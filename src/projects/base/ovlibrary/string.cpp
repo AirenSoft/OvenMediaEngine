@@ -1,0 +1,972 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Hyunjun Jang
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
+#include "./data.h"
+#include "./string.h"
+#include "./assert.h"
+#include "./memory_utilities.h"
+
+#include <cstdarg>
+#include <cctype>
+#include <algorithm>
+
+namespace ov
+{
+	String::String()
+		: _buffer(nullptr),
+
+		  _length(0),
+		  _capacity(0)
+	{
+	}
+
+	String::String(const char *string, ssize_t length)
+		: String()
+	{
+		Append(string, length);
+	}
+
+	String::String(const String &string)
+		: String(string._buffer, string.GetLength())
+	{
+	}
+
+	String::String(String &&string) noexcept
+		: _buffer(string._buffer),
+
+		  _length(string._length),
+		  _capacity(string._capacity)
+	{
+		string._buffer = nullptr;
+
+		string._length = 0;
+		string._capacity = 0;
+	}
+
+	String::~String()
+	{
+		Release();
+	}
+
+	String::operator const char *() const noexcept
+	{
+		return CStr();
+	}
+
+	const char *String::CStr() const noexcept
+	{
+		if(_buffer == nullptr)
+		{
+			return "";
+		}
+
+		return _buffer;
+	}
+
+	char *String::GetBuffer() noexcept
+	{
+		// 수정 가능한 포인터이기 때문에, 문자열이 없는 상태에서 호출되면 안됨
+		OV_ASSERT(_buffer != nullptr, "Use \"const char *CStr()\" instead");
+
+		return _buffer;
+	}
+
+	String &String::operator =(const String &buffer) noexcept
+	{
+		if(this == &buffer)
+		{
+			// 자기 자신일 경우, 대입하지 않아도 됨
+			return *this;
+		}
+
+		if(_buffer != nullptr)
+		{
+			// 기존 버퍼에 복사하기 위해, 길이를 0으로 만듦
+			_length = 0;
+			_buffer[0] = '\0';
+		}
+
+		Append(buffer._buffer);
+
+		return *this;
+	}
+
+	String &String::operator =(const char *buffer) noexcept
+	{
+		if(_buffer != nullptr)
+		{
+			// 기존 버퍼에 복사하기 위해, 길이를 0으로 만듦
+			_length = 0;
+			_buffer[0] = '\0';
+		}
+
+		Append(buffer);
+
+		return *this;
+	}
+
+	const String &String::operator +=(const char *buffer) noexcept
+	{
+		Append(buffer);
+
+		return *this;
+	}
+
+	String String::operator +(const String &other) noexcept
+	{
+		String instance(*this);
+
+		instance.Append(other);
+
+		return instance;
+	}
+
+
+	bool String::Prepend(char c)
+	{
+		if(Alloc(_length + 1) == false)
+		{
+			return false;
+		}
+
+		// 1바이트씩 뒤로 이동
+		::memmove(_buffer + 1, _buffer, static_cast<size_t>(_length));
+
+		_buffer[0] = c;
+		_length++;
+
+		_buffer[_length + 1] = '\0';
+
+		return true;
+	}
+
+	bool String::Prepend(const char *string, ssize_t length)
+	{
+		if(string == nullptr)
+		{
+			return false;
+		}
+
+		if(length == 0)
+		{
+			// 문자열을 추가하지 않음
+			return true;
+		}
+		else if(length == -1)
+		{
+			// 길이를 직접 구함
+			length = ::strlen(string);
+		}
+		else if(length < 0)
+		{
+			// 잘못된 파라미터
+			return false;
+		}
+
+		// 기존 데이터 + 새 데이터가 들어갈 만한 공간을 확보한 뒤
+		if(Alloc(_length + length) == false)
+		{
+			return false;
+		}
+
+		// 기존 데이터 앞에 Prepend
+		::memmove(_buffer + length, _buffer, static_cast<size_t>(_length));
+
+		::memcpy(_buffer, string, static_cast<size_t>(length));
+		_length += length;
+
+		_buffer[_length] = '\0';
+
+		return true;
+	}
+
+	bool String::Append(char c)
+	{
+		if(Alloc(_length + 1) == false)
+		{
+			return false;
+		}
+
+		_buffer[_length] = c;
+		_length++;
+
+		_buffer[_length + 1] = '\0';
+
+		return true;
+	}
+
+	bool String::Append(const char *string, ssize_t length)
+	{
+		if(string == nullptr)
+		{
+			return false;
+		}
+
+		if(length == 0)
+		{
+			// 문자열을 추가하지 않음
+			return true;
+		}
+		else if(length == -1)
+		{
+			// 길이를 직접 구함
+			length = ::strlen(string);
+		}
+		else if(length < 0)
+		{
+			// 잘못된 파라미터
+			return false;
+		}
+
+		// 기존 데이터 + 새 데이터가 들어갈 만한 공간을 확보한 뒤
+		if(Alloc(_length + length) == false)
+		{
+			return false;
+		}
+
+		// 기존 데이터 뒤에 Append
+		if(_buffer != nullptr)
+		{
+			::memcpy(_buffer + _length, string, sizeof(char) * length);
+		}
+
+		_length += length;
+
+		if(_buffer != nullptr)
+		{
+			_buffer[_length] = '\0';
+		}
+
+		return true;
+	}
+
+	ssize_t String::AppendFormat(const char *format, ...)
+	{
+		va_list list;
+		ssize_t appended_length;
+
+		va_start(list, format);
+
+		appended_length = AppendVFormat(format, &(list[0]));
+
+		va_end(list);
+
+		return appended_length;
+	}
+
+	ssize_t String::AppendVFormat(const char *format, va_list list)
+	{
+		ssize_t length;
+		va_list list_for_count;
+
+		va_copy(list_for_count, list);
+
+		length = ::vsnprintf(nullptr, 0, format, &(list_for_count[0]));
+
+		if(Alloc(_length + length) == false)
+		{
+			return 0;
+		}
+
+		if(_buffer != nullptr)
+		{
+			::vsnprintf(_buffer + _length, static_cast<size_t>(length + 1), format, list);
+			_length += length;
+		}
+
+		if(_buffer != nullptr)
+		{
+			_buffer[_length] = '\0';
+		}
+
+		return length;
+	}
+
+	ssize_t String::Format(const char *format, ...)
+	{
+		va_list list;
+
+		va_start(list, format);
+
+		VFormat(format, &(list[0]));
+
+		va_end(list);
+
+		return _length;
+	}
+
+	ssize_t String::VFormat(const char *format, va_list list)
+	{
+		ssize_t length;
+		va_list list_for_count;
+
+		// vsnprintf로 길이를 얻어오면 list가 가장 마지막 파라미터를 가리키게 되므로
+		// 현재 상태를 미리 백업함
+		va_copy(list_for_count, list);
+
+		length = ::vsnprintf(nullptr, 0, format, list);
+
+		if(Alloc(length))
+		{
+			va_copy(list, &(list_for_count[0]));
+
+			::vsnprintf(_buffer, static_cast<size_t>(length + 1), format, list);
+			_length = length;
+		}
+
+		return _length;
+	}
+
+	String String::FormatString(const char *format, ...)
+	{
+		va_list list;
+		String buffer;
+
+		va_start(list, format);
+
+		buffer.VFormat(format, &(list[0]));
+
+		va_end(list);
+
+		return buffer;
+	}
+
+	ssize_t String::IndexOf(char c, ssize_t start_position) const noexcept
+	{
+		ssize_t index;
+
+		for(index = start_position; index < _length; index++)
+		{
+			if(_buffer[index] == c)
+			{
+				return index;
+			}
+		}
+
+		return -1L;
+	}
+
+	ssize_t String::IndexOf(const char *str, ssize_t start_position) const noexcept
+	{
+		if(start_position >= _length)
+		{
+			return -1L;
+		}
+
+		char *p = ::strstr(_buffer + start_position, str);
+
+		if(p == nullptr)
+		{
+			return -1L;
+		}
+
+		return p - _buffer;
+	}
+
+	ssize_t String::IndexOfRev(char c, ssize_t start_position) const noexcept
+	{
+		ssize_t index;
+		ssize_t start;
+
+		if((_length == 0L) || (start_position < -1L) || (start_position >= _length))
+		{
+			return -1L;
+		}
+
+		if(start_position == -1L)
+		{
+			start = _length - 1L;
+		}
+		else
+		{
+			start = std::min(_length - 1L, start_position);
+		}
+
+		for(index = start; index >= 0L; index--)
+		{
+			if(_buffer[index] == c)
+			{
+				return index;
+			}
+		}
+
+		return -1L;
+	}
+
+	String String::Replace(const char *old_token, const char *new_token)
+	{
+		String target;
+
+		if(old_token == nullptr || new_token == nullptr)
+		{
+			return "";
+		}
+
+		ssize_t pos = 0L;
+		ssize_t old_len = ::strlen(old_token);
+		ssize_t new_len = ::strlen(new_token);
+		const char *target_buffer = _buffer;
+
+		while(true)
+		{
+			ssize_t new_pos = IndexOf(old_token, pos);
+
+			if(new_pos == -1)
+			{
+				target.Append(target_buffer);
+				break;
+			}
+
+			target.Append(target_buffer, new_pos - pos);
+			target.Append(new_token, new_len);
+
+			target_buffer = _buffer + new_pos + old_len;
+			pos = new_pos + old_len;
+		}
+
+		return target;
+	}
+
+	String String::Substring(ssize_t start, ssize_t length) const
+	{
+		if(length == -1L)
+		{
+			length = _length - start;
+		}
+
+		if(start < 0L)
+		{
+			return "";
+		}
+
+		if((start + length) > _length)
+		{
+			// _length 값보다 크면 보정
+			length = _length - start;
+		}
+
+		return String(_buffer + start, length);
+	}
+
+	String String::Trim() const
+	{
+		ssize_t left_index;
+		ssize_t right_index;
+
+		// 왼쪽 공백 위치 찾음
+		for(left_index = 0L; left_index < _length; left_index++)
+		{
+			switch(_buffer[left_index])
+			{
+				case '\r':
+				case '\n':
+				case '\t':
+				case ' ':
+					continue;
+
+				default:
+					break;
+			}
+
+			break;
+		}
+
+		for(right_index = (_length - 1L); right_index >= left_index; right_index--)
+		{
+			switch(_buffer[right_index])
+			{
+				case '\r':
+				case '\n':
+				case '\t':
+				case ' ':
+					continue;
+
+				default:
+					break;
+			}
+
+			break;
+		}
+
+		if((left_index == 0) && (right_index == (_length - 1L)))
+		{
+			// trim 할 게 없음
+			return *this;
+		}
+
+		// left_index는 공백이 아닌 문자 지점이므로
+		return Substring(left_index, right_index - left_index + 1L);
+	}
+
+	String String::PadLeftString(ssize_t length, char pad)
+	{
+		String padding = *this;
+
+		padding.PadLeft(length, pad);
+
+		return padding;
+	}
+
+	String String::PadRightString(ssize_t length, char pad)
+	{
+		String padding = *this;
+
+		padding.PadRight(length, pad);
+
+		return padding;
+	}
+
+	void String::PadLeft(ssize_t length, char pad)
+	{
+		ssize_t remained = length - GetLength();
+
+		if(remained > 0L)
+		{
+			String padding;
+
+			for(ssize_t index = 0; index < remained; index++)
+			{
+				padding.Append(pad);
+			}
+
+			Prepend(padding);
+		}
+	}
+
+	void String::PadRight(ssize_t length, char pad)
+	{
+		ssize_t remained = length - GetLength();
+
+		if(remained > 0L)
+		{
+			String padding;
+
+			for(ssize_t index = 0L; index < remained; index++)
+			{
+				padding.Append(pad);
+			}
+
+			Append(padding);
+		}
+	}
+
+	void String::MakeUpper()
+	{
+		for(ssize_t index = 0L; index < _length; index++)
+		{
+			if(isalpha(_buffer[index]) != 0)
+			{
+				_buffer[index] = static_cast<char>(::toupper(_buffer[index]));
+			}
+		}
+	}
+
+	void String::MakeLower()
+	{
+		ssize_t index;
+
+		for(index = 0L; index < _length; index++)
+		{
+			if(isalpha(_buffer[index]) != 0)
+			{
+				_buffer[index] = static_cast<char>(::tolower(_buffer[index]));
+			}
+		}
+	}
+
+	String String::UpperCaseString() const
+	{
+		String str_upper = *this;
+
+		str_upper.MakeUpper();
+
+		return str_upper;
+	}
+
+	String String::LowerCaseString() const
+	{
+		String lower = *this;
+
+		lower.MakeLower();
+
+		return lower;
+	}
+
+	std::vector<String> String::Split(const char *separator) const
+	{
+		return String::Split(CStr(), separator);
+	}
+
+	std::vector<String> String::Split(const char *string, const char *separator) const
+	{
+		std::vector<String> list;
+		const char *last;
+		ssize_t token_length;
+		ssize_t seperator_length;
+		char token[1024];
+
+		if(separator == nullptr)
+		{
+			if(string != nullptr)
+			{
+				list.emplace_back(string);
+			}
+
+			return list;
+		}
+
+		seperator_length = (int)strlen(separator);
+
+		if(((string == nullptr) || (strlen(string) == 0L)) || (seperator_length == 0L))
+		{
+			if(string != nullptr)
+			{
+				list.emplace_back(string);
+			}
+
+			return list;
+		}
+
+		while(true)
+		{
+			last = ::strstr(string, separator);
+
+			if(last == nullptr)
+			{
+				token_length = ::strlen(string);
+
+				::memcpy(&(token[0]), string, token_length * sizeof(char));
+			}
+			else
+			{
+				token_length = (last - string);
+
+				::memcpy(&(token[0]), string, token_length * sizeof(char));
+			}
+
+			token[token_length] = '\0';
+			list.emplace_back(token);
+
+			if(last == nullptr)
+			{
+				break;
+			}
+
+			string = last + seperator_length;
+		}
+
+		return list;
+	}
+
+	String String::Join(const std::vector<String> &list, const char *seperator)
+	{
+		String string;
+		bool is_first = true;
+
+		for(auto const &item : list)
+		{
+			if(is_first == false)
+			{
+				string.Append(seperator);
+			}
+			else
+			{
+				is_first = false;
+			}
+
+			string.Append(item.CStr());
+		}
+
+		return string;
+	}
+
+	bool String::HasPrefix(String prefix) const
+	{
+		return (Left(prefix.GetLength()) == prefix);
+	}
+
+	bool String::HasSuffix(String suffix) const
+	{
+		return (Right(suffix.GetLength()) == suffix);
+	}
+
+	String String::Left(ssize_t length) const
+	{
+		length = (length < _length) ? length : _length;
+
+		return String(_buffer, length);
+	}
+
+	String String::Right(ssize_t length) const
+	{
+		ssize_t start_position;
+
+		length = (length < _length) ? length : _length;
+		start_position = _length - length;
+
+		return String(_buffer + start_position, length);
+	}
+
+	char String::Get(ssize_t index) const
+	{
+		if((index < 0) || (index >= _length))
+		{
+			return 0;
+		}
+
+		return _buffer[index];
+	}
+
+	char String::operator [](ssize_t index) const
+	{
+		return Get(index);
+	}
+
+	bool String::operator !=(const char *buffer) const
+	{
+		return ((operator ==(buffer)) == true) ? false : true;
+	}
+
+	bool String::operator ==(const String &str) const
+	{
+		if(str._buffer == _buffer)
+		{
+			return true;
+		}
+
+		// 위에서 두 값을 비교하기 때문에 여기서 둘 다 nullptr 경우는 없음
+		if((str._buffer == nullptr) || (_buffer == nullptr))
+		{
+			return false;
+		}
+
+		if(::strcmp(_buffer, str._buffer) == 0)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	bool String::operator ==(const char *buffer) const
+	{
+		if(buffer == _buffer)
+		{
+			return true;
+		}
+
+		if(buffer == nullptr)
+		{
+			return false;
+		}
+
+		if(_buffer == nullptr)
+		{
+			if(buffer[0] == '\0')
+			{
+				return true;
+			}
+
+			return false;
+		}
+
+		if(::strcmp(_buffer, buffer) == 0)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	bool String::operator <(const String &string) const
+	{
+		if(_buffer == nullptr)
+		{
+			if(string._buffer != nullptr)
+			{
+				// _buffer == nullptr && string != nullptr
+				return true;
+			}
+
+			// _buffer == nullptr && string == nullptr
+			return false;
+		}
+
+		if(string._buffer == nullptr)
+		{
+			// _buffer != nullptr && string == nullptr
+			return false;
+		}
+
+		// _buffer != nullptr && string != nullptr
+		if(::strcmp(_buffer, string._buffer) < 0)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	bool String::operator >(const String &string) const
+	{
+		if(_buffer == nullptr)
+		{
+			// _buffer == nullptr && string != nullptr
+			// _buffer == nullptr && string == nullptr
+			return false;
+		}
+
+		if(string._buffer == nullptr)
+		{
+			// _buffer != nullptr && string == null
+			return true;
+		}
+
+		// _buffer != nullptr && string != nullptr
+		if(::strcmp(_buffer, string._buffer) > 0)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	ssize_t String::GetCapacity() const noexcept
+	{
+		return _capacity;
+	}
+
+	bool String::SetCapacity(ssize_t length) noexcept
+	{
+		return Alloc(length, true);
+	}
+
+	ssize_t String::GetLength() const noexcept
+	{
+		return _length;
+	}
+
+	bool String::SetLength(ssize_t length) noexcept
+	{
+		if(length < _length)
+		{
+			// 버퍼 축소
+			::memset(_buffer + length, 0, static_cast<size_t>(_length - length));
+			_length = length;
+
+			return true;
+		}
+
+		// 버퍼 확장
+		if(Alloc(length))
+		{
+			// 길이 정보 저장
+			_length = length;
+			return true;
+		}
+
+		return false;
+	}
+
+	bool String::Clear()
+	{
+		return Release();
+	}
+
+	bool String::IsEmpty() const noexcept
+	{
+		return (_length == 0L);
+	}
+
+	std::shared_ptr<Data> String::ToData(bool include_null_char) const
+	{
+		if(_buffer == nullptr)
+		{
+			return ov::Data::CreateData();
+		}
+
+		return ov::Data::CreateData(_buffer, _length + (include_null_char ? 1 : 0), false);
+	}
+
+	bool String::Alloc(ssize_t length, bool alloc_exactly) noexcept
+	{
+		if(
+			// 기존에 할당된 버퍼가 충분 하지 않거나
+			(_capacity < length) ||
+			// 기존에 할당된 버퍼가 너무 크거나
+			(_capacity > (length * 2)) ||
+			// alloc_exactly flag가 켜져 있으면서 capacity가 정확히 일치하지 않는 경우
+			(alloc_exactly && (_capacity != length))
+			)
+		{
+			ssize_t allocated_length = length;
+
+			if(alloc_exactly == false)
+			{
+				allocated_length = 1L;
+
+				// 2의 거듭 제곱 크기로 계산
+				while(allocated_length < length)
+				{
+					if(allocated_length >= 1024L * 1024L)
+					{
+						// 1MB를 넘어가면 지수 형태로 증가 하지 않음
+						allocated_length += 1024L * 1024L;
+					}
+					else
+					{
+						// 1MB 미만일 경우 지수 형태로 증가
+						allocated_length *= 2L;
+					}
+				}
+			}
+
+			// null문자가 들어갈 공간 더함
+			char *buffer = static_cast<char *>(::malloc(sizeof(char) * (allocated_length + 1L)));
+
+			if(buffer == nullptr)
+			{
+				// 메모리 할당 실패
+				return false;
+			}
+
+			::memset(buffer, 0, sizeof(char) * (allocated_length + 1L));
+
+			// 기존에 데이터가 있다면 복사
+			if(_length > 0L)
+			{
+				::memcpy(buffer, _buffer, sizeof(char) * _length);
+			}
+
+			// 기존 버퍼 해제
+			ssize_t old_length = _length;
+
+			Release();
+
+			_capacity = allocated_length;
+
+			// 버퍼 대입
+			_buffer = buffer;
+
+			// Release()에 의해 길이 정보가 초기화 되었으므로 다시 대입해줌
+			_length = old_length;
+		}
+
+		return true;
+	}
+
+	bool String::Release() noexcept
+	{
+		OV_SAFE_FREE(_buffer);
+
+		_capacity = 0L;
+		_length = 0L;
+
+		return true;
+	}
+}

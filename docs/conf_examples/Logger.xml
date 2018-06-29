@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Logger>
+    <!-- Log level: [debug, info, warn, error, critical] -->
+
+    <Tag name=".*" level="info" />
+    <Tag name="Ice" level="info" />
+    <Tag name="Transcode" level="info" />
+    <Tag name="MediaRouter.*" level="info" />
+    <Tag name="Bitstream" level="info" />
+    <Tag name="StreamInfo" level="info" />
+    <Tag name="OvenCodec" level="info" />
+    <Tag name="DTLS" level="info" />
+    <Tag name="PROTOTYPE" level="info" />
+    <Tag name="Config" level="info" />
+    <Tag name="OVLibrary" level="info" />
+</Logger>

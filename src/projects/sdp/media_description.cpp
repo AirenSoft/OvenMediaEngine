@@ -1,0 +1,659 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by getroot
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
+
+#include <regex>
+#include "media_description.h"
+#include "session_description.h"
+
+MediaDescription::MediaDescription(const std::shared_ptr<SessionDescription>& session_desc)
+{
+	_session_description = session_desc;
+	_media_type = MediaType::UNKNOWN;
+	_media_type_str = "UNKNOWN";
+	_direction = Direction::UNKNOWN;
+	_direction_str = "UNKNOWN";
+	_setup = SetupType::UNKNOWN;
+	_setup_str = "UNKNOWN";
+
+	_connection_ip_version = 4;
+	_connection_ip = "0.0.0.0";
+	_framerate = 0;
+	_port = 9;
+	_ssrc = 0;
+
+	UseDtls(true);
+	UseRtcpMux(false);
+}
+
+MediaDescription::~MediaDescription()
+{
+}
+
+bool MediaDescription::UpdateData(ov::String &sdp)
+{
+	if(_media_type == MediaType::UNKNOWN || _direction == Direction::UNKNOWN || _setup == SetupType::UNKNOWN)
+	{
+		loge("SDP", "Required value is not defined - MediaType : %s, Direction : %s, SetupType : %s",
+			_media_type_str.CStr(), _direction_str.CStr(), _setup_str.CStr());
+		return false;
+	}
+
+	// Make m line
+	sdp = ov::String::FormatString("m=%s %d %s", _media_type_str.CStr(), _port, _protocol.CStr());
+	// Append payload id
+	for(auto &t : _payload_list)
+	{
+		if(t->GetId() == 0)
+		{
+			return false;
+		}
+
+		sdp += ov::String::FormatString(" %d", t->GetId());
+	}
+	sdp += "\r\n";
+
+	sdp += ov::String::FormatString("c=IN IP%d %s\r\n", _connection_ip_version, _connection_ip.CStr());
+
+	sdp += ov::String::FormatString("a=%s\r\n", _direction_str.CStr());
+
+	sdp += ov::String::FormatString("a=mid:%s\r\n", _mid.CStr());
+
+	sdp += ov::String::FormatString("a=setup:%s\r\n", _setup_str.CStr());
+
+	// Common Attributes
+	ov::String common_attr_text;
+	if(!SerializeCommonAttr(common_attr_text))
+	{
+		return false;
+	}
+
+	sdp += common_attr_text;
+
+	if(_framerate)
+	{
+		sdp += ov::String::FormatString("a=framerate:%.2f\r\n", _framerate);
+	}
+
+	if(_use_rtcpmux_flag)
+	{
+		sdp += ov::String::FormatString("a=rtcp-mux\r\n");
+	}
+
+	// Payloads
+	for(auto &payload : _payload_list)
+	{
+		sdp += ov::String::FormatString("a=rtpmap:%d %s/%d", payload->GetId(),
+									   payload->GetCodecStr().CStr(),
+									   payload->GetCodecRate());
+		if(!payload->GetCodecParams().IsEmpty())
+		{
+			sdp += ov::String::FormatString("/%s", payload->GetCodecParams().CStr());
+		}
+
+		sdp += "\r\n";
+
+		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::GOOG_REMB))
+		{
+			sdp += ov::String::FormatString("a=rtcp-fb:%d goog_remb\r\n", payload->GetId());
+		}
+		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TRANSPORT_CC))
+		{
+			sdp += ov::String::FormatString("a=rtcp-fb:%d transport-cc\r\n", payload->GetId());
+		}
+		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::CCM_FIR))
+		{
+			sdp += ov::String::FormatString("a=rtcp-fb:%d ccm fir\r\n", payload->GetId());
+		}
+		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::NACK))
+		{
+			sdp += ov::String::FormatString("a=rtcp-fb:%d nack\r\n", payload->GetId());
+		}
+		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::NACK_PLI))
+		{
+			sdp += ov::String::FormatString("a=rtcp-fb:%d nack pli\r\n", payload->GetId());
+		}
+	}
+
+	// SSRCs
+	if(!_cname.IsEmpty())
+	{
+		sdp += ov::String::FormatString("a=ssrc:%u cname:%s\r\n", _ssrc, _cname.CStr());
+	}
+
+	return true;
+}
+
+
+bool MediaDescription::SetMediaType(const ov::String &type)
+{
+	if(type.UpperCaseString() == "VIDEO")
+	{
+		SetMediaType(MediaType::VIDEO);
+	}
+	else if(type.UpperCaseString() == "AUDIO")
+	{
+		SetMediaType(MediaType::AUDIO);
+	}
+	else if(type.UpperCaseString() == "APPLICATION")
+	{
+		SetMediaType(MediaType::APPLICATION);
+	}
+	else
+	{
+		return false;
+	}
+
+	return true;
+}
+
+
+bool MediaDescription::FromString(const ov::String& desc)
+{
+	std::stringstream sdpstream(desc.CStr());
+	std::string line;
+
+	while(std::getline(sdpstream, line, '\n'))
+	{
+		if (line.size() && line[line.length() - 1] == '\r')
+		{
+			line.pop_back();
+		}
+
+		char type = line[0];
+		std::string content = line.substr(2);
+
+		if(!ParsingMediaLine(type, content))
+		{
+			return false;
+		}
+	}
+		return true;
+}
+
+bool MediaDescription::SetDirection(const ov::String &dir)
+{
+	if(dir.UpperCaseString() == "SENDRECV")
+	{
+		SetDirection(Direction::SENDRECV);
+	}
+	else if(dir.UpperCaseString() == "RECVONLY")
+	{
+		SetDirection(Direction::RECVONLY);
+	}
+	else if(dir.UpperCaseString() == "SENDONLY")
+	{
+		SetDirection(Direction::SENDONLY);
+	}
+	else if(dir.UpperCaseString() == "INACTIVE")
+	{
+		SetDirection(Direction::INACTIVE);
+	}
+	else
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool MediaDescription::ParsingMediaLine(char type, std::string content)
+{
+	bool parsing_error = false;
+	std::smatch matches;
+
+	switch(type)
+	{
+		case 'm':
+			// m=video 9 UDP/TLS/RTP/SAVPF 97
+			if (std::regex_search(content, matches, std::regex("^(\\w*) (\\d*) ([\\w\\/]*)(?: (.*))?")))
+			{
+				if(matches.size() < 4+1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				if(!SetMediaType(std::string(matches[1]).c_str()))
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetPort(std::stoul(matches[2]));
+
+				ov::String protocol = std::string(matches[3]).c_str();
+				if(protocol.UpperCaseString() == "UDP/TLS/RTP/SAVPF")
+				{
+					UseDtls(true);
+				}
+				else if(protocol.UpperCaseString() == "RTP/AVPF")
+				{
+					UseDtls(false);
+				}
+				else
+				{
+					loge("SDP", "Cannot support %s protocol", protocol.CStr());
+					parsing_error = true;
+					break;
+				}
+
+				// Payload를 모두 생성하여 넣는다.
+				// 나중에 Payload에 관련된 정보(rtpmap, fmtp, rtcp-fb)가 나오면 파싱하여 해당 Payload에 값을 설정한다.
+				std::string payload_number;
+				std::stringstream payload_numbers(matches[4]);
+				while(std::getline(payload_numbers, payload_number, ' '))
+				{
+					auto payload = std::make_shared<PayloadAttr>();
+					payload->SetId(static_cast<uint8_t>(std::stoul(payload_number)));
+					AddPayload(payload);
+				}
+			}
+			else
+			{
+				// 필수값 이므로 m이 에러가 나면 실패
+				parsing_error = true;
+			}
+			break;
+		case 'c':
+			// c=IN IP4 0.0.0.0
+			if(std::regex_search(content, matches, std::regex("^IN IP(\\d) (\\S*)")))
+			{
+				if(matches.size() != 2+1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetConnection(std::stoul(matches[1]), std::string(matches[2]).c_str());
+			}
+			else
+			{
+				// 필수값 이므로 m이 에러가 나면 실패
+				parsing_error = true;
+			}
+
+			break;
+		case 'a':
+
+			// a=rtcp-mux
+			if(std::regex_search(content, matches, std::regex("^(rtcp-mux)")))
+			{
+				UseRtcpMux(true);
+			}
+			// a=sendonly
+			else if(std::regex_search(content, matches, std::regex("^(sendrecv|recvonly|sendonly|inactive)")))
+			{
+				if(matches.size() != 1+1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				if(!SetDirection(std::string(matches[1]).c_str()))
+				{
+					parsing_error = true;
+					break;
+				}
+			}
+			// a=mid:video,
+			else if(std::regex_search(content, matches, std::regex("^mid:([^\\s]*)")))
+			{
+				if(matches.size() != 1+1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetMid(std::string(matches[1]).c_str());
+			}
+			// a=setup:actpass
+			else if(std::regex_search(content, matches, std::regex("^setup:(\\w*)")))
+			{
+				if(matches.size() != 1+1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetSetup(std::string(matches[1]).c_str());
+			}
+			// a=framerate:29.97
+			else if(std::regex_search(content, matches, std::regex("^framerate:(\\d+(?:$|\\.\\d+))")))
+			{
+				if(matches.size() != 1+1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetFramerate(std::stof(matches[1]));
+			}
+			// a=rtpmap:96 VP8/50000/?
+			else if(std::regex_search(content,
+									  matches,
+									  std::regex("rtpmap:(\\d*) ([\\w\\-\\.]*)(?:\\s*\\/(\\d*)(?:\\s*\\/(\\S*))?)?")))
+			{
+				if(matches.size() < 3+1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				//TODO(getroot): matches[4]가 없는 경우에도 메모리는 할당 되는지 확인
+				AddRtpmap(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(),
+						  static_cast<uint32_t>(std::stoul(matches[3])), std::string(matches[4]).c_str());
+			}
+			// a=rtcp-fb:96 nack pli
+			// pli는 subtype으로 구분해야 하지만 여기서는 type-subtype 형태로 구분한다.
+			else if(std::regex_search(content,
+									  matches,
+									  std::regex("rtcp-fb:(\\*|\\d*) (.*)")))
+			{
+				if(matches.size() != 2+1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				EnableRtcpFb(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(), true);
+			}
+			// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
+			else if(std::regex_search(content, matches, std::regex("ssrc:(\\d*) cname(?::(.*))?")))
+			{
+				if(matches.size() != 2+1)
+				{
+					parsing_error = true;
+					break;
+				}
+
+				SetCname(stoul(matches[1]), std::string(matches[2]).c_str());
+			}
+			else if(ParsingCommonAttrLine(type, content))
+			{
+				// 아무것도 안하기
+			}
+			else
+			{
+				logw("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
+			}
+
+			break;
+		default:
+			logw("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
+			break;
+	}
+
+	if(parsing_error)
+	{
+		loge("SDP", "Sdp parsing error : %c=%s", type, content.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+// m=video 9 UDP/TLS/RTP/SAVPF 97
+void MediaDescription::SetMediaType(const MediaType type)
+{
+	_media_type = type;
+	switch(_media_type)
+	{
+		case MediaType::VIDEO:
+			_media_type_str = "video";
+			break;
+		case MediaType::AUDIO:
+			_media_type_str = "audio";
+			break;
+		case MediaType::APPLICATION:
+			_media_type_str = "application";
+			break;
+		default:
+			_media_type_str = "";
+			break;
+	}
+}
+
+const MediaDescription::MediaType MediaDescription::GetMediaType()
+{
+	return _media_type;
+}
+
+void MediaDescription::SetPort(uint16_t port)
+{
+	_port = port;
+}
+
+const uint16_t MediaDescription::GetPort()
+{
+	return _port;
+}
+
+void MediaDescription::UseDtls(const bool flag)
+{
+	_use_dtls_flag = flag;
+	if(_use_dtls_flag)
+	{
+		_protocol = "UDP/TLS/RTP/SAVPF";
+	}
+	else
+	{
+		_protocol = "RTP/AVPF";
+	}
+}
+
+const bool MediaDescription::IsUseDtls()
+{
+	return _use_dtls_flag;
+}
+
+void MediaDescription::AddPayload(const std::shared_ptr<PayloadAttr>& payload)
+{
+	_payload_list.push_back(payload);
+}
+
+const std::shared_ptr<PayloadAttr> MediaDescription::GetPayload(uint8_t id)
+{
+	for(auto &payload : _payload_list)
+	{
+		if(payload->GetId() == id)
+		{
+			return payload;
+		}
+	}
+
+	return nullptr;
+}
+
+const std::shared_ptr<PayloadAttr> MediaDescription::GetFirstPayload()
+{
+	return _payload_list[0];
+}
+
+// a=rtcp-mux
+void MediaDescription::UseRtcpMux(const bool flag)
+{
+	_use_rtcpmux_flag = flag;
+}
+
+const bool MediaDescription::IsUseRtcpMux()
+{
+	return _use_rtcpmux_flag;
+}
+
+// a=sendonly
+void MediaDescription::SetDirection(const Direction dir)
+{
+	_direction = dir;
+	switch(_direction)
+	{
+		case Direction::SENDRECV:
+			_direction_str = "sendrecv";
+			break;
+		case Direction::RECVONLY:
+			_direction_str = "recvonly";
+			break;
+		case Direction::SENDONLY:
+			_direction_str = "sendonly";
+			break;
+		case Direction::INACTIVE:
+			_direction_str = "inactive";
+			break;
+		default:
+			_direction_str = "";
+			break;
+	}
+}
+
+const MediaDescription::Direction MediaDescription::GetDirection()
+{
+	return _direction;
+}
+
+// a=mid:video
+void MediaDescription::SetMid(const ov::String& mid)
+{
+	_mid = mid;
+}
+
+const ov::String MediaDescription::GetMid()
+{
+	return _mid;
+}
+
+// a=setup:actpass
+void MediaDescription::SetSetup(const SetupType type)
+{
+	_setup = type;
+	switch(_setup)
+	{
+		case SetupType::ACTIVE:
+			_setup_str = "active";
+			break;
+		case SetupType::PASSIVE:
+			_setup_str = "passive";
+			break;
+		case SetupType::ACTPASS:
+			_setup_str = "actpass";
+			break;
+		default:
+			_setup_str = "";
+	}
+}
+
+bool MediaDescription::SetSetup(const ov::String& type)
+{
+	if(type.UpperCaseString() == "ACTIVE")
+	{
+		SetSetup(SetupType::ACTIVE);
+	}
+	else if(type.UpperCaseString() == "PASSIVE")
+	{
+		SetSetup(SetupType::PASSIVE);
+	}
+	else if(type.UpperCaseString() == "ACTPASS")
+	{
+		SetSetup(SetupType::ACTPASS);
+	}
+	else
+	{
+		return false;
+	}
+
+	return true;
+}
+
+// c=IN IP4 0.0.0.0
+void MediaDescription::SetConnection(const uint8_t version, const ov::String& ip)
+{
+	_connection_ip_version = version;
+	_connection_ip = ip;
+}
+
+void MediaDescription::SetFramerate(const float framerate)
+{
+	_framerate = framerate;
+}
+
+const float MediaDescription::GetFramerate()
+{
+	return _framerate;
+}
+
+// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
+void MediaDescription::SetCname(const uint32_t ssrc, const ov::String& cname)
+{
+	_ssrc = ssrc;
+	_cname = cname;
+}
+
+const uint32_t MediaDescription::GetSsrc()
+{
+	return _ssrc;
+}
+
+const ov::String MediaDescription::GetCname()
+{
+	return _cname;
+}
+
+// a=rtpmap:96 VP8/50000
+bool MediaDescription::AddRtpmap(const uint8_t payload_type, const ov::String &codec,
+								 const uint32_t rate, const ov::String parameters)
+{
+	std::shared_ptr<PayloadAttr> payload = GetPayload(payload_type);
+	if(payload == nullptr)
+	{
+		payload = std::make_shared<PayloadAttr>();
+		payload->SetId(payload_type);
+		AddPayload(payload);
+	}
+
+	payload->SetRtpmap(codec, rate, parameters);
+}
+
+void MediaDescription::AddRtpmap(const uint8_t payload_type, const PayloadAttr::SupportCodec codec,
+								 const uint32_t rate, const ov::String parameters)
+{
+	std::shared_ptr<PayloadAttr> payload = GetPayload(payload_type);
+	if(payload == nullptr)
+	{
+		payload = std::make_shared<PayloadAttr>();
+		payload->SetId(payload_type);
+		AddPayload(payload);
+	}
+
+	payload->SetRtpmap(codec, rate, parameters);
+}
+
+// a=rtcp-fb:96 nack pli
+bool MediaDescription::EnableRtcpFb(const uint8_t id, const ov::String &type, const bool on)
+{
+	std::shared_ptr<PayloadAttr> payload = GetPayload(id);
+	if(payload == nullptr)
+	{
+		payload = std::make_shared<PayloadAttr>();
+		payload->SetId(id);
+		AddPayload(payload);
+	}
+
+	return payload->EnableRtcpFb(type, on);
+}
+
+void MediaDescription::EnableRtcpFb(const uint8_t id, const PayloadAttr::RtcpFbType &type, const bool on)
+{
+	std::shared_ptr<PayloadAttr> payload = GetPayload(id);
+	if(payload == nullptr)
+	{
+		payload = std::make_shared<PayloadAttr>();
+		payload->SetId(id);
+		AddPayload(payload);
+	}
+
+	payload->EnableRtcpFb(type, on);
+}

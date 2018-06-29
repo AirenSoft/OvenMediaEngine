@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Server>
+	<Name>OvenMediaEngine</Name>
+	<Hosts>
+		<Host>
+			<Name>default</Name>
+			<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
+			<IPAddress>127.0.0.1</IPAddress>
+			<MaxConnection>0</MaxConnection>
+			<Provider>
+				<!-- port[/protocol] -->
+				<!-- default protocol: tcp -->
+				<Port>1935/tcp</Port>
+				<MaxConnection>10</MaxConnection>
+			</Provider>
+			<Publisher>
+				<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
+				<IPAddress>127.0.0.1</IPAddress>
+				<Port>1936/udp</Port>
+				<MaxConnection>10</MaxConnection>
+				<WebRTC>
+					<!-- millisecond -->
+					<SessionTimeout>30000</SessionTimeout>
+					<CandidatePort>45050/udp</CandidatePort>
+					<SignallingPort>3333/tcp</SignallingPort>
+				</WebRTC>
+			</Publisher>
+			<Applications-Ref>${ome.AppHome}/conf/Applications.xml</Applications-Ref>
+		</Host>
+	</Hosts>
+</Server>

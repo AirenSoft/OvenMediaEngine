@@ -1,0 +1,5 @@
+ifeq ($(MAKECMDGOALS), release)
+BUILD_METHOD := RELEASE
+else
+BUILD_METHOD := DEBUG
+endif

@@ -1,0 +1,110 @@
+#include "rtc_application.h"
+#include "ice/ice_port_manager.h"
+
+std::shared_ptr<RtcApplication> RtcApplication::Create(const std::shared_ptr<ApplicationInfo> &info,
+													   std::shared_ptr<IcePort> ice_port,
+													   std::shared_ptr<RtcSignallingServer> rtc_signalling)
+{
+	auto application = std::make_shared<RtcApplication>(info, ice_port, rtc_signalling);
+	application->Start();
+	return application;
+}
+
+RtcApplication::RtcApplication(const std::shared_ptr<ApplicationInfo> &info,
+                               std::shared_ptr<IcePort> ice_port,
+                               std::shared_ptr<RtcSignallingServer> rtc_signalling)
+	:Application(info)
+{
+	_ice_port = ice_port;
+	_rtc_signalling = rtc_signalling;
+}
+
+RtcApplication::~RtcApplication()
+{
+	Stop();
+	logd("WEBRTC", "RtcApplication(%d) has been terminated finally", GetId());
+}
+
+std::shared_ptr<Certificate> RtcApplication::GetCertificate()
+{
+	return _certificate;
+}
+
+std::shared_ptr<Stream> RtcApplication::CreateStream(std::shared_ptr<StreamInfo> info)
+{
+	// Stream Class 생성할때는 복사를 사용한다.
+	logd("WEBRTC", "CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
+	return RtcStream::Create(GetSharedPtrAs<Application>(), *info.get());
+}
+
+bool RtcApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
+{
+	// Input이 종료된 경우에 호출됨, 이 경우에는 Stream을 삭제 해야 하고, 그 전에 연결된 모든 Session을 종료
+	// StreamInfo로 Stream을 구한다.
+	logd("WEBRTC", "DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
+
+	auto stream = std::static_pointer_cast<RtcStream>(GetStream(info->GetId()));
+	if(stream == nullptr)
+	{
+		loge("WEBRTC", "Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
+		return false;
+	}
+
+	// 모든 Session에 Frame을 전달한다.
+	for (auto const &x : stream->GetSessionMap())
+	{
+		auto session = std::static_pointer_cast<RtcSession>(x.second);
+
+		// IcePort에 모든 Session 삭제
+		_ice_port->RemoveSession(session);
+
+		// Signalling에 모든 Session 삭제
+		_rtc_signalling->Disconnect(GetName(), stream->GetName(), session->GetPeerSDP());
+	}
+
+	logi("WEBRTC", "%s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
+
+	return true;
+}
+
+// 전송
+void RtcApplication::SendVideoFrame(std::shared_ptr<StreamInfo> info,
+									std::shared_ptr<MediaTrack> track,
+								  std::unique_ptr<EncodedFrame> encoded_frame,
+								  std::unique_ptr<CodecSpecificInfo> codec_info,
+								  std::unique_ptr<FragmentationHeader> fragmentation)
+{
+	// 향후 필요한 경우 추가 동작을 구현한다.
+
+	Application::SendVideoFrame(info,
+								track,
+								std::move(encoded_frame),
+								std::move(codec_info),
+								std::move(fragmentation));
+}
+
+bool RtcApplication::Start()
+{
+	if(!_certificate)
+	{
+		// 인증서를 생성한다.
+		_certificate = std::make_shared<Certificate>();
+		if (!_certificate->Generate())
+		{
+			loge("WEBRTC", "Cannot create certificate");
+			return false;
+		}
+		//For Test
+		//_certificate->GenerateFromPem("cert.pem");
+		logi("WEBRTC", "Webrtc Application Started");
+	}
+
+	return Application::Start();
+}
+
+bool RtcApplication::Stop()
+{
+	// TODO(dimiden): Application이 종료되는 경우는 향후 Application 단위의 재시작 기능이 개발되면 필요함
+	// 그 전에는 프로그램 종료까지 본 함수는 호출되지 않음
+	return Application::Stop();
+}

@@ -1,0 +1,18 @@
+LOCAL_PATH := $(call get_local_path)
+
+LIBRTMP_PATH := $(LOCAL_PATH)/librtmp-2.4
+LIBRTMP_CONF_PATH := $(realpath $(LIBRTMP_PATH))/librtmp.a
+
+include $(CLEAR_VARIABLES)
+
+LOCAL_TARGET := librtmp.a
+LOCAL_PREBUILT_TARGET := $(LIBRTMP_PATH)/$(LOCAL_TARGET)
+$(LOCAL_PREBUILT_TARGET): $(LIBRTMP_CONF_PATH)
+
+include $(BUILD_PREBUILT_LIBRARY)
+
+include $(CLEAR_VARIABLES)
+
+$(LIBRTMP_CONF_PATH):
+	@cd "$(LIBRTMP_PATH)" && make
+
