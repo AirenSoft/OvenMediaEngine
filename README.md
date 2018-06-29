@@ -1,6 +1,6 @@
 # OvenMediaEngine (OME)
 ## What is OvenMediaEngine?
-OvenMediaEngine(OME) is a streaming engine for real-time live broadcasting with ultra low latency. It receives the RTMP stream from general broadcasting studio such as OBS, XSplit and transmits it on Webrtc. The streams can be played in the browser with ultra low latency without plug-ins. To make it easier to play webrtc streams in browsers, we are working on another HTML5 player project [OvenPlayer](https://github.com/AirenSoft/OvenPlayer).
+OvenMediaEngine(OME) is a streaming engine for real-time live broadcasting with ultra low latency. It receives the RTMP stream from general broadcasting studio such as OBS, XSplit and transmits it on WebRTC. The streams can be played in the browser with ultra low latency without plug-ins. To make it easier to play WebRTC streams in browsers, we are working on another HTML5 player project [OvenPlayer](https://github.com/AirenSoft/OvenPlayer).
 
 Our goal is to make it easier for you d build stable real-time broadcating service easily.
  
