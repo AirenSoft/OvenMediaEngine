@@ -6,7 +6,7 @@ before_install:
 
 install:
   - docker pull ubuntu:18.04
-  - $TRAVIS_BUILD_DIR/Docker/ubuntu/build_images.sh
+  - cd $TRAVIS_BUILD_DIR/Docker/ubuntu/ && ./build_images.sh
 
 after_success:
   # TODO: nofity / upload to docker hub
