@@ -1,8 +1,12 @@
----
+sudo: required
+
 before_install:
-  - sudo apt-get update && apt-get install -y build-essential
-  - sudo apt-get bc nasm autoconf libtool zlib1g-dev pkg-config curl
-  - chmod +x $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/*.sh
+  # c++11
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update -qq
+addons:
+  apt:
+    update: true
 
 # Language selection
 language: cpp
@@ -12,6 +16,12 @@ compiler: gcc
 
 # We may change the build prefix so we don't have to have the previlige
 install:
+  # c++11
+  - sudo apt-get install -qq g++-5
+  - sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-5 90
+  # media essential
+  - sudo apt-get bc nasm autoconf libtool zlib1g-dev pkg-config curl
+  - chmod +x $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/*.sh
   - sudo $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_openssl.sh
   - sudo $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_libvpx.sh
   - sudo $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_libopus.sh
