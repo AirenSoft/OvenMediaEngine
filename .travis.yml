@@ -1,34 +1,12 @@
 sudo: required
+dist: trusty
 
 before_install:
-  # c++11
-  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  - sudo apt-get update -qq
-addons:
-  apt:
-    update: true
+  - chmod +x $TRAVIS_BUILD_DIR/Docker/ubuntu/build_images.sh
 
-# Language selection
-language: cpp
-
-# Compiler selection
-compiler: gcc
-
-# We may change the build prefix so we don't have to have the previlige
 install:
-  # c++11
-  - sudo apt-get install -qq g++-5
-  - sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-5 90
-  # media essential
-  - sudo apt-get bc nasm autoconf libtool zlib1g-dev pkg-config curl
-  - chmod +x $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/*.sh
-  - sudo $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_openssl.sh
-  - sudo $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_libvpx.sh
-  - sudo $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_libopus.sh
-  - sudo $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_libsrtp.sh
-  - sudo $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_ffmpeg.sh
+  - docker pull ubuntu:18.04
+  - $TRAVIS_BUILD_DIR/Docker/ubuntu/build_images.sh
 
-# build steps
-script:
-  - cd ${TRAVIS_BUILD_DIR}
-  - make
+after_success:
+  # TODO: nofity / upload to docker hub
