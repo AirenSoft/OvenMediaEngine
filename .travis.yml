@@ -1,0 +1,12 @@
+sudo: required
+dist: trusty
+
+before_install:
+  - chmod +x $TRAVIS_BUILD_DIR/Docker/ubuntu/build_images.sh
+
+install:
+  - docker pull ubuntu:18.04
+  - cd $TRAVIS_BUILD_DIR/Docker/ubuntu/ && ./build_images.sh
+
+after_success:
+  # TODO: nofity / upload to docker hub
