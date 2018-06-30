@@ -1,8 +1,8 @@
 sudo: required
 before_install:
-  apt-get update && apt-get install -y build-essential
-  apt-get bc nasm autoconf libtool zlib1g-dev pkg-config curl
-  chmod +x $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/*.sh
+  - apt-get update && apt-get install -y build-essential
+  - apt-get bc nasm autoconf libtool zlib1g-dev pkg-config curl
+  - chmod +x $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/*.sh
 
 # Language selection
 language: cpp
@@ -10,13 +10,14 @@ language: cpp
 # Compiler selection
 compiler: gcc
 
-install:sh
-  $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_openssl.sh
-  $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_libvpx.sh
-  $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_libopus.sh
-  $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_libsrtp.sh
-  $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_ffmpeg.sh
+install:
+  - $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_openssl.sh
+  - $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_libvpx.sh
+  - $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_libopus.sh
+  - $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_libsrtp.sh
+  - $TRAVIS_BUILD_DIR/Docker/ubuntu/ome_base/install_ffmpeg.sh
 
 # build steps
 script:
-  make
+  - cd ${TRAVIS_BUILD_DIR}
+  - make
