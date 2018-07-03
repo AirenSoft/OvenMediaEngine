@@ -1,9 +1,9 @@
 # OvenMediaEngine (OME)
 ## What is OvenMediaEngine?
-OvenMediaEngine(OME) is a streaming engine for real-time live broadcasting with ultra low latency. It receives the RTMP stream from general broadcasting studio such as OBS, XSplit and transmits it on WebRTC. The streams can be played in the browser with ultra low latency without plug-ins. To make it easier to play WebRTC streams in browsers, we are working on another HTML5 player project [OvenPlayer](https://github.com/AirenSoft/OvenPlayer).
+OvenMediaEngine(OME) is a streaming engine for real-time live broadcasting with Ultra-low latency. It receives the RTMP stream from general broadcasting studios such as OBS, XSplit and transmit it on WebRTC. Video streams with Ultra-low latency can be played in a browser without plug-ins. To make it easier to play WebRTC streams in browsers, we are working on another HTML5 player project [OvenPlayer](https://github.com/AirenSoft/OvenPlayer).
 
-Our goal is to make it easier for you d build stable real-time broadcating service easily.
- 
+Our goal is to make it easier for you to build a stable real-time broadcasting service.
+
 ## Features
 - RTMP Input, Webrtc Output
 - Live transcoding (VP8, Opus)
@@ -13,7 +13,7 @@ Our goal is to make it easier for you d build stable real-time broadcating servi
 - Configuration
 
 ## Supported Platforms
-We already support the following platforms:
+We support the following platforms:
 - Ubuntu 18
 - Centos 7
 - Fedora 28
@@ -216,13 +216,17 @@ $ cat conf/Server.xml
                 </Host>
         </Hosts>
 </Server>
+
+$ ./main
+[07-03 12:29:20.705] I 18780 OvenMediaEngine | main.cpp:22 | OvenMediaEngine v0.1.1 (build: 18062600) is started on [Dim-Ubuntu] (Linux x86_64 - 4.15.0-23-generic, #25-Ubuntu SMP Wed May 23 18:02:16 UTC 2018)
+...
 ```
 
 ## How to Contribute
 Please read [Guidelines](CONTRIBUTING.md) and our [Rules](CODE_OF_CONDUCT.md).
 
 ## Future works
-The following features will be supported, and check the milestones for details.
+The following features will be supported, and check the milestones for more details.
 - Audio support
 - Various input stream
   - file, webrtc, mpeg-ts 
