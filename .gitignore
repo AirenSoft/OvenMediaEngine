@@ -1,0 +1,13 @@
+.DS_Store
+
+intermediates
+logs
+
+.idea
+cmake-build-debug
+CMakeLists.txt
+
+*.o
+*.d
+*.pc
+*.texi
