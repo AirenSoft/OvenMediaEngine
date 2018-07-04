@@ -25,6 +25,6 @@ Suggest new features that you and others would find useful. When you register it
 
 ### Improving documentation and Writing code
 
-We are still discussing the commit guidelines, style guides, testing methods, and Pull request processes. It is similar to the way many other projects use it. However, if you want to contribute immediately, please create it as an Issue or mail to rock@airensoft.com or underdog@airensoft.com. Please don't worry! We're here to help you.
+We are still discussing the commit guidelines, style guides, testing methods, and Pull request processes. It is similar to the way many other projects use it. However, if you want to contribute immediately, please create it as an Issue or mail to dimiden@airensoft.com. Please don't worry! We're here to help you.
 
 > We will update this section little by little.
