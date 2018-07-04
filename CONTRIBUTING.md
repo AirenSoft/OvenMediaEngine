@@ -13,7 +13,7 @@ And any kind of contributions that can make our project better!
 
 ## First step
 
-All contributions start with an issue. If It is an unresolved issue, please join the issue or if it does not already exist, create an issue. Then we will contact you to find the best solution without getting lost. We hope all conversations are done through the issue.
+All contributions start with the Issue. Please join the Issue if it is an unresolved Issue or create an Issue if it does not already exist. We will contact you to find the best solution without getting lost. We hope all conversations are done through the Issue for history purposes.
 
 ### Bug reports
 
@@ -21,10 +21,10 @@ Please make sure you have tested with the latest stable version. It is helpful t
 
 ### Feature requests
 
-Suggest new features that will make you and many people like it. When you register an issue, please provide a description of the function, why it is needed, and how it should work. We will organize these features and provide milestones and implement them in the near future.
+Suggest new features that you and others would find useful. When you register it as an Issue, please provide a description of the function, why it is needed, and how it should work. We will organize these features and provide milestones and implement them in the near future.
 
 ### Improving documentation and Writing code
 
-We are still discussing about the commit guidelines, style guides, testing methods, and Pull request processes. Perhaps it is similar to the way many other projects use it. However, if you want to contribute immediately, please create an issue or mail to dimiden@airensoft.com. Please don't worry! We keep an eye on you.
+We are still discussing the commit guidelines, style guides, testing methods, and Pull request processes. It is similar to the way many other projects use it. However, if you want to contribute immediately, please create it as an Issue or mail to rock@airensoft.com or underdog@airensoft.com. Please don't worry! We're here to help you.
 
 > We will update this section little by little.
