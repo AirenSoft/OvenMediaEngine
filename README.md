@@ -236,10 +236,10 @@ To publish a live stream on the encoder, you need to set the RTMP URL as it is b
 
 Here's what each item means:
 
-  - <OME Server IP>: It is related to the first `<IPAddress>` in the `Server.xml` file above. Normally, you can use '<IPAddress>` as is.
-  - <OME RTMP Port>: You can use `<Port>` of `<Provider>` in `Server.xml` file above. If you using the default settings, RTMP default port (1935) is used. (If you set the default port (1935), the port can be omitted.)
-  - <Application name>: This value corresponds to `<Name>` of `<Application>` in `conf/Applications.xml` file. If you using the default settings, you can use `app`.
-  - <Stream name>: Name to distinguish the live stream, which can be determined by the publisher. The determined `stream name` will affect the URL to be played later on the player side.
+  - `<OME Server IP>`: It is related to the first `<IPAddress>` in the `Server.xml` file above. Normally, you can use `<IPAddress>` as is.
+  - `<OME RTMP Port>`: You can use `<Port>` of `<Provider>` in `Server.xml` file above. If you using the default settings, RTMP default port (1935) is used. (If you set the default port (1935), the port can be omitted.)
+  - `<Application name>`: This value corresponds to `<Name>` of `<Application>` in `conf/Applications.xml` file. If you using the default settings, you can use `app`.
+  - `<Stream name>`: Name to distinguish the live stream, which can be determined by the publisher. The determined `stream name` will affect the URL to be played later on the player side.
 
 After you enter the above RTMP URL into the encoder and start publishing, you will have an environment in which the player can view the live stream.
 
@@ -268,13 +268,13 @@ Please refer to the following source code to create an HTML page that is linked 
 
 Please note that the WebRTC Signaling URL in the sample code above is similar to an RTMP URL and consists of the following:
 
-  - ws://<OME Server IP>:[<OME Signalling Port>/<Application name>/<Stream name>
-    - <OME Server IP>: This is related to the second `<IPAddress>` element in `Server.xml` set up above. Normally, you can use the value of `<IPAddress>`.
-    - <OME Signaling Port>: You can use the value of `<SignalingPort>` in `Server.xml` above. If you using the default settings, it will be the Signaling Default Port (3333).
-    - <Application name>: Enter the value of `<Application name>` in the encoder as the value corresponding to `<Name>` in the <Application> in `conf/Applications.xml`.
-    - <Stream name>: This is the name to distinguish the live stream. OvenMediaEngine uses the `_o` suffix to distinguish it from the output of `<Stream name>` in the encoder.
+  - `ws://<OME Server IP>:[<OME Signalling Port>/<Application name>/<Stream name>`
+    - `<OME Server IP>`: This is related to the second `<IPAddress>` element in `Server.xml` set up above. Normally, you can use the value of `<IPAddress>`.
+    - `<OME Signaling Port>`: You can use the value of `<SignalingPort>` in `Server.xml` above. If you using the default settings, it will be the Signaling Default Port (3333).
+    - `<Application name>`: Enter the value of `<Application name>` in the encoder as the value corresponding to `<Name>` in the `<Application>` in `conf/Applications.xml`.
+    - `<Stream name>`: This is the name to distinguish the live stream. OvenMediaEngine uses the `_o` suffix to distinguish it from the output of `<Stream name>` in the encoder.
 
-For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC Signaling URL will be` ws://192.168.0.1:3333/app/stream_o`.
+For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC Signaling URL will be `ws://192.168.0.1:3333/app/stream_o`.
 
 ## How to Contribute
 Please read [Guidelines](CONTRIBUTING.md) and our [Rules](CODE_OF_CONDUCT.md).
