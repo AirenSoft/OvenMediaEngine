@@ -20,7 +20,9 @@ bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &patte
 	}
 
 	_request_handler_list.push_back((RequestInfo){
+#if DEBUG
 		.pattern_string = pattern,
+#endif // DEBUG
 		.pattern = std::regex(pattern),
 		.method = method,
 		.handler = handler
