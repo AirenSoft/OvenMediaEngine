@@ -269,12 +269,10 @@ Please refer to the following source code to create an HTML page that is linked 
 Please note that the WebRTC Signaling URL in the sample code above is similar to an RTMP URL and consists of the following:
 
   - ws://<OME Server IP>:[<OME Signalling Port>/<Application name>/<Stream name>
-
     - <OME Server IP>: This is related to the second `<IPAddress>` element in `Server.xml` set up above. Normally, you can use the value of `<IPAddress>`.
     - <OME Signaling Port>: You can use the value of `<SignalingPort>` in `Server.xml` above. If you using the default settings, it will be the Signaling Default Port (3333).
-    - <Application name: Enter the value of `<Application name>` in the encoder as the value corresponding to `<Name>` in the <Application> in `conf/Applications.xml`.
+    - <Application name>: Enter the value of `<Application name>` in the encoder as the value corresponding to `<Name>` in the <Application> in `conf/Applications.xml`.
     - <Stream name>: This is the name to distinguish the live stream. OvenMediaEngine uses the `_o` suffix to distinguish it from the output of `<Stream name>` in the encoder.
-
 
 For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC Signaling URL will be` ws://192.168.0.1:3333/app/stream_o`.
 
