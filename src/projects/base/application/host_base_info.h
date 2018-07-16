@@ -13,24 +13,24 @@
 class HostBaseInfo
 {
 public:
-    HostBaseInfo();
-    virtual ~HostBaseInfo();
+	HostBaseInfo();
+	virtual ~HostBaseInfo();
 
-    const ov::String GetIPAddress() const noexcept;
-    void SetIPAddress(ov::String ip_address);
+	const ov::String GetIPAddress() const noexcept;
+	void SetIPAddress(ov::String ip_address);
 
-    const int GetPort() const noexcept;
-    void SetPort(int port);
+	const int GetPort() const noexcept;
+	void SetPort(int port);
 
-    const ov::String GetProtocol() const noexcept;
-    void SetProtocol(ov::String protocol);
+	const ov::String GetProtocol() const noexcept;
+	void SetProtocol(ov::String protocol);
 
-    const int GetMaxConnection() const noexcept;
-    void SetMaxConnection(int max_connection);
+	const int GetMaxConnection() const noexcept;
+	void SetMaxConnection(int max_connection);
 
 protected:
-    ov::String _ip_address;
-    int _port;
-    ov::String _protocol;
-    int _max_connection;
+	ov::String _ip_address;
+	int _port;
+	ov::String _protocol;
+	int _max_connection;
 };

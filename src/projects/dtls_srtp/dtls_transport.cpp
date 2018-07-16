@@ -3,7 +3,7 @@
 #include <algorithm>
 
 DtlsTransport::DtlsTransport(uint32_t id, std::shared_ptr<Session> session)
-	: SessionNode(id, DTLS, session)
+	: SessionNode(id, SessionNodeType::Dtls, session)
 {
 	_state = SSL_NONE;
 	_peer_cerificate_verified = false;
@@ -224,7 +224,7 @@ bool DtlsTransport::MakeSrtpKey()
 	// Upper Node가 SRTP라면 값을 넘긴다.
 	// SRTP를 쓸때는 꼭 SRTP - DTLS 순서로 연결해야 한다.
 	auto node = GetUpperNode();
-	if(node->GetNodeType() == SRTP)
+	if(node->GetNodeType() == SessionNodeType::Srtp)
 	{
 		auto srtp_transport = std::static_pointer_cast<SrtpTransport>(node);
 		srtp_transport->SetKeyMeterial(crypto_suite, server_key_data, client_key_data);
@@ -268,14 +268,14 @@ bool DtlsTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov
 			break;
 		case SSL_CONNECTED:
 			// SRTP는 이미 암호화가 되었으므로 ICE로 바로 전송한다.
-			if(from_node == SRTP)
+			if(from_node == SessionNodeType::Srtp)
 			{
-				auto node = GetLowerNode(ICE);
+				auto node = GetLowerNode(SessionNodeType::Ice);
 				if(node == nullptr)
 				{
 					return false;
 				}
-				//logd("WEBRTC", "DtlsTransport Send next node : %d", data->GetLength());
+				//logtd("DtlsTransport Send next node : %d", data->GetLength());
 				return node->SendData(GetNodeType(), data);
 			}
 			else
@@ -408,7 +408,7 @@ int DtlsTransport::Read(void *buffer, size_t buffer_len, size_t *read)
 int DtlsTransport::Write(const void *data, size_t data_len, size_t *written)
 {
 	auto packet = ov::Data::CreateData(data, data_len);
-	auto node = GetLowerNode(ICE);
+	auto node = GetLowerNode(SessionNodeType::Ice);
 	if(node == nullptr)
 	{
 		loge("DTLS", "SSL write packet block");

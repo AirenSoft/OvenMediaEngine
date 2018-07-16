@@ -14,14 +14,14 @@
 class HostPublisherInfo : public HostBaseInfo
 {
 public:
-    HostPublisherInfo();
-    virtual ~HostPublisherInfo();
+	HostPublisherInfo();
+	virtual ~HostPublisherInfo();
 
-    std::shared_ptr<HostPublishersWebRtcInfo> GetWebRtcProperties() const noexcept;
-    void SetWebRtcProperties(std::shared_ptr<HostPublishersWebRtcInfo> webrtc_properties);
+	std::shared_ptr<HostPublishersWebRtcInfo> GetWebRtcProperties() const noexcept;
+	void SetWebRtcProperties(std::shared_ptr<HostPublishersWebRtcInfo> webrtc_properties);
 
-    ov::String ToString() const;
+	ov::String ToString() const;
 
 private:
-    std::shared_ptr<HostPublishersWebRtcInfo> _webrtc_properties;
+	std::shared_ptr<HostPublishersWebRtcInfo> _webrtc_properties;
 };

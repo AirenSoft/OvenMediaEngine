@@ -14,104 +14,109 @@
 #include <mutex>
 #include <condition_variable>
 
-template <typename T>
+template<typename T>
 class MediaQueue
 {
-  public:
+public:
 
-  MediaQueue() {
-    _abort = false;
-  }
+	MediaQueue()
+	{
+		_abort = false;
+	}
 
-  T pop()
-  {
-    if(_abort == true)
-    {
-        return static_cast<T>(nullptr);
-    }
+	T pop()
+	{
+		if(_abort)
+		{
+			return static_cast<T>(nullptr);
+		}
 
-    std::unique_lock<std::mutex> mlock(_mutex);
-    while (_queue.empty())
-    {
-      _cond.wait(mlock);
+		std::unique_lock<std::mutex> mlock(_mutex);
+		while(_queue.empty())
+		{
+			_cond.wait(mlock);
 
-      if(_abort==true)
-      {
-        return static_cast<T>(nullptr);
-      }
-    }
+			if(_abort)
+			{
+				return static_cast<T>(nullptr);
+			}
+		}
 
-    auto item = _queue.front();
-    _queue.pop();
+		auto item = _queue.front();
+		_queue.pop();
 
-    return item;
-  }
+		return item;
+	}
 
-  T pop_unique()
-  {
-    if(_abort == true)
-       return static_cast<T>(nullptr);
+	T pop_unique()
+	{
+		if(_abort)
+		{
+			return static_cast<T>(nullptr);
+		}
 
-    std::unique_lock<std::mutex> mlock(_mutex);
-    while (_queue.empty())
-    {
-      _cond.wait(mlock);
+		std::unique_lock<std::mutex> mlock(_mutex);
+		while(_queue.empty())
+		{
+			_cond.wait(mlock);
 
-      if(_abort==true)
-         return static_cast<T>(nullptr);
-    }
+			if(_abort)
+			{
+				return static_cast<T>(nullptr);
+			}
+		}
 
-    auto item = std::move(_queue.front());
+		auto item = std::move(_queue.front());
 
-    _queue.pop();
+		_queue.pop();
 
-    return item;
-  }
+		return item;
+	}
 
-  void pop(T& item)
-  {
-    std::unique_lock<std::mutex> mlock(_mutex);
+	void pop(T &item)
+	{
+		std::unique_lock<std::mutex> mlock(_mutex);
 
-    while (_queue.empty())
-    {
-      _cond.wait(mlock);
-    }
+		while(_queue.empty())
+		{
+			_cond.wait(mlock);
+		}
 
-    item = _queue.front();
-    _queue.pop();
-  }
+		item = _queue.front();
+		_queue.pop();
+	}
 
-  void push(const T& item)
-  {
-    std::unique_lock<std::mutex> mlock(_mutex);
-    _queue.push(item);
-    mlock.unlock();
-    _cond.notify_one();
-  }
+	void push(const T &item)
+	{
+		std::unique_lock<std::mutex> mlock(_mutex);
+		_queue.push(item);
+		mlock.unlock();
+		_cond.notify_one();
+	}
 
-  void push(T&& item)
-  {
-    std::unique_lock<std::mutex> mlock(_mutex);
-    _queue.push(std::move(item));
-    mlock.unlock();
-    _cond.notify_one();
-  }
+	void push(T &&item)
+	{
+		std::unique_lock<std::mutex> mlock(_mutex);
+		_queue.push(std::move(item));
+		mlock.unlock();
+		_cond.notify_one();
+	}
 
-  uint32_t size()
-  {
-    return _queue.size();
-  }
+	size_t size()
+	{
+		return _queue.size();
+	}
 
-  // TODO: Abort
-  void abort()
-  {
-    _abort = true;
-    _cond.notify_one();
-  }
+	// TODO: Abort
+	void abort()
+	{
+		_abort = true;
+		_cond.notify_one();
+	}
 
-  private:
-    std::queue<T> _queue;
-    std::mutex _mutex;
-    std::condition_variable _cond;
-    bool _abort;
+private:
+	std::queue<T> _queue;
+	std::mutex _mutex;
+	std::condition_variable _cond;
+	bool _abort;
 };

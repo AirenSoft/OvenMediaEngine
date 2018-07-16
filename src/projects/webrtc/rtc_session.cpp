@@ -1,11 +1,14 @@
+#include "rtc_private.h"
 #include "rtc_session.h"
 #include "rtc_application.h"
 
+#include <utility>
+
 std::shared_ptr<RtcSession> RtcSession::Create(std::shared_ptr<Application> application,
-											   std::shared_ptr<Stream> stream,
-											   std::shared_ptr<SessionDescription> offer_sdp,
-											   std::shared_ptr<SessionDescription> peer_sdp,
-											   std::shared_ptr<IcePort> ice_port)
+                                               std::shared_ptr<Stream> stream,
+                                               std::shared_ptr<SessionDescription> offer_sdp,
+                                               std::shared_ptr<SessionDescription> peer_sdp,
+                                               std::shared_ptr<IcePort> ice_port)
 {
 	auto session = std::make_shared<RtcSession>(application, stream, offer_sdp, peer_sdp, ice_port);
 	if(!session->Start())
@@ -16,20 +19,20 @@ std::shared_ptr<RtcSession> RtcSession::Create(std::shared_ptr<Application> appl
 }
 
 RtcSession::RtcSession(std::shared_ptr<Application> application,
-					   std::shared_ptr<Stream> stream,
-					   std::shared_ptr<SessionDescription> offer_sdp,
+                       std::shared_ptr<Stream> stream,
+                       std::shared_ptr<SessionDescription> offer_sdp,
                        std::shared_ptr<SessionDescription> peer_sdp,
                        std::shared_ptr<IcePort> ice_port)
-	: Session(application, stream)
+	: Session(std::move(application), std::move(stream))
 {
-	_offer_sdp = offer_sdp;
-	_peer_sdp = peer_sdp;
-	_ice_port = ice_port;
+	_offer_sdp = std::move(offer_sdp);
+	_peer_sdp = std::move(peer_sdp);
+	_ice_port = std::move(ice_port);
 }
 
 RtcSession::~RtcSession()
 {
-	logd("WEBRTC", "RtcSession(%d) has been terminated finally", GetId());
+	logtd("RtcSession(%d) has been terminated finally", GetId());
 
 	_rtp_rtcp_map.clear();
 }
@@ -44,16 +47,16 @@ bool RtcSession::Start()
 	auto session = std::static_pointer_cast<Session>(GetSharedPtr());
 
 	// SRTP 생성
-	_srtp_transport = std::make_shared<SrtpTransport>(SRTP, session);
+	_srtp_transport = std::make_shared<SrtpTransport>((uint32_t)SessionNodeType::Srtp, session);
 
 	// DTLS 생성
-	_dtls_transport = std::make_shared<DtlsTransport>(DTLS, session);
+	_dtls_transport = std::make_shared<DtlsTransport>((uint32_t)SessionNodeType::Dtls, session);
 	std::shared_ptr<RtcApplication> application = std::static_pointer_cast<RtcApplication>(GetApplication());
 	_dtls_transport->SetLocalCertificate(application->GetCertificate());
 	_dtls_transport->StartDTLS();
 
 	// ICE-DTLS 생성
-	_dtls_ice_transport = std::make_shared<DtlsIceTransport>(ICE, session, _ice_port);
+	_dtls_ice_transport = std::make_shared<DtlsIceTransport>((uint32_t)SessionNodeType::Ice, session, _ice_port);
 
 	// RtpRtcp를 생성하면서 SRTP와 연결한다.
 
@@ -63,13 +66,13 @@ bool RtcSession::Start()
 
 	if(offer_media_desc_list.size() != peer_media_desc_list.size())
 	{
-		loge("WEBRTC", "m= line of answer does not correspod with offer");
+		logte("m= line of answer does not correspod with offer");
 		return false;
 	}
 
 	// RFC3264
 	// For each "m=" line in the offer, there MUST be a corresponding "m=" line in the answer.
-	for(int i=0; i<peer_media_desc_list.size(); i++)
+	for(int i = 0; i < peer_media_desc_list.size(); i++)
 	{
 		auto peer_media_desc = peer_media_desc_list[i];
 		auto offer_media_desc = offer_media_desc_list[i];
@@ -78,7 +81,7 @@ bool RtcSession::Start()
 		auto payload = peer_media_desc->GetFirstPayload();
 		if(payload == nullptr)
 		{
-			loge("WEBRTC", "Failed to get the first payload type of peer sdp");
+			logte("Failed to get the first payload type of peer sdp");
 			return false;
 		}
 
@@ -86,7 +89,7 @@ bool RtcSession::Start()
 		auto track = GetRtcStream()->GetRtcTrack(payload->GetId());
 		if(track == nullptr)
 		{
-			loge("WEBRTC", "Failed to find track associated with %d payload");
+			logte("Failed to find track associated with %d payload");
 			return false;
 		}
 
@@ -94,8 +97,8 @@ bool RtcSession::Start()
 		// peer에서 받기 거부한 m= line이 있는지 체크하여 track에서 뺀다, 현재는 다 받기 때문에 모두 보낸다.
 
 		auto rtp_rtcp = std::make_shared<RtpRtcp>(track->GetId(),
-												  session,
-												  peer_media_desc->GetMediaType() == MediaDescription::MediaType::AUDIO);
+		                                          session,
+		                                          peer_media_desc->GetMediaType() == MediaDescription::MediaType::AUDIO);
 		rtp_rtcp->Initialize();
 		rtp_rtcp->SetSSRC(offer_media_desc->GetSsrc());
 		rtp_rtcp->SetPayloadType(payload->GetId());
@@ -123,7 +126,7 @@ bool RtcSession::Start()
 
 bool RtcSession::Stop()
 {
-	logd("WEBRTC", "Stop session. Peer sdp session id : %u", GetPeerSDP()->GetSessionId());
+	logtd("Stop session. Peer sdp session id : %u", GetPeerSDP()->GetSessionId());
 
 	// 연결된 세션을 정리한다.
 	_dtls_ice_transport->Stop();
@@ -151,16 +154,16 @@ void RtcSession::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, con
 	// NETWORK에서 받은 Packet은 DTLS로 넘긴다.
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
 
-	_dtls_ice_transport->OnDataReceived(NONE, data);
+	_dtls_ice_transport->OnDataReceived(SessionNodeType::None, data);
 }
 
 bool RtcSession::SendOutgoingVideoData(std::shared_ptr<MediaTrack> track,
-									   FrameType frame_type,
-									   uint32_t timestamp,
-									   const uint8_t *payload_data,
-									   size_t payload_size,
-									   const FragmentationHeader *fragmentation,
-									   const RTPVideoHeader *rtp_video_header)
+                                       FrameType frame_type,
+                                       uint32_t timestamp,
+                                       const uint8_t *payload_data,
+                                       size_t payload_size,
+                                       const FragmentationHeader *fragmentation,
+                                       const RTPVideoHeader *rtp_video_header)
 {
 	// Track ID로 rtp_rtcp를 찾는다.
 	auto it = _rtp_rtcp_map.find(track->GetId());
@@ -172,12 +175,12 @@ bool RtcSession::SendOutgoingVideoData(std::shared_ptr<MediaTrack> track,
 
 	auto rtp_rtcp = it->second;
 
-	//logd("WEBRTC", "RtcSession Send first node : %d", payload_size);
+	//logtd("RtcSession Send first node : %d", payload_size);
 	// SendOutgoingData 를 호출하면 최종적으로 SendRtpToNetwork가 호출된다.
 	return rtp_rtcp->SendOutgoingData(frame_type,
-									  timestamp,
-									  payload_data,
-									  payload_size,
-									  fragmentation,
-									  rtp_video_header);
+	                                  timestamp,
+	                                  payload_data,
+	                                  payload_size,
+	                                  fragmentation,
+	                                  rtp_video_header);
 }

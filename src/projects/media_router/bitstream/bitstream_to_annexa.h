@@ -2,7 +2,7 @@
 //
 //  MediaRouter
 //
-//  Created by Kwon Keuk Hanb
+//  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================

@@ -1,7 +1,7 @@
 /*
  * We referenced this code from WEBRTC NATIVE CODE.
 
-[Webrtc Native Code License]
+[WebRTC Native Code License]
 
 Copyright (c) 2011, The WebRTC project authors. All rights reserved.
 

@@ -11,7 +11,7 @@
 
 
 DtlsIceTransport::DtlsIceTransport(uint32_t node_id, std::shared_ptr<Session> session, std::shared_ptr<IcePort> ice_port)
-	:SessionNode(node_id, ICE, session)
+	: SessionNode(node_id, SessionNodeType::Ice, session)
 {
 	_ice_port = ice_port;
 }
@@ -31,7 +31,7 @@ bool DtlsIceTransport::SendData(SessionNodeType from_node, const std::shared_ptr
 		return false;
 	}
 
-	//logd("WEBRTC", "DtlsIceTransport Send by ice port : %d", data->GetLength());
+	//logtd("DtlsIceTransport Send by ice port : %d", data->GetLength());
 	// ICE_PORT로 최종 전송한다. (Out of session)
 	_ice_port->Send(GetSession(), data);
 	return true;

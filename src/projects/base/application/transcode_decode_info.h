@@ -13,14 +13,14 @@
 class TranscodeDecodeInfo
 {
 public:
-    TranscodeDecodeInfo();
-    virtual ~TranscodeDecodeInfo();
+	TranscodeDecodeInfo();
+	virtual ~TranscodeDecodeInfo();
 
-    std::shared_ptr<const TranscodeVideoInfo> GetVideo() const noexcept;
-    void SetVideo(std::shared_ptr<TranscodeVideoInfo> video);
+	std::shared_ptr<const TranscodeVideoInfo> GetVideo() const noexcept;
+	void SetVideo(std::shared_ptr<TranscodeVideoInfo> video);
 
-    ov::String ToString() const;
+	ov::String ToString() const;
 
 private:
-    std::shared_ptr<TranscodeVideoInfo> _video;
+	std::shared_ptr<TranscodeVideoInfo> _video;
 };

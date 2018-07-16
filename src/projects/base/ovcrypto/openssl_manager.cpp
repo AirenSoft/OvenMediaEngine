@@ -12,7 +12,7 @@
 #include "openssl_manager.h"
 #include "openssl/ssl.h"
 
-std::mutex*	OpenSSLManager::_mutex_array = nullptr;
+std::mutex *OpenSSLManager::_mutex_array = nullptr;
 
 OpenSSLManager::OpenSSLManager()
 {
@@ -51,7 +51,7 @@ bool OpenSSLManager::ReleaseOpenSSL()
 	CRYPTO_set_id_callback(nullptr);
 	CRYPTO_set_locking_callback(nullptr);
 
-	delete [] _mutex_array;
+	delete[] _mutex_array;
 	return true;
 }
 
@@ -63,7 +63,7 @@ unsigned long OpenSSLManager::GetThreadId()
 
 void OpenSSLManager::MutexLock(int mode, int n, const char *file, int line)
 {
-	if (mode & CRYPTO_LOCK)
+	if(mode & CRYPTO_LOCK)
 	{
 		_mutex_array[n].lock();
 	}

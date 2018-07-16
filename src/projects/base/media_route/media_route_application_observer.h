@@ -16,9 +16,10 @@
 class MediaRouteApplicationObserver : public ov::EnableSharedFromThis<MediaRouteApplicationObserver>
 {
 public:
-	enum ObserverType {
-		OBSERVER_TYPE_PUBLISHER = 0,
-		OBSERVER_TYPE_TRANSCODER
+	enum class ObserverType : int8_t
+	{
+		Publisher = 0,
+		Transcoder
 	};
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 인터페이스
@@ -31,10 +32,10 @@ public:
 	// 스트림(Stream) 삭제
 	virtual bool OnDeleteStream(
 		std::shared_ptr<StreamInfo> info) = 0;
-	
+
 
 	// 비디오 프레임 전달
-	virtual bool 	OnSendVideoFrame(
+	virtual bool OnSendVideoFrame(
 		std::shared_ptr<StreamInfo> stream,
 		std::shared_ptr<MediaTrack> track,
 		std::unique_ptr<EncodedFrame> encoded_frame,
@@ -46,11 +47,14 @@ public:
 	virtual bool OnSendFrame(
 		std::shared_ptr<StreamInfo> info,
 		std::unique_ptr<MediaBuffer> frame
-	) { return false; }
+	)
+	{
+		return false;
+	}
 
-
-	virtual ObserverType GetObserverType() {
-		return OBSERVER_TYPE_PUBLISHER;
+	virtual ObserverType GetObserverType()
+	{
+		return ObserverType::Publisher;
 	}
 };
 

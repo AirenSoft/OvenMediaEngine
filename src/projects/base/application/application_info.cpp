@@ -7,9 +7,11 @@
 //
 //==============================================================================
 #include <base/ovlibrary/ovlibrary.h>
+#include <utility>
 #include "application_info.h"
 
 ApplicationInfo::ApplicationInfo()
+	: _type(ApplicationType::Unknown)
 {
 	// ID RANDOM 생성
 	_id = ov::Random::GenerateInteger();
@@ -61,7 +63,7 @@ void ApplicationInfo::SetType(ApplicationType type)
 	_type = type;
 }
 
-void ApplicationInfo::SetTypeFromString(ov::String type_string)
+void ApplicationInfo::SetTypeFromString(const ov::String &type_string)
 {
 	_type = ApplicationInfo::ApplicationTypeFromString(type_string);
 }
@@ -90,13 +92,13 @@ const char *ApplicationInfo::StringFromApplicationType(ApplicationType applicati
 {
 	switch(application_type)
 	{
-		case ApplicationType::live:
+		case ApplicationType::Live:
 			return "live";
-		case ApplicationType::vod:
+		case ApplicationType::Vod:
 			return "vod";
-		case ApplicationType::liveedge:
+		case ApplicationType::LiveEdge:
 			return "liveedge";
-		case ApplicationType::vodedge:
+		case ApplicationType::VodEdge:
 			return "vodedge";
 		default:
 			return "unknown";
@@ -107,40 +109,40 @@ const ApplicationType ApplicationInfo::ApplicationTypeFromString(ov::String type
 {
 	if(type_string == "live")
 	{
-		return ApplicationType::live;
+		return ApplicationType::Live;
 	}
 	else if(type_string == "vod")
 	{
-		return ApplicationType::vod;
+		return ApplicationType::Vod;
 	}
 	else if(type_string == "liveedge")
 	{
-		return ApplicationType::liveedge;
+		return ApplicationType::LiveEdge;
 	}
 	else if(type_string == "vodedge")
 	{
-		return ApplicationType::vodedge;
+		return ApplicationType::VodEdge;
 	}
 	else
 	{
-		return ApplicationType::unknown;
+		return ApplicationType::Unknown;
 	}
 }
 
 ov::String ApplicationInfo::ToString() const
 {
-	ov::String result = ov::String::FormatString("{\"name\": \"%s\", \"type\": \"%s\"", _name.CStr(), ApplicationInfo::StringFromApplicationType(_type));
+	ov::String result = ov::String::FormatString(R"({"name": "%s", "type": "%s")", _name.CStr(), ApplicationInfo::StringFromApplicationType(_type));
 
-	if(_providers.size() > 0)
+	if(_providers.empty() == false)
 	{
 		result.Append(", \"providers\": [");
 
 		for(auto iterator = _providers.begin(); iterator != _providers.end(); ++iterator)
 		{
-            if(iterator != _providers.begin())
-            {
-                result.Append(",");
-            }
+			if(iterator != _providers.begin())
+			{
+				result.Append(",");
+			}
 
 			result.AppendFormat("%s", (*iterator)->ToString().CStr());
 		}
@@ -148,16 +150,16 @@ ov::String ApplicationInfo::ToString() const
 		result.Append("]");
 	}
 
-	if(_publishers.size() > 0)
+	if(_publishers.empty() == false)
 	{
 		result.Append(", \"publishers\": [");
 
 		for(auto iterator = _publishers.begin(); iterator != _publishers.end(); ++iterator)
 		{
-            if(iterator != _publishers.begin())
-            {
-                result.Append(",");
-            }
+			if(iterator != _publishers.begin())
+			{
+				result.Append(",");
+			}
 
 			result.AppendFormat("%s", (*iterator)->ToString().CStr());
 		}

@@ -2,7 +2,7 @@
 //
 //  Provider Base Class 
 //
-//  Created by Kwon Keuk Hanb
+//  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -15,9 +15,9 @@
 namespace pvd
 {
 	Application::Application(const ApplicationInfo &info)
-		:ApplicationInfo(info)
+		: ApplicationInfo(info)
 	{
-		
+
 	}
 
 	Application::~Application()
@@ -47,7 +47,7 @@ namespace pvd
 
 	std::shared_ptr<Stream> Application::GetStream(ov::String stream_name)
 	{
-		for(auto const & x : _streams)
+		for(auto const &x : _streams)
 		{
 			auto stream = x.second;
 			if(stream->GetName() == stream_name)
@@ -92,7 +92,7 @@ namespace pvd
 	bool Application::DeleteStream2(std::shared_ptr<Stream> stream)
 	{
 		logtd("DeleteStream");
-		
+
 		if(_streams.find(stream->GetId()) == _streams.end())
 		{
 			return false;

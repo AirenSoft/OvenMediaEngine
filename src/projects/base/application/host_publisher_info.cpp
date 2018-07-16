@@ -18,25 +18,25 @@ HostPublisherInfo::~HostPublisherInfo()
 
 std::shared_ptr<HostPublishersWebRtcInfo> HostPublisherInfo::GetWebRtcProperties() const noexcept
 {
-    return _webrtc_properties;
+	return _webrtc_properties;
 }
 
 void HostPublisherInfo::SetWebRtcProperties(std::shared_ptr<HostPublishersWebRtcInfo> webrtc_properties)
 {
-    _webrtc_properties = webrtc_properties;
+	_webrtc_properties = webrtc_properties;
 }
 
 ov::String HostPublisherInfo::ToString() const
 {
-    ov::String result = ov::String::FormatString("{\"ip_address\": \"%s\", \"port\": %d, \"protocol\": \"%s\", \"max_connection\": %d",
-                                                 _ip_address.CStr(), _port, _protocol.CStr(), _max_connection);
+	ov::String result = ov::String::FormatString("{\"ip_address\": \"%s\", \"port\": %d, \"protocol\": \"%s\", \"max_connection\": %d",
+	                                             _ip_address.CStr(), _port, _protocol.CStr(), _max_connection);
 
-    if(_webrtc_properties != nullptr)
-    {
-        result.AppendFormat(", \"webrtc_properties\": %s", _webrtc_properties->ToString().CStr());
-    }
+	if(_webrtc_properties != nullptr)
+	{
+		result.AppendFormat(", \"webrtc_properties\": %s", _webrtc_properties->ToString().CStr());
+	}
 
-    result.Append("}");
+	result.Append("}");
 
-    return result;
+	return result;
 }

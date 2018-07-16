@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include <vector>
 #include <algorithm>
@@ -32,31 +32,31 @@
 class TranscodeApplication : public MediaRouteApplicationConnector, public MediaRouteApplicationObserver
 {
 public:
-	static std::shared_ptr<TranscodeApplication> Create(std::shared_ptr<ApplicationInfo> appinfo);
+	static std::shared_ptr<TranscodeApplication> Create(std::shared_ptr<ApplicationInfo> app_info);
 
-    TranscodeApplication(std::shared_ptr<ApplicationInfo> appinfo);
-    ~TranscodeApplication();
+	TranscodeApplication(std::shared_ptr<ApplicationInfo> appinfo);
+	~TranscodeApplication();
 
-
-    MediaRouteApplicationObserver::ObserverType GetObserverType() {
-		return MediaRouteApplicationObserver::OBSERVER_TYPE_TRANSCODER;
-	} 
-
-	MediaRouteApplicationConnector::ConnectorType  GetConnectorType() {
-		return MediaRouteApplicationConnector::CONNECTOR_TYPE_TRANSCODER;
+	MediaRouteApplicationObserver::ObserverType GetObserverType()
+	{
+		return MediaRouteApplicationObserver::ObserverType::Transcoder;
 	}
-	
+
+	MediaRouteApplicationConnector::ConnectorType GetConnectorType()
+	{
+		return MediaRouteApplicationConnector::ConnectorType::Transcoder;
+	}
+
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 트랜스코드 어플리케이션 관련 모듈
 	////////////////////////////////////////////////////////////////////////////////////////////////
-public:
-	bool 	OnCreateStream(
+	bool OnCreateStream(
 		std::shared_ptr<StreamInfo> stream_info) override;
-	
-	bool 	OnDeleteStream(
+
+	bool OnDeleteStream(
 		std::shared_ptr<StreamInfo> stream_info) override;
-	
-	bool 	OnSendVideoFrame(
+
+	bool OnSendVideoFrame(
 		std::shared_ptr<StreamInfo> stream_info,
 		std::shared_ptr<MediaTrack> track,
 		std::unique_ptr<EncodedFrame> encoded_frame,
@@ -68,9 +68,15 @@ public:
 		std::unique_ptr<MediaBuffer> frame
 	) override;
 
+	const std::shared_ptr<ApplicationInfo> &GetApplicationInfo() const
+	{
+		return _app_info;
+	}
 
 private:
-	std::map<int32_t, std::shared_ptr<TranscodeStream>> _streams;	
+	std::map<int32_t, std::shared_ptr<TranscodeStream>> _streams;
 	std::mutex _mutex;
+
+	std::shared_ptr<ApplicationInfo> _app_info;
 };
 

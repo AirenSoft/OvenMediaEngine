@@ -2,7 +2,7 @@
 //
 //  Provider Base Class 
 //
-//  Created by Kwon Keuk Hanb
+//  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -21,6 +21,7 @@ namespace pvd
 	{
 		_router = router;
 	}
+
 	Provider::~Provider()
 	{
 
@@ -51,13 +52,13 @@ namespace pvd
 	bool Provider::Stop()
 	{
 		auto it = _applications.begin();
-		while( it != _applications.end())
+		while(it != _applications.end())
 		{
 			auto application = it->second;
-			
+
 			_router->UnregisterConnectorApp(application, application);
 			application->Stop();
-			
+
 			it = _applications.erase(it);
 		}
 
@@ -66,7 +67,7 @@ namespace pvd
 
 	std::shared_ptr<Application> Provider::GetApplication(ov::String app_name)
 	{
-		for(auto const & x : _applications)
+		for(auto const &x : _applications)
 		{
 			auto application = x.second;
 			if(application->GetName() == app_name)
@@ -78,7 +79,7 @@ namespace pvd
 		return nullptr;
 	}
 
-	std::shared_ptr<Stream>	Provider::GetStream(ov::String app_name, ov::String stream_name)
+	std::shared_ptr<Stream> Provider::GetStream(ov::String app_name, ov::String stream_name)
 	{
 		auto app = GetApplication(app_name);
 		if(!app)
@@ -99,7 +100,7 @@ namespace pvd
 		return _applications[app_id];
 	}
 
-	std::shared_ptr<Stream>	Provider::GetStream(uint32_t app_id, uint32_t stream_id)
+	std::shared_ptr<Stream> Provider::GetStream(uint32_t app_id, uint32_t stream_id)
 	{
 		auto app = GetApplication(app_id);
 		if(!app)

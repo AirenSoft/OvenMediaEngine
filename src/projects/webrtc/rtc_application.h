@@ -14,31 +14,31 @@ class RtcApplication : public Application
 {
 public:
 	static std::shared_ptr<RtcApplication> Create(const std::shared_ptr<ApplicationInfo> &info,
-												  std::shared_ptr<IcePort> ice_port,
-												  std::shared_ptr<RtcSignallingServer> rtc_signalling);
+	                                              std::shared_ptr<IcePort> ice_port,
+	                                              std::shared_ptr<RtcSignallingServer> rtc_signalling);
 	RtcApplication(const std::shared_ptr<ApplicationInfo> &info,
-				   std::shared_ptr<IcePort> ice_port,
-				   std::shared_ptr<RtcSignallingServer> rtc_signalling);
+	               std::shared_ptr<IcePort> ice_port,
+	               std::shared_ptr<RtcSignallingServer> rtc_signalling);
 	~RtcApplication() final;
 
-	std::shared_ptr<Certificate>	GetCertificate();
+	std::shared_ptr<Certificate> GetCertificate();
 
 private:
-	bool 			Start() override ;
-	bool 			Stop() override ;
+	bool Start() override;
+	bool Stop() override;
 
 
-	void 			SendVideoFrame(std::shared_ptr<StreamInfo> info,
-								   std::shared_ptr<MediaTrack> track,
-								   std::unique_ptr<EncodedFrame> encoded_frame,
-								   std::unique_ptr<CodecSpecificInfo> codec_info,
-								   std::unique_ptr<FragmentationHeader> fragmentation) override ;
+	void SendVideoFrame(std::shared_ptr<StreamInfo> info,
+	                    std::shared_ptr<MediaTrack> track,
+	                    std::unique_ptr<EncodedFrame> encoded_frame,
+	                    std::unique_ptr<CodecSpecificInfo> codec_info,
+	                    std::unique_ptr<FragmentationHeader> fragmentation) override;
 
 	// Application Implementation
-	std::shared_ptr<Stream> CreateStream(std::shared_ptr<StreamInfo> info) override ;
-	bool					DeleteStream(std::shared_ptr<StreamInfo> info) override ;
+	std::shared_ptr<Stream> CreateStream(std::shared_ptr<StreamInfo> info) override;
+	bool DeleteStream(std::shared_ptr<StreamInfo> info) override;
 
-	std::shared_ptr<IcePort>						_ice_port;
-	std::shared_ptr<RtcSignallingServer>			_rtc_signalling;
-	std::shared_ptr<Certificate>					_certificate;
+	std::shared_ptr<IcePort> _ice_port;
+	std::shared_ptr<RtcSignallingServer> _rtc_signalling;
+	std::shared_ptr<Certificate> _certificate;
 };

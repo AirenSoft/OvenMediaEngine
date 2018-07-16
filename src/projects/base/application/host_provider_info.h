@@ -13,8 +13,8 @@
 class HostProviderInfo : public HostBaseInfo
 {
 public:
-    HostProviderInfo();
-    virtual ~HostProviderInfo();
+	HostProviderInfo();
+	virtual ~HostProviderInfo();
 
-    ov::String ToString() const;
+	ov::String ToString() const;
 };

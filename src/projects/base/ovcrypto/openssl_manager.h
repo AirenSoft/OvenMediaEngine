@@ -8,8 +8,6 @@
 //==============================================================================
 #pragma once
 
-
-
 class OpenSSLManager
 {
 public:
@@ -20,9 +18,8 @@ public:
 	static bool ReleaseOpenSSL();
 
 private:
-	static unsigned long 	GetThreadId();
-	static void 			MutexLock(int mode, int n, const char * file, int line);
+	static unsigned long GetThreadId();
+	static void MutexLock(int mode, int n, const char *file, int line);
 
-
-	static std::mutex*		_mutex_array;
+	static std::mutex *_mutex_array;
 };

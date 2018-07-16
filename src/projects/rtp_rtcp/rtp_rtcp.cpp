@@ -1,7 +1,7 @@
 #include "rtp_rtcp.h"
 
 RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<Session> session, bool audio)
-	: SessionNode(id, RTP_RTCP, session)
+	: SessionNode(id, SessionNodeType::RtpRtcp, session)
 {
 	_audio_session_flag = audio;
 }
@@ -57,7 +57,7 @@ bool RtpRtcp::SendRtpToNetwork(std::unique_ptr<RtpPacket> packet)
 		return false;
 	}
 
-	//logd("WEBRTC", "RtpRtcp Send next node : %d", packet->GetData()->GetLength());
+	//logtd("RtpRtcp Send next node : %d", packet->GetData()->GetLength());
 	return node->SendData(GetNodeType(), packet->GetData());
 }
 

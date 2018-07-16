@@ -14,19 +14,19 @@
 class ServerInfo
 {
 public:
-    ServerInfo();
-    virtual ~ServerInfo();
+	ServerInfo();
+	virtual ~ServerInfo();
 
-    const ov::String GetName() const noexcept;
-    void SetName(ov::String name);
+	const ov::String GetName() const noexcept;
+	void SetName(ov::String name);
 
-    std::vector<std::shared_ptr<HostInfo>> GetHosts() const noexcept;
-    void AddHost(std::shared_ptr<HostInfo> host);
+	std::vector<std::shared_ptr<HostInfo>> GetHosts() const noexcept;
+	void AddHost(std::shared_ptr<HostInfo> host);
 
-    ov::String ToString() const;
+	ov::String ToString() const;
 
 private:
-    ov::String _name;
+	ov::String _name;
 
-    std::vector<std::shared_ptr<HostInfo>> _hosts;
+	std::vector<std::shared_ptr<HostInfo>> _hosts;
 };

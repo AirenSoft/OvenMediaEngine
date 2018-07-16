@@ -1,8 +1,9 @@
+#include "publisher_private.h"
 #include "stream.h"
 
 Stream::Stream(const std::shared_ptr<Application> application,
-			   const StreamInfo &info)
-	:StreamInfo(info)
+               const StreamInfo &info)
+	: StreamInfo(info)
 {
 	_application = application;
 }
@@ -36,7 +37,7 @@ std::shared_ptr<Application> Stream::GetApplication()
 	return _application;
 }
 
-const std::map<session_id_t, std::shared_ptr<Session>>&	Stream::GetSessionMap()
+const std::map<session_id_t, std::shared_ptr<Session>> &Stream::GetSessionMap()
 {
 	std::unique_lock<std::mutex> lock(_session_map_guard);
 	return _sessions;
@@ -55,7 +56,7 @@ bool Stream::RemoveSession(session_id_t id)
 	std::unique_lock<std::mutex> lock(_session_map_guard);
 	if(_sessions.count(id) <= 0)
 	{
-		logd("PUBLISHER", "Cannot find session : %u", id);
+		logtd("Cannot find session : %u", id);
 		return false;
 	}
 
@@ -66,7 +67,7 @@ bool Stream::RemoveSession(session_id_t id)
 	// Session 동작을 중지한다.
 	session->Stop();
 
-	logd("PUBLISHER", "Session deleted : %u", id);
+	logtd("Session deleted : %u", id);
 
 	return true;
 }

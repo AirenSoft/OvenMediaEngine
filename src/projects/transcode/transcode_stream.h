@@ -6,11 +6,9 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #pragma once
 
-
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include <vector>
 #include <queue>

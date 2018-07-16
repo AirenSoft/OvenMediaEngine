@@ -19,16 +19,16 @@ public:
 	Session(const SessionInfo &info, std::shared_ptr<Application> app, std::shared_ptr<Stream> stream);
 	virtual ~Session() = default;
 
-	std::shared_ptr<Application>		GetApplication();
-	std::shared_ptr<Stream>				GetStream();
+	std::shared_ptr<Application> GetApplication();
+	std::shared_ptr<Stream> GetStream();
 
-	virtual bool	Start();
-	virtual bool	Stop();
+	virtual bool Start();
+	virtual bool Stop();
 
 	// 상위 Layer에서 Packet을 수신받는다.
-	virtual void	OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std::shared_ptr<const ov::Data> data) = 0;
+	virtual void OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std::shared_ptr<const ov::Data> data) = 0;
 
-	enum class SessionState
+	enum class SessionState : int8_t
 	{
 		Ready,
 		Started,
@@ -36,13 +36,13 @@ public:
 		Error
 	};
 
-	SessionState	GetState();
-	virtual void	Terminate(ov::String reason);
+	SessionState GetState();
+	virtual void Terminate(ov::String reason);
 
 private:
-	std::shared_ptr<Application>		_application;
-	std::shared_ptr<Stream>				_stream;
-	SessionState						_state;
-	ov::String							_error_reason;
+	std::shared_ptr<Application> _application;
+	std::shared_ptr<Stream> _stream;
+	SessionState _state;
+	ov::String _error_reason;
 };
 

@@ -98,23 +98,23 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 
 		sdp += "\r\n";
 
-		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::GOOG_REMB))
+		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::GoogRemb))
 		{
 			sdp += ov::String::FormatString("a=rtcp-fb:%d goog_remb\r\n", payload->GetId());
 		}
-		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TRANSPORT_CC))
+		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TransportCc))
 		{
 			sdp += ov::String::FormatString("a=rtcp-fb:%d transport-cc\r\n", payload->GetId());
 		}
-		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::CCM_FIR))
+		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::CcmFir))
 		{
 			sdp += ov::String::FormatString("a=rtcp-fb:%d ccm fir\r\n", payload->GetId());
 		}
-		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::NACK))
+		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::Nack))
 		{
 			sdp += ov::String::FormatString("a=rtcp-fb:%d nack\r\n", payload->GetId());
 		}
-		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::NACK_PLI))
+		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::NackPli))
 		{
 			sdp += ov::String::FormatString("a=rtcp-fb:%d nack pli\r\n", payload->GetId());
 		}

@@ -8,6 +8,7 @@
 //==============================================================================
 
 #pragma once
+
 #include "sdp_base.h"
 
 class PayloadAttr
@@ -16,45 +17,47 @@ public:
 	PayloadAttr();
 	virtual ~PayloadAttr();
 
-	enum SupportCodec
+	enum class SupportCodec
 	{
-		VP8,
+		Unknown,
+		Vp8,
 		H264,
-		OPUS
+		Opus
 	};
 
-	enum RtcpFbType
+	enum class RtcpFbType
 	{
-		GOOG_REMB,
-		TRANSPORT_CC,
-		CCM_FIR,
-		NACK,
-		NACK_PLI,
-		NUMBER_OF_RTCPFB_TYPE
+		GoogRemb,
+		TransportCc,
+		CcmFir,
+		Nack,
+		NackPli,
+
+		NumberOfRtcpFbType
 	};
 
-	void 				SetId(uint8_t id);
-	uint8_t 			GetId();
+	void SetId(uint8_t id);
+	uint8_t GetId();
 
 	// a=rtpmap:97 VP8/50000
-	void 				SetRtpmap(const SupportCodec codec, const uint32_t rate, const ov::String parameters="");
-	bool 				SetRtpmap(const ov::String& codec, const uint32_t rate, const ov::String parameters="");
-	const SupportCodec 	GetCodec();
-	const ov::String	GetCodecStr();
-	const uint32_t 		GetCodecRate();
-	const ov::String	GetCodecParams();
+	void SetRtpmap(const SupportCodec codec, uint32_t rate, const ov::String &parameters = "");
+	bool SetRtpmap(const ov::String &codec, uint32_t rate, const ov::String &parameters = "");
+	const SupportCodec GetCodec();
+	const ov::String GetCodecStr();
+	const uint32_t GetCodecRate();
+	const ov::String GetCodecParams();
 
 	// a=rtcp-fb:96 nack pli
-	bool 				EnableRtcpFb(const ov::String& type, const bool on);
-	void 				EnableRtcpFb(const RtcpFbType& type, const bool on);
-	bool				IsRtcpFbEnabled(const RtcpFbType& type);
+	bool EnableRtcpFb(const ov::String &type, bool on);
+	void EnableRtcpFb(const RtcpFbType &type, bool on);
+	bool IsRtcpFbEnabled(const RtcpFbType &type);
 
 private:
-	uint8_t 			_id;
-	SupportCodec		_codec;
-	ov::String			_codec_str;
-	uint32_t 			_rate;
-	ov::String			_codec_param;
+	uint8_t _id;
+	SupportCodec _codec;
+	ov::String _codec_str;
+	uint32_t _rate;
+	ov::String _codec_param;
 
-	bool				_rtcpfb_support_flag[NUMBER_OF_RTCPFB_TYPE];
+	bool _rtcpfb_support_flag[(int)(RtcpFbType::NumberOfRtcpFbType)];
 };

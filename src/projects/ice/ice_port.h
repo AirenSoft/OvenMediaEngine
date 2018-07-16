@@ -108,7 +108,7 @@ private:
 	{
 		// client에 연결되어 있는 세션 정보
 		std::shared_ptr<SessionInfo> session_info;
-
+		
 		std::shared_ptr<SessionDescription> offer_sdp;
 		std::shared_ptr<SessionDescription> peer_sdp;
 

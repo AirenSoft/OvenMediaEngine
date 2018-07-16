@@ -11,15 +11,15 @@
 
 // x가 value가 아니면, func를 호출한 뒤 value 값으로 만듦
 #define OV_SAFE_FUNC(x, value, func, member) \
-	do \
-	{ \
+    do \
+    { \
         if((x) != (value)) \
         { \
             func ((x)member); \
             (x) = (value); \
         } \
     } \
-	while(false)
+    while(false)
 
 #define OV_SAFE_DELETE(x)                           OV_SAFE_FUNC(x, nullptr, delete,)
 #define OV_SAFE_FREE(x)                             OV_SAFE_FUNC(x, nullptr, OV_GLOBAL_NAMESPACE_PREFIX free,) // NOLINT

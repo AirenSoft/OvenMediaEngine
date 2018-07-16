@@ -13,30 +13,30 @@
 class TranscodeAudioInfo
 {
 public:
-    TranscodeAudioInfo();
-    virtual ~TranscodeAudioInfo();
+	TranscodeAudioInfo();
+	virtual ~TranscodeAudioInfo();
 
-    const bool GetActive() const noexcept;
-    void SetActive(bool active);
+	const bool GetActive() const noexcept;
+	void SetActive(bool active);
 
-    const ov::String GetCodec() const noexcept;
-    void SetCodec(ov::String codec);
+	const ov::String GetCodec() const noexcept;
+	void SetCodec(ov::String codec);
 
-    const int GetBitrate() const noexcept;
-    void SetBitrate(int bitrate);
+	const int GetBitrate() const noexcept;
+	void SetBitrate(int bitrate);
 
-    const int GetSamplerate() const noexcept;
-    void SetSamplerate(int samplerate);
+	const int GetSamplerate() const noexcept;
+	void SetSamplerate(int samplerate);
 
-    const int GetChannel() const noexcept;
-    void SetChannel(int channel);
+	const int GetChannel() const noexcept;
+	void SetChannel(int channel);
 
-    ov::String ToString() const;
+	ov::String ToString() const;
 
 private:
-    bool _active;
-    ov::String _codec;
-    int _bitrate;
-    int _samplerate;
-    int _channel;
+	bool _active;
+	ov::String _codec;
+	int _bitrate;
+	int _samplerate;
+	int _channel;
 };

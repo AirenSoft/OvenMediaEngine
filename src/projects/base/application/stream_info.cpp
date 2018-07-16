@@ -1,8 +1,6 @@
 #include <random>
 #include "stream_info.h"
 
-#include <base/ovlibrary/ovlibrary.h>
-
 #define OV_LOG_TAG "StreamInfo"
 
 using namespace MediaCommonType;
@@ -11,7 +9,7 @@ StreamInfo::StreamInfo()
 {
 	// 소스 타입
 	// _input_source_type = kSourceTypeOrigin;
-	
+
 	// ID RANDOM 생성
 	SetId(ov::Random::GenerateInteger());
 }
@@ -21,17 +19,16 @@ StreamInfo::StreamInfo(uint32_t stream_id)
 	_id = stream_id;
 }
 
-StreamInfo::StreamInfo(const StreamInfo &T)
+StreamInfo::StreamInfo(const StreamInfo &stream_info)
 {
-	_id = T._id;
-	_name = T._name;
-	
-	for (auto it=T._tracks.begin(); it!=T._tracks.end(); ++it)
+	_id = stream_info._id;
+	_name = stream_info._name;
+
+	for(auto &track : stream_info._tracks)
 	{
-    	auto track = it->second;
-    	auto new_track = std::make_shared<MediaTrack>(*track.get());
-    	AddTrack(new_track);
-    }
+		auto new_track = std::make_shared<MediaTrack>(*(track.second.get()));
+		AddTrack(new_track);
+	}
 }
 
 StreamInfo::~StreamInfo()
@@ -39,13 +36,12 @@ StreamInfo::~StreamInfo()
 
 }
 
-
 void StreamInfo::SetId(uint32_t id)
 {
 	_id = id;
 }
 
-uint32_t StreamInfo::GetId()
+uint32_t StreamInfo::GetId() const
 {
 	return _id;
 }
@@ -60,93 +56,113 @@ void StreamInfo::SetName(ov::String name)
 	_name = name;
 }
 
-uint32_t StreamInfo::GetTrackCount()
-{
-	return _tracks.size();
-}
-
 bool StreamInfo::AddTrack(std::shared_ptr<MediaTrack> track)
 {
-	bool ret = _tracks.insert(std::make_pair(track->GetId(), track)).second;
-
-	return ret;
+	return _tracks.insert(std::make_pair(track->GetId(), track)).second;
 }
 
-std::shared_ptr<MediaTrack> StreamInfo::GetTrackAt(uint32_t index)
+const std::shared_ptr<MediaTrack> StreamInfo::GetTrack(int32_t id) const
 {
-	uint32_t counter = 0;
-	for (auto it = _tracks.begin(); it != _tracks.end(); ++it)
-	{
-		if (counter == index)
-		{
-			return it->second;
-		}
-		counter++;
-    }
+	auto item = _tracks.find(id);
 
-	return nullptr;
-}
-
-std::shared_ptr<MediaTrack> StreamInfo::GetTrack(uint32_t id)
-{
-	auto it = _tracks.find(id);
-
-	if(it == _tracks.end())
+	if(item == _tracks.end())
 	{
 		return nullptr;
 	}
 
-    return it->second;
+	return item->second;
 }
 
+const std::map<int32_t, std::shared_ptr<MediaTrack>> &StreamInfo::GetTracks() const
+{
+	return _tracks;
+}
 
 void StreamInfo::ShowInfo()
 {
-	ov::String out_str = "";
+	ov::String out_str = ov::String::FormatString("Stream Information / id(%u), name(%s)", GetId(), GetName().CStr());
 
-	out_str.AppendFormat("Stream Information / ");
-	out_str.AppendFormat("id(%u), name(%s)", GetId(), GetName().CStr());
-	for (auto it=_tracks.begin(); it!=_tracks.end(); ++it)
+	for(auto it = _tracks.begin(); it != _tracks.end(); ++it)
 	{
-    	auto track = it->second;
+		auto track = it->second;
 
-    	// TODO. CODEC_ID를 문자열로 변환하는 공통 함수를 만들어야함.
-    	std::string codec_name;
-    	switch(track->GetCodecId())
-    	{
-			case MediaCodecId::CODEC_ID_H264: codec_name = "avc"; break;
-			case MediaCodecId::CODEC_ID_VP8: codec_name = "vp8"; break;
-			case MediaCodecId::CODEC_ID_VP9: codec_name = "vp0"; break;
-			case MediaCodecId::CODEC_ID_FLV: codec_name = "flv"; break;
-			case MediaCodecId::CODEC_ID_AAC: codec_name = "aac"; break;
-			case MediaCodecId::CODEC_ID_MP3: codec_name = "mp3"; break;
-			case MediaCodecId::CODEC_ID_OPUS: codec_name = "opus"; break;
-			case MediaCodecId::CODEC_ID_NONE:
+		// TODO. CODEC_ID를 문자열로 변환하는 공통 함수를 만들어야함.
+		ov::String codec_name;
+
+		switch(track->GetCodecId())
+		{
+			case MediaCodecId::H264:
+				codec_name = "avc";
+				break;
+
+			case MediaCodecId::Vp8:
+				codec_name = "vp8";
+				break;
+
+			case MediaCodecId::Vp9:
+				codec_name = "vp0";
+				break;
+
+			case MediaCodecId::Flv:
+				codec_name = "flv";
+				break;
+
+			case MediaCodecId::Aac:
+				codec_name = "aac";
+				break;
+
+			case MediaCodecId::Mp3:
+				codec_name = "mp3";
+				break;
+
+			case MediaCodecId::Opus:
+				codec_name = "opus";
+				break;
+
+			case MediaCodecId::None:
 			default:
-			codec_name = "unknown";
-			break;
+				codec_name = "unknown";
+				break;
 		}
 
-		if(track->GetMediaType() == MediaType::MEDIA_TYPE_VIDEO)	
+		switch(track->GetMediaType())
 		{
-			out_str.AppendFormat(" / Video Track -> ");
-			out_str.AppendFormat("track_id(%d) ", track->GetId()); 
-			out_str.AppendFormat("codec(%d,%s) ", track->GetCodecId(), codec_name.c_str());
-			out_str.AppendFormat("resolution(%dx%d) ", track->GetWidth(), track->GetHeight());
-			out_str.AppendFormat("framerate(%.2ffps) ", track->GetFrameRate());
-		}
-		else if(track->GetMediaType() == MediaType::MEDIA_TYPE_AUDIO) 
-		{
-			out_str.AppendFormat(" / Audio Track -> ");
-			out_str.AppendFormat("track_id(%d) ", track->GetId());
-			out_str.AppendFormat("codec(%d,%s) ",  track->GetCodecId(), codec_name.c_str());
-			out_str.AppendFormat("samplerate(%d) ", track->GetSampleRate());
-			out_str.AppendFormat("format(%s, %d) ", track->GetSample().GetName(), track->GetSample().GetSampleSize());
-			out_str.AppendFormat("channel(%s, %d) ", track->GetChannel().GetName(), track->GetChannel().GetCounts());
+			case MediaType::Video:
+				out_str.AppendFormat(
+					" / Video Track -> "
+					"track_id(%d) "
+					"codec(%d,%s) "
+					"resolution(%dx%d) "
+					"framerate(%.2ffps) ",
+					track->GetId(),
+					track->GetCodecId(), codec_name.CStr(),
+					track->GetWidth(), track->GetHeight(),
+					track->GetFrameRate()
+				);
+				break;
+
+			case MediaType::Audio:
+				out_str.AppendFormat(
+					" / Audio Track -> "
+					"track_id(%d) "
+					"codec(%d, %s) "
+					"samplerate(%d) "
+					"format(%s, %d) "
+					"channel(%s, %d) ",
+					track->GetId(),
+					track->GetCodecId(), codec_name.CStr(),
+					track->GetSampleRate(),
+					track->GetSample().GetName(), track->GetSample().GetSampleSize(),
+					track->GetChannel().GetName(), track->GetChannel().GetCounts()
+				);
+				break;
+
+			default:
+				break;
 		}
 
-		out_str.AppendFormat("timebase(%d/%d)", track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
-    }
+		out_str.AppendFormat("timebase(%s)", track->GetTimeBase().ToString().CStr());
+	}
 
-    logi("StreamInfo", "%s", out_str.CStr());
+	logti("%s", out_str.CStr());
 }

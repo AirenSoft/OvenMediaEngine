@@ -119,11 +119,24 @@ std::vector<std::shared_ptr<ApplicationInfo>> ConfigManager::GetApplicationInfos
 	return _server->GetHosts().front()->GetApplications();
 }
 
+std::shared_ptr<ApplicationInfo> ConfigManager::GetApplicationInfo(const ov::String &name) const noexcept
+{
+	auto list = GetApplicationInfos();
+
+	for(auto app_info : list)
+	{
+		if(app_info->GetName() == name)
+		{
+			return app_info;
+		}
+	}
+
+	return nullptr;
+}
+
 bool ConfigManager::LoadServerConfig() noexcept
 {
-	// TODO: MACRO 기능 정의&개발 후 수정해야함
-	ov::String config_path("${ome.AppHome}/conf/Server.xml");
-	config_path = config_path.Replace(CONFIG_MACRO_APP_HOME, ov::PathManager::GetAppPath());
+	ov::String config_path = ov::PathManager::Combine(ov::PathManager::GetAppPath(), "conf/Server.xml");
 
 	auto server_loader = std::make_shared<ConfigServerLoader>(config_path);
 	if(server_loader == nullptr)
@@ -151,16 +164,15 @@ void ConfigManager::LoadLoggerConfig() noexcept
 {
 	struct stat value = { 0 };
 
-	ov::String config_path("${ome.AppHome}/conf/Logger.xml");
-	config_path = config_path.Replace(CONFIG_MACRO_APP_HOME, ov::PathManager::GetAppPath());
+	ov::String config_path = ov::PathManager::Combine(ov::PathManager::GetAppPath(), "conf/Logger.xml");
 
 	::memset(&_last_modified, 0, sizeof(_last_modified));
 	::stat(config_path, &value);
 
 	if(
-			(_last_modified.tv_sec == value.st_mtim.tv_sec) &&
-			(_last_modified.tv_nsec == value.st_mtim.tv_nsec)
-			)
+		(_last_modified.tv_sec == value.st_mtim.tv_sec) &&
+		(_last_modified.tv_nsec == value.st_mtim.tv_nsec)
+		)
 	{
 		// log.config가 변경되지 않음
 		return;
@@ -169,7 +181,6 @@ void ConfigManager::LoadLoggerConfig() noexcept
 	ov_log_reset_enable();
 
 	_last_modified = value.st_mtim;
-
 
 	auto logger_loader = std::make_shared<ConfigLoggerLoader>(config_path);
 	if(logger_loader == nullptr)

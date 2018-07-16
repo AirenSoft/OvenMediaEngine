@@ -24,9 +24,9 @@ namespace ov
 	{
 		Connected,
 		// 연결이 끊어짐
-		Disconnected,
+			Disconnected,
 		// 오류가 발생해서 연결이 끊어짐
-		Error
+			Error
 	};
 
 	enum class SocketFamily : sa_family_t

@@ -1,6 +1,8 @@
+#include "rtc_private.h"
 #include "webrtc_publisher.h"
 #include "rtc_stream.h"
 #include "rtc_session.h"
+
 #include "config/config_manager.h"
 
 std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(std::shared_ptr<MediaRouteInterface> router)
@@ -22,7 +24,7 @@ WebRtcPublisher::WebRtcPublisher(std::shared_ptr<MediaRouteInterface> router)
 
 WebRtcPublisher::~WebRtcPublisher()
 {
-	logd("WEBRTC", "WebRtcPublisher has been terminated finally");
+	logtd("WebRtcPublisher has been terminated finally");
 }
 
 /*
@@ -53,7 +55,7 @@ bool WebRtcPublisher::Start(std::vector<std::shared_ptr<ApplicationInfo>> &appli
 	if(_ice_port == nullptr || _signalling == nullptr)
 	{
 		// Something wrokng...
-		loge("WEBRTC", "Failed to start publisher");
+		logte("Failed to start publisher");
 		return false;
 	}
 
@@ -91,7 +93,7 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::St
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
 	if(!stream)
 	{
-		loge("WEBRTC", "Get offer sdp failed. Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
+		logte("Get offer sdp failed. Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
 		return nullptr;
 	}
 
@@ -115,14 +117,14 @@ bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
 	auto stream = GetStream(application_name, stream_name);
 	if(!stream)
 	{
-		loge("WEBRTC", "Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
+		logte("Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
 	ov::String remote_sdp_text;
 	peer_sdp->ToString(remote_sdp_text);
-	logd("WEBRTC", "OnAddRemoteDescription");
-	logd("WEBRTC", "%s", remote_sdp_text.CStr());
+	logtd("OnAddRemoteDescription");
+	logtd("%s", remote_sdp_text.CStr());
 
 	// Stream에 Session을 생성한다.
 	auto session = RtcSession::Create(application, stream, offer_sdp, peer_sdp, _ice_port);
@@ -138,16 +140,16 @@ bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
 }
 
 bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov::String &stream_name,
-				   const std::shared_ptr<SessionDescription> &offer_sdp,
-				   const std::shared_ptr<SessionDescription> &peer_sdp)
+                                    const std::shared_ptr<SessionDescription> &offer_sdp,
+                                    const std::shared_ptr<SessionDescription> &peer_sdp)
 {
 	// 플레이어에서 stop 이벤트가 수신 된 경우 처리
-	logd("WEBRTC", "Stop commnad received : %s/%s/%u", application_name.CStr(), stream_name.CStr(), peer_sdp->GetSessionId());
+	logtd("Stop commnad received : %s/%s/%u", application_name.CStr(), stream_name.CStr(), peer_sdp->GetSessionId());
 	// Find Stream
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
 	if(!stream)
 	{
-		loge("WEBRTC", "To stop session failed. Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
+		logte("To stop session failed. Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
@@ -156,7 +158,7 @@ bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov
 
 	if(session == nullptr)
 	{
-		loge("WEBRTC", "To stop session failed. Cannot find session by peer sdp session id (%u)", peer_sdp->GetSessionId());
+		logte("To stop session failed. Cannot find session by peer sdp session id (%u)", peer_sdp->GetSessionId());
 		return false;
 	}
 
@@ -171,9 +173,9 @@ bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov
 
 // It does not be used because
 bool WebRtcPublisher::OnIceCandidate(const ov::String &application_name,
-									 const ov::String &stream_name,
-									 const std::shared_ptr<RtcIceCandidate> &candidate,
-									 const ov::String &username_fragment)
+                                     const ov::String &stream_name,
+                                     const std::shared_ptr<RtcIceCandidate> &candidate,
+                                     const ov::String &username_fragment)
 {
 	return true;
 }
@@ -185,7 +187,7 @@ bool WebRtcPublisher::OnIceCandidate(const ov::String &application_name,
 void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<SessionInfo> &session_info,
                                      IcePortConnectionState state)
 {
-	logd("WEBRTC", "IcePort OnStateChanged : %d", state);
+	logtd("IcePort OnStateChanged : %d", state);
 
 	auto session = std::static_pointer_cast<RtcSession>(session_info);
 	auto application = session->GetApplication();
@@ -229,7 +231,7 @@ uint16_t WebRtcPublisher::GetSignallingPort()
 	   ConfigManager::Instance()->GetHostPublisher() == nullptr ||
 	   ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr)
 	{
-		loge("WEBRTC", "Cannot get publish service config");
+		logte("Cannot get publish service config");
 
 		// Default Signalling Port
 		return 3333;
@@ -243,7 +245,7 @@ ov::String WebRtcPublisher::GetCandidateIP()
 	if(ConfigManager::Instance() == nullptr ||
 	   ConfigManager::Instance()->GetHostPublisher() == nullptr)
 	{
-		loge("WEBRTC", "Cannot get publish service config");
+		logte("Cannot get publish service config");
 
 		// Default Candidate IP
 		return "127.0.0.1";
@@ -258,7 +260,7 @@ uint16_t WebRtcPublisher::GetCandidatePort()
 	   ConfigManager::Instance()->GetHostPublisher() == nullptr ||
 	   ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr)
 	{
-		loge("WEBRTC", "Cannot get publish service config");
+		logte("Cannot get publish service config");
 
 		// Default Candidate Port
 		return 10000;
@@ -273,7 +275,7 @@ ov::String WebRtcPublisher::GetCandidateProto()
 	   ConfigManager::Instance()->GetHostPublisher() == nullptr ||
 	   ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr)
 	{
-		loge("WEBRTC", "Cannot get publish service config");
+		logte("Cannot get publish service config");
 		return "UDP";
 	}
 

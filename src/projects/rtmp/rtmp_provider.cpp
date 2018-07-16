@@ -6,7 +6,6 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #include <iostream>
 #include <unistd.h>
 
@@ -15,6 +14,8 @@
 #include "rtmp_stream.h"
 
 #define OV_LOG_TAG "RtmpProvider"
+
+using namespace MediaCommonType;
 
 std::shared_ptr<RtmpProvider> RtmpProvider::Create(std::shared_ptr<MediaRouteInterface> router)
 {
@@ -128,8 +129,8 @@ void RtmpProvider::OnMetaData(RtmpConnector *conn)
 	
 		// 비디오는 TrackId 0으로 고정
 		new_track->SetId(0);
-		new_track->SetMediaType(MediaType::MEDIA_TYPE_VIDEO);
-		new_track->SetCodecId(MediaCodecId::CODEC_ID_H264);
+		new_track->SetMediaType(MediaType::Video);
+		new_track->SetCodecId(MediaCodecId::H264);
 		new_track->SetWidth((uint32_t)conn->_width);
 		new_track->SetHeight((uint32_t)conn->_height);
 		new_track->SetFrameRate(conn->_framerate);
@@ -146,20 +147,20 @@ void RtmpProvider::OnMetaData(RtmpConnector *conn)
 	
 		// 오디오는 TrackID를 1로 고정
 		new_track->SetId(1);
-		new_track->SetMediaType(MediaType::MEDIA_TYPE_AUDIO);
-		new_track->SetCodecId(MediaCodecId::CODEC_ID_AAC);
+		new_track->SetMediaType(MediaType::Audio);
+		new_track->SetCodecId(MediaCodecId::Aac);
 		new_track->SetSampleRate(conn->_audio_samplerate);
 		new_track->SetTimeBase(1, 1000);
-		new_track->GetSample().SetFormat(MediaCommonType::AudioSample::Format::SAMPLE_FMT_S16);
+		new_track->GetSample().SetFormat(MediaCommonType::AudioSample::Format::S16);
 
 		// new_track->SetSampleSize(conn->_audio_samplesize);
 
 		if((int32_t)conn->_audio_channels == 1)
-			new_track->GetChannel().SetLayout(MediaCommonType::AudioChannel::Layout::AUDIO_LAYOUT_MONO);
+			new_track->GetChannel().SetLayout(MediaCommonType::AudioChannel::Layout::LayoutMono);
 		else if((int32_t)conn->_audio_channels == 2)
-			new_track->GetChannel().SetLayout(MediaCommonType::AudioChannel::Layout::AUDIO_LAYOUT_STEREO);
+			new_track->GetChannel().SetLayout(MediaCommonType::AudioChannel::Layout::LayoutStereo);
 		
-		new_track->GetChannel().SetLayout(MediaCommonType::AudioChannel::Layout::AUDIO_LAYOUT_STEREO);
+		new_track->GetChannel().SetLayout(MediaCommonType::AudioChannel::Layout::LayoutStereo);
 		
 		stream->AddTrack(new_track);		
 	}
@@ -222,7 +223,7 @@ void RtmpProvider::OnVideoPacket(RtmpConnector *conn, int8_t has_abs_time, uint3
 		return;
 	}
 
-	auto pbuf = std::make_unique<MediaBuffer>(MediaType::MEDIA_TYPE_VIDEO, 0, (uint8_t*)body, body_size, time);
+	auto pbuf = std::make_unique<MediaBuffer>(MediaType::Video, 0, (uint8_t*)body, body_size, time);
 
 	application->SendFrame(stream, std::move(pbuf));
 }
@@ -246,7 +247,7 @@ void RtmpProvider::OnAudioPacket(RtmpConnector *conn, int8_t has_abs_time, uint3
 		return;
 	}
 
-	auto pbuf = std::make_unique<MediaBuffer>(MediaType::MEDIA_TYPE_AUDIO, 1, (uint8_t*)body, body_size, time);
+	auto pbuf = std::make_unique<MediaBuffer>(MediaType::Audio, 1, (uint8_t*)body, body_size, time);
 	
 	application->SendFrame(stream, std::move(pbuf));
 }

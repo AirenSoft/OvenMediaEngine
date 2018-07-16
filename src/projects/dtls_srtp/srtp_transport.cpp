@@ -10,7 +10,7 @@
 #include "dtls_transport.h"
 
 SrtpTransport::SrtpTransport(uint32_t node_id, std::shared_ptr<Session> session)
-	: SessionNode(node_id, SRTP, session)
+	: SessionNode(node_id, SessionNodeType::Srtp, session)
 {
 
 }
@@ -41,7 +41,7 @@ bool SrtpTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov
 	{
 		return false;
 	}
-	//logd("WEBRTC", "SrtpTransport Send next node : %d", data->GetLength());
+	//logtd("SrtpTransport Send next node : %d", data->GetLength());
 	return node->SendData(GetNodeType(), data);
 }
 
@@ -59,8 +59,7 @@ bool SrtpTransport::OnDataReceived(SessionNodeType from_node, const std::shared_
 }
 
 // SRTP 를 초기화 한다.
-bool SrtpTransport::SetKeyMeterial(uint64_t crypto_suite,
-					std::shared_ptr<ov::Data> server_key, std::shared_ptr<ov::Data> client_key)
+bool SrtpTransport::SetKeyMeterial(uint64_t crypto_suite, std::shared_ptr<ov::Data> server_key, std::shared_ptr<ov::Data> client_key)
 {
 	// 이미 Session을 만들었다면 다시 하지 않는다.
 	// TODO: 향후 재협상을 개발해야 한다.

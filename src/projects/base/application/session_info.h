@@ -16,9 +16,9 @@ public:
 	SessionInfo(SessionInfo &&T);
 	virtual ~SessionInfo() = default;
 
-	session_id_t 	GetId() const;
+	session_id_t GetId() const;
 
 private:
 	// 세션 ID
-	session_id_t 	_id;
+	session_id_t _id;
 };

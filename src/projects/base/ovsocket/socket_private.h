@@ -21,7 +21,7 @@
         list.push_back(# flag); \
     }
 
-    // state가 condition이 아니면 return_value를 반환함
+// state가 condition이 아니면 return_value를 반환함
 #define CHECK_STATE(condition, return_value) \
     do \
     { \

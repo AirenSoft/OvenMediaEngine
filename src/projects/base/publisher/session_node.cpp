@@ -6,7 +6,7 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
+#include "publisher_private.h"
 #include "session_node.h"
 
 SessionNode::SessionNode(uint32_t id, SessionNodeType node_type, std::shared_ptr<Session> session)
@@ -33,7 +33,7 @@ uint32_t SessionNode::GetId()
 	return _node_id;
 }
 
-SessionNodeType	SessionNode::GetNodeType()
+SessionNodeType SessionNode::GetNodeType()
 {
 	return _node_type;
 }
@@ -101,7 +101,8 @@ void SessionNode::RegisterUpperNode(std::shared_ptr<SessionNode> node)
 	{
 		return;
 	}
-	_upper_nodes[node->GetId()] = node;
+
+	_upper_nodes[node->GetNodeType()] = node;
 }
 
 void SessionNode::RegisterLowerNode(std::shared_ptr<SessionNode> node)
@@ -110,5 +111,6 @@ void SessionNode::RegisterLowerNode(std::shared_ptr<SessionNode> node)
 	{
 		return;
 	}
-	_lower_nodes[node->GetId()] = node;
+
+	_lower_nodes[node->GetNodeType()] = node;
 }

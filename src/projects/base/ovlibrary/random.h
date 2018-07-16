@@ -10,7 +10,8 @@
 #pragma once
 
 #include <cstdint>
-#include "string.h"
+
+#include "./string.h"
 
 namespace ov
 {
@@ -20,7 +21,7 @@ namespace ov
 		Random() = default;
 		virtual ~Random() = default;
 
-		static uint32_t 	GenerateInteger();
-		static ov::String	GenerateString(uint32_t length);
+		static uint32_t GenerateInteger();
+		static ov::String GenerateString(uint32_t length);
 	};
 }

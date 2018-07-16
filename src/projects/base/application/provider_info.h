@@ -13,37 +13,37 @@
 
 enum class ProviderType
 {
-    unknown,
-    rtmp,
-    webrtc,
-    mpegts
+	Unknown,
+	Rtmp,
+	Webrtc,
+	MpegTs
 };
 
 class ProviderInfo
 {
 public:
-    ProviderInfo();
-    virtual ~ProviderInfo();
+	ProviderInfo();
+	virtual ~ProviderInfo();
 
-    const ProviderType GetType() const noexcept;
-    void SetType(ProviderType type);
-    void SetTypeFromString(ov::String type_string);
+	const ProviderType GetType() const noexcept;
+	void SetType(ProviderType type);
+	void SetTypeFromString(ov::String type_string);
 
-    std::shared_ptr<TranscodeDecodeInfo> GetDecode() const noexcept;
-    void SetDecode(std::shared_ptr<TranscodeDecodeInfo> decode);
+	std::shared_ptr<TranscodeDecodeInfo> GetDecode() const noexcept;
+	void SetDecode(std::shared_ptr<TranscodeDecodeInfo> decode);
 
-    const ov::String GetDecodeRef() const noexcept;
-    void SetDecodeRef(ov::String decode_ref);
+	const ov::String GetDecodeRef() const noexcept;
+	void SetDecodeRef(ov::String decode_ref);
 
-    // Utilities
-    static const char *StringFromProviderType(ProviderType provider_type) noexcept;
-    static const ProviderType ProviderTypeFromString(ov::String type_string) noexcept;
+	// Utilities
+	static const char *StringFromProviderType(ProviderType provider_type) noexcept;
+	static const ProviderType ProviderTypeFromString(ov::String type_string) noexcept;
 
-    ov::String ToString() const;
+	ov::String ToString() const;
 
 private:
-    ProviderType _type;
-    std::shared_ptr<TranscodeDecodeInfo> _decode;
+	ProviderType _type;
+	std::shared_ptr<TranscodeDecodeInfo> _decode;
 
-    ov::String _decode_ref;
+	ov::String _decode_ref;
 };

@@ -1,29 +1,31 @@
-
+#include "rtc_private.h"
 #include "rtc_stream.h"
 #include "rtc_application.h"
 #include "rtc_session.h"
 
+using namespace MediaCommonType;
+
 std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<Application> application,
-											 const StreamInfo &info)
+                                             const StreamInfo &info)
 {
-    auto stream = std::make_shared<RtcStream>(application, info);
-    if(!stream->Start())
+	auto stream = std::make_shared<RtcStream>(application, info);
+	if(!stream->Start())
 	{
 		return nullptr;
 	}
-    return stream;
+	return stream;
 }
 
 RtcStream::RtcStream(const std::shared_ptr<Application> application,
-					 const StreamInfo &info)
-    :Stream(application, info)
+                     const StreamInfo &info)
+	: Stream(application, info)
 {
 	_certificate = application->GetSharedPtrAs<RtcApplication>()->GetCertificate();
 }
 
 RtcStream::~RtcStream()
 {
-	logd("WEBRTC", "RtcStream(%d) has been terminated finally", GetId());
+	logtd("RtcStream(%d) has been terminated finally", GetId());
 	Stop();
 }
 
@@ -47,6 +49,7 @@ bool RtcStream::Start()
 
 	auto video_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
 	video_media_desc->SetConnection(4, "0.0.0.0");
+	// TODO(dimiden): Prevent duplication
 	video_media_desc->SetMid(ov::Random::GenerateString(6));
 	video_media_desc->SetSetup(MediaDescription::SetupType::ACTPASS);
 	video_media_desc->UseDtls(true);
@@ -57,6 +60,7 @@ bool RtcStream::Start()
 
 	auto audio_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
 	audio_media_desc->SetConnection(4, "0.0.0.0");
+	// TODO(dimiden): Prevent duplication
 	audio_media_desc->SetMid(ov::Random::GenerateString(6));
 	audio_media_desc->SetSetup(MediaDescription::SetupType::ACTPASS);
 	audio_media_desc->UseDtls(true);
@@ -65,52 +69,72 @@ bool RtcStream::Start()
 	audio_media_desc->SetMediaType(MediaDescription::MediaType::VIDEO);
 	audio_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
 
-	for(int i=0; i<GetTrackCount(); i++)
+	for(auto &track_item : _tracks)
 	{
-		auto track = GetTrackAt(i);
+		auto sdp_support_codec = PayloadAttr::SupportCodec::Unknown;
+		auto &track = track_item.second;
 
-		if(track->GetMediaType() == MediaType::MEDIA_TYPE_VIDEO)
+		switch(track->GetMediaType())
 		{
-			// Timebase
-			track->GetTimeBase().GetDen(), track->GetTimeBase().GetNum();
-
-			PayloadAttr::SupportCodec sdp_support_codec;
-
-			switch(track->GetCodecId())
+			case MediaType::Video:
 			{
-				case MediaCodecId::CODEC_ID_VP8:
-					sdp_support_codec = PayloadAttr::SupportCodec::VP8;
-					break;
-				case MediaCodecId ::CODEC_ID_H264:
-					sdp_support_codec = PayloadAttr::SupportCodec::H264;
-					break;
-				default:
-					logw("WEBRTC", "Unsupported codec(%d) is being input from media track",
-						 track->GetCodecId());
-					continue;
-					break;
+				switch(track->GetCodecId())
+				{
+					case MediaCodecId::Vp8:
+						sdp_support_codec = PayloadAttr::SupportCodec::Vp8;
+						break;
+					case MediaCodecId::H264:
+						sdp_support_codec = PayloadAttr::SupportCodec::H264;
+						break;
+					default:
+						logtw("Unsupported codec(%d) is being input from media track", track->GetCodecId());
+						continue;
+				}
+
+				auto payload = std::make_shared<PayloadAttr>();
+				//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
+				payload->SetRtpmap(sdp_support_codec, 90000);
+
+				video_media_desc->AddPayload(payload);
+
+				// WebRTC에서 사용하는 Track만 별도로 관리한다.
+				AddRtcTrack(payload->GetId(), track);
+
+				break;
 			}
 
-			auto payload = std::make_shared<PayloadAttr>();
-			//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
-			payload->SetRtpmap(sdp_support_codec, 90000);
+			case MediaType::Audio:
+			{
+				PayloadAttr::SupportCodec sdp_support_codec;
 
-			video_media_desc->AddPayload(payload);
+				switch(track->GetCodecId())
+				{
+					case MediaCodecId::Opus:
+						sdp_support_codec = PayloadAttr::SupportCodec::Opus;
+						break;
 
-			// Webrtc에서 사용하는 Track만 별도로 관리한다.
-			AddRtcTrack(payload->GetId(), track);
-		}
-		else if(track->GetMediaType() == MediaType::MEDIA_TYPE_AUDIO)
-		{
-			// TODO(getroot): Audio 개발하기
-			logw("WEBRTC", "Unsupported audio codec(%d) is being input from media track", track->GetCodecId());
-		}
-		else
-		{
-			// not support yet
-			continue;
-		}
+					default:
+						logtw("Unsupported codec(%d) is being input from media track", track->GetCodecId());
+						continue;
+				}
 
+				auto payload = std::make_shared<PayloadAttr>();
+				//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
+				payload->SetRtpmap(sdp_support_codec, 90000);
+
+				audio_media_desc->AddPayload(payload);
+
+				// WebRTC에서 사용하는 Track만 별도로 관리한다.
+				AddRtcTrack(payload->GetId(), track);
+
+				break;
+			}
+
+			default:
+				// not supported type
+				logtw("Not supported media type: %d", (int)(track->GetMediaType()));
+				break;
+		}
 	}
 
 	// Media Description 연결
@@ -119,8 +143,8 @@ bool RtcStream::Start()
 	ov::String offer_sdp_text;
 	_offer_sdp->ToString(offer_sdp_text);
 
-	logi("WEBRTC", "Stream created : %s/%u", GetName().CStr(), GetId());
-	logd("WEBRTC", "%s", offer_sdp_text.CStr());
+	logti("Stream created : %s/%u", GetName().CStr(), GetId());
+	logtd("%s", offer_sdp_text.CStr());
 
 	return Stream::Start();
 }
@@ -140,7 +164,7 @@ std::shared_ptr<SessionDescription> RtcStream::GetSessionDescription()
 std::shared_ptr<RtcSession> RtcStream::FindRtcSessionByPeerSDPSessionID(uint32_t session_id)
 {
 	// 모든 Session에 Frame을 전달한다.
-	for (auto const &x : GetSessionMap())
+	for(auto const &x : GetSessionMap())
 	{
 		auto session = std::static_pointer_cast<RtcSession>(x.second);
 
@@ -154,9 +178,9 @@ std::shared_ptr<RtcSession> RtcStream::FindRtcSessionByPeerSDPSessionID(uint32_t
 }
 
 void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
-							   std::unique_ptr<EncodedFrame> encoded_frame,
-							   std::unique_ptr<CodecSpecificInfo> codec_info,
-							   std::unique_ptr<FragmentationHeader> fragmentation)
+                               std::unique_ptr<EncodedFrame> encoded_frame,
+                               std::unique_ptr<CodecSpecificInfo> codec_info,
+                               std::unique_ptr<FragmentationHeader> fragmentation)
 {
 	// VideoFrame 데이터를 Protocol에 맞게 변환한다.
 
@@ -170,7 +194,7 @@ void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 	}
 
 	// 모든 Session에 Frame을 전달한다.
-	for(auto const& x : GetSessionMap())
+	for(auto const &x : GetSessionMap())
 	{
 		auto session = x.second;
 
@@ -179,31 +203,31 @@ void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 		// TODO(getroot): 향후 Performance 증가를 위해 RTP Packetize를 한번 하고 모든 Session에 전달하는 방법을
 		// 실험해보고 성능이 좋아지면 적용한다.
 		std::static_pointer_cast<RtcSession>(session)->SendOutgoingVideoData(track,
-																			 encoded_frame->_frameType,
-																			  encoded_frame->_timeStamp,
-																			  encoded_frame->_buffer,
-																			  encoded_frame->_length,
-																			  fragmentation.get(),
-																			  &rtp_video_header);
+		                                                                     encoded_frame->frame_type,
+		                                                                     encoded_frame->time_stamp,
+		                                                                     encoded_frame->buffer,
+		                                                                     encoded_frame->length,
+		                                                                     fragmentation.get(),
+		                                                                     &rtp_video_header);
 	}
 	// TODO(getroot): 향후 ov::Data로 변경한다.
-	delete[] encoded_frame->_buffer;
+	delete[] encoded_frame->buffer;
 }
 
-void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo* info, RTPVideoHeader *rtp_video_header)
+void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader *rtp_video_header)
 {
-	switch(info->codecType)
+	switch(info->codec_type)
 	{
-		case kVideoCodecVP8:
+		case VideoCodecType::Vp8:
 			rtp_video_header->codec = kRtpVideoVp8;
 			rtp_video_header->codecHeader.VP8.InitRTPVideoHeaderVP8();
-			rtp_video_header->codecHeader.VP8.pictureId = info->codecSpecific.VP8.pictureId;
-			rtp_video_header->codecHeader.VP8.nonReference = info->codecSpecific.VP8.nonReference;
-			rtp_video_header->codecHeader.VP8.temporalIdx = info->codecSpecific.VP8.temporalIdx;
-			rtp_video_header->codecHeader.VP8.layerSync = info->codecSpecific.VP8.layerSync;
-			rtp_video_header->codecHeader.VP8.tl0PicIdx = info->codecSpecific.VP8.tl0PicIdx;
-			rtp_video_header->codecHeader.VP8.keyIdx = info->codecSpecific.VP8.keyIdx;
-			rtp_video_header->simulcastIdx = info->codecSpecific.VP8.simulcastIdx;
+			rtp_video_header->codecHeader.VP8.pictureId = info->codec_specific.vp8.picture_id;
+			rtp_video_header->codecHeader.VP8.nonReference = info->codec_specific.vp8.non_reference;
+			rtp_video_header->codecHeader.VP8.temporalIdx = info->codec_specific.vp8.temporal_idx;
+			rtp_video_header->codecHeader.VP8.layerSync = info->codec_specific.vp8.layer_sync;
+			rtp_video_header->codecHeader.VP8.tl0PicIdx = info->codec_specific.vp8.tl0_pic_idx;
+			rtp_video_header->codecHeader.VP8.keyIdx = info->codec_specific.vp8.key_idx;
+			rtp_video_header->simulcastIdx = info->codec_specific.vp8.simulcast_idx;
 			return;
 	}
 }
@@ -213,7 +237,7 @@ void RtcStream::AddRtcTrack(uint32_t payload_type, std::shared_ptr<MediaTrack> t
 	_rtc_track[payload_type] = track;
 }
 
-std::shared_ptr<MediaTrack>	RtcStream::GetRtcTrack(uint32_t payload_type)
+std::shared_ptr<MediaTrack> RtcStream::GetRtcTrack(uint32_t payload_type)
 {
 	if(!_rtc_track.count(payload_type))
 	{

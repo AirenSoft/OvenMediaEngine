@@ -1,12 +1,9 @@
-//
-// Created by getroot on 18. 3. 19.
-//
-
+#include "publisher_private.h"
 #include "session.h"
 #include "application.h"
 
 Session::Session(std::shared_ptr<Application> application, std::shared_ptr<Stream> stream)
-		:SessionInfo()
+	: SessionInfo()
 {
 	_application = application;
 	_stream = stream;
@@ -14,7 +11,7 @@ Session::Session(std::shared_ptr<Application> application, std::shared_ptr<Strea
 }
 
 Session::Session(const SessionInfo &info, std::shared_ptr<Application> application, std::shared_ptr<Stream> stream)
-	:SessionInfo(info)
+	: SessionInfo(info)
 {
 	_application = application;
 	_stream = stream;

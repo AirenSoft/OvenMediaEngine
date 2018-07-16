@@ -23,7 +23,7 @@ OvenCodecImplAvcodecEncAVC::OvenCodecImplAvcodecEncAVC()
 	_frame = av_frame_alloc();
 	_codec_par = avcodec_parameters_alloc();
 	_change_format = false;
-	
+
 	_coded_frame_count = 0;
 	_coded_data_size = 0;
 
@@ -31,10 +31,10 @@ OvenCodecImplAvcodecEncAVC::OvenCodecImplAvcodecEncAVC()
 
 OvenCodecImplAvcodecEncAVC::~OvenCodecImplAvcodecEncAVC()
 {
-    avcodec_free_context(&_context);
-    avcodec_parameters_free(&_codec_par);
-    av_frame_free(&_frame);
-    av_packet_free(&_pkt);
+	avcodec_free_context(&_context);
+	avcodec_parameters_free(&_codec_par);
+	av_frame_free(&_frame);
+	av_packet_free(&_pkt);
 }
 
 int OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> context)
@@ -43,51 +43,56 @@ int OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> cont
 
 	// AVCodecParameters *origin_par = NULL;
 
-    AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
-    if (!codec) {
-        logte("Codec not found\n");
-        return 1;
-    }
+	AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+	if(!codec)
+	{
+		logte("Codec not found\n");
+		return 1;
+	}
 
 	_context = avcodec_alloc_context3(codec);
-	if (!_context) {
+	if(!_context)
+	{
 		logte("Could not allocate video codec context\n");
 		return 1;
-	} 
+	}
 
-	_context->bit_rate				= _transcode_context->_video_bitrate;
+	_context->bit_rate = _transcode_context->_video_bitrate;
 
 	_context->rc_max_rate = _context->rc_min_rate = _context->bit_rate;
 
-	_context->rc_buffer_size		= _context->bit_rate * 2;
+	_context->rc_buffer_size = _context->bit_rate * 2;
 
-    _context->sample_aspect_ratio	= (AVRational){1, 1};
+	_context->sample_aspect_ratio = (AVRational){ 1, 1 };
 
-    _context->time_base 			= (AVRational){1, AV_TIME_BASE};
+	_context->time_base = (AVRational){ 1, AV_TIME_BASE };
 
-    _context->framerate 			= av_d2q(_transcode_context->_video_frame_rate, AV_TIME_BASE);
+	_context->framerate = av_d2q(_transcode_context->_video_frame_rate, AV_TIME_BASE);
 
-    _context->gop_size 				= _transcode_context->_video_gop;
+	_context->gop_size = _transcode_context->_video_gop;
 
-    _context->max_b_frames 			= 0;
+	_context->max_b_frames = 0;
 
-    _context->pix_fmt 				= AV_PIX_FMT_YUV420P;
+	_context->pix_fmt = AV_PIX_FMT_YUV420P;
 
-	_context->width					= _transcode_context->_video_width;
+	_context->width = _transcode_context->_video_width;
 
-    _context->height				=  _transcode_context->_video_height;
+	_context->height = _transcode_context->_video_height;
 
-    _context->thread_count 			= 4;
+	_context->thread_count = 4;
 
 
-    if(codec->id == AV_CODEC_ID_H264)
-        av_opt_set(_context->priv_data, "preset", "fast", 0);
+	if(codec->id == AV_CODEC_ID_H264)
+	{
+		av_opt_set(_context->priv_data, "preset", "fast", 0);
+	}
 
 	// open codec
-	if(avcodec_open2(_context, codec, NULL) < 0) {
+	if(avcodec_open2(_context, codec, NULL) < 0)
+	{
 		logte("Could not open codec\n");
 		return 1;
-	}	
+	}
 
 	return 0;
 }
@@ -106,7 +111,7 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncAVC::recvbuf
 	// 디코딩 가능한 프레임이 존재하는지 확인한다.
 	///////////////////////////////////////////////////
 	ret = avcodec_receive_packet(_context, _pkt);
-	if(ret == AVERROR(EAGAIN) )
+	if(ret == AVERROR(EAGAIN))
 	{
 		// 패킷을 넣음
 	}
@@ -115,7 +120,7 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncAVC::recvbuf
 		printf("\r\nError receiving a packet for decoding : AVERROR_EOF\n");
 		return std::make_pair(-1, nullptr);
 	}
-	else if(ret < 0) 
+	else if(ret < 0)
 	{
 		// copy
 		// frame->linesize[0] * frame->height
@@ -135,25 +140,25 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncAVC::recvbuf
 	///////////////////////////////////////////////////
 	// 인코딩 요청
 	///////////////////////////////////////////////////
-	while (_pkt_buf.size() > 0) {
+	while(_pkt_buf.size() > 0)
+	{
+		MediaBuffer *cur_pkt = _pkt_buf[0].get();
 
-		MediaBuffer* cur_pkt = _pkt_buf[0].get();
-
-		_frame->format = cur_pkt->_format;
-		_frame->width  = cur_pkt->_width;
-		_frame->height = cur_pkt->_height;
-		_frame->pts    = cur_pkt->GetPts();
+		_frame->format = cur_pkt->GetFormat();
+		_frame->width = cur_pkt->GetWidth();
+		_frame->height = cur_pkt->GetHeight();
+		_frame->pts = cur_pkt->GetPts();
 
 		if(av_frame_get_buffer(_frame, 32) < 0)
 		{
 			printf("Could not allocate the video frame data\n");
 			return std::make_pair(-1, nullptr);
 		}
-		
+
 		if(av_frame_make_writable(_frame) < 0)
 		{
 			printf("Could not make sure the frame data is writable\n");
-				return std::make_pair(-1, nullptr);
+			return std::make_pair(-1, nullptr);
 		}
 
 		int ret = avcodec_send_frame(_context, _frame);
@@ -164,7 +169,7 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncAVC::recvbuf
 
 		av_frame_unref(_frame);
 
-		_pkt_buf.erase(_pkt_buf.begin(), _pkt_buf.begin()+1);
+		_pkt_buf.erase(_pkt_buf.begin(), _pkt_buf.begin() + 1);
 	}
 
 	return std::make_pair(-1, nullptr);

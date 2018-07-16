@@ -1,7 +1,8 @@
+#include "publisher_private.h"
 #include "application.h"
 
 Application::Application(const std::shared_ptr<ApplicationInfo> &info)
-	:ApplicationInfo(info)
+	: ApplicationInfo(info)
 {
 	_stop_thread_flag = false;
 }
@@ -49,14 +50,14 @@ bool Application::OnDeleteStream(std::shared_ptr<StreamInfo> info)
 {
 	if(_streams.count(info->GetId()) <= 0)
 	{
-		loge("PUBLISHER", "OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName(), info->GetName());
+		logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName(), info->GetName());
 		return false;
 	}
 
 	auto stream = std::static_pointer_cast<Stream>(GetStream(info->GetId()));
 	if(stream == nullptr)
 	{
-		loge("PUBLISHER", "OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName(), info->GetName());
+		logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName(), info->GetName());
 		return false;
 	}
 
@@ -74,18 +75,18 @@ bool Application::OnDeleteStream(std::shared_ptr<StreamInfo> info)
 }
 
 bool Application::OnSendVideoFrame(std::shared_ptr<StreamInfo> info,
-									std::shared_ptr<MediaTrack> track,
-									std::unique_ptr<EncodedFrame> encoded_frame,
-									std::unique_ptr<CodecSpecificInfo> codec_info,
-									std::unique_ptr<FragmentationHeader> fragmentation)
+                                   std::shared_ptr<MediaTrack> track,
+                                   std::unique_ptr<EncodedFrame> encoded_frame,
+                                   std::unique_ptr<CodecSpecificInfo> codec_info,
+                                   std::unique_ptr<FragmentationHeader> fragmentation)
 {
 	auto data = std::make_unique<Application::VideoStreamData>(info,
-																track,
-																std::move(encoded_frame),
-																std::move(codec_info),
-																std::move(fragmentation));
+	                                                           track,
+	                                                           std::move(encoded_frame),
+	                                                           std::move(codec_info),
+	                                                           std::move(fragmentation));
 
-    // Mutex (This function may be called by Router thread)
+	// Mutex (This function may be called by Router thread)
 	std::unique_lock<std::mutex> lock(this->_video_stream_queue_guard);
 	_video_stream_queue.push(std::move(data));
 	lock.unlock();
@@ -95,7 +96,7 @@ bool Application::OnSendVideoFrame(std::shared_ptr<StreamInfo> info,
 }
 
 bool Application::PushIncomingPacket(std::shared_ptr<SessionInfo> session_info,
-									 std::shared_ptr<const ov::Data> data)
+                                     std::shared_ptr<const ov::Data> data)
 {
 	auto packet = std::make_unique<Application::IncomingPacket>(session_info, data);
 
@@ -121,7 +122,7 @@ std::shared_ptr<Stream> Application::GetStream(uint32_t stream_id)
 
 std::shared_ptr<Stream> Application::GetStream(ov::String stream_name)
 {
-	for(auto const & x : _streams)
+	for(auto const &x : _streams)
 	{
 		auto stream = x.second;
 		if(stream->GetName() == stream_name)
@@ -191,10 +192,10 @@ void Application::WorkerThread()
 		{
 			// Stream에 데이터를 전송한다.
 			SendVideoFrame(video_data->_stream_info,
-						   video_data->_track,
-						   std::move(video_data->_encoded_frame),
-						   std::move(video_data->_codec_info),
-						   std::move(video_data->_framgmentation_header));
+			               video_data->_track,
+			               std::move(video_data->_encoded_frame),
+			               std::move(video_data->_codec_info),
+			               std::move(video_data->_framgmentation_header));
 		}
 
 		std::unique_ptr<IncomingPacket> packet = PopIncomingPacket();
@@ -210,10 +211,10 @@ void Application::WorkerThread()
 }
 
 void Application::SendVideoFrame(std::shared_ptr<StreamInfo> info,
-								 std::shared_ptr<MediaTrack> track,
-								 std::unique_ptr<EncodedFrame> encoded_frame,
-								 std::unique_ptr<CodecSpecificInfo> codec_info,
-								 std::unique_ptr<FragmentationHeader> fragmentation)
+                                 std::shared_ptr<MediaTrack> track,
+                                 std::unique_ptr<EncodedFrame> encoded_frame,
+                                 std::unique_ptr<CodecSpecificInfo> codec_info,
+                                 std::unique_ptr<FragmentationHeader> fragmentation)
 {
 	// Stream에 Packet을 전송한다.
 	auto stream = GetStream(info->GetId());
@@ -224,9 +225,9 @@ void Application::SendVideoFrame(std::shared_ptr<StreamInfo> info,
 	}
 
 	stream->SendVideoFrame(track,
-							std::move(encoded_frame),
-						   	std::move(codec_info),
-						   	std::move(fragmentation));
+	                       std::move(encoded_frame),
+	                       std::move(codec_info),
+	                       std::move(fragmentation));
 }
 
 void Application::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std::shared_ptr<const ov::Data> data)

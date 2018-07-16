@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <inttypes.h>
+#include <cinttypes>
 #include <endian.h>
 
 #if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
@@ -54,32 +54,44 @@ namespace ov
 
 	// Host => Little Endian
 	OV_DECLARE_ENDIAN_FUNCTION(uint16_t, HostToLE16, htole16);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint32_t, HostToLE32, htole32);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint64_t, HostToLE64, htole64);
 
 	// Little Endian => Host
 	OV_DECLARE_ENDIAN_FUNCTION(uint16_t, LE16ToHost, le16toh);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint32_t, LE32ToHost, le32toh);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint64_t, LE64ToHost, le64toh);
 
 	// Host => Big Endian
 	OV_DECLARE_ENDIAN_FUNCTION(uint16_t, HostToBE16, htobe16);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint32_t, HostToBE32, htobe32);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint64_t, HostToBE64, htobe64);
 
 	// Big Endian => Host
 	OV_DECLARE_ENDIAN_FUNCTION(uint16_t, BE16ToHost, be16toh);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint32_t, BE32ToHost, be32toh);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint64_t, BE64ToHost, be64toh);
 
 	// Host => Network Endian (Host => BE의 alias)
 	OV_DECLARE_ENDIAN_FUNCTION(uint16_t, HostToNetwork16, htobe16);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint32_t, HostToNetwork32, htobe32);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint64_t, HostToNetwork64, htobe64);
 
 	// Network Endian => Host (BE => Host의 alias)
 	OV_DECLARE_ENDIAN_FUNCTION(uint16_t, NetworkToHost16, be16toh);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint32_t, NetworkToHost32, be32toh);
+
 	OV_DECLARE_ENDIAN_FUNCTION(uint64_t, NetworkToHost64, be64toh);
 
 }

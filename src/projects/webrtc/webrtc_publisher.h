@@ -66,7 +66,7 @@ private:
 	// Publisher Implementation
 	PublisherType GetPublisherType() override
 	{
-		return PublisherType::webrtc;
+		return PublisherType::Webrtc;
 	}
 
 	std::shared_ptr<Application>			OnCreateApplication(const std::shared_ptr<ApplicationInfo> &info) override;

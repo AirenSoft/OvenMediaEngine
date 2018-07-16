@@ -2,21 +2,21 @@
 //
 //  MediaRouteStream
 //
-//  Created by Kwon Keuk Hanb
+//  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
-
 #include "media_route_stream.h"
+
 #include <base/ovlibrary/ovlibrary.h>
 
 #define OV_LOG_TAG "MediaRouteStream"
 
-MediaRouteStream::MediaRouteStream(std::shared_ptr<StreamInfo> stream_info) 
+using namespace MediaCommonType;
+
+MediaRouteStream::MediaRouteStream(std::shared_ptr<StreamInfo> stream_info)
 {
-	logtd("create media route stream. name(%s) id(%u)"
-		, stream_info->GetName().CStr(), stream_info->GetId());
+	logtd("create media route stream. name(%s) id(%u)", stream_info->GetName().CStr(), stream_info->GetId());
 
 	// 스트림 정보 저정
 	_stream_info = stream_info;
@@ -25,8 +25,7 @@ MediaRouteStream::MediaRouteStream(std::shared_ptr<StreamInfo> stream_info)
 
 MediaRouteStream::~MediaRouteStream()
 {
-	logtd("Delete media route stream name(%s) id(%u)"
-		, _stream_info->GetName().CStr(), _stream_info->GetId());
+	logtd("Delete media route stream name(%s) id(%u)", _stream_info->GetName().CStr(), _stream_info->GetId());
 }
 
 std::shared_ptr<StreamInfo> MediaRouteStream::GetStreamInfo()
@@ -34,12 +33,12 @@ std::shared_ptr<StreamInfo> MediaRouteStream::GetStreamInfo()
 	return _stream_info;
 }
 
-void MediaRouteStream::SetConnectorType(int32_t type)
+void MediaRouteStream::SetConnectorType(MediaRouteApplicationConnector::ConnectorType type)
 {
 	_application_connector_type = type;
 }
 
-int32_t MediaRouteStream::GetConnectorType()
+MediaRouteApplicationConnector::ConnectorType MediaRouteStream::GetConnectorType()
 {
 	return _application_connector_type;
 }
@@ -47,29 +46,28 @@ int32_t MediaRouteStream::GetConnectorType()
 bool MediaRouteStream::Push(std::unique_ptr<MediaBuffer> buffer)
 {
 	MediaType media_type = buffer->GetMediaType();
-	uint32_t track_id = buffer->GetTrackId();
-	auto 	 media_track = _stream_info->GetTrack(track_id);
+	int32_t track_id = buffer->GetTrackId();
+	auto media_track = _stream_info->GetTrack(track_id);
 
 	if(media_track == nullptr)
 	{
-		logte("can not find media track. type(%s), id(%d)"
-			, (media_type == MediaType::MEDIA_TYPE_VIDEO)?"video":"audio", track_id);
+		logte("can not find media track. type(%s), id(%d)", (media_type == MediaType::Video) ? "video" : "audio", track_id);
 		return false;
 	}
 
-	if(media_type == MediaType::MEDIA_TYPE_VIDEO && media_track->GetCodecId() == MediaCodecId::CODEC_ID_H264)
+	if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::H264)
 	{
 		_bsfv.convert_to(buffer.get());
 	}
-	else if(media_type == MediaType::MEDIA_TYPE_VIDEO && media_track->GetCodecId() == MediaCodecId::CODEC_ID_VP8)
+	else if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::Vp8)
 	{
 		_bsf_vp8.convert_to(buffer.get());
 	}
-	else if(media_type == MediaType::MEDIA_TYPE_AUDIO && media_track->GetCodecId() == MediaCodecId::CODEC_ID_AAC)
+	else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Aac)
 	{
 		_bsfa.convert_to(buffer.get());
 	}
-	else if(media_type == MediaType::MEDIA_TYPE_AUDIO && media_track->GetCodecId() == MediaCodecId::CODEC_ID_OPUS)
+	else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Opus)
 	{
 		// logtd("%s", ov::Dump(buffer->GetBuffer(), buffer->GetDataSize()).CStr());
 		// _bsfa.convert_to(buffer.GetBuffer());
@@ -108,13 +106,13 @@ std::unique_ptr<MediaBuffer> MediaRouteStream::Pop()
 
 	auto p2 = std::move(_queue.front());
 	_queue.pop();
-	
+
 	return p2;
 }
 
 uint32_t MediaRouteStream::Size()
 {
-	return _queue.size();	
+	return _queue.size();
 }
 
 

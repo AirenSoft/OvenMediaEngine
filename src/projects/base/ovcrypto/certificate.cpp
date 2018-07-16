@@ -57,7 +57,7 @@ bool Certificate::GenerateFromPem(ov::String filename)
 
 	// Check Key
 	EC_KEY *ec_key = EVP_PKEY_get1_EC_KEY(_pkey);
-	if (!ec_key)
+	if(!ec_key)
 	{
 		loge("CERT", "Get ec key from pkey failed");
 		return false;
@@ -99,9 +99,9 @@ bool Certificate::Generate()
 }
 
 // Make ECDSA Key
-EVP_PKEY* Certificate::MakeKey()
+EVP_PKEY *Certificate::MakeKey()
 {
-	EVP_PKEY*	key;
+	EVP_PKEY *key;
 
 	key = EVP_PKEY_new();
 	if(key == nullptr)
@@ -109,7 +109,7 @@ EVP_PKEY* Certificate::MakeKey()
 		return nullptr;
 	}
 
-	EC_KEY* ec_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+	EC_KEY *ec_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 	if(ec_key == nullptr)
 	{
 		EVP_PKEY_free(key);
@@ -118,7 +118,7 @@ EVP_PKEY* Certificate::MakeKey()
 
 	EC_KEY_set_asn1_flag(ec_key, OPENSSL_EC_NAMED_CURVE);
 
-	if (!EC_KEY_generate_key(ec_key) || !EVP_PKEY_assign_EC_KEY(key, ec_key))
+	if(!EC_KEY_generate_key(ec_key) || !EVP_PKEY_assign_EC_KEY(key, ec_key))
 	{
 		EC_KEY_free(ec_key);
 		EVP_PKEY_free(key);
@@ -129,10 +129,10 @@ EVP_PKEY* Certificate::MakeKey()
 }
 
 // Make X509 Certificate
-X509* Certificate::MakeCertificate(EVP_PKEY* pkey)
+X509 *Certificate::MakeCertificate(EVP_PKEY *pkey)
 {
 	// Allocation
-	X509* x509 = X509_new();
+	X509 *x509 = X509_new();
 	if(x509 == nullptr)
 	{
 		return nullptr;
@@ -146,7 +146,7 @@ X509* Certificate::MakeCertificate(EVP_PKEY* pkey)
 	}
 
 	// BIGNUM Allocation
-	BIGNUM* serial_number = BN_new();
+	BIGNUM *serial_number = BN_new();
 	if(serial_number == nullptr)
 	{
 		X509_free(x509);
@@ -154,7 +154,7 @@ X509* Certificate::MakeCertificate(EVP_PKEY* pkey)
 	}
 
 	// Allocation
-	X509_NAME* name = X509_NAME_new();
+	X509_NAME *name = X509_NAME_new();
 	if(name == nullptr)
 	{
 		X509_free(x509);
@@ -169,7 +169,7 @@ X509* Certificate::MakeCertificate(EVP_PKEY* pkey)
 		return nullptr;
 	}
 
-	ASN1_INTEGER* asn1_serial_number;
+	ASN1_INTEGER *asn1_serial_number;
 
 	// Random 값을 뽑아서 X509 Serial Number에 사용한다.
 	BN_pseudo_rand(serial_number, 64, 0, 0);
@@ -181,9 +181,9 @@ X509* Certificate::MakeCertificate(EVP_PKEY* pkey)
 	BN_to_ASN1_INTEGER(serial_number, asn1_serial_number);
 
 	// 인증서에 정보를 추가한다.
-	if(!X509_NAME_add_entry_by_NID(name, NID_commonName, MBSTRING_UTF8, (unsigned char*)CERT_NAME, -1, -1, 0) ||
-		!X509_set_subject_name(x509, name) ||
-		!X509_set_issuer_name(x509, name))
+	if(!X509_NAME_add_entry_by_NID(name, NID_commonName, MBSTRING_UTF8, (unsigned char *)CERT_NAME, -1, -1, 0) ||
+	   !X509_set_subject_name(x509, name) ||
+	   !X509_set_issuer_name(x509, name))
 	{
 		X509_free(x509);
 		BN_free(serial_number);
@@ -196,7 +196,7 @@ X509* Certificate::MakeCertificate(EVP_PKEY* pkey)
 	time_t now = time(nullptr);
 
 	if(!X509_time_adj(X509_get_notBefore(x509), now + CertificateWindowInSeconds, &epoch_off) ||
-		!X509_time_adj(X509_get_notAfter(x509), now + DefaultCertificateLifetimeInSeconds, &epoch_off))
+	   !X509_time_adj(X509_get_notAfter(x509), now + DefaultCertificateLifetimeInSeconds, &epoch_off))
 	{
 		X509_free(x509);
 		BN_free(serial_number);
@@ -220,7 +220,7 @@ X509* Certificate::MakeCertificate(EVP_PKEY* pkey)
 
 void Certificate::Print()
 {
-	BIO* temp_memory_bio = BIO_new(BIO_s_mem());
+	BIO *temp_memory_bio = BIO_new(BIO_s_mem());
 
 	if(!temp_memory_bio)
 	{
@@ -229,7 +229,7 @@ void Certificate::Print()
 	}
 	X509_print_ex(temp_memory_bio, _X509, XN_FLAG_SEP_CPLUS_SPC, 0);
 	BIO_write(temp_memory_bio, "\0", 1);
-	char* buffer;
+	char *buffer;
 	BIO_get_mem_data(temp_memory_bio, &buffer);
 	logd("CERT", "%s", buffer);
 	BIO_free(temp_memory_bio);
@@ -247,31 +247,31 @@ void Certificate::Print()
 	}
 }
 
-bool Certificate::GetDigestEVP(const ov::String& algorithm, const EVP_MD** mdp)
+bool Certificate::GetDigestEVP(const ov::String &algorithm, const EVP_MD **mdp)
 {
-	const EVP_MD* md;
+	const EVP_MD *md;
 
-	if (algorithm == "md5")
+	if(algorithm == "md5")
 	{
 		md = EVP_md5();
 	}
-	else if (algorithm == "sha-1")
+	else if(algorithm == "sha-1")
 	{
 		md = EVP_sha1();
 	}
-	else if (algorithm == "sha-224")
+	else if(algorithm == "sha-224")
 	{
 		md = EVP_sha224();
 	}
-	else if (algorithm == "sha-256")
+	else if(algorithm == "sha-256")
 	{
 		md = EVP_sha256();
 	}
-	else if (algorithm == "sha-384")
+	else if(algorithm == "sha-384")
 	{
 		md = EVP_sha384();
 	}
-	else if (algorithm == "sha-512")
+	else if(algorithm == "sha-512")
 	{
 		md = EVP_sha512();
 	}
@@ -286,27 +286,27 @@ bool Certificate::GetDigestEVP(const ov::String& algorithm, const EVP_MD** mdp)
 
 bool Certificate::ComputeDigest(const ov::String algorithm)
 {
-	const EVP_MD* md;
+	const EVP_MD *md;
 	unsigned int n;
 
-	if (!GetDigestEVP(algorithm, &md))
+	if(!GetDigestEVP(algorithm, &md))
 	{
 		return false;
 	}
 
 	uint8_t digest[EVP_MAX_MD_SIZE];
 	X509_digest(GetX509(), md, digest, &n);
-	_digest->Append(const_cast<uint8_t*>(digest), n);
+	_digest->Append(const_cast<uint8_t *>(digest), n);
 	_digest_algorithm = algorithm;
 	return true;
 }
 
-X509* Certificate::GetX509()
+X509 *Certificate::GetX509()
 {
 	return _X509;
 }
 
-EVP_PKEY* Certificate::GetPkey()
+EVP_PKEY *Certificate::GetPkey()
 {
 	return _pkey;
 }

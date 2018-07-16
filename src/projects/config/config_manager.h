@@ -33,7 +33,7 @@ public:
     std::shared_ptr<HostPublisherInfo> GetHostPublisher() const noexcept;
 
     std::vector<std::shared_ptr<ApplicationInfo>> GetApplicationInfos() const noexcept;
-
+	std::shared_ptr<ApplicationInfo> GetApplicationInfo(const ov::String &name) const noexcept;
 
 protected:
     ConfigManager();

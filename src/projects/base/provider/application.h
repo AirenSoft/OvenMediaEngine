@@ -2,7 +2,7 @@
 //
 //  Provider Base Class 
 //
-//  Created by Kwon Keuk Hanb
+//  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -23,28 +23,28 @@ namespace pvd
 
 	class Application : public ApplicationInfo, public MediaRouteApplicationConnector
 	{
-		enum ApplicationState
+		enum class ApplicationState : int8_t
 		{
-			kIdel,
-			kStarted,
-			kStopped,
-			kError
+			Idle,
+			Started,
+			Stopped,
+			Error
 		};
 
 	public:
-		bool 	Start();
-		bool 	Stop();
+		bool Start();
+		bool Stop();
 
 		std::shared_ptr<Stream> GetStream(uint32_t stream_id);
 		std::shared_ptr<Stream> GetStream(ov::String stream_name);
 
 		std::shared_ptr<Stream> MakeStream();
-		bool	CreateStream2(std::shared_ptr<Stream> stream);
-		bool	DeleteStream2(std::shared_ptr<Stream> stream);
+		bool CreateStream2(std::shared_ptr<Stream> stream);
+		bool DeleteStream2(std::shared_ptr<Stream> stream);
 
 		// 상위 클래스에서 Stream 객체를 생성해서 받아옴
 		virtual std::shared_ptr<Stream> OnCreateStream() = 0;
-		
+
 	protected:
 		explicit Application(const ApplicationInfo &info);
 		virtual ~Application();

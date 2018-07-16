@@ -13,9 +13,9 @@ PayloadAttr::PayloadAttr()
 {
 	_id = 0;
 
-	for(int i=0; i<NUMBER_OF_RTCPFB_TYPE; i++)
+	for(bool &flag : _rtcpfb_support_flag)
 	{
-		_rtcpfb_support_flag[i] = false;
+		flag = false;
 	}
 }
 
@@ -33,19 +33,19 @@ uint8_t PayloadAttr::GetId()
 	return _id;
 }
 
-bool PayloadAttr::SetRtpmap(const ov::String& codec, const uint32_t rate, const ov::String parameters)
+bool PayloadAttr::SetRtpmap(const ov::String &codec, uint32_t rate, const ov::String &parameters)
 {
 	if(codec.UpperCaseString() == "VP8")
 	{
-		SetRtpmap(SupportCodec::VP8, rate,  parameters);
+		SetRtpmap(SupportCodec::Vp8, rate, parameters);
 	}
 	else if(codec.UpperCaseString() == "H264")
 	{
-		SetRtpmap(SupportCodec::H264, rate,  parameters);
+		SetRtpmap(SupportCodec::H264, rate, parameters);
 	}
 	else if(codec.UpperCaseString() == "OPUS")
 	{
-		SetRtpmap(SupportCodec::OPUS, rate,  parameters);
+		SetRtpmap(SupportCodec::Opus, rate, parameters);
 	}
 	else
 	{
@@ -56,33 +56,36 @@ bool PayloadAttr::SetRtpmap(const ov::String& codec, const uint32_t rate, const 
 }
 
 // a=rtpmap:97 VP8/50000
-void PayloadAttr::SetRtpmap(const SupportCodec codec, const uint32_t rate, const ov::String parameters)
+void PayloadAttr::SetRtpmap(const SupportCodec codec, uint32_t rate, const ov::String &parameters)
 {
 	_codec = codec;
 	// codec에 따라 payload id를 발급한다.
 	switch(_codec)
 	{
-		case VP8:
+		case SupportCodec::Vp8:
 			if(_id == 0)
 			{
 				_id = 97;
 			}
 			_codec_str = "VP8";
 			break;
-		case H264:
+
+		case SupportCodec::H264:
 			if(_id == 0)
 			{
 				_id = 100;
 			}
 			_codec_str = "H264";
 			break;
-		case OPUS:
+
+		case SupportCodec::Opus:
 			if(_id == 0)
 			{
 				_id = 111;
 			}
 			_codec_str = "OPUS";
 			break;
+
 		default:
 			_id = 0;
 			return;
@@ -95,7 +98,7 @@ void PayloadAttr::SetRtpmap(const SupportCodec codec, const uint32_t rate, const
 // a=rtcp-fb:96 nack pli
 void PayloadAttr::EnableRtcpFb(const RtcpFbType &type, const bool on)
 {
-	_rtcpfb_support_flag[type] = on;
+	_rtcpfb_support_flag[(int)type] = on;
 }
 
 const PayloadAttr::SupportCodec PayloadAttr::GetCodec()
@@ -118,35 +121,39 @@ const ov::String PayloadAttr::GetCodecParams()
 	return _codec_param;
 }
 
-bool PayloadAttr::EnableRtcpFb(const ov::String& type, const bool on)
+bool PayloadAttr::EnableRtcpFb(const ov::String &type, const bool on)
 {
-	if(type.UpperCaseString() == "GOOG_REMB")
+	ov::String type_name = type.UpperCaseString();
+
+	if(type_name == "GOOG_REMB")
 	{
-		_rtcpfb_support_flag[RtcpFbType::GOOG_REMB] = on;
+		_rtcpfb_support_flag[(int)(RtcpFbType::GoogRemb)] = on;
 	}
-	else if(type.UpperCaseString() == "TRANSPORT_CC")
+	else if(type_name == "TRANSPORT_CC")
 	{
-		_rtcpfb_support_flag[RtcpFbType::TRANSPORT_CC] = on;
+		_rtcpfb_support_flag[(int)(RtcpFbType::TransportCc)] = on;
 	}
-	else if(type.UpperCaseString() == "CCM_FIR")
+	else if(type_name == "CCM_FIR")
 	{
-		_rtcpfb_support_flag[RtcpFbType::CCM_FIR] = on;
+		_rtcpfb_support_flag[(int)(RtcpFbType::CcmFir)] = on;
 	}
-	else if(type.UpperCaseString() == "NACK")
+	else if(type_name == "NACK")
 	{
-		_rtcpfb_support_flag[RtcpFbType::NACK] = on;
+		_rtcpfb_support_flag[(int)(RtcpFbType::Nack)] = on;
 	}
-	else if(type.UpperCaseString() == "NACK_PLI")
+	else if(type_name == "NACK_PLI")
 	{
-		_rtcpfb_support_flag[RtcpFbType::NACK_PLI] = on;
+		_rtcpfb_support_flag[(int)(RtcpFbType::NackPli)] = on;
 	}
 	else
 	{
 		return false;
 	}
+
+	return true;
 }
 
-bool PayloadAttr::IsRtcpFbEnabled(const PayloadAttr::RtcpFbType& type)
+bool PayloadAttr::IsRtcpFbEnabled(const PayloadAttr::RtcpFbType &type)
 {
-	return _rtcpfb_support_flag[type];
+	return _rtcpfb_support_flag[(int)type];
 }

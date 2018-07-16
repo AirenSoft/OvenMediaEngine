@@ -40,7 +40,7 @@ namespace ov
 
 	static unsigned long UpdateCrc(unsigned long initial, const unsigned char *buf, ssize_t len)
 	{
-		unsigned long c = initial ^ 0xFFFFFFFFL;
+		unsigned long c = initial ^0xFFFFFFFFL;
 		ssize_t n;
 
 		if(crc_table_computed == false)

@@ -1,35 +1,45 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Kwon Keuk Han
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #include "media_track.h"
 
 #include <base/ovlibrary/ovlibrary.h>
 
 #define OV_LOG_TAG "MediaTrack"
 
-MediaTrack::MediaTrack() :
-	_id(0),
-	_codec_id(MediaCodecId::CODEC_ID_NONE),
-	_start_frame_time(0),
-	_last_frame_time(0)
+using namespace MediaCommonType;
+
+MediaTrack::MediaTrack()
+	: _id(0),
+	  _codec_id(MediaCodecId::None),
+	  _start_frame_time(0),
+	  _last_frame_time(0)
 {
-	
+
 }
 
-MediaTrack::MediaTrack(const MediaTrack &T)
+MediaTrack::MediaTrack(const MediaTrack &media_track)
 {
-	_id = T._id;
-	_media_type = T._media_type;
-	_codec_id = T._codec_id;
+	_id = media_track._id;
+	_media_type = media_track._media_type;
+	_codec_id = media_track._codec_id;
 
 	// 비디오
-	_framerate = T._framerate;
-	_width = T._width;
-	_height = T._height;
+	_framerate = media_track._framerate;
+	_width = media_track._width;
+	_height = media_track._height;
 
 	// 오디오
 	// _sample_rate = T._sample_rate;
-	_sample = T._sample;
-	_channel_layout = T._channel_layout;
+	_sample = media_track._sample;
+	_channel_layout = media_track._channel_layout;
 
-	_time_base = T._time_base;
+	_time_base = media_track._time_base;
 
 	_start_frame_time = 0;
 	_last_frame_time = 0;
@@ -70,7 +80,7 @@ MediaCodecId MediaTrack::GetCodecId()
 	return _codec_id;
 }
 
-Timebase& MediaTrack::GetTimeBase()
+Timebase &MediaTrack::GetTimeBase()
 {
 	return _time_base;
 }
@@ -99,64 +109,4 @@ void MediaTrack::SetLastFrameTime(int64_t time)
 int64_t MediaTrack::GetLastFrameTime()
 {
 	return _last_frame_time;
-}
-
-void VideoTrack::SetFrameRate(double framerate)
-{
-	_framerate = framerate;
-}
-
-double VideoTrack::GetFrameRate()
-{
-	return _framerate;
-}
-
-void VideoTrack::SetWidth(uint32_t width)
-{
-	_width = width;
-}
-
-uint32_t VideoTrack::GetWidth()
-{
-	return _width;
-}
-
-void VideoTrack::SetHeight(uint32_t height)
-{
-	_height = height;
-}
-
-uint32_t VideoTrack::GetHeight()
-{
-	return _height;
-}
-
-void AudioTrack::SetSampleRate(int32_t sample_rate)
-{
-	_sample.SetRate((AudioSample::Rate)sample_rate);
-}
-
-int32_t AudioTrack::GetSampleRate()
-{
-	return (int32_t)_sample.GetRate();
-}
-
-AudioSample& AudioTrack::GetSample()
-{
-	return _sample;
-}
-
-AudioSample::Format AudioTrack::GetSampleFormat()
-{
-	return _sample.GetFormat();
-}
-
-AudioChannel::Layout AudioTrack::GetChannelLayout()
-{
-	return _channel_layout.GetLayout();
-}
-
-AudioChannel& AudioTrack::GetChannel()
-{
-	return _channel_layout;	
 }

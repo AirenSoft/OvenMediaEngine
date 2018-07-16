@@ -37,11 +37,11 @@ void TranscodeCodec::Configure(MediaCodecId codec_id, bool is_encoder, std::shar
 	{
 		switch(codec_id)
 		{
-		case MediaCodecId::CODEC_ID_H264:
+		case MediaCodecId::H264:
 			_impl = new OvenCodecImplAvcodecDecAVC();
 		break;
 		
-		case MediaCodecId::CODEC_ID_AAC:
+		case MediaCodecId::Aac:
 			_impl = new OvenCodecImplAvcodecDecAAC();
 		break;
 		
@@ -57,19 +57,19 @@ void TranscodeCodec::Configure(MediaCodecId codec_id, bool is_encoder, std::shar
 	{
 		switch(codec_id)
 		{
-		case MediaCodecId::CODEC_ID_H264:
+		case MediaCodecId::H264:
 			_impl = new OvenCodecImplAvcodecEncAVC();
 		break;
 
-		case MediaCodecId::CODEC_ID_AAC:
+		case MediaCodecId::Aac:
 			_impl = new OvenCodecImplAvcodecEncAAC();
 		break;
 
-		case MediaCodecId::CODEC_ID_VP8:
+		case MediaCodecId::Vp8:
 			_impl = new OvenCodecImplAvcodecEncVP8();
 			break;
 			
-		case MediaCodecId::CODEC_ID_OPUS:
+		case MediaCodecId::Opus:
 			_impl = new OvenCodecImplAvcodecEncOpus();
 		default:
 		break;

@@ -19,7 +19,7 @@ namespace ov
 	{
 	public:
 		Crc32();
-		virtual ~Crc32();
+		~Crc32();
 
 		static uint32_t Update(uint32_t initial, const void *buffer, ssize_t length);
 		static uint32_t Update(uint32_t initial, const ov::Data &data);
