@@ -164,14 +164,15 @@ We will support the following platforms in the future:
   ```
   
 ### Build
-You can build OME source with the following command. The built binary can be found in the ```bin/DEBUG``` or ```bin/RELEASE``` directory.
+You can build OME source with the following command. The built binary can be found in the `bin/DEBUG` or `bin/RELEASE` directory.
 ```
 $ cd [OME_PATH]/src
 $ make
 ```
 
-### Launch
-When you launch it for the first time, you must create configuration files to the location where the binary exists. The default configuration files are located at ```conf``` directory, so you can copy and use them.
+### Try it
+#### Server
+When you launch it for the first time, you must create configuration files to the location where the binary exists. The default configuration files are located at `conf` directory, so you can copy and use them.
 ```
 $ cd [OME_PATH]/src/bin/DEBUG
 $ cp -R ../../../docs/conf_examples conf
@@ -216,11 +217,66 @@ $ cat conf/Server.xml
                 </Host>
         </Hosts>
 </Server>
+```
 
+The first `<IPAddress>` in the `Server.xml` configuration file uses the IP address to listen to the RTMP stream being published, generally it uses the IP of the system. If the value of this item is not set correctly, the encoder may not be connected.
+The second `<IPAddress>` in `<Publisher>` is used to specify the IP address that the WebSocket server uses to listen to WebRTC Signaling, generally it uses the first `<IPAddress>` in the 'Server.xml' file. If the value of this item is not set correctly, playback may not be performed normally.
+
+```
 $ ./main
 [07-03 12:29:20.705] I 18780 OvenMediaEngine | main.cpp:22 | OvenMediaEngine v0.1.1 (build: 18062600) is started on [Dim-Ubuntu] (Linux x86_64 - 4.15.0-23-generic, #25-Ubuntu SMP Wed May 23 18:02:16 UTC 2018)
 ...
 ```
+
+#### Publisher
+If the server is running normally, you can use an encoder such as OBS or XSplit to publish a live stream.
+To publish a live stream on the encoder, you need to set the RTMP URL as it is below.
+
+  - `rtmp://<OME Server IP>[:<OME RTMP Port>]/<Application name>/<Stream name>`
+
+Here's what each item means:
+
+  - <OME Server IP>: It is related to the first `<IPAddress>` in the `Server.xml` file above. Normally, you can use '<IPAddress>` as is.
+  - <OME RTMP Port>: You can use `<Port>` of `<Provider>` in `Server.xml` file above. If you using the default settings, RTMP default port (1935) is used. (If you set the default port (1935), the port can be omitted.)
+  - <Application name>: This value corresponds to `<Name>` of `<Application>` in `conf/Applications.xml` file. If you using the default settings, you can use `app`.
+  - <Stream name>: Name to distinguish the live stream, which can be determined by the publisher. The determined `stream name` will affect the URL to be played later on the player side.
+
+After you enter the above RTMP URL into the encoder and start publishing, you will have an environment in which the player can view the live stream.
+
+#### Player
+The live stream being published can be played on the latest browsers that support WebRTC, such as Chrome. When playing over WebRTC, you need a special step called Signaling. These steps are processed automatically so you can easily make it work together if you are using '[OvenPlayer](https://github.com/AirenSoft/OvenPlayer)', which implements OvenMediaEngine's Signaling specification.
+Please refer to the following source code to create an HTML page that is linked with [OvenPlayer] (https://github.com/AirenSoft/OvenPlayer). When you open this HTML page in your browser, the live stream you are publishing will play. (For more information on how to work with [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), please refer to [OvenPlayer Quick Start](https://github.com/AirenSoft/OvenPlayer#quick-start).)
+
+
+```
+<!-- import OvenPlayer css -->
+<link rel="stylesheet" href="ovenplayer/css/player.css">
+
+<!-- import OvenPlayer javascript -->
+<script src="ovenplayer/ovenplayer.js"></script>
+
+<!-- OvenPlayer will be added this area. -->
+<div id="player_id"></div>
+    
+<script>
+    // Initialize OvenPlayer.
+    var player = OvenPlayer.create("player_id", {
+        sources: [{type : "webrtc", file : "<WebRTC Signalling URL>", label : "1080"}]
+    });
+</script>
+```
+
+Please note that the WebRTC Signaling URL in the sample code above is similar to an RTMP URL and consists of the following:
+
+  - ws://<OME Server IP>:[<OME Signalling Port>/<Application name>/<Stream name>
+
+    - <OME Server IP>: This is related to the second `<IPAddress>` element in `Server.xml` set up above. Normally, you can use the value of `<IPAddress>`.
+    - <OME Signaling Port>: You can use the value of `<SignalingPort>` in `Server.xml` above. If you using the default settings, it will be the Signaling Default Port (3333).
+    - <Application name: Enter the value of `<Application name>` in the encoder as the value corresponding to `<Name>` in the <Application> in `conf/Applications.xml`.
+    - <Stream name>: This is the name to distinguish the live stream. OvenMediaEngine uses the `_o` suffix to distinguish it from the output of `<Stream name>` in the encoder.
+
+
+For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC Signaling URL will be` ws://192.168.0.1:3333/app/stream_o`.
 
 ## How to Contribute
 Please read [Guidelines](CONTRIBUTING.md) and our [Rules](CODE_OF_CONDUCT.md).
