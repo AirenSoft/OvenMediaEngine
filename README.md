@@ -219,8 +219,8 @@ $ cat conf/Server.xml
 </Server>
 ```
 
-The first `<IPAddress>` in the `Server.xml` configuration file uses the IP address to listen to the RTMP stream being published, generally it uses the IP of the system. If the value of this item is not set correctly, the encoder may not be connected.
-The second `<IPAddress>` in `<Publisher>` is used to specify the IP address that the WebSocket server uses to listen to WebRTC Signaling, generally it uses the first `<IPAddress>` in the 'Server.xml' file. If the value of this item is not set correctly, playback may not be performed normally.
+The first `<IPAddress>` in the `Server.xml` configuration file uses the IP address to listen to the RTMP stream being published, otherwise it uses the IP of the system. If the value of this item is not set correctly, the encoder may not be connected.
+The second `<IPAddress>` in `<Publisher>` is used to specify the IP address that the WebSocket server uses to listen to WebRTC Signaling, otherwise it uses the first `<IPAddress>` in the 'Server.xml' file. If the value of this item is not set correctly, playback may not be performed normally.
 
 ```
 $ ./main
@@ -237,8 +237,8 @@ To publish a live stream on the encoder, you need to set the RTMP URL as it is b
 Here's what each item means:
 
   - `<OME Server IP>`: It is related to the first `<IPAddress>` in the `Server.xml` file above. Normally, you can use `<IPAddress>` as is.
-  - `<OME RTMP Port>`: You can use `<Port>` of `<Provider>` in `Server.xml` file above. If you using the default settings, RTMP default port (1935) is used. (If you set the default port (1935), the port can be omitted.)
-  - `<Application name>`: This value corresponds to `<Name>` of `<Application>` in `conf/Applications.xml` file. If you using the default settings, you can use `app`.
+  - `<OME RTMP Port>`: You can use `<Port>` of `<Provider>` in `Server.xml` file above. If you are using the default settings, RTMP default port (1935) is used. (If you set the default port (1935), the port can be omitted.)
+  - `<Application name>`: This value corresponds to `<Name>` of `<Application>` in `conf/Applications.xml` file. If you are using the default settings, you can use `app`.
   - `<Stream name>`: Name to distinguish the live stream, which can be determined by the publisher. The determined `stream name` will affect the URL to be played later on the player side.
 
 After you enter the above RTMP URL into the encoder and start publishing, you will have an environment in which the player can view the live stream.
