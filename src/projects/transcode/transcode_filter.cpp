@@ -9,13 +9,13 @@ using namespace MediaCommonType;
 #define OV_LOG_TAG "TranscodeFilter"
 
 TranscodeFilter::TranscodeFilter() :
-	_impl(NULL)
+	_impl(nullptr)
 {
 	// av_log_set_level(AV_LOG_TRACE);
 }
 
-TranscodeFilter::TranscodeFilter(FilterType type, std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) :
-	_impl(NULL)
+TranscodeFilter::TranscodeFilter(TranscodeFilterType type, std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) :
+	_impl(nullptr)
 {
 	Configure(type, input_media_track, context);
 }
@@ -23,42 +23,38 @@ TranscodeFilter::TranscodeFilter(FilterType type, std::shared_ptr<MediaTrack> in
 TranscodeFilter::~TranscodeFilter()
 {
 	if(_impl != nullptr)
+	{
 		delete _impl;
+	}
 }
 
-
-int32_t TranscodeFilter::Configure(FilterType type, std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context)
+int32_t TranscodeFilter::Configure(TranscodeFilterType type, std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context)
 {
-
-
 	switch(type)
 	{
-	case FilterType::FILTER_TYPE_AUDIO_RESAMPLER:
-		_impl = new MediaFilterResampler();
-	break;
-	case FilterType::FILTER_TYPE_VIDEO_RESCALER:
-		_impl = new MediaFilterRescaler();
-	break;
-	default:
-		logte("unsupport filter. type(%d)", type);
-		return 1;
-	}	
+		case TranscodeFilterType::AudioResampler:
+			_impl = new MediaFilterResampler();
+			break;
+		case TranscodeFilterType::VideoRescaler:
+			_impl = new MediaFilterRescaler();
+			break;
+		default:
+			logte("Unsupported filter. type(%d)", type);
+			return 1;
+	}
 
 	// 트랜스코딩 컨텍스트 정보 전달
 	_impl->Configure(input_media_track, context);
 
 	return 0;
-
 }
 
-int32_t TranscodeFilter::SendBuffer(std::unique_ptr<MediaBuffer> buf)
+int32_t TranscodeFilter::SendBuffer(std::unique_ptr<MediaFrame> buffer)
 {
-	return _impl->SendBuffer(std::move(buf));
+	return _impl->SendBuffer(std::move(buffer));
 }
 
-std::pair<int32_t, std::unique_ptr<MediaBuffer>> TranscodeFilter::RecvBuffer()
+std::unique_ptr<MediaFrame> TranscodeFilter::RecvBuffer(TranscodeResult *result)
 {
-	auto obj = _impl->RecvBuffer();
-
-	return obj;
+	return _impl->RecvBuffer(result);
 }

@@ -6,90 +6,17 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #include "transcode_codec_dec_aac.h"
-
-#include <base/ovlibrary/ovlibrary.h>
 
 #define OV_LOG_TAG "TranscodeCodec"
 
-OvenCodecImplAvcodecDecAAC::OvenCodecImplAvcodecDecAAC()
+std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResult *result)
 {
-	avcodec_register_all();
-	_pkt_buf.clear();
-	_pkt = av_packet_alloc();
-	_frame = av_frame_alloc();
-	_codec_par = avcodec_parameters_alloc();
-	_change_format = false;
-	_decoded_frame_num = 0;
-
-}
-
-OvenCodecImplAvcodecDecAAC::~OvenCodecImplAvcodecDecAAC()
-{
-	avcodec_free_context(&_context);
-	av_frame_free(&_frame);
-	av_packet_free(&_pkt);
-}
-
-int32_t OvenCodecImplAvcodecDecAAC::Configure(std::shared_ptr<TranscodeContext> context)
-{
-	_transcode_context = context;
-
-	AVCodecParameters *origin_par = NULL;
-
-	/* find the MPEG-1 video decoder */
-	AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_AAC);
-	if(!codec)
-	{
-		logte("Codec not found\n");
-		return 1;
-	}
-
-	// create codec context
-	_context = avcodec_alloc_context3(codec);
-	if(!_context)
-	{
-		logte("Could not allocate video codec context\n");
-		return 1;
-	}
-
-	// open codec
-	if(avcodec_open2(_context, codec, NULL) < 0)
-	{
-		logte("Could not open codec\n");
-		return 1;
-	}
-
-	_parser = av_parser_init(codec->id);
-	if(!_parser)
-	{
-		logte("Parser not found\n");
-		return 1;
-	}
-
-	return 0;
-}
-
-void OvenCodecImplAvcodecDecAAC::sendbuf(std::unique_ptr<MediaBuffer> buf)
-{
-	_pkt_buf.push_back(std::move(buf));
-}
-
-// ==========================
-// 리턴값 정의
-// ==========================
-//  0 : 프레임 디코딩 완료, 아직 디코딩할 데이터가 대기하고 있음.
-//  1 : 포맷이 변경이 되었다.
-//  < 0 : 뭐든간에 에러가 있다.
-
-std::pair<int32_t, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecDecAAC::recvbuf()
-{
-	int ret;
 	///////////////////////////////////////////////////
 	// 디코딩 가능한 프레임이 존재하는지 확인한다.
 	///////////////////////////////////////////////////
-	ret = avcodec_receive_frame(_context, _frame);
+	int ret = avcodec_receive_frame(_context, _frame);
+
 	if(ret == AVERROR(EAGAIN))
 	{
 		// 패킷을 넣음
@@ -97,12 +24,14 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecDecAAC::rec
 	else if(ret == AVERROR_EOF)
 	{
 		logte("Error receiving a packet for decoding : AVERROR_EOF");
-		return std::make_pair(-1, nullptr);
+		*result = TranscodeResult::EndOfFile;
+		return nullptr;
 	}
 	else if(ret < 0)
 	{
 		logte("Error receiving a packet for decoding : %d", ret);
-		return std::make_pair(-1, nullptr);
+		*result = TranscodeResult::DataError;
+		return nullptr;
 	}
 	else
 	{
@@ -114,7 +43,7 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecDecAAC::rec
 			ret = avcodec_parameters_from_context(_codec_par, _context);
 			if(ret == 0)
 			{
-				logti("codec parameters : codec_type(%d), codec_id(%d), codec_tag(%d), extra(%d), format(%d), bit_rate(%d),  bits_per_coded_sample(%d), bits_per_raw_sample(%d), profile(%d), level(%d), sample_aspect_ratio(%d/%d) width(%d), height(%d) field_order(%d) color_range(%d) color_primaries(%d) color_trc(%d) color_space(%d) chroma_location(%d), channel_layout(%.0f) channels(%d) sample_rate(%d) block_align(%d) frame_size(%d)",
+				logti("Codec parameters: codec_type(%d), codec_id(%d), codec_tag(%d), extra(%d), format(%d), bit_rate(%d), bits_per_coded_sample(%d), bits_per_raw_sample(%d), profile(%d), level(%d), sample_aspect_ratio(%d/%d) width(%d), height(%d) field_order(%d) color_range(%d) color_primaries(%d) color_trc(%d) color_space(%d) chroma_location(%d), channel_layout(%ld) channels(%d) sample_rate(%d) block_align(%d) frame_size(%d)",
 				      _codec_par->codec_type,
 				      _codec_par->codec_id,
 				      _codec_par->codec_tag,
@@ -137,7 +66,7 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecDecAAC::rec
 				      _codec_par->color_space,
 				      _codec_par->chroma_location,
 
-				      (float)_codec_par->channel_layout,
+				      _codec_par->channel_layout,
 				      _codec_par->channels,
 				      _codec_par->sample_rate,
 				      _codec_par->block_align,
@@ -165,7 +94,7 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecDecAAC::rec
 				, (float)(_frame->pts==AV_NOPTS_VALUE)?-1.0f:_frame->pts);
 #endif
 
-		auto out_buf = std::make_unique<MediaBuffer>();
+		auto out_buf = std::make_unique<MediaFrame>();
 
 		out_buf->SetBytesPerSample(av_get_bytes_per_sample(_context->sample_fmt));
 		out_buf->SetNbSamples(_frame->nb_samples);
@@ -193,20 +122,28 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecDecAAC::rec
 		av_frame_unref(_frame);
 
 		// Notify가 필요한 경우에 1을 반환, 아닌 경우에는 일반적인 경우로 0을 반환
-		return std::make_pair(need_to_change_notify ? 1 : 0, std::move(out_buf));
+		*result = need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady;
+		return std::move(out_buf);
 	}
 
 	///////////////////////////////////////////////////
 	// 인코딩 요청
 	///////////////////////////////////////////////////
-	while(_pkt_buf.size() > 0)
+	off_t offset = 0;
+
+	while(_input_buffer.size() > 0)
 	{
+		const MediaPacket *cur_pkt = _input_buffer[0].get();
+		std::shared_ptr<const ov::Data> cur_data = nullptr;
 
-		MediaBuffer *cur_pkt = _pkt_buf[0].get();
-
-		if(cur_pkt->GetBufferSize() == 0)
+		if(cur_pkt != nullptr)
 		{
-			_pkt_buf.erase(_pkt_buf.begin(), _pkt_buf.begin() + 1);
+			cur_data = cur_pkt->GetData();
+		}
+
+		if((cur_data == nullptr) || (cur_data->GetLength() == 0))
+		{
+			_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
 			continue;
 		}
 
@@ -214,15 +151,16 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecDecAAC::rec
 			_parser,
 			_context,
 			&_pkt->data, &_pkt->size,
-			cur_pkt->GetBuffer() + cur_pkt->GetOffset(),
-			cur_pkt->GetBufferSize() - cur_pkt->GetOffset(),
+			cur_data->GetDataAs<uint8_t>() + offset,
+			static_cast<int>(cur_data->GetLength() - offset),
 			cur_pkt->GetPts(), cur_pkt->GetPts(),
 			0);
 
 		if(parsed_size < 0)
 		{
 			logte("Error while parsing\n");
-			return std::make_pair(-2, nullptr);
+			*result = TranscodeResult::ParseError;
+			return nullptr;
 		}
 
 		if(_pkt->size > 0)
@@ -235,38 +173,45 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecDecAAC::rec
 			{
 				// 더이상 디코딩할 데이터가 없다면 빠짐
 				// printf("Error sending a packet for decoding : AVERROR(EAGAIN)\n");
-				return std::make_pair(0, nullptr);
 			}
 			else if(ret == AVERROR_EOF)
 			{
-				logte("Error sending a packet for decoding : AVERROR_EOF\n");
+				logte("Error sending a packet for decoding : AVERROR_EOF");
 			}
 			else if(ret == AVERROR(EINVAL))
 			{
-				logte("Error sending a packet for decoding : AVERROR(EINVAL)\n");
+				logte("Error sending a packet for decoding : AVERROR(EINVAL)");
 			}
 			else if(ret == AVERROR(ENOMEM))
 			{
-				logte("Error sending a packet for decoding : AVERROR(ENOMEM)\n");
+				logte("Error sending a packet for decoding : AVERROR(ENOMEM)");
 			}
 			else if(ret < 0)
 			{
-				logte("Error sending a packet for decoding : ERROR(Unknown %d)\n", ret);
-				return std::make_pair(-1, nullptr);
+				logte("Error sending a packet for decoding : ERROR(Unknown %d)", ret);
+				*result = TranscodeResult::DataError;
+				return nullptr;
 			}
 		}
 
 		// send_packet 이 완료된 이후에 데이터를 삭제해야함.
 		if(parsed_size > 0)
 		{
-			cur_pkt->IncreaseOffset(static_cast<size_t>(parsed_size));
+			OV_ASSERT(cur_data->GetLength() >= parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", cur_data->GetLength(), parsed_size);
 
-			if(cur_pkt->GetOffset() >= cur_pkt->GetBufferSize())
+			offset += parsed_size;
+
+			if(cur_data->GetLength() <= parsed_size)
 			{
-				_pkt_buf.erase(_pkt_buf.begin(), _pkt_buf.begin() + 1);
+				// pop the first item
+				_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
+
+				offset = 0;
 			}
 		}
 	}
 
-	return std::make_pair(-1, nullptr);
+	*result = TranscodeResult::NoData;
+	return nullptr;
 }
+

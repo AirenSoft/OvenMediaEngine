@@ -73,7 +73,12 @@ bool TranscodeApplication::OnSendVideoFrame(std::shared_ptr<StreamInfo> stream_i
 	return true;
 }
 
-bool TranscodeApplication::OnSendFrame(std::shared_ptr<StreamInfo> stream_info, std::unique_ptr<MediaBuffer> frame)
+bool TranscodeApplication::OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::unique_ptr<EncodedFrame> encoded_frame, std::unique_ptr<CodecSpecificInfo> codec_info, std::unique_ptr<FragmentationHeader> fragmentation)
+{
+	return true;
+}
+
+bool TranscodeApplication::OnSendFrame(std::shared_ptr<StreamInfo> stream_info, std::unique_ptr<MediaPacket> packet)
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 
@@ -85,5 +90,5 @@ bool TranscodeApplication::OnSendFrame(std::shared_ptr<StreamInfo> stream_info, 
 
 	auto stream = stream_bucket->second;
 
-	return stream->Push(std::move(frame));
+	return stream->Push(std::move(packet));
 }

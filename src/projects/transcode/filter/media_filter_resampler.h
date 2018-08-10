@@ -21,28 +21,21 @@
 class MediaFilterResampler : public MediaFilterImpl
 {
 public:
-    MediaFilterResampler(); 
-    ~MediaFilterResampler();
+	MediaFilterResampler();
+	~MediaFilterResampler();
 
-    int32_t Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) override;
+	int32_t Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) override;
 
-    int32_t SendBuffer(std::unique_ptr<MediaBuffer> buf) override;
-
-    std::pair<int32_t, std::unique_ptr<MediaBuffer>> RecvBuffer() override;
+	int32_t SendBuffer(std::unique_ptr<MediaFrame> buffer) override;
+	std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
 
 private:
+	AVFrame *_frame;
+	AVFilterContext *_buffersink_ctx;
+	AVFilterContext *_buffersrc_ctx;
+	AVFilterGraph *_filter_graph;
+	AVFilterInOut *_outputs;
+	AVFilterInOut *_inputs;
 
-	AVFrame*			_frame;
-
-	AVFilterContext*	_buffersink_ctx;
-
-	AVFilterContext*	_buffersrc_ctx;
-
-	AVFilterGraph*		_filter_graph;
-
-	AVFilterInOut*		_outputs;
-
-	AVFilterInOut*		_inputs;
-
-	std::vector<std::unique_ptr<MediaBuffer>> 	_pkt_buf;
+	std::vector<std::unique_ptr<MediaFrame>> _pkt_buf;
 };

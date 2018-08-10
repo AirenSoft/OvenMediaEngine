@@ -63,9 +63,11 @@ public:
 		std::unique_ptr<CodecSpecificInfo> codec_info,
 		std::unique_ptr<FragmentationHeader> fragmentation) override;
 
+	bool OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::unique_ptr<EncodedFrame> encoded_frame, std::unique_ptr<CodecSpecificInfo> codec_info, std::unique_ptr<FragmentationHeader> fragmentation) override;
+
 	bool OnSendFrame(
 		std::shared_ptr<StreamInfo> stream_info,
-		std::unique_ptr<MediaBuffer> frame
+		std::unique_ptr<MediaPacket> packet
 	) override;
 
 	const std::shared_ptr<ApplicationInfo> &GetApplicationInfo() const

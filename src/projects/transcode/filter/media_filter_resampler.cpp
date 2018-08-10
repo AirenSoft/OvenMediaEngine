@@ -156,17 +156,17 @@ int32_t MediaFilterResampler::Configure(std::shared_ptr<MediaTrack> input_media_
 	return 0;
 }
 
-int32_t MediaFilterResampler::SendBuffer(std::unique_ptr<MediaBuffer> buf)
+int32_t MediaFilterResampler::SendBuffer(std::unique_ptr<MediaFrame> buffer)
 {
-
-	_pkt_buf.push_back(std::move(buf));
+	_pkt_buf.push_back(std::move(buffer));
 
 	return 0;
 }
 
-std::pair<int32_t, std::unique_ptr<MediaBuffer>> MediaFilterResampler::RecvBuffer()
+std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *result)
 {
 	int ret = av_buffersink_get_frame(_buffersink_ctx, _frame);
+
 	if(ret == AVERROR(EAGAIN))
 	{
 		// printf("eagain : %d\r\n", ret);
@@ -174,16 +174,18 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> MediaFilterResampler::RecvBuffe
 	else if(ret == AVERROR_EOF)
 	{
 		logte("eof : %d\r\n", ret);
-		return std::make_pair(-1, nullptr);
+		*result = TranscodeResult::EndOfFile;
+		return nullptr;
 	}
 	else if(ret < 0)
 	{
 		logte("error : %d\r\n", ret);
-		return std::make_pair(-1, nullptr);
+		*result = TranscodeResult::DataError;
+		return nullptr;
 	}
 	else
 	{
-		auto out_buf = std::make_unique<MediaBuffer>();
+		auto out_buf = std::make_unique<MediaFrame>();
 
 		out_buf->SetFormat(_frame->format);
 		out_buf->SetBytesPerSample(av_get_bytes_per_sample((AVSampleFormat)_frame->format));
@@ -212,13 +214,13 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> MediaFilterResampler::RecvBuffe
 		av_frame_unref(_frame);
 
 		// Notify가 필요한 경우에 1을 반환, 아닌 경우에는 일반적인 경우로 0을 반환
-		return std::make_pair(0, std::move(out_buf));
+		*result = TranscodeResult::DataReady;
+		return std::move(out_buf);
 	}
-
 
 	while(_pkt_buf.size() > 0)
 	{
-		MediaBuffer *cur_pkt = _pkt_buf[0].get();
+		MediaFrame *cur_pkt = _pkt_buf[0].get();
 
 		// ** 오디오 프레임에 들어갈 필수 항목
 		_frame->nb_samples = cur_pkt->GetNbSamples();
@@ -241,14 +243,16 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> MediaFilterResampler::RecvBuffe
 		{
 			logte("Could not allocate the audio frame data\n");
 
-			return std::make_pair(-1, nullptr);
+			*result = TranscodeResult::DataError;
+			return nullptr;
 		}
 
 		if(av_frame_make_writable(_frame) < 0)
 		{
 			logte("Could not make sure the frame data is writable\n");
 
-			return std::make_pair(-1, nullptr);
+			*result = TranscodeResult::DataError;
+			return nullptr;
 		}
 
 		if(av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0)
@@ -262,5 +266,6 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> MediaFilterResampler::RecvBuffe
 		av_frame_unref(_frame);
 	}
 
-	return std::make_pair(-1, nullptr);
+	*result = TranscodeResult::NoData;
+	return nullptr;
 }

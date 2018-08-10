@@ -8,34 +8,13 @@
 //==============================================================================
 #include "transcode_codec_enc_opus.h"
 
-#include <base/ovlibrary/ovlibrary.h>
-
 #define OV_LOG_TAG "TranscodeCodec"
-
-OvenCodecImplAvcodecEncOpus::OvenCodecImplAvcodecEncOpus()
-{
-	avcodec_register_all();
-	_pkt_buf.clear();
-	_pkt = av_packet_alloc();
-	_frame = av_frame_alloc();
-	_decoded_frame_num = 0;
-
-}
-
-OvenCodecImplAvcodecEncOpus::~OvenCodecImplAvcodecEncOpus()
-{
-	avcodec_free_context(&_context);
-	av_frame_free(&_frame);
-	av_packet_free(&_pkt);
-}
 
 int OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	_transcode_context = context;
 
-	// AVCodecParameters *origin_par = NULL;
-
-	AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_OPUS);
+	AVCodec *codec = avcodec_find_encoder(GetCodecID());
 	if(!codec)
 	{
 		logte("Codec not found\n");
@@ -49,25 +28,19 @@ int OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> con
 		return 1;
 	}
 
-
 	_context->bit_rate = _transcode_context->_audio_bitrate;
-
 	/* check that the encoder supports s16 pcm input */
 	// AV_SAMPLE_FMT_S16, AV_SAMPLE_FMT_FLT, AV_SAMPLE_FMT_NO
 	_context->sample_fmt = AV_SAMPLE_FMT_FLT;
-
 	/* select other audio parameters supported by the encoder */
 	// 지원 가능한 샘플 레이트 48000, 24000, 16000, 12000, 8000, 0
 	_context->sample_rate = _transcode_context->GetAudioSampleRate();
-
 	_context->channel_layout = (int32_t)MediaCommonType::AudioChannel::Layout::LayoutStereo;
-
 	// _context->channels       	= av_get_channel_layout_nb_channels(_context->channel_layout);
-
 	_context->time_base = (AVRational){ 1, AV_TIME_BASE };
 
 	// open codec
-	if(avcodec_open2(_context, codec, NULL) < 0)
+	if(avcodec_open2(_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec\n");
 		return 1;
@@ -76,12 +49,7 @@ int OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> con
 	return 0;
 }
 
-void OvenCodecImplAvcodecEncOpus::sendbuf(std::unique_ptr<MediaBuffer> buf)
-{
-	_pkt_buf.push_back(std::move(buf));
-}
-
-std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncOpus::recvbuf()
+std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)
 {
 	int ret;
 
@@ -96,12 +64,14 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncOpus::recvbu
 	else if(ret == AVERROR_EOF)
 	{
 		logte("\r\nError receiving a packet for decoding : AVERROR_EOF\n");
-		return std::make_pair(-1, nullptr);
+		*result = TranscodeResult::DataError;
+		return nullptr;
 	}
 	else if(ret < 0)
 	{
 		logte("Error receiving a packet for encoding : %d\n", ret);
-		return std::make_pair(-1, nullptr);
+		*result = TranscodeResult::DataError;
+		return nullptr;
 	}
 	else
 	{
@@ -114,21 +84,21 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncOpus::recvbu
 		// Utils::Debug::DumpHex(_pkt->data, (_pkt->size>32)?32:_pkt->size);
 #endif
 
-		auto pbuf = std::make_unique<MediaBuffer>(MediaType::Audio, 0, _pkt->data, _pkt->size, _pkt->pts, _pkt->flags);
+		auto packet_buffer = std::make_unique<MediaPacket>(MediaType::Audio, 0, _pkt->data, _pkt->size, _pkt->pts, (_pkt->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
 
 		av_packet_unref(_pkt);
 
-		return std::make_pair(0, std::move(pbuf));
+		*result = TranscodeResult::DataReady;
+		return std::move(packet_buffer);
 	}
 
 
 	///////////////////////////////////////////////////
 	// 인코딩 요청
 	///////////////////////////////////////////////////
-	while(_pkt_buf.size() > 0)
+	while(_input_buffer.size() > 0)
 	{
-
-		MediaBuffer *cur_pkt = _pkt_buf[0].get();
+		const MediaFrame *cur_pkt = _input_buffer[0].get();
 
 		_frame->nb_samples = _context->frame_size;
 		_frame->format = _context->sample_fmt;
@@ -138,13 +108,15 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncOpus::recvbu
 		if(av_frame_get_buffer(_frame, 0) < 0)
 		{
 			logte("Could not allocate the audio frame data\n");
-			return std::make_pair(-1, nullptr);
+			*result = TranscodeResult::DataError;
+			return nullptr;
 		}
 
 		if(av_frame_make_writable(_frame) < 0)
 		{
 			logte("Could not make sure the frame data is writable\n");
-			return std::make_pair(-1, nullptr);
+			*result = TranscodeResult::DataError;
+			return nullptr;
 		}
 
 		//TODO: 디코딩된 오디오 프레임의 데이터를 넣어줘야함.
@@ -157,8 +129,9 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncOpus::recvbu
 
 		av_frame_unref(_frame);
 
-		_pkt_buf.erase(_pkt_buf.begin(), _pkt_buf.begin() + 1);
+		_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
 	}
 
-	return std::make_pair(-1, nullptr);
+	*result = TranscodeResult::NoData;
+	return nullptr;
 }

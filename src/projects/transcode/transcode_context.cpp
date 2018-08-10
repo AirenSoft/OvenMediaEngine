@@ -14,8 +14,7 @@
 
 #define OV_LOG_TAG "TranscodeContext"
 
-
-TranscodeContext::TranscodeContext() 
+TranscodeContext::TranscodeContext()
 {
 	SetAudioTimeBase(1, 1000000);
 	SetVideoTimeBase(1, 1000000);
@@ -106,7 +105,7 @@ float TranscodeContext::GetFrameRate()
 	return _video_frame_rate;
 }
 
-Timebase& TranscodeContext::GetVideoTimeBase()
+Timebase &TranscodeContext::GetVideoTimeBase()
 {
 	return _video_time_base;
 }
@@ -116,7 +115,7 @@ void TranscodeContext::SetVideoTimeBase(int32_t num, int32_t den)
 	_video_time_base.Set(num, den);
 }
 
-Timebase& TranscodeContext::GetAudioTimeBase()
+Timebase &TranscodeContext::GetAudioTimeBase()
 {
 	return _audio_time_base;
 }

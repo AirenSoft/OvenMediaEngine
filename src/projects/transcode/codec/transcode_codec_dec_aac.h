@@ -6,39 +6,17 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #pragma once
 
-#include <vector>
-#include <stdint.h>
+#include "transcode_decoder.h"
 
-#include "transcode_codec_impl.h"
-
-class OvenCodecImplAvcodecDecAAC : public OvenCodecImpl
+class OvenCodecImplAvcodecDecAAC : public TranscodeDecoder
 {
 public:
-    OvenCodecImplAvcodecDecAAC(); 
-    ~OvenCodecImplAvcodecDecAAC();
+	AVCodecID GetCodecID() const noexcept override
+	{
+		return AV_CODEC_ID_AAC;
+	}
 
-public:
- 	/*virtual*/
- 	int32_t Configure(std::shared_ptr<TranscodeContext> context) override;
-
-	void sendbuf(std::unique_ptr<MediaBuffer> buf) override;
-	
-	std::pair<int32_t, std::unique_ptr<MediaBuffer>> recvbuf() override;
-	
-private:
-	std::shared_ptr<TranscodeContext> _transcode_context;
-
-	AVCodecContext*					_context;
-	AVCodecParserContext*			_parser;
-	AVCodecParameters *				_codec_par;
-	std::vector<std::unique_ptr<MediaBuffer>> 	_pkt_buf;
-
-	bool							_change_format;
-
-	AVPacket*						_pkt;
-	AVFrame*						_frame;
-	int 							_decoded_frame_num;
+	std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
 };

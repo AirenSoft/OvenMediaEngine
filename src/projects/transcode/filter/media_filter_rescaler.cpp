@@ -14,14 +14,13 @@
 
 #define DEBUG_RESCALER    0
 
-MediaFilterRescaler::MediaFilterRescaler() :
-	_frame(nullptr),
-	// _frame_out(nullptr),
-	_buffersink_ctx(nullptr),
-	_buffersrc_ctx(nullptr),
-	_filter_graph(nullptr),
-	_outputs(nullptr),
-	_inputs(nullptr)
+MediaFilterRescaler::MediaFilterRescaler()
+	: _frame(nullptr),
+	  _buffersink_ctx(nullptr),
+	  _buffersrc_ctx(nullptr),
+	  _filter_graph(nullptr),
+	  _outputs(nullptr),
+	  _inputs(nullptr)
 {
 	avfilter_register_all();
 
@@ -164,18 +163,18 @@ int32_t MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_t
 	return 0;
 }
 
-int32_t MediaFilterRescaler::SendBuffer(std::unique_ptr<MediaBuffer> buf)
+int32_t MediaFilterRescaler::SendBuffer(std::unique_ptr<MediaFrame> buffer)
 {
-
-	_pkt_buf.push_back(std::move(buf));
+	_pkt_buf.push_back(std::move(buffer));
 
 	return 0;
 }
 
-std::pair<int32_t, std::unique_ptr<MediaBuffer>> MediaFilterRescaler::RecvBuffer()
+std::unique_ptr<MediaFrame> MediaFilterRescaler::RecvBuffer(TranscodeResult *result)
 {
 	// 출력될 프레임이 있는지 확인함
 	int ret = av_buffersink_get_frame(_buffersink_ctx, _frame);
+
 	if(ret == AVERROR(EAGAIN))
 	{
 		// printf("eagain : %d\r\n", ret);
@@ -183,16 +182,18 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> MediaFilterRescaler::RecvBuffer
 	else if(ret == AVERROR_EOF)
 	{
 		logte("eof : %d\r\n", ret);
-		return std::make_pair(-1, nullptr);
+		*result = TranscodeResult::EndOfFile;
+		return nullptr;
 	}
 	else if(ret < 0)
 	{
 		logte("error : %d\r\n", ret);
-		return std::make_pair(-1, nullptr);
+		*result = TranscodeResult::DataError;
+		return nullptr;
 	}
 	else
 	{
-		auto out_buf = std::make_unique<MediaBuffer>();
+		auto out_buf = std::make_unique<MediaFrame>();
 		out_buf->SetWidth(_frame->width);
 		out_buf->SetHeight(_frame->height);
 		out_buf->SetFormat(_frame->format);
@@ -211,13 +212,13 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> MediaFilterRescaler::RecvBuffer
 		av_frame_unref(_frame);
 
 		// TODO: Got Frame!
-		return std::make_pair(0, std::move(out_buf));
+		*result = TranscodeResult::DataReady;
+		return std::move(out_buf);
 	}
-
 
 	while(_pkt_buf.size() > 0)
 	{
-		MediaBuffer *cur_pkt = _pkt_buf[0].get();
+		MediaFrame *cur_pkt = _pkt_buf[0].get();
 
 		_frame->format = cur_pkt->GetFormat();
 		_frame->width = cur_pkt->GetWidth();
@@ -232,13 +233,15 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> MediaFilterRescaler::RecvBuffer
 		if(av_frame_get_buffer(_frame, 32) < 0)
 		{
 			logte("Could not allocate the video frame data\n");
-			return std::make_pair(-1, nullptr);
+			*result = TranscodeResult::DataError;
+			return nullptr;
 		}
 
 		if(av_frame_make_writable(_frame) < 0)
 		{
 			logte("Could not make sure the frame data is writable\n");
-			return std::make_pair(-1, nullptr);
+			*result = TranscodeResult::DataError;
+			return nullptr;
 		}
 
 		// 데이터를 복사함.
@@ -267,5 +270,6 @@ std::pair<int32_t, std::unique_ptr<MediaBuffer>> MediaFilterRescaler::RecvBuffer
 		av_frame_unref(_frame);
 	}
 
-	return std::make_pair(-1, nullptr);
+	*result = TranscodeResult::NoData;
+	return nullptr;
 }

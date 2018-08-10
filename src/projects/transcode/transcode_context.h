@@ -18,11 +18,11 @@
 // TranscodeContext 데이터를 코덱 및 필터에 공용으로 사용된다
 using namespace MediaCommonType;
 
-class TranscodeContext 
+class TranscodeContext
 {
 public:
-    TranscodeContext();
-    ~TranscodeContext();
+	TranscodeContext();
+	~TranscodeContext();
 
 	// 비디오 트랜스코딩 옵션
 public:
@@ -37,33 +37,33 @@ public:
 
 	uint32_t GetVideoWidth();
 	uint32_t GetVideoHeight();
-	
+
 	void SetFrameRate(float val);
 	float GetFrameRate();
-	
-	Timebase& GetVideoTimeBase();
+
+	Timebase &GetVideoTimeBase();
 	void SetVideoTimeBase(int32_t num, int32_t den);
-	
+
 	void SetGOP(int32_t val);
 	int32_t GetGOP();
 
-	MediaCodecId   	_video_codec_id;
+	MediaCodecId _video_codec_id;
 
 	// Bitrate
-	int32_t			_video_bitrate;
+	int32_t _video_bitrate;
 
 	// Resolution
-	uint32_t		_video_width;
-	uint32_t 		_video_height;
+	uint32_t _video_width;
+	uint32_t _video_height;
 
 	// Frame Rate
-	float			_video_frame_rate;
+	float _video_frame_rate;
 
 	// GOP : Group Of Picture
-	int32_t			_video_gop;
+	int32_t _video_gop;
 
 	// 비디오 타입 베이스
-	Timebase 		_video_time_base;
+	Timebase _video_time_base;
 
 
 
@@ -79,26 +79,26 @@ public:
 	void SetAudioSampleRate(int32_t val);
 	int32_t GetAudioSampleRate();
 
-	Timebase& GetAudioTimeBase();
-	
+	Timebase &GetAudioTimeBase();
+
 	void SetAudioTimeBase(int32_t num, int32_t den);
 
 	void SetAudioSampleForamt(AudioSample::Format val);
 
 	void SetAudioChannelLayout(AudioChannel::Layout val);
-	
-	MediaCodecId   	_audio_codec_id;
+
+	MediaCodecId _audio_codec_id;
 
 	// 오디오 비트레이트
-	int32_t 		_audio_bitrate;
-	
+	int32_t _audio_bitrate;
+
 	// 오디오 샘플
-	AudioSample 	_audio_sample;
+	AudioSample _audio_sample;
 
 	// 오디오 채널
-	AudioChannel 	_audio_channel;
+	AudioChannel _audio_channel;
 
 	// 오디오 타임베이스
-	Timebase 		_audio_time_base;
+	Timebase _audio_time_base;
 };
 

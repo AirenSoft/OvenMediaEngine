@@ -6,44 +6,15 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
-
 #include "transcode_codec_enc_avc.h"
-#include <base/ovlibrary/ovlibrary.h>
-
 
 #define OV_LOG_TAG "TranscodeCodec"
-
-OvenCodecImplAvcodecEncAVC::OvenCodecImplAvcodecEncAVC()
-{
-	avcodec_register_all();
-
-	_pkt_buf.clear();
-	_pkt = av_packet_alloc();
-	_frame = av_frame_alloc();
-	_codec_par = avcodec_parameters_alloc();
-	_change_format = false;
-
-	_coded_frame_count = 0;
-	_coded_data_size = 0;
-
-}
-
-OvenCodecImplAvcodecEncAVC::~OvenCodecImplAvcodecEncAVC()
-{
-	avcodec_free_context(&_context);
-	avcodec_parameters_free(&_codec_par);
-	av_frame_free(&_frame);
-	av_packet_free(&_pkt);
-}
 
 int OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	_transcode_context = context;
 
-	// AVCodecParameters *origin_par = NULL;
-
-	AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+	AVCodec *codec = avcodec_find_encoder(GetCodecID());
 	if(!codec)
 	{
 		logte("Codec not found\n");
@@ -58,37 +29,22 @@ int OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> cont
 	}
 
 	_context->bit_rate = _transcode_context->_video_bitrate;
-
 	_context->rc_max_rate = _context->rc_min_rate = _context->bit_rate;
-
-	_context->rc_buffer_size = _context->bit_rate * 2;
-
+	_context->rc_buffer_size = static_cast<int>(_context->bit_rate * 2);
 	_context->sample_aspect_ratio = (AVRational){ 1, 1 };
-
 	_context->time_base = (AVRational){ 1, AV_TIME_BASE };
-
 	_context->framerate = av_d2q(_transcode_context->_video_frame_rate, AV_TIME_BASE);
-
 	_context->gop_size = _transcode_context->_video_gop;
-
 	_context->max_b_frames = 0;
-
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
-
 	_context->width = _transcode_context->_video_width;
-
 	_context->height = _transcode_context->_video_height;
-
 	_context->thread_count = 4;
 
-
-	if(codec->id == AV_CODEC_ID_H264)
-	{
-		av_opt_set(_context->priv_data, "preset", "fast", 0);
-	}
+	av_opt_set(_context->priv_data, "preset", "fast", 0);
 
 	// open codec
-	if(avcodec_open2(_context, codec, NULL) < 0)
+	if(avcodec_open2(_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec\n");
 		return 1;
@@ -97,13 +53,7 @@ int OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> cont
 	return 0;
 }
 
-
-void OvenCodecImplAvcodecEncAVC::sendbuf(std::unique_ptr<MediaBuffer> buf)
-{
-	_pkt_buf.push_back(std::move(buf));
-}
-
-std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncAVC::recvbuf()
+std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeResult *result)
 {
 	int ret;
 
@@ -118,14 +68,16 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncAVC::recvbuf
 	else if(ret == AVERROR_EOF)
 	{
 		printf("\r\nError receiving a packet for decoding : AVERROR_EOF\n");
-		return std::make_pair(-1, nullptr);
+		*result = TranscodeResult::DataError;
+		return nullptr;
 	}
 	else if(ret < 0)
 	{
 		// copy
 		// frame->linesize[0] * frame->height
 		printf("Error receiving a packet for decoding : %d\n", ret);
-		return std::make_pair(-1, nullptr);
+		*result = TranscodeResult::DataError;
+		return nullptr;
 	}
 	else
 	{
@@ -133,16 +85,17 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncAVC::recvbuf
 
 		// Utils::Debug::DumpHex(_pkt->data, (_pkt->size>80)?80:_pkt->size);
 
-		return std::make_pair(0, nullptr);
+		// TODO(soulk): 여기서 데이터를 안넘겨도 되는지 확인
+		*result = TranscodeResult::DataReady;
+		return nullptr;
 	}
-
 
 	///////////////////////////////////////////////////
 	// 인코딩 요청
 	///////////////////////////////////////////////////
-	while(_pkt_buf.size() > 0)
+	while(_input_buffer.size() > 0)
 	{
-		MediaBuffer *cur_pkt = _pkt_buf[0].get();
+		const MediaFrame *cur_pkt = _input_buffer[0].get();
 
 		_frame->format = cur_pkt->GetFormat();
 		_frame->width = cur_pkt->GetWidth();
@@ -152,13 +105,15 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncAVC::recvbuf
 		if(av_frame_get_buffer(_frame, 32) < 0)
 		{
 			printf("Could not allocate the video frame data\n");
-			return std::make_pair(-1, nullptr);
+			*result = TranscodeResult::DataError;
+			return nullptr;
 		}
 
 		if(av_frame_make_writable(_frame) < 0)
 		{
 			printf("Could not make sure the frame data is writable\n");
-			return std::make_pair(-1, nullptr);
+			*result = TranscodeResult::DataError;
+			return nullptr;
 		}
 
 		int ret = avcodec_send_frame(_context, _frame);
@@ -169,8 +124,9 @@ std::pair<int, std::unique_ptr<MediaBuffer>> OvenCodecImplAvcodecEncAVC::recvbuf
 
 		av_frame_unref(_frame);
 
-		_pkt_buf.erase(_pkt_buf.begin(), _pkt_buf.begin() + 1);
+		_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
 	}
 
-	return std::make_pair(-1, nullptr);
+	*result = TranscodeResult::NoData;
+	return nullptr;
 }
