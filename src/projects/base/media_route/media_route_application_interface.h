@@ -10,7 +10,7 @@
 class MediaRouteApplicationObserver;
 class MediaRouteApplicationConnector;
 class StreamInfo;
-class MediaBuffer;
+class MediaPacket;
 
 class MediaRouteApplicationInterface : public ov::EnableSharedFromThis<MediaRouteApplicationInterface>
 {
@@ -25,7 +25,7 @@ public:
 		return false;
 	}
 
-	virtual bool OnReceiveBuffer(std::shared_ptr<MediaRouteApplicationConnector> application, std::shared_ptr<StreamInfo> stream, std::unique_ptr<MediaBuffer> buffer)
+	virtual bool OnReceiveBuffer(std::shared_ptr<MediaRouteApplicationConnector> application, std::shared_ptr<StreamInfo> stream, std::unique_ptr<MediaPacket> packet)
 	{
 		return false;
 	}

@@ -2,12 +2,13 @@
 
 #include <stdint.h>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "base/ovlibrary/enable_shared_from_this.h"
 #include "base/application/stream_info.h"
 #include "base/application/application_info.h"
-#include "base/common_video.h"
+#include "base/common_types.h"
 
 #include "media_route_interface.h"
 #include "media_route_application_interface.h"
@@ -29,31 +30,35 @@ public:
 	// MediaRouteApplication -> Stream 생성
 	inline bool CreateStream(std::shared_ptr<StreamInfo> stream_info)
 	{
-		if(!GetMediaRouteApplication())
+		if(GetMediaRouteApplication() == nullptr)
 		{
 			return false;
 		}
-		return GetMediaRouteApplication()->OnCreateStream(this->GetSharedPtr(), stream_info);
+
+		return GetMediaRouteApplication()->OnCreateStream(this->GetSharedPtr(), std::move(stream_info));
 	}
 
 	// MediaRouteApplication -> Stream 삭제
 	inline bool DeleteStream(std::shared_ptr<StreamInfo> stream_info)
 	{
-		if(!GetMediaRouteApplication())
+		if(GetMediaRouteApplication() == nullptr)
 		{
 			return false;
 		}
-		return GetMediaRouteApplication()->OnDeleteStream(this->GetSharedPtr(), stream_info);
+
+		return GetMediaRouteApplication()->OnDeleteStream(this->GetSharedPtr(), std::move(stream_info));
 	}
 
 	// MediaRouteApplication -> Stream-> Frame
-	inline bool SendFrame(std::shared_ptr<StreamInfo> stream_info, std::unique_ptr<MediaBuffer> buffer)
+	inline bool SendFrame(std::shared_ptr<StreamInfo> stream_info, std::unique_ptr<MediaPacket> packet)
 	{
-		if(!GetMediaRouteApplication())
+		if(GetMediaRouteApplication() == nullptr)
 		{
+			OV_ASSERT(false, "MediaRouteAppplication MUST NOT NULL");
 			return false;
 		}
-		return GetMediaRouteApplication()->OnReceiveBuffer(this->GetSharedPtr(), stream_info, std::move(buffer));
+
+		return GetMediaRouteApplication()->OnReceiveBuffer(this->GetSharedPtr(), std::move(stream_info), std::move(packet));
 	}
 
 	virtual ConnectorType GetConnectorType()

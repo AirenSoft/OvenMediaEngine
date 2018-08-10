@@ -5,7 +5,6 @@
 #include "base/ovlibrary/string.h"
 #include "base/ovlibrary/semaphore.h"
 #include "config/config.h"
-#include "base/common_video.h"
 #include "base/application/application_info.h"
 #include "base/application/stream_info.h"
 #include "base/media_route/media_route_application_observer.h"
@@ -27,7 +26,13 @@ public:
 	bool OnDeleteStream(std::shared_ptr<StreamInfo> info) override;
 
 	// Queue에 데이터를 넣는다.
-	bool OnSendVideoFrame(std::shared_ptr<StreamInfo> info,
+	bool OnSendVideoFrame(std::shared_ptr<StreamInfo> stream_info,
+	                      std::shared_ptr<MediaTrack> track,
+	                      std::unique_ptr<EncodedFrame> encoded_frame,
+	                      std::unique_ptr<CodecSpecificInfo> codec_info,
+	                      std::unique_ptr<FragmentationHeader> fragmentation) override;
+
+	bool OnSendAudioFrame(std::shared_ptr<StreamInfo> stream_info,
 	                      std::shared_ptr<MediaTrack> track,
 	                      std::unique_ptr<EncodedFrame> encoded_frame,
 	                      std::unique_ptr<CodecSpecificInfo> codec_info,
@@ -50,6 +55,12 @@ protected:
 	// Stream에 VideoFrame을 전송한다.
 	// virtual로 Child에서 원하면 다른 작업을 할 수 있게 한다.
 	virtual void SendVideoFrame(std::shared_ptr<StreamInfo> info,
+	                            std::shared_ptr<MediaTrack> track,
+	                            std::unique_ptr<EncodedFrame> encoded_frame,
+	                            std::unique_ptr<CodecSpecificInfo> codec_info,
+	                            std::unique_ptr<FragmentationHeader> fragmentation);
+
+	virtual void SendAudioFrame(std::shared_ptr<StreamInfo> info,
 	                            std::shared_ptr<MediaTrack> track,
 	                            std::unique_ptr<EncodedFrame> encoded_frame,
 	                            std::unique_ptr<CodecSpecificInfo> codec_info,
@@ -96,6 +107,29 @@ private:
 	};
 	std::unique_ptr<Application::VideoStreamData> PopVideoStreamData();
 
+	class AudioStreamData
+	{
+	public:
+		AudioStreamData(std::shared_ptr<StreamInfo> stream_info,
+		                std::shared_ptr<MediaTrack> track,
+		                std::unique_ptr<EncodedFrame> encoded_frame,
+		                std::unique_ptr<CodecSpecificInfo> codec_info,
+		                std::unique_ptr<FragmentationHeader> fragmentation)
+		{
+			_stream_info = std::move(stream_info);
+			_track = std::move(track);
+			_encoded_frame = std::move(encoded_frame);
+			_codec_info = std::move(codec_info);
+			_framgmentation_header = std::move(fragmentation);
+		}
+
+		std::shared_ptr<StreamInfo> _stream_info;
+		std::shared_ptr<MediaTrack> _track;
+		std::unique_ptr<EncodedFrame> _encoded_frame;
+		std::unique_ptr<CodecSpecificInfo> _codec_info;
+		std::unique_ptr<FragmentationHeader> _framgmentation_header;
+	};
+	std::unique_ptr<Application::AudioStreamData> PopAudioStreamData();
 
 	class IncomingPacket
 	{
@@ -115,9 +149,11 @@ private:
 	std::thread _worker_thread;
 	ov::Semaphore _queue_event;
 
-
 	std::queue<std::unique_ptr<VideoStreamData>> _video_stream_queue;
 	std::mutex _video_stream_queue_guard;
+
+	std::queue<std::unique_ptr<AudioStreamData>> _audio_stream_queue;
+	std::mutex _audio_stream_queue_guard;
 
 	std::queue<std::unique_ptr<IncomingPacket>> _incoming_packet_queue;
 	std::mutex _incoming_packet_queue_guard;
