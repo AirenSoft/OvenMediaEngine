@@ -278,6 +278,11 @@ std::shared_ptr<ov::Error> RtcSignallingServer::ProcessCommand(const ov::String 
 				observer->OnAddRemoteDescription(info.application_name, info.stream_name, info.offer_sdp, info.peer_sdp);
 			};
 		}
+		else
+		{
+			// SDP를 파싱할 수 없음
+			return std::make_shared<ov::Error>(104, "Could not parse SDP");
+		}
 	}
 	else if(command == "candidate")
 	{
