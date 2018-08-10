@@ -12,8 +12,7 @@
 
 #include "log.h"
 
-// #ifdef DEBUG
-#if 0
+#ifdef DEBUG
 #	define OV_ASSERT_TO_STRING(x)				# x
 #	define OV_ASSERT_INTERNAL(expression, format, ...) \
 	do \
