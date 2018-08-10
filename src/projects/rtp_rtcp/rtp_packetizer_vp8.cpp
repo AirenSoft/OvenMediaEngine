@@ -173,7 +173,7 @@ int RtpPacketizerVp8::WriteHeaderAndPayload(const InfoStruct& packet_info, uint8
 		buffer[0] |= kXBit;
 	}
 
-	if (hdr_info_.nonReference)
+	if (hdr_info_.non_reference)
 	{
 		buffer[0] |= kNBit;
 	}
@@ -245,7 +245,7 @@ int RtpPacketizerVp8::WritePictureIDFields(uint8_t* x_field, uint8_t* buffer, si
 
 int RtpPacketizerVp8::WritePictureID(uint8_t* buffer, size_t buffer_length) const 
 {
-	const uint16_t pic_id = static_cast<uint16_t>(hdr_info_.pictureId);
+	const uint16_t pic_id = static_cast<uint16_t>(hdr_info_.picture_id);
 	size_t picture_id_len = PictureIdLength();
 	if (picture_id_len > buffer_length)
 	{
@@ -271,7 +271,7 @@ int RtpPacketizerVp8::WriteTl0PicIdxFields(uint8_t* x_field, uint8_t* buffer, si
 	}
 
 	*x_field |= kLBit;
-	buffer[vp8_fixed_payload_descriptor_bytes_ + *extension_length] = hdr_info_.tl0PicIdx;
+	buffer[vp8_fixed_payload_descriptor_bytes_ + *extension_length] = hdr_info_.tl0_pic_idx;
 	++*extension_length;
 	return 0;
 }
@@ -288,14 +288,14 @@ int RtpPacketizerVp8::WriteTIDAndKeyIdxFields(uint8_t* x_field, uint8_t* buffer,
 	if (TIDFieldPresent()) 
 	{
 		*x_field |= kTBit;
-		*data_field |= hdr_info_.temporalIdx << 6;
-		*data_field |= hdr_info_.layerSync ? kYBit : 0;
+		*data_field |= hdr_info_.temporal_idx << 6;
+		*data_field |= hdr_info_.layer_sync ? kYBit : 0;
 	}
 	
 	if (KeyIdxFieldPresent()) 
 	{
 		*x_field |= kKBit;
-		*data_field |= (hdr_info_.keyIdx & kKeyIdxField);
+		*data_field |= (hdr_info_.key_idx & kKeyIdxField);
 	}
 	++*extension_length;
 	return 0;
@@ -322,7 +322,7 @@ size_t RtpPacketizerVp8::PayloadDescriptorExtraLength() const
 
 size_t RtpPacketizerVp8::PictureIdLength() const 
 {
-	if (hdr_info_.pictureId == kNoPictureId) 
+	if (hdr_info_.picture_id == kNoPictureId)
 	{
 		return 0;
 	}
@@ -336,15 +336,15 @@ bool RtpPacketizerVp8::XFieldPresent() const
 
 bool RtpPacketizerVp8::TIDFieldPresent() const 
 {
-	return (hdr_info_.temporalIdx != kNoTemporalIdx);
+	return (hdr_info_.temporal_idx != kNoTemporalIdx);
 }
 
 bool RtpPacketizerVp8::KeyIdxFieldPresent() const 
 {
-	return (hdr_info_.keyIdx != kNoKeyIdx);
+	return (hdr_info_.key_idx != kNoKeyIdx);
 }
 
 bool RtpPacketizerVp8::TL0PicIdxFieldPresent() const 
 {
-	return (hdr_info_.tl0PicIdx != kNoTl0PicIdx);
+	return (hdr_info_.tl0_pic_idx != kNoTl0PicIdx);
 }

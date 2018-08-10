@@ -6,65 +6,71 @@
 #include "base/ovlibrary/ovlibrary.h"
 #include "rtp_packet.h"
 #include "rtp_rtcp_interface.h"
-#include "base/common_video.h"
+#include "base/common_types.h"
 
-enum RtpVideoCodecTypes
+enum class RtpVideoCodecType
 {
-	kRtpVideoNone = 0,
-	kRtpVideoVp8 = 1,
+	None,
+	Vp8,
 	// In the future
-	// kRtpVideoVp9 = 2
-	// kRtpVideoH264 = 3
+	// kRtpVideoVp9
+	// kRtpVideoH264
 };
 
-const int16_t	kNoPictureId = -1;
-const int16_t	kNoTl0PicIdx = -1;
-const uint8_t	kNoTemporalIdx = 0xFF;
-const int		kNoKeyIdx = -1;
+enum class RtpAudioCodecType
+{
+	None,
+	Opus
+};
+
+const int16_t kNoPictureId = -1;
+const int16_t kNoTl0PicIdx = -1;
+const uint8_t kNoTemporalIdx = 0xFF;
+const int kNoKeyIdx = -1;
 
 struct RTPVideoHeaderVP8
 {
 	void InitRTPVideoHeaderVP8()
 	{
-		nonReference = false;
-		pictureId = kNoPictureId;
-		tl0PicIdx = kNoTl0PicIdx;
-		temporalIdx = kNoTemporalIdx;
-		layerSync = false;
-		keyIdx = kNoKeyIdx;
-		partitionId = 0;
-		beginningOfPartition = false;
+		non_reference = false;
+		picture_id = kNoPictureId;
+		tl0_pic_idx = kNoTl0PicIdx;
+		temporal_idx = kNoTemporalIdx;
+		layer_sync = false;
+		key_idx = kNoKeyIdx;
+		partition_id = 0;
+		beginning_of_partition = false;
 	}
-	
-	bool	nonReference;			// Frame is discardable.
-	int16_t	pictureId;          	// Picture ID index, 15 bits;
+
+	bool non_reference;            // Frame is discardable.
+	int16_t picture_id;            // Picture ID index, 15 bits;
 	// kNoPictureId if PictureID does not exist.
-	int16_t	tl0PicIdx;				// TL0PIC_IDX, 8 bits;
+	int16_t tl0_pic_idx;                // TL0PIC_IDX, 8 bits;
 	// kNoTl0PicIdx means no value provided.
-	uint8_t	temporalIdx;			// Temporal layer index, or kNoTemporalIdx.
-	bool	layerSync;				// This frame is a layer sync frame.
+	uint8_t temporal_idx;            // Temporal layer index, or kNoTemporalIdx.
+	bool layer_sync;                // This frame is a layer sync frame.
 	// Disabled if temporalIdx == kNoTemporalIdx.
-	int		keyIdx;					// 5 bits; kNoKeyIdx means not used.
-	int		partitionId;			// VP8 partition ID
-	bool	beginningOfPartition;	// True if this packet is the first
+	int key_idx;                    // 5 bits; kNoKeyIdx means not used.
+	int partition_id;            // VP8 partition ID
+	bool beginning_of_partition;    // True if this packet is the first
 	// in a VP8 partition. Otherwise false
 };
 
 union RTPVideoTypeHeader
 {
-	RTPVideoHeaderVP8 VP8;
+	RTPVideoHeaderVP8 vp8;
 	// In the future
 	// RTPVideoHeaderVP9 VP9;
 };
 
 struct RTPVideoHeader
 {
-	uint16_t			width;  // size
-	uint16_t			height;
+	uint16_t width;  // size
+	uint16_t height;
 
-	uint8_t 			simulcastIdx; // Extension, 0이면 사용하지 않음
-	bool				is_first_packet_in_frame;
+	uint8_t simulcast_idx; // Extension, 0이면 사용하지 않음
+	bool is_first_packet_in_frame;
 
-	RtpVideoCodecTypes 	codec;
-	RTPVideoTypeHeader 	codecHeader;
+	RtpVideoCodecType codec;
+	RTPVideoTypeHeader codec_header;
 };

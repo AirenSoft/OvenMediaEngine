@@ -16,9 +16,9 @@ void RtpRtcp::Initialize()
 	// TODO: _rtcp_sender, _rtcp_receiver 초기화
 }
 
-void RtpRtcp::SetPayloadType(const uint8_t pt)
+void RtpRtcp::SetPayloadType(uint8_t payload_type)
 {
-	_rtp_sender->SetPayloadType(pt);
+	_rtp_sender->SetPayloadType(payload_type);
 }
 
 void RtpRtcp::SetSSRC(const uint32_t ssrc)
@@ -26,17 +26,17 @@ void RtpRtcp::SetSSRC(const uint32_t ssrc)
 	_rtp_sender->SetSSRC(ssrc);
 }
 
-void RtpRtcp::SetCsrcs(const std::vector<uint32_t>& csrcs)
+void RtpRtcp::SetCsrcs(const std::vector<uint32_t> &csrcs)
 {
 	_rtp_sender->SetCsrcs(csrcs);
 }
 
 bool RtpRtcp::SendOutgoingData(FrameType frame_type,
-							uint32_t time_stamp,
-							const uint8_t* payload_data,
-							size_t payload_size,
-							const FragmentationHeader* fragmentation,
-							const RTPVideoHeader* rtp_video_header)
+                               uint32_t time_stamp,
+                               const uint8_t *payload_data,
+                               size_t payload_size,
+                               const FragmentationHeader *fragmentation,
+                               const RTPVideoHeader *rtp_video_header)
 {
 
 
@@ -44,7 +44,7 @@ bool RtpRtcp::SendOutgoingData(FrameType frame_type,
 //	logd("RTP_RTCP", "RtpRtcp::SendOutgoingData Enter");
 
 	return _rtp_sender->SendOutgoingData(frame_type, time_stamp, payload_data,
-										 payload_size, fragmentation, rtp_video_header);
+	                                     payload_size, fragmentation, rtp_video_header);
 }
 
 // RtpSender에서 호출한다.
