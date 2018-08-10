@@ -17,41 +17,105 @@
 
 #include "media_type.h"
 
-class MediaBuffer
+enum class MediaPacketFlag
+{
+	NoFlag,
+	Key
+};
+
+class MediaPacket
 {
 public:
-	MediaBuffer()
+	MediaPacket(MediaCommonType::MediaType media_type, int32_t track_id, const void *data, int32_t data_size, int64_t pts, MediaPacketFlag flags)
+		: _media_type(media_type),
+		  _track_id(track_id),
+		  _pts(pts),
+		  _flags(flags)
 	{
-		_offset = 0;
+		_data->Append(data, data_size);
 	}
 
-	MediaBuffer(MediaCommonType::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts)
+	MediaPacket(MediaCommonType::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, MediaPacketFlag flags)
+		: _media_type(media_type),
+		  _track_id(track_id),
+		  _pts(pts),
+		  _flags(flags)
 	{
-		SetMediaType(media_type);
-		SetTrackId(track_id);
+		_data->Append(data);
+	}
+
+	MediaCommonType::MediaType GetMediaType() const noexcept
+	{
+		return _media_type;
+	}
+
+	const std::shared_ptr<const ov::Data> GetData() const noexcept
+	{
+		return _data;
+	}
+
+	std::shared_ptr<ov::Data> &GetData() noexcept
+	{
+		return _data;
+	}
+
+	int64_t GetPts() const noexcept
+	{
+		return _pts;
+	}
+
+	int32_t GetTrackId() const noexcept
+	{
+		return _track_id;
+	}
+
+	void SetTrackId(int32_t track_id)
+	{
+		_track_id = track_id;
+	}
+
+	MediaPacketFlag GetFlags() const noexcept
+	{
+		return _flags;
+	}
+
+protected:
+	MediaCommonType::MediaType _media_type;
+	int32_t _track_id;
+
+	std::shared_ptr<ov::Data> _data = ov::Data::CreateData();
+
+	int64_t _pts;
+	MediaPacketFlag _flags;
+};
+
+class MediaFrame
+{
+public:
+	MediaFrame() = default;
+
+	MediaFrame(MediaCommonType::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts, int32_t flags)
+		: _media_type(media_type),
+		  _track_id(track_id),
+
+		  _flags(flags),
+
+		  _pts(pts)
+	{
 		SetBuffer(data, data_size);
-		SetPts(pts);
-		SetOffset(0);
 	}
 
-	MediaBuffer(MediaCommonType::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts, int32_t flags)
+	MediaFrame(MediaCommonType::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts)
+		: MediaFrame(media_type, track_id, data, data_size, pts, 0)
 	{
-		SetMediaType(media_type);
-		SetTrackId(track_id);
-		SetBuffer(data, data_size);
-		SetPts(pts);
-		SetOffset(0);
-		SetFlags(flags);
 	}
 
-	MediaBuffer(uint8_t *data, int32_t data_size, int64_t pts)
+	MediaFrame(const uint8_t *data, int32_t data_size, int64_t pts)
+		: MediaFrame(MediaCommonType::MediaType::Unknown, 0, data, data_size, pts, 0)
 	{
-		SetBuffer(data, data_size);
-		SetPts(pts);
-		SetOffset(0);
 	}
 
-	~MediaBuffer() = default;
+	~MediaFrame() = default;
 
 	void ClearBuffer(int32_t plane = 0)
 	{
@@ -79,24 +143,57 @@ public:
 		_data_buffer[plane].insert(_data_buffer[plane].begin() + offset, data, data + data_size);
 	}
 
+	const uint8_t *GetBuffer(int32_t plane = 0) const
+	{
+		auto list = GetPlainData(plane);
+
+		if(list != nullptr)
+		{
+			return list->data();
+		}
+
+		return nullptr;
+	}
+
 	uint8_t *GetBuffer(int32_t plane = 0)
 	{
 		return reinterpret_cast<uint8_t *>(_data_buffer[plane].data());
 	}
 
-	uint8_t GetByteAt(int32_t offset, int32_t plane = 0)
+	uint8_t GetByteAt(int32_t offset, int32_t plane = 0) const
 	{
-		return _data_buffer[plane][offset];
+		auto list = GetPlainData(plane);
+
+		if(list != nullptr)
+		{
+			return (*list)[offset];
+		}
+
+		return 0;
 	}
 
-	size_t GetDataSize(int32_t plane = 0)
+	size_t GetDataSize(int32_t plane = 0) const
 	{
-		return _data_buffer[plane].size();
+		auto list = GetPlainData(plane);
+
+		if(list != nullptr)
+		{
+			return list->size();
+		}
+
+		return 0;
 	}
 
-	size_t GetBufferSize(int32_t plane = 0)
+	size_t GetBufferSize(int32_t plane = 0) const
 	{
-		return _data_buffer[plane].size();
+		auto list = GetPlainData(plane);
+
+		if(list != nullptr)
+		{
+			return list->size();
+		}
+
+		return 0;
 	}
 
 	void EraseBuffer(int32_t offset, int32_t length, int32_t plane = 0)
@@ -122,7 +219,7 @@ public:
 		_media_type = media_type;
 	}
 
-	MediaCommonType::MediaType GetMediaType()
+	MediaCommonType::MediaType GetMediaType() const
 	{
 		return _media_type;
 	}
@@ -132,12 +229,12 @@ public:
 		_track_id = track_id;
 	}
 
-	int32_t GetTrackId()
+	int32_t GetTrackId() const
 	{
 		return _track_id;
 	}
 
-	int64_t GetPts()
+	int64_t GetPts() const
 	{
 		return _pts;
 	}
@@ -152,7 +249,7 @@ public:
 		_offset = offset;
 	}
 
-	size_t GetOffset()
+	size_t GetOffset() const
 	{
 		return _offset;
 	}
@@ -272,6 +369,18 @@ public:
 	}
 
 private:
+	const std::vector<uint8_t> *GetPlainData(int32_t plane) const
+	{
+		auto item = _data_buffer.find(plane);
+
+		if(item == _data_buffer.cend())
+		{
+			return nullptr;
+		}
+
+		return &(item->second);
+	}
+
 	// Data plane, Data
 	std::map<int32_t, std::vector<uint8_t>> _data_buffer;
 
