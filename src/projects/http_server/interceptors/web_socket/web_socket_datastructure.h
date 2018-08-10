@@ -59,7 +59,7 @@ enum class WebSocketFrameOpcode : uint8_t
 // + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
 // |                     Payload Data continued ...                |
 // +---------------------------------------------------------------+
-typedef struct WebSocketFrameHeader
+struct WebSocketFrameHeader
 {
 	// 첫 번째 바이트
 	// Opcode:  4 bits
@@ -109,7 +109,7 @@ typedef struct WebSocketFrameHeader
 	//    the "Payload data" as per Section 5.3.  All frames sent from
 	//    client to server have this bit set to 1.
 	bool mask: 1;
-} WebSocketFrameHeader;
+};
 
 class WebSocketResponse;
 class WebSocketFrame;
