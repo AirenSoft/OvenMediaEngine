@@ -73,7 +73,7 @@ public:
 	bool OnReceiveBuffer(
 		std::shared_ptr<MediaRouteApplicationConnector> app_conn,
 		std::shared_ptr<StreamInfo> stream,
-		std::unique_ptr<MediaBuffer> buffer) override;
+		std::unique_ptr<MediaPacket> packet) override;
 
 
 public:

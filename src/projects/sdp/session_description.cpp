@@ -111,7 +111,7 @@ bool SessionDescription::FromString(const ov::String &sdp)
 			if(media_level == true)
 			{
 				auto media_desc = std::make_shared<MediaDescription>(GetSharedPtr());
-				if(media_desc->FromString(media_desc_sdp.c_str()))
+				if(media_desc->FromString(media_desc_sdp.c_str()) == false)
 				{
 					return false;
 				}
@@ -133,7 +133,7 @@ bool SessionDescription::FromString(const ov::String &sdp)
 			if(sdpstream.rdbuf()->in_avail() == 0)
 			{
 				auto media_desc = std::make_shared<MediaDescription>(GetSharedPtr());
-				if(!media_desc->FromString(media_desc_sdp.c_str()))
+				if(media_desc->FromString(media_desc_sdp.c_str()) == false)
 				{
 					return false;
 				}
@@ -363,8 +363,11 @@ ov::String SessionDescription::GetMsidToken() const
 // m=video 9 UDP/TLS/RTP/SAVPF 97
 void SessionDescription::AddMedia(std::shared_ptr<MediaDescription> media)
 {
-	// key는 향후 검색을 위해 사용될 수 있는 값임
-	_media_list.push_back(media);
+	if(media != nullptr)
+	{
+		// key는 향후 검색을 위해 사용될 수 있는 값임
+		_media_list.push_back(media);
+	}
 }
 
 const std::shared_ptr<MediaDescription> SessionDescription::GetMediaByMid(const ov::String& mid)

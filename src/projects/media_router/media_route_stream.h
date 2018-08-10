@@ -43,13 +43,13 @@ private:
 
 public:
 	// 패킷 관리
-	bool Push(std::unique_ptr<MediaBuffer> buffer);
-	std::unique_ptr<MediaBuffer> Pop();
+	bool Push(std::unique_ptr<MediaPacket> buffer);
+	std::unique_ptr<MediaPacket> Pop();
 	uint32_t Size();
 
 	time_t getLastReceivedTime();
 private:
-	std::queue<std::unique_ptr<MediaBuffer>> _queue;
+	std::queue<std::unique_ptr<MediaPacket>> _queue;
 
 private:
 	////////////////////////////

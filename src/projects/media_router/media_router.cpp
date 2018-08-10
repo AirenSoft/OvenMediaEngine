@@ -34,7 +34,7 @@ MediaRouter::~MediaRouter()
 
 bool MediaRouter::Start()
 {
-	logti("Started media route modules.");
+	logti("Trying to start media router...");
 
 	// 데이터베이스(or Config)에서 어플리케이션 정보를 생성함.
 	if(!CraeteApplications())
@@ -50,10 +50,13 @@ bool MediaRouter::Start()
     catch (const std::system_error& e) 
     {
         _kill_flag = true;
+
 		logte("Failed to start media router thread.");
+
         return false;
     }
 
+    logti("Media router is started.");
   
 	return true;
 }

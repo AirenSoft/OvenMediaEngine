@@ -11,14 +11,14 @@
 #include "media_description.h"
 #include "session_description.h"
 
-MediaDescription::MediaDescription(const std::shared_ptr<SessionDescription>& session_desc)
+MediaDescription::MediaDescription(const std::shared_ptr<SessionDescription> &session_desc)
 {
 	_session_description = session_desc;
-	_media_type = MediaType::UNKNOWN;
+	_media_type = MediaType::Unknown;
 	_media_type_str = "UNKNOWN";
-	_direction = Direction::UNKNOWN;
+	_direction = Direction::Unknown;
 	_direction_str = "UNKNOWN";
-	_setup = SetupType::UNKNOWN;
+	_setup = SetupType::Unknown;
 	_setup_str = "UNKNOWN";
 
 	_connection_ip_version = 4;
@@ -37,15 +37,17 @@ MediaDescription::~MediaDescription()
 
 bool MediaDescription::UpdateData(ov::String &sdp)
 {
-	if(_media_type == MediaType::UNKNOWN || _direction == Direction::UNKNOWN || _setup == SetupType::UNKNOWN)
+	if(_media_type == MediaType::Unknown || _direction == Direction::Unknown || _setup == SetupType::Unknown)
 	{
 		loge("SDP", "Required value is not defined - MediaType : %s, Direction : %s, SetupType : %s",
-			_media_type_str.CStr(), _direction_str.CStr(), _setup_str.CStr());
+		     _media_type_str.CStr(), _direction_str.CStr(), _setup_str.CStr());
+
 		return false;
 	}
 
 	// Make m line
 	sdp = ov::String::FormatString("m=%s %d %s", _media_type_str.CStr(), _port, _protocol.CStr());
+
 	// Append payload id
 	for(auto &t : _payload_list)
 	{
@@ -54,76 +56,80 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 			return false;
 		}
 
-		sdp += ov::String::FormatString(" %d", t->GetId());
+		sdp.AppendFormat(" %d", t->GetId());
 	}
-	sdp += "\r\n";
 
-	sdp += ov::String::FormatString("c=IN IP%d %s\r\n", _connection_ip_version, _connection_ip.CStr());
-
-	sdp += ov::String::FormatString("a=%s\r\n", _direction_str.CStr());
-
-	sdp += ov::String::FormatString("a=mid:%s\r\n", _mid.CStr());
-
-	sdp += ov::String::FormatString("a=setup:%s\r\n", _setup_str.CStr());
+	sdp.AppendFormat(
+		"\r\n"
+		"c=IN IP%d %s\r\n"
+		"a=%s\r\n"
+		"a=mid:%s\r\n"
+		"a=setup:%s\r\n",
+		_connection_ip_version, _connection_ip.CStr(),
+		_direction_str.CStr(),
+		_mid.CStr(),
+		_setup_str.CStr()
+	);
 
 	// Common Attributes
 	ov::String common_attr_text;
-	if(!SerializeCommonAttr(common_attr_text))
+	if(SerializeCommonAttr(common_attr_text) == false)
 	{
 		return false;
 	}
 
-	sdp += common_attr_text;
+	sdp.Append(common_attr_text);
 
 	if(_framerate)
 	{
-		sdp += ov::String::FormatString("a=framerate:%.2f\r\n", _framerate);
+		sdp.AppendFormat("a=framerate:%.2f\r\n", _framerate);
 	}
 
 	if(_use_rtcpmux_flag)
 	{
-		sdp += ov::String::FormatString("a=rtcp-mux\r\n");
+		sdp.AppendFormat("a=rtcp-mux\r\n");
 	}
 
 	// Payloads
 	for(auto &payload : _payload_list)
 	{
-		sdp += ov::String::FormatString("a=rtpmap:%d %s/%d", payload->GetId(),
-									   payload->GetCodecStr().CStr(),
-									   payload->GetCodecRate());
-		if(!payload->GetCodecParams().IsEmpty())
+		sdp.AppendFormat("a=rtpmap:%d %s/%d", payload->GetId(),
+		                 payload->GetCodecStr().CStr(),
+		                 payload->GetCodecRate());
+
+		if(payload->GetCodecParams().IsEmpty() == false)
 		{
-			sdp += ov::String::FormatString("/%s", payload->GetCodecParams().CStr());
+			sdp.AppendFormat("/%s", payload->GetCodecParams().CStr());
 		}
 
-		sdp += "\r\n";
+		sdp.Append("\r\n");
 
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::GoogRemb))
 		{
-			sdp += ov::String::FormatString("a=rtcp-fb:%d goog_remb\r\n", payload->GetId());
+			sdp.AppendFormat("a=rtcp-fb:%d goog_remb\r\n", payload->GetId());
 		}
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TransportCc))
 		{
-			sdp += ov::String::FormatString("a=rtcp-fb:%d transport-cc\r\n", payload->GetId());
+			sdp.AppendFormat("a=rtcp-fb:%d transport-cc\r\n", payload->GetId());
 		}
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::CcmFir))
 		{
-			sdp += ov::String::FormatString("a=rtcp-fb:%d ccm fir\r\n", payload->GetId());
+			sdp.AppendFormat("a=rtcp-fb:%d ccm fir\r\n", payload->GetId());
 		}
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::Nack))
 		{
-			sdp += ov::String::FormatString("a=rtcp-fb:%d nack\r\n", payload->GetId());
+			sdp.AppendFormat("a=rtcp-fb:%d nack\r\n", payload->GetId());
 		}
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::NackPli))
 		{
-			sdp += ov::String::FormatString("a=rtcp-fb:%d nack pli\r\n", payload->GetId());
+			sdp.AppendFormat("a=rtcp-fb:%d nack pli\r\n", payload->GetId());
 		}
 	}
 
 	// SSRCs
-	if(!_cname.IsEmpty())
+	if(_cname.IsEmpty() == false)
 	{
-		sdp += ov::String::FormatString("a=ssrc:%u cname:%s\r\n", _ssrc, _cname.CStr());
+		sdp.AppendFormat("a=ssrc:%u cname:%s\r\n", _ssrc, _cname.CStr());
 	}
 
 	return true;
@@ -134,15 +140,15 @@ bool MediaDescription::SetMediaType(const ov::String &type)
 {
 	if(type.UpperCaseString() == "VIDEO")
 	{
-		SetMediaType(MediaType::VIDEO);
+		SetMediaType(MediaType::Video);
 	}
 	else if(type.UpperCaseString() == "AUDIO")
 	{
-		SetMediaType(MediaType::AUDIO);
+		SetMediaType(MediaType::Audio);
 	}
 	else if(type.UpperCaseString() == "APPLICATION")
 	{
-		SetMediaType(MediaType::APPLICATION);
+		SetMediaType(MediaType::Application);
 	}
 	else
 	{
@@ -153,14 +159,14 @@ bool MediaDescription::SetMediaType(const ov::String &type)
 }
 
 
-bool MediaDescription::FromString(const ov::String& desc)
+bool MediaDescription::FromString(const ov::String &desc)
 {
 	std::stringstream sdpstream(desc.CStr());
 	std::string line;
 
 	while(std::getline(sdpstream, line, '\n'))
 	{
-		if (line.size() && line[line.length() - 1] == '\r')
+		if(line.size() && line[line.length() - 1] == '\r')
 		{
 			line.pop_back();
 		}
@@ -168,31 +174,33 @@ bool MediaDescription::FromString(const ov::String& desc)
 		char type = line[0];
 		std::string content = line.substr(2);
 
-		if(!ParsingMediaLine(type, content))
+		if(ParsingMediaLine(type, content) == false)
 		{
+			logw("SDP", "Could not parse line: %c: %s (%s)", type, content.c_str(), line.c_str());
 			return false;
 		}
 	}
-		return true;
+
+	return true;
 }
 
 bool MediaDescription::SetDirection(const ov::String &dir)
 {
 	if(dir.UpperCaseString() == "SENDRECV")
 	{
-		SetDirection(Direction::SENDRECV);
+		SetDirection(Direction::SendRecv);
 	}
 	else if(dir.UpperCaseString() == "RECVONLY")
 	{
-		SetDirection(Direction::RECVONLY);
+		SetDirection(Direction::RecvOnly);
 	}
 	else if(dir.UpperCaseString() == "SENDONLY")
 	{
-		SetDirection(Direction::SENDONLY);
+		SetDirection(Direction::SendOnly);
 	}
 	else if(dir.UpperCaseString() == "INACTIVE")
 	{
-		SetDirection(Direction::INACTIVE);
+		SetDirection(Direction::Inactive);
 	}
 	else
 	{
@@ -211,9 +219,10 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 	{
 		case 'm':
 			// m=video 9 UDP/TLS/RTP/SAVPF 97
-			if (std::regex_search(content, matches, std::regex("^(\\w*) (\\d*) ([\\w\\/]*)(?: (.*))?")))
+
+			if(std::regex_search(content, matches, std::regex("^(\\w*) (\\d*) ([\\w\\/]*)(?: (.*))?")))
 			{
-				if(matches.size() < 4+1)
+				if(matches.size() < 4 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -264,7 +273,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			// c=IN IP4 0.0.0.0
 			if(std::regex_search(content, matches, std::regex("^IN IP(\\d) (\\S*)")))
 			{
-				if(matches.size() != 2+1)
+				if(matches.size() != 2 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -286,10 +295,10 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			{
 				UseRtcpMux(true);
 			}
-			// a=sendonly
+				// a=sendonly
 			else if(std::regex_search(content, matches, std::regex("^(sendrecv|recvonly|sendonly|inactive)")))
 			{
-				if(matches.size() != 1+1)
+				if(matches.size() != 1 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -301,10 +310,10 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					break;
 				}
 			}
-			// a=mid:video,
+				// a=mid:video,
 			else if(std::regex_search(content, matches, std::regex("^mid:([^\\s]*)")))
 			{
-				if(matches.size() != 1+1)
+				if(matches.size() != 1 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -312,10 +321,10 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 				SetMid(std::string(matches[1]).c_str());
 			}
-			// a=setup:actpass
+				// a=setup:actpass
 			else if(std::regex_search(content, matches, std::regex("^setup:(\\w*)")))
 			{
-				if(matches.size() != 1+1)
+				if(matches.size() != 1 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -323,10 +332,10 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 				SetSetup(std::string(matches[1]).c_str());
 			}
-			// a=framerate:29.97
+				// a=framerate:29.97
 			else if(std::regex_search(content, matches, std::regex("^framerate:(\\d+(?:$|\\.\\d+))")))
 			{
-				if(matches.size() != 1+1)
+				if(matches.size() != 1 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -334,12 +343,12 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 				SetFramerate(std::stof(matches[1]));
 			}
-			// a=rtpmap:96 VP8/50000/?
+				// a=rtpmap:96 VP8/50000/?
 			else if(std::regex_search(content,
-									  matches,
-									  std::regex("rtpmap:(\\d*) ([\\w\\-\\.]*)(?:\\s*\\/(\\d*)(?:\\s*\\/(\\S*))?)?")))
+			                          matches,
+			                          std::regex("rtpmap:(\\d*) ([\\w\\-\\.]*)(?:\\s*\\/(\\d*)(?:\\s*\\/(\\S*))?)?")))
 			{
-				if(matches.size() < 3+1)
+				if(matches.size() < 3 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -347,15 +356,15 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 				//TODO(getroot): matches[4]가 없는 경우에도 메모리는 할당 되는지 확인
 				AddRtpmap(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(),
-						  static_cast<uint32_t>(std::stoul(matches[3])), std::string(matches[4]).c_str());
+				          static_cast<uint32_t>(std::stoul(matches[3])), std::string(matches[4]).c_str());
 			}
-			// a=rtcp-fb:96 nack pli
-			// pli는 subtype으로 구분해야 하지만 여기서는 type-subtype 형태로 구분한다.
+				// a=rtcp-fb:96 nack pli
+				// pli는 subtype으로 구분해야 하지만 여기서는 type-subtype 형태로 구분한다.
 			else if(std::regex_search(content,
-									  matches,
-									  std::regex("rtcp-fb:(\\*|\\d*) (.*)")))
+			                          matches,
+			                          std::regex("rtcp-fb:(\\*|\\d*) (.*)")))
 			{
-				if(matches.size() != 2+1)
+				if(matches.size() != 2 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -363,10 +372,10 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 				EnableRtcpFb(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(), true);
 			}
-			// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
+				// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
 			else if(std::regex_search(content, matches, std::regex("ssrc:(\\d*) cname(?::(.*))?")))
 			{
-				if(matches.size() != 2+1)
+				if(matches.size() != 2 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -404,13 +413,13 @@ void MediaDescription::SetMediaType(const MediaType type)
 	_media_type = type;
 	switch(_media_type)
 	{
-		case MediaType::VIDEO:
+		case MediaType::Video:
 			_media_type_str = "video";
 			break;
-		case MediaType::AUDIO:
+		case MediaType::Audio:
 			_media_type_str = "audio";
 			break;
-		case MediaType::APPLICATION:
+		case MediaType::Application:
 			_media_type_str = "application";
 			break;
 		default:
@@ -429,12 +438,12 @@ void MediaDescription::SetPort(uint16_t port)
 	_port = port;
 }
 
-const uint16_t MediaDescription::GetPort()
+uint16_t MediaDescription::GetPort()
 {
 	return _port;
 }
 
-void MediaDescription::UseDtls(const bool flag)
+void MediaDescription::UseDtls(bool flag)
 {
 	_use_dtls_flag = flag;
 	if(_use_dtls_flag)
@@ -447,12 +456,12 @@ void MediaDescription::UseDtls(const bool flag)
 	}
 }
 
-const bool MediaDescription::IsUseDtls()
+bool MediaDescription::IsUseDtls()
 {
 	return _use_dtls_flag;
 }
 
-void MediaDescription::AddPayload(const std::shared_ptr<PayloadAttr>& payload)
+void MediaDescription::AddPayload(const std::shared_ptr<PayloadAttr> &payload)
 {
 	_payload_list.push_back(payload);
 }
@@ -476,12 +485,12 @@ const std::shared_ptr<PayloadAttr> MediaDescription::GetFirstPayload()
 }
 
 // a=rtcp-mux
-void MediaDescription::UseRtcpMux(const bool flag)
+void MediaDescription::UseRtcpMux(bool flag)
 {
 	_use_rtcpmux_flag = flag;
 }
 
-const bool MediaDescription::IsUseRtcpMux()
+bool MediaDescription::IsUseRtcpMux()
 {
 	return _use_rtcpmux_flag;
 }
@@ -492,16 +501,16 @@ void MediaDescription::SetDirection(const Direction dir)
 	_direction = dir;
 	switch(_direction)
 	{
-		case Direction::SENDRECV:
+		case Direction::SendRecv:
 			_direction_str = "sendrecv";
 			break;
-		case Direction::RECVONLY:
+		case Direction::RecvOnly:
 			_direction_str = "recvonly";
 			break;
-		case Direction::SENDONLY:
+		case Direction::SendOnly:
 			_direction_str = "sendonly";
 			break;
-		case Direction::INACTIVE:
+		case Direction::Inactive:
 			_direction_str = "inactive";
 			break;
 		default:
@@ -516,7 +525,7 @@ const MediaDescription::Direction MediaDescription::GetDirection()
 }
 
 // a=mid:video
-void MediaDescription::SetMid(const ov::String& mid)
+void MediaDescription::SetMid(const ov::String &mid)
 {
 	_mid = mid;
 }
@@ -532,13 +541,13 @@ void MediaDescription::SetSetup(const SetupType type)
 	_setup = type;
 	switch(_setup)
 	{
-		case SetupType::ACTIVE:
+		case SetupType::Active:
 			_setup_str = "active";
 			break;
-		case SetupType::PASSIVE:
+		case SetupType::Passive:
 			_setup_str = "passive";
 			break;
-		case SetupType::ACTPASS:
+		case SetupType::ActPass:
 			_setup_str = "actpass";
 			break;
 		default:
@@ -546,19 +555,19 @@ void MediaDescription::SetSetup(const SetupType type)
 	}
 }
 
-bool MediaDescription::SetSetup(const ov::String& type)
+bool MediaDescription::SetSetup(const ov::String &type)
 {
 	if(type.UpperCaseString() == "ACTIVE")
 	{
-		SetSetup(SetupType::ACTIVE);
+		SetSetup(SetupType::Active);
 	}
 	else if(type.UpperCaseString() == "PASSIVE")
 	{
-		SetSetup(SetupType::PASSIVE);
+		SetSetup(SetupType::Passive);
 	}
 	else if(type.UpperCaseString() == "ACTPASS")
 	{
-		SetSetup(SetupType::ACTPASS);
+		SetSetup(SetupType::ActPass);
 	}
 	else
 	{
@@ -569,7 +578,7 @@ bool MediaDescription::SetSetup(const ov::String& type)
 }
 
 // c=IN IP4 0.0.0.0
-void MediaDescription::SetConnection(const uint8_t version, const ov::String& ip)
+void MediaDescription::SetConnection(uint8_t version, const ov::String &ip)
 {
 	_connection_ip_version = version;
 	_connection_ip = ip;
@@ -586,13 +595,13 @@ const float MediaDescription::GetFramerate()
 }
 
 // a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
-void MediaDescription::SetCname(const uint32_t ssrc, const ov::String& cname)
+void MediaDescription::SetCname(uint32_t ssrc, const ov::String &cname)
 {
 	_ssrc = ssrc;
 	_cname = cname;
 }
 
-const uint32_t MediaDescription::GetSsrc()
+uint32_t MediaDescription::GetSsrc()
 {
 	return _ssrc;
 }
@@ -603,8 +612,8 @@ const ov::String MediaDescription::GetCname()
 }
 
 // a=rtpmap:96 VP8/50000
-bool MediaDescription::AddRtpmap(const uint8_t payload_type, const ov::String &codec,
-								 const uint32_t rate, const ov::String parameters)
+bool MediaDescription::AddRtpmap(uint8_t payload_type, const ov::String &codec,
+                                 uint32_t rate, const ov::String &parameters)
 {
 	std::shared_ptr<PayloadAttr> payload = GetPayload(payload_type);
 	if(payload == nullptr)
@@ -617,8 +626,8 @@ bool MediaDescription::AddRtpmap(const uint8_t payload_type, const ov::String &c
 	payload->SetRtpmap(codec, rate, parameters);
 }
 
-void MediaDescription::AddRtpmap(const uint8_t payload_type, const PayloadAttr::SupportCodec codec,
-								 const uint32_t rate, const ov::String parameters)
+void MediaDescription::AddRtpmap(uint8_t payload_type, PayloadAttr::SupportCodec codec,
+                                 uint32_t rate, const ov::String &parameters)
 {
 	std::shared_ptr<PayloadAttr> payload = GetPayload(payload_type);
 	if(payload == nullptr)
@@ -632,7 +641,7 @@ void MediaDescription::AddRtpmap(const uint8_t payload_type, const PayloadAttr::
 }
 
 // a=rtcp-fb:96 nack pli
-bool MediaDescription::EnableRtcpFb(const uint8_t id, const ov::String &type, const bool on)
+bool MediaDescription::EnableRtcpFb(uint8_t id, const ov::String &type, bool on)
 {
 	std::shared_ptr<PayloadAttr> payload = GetPayload(id);
 	if(payload == nullptr)
@@ -645,7 +654,7 @@ bool MediaDescription::EnableRtcpFb(const uint8_t id, const ov::String &type, co
 	return payload->EnableRtcpFb(type, on);
 }
 
-void MediaDescription::EnableRtcpFb(const uint8_t id, const PayloadAttr::RtcpFbType &type, const bool on)
+void MediaDescription::EnableRtcpFb(uint8_t id, const PayloadAttr::RtcpFbType &type, bool on)
 {
 	std::shared_ptr<PayloadAttr> payload = GetPayload(id);
 	if(payload == nullptr)

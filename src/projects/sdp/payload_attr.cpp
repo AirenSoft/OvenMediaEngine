@@ -56,6 +56,7 @@ bool PayloadAttr::SetRtpmap(const ov::String &codec, uint32_t rate, const ov::St
 }
 
 // a=rtpmap:97 VP8/50000
+// a=rtpmap:111 OPUS/48000/2
 void PayloadAttr::SetRtpmap(const SupportCodec codec, uint32_t rate, const ov::String &parameters)
 {
 	_codec = codec;

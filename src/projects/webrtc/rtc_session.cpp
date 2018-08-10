@@ -98,7 +98,7 @@ bool RtcSession::Start()
 
 		auto rtp_rtcp = std::make_shared<RtpRtcp>(track->GetId(),
 		                                          session,
-		                                          peer_media_desc->GetMediaType() == MediaDescription::MediaType::AUDIO);
+		                                          peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio);
 		rtp_rtcp->Initialize();
 		rtp_rtcp->SetSSRC(offer_media_desc->GetSsrc());
 		rtp_rtcp->SetPayloadType(payload->GetId());
@@ -157,13 +157,13 @@ void RtcSession::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, con
 	_dtls_ice_transport->OnDataReceived(SessionNodeType::None, data);
 }
 
-bool RtcSession::SendOutgoingVideoData(std::shared_ptr<MediaTrack> track,
-                                       FrameType frame_type,
-                                       uint32_t timestamp,
-                                       const uint8_t *payload_data,
-                                       size_t payload_size,
-                                       const FragmentationHeader *fragmentation,
-                                       const RTPVideoHeader *rtp_video_header)
+bool RtcSession::SendOutgoingData(std::shared_ptr<MediaTrack> track,
+                                  FrameType frame_type,
+                                  uint32_t timestamp,
+                                  const uint8_t *payload_data,
+                                  size_t payload_size,
+                                  const FragmentationHeader *fragmentation,
+                                  const RTPVideoHeader *rtp_video_header)
 {
 	// Track ID로 rtp_rtcp를 찾는다.
 	auto it = _rtp_rtcp_map.find(track->GetId());

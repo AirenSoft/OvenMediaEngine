@@ -10,17 +10,19 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
-#define OV_LOG_TAG "MediaRouteStream"
+#define OV_LOG_TAG "MediaRoute.Stream"
 
 using namespace MediaCommonType;
 
 MediaRouteStream::MediaRouteStream(std::shared_ptr<StreamInfo> stream_info)
 {
-	logtd("create media route stream. name(%s) id(%u)", stream_info->GetName().CStr(), stream_info->GetId());
+	logtd("Trying to create media route stream: name(%s) id(%u)", stream_info->GetName().CStr(), stream_info->GetId());
 
 	// 스트림 정보 저정
 	_stream_info = stream_info;
 	_stream_info->ShowInfo();
+
+	time(&_last_rb_time);
 }
 
 MediaRouteStream::~MediaRouteStream()
@@ -43,7 +45,7 @@ MediaRouteApplicationConnector::ConnectorType MediaRouteStream::GetConnectorType
 	return _application_connector_type;
 }
 
-bool MediaRouteStream::Push(std::unique_ptr<MediaBuffer> buffer)
+bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer)
 {
 	MediaType media_type = buffer->GetMediaType();
 	int32_t track_id = buffer->GetTrackId();
@@ -97,7 +99,7 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaBuffer> buffer)
 	return true;
 }
 
-std::unique_ptr<MediaBuffer> MediaRouteStream::Pop()
+std::unique_ptr<MediaPacket> MediaRouteStream::Pop()
 {
 	if(_queue.empty())
 	{

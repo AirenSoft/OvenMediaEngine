@@ -11,7 +11,7 @@
 #include "base/application/application_info.h"
 #include "base/application/stream_info.h"
 
-#define OV_LOG_TAG "MediaRouteApplication"
+#define OV_LOG_TAG "MediaRoute.App"
 
 using namespace MediaCommonType;
 
@@ -260,7 +260,7 @@ bool MediaRouteApplication::OnDeleteStream(
 bool MediaRouteApplication::OnReceiveBuffer(
 	std::shared_ptr<MediaRouteApplicationConnector> app_conn,
 	std::shared_ptr<StreamInfo> stream_info,
-	std::unique_ptr<MediaBuffer> buffer)
+	std::unique_ptr<MediaPacket> packet)
 {
 	if(app_conn == nullptr || stream_info == nullptr)
 	{
@@ -284,7 +284,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 		return false;
 	}
 
-	bool ret = stream->Push(std::move(buffer));
+	bool ret = stream->Push(std::move(packet));
 
 	// TODO(SOULK) : Connector(Provider, Transcoder)에서 수신된 데이터에 대한 정보를 바로 처리하기 위해 버퍼의 Indicator 정보를
 	// MainTask에 전달한다. 패킷이 수신되어 처리(재분배)되는 속도가 0.001초 이하의 초저지연으로 동작하나, 효율적인 구조는 
@@ -323,13 +323,14 @@ void MediaRouteApplication::GarbageCollector()
 
 			// TODO(soulk) 삭제 Treshold 값은 설정서 읽어오도록 수정해야함.
 			// Observer 에게 삭제 메세지를 전달하는 구조도 비효율적임. 레이스컨디션 발생 가능성 있음.
-			if(diff_time > 30)
+#if DEBUG
+			// debug 빌드 되었을 경우 stream 삭제 기능 동작 안하게 함
+#else // DEBUG
 			{
 				logti("%s(%u) will delete the stream. diff time(%.0f)",
-				      stream->GetStreamInfo()->GetName().CStr(),
-				      stream->GetStreamInfo()->GetId(),
-				      diff_time);
-
+					  stream->GetStreamInfo()->GetName().CStr(),
+					  stream->GetStreamInfo()->GetId(),
+					  diff_time);
 
 				for(auto observer : _observers)
 				{
@@ -346,7 +347,7 @@ void MediaRouteApplication::GarbageCollector()
 				// 비효율적임
 				it = _streams.begin();
 			}
-
+#endif // DEBUG
 		}
 	}
 }
@@ -390,42 +391,52 @@ void MediaRouteApplication::MainTask()
 			for(const auto &observer : _observers)
 			{
 				// 프로바이터에서 전달받은 스트림은 트랜스코더로 넘김
-				if((connector_type == MediaRouteApplicationConnector::ConnectorType::Provider)
-				   && (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder))
+				if(
+					(connector_type == MediaRouteApplicationConnector::ConnectorType::Provider) &&
+					(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder)
+					)
 				{
 					// TODO(soulk): Application Observer의 타입에 따라서 호출하는 함수를 다르게 한다
-					// TODO(soulk) : MediaBuffer clone 기능을 만든다.
-					auto media_buffer_clone = std::make_unique<MediaBuffer>(
+					// TODO(soulk) : MediaFrame clone 기능을 만든다.
+					auto media_buffer_clone = std::make_unique<MediaPacket>(
 						cur_buf->GetMediaType(),
 						cur_buf->GetTrackId(),
-						cur_buf->GetBuffer(),
-						cur_buf->GetDataSize(),
-						cur_buf->GetPts());
+						cur_buf->GetData(),
+						cur_buf->GetPts(),
+						cur_buf->GetFlags()
+					);
 
 					observer->OnSendFrame(
 						stream_info,
 						std::move(media_buffer_clone)
 					);
 				}
-
 					// 트랜스코더에서 전달받은 스트림은 퍼블리셔로 넘김
-				else if((connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder)
-				        && (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
+				else if(
+					(connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
+					(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher)
+					)
 				{
 					switch(cur_buf->GetMediaType())
 					{
 						case MediaType::Video:
 						{
+							auto &data = cur_buf->GetData();
+
 							// TODO: 공동 구조체로 변경해야함.
-							uint8_t *buffer = new uint8_t[cur_buf->GetBufferSize()];
-							memcpy(buffer, cur_buf->GetBuffer(), cur_buf->GetBufferSize());
+							auto buffer = new uint8_t[data->GetLength()];
+							memcpy(buffer, data->GetData(), data->GetLength());
 
-							auto encoded_frame = std::make_unique<EncodedFrame>(buffer, cur_buf->GetBufferSize(), 0);
-							encoded_frame->encoded_width = cur_buf->GetWidth();
-							encoded_frame->encoded_height = cur_buf->GetHeight();
-							encoded_frame->frame_type = (cur_buf->GetFlags() == 1) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
+							auto &track = stream_info->GetTrack(cur_buf->GetTrackId());
 
-							// TODO : Publisher에서 Timestamp를 90000Hz로 변경하는 코드를 넣어야함. 직지금은 임시로 넣음.
+							OV_ASSERT2(track != nullptr);
+
+							auto encoded_frame = std::make_unique<EncodedFrame>(buffer, data->GetLength(), 0);
+							encoded_frame->encoded_width = track->GetWidth();
+							encoded_frame->encoded_height = track->GetHeight();
+							encoded_frame->frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
+
+							// TODO(soulk): Publisher에서 Timestamp를 90000Hz로 변경하는 코드를 넣어야함. 지금은 임시로 넣음.
 							encoded_frame->time_stamp = (uint32_t)((double)cur_buf->GetPts() / (double)1000000 * (double)90000);
 							// encoded_frame->_timeStamp = (uint32_t)cur_buf->GetPts();
 
@@ -434,8 +445,7 @@ void MediaRouteApplication::MainTask()
 
 							auto codec_info = std::make_unique<CodecSpecificInfo>();
 
-							codec_info->codec_type = VideoCodecType::Vp8;
-							codec_info->codec_specific.generic.simulcast_idx = -1;
+							codec_info->codec_type = CodecType::Vp8;
 							codec_info->codec_specific.vp8.picture_id = -1;
 							codec_info->codec_specific.vp8.non_reference = false;
 							codec_info->codec_specific.vp8.simulcast_idx = 0;
@@ -447,8 +457,6 @@ void MediaRouteApplication::MainTask()
 							auto fragmentation = std::make_unique<FragmentationHeader>();
 
 							// logtd("send to publisher (1000k cr):%u, (90k cr):%u", cur_buf->GetPts(), encoded_frame->_timeStamp);
-
-
 							observer->OnSendVideoFrame(
 								stream_info,
 								media_track,
@@ -460,17 +468,23 @@ void MediaRouteApplication::MainTask()
 
 						case MediaType::Audio:
 						{
-							/*
-							uint8_t *buffer = new uint8_t[cur_buf->GetBufferSize()];
-							memcpy(buffer, cur_buf->GetBuffer(), cur_buf->GetBufferSize());
+							auto &data = cur_buf->GetData();
 
-							auto encoded_frame = std::make_unique<EncodedFrame>(buffer, cur_buf->GetBufferSize(), 0);
-							encoded_frame->_encodedWidth = cur_buf->_width;
-							encoded_frame->_encodedHeight = cur_buf->_height;
-							encoded_frame->_frameType = (FrameType)(cur_buf->_flags == 1) ? kVideoFrameKey : kVideoFrameDelta;
+							// TODO: 공동 구조체로 변경해야함.
+							auto buffer = new uint8_t[data->GetLength()];
+							memcpy(buffer, data->GetData(), data->GetLength());
 
-							// TODO : Publisher에서 Timestamp를 90000Hz로 변경하는 코드를 넣어야함. 직지금은 임시로 넣음.
-							encoded_frame->_timeStamp = (uint32_t)((double)cur_buf->GetPts() / (double)1000000 * (double)90000);
+							auto &track = stream_info->GetTrack(cur_buf->GetTrackId());
+
+							OV_ASSERT2(track != nullptr);
+
+							auto encoded_frame = std::make_unique<EncodedFrame>(buffer, data->GetLength(), 0);
+							encoded_frame->encoded_width = track->GetWidth();
+							encoded_frame->encoded_height = track->GetHeight();
+							encoded_frame->frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
+
+							// TODO(soulk): Publisher에서 Timestamp를 90000Hz로 변경하는 코드를 넣어야함. 지금은 임시로 넣음.
+							encoded_frame->time_stamp = (uint32_t)((double)cur_buf->GetPts() / (double)1000000 * (double)90000);
 							// encoded_frame->_timeStamp = (uint32_t)cur_buf->GetPts();
 
 							// SDP의 Timebase가 90000이라서 읨의로 수정해줌.
@@ -478,31 +492,23 @@ void MediaRouteApplication::MainTask()
 
 							auto codec_info = std::make_unique<CodecSpecificInfo>();
 
-							codec_info->codecType = kVideoCodecVP8;
-							codec_info->codecSpecific.generic.simulcast_idx = -1;
-							codec_info->codecSpecific.VP8.pictureId = -1;
-							codec_info->codecSpecific.VP8.nonReference = false;
-							codec_info->codecSpecific.VP8.simulcastIdx = 0;
-							codec_info->codecSpecific.VP8.temporalIdx = 0;
-							codec_info->codecSpecific.VP8.layerSync = false;
-							codec_info->codecSpecific.VP8.tl0PicIdx = 0;
-							codec_info->codecSpecific.VP8.keyIdx = 0;
+							codec_info->codec_type = CodecType::Opus;
+
+							codec_info->codec_specific.opus.sample_rate_hz = media_track->GetSampleRate();
+							codec_info->codec_specific.opus.num_channels = media_track->GetChannel().GetCounts();
+							codec_info->codec_specific.opus.default_bitrate_bps = 0;
+							codec_info->codec_specific.opus.min_bitrate_bps = 0;
+							codec_info->codec_specific.opus.max_bitrate_bps = 0;
 
 							auto fragmentation = std::make_unique<FragmentationHeader>();
 
 							// logtd("send to publisher (1000k cr):%u, (90k cr):%u", cur_buf->GetPts(), encoded_frame->_timeStamp);
-
-
-							observer->OnSendVideoFrame(
+							observer->OnSendAudioFrame(
 								stream_info,
 								media_track,
 								std::move(encoded_frame),
 								std::move(codec_info),
 								std::move(fragmentation));
-								*/
-
-							logtd("Ignoring audio frame...");
-
 							break;
 						}
 

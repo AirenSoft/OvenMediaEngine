@@ -1,7 +1,6 @@
 #pragma once
 
 #include "base/common_types.h"
-#include "base/common_video.h"
 #include "base/publisher/application.h"
 #include "base/application/application_info.h"
 #include "base/application/session_info.h"

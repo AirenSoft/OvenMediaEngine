@@ -14,18 +14,18 @@
 class SdpBase
 {
 public:
-	virtual bool		FromString(const ov::String& desc) = 0;
+	virtual bool FromString(const ov::String &desc) = 0;
 
-	bool 				Update()
+	bool Update()
 	{
 		return UpdateData(_sdp_text);
 	}
 
-	bool				ToString(ov::String &sdp)
+	bool ToString(ov::String &sdp)
 	{
 		if(_sdp_text.IsEmpty())
 		{
-			if(!Update())
+			if(Update() == false)
 			{
 				return false;
 			}
@@ -35,9 +35,10 @@ public:
 
 		return true;
 	}
+
 protected:
-	virtual bool		UpdateData(ov::String &sdp) = 0;
+	virtual bool UpdateData(ov::String &sdp) = 0;
 
 private:
-	ov::String			_sdp_text;
+	ov::String _sdp_text;
 };

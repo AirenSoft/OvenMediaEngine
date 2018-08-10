@@ -115,6 +115,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
 {
 	auto application = GetApplication(application_name);
 	auto stream = GetStream(application_name, stream_name);
+
 	if(!stream)
 	{
 		logte("Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
@@ -123,18 +124,25 @@ bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
 
 	ov::String remote_sdp_text;
 	peer_sdp->ToString(remote_sdp_text);
-	logtd("OnAddRemoteDescription");
-	logtd("%s", remote_sdp_text.CStr());
+	logtd("OnAddRemoteDescription: %s", remote_sdp_text.CStr());
 
 	// Stream에 Session을 생성한다.
 	auto session = RtcSession::Create(application, stream, offer_sdp, peer_sdp, _ice_port);
 
-	// Stream에 Session을 등록한다.
-	stream->AddSession(session);
+	if(session != nullptr)
+	{
+		// Stream에 Session을 등록한다.
+		stream->AddSession(session);
 
-	// ice_port에 SessionInfo을 전달한다.
-	// 향후 해당 session에서 Ice를 통해 패킷이 들어오면 SessionInfo와 함께 Callback을 준다.
-	_ice_port->AddSession(session, offer_sdp, peer_sdp);
+		// ice_port에 SessionInfo을 전달한다.
+		// 향후 해당 session에서 Ice를 통해 패킷이 들어오면 SessionInfo와 함께 Callback을 준다.
+		_ice_port->AddSession(session, offer_sdp, peer_sdp);
+	}
+	else
+	{
+		// peer_sdp가 잘못되거나, 다른 이유로 인해 session을 생성하지 못함
+		logte("Cannot create session");
+	}
 
 	return true;
 }

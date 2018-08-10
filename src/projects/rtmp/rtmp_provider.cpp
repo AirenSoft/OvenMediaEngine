@@ -223,7 +223,7 @@ void RtmpProvider::OnVideoPacket(RtmpConnector *conn, int8_t has_abs_time, uint3
 		return;
 	}
 
-	auto pbuf = std::make_unique<MediaBuffer>(MediaType::Video, 0, (uint8_t*)body, body_size, time);
+	auto pbuf = std::make_unique<MediaPacket>(MediaType::Video, 0, body, body_size, time, MediaPacketFlag::NoFlag);
 
 	application->SendFrame(stream, std::move(pbuf));
 }
@@ -247,11 +247,10 @@ void RtmpProvider::OnAudioPacket(RtmpConnector *conn, int8_t has_abs_time, uint3
 		return;
 	}
 
-	auto pbuf = std::make_unique<MediaBuffer>(MediaType::Audio, 1, (uint8_t*)body, body_size, time);
+	auto pbuf = std::make_unique<MediaPacket>(MediaType::Audio, 1, body, body_size, time, MediaPacketFlag::NoFlag);
 	
 	application->SendFrame(stream, std::move(pbuf));
 }
-
 
 void RtmpProvider::OnDisconnect(RtmpConnector *conn) 
 {
