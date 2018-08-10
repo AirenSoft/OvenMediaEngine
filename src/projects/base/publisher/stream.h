@@ -1,7 +1,7 @@
 #pragma once
 
 #include "session.h"
-#include "base/common_video.h"
+#include "base/common_types.h"
 #include "base/application/stream_info.h"
 
 
@@ -14,6 +14,11 @@ public:
 	std::shared_ptr<Session> GetSession(session_id_t id);
 
 	virtual void SendVideoFrame(std::shared_ptr<MediaTrack> track,
+	                            std::unique_ptr<EncodedFrame> encoded_frame,
+	                            std::unique_ptr<CodecSpecificInfo> codec_info,
+	                            std::unique_ptr<FragmentationHeader> fragmentation) = 0;
+
+	virtual void SendAudioFrame(std::shared_ptr<MediaTrack> track,
 	                            std::unique_ptr<EncodedFrame> encoded_frame,
 	                            std::unique_ptr<CodecSpecificInfo> codec_info,
 	                            std::unique_ptr<FragmentationHeader> fragmentation) = 0;

@@ -47,27 +47,8 @@ bool RtcStream::Start()
 	// GetContentCount() -> Content -> GetTrackCount로 확장해야 한다.
 	// 다음은 위와 같은 제약사항으로 인해 개발된 임시 코드이다. by Getroot
 
-	auto video_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
-	video_media_desc->SetConnection(4, "0.0.0.0");
-	// TODO(dimiden): Prevent duplication
-	video_media_desc->SetMid(ov::Random::GenerateString(6));
-	video_media_desc->SetSetup(MediaDescription::SetupType::ACTPASS);
-	video_media_desc->UseDtls(true);
-	video_media_desc->UseRtcpMux(true);
-	video_media_desc->SetDirection(MediaDescription::Direction::SENDONLY);
-	video_media_desc->SetMediaType(MediaDescription::MediaType::VIDEO);
-	video_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
-
-	auto audio_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
-	audio_media_desc->SetConnection(4, "0.0.0.0");
-	// TODO(dimiden): Prevent duplication
-	audio_media_desc->SetMid(ov::Random::GenerateString(6));
-	audio_media_desc->SetSetup(MediaDescription::SetupType::ACTPASS);
-	audio_media_desc->UseDtls(true);
-	audio_media_desc->UseRtcpMux(true);
-	audio_media_desc->SetDirection(MediaDescription::Direction::SENDONLY);
-	audio_media_desc->SetMediaType(MediaDescription::MediaType::VIDEO);
-	audio_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
+	std::shared_ptr<MediaDescription> video_media_desc = nullptr;
+	std::shared_ptr<MediaDescription> audio_media_desc = nullptr;
 
 	for(auto &track_item : _tracks)
 	{
@@ -90,6 +71,20 @@ bool RtcStream::Start()
 						logtw("Unsupported codec(%d) is being input from media track", track->GetCodecId());
 						continue;
 				}
+
+				// 현재 동시에 1개의 video만 지원
+				OV_ASSERT2(video_media_desc == nullptr);
+
+				video_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
+				video_media_desc->SetConnection(4, "0.0.0.0");
+				// TODO(dimiden): Prevent duplication
+				video_media_desc->SetMid(ov::Random::GenerateString(6));
+				video_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
+				video_media_desc->UseDtls(true);
+				video_media_desc->UseRtcpMux(true);
+				video_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
+				video_media_desc->SetMediaType(MediaDescription::MediaType::Video);
+				video_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
 
 				auto payload = std::make_shared<PayloadAttr>();
 				//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
@@ -118,9 +113,23 @@ bool RtcStream::Start()
 						continue;
 				}
 
+				// 현재 동시에 1개의 audio만 지원
+				OV_ASSERT2(audio_media_desc == nullptr);
+
+				audio_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
+				audio_media_desc->SetConnection(4, "0.0.0.0");
+				// TODO(dimiden): Prevent duplication
+				audio_media_desc->SetMid(ov::Random::GenerateString(6));
+				audio_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
+				audio_media_desc->UseDtls(true);
+				audio_media_desc->UseRtcpMux(true);
+				audio_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
+				audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
+				audio_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
+
 				auto payload = std::make_shared<PayloadAttr>();
-				//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
-				payload->SetRtpmap(sdp_support_codec, 90000);
+				// TODO(dimiden): Need to change to transcoding profile's bitrate and channel
+				payload->SetRtpmap(sdp_support_codec, 48000, "2");
 
 				audio_media_desc->AddPayload(payload);
 
@@ -139,6 +148,7 @@ bool RtcStream::Start()
 
 	// Media Description 연결
 	_offer_sdp->AddMedia(video_media_desc);
+	_offer_sdp->AddMedia(audio_media_desc);
 
 	ov::String offer_sdp_text;
 	_offer_sdp->ToString(offer_sdp_text);
@@ -202,14 +212,43 @@ void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 		// shared_ptr, unique_ptr을 사용하지 않아도 무방하다. 사실 다 고치기가 귀찮음 ㅠㅠ
 		// TODO(getroot): 향후 Performance 증가를 위해 RTP Packetize를 한번 하고 모든 Session에 전달하는 방법을
 		// 실험해보고 성능이 좋아지면 적용한다.
-		std::static_pointer_cast<RtcSession>(session)->SendOutgoingVideoData(track,
-		                                                                     encoded_frame->frame_type,
-		                                                                     encoded_frame->time_stamp,
-		                                                                     encoded_frame->buffer,
-		                                                                     encoded_frame->length,
-		                                                                     fragmentation.get(),
-		                                                                     &rtp_video_header);
+		std::static_pointer_cast<RtcSession>(session)->SendOutgoingData(track,
+		                                                                encoded_frame->frame_type,
+		                                                                encoded_frame->time_stamp,
+		                                                                encoded_frame->buffer,
+		                                                                encoded_frame->length,
+		                                                                fragmentation.get(),
+		                                                                &rtp_video_header);
 	}
+	// TODO(getroot): 향후 ov::Data로 변경한다.
+	delete[] encoded_frame->buffer;
+}
+
+void RtcStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
+                               std::unique_ptr<EncodedFrame> encoded_frame,
+                               std::unique_ptr<CodecSpecificInfo> codec_info,
+                               std::unique_ptr<FragmentationHeader> fragmentation)
+{
+	// AudioFrame 데이터를 Protocol에 맞게 변환한다.
+
+	// 모든 Session에 Frame을 전달한다.
+	for(auto const &x : GetSessionMap())
+	{
+		auto session = x.second;
+
+		// RTP_RTCP는 Blocking 방식의 Packetizer이므로
+		// shared_ptr, unique_ptr을 사용하지 않아도 무방하다. 사실 다 고치기가 귀찮음 ㅠㅠ
+		// TODO(getroot): 향후 Performance 증가를 위해 RTP Packetize를 한번 하고 모든 Session에 전달하는 방법을
+		// 실험해보고 성능이 좋아지면 적용한다.
+		std::static_pointer_cast<RtcSession>(session)->SendOutgoingData(track,
+		                                                                encoded_frame->frame_type,
+		                                                                encoded_frame->time_stamp,
+		                                                                encoded_frame->buffer,
+		                                                                encoded_frame->length,
+		                                                                fragmentation.get(),
+		                                                                nullptr);
+	}
+
 	// TODO(getroot): 향후 ov::Data로 변경한다.
 	delete[] encoded_frame->buffer;
 }
@@ -218,16 +257,16 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 {
 	switch(info->codec_type)
 	{
-		case VideoCodecType::Vp8:
-			rtp_video_header->codec = kRtpVideoVp8;
-			rtp_video_header->codecHeader.VP8.InitRTPVideoHeaderVP8();
-			rtp_video_header->codecHeader.VP8.pictureId = info->codec_specific.vp8.picture_id;
-			rtp_video_header->codecHeader.VP8.nonReference = info->codec_specific.vp8.non_reference;
-			rtp_video_header->codecHeader.VP8.temporalIdx = info->codec_specific.vp8.temporal_idx;
-			rtp_video_header->codecHeader.VP8.layerSync = info->codec_specific.vp8.layer_sync;
-			rtp_video_header->codecHeader.VP8.tl0PicIdx = info->codec_specific.vp8.tl0_pic_idx;
-			rtp_video_header->codecHeader.VP8.keyIdx = info->codec_specific.vp8.key_idx;
-			rtp_video_header->simulcastIdx = info->codec_specific.vp8.simulcast_idx;
+		case CodecType::Vp8:
+			rtp_video_header->codec = RtpVideoCodecType::Vp8;
+			rtp_video_header->codec_header.vp8.InitRTPVideoHeaderVP8();
+			rtp_video_header->codec_header.vp8.picture_id = info->codec_specific.vp8.picture_id;
+			rtp_video_header->codec_header.vp8.non_reference = info->codec_specific.vp8.non_reference;
+			rtp_video_header->codec_header.vp8.temporal_idx = info->codec_specific.vp8.temporal_idx;
+			rtp_video_header->codec_header.vp8.layer_sync = info->codec_specific.vp8.layer_sync;
+			rtp_video_header->codec_header.vp8.tl0_pic_idx = info->codec_specific.vp8.tl0_pic_idx;
+			rtp_video_header->codec_header.vp8.key_idx = info->codec_specific.vp8.key_idx;
+			rtp_video_header->simulcast_idx = info->codec_specific.vp8.simulcast_idx;
 			return;
 	}
 }
