@@ -135,7 +135,7 @@ void IcePort::AddSession(const std::shared_ptr<SessionInfo> &session_info, std::
 
 		if(item != _user_mapping_table.end())
 		{
-			OV_ASSERT(false, "Duplicated ufrag: %s:%s, session_id: %d (old session_id: %d)", local_ufrag.CStr(), remote_ufrag.CStr(), session_id, item->second.session_info->GetId());
+			OV_ASSERT(false, "Duplicated ufrag: %s:%s, session_id: %d (old session_id: %d)", local_ufrag.CStr(), remote_ufrag.CStr(), session_id, item->second->session_info->GetId());
 		}
 
 		logtd("Trying to add session: %d (ufrag: %s:%s)...", session_id, local_ufrag.CStr(), remote_ufrag.CStr());
@@ -327,7 +327,7 @@ bool IcePort::ProcessBindingRequest(ov::Socket *remote, const ov::SocketAddress 
 	auto info = _user_mapping_table.find(local_ufrag);
 	if(info == _user_mapping_table.end())
 	{
-		logtw("User not found: %s (AddSession() needed)", local_ufrag.CStr());
+		logtd("User not found: %s (AddSession() needed)", local_ufrag.CStr());
 		return false;
 	}
 
