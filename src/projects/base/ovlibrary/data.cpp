@@ -54,7 +54,7 @@ namespace ov
 		return dump;
 	}
 
-	String Dump(const void *data, ssize_t length, const char *title, ssize_t offset, ssize_t max_bytes, const char *line_prefix) noexcept
+	String Dump(const void *data, ssize_t length, const char *title, off_t offset, ssize_t max_bytes, const char *line_prefix) noexcept
 	{
 		if(offset > length)
 		{

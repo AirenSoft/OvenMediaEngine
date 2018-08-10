@@ -82,7 +82,7 @@ namespace ov
 		/// @remarks copy_data가 true일 경우, 메모리를 새롭게 할당한 뒤 복사하므로 입력된 data가 유효하지 않게 되더라도 영향을 받지 않음.
 		///          copy_data가 false일 경우, 별도로 메모리를 복사하지 않고 포인터만 참조하므로 입력된 data가 유효하지 않게 되면 문제가 발생함.
 		///          또한, read-only로 동작하기 때문에 데이터를 조작하는 API(Write(), Append() 등)를 호출하면 실패함
-		static std::shared_ptr<Data> CreateData(const void *data, ssize_t length, bool copy_data = true)
+		static std::shared_ptr<Data> CreateData(const void *data, size_t length, bool copy_data = true)
 		{
 			if(data == nullptr)
 			{
@@ -157,7 +157,7 @@ namespace ov
 				return _reference_data;
 			}
 
-			return _data->data() + _offset;
+			return _data->data() + _offset + _data_offset;
 		}
 
 		template<typename T>
@@ -180,7 +180,7 @@ namespace ov
 				return nullptr;
 			}
 
-			return _data->data() + _offset;
+			return _data->data() + _offset + _data_offset;
 		}
 
 		template<typename T>
@@ -189,15 +189,38 @@ namespace ov
 			return reinterpret_cast<T *>(GetWritableData());
 		}
 
+		inline off_t GetOffset() const noexcept
+		{
+			return _data_offset;
+		}
+
+		inline bool SetOffset(off_t offset)
+		{
+			if((offset < 0) || (offset >= _length))
+			{
+				OV_ASSERT(false, "Offset MUST BE between 0 and %d", (_length - 1));
+				return false;
+			}
+
+			_data_offset = offset;
+
+			return true;
+		}
+
+		inline bool IncreaseOffset(off_t delta)
+		{
+			return SetOffset(_data_offset + delta);
+		}
+
 		/// Data 인스턴스 안에 포함되어 있는 데이터의 크기
 		///
 		/// @return byte 단위의 데이터 크기
-		inline ssize_t GetLength() const
+		inline size_t GetLength() const noexcept
 		{
-			return _length;
+			return _length - _data_offset;
 		}
 
-		inline bool SetLength(ssize_t length)
+		inline bool SetLength(size_t length)
 		{
 			if(IsReadOnly())
 			{
@@ -205,9 +228,10 @@ namespace ov
 				return false;
 			}
 
-			if(Reserve(length))
+			// offset만큼 추가로 더 할당해줘야 함
+			if(Reserve(length + _data_offset))
 			{
-				_data->resize((size_t)length);
+				_data->resize(length + _data_offset);
 				_length = length;
 				return true;
 			}
@@ -223,14 +247,8 @@ namespace ov
 		///
 		/// @remark 기존 데이터는 그대로 유지되며, _reference_data가 설정되어 있을 경우엔 동작하지 않음.
 		///         본 메서드가 호출되는 순간, cow가 발생함
-		bool Reserve(ssize_t capacity)
+		bool Reserve(size_t capacity)
 		{
-			if(capacity < 0L)
-			{
-				OV_ASSERT2(capacity >= 0L);
-				return false;
-			}
-
 			if(Detach() == false)
 			{
 				return false;
@@ -238,7 +256,7 @@ namespace ov
 
 			OV_ASSERT2(_data != nullptr);
 
-			_data->reserve(static_cast<unsigned long>(capacity));
+			_data->reserve(capacity);
 
 			return true;
 		}
@@ -246,7 +264,7 @@ namespace ov
 		/// 할당되어 있는 메모리 크기를 얻어옴.
 		///
 		/// @return 할당되어 있는 메모리 크기
-		inline ssize_t GetCapacity() const noexcept
+		inline size_t GetCapacity() const noexcept
 		{
 			OV_ASSERT2(IsReadOnly() == false);
 
@@ -271,19 +289,48 @@ namespace ov
 			if(Detach() == false)
 			{
 				// copy-on-write 실패
+				OV_ASSERT(false, "Failed to copy-on-write");
 				return false;
 			}
 
 			_data->clear();
+			_data_offset = 0;
+			_length = 0;
 
 			return true;
 		}
 
-		bool Append(const void *data, ssize_t length)
+		bool Insert(const void *data, off_t offset, size_t length)
 		{
-			if((data == nullptr) || (length < 0))
+			if(data == nullptr)
 			{
-				OV_ASSERT(false, "Invalid parameter: data: %p, length: %ld", data, length);
+				OV_ASSERT(false, "Invalid parameter: data: %p", data);
+				return false;
+			}
+
+			if(Detach() == false)
+			{
+				return false;
+			}
+
+			const auto *source = static_cast<const uint8_t *>(data);
+
+			_data->insert(_data->begin() + _offset + offset, source, source + length);
+			_length += length;
+
+			return true;
+		}
+
+		bool Insert(const std::shared_ptr<const Data> &data, off_t offset)
+		{
+			return Insert(data->GetData(), offset, data->GetLength());
+		}
+
+		bool Append(const void *data, size_t length)
+		{
+			if(data == nullptr)
+			{
+				OV_ASSERT(false, "Invalid parameter: data: %p", data);
 				return false;
 			}
 
@@ -308,7 +355,6 @@ namespace ov
 		/// this 데이터의 일부 영역만 참조하는 Data instance 생성
 		///
 		/// @param offset 원본 데이터에서 참조할 offset
-		/// @param length 원본 데이터에서 참조할 바이트 수 (생략시 offset부터 나머지 데이터)
 		///
 		/// @return 생성된 Data instance
 		///
@@ -316,7 +362,57 @@ namespace ov
 		/// 다른 Data instance가 입력될 경우, 기본적으로 copy-on-write 모드로 동작함.
 		/// 즉, 원본 데이터나 this에 아무런 조작을 하지 않을 경우 포인터만 보관하고 있으며,
 		/// 다른 Data instance의 데이터 혹은 this instance의 데이터가 변경되면 그 때 메모리 복사가 이루어짐.
-		std::shared_ptr<Data> Subdata(ssize_t offset, ssize_t length = -1L) const
+		std::shared_ptr<Data> Subdata(off_t offset) const
+		{
+			if((_data == nullptr) || (IsReadOnly()))
+			{
+				// 참조 모드 이거나, 아직 할당이 덜 되었다면
+				OV_ASSERT2(false);
+
+				return nullptr;
+			}
+
+			if((_length < offset) || (offset < 0))
+			{
+				OV_ASSERT(false, "Offset MUST BE between 0 and %d", (_length - 1));
+
+				return nullptr;
+			}
+
+			// 남은 데이터 전부를 subdata로 함
+			auto length = static_cast<size_t>(_length - offset);
+
+			if((offset < 0) || ((offset + length) > _length))
+			{
+				// offset 또는 length가 잘못 지정되어 있음
+
+				return nullptr;
+			}
+
+			auto instance = CreateData();
+
+			// 원본 데이터 지정
+			instance->_data = _data;
+
+			// offset과 length 지정
+			instance->_offset = _offset + offset;
+			instance->_length = length;
+
+			return instance;
+		}
+
+		/// this 데이터의 일부 영역만 참조하는 Data instance 생성
+		///
+		/// @param offset 원본 데이터에서 참조할 offset
+		/// @param length 원본 데이터에서 참조할 바이트 수
+		///
+		/// @return 생성된 Data instance
+		///
+		/// @remarks
+		/// 다른 Data instance가 입력될 경우, 기본적으로 copy-on-write 모드로 동작함.
+		/// 즉, 원본 데이터나 this에 아무런 조작을 하지 않을 경우 포인터만 보관하고 있으며,
+		/// 다른 Data instance의 데이터 혹은 this instance의 데이터가 변경되면 그 때 메모리 복사가 이루어짐.
+		std::shared_ptr<Data> Subdata(off_t offset, size_t length) const
 		{
 			if((_data == nullptr) || (IsReadOnly()))
 			{
@@ -325,16 +421,10 @@ namespace ov
 				return nullptr;
 			}
 
-			if(length == -1L)
+			if((_length < offset) || (offset < 0) || ((offset + length) > _length))
 			{
-				// length이 -1로 들어오면, 남은 데이터 전부를 subdata로 함
-				length = _length - offset;
-			}
+				OV_ASSERT(false, "Invalid offset or length: offset: %jd, length: %zd (current data: %zd bytes)", (intmax_t)offset, length, _length);
 
-			if((offset < 0) || ((offset + length) > _length) || (length < 0))
-			{
-				// offset 또는 length가 잘못 지정되어 있음
-				OV_ASSERT(false, "Invalid offset or length: offset: %ld, length: %ld (current data: %ld bytes)", offset, length, _length);
 				return nullptr;
 			}
 
@@ -360,7 +450,7 @@ namespace ov
 			return Dump(title, 0L, 1024L, line_prefix);
 		}
 
-		String Dump(const char *title, ssize_t offset = 0L, ssize_t max_bytes = 1024L, const char *line_prefix = nullptr) const noexcept
+		String Dump(const char *title, off_t offset = 0L, ssize_t max_bytes = 1024L, const char *line_prefix = nullptr) const noexcept
 		{
 			return ov::Dump(GetData(), GetLength(), title, offset, max_bytes, line_prefix);
 		}
@@ -372,12 +462,6 @@ namespace ov
 
 	protected:
 		Data()
-			: _reference_data(nullptr),
-
-			  _data(nullptr),
-
-			  _offset(0L),
-			  _length(0L)
 		{
 			_data = std::make_shared<std::vector<uint8_t>>();
 		}
@@ -426,13 +510,17 @@ namespace ov
 		// 데이터 보관용 변수
 
 		// 참조 데이터 (이 데이터가 유효하면(not null) read-only로 동작함)
-		const void *_reference_data;
+		const void *_reference_data = nullptr;
 
 		// 실제 할당된 데이터 (offset을 주어 subdata를 생성한 경우, _current_data와 _data 포인터가 다를 수 있음)
-		std::shared_ptr<std::vector<uint8_t>> _data;
-		ssize_t _offset;
+		std::shared_ptr<std::vector<uint8_t>> _data = nullptr;
+		off_t _offset = 0;
+
+		// 논리적인 offset. subdata인 경우에도, 처음엔 무조건 0
+		// Insert()/Subdata() 할 때 영향을 미치지 않음
+		off_t _data_offset = 0;
 
 		// 저장된 데이터 길이
-		ssize_t _length;
+		size_t _length = 0;
 	};
 };
