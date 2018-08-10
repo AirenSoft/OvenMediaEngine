@@ -19,7 +19,7 @@ public:
     BitstreamAnnexA();
     ~BitstreamAnnexA();
 
- 	void convert_to(MediaBuffer* pkt);
+ 	void convert_to(MediaPacket *packet);
 private:
 
 	std::vector<uint8_t> 	_sps;

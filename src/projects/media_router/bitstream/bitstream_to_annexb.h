@@ -20,7 +20,7 @@ public:
 	{
 	    // Unspecified
 	    AvcNaluTypeReserved = 0,
-	    
+
 	    // Coded slice of a non-IDR picture slice_layer_without_partitioning_rbsp( )
 	    AvcNaluTypeNonIDR = 1,
 	    // Coded slice data partition A slice_data_partition_a_layer_rbsp( )
@@ -62,7 +62,7 @@ public:
     BitstreamToAnnexB();
     ~BitstreamToAnnexB();
 
- 	void convert_to(MediaBuffer* pkt);
+ 	void convert_to(MediaPacket *packet);
 private:
 
 	std::vector<uint8_t> 	_sps;
@@ -77,7 +77,7 @@ enum SrsAvcNaluType
 {
     // Unspecified
     SrsAvcNaluTypeReserved = 0,
-    
+
     // Coded slice of a non-IDR picture slice_layer_without_partitioning_rbsp( )
     SrsAvcNaluTypeNonIDR = 1,
     // Coded slice data partition A slice_data_partition_a_layer_rbsp( )

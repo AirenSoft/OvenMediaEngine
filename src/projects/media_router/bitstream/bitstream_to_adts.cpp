@@ -6,16 +6,15 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include <stdio.h>
-
 #include "bitstream_to_adts.h"
+
+#include <cstdio>
 
 #include <base/ovlibrary/ovlibrary.h>
 
 #define OV_LOG_TAG "BitstreamToADTS"
 
-
-BitstreamToADTS::BitstreamToADTS() 
+BitstreamToADTS::BitstreamToADTS()
 {
 	_has_sequence_header = false;
 }
@@ -26,30 +25,39 @@ BitstreamToADTS::~BitstreamToADTS()
 
 BitstreamToADTS::AacProfile BitstreamToADTS::codec_aac_rtmp2ts(AacObjectType object_type)
 {
-    switch (object_type) {
-        case AacObjectTypeAacMain: return AacProfileMain;
-        case AacObjectTypeAacHE:
-        case AacObjectTypeAacHEV2:
-        case AacObjectTypeAacLC: return AacProfileLC;
-        case AacObjectTypeAacSSR: return AacProfileSSR;
-        default: return AacProfileReserved;
-    }
+	switch(object_type)
+	{
+		case AacObjectTypeAacMain:
+			return AacProfileMain;
+		case AacObjectTypeAacHE:
+		case AacObjectTypeAacHEV2:
+		case AacObjectTypeAacLC:
+			return AacProfileLC;
+		case AacObjectTypeAacSSR:
+			return AacProfileSSR;
+		default:
+			return AacProfileReserved;
+	}
 }
 
-void BitstreamToADTS::convert_to(MediaBuffer* pkt)
+void BitstreamToADTS::convert_to(MediaPacket *packet)
 {
-	if(pkt->GetDataSize() == 0) {
+	auto &data = packet->GetData();
+
+	if(data->GetLength() == 0)
+	{
 		return;
 	}
 
+	uint8_t *pbuf = data->GetWritableDataAs<uint8_t>();
+	int32_t pbuf_len = static_cast<int32_t>(data->GetLength());
+
 	// 만약, ADTS 타입이면  그냥 종료함.
-	if(	pkt->GetByteAt(0) == 0xff)  {
+	if(pbuf[0] == 0xff)
+	{
 		logtd("already ADTS type");
 		return;
 	}
-
-	uint8_t* pbuf = pkt->GetBuffer();
-	int32_t pbuf_len = pkt->GetDataSize();
 
 	// logtd("%s", ov::Dump(pbuf, pbuf_len).CStr());
 
@@ -63,8 +71,8 @@ void BitstreamToADTS::convert_to(MediaBuffer* pkt)
 	uint8_t aac_packet_type = pbuf[1];
 
 #if 1
-	logtd("sound_type:%d, sound_size:%d, sound_rate:%d, audio_codec_id:%d, aac_packet_type:%d", 
-		sound_type, sound_size, sound_rate, audio_codec_id, aac_packet_type);
+	logtd("sound_type:%d, sound_size:%d, sound_rate:%d, audio_codec_id:%d, aac_packet_type:%d",
+	      sound_type, sound_size, sound_rate, audio_codec_id, aac_packet_type);
 #endif
 
 	if(audio_codec_id != AudioCodecIdAAC)
@@ -75,43 +83,48 @@ void BitstreamToADTS::convert_to(MediaBuffer* pkt)
 	// 시퀀스 헤더
 	if(aac_packet_type == CodecAudioTypeSequenceHeader)
 	{
-		uint8_t audioObjectType =  pbuf[2];
-        aac_sample_rate =  pbuf[3];
+		uint8_t audioObjectType = pbuf[2];
+		aac_sample_rate = pbuf[3];
 
-        aac_channels = (aac_sample_rate >> 3) & 0x0f;
-        aac_sample_rate = ((audioObjectType << 1) & 0x0e) | ((aac_sample_rate >> 7) & 0x01);
-        
-        audioObjectType = (audioObjectType >> 3) & 0x1f;
-        aac_object = (AacObjectType)audioObjectType;
-      
-        logtd("audio object type = %d, aac_sample_rate = %d, aac_channels = %d", audioObjectType, aac_sample_rate, aac_channels);
-	
+		aac_channels = (aac_sample_rate >> 3) & 0x0f;
+		aac_sample_rate = ((audioObjectType << 1) & 0x0e) | ((aac_sample_rate >> 7) & 0x01);
+
+		audioObjectType = (audioObjectType >> 3) & 0x1f;
+		aac_object = (AacObjectType)audioObjectType;
+
+		logtd("audio object type = %d, aac_sample_rate = %d, aac_channels = %d", audioObjectType, aac_sample_rate, aac_channels);
+
 		_has_sequence_header = true;
 
-		logtd("detected aac sequecne header\r");
-		
-		pkt->ClearBuffer();
-		
+		logtd("detected aac sequence header\r");
+
+		data->Clear();
+
 		return;
 	}
 	else if(aac_packet_type == CodecAudioTypeRawData)
 	{
 		if(_has_sequence_header == false)
+		{
 			return;
-   		int16_t aac_fixed_header_length = 2;
+		}
 
-   		// 상위 2바이트를 삭제함
-   		pkt->EraseBuffer(0, aac_fixed_header_length);
-   		// pkt->_buf.erase(pkt->_buf.begin(), pkt->_buf.begin()+aac_fixed_header_length);
+		int16_t aac_fixed_header_length = 2;
 
-   		int16_t aac_raw_length = pkt->GetBufferSize();	// 2바이트 헤더를 제외함
+		// extract data after [aac_fixed_header_length] bytes
+		// packet->EraseBuffer(0, aac_fixed_header_length);
+		data->SetOffset(aac_fixed_header_length);
+		// pkt->_buf.erase(pkt->_buf.begin(), pkt->_buf.begin()+aac_fixed_header_length);
 
-   		////////////////////////////////////////////////////////////
+		int16_t aac_raw_length = data->GetLength();    // 2바이트 헤더를 제외함
+
+		////////////////////////////////////////////////////////////
 		// ADTS 헤더를 추가함
 		////////////////////////////////////////////////////////////
 		char aac_fixed_header[7];
-		if(true) {
-			char* pp = aac_fixed_header;
+		if(true)
+		{
+			char *pp = aac_fixed_header;
 			int16_t aac_frame_length = aac_raw_length + 7;
 
 			// Syncword 12 bslbf
@@ -146,10 +159,10 @@ void BitstreamToADTS::convert_to(MediaBuffer* pkt)
 
 			// no_raw_data_blocks_in_frame 2 uimsbf
 			*pp++ = 0xfc;
-    	}
+		}
 
-    	pkt->InsertBuffer(0, (uint8_t*)aac_fixed_header, (int32_t)sizeof(aac_fixed_header));
+		data->Insert(aac_fixed_header, data->GetOffset(), sizeof(aac_fixed_header));
 	}
-	
+
 	// Utils::Debug::DumpHex(pbuf, pbuf_len);
 }

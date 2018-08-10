@@ -115,7 +115,7 @@
       ((const uint8_t*)(x))[0])
 
 
-BitstreamAnnexA::BitstreamAnnexA() 
+BitstreamAnnexA::BitstreamAnnexA()
 {
 }
 
@@ -123,9 +123,11 @@ BitstreamAnnexA::~BitstreamAnnexA()
 {
 }
 
-void BitstreamAnnexA::convert_to(MediaBuffer* pkt)
+void BitstreamAnnexA::convert_to(MediaPacket *packet)
 {
-	uint8_t* p = pkt->GetBuffer();
+	auto &data = packet->GetData();
+
+	uint8_t *p = data->GetWritableDataAs<uint8_t>();
 
 	unsigned int frame_type;
 
@@ -138,30 +140,30 @@ void BitstreamAnnexA::convert_to(MediaBuffer* pkt)
 	// | 3       | None                    | None        |
 	// | Other   | Reserved for future use |             |
 	// +---------+-------------------------+-------------+
-   unsigned int profile;
+	unsigned int profile;
 
-   unsigned int sync_code;		
+	unsigned int sync_code;
 
-   unsigned int width, height, horizontal_scale, vertical_scale;
+	unsigned int width, height, horizontal_scale, vertical_scale;
 
-   unsigned int show_frame; 
+	unsigned int show_frame;
 
 
 	frame_type = p[0] & 0x01;
-	profile    = (p[0] >> 1) & 0x07;
-	show_frame    = (p[0] >> 4) & 0x01;
+	profile = (p[0] >> 1) & 0x07;
+	show_frame = (p[0] >> 4) & 0x01;
 
 	if(frame_type == 0)
 	{
 		sync_code = AV_RL24(p + 3);
 
-		width  = AV_RL16(p + 6) & 0x3fff;
+		width = AV_RL16(p + 6) & 0x3fff;
 		horizontal_scale = AV_RL16(p + 6) >> 14;
 
 		// 0011 1111 1111 1111
 		// Scale + Height
-        height = AV_RL16(p + 8) & 0x3fff;
-        vertical_scale = AV_RL16(p + 8)  >> 14;
+		height = AV_RL16(p + 8) & 0x3fff;
+		vertical_scale = AV_RL16(p + 8) >> 14;
 
 		// printf("%s", ov::Data::Dump(_pkt->data, _pkt->size, 0, 64).CStr());
 #if 0

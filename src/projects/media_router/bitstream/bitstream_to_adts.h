@@ -56,7 +56,7 @@ public:
     BitstreamToADTS();
     ~BitstreamToADTS();
 
- 	void convert_to(MediaBuffer* pkt);
+ 	void convert_to(MediaPacket *packet);
 private:
 	AacProfile 	codec_aac_rtmp2ts(AacObjectType object_type);
 
