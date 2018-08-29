@@ -17,7 +17,7 @@ RtpPacket::RtpPacket()
 	// 패킷 최대 크기만큼 넉넉하게 메모리 예약
 	_data->Reserve(DEFAULT_MAX_PACKET_SIZE);
 	_data->SetLength(FIXED_HEADER_SIZE);
-	_buffer = (uint8_t *)_data->GetData();
+	_buffer = _data->GetWritableDataAs<uint8_t>();
 
 	// 버퍼에 RTP 버전 표기
 	_buffer[0] = RTP_VERSION << 6;
@@ -34,7 +34,7 @@ RtpPacket::RtpPacket(RtpPacket &src)
 	_extension_size = src._extension_size;
 
 	_data = src._data->Clone();
-	_buffer = (uint8_t *)_data->GetData();
+	_buffer = _data->GetWritableDataAs<uint8_t>();
 
 	_sequence_number = 0;
 	_timestamp = 0;
@@ -143,6 +143,7 @@ void RtpPacket::SetCsrcs(const std::vector<uint32_t>& csrcs)
 
 	// _buffer 사이즈 조정
 	_data->SetLength(_payload_offset);
+	_buffer = _data->GetWritableDataAs<uint8_t>();
 
 	// 4 bytes 짜리 csrc를 buffer에 BIG ENDIAN으로 넣는다.
 	size_t offset = FIXED_HEADER_SIZE;
@@ -172,6 +173,7 @@ uint8_t* RtpPacket::SetPayloadSize(size_t size_bytes)
 {
 	if (_payload_offset + size_bytes > _data->GetCapacity())
 	{
+		OV_ASSERT(false, "Data capacity must be greater than %ld (offset: %ld + bytes: %ld)", _data->GetCapacity(), _payload_offset, size_bytes, _payload_offset + size_bytes);
 		return nullptr;
 	}
 
