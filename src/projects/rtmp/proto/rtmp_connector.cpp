@@ -314,7 +314,7 @@ int RtmpConnector::handle_invoke(RTMP * r, RTMPPacket *packet, unsigned int offs
 	nRes = AMF_Decode(&obj, (const char*)body, (int)nBodySize, 0);
 	if (nRes < 0)
 	{
-		logte("error decoding invoke packet\r\n");
+		logte("error decoding invoke packet");
 		return 0;
 	}
 

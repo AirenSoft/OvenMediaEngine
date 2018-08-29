@@ -2,8 +2,6 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
-//TODO: common_type 헤더에 넣음
-//TODO: common_video 헤더와 통합해야함.
 namespace MediaCommonType
 {
 	// 미디어 타입
@@ -113,8 +111,6 @@ namespace MediaCommonType
 		int32_t _den;
 	};
 
-
-
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	// 오디오 샘플 포맷
 	//////////////////////////////////////////////////////////////////////////////////////////////////
@@ -170,18 +166,14 @@ namespace MediaCommonType
 		};
 
 	public:
-		AudioSample() : AudioSample(Format::None)
-		{
-		}
+		AudioSample() = default;
 
-		AudioSample(Format fmt)
+		explicit AudioSample(Format fmt)
 		{
 			SetFormat(fmt);
 		}
 
-		~AudioSample()
-		{
-		}
+		~AudioSample() = default;
 
 		AudioSample &operator =(const AudioSample &T) noexcept
 		{
@@ -193,46 +185,30 @@ namespace MediaCommonType
 			return *this;
 		}
 
+#define OV_MEDIA_TYPE_SET_VALUE(type, ...) \
+    case type: \
+        __VA_ARGS__; \
+        break
+
 		void SetFormat(Format fmt)
 		{
 			_format = fmt;
 
-			switch((int8_t)_format)
+			switch(_format)
 			{
-				case (int8_t)Format::U8:
-					_name = "u8", _sample_size = 1;
-					break;
-				case (int8_t)Format::S16:
-					_name = "s16", _sample_size = 2;
-					break;
-				case (int8_t)Format::S32:
-					_name = "s32", _sample_size = 4;
-					break;
-				case (int8_t)Format::Flt:
-					_name = "flt", _sample_size = 4;
-					break;
-				case (int8_t)Format::Dbl:
-					_name = "dbl", _sample_size = 8;
-					break;
-				case (int8_t)Format::U8P:
-					_name = "u8p", _sample_size = 1;
-					break;
-				case (int8_t)Format::S16P:
-					_name = "s16p", _sample_size = 2;
-					break;
-				case (int8_t)Format::S32P:
-					_name = "s32p", _sample_size = 4;
-					break;
-				case (int8_t)Format::FltP:
-					_name = "fltp", _sample_size = 4;
-					break;
-				case (int8_t)Format::DblP:
-					_name = "dblp", _sample_size = 8;
-					break;
-				case (int8_t)Format::None:
+				OV_MEDIA_TYPE_SET_VALUE(Format::U8, _name = "u8", _sample_size = 1);
+				OV_MEDIA_TYPE_SET_VALUE(Format::S16, _name = "s16", _sample_size = 2);
+				OV_MEDIA_TYPE_SET_VALUE(Format::S32, _name = "s32", _sample_size = 4);
+				OV_MEDIA_TYPE_SET_VALUE(Format::Flt, _name = "flt", _sample_size = 4);
+				OV_MEDIA_TYPE_SET_VALUE(Format::Dbl, _name = "dbl", _sample_size = 8);
+				OV_MEDIA_TYPE_SET_VALUE(Format::U8P, _name = "u8p", _sample_size = 1);
+				OV_MEDIA_TYPE_SET_VALUE(Format::S16P, _name = "s16p", _sample_size = 2);
+				OV_MEDIA_TYPE_SET_VALUE(Format::S32P, _name = "s32p", _sample_size = 4);
+				OV_MEDIA_TYPE_SET_VALUE(Format::FltP, _name = "fltp", _sample_size = 4);
+				OV_MEDIA_TYPE_SET_VALUE(Format::DblP, _name = "dblp", _sample_size = 8);
+
 				default:
-					_name = "none", _sample_size = 0;
-					break;
+				OV_MEDIA_TYPE_SET_VALUE(Format::None, _name = "none", _sample_size = 0);
 			}
 		}
 
@@ -245,16 +221,6 @@ namespace MediaCommonType
 		{
 			return _format;
 		}
-
-		// void SetRate(int32_t rate)
-		// {
-		//     _rate = (Rate)rate;
-		// }
-
-		// int32_t GetRate()
-		// {
-		//     return (int32_t)_rate;
-		// }
 
 		void SetRate(Rate rate)
 		{
@@ -271,17 +237,17 @@ namespace MediaCommonType
 			return _name.c_str();
 		}
 
-		// 샘플 레이트
-		Rate _rate;
+		// Sample rate
+		Rate _rate = Rate::None;
 
-		// 샘플 포맷
-		Format _format;
+		// Sample format
+		Format _format = Format::None;
 
-		// 샘플 사이즈
-		int32_t _sample_size;
+		// Sample size
+		int32_t _sample_size = 0;
 
-		// 샘플 포맷명
-		std::string _name;
+		// Sample format name
+		std::string _name = "none";
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
@@ -299,13 +265,8 @@ namespace MediaCommonType
 		};
 
 	public:
-		AudioChannel() : _layout(Layout::LayoutStereo), _count(2), _name("")
-		{
-		}
-
-		~AudioChannel()
-		{
-		}
+		AudioChannel() = default;
+		~AudioChannel() = default;
 
 		AudioChannel &operator =(const AudioChannel &audio_channel) noexcept
 		{
@@ -322,40 +283,33 @@ namespace MediaCommonType
 
 			switch(_layout)
 			{
-				case Layout::LayoutStereo:
-					_count = 2;
-					_name = "stereo";
-					break;
-
-				case Layout::LayoutMono:
-					_count = 1;
-					_name = "mono";
-					break;
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutStereo, _count = 2, _name = "stereo");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutMono, _count = 1, _name = "mono");
 			}
 		}
 
 		// 채널 레이아웃 반환
-		AudioChannel::Layout GetLayout()
+		AudioChannel::Layout GetLayout() const
 		{
 			return _layout;
 		}
 
 		// 채널 개수 반환
-		int32_t GetCounts()
+		int32_t GetCounts() const
 		{
 			return _count;
 		}
 
 		// 채널 레이아웃 명
-		const char *GetName()
+		const char *GetName() const
 		{
 			return _name.c_str();
 		}
 
 	private:
-		Layout _layout;
-		int32_t _count;
-		std::string _name;
+		Layout _layout = Layout::LayoutStereo;
+		int32_t _count = 2;
+		std::string _name = "stereo";
 	};
 
 

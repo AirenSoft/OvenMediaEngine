@@ -25,7 +25,7 @@ namespace ov
 	class String
 	{
 	public:
-		String();
+		String() = default;
 		String(const char *string, ssize_t length = -1); // NOLINT
 
 		// copy constructor
@@ -66,19 +66,19 @@ namespace ov
 		// start_position 부터 시작해서 0번째 글자까지 탐색함. -1일 경우 문자열 길이로 대체
 		ssize_t IndexOfRev(char c, ssize_t start_position = -1) const noexcept;
 
-		String Replace(const char *old_token, const char *new_token);
-		String Substring(ssize_t start, ssize_t length = -1) const;
-		String Trim() const;
-
+		// in-place utilities
 		void PadLeft(ssize_t length, char pad = ' ');
 		void PadRight(ssize_t length, char pad = ' ');
-
-		String PadLeftString(ssize_t length, char pad = ' ');
-		String PadRightString(ssize_t length, char pad = ' ');
-
 		void MakeUpper();
 		void MakeLower();
 
+		// out-of-place utilties
+		String Replace(const char *old_token, const char *new_token) const;
+		String Substring(ssize_t start, ssize_t length = -1) const;
+		String Trim() const;
+
+		String PadLeftString(ssize_t length, char pad = ' ') const;
+		String PadRightString(ssize_t length, char pad = ' ') const;
 		String UpperCaseString() const;
 		String LowerCaseString() const;
 
@@ -129,13 +129,13 @@ namespace ov
 		bool Release() noexcept;
 
 	private:
-		char *_buffer;
+		char *_buffer = nullptr;
 
 		// 실제 데이터가 있는 길이
-		ssize_t _length;
+		ssize_t _length = 0;
 
 		// 거의 지수 형태로 증가함
-		ssize_t _capacity;
+		ssize_t _capacity = 0;
 	};
 
 	struct CaseInsensitiveComparator

@@ -10,12 +10,12 @@
 #endif // __cplusplus
 
 // x가 value가 아니면, func를 호출한 뒤 value 값으로 만듦
-#define OV_SAFE_FUNC(x, value, func, member) \
+#define OV_SAFE_FUNC(x, value, func, prefix) \
     do \
     { \
         if((x) != (value)) \
         { \
-            func ((x)member); \
+            func (prefix(x)); \
             (x) = (value); \
         } \
     } \

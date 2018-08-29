@@ -1,6 +1,8 @@
 #include "publisher_private.h"
 #include "application.h"
 
+#include <algorithm>
+
 Application::Application(const std::shared_ptr<ApplicationInfo> &info)
 	: ApplicationInfo(info)
 {
@@ -109,6 +111,7 @@ bool Application::OnSendAudioFrame(std::shared_ptr<StreamInfo> stream_info,
 
 	// Mutex (This function may be called by Router thread)
 	std::unique_lock<std::mutex> lock(_audio_stream_queue_guard);
+
 	_audio_stream_queue.push(std::move(data));
 	lock.unlock();
 	_queue_event.Notify();
@@ -226,6 +229,8 @@ void Application::WorkerThread()
 
 		if((video_data != nullptr) && (video_data->_stream_info != nullptr) && (video_data->_track != nullptr))
 		{
+			OV_ASSERT2(video_data->_encoded_frame != nullptr);
+
 			SendVideoFrame(video_data->_stream_info,
 			               video_data->_track,
 			               std::move(video_data->_encoded_frame),
@@ -238,6 +243,8 @@ void Application::WorkerThread()
 
 		if((audio_data != nullptr) && (audio_data->_stream_info != nullptr) && (audio_data->_track != nullptr))
 		{
+			OV_ASSERT2(audio_data->_encoded_frame != nullptr);
+
 			SendAudioFrame(audio_data->_stream_info,
 			               audio_data->_track,
 			               std::move(audio_data->_encoded_frame),

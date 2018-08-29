@@ -80,13 +80,13 @@ public:
 	}
 
 protected:
-	MediaCommonType::MediaType _media_type;
-	int32_t _track_id;
+	MediaCommonType::MediaType _media_type = MediaCommonType::MediaType::Unknown;
+	int32_t _track_id = -1;
 
 	std::shared_ptr<ov::Data> _data = ov::Data::CreateData();
 
-	int64_t _pts;
-	MediaPacketFlag _flags;
+	int64_t _pts = -1;
+	MediaPacketFlag _flags = MediaPacketFlag::NoFlag;
 };
 
 class MediaFrame
@@ -308,6 +308,12 @@ public:
 		return _format;
 	}
 
+	template<typename T>
+	T GetFormat() const
+	{
+		return static_cast<T>(_format);
+	}
+
 	int32_t GetBytesPerSample() const
 	{
 		return _bytes_per_sample;
@@ -335,7 +341,18 @@ public:
 
 	void SetChannels(int32_t channels)
 	{
-		_channels = channels;
+		switch(channels)
+		{
+			case 1:
+				_channels = channels;
+				_channel_layout = MediaCommonType::AudioChannel::Layout::LayoutMono;
+				break;
+
+			case 2:
+				_channels = channels;
+				_channel_layout = MediaCommonType::AudioChannel::Layout::LayoutStereo;
+				break;
+		}
 	}
 
 	MediaCommonType::AudioChannel::Layout GetChannelLayout() const
@@ -345,7 +362,18 @@ public:
 
 	void SetChannelLayout(MediaCommonType::AudioChannel::Layout channel_layout)
 	{
-		_channel_layout = channel_layout;
+		switch(channel_layout)
+		{
+			case MediaCommonType::AudioChannel::Layout::LayoutMono:
+				_channel_layout = channel_layout;
+				_channels = 1;
+				break;
+
+			case MediaCommonType::AudioChannel::Layout::LayoutStereo:
+				_channel_layout = channel_layout;
+				_channels = 2;
+				break;
+		}
 	}
 
 	int32_t GetSampleRate() const

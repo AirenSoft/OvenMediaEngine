@@ -23,10 +23,6 @@ public:
 		Transcoder
 	};
 
-	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 인터페이스
-	////////////////////////////////////////////////////////////////////////////////////////////////
-public:
 	// MediaRouteApplication -> Stream 생성
 	inline bool CreateStream(std::shared_ptr<StreamInfo> stream_info)
 	{
@@ -54,7 +50,7 @@ public:
 	{
 		if(GetMediaRouteApplication() == nullptr)
 		{
-			OV_ASSERT(false, "MediaRouteAppplication MUST NOT NULL");
+			OV_ASSERT(false, "MediaRouteAppplication MUST BE NOT NULL");
 			return false;
 		}
 

@@ -17,14 +17,6 @@
 
 namespace ov
 {
-	String::String()
-		: _buffer(nullptr),
-
-		  _length(0),
-		  _capacity(0)
-	{
-	}
-
 	String::String(const char *string, ssize_t length)
 		: String()
 	{
@@ -311,15 +303,20 @@ namespace ov
 
 		length = ::vsnprintf(nullptr, 0, format, list);
 
-		if(Alloc(length))
+		if(length >= 0L)
 		{
-			va_copy(list, &(list_for_count[0]));
+			if(Alloc(length))
+			{
+				va_copy(list, &(list_for_count[0]));
 
-			::vsnprintf(_buffer, static_cast<size_t>(length + 1), format, list);
-			_length = length;
+				::vsnprintf(_buffer, static_cast<size_t>(length + 1), format, list);
+				_length = static_cast<size_t>(length);
+			}
+
+			return _length;
 		}
 
-		return _length;
+		return -1L;
 	}
 
 	String String::FormatString(const char *format, ...)
@@ -398,7 +395,65 @@ namespace ov
 		return -1L;
 	}
 
-	String String::Replace(const char *old_token, const char *new_token)
+	void String::PadLeft(ssize_t length, char pad)
+	{
+		ssize_t remained = length - GetLength();
+
+		if(remained > 0L)
+		{
+			String padding;
+
+			for(ssize_t index = 0; index < remained; index++)
+			{
+				padding.Append(pad);
+			}
+
+			Prepend(padding);
+		}
+	}
+
+	void String::PadRight(ssize_t length, char pad)
+	{
+		ssize_t remained = length - GetLength();
+
+		if(remained > 0L)
+		{
+			String padding;
+
+			for(ssize_t index = 0L; index < remained; index++)
+			{
+				padding.Append(pad);
+			}
+
+			Append(padding);
+		}
+	}
+
+	void String::MakeUpper()
+	{
+		for(ssize_t index = 0L; index < _length; index++)
+		{
+			if(isalpha(_buffer[index]) != 0)
+			{
+				_buffer[index] = static_cast<char>(::toupper(_buffer[index]));
+			}
+		}
+	}
+
+	void String::MakeLower()
+	{
+		ssize_t index;
+
+		for(index = 0L; index < _length; index++)
+		{
+			if(isalpha(_buffer[index]) != 0)
+			{
+				_buffer[index] = static_cast<char>(::tolower(_buffer[index]));
+			}
+		}
+	}
+
+	String String::Replace(const char *old_token, const char *new_token) const
 	{
 		String target;
 
@@ -503,7 +558,7 @@ namespace ov
 		return Substring(left_index, right_index - left_index + 1L);
 	}
 
-	String String::PadLeftString(ssize_t length, char pad)
+	String String::PadLeftString(ssize_t length, char pad) const
 	{
 		String padding = *this;
 
@@ -512,71 +567,13 @@ namespace ov
 		return padding;
 	}
 
-	String String::PadRightString(ssize_t length, char pad)
+	String String::PadRightString(ssize_t length, char pad) const
 	{
 		String padding = *this;
 
 		padding.PadRight(length, pad);
 
 		return padding;
-	}
-
-	void String::PadLeft(ssize_t length, char pad)
-	{
-		ssize_t remained = length - GetLength();
-
-		if(remained > 0L)
-		{
-			String padding;
-
-			for(ssize_t index = 0; index < remained; index++)
-			{
-				padding.Append(pad);
-			}
-
-			Prepend(padding);
-		}
-	}
-
-	void String::PadRight(ssize_t length, char pad)
-	{
-		ssize_t remained = length - GetLength();
-
-		if(remained > 0L)
-		{
-			String padding;
-
-			for(ssize_t index = 0L; index < remained; index++)
-			{
-				padding.Append(pad);
-			}
-
-			Append(padding);
-		}
-	}
-
-	void String::MakeUpper()
-	{
-		for(ssize_t index = 0L; index < _length; index++)
-		{
-			if(isalpha(_buffer[index]) != 0)
-			{
-				_buffer[index] = static_cast<char>(::toupper(_buffer[index]));
-			}
-		}
-	}
-
-	void String::MakeLower()
-	{
-		ssize_t index;
-
-		for(index = 0L; index < _length; index++)
-		{
-			if(isalpha(_buffer[index]) != 0)
-			{
-				_buffer[index] = static_cast<char>(::tolower(_buffer[index]));
-			}
-		}
 	}
 
 	String String::UpperCaseString() const
@@ -940,7 +937,7 @@ namespace ov
 			// 기존에 데이터가 있다면 복사
 			if(_length > 0L)
 			{
-				::memcpy(buffer, _buffer, sizeof(char) * _length);
+				::memcpy(buffer, _buffer, sizeof(char) * std::min(allocated_length, _length));
 			}
 
 			// 기존 버퍼 해제
