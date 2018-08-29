@@ -19,7 +19,7 @@
 namespace ov
 {
 	//TODO: 성능 최적화 필요
-	String ToHexStringWithDelimiter(const void *data, ssize_t length, char delimiter)
+	String ToHexStringWithDelimiter(const void *data, size_t length, char delimiter)
 	{
 		String dump;
 
@@ -39,7 +39,7 @@ namespace ov
 		return dump;
 	}
 
-	String ToHexString(const void *data, ssize_t length)
+	String ToHexString(const void *data, size_t length)
 	{
 		String dump;
 
@@ -54,7 +54,7 @@ namespace ov
 		return dump;
 	}
 
-	String Dump(const void *data, ssize_t length, const char *title, off_t offset, ssize_t max_bytes, const char *line_prefix) noexcept
+	String Dump(const void *data, size_t length, const char *title, off_t offset, size_t max_bytes, const char *line_prefix) noexcept
 	{
 		if(offset > length)
 		{
@@ -66,7 +66,7 @@ namespace ov
 		max_bytes = std::min((length - offset), max_bytes);
 
 		// 최대 1MB 까지 덤프 가능
-		int dump_bytes = (int)std::min(max_bytes, (1024L * 1024L));
+		int dump_bytes = (int)std::min(max_bytes, (1024UL * 1024UL));
 
 		if(title == nullptr)
 		{
@@ -134,11 +134,11 @@ namespace ov
 			{
 				if(dump_bytes % 16 > 0)
 				{
-					String padding;
+					String pad_string;
 
-					padding.PadRight((16 - (dump_bytes % 16)) * 3);
+					pad_string.PadRight((16 - (dump_bytes % 16)) * 3);
 
-					dump.Append(padding);
+					dump.Append(pad_string);
 				}
 
 				dump.AppendFormat("| %s", ascii.CStr());
@@ -146,5 +146,31 @@ namespace ov
 		}
 
 		return dump;
+	}
+
+	String Dump(const void *data, size_t length, size_t max_bytes) noexcept
+	{
+		return Dump(data, length, nullptr, 0, max_bytes, nullptr);
+	}
+
+	bool DumpToFile(FILE **file, const char *file_name, const void *data, size_t length, off_t offset, bool append) noexcept
+	{
+		if((file == nullptr) || (offset < 0L))
+		{
+			return false;
+		}
+
+		if(*file == nullptr)
+		{
+			*file = ::fopen(file_name, append ? "ab" : "wb");
+		}
+
+		if(*file == nullptr)
+		{
+			return false;
+		}
+
+		::fwrite(static_cast<const uint8_t *>(data) + offset, sizeof(uint8_t), static_cast<size_t>(length), *file);
+		::fflush(*file);
 	}
 }

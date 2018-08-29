@@ -18,22 +18,20 @@
 
 namespace ov
 {
-	// Dump utility
+	// Dump utilities
 
 	// 데이터를 0001020304A0과 같은 hex string으로 변환
-	String ToHexString(const void *data, ssize_t length);
+	String ToHexString(const void *data, size_t length);
 	// 데이터를 00:01:02:A0 과 같이 delimeter를 낀 hex string으로 변환
-	String ToHexStringWithDelimiter(const void *data, ssize_t length, char delimiter);
+	String ToHexStringWithDelimiter(const void *data, size_t length, char delimiter);
 
 
 	// 데이터를 hex dump (디버깅 용도)
-	String Dump(const void *data, ssize_t length, const char *title = nullptr, ssize_t offset = 0, ssize_t max_bytes = 1024, const char *line_prefix = nullptr) noexcept;
+	String Dump(const void *data, size_t length, const char *title, off_t offset = 0, size_t max_bytes = 1024, const char *line_prefix = nullptr) noexcept;
+	String Dump(const void *data, size_t length, size_t max_bytes = 1024) noexcept;
 
-	template<typename T>
-	String Dump(const T &data, const char *title = nullptr, ssize_t offset = 0, ssize_t max_bytes = 1024, const char *line_prefix = nullptr) noexcept
-	{
-		return Dump(&data, sizeof(T), title, offset, max_bytes, line_prefix);
-	}
+	// 파일에 기록
+	bool DumpToFile(FILE **file, const char *file_name, const void *data, size_t length, off_t offset = 0, bool append = false) noexcept;
 
 	// Data class
 	class Data : public EnableSharedFromThis<Data>
@@ -440,9 +438,9 @@ namespace ov
 			return instance;
 		}
 
-		String Dump() const noexcept
+		String Dump(ssize_t max_bytes = 1024L) const noexcept
 		{
-			return Dump(nullptr, 0L, 1024L, nullptr);
+			return Dump(nullptr, 0L, max_bytes, nullptr);
 		}
 
 		String Dump(const char *title, const char *line_prefix) const noexcept
@@ -457,7 +455,7 @@ namespace ov
 
 		String ToString() const
 		{
-			return ov::ToHexString(static_cast<const uint8_t *>(GetData()) + _offset, GetLength());
+			return ToHexString(static_cast<const uint8_t *>(GetData()) + _offset, GetLength());
 		}
 
 	protected:
