@@ -82,48 +82,39 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 
 		_decoded_frame_num++;
 
-#if 0
-		if(_decoded_frame_num % 100 == 0)
-			printf("decoded audio frame. num(%d), bytes_per_sample(%d), nb_samples(%d), channels(%d), pts/dts(%.0f/%.0f/%.0f)\n"
-				, _decoded_frame_num
-				, av_get_bytes_per_sample(_context->sample_fmt)
-				, _frame->nb_samples
-				, _context->channels	// stride
-				, (float)(_frame->pts==AV_NOPTS_VALUE)?-1.0f:_frame->pts
-				, (float)(_frame->pkt_dts==AV_NOPTS_VALUE)?-1.0f:_frame->pkt_dts
-				, (float)(_frame->pts==AV_NOPTS_VALUE)?-1.0f:_frame->pts);
-#endif
+		auto output_frame = std::make_unique<MediaFrame>();
 
-		auto out_buf = std::make_unique<MediaFrame>();
+		output_frame->SetBytesPerSample(av_get_bytes_per_sample(static_cast<AVSampleFormat>(_frame->format)));
+		output_frame->SetNbSamples(_frame->nb_samples);
+		output_frame->SetChannels(_frame->channels);
+		output_frame->SetSampleRate(_frame->sample_rate);
+		output_frame->SetFormat(_frame->format);
+		output_frame->SetPts(static_cast<int64_t>((_frame->pts == AV_NOPTS_VALUE) ? -1.0f : _frame->pts));
 
-		out_buf->SetBytesPerSample(av_get_bytes_per_sample(_context->sample_fmt));
-		out_buf->SetNbSamples(_frame->nb_samples);
-		out_buf->SetChannels(_context->channels);
-		out_buf->SetSampleRate(_context->sample_rate);
-		out_buf->SetChannelLayout((MediaCommonType::AudioChannel::Layout)_context->channel_layout);
-		out_buf->SetFormat(_context->sample_fmt);
-		out_buf->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1.0f : _frame->pts);
+		auto data_length = static_cast<uint32_t>(output_frame->GetBytesPerSample() * output_frame->GetNbSamples());
 
-		uint32_t data_length = (uint32_t)(out_buf->GetBytesPerSample() * out_buf->GetNbSamples() * out_buf->GetChannels());
-
-		// 메모리를 미리 할당함
-		out_buf->Resize(data_length);
-
-		uint8_t *buf_ptr = out_buf->GetBuffer();
-
-		for(int i = 0; i < out_buf->GetNbSamples(); i++)
+		// Copy frame data into out_buf
+		if(TranscodeBase::IsPlanar(output_frame->GetFormat<AVSampleFormat>()))
 		{
-			for(int ch = 0; ch < out_buf->GetChannels(); ch++)
+			// If the frame is planar, the data is stored separately in the "_frame->data" array.
+			for(int channel = 0; channel < _frame->channels; channel++)
 			{
-				memcpy(buf_ptr + ch + out_buf->GetBytesPerSample() * i, _frame->data[ch] + out_buf->GetBytesPerSample() * i, static_cast<size_t>(out_buf->GetBytesPerSample()));
+				output_frame->Resize(data_length, channel);
+				uint8_t *output = output_frame->GetBuffer(channel);
+				::memcpy(output, _frame->data[channel], data_length);
 			}
+		}
+		else
+		{
+			// If the frame is non-planar, it means interleaved data. So, just copy from "_frame->data[0]" into the output_frame
+			output_frame->AppendBuffer(_frame->data[0], data_length * _frame->channels, 0);
 		}
 
 		av_frame_unref(_frame);
 
 		// Notify가 필요한 경우에 1을 반환, 아닌 경우에는 일반적인 경우로 0을 반환
 		*result = need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady;
-		return std::move(out_buf);
+		return std::move(output_frame);
 	}
 
 	///////////////////////////////////////////////////
@@ -131,7 +122,7 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 	///////////////////////////////////////////////////
 	off_t offset = 0;
 
-	while(_input_buffer.size() > 0)
+	while(_input_buffer.empty() == false)
 	{
 		const MediaPacket *cur_pkt = _input_buffer[0].get();
 		std::shared_ptr<const ov::Data> cur_data = nullptr;
@@ -146,6 +137,8 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 			_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
 			continue;
 		}
+
+		logd("Transcode.AAC.Packet", "Decoding AAC packet\n%s", cur_data->Dump(32).CStr());
 
 		int parsed_size = av_parser_parse2(
 			_parser,
@@ -168,7 +161,8 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 			_pkt->pts = _parser->pts;
 			_pkt->dts = _parser->dts;
 
-			int ret = avcodec_send_packet(_context, _pkt);
+			ret = avcodec_send_packet(_context, _pkt);
+
 			if(ret == AVERROR(EAGAIN))
 			{
 				// 더이상 디코딩할 데이터가 없다면 빠짐

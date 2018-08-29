@@ -18,7 +18,7 @@ public:
 		return AV_CODEC_ID_VP8;
 	}
 
-	int Configure(std::shared_ptr<TranscodeContext> context) override;
+	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
 	std::unique_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
 };

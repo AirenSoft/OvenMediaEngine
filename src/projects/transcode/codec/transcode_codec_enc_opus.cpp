@@ -8,130 +8,205 @@
 //==============================================================================
 #include "transcode_codec_enc_opus.h"
 
+#include <opus/opus.h>
+
 #define OV_LOG_TAG "TranscodeCodec"
 
-int OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> context)
+#if 0
+size_t AudioEncoderOpusImpl::SufficientOutputBufferSize() const {
+  // Calculate the number of bytes we expect the encoder to produce,
+  // then multiply by two to give a wide margin for error.
+  const size_t bytes_per_millisecond =
+	  static_cast<size_t>(GetBitrateBps(config_) / (1000 * 8) + 1);
+  const size_t approx_encoded_bytes =
+	  Num10msFramesPerPacket() * 10 * bytes_per_millisecond;
+  return 2 * approx_encoded_bytes;
+}
+#endif
+
+bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> context)
 {
+	if(TranscodeEncoder::Configure(context) == false)
+	{
+		return false;
+	}
+
+	// Initialize OPUS encoder
+	// int application = OPUS_APPLICATION_AUDIO;
+	int application = OPUS_APPLICATION_RESTRICTED_LOWDELAY;
+	int error;
+
+	_encoder = ::opus_encoder_create(context->GetAudioSampleRate(), context->GetAudioChannel().GetCounts(), application, &error);
+
+	if((_encoder == nullptr) || (error != OPUS_OK))
+	{
+		logte("Could not create OPUS encoder: %d", error);
+
+		::opus_encoder_destroy(_encoder);
+		return false;
+	}
+
 	_transcode_context = context;
 
-	AVCodec *codec = avcodec_find_encoder(GetCodecID());
-	if(!codec)
-	{
-		logte("Codec not found\n");
-		return 1;
-	}
+	// (48000Hz / 100ms) * 6 = 2880 samples / 600ms
+	const int max_opus_frame_count = (48000 / 100) * 6;
+	// OPUS supports up to 256, but only 16 are used here.
+	const int estimated_channel_count = 16;
+	// OPUS supports int16 or float
+	const int estimated_frame_size = std::max(sizeof(opus_int16), sizeof(float));
 
-	_context = avcodec_alloc_context3(codec);
-	if(!_context)
-	{
-		logte("Could not allocate audio codec context\n");
-		return 1;
-	}
+	_buffer = ov::Data::CreateData(max_opus_frame_count * estimated_channel_count * estimated_frame_size);
+	_format = MediaCommonType::AudioSample::Format::None;
+	_current_pts = -1;
 
-	_context->bit_rate = _transcode_context->_audio_bitrate;
-	/* check that the encoder supports s16 pcm input */
-	// AV_SAMPLE_FMT_S16, AV_SAMPLE_FMT_FLT, AV_SAMPLE_FMT_NO
-	_context->sample_fmt = AV_SAMPLE_FMT_FLT;
-	/* select other audio parameters supported by the encoder */
-	// 지원 가능한 샘플 레이트 48000, 24000, 16000, 12000, 8000, 0
-	_context->sample_rate = _transcode_context->GetAudioSampleRate();
-	_context->channel_layout = (int32_t)MediaCommonType::AudioChannel::Layout::LayoutStereo;
-	// _context->channels       	= av_get_channel_layout_nb_channels(_context->channel_layout);
-	_context->time_base = (AVRational){ 1, AV_TIME_BASE };
+	return true;
+}
 
-	// open codec
-	if(avcodec_open2(_context, codec, nullptr) < 0)
-	{
-		logte("Could not open codec\n");
-		return 1;
-	}
+void OvenCodecImplAvcodecEncOpus::SendBuffer(std::unique_ptr<const MediaFrame> frame)
+{
+	logd("Transcode.OPUS.Packet", "[-> RAW DATA for OPUS]\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
 
-	return 0;
+	TranscodeEncoder::SendBuffer(std::move(frame));
 }
 
 std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)
 {
-	int ret;
+	OV_ASSERT2(_transcode_context);
 
-	///////////////////////////////////////////////////
-	// 디코딩 가능한 프레임이 존재하는지 확인한다.
-	///////////////////////////////////////////////////
-	ret = avcodec_receive_packet(_context, _pkt);
-	if(ret == AVERROR(EAGAIN))
+	// 200ms
+	const int frame_count_to_encode = 480 * 2;
+	const int bytes_to_encode = frame_count_to_encode * _transcode_context->GetAudioChannel().GetCounts() * _transcode_context->GetAudioSample().GetSampleSize();
+
+	while((_input_buffer.empty() == false) && (_buffer->GetLength() < bytes_to_encode))
 	{
-		// 패킷을 넣음
-	}
-	else if(ret == AVERROR_EOF)
-	{
-		logte("\r\nError receiving a packet for decoding : AVERROR_EOF\n");
-		*result = TranscodeResult::DataError;
-		return nullptr;
-	}
-	else if(ret < 0)
-	{
-		logte("Error receiving a packet for encoding : %d\n", ret);
-		*result = TranscodeResult::DataError;
-		return nullptr;
-	}
-	else
-	{
-		_decoded_frame_num++;
-
-#if 0
-		if(_decoded_frame_num % 100 == 0)
-			printf("encoded audio packet pts=%10.0f size=%10d flags=%5d\n", (float)_pkt->pts, _pkt->size, _pkt->flags);
-
-		// Utils::Debug::DumpHex(_pkt->data, (_pkt->size>32)?32:_pkt->size);
-#endif
-
-		auto packet_buffer = std::make_unique<MediaPacket>(MediaType::Audio, 0, _pkt->data, _pkt->size, _pkt->pts, (_pkt->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
-
-		av_packet_unref(_pkt);
-
-		*result = TranscodeResult::DataReady;
-		return std::move(packet_buffer);
-	}
-
-
-	///////////////////////////////////////////////////
-	// 인코딩 요청
-	///////////////////////////////////////////////////
-	while(_input_buffer.size() > 0)
-	{
-		const MediaFrame *cur_pkt = _input_buffer[0].get();
-
-		_frame->nb_samples = _context->frame_size;
-		_frame->format = _context->sample_fmt;
-		_frame->channel_layout = _context->channel_layout;
-		_frame->pts = cur_pkt->GetPts();
-
-		if(av_frame_get_buffer(_frame, 0) < 0)
-		{
-			logte("Could not allocate the audio frame data\n");
-			*result = TranscodeResult::DataError;
-			return nullptr;
-		}
-
-		if(av_frame_make_writable(_frame) < 0)
-		{
-			logte("Could not make sure the frame data is writable\n");
-			*result = TranscodeResult::DataError;
-			return nullptr;
-		}
-
-		//TODO: 디코딩된 오디오 프레임의 데이터를 넣어줘야함.
-
-		int ret = avcodec_send_frame(_context, _frame);
-		if(ret < 0)
-		{
-			logtw("Error sending a frame for encoding : %d\n", ret);
-		}
-
-		av_frame_unref(_frame);
-
+		auto frame_buffer = std::move(_input_buffer[0]);
+		// dequeue
 		_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
+
+		const MediaFrame *frame = frame_buffer.get();
+
+		OV_ASSERT2(frame != nullptr);
+
+		// Store frame informations
+		_format = frame->GetFormat<MediaCommonType::AudioSample::Format>();
+
+		if(_current_pts == -1)
+		{
+			_current_pts = frame->GetPts();
+		}
+
+		// Append frame data into the buffer
+
+		if(frame->GetChannels() == 1)
+		{
+			// Just copy data into buffer
+			_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
+		}
+		else if(frame->GetChannels() >= 2)
+		{
+			// Currently, OME's OPUS encoder supports up to 2 channels
+			switch(_format)
+			{
+				case MediaCommonType::AudioSample::Format::S16P:
+				case MediaCommonType::AudioSample::Format::FltP:
+				{
+					// Need to interleave if sample type is planar
+
+					off_t current_offset = _buffer->GetLength();
+
+					// Reserve extra spaces
+					size_t total_bytes = frame->GetBufferSize(0) + frame->GetBufferSize(1);
+					_buffer->SetLength(current_offset + total_bytes);
+
+					if(_format == MediaCommonType::AudioSample::Format::S16P)
+					{
+						// S16P
+						ov::Interleave<int16_t>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
+						_format = MediaCommonType::AudioSample::Format::S16;
+					}
+					else
+					{
+						// FltP
+						ov::Interleave<float>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
+						_format = MediaCommonType::AudioSample::Format::Flt;
+					}
+
+					break;
+				}
+
+				case MediaCommonType::AudioSample::Format::S16:
+				case MediaCommonType::AudioSample::Format::Flt:
+					// Do not need to interleave if sample type is non-planar
+					_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
+					break;
+
+				default:
+					logte("Not supported format: %d", _format);
+					*result = TranscodeResult::DataError;
+
+					OV_ASSERT2(false);
+					return nullptr;
+			}
+		}
 	}
 
-	*result = TranscodeResult::NoData;
-	return nullptr;
+	if(_buffer->GetLength() < bytes_to_encode)
+	{
+		// There is no data to encode
+		*result = TranscodeResult::NoData;
+		return nullptr;
+	}
+
+	OV_ASSERT2(_current_pts >= 0);
+	OV_ASSERT2(_buffer->GetLength() >= bytes_to_encode);
+
+	int encoded_bytes = -1;
+
+	// "1275 * 3 + 7" formula is used in opusenc.c:813
+	// or, use the formula in "AudioEncoderOpusImpl::SufficientOutputBufferSize()" of the native code.
+	std::shared_ptr<ov::Data> encoded = ov::Data::CreateData(1275 * 3 + 7);
+	encoded->SetLength(encoded->GetCapacity());
+
+	// Encode
+	switch(_format)
+	{
+		case MediaCommonType::AudioSample::Format::S16:
+			encoded_bytes = ::opus_encode(_encoder, _buffer->GetDataAs<const opus_int16>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
+			break;
+
+		case MediaCommonType::AudioSample::Format::Flt:
+			encoded_bytes = ::opus_encode_float(_encoder, _buffer->GetDataAs<float>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
+			break;
+
+		default:
+			*result = TranscodeResult::DataError;
+			return nullptr;
+	}
+
+	if(encoded_bytes < 0)
+	{
+		logte("An error occurred while encode data %z bytes: %d (Buffer: %z bytes)", _buffer->GetLength(), encoded_bytes, encoded->GetCapacity());
+		*result = TranscodeResult::DataError;
+		return nullptr;
+	}
+
+	encoded->SetLength(static_cast<size_t>(encoded_bytes));
+
+	// Data is encoded successfully
+	logd("Transcode.OPUS.Packet", "Data before OPUS encoding\n%s", _buffer->Dump(32).CStr());
+	logd("Transcode.OPUS.Packet", "Data after OPUS encoding\n%s", encoded->Dump(32).CStr());
+
+	// dequeue <bytes_to_encoded> bytes
+	auto buffer = _buffer->GetWritableDataAs<uint8_t>();
+	::memmove(buffer, buffer + bytes_to_encode, _buffer->GetLength() - bytes_to_encode);
+	_buffer->SetLength(_buffer->GetLength() - bytes_to_encode);
+
+	// MediaPacket(MediaCommonType::MediaType media_type, int32_t track_id, const void *data, int32_t data_size, int64_t pts, MediaPacketFlag flags)
+	// MediaPacket(MediaCommonType::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, MediaPacketFlag flags)
+	auto packet_buffer = std::make_unique<MediaPacket>(MediaCommonType::MediaType::Audio, 1, encoded->GetData(), encoded->GetLength(), _current_pts, MediaPacketFlag::Key);
+
+	_current_pts += frame_count_to_encode;
+
+	*result = TranscodeResult::DataReady;
+	return std::move(packet_buffer);
 }

@@ -10,7 +10,7 @@
 
 #define OV_LOG_TAG "TranscodeCodec"
 
-int OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> context)
+bool OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	_transcode_context = context;
 
@@ -18,15 +18,15 @@ int OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> cont
 
 	if(!codec)
 	{
-		logte("Codec not found\n");
-		return 1;
+		logte("Codec not found");
+		return false;
 	}
 
 	_context = avcodec_alloc_context3(codec);
 	if(!_context)
 	{
-		logte("Could not allocate video codec context\n");
-		return 1;
+		logte("Could not allocate video codec context");
+		return false;
 	}
 
 	// 인코딩 옵션 설정
@@ -37,7 +37,7 @@ int OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> cont
 	_context->time_base = (AVRational){
 		_transcode_context->GetVideoTimeBase().GetNum(), _transcode_context->GetVideoTimeBase().GetDen()
 	};
-	_context->framerate = av_d2q(_transcode_context->_video_frame_rate, AV_TIME_BASE);
+	_context->framerate = av_d2q(_transcode_context->GetFrameRate(), AV_TIME_BASE);
 	_context->gop_size = _transcode_context->GetGOP();
 	_context->max_b_frames = 0;
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
@@ -57,11 +57,11 @@ int OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> cont
 
 	if(avcodec_open2(_context, codec, &opts) < 0)
 	{
-		logte("Could not open codec\n");
-		return 1;
+		logte("Could not open codec");
+		return false;
 	}
 
-	return 0;
+	return true;
 }
 
 std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeResult *result)
@@ -78,7 +78,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeRes
 	}
 	else if(ret == AVERROR_EOF)
 	{
-		logte("\r\nError receiving a packet for decoding : AVERROR_EOF\n");
+		logte("Error receiving a packet for decoding : AVERROR_EOF");
 		*result = TranscodeResult::DataError;
 		return nullptr;
 	}
@@ -86,7 +86,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeRes
 	{
 		// copy
 		// frame->linesize[0] * frame->height
-		logte("Error receiving a packet for decoding : %d\n", ret);
+		logte("Error receiving a packet for decoding : %d", ret);
 		*result = TranscodeResult::DataError;
 		return nullptr;
 	}
@@ -101,7 +101,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeRes
 			 (float)_pkt->pts, _pkt->size, _pkt->flags, _encoded_data_size);
 #endif
 
-		auto packet_buffer = std::make_unique<MediaPacket>(MediaType::Video, 0, _pkt->data, _pkt->size, _pkt->dts, (_pkt->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+		auto packet_buffer = std::make_unique<MediaPacket>(MediaCommonType::MediaType::Video, 0, _pkt->data, _pkt->size, _pkt->dts, (_pkt->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
 
 		av_packet_unref(_pkt);
 
@@ -114,38 +114,37 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeRes
 	///////////////////////////////////////////////////
 	while(_input_buffer.size() > 0)
 	{
-		const MediaFrame *cur_pkt = _input_buffer[0].get();
+		const MediaFrame *frame = _input_buffer[0].get();
 
-		_frame->format = cur_pkt->GetFormat();
-		_frame->width = cur_pkt->GetWidth();
-		_frame->height = cur_pkt->GetHeight();
-		_frame->pts = cur_pkt->GetPts();
-
+		_frame->format = frame->GetFormat();
+		_frame->width = frame->GetWidth();
+		_frame->height = frame->GetHeight();
+		_frame->pts = frame->GetPts();
 
 		if(av_frame_get_buffer(_frame, 32) < 0)
 		{
-			logte("Could not allocate the video frame data\n");
+			logte("Could not allocate the video frame data");
 			*result = TranscodeResult::DataError;
 			return nullptr;
 		}
 
 		if(av_frame_make_writable(_frame) < 0)
 		{
-			logte("Could not make sure the frame data is writable\n");
+			logte("Could not make sure the frame data is writable");
 			*result = TranscodeResult::DataError;
 			return nullptr;
 		}
 
-		// 데이터를 복사함.
-		memcpy(_frame->data[0], cur_pkt->GetBuffer(0), cur_pkt->GetBufferSize(0));
-		memcpy(_frame->data[1], cur_pkt->GetBuffer(1), cur_pkt->GetBufferSize(1));
-		memcpy(_frame->data[2], cur_pkt->GetBuffer(2), cur_pkt->GetBufferSize(2));
+		// Copy packet data into frame
+		memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
+		memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
+		memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
 
 		int ret = avcodec_send_frame(_context, _frame);
 
 		if(ret < 0)
 		{
-			logte("Error sending a frame for encoding : %d\n", ret);
+			logte("Error sending a frame for encoding : %d", ret);
 			// TODO(soulk): 에러 처리 안해도 되는지?
 		}
 

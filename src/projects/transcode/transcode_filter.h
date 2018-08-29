@@ -25,7 +25,7 @@ public:
 	TranscodeFilter(TranscodeFilterType type, std::shared_ptr<MediaTrack> input_media_track = nullptr, std::shared_ptr<TranscodeContext> context = nullptr);
 	~TranscodeFilter();
 
-	int32_t Configure(TranscodeFilterType type, std::shared_ptr<MediaTrack> input_media_track = nullptr, std::shared_ptr<TranscodeContext> context = nullptr);
+	bool Configure(TranscodeFilterType type, std::shared_ptr<MediaTrack> input_media_track = nullptr, std::shared_ptr<TranscodeContext> context = nullptr);
 
 	int32_t SendBuffer(std::unique_ptr<MediaFrame> buffer);
 	std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result);

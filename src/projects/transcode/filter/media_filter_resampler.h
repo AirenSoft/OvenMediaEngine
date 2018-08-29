@@ -24,12 +24,14 @@ public:
 	MediaFilterResampler();
 	~MediaFilterResampler();
 
-	int32_t Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) override;
+	bool Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) override;
 
 	int32_t SendBuffer(std::unique_ptr<MediaFrame> buffer) override;
 	std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
 
-private:
+protected:
+	bool IsPlanar(AVSampleFormat format);
+
 	AVFrame *_frame;
 	AVFilterContext *_buffersink_ctx;
 	AVFilterContext *_buffersrc_ctx;
@@ -37,5 +39,5 @@ private:
 	AVFilterInOut *_outputs;
 	AVFilterInOut *_inputs;
 
-	std::vector<std::unique_ptr<MediaFrame>> _pkt_buf;
+	std::vector<std::unique_ptr<MediaFrame>> _input_buffer;
 };

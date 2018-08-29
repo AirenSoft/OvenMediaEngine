@@ -10,7 +10,7 @@
 
 #define OV_LOG_TAG "TranscodeCodec"
 
-int OvenCodecImplAvcodecEncAAC::Configure(std::shared_ptr<TranscodeContext> context)
+bool OvenCodecImplAvcodecEncAAC::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	_transcode_context = context;
 
@@ -18,21 +18,20 @@ int OvenCodecImplAvcodecEncAAC::Configure(std::shared_ptr<TranscodeContext> cont
 	AVCodec *codec = avcodec_find_encoder(GetCodecID());
 	if(!codec)
 	{
-		printf("Codec not found\n");
-		return 1;
+		logte("Codec not found");
+		return false;
 	}
 
 	// create codec context
 	_context = avcodec_alloc_context3(codec);
 	if(!_context)
 	{
-		printf("Could not allocate audio codec context\n");
-		return 1;
+		logte("Could not allocate audio codec context");
+		return false;
 	}
 
 	// put sample parameters
 	_context->bit_rate = 64000;
-
 
 	// check that the encoder supports s16 pcm input
 	// AV_SAMPLE_FMT_S16, AV_SAMPLE_FMT_FLT, AV_SAMPLE_FMT_NO
@@ -49,64 +48,61 @@ int OvenCodecImplAvcodecEncAAC::Configure(std::shared_ptr<TranscodeContext> cont
 	// open codec
 	if(avcodec_open2(_context, codec, nullptr) < 0)
 	{
-		printf("Could not open codec\n");
-		return 1;
+		logte("Could not open codec");
+		return false;
 	}
 
-	return 0;
+	return true;
 }
 
 std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAAC::RecvBuffer(TranscodeResult *result)
 {
-	int ret;
+	// Check frame is availble
+	int ret = avcodec_receive_packet(_context, _pkt);
 
-	///////////////////////////////////////////////////
-	// 디코딩 가능한 프레임이 존재하는지 확인한다.
-	///////////////////////////////////////////////////
-	ret = avcodec_receive_packet(_context, _pkt);
 	if(ret == AVERROR(EAGAIN))
 	{
-		// 패킷을 넣음
+		// Packet is enqueued to encoder's buffer
 	}
 	else if(ret == AVERROR_EOF)
 	{
-		printf("\r\nError receiving a packet for decoding : AVERROR_EOF\n");
+		logte("Error receiving a packet for decoding : AVERROR_EOF");
 
 		*result = TranscodeResult::DataError;
 		return nullptr;
 	}
 	else if(ret < 0)
 	{
-		printf("Error receiving a packet for encoding : %d\n", ret);
+		logte("Error receiving a packet for encoding : %d", ret);
 
 		*result = TranscodeResult::DataError;
 		return nullptr;
 	}
 	else
 	{
-		printf("encoded audio packet %10.0f size=%10d flags=%5d\n", (float)_pkt->pts, _pkt->size, _pkt->flags);
-
-		// Utils::Debug::DumpHex(_pkt->data, (_pkt->size>32)?32:_pkt->size);
+		logtd("encoded audio packet %10.0f size=%10d flags=%5d", (float)_pkt->pts, _pkt->size, _pkt->flags);
 
 		*result = TranscodeResult::DataReady;
 		return nullptr;
 	}
 
-	///////////////////////////////////////////////////
-	// 인코딩 요청
-	///////////////////////////////////////////////////
-	while(_input_buffer.size() > 0)
+	// Try encode
+	while(_input_buffer.empty() == false)
 	{
-		const MediaFrame *cur_pkt = _input_buffer[0].get();
+		// Dequeue the frame
+		auto buffer = std::move(_input_buffer[0]);
+		_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
+
+		const MediaFrame *frame = buffer.get();
 
 		_frame->nb_samples = _context->frame_size;
 		_frame->format = _context->sample_fmt;
 		_frame->channel_layout = _context->channel_layout;
-		_frame->pts = cur_pkt->GetPts();
+		_frame->pts = frame->GetPts();
 
 		if(av_frame_get_buffer(_frame, 0) < 0)
 		{
-			printf("Could not allocate the audio frame data\n");
+			logte("Could not allocate the audio frame data");
 
 			*result = TranscodeResult::DataError;
 			return nullptr;
@@ -114,22 +110,19 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAAC::RecvBuffer(TranscodeRes
 
 		if(av_frame_make_writable(_frame) < 0)
 		{
-			printf("Could not make sure the frame data is writable\n");
+			logte("Could not make sure the frame data is writable");
 
 			*result = TranscodeResult::DataError;
 			return nullptr;
 		}
 
+		ret = avcodec_send_frame(_context, _frame);
 
-		int ret = avcodec_send_frame(_context, _frame);
 		if(ret < 0)
 		{
-			printf("Error sending a frame for encoding : %d\n", ret);
+			logte("Error sending a frame for encoding: %d", ret);
 		}
-
-		_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
 	}
 
-	*result = TranscodeResult::NoData;
 	return nullptr;
 }

@@ -53,12 +53,37 @@ public:
 
 	virtual AVCodecID GetCodecID() const noexcept = 0;
 
-	virtual int32_t Configure(std::shared_ptr<TranscodeContext> context) = 0;
+	virtual bool Configure(std::shared_ptr<TranscodeContext> context) = 0;
 
 	virtual void SendBuffer(std::unique_ptr<const InputType> buf) = 0;
 	virtual std::unique_ptr<OutputType> RecvBuffer(TranscodeResult *result) = 0;
 
-public:
+protected:
+	static bool IsPlanar(AVSampleFormat format)
+	{
+		switch(format)
+		{
+			case AV_SAMPLE_FMT_U8:
+			case AV_SAMPLE_FMT_S16:
+			case AV_SAMPLE_FMT_S32:
+			case AV_SAMPLE_FMT_FLT:
+			case AV_SAMPLE_FMT_DBL:
+			case AV_SAMPLE_FMT_S64:
+				return false;
+
+			case AV_SAMPLE_FMT_U8P:
+			case AV_SAMPLE_FMT_S16P:
+			case AV_SAMPLE_FMT_S32P:
+			case AV_SAMPLE_FMT_FLTP:
+			case AV_SAMPLE_FMT_DBLP:
+			case AV_SAMPLE_FMT_S64P:
+				return true;
+
+			default:
+				return false;
+		}
+	}
+
 	int64_t _last_send_packet_pts = 0LL;
 	int64_t _last_recv_packet_pts = 0LL;
 

@@ -42,20 +42,20 @@ TranscodeStream::TranscodeStream(std::shared_ptr<StreamInfo> stream_info, Transc
 	auto app_info = parent->GetApplicationInfo();
 	auto config = ConfigManager::Instance()->GetApplicationInfo(app_info->GetName());
 
-	_transcode_context->SetVideoCodecId(MediaCodecId::Vp8);
+	_transcode_context->SetVideoCodecId(MediaCommonType::MediaCodecId::Vp8);
 	_transcode_context->SetVideoBitrate(5000000);
 
-	_transcode_context->SetVideoWidth(1280);
-	_transcode_context->SetVideoHeight(720);
+	_transcode_context->SetVideoWidth(480);
+	_transcode_context->SetVideoHeight(320);
 	_transcode_context->SetFrameRate(30.00f);
 	_transcode_context->SetGOP(30);
 	_transcode_context->SetVideoTimeBase(1, 1000000);
 
-	_transcode_context->SetAudioCodecId(MediaCodecId::Opus);
+	_transcode_context->SetAudioCodecId(MediaCommonType::MediaCodecId::Opus);
 	_transcode_context->SetAudioBitrate(64000);
 	_transcode_context->SetAudioSampleRate(48000);
-	_transcode_context->_audio_channel.SetLayout(AudioChannel::Layout::LayoutStereo); // STEREO
-	_transcode_context->SetAudioSampleForamt(AudioSample::Format::FltP);
+	_transcode_context->GetAudioChannel().SetLayout(MediaCommonType::AudioChannel::Layout::LayoutStereo);
+	_transcode_context->SetAudioSampleFormat(MediaCommonType::AudioSample::Format::S16);
 	_transcode_context->SetAudioTimeBase(1, 1000000);
 
 	///////////////////////////////////////////////////////
@@ -81,7 +81,7 @@ TranscodeStream::TranscodeStream(std::shared_ptr<StreamInfo> stream_info, Transc
 
 		switch(cur_track->GetMediaType())
 		{
-			case MediaType::Video:
+			case MediaCommonType::MediaType::Video:
 				new_track->SetCodecId(_transcode_context->GetVideoCodecId());
 				new_track->SetWidth(_transcode_context->GetVideoWidth());
 				new_track->SetHeight(_transcode_context->GetVideoHeight());
@@ -89,11 +89,11 @@ TranscodeStream::TranscodeStream(std::shared_ptr<StreamInfo> stream_info, Transc
 				new_track->SetTimeBase(_transcode_context->GetVideoTimeBase().GetNum(), _transcode_context->GetVideoTimeBase().GetDen());
 				break;
 
-			case MediaType::Audio:
+			case MediaCommonType::MediaType::Audio:
 				new_track->SetCodecId(_transcode_context->GetAudioCodecId());
 				new_track->SetSampleRate(_transcode_context->GetAudioSampleRate());
-				new_track->GetSample().SetFormat(_transcode_context->_audio_sample.GetFormat());
-				new_track->GetChannel().SetLayout(_transcode_context->_audio_channel.GetLayout());
+				new_track->GetSample().SetFormat(_transcode_context->GetAudioSample().GetFormat());
+				new_track->GetChannel().SetLayout(_transcode_context->GetAudioChannel().GetLayout());
 				new_track->SetTimeBase(_transcode_context->GetAudioTimeBase().GetNum(), _transcode_context->GetAudioTimeBase().GetDen());
 				break;
 
@@ -225,7 +225,7 @@ void TranscodeStream::ChangeOutputFormat(MediaFrame *buffer)
 		return;
 	}
 
-	if(track->GetMediaType() == MediaType::Video)
+	if(track->GetMediaType() == MediaCommonType::MediaType::Video)
 	{
 		logtd("parsed form media buffer. width:%d, height:%d, format:%d", buffer->GetWidth(), buffer->GetHeight(), buffer->GetFormat());
 
@@ -235,14 +235,14 @@ void TranscodeStream::ChangeOutputFormat(MediaFrame *buffer)
 
 		_filters[track->GetId()] = std::make_unique<TranscodeFilter>(TranscodeFilterType::VideoRescaler, track, _transcode_context);
 	}
-	else if(track->GetMediaType() == MediaType::Audio)
+	else if(track->GetMediaType() == MediaCommonType::MediaType::Audio)
 	{
 		logtd("parsed form media buffer. format(%d), bytes_per_sample(%d), nb_samples(%d), channels(%d), channel_layout(%d), sample_rate(%d)",
 		      buffer->GetFormat(), buffer->GetBytesPerSample(), buffer->GetNbSamples(), buffer->GetChannels(), buffer->GetChannelLayout(), buffer->GetSampleRate()
 		);
 
 		track->SetSampleRate(buffer->GetSampleRate());
-		track->GetSample().SetFormat(static_cast<AudioSample::Format>(buffer->GetFormat()));
+		track->GetSample().SetFormat(buffer->GetFormat<MediaCommonType::AudioSample::Format>());
 		track->GetChannel().SetLayout(buffer->GetChannelLayout());
 		track->GetTimeBase().Set(1, 1000);
 
@@ -314,24 +314,29 @@ TranscodeResult TranscodeStream::do_filter(int32_t track_id, std::unique_ptr<Med
 	////////////////////////////////////////////////////////
 	// 1) 디코더에 전달함
 	////////////////////////////////////////////////////////
-	if(_filters.find(track_id) == _filters.end())
+	auto filter = _filters.find(track_id);
+
+	if(filter == _filters.end())
 	{
 		return TranscodeResult::NoData;
 	}
 
-	_filters[track_id]->SendBuffer(std::move(frame));
+	logd("TranscodeStream.Packet", "SendBuffer to do_filter()\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
+
+	filter->second->SendBuffer(std::move(frame));
 
 	while(true)
 	{
 		TranscodeResult result;
-		auto ret_frame = _filters[track_id]->RecvBuffer(&result);
+		auto ret_frame = filter->second->RecvBuffer(&result);
 
 		// 에러, 또는 디코딩된 패킷이 없다면 종료
 		switch(result)
 		{
 			case TranscodeResult::DataReady:
-				// 틴터에 성공하면
 				ret_frame->SetTrackId(track_id);
+
+				logd("Transcode.Packet", "Received from filter:\n%s", ov::Dump(ret_frame->GetBuffer(0), ret_frame->GetBufferSize(0), 32).CStr());
 
 				// logtd("filtered frame. track_id(%d), pts(%.0f)", ret_frame->GetTrackId(), (float)ret_frame->GetPts());
 
@@ -357,12 +362,13 @@ TranscodeResult TranscodeStream::do_encode(int32_t track_id, std::unique_ptr<con
 	////////////////////////////////////////////////////////
 	// 2) 인코더에 전달
 	////////////////////////////////////////////////////////
-	_encoders[track_id]->SendBuffer(std::move(frame));
+	auto &encoder = _encoders[track_id];
+	encoder->SendBuffer(std::move(frame));
 
 	while(true)
 	{
 		TranscodeResult result;
-		auto ret_packet = _encoders[track_id]->RecvBuffer(&result);
+		auto ret_packet = encoder->RecvBuffer(&result);
 
 		if(static_cast<int>(result) < 0)
 		{
@@ -417,7 +423,7 @@ void TranscodeStream::DecodeTask()
 
 void TranscodeStream::FilterTask()
 {
-	logtd("Started transcode stream  thread");
+	logtd("Transcode filter thread is started");
 
 	while(!_kill_flag)
 	{
@@ -436,7 +442,7 @@ void TranscodeStream::FilterTask()
 		do_filter(track_id, std::move(frame));
 	}
 
-	logtd("Terminated transcode stream filter thread");
+	logtd("Transcode filter thread is terminated");
 }
 
 void TranscodeStream::EncodeTask()

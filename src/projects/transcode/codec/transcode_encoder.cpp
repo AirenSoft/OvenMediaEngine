@@ -1,3 +1,5 @@
+#include <utility>
+
 //==============================================================================
 //
 //  OvenMediaEngine
@@ -27,33 +29,33 @@ TranscodeEncoder::TranscodeEncoder()
 
 TranscodeEncoder::~TranscodeEncoder()
 {
-	avcodec_free_context(&_context);
+	OV_SAFE_FUNC(_context, nullptr, avcodec_free_context, &);
 
-	av_frame_free(&_frame);
-	av_packet_free(&_pkt);
+	OV_SAFE_FUNC(_frame, nullptr, av_frame_free, &);
+	OV_SAFE_FUNC(_pkt, nullptr, av_packet_free, &);
 
-	avcodec_parameters_free(&_codec_par);
+	OV_SAFE_FUNC(_codec_par, nullptr, avcodec_parameters_free, &);
 }
 
-std::unique_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context)
+std::unique_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(MediaCommonType::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context)
 {
 	std::unique_ptr<TranscodeEncoder> encoder = nullptr;
 
 	switch(codec_id)
 	{
-		case MediaCodecId::H264:
+		case MediaCommonType::MediaCodecId::H264:
 			encoder = std::make_unique<OvenCodecImplAvcodecEncAVC>();
 			break;
 
-		case MediaCodecId::Aac:
+		case MediaCommonType::MediaCodecId::Aac:
 			encoder = std::make_unique<OvenCodecImplAvcodecEncAAC>();
 			break;
 
-		case MediaCodecId::Vp8:
+		case MediaCommonType::MediaCodecId::Vp8:
 			encoder = std::make_unique<OvenCodecImplAvcodecEncVP8>();
 			break;
 
-		case MediaCodecId::Opus:
+		case MediaCommonType::MediaCodecId::Opus:
 			encoder = std::make_unique<OvenCodecImplAvcodecEncOpus>();
 			break;
 
@@ -64,10 +66,17 @@ std::unique_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(MediaCodecId c
 
 	if(encoder != nullptr)
 	{
-		encoder->Configure(transcode_context);
+		encoder->Configure(std::move(transcode_context));
 	}
 
 	return std::move(encoder);
+}
+
+bool TranscodeEncoder::Configure(std::shared_ptr<TranscodeContext> context)
+{
+	_transcode_context = context;
+
+	return (_transcode_context != nullptr);
 }
 
 void TranscodeEncoder::SendBuffer(std::unique_ptr<const MediaFrame> frame)

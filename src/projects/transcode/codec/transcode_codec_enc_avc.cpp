@@ -10,35 +10,35 @@
 
 #define OV_LOG_TAG "TranscodeCodec"
 
-int OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> context)
+bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	_transcode_context = context;
 
 	AVCodec *codec = avcodec_find_encoder(GetCodecID());
 	if(!codec)
 	{
-		logte("Codec not found\n");
-		return 1;
+		logte("Codec not found");
+		return false;
 	}
 
 	_context = avcodec_alloc_context3(codec);
 	if(!_context)
 	{
-		logte("Could not allocate video codec context\n");
-		return 1;
+		logte("Could not allocate video codec context");
+		return false;
 	}
 
-	_context->bit_rate = _transcode_context->_video_bitrate;
+	_context->bit_rate = _transcode_context->GetVideoBitrate();
 	_context->rc_max_rate = _context->rc_min_rate = _context->bit_rate;
 	_context->rc_buffer_size = static_cast<int>(_context->bit_rate * 2);
 	_context->sample_aspect_ratio = (AVRational){ 1, 1 };
 	_context->time_base = (AVRational){ 1, AV_TIME_BASE };
-	_context->framerate = av_d2q(_transcode_context->_video_frame_rate, AV_TIME_BASE);
-	_context->gop_size = _transcode_context->_video_gop;
+	_context->framerate = av_d2q(_transcode_context->GetFrameRate(), AV_TIME_BASE);
+	_context->gop_size = _transcode_context->GetGOP();
 	_context->max_b_frames = 0;
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
-	_context->width = _transcode_context->_video_width;
-	_context->height = _transcode_context->_video_height;
+	_context->width = _transcode_context->GetVideoWidth();
+	_context->height = _transcode_context->GetVideoHeight();
 	_context->thread_count = 4;
 
 	av_opt_set(_context->priv_data, "preset", "fast", 0);
@@ -46,11 +46,11 @@ int OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> cont
 	// open codec
 	if(avcodec_open2(_context, codec, nullptr) < 0)
 	{
-		logte("Could not open codec\n");
-		return 1;
+		logte("Could not open codec");
+		return false;
 	}
 
-	return 0;
+	return true;
 }
 
 std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeResult *result)
@@ -67,7 +67,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 	}
 	else if(ret == AVERROR_EOF)
 	{
-		printf("\r\nError receiving a packet for decoding : AVERROR_EOF\n");
+		logte("Error receiving a packet for decoding : AVERROR_EOF");
 		*result = TranscodeResult::DataError;
 		return nullptr;
 	}
@@ -75,13 +75,13 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 	{
 		// copy
 		// frame->linesize[0] * frame->height
-		printf("Error receiving a packet for decoding : %d\n", ret);
+		logte("Error receiving a packet for decoding : %d", ret);
 		*result = TranscodeResult::DataError;
 		return nullptr;
 	}
 	else
 	{
-		printf("encoded video packet %10.0f size=%10d flags=%5d\n", (float)_pkt->pts, _pkt->size, _pkt->flags);
+		logtd("encoded video packet %10.0f size=%10d flags=%5d", (float)_pkt->pts, _pkt->size, _pkt->flags);
 
 		// Utils::Debug::DumpHex(_pkt->data, (_pkt->size>80)?80:_pkt->size);
 
@@ -104,22 +104,23 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 
 		if(av_frame_get_buffer(_frame, 32) < 0)
 		{
-			printf("Could not allocate the video frame data\n");
+			logte("Could not allocate the video frame data");
 			*result = TranscodeResult::DataError;
 			return nullptr;
 		}
 
 		if(av_frame_make_writable(_frame) < 0)
 		{
-			printf("Could not make sure the frame data is writable\n");
+			logte("Could not make sure the frame data is writable");
 			*result = TranscodeResult::DataError;
 			return nullptr;
 		}
 
-		int ret = avcodec_send_frame(_context, _frame);
+		ret = avcodec_send_frame(_context, _frame);
+
 		if(ret < 0)
 		{
-			printf("Error sending a frame for encoding : %d\n", ret);
+			logte("Error sending a frame for encoding : %d", ret);
 		}
 
 		av_frame_unref(_frame);

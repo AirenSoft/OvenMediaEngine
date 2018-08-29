@@ -28,7 +28,7 @@ TranscodeFilter::~TranscodeFilter()
 	}
 }
 
-int32_t TranscodeFilter::Configure(TranscodeFilterType type, std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context)
+bool TranscodeFilter::Configure(TranscodeFilterType type, std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context)
 {
 	switch(type)
 	{
@@ -40,13 +40,13 @@ int32_t TranscodeFilter::Configure(TranscodeFilterType type, std::shared_ptr<Med
 			break;
 		default:
 			logte("Unsupported filter. type(%d)", type);
-			return 1;
+			return false;
 	}
 
 	// 트랜스코딩 컨텍스트 정보 전달
-	_impl->Configure(input_media_track, context);
+	_impl->Configure(std::move(input_media_track), std::move(context));
 
-	return 0;
+	return true;
 }
 
 int32_t TranscodeFilter::SendBuffer(std::unique_ptr<MediaFrame> buffer)

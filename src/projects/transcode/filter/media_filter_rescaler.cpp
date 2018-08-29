@@ -63,7 +63,7 @@ MediaFilterRescaler::~MediaFilterRescaler()
 }
 
 
-int32_t MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context)
+bool MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context)
 {
 	int ret;
 	const AVFilter *buffersrc = avfilter_get_by_name("buffer");
@@ -74,7 +74,7 @@ int32_t MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_t
 	if(!_outputs || !_inputs || !_filter_graph)
 	{
 		logte("cannot allocated filter graph");
-		return 1;
+		return false;
 	}
 
 	// 입력 트랙의 정보를 설정함
@@ -88,7 +88,7 @@ int32_t MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_t
 	if(ret < 0)
 	{
 		logte("Cannot create buffer source\n");
-		return 1;
+		return false;
 	}
 
 	// TODO: Timebase의 값을 설정이 가능하도록 할지, 기본값으로 고정할지 정해야함.
@@ -103,14 +103,14 @@ int32_t MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_t
 	if(ret < 0)
 	{
 		logte("Cannot create video buffer sink\n");
-		return 1;
+		return false;
 	}
 
 	ret = av_opt_set_int_list(_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
 	if(ret < 0)
 	{
 		logte("Cannot set output pixel format\n");
-		return 1;
+		return false;
 	}
 
 	// 필터 연결
@@ -130,13 +130,13 @@ int32_t MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_t
 	if((ret = avfilter_graph_parse_ptr(_filter_graph, output_filter_descr.CStr(), &_inputs, &_outputs, NULL)) < 0)
 	{
 		logte("Cannot create filter graph\n");
-		return 1;
+		return false;
 	}
 
 	if((ret = avfilter_graph_config(_filter_graph, NULL)) < 0)
 	{
 		logte("Cannot validation filter graph\n");
-		return 1;
+		return false;
 	}
 
 #if 0
@@ -160,7 +160,7 @@ int32_t MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_t
 #endif
 	logtd("media rescaler filter created.");
 
-	return 0;
+	return true;
 }
 
 int32_t MediaFilterRescaler::SendBuffer(std::unique_ptr<MediaFrame> buffer)

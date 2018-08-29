@@ -21,7 +21,7 @@ public:
 	MediaFilterRescaler();
 	~MediaFilterRescaler();
 
-	int32_t Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) override;
+	bool Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) override;
 
 	int32_t SendBuffer(std::unique_ptr<MediaFrame> buffer) override;
 	std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;

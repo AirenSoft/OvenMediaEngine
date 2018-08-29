@@ -24,22 +24,22 @@ TranscodeContext::~TranscodeContext()
 {
 }
 
-void TranscodeContext::SetVideoCodecId(MediaCodecId val)
+void TranscodeContext::SetVideoCodecId(MediaCommonType::MediaCodecId val)
 {
 	_video_codec_id = val;
 }
 
-MediaCodecId TranscodeContext::GetVideoCodecId()
+MediaCommonType::MediaCodecId TranscodeContext::GetVideoCodecId()
 {
 	return _video_codec_id;
 }
 
-void TranscodeContext::SetAudioCodecId(MediaCodecId val)
+void TranscodeContext::SetAudioCodecId(MediaCommonType::MediaCodecId val)
 {
 	_audio_codec_id = val;
 }
 
-MediaCodecId TranscodeContext::GetAudioCodecId()
+MediaCommonType::MediaCodecId TranscodeContext::GetAudioCodecId()
 {
 	return _audio_codec_id;
 }
@@ -54,19 +54,29 @@ int32_t TranscodeContext::GetVideoBitrate()
 	return _video_bitrate;
 }
 
-int32_t TranscodeContext::GetAudioBitrate()
-{
-	return _audio_bitrate;
-}
-
 void TranscodeContext::SetAudioBitrate(int32_t val)
 {
 	_audio_bitrate = val;
 }
 
+int32_t TranscodeContext::GetAudioBitrate()
+{
+	return _audio_bitrate;
+}
+
+void TranscodeContext::SetAudioSample(MediaCommonType::AudioSample sample)
+{
+	_audio_sample = sample;
+}
+
+MediaCommonType::AudioSample TranscodeContext::GetAudioSample() const
+{
+	return _audio_sample;
+}
+
 void TranscodeContext::SetAudioSampleRate(int32_t val)
 {
-	_audio_sample.SetRate((AudioSample::Rate)val);
+	_audio_sample.SetRate((MediaCommonType::AudioSample::Rate)val);
 	// _audio_sample_rate = val;
 }
 
@@ -105,7 +115,7 @@ float TranscodeContext::GetFrameRate()
 	return _video_frame_rate;
 }
 
-Timebase &TranscodeContext::GetVideoTimeBase()
+MediaCommonType::Timebase &TranscodeContext::GetVideoTimeBase()
 {
 	return _video_time_base;
 }
@@ -115,7 +125,7 @@ void TranscodeContext::SetVideoTimeBase(int32_t num, int32_t den)
 	_video_time_base.Set(num, den);
 }
 
-Timebase &TranscodeContext::GetAudioTimeBase()
+MediaCommonType::Timebase &TranscodeContext::GetAudioTimeBase()
 {
 	return _audio_time_base;
 }
@@ -136,12 +146,17 @@ int32_t TranscodeContext::GetGOP()
 	return _video_gop;
 }
 
-void TranscodeContext::SetAudioSampleForamt(AudioSample::Format val)
+void TranscodeContext::SetAudioSampleFormat(MediaCommonType::AudioSample::Format val)
 {
 	_audio_sample.SetFormat(val);
 }
 
-void TranscodeContext::SetAudioChannelLayout(AudioChannel::Layout val)
+MediaCommonType::AudioChannel &TranscodeContext::GetAudioChannel()
 {
-	_audio_channel.SetLayout(val);
+	return _audio_channel;
+}
+
+const MediaCommonType::AudioChannel &TranscodeContext::GetAudioChannel() const
+{
+	return _audio_channel;
 }

@@ -19,6 +19,7 @@ TranscodeDecoder::TranscodeDecoder()
 
 	_pkt = av_packet_alloc();
 	_frame = av_frame_alloc();
+
 }
 
 TranscodeDecoder::~TranscodeDecoder()
@@ -30,17 +31,17 @@ TranscodeDecoder::~TranscodeDecoder()
 	av_packet_free(&_pkt);
 }
 
-std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context)
+std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(MediaCommonType::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context)
 {
 	std::unique_ptr<TranscodeDecoder> decoder = nullptr;
 
 	switch(codec_id)
 	{
-		case MediaCodecId::H264:
+		case MediaCommonType::MediaCodecId::H264:
 			decoder = std::make_unique<OvenCodecImplAvcodecDecAVC>();
 			break;
 
-		case MediaCodecId::Aac:
+		case MediaCommonType::MediaCodecId::Aac:
 			decoder = std::make_unique<OvenCodecImplAvcodecDecAAC>();
 			break;
 
@@ -57,7 +58,7 @@ std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(MediaCodecId c
 	return std::move(decoder);
 }
 
-int32_t TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
+bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	_transcode_context = context;
 
@@ -66,7 +67,7 @@ int32_t TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 	if(_codec == nullptr)
 	{
 		logte("Codec not found");
-		return 1;
+		return false;
 	}
 
 	// create codec context
@@ -75,13 +76,13 @@ int32_t TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 	if(_context == nullptr)
 	{
 		logte("Could not allocate video codec context");
-		return 1;
+		return false;
 	}
 
 	if(avcodec_open2(_context, _codec, nullptr) < 0)
 	{
 		logte("Could not open codec");
-		return 1;
+		return false;
 	}
 
 	_parser = av_parser_init(_codec->id);
@@ -89,10 +90,10 @@ int32_t TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 	if(!_parser)
 	{
 		logte("Parser not found");
-		return 1;
+		return false;
 	}
 
-	return 0;
+	return true;
 }
 
 void TranscodeDecoder::SendBuffer(std::unique_ptr<const MediaPacket> packet)

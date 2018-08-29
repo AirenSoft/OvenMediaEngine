@@ -53,7 +53,7 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 
 			if(ret == 0)
 			{
-				logti("codec parameters : codec_type(%d), codec_id(%d), codec_tag(%d), extra(%d), format(%d), bit_rate(%d),  bits_per_coded_sample(%d), bits_per_raw_sample(%d), profile(%d), level(%d), sample_aspect_ratio(%d/%d) width(%d), height(%d) field_order(%d) color_range(%d) color_primaries(%d) color_trc(%d) color_space(%d) chroma_location(%d), channel_layout(%ld) channels(%d) sample_rate(%d) block_align(%d) frame_size(%d)",
+				logti("Codec parameters : codec_type(%d), codec_id(%d), codec_tag(%d), extra(%d), format(%d), bit_rate(%d),  bits_per_coded_sample(%d), bits_per_raw_sample(%d), profile(%d), level(%d), sample_aspect_ratio(%d/%d) width(%d), height(%d) field_order(%d) color_range(%d) color_primaries(%d) color_trc(%d) color_space(%d) chroma_location(%d), channel_layout(%ld) channels(%d) sample_rate(%d) block_align(%d) frame_size(%d)",
 				      _codec_par->codec_type,
 				      _codec_par->codec_id,
 				      _codec_par->codec_tag,

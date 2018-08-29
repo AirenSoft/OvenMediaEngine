@@ -13,7 +13,6 @@
 #include "transcoder.h"
 #include "config/config_manager.h"
 
-
 #define OV_LOG_TAG "Transcoder"
 
 std::shared_ptr<Transcoder> Transcoder::Create(std::shared_ptr<MediaRouteInterface> router)
@@ -23,7 +22,7 @@ std::shared_ptr<Transcoder> Transcoder::Create(std::shared_ptr<MediaRouteInterfa
 	return media_router;
 }
 
-Transcoder::Transcoder(std::shared_ptr<MediaRouteInterface> router) 
+Transcoder::Transcoder(std::shared_ptr<MediaRouteInterface> router)
 {
 	_router = router;
 }
@@ -52,18 +51,20 @@ bool Transcoder::Stop()
 	logtd("Terminated media transcode modules.");
 
 	if(!DeleteApplication())
+	{
 		return false;
+	}
 
 	// TODO: 패킷 처리 스레드를 만들어야함.. 어플리케이션 단위로 만들어 버릴까?
 	return true;
-}	
+}
 
 // 어플리케이션의 스트림이 생성됨
 // TODO: Global Config에서 설정값을 읽어옴
 bool Transcoder::CraeteApplications()
 {
 	auto application_infos = ConfigManager::Instance()->GetApplicationInfos();
-	for(auto const& application_info : application_infos)
+	for(auto const &application_info : application_infos)
 	{
 		//TODO(soulk) : 어플리케이션 구분 코드를 Name에서 Id 체계로 변경해야함.
 		ov::String key_app = application_info->GetName();
@@ -71,7 +72,7 @@ bool Transcoder::CraeteApplications()
 		auto trans_app = std::make_shared<TranscodeApplication>(application_info);
 
 		// // 라우터 어플리케이션 관리 항목에 추가
-		_tracode_apps.insert ( 
+		_tracode_apps.insert(
 			std::make_pair(key_app.CStr(), trans_app)
 		);
 
@@ -79,7 +80,7 @@ bool Transcoder::CraeteApplications()
 		_router->RegisterConnectorApp(application_info, trans_app);
 	}
 
-	return true;	
+	return true;
 }
 
 // 어플리케이션의 스트림이 삭제됨
@@ -90,10 +91,12 @@ bool Transcoder::DeleteApplication()
 
 //  Application Name으로 TranscodeApplication 찾음
 std::shared_ptr<TranscodeApplication> Transcoder::GetApplicationByName(std::string app_name)
-{ 
+{
 	auto obj = _tracode_apps.find(app_name);
 	if(obj == _tracode_apps.end())
+	{
 		return NULL;
+	}
 
-	return  obj->second;
+	return obj->second;
 }

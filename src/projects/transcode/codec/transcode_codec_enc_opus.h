@@ -8,6 +8,8 @@
 //==============================================================================
 #include "transcode_encoder.h"
 
+struct OpusEncoder;
+
 class OvenCodecImplAvcodecEncOpus : public TranscodeEncoder
 {
 public:
@@ -16,6 +18,17 @@ public:
 		return AV_CODEC_ID_OPUS;
 	}
 
-	int Configure(std::shared_ptr<TranscodeContext> context) override;
+	bool Configure(std::shared_ptr<TranscodeContext> context) override;
+
+	void SendBuffer(std::unique_ptr<const MediaFrame> frame) override;
+
 	std::unique_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
+
+protected:
+	std::shared_ptr<ov::Data> _buffer;
+
+	MediaCommonType::AudioSample::Format _format;
+	int64_t _current_pts;
+
+	OpusEncoder *_encoder;
 };

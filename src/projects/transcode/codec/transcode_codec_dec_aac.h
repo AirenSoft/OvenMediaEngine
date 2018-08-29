@@ -19,4 +19,6 @@ public:
 	}
 
 	std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
+
+protected:
 };

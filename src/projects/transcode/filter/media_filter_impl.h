@@ -45,9 +45,10 @@ public:
 	// 원본 스트림 정보
 	// stream_info : 원본 파일 정보
 	// context : 변환 정보
-	virtual int32_t Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) = 0;
+	virtual bool Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) = 0;
 
 	virtual int32_t SendBuffer(std::unique_ptr<MediaFrame> buffer) = 0;
 	virtual std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) = 0;
+
 };
 
