@@ -146,6 +146,10 @@ bool RtcStream::Start()
 		}
 	}
 
+	// Simulate audio or video only (test purpose)
+	// video_media_desc = nullptr;
+	// audio_media_desc = nullptr;
+
 	// Media Description 연결
 	_offer_sdp->AddMedia(video_media_desc);
 	_offer_sdp->AddMedia(audio_media_desc);
@@ -153,7 +157,7 @@ bool RtcStream::Start()
 	ov::String offer_sdp_text;
 	_offer_sdp->ToString(offer_sdp_text);
 
-	logti("Stream created : %s/%u", GetName().CStr(), GetId());
+	logti("Stream is created : %s/%u", GetName().CStr(), GetId());
 	logtd("%s", offer_sdp_text.CStr());
 
 	return Stream::Start();
@@ -230,6 +234,9 @@ void RtcStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
                                std::unique_ptr<FragmentationHeader> fragmentation)
 {
 	// AudioFrame 데이터를 Protocol에 맞게 변환한다.
+
+	OV_ASSERT2(encoded_frame != nullptr);
+	OV_ASSERT2(encoded_frame->buffer != nullptr);
 
 	// 모든 Session에 Frame을 전달한다.
 	for(auto const &x : GetSessionMap())

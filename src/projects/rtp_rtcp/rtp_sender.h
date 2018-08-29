@@ -28,6 +28,8 @@ private:
 	std::unique_ptr<RtpPacket> AllocatePacket();
 	bool AssignSequenceNumber(RtpPacket *packet);
 
+	bool MarkerBit(FrameType frame_type, int8_t payload_type);
+
 	// Video Packet Sender Interface
 	bool SendVideo(RtpVideoCodecType video_type,
 	               FrameType frame_type,

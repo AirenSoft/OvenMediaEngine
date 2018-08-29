@@ -1,10 +1,11 @@
-
 #include <time.h>
 #include <iostream>
 #include <memory>
 #include "rtp_packet.h"
 #include "rtp_packetizer.h"
 #include "rtp_sender.h"
+
+#define OV_LOG_TAG "RtpRtcp"
 
 RTPSender::RTPSender(bool audio, std::shared_ptr<RtpRtcpSession> session)
 {
@@ -65,9 +66,10 @@ bool RTPSender::SendVideo(RtpVideoCodecType video_type,
                           const FragmentationHeader *fragmentation,
                           const RTPVideoHeader *video_header)
 {
-//	logd("rtp_rtcp", "RTPSender::SendVideo Enter\n");
+//	logtd( "RTPSender::SendVideo Enter\n");
 
-	std::unique_ptr<RtpPacket> rtp_header_template, last_rtp_header;
+	std::unique_ptr<RtpPacket> rtp_header_template;
+	std::unique_ptr<RtpPacket> last_rtp_header;
 
 	// 기본 패킷 헤더를 생성
 	rtp_header_template = AllocatePacket();
@@ -94,7 +96,7 @@ bool RTPSender::SendVideo(RtpVideoCodecType video_type,
 	if(!packetizer)
 	{
 		// 지원하지 못하는 Frame이 들어옴, critical error
-		loge("RTP_RTCP", "Cannot create packetizer");
+		logte("Cannot create packetizer");
 		return false;
 	}
 
@@ -102,7 +104,7 @@ bool RTPSender::SendVideo(RtpVideoCodecType video_type,
 	size_t num_packets = packetizer->SetPayloadData(payload_data, payload_size, fragmentation);
 	if(num_packets == 0)
 	{
-		loge("RTP_RTCP", "Packetizer returns 0 packet");
+		logte("Packetizer returns 0 packet");
 		return false;
 	}
 
@@ -148,6 +150,31 @@ bool RTPSender::SendAudio(FrameType frame_type,
 		return false;
 	}
 
+	std::unique_ptr<RtpPacket> packet = AllocatePacket();
+	packet->SetMarker(MarkerBit(frame_type, _payload_type));
+	packet->SetPayloadType(_payload_type);
+	packet->SetTimestamp(rtp_timestamp);
+
+	uint8_t *payload = packet->AllocatePayload(payload_size);
+
+	if(payload == nullptr)
+	{
+		OV_ASSERT2(false);
+		return false;
+	}
+
+	::memcpy(payload, payload_data, payload_size);
+
+	if(AssignSequenceNumber(packet.get()) == false)
+	{
+		OV_ASSERT2(false);
+		return false;
+	}
+
+	// logd("RtpSender.Packet", "Trying to send packet:\n%s", packet->GetData()->Dump().CStr());
+
+	_session->SendRtpToNetwork(std::move(packet));
+
 	return true;
 
 #if 0
@@ -158,7 +185,7 @@ bool RTPSender::SendAudio(FrameType frame_type,
 	packet->set_capture_time_ms(clock_->TimeInMilliseconds());
 	// Update audio level extension, if included.
 	packet->SetExtension<AudioLevel>(frame_type == kAudioFrameSpeech,
-	                                 audio_level_dbov);
+									 audio_level_dbov);
 
 	uint8_t *payload = packet->AllocatePayload(payload_size);
 	if(!payload)
@@ -177,8 +204,8 @@ bool RTPSender::SendAudio(FrameType frame_type,
 		last_payload_type_ = payload_type;
 	}
 	TRACE_EVENT_ASYNC_END2("webrtc", "Audio", rtp_timestamp, "timestamp",
-	                       packet->Timestamp(), "seqnum",
-	                       packet->SequenceNumber());
+						   packet->Timestamp(), "seqnum",
+						   packet->SequenceNumber());
 	bool send_result = rtp_sender_->SendToNetwork(
 		std::move(packet), kAllowRetransmission, RtpPacketSender::kHighPriority);
 	if(first_packet_sent_())
@@ -204,3 +231,11 @@ bool RTPSender::AssignSequenceNumber(RtpPacket *packet)
 	packet->SetSequenceNumber(_sequence_number++);
 	return true;
 }
+
+bool RTPSender::MarkerBit(FrameType frame_type, int8_t payload_type)
+{
+	// Reference: rtp_sender_audio.cc:75
+	// temporary code
+	return false;
+}
+
