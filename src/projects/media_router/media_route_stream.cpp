@@ -68,11 +68,17 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer)
 	else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Aac)
 	{
 		_bsfa.convert_to(buffer.get());
+		logd("MediaRouteStream.AAC.Packet", "Enqueue for AAC\n%s", buffer->GetData()->Dump(32).CStr());
 	}
 	else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Opus)
 	{
-		// logtd("%s", ov::Dump(buffer->GetBuffer(), buffer->GetDataSize()).CStr());
+		// logtw("%s", buffer->GetData()->Dump(32).CStr());
 		// _bsfa.convert_to(buffer.GetBuffer());
+		logd("MediaRouteStream.OPUS.Packet", "Enqueue for OPUS\n%s", buffer->GetData()->Dump(32).CStr());
+	}
+	else
+	{
+		OV_ASSERT2(false);
 	}
 
 #if 0
@@ -90,12 +96,12 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer)
 	media_track->SetLastFrameTime(buffer->GetPts());
 #endif
 
-
 	// 변경된 스트림을 큐에 넣음
 	_queue.push(std::move(buffer));
 
 	time(&_last_rb_time);
 	// logtd("last time : %s", asctime(gmtime(&_last_rb_time)) );
+
 	return true;
 }
 

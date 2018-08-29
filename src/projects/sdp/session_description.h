@@ -6,6 +6,7 @@
 //
 //==============================================================================
 #pragma once
+
 #include "base/common_types.h"
 #include "common_attr.h"
 #include "media_description.h"
@@ -44,56 +45,56 @@
  */
 
 class SessionDescription : public SdpBase,
-						   public CommonAttr,
-						   public ov::EnableSharedFromThis<SessionDescription>
+                           public CommonAttr,
+                           public ov::EnableSharedFromThis<SessionDescription>
 {
 public:
 	SessionDescription();
-	~SessionDescription();
+	~SessionDescription() = default;
 
-	bool			FromString(const ov::String &sdp) override ;
+	bool FromString(const ov::String &sdp) override;
 
 	// v=0
-	void 			SetVersion(uint8_t version);
-	uint8_t 		GetVersion();
+	void SetVersion(uint8_t version);
+	uint8_t GetVersion();
 
 	// o=OvenMediaEngine 1882243660 2 IN IP4 127.0.0.1
-	void 			SetOrigin(ov::String user_name, uint32_t session_id, uint32_t session_version,
-							  ov::String net_type, uint8_t ip_version, ov::String address);
-	ov::String		GetUserName();
-	uint32_t 		GetSessionId();
-	uint32_t 		GetSessionVersion();
-	ov::String		GetNetType();
-	uint8_t 		GetIpVersion();
-	ov::String		GetAddress();
+	void SetOrigin(ov::String user_name, uint32_t session_id, uint32_t session_version,
+	               ov::String net_type, uint8_t ip_version, ov::String address);
+	ov::String GetUserName();
+	uint32_t GetSessionId();
+	uint32_t GetSessionVersion();
+	ov::String GetNetType();
+	uint8_t GetIpVersion();
+	ov::String GetAddress();
 
 	// s=-
-	void 			SetSessionName(ov::String session_name);
-	ov::String		GetSessionName();
+	void SetSessionName(ov::String session_name);
+	ov::String GetSessionName();
 
 	// t=0 0
-	void 			SetTiming(uint32_t start, uint32_t stop);
-	uint32_t 		GetStartTime();
-	uint32_t 		GetStopTime();
+	void SetTiming(uint32_t start, uint32_t stop);
+	uint32_t GetStartTime();
+	uint32_t GetStopTime();
 
 	// a=msid-semantic:WMS *
-	void 			SetMsidSemantic(const ov::String& semantic, const ov::String& token);
-	ov::String		GetMsidSemantic() const;
-	ov::String		GetMsidToken() const;
+	void SetMsidSemantic(const ov::String &semantic, const ov::String &token);
+	ov::String GetMsidSemantic() const;
+	ov::String GetMsidToken() const;
 
 	// m=video 9 UDP/TLS/RTP/SAVPF 97
 	// a=group:BUNDLE 에 AddMedia의 mid를 추가한다. OME는 BUNDLE-ONLY만 지원한다. (2018.05.01)
-	void 			AddMedia(std::shared_ptr<MediaDescription> media);
+	void AddMedia(std::shared_ptr<MediaDescription> media);
 	const std::shared_ptr<MediaDescription> GetFirstMedia();
-	const std::shared_ptr<MediaDescription> GetMediaByMid(const ov::String& mid);
-	const std::vector<std::shared_ptr<MediaDescription>>& GetMediaList();
+	const std::shared_ptr<MediaDescription> GetMediaByMid(const ov::String &mid);
+	const std::vector<std::shared_ptr<MediaDescription>> &GetMediaList();
 
-	// Commin attr
-	ov::String		GetFingerprintAlgorithm() override;
-	ov::String		GetFingerprintValue() override;
-	ov::String		GetIceOption() override;
-	ov::String		GetIceUfrag() override;
-	ov::String		GetIcePwd() override;
+	// Common attr
+	ov::String GetFingerprintAlgorithm() override;
+	ov::String GetFingerprintValue() override;
+	ov::String GetIceOption() override;
+	ov::String GetIceUfrag() override;
+	ov::String GetIcePwd() override;
 
 	bool operator ==(const SessionDescription &description) const
 	{
@@ -102,27 +103,34 @@ public:
 	}
 
 private:
-	bool 			UpdateData(ov::String &sdp) override;
-	bool			ParsingSessionLine(char type, std::string content);
+	bool UpdateData(ov::String &sdp) override;
+	bool ParsingSessionLine(char type, std::string content);
+
 	// version
-	uint8_t 		_version;
+	uint8_t _version = 0;
+
 	// origin
-	ov::String		_user_name;
-	uint32_t 		_session_id;
-	uint32_t 		_session_version;
-	ov::String		_net_type;
-	uint8_t 		_ip_version;
-	ov::String		_address;
+	ov::String _user_name = "OvenMediaEngine";
+	uint32_t _session_id = ov::Random::GenerateInteger();
+	uint32_t _session_version = 2;
+	ov::String _net_type = "IN";
+	uint8_t _ip_version = 4;
+	ov::String _address = "127.0.0.1";
+
 	// session
-	ov::String		_session_name;
+	ov::String _session_name = "-";
+
 	// timing
-	uint32_t 		_start_time;
-	uint32_t 		_stop_time;
+	uint32_t _start_time = 0;
+	uint32_t _stop_time = 0;
+
 	// msid-semantic
-	ov::String		_msid_semantic;
-	ov::String		_msid_token;
+	ov::String _msid_semantic;
+	ov::String _msid_token;
+
 	// group:Bundle
-	std::vector<ov::String>	_bundles;
+	std::vector<ov::String> _bundles;
+
 	// Media
-	std::vector<std::shared_ptr<MediaDescription>>	_media_list;
+	std::vector<std::shared_ptr<MediaDescription>> _media_list;
 };

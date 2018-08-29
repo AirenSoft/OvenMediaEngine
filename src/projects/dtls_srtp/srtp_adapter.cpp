@@ -10,6 +10,8 @@
 #include <openssl/srtp.h>
 #include "srtp_adapter.h"
 
+#define OV_LOG_TAG "SRTP"
+
 SrtpAdapter::SrtpAdapter()
 {
 	_session = nullptr;
@@ -37,7 +39,7 @@ bool SrtpAdapter::SetKey(srtp_ssrc_type_t type, uint64_t crypto_suite, std::shar
 			srtp_crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtcp);
 			break;
 		default:
-			loge("SRTP", "Failed to create srtp adapter. Unsupported crypto suite %d", crypto_suite);
+			logte("Failed to create srtp adapter. Unsupported crypto suite %d", crypto_suite);
 			return false;
 	}
 
@@ -49,10 +51,10 @@ bool SrtpAdapter::SetKey(srtp_ssrc_type_t type, uint64_t crypto_suite, std::shar
 	policy.next = nullptr;
 
 	int err = srtp_create(&_session, &policy);
-	if (err != srtp_err_status_ok)
+	if(err != srtp_err_status_ok)
 	{
 		_session = nullptr;
-		loge("SRTP", "srtp_create failed, err=%d", err);
+		logte("srtp_create failed, err=%d", err);
 		return false;
 	}
 	srtp_set_user_data(_session, this);
@@ -75,17 +77,17 @@ bool SrtpAdapter::ProtectRtp(std::shared_ptr<ov::Data> data)
 
 	if(need_len > data->GetCapacity())
 	{
-		loge("SRTP", "Buffer capacity(%d) less than the needed(%d)", data->GetCapacity(), need_len);
+		logte("Buffer capacity(%d) less than the needed(%d)", data->GetCapacity(), need_len);
 		return false;
 	}
 
 	auto buffer = data->GetWritableData();
 	int out_len = static_cast<int>(data->GetLength());
- 	data->SetLength(need_len);
+	data->SetLength(need_len);
 	int err = srtp_protect(_session, buffer, &out_len);
-	if (err != srtp_err_status_ok)
+	if(err != srtp_err_status_ok)
 	{
-		loge("SRTP", "Failed to protect SRTP packet, err=%d", err);
+		logte("Failed to protect SRTP packet, err=%d", err);
 		return false;
 	}
 

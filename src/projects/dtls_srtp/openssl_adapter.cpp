@@ -10,6 +10,8 @@
 #include "openssl_adapter.h"
 #include "dtls_transport.h"
 
+#define OV_LOG_TAG "DTLS"
+
 BIO_METHOD* OpenSslAdapter::_bio_methods = nullptr;
 
 OpenSslAdapter::OpenSslAdapter()
@@ -118,14 +120,14 @@ SSL_CTX* OpenSslAdapter::SetupSslContext(std::shared_ptr<Certificate> local_cert
 
 	if(SSL_CTX_use_certificate(ctx, local_certificate->GetX509()) != 1)
 	{
-		loge("DTLS", "Configuring cert to ctx failed");
+		logte("Configuring cert to ctx failed");
 		SSL_CTX_free(ctx);
 		return nullptr;
 	}
 
 	if(SSL_CTX_use_PrivateKey(ctx, local_certificate->GetPkey()) != 1)
 	{
-		loge("DTLS", "Configuring pkey to ctx failed");
+		logte("Configuring pkey to ctx failed");
 		SSL_CTX_free(ctx);
 		return nullptr;
 	}
@@ -140,7 +142,7 @@ SSL_CTX* OpenSslAdapter::SetupSslContext(std::shared_ptr<Certificate> local_cert
 	// 에러면 1, 성공이면 0... 미친 함수들...
 	if (SSL_CTX_set_tlsext_use_srtp(ctx, "SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32"))
 	{
-		loge("DTLS", "SSL_CTX_set_tlsext_use_srtp failed");
+		logte("SSL_CTX_set_tlsext_use_srtp failed");
 		SSL_CTX_free(ctx);
 		return nullptr;
 	}

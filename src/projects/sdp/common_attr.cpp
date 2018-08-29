@@ -25,21 +25,25 @@ bool CommonAttr::SerializeCommonAttr(ov::String &sdp)
 	// FINGERPRINT
 	if(!_fingerprint_algorithm.IsEmpty() && !_fingerprint_value.IsEmpty())
 	{
-		sdp += ov::String::FormatString("a=fingerprint:%s %s\r\n", _fingerprint_algorithm.CStr(),
-																_fingerprint_value.CStr());
+		sdp.AppendFormat("a=fingerprint:%s %s\r\n",
+		                 _fingerprint_algorithm.CStr(), _fingerprint_value.CStr());
 	}
 
 	// ICE-OPTION
 	if(!_ice_option.IsEmpty())
 	{
-		sdp += ov::String::FormatString("a=ice-options:%s\r\n", _ice_option.CStr());
+		sdp.AppendFormat("a=ice-options:%s\r\n", _ice_option.CStr());
 	}
 
 	// ice-ufrag, ice-password
 	if(!_ice_ufrag.IsEmpty() && !_ice_pwd.IsEmpty())
 	{
-		sdp += ov::String::FormatString("a=ice-ufrag:%s\r\n", _ice_ufrag.CStr());
-		sdp += ov::String::FormatString("a=ice-pwd:%s\r\n", _ice_pwd.CStr());
+		sdp.AppendFormat(
+			"a=ice-ufrag:%s\r\n"
+			"a=ice-pwd:%s\r\n",
+			_ice_ufrag.CStr(),
+			_ice_pwd.CStr()
+		);
 	}
 
 	return true;
@@ -55,12 +59,12 @@ bool CommonAttr::ParsingCommonAttrLine(char type, std::string content)
 		_fingerprint_algorithm = std::string(matches[1]).c_str();
 		_fingerprint_value = std::string(matches[2]).c_str();
 	}
-	// a=ice-options:trickle
+		// a=ice-options:trickle
 	else if(std::regex_search(content, matches, std::regex("^ice-options:(\\S*)")))
 	{
 		_ice_option = std::string(matches[1]).c_str();
 	}
-	// a=ice-ufrag:0dfa46c9
+		// a=ice-ufrag:0dfa46c9
 	else if(std::regex_search(content, matches, std::regex("^ice-ufrag:(\\S*)")))
 	{
 		_ice_ufrag = std::string(matches[1]).c_str();
@@ -78,7 +82,7 @@ bool CommonAttr::ParsingCommonAttrLine(char type, std::string content)
 
 // a=fingerprint:sha-256 D7:81:CF:01:46:FB:2D
 //TODO(getroot): algorithm을 enum값으로 변경
-void CommonAttr::SetFingerprint(const ov::String& algorithm, const ov::String& value)
+void CommonAttr::SetFingerprint(const ov::String &algorithm, const ov::String &value)
 {
 	_fingerprint_algorithm = algorithm;
 	_fingerprint_value = value;
@@ -96,7 +100,7 @@ ov::String CommonAttr::GetFingerprintValue()
 
 // a=ice-options:trickle
 //TODO(getroot): option을 enum값으로 변경
-void CommonAttr::SetIceOption(const ov::String& option)
+void CommonAttr::SetIceOption(const ov::String &option)
 {
 	_ice_option = option;
 }
@@ -107,7 +111,7 @@ ov::String CommonAttr::GetIceOption()
 }
 
 // a=ice-pwd:c32d4070c67e9782bea90a9ab46ea838
-void CommonAttr::SetIceUfrag(const ov::String& ufrag)
+void CommonAttr::SetIceUfrag(const ov::String &ufrag)
 {
 	_ice_ufrag = ufrag;
 }
@@ -118,7 +122,7 @@ ov::String CommonAttr::GetIceUfrag()
 }
 
 // a=ice-ufrag:0dfa46c9
-void CommonAttr::SetIcePwd(const ov::String& pwd)
+void CommonAttr::SetIcePwd(const ov::String &pwd)
 {
 	_ice_pwd = pwd;
 }

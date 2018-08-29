@@ -12,52 +12,42 @@
 
 SessionDescription::SessionDescription()
 {
-	// Default value
-	_version = 0;
-	_start_time = 0;
-	_user_name = "OvenMediaEngine";
-	_session_id = ov::Random::GenerateInteger();
-	_session_version = 2;
-	_net_type = "IN";
-	_ip_version = 4;
-	_address = "127.0.0.1";
-	_session_name = "-";
-	_start_time = 0;
-	_stop_time = 0;
-}
-
-SessionDescription::~SessionDescription()
-{
-
 }
 
 bool SessionDescription::UpdateData(ov::String &sdp)
 {
 	// Session
-	sdp = ov::String::FormatString("v=%d\r\n", _version);
-	sdp += ov::String::FormatString("o=%s %u %d %s IP%d %s\r\n", _user_name.CStr(), _session_id, _session_version,
-									  _net_type.CStr(), _ip_version, _address.CStr());
-	sdp += ov::String::FormatString("s=%s\r\n", _session_name.CStr());
-	sdp += ov::String::FormatString("t=%d %d\r\n", _start_time, _stop_time);
+	sdp.Format(
+		"v=%d\r\n"
+		"o=%s %u %d %s IP%d %s\r\n"
+		"s=%s\r\n"
+		"t=%d %d\r\n",
+		_version,
+		_user_name.CStr(), _session_id, _session_version, _net_type.CStr(), _ip_version, _address.CStr(),
+		_session_name.CStr(),
+		_start_time, _stop_time
+	);
 
 	// a=group:BUNDLE 에 모든 Media를 추가한다.
 	// OME는 현재 BUNDLE-ONLY만 지원하기 때문이다. (2018.05.01)
-	sdp += ov::String::FormatString("a=group:BUNDLE");
+	sdp += "a=group:BUNDLE";
+
 	for(auto &t : _media_list)
 	{
-		sdp += " ";
-		sdp += t->GetMid();
+		sdp.AppendFormat(" %s", t->GetMid().CStr());
 	}
+
 	sdp += "\r\n";
 
 	// msid-semantic
-	if(!_msid_semantic.IsEmpty())
+	if(_msid_semantic.IsEmpty() == false)
 	{
-		sdp += ov::String::FormatString("a=msid-semantic:%s %s\r\n", _msid_semantic.CStr(), _msid_token.CStr());
+		sdp.AppendFormat("a=msid-semantic:%s %s\r\n", _msid_semantic.CStr(), _msid_token.CStr());
 	}
 
 	// Common Attributes
 	ov::String common_attr_text;
+
 	if(!SerializeCommonAttr(common_attr_text))
 	{
 		return false;
@@ -72,8 +62,10 @@ bool SessionDescription::UpdateData(ov::String &sdp)
 		{
 			return false;
 		}
+
 		ov::String media_desc_text;
 		t->ToString(media_desc_text);
+
 		sdp += media_desc_text;
 	}
 
@@ -86,17 +78,17 @@ bool SessionDescription::FromString(const ov::String &sdp)
 	std::stringstream sdpstream(sdp.CStr());
 	std::string line;
 
-	std::string media_desc_sdp;
+	ov::String media_desc_sdp;
 	bool media_level = false;
 
 	while(std::getline(sdpstream, line, '\n'))
 	{
-		if (line.size() && line[line.length() - 1] == '\r')
+		if(line.size() && line[line.length() - 1] == '\r')
 		{
 			line.pop_back();
 		}
 
-		if (!std::regex_search(line, ValidLineRegex))
+		if(!std::regex_search(line, ValidLineRegex))
 		{
 			continue;
 		}
@@ -107,43 +99,42 @@ bool SessionDescription::FromString(const ov::String &sdp)
 		// media라면 다음 m을 만날때까지 또는 stream이 끝날때까지 모아서 media description에 넘긴다.
 		if(type == 'm')
 		{
-			// 지금까지 Media를 모으고 있었다가 새로은 m을 만나면 기존 m level을 파상
+			// 새로운 m을 만나면 기존 m level을 파싱
 			if(media_level == true)
 			{
 				auto media_desc = std::make_shared<MediaDescription>(GetSharedPtr());
-				if(media_desc->FromString(media_desc_sdp.c_str()) == false)
+				if(media_desc->FromString(media_desc_sdp) == false)
 				{
 					return false;
 				}
 				AddMedia(media_desc);
 			}
+
 			// 초기화
-			media_desc_sdp.empty();
-			media_desc_sdp += line;
-			media_desc_sdp += '\n';
+			media_desc_sdp.Clear();
+			media_desc_sdp.AppendFormat("%s\n", line.c_str());
 			media_level = true;
 		}
-		// media level이면 계속 모은다.
+			// media level이면 계속 모은다.
 		else if(media_level == true)
 		{
-			media_desc_sdp += line;
-			media_desc_sdp += '\n';
+			media_desc_sdp.AppendFormat("%s\n", line.c_str());
 
 			// 만약 sdp의 끝이면 생성
 			if(sdpstream.rdbuf()->in_avail() == 0)
 			{
 				auto media_desc = std::make_shared<MediaDescription>(GetSharedPtr());
-				if(media_desc->FromString(media_desc_sdp.c_str()) == false)
+				if(media_desc->FromString(media_desc_sdp) == false)
 				{
 					return false;
 				}
 				AddMedia(media_desc);
 			}
 		}
-		// media level이 아니면 파싱하여 저장
+			// media level이 아니면 파싱하여 저장
 		else
 		{
-			if(!ParsingSessionLine(type, content))
+			if(ParsingSessionLine(type, content) == false)
 			{
 				return false;
 			}
@@ -162,9 +153,9 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 	{
 		case 'v':
 			// v=0
-			if (std::regex_search(content, matches, std::regex("^(\\d*)$")))
+			if(std::regex_search(content, matches, std::regex("^(\\d*)$")))
 			{
-				if(matches.size() != 1+1)
+				if(matches.size() != 1 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -176,25 +167,25 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 			// o=OvenMediaEngine 1882243660 2 IN IP4 127.0.0.1
 			if(std::regex_search(content, matches, std::regex("^(\\S*) (\\d*) (\\d*) (\\S*) IP(\\d) (\\S*)")))
 			{
-				if(matches.size() != 6+1)
+				if(matches.size() != 6 + 1)
 				{
 					parsing_error = true;
 					break;
 				}
 
 				SetOrigin(std::string(matches[1]).c_str(),
-						  static_cast<uint32_t>(std::stoul(matches[2])),
-						  static_cast<uint32_t>(std::stoul(matches[3])),
-						  std::string(matches[4]).c_str(),
-						  static_cast<uint8_t>(std::stoul(matches[5])),
-						  std::string(matches[6]).c_str());
+				          static_cast<uint32_t>(std::stoul(matches[2])),
+				          static_cast<uint32_t>(std::stoul(matches[3])),
+				          std::string(matches[4]).c_str(),
+				          static_cast<uint8_t>(std::stoul(matches[5])),
+				          std::string(matches[6]).c_str());
 			}
 			break;
 		case 's':
 			// s=-
 			if(std::regex_search(content, matches, std::regex("^(.*)")))
 			{
-				if(matches.size() != 1+1)
+				if(matches.size() != 1 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -207,14 +198,14 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 			// t=0 0
 			if(std::regex_search(content, matches, std::regex("^(\\d*) (\\d*)")))
 			{
-				if(matches.size() != 2+1)
+				if(matches.size() != 2 + 1)
 				{
 					parsing_error = true;
 					break;
 				}
 
 				SetTiming(static_cast<uint32_t>(std::stoul(matches[1])),
-						  static_cast<uint32_t>(std::stoul(matches[2])));
+				          static_cast<uint32_t>(std::stoul(matches[2])));
 			}
 
 			break;
@@ -222,7 +213,7 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 			// a=group:BUNDLE video audio ...
 			if(std::regex_search(content, matches, std::regex("^group:BUNDLE (.*)")))
 			{
-				if(matches.size() != 1+1)
+				if(matches.size() != 1 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -233,13 +224,13 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 				while(std::getline(bundles, bundle, ' '))
 				{
 					// 당장은 사용하는 곳이 없다. bundle only 이므로...
-					_bundles.push_back(bundle.c_str());
+					_bundles.emplace_back(bundle.c_str());
 				}
 			}
-			// a=msid-semantic:WMS *
-			else if(std::regex_search(content, matches, std::regex("^msid-semantic:\\s?(\\w*) (\\S*)")))
+				// a=msid-semantic:WMS *
+			else if(std::regex_search(content, matches, std::regex(R"(^msid-semantic:\s?(\w*) (\S*))")))
 			{
-				if(matches.size() != 2+1)
+				if(matches.size() != 2 + 1)
 				{
 					parsing_error = true;
 					break;
@@ -283,7 +274,7 @@ uint8_t SessionDescription::GetVersion()
 
 // o=OvenMediaEngine 1882243660 2 IN IP4 127.0.0.1
 void SessionDescription::SetOrigin(ov::String user_name, uint32_t session_id, uint32_t session_version,
-						  ov::String net_type, uint8_t ip_version, ov::String address)
+                                   ov::String net_type, uint8_t ip_version, ov::String address)
 {
 	_user_name = user_name;
 	_session_id = session_id;
@@ -297,22 +288,27 @@ ov::String SessionDescription::GetUserName()
 {
 	return _user_name;
 }
+
 uint32_t SessionDescription::GetSessionId()
 {
 	return _session_id;
 }
+
 uint32_t SessionDescription::GetSessionVersion()
 {
 	return _session_version;
 }
+
 ov::String SessionDescription::GetNetType()
 {
 	return _net_type;
 }
+
 uint8_t SessionDescription::GetIpVersion()
 {
 	return _ip_version;
 }
+
 ov::String SessionDescription::GetAddress()
 {
 	return _address;
@@ -323,6 +319,7 @@ void SessionDescription::SetSessionName(ov::String session_name)
 {
 	_session_name = session_name;
 }
+
 ov::String SessionDescription::GetSessionName()
 {
 	return _session_name;
@@ -334,17 +331,19 @@ void SessionDescription::SetTiming(uint32_t start, uint32_t stop)
 	_start_time = start;
 	_stop_time = stop;
 }
+
 uint32_t SessionDescription::GetStartTime()
 {
 	return _start_time;
 }
+
 uint32_t SessionDescription::GetStopTime()
 {
 	return _stop_time;
 }
 
 // a=msid-semantic:WMS *
-void SessionDescription::SetMsidSemantic(const ov::String& semantic, const ov::String& token)
+void SessionDescription::SetMsidSemantic(const ov::String &semantic, const ov::String &token)
 {
 	_msid_semantic = semantic;
 	_msid_token = token;
@@ -370,7 +369,7 @@ void SessionDescription::AddMedia(std::shared_ptr<MediaDescription> media)
 	}
 }
 
-const std::shared_ptr<MediaDescription> SessionDescription::GetMediaByMid(const ov::String& mid)
+const std::shared_ptr<MediaDescription> SessionDescription::GetMediaByMid(const ov::String &mid)
 {
 	for(auto &media : _media_list)
 	{
@@ -383,7 +382,7 @@ const std::shared_ptr<MediaDescription> SessionDescription::GetMediaByMid(const 
 	return nullptr;
 }
 
-const std::vector<std::shared_ptr<MediaDescription>>& SessionDescription::GetMediaList()
+const std::vector<std::shared_ptr<MediaDescription>> &SessionDescription::GetMediaList()
 {
 	return _media_list;
 }
@@ -391,7 +390,7 @@ const std::vector<std::shared_ptr<MediaDescription>>& SessionDescription::GetMed
 
 const std::shared_ptr<MediaDescription> SessionDescription::GetFirstMedia()
 {
-	if(_media_list.size() <= 0)
+	if(_media_list.empty())
 	{
 		return nullptr;
 	}
@@ -431,6 +430,7 @@ ov::String SessionDescription::GetFingerprintValue()
 
 	return value;
 }
+
 ov::String SessionDescription::GetIceOption()
 {
 	ov::String value = CommonAttr::GetIceOption();
@@ -446,6 +446,7 @@ ov::String SessionDescription::GetIceOption()
 
 	return value;
 }
+
 ov::String SessionDescription::GetIceUfrag()
 {
 	ov::String value = CommonAttr::GetIceUfrag();
@@ -461,6 +462,7 @@ ov::String SessionDescription::GetIceUfrag()
 
 	return value;
 }
+
 ov::String SessionDescription::GetIcePwd()
 {
 	ov::String value = CommonAttr::GetIcePwd();

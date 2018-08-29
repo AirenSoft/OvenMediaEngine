@@ -2,6 +2,8 @@
 #include "openssl_adapter.h"
 #include <algorithm>
 
+#define OV_LOG_TAG              "DTLS"
+
 DtlsTransport::DtlsTransport(uint32_t id, std::shared_ptr<Session> session)
 	: SessionNode(id, SessionNodeType::Dtls, session)
 {
@@ -85,20 +87,20 @@ bool DtlsTransport::StartDTLS()
 
 int DtlsTransport::ContinueSSL()
 {
-	logd("DTLS", "Continue DTLS...");
+	logtd("Continue DTLS...");
 	// DTLS Accept
 	int code = SSL_accept(_ssl);
 	int error = SSL_get_error(_ssl, code);
 
 	if(error == SSL_ERROR_NONE)
 	{
-		logd("DTLS", "DTLS Accept!");
+		logtd("DTLS Accept!");
 		_state = SSL_CONNECTED;
 
 		X509 *cert = SSL_get_peer_certificate(_ssl);
 		if(!cert)
 		{
-			loge("DTLS", "Get peer cert failed");
+			logte("Get peer cert failed");
 			return 1;
 		}
 		_peer_certificate = std::make_shared<Certificate>(cert);
@@ -115,18 +117,18 @@ int DtlsTransport::ContinueSSL()
 	}
 	else if(error == SSL_ERROR_WANT_READ)
 	{
-		logd("DTLS", "SSL_ERROR_WANT_READ");
+		logtd("SSL_ERROR_WANT_READ");
 		// 잠시 후 다시 Continue SSL을 한다.
 		// 그런데 이것을 하는 동안 Thread가 잠기므로, 전체적으로 Lock이 걸린다.
 		// 해결책이 필요함
 	}
 	else if(error == SSL_ERROR_WANT_WRITE)
 	{
-		logd("DTLS", "SSL_ERROR_WANT_WRITE");
+		logtd("SSL_ERROR_WANT_WRITE");
 	}
 	else
 	{
-		logd("DTLS", "SSL_accept error : (%d) err=%d", code, error);
+		logtd("SSL_accept error : (%d) err=%d", code, error);
 	}
 
 	return 1;
@@ -235,7 +237,7 @@ bool DtlsTransport::MakeSrtpKey()
 
 int DtlsTransport::SSLVerifyCallback(X509_STORE_CTX *store, void *arg)
 {
-	logd("DTLS", "SSLVerifyCallback enter");
+	logtd("SSLVerifyCallback enter");
 	return 1;
 
 }
@@ -243,7 +245,7 @@ int DtlsTransport::SSLVerifyCallback(X509_STORE_CTX *store, void *arg)
 bool DtlsTransport::VerifyPeerCertificate()
 {
 	// TODO: PEER CERTIFICATE와 SDP에서 받은 Digest를 비교하여 검증한다.
-	logd("DTLS", "Accepted peer certificate");
+	logtd("Accepted peer certificate");
 	_peer_cerificate_verified = true;
 	return true;
 }
@@ -255,7 +257,7 @@ bool DtlsTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
 	{
-		logd("DTLS", "SessionNode has not started, so the received data has been canceled.");
+		logtd("SessionNode has not started, so the received data has been canceled.");
 		return false;
 	}
 
@@ -289,7 +291,7 @@ bool DtlsTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov
 					return true;
 				}
 
-				loge("DTLS", "SSL_wirte error : code(%d) error(%d)", code, ssl_error);
+				logte("SSL_wirte error : code(%d) error(%d)", code, ssl_error);
 			}
 			break;
 		case SSL_ERROR:
@@ -309,11 +311,11 @@ bool DtlsTransport::OnDataReceived(SessionNodeType from_node, const std::shared_
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
 	{
-		logd("DTLS", "SessionNode has not started, so the received data has been canceled.");
+		logtd("SessionNode has not started, so the received data has been canceled.");
 		return false;
 	}
 
-	logd("DTLS", "OnDataReceived (%d) bytes", data->GetLength());
+	logtd("OnDataReceived (%d) bytes", data->GetLength());
 
 	switch(_state)
 	{
@@ -326,7 +328,7 @@ bool DtlsTransport::OnDataReceived(SessionNodeType from_node, const std::shared_
 			// DTLS 패킷인지 검사한다.
 			if(IsDtlsPacket(data))
 			{
-				logd("DTLS", "Receive DTLS packet");
+				logtd("Receive DTLS packet");
 				// Packet을 Queue에 쌓는다.
 				SaveDtlsPacket(data);
 
@@ -350,13 +352,13 @@ bool DtlsTransport::OnDataReceived(SessionNodeType from_node, const std::shared_
 					int pending = SSL_pending(_ssl);
 					if(pending >= 0)
 					{
-						logd("DTLS", "Short DTLS read. Flushing %d bytes", pending);
+						logtd("Short DTLS read. Flushing %d bytes", pending);
 						FlushInput(pending);
 					}
 
 					// 읽은 패킷을 누군가에게 줘야 하는데... 줄 놈이 없다.
 					// TODO: 향후 SCTP 등을 연결하면 준다. 지금은 DTLS로 암호화 된 패킷을 받을 객체가 없다.
-					logd("DTLS", "Unknown dtls packet received (%d:%d)", code, ssl_error);
+					logtd("Unknown dtls packet received (%d:%d)", code, ssl_error);
 				}
 
 				return true;
@@ -392,12 +394,12 @@ int DtlsTransport::Read(void *buffer, size_t buffer_len, size_t *read)
 	std::shared_ptr<const ov::Data> data = TakeDtlsPacket();
 	if(data == nullptr)
 	{
-		logd("DTLS", "SSL read packet block");
+		logtd("SSL read packet block");
 		return 2;
 	}
 
 	size_t read_len = std::min<size_t>(buffer_len, static_cast<size_t>(data->GetLength()));
-	logd("DTLS", "SSL read packet : %d", read_len);
+	logtd("SSL read packet : %d", read_len);
 	memcpy(buffer, data->GetData(), read_len);
 	*read = read_len;
 
@@ -411,11 +413,11 @@ int DtlsTransport::Write(const void *data, size_t data_len, size_t *written)
 	auto node = GetLowerNode(SessionNodeType::Ice);
 	if(node == nullptr)
 	{
-		loge("DTLS", "SSL write packet block");
+		logte("SSL write packet block");
 		return 2;
 	}
 
-	logd("DTLS", "SSL write packet : %d", packet->GetLength());
+	logtd("SSL write packet : %d", packet->GetLength());
 	node->SendData(GetNodeType(), packet);
 	*written = data_len;
 	return 1;
@@ -438,7 +440,7 @@ void DtlsTransport::FlushInput(int32_t left)
 			return;
 		}
 
-		logd("DTLS", "Flushed %d bytes", code);
+		logtd("Flushed %d bytes", code);
 		left -= code;
 	}
 }
@@ -463,7 +465,7 @@ bool DtlsTransport::SaveDtlsPacket(const std::shared_ptr<const ov::Data> data)
 	// 구조상 저장하자마자 사용해야 한다.
 	if(_packet_buffer.size() == 1)
 	{
-		loge("DTLS", "Ssl buffer is full");
+		logte("Ssl buffer is full");
 		return false;
 	}
 
@@ -476,7 +478,7 @@ std::shared_ptr<const ov::Data> DtlsTransport::TakeDtlsPacket()
 {
 	if(_packet_buffer.size() <= 0)
 	{
-		logd("DTLS", "Ssl buffer is empty");
+		logtd("Ssl buffer is empty");
 		return nullptr;
 	}
 

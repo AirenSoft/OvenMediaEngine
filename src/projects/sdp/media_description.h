@@ -74,7 +74,7 @@ public:
 
 	// a=mid:video
 	void SetMid(const ov::String &mid);
-	const ov::String GetMid();
+	const ov::String &GetMid();
 
 	// a=setup:actpass
 	void SetSetup(SetupType type);
@@ -106,29 +106,29 @@ private:
 	bool UpdateData(ov::String &sdp) override;
 	bool ParsingMediaLine(char type, std::string content);
 
-	MediaType _media_type;
-	ov::String _media_type_str;
+	MediaType _media_type = MediaType::Unknown;
+	ov::String _media_type_str = "UNKNOWN";
 
-	uint16_t _port;
-	bool _use_dtls_flag;
+	uint16_t _port = 9;
+	bool _use_dtls_flag = false;
 	ov::String _protocol;
 
-	bool _use_rtcpmux_flag;
+	bool _use_rtcpmux_flag = false;
 
-	Direction _direction;
-	ov::String _direction_str;
+	Direction _direction = Direction::Unknown;
+	ov::String _direction_str = "UNKNOWN";
 
 	ov::String _mid;
 
-	SetupType _setup;
-	ov::String _setup_str;
+	SetupType _setup = SetupType::Unknown;
+	ov::String _setup_str = "UNKNOWN";
 
-	uint8_t _connection_ip_version;
-	ov::String _connection_ip;
+	uint8_t _connection_ip_version = 4;
+	ov::String _connection_ip = "0.0.0.0";
 
-	float _framerate;
+	float _framerate = 0.0f;
 
-	uint32_t _ssrc;
+	uint32_t _ssrc = 0;
 	ov::String _cname;
 
 

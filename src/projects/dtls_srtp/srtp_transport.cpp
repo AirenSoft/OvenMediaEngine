@@ -9,6 +9,8 @@
 #include "srtp_transport.h"
 #include "dtls_transport.h"
 
+#define OV_LOG_TAG "SRTP"
+
 SrtpTransport::SrtpTransport(uint32_t node_id, std::shared_ptr<Session> session)
 	: SessionNode(node_id, SessionNodeType::Srtp, session)
 {
@@ -25,7 +27,7 @@ bool SrtpTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
 	{
-		logd("SRTP", "SessionNode has not started, so the received data has been canceled.");
+		logtd("SessionNode has not started, so the received data has been canceled.");
 		return false;
 	}
 
@@ -51,7 +53,7 @@ bool SrtpTransport::OnDataReceived(SessionNodeType from_node, const std::shared_
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
 	{
-		logd("SRTP", "SessionNode has not started, so the received data has been canceled.");
+		logtd("SessionNode has not started, so the received data has been canceled.");
 		return false;
 	}
 
@@ -68,12 +70,12 @@ bool SrtpTransport::SetKeyMeterial(uint64_t crypto_suite, std::shared_ptr<ov::Da
 		return false;
 	}
 
-	logd("SRTP", "Try to set key meterial");
+	logtd("Try to set key meterial");
 
 	_send_session = std::make_shared<SrtpAdapter>();
 	if(_send_session == nullptr)
 	{
-		loge("SRTP", "Create srtp adapter failed");
+		logte("Create srtp adapter failed");
 		return false;
 	}
 

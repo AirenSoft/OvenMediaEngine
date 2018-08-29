@@ -7,25 +7,14 @@
 //
 //==============================================================================
 
-#include <regex>
 #include "media_description.h"
 #include "session_description.h"
+
+#include <regex>
 
 MediaDescription::MediaDescription(const std::shared_ptr<SessionDescription> &session_desc)
 {
 	_session_description = session_desc;
-	_media_type = MediaType::Unknown;
-	_media_type_str = "UNKNOWN";
-	_direction = Direction::Unknown;
-	_direction_str = "UNKNOWN";
-	_setup = SetupType::Unknown;
-	_setup_str = "UNKNOWN";
-
-	_connection_ip_version = 4;
-	_connection_ip = "0.0.0.0";
-	_framerate = 0;
-	_port = 9;
-	_ssrc = 0;
 
 	UseDtls(true);
 	UseRtcpMux(false);
@@ -39,7 +28,7 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 {
 	if(_media_type == MediaType::Unknown || _direction == Direction::Unknown || _setup == SetupType::Unknown)
 	{
-		loge("SDP", "Required value is not defined - MediaType : %s, Direction : %s, SetupType : %s",
+		loge("SDP", "Required value is not defined - MediaType: %s, Direction: %s, SetupType: %s",
 		     _media_type_str.CStr(), _direction_str.CStr(), _setup_str.CStr());
 
 		return false;
@@ -288,8 +277,8 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			}
 
 			break;
-		case 'a':
 
+		case 'a':
 			// a=rtcp-mux
 			if(std::regex_search(content, matches, std::regex("^(rtcp-mux)")))
 			{
@@ -446,6 +435,7 @@ uint16_t MediaDescription::GetPort()
 void MediaDescription::UseDtls(bool flag)
 {
 	_use_dtls_flag = flag;
+
 	if(_use_dtls_flag)
 	{
 		_protocol = "UDP/TLS/RTP/SAVPF";
@@ -530,7 +520,7 @@ void MediaDescription::SetMid(const ov::String &mid)
 	_mid = mid;
 }
 
-const ov::String MediaDescription::GetMid()
+const ov::String &MediaDescription::GetMid()
 {
 	return _mid;
 }
@@ -571,6 +561,7 @@ bool MediaDescription::SetSetup(const ov::String &type)
 	}
 	else
 	{
+		OV_ASSERT(false, "Invalid setup type: %s", type.CStr());
 		return false;
 	}
 

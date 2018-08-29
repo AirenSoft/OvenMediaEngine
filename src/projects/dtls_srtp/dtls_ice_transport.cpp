@@ -9,6 +9,7 @@
 
 #include "dtls_ice_transport.h"
 
+#define OV_LOG_TAG "DTLS.ICE"
 
 DtlsIceTransport::DtlsIceTransport(uint32_t node_id, std::shared_ptr<Session> session, std::shared_ptr<IcePort> ice_port)
 	: SessionNode(node_id, SessionNodeType::Ice, session)
@@ -27,7 +28,7 @@ bool DtlsIceTransport::SendData(SessionNodeType from_node, const std::shared_ptr
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
 	{
-		logd("DTLS-ICE", "SessionNode has not started, so the received data has been canceled.");
+		logtd("SessionNode has not started, so the received data has been canceled.");
 		return false;
 	}
 
@@ -43,7 +44,7 @@ bool DtlsIceTransport::OnDataReceived(SessionNodeType from_node, const std::shar
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
 	{
-		logd("DTLS-ICE", "SessionNode has not started, so the received data has been canceled.");
+		logtd("SessionNode has not started, so the received data has been canceled.");
 		return false;
 	}
 
