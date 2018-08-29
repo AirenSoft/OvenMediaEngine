@@ -378,6 +378,7 @@ void MediaRouteApplication::MainTask()
 		auto stream = _streams[indicator->_stream_id];
 
 		auto cur_buf = stream->Pop();
+
 		if(cur_buf)
 		{
 			MediaRouteApplicationConnector::ConnectorType connector_type = stream->GetConnectorType();
@@ -438,6 +439,7 @@ void MediaRouteApplication::MainTask()
 
 							// TODO(soulk): Publisher에서 Timestamp를 90000Hz로 변경하는 코드를 넣어야함. 지금은 임시로 넣음.
 							encoded_frame->time_stamp = (uint32_t)((double)cur_buf->GetPts() / (double)1000000 * (double)90000);
+							// logtd("Video PTS: %ld", encoded_frame->time_stamp);
 							// encoded_frame->_timeStamp = (uint32_t)cur_buf->GetPts();
 
 							// SDP의 Timebase가 90000이라서 읨의로 수정해줌.
@@ -470,7 +472,6 @@ void MediaRouteApplication::MainTask()
 						{
 							auto &data = cur_buf->GetData();
 
-							// TODO: 공동 구조체로 변경해야함.
 							auto buffer = new uint8_t[data->GetLength()];
 							memcpy(buffer, data->GetData(), data->GetLength());
 
@@ -478,13 +479,14 @@ void MediaRouteApplication::MainTask()
 
 							OV_ASSERT2(track != nullptr);
 
+							// RFC7587 - RTP Payload Format for the Opus Speech and Audio Codec (https://tools.ietf.org/html/rfc7587)
+
 							auto encoded_frame = std::make_unique<EncodedFrame>(buffer, data->GetLength(), 0);
 							encoded_frame->encoded_width = track->GetWidth();
 							encoded_frame->encoded_height = track->GetHeight();
 							encoded_frame->frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
-
-							// TODO(soulk): Publisher에서 Timestamp를 90000Hz로 변경하는 코드를 넣어야함. 지금은 임시로 넣음.
-							encoded_frame->time_stamp = (uint32_t)((double)cur_buf->GetPts() / (double)1000000 * (double)90000);
+							encoded_frame->time_stamp = cur_buf->GetPts(); // / (double)1000000 * (double)90000;
+							// logtd(">>> Audio PTS: %ld %ld", cur_buf->GetPts(), encoded_frame->time_stamp);
 							// encoded_frame->_timeStamp = (uint32_t)cur_buf->GetPts();
 
 							// SDP의 Timebase가 90000이라서 읨의로 수정해줌.
