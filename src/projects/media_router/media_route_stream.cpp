@@ -10,7 +10,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
-#define OV_LOG_TAG "MediaRoute.Stream"
+#define OV_LOG_TAG "MediaRouter.Stream"
 
 using namespace MediaCommonType;
 
@@ -68,13 +68,13 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer)
 	else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Aac)
 	{
 		_bsfa.convert_to(buffer.get());
-		logd("MediaRouteStream.AAC.Packet", "Enqueue for AAC\n%s", buffer->GetData()->Dump(32).CStr());
+		logd("MediaRouter.Stream.AAC.Packet", "Enqueue for AAC\n%s", buffer->GetData()->Dump(32).CStr());
 	}
 	else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Opus)
 	{
 		// logtw("%s", buffer->GetData()->Dump(32).CStr());
 		// _bsfa.convert_to(buffer.GetBuffer());
-		logd("MediaRouteStream.OPUS.Packet", "Enqueue for OPUS\n%s", buffer->GetData()->Dump(32).CStr());
+		logd("MediaRouter.Stream.OPUS.Packet", "Enqueue for OPUS\n%s", buffer->GetData()->Dump(32).CStr());
 	}
 	else
 	{

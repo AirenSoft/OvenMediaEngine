@@ -11,7 +11,7 @@
 #include "base/application/application_info.h"
 #include "base/application/stream_info.h"
 
-#define OV_LOG_TAG "MediaRoute.App"
+#define OV_LOG_TAG "MediaRouter.App"
 
 using namespace MediaCommonType;
 
