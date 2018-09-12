@@ -3,9 +3,9 @@ include $(DEFAULT_VARIABLES)
 
 LOCAL_STATIC_LIBRARIES := \
 	webrtc \
-	ice \
 	transcoder \
 	rtc_signalling \
+	ice \
 	jsoncpp \
 	http_server \
 	dtls_srtp \

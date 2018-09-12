@@ -20,7 +20,7 @@ RtcSignallingServer::~RtcSignallingServer()
 {
 }
 
-bool RtcSignallingServer::Start(const ov::SocketAddress &address)
+bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate)
 {
 	if(_http_server != nullptr)
 	{
@@ -28,7 +28,18 @@ bool RtcSignallingServer::Start(const ov::SocketAddress &address)
 		return false;
 	}
 
-	_http_server = std::make_shared<HttpServer>();
+	if(certificate != nullptr)
+	{
+		auto https_server = std::make_shared<HttpsServer>();
+
+		https_server->SetLocalCertificate(certificate);
+
+		_http_server = https_server;
+	}
+	else
+	{
+		_http_server = std::make_shared<HttpServer>();
+	}
 
 	auto web_socket = std::make_shared<WebSocketInterceptor>();
 

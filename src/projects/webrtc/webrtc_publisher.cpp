@@ -59,9 +59,11 @@ bool WebRtcPublisher::Start(std::vector<std::shared_ptr<ApplicationInfo>> &appli
 		return false;
 	}
 
+	std::shared_ptr<Certificate> certificate = GetCertificate();
+
 	// Signalling에 Observer 연결
 	_signalling->AddObserver(RtcSignallingObserver::GetSharedPtr());
-	_signalling->Start(ov::SocketAddress(GetSignallingPort()));
+	_signalling->Start(ov::SocketAddress(GetSignallingPort()), certificate);
 
 	// Publisher::Start()에서 Application을 생성한다.
 	return Publisher::Start(application_infos);
@@ -235,9 +237,10 @@ void WebRtcPublisher::OnDataReceived(IcePort &port, const std::shared_ptr<Sessio
 
 uint16_t WebRtcPublisher::GetSignallingPort()
 {
-	if(ConfigManager::Instance() == nullptr ||
-	   ConfigManager::Instance()->GetHostPublisher() == nullptr ||
-	   ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr)
+	if(
+		ConfigManager::Instance()->GetHostPublisher() == nullptr ||
+		ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr
+		)
 	{
 		logte("Cannot get publish service config");
 
@@ -250,8 +253,9 @@ uint16_t WebRtcPublisher::GetSignallingPort()
 
 ov::String WebRtcPublisher::GetCandidateIP()
 {
-	if(ConfigManager::Instance() == nullptr ||
-	   ConfigManager::Instance()->GetHostPublisher() == nullptr)
+	if(
+		ConfigManager::Instance()->GetHostPublisher() == nullptr
+		)
 	{
 		logte("Cannot get publish service config");
 
@@ -264,9 +268,10 @@ ov::String WebRtcPublisher::GetCandidateIP()
 
 uint16_t WebRtcPublisher::GetCandidatePort()
 {
-	if(ConfigManager::Instance() == nullptr ||
-	   ConfigManager::Instance()->GetHostPublisher() == nullptr ||
-	   ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr)
+	if(
+		ConfigManager::Instance()->GetHostPublisher() == nullptr ||
+		ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr
+		)
 	{
 		logte("Cannot get publish service config");
 
@@ -279,13 +284,44 @@ uint16_t WebRtcPublisher::GetCandidatePort()
 
 ov::String WebRtcPublisher::GetCandidateProto()
 {
-	if(ConfigManager::Instance() == nullptr ||
-	   ConfigManager::Instance()->GetHostPublisher() == nullptr ||
-	   ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr)
+	if(
+		ConfigManager::Instance()->GetHostPublisher() == nullptr ||
+		ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr
+		)
 	{
 		logte("Cannot get publish service config");
 		return "UDP";
 	}
 
 	return ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties()->GetCandidateProtocol();
+}
+
+std::shared_ptr<Certificate> WebRtcPublisher::GetCertificate()
+{
+	auto tls_info = ConfigManager::Instance()->GetHostTls();
+
+	if(tls_info->CheckTls())
+	{
+		auto certificate = std::make_shared<Certificate>();
+
+		logti("Trying to create a certificate using file\n\tCert path: %s\n\tPrivate key path: %s",
+		      tls_info->GetCertPath().CStr(),
+		      tls_info->GetKeyPath().CStr()
+		);
+
+		if(certificate->GenerateFromPem(tls_info->GetCertPath(), tls_info->GetKeyPath()))
+		{
+			return certificate;
+		}
+
+		logte("An error occurred while create a certificate");
+	}
+	else
+	{
+		// TLS is disabled
+	}
+
+	return nullptr;
+
+
 }

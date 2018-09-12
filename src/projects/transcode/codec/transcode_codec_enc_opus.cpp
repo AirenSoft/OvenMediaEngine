@@ -185,7 +185,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeRe
 
 	if(encoded_bytes < 0)
 	{
-		logte("An error occurred while encode data %z bytes: %d (Buffer: %z bytes)", _buffer->GetLength(), encoded_bytes, encoded->GetCapacity());
+		logte("An error occurred while encode data %zu bytes: %d (Buffer: %zu bytes)", _buffer->GetLength(), encoded_bytes, encoded->GetCapacity());
 		*result = TranscodeResult::DataError;
 		return nullptr;
 	}

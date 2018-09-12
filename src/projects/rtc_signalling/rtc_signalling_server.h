@@ -8,15 +8,15 @@
 //==============================================================================
 #pragma once
 
-#include "./rtc_signalling_observer.h"
-#include "./rtc_ice_candidate.h"
+#include "rtc_signalling_observer.h"
+#include "rtc_ice_candidate.h"
 
 #include <memory>
 
-#include <base/ovlibrary/ovlibrary.h>
-#include <base/ovsocket/ovsocket.h>
 #include <ice/ice.h>
 #include <http_server/http_server.h>
+#include <http_server/https_server.h>
+#include <http_server/interceptors/http_request_interceptors.h>
 
 class RtcSignallingServer
 {
@@ -24,7 +24,7 @@ public:
 	RtcSignallingServer();
 	virtual ~RtcSignallingServer();
 
-	bool Start(const ov::SocketAddress &address);
+	bool Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate = nullptr);
 	bool Stop();
 
 	bool AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer);

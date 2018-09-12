@@ -31,6 +31,8 @@ enum class PhysicalPortProbeResult
 class PhysicalPortObserver
 {
 public:
+	friend class PhysicalPort;
+
 	// TCP일 때, 상대방이 접속하면 호출됨
 	virtual void OnConnected(ov::Socket *remote)
 	{
@@ -50,5 +52,6 @@ public:
 	virtual PhysicalPortProbeResult ProbePacket(ov::Socket *remote, const std::shared_ptr<const ov::Data> &data)
 	{
 		// dummy function
+		return PhysicalPortProbeResult::Failed;
 	}
 };

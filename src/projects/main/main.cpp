@@ -14,7 +14,7 @@
 
 #include <srtp2/srtp.h>
 
-int main(int argc, char *argv[])
+int main()
 {
 	struct utsname uts;
 	::uname(&uts);
@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	}
 
 	logtd("Trying to initialize OpenSSL...");
-	OpenSSLManager::InitializeOpenSSL();
+	ov::OpensslManager::InitializeOpenssl();
 
 	logtd("Trying to initialize libsrtp...");
 	int err = srtp_init();
@@ -52,13 +52,16 @@ int main(int argc, char *argv[])
 	auto publisher = WebRtcPublisher::Create(router);
 
 	// Wait for termination...
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
 	while(true)
 	{
 		sleep(1);
 	}
+#pragma clang diagnostic pop
 
 	logtd("Trying to uninitialize OpenSSL...");
-	OpenSSLManager::ReleaseOpenSSL();
+	ov::OpensslManager::ReleaseOpenSSL();
 
 	logti("OvenMediaEngine will be terminated");
 

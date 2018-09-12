@@ -194,10 +194,8 @@ bool MediaRouteApplication::OnCreateStream(
 	lock.unlock();
 
 	// 옵저버에 스트림 생성을 알림
-	for(auto it = _observers.begin(); it != _observers.end(); ++it)
+	for(auto observer : _observers)
 	{
-		auto observer = *it;
-
 		// 프로바이더에서 들어오는 스트림은 트샌스코더에만 전달함
 		if((app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
 		   (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder))

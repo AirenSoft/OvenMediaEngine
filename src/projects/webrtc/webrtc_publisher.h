@@ -61,7 +61,7 @@ private:
 	ov::String	GetCandidateIP();
 	uint16_t 	GetCandidatePort();
 	ov::String	GetCandidateProto();
-
+	std::shared_ptr<Certificate> GetCertificate();
 
 	// Publisher Implementation
 	PublisherType GetPublisherType() override
