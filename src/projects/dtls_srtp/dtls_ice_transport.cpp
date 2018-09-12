@@ -35,6 +35,7 @@ bool DtlsIceTransport::SendData(SessionNodeType from_node, const std::shared_ptr
 	//logtd("DtlsIceTransport Send by ice port : %d", data->GetLength());
 	// ICE_PORT로 최종 전송한다. (Out of session)
 	_ice_port->Send(GetSession(), data);
+
 	return true;
 }
 
@@ -50,6 +51,7 @@ bool DtlsIceTransport::OnDataReceived(SessionNodeType from_node, const std::shar
 
 	// upper node를 구한다. DTLS와 연결되는 ICE는 무조건 DTLS 하나와면 연결된다.
 	auto node = GetUpperNode();
+
 	if(node == nullptr)
 	{
 		return false;

@@ -35,6 +35,7 @@ bool SrtpTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov
 	{
 		return false;
 	}
+
 	_send_session->ProtectRtp(data);
 
 	// DTLS로 보낸다.

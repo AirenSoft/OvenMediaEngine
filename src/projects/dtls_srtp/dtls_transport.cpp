@@ -1,33 +1,19 @@
 #include "dtls_transport.h"
-#include "openssl_adapter.h"
+
+#include <utility>
 #include <algorithm>
 
 #define OV_LOG_TAG              "DTLS"
 
 DtlsTransport::DtlsTransport(uint32_t id, std::shared_ptr<Session> session)
-	: SessionNode(id, SessionNodeType::Dtls, session)
+	: SessionNode(id, SessionNodeType::Dtls, std::move(session))
 {
 	_state = SSL_NONE;
 	_peer_cerificate_verified = false;
 }
 
-DtlsTransport::~DtlsTransport()
-{
-	if(_ssl_ctx != nullptr)
-	{
-		SSL_CTX_free(_ssl_ctx);
-	}
-
-	if(_ssl != nullptr)
-	{
-		SSL_free(_ssl);
-	}
-
-	_state = SSL_CLOSED;
-}
-
 // Set Local Certificate
-void DtlsTransport::SetLocalCertificate(std::shared_ptr<Certificate> certificate)
+void DtlsTransport::SetLocalCertificate(const std::shared_ptr<Certificate> &certificate)
 {
 	_local_certificate = certificate;
 }
@@ -52,28 +38,51 @@ bool DtlsTransport::StartDTLS()
 	}
 	*/
 
-	_ssl_ctx = OpenSslAdapter::SetupSslContext(_local_certificate, SSLVerifyCallback);
-	if(_ssl_ctx == nullptr)
+	ov::TlsCallback callback =
+		{
+			.create_callback = [](ov::Tls *tls, SSL_CTX *context) -> bool
+			{
+				tls->SetVerify(SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT);
+
+				// SSL_CTX_set_tlsext_use_srtp() returns 1 on error, 0 on success
+				if(SSL_CTX_set_tlsext_use_srtp(context, "SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32"))
+				{
+					logte("SSL_CTX_set_tlsext_use_srtp failed");
+					return false;
+				}
+
+				return true;
+			},
+
+			.read_callback = std::bind(&DtlsTransport::Read, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+			.write_callback = std::bind(&DtlsTransport::Write, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+			.destroy_callback = nullptr,
+			.ctrl_callback = [](ov::Tls *tls, int cmd, long num, void *ptr) -> long
+			{
+				switch(cmd)
+				{
+					case BIO_CTRL_RESET:
+					case BIO_CTRL_WPENDING:
+					case BIO_CTRL_PENDING:
+						return 0;
+
+					case BIO_CTRL_FLUSH:
+						return 1;
+
+					default:
+						return 0;
+				}
+			},
+			.verify_callback = [](ov::Tls *tls, X509_STORE_CTX *store_context) -> bool
+			{
+				logtd("SSLVerifyCallback enter");
+				return true;
+			}
+		};
+
+	if(_tls.Initialize(DTLS_server_method(), _local_certificate, "DEFAULT:!NULL:!aNULL:!SHA256:!SHA384:!aECDH:!AESGCM+AES256:!aPSK", callback) == false)
 	{
 		_state = SSL_ERROR;
-		return false;
-	}
-
-	BIO *bio = OpenSslAdapter::CreateBio(this);
-	if(bio == nullptr)
-	{
-		_state = SSL_ERROR;
-		return false;
-	}
-
-	_ssl = OpenSslAdapter::CreateSslSession(_ssl_ctx, bio, bio, this);
-	if(_ssl == nullptr)
-	{
-		BIO_free(bio);
-		SSL_CTX_free(_ssl_ctx);
-		_ssl_ctx = nullptr;
-		_state = SSL_ERROR;
-
 		return false;
 	}
 
@@ -85,161 +94,65 @@ bool DtlsTransport::StartDTLS()
 	return true;
 }
 
-int DtlsTransport::ContinueSSL()
+bool DtlsTransport::ContinueSSL()
 {
 	logtd("Continue DTLS...");
-	// DTLS Accept
-	int code = SSL_accept(_ssl);
-	int error = SSL_get_error(_ssl, code);
+
+	int error = _tls.Accept();
 
 	if(error == SSL_ERROR_NONE)
 	{
-		logtd("DTLS Accept!");
 		_state = SSL_CONNECTED;
 
-		X509 *cert = SSL_get_peer_certificate(_ssl);
-		if(!cert)
-		{
-			logte("Get peer cert failed");
-			return 1;
-		}
-		_peer_certificate = std::make_shared<Certificate>(cert);
-		X509_free(cert);
+		_peer_certificate = _tls.GetPeerCertificate();
 
-		if(!VerifyPeerCertificate())
+		if(_peer_certificate == nullptr)
+		{
+			return false;
+		}
+
+		if(VerifyPeerCertificate() == false)
 		{
 			// Peer Certificate 검증 실패
 		}
 
 		_peer_certificate->Print();
 
-		MakeSrtpKey();
-	}
-	else if(error == SSL_ERROR_WANT_READ)
-	{
-		logtd("SSL_ERROR_WANT_READ");
-		// 잠시 후 다시 Continue SSL을 한다.
-		// 그런데 이것을 하는 동안 Thread가 잠기므로, 전체적으로 Lock이 걸린다.
-		// 해결책이 필요함
-	}
-	else if(error == SSL_ERROR_WANT_WRITE)
-	{
-		logtd("SSL_ERROR_WANT_WRITE");
-	}
-	else
-	{
-		logtd("SSL_accept error : (%d) err=%d", code, error);
+		return MakeSrtpKey();
 	}
 
-	return 1;
-}
-
-//TODO: 향후 SSL 쪽은 모두 Adapter 쪽으로 옮긴다.
-uint64_t DtlsTransport::GetDtlsSrtpCryptoSuite()
-{
-	SRTP_PROTECTION_PROFILE *srtp_profile = SSL_get_selected_srtp_profile(_ssl);
-	if(!srtp_profile)
-	{
-		return 0;
-	}
-
-	return srtp_profile->id;
-}
-
-bool DtlsTransport::GetKeySaltLen(uint64_t crypto_suite, uint64_t &key_len, uint64_t &salt_len)
-{
-	switch(crypto_suite)
-	{
-		case SRTP_AES128_CM_SHA1_32:
-		case SRTP_AES128_CM_SHA1_80:
-			// SRTP_AES128_CM_HMAC_SHA1_32 and SRTP_AES128_CM_HMAC_SHA1_80 are defined
-			// in RFC 5764 to use a 128 bits key and 112 bits salt for the cipher.
-			key_len = 16;
-			salt_len = 14;
-			break;
-		case SRTP_AEAD_AES_128_GCM:
-			// SRTP_AEAD_AES_128_GCM is defined in RFC 7714 to use a 128 bits key and
-			// a 96 bits salt for the cipher.
-			key_len = 16;
-			salt_len = 12;
-			break;
-		case SRTP_AEAD_AES_256_GCM:
-			// SRTP_AEAD_AES_256_GCM is defined in RFC 7714 to use a 256 bits key and
-			// a 96 bits salt for the cipher.
-			key_len = 32;
-			salt_len = 12;
-			break;
-		default:
-			return false;
-	}
-	return true;
+	return false;
 }
 
 bool DtlsTransport::MakeSrtpKey()
 {
-	if(!_peer_cerificate_verified)
+	if(_peer_cerificate_verified == false)
 	{
 		return false;
 	}
 
-	uint64_t key_len;
-	uint64_t salt_len;
-	uint64_t crypto_suite;
-
-	crypto_suite = GetDtlsSrtpCryptoSuite();
-	if(!GetKeySaltLen(crypto_suite, key_len, salt_len))
-	{
-		return false;
-	}
-
+	// https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#exporter-labels
 	const ov::String label = "EXTRACTOR-dtls_srtp";
-	auto key_data = ov::Data::CreateData((key_len + salt_len) * 2);
-	key_data->SetLength((key_len + salt_len) * 2);
 
-	auto key_buffer = key_data->GetWritableDataAs<uint8_t>();
+	auto crypto_suite = _tls.GetSelectedSrtpProfileId();
 
-	if(SSL_export_keying_material(_ssl, &key_buffer[0], static_cast<size_t>(key_data->GetLength()),
-	                              label.CStr(), static_cast<size_t>(label.GetLength()),
-	                              nullptr, 0, false) != 1)
-	{
-		return false;
-	}
+	std::shared_ptr<ov::Data> server_key = ov::Data::CreateData();
+	std::shared_ptr<ov::Data> client_key = ov::Data::CreateData();
 
-	auto client_key_data = ov::Data::CreateData(key_len + salt_len);
-	auto server_key_data = ov::Data::CreateData(key_len + salt_len);
-	// 사이즈 늘림
-	client_key_data->SetLength(key_len + salt_len);
-	server_key_data->SetLength(key_len + salt_len);
-	// 버퍼 얻어옴
-	auto client_key_buffer = client_key_data->GetWritableDataAs<uint8_t>();
-	auto server_key_buffer = server_key_data->GetWritableDataAs<uint8_t>();
-
-	size_t offset = 0;
-	memcpy(&client_key_buffer[0], &key_buffer[offset], key_len);
-	offset += key_len;
-	memcpy(&server_key_buffer[0], &key_buffer[offset], key_len);
-	offset += key_len;
-	memcpy(&client_key_buffer[key_len], &key_buffer[offset], salt_len);
-	offset += salt_len;
-	memcpy(&server_key_buffer[key_len], &key_buffer[offset], salt_len);
+	_tls.ExportKeyingMaterial(crypto_suite, label, server_key, client_key);
 
 	// Upper Node가 SRTP라면 값을 넘긴다.
 	// SRTP를 쓸때는 꼭 SRTP - DTLS 순서로 연결해야 한다.
 	auto node = GetUpperNode();
+
 	if(node->GetNodeType() == SessionNodeType::Srtp)
 	{
 		auto srtp_transport = std::static_pointer_cast<SrtpTransport>(node);
-		srtp_transport->SetKeyMeterial(crypto_suite, server_key_data, client_key_data);
+
+		srtp_transport->SetKeyMeterial(crypto_suite, server_key, client_key);
 	}
 
 	return true;
-}
-
-int DtlsTransport::SSLVerifyCallback(X509_STORE_CTX *store, void *arg)
-{
-	logtd("SSLVerifyCallback enter");
-	return 1;
-
 }
 
 bool DtlsTransport::VerifyPeerCertificate()
@@ -284,14 +197,17 @@ bool DtlsTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov
 			{
 				// 그 이외의 패킷은 암호화 하여 전송한다.
 				// TODO: 현재는 사용할 일이 없고 향후 데이터 채널을 붙이면 다시 검증한다. (현재는 검증 전)
-				int code = SSL_write(_ssl, data->GetData(), data->GetLength());
-				int ssl_error = SSL_get_error(_ssl, code);
+
+				size_t written_bytes;
+
+				int ssl_error = _tls.Write(data->GetData(), data->GetLength(), &written_bytes);
+
 				if(ssl_error == SSL_ERROR_NONE)
 				{
 					return true;
 				}
 
-				logte("SSL_wirte error : code(%d) error(%d)", code, ssl_error);
+				logte("SSL_wirte error : error(%d)", ssl_error);
 			}
 			break;
 		case SSL_ERROR:
@@ -345,20 +261,20 @@ bool DtlsTransport::OnDataReceived(SessionNodeType from_node, const std::shared_
 
 					// SSL_read는 다음과 같이 동작한다.
 					// SSL -> Read() -> TakeDtlsPacket() -> Decrypt -> buffer
-					int code = SSL_read(_ssl, buffer, sizeof(buffer));
-					int ssl_error = SSL_get_error(_ssl, code);
+					int ssl_error = _tls.Read(buffer, sizeof(buffer), nullptr);
 
 					// 말이 안되는데 여기 들어오는지 보자.
-					int pending = SSL_pending(_ssl);
+					int pending = _tls.Pending();
+
 					if(pending >= 0)
 					{
 						logtd("Short DTLS read. Flushing %d bytes", pending);
-						FlushInput(pending);
+						_tls.FlushInput();
 					}
 
 					// 읽은 패킷을 누군가에게 줘야 하는데... 줄 놈이 없다.
 					// TODO: 향후 SCTP 등을 연결하면 준다. 지금은 DTLS로 암호화 된 패킷을 받을 객체가 없다.
-					logtd("Unknown dtls packet received (%d:%d)", code, ssl_error);
+					logtd("Unknown dtls packet received (%d)", ssl_error);
 				}
 
 				return true;
@@ -388,63 +304,50 @@ bool DtlsTransport::OnDataReceived(SessionNodeType from_node, const std::shared_
 	return false;
 }
 
-// SSL에서 암호화 할 패킷을 읽어갈 때 호출한다.
-int DtlsTransport::Read(void *buffer, size_t buffer_len, size_t *read)
+ssize_t DtlsTransport::Read(ov::Tls *tls, void *buffer, size_t length)
 {
 	std::shared_ptr<const ov::Data> data = TakeDtlsPacket();
+
 	if(data == nullptr)
 	{
 		logtd("SSL read packet block");
-		return 2;
+		return 0;
 	}
 
-	size_t read_len = std::min<size_t>(buffer_len, static_cast<size_t>(data->GetLength()));
-	logtd("SSL read packet : %d", read_len);
-	memcpy(buffer, data->GetData(), read_len);
-	*read = read_len;
+	size_t read_len = std::min<size_t>(length, static_cast<size_t>(data->GetLength()));
 
-	return 1;
+	logtd("SSL read packet : %zu", read_len);
+
+	::memcpy(buffer, data->GetData(), read_len);
+
+	return read_len;
 }
 
-// SSL에서 패킷을 전송하기 위해 호출한다. ice로 최종 전송한다.
-int DtlsTransport::Write(const void *data, size_t data_len, size_t *written)
+ssize_t DtlsTransport::Write(ov::Tls *tls, const void *data, size_t length)
 {
-	auto packet = ov::Data::CreateData(data, data_len);
+	auto packet = ov::Data::CreateData(data, length);
+
 	auto node = GetLowerNode(SessionNodeType::Ice);
+
 	if(node == nullptr)
 	{
-		logte("SSL write packet block");
-		return 2;
+		logte("Cannot find lower node (Expected: IcePort)");
+
+		OV_ASSERT2(false);
+
+		return -1;
 	}
 
-	logtd("SSL write packet : %d", packet->GetLength());
-	node->SendData(GetNodeType(), packet);
-	*written = data_len;
-	return 1;
-}
+	logtd("SSL write packet : %zu", packet->GetLength());
 
-void DtlsTransport::FlushInput(int32_t left)
-{
-	unsigned char buf[MAX_DTLS_PACKET_LEN];
-
-	while(left)
+	if(node->SendData(GetNodeType(), packet))
 	{
-		// This should always succeed
-		int toread = (sizeof(buf) < left) ? sizeof(buf) : left;
-		int code = SSL_read(_ssl, buf, toread);
-
-		int ssl_error = SSL_get_error(_ssl, code);
-
-		if(ssl_error != SSL_ERROR_NONE)
-		{
-			return;
-		}
-
-		logtd("Flushed %d bytes", code);
-		left -= code;
+		return length;
 	}
-}
 
+	// retry
+	return 0;
+}
 
 bool DtlsTransport::IsDtlsPacket(const std::shared_ptr<const ov::Data> data)
 {
@@ -486,3 +389,4 @@ std::shared_ptr<const ov::Data> DtlsTransport::TakeDtlsPacket()
 	_packet_buffer.pop_front();
 	return data;
 }
+
