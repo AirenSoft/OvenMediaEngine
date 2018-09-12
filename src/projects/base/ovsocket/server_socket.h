@@ -18,11 +18,12 @@ namespace ov
 	class ServerSocket : public Socket
 	{
 	public:
-		ServerSocket();
-		~ServerSocket() override;
+		ServerSocket() = default;
+		~ServerSocket() override = default;
 
 		// 특정 port로 bind. backlog 지정 시, 해당 크기만큼 backlog 지정
-		bool Prepare(int port, int backlog = SOMAXCONN);
+		bool Prepare(uint16_t port, int backlog = SOMAXCONN);
+
 		// address에 해당하는 주소로 bind
 		bool Prepare(const SocketAddress &address, int backlog = SOMAXCONN);
 
@@ -32,6 +33,7 @@ namespace ov
 		bool Close() override;
 
 		using Socket::GetState;
+		using Socket::ToString;
 
 		String ToString() const override;
 

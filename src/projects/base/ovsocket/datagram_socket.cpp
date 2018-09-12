@@ -13,14 +13,6 @@
 
 namespace ov
 {
-	DatagramSocket::DatagramSocket()
-	{
-	}
-
-	DatagramSocket::~DatagramSocket()
-	{
-	}
-
 	bool DatagramSocket::Prepare(int port)
 	{
 		return Prepare(SocketAddress(port));
@@ -134,5 +126,10 @@ namespace ov
 		}
 
 		return true;
+	}
+
+	String DatagramSocket::ToString() const
+	{
+		return Socket::ToString("DatagramSocket");
 	}
 }

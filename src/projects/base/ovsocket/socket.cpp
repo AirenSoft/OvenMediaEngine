@@ -401,20 +401,20 @@ namespace ov
 		return _type;
 	}
 
-	ssize_t Socket::Send(const void *data, ssize_t length)
+	ssize_t Socket::Send(const void *data, size_t length)
 	{
 		// TODO: 별도 send queue를 만들어야 함
 		OV_ASSERT2(_socket != InvalidSocket);
 
-		logtd("[%p] [#%d] Trying to send data:\n%s", this, _socket, ov::Dump(data, length).CStr());
+		logtd("[%p] [#%d] Trying to send data:\n%s", this, _socket, ov::Dump(data, length, 64).CStr());
 
-		uint8_t *data_to_send = (uint8_t *)data;
-		ssize_t remained = length;
-		ssize_t total_sent = 0L;
+		auto data_to_send = static_cast<const uint8_t *>(data);
+		size_t remained = length;
+		size_t total_sent = 0L;
 
 		while(remained > 0L)
 		{
-			ssize_t sent = ::send(_socket, data_to_send, static_cast<size_t>(remained), MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0)); // NOLINT
+			ssize_t sent = ::send(_socket, data_to_send, remained, MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0));
 
 			if(sent == -1L)
 			{
@@ -423,17 +423,19 @@ namespace ov
 					continue;
 				}
 
-				logtw("[%p] [#%d] Could not send data: %ld", this, sent);
+				logtw("[%p] [#%d] Could not send data: %zd", this, sent);
 
 				break;
 			}
+
+			OV_ASSERT2(remained >= sent);
 
 			remained -= sent;
 			total_sent += sent;
 			data_to_send += sent;
 		}
 
-		logtd("[%p] [#%d] Sent: %ld bytes", this, _socket, total_sent);
+		logtd("[%p] [#%d] Sent: %zu bytes", this, _socket, total_sent);
 
 		return total_sent;
 	}
@@ -445,14 +447,14 @@ namespace ov
 		return Send(data->GetData(), data->GetLength());
 	}
 
-	ssize_t Socket::SendTo(const ov::SocketAddress &address, const void *data, ssize_t length)
+	ssize_t Socket::SendTo(const ov::SocketAddress &address, const void *data, size_t length)
 	{
 		OV_ASSERT2(_socket != InvalidSocket);
 		OV_ASSERT2(address.AddressForIPv4()->sin_addr.s_addr != 0);
 
-		logtd("[%p] [#%d] Trying to send data %ld bytes to %s...", this, _socket, length, address.ToString().CStr());
+		logtd("[%p] [#%d] Trying to send data %zu bytes to %s...", this, _socket, length, address.ToString().CStr());
 
-		return ::sendto(_socket, data, (size_t)length, MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0), address.Address(), address.AddressLength()); // NOLINT
+		return ::sendto(_socket, data, length, MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0), address.Address(), address.AddressLength());
 	}
 
 	ssize_t Socket::SendTo(const ov::SocketAddress &address, const std::shared_ptr<const Data> &data)
@@ -474,7 +476,7 @@ namespace ov
 
 		ssize_t read_bytes = ::recv(_socket, data->GetWritableData(), (size_t)data->GetLength(), (_is_nonblock ? MSG_DONTWAIT : 0));
 
-		logtd("[%p] [#%d] Read bytes: %ld", this, _socket, read_bytes);
+		logtd("[%p] [#%d] Read bytes: %zd", this, _socket, read_bytes);
 
 		if(read_bytes == 0L)
 		{
@@ -510,7 +512,7 @@ namespace ov
 		}
 		else
 		{
-			logtd("[%p] [#%d] %ld bytes read", this, _socket, read_bytes);
+			logtd("[%p] [#%d] %zd bytes read", this, _socket, read_bytes);
 
 			data->SetLength(read_bytes);
 		}
@@ -558,7 +560,7 @@ namespace ov
 		}
 		else
 		{
-			logtd("[%p] [#%d] %ld bytes read", this, _socket, read_bytes);
+			logtd("[%p] [#%d] %zd bytes read", this, _socket, read_bytes);
 
 			data->SetLength(read_bytes);
 			*address = std::make_shared<ov::SocketAddress>(remote);
@@ -650,5 +652,4 @@ namespace ov
 	{
 		return ToString("Socket");
 	}
-
 }

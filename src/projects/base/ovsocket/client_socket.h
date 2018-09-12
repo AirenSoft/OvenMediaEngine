@@ -20,7 +20,8 @@ namespace ov
 
 		ClientSocket();
 		ClientSocket(SocketType type, socket_t socket, const sockaddr_in &remote_addr_in);
-		~ClientSocket() override;
+
+		~ClientSocket() override = default;
 
 		// 데이터 송신
 		ssize_t Send(const ov::String &string, bool include_null_char = false);
@@ -29,9 +30,9 @@ namespace ov
 		bool Send(const T *data)
 		{
 			ssize_t sent = Send(data, sizeof(T));
-			bool result = sent == sizeof(T);
+			bool result = (sent == sizeof(T));
 
-			OV_ASSERT(sent == sizeof(T), "Could not send data: sent: %ld, expected: %ld", sent, sizeof(T));
+			OV_ASSERT(sent == sizeof(T), "Could not send data: sent: %zu, expected: %zu", sent, sizeof(T));
 
 			return result;
 		}
@@ -43,7 +44,5 @@ namespace ov
 		using Socket::GetState;
 
 		String ToString() const override;
-
-	protected:
 	};
 }

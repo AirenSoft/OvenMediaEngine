@@ -16,8 +16,8 @@ namespace ov
 	class DatagramSocket : public Socket
 	{
 	public:
-		DatagramSocket();
-		virtual ~DatagramSocket();
+		DatagramSocket() = default;
+		~DatagramSocket() override = default;
 
 		// 특정 port로 bind
 		bool Prepare(int port);
@@ -33,6 +33,8 @@ namespace ov
 		using Socket::Send;
 		using Socket::SendTo;
 		using Socket::Close;
+
+		String ToString() const override;
 
 	protected:
 	};

@@ -12,15 +12,7 @@
 
 namespace ov
 {
-	ServerSocket::ServerSocket()
-	{
-	}
-
-	ServerSocket::~ServerSocket()
-	{
-	}
-
-	bool ServerSocket::Prepare(int port, int backlog)
+	bool ServerSocket::Prepare(uint16_t port, int backlog)
 	{
 		return Prepare(SocketAddress(port), backlog);
 	}
@@ -223,4 +215,6 @@ namespace ov
 	{
 		return Socket::ToString("ServerSocket");
 	}
+
+
 }

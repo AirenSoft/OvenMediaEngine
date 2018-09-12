@@ -18,7 +18,7 @@
 #define ADD_FLAG_IF(list, x, flag) \
     if(OV_CHECK_FLAG(x, flag)) \
     { \
-        list.push_back(# flag); \
+        list.emplace_back(# flag); \
     }
 
 // state가 condition이 아니면 return_value를 반환함

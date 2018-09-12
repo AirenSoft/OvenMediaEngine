@@ -1,3 +1,5 @@
+#include <utility>
+
 //==============================================================================
 //
 //  OvenMediaEngine
@@ -18,12 +20,10 @@
 #include <map>
 #include <functional>
 
-#include "../ovlibrary/ovlibrary.h"
+#include <base/ovlibrary/ovlibrary.h>
 
 namespace ov
 {
-	class Socket;
-
 	// socket type
 	typedef int socket_t;
 
@@ -66,18 +66,18 @@ namespace ov
 		SocketType GetType() const;
 
 		// 데이터 송신
-		ssize_t Send(const void *data, ssize_t length);
-		ssize_t Send(const std::shared_ptr<const Data> &data);
+		virtual ssize_t Send(const void *data, size_t length);
+		virtual ssize_t Send(const std::shared_ptr<const Data> &data);
 
-		ssize_t SendTo(const ov::SocketAddress &address, const void *data, ssize_t length);
-		ssize_t SendTo(const ov::SocketAddress &address, const std::shared_ptr<const Data> &data);
+		virtual ssize_t SendTo(const ov::SocketAddress &address, const void *data, size_t length);
+		virtual ssize_t SendTo(const ov::SocketAddress &address, const std::shared_ptr<const Data> &data);
 
-		// 데이터 수신
+		virtual // 데이터 수신
 		// 최대 ByteData의 capacity만큼 데이터를 기록
 		// false가 반환되면 error를 체크해야 함
 		std::shared_ptr<ov::Error> Recv(std::shared_ptr<Data> &data);
 
-		// 최대 ByteData의 capacity만큼 데이터를 기록
+		virtual // 최대 ByteData의 capacity만큼 데이터를 기록
 		// nullptr이 반환되면 errno를 체크해야 함
 		std::shared_ptr<ov::Error> RecvFrom(std::shared_ptr<Data> &data, std::shared_ptr<ov::SocketAddress> *address);
 
@@ -99,7 +99,7 @@ namespace ov
 		template<typename T>
 		std::shared_ptr<T> AcceptClient()
 		{
-			sockaddr_in client;
+			sockaddr_in client {};
 
 			socket_t client_socket = AcceptClientInternal(&client);
 
@@ -142,7 +142,7 @@ namespace ov
 		static String StringFromEpollEvent(const epoll_event *event);
 		static String StringFromEpollEvent(const epoll_event &event);
 
-		String ToString(const char *class_name) const;
+		virtual String ToString(const char *class_name) const;
 
 	protected:
 		socket_t _socket;

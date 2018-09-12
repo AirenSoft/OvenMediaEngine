@@ -16,17 +16,11 @@
 
 namespace ov
 {
-	// TCP socket
-	class ServerSocket;
-	class ClientSocket;
-
 	enum class SocketConnectionState : int8_t
 	{
 		Connected,
-		// 연결이 끊어짐
-			Disconnected,
-		// 오류가 발생해서 연결이 끊어짐
-			Error
+		Disconnected,                   // 연결이 끊어짐
+		Error                           // 오류가 발생해서 연결이 끊어짐
 	};
 
 	enum class SocketFamily : sa_family_t
@@ -37,10 +31,16 @@ namespace ov
 		Inet6 = AF_INET6,
 	};
 
+	class Socket;
+
+	// For TCP sockets
+	class ServerSocket;
+	class ClientSocket;
+
 	typedef std::function<bool(ClientSocket *client, SocketConnectionState state)> ClientConnectionCallback;
 	typedef std::function<bool(ClientSocket *client, const std::shared_ptr<Data> &data)> ClientDataCallback;
 
-	// UDP socket
+	// for UDP socket
 	class DatagramSocket;
 	class SocketAddress;
 
