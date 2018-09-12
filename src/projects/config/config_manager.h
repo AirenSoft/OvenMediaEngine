@@ -29,6 +29,7 @@ public:
 
     std::shared_ptr<HostInfo> GetHost() const noexcept;
 
+	std::shared_ptr<HostTlsInfo> GetHostTls() const noexcept;
     std::shared_ptr<HostProviderInfo> GetHostProvider() const noexcept;
     std::shared_ptr<HostPublisherInfo> GetHostPublisher() const noexcept;
 

@@ -38,12 +38,22 @@ void HostInfo::SetName(ov::String name)
 	_name = name;
 }
 
+std::shared_ptr<HostTlsInfo> HostInfo::GetTls() const noexcept
+{
+	return _tls;
+}
+
+void HostInfo::SetTls(const std::shared_ptr<HostTlsInfo> &tls)
+{
+	_tls = std::move(tls);
+}
+
 std::shared_ptr<HostProviderInfo> HostInfo::GetProvider() const noexcept
 {
 	return _provider;
 }
 
-void HostInfo::SetProvider(std::shared_ptr<HostProviderInfo> provider)
+void HostInfo::SetProvider(const std::shared_ptr<HostProviderInfo> &provider)
 {
 	_provider = provider;
 }
@@ -53,7 +63,7 @@ std::shared_ptr<HostPublisherInfo> HostInfo::GetPublisher() const noexcept
 	return _publisher;
 }
 
-void HostInfo::SetPublisher(std::shared_ptr<HostPublisherInfo> publisher)
+void HostInfo::SetPublisher(const std::shared_ptr<HostPublisherInfo> &publisher)
 {
 	_publisher = publisher;
 }
@@ -63,7 +73,7 @@ std::vector<std::shared_ptr<ApplicationInfo>> HostInfo::GetApplications() const 
 	return _applications;
 }
 
-void HostInfo::AddApplication(std::shared_ptr<ApplicationInfo> application)
+void HostInfo::AddApplication(const std::shared_ptr<ApplicationInfo> &application)
 {
 	_applications.push_back(application);
 }
@@ -80,10 +90,12 @@ void HostInfo::SetApplicationsRef(ov::String applications_ref)
 
 ov::String HostInfo::ToString() const
 {
-	ov::String result = ov::String::FormatString("{\"id\": %ld, \"name\": \"%s\", \"ip_address\": \"%s\", \"max_connection\": %d, \"provider\": %s, \"publisher\": %s, \"applications_ref\": \"%s\"",
-	                                             _id, _name.CStr(), _ip_address.CStr(), _max_connection, _provider->ToString().CStr(), _publisher->ToString().CStr(), _applications_ref.CStr());
+	ov::String result = ov::String::FormatString(
+		"{\"id\": %ld, \"name\": \"%s\", \"ip_address\": \"%s\", \"max_connection\": %d, \"provider\": %s, \"publisher\": %s, \"applications_ref\": \"%s\"",
+		_id, _name.CStr(), _ip_address.CStr(), _max_connection, _provider->ToString().CStr(), _publisher->ToString().CStr(), _applications_ref.CStr()
+	);
 
-	if(_applications.size() > 0)
+	if(_applications.empty() == false)
 	{
 		result.Append(", \"applications\": [");
 

@@ -26,6 +26,7 @@ public:
     std::shared_ptr<HostInfo> GetHostInfo() const noexcept;
 
 private:
+	std::shared_ptr<HostTlsInfo> ParseTls(pugi::xml_node tls_node);
     std::shared_ptr<HostProviderInfo> ParseProvider(pugi::xml_node provider_node);
     std::shared_ptr<HostPublisherInfo> ParsePublisher(pugi::xml_node publisher_node);
     void FillHostDefaultValues(std::shared_ptr<HostBaseInfo> host_base_info);

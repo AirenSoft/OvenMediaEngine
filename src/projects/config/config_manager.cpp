@@ -80,6 +80,18 @@ std::shared_ptr<HostInfo> ConfigManager::GetHost() const noexcept
 	return _server->GetHosts().front();
 }
 
+std::shared_ptr<HostTlsInfo> ConfigManager::GetHostTls() const noexcept
+{
+	const auto &host = GetHost();
+
+	if(host == nullptr)
+	{
+		return nullptr;
+	}
+
+	return host->GetTls();
+}
+
 std::shared_ptr<HostProviderInfo> ConfigManager::GetHostProvider() const noexcept
 {
 	const auto &host = GetHost();
