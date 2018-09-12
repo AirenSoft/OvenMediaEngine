@@ -22,11 +22,12 @@ enum class KeyType : int32_t
 class Certificate
 {
 public:
-	Certificate();
-	Certificate(X509 *x509);
+	Certificate() = default;
+	explicit Certificate(X509 *x509);
 	~Certificate();
 
 	bool Generate();
+	bool GenerateFromPem(ov::String cert_filename, ov::String private_key_filename);
 	bool GenerateFromPem(ov::String filename);
 	X509 *GetX509();
 	EVP_PKEY *GetPkey();
@@ -45,8 +46,9 @@ private:
 
 	bool GetDigestEVP(const ov::String &algorithm, const EVP_MD **mdp);
 
-	X509 *_X509;
-	EVP_PKEY *_pkey;
-	std::shared_ptr<ov::Data> _digest;
+	X509 *_X509 = nullptr;
+	EVP_PKEY *_pkey = nullptr;
+
+	std::shared_ptr<ov::Data> _digest = ov::Data::CreateData();
 	ov::String _digest_algorithm;
 };

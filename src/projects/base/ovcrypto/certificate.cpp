@@ -1,26 +1,65 @@
 #include "certificate.h"
 
-Certificate::Certificate()
-{
-	_X509 = nullptr;
-	_pkey = nullptr;
-	_digest = ov::Data::CreateData();
-}
-
 Certificate::Certificate(X509 *x509)
 {
 	_X509 = x509;
-	_pkey = nullptr;
 
 	// Increments the reference count
 	X509_up_ref(_X509);
-
-	_digest = ov::Data::CreateData();
 }
 
 Certificate::~Certificate()
 {
+	OV_SAFE_FUNC(_X509, nullptr, X509_free,);
+	OV_SAFE_FUNC(_pkey, nullptr, EVP_PKEY_free,);
+}
 
+bool Certificate::GenerateFromPem(ov::String cert_filename, ov::String private_key_filename)
+{
+	OV_ASSERT2(_X509 == nullptr);
+	OV_ASSERT2(_pkey == nullptr);
+
+	if((_X509 != nullptr) || (_pkey != nullptr))
+	{
+		return false;
+	}
+
+	// Read cert file
+	BIO *cert_bio = nullptr;
+	cert_bio = BIO_new(BIO_s_file());
+
+	if(BIO_read_filename(cert_bio, cert_filename.CStr()) <= 0)
+	{
+		return false;
+	}
+
+	_X509 = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
+	BIO_free(cert_bio);
+
+	if(_X509 == nullptr)
+	{
+		return false;
+	}
+
+	// Read private key file
+	BIO *pk_bio = nullptr;
+	pk_bio = BIO_new(BIO_s_file());
+
+	if(BIO_read_filename(pk_bio, private_key_filename.CStr()) <= 0)
+	{
+		return false;
+	}
+
+	_pkey = PEM_read_bio_PrivateKey(pk_bio, nullptr, nullptr, nullptr);
+
+	BIO_free(pk_bio);
+
+	if(_pkey == nullptr)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 bool Certificate::GenerateFromPem(ov::String filename)
@@ -30,7 +69,7 @@ bool Certificate::GenerateFromPem(ov::String filename)
 		return false;
 	}
 
-	BIO *cert_bio = NULL;
+	BIO *cert_bio = nullptr;
 	cert_bio = BIO_new(BIO_s_file());
 
 	if(BIO_read_filename(cert_bio, filename.CStr()) <= 0)
@@ -38,7 +77,7 @@ bool Certificate::GenerateFromPem(ov::String filename)
 		return false;
 	}
 
-	_X509 = PEM_read_bio_X509(cert_bio, NULL, NULL, NULL);
+	_X509 = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
 	if(_X509 == nullptr)
 	{
 		BIO_free(cert_bio);
