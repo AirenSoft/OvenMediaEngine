@@ -118,7 +118,7 @@ bool HttpResponse::Send(const void *data, size_t length)
 	else
 	{
 		// Send the plain data to the client
-		return _remote->Send(data) == length;
+		return _remote->Send(data, length) == length;
 	}
 }
 

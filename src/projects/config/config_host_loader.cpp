@@ -80,11 +80,8 @@ bool ConfigHostLoader::Parse(pugi::xml_node root_node)
 	ParseHostBase(root_node, _host_info);
 
 	// Parse Tls configurations
-	if(tls_node.empty() == false)
-	{
-		_host_info->SetTls(ParseTls(tls_node));
-		FillHostDefaultValues(_host_info->GetTls());
-	}
+	_host_info->SetTls(ParseTls(tls_node));
+	FillHostDefaultValues(_host_info->GetTls());
 
 	// Parse Providers
 	_host_info->SetProvider(ParseProvider(providers_node));
@@ -132,15 +129,18 @@ std::shared_ptr<HostTlsInfo> ConfigHostLoader::ParseTls(pugi::xml_node tls_node)
 {
 	auto tls_info = std::make_shared<HostTlsInfo>();
 
-	pugi::xml_node cert_path = tls_node.child("CertPath");
-	pugi::xml_node key_path = tls_node.child("KeyPath");
-
-	if((cert_path.empty() == false) && (key_path.empty() == false))
+	if(tls_node.empty() == false)
 	{
-		ParseHostBase(tls_node, tls_info);
+		pugi::xml_node cert_path = tls_node.child("CertPath");
+		pugi::xml_node key_path = tls_node.child("KeyPath");
 
-		tls_info->SetCertPath(ConfigUtility::StringFromNode(cert_path));
-		tls_info->SetKeyPath(ConfigUtility::StringFromNode(key_path));
+		if((cert_path.empty() == false) && (key_path.empty() == false))
+		{
+			ParseHostBase(tls_node, tls_info);
+
+			tls_info->SetCertPath(ConfigUtility::StringFromNode(cert_path));
+			tls_info->SetKeyPath(ConfigUtility::StringFromNode(key_path));
+		}
 	}
 
 	return tls_info;
