@@ -8,8 +8,9 @@
 //==============================================================================
 #pragma once
 
-#include "./web_socket_frame.h"
-#include "./web_socket_response.h"
+#include "web_socket_frame.h"
+#include "web_socket_request.h"
+#include "web_socket_response.h"
 
 #include <http_server/http_server.h>
 

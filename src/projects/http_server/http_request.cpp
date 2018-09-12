@@ -12,19 +12,8 @@
 
 #include <algorithm>
 
-HttpRequest::HttpRequest(const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<HttpRequestInterceptor> &interceptor)
-	: _parse_status(HttpStatusCode::PartialContent),
-
-	  _method(HttpMethod::Unknown),
-
-	  _is_header_found(false),
-	  _content_length(0L),
-
-	  _response(response),
-
-	  _request_body(nullptr),
-
-	  _interceptor(interceptor)
+HttpRequest::HttpRequest(const std::shared_ptr<HttpRequestInterceptor> &interceptor)
+	: _interceptor(interceptor)
 {
 }
 

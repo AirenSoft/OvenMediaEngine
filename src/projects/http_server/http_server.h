@@ -10,12 +10,10 @@
 
 #include "http_request.h"
 #include "http_response.h"
-#include "http_datastructure.h"
+#include "http_client.h"
+#include "interceptors/default/http_default_interceptor.h"
 
-#include "interceptors/http_request_interceptors.h"
-
-#include <base/ovsocket/ovsocket.h>
-#include <physical_port/physical_port_manager.h>
+#include <physical_port/physical_port.h>
 
 // 참고 자료
 // RFC7230 - Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing (https://tools.ietf.org/html/rfc7230)
@@ -39,6 +37,16 @@ public:
 	bool Disconnect(const ov::String &id);
 
 protected:
+	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpClient>>;
+
+protected:
+	// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨
+	ssize_t TryParseHeader(const std::shared_ptr<const ov::Data> &data, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
+
+	std::shared_ptr<HttpClient> FindClient(ov::Socket *remote);
+
+	void ProcessData(std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data);
+
 	//--------------------------------------------------------------------
 	// Implementation of PhysicalPortObserver
 	//--------------------------------------------------------------------
@@ -46,14 +54,12 @@ protected:
 	void OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 	void OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 
-	// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨
-	ssize_t TryParseHeader(const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
-
+protected:
 	// HttpServer와 연결된 physical port
-	std::shared_ptr<PhysicalPort> _physical_port;
+	std::shared_ptr<PhysicalPort> _physical_port = nullptr;
 
-	std::map<ov::Socket *, std::shared_ptr<HttpRequest>> _client_list;
+	ClientList _client_list;
 
 	std::vector<std::shared_ptr<HttpRequestInterceptor>> _interceptor_list;
-	std::shared_ptr<HttpRequestInterceptor> _default_interceptor;
+	std::shared_ptr<HttpRequestInterceptor> _default_interceptor = std::make_shared<HttpDefaultInterceptor>();
 };

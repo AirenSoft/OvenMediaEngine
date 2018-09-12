@@ -8,23 +8,16 @@
 //==============================================================================
 #include "http_server.h"
 #include "http_private.h"
-#include "http_request.h"
-#include "http_response.h"
 
-#include <base/ovlibrary/ovlibrary.h>
-
-HttpMethod operator |(HttpMethod lhs, HttpMethod rhs)
-{
-	return static_cast<HttpMethod> (static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs));
-}
+#include <physical_port/physical_port_manager.h>
 
 HttpServer::HttpServer()
-	: _default_interceptor(std::make_shared<HttpDefaultInterceptor>())
 {
 }
 
 HttpServer::~HttpServer()
 {
+	// PhysicalPort should be stopped before release HttpServer
 	OV_ASSERT2(_physical_port == nullptr);
 }
 
@@ -40,7 +33,7 @@ bool HttpServer::Start(const ov::SocketAddress &address)
 
 	if(_physical_port != nullptr)
 	{
-		_physical_port->AddObserver(this);
+		return _physical_port->AddObserver(this);
 	}
 
 	return _physical_port != nullptr;
@@ -60,113 +53,7 @@ bool HttpServer::Stop()
 	return true;
 }
 
-void HttpServer::OnConnected(ov::Socket *remote)
-{
-	logtd("Client is connected: %s", remote->ToString().CStr());
-
-	auto response = std::make_shared<HttpResponse>(dynamic_cast<ov::ClientSocket *>(remote));
-
-	// 기본 헤더 추가
-	response->SetHeader("Server", "OvenMediaEngine");
-	response->SetHeader("Content-Type", "text/html");
-
-	_client_list[remote] = std::make_shared<HttpRequest>(response, _default_interceptor);
-}
-
-void HttpServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
-{
-	auto item = _client_list.find(remote);
-
-	bool need_to_disconnect = false;
-
-	if(item != _client_list.end())
-	{
-		std::shared_ptr<HttpRequest> &request = item->second;
-		std::shared_ptr<HttpResponse> &response = request->GetHttpResponse();
-
-		if(request->ParseStatus() == HttpStatusCode::OK)
-		{
-			// 이미 파싱 된 상태라면, 바로 interceptor로 처리를 넘김
-			request->GetRequestInterceptor()->OnHttpData(request, response, data);
-
-			if(response->IsConnected() == false)
-			{
-				request->GetRequestInterceptor()->OnHttpClosed(request, response);
-			}
-		}
-		else if(request->ParseStatus() == HttpStatusCode::PartialContent)
-		{
-			// 헤더 파싱이 필요한 상태
-			ssize_t processed_length = TryParseHeader(address, data, request, response);
-
-			if(processed_length >= 0)
-			{
-				if(request->ParseStatus() == HttpStatusCode::OK)
-				{
-					// 파싱이 완료됨
-
-					// 해당 request를 처리할 interceptor를 찾음
-					for(auto &interceptor : _interceptor_list)
-					{
-						if(interceptor->IsInterceptorForRequest(request, response))
-						{
-							request->SetRequestInterceptor(interceptor);
-							break;
-						}
-					}
-
-					request->GetRequestInterceptor()->OnHttpPrepare(request, response);
-
-					if(response->IsConnected())
-					{
-						request->GetRequestInterceptor()->OnHttpData(request, response, data->Subdata(processed_length));
-					}
-
-					if(response->IsConnected() == false)
-					{
-						request->GetRequestInterceptor()->OnHttpClosed(request, response);
-					}
-				}
-				else if(request->ParseStatus() == HttpStatusCode::PartialContent)
-				{
-					// 데이터가 더 필요함. 나머지 데이터가 더 들어오길 대기
-				}
-			}
-			else
-			{
-				// 오류 발생
-				request->GetRequestInterceptor()->OnHttpError(request, response, HttpStatusCode::BadRequest);
-			}
-		}
-		else
-		{
-			// 이전에 parse 할 때 오류가 발생했다면 response한 뒤 close() 했으므로, 정상적인 상황이라면 여기에 진입하면 안됨
-			logte("Invalid parse status: %d", request->ParseStatus());
-			OV_ASSERT2(false);
-		}
-
-		if(response->IsConnected() == false)
-		{
-			// interceptor 안에서 연결이 해제되었음. client map에서 삭제
-			logti("Connection is closed: %s", remote->ToString().CStr());
-			_client_list.erase(item);
-		}
-	}
-	else
-	{
-		// OnConnected()에서 추가했으므로, 반드시 client list에 있어야 함
-		OV_ASSERT2(item != _client_list.end());
-	}
-}
-
-void HttpServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
-{
-	logtd("Client is disconnected: %s", remote->ToString().CStr());
-
-	_client_list.erase(remote);
-}
-
-ssize_t HttpServer::TryParseHeader(const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
+ssize_t HttpServer::TryParseHeader(const std::shared_ptr<const ov::Data> &data, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
 {
 	OV_ASSERT2(request->ParseStatus() == HttpStatusCode::PartialContent);
 
@@ -193,6 +80,129 @@ ssize_t HttpServer::TryParseHeader(const ov::SocketAddress &address, const std::
 	return processed_length;
 }
 
+std::shared_ptr<HttpClient> HttpServer::FindClient(ov::Socket *remote)
+{
+	auto item = _client_list.find(remote);
+
+	bool need_to_disconnect = false;
+
+	if(item != _client_list.end())
+	{
+		return item->second;
+	}
+
+	return nullptr;
+}
+
+void HttpServer::OnConnected(ov::Socket *remote)
+{
+	logtd("Client is connected: %s", remote->ToString().CStr());
+
+	_client_list[remote] = std::make_shared<HttpClient>(dynamic_cast<ov::ClientSocket *>(remote), _default_interceptor);
+}
+
+void HttpServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
+{
+	auto client = FindClient(remote);
+
+	ProcessData(client, data);
+}
+
+void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
+{
+	OV_ASSERT2(client != nullptr);
+
+	if(client != nullptr)
+	{
+		std::shared_ptr<HttpRequest> &request = client->GetRequest();
+		std::shared_ptr<HttpResponse> &response = client->GetResponse();
+
+		switch(request->ParseStatus())
+		{
+			case HttpStatusCode::OK:
+				// If the request is parsed, bypass to the interceptor
+				request->GetRequestInterceptor()->OnHttpData(request, response, data);
+
+				if(response->IsConnected() == false)
+				{
+					request->GetRequestInterceptor()->OnHttpClosed(request, response);
+				}
+
+				break;
+
+			case HttpStatusCode::PartialContent:
+			{
+				// Need to parse HTTP header
+				ssize_t processed_length = TryParseHeader(data, request, response);
+
+				if(processed_length >= 0)
+				{
+					if(request->ParseStatus() == HttpStatusCode::OK)
+					{
+						// Parsing is completed
+
+						// Find interceptor for the request
+						for(auto &interceptor : _interceptor_list)
+						{
+							if(interceptor->IsInterceptorForRequest(request, response))
+							{
+								request->SetRequestInterceptor(interceptor);
+								break;
+							}
+						}
+
+						request->GetRequestInterceptor()->OnHttpPrepare(request, response);
+
+						if(response->IsConnected())
+						{
+							request->GetRequestInterceptor()->OnHttpData(request, response, data->Subdata(processed_length));
+						}
+
+						if(response->IsConnected() == false)
+						{
+							request->GetRequestInterceptor()->OnHttpClosed(request, response);
+						}
+					}
+					else if(request->ParseStatus() == HttpStatusCode::PartialContent)
+					{
+						// Need more data
+					}
+				}
+				else
+				{
+					// An error occurred with the request
+					request->GetRequestInterceptor()->OnHttpError(request, response, HttpStatusCode::BadRequest);
+				}
+
+				break;
+			}
+
+			default:
+				// 이전에 parse 할 때 오류가 발생했다면 response한 뒤 close() 했으므로, 정상적인 상황이라면 여기에 진입하면 안됨
+				logte("Invalid parse status: %d", request->ParseStatus());
+				OV_ASSERT2(false);
+
+				break;
+		}
+
+		if(response->IsConnected() == false)
+		{
+			// interceptor 안에서 연결이 해제되었음. client map에서 삭제
+			auto remote = static_cast<ov::Socket *>(response->GetRemote());
+
+			logti("Connection is closed: %s", remote->ToString().CStr());
+			_client_list.erase(remote);
+		}
+	}
+}
+
+void HttpServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
+{
+	logtd("Client is disconnected: %s", remote->ToString().CStr());
+
+	_client_list.erase(remote);
+}
+
 bool HttpServer::AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor)
 {
 	// 기존에 등록된 processor가 있는지 확인
@@ -214,7 +224,7 @@ bool HttpServer::AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &i
 
 bool HttpServer::RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor)
 {
-	// 기존에 등록된 processor가 있는지 확인
+	// Find interceptor in the list
 	auto item = std::find_if(_interceptor_list.begin(), _interceptor_list.end(), [&](std::shared_ptr<HttpRequestInterceptor> const &value) -> bool
 	{
 		return value == interceptor;
@@ -222,10 +232,11 @@ bool HttpServer::RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor>
 
 	if(item == _interceptor_list.end())
 	{
-		// 기존에 등록되어 있음
+		// interceptor is not exists in the list
 		logtw("%p is not found.", interceptor.get());
 		return false;
 	}
+
 
 	_interceptor_list.erase(item);
 	return true;
@@ -240,6 +251,6 @@ std::shared_ptr<HttpDefaultInterceptor> HttpServer::GetDefaultInterceptor()
 
 bool HttpServer::Disconnect(const ov::String &id)
 {
-
+	return false;
 }
 

@@ -132,7 +132,7 @@ void WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 		return;
 	}
 
-	logtd("Data is received: %s", data->Dump().CStr());
+	logtd("Data is received\n%s", data->Dump().CStr());
 
 	if(item->second.frame == nullptr)
 	{

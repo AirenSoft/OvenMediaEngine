@@ -11,16 +11,12 @@
 #include "http_datastructure.h"
 #include "interceptors/http_request_interceptor.h"
 
-#include <memory>
-
-#include <base/ovlibrary/ovlibrary.h>
-
 class HttpRequest : public ov::EnableSharedFromThis<HttpRequest>
 {
 public:
 	friend class HttpRequestInterceptor;
 
-	HttpRequest(const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<HttpRequestInterceptor> &interceptor);
+	HttpRequest(const std::shared_ptr<HttpRequestInterceptor> &interceptor);
 	~HttpRequest() override = default;
 
 	/// HttpRequest 객체 초기화를 위해, client에서 보낸 데이터를 처리함
@@ -115,6 +111,11 @@ public:
 	ov::String ToString() const;
 
 protected:
+	void SetResponse(const std::shared_ptr<HttpResponse> &response)
+	{
+		_response = response;
+	}
+
 	// HttpRequestInterceptorInterface를 통해, 다른 interceptor에서 사용됨
 	const std::shared_ptr<ov::Data> &GetRequestBody()
 	{
@@ -133,26 +134,26 @@ protected:
 	void PostProcess();
 
 	// request 처리를 담당하는 객체
-	std::shared_ptr<HttpRequestInterceptor> _interceptor;
+	std::shared_ptr<HttpRequestInterceptor> _interceptor = nullptr;
 
-	HttpStatusCode _parse_status;
+	HttpStatusCode _parse_status = HttpStatusCode::PartialContent;
 
 	// request 관련 정보 저장
-	HttpMethod _method;
+	HttpMethod _method = HttpMethod::Unknown;
 	ov::String _request_target;
 	ov::String _http_version;
 
 	// request 헤더
-	bool _is_header_found;
+	bool _is_header_found = false;
 	// 헤더 영역을 추출해내기 위해 임시로 사용되는 문자열 버퍼
 	ov::String _request_string;
 	std::map<ov::String, ov::String, ov::CaseInsensitiveComparator> _request_header;
 
 	// 자주 사용하는 헤더 값은 미리 저장해놓음
-	ssize_t _content_length;
+	ssize_t _content_length = 0L;
 
 	// HTTP body
-	std::shared_ptr<ov::Data> _request_body;
+	std::shared_ptr<ov::Data> _request_body = nullptr;
 
-	std::shared_ptr<HttpResponse> _response;
+	std::shared_ptr<HttpResponse> _response = nullptr;
 };

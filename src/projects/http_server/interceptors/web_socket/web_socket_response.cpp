@@ -26,16 +26,18 @@ WebSocketResponse::~WebSocketResponse()
 
 ssize_t WebSocketResponse::Send(const std::shared_ptr<const ov::Data> &data, WebSocketFrameOpcode opcode)
 {
-	// fragmentation 해야 함
-
-	WebSocketFrameHeader header;
-
-	header.mask = false;
-
 	// RFC6455 - 5.2.  Base Framing Protocol
 	//
 	//
-	ssize_t length = data->GetLength();
+	WebSocketFrameHeader header {
+		.opcode = static_cast<uint8_t>(opcode),
+		.reserved = 0x00,
+		.fin = true,
+		.payload_length = 0,
+		.mask = false
+	};
+
+	size_t length = data->GetLength();
 
 	if(length < 0x7D)
 	{
@@ -58,44 +60,24 @@ ssize_t WebSocketResponse::Send(const std::shared_ptr<const ov::Data> &data, Web
 		header.payload_length = 127;
 	}
 
-	header.fin = true;
-	header.reserved = 0x00;
-	header.opcode = static_cast<uint8_t>(opcode);
-
-	_remote->Send(&header);
+	_response->Send(&header);
 
 	if(header.payload_length == 126)
 	{
 		auto payload_length = ov::HostToNetwork16(static_cast<uint16_t>(length));
 
-		_remote->Send(&payload_length);
+		_response->Send(&payload_length);
 	}
 	else if(header.payload_length == 127)
 	{
 		auto payload_length = ov::HostToNetwork64(static_cast<uint64_t>(length));
 
-		_remote->Send(&payload_length);
+		_response->Send(&payload_length);
 	}
 
-	ssize_t remained = data->GetLength();
-	auto data_to_send = data->GetDataAs<uint8_t>();
+	logtd("Trying to send data\n%s", data->Dump(32).CStr());
 
-	logtd("Trying to send data %ld bytes...", length);
-
-	while(remained > 0L)
-	{
-		ssize_t to_send = std::min(remained, 1024L * 1024L);
-		ssize_t sent = _remote->Send(data_to_send, to_send);
-
-		if(sent < 0L)
-		{
-			logtw("An error occurred while send data");
-			break;
-		}
-
-		remained -= sent;
-		data_to_send += sent;
-	}
+	return _response->Send(data) ? data->GetLength() : -1;
 }
 
 ssize_t WebSocketResponse::Send(const std::shared_ptr<const ov::Data> &data)

@@ -10,21 +10,13 @@
 
 #include "http_datastructure.h"
 
-#include <memory>
-
-#include <base/ovlibrary/ovlibrary.h>
-#include <base/ovsocket/ovsocket.h>
-
-class HttpServer;
-class HttpRequest;
-
 class HttpResponse : public ov::EnableSharedFromThis<HttpResponse>
 {
 public:
-	friend class HttpServer;
+	friend class HttpClient;
 
 	HttpResponse(ov::ClientSocket *remote);
-	~HttpResponse();
+	~HttpResponse() = default;
 
 	HttpStatusCode GetStatusCode() const
 	{
@@ -48,11 +40,18 @@ public:
 	const ov::String &GetHeader(const ov::String &key);
 
 	// message body
-	// TODO: 지금 구조에서는 content-length가 확정된 데이터 밖에 보내지 못함. 나중에 필요할 경우, stream 형태로 바꿔야 함
-	// (예: 끝을 알 수 없는 데이터 보내기)
 	bool AppendData(const std::shared_ptr<const ov::Data> &data);
 	bool AppendString(const ov::String &string);
 	bool AppendFile(const ov::String &filename);
+
+	template<typename T>
+	bool Send(const T *data)
+	{
+		return Send(data, sizeof(T));
+	}
+
+	bool Send(const void *data, size_t length);
+	bool Send(const std::shared_ptr<const ov::Data> &data);
 
 	bool Response();
 
@@ -72,18 +71,37 @@ public:
 	}
 
 protected:
+	void SetTls(const std::shared_ptr<ov::Tls> &tls)
+	{
+		_tls = tls;
+	}
+
+	std::shared_ptr<ov::Tls> GetTls()
+	{
+		return _tls;
+	}
+
+	std::shared_ptr<const ov::Tls> GetTls() const
+	{
+		return _tls;
+	}
+
 	bool SendHeaderIfNeeded();
 	bool SendResponse();
 
-	HttpStatusCode _status_code;
-	ov::String _reason;
+	ov::ClientSocket *_remote = nullptr;
 
-	bool _is_header_sent;
+	std::shared_ptr<ov::Tls> _tls = nullptr;
+	std::shared_ptr<const ov::Data> _tls_packet_buffer = nullptr;
+
+	HttpStatusCode _status_code = HttpStatusCode::OK;
+	ov::String _reason = StringFromHttpStatusCode(HttpStatusCode::OK);
+
+	bool _is_header_sent = false;
 
 	std::map<ov::String, ov::String> _response_header;
-	ov::ClientSocket *_remote;
 
 	std::vector<std::shared_ptr<const ov::Data>> _response_data_list;
 
-	ov::String _default_value;
+	ov::String _default_value = "";
 };

@@ -1,3 +1,5 @@
+#include <utility>
+
 //==============================================================================
 //
 //  OvenMediaEngine
@@ -14,20 +16,10 @@
 
 #include <base/ovsocket/ovsocket.h>
 
-
 HttpResponse::HttpResponse(ov::ClientSocket *remote)
-	: _status_code(HttpStatusCode::OK),
-	  _reason(StringFromHttpStatusCode(HttpStatusCode::OK)),
-
-	  _is_header_sent(false),
-
-	  _remote(remote)
+	: _remote(remote)
 {
 	OV_ASSERT2(_remote != nullptr);
-}
-
-HttpResponse::~HttpResponse()
-{
 }
 
 bool HttpResponse::Response()
@@ -85,6 +77,56 @@ const ov::String &HttpResponse::GetHeader(const ov::String &key)
 	return item->second;
 }
 
+bool HttpResponse::Send(const void *data, size_t length)
+{
+	OV_ASSERT2(_remote != nullptr);
+
+	if(_remote == nullptr)
+	{
+		return false;
+	}
+
+	if(_tls != nullptr)
+	{
+		size_t written;
+
+		// Data will be sent to the client
+
+		// * Data flow:
+		//   1. ov::Tls::Write() ->
+		//   2. HttpClient::TlsWrite() ->
+		//   3. ClientSocket::Send() // using HttpResponse::_remote
+		int result = _tls->Write(data, length, &written);
+
+		switch(result)
+		{
+			case SSL_ERROR_NONE:
+				// data was sent in HttpClient::TlsWrite();
+				break;
+
+			case SSL_ERROR_WANT_WRITE:
+				// Need more data to encrypt
+				break;
+
+			default:
+				logte("An error occurred while accept client: %s", _remote->ToString().CStr());
+				return false;
+		}
+
+		return true;
+	}
+	else
+	{
+		// Send the plain data to the client
+		return _remote->Send(data) == length;
+	}
+}
+
+bool HttpResponse::Send(const std::shared_ptr<const ov::Data> &data)
+{
+	return Send(data->GetData(), data->GetLength());
+}
+
 bool HttpResponse::SendHeaderIfNeeded()
 {
 	if(_is_header_sent)
@@ -100,26 +142,33 @@ bool HttpResponse::SendHeaderIfNeeded()
 
 	// _response_header["Content-Length"] = ov::Converter::ToString(_response_data->GetCount());
 
-	ov::String response_message;
+	std::shared_ptr<ov::Data> response = ov::Data::CreateData();
+	ov::ByteStream stream(response);
 
 	// RFC7230 - 3.1.2.  Status Line
 	// status-line = HTTP-version SP status-code SP reason-phrase CRLF
 	// TODO: HTTP version을 request에서 받은 것으로 대체
-	response_message.Format("HTTP/1.1 %d %s\r\n", _status_code, _reason.CStr());
+	stream.Append(ov::String::FormatString("HTTP/1.1 %d %s\r\n", _status_code, _reason.CStr()).ToData(false));
 
 	// RFC7230 - 3.2.  Header Fields
-	std::for_each(_response_header.begin(), _response_header.end(), [&response_message](const auto &pair) -> void
+	std::for_each(_response_header.begin(), _response_header.end(), [&stream](const auto &pair) -> void
 	{
-		response_message.AppendFormat("%s: %s\r\n", pair.first.CStr(), pair.second.CStr());
+		stream.Append(pair.first.ToData(false));
+		stream.Append(": ", 2);
+		stream.Append(pair.second.ToData(false));
+		stream.Append("\r\n", 2);
 	});
 
-	response_message.AppendFormat("\r\n");
+	stream.Append("\r\n", 2);
 
-	_remote->Send(response_message);
+	if(Send(response))
+	{
+		_is_header_sent = true;
 
-	_is_header_sent = true;
+		return true;
+	}
 
-	return true;
+	return false;
 }
 
 bool HttpResponse::SendResponse()
@@ -128,7 +177,7 @@ bool HttpResponse::SendResponse()
 
 	for(const auto &data : _response_data_list)
 	{
-		sent &= (_remote->Send(data) == data->GetLength());
+		sent &= Send(data);
 	}
 
 	_response_data_list.clear();

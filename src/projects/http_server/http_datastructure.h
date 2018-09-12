@@ -12,6 +12,8 @@
 #include <memory>
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <base/ovcrypto/ovcrypto.h>
+#include <base/ovsocket/ovsocket.h>
 
 // RFC7231 - 4. Request Methods
 // +---------+-------------------------------------------------+-------+
@@ -47,7 +49,11 @@ enum class HttpMethod : uint16_t
 	Options = 0x0040,
 	Trace = 0x0080
 };
-HttpMethod operator |(HttpMethod lhs, HttpMethod rhs);
+
+inline HttpMethod operator |(HttpMethod lhs, HttpMethod rhs)
+{
+	return static_cast<HttpMethod> (static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs));
+}
 
 // RFC7231 - 6. Response Status Codes
 // +------+-------------------------------+--------------------------+
@@ -198,5 +204,7 @@ class HttpServer;
 class HttpRequest;
 class HttpResponse;
 
-typedef std::function<void(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)> HttpRequestHandler;
-typedef std::function<void(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)> HttpRequestErrorHandler;
+using HttpRequestHandler = std::function<void(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)>;
+using HttpRequestErrorHandler = std::function<void(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)>;
+
+using HttpResponseWriteHandler = std::function<bool(const std::shared_ptr<ov::Data> &data)>;
