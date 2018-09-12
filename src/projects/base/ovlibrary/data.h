@@ -59,7 +59,7 @@ namespace ov
 		}
 
 		/// capacity 만큼 미리 메모리를 할당하며 instance 생성
-		static std::shared_ptr<Data> CreateData(ssize_t capacity)
+		static std::shared_ptr<Data> CreateData(size_t capacity)
 		{
 			auto instance = CreateData();
 
@@ -421,7 +421,7 @@ namespace ov
 
 			if((_length < offset) || (offset < 0) || ((offset + length) > _length))
 			{
-				OV_ASSERT(false, "Invalid offset or length: offset: %jd, length: %zd (current data: %zd bytes)", (intmax_t)offset, length, _length);
+				OV_ASSERT(false, "Invalid offset or length: offset: %jd, length: %zu (current data: %zu bytes)", (intmax_t)offset, length, _length);
 
 				return nullptr;
 			}

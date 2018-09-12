@@ -17,8 +17,12 @@
 
 namespace ov
 {
-	String::String(const char *string, ssize_t length)
-		: String()
+	String::String(const char *string)
+	{
+		Append(string);
+	}
+
+	String::String(const char *string, size_t length)
 	{
 		Append(string, length);
 	}
@@ -137,7 +141,17 @@ namespace ov
 		return true;
 	}
 
-	bool String::Prepend(const char *string, ssize_t length)
+	bool String::Prepend(const char *string)
+	{
+		if(string == nullptr)
+		{
+			return false;
+		}
+
+		return Prepend(string, ::strlen(string));
+	}
+
+	bool String::Prepend(const char *string, size_t length)
 	{
 		if(string == nullptr)
 		{
@@ -148,16 +162,6 @@ namespace ov
 		{
 			// 문자열을 추가하지 않음
 			return true;
-		}
-		else if(length == -1)
-		{
-			// 길이를 직접 구함
-			length = ::strlen(string);
-		}
-		else if(length < 0)
-		{
-			// 잘못된 파라미터
-			return false;
 		}
 
 		// 기존 데이터 + 새 데이터가 들어갈 만한 공간을 확보한 뒤
@@ -192,7 +196,17 @@ namespace ov
 		return true;
 	}
 
-	bool String::Append(const char *string, ssize_t length)
+	bool String::Append(const char *string)
+	{
+		if(string == nullptr)
+		{
+			return false;
+		}
+
+		return Append(string, ::strlen(string));
+	}
+
+	bool String::Append(const char *string, size_t length)
 	{
 		if(string == nullptr)
 		{
@@ -203,16 +217,6 @@ namespace ov
 		{
 			// 문자열을 추가하지 않음
 			return true;
-		}
-		else if(length == -1)
-		{
-			// 길이를 직접 구함
-			length = ::strlen(string);
-		}
-		else if(length < 0)
-		{
-			// 잘못된 파라미터
-			return false;
 		}
 
 		// 기존 데이터 + 새 데이터가 들어갈 만한 공간을 확보한 뒤
@@ -237,10 +241,10 @@ namespace ov
 		return true;
 	}
 
-	ssize_t String::AppendFormat(const char *format, ...)
+	size_t String::AppendFormat(const char *format, ...)
 	{
 		va_list list;
-		ssize_t appended_length;
+		size_t appended_length;
 
 		va_start(list, format);
 
@@ -251,14 +255,20 @@ namespace ov
 		return appended_length;
 	}
 
-	ssize_t String::AppendVFormat(const char *format, va_list list)
+	size_t String::AppendVFormat(const char *format, va_list list)
 	{
-		ssize_t length;
 		va_list list_for_count;
 
 		va_copy(list_for_count, list);
 
-		length = ::vsnprintf(nullptr, 0, format, &(list_for_count[0]));
+		int result = ::vsnprintf(nullptr, 0, format, &(list_for_count[0]));
+
+		if(result < 0)
+		{
+			return 0L;
+		}
+
+		size_t length = static_cast<size_t>(result);
 
 		if(Alloc(_length + length) == false)
 		{
@@ -267,7 +277,7 @@ namespace ov
 
 		if(_buffer != nullptr)
 		{
-			::vsnprintf(_buffer + _length, static_cast<size_t>(length + 1), format, list);
+			::vsnprintf(_buffer + _length, length + 1, format, list);
 			_length += length;
 		}
 
@@ -279,7 +289,7 @@ namespace ov
 		return length;
 	}
 
-	ssize_t String::Format(const char *format, ...)
+	size_t String::Format(const char *format, ...)
 	{
 		va_list list;
 
@@ -292,31 +302,32 @@ namespace ov
 		return _length;
 	}
 
-	ssize_t String::VFormat(const char *format, va_list list)
+	size_t String::VFormat(const char *format, va_list list)
 	{
-		ssize_t length;
 		va_list list_for_count;
 
 		// vsnprintf로 길이를 얻어오면 list가 가장 마지막 파라미터를 가리키게 되므로
 		// 현재 상태를 미리 백업함
 		va_copy(list_for_count, list);
 
-		length = ::vsnprintf(nullptr, 0, format, list);
+		int result = ::vsnprintf(nullptr, 0, format, list);
 
-		if(length >= 0L)
+		if(result <= 0L)
 		{
-			if(Alloc(length))
-			{
-				va_copy(list, &(list_for_count[0]));
-
-				::vsnprintf(_buffer, static_cast<size_t>(length + 1), format, list);
-				_length = static_cast<size_t>(length);
-			}
-
-			return _length;
+			return 0L;
 		}
 
-		return -1L;
+		size_t length = static_cast<size_t>(result);
+
+		if(Alloc(length))
+		{
+			va_copy(list, &(list_for_count[0]));
+
+			::vsnprintf(_buffer, length + 1, format, list);
+			_length = length;
+		}
+
+		return _length;
 	}
 
 	String String::FormatString(const char *format, ...)
@@ -333,9 +344,9 @@ namespace ov
 		return buffer;
 	}
 
-	ssize_t String::IndexOf(char c, ssize_t start_position) const noexcept
+	off_t String::IndexOf(char c, off_t start_position) const noexcept
 	{
-		ssize_t index;
+		off_t index;
 
 		for(index = start_position; index < _length; index++)
 		{
@@ -348,9 +359,9 @@ namespace ov
 		return -1L;
 	}
 
-	ssize_t String::IndexOf(const char *str, ssize_t start_position) const noexcept
+	off_t String::IndexOf(const char *str, off_t start_position) const noexcept
 	{
-		if(start_position >= _length)
+		if(start_position >= static_cast<off_t>(_length))
 		{
 			return -1L;
 		}
@@ -365,12 +376,12 @@ namespace ov
 		return p - _buffer;
 	}
 
-	ssize_t String::IndexOfRev(char c, ssize_t start_position) const noexcept
+	off_t String::IndexOfRev(char c, off_t start_position) const noexcept
 	{
-		ssize_t index;
-		ssize_t start;
+		off_t index;
+		off_t start;
 
-		if((_length == 0L) || (start_position < -1L) || (start_position >= _length))
+		if((_length == 0L) || (start_position < -1L) || (start_position >= static_cast<off_t>(_length)))
 		{
 			return -1L;
 		}
@@ -381,7 +392,7 @@ namespace ov
 		}
 		else
 		{
-			start = std::min(_length - 1L, start_position);
+			start = std::min(static_cast<off_t>(_length) - 1L, start_position);
 		}
 
 		for(index = start; index >= 0L; index--)
@@ -395,15 +406,15 @@ namespace ov
 		return -1L;
 	}
 
-	void String::PadLeft(ssize_t length, char pad)
+	void String::PadLeft(size_t length, char pad)
 	{
-		ssize_t remained = length - GetLength();
+		size_t remained = length - GetLength();
 
 		if(remained > 0L)
 		{
 			String padding;
 
-			for(ssize_t index = 0; index < remained; index++)
+			for(size_t index = 0; index < remained; index++)
 			{
 				padding.Append(pad);
 			}
@@ -412,26 +423,28 @@ namespace ov
 		}
 	}
 
-	void String::PadRight(ssize_t length, char pad)
+	void String::PadRight(size_t length, char pad)
 	{
-		ssize_t remained = length - GetLength();
-
-		if(remained > 0L)
+		if(length <= GetLength())
 		{
-			String padding;
-
-			for(ssize_t index = 0L; index < remained; index++)
-			{
-				padding.Append(pad);
-			}
-
-			Append(padding);
+			return;
 		}
+
+		size_t remained = length - GetLength();
+
+		String padding;
+
+		for(size_t index = 0L; index < remained; index++)
+		{
+			padding.Append(pad);
+		}
+
+		Append(padding);
 	}
 
 	void String::MakeUpper()
 	{
-		for(ssize_t index = 0L; index < _length; index++)
+		for(size_t index = 0L; index < _length; index++)
 		{
 			if(isalpha(_buffer[index]) != 0)
 			{
@@ -442,7 +455,7 @@ namespace ov
 
 	void String::MakeLower()
 	{
-		ssize_t index;
+		size_t index;
 
 		for(index = 0L; index < _length; index++)
 		{
@@ -462,14 +475,14 @@ namespace ov
 			return "";
 		}
 
-		ssize_t pos = 0L;
-		ssize_t old_len = ::strlen(old_token);
-		ssize_t new_len = ::strlen(new_token);
+		off_t pos = 0L;
+		size_t old_len = ::strlen(old_token);
+		size_t new_len = ::strlen(new_token);
 		const char *target_buffer = _buffer;
 
 		while(true)
 		{
-			ssize_t new_pos = IndexOf(old_token, pos);
+			off_t new_pos = IndexOf(old_token, pos);
 
 			if(new_pos == -1)
 			{
@@ -477,7 +490,9 @@ namespace ov
 				break;
 			}
 
-			target.Append(target_buffer, new_pos - pos);
+			OV_ASSERT2(new_pos >= pos);
+
+			target.Append(target_buffer, static_cast<size_t>(new_pos - pos));
 			target.Append(new_token, new_len);
 
 			target_buffer = _buffer + new_pos + old_len;
@@ -487,14 +502,19 @@ namespace ov
 		return target;
 	}
 
-	String String::Substring(ssize_t start, ssize_t length) const
+	String String::Substring(off_t start) const
 	{
-		if(length == -1L)
+		if((start < 0L) || (_length < start))
 		{
-			length = _length - start;
+			return "";
 		}
 
-		if(start < 0L)
+		return Substring(start, _length - start);
+	}
+
+	String String::Substring(off_t start, size_t length) const
+	{
+		if((start < 0L) || (_length < start))
 		{
 			return "";
 		}
@@ -510,8 +530,13 @@ namespace ov
 
 	String String::Trim() const
 	{
-		ssize_t left_index;
-		ssize_t right_index;
+		size_t left_index;
+		size_t right_index;
+
+		if(_length == 0)
+		{
+			return "";
+		}
 
 		// 왼쪽 공백 위치 찾음
 		for(left_index = 0L; left_index < _length; left_index++)
@@ -554,11 +579,13 @@ namespace ov
 			return *this;
 		}
 
+		OV_ASSERT2(right_index >= left_index);
+
 		// left_index는 공백이 아닌 문자 지점이므로
 		return Substring(left_index, right_index - left_index + 1L);
 	}
 
-	String String::PadLeftString(ssize_t length, char pad) const
+	String String::PadLeftString(size_t length, char pad) const
 	{
 		String padding = *this;
 
@@ -567,7 +594,7 @@ namespace ov
 		return padding;
 	}
 
-	String String::PadRightString(ssize_t length, char pad) const
+	String String::PadRightString(size_t length, char pad) const
 	{
 		String padding = *this;
 
@@ -603,8 +630,8 @@ namespace ov
 	{
 		std::vector<String> list;
 		const char *last;
-		ssize_t token_length;
-		ssize_t seperator_length;
+		size_t token_length;
+		size_t seperator_length;
 		char token[1024];
 
 		if(separator == nullptr)
@@ -692,26 +719,26 @@ namespace ov
 		return (Right(suffix.GetLength()) == suffix);
 	}
 
-	String String::Left(ssize_t length) const
+	String String::Left(size_t length) const
 	{
-		length = (length < _length) ? length : _length;
+		length = std::min(length, _length);
 
 		return String(_buffer, length);
 	}
 
-	String String::Right(ssize_t length) const
+	String String::Right(size_t length) const
 	{
-		ssize_t start_position;
+		size_t start_position;
 
-		length = (length < _length) ? length : _length;
+		length = std::min(length, _length);
 		start_position = _length - length;
 
 		return String(_buffer + start_position, length);
 	}
 
-	char String::Get(ssize_t index) const
+	char String::Get(off_t index) const
 	{
-		if((index < 0) || (index >= _length))
+		if((index < 0) || (index >= static_cast<off_t>(_length)))
 		{
 			return 0;
 		}
@@ -719,7 +746,7 @@ namespace ov
 		return _buffer[index];
 	}
 
-	char String::operator [](ssize_t index) const
+	char String::operator [](off_t index) const
 	{
 		return Get(index);
 	}
@@ -833,22 +860,22 @@ namespace ov
 		return false;
 	}
 
-	ssize_t String::GetCapacity() const noexcept
+	size_t String::GetCapacity() const noexcept
 	{
 		return _capacity;
 	}
 
-	bool String::SetCapacity(ssize_t length) noexcept
+	bool String::SetCapacity(size_t length) noexcept
 	{
 		return Alloc(length, true);
 	}
 
-	ssize_t String::GetLength() const noexcept
+	size_t String::GetLength() const noexcept
 	{
 		return _length;
 	}
 
-	bool String::SetLength(ssize_t length) noexcept
+	bool String::SetLength(size_t length) noexcept
 	{
 		if(length < _length)
 		{
@@ -890,7 +917,7 @@ namespace ov
 		return ov::Data::CreateData(_buffer, _length + (include_null_char ? 1 : 0), false);
 	}
 
-	bool String::Alloc(ssize_t length, bool alloc_exactly) noexcept
+	bool String::Alloc(size_t length, bool alloc_exactly) noexcept
 	{
 		if(
 			// 기존에 할당된 버퍼가 충분 하지 않거나
@@ -901,7 +928,7 @@ namespace ov
 			(alloc_exactly && (_capacity != length))
 			)
 		{
-			ssize_t allocated_length = length;
+			size_t allocated_length = length;
 
 			if(alloc_exactly == false)
 			{
@@ -941,7 +968,7 @@ namespace ov
 			}
 
 			// 기존 버퍼 해제
-			ssize_t old_length = _length;
+			size_t old_length = _length;
 
 			Release();
 
