@@ -51,7 +51,7 @@ bool ConfigHostLoader::Parse(pugi::xml_node root_node)
 		return false;
 	}
 
-	pugi::xml_node tls_node = root_node.child("Tls");
+	pugi::xml_node tls_node = root_node.child("TLS");
 	pugi::xml_node providers_node = root_node.child("Provider");
 	if(providers_node.empty())
 	{

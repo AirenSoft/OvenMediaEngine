@@ -7,6 +7,10 @@
 			<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
 			<IPAddress>127.0.0.1</IPAddress>
 			<MaxConnection>0</MaxConnection>
+			<TLS>
+				<CertPath><!-- certification file path for TLS servers --></CertPath>
+				<KeyPath><!-- private key file path for TLS servers --></KeyPath>
+			</TLS>
 			<Provider>
 				<!-- port[/protocol] -->
 				<!-- default protocol: tcp -->
