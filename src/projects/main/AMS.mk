@@ -24,7 +24,6 @@ LOCAL_STATIC_LIBRARIES := \
 	sqlite
 
 LOCAL_PREBUILT_LIBRARIES := \
-	librtmp.a \
 	libpugixml.a
 
 LOCAL_LDFLAGS := \

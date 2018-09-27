@@ -1,0 +1,38 @@
+//==============================================================================
+//
+//  RtmpProvider
+//
+//  Created by Jaejong Bong
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
+
+#pragma once
+
+#include "rtmp_define.h"
+
+
+//===============================================================================================
+// RtmpHandshake
+//===============================================================================================
+class RtmpHandshake
+{
+public:
+	RtmpHandshake() = default;
+	~RtmpHandshake() = default;
+
+public:
+	static	bool	MakeS1(uint8_t *sig);
+	static	bool	MakeC1(uint8_t *sig);
+	
+	static	bool	MakeS2(uint8_t *client_sig, uint8_t *sig);
+    static	bool	MakeC2(uint8_t *client_sig, uint8_t *sig);
+
+private:
+	static	int		GetDigestOffset1(uint8_t *hadshake);
+	static	int		GetDigestOffset2(uint8_t *hadshake);
+	static	void	HMACsha256(uint8_t *message, int message_size, uint8_t *key, int key_size, uint8_t *digest);
+	static	void	CalculateDigest(int digest_pos, uint8_t *message, uint8_t *key, int key_size, uint8_t *digest);
+	static	bool	VerifyDigest(int digest_pos, uint8_t *message, uint8_t *key, int key_size);
+};
+

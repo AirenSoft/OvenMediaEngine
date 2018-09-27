@@ -373,7 +373,17 @@ void MediaRouteApplication::MainTask()
 
 		// logtd("indicator : %u", indicator->_stream_id);
 
-		auto stream = _streams[indicator->_stream_id];
+		// TODO: 동기화 처리가 필요 하지만 자주 호출 부분이라 성능 적으로 확인 필요
+		std::unique_lock<std::mutex> lock(_mutex);
+        	auto it = _streams.find(indicator->_stream_id);
+        	auto stream = (it != _streams.end()) ? it->second : nullptr;
+		lock.unlock();
+
+		if(stream == nullptr)
+		{
+			logte("stream is nullptr - strem_id(%u)", indicator->_stream_id);
+			continue;
+		}
 
 		auto cur_buf = stream->Pop();
 

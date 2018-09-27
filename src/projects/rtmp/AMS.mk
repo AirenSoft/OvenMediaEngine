@@ -7,7 +7,6 @@ LOCAL_STATIC_LIBRARIES := \
 	provider 
 	
 LOCAL_PREBUILT_LIBRARIES := \
-	librtmp.a \
 
 LOCAL_LDFLAGS := \
     -lpthread \
@@ -16,9 +15,8 @@ LOCAL_LDFLAGS := \
  
 LOCAL_TARGET := rtmpprovider
 
-LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES) $(call get_sub_source_list,proto) 
-LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES) $(call get_sub_source_list,proto) 
-
+LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES) $(call get_sub_source_list,chunk)
+LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES) $(call get_sub_source_list,chunk)
 
 include $(BUILD_STATIC_LIBRARY)
 # include $(BUILD_EXECUTABLE)
