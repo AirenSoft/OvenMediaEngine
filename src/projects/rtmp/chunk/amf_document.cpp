@@ -393,7 +393,7 @@ AmfProperty::AmfProperty(const char *  pString) // 스트링은 내부에서 메
 //====================================================================================================
 // AmfProperty - AmfProperty
 //====================================================================================================
-AmfProperty::AmfProperty(AmfArray *pArray) // array는 파라미터 포인터를 그대로 저장
+AmfProperty::AmfProperty(AmfArray *pArray) // array 는 파라미터 포인터를 그대로 저장
 {
 	// 초기화
 	_Initialize();
@@ -409,7 +409,7 @@ AmfProperty::AmfProperty(AmfArray *pArray) // array는 파라미터 포인터를
 //====================================================================================================
 // AmfProperty - AmfProperty
 //====================================================================================================
-AmfProperty::AmfProperty(AmfObject *pObject) // object는 파라미터 포인터를 그대로 저장
+AmfProperty::AmfProperty(AmfObject *pObject) // object 는 파라미터 포인터를 그대로 저장
 {
 	// 초기화
 	_Initialize();
@@ -593,6 +593,8 @@ int AmfProperty::Decode(void * data, int DataLen) // ret=0이면 실패
 		if( !size ) { delete _object; _object = nullptr; }
 		_amf_data_type = AMF_OBJECT;
 		break;
+	default:
+		break;
 	}
 	
 	return size;
@@ -676,7 +678,7 @@ int AmfObjectArray::Encode(void * data)
 	// 시작 marker 기록
 	pt_out += WriteInt8(pt_out, start_marker);
 
-	// array이면 카운트값 기록
+	// array 이면 카운트값 기록
 	if( _amf_data_type == AMF_ARRAY ) 
 	{ 
 		pt_out += WriteInt32(pt_out, 0); /* 0=infinite */
@@ -691,7 +693,7 @@ int AmfObjectArray::Encode(void * data)
 		pt_pair = _amf_property_pairs[i];
 		if( !pt_pair ) { continue; }
 
-		// property가 invalid인지 체크
+		// property 가 invalid 인지 체크
 		//if( pt_pair->_property->GetType() == AMF_NULL ) { continue; }
 
 		// 문자열 기록
@@ -726,7 +728,7 @@ int AmfObjectArray::Decode(void * data, int DataLen)
 	if( ReadInt8(pt_in) != start_marker ) { return 0; }
 	pt_in++;
 
-	// array일 경우 count값 읽어들임
+	// array 일 경우 count 값 읽어들임
 	if( _amf_data_type == AMF_ARRAY ) 
 	{ 
 		pt_in += sizeof(uint32_t); 
@@ -738,7 +740,7 @@ int AmfObjectArray::Decode(void * data, int DataLen)
 		tPROPERTY_PAIR	*pt_pair = nullptr;
 		int				len;
 
-		// 끝 marker인가?
+		// 끝 marker 인가?
 		if( ReadInt8(pt_in) == end_marker ) 
 		{ 
 			pt_in++; 
@@ -778,7 +780,7 @@ int AmfObjectArray::Decode(void * data, int DataLen)
 			return 0;
 		}
 
-		// list에 추가
+		// list 에 추가
 		_amf_property_pairs.push_back(pt_pair); 
 		pt_pair = nullptr;
 	}

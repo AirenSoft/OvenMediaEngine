@@ -9,9 +9,6 @@
 #include "rtmp_import_chunk.h"
 #include "../rtmp_chunk_log_define.h"
 
-#define DEFAULT_IMPORT_BUFFER_SIZE	(1024*1024)
-
-
 //====================================================================================================
 // RtmpImportChunk
 //====================================================================================================
@@ -113,7 +110,7 @@ std::shared_ptr<RtmpMuxMessageHeader> RtmpImportChunk::GetMessageHeader(std::sha
 }
 
 //====================================================================================================
-// ChunkMessag추가
+// ChunkMessage 추가
 //====================================================================================================
 bool RtmpImportChunk::AppendChunk(std::shared_ptr<ImportStream> &stream, uint8_t *chunk, int header_size, int data_size)
 {
@@ -158,7 +155,7 @@ int  RtmpImportChunk::CompleteChunkMessage(std::shared_ptr<ImportStream> &stream
 	//전체 크기 확인 
 	chunk_data_raw_size = GetChunkDataRawSize(chunk_size, message_header->chunk_stream_id, message_header->body_size, extend_type);
 
-	// Chunk Stream이 완성되지 않았다면 스킵
+	// Chunk Stream 이 완성되지 않았다면 스킵
 	if(stream->data_size < chunk_header_size + chunk_data_raw_size)
 	{
 		RTMP_CHUNK_ERROR_LOG(("Buffer(%d) RawData(%d)", stream->data_size, chunk_header_size + chunk_data_raw_size));
@@ -177,7 +174,7 @@ int  RtmpImportChunk::CompleteChunkMessage(std::shared_ptr<ImportStream> &stream
 	// 메모리 할당
 	auto message = std::make_shared<ImportMessage>(message_header);
 
-	//Chunk Mesage 할당 
+	//Chunk Message 할당
 	if(GetChunkData(chunk_size, stream->buffer->data() + chunk_header_size, chunk_data_raw_size, message_header->body_size, message->body->data(), extend_type) == 0)
 	{	
 		RTMP_CHUNK_ERROR_LOG(("GetChunkData - Header(%d) RawData(%d)", chunk_header_size, chunk_data_raw_size));
@@ -237,7 +234,7 @@ int RtmpImportChunk::ImportStreamData(uint8_t *data, int data_size, bool & messa
 		}
 	}
 	
-	// ExtendHeader설정 
+	// ExtendHeader 설정
 	stream->extend_type = extend_type; 
 	
 	// Message Header 얻기
@@ -251,7 +248,7 @@ int RtmpImportChunk::ImportStreamData(uint8_t *data, int data_size, bool & messa
 		return -1;
 	}
 	
-	// Chunk Size가 남은 경우 
+	// Chunk Size 가 남은 경우
 	if(_chunk_size < rest_chunk_size)
 	{
 		//Data 를 아직 다 받지 못했다면 스킵

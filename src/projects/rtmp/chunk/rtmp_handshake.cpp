@@ -8,7 +8,7 @@
 //==============================================================================
 
 #include "rtmp_handshake.h"
-
+#include <random>
 #ifdef WIN32
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
@@ -45,6 +45,7 @@ bool RtmpHandshake::MakeC1(uint8_t * sig)
 {
 	int		i;
 	int		offset;
+	std::mt19937 random_number;
 
 	// 파라미터 체크
 	if( !sig ) 
@@ -58,7 +59,7 @@ bool RtmpHandshake::MakeC1(uint8_t * sig)
 
 	for(i=8; i<RTMP_HANDSHAKE_PACKET_SIZE; i++) 
 	{ 
-		sig[i] = (uint8_t)(rand() % 256); 
+		sig[i] = (uint8_t)(random_number() % 256);
 	}
 
 	// digest offset 찾기
@@ -77,6 +78,7 @@ bool RtmpHandshake::MakeS1(uint8_t *sig)
 { 
 	int		i;
 	int		offset;
+	std::mt19937 random_number;
 
 	// 파라미터 체크
 	if( !sig ) 
@@ -90,7 +92,7 @@ bool RtmpHandshake::MakeS1(uint8_t *sig)
 	
 	for(i=8; i<RTMP_HANDSHAKE_PACKET_SIZE; i++) 
 	{ 
-		sig[i] = (uint8_t)(rand() % 256);
+		sig[i] = (uint8_t)(random_number() % 256);
 	}
 
 	// digest offset 찾기
@@ -109,6 +111,7 @@ bool RtmpHandshake::MakeS2(uint8_t * client_sig, uint8_t * sig)
 {
 	int		i;
 	int		offset;
+	std::mt19937 random_number;
 	uint8_t	digest[SHA256_DIGEST_LENGTH];
 
 	// 파라미터 체크
@@ -134,15 +137,15 @@ bool RtmpHandshake::MakeS2(uint8_t * client_sig, uint8_t * sig)
 	}
 
 	// client digest 구하기
-	HMACsha256(client_sig+offset, SHA256_DIGEST_LENGTH, (uint8_t*)g_GenuineFMSKey, sizeof(g_GenuineFMSKey), digest);
+	HmacSha256(client_sig+offset, SHA256_DIGEST_LENGTH, (uint8_t*)g_GenuineFMSKey, sizeof(g_GenuineFMSKey), digest);
 
 	// s2 만들기
 	for(i=0; i<1504; i++) 
 	{ 
-		sig[i] = (uint8_t)(rand() % 256); 
+		sig[i] = (uint8_t)(random_number() % 256);
 	}
-	
-	HMACsha256(sig, 1504, digest, SHA256_DIGEST_LENGTH, sig+1504);
+
+	HmacSha256(sig, 1504, digest, SHA256_DIGEST_LENGTH, sig+1504);
 
 	return true;
 }
@@ -182,9 +185,9 @@ bool RtmpHandshake::MakeC2(uint8_t * client_sig, uint8_t * sig)
 //===============================================================================================
 // GetDigestOffset1
 //===============================================================================================
-int RtmpHandshake::GetDigestOffset1(uint8_t * hadshake)
+int RtmpHandshake::GetDigestOffset1(uint8_t * handshake)
 {
-	uint8_t	*ptr = (uint8_t*)hadshake + 8;
+	uint8_t	*ptr = handshake + 8;
 	int		offset = 0;
 
 	offset += (*ptr); ptr++;
@@ -198,9 +201,9 @@ int RtmpHandshake::GetDigestOffset1(uint8_t * hadshake)
 //===============================================================================================
 // GetDigestOffset2
 //===============================================================================================
-int RtmpHandshake::GetDigestOffset2(uint8_t * hadshake)
+int RtmpHandshake::GetDigestOffset2(uint8_t * handshake)
 {
-	uint8_t	*ptr = (uint8_t*)hadshake + 772;
+	uint8_t	*ptr = handshake + 772;
 	int		offset = 0;
 
 	offset += (*ptr); ptr++;
@@ -212,9 +215,9 @@ int RtmpHandshake::GetDigestOffset2(uint8_t * hadshake)
 }
 
 //===============================================================================================
-// HMACsha256
+// HmacSha256
 //===============================================================================================
-void RtmpHandshake::HMACsha256(uint8_t *message, int message_size, uint8_t *key, int key_size, uint8_t *digest)
+void RtmpHandshake::HmacSha256(uint8_t *message, int message_size, uint8_t *key, int key_size, uint8_t *digest)
 {
 	uint32_t result_size = 0;
 	
@@ -235,13 +238,13 @@ void RtmpHandshake::HMACsha256(uint8_t *message, int message_size, uint8_t *key,
 //===============================================================================================
 void RtmpHandshake::CalculateDigest(int digest_pos, uint8_t * message, uint8_t *key, int key_size, uint8_t *digest)
 {
-	const int	buffser_size = RTMP_HANDSHAKE_PACKET_SIZE - SHA256_DIGEST_LENGTH;
-	uint8_t		buffer[buffser_size] = {0,};
+	const int	buffer_size = RTMP_HANDSHAKE_PACKET_SIZE - SHA256_DIGEST_LENGTH;
+	uint8_t		buffer[buffer_size] = {0,};
 
 	memcpy(buffer, message, (size_t)digest_pos);
-	memcpy(buffer + digest_pos, &message[digest_pos+SHA256_DIGEST_LENGTH], (size_t)(buffser_size - digest_pos));
+	memcpy(buffer + digest_pos, &message[digest_pos+SHA256_DIGEST_LENGTH], (size_t)(buffer_size - digest_pos));
 
-	HMACsha256(buffer, buffser_size, key, key_size, digest);
+	HmacSha256(buffer, buffer_size, key, key_size, digest);
 }
 
 //===============================================================================================
@@ -253,7 +256,7 @@ bool RtmpHandshake::VerifyDigest(int digest_pos, uint8_t *message, uint8_t *key,
 
 	CalculateDigest(digest_pos, message, key, key_size, calc_digest);
 
-    return !memcmp(message + digest_pos, calc_digest, SHA256_DIGEST_LENGTH) ? true : false;
+    return !memcmp(message + digest_pos, calc_digest, SHA256_DIGEST_LENGTH);
 }
 
 

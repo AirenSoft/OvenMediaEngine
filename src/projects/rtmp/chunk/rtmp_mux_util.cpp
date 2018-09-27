@@ -97,7 +97,7 @@ int RtmpMuxUtil::WriteInt32LE(void * output, int nVal)
 // basic_header 크기 획득(RawData) 
 // FormatType + CSID 
 //====================================================================================================
-int RtmpMuxUtil::Getbasic_headerSizeByRawData(uint8_t nData)
+int RtmpMuxUtil::GetBasicHeaderSizeByRawData(uint8_t nData)
 {
 	int header_size = 1; 
 	
@@ -114,13 +114,13 @@ int RtmpMuxUtil::Getbasic_headerSizeByRawData(uint8_t nData)
 // basic_header 크기 획득 (CSID)
 // FormatType + CSID 
 //====================================================================================================
-int RtmpMuxUtil::Getbasic_headerSizeByChunkStreamID(uint32_t chunk_stream_id)
+int RtmpMuxUtil::GetBasicHeaderSizeByChunkStreamID(uint32_t chunk_stream_id)
 {
 	int	header_size = 1;
 
 	// bh_len 계산
 	if		( chunk_stream_id >= (64+256) )	header_size = 3;
-	else if	( chunk_stream_id >= 64 )	header_size = 2;
+	else if( chunk_stream_id >= 64 )		header_size = 2;
 	else									header_size = 1;
 
 	return header_size;
@@ -213,7 +213,7 @@ std::shared_ptr<RtmpChunkHeader> RtmpMuxUtil::GetChunkHeader(void * raw_data, in
 	}
 
 	// 헤더길이 얻기
-	basic_header_size	= Getbasic_headerSizeByRawData(raw_data_pos[0]);
+	basic_header_size	= GetBasicHeaderSizeByRawData(raw_data_pos[0]);
     chunk_header_size	= GetChunkHeaderSize(raw_data, raw_data_size);
 
 	if(chunk_header_size <= 0)
@@ -273,7 +273,7 @@ std::shared_ptr<RtmpChunkHeader> RtmpMuxUtil::GetChunkHeader(void * raw_data, in
 			chunk_header->type_1.type_id			= raw_data_pos[0];
 			raw_data_pos += 1; 
 
-			//Externed Timestamp 확인 
+			// Externed Timestamp 확인
 			if(chunk_header->type_1.timestamp_delta == RTMP_EXTEND_TIMESTAMP)
 			{
 				chunk_header->type_1.timestamp_delta = ReadInt32(raw_data_pos);
@@ -287,7 +287,7 @@ std::shared_ptr<RtmpChunkHeader> RtmpMuxUtil::GetChunkHeader(void * raw_data, in
 			chunk_header->type_2.timestamp_delta	= ReadInt24(raw_data_pos);
 			raw_data_pos += 3; 
 
-			//Externed Timestamp 확인 
+			// Externed Timestamp 확인
 			if(chunk_header->type_1.timestamp_delta == RTMP_EXTEND_TIMESTAMP)
 			{
 				chunk_header->type_1.timestamp_delta = ReadInt32(raw_data_pos);
@@ -347,7 +347,7 @@ int RtmpMuxUtil::GetChunkData(int chunk_size, void * raw_data, int raw_data_size
 		if( nIndex > 0 )
 		{
 			// type3인지 체크. 아니면 에러리턴
-			if( Getbasic_headerSizeByRawData(*raw_data_pos) != 1 )
+			if(GetBasicHeaderSizeByRawData(*raw_data_pos) != 1)
 			{ 
 				return 0; 
 			}
@@ -410,7 +410,7 @@ int RtmpMuxUtil::GetChunkBasicHeaderRaw(uint8_t chunk_type, uint32_t chunk_strea
 		raw_data_pos[0] 	= (uint8_t)(chunk_stream_id&0x3f);
 	}
 
-	//FormatType 기록
+	// FormatType 기록
 	raw_data_pos[0] |= chunk_type & 0xc0;
 
 	return basic_header_size;
@@ -479,15 +479,15 @@ int RtmpMuxUtil::GetChunkHeaderRaw(std::shared_ptr<RtmpChunkHeader> &chunk_heade
 			else				WriteInt24(raw_data_pos, RTMP_EXTEND_TIMESTAMP);
 			raw_data_pos += 3; 
 
-			//length
+			// length
 			WriteInt24(raw_data_pos, chunk_header->type_1.body_size);
 			raw_data_pos += 3; 
 			
-			//streamid
+			// streamid
 			*(raw_data_pos) = chunk_header->type_1.type_id;
 			raw_data_pos += 1; 
 
-			//extended timestamp
+			// extended timestamp
 			if(extend_type)
 			{
 				message_header_size += RTMP_EXTEND_TIMESTAMP_SIZE; 
@@ -540,7 +540,7 @@ int RtmpMuxUtil::GetChunkDataRawSize(int chunk_size, uint32_t chunk_stream_id, i
 	}
 	
 	// BashHeader 구하기
-	type3_header_size = Getbasic_headerSizeByChunkStreamID(chunk_stream_id);
+	type3_header_size = GetBasicHeaderSizeByChunkStreamID(chunk_stream_id);
 
 	if(extend_type)
 	{

@@ -59,25 +59,22 @@ const int g_rtmp_sample_rate_table[] = {96000, 88200, 64000, 48000, 44100, 32000
 #define RTMP_EXTEND_TIMESTAMP					(0x00ffffff) 
 #define RTMP_EXTEND_TIMESTAMP_SIZE				(4) 			//sizeof(uint)
 
-#define RTMP_MIN(a,b)							(a<b ? a : b)
-#define RTMP_MAX(a,b)							(a>b ? a : b)
-
 // CHUNK STREAM ID
 #define RTMP_CHUNK_STREAM_ID_URGENT				(2)
 #define RTMP_CHUNK_STREAM_ID_CONTROL			(3)
 #define RTMP_CHUNK_STREAM_ID_MEDIA				(8)
 
 // MESSAGE ID
-#define RTMP_MSGID_SET_CHUNKSIZE				(1)
+#define RTMP_MSGID_SET_CHUNK_SIZE				(1)
 #define RTMP_MSGID_ABORT_MESSAGE				(2)
 #define RTMP_MSGID_ACKNOWLEDGEMENT				(3)
-#define RTMP_MSGID_USERCONTROL_MESSAGE			(4)
+#define RTMP_MSGID_USER_CONTROL_MESSAGE			(4)
 #define RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE	(5)
 #define RTMP_MSGID_SET_PEERBANDWIDTH			(6)
 #define RTMP_MSGID_AUDIO_MESSAGE				(8)
 #define RTMP_MSGID_VIDEO_MESSAGE				(9)
-#define RTMP_MSGID_AMF3DATAMESSAGE				(15)
-#define RTMP_MSGID_AMF3COMMANDMESSAGE			(17)
+#define RTMP_MSGID_AMF3_DATA_MESSAGE			(15)
+#define RTMP_MSGID_AMF3_COMMAND_MESSAGE			(17)
 #define RTMP_MSGID_AMF0_DATA_MESSAGE			(18)
 #define RTMP_MSGID_AMF0_COMMAND_MESSAGE			(20)
 #define RTMP_MSGID_AGGREGATE_MESSAGE			(22)
@@ -315,7 +312,7 @@ public :
 	RtmpMediaInfo()
 	{
 		has_video 			= false;
-		has_aduio 			= false;
+		has_audio 			= false;
 
 		// 비디오 정보
 		video_codec_type 	= RTMP_UNKNOWN_CODEC_TYPE;
@@ -342,7 +339,7 @@ public :
 
 public :
 	bool				has_video;
-	bool   				has_aduio;
+	bool   				has_audio;
 
 	// 비디오 정보
 	tRTMP_CODEC_TYPE 	video_codec_type;

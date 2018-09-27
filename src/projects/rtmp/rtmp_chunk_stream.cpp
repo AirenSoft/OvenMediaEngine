@@ -50,47 +50,39 @@ RtmpChunkStream::RtmpChunkStream(ov::ClientSocket *remote, IRtmpChunkStream * st
     OV_ASSERT2(remote != nullptr);
     OV_ASSERT2(stream_interface != nullptr);
 
-    _remote                         = remote;
-    _stream_interface               = stream_interface;
-    _remained_data                  = std::make_unique<std::vector<uint8_t>>();
-    _app_id                         = 0;
-    _app_stream_id                  = 0;
+    _remote                     = remote;
+    _stream_interface           = stream_interface;
+    _remained_data              = std::make_unique<std::vector<uint8_t>>();
+    _app_id                     = 0;
+    _app_stream_id              = 0;
 
-    _import_chunk = std::make_shared<RtmpImportChunk>(RTMP_DEFAULT_CHUNK_SIZE);
-    _export_chunk = std::make_shared<RtmpExportChunk>(false, RTMP_DEFAULT_CHUNK_SIZE);
-    _media_info = std::make_shared<RtmpMediaInfo>();
+    _import_chunk               = std::make_unique<RtmpImportChunk>(RTMP_DEFAULT_CHUNK_SIZE);
+    _export_chunk               = std::make_unique<RtmpExportChunk>(false, RTMP_DEFAULT_CHUNK_SIZE);
+    _media_info                 = std::make_shared<RtmpMediaInfo>();
 
-    _delete_stream                  = false;
-    _stream_id					    = 0;
-    _handshake_state                = RTMP_HANDSHAKE_READY_STATE;
-    _peer_bandwidth				    = RTMP_DEFAULT_PEER_BANDWIDTH;
-    _acknowledgement_size		    = RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE/2;
-    _acknowledgement_traffic	    = 0;
-    _client_id					    = 12345.0;
-    _chunk_stream_id			    = 0;
-}
-
-//====================================================================================================
-// ~RtmpChunkStream
-//====================================================================================================
-RtmpChunkStream::~RtmpChunkStream()
-{
-
+    _delete_stream              = false;
+    _stream_id					= 0;
+    _handshake_state            = RTMP_HANDSHAKE_READY_STATE;
+    _peer_bandwidth				= RTMP_DEFAULT_PEER_BANDWIDTH;
+    _acknowledgement_size		= RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE/2;
+    _acknowledgement_traffic    = 0;
+    _client_id					= 12345.0;
+    _chunk_stream_id			= 0;
 }
 
 //====================================================================================================
 //  패킷 전송
 // - 1M단위 제한
 //====================================================================================================
-bool RtmpChunkStream::SendData(ssize_t data_size, uint8_t * data)
+bool RtmpChunkStream::SendData(int data_size, uint8_t * data)
 {
-    ssize_t     remained        = data_size;
+    int     remained        = data_size;
     uint8_t *   data_to_send    = data;
 
     while(remained > 0L)
     {
-        ssize_t to_send = std::min(remained, (1024L * 1024L));
-        ssize_t sent = _remote->Send(data_to_send, to_send);
+        int to_send = std::min(remained, (int)(1024L * 1024L));
+        int sent = _remote->Send(data_to_send, to_send);
 
         if(sent != to_send)
         {
@@ -133,8 +125,8 @@ int32_t RtmpChunkStream::OnDataReceived(const std::unique_ptr<std::vector<uint8_
         return -1;
     }
 
-    if(_handshake_state != RTMP_HANDSHAKE_COMPLETE_STATE)    process_size = RecvHandshakePacket(process_data);
-    else                                                     process_size = RecvChunkPacket(process_data);
+    if(_handshake_state != RTMP_HANDSHAKE_COMPLETE_STATE)    process_size = ReceiveHandshakePacket(process_data);
+    else                                                     process_size = ReceiveChunkPacket(process_data);
 
     if(process_size < 0)
     {
@@ -153,12 +145,12 @@ int32_t RtmpChunkStream::OnDataReceived(const std::unique_ptr<std::vector<uint8_
 
 
 //====================================================================================================
-// Recv Handshake Packet
-// c0 + c1 Recv
+// Receive Handshake Packet
+// c0 + c1 Receive
 // s0 + s1 + s2 Send
-// c2 Recv
+// c2 Receive
 //====================================================================================================
-int32_t RtmpChunkStream::RecvHandshakePacket(const std::shared_ptr<const std::vector<uint8_t>> &data)
+int32_t RtmpChunkStream::ReceiveHandshakePacket(const std::shared_ptr<const std::vector<uint8_t>> &data)
 {
     int32_t process_size = 0;
     int32_t chunk_process_size = 0;
@@ -204,7 +196,7 @@ int32_t RtmpChunkStream::RecvHandshakePacket(const std::shared_ptr<const std::ve
     if(process_size < data->size())
     {
         auto  process_data = std::make_shared<std::vector<uint8_t>>(data->begin() + process_size, data->end());
-        chunk_process_size = RecvChunkPacket(process_data);
+        chunk_process_size = ReceiveChunkPacket(process_data);
         if(chunk_process_size < 0)
         {
             return -1;
@@ -264,7 +256,7 @@ bool RtmpChunkStream::SendHandshake(const std::shared_ptr<const std::vector<uint
 // Chunk 패킷 수신
 // - OnMetaData 이후에 스트리밍 시작
 //====================================================================================================
-int32_t RtmpChunkStream::RecvChunkPacket(const std::shared_ptr<const std::vector<uint8_t>> &data)
+int32_t RtmpChunkStream::ReceiveChunkPacket(const std::shared_ptr<const std::vector<uint8_t>> &data)
 {
     int32_t process_size 		= 0;
     int32_t	import_size			= 0;
@@ -288,9 +280,9 @@ int32_t RtmpChunkStream::RecvChunkPacket(const std::shared_ptr<const std::vector
 
         if(message_complete)
         {
-            if(!RecvChunkMessageProc())
+            if(!ReceiveChunkMessage())
             {
-                logte("RecvChunkMessageProc Fail");
+                logte("ReceiveChunkMessage Fail");
                 return -1;
             }
         }
@@ -315,9 +307,9 @@ int32_t RtmpChunkStream::RecvChunkPacket(const std::shared_ptr<const std::vector
 //====================================================================================================
 // ChunkMessage 처리
 //====================================================================================================
-bool RtmpChunkStream::RecvChunkMessageProc()
+bool RtmpChunkStream::ReceiveChunkMessage()
 {
-    // 메시지 처리(지연 발생시 thread에서  처리)
+    // 메시지 처리(지연 발생시 thread 에서  처리)
     while(true)
     {
         auto message =  _import_chunk->GetMessage();
@@ -338,12 +330,12 @@ bool RtmpChunkStream::RecvChunkMessageProc()
         //처리
         switch(message->message_header->type_id)
         {
-            case RTMP_MSGID_AUDIO_MESSAGE:				    bSuccess = RecvAudioMessage(message);	break;// 에러 종료 처리 필요
-            case RTMP_MSGID_VIDEO_MESSAGE:				    bSuccess = RecvVideoMessage(message);   break;// 에러 종료 처리 필요
-            case RTMP_MSGID_SET_CHUNKSIZE :				    bSuccess = RecvSetChunkSize(message);	break;// 에러 종료 처리 필요
-            case RTMP_MSGID_AMF0_DATA_MESSAGE :			    RecvAmfDataMessage(message);			break;
-            case RTMP_MSGID_AMF0_COMMAND_MESSAGE :		    RecvAmfCommandMessage(message);			break;
-            case RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE :    RecvWindowAcknowledgementSize(message);	break;
+            case RTMP_MSGID_AUDIO_MESSAGE:				    bSuccess = ReceiveAudioMessage(message);	break;// 에러 종료 처리 필요
+            case RTMP_MSGID_VIDEO_MESSAGE:				    bSuccess = ReceiveVideoMessage(message);   break;// 에러 종료 처리 필요
+            case RTMP_MSGID_SET_CHUNK_SIZE :				bSuccess = ReceiveSetChunkSize(message);	break;// 에러 종료 처리 필요
+            case RTMP_MSGID_AMF0_DATA_MESSAGE :			    ReceiveAmfDataMessage(message);			break;
+            case RTMP_MSGID_AMF0_COMMAND_MESSAGE :		    ReceiveAmfCommandMessage(message);			break;
+            case RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE :    ReceiveWindowAcknowledgementSize(message);	break;
             default:
             {
                 logtw("Unknown Type - Type(%d)", message->message_header->type_id);
@@ -364,9 +356,9 @@ bool RtmpChunkStream::RecvChunkMessageProc()
 //====================================================================================================
 // Chunk Message - SetChunkSize
 //====================================================================================================
-bool RtmpChunkStream::RecvSetChunkSize(std::shared_ptr<ImportMessage> & message)
+bool RtmpChunkStream::ReceiveSetChunkSize(std::shared_ptr<ImportMessage> & message)
 {
-    int32_t chunk_size = RtmpMuxUtil::ReadInt32(message->body->data());
+    auto chunk_size = RtmpMuxUtil::ReadInt32(message->body->data());
 
     if(chunk_size <= 0)
     {
@@ -375,7 +367,7 @@ bool RtmpChunkStream::RecvSetChunkSize(std::shared_ptr<ImportMessage> & message)
     }
 
     _import_chunk->SetChunkSize(chunk_size);
-    logtd("Set Recv ChunkSize(%u)", chunk_size);
+    logtd("Set Receive ChunkSize(%u)", chunk_size);
 
     return true;
 }
@@ -383,10 +375,9 @@ bool RtmpChunkStream::RecvSetChunkSize(std::shared_ptr<ImportMessage> & message)
 //====================================================================================================
 // Chunk Message - WindowAcknowledgementSize
 //====================================================================================================
-void RtmpChunkStream::RecvWindowAcknowledgementSize(std::shared_ptr<ImportMessage> & message)
+void RtmpChunkStream::ReceiveWindowAcknowledgementSize(std::shared_ptr<ImportMessage> & message)
 {
-    uint32_t chunk_size 		= RtmpMuxUtil::ReadInt32(message->body->data());
-    uint32_t ackledgement_size 	= RtmpMuxUtil::ReadInt32(message->body->data());
+    auto ackledgement_size 	= RtmpMuxUtil::ReadInt32(message->body->data());
 
     if(ackledgement_size != 0)
     {
@@ -398,7 +389,7 @@ void RtmpChunkStream::RecvWindowAcknowledgementSize(std::shared_ptr<ImportMessag
 //====================================================================================================
 // Chunk Message - Amf0CommandMessage
 //====================================================================================================
-void RtmpChunkStream::RecvAmfCommandMessage(std::shared_ptr<ImportMessage> & message)
+void RtmpChunkStream::ReceiveAmfCommandMessage(std::shared_ptr<ImportMessage> & message)
 {
     AmfDocument	document;
     ov::String  message_name;
@@ -444,12 +435,12 @@ void RtmpChunkStream::RecvAmfCommandMessage(std::shared_ptr<ImportMessage> & mes
 //====================================================================================================
 // Chunk Message - Amf0DataMessage
 //====================================================================================================
-void RtmpChunkStream::RecvAmfDataMessage(std::shared_ptr<ImportMessage> & message)
+void RtmpChunkStream::ReceiveAmfDataMessage(std::shared_ptr<ImportMessage> & message)
 {
     AmfDocument	document;
     int32_t		decode_lehgth		= 0;
-    ov::String message_name;
-    ov::String data_name;
+    ov::String  message_name;
+    ov::String  data_name;
 
     // 응답 디코딩
     decode_lehgth = document.Decode(message->body->data(), message->message_header->body_size);
@@ -472,8 +463,10 @@ void RtmpChunkStream::RecvAmfDataMessage(std::shared_ptr<ImportMessage> & messag
     }
 
     // 처리
-    if( message_name == RTMP_CMD_DATA_SETDATAFRAME && data_name == RTMP_CMD_DATA_ONMETADATA  && 
-        document.GetProperty(2) != nullptr && (document.GetProperty(2)->GetType() == AMF_OBJECT || document.GetProperty(2)->GetType() == AMF_ARRAY))
+    if( message_name == RTMP_CMD_DATA_SETDATAFRAME &&
+        data_name == RTMP_CMD_DATA_ONMETADATA  &&
+        document.GetProperty(2) != nullptr &&
+        (document.GetProperty(2)->GetType() == AMF_OBJECT || document.GetProperty(2)->GetType() == AMF_ARRAY))
     {
         OnAmfMetaData(message->message_header, document, 2);
     }
@@ -666,7 +659,7 @@ bool RtmpChunkStream::SendAmfCommand(std::shared_ptr<RtmpMuxMessageHeader> &mess
 //====================================================================================================
 bool RtmpChunkStream::SendUserControlMessage(uint8_t message, std::shared_ptr<std::vector<uint8_t>> &data)
 {
-    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT, 0, RTMP_MSGID_USERCONTROL_MESSAGE, 0, data->size() + 1);
+    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT, 0, RTMP_MSGID_USER_CONTROL_MESSAGE, 0, data->size() + 1);
 
     data->insert(data->begin(), 0);
     RtmpMuxUtil::WriteInt8(data->data(), message);
@@ -715,7 +708,7 @@ bool RtmpChunkStream::SendSetPeerBandwidth( )
 }
 
 //====================================================================================================
-// UCMID Stream Begin 전송
+// Stream Begin 전송
 //====================================================================================================
 bool RtmpChunkStream::SendStreamBegin( )
 {
@@ -731,10 +724,10 @@ bool RtmpChunkStream::SendStreamBegin( )
 //====================================================================================================
 bool RtmpChunkStream::SendAmfConnectResult(uint32_t chunk_stream_id, double transaction_id, double object_encoding)
 {
-    auto	    message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id, 0, RTMP_MSGID_AMF0_COMMAND_MESSAGE, _stream_id, 0);
+    auto        message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id, 0, RTMP_MSGID_AMF0_COMMAND_MESSAGE, _stream_id, 0);
     AmfDocument	document;
-    AmfObject *	object = nullptr;
-    AmfArray * 	array 	= nullptr;
+    AmfObject   *object = nullptr;
+    AmfArray    *array 	= nullptr;
 
     // _result 
     document.AddProperty(RTMP_ACK_NAME_RESULT);
@@ -747,7 +740,6 @@ bool RtmpChunkStream::SendAmfConnectResult(uint32_t chunk_stream_id, double tran
     object->AddProperty("mode", 1.0);
 
     document.AddProperty(object);
-    object = nullptr;
 
     // information
     object = new AmfObject;
@@ -760,10 +752,8 @@ bool RtmpChunkStream::SendAmfConnectResult(uint32_t chunk_stream_id, double tran
     array = new AmfArray;
     array->AddProperty("version",  "3,5,2,654");
     object->AddProperty("data", array);
-    array = nullptr;
 
     document.AddProperty(object);
-    object = nullptr;
 
     return SendAmfCommand(message_header, document);
 }
@@ -773,9 +763,9 @@ bool RtmpChunkStream::SendAmfConnectResult(uint32_t chunk_stream_id, double tran
 //====================================================================================================
 bool RtmpChunkStream::SendAmfOnFCPublish(uint32_t chunk_stream_id, uint32_t stream_id, double client_id )
 {
-    auto	    message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id, 0, RTMP_MSGID_AMF0_COMMAND_MESSAGE, _stream_id, 0);
+    auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id, 0, RTMP_MSGID_AMF0_COMMAND_MESSAGE, _stream_id, 0);
     AmfDocument	document;
-    AmfObject *	object = nullptr;
+    AmfObject   *object = nullptr;
 
     document.AddProperty(RTMP_CMD_NAME_ONFCPUBLISH);
     document.AddProperty(0.0);
@@ -789,8 +779,6 @@ bool RtmpChunkStream::SendAmfOnFCPublish(uint32_t chunk_stream_id, uint32_t stre
 
     document.AddProperty(object);
 
-    object = nullptr;
-
     return SendAmfCommand(message_header, document);
 }
 
@@ -800,7 +788,7 @@ bool RtmpChunkStream::SendAmfOnFCPublish(uint32_t chunk_stream_id, uint32_t stre
 //====================================================================================================
 bool RtmpChunkStream::SendAmfCreateStreamResult(uint32_t chunk_stream_id, double transaction_id)
 {
-    auto	    message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id, 0, RTMP_MSGID_AMF0_COMMAND_MESSAGE, 0, 0);
+    auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id, 0, RTMP_MSGID_AMF0_COMMAND_MESSAGE, 0, 0);
     AmfDocument	document;
 
     // 스트림ID 정하기
@@ -821,7 +809,7 @@ bool RtmpChunkStream::SendAmfOnStatus(uint32_t chunk_stream_id, uint32_t stream_
 {
     auto	    message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id, 0, RTMP_MSGID_AMF0_COMMAND_MESSAGE, stream_id, 0);
     AmfDocument	document;
-    AmfObject *	object = nullptr;
+    AmfObject   *object = nullptr;
 
     document.AddProperty(RTMP_CMD_NAME_ONSTATUS);
     document.AddProperty(0.0);
@@ -834,8 +822,6 @@ bool RtmpChunkStream::SendAmfOnStatus(uint32_t chunk_stream_id, uint32_t stream_
     object->AddProperty("clientid", 	client_id);
 
     document.AddProperty(object);
-
-    object = nullptr;
 
     return SendAmfCommand(message_header, document);
 }
@@ -852,12 +838,12 @@ bool RtmpChunkStream::SendAmfOnStatus(uint32_t chunk_stream_id, uint32_t stream_
 // - Control Header(1Byte - Codec/SampleRate/SampleSize/Channels)
 // - Frame
 //
-//AAC : Adts헤더 정보 추가
+//AAC : Adts 헤더 정보 추가
 //Speex : 크기 정보 추가
 //====================================================================================================
-bool RtmpChunkStream::RecvAudioMessage(std::shared_ptr<ImportMessage> & message)
+bool RtmpChunkStream::ReceiveAudioMessage(std::shared_ptr<ImportMessage> & message)
 {
-    if(!_media_info->has_aduio || _delete_stream)
+    if(!_media_info->has_audio || _delete_stream)
     {
         return true;
     }
@@ -900,7 +886,7 @@ bool RtmpChunkStream::RecvAudioMessage(std::shared_ptr<ImportMessage> & message)
 // 2. 정보 + I-Frame
 // 3. I-Frame/P-Frame
 //====================================================================================================
-bool RtmpChunkStream::RecvVideoMessage(std::shared_ptr<ImportMessage> &message)
+bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &message)
 {
    tRTMP_FRAME_TYPE frame_type = RTMP_VIDEO_P_FRAME_TYPE;
 
@@ -948,7 +934,7 @@ bool RtmpChunkStream::RecvVideoMessage(std::shared_ptr<ImportMessage> &message)
 // ProcessVideoSequenceData
 // - Video Control 패킷 처리
 // - SPS/PPS 정보 추출 : Bypass 시에 트랜스코딩에서 정보를 못주면 여기서 처리 필요
-// - ffmpeg 재싱 시에 해상도 정보 문제 발생시 SPS에서 해상도 정보 추출 필요
+// - ffmpeg 재싱 시에 해상도 정보 문제 발생시 SPS 에서 해상도 정보 추출 필요
 // - SPS/PPS Load
 //      - 00 00 00   		- 3 byte
 //      - version 			- 1 byte
@@ -1079,7 +1065,7 @@ bool RtmpChunkStream::OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &messa
     else if (device_type_string.IndexOf("Lavf") >=  0)					encoder_type = RTMP_LAVF_ENCODER_TYPE;
     else																encoder_type = RTMP_CUSTOM_ENCODER_TYPE;
 
-    // Vodio Codec
+    // Video Codec
     if((index = object->FindName("videocodecid")) >= 0)
     {
         if      (object->GetType(index) == AMF_STRING && strcmp("avc1", object->GetString(index)) == 0)     video_codec_type = RTMP_H264_VIDEO_CODEC_TYPE;
@@ -1143,7 +1129,7 @@ bool RtmpChunkStream::OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &messa
     }
 
     _media_info->has_video          = (video_codec_type == RTMP_H264_VIDEO_CODEC_TYPE);
-    _media_info->has_aduio          = (audio_codec_type == RTMP_AAC_AUDIO_CODEC_TYPE);
+    _media_info->has_audio          = (audio_codec_type == RTMP_AAC_AUDIO_CODEC_TYPE);
     _media_info->video_codec_type	= video_codec_type;
     _media_info->video_width		= (int32_t)video_width;
     _media_info->video_height		= (int32_t)video_height;

@@ -69,8 +69,8 @@ public:
 	static	int			WriteInt32(void * output, int nVal);
 	static	int			WriteInt32LE(void * output, int nVal);
 
-	static	int			Getbasic_headerSizeByRawData(uint8_t nData);
-	static	int			Getbasic_headerSizeByChunkStreamID(uint32_t chunk_stream_id);
+	static	int			GetBasicHeaderSizeByRawData(uint8_t nData);
+	static	int			GetBasicHeaderSizeByChunkStreamID(uint32_t chunk_stream_id);
 
 	static	int			GetChunkHeaderSize(void * raw_data, int raw_data_size); // ret:길이, ret<=0:실패
 	static	std::shared_ptr<RtmpChunkHeader> GetChunkHeader(void * raw_data, int raw_data_size,  int &chunk_header_size, bool &extend_type); // ret<=0:실패, ret>0:처리길이

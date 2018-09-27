@@ -52,7 +52,7 @@ bool RtmpProvider::Start()
 	// RtmpServer 생성
 	_rtmp_server = std::make_shared<RtmpServer>();
 
-	// RtmpServer에 Observer 연결
+	// RtmpServer 에 Observer 연결
 	_rtmp_server->AddObserver(RtmpObserver::GetSharedPtr());
 	_rtmp_server->Start(ov::SocketAddress(1935));
 
@@ -114,7 +114,7 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name, const ov::S
         stream->AddTrack(new_track);
     }
 
-    if(media_info->has_aduio)
+    if(media_info->has_audio)
     {
         auto new_track = std::make_shared<MediaTrack>();
 

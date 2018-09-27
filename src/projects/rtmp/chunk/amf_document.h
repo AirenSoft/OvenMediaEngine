@@ -72,12 +72,12 @@ public:
 	explicit		AmfProperty(double Number);
 	explicit		AmfProperty(bool Boolean);
 	explicit		AmfProperty(const char *  pString); 	// 스트링은 내부에서 메모리 할당해서 복사
-	explicit		AmfProperty(AmfArray *pArray); 			// array는 파라미터 포인터를 그대로 저장
-	explicit		AmfProperty(AmfObject *pObject); 		// object는 파라미터 포인터를 그대로 저장
+	explicit		AmfProperty(AmfArray *pArray); 			// array 는 파라미터 포인터를 그대로 저장
+	explicit		AmfProperty(AmfObject *pObject); 		// object 는 파라미터 포인터를 그대로 저장
 	 ~AmfProperty( ) override;
 
 public:
-	void			Dump(std::string &duam_string);
+	void			Dump(std::string &dump_string);
 
 public:
 	int				Encode(void * data); // ret=0이면 실패, type -> packet
@@ -120,7 +120,7 @@ public:
 	} tPROPERTY_PAIR; // new, delete
 
 public:
-	virtual void    Dump(std::string & duam_string);
+	virtual void    Dump(std::string & dump_string);
 
 public:
 	int				Encode(void * data); // ret=0이면 실패, type -> packet
@@ -165,7 +165,7 @@ public:
    ~AmfArray( ) override = default;
 
 public:
-	void Dump(std::string &duam_string) final;
+	void Dump(std::string &dump_string) final;
 };
 
 //====================================================================================================
@@ -191,7 +191,7 @@ public:
     ~AmfDocument( ) override;
 
 public:
-	void			Dump(std::string &duam_string);
+	void			Dump(std::string &dump_string);
 
 public:
 	int				Encode(void * data); 					// ret=0이면 실패

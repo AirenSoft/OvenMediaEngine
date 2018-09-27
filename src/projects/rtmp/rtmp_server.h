@@ -19,7 +19,7 @@
 class RtmpServer : protected PhysicalPortObserver, public IRtmpChunkStream
 {
 public:
-	RtmpServer();
+	RtmpServer() = default;
 	virtual ~RtmpServer();
 
 public:

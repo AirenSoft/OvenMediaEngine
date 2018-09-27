@@ -29,9 +29,9 @@ public:
     static	bool	MakeC2(uint8_t *client_sig, uint8_t *sig);
 
 private:
-	static	int		GetDigestOffset1(uint8_t *hadshake);
-	static	int		GetDigestOffset2(uint8_t *hadshake);
-	static	void	HMACsha256(uint8_t *message, int message_size, uint8_t *key, int key_size, uint8_t *digest);
+	static	int		GetDigestOffset1(uint8_t *handshake);
+	static	int		GetDigestOffset2(uint8_t *handshake);
+	static	void	HmacSha256(uint8_t *message, int message_size, uint8_t *key, int key_size, uint8_t *digest);
 	static	void	CalculateDigest(int digest_pos, uint8_t *message, uint8_t *key, int key_size, uint8_t *digest);
 	static	bool	VerifyDigest(int digest_pos, uint8_t *message, uint8_t *key, int key_size);
 };

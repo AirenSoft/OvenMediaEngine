@@ -11,16 +11,14 @@
 
 #define _CONSOLE
 
-#include "base/common_types.h"
-#include "base/provider/stream.h"
-#include <base/ovsocket/ovsocket.h>
+#include "../base/common_types.h"
+#include "../base/provider/stream.h"
+#include "../base/ovsocket/ovsocket.h"
 
 #include "chunk/rtmp_import_chunk.h"
 #include "chunk/rtmp_export_chunk.h"
 #include "chunk/rtmp_handshake.h"
 #include "chunk/amf_document.h"
-
-using namespace pvd;
 
 //====================================================================================================
 // Interface
@@ -41,33 +39,33 @@ class RtmpChunkStream : public ov::EnableSharedFromThis<RtmpChunkStream>
 {
 public:
 	RtmpChunkStream(ov::ClientSocket *remote, IRtmpChunkStream * stream_interface);
-    ~RtmpChunkStream() final;
+    ~RtmpChunkStream() override = default;
 
 public:
     int32_t	OnDataReceived(const std::unique_ptr<std::vector<uint8_t>> &data);
 
 private :
-    bool   SendData(ssize_t data_size, uint8_t * data);
+    bool   SendData(int data_size, uint8_t * data);
 
-	int32_t	RecvHandshakePacket(const std::shared_ptr<const std::vector<uint8_t>> &data);
-	int32_t	RecvChunkPacket(const std::shared_ptr<const std::vector<uint8_t>> &data);
+	int32_t	ReceiveHandshakePacket(const std::shared_ptr<const std::vector<uint8_t>> &data);
+	int32_t	ReceiveChunkPacket(const std::shared_ptr<const std::vector<uint8_t>> &data);
 
 	bool	SendHandshake(const std::shared_ptr<const std::vector<uint8_t>> &data);
 
-	bool	RecvChunkMessageProc();
-	bool	RecvSetChunkSize(std::shared_ptr<ImportMessage> &message);
-	void	RecvWindowAcknowledgementSize(std::shared_ptr<ImportMessage> &message);
-	void	RecvAmfCommandMessage(std::shared_ptr<ImportMessage> &message);
-	void	RecvAmfDataMessage(std::shared_ptr<ImportMessage> &message);
-	bool	RecvAudioMessage(std::shared_ptr<ImportMessage> &message);
-	bool	RecvVideoMessage(std::shared_ptr<ImportMessage> &message);
+	bool	ReceiveChunkMessage();
+	bool	ReceiveSetChunkSize(std::shared_ptr<ImportMessage> &message);
+	void	ReceiveWindowAcknowledgementSize(std::shared_ptr<ImportMessage> &message);
+	void	ReceiveAmfCommandMessage(std::shared_ptr<ImportMessage> &message);
+	void	ReceiveAmfDataMessage(std::shared_ptr<ImportMessage> &message);
+	bool	ReceiveAudioMessage(std::shared_ptr<ImportMessage> &message);
+	bool	ReceiveVideoMessage(std::shared_ptr<ImportMessage> &message);
 
-	void 	OnAmfConnect(std::shared_ptr<RtmpMuxMessageHeader> &message_hdader, AmfDocument &document, double transaction_id);
-	void 	OnAmfCreateStream(std::shared_ptr<RtmpMuxMessageHeader> &message_hdader, AmfDocument &document, double transaction_id);
-	void 	OnAmfFCPublish(std::shared_ptr<RtmpMuxMessageHeader> &message_hdader, AmfDocument &document, double transaction_id);
-	void 	OnAmfPublish(std::shared_ptr<RtmpMuxMessageHeader> &message_hdader, AmfDocument &document, double transaction_id);
-	void 	OnAmfDeleteStream(std::shared_ptr<RtmpMuxMessageHeader> &message_hdader, AmfDocument &document, double transaction_id);
-	bool 	OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &message_hdader, AmfDocument &document, int32_t object_index);
+	void 	OnAmfConnect(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document, double transaction_id);
+	void 	OnAmfCreateStream(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document, double transaction_id);
+	void 	OnAmfFCPublish(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document, double transaction_id);
+	void 	OnAmfPublish(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document, double transaction_id);
+	void 	OnAmfDeleteStream(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document, double transaction_id);
+	bool 	OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document, int32_t object_index);
 
 	bool	SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data);
 	bool	SendUserControlMessage(uint8_t message, std::shared_ptr<std::vector<uint8_t>> &data);
@@ -86,7 +84,6 @@ private :
 	bool 	ProcessVideoSequenceData(std::unique_ptr<std::vector<uint8_t>> data);
 	bool 	ProcessAudioSequenceData(std::unique_ptr<std::vector<uint8_t>> data);
 
-
 protected :
 	ov::ClientSocket *						_remote;
 	IRtmpChunkStream *  					_stream_interface;
@@ -97,8 +94,8 @@ protected :
 
 	std::unique_ptr<std::vector<uint8_t>> 	_remained_data;
 	tRTMP_HANDSHAKE_STATE   				_handshake_state;
-	std::shared_ptr<RtmpImportChunk> 		_import_chunk;
-	std::shared_ptr<RtmpExportChunk> 		_export_chunk;
+	std::unique_ptr<RtmpImportChunk> 		_import_chunk;
+	std::unique_ptr<RtmpExportChunk> 		_export_chunk;
 	bool 									_delete_stream;
 	std::shared_ptr<RtmpMediaInfo> 			_media_info;
 
