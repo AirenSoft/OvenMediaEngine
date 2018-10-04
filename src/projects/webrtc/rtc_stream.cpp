@@ -100,8 +100,6 @@ bool RtcStream::Start()
 
 			case MediaType::Audio:
 			{
-				PayloadAttr::SupportCodec sdp_support_codec;
-
 				switch(track->GetCodecId())
 				{
 					case MediaCodecId::Opus:
@@ -118,7 +116,7 @@ bool RtcStream::Start()
 
 				audio_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
 				audio_media_desc->SetConnection(4, "0.0.0.0");
-				// TODO(dimiden): Prevent duplication
+				// TODO(dimiden): Need to prevent duplication
 				audio_media_desc->SetMid(ov::Random::GenerateString(6));
 				audio_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
 				audio_media_desc->UseDtls(true);
@@ -150,7 +148,7 @@ bool RtcStream::Start()
 	// video_media_desc = nullptr;
 	// audio_media_desc = nullptr;
 
-	// Media Description 연결
+	// Connect Media descriptions and SDP
 	_offer_sdp->AddMedia(video_media_desc);
 	_offer_sdp->AddMedia(audio_media_desc);
 
@@ -224,6 +222,7 @@ void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 		                                                                fragmentation.get(),
 		                                                                &rtp_video_header);
 	}
+
 	// TODO(getroot): 향후 ov::Data로 변경한다.
 	delete[] encoded_frame->buffer;
 }

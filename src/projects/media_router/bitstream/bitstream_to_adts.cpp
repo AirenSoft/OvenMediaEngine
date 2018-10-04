@@ -113,7 +113,7 @@ void BitstreamToADTS::convert_to(MediaPacket *packet)
 
 		// extract data after [aac_fixed_header_length] bytes
 		// packet->EraseBuffer(0, aac_fixed_header_length);
-		data->SetOffset(aac_fixed_header_length);
+		data->Erase(0, aac_fixed_header_length);
 		// pkt->_buf.erase(pkt->_buf.begin(), pkt->_buf.begin()+aac_fixed_header_length);
 
 		int16_t aac_raw_length = data->GetLength();    // 2바이트 헤더를 제외함
@@ -161,7 +161,7 @@ void BitstreamToADTS::convert_to(MediaPacket *packet)
 			*pp++ = 0xfc;
 		}
 
-		data->Insert(aac_fixed_header, data->GetOffset(), sizeof(aac_fixed_header));
+		data->Insert(aac_fixed_header, 0, sizeof(aac_fixed_header));
 	}
 
 	// Utils::Debug::DumpHex(pbuf, pbuf_len);

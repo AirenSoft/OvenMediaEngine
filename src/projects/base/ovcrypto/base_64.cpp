@@ -108,7 +108,7 @@ namespace ov
 		// [base64 문자열 길이 / 4 * 3] + [null 문자] = (length / 4 * 3) + 1
 		auto max_length = static_cast<int>((text.GetLength() / 4 * 3) + 1);
 
-		auto data = ov::Data::CreateData(max_length);
+		auto data = std::make_shared<ov::Data>(max_length);
 		data->SetLength(max_length);
 
 		// base64 계산

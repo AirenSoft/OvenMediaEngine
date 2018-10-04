@@ -86,7 +86,7 @@ void HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 	if(process_data != nullptr)
 	{
 		// request body에 데이터를 추가한 뒤
-		request_body->Append(process_data);
+		request_body->Append(process_data.get());
 
 		// 다 받아졌는지 확인
 		if(request_body->GetLength() == content_length)

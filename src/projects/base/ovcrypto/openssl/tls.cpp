@@ -348,7 +348,7 @@ namespace ov
 
 	std::shared_ptr<ov::Data> Tls::Read()
 	{
-		auto data = ov::Data::CreateData();
+		auto data = std::make_shared<ov::Data>();
 
 		unsigned char buf[1024];
 
@@ -481,7 +481,7 @@ namespace ov
 
 		size_t capacity = (key_len + salt_len) * 2;
 
-		auto key_data = ov::Data::CreateData(capacity);
+		auto key_data = std::make_shared<ov::Data>(capacity);
 		key_data->SetLength(capacity);
 
 		auto key_buffer = key_data->GetWritableDataAs<uint8_t>();

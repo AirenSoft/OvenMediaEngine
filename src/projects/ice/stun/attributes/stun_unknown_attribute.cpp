@@ -25,7 +25,7 @@ bool StunUnknownAttribute::Parse(ov::ByteStream &stream)
 
 bool StunUnknownAttribute::SetData(const void *data, int length)
 {
-	_data = ov::Data::CreateData(data, length);
+	_data = std::make_shared<ov::Data>(data, length);
 	_length = length;
 
 	return true;

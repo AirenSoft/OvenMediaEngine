@@ -39,7 +39,7 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 			return -1L;
 	}
 
-	ov::ByteStream stream(data);
+	ov::ByteStream stream(data.get());
 
 	ssize_t header_length = 0L;
 
@@ -54,7 +54,7 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 	}
 
 	// 남은 데이터와 websocket frame 크기 중, 작은 크기를 구해 데이터를 누적함
-	ssize_t length = std::min(stream.Remained(), (ssize_t)_remained_length);
+	size_t length = std::min(stream.Remained(), _remained_length);
 
 	if(length > 0L)
 	{
@@ -74,7 +74,7 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 		// masking 처리
 		if(_header.mask)
 		{
-			ssize_t payload_length = _payload->GetLength();
+			size_t payload_length = _payload->GetLength();
 
 			// 빠른 처리를 위해 8의 배수로 처리함 (mask가 있을 경우, 데이터 할당 시 이미 8의 배수로 할당해놓음)
 
@@ -84,8 +84,8 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 			uint64_t mask = static_cast<uint64_t>(_frame_masking_key) << (sizeof(_frame_masking_key) * 8) | static_cast<uint64_t>(_frame_masking_key);
 
 			// 8의 배수로 만듦
-			ssize_t count = ((payload_length + 7L) / 8L);
-			_payload->SetLength(count * 8L);
+			size_t count = ((payload_length + 7L) / 8L);
+			_payload->SetLength(static_cast<size_t>(count * 8L));
 
 			auto current = _payload->GetWritableDataAs<uint64_t>();
 
@@ -215,7 +215,7 @@ ssize_t WebSocketFrame::ProcessHeader(ov::ByteStream &stream)
 
 	// masking을 해야한다면, 나중에 속도 최적화를 위해 8의 배수로 masking을 처리하는데, 이 때 버퍼 재할당이 일어나지 않도록 8의 배수로 미리 맞춰놓음
 	ssize_t total_length = _header.mask ? (_total_length / 8L) * 8L : _total_length;
-	_payload = ov::Data::CreateData(total_length);
+	_payload = std::make_shared<ov::Data>(total_length);
 
 	if(_header.mask)
 	{

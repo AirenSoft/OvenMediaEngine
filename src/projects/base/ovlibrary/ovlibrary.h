@@ -17,6 +17,7 @@
 #include "./delay_queue.h"
 #include "./converter.h"
 #include "./data.h"
+#include "./dump_utilities.h"
 #include "./byte_stream.h"
 #include "./enable_shared_from_this.h"
 #include "./error.h"

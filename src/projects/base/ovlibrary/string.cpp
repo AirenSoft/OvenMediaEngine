@@ -911,10 +911,10 @@ namespace ov
 	{
 		if(_buffer == nullptr)
 		{
-			return ov::Data::CreateData();
+			return std::make_shared<ov::Data>();
 		}
 
-		return ov::Data::CreateData(_buffer, _length + (include_null_char ? 1 : 0), false);
+		return std::make_shared<ov::Data>(_buffer, _length + (include_null_char ? 1 : 0), false);
 	}
 
 	bool String::Alloc(size_t length, bool alloc_exactly) noexcept

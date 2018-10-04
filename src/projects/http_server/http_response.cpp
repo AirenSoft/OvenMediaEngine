@@ -142,8 +142,8 @@ bool HttpResponse::SendHeaderIfNeeded()
 
 	// _response_header["Content-Length"] = ov::Converter::ToString(_response_data->GetCount());
 
-	std::shared_ptr<ov::Data> response = ov::Data::CreateData();
-	ov::ByteStream stream(response);
+	std::shared_ptr<ov::Data> response = std::make_shared<ov::Data>();
+	ov::ByteStream stream(response.get());
 
 	// RFC7230 - 3.1.2.  Status Line
 	// status-line = HTTP-version SP status-code SP reason-phrase CRLF

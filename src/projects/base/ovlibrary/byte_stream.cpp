@@ -10,7 +10,7 @@
 
 namespace ov
 {
-	ByteStream::ByteStream(const std::shared_ptr<Data> &data)
+	ByteStream::ByteStream(Data *data)
 		: _data(data),
 		  _read_only_data(_data),
 
@@ -18,7 +18,7 @@ namespace ov
 	{
 	}
 
-	ByteStream::ByteStream(const std::shared_ptr<const Data> &data)
+	ByteStream::ByteStream(const Data *data)
 		: _data(nullptr),
 		  _read_only_data(data),
 
@@ -38,7 +38,7 @@ namespace ov
 	{
 	}
 
-	bool ByteStream::Write(const void *data, ssize_t bytes) noexcept
+	bool ByteStream::Write(const void *data, size_t bytes) noexcept
 	{
 		if(_data == nullptr)
 		{
@@ -49,7 +49,7 @@ namespace ov
 		if((_offset + bytes) > _data->GetLength())
 		{
 			// 데이터가 저장될 공간이 없으므로, 메모리를 확장한 뒤,
-			if(_data->SetLength(_offset + bytes) == false)
+			if(_data->SetLength(static_cast<size_t>(_offset + bytes)) == false)
 			{
 				return false;
 			}
@@ -61,13 +61,13 @@ namespace ov
 			// _data에 데이터가 충분히 들어갈 공간이 있음
 		}
 
-		::memcpy(_data->GetWritableDataAs<uint8_t>() + _offset, data, (size_t)bytes);
+		::memcpy(_data->GetWritableDataAs<uint8_t>() + _offset, data, bytes);
 		_offset += bytes;
 
 		return true;
 	}
 
-	bool ByteStream::Append(const void *data, ssize_t bytes) noexcept
+	bool ByteStream::Append(const void *data, size_t bytes) noexcept
 	{
 		if(_data == nullptr)
 		{
@@ -78,7 +78,7 @@ namespace ov
 		return _data->Append(reinterpret_cast<const uint8_t *>(data), bytes);
 	}
 
-	ssize_t ByteStream::Remained() const noexcept
+	size_t ByteStream::Remained() const noexcept
 	{
 		return Remained<uint8_t>();
 	}
@@ -88,25 +88,24 @@ namespace ov
 		return Remained() >= bytes;
 	}
 
-	std::shared_ptr<Data> ByteStream::GetData() noexcept
+	Data *ByteStream::GetData() noexcept
 	{
 		OV_ASSERT2(_data != nullptr);
 
 		return _data;
 	}
 
-	std::shared_ptr<Data> ByteStream::GetRemainData() const noexcept
+	std::shared_ptr<const Data> ByteStream::GetRemainData() const noexcept
 	{
-		// TODO: 최적화 덜 됨
 		return _read_only_data->Subdata(_offset);
 	}
 
-	ssize_t ByteStream::GetOffset() const noexcept
+	off_t ByteStream::GetOffset() const noexcept
 	{
 		return _offset;
 	}
 
-	bool ByteStream::SetOffset(ssize_t offset) noexcept
+	bool ByteStream::SetOffset(off_t offset) noexcept
 	{
 		OV_ASSERT(offset >= 0L, "offset must greater equal than 0: %ld", offset);
 
@@ -130,7 +129,7 @@ namespace ov
 				return false;
 			}
 
-			if(_data->SetLength(offset) == false)
+			if(_data->SetLength(static_cast<size_t>(offset)) == false)
 			{
 				return false;
 			}
@@ -152,7 +151,7 @@ namespace ov
 	{
 		if(_offset_stack.empty() == false)
 		{
-			ssize_t offset = _offset_stack.back();
+			off_t offset = _offset_stack.back();
 
 			_offset_stack.pop_back();
 
@@ -164,7 +163,7 @@ namespace ov
 		return false;
 	}
 
-	String ByteStream::Dump(ssize_t max_bytes, const char *title) const noexcept
+	String ByteStream::Dump(size_t max_bytes, const char *title) const noexcept
 	{
 		return _read_only_data->Dump(title, _offset, max_bytes);
 	}

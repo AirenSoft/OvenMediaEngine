@@ -35,13 +35,13 @@ namespace ov
 		/// 만약, data가 reference 모드로 생성된 상태라면 읽기만 가능 (Write할 때 false가 반환됨)
 		///
 		/// @param data 조작할 데이터
-		explicit ByteStream(const std::shared_ptr<Data> &data);
+		explicit ByteStream(Data *data);
 
 		/// data에서 데이터를 읽거나 기록함
 		/// 만약, data가 reference 모드로 생성된 상태라면 읽기만 가능 (Write할 때 false가 반환됨)
 		///
 		/// @param data 조작할 데이터
-		explicit ByteStream(const std::shared_ptr<const Data> &data);
+		explicit ByteStream(const Data *data);
 
 		/// 복사 생성자
 		///
@@ -63,12 +63,11 @@ namespace ov
 		///
 		/// @return 읽은 데이터 개수 (0 ~ count 사이)
 		template<typename T = uint8_t>
-		inline ssize_t Peek(T *buffer, ssize_t count)
+		inline size_t Peek(T *buffer, size_t count)
 		{
-			ssize_t peek_count = std::min(Remained<T>(), count);
-			peek_count = std::max(peek_count, 0L);
+			size_t peek_count = std::min(Remained<T>(), count);
 
-			if(peek_count > 0L)
+			if(peek_count > 0)
 			{
 				if(buffer != nullptr)
 				{
@@ -85,7 +84,7 @@ namespace ov
 		///
 		/// @return 읽은 데이터 개수 (0 ~ 1 사이)
 		template<typename T = uint8_t>
-		inline ssize_t Peek(T *buffer)
+		inline size_t Peek(T *buffer)
 		{
 			return Peek<T>(buffer, 1);
 		}
@@ -97,7 +96,7 @@ namespace ov
 		///
 		/// @return skip된 데이터 개수 (0 ~ count 사이)
 		template<typename T = uint8_t>
-		inline ssize_t Skip(ssize_t count)
+		inline size_t Skip(size_t count)
 		{
 			return Read<T>(nullptr, count);
 		}
@@ -108,7 +107,7 @@ namespace ov
 		///
 		/// @return skip된 데이터 개수 (0 ~ 1 사이)
 		template<typename T = uint8_t>
-		inline ssize_t Skip()
+		inline size_t Skip()
 		{
 			return Read<T>(nullptr, 1);
 		}
@@ -121,9 +120,9 @@ namespace ov
 		///
 		/// @return 읽은 데이터 개수 (0 ~ count 사이)
 		template<typename T = uint8_t>
-		inline ssize_t Read(T *buffer, ssize_t count)
+		inline size_t Read(T *buffer, size_t count)
 		{
-			ssize_t copied = Peek(buffer, count);
+			size_t copied = Peek(buffer, count);
 
 			_offset += sizeof(T) * copied;
 
@@ -137,9 +136,9 @@ namespace ov
 		///
 		/// @return 읽은 데이터 개수 (0 ~ 1 사이)
 		template<typename T = uint8_t>
-		inline ssize_t Read(T *buffer)
+		inline size_t Read(T *buffer)
 		{
-			ssize_t copied = Peek(buffer, 1);
+			size_t copied = Peek(buffer, 1);
 
 			_offset += sizeof(T) * copied;
 
@@ -245,7 +244,7 @@ namespace ov
 		/// @remarks
 		/// 만약, _data가 is_reference 타입이라면 false가 반환될 수 있음.
 		/// 데이터를 기록할 공간이 부족할 경우 _data에 Append() 됨.
-		bool Write(const void *data, ssize_t bytes) noexcept;
+		bool Write(const void *data, size_t bytes) noexcept;
 
 		/// 데이터를 현재 위치(offset)에 data를 기록함. 기록 후 현재 위치가 변경됨.
 		///
@@ -273,7 +272,7 @@ namespace ov
 		/// 만약, _data가 is_reference 타입이라면 false가 반환될 수 있음.
 		/// 데이터를 기록할 공간이 부족할 경우 _data에 Append() 됨.
 		template<typename T>
-		bool Write(const T *buffer, ssize_t count)
+		bool Write(const T *buffer, size_t count)
 		{
 			return Write((const void *)buffer, sizeof(T) * count);
 		}
@@ -303,7 +302,7 @@ namespace ov
 		///
 		/// @remarks
 		/// 만약, _data가 is_reference 타입이라면 false가 반환될 수 있음.
-		bool Append(const void *data, ssize_t bytes) noexcept;
+		bool Append(const void *data, size_t bytes) noexcept;
 
 		/// data를 데이터 끝에 bytes만큼 기록함. 기록 후 현재 위치가 변경되지 않음.
 		///
@@ -330,7 +329,7 @@ namespace ov
 		/// 만약, _data가 is_reference 타입이라면 false가 반환될 수 있음.
 		/// 데이터를 기록할 공간이 부족할 경우 _data에 Append() 됨.
 		template<typename T>
-		bool Append(const T *buffer, ssize_t count)
+		bool Append(const T *buffer, size_t count)
 		{
 			return Append((const void *)buffer, sizeof(T) * count);
 		}
@@ -425,7 +424,7 @@ namespace ov
 		///
 		/// @return 개수
 		template<typename T = uint8_t>
-		inline ssize_t Remained() const noexcept
+		inline size_t Remained() const noexcept
 		{
 			ssize_t remained_bytes = (_read_only_data->GetLength() - _offset);
 
@@ -442,7 +441,7 @@ namespace ov
 		///
 		/// @remarks
 		/// Remained<uint8_t>() 와 동일함.
-		ssize_t Remained() const noexcept;
+		size_t Remained() const noexcept;
 
 		/// 지정한 bytes 만큼 남았는지 확인
 		///
@@ -454,18 +453,18 @@ namespace ov
 		/// 저장되어 있는 쓰기 가능한 데이터를 얻어옴
 		///
 		/// @return 저장된 데이터
-		std::shared_ptr<Data> GetData() noexcept;
+		Data *GetData() noexcept;
 
 		/// GetOffset() 부터 Remained() 크기가 고려된 데이터를 얻어옴
 		/// 여기서 얻어온 데이터는, 원본 데이터를 참조만 하기 때문에 ByteStream 객체가 해제되기 전 까지만 사용해야 함
 		///
 		/// @return 저장된 데이터
-		std::shared_ptr<Data> GetRemainData() const noexcept;
+		std::shared_ptr<const Data> GetRemainData() const noexcept;
 
 		/// 현재 위치를 얻어옴
 		///
 		/// @return 현재 위치
-		ssize_t GetOffset() const noexcept;
+		off_t GetOffset() const noexcept;
 
 		/// 현재 위치를 설정함
 		///
@@ -475,7 +474,7 @@ namespace ov
 		///
 		/// @remarks
 		/// 만약, offset이 _data의 Count()보다 클 경우, _data에 빈 데이터를 append함
-		bool SetOffset(ssize_t offset) noexcept;
+		bool SetOffset(off_t offset) noexcept;
 
 		/// 현재 위치의 데이터를 dump함
 		///
@@ -483,7 +482,7 @@ namespace ov
 		/// @param title dump할 때 보여질 제목
 		///
 		/// @return dump결과가 저장된 문자열
-		String Dump(ssize_t max_bytes = 1024L, const char *title = nullptr) const noexcept;
+		String Dump(size_t max_bytes = 1024L, const char *title = nullptr) const noexcept;
 
 		/// offset history에 현재 offset을 넣음
 		/// 여러 곳에서 stream을 사용할 때, offset을 백업 & 복원하면서 사용해야 하는 이슈가 있는데, 이를 편하게 해주는 유틸리티 함수
@@ -527,13 +526,13 @@ namespace ov
 			return Write<T>(&buffer, 1);
 		}
 
-		std::shared_ptr<Data> _data;
-		std::shared_ptr<const Data> _read_only_data;
+		Data *_data;
+		const Data *_read_only_data;
 
 		// 데이터를 읽거나 기록할 때 사용될 offset
-		ssize_t _offset;
+		off_t _offset;
 
 		// offset push & pop 할 때 사용하는 history queue
-		std::vector<ssize_t> _offset_stack;
+		std::vector<off_t> _offset_stack;
 	};
 }

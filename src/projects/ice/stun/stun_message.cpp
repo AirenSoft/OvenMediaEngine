@@ -314,8 +314,8 @@ bool StunMessage::WriteFingerprintAttribute(ov::ByteStream &stream)
 	std::unique_ptr<StunFingerprintAttribute> attribute = std::make_unique<StunFingerprintAttribute>();
 
 	// Crc를 계산할 땐, STUN 헤더의 length에 fingerprint attribute 길이가 포함되어 있어야 함
-	uint8_t *buffer = (uint8_t *)(stream.GetData()->GetData());
-	uint16_t *length = (uint16_t *)(buffer + sizeof(uint16_t));
+	uint8_t *buffer = stream.GetData()->GetWritableDataAs<uint8_t>();
+	uint16_t *length = reinterpret_cast<uint16_t *>(buffer + sizeof(uint16_t));
 	int attribute_length = attribute->GetLength(true, true);
 
 	_message_length += attribute_length;
@@ -323,7 +323,7 @@ bool StunMessage::WriteFingerprintAttribute(ov::ByteStream &stream)
 
 	logtd("Calculating CRC for STUN message:\n%s", stream.GetData()->Dump().CStr());
 
-	uint32_t crc = ov::Crc32::Calculate(*(stream.GetData().get()));
+	uint32_t crc = ov::Crc32::Calculate(stream.GetData());
 
 	bool result = true;
 
@@ -631,8 +631,8 @@ bool StunMessage::AddAttribute(std::unique_ptr<StunAttribute> attribute)
 
 std::shared_ptr<ov::Data> StunMessage::Serialize(const ov::String &integrity_key)
 {
-	std::shared_ptr<ov::Data> data = ov::Data::CreateData();
-	ov::ByteStream stream(data);
+	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>();
+	ov::ByteStream stream(data.get());
 
 	bool result = true;
 

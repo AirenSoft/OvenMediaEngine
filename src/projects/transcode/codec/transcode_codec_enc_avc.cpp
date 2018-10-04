@@ -57,6 +57,12 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 {
 	int ret;
 
+	if(_context == nullptr)
+	{
+		*result = TranscodeResult::NoData;
+		return nullptr;
+	}
+
 	///////////////////////////////////////////////////
 	// 디코딩 가능한 프레임이 존재하는지 확인한다.
 	///////////////////////////////////////////////////

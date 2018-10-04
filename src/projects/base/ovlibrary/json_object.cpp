@@ -9,6 +9,7 @@
 #include "./json_object.h"
 #include "./json.h"
 #include "./ovlibrary_private.h"
+#include "./dump_utilities.h"
 
 namespace ov
 {

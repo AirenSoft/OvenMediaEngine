@@ -59,9 +59,9 @@ namespace ov
 		return static_cast<uint32_t>(UpdateCrc(initial, static_cast<const uint8_t *>(buffer), length));
 	}
 
-	uint32_t Crc32::Update(uint32_t initial, const ov::Data &data)
+	uint32_t Crc32::Update(uint32_t initial, const ov::Data *data)
 	{
-		return Update(initial, data.GetData(), data.GetLength());
+		return Update(initial, data->GetData(), data->GetLength());
 	}
 
 	uint32_t Crc32::Calculate(const void *buffer, ssize_t length)
@@ -69,8 +69,8 @@ namespace ov
 		return Update(0, static_cast<const uint8_t *>(buffer), length);
 	}
 
-	uint32_t Crc32::Calculate(const ov::Data &data)
+	uint32_t Crc32::Calculate(const ov::Data *data)
 	{
-		return Calculate(data.GetData(), data.GetLength());
+		return Calculate(data->GetData(), data->GetLength());
 	}
 }

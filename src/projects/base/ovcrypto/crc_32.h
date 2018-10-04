@@ -22,9 +22,9 @@ namespace ov
 		~Crc32();
 
 		static uint32_t Update(uint32_t initial, const void *buffer, ssize_t length);
-		static uint32_t Update(uint32_t initial, const ov::Data &data);
+		static uint32_t Update(uint32_t initial, const ov::Data *data);
 
 		static uint32_t Calculate(const void *buffer, ssize_t length);
-		static uint32_t Calculate(const ov::Data &data);
+		static uint32_t Calculate(const ov::Data *data);
 	};
 }

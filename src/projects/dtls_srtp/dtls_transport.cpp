@@ -136,8 +136,8 @@ bool DtlsTransport::MakeSrtpKey()
 
 	auto crypto_suite = _tls.GetSelectedSrtpProfileId();
 
-	std::shared_ptr<ov::Data> server_key = ov::Data::CreateData();
-	std::shared_ptr<ov::Data> client_key = ov::Data::CreateData();
+	std::shared_ptr<ov::Data> server_key = std::make_shared<ov::Data>();
+	std::shared_ptr<ov::Data> client_key = std::make_shared<ov::Data>();
 
 	_tls.ExportKeyingMaterial(crypto_suite, label, server_key, client_key);
 
@@ -325,7 +325,7 @@ ssize_t DtlsTransport::Read(ov::Tls *tls, void *buffer, size_t length)
 
 ssize_t DtlsTransport::Write(ov::Tls *tls, const void *data, size_t length)
 {
-	auto packet = ov::Data::CreateData(data, length);
+	auto packet = std::make_shared<ov::Data>(data, length);
 
 	auto node = GetLowerNode(SessionNodeType::Ice);
 

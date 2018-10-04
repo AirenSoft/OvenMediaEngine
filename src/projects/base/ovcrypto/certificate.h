@@ -49,6 +49,6 @@ private:
 	X509 *_X509 = nullptr;
 	EVP_PKEY *_pkey = nullptr;
 
-	std::shared_ptr<ov::Data> _digest = ov::Data::CreateData();
+	ov::Data _digest;
 	ov::String _digest_algorithm;
 };

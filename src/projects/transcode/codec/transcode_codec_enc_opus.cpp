@@ -55,7 +55,7 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> co
 	// OPUS supports int16 or float
 	const int estimated_frame_size = std::max(sizeof(opus_int16), sizeof(float));
 
-	_buffer = ov::Data::CreateData(max_opus_frame_count * estimated_channel_count * estimated_frame_size);
+	_buffer = std::make_shared<ov::Data>(max_opus_frame_count * estimated_channel_count * estimated_frame_size);
 	_format = MediaCommonType::AudioSample::Format::None;
 	_current_pts = -1;
 
@@ -164,7 +164,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeRe
 
 	// "1275 * 3 + 7" formula is used in opusenc.c:813
 	// or, use the formula in "AudioEncoderOpusImpl::SufficientOutputBufferSize()" of the native code.
-	std::shared_ptr<ov::Data> encoded = ov::Data::CreateData(1275 * 3 + 7);
+	std::shared_ptr<ov::Data> encoded = std::make_shared<ov::Data>(1275 * 3 + 7);
 	encoded->SetLength(encoded->GetCapacity());
 
 	// Encode

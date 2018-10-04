@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "certificate.h"
 
 Certificate::Certificate(X509 *x509)
@@ -335,7 +337,7 @@ bool Certificate::ComputeDigest(const ov::String algorithm)
 
 	uint8_t digest[EVP_MAX_MD_SIZE];
 	X509_digest(GetX509(), md, digest, &n);
-	_digest->Append(const_cast<uint8_t *>(digest), n);
+	_digest.Append(digest, n);
 	_digest_algorithm = algorithm;
 	return true;
 }
@@ -353,15 +355,15 @@ EVP_PKEY *Certificate::GetPkey()
 //TODO(getroot): Algorithm을 enum값으로 변경
 ov::String Certificate::GetFingerprint(ov::String algorithm)
 {
-	if(_digest->GetLength() <= 0)
+	if(_digest.GetLength() <= 0)
 	{
-		if(!ComputeDigest(algorithm))
+		if(!ComputeDigest(std::move(algorithm)))
 		{
 			return "";
 		}
 	}
 
-	ov::String fingerprint = ov::ToHexStringWithDelimiter(_digest->GetDataAs<char>(), _digest->GetLength(), ':');
+	ov::String fingerprint = ov::ToHexStringWithDelimiter(&_digest, ':');
 	fingerprint.MakeUpper();
 	return fingerprint;
 }

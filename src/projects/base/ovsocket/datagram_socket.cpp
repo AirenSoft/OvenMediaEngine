@@ -79,7 +79,7 @@ namespace ov
 
 					while(true)
 					{
-						std::shared_ptr<Data> data = ov::Data::CreateData(UdpBufferSize);
+						std::shared_ptr<Data> data = std::make_shared<ov::Data>(UdpBufferSize);
 
 						// socket에서 이벤트 발생
 						std::shared_ptr<SocketAddress> remote;

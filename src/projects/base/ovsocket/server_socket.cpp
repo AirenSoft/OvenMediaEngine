@@ -103,7 +103,7 @@ namespace ov
 
 				while(true)
 				{
-					std::shared_ptr<Data> data = Data::CreateData(TcpBufferSize);
+					auto data = std::make_shared<Data>(TcpBufferSize);
 
 					auto error = client_socket->Recv(data);
 

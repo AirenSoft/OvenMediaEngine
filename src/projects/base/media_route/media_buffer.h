@@ -41,7 +41,7 @@ public:
 		  _pts(pts),
 		  _flags(flags)
 	{
-		_data->Append(data);
+		_data->Append(data.get());
 	}
 
 	MediaCommonType::MediaType GetMediaType() const noexcept
@@ -83,7 +83,7 @@ protected:
 	MediaCommonType::MediaType _media_type = MediaCommonType::MediaType::Unknown;
 	int32_t _track_id = -1;
 
-	std::shared_ptr<ov::Data> _data = ov::Data::CreateData();
+	std::shared_ptr<ov::Data> _data = std::make_shared<ov::Data>();
 
 	int64_t _pts = -1;
 	MediaPacketFlag _flags = MediaPacketFlag::NoFlag;

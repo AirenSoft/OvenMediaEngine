@@ -121,7 +121,7 @@ protected:
 	{
 		if(_request_body == nullptr)
 		{
-			_request_body = ov::Data::CreateData();
+			_request_body = std::make_shared<ov::Data>();
 		}
 
 		return _request_body;

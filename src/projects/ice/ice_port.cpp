@@ -216,7 +216,7 @@ void IcePort::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &addres
 	// TODO: 지금은 data 안에 하나의 STUN 메시지만 있을 것으로 간주하고 작성되어 있음
 	// TODO: TCP의 경우, 데이터가 많이 들어올 수 있기 때문에 별도 처리 필요
 
-	ov::ByteStream stream(data);
+	ov::ByteStream stream(data.get());
 	StunMessage message;
 
 	if(message.Parse(stream))

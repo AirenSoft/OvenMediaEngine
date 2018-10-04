@@ -193,7 +193,7 @@ namespace ov
 
 	const std::shared_ptr<ov::Data> &MessageDigest::Finish()
 	{
-		std::shared_ptr<ov::Data> data = ov::Data::CreateData(Size());
+		std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>(Size());
 
 		Finish(data->GetWritableData(), data->GetCapacity());
 
@@ -279,7 +279,7 @@ namespace ov
 
 	std::shared_ptr<ov::Data> MessageDigest::ComputeHmac(CryptoAlgorithm algorithm, const std::shared_ptr<const ov::Data> &key, const std::shared_ptr<const ov::Data> &input)
 	{
-		std::shared_ptr<ov::Data> data = ov::Data::CreateData();
+		std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>();
 
 		data->SetLength(MessageDigest::Size(algorithm));
 
@@ -312,7 +312,7 @@ namespace ov
 
 	std::shared_ptr<ov::Data> MessageDigest::ComputeDigest(CryptoAlgorithm algorithm, const void *input, ssize_t input_length)
 	{
-		std::shared_ptr<ov::Data> data = ov::Data::CreateData();
+		std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>();
 
 		data->SetLength(Size(algorithm));
 
