@@ -13,6 +13,8 @@
 
 #include "media_route/media_type.h"
 
+#define MAX_FRAG_COUNT 3
+
 enum class FrameType : int8_t
 {
 	EmptyFrame,
@@ -29,24 +31,59 @@ struct FragmentationHeader
 public:
 	~FragmentationHeader()
 	{
-		OV_SAFE_DELETE(fragmentation_offset);
-		OV_SAFE_DELETE(fragmentation_length);
-		OV_SAFE_DELETE(fragmentation_time_diff);
-		OV_SAFE_DELETE(fragmentation_pl_type);
 	}
 
 	// Number of fragmentations
 	uint16_t fragmentation_vector_size = 0;
 	// Offset of pointer to data for each
-	size_t *fragmentation_offset = nullptr;
+	size_t fragmentation_offset[MAX_FRAG_COUNT];
 
 	// fragmentation
 	// Data size for each fragmentation
-	size_t *fragmentation_length = nullptr;
+	size_t fragmentation_length[MAX_FRAG_COUNT];
 	// Timestamp difference relative "now" for each fragmentation
-	uint16_t *fragmentation_time_diff = nullptr;
+	uint16_t fragmentation_time_diff[MAX_FRAG_COUNT];
 	// Payload type of each fragmentation
-	uint8_t *fragmentation_pl_type = nullptr;
+	uint8_t fragmentation_pl_type[MAX_FRAG_COUNT];
+
+	void VerifyAndAllocateFragmentationHeader(const size_t size) {
+		const uint16_t size16 = static_cast<uint16_t>(size);
+		if (fragmentation_vector_size < size16) {
+			uint16_t oldVectorSize = fragmentation_vector_size;
+			{
+				// offset
+				size_t* oldOffsets = fragmentation_offset;
+				memset(fragmentation_offset + oldVectorSize, 0,
+				       sizeof(size_t) * (size16 - oldVectorSize));
+				// copy old values
+				memcpy(fragmentation_offset, oldOffsets, sizeof(size_t) * oldVectorSize);
+			}
+			// length
+			{
+				size_t* oldLengths = fragmentation_length;
+				memset(fragmentation_length + oldVectorSize, 0,
+				       sizeof(size_t) * (size16 - oldVectorSize));
+				memcpy(fragmentation_length, oldLengths, sizeof(size_t) * oldVectorSize);
+			}
+			// time diff
+			{
+				uint16_t* oldTimeDiffs = fragmentation_time_diff;
+				memset(fragmentation_time_diff + oldVectorSize, 0,
+				       sizeof(uint16_t) * (size16 - oldVectorSize));
+				memcpy(fragmentation_time_diff, oldTimeDiffs,
+				       sizeof(uint16_t) * oldVectorSize);
+			}
+			// payload type
+			{
+				uint8_t* oldTimePlTypes = fragmentation_pl_type;
+				memset(fragmentation_pl_type + oldVectorSize, 0,
+				       sizeof(uint8_t) * (size16 - oldVectorSize));
+				memcpy(fragmentation_pl_type, oldTimePlTypes,
+				       sizeof(uint8_t) * oldVectorSize);
+			}
+			fragmentation_vector_size = size16;
+		}
+	}
 };
 
 struct EncodedFrame
@@ -96,6 +133,16 @@ enum class CodecType : int32_t
 	Unknown
 };
 
+enum class H264PacketizationMode {
+	NonInterleaved = 0,  // Mode 1 - STAP-A, FU-A is allowed
+	SingleNalUnit        // Mode 0 - only single NALU allowed
+};
+
+struct CodecSpecificInfoH264 {
+	H264PacketizationMode packetization_mode;
+	uint8_t simulcast_idx;
+};
+
 struct CodecSpecificInfoVp8
 {
 	int16_t picture_id = 0;         // Negative value to skip pictureId.
@@ -122,6 +169,7 @@ union CodecSpecificInfoUnion
 
 	CodecSpecificInfoVp8 vp8;
 
+	CodecSpecificInfoH264 h264;
 	// In the future
 	// RTPVideoHeaderVP9 vp9;
 

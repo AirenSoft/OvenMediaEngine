@@ -16,6 +16,7 @@
 #include <map>
 
 #include "media_type.h"
+#include "base/common_types.h"
 
 enum class MediaPacketFlag
 {
@@ -78,6 +79,8 @@ public:
 	{
 		return _flags;
 	}
+
+	std::unique_ptr<FragmentationHeader> _frag_hdr = std::make_unique<FragmentationHeader>();
 
 protected:
 	MediaCommonType::MediaType _media_type = MediaCommonType::MediaType::Unknown;

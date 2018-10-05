@@ -274,6 +274,11 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 			rtp_video_header->codec_header.vp8.key_idx = info->codec_specific.vp8.key_idx;
 			rtp_video_header->simulcast_idx = info->codec_specific.vp8.simulcast_idx;
 			return;
+		case CodecType::H264:
+			rtp_video_header->codec = RtpVideoCodecType::H264;
+			rtp_video_header->codec_header.h264.packetization_mode = info->codec_specific.h264.packetization_mode;
+			rtp_video_header->simulcast_idx = info->codec_specific.h264.simulcast_idx;
+			return;
 	}
 }
 

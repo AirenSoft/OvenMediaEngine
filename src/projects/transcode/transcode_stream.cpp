@@ -36,11 +36,11 @@ TranscodeStream::TranscodeStream(std::shared_ptr<StreamInfo> stream_info, Transc
 		CreateDecoder(track.second->GetId());
 	}
 
-	_transcode_context = std::make_shared<TranscodeContext>();
-
 	// TODO(dimiden): Read these values from config file
 	auto app_info = parent->GetApplicationInfo();
 	auto config = ConfigManager::Instance()->GetApplicationInfo(app_info->GetName());
+
+	_transcode_context = std::make_shared<TranscodeContext>();
 
 	_transcode_context->SetVideoCodecId(MediaCommonType::MediaCodecId::Vp8);
 	_transcode_context->SetVideoBitrate(5000000);
@@ -362,6 +362,7 @@ TranscodeResult TranscodeStream::do_encode(int32_t track_id, std::unique_ptr<con
 	////////////////////////////////////////////////////////
 	// 2) 인코더에 전달
 	////////////////////////////////////////////////////////
+
 	auto &encoder = _encoders[track_id];
 	encoder->SendBuffer(std::move(frame));
 
