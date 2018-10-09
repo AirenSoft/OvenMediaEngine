@@ -24,149 +24,95 @@ We will support the following platforms in the future:
 
 ## Quick Start
 ### Prerequisites
-- **[CentOS only]** devtoolset (gcc 6.0+ for compile, 7.0+ is recommended)
+- Ubuntu
+  - Install packages
   ```
-  $ sudo yum install centos-release-scl
-  $ sudo yum install devtoolset-7
-  
-  # Execute this command
-  $ source scl_source enable devtoolset-7
-  # and append above command to ~/.bashrc using text editors
+  $ sudo apt install build-essential nasm autoconf libtool zlib1g-dev libssl-dev libvpx-dev libopus-dev libsrtp2-dev pkg-config libavformat-dev libavcodec-dev libavfilter-dev libswscale-dev libavresample-dev
   ```
-- **[Ubuntu only]** build-essential
+  - [OpenH264 1.8.0](https://www.openh264.org/) [[Download]](http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2)
   ```
-  $ sudo apt install build-essential
+  $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && mv libopenh264-1.8.0-linux64.4.so /usr/lib && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
   ```
-- bc (An arbitrary precision calculator language)
-  - CentOS/Fedora
-    ```
-    $ sudo yum install bc
-    ```
-  - Ubuntu
-    ```
-    $ sudo apt install bc
-    ```
-- gcc-c++
-  - CentOS/Fedora
-    ```
-    $ sudo yum install gcc-c++
-    ```
-- nasm (Netwide Assembler)
-  - CentOS/Fedora
-    ```
-    $ sudo yum install nasm
-    ```
-  - Ubuntu
-    ```
-    $ sudo apt install nasm
-    ```
-- autoconf
-  - CentOS/Fedora
-    ```
-    $ sudo yum install autoconf
-    ```
-  - Ubuntu
-    ```
-    $ sudo apt install autoconf
-    ```
-- libtool
-  - CentOS/Fedora
-    ```
-    $ sudo yum install libtool
-    ```
-  - Ubuntu
-    ```
-    $ sudo apt install libtool
-    ```
-- glibc-static
-  - CentOS
-    ```
-    $ sudo yum install glibc-static
-    ```
-- zlib-devel
-  - CentOS/Fedora
-    ```
-    $ sudo yum install zlib-devel
-    ```
-  - Ubuntu
-    ```
-    $ sudo apt install zlib1g-dev
-    ```
-- pkg-config
-  - CentOS/Fedora
-    ```
-    $ sudo yum install pkg-config
-    ```
-  - Ubuntu
-    ```
-    $ sudo apt install pkg-config
-    ```
-- [OpenSSL 1.1.0g](https://www.openssl.org) [[Download]](https://www.openssl.org/source/openssl-1.1.0g.tar.gz)
+- Fedora
+  - Install packages
   ```
-  $ curl -OL https://www.openssl.org/source/openssl-1.1.0g.tar.gz
-  $ tar xvfz openssl-1.1.0g.tar.gz
-  $ cd openssl-1.1.0g
-  $ ./config shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa && make && make install
+  sudo yum install gcc-c++ make nasm autoconf libtool zlib-devel openssl-devel libvpx-devel opus-devel
   ```
-- [libvpx 1.7.0](https://www.webmproject.org/code/) [[Download]](https://chromium.googlesource.com/webm/libvpx/+archive/v1.7.0.tar.gz)
+  - Execute below commands and append them to ~/.bashrc using text editors 
   ```
-  $ curl -OL https://chromium.googlesource.com/webm/libvpx/+archive/v1.7.0.tar.gz
-  $ mkdir libvpx-1.7.0
-  $ cd libvpx-1.7.0
-  $ tar xvfz ../v1.7.0.tar.gz
-  $ ./configure --enable-shared --disable-static --disable-examples && make && make install
+  $ export PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig
+  $ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib:/usr/local/lib64
   ```
-- [Opus 1.1.3](https://opus-codec.org/) [[Download]](https://archive.mozilla.org/pub/opus/opus-1.1.3.tar.gz)
+  - [libSRTP 2.2.0](https://github.com/cisco/libsrtp) [[Download]](https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz)
   ```
-  $ curl -OL https://archive.mozilla.org/pub/opus/opus-1.1.3.tar.gz
-  $ tar xvfz opus-1.1.3.tar.gz
-  $ cd opus-1.1.3
-  $ autoreconf -f -i
-  $ ./configure --enable-shared --disable-static && make && make install
+  $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure && make && sudo make install)
   ```
-- [libSRTP 2.2.0](https://github.com/cisco/libsrtp) [[Download]](https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz)
+  - [FFmpeg 3.4.2](https://ffmpeg.org) [[Download]](https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz)
   ```
-  $ curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz
-  $ tar xvfz v2.2.0.tar.gz
-  $ cd libsrtp-2.2.0
-  $ ./configure && make && make install
-  ```
-- [FFmpeg 3.4.2](https://ffmpeg.org) [[Download]](https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz)
-  ```
-  $ curl -OL https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz
-  $ xz -d ffmpeg-3.4.2.tar.xz
-  $ tar xvf ffmpeg-3.4.2.tar
-  $ cd ffmpeg-3.4.2
-  $ ./configure \
-	--enable-shared \
-	--disable-static \
+  $ (curl -OL https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz && xz -d ffmpeg-3.4.2.tar.xz && tar xvf ffmpeg-3.4.2.tar && cd ffmpeg-3.4.2 && ./configure \
+	--disable-static --enable-shared \
 	--extra-libs=-ldl \
-	--disable-ffplay \
 	--enable-ffprobe \
-	--disable-ffserver \
-	--disable-avdevice \
-	--disable-doc \
-	--disable-symver \
-	--disable-debug \
-	--disable-indevs \
-	--disable-outdevs \
-	--disable-devices \
-	--disable-hwaccels \
-	--disable-encoders \
-	--enable-zlib \
-	--disable-filters \
-	--disable-vaapi \
-	--enable-libopus \
-	--enable-libvpx \
+	--disable-ffplay --disable-ffserver --disable-filters --disable-vaapi --disable-avdevice --disable-doc --disable-symver --disable-debug --disable-indevs --disable-outdevs --disable-devices --disable-hwaccels --disable-encoders \
+	--enable-zlib --enable-libopus --enable-libvpx \
 	--enable-encoder=libvpx_vp8,libvpx_vp9,libopus \
 	--disable-decoder=tiff \
-	--enable-filter=aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && make && make install
+	--enable-filter=aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && make && sudo make install)
+  ```
+  - [OpenH264 1.8.0](https://www.openh264.org/) [[Download]](http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2)
+  ```
+  $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && mv libopenh264-1.8.0-linux64.4.so /usr/lib && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
+  ```
+- CentOS (gcc 7.0+ is recommended)
+  - Install packages
+  ```
+  $ sudo yum install centos-release-scl
+  $ sudo yum install devtoolset-7 bc gcc-c++ nasm autoconf libtool glibc-static zlib-devel git bzip2
+  ```
+  - Execute below commands and append them to ~/.bashrc using text editors 
+  ```
+  $ source scl_source enable devtoolset-7
+  $ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib:/usr/local/lib64:/usr/lib
+  $ export PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig
+  ```
+  - [OpenSSL 1.1.0g](https://www.openssl.org) [[Download]](https://www.openssl.org/source/openssl-1.1.0g.tar.gz)
+  ```
+  $ (curl -OL https://www.openssl.org/source/openssl-1.1.0g.tar.gz && tar xvfz openssl-1.1.0g.tar.gz && cd openssl-1.1.0g && ./config shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa && make && sudo make install)
+  ```
+  - [libvpx 1.7.0](https://www.webmproject.org/code/) [[Download]](https://chromium.googlesource.com/webm/libvpx/+archive/v1.7.0.tar.gz)
+  ```
+  $ (curl -OL https://chromium.googlesource.com/webm/libvpx/+archive/v1.7.0.tar.gz && mkdir libvpx-1.7.0 && cd libvpx-1.7.0 && tar xvfz ../v1.7.0.tar.gz && ./configure --enable-shared --disable-static --disable-examples && make && sudo make install)
+  ```
+  - [Opus 1.1.3](https://opus-codec.org/) [[Download]](https://archive.mozilla.org/pub/opus/opus-1.1.3.tar.gz)
+  ```
+  $ (curl -OL https://archive.mozilla.org/pub/opus/opus-1.1.3.tar.gz && tar xvfz opus-1.1.3.tar.gz && cd opus-1.1.3 && autoreconf -f -i && ./configure --enable-shared --disable-static && make && sudo make install)
+  ```
+  - [libSRTP 2.2.0](https://github.com/cisco/libsrtp) [[Download]](https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz)
+  ```
+  $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure && make && sudo make install)
+  ```
+  - [FFmpeg 3.4.2](https://ffmpeg.org) [[Download]](https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz)
+  ```
+  $ (curl -OL https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz && xz -d ffmpeg-3.4.2.tar.xz && tar xvf ffmpeg-3.4.2.tar && cd ffmpeg-3.4.2 && ./configure \
+	--disable-static --enable-shared \
+	--extra-libs=-ldl \
+	--enable-ffprobe \
+	--disable-ffplay --disable-ffserver --disable-filters --disable-vaapi --disable-avdevice --disable-doc --disable-symver --disable-debug --disable-indevs --disable-outdevs --disable-devices --disable-hwaccels --disable-encoders \
+	--enable-zlib --enable-libopus --enable-libvpx \
+	--enable-encoder=libvpx_vp8,libvpx_vp9,libopus \
+	--disable-decoder=tiff \
+	--enable-filter=aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && make && sudo make install)
+  ```
+  - [OpenH264 1.8.0](https://www.openh264.org/) [[Download]](http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2)
+  ```
+  $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && mv libopenh264-1.8.0-linux64.4.so /usr/lib && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
   ```
   
 ### Build
 You can build OME source with the following command. The built binary can be found in the `bin/DEBUG` or `bin/RELEASE` directory.
 ```
-$ cd [OME_PATH]/src
+$ git clone "https://github.com/AirenSoft/OvenMediaEngine"
+$ cd OvenMediaEngine/src
 $ make
 ```
 
