@@ -455,16 +455,27 @@ void MediaRouteApplication::MainTask()
 
 							auto codec_info = std::make_unique<CodecSpecificInfo>();
 
-							codec_info->codec_type = CodecType::Vp8;
-							codec_info->codec_specific.vp8.picture_id = -1;
-							codec_info->codec_specific.vp8.non_reference = false;
-							codec_info->codec_specific.vp8.simulcast_idx = 0;
-							codec_info->codec_specific.vp8.temporal_idx = 0;
-							codec_info->codec_specific.vp8.layer_sync = false;
-							codec_info->codec_specific.vp8.tl0_pic_idx = 0;
-							codec_info->codec_specific.vp8.key_idx = 0;
+							MediaCodecId codec_id = media_track->GetCodecId();
 
-							auto fragmentation = std::make_unique<FragmentationHeader>();
+							if(codec_id == MediaCodecId::Vp8)
+							{
+								codec_info->codec_type = CodecType::Vp8;
+								codec_info->codec_specific.vp8.picture_id = -1;
+								codec_info->codec_specific.vp8.non_reference = false;
+								codec_info->codec_specific.vp8.simulcast_idx = 0;
+								codec_info->codec_specific.vp8.temporal_idx = 0;
+								codec_info->codec_specific.vp8.layer_sync = false;
+								codec_info->codec_specific.vp8.tl0_pic_idx = 0;
+								codec_info->codec_specific.vp8.key_idx = 0;
+							}
+							else if (codec_id == MediaCodecId::H264)
+							{
+								codec_info->codec_type = CodecType::H264;
+								codec_info->codec_specific.h264.simulcast_idx= 0;
+								codec_info->codec_specific.h264.packetization_mode = H264PacketizationMode::NonInterleaved;
+							}
+
+							auto fragmentation = std::move(cur_buf->_frag_hdr);
 
 							// logtd("send to publisher (1000k cr):%u, (90k cr):%u", cur_buf->GetPts(), encoded_frame->_timeStamp);
 							observer->OnSendVideoFrame(

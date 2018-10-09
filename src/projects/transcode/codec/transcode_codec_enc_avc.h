@@ -9,10 +9,12 @@
 #pragma once
 
 #include "transcode_encoder.h"
+#include "include/codec_api.h"
 
 class OvenCodecImplAvcodecEncAVC : public TranscodeEncoder
 {
 public:
+
 	AVCodecID GetCodecID() const noexcept override
 	{
 		return AV_CODEC_ID_H264;
@@ -20,7 +22,10 @@ public:
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
-	std::unique_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
-private:
+	void SendBuffer(std::unique_ptr<const MediaFrame> frame) override;
 
+	std::unique_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
+
+private:
+	ISVCEncoder* _encoder;
 };

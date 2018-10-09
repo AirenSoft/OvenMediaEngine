@@ -1,5 +1,6 @@
 #include "rtp_packetizer.h"
 #include "rtp_packetizer_vp8.h"
+#include "rtp_packetizer_h264.h"
 
 RtpPacketizer *RtpPacketizer::Create(RtpVideoCodecType type,
                                      size_t max_payload_len,
@@ -11,6 +12,9 @@ RtpPacketizer *RtpPacketizer::Create(RtpVideoCodecType type,
 	{
 		case RtpVideoCodecType::Vp8:
 			return new RtpPacketizerVp8(rtp_type_header->vp8, max_payload_len, last_packet_reduction_len);
+
+		case RtpVideoCodecType::H264:
+			return new RtpPacketizerH264(max_payload_len, last_packet_reduction_len, rtp_type_header->h264.packetization_mode);
 
 		case RtpVideoCodecType::None:
 			break;

@@ -12,9 +12,9 @@ enum class RtpVideoCodecType
 {
 	None,
 	Vp8,
+	H264
 	// In the future
 	// kRtpVideoVp9
-	// kRtpVideoH264
 };
 
 enum class RtpAudioCodecType
@@ -27,6 +27,42 @@ const int16_t kNoPictureId = -1;
 const int16_t kNoTl0PicIdx = -1;
 const uint8_t kNoTemporalIdx = 0xFF;
 const int kNoKeyIdx = -1;
+
+const size_t kMaxNalusPerPacket = 10;
+
+struct NaluInfo {
+	uint8_t type;
+	int sps_id;
+	int pps_id;
+};
+
+enum NaluType : uint8_t {
+	kSlice = 1,
+	kIdr = 5,
+	kSei = 6,
+	kSps = 7,
+	kPps = 8,
+	kAud = 9,
+	kEndOfSequence = 10,
+	kEndOfStream = 11,
+	kFiller = 12,
+	kStapA = 24,
+	kFuA = 28
+};
+
+enum H264PacketizationTypes {
+	kH264SingleNalu,
+	kH264StapA,
+	kH264FuA,
+};
+
+struct RTPVideoHeaderH264 {
+	uint8_t nalu_type;
+	H264PacketizationTypes packetization_type;
+	NaluInfo nalus[kMaxNalusPerPacket];
+	size_t nalus_length;
+	H264PacketizationMode packetization_mode;
+};
 
 struct RTPVideoHeaderVP8
 {
@@ -59,6 +95,7 @@ struct RTPVideoHeaderVP8
 union RTPVideoTypeHeader
 {
 	RTPVideoHeaderVP8 vp8;
+	RTPVideoHeaderH264 h264;
 	// In the future
 	// RTPVideoHeaderVP9 VP9;
 };
