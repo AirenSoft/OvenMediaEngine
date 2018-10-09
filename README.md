@@ -227,7 +227,6 @@ Please read [Guidelines](CONTRIBUTING.md) and our [Rules](CODE_OF_CONDUCT.md).
 
 ## Future works
 The following features will be supported, and check the milestones for more details.
-- Audio support
 - Various input stream
   - file, webrtc, mpeg-ts 
 - Various output protocols
