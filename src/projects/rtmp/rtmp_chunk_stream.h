@@ -68,7 +68,7 @@ private :
 	bool 	OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document, int32_t object_index);
 
 	bool	SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data);
-	bool	SendUserControlMessage(uint8_t message, std::shared_ptr<std::vector<uint8_t>> &data);
+	bool	SendUserControlMessage(uint16_t message, std::shared_ptr<std::vector<uint8_t>> &data);
 
 	bool	SendWindowAcknowledgementSize();
 	bool	SendSetPeerBandwidth();

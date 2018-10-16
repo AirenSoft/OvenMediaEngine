@@ -39,9 +39,9 @@ typedef enum
 //====================================================================================================
 // AmfUtil - WriteInt8
 //====================================================================================================
-int AmfUtil::WriteInt8(void * data, unsigned char Number)
+int AmfUtil::WriteInt8(void * data, uint8_t Number)
 {
-	auto	*pt_out = (unsigned char*)data;
+	auto	*pt_out = (uint8_t*)data;
 
 	// 파라미터 체크
 	if( !data ) { return 0; }
@@ -57,14 +57,14 @@ int AmfUtil::WriteInt8(void * data, unsigned char Number)
 //====================================================================================================
 int AmfUtil::WriteInt16(void * data, uint16_t Number)
 {
-	auto	*pt_out = (unsigned char *)data;
+	auto	*pt_out = (uint8_t *)data;
 
 	// 파라미터 체크
 	if( !data ) { return 0; }
 
 	// 기록
-	pt_out[0] = (unsigned char)(Number >> 8);
-	pt_out[1] =  (unsigned char)(Number & 0xff);
+	pt_out[0] = (uint8_t)(Number >> 8);
+	pt_out[1] =  (uint8_t)(Number & 0xff);
 
 	return 2;
 }
@@ -74,15 +74,15 @@ int AmfUtil::WriteInt16(void * data, uint16_t Number)
 //====================================================================================================
 int AmfUtil::WriteInt24(void * data, uint32_t Number)
 {
-	auto	*pt_out = (unsigned char*)data;
+	auto	*pt_out = (uint8_t*)data;
 
 	// 파라미터 체크
 	if( !data ) { return 0; }
 
 	// 기록
-	pt_out[0] = (unsigned char)(Number >> 16);
-	pt_out[1] = (unsigned char)( Number >> 8);
-	pt_out[2] = (unsigned char)(Number & 0xff);
+	pt_out[0] = (uint8_t)(Number >> 16);
+	pt_out[1] = (uint8_t)( Number >> 8);
+	pt_out[2] = (uint8_t)(Number & 0xff);
 
 	return 3;
 }
@@ -92,16 +92,16 @@ int AmfUtil::WriteInt24(void * data, uint32_t Number)
 //====================================================================================================
 int AmfUtil::WriteInt32(void * data, uint32_t Number)
 {
-	auto	*pt_out = (unsigned char*)data;
+	auto	*pt_out = (uint8_t*)data;
 
 	// 파라미터 체크
 	if( !data ) { return 0; }
 
 	// 기록
-	pt_out[0] = (unsigned char)(Number >> 24);
-	pt_out[1] = (unsigned char)(Number >> 16);
-	pt_out[2] = (unsigned char)(Number >> 8);
-	pt_out[3] = (unsigned char)(Number & 0xff);
+	pt_out[0] = (uint8_t)(Number >> 24);
+	pt_out[1] = (uint8_t)(Number >> 16);
+	pt_out[2] = (uint8_t)(Number >> 8);
+	pt_out[3] = (uint8_t)(Number & 0xff);
 
 	return 4;
 }
@@ -109,10 +109,10 @@ int AmfUtil::WriteInt32(void * data, uint32_t Number)
 //====================================================================================================
 // AmfUtil - ReadInt8
 //====================================================================================================
-unsigned char AmfUtil::ReadInt8(void * data)
+uint8_t AmfUtil::ReadInt8(void * data)
 {
-	auto	*pt_in = (unsigned char*)data;
-	unsigned char	number = 0;
+	auto	*pt_in = (uint8_t*)data;
+	uint8_t	number = 0;
 
 	// 파라미터 체크
 	if( !data ) { return 0; }
@@ -128,7 +128,7 @@ unsigned char AmfUtil::ReadInt8(void * data)
 //====================================================================================================
 uint16_t AmfUtil::ReadInt16(void * data)
 {
-	auto	*pt_in = (unsigned char*)data;
+	auto	*pt_in = (uint8_t*)data;
 	uint16_t	number = 0;
 
 	// 파라미터 체크
@@ -146,7 +146,7 @@ uint16_t AmfUtil::ReadInt16(void * data)
 //====================================================================================================
 uint32_t AmfUtil::ReadInt24(void * data)
 {
-	auto	*pt_in = (unsigned char*)data;
+	auto	*pt_in = (uint8_t*)data;
 	uint32_t	number = 0;
 
 	// 파라미터 체크
@@ -165,7 +165,7 @@ uint32_t AmfUtil::ReadInt24(void * data)
 //====================================================================================================
 uint32_t AmfUtil::ReadInt32(void * data)
 {
-	auto	*pt_in = (unsigned char*)data;
+	auto	*pt_in = (uint8_t*)data;
 	uint32_t	number = 0;
 
 	// 파라미터 체크
@@ -185,8 +185,8 @@ uint32_t AmfUtil::ReadInt32(void * data)
 //====================================================================================================
 int AmfUtil::EncodeNumber(void * data, double Number)
 {
-	auto	*pt_in = (unsigned char*)&Number;
-	auto	*pt_out = (unsigned char*)data;
+	auto	*pt_in = (uint8_t*)&Number;
+	auto	*pt_out = (uint8_t*)data;
 
 	// 파라미터 체크
 	if( !data ) { return 0; }
@@ -212,7 +212,7 @@ int AmfUtil::EncodeNumber(void * data, double Number)
 //====================================================================================================
 int AmfUtil::EncodeBoolean(void * data, bool Boolean)
 {
-	auto	*pt_out = (unsigned char*)data;
+	auto	*pt_out = (uint8_t*)data;
 
 	// 파라미터 체크
 	if( !data ) { return 0; }
@@ -231,7 +231,7 @@ int AmfUtil::EncodeBoolean(void * data, bool Boolean)
 //====================================================================================================
 int AmfUtil::EncodeString(void * data, char *  pString)
 {
-	auto	*pt_out = (unsigned char*)data;
+	auto	*pt_out = (uint8_t*)data;
 
 	// 파라미터 체크
 	if( !data || !pString ) { return 0; }
@@ -251,8 +251,8 @@ int AmfUtil::EncodeString(void * data, char *  pString)
 //====================================================================================================
 int AmfUtil::DecodeNumber(void * data, double *pNumber)
 {
-	auto	*pt_in = (unsigned char*)data;
-	auto	*pt_out = (unsigned char*)pNumber;
+	auto	*pt_in = (uint8_t*)data;
+	auto	*pt_out = (uint8_t*)pNumber;
 
 	// 파라미터 체크
 	if( !data || !pNumber ) { return 0; }
@@ -279,7 +279,7 @@ int AmfUtil::DecodeNumber(void * data, double *pNumber)
 //====================================================================================================
 int AmfUtil::DecodeBoolean(void * data, bool *pBoolean)
 {
-	auto	*pt_in = (unsigned char*)data;
+	auto	*pt_in = (uint8_t*)data;
 
 	// 파라미터 체크
 	if( !data || !pBoolean ) { return 0; }
@@ -299,7 +299,7 @@ int AmfUtil::DecodeBoolean(void * data, bool *pBoolean)
 //====================================================================================================
 int AmfUtil::DecodeString(void * data, char *  pString)
 {
-	auto	*pt_in = (unsigned char*)data;
+	auto	*pt_in = (uint8_t*)data;
 	int		str_len;
 
 	// 파라미터 체크
@@ -496,7 +496,7 @@ void AmfProperty::Dump(std::string &dump_string)
 //====================================================================================================
 int AmfProperty::Encode(void * data) // ret=0이면 실패
 {
-	auto	*pt_out = (unsigned char*)data;
+	auto	*pt_out = (uint8_t*)data;
 
 	// 파라미터 체크
 	if( !data ) { return 0; }
@@ -532,7 +532,7 @@ int AmfProperty::Encode(void * data) // ret=0이면 실패
 		break;
 	}
 
-	return (int)(pt_out - (unsigned char*)data);
+	return (int)(pt_out - (uint8_t*)data);
 }
 
 //====================================================================================================
@@ -540,7 +540,7 @@ int AmfProperty::Encode(void * data) // ret=0이면 실패
 //====================================================================================================
 int AmfProperty::Decode(void * data, int DataLen) // ret=0이면 실패
 {
-	auto	*pt_in = (unsigned char*)data;
+	auto	*pt_in = (uint8_t*)data;
 	int		size = 0;
 
 	// 파라미터 체크
@@ -661,8 +661,8 @@ void AmfObjectArray::Dump(std::string &dump_string)
 //====================================================================================================
 int AmfObjectArray::Encode(void * data)
 {
-	auto	*pt_out = (unsigned char*)data;
-	unsigned char	start_marker, end_marker;
+	auto	*pt_out = (uint8_t*)data;
+	uint8_t	start_marker, end_marker;
 	int		i;
 
 	// marker 설정
@@ -709,7 +709,7 @@ int AmfObjectArray::Encode(void * data)
 	pt_out += WriteInt16(pt_out, 0);
 	pt_out += WriteInt8(pt_out, end_marker);
 
-	return (int)(pt_out - (unsigned char*)data);
+	return (int)(pt_out - (uint8_t*)data);
 }
 
 //====================================================================================================
@@ -717,8 +717,8 @@ int AmfObjectArray::Encode(void * data)
 //====================================================================================================
 int AmfObjectArray::Decode(void * data, int DataLen)
 {
-	auto 			*pt_in = (unsigned char*)data;
-	unsigned char	start_marker, end_marker;
+	auto 			*pt_in = (uint8_t*)data;
+	uint8_t	start_marker, end_marker;
 
 	// marker 설정
 	start_marker	= (_amf_data_type == AMF_OBJECT ? AMF_MARKER_OBJECT : AMF_MARKER_ECMA_ARRAY);
@@ -765,7 +765,7 @@ int AmfObjectArray::Decode(void * data, int DataLen)
 		pt_pair->_name[len] = '\0';
 
 		// value 읽기
-		len = pt_pair->_property->Decode(pt_in, DataLen - (int)(pt_in - (unsigned char*)data));
+		len = pt_pair->_property->Decode(pt_in, DataLen - (int)(pt_in - (uint8_t*)data));
 		pt_in += len;
 		
 		// value 체크
@@ -785,7 +785,7 @@ int AmfObjectArray::Decode(void * data, int DataLen)
 		pt_pair = nullptr;
 	}
 
-	return (int)(pt_in - (unsigned char*)data);
+	return (int)(pt_in - (uint8_t*)data);
 }
 
 //====================================================================================================
@@ -1174,7 +1174,7 @@ void AmfDocument::Dump(std::string & dump_string)
 //====================================================================================================
 int AmfDocument::Encode(void * data) // ret=0이면 실패
 {
-	auto	*pt_out = (unsigned char*)data;
+	auto	*pt_out = (uint8_t*)data;
 	int		i;
 
 	// 인코딩
@@ -1183,7 +1183,7 @@ int AmfDocument::Encode(void * data) // ret=0이면 실패
 		pt_out += _amf_propertys[i]->Encode(pt_out);
 	}
 
-	return (int)(pt_out - (unsigned char*)data);
+	return (int)(pt_out - (uint8_t*)data);
 }
 
 //====================================================================================================
@@ -1191,7 +1191,7 @@ int AmfDocument::Encode(void * data) // ret=0이면 실패
 //====================================================================================================
 int AmfDocument::Decode(void * data, int DataLen) // ret=0이면 실패
 {
-	auto			*pt_in = (unsigned char*)data;
+	auto			*pt_in = (uint8_t*)data;
 	int				total_len = 0;
 	int				ret_len;
 
@@ -1221,7 +1221,7 @@ int AmfDocument::Decode(void * data, int DataLen) // ret=0이면 실패
 		pt_item = nullptr;
 	}
 
-	return (int)(pt_in - (unsigned char*)data);
+	return (int)(pt_in - (uint8_t*)data);
 }
 
 //====================================================================================================

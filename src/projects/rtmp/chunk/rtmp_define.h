@@ -12,7 +12,6 @@
 #include <map>
 #include <memory>
 
-
 #ifdef WIN32
 #include <winsock2.h>
 #else 
@@ -280,11 +279,20 @@ static char g_rtmp_codec_type_string[RTMP_MAX_CODEC_TYPE][10]=
 //===============================================================================================
 struct RtmpFrameInfo
 {
-	uint32_t			timestamp; 
-	int					composition_time_offset;
-	tRTMP_FRAME_TYPE 	frame_type;
-	int					frame_size; 
-	char * 				frame; 
+public :
+    RtmpFrameInfo(uint32_t timestamp_, int composition_time_offset_, tRTMP_FRAME_TYPE frame_type_, int frame_size, uint8_t *frame)
+    {
+        timestamp = timestamp_;
+        composition_time_offset = composition_time_offset_;
+        frame_type = frame_type_;
+        frame_data = std::make_shared<std::vector<uint8_t>>(frame, frame + frame_size);
+    }
+
+public :
+	uint32_t			                    timestamp;
+	int					                    composition_time_offset;
+	tRTMP_FRAME_TYPE 	                    frame_type;
+	std::shared_ptr<std::vector<uint8_t>>   frame_data;
 };
 
 //===============================================================================================

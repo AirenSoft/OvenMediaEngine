@@ -57,13 +57,13 @@ int RtmpMuxUtil::WriteInt8(void * output, uint8_t nVal)
 	return sizeof(uint8_t);
 }
 
-int RtmpMuxUtil::WriteInt16(void * output, short nVal)
+int RtmpMuxUtil::WriteInt16(void * output, int16_t nVal)
 {
 	auto *pt_out = (uint8_t*)output;
 
 	pt_out[1] = (uint8_t)(nVal & 0xff);
 	pt_out[0] = (uint8_t)(nVal >> 8);
-	return sizeof(short);
+	return sizeof(int16_t);
 }
 
 int RtmpMuxUtil::WriteInt24(void * output, int nVal)
