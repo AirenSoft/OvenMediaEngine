@@ -40,6 +40,6 @@ LOCAL_LDFLAGS := \
 	`pkg-config --libs opus` \
 	`pkg-config --libs libsrtp2`
 
-LOCAL_TARGET := main
+LOCAL_TARGET := OvenMediaEngine
 
 include $(BUILD_EXECUTABLE)
