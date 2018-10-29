@@ -14,11 +14,6 @@
 
 bool OvenCodecImplAvcodecDecAVC::Configure(std::shared_ptr<TranscodeContext> context)
 {
-	if(!TranscodeDecoder::Configure(context))
-	{
-		return false;
-	}
-
 	if(WelsCreateDecoder(&_decoder))
 	{
 		logte("Unable to create H264 decoder");
