@@ -121,6 +121,10 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeRes
 		_frame->height = frame->GetHeight();
 		_frame->pts = frame->GetPts();
 
+		_frame->linesize[0] = frame->GetStride(0);
+		_frame->linesize[1] = frame->GetStride(1);
+		_frame->linesize[2] = frame->GetStride(2);
+
 		if(av_frame_get_buffer(_frame, 32) < 0)
 		{
 			logte("Could not allocate the video frame data");
