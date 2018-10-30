@@ -399,6 +399,44 @@ public:
 		return _flags;
 	}
 
+	// This function should only be called before filtering (_track_id 0, 1)
+	std::unique_ptr<MediaFrame> CloneFrame()
+	{
+		auto frame = std::make_unique<MediaFrame>();
+
+		if(_track_id == (int32_t)MediaCommonType::MediaType::Video)
+		{
+			frame->SetWidth(_width);
+			frame->SetHeight(_height);
+			frame->SetFormat(_format);
+			frame->SetPts(_pts);
+			for (int i=0; i< 3 ; ++i)
+			{
+				frame->SetStride(GetStride(i), i);
+				frame->SetBuffer(GetBuffer(i), GetDataSize(i), i);
+			}
+		}
+		else if(_track_id == (int32_t)MediaCommonType::MediaType::Audio)
+		{
+			frame->SetFormat(_format);
+			frame->SetBytesPerSample(_bytes_per_sample);
+			frame->SetNbSamples(_nb_samples);
+			frame->SetChannels(_channels);
+			frame->SetSampleRate(_sample_rate);
+			frame->SetChannelLayout(_channel_layout);
+			frame->SetPts(_pts);
+			for (int i = 0; i< _channels; ++i) {
+				frame->SetBuffer(GetBuffer(i), GetDataSize(i), i);
+			}
+		}
+		else
+		{
+			OV_ASSERT2(false);
+			return nullptr;
+		}
+		return frame;
+	}
+
 private:
 	const std::vector<uint8_t> *GetPlainData(int32_t plane) const
 	{

@@ -39,9 +39,7 @@ public:
 	void SetId(uint8_t id);
 	uint8_t GetId();
 
-	// a=rtpmap:97 VP8/50000
-	void SetRtpmap(const SupportCodec codec, uint32_t rate, const ov::String &parameters = "");
-	bool SetRtpmap(const ov::String &codec, uint32_t rate, const ov::String &parameters = "");
+	void SetRtpmap(const uint8_t payload_type, const ov::String &codec, uint32_t rate, const ov::String &parameters = "");
 	const SupportCodec GetCodec();
 	const ov::String GetCodecStr();
 	const uint32_t GetCodecRate();

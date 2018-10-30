@@ -10,6 +10,8 @@
 
 #include "base/common_types.h"
 
+using namespace MediaCommonType;
+
 class TranscodeVideoInfo
 {
 public:
@@ -21,6 +23,8 @@ public:
 
 	const ov::String GetCodec() const noexcept;
 	void SetCodec(ov::String codec);
+
+	const MediaCodecId GetCodecId() const noexcept;
 
 	const ov::String GetHWAcceleration() const noexcept;
 	void SetHWAcceleration(ov::String hw_acceleration);

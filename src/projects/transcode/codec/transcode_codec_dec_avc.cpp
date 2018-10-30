@@ -41,15 +41,13 @@ bool OvenCodecImplAvcodecDecAVC::Configure(std::shared_ptr<TranscodeContext> con
 
 std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResult *result)
 {
-	*result = TranscodeResult::NoData;
-
-	std::shared_ptr<const ov::Data> stream_h264 = nullptr;
 	int64_t pts;
 	SBufferInfo info;
 	uint8_t* ptrs[3];
 
 	if(_input_buffer.empty())
 	{
+		*result = TranscodeResult::NoData;
 		return nullptr;
 	}
 
@@ -61,15 +59,15 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 		const MediaPacket *packet = packet_buffer.get();
 		OV_ASSERT2(packet != nullptr);
 
-		stream_h264 = packet->GetData();
+		auto &data = packet->GetData();
 		pts = packet->GetPts();
 
 		::memset(&info, 0, sizeof(SBufferInfo));
 
 		// DecodeFrameNoDelay = DecodeFrame2(src, len, ...) + DecodeFrame2(NULL, 0, ...)
 		DECODING_STATE state = _decoder->DecodeFrameNoDelay(
-			static_cast<const u_char *>(stream_h264->GetData()),
-			static_cast<const int>(stream_h264->GetLength()),
+			static_cast<const u_char *>(data->GetData()),
+			static_cast<const int>(data->GetLength()),
 			ptrs,
 			&info
 		);
@@ -77,7 +75,7 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 		if (state != dsErrorFree)
 		{
 			// Todo RequestIDR or something like that.
-			logte("DecodeFrameNoDelay failed, state=%d,len=%d", state, stream_h264->GetLength());
+			logte("DecodeFrameNoDelay failed, state=%d,len=%d", state, data->GetLength());
 
 			*result = TranscodeResult::DataError;
 			return nullptr;
@@ -100,9 +98,9 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 		frame_buffer->SetStride(info.UsrData.sSystemBuffer.iStride[1], 1);
 		frame_buffer->SetStride(info.UsrData.sSystemBuffer.iStride[1], 2);
 
-		frame_buffer->SetBuffer(ptrs[0],frame_buffer->GetStride(0) * frame_buffer->GetHeight(), 0);
-		frame_buffer->SetBuffer(ptrs[1],frame_buffer->GetStride(1) * frame_buffer->GetHeight() / 2, 1);
-		frame_buffer->SetBuffer(ptrs[2],frame_buffer->GetStride(2) * frame_buffer->GetHeight() / 2, 2);
+		frame_buffer->SetBuffer(ptrs[0], frame_buffer->GetStride(0) * frame_buffer->GetHeight(), 0);
+		frame_buffer->SetBuffer(ptrs[1], frame_buffer->GetStride(1) * frame_buffer->GetHeight() / 2, 1);
+		frame_buffer->SetBuffer(ptrs[2], frame_buffer->GetStride(2) * frame_buffer->GetHeight() / 2, 2);
 
 		*result = TranscodeResult::DataReady;
 
@@ -114,6 +112,7 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 		return std::move(frame_buffer);
 	}
 
+	*result = TranscodeResult::NoData;
 	return nullptr;
 }
 

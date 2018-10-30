@@ -90,8 +90,7 @@ public:
 	// a=rtpmap:96 VP8/50000
 	bool AddRtpmap(uint8_t payload_type, const ov::String &codec, uint32_t rate,
 	               const ov::String &parameters);
-	void AddRtpmap(uint8_t payload_type, PayloadAttr::SupportCodec codec, uint32_t rate,
-	               const ov::String &parameters);
+
 	// a=rtcp-fb:96 nack pli
 	bool EnableRtcpFb(uint8_t id, const ov::String &type, bool on);
 	void EnableRtcpFb(uint8_t id, const PayloadAttr::RtcpFbType &type, bool on);

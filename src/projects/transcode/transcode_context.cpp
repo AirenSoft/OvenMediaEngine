@@ -16,52 +16,31 @@
 
 TranscodeContext::TranscodeContext()
 {
-	SetAudioTimeBase(1, 1000000);
-	SetVideoTimeBase(1, 1000000);
+	SetTimeBase(1, 1000000);
 }
 
 TranscodeContext::~TranscodeContext()
 {
 }
 
-void TranscodeContext::SetVideoCodecId(MediaCommonType::MediaCodecId val)
+void TranscodeContext::SetCodecId(MediaCommonType::MediaCodecId val)
 {
-	_video_codec_id = val;
+	_codec_id = val;
 }
 
-MediaCommonType::MediaCodecId TranscodeContext::GetVideoCodecId()
+MediaCommonType::MediaCodecId TranscodeContext::GetCodecId()
 {
-	return _video_codec_id;
+	return _codec_id;
 }
 
-void TranscodeContext::SetAudioCodecId(MediaCommonType::MediaCodecId val)
+void TranscodeContext::SetBitrate(int32_t val)
 {
-	_audio_codec_id = val;
+	_bitrate = val;
 }
 
-MediaCommonType::MediaCodecId TranscodeContext::GetAudioCodecId()
+int32_t TranscodeContext::GetBitrate()
 {
-	return _audio_codec_id;
-}
-
-void TranscodeContext::SetVideoBitrate(int32_t val)
-{
-	_video_bitrate = val;
-}
-
-int32_t TranscodeContext::GetVideoBitrate()
-{
-	return _video_bitrate;
-}
-
-void TranscodeContext::SetAudioBitrate(int32_t val)
-{
-	_audio_bitrate = val;
-}
-
-int32_t TranscodeContext::GetAudioBitrate()
-{
-	return _audio_bitrate;
+	return _bitrate;
 }
 
 void TranscodeContext::SetAudioSample(MediaCommonType::AudioSample sample)
@@ -115,26 +94,15 @@ float TranscodeContext::GetFrameRate()
 	return _video_frame_rate;
 }
 
-MediaCommonType::Timebase &TranscodeContext::GetVideoTimeBase()
+MediaCommonType::Timebase &TranscodeContext::GetTimeBase()
 {
-	return _video_time_base;
+	return _time_base;
 }
 
-void TranscodeContext::SetVideoTimeBase(int32_t num, int32_t den)
+void TranscodeContext::SetTimeBase(int32_t num, int32_t den)
 {
-	_video_time_base.Set(num, den);
+	_time_base.Set(num, den);
 }
-
-MediaCommonType::Timebase &TranscodeContext::GetAudioTimeBase()
-{
-	return _audio_time_base;
-}
-
-void TranscodeContext::SetAudioTimeBase(int32_t num, int32_t den)
-{
-	_audio_time_base.Set(num, den);
-}
-
 
 void TranscodeContext::SetGOP(int32_t val)
 {
@@ -160,3 +128,14 @@ const MediaCommonType::AudioChannel &TranscodeContext::GetAudioChannel() const
 {
 	return _audio_channel;
 }
+
+ov::String TranscodeContext::GetStreamName() const
+{
+	return _stream_name;
+}
+
+MediaType TranscodeContext::GetMediaType() const
+{
+	return _media_type;
+}
+

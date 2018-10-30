@@ -14,20 +14,60 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include "base/media_route/media_type.h"
 
+using namespace MediaCommonType;
+
 class TranscodeContext
 {
 public:
 	TranscodeContext();
 	~TranscodeContext();
 
+	// Video
+	TranscodeContext(
+		ov::String &stream_name,
+		MediaCodecId codec_id,
+		int32_t bitrate,
+		uint32_t width,
+		uint32_t height,
+		float frame_rate) : _stream_name(stream_name),
+							_codec_id(codec_id),
+					        _bitrate(bitrate),
+					        _video_width(width),
+					        _video_height(height),
+					        _video_frame_rate(frame_rate)
+	{
+		_media_type = MediaType::Video;
+		_time_base.Set(1, 1000000);
+		_video_gop = 30;
+	}
+
+	// Audio
+	TranscodeContext(
+		ov::String &stream_name,
+		MediaCodecId codec_id,
+		int32_t bitrate,
+		int32_t sample) : _stream_name(stream_name),
+						  _codec_id(codec_id),
+	                      _bitrate(bitrate)
+	{
+		_media_type = MediaType::Audio;
+		_time_base.Set(1, 1000000);
+		_audio_sample.SetRate((AudioSample::Rate)sample);
+		_audio_sample.SetFormat(AudioSample::Format::S16);
+		_audio_channel.SetLayout(AudioChannel::Layout::LayoutStereo);
+	}
+
 	//--------------------------------------------------------------------
 	// Video transcoding options
 	//--------------------------------------------------------------------
-	void SetVideoCodecId(MediaCommonType::MediaCodecId val);
-	MediaCommonType::MediaCodecId GetVideoCodecId();
+	void SetCodecId(MediaCodecId val);
+	MediaCodecId GetCodecId();
 
-	void SetVideoBitrate(int32_t val);
-	int32_t GetVideoBitrate();
+	void SetBitrate(int32_t val);
+	int32_t GetBitrate();
+
+	Timebase &GetTimeBase();
+	void SetTimeBase(int32_t num, int32_t den);
 
 	void SetVideoWidth(uint32_t val);
 	void SetVideoHeight(uint32_t val);
@@ -35,47 +75,38 @@ public:
 	uint32_t GetVideoWidth();
 	uint32_t GetVideoHeight();
 
-	void SetFrameRate(float val);
-	float GetFrameRate();
-
-	MediaCommonType::Timebase &GetVideoTimeBase();
-	void SetVideoTimeBase(int32_t num, int32_t den);
-
 	void SetGOP(int32_t val);
 	int32_t GetGOP();
 
-	//--------------------------------------------------------------------
-	// Audio transcoding options
-	//--------------------------------------------------------------------
-	void SetAudioCodecId(MediaCommonType::MediaCodecId val);
-	MediaCommonType::MediaCodecId GetAudioCodecId();
+	void SetFrameRate(float val);
+	float GetFrameRate();
 
-	void SetAudioBitrate(int32_t val);
-	int32_t GetAudioBitrate();
-
-	void SetAudioSample(MediaCommonType::AudioSample sample);
-	MediaCommonType::AudioSample GetAudioSample() const;
+	void SetAudioSample(AudioSample sample);
+	AudioSample GetAudioSample() const;
 
 	void SetAudioSampleRate(int32_t val);
 	int32_t GetAudioSampleRate();
 
-	MediaCommonType::Timebase &GetAudioTimeBase();
+	void SetAudioSampleFormat(AudioSample::Format val);
 
-	void SetAudioTimeBase(int32_t num, int32_t den);
+	AudioChannel &GetAudioChannel();
+	const AudioChannel &GetAudioChannel() const;
 
-	void SetAudioSampleFormat(MediaCommonType::AudioSample::Format val);
+	MediaType GetMediaType() const;
 
-	MediaCommonType::AudioChannel &GetAudioChannel();
-	const MediaCommonType::AudioChannel &GetAudioChannel() const;
+	ov::String GetStreamName() const;
 
 private:
 	//--------------------------------------------------------------------
 	// Video transcoding options
 	//--------------------------------------------------------------------
-	MediaCommonType::MediaCodecId _video_codec_id;
+	MediaCodecId _codec_id;
 
 	// Bitrate
-	int32_t _video_bitrate;
+	int32_t _bitrate;
+
+	// Video timebase
+	Timebase _time_base;
 
 	// Resolution
 	uint32_t _video_width;
@@ -87,24 +118,15 @@ private:
 	// GOP : Group Of Picture
 	int32_t _video_gop;
 
-	// Video timebase
-	MediaCommonType::Timebase _video_time_base;
-
-	//--------------------------------------------------------------------
-	// Audio transcoding options
-	//--------------------------------------------------------------------
-	MediaCommonType::MediaCodecId _audio_codec_id;
-
-	// Bitrate
-	int32_t _audio_bitrate;
+	MediaType _media_type;
 
 	// Sample type
-	MediaCommonType::AudioSample _audio_sample;
+	AudioSample _audio_sample;
 
 	// Channel
-	MediaCommonType::AudioChannel _audio_channel;
+	AudioChannel _audio_channel;
 
-	// Audio timebase
-	MediaCommonType::Timebase _audio_time_base;
+	// Linked stream name
+	ov::String _stream_name;
 };
 

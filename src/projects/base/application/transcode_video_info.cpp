@@ -31,6 +31,19 @@ const ov::String TranscodeVideoInfo::GetCodec() const noexcept
 	return _codec;
 }
 
+const MediaCodecId TranscodeVideoInfo::GetCodecId() const noexcept
+{
+	if(_codec.UpperCaseString() == "H264")
+	{
+		return MediaCodecId::H264;
+	}
+	else if(_codec.UpperCaseString() == "VP8")
+	{
+		return MediaCodecId::Vp8;
+	}
+	return MediaCodecId::None;
+}
+
 void TranscodeVideoInfo::SetCodec(ov::String codec)
 {
 	_codec = codec;

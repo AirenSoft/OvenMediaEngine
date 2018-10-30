@@ -27,7 +27,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	param.fMaxFrameRate = context->GetFrameRate();
 	param.iPicWidth = context->GetVideoWidth();
 	param.iPicHeight = context->GetVideoHeight();
-	param.iTargetBitrate = context->GetVideoBitrate();
+	param.iTargetBitrate = context->GetBitrate();
 	param.iRCMode = RC_QUALITY_MODE;
 	param.iTemporalLayerNum = 1;
 	param.iSpatialLayerNum = 1;

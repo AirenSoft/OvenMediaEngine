@@ -22,10 +22,10 @@ class TranscodeFilter
 {
 public:
 	TranscodeFilter();
-	TranscodeFilter(TranscodeFilterType type, std::shared_ptr<MediaTrack> input_media_track = nullptr, std::shared_ptr<TranscodeContext> context = nullptr);
+	TranscodeFilter(std::shared_ptr<MediaTrack> input_media_track = nullptr, std::shared_ptr<TranscodeContext> context = nullptr);
 	~TranscodeFilter();
 
-	bool Configure(TranscodeFilterType type, std::shared_ptr<MediaTrack> input_media_track = nullptr, std::shared_ptr<TranscodeContext> context = nullptr);
+	bool Configure(std::shared_ptr<MediaTrack> input_media_track = nullptr, std::shared_ptr<TranscodeContext> context = nullptr);
 
 	int32_t SendBuffer(std::unique_ptr<MediaFrame> buffer);
 	std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result);
