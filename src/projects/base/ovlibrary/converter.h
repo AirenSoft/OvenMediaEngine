@@ -148,6 +148,22 @@ namespace ov
 			}
 		}
 
+		static bool ToBool(const ov::String &str)
+		{
+			ov::String value = str.LowerCaseString();
+
+			if(str == "true")
+			{
+				return true;
+			}
+			else if(str == "false")
+			{
+				return false;
+			}
+
+			return (ToInt64(str) != 0);
+		}
+
 		static float ToFloat(const ov::String &str)
 		{
 			try
