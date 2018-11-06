@@ -9,7 +9,10 @@ namespace ov
 	class PathManager
 	{
 	public:
-		static String GetAppPath(String subPath = "");
+		static String GetAppPath(String sub_path = "");
+
+		static String ExpandPath(String path);
+		static String ExtractPath(String path);
 
 		// <app_path>/oss 디렉토리 준비
 		// 만약, sub_path가 명시되어 있다면 <app_path>/oss/<sub_path> 경로까지 생성함
