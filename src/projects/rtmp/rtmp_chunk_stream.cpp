@@ -77,7 +77,7 @@ RtmpChunkStream::RtmpChunkStream(ov::ClientSocket *remote, IRtmpChunkStream * st
 bool RtmpChunkStream::SendData(int data_size, uint8_t * data)
 {
     int     remained        = data_size;
-    uint8_t *   data_to_send    = data;
+    uint8_t *data_to_send   = data;
 
     while(remained > 0L)
     {
@@ -657,12 +657,13 @@ bool RtmpChunkStream::SendAmfCommand(std::shared_ptr<RtmpMuxMessageHeader> &mess
 //====================================================================================================
 // User Control Message 전송
 //====================================================================================================
-bool RtmpChunkStream::SendUserControlMessage(uint8_t message, std::shared_ptr<std::vector<uint8_t>> &data)
+bool RtmpChunkStream::SendUserControlMessage(uint16_t message, std::shared_ptr<std::vector<uint8_t>> &data)
 {
-    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT, 0, RTMP_MSGID_USER_CONTROL_MESSAGE, 0, data->size() + 1);
+    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT, 0, RTMP_MSGID_USER_CONTROL_MESSAGE, 0, data->size() + 2);
 
     data->insert(data->begin(), 0);
-    RtmpMuxUtil::WriteInt8(data->data(), message);
+    data->insert(data->begin(), 0);
+    RtmpMuxUtil::WriteInt16(data->data(), message);
 
     return SendMessagePacket(message_header, data);
 }

@@ -64,7 +64,7 @@ public:
 	static	int			ReadInt32LE(void * data);
 
 	static	int			WriteInt8(void * output, uint8_t nVal);
-	static	int			WriteInt16(void * output, short nVal);
+	static	int			WriteInt16(void * output, int16_t nVal);
 	static	int			WriteInt24(void * output, int nVal);
 	static	int			WriteInt32(void * output, int nVal);
 	static	int			WriteInt32LE(void * output, int nVal);
