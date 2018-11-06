@@ -6,24 +6,4 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#pragma once
-
-namespace ov
-{
-	template<class T>
-	class Singleton
-	{
-	public:
-		virtual ~Singleton() = default;
-
-		static T *Instance()
-		{
-			static T instance;
-
-			return &instance;
-		}
-
-	protected:
-		Singleton() = default;
-	};
-}
+#include "value_for_specialization.h"

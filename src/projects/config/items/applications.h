@@ -8,22 +8,22 @@
 //==============================================================================
 #pragma once
 
-namespace ov
+#include "application.h"
+
+namespace cfg
 {
-	template<class T>
-	class Singleton
+	struct Applications : public Item
 	{
-	public:
-		virtual ~Singleton() = default;
-
-		static T *Instance()
+		bool MakeParseList() override
 		{
-			static T instance;
+			bool result = true;
 
-			return &instance;
+			result = result && RegisterValue<Optional, Includable>("Application", &_application_list);
+
+			return result;
 		}
 
 	protected:
-		Singleton() = default;
+		Value <std::vector<Application>> _application_list;
 	};
 }

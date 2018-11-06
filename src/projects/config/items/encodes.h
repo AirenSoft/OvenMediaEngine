@@ -8,22 +8,22 @@
 //==============================================================================
 #pragma once
 
-namespace ov
+#include "encode.h"
+
+namespace cfg
 {
-	template<class T>
-	class Singleton
+	struct Encodes : public Item
 	{
-	public:
-		virtual ~Singleton() = default;
-
-		static T *Instance()
+		bool MakeParseList() override
 		{
-			static T instance;
+			bool result = true;
 
-			return &instance;
+			result = result && RegisterValue<Optional, Includable>("Encode", &_encode_list);
+
+			return result;
 		}
 
 	protected:
-		Singleton() = default;
+		Value<std::vector<Encode>> _encode_list;
 	};
 }

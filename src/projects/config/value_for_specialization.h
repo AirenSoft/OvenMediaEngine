@@ -8,22 +8,13 @@
 //==============================================================================
 #pragma once
 
-namespace ov
+#include "value_container.h"
+
+namespace cfg
 {
-	template<class T>
-	class Singleton
+	// For specialized classes
+	template<typename Ttype, typename Tenabler = void>
+	class Value : public ValueContainer<Ttype>
 	{
-	public:
-		virtual ~Singleton() = default;
-
-		static T *Instance()
-		{
-			static T instance;
-
-			return &instance;
-		}
-
-	protected:
-		Singleton() = default;
 	};
 }

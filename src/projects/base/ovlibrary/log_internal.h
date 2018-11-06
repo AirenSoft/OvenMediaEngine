@@ -287,7 +287,7 @@ namespace ov
 			           " | "
 			           #if OV_LOG_SHOW_FILE_NAME
 			           // File:Line
-			           "%s:%d | "
+			           "%s:%-4d | "
 #endif // OV_LOG_SHOW_FILE_NAME
 #if OV_LOG_SHOW_FUNCTION_NAME
 			// Method

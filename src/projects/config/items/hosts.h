@@ -8,22 +8,22 @@
 //==============================================================================
 #pragma once
 
-namespace ov
+#include "host.h"
+
+namespace cfg
 {
-	template<class T>
-	class Singleton
+	struct Hosts : public Item
 	{
-	public:
-		virtual ~Singleton() = default;
-
-		static T *Instance()
+		bool MakeParseList() override
 		{
-			static T instance;
+			bool result = true;
 
-			return &instance;
+			result = result && RegisterValue<Optional, Includable>("Host", &_host);
+
+			return result;
 		}
 
 	protected:
-		Singleton() = default;
+		Value <std::vector<Host>> _host;
 	};
 }

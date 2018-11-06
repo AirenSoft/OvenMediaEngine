@@ -8,22 +8,22 @@
 //==============================================================================
 #pragma once
 
-namespace ov
+#include "../item.h"
+
+namespace cfg
 {
-	template<class T>
-	class Singleton
+	struct RtmpProvider : public Item
 	{
-	public:
-		virtual ~Singleton() = default;
-
-		static T *Instance()
+		bool MakeParseList() override
 		{
-			static T instance;
+			bool result = true;
 
-			return &instance;
+			result = result && RegisterValue<Optional>("Port", &_port);
+
+			return result;
 		}
 
 	protected:
-		Singleton() = default;
+		Value <ov::String> _port = "1935/tcp";
 	};
 }

@@ -8,22 +8,22 @@
 //==============================================================================
 #pragma once
 
-namespace ov
+#include "publisher.h"
+
+namespace cfg
 {
-	template<class T>
-	class Singleton
+	struct RtmpPublisher : public Publisher
 	{
-	public:
-		virtual ~Singleton() = default;
-
-		static T *Instance()
+		bool MakeParseList() override
 		{
-			static T instance;
+			bool result = true;
 
-			return &instance;
+			result = result && RegisterValue<Optional>("Port", &_port);
+
+			return result;
 		}
 
 	protected:
-		Singleton() = default;
+		Value<int> _port = 1935;
 	};
 }
