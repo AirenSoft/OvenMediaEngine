@@ -378,6 +378,9 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			}
 			else
 			{
+				// TODO Implementing of unknown attributes
+				// a=fmtp:96 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f
+				// a=fmtp:112 minptime=10;useinbandfec=1
 				logw("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
 			}
 
@@ -614,21 +617,7 @@ bool MediaDescription::AddRtpmap(uint8_t payload_type, const ov::String &codec,
 		AddPayload(payload);
 	}
 
-	payload->SetRtpmap(codec, rate, parameters);
-}
-
-void MediaDescription::AddRtpmap(uint8_t payload_type, PayloadAttr::SupportCodec codec,
-                                 uint32_t rate, const ov::String &parameters)
-{
-	std::shared_ptr<PayloadAttr> payload = GetPayload(payload_type);
-	if(payload == nullptr)
-	{
-		payload = std::make_shared<PayloadAttr>();
-		payload->SetId(payload_type);
-		AddPayload(payload);
-	}
-
-	payload->SetRtpmap(codec, rate, parameters);
+	payload->SetRtpmap(payload_type, codec, rate, parameters);
 }
 
 // a=rtcp-fb:96 nack pli

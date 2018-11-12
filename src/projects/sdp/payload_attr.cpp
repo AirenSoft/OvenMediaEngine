@@ -33,65 +33,10 @@ uint8_t PayloadAttr::GetId()
 	return _id;
 }
 
-bool PayloadAttr::SetRtpmap(const ov::String &codec, uint32_t rate, const ov::String &parameters)
+void PayloadAttr::SetRtpmap(const uint8_t payload_type, const ov::String &codec, uint32_t rate, const ov::String &parameters)
 {
-	if(codec.UpperCaseString() == "VP8")
-	{
-		SetRtpmap(SupportCodec::Vp8, rate, parameters);
-	}
-	else if(codec.UpperCaseString() == "H264")
-	{
-		SetRtpmap(SupportCodec::H264, rate, parameters);
-	}
-	else if(codec.UpperCaseString() == "OPUS")
-	{
-		SetRtpmap(SupportCodec::Opus, rate, parameters);
-	}
-	else
-	{
-		return false;
-	}
-
-	return true;
-}
-
-// a=rtpmap:97 VP8/50000
-// a=rtpmap:111 OPUS/48000/2
-void PayloadAttr::SetRtpmap(const SupportCodec codec, uint32_t rate, const ov::String &parameters)
-{
-	_codec = codec;
-	// codec에 따라 payload id를 발급한다.
-	switch(_codec)
-	{
-		case SupportCodec::Vp8:
-			if(_id == 0)
-			{
-				_id = 97;
-			}
-			_codec_str = "VP8";
-			break;
-
-		case SupportCodec::H264:
-			if(_id == 0)
-			{
-				_id = 100;
-			}
-			_codec_str = "H264";
-			break;
-
-		case SupportCodec::Opus:
-			if(_id == 0)
-			{
-				_id = 111;
-			}
-			_codec_str = "OPUS";
-			break;
-
-		default:
-			_id = 0;
-			return;
-	}
-
+	_id = payload_type;
+	_codec_str = codec;
 	_rate = rate;
 	_codec_param = parameters;
 }

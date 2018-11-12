@@ -84,7 +84,7 @@ bool MediaFilterResampler::Configure(std::shared_ptr<MediaTrack> input_media_tra
 		context->GetAudioSampleRate(),
 		context->GetAudioSample().GetName(),
 		context->GetAudioChannel().GetName(),
-		context->GetVideoTimeBase().GetExpr()
+		context->GetTimeBase().GetExpr()
 	);
 
 	logtd("resample. track[%u] %s -> %s", input_media_track->GetId(), input_formats.CStr(), output_filter_descr.CStr());

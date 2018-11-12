@@ -30,12 +30,12 @@ bool OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> con
 	}
 
 	// 인코딩 옵션 설정
-	_context->bit_rate = _transcode_context->GetVideoBitrate();
+	_context->bit_rate = _transcode_context->GetBitrate();
 	_context->rc_max_rate = _context->rc_min_rate = _context->bit_rate;
 	_context->rc_buffer_size = static_cast<int>(_context->bit_rate * 2);
 	_context->sample_aspect_ratio = (AVRational){ 1, 1 };
 	_context->time_base = (AVRational){
-		_transcode_context->GetVideoTimeBase().GetNum(), _transcode_context->GetVideoTimeBase().GetDen()
+		_transcode_context->GetTimeBase().GetNum(), _transcode_context->GetTimeBase().GetDen()
 	};
 	_context->framerate = av_d2q(_transcode_context->GetFrameRate(), AV_TIME_BASE);
 	_context->gop_size = _transcode_context->GetGOP();

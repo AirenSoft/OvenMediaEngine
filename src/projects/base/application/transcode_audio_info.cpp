@@ -31,6 +31,19 @@ const ov::String TranscodeAudioInfo::GetCodec() const noexcept
 	return _codec;
 }
 
+const MediaCodecId TranscodeAudioInfo::GetCodecId() const noexcept
+{
+	if(_codec.UpperCaseString() == "AAC")
+	{
+		return MediaCodecId::Aac;
+	}
+	else if(_codec.UpperCaseString() == "OPUS")
+	{
+		return MediaCodecId::Opus;
+	}
+	return MediaCodecId::None;
+}
+
 void TranscodeAudioInfo::SetCodec(ov::String codec)
 {
 	_codec = codec;

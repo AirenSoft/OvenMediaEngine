@@ -92,7 +92,7 @@ bool MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_trac
 	}
 
 	// TODO: Timebase의 값을 설정이 가능하도록 할지, 기본값으로 고정할지 정해야함.
-	ov::String output_filter_descr = ov::String::FormatString("fps=fps=%.2f:round=near,scale=%dx%d:flags=bicubic,settb=expr=%f", context->GetFrameRate(), context->GetVideoWidth(), context->GetVideoHeight(), (float)context->GetVideoTimeBase().GetExpr()
+	ov::String output_filter_descr = ov::String::FormatString("fps=fps=%.2f:round=near,scale=%dx%d:flags=bicubic,settb=expr=%f", context->GetFrameRate(), context->GetVideoWidth(), context->GetVideoHeight(), (float)context->GetTimeBase().GetExpr()
 	);
 
 	logtd("rescale track[%u] %s -> %s", input_media_track->GetId(), input_formats.CStr(), output_filter_descr.CStr());

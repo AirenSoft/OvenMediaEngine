@@ -10,6 +10,8 @@
 
 #include "base/common_types.h"
 
+using namespace MediaCommonType;
+
 class TranscodeAudioInfo
 {
 public:
@@ -21,6 +23,8 @@ public:
 
 	const ov::String GetCodec() const noexcept;
 	void SetCodec(ov::String codec);
+
+	const MediaCodecId GetCodecId() const noexcept;
 
 	const int GetBitrate() const noexcept;
 	void SetBitrate(int bitrate);

@@ -50,9 +50,12 @@ bool RtcStream::Start()
 	std::shared_ptr<MediaDescription> video_media_desc = nullptr;
 	std::shared_ptr<MediaDescription> audio_media_desc = nullptr;
 
+	bool first_video_desc = true;
+	bool first_audio_desc = true;
+
 	for(auto &track_item : _tracks)
 	{
-		auto sdp_support_codec = PayloadAttr::SupportCodec::Unknown;
+		ov::String codec = "";
 		auto &track = track_item.second;
 
 		switch(track->GetMediaType())
@@ -62,33 +65,36 @@ bool RtcStream::Start()
 				switch(track->GetCodecId())
 				{
 					case MediaCodecId::Vp8:
-						sdp_support_codec = PayloadAttr::SupportCodec::Vp8;
+						codec = "VP8";
 						break;
 					case MediaCodecId::H264:
-						sdp_support_codec = PayloadAttr::SupportCodec::H264;
+						codec = "H264";
 						break;
 					default:
 						logtw("Unsupported codec(%d) is being input from media track", track->GetCodecId());
 						continue;
 				}
 
-				// 현재 동시에 1개의 video만 지원
-				OV_ASSERT2(video_media_desc == nullptr);
+				if (first_video_desc)
+				{
+					video_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
+					video_media_desc->SetConnection(4, "0.0.0.0");
+					// TODO(dimiden): Prevent duplication
+					video_media_desc->SetMid(ov::Random::GenerateString(6));
+					video_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
+					video_media_desc->UseDtls(true);
+					video_media_desc->UseRtcpMux(true);
+					video_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
+					video_media_desc->SetMediaType(MediaDescription::MediaType::Video);
+					video_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
 
-				video_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
-				video_media_desc->SetConnection(4, "0.0.0.0");
-				// TODO(dimiden): Prevent duplication
-				video_media_desc->SetMid(ov::Random::GenerateString(6));
-				video_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
-				video_media_desc->UseDtls(true);
-				video_media_desc->UseRtcpMux(true);
-				video_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
-				video_media_desc->SetMediaType(MediaDescription::MediaType::Video);
-				video_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
+					_offer_sdp->AddMedia(video_media_desc);
+					first_video_desc = false;
+				}
 
 				auto payload = std::make_shared<PayloadAttr>();
 				//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
-				payload->SetRtpmap(sdp_support_codec, 90000);
+				payload->SetRtpmap(track->GetId(), codec, 90000);
 
 				video_media_desc->AddPayload(payload);
 
@@ -103,7 +109,7 @@ bool RtcStream::Start()
 				switch(track->GetCodecId())
 				{
 					case MediaCodecId::Opus:
-						sdp_support_codec = PayloadAttr::SupportCodec::Opus;
+						codec = "OPUS";
 						break;
 
 					default:
@@ -111,23 +117,26 @@ bool RtcStream::Start()
 						continue;
 				}
 
-				// 현재 동시에 1개의 audio만 지원
-				OV_ASSERT2(audio_media_desc == nullptr);
+				if (first_audio_desc)
+				{
+					audio_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
+					audio_media_desc->SetConnection(4, "0.0.0.0");
+					// TODO(dimiden): Need to prevent duplication
+					audio_media_desc->SetMid(ov::Random::GenerateString(6));
+					audio_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
+					audio_media_desc->UseDtls(true);
+					audio_media_desc->UseRtcpMux(true);
+					audio_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
+					audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
+					audio_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
 
-				audio_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
-				audio_media_desc->SetConnection(4, "0.0.0.0");
-				// TODO(dimiden): Need to prevent duplication
-				audio_media_desc->SetMid(ov::Random::GenerateString(6));
-				audio_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
-				audio_media_desc->UseDtls(true);
-				audio_media_desc->UseRtcpMux(true);
-				audio_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
-				audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
-				audio_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
+					_offer_sdp->AddMedia(audio_media_desc);
+					first_audio_desc = false;
+				}
 
 				auto payload = std::make_shared<PayloadAttr>();
 				// TODO(dimiden): Need to change to transcoding profile's bitrate and channel
-				payload->SetRtpmap(sdp_support_codec, 48000, "2");
+				payload->SetRtpmap(track->GetId(), codec, 48000, "2");
 
 				audio_media_desc->AddPayload(payload);
 
@@ -144,19 +153,11 @@ bool RtcStream::Start()
 		}
 	}
 
-	// Simulate audio or video only (test purpose)
-	// video_media_desc = nullptr;
-	// audio_media_desc = nullptr;
-
-	// Connect Media descriptions and SDP
-	_offer_sdp->AddMedia(video_media_desc);
-	_offer_sdp->AddMedia(audio_media_desc);
-
 	ov::String offer_sdp_text;
 	_offer_sdp->ToString(offer_sdp_text);
 
 	logti("Stream is created : %s/%u", GetName().CStr(), GetId());
-	logtd("%s", offer_sdp_text.CStr());
+	logtw("%s", offer_sdp_text.CStr());
 
 	return Stream::Start();
 }
