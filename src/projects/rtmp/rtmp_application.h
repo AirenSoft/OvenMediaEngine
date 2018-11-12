@@ -11,8 +11,6 @@
 
 #include "base/common_types.h"
 
-#include "base/application/application.h"
-
 #include "base/provider/application.h"
 #include "base/provider/stream.h"
 
@@ -21,10 +19,10 @@ using namespace pvd;
 class RtmpApplication : public Application
 {
 public:
-	static std::shared_ptr<RtmpApplication> Create(const ApplicationInfo &info);
+	static std::shared_ptr<RtmpApplication> Create(const info::Application &application_info);
 
-	RtmpApplication(const ApplicationInfo &info);
-	~RtmpApplication() final;
+	explicit RtmpApplication(const info::Application &info);
+	~RtmpApplication() override = default;
 
 public:
 	std::shared_ptr<Stream> OnCreateStream() override;

@@ -4,19 +4,19 @@
 #include "ice/ice_port_manager.h"
 
 
-std::shared_ptr<RtcApplication> RtcApplication::Create(const std::shared_ptr<ApplicationInfo> &info,
+std::shared_ptr<RtcApplication> RtcApplication::Create(const info::Application &application_info,
                                                        std::shared_ptr<IcePort> ice_port,
                                                        std::shared_ptr<RtcSignallingServer> rtc_signalling)
 {
-	auto application = std::make_shared<RtcApplication>(info, ice_port, rtc_signalling);
+	auto application = std::make_shared<RtcApplication>(application_info, ice_port, rtc_signalling);
 	application->Start();
 	return application;
 }
 
-RtcApplication::RtcApplication(const std::shared_ptr<ApplicationInfo> &info,
+RtcApplication::RtcApplication(const info::Application &application_info,
                                std::shared_ptr<IcePort> ice_port,
                                std::shared_ptr<RtcSignallingServer> rtc_signalling)
-	: Application(info)
+	: Application(application_info)
 {
 	_ice_port = ice_port;
 	_rtc_signalling = rtc_signalling;

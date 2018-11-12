@@ -1,6 +1,5 @@
 #pragma once
 
-#include <base/application/publisher_info.h>
 #include <base/common_types.h>
 #include "physical_port/physical_port.h"
 #include "ice/ice_port_manager.h"
@@ -12,26 +11,42 @@
 class Publisher
 {
 public:
-	virtual bool Start(std::vector<std::shared_ptr<ApplicationInfo>> &application_infos);
+	virtual bool Start();
 	virtual bool Stop();
 
 	// app_name으로 Application을 찾아서 반환한다.
-	std::shared_ptr<Application> GetApplication(ov::String app_name);
+	std::shared_ptr<Application> GetApplicationByName(ov::String app_name);
 	std::shared_ptr<Stream> GetStream(ov::String app_name, ov::String stream_name);
 
-	std::shared_ptr<Application> GetApplication(uint32_t app_id);
-	std::shared_ptr<Stream> GetStream(uint32_t app_id, uint32_t stream_id);
+	std::shared_ptr<Application> GetApplicationById(info::application_id_t application_id);
+	std::shared_ptr<Stream> GetStream(info::application_id_t application_id, uint32_t stream_id);
 
 protected:
-	Publisher(std::shared_ptr<MediaRouteInterface> router);
-	virtual ~Publisher();
+	explicit Publisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
+	virtual ~Publisher() = default;
 
-	std::map<uint32_t, std::shared_ptr<Application>> _applications;
+	template<typename Tpublisher>
+	const Tpublisher *FindPublisherInfo()
+	{
+		const auto &publishers = _application_info.GetPublishers();
 
-private:
+		for(auto &publisher_info : publishers)
+		{
+			if(GetPublisherType() == publisher_info->GetType())
+			{
+				return dynamic_cast<const Tpublisher *>(publisher_info);
+			}
+		}
+
+		return nullptr;
+	}
+
 	// 모든 Publisher는 Type을 정의해야 하며, Config과 일치해야 한다.
-	virtual PublisherType GetPublisherType() = 0;
-	virtual std::shared_ptr<Application> OnCreateApplication(const std::shared_ptr<ApplicationInfo> &info) = 0;
+	virtual cfg::PublisherType GetPublisherType() = 0;
+	virtual std::shared_ptr<Application> OnCreateApplication(const info::Application &application_info) = 0;
+
+	std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
+	info::Application _application_info;
 
 	std::shared_ptr<MediaRouteInterface> _router;
 };

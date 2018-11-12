@@ -14,23 +14,24 @@ namespace cfg
 {
 	struct Stream : public Item
 	{
-		bool MakeParseList() override
+		ov::String GetName() const
 		{
-			bool result = true;
-
-			result = result && RegisterValue("Name", &_name);
-			result = result && RegisterValue("Profiles", &_profiles);
-
-			return result;
+			return _name;
 		}
 
-		//const std::vector<std::shared_ptr<StreamProfile>> &GetProfiles() const
-		//{
-		//	return _profiles.GetValueAs<StreamProfiles>()->GetProfiles();
-		//}
+		const std::vector<StreamProfile> &GetProfiles() const
+		{
+			return _profiles.GetProfiles();
+		}
 
 	protected:
-		Value<ov::String> _name;
-		Value<StreamProfiles> _profiles;
+		void MakeParseList() const override
+		{
+			RegisterValue("Name", &_name);
+			RegisterValue("Profiles", &_profiles);
+		}
+
+		ov::String _name;
+		StreamProfiles _profiles;
 	};
 }

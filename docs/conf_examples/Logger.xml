@@ -12,5 +12,6 @@
     <Tag name="RtpRtcp" level="info" />
     <Tag name="TranscodeCodec" level="info" />
     <Tag name=".*\.Packet" level="info" />
+    <Tag name="Config" level="info" />
     <Tag name=".*" level="info" />
 </Logger>

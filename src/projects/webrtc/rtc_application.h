@@ -2,7 +2,6 @@
 
 #include "base/common_types.h"
 #include "base/publisher/application.h"
-#include "base/application/application_info.h"
 #include "base/application/session_info.h"
 #include "base/ovcrypto/certificate.h"
 #include "ice/ice_port.h"
@@ -12,10 +11,10 @@
 class RtcApplication : public Application
 {
 public:
-	static std::shared_ptr<RtcApplication> Create(const std::shared_ptr<ApplicationInfo> &info,
+	static std::shared_ptr<RtcApplication> Create(const info::Application &application_info,
 	                                              std::shared_ptr<IcePort> ice_port,
 	                                              std::shared_ptr<RtcSignallingServer> rtc_signalling);
-	RtcApplication(const std::shared_ptr<ApplicationInfo> &info,
+	RtcApplication(const info::Application &application_info,
 	               std::shared_ptr<IcePort> ice_port,
 	               std::shared_ptr<RtcSignallingServer> rtc_signalling);
 	~RtcApplication() final;

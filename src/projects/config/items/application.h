@@ -16,30 +16,87 @@
 
 namespace cfg
 {
+	enum class ApplicationType
+	{
+		Unknown,
+		Live,
+		Vod,
+		LiveEdge,
+		VodEdge
+	};
+
 	struct Application : public Item
 	{
-		bool MakeParseList() override
+		ov::String GetName() const
 		{
-			bool result = true;
+			return _name;
+		}
 
-			result = result && RegisterValue("Name", &_name);
-			result = result && RegisterValue<Optional>("Type", &_type);
-			result = result && RegisterValue<Optional, Includable>("TLS", &_tls);
-			result = result && RegisterValue<Optional, Includable>("Decode", &_decode);
-			result = result && RegisterValue<Optional, Includable>("Encodes", &_encodes);
-			result = result && RegisterValue<Optional, Includable>("Providers", &_providers);
-			result = result && RegisterValue<Optional, Includable>("Publishers", &_publishers);
+		ApplicationType GetType() const
+		{
+			if(_type == "live")
+			{
+				return ApplicationType::Live;
+			}
+			else if(_type == "vod")
+			{
+				return ApplicationType::Vod;
+			}
+			else if(_type == "livdedge")
+			{
+				return ApplicationType::LiveEdge;
+			}
+			else if(_type == "vodedge")
+			{
+				return ApplicationType::VodEdge;
+			}
 
-			return result;
+			return ApplicationType::Unknown;
+		}
+
+		const Tls &GetTls() const
+		{
+			return _tls;
+		}
+
+		const Decode &GetDecode() const
+		{
+			return _decode;
+		}
+
+		const std::vector<Encode> &GetEncodes() const
+		{
+			return _encodes.GetEncodes();
+		}
+
+		std::vector<const Provider *> GetProviders() const
+		{
+			return std::move(_providers.GetProviders());
+		}
+
+		std::vector<const Publisher *> GetPublishers() const
+		{
+			return std::move(_publishers.GetPublishers());
 		}
 
 	protected:
-		Value<ov::String> _name;
-		Value<ov::String> _type;
-		Value<Tls> _tls;
-		Value<Decode> _decode;
-		Value<Encodes> _encodes;
-		Value<Providers> _providers;
-		Value<Publishers> _publishers;
+		void MakeParseList() const override
+		{
+			RegisterValue("Name", &_name);
+			RegisterValue<Optional>("Type", &_type);
+			RegisterValue<Optional, Overridable, Includable>("TLS", &_tls);
+			RegisterValue<Optional, Overridable, Includable>("Decode", &_decode);
+			RegisterValue<Optional, Overridable, Includable>("Encodes", &_encodes);
+			RegisterValue<Optional, Overridable, Includable>("Providers", &_providers);
+			RegisterValue<Optional, Overridable, Includable>("Publishers", &_publishers);
+		}
+
+		ov::String _name;
+		ov::String _type;
+		Tls _tls;
+		Decode _decode;
+		Encodes _encodes;
+		Providers _providers;
+		Publishers _publishers;
 	};
 }

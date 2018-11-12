@@ -26,6 +26,11 @@ namespace ov
 			return ov::String::FormatString("%d", number);
 		}
 
+		static ov::String ToString(const ov::String &str)
+		{
+			return str;
+		}
+
 		static ov::String ToString(unsigned int number)
 		{
 			return ov::String::FormatString("%u", number);

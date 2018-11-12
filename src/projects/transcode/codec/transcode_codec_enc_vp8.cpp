@@ -101,7 +101,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeRes
 			 (float)_pkt->pts, _pkt->size, _pkt->flags, _encoded_data_size);
 #endif
 
-		auto packet_buffer = std::make_unique<MediaPacket>(MediaCommonType::MediaType::Video, 0, _pkt->data, _pkt->size, _pkt->dts, (_pkt->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+		auto packet_buffer = std::make_unique<MediaPacket>(common::MediaType::Video, 0, _pkt->data, _pkt->size, _pkt->dts, (_pkt->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
 
 		av_packet_unref(_pkt);
 

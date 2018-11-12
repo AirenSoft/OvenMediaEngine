@@ -14,16 +14,12 @@ namespace cfg
 {
 	struct DecodeVideo : public Item
 	{
-		bool MakeParseList() override
+	protected:
+		void MakeParseList() const override
 		{
-			bool result = true;
-
-			result = result && RegisterValue("HWAcceleration", &_hw_acceleration);
-
-			return result;
+			RegisterValue("HWAcceleration", &_hw_acceleration);
 		}
 
-	protected:
-		Value <ov::String> _hw_acceleration;
+		ov::String _hw_acceleration;
 	};
 }

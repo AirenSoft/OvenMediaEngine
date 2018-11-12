@@ -17,22 +17,48 @@ namespace cfg
 {
 	struct Publishers : public Item
 	{
-		bool MakeParseList() override
+		std::vector<const Publisher *> GetPublishers() const
 		{
-			bool result = true;
+			return {
+				&_rtmp_publisher,
+				&_hls_publisher,
+				&_dash_publisher,
+				&_webrtc_publisher
+			};
+		}
 
-			result = result && RegisterValue<Optional>("RTMP", &_rtmp_publisher);
-			result = result && RegisterValue<Optional>("HLS", &_hls_publisher);
-			result = result && RegisterValue<Optional>("DASH", &_dash_publisher);
-			result = result && RegisterValue<Optional>("WebRTC", &_webrtc_publisher);
+		const RtmpPublisher &GetRtmpPublisher() const
+		{
+			return _rtmp_publisher;
+		}
 
-			return result;
+		const HlsPublisher &GetHlsPublisher() const
+		{
+			return _hls_publisher;
+		}
+
+		const DashPublisher &GetDashPublisher() const
+		{
+			return _dash_publisher;
+		}
+
+		const WebrtcPublisher &GetWebrtcPublisher() const
+		{
+			return _webrtc_publisher;
 		}
 
 	protected:
-		Value<RtmpPublisher> _rtmp_publisher;
-		Value<HlsPublisher> _hls_publisher;
-		Value<DashPublisher> _dash_publisher;
-		Value<WebrtcPublisher> _webrtc_publisher;
+		void MakeParseList() const override
+		{
+			RegisterValue<Optional>("RTMP", &_rtmp_publisher);
+			RegisterValue<Optional>("HLS", &_hls_publisher);
+			RegisterValue<Optional>("DASH", &_dash_publisher);
+			RegisterValue<Optional>("WebRTC", &_webrtc_publisher);
+		}
+
+		RtmpPublisher _rtmp_publisher;
+		HlsPublisher _hls_publisher;
+		DashPublisher _dash_publisher;
+		WebrtcPublisher _webrtc_publisher;
 	};
 }

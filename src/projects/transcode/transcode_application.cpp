@@ -14,18 +14,17 @@
 
 #define OV_LOG_TAG "TranscodeApplication"
 
-std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(std::shared_ptr<ApplicationInfo> app_info)
+std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(const info::Application &application_info)
 {
-	auto instance = std::make_shared<TranscodeApplication>(app_info);
+	auto instance = std::make_shared<TranscodeApplication>(application_info);
 
 	return instance;
 }
 
-TranscodeApplication::TranscodeApplication(std::shared_ptr<ApplicationInfo> app_info)
+TranscodeApplication::TranscodeApplication(const info::Application &application_info)
+	: _application_info(application_info)
 {
-	logtd("Transcode application [%s] is created", app_info->GetName().CStr());
-
-	_app_info = app_info;
+	logtd("Transcode application [%s] is created", _application_info.GetName().CStr());
 }
 
 TranscodeApplication::~TranscodeApplication()
@@ -39,7 +38,7 @@ bool TranscodeApplication::OnCreateStream(std::shared_ptr<StreamInfo> stream_inf
 
 	std::unique_lock<std::mutex> lock(_mutex);
 
-	auto stream = std::make_shared<TranscodeStream>(stream_info, this);
+	auto stream = std::make_shared<TranscodeStream>(_application_info, stream_info, this);
 
 	_streams.insert(std::make_pair(stream_info->GetId(), stream));
 
@@ -83,6 +82,7 @@ bool TranscodeApplication::OnSendFrame(std::shared_ptr<StreamInfo> stream_info, 
 	std::unique_lock<std::mutex> lock(_mutex);
 
 	auto stream_bucket = _streams.find(stream_info->GetId());
+
 	if(stream_bucket == _streams.end())
 	{
 		return false;

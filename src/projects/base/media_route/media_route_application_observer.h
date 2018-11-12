@@ -7,7 +7,6 @@
 
 #include "base/ovlibrary/enable_shared_from_this.h"
 #include "base/application/stream_info.h"
-#include "base/application/application_info.h"
 
 #include "media_route_interface.h"
 #include "media_route_application_interface.h"

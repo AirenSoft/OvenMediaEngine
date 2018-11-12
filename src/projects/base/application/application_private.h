@@ -8,13 +8,4 @@
 //==============================================================================
 #pragma once
 
-#include "value_container.h"
-
-namespace cfg
-{
-	// For specialized classes
-	template<typename Ttype, typename Tenabler = void>
-	class Value : public ValueContainer<Ttype>
-	{
-	};
-}
+#define OV_LOG_TAG                      "Application"

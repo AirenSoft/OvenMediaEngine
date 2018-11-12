@@ -23,12 +23,12 @@ TranscodeContext::~TranscodeContext()
 {
 }
 
-void TranscodeContext::SetCodecId(MediaCommonType::MediaCodecId val)
+void TranscodeContext::SetCodecId(common::MediaCodecId val)
 {
 	_codec_id = val;
 }
 
-MediaCommonType::MediaCodecId TranscodeContext::GetCodecId()
+common::MediaCodecId TranscodeContext::GetCodecId()
 {
 	return _codec_id;
 }
@@ -43,19 +43,19 @@ int32_t TranscodeContext::GetBitrate()
 	return _bitrate;
 }
 
-void TranscodeContext::SetAudioSample(MediaCommonType::AudioSample sample)
+void TranscodeContext::SetAudioSample(common::AudioSample sample)
 {
 	_audio_sample = sample;
 }
 
-MediaCommonType::AudioSample TranscodeContext::GetAudioSample() const
+common::AudioSample TranscodeContext::GetAudioSample() const
 {
 	return _audio_sample;
 }
 
 void TranscodeContext::SetAudioSampleRate(int32_t val)
 {
-	_audio_sample.SetRate((MediaCommonType::AudioSample::Rate)val);
+	_audio_sample.SetRate((common::AudioSample::Rate)val);
 	// _audio_sample_rate = val;
 }
 
@@ -94,7 +94,7 @@ float TranscodeContext::GetFrameRate()
 	return _video_frame_rate;
 }
 
-MediaCommonType::Timebase &TranscodeContext::GetTimeBase()
+common::Timebase &TranscodeContext::GetTimeBase()
 {
 	return _time_base;
 }
@@ -114,17 +114,17 @@ int32_t TranscodeContext::GetGOP()
 	return _video_gop;
 }
 
-void TranscodeContext::SetAudioSampleFormat(MediaCommonType::AudioSample::Format val)
+void TranscodeContext::SetAudioSampleFormat(common::AudioSample::Format val)
 {
 	_audio_sample.SetFormat(val);
 }
 
-MediaCommonType::AudioChannel &TranscodeContext::GetAudioChannel()
+common::AudioChannel &TranscodeContext::GetAudioChannel()
 {
 	return _audio_channel;
 }
 
-const MediaCommonType::AudioChannel &TranscodeContext::GetAudioChannel() const
+const common::AudioChannel &TranscodeContext::GetAudioChannel() const
 {
 	return _audio_channel;
 }
@@ -134,7 +134,7 @@ ov::String TranscodeContext::GetStreamName() const
 	return _stream_name;
 }
 
-MediaType TranscodeContext::GetMediaType() const
+common::MediaType TranscodeContext::GetMediaType() const
 {
 	return _media_type;
 }

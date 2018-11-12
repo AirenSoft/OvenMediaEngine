@@ -164,7 +164,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 		*/
 
 		auto packet_buffer = std::make_unique<MediaPacket>(
-			MediaCommonType::MediaType::Video,
+			common::MediaType::Video,
 			0,
 			encoded.get(),
 			encoded_length,

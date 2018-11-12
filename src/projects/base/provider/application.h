@@ -12,16 +12,14 @@
 
 #include "base/common_types.h"
 #include "base/ovlibrary/ovlibrary.h"
-#include "base/application/application.h"
 
 #include "base/media_route/media_route_application_connector.h"
 
 namespace pvd
 {
-	class Application;
 	class Stream;
 
-	class Application : public ApplicationInfo, public MediaRouteApplicationConnector
+	class Application : public info::Application, public MediaRouteApplicationConnector
 	{
 		enum class ApplicationState : int8_t
 		{
@@ -35,8 +33,8 @@ namespace pvd
 		bool Start();
 		bool Stop();
 
-		std::shared_ptr<Stream> GetStream(uint32_t stream_id);
-		std::shared_ptr<Stream> GetStream(ov::String stream_name);
+		std::shared_ptr<Stream> GetStreamById(uint32_t stream_id);
+		std::shared_ptr<Stream> GetStreamByName(ov::String stream_name);
 
 		std::shared_ptr<Stream> MakeStream();
 		bool CreateStream2(std::shared_ptr<Stream> stream);
@@ -46,8 +44,8 @@ namespace pvd
 		virtual std::shared_ptr<Stream> OnCreateStream() = 0;
 
 	protected:
-		explicit Application(const ApplicationInfo &info);
-		virtual ~Application();
+		explicit Application(const info::Application &application_info);
+		~Application() override;
 
 		std::map<uint32_t, std::shared_ptr<Stream>> _streams;
 

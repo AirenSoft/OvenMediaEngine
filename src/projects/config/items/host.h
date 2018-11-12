@@ -17,26 +17,52 @@ namespace cfg
 {
 	struct Host : public Item
 	{
-		bool MakeParseList() override
+		ov::String GetName() const
 		{
-			bool result = true;
+			return _name;
+		}
 
-			result = result && RegisterValue("Name", &_name);
-			result = result && RegisterValue<Optional>("IP", &_ip);
-			result = result && RegisterValue<Optional, Includable>("TLS", &_tls);
-			result = result && RegisterValue<Optional, Includable>("Providers", &_providers);
-			result = result && RegisterValue<Optional, Includable>("Publishers", &_publishers);
-			result = result && RegisterValue<Optional, Includable>("Applications", &_applications);
+		ov::String GetIp() const
+		{
+			return _ip;
+		}
 
-			return result;
+		Tls GetTls() const
+		{
+			return _tls;
+		}
+
+		Providers GetProviders() const
+		{
+			return _providers;
+		}
+
+		Publishers GetPublishers() const
+		{
+			return _publishers;
+		}
+
+		const std::vector<Application> &GetApplications() const
+		{
+			return _applications.GetApplications();
 		}
 
 	protected:
-		Value <ov::String> _name;
-		Value <ov::String> _ip;
-		Value <Tls> _tls;
-		Value <Providers> _providers;
-		Value <Publishers> _publishers;
-		Value <Applications> _applications;
+		void MakeParseList() const override
+		{
+			RegisterValue("Name", &_name);
+			RegisterValue<Optional, Overridable>("IP", &_ip);
+			RegisterValue<Optional, Overridable, Includable>("TLS", &_tls);
+			RegisterValue<Optional, Overridable, Includable>("Providers", &_providers);
+			RegisterValue<Optional, Overridable, Includable>("Publishers", &_publishers);
+			RegisterValue<Optional, Includable>("Applications", &_applications);
+		}
+		
+		ov::String _name;
+		ov::String _ip;
+		Tls _tls;
+		Providers _providers;
+		Publishers _publishers;
+		Applications _applications;
 	};
 }

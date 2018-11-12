@@ -8,7 +8,7 @@
 //==============================================================================
 #include "audio_track.h"
 
-using namespace MediaCommonType;
+using namespace common;
 
 void AudioTrack::SetSampleRate(int32_t sample_rate)
 {

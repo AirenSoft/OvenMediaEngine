@@ -17,34 +17,29 @@
 
 namespace pvd
 {
-	Provider::Provider(std::shared_ptr<MediaRouteInterface> router)
+	Provider::Provider(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router)
+		: _application_info(application_info),
+		  _router(router)
 	{
-		_router = router;
 	}
 
 	Provider::~Provider()
 	{
-
 	}
 
 	bool Provider::Start()
 	{
-		// TODO: CONFIG 에서 Application 설정을 읽어와서 생성해야 한다.
-		// config->application->publish->get(GetPublishName()) 로 수정
-		if(GetProviderName() == "RTMP") //
-		{
-			ApplicationInfo app_info;
-			// Config 에서 Application 정보를 읽어온다.
-			app_info.SetName(ov::String::FormatString("app"));
-			// Application 을 자식에게 생성하게 한다.
-			auto application = OnCreateApplication(app_info);
-			// 생성한 Application을 Router와 연결하고 Start
-			_router->RegisterConnectorApp(application, application);
-			// Apllication Map에 보관
-			_applications[application->GetId()] = application;
-			// 시작한다.
-			application->Start();
-		}
+		// Application 을 자식에게 생성하게 한다.
+		auto application = OnCreateApplication(_application_info);
+
+		// 생성한 Application을 Router와 연결하고 Start
+		_router->RegisterConnectorApp(application.get(), application);
+
+		// Apllication Map에 보관
+		_applications[application->GetId()] = application;
+
+		// 시작한다.
+		application->Start();
 
 		return true;
 	}
@@ -52,11 +47,13 @@ namespace pvd
 	bool Provider::Stop()
 	{
 		auto it = _applications.begin();
+
 		while(it != _applications.end())
 		{
 			auto application = it->second;
 
-			_router->UnregisterConnectorApp(application, application);
+			_router->UnregisterConnectorApp(application.get(), application);
+
 			application->Stop();
 
 			it = _applications.erase(it);
@@ -65,7 +62,7 @@ namespace pvd
 		return true;
 	}
 
-	std::shared_ptr<Application> Provider::GetApplication(ov::String app_name)
+	std::shared_ptr<Application> Provider::GetApplicationByName(ov::String app_name)
 	{
 		for(auto const &x : _applications)
 		{
@@ -79,35 +76,39 @@ namespace pvd
 		return nullptr;
 	}
 
-	std::shared_ptr<Stream> Provider::GetStream(ov::String app_name, ov::String stream_name)
+	std::shared_ptr<Stream> Provider::GetStreamByName(ov::String app_name, ov::String stream_name)
 	{
-		auto app = GetApplication(app_name);
+		auto app = GetApplicationByName(app_name);
+
 		if(!app)
 		{
 			return nullptr;
 		}
 
-		return app->GetStream(stream_name);
+		return app->GetStreamByName(stream_name);
 	}
 
-	std::shared_ptr<Application> Provider::GetApplication(uint32_t app_id)
+	std::shared_ptr<Application> Provider::GetApplicationById(info::application_id_t application_id)
 	{
-		if(_applications.count(app_id) <= 0)
+		auto application = _applications.find(application_id);
+
+		if(application != _applications.end())
 		{
-			return nullptr;
+			return application->second;
 		}
 
-		return _applications[app_id];
+		return nullptr;
 	}
 
-	std::shared_ptr<Stream> Provider::GetStream(uint32_t app_id, uint32_t stream_id)
+	std::shared_ptr<Stream> Provider::GetStreamById(info::application_id_t application_id, uint32_t stream_id)
 	{
-		auto app = GetApplication(app_id);
-		if(!app)
+		auto app = GetApplicationById(application_id);
+
+		if(app != nullptr)
 		{
-			return nullptr;
+			return app->GetStreamById(stream_id);
 		}
 
-		return app->GetStream(stream_id);
+		return nullptr;
 	}
 }

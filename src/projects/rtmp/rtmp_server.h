@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #pragma once
+
 #include "rtmp_chunk_stream.h"
 #include <base/ovsocket/ovsocket.h>
 #include <physical_port/physical_port_manager.h>
@@ -40,14 +41,14 @@ protected:
 	//--------------------------------------------------------------------
 	// Implementation of IRtmpChunkStream
 	//--------------------------------------------------------------------
-	bool OnChunkStreamReadyComplete(ov::ClientSocket *remote, ov::String &app_name, ov::String &stream_name, std::shared_ptr<RtmpMediaInfo> &media_info, uint32_t &app_id, uint32_t &stream_id) override;
-	bool OnChunkStreamVideoData(ov::ClientSocket *remote, uint32_t app_id, uint32_t stream_id, uint32_t timestamp, std::shared_ptr<std::vector<uint8_t>> &data)  override;
-	bool OnChunkStreamAudioData(ov::ClientSocket *remote, uint32_t app_id, uint32_t stream_id, uint32_t timestamp, std::shared_ptr<std::vector<uint8_t>> &data) override;
-	bool OnChunkStreamDelete(ov::ClientSocket *remote, ov::String &app_name, ov::String &stream_name, uint32_t app_id, uint32_t stream_id) override;
+	bool OnChunkStreamReadyComplete(ov::ClientSocket *remote, ov::String &app_name, ov::String &stream_name, std::shared_ptr<RtmpMediaInfo> &media_info, info::application_id_t &application_id, uint32_t &stream_id) override;
+	bool OnChunkStreamVideoData(ov::ClientSocket *remote, info::application_id_t application_id, uint32_t stream_id, uint32_t timestamp, std::shared_ptr<std::vector<uint8_t>> &data) override;
+	bool OnChunkStreamAudioData(ov::ClientSocket *remote, info::application_id_t application_id, uint32_t stream_id, uint32_t timestamp, std::shared_ptr<std::vector<uint8_t>> &data) override;
+	bool OnChunkStreamDelete(ov::ClientSocket *remote, ov::String &app_name, ov::String &stream_name, info::application_id_t application_id, uint32_t stream_id) override;
 
 private :
-	std::shared_ptr<PhysicalPort>                               _physical_port;
-	std::map<ov::Socket *, std::shared_ptr<RtmpChunkStream>>    _client_list;
-	std::vector<std::shared_ptr<RtmpObserver>>                  _observers;
+	std::shared_ptr<PhysicalPort> _physical_port;
+	std::map<ov::Socket *, std::shared_ptr<RtmpChunkStream>> _client_list;
+	std::vector<std::shared_ptr<RtmpObserver>> _observers;
 
 };

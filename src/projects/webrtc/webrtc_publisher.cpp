@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "rtc_private.h"
 #include "webrtc_publisher.h"
 #include "rtc_stream.h"
@@ -5,21 +7,19 @@
 
 #include "config/config_manager.h"
 
-std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(std::shared_ptr<MediaRouteInterface> router)
+std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router)
 {
-	auto webrtc = std::make_shared<WebRtcPublisher>(router);
+	auto webrtc = std::make_shared<WebRtcPublisher>(application_info, router);
 
 	// CONFIG을 불러온다.
-	auto application_infos = ConfigManager::Instance()->GetApplicationInfos();
-	webrtc->Start(application_infos);
+	webrtc->Start();
 
 	return webrtc;
 }
 
-WebRtcPublisher::WebRtcPublisher(std::shared_ptr<MediaRouteInterface> router)
-	: Publisher(router)
+WebRtcPublisher::WebRtcPublisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router)
+	: Publisher(application_info, std::move(router))
 {
-
 }
 
 WebRtcPublisher::~WebRtcPublisher()
@@ -31,8 +31,17 @@ WebRtcPublisher::~WebRtcPublisher()
  * Publisher Implementation
  */
 
-bool WebRtcPublisher::Start(std::vector<std::shared_ptr<ApplicationInfo>> &application_infos)
+bool WebRtcPublisher::Start()
 {
+	// Find WebRTC publisher configuration
+	_publisher_info = FindPublisherInfo<cfg::WebrtcPublisher>();
+
+	if(_publisher_info == nullptr)
+	{
+		logte("Cannot initialize WebrtcPublisher using config information");
+		return false;
+	}
+
 	// _ice_port 생성
 	ov::SocketType socket_type;
 
@@ -66,7 +75,7 @@ bool WebRtcPublisher::Start(std::vector<std::shared_ptr<ApplicationInfo>> &appli
 	_signalling->Start(ov::SocketAddress(GetSignallingPort()), certificate);
 
 	// Publisher::Start()에서 Application을 생성한다.
-	return Publisher::Start(application_infos);
+	return Publisher::Start();
 }
 
 bool WebRtcPublisher::Stop()
@@ -78,9 +87,9 @@ bool WebRtcPublisher::Stop()
 }
 
 // Publisher에서 Application 생성 요청이 온다.
-std::shared_ptr<Application> WebRtcPublisher::OnCreateApplication(const std::shared_ptr<ApplicationInfo> &info)
+std::shared_ptr<Application> WebRtcPublisher::OnCreateApplication(const info::Application &application_info)
 {
-	return RtcApplication::Create(info, _ice_port, _signalling);
+	return RtcApplication::Create(application_info, _ice_port, _signalling);
 }
 
 /*
@@ -101,7 +110,7 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::St
 
 	ice_candidates->push_back(RtcIceCandidate(GetCandidateProto(), ov::SocketAddress(GetCandidateIP(), GetCandidatePort()), 0, ""));
 
-	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription().get());
+	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
 
 	session_description->SetIceUfrag(_ice_port->GenerateUfrag());
 	session_description->Update();
@@ -115,7 +124,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
                                              const std::shared_ptr<SessionDescription> &offer_sdp,
                                              const std::shared_ptr<SessionDescription> &peer_sdp)
 {
-	auto application = GetApplication(application_name);
+	auto application = GetApplicationByName(application_name);
 	auto stream = GetStream(application_name, stream_name);
 
 	if(!stream)
@@ -237,79 +246,56 @@ void WebRtcPublisher::OnDataReceived(IcePort &port, const std::shared_ptr<Sessio
 
 uint16_t WebRtcPublisher::GetSignallingPort()
 {
-	if(
-		ConfigManager::Instance()->GetHostPublisher() == nullptr ||
-		ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr
-		)
-	{
-		logte("Cannot get publish service config");
+	int port = _publisher_info->GetSignalling().GetPort();
 
-		// Default Signalling Port
-		return 3333;
-	}
-
-	return static_cast<uint16_t>(ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties()->GetSignallingPort());
+	return static_cast<uint16_t>((port == 0) ? 3333 : port);
 }
 
 ov::String WebRtcPublisher::GetCandidateIP()
 {
-	if(
-		ConfigManager::Instance()->GetHostPublisher() == nullptr
-		)
-	{
-		logte("Cannot get publish service config");
+	ov::String ip = _publisher_info->GetIp();
 
-		// Default Candidate IP
-		return "127.0.0.1";
-	}
-
-	return ConfigManager::Instance()->GetHostPublisher()->GetIPAddress();
+	return ip.IsEmpty() ? "127.0.0.1" : ip;
 }
 
 uint16_t WebRtcPublisher::GetCandidatePort()
 {
-	if(
-		ConfigManager::Instance()->GetHostPublisher() == nullptr ||
-		ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr
-		)
-	{
-		logte("Cannot get publish service config");
+	auto tokens = _publisher_info->GetPort().Split("/");
 
-		// Default Candidate Port
-		return 10000;
-	}
+	int port = ov::Converter::ToUInt16(tokens[0]);
 
-	return static_cast<uint16_t>(ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties()->GetCandidatePort());
+	return static_cast<uint16_t>((port == 0) ? 10000 : port);
 }
 
 ov::String WebRtcPublisher::GetCandidateProto()
 {
-	if(
-		ConfigManager::Instance()->GetHostPublisher() == nullptr ||
-		ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties() == nullptr
-		)
+	auto tokens = _publisher_info->GetPort().Split("/");
+
+	if(tokens.size() >= 2)
 	{
-		logte("Cannot get publish service config");
-		return "UDP";
+		return tokens[1].UpperCaseString();
 	}
 
-	return ConfigManager::Instance()->GetHostPublisher()->GetWebRtcProperties()->GetCandidateProtocol();
+	return "UDP";
 }
 
 std::shared_ptr<Certificate> WebRtcPublisher::GetCertificate()
 {
-	auto tls_info = ConfigManager::Instance()->GetHostTls();
+	cfg::Tls tls_info = _publisher_info->GetTls();
 
-	if(tls_info->CheckTls())
+	if(
+		(tls_info.GetCertPath().IsEmpty() == false) &&
+		(tls_info.GetKeyPath().IsEmpty() == false)
+		)
 	{
 		auto certificate = std::make_shared<Certificate>();
 
 		logti("Trying to create a certificate using file\n\tCert path: %s\n\tPrivate key path: %s",
-		      tls_info->GetCertPath().CStr(),
-		      tls_info->GetKeyPath().CStr()
+		      tls_info.GetCertPath().CStr(),
+		      tls_info.GetKeyPath().CStr()
 		);
 
-		if(certificate->GenerateFromPem(tls_info->GetCertPath(), tls_info->GetKeyPath()))
+		if(certificate->GenerateFromPem(tls_info.GetCertPath(), tls_info.GetKeyPath()))
 		{
 			return certificate;
 		}
@@ -322,6 +308,4 @@ std::shared_ptr<Certificate> WebRtcPublisher::GetCertificate()
 	}
 
 	return nullptr;
-
-
 }

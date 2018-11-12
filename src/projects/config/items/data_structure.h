@@ -6,4 +6,4 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "value_for_specialization.h"
+#pragma once

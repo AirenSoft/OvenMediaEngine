@@ -200,7 +200,7 @@ std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 		output_frame->SetNbSamples(_frame->nb_samples);
 		output_frame->SetChannels(_frame->channels);
 		output_frame->SetSampleRate(_frame->sample_rate);
-		output_frame->SetChannelLayout((MediaCommonType::AudioChannel::Layout)_frame->channel_layout);
+		output_frame->SetChannelLayout((common::AudioChannel::Layout)_frame->channel_layout);
 
 		output_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1L : _frame->pts);
 

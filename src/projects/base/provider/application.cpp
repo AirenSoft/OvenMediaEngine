@@ -14,8 +14,8 @@
 
 namespace pvd
 {
-	Application::Application(const ApplicationInfo &info)
-		: ApplicationInfo(info)
+	Application::Application(const info::Application &application_info)
+		: info::Application(application_info)
 	{
 
 	}
@@ -25,17 +25,19 @@ namespace pvd
 		Stop();
 	}
 
-
 	bool Application::Start()
 	{
+		// TODO(soulk): Check this return value
+		return false;
 	}
 
 	bool Application::Stop()
 	{
+		// TODO(soulk): Check this return value
+		return false;
 	}
 
-
-	std::shared_ptr<Stream> Application::GetStream(uint32_t stream_id)
+	std::shared_ptr<Stream> Application::GetStreamById(uint32_t stream_id)
 	{
 		if(_streams.find(stream_id) == _streams.end())
 		{
@@ -45,7 +47,7 @@ namespace pvd
 		return _streams[stream_id];
 	}
 
-	std::shared_ptr<Stream> Application::GetStream(ov::String stream_name)
+	std::shared_ptr<Stream> Application::GetStreamByName(ov::String stream_name)
 	{
 		for(auto const &x : _streams)
 		{

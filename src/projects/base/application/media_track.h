@@ -27,15 +27,15 @@ public:
 
 public:
 	// 비디오 오디오 설정
-	void SetMediaType(MediaCommonType::MediaType type);
-	MediaCommonType::MediaType GetMediaType();
+	void SetMediaType(common::MediaType type);
+	common::MediaType GetMediaType();
 
 	// 코덱 설정
-	void SetCodecId(MediaCommonType::MediaCodecId id);
-	MediaCommonType::MediaCodecId GetCodecId();
+	void SetCodecId(common::MediaCodecId id);
+	common::MediaCodecId GetCodecId();
 
 	// 타임베이스 설정
-	MediaCommonType::Timebase &GetTimeBase();
+	common::Timebase &GetTimeBase();
 	void SetTimeBase(int32_t num, int32_t den);
 
 	void SetStartFrameTime(int64_t time);
@@ -47,13 +47,13 @@ public:
 // private:
 
 	// 코덱 아이디
-	MediaCommonType::MediaCodecId _codec_id;
+	common::MediaCodecId _codec_id;
 
 	// 트랙 타입
-	MediaCommonType::MediaType _media_type;
+	common::MediaType _media_type;
 
 	// 타입 베이스
-	MediaCommonType::Timebase _time_base;
+	common::Timebase _time_base;
 
 	// 시작 프레임(패킷) 시간
 	int64_t _start_frame_time;

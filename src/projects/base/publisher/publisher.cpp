@@ -1,51 +1,42 @@
 #include "publisher_private.h"
 #include "publisher.h"
 
-Publisher::Publisher(std::shared_ptr<MediaRouteInterface> router)
-{
-	_router = router;
-}
-
-Publisher::~Publisher()
+Publisher::Publisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router)
+	: _application_info(application_info),
+	  _router(std::move(router))
 {
 }
 
-bool Publisher::Start(std::vector<std::shared_ptr<ApplicationInfo>> &application_infos)
+bool Publisher::Start()
 {
-	for(auto const &application_info : application_infos)
-	{
-		auto publishers = application_info->GetPublishers();
-		for(auto const &publisher : publishers)
-		{
-			if(GetPublisherType() == publisher->GetType())
-			{
-				logti("Create application : %s", application_info->GetName().CStr());
-				auto application = OnCreateApplication(application_info);
-				// 생성한 Application을 Router와 연결하고 Start
-				_router->RegisterObserverApp(application_info, application);
-				// Apllication Map에 보관
-				_applications[application->GetId()] = application;
+	logti("Create application : %s", _application_info.GetName().CStr());
 
-				break;
-			}
-		}
-	}
+	auto application = OnCreateApplication(_application_info);
+
+	// 생성한 Application을 Router와 연결하고 Start
+	_router->RegisterObserverApp(application.get(), application);
+
+	// Application Map에 보관
+	_applications[application->GetId()] = application;
+
+	return true;
 }
 
 bool Publisher::Stop()
 {
 	auto it = _applications.begin();
+
 	while(it != _applications.end())
 	{
 		auto application = it->second;
 
-		_router->UnregisterObserverApp(application, application);
+		_router->UnregisterObserverApp(application.get(), application);
 
 		it = _applications.erase(it);
 	}
 }
 
-std::shared_ptr<Application> Publisher::GetApplication(ov::String app_name)
+std::shared_ptr<Application> Publisher::GetApplicationByName(ov::String app_name)
 {
 	for(auto const &x : _applications)
 	{
@@ -61,32 +52,36 @@ std::shared_ptr<Application> Publisher::GetApplication(ov::String app_name)
 
 std::shared_ptr<Stream> Publisher::GetStream(ov::String app_name, ov::String stream_name)
 {
-	auto app = GetApplication(app_name);
-	if(!app)
+	auto app = GetApplicationByName(std::move(app_name));
+
+	if(app != nullptr)
 	{
-		return nullptr;
+		return app->GetStream(std::move(stream_name));
 	}
 
-	return app->GetStream(stream_name);
+	return nullptr;
 }
 
-std::shared_ptr<Application> Publisher::GetApplication(uint32_t app_id)
+std::shared_ptr<Application> Publisher::GetApplicationById(info::application_id_t application_id)
 {
-	if(_applications.count(app_id) <= 0)
+	auto application = _applications.find(application_id);
+
+	if(application == _applications.end())
 	{
 		return nullptr;
 	}
 
-	return _applications[app_id];
+	return application->second;
 }
 
-std::shared_ptr<Stream> Publisher::GetStream(uint32_t app_id, uint32_t stream_id)
+std::shared_ptr<Stream> Publisher::GetStream(info::application_id_t application_id, uint32_t stream_id)
 {
-	auto app = GetApplication(app_id);
-	if(!app)
+	auto app = GetApplicationById(application_id);
+
+	if(app != nullptr)
 	{
-		return nullptr;
+		return app->GetStream(stream_id);
 	}
 
-	return app->GetStream(stream_id);
+	return nullptr;
 }

@@ -3,7 +3,7 @@
 #include "filter/media_filter_resampler.h"
 #include "filter/media_filter_rescaler.h"
 
-using namespace MediaCommonType;
+using namespace common;
 
 
 #define OV_LOG_TAG "TranscodeFilter"

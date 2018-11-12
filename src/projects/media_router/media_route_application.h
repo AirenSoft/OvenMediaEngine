@@ -21,6 +21,8 @@
 
 #include "media_route_stream.h"
 
+#include <config/items/application.h>
+
 class ApplicationInfo;
 class StreamInfo;
 
@@ -35,10 +37,10 @@ class StreamInfo;
 class MediaRouteApplication : public MediaRouteApplicationInterface
 {
 public:
-	static std::shared_ptr<MediaRouteApplication> Create(const std::shared_ptr<ApplicationInfo> &appinfo);
+	static std::shared_ptr<MediaRouteApplication> Create(const info::Application &application_info);
 
-	MediaRouteApplication(const std::shared_ptr<ApplicationInfo> &appinfo);
-	~MediaRouteApplication();
+	explicit MediaRouteApplication(const info::Application &application_info);
+	~MediaRouteApplication() override;
 
 public:
 	bool Start();
@@ -86,16 +88,16 @@ public:
 
 
 public:
-	// 어플리케이션 정보
-	std::shared_ptr<ApplicationInfo> _application_info;
+	// Application information from configuration file
+	info::Application _application_info;
 
-	// Connector 인스턴스 정보
+	// Information of Connector instance
 	std::vector<std::shared_ptr<MediaRouteApplicationConnector>> _connectors;
 
-	// Observer 인ㅅ턴스 정보
+	// Information of Observer instance
 	std::vector<std::shared_ptr<MediaRouteApplicationObserver>> _observers;
 
-	// MediaStream 인스턴스 정보
+	// Information of MediaStream instance
 	// Key : StreamInfo.id
 	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _streams;
 
@@ -124,4 +126,3 @@ public:
 	// 버퍼를 처리할 인디게이터
 	MediaQueue<std::unique_ptr<BufferIndicator>> _indicator;
 };
-

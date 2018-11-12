@@ -14,16 +14,17 @@ namespace cfg
 {
 	struct Encodes : public Item
 	{
-		bool MakeParseList() override
+		const std::vector<Encode> &GetEncodes() const
 		{
-			bool result = true;
-
-			result = result && RegisterValue<Optional, Includable>("Encode", &_encode_list);
-
-			return result;
+			return _encode_list;
 		}
 
 	protected:
-		Value<std::vector<Encode>> _encode_list;
+		void MakeParseList() const override
+		{
+			RegisterValue<Optional, Includable>("Encode", &_encode_list);
+		}
+
+		std::vector<Encode> _encode_list;
 	};
 }

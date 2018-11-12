@@ -15,15 +15,17 @@
 
 #define OV_LOG_TAG "MediaRouter"
 
-std::shared_ptr<MediaRouter> MediaRouter::Create()
+std::shared_ptr<MediaRouter> MediaRouter::Create(const std::vector<info::Application> &app_info_list)
 {
-	auto media_router = std::make_shared<MediaRouter>();
+	auto media_router = std::make_shared<MediaRouter>(app_info_list);
 	media_router->Start();
 	return media_router;
 }
 
-MediaRouter::MediaRouter() 
+MediaRouter::MediaRouter(const std::vector<info::Application> &app_info_list)
 {
+	_app_info_list = app_info_list;
+
 	// logtd("+ MediaRouter");
 }
 
@@ -36,28 +38,28 @@ bool MediaRouter::Start()
 {
 	logti("Trying to start media router...");
 
-	// 데이터베이스(or Config)에서 어플리케이션 정보를 생성함.
-	if(!CraeteApplications())
+	// Create applications using information in the config
+	if(CreateApplications() == false)
 	{
 		return false;
 	}
 
-	try 
+	try
 	{
-        _kill_flag = false;
-        _thread = std::thread(&MediaRouter::MainTask, this);
-    } 
-    catch (const std::system_error& e) 
-    {
-        _kill_flag = true;
+		_kill_flag = false;
+		_thread = std::thread(&MediaRouter::MainTask, this);
+	}
+	catch(const std::system_error &e)
+	{
+		_kill_flag = true;
 
 		logte("Failed to start media router thread.");
 
-        return false;
-    }
+		return false;
+	}
 
-    logti("Media router is started.");
-  
+	logti("Media router is started.");
+
 	return true;
 }
 
@@ -75,28 +77,26 @@ bool MediaRouter::Stop()
 
 	// TODO: 패킷 처리 스레드를 만들어야함.. 어플리케이션 단위로 만들어 버릴까?
 	return true;
-}	
+}
 
 // 어플리케이션의 스트림이 생성됨
-// TODO: Global Config에서 설정값을 읽어옴
-bool MediaRouter::CraeteApplications()
+bool MediaRouter::CreateApplications()
 {
-	auto application_infos = ConfigManager::Instance()->GetApplicationInfos();
-	for(auto const& application_info : application_infos)
+	for(auto const &application_info : _app_info_list)
 	{
-		//TODO(soulk) : 어플리케이션 구분 코드를 Name에서 Id 체계로 변경해야함.
-		ov::String key_app = application_info->GetName();
+		info::application_id_t application_id = application_info.GetId();
 
 		auto route_app = MediaRouteApplication::Create(application_info);
+
 		if(route_app == nullptr)
 		{
 			logte("failed to allocation");
 			continue;
 		}
-		
+
 		// 라우터 어플리케이션 관리 항목에 추가
-		_route_apps.insert ( 
-			std::make_pair(key_app.CStr(), route_app)
+		_route_apps.insert(
+			std::make_pair(application_id, route_app)
 		);
 	}
 
@@ -106,7 +106,7 @@ bool MediaRouter::CraeteApplications()
 // 어플리케이션의 스트림이 삭제됨
 bool MediaRouter::DeleteApplication()
 {
-	for(auto const& _route_app : _route_apps)
+	for(auto const &_route_app : _route_apps)
 	{
 		_route_app.second->Stop();
 	}
@@ -117,39 +117,32 @@ bool MediaRouter::DeleteApplication()
 }
 
 //  Application Name으로 RouteApplication을 찾음
-std::shared_ptr<MediaRouteApplication> MediaRouter::GetRouteApplicationByName(std::string app_name) 
-{ 
-	auto obj = _route_apps.find(app_name);
+std::shared_ptr<MediaRouteApplication> MediaRouter::GetRouteApplicationById(info::application_id_t application_id)
+{
+	auto obj = _route_apps.find(application_id);
 
 	if(obj == _route_apps.end())
 	{
-		return NULL;
+		return nullptr;
 	}
 
-	return  obj->second;
+	return obj->second;
 }
 
 // Connector의 Application이 생성되면 라우터에 등록함
 bool MediaRouter::RegisterConnectorApp(
-	std::shared_ptr<ApplicationInfo> app_info,
+	const info::Application *application_info,
 	std::shared_ptr<MediaRouteApplicationConnector> app_conn)
 {
-	// 커넥터의 어플리케이션 명을 받음.
-	ov::String app_name = app_info->GetName();
-	if(app_name.IsEmpty())
-	{
-		return true;
-	}
-
 	// logtd("Register connector application. app_ptr(%p) name(%s)", app_conn.get(), app_name.CStr());
 
 	// 1. 미디어 라우터 포인터 설정
 	// app_conn->SetMediaRouter(this->GetSharedPtr());
 
 	// 2. Media Route Application 모듈에 Connector를 등록함
-	auto media_route_app = GetRouteApplicationByName(app_name.CStr()); 
+	auto media_route_app = GetRouteApplicationById(application_info->GetId());
 
-	if(media_route_app == NULL)
+	if(media_route_app == nullptr)
 	{
 		return false;
 	}
@@ -159,21 +152,13 @@ bool MediaRouter::RegisterConnectorApp(
 
 // 어플리케이션의 스트림이 생성됨
 bool MediaRouter::UnregisterConnectorApp(
-	std::shared_ptr<ApplicationInfo> app_info,
+	const info::Application *application_info,
 	std::shared_ptr<MediaRouteApplicationConnector> app_conn)
 {
-	// 커넥터의 어플리케이션 명을 받음.
-	ov::String app_name = app_info->GetName();
-
-	if(app_name.IsEmpty())
-	{
-		return true;
-	}
-
 	// logtd("Unregistred connector application. app_ptr(%p) name(%s)", app_conn.get(), app_name.CStr());
 
-	auto media_route_app = GetRouteApplicationByName(app_name.CStr()); 
-	if(media_route_app == NULL)
+	auto media_route_app = GetRouteApplicationById(application_info->GetId());
+	if(media_route_app == nullptr)
 	{
 		return false;
 	}
@@ -182,18 +167,10 @@ bool MediaRouter::UnregisterConnectorApp(
 }
 
 bool MediaRouter::RegisterObserverApp(
-	std::shared_ptr<ApplicationInfo> app_info, std::shared_ptr<MediaRouteApplicationObserver> app_obsrv)
-{ 
-	if(app_info == NULL || app_obsrv == NULL)
+	const info::Application *application_info, std::shared_ptr<MediaRouteApplicationObserver> app_obsrv)
+{
+	if(app_obsrv == nullptr)
 	{
-		return false;
-	}
-	
-	// 어플리케이션 명 조회..
-	ov::String app_name = app_info->GetName();
-	if(app_name.IsEmpty())
-	{
-		logtw("invalid application name");
 		return false;
 	}
 
@@ -201,10 +178,11 @@ bool MediaRouter::RegisterObserverApp(
 
 
 	// 2. Media Route Application 모듈에 Connector를 등록함
-	auto media_route_app = GetRouteApplicationByName(app_name.CStr()); 
-	if(media_route_app == NULL)
+	auto media_route_app = GetRouteApplicationById(application_info->GetId());
+
+	if(media_route_app == nullptr)
 	{
-		logtw("can not find application. name(%s)", app_name.CStr());
+		logtw("can not find application. name(%s)", application_info->GetName().CStr());
 		return false;
 	}
 
@@ -212,27 +190,19 @@ bool MediaRouter::RegisterObserverApp(
 }
 
 bool MediaRouter::UnregisterObserverApp(
-	std::shared_ptr<ApplicationInfo> app_info, std::shared_ptr<MediaRouteApplicationObserver> app_obsrv)
-{ 
-	if(app_info == NULL || app_obsrv == NULL)
+	const info::Application *application_info, std::shared_ptr<MediaRouteApplicationObserver> app_obsrv)
+{
+	if(app_obsrv == nullptr)
 	{
-		return false;
-	}
-
-	// 어플리케이션 명 조회.
-	ov::String app_name = app_info->GetName();
-	if(app_name.IsEmpty())
-	{
-		logtw(" invalid application name");
 		return false;
 	}
 
 	// logtd("- Unregistred observer applicaiton. app_ptr(%p) name(%s)", app_obsrv.get(), app_name.CStr());
 
-	auto media_route_app = GetRouteApplicationByName(app_name.CStr()); 
-	if(media_route_app == NULL)
+	auto media_route_app = GetRouteApplicationById(application_info->GetId());
+	if(media_route_app == nullptr)
 	{
-		logtw("can not find application. name(%s)", app_name.CStr());
+		logtw("can not find application. name(%s)", application_info->GetName().CStr());
 		return false;
 	}
 
@@ -243,16 +213,16 @@ bool MediaRouter::UnregisterObserverApp(
 // Application -> Stream -> BufferQueue에 있는 Buffer를 Observer에 전달하는 목적으로 사용됨.
 void MediaRouter::MainTask()
 {
-    while(!_kill_flag) 
-    {
-	    sleep(5);
+	while(!_kill_flag)
+	{
+		sleep(5);
 		// logtd("Perform a garbage collector");
-		for (auto it=_route_apps.begin(); it!=_route_apps.end(); ++it)
+		for(auto it = _route_apps.begin(); it != _route_apps.end(); ++it)
 		{
-	    	auto application = it->second;
-	    
-	    	application->OnGarbageCollector();
-	    }
-    }
+			auto application = it->second;
+
+			application->OnGarbageCollector();
+		}
+	}
 
 }

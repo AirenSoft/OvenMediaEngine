@@ -8,41 +8,38 @@
 //==============================================================================
 #pragma once
 
-#include "value_for_int.h"
-#include "value_for_bool.h"
-#include "value_for_float.h"
-#include "value_for_string.h"
-#include "value_for_item.h"
-#include "value_for_list.h"
+#include "value.h"
+
+#include <utility>
 
 namespace cfg
 {
-	// Annotations
+	//region Annotations
+
 	struct Optional;
 	struct Includable;
 	struct Overridable;
 
-	class Item
-	{
-	public:
-		friend class ValueBase;
+	//endregion
 
+	struct Item
+	{
 		Item() = default;
+		Item(const Item &item);
+		Item(Item &&item) noexcept;
 		virtual ~Item() = default;
 
-		void SetParent(Item *parent);
-		Item *GetParent();
-		const Item *GetParent() const;
+		Item &operator =(const Item &item);
 
-		bool IsValid() const;
-
-		virtual bool Parse(const ov::String &file_name, const ov::String &tag_name);
+		bool Parse(const ov::String &file_name, const ov::String &tag_name);
 
 		virtual ov::String ToString() const;
-		virtual ov::String ToString(int indent) const;
 
 	protected:
-		// Annotation Utilities
+		const ov::String GetTagName() const;
+
+		//region ========== Annotation Utilities ==========
+
 		template<typename... Args>
 		struct CheckAnnotations;
 
@@ -58,61 +55,142 @@ namespace cfg
 			static constexpr bool value = false;
 		};
 
-		// ValueType + Up to 5 annotations
-		template<
-			ValueType config_type,
-			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void, typename Tannotation4 = void, typename Tannotation5 = void,
-			typename T
-		>
-		bool RegisterValue(const ov::String &name, Value<T> *value, ValueType type = config_type)
-		{
-			bool is_optional = CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3, Tannotation4, Tannotation5>::value;
-			bool is_includable = CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3, Tannotation4, Tannotation5>::value;
-			bool is_overridable = CheckAnnotations<Overridable, Tannotation1, Tannotation2, Tannotation3, Tannotation4, Tannotation5>::value;
+		//endregion
 
-			if(config_type != ValueType::Unknown)
+		//region ========== ProbeType ==========
+
+		static constexpr ValueType ProbeType(const int *target)
+		{
+			return ValueType::Integer;
+		}
+
+		static constexpr ValueType ProbeType(const bool *target)
+		{
+			return ValueType::Boolean;
+		}
+
+		static constexpr ValueType ProbeType(const float *target)
+		{
+			return ValueType::Float;
+		}
+
+		static constexpr ValueType ProbeType(const ov::String *target)
+		{
+			return ValueType::String;
+		}
+
+		static constexpr ValueType ProbeType(const Item *target)
+		{
+			return ValueType::Element;
+		}
+
+		//endregion
+
+		struct ParseItem
+		{
+			ParseItem() = default;
+
+			ParseItem(ov::String name, bool is_parsed, ValueBase *value)
+				: name(std::move(name)),
+				  is_parsed(is_parsed),
+				  value(value)
 			{
-				value->SetType(config_type);
 			}
 
-			value->SetParent(this);
-			value->SetName(name);
-			value->SetOptional(is_optional);
-			value->SetIncludable(is_includable);
-			value->SetOverridable(is_overridable);
+			ParseItem(ov::String name, ValueBase *value)
+				: ParseItem(std::move(name), false, value)
+			{
+			}
 
-			_parse_list[name] = value;
+			ov::String name;
+			bool is_parsed = false;
 
-			return true;
-		}
+			std::shared_ptr<ValueBase> value;
+		};
 
-		// Up to 5 annotations
+		//region ========== RegisterValue ==========
+
+		void Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_includable, bool is_overridable) const;
+
+		// For int, bool, float, ov::String with value_type
 		template<
-			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void, typename Tannotation4 = void, typename Tannotation5 = void,
-			typename T
+			ValueType value_type,
+			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
+			typename Ttype
 		>
-		bool RegisterValue(const ov::String &name, Value<T> *value)
+		void RegisterValue(const ov::String &name, const Ttype *target, ValueType type = value_type) const
 		{
-			return RegisterValue<ValueType::Unknown, Tannotation1, Tannotation2, Tannotation3, Tannotation4, Tannotation5, T>(name, value);
+			Register(
+				name, new Value<Ttype>(type, const_cast<Ttype *>(target)),
+				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<Overridable, Tannotation1, Tannotation2, Tannotation3>::value
+			);
+		};
+
+		// For int, bool, float, ov::String without value_type (use ProbeType())
+		template<
+			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
+			typename Ttype, typename std::enable_if<std::is_base_of<Item, Ttype>::value == false>::type * = nullptr
+		>
+		void RegisterValue(const ov::String &name, const Ttype *target) const
+		{
+			Register(
+				name, new Value<Ttype>(ProbeType(target), const_cast<Ttype *>(target)),
+				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<Overridable, Tannotation1, Tannotation2, Tannotation3>::value
+			);
 		}
 
-		ValueBase *FindParentValue(const ValueBase *value) const;
+		// For subclass of Item
+		template<
+			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
+			typename Ttype, typename std::enable_if<std::is_base_of<Item, Ttype>::value>::type * = nullptr
+		>
+		void RegisterValue(const ov::String &name, const Ttype *target) const
+		{
+			Register(
+				name, new ValueForElement<Ttype>(const_cast<Ttype *>(target)),
+				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<Overridable, Tannotation1, Tannotation2, Tannotation3>::value
+			);
+		}
 
-		// parse 하기 직전에 한 번 호출해주면 됨
-		virtual bool MakeParseList() = 0;
+		// For list of Items
+		template<
+			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
+			typename Ttype
+		>
+		void RegisterValue(const ov::String &name, const std::vector<Ttype> *target) const
+		{
+			Register(
+				name, new ValueForList<Ttype>(const_cast<std::vector<Ttype> *>(target)),
+				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<Overridable, Tannotation1, Tannotation2, Tannotation3>::value
+			);
+		}
 
-		// element안에 있는 include attribute를 처리함
-		virtual bool PreProcess(const ov::String &tag_name, const pugi::xml_node &node, const ValueBase *value_type, int indent);
-		virtual bool ParseFromFile(const ov::String &file_name, const ov::String &tag_name, bool processing_include_file, int indent);
+		//endregion
 
-		virtual bool ParseFromNode(const pugi::xml_node &node, const ov::String &tag_name, int indent);
-		virtual bool ParseFromNode(const pugi::xml_node &node, const ov::String &tag_name, bool processing_include_file, int indent);
+		virtual void MakeParseList() const = 0;
 
-		virtual bool PostProcess(int indent);
+		ValueBase *FindValue(const ov::String &name, const ParseItem *parse_item_to_find);
+		bool IsParsed(const void *target) const;
+
+		bool ParseFromFile(const ov::String &file_name, const ov::String &tag_name, int indent);
+		// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
+		bool ParseFromNode(const pugi::xml_node &node, const ov::String &tag_name, int indent);
+		virtual bool ParseFromNode(const pugi::xml_node &node, const ov::String &tag_name, bool process_include, int indent);
+
+		virtual ov::String ToString(int indent) const;
+		ov::String ToString(const ParseItem *parse_item, int indent, bool append_new_line) const;
+
+		ov::String _tag_name;
+		mutable std::vector<ParseItem> _parse_list;
 
 		Item *_parent = nullptr;
-		ov::String _tag_name;
-
-		std::map<ov::String, ValueBase *> _parse_list;
 	};
 };

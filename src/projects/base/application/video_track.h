@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "../common_types.h"
+#include "base/common_types.h"
 
 class VideoTrack
 {

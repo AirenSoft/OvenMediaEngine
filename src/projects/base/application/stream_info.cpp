@@ -3,7 +3,7 @@
 
 #define OV_LOG_TAG "StreamInfo"
 
-using namespace MediaCommonType;
+using namespace common;
 
 StreamInfo::StreamInfo()
 {

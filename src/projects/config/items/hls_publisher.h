@@ -15,18 +15,21 @@ namespace cfg
 {
 	struct HlsPublisher : public Publisher
 	{
-		bool MakeParseList() override
+		PublisherType GetType() const override
 		{
-			bool result = true;
-
-			result = result && RegisterValue<Optional>("Port", &_port);
-			result = result && RegisterValue<Optional>("TLS", &_tls);
-
-			return result;
+			return PublisherType::Hls;
 		}
 
 	protected:
-		Value<int> _port = 80;
-		Value <Tls> _tls;
+		void MakeParseList() const override
+		{
+			Publisher::MakeParseList();
+
+			RegisterValue<Optional>("Port", &_port);
+			RegisterValue<Optional>("TLS", &_tls);
+		}
+
+		int _port = 80;
+		Tls _tls;
 	};
 }

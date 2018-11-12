@@ -2,19 +2,12 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Gil Hoon Choi
+//  Created by Hyunjun Jang
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#pragma once
+#include "value.h"
 
-#include "host_base_info.h"
-
-class HostProviderInfo : public HostBaseInfo
+namespace cfg
 {
-public:
-	HostProviderInfo();
-	virtual ~HostProviderInfo();
-
-	ov::String ToString() const;
-};
+}

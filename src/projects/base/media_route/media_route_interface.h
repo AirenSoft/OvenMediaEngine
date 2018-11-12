@@ -4,7 +4,8 @@
 #include <memory>
 #include <vector>
 
-#include "base/ovlibrary/ovlibrary.h"
+#include <base/ovlibrary/ovlibrary.h>
+#include <base/application/application.h>
 
 class MediaRouteApplicationObserver;
 class MediaRouteApplicationConnector;
@@ -19,14 +20,14 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 퍼블리셔(Publisher)의 어플리케이션이 호출하는 API 
 	virtual bool RegisterConnectorApp(
-		std::shared_ptr<ApplicationInfo> app_info,
+		const info::Application *application_info,
 		std::shared_ptr<MediaRouteApplicationConnector> application_connector)
 	{
 		return false;
 	}
 
 	virtual bool UnregisterConnectorApp(
-		std::shared_ptr<ApplicationInfo> app_info,
+		const info::Application *application_info,
 		std::shared_ptr<MediaRouteApplicationConnector> application_connector)
 	{
 		return false;
@@ -38,11 +39,11 @@ public:
 
 	// 퍼블리셔(Publisher)의 어플리케이션이 호출하는 API 
 	virtual bool RegisterObserverApp(
-		std::shared_ptr<ApplicationInfo> application_info,
+		const info::Application *application_info,
 		std::shared_ptr<MediaRouteApplicationObserver> application_observer) = 0;
 
 	virtual bool UnregisterObserverApp(
-		std::shared_ptr<ApplicationInfo> application_info,
+		const info::Application *application_info,
 		std::shared_ptr<MediaRouteApplicationObserver> application_observer) = 0;
 };
 

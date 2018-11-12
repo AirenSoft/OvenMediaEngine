@@ -39,9 +39,5 @@
 
  */
 
-
-class ServerConfig{};
-class ApplicationConfig{};
-
-
-
+#include "items/items.h"
+#include "config_manager.h"

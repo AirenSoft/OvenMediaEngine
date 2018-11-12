@@ -9,24 +9,47 @@
 #pragma once
 
 #include "publisher.h"
+#include "signalling.h"
 #include "tls.h"
 
 namespace cfg
 {
 	struct WebrtcPublisher : public Publisher
 	{
-		bool MakeParseList() override
+		PublisherType GetType() const override
 		{
-			bool result = true;
+			return PublisherType::Webrtc;
+		}
 
-			result = result && RegisterValue<Optional>("Port", &_port);
-			result = result && RegisterValue<Optional>("TLS", &_tls);
+		ov::String GetPort() const
+		{
+			return _port;
+		}
 
-			return result;
+		const Signalling &GetSignalling() const
+		{
+			return _signalling;
+		}
+
+		const Tls &GetTls() const
+		{
+			return _tls;
 		}
 
 	protected:
-		Value <ov::String> _port = "80/tcp";
-		Value <Tls> _tls;
+		void MakeParseList() const override
+		{
+			Publisher::MakeParseList();
+
+			RegisterValue<Optional>("Port", &_port);
+			RegisterValue<Optional, Overridable>("TLS", &_tls);
+			RegisterValue<Optional, Overridable>("Timeout", &_timeout);
+			RegisterValue("Signalling", &_signalling);
+		}
+
+		ov::String _port = "80/tcp";
+		int _timeout = 0;
+		Signalling _signalling;
+		Tls _tls;
 	};
 }

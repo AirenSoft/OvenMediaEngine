@@ -24,16 +24,6 @@ namespace cfg
 
 	struct StreamProfile : public Item
 	{
-		bool MakeParseList() override
-		{
-			bool result = true;
-
-			result = result && RegisterValue<ValueType::Attribute>("use", &_use_temp);
-			result = result && RegisterValue<ValueType::Text>("Name", &_name);
-
-			return result;
-		}
-
 		StreamProfileUse GetUse() const
 		{
 			return _use;
@@ -41,36 +31,42 @@ namespace cfg
 
 		ov::String GetName() const
 		{
-			return *_name;
+			return _name;
 		}
 
 	protected:
-		bool PostProcess(int indent) override
+		void MakeParseList() const override
 		{
-			const ov::String use = *_use_temp;
+			RegisterValue<ValueType::Attribute>("use", &_use_temp);
+			RegisterValue<ValueType::Text>("Name", &_name);
+		}
 
-			if(use == "audio-only")
-			{
-				_use = StreamProfileUse::AudioOnly;
-				return true;
-			}
-			else if(use == "video-only")
-			{
-				_use = StreamProfileUse::VideoOnly;
-				return true;
-			}
-			else if(use == "both")
-			{
-				_use = StreamProfileUse::Both;
-				return true;
-			}
+		bool PostProcess(int indent)
+		{
+			//const ov::String use = *_use_temp.GetValue();
+			//
+			//if(use == "audio-only")
+			//{
+			//	_use = StreamProfileUse::AudioOnly;
+			//	return true;
+			//}
+			//else if(use == "video-only")
+			//{
+			//	_use = StreamProfileUse::VideoOnly;
+			//	return true;
+			//}
+			//else if(use == "both")
+			//{
+			//	_use = StreamProfileUse::Both;
+			//	return true;
+			//}
 
 			OV_ASSERT2(false);
 			return false;
 		}
 
-		Value <ov::String> _use_temp = "both";
+		ov::String _use_temp = "both";
 		StreamProfileUse _use;
-		Value <ov::String> _name;
+		ov::String _name;
 	};
 }

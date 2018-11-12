@@ -14,28 +14,24 @@ namespace cfg
 {
 	struct Tls : public Item
 	{
-		bool MakeParseList() override
-		{
-			bool result = true;
-
-			result = result && RegisterValue("CertPath", &_cert_path);
-			result = result && RegisterValue("KeyPath", &_key_path);
-
-			return result;
-		}
-
 		ov::String GetCertPath() const
 		{
-			return *_cert_path;
+			return _cert_path;
 		}
 
 		ov::String GetKeyPath() const
 		{
-			return *_key_path;
+			return _key_path;
 		}
 
 	protected:
-		Value<ov::String> _cert_path;
-		Value<ov::String> _key_path;
+		void MakeParseList() const override
+		{
+			RegisterValue("CertPath", &_cert_path);
+			RegisterValue("KeyPath", &_key_path);
+		}
+
+		ov::String _cert_path;
+		ov::String _key_path;
 	};
 }

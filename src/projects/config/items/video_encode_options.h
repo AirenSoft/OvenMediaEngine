@@ -14,30 +14,66 @@ namespace cfg
 {
 	struct VideoEncodeOptions : public Item
 	{
-		bool MakeParseList() override
+		bool IsActive() const
 		{
-			bool result = true;
+			return _active;
+		}
 
-			result = result && RegisterValue<Optional>("Active", &_active);
-			result = result && RegisterValue<Optional>("HWAcceleration", &_hw_acceleration);
-			result = result && RegisterValue("Codec", &_codec);
-			result = result && RegisterValue("Scale", &_scale);
-			result = result && RegisterValue("Width", &_width);
-			result = result && RegisterValue("Height", &_height);
-			result = result && RegisterValue("Bitrate", &_bitrate);
-			result = result && RegisterValue("Framerate", &_framerate);
+		ov::String GetHWAcceleration() const
+		{
+			return _hw_acceleration;
+		}
 
-			return result;
+		ov::String GetCodec() const
+		{
+			return _codec;
+		}
+
+		ov::String GetScale() const
+		{
+			return _scale;
+		}
+
+		int GetWidth() const
+		{
+			return _width;
+		}
+
+		int GetHeight() const
+		{
+			return _height;
+		}
+
+		ov::String GetBitrate() const
+		{
+			return _bitrate;
+		}
+
+		float GetFramerate() const
+		{
+			return _framerate;
 		}
 
 	protected:
-		Value<bool> _active = true;
-		Value <ov::String> _hw_acceleration = "none";
-		Value <ov::String> _codec;
-		Value <ov::String> _scale;
-		Value<int> _width = 0;
-		Value<int> _height = 0;
-		Value <ov::String> _bitrate;
-		Value<float> _framerate = 0.0f;
+		void MakeParseList() const override
+		{
+			RegisterValue<Optional>("Active", &_active);
+			RegisterValue<Optional>("HWAcceleration", &_hw_acceleration);
+			RegisterValue("Codec", &_codec);
+			RegisterValue("Scale", &_scale);
+			RegisterValue("Width", &_width);
+			RegisterValue("Height", &_height);
+			RegisterValue("Bitrate", &_bitrate);
+			RegisterValue("Framerate", &_framerate);
+		}
+
+		bool _active = true;
+		ov::String _hw_acceleration = "none";
+		ov::String _codec;
+		ov::String _scale;
+		int _width = 0;
+		int _height = 0;
+		ov::String _bitrate;
+		float _framerate = 0.0f;
 	};
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "base/common_types.h"
-#include "media_track.h"
+#include "base/application/media_track.h"
 
 class StreamInfo
 {

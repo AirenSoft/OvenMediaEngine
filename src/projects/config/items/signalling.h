@@ -6,9 +6,25 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "value_for_list.h"
+#pragma once
+
+#include "../item.h"
 
 namespace cfg
 {
+	struct Signalling : public Item
+	{
+		int GetPort() const
+		{
+			return _port;
+		}
 
+	protected:
+		void MakeParseList() const override
+		{
+			RegisterValue<Optional>("Port", &_port);
+		}
+
+		int _port = 3333;
+	};
 }

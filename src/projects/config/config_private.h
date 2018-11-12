@@ -8,8 +8,6 @@
 //==============================================================================
 #pragma once
 
-#include "utility/config_utility.h"
+#include "utilities/config_utility.h"
 
 #define OV_LOG_TAG                      "Config"
-
-#define CONFIG_MACRO_APP_HOME           "${ome.AppHome}"

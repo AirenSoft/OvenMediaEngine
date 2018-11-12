@@ -2,7 +2,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
-namespace MediaCommonType
+namespace common
 {
 	// 미디어 타입
 	enum class MediaType : int32_t

@@ -14,24 +14,45 @@ namespace cfg
 {
 	struct AudioEncodeOptions : public Item
 	{
-		bool MakeParseList() override
+		bool IsActive() const
 		{
-			bool result = true;
+			return _active;
+		}
 
-			result = result && RegisterValue<Optional>("Active", &_active);
-			result = result && RegisterValue("Codec", &_codec);
-			result = result && RegisterValue("Bitrate", &_bitrate);
-			result = result && RegisterValue("Samplerate", &_samplerate);
-			result = result && RegisterValue("Channel", &_channel);
+		ov::String GetCodec() const
+		{
+			return _codec;
+		}
 
-			return result;
+		ov::String GetBitrate() const
+		{
+			return _bitrate;
+		}
+
+		int GetSamplerate() const
+		{
+			return _samplerate;
+		}
+
+		int GetChannel() const
+		{
+			return _channel;
 		}
 
 	protected:
-		Value<bool> _active = true;
-		Value <ov::String> _codec;
-		Value <ov::String> _bitrate;
-		Value<int> _samplerate = 0;
-		Value<int> _channel = 0;
+		void MakeParseList() const override
+		{
+			RegisterValue<Optional>("Active", &_active);
+			RegisterValue("Codec", &_codec);
+			RegisterValue("Bitrate", &_bitrate);
+			RegisterValue("Samplerate", &_samplerate);
+			RegisterValue("Channel", &_channel);
+		}
+
+		bool _active = true;
+		ov::String _codec;
+		ov::String _bitrate;
+		int _samplerate = 0;
+		int _channel = 0;
 	};
 }

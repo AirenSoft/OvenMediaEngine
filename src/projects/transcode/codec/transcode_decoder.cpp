@@ -31,17 +31,17 @@ TranscodeDecoder::~TranscodeDecoder()
 	av_packet_free(&_pkt);
 }
 
-std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(MediaCommonType::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context)
+std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context)
 {
 	std::unique_ptr<TranscodeDecoder> decoder = nullptr;
 
 	switch(codec_id)
 	{
-		case MediaCommonType::MediaCodecId::H264:
+		case common::MediaCodecId::H264:
 			decoder = std::make_unique<OvenCodecImplAvcodecDecAVC>();
 			break;
 
-		case MediaCommonType::MediaCodecId::Aac:
+		case common::MediaCodecId::Aac:
 			decoder = std::make_unique<OvenCodecImplAvcodecDecAAC>();
 			break;
 

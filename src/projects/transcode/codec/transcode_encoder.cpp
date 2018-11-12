@@ -37,25 +37,25 @@ TranscodeEncoder::~TranscodeEncoder()
 	OV_SAFE_FUNC(_codec_par, nullptr, avcodec_parameters_free, &);
 }
 
-std::unique_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(MediaCommonType::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context)
+std::unique_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context)
 {
 	std::unique_ptr<TranscodeEncoder> encoder = nullptr;
 
 	switch(codec_id)
 	{
-		case MediaCommonType::MediaCodecId::H264:
+		case common::MediaCodecId::H264:
 			encoder = std::make_unique<OvenCodecImplAvcodecEncAVC>();
 			break;
 
-		case MediaCommonType::MediaCodecId::Aac:
+		case common::MediaCodecId::Aac:
 			encoder = std::make_unique<OvenCodecImplAvcodecEncAAC>();
 			break;
 
-		case MediaCommonType::MediaCodecId::Vp8:
+		case common::MediaCodecId::Vp8:
 			encoder = std::make_unique<OvenCodecImplAvcodecEncVP8>();
 			break;
 
-		case MediaCommonType::MediaCodecId::Opus:
+		case common::MediaCodecId::Opus:
 			encoder = std::make_unique<OvenCodecImplAvcodecEncOpus>();
 			break;
 

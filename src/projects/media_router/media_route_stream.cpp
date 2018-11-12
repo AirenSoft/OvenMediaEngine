@@ -12,7 +12,7 @@
 
 #define OV_LOG_TAG "MediaRouter.Stream"
 
-using namespace MediaCommonType;
+using namespace common;
 
 MediaRouteStream::MediaRouteStream(std::shared_ptr<StreamInfo> stream_info)
 {

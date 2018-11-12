@@ -8,27 +8,28 @@
 //==============================================================================
 #pragma once
 
-#include "rtmp_provider.h"
+#include "streams.h"
 
 namespace cfg
 {
-	struct Providers : public Item
+	enum class ProviderType
 	{
-		std::vector<const Provider *> GetProviders() const
-		{
-			return {
-				&_rtmp_provider
-			};
-		}
+		Unknown,
+		Rtmp,
+	};
+
+	struct Provider : public Item
+	{
+		virtual ProviderType GetType() const = 0;
 
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<Optional>("RTMP", &_rtmp_provider);
-		};
+			RegisterValue<Optional>("IP", &_ip);
+			RegisterValue<Optional>("MaxConnection", &_max_connection);
+		}
 
-		std::vector<const Provider *> _providers;
-
-		RtmpProvider _rtmp_provider;
+		ov::String _ip;
+		int _max_connection = 0;
 	};
 }

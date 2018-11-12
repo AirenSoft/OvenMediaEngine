@@ -17,7 +17,65 @@
 
 #define OV_LOG_TAG "TranscodeStream"
 
-TranscodeStream::TranscodeStream(std::shared_ptr<StreamInfo> stream_info, TranscodeApplication *parent)
+common::MediaCodecId GetCodecId(ov::String name)
+{
+	name.MakeUpper();
+
+	// Video codecs
+	if(name == "H264")
+	{
+		return common::MediaCodecId::H264;
+	}
+	else if(name == "VP8")
+	{
+		return common::MediaCodecId::Vp8;
+	}
+	else if(name == "VP9")
+	{
+		return common::MediaCodecId::Vp9;
+	}
+
+	// Audio codecs
+	if(name == "FLV")
+	{
+		return common::MediaCodecId::Flv;
+	}
+	else if(name == "AAC")
+	{
+		return common::MediaCodecId::Aac;
+	}
+	else if(name == "MP3")
+	{
+		return common::MediaCodecId::Mp3;
+	}
+	else if(name == "OPUS")
+	{
+		return common::MediaCodecId::Opus;
+	}
+
+	return common::MediaCodecId::None;
+}
+
+int64_t GetBitrate(ov::String bitrate)
+{
+	bitrate.MakeUpper();
+
+	int64_t multiplier = 1;
+
+	if(bitrate.HasSuffix("K"))
+	{
+		multiplier = 1024;
+	}
+	else if(bitrate.HasSuffix("M"))
+	{
+		multiplier = 1024 * 1024;
+	}
+
+	return static_cast<int64_t>(ov::Converter::ToFloat(bitrate) * multiplier);
+}
+
+TranscodeStream::TranscodeStream(const info::Application &application_info, std::shared_ptr<StreamInfo> stream_info, TranscodeApplication *parent)
+	: _application_info(application_info)
 {
 	logtd("Created Transcode stream. name(%s)", stream_info->GetName().CStr());
 
@@ -36,44 +94,56 @@ TranscodeStream::TranscodeStream(std::shared_ptr<StreamInfo> stream_info, Transc
 		CreateDecoder(track.second->GetId());
 	}
 
-	auto app_info = parent->GetApplicationInfo();
-	auto config = ConfigManager::Instance()->GetApplicationInfo(app_info->GetName());
+	auto encodes = _application_info.GetEncodes();
 
-	for (const auto &publisher : app_info->GetPublishers())
+	for(const auto &encode : encodes)
 	{
-		for (const auto &encode : publisher->GetEncodes())
+		if(encode.IsActive() == false)
 		{
-			auto stream_name = encode->GetStreamName();
-			if(AddStreamInfoOutput(stream_name) == false)
+			continue;
+		}
+
+		auto stream_name = encode.GetStreamName();
+
+		// Resolve stream name
+		// ${OriginStreamName} => stream_info->GetName()
+		stream_name = stream_name.Replace("${OriginStreamName}", stream_info->GetName());
+
+		if(AddStreamInfoOutput(stream_name) == false)
+		{
+			continue;
+		}
+
+		auto video_profile = encode.GetVideoEncodingOptions();
+		auto audio_profile = encode.GetAudioEncodingOptions();
+
+		if((video_profile != nullptr) && (video_profile->IsActive()))
+		{
+			bool ret = AddContext(
+				stream_name,
+				GetCodecId(video_profile->GetCodec()),
+				GetBitrate(video_profile->GetBitrate()),
+				video_profile->GetWidth(),
+				video_profile->GetHeight(),
+				video_profile->GetFramerate()
+			);
+			if(ret == false)
 			{
 				continue;
 			}
+		}
 
-			auto video = encode->GetVideo();
-			auto audio = encode->GetAudio();
-
-			if(video != nullptr && video->GetActive())
+		if((audio_profile != nullptr) && (audio_profile->IsActive()))
+		{
+			bool ret = AddContext(
+				stream_name,
+				GetCodecId(audio_profile->GetCodec()),
+				GetBitrate(audio_profile->GetBitrate()),
+				audio_profile->GetSamplerate()
+			);
+			if(ret == false)
 			{
-				bool ret = AddContext(
-					stream_name,
-					video->GetCodecId(),
-					video->GetBitrate(),
-					video->GetWidth(),
-					video->GetHeight(),
-					video->GetFramerate()
-					);
-				if(ret == false) continue;
-			}
-
-			if(audio != nullptr && audio->GetActive())
-			{
-				bool ret = AddContext(
-					stream_name,
-					audio->GetCodecId(),
-					audio->GetBitrate(),
-					audio->GetSamplerate()
-					);
-				if(ret == false) continue;
+				continue;
 			}
 		}
 	}
@@ -441,7 +511,7 @@ bool TranscodeStream::AddStreamInfoOutput(ov::String stream_name)
 
 void TranscodeStream::CreateStreams()
 {
-	for (auto &iter : _stream_info_outputs)
+	for(auto &iter : _stream_info_outputs)
 	{
 		_parent->CreateStream(iter.second);
 	}
@@ -449,7 +519,7 @@ void TranscodeStream::CreateStreams()
 
 void TranscodeStream::DeleteStreams()
 {
-	for (auto &iter : _stream_info_outputs)
+	for(auto &iter : _stream_info_outputs)
 	{
 		_parent->DeleteStream(iter.second);
 	}
@@ -462,7 +532,7 @@ void TranscodeStream::SendFrame(std::unique_ptr<MediaPacket> packet)
 	auto item = _contexts.find(track_id);
 	auto stream_name = item->second->GetStreamName();
 
-	for (auto &iter : _stream_info_outputs)
+	for(auto &iter : _stream_info_outputs)
 	{
 		if(stream_name != iter.first)
 		{
@@ -476,8 +546,8 @@ void TranscodeStream::CreateEncoders(std::shared_ptr<MediaTrack> media_track)
 {
 	for(auto &iter : _contexts)
 	{
-		if((media_track->GetMediaType() == MediaType::Video && iter.second->GetMediaType() == MediaType::Audio) ||
-			media_track->GetMediaType() == MediaType::Audio && iter.second->GetMediaType() == MediaType::Video)
+		if((media_track->GetMediaType() == common::MediaType::Video && iter.second->GetMediaType() == common::MediaType::Audio) ||
+		   media_track->GetMediaType() == common::MediaType::Audio && iter.second->GetMediaType() == common::MediaType::Video)
 		{
 			continue;
 		}
@@ -488,14 +558,14 @@ void TranscodeStream::CreateEncoders(std::shared_ptr<MediaTrack> media_track)
 		new_track->SetCodecId(iter.second->GetCodecId());
 		new_track->SetTimeBase(iter.second->GetTimeBase().GetNum(), iter.second->GetTimeBase().GetDen());
 
-		if( media_track->GetMediaType() == MediaType::Video)
+		if(media_track->GetMediaType() == common::MediaType::Video)
 		{
 			new_track->SetWidth(iter.second->GetVideoWidth());
 			new_track->SetHeight(iter.second->GetVideoHeight());
 			new_track->SetFrameRate(iter.second->GetFrameRate());
 
 		}
-		else if( media_track->GetMediaType() == MediaType::Audio)
+		else if(media_track->GetMediaType() == common::MediaType::Audio)
 		{
 			new_track->SetSampleRate(iter.second->GetAudioSampleRate());
 			new_track->GetSample().SetFormat(iter.second->GetAudioSample().GetFormat());
@@ -525,21 +595,21 @@ void TranscodeStream::CreateFilters(std::shared_ptr<MediaTrack> media_track, Med
 {
 	for(auto &iter : _contexts)
 	{
-		if((media_track->GetMediaType() == MediaType::Video && iter.second->GetMediaType() == MediaType::Audio) ||
-			media_track->GetMediaType() == MediaType::Audio && iter.second->GetMediaType() == MediaType::Video)
+		if((media_track->GetMediaType() == common::MediaType::Video && iter.second->GetMediaType() == common::MediaType::Audio) ||
+		   media_track->GetMediaType() == common::MediaType::Audio && iter.second->GetMediaType() == common::MediaType::Video)
 		{
 			continue;
 		}
 
-		if(media_track->GetMediaType() == MediaType::Video)
+		if(media_track->GetMediaType() == common::MediaType::Video)
 		{
 			media_track->SetWidth(media_track->GetWidth());
 			media_track->SetHeight(media_track->GetHeight());
 		}
-		else if(media_track->GetMediaType() == MediaType::Audio)
+		else if(media_track->GetMediaType() == common::MediaType::Audio)
 		{
 			media_track->SetSampleRate(buffer->GetSampleRate());
-			media_track->GetSample().SetFormat(buffer->GetFormat<MediaCommonType::AudioSample::Format>());
+			media_track->GetSample().SetFormat(buffer->GetFormat<common::AudioSample::Format>());
 			media_track->GetChannel().SetLayout(buffer->GetChannelLayout());
 		}
 		else
@@ -558,14 +628,14 @@ void TranscodeStream::DoFilters(std::unique_ptr<MediaFrame> frame)
 
 	for(auto &iter: _contexts)
 	{
-		if((track_id == (uint32_t)MediaType::Video && iter.second->GetMediaType() == MediaType::Audio) ||
-		    track_id == (uint32_t)MediaType::Audio && iter.second->GetMediaType() == MediaType::Video)
+		if((track_id == (uint32_t)common::MediaType::Video && iter.second->GetMediaType() == common::MediaType::Audio) ||
+		   track_id == (uint32_t)common::MediaType::Audio && iter.second->GetMediaType() == common::MediaType::Video)
 		{
 			continue;
 		}
 
 		auto frame_clone = frame->CloneFrame();
-		if (frame_clone== nullptr)
+		if(frame_clone == nullptr)
 		{
 			logte("FilterTask -> Unknown Frame");
 			continue;
@@ -576,7 +646,7 @@ void TranscodeStream::DoFilters(std::unique_ptr<MediaFrame> frame)
 
 bool TranscodeStream::AddContext(
 	ov::String &stream_name,
-	MediaCodecId codec_id,
+	common::MediaCodecId codec_id,
 	int bitrate,
 	int width,
 	int height,
@@ -584,7 +654,7 @@ bool TranscodeStream::AddContext(
 {
 	// 96-127 dynamic : RTP Payload Types for standard audio and video encodings
 	// 0x60 ~ 0x6F
-	if (_last_track_video >= 0x70)
+	if(_last_track_video >= 0x70)
 	{
 		logte("The number of video encoders that can be supported is 16");
 		return false;
@@ -596,13 +666,13 @@ bool TranscodeStream::AddContext(
 
 bool TranscodeStream::AddContext(
 	ov::String &stream_name,
-	MediaCodecId codec_id,
+	common::MediaCodecId codec_id,
 	int bitrate,
 	float samplerate)
 {
 	// 96-127 dynamic : RTP Payload Types for standard audio and video encodings
 	// 0x70 ~ 0x7F
-	if (_last_track_audio > 0x7F)
+	if(_last_track_audio > 0x7F)
 	{
 		logte("The number of audio encoders that can be supported is 16");
 		return false;

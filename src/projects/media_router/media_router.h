@@ -23,11 +23,10 @@
 
 // 공옹 구조체
 #include "base/application/stream_info.h"
-#include "base/application/application_info.h"
 #include "media_route_application.h"
 
 #include <base/ovlibrary/ovlibrary.h>
-
+#include <config/config.h>
 
 // -어플리케이션(Application) 별 스트림(Stream)을 관리해야 한다
 // - Publisher를 관리해야한다
@@ -35,26 +34,26 @@
 class MediaRouter : public MediaRouteInterface
 {
 public:
-	static std::shared_ptr<MediaRouter> Create();
+	static std::shared_ptr<MediaRouter> Create(const std::vector<info::Application> &app_info_list);
 
-    MediaRouter();
-    ~MediaRouter();
+	MediaRouter(const std::vector<info::Application> &app_info_list);
+	~MediaRouter();
 
-    bool Start();
-    bool Stop();
+	bool Start();
+	bool Stop();
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 라우트 어플리케이션 관련 모듈
 	////////////////////////////////////////////////////////////////////////////////////////////////
 public:
-	bool CraeteApplications();
+	bool CreateApplications();
 	bool DeleteApplication();
 
 	//  Application Name으로 RouteApplication을 찾음
-	std::shared_ptr<MediaRouteApplication> GetRouteApplicationByName(std::string app_name);
+	std::shared_ptr<MediaRouteApplication> GetRouteApplicationById(info::application_id_t application_id);
 
 private:
-	std::map<std::string, std::shared_ptr<MediaRouteApplication>> _route_apps;
+	std::map<info::application_id_t , std::shared_ptr<MediaRouteApplication>> _route_apps;
 
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,12 +61,12 @@ private:
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 본 데이터 모듈에 넣어주는 놈들
 public:
-   	bool RegisterConnectorApp(
-   		std::shared_ptr<ApplicationInfo> app_info,
-   		std::shared_ptr<MediaRouteApplicationConnector> application_connector);
+	bool RegisterConnectorApp(
+		const info::Application *application_info,
+		std::shared_ptr<MediaRouteApplicationConnector> application_connector);
 
 	bool UnregisterConnectorApp(
-		std::shared_ptr<ApplicationInfo> app_info,
+		const info::Application *application_info,
 		std::shared_ptr<MediaRouteApplicationConnector> application_connector);
 
 
@@ -78,18 +77,21 @@ private:
 	// 본 데이터 모듈에서 가져가는 넘들
 public:
 	bool RegisterObserverApp(
-		std::shared_ptr<ApplicationInfo> app_info, 
+		const info::Application *application_info,
 		std::shared_ptr<MediaRouteApplicationObserver> application_observer);
 
 	bool UnregisterObserverApp(
-		std::shared_ptr<ApplicationInfo> app_info, 
+		const info::Application *application_info,
 		std::shared_ptr<MediaRouteApplicationObserver> application_observer);
 
 private:
 	void MainTask();
-	volatile bool 	_kill_flag;
-    std::thread 	_thread;
-    std::mutex 		_mutex;
+
+	std::vector<info::Application> _app_info_list;
+
+	volatile bool _kill_flag;
+	std::thread _thread;
+	std::mutex _mutex;
 
 };
 

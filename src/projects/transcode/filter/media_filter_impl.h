@@ -27,20 +27,15 @@ extern "C"
 #include <libavutil/opt.h>
 }
 
-#include <base/application/application.h>
 #include <base/media_route/media_buffer.h>
 #include <base/media_route/media_type.h>
+#include <base/application/application.h>
 
 class MediaFilterImpl
 {
 public:
-	MediaFilterImpl()
-	{
-	};
-
-	virtual ~MediaFilterImpl()
-	{
-	};
+	MediaFilterImpl() = default;
+	virtual ~MediaFilterImpl() = default;
 
 	// 원본 스트림 정보
 	// stream_info : 원본 파일 정보

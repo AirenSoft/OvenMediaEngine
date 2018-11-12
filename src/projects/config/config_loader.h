@@ -15,21 +15,21 @@
 class ConfigLoader
 {
 public:
-    ConfigLoader();
-    explicit ConfigLoader(const ov::String config_path);
-    virtual ~ConfigLoader();
+	ConfigLoader();
+	explicit ConfigLoader(const ov::String &config_path);
+	virtual ~ConfigLoader();
 
-    virtual bool Parse() = 0;
-    void Reset();
+	virtual bool Parse() = 0;
+	void Reset();
 
-    const ov::String GetConfigPath() const noexcept;
-    void SetConfigPath(ov::String config_path);
+	const ov::String GetConfigPath() const noexcept;
+	void SetConfigPath(ov::String config_path);
 
 protected:
-    bool Load();
+	bool Load();
 
-    pugi::xml_document _document;
+	pugi::xml_document _document;
 
 private:
-    ov::String _config_path;
+	ov::String _config_path;
 };

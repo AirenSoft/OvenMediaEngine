@@ -12,22 +12,44 @@
 
 namespace cfg
 {
+	enum class PublisherType
+	{
+		Unknown,
+		Webrtc,
+		Rtmp,
+		Hls,
+		Dash,
+	};
+
 	struct Publisher : public Item
 	{
-		bool MakeParseList() override
+		virtual PublisherType GetType() const = 0;
+
+		ov::String GetIp() const
 		{
-			bool result = true;
+			return _ip;
+		}
 
-			result = result && RegisterValue<Optional>("IP", &_ip);
-			result = result && RegisterValue<Optional>("MaxConnection", &_max_connection);
-			result = result && RegisterValue<Optional>("Streams", &_streams);
+		int GetMaxConnection() const
+		{
+			return _max_connection;
+		}
 
-			return result;
+		const Streams &GetStreams() const
+		{
+			return _streams;
 		}
 
 	protected:
-		Value<ov::String> _ip;
-		Value<int> _max_connection = 0;
-		Value<Streams> _streams;
+		void MakeParseList() const override
+		{
+			RegisterValue<Optional>("IP", &_ip);
+			RegisterValue<Optional>("MaxConnection", &_max_connection);
+			RegisterValue<Optional>("Streams", &_streams);
+		}
+
+		ov::String _ip;
+		int _max_connection = 0;
+		Streams _streams;
 	};
 }

@@ -14,16 +14,12 @@ namespace cfg
 {
 	struct Decode : public Item
 	{
-		bool MakeParseList() override
+	protected:
+		void MakeParseList() const override
 		{
-			bool result = true;
-
-			result = result && RegisterValue("Video", &_video);
-
-			return result;
+			RegisterValue("Video", &_video);
 		}
 
-	protected:
-		Value<DecodeVideo> _video;
+		DecodeVideo _video;
 	};
 }

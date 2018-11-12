@@ -6,7 +6,6 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #pragma once
 
 #include <stdint.h>
@@ -21,38 +20,39 @@
 
 // 공옹 구조체
 #include "base/application/stream_info.h"
-#include "base/application/application_info.h"
 
 #include "transcode_application.h"
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <config/config.h>
 
-
-class Transcoder 
+class Transcoder
 {
 	// class TranscodeApplication;
 public:
-	static std::shared_ptr<Transcoder> Create(std::shared_ptr<MediaRouteInterface> router);
+	static std::shared_ptr<Transcoder> Create(const std::vector<info::Application> &application_list, std::shared_ptr<MediaRouteInterface> router);
 
-    Transcoder(std::shared_ptr<MediaRouteInterface> router);
-    ~Transcoder();
+	Transcoder(const std::vector<info::Application> &application_list, std::shared_ptr<MediaRouteInterface> router);
+	~Transcoder() = default;
 
-    bool Start();
-    bool Stop();
+	bool Start();
+	bool Stop();
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 트랜스코드 어플리케이션 관련 모듈
 	////////////////////////////////////////////////////////////////////////////////////////////////
 public:
-	bool CraeteApplications();
+	bool CreateApplications();
 	bool DeleteApplication();
 
-	// //  Application Name으로 RouteApplication을 찾음
-	std::shared_ptr<TranscodeApplication> GetApplicationByName(std::string app_name);
+	// Application Name으로 RouteApplication을 찾음
+	std::shared_ptr<TranscodeApplication> GetApplicationById(info::application_id_t application_id);
 
 private:
-	std::map<std::string, std::shared_ptr<TranscodeApplication>> _tracode_apps;
+	std::vector<info::Application> _app_info_list;
 
- std::shared_ptr<MediaRouteInterface> _router;
+	std::map<info::application_id_t, std::shared_ptr<TranscodeApplication>> _tracode_apps;
+
+	std::shared_ptr<MediaRouteInterface> _router;
 };
 

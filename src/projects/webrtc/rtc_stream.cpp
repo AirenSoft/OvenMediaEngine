@@ -3,7 +3,7 @@
 #include "rtc_application.h"
 #include "rtc_session.h"
 
-using namespace MediaCommonType;
+using namespace common;
 
 std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<Application> application,
                                              const StreamInfo &info)

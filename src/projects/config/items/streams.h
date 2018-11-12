@@ -14,16 +14,12 @@ namespace cfg
 {
 	struct Streams : public Item
 	{
-		bool MakeParseList() override
+	protected:
+		void MakeParseList() const override
 		{
-			bool result = true;
-
-			result = result && RegisterValue<Optional, Includable>("Stream", &_stream_list);
-
-			return result;
+			RegisterValue<Optional, Includable>("Stream", &_stream_list);
 		}
 
-	protected:
-		Value<std::vector<Stream>> _stream_list;
+		std::vector<Stream> _stream_list;
 	};
 }

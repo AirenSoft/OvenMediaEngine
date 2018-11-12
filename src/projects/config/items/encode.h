@@ -15,24 +15,45 @@ namespace cfg
 {
 	struct Encode : public Item
 	{
-		bool MakeParseList() override
+		bool IsActive() const
 		{
-			bool result = true;
+			return _active;
+		}
 
-			result = result && RegisterValue<Optional>("Active", &_active);
-			result = result && RegisterValue("Name", &_name);
-			result = result && RegisterValue("StreamName", &_stream_name);
-			result = result && RegisterValue<Optional>("Audio", &_audio);
-			result = result && RegisterValue<Optional>("Video", &_video);
+		ov::String GetName() const
+		{
+			return _name;
+		}
 
-			return result;
+		ov::String GetStreamName() const
+		{
+			return _stream_name;
+		}
+
+		const AudioEncodeOptions *GetAudioEncodingOptions() const
+		{
+			return IsParsed(&_audio) ? _audio.GetAudioEncodeOptions() : nullptr;
+		}
+
+		const VideoEncodeOptions *GetVideoEncodingOptions() const
+		{
+			return IsParsed(&_video) ? _video.GetVideoEncodeOptions() : nullptr;
 		}
 
 	protected:
-		Value<bool> _active;
-		Value<ov::String> _name;
-		Value<ov::String> _stream_name;
-		Value<AudioProfile> _audio;
-		Value<VideoProfile> _video;
+		void MakeParseList() const override
+		{
+			RegisterValue<Optional>("Active", &_active);
+			RegisterValue("Name", &_name);
+			RegisterValue("StreamName", &_stream_name);
+			RegisterValue<Optional>("Audio", &_audio);
+			RegisterValue<Optional>("Video", &_video);
+		}
+
+		bool _active;
+		ov::String _name;
+		ov::String _stream_name;
+		AudioProfile _audio;
+		VideoProfile _video;
 	};
 }

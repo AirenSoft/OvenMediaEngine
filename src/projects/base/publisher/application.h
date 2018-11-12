@@ -5,7 +5,6 @@
 #include "base/ovlibrary/string.h"
 #include "base/ovlibrary/semaphore.h"
 #include "config/config.h"
-#include "base/application/application_info.h"
 #include "base/application/stream_info.h"
 #include "base/media_route/media_route_application_observer.h"
 #include "stream.h"
@@ -18,7 +17,7 @@ enum ApplicationState
 	Error
 };
 
-class Application : public ApplicationInfo, public MediaRouteApplicationObserver
+class Application : public info::Application, public MediaRouteApplicationObserver
 {
 public:
 	// MediaRouteApplicationObserver Implementation
@@ -46,7 +45,7 @@ public:
 	std::shared_ptr<Stream> GetStream(ov::String stream_name);
 
 protected:
-	explicit Application(const std::shared_ptr<ApplicationInfo> &info);
+	explicit Application(const info::Application &application_info);
 	virtual ~Application();
 
 	virtual bool Start();

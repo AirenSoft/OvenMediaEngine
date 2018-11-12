@@ -14,16 +14,19 @@ namespace cfg
 {
 	struct RtmpPublisher : public Publisher
 	{
-		bool MakeParseList() override
+		PublisherType GetType() const override
 		{
-			bool result = true;
-
-			result = result && RegisterValue<Optional>("Port", &_port);
-
-			return result;
+			return PublisherType::Rtmp;
 		}
 
 	protected:
-		Value<int> _port = 1935;
+		void MakeParseList() const override
+		{
+			Publisher::MakeParseList();
+
+			RegisterValue<Optional>("Port", &_port);
+		}
+
+		int _port = 1935;
 	};
 }

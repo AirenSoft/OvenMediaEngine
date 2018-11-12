@@ -14,16 +14,17 @@ namespace cfg
 {
 	struct Applications : public Item
 	{
-		bool MakeParseList() override
+		const std::vector<Application> &GetApplications() const
 		{
-			bool result = true;
-
-			result = result && RegisterValue<Optional, Includable>("Application", &_application_list);
-
-			return result;
+			return _application_list;
 		}
 
 	protected:
-		Value <std::vector<Application>> _application_list;
+		void MakeParseList() const override
+		{
+			RegisterValue<Optional, Includable>("Application", &_application_list);
+		}
+
+		std::vector<Application> _application_list;
 	};
 }

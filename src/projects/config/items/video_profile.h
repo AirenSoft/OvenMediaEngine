@@ -14,18 +14,24 @@ namespace cfg
 {
 	struct VideoProfile : public Item
 	{
-		bool MakeParseList() override
+		bool GetBypass() const
 		{
-			bool result = true;
+			return _bypass;
+		}
 
-			result = result && RegisterValue<Optional>("Bypass", &_bypass);
-			result = result && RegisterValue<Optional>("VideoEncodeOptions", &_audio_encode_options);
-
-			return result;
+		const VideoEncodeOptions *GetVideoEncodeOptions() const
+		{
+			return IsParsed(&_video_encode_options) ? &_video_encode_options : nullptr;
 		}
 
 	protected:
-		Value<bool> _bypass = false;
-		Value<VideoEncodeOptions> _audio_encode_options;
+		void MakeParseList() const override
+		{
+			RegisterValue<Optional>("Bypass", &_bypass);
+			RegisterValue<Optional>("VideoEncodeOptions", &_video_encode_options);
+		}
+
+		bool _bypass = false;
+		VideoEncodeOptions _video_encode_options;
 	};
 }

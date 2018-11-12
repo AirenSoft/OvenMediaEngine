@@ -12,7 +12,7 @@
 
 #define OV_LOG_TAG "MediaTrack"
 
-using namespace MediaCommonType;
+using namespace common;
 
 MediaTrack::MediaTrack()
 	: _id(0),

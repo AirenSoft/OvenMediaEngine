@@ -8,31 +8,28 @@
 //==============================================================================
 #include "media_route_application.h"
 
-#include "base/application/application_info.h"
 #include "base/application/stream_info.h"
 
 #define OV_LOG_TAG "MediaRouter.App"
 
-using namespace MediaCommonType;
+using namespace common;
 
-std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const std::shared_ptr<ApplicationInfo> &appinfo)
+std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info::Application &application_info)
 {
-	auto media_route_application = std::make_shared<MediaRouteApplication>(appinfo);
+	auto media_route_application = std::make_shared<MediaRouteApplication>(application_info);
 	media_route_application->Start();
 	return media_route_application;
 }
 
-MediaRouteApplication::MediaRouteApplication(const std::shared_ptr<ApplicationInfo> &appinfo)
+MediaRouteApplication::MediaRouteApplication(const info::Application &application_info)
+	: _application_info(application_info)
 {
-	// 어플리케이션 정보 저장
-	_application_info = appinfo;
-
-	logtd("Created media route application. application(%s)", _application_info->GetName().CStr());
+	logtd("Created media route application. application(%s)", application_info.GetName().CStr());
 }
 
 MediaRouteApplication::~MediaRouteApplication()
 {
-	logtd("Destroyed media router application. application(%s)", _application_info->GetName().CStr());
+	logtd("Destroyed media router application. application(%s)", _application_info.GetName().CStr());
 }
 
 bool MediaRouteApplication::Start()
@@ -49,7 +46,7 @@ bool MediaRouteApplication::Start()
 		return false;
 	}
 
-	logtd("started media route application thread. application(%s)", _application_info->GetName().CStr());
+	logtd("started media route application thread. application(%s)", _application_info.GetName().CStr());
 	return true;
 }
 
@@ -67,12 +64,12 @@ bool MediaRouteApplication::RegisterConnectorApp(
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 
-	if(app_conn == NULL)
+	if(app_conn == nullptr)
 	{
 		return false;
 	}
 
-	logtd("Register application connector. application(%s/%p) connector_type(%d)", _application_info->GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
+	logtd("Register application connector. application(%s/%p) connector_type(%d)", _application_info.GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
 
 	app_conn->SetMediaRouterApplication(GetSharedPtr());
 
@@ -86,12 +83,12 @@ bool MediaRouteApplication::RegisterConnectorApp(
 bool MediaRouteApplication::UnregisterConnectorApp(
 	std::shared_ptr<MediaRouteApplicationConnector> app_conn)
 {
-	if(app_conn == NULL)
+	if(app_conn == nullptr)
 	{
 		return false;
 	}
 
-	logtd("Unregister application connector. application(%s/%p) connector_type(%d)", _application_info->GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
+	logtd("Unregister application connector. application(%s/%p) connector_type(%d)", _application_info.GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
 
 	// 삭제
 	auto position = std::find(_connectors.begin(), _connectors.end(), app_conn);
@@ -112,12 +109,12 @@ bool MediaRouteApplication::RegisterObserverApp(
 	std::shared_ptr<MediaRouteApplicationObserver> app_obsrv)
 {
 
-	if(app_obsrv == NULL)
+	if(app_obsrv == nullptr)
 	{
 		return false;
 	}
 
-	logtd("Register application observer. application(%s/%p) observer_type(%d)", _application_info->GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
+	logtd("Register application observer. application(%s/%p) observer_type(%d)", _application_info.GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
 
 	std::unique_lock<std::mutex> lock(_mutex);
 	_observers.push_back(app_obsrv);
@@ -130,12 +127,12 @@ bool MediaRouteApplication::RegisterObserverApp(
 bool MediaRouteApplication::UnregisterObserverApp(
 	std::shared_ptr<MediaRouteApplicationObserver> app_obsrv)
 {
-	if(app_obsrv == NULL)
+	if(app_obsrv == nullptr)
 	{
 		return false;
 	}
 
-	logtd("Unregister application observer. application(%s/%p) observer_type(%d)", _application_info->GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
+	logtd("Unregister application observer. application(%s/%p) observer_type(%d)", _application_info.GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
 
 	auto position = std::find(_observers.begin(), _observers.end(), app_obsrv);
 	if(position == _observers.end())
@@ -153,8 +150,9 @@ bool MediaRouteApplication::OnCreateStream(
 	std::shared_ptr<MediaRouteApplicationConnector> app_conn,
 	std::shared_ptr<StreamInfo> stream_info)
 {
-	if(app_conn == NULL || stream_info == NULL)
+	if(app_conn == nullptr || stream_info == nullptr)
 	{
+		OV_ASSERT2(false);
 		return false;
 	}
 
@@ -178,7 +176,7 @@ bool MediaRouteApplication::OnCreateStream(
 	}
 
 
-	logtd("Created stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info->GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+	logtd("Created stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	std::unique_lock<std::mutex> lock(_mutex);
 
@@ -222,7 +220,7 @@ bool MediaRouteApplication::OnDeleteStream(
 		return false;
 	}
 
-	logtd("Deleted stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info->GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+	logtd("Deleted stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 
 	auto new_stream_info = std::make_shared<StreamInfo>(*stream_info);
@@ -269,7 +267,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 	auto stream_bucket = _streams.find(stream_info->GetId());
 	if(stream_bucket == _streams.end())
 	{
-		logte("cannot find stream from router. appication(%s), stream(%s)", _application_info->GetName().CStr(), stream_info->GetName().CStr());
+		logte("cannot find stream from router. appication(%s), stream(%s)", _application_info.GetName().CStr(), stream_info->GetName().CStr());
 
 		return false;
 	}
@@ -375,8 +373,8 @@ void MediaRouteApplication::MainTask()
 
 		// TODO: 동기화 처리가 필요 하지만 자주 호출 부분이라 성능 적으로 확인 필요
 		std::unique_lock<std::mutex> lock(_mutex);
-        	auto it = _streams.find(indicator->_stream_id);
-        	auto stream = (it != _streams.end()) ? it->second : nullptr;
+		auto it = _streams.find(indicator->_stream_id);
+		auto stream = (it != _streams.end()) ? it->second : nullptr;
 		lock.unlock();
 
 		if(stream == nullptr)
@@ -468,10 +466,10 @@ void MediaRouteApplication::MainTask()
 								codec_info->codec_specific.vp8.tl0_pic_idx = 0;
 								codec_info->codec_specific.vp8.key_idx = 0;
 							}
-							else if (codec_id == MediaCodecId::H264)
+							else if(codec_id == MediaCodecId::H264)
 							{
 								codec_info->codec_type = CodecType::H264;
-								codec_info->codec_specific.h264.simulcast_idx= 0;
+								codec_info->codec_specific.h264.simulcast_idx = 0;
 								codec_info->codec_specific.h264.packetization_mode = H264PacketizationMode::NonInterleaved;
 							}
 

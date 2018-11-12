@@ -14,18 +14,24 @@ namespace cfg
 {
 	struct AudioProfile : public Item
 	{
-		bool MakeParseList() override
+		bool IsBypass() const
 		{
-			bool result = true;
+			return _bypass;
+		}
 
-			result = result && RegisterValue<Optional>("Bypass", &_bypass);
-			result = result && RegisterValue<Optional>("AudioEncodeOptions", &_audio_encode_options);
-
-			return result;
+		const AudioEncodeOptions *GetAudioEncodeOptions() const
+		{
+			return IsParsed(&_audio_encode_options) ? &_audio_encode_options : nullptr;
 		}
 
 	protected:
-		Value<bool> _bypass = false;
-		Value<AudioEncodeOptions> _audio_encode_options;
+		void MakeParseList() const override
+		{
+			RegisterValue<Optional>("Bypass", &_bypass);
+			RegisterValue<Optional>("AudioEncodeOptions", &_audio_encode_options);
+		}
+
+		bool _bypass = false;
+		AudioEncodeOptions _audio_encode_options;
 	};
 }

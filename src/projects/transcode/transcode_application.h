@@ -22,7 +22,6 @@
 
 // 공옹 구조체
 #include "base/application/stream_info.h"
-#include "base/application/application_info.h"
 
 #include "transcode_stream.h"
 
@@ -32,10 +31,10 @@
 class TranscodeApplication : public MediaRouteApplicationConnector, public MediaRouteApplicationObserver
 {
 public:
-	static std::shared_ptr<TranscodeApplication> Create(std::shared_ptr<ApplicationInfo> app_info);
+	static std::shared_ptr<TranscodeApplication> Create(const info::Application &application_info);
 
-	TranscodeApplication(std::shared_ptr<ApplicationInfo> appinfo);
-	~TranscodeApplication();
+	explicit TranscodeApplication(const info::Application &application_info);
+	~TranscodeApplication() override;
 
 	MediaRouteApplicationObserver::ObserverType GetObserverType()
 	{
@@ -70,15 +69,10 @@ public:
 		std::unique_ptr<MediaPacket> packet
 	) override;
 
-	const std::shared_ptr<ApplicationInfo> &GetApplicationInfo() const
-	{
-		return _app_info;
-	}
-
 private:
 	std::map<int32_t, std::shared_ptr<TranscodeStream>> _streams;
 	std::mutex _mutex;
 
-	std::shared_ptr<ApplicationInfo> _app_info;
+	info::Application _application_info;
 };
 

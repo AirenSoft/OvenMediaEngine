@@ -12,125 +12,177 @@
 
 namespace cfg
 {
-	void Item::SetParent(Item *parent)
+	static ov::String MakeIndentString(int indent)
 	{
-		_parent = parent;
-	}
+		static std::map<int, ov::String> cache;
 
-	Item *Item::GetParent()
-	{
-		return _parent;
-	}
+		auto item = cache.find(indent);
 
-	const Item *Item::GetParent() const
-	{
-		return _parent;
-	}
-
-	bool Item::IsValid() const
-	{
-		bool is_valid = true;
-
-		for(auto &value: _parse_list)
+		if(item != cache.end())
 		{
-			//is_valid &= value.second->IsValid(this);
+			return item->second;
 		}
 
-		return is_valid;
-	}
+		ov::String indent_string;
 
-	bool Item::PreProcess(const ov::String &tag_name, const pugi::xml_node &node, const ValueBase *value_type, int indent)
-	{
-		_tag_name = tag_name;
-
-		if(value_type->IsIncludable())
+		for(int count = 0; count < indent; count++)
 		{
-			logtd("%s[%s] Check includability...", ValueBase::MakeIndentString(indent).CStr(), _tag_name.CStr());
-
-			auto include_file = node.attribute("include");
-
-			if(include_file.empty() == false)
-			{
-				logtd("%s[%s] Include file found: %s. Trying to parse from file...", ValueBase::MakeIndentString(indent).CStr(), _tag_name.CStr(), include_file.value());
-
-				bool result = ParseFromFile(include_file.value(), tag_name, true, indent + 1);
-
-				if(result)
-				{
-					return IsValid();
-				}
-				else
-				{
-					// Cannot parse the XML file
-					logte("An error occurred while parse the config %s from file: %s", include_file.value(), tag_name.CStr());
-					return false;
-				}
-			}
-
-			return true;
+			indent_string += "    ";
 		}
 
-		// not includable
-		return true;
+		cache[indent] = indent_string;
+
+		return indent_string;
 	}
 
-	ValueBase *Item::FindParentValue(const ValueBase *value) const
+	static ov::String GetValueTypeAsString(ValueType type)
 	{
-		auto item = _parse_list.find(value->GetName());
-		bool find_from_parent = false;
-
-		if(
-			// 항목을 못찾거나
-			(item == _parse_list.end()) ||
-			// 찾았는데 타입이 안맞는 경우 부모에게 물어봐야 함
-			(item->second->GetType() != value->GetType())
-			)
+		switch(type)
 		{
-			// 부모 항목에서 값이 존재하는지 찾아봄
-			if(_parent != nullptr)
-			{
-				return _parent->FindParentValue(value);
-			}
-			else
-			{
-				// This item has no parent
-			}
+			default:
+			case ValueType::Unknown:
+				return "Unknown";
+
+			case ValueType::String:
+				return "String";
+
+			case ValueType::Integer:
+				return "Integer";
+
+			case ValueType::Boolean:
+				return "Boolean";
+
+			case ValueType::Float:
+				return "Float";
+
+			case ValueType::Text:
+				return "Text";
+
+			case ValueType::Attribute:
+				return "Attribute";
+
+			case ValueType::Element:
+				return "Element";
+
+			case ValueType::List:
+				return "List";
 		}
-		else
+	}
+
+	Item::Item(const Item &item)
+	{
+		_tag_name = item._tag_name;
+
+		for(auto &parse_item : item._parse_list)
 		{
-			// 항목을 찾았고 타입도 동일함
+			_parse_list.emplace_back(parse_item.name, parse_item.is_parsed, nullptr);
+		}
 
-			// 이미 this를 파싱하면서, 값이 다 입력되었을 것이기 때문에, 굳이 parent에서 찾아보지 않아도 됨
+		_parent = item._parent;
+	}
 
-			auto current_value = item->second;
+	Item::Item(Item &&item) noexcept
+	{
+		std::swap(_tag_name, item._tag_name);
+		std::swap(_parse_list, item._parse_list);
+		std::swap(_parent, item._parent);
+	}
 
-			if(current_value->IsOverridable())
+	const ov::String Item::GetTagName() const
+	{
+		return _tag_name;
+	}
+
+	Item &Item::operator =(const Item &item)
+	{
+		_tag_name = item._tag_name;
+		_parent = item._parent;
+		_parse_list = item._parse_list;
+
+		// To update pointers of ValueBase::_target
+		MakeParseList();
+
+		return *this;
+	}
+
+
+	void Item::Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_includable, bool is_overridable) const
+	{
+		value->SetOptional(is_optional);
+		value->SetIncludable(is_includable);
+		value->SetOverridable(is_overridable);
+
+		bool is_parsed = false;
+
+		for(auto old_value = _parse_list.begin(); old_value != _parse_list.end(); ++old_value)
+		{
+			if(old_value->name == name)
 			{
-				if(current_value->IsParsed())
+				// restore some values before overwrite
+				is_parsed = old_value->is_parsed;
+				ValueBase *base = old_value->value.get();
+
+				if(base != nullptr)
 				{
-					// 값이 이미 파싱 된 상태라면, 그냥 넘김
-					return current_value;
+					// The attributes of two values must be the same
+					OV_ASSERT2(value->GetType() == base->GetType());
+					OV_ASSERT2(value->IsOptional() == base->IsOptional());
+					OV_ASSERT2(value->IsIncludable() == base->IsIncludable());
+					OV_ASSERT2(value->IsOverridable() == base->IsOverridable());
 				}
 
-				// optional이 아닌데, 값이 입력되어 있지 않다면 프로그램 버그임
-				OV_ASSERT2(current_value->IsOptional());
+				_parse_list.erase(old_value);
+				break;
 			}
-			else
+		}
+
+		_parse_list.emplace_back(name, is_parsed, value);
+	}
+
+	ValueBase *Item::FindValue(const ov::String &name, const ParseItem *parse_item_to_find)
+	{
+		for(auto &parse_item : _parse_list)
+		{
+			if(
+				(parse_item.name == name) &&
+				((parse_item.value != nullptr) && (parse_item.value->GetType() == parse_item_to_find->value->GetType()))
+				)
 			{
-				// override 불가능한 값
+				return parse_item.value.get();
 			}
+		}
+
+		if(_parent != nullptr)
+		{
+			return _parent->FindValue(name, parse_item_to_find);
 		}
 
 		return nullptr;
 	}
 
-	// 파일로 부터 파싱 시작 (root element 이거나 include가 달려 있는 항목은 파일로 부터 파싱함)
-	bool Item::Parse(const ov::String &file_name, const ov::String &tag_name)
+	bool Item::IsParsed(const void *target) const
 	{
-		return ParseFromFile(file_name, tag_name, false, 0);
+		MakeParseList();
+
+		for(auto &parse_item : _parse_list)
+		{
+			OV_ASSERT2(parse_item.value != nullptr);
+
+			if(parse_item.value->GetTarget() == target)
+			{
+				return parse_item.is_parsed;
+			}
+		}
+
+		return false;
 	}
 
-	bool Item::ParseFromFile(const ov::String &file_name, const ov::String &tag_name, bool processing_include_file, int indent)
+	bool Item::Parse(const ov::String &file_name, const ov::String &tag_name)
+	{
+		return ParseFromFile(file_name, tag_name, 0);
+	}
+
+	bool Item::ParseFromFile(const ov::String &file_name, const ov::String &tag_name, int indent)
 	{
 		_tag_name = tag_name;
 
@@ -143,7 +195,7 @@ namespace cfg
 			return false;
 		}
 
-		return ParseFromNode(document.child(_tag_name), tag_name, processing_include_file, indent);
+		return ParseFromNode(document.child(_tag_name), tag_name, false, indent);
 	}
 
 	// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
@@ -152,64 +204,104 @@ namespace cfg
 		return ParseFromNode(node, tag_name, false, indent);
 	}
 
-	bool Item::ParseFromNode(const pugi::xml_node &node, const ov::String &tag_name, bool processing_include_file, int indent)
+#define CONFIG_DECLARE_PROCESSOR(value_type, type, dst) \
+        case value_type: \
+        { \
+            auto target = dynamic_cast<Value<type> *>(parse_item.value.get()); \
+            \
+            if((target != nullptr) && (target->GetTarget() != nullptr)) \
+            { \
+                *(target->GetTarget()) = dst; \
+                parsed = true; \
+                logtd("%s[%s] [%s] = %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, false).CStr()); \
+            } \
+            else \
+            { \
+                OV_ASSERT2(false); \
+            } \
+            \
+            break; \
+        }
+
+#define CONFIG_FROM_ANOTHER_VALUE(value_type, type, src) \
+        case value_type: \
+        { \
+            auto source = dynamic_cast<type *>(src); \
+            auto target = dynamic_cast<type *>(parse_item.value.get()); \
+            \
+            if((source != nullptr) && (target != nullptr)) \
+            { \
+                OV_ASSERT2(source->GetTarget() != nullptr); \
+                OV_ASSERT2(target->GetTarget() != nullptr); \
+                *(target->GetTarget()) = *(source->GetTarget()); \
+                parse_item.is_parsed = true; \
+                logtd("%s[%s] [%s] = %s (from parent value)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, false).CStr()); \
+            } \
+            else \
+            { \
+                OV_ASSERT(false, "Source: %p, Target: %p", source, target); \
+            } \
+            \
+            break; \
+        }
+
+	bool Item::ParseFromNode(const pugi::xml_node &node, const ov::String &tag_name, bool process_include, int indent)
 	{
 		_tag_name = tag_name;
 
-		if(MakeParseList() == false)
+		MakeParseList();
+
+		logtd("%s[%s] Trying to parse node (this = %p)...", MakeIndentString(indent).CStr(), _tag_name.CStr(), this);
+
+		auto inc = node.attribute("include");
+
+		if(inc.empty() == false)
 		{
-			return false;
+			logtd("%s[%s] Include file found: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), inc.value());
+
+			if(ParseFromFile(inc.value(), tag_name, indent) == false)
+			{
+				return false;
+			}
 		}
 
-		logtd("%s[%s] Trying to parse children (this = %p, from_include = %d)...", ValueBase::MakeIndentString(indent).CStr(), _tag_name.CStr(), this, processing_include_file);
-
-		for(auto &value : _parse_list)
+		for(auto &parse_item : _parse_list)
 		{
-			// value.first에 해당하는 값을 찾음
-			auto &child_name = value.first;
-			auto &child_value = value.second;
+			auto &name = parse_item.name;
+			ValueBase *value = parse_item.value.get();
+
+			if(value == nullptr)
+			{
+				OV_ASSERT(value != nullptr, "[%s] Cannot obtain value information for %s (this is a bug)", _tag_name.CStr(), name.CStr());
+				logte("%s[%s] Cannot obtain value information for %s (this is a bug)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
+				continue;
+			}
 
 			pugi::xml_node child_node;
 			pugi::xml_attribute attribute;
 
-			switch(child_value->GetType())
+			switch(value->GetType())
 			{
-				case ValueType::Attribute:
-					attribute = node.attribute(child_name);
-					break;
-
 				case ValueType::Text:
 					child_node = node;
 					break;
 
+				case ValueType::Attribute:
+					attribute = node.attribute(name);
+					break;
+
 				default:
-					child_node = node.child(child_name);
+					child_node = node.child(name);
 					break;
 			}
 
 			if(child_node.empty() && attribute.empty())
 			{
-				logtd("%s[%s] [%s] is empty", ValueBase::MakeIndentString(indent + 1).CStr(), _tag_name.CStr(), child_name.CStr());
+				logtd("%s[%s] [%s] is empty", MakeIndentString(indent + 1).CStr(), _tag_name.CStr(), name.CStr());
 
-				// 만약, <ConfigItem>의 <Name>이 필수 값이라고 할 때, Config이 다음과 같이 설정되어 있다면,
-				//
-				// a.xml
-				// ---------------
-				// <ConfigItem>
-				//   <Name>NameInA</Name>
-				// </ConfigItem>
-				//
-				// config.xml
-				// ---------------
-				// <ConfigItem include="a.xml">
-				// </ConfigItem>
-				//
-				// a.xml에서 Name 값이 지정되었으므로, config.xml을 파싱하는 단계에서 Name을 찾지 못하더라도 그건 오류가 아님
-				// 이것을 판단하기 위해, 기존에 값이 설정된 적이 있는지를 보면 됨
-
-				if(child_value->IsParsed())
+				if(parse_item.is_parsed)
 				{
-					// include된 파일로 부터 값이 이미 설정됨. 성공으로 간주함
+					// the item was parsed from include file
 					continue;
 				}
 
@@ -217,47 +309,73 @@ namespace cfg
 
 				if(_parent != nullptr)
 				{
-					logtd("%s[%s] Trying to find [%s] from parent...", ValueBase::MakeIndentString(indent + 1).CStr(), _tag_name.CStr(), child_name.CStr());
-					parent_value = _parent->FindParentValue(child_value);
+					logtd("%s[%s] Trying to find [%s] from parent...", MakeIndentString(indent + 1).CStr(), _tag_name.CStr(), name.CStr());
+					parent_value = _parent->FindValue(name, &parse_item);
 				}
 
 				if(parent_value == nullptr)
 				{
-					if((processing_include_file == false) && (child_value->IsOptional() == false))
-					{
-						// 필수 항목인데, 부모에도 값이 지정되어 있지 않음
-						logte("Cannot find element: %s->%s", _tag_name.CStr(), child_name.CStr());
-						return false;
-					}
-
-					// 필수 항목이 아니거나, include 파일로 부터 읽고 있는 상황이기 때문에 그냥 진행
-					if(child_value->IsOptional())
-					{
-						logtd("%s[%s] Ignoring [%s] (optional)...", ValueBase::MakeIndentString(indent + 2).CStr(), _tag_name.CStr(), child_name.CStr());
-					}
-
 					continue;
 				}
 
-				// 부모로부터 값을 얻어왔음
-				logtd("%s[%s] From parent: [%s] = %s", ValueBase::MakeIndentString(indent + 1).CStr(), _tag_name.CStr(), child_name.CStr(), parent_value->ToString().CStr());
-
-				switch(value.second->GetType())
+				if(parse_item.value->GetSize() != parent_value->GetSize())
 				{
-					case ValueType::String:
-					case ValueType::Integer:
-					case ValueType::Boolean:
-					case ValueType::Float:
+					logte("Element size does not matched: %zu != %zu", parse_item.value->GetSize(), parent_value->GetSize());
+					OV_ASSERT2(false);
+					continue;
+				}
+
+				switch(parse_item.value->GetType())
+				{
+					CONFIG_FROM_ANOTHER_VALUE(ValueType::Integer, Value<int>, parent_value)
+					CONFIG_FROM_ANOTHER_VALUE(ValueType::Boolean, Value<bool>, parent_value)
+					CONFIG_FROM_ANOTHER_VALUE(ValueType::Float, Value<float>, parent_value)
+					CONFIG_FROM_ANOTHER_VALUE(ValueType::String, Value<ov::String>, parent_value)
+					CONFIG_FROM_ANOTHER_VALUE(ValueType::Text, Value<ov::String>, parent_value)
+					CONFIG_FROM_ANOTHER_VALUE(ValueType::Attribute, Value<ov::String>, parent_value)
+
 					case ValueType::Element:
-					case ValueType::List:
-					case ValueType::Attribute:
-					case ValueType::Text:
-						if(child_value->ParseFromValue(parent_value, indent + 1) == false)
+					{
+						auto source = dynamic_cast<ValueForElementBase *>(parent_value);
+						auto target = dynamic_cast<ValueForElementBase *>(value);
+
+						if(source != nullptr)
 						{
-							return false;
+							parse_item.is_parsed = source->Copy(target);
+
+							if(parse_item.is_parsed)
+							{
+								logtd("%s[%s] [%s] = %s (from parent value)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, false).CStr());
+							}
+						}
+						else
+						{
+							OV_ASSERT(false, "Source: %p, Target: %p", source, target);
 						}
 
 						break;
+					}
+					case ValueType::List:
+					{
+						auto source = dynamic_cast<ValueForListBase *>(parent_value);
+						auto target = dynamic_cast<ValueForListBase *>(value);
+
+						if(source != nullptr)
+						{
+							parse_item.is_parsed = source->Copy(target);
+
+							if(parse_item.is_parsed)
+							{
+								logtd("%s[%s] [%s] = %s (from parent value)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, false).CStr());
+							}
+						}
+						else
+						{
+							OV_ASSERT(false, "Source: %p, Target: %p", source, target);
+						}
+
+						break;
+					}
 
 					case ValueType::Unknown:
 					default:
@@ -267,70 +385,98 @@ namespace cfg
 			}
 			else
 			{
-				switch(value.second->GetType())
-				{
-					case ValueType::String:
-					case ValueType::Integer:
-					case ValueType::Boolean:
-					case ValueType::Float:
-					case ValueType::Text:
-						logtd("%s[%s] Trying to parse plain value from node [%s]...", ValueBase::MakeIndentString(indent).CStr(), _tag_name.CStr(), child_node.name());
-						if(child_value->ParseFromNode(child_node, processing_include_file, indent) == false)
-						{
-							return false;
-						}
+				bool parsed = false;
 
-						logtd("%s[%s] [%s] = %s", ValueBase::MakeIndentString(indent).CStr(), _tag_name.CStr(), child_node.name(), child_value->ToString().CStr());
-						break;
+				logtd("%s[%s] Trying to parse value from node [%s]...", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
+
+				switch(value->GetType())
+				{
+					CONFIG_DECLARE_PROCESSOR(ValueType::Integer, int, ov::Converter::ToInt32(child_node.child_value()))
+					CONFIG_DECLARE_PROCESSOR(ValueType::Boolean, bool, ov::Converter::ToBool(child_node.child_value()))
+					CONFIG_DECLARE_PROCESSOR(ValueType::Float, float, ov::Converter::ToFloat(child_node.child_value()))
+					CONFIG_DECLARE_PROCESSOR(ValueType::String, ov::String, child_node.child_value())
+					CONFIG_DECLARE_PROCESSOR(ValueType::Text, ov::String, child_node.child_value())
+					CONFIG_DECLARE_PROCESSOR(ValueType::Attribute, ov::String, attribute.value())
 
 					case ValueType::Element:
-						logtd("%s[%s] Trying to parse item from node [%s]...", ValueBase::MakeIndentString(indent).CStr(), _tag_name.CStr(), child_node.name());
-						if(child_value->ParseFromNode(child_node, processing_include_file, indent) == false)
+					{
+						auto target = dynamic_cast<ValueForElementBase *>(value);
+
+						if((target != nullptr) && (target->GetTarget() != nullptr))
 						{
-							return false;
+							target->GetTarget()->_parent = this;
+							parsed = (target->GetTarget())->ParseFromNode(child_node, name, value->IsIncludable(), indent + 1);
+						}
+						else
+						{
+							OV_ASSERT2(false);
 						}
 
-						logtd("%s[%s] [%s] = %s", ValueBase::MakeIndentString(indent).CStr(), _tag_name.CStr(), child_node.name(), child_value->IsParsed() ? "{}" : "N/A");
+						if(parsed)
+						{
+							logtd("%s[%s] [%s] = %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), "{ ... }");
+						}
+
 						break;
+					}
 
 					case ValueType::List:
 					{
-						logtd("%s[%s] Trying to parse item list [%s]...", ValueBase::MakeIndentString(indent).CStr(), _tag_name.CStr(), child_node.name());
+						logtd("%s[%s] Trying to parse item list [%s]...", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
 
-						while(child_node)
+						auto target = dynamic_cast<ValueForListBase *>(value);
+
+						if((target != nullptr) && (target->GetTarget() != nullptr))
 						{
-							if(child_value->ParseFromNode(child_node, processing_include_file, indent) == false)
+							if(value->IsOptional())
 							{
-								return false;
+								// optional이라면 먼저 parse 된 상태로 전환
+								parsed = true;
 							}
 
-							logtd("%s[%s] [%s] = ", ValueBase::MakeIndentString(indent).CStr(), _tag_name.CStr(), child_node.name(), child_value->IsParsed() ? "{ ... }" : "N/A");
-							child_node = child_node.next_sibling(child_name);
-						}
-					}
-						break;
+							while(child_node)
+							{
+								Item *i = target->Create();
 
-					case ValueType::Attribute:
-						logtd("%s[%s] Trying to parse item from attribute [%s]...", ValueBase::MakeIndentString(indent).CStr(), _tag_name.CStr(), attribute.name());
-						if(child_value->ParseFromAttribute(attribute, processing_include_file, indent) == false)
-						{
-							return false;
+								i->_parent = this;
+								parsed = i->ParseFromNode(child_node, name, value->IsIncludable(), indent + 1);
+
+								if(parsed == false)
+								{
+									break;
+								}
+
+								logtd("%s[%s] [List<%s>] = %s",
+								      MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(),
+								      ov::String::FormatString("{ %zu items }", target->GetList().size()).CStr()
+								);
+
+								child_node = child_node.next_sibling(name);
+							}
+
 						}
-						logtd("%s[%s] [%s] = %s", ValueBase::MakeIndentString(indent).CStr(), _tag_name.CStr(), child_node.name(), child_value->ToString().CStr());
+						else
+						{
+							OV_ASSERT2(false);
+						}
+
 						break;
+					}
 
 					case ValueType::Unknown:
 						OV_ASSERT2(false);
 						break;
 				}
+
+				if(parsed == false)
+				{
+					logte("%s[%s] Could not parse [%s]", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
+				}
+
+				parse_item.is_parsed = parsed;
 			}
 		}
 
-		return true;
-	}
-
-	bool Item::PostProcess(int indent)
-	{
 		return true;
 	}
 
@@ -342,6 +488,8 @@ namespace cfg
 	ov::String Item::ToString(int indent) const
 	{
 		ov::String result;
+
+		MakeParseList();
 
 		if(indent == 0)
 		{
@@ -356,14 +504,119 @@ namespace cfg
 		{
 			result.Append("{\n");
 
-			for(auto &value : _parse_list)
+			for(auto &parse_item : _parse_list)
 			{
-				result.AppendFormat("%s", value.second->ToString(indent + 1, true).CStr());
+				result.Append(ToString(&parse_item, indent + 1, true));
 			}
 
-			result.AppendFormat("%s}", ValueBase::MakeIndentString(indent).CStr());
+			result.AppendFormat("%s}", MakeIndentString(indent).CStr());
 		}
 
 		return result;
+	}
+
+	ov::String Item::ToString(const ParseItem *parse_item, int indent, bool append_new_line) const
+	{
+		ov::String str;
+
+		ValueBase *value = parse_item->value.get();
+
+		switch(value->GetType())
+		{
+			case ValueType::Integer:
+			{
+				auto target = dynamic_cast<Value<int> *>(value);
+				str = (target != nullptr) ? ov::String::FormatString("%d", *(target->GetTarget())) : "(null)";
+				break;
+			}
+
+			case ValueType::Boolean:
+			{
+				auto target = dynamic_cast<Value<bool> *>(value);
+				str = (target != nullptr) ? (*(target->GetTarget()) ? "true" : "false") : "(null)";
+				break;
+			}
+
+			case ValueType::Float:
+			{
+				auto target = dynamic_cast<Value<float> *>(value);
+				str = (target != nullptr) ? ov::String::FormatString("%f", *(target->GetTarget())) : "(null)";
+				break;
+			}
+
+			case ValueType::String:
+			case ValueType::Attribute:
+			case ValueType::Text:
+			{
+				auto target = dynamic_cast<Value<ov::String> *>(value);
+				str = (target != nullptr) ? *(target->GetTarget()) : "(null)";
+				break;
+			}
+
+			case ValueType::Element:
+			{
+				auto target = dynamic_cast<ValueForElementBase *>(value);
+				str = (target != nullptr) ? target->GetTarget()->ToString(indent) : "(null)";
+				break;
+			}
+
+			case ValueType::List:
+			{
+				auto target = dynamic_cast<ValueForListBase *>(value);
+
+				ov::String indent_string = MakeIndentString(indent + 1);
+				auto item_list = target->GetList();
+
+				if(item_list.empty())
+				{
+					str = "(no items) []";
+				}
+				else
+				{
+					str = ov::String::FormatString("(%d items) [", item_list.size());
+					bool is_first = true;
+
+					for(auto &item: item_list)
+					{
+						if(item == nullptr)
+						{
+							OV_ASSERT2(false);
+							return "";
+						}
+
+						if(is_first)
+						{
+							str.AppendFormat("%s", item->ToString(indent).CStr());
+							is_first = false;
+						}
+						else
+						{
+							str.AppendFormat(", %s", item->ToString(indent).CStr());
+						}
+					}
+
+					str.Append(']');
+				}
+
+				break;
+			}
+
+			default:
+				break;
+
+		}
+
+		return ov::String::FormatString(
+			"%s%s%s%s (%s%s%s) = %s%s",
+			MakeIndentString(indent).CStr(),
+			value->GetType() == ValueType::List ? "List<" : "",
+			parse_item->name.CStr(),
+			value->GetType() == ValueType::List ? ">" : "",
+			GetValueTypeAsString(value->GetType()).CStr(),
+			value->IsOptional() ? ", optional" : "",
+			value->IsIncludable() ? ", includable" : "",
+			parse_item->is_parsed ? str.CStr() : "N/A",
+			append_new_line ? "\n" : ""
+		);
 	}
 };

@@ -91,8 +91,8 @@ bool SessionDescription::FromString(const ov::String &sdp)
 		if(!std::regex_search(line, ValidLineRegex))
 		{
 			continue;
-		}
 
+		}
 		char type = line[0];
 		std::string content = line.substr(2);
 

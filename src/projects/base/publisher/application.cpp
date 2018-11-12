@@ -3,8 +3,8 @@
 
 #include <algorithm>
 
-Application::Application(const std::shared_ptr<ApplicationInfo> &info)
-	: ApplicationInfo(info)
+Application::Application(const info::Application &application_info)
+	: info::Application(application_info)
 {
 	_stop_thread_flag = false;
 }
@@ -37,6 +37,7 @@ bool Application::OnCreateStream(std::shared_ptr<StreamInfo> info)
 {
 	// Stream을 자식을 통해 생성해서 연결한다.
 	auto stream = CreateStream(info);
+
 	if(!stream)
 	{
 		// Stream 생성 실패

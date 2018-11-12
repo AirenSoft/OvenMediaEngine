@@ -21,6 +21,7 @@
 #include "host.h"
 #include "hosts.h"
 #include "items.h"
+#include "provider.h"
 #include "providers.h"
 #include "publisher.h"
 #include "publishers.h"

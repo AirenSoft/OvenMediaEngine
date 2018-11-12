@@ -16,13 +16,13 @@
 
 int main()
 {
-	struct utsname uts;
+	struct utsname uts {};
 	::uname(&uts);
 
-	logti("OvenMediaEngine v" OME_VERSION " is started on [%s] (%s %s - %s, %s)", uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
+	logti("OvenMediaEngine v%s is started on [%s] (%s %s - %s, %s)", OME_VERSION, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
 
 	logti("Trying to load configurations...");
-	if(ConfigManager::Instance()->LoadConfigs() == false)
+	if(cfg::ConfigManager::Instance()->LoadConfigs() == false)
 	{
 		logte("An error occurred while load config");
 		return 1;
@@ -39,19 +39,53 @@ int main()
 		return 1;
 	}
 
-	logtd("Trying to create MediaRouter...");
-	auto router = MediaRouter::Create();
+	std::shared_ptr<cfg::Server> server = cfg::ConfigManager::Instance()->GetServer();
+	std::vector<cfg::Host> hosts = server->GetHosts();
 
-	logtd("Trying to create Transcoder...");
-	auto transcoder = Transcoder::Create(router);
+	std::shared_ptr<MediaRouter> router;
+	std::shared_ptr<Transcoder> transcoder;
 
-	logtd("Trying to create RTMP Provider...");
-	auto provider = RtmpProvider::Create(router);
+	std::vector<std::shared_ptr<pvd::Provider>> providers;
+	std::vector<std::shared_ptr<Publisher>> publishers;
 
-	logtd("Trying to create WebRtc Publisher...");
-	auto publisher = WebRtcPublisher::Create(router);
+	std::map<ov::String, std::vector<info::Application>> application_infos;
 
-	// Wait for termination...
+	for(auto &host : hosts)
+	{
+		logtd("trying to create modules for host [%s]", host.GetName().CStr());
+
+		auto &app_info_list = application_infos[host.GetName()];
+
+		for(const auto &application : host.GetApplications())
+		{
+			app_info_list.emplace_back(application);
+		}
+
+		if(app_info_list.empty() == false)
+		{
+			logtd("Trying to create MediaRouter for host [%s]...", host.GetName().CStr());
+			router = MediaRouter::Create(app_info_list);
+
+			logtd("Trying to create Transcoder for host [%s]...", host.GetName().CStr());
+			transcoder = Transcoder::Create(app_info_list, router);
+
+			for(const auto &application_info : app_info_list)
+			{
+				logtd("Trying to create RTMP Provider for application [%s]...", application_info.GetName().CStr());
+				providers.push_back(RtmpProvider::Create(application_info, router));
+
+				logtd("Trying to create WebRtc Publisher for application [%s]...", application_info.GetName().CStr());
+				publishers.push_back(WebRtcPublisher::Create(application_info, router));
+			}
+		}
+		else
+		{
+			logtd("Nothing to do for host [%s]", host.GetName().CStr());
+		}
+	}
+
+	logtd("Wait for termination...");
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 	while(true)

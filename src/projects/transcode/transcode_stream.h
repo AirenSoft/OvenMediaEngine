@@ -27,6 +27,8 @@
 #include "codec/transcode_encoder.h"
 #include "codec/transcode_decoder.h"
 
+#include <base/application/application.h>
+
 class TranscodeApplication;
 
 typedef int32_t MediaTrackId;
@@ -34,7 +36,7 @@ typedef int32_t MediaTrackId;
 class TranscodeStream
 {
 public:
-	TranscodeStream(std::shared_ptr<StreamInfo> orig_stream_info, TranscodeApplication *parent);
+	TranscodeStream(const info::Application &application_info, std::shared_ptr<StreamInfo> orig_stream_info, TranscodeApplication *parent);
 	~TranscodeStream();
 
 	void Stop();
@@ -62,8 +64,9 @@ private:
 	uint8_t _last_track_video = 0x60;     // 0x60 ~ 0x6F
 	uint8_t _last_track_audio = 0x70;     // 0x70 ~ 0x7F
 
-
 private:
+	info::Application _application_info;
+
 	// 디코더
 	std::map<MediaTrackId, std::unique_ptr<TranscodeDecoder>> _decoders;
 
@@ -113,8 +116,8 @@ private:
 	std::map<ov::String, std::shared_ptr<StreamInfo>> _stream_info_outputs;
 
 	// 트랜스코딩 코덱 변환 정보
-	bool AddContext(ov::String &stream_name, MediaCodecId codec_id, int bitrate, int width, int height, float framerate);
-	bool AddContext(ov::String &stream_name, MediaCodecId codec_id, int bitrate, float samplerate);
+	bool AddContext(ov::String &stream_name, common::MediaCodecId codec_id, int bitrate, int width, int height, float framerate);
+	bool AddContext(ov::String &stream_name, common::MediaCodecId codec_id, int bitrate, float samplerate);
 	std::map<MediaTrackId, std::shared_ptr<TranscodeContext>> _contexts;
 
 	// Create output streams

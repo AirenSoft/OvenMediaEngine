@@ -14,16 +14,17 @@ namespace cfg
 {
 	struct Hosts : public Item
 	{
-		bool MakeParseList() override
+		const std::vector<Host> &GetHosts() const
 		{
-			bool result = true;
-
-			result = result && RegisterValue<Optional, Includable>("Host", &_host);
-
-			return result;
+			return _host_list;
 		}
 
 	protected:
-		Value <std::vector<Host>> _host;
+		void MakeParseList() const override
+		{
+			RegisterValue<Optional, Includable>("Host", &_host_list);
+		}
+
+		std::vector<Host> _host_list;
 	};
 }

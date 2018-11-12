@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "../common_types.h"
+#include "base/common_types.h"
 
 class AudioTrack
 {
@@ -16,17 +16,17 @@ public:
 	void SetSampleRate(int32_t samplerate);
 	int32_t GetSampleRate();
 
-	MediaCommonType::AudioSample::Format GetSampleFormat();
-	MediaCommonType::AudioChannel::Layout GetChannelLayout();
+	common::AudioSample::Format GetSampleFormat();
+	common::AudioChannel::Layout GetChannelLayout();
 
-	MediaCommonType::AudioSample &GetSample();
-	MediaCommonType::AudioChannel &GetChannel();
+	common::AudioSample &GetSample();
+	common::AudioChannel &GetChannel();
 
 protected:
 	// sample format, sample rate
-	MediaCommonType::AudioSample _sample;
+	common::AudioSample _sample;
 
 	// channel layout
-	MediaCommonType::AudioChannel _channel_layout;
+	common::AudioChannel _channel_layout;
 
 };

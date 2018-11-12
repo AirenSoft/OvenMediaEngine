@@ -8,22 +8,30 @@
 //==============================================================================
 #pragma once
 
-#include "../item.h"
+#include "provider.h"
 
 namespace cfg
 {
-	struct RtmpProvider : public Item
+	struct RtmpProvider : public Provider
 	{
-		bool MakeParseList() override
+		ProviderType GetType() const override
 		{
-			bool result = true;
+			return ProviderType::Rtmp;
+		}
 
-			result = result && RegisterValue<Optional>("Port", &_port);
-
-			return result;
+		int GetPort() const
+		{
+			return _port;
 		}
 
 	protected:
-		Value <ov::String> _port = "1935/tcp";
+		void MakeParseList() const override
+		{
+			Provider::MakeParseList();
+
+			RegisterValue<Optional>("Port", &_port);
+		}
+
+		int _port = 1935;
 	};
 }
