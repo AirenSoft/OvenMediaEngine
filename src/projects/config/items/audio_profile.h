@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "audio_encode_options.h"
+#include "../item.h"
 
 namespace cfg
 {
@@ -19,19 +19,47 @@ namespace cfg
 			return _bypass;
 		}
 
-		const AudioEncodeOptions *GetAudioEncodeOptions() const
+		bool IsActive() const
 		{
-			return IsParsed(&_audio_encode_options) ? &_audio_encode_options : nullptr;
+			return _active;
+		}
+
+		ov::String GetCodec() const
+		{
+			return _codec;
+		}
+
+		ov::String GetBitrate() const
+		{
+			return _bitrate;
+		}
+
+		int GetSamplerate() const
+		{
+			return _samplerate;
+		}
+
+		int GetChannel() const
+		{
+			return _channel;
 		}
 
 	protected:
 		void MakeParseList() const override
 		{
 			RegisterValue<Optional>("Bypass", &_bypass);
-			RegisterValue<Optional>("AudioEncodeOptions", &_audio_encode_options);
+			RegisterValue<Optional>("Active", &_active);
+			RegisterValue("Codec", &_codec);
+			RegisterValue("Bitrate", &_bitrate);
+			RegisterValue("Samplerate", &_samplerate);
+			RegisterValue("Channel", &_channel);
 		}
 
 		bool _bypass = false;
-		AudioEncodeOptions _audio_encode_options;
+		bool _active = true;
+		ov::String _codec;
+		ov::String _bitrate;
+		int _samplerate = 0;
+		int _channel = 0;
 	};
 }

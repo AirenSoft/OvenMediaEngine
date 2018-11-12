@@ -114,8 +114,8 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 			continue;
 		}
 
-		auto video_profile = encode.GetVideoEncodingOptions();
-		auto audio_profile = encode.GetAudioEncodingOptions();
+		auto video_profile = encode.GetVideoProfile();
+		auto audio_profile = encode.GetAudioProfile();
 
 		if((video_profile != nullptr) && (video_profile->IsActive()))
 		{

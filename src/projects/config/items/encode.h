@@ -30,14 +30,14 @@ namespace cfg
 			return _stream_name;
 		}
 
-		const AudioEncodeOptions *GetAudioEncodingOptions() const
+		const AudioProfile *GetAudioProfile() const
 		{
-			return IsParsed(&_audio) ? _audio.GetAudioEncodeOptions() : nullptr;
+			return IsParsed(&_audio) ? &_audio : nullptr;
 		}
 
-		const VideoEncodeOptions *GetVideoEncodingOptions() const
+		const VideoProfile *GetVideoProfile() const
 		{
-			return IsParsed(&_video) ? _video.GetVideoEncodeOptions() : nullptr;
+			return IsParsed(&_video) ? &_video : nullptr;
 		}
 
 	protected:

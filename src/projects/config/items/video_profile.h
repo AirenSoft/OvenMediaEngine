@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "video_encode_options.h"
+#include "../item.h"
 
 namespace cfg
 {
@@ -19,19 +19,69 @@ namespace cfg
 			return _bypass;
 		}
 
-		const VideoEncodeOptions *GetVideoEncodeOptions() const
+		bool IsActive() const
 		{
-			return IsParsed(&_video_encode_options) ? &_video_encode_options : nullptr;
+			return _active;
+		}
+
+		ov::String GetHWAcceleration() const
+		{
+			return _hw_acceleration;
+		}
+
+		ov::String GetCodec() const
+		{
+			return _codec;
+		}
+
+		ov::String GetScale() const
+		{
+			return _scale;
+		}
+
+		int GetWidth() const
+		{
+			return _width;
+		}
+
+		int GetHeight() const
+		{
+			return _height;
+		}
+
+		ov::String GetBitrate() const
+		{
+			return _bitrate;
+		}
+
+		float GetFramerate() const
+		{
+			return _framerate;
 		}
 
 	protected:
 		void MakeParseList() const override
 		{
 			RegisterValue<Optional>("Bypass", &_bypass);
-			RegisterValue<Optional>("VideoEncodeOptions", &_video_encode_options);
+
+			RegisterValue<Optional>("Active", &_active);
+			RegisterValue<Optional>("HWAcceleration", &_hw_acceleration);
+			RegisterValue("Codec", &_codec);
+			RegisterValue("Scale", &_scale);
+			RegisterValue("Width", &_width);
+			RegisterValue("Height", &_height);
+			RegisterValue("Bitrate", &_bitrate);
+			RegisterValue("Framerate", &_framerate);
 		}
 
 		bool _bypass = false;
-		VideoEncodeOptions _video_encode_options;
+		bool _active = true;
+		ov::String _hw_acceleration = "none";
+		ov::String _codec;
+		ov::String _scale;
+		int _width = 0;
+		int _height = 0;
+		ov::String _bitrate;
+		float _framerate = 0.0f;
 	};
 }

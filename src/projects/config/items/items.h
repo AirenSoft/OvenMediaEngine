@@ -10,7 +10,6 @@
 
 #include "application.h"
 #include "applications.h"
-#include "audio_encode_options.h"
 #include "audio_profile.h"
 #include "dash_publisher.h"
 #include "decode.h"
@@ -33,6 +32,5 @@
 #include "stream_profiles.h"
 #include "streams.h"
 #include "tls.h"
-#include "video_encode_options.h"
 #include "video_profile.h"
 #include "webrtc_publisher.h"
