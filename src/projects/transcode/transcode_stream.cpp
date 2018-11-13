@@ -56,11 +56,11 @@ common::MediaCodecId GetCodecId(ov::String name)
 	return common::MediaCodecId::None;
 }
 
-int64_t GetBitrate(ov::String bitrate)
+int GetBitrate(ov::String bitrate)
 {
 	bitrate.MakeUpper();
 
-	int64_t multiplier = 1;
+	int multiplier = 1;
 
 	if(bitrate.HasSuffix("K"))
 	{
@@ -71,7 +71,7 @@ int64_t GetBitrate(ov::String bitrate)
 		multiplier = 1024 * 1024;
 	}
 
-	return static_cast<int64_t>(ov::Converter::ToFloat(bitrate) * multiplier);
+	return static_cast<int>(ov::Converter::ToFloat(bitrate) * multiplier);
 }
 
 TranscodeStream::TranscodeStream(const info::Application &application_info, std::shared_ptr<StreamInfo> stream_info, TranscodeApplication *parent)
@@ -103,7 +103,8 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 			continue;
 		}
 
-		auto stream_name = encode.GetStreamName();
+		//auto stream_name = encode.GetStreamName();
+		ov::String stream_name = "";
 
 		// Resolve stream name
 		// ${OriginStreamName} => stream_info->GetName()

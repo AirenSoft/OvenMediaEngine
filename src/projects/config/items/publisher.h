@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "streams.h"
+#include "../item.h"
 
 namespace cfg
 {
@@ -35,21 +35,14 @@ namespace cfg
 			return _max_connection;
 		}
 
-		const Streams &GetStreams() const
-		{
-			return _streams;
-		}
-
 	protected:
 		void MakeParseList() const override
 		{
 			RegisterValue<Optional>("IP", &_ip);
 			RegisterValue<Optional>("MaxConnection", &_max_connection);
-			RegisterValue<Optional>("Streams", &_streams);
 		}
 
 		ov::String _ip;
 		int _max_connection = 0;
-		Streams _streams;
 	};
 }

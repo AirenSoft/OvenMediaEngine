@@ -26,7 +26,26 @@ namespace cfg
 	{
 		StreamProfileUse GetUse() const
 		{
-			return _use;
+			if(_use == "audio-only")
+			{
+				return StreamProfileUse::AudioOnly;
+			}
+			else if(_use == "video-only")
+			{
+				return StreamProfileUse::VideoOnly;
+			}
+
+			return StreamProfileUse::Both;
+		}
+
+		bool IsAudioOnly() const
+		{
+			return GetUse() == StreamProfileUse::AudioOnly;
+		}
+
+		bool IsVideoOnly() const
+		{
+			return GetUse() == StreamProfileUse::VideoOnly;
 		}
 
 		ov::String GetName() const
@@ -37,36 +56,11 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<ValueType::Attribute>("use", &_use_temp);
+			RegisterValue<ValueType::Attribute>("use", &_use);
 			RegisterValue<ValueType::Text>("Name", &_name);
 		}
 
-		bool PostProcess(int indent)
-		{
-			//const ov::String use = *_use_temp.GetValue();
-			//
-			//if(use == "audio-only")
-			//{
-			//	_use = StreamProfileUse::AudioOnly;
-			//	return true;
-			//}
-			//else if(use == "video-only")
-			//{
-			//	_use = StreamProfileUse::VideoOnly;
-			//	return true;
-			//}
-			//else if(use == "both")
-			//{
-			//	_use = StreamProfileUse::Both;
-			//	return true;
-			//}
-
-			OV_ASSERT2(false);
-			return false;
-		}
-
-		ov::String _use_temp = "both";
-		StreamProfileUse _use;
+		ov::String _use = "both";
 		ov::String _name;
 	};
 }

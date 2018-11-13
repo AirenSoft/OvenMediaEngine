@@ -25,11 +25,6 @@ namespace cfg
 			return _name;
 		}
 
-		ov::String GetStreamName() const
-		{
-			return _stream_name;
-		}
-
 		const AudioProfile *GetAudioProfile() const
 		{
 			return IsParsed(&_audio) ? &_audio : nullptr;
@@ -45,14 +40,12 @@ namespace cfg
 		{
 			RegisterValue<Optional>("Active", &_active);
 			RegisterValue("Name", &_name);
-			RegisterValue("StreamName", &_stream_name);
 			RegisterValue<Optional>("Audio", &_audio);
 			RegisterValue<Optional>("Video", &_video);
 		}
 
 		bool _active;
 		ov::String _name;
-		ov::String _stream_name;
 		AudioProfile _audio;
 		VideoProfile _video;
 	};
