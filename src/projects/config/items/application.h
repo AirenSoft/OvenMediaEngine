@@ -70,9 +70,9 @@ namespace cfg
 			return _encodes.GetEncodes();
 		}
 
-		const Streams &GetStreams() const
+		const std::vector<Stream> &GetStreamList() const
 		{
-			return _streams;
+			return _streams.GetStreamList();
 		}
 
 		std::vector<const Provider *> GetProviders() const

@@ -14,6 +14,11 @@ namespace cfg
 {
 	struct Streams : public Item
 	{
+		const std::vector<Stream> &GetStreamList() const
+		{
+			return _stream_list;
+		}
+
 	protected:
 		void MakeParseList() const override
 		{
