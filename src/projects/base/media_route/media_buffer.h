@@ -82,6 +82,19 @@ public:
 
 	std::unique_ptr<FragmentationHeader> _frag_hdr = std::make_unique<FragmentationHeader>();
 
+	std::unique_ptr<MediaPacket> ClonePacket()
+	{
+		auto packet = std::make_unique<MediaPacket>(
+			GetMediaType(),
+			GetTrackId(),
+			GetData(),
+			GetPts(),
+			GetFlags()
+		);
+		::memcpy(packet->_frag_hdr.get(), _frag_hdr.get(), sizeof(FragmentationHeader));
+		return packet;
+	}
+
 protected:
 	common::MediaType _media_type = common::MediaType::Unknown;
 	int32_t _track_id = -1;

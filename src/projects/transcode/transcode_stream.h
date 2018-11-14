@@ -76,6 +76,9 @@ private:
 	// 필터
 	std::map<MediaTrackId, std::unique_ptr<TranscodeFilter>> _filters;
 
+	// 스트림별 트랙집합
+	std::map <ov::String, std::vector <uint8_t >> _stream_tracks;
+
 
 private:
 	volatile bool _kill_flag;
@@ -116,8 +119,7 @@ private:
 	std::map<ov::String, std::shared_ptr<StreamInfo>> _stream_info_outputs;
 
 	// 트랜스코딩 코덱 변환 정보
-	bool AddContext(ov::String &stream_name, common::MediaCodecId codec_id, int bitrate, int width, int height, float framerate);
-	bool AddContext(ov::String &stream_name, common::MediaCodecId codec_id, int bitrate, float samplerate);
+	uint8_t AddContext(common::MediaType media_type, std::shared_ptr<TranscodeContext> context);
 	std::map<MediaTrackId, std::shared_ptr<TranscodeContext>> _contexts;
 
 	// Create output streams

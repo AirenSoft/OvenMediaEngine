@@ -129,11 +129,6 @@ const common::AudioChannel &TranscodeContext::GetAudioChannel() const
 	return _audio_channel;
 }
 
-ov::String TranscodeContext::GetStreamName() const
-{
-	return _stream_name;
-}
-
 common::MediaType TranscodeContext::GetMediaType() const
 {
 	return _media_type;

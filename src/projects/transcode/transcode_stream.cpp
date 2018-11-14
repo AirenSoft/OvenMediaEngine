@@ -94,7 +94,10 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 		CreateDecoder(track.second->GetId());
 	}
 
+	// Generate track list by profile(=encode name)
 	auto encodes = _application_info.GetEncodes();
+	std::map <ov::String, std::vector <uint8_t >> profile_tracks;
+	std::vector <uint8_t> tracks;
 
 	for(const auto &encode : encodes)
 	{
@@ -103,11 +106,48 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 			continue;
 		}
 
-		//auto stream_name = encode.GetStreamName();
-		ov::String stream_name = "";
+		auto video_profile = encode.GetVideoProfile();
+		auto audio_profile = encode.GetAudioProfile();
+		auto profile_name = encode.GetName();
 
-		// Resolve stream name
-		// ${OriginStreamName} => stream_info->GetName()
+		if((video_profile != nullptr) && (video_profile->IsActive()))
+		{
+			auto context = std::make_shared<TranscodeContext>(
+				GetCodecId(video_profile->GetCodec()),
+				GetBitrate(video_profile->GetBitrate()),
+				video_profile->GetWidth(), video_profile->GetHeight(),
+				video_profile->GetFramerate()
+			);
+			uint8_t track_id = AddContext(common::MediaType::Video, context);
+			if(track_id)
+			{
+				tracks.push_back(track_id);
+			}
+		}
+
+		if((audio_profile != nullptr) && (audio_profile->IsActive()))
+		{
+			auto context = std::make_shared<TranscodeContext>(
+				GetCodecId(audio_profile->GetCodec()),
+				GetBitrate(audio_profile->GetBitrate()),
+				audio_profile->GetSamplerate()
+			);
+			uint8_t track_id = AddContext(common::MediaType::Audio, context);
+			if(track_id)
+			{
+				tracks.push_back(track_id);
+			}
+		}
+		profile_tracks[profile_name] = tracks;
+		tracks.clear();
+	}
+
+	// Generate track list by stream
+	auto streams = _application_info.GetStreamList();
+
+	for(const auto &stream : streams)
+	{
+		auto stream_name = stream.GetName();
 		stream_name = stream_name.Replace("${OriginStreamName}", stream_info->GetName());
 
 		if(AddStreamInfoOutput(stream_name) == false)
@@ -115,38 +155,45 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 			continue;
 		}
 
-		auto video_profile = encode.GetVideoProfile();
-		auto audio_profile = encode.GetAudioProfile();
+		auto profiles = stream.GetProfiles();
 
-		if((video_profile != nullptr) && (video_profile->IsActive()))
+		for(const auto &profile : profiles)
 		{
-			bool ret = AddContext(
-				stream_name,
-				GetCodecId(video_profile->GetCodec()),
-				GetBitrate(video_profile->GetBitrate()),
-				video_profile->GetWidth(),
-				video_profile->GetHeight(),
-				video_profile->GetFramerate()
-			);
-			if(ret == false)
+			auto item = profile_tracks.find(profile.GetName());
+			if(item == profile_tracks.end())
 			{
 				continue;
 			}
+			tracks.push_back(item->second[0]);  // Video
+			tracks.push_back(item->second[1]);  // Audio
 		}
+		_stream_tracks[stream_name] = tracks;
+		tracks.clear();
+	}
 
-		if((audio_profile != nullptr) && (audio_profile->IsActive()))
+	// Generate unused track list to delete
+	for (auto context : _contexts)
+	{
+		bool found = false;
+		for (auto stream_track : _stream_tracks)
 		{
-			bool ret = AddContext(
-				stream_name,
-				GetCodecId(audio_profile->GetCodec()),
-				GetBitrate(audio_profile->GetBitrate()),
-				audio_profile->GetSamplerate()
-			);
-			if(ret == false)
+			auto it = find(stream_track.second.begin(), stream_track.second.end(), context.first);
+			if(it != stream_track.second.end())
 			{
-				continue;
+				found = true;
+				break;
 			}
 		}
+		if(found == false)
+		{
+			tracks.push_back(context.first);
+		}
+	}
+
+	// Delete unused context
+	for (auto track : tracks)
+	{
+		_contexts.erase(track);
 	}
 
 	///////////////////////////////////////////////////////
@@ -160,6 +207,8 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 		auto &cur_track = track.second;
 		CreateEncoders(cur_track);
 	}
+
+	logti("Transcoder Information / Encoders(%d) / Streams(%d)", _encoders.size(), _stream_tracks.size());
 
 	// 패킷 저리 스레드 생성
 	try
@@ -531,15 +580,23 @@ void TranscodeStream::SendFrame(std::unique_ptr<MediaPacket> packet)
 	uint8_t track_id = packet->GetTrackId();
 
 	auto item = _contexts.find(track_id);
-	auto stream_name = item->second->GetStreamName();
 
 	for(auto &iter : _stream_info_outputs)
 	{
-		if(stream_name != iter.first)
+		auto stream_track = _stream_tracks.find(iter.first);
+		if(stream_track == _stream_tracks.end())
 		{
 			continue;
 		}
-		_parent->SendFrame(iter.second, std::move(packet));
+
+		auto it = find(stream_track->second.begin(), stream_track->second.end(), track_id);
+		if(it == stream_track->second.end())
+		{
+			continue;
+		}
+
+		auto clone_packet = packet->ClonePacket();
+		_parent->SendFrame(iter.second, std::move(clone_packet));
 	}
 }
 
@@ -578,14 +635,23 @@ void TranscodeStream::CreateEncoders(std::shared_ptr<MediaTrack> media_track)
 			continue;
 		}
 
-		auto stream_name = iter.second->GetStreamName();
-		auto item = _stream_info_outputs.find(stream_name);
-		if(item == _stream_info_outputs.end())
+		for (auto stream_track : _stream_tracks)
 		{
-			OV_ASSERT2(false);
-			return;
+			auto it = find(stream_track.second.begin(), stream_track.second.end(), iter.first);
+			if(it == stream_track.second.end())
+			{
+				continue;
+			}
+
+			auto item = _stream_info_outputs.find(stream_track.first);
+			if(item == _stream_info_outputs.end())
+			{
+				OV_ASSERT2(false);
+				continue;
+			}
+			item->second->AddTrack(new_track);
+			logti("stream_name(%s), track_id(%d)", stream_track.first.CStr(), iter.first);
 		}
-		item->second->AddTrack(new_track);
 
 		// av_log_set_level(AV_LOG_DEBUG);
 		CreateEncoder(new_track, iter.second);
@@ -645,40 +711,33 @@ void TranscodeStream::DoFilters(std::unique_ptr<MediaFrame> frame)
 	}
 }
 
-bool TranscodeStream::AddContext(
-	ov::String &stream_name,
-	common::MediaCodecId codec_id,
-	int bitrate,
-	int width,
-	int height,
-	float framerate)
+uint8_t TranscodeStream::AddContext(common::MediaType media_type, std::shared_ptr<TranscodeContext> context)
 {
+	uint8_t last_index = 0;
 	// 96-127 dynamic : RTP Payload Types for standard audio and video encodings
-	// 0x60 ~ 0x6F
-	if(_last_track_video >= 0x70)
+	if (media_type == common::MediaType::Video)
 	{
-		logte("The number of video encoders that can be supported is 16");
-		return false;
+		// 0x60 ~ 0x6F
+		if(_last_track_video >= 0x70)
+		{
+			logte("The number of video encoders that can be supported is 16");
+			return 0;
+		}
+		last_index = _last_track_video;
+		++_last_track_video;
 	}
-	_contexts[_last_track_video++] = std::make_shared<TranscodeContext>(stream_name, codec_id, bitrate, width, height, framerate);
-
-	return true;
-}
-
-bool TranscodeStream::AddContext(
-	ov::String &stream_name,
-	common::MediaCodecId codec_id,
-	int bitrate,
-	float samplerate)
-{
-	// 96-127 dynamic : RTP Payload Types for standard audio and video encodings
-	// 0x70 ~ 0x7F
-	if(_last_track_audio > 0x7F)
+	else if (media_type == common::MediaType::Audio)
 	{
-		logte("The number of audio encoders that can be supported is 16");
-		return false;
+		// 0x70 ~ 0x7F
+		if(_last_track_audio > 0x7F)
+		{
+			logte("The number of audio encoders that can be supported is 16");
+			return 0;
+		}
+		last_index = _last_track_audio;
+		++_last_track_audio;
 	}
-	_contexts[_last_track_audio++] = std::make_shared<TranscodeContext>(stream_name, codec_id, bitrate, samplerate);
+	_contexts[last_index] = context;
 
-	return true;
+	return last_index;
 }

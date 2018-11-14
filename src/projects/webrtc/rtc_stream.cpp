@@ -157,7 +157,6 @@ bool RtcStream::Start()
 	_offer_sdp->ToString(offer_sdp_text);
 
 	logti("Stream is created : %s/%u", GetName().CStr(), GetId());
-	logtw("%s", offer_sdp_text.CStr());
 
 	return Stream::Start();
 }

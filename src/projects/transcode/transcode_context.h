@@ -22,13 +22,11 @@ public:
 
 	// Video
 	TranscodeContext(
-		ov::String &stream_name,
 		common::MediaCodecId codec_id,
 		int32_t bitrate,
 		uint32_t width,
 		uint32_t height,
-		float frame_rate) : _stream_name(stream_name),
-	                        _codec_id(codec_id),
+		float frame_rate) : _codec_id(codec_id),
 	                        _bitrate(bitrate),
 	                        _video_width(width),
 	                        _video_height(height),
@@ -41,11 +39,9 @@ public:
 
 	// Audio
 	TranscodeContext(
-		ov::String &stream_name,
 		common::MediaCodecId codec_id,
 		int32_t bitrate,
-		int32_t sample) : _stream_name(stream_name),
-	                      _codec_id(codec_id),
+		int32_t sample) : _codec_id(codec_id),
 	                      _bitrate(bitrate)
 	{
 		_media_type = common::MediaType::Audio;
@@ -92,8 +88,6 @@ public:
 
 	common::MediaType GetMediaType() const;
 
-	ov::String GetStreamName() const;
-
 private:
 	//--------------------------------------------------------------------
 	// Video transcoding options
@@ -123,8 +117,5 @@ private:
 
 	// Channel
 	common::AudioChannel _audio_channel;
-
-	// Linked stream name
-	ov::String _stream_name;
 };
 
