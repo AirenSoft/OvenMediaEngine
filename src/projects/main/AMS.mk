@@ -20,6 +20,7 @@ LOCAL_STATIC_LIBRARIES := \
 	config \
 	ovlibrary \
 	rtmpprovider \
+	segment_stream \
 	jsoncpp \
 	sqlite
 

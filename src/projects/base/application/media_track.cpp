@@ -17,6 +17,7 @@ using namespace common;
 MediaTrack::MediaTrack()
 	: _id(0),
 	  _codec_id(MediaCodecId::None),
+	  _bitrate(0),
 	  _start_frame_time(0),
 	  _last_frame_time(0)
 {
@@ -40,6 +41,8 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_channel_layout = media_track._channel_layout;
 
 	_time_base = media_track._time_base;
+
+	_bitrate = media_track._bitrate;
 
 	_start_frame_time = 0;
 	_last_frame_time = 0;
@@ -90,6 +93,15 @@ void MediaTrack::SetTimeBase(int32_t num, int32_t den)
 	_time_base.Set(num, den);
 }
 
+void MediaTrack::SetBitrate(int32_t bitrate)
+{
+	_bitrate = bitrate;
+}
+
+int32_t MediaTrack::GetBitrate()
+{
+	return _bitrate;
+}
 
 void MediaTrack::SetStartFrameTime(int64_t time)
 {

@@ -27,7 +27,7 @@
 const char g_rtmp_avc_nal_header[RTMP_AVC_NAL_HEADER_SIZE] = {0,0,0,1};
 
 //Rtmp - 44100(4) 22050(7) 11025(10) 사용 
-const int g_rtmp_sample_rate_table[] = {96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 0, 0, 0, 0};
+const int g_rtmp_sample_rate_table[] = {96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350, 0, 0, 0};
 #define RTMP_SAMPLERATE_TABLE_SIZE (16)
 
 #define RTMP_SESSION_KEY_MAX_SIZE				(1024)

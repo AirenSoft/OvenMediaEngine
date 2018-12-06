@@ -82,16 +82,25 @@ namespace ov
 				// listen된 socket에서 이벤트 발생
 
 				// listen된 socket에 새로운 클라이언트가 접속함
-				std::shared_ptr<ClientSocket> client = Accept();
+				int accept_count = 0;
+				std::shared_ptr<ClientSocket> client = nullptr;
 
-				if(client != nullptr)
+				do
 				{
-					// 정상적으로 accept 되었다면 callback
-					need_to_delete = connection_callback(client.get(), SocketConnectionState::Connected);
+					client = Accept();
 
-					// callback의 반환 값이 true면(need_to_delete = true), 아래에서 client 없앰
-				}
-				else
+					if(client != nullptr)
+					{
+						// 정상적으로 accept 되었다면 callback
+						need_to_delete = connection_callback(client.get(), SocketConnectionState::Connected);
+
+						// callback의 반환 값이 true면(need_to_delete = true), 아래에서 client 없앰
+
+						accept_count++;
+					}
+				}while(client != nullptr);
+
+				if(accept_count <= 0 && client_socket != nullptr)
 				{
 					// accept 실패. 아래에서 client 없앰 (정상적인 상황이라면, map 자체에 등록되어 있지 않음)
 					need_to_delete = true;

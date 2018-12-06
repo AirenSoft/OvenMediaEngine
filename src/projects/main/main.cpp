@@ -7,6 +7,7 @@
 
 #include <config/config_manager.h>
 #include <webrtc/webrtc_publisher.h>
+#include <segment_stream/segment_stream_publisher.h>
 #include <media_router/media_router.h>
 #include <transcode/transcoder.h>
 #include <rtmp/rtmp_provider.h>
@@ -76,6 +77,9 @@ int main()
 
 				logtd("Trying to create WebRtc Publisher for application [%s]...", application_info.GetName().CStr());
 				publishers.push_back(WebRtcPublisher::Create(application_info, router));
+
+				logtd("Trying to create SegmentStream Publisher for application [%s]...", application_info.GetName().CStr());
+				publishers.push_back(SegmentStreamPublisher::Create(application_info, router));
 			}
 		}
 		else

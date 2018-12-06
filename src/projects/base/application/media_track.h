@@ -38,6 +38,10 @@ public:
 	common::Timebase &GetTimeBase();
 	void SetTimeBase(int32_t num, int32_t den);
 
+	// bitrate 설정
+	void SetBitrate(int32_t bitrate);
+	int32_t GetBitrate();
+
 	void SetStartFrameTime(int64_t time);
 	int64_t GetStartFrameTime();
 
@@ -54,6 +58,9 @@ public:
 
 	// 타입 베이스
 	common::Timebase _time_base;
+
+	// bitrate
+	int32_t _bitrate;
 
 	// 시작 프레임(패킷) 시간
 	int64_t _start_frame_time;
