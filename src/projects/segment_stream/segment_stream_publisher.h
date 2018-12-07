@@ -37,12 +37,12 @@ private :
     bool        OnSegmentRequest(const ov::String &app_name, const ov::String &stream_name, SegmentType segment_type, const ov::String &file_name, std::shared_ptr<ov::Data> &segment_data) override;
     bool        OnCrossdomainRequest(ov::String &cross_domain) override;
     bool        OnCorsCheck(const ov::String &app_name, const ov::String &stream_name, ov::String &origin_url) override;
-private :
+
     // Publisher Implementation
-    cfg::PublisherType GetPublisherType() override
-    {
-        return cfg::PublisherType::Hls; // 임시( 차후 hls/dash 통합 처리)
-    }
+    cfg::PublisherType GetPublisherType() override { return cfg::PublisherType::Dash; }
+
+private :
+    const cfg::DashPublisher *_publisher_info = nullptr;
 
     std::shared_ptr<SegmentStreamServer> _segment_stream_server;
 };

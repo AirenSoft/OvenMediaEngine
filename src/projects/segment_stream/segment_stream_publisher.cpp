@@ -46,8 +46,9 @@ SegmentStreamPublisher::~SegmentStreamPublisher()
 //====================================================================================================
 uint16_t SegmentStreamPublisher::GetSegmentStreamPort()
 {
-    // temp
-    return 80;
+    int port = _publisher_info->GetPort();
+
+    return static_cast<uint16_t>((port == 0) ? 80 : port);
 }
 
 //====================================================================================================
@@ -56,15 +57,14 @@ uint16_t SegmentStreamPublisher::GetSegmentStreamPort()
 //====================================================================================================
 bool SegmentStreamPublisher::Start()
 {
-	/*
 	// Find SegmentStream publisher configuration
-	_publisher_info = FindPublisherInfo<cfg::SegmentStreamPublisher>();
+	_publisher_info = FindPublisherInfo<cfg::DashPublisher>();
 
 	if(_publisher_info == nullptr)
 	{
-		logte("Cannot initialize WebrtcPublisher using config information");
+		logte("Cannot initialize DashPublisher using config information");
 		return false;
-	}*/
+	}
 
     // segment setream server(http) Start
     _segment_stream_server = std::make_shared<SegmentStreamServer>();

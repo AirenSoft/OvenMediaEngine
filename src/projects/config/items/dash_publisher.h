@@ -20,6 +20,11 @@ namespace cfg
 			return PublisherType::Dash;
 		}
 
+		int GetPort() const
+		{
+			return _port;
+		}
+
 	protected:
 		void MakeParseList() const override
 		{
