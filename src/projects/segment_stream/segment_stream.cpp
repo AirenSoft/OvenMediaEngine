@@ -120,15 +120,15 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> 			track,
 {
 	//logtd("Video Timestamp : %d" , encoded_frame->time_stamp);
 
-    if(_stream_packetyzer != nullptr)
-    {
-        _stream_packetyzer->AppendVideoData(encoded_frame->time_stamp,
+	if(_stream_packetyzer != nullptr)
+	{
+		_stream_packetyzer->AppendVideoData(encoded_frame->time_stamp,
 											track->GetTimeBase().GetDen(),
 											encoded_frame->frame_type == FrameType::VideoFrameKey,
 											0,
 											encoded_frame->length,
 											encoded_frame->buffer);
-    }
+	}
 }
 
 //====================================================================================================
@@ -140,15 +140,15 @@ void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> 			track,
 								   std::unique_ptr<CodecSpecificInfo> 	codec_info,
 								   std::unique_ptr<FragmentationHeader> fragmentation)
 {
-    //logtd("Audio Timestamp : %d", encoded_frame->time_stamp);
+	//logtd("Audio Timestamp : %d", encoded_frame->time_stamp);
 
-    if(_stream_packetyzer != nullptr)
-    {
-        _stream_packetyzer->AppendAudioData(encoded_frame->time_stamp,
+	if(_stream_packetyzer != nullptr)
+	{
+		_stream_packetyzer->AppendAudioData(encoded_frame->time_stamp,
 											track->GetTimeBase().GetDen(),
 											encoded_frame->length,
 											encoded_frame->buffer);
-    }
+	}
 
 }
 
@@ -158,12 +158,12 @@ void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> 			track,
 //====================================================================================================
 bool SegmentStream::GetPlayList(PlayListType play_list_type, ov::String &play_list)
 {
-    if (_stream_packetyzer == nullptr)
-    {
-        return false;
-    }
+	if (_stream_packetyzer == nullptr)
+	{
+		return false;
+	}
 
-    return  _stream_packetyzer->GetPlayList(play_list_type, play_list);
+	return  _stream_packetyzer->GetPlayList(play_list_type, play_list);
 }
 
 //====================================================================================================
@@ -172,10 +172,10 @@ bool SegmentStream::GetPlayList(PlayListType play_list_type, ov::String &play_li
 //====================================================================================================
 bool SegmentStream::GetSegment(SegmentType type, const ov::String &file_name, std::shared_ptr<ov::Data> &data)
 {
-    if (_stream_packetyzer == nullptr)
-    {
-        return false;
-    }
+	if (_stream_packetyzer == nullptr)
+	{
+		return false;
+	}
 
-    return  _stream_packetyzer->GetSegment(type, file_name, data);
+	return  _stream_packetyzer->GetSegment(type, file_name, data);
 }

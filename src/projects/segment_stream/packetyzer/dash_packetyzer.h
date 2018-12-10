@@ -20,19 +20,19 @@
 class DashPacketyzer : public Packetyzer
 {
 public:
-    DashPacketyzer(	std::string 			&segment_prefix,
-    				PacketyzerStreamType 	stream_type,
-    				uint32_t 				segment_count,
-    				uint32_t 				segment_duration,
-    				PacketyzerMediaInfo 	&media_info);
-    ~DashPacketyzer() final;
+	DashPacketyzer(	std::string 			&segment_prefix,
+					PacketyzerStreamType 	stream_type,
+					uint32_t 				segment_count,
+					uint32_t 				segment_duration,
+					PacketyzerMediaInfo 	&media_info);
+	~DashPacketyzer() final;
 
 public :
-    bool VideoInit(std::shared_ptr<std::vector<uint8_t>> &data);
-    bool AudioInit();
+	bool VideoInit(std::shared_ptr<std::vector<uint8_t>> &data);
+	bool AudioInit();
 
-    bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData>  &frame_data);
-    bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData>  &frame_data);
+	bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData>  &frame_data);
+	bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData>  &frame_data);
 	bool VideoSegmentWrite(uint64_t last_timestamp);
 	bool AudioSegmentWrite(uint64_t last_timestamp);
 

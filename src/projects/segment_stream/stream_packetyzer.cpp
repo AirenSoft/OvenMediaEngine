@@ -19,7 +19,7 @@ StreamPacketyzer::StreamPacketyzer(std::string &segment_prefix, PacketyzerStream
 {
 	_video_timescale    = PACKTYZER_DEFAULT_TIMESCALE;
 	_audio_timescale    = media_info.audio_samplerate;
-    _stream_type        = stream_type;
+	_stream_type        = stream_type;
 
 	// timescale 변경
 	media_info.video_timescale = _video_timescale;
@@ -46,7 +46,7 @@ bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, b
 	// 임시
 	timescale = 90000;
 
-	// data vaild check
+	// data valid check
 	if(data_size <= 0 || data_size > MAX_INPUT_DATA_SIZE)
 	{
 		printf("ERROR : [StreamHlsMaker] AppendVideoData - Data Size Error(%d:%d)", data_size, MAX_INPUT_DATA_SIZE);
@@ -73,14 +73,14 @@ bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, b
 
 	// Video data save
 	if(_stream_type == PacketyzerStreamType::VideoOnly)
-    {
-        _dash_packetyzer->AppendVideoFrame(video_data);
-        _hls_packetyzer->AppendVideoFrame(video_data);
-    }
+	{
+		_dash_packetyzer->AppendVideoFrame(video_data);
+		_hls_packetyzer->AppendVideoFrame(video_data);
+	}
 	else
-    {
-	    _video_data_queue.push_back(video_data);
-    }
+	{
+		_video_data_queue.push_back(video_data);
+	}
 
 	return true; 
 }
@@ -104,7 +104,7 @@ bool StreamPacketyzer::VideoDataSampleWrite(uint64_t timestamp)
 
 			_dash_packetyzer->AppendVideoFrame(video_data);
 			_hls_packetyzer->AppendVideoFrame(video_data);
- 		}
+		}
 
 		_video_data_queue.pop_front();
 	}
@@ -117,7 +117,7 @@ bool StreamPacketyzer::VideoDataSampleWrite(uint64_t timestamp)
 //====================================================================================================
 bool StreamPacketyzer::AppendAudioData(uint64_t timestamp, uint32_t timescale, uint32_t data_size, uint8_t *data)
 {
-	// data vaild check
+	// data valid check
 	if(data_size <= 0 || data_size > MAX_INPUT_DATA_SIZE)
 	{
 		printf("ERROR : [StreamHlsMaker] AppendAudioData - Data Size Error(%d:%d)", data_size, MAX_INPUT_DATA_SIZE);
@@ -168,12 +168,12 @@ bool StreamPacketyzer::GetSegment(SegmentType type, const ov::String &segment_fi
 {
 	bool result = false;
 	std::string file_name = segment_file_name.CStr();
-    std::shared_ptr<std::vector<uint8_t>> data;
+	std::shared_ptr<std::vector<uint8_t>> data;
 
 	if      (type == SegmentType::MpegTs)   result = _hls_packetyzer->GetSegmentData(file_name, data);
 	else if(type == SegmentType::M4S)      result = _dash_packetyzer->GetSegmentData(file_name, data);
 
-    if(result)segment_data = std::make_shared<ov::Data>(data->data(), data->size());
+	if(result)segment_data = std::make_shared<ov::Data>(data->data(), data->size());
 
 	return result;
 }

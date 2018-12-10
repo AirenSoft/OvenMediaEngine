@@ -28,10 +28,10 @@ void BitWriter::Write(uint32_t bit_count, uint32_t value)
 	
 	data = _data->data();
 	
-    if (_bit_count + bit_count > _data->size()*8) 
+	if (_bit_count + bit_count > _data->size()*8)
 	{
 		return;
-    }
+	}
 
 	data += _bit_count/8;
 
@@ -39,21 +39,21 @@ void BitWriter::Write(uint32_t bit_count, uint32_t value)
 
 	while (bit_count) 
 	{
-        uint32_t mask = bit_count==32 ? 0xFFFFFFFF : ((1<<bit_count)-1);
+		uint32_t mask = bit_count==32 ? 0xFFFFFFFF : ((1<<bit_count)-1);
 		
-        if (bit_count <= space)
+		if (bit_count <= space)
 		{
-            *data |= ((value&mask) << (space -bit_count));
-            _bit_count += bit_count;
-            return;
-        }
-        else
-        {
-            *data |= ((value&mask) >> (bit_count- space));
-            ++data;
-            _bit_count	+= space;
-            bit_count	-= space;
+			*data |= ((value&mask) << (space -bit_count));
+			_bit_count += bit_count;
+			return;
+		}
+		else
+		{
+			*data |= ((value&mask) >> (bit_count- space));
+			++data;
+			_bit_count	+= space;
+			bit_count	-= space;
 			space		= 8;
-        }
-    }
+		}
+	}
 }

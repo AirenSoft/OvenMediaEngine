@@ -24,7 +24,7 @@ public:
 	virtual ~StreamPacketyzer();
 
 public :
-    bool    AppendVideoData(uint64_t timestamp, uint32_t timescale, bool is_keyframe, uint64_t time_offset, uint32_t data_size, uint8_t *data);
+	bool    AppendVideoData(uint64_t timestamp, uint32_t timescale, bool is_keyframe, uint64_t time_offset, uint32_t data_size, uint8_t *data);
 	bool    AppendAudioData(uint64_t timestamp, uint32_t timescale, uint32_t data_size, uint8_t *data);
 
 	bool    GetPlayList(PlayListType play_list_type, ov::String &segment_play_list);
@@ -38,7 +38,7 @@ private :
 	std::shared_ptr<DashPacketyzer> _dash_packetyzer;
 	uint32_t 						_audio_timescale;
 	uint32_t 						_video_timescale;
-    PacketyzerStreamType            _stream_type;
+	PacketyzerStreamType            _stream_type;
 	std::deque<std::shared_ptr<PacketyzerFrameData>>	_video_data_queue;
 };
 

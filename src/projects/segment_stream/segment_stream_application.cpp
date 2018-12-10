@@ -34,7 +34,7 @@ SegmentStreamApplication::SegmentStreamApplication(const info::Application &appl
 //====================================================================================================
 SegmentStreamApplication::~SegmentStreamApplication()
 {
-    Stop();
+	Stop();
 	logtd("SegmentStreamApplication(%d) has been terminated finally", GetId());
 
 }

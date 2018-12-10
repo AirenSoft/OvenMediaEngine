@@ -52,9 +52,9 @@ bool HlsPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame
 	}
 
 	uint64_t timestamp = frame_data->timestamp;
-    uint64_t time_offset = frame_data->time_offset;
+	uint64_t time_offset = frame_data->time_offset;
 
-    if(frame_data->timescale != _media_info.video_timescale)
+	if(frame_data->timescale != _media_info.video_timescale)
 	{
 		timestamp = ConvertTimeScale(frame_data->timestamp, frame_data->timescale, _media_info.video_timescale);
 		time_offset = ConvertTimeScale(frame_data->time_offset, frame_data->timescale, _media_info.video_timescale);
@@ -62,21 +62,21 @@ bool HlsPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame
 
 	if(frame_data->type == PacketyzerFrameType::VideoIFrame && !_frame_datas.empty())
 	{
-	    // Duration Check
-        uint64_t duration = timestamp - _frame_datas[0]->timestamp;
+		// Duration Check
+		uint64_t duration = timestamp - _frame_datas[0]->timestamp;
 
-        if(duration >= _segment_duration*_media_info.video_timescale)
-        {
+		if(duration >= _segment_duration*_media_info.video_timescale)
+		{
 			// Segment Write
 			SegmentWrite(_frame_datas[0]->timestamp, duration);
 		}
 	}
 
-    // 데이터 복사
-    auto frame = std::make_shared<std::vector<uint8_t>>(frame_data->data->data(), frame_data->data->data() + frame_data->data->size());
-    auto video_data = std::make_shared<PacketyzerFrameData>(frame_data->type ,  timestamp, time_offset, PACKTYZER_DEFAULT_TIMESCALE, frame);
+	// 데이터 복사
+	auto frame = std::make_shared<std::vector<uint8_t>>(frame_data->data->data(), frame_data->data->data() + frame_data->data->size());
+	auto video_data = std::make_shared<PacketyzerFrameData>(frame_data->type ,  timestamp, time_offset, PACKTYZER_DEFAULT_TIMESCALE, frame);
 
-    _frame_datas.push_back(video_data);
+	_frame_datas.push_back(video_data);
 
 	return true;
 
@@ -108,19 +108,19 @@ bool HlsPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData>  &fram
 	
 	if(_stream_type == PacketyzerStreamType::AudioOnly&& !_frame_datas.empty())
 	{
-        // Duration Check
-        uint64_t duration = timestamp - _frame_datas[0]->timestamp;
+		// Duration Check
+		uint64_t duration = timestamp - _frame_datas[0]->timestamp;
 
-        if(duration >= (_segment_duration * _media_info.audio_timescale))
-        {
-            // Segment Write
+		if(duration >= (_segment_duration * _media_info.audio_timescale))
+		{
+			// Segment Write
 			SegmentWrite(_frame_datas[0]->timestamp, duration);
-        }
+		}
 	}
 
-    // 데이터 복사
-    auto frame = std::make_shared<std::vector<uint8_t>>(frame_data->data->data(), frame_data->data->data() + frame_data->data->size());
-    auto audio_data = std::make_shared<PacketyzerFrameData>(frame_data->type , timestamp, 0, _media_info.audio_timescale, frame);
+	// 데이터 복사
+	auto frame = std::make_shared<std::vector<uint8_t>>(frame_data->data->data(), frame_data->data->data() + frame_data->data->size());
+	auto audio_data = std::make_shared<PacketyzerFrameData>(frame_data->type , timestamp, 0, _media_info.audio_timescale, frame);
 
 	_frame_datas.push_back(audio_data);
 
@@ -131,30 +131,30 @@ bool HlsPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData>  &fram
 //====================================================================================================
 bool HlsPacketyzer::SegmentWrite(uint64_t start_timestamp, uint64_t duration)
 {
-    auto ts_writer = std::make_unique<TsWriter>(_stream_type);
+	auto ts_writer = std::make_unique<TsWriter>(_stream_type);
 	
-    for(auto &frame_data : _frame_datas)
-    {
+	for(auto &frame_data : _frame_datas)
+	{
 		//if (frame_data->type == PacketyzerFrameType::AudioFrame) continue; 
 
-        // TS(PES) Write
-        ts_writer->WriteSample(frame_data->type != PacketyzerFrameType::AudioFrame,
-                        frame_data->type == PacketyzerFrameType::AudioFrame || frame_data->type == PacketyzerFrameType::VideoIFrame,
-                        frame_data->timestamp,
-                        frame_data->time_offset,
-                        frame_data->data);
-    }
+		// TS(PES) Write
+		ts_writer->WriteSample(frame_data->type != PacketyzerFrameType::AudioFrame,
+						frame_data->type == PacketyzerFrameType::AudioFrame || frame_data->type == PacketyzerFrameType::VideoIFrame,
+						frame_data->timestamp,
+						frame_data->time_offset,
+						frame_data->data);
+	}
 	
-    std::ostringstream	file_name_stream;
-    file_name_stream << _segment_prefix << "_" << _sequence_number << ".ts";
+	std::ostringstream	file_name_stream;
+	file_name_stream << _segment_prefix << "_" << _sequence_number << ".ts";
 
-    SetSegmentData(SegmentDataType::Ts, _sequence_number, file_name_stream.str(), duration, start_timestamp, ts_writer->GetDataStream(), true);
+	SetSegmentData(SegmentDataType::Ts, _sequence_number, file_name_stream.str(), duration, start_timestamp, ts_writer->GetDataStream(), true);
 
-    UpdatePlayList();
+	UpdatePlayList();
 
-    _sequence_number++;
+	_sequence_number++;
 
-    _frame_datas.clear();
+	_frame_datas.clear();
 
 	return true;
 }
@@ -192,15 +192,15 @@ bool HlsPacketyzer::UpdatePlayList( )
 	segment_datas_lock.unlock();
 
 	play_list    <<  "#EXTM3U" << "\r\n"
-                        <<  "#EXT-X-MEDIA-SEQUENCE:" << _sequence_number + 1 << "\r\n"
-                        <<  "#EXT-X-VERSION:3" << "\r\n"
-                        <<  "#EXT-X-ALLOW-CACHE:NO" << "\r\n"
-                        <<  "#EXT-X-TARGETDURATION:" << (int)(max_duration/PACKTYZER_DEFAULT_TIMESCALE) << "\r\n"
+						<<  "#EXT-X-MEDIA-SEQUENCE:" << _sequence_number + 1 << "\r\n"
+						<<  "#EXT-X-VERSION:3" << "\r\n"
+						<<  "#EXT-X-ALLOW-CACHE:NO" << "\r\n"
+						<<  "#EXT-X-TARGETDURATION:" << (int)(max_duration/PACKTYZER_DEFAULT_TIMESCALE) << "\r\n"
 						<< 	m3u8_play_list.str();
 
 	// Playlist 설정
 	std::string play_list_data = play_list.str();
 	SetPlayList(play_list_data);
 
-    return true;
+	return true;
 }

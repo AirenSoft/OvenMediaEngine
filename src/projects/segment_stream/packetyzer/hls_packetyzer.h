@@ -18,11 +18,11 @@
 class HlsPacketyzer : public Packetyzer
 {
 public:
-    HlsPacketyzer(	std::string				&segment_prefix,
+	HlsPacketyzer(	std::string				&segment_prefix,
 					PacketyzerStreamType 	stream_type,
 					uint32_t 				segment_count,
 					uint32_t				segment_duration,
-				    PacketyzerMediaInfo		&media_info);
+					PacketyzerMediaInfo		&media_info);
 	~HlsPacketyzer() = default;
 	
 public :

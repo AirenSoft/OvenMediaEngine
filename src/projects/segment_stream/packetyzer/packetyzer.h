@@ -23,20 +23,20 @@ public:
 				uint32_t 				segment_count,
 				uint32_t 				segment_duration,
 				PacketyzerMediaInfo 	&media_info);
-    virtual ~Packetyzer();
+	virtual ~Packetyzer();
 
 public :
 	static uint64_t ConvertTimeScale(uint64_t time, uint32_t from_timescale, uint32_t to_timescale);
-    bool SetPlayList(std::string &play_list);
-    bool SetSegmentData(	SegmentDataType data_type,
-    						uint32_t 		sequence_number,
-    						std::string 	file_name,
-    						uint64_t 		duration,
-    						uint64_t 		timestamp_,
-    						std::shared_ptr<std::vector<uint8_t>> &data,
-    						bool 			indexing = true);
-    bool GetPlayList(std::string &play_list);
-    bool GetSegmentData(std::string &file_name, std::shared_ptr<std::vector<uint8_t>> &data);
+	bool SetPlayList(std::string &play_list);
+	bool SetSegmentData(	SegmentDataType data_type,
+							uint32_t 		sequence_number,
+							std::string 	file_name,
+							uint64_t 		duration,
+							uint64_t 		timestamp_,
+							std::shared_ptr<std::vector<uint8_t>> &data,
+							bool 			indexing = true);
+	bool GetPlayList(std::string &play_list);
+	bool GetSegmentData(std::string &file_name, std::shared_ptr<std::vector<uint8_t>> &data);
    
 protected :
 	PacketyzerType			_packetyzer_type;
@@ -44,7 +44,7 @@ protected :
 	PacketyzerStreamType	_stream_type;
 	int 					_segment_count;
 	int						_segment_save_count;
-    uint64_t				_segment_duration; // second
+	uint64_t				_segment_duration; // second
 	PacketyzerMediaInfo		_media_info;
 	uint32_t				_sequence_number;
 	uint32_t				_video_sequence_number;

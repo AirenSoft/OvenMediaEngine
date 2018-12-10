@@ -23,12 +23,12 @@ Packetyzer::Packetyzer(	PacketyzerType 			packetyzer_type,
 	_packetyzer_type 		= packetyzer_type;
 	_segment_prefix			= segment_prefix;
 	_stream_type			= stream_type;
-    _segment_count			= segment_count;
+	_segment_count			= segment_count;
 	_segment_save_count		= segment_count * 2;
 	_segment_duration		= segment_duration;
 
-    _media_info				= media_info;
-  	_sequence_number		= 1;
+	_media_info				= media_info;
+	_sequence_number		= 1;
 	_video_sequence_number	= 1;
 	_audio_sequence_number	= 1;
 	_save_file				= false;
@@ -39,7 +39,7 @@ Packetyzer::Packetyzer(	PacketyzerType 			packetyzer_type,
 	if(_stream_type == PacketyzerStreamType::VideoOnly)_audio_init = true;
 	if(_stream_type == PacketyzerStreamType::AudioOnly)_video_init = true;
 
-    _segment_datas.clear();
+	_segment_datas.clear();
 	_segment_indexer.clear();
 	_video_segment_indexer.clear();
 	_audio_segment_indexer.clear();
@@ -86,7 +86,7 @@ bool Packetyzer::SetPlayList(std::string &play_list)
 
 		// init.m4s test 파일 저장
 		FILE * 	file = fopen(file_name.c_str(), "wb");
-	    fwrite(_play_list.c_str(), 1, _play_list.size(), file);
+		fwrite(_play_list.c_str(), 1, _play_list.size(), file);
 		fclose(file);
 	}
 	return true;
@@ -131,7 +131,7 @@ bool Packetyzer::SetSegmentData(SegmentDataType 	data_type,
 			// segment data delete
 			if (segment_data_item != _segment_datas.end())
 			{
-                _segment_datas.erase(segment_data_item);
+				_segment_datas.erase(segment_data_item);
 			}
 
 			// file delete
@@ -164,7 +164,7 @@ bool Packetyzer::SetSegmentData(SegmentDataType 	data_type,
 bool Packetyzer::GetPlayList(std::string &play_list)
 {
 	play_list = _play_list;
-    return true;
+	return true;
 }
 
 //====================================================================================================
@@ -179,7 +179,7 @@ bool Packetyzer::GetSegmentData(std::string &file_name, std::shared_ptr<std::vec
 	if (segment_data_item != _segment_datas.end())
 	{
 		data = segment_data_item->second->data;
-        return true;
+		return true;
 	}
 	return false;
 }

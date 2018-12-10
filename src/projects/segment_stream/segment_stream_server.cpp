@@ -17,29 +17,29 @@
 //====================================================================================================
 bool SegmentStreamServer::Start(const ov::SocketAddress &address)
 {
-    if(_http_server != nullptr)
-    {
-        OV_ASSERT(false, "Server is already running");
-        return false;
-    }
+	if(_http_server != nullptr)
+	{
+		OV_ASSERT(false, "Server is already running");
+		return false;
+	}
 
-    _http_server = std::make_shared<HttpServer>();
+	_http_server = std::make_shared<HttpServer>();
 
-    // Interceptor 추가
-    // 핸들러 등록
+	// Interceptor 추가
+	// 핸들러 등록
 
-    auto segment_stream_interceptor = std::make_shared<SegmentStreamInterceptor>();
+	auto segment_stream_interceptor = std::make_shared<SegmentStreamInterceptor>();
 
-    // 정규식 설정  app_name/stream_name/file_name.ext?param=value
-    ov::String regular_expression = "(([^ #?]*)/([^ #?]*)/)?([^ #?]*)[.](m3u8|mpd|ts|m4s|xml)[?]?([^ #]*)#?([^ ]*)?";
+	// 정규식 설정  app_name/stream_name/file_name.ext?param=value
+	ov::String regular_expression = "(([^ #?]*)/([^ #?]*)/)?([^ #?]*)[.](m3u8|mpd|ts|m4s|xml)[?]?([^ #]*)#?([^ ]*)?";
 
-    auto process_func = std::bind(&SegmentStreamServer::ProcessRequest, this , std::placeholders::_1, std::placeholders::_2);
+	auto process_func = std::bind(&SegmentStreamServer::ProcessRequest, this , std::placeholders::_1, std::placeholders::_2);
 
-    segment_stream_interceptor->Register(HttpMethod::Get , regular_expression, process_func);
+	segment_stream_interceptor->Register(HttpMethod::Get , regular_expression, process_func);
 
-    _http_server->AddInterceptor(segment_stream_interceptor);
+	_http_server->AddInterceptor(segment_stream_interceptor);
 
-    return _http_server->Start(address);
+	return _http_server->Start(address);
 }
 
 
@@ -48,26 +48,63 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address)
 //====================================================================================================
 bool SegmentStreamServer::Stop()
 {
-    return false;
+	return false;
 }
 
+//====================================================================================================
+// 접속 허용 app 및 Porotocol 설정
+//====================================================================================================
+bool SegmentStreamServer::SetAllowApp(ov::String &app_name, AllowProtocolFlag allow_flag)
+{
+	auto item = _allow_apps.find(app_name);
+
+	if(item == _allow_apps.end())
+	{
+		_allow_apps[app_name] = (uint32_t)allow_flag;
+	}
+	else
+	{
+		uint32_t allow_flags = item->second;
+
+		allow_flags |= (uint32_t)allow_flag;
+
+		_allow_apps[app_name] = allow_flags;
+	}
+
+	return true;
+}
+
+//====================================================================================================
+// 접속 허용 app 확인
+//====================================================================================================
+bool SegmentStreamServer::AllowAppCheck(ov::String &app_name, AllowProtocolFlag allow_flag)
+{
+	auto item = _allow_apps.find(app_name);
+
+	if(item == _allow_apps.end())
+	{
+		return false;
+	}
+
+	return (item->second & (uint32_t)AllowProtocolFlag::ALL) > 0 || (item->second & (uint32_t)allow_flag) > 0 ;
+}
 //====================================================================================================
 // AddObserver
 //====================================================================================================
 bool SegmentStreamServer::AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer)
 {
-    // 기존에 등록된 observer가 있는지 확인
-    for(const auto &item : _observers)
-    {
-        if(item == observer)
-        {
-            // 기존에 등록되어 있음
-            logtw("%p is already observer of SegmentStreamServer", observer.get());
-            return false;
-        }
-    }
+	// 기존에 등록된 observer가 있는지 확인
+	for(const auto &item : _observers)
+	{
+		if(item == observer)
+		{
+			// 기존에 등록되어 있음
+			logtw("%p is already observer of SegmentStreamServer", observer.get());
+			return false;
+		}
+	}
 
-    _observers.push_back(observer);
+	_observers.push_back(observer);
 
 }
 
@@ -76,21 +113,21 @@ bool SegmentStreamServer::AddObserver(const std::shared_ptr<SegmentStreamObserve
 //====================================================================================================
 bool SegmentStreamServer::RemoveObserver(const std::shared_ptr<SegmentStreamObserver> &observer)
 {
-    auto item = std::find_if(_observers.begin(), _observers.end(), [&](std::shared_ptr<SegmentStreamObserver> const &value) -> bool
-    {
-        return value == observer;
-    });
+	auto item = std::find_if(_observers.begin(), _observers.end(), [&](std::shared_ptr<SegmentStreamObserver> const &value) -> bool
+	{
+		return value == observer;
+	});
 
-    if(item == _observers.end())
-    {
-        // 기존에 등록되어 있지 않음
-        logtw("%p is not registered observer", observer.get());
-        return false;
-    }
+	if(item == _observers.end())
+	{
+		// 기존에 등록되어 있지 않음
+		logtw("%p is not registered observer", observer.get());
+		return false;
+	}
 
-    _observers.erase(item);
+	_observers.erase(item);
 
-    return true;
+	return true;
 }
 
 //====================================================================================================
@@ -98,7 +135,7 @@ bool SegmentStreamServer::RemoveObserver(const std::shared_ptr<SegmentStreamObse
 //====================================================================================================
 bool SegmentStreamServer::Disconnect(const ov::String &app_na, const ov::String &stream_name)
 {
-    return true;
+	return true;
 }
 
 
@@ -109,56 +146,56 @@ bool SegmentStreamServer::Disconnect(const ov::String &app_na, const ov::String 
 //====================================================================================================
 bool SegmentStreamServer::RequestUrlParsing(const ov::String &request_url, ov::String &app_name, ov::String &stream_name, ov::String &file_name, ov::String &file_ext)
 {
-    ov::String request_path;
-    ov::String request_param;
+	ov::String request_path;
+	ov::String request_param;
 
-    // 확장자 확인
-    // 파라메터 분리  directory/file.ext?param=test
-    auto tokens = request_url.Split("?");
-    if(tokens.size() == 0)
-    {
-        return false;
-    }
+	// 확장자 확인
+	// 파라메터 분리  directory/file.ext?param=test
+	auto tokens = request_url.Split("?");
+	if(tokens.size() == 0)
+	{
+		return false;
+	}
 
-    request_path =  tokens[0];
-    request_param = tokens.size() == 2 ? tokens[1] : "";
+	request_path =  tokens[0];
+	request_param = tokens.size() == 2 ? tokens[1] : "";
 
-    // ...../app_name/stream_name/file_name.ext_name 분리
-    tokens.clear();
-    tokens = request_path.Split("/");
+	// ...../app_name/stream_name/file_name.ext_name 분리
+	tokens.clear();
+	tokens = request_path.Split("/");
 
-    if(tokens.size() < 3)
-    {
-        return false;
-    }
+	if(tokens.size() < 3)
+	{
+		return false;
+	}
 
-    app_name     = tokens[tokens.size() -3];
-    stream_name  = tokens[tokens.size() -2];
-    file_name   = tokens[tokens.size() -1];
+	app_name     = tokens[tokens.size() -3];
+	stream_name  = tokens[tokens.size() -2];
+	file_name   = tokens[tokens.size() -1];
 
-    // file_name.ext_name 분리
-    tokens.clear();
-    tokens = file_name.Split(".");
+	// file_name.ext_name 분리
+	tokens.clear();
+	tokens = file_name.Split(".");
 
-    if(tokens.size() != 2)
-    {
-        return false;
-    }
+	if(tokens.size() != 2)
+	{
+		return false;
+	}
 
-    file_ext  = tokens[1];
+	file_ext  = tokens[1];
 
-    /*
-    logtd("request : %s\n"\
-         "request path : %s\n"\
-         "request param : %s\n"\
-         "app name : %s\n"\
-         "stream name : %s\n"\
-         "file name : %s\n"\
-         "file ext : %s\n",
-          request_url.CStr(), request_path.CStr(), request_param.CStr(),  app_name.CStr(), stream_name.CStr(), file_name.CStr(),file_ext.CStr());
-    */
+	/*
+	logtd("request : %s\n"\
+		 "request path : %s\n"\
+		 "request param : %s\n"\
+		 "app name : %s\n"\
+		 "stream name : %s\n"\
+		 "file name : %s\n"\
+		 "file ext : %s\n",
+		  request_url.CStr(), request_path.CStr(), request_param.CStr(),  app_name.CStr(), stream_name.CStr(), file_name.CStr(),file_ext.CStr());
+	*/
 
-    return true;
+	return true;
 }
 
 //====================================================================================================
@@ -166,40 +203,40 @@ bool SegmentStreamServer::RequestUrlParsing(const ov::String &request_url, ov::S
 //====================================================================================================
 void SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
 {
-    ov::String request_url = request->GetRequestTarget();
-    ov::String stream_name;
-    ov::String app_name;
-    ov::String file_name;
-    ov::String file_ext;
+	ov::String request_url = request->GetRequestTarget();
+	ov::String stream_name;
+	ov::String app_name;
+	ov::String file_name;
+	ov::String file_ext;
 
-    // Crossdomain 확인
-    if(request_url.IndexOf("crossdomain.xml") >= 0)
-    {
-        CrossdomainRequest(request, response);
-        return;
-    }
+	// Crossdomain 확인
+	if(request_url.IndexOf("crossdomain.xml") >= 0)
+	{
+		CrossdomainRequest(request, response);
+		return;
+	}
 
-    // URL 파싱
-    // app/strem/file.ext 기준
-    if(!RequestUrlParsing(request_url, app_name, stream_name, file_name, file_ext))
-    {
-        logtd("Request URL Parsing Fail : %s", request_url.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
-        return;
-    }
+	// URL 파싱
+	// app/strem/file.ext 기준
+	if(!RequestUrlParsing(request_url, app_name, stream_name, file_name, file_ext))
+	{
+		logtd("Request URL Parsing Fail : %s", request_url.CStr());
+		response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
+		return;
+	}
 
-    // CORS 확인
-    if(!CorsCheck(app_name, stream_name, request, response))
-    {
-        return;
-    }
+	// CORS 확인
+	if(!CorsCheck(app_name, stream_name, request, response))
+	{
+		return;
+	}
 
-    // 요청 파일 처리
-    if      (file_name == "playlist.m3u8")   PlayListRequest(app_name, stream_name, PlayListType::M3u8, response);
-    else if(file_name == "manifest.mpd")    PlayListRequest(app_name, stream_name, PlayListType::Mpd, response);
-    else if(file_ext == "ts")               SegmentRequest(app_name, stream_name, file_name, SegmentType::MpegTs, response);
-    else if(file_ext == "m4s")              SegmentRequest(app_name, stream_name, file_name, SegmentType::M4S, response);
-    else                                    response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
+	// 요청 파일 처리
+	if      (file_name == "playlist.m3u8")   PlayListRequest(app_name, stream_name, PlayListType::M3u8, response);
+	else if(file_name == "manifest.mpd")    PlayListRequest(app_name, stream_name, PlayListType::Mpd, response);
+	else if(file_ext == "ts")               SegmentRequest(app_name, stream_name, file_name, SegmentType::MpegTs, response);
+	else if(file_ext == "m4s")              SegmentRequest(app_name, stream_name, file_name, SegmentType::M4S, response);
+	else                                    response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
 }
 
 //====================================================================================================
@@ -208,33 +245,33 @@ void SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &req
 //====================================================================================================
 bool SegmentStreamServer::CorsCheck(ov::String &app_name, ov::String &stream_name, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
 {
-    if(!request->IsHeaderExists("Origin"))
-    {
-        return true;
-    }
+	if(!request->IsHeaderExists("Origin"))
+	{
+		return true;
+	}
 
-    ov::String origin_url = request->GetHeader("Origin");
+	ov::String origin_url = request->GetHeader("Origin");
 
-    logtd("Cors Check : %s/%s - %s", app_name.CStr(), stream_name.CStr(), origin_url.CStr());
+	logtd("Cors Check : %s/%s - %s", app_name.CStr(), stream_name.CStr(), origin_url.CStr());
 
-    auto item =  std::find_if(_observers.begin(), _observers.end(), [&app_name, &stream_name, &origin_url](auto &observer) -> bool
-    {
-        return observer->OnCorsCheck(app_name, stream_name, origin_url);
-    });
+	auto item =  std::find_if(_observers.begin(), _observers.end(), [&app_name, &stream_name, &origin_url](auto &observer) -> bool
+	{
+		return observer->OnCorsCheck(app_name, stream_name, origin_url);
+	});
 
-    if(item == _observers.end())
-    {
-        logtd("Cors Check Fail : %s/%s - %s", app_name.CStr(), stream_name.CStr(), origin_url.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
-        return false;
-    }
+	if(item == _observers.end())
+	{
+		logtd("Cors Check Fail : %s/%s - %s", app_name.CStr(), stream_name.CStr(), origin_url.CStr());
+		response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
+		return false;
+	}
 
-    // http 헤더 설정
-    response->SetHeader("Access-Control-Allow-Credentials", "true");
+	// http 헤더 설정
+	response->SetHeader("Access-Control-Allow-Credentials", "true");
 	response->SetHeader("Access-Control-Allow-Headers", "Content-Type, *");
 	response->SetHeader("Access-Control-Allow-Origin", "*");
 
-    return true;
+	return true;
 }
 
 //====================================================================================================
@@ -243,31 +280,39 @@ bool SegmentStreamServer::CorsCheck(ov::String &app_name, ov::String &stream_nam
 //====================================================================================================
 void SegmentStreamServer::PlayListRequest(ov::String &app_name, ov::String &stream_name, PlayListType play_list_type, const std::shared_ptr<HttpResponse> &response)
 {
-    ov::String play_list;
+	AllowProtocolFlag allow_flag = play_list_type == PlayListType::Mpd ? AllowProtocolFlag::DASH : AllowProtocolFlag::HLS;
+	if(!AllowAppCheck(app_name, allow_flag))
+	{
+		logtd("App Allow Check Fail : %s/%s", app_name.CStr(), stream_name.CStr());
+		response->SetStatusCode(HttpStatusCode::NotFound);
+		return;
+	}
 
-    auto item =  std::find_if(_observers.begin(), _observers.end(), [&app_name, &stream_name, &play_list_type, &play_list](auto &observer) -> bool
-    {
-        return observer->OnPlayListRequest(app_name, stream_name, play_list_type,  play_list);
-    });
+	ov::String play_list;
 
-    if(item == _observers.end() || play_list.IsEmpty())
-    {
-        logtd("PlayList Serarch Fail : %s/%s", app_name.CStr(), stream_name.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);
-        return;
-    }
+	auto item =  std::find_if(_observers.begin(), _observers.end(), [&app_name, &stream_name, &play_list_type, &play_list](auto &observer) -> bool
+	{
+		return observer->OnPlayListRequest(app_name, stream_name, play_list_type,  play_list);
+	});
 
-    // header setting
-    if(play_list_type == PlayListType::M3u8) response->SetHeader("Content-Type", "application/x-mpegURL");
-    else if(play_list_type == PlayListType::Mpd) response->SetHeader("Content-Type", "application/dash+xml");
+	if(item == _observers.end() || play_list.IsEmpty())
+	{
+		logtd("PlayList Serarch Fail : %s/%s", app_name.CStr(), stream_name.CStr());
+		response->SetStatusCode(HttpStatusCode::NotFound);
+		return;
+	}
 
-    logtd("PlayList Append : %s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), play_list.GetLength());
-    response->AppendString(play_list);
+	// header setting
+	if(play_list_type == PlayListType::M3u8) response->SetHeader("Content-Type", "application/x-mpegURL");
+	else if(play_list_type == PlayListType::Mpd) response->SetHeader("Content-Type", "application/dash+xml");
 
-    if(!response->Response())
-    {
-        logte("PlayList Response Fail  : %s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), play_list.GetLength());
-    }
+	logtd("PlayList Append : %s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), play_list.GetLength());
+	response->AppendString(play_list);
+
+	if(!response->Response())
+	{
+		logte("PlayList Response Fail  : %s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), play_list.GetLength());
+	}
 
 }
 
@@ -277,31 +322,39 @@ void SegmentStreamServer::PlayListRequest(ov::String &app_name, ov::String &stre
 //====================================================================================================
 void SegmentStreamServer::SegmentRequest(ov::String &app_name, ov::String &stream_name, ov::String &file_name, SegmentType segment_type, const std::shared_ptr<HttpResponse> &response)
 {
-    std::shared_ptr<ov::Data> segment_data = nullptr;
+	AllowProtocolFlag  allow_flag = segment_type == SegmentType::M4S ? AllowProtocolFlag::DASH : AllowProtocolFlag::HLS;
+	if(!AllowAppCheck(app_name, allow_flag))
+	{
+		logtd("App Allow Check Fail : %s/%s", app_name.CStr(), stream_name.CStr());
+		response->SetStatusCode(HttpStatusCode::NotFound);
+		return;
+	}
 
-    auto item =  std::find_if(_observers.begin(), _observers.end(), [&app_name, &stream_name, &segment_type, &file_name, &segment_data](auto &observer) -> bool
-    {
-        return observer->OnSegmentRequest(app_name, stream_name, segment_type, file_name, segment_data);
-    });
+	std::shared_ptr<ov::Data> segment_data = nullptr;
 
-    if(item == _observers.end() || segment_data == nullptr)
-    {
-        logtd("Segment Data Serarch Fail : %s/%s", app_name.CStr(), stream_name.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);
-        return;
-    }
+	auto item =  std::find_if(_observers.begin(), _observers.end(), [&app_name, &stream_name, &segment_type, &file_name, &segment_data](auto &observer) -> bool
+	{
+		return observer->OnSegmentRequest(app_name, stream_name, segment_type, file_name, segment_data);
+	});
 
-    // header setting
-    if(segment_type == SegmentType::MpegTs) response->SetHeader("Content-Type", "video/MP2T");
-    else if(segment_type == SegmentType::M4S) response->SetHeader("Content-Type", "video/mp4");
+	if(item == _observers.end() || segment_data == nullptr)
+	{
+		logtd("Segment Data Serarch Fail : %s/%s", app_name.CStr(), stream_name.CStr());
+		response->SetStatusCode(HttpStatusCode::NotFound);
+		return;
+	}
 
-    logtd("SegmentData Append : %s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), segment_data->GetLength());
-    response->AppendData(segment_data);
+	// header setting
+	if(segment_type == SegmentType::MpegTs) response->SetHeader("Content-Type", "video/MP2T");
+	else if(segment_type == SegmentType::M4S) response->SetHeader("Content-Type", "video/mp4");
 
-    if(!response->Response())
-    {
-        logte("Segment Response Fail  : %s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), segment_data->GetLength());
-    }
+	logtd("SegmentData Append : %s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), segment_data->GetLength());
+	response->AppendData(segment_data);
+
+	if(!response->Response())
+	{
+		logte("Segment Response Fail  : %s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), segment_data->GetLength());
+	}
 }
 
 //====================================================================================================
@@ -310,26 +363,26 @@ void SegmentStreamServer::SegmentRequest(ov::String &app_name, ov::String &strea
 //====================================================================================================
 void SegmentStreamServer::CrossdomainRequest(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
 {
-    ov::String crossdomain;
+	ov::String crossdomain;
 
-    auto item =  std::find_if(_observers.begin(), _observers.end(), [&crossdomain](auto &observer) -> bool
-    {
-        return observer->OnCrossdomainRequest(crossdomain);
-    });
+	auto item =  std::find_if(_observers.begin(), _observers.end(), [&crossdomain](auto &observer) -> bool
+	{
+		return observer->OnCrossdomainRequest(crossdomain);
+	});
 
-    if(item == _observers.end() || crossdomain.IsEmpty())
-    {
-        logtd("Crossdomain Serarch Fail");
-        response->SetStatusCode(HttpStatusCode::NotFound);
-        return;
-    }
+	if(item == _observers.end() || crossdomain.IsEmpty())
+	{
+		logtd("Crossdomain Serarch Fail");
+		response->SetStatusCode(HttpStatusCode::NotFound);
+		return;
+	}
 
-    // header setting
-    response->SetHeader("Content-Type", "text/x-cross-domain-policy");
+	// header setting
+	response->SetHeader("Content-Type", "text/x-cross-domain-policy");
 
-    response->AppendString(crossdomain);
-    if(!response->Response())
-    {
-        logte("PlayList Response Fail  : Size(%d)", crossdomain.GetLength());
-    }
+	response->AppendString(crossdomain);
+	if(!response->Response())
+	{
+		logte("PlayList Response Fail  : Size(%d)", crossdomain.GetLength());
+	}
 }

@@ -19,7 +19,7 @@
 class SegmentStreamPublisher : public Publisher, public SegmentStreamObserver
 {
 public:
-    static std::shared_ptr<SegmentStreamPublisher> Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
+	static std::shared_ptr<SegmentStreamPublisher> Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
 
 	SegmentStreamPublisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
 	~SegmentStreamPublisher();
@@ -27,22 +27,22 @@ public:
 public :
 
 private :
-    uint16_t     GetSegmentStreamPort();
-    bool        Start() override;
-    bool        Stop() override ;
-    std::shared_ptr<Application>    OnCreateApplication(const info::Application &application_info) override;
+	uint16_t     GetSegmentStreamPort();
+	bool        Start() override;
+	bool        Stop() override ;
+	std::shared_ptr<Application>    OnCreateApplication(const info::Application &application_info) override;
 
-    // SegmentStreamObserver Implementation
-    bool        OnPlayListRequest(const ov::String &app_name, const ov::String &stream_name, PlayListType play_list_type, ov::String &play_list) override;
-    bool        OnSegmentRequest(const ov::String &app_name, const ov::String &stream_name, SegmentType segment_type, const ov::String &file_name, std::shared_ptr<ov::Data> &segment_data) override;
-    bool        OnCrossdomainRequest(ov::String &cross_domain) override;
-    bool        OnCorsCheck(const ov::String &app_name, const ov::String &stream_name, ov::String &origin_url) override;
+	// SegmentStreamObserver Implementation
+	bool        OnPlayListRequest(const ov::String &app_name, const ov::String &stream_name, PlayListType play_list_type, ov::String &play_list) override;
+	bool        OnSegmentRequest(const ov::String &app_name, const ov::String &stream_name, SegmentType segment_type, const ov::String &file_name, std::shared_ptr<ov::Data> &segment_data) override;
+	bool        OnCrossdomainRequest(ov::String &cross_domain) override;
+	bool        OnCorsCheck(const ov::String &app_name, const ov::String &stream_name, ov::String &origin_url) override;
 
-    // Publisher Implementation
-    cfg::PublisherType GetPublisherType() override { return cfg::PublisherType::Dash; }
+	// Publisher Implementation
+	cfg::PublisherType GetPublisherType() override { return cfg::PublisherType::Dash; }
 
 private :
-    const cfg::DashPublisher *_publisher_info = nullptr;
+	const cfg::DashPublisher *_publisher_info = nullptr;
 
-    std::shared_ptr<SegmentStreamServer> _segment_stream_server;
+	std::shared_ptr<SegmentStreamServer> _segment_stream_server;
 };

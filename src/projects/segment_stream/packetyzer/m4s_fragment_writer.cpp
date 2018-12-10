@@ -23,15 +23,15 @@
 // Constructor
 //====================================================================================================
 M4sFragmentWriter::M4sFragmentWriter(	M4sMediaType	media_type,
-                                     	uint32_t		data_init_size,
-                                        uint32_t		sequence_number,
-                                        uint32_t		track_id,
+										uint32_t		data_init_size,
+										uint32_t		sequence_number,
+										uint32_t		track_id,
 										uint64_t		start_timestamp,
-                                        std::vector<std::shared_ptr<FragmentSampleData>> &sample_datas) :
-                                        M4sWriter(media_type, data_init_size)
+										std::vector<std::shared_ptr<FragmentSampleData>> &sample_datas) :
+										M4sWriter(media_type, data_init_size)
 {
-    _sequence_number    = sequence_number;
-    _track_id			= track_id;
+	_sequence_number    = sequence_number;
+	_track_id			= track_id;
 	_start_timestamp	= start_timestamp; 
 	_sample_datas	    = sample_datas;
 }
@@ -41,7 +41,7 @@ M4sFragmentWriter::M4sFragmentWriter(	M4sMediaType	media_type,
 //====================================================================================================
 M4sFragmentWriter::~M4sFragmentWriter( )
 {
-    _sample_datas.clear();
+	_sample_datas.clear();
 }
 
 //====================================================================================================
@@ -62,7 +62,7 @@ int M4sFragmentWriter::CreateData()
 	else if (_media_type == M4sMediaType::AudioMediaType)	position = _data_stream->size() - _sample_datas.size() * 8 - 4;
 
 
-    (*_data_stream)[position] = ((uint8_t)(data_offset >> 24 & 0xFF));
+	(*_data_stream)[position] = ((uint8_t)(data_offset >> 24 & 0xFF));
 	(*_data_stream)[position + 1] = ((uint8_t)(data_offset >> 16 & 0xFF));
 	(*_data_stream)[position + 2] = ((uint8_t)(data_offset >> 8 & 0xFF));
 	(*_data_stream)[position + 3] = ((uint8_t)(data_offset & 0xFF));
@@ -167,8 +167,8 @@ int M4sFragmentWriter::TrunBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_
 		flag = TRUN_FLAG_DATA_OFFSET_PRESENT | TRUN_FLAG_SAMPLE_DURATION_PRESENT | TRUN_FLAG_SAMPLE_SIZE_PRESENT;
 	}
 
-    WriteUint32(_sample_datas.size(), data);	// Sample Item Count;
-    WriteUint32(0x11111111, data);	            // Data offset - temp 0 setting
+	WriteUint32(_sample_datas.size(), data);	// Sample Item Count;
+	WriteUint32(0x11111111, data);	            // Data offset - temp 0 setting
 
 	for (auto &sample_data : _sample_datas)
 	{
@@ -184,7 +184,7 @@ int M4sFragmentWriter::TrunBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_
 		{
 			WriteUint32(sample_data->data->size(), data);				// sample
 		}
-    }
+	}
 
 	return BoxDataWrite("trun", 0, flag, data, data_stream);
 }

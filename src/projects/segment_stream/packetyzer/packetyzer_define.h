@@ -64,7 +64,7 @@ public :
 	{
 		sequence_number		= sequence_number_;
 		file_name			= file_name_;
-        create_time			= time(nullptr);
+		create_time			= time(nullptr);
 		duration			= duration_;
 		timestamp			= timestamp_;
 		data				= std::make_shared<std::vector<uint8_t>>(data_, data_ + data_size_);
@@ -82,8 +82,8 @@ public :
 
 public : 
 	int  		sequence_number;
-    std::string file_name;
-    time_t      create_time;
+	std::string file_name;
+	time_t      create_time;
 	uint64_t	duration;
 	uint64_t	timestamp;
 	std::shared_ptr<std::vector<uint8_t>> data; 
@@ -94,10 +94,10 @@ public :
 //====================================================================================================
 enum class PacketyzerFrameType
 {
-    VideoIFrame = 'I', // Key
-    VideoPFrame = 'P',
+	VideoIFrame = 'I', // Key
+	VideoPFrame = 'P',
 	VideoBFrame = 'B',
-    AudioFrame 	= 'A',
+	AudioFrame 	= 'A',
 };
 
 //====================================================================================================
@@ -106,30 +106,30 @@ enum class PacketyzerFrameType
 struct PacketyzerFrameData
 {
 public:
-    PacketyzerFrameData(PacketyzerFrameType type_, uint64_t timestamp_, uint64_t time_offset_, uint32_t time_scale_, std::shared_ptr<std::vector<uint8_t>> &data_)
-    {
-    	type 		= type_;
-        timestamp	= timestamp_;
-        time_offset = time_offset_;
-        timescale 	= time_scale_;
-        data		= data_;
-    }
-
-    PacketyzerFrameData(PacketyzerFrameType type_, uint64_t timestamp_, uint64_t time_offset_, uint32_t time_scale_)
-    {
+	PacketyzerFrameData(PacketyzerFrameType type_, uint64_t timestamp_, uint64_t time_offset_, uint32_t time_scale_, std::shared_ptr<std::vector<uint8_t>> &data_)
+	{
 		type 		= type_;
 		timestamp	= timestamp_;
-        time_offset = time_offset_;
-        timescale 	= time_scale_;
-        data		= std::make_shared<std::vector<uint8_t>>();
-    }
+		time_offset = time_offset_;
+		timescale 	= time_scale_;
+		data		= data_;
+	}
+
+	PacketyzerFrameData(PacketyzerFrameType type_, uint64_t timestamp_, uint64_t time_offset_, uint32_t time_scale_)
+	{
+		type 		= type_;
+		timestamp	= timestamp_;
+		time_offset = time_offset_;
+		timescale 	= time_scale_;
+		data		= std::make_shared<std::vector<uint8_t>>();
+	}
 
 public:
-    PacketyzerFrameType 	type;
-    uint64_t 	        	timestamp;
-    uint64_t 	       	 	time_offset;
-    uint32_t                timescale;
-    std::shared_ptr<std::vector<uint8_t>> 	data;
+	PacketyzerFrameType 	type;
+	uint64_t 	        	timestamp;
+	uint64_t 	       	 	time_offset;
+	uint32_t                timescale;
+	std::shared_ptr<std::vector<uint8_t>> 	data;
 };
 
 
@@ -152,20 +152,20 @@ struct PacketyzerMediaInfo
 {
 public :
 	PacketyzerMediaInfo()
-    {
-        video_codec_type 	= SegmentCodecType::UnknownCodec;
-        video_width			= 0;
-        video_height		= 0;
-        video_framerate		= 0;
-        video_bitrate		= 0;
-        video_timescale		= 0;
+	{
+		video_codec_type 	= SegmentCodecType::UnknownCodec;
+		video_width			= 0;
+		video_height		= 0;
+		video_framerate		= 0;
+		video_bitrate		= 0;
+		video_timescale		= 0;
 
-        audio_codec_type  	= SegmentCodecType::UnknownCodec;
-        audio_channels		= 0;
-        audio_samplerate	= 0;
-        audio_bitrate		= 0;
-        audio_timescale 	= 0;
-    }
+		audio_codec_type  	= SegmentCodecType::UnknownCodec;
+		audio_channels		= 0;
+		audio_samplerate	= 0;
+		audio_bitrate		= 0;
+		audio_timescale 	= 0;
+	}
 	PacketyzerMediaInfo(SegmentCodecType 	video_codec_type_,
 						uint32_t			video_width_,
 						uint32_t			video_height_,
