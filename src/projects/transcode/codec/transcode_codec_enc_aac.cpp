@@ -35,7 +35,7 @@ bool OvenCodecImplAvcodecEncAAC::Configure(std::shared_ptr<TranscodeContext> con
 	}
 
 	// put sample parameters
-	_context->bit_rate = 64000;
+	_context->bit_rate = context->GetBitrate();
 
 	// check that the encoder supports s16 pcm input
 	// AV_SAMPLE_FMT_S16, AV_SAMPLE_FMT_FLT, AV_SAMPLE_FMT_NO
@@ -43,7 +43,7 @@ bool OvenCodecImplAvcodecEncAAC::Configure(std::shared_ptr<TranscodeContext> con
 
 	// select other audio parameters supported by the encoder
 	// 지원 가능한 샘플 레이트 48000, 24000, 16000, 12000, 8000, 0
-	_context->sample_rate = 48000;
+	_context->sample_rate = context->GetAudioSampleRate();
 	_context->channel_layout = AV_CH_LAYOUT_STEREO;
 	_context->channels = av_get_channel_layout_nb_channels(_context->channel_layout);
 
