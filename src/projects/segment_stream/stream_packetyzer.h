@@ -20,13 +20,18 @@
 class StreamPacketyzer
 {
 public:
-	StreamPacketyzer(std::string &segment_prefix, PacketyzerStreamType stream_type, int segment_count, int segment_duration, PacketyzerMediaInfo &media_info);
+	StreamPacketyzer(bool               enable_dash,
+					bool                enable_hls,
+					std::string         &segment_prefix,
+					PacketyzerStreamType stream_type,
+					int                 segment_count,
+					int                 segment_duration,
+					PacketyzerMediaInfo  media_info);
 	virtual ~StreamPacketyzer();
 
 public :
 	bool    AppendVideoData(uint64_t timestamp, uint32_t timescale, bool is_keyframe, uint64_t time_offset, uint32_t data_size, uint8_t *data);
 	bool    AppendAudioData(uint64_t timestamp, uint32_t timescale, uint32_t data_size, uint8_t *data);
-
 	bool    GetPlayList(PlayListType play_list_type, ov::String &segment_play_list);
 	bool    GetSegment(SegmentType type, const ov::String &file_name, std::shared_ptr<ov::Data> &data);
 

@@ -114,9 +114,9 @@ bool SegmentStreamServer::AddObserver(const std::shared_ptr<SegmentStreamObserve
 bool SegmentStreamServer::RemoveObserver(const std::shared_ptr<SegmentStreamObserver> &observer)
 {
 	auto item = std::find_if(_observers.begin(), _observers.end(), [&](std::shared_ptr<SegmentStreamObserver> const &value) -> bool
-	{
-		return value == observer;
-	});
+    {
+        return value == observer;
+    });
 
 	if(item == _observers.end())
 	{

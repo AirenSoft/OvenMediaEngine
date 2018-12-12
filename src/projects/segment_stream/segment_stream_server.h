@@ -15,7 +15,6 @@
 #include <http_server/https_server.h>
 #include <http_server/interceptors/http_request_interceptors.h>
 
-
 enum class AllowProtocolFlag
 {
 	NONE	= 0x00,
@@ -39,10 +38,8 @@ public :
 	bool Stop();
 	bool SetAllowApp(ov::String &app_name, AllowProtocolFlag allow_flag);
 	bool AllowAppCheck(ov::String &app_name, AllowProtocolFlag allow_flag);
-
 	bool AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer);
 	bool RemoveObserver(const std::shared_ptr<SegmentStreamObserver> &observer);
-
 	bool Disconnect(const ov::String &app_na, const ov::String &stream_name);
 
 protected:
@@ -53,11 +50,10 @@ protected:
 	void SegmentRequest(ov::String &app_name, ov::String &stream_name, ov::String &file_name,SegmentType segment_type, const std::shared_ptr<HttpResponse> &response);
 	void CrossdomainRequest(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
 
-
 protected :
 	std::shared_ptr<HttpServer> 						_http_server;
 	std::vector<std::shared_ptr<SegmentStreamObserver>> _observers;
-	std::map<ov::String, uint32_t> 			        _allow_apps;  // key : app name  flag : hls/dash allow flag
+	std::map<ov::String, uint32_t> 			        	_allow_apps;  // key : app name  flag : hls/dash allow flag
 
 
 };

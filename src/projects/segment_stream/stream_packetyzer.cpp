@@ -15,7 +15,13 @@
 //====================================================================================================
 // Constructor
 //====================================================================================================
-StreamPacketyzer::StreamPacketyzer(std::string &segment_prefix, PacketyzerStreamType stream_type, int segment_count, int segment_duration, PacketyzerMediaInfo &media_info)
+StreamPacketyzer::StreamPacketyzer(bool               enable_dash,
+								   bool                enable_hls,
+								   std::string         &segment_prefix,
+								   PacketyzerStreamType stream_type,
+								   int                 segment_count,
+								   int                 segment_duration,
+								   PacketyzerMediaInfo  media_info)
 {
 	_video_timescale    = PACKTYZER_DEFAULT_TIMESCALE;
 	_audio_timescale    = media_info.audio_samplerate;
@@ -25,8 +31,11 @@ StreamPacketyzer::StreamPacketyzer(std::string &segment_prefix, PacketyzerStream
 	media_info.video_timescale = _video_timescale;
 	media_info.audio_timescale = _audio_timescale;
 
-	_hls_packetyzer = std::make_shared<HlsPacketyzer>(segment_prefix, stream_type, segment_count, segment_duration, media_info);
-	_dash_packetyzer = std::make_shared<DashPacketyzer>(segment_prefix, stream_type, segment_count, segment_duration, media_info);
+	_dash_packetyzer    = nullptr;
+	_hls_packetyzer     = nullptr;
+
+	if(enable_dash) _dash_packetyzer = std::make_shared<DashPacketyzer>(segment_prefix, stream_type, segment_count, segment_duration, media_info);
+	if(enable_hls) _hls_packetyzer = std::make_shared<HlsPacketyzer>(segment_prefix, stream_type, segment_count, segment_duration, media_info);
 }
 
 //====================================================================================================
@@ -64,7 +73,7 @@ bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, b
 	if (timescale != _video_timescale)
 	{
 		timestamp = Packetyzer::ConvertTimeScale(timestamp, timescale, _video_timescale);
-		if(time_offset != 0)time_offset = Packetyzer::ConvertTimeScale(time_offset, timescale, _video_timescale);
+		if(time_offset != 0) time_offset = Packetyzer::ConvertTimeScale(time_offset, timescale, _video_timescale);
 
 	}
 
@@ -74,8 +83,8 @@ bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, b
 	// Video data save
 	if(_stream_type == PacketyzerStreamType::VideoOnly)
 	{
-		_dash_packetyzer->AppendVideoFrame(video_data);
-		_hls_packetyzer->AppendVideoFrame(video_data);
+		if(_dash_packetyzer != nullptr) _dash_packetyzer->AppendVideoFrame(video_data);
+		if(_hls_packetyzer != nullptr) _hls_packetyzer->AppendVideoFrame(video_data);
 	}
 	else
 	{
@@ -102,8 +111,8 @@ bool StreamPacketyzer::VideoDataSampleWrite(uint64_t timestamp)
 				break;
 			}
 
-			_dash_packetyzer->AppendVideoFrame(video_data);
-			_hls_packetyzer->AppendVideoFrame(video_data);
+			if(_dash_packetyzer != nullptr) _dash_packetyzer->AppendVideoFrame(video_data);
+			if(_hls_packetyzer != nullptr) _hls_packetyzer->AppendVideoFrame(video_data);
 		}
 
 		_video_data_queue.pop_front();
@@ -137,8 +146,8 @@ bool StreamPacketyzer::AppendAudioData(uint64_t timestamp, uint32_t timescale, u
 	auto audio_data = std::make_shared<PacketyzerFrameData>(PacketyzerFrameType::AudioFrame,  timestamp, 0, _audio_timescale, frame);
 
 	// hls/dash Audio 데이터 삽입
-	_dash_packetyzer->AppendAudioFrame(audio_data);
-	_hls_packetyzer->AppendAudioFrame(audio_data);
+	if(_dash_packetyzer != nullptr) _dash_packetyzer->AppendAudioFrame(audio_data);
+	if(_hls_packetyzer != nullptr) _hls_packetyzer->AppendAudioFrame(audio_data);
 
 	return true;
 }
@@ -152,8 +161,8 @@ bool StreamPacketyzer::GetPlayList(PlayListType play_list_type, ov::String &segm
 	bool result = false;
 	std::string play_list;
 
-	if		(play_list_type == PlayListType::M3u8)  result = _hls_packetyzer->GetPlayList(play_list);
-	else if(play_list_type == PlayListType::Mpd)   result = _dash_packetyzer->GetPlayList(play_list);
+	if (play_list_type == PlayListType::Mpd && _dash_packetyzer != nullptr) result = _dash_packetyzer->GetPlayList(play_list);
+	else if (play_list_type == PlayListType::M3u8 && _hls_packetyzer != nullptr) result = _hls_packetyzer->GetPlayList(play_list);
 
 	if(result)segment_play_list = play_list.c_str();
 
@@ -170,8 +179,8 @@ bool StreamPacketyzer::GetSegment(SegmentType type, const ov::String &segment_fi
 	std::string file_name = segment_file_name.CStr();
 	std::shared_ptr<std::vector<uint8_t>> data;
 
-	if      (type == SegmentType::MpegTs)   result = _hls_packetyzer->GetSegmentData(file_name, data);
-	else if(type == SegmentType::M4S)      result = _dash_packetyzer->GetSegmentData(file_name, data);
+	if (type == SegmentType::M4S && _dash_packetyzer != nullptr) result = _dash_packetyzer->GetSegmentData(file_name, data);
+	else if (type == SegmentType::MpegTs && _hls_packetyzer != nullptr) result = _hls_packetyzer->GetSegmentData(file_name, data);
 
 	if(result)segment_data = std::make_shared<ov::Data>(data->data(), data->size());
 
