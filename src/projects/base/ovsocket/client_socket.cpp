@@ -15,8 +15,8 @@ namespace ov
 	{
 	}
 
-	ClientSocket::ClientSocket(SocketType type, socket_t socket, const sockaddr_in &remote_addr_in)
-		: Socket(type, socket, remote_addr_in)
+	ClientSocket::ClientSocket(SocketWrapper socket, const SocketAddress &remote_address)
+		: Socket(socket, remote_address)
 	{
 		MakeNonBlocking();
 	}

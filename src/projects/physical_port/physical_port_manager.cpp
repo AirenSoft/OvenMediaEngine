@@ -25,9 +25,14 @@ std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(ov::SocketType typ
 	if(item == _port_list.end())
 	{
 		port = std::make_shared<PhysicalPort>();
+
 		if(port->Create(type, address))
 		{
 			_port_list[key] = port;
+		}
+		else
+		{
+			port = nullptr;
 		}
 	}
 	else

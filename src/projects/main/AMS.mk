@@ -30,6 +30,7 @@ LOCAL_PREBUILT_LIBRARIES := \
 LOCAL_LDFLAGS := \
 	-lpthread \
 	-ldl \
+	`pkg-config --libs srt` \
 	`pkg-config --libs libavformat` \
 	`pkg-config --libs libavfilter` \
 	`pkg-config --libs libavcodec` \

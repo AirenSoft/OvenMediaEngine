@@ -86,6 +86,8 @@ namespace cfg
 
 		//endregion
 
+		//region ========== ParseItem ==========
+
 		struct ParseItem
 		{
 			ParseItem() = default;
@@ -107,6 +109,8 @@ namespace cfg
 
 			std::shared_ptr<ValueBase> value;
 		};
+
+		//endregion
 
 		//region ========== RegisterValue ==========
 

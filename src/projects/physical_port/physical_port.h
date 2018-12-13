@@ -44,13 +44,16 @@ public:
 	bool RemoveObserver(PhysicalPortObserver *observer);
 
 protected:
+	bool CreateServerSocket(ov::SocketType type, const ov::SocketAddress &address);
+	bool CreateDatagramSocket(ov::SocketType type, const ov::SocketAddress &address);
+
 	std::shared_ptr<PhysicalPort> _self;
 
 	ov::SocketType _type;
 	ov::SocketAddress _address;
 
-	std::shared_ptr<ov::ServerSocket> _tcp_socket;
-	std::shared_ptr<ov::DatagramSocket> _udp_socket;
+	std::shared_ptr<ov::ServerSocket> _server_socket;
+	std::shared_ptr<ov::DatagramSocket> _datagram_socket;
 
 	volatile bool _need_to_stop;
 	std::thread _thread;

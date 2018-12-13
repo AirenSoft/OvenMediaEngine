@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include <errno.h>
+#include <srt/srt.h>
 #include "error.h"
 
 #include "log.h"
@@ -87,8 +88,9 @@ namespace ov
 		return std::make_shared<Error>("errno", errno, "%s", strerror(errno));
 	}
 
-	Error::~Error()
+	std::shared_ptr<Error> Error::CreateErrorFromSrt()
 	{
+		return std::make_shared<Error>("SRT", srt_getlasterror(nullptr), "%s (0x%x)", srt_getlasterror_str(), srt_getlasterror(nullptr));
 	}
 
 	int Error::GetCode() const

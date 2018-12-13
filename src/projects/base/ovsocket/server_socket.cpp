@@ -12,22 +12,23 @@
 
 namespace ov
 {
-	bool ServerSocket::Prepare(uint16_t port, int backlog)
+	bool ServerSocket::Prepare(SocketType type, uint16_t port, int backlog)
 	{
-		return Prepare(SocketAddress(port), backlog);
+		return Prepare(type, SocketAddress(port), backlog);
 	}
 
-	bool ServerSocket::Prepare(const SocketAddress &address, int backlog)
+	bool ServerSocket::Prepare(SocketType type, const SocketAddress &address, int backlog)
 	{
 		CHECK_STATE(== SocketState::Closed, false);
 
 		if(
 			(
-				Create(SocketType::Tcp) &&
+				Create(type) &&
 				MakeNonBlocking() &&
 				PrepareEpoll() &&
 				AddToEpoll(this, static_cast<void *>(this)) &&
-				SetSockOpt<int>(SO_REUSEADDR, 1) &&
+				// SRT socket is already non-block mode
+				((type == SocketType::Tcp) ? SetSockOpt<int>(SO_REUSEADDR, 1) : SetSockOpt(SRTO_REUSEADDR, true)) &&
 				Bind(address) &&
 				Listen(backlog)
 			) == false)
@@ -67,12 +68,20 @@ namespace ov
 
 			if(
 				OV_CHECK_FLAG(event->events, EPOLLERR) ||
-				OV_CHECK_FLAG(event->events, EPOLLHUP) ||
 				(!OV_CHECK_FLAG(event->events, EPOLLIN))
 				)
 			{
 				// 오류 발생
-				logte("[%p] [#%d] Epoll error: %p, events: %s (%d)", this, GetSocket(), epoll_data, StringFromEpollEvent(event).CStr(), event->events);
+				logte("[%p] [#%d] Epoll error: %p, events: %s (%d)", this, _socket.GetSocket(), epoll_data, StringFromEpollEvent(event).CStr(), event->events);
+
+				// client map에서 삭제
+				need_to_delete = true;
+			}
+			else if(OV_CHECK_FLAG(event->events, EPOLLHUP))
+			{
+				logti("[%p] [#%d] Client is disconnected", this, _socket.GetSocket());
+
+				connection_callback(client_socket, SocketConnectionState::Disconnected);
 
 				// client map에서 삭제
 				need_to_delete = true;
@@ -98,7 +107,7 @@ namespace ov
 
 						accept_count++;
 					}
-				}while(client != nullptr);
+				} while(client != nullptr);
 
 				if(accept_count <= 0 && client_socket != nullptr)
 				{
@@ -125,20 +134,20 @@ namespace ov
 
 					if(client_socket->GetState() == SocketState::Closed)
 					{
-						logtd("[%p] [#%d] Client %s is disconnected (Socket is closed)", this, GetSocket(), client_socket->ToString().CStr());
+						logtd("[%p] [#%d] Client %s is disconnected (Socket is closed)", this, _socket.GetSocket(), client_socket->ToString().CStr());
 						connection_callback(client_socket, SocketConnectionState::Disconnected);
 						break;
 					}
 					else if(client_socket->GetState() == SocketState::Error)
 					{
-						logtd("[%p] [#%d] An error occurred on client %s", this, GetSocket(), client_socket->ToString().CStr());
+						logtd("[%p] [#%d] An error occurred on client %s", this, _socket.GetSocket(), client_socket->ToString().CStr());
 						connection_callback(client_socket, SocketConnectionState::Error);
 						break;
 					}
 
 					if(error != nullptr)
 					{
-						logtd("[%p] [#%d] Client %s is disconnected", this, GetSocket(), client_socket->ToString().CStr());
+						logtd("[%p] [#%d] Client %s is disconnected", this, _socket.GetSocket(), client_socket->ToString().CStr());
 						need_to_delete = true;
 						break;
 					}
@@ -178,7 +187,7 @@ namespace ov
 					}
 					else
 					{
-						logtd("[%d] Could not find socket instance for %s", GetSocket(), client_socket->ToString().CStr());
+						logtd("[%d] Could not find socket instance for %s", _socket.GetSocket(), client_socket->ToString().CStr());
 					}
 				}
 			}
@@ -195,17 +204,13 @@ namespace ov
 
 		if(client != nullptr)
 		{
-			logtd("[%p] [#%d] New client is connected: %s", this, GetSocket(), client->ToString().CStr());
+			logtd("[%p] [#%d] New client is connected: %s", this, _socket.GetSocket(), client->ToString().CStr());
 
 			_client_list[client.get()] = client;
 
 			AddToEpoll(client.get(), static_cast<void *>(client.get()));
 
 			return client;
-		}
-		else
-		{
-			logte("[%p] [#%d] Could not accept new client", this, GetSocket());
 		}
 
 		return nullptr;
@@ -224,6 +229,4 @@ namespace ov
 	{
 		return Socket::ToString("ServerSocket");
 	}
-
-
 }

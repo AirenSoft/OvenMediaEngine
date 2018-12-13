@@ -14,8 +14,8 @@
 
 PhysicalPort::PhysicalPort()
 	: _type(ov::SocketType::Unknown),
-	  _tcp_socket(nullptr),
-	  _udp_socket(nullptr),
+	  _server_socket(nullptr),
+	  _datagram_socket(nullptr),
 
 	  _need_to_stop(true)
 {
@@ -28,136 +28,146 @@ PhysicalPort::~PhysicalPort()
 
 bool PhysicalPort::Create(ov::SocketType type, const ov::SocketAddress &address)
 {
-	OV_ASSERT2((_tcp_socket == nullptr) && (_udp_socket == nullptr));
+	OV_ASSERT2((_server_socket == nullptr) && (_datagram_socket == nullptr));
 
 	logtd("Trying to start server...");
 
 	switch(type)
 	{
+		case ov::SocketType::Srt:
 		case ov::SocketType::Tcp:
 		{
-			auto socket = std::make_shared<ov::ServerSocket>();
-
-			if(socket->Prepare(address))
-			{
-				_type = type;
-				_tcp_socket = socket;
-
-				_need_to_stop = false;
-
-				auto proc = [&, socket]() -> void
-				{
-					auto client_callback = [&](ov::ClientSocket *client, ov::SocketConnectionState state) -> bool
-					{
-						switch(state)
-						{
-							case ov::SocketConnectionState::Connected:
-							{
-								logtd("New client is connected: %s", client->ToString().CStr());
-
-								// observer들에게 알림
-								auto func = std::bind(&PhysicalPortObserver::OnConnected, std::placeholders::_1, static_cast<ov::Socket *>(client));
-								std::for_each(_observer_list.begin(), _observer_list.end(), func);
-
-								break;
-							}
-
-							case ov::SocketConnectionState::Disconnected:
-							{
-								logtd("Client is disconnected: %s", client->ToString().CStr());
-
-								// observer들에게 알림
-								auto func = std::bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, static_cast<ov::Socket *>(client), PhysicalPortDisconnectReason::Disconnected, nullptr);
-								std::for_each(_observer_list.begin(), _observer_list.end(), func);
-
-								break;
-							}
-						}
-
-						if(client->GetType() == ov::SocketType ::Tcp)
-						{
-							// TCP는 명시적으로 close하기 전까지 계속 사용해야 하므로 false 반환
-							return false;
-						}
-
-						return true;
-					};
-
-					auto data_callback = [&](ov::ClientSocket *client, const std::shared_ptr<const ov::Data> &data) -> bool
-					{
-						logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
-
-						// observer들에게 알림
-						auto func = std::bind(&PhysicalPortObserver::OnDataReceived, std::placeholders::_1, static_cast<ov::Socket *>(client), std::ref(*(client->GetRemoteAddress().get())), std::ref(data));
-						std::for_each(_observer_list.begin(), _observer_list.end(), func);
-
-						// TCP는 명시적으로 close하기 전까지 계속 사용해야 하므로 false 반환
-						return false;
-					};
-
-					while((_need_to_stop == false) && (socket->DispatchEvent(client_callback, data_callback, 500)))
-					{
-					}
-
-					socket->Close();
-
-					logtd("Server is stopped");
-				};
-
-				// thread 시작
-				_thread = std::thread(proc);
-
-				_address = address;
-
-				return true;
-			}
-			break;
+			return CreateServerSocket(type, address);
 		}
 
 		case ov::SocketType::Udp:
 		{
-			auto socket = std::make_shared<ov::DatagramSocket>();
+			return CreateDatagramSocket(type, address);
+		}
+	}
 
-			if(socket->Prepare(address))
+	return false;
+}
+
+bool PhysicalPort::CreateServerSocket(ov::SocketType type, const ov::SocketAddress &address)
+{
+	auto socket = std::make_shared<ov::ServerSocket>();
+
+	if(socket->Prepare(type, address))
+	{
+		_type = type;
+		_server_socket = socket;
+
+		_need_to_stop = false;
+
+		auto proc = [&, socket]() -> void
+		{
+			auto client_callback = [&](ov::ClientSocket *client, ov::SocketConnectionState state) -> bool
 			{
-				_type = type;
-				_udp_socket = socket;
-
-				_need_to_stop = false;
-
-				auto proc = [&, socket]() -> void
+				switch(state)
 				{
-					auto data_callback = [&](ov::DatagramSocket *socket, const ov::SocketAddress &remote_address, const std::shared_ptr<const ov::Data> &data) -> bool
+					case ov::SocketConnectionState::Connected:
 					{
-						logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
+						logtd("New client is connected: %s", client->ToString().CStr());
 
 						// observer들에게 알림
-						auto func = std::bind(&PhysicalPortObserver::OnDataReceived, std::placeholders::_1, socket, remote_address, std::ref(data));
-						std::for_each(_observer_list.begin(), _observer_list.end(), func);
+						auto func = std::bind(&PhysicalPortObserver::OnConnected, std::placeholders::_1, static_cast<ov::Socket *>(client));
+						for_each(_observer_list.begin(), _observer_list.end(), func);
 
-						// UDP는 1회용 소켓으로 사용
-						return true;
-					};
-
-					while((_need_to_stop == false) && (socket->DispatchEvent(data_callback, 500)))
-					{
+						break;
 					}
 
-					socket->Close();
+					case ov::SocketConnectionState::Disconnected:
+					{
+						logtd("Client is disconnected: %s", client->ToString().CStr());
 
-					logtd("Server is stopped");
-				};
+						// observer들에게 알림
+						auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, static_cast<ov::Socket *>(client), PhysicalPortDisconnectReason::Disconnected, nullptr);
+						for_each(_observer_list.begin(), _observer_list.end(), func);
 
-				// thread 시작
-				_thread = std::thread(proc);
+						break;
+					}
 
-				_address = address;
+					default:
+						break;
+				}
 
-				return true;
+				// 명시적으로 close하기 전 까지 계속 사용해야 하므로 false 반환
+				return false;
+			};
+
+			auto data_callback = [&](ov::ClientSocket *client, const std::shared_ptr<const ov::Data> &data) -> bool
+			{
+				logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
+
+				// observer들에게 알림
+				auto func = std::bind(&PhysicalPortObserver::OnDataReceived, std::placeholders::_1, static_cast<ov::Socket *>(client), std::ref(*(client->GetRemoteAddress().get())), ref(data));
+				for_each(_observer_list.begin(), _observer_list.end(), func);
+
+				// TCP는 명시적으로 close하기 전까지 계속 사용해야 하므로 false 반환
+				return false;
+			};
+
+			while((_need_to_stop == false) && (socket->DispatchEvent(client_callback, data_callback, 500)))
+			{
 			}
 
-			break;
-		}
+			socket->Close();
+
+			logtd("Server is stopped");
+		};
+
+		// thread 시작
+		_thread = std::thread(proc);
+
+		_address = address;
+
+		return true;
+	}
+
+	return false;
+}
+
+bool PhysicalPort::CreateDatagramSocket(ov::SocketType type, const ov::SocketAddress &address)
+{
+	auto socket = std::make_shared<ov::DatagramSocket>();
+
+	if(socket->Prepare(address))
+	{
+		_type = type;
+		_datagram_socket = socket;
+
+		_need_to_stop = false;
+
+		auto proc = [&, socket]() -> void
+		{
+			auto data_callback = [&](ov::DatagramSocket *socket, const ov::SocketAddress &remote_address, const std::shared_ptr<const ov::Data> &data) -> bool
+			{
+				logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
+
+				// observer들에게 알림
+				auto func = std::bind(&PhysicalPortObserver::OnDataReceived, std::placeholders::_1, socket, remote_address, ref(data));
+				for_each(_observer_list.begin(), _observer_list.end(), func);
+
+				// UDP는 1회용 소켓으로 사용
+				return true;
+			};
+
+			while((_need_to_stop == false) && (socket->DispatchEvent(data_callback, 500)))
+			{
+			}
+
+			socket->Close();
+
+			logtd("Server is stopped");
+		};
+
+		// thread 시작
+		_thread = std::thread(proc);
+
+		_address = address;
+
+		return true;
 	}
 
 	return false;
@@ -177,11 +187,11 @@ bool PhysicalPort::Close()
 	switch(_type)
 	{
 		case ov::SocketType::Tcp:
-			if(_tcp_socket != nullptr)
+			if(_server_socket != nullptr)
 			{
-				if(_tcp_socket->Close())
+				if(_server_socket->Close())
 				{
-					_tcp_socket = nullptr;
+					_server_socket = nullptr;
 					_observer_list.clear();
 					return true;
 				}
@@ -189,9 +199,9 @@ bool PhysicalPort::Close()
 			break;
 
 		case ov::SocketType::Udp:
-			if(_udp_socket != nullptr)
+			if(_datagram_socket != nullptr)
 			{
-				_udp_socket = nullptr;
+				_datagram_socket = nullptr;
 				_observer_list.clear();
 				return true;
 			}
@@ -209,14 +219,14 @@ ov::SocketState PhysicalPort::GetState()
 	switch(_type)
 	{
 		case ov::SocketType::Tcp:
-			OV_ASSERT2(_tcp_socket != nullptr);
+			OV_ASSERT2(_server_socket != nullptr);
 
-			return _tcp_socket->GetState();
+			return _server_socket->GetState();
 
 		case ov::SocketType::Udp:
-			OV_ASSERT2(_udp_socket != nullptr);
+			OV_ASSERT2(_datagram_socket != nullptr);
 
-			return _udp_socket->GetState();
+			return _datagram_socket->GetState();
 
 		default:
 			return ov::SocketState::Closed;

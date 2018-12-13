@@ -10,8 +10,6 @@
 
 #define OV_LOG_TAG "Socket"
 
-#define EPOLL_MAX_EVENTS                     1024
-
 // UDP 까지 고려해서 적당히 크게 잡음
 #define MAX_BUFFER_SIZE                      4096
 

@@ -19,7 +19,7 @@ namespace ov
 		friend class ServerSocket;
 
 		ClientSocket();
-		ClientSocket(SocketType type, socket_t socket, const sockaddr_in &remote_addr_in);
+		ClientSocket(SocketWrapper socket, const SocketAddress &remote_address);
 
 		~ClientSocket() override = default;
 

@@ -22,7 +22,7 @@ namespace ov
 		Error(const ov::String &domain, int code);
 		Error(const ov::String &domain, int code, const char *format, ...);
 
-		Error(int code);
+		explicit Error(int code);
 		Error(int code, const char *format, ...);
 
 		Error(const Error &error);
@@ -30,8 +30,9 @@ namespace ov
 		static std::shared_ptr<Error> CreateError(ov::String domain, int code, const char *format, ...);
 		static std::shared_ptr<Error> CreateError(int code, const char *format, ...);
 		static std::shared_ptr<Error> CreateErrorFromErrno();
+		static std::shared_ptr<Error> CreateErrorFromSrt();
 
-		virtual ~Error();
+		virtual ~Error() = default;
 
 		virtual int GetCode() const;
 		virtual String GetMessage() const;

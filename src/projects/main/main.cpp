@@ -5,6 +5,9 @@
 
 #include <sys/utsname.h>
 
+#include <srtp2/srtp.h>
+#include <srt/srt.h>
+
 #include <config/config_manager.h>
 #include <webrtc/webrtc_publisher.h>
 #include <segment_stream/segment_stream_publisher.h>
@@ -13,7 +16,7 @@
 #include <rtmp/rtmp_provider.h>
 #include <base/ovcrypto/ovcrypto.h>
 
-#include <srtp2/srtp.h>
+void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
 
 int main()
 {
@@ -28,6 +31,11 @@ int main()
 		logte("An error occurred while load config");
 		return 1;
 	}
+
+	logtd("Trying to initialize SRT...");
+	srt_startup();
+	srt_setloglevel(logging::LogLevel::debug);
+	srt_setloghandler(nullptr, SrtLogHandler);
 
 	logtd("Trying to initialize OpenSSL...");
 	ov::OpensslManager::InitializeOpenssl();
@@ -101,7 +109,39 @@ int main()
 	logtd("Trying to uninitialize OpenSSL...");
 	ov::OpensslManager::ReleaseOpenSSL();
 
+	srt_cleanup();
+
 	logti("OvenMediaEngine will be terminated");
 
 	return 0;
+}
+
+void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message)
+{
+	switch(level)
+	{
+		case logging::LogLevel::debug:
+			logd("SRT", "%s:%d [%s] %s", file, line, area, message);
+			break;
+
+		case logging::LogLevel::note:
+			logi("SRT", "%s:%d [%s] %s", file, line, area, message);
+			break;
+
+		case logging::LogLevel::warning:
+			logw("SRT", "%s:%d [%s] %s", file, line, area, message);
+			break;
+
+		case logging::LogLevel::error:
+			loge("SRT", "%s:%d [%s] %s", file, line, area, message);
+			break;
+
+		case logging::LogLevel::fatal:
+			logc("SRT", "%s:%d [%s] %s", file, line, area, message);
+			break;
+
+		default:
+			loge("SRT", "(Unknown level: %d) %s:%d [%s] %s", level, file, line, area, message);
+			break;
+	}
 }

@@ -53,7 +53,7 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer)
 
 	if(media_track == nullptr)
 	{
-		logte("can not find media track. type(%s), id(%d)", (media_type == MediaType::Video) ? "video" : "audio", track_id);
+		logte("Cannot find media track. type(%s), id(%d)", (media_type == MediaType::Video) ? "video" : "audio", track_id);
 		return false;
 	}
 
