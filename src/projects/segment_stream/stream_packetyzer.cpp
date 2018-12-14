@@ -9,8 +9,8 @@
 
 #include "stream_packetyzer.h"
 
-#define MAX_VIDEO_DATA_QUEUE_COUNT 		(500)
-#define MAX_INPUT_DATA_SIZE				(10485760*2) // 20mb
+#define OV_LOG_TAG                  "SegmentStream"
+#define MAX_INPUT_DATA_SIZE			(10485760*2) // 20mb
 
 //====================================================================================================
 // Constructor
@@ -34,6 +34,8 @@ StreamPacketyzer::StreamPacketyzer(bool               enable_dash,
 	_dash_packetyzer    = nullptr;
 	_hls_packetyzer     = nullptr;
 
+	_start_time 		= time(nullptr);
+    _video_framerate    = (uint32_t)media_info.video_framerate;
 	if(enable_dash) _dash_packetyzer = std::make_shared<DashPacketyzer>(segment_prefix, stream_type, segment_count, segment_duration, media_info);
 	if(enable_hls) _hls_packetyzer = std::make_shared<HlsPacketyzer>(segment_prefix, stream_type, segment_count, segment_duration, media_info);
 }
@@ -50,32 +52,22 @@ StreamPacketyzer::~StreamPacketyzer( )
 //====================================================================================================
 // Append Video Data
 //====================================================================================================
-bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, bool is_keyframe, uint64_t time_offset, uint32_t data_size, uint8_t *data)
-{
+bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, bool is_keyframe, uint64_t time_offset, uint32_t data_size, uint8_t *data) {
 	// 임시
 	timescale = 90000;
 
 	// data valid check
-	if(data_size <= 0 || data_size > MAX_INPUT_DATA_SIZE)
-	{
-		printf("ERROR : [StreamHlsMaker] AppendVideoData - Data Size Error(%d:%d)", data_size, MAX_INPUT_DATA_SIZE);
-		return false; 
-	}
-	
-	// Queue size check
-	if(_video_data_queue.size() > MAX_VIDEO_DATA_QUEUE_COUNT)
-	{
-		printf("ERROR : [StreamHlsMaker] AppendVideoData - VideoDataQueue Count Over(%d:%d)", (int)_video_data_queue.size(), MAX_VIDEO_DATA_QUEUE_COUNT);
+	if (data_size <= 0 || data_size > MAX_INPUT_DATA_SIZE) {
+		printf("ERROR : [StreamPacketyzer] AppendVideoData - Data Size Error(%d:%d)", data_size, MAX_INPUT_DATA_SIZE);
 		return false;
 	}
 
-	// timestamp change
-	if (timescale != _video_timescale)
-	{
-		timestamp = Packetyzer::ConvertTimeScale(timestamp, timescale, _video_timescale);
-		if(time_offset != 0) time_offset = Packetyzer::ConvertTimeScale(time_offset, timescale, _video_timescale);
-
-	}
+    // timestamp change
+    if (timescale != _video_timescale)
+    {
+        timestamp = Packetyzer::ConvertTimeScale(timestamp, timescale, _video_timescale);
+        if(time_offset != 0) time_offset = Packetyzer::ConvertTimeScale(time_offset, timescale, _video_timescale);
+    }
 
 	auto frame = std::make_shared<std::vector<uint8_t>>(data, data + data_size);
 	auto video_data = std::make_shared<PacketyzerFrameData>(is_keyframe ? PacketyzerFrameType::VideoIFrame : PacketyzerFrameType::VideoPFrame,  timestamp, time_offset, _video_timescale, frame);
@@ -99,6 +91,34 @@ bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, b
 //====================================================================================================
 bool StreamPacketyzer::VideoDataSampleWrite(uint64_t timestamp)
 {
+    // Queue size over check( Framerate X 3)
+    if (_video_data_queue.size() > _video_framerate*3)
+    {
+        int delete_count = 0;
+
+        while(!_video_data_queue.empty())
+        {
+            auto video_data = _video_data_queue.front();
+
+            if(video_data->timestamp <= timestamp)
+            {
+                break;
+            }
+
+            delete_count++;
+            _video_data_queue.pop_front();
+
+            printf("\n test : timestamp(%lld)", video_data->timestamp);
+        }
+
+        logtw("AppendVideoData - VideoDataQueue Count Over - Count(%d:%d) Timestamp(%lld) Duration(%d) Delete(%d)",
+              (int) _video_data_queue.size(),
+			 _video_framerate*3,
+              timestamp,
+              time(nullptr) - _start_time,
+              delete_count);
+    }
+
 	//Video data append
 	while(!_video_data_queue.empty())
 	{
@@ -129,7 +149,7 @@ bool StreamPacketyzer::AppendAudioData(uint64_t timestamp, uint32_t timescale, u
 	// data valid check
 	if(data_size <= 0 || data_size > MAX_INPUT_DATA_SIZE)
 	{
-		printf("ERROR : [StreamHlsMaker] AppendAudioData - Data Size Error(%d:%d)", data_size, MAX_INPUT_DATA_SIZE);
+		printf("ERROR : [StreamPacketyzer] AppendAudioData - Data Size Error(%d:%d)", data_size, MAX_INPUT_DATA_SIZE);
 		return false; 
 	}
 

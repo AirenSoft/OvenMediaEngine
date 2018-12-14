@@ -877,7 +877,7 @@ namespace ov
 			case SocketType::Udp:
 			case SocketType::Tcp:
 				read_bytes = ::recv(_socket.GetSocket(), data->GetWritableData(), (size_t)data->GetLength(), (_is_nonblock ? MSG_DONTWAIT : 0));
-
+				break;
 			case SocketType::Srt:
 				read_bytes = ::srt_recv(_socket.GetSocket(), reinterpret_cast<char *>(data->GetWritableData()), static_cast<int>(data->GetLength()));
 

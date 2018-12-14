@@ -8,6 +8,7 @@
 //==============================================================================
 
 #pragma once
+#include <config/config.h>
 #include "base/common_types.h"
 #include "base/publisher/publisher.h"
 #include "base/media_route/media_route_application_interface.h"
@@ -27,7 +28,6 @@ public:
 public :
 
 private :
-	uint16_t     GetSegmentStreamPort();
 	bool        Start() override;
 	bool        Stop() override ;
 	std::shared_ptr<Application>    OnCreateApplication(const info::Application &application_info) override;
@@ -39,10 +39,9 @@ private :
 	bool        OnCorsCheck(const ov::String &app_name, const ov::String &stream_name, ov::String &origin_url) override;
 
 	// Publisher Implementation
-	cfg::PublisherType GetPublisherType() override { return cfg::PublisherType::Dash; }
+	cfg::PublisherType GetPublisherType() override { return _publisher_type; }
 
 private :
-	const cfg::DashPublisher *_publisher_info = nullptr;
-
-	std::shared_ptr<SegmentStreamServer> _segment_stream_server;
+    cfg::PublisherType  _publisher_type;
+	std::vector<std::shared_ptr<SegmentStreamServer>> _segment_stream_servers;
 };
