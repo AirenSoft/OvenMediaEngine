@@ -34,6 +34,8 @@ namespace ov
 
 	constexpr const int EpollMaxEvents = 1024;
 
+	constexpr const int MaxSrtPacketSize = 1316;
+
 	enum class SocketType : char
 	{
 		Unknown,
@@ -166,17 +168,73 @@ namespace ov
 	class Socket
 	{
 	public:
+		Socket();
 		Socket(SocketWrapper socket, const SocketAddress &remote_address);
 		// socket은 복사 불가능 (descriptor 까지 복사되는 것 방지)
 		Socket(const Socket &socket) = delete;
 		Socket(Socket &&socket) noexcept;
 		virtual ~Socket();
 
+		bool Create(SocketType type);
+		bool MakeNonBlocking();
+
+		bool Bind(const SocketAddress &address);
+
+		bool Listen(int backlog = SOMAXCONN);
+
+		template<typename T>
+		std::shared_ptr<T> AcceptClient()
+		{
+			SocketAddress client;
+			SocketWrapper client_socket = AcceptClientInternal(&client);
+
+			if(client_socket.IsValid())
+			{
+				// Accept()는 TCP에서만 일어남
+				return std::make_shared<T>(client_socket, client);
+			}
+
+			return nullptr;
+		}
+
+		bool Connect(const SocketAddress &endpoint, int timeout = Infinite);
+
+		bool PrepareEpoll();
+		bool AddToEpoll(Socket *socket, void *parameter);
+		int EpollWait(int timeout = Infinite);
+		const epoll_event *EpollEvents(int index);
+		bool RemoveFromEpoll(Socket *socket);
+
 		std::shared_ptr<SocketAddress> GetLocalAddress() const;
 		std::shared_ptr<SocketAddress> GetRemoteAddress() const;
 
+		// for normal socket
+		template<class T>
+		bool SetSockOpt(int option, const T &value)
+		{
+			return SetSockOpt(option, &value, (socklen_t)sizeof(T));
+		}
+
+		bool SetSockOpt(int option, const void *value, socklen_t value_length);
+
+		// for SRT
+		template<class T>
+		bool SetSockOpt(SRT_SOCKOPT option, const T &value)
+		{
+			return SetSockOpt(option, &value, static_cast<int>(sizeof(T)));
+		}
+
+		bool SetSockOpt(SRT_SOCKOPT option, const void *value, int value_length);
+
 		// 현재 소켓의 접속 상태
 		SocketState GetState() const;
+
+		void SetState(SocketState state);
+
+		SocketWrapper GetSocket() const
+		{
+			return _socket;
+		}
 
 		// 소켓 타입
 		SocketType GetType() const;
@@ -203,64 +261,7 @@ namespace ov
 		virtual String ToString() const;
 
 	protected:
-		Socket();
-
-		bool Create(SocketType type);
-		bool MakeNonBlocking();
-
-		bool Bind(const SocketAddress &address);
-
-		bool Listen(int backlog = SOMAXCONN);
-
-		template<typename T>
-		std::shared_ptr<T> AcceptClient()
-		{
-			SocketAddress client;
-			SocketWrapper client_socket = AcceptClientInternal(&client);
-
-			if(client_socket.IsValid())
-			{
-				// Accept()는 TCP에서만 일어남
-				return std::make_shared<T>(client_socket, client);
-			}
-
-			return nullptr;
-		}
-
 		SocketWrapper AcceptClientInternal(SocketAddress *client);
-
-		bool Connect(const SocketAddress &endpoint, int timeout = Infinite);
-
-		bool PrepareEpoll();
-		bool AddToEpoll(Socket *socket, void *parameter);
-		int EpollWait(int timeout = Infinite);
-		const epoll_event *EpollEvents(int index);
-		bool RemoveFromEpoll(Socket *socket);
-
-		// for normal socket
-		template<class T>
-		bool SetSockOpt(int option, const T &value)
-		{
-			return SetSockOpt(option, &value, (socklen_t)sizeof(T));
-		}
-
-		bool SetSockOpt(int option, const void *value, socklen_t value_length);
-
-		// for SRT
-		template<class T>
-		bool SetSockOpt(SRT_SOCKOPT option, const T &value)
-		{
-			return SetSockOpt(option, &value, static_cast<int>(sizeof(T)));
-		}
-
-		bool SetSockOpt(SRT_SOCKOPT option, const void *value, int value_length);
-
-		void SetState(SocketState state);
-
-		SocketWrapper GetSocket() const
-		{
-			return _socket;
-		}
 
 		// utility method
 		static String StringFromEpollEvent(const epoll_event *event);

@@ -45,6 +45,7 @@ std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(ov::SocketType typ
 
 bool PhysicalPortManager::DeletePort(std::shared_ptr<PhysicalPort> &port)
 {
+	// TODO: reference counting을 해서, 여러 곳에서 delete 하더라도 문제 없이 동작하도록 해야 함
 	auto key = std::make_pair(port->GetType(), port->GetAddress());
 	auto item = _port_list.find(key);
 

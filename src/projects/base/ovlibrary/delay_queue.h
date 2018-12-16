@@ -20,7 +20,8 @@
 
 namespace ov
 {
-	typedef std::function<void(void *parameter)> DelayQueueFunction;
+	// Return false if need to stop when using repeat mode
+	typedef std::function<bool(void *parameter)> DelayQueueFunction;
 
 	class DelayQueue
 	{

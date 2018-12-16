@@ -33,6 +33,31 @@ namespace ov
 		OV_ASSERT2((void *)_address_ipv6 == (void *)(&_address_storage));
 	}
 
+	SocketAddress::SocketAddress(const ov::String &hostPort)
+		: SocketAddress()
+	{
+		OV_ASSERT2((void *)_address_ipv4 == (void *)(&_address_storage));
+		OV_ASSERT2((void *)_address_ipv6 == (void *)(&_address_storage));
+
+		// <host>[:<port>]
+		auto tokens = hostPort.Split(":");
+		bool result = false;
+
+		if(tokens.empty() == false)
+		{
+			// host
+			result = SetHostname(tokens[0]);
+
+			if(tokens.size() >= 2)
+			{
+				// port
+				result = SetPort(Converter::ToUInt16(tokens[1]));
+			}
+		}
+
+		OV_ASSERT2(result);
+	}
+
 	SocketAddress::SocketAddress(const ov::String &hostname, uint16_t port)
 		: SocketAddress(hostname.CStr(), port)
 	{

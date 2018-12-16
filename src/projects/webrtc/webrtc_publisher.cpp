@@ -7,9 +7,9 @@
 
 #include "config/config_manager.h"
 
-std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router)
+std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router, std::shared_ptr<MediaRouteApplicationInterface> application)
 {
-	auto webrtc = std::make_shared<WebRtcPublisher>(application_info, router);
+	auto webrtc = std::make_shared<WebRtcPublisher>(application_info, router, application);
 
 	// CONFIG을 불러온다.
 	webrtc->Start();
@@ -17,9 +17,10 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Application
 	return webrtc;
 }
 
-WebRtcPublisher::WebRtcPublisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router)
+WebRtcPublisher::WebRtcPublisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router, std::shared_ptr<MediaRouteApplicationInterface> application)
 	: Publisher(application_info, std::move(router))
 {
+	_application = application;
 }
 
 WebRtcPublisher::~WebRtcPublisher()
@@ -59,7 +60,7 @@ bool WebRtcPublisher::Start()
 	}
 
 	_ice_port = IcePortManager::Instance()->CreatePort(socket_type, ov::SocketAddress(GetCandidatePort()), IcePortObserver::GetSharedPtr());
-	_signalling = std::make_shared<RtcSignallingServer>();
+	_signalling = std::make_shared<RtcSignallingServer>(_application_info, _application);
 
 	if(_ice_port == nullptr || _signalling == nullptr)
 	{
@@ -104,7 +105,6 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::St
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
 	if(!stream)
 	{
-		logte("Get offer sdp failed. Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
 		return nullptr;
 	}
 
@@ -281,7 +281,7 @@ ov::String WebRtcPublisher::GetCandidateProto()
 
 std::shared_ptr<Certificate> WebRtcPublisher::GetCertificate()
 {
-	cfg::Tls tls_info = _publisher_info->GetTls();
+	cfg::Tls tls_info = _publisher_info->GetSignalling().GetTls();
 
 	if(
 		(tls_info.GetCertPath().IsEmpty() == false) &&

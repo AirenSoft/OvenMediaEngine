@@ -753,7 +753,7 @@ namespace ov
 	ssize_t Socket::Send(const void *data, size_t length)
 	{
 		// TODO: 별도 send queue를 만들어야 함
-		OV_ASSERT2(_socket.IsValid());
+		//OV_ASSERT2(_socket.IsValid());
 
 		logtd("[%p] [#%d] Trying to send data:\n%s", this, _socket.GetSocket(), ov::Dump(data, length, 64).CStr());
 
@@ -833,7 +833,7 @@ namespace ov
 
 	ssize_t Socket::SendTo(const ov::SocketAddress &address, const void *data, size_t length)
 	{
-		OV_ASSERT2(_socket.IsValid());
+		//OV_ASSERT2(_socket.IsValid());
 		OV_ASSERT2(address.AddressForIPv4()->sin_addr.s_addr != 0);
 
 		logtd("[%p] [#%d] Trying to send data %zu bytes to %s...", this, _socket.GetSocket(), length, address.ToString().CStr());
@@ -847,6 +847,9 @@ namespace ov
 			case SocketType::Srt:
 				// Does not support SendTo() for SRT
 				OV_ASSERT2(false);
+				break;
+
+			case SocketType::Unknown:
 				break;
 		}
 
@@ -862,7 +865,7 @@ namespace ov
 
 	std::shared_ptr<ov::Error> Socket::Recv(std::shared_ptr<Data> &data)
 	{
-		OV_ASSERT2(_socket.IsValid());
+		//OV_ASSERT2(_socket.IsValid());
 		OV_ASSERT2(data != nullptr);
 		OV_ASSERT2(data->GetCapacity() > 0);
 
@@ -877,9 +880,11 @@ namespace ov
 			case SocketType::Udp:
 			case SocketType::Tcp:
 				read_bytes = ::recv(_socket.GetSocket(), data->GetWritableData(), (size_t)data->GetLength(), (_is_nonblock ? MSG_DONTWAIT : 0));
+				break;
 
 			case SocketType::Srt:
 				read_bytes = ::srt_recv(_socket.GetSocket(), reinterpret_cast<char *>(data->GetWritableData()), static_cast<int>(data->GetLength()));
+				break;
 
 			default:
 				break;
@@ -952,6 +957,9 @@ namespace ov
 
 					break;
 				}
+
+				case SocketType::Unknown:
+					break;
 			}
 		}
 		else
@@ -1020,6 +1028,9 @@ namespace ov
 			case SocketType::Srt:
 				// Does not support RecvFrom() for SRT
 				OV_ASSERT2(false);
+				break;
+
+			case SocketType::Unknown:
 				break;
 		}
 

@@ -45,7 +45,11 @@ protected:
 	virtual cfg::PublisherType GetPublisherType() = 0;
 	virtual std::shared_ptr<Application> OnCreateApplication(const info::Application &application_info) = 0;
 
+	// 모든 application들의 map
 	std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
+
+	// Publisher를 상속받은 클래스에서 사용되는 정보
+	std::shared_ptr<MediaRouteApplicationInterface> _application;
 	info::Application _application_info;
 
 	std::shared_ptr<MediaRouteInterface> _router;

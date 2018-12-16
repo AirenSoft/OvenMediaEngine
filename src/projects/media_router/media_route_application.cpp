@@ -8,7 +8,8 @@
 //==============================================================================
 #include "media_route_application.h"
 
-#include "base/application/stream_info.h"
+#include <base/application/stream_info.h>
+#include <relay/relay.h>
 
 #define OV_LOG_TAG "MediaRouter.App"
 
@@ -24,12 +25,12 @@ std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info:
 MediaRouteApplication::MediaRouteApplication(const info::Application &application_info)
 	: _application_info(application_info)
 {
-	logtd("Created media route application. application(%s)", application_info.GetName().CStr());
+	logtd("Created media route application. application (%d: %s)", application_info.GetType(), application_info.GetName().CStr());
 }
 
 MediaRouteApplication::~MediaRouteApplication()
 {
-	logtd("Destroyed media router application. application(%s)", _application_info.GetName().CStr());
+	logtd("Destroyed media router application. application (%d: %s)", _application_info.GetType(), _application_info.GetName().CStr());
 }
 
 bool MediaRouteApplication::Start()
@@ -44,6 +45,35 @@ bool MediaRouteApplication::Start()
 		_kill_flag = true;
 		logte("Failed to start media route application thread.");
 		return false;
+	}
+
+	switch(_application_info.GetType())
+	{
+		case cfg::ApplicationType::Live:
+			_relay_server = std::make_shared<RelayServer>(this, _application_info);
+
+			RegisterObserverApp(_relay_server);
+
+			break;
+
+		case cfg::ApplicationType::LiveEdge:
+		{
+			_relay_server = std::make_shared<RelayServer>(this, _application_info);
+
+			auto &origin = _application_info.GetOrigin();
+
+			if(origin.IsParsed() && (origin.GetPrimary().IsEmpty() == false))
+			{
+				_relay_client = std::make_shared<RelayClient>(this, _application_info, origin.GetPrimary());
+				_relay_client->Start();
+			}
+
+			break;
+		}
+
+		case cfg::ApplicationType::Vod:
+		case cfg::ApplicationType::VodEdge:
+			break;
 	}
 
 	logtd("started media route application thread. application(%s)", _application_info.GetName().CStr());
@@ -194,14 +224,27 @@ bool MediaRouteApplication::OnCreateStream(
 	// 옵저버에 스트림 생성을 알림
 	for(auto observer : _observers)
 	{
-		// 프로바이더에서 들어오는 스트림은 트샌스코더에만 전달함
-		if((app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
-		   (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder))
+		if(
+			// Provider -> MediaRoute -> Transcoder
+			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
+			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder)
+			)
 		{
 			observer->OnCreateStream(new_stream->GetStreamInfo());
 		}
-		else if((app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
-		        (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
+		else if(
+			// Transcoder -> MediaRoute -> Publisher
+			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
+			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher)
+			)
+		{
+			observer->OnCreateStream(new_stream->GetStreamInfo());
+		}
+		else if(
+			// RelayClient -> MediaRoute -> Publisher
+			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Relay) &&
+			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher)
+			)
 		{
 			observer->OnCreateStream(new_stream->GetStreamInfo());
 		}
@@ -222,7 +265,6 @@ bool MediaRouteApplication::OnDeleteStream(
 
 	logtd("Deleted stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
-
 	auto new_stream_info = std::make_shared<StreamInfo>(*stream_info);
 
 	// 옵저버에 스트림 삭제를 알림
@@ -230,13 +272,33 @@ bool MediaRouteApplication::OnDeleteStream(
 	{
 		auto observer = *it;
 
-		if((app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
-		   (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder))
+		if(
+			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
+			(
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay)
+			)
+			)
 		{
 			observer->OnDeleteStream(new_stream_info);
 		}
-		else if((app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
-		        (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
+		else if(
+			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
+			(
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher) ||
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay)
+			)
+			)
+		{
+			observer->OnDeleteStream(new_stream_info);
+		}
+		else if(
+			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Relay) &&
+			(
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher)
+			)
+			)
 		{
 			observer->OnDeleteStream(new_stream_info);
 		}
@@ -280,7 +342,9 @@ bool MediaRouteApplication::OnReceiveBuffer(
 		return false;
 	}
 
-	bool ret = stream->Push(std::move(packet));
+	bool convert_bitstream = app_conn->GetConnectorType() != MediaRouteApplicationConnector::ConnectorType::Relay;
+
+	bool ret = stream->Push(std::move(packet), convert_bitstream);
 
 	// TODO(SOULK) : Connector(Provider, Transcoder)에서 수신된 데이터에 대한 정보를 바로 처리하기 위해 버퍼의 Indicator 정보를
 	// MainTask에 전달한다. 패킷이 수신되어 처리(재분배)되는 속도가 0.001초 이하의 초저지연으로 동작하나, 효율적인 구조는 
@@ -394,6 +458,15 @@ void MediaRouteApplication::MainTask()
 			// Find Media Track
 			auto media_track = stream_info->GetTrack(cur_buf->GetTrackId());
 
+			if(
+				(connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) ||
+				(connector_type == MediaRouteApplicationConnector::ConnectorType::Relay)
+				)
+			{
+				// transcoder나 relay에서 전달된 데이터는 다음 relay client로 전달
+				_relay_server->Send(stream, cur_buf.get());
+			}
+
 			// Observer(Publisher or Transcoder)에게 MediaBuffer를 전달함.
 			for(const auto &observer : _observers)
 			{
@@ -420,7 +493,10 @@ void MediaRouteApplication::MainTask()
 				}
 					// 트랜스코더에서 전달받은 스트림은 퍼블리셔로 넘김
 				else if(
-					(connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
+					(
+						(connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) ||
+						(connector_type == MediaRouteApplicationConnector::ConnectorType::Relay)
+					) &&
 					(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher)
 					)
 				{
@@ -514,7 +590,7 @@ void MediaRouteApplication::MainTask()
 							codec_info->codec_type = CodecType::Opus;
 
 							codec_info->codec_specific.opus.sample_rate_hz = media_track->GetSampleRate();
-							codec_info->codec_specific.opus.num_channels = media_track->GetChannel().GetCounts();
+							codec_info->codec_specific.opus.num_channels = static_cast<size_t>(media_track->GetChannel().GetCounts());
 							codec_info->codec_specific.opus.default_bitrate_bps = 0;
 							codec_info->codec_specific.opus.min_bitrate_bps = 0;
 							codec_info->codec_specific.opus.max_bitrate_bps = 0;

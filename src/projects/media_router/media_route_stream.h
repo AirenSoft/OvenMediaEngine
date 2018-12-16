@@ -40,10 +40,9 @@ private:
 
 	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
 
-
 public:
 	// 패킷 관리
-	bool Push(std::unique_ptr<MediaPacket> buffer);
+	bool Push(std::unique_ptr<MediaPacket> buffer, bool convert_bitstream);
 	std::unique_ptr<MediaPacket> Pop();
 	uint32_t Size();
 

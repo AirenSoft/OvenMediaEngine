@@ -182,7 +182,7 @@ bool MediaRouter::RegisterObserverApp(
 
 	if(media_route_app == nullptr)
 	{
-		logtw("can not find application. name(%s)", application_info->GetName().CStr());
+		logtw("cannot find application. name(%s)", application_info->GetName().CStr());
 		return false;
 	}
 
@@ -202,7 +202,7 @@ bool MediaRouter::UnregisterObserverApp(
 	auto media_route_app = GetRouteApplicationById(application_info->GetId());
 	if(media_route_app == nullptr)
 	{
-		logtw("can not find application. name(%s)", application_info->GetName().CStr());
+		logtw("cannot find application. name(%s)", application_info->GetName().CStr());
 		return false;
 	}
 

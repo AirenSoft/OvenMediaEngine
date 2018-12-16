@@ -33,7 +33,7 @@ class PhysicalPortObserver
 public:
 	friend class PhysicalPort;
 
-	// TCP일 때, 상대방이 접속하면 호출됨
+	// TCP/SRT등 일 때, 상대방이 접속하면 호출됨
 	virtual void OnConnected(ov::Socket *remote)
 	{
 		// dummy function
@@ -42,7 +42,7 @@ public:
 	// 데이터를 수신하였을 때 호출됨
 	virtual void OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) = 0;
 
-	// TCP일 때, 상대방과의 접속이 해제되면 호출됨
+	// TCP/SRT등 일 때, 상대방과의 접속이 해제되면 호출됨
 	virtual void OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 	{
 		// dummy function

@@ -79,6 +79,7 @@ namespace cfg
 		}
 
 		_parent = item._parent;
+		_parsed = item._parsed;
 	}
 
 	Item::Item(Item &&item) noexcept
@@ -182,6 +183,11 @@ namespace cfg
 		return ParseFromFile(file_name, tag_name, 0);
 	}
 
+	bool Item::IsParsed() const
+	{
+		return _parsed;
+	}
+
 	bool Item::ParseFromFile(const ov::String &file_name, const ov::String &tag_name, int indent)
 	{
 		_tag_name = tag_name;
@@ -248,6 +254,7 @@ namespace cfg
 	bool Item::ParseFromNode(const pugi::xml_node &node, const ov::String &tag_name, bool process_include, int indent)
 	{
 		_tag_name = tag_name;
+		_parsed = false;
 
 		MakeParseList();
 
@@ -477,6 +484,7 @@ namespace cfg
 			}
 		}
 
+		_parsed = true;
 		return true;
 	}
 

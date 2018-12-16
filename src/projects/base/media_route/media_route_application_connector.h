@@ -19,7 +19,8 @@ public:
 	enum class ConnectorType : int8_t
 	{
 		Provider = 0,
-		Transcoder
+		Transcoder,
+		Relay
 	};
 
 	// MediaRouteApplication -> Stream 생성

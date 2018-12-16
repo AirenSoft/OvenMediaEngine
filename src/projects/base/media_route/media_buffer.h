@@ -18,7 +18,7 @@
 #include "media_type.h"
 #include "base/common_types.h"
 
-enum class MediaPacketFlag
+enum class MediaPacketFlag : uint8_t
 {
 	NoFlag,
 	Key

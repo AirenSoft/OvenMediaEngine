@@ -53,7 +53,7 @@ public:
 	std::shared_ptr<MediaRouteApplication> GetRouteApplicationById(info::application_id_t application_id);
 
 private:
-	std::map<info::application_id_t , std::shared_ptr<MediaRouteApplication>> _route_apps;
+	std::map<info::application_id_t, std::shared_ptr<MediaRouteApplication>> _route_apps;
 
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
@@ -63,26 +63,24 @@ private:
 public:
 	bool RegisterConnectorApp(
 		const info::Application *application_info,
-		std::shared_ptr<MediaRouteApplicationConnector> application_connector);
+		std::shared_ptr<MediaRouteApplicationConnector> application_connector) override;
 
 	bool UnregisterConnectorApp(
 		const info::Application *application_info,
-		std::shared_ptr<MediaRouteApplicationConnector> application_connector);
+		std::shared_ptr<MediaRouteApplicationConnector> application_connector) override;
 
 
-private:
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 퍼블리셔 관련 모듈
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 본 데이터 모듈에서 가져가는 넘들
-public:
 	bool RegisterObserverApp(
 		const info::Application *application_info,
-		std::shared_ptr<MediaRouteApplicationObserver> application_observer);
+		std::shared_ptr<MediaRouteApplicationObserver> application_observer) override;
 
 	bool UnregisterObserverApp(
 		const info::Application *application_info,
-		std::shared_ptr<MediaRouteApplicationObserver> application_observer);
+		std::shared_ptr<MediaRouteApplicationObserver> application_observer) override;
 
 private:
 	void MainTask();

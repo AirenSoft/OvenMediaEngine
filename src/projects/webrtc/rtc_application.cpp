@@ -37,7 +37,7 @@ std::shared_ptr<Stream> RtcApplication::CreateStream(std::shared_ptr<StreamInfo>
 {
 	// Stream Class 생성할때는 복사를 사용한다.
 	logtd("CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
-	return RtcStream::Create(GetSharedPtrAs<Application>(), *info.get());
+	return RtcStream::Create(GetSharedPtrAs<Application>(), *info);
 }
 
 bool RtcApplication::DeleteStream(std::shared_ptr<StreamInfo> info)

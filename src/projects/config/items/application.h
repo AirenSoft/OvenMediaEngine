@@ -14,6 +14,7 @@
 #include "streams.h"
 #include "providers.h"
 #include "publishers.h"
+#include "origin.h"
 
 namespace cfg
 {
@@ -43,7 +44,7 @@ namespace cfg
 			{
 				return ApplicationType::Vod;
 			}
-			else if(_type == "livdedge")
+			else if(_type == "liveedge")
 			{
 				return ApplicationType::LiveEdge;
 			}
@@ -53,6 +54,11 @@ namespace cfg
 			}
 
 			return ApplicationType::Unknown;
+		}
+
+		const Origin &GetOrigin() const
+		{
+			return _origin;
 		}
 
 		const Tls &GetTls() const
@@ -90,6 +96,7 @@ namespace cfg
 		{
 			RegisterValue("Name", &_name);
 			RegisterValue<Optional>("Type", &_type);
+			RegisterValue<Optional, Includable>("Origin", &_origin);
 			RegisterValue<Optional, Overridable, Includable>("TLS", &_tls);
 			RegisterValue<Optional, Overridable, Includable>("Decode", &_decode);
 			RegisterValue<Optional, Overridable, Includable>("Encodes", &_encodes);
@@ -100,6 +107,7 @@ namespace cfg
 
 		ov::String _name;
 		ov::String _type;
+		Origin _origin;
 		Tls _tls;
 		Decode _decode;
 		Encodes _encodes;

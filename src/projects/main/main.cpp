@@ -80,14 +80,40 @@ int main()
 
 			for(const auto &application_info : app_info_list)
 			{
-				logtd("Trying to create RTMP Provider for application [%s]...", application_info.GetName().CStr());
-				providers.push_back(RtmpProvider::Create(application_info, router));
+				if(application_info.GetType() == cfg::ApplicationType::Live)
+				{
+					logtd("Trying to create RTMP Provider for application [%s]...", application_info.GetName().CStr());
+					providers.push_back(RtmpProvider::Create(application_info, router));
+				}
 
-				logtd("Trying to create WebRtc Publisher for application [%s]...", application_info.GetName().CStr());
-				publishers.push_back(WebRtcPublisher::Create(application_info, router));
+				auto publisher_list = application_info.GetPublishers();
 
-				logtd("Trying to create SegmentStream Publisher for application [%s]...", application_info.GetName().CStr());
-				publishers.push_back(SegmentStreamPublisher::Create(application_info, router));
+				for(const auto &publisher : publisher_list)
+				{
+					if(publisher->IsParsed())
+					{
+						auto application = router->GetRouteApplicationById(application_info.GetId());
+
+						switch(publisher->GetType())
+						{
+							case cfg::PublisherType::Webrtc:
+								logtd("Trying to create WebRtc Publisher for application [%s]...", application_info.GetName().CStr());
+								publishers.push_back(WebRtcPublisher::Create(application_info, router, application));
+								break;
+
+							case cfg::PublisherType::Dash:
+							case cfg::PublisherType::Hls:
+								logtd("Trying to create SegmentStream Publisher for application [%s]...", application_info.GetName().CStr());
+								//publishers.push_back(SegmentStreamPublisher::Create(application_info, router));
+								break;
+
+							case cfg::PublisherType::Rtmp:
+							default:
+								// not implemented
+								break;
+						}
+					}
+				}
 			}
 		}
 		else
@@ -95,8 +121,6 @@ int main()
 			logtd("Nothing to do for host [%s]", host.GetName().CStr());
 		}
 	}
-
-	logtd("Wait for termination...");
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
@@ -118,30 +142,53 @@ int main()
 
 void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message)
 {
+	// SRT log format:
+	// HH:mm:ss.ssssss/SRT:xxxx:xxxxxx.N: xxx.c: .................
+	// 13:20:15.618019.N: SRT.c: PASSING request from: 192.168.0.212:63308 to agent:397692317
+	// 13:20:15.618019.!!FATAL!!: SRT.c: PASSING request from: 192.168.0.212:63308 to agent:397692317
+	// 13:20:15.618019.!W: SRT.c: PASSING request from: 192.168.0.212:63308 to agent:397692317
+	// 13:20:15.618019.*E: SRT.c: PASSING request from: 192.168.0.212:63308 to agent:397692317
+	// 20:41:11.929158/ome_origin*E: SRT.d: SND-DROPPED 1 packets - lost delaying for 1021m
+	// 13:20:15.618019/SRT:RcvQ:worker.N: SRT.c: PASSING request from: 192.168.0.212:63308 to agent:397692317
+
+	std::smatch matches;
+	std::string m = message;
+	ov::String mess;
+
+	if(std::regex_search(m, matches, std::regex("^([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{6})([/a-zA-Z:.!*_]+) ([/a-zA-Z:.!]+ )?(.+)")))
+	{
+		mess = std::string(matches[4]).c_str();
+	}
+	else
+	{
+		// Unknown pattern
+		mess = message;
+	}
+
 	switch(level)
 	{
 		case logging::LogLevel::debug:
-			logd("SRT", "%s:%d [%s] %s", file, line, area, message);
+			ov_log_internal(OVLogLevelDebug, "SRT", file, line, area, "%s", mess.CStr());
 			break;
 
 		case logging::LogLevel::note:
-			logi("SRT", "%s:%d [%s] %s", file, line, area, message);
+			ov_log_internal(OVLogLevelInformation, "SRT", file, line, area, "%s", mess.CStr());
 			break;
 
 		case logging::LogLevel::warning:
-			logw("SRT", "%s:%d [%s] %s", file, line, area, message);
+			ov_log_internal(OVLogLevelWarning, "SRT", file, line, area, "%s", mess.CStr());
 			break;
 
 		case logging::LogLevel::error:
-			loge("SRT", "%s:%d [%s] %s", file, line, area, message);
+			ov_log_internal(OVLogLevelError, "SRT", file, line, area, "%s", mess.CStr());
 			break;
 
 		case logging::LogLevel::fatal:
-			logc("SRT", "%s:%d [%s] %s", file, line, area, message);
+			ov_log_internal(OVLogLevelCritical, "SRT", file, line, area, "%s", mess.CStr());
 			break;
 
 		default:
-			loge("SRT", "(Unknown level: %d) %s:%d [%s] %s", level, file, line, area, message);
+			ov_log_internal(OVLogLevelError, "SRT", file, line, area, "(Unknown level: %d) %s", level, mess.CStr());
 			break;
 	}
 }

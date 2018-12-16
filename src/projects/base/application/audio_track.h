@@ -16,9 +16,6 @@ public:
 	void SetSampleRate(int32_t samplerate);
 	int32_t GetSampleRate();
 
-	common::AudioSample::Format GetSampleFormat();
-	common::AudioChannel::Layout GetChannelLayout();
-
 	common::AudioSample &GetSample();
 	common::AudioChannel &GetChannel();
 

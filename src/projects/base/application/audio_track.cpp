@@ -25,16 +25,6 @@ AudioSample &AudioTrack::GetSample()
 	return _sample;
 }
 
-AudioSample::Format AudioTrack::GetSampleFormat()
-{
-	return _sample.GetFormat();
-}
-
-AudioChannel::Layout AudioTrack::GetChannelLayout()
-{
-	return _channel_layout.GetLayout();
-}
-
 AudioChannel &AudioTrack::GetChannel()
 {
 	return _channel_layout;

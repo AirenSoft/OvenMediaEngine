@@ -13,16 +13,20 @@
 
 #include <memory>
 
+#include <base/application/application.h>
+#include <base/media_route/media_route_interface.h>
 #include <ice/ice.h>
 #include <http_server/http_server.h>
 #include <http_server/https_server.h>
 #include <http_server/interceptors/http_request_interceptors.h>
+#include <media_router/media_route_application.h>
+#include <relay/relay.h>
 
-class RtcSignallingServer
+class RtcSignallingServer : public ov::EnableSharedFromThis<RtcSignallingServer>
 {
 public:
-	RtcSignallingServer();
-	virtual ~RtcSignallingServer();
+	RtcSignallingServer(const info::Application &application_info, std::shared_ptr<MediaRouteApplicationInterface> application);
+	virtual ~RtcSignallingServer() = default;
 
 	bool Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate = nullptr);
 	bool Stop();
@@ -54,12 +58,19 @@ protected:
 		std::vector<RtcIceCandidate> remote_candidates;
 	};
 
-	std::shared_ptr<ov::Error> ProcessCommand(const ov::String &command, const ov::JsonObject &object, RtcSignallingInfo &info, const std::shared_ptr<WebSocketResponse> &response, const std::shared_ptr<const WebSocketFrame> &message);
-	bool ProcessRequestOffer(RtcSignallingInfo &info, const std::shared_ptr<WebSocketResponse> &response, const std::shared_ptr<const WebSocketFrame> &message);
+	using SdpCallback = std::function<void(std::shared_ptr<SessionDescription> sdp, std::shared_ptr<ov::Error> error)>;
+
+	void ProcessCommand(const ov::String &command, const ov::JsonObject &object, RtcSignallingInfo &info, const std::shared_ptr<WebSocketResponse> &response, const std::shared_ptr<const WebSocketFrame> &message);
+	void ProcessRequestOffer(RtcSignallingInfo &info, const std::shared_ptr<WebSocketResponse> &response, const std::shared_ptr<const WebSocketFrame> &message, SdpCallback callback);
+
+	const info::Application &_application_info;
+	std::shared_ptr<MediaRouteApplicationInterface> _application;
 
 	std::shared_ptr<HttpServer> _http_server;
 
 	std::vector<std::shared_ptr<RtcSignallingObserver>> _observers;
+
+	ov::DelayQueue _sdp_timer;
 
 	// key: response
 	// value: sdp

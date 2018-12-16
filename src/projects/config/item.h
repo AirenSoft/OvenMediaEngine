@@ -32,6 +32,7 @@ namespace cfg
 		Item &operator =(const Item &item);
 
 		bool Parse(const ov::String &file_name, const ov::String &tag_name);
+		bool IsParsed() const;
 
 		virtual ov::String ToString() const;
 
@@ -182,6 +183,7 @@ namespace cfg
 		virtual void MakeParseList() const = 0;
 
 		ValueBase *FindValue(const ov::String &name, const ParseItem *parse_item_to_find);
+		// target은 하위 항목
 		bool IsParsed(const void *target) const;
 
 		bool ParseFromFile(const ov::String &file_name, const ov::String &tag_name, int indent);
@@ -194,6 +196,8 @@ namespace cfg
 
 		ov::String _tag_name;
 		mutable std::vector<ParseItem> _parse_list;
+
+		bool _parsed = false;
 
 		Item *_parent = nullptr;
 	};

@@ -12,7 +12,7 @@
 
 namespace ov
 {
-	// 일반적으로 사용되는 소켓 (client socket)
+	// 일반적으로 사용되는 소켓 (server에서 생성한 client socket)
 	class ClientSocket : public Socket
 	{
 	public:

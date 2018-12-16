@@ -11,6 +11,9 @@ class MediaRouteApplicationObserver;
 class MediaRouteApplicationConnector;
 class StreamInfo;
 class MediaPacket;
+class MediaRouteStream;
+
+class RelayClient;
 
 class MediaRouteApplicationInterface : public ov::EnableSharedFromThis<MediaRouteApplicationInterface>
 {
@@ -29,5 +32,8 @@ public:
 	{
 		return false;
 	}
+
+	virtual std::shared_ptr<RelayClient> GetOriginConnector() = 0;
+	virtual const std::map<uint32_t, std::shared_ptr<MediaRouteStream>> GetStreams() const = 0;
 };
 

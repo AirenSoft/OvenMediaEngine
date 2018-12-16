@@ -103,16 +103,16 @@ namespace ov
 				if(_event.Wait(first_item.time_point) == false)
 				{
 					// first_item.time_point 만큼 대기 할 때까지, 다른 항목이 Push() 되지 않았음
-					first_item.function(first_item.parameter);
+					bool cont = first_item.function(first_item.parameter);
 
 					std::lock_guard<std::mutex> lock(_mutex);
 
 					// 처리된 항목은 queue에서 제외
 					_queue.pop();
 
-					if(first_item.repeat)
+					if(first_item.repeat && cont)
 					{
-						// repeat이 활성화 되어 있으면, 다음 번 실행을 위해 다시 등록
+						// repeat이 활성화 되어 있고 true를 반환했다면 다음 번 실행을 위해 다시 등록
 						first_item.RecalculateTimePoint();
 
 						_queue.push(first_item);

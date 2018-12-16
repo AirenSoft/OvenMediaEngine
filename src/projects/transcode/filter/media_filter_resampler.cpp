@@ -80,7 +80,8 @@ bool MediaFilterResampler::Configure(std::shared_ptr<MediaTrack> input_media_tra
 	ov::String output_filter_descr;
 
 	output_filter_descr.Format(
-		"aresample=%d,asetnsamples=n=1024,aformat=sample_fmts=%s:channel_layouts=%s,asettb=expr=%f",
+		//"aresample=%d,asetnsamples=n=1024,aformat=sample_fmts=%s:channel_layouts=%s,asettb=expr=%f",
+		"aresample=%d,aformat=sample_fmts=%s:channel_layouts=%s,asettb=expr=%f",
 		context->GetAudioSampleRate(),
 		context->GetAudioSample().GetName(),
 		context->GetAudioChannel().GetName(),

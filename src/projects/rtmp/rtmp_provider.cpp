@@ -174,14 +174,14 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id, uint32_t s
 
 	if(application == nullptr)
 	{
-		logte("can not find application");
+		logte("cannot find application");
 		return false;
 	}
 
 	auto stream = std::dynamic_pointer_cast<RtmpStream>(application->GetStreamById(stream_id));
 	if(stream == nullptr)
 	{
-		logte("can not find stream");
+		logte("cannot find stream");
 		return false;
 	}
 
@@ -202,7 +202,7 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id, uint32_t s
 
 	if(application == nullptr)
 	{
-		logte("can not find application");
+		logte("cannot find application");
 		return false;
 	}
 
@@ -210,7 +210,7 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id, uint32_t s
 
 	if(stream == nullptr)
 	{
-		logte("can not find stream");
+		logte("cannot find stream");
 		return false;
 	}
 
@@ -229,14 +229,14 @@ bool RtmpProvider::OnDeleteStream(info::application_id_t app_id, uint32_t stream
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationById(app_id));
 	if(application == nullptr)
 	{
-		logte("can not find application");
+		logte("cannot find application");
 		return false;
 	}
 
 	auto stream = std::dynamic_pointer_cast<RtmpStream>(application->GetStreamById(stream_id));
 	if(stream == nullptr)
 	{
-		logte("can not find stream");
+		logte("cannot find stream");
 		return false;
 	}
 

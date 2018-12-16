@@ -12,26 +12,26 @@
 
 namespace cfg
 {
-	struct Signalling : public Item
+	struct Origin : public Item
 	{
-		const Tls &GetTls() const
+		ov::String GetPrimary() const
 		{
-			return _tls;
+			return _primary;
 		}
 
-		int GetPort() const
+		ov::String GetSecondary() const
 		{
-			return _port;
+			return _secondary;
 		}
 
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<Optional, Overridable>("TLS", &_tls);
-			RegisterValue<Optional>("Port", &_port);
+			RegisterValue("Primary", &_primary);
+			RegisterValue<Optional>("Secondary", &_secondary);
 		}
 
-		Tls _tls;
-		int _port = 3333;
+		ov::String _primary;
+		ov::String _secondary;
 	};
 }

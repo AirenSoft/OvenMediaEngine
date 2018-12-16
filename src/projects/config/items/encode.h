@@ -44,7 +44,7 @@ namespace cfg
 			RegisterValue<Optional>("Video", &_video);
 		}
 
-		bool _active;
+		bool _active = true;
 		ov::String _name;
 		AudioProfile _audio;
 		VideoProfile _video;

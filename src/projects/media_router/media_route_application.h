@@ -26,6 +26,9 @@
 class ApplicationInfo;
 class StreamInfo;
 
+class RelayServer;
+class RelayClient;
+
 // -어플리케이션(Application) 별 스트림(Stream)을 관리해야 한다
 // - Publisher를 관리해야한다
 // - Provider를 관리해야한다
@@ -107,6 +110,16 @@ public:
 	void OnGarbageCollector();
 	void GarbageCollector();
 
+	const std::map<uint32_t, std::shared_ptr<MediaRouteStream>> GetStreams() const override
+	{
+		return _streams;
+	}
+
+	std::shared_ptr<RelayClient> GetOriginConnector() override
+	{
+		return _relay_client;
+	}
+
 	enum
 	{
 		BUFFFER_INDICATOR_UNIQUEID_GC = 0
@@ -123,6 +136,12 @@ public:
 		uint32_t _stream_id;
 	};
 
+protected:
 	// 버퍼를 처리할 인디게이터
 	MediaQueue<std::unique_ptr<BufferIndicator>> _indicator;
+
+	std::shared_ptr<RelayServer> _relay_server;
+
+	std::shared_ptr<RelayClient> _relay_client;
+	ov::DelayQueue _retry_timer;
 };

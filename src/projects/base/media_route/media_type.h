@@ -5,7 +5,7 @@
 namespace common
 {
 	// 미디어 타입
-	enum class MediaType : int32_t
+	enum class MediaType : int8_t
 	{
 		Unknown = -1,
 		Video,
@@ -18,7 +18,7 @@ namespace common
 	};
 
 	// 디코딩된 비디오 프레임의 타입
-	enum class PictureType : int32_t
+	enum class PictureType : uint8_t
 	{
 		None = 0, ///< Undefined
 		I,     ///< Intra
@@ -31,7 +31,7 @@ namespace common
 	};
 
 	// 미디어 코덱 아이디
-	enum class MediaCodecId : int32_t
+	enum class MediaCodecId : uint8_t
 	{
 		None = 0,
 		H264,
@@ -295,7 +295,7 @@ namespace common
 		}
 
 		// 채널 개수 반환
-		int32_t GetCounts() const
+		uint32_t GetCounts() const
 		{
 			return _count;
 		}
@@ -308,7 +308,7 @@ namespace common
 
 	private:
 		Layout _layout = Layout::LayoutStereo;
-		int32_t _count = 2;
+		uint32_t _count = 2;
 		std::string _name = "stereo";
 	};
 

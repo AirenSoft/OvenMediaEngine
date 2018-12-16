@@ -45,7 +45,7 @@ MediaRouteApplicationConnector::ConnectorType MediaRouteStream::GetConnectorType
 	return _application_connector_type;
 }
 
-bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer)
+bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer, bool convert_bitstream)
 {
 	MediaType media_type = buffer->GetMediaType();
 	int32_t track_id = buffer->GetTrackId();
@@ -57,28 +57,31 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer)
 		return false;
 	}
 
-	if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::H264)
+	if(convert_bitstream)
 	{
-		_bsfv.convert_to(buffer.get());
-	}
-	else if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::Vp8)
-	{
-		_bsf_vp8.convert_to(buffer.get());
-	}
-	else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Aac)
-	{
-		_bsfa.convert_to(buffer.get());
-		logd("MediaRouter.Stream.AAC.Packet", "Enqueue for AAC\n%s", buffer->GetData()->Dump(32).CStr());
-	}
-	else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Opus)
-	{
-		// logtw("%s", buffer->GetData()->Dump(32).CStr());
-		// _bsfa.convert_to(buffer.GetBuffer());
-		logd("MediaRouter.Stream.OPUS.Packet", "Enqueue for OPUS\n%s", buffer->GetData()->Dump(32).CStr());
-	}
-	else
-	{
-		OV_ASSERT2(false);
+		if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::H264)
+		{
+			_bsfv.convert_to(buffer.get());
+		}
+		else if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::Vp8)
+		{
+			_bsf_vp8.convert_to(buffer.get());
+		}
+		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Aac)
+		{
+			_bsfa.convert_to(buffer.get());
+			logd("MediaRouter.Stream.AAC.Packet", "Enqueue for AAC\n%s", buffer->GetData()->Dump(32).CStr());
+		}
+		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Opus)
+		{
+			// logtw("%s", buffer->GetData()->Dump(32).CStr());
+			// _bsfa.convert_to(buffer.GetBuffer());
+			logd("MediaRouter.Stream.OPUS.Packet", "Enqueue for OPUS\n%s", buffer->GetData()->Dump(32).CStr());
+		}
+		else
+		{
+			OV_ASSERT2(false);
+		}
 	}
 
 #if 0

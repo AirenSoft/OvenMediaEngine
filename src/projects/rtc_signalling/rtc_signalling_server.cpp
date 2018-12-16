@@ -12,12 +12,11 @@
 
 #include <ice/ice.h>
 
-RtcSignallingServer::RtcSignallingServer()
+RtcSignallingServer::RtcSignallingServer(const info::Application &application_info, std::shared_ptr<MediaRouteApplicationInterface> application)
+	: _application_info(application_info),
+	  _application(application)
 {
-}
-
-RtcSignallingServer::~RtcSignallingServer()
-{
+	_sdp_timer.Start();
 }
 
 bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate)
@@ -109,16 +108,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::sha
 
 			logtd("Trying to process command: %s...", command.CStr());
 
-			auto error = ProcessCommand(command, object, client->second, response, message);
-			if(error != nullptr)
-			{
-				ov::JsonObject response_json;
-				Json::Value &value = response_json.GetJsonValue();
-
-				value["error"] = error->GetMessage().CStr();
-
-				response->Send(response_json.ToString());
-			}
+			ProcessCommand(command, object, client->second, response, message);
 		});
 
 	web_socket->SetErrorHandler(
@@ -204,7 +194,7 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 		if(
 			(info.application_name == application_name) &&
 			(info.stream_name == stream_name) &&
-			(*(info.peer_sdp) == *peer_sdp)
+			((info.peer_sdp != nullptr) && (*(info.peer_sdp) == *peer_sdp))
 			)
 		{
 			break;
@@ -228,6 +218,8 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 
 bool RtcSignallingServer::Stop()
 {
+	_sdp_timer.Stop();
+
 	if(_http_server == nullptr)
 	{
 		return false;
@@ -236,20 +228,91 @@ bool RtcSignallingServer::Stop()
 	if(_http_server->Stop())
 	{
 		_http_server = nullptr;
+
 		return true;
 	}
 
 	return false;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::ProcessCommand(const ov::String &command, const ov::JsonObject &object, RtcSignallingInfo &info, const std::shared_ptr<WebSocketResponse> &response, const std::shared_ptr<const WebSocketFrame> &message)
+void RtcSignallingServer::ProcessCommand(const ov::String &command, const ov::JsonObject &object, RtcSignallingInfo &info, const std::shared_ptr<WebSocketResponse> &response, const std::shared_ptr<const WebSocketFrame> &message)
 {
+	auto response_error = [&](std::shared_ptr<ov::Error> error) -> void
+	{
+		ov::JsonObject response_json;
+		Json::Value &value = response_json.GetJsonValue();
+
+		value["error"] = error->GetMessage().CStr();
+
+		response->Send(response_json.ToString());
+	};
+
 	if(command == "request_offer")
 	{
-		if(ProcessRequestOffer(info, response, message) == false)
+		ProcessRequestOffer(info, response, message, [&, response_error](std::shared_ptr<SessionDescription> sdp, std::shared_ptr<ov::Error> error) -> void
 		{
-			return std::make_shared<ov::Error>(100, "Cannot create offer");
-		}
+			if((sdp != nullptr) && (error == nullptr))
+			{
+				ov::JsonObject response_json;
+
+				Json::Value &value = response_json.GetJsonValue();
+
+				// SDP를 계산함
+				Json::Value &sdp_value = value["sdp"];
+
+				ov::String offer_sdp;
+
+				if(sdp->ToString(offer_sdp))
+				{
+					value["id"] = info.id.CStr();
+					sdp_value["sdp"] = offer_sdp.CStr();
+					sdp_value["type"] = "offer";
+
+					// candidates: [ <candidate>, <candidate>, ... ]
+					Json::Value candidates(Json::ValueType::arrayValue);
+
+					// candiate:
+					// {
+					//     "candidate":"candidate:0 1 UDP 50 192.168.0.183 10000 typ host generation 0",
+					//     "sdpMLineIndex":0,
+					//     "sdpMid":"video"
+					// }
+					// local candidate 목록을 client로 보냄
+					for(const auto &candidate : info.local_candidates)
+					{
+						Json::Value item;
+
+						item["candidate"] = candidate.GetCandidateString().CStr();
+						item["sdpMLineIndex"] = candidate.GetSdpMLineIndex();
+						if(candidate.GetSdpMid().IsEmpty() == false)
+						{
+							item["sdpMid"] = candidate.GetSdpMid().CStr();
+						}
+
+						candidates.append(item);
+					}
+					value["candidates"] = candidates;
+
+					info.offer_sdp = sdp;
+
+					response->Send(response_json.ToString());
+				}
+				else
+				{
+					//TODO(dimiden): ERROR 처리 할 것
+					logtw("Could not obtain SDP for stream %s", info.stream_name.CStr());
+
+					OV_ASSERT2(false);
+
+					error = std::make_shared<ov::Error>(100, "Cannot create offer");
+				}
+			}
+
+			if(error != nullptr)
+			{
+				response_error(error);
+			}
+		});
 	}
 	else if(command == "answer")
 	{
@@ -258,7 +321,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::ProcessCommand(const ov::String 
 
 		if(sdp_value.isNull())
 		{
-			return std::make_shared<ov::Error>(101, "There is no SDP");
+			response_error(std::make_shared<ov::Error>(101, "There is no SDP"));
 		}
 
 		// client가 SDP를 보냈으므로, 처리함
@@ -267,13 +330,13 @@ std::shared_ptr<ov::Error> RtcSignallingServer::ProcessCommand(const ov::String 
 		if((sdp_type.isString() == false) || (sdp_type != "answer"))
 		{
 			// 반드시 answer sdp여야 함
-			return std::make_shared<ov::Error>(102, "Invalid SDP type");
+			response_error(std::make_shared<ov::Error>(102, "Invalid SDP type"));
 		}
 
 		if(sdp_value["sdp"].isString() == false)
 		{
 			// 반드시 문자열 이어야 함
-			return std::make_shared<ov::Error>(103, "SDP must be string");
+			response_error(std::make_shared<ov::Error>(103, "SDP must be string"));
 		}
 
 		logtd("The client sent a answer: %s", object.ToString().CStr());
@@ -292,7 +355,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::ProcessCommand(const ov::String 
 		else
 		{
 			// SDP를 파싱할 수 없음
-			return std::make_shared<ov::Error>(104, "Could not parse SDP");
+			response_error(std::make_shared<ov::Error>(104, "Could not parse SDP"));
 		}
 	}
 	else if(command == "candidate")
@@ -302,12 +365,12 @@ std::shared_ptr<ov::Error> RtcSignallingServer::ProcessCommand(const ov::String 
 
 		if(candidates_value.isNull())
 		{
-			return std::make_shared<ov::Error>(104, "There is no candidate list");
+			response_error(std::make_shared<ov::Error>(104, "There is no candidate list"));
 		}
 
 		if(candidates_value.isArray() == false)
 		{
-			return std::make_shared<ov::Error>(105, "Candidates must be array");
+			response_error(std::make_shared<ov::Error>(105, "Candidates must be array"));
 		}
 
 		// client가 candidate를 보냈으므로, 처리함
@@ -322,7 +385,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::ProcessCommand(const ov::String 
 
 			if(ice_candidate->ParseFromString(candidate) == false)
 			{
-				return std::make_shared<ov::Error>(106, "Invalid candidate: %s", candidate.CStr());
+				response_error(std::make_shared<ov::Error>(106, "Invalid candidate: %s", candidate.CStr()));
 			}
 
 			for(auto &observer : _observers)
@@ -343,15 +406,14 @@ std::shared_ptr<ov::Error> RtcSignallingServer::ProcessCommand(const ov::String 
 			};
 		}
 	}
-
-	return nullptr;
 }
 
-bool RtcSignallingServer::ProcessRequestOffer(RtcSignallingInfo &info, const std::shared_ptr<WebSocketResponse> &response, const std::shared_ptr<const WebSocketFrame> &message)
+void RtcSignallingServer::ProcessRequestOffer(RtcSignallingInfo &info, const std::shared_ptr<WebSocketResponse> &response, const std::shared_ptr<const WebSocketFrame> &message, SdpCallback callback)
 {
 	ov::String application_name = info.application_name;
 	ov::String stream_name = info.stream_name;
 
+	// 여기에 request offer가 있음.
 	std::shared_ptr<SessionDescription> sdp = nullptr;
 
 	std::find_if(_observers.begin(), _observers.end(), [&info, &sdp, &application_name, &stream_name](auto &observer) -> bool
@@ -363,61 +425,69 @@ bool RtcSignallingServer::ProcessRequestOffer(RtcSignallingInfo &info, const std
 
 	if(sdp != nullptr)
 	{
-		ov::JsonObject response_json;
-
-		Json::Value &value = response_json.GetJsonValue();
-
-		// SDP를 계산함
-		Json::Value &sdp_value = value["sdp"];
-
-		ov::String offer_sdp;
-
-		if(sdp->ToString(offer_sdp) == false)
-		{
-			//TODO(dimiden): ERROR 처리 할 것
-			logtw("Could not obtain SDP for stream %s", info.stream_name.CStr());
-
-			OV_ASSERT2(false);
-			return false;
-		}
-
-		value["id"] = info.id.CStr();
-		sdp_value["sdp"] = offer_sdp.CStr();
-		sdp_value["type"] = "offer";
-
-		// candidates: [ <candidate>, <candidate>, ... ]
-		Json::Value candidates(Json::ValueType::arrayValue);
-
-		// candiate:
-		// {
-		//     "candidate":"candidate:0 1 UDP 50 192.168.0.183 10000 typ host generation 0",
-		//     "sdpMLineIndex":0,
-		//     "sdpMid":"video"
-		// }
-		// local candidate 목록을 client로 보냄
-		for(const auto &candidate : info.local_candidates)
-		{
-			Json::Value item;
-
-			item["candidate"] = candidate.GetCandidateString().CStr();
-			item["sdpMLineIndex"] = candidate.GetSdpMLineIndex();
-			if(candidate.GetSdpMid().IsEmpty() == false)
-			{
-				item["sdpMid"] = candidate.GetSdpMid().CStr();
-			}
-
-			candidates.append(item);
-		}
-		value["candidates"] = candidates;
-
-		info.offer_sdp = sdp;
-
-		response->Send(response_json.ToString());
-
-		return true;
+		callback(sdp, nullptr);
 	}
+	else
+	{
+		if(_application_info.GetType() == cfg::ApplicationType::LiveEdge)
+		{
+			// Request a SDP to origin
+			auto origin = _application->GetOriginConnector();
 
-	logtw("Could not obtain sdp for client: %s", response->ToString().CStr());
+			// TODO: need to change asyncronous without timer
+			if(origin != nullptr)
+			{
+				ov::String identifier = ov::String::FormatString("%s/%s", application_name.CStr(), stream_name.CStr());
+				int count = 0;
 
-	return false;
+				_sdp_timer.Push(
+					[&, count, sdp, application_name, stream_name, response, callback](void *paramter) -> bool
+					{
+						std::shared_ptr<SessionDescription> sdp = nullptr;
+
+						// check again
+						std::find_if(_observers.begin(), _observers.end(), [&info, &sdp, &application_name, &stream_name](auto &observer) -> bool
+						{
+							// observer에 local_candidates를 채워달라고 요청함
+							sdp = observer->OnRequestOffer(application_name, stream_name, &(info.local_candidates));
+							return sdp != nullptr;
+						});
+
+						if(sdp != nullptr)
+						{
+							callback(sdp, nullptr);
+
+							// Stop the timer
+							return false;
+						}
+
+						if((time(nullptr) - reinterpret_cast<time_t>(paramter)) > 5)
+						{
+							// timeout
+							callback(nullptr, std::make_shared<ov::Error>(100, "Cannot create offer"));
+
+							// Stop the timer
+							return false;
+						}
+
+						// wait for response
+						return true;
+					}, reinterpret_cast<void *>(time(nullptr)), 100, true);
+
+				// Request stream information to generate SDP
+				origin->Sync(identifier);
+			}
+			else
+			{
+				OV_ASSERT2(origin != nullptr);
+			}
+		}
+		else
+		{
+			logte("Get offer sdp failed. Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
+			logtw("Could not obtain sdp for client: %s", response->ToString().CStr());
+
+			callback(sdp, std::make_shared<ov::Error>(100, "Cannot create offer"));
+		}
+	}
 }

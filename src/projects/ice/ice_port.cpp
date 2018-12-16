@@ -18,9 +18,10 @@
 
 IcePort::IcePort()
 {
-	_timer.Push([this](void *paramter) -> void
+	_timer.Push([this](void *paramter) -> bool
 	            {
 		            CheckTimedoutItem();
+		            return true;
 	            }, nullptr, 1000, true);
 	_timer.Start();
 }
@@ -44,6 +45,13 @@ bool IcePort::Create(ov::SocketType type, const ov::SocketAddress &address)
 	}
 
 	_physical_port = PhysicalPortManager::Instance()->CreatePort(type, address);
+
+	if(_physical_port == nullptr)
+	{
+		logte("Cannot create physical port for %s (type: %d)", address.ToString().CStr(), type);
+		return false;
+	}
+
 	_physical_port->AddObserver(this);
 
 	return true;
@@ -51,7 +59,7 @@ bool IcePort::Create(ov::SocketType type, const ov::SocketAddress &address)
 
 bool IcePort::Close()
 {
-	if(_physical_port->Close())
+	if((_physical_port == nullptr) || _physical_port->Close())
 	{
 		return true;
 	}
