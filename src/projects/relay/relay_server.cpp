@@ -146,6 +146,13 @@ void RelayServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &ad
 						RelayPacket response(RelayPacketType::Sync);
 						Send(remote, stream_info->GetId(), response, serialize.ToData().get());
 
+						auto info_iter = _client_list.find(remote);
+
+						if(info_iter != _client_list.end())
+						{
+							info_iter->second.stream_id = stream_info->GetId();
+						}
+
 						_client_map[stream_info->GetId()].push_back(remote);
 
 						return;
@@ -192,6 +199,7 @@ void RelayServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReaso
 			{
 				if(*client == remote)
 				{
+					logtd("Deleting RelayClient for stream: %s", remote->ToString().CStr());
 					client_list.erase(client);
 					break;
 				}
@@ -202,6 +210,9 @@ void RelayServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReaso
 			// The client disconnected as soon as it connected
 			// (does not request any data)
 		}
+
+		logtd("Deleting RelayClient from client list: %s", remote->ToString().CStr());
+		_client_list.erase(info_iter);
 	}
 	else
 	{
