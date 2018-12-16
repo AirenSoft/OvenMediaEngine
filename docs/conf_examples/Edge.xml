@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Server version="1">
+	<Name>OvenMediaEngine</Name>
+	<Hosts>
+		<Host>
+			<Name>default</Name>
+			<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
+			<IP>192.168.0.183</IP>
+			<Applications>
+				<Application>
+					<Name>app</Name>
+					<Type>liveedge</Type>
+					<Origin>
+						<Primary>192.168.0.183:9000</Primary>
+						<Secondary>192.168.0.183:9000</Secondary>
+					</Origin>
+					<Publishers>
+						<WebRTC>
+							<IP>192.168.0.183</IP>
+							<Port>10001/udp</Port>
+							<Signalling>
+								<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
+								<Port>3334</Port>
+							</Signalling>
+						</WebRTC>
+					</Publishers>
+				</Application>
+			</Applications>
+		</Host>
+	</Hosts>
+</Server>
