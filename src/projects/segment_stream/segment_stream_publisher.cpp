@@ -6,7 +6,6 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #include "segment_stream_publisher.h"
 #include "config/config_manager.h"
 #include "segment_stream_application.h"
@@ -29,6 +28,8 @@ std::shared_ptr<SegmentStreamPublisher> SegmentStreamPublisher::Create(const inf
 SegmentStreamPublisher::SegmentStreamPublisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router) 
 	: Publisher(application_info, std::move(router))
 {
+    _publisher_type = cfg::PublisherType::Dash;
+
 	logtd("SegmentStreamPublisher Create Start");
 }
 
@@ -41,42 +42,72 @@ SegmentStreamPublisher::~SegmentStreamPublisher()
 }
 
 //====================================================================================================
-// GetSegmentStreamPort
-// - Config 정보에서 Segment Stream Port(http)정보 전달
-//====================================================================================================
-uint16_t SegmentStreamPublisher::GetSegmentStreamPort()
-{
-	int port = _publisher_info->GetPort();
-
-	return static_cast<uint16_t>((port == 0) ? 80 : port);
-}
-
-//====================================================================================================
 // Start
 // - Publisher override
 //====================================================================================================
 bool SegmentStreamPublisher::Start()
 {
-	// Find SegmentStream publisher configuration
-	_publisher_info = FindPublisherInfo<cfg::DashPublisher>();
 
-	if(_publisher_info == nullptr)
+    auto publisher_type = GetPublisherType();
+
+	// Find Dash publisher configuration
+    _publisher_type = cfg::PublisherType::Dash;
+	auto dash_publisher_info = FindPublisherInfo<cfg::DashPublisher>();
+	if(dash_publisher_info == nullptr)
 	{
-		logte("Cannot initialize DashPublisher using config information");
+		logte("Cannot initialize SegmentStreamPublisher(DASH) using config information");
 		return false;
 	}
 
-	// segment setream server(http) Start
-	ov::String app_name = _application_info.GetName();
-	_segment_stream_server = std::make_shared<SegmentStreamServer>();
-	_segment_stream_server->SetAllowApp(app_name, AllowProtocolFlag::DASH); // TODO : 차후 허용 확인 이후 설정
-	_segment_stream_server->SetAllowApp(app_name, AllowProtocolFlag::HLS);  // TODO : 차후 허용 확인 이후 설정
-	_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
-	_segment_stream_server->Start(ov::SocketAddress(GetSegmentStreamPort()));
+	// Find Hls publisher configuration
+    _publisher_type = cfg::PublisherType::Hls;
+    auto hls_publisher_info = FindPublisherInfo<cfg::HlsPublisher>();
+	if(hls_publisher_info == nullptr)
+	{
+		logte("Cannot initialize SegmentStreamPublisher(HLS) using config information");
+		return false;
+	}
 
-	// Publisher::Start()에서 Application을 생성
+    _publisher_type = publisher_type;
 
+	uint16_t dash_publisher_port 	= dash_publisher_info->GetPort();
+	uint16_t hls_publisher_port 	= hls_publisher_info->GetPort();
+	ov::String app_name 			= _application_info.GetName();
 
+	if(dash_publisher_port == 0) dash_publisher_port = 80;
+	if(hls_publisher_port == 0) hls_publisher_port = 80;
+
+	// DSH/HLS Server Start
+	if(dash_publisher_port == hls_publisher_port)
+	{
+		auto segment_stream_server = std::make_shared<SegmentStreamServer>();
+
+		segment_stream_server->SetAllowApp(app_name, AllowProtocolFlag::DASH);
+		segment_stream_server->SetAllowApp(app_name, AllowProtocolFlag::HLS);
+		segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+		segment_stream_server->Start(ov::SocketAddress(dash_publisher_port));
+
+		_segment_stream_servers.push_back(segment_stream_server);
+	}
+	else
+	{
+		auto dash_segment_stream_server = std::make_shared<SegmentStreamServer>();
+
+		dash_segment_stream_server->SetAllowApp(app_name, AllowProtocolFlag::DASH);
+		dash_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+		dash_segment_stream_server->Start(ov::SocketAddress(dash_publisher_port));
+
+		_segment_stream_servers.push_back(dash_segment_stream_server);
+
+		auto hls_segment_stream_server = std::make_shared<SegmentStreamServer>();
+
+		hls_segment_stream_server->SetAllowApp(app_name, AllowProtocolFlag::HLS);
+		hls_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+		hls_segment_stream_server->Start(ov::SocketAddress(hls_publisher_port));
+
+		_segment_stream_servers.push_back(hls_segment_stream_server);
+
+	}
 
 	return Publisher::Start();
 }

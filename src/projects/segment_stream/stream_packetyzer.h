@@ -44,6 +44,8 @@ private :
 	uint32_t 						_audio_timescale;
 	uint32_t 						_video_timescale;
 	PacketyzerStreamType            _stream_type;
+	time_t 							_start_time;
+	uint32_t                        _video_framerate;
 	std::deque<std::shared_ptr<PacketyzerFrameData>>	_video_data_queue;
 };
 
