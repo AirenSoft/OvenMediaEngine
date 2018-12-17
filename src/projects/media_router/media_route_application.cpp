@@ -549,7 +549,8 @@ void MediaRouteApplication::MainTask()
 								codec_info->codec_specific.h264.packetization_mode = H264PacketizationMode::NonInterleaved;
 							}
 
-							auto fragmentation = std::move(cur_buf->_frag_hdr);
+							auto fragmentation = std::make_unique<FragmentationHeader>();
+							::memcpy(fragmentation.get(), cur_buf->_frag_hdr.get(), sizeof(FragmentationHeader));
 
 							// logtd("send to publisher (1000k cr):%u, (90k cr):%u", cur_buf->GetPts(), encoded_frame->_timeStamp);
 							observer->OnSendVideoFrame(
