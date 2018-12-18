@@ -52,15 +52,19 @@ StreamPacketyzer::~StreamPacketyzer( )
 //====================================================================================================
 // Append Video Data
 //====================================================================================================
-bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, bool is_keyframe, uint64_t time_offset, uint32_t data_size, uint8_t *data) {
-	// 임시
-	timescale = 90000;
+bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, bool is_keyframe, uint64_t time_offset, uint32_t data_size, uint8_t *data)
+{
+    // 임시
+    timescale = 90000;
 
 	// data valid check
-	if (data_size <= 0 || data_size > MAX_INPUT_DATA_SIZE) {
-		printf("ERROR : [StreamPacketyzer] AppendVideoData - Data Size Error(%d:%d)", data_size, MAX_INPUT_DATA_SIZE);
+	if (data_size <= 0 || data_size > MAX_INPUT_DATA_SIZE)
+	{
+		logtw("Data Size Error(%d:%d)", data_size, MAX_INPUT_DATA_SIZE);
 		return false;
 	}
+
+	// logti("test - Append Video - timestamp(%lld) data(%d)", timestamp, data_size);
 
     // timestamp change
     if (timescale != _video_timescale)
@@ -107,11 +111,9 @@ bool StreamPacketyzer::VideoDataSampleWrite(uint64_t timestamp)
 
             delete_count++;
             _video_data_queue.pop_front();
-
-            printf("\n test : timestamp(%lld)", video_data->timestamp);
         }
 
-        logtw("AppendVideoData - VideoDataQueue Count Over - Count(%d:%d) Timestamp(%lld) Duration(%d) Delete(%d)",
+        logtw("VideoDataQueue Count Over - Count(%d:%d) Timestamp(%lld) Duration(%d) Delete(%d)",
               (int) _video_data_queue.size(),
 			 _video_framerate*3,
               timestamp,
@@ -149,9 +151,12 @@ bool StreamPacketyzer::AppendAudioData(uint64_t timestamp, uint32_t timescale, u
 	// data valid check
 	if(data_size <= 0 || data_size > MAX_INPUT_DATA_SIZE)
 	{
-		printf("ERROR : [StreamPacketyzer] AppendAudioData - Data Size Error(%d:%d)", data_size, MAX_INPUT_DATA_SIZE);
+		logtw("Data Size Error(%d:%d)", data_size, MAX_INPUT_DATA_SIZE);
 		return false; 
 	}
+
+	// logti("test - Append Audio - timestamp(%lld) data(%d)", Packetyzer::ConvertTimeScale(timestamp, timescale, _video_timescale), data_size);
+
 
 	// Video 데이터 삽입(오디오 타임스탬프 이전 데이터)
 	VideoDataSampleWrite(Packetyzer::ConvertTimeScale(timestamp, timescale, _video_timescale));

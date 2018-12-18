@@ -57,11 +57,9 @@ SegmentStream::SegmentStream(const std::shared_ptr<Application> application, con
 
     PacketyzerMediaInfo media_info;
 
-    if (video_track != nullptr)
+    if (video_track != nullptr && video_track->GetCodecId() == MediaCodecId::H264)
     {
-        if (video_track->GetCodecId() == MediaCodecId::H264) media_info.video_codec_type = SegmentCodecType::H264Codec;
-        else media_info.video_codec_type = SegmentCodecType::UnknownCodec;
-
+        media_info.video_codec_type = SegmentCodecType::H264Codec;
         media_info.video_framerate = video_track->GetFrameRate();
         media_info.video_width = video_track->GetWidth();
         media_info.video_height = video_track->GetHeight();
@@ -71,11 +69,9 @@ SegmentStream::SegmentStream(const std::shared_ptr<Application> application, con
         _media_tracks[video_track->GetId()] = video_track;
     }
 
-    if (audio_track != nullptr)
+    if (audio_track != nullptr && audio_track->GetCodecId() == MediaCodecId::Aac)
     {
-        if (audio_track->GetCodecId() == MediaCodecId::Aac) media_info.audio_codec_type = SegmentCodecType::AacCodec;
-        else media_info.audio_codec_type = SegmentCodecType::UnknownCodec;
-
+        media_info.audio_codec_type = SegmentCodecType::AacCodec;
         media_info.audio_samplerate = audio_track->GetSampleRate();
         media_info.audio_channels = audio_track->GetChannel().GetCounts();
         media_info.audio_timescale = audio_track->GetTimeBase().GetDen();
@@ -86,13 +82,12 @@ SegmentStream::SegmentStream(const std::shared_ptr<Application> application, con
 
     if (video_track != nullptr || audio_track != nullptr)
     {
-        _stream_packetyzer = std::make_unique<StreamPacketyzer>(true,
-                                                                true,
-                                                                prefix,
-                                                                PacketyzerStreamType::Common,
-                                                                5,
-                                                                5,
-                                                                media_info);
+        PacketyzerStreamType stream_type = PacketyzerStreamType::Common;
+
+        if(video_track == nullptr) stream_type = PacketyzerStreamType::AudioOnly;
+        if(audio_track == nullptr) stream_type = PacketyzerStreamType::VideoOnly;
+
+        _stream_packetyzer = std::make_unique<StreamPacketyzer>(true, true, prefix, stream_type, 5, 5, media_info);
     }
 }
 

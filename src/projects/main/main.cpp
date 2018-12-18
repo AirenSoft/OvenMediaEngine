@@ -87,6 +87,7 @@ int main()
 				}
 
 				auto publisher_list = application_info.GetPublishers();
+				bool segment_publisher_create = false;  // Dash + HLS --> segment_publisher
 
 				for(const auto &publisher : publisher_list)
 				{
@@ -103,8 +104,13 @@ int main()
 
 							case cfg::PublisherType::Dash:
 							case cfg::PublisherType::Hls:
-								logtd("Trying to create SegmentStream Publisher for application [%s]...", application_info.GetName().CStr());
-								//publishers.push_back(SegmentStreamPublisher::Create(application_info, router));
+								if(!segment_publisher_create)
+								{
+									logtd("Trying to create SegmentStream Publisher for application [%s]...", application_info.GetName().CStr());
+									publishers.push_back(SegmentStreamPublisher::Create(application_info, router));
+									segment_publisher_create = true;
+								}
+
 								break;
 
 							case cfg::PublisherType::Rtmp:

@@ -45,9 +45,9 @@ public :
 protected:
 	bool RequestUrlParsing(const ov::String &request_url, ov::String &app_name, ov::String &stream_name, ov::String &file_name, ov::String &file_ext);
 	void ProcessRequest(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
-	bool CorsCheck(ov::String &app_name, ov::String &stream_name, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
-	void PlayListRequest(ov::String &app_name, ov::String &stream_name, PlayListType play_list_type, const std::shared_ptr<HttpResponse> &response);
-	void SegmentRequest(ov::String &app_name, ov::String &stream_name, ov::String &file_name,SegmentType segment_type, const std::shared_ptr<HttpResponse> &response);
+	bool CorsCheck(ov::String &app_name, ov::String &stream_name, ov::String &file_name, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
+	void PlayListRequest(ov::String &app_name, ov::String &stream_name, ov::String &file_name, PlayListType play_list_type, const std::shared_ptr<HttpResponse> &response);
+	void SegmentRequest(ov::String &app_name, ov::String &stream_name, ov::String &file_name, SegmentType segment_type, const std::shared_ptr<HttpResponse> &response);
 	void CrossdomainRequest(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
 
 protected :

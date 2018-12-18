@@ -134,13 +134,13 @@ std::shared_ptr<Application> SegmentStreamPublisher::OnCreateApplication(const i
 // OnPlayListRequest
 //  - SegmentStreamObserver Implementation
 //====================================================================================================
-bool SegmentStreamPublisher::OnPlayListRequest(const ov::String &app_name, const ov::String &stream_name, PlayListType play_list_type, ov::String &play_list)
+bool SegmentStreamPublisher::OnPlayListRequest(const ov::String &app_name, const ov::String &stream_name, const ov::String &file_name, PlayListType play_list_type, ov::String &play_list)
 {
 	auto stream = std::static_pointer_cast<SegmentStream>(GetStream(app_name, stream_name));
 
 	if(!stream)
 	{
-		logte("Cannot find stream (%s/%s)", app_name.CStr(), stream_name.CStr());
+		logte("Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
 		return false;
 	}
 
@@ -155,8 +155,9 @@ bool SegmentStreamPublisher::OnSegmentRequest(const ov::String &app_name, const 
 {
 	auto stream = std::static_pointer_cast<SegmentStream>(GetStream(app_name, stream_name));
 
-	if (!stream) {
-		logte("Cannot find stream (%s/%s)", app_name.CStr(), stream_name.CStr());
+	if (!stream)
+	{
+		logte("Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
 		return false;
 	}
 
@@ -181,7 +182,7 @@ bool SegmentStreamPublisher::OnCrossdomainRequest(ov::String &cross_domain)
 // OnCorsCheck
 //  - SegmentStreamObserver Implementation
 //====================================================================================================
-bool SegmentStreamPublisher::OnCorsCheck(const ov::String &app_name, const ov::String &stream_name, ov::String &origin_url)
+bool SegmentStreamPublisher::OnCorsCheck(const ov::String &app_name, const ov::String &stream_name, const ov::String &file_name, ov::String &origin_url)
 {
 
 	return true;

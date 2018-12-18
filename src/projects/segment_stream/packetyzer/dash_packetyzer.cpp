@@ -461,23 +461,43 @@ bool DashPacketyzer::UpdatePlayList(bool video_update)
 	}
 	
 	segment_datas_lock.unlock();
-	
-	play_list       << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-					<< "<MPD xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
-					<< "    xmlns=\"urn:mpeg:dash:schema:mpd:2011\"\n"
-					<< "    xmlns:xlink=\"http://www.w3.org/1999/xlink\"\n"
-					<< "    xsi:schemaLocation=\"urn:mpeg:DASH:schema:MPD:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd\"\n"
-					<< "    profiles=\"urn:mpeg:dash:profile:isoff-live:2011\"\n"
-					<< "    type=\"dynamic\"\n"
-					<< "    minimumUpdatePeriod=\"PT" << video_min_duration / _media_info.video_timescale << "S\"\n"
-					<< "    publishTime=" << MakeUtcTimeString(update_time) << "\n"
-					<< "    availabilityStartTime=" << MakeUtcTimeString(_start_time) << "\n"
-					<< "    timeShiftBufferDepth=\"PT" << video_total_duration / _media_info.video_timescale << "S\"\n"
-					<< "    suggestedPresentationDelay=\"PT" << _segment_count / 2 * _segment_duration << "S\"\n"
-					<< "    minBufferTime=\"PT" << _segment_duration / 2 + 1 << "S\">\n"
-					<< "<Period id=\"0\" start=\"PT0.0S\">\n";
-	
-	// video listing 
+
+	uint32_t minimum_update_period = 0;
+	uint32_t time_shift_buffer_depth = 0;
+
+	if(_stream_type  ==  PacketyzerStreamType::AudioOnly)
+	{
+		if (_media_info.audio_timescale != 0)
+		{
+			minimum_update_period = (uint32_t) audio_min_duration / _media_info.audio_timescale;
+			time_shift_buffer_depth = (uint32_t) audio_total_duration / _media_info.audio_timescale;
+		}
+	}
+	else
+	{
+		if (_media_info.video_timescale != 0)
+		{
+			minimum_update_period = (uint32_t) video_min_duration / _media_info.video_timescale;
+			time_shift_buffer_depth = (uint32_t) video_total_duration / _media_info.video_timescale;
+		}
+	}
+
+	play_list << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+			  << "<MPD xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+			  << "    xmlns=\"urn:mpeg:dash:schema:mpd:2011\"\n"
+			  << "    xmlns:xlink=\"http://www.w3.org/1999/xlink\"\n"
+			  << "    xsi:schemaLocation=\"urn:mpeg:DASH:schema:MPD:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd\"\n"
+			  << "    profiles=\"urn:mpeg:dash:profile:isoff-live:2011\"\n"
+			  << "    type=\"dynamic\"\n"
+			  << "    minimumUpdatePeriod=\"PT" << minimum_update_period << "S\"\n"
+			  << "    publishTime=" << MakeUtcTimeString(update_time) << "\n"
+			  << "    availabilityStartTime=" << MakeUtcTimeString(_start_time) << "\n"
+			  << "    timeShiftBufferDepth=\"PT" << time_shift_buffer_depth << "S\"\n"
+			  << "    suggestedPresentationDelay=\"PT" << _segment_count / 2 * _segment_duration << "S\"\n"
+			  << "    minBufferTime=\"PT" << _segment_duration / 2 + 1 << "S\">\n"
+			  << "<Period id=\"0\" start=\"PT0.0S\">\n";
+
+	// video listing
 	if (!video_segment_urls.str().empty())
 	{
 		play_list   << "\t<AdaptationSet id=\"0\" group=\"1\" mimeType=\"video/mp4\" width=\"" << _media_info.video_width << "\" height=\"" << _media_info.video_height
