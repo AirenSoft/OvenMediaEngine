@@ -15,11 +15,15 @@
 #include <transcode/transcoder.h>
 #include <rtmp/rtmp_provider.h>
 #include <base/ovcrypto/ovcrypto.h>
+#include <base/ovlibrary/stack_trace.h>
 
 void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
 
 int main()
 {
+	logtd("Trying to initialize StackTrace...");
+	ov::StackTrace::InitializeStackTrace();
+
 	struct utsname uts {};
 	::uname(&uts);
 
