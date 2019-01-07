@@ -290,17 +290,19 @@ std::shared_ptr<Certificate> WebRtcPublisher::GetCertificate()
 	{
 		auto certificate = std::make_shared<Certificate>();
 
-		logti("Trying to create a certificate using file\n\tCert path: %s\n\tPrivate key path: %s",
+		logti("Trying to create a certificate using files\n\tCert path: %s\n\tPrivate key path: %s",
 		      tls_info.GetCertPath().CStr(),
 		      tls_info.GetKeyPath().CStr()
 		);
 
-		if(certificate->GenerateFromPem(tls_info.GetCertPath(), tls_info.GetKeyPath()))
+		auto error = certificate->GenerateFromPem(tls_info.GetCertPath(), tls_info.GetKeyPath());
+
+		if(error == nullptr)
 		{
 			return certificate;
 		}
 
-		logte("An error occurred while create a certificate");
+		logte("Could not create a certificate from files: %s", error->ToString().CStr());
 	}
 	else
 	{

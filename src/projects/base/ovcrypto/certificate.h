@@ -26,9 +26,9 @@ public:
 	explicit Certificate(X509 *x509);
 	~Certificate();
 
-	bool Generate();
-	bool GenerateFromPem(ov::String cert_filename, ov::String private_key_filename);
-	bool GenerateFromPem(ov::String filename);
+	std::shared_ptr<ov::Error> Generate();
+	std::shared_ptr<ov::Error> GenerateFromPem(ov::String cert_filename, ov::String private_key_filename);
+	std::shared_ptr<ov::Error> GenerateFromPem(ov::String filename);
 	X509 *GetX509();
 	EVP_PKEY *GetPkey();
 	ov::String GetFingerprint(ov::String algorithm);

@@ -7,10 +7,14 @@
 //
 //==============================================================================
 #include <errno.h>
+
+#include <openssl/err.h>
 #include <srt/srt.h>
+
 #include "error.h"
 
 #include "log.h"
+#include "memory_utilities.h"
 
 namespace ov
 {
@@ -91,6 +95,16 @@ namespace ov
 	std::shared_ptr<Error> Error::CreateErrorFromSrt()
 	{
 		return std::make_shared<Error>("SRT", srt_getlasterror(nullptr), "%s (0x%x)", srt_getlasterror_str(), srt_getlasterror(nullptr));
+	}
+
+	std::shared_ptr<Error> Error::CreateErrorFromOpenSsl()
+	{
+		unsigned long error_code = ERR_get_error();
+		char buffer[1024];
+
+		ERR_error_string_n(error_code, buffer, OV_COUNTOF(buffer));
+
+		return std::make_shared<Error>("OpenSSL", error_code, "%s (0x%x)", buffer, error_code);
 	}
 
 	int Error::GetCode() const

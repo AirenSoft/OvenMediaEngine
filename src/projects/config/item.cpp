@@ -197,7 +197,7 @@ namespace cfg
 
 		if(result == false)
 		{
-			logte("Could not read the file (reason: %s)", result.description());
+			logte("Could not read the file: %s (reason: %s)", file_name.CStr(), result.description());
 			return false;
 		}
 
@@ -477,7 +477,7 @@ namespace cfg
 
 				if(parsed == false)
 				{
-					logte("%s[%s] Could not parse [%s]", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
+					logtd("%s[%s] Could not parse [%s]", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
 				}
 
 				parse_item.is_parsed = parsed;
