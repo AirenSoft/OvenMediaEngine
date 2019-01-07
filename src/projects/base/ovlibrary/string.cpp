@@ -579,7 +579,11 @@ namespace ov
 			return *this;
 		}
 
-		OV_ASSERT2(right_index >= left_index);
+		if(right_index < left_index)
+		{
+			// 공백으로만 이루어진 문자열
+			return "";
+		}
 
 		// left_index는 공백이 아닌 문자 지점이므로
 		return Substring(left_index, right_index - left_index + 1L);
