@@ -23,7 +23,7 @@ namespace ov
 
 	private:
 		static void AbortHandler(int signum, siginfo_t* si, void* unused);
-		static void PrintStackTrace();
+		static void PrintStackTrace(String sig_name);
 
 	};
 }

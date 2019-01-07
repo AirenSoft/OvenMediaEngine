@@ -13,10 +13,11 @@
 #include <errno.h>
 #include <cxxabi.h>
 
-#include "log.h"
-#include "stack_trace.h"
+#include <iostream>
+#include <fstream>
 
-#define OV_LOG_TAG "StackTrace"
+#include "string.h"
+#include "stack_trace.h"
 
 namespace ov
 {
@@ -52,20 +53,46 @@ namespace ov
 
 	void StackTrace::AbortHandler(int signum, siginfo_t* si, void* unused)
 	{
-		logtc("Caught signal (%d)", signum);
-		PrintStackTrace();
+		String sig_name;
+		switch(signum)
+		{
+			case SIGABRT:
+				sig_name = "SIGABRT";
+				break;
+			case SIGSEGV:
+				sig_name = "SIGSEGV";
+				break;
+			case SIGBUS:
+				sig_name = "SIGBUS";
+				break;
+			case SIGILL:
+				sig_name = "SIGILL";
+				break;
+			case SIGFPE:
+				sig_name = "SIGFPE";
+				break;
+		}
+		PrintStackTrace(sig_name);
 
 		exit(signum);
 	}
 
-	void StackTrace::PrintStackTrace()
+	void StackTrace::PrintStackTrace(String sig_name)
 	{
-		void* addr_list[16];
+		void* addr_list[64];
+		char file_name[32];
+		String log;
+
+		time_t t = time(0);
+		strftime(file_name, 32, "stack_dump_%Y%m%d", localtime(&t));
+		std::ofstream dump_file(file_name, std::ofstream::app);
 
 		int buffer_size = backtrace(addr_list, sizeof(addr_list) / sizeof(void*));
 		if (buffer_size == 0) return;
 
 		char** symbol_list = backtrace_symbols(addr_list, buffer_size);
+
+		log.AppendFormat("stack dump / signal(%s) / %s\n", sig_name.CStr(), __TIME__);
 
 		// (0)PrintStackTrace, (1)AbortHandler
 		for (int i = 2; i < buffer_size; ++i)
@@ -93,15 +120,18 @@ namespace ov
 
 				int status = 0;
 				char* real_name = abi::__cxa_demangle( begin_name, nullptr, nullptr, &status );
-				if (status == 0)
-				{
-					logtc("%s (%s + %s) %s", symbol_list[i], real_name, begin_offset, end_offset);
-				}
+				log.AppendFormat("%s\n\t %s\n\t [+%s]\n\t%s\n", symbol_list[i], real_name, begin_offset, end_offset);
 				free(real_name);
 			} else {
-				logtc("%s", symbol_list[i]);
+				log.AppendFormat("%s\n", symbol_list[i]);
 			}
 		}
 		free(symbol_list);
+
+		// need not call fstream::close() explicitly to close the file
+		dump_file << log;
+
+		fputs(log, stderr);
+		fflush(stderr);
 	}
 }
