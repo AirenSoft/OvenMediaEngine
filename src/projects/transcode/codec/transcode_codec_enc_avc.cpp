@@ -37,7 +37,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	param.bEnableFrameSkip = true;
 	param.bEnableLongTermReference = false;
 	param.iLtrMarkPeriod = 30;
-	param.uiIntraPeriod = 100; // KeyFrame Interval (3 sec)
+	param.uiIntraPeriod = 30; // KeyFrame Interval (3 sec)
 	param.eSpsPpsIdStrategy = CONSTANT_ID;
 	param.bPrefixNalAddingCtrl = false;
 	param.sSpatialLayers[0].iVideoWidth = param.iPicWidth;

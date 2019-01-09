@@ -20,13 +20,13 @@
 
 #else
 
-#define RTMP_CHUNK_LOG(str)				printf str
-#define RTMP_CHUNK_INFO_LOG(str)		printf str
-#define RTMP_CHUNK_DEBUG_LOG(str)		printf str
-#define RTMP_CHUNK_ERROR_LOG(str)		printf str
-#define RTMP_CHUNK_WARNING_LOG(str)		printf str
+#define RTMP_CHUNK_LOG(str)                printf str
+#define RTMP_CHUNK_INFO_LOG(str)        printf str
+#define RTMP_CHUNK_DEBUG_LOG(str)        printf str
+#define RTMP_CHUNK_ERROR_LOG(str)        printf str
+#define RTMP_CHUNK_WARNING_LOG(str)        printf str
 
-#endif 
+#endif
 
 #pragma pack()
 
