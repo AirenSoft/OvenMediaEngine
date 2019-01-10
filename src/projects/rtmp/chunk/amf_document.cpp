@@ -406,7 +406,7 @@ AmfProperty::~AmfProperty()
     // 메모리 해제
     if (_string)
     {
-        delete _string;
+        delete [] _string;
         _string = nullptr;
     }
 
@@ -565,14 +565,14 @@ int AmfProperty::Decode(void *data, int data_length) // ret=0이면 실패
             if (data_length < (1 + 3)) { return 0; }
             if (_string)
             {
-                delete _string;
+                delete [] _string;
                 _string = nullptr;
             }
             _string = new char[ReadInt16(pt_in + 1) + 1];
             size = DecodeString(pt_in, _string);
             if (!size)
             {
-                delete _string;
+                delete [] _string;
                 _string = nullptr;
             }
             _amf_data_type = AmfDataType::String;
