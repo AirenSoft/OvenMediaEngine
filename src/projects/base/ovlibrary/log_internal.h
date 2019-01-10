@@ -149,10 +149,10 @@ namespace ov
 
 				if(item == _enable_map.cend())
 				{
-					// 정규식에 매칭되는 항목이 없다면 debug 이상의 로그 활성화
+					// 정규식에 매칭되는 항목이 없다면 info 이상의 로그 활성화
 					_enable_map[tag] = (EnableItem){
 						.regex = nullptr,
-						.level = OVLogLevelDebug,
+						.level = OVLogLevelInformation,
 						.is_enabled = true
 					};
 				}

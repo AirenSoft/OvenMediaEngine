@@ -16,14 +16,14 @@ Certificate::~Certificate()
 	OV_SAFE_FUNC(_pkey, nullptr, EVP_PKEY_free,);
 }
 
-bool Certificate::GenerateFromPem(ov::String cert_filename, ov::String private_key_filename)
+std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String cert_filename, ov::String private_key_filename)
 {
 	OV_ASSERT2(_X509 == nullptr);
 	OV_ASSERT2(_pkey == nullptr);
 
 	if((_X509 != nullptr) || (_pkey != nullptr))
 	{
-		return false;
+		return ov::Error::CreateError("OpenSSL", 0, "Certificate is already created");
 	}
 
 	// Read cert file
@@ -32,7 +32,7 @@ bool Certificate::GenerateFromPem(ov::String cert_filename, ov::String private_k
 
 	if(BIO_read_filename(cert_bio, cert_filename.CStr()) <= 0)
 	{
-		return false;
+		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
 	_X509 = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
@@ -40,7 +40,7 @@ bool Certificate::GenerateFromPem(ov::String cert_filename, ov::String private_k
 
 	if(_X509 == nullptr)
 	{
-		return false;
+		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
 	// Read private key file
@@ -49,7 +49,7 @@ bool Certificate::GenerateFromPem(ov::String cert_filename, ov::String private_k
 
 	if(BIO_read_filename(pk_bio, private_key_filename.CStr()) <= 0)
 	{
-		return false;
+		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
 	_pkey = PEM_read_bio_PrivateKey(pk_bio, nullptr, nullptr, nullptr);
@@ -58,17 +58,17 @@ bool Certificate::GenerateFromPem(ov::String cert_filename, ov::String private_k
 
 	if(_pkey == nullptr)
 	{
-		return false;
+		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
-	return true;
+	return nullptr;
 }
 
-bool Certificate::GenerateFromPem(ov::String filename)
+std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String filename)
 {
 	if(_X509 != nullptr)
 	{
-		return false;
+		return ov::Error::CreateError("OpenSSL", 0, "Certificate is already created");
 	}
 
 	BIO *cert_bio = nullptr;
@@ -76,22 +76,21 @@ bool Certificate::GenerateFromPem(ov::String filename)
 
 	if(BIO_read_filename(cert_bio, filename.CStr()) <= 0)
 	{
-		return false;
+		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
 	_X509 = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
 	if(_X509 == nullptr)
 	{
 		BIO_free(cert_bio);
-		return false;
+		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
 	_pkey = PEM_read_bio_PrivateKey(cert_bio, nullptr, nullptr, nullptr);
 	if(_pkey == nullptr)
 	{
-		loge("CERT", "Read private-key failed");
 		BIO_free(cert_bio);
-		return false;
+		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
 	BIO_free(cert_bio);
@@ -100,43 +99,41 @@ bool Certificate::GenerateFromPem(ov::String filename)
 	EC_KEY *ec_key = EVP_PKEY_get1_EC_KEY(_pkey);
 	if(!ec_key)
 	{
-		loge("CERT", "Get ec key from pkey failed");
-		return false;
+		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
 	if(!EC_KEY_check_key(ec_key))
 	{
-		loge("CERT", "ec_key check failed");
 		EC_KEY_free(ec_key);
-		return false;
+		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
-	return true;
+	return nullptr;
 }
 
-bool Certificate::Generate()
+std::shared_ptr<ov::Error> Certificate::Generate()
 {
 	if(_X509 != nullptr)
 	{
-		return false;
+		return ov::Error::CreateError("OpenSSL", 0, "Certificate is already created");
 	}
 
 	EVP_PKEY *pkey = MakeKey();
 	if(pkey == nullptr)
 	{
-		return false;
+		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
 	X509 *x509 = MakeCertificate(pkey);
 	if(x509 == nullptr)
 	{
-		return false;
+		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
 	_pkey = pkey;
 	_X509 = x509;
 
-	return true;
+	return nullptr;
 }
 
 // Make ECDSA Key

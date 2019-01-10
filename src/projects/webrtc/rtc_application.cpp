@@ -84,18 +84,18 @@ void RtcApplication::SendVideoFrame(std::shared_ptr<StreamInfo> info,
 
 bool RtcApplication::Start()
 {
-	if(!_certificate)
+	if(_certificate == nullptr)
 	{
 		// 인증서를 생성한다.
 		_certificate = std::make_shared<Certificate>();
-		if(!_certificate->Generate())
+
+		auto error = _certificate->Generate();
+		if(error != nullptr)
 		{
-			logte("Cannot create certificate");
+			logte("Cannot create certificate: %s", error->ToString().CStr());
 			return false;
 		}
 
-		// For Test
-		//_certificate->GenerateFromPem("cert.pem");
 		logti("WebRTC Application Started");
 	}
 
