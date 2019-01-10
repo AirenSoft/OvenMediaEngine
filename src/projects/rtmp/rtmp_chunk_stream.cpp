@@ -1162,7 +1162,7 @@ bool RtmpChunkStream::VideoSequenceInfoProcess(std::unique_ptr<std::vector<uint8
     // Only H264
     if ((control_byte & 0x0f) != 7)
     {
-        logtw("Not Support Codec Type - codec(%d)", (control_byte & 0x0f));
+        logtw("Not Supported Codec Type - codec(%d)", (control_byte & 0x0f));
         return false;
     }
 
@@ -1199,7 +1199,7 @@ bool RtmpChunkStream::VideoSequenceInfoProcess(std::unique_ptr<std::vector<uint8
     // Only h264(baseline)
     if (avc_profile != 66)
     {
-        logtw("Not Support H264 Profile Type - profile(%d)", avc_profile);
+        logtw("Not Supported H264 Profile Type - profile(%d)", avc_profile);
         return true;
 
     }
@@ -1228,7 +1228,7 @@ bool RtmpChunkStream::AudioSequenceInfoProcess(std::unique_ptr<std::vector<uint8
     // Only AAC
     if ((control_byte >> 4) != 10)
     {
-        logtw("Not Support Codec Type - codec(%d)", (control_byte >> 4));
+        logtw("Not Supported Codec Type - codec(%d)", (control_byte >> 4));
         return true;
     }
 
@@ -1267,7 +1267,14 @@ bool RtmpChunkStream::AudioSequenceInfoProcess(std::unique_ptr<std::vector<uint8
 //====================================================================================================
 bool RtmpChunkStream::StreamCreate()
 {
-    // 생성
+    // Streaming Check
+    if(!_media_info->video_streaming  && !_media_info->audio_streaming)
+    {
+        logte("Video/Audio Not Streaming");
+        return false;
+    }
+
+    // Stream Create
     if (!(_stream_interface->OnChunkStreamReadyComplete(_remote, _app_name, _stream_name, _media_info, _app_id,
                                                         _stream_id)))
     {

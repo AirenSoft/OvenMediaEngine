@@ -59,10 +59,20 @@
 						<RTMP />
 						<HLS>
 							<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
+							<SegmentDuration>3</SegmentDuration>
+							<SegmentCount>3</SegmentCount>
+							<CrossDoamin>
+								<Url>www.airensoft.com</Url>
+							</CrossDoamin>
 						</HLS>
-						<Dash>
+						<DASH>
 							<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
-						</Dash>
+							<SegmentDuration>5</SegmentDuration>
+							<SegmentCount>5</SegmentCount>
+							<Cors>
+								<Url>http://www.airensoft.com</Url>
+							</Cors>
+						</DASH>
 						<WebRTC>
 							<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
 							<IP>192.168.0.183</IP>

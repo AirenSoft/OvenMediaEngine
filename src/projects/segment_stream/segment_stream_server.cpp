@@ -271,7 +271,7 @@ bool SegmentStreamServer::CorsCheck(ov::String &app_name,
 {
     ov::String origin_url = request->GetHeader("Origin");
 
-    logtd("Cors Check : %s/%s/%s - %s", app_name.CStr(), stream_name.CStr(), origin_url.CStr());
+    //logtd("Cors Check : %s/%s/%s - %s", app_name.CStr(), stream_name.CStr(), file_name.CStr(), origin_url.CStr());
 
     // cors url 설정이 있는 경우에만 확인
     if (!_cors_urls.empty())
@@ -427,7 +427,8 @@ void SegmentStreamServer::CrossdomainRequest(const std::shared_ptr<HttpRequest> 
 //====================================================================================================
 void SegmentStreamServer::AddCors(const std::vector<cfg::Url> &cors_urls, ProtocolFlag protocol_flag)
 {
-    if (cors_urls.empty()) {
+    if (cors_urls.empty())
+    {
         return;
     }
 
@@ -438,9 +439,11 @@ void SegmentStreamServer::AddCors(const std::vector<cfg::Url> &cors_urls, Protoc
         if (item != _cors_urls.end())
         {
             item->second |= (int) protocol_flag;
-        } else
+        }
+        else
         {
-            _cors_urls[url.GetUrl()] = (int) protocol_flag;
+            if(!url.GetUrl().IsEmpty())
+                _cors_urls[url.GetUrl()] = (int) protocol_flag;
         }
     }
 }
@@ -459,7 +462,13 @@ void SegmentStreamServer::AddCrossDomain(const std::vector<cfg::Url> &cross_doma
 
     for (auto &url : cross_domains)
     {
-        _cross_domains[url.GetUrl()] = (int) ProtocolFlag::ALL;
+        if(!url.GetUrl().IsEmpty())
+            _cross_domains[url.GetUrl()] = (int) ProtocolFlag::ALL;
+    }
+
+    if(_cross_domains.empty())
+    {
+        return;
     }
 
     // crossdomain.xml 재설정
