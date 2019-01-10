@@ -5,11 +5,13 @@ OvenMediaEngine(OME) is a streaming engine for real-time live broadcasting with 
 Our goal is to make it easier for you to build a stable real-time broadcasting service.
 
 ## Features
-- RTMP Input, Webrtc Output
-- Live transcoding (VP8, Opus)
+- RTMP Input, WebRTC/HLS/MPEG-DASH Output
+- Live transcoding (H.264, VP8, Opus, AAC)
 - Embedded WebRTC signalling server (Websocket based server)
 - DTLS (Datagram Transport Layer Security)
 - SRTP (Secure Real-time Transport Protocol)
+- Clustering
+    - Origin-Edge architecture 
 - Configuration
 
 ## Supported Platforms
@@ -27,16 +29,32 @@ We will support the following platforms in the future:
 - Ubuntu
   - Install packages
   ```
-  $ sudo apt install build-essential nasm autoconf libtool zlib1g-dev libssl-dev libvpx-dev libopus-dev libsrtp2-dev pkg-config libavformat-dev libavcodec-dev libavfilter-dev libswscale-dev libavresample-dev
+  $ sudo apt install build-essential nasm autoconf libtool zlib1g-dev libssl-dev libvpx-dev libopus-dev libsrtp2-dev pkg-config libfdk-aac-dev tclsh cmake
   ```
   - [OpenH264 1.8.0](https://www.openh264.org/) [[Download]](http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2)
   ```
   $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && mv libopenh264-1.8.0-linux64.4.so /usr/lib && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
   ```
+  - [SRT](https://github.com/Haivision/srt) [[Download]](https://github.com/Haivision/srt/archive/v1.3.1.tar.gz)
+  ```
+  $ (curl -OL https://github.com/Haivision/srt/archive/v1.3.1.tar.gz && tar xvf v1.3.1.tar.gz && cd srt-1.3.1 && ./configure && make && make install && ldconfig)
+  ```
+  - [FFmpeg 3.4.2](https://ffmpeg.org) [[Download]](https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz)
+  ```
+  $ (curl -OL https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz && xz -d ffmpeg-3.4.2.tar.xz && tar xvf ffmpeg-3.4.2.tar && cd ffmpeg-3.4.2 && ./configure \
+	--disable-static --enable-shared \
+	--extra-libs=-ldl \
+	--enable-ffprobe \
+	--disable-ffplay --disable-ffserver --disable-filters --disable-vaapi --disable-avdevice --disable-doc --disable-symver --disable-debug --disable-indevs --disable-outdevs --disable-devices --disable-hwaccels --disable-encoders \
+	--enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac \
+	--enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac \
+	--disable-decoder=tiff \
+	--enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && make && sudo make install)
+  ```
 - Fedora
   - Install packages
   ```
-  sudo yum install gcc-c++ make nasm autoconf libtool zlib-devel openssl-devel libvpx-devel opus-devel
+  sudo yum install gcc-c++ make nasm autoconf libtool zlib-devel openssl-devel libvpx-devel opus-devel tcl cmake
   ```
   - Execute below commands and append them to ~/.bashrc using text editors 
   ```
@@ -54,20 +72,29 @@ We will support the following platforms in the future:
 	--extra-libs=-ldl \
 	--enable-ffprobe \
 	--disable-ffplay --disable-ffserver --disable-filters --disable-vaapi --disable-avdevice --disable-doc --disable-symver --disable-debug --disable-indevs --disable-outdevs --disable-devices --disable-hwaccels --disable-encoders \
-	--enable-zlib --enable-libopus --enable-libvpx \
-	--enable-encoder=libvpx_vp8,libvpx_vp9,libopus \
+	--enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac \
+	--enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac \
 	--disable-decoder=tiff \
-	--enable-filter=aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && make && sudo make install)
+	--enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && make && sudo make install)
   ```
   - [OpenH264 1.8.0](https://www.openh264.org/) [[Download]](http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2)
   ```
   $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && mv libopenh264-1.8.0-linux64.4.so /usr/lib && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
   ```
+  - [FDK-AAC](https://github.com/mstorsjo/fdk-aac) [[Download]](https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz)
+  ```
+  $ (curl -OL https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz && tar xvf v0.1.5.tar.gz && cd fdk-aac-0.1.5 && ./autogen.sh && ./configure && make && make install)
+  ```
+  - [SRT](https://github.com/Haivision/srt) [[Download]](https://github.com/Haivision/srt/archive/v1.3.1.tar.gz)
+  ```
+  $ (curl -OL https://github.com/Haivision/srt/archive/v1.3.1.tar.gz && tar xvf v1.3.1.tar.gz && cd srt-1.3.1 && ./configure && make && make install)
+  ```
+
 - CentOS (gcc 7.0+ is recommended)
   - Install packages
   ```
   $ sudo yum install centos-release-scl
-  $ sudo yum install devtoolset-7 bc gcc-c++ nasm autoconf libtool glibc-static zlib-devel git bzip2
+  $ sudo yum install devtoolset-7 bc gcc-c++ nasm autoconf libtool glibc-static zlib-devel git bzip2 tcl cmake
   ```
   - Execute below commands and append them to ~/.bashrc using text editors 
   ```
@@ -98,14 +125,22 @@ We will support the following platforms in the future:
 	--extra-libs=-ldl \
 	--enable-ffprobe \
 	--disable-ffplay --disable-ffserver --disable-filters --disable-vaapi --disable-avdevice --disable-doc --disable-symver --disable-debug --disable-indevs --disable-outdevs --disable-devices --disable-hwaccels --disable-encoders \
-	--enable-zlib --enable-libopus --enable-libvpx \
-	--enable-encoder=libvpx_vp8,libvpx_vp9,libopus \
+	--enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac \
+	--enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac \
 	--disable-decoder=tiff \
-	--enable-filter=aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && make && sudo make install)
+	--enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && make && sudo make install)
   ```
   - [OpenH264 1.8.0](https://www.openh264.org/) [[Download]](http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2)
   ```
   $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && mv libopenh264-1.8.0-linux64.4.so /usr/lib && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
+  ```
+  - [FDK-AAC](https://github.com/mstorsjo/fdk-aac) [[Download]](https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz)
+  ```
+  $ (curl -OL https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz && tar xvf v0.1.5.tar.gz && cd fdk-aac-0.1.5 && ./autogen.sh && ./configure && make && make install)
+  ```
+  - [SRT](https://github.com/Haivision/srt) [[Download]](https://github.com/Haivision/srt/archive/v1.3.1.tar.gz)
+  ```
+  $ (curl -OL https://github.com/Haivision/srt/archive/v1.3.1.tar.gz && tar xvf v1.3.1.tar.gz && cd srt-1.3.1 && ./configure && make && make install)
   ```
   
 ### Build
@@ -228,18 +263,14 @@ Please read [Guidelines](CONTRIBUTING.md) and our [Rules](CODE_OF_CONDUCT.md).
 ## Future works
 The following features will be supported, and check the milestones for more details.
 - Various input stream
-  - file, webrtc, mpeg-ts 
-- Various output protocols
-  - hls, mpeg-dash, ...
+  - file, WebRTC, MPEG-TS
 - Various encoding profiles
-  - h.264, vp9, av1, ...
-- Clustering
-  - Origin-Edge architecture
+  - H.265, VP9, AV1, ...
 - Virtual host
 - Web console
 - Statistics
 - Recording live streams
-- Webrtc extensions
+- WebRTC extensions
 
 ## License
 OvenMediaEngine is licensed under the [GPLv2 license](LICENSE).
