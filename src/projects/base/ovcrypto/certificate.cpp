@@ -32,6 +32,7 @@ std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String cert_filename
 
 	if(BIO_read_filename(cert_bio, cert_filename.CStr()) <= 0)
 	{
+		BIO_free(cert_bio);
 		return ov::Error::CreateErrorFromOpenSsl();
 	}
 

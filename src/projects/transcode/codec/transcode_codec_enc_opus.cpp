@@ -24,6 +24,14 @@ size_t AudioEncoderOpusImpl::SufficientOutputBufferSize() const {
 }
 #endif
 
+OvenCodecImplAvcodecEncOpus::~OvenCodecImplAvcodecEncOpus()
+{
+	if(_encoder)
+	{
+		::opus_encoder_destroy(_encoder);
+	}
+}
+
 bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	if(TranscodeEncoder::Configure(context) == false)

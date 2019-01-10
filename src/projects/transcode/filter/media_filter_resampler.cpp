@@ -45,6 +45,11 @@ MediaFilterResampler::~MediaFilterResampler()
 	{
 		avfilter_inout_free(&_inputs);
 	}
+
+	if(_filter_graph)
+	{
+		avfilter_graph_free(&_filter_graph);
+	}
 }
 
 bool MediaFilterResampler::Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context)
