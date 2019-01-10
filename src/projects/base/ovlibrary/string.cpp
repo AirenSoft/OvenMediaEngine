@@ -136,7 +136,7 @@ namespace ov
 		_buffer[0] = c;
 		_length++;
 
-		_buffer[_length + 1] = '\0';
+		_buffer[_length] = '\0';
 
 		return true;
 	}
@@ -191,7 +191,7 @@ namespace ov
 		_buffer[_length] = c;
 		_length++;
 
-		_buffer[_length + 1] = '\0';
+		_buffer[_length] = '\0';
 
 		return true;
 	}
