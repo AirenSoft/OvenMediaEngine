@@ -1286,14 +1286,14 @@ bool RtmpChunkStream::StreamCreate()
             "encoder : %s(%s) \n"\
             "video : %s/%d*%d/%.2ffps/%dkbps \n"\
             "audio : %s/%dch/%dhz/%dkbps \n",
-          GetEncoderTypeString(_media_info->encoder_type),
+          GetEncoderTypeString(_media_info->encoder_type).CStr(),
           _device_string.CStr(),
-          GetCodecString(_media_info->video_codec_type),
+          GetCodecString(_media_info->video_codec_type).CStr(),
           _media_info->video_width,
           _media_info->video_height,
           _media_info->video_framerate,
           _media_info->video_bitrate,
-          GetCodecString(_media_info->audio_codec_type),
+          GetCodecString(_media_info->audio_codec_type).CStr(),
           _media_info->audio_channels,
           _media_info->audio_samplerate,
           _media_info->audio_bitrate);
@@ -1447,8 +1447,8 @@ bool RtmpChunkStream::OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &messa
     // support codec check (H264/AAC 지원)
     if (!(video_codec_type == RtmpCodecType::H264) && !(audio_codec_type == RtmpCodecType::AAC))
     {
-        logtw("codec type fail - video(%s) audio(%s)", GetCodecString(video_codec_type),
-              GetCodecString(audio_codec_type));
+        logtw("codec type fail - video(%s) audio(%s)", GetCodecString(video_codec_type).CStr(),
+              GetCodecString(audio_codec_type).CStr());
     }
 
     _media_info->video_codec_type = video_codec_type;
