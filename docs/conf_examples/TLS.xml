@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<TLS>
+	<!-- certification file path for TLS servers -->
+	<CertPath>/path/to/cert/filename.crt</CertPath>
+	<!-- private key file path for TLS servers -->
+	<KeyPath>/path/to/cert/filename.key</KeyPath>
+</TLS>

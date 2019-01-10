@@ -58,11 +58,11 @@
 					<Publishers>
 						<RTMP />
 						<HLS>
-							<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
+							<!--<TLS include="TLS.xml" />-->
 						</HLS>
-						<Dash>
-							<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
-						</Dash>
+						<DASH>
+							<!--<TLS include="TLS.xml" />-->
+						</DASH>
 						<WebRTC>
 							<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
 							<IP>192.168.0.183</IP>
@@ -70,7 +70,7 @@
 							<Port>10000/udp</Port>
 							<Timeout>30000</Timeout>
 							<Signalling>
-								<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
+								<!--<TLS include="TLS.xml" />-->
 								<Port>3333</Port>
 							</Signalling>
 						</WebRTC>
