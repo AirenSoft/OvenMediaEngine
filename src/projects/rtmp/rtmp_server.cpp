@@ -145,7 +145,7 @@ void RtmpServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &add
 	 if(item->second->OnDataReceived(std::move(process_data)) < 0)
      {
 	     // TODO: 스트림 종료 및 세션 정리
-         logte("Receiven Process Fail - remote(%s", remote->ToString().CStr());
+         logte("Receive Process Fail - remote(%s", remote->ToString().CStr());
 	     return;
      }
 

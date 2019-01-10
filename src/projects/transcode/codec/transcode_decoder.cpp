@@ -29,6 +29,8 @@ TranscodeDecoder::~TranscodeDecoder()
 
 	av_frame_free(&_frame);
 	av_packet_free(&_pkt);
+
+	av_parser_close(_parser);
 }
 
 std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context)

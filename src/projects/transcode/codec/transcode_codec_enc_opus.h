@@ -13,6 +13,9 @@ struct OpusEncoder;
 class OvenCodecImplAvcodecEncOpus : public TranscodeEncoder
 {
 public:
+
+	~OvenCodecImplAvcodecEncOpus() override;
+
 	AVCodecID GetCodecID() const noexcept override
 	{
 		return AV_CODEC_ID_OPUS;

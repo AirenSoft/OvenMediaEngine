@@ -12,25 +12,28 @@
 
 #define OV_LOG_TAG "SegmentStream"
 
-std::shared_ptr<SegmentStreamPublisher> SegmentStreamPublisher::Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router)
+std::shared_ptr<SegmentStreamPublisher>
+SegmentStreamPublisher::Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router)
 {
-	auto segment_stream = std::make_shared<SegmentStreamPublisher>(application_info, router);
+    auto segment_stream = std::make_shared<SegmentStreamPublisher>(application_info, router);
 
-	// CONFIG을 불러온다.
-	segment_stream->Start();
+    // CONFIG을 불러온다.
+    segment_stream->Start();
 
-	return segment_stream;
+    return segment_stream;
 }
 
 //====================================================================================================
 // SegmentStreamPublisher
 //====================================================================================================
-SegmentStreamPublisher::SegmentStreamPublisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router) 
-	: Publisher(application_info, std::move(router))
+SegmentStreamPublisher::SegmentStreamPublisher(const info::Application &application_info,
+                                               std::shared_ptr<MediaRouteInterface> router)
+        : Publisher(application_info, std::move(router))
 {
     _publisher_type = cfg::PublisherType::Dash;
 
-	logtd("SegmentStreamPublisher Create Start");
+
+    logtd("SegmentStreamPublisher Create Start");
 }
 
 //====================================================================================================
@@ -38,7 +41,7 @@ SegmentStreamPublisher::SegmentStreamPublisher(const info::Application &applicat
 //====================================================================================================
 SegmentStreamPublisher::~SegmentStreamPublisher()
 {
-   logtd("SegmentStreamPublisher has been terminated finally");
+    logtd("SegmentStreamPublisher has been terminated finally");
 }
 
 //====================================================================================================
@@ -50,66 +53,80 @@ bool SegmentStreamPublisher::Start()
 
     auto publisher_type = GetPublisherType();
 
-	// Find Dash publisher configuration
+    // Find Dash publisher configuration
     _publisher_type = cfg::PublisherType::Dash;
-	auto dash_publisher_info = FindPublisherInfo<cfg::DashPublisher>();
-	if(dash_publisher_info == nullptr)
-	{
-		logte("Cannot initialize SegmentStreamPublisher(DASH) using config information");
-		return false;
-	}
+    auto dash_publisher_info = FindPublisherInfo<cfg::DashPublisher>();
+    if (dash_publisher_info == nullptr)
+    {
+        logte("Cannot initialize SegmentStreamPublisher(DASH) using config information");
+        return false;
+    }
 
-	// Find Hls publisher configuration
+    // Find Hls publisher configuration
     _publisher_type = cfg::PublisherType::Hls;
     auto hls_publisher_info = FindPublisherInfo<cfg::HlsPublisher>();
-	if(hls_publisher_info == nullptr)
-	{
-		logte("Cannot initialize SegmentStreamPublisher(HLS) using config information");
-		return false;
-	}
+    if (hls_publisher_info == nullptr)
+    {
+        logte("Cannot initialize SegmentStreamPublisher(HLS) using config information");
+        return false;
+    }
 
     _publisher_type = publisher_type;
 
-	uint16_t dash_publisher_port 	= dash_publisher_info->GetPort();
-	uint16_t hls_publisher_port 	= hls_publisher_info->GetPort();
-	ov::String app_name 			= _application_info.GetName();
+    uint16_t dash_publisher_port = dash_publisher_info->GetPort();
+    uint16_t hls_publisher_port = hls_publisher_info->GetPort();
+    ov::String app_name = _application_info.GetName();
 
-	if(dash_publisher_port == 0) dash_publisher_port = 80;
-	if(hls_publisher_port == 0) hls_publisher_port = 80;
+    if (dash_publisher_port == 0) dash_publisher_port = 80;
+    if (hls_publisher_port == 0) hls_publisher_port = 80;
 
-	// DSH/HLS Server Start
-	if(dash_publisher_port == hls_publisher_port)
-	{
-		auto segment_stream_server = std::make_shared<SegmentStreamServer>();
+    // DSH/HLS Server Start
+    if (dash_publisher_port == hls_publisher_port)
+    {
+        auto segment_stream_server = std::make_shared<SegmentStreamServer>();
 
-		segment_stream_server->SetAllowApp(app_name, AllowProtocolFlag::DASH);
-		segment_stream_server->SetAllowApp(app_name, AllowProtocolFlag::HLS);
-		segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
-		segment_stream_server->Start(ov::SocketAddress(dash_publisher_port));
+        segment_stream_server->SetAllowApp(app_name, ProtocolFlag::DASH);
+        segment_stream_server->SetAllowApp(app_name, ProtocolFlag::HLS);
+        segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
-		_segment_stream_servers.push_back(segment_stream_server);
-	}
-	else
-	{
-		auto dash_segment_stream_server = std::make_shared<SegmentStreamServer>();
+        segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH); // Cors
+        segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());        // CrossDomain
 
-		dash_segment_stream_server->SetAllowApp(app_name, AllowProtocolFlag::DASH);
-		dash_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
-		dash_segment_stream_server->Start(ov::SocketAddress(dash_publisher_port));
+        segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);   // Cors
+        segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());        // CrossDomain
 
-		_segment_stream_servers.push_back(dash_segment_stream_server);
+        segment_stream_server->Start(ov::SocketAddress(dash_publisher_port));
 
-		auto hls_segment_stream_server = std::make_shared<SegmentStreamServer>();
+        _segment_stream_servers.push_back(segment_stream_server);
+    }
+    else
+    {
+        auto dash_segment_stream_server = std::make_shared<SegmentStreamServer>();
 
-		hls_segment_stream_server->SetAllowApp(app_name, AllowProtocolFlag::HLS);
-		hls_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
-		hls_segment_stream_server->Start(ov::SocketAddress(hls_publisher_port));
+        dash_segment_stream_server->SetAllowApp(app_name, ProtocolFlag::DASH);
+        dash_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+        dash_segment_stream_server->Start(ov::SocketAddress(dash_publisher_port));
 
-		_segment_stream_servers.push_back(hls_segment_stream_server);
+        dash_segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH);    // Cors
+        dash_segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());            // CrossDomain
 
-	}
+        _segment_stream_servers.push_back(dash_segment_stream_server);
 
-	return Publisher::Start();
+        auto hls_segment_stream_server = std::make_shared<SegmentStreamServer>();
+
+        hls_segment_stream_server->SetAllowApp(app_name, ProtocolFlag::HLS);
+        hls_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+        hls_segment_stream_server->Start(ov::SocketAddress(hls_publisher_port));
+
+
+        hls_segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);   // Cors
+        hls_segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());        // CrossDomain
+
+        _segment_stream_servers.push_back(hls_segment_stream_server);
+
+    }
+
+    return Publisher::Start();
 }
 
 //====================================================================================================
@@ -118,7 +135,7 @@ bool SegmentStreamPublisher::Start()
 //====================================================================================================
 bool SegmentStreamPublisher::Stop()
 {
-	return Publisher::Stop();
+    return Publisher::Stop();
 }
 
 //====================================================================================================
@@ -126,7 +143,7 @@ bool SegmentStreamPublisher::Stop()
 //====================================================================================================
 std::shared_ptr<Application> SegmentStreamPublisher::OnCreateApplication(const info::Application &application_info)
 {
-	return SegmentStreamApplication::Create(application_info);
+    return SegmentStreamApplication::Create(application_info);
 }
 
 
@@ -134,57 +151,40 @@ std::shared_ptr<Application> SegmentStreamPublisher::OnCreateApplication(const i
 // OnPlayListRequest
 //  - SegmentStreamObserver Implementation
 //====================================================================================================
-bool SegmentStreamPublisher::OnPlayListRequest(const ov::String &app_name, const ov::String &stream_name, const ov::String &file_name, PlayListType play_list_type, ov::String &play_list)
+bool SegmentStreamPublisher::OnPlayListRequest(const ov::String &app_name,
+                                               const ov::String &stream_name,
+                                               const ov::String &file_name,
+                                               PlayListType play_list_type,
+                                               ov::String &play_list)
 {
-	auto stream = std::static_pointer_cast<SegmentStream>(GetStream(app_name, stream_name));
+    auto stream = std::static_pointer_cast<SegmentStream>(GetStream(app_name, stream_name));
 
-	if(!stream)
-	{
-		logte("Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
-		return false;
-	}
+    if (!stream)
+    {
+        logte("Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+        return false;
+    }
 
-	return stream->GetPlayList(play_list_type, play_list);
+    return stream->GetPlayList(play_list_type, play_list);
 }
 
 //====================================================================================================
 // OnPlayListRequest
 //  - SegmentStreamObserver Implementation
 //====================================================================================================
-bool SegmentStreamPublisher::OnSegmentRequest(const ov::String &app_name, const ov::String &stream_name, SegmentType segmnet_type, const ov::String &file_name, std::shared_ptr<ov::Data> &segment_data)
+bool SegmentStreamPublisher::OnSegmentRequest(const ov::String &app_name,
+                                              const ov::String &stream_name,
+                                              SegmentType segmnet_type,
+                                              const ov::String &file_name,
+                                              std::shared_ptr<ov::Data> &segment_data)
 {
-	auto stream = std::static_pointer_cast<SegmentStream>(GetStream(app_name, stream_name));
+    auto stream = std::static_pointer_cast<SegmentStream>(GetStream(app_name, stream_name));
 
-	if (!stream)
-	{
-		logte("Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
-		return false;
-	}
+    if (!stream)
+    {
+        logte("Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+        return false;
+    }
 
-	return stream->GetSegment(segmnet_type, file_name, segment_data);
+    return stream->GetSegment(segmnet_type, file_name, segment_data);
 }
-
-//====================================================================================================
-// OnPlayListRequest
-//  - SegmentStreamObserver Implementation
-//====================================================================================================
-bool SegmentStreamPublisher::OnCrossdomainRequest(ov::String &cross_domain)
-{
-	cross_domain =  "<?xml version=\"1.0\"?>\r\n"\
-					"<cross-domain-policy>\r\n"\
-					"<allow-access-from domain=\"*\"/>\r\n"\
-					"<site-control permitted-cross-domain-policies=\"all\"/>\r\n"\
-					"</cross-domain-policy>";
-	return true;
-}
-
-//====================================================================================================
-// OnCorsCheck
-//  - SegmentStreamObserver Implementation
-//====================================================================================================
-bool SegmentStreamPublisher::OnCorsCheck(const ov::String &app_name, const ov::String &stream_name, const ov::String &file_name, ov::String &origin_url)
-{
-
-	return true;
-}
-

@@ -59,9 +59,19 @@
 						<RTMP />
 						<HLS>
 							<!--<TLS include="TLS.xml" />-->
+							<SegmentDuration>3</SegmentDuration>
+							<SegmentCount>3</SegmentCount>
+							<CrossDoamin>
+								<Url>www.airensoft.com</Url>
+							</CrossDoamin>
 						</HLS>
 						<DASH>
 							<!--<TLS include="TLS.xml" />-->
+							<SegmentDuration>5</SegmentDuration>
+							<SegmentCount>5</SegmentCount>
+							<Cors>
+								<Url>http://www.airensoft.com</Url>
+							</Cors>
 						</DASH>
 						<WebRTC>
 							<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->

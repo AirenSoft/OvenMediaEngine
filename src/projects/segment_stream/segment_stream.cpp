@@ -17,14 +17,15 @@ using namespace common;
 //====================================================================================================
 // Create
 //====================================================================================================
-std::shared_ptr<SegmentStream> SegmentStream::Create(const std::shared_ptr<Application> application, const StreamInfo &info)
+std::shared_ptr<SegmentStream>
+SegmentStream::Create(const std::shared_ptr<Application> application, const StreamInfo &info)
 {
-	auto stream = std::make_shared<SegmentStream>(application, info);
-	if(!stream->Start())
-	{
-		return nullptr;
-	}
-	return stream;
+    auto stream = std::make_shared<SegmentStream>(application, info);
+    if (!stream->Start())
+    {
+        return nullptr;
+    }
+    return stream;
 }
 
 //====================================================================================================
@@ -32,7 +33,8 @@ std::shared_ptr<SegmentStream> SegmentStream::Create(const std::shared_ptr<Appli
 // - DASH/HLS : H264/AAC only
 // TODO : 다중 트랜스코딩/다중 트랙 구분 및 처리 필요
 //====================================================================================================
-SegmentStream::SegmentStream(const std::shared_ptr<Application> application, const StreamInfo &info) : Stream(application, info)
+SegmentStream::SegmentStream(const std::shared_ptr<Application> application, const StreamInfo &info) : Stream(
+        application, info)
 {
     std::string prefix = this->GetName().CStr();
     std::shared_ptr<MediaTrack> video_track = nullptr;
@@ -42,16 +44,13 @@ SegmentStream::SegmentStream(const std::shared_ptr<Application> application, con
     {
         auto &track = track_item.second;
 
-        switch (track->GetMediaType())
+        if(track->GetMediaType() == MediaType::Video &&  track->GetCodecId() == MediaCodecId::H264)
         {
-            case MediaType::Video:
-            {
-                if (track->GetCodecId() == MediaCodecId::H264) video_track = track;
-            }
-            case MediaType::Audio:
-            {
-                if (track->GetCodecId() == MediaCodecId::Aac) audio_track = track;
-            }
+            video_track = track;
+        }
+        else if(track->GetMediaType() == MediaType::Audio &&  track->GetCodecId() == MediaCodecId::Aac)
+        {
+            audio_track = track;
         }
     }
 
@@ -84,11 +83,50 @@ SegmentStream::SegmentStream(const std::shared_ptr<Application> application, con
     {
         PacketyzerStreamType stream_type = PacketyzerStreamType::Common;
 
-        if(video_track == nullptr) stream_type = PacketyzerStreamType::AudioOnly;
-        if(audio_track == nullptr) stream_type = PacketyzerStreamType::VideoOnly;
+        if (video_track == nullptr) stream_type = PacketyzerStreamType::AudioOnly;
+        if (audio_track == nullptr) stream_type = PacketyzerStreamType::VideoOnly;
 
-        _stream_packetyzer = std::make_unique<StreamPacketyzer>(true, true, prefix, stream_type, 5, 5, media_info);
+        SegmentConfigInfo dash_segment_config_info(true, DEFAULT_SEGMENT_COUNT, DEFAULT_SEGMENT_DURATION);
+        SegmentConfigInfo hls_segment_config_info(true, DEFAULT_SEGMENT_COUNT, DEFAULT_SEGMENT_DURATION);
+
+        const auto &publishers = application->GetPublishers();
+
+        for (auto &publisher_info : publishers)
+        {
+            if (cfg::PublisherType::Dash == publisher_info->GetType())
+            {
+                dash_segment_config_info._count = dynamic_cast<const cfg::DashPublisher *>(publisher_info)->GetSegmentCount();
+                dash_segment_config_info._duration = dynamic_cast<const cfg::DashPublisher *>(publisher_info)->GetSegmentDuration();
+
+                if (dash_segment_config_info._count <= 0)
+                    dash_segment_config_info._count = DEFAULT_SEGMENT_COUNT;
+
+                if (dash_segment_config_info._duration <= 0)
+                    dash_segment_config_info._duration = DEFAULT_SEGMENT_DURATION;
+
+            }
+            else if (cfg::PublisherType::Hls == publisher_info->GetType())
+            {
+                hls_segment_config_info._count = dynamic_cast<const cfg::HlsPublisher *>(publisher_info)->GetSegmentCount();
+                hls_segment_config_info._duration = dynamic_cast<const cfg::HlsPublisher *>(publisher_info)->GetSegmentDuration();
+
+                if (hls_segment_config_info._count <= 0)
+                    hls_segment_config_info._count = DEFAULT_SEGMENT_COUNT;
+
+                if (hls_segment_config_info._duration <= 0)
+                    hls_segment_config_info._duration = DEFAULT_SEGMENT_DURATION;
+            }
+        }
+
+        _stream_packetyzer = std::make_unique<StreamPacketyzer>(dash_segment_config_info,
+                                                                hls_segment_config_info,
+                                                                prefix,
+                                                                stream_type,
+                                                                media_info);
     }
+
+    _key_frame_check_timestamp = 0;
+    _previous_key_frame_timestamp = 0;
 }
 
 //====================================================================================================
@@ -96,7 +134,7 @@ SegmentStream::SegmentStream(const std::shared_ptr<Application> application, con
 //====================================================================================================
 SegmentStream::~SegmentStream()
 {
-	Stop();
+    Stop();
 }
 
 //====================================================================================================
@@ -104,7 +142,7 @@ SegmentStream::~SegmentStream()
 //====================================================================================================
 bool SegmentStream::Start()
 {
-	return Stream::Start();
+    return Stream::Start();
 }
 
 //====================================================================================================
@@ -112,7 +150,7 @@ bool SegmentStream::Start()
 //====================================================================================================
 bool SegmentStream::Stop()
 {
-	return Stream::Stop();
+    return Stream::Stop();
 }
 
 //====================================================================================================
@@ -121,22 +159,34 @@ bool SegmentStream::Stop()
 // - 첫 key 프레임 에서 SPS/PPS 추출  이후 생성
 //
 //====================================================================================================
-void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> 			track,
-								   std::unique_ptr<EncodedFrame> 		encoded_frame,
-								   std::unique_ptr<CodecSpecificInfo> 	codec_info,
-								   std::unique_ptr<FragmentationHeader> fragmentation)
+void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
+                                   std::unique_ptr<EncodedFrame> encoded_frame,
+                                   std::unique_ptr<CodecSpecificInfo> codec_info,
+                                   std::unique_ptr<FragmentationHeader> fragmentation)
 {
-	//logtd("Video Timestamp : %d" , encoded_frame->time_stamp);
+    //logtd("Video Timestamp : %d" , encoded_frame->time_stamp);
 
-	if(_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
-	{
-		_stream_packetyzer->AppendVideoData(encoded_frame->time_stamp,
-											track->GetTimeBase().GetDen(),
-											encoded_frame->frame_type == FrameType::VideoFrameKey,
-											0,
-											encoded_frame->length,
-											encoded_frame->buffer);
-	}
+    if (_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
+    {
+        _stream_packetyzer->AppendVideoData(encoded_frame->time_stamp,
+                                            track->GetTimeBase().GetDen(),
+                                            encoded_frame->frame_type == FrameType::VideoFrameKey,
+                                            0,
+                                            encoded_frame->length,
+                                            encoded_frame->buffer);
+
+        if (encoded_frame->frame_type == FrameType::VideoFrameKey)
+        {
+            if (encoded_frame->time_stamp - _key_frame_check_timestamp >= 60 * 90000)
+            {
+                logtd("KeyFrame Interval - time(%d)",
+                      (encoded_frame->time_stamp - _previous_key_frame_timestamp) / 90); // 1/90000 -> 1/1000
+
+                _key_frame_check_timestamp = encoded_frame->time_stamp;
+            }
+            _previous_key_frame_timestamp = encoded_frame->time_stamp;
+        }
+    }
 
     delete[] encoded_frame->buffer;
 
@@ -146,20 +196,20 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> 			track,
 // SendAudioFrame
 // - Packetyzer에 Audio데이터 추가
 //====================================================================================================
-void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> 			track,
-								   std::unique_ptr<EncodedFrame> 		encoded_frame,
-								   std::unique_ptr<CodecSpecificInfo> 	codec_info,
-								   std::unique_ptr<FragmentationHeader> fragmentation)
-{
-	//logtd("Audio Timestamp : %d", encoded_frame->time_stamp);
+void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
+                                   std::unique_ptr<EncodedFrame> encoded_frame,
+                                   std::unique_ptr<CodecSpecificInfo> codec_info,
+                                   std::unique_ptr<FragmentationHeader> fragmentation)
+                                   {
+    //logtd("Audio Timestamp : %d", encoded_frame->time_stamp);
 
-	if(_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
-	{
-		_stream_packetyzer->AppendAudioData(encoded_frame->time_stamp,
-											track->GetTimeBase().GetDen(),
-											encoded_frame->length,
-											encoded_frame->buffer);
-	}
+    if (_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
+    {
+        _stream_packetyzer->AppendAudioData(encoded_frame->time_stamp,
+                                            track->GetTimeBase().GetDen(),
+                                            encoded_frame->length,
+                                            encoded_frame->buffer);
+    }
 
     delete[] encoded_frame->buffer;
 }
@@ -170,10 +220,10 @@ void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> 			track,
 //====================================================================================================
 bool SegmentStream::GetPlayList(PlayListType play_list_type, ov::String &play_list)
 {
-	if (_stream_packetyzer != nullptr)
-	{
-        return  _stream_packetyzer->GetPlayList(play_list_type, play_list);
-	}
+    if (_stream_packetyzer != nullptr)
+    {
+        return _stream_packetyzer->GetPlayList(play_list_type, play_list);
+    }
 
     return false;
 }
@@ -184,10 +234,10 @@ bool SegmentStream::GetPlayList(PlayListType play_list_type, ov::String &play_li
 //====================================================================================================
 bool SegmentStream::GetSegment(SegmentType type, const ov::String &file_name, std::shared_ptr<ov::Data> &data)
 {
-	if (_stream_packetyzer != nullptr)
-	{
-        return  _stream_packetyzer->GetSegment(type, file_name, data);
-	}
+    if (_stream_packetyzer != nullptr)
+    {
+        return _stream_packetyzer->GetSegment(type, file_name, data);
+    }
 
-	return false;
+    return false;
 }
