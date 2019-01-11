@@ -33,11 +33,11 @@ We will support the following platforms in the future:
   ```
   - [OpenH264 1.8.0](https://www.openh264.org/) [[Download]](http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2)
   ```
-  $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && mv libopenh264-1.8.0-linux64.4.so /usr/lib && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
+  $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && sudo mv libopenh264-1.8.0-linux64.4.so /usr/lib && sudo ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && sudo ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
   ```
   - [SRT](https://github.com/Haivision/srt) [[Download]](https://github.com/Haivision/srt/archive/v1.3.1.tar.gz)
   ```
-  $ (curl -OL https://github.com/Haivision/srt/archive/v1.3.1.tar.gz && tar xvf v1.3.1.tar.gz && cd srt-1.3.1 && ./configure && make && make install && ldconfig)
+  $ (curl -OL https://github.com/Haivision/srt/archive/v1.3.1.tar.gz && tar xvf v1.3.1.tar.gz && cd srt-1.3.1 && ./configure && make && sudo make install)
   ```
   - [FFmpeg 3.4.2](https://ffmpeg.org) [[Download]](https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz)
   ```
@@ -49,7 +49,7 @@ We will support the following platforms in the future:
 	--enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac \
 	--enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac \
 	--disable-decoder=tiff \
-	--enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && make && sudo make install)
+	--enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && make && sudo make install && sudo ldconfig)
   ```
 - Fedora
   - Install packages
@@ -65,6 +65,10 @@ We will support the following platforms in the future:
   ```
   $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure && make && sudo make install)
   ```
+  - [FDK-AAC](https://github.com/mstorsjo/fdk-aac) [[Download]](https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz)
+  ```
+  $ (curl -OL https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz && tar xvf v0.1.5.tar.gz && cd fdk-aac-0.1.5 && ./autogen.sh && ./configure && make && sudo make install)
+  ```
   - [FFmpeg 3.4.2](https://ffmpeg.org) [[Download]](https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz)
   ```
   $ (curl -OL https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz && xz -d ffmpeg-3.4.2.tar.xz && tar xvf ffmpeg-3.4.2.tar && cd ffmpeg-3.4.2 && ./configure \
@@ -79,17 +83,12 @@ We will support the following platforms in the future:
   ```
   - [OpenH264 1.8.0](https://www.openh264.org/) [[Download]](http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2)
   ```
-  $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && mv libopenh264-1.8.0-linux64.4.so /usr/lib && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
-  ```
-  - [FDK-AAC](https://github.com/mstorsjo/fdk-aac) [[Download]](https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz)
-  ```
-  $ (curl -OL https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz && tar xvf v0.1.5.tar.gz && cd fdk-aac-0.1.5 && ./autogen.sh && ./configure && make && make install)
+  $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && sudo mv libopenh264-1.8.0-linux64.4.so /usr/lib && sudo ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && sudo ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
   ```
   - [SRT](https://github.com/Haivision/srt) [[Download]](https://github.com/Haivision/srt/archive/v1.3.1.tar.gz)
   ```
-  $ (curl -OL https://github.com/Haivision/srt/archive/v1.3.1.tar.gz && tar xvf v1.3.1.tar.gz && cd srt-1.3.1 && ./configure && make && make install)
+  $ (curl -OL https://github.com/Haivision/srt/archive/v1.3.1.tar.gz && tar xvf v1.3.1.tar.gz && cd srt-1.3.1 && ./configure && make && sudo make install)
   ```
-
 - CentOS (gcc 7.0+ is recommended)
   - Install packages
   ```
@@ -118,6 +117,10 @@ We will support the following platforms in the future:
   ```
   $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure && make && sudo make install)
   ```
+  - [FDK-AAC](https://github.com/mstorsjo/fdk-aac) [[Download]](https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz)
+  ```
+  $ (curl -OL https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz && tar xvf v0.1.5.tar.gz && cd fdk-aac-0.1.5 && ./autogen.sh && ./configure && make && sudo make install)
+  ```
   - [FFmpeg 3.4.2](https://ffmpeg.org) [[Download]](https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz)
   ```
   $ (curl -OL https://www.ffmpeg.org/releases/ffmpeg-3.4.2.tar.xz && xz -d ffmpeg-3.4.2.tar.xz && tar xvf ffmpeg-3.4.2.tar && cd ffmpeg-3.4.2 && ./configure \
@@ -132,15 +135,11 @@ We will support the following platforms in the future:
   ```
   - [OpenH264 1.8.0](https://www.openh264.org/) [[Download]](http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2)
   ```
-  $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && mv libopenh264-1.8.0-linux64.4.so /usr/lib && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
-  ```
-  - [FDK-AAC](https://github.com/mstorsjo/fdk-aac) [[Download]](https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz)
-  ```
-  $ (curl -OL https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz && tar xvf v0.1.5.tar.gz && cd fdk-aac-0.1.5 && ./autogen.sh && ./configure && make && make install)
+  $ (curl -OL http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2 && bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2 && sudo mv libopenh264-1.8.0-linux64.4.so /usr/lib && sudo ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so && sudo ln -s /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4)
   ```
   - [SRT](https://github.com/Haivision/srt) [[Download]](https://github.com/Haivision/srt/archive/v1.3.1.tar.gz)
   ```
-  $ (curl -OL https://github.com/Haivision/srt/archive/v1.3.1.tar.gz && tar xvf v1.3.1.tar.gz && cd srt-1.3.1 && ./configure && make && make install)
+  $ (curl -OL https://github.com/Haivision/srt/archive/v1.3.1.tar.gz && tar xvf v1.3.1.tar.gz && cd srt-1.3.1 && ./configure && make && sudo make install)
   ```
   
 ### Build
