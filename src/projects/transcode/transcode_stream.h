@@ -42,9 +42,6 @@ public:
 	void Stop();
 
 	bool Push(std::unique_ptr<MediaPacket> packet);
-	uint32_t GetBufferCount();
-
-	std::shared_ptr<StreamInfo> GetStreamInfo();
 
 private:
 
@@ -134,5 +131,7 @@ private:
 	// 통계 정보
 private:
 	uint32_t _stats_decoded_frame_count;
+
+	uint8_t _max_queue_size;
 };
 
