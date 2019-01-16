@@ -82,6 +82,9 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 	// 통계 정보 초기화
 	_stats_decoded_frame_count = 0;
 
+	// maximum queue size
+	_max_queue_size = 10;
+
 	// 부모 클래스
 	_parent = parent;
 
@@ -101,7 +104,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 
 	for(const auto &encode : encodes)
 	{
-		if(encode.IsActive() == false)
+		if(!encode.IsActive())
 		{
 			continue;
 		}
@@ -150,7 +153,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 		auto stream_name = stream.GetName();
 		stream_name = stream_name.Replace("${OriginStreamName}", stream_info->GetName());
 
-		if(AddStreamInfoOutput(stream_name) == false)
+		if(!AddStreamInfoOutput(stream_name))
 		{
 			continue;
 		}
@@ -184,7 +187,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 				break;
 			}
 		}
-		if(found == false)
+		if(!found)
 		{
 			tracks.push_back(context.first);
 		}
@@ -258,15 +261,17 @@ void TranscodeStream::Stop()
 	_thread_encode.join();
 }
 
-std::shared_ptr<StreamInfo> TranscodeStream::GetStreamInfo()
-{
-	return _stream_info_input;
-}
-
 bool TranscodeStream::Push(std::unique_ptr<MediaPacket> packet)
 {
 	// logtd("Stage-1-1 : %f", (float)frame->GetPts());
 	// 변경된 스트림을 큐에 넣음
+
+	if(_queue.size() > _max_queue_size)
+	{
+		logtw("Queue(stream) is full, Please check your system");
+		return true;
+	}
+
 	_queue.push(std::move(packet));
 
 	return true;
@@ -276,11 +281,6 @@ bool TranscodeStream::Push(std::unique_ptr<MediaPacket> packet)
 // {
 // 	return _queue.pop_unique();
 // }
-
-uint32_t TranscodeStream::GetBufferCount()
-{
-	return _queue.size();
-}
 
 void TranscodeStream::CreateDecoder(int32_t media_track_id)
 {
@@ -379,7 +379,14 @@ TranscodeResult TranscodeStream::do_decode(int32_t track_id, std::unique_ptr<con
 					logtd("stats. rq(%d), dq(%d), fq(%d)", _queue.size(), _queue_decoded.size(), _queue_filterd.size());
 				}
 
+				if(_queue_decoded.size() > _max_queue_size)
+				{
+					logtw("Queue(decoded) is full, Please check your system");
+					return result;
+				}
+
 				_queue_decoded.push(std::move(ret_frame));
+
 				break;
 
 			default:
@@ -418,18 +425,18 @@ TranscodeResult TranscodeStream::do_filter(int32_t track_id, std::unique_ptr<Med
 
 				logd("Transcode.Packet", "Received from filter:\n%s", ov::Dump(ret_frame->GetBuffer(0), ret_frame->GetBufferSize(0), 32).CStr());
 
-				// logtd("filtered frame. track_id(%d), pts(%.0f)", ret_frame->GetTrackId(), (float)ret_frame->GetPts());
-
+				if (_queue_filterd.size() > _max_queue_size)
+				{
+					logtw("Queue(filtered) is full, Please check your system");
+					return result;
+				}
 				_queue_filterd.push(std::move(ret_frame));
-				// do_encode(track_id, std::move(ret_frame));
 				break;
 
 			default:
 				return result;
 		}
 	}
-
-	return TranscodeResult::DataReady;
 }
 
 TranscodeResult TranscodeStream::do_encode(int32_t track_id, std::unique_ptr<const MediaFrame> frame)
@@ -468,8 +475,6 @@ TranscodeResult TranscodeStream::do_encode(int32_t track_id, std::unique_ptr<con
 			SendFrame(std::move(ret_packet));
 		}
 	}
-
-	return TranscodeResult::DataReady;
 }
 
 // 디코딩 & 인코딩 스레드
@@ -550,8 +555,8 @@ bool TranscodeStream::AddStreamInfoOutput(ov::String stream_name)
 	auto stream_info_output = std::make_shared<StreamInfo>();
 	stream_info_output->SetName(stream_name);
 
-	if(_stream_info_outputs.insert(
-		std::make_pair(stream_name, stream_info_output)).second == false)
+	if(!_stream_info_outputs.insert(
+			std::make_pair(stream_name, stream_info_output)).second)
 	{
 		logtw("The stream [%s] already exists", stream_name.CStr());
 		return false;
@@ -577,7 +582,7 @@ void TranscodeStream::DeleteStreams()
 
 void TranscodeStream::SendFrame(std::unique_ptr<MediaPacket> packet)
 {
-	uint8_t track_id = packet->GetTrackId();
+	uint8_t track_id = static_cast<uint8_t>(packet->GetTrackId());
 
 	auto item = _contexts.find(track_id);
 
@@ -611,7 +616,7 @@ void TranscodeStream::CreateEncoders(std::shared_ptr<MediaTrack> media_track)
 		}
 
 		auto new_track = std::make_shared<MediaTrack>();
-		new_track->SetId(iter.first);
+		new_track->SetId((uint32_t)iter.first);
 		new_track->SetMediaType(media_track->GetMediaType());
 		new_track->SetCodecId(iter.second->GetCodecId());
 		new_track->SetTimeBase(iter.second->GetTimeBase().GetNum(), iter.second->GetTimeBase().GetDen());

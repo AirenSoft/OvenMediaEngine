@@ -11,10 +11,20 @@
 
 #define OV_LOG_TAG "TranscodeCodec"
 
+OvenCodecImplAvcodecEncAVC::~OvenCodecImplAvcodecEncAVC()
+{
+	if(_encoder)
+	{
+		_encoder->Uninitialize();
+		WelsDestroySVCEncoder(_encoder);
+	}
+}
+
 bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	if(WelsCreateSVCEncoder(&_encoder))
 	{
+		_encoder->Uninitialize();
 		logte("Unable to create H264 encoder");
 		return false;
 	}
@@ -37,7 +47,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	param.bEnableFrameSkip = true;
 	param.bEnableLongTermReference = false;
 	param.iLtrMarkPeriod = 30;
-	param.uiIntraPeriod = 30; // KeyFrame Interval (3 sec)
+	param.uiIntraPeriod = 30; // KeyFrame Interval (1 sec)
 	param.eSpsPpsIdStrategy = CONSTANT_ID;
 	param.bPrefixNalAddingCtrl = false;
 	param.sSpatialLayers[0].iVideoWidth = param.iPicWidth;

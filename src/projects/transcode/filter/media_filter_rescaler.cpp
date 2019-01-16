@@ -60,6 +60,11 @@ MediaFilterRescaler::~MediaFilterRescaler()
 	{
 		avfilter_inout_free(&_inputs);
 	}
+
+	if(_filter_graph)
+	{
+		avfilter_graph_free(&_filter_graph);
+	}
 }
 
 

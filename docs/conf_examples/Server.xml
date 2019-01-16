@@ -60,7 +60,7 @@
 					<Publishers>
 						<RTMP />
 						<HLS>
-							<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
+							<!--<TLS include="TLS.xml" />-->
 							<SegmentDuration>3</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
 							<CrossDoamin>
@@ -68,7 +68,7 @@
 							</CrossDoamin>
 						</HLS>
 						<DASH>
-							<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
+							<!--<TLS include="TLS.xml" />-->
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>5</SegmentCount>
 							<Cors>
@@ -83,7 +83,7 @@
 							<Port>10000/udp</Port>
 							<Timeout>30000</Timeout>
 							<Signalling>
-								<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
+								<!--<TLS include="TLS.xml" />-->
 								<Port>3333</Port>
 							</Signalling>
 						</WebRTC>

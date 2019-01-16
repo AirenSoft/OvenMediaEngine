@@ -12,6 +12,14 @@
 
 #define DEBUG_PREVIEW 0
 
+OvenCodecImplAvcodecDecAVC::~OvenCodecImplAvcodecDecAVC()
+{
+	if(_decoder)
+	{
+		WelsDestroyDecoder(_decoder);
+	}
+}
+
 bool OvenCodecImplAvcodecDecAVC::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	if(WelsCreateDecoder(&_decoder))

@@ -15,6 +15,8 @@ class OvenCodecImplAvcodecEncAVC : public TranscodeEncoder
 {
 public:
 
+	~OvenCodecImplAvcodecEncAVC() override;
+
 	AVCodecID GetCodecID() const noexcept override
 	{
 		return AV_CODEC_ID_H264;
