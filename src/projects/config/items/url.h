@@ -22,7 +22,7 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue("Url", &_url);
+			RegisterValue<ValueType::Text>("Name", &_url);
 		}
 
 		ov::String _url;

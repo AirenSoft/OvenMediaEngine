@@ -28,34 +28,50 @@
 
 class RtmpProvider : public pvd::Provider, public RtmpObserver
 {
-	// class TranscodeApplication;
+    // class TranscodeApplication;
 public:
-	static std::shared_ptr<RtmpProvider> Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
+    static std::shared_ptr<RtmpProvider>
+    Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
 
-	explicit RtmpProvider(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
-	~RtmpProvider() override;
+    explicit RtmpProvider(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
 
-	cfg::ProviderType GetProviderType() override
-	{
-		return cfg::ProviderType::Rtmp;
-	}
+    ~RtmpProvider() override;
 
-	bool Start() override;
-	bool Stop() override;
+    cfg::ProviderType GetProviderType() override
+    {
+        return cfg::ProviderType::Rtmp;
+    }
 
-	std::shared_ptr<pvd::Application> OnCreateApplication(const info::Application &application_info) override;
+    bool Start() override;
 
-	//--------------------------------------------------------------------
-	// Implementation of RtmpObserver
-	//--------------------------------------------------------------------
-	bool OnStreamReadyComplete(const ov::String &app_name, const ov::String &stream_name, std::shared_ptr<RtmpMediaInfo> &media_info, info::application_id_t &application_id, uint32_t &stream_id) override;
-	bool OnVideoData(info::application_id_t application_id, uint32_t stream_id, uint32_t timestamp, std::shared_ptr<std::vector<uint8_t>> &data) override;
-	bool OnAudioData(info::application_id_t application_id, uint32_t stream_id, uint32_t timestamp, std::shared_ptr<std::vector<uint8_t>> &data) override;
-	bool OnDeleteStream(info::application_id_t application_id, uint32_t stream_id) override;
+    bool Stop() override;
+
+    std::shared_ptr<pvd::Application> OnCreateApplication(const info::Application &application_info) override;
+
+    //--------------------------------------------------------------------
+    // Implementation of RtmpObserver
+    //--------------------------------------------------------------------
+    bool OnStreamReadyComplete(const ov::String &app_name,
+                               const ov::String &stream_name,
+                               std::shared_ptr<RtmpMediaInfo> &media_info,
+                               info::application_id_t &application_id,
+                               uint32_t &stream_id) override;
+
+    bool OnVideoData(info::application_id_t application_id,
+                     uint32_t stream_id,
+                     uint32_t timestamp,
+                     std::shared_ptr<std::vector<uint8_t>> &data) override;
+
+    bool OnAudioData(info::application_id_t application_id,
+                     uint32_t stream_id,
+                     uint32_t timestamp,
+                     std::shared_ptr<std::vector<uint8_t>> &data) override;
+
+    bool OnDeleteStream(info::application_id_t application_id, uint32_t stream_id) override;
 
 private:
-	const cfg::RtmpProvider *_provider_info;
+    const cfg::RtmpProvider *_provider_info;
 
-	std::shared_ptr<RtmpServer> _rtmp_server;
+    std::shared_ptr<RtmpServer> _rtmp_server;
 };
 

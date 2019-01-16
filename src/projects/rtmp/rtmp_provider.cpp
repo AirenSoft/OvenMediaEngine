@@ -8,6 +8,7 @@
 //==============================================================================
 #include <iostream>
 #include <unistd.h>
+#include <config/config.h>
 
 #include "rtmp_provider.h"
 #include "rtmp_application.h"
@@ -89,9 +90,11 @@ std::shared_ptr<Application> RtmpProvider::OnCreateApplication(const info::Appli
 // OnStreamReadyComplete
 // - RtmpObserver 구현
 //====================================================================================================
-bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name, const ov::String &stream_name,
-                                         std::shared_ptr<RtmpMediaInfo> &media_info,
-                                         info::application_id_t &application_id, uint32_t &stream_id)
+bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
+                                            const ov::String &stream_name,
+                                            std::shared_ptr<RtmpMediaInfo> &media_info,
+                                            info::application_id_t &application_id,
+                                            uint32_t &stream_id)
 {
     logtd("OnStreamReadyComplete - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
 
@@ -99,14 +102,42 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name, const ov::S
     auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationByName(app_name.CStr()));
     if (application == nullptr)
     {
+        logte("Cannot Find Applicaton - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
         return false;
     }
+
+    if (GetStreamByName(app_name, stream_name))
+    {
+        // 기존 접속 스트림 종료
+        if (_provider_info->GetOverlapStreamProcessType() == cfg::OverlapStreamProcessType::Refresh)
+        {
+            uint32_t stream_id = GetStreamByName(app_name, stream_name)->GetId();
+
+            logti("Overlap Stream Input(Refreah) - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
+
+            // 세션 종료
+            if(!_rtmp_server->Disconnect(app_name, stream_id))
+            {
+                logte("Disconnect Fail - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
+            }
+
+            // 스트림 정보 종료
+            application->DeleteStream2(application->GetStreamByName(stream_name));
+
+        }
+        else
+        {
+            logti("Overlap Stream Input(Reject) - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
+            return false;
+        }
+    }
+
 
     // Application -> RtmpApplication: create rtmp stream -> Application 에 Stream 정보 저장
     auto stream = application->MakeStream();
     if (stream == nullptr)
     {
-        logte("can not create stream");
+        logte("can not create stream - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
         return false;
     }
 
@@ -171,7 +202,9 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name, const ov::S
 // OnVideoStreamData
 // - RtmpObserver 구현
 //====================================================================================================
-bool RtmpProvider::OnVideoData(info::application_id_t application_id, uint32_t stream_id, uint32_t timestamp,
+bool RtmpProvider::OnVideoData(info::application_id_t application_id,
+                                uint32_t stream_id,
+                                uint32_t timestamp,
                                std::shared_ptr<std::vector<uint8_t>> &data)
 {
     auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationById(application_id));
@@ -189,8 +222,12 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id, uint32_t s
         return false;
     }
 
-    auto pbuf = std::make_unique<MediaPacket>(MediaType::Video, 0, data->data(), data->size(), timestamp,
-                                              MediaPacketFlag::NoFlag);
+    auto pbuf = std::make_unique<MediaPacket>(MediaType::Video,
+                                                0,
+                                                data->data(),
+                                                data->size(),
+                                                timestamp,
+                                                MediaPacketFlag::NoFlag);
 
     application->SendFrame(stream, std::move(pbuf));
 
@@ -201,8 +238,10 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id, uint32_t s
 // OnAudioStreamData
 // - RtmpObserver 구현
 //====================================================================================================
-bool RtmpProvider::OnAudioData(info::application_id_t application_id, uint32_t stream_id, uint32_t timestamp,
-                               std::shared_ptr<std::vector<uint8_t>> &data)
+bool RtmpProvider::OnAudioData(info::application_id_t application_id,
+                                uint32_t stream_id,
+                                uint32_t timestamp,
+                                std::shared_ptr<std::vector<uint8_t>> &data)
 {
     auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationById(application_id));
 
@@ -220,8 +259,12 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id, uint32_t s
         return false;
     }
 
-    auto pbuf = std::make_unique<MediaPacket>(MediaType::Audio, 1, data->data(), data->size(), timestamp,
-                                              MediaPacketFlag::NoFlag);
+    auto pbuf = std::make_unique<MediaPacket>(MediaType::Audio,
+                                    1,
+                                    data->data(),
+                                    data->size(),
+                                    timestamp,
+                                    MediaPacketFlag::NoFlag);
     application->SendFrame(stream, std::move(pbuf));
 
     return true;

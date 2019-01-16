@@ -40,9 +40,9 @@
  - AAC : Control Byte 
 */
 
-#define OV_LOG_TAG                    "RtmpProvider"
-#define MAX_STREAM_MESSAGE_COUNT   (100)
-
+#define OV_LOG_TAG                  "RtmpProvider"
+#define MAX_STREAM_MESSAGE_COUNT    (100)
+#define BASELINE_PROFILE            (66)
 //====================================================================================================
 // RtmpChunkStream
 //====================================================================================================
@@ -685,8 +685,12 @@ void RtmpChunkStream::OnAmfPublish(std::shared_ptr<RtmpMuxMessageHeader> &messag
             logte("OnPublish - Publish Name None");
 
             //Reject
-            SendAmfOnStatus(message_header->chunk_stream_id, _rtmp_stream_id, (char *) "error",
-                            (char *) "NetStream.Publish.Rejected", (char *) "Authentication Failed.", _client_id);
+            SendAmfOnStatus(message_header->chunk_stream_id,
+                            _rtmp_stream_id,
+                            (char *) "error",
+                            (char *) "NetStream.Publish.Rejected",
+                            (char *) "Authentication Failed.", _client_id);
+
             return;
         }
     }
@@ -775,8 +779,11 @@ bool RtmpChunkStream::SendAmfCommand(std::shared_ptr<RtmpMuxMessageHeader> &mess
 //====================================================================================================
 bool RtmpChunkStream::SendUserControlMessage(uint16_t message, std::shared_ptr<std::vector<uint8_t>> &data)
 {
-    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT, 0,
-                                                                 RTMP_MSGID_USER_CONTROL_MESSAGE, 0, data->size() + 2);
+    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
+                                                                0,
+                                                                RTMP_MSGID_USER_CONTROL_MESSAGE,
+                                                                0,
+                                                                data->size() + 2);
 
     data->insert(data->begin(), 0);
     data->insert(data->begin(), 0);
@@ -791,9 +798,11 @@ bool RtmpChunkStream::SendUserControlMessage(uint16_t message, std::shared_ptr<s
 bool RtmpChunkStream::SendWindowAcknowledgementSize()
 {
     auto body = std::make_shared<std::vector<uint8_t>>(sizeof(int));
-    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT, 0,
-                                                                 RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE, _rtmp_stream_id,
-                                                                 body->size());
+    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
+                                                                0,
+                                                                RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE,
+                                                                _rtmp_stream_id,
+                                                                body->size());
 
     RtmpMuxUtil::WriteInt32(body->data(), RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE);
 
@@ -806,8 +815,11 @@ bool RtmpChunkStream::SendWindowAcknowledgementSize()
 bool RtmpChunkStream::SendAcknowledgementSize()
 {
     auto body = std::make_shared<std::vector<uint8_t>>(sizeof(int));
-    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT, 0,
-                                                                 RTMP_MSGID_ACKNOWLEDGEMENT, 0, body->size());
+    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
+                                                                0,
+                                                                RTMP_MSGID_ACKNOWLEDGEMENT,
+                                                                0,
+                                                                body->size());
 
     RtmpMuxUtil::WriteInt32(body->data(), _acknowledgement_traffic);
 
@@ -820,9 +832,11 @@ bool RtmpChunkStream::SendAcknowledgementSize()
 bool RtmpChunkStream::SendSetPeerBandwidth()
 {
     auto body = std::make_shared<std::vector<uint8_t>>(5);
-    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT, 0,
-                                                                 RTMP_MSGID_SET_PEERBANDWIDTH, _rtmp_stream_id,
-                                                                 body->size());
+    auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
+                                                                    0,
+                                                                    RTMP_MSGID_SET_PEERBANDWIDTH,
+                                                                    _rtmp_stream_id,
+                                                                    body->size());
 
     RtmpMuxUtil::WriteInt32(body->data(), _peer_bandwidth);
     RtmpMuxUtil::WriteInt8(body->data() + 4, 2);
@@ -1162,7 +1176,8 @@ bool RtmpChunkStream::VideoSequenceInfoProcess(std::unique_ptr<std::vector<uint8
     // Only H264
     if ((control_byte & 0x0f) != 7)
     {
-        logtw("Not Supported Codec Type - codec(%d)", (control_byte & 0x0f));
+        logtd("Not Supported Codec Type - codec(%d)", (control_byte & 0x0f));
+        logti("Please select H264 codec");
         return false;
     }
 
@@ -1197,17 +1212,21 @@ bool RtmpChunkStream::VideoSequenceInfoProcess(std::unique_ptr<std::vector<uint8
     uint8_t avc_level = _media_info->avc_sps->at(3);
 
     // Only h264(baseline)
-    if (avc_profile != 66)
+    if (avc_profile != BASELINE_PROFILE)
     {
-        logtw("Not Supported H264 Profile Type - profile(%d)", avc_profile);
+        logtd("Not Supported H264 Profile Type - profile(%d)", avc_profile);
+        logti("Please select Baseline Profile");
         return true;
 
     }
 
     _media_info->video_streaming = true;
 
-    logtd("Video Sequence Data - sps(%d) pps(%d) profile(%d) level(%d)", _media_info->avc_sps->size(),
-          _media_info->avc_pps->size(), avc_profile, avc_level);
+    logtd("Video Sequence Data - sps(%d) pps(%d) profile(%d) level(%d)",
+            _media_info->avc_sps->size(),
+            _media_info->avc_pps->size(),
+            avc_profile,
+            avc_level);
 
     return true;
 }
@@ -1228,7 +1247,8 @@ bool RtmpChunkStream::AudioSequenceInfoProcess(std::unique_ptr<std::vector<uint8
     // Only AAC
     if ((control_byte >> 4) != 10)
     {
-        logtw("Not Supported Codec Type - codec(%d)", (control_byte >> 4));
+        logtd("Not Supported Codec Type - codec(%d)", (control_byte >> 4));
+        logti("Please select AAC codec");
         return true;
     }
 
@@ -1270,34 +1290,55 @@ bool RtmpChunkStream::StreamCreate()
     // Streaming Check
     if(!_media_info->video_streaming  && !_media_info->audio_streaming)
     {
-        logte("Video/Audio Not Streaming");
+        logte("Video/Audio Not Streaming - app(%s) stram(%s)", _app_name.CStr(), _stream_name.CStr());
+        _stream_messages.clear();
+        _media_info->video_streaming = false;
+        _media_info->audio_streaming = false;
+        _remote->Close();
         return false;
     }
 
     // Stream Create
-    if (!(_stream_interface->OnChunkStreamReadyComplete(_remote, _app_name, _stream_name, _media_info, _app_id,
+    if (!(_stream_interface->OnChunkStreamReadyComplete(_remote,
+                                                        _app_name,
+                                                        _stream_name,
+                                                        _media_info,
+                                                        _app_id,
                                                         _stream_id)))
     {
-        logte("Stream Create Fail");
+        logte("Stream Create Fail - app(%s) stram(%s)", _app_name.CStr(),
+                                                        _stream_name.CStr());
+                                                        _stream_messages.clear();
+                                                        _media_info->video_streaming = false;
+                                                        _media_info->audio_streaming = false;
+                                                        _remote->Close();
         return false;
     }
 
-    logtd("\n======= MEDIA CREATE INFO ======= \n"\
-            "encoder : %s(%s) \n"\
-            "video : %s/%d*%d/%.2ffps/%dkbps \n"\
-            "audio : %s/%dch/%dhz/%dkbps \n",
-          GetEncoderTypeString(_media_info->encoder_type).CStr(),
-          _device_string.CStr(),
-          GetCodecString(_media_info->video_codec_type).CStr(),
-          _media_info->video_width,
-          _media_info->video_height,
-          _media_info->video_framerate,
-          _media_info->video_bitrate,
-          GetCodecString(_media_info->audio_codec_type).CStr(),
-          _media_info->audio_channels,
-          _media_info->audio_samplerate,
-          _media_info->audio_bitrate);
-
+    logtd("\n======= Stream Crete Info ======= \n"\
+    "app : %s(%u)\n"\
+    "stream : %s(%u)\n"\
+    "encoder : %s(%s)/%s\n"\
+    "video : %s/%s/%d*%d/%.2ffps/%dkbps\n"\
+    "audio : %s/%s/%dch/%dhz/%dkbps",
+    _app_name.CStr(),
+    _app_id,
+    _stream_name.CStr(),
+    _stream_id,
+    GetEncoderTypeString(_media_info->encoder_type).CStr(),
+    _device_string.CStr(),
+    _remote->ToString().CStr(),
+    _media_info->video_streaming ? "enable" : "disable",
+    GetCodecString(_media_info->video_codec_type).CStr(),
+    _media_info->video_width,
+    _media_info->video_height,
+    _media_info->video_framerate,
+    _media_info->video_bitrate,
+    _media_info->audio_streaming ? "enable" : "disable",
+    GetCodecString(_media_info->audio_codec_type).CStr(),
+    _media_info->audio_channels,
+    _media_info->audio_samplerate,
+    _media_info->audio_bitrate);
 
     // 임시 저장 데이터 처리(재귀 호출 주의)
     for (auto message : _stream_messages)

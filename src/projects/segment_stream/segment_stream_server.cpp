@@ -142,7 +142,8 @@ bool SegmentStreamServer::RemoveObserver(const std::shared_ptr<SegmentStreamObse
 //====================================================================================================
 // Disconnect
 //====================================================================================================
-bool SegmentStreamServer::Disconnect(const ov::String &app_na, const ov::String &stream_name) {
+bool SegmentStreamServer::Disconnect(const ov::String &app_na, const ov::String &stream_name)
+{
     return true;
 }
 
@@ -156,7 +157,8 @@ bool SegmentStreamServer::RequestUrlParsing(const ov::String &request_url,
                                             ov::String &app_name,
                                             ov::String &stream_name,
                                             ov::String &file_name,
-                                            ov::String &file_ext) {
+                                            ov::String &file_ext)
+{
     ov::String request_path;
     ov::String request_param;
 
@@ -235,12 +237,15 @@ void SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &req
 
     ProtocolFlag protocol_flag = ProtocolFlag::NONE;
 
-    if (file_ext == "m4s" || file_ext == "mpd") protocol_flag = ProtocolFlag::DASH;
-    else if (file_ext == "ts" || file_ext == "m3u8")protocol_flag = ProtocolFlag::HLS;
+    if (file_ext == "m4s" || file_ext == "mpd")
+        protocol_flag = ProtocolFlag::DASH;
+    else if (file_ext == "ts" || file_ext == "m3u8")
+        protocol_flag = ProtocolFlag::HLS;
 
     // CORS 확인
     if (request->IsHeaderExists("Origin")) {
-        if (!CorsCheck(app_name, stream_name, file_name, protocol_flag, request, response)) {
+        if (!CorsCheck(app_name, stream_name, file_name, protocol_flag, request, response))
+        {
             return;
         }
     }

@@ -27,26 +27,37 @@
 //====================================================================================================
 class IRtmpChunkStream {
 public:
-    virtual bool OnChunkStreamReadyComplete(ov::ClientSocket *remote, ov::String &app_name, ov::String &stream_name,
+    virtual bool OnChunkStreamReadyComplete(ov::ClientSocket *remote,
+                                            ov::String &app_name, ov::String &stream_name,
                                             std::shared_ptr<RtmpMediaInfo> &media_info,
-                                            info::application_id_t &applicaiton_id, uint32_t &stream_id) = 0;
+                                            info::application_id_t &applicaiton_id,
+                                            uint32_t &stream_id) = 0;
 
     virtual bool
-    OnChunkStreamVideoData(ov::ClientSocket *remote, info::application_id_t applicaiton_id, uint32_t stream_id,
-                           uint32_t timestamp, std::shared_ptr<std::vector<uint8_t>> &data) = 0;
+    OnChunkStreamVideoData(ov::ClientSocket *remote,
+                            info::application_id_t applicaiton_id,
+                            uint32_t stream_id,
+                           uint32_t timestamp,
+                           std::shared_ptr<std::vector<uint8_t>> &data) = 0;
 
     virtual bool
-    OnChunkStreamAudioData(ov::ClientSocket *remote, info::application_id_t applicaiton_id, uint32_t stream_id,
-                           uint32_t timestamp, std::shared_ptr<std::vector<uint8_t>> &data) = 0;
+    OnChunkStreamAudioData(ov::ClientSocket *remote,
+                            info::application_id_t applicaiton_id,
+                            uint32_t stream_id,
+                           uint32_t timestamp,
+                           std::shared_ptr<std::vector<uint8_t>> &data) = 0;
 
-    virtual bool OnChunkStreamDelete(ov::ClientSocket *remote, ov::String &app_name, ov::String &stream_name,
-                                     info::application_id_t applicaiton_id, uint32_t stream_id) = 0;
+    virtual bool OnChunkStreamDelete(ov::ClientSocket *remote,
+                                        ov::String &app_name, ov::String &stream_name,
+                                        info::application_id_t applicaiton_id,
+                                        uint32_t stream_id) = 0;
 };
 
 //====================================================================================================
 // RtmpChunkStream
 //====================================================================================================
-class RtmpChunkStream : public ov::EnableSharedFromThis<RtmpChunkStream> {
+class RtmpChunkStream : public ov::EnableSharedFromThis<RtmpChunkStream>
+{
 public:
     RtmpChunkStream(ov::ClientSocket *remote, IRtmpChunkStream *stream_interface);
 
@@ -58,6 +69,15 @@ public:
     static ov::String GetCodecString(RtmpCodecType codec_type);
 
     static ov::String GetEncoderTypeString(RtmpEncoderType encoder_type);
+
+    ov::String GetAppName(){ return _app_name; }
+    ov::String GetStreamName(){ return _stream_name; }
+    uint32_t GetStreamId(){ return _stream_id; }
+
+    bool Close()
+    {
+        return _remote->Close();
+    }
 
 private :
     bool SendData(int data_size, uint8_t *data);
@@ -94,8 +114,9 @@ private :
     void
     OnAmfPublish(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document, double transaction_id);
 
-    void OnAmfDeleteStream(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document,
-                           double transaction_id);
+    void OnAmfDeleteStream(std::shared_ptr<RtmpMuxMessageHeader> &message_header,
+                            AmfDocument &document,
+                            double transaction_id);
 
     bool
     OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document, int32_t object_index);
@@ -121,8 +142,12 @@ private :
 
     bool SendAmfCreateStreamResult(uint32_t chunk_stream_id, double transaction_id);
 
-    bool SendAmfOnStatus(uint32_t chunk_stream_id, uint32_t stream_id, char *level, char *code, char *description,
-                         double client_id);
+    bool SendAmfOnStatus(uint32_t chunk_stream_id,
+                        uint32_t stream_id,
+                        char *level,
+                        char *code,
+                        char *description,
+                        double client_id);
 
     bool VideoSequenceInfoProcess(std::unique_ptr<std::vector<uint8_t>> data, uint8_t control_byte);
 

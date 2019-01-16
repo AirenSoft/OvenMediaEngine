@@ -12,6 +12,12 @@
 
 namespace cfg
 {
+	enum class OverlapStreamProcessType
+	{
+		Reject = 0,
+		Refresh,
+	};
+
 	struct RtmpProvider : public Provider
 	{
 		ProviderType GetType() const override
@@ -24,14 +30,21 @@ namespace cfg
 			return _port;
 		}
 
+		OverlapStreamProcessType GetOverlapStreamProcessType() const
+		{
+			return _overlap_stream_process == "refresh" ? OverlapStreamProcessType::Refresh : OverlapStreamProcessType::Reject;
+		}
+
 	protected:
 		void MakeParseList() const override
 		{
 			Provider::MakeParseList();
 
 			RegisterValue<Optional>("Port", &_port);
+			RegisterValue<Optional>("OverlapStreamProcess", &_overlap_stream_process);
 		}
 
 		int _port = 1935;
+		ov::String _overlap_stream_process;
 	};
 }

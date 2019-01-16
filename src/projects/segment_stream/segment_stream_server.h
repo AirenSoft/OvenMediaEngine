@@ -27,7 +27,8 @@ enum class ProtocolFlag {
 //====================================================================================================
 // SegmentStreamServer
 //====================================================================================================
-class SegmentStreamServer {
+class SegmentStreamServer
+{
 public :
     SegmentStreamServer() = default;
 

@@ -117,10 +117,35 @@ void RtmpServer::OnConnected(ov::Socket *remote)
 }
 
 //====================================================================================================
+// Disconnect
+// - stream name은 중복 가능 해서 stream id 로 검색
+//====================================================================================================
+bool RtmpServer::Disconnect(const ov::String &app_name, uint32_t stream_id)
+{
+    for(auto item = _client_list.begin(); item != _client_list.end(); ++item)
+    {
+        auto chunk_stream = item->second;
+
+        if(chunk_stream->GetAppName() == app_name && chunk_stream->GetStreamId()== stream_id)
+        {
+            item->first->Close();
+
+            _client_list.erase(item);
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+//====================================================================================================
 // OnDataReceived
 // - 데이터 수신
 //====================================================================================================
-void RtmpServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
+void RtmpServer::OnDataReceived(ov::Socket *remote,
+                                const ov::SocketAddress &address,
+                                const std::shared_ptr<const ov::Data> &data)
 {
 	auto item = _client_list.find(remote);
 
@@ -141,7 +166,9 @@ void RtmpServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &add
 	 }
 
 	 // 데이터 전달
-	 auto process_data = std::make_unique<std::vector<uint8_t>>((uint8_t *)data->GetData(), (uint8_t *)data->GetData() + data->GetLength());
+	 auto process_data = std::make_unique<std::vector<uint8_t>>((uint8_t *)data->GetData(),
+	         (uint8_t *)data->GetData() + data->GetLength());
+
 	 if(item->second->OnDataReceived(std::move(process_data)) < 0)
      {
 	     // TODO: 스트림 종료 및 세션 정리
@@ -155,7 +182,9 @@ void RtmpServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &add
 // OnDisconnected
 // - client 세션 제거
 //====================================================================================================
-void RtmpServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
+void RtmpServer::OnDisconnected(ov::Socket *remote,
+                                PhysicalPortDisconnectReason reason,
+                                const std::shared_ptr<const ov::Error> &error)
 {
 	logtd("Client Disconnected - remote(%s)", remote->ToString().CStr());
 
@@ -174,19 +203,30 @@ void RtmpServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason
 // - 스트림 준비 완료
 // - app/stream id 획득 및 저장
 //====================================================================================================
-bool RtmpServer::OnChunkStreamReadyComplete(ov::ClientSocket *remote, ov::String &app_name, ov::String &stream_name, std::shared_ptr<RtmpMediaInfo> &media_info, info::application_id_t &application_id, uint32_t &stream_id)
+bool RtmpServer::OnChunkStreamReadyComplete(ov::ClientSocket *remote,
+                                            ov::String &app_name,
+                                            ov::String &stream_name,
+                                            std::shared_ptr<RtmpMediaInfo> &media_info,
+                                            info::application_id_t &application_id,
+                                            uint32_t &stream_id)
 {
     // observer들에게 알림
     for(auto &observer : _observers)
     {
         if(!observer->OnStreamReadyComplete(app_name, stream_name, media_info, application_id, stream_id))
         {
-            logte("Ready Complete Fail - app(%s) stream(%s) client(%s)", app_name.CStr(), stream_name.CStr(), remote->ToString().CStr());
+            logte("Ready Complete Fail - app(%s) stream(%s) client(%s)", app_name.CStr(),
+                                                                        stream_name.CStr(),
+                                                                        remote->ToString().CStr());
             return false;
         }
     }
 
-    logtd("Create Stream - app(%s/%u) stream(%s/%u) client(%s)", app_name.CStr(), application_id, stream_name.CStr(), stream_id, remote->ToString().CStr());
+    logtd("Create Stream - app(%s/%u) stream(%s/%u) client(%s)", app_name.CStr(),
+                                                                application_id,
+                                                                stream_name.CStr(),
+                                                                stream_id,
+                                                                remote->ToString().CStr());
 
     return true;
 }
@@ -196,14 +236,21 @@ bool RtmpServer::OnChunkStreamReadyComplete(ov::ClientSocket *remote, ov::String
 // - IRtmpChunkStream 구현
 // - Video 스트림 전달
 //====================================================================================================
-bool RtmpServer::OnChunkStreamVideoData(ov::ClientSocket *remote, info::application_id_t application_id, uint32_t stream_id, uint32_t timestamp, std::shared_ptr<std::vector<uint8_t>> &data)
+bool RtmpServer::OnChunkStreamVideoData(ov::ClientSocket *remote,
+                                        info::application_id_t application_id,
+                                        uint32_t stream_id,
+                                        uint32_t timestamp,
+                                        std::shared_ptr<std::vector<uint8_t>> &data)
 {
     // observer들에게 알림
     for(auto &observer : _observers)
     {
         if(!observer->OnVideoData(application_id, stream_id, timestamp, data))
         {
-            logte("Video Data Fail - app(%u) stream(%u) client(%s)", application_id, stream_id, remote->ToString().CStr());
+            logte("Video Data Fail - app(%u) stream(%u) client(%s)",
+                    application_id,
+                    stream_id,
+                    remote->ToString().CStr());
             return false;
         }
     }
@@ -216,14 +263,21 @@ bool RtmpServer::OnChunkStreamVideoData(ov::ClientSocket *remote, info::applicat
 // - IRtmpChunkStream 구현
 // - Audio 스트림 전달
 //====================================================================================================
-bool RtmpServer::OnChunkStreamAudioData(ov::ClientSocket *remote, info::application_id_t application_id, uint32_t stream_id, uint32_t timestamp, std::shared_ptr<std::vector<uint8_t>> &data)
+bool RtmpServer::OnChunkStreamAudioData(ov::ClientSocket *remote,
+                                        info::application_id_t application_id,
+                                        uint32_t stream_id,
+                                        uint32_t timestamp,
+                                        std::shared_ptr<std::vector<uint8_t>> &data)
 {
     // observer들에게 알림
     for(auto &observer : _observers)
     {
         if(!observer->OnAudioData(application_id, stream_id, timestamp, data))
         {
-            logte("Audio Data Fail - app(%u) stream(%u) client(%s)", application_id, stream_id, remote->ToString().CStr());
+            logte("Audio Data Fail - app(%u) stream(%u) client(%s)",
+                    application_id,
+                    stream_id,
+                    remote->ToString().CStr());
             return false;
         }
     }
@@ -235,19 +289,31 @@ bool RtmpServer::OnChunkStreamAudioData(ov::ClientSocket *remote, info::applicat
 // OnDeleteStream
 // - IRtmpChunkStream 구현
 //====================================================================================================
-bool RtmpServer::OnChunkStreamDelete(ov::ClientSocket *remote, ov::String &app_name, ov::String &stream_name, info::application_id_t application_id, uint32_t stream_id)
+bool RtmpServer::OnChunkStreamDelete(ov::ClientSocket *remote,
+                                    ov::String &app_name,
+                                    ov::String &stream_name,
+                                    info::application_id_t application_id,
+                                    uint32_t stream_id)
 {
     // observer들에게 알림
     for(auto &observer : _observers)
     {
         if(!observer->OnDeleteStream(application_id, stream_id))
         {
-            logte("Delete Stream Fail - app(%s/%u) stream(%s/%u) client(%s)", app_name.CStr(), application_id, stream_name.CStr(), stream_id, remote->ToString().CStr());
+            logte("Delete Stream Fail - app(%s/%u) stream(%s/%u) client(%s)", app_name.CStr(),
+                                                                            application_id,
+                                                                            stream_name.CStr(),
+                                                                            stream_id,
+                                                                            remote->ToString().CStr());
             return false;
         }
     }
 
-    logtd("Delete Stream - app(%s/%u) stream(%s/%u) client(%s)", app_name.CStr(), application_id, stream_name.CStr(), stream_id, remote->ToString().CStr());
+    logtd("Delete Stream - app(%s/%u) stream(%s/%u) client(%s)", app_name.CStr(),
+                                                                application_id,
+                                                                stream_name.CStr(),
+                                                                stream_id,
+                                                                remote->ToString().CStr());
 
     return true;
 }

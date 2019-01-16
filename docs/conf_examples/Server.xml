@@ -53,6 +53,8 @@
 						<RTMP>
 							<MaxConnection>10</MaxConnection>
 							<Port>1935</Port>
+							<!--<OverlapStreamProcess>refresh</OverlapStreamSession>-->
+							<OverlapStreamProcess>reject</OverlapStreamProcess>
 						</RTMP>
 					</Providers>
 					<Publishers>
@@ -71,6 +73,7 @@
 							<SegmentCount>5</SegmentCount>
 							<Cors>
 								<Url>http://www.airensoft.com</Url>
+								<Url>https://www.airensoft.com</Url>
 							</Cors>
 						</DASH>
 						<WebRTC>

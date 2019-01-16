@@ -10,7 +10,7 @@
 
 #include "publisher.h"
 #include "tls.h"
-#include "url.h"
+#include "urls.h"
 
 namespace cfg
 {
@@ -38,12 +38,12 @@ namespace cfg
 
 		const std::vector<Url> &GetCrossDomains() const
 		{
-			return _cross_domain_list;
+			return _cross_domain_list.GetUrls();
 		}
 
 		const std::vector<Url> &GetCorsUrls() const
 		{
-			return _cors_url_list;
+			return _cors_url_list.GetUrls();
 		}
 
 	protected:
@@ -55,15 +55,15 @@ namespace cfg
 			RegisterValue<Optional>("TLS", &_tls);
 			RegisterValue<Optional>("SegmentCount", &_segment_count);
 			RegisterValue<Optional>("SegmentDuration", &_segment_duration);
-			RegisterValue<Optional, Includable>("CrossDoamin", &_cross_domain_list);
-			RegisterValue<Optional, Includable>("Cors", &_cors_url_list);
+			RegisterValue<Optional>("CrossDoamin", &_cross_domain_list);
+			RegisterValue<Optional>("Cors", &_cors_url_list);
 		}
 
 		int _port = 80;
 		Tls _tls;
 		int _segment_count;
 		int _segment_duration;
-		std::vector<Url> _cross_domain_list;
-		std::vector<Url> _cors_url_list;
+		Urls _cross_domain_list;
+		Urls _cors_url_list;
 	};
 }
