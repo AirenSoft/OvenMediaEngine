@@ -132,6 +132,8 @@ private:
 private:
 	uint32_t _stats_decoded_frame_count;
 
+	uint8_t _stats_queue_full_count;
+
 	uint8_t _max_queue_size;
 };
 
