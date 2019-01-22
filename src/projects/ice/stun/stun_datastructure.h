@@ -82,3 +82,4 @@ enum class StunErrorCode
 #define OV_STUN_MAGIC_COOKIE                                    0x2112A442
 // SHA1 digest 크기와 동일
 #define OV_STUN_HASH_LENGTH                                     20
+#define OV_STUN_LENGTH_AND_VALUE                                0x03

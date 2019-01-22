@@ -58,10 +58,32 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 {
 	logtd("Trying to check STUN header length...");
 
+	uint8_t fb;
+	stream.Peek(&fb);
+
+	/* First byte of STUN message is always 0x00 or 0x01. */
+	if (fb != 0x00 && fb != 0x01)
+	{
+		// This is not a stun packet
+		return false;
+	}
+
+	/*
+	 * The message length MUST contain the size, in bytes, of the message
+	 * not including the 20-byte STUN header. Since all STUN attributes are
+	 * padded to a multiple of 4 bytes, the last 2 bits of this field are
+	 * always zero. This provides another way to distinguish STUN packets
+	 * from packets of other protocols. (RFC 5389)
+	 */
+	if ((stream.Remained() & OV_STUN_LENGTH_AND_VALUE) != 0)
+	{
+		// This is not a stun packet
+		return false;
+	}
+
 	if((stream.Remained() >= DefaultHeaderLength()) == false)
 	{
 		// 데이터 부족 - STUN 메시지가 아님
-		logtw("Invalid STUN message length: %d bytes", stream.Remained());
 		return false;
 	}
 
