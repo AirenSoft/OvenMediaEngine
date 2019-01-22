@@ -70,10 +70,11 @@ bool WebRtcPublisher::Start()
 	}
 
 	std::shared_ptr<Certificate> certificate = GetCertificate();
+	std::shared_ptr<Certificate> chain_certificate = GetChainCertificate();
 
 	// Signalling에 Observer 연결
 	_signalling->AddObserver(RtcSignallingObserver::GetSharedPtr());
-	_signalling->Start(ov::SocketAddress(GetSignallingPort()), certificate);
+	_signalling->Start(ov::SocketAddress(GetSignallingPort()), certificate, chain_certificate);
 
 	// Publisher::Start()에서 Application을 생성한다.
 	return Publisher::Start();
@@ -303,6 +304,37 @@ std::shared_ptr<Certificate> WebRtcPublisher::GetCertificate()
 		}
 
 		logte("Could not create a certificate from files: %s", error->ToString().CStr());
+	}
+	else
+	{
+		// TLS is disabled
+	}
+
+	return nullptr;
+}
+
+std::shared_ptr<Certificate> WebRtcPublisher::GetChainCertificate()
+{
+	cfg::Tls tls_info = _publisher_info->GetSignalling().GetTls();
+
+	if(
+		(tls_info.GetChainCertPath().IsEmpty() == false)
+		)
+	{
+		auto certificate = std::make_shared<Certificate>();
+
+		logti("Trying to create a chain certificate using file: %s",
+		      tls_info.GetChainCertPath().CStr()
+		);
+
+		auto error = certificate->GenerateFromPem(tls_info.GetChainCertPath(), true);
+
+		if(error == nullptr)
+		{
+			return certificate;
+		}
+
+		logte("Could not create a chain certificate from file: %s", error->ToString().CStr());
 	}
 	else
 	{

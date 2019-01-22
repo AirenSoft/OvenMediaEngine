@@ -15,6 +15,7 @@ class HttpsServer : public HttpServer
 public:
 	// Set Local Certificate
 	void SetLocalCertificate(const std::shared_ptr<Certificate> &certificate);
+	void SetChainCertificate(const std::shared_ptr<Certificate> &certificate);
 
 protected:
 	//--------------------------------------------------------------------
@@ -25,4 +26,5 @@ protected:
 
 protected:
 	std::shared_ptr<Certificate> _local_certificate = nullptr;
+	std::shared_ptr<Certificate> _chain_certificate = nullptr;
 };

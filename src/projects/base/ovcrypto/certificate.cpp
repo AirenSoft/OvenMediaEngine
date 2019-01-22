@@ -26,6 +26,7 @@ std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String cert_filename
 		return ov::Error::CreateError("OpenSSL", 0, "Certificate is already created");
 	}
 
+	// TODO(dimiden): If a cert file contains multiple certificates, it should be processed.
 	// Read cert file
 	BIO *cert_bio = nullptr;
 	cert_bio = BIO_new(BIO_s_file());
@@ -65,7 +66,7 @@ std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String cert_filename
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String filename)
+std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String filename, bool aux)
 {
 	if(_X509 != nullptr)
 	{
@@ -80,34 +81,45 @@ std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String filename)
 		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
-	_X509 = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
-	if(_X509 == nullptr)
+	if(aux)
 	{
-		BIO_free(cert_bio);
-		return ov::Error::CreateErrorFromOpenSsl();
+		_X509 = PEM_read_bio_X509_AUX(cert_bio, nullptr, nullptr, nullptr);
 	}
-
-	_pkey = PEM_read_bio_PrivateKey(cert_bio, nullptr, nullptr, nullptr);
-	if(_pkey == nullptr)
+	else
 	{
-		BIO_free(cert_bio);
-		return ov::Error::CreateErrorFromOpenSsl();
+		_X509 = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
 	}
 
 	BIO_free(cert_bio);
 
-	// Check Key
-	EC_KEY *ec_key = EVP_PKEY_get1_EC_KEY(_pkey);
-	if(!ec_key)
+	if(_X509 == nullptr)
 	{
 		return ov::Error::CreateErrorFromOpenSsl();
 	}
 
-	if(!EC_KEY_check_key(ec_key))
-	{
-		EC_KEY_free(ec_key);
-		return ov::Error::CreateErrorFromOpenSsl();
-	}
+	// TODO(dimiden): Extract these codes to another function like GenerateFromPrivateKey()
+	//
+	//_pkey = PEM_read_bio_PrivateKey(cert_bio, nullptr, nullptr, nullptr);
+	//if(_pkey == nullptr)
+	//{
+	//	BIO_free(cert_bio);
+	//	return ov::Error::CreateErrorFromOpenSsl();
+	//}
+	//
+	//BIO_free(cert_bio);
+	//
+	//// Check Key
+	//EC_KEY *ec_key = EVP_PKEY_get1_EC_KEY(_pkey);
+	//if(!ec_key)
+	//{
+	//	return ov::Error::CreateErrorFromOpenSsl();
+	//}
+	//
+	//if(!EC_KEY_check_key(ec_key))
+	//{
+	//	EC_KEY_free(ec_key);
+	//	return ov::Error::CreateErrorFromOpenSsl();
+	//}
 
 	return nullptr;
 }

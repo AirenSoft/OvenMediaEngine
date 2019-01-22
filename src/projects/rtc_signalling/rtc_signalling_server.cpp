@@ -19,7 +19,7 @@ RtcSignallingServer::RtcSignallingServer(const info::Application &application_in
 	_sdp_timer.Start();
 }
 
-bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate)
+bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate)
 {
 	if(_http_server != nullptr)
 	{
@@ -32,6 +32,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::sha
 		auto https_server = std::make_shared<HttpsServer>();
 
 		https_server->SetLocalCertificate(certificate);
+		https_server->SetChainCertificate(chain_certificate);
 
 		_http_server = https_server;
 	}

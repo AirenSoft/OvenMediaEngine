@@ -23,6 +23,11 @@ void HttpsServer::SetLocalCertificate(const std::shared_ptr<Certificate> &certif
 	_local_certificate = certificate;
 }
 
+void HttpsServer::SetChainCertificate(const std::shared_ptr<Certificate> &certificate)
+{
+	_chain_certificate = certificate;
+}
+
 void HttpsServer::OnConnected(ov::Socket *remote)
 {
 	HttpServer::OnConnected(remote);
@@ -65,7 +70,7 @@ void HttpsServer::OnConnected(ov::Socket *remote)
 
 	auto tls = std::make_shared<ov::Tls>();
 
-	if(tls->Initialize(TLS_server_method(), _local_certificate, HTTP_INTERMEDIATE_COMPATIBILITY, callback) == false)
+	if(tls->Initialize(TLS_server_method(), _local_certificate, _chain_certificate, HTTP_INTERMEDIATE_COMPATIBILITY, callback) == false)
 	{
 		// TODO: Disconnect
 		return;

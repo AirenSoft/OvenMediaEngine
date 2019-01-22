@@ -53,14 +53,14 @@ namespace ov
 		return bio_methods;
 	}
 
-	bool Tls::Initialize(const SSL_METHOD *method, const std::shared_ptr<Certificate> &certificate, const ov::String &cipher_list, TlsCallback callback)
+	bool Tls::Initialize(const SSL_METHOD *method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback)
 	{
 		bool result = true;
 
 		_callback = std::move(callback);
 
 		// Create SSL_CTX
-		result = result && PrepareSslContext(method, certificate, cipher_list);
+		result = result && PrepareSslContext(method, certificate, chain_certificate, cipher_list);
 		// Create BIO
 		result = result && PrepareBio();
 		// Create SSL
@@ -74,7 +74,7 @@ namespace ov
 		return result;
 	};
 
-	bool Tls::PrepareSslContext(const SSL_METHOD *method, const std::shared_ptr<Certificate> &certificate, const ov::String &cipher_list)
+	bool Tls::PrepareSslContext(const SSL_METHOD *method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list)
 	{
 		do
 		{
@@ -91,13 +91,20 @@ namespace ov
 
 			if(::SSL_CTX_use_certificate(ctx, certificate->GetX509()) != 1)
 			{
-				logte("Configuring cert to ctx failed");
+				logte("Cannot use certficate: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
+				break;
+			}
+
+			if((chain_certificate != nullptr) && (::SSL_CTX_add0_chain_cert(ctx, chain_certificate->GetX509()) != 1))
+			{
+				logte("Cannot use chain certificate: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
+
 				break;
 			}
 
 			if(::SSL_CTX_use_PrivateKey(ctx, certificate->GetPkey()) != 1)
 			{
-				logte("Configuring pkey to ctx failed");
+				logte("Cannot use private key: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
 				break;
 			}
 

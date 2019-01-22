@@ -28,7 +28,7 @@ public:
 	RtcSignallingServer(const info::Application &application_info, std::shared_ptr<MediaRouteApplicationInterface> application);
 	virtual ~RtcSignallingServer() = default;
 
-	bool Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate = nullptr);
+	bool Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate = nullptr, const std::shared_ptr<Certificate> &chain_certificate = nullptr);
 	bool Stop();
 
 	bool AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer);
