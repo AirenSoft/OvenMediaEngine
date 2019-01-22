@@ -83,7 +83,9 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 	_stats_decoded_frame_count = 0;
 
 	// maximum queue size
-	_max_queue_size = 10;
+	_max_queue_size = 0;
+
+	_stats_queue_full_count = 0;
 
 	// 부모 클래스
 	_parent = parent;
@@ -211,6 +213,9 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 		CreateEncoders(cur_track);
 	}
 
+	OV_ASSERT2(_encoders.size());
+	_max_queue_size = _encoders.size() * 16;
+
 	logti("Transcoder Information / Encoders(%d) / Streams(%d)", _encoders.size(), _stream_tracks.size());
 
 	// 패킷 저리 스레드 생성
@@ -268,7 +273,7 @@ bool TranscodeStream::Push(std::unique_ptr<MediaPacket> packet)
 
 	if(_queue.size() > _max_queue_size)
 	{
-		logtw("Queue(stream) is full, Please check your system");
+		logti("Queue(stream) is full, please check your system");
 		return true;
 	}
 
@@ -381,7 +386,7 @@ TranscodeResult TranscodeStream::do_decode(int32_t track_id, std::unique_ptr<con
 
 				if(_queue_decoded.size() > _max_queue_size)
 				{
-					logtw("Queue(decoded) is full, Please check your system");
+					logti("Queue(decoded) is full, please check your system");
 					return result;
 				}
 
@@ -427,7 +432,10 @@ TranscodeResult TranscodeStream::do_filter(int32_t track_id, std::unique_ptr<Med
 
 				if (_queue_filterd.size() > _max_queue_size)
 				{
-					logtw("Queue(filtered) is full, Please check your system");
+					if(++_stats_queue_full_count % 256 == UINT8_MAX)
+					{
+						logti("Queue(filtered) is full, please decrease encoding options(resolution,bitrate,framerate)");
+					}
 					return result;
 				}
 				_queue_filterd.push(std::move(ret_frame));
