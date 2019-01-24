@@ -73,6 +73,14 @@ bool CommonAttr::ParsingCommonAttrLine(char type, std::string content)
 	{
 		_ice_pwd = std::string(matches[1]).c_str();
 	}
+	else if(std::regex_search(content, matches, std::regex("fmtp:(\\d*) (.*)profile-level-id=(.*)")))
+	{
+		// a=fmtp:97 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f
+	}
+	else if(std::regex_search(content, matches, std::regex("rtcp:(\\d*) IN (.*)")))
+	{
+		// a=rtcp:9 IN IP4 0.0.0.0
+	}
 	else
 	{
 		return false;

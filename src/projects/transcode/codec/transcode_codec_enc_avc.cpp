@@ -55,6 +55,8 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	param.sSpatialLayers[0].fFrameRate = param.fMaxFrameRate;
 	param.sSpatialLayers[0].iSpatialBitrate = param.iTargetBitrate;
 	param.sSpatialLayers[0].iMaxSpatialBitrate = param.iMaxBitrate;
+	param.sSpatialLayers[0].uiProfileIdc = PRO_BASELINE;
+	param.sSpatialLayers[0].uiLevelIdc = LEVEL_3_1;     // baseline & lvl 3.1 => profile-level-id=42e01f
 
 	if(_encoder->InitializeExt(&param))
 	{

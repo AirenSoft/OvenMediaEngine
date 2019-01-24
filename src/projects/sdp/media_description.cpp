@@ -93,6 +93,15 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 
 		sdp.Append("\r\n");
 
+		if(payload->GetCodecStr() == "H264")
+		{
+			// NonInterleaved => packetization-mode=1
+			sdp.AppendFormat("a=fmtp:%d packetization-mode=1", payload->GetId());
+
+			// baseline & lvl 3.1 => profile-level-id=42e01f
+			sdp.AppendFormat(";profile-level-id=%x\r\n", 0x42e01f);
+		}
+
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::GoogRemb))
 		{
 			sdp.AppendFormat("a=rtcp-fb:%d goog_remb\r\n", payload->GetId());
@@ -378,8 +387,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			}
 			else
 			{
-				// TODO Implementing of unknown attributes
-				// a=fmtp:96 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f
+				// TODO Implementing of unknown attributes\
 				// a=fmtp:112 minptime=10;useinbandfec=1
 				logw("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
 			}
