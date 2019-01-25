@@ -74,18 +74,22 @@ namespace ov
 				// 오류 발생
 				logte("[%p] [#%d] Epoll error: %p, events: %s (%d)", this, _socket.GetSocket(), epoll_data, StringFromEpollEvent(event).CStr(), event->events);
 
-				// client map에서 삭제
-				need_to_delete = true;
-			}
-			else if(OV_CHECK_FLAG(event->events, EPOLLHUP))
-			{
-				logti("[%p] [#%d] Client is disconnected", this, _socket.GetSocket());
-
-				connection_callback(client_socket, SocketConnectionState::Disconnected);
+                if(client_socket != nullptr && (OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP)))
+                    connection_callback(client_socket, SocketConnectionState::Disconnected);
 
 				// client map에서 삭제
 				need_to_delete = true;
 			}
+            else if(OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP))
+            {
+                logti("[%p] [#%d] Client is disconnected - events(%s)", this, _socket.GetSocket(), StringFromEpollEvent(event).CStr());
+
+                if(client_socket != nullptr)
+                    connection_callback(client_socket, SocketConnectionState::Disconnected);
+
+                // client map에서 삭제
+                need_to_delete = true;
+            }
 			else if(epoll_data == static_cast<void *>(this))
 			{
 				// listen된 socket에서 이벤트 발생
@@ -164,32 +168,7 @@ namespace ov
 
 			if(need_to_delete)
 			{
-				// 리소스 해제
-				if(client_socket == nullptr)
-				{
-					// client_socket이 없다면, 해제 할 수 없음
-				}
-				else
-				{
-					RemoveFromEpoll(client_socket);
-
-					if(client_socket->GetState() != SocketState::Closed)
-					{
-						client_socket->Close();
-					}
-
-					// client list 에서도 해당 항목을 삭제 해야 함
-					auto item = _client_list.find(client_socket);
-
-					if(item != _client_list.end())
-					{
-						_client_list.erase(item);
-					}
-					else
-					{
-						logtd("[%d] Could not find socket instance for %s", _socket.GetSocket(), client_socket->ToString().CStr());
-					}
-				}
+				RemoveClientSocket(client_socket);
 			}
 		}
 
@@ -206,6 +185,10 @@ namespace ov
 		{
 			logtd("[%p] [#%d] New client is connected: %s", this, _socket.GetSocket(), client->ToString().CStr());
 
+
+			std::unique_lock<std::mutex> lock(_client_list_mutex);
+
+			// 외부 Thread 접근 으로 동기화처리 필요
 			_client_list[client.get()] = client;
 
 			AddToEpoll(client.get(), static_cast<void *>(client.get()));
@@ -228,5 +211,39 @@ namespace ov
 	String ServerSocket::ToString() const
 	{
 		return Socket::ToString("ServerSocket");
+	}
+
+	bool ServerSocket::RemoveClientSocket(ClientSocket * client_socket)
+	{
+		// 리소스 해제
+		if(client_socket == nullptr)
+		{
+			return false;
+		}
+
+		RemoveFromEpoll(client_socket);
+
+		if(client_socket->GetState() != SocketState::Closed)
+		{
+			client_socket->Close();
+		}
+
+		// 외부 Thread 접근 으로 동기화처리 필요
+		std::unique_lock<std::mutex> lock(_client_list_mutex);
+
+		// client list 에서도 해당 항목을 삭제 해야 함
+		auto item = _client_list.find(client_socket);
+
+		if(item != _client_list.end())
+		{
+			_client_list.erase(item);
+		}
+		else
+		{
+			logtd("[%d] Could not find socket instance for %s", _socket.GetSocket(), client_socket->ToString().CStr());
+		}
+
+
+		return true;
 	}
 }

@@ -17,14 +17,25 @@
 //====================================================================================================
 // Start
 //====================================================================================================
-bool SegmentStreamServer::Start(const ov::SocketAddress &address)
+bool SegmentStreamServer::Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate)
 {
     if (_http_server != nullptr) {
         OV_ASSERT(false, "Server is already running");
         return false;
     }
 
-    _http_server = std::make_shared<HttpServer>();
+    if(certificate != nullptr)
+    {
+        auto https_server = std::make_shared<HttpsServer>();
+
+        https_server->SetLocalCertificate(certificate);
+
+        _http_server = https_server;
+    }
+    else
+    {
+        _http_server = std::make_shared<HttpServer>();
+    }
 
     // Interceptor 추가
     // 핸들러 등록
@@ -66,7 +77,7 @@ bool SegmentStreamServer::Stop()
 //====================================================================================================
 // 접속 허용 app 및 Porotocol 설정
 //====================================================================================================
-bool SegmentStreamServer::SetAllowApp(ov::String &app_name, ProtocolFlag protocol_flag)
+bool SegmentStreamServer::SetAllowApp(ov::String app_name, ProtocolFlag protocol_flag)
 {
     auto item = _allow_apps.find(app_name);
 

@@ -73,55 +73,65 @@ bool SegmentStreamPublisher::Start()
 
     _publisher_type = publisher_type;
 
-    uint16_t dash_publisher_port = dash_publisher_info->GetPort();
-    uint16_t hls_publisher_port = hls_publisher_info->GetPort();
-    ov::String app_name = _application_info.GetName();
-
-    if (dash_publisher_port == 0) dash_publisher_port = 80;
-    if (hls_publisher_port == 0) hls_publisher_port = 80;
-
     // DSH/HLS Server Start
-    if (dash_publisher_port == hls_publisher_port)
+    if (dash_publisher_info->GetPort() == hls_publisher_info->GetPort())
     {
         auto segment_stream_server = std::make_shared<SegmentStreamServer>();
 
-        segment_stream_server->SetAllowApp(app_name, ProtocolFlag::DASH);
-        segment_stream_server->SetAllowApp(app_name, ProtocolFlag::HLS);
+        segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::DASH);
+        segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::HLS);
         segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
-        segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH); // Cors
-        segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());        // CrossDomain
+        // Cors/CrossDomain
+        segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH);
+        segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());
+        segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);
+        segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());
 
-        segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);   // Cors
-        segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());        // CrossDomain
+        // TLS
+        std::shared_ptr<Certificate> certificate = GetCertificate(dash_publisher_info->GetTls().GetCertPath(),
+                                                                  dash_publisher_info->GetTls().GetKeyPath());
+        if(certificate == nullptr)
+        {
+            certificate = GetCertificate(hls_publisher_info->GetTls().GetCertPath(),
+                                         hls_publisher_info->GetTls().GetKeyPath());
+        }
 
-        segment_stream_server->Start(ov::SocketAddress(dash_publisher_port));
-
+        // Start
+        segment_stream_server->Start(ov::SocketAddress(dash_publisher_info->GetPort()), certificate);
         _segment_stream_servers.push_back(segment_stream_server);
     }
     else
     {
         auto dash_segment_stream_server = std::make_shared<SegmentStreamServer>();
 
-        dash_segment_stream_server->SetAllowApp(app_name, ProtocolFlag::DASH);
+        dash_segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::DASH);
         dash_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
-        dash_segment_stream_server->Start(ov::SocketAddress(dash_publisher_port));
 
-        dash_segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH);    // Cors
-        dash_segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());            // CrossDomain
+        // Cors/CrossDomain
+        dash_segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH);
+        dash_segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());
+
+        // Start
+        dash_segment_stream_server->Start(ov::SocketAddress(dash_publisher_info->GetPort()),
+                                          GetCertificate(dash_publisher_info->GetTls().GetCertPath(),
+                                                         dash_publisher_info->GetTls().GetKeyPath()));
 
         _segment_stream_servers.push_back(dash_segment_stream_server);
 
         auto hls_segment_stream_server = std::make_shared<SegmentStreamServer>();
 
-        hls_segment_stream_server->SetAllowApp(app_name, ProtocolFlag::HLS);
+        hls_segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::HLS);
         hls_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
-        hls_segment_stream_server->Start(ov::SocketAddress(hls_publisher_port));
 
+        // Cors/CrossDomain
+        hls_segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);
+        hls_segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());
 
-        hls_segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);   // Cors
-        hls_segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());        // CrossDomain
-
+        // Start
+        hls_segment_stream_server->Start(ov::SocketAddress(hls_publisher_info->GetPort()),
+                                         GetCertificate(hls_publisher_info->GetTls().GetCertPath(),
+                                                        hls_publisher_info->GetTls().GetKeyPath()));
         _segment_stream_servers.push_back(hls_segment_stream_server);
 
     }
@@ -187,4 +197,29 @@ bool SegmentStreamPublisher::OnSegmentRequest(const ov::String &app_name,
     }
 
     return stream->GetSegment(segmnet_type, file_name, segment_data);
+}
+
+std::shared_ptr<Certificate> SegmentStreamPublisher::GetCertificate(ov::String cert_path, ov::String key_path)
+{
+    if(!cert_path.IsEmpty() && !key_path.IsEmpty())
+    {
+        auto certificate = std::make_shared<Certificate>();
+
+        logti("Trying to create a certificate using files - cert_path(%s) key_path(%s)",cert_path.CStr(),key_path.CStr());
+
+        auto error = certificate->GenerateFromPem(cert_path, key_path);
+
+        if(error == nullptr)
+        {
+            return certificate;
+        }
+
+        logte("Could not create a certificate from files: %s", error->ToString().CStr());
+    }
+    else
+    {
+        // TLS is disabled
+    }
+
+    return nullptr;
 }

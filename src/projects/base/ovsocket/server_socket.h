@@ -37,7 +37,10 @@ namespace ov
 
 		String ToString() const override;
 
+		bool RemoveClientSocket(ClientSocket * client_socket);
+
 	protected:
 		std::map<ClientSocket *, std::shared_ptr<ClientSocket>> _client_list;
+        std::mutex _client_list_mutex;
 	};
 }

@@ -47,10 +47,11 @@ public:
                            uint32_t timestamp,
                            std::shared_ptr<std::vector<uint8_t>> &data) = 0;
 
-    virtual bool OnChunkStreamDelete(ov::ClientSocket *remote,
-                                        ov::String &app_name, ov::String &stream_name,
-                                        info::application_id_t applicaiton_id,
-                                        uint32_t stream_id) = 0;
+    virtual bool OnDeleteStream(ov::ClientSocket *remote,
+                                  ov::String &app_name,
+                                  ov::String &stream_name,
+                                  info::application_id_t applicaiton_id,
+                                  uint32_t stream_id) = 0;
 };
 
 //====================================================================================================
@@ -70,14 +71,19 @@ public:
 
     static ov::String GetEncoderTypeString(RtmpEncoderType encoder_type);
 
-    ov::String GetAppName(){ return _app_name; }
-    ov::String GetStreamName(){ return _stream_name; }
+    ov::String &GetAppName(){ return _app_name; }
+
+    ov::String &GetStreamName(){ return _stream_name; }
+
+    info::application_id_t GetAppId(){ return _app_id; }
+
     uint32_t GetStreamId(){ return _stream_id; }
 
-    bool Close()
-    {
-        return _remote->Close();
-    }
+    time_t  GetLastPacketTime(){ return _last_packet_time; }
+
+    bool Close(){ return _remote->Close(); }
+
+    ov::ClientSocket * GetRemoteSocket(){ return _remote; }
 
 private :
     bool SendData(int data_size, uint8_t *data);
@@ -184,5 +190,7 @@ protected :
 
     uint32_t _key_frame_check_timestamp;
     uint32_t _previous_key_frame_timestamp;
+
+    time_t  _last_packet_time;
 
 };

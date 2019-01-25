@@ -419,7 +419,8 @@ namespace ov
 					// EPOLLHUP: hang up 확인
 					// EPOLLPRI: 중요 데이터 확인
 					// EPOLLET: ET 동작방식 설정
-					event.events = EPOLLIN | EPOLLERR | EPOLLHUP;
+					// EPOLLRDHUP : 연결이 종료되거나 Half-close 가 진행된 상황
+					event.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
 
 					logtd("[%p] [#%d] Trying to add socket #%d to epoll #%d...", this, _socket.GetSocket(), socket->_socket.GetSocket(), _epoll);
 					int result = ::epoll_ctl(_epoll, EPOLL_CTL_ADD, socket->_socket.GetSocket(), &event);

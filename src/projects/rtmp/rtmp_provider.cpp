@@ -96,8 +96,6 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
                                             info::application_id_t &application_id,
                                             uint32_t &stream_id)
 {
-    logtd("OnStreamReadyComplete - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
-
     // 어플리케이션 조회, 어플리케이션명에 해당하는 정보가 없다면 RTMP 커넥션을 종료함.
     auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationByName(app_name.CStr()));
     if (application == nullptr)
@@ -194,6 +192,8 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
     // id 설정
     application_id = application->GetId();
     stream_id = stream->GetId();
+
+    logtd("Strem ready complete - app(%s/%u) stream(%s/%u)", app_name.CStr(), application_id, stream_name.CStr(), stream_id);
 
     return true;
 }

@@ -35,11 +35,11 @@ public :
     ~SegmentStreamServer() = default;
 
 public :
-    bool Start(const ov::SocketAddress &address);
+    bool Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate = nullptr);
 
     bool Stop();
 
-    bool SetAllowApp(ov::String &app_name, ProtocolFlag protocol_flag);
+    bool SetAllowApp(ov::String app_name, ProtocolFlag protocol_flag);
 
     bool AllowAppCheck(ov::String &app_name, ProtocolFlag protocol_flag);
 

@@ -24,6 +24,10 @@ namespace cfg
 		{
 			return _port;
 		}
+		const Tls &GetTls() const
+		{
+			return _tls;
+		}
 
 		int GetSegmentCount() const
 		{
