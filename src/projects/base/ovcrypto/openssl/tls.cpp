@@ -397,24 +397,32 @@ namespace ov
 	{
 		OV_ASSERT2(_ssl != nullptr);
 
-		int result = ::SSL_write(_ssl, data, static_cast<int>(length));
+		size_t write_size = 0;
 
-		if(result > 0)
+        do
+        {
+            // max 16384(2^14)byte write
+            int result = ::SSL_write(_ssl, (void *)((char *)data + write_size), static_cast<int>(length - write_size));
+
+            if(result <= 0)
+            {
+                // The write operation was not successful, because either the connection was closed,
+                // an error occurred or action must be taken by the calling process.
+                // Call SSL_get_error() with the return value ret to find out the reason.
+                return GetError(result);
+            }
+
+            write_size +=  static_cast<size_t>(result);
+        }while(write_size < length);
+
+        // The write operation was successful,
+        // the return value is the number of bytes actually written to the TLS/SSL connection.
+        if (written_bytes != nullptr)
 		{
-			// The write operation was successful,
-			// the return value is the number of bytes actually written to the TLS/SSL connection.
-			if(written_bytes != nullptr)
-			{
-				*written_bytes = static_cast<size_t>(result);
-			}
-
-			return SSL_ERROR_NONE;
+        	*written_bytes += write_size;
 		}
 
-		// The write operation was not successful, because either the connection was closed,
-		// an error occurred or action must be taken by the calling process.
-		// Call SSL_get_error() with the return value ret to find out the reason.
-		return GetError(result);
+		return SSL_ERROR_NONE;
 	}
 
 	bool Tls::FlushInput()
