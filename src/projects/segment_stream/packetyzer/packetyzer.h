@@ -44,6 +44,10 @@ public :
 
     bool GetSegmentData(std::string &file_name, std::shared_ptr<std::vector<uint8_t>> &data);
 
+    static uint32_t Gcd(uint32_t n1, uint32_t n2);
+    static std::string MakeUtcTimeString(time_t value);
+    static double GetCurrentMilliseconds();
+
 protected :
     PacketyzerType _packetyzer_type;
     std::string _segment_prefix;

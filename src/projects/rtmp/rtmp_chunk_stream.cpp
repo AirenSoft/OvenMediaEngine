@@ -43,6 +43,8 @@
 #define OV_LOG_TAG                  "RtmpProvider"
 #define MAX_STREAM_MESSAGE_COUNT    (100)
 #define BASELINE_PROFILE            (66)
+#define MAIN_PROFILE            (77)
+
 //====================================================================================================
 // RtmpChunkStream
 //====================================================================================================
@@ -1001,16 +1003,23 @@ bool RtmpChunkStream::SendAmfOnStatus(uint32_t chunk_stream_id, uint32_t stream_
 //
 // * Frame 순서
 // 1. SPS/PPS 정보
-// 2. 정보 + I-Frame
-// 3. I-Frame/P-Frame
+// 2. 정보(SEI) + I-Frame
+// 3. I-Frame/P-Frame 반복
+//
+// 0x06 :  NAL_SEI  맨 처음 프레임에서 나오는데, uuid와 기타 코덱 정보를 가지고 있다.
+// 0x67 : NAL_SPS
+// 0x68 : NAL_PPS
+// 0x41 : NAL_SLICE    -> 일반적인 프레임에서 나옴
+// 0x01 : NAL_SLICE -> 일반적인 프레임에서 나옴
+// 0x65 : NAL_SLICE_IDR    -> 키 프레임에서 나온다
 //====================================================================================================
 bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &message)
 {
     RtmpFrameType frame_type = RtmpFrameType::VideoPFrame;
 
     // size check
-    if (message->message_header->body_size<
-            RTMP_VIDEO_DATA_MIN_SIZE || message->message_header->body_size>RTMP_MAX_PACKET_SIZE)
+    if (message->message_header->body_size < RTMP_VIDEO_DATA_MIN_SIZE ||
+    message->message_header->body_size>RTMP_MAX_PACKET_SIZE)
     {
         logte("Size Fail - app(%s) stram(%s) size(%d)",
               _app_name.CStr(),
@@ -1225,6 +1234,7 @@ bool RtmpChunkStream::VideoSequenceInfoProcess(std::unique_ptr<std::vector<uint8
                 (control_byte & 0x0f));
 
         logti("Please select H264 codec - app(%s) stram(%s)", _app_name.CStr(), _stream_name.CStr());
+
         return false;
     }
 
@@ -1247,7 +1257,7 @@ bool RtmpChunkStream::VideoSequenceInfoProcess(std::unique_ptr<std::vector<uint8
     pps_size = RtmpMuxUtil::ReadInt16(data->data() + 12 + sps_size);
     if (pps_size <= 0 || pps_size > (data->size() - 14 - sps_size))
     {
-        logte("PPS Size Fail - app(%s) stram(%s) pps(%d:%d)", _app_name.CStr(), _stream_name.CStr(), pps_size);
+        logte("PPS Size Fail - app(%s) stram(%s) pps(%d)", _app_name.CStr(), _stream_name.CStr(), pps_size);
         return false;
     }
 
@@ -1258,29 +1268,31 @@ bool RtmpChunkStream::VideoSequenceInfoProcess(std::unique_ptr<std::vector<uint8
     uint8_t avc_profile_compatibility = _media_info->avc_sps->at(2);
     uint8_t avc_level = _media_info->avc_sps->at(3);
 
+    /*
     // Only h264(baseline)
-    if (avc_profile != BASELINE_PROFILE)
+    if (avc_profile != BASELINE_PROFILE && avc_profile != MAIN_PROFILE)
     {
         logtd("Not Supported H264 Profile Type - app(%s) stram(%s) profile(%d)",
-                avc_profile,
                 _app_name.CStr(),
-                _stream_name.CStr());
+                _stream_name.CStr(),
+                avc_profile);
 
-        logti("Please select Baseline Profile - app(%s) stram(%s)",
-              _app_name.CStr(),
-              _stream_name.CStr());
-        return true;
+        logti("Please select Baseline Profile - app(%s) stram(%s)", _app_name.CStr(), _stream_name.CStr());
+
+        return false;
 
     }
+    */
 
     _media_info->video_streaming = true;
 
-    logtd("Video Sequence Data - app(%s) stram(%s) sps(%d) pps(%d) profile(%d) level(%d)",
+    logtd("Video Sequence Data - app(%s) stram(%s) sps(%d) pps(%d) profile(%d) compatibility(%d) level(%d)",
           _app_name.CStr(),
           _stream_name.CStr(),
           _media_info->avc_sps->size(),
           _media_info->avc_pps->size(),
           avc_profile,
+          avc_profile_compatibility,
           avc_level);
 
     return true;

@@ -10,6 +10,7 @@
 #include "packetyzer.h"
 #include <sstream>
 #include <algorithm>
+#include <sys/time.h>
 
 //====================================================================================================
 // Constructor
@@ -182,4 +183,44 @@ bool Packetyzer::GetSegmentData(std::string &file_name, std::shared_ptr<std::vec
         return true;
     }
     return false;
+}
+
+//====================================================================================================
+// Gcd(Util)
+//====================================================================================================
+uint32_t Packetyzer::Gcd(uint32_t n1, uint32_t n2)
+{
+    uint32_t temp;
+
+    while (n2 != 0)
+    {
+        temp = n1;
+        n1 = n2;
+        n2 = temp % n2;
+    }
+    return n1;
+}
+
+//====================================================================================================
+// Packetyzer(Util)
+// - 1/1000
+//====================================================================================================
+double Packetyzer::GetCurrentMilliseconds()
+{
+    struct timeval time_value;
+    gettimeofday(&time_value, nullptr); // get current time
+    double milliseconds = time_value.tv_sec*1000LL + time_value.tv_usec/1000; // calculate milliseconds
+    return milliseconds;
+}
+
+//====================================================================================================
+// MakeUtcTimeString
+// - ex)
+//====================================================================================================
+std::string Packetyzer::MakeUtcTimeString(time_t value)
+{
+    std::tm *now_tm = gmtime(&value);
+    char buf[42];
+    strftime(buf, 42, "\"%Y-%m-%dT%TZ\"", now_tm);
+    return buf;
 }

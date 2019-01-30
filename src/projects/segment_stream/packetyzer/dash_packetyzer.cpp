@@ -12,32 +12,10 @@
 #include <sstream>
 #include <algorithm>
 #include <numeric>
-#include <sys/time.h>
+
 
 #define VIDEO_TRACK_ID    (1)
 #define AUDIO_TRACK_ID    (2)
-
-uint32_t Gcd(uint32_t n1, uint32_t n2)
-{
-    uint32_t temp;
-
-    while (n2 != 0)
-    {
-        temp = n1;
-        n1 = n2;
-        n2 = temp % n2;
-    }
-    return n1;
-}
-
-// 1/1000
-double GetCurrentMilliseconds()
-{
-    struct timeval time_value;
-    gettimeofday(&time_value, nullptr); // get current time
-    double milliseconds = time_value.tv_sec*1000LL + time_value.tv_usec/1000; // calculate milliseconds
-    return milliseconds;
-}
 
 //====================================================================================================
 // Constructor
@@ -441,14 +419,6 @@ bool DashPacketyzer::AudioSegmentWrite(uint64_t last_timestamp)
     _audio_sequence_number++;
 
     return true;
-}
-
-std::string MakeUtcTimeString(time_t value)
-{
-    std::tm *now_tm = gmtime(&value);
-    char buf[42];
-    strftime(buf, 42, "\"%Y-%m-%dT%TZ\"", now_tm);
-    return buf;
 }
 
 //====================================================================================================
