@@ -44,11 +44,24 @@ namespace ov
 		sa.sa_sigaction = AbortHandler;
 		sigemptyset( &sa.sa_mask );
 
+		/* Intentional signals (ignore)
+		 * SIGQUIT, SIGINT, SIGTERM, SIGTRAP, SIGHUP, SIGKILL
+		 * SIGVTALRM, SIGPROF, SIGALRM
+		 */
+
+		// Core dumped signal
 		sigaction( SIGABRT, &sa, nullptr );    // assert()
 		sigaction( SIGSEGV, &sa, nullptr );    // illegal memory access
 		sigaction( SIGBUS,  &sa, nullptr );    // illegal memory access
 		sigaction( SIGILL,  &sa, nullptr );    // execute a malformed instruction.
 		sigaction( SIGFPE,  &sa, nullptr );    // divide by zero
+		sigaction( SIGSYS,  &sa, nullptr );    // bad system call
+		sigaction( SIGXCPU, &sa, nullptr );    // cpu time limit exceeded
+		sigaction( SIGXFSZ, &sa, nullptr );    // file size limit exceeded
+
+		// Terminated signal
+		sigaction( SIGPIPE, &sa, nullptr );    // write on a pipe with no one to read it
+		sigaction( SIGPOLL, &sa, nullptr );    // pollable event
 	}
 
 	void StackTrace::AbortHandler(int signum, siginfo_t* si, void* unused)
@@ -70,6 +83,21 @@ namespace ov
 				break;
 			case SIGFPE:
 				sig_name = "SIGFPE";
+				break;
+			case SIGSYS:
+				sig_name = "SIGSYS";
+				break;
+			case SIGXCPU:
+				sig_name = "SIGXCPU";
+				break;
+			case SIGXFSZ:
+				sig_name = "SIGXFSZ";
+				break;
+			case SIGPIPE:
+				sig_name = "SIGPIPE";
+				break;
+			case SIGPOLL:
+				sig_name = "SIGPOLL";
 				break;
 		}
 		PrintStackTrace(sig_name);
