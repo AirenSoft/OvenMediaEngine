@@ -22,7 +22,7 @@ void SrtLogHandler(void *opaque, int level, const char *file, int line, const ch
 int main()
 {
 	logtd("Trying to initialize StackTrace...");
-	ov::StackTrace::InitializeStackTrace();
+	ov::StackTrace::InitializeStackTrace(OME_VERSION);
 
 	struct utsname uts {};
 	::uname(&uts);

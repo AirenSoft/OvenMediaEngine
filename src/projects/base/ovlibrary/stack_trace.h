@@ -9,6 +9,8 @@
 
 #include <csignal>
 
+#include "./string.h"
+
 #pragma once
 
 namespace ov
@@ -16,14 +18,25 @@ namespace ov
 	class StackTrace
 	{
 	public:
-		StackTrace() = default;
-		virtual ~StackTrace() = default;
+		StackTrace() = delete;
 
-		static void InitializeStackTrace();
+		static void InitializeStackTrace(const char *version);
+		static void ShowTrace();
 
 	private:
-		static void AbortHandler(int signum, siginfo_t* si, void* unused);
-		static void PrintStackTrace(String sig_name);
+		struct ParseResult
+		{
+			char *module_name = nullptr;
+			char *address = nullptr;
+			char *function_name = nullptr;
+			char *offset = nullptr;
+		};
+
+		static void AbortHandler(int signum, siginfo_t *si, void *unused);
+		static void PrintStackTrace(int signum, String sig_name);
+
+		static bool ParseLinuxStyleLine(char *line, ParseResult *parse_result);
+		static bool ParseMacOsStyleLine(char *line, ParseResult *parse_result);
 
 	};
 }
