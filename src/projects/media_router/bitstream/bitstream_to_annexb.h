@@ -63,6 +63,14 @@ public:
     ~BitstreamToAnnexB();
 
  	void convert_to(MediaPacket *packet);
+ 	static bool SequenceHeaderParsing(const uint8_t *data,
+                                        int data_size,
+                                        std::vector<uint8_t> &_sps,
+                                        std::vector<uint8_t> &_pps,
+                                        uint8_t &avc_profile,
+                                        uint8_t &avc_profile_compatibility,
+                                        uint8_t &avc_level);
+
 private:
 
 	std::vector<uint8_t> 	_sps;

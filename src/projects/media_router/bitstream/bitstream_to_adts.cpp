@@ -166,3 +166,29 @@ void BitstreamToADTS::convert_to(MediaPacket *packet)
 
 	// Utils::Debug::DumpHex(pbuf, pbuf_len);
 }
+
+//====================================================================================================
+// BitstreamSequenceInfoParsing
+// - Bitstream(Rtmp Input Low Data) Sequence Info Parsing
+//====================================================================================================
+bool BitstreamToADTS::SequenceHeaderParsing(const uint8_t *data,
+											 int data_size,
+											 int &sample_index,
+											 int &channels)
+{
+	if(data_size < 4)
+	{
+		return false;
+	}
+
+	if(((data[0] >> 4) & 0x0f) != AudioCodecIdAAC || data[1] != CodecAudioTypeSequenceHeader)
+	{
+		return false;
+	}
+
+	channels = (data[3] >> 3) & 0x0f;
+	sample_index = ((data[2] << 1) & 0x0e) | ((data[3] >> 7) & 0x01);
+	//aac_type = (AacObjectType)((data[2] >> 3) & 0x1f);
+
+	return true;
+}

@@ -57,6 +57,11 @@ public:
     ~BitstreamToADTS();
 
  	void convert_to(MediaPacket *packet);
+
+ 	static bool SequenceHeaderParsing(const uint8_t *data,
+									  int data_size,
+									  int &sample_index,
+									  int &channels);
 private:
 	AacProfile 	codec_aac_rtmp2ts(AacObjectType object_type);
 

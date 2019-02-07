@@ -10,7 +10,7 @@
 #pragma once
 
 #define _CONSOLE
-
+#include <base/ovlibrary/ovlibrary.h>
 #include <base/common_types.h>
 #include <base/provider/stream.h>
 #include <base/ovsocket/ovsocket.h>
@@ -111,8 +111,9 @@ private :
     void
     OnAmfConnect(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document, double transaction_id);
 
-    void OnAmfCreateStream(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document,
-                           double transaction_id);
+    void OnAmfCreateStream(std::shared_ptr<RtmpMuxMessageHeader> &message_header,
+                            AmfDocument &document,
+                            double transaction_id);
 
     void
     OnAmfFCPublish(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document, double transaction_id);
@@ -155,9 +156,9 @@ private :
                         char *description,
                         double client_id);
 
-    bool VideoSequenceInfoProcess(std::unique_ptr<std::vector<uint8_t>> data, uint8_t control_byte);
+    bool VideoSequenceHeaderProcess(std::shared_ptr<std::vector<uint8_t>> &data, uint8_t control_byte);
 
-    bool AudioSequenceInfoProcess(std::unique_ptr<std::vector<uint8_t>> data, uint8_t control_byte);
+    bool AudioSequenceHeaderProcess(std::shared_ptr<std::vector<uint8_t>> &data, uint8_t control_byte);
 
     bool StreamCreate();
 

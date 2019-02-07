@@ -318,3 +318,66 @@ std::string BitstreamToAnnexB::Nalu2Str(AvcNaluType nalu_type)
 			return "Other";
 	}
 }
+
+//====================================================================================================
+// SequenceHeaderParsing
+// - Bitstream(Rtmp Input Low Data) Sequence Info Parsing
+//====================================================================================================
+bool BitstreamToAnnexB::SequenceHeaderParsing(const uint8_t *data,
+                                                int data_size,
+                                                std::vector<uint8_t> &sps,
+                                                std::vector<uint8_t> &pps,
+                                                uint8_t &avc_profile,
+                                                uint8_t &avc_profile_compatibility,
+                                                uint8_t &avc_level)
+{
+	if(data_size < 4)
+	{
+		logtw("Could not determine bit stream type");
+		return false;
+	}
+
+	int frame_type = data[0] >> 4 & 0x0f;
+	int codec_id = data[0] & 0x0f;
+	int avc_packet_type = data[1];
+
+	if(frame_type != 1 || codec_id != 7 || avc_packet_type != 0) // avcvideopacket
+	{
+		return false;
+	}
+
+	data += 5;
+	logtd("configuration version = %d", *(data++));
+	avc_profile =  *(data++);
+	avc_profile_compatibility = *(data++);
+	avc_level = *(data++);
+	logtd("lengthSizeMinusOne = %d", *(data++) & 0x03);
+
+	logtd("sps count = reserve(%02x) + %d", *data & 0xE0, *data & 0x1F); // reserve(3) + unsigned int(5)
+	int sps_count = *data & 0x1F;
+	data++;
+	for(int index = 0; index < sps_count; index++)
+	{
+		int sps_size = *data << 8 | *(data + 1);
+		data += 2;
+		// Utils::Debug::DumpHex(p, sps_size);
+		sps.clear();
+		sps.insert(sps.end(), data, data + sps_size);
+		data += sps_size;
+	}
+
+	logtd("pps count = %d", *data); // reserve(3) + unsigned int(5)
+	int pps_count = *data & 0x1F;
+	data++;
+	for(int index = 0; index < pps_count; index++)
+	{
+		int pps_size = *data << 8 | *(data + 1);
+		data += 2;
+		// Utils::Debug::DumpHex(p, pps_size);
+		pps.clear();
+		pps.insert(pps.end(), data, data + pps_size);
+		data += pps_size;
+	}
+
+	return true;
+}

@@ -32,18 +32,15 @@ bool RtmpServer::Start(const ov::SocketAddress &address)
         return false;
     }
 
-    // Create MainTask Thread
-    try
-    {
-        _thread_kill_flag = false;
-        _thread = std::thread(&RtmpServer::MainTask, this);
-    }
-    catch(const std::system_error &e)
-    {
-        _thread_kill_flag = true;
-        logte("RtmpServer thread start fail");
-        return false;
-    }
+    // Gargabe Check Timer Setting
+    _garbage_check_timer.Push([this](void *paramter) ->bool
+                              {
+                                OnGarbageCheck();
+                                return true;
+                              }, nullptr, 3000, true);
+
+    // Gargabe Check Timer Start
+    _garbage_check_timer.Start();
 
 	_physical_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Tcp, address);
 
@@ -65,8 +62,8 @@ bool RtmpServer::Stop()
 		return false;
 	}
 
-    _thread_kill_flag = true;
-    _thread.join();
+    // Gargabe Check Timer Stop
+    _garbage_check_timer.Stop();
 
 	_physical_port->RemoveObserver(this);
 	PhysicalPortManager::Instance()->DeletePort(_physical_port);
@@ -372,20 +369,6 @@ bool RtmpServer::OnDeleteStream(ov::ClientSocket *remote,
 }
 
 //====================================================================================================
-// RtmpServer Main Thread
-// - GarbageCheck
-//====================================================================================================
-void RtmpServer::MainTask()
-{
-    while(!_thread_kill_flag)
-    {
-        sleep(3);
-
-        OnGarbageCheck();
-    }
-}
-
-//====================================================================================================
 // Gerbage Check
 // - Last Packet Time Check
 //====================================================================================================
@@ -405,7 +388,7 @@ void RtmpServer::OnGarbageCheck()
         {
 
             logtd("RtmpServer garbage check - stream time over remove - app(%s/%u) stream(%s/%u) gap(%d/%d) remote(%s)",
-                    item->second->GetAppName().CStr(),
+                               item->second->GetAppName().CStr(),
                     item->second->GetAppId(),
                     item->second->GetStreamName().CStr(),
                     item->second->GetStreamId(),
