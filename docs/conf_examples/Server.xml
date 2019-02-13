@@ -23,9 +23,9 @@
 							<Video>
 								<!-- vp8, h264 -->
 								<Codec>vp8</Codec>
-								<Width>480</Width>
-								<Height>320</Height>
-								<Bitrate>1000000</Bitrate>
+								<Width>1280</Width>
+								<Height>720</Height>
+								<Bitrate>2000000</Bitrate>
 								<Framerate>30.0</Framerate>
 							</Video>
 						</Encode>
@@ -33,9 +33,9 @@
 							<Name>FHD_H264</Name>
 							<Video>
 								<Codec>h264</Codec>
-								<Width>480</Width>
-								<Height>320</Height>
-								<Bitrate>1000000</Bitrate>
+								<Width>1280</Width>
+								<Height>720</Height>
+								<Bitrate>2000000</Bitrate>
 								<Framerate>30.0</Framerate>
 							</Video>
 						</Encode>
