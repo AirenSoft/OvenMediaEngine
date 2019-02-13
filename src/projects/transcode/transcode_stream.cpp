@@ -617,8 +617,7 @@ void TranscodeStream::CreateEncoders(std::shared_ptr<MediaTrack> media_track)
 {
 	for(auto &iter : _contexts)
 	{
-		if((media_track->GetMediaType() == common::MediaType::Video && iter.second->GetMediaType() == common::MediaType::Audio) ||
-		   media_track->GetMediaType() == common::MediaType::Audio && iter.second->GetMediaType() == common::MediaType::Video)
+		if(media_track->GetMediaType() != iter.second->GetMediaType())
 		{
 			continue;
 		}
@@ -675,16 +674,15 @@ void TranscodeStream::CreateFilters(std::shared_ptr<MediaTrack> media_track, Med
 {
 	for(auto &iter : _contexts)
 	{
-		if((media_track->GetMediaType() == common::MediaType::Video && iter.second->GetMediaType() == common::MediaType::Audio) ||
-		   media_track->GetMediaType() == common::MediaType::Audio && iter.second->GetMediaType() == common::MediaType::Video)
+		if(media_track->GetMediaType() != iter.second->GetMediaType())
 		{
 			continue;
 		}
 
 		if(media_track->GetMediaType() == common::MediaType::Video)
 		{
-			media_track->SetWidth(media_track->GetWidth());
-			media_track->SetHeight(media_track->GetHeight());
+			media_track->SetWidth(buffer->GetWidth());
+			media_track->SetHeight(buffer->GetHeight());
 		}
 		else if(media_track->GetMediaType() == common::MediaType::Audio)
 		{
@@ -708,8 +706,7 @@ void TranscodeStream::DoFilters(std::unique_ptr<MediaFrame> frame)
 
 	for(auto &iter: _contexts)
 	{
-		if((track_id == (uint32_t)common::MediaType::Video && iter.second->GetMediaType() == common::MediaType::Audio) ||
-		   track_id == (uint32_t)common::MediaType::Audio && iter.second->GetMediaType() == common::MediaType::Video)
+		if(track_id != (uint32_t)iter.second->GetMediaType())
 		{
 			continue;
 		}
