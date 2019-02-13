@@ -27,7 +27,7 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<Optional, Overridable>("TLS", &_tls);
+			RegisterValue<Optional>("TLS", &_tls);
 			RegisterValue<Optional>("Port", &_port);
 		}
 

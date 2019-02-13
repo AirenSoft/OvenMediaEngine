@@ -37,7 +37,7 @@ namespace cfg
 			Publisher::MakeParseList();
 
 			RegisterValue<Optional>("Port", &_port);
-			RegisterValue<Optional, Overridable>("Timeout", &_timeout);
+			RegisterValue<Optional>("Timeout", &_timeout);
 			RegisterValue("Signalling", &_signalling);
 		}
 

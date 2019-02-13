@@ -59,9 +59,6 @@ namespace cfg
 		bool IsIncludable() const;
 		void SetIncludable(bool is_includable);
 
-		bool IsOverridable() const;
-		void SetOverridable(bool is_overridable);
-
 		size_t GetSize() const;
 
 		void *GetTarget() const;
@@ -71,7 +68,6 @@ namespace cfg
 
 		bool _is_optional = false;
 		bool _is_includable = false;
-		bool _is_overridable = false;
 
 		size_t _value_size = 0;
 		void *_target = nullptr;

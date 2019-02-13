@@ -97,12 +97,12 @@ namespace cfg
 			RegisterValue("Name", &_name);
 			RegisterValue<Optional>("Type", &_type);
 			RegisterValue<Optional, Includable>("Origin", &_origin);
-			RegisterValue<Optional, Overridable, Includable>("TLS", &_tls);
-			RegisterValue<Optional, Overridable, Includable>("Decode", &_decode);
-			RegisterValue<Optional, Overridable, Includable>("Encodes", &_encodes);
-			RegisterValue<Optional, Overridable, Includable>("Streams", &_streams);
-			RegisterValue<Optional, Overridable, Includable>("Providers", &_providers);
-			RegisterValue<Optional, Overridable, Includable>("Publishers", &_publishers);
+			RegisterValue<Optional, Includable>("TLS", &_tls);
+			RegisterValue<Optional, Includable>("Decode", &_decode);
+			RegisterValue<Optional, Includable>("Encodes", &_encodes);
+			RegisterValue<Optional, Includable>("Streams", &_streams);
+			RegisterValue<Optional, Includable>("Providers", &_providers);
+			RegisterValue<Optional, Includable>("Publishers", &_publishers);
 		}
 
 		ov::String _name;

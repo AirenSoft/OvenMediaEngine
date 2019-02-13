@@ -18,7 +18,6 @@ namespace cfg
 
 	struct Optional;
 	struct Includable;
-	struct Overridable;
 
 	//endregion
 
@@ -115,7 +114,7 @@ namespace cfg
 
 		//region ========== RegisterValue ==========
 
-		void Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_includable, bool is_overridable) const;
+		void Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_includable) const;
 
 		// For int, bool, float, ov::String with value_type
 		template<
@@ -128,8 +127,7 @@ namespace cfg
 			Register(
 				name, new Value<Ttype>(type, const_cast<Ttype *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Overridable, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value
 			);
 		};
 
@@ -143,8 +141,7 @@ namespace cfg
 			Register(
 				name, new Value<Ttype>(ProbeType(target), const_cast<Ttype *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Overridable, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value
 			);
 		}
 
@@ -158,8 +155,7 @@ namespace cfg
 			Register(
 				name, new ValueForElement<Ttype>(const_cast<Ttype *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Overridable, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value
 			);
 		}
 
@@ -173,8 +169,7 @@ namespace cfg
 			Register(
 				name, new ValueForList<Ttype>(const_cast<std::vector<Ttype> *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Overridable, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value
 			);
 		}
 

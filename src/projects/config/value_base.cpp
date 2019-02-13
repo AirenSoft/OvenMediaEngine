@@ -42,16 +42,6 @@ namespace cfg
 		_is_includable = is_includable;
 	}
 
-	bool ValueBase::IsOverridable() const
-	{
-		return _is_overridable;
-	}
-
-	void ValueBase::SetOverridable(bool is_overridable)
-	{
-		_is_overridable = is_overridable;
-	}
-
 	size_t ValueBase::GetSize() const
 	{
 		return _value_size;

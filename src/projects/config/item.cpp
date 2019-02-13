@@ -107,11 +107,10 @@ namespace cfg
 	}
 
 
-	void Item::Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_includable, bool is_overridable) const
+	void Item::Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_includable) const
 	{
 		value->SetOptional(is_optional);
 		value->SetIncludable(is_includable);
-		value->SetOverridable(is_overridable);
 
 		bool is_parsed = false;
 
@@ -129,7 +128,6 @@ namespace cfg
 					OV_ASSERT2(value->GetType() == base->GetType());
 					OV_ASSERT2(value->IsOptional() == base->IsOptional());
 					OV_ASSERT2(value->IsIncludable() == base->IsIncludable());
-					OV_ASSERT2(value->IsOverridable() == base->IsOverridable());
 				}
 
 				_parse_list.erase(old_value);

@@ -51,10 +51,10 @@ namespace cfg
 		void MakeParseList() const override
 		{
 			RegisterValue("Name", &_name);
-			RegisterValue<Optional, Overridable>("IP", &_ip);
-			RegisterValue<Optional, Overridable, Includable>("TLS", &_tls);
-			RegisterValue<Optional, Overridable, Includable>("Providers", &_providers);
-			RegisterValue<Optional, Overridable, Includable>("Publishers", &_publishers);
+			RegisterValue<Optional>("IP", &_ip);
+			RegisterValue<Optional, Includable>("TLS", &_tls);
+			RegisterValue<Optional, Includable>("Providers", &_providers);
+			RegisterValue<Optional, Includable>("Publishers", &_publishers);
 			RegisterValue<Optional, Includable>("Applications", &_applications);
 		}
 		
