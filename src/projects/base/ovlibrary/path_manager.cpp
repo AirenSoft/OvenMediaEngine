@@ -24,6 +24,18 @@ namespace ov
 		return "";
 	}
 
+	String PathManager::GetCurrentPath(String sub_path)
+	{
+		char buffer[4096] = { 0 };
+
+		if(getcwd(buffer, OV_COUNTOF(buffer)) == nullptr)
+		{
+			return "";
+		}
+
+		return Combine(Combine(buffer, std::move(sub_path)), "");
+	}
+
 	String PathManager::ExpandPath(String path)
 	{
 		wordexp_t exp_result;

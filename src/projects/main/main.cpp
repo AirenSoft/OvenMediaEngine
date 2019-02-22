@@ -19,7 +19,7 @@
 
 void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
 
-int main()
+int main(int argc, char *argv[])
 {
 	logtd("Trying to initialize StackTrace...");
 	ov::StackTrace::InitializeStackTrace(OME_VERSION);
@@ -29,7 +29,6 @@ int main()
 
 	logti("OvenMediaEngine v%s is started on [%s] (%s %s - %s, %s)", OME_VERSION, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
 
-	logti("Trying to load configurations...");
 	if(cfg::ConfigManager::Instance()->LoadConfigs() == false)
 	{
 		logte("An error occurred while load config");
@@ -71,6 +70,8 @@ int main()
 
 		for(const auto &application : host.GetApplications())
 		{
+			logti("Trying to create application [%s] (%s)...", application.GetName().CStr(), application.GetTypeName().CStr());
+
 			app_info_list.emplace_back(application);
 		}
 

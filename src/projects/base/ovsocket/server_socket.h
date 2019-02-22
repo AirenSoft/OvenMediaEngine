@@ -40,6 +40,8 @@ namespace ov
 		bool RemoveClientSocket(ClientSocket * client_socket);
 
 	protected:
+		bool SetSocketOptions(SocketType type);
+
 		std::map<ClientSocket *, std::shared_ptr<ClientSocket>> _client_list;
         std::mutex _client_list_mutex;
 	};

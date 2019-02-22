@@ -336,6 +336,8 @@ namespace ov
 				break;
 		}
 
+		Close();
+
 		return false;
 	}
 
@@ -792,11 +794,24 @@ namespace ov
 				break;
 
 			case SocketType::Srt:
+			{
+				SRT_MSGCTRL msgctrl {};
+
+				// 10b == start of frame
+				//msgctrl.boundary = 2;
+
 				while(remained > 0L)
 				{
 					// SRT limits packet size up to 1316
 					int to_send = std::min(1316, static_cast<int>(remained));
-					int sent = ::srt_send(_socket.GetSocket(), reinterpret_cast<const char *>(data_to_send), to_send);
+
+					if(remained == to_send)
+					{
+						// 01b == end of frame
+						//msgctrl.boundary |= 1;
+					}
+
+					int sent = ::srt_sendmsg2(_socket.GetSocket(), reinterpret_cast<const char *>(data_to_send), to_send, &msgctrl);
 
 					if(sent == -1L)
 					{
@@ -805,7 +820,7 @@ namespace ov
 							continue;
 						}
 
-						logtw("[%p] [#%d] Could not send data: %zd", this, sent);
+						logtw("[%p] [#%d] Could not send data: %zd (%s)", this, sent, ov::Error::CreateErrorFromSrt()->ToString().CStr());
 
 						break;
 					}
@@ -815,9 +830,12 @@ namespace ov
 					remained -= sent;
 					total_sent += sent;
 					data_to_send += sent;
+
+					msgctrl.boundary = 0;
 				}
 
 				break;
+			}
 		}
 
 		logtd("[%p] [#%d] Sent: %zu bytes", this, _socket.GetSocket(), total_sent);

@@ -20,7 +20,6 @@
 							<IP>192.168.0.183</IP>
 							<Port>10001/udp</Port>
 							<Signalling>
-								<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
 								<Port>3334</Port>
 							</Signalling>
 						</WebRTC>

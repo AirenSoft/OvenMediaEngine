@@ -56,6 +56,16 @@ namespace cfg
 			return ApplicationType::Unknown;
 		}
 
+		ov::String GetTypeName() const
+		{
+			return _type;
+		}
+
+		int GetRelayPort() const
+		{
+			return _relay_port;
+		}
+
 		const Origin &GetOrigin() const
 		{
 			return _origin;
@@ -96,6 +106,7 @@ namespace cfg
 		{
 			RegisterValue("Name", &_name);
 			RegisterValue<Optional>("Type", &_type);
+			RegisterValue<Optional>("RelayPort", &_relay_port);
 			RegisterValue<Optional, Includable>("Origin", &_origin);
 			RegisterValue<Optional, Includable>("TLS", &_tls);
 			RegisterValue<Optional, Includable>("Decode", &_decode);
@@ -107,6 +118,7 @@ namespace cfg
 
 		ov::String _name;
 		ov::String _type;
+		int _relay_port = 9000;
 		Origin _origin;
 		Tls _tls;
 		Decode _decode;

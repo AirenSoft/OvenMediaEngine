@@ -18,15 +18,19 @@ RelayServer::RelayServer(MediaRouteApplicationInterface *media_route_application
 	: _media_route_application(media_route_application),
 	  _application_info(application_info)
 {
-	// localhost:9000에 대기
-	if(application_info.GetType() == cfg::ApplicationType::Live)
-	{
-		_server_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Srt, ov::SocketAddress(9000));
+	// Listen to localhost:<relay_port>
+	int port = application_info.GetRelayPort();
 
-		if(_server_port != nullptr)
-		{
-			_server_port->AddObserver(this);
-		}
+	_server_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Srt, ov::SocketAddress(static_cast<uint16_t>(port)));
+
+	if(_server_port != nullptr)
+	{
+		logti("Trying to start relay server on %d", port);
+		_server_port->AddObserver(this);
+	}
+	else
+	{
+		logtw("Could not create relay port. Origin features will not work.");
 	}
 }
 
@@ -38,17 +42,68 @@ RelayServer::~RelayServer()
 	}
 }
 
+void RelayServer::SendStream(ov::Socket *remote, const std::shared_ptr<StreamInfo> &stream_info)
+{
+	// serialize media track
+	ov::String serialize = ov::String::FormatString("%s\n", stream_info->GetName().CStr());
+
+	// about 45 bytes per track
+	for(auto &track_iter : stream_info->GetTracks())
+	{
+		MediaTrack *track = track_iter.second.get();
+
+		serialize.AppendFormat(
+			// Serialize VideoTrack
+			// framerate|width|height
+			"%.6f|%d|%d|"
+			// Serialize AudioTrack
+			// samplerate|format|layout
+			"%d|%d|%d|"
+			// Serialize MediaTrack
+			// track_id|codec_id|media_type|timebase.num|timebase.den|bitrate|start_frame_time|last_frame_time
+			"%d|%d|%d|%d|%d|%d|%lld|%lld\n",
+			track->GetFrameRate(), track->GetWidth(), track->GetHeight(),
+			track->GetSampleRate(), track->GetSample().GetFormat(), track->GetChannel().GetLayout(),
+			track->GetId(), track->GetCodecId(), track->GetMediaType(), track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), track->GetBitrate(), track->GetStartFrameTime(), track->GetLastFrameTime()
+		);
+	}
+
+	logtd("Trying to send a stream information for %s/%s (%u/%u)\n%s...",
+	      _application_info.GetName().CStr(), stream_info->GetName().CStr(),
+	      _application_info.GetId(), stream_info->GetId(),
+	      serialize.CStr()
+	);
+
+	RelayPacket response(RelayPacketType::CreateStream);
+
+	if(remote != nullptr)
+	{
+		// send to specific relay client
+		Send(remote, stream_info->GetId(), response, serialize.ToData().get());
+	}
+	else
+	{
+		// broadcast
+		Send(stream_info->GetId(), response, serialize.ToData().get());
+	}
+}
+
 bool RelayServer::OnCreateStream(std::shared_ptr<StreamInfo> info)
 {
-	// Nothing to do
+	// Notify to relay client
+	logtd("Stream is created: %u, %s", info->GetId(), info->GetName().CStr());
+
+	SendStream(nullptr, info);
+
 	return true;
 }
 
 bool RelayServer::OnDeleteStream(std::shared_ptr<StreamInfo> info)
 {
 	// Notify to relay client
-	logtd("Stream is deleted: %d, %s", info->GetId(), info->GetName().CStr());
-	Send(info->GetId(), RelayPacket(RelayPacketType::Sync), nullptr);
+	logtd("Stream is deleted: %u, %s", info->GetId(), info->GetName().CStr());
+
+	Send(info->GetId(), RelayPacket(RelayPacketType::DeleteStream), nullptr);
 
 	return true;
 }
@@ -66,8 +121,6 @@ bool RelayServer::OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shar
 void RelayServer::OnConnected(ov::Socket *remote)
 {
 	logtd("New RelayClient is connected: %s", remote->ToString().CStr());
-
-	_client_list[remote] = ClientInfo();
 }
 
 void RelayServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
@@ -78,105 +131,13 @@ void RelayServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &ad
 
 	switch(packet.GetType())
 	{
-		case RelayPacketType::RequestSync:
-		{
-			// Extract application and stream name
-			// The payload must consist of "app/stream" when type is RequestOffer
-			ov::String payload(reinterpret_cast<const char *>(packet.GetData()), packet.GetDataSize());
-			auto tokens = payload.Split("/");
-
-			if(tokens.size() != 2)
-			{
-				// Invalid request. Disconnect...
-				logtd("Invalid request: %s, disconnecting...", payload.CStr());
-				remote->Close();
-				return;
-			}
-
-			ov::String app_name = tokens[0];
-			ov::String stream_name = tokens[1];
-
-			if(_application_info.GetName() != app_name)
-			{
-				// Another relay server will process this request
-				return;
-			}
-
-			auto streams = _media_route_application->GetStreams();
-
-			for(auto &stream_iter : streams)
-			{
-				const auto &stream_info = stream_iter.second->GetStreamInfo();
-
-				if(stream_info != nullptr)
-				{
-					if(stream_info->GetName() == stream_name)
-					{
-						// response
-						logtd("Response sync for %s (%d/%d)...", payload.CStr(), _application_info.GetId(), stream_info->GetId());
-
-						// serialize media track
-						ov::String serialize;
-
-						serialize.AppendFormat("%s\n", stream_name.CStr());
-
-						// about 45 bytes per track
-						for(auto &track_iter : stream_info->GetTracks())
-						{
-							MediaTrack *track = track_iter.second.get();
-
-							serialize.AppendFormat(
-								// Serialize VideoTrack
-								// framerate|width|height
-								"%.6f|%d|%d|"
-								// Serialize AudioTrack
-								// samplerate|format|layout
-								"%d|%d|%d|"
-								// Serialize MediaTrack
-								// track_id|codec_id|media_type|timebase.num|timebase.den|bitrate|start_frame_time|last_frame_time
-								"%d|%d|%d|%d|%d|%d|%lld|%lld\n",
-								track->GetFrameRate(), track->GetWidth(), track->GetHeight(),
-								track->GetSampleRate(), track->GetSample().GetFormat(), track->GetChannel().GetLayout(),
-								track->GetId(), track->GetCodecId(), track->GetMediaType(), track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), track->GetBitrate(), track->GetStartFrameTime(), track->GetLastFrameTime()
-							);
-						}
-
-						logtd("Sync data for %u/%u\n%s", _application_info.GetId(), stream_info->GetId(), serialize.CStr());
-
-						RelayPacket response(RelayPacketType::Sync);
-						Send(remote, stream_info->GetId(), response, serialize.ToData().get());
-
-						auto info_iter = _client_list.find(remote);
-
-						if(info_iter != _client_list.end())
-						{
-							info_iter->second.stream_id = stream_info->GetId();
-						}
-
-						_client_map[stream_info->GetId()].push_back(remote);
-
-						return;
-					}
-				}
-			}
-
-			// no data
-			logtd("There is no stream for %s (%u)...", payload.CStr(), _application_info.GetId());
-			RelayPacket response(RelayPacketType::Sync);
-
-			remote->Send(&response, sizeof(response));
-
-			break;
-		}
-
-		case RelayPacketType::Sync:
-		case RelayPacketType::Packet:
-			logte("Invalid packet type from client: %d", packet.GetType());
+		case RelayPacketType::Register:
+			HandleRegister(remote, packet);
 			break;
 
 		default:
 			OV_ASSERT2(false);
-			logte("Invalid packet type from client: %d", packet.GetType());
+			logte("Invalid packet received from client: %d", packet.GetType());
 			break;
 	}
 }
@@ -185,52 +146,55 @@ void RelayServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReaso
 {
 	logtd("RelayClient is disconnected: %s (reason: %d)", remote->ToString().CStr(), reason);
 
+	// remove from _client_list
 	auto info_iter = _client_list.find(remote);
 
 	if(info_iter != _client_list.end())
 	{
-		auto client_list_iter = _client_map.find(info_iter->second.stream_id);
-
-		if(client_list_iter != _client_map.end())
-		{
-			auto &client_list = client_list_iter->second;
-
-			for(auto client = client_list.begin(); client != client_list.end(); ++client)
-			{
-				if(*client == remote)
-				{
-					logtd("Deleting RelayClient for stream: %s", remote->ToString().CStr());
-					client_list.erase(client);
-					break;
-				}
-			}
-		}
-		else
-		{
-			// The client disconnected as soon as it connected
-			// (does not request any data)
-		}
-
-		logtd("Deleting RelayClient from client list: %s", remote->ToString().CStr());
 		_client_list.erase(info_iter);
 	}
-	else
-	{
-		// not found
-		OV_ASSERT2(false);
-	}
-};
+}
 
-void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data)
+void RelayServer::HandleRegister(ov::Socket *remote, const RelayPacket &packet)
 {
-	if(_client_map.size() == 0)
+	// The relay client wants to be registered on this server for the application
+	ov::String app_name(reinterpret_cast<const char *>(packet.GetData()), packet.GetDataSize());
+	if(_application_info.GetName() != app_name)
 	{
+		// Cannot handle that application
+		logte("Cannot handle %s", app_name.CStr());
+
+		// TODO(dimiden): If multiple RelayServers use the same PhysicalPort, data from other servers can come in here
+		// This situation is not assumed at this time, and packet probe function should be added afterward
+
+		RelayPacket response(RelayPacketType::Error);
+		remote->Send(&response, sizeof(response));
+
 		return;
 	}
 
-	auto client_list_iter = _client_map.find(stream_id);
+	logtd("Registering a relay client %s for application: %s", remote->ToString().CStr(), _application_info.GetName().CStr());
+	_client_list[remote] = ClientInfo();
 
-	if(client_list_iter == _client_map.end())
+	// Send streams to the relay client
+	auto streams = _media_route_application->GetStreams();
+
+	if(streams.empty() == false)
+	{
+		logtd("Trying to send streams (%zu streams found)...", streams.size());
+	}
+
+	for(auto &stream_iter : streams)
+	{
+		const auto &stream_info = stream_iter.second->GetStreamInfo();
+
+		SendStream(remote, stream_info);
+	}
+}
+
+void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data)
+{
+	if(_client_list.empty())
 	{
 		// There is no client to send
 		return;
@@ -260,9 +224,9 @@ void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_pack
 				packet.SetEnd(true);
 			}
 
-			for(auto &client : client_list_iter->second)
+			for(auto &client : _client_list)
 			{
-				client->Send(&packet, sizeof(packet));
+				client.first->Send(&packet, sizeof(packet));
 			}
 
 			packet.SetStart(false);
@@ -272,16 +236,16 @@ void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_pack
 	{
 		packet.SetEnd(true);
 
-		for(auto &client : client_list_iter->second)
+		for(auto &client : _client_list)
 		{
-			client->Send(&packet, sizeof(packet));
+			client.first->Send(&packet, sizeof(packet));
 		}
 	}
 }
 
 void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_packet, const void *data, uint16_t data_size)
 {
-	if(_client_map.size() == 0)
+	if(_client_list.empty())
 	{
 		return;
 	}
@@ -305,6 +269,7 @@ void RelayServer::Send(ov::Socket *socket, info::stream_id_t stream_id, const Re
 
 	if(data != nullptr)
 	{
+		// separate the data to multiple packets
 		ov::ByteStream stream(data);
 
 		while(stream.Remained() > 0)
@@ -330,10 +295,11 @@ void RelayServer::Send(ov::Socket *socket, info::stream_id_t stream_id, const Re
 	}
 }
 
-void RelayServer::Send(const std::shared_ptr<MediaRouteStream> &media_stream, MediaPacket *packet)
+void RelayServer::SendMediaPacket(const std::shared_ptr<MediaRouteStream> &media_stream, const MediaPacket *packet)
 {
-	if(_client_map.size() == 0)
+	if(_client_list.empty())
 	{
+		// Nothing to do
 		return;
 	}
 
@@ -341,6 +307,8 @@ void RelayServer::Send(const std::shared_ptr<MediaRouteStream> &media_stream, Me
 	auto media_track = stream_info->GetTrack(packet->GetTrackId());
 
 	RelayPacket relay_packet(RelayPacketType::Packet);
+
+	relay_packet.SetFragmentHeader(packet->_frag_hdr.get());
 
 	relay_packet.SetMediaType(static_cast<int8_t>(packet->GetMediaType()));
 	relay_packet.SetTrackId(static_cast<uint32_t>(packet->GetTrackId()));

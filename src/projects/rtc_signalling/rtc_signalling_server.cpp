@@ -475,8 +475,6 @@ void RtcSignallingServer::ProcessRequestOffer(RtcSignallingInfo &info, const std
 						return true;
 					}, reinterpret_cast<void *>(time(nullptr)), 100, true);
 
-				// Request stream information to generate SDP
-				origin->Sync(identifier);
 			}
 			else
 			{

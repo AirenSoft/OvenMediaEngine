@@ -11,7 +11,7 @@
 
 #include <base/provider/stream.h>
 
-void RelayClient::Start()
+void RelayClient::Start(const ov::String &application)
 {
 	OV_ASSERT2(_stop == true);
 	_stop = false;
@@ -19,10 +19,16 @@ void RelayClient::Start()
 	_media_route_application->RegisterConnectorApp(this->GetSharedPtr());
 
 	_connection = std::thread(
-		[&]() -> void
+		[&, application]() -> void
 		{
 			auto data = std::make_shared<ov::Data>(ov::MaxSrtPacketSize);
-			ov::SocketAddress address(_server_address);
+
+			ov::SocketAddress primary_address(_primary_server_address);
+			bool secondary_server_available = (_secondary_server_address.IsEmpty() == false);
+			ov::SocketAddress secondary_address(_secondary_server_address);
+
+			bool is_first = true;
+			bool is_primary = true;
 
 			while(_stop == false)
 			{
@@ -31,17 +37,31 @@ void RelayClient::Start()
 					return;
 				}
 
-				logti("Trying to connect to origin server...: %s", address.ToString().CStr());
+				// Switch between primary and secondary server
+				if((is_first == false) && secondary_server_available)
+				{
+					is_primary = !is_primary;
+				}
+				else
+				{
+					is_first = false;
+				}
+
+				ov::SocketAddress address((is_primary) ? _primary_server_address : _secondary_server_address);
+
+				logti("Trying to connect to %s origin server...: %s", (is_primary) ? "primary" : "secondary", address.ToString().CStr());
 
 				if(_client_socket.Connect(address, 1000) == false)
 				{
 					// retry
+					logtw("Cannot connect to %s origin server", (is_primary) ? "primary" : "secondary");
 					sleep(1);
 
 					continue;
 				}
 
-				logti("Connected to %s", address.ToString().CStr());
+				logti("Trying to request register for application [%s]...", application.CStr());
+				Register(application);
 
 				while(true)
 				{
@@ -51,9 +71,9 @@ void RelayClient::Start()
 					if(error != nullptr)
 					{
 						logte("An error occurred while receive data: %s", error->ToString().CStr());
-						_client_socket.Close();
 
 						// reconnect
+						_client_socket.Close();
 						break;
 					}
 
@@ -61,13 +81,28 @@ void RelayClient::Start()
 
 					switch(packet.GetType())
 					{
-						case RelayPacketType::Sync:
-							HandleSync(packet);
+						case RelayPacketType::Register:
+							OV_ASSERT2("RelayClient cannot handle Register packet");
+							break;
+
+						case RelayPacketType::CreateStream:
+							HandleCreateStream(packet);
+							break;
+
+						case RelayPacketType::DeleteStream:
+							HandleDeleteStream(packet);
 							break;
 
 						case RelayPacketType::Packet:
 							// 데이터 처리
 							HandleData(packet);
+							break;
+
+						case RelayPacketType::Error:
+							// There was a problem
+
+							// reconnect
+							_client_socket.Close();
 							break;
 
 						default:
@@ -79,31 +114,23 @@ void RelayClient::Start()
 		});
 }
 
-void RelayClient::HandleSync(const RelayPacket &packet)
+void RelayClient::HandleCreateStream(const RelayPacket &packet)
 {
 	ov::String deserialize = ov::String(static_cast<const char *>(packet.GetData()), packet.GetDataSize());
 
 	if(deserialize.IsEmpty())
 	{
-		// Stream is deleted from origin
-		auto stream_list = _media_route_application->GetStreams();
-		auto stream = stream_list[packet.GetStreamId()];
+		// There is no stream to process
 
-		if(stream != nullptr)
-		{
-			logti("Stream is deleted (%d, %s)", packet.GetStreamId(), stream->GetStreamInfo()->GetName().CStr());
-			_media_route_application->OnDeleteStream(this->GetSharedPtr(), stream->GetStreamInfo());
-		}
-		else
-		{
-			logti("Stream is deleted (unknown stream: %d)", packet.GetStreamId());
-		}
+		// RelayServer should not send empty CreateStream event
+		OV_ASSERT2(false);
 
 		return;
 	}
 
 	auto lines = deserialize.Split("\n");
-	logtd("Received sync data:\n%s", deserialize.CStr());
+
+	logtd("Received stream information:\n%s", deserialize.CStr());
 
 	if(lines.empty())
 	{
@@ -162,7 +189,7 @@ void RelayClient::HandleSync(const RelayPacket &packet)
 
 			// Serialize MediaTrack
 			// track_id|codec_id|media_type|timebase.num|timebase.den|bitrate|start_frame_time|last_frame_time
-			track->SetId(ov::Converter::ToInt32(info[index++]));
+			track->SetId(ov::Converter::ToUInt32(info[index++]));
 			track->SetCodecId(static_cast<common::MediaCodecId>(ov::Converter::ToInt32(info[index++])));
 			track->SetMediaType(static_cast<common::MediaType>(ov::Converter::ToInt32(info[index++])));
 			int num = ov::Converter::ToInt32(info[index++]);
@@ -182,9 +209,38 @@ void RelayClient::HandleSync(const RelayPacket &packet)
 		}
 	}
 
+	_stream_list[stream->GetId()] = stream;
+
 	MediaRouteApplicationConnector::CreateStream(stream);
 
-	logtd("Sync %u/%u", packet.GetApplicationId(), stream->GetId());
+	logtd("A stream is created: %s/%s (%u/%u)",
+	      _application_info.GetName().CStr(), stream->GetName().CStr(),
+	      packet.GetApplicationId(), stream->GetId()
+	);
+}
+
+void RelayClient::HandleDeleteStream(const RelayPacket &packet)
+{
+	info::stream_id_t stream_id = packet.GetStreamId();
+
+	auto stream_info = _stream_list.find(stream_id);
+
+	if(stream_info == _stream_list.end())
+	{
+		// If a DeleteStream event occurs before registering, it enters here
+		return;
+	}
+
+	auto stream = stream_info->second;
+
+	logtd("A stream is deleted: %s/%s (%u/%u)",
+	      _application_info.GetName().CStr(), stream->GetName().CStr(),
+	      packet.GetApplicationId(), stream->GetId()
+	);
+
+	MediaRouteApplicationConnector::DeleteStream(stream);
+
+	_stream_list.erase(stream_info);
 }
 
 void RelayClient::HandleData(const RelayPacket &packet)
@@ -193,13 +249,15 @@ void RelayClient::HandleData(const RelayPacket &packet)
 
 	{
 		std::lock_guard<std::mutex> lock_guard(_transaction_lock);
-		// TODO: change to iterator method to prevent DoS attack
+		// TODO: change to iteration method to prevent DoS attack
+		// (If the RelayServer sends stream id that keeps changing, garbage data will increase in _transaction.
 		transaction = _transactions[packet.GetStreamId()][packet.GetTrackId()];
 	}
 
 	if(transaction == nullptr)
 	{
-		logtd("There is no transaction for stream: %u", packet.GetStreamId());
+		logtd("There is no stream or track (stream id: %u, track_id: %u)", packet.GetStreamId(), packet.GetTrackId());
+		Register(_application_info.GetName());
 		return;
 	}
 
@@ -235,6 +293,8 @@ void RelayClient::HandleData(const RelayPacket &packet)
 					static_cast<MediaPacketFlag>(transaction->flags)
 				);
 
+				::memcpy(media_packet->_frag_hdr.get(), packet.GetFragmentHeader(), sizeof(FragmentationHeader));
+
 				_media_route_application->OnReceiveBuffer(this->GetSharedPtr(), stream->GetStreamInfo(), std::move(media_packet));
 			}
 		}
@@ -258,9 +318,9 @@ void RelayClient::HandleData(const RelayPacket &packet)
 	}
 }
 
-void RelayClient::Sync(const ov::String &identifier)
+void RelayClient::Register(const ov::String &identifier)
 {
-	RelayPacket packet(RelayPacketType::RequestSync);
+	RelayPacket packet(RelayPacketType::Register);
 
 	packet.SetData(identifier.CStr(), static_cast<uint16_t>(identifier.GetLength()));
 

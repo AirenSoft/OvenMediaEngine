@@ -9,7 +9,7 @@ Publisher::Publisher(const info::Application &application_info, std::shared_ptr<
 
 bool Publisher::Start()
 {
-	logti("Create application : %s", _application_info.GetName().CStr());
+	logti("Trying to start publisher %d for application: %s", GetPublisherType(), _application_info.GetName().CStr());
 
 	auto application = OnCreateApplication(_application_info);
 
@@ -34,6 +34,8 @@ bool Publisher::Stop()
 
 		it = _applications.erase(it);
 	}
+
+	return true;
 }
 
 std::shared_ptr<Application> Publisher::GetApplicationByName(ov::String app_name)

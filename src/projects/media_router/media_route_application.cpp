@@ -64,8 +64,8 @@ bool MediaRouteApplication::Start()
 
 			if(origin.IsParsed() && (origin.GetPrimary().IsEmpty() == false))
 			{
-				_relay_client = std::make_shared<RelayClient>(this, _application_info, origin.GetPrimary());
-				_relay_client->Start();
+				_relay_client = std::make_shared<RelayClient>(this, _application_info, origin.GetPrimary(), origin.GetSecondary());
+				_relay_client->Start(_application_info.GetName());
 			}
 
 			break;
@@ -228,6 +228,14 @@ bool MediaRouteApplication::OnCreateStream(
 			// Provider -> MediaRoute -> Transcoder
 			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
 			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder)
+			)
+		{
+			observer->OnCreateStream(new_stream->GetStreamInfo());
+		}
+		else if(
+			// Provider -> MediaRoute -> Relay
+			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
+			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay)
 			)
 		{
 			observer->OnCreateStream(new_stream->GetStreamInfo());
@@ -458,19 +466,21 @@ void MediaRouteApplication::MainTask()
 			// Find Media Track
 			auto media_track = stream_info->GetTrack(cur_buf->GetTrackId());
 
+			// Transcoder -> MediaRouter -> RelayClient
+			// or
+			// RelayServer -> MediaRouter -> RelayClient
 			if(
 				(connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) ||
 				(connector_type == MediaRouteApplicationConnector::ConnectorType::Relay)
 				)
 			{
-				// transcoder나 relay에서 전달된 데이터는 다음 relay client로 전달
-				_relay_server->Send(stream, cur_buf.get());
+				_relay_server->SendMediaPacket(stream, cur_buf.get());
 			}
 
 			// Observer(Publisher or Transcoder)에게 MediaBuffer를 전달함.
 			for(const auto &observer : _observers)
 			{
-				// 프로바이터에서 전달받은 스트림은 트랜스코더로 넘김
+				// Provider -> MediaRouter -> Transcoder
 				if(
 					(connector_type == MediaRouteApplicationConnector::ConnectorType::Provider) &&
 					(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder)
@@ -491,7 +501,9 @@ void MediaRouteApplication::MainTask()
 						std::move(media_buffer_clone)
 					);
 				}
-					// 트랜스코더에서 전달받은 스트림은 퍼블리셔로 넘김
+				// Transcoder -> MediaRouter -> Publisher
+				// or
+				// RelayClient -> MediaRouter -> Publisher
 				else if(
 					(
 						(connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) ||
@@ -579,7 +591,7 @@ void MediaRouteApplication::MainTask()
 							encoded_frame->encoded_width = track->GetWidth();
 							encoded_frame->encoded_height = track->GetHeight();
 							encoded_frame->frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
-							encoded_frame->time_stamp = cur_buf->GetPts(); // / (double)1000000 * (double)90000;
+							encoded_frame->time_stamp = static_cast<int32_t>(cur_buf->GetPts()); // / (double)1000000 * (double)90000;
 							// logtd(">>> Audio PTS: %ld %ld", cur_buf->GetPts(), encoded_frame->time_stamp);
 							// encoded_frame->_timeStamp = (uint32_t)cur_buf->GetPts();
 

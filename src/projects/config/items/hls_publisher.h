@@ -60,8 +60,8 @@ namespace cfg
 			RegisterValue<Optional>("TLS", &_tls);
 			RegisterValue<Optional>("SegmentCount", &_segment_count);
 			RegisterValue<Optional>("SegmentDuration", &_segment_duration);
-			RegisterValue<Optional>("CrossDoamin", &_cross_domain_list);
-			RegisterValue<Optional>("Cors", &_cors_url_list);
+			RegisterValue<Optional>("CrossDomain", &_cross_domain_list);
+			RegisterValue<Optional>("CORS", &_cors_url_list);
 		}
 
 		int _port = 80;

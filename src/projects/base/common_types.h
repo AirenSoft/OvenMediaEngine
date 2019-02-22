@@ -29,25 +29,21 @@ enum class FrameType : int8_t
 struct FragmentationHeader
 {
 public:
-	~FragmentationHeader()
-	{
-	}
-
 	// Number of fragmentations
 	uint16_t fragmentation_vector_size = 0;
 	// Offset of pointer to data for each
-	size_t fragmentation_offset[MAX_FRAG_COUNT];
+	size_t fragmentation_offset[MAX_FRAG_COUNT] {};
 
 	// fragmentation
 	// Data size for each fragmentation
-	size_t fragmentation_length[MAX_FRAG_COUNT];
+	size_t fragmentation_length[MAX_FRAG_COUNT] {};
 	// Timestamp difference relative "now" for each fragmentation
-	uint16_t fragmentation_time_diff[MAX_FRAG_COUNT];
+	uint16_t fragmentation_time_diff[MAX_FRAG_COUNT] {};
 	// Payload type of each fragmentation
-	uint8_t fragmentation_pl_type[MAX_FRAG_COUNT];
+	uint8_t fragmentation_pl_type[MAX_FRAG_COUNT] {};
 
 	void VerifyAndAllocateFragmentationHeader(const size_t size) {
-		const uint16_t size16 = static_cast<uint16_t>(size);
+		const auto size16 = static_cast<uint16_t>(size);
 		if (fragmentation_vector_size < size16) {
 			uint16_t oldVectorSize = fragmentation_vector_size;
 			{

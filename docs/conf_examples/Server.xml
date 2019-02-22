@@ -11,6 +11,9 @@
 				<Application>
 					<Name>app</Name>
 					<Type>live</Type>
+					<!-- under construction -->
+					<Relay />
+					<RelayPort>9000</RelayPort>
 					<Encodes>
 						<Encode>
 							<Name>FHD_VP8</Name>
@@ -60,21 +63,19 @@
 					<Publishers>
 						<RTMP />
 						<HLS>
-							<!--<TLS include="TLS.xml" />-->
 							<SegmentDuration>3</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
-							<CrossDoamin>
+							<CrossDomain>
 								<Url>www.airensoft.com</Url>
-							</CrossDoamin>
+							</CrossDomain>
 						</HLS>
 						<DASH>
-							<!--<TLS include="TLS.xml" />-->
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>5</SegmentCount>
-							<Cors>
+							<CORS>
 								<Url>http://www.airensoft.com</Url>
 								<Url>https://www.airensoft.com</Url>
-							</Cors>
+							</CORS>
 						</DASH>
 						<WebRTC>
 							<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
@@ -83,7 +84,6 @@
 							<Port>10000/udp</Port>
 							<Timeout>30000</Timeout>
 							<Signalling>
-								<!--<TLS include="TLS.xml" />-->
 								<Port>3333</Port>
 							</Signalling>
 						</WebRTC>

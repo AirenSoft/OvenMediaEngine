@@ -10,6 +10,7 @@ namespace ov
 	{
 	public:
 		static String GetAppPath(String sub_path = "");
+		static String GetCurrentPath(String sub_path = "");
 
 		static String ExpandPath(String path);
 		static String ExtractPath(String path);

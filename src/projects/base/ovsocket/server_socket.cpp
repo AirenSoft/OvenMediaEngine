@@ -27,8 +27,7 @@ namespace ov
 				MakeNonBlocking() &&
 				PrepareEpoll() &&
 				AddToEpoll(this, static_cast<void *>(this)) &&
-				// SRT socket is already non-block mode
-				((type == SocketType::Tcp) ? SetSockOpt<int>(SO_REUSEADDR, 1) : SetSockOpt(SRTO_REUSEADDR, true)) &&
+				SetSocketOptions(type) &&
 				Bind(address) &&
 				Listen(backlog)
 			) == false)
@@ -74,22 +73,26 @@ namespace ov
 				// 오류 발생
 				logte("[%p] [#%d] Epoll error: %p, events: %s (%d)", this, _socket.GetSocket(), epoll_data, StringFromEpollEvent(event).CStr(), event->events);
 
-                if(client_socket != nullptr && (OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP)))
-                    connection_callback(client_socket, SocketConnectionState::Disconnected);
+				if(client_socket != nullptr && (OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP)))
+				{
+					connection_callback(client_socket, SocketConnectionState::Disconnected);
+				}
 
 				// client map에서 삭제
 				need_to_delete = true;
 			}
-            else if(OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP))
-            {
-                logti("[%p] [#%d] Client is disconnected - events(%s)", this, _socket.GetSocket(), StringFromEpollEvent(event).CStr());
+			else if(OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP))
+			{
+				logti("[%p] [#%d] Client is disconnected - events(%s)", this, _socket.GetSocket(), StringFromEpollEvent(event).CStr());
 
-                if(client_socket != nullptr)
-                    connection_callback(client_socket, SocketConnectionState::Disconnected);
+				if(client_socket != nullptr)
+				{
+					connection_callback(client_socket, SocketConnectionState::Disconnected);
+				}
 
-                // client map에서 삭제
-                need_to_delete = true;
-            }
+				// client map에서 삭제
+				need_to_delete = true;
+			}
 			else if(epoll_data == static_cast<void *>(this))
 			{
 				// listen된 socket에서 이벤트 발생
@@ -213,7 +216,7 @@ namespace ov
 		return Socket::ToString("ServerSocket");
 	}
 
-	bool ServerSocket::RemoveClientSocket(ClientSocket * client_socket)
+	bool ServerSocket::RemoveClientSocket(ClientSocket *client_socket)
 	{
 		// 리소스 해제
 		if(client_socket == nullptr)
@@ -245,5 +248,106 @@ namespace ov
 
 
 		return true;
+	}
+
+	bool ServerSocket::SetSocketOptions(SocketType type)
+	{
+		// SRT socket is already non-block mode
+		bool result = true;
+
+		if(type == SocketType::Tcp)
+		{
+			result &= SetSockOpt<int>(SO_REUSEADDR, 1);
+		}
+		else
+		{
+			// https://github.com/Haivision/srt/blob/master/docs/API.md
+
+			// OptName	        Since	Binding	    Type	    Units	    Default	    Range
+			// SRTO_TRANSTYPE	1.3.0	pre	        enum		            SRTT_LIVE	alt: SRTT_FILE
+			//
+			// [SET] - Sets the transmission type for the socket, in particular,
+			// setting this option sets multiple other parameters to their default values as required for a particular transmission type.
+			//     SRTT_LIVE: Set options as for live transmission.
+			//                In this mode, you should send by one sending instruction only so many data
+			//                that fit in one UDP packet, and limited to the value defined first in SRTO_PAYLOADSIZE option
+			//                (1316 is default in this mode). There is no speed control in this mode, only the bandwidth control, if configured, in order to not exceed the bandwidth with the overhead transmission (retransmitted and control packets).
+			//     SRTT_FILE: Set options as for non-live transmission.
+			//                See SRTO_MESSAGEAPI for further explanations
+			result &= SetSockOpt<SRT_TRANSTYPE>(SRTO_TRANSTYPE, SRTT_LIVE);
+
+			// OptName	        Since	Binding	    Type	    Units	    Default	    Range
+			// SRTO_INPUTBW	    1.0.5	post	    int64_t	    bytes/s	    0	        0..
+			//
+			// Sender nominal input rate. Used along with OHEADBW, when MAXBW is set to relative (0),
+			// to calculate maximum sending rate when recovery packets are sent along with main media stream (INPUTBW * (100 + OHEADBW) / 100).
+			// If INPUTBW is not set while MAXBW is set to relative (0), the actual input rate is evaluated inside the library.
+			result &= SetSockOpt<int64_t>(SRTO_INPUTBW, 10LL * (1024LL * (1024LL * 1024LL)));
+
+			// OptName	        Since	Binding	    Type	    Units	    Default	    Range
+			// SRTO_MAXBW	    1.0.5	pre	        int64_t	    bytes/sec	-1	    -1
+			//
+			// [GET or SET] - Maximum send bandwidth.
+			// -1: infinite (CSRTCC limit is 30mbps) =
+			// 0: relative to input rate (SRT 1.0.5 addition, see SRTO_INPUTBW)
+			// SRT recommended value: 0 (relative)
+			result &= SetSockOpt<int64_t>(SRTO_MAXBW, 0LL);
+
+			// OptName	        Since	Binding	    Type	    Units	    Default	    Range
+			// SRTO_OHEADBW     1.0.5	post	    int         %	        25	        5..100
+			//
+			// Recovery bandwidth overhead above input rate (see SRTO_INPUTBW).
+			// Sender: user configurable, default: 25%.
+			// To do: set-only. get should be supported.
+			// SetSockOpt<int>(SRTO_OHEADBW, 100);
+
+			// OptName	        Since	Binding	    Type	    Units	    Default     Range
+			// SRTO_PEERLATENCY	1.3.0	pre	        int32_t	    msec	    0	        positive only
+			//
+			// The latency value (as described in SRTO_RCVLATENCY) that is set by the sender side as a minimum value for the receiver.
+			result &= SetSockOpt<int32_t>(SRTO_PEERLATENCY, 50);
+
+			// OptName          Since	Binding	    Type	    Units	    Default	    Range
+			// SRTO_RCVLATENCY	1.3.0	pre	        int32_t	    msec	    0	        positive only
+			//
+			// The time that should elapse since the moment when the packet was sent and the moment
+			// when it's delivered to the receiver application in the receiving function.
+			// This time should be a buffer time large enough to cover the time spent for sending,
+			// unexpectedly extended RTT time, and the time needed to retransmit the lost UDP packet.
+			// The effective latency value will be the maximum of this options' value and the value of SRTO_PEERLATENCY set by the peer side.
+			// This option in pre-1.3.0 version is available only as SRTO_LATENCY.
+			result &= SetSockOpt<int32_t>(SRTO_RCVLATENCY, 50);
+
+			// OptName	        Since	Binding	    Type	    Units	    Default	    Range
+			// SRTO_RCVSYN		        pre	        bool    	true	    true	    false
+			//
+			// [GET or SET] - Synchronous (blocking) receive mode
+			result &= SetSockOpt<bool>(SRTO_RCVSYN, false);
+
+			// OptName	        Since	Binding	    Type	    Units	    Default	    Range
+			// SRTO_SNDSYN		        post	    bool	    true	    true	    false
+			//
+			// [GET or SET] - Synchronous (blocking) send mode
+			result &= SetSockOpt<bool>(SRTO_SNDSYN, false);
+
+			// OptName          Since	Binding	    Type	    Units	    Default	    Range
+			// SRTO_REUSEADDR	        pre			true	                true        false
+			//
+			// When true, allows the SRT socket use the binding address used already by another SRT socket in the same application.
+			// Note that SRT socket use an intermediate object to access the underlying UDP sockets called Multiplexer,
+			// so multiple SRT socket may share one UDP socket and the packets received to this UDP socket
+			// will be correctly dispatched to the SRT socket to which they are currently destined.
+			// This has some similarities to SO_REUSEADDR system socket option, although it's only used inside SRT.
+			//
+			// TODO: This option weirdly only allows the socket used in bind() to use the local address
+			// that another socket is already using, but not to disallow another socket in the same application
+			// to use the binding address that the current socket is already using.
+			// What it actually changes is that when given address in bind() is already used by another socket,
+			// this option will make the binding fail instead of making the socket added to the shared group of that
+			// socket that already has bound this address - but it will not disallow another socket reuse its address.
+			result &= SetSockOpt<bool>(SRTO_REUSEADDR, true);
+		}
+
+		return result;
 	}
 }

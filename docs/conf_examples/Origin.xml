@@ -11,6 +11,9 @@
 				<Application>
 					<Name>app</Name>
 					<Type>live</Type>
+					<!-- under construction -->
+					<Relay />
+					<RelayPort>9000</RelayPort>
 					<Encodes>
 						<Encode>
 							<Name>FHD_VP8</Name>
@@ -53,16 +56,27 @@
 						<RTMP>
 							<MaxConnection>10</MaxConnection>
 							<Port>1935</Port>
+							<!--<OverlapStreamProcess>refresh</OverlapStreamSession>-->
+							<OverlapStreamProcess>reject</OverlapStreamProcess>
 						</RTMP>
 					</Providers>
 					<Publishers>
 						<RTMP />
 						<HLS>
-							<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
+							<SegmentDuration>3</SegmentDuration>
+							<SegmentCount>3</SegmentCount>
+							<CrossDomain>
+								<Url>www.airensoft.com</Url>
+							</CrossDomain>
 						</HLS>
-						<Dash>
-							<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
-						</Dash>
+						<DASH>
+							<SegmentDuration>5</SegmentDuration>
+							<SegmentCount>5</SegmentCount>
+							<CORS>
+								<Url>http://www.airensoft.com</Url>
+								<Url>https://www.airensoft.com</Url>
+							</CORS>
+						</DASH>
 						<WebRTC>
 							<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
 							<IP>192.168.0.183</IP>
@@ -70,7 +84,6 @@
 							<Port>10000/udp</Port>
 							<Timeout>30000</Timeout>
 							<Signalling>
-								<TLS include="/root/dev/OvenMediaEngine/src/conf/TLS.xml" />
 								<Port>3333</Port>
 							</Signalling>
 						</WebRTC>

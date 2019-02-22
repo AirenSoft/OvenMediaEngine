@@ -22,18 +22,19 @@ class RelayServer : public PhysicalPortObserver, public MediaRouteApplicationObs
 {
 public:
 	explicit RelayServer(MediaRouteApplicationInterface *media_route_application, const info::Application &application_info);
-	~RelayServer();
+	~RelayServer() override;
 
 	void Send(info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data);
 	void Send(info::stream_id_t stream_id, const RelayPacket &base_packet, const void *data, uint16_t data_size);
 	void Send(ov::Socket *socket, info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data);
-	void Send(const std::shared_ptr<MediaRouteStream> &media_stream, MediaPacket *packet);
+	void SendMediaPacket(const std::shared_ptr<MediaRouteStream> &media_stream, const MediaPacket *packet);
 
 protected:
 	struct ClientInfo
 	{
-		info::stream_id_t stream_id = 0;
 	};
+
+	void SendStream(ov::Socket *remote, const std::shared_ptr<StreamInfo> &stream_info);
 
 	//--------------------------------------------------------------------
 	// Implementation of MediaRouteApplicationObserver
@@ -42,6 +43,7 @@ protected:
 	bool OnDeleteStream(std::shared_ptr<StreamInfo> info) override;
 	bool OnSendVideoFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::unique_ptr<EncodedFrame> encoded_frame, std::unique_ptr<CodecSpecificInfo> codec_info, std::unique_ptr<FragmentationHeader> fragmentation) override;
 	bool OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::unique_ptr<EncodedFrame> encoded_frame, std::unique_ptr<CodecSpecificInfo> codec_info, std::unique_ptr<FragmentationHeader> fragmentation) override;
+
 	ObserverType GetObserverType() override
 	{
 		return ObserverType::Relay;
@@ -57,6 +59,8 @@ protected:
 	void OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 	//--------------------------------------------------------------------
 
+	void HandleRegister(ov::Socket *remote, const RelayPacket &packet);
+
 	MediaRouteApplicationInterface *_media_route_application;
 
 	const info::Application &_application_info;
@@ -64,8 +68,6 @@ protected:
 
 	// All client list
 	std::map<ov::Socket *, ClientInfo> _client_list;
-	// Client list of specific stream
-	std::map<info::stream_id_t, std::vector<ov::Socket *>> _client_map;
 
 	uint32_t _transaction_id = 0;
 };
