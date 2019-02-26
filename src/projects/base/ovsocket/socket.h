@@ -77,7 +77,7 @@ namespace ov
 					return _socket.srt_socket == sock;
 
 				default:
-					return false;
+					return (sock == InvalidSocket);
 			}
 		}
 

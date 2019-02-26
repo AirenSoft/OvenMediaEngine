@@ -86,7 +86,7 @@ public:
 	const ov::String &GetHeader(const ov::String &key, const ov::String &default_value) const noexcept;
 	const bool IsHeaderExists(const ov::String &key) const noexcept;
 
-	std::shared_ptr<HttpResponse> &GetHttpResponse() noexcept
+	HttpResponse *GetHttpResponse() noexcept
 	{
 		return _response;
 	}
@@ -132,7 +132,7 @@ public:
 	ov::String ToString() const;
 
 protected:
-	void SetResponse(const std::shared_ptr<HttpResponse> &response)
+	void SetResponse(HttpResponse *response)
 	{
 		_response = response;
 	}
@@ -177,7 +177,7 @@ protected:
 	// HTTP body
 	std::shared_ptr<ov::Data> _request_body = nullptr;
 
-	std::shared_ptr<HttpResponse> _response = nullptr;
+	HttpResponse *_response = nullptr;
 
 	std::shared_ptr<void> _extra = nullptr;
 };

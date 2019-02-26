@@ -16,7 +16,7 @@
 
 #include <base/ovsocket/ovsocket.h>
 
-HttpResponse::HttpResponse(std::shared_ptr<HttpRequest> request, ov::ClientSocket *remote)
+HttpResponse::HttpResponse(HttpRequest *request, ov::ClientSocket *remote)
 	: _request(request),
 	_remote(remote)
 {
