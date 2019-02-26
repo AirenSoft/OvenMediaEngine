@@ -16,7 +16,7 @@ class HttpRequest : public ov::EnableSharedFromThis<HttpRequest>
 public:
 	friend class HttpRequestInterceptor;
 
-	HttpRequest(const std::shared_ptr<HttpRequestInterceptor> &interceptor);
+	HttpRequest(const std::shared_ptr<HttpRequestInterceptor> &interceptor, ov::ClientSocket *remote);
 	~HttpRequest() override = default;
 
 	/// HttpRequest 객체 초기화를 위해, client에서 보낸 데이터를 처리함
@@ -108,6 +108,27 @@ public:
 		return _interceptor;
 	}
 
+	ov::ClientSocket *GetRemote()
+	{
+		return _remote;
+	}
+
+	std::shared_ptr<void> GetExtra() const
+	{
+		return _extra;
+	}
+
+	template<typename T>
+	std::shared_ptr<T> GetExtraAs() const
+	{
+		return std::static_pointer_cast<T>(_extra);
+	}
+
+	void SetExtra(std::shared_ptr<void> extra)
+	{
+		_extra = std::move(extra);
+	}
+
 	ov::String ToString() const;
 
 protected:
@@ -135,6 +156,7 @@ protected:
 
 	// request 처리를 담당하는 객체
 	std::shared_ptr<HttpRequestInterceptor> _interceptor = nullptr;
+	ov::ClientSocket *_remote = nullptr;
 
 	HttpStatusCode _parse_status = HttpStatusCode::PartialContent;
 
@@ -156,4 +178,6 @@ protected:
 	std::shared_ptr<ov::Data> _request_body = nullptr;
 
 	std::shared_ptr<HttpResponse> _response = nullptr;
+
+	std::shared_ptr<void> _extra = nullptr;
 };

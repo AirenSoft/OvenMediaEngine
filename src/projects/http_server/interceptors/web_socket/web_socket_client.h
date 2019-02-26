@@ -1,3 +1,5 @@
+#include <utility>
+
 //==============================================================================
 //
 //  OvenMediaEngine
@@ -14,19 +16,33 @@
 #include <base/ovsocket/ovsocket.h>
 #include <http_server/http_server.h>
 
-class WebSocketRequest
+class WebSocketClient
 {
 public:
-	explicit WebSocketRequest(const std::shared_ptr<HttpRequest> &request);
+	WebSocketClient(ov::ClientSocket *remote, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
+	virtual ~WebSocketClient();
 
-	// TODO: 나중에 정리하기
+	ssize_t Send(const std::shared_ptr<const ov::Data> &data, WebSocketFrameOpcode opcode);
+	ssize_t Send(const std::shared_ptr<const ov::Data> &data);
+	ssize_t Send(const ov::String &string);
+
 	const std::shared_ptr<HttpRequest> &GetRequest()
 	{
 		return _request;
 	}
 
+	const std::shared_ptr<HttpResponse> &GetResponse()
+	{
+		return _response;
+	}
+
 	ov::String ToString() const;
 
+	void Close();
+
 protected:
+	ov::ClientSocket *_remote;
+
 	std::shared_ptr<HttpRequest> _request;
+	std::shared_ptr<HttpResponse> _response;
 };

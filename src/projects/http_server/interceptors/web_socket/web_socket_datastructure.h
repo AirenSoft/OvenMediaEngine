@@ -111,11 +111,11 @@ struct WebSocketFrameHeader
 };
 #pragma pack(pop)
 
-class WebSocketResponse;
+class WebSocketClient;
 class WebSocketFrame;
 
-typedef std::function<void(const std::shared_ptr<WebSocketResponse> &response)> WebSocketConnectionHandler;
-typedef std::function<void(const std::shared_ptr<WebSocketResponse> &response, const std::shared_ptr<const WebSocketFrame> &message)> WebSocketMessageHandler;
-typedef std::function<void(const std::shared_ptr<WebSocketResponse> &response, const std::shared_ptr<const ov::Error> &error)> WebSocketErrorHandler;
-typedef std::function<void(const std::shared_ptr<WebSocketResponse> &response)> WebSocketCloseHandler;
+typedef std::function<void(const std::shared_ptr<WebSocketClient> &response)> WebSocketConnectionHandler;
+typedef std::function<void(const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message)> WebSocketMessageHandler;
+typedef std::function<void(const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const ov::Error> &error)> WebSocketErrorHandler;
+typedef std::function<void(const std::shared_ptr<WebSocketClient> &response)> WebSocketCloseHandler;
 

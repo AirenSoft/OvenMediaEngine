@@ -249,8 +249,28 @@ std::shared_ptr<HttpDefaultInterceptor> HttpServer::GetDefaultInterceptor()
 	return default_interceptor;
 }
 
-bool HttpServer::Disconnect(const ov::String &id)
+const HttpServer::ClientList &HttpServer::GetClientList() const
 {
-	return false;
+	return _client_list;
 }
 
+bool HttpServer::Disconnect(ov::Socket *remote)
+{
+	auto client = _client_list.find(remote);
+
+	return Disconnect(client);
+}
+
+bool HttpServer::Disconnect(ClientList::iterator client)
+{
+	if(client != _client_list.end())
+	{
+		if(client->first->Close())
+		{
+			_client_list.erase(client);
+			return true;
+		}
+	}
+
+	return false;
+}

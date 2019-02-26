@@ -11,10 +11,10 @@ class SessionInfo : public ov::EnableSharedFromThis<SessionInfo>
 {
 public:
 	SessionInfo();
-	SessionInfo(session_id_t session_id);
+	explicit SessionInfo(session_id_t session_id);
 	SessionInfo(const SessionInfo &T);
-	SessionInfo(SessionInfo &&T);
-	virtual ~SessionInfo() = default;
+	SessionInfo(SessionInfo &&T) = default;
+	~SessionInfo() override = default;
 
 	session_id_t GetId() const;
 

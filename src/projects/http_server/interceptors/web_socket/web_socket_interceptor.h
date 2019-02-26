@@ -9,8 +9,7 @@
 #pragma once
 
 #include "web_socket_frame.h"
-#include "web_socket_request.h"
-#include "web_socket_response.h"
+#include "web_socket_client.h"
 
 #include <http_server/http_server.h>
 
@@ -48,7 +47,7 @@ protected:
 
 	struct WebSocketInfo
 	{
-		std::shared_ptr<WebSocketResponse> response;
+		std::shared_ptr<WebSocketClient> response;
 		std::shared_ptr<WebSocketFrame> frame;
 	};
 

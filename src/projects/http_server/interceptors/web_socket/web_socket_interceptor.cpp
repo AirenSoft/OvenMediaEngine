@@ -104,7 +104,7 @@ void WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &req
 
 	// 지속적으로 통신해야 하므로, 연결은 끊지 않음
 	logtd("Add to websocket client list: %s", request->ToString().CStr());
-	auto websocket_response = std::make_shared<WebSocketResponse>(response->GetRemote(), request, response);
+	auto websocket_response = std::make_shared<WebSocketClient>(response->GetRemote(), request, response);
 	_websocket_client_list[request] = (WebSocketInfo){
 		.response = websocket_response,
 		.frame = nullptr

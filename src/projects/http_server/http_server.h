@@ -23,6 +23,8 @@
 class HttpServer : protected PhysicalPortObserver
 {
 public:
+	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpClient>>;
+
 	HttpServer();
 	virtual ~HttpServer();
 
@@ -34,10 +36,10 @@ public:
 
 	std::shared_ptr<HttpDefaultInterceptor> GetDefaultInterceptor();
 
-	bool Disconnect(const ov::String &id);
+	const ClientList &GetClientList() const;
 
-protected:
-	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpClient>>;
+	bool Disconnect(ov::Socket *remote);
+	bool Disconnect(ClientList::iterator client);
 
 protected:
 	// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨

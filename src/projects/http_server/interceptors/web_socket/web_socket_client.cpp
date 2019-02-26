@@ -6,25 +6,25 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "web_socket_response.h"
+#include "web_socket_client.h"
 #include "web_socket_datastructure.h"
 #include "../../http_private.h"
 
 #include <unistd.h>
 #include <algorithm>
 
-WebSocketResponse::WebSocketResponse(ov::ClientSocket *remote, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
+WebSocketClient::WebSocketClient(ov::ClientSocket *remote, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
 	: _remote(remote),
 	  _request(request),
 	  _response(response)
 {
 }
 
-WebSocketResponse::~WebSocketResponse()
+WebSocketClient::~WebSocketClient()
 {
 }
 
-ssize_t WebSocketResponse::Send(const std::shared_ptr<const ov::Data> &data, WebSocketFrameOpcode opcode)
+ssize_t WebSocketClient::Send(const std::shared_ptr<const ov::Data> &data, WebSocketFrameOpcode opcode)
 {
 	// RFC6455 - 5.2.  Base Framing Protocol
 	//
@@ -80,22 +80,22 @@ ssize_t WebSocketResponse::Send(const std::shared_ptr<const ov::Data> &data, Web
 	return _response->Send(data) ? data->GetLength() : -1;
 }
 
-ssize_t WebSocketResponse::Send(const std::shared_ptr<const ov::Data> &data)
+ssize_t WebSocketClient::Send(const std::shared_ptr<const ov::Data> &data)
 {
 	return Send(data, WebSocketFrameOpcode::Binary);
 }
 
-ssize_t WebSocketResponse::Send(const ov::String &string)
+ssize_t WebSocketClient::Send(const ov::String &string)
 {
 	return Send(string.ToData(false), WebSocketFrameOpcode::Text);
 }
 
-void WebSocketResponse::Close()
+void WebSocketClient::Close()
 {
 	_remote->Close();
 }
 
-ov::String WebSocketResponse::ToString() const
+ov::String WebSocketClient::ToString() const
 {
-	return ov::String::FormatString("<WebSocketResponse: %p, %s>", this, _remote->ToString().CStr());
+	return ov::String::FormatString("<WebSocketClient: %p, %s>", this, _remote->ToString().CStr());
 }

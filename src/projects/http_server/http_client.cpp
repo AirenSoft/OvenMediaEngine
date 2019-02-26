@@ -14,8 +14,8 @@ HttpClient::HttpClient(ov::ClientSocket *socket, const std::shared_ptr<HttpReque
 {
 	OV_ASSERT2(socket);
 
-	_request = std::make_shared<HttpRequest>(interceptor);
-	_response = std::make_shared<HttpResponse>(socket);
+	_request = std::make_shared<HttpRequest>(interceptor, socket);
+	_response = std::make_shared<HttpResponse>(_request, socket);
 
 	OV_ASSERT2(_request != nullptr);
 	OV_ASSERT2(_response != nullptr);
@@ -86,4 +86,3 @@ void HttpClient::Send(const std::shared_ptr<ov::Data> &data)
 
 	_response->AppendData(data);
 }
-

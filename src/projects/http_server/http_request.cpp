@@ -12,8 +12,9 @@
 
 #include <algorithm>
 
-HttpRequest::HttpRequest(const std::shared_ptr<HttpRequestInterceptor> &interceptor)
-	: _interceptor(interceptor)
+HttpRequest::HttpRequest(const std::shared_ptr<HttpRequestInterceptor> &interceptor, ov::ClientSocket *remote)
+	: _interceptor(interceptor),
+	  _remote(remote)
 {
 }
 
