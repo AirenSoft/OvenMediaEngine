@@ -96,7 +96,7 @@ std::shared_ptr<HttpClient> HttpServer::FindClient(ov::Socket *remote)
 
 void HttpServer::OnConnected(ov::Socket *remote)
 {
-	logti("Client is connected: %s", remote->ToString().CStr());
+	logti("Client(%s) is connected on %s", remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 
 	_client_list[remote] = std::make_shared<HttpClient>(dynamic_cast<ov::ClientSocket *>(remote), _default_interceptor);
 }
@@ -190,7 +190,7 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 			// interceptor 안에서 연결이 해제되었음. client map에서 삭제
 			auto remote = static_cast<ov::Socket *>(response->GetRemote());
 
-			logti("Connection is closed: %s", remote->ToString().CStr());
+			logti("Client(%s) is disconnected from %s (In interceptor)", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 			_client_list.erase(remote);
 		}
 	}
@@ -198,7 +198,7 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 
 void HttpServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 {
-	logtd("Client is disconnected: %s", remote->ToString().CStr());
+	logti("Client(%s) is disconnected from %s", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 
 	_client_list.erase(remote);
 }
