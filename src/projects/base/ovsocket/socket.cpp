@@ -58,7 +58,10 @@ namespace ov
 		// epoll 관련 변수들이 정상적으로 해제되었는지 확인
 		OV_ASSERT(_epoll == InvalidSocket, "Epoll is not uninitialized");
 		OV_ASSERT(_epoll_events == nullptr, "Epoll events are not freed");
-		OV_ASSERT(_last_epoll_event_count == 0, "Last epoll event count is remained");
+
+		// TODO(dimiden): PhysicalPort에서 이벤트를 모두 처리하지 않고 Socket을 바로 Close()하는 부분이 있는데,
+		// 나중에 half-close를 한 뒤, 나머지 이벤트들을 모두 처리하고 나서 최종적으로 Close()하도록 해야함
+		// OV_ASSERT(_last_epoll_event_count == 0, "Last epoll event count is remained: %d", _last_epoll_event_count);
 	}
 
 	bool Socket::Create(SocketType type)

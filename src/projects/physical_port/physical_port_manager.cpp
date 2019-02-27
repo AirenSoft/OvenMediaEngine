@@ -60,5 +60,7 @@ bool PhysicalPortManager::DeletePort(std::shared_ptr<PhysicalPort> &port)
 		_port_list.erase(item);
 	}
 
+	port->Close();
+
 	return true;
 }

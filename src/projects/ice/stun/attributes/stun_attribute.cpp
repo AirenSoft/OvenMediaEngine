@@ -159,6 +159,8 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType 
 		case StunAttributeType::UnknownAttributes:
 		default:
 			// 잘못된 타입이 들어옴
+			logtw("Unknown attributes: %d (length: %d)", type, length);
+
 			attribute = std::make_unique<StunUnknownAttribute>((int)type, length);
 			break;
 	}

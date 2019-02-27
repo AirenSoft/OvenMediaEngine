@@ -157,7 +157,7 @@ bool StunMessage::ParseAttributes(ov::ByteStream &stream)
 
 		if(attribute == nullptr)
 		{
-			logtw("Could not create attribute");
+			logtw("Could not parse attribute");
 			return false;
 		}
 

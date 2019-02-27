@@ -96,7 +96,7 @@ std::shared_ptr<HttpClient> HttpServer::FindClient(ov::Socket *remote)
 
 void HttpServer::OnConnected(ov::Socket *remote)
 {
-	logtd("Client is connected: %s", remote->ToString().CStr());
+	logti("Client is connected: %s", remote->ToString().CStr());
 
 	_client_list[remote] = std::make_shared<HttpClient>(dynamic_cast<ov::ClientSocket *>(remote), _default_interceptor);
 }

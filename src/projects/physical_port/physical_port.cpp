@@ -23,7 +23,7 @@ PhysicalPort::PhysicalPort()
 
 PhysicalPort::~PhysicalPort()
 {
-	OV_ASSERT2(_observer_list.size() == 0);
+	OV_ASSERT2(_observer_list.empty());
 }
 
 bool PhysicalPort::Create(ov::SocketType type, const ov::SocketAddress &address)
