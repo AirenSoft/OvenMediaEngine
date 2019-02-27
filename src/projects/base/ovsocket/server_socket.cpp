@@ -83,7 +83,7 @@ namespace ov
 			}
 			else if(OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP))
 			{
-				logti("[%p] [#%d] Client is disconnected - events(%s)", this, _socket.GetSocket(), StringFromEpollEvent(event).CStr());
+				logtd("[%p] [#%d] Client is disconnected - events(%s)", this, _socket.GetSocket(), StringFromEpollEvent(event).CStr());
 
 				if(client_socket != nullptr)
 				{
@@ -107,6 +107,8 @@ namespace ov
 
 					if(client != nullptr)
 					{
+						logtd("[%p] [#%d] Client is connected - events(%s)", this, _socket.GetSocket(), StringFromEpollEvent(event).CStr());
+
 						// 정상적으로 accept 되었다면 callback
 						need_to_delete = connection_callback(client.get(), SocketConnectionState::Connected);
 

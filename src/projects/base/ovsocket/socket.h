@@ -113,6 +113,7 @@ namespace ov
 					if(sock != InvalidSocket)
 					{
 						_type = type;
+						_valid = true;
 					}
 					break;
 
@@ -122,30 +123,28 @@ namespace ov
 					if(sock != SRT_INVALID_SOCK)
 					{
 						_type = type;
+						_valid = true;
 					}
 					break;
 
 				default:
-					_type = type;
-					_socket.socket = sock;
+					OV_ASSERT2(type == SocketType::Unknown);
+					OV_ASSERT2(sock == InvalidSocket);
+
+					_type = SocketType::Unknown;
+					_socket.socket = InvalidSocket;
 					break;
 			}
 		}
 
+		void SetValid(bool valid)
+		{
+			_valid = valid;
+		}
+
 		const bool IsValid() const noexcept
 		{
-			switch(_type)
-			{
-				case SocketType::Tcp:
-				case SocketType::Udp:
-					return _socket.socket != InvalidSocket;
-
-				case SocketType::Srt:
-					return _socket.srt_socket != SRT_INVALID_SOCK;
-
-				default:
-					return false;
-			}
+			return _valid;
 		}
 
 		SocketType GetType() const
@@ -157,6 +156,7 @@ namespace ov
 
 	protected:
 		SocketType _type = SocketType::Unknown;
+		bool _valid = false;
 
 		union
 		{

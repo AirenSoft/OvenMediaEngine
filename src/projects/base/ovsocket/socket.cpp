@@ -1069,10 +1069,6 @@ namespace ov
 
 			CHECK_STATE(!= SocketState::Closed, false);
 
-			if(GetType() == SocketType::Tcp)
-			{
-			}
-
 			// socket 관련
 			switch(GetType())
 			{
@@ -1103,7 +1099,7 @@ namespace ov
 					break;
 			}
 
-			_socket.SetSocket(SocketType::Unknown, InvalidSocket);
+			_socket.SetValid(false);
 
 			// epoll 관련
 			OV_SAFE_FUNC(_epoll, InvalidSocket, ::close,);
@@ -1178,7 +1174,13 @@ namespace ov
 		}
 		else
 		{
-			return String::FormatString("<%s: %p, (%s) #%d, state: %d>", class_name, this, StringFromSocketType(GetType()), _socket.GetSocket(), _state);
+			return String::FormatString(
+				"<%s: %p, #%d, state: %d, %s, %s>",
+				class_name, this,
+				_socket.GetSocket(), _state,
+				StringFromSocketType(GetType()),
+				_remote_address->ToString().CStr()
+			);
 		}
 	}
 
