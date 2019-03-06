@@ -62,6 +62,8 @@ bool RtcStream::Start()
 		{
 			case MediaType::Video:
 			{
+				auto payload = std::make_shared<PayloadAttr>();
+
 				switch(track->GetCodecId())
 				{
 					case MediaCodecId::Vp8:
@@ -69,13 +71,21 @@ bool RtcStream::Start()
 						break;
 					case MediaCodecId::H264:
 						codec = "H264";
+
+						payload->SetFmtp(ov::String::FormatString(
+							// NonInterleaved => packetization-mode=1
+							// baseline & lvl 3.1 => profile-level-id=42e01f
+							"packetization-mode=1;profile-level-id=%x",
+							0x42e01f
+						));
+
 						break;
 					default:
 						logtw("Unsupported codec(%d) is being input from media track", track->GetCodecId());
 						continue;
 				}
 
-				if (first_video_desc)
+				if(first_video_desc)
 				{
 					video_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
 					video_media_desc->SetConnection(4, "0.0.0.0");
@@ -92,7 +102,6 @@ bool RtcStream::Start()
 					first_video_desc = false;
 				}
 
-				auto payload = std::make_shared<PayloadAttr>();
 				//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
 				payload->SetRtpmap(track->GetId(), codec, 90000);
 
@@ -106,10 +115,17 @@ bool RtcStream::Start()
 
 			case MediaType::Audio:
 			{
+				auto payload = std::make_shared<PayloadAttr>();
+
 				switch(track->GetCodecId())
 				{
 					case MediaCodecId::Opus:
 						codec = "OPUS";
+
+						// Enable inband-fec
+						// a=fmtp:111 maxplaybackrate=16000; useinbandfec=1; maxaveragebitrate=20000
+						 payload->SetFmtp("stereo=1;useinbandfec=1;");
+
 						break;
 
 					default:
@@ -117,7 +133,7 @@ bool RtcStream::Start()
 						continue;
 				}
 
-				if (first_audio_desc)
+				if(first_audio_desc)
 				{
 					audio_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
 					audio_media_desc->SetConnection(4, "0.0.0.0");
@@ -129,12 +145,10 @@ bool RtcStream::Start()
 					audio_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
 					audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
 					audio_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
-
 					_offer_sdp->AddMedia(audio_media_desc);
 					first_audio_desc = false;
 				}
 
-				auto payload = std::make_shared<PayloadAttr>();
 				// TODO(dimiden): Need to change to transcoding profile's bitrate and channel
 				payload->SetRtpmap(track->GetId(), codec, 48000, "2");
 

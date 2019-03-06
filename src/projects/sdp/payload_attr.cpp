@@ -103,3 +103,13 @@ bool PayloadAttr::IsRtcpFbEnabled(const PayloadAttr::RtcpFbType &type)
 {
 	return _rtcpfb_support_flag[(int)type];
 }
+
+void PayloadAttr::SetFmtp(const ov::String &fmtp)
+{
+	_fmtp = fmtp;
+}
+
+ov::String PayloadAttr::GetFmtp() const
+{
+	return _fmtp;
+}

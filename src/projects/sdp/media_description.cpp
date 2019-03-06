@@ -82,7 +82,9 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 	// Payloads
 	for(auto &payload : _payload_list)
 	{
-		sdp.AppendFormat("a=rtpmap:%d %s/%d", payload->GetId(),
+		uint8_t payload_id = payload->GetId();
+
+		sdp.AppendFormat("a=rtpmap:%d %s/%d", payload_id,
 		                 payload->GetCodecStr().CStr(),
 		                 payload->GetCodecRate());
 
@@ -93,34 +95,35 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 
 		sdp.Append("\r\n");
 
-		if(payload->GetCodecStr() == "H264")
-		{
-			// NonInterleaved => packetization-mode=1
-			sdp.AppendFormat("a=fmtp:%d packetization-mode=1", payload->GetId());
+		// a=fmtp:%d packetization-mode=1
+		auto fmtp = payload->GetFmtp();
 
-			// baseline & lvl 3.1 => profile-level-id=42e01f
-			sdp.AppendFormat(";profile-level-id=%x\r\n", 0x42e01f);
+		if(fmtp.IsEmpty() == false)
+		{
+			sdp.AppendFormat("a=fmtp:%d ", payload_id);
+			sdp.Append(fmtp);
+			sdp.Append("\r\n");
 		}
 
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::GoogRemb))
 		{
-			sdp.AppendFormat("a=rtcp-fb:%d goog_remb\r\n", payload->GetId());
+			sdp.AppendFormat("a=rtcp-fb:%d goog_remb\r\n", payload_id);
 		}
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::TransportCc))
 		{
-			sdp.AppendFormat("a=rtcp-fb:%d transport-cc\r\n", payload->GetId());
+			sdp.AppendFormat("a=rtcp-fb:%d transport-cc\r\n", payload_id);
 		}
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::CcmFir))
 		{
-			sdp.AppendFormat("a=rtcp-fb:%d ccm fir\r\n", payload->GetId());
+			sdp.AppendFormat("a=rtcp-fb:%d ccm fir\r\n", payload_id);
 		}
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::Nack))
 		{
-			sdp.AppendFormat("a=rtcp-fb:%d nack\r\n", payload->GetId());
+			sdp.AppendFormat("a=rtcp-fb:%d nack\r\n", payload_id);
 		}
 		if(payload->IsRtcpFbEnabled(PayloadAttr::RtcpFbType::NackPli))
 		{
-			sdp.AppendFormat("a=rtcp-fb:%d nack pli\r\n", payload->GetId());
+			sdp.AppendFormat("a=rtcp-fb:%d nack pli\r\n", payload_id);
 		}
 	}
 
@@ -618,6 +621,7 @@ bool MediaDescription::AddRtpmap(uint8_t payload_type, const ov::String &codec,
                                  uint32_t rate, const ov::String &parameters)
 {
 	std::shared_ptr<PayloadAttr> payload = GetPayload(payload_type);
+
 	if(payload == nullptr)
 	{
 		payload = std::make_shared<PayloadAttr>();
@@ -626,6 +630,8 @@ bool MediaDescription::AddRtpmap(uint8_t payload_type, const ov::String &codec,
 	}
 
 	payload->SetRtpmap(payload_type, codec, rate, parameters);
+
+	return true;
 }
 
 // a=rtcp-fb:96 nack pli

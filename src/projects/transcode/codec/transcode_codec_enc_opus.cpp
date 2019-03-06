@@ -32,7 +32,7 @@ OvenCodecImplAvcodecEncOpus::~OvenCodecImplAvcodecEncOpus()
 	}
 }
 
-bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> context)
+bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr <TranscodeContext> context)
 {
 	if(TranscodeEncoder::Configure(context) == false)
 	{
@@ -53,6 +53,10 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> co
 		::opus_encoder_destroy(_encoder);
 		return false;
 	}
+
+	// Enable FEC
+	::opus_encoder_ctl(_encoder, OPUS_SET_INBAND_FEC(1));
+	::opus_encoder_ctl(_encoder, OPUS_SET_PACKET_LOSS_PERC(10));
 
 	_transcode_context = context;
 
@@ -77,7 +81,7 @@ void OvenCodecImplAvcodecEncOpus::SendBuffer(std::unique_ptr<const MediaFrame> f
 	TranscodeEncoder::SendBuffer(std::move(frame));
 }
 
-std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)
+std::unique_ptr <MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)
 {
 	OV_ASSERT2(_transcode_context);
 
@@ -172,7 +176,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeRe
 
 	// "1275 * 3 + 7" formula is used in opusenc.c:813
 	// or, use the formula in "AudioEncoderOpusImpl::SufficientOutputBufferSize()" of the native code.
-	std::shared_ptr<ov::Data> encoded = std::make_shared<ov::Data>(1275 * 3 + 7);
+	std::shared_ptr <ov::Data> encoded = std::make_shared<ov::Data>(1275 * 3 + 7);
 	encoded->SetLength(encoded->GetCapacity());
 
 	// Encode

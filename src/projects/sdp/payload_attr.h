@@ -50,6 +50,10 @@ public:
 	void EnableRtcpFb(const RtcpFbType &type, bool on);
 	bool IsRtcpFbEnabled(const RtcpFbType &type);
 
+	// a=fmtp:111 maxplaybackrate=16000; useinbandfec=1; maxaveragebitrate=20000
+	void SetFmtp(const ov::String &fmtp);
+	ov::String GetFmtp() const;
+
 private:
 	uint8_t _id;
 	SupportCodec _codec;
@@ -58,4 +62,6 @@ private:
 	ov::String _codec_param;
 
 	bool _rtcpfb_support_flag[(int)(RtcpFbType::NumberOfRtcpFbType)];
+
+	ov::String _fmtp;
 };
