@@ -66,7 +66,7 @@ bool RtcSession::Start()
 
 	if(offer_media_desc_list.size() != peer_media_desc_list.size())
 	{
-		logte("m= line of answer does not correspod with offer");
+		logte("m= line of answer does not correspond with offer");
 		return false;
 	}
 
@@ -149,12 +149,28 @@ std::shared_ptr<SessionDescription> RtcSession::GetPeerSDP()
 	return _peer_sdp;
 }
 
+// Application에서 바로 Session의 다음 함수를 호출해준다.
 void RtcSession::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, const std::shared_ptr<const ov::Data> data)
 {
 	// NETWORK에서 받은 Packet은 DTLS로 넘긴다.
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
 
 	_dtls_ice_transport->OnDataReceived(SessionNodeType::None, data);
+}
+
+bool RtcSession::SendOutgoingData(std::unique_ptr<RtpPacket> packet)
+{
+	// PayloadType으로 rtp_rtcp를 찾는다.
+	auto it = _rtp_rtcp_map.find(packet->PayloadType());
+	// 없으면 peer가 원하는 track이 아니므로 돌려보냄
+	if(it == _rtp_rtcp_map.end())
+	{
+		return false;
+	}
+
+	auto rtp_rtcp = it->second;
+
+	return rtp_rtcp->SendOutgoingData(std::move(packet));
 }
 
 bool RtcSession::SendOutgoingData(std::shared_ptr<MediaTrack> track,

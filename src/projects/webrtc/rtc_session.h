@@ -61,6 +61,7 @@ public:
 
 	std::shared_ptr<SessionDescription> GetPeerSDP();
 
+	bool SendOutgoingData(std::unique_ptr<RtpPacket> packet);
 	bool SendOutgoingData(std::shared_ptr<MediaTrack> track,
 	                      FrameType frame_type,
 	                      uint32_t timestamp,

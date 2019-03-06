@@ -21,6 +21,9 @@ public:
 	// CSRC를 설정한다.
 	void SetCsrcs(const std::vector<uint32_t> &csrcs);
 
+	// 이미 만들어진 패킷을 전송한다. 성능을 위해 상위에서 Packetizing을 하는 경우 사용한다.
+	bool SendOutgoingData(std::unique_ptr<RtpPacket> packet);
+
 	// Frame을 전송한다.
 	bool SendOutgoingData(FrameType frame_type,
 	                      uint32_t time_stamp,

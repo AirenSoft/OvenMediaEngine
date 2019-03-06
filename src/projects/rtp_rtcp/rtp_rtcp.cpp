@@ -31,6 +31,11 @@ void RtpRtcp::SetCsrcs(const std::vector<uint32_t> &csrcs)
 	_rtp_sender->SetCsrcs(csrcs);
 }
 
+bool RtpRtcp::SendOutgoingData(std::unique_ptr<RtpPacket> packet)
+{
+	return SendRtpToNetwork(std::move(packet));
+}
+
 bool RtpRtcp::SendOutgoingData(FrameType frame_type,
                                uint32_t time_stamp,
                                const uint8_t *payload_data,

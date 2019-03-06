@@ -101,6 +101,9 @@ bool RtcStream::Start()
 				// WebRTC에서 사용하는 Track만 별도로 관리한다.
 				AddRtcTrack(payload->GetId(), track);
 
+				// RTP Packetizer를 추가한다.
+				AddRtpPacketizer(false, payload->GetId(), video_media_desc->GetSsrc());
+
 				break;
 			}
 
@@ -142,6 +145,9 @@ bool RtcStream::Start()
 
 				// WebRTC에서 사용하는 Track만 별도로 관리한다.
 				AddRtcTrack(payload->GetId(), track);
+
+				// RTP Packetizer를 추가한다.
+				AddRtpPacketizer(true, payload->GetId(), audio_media_desc->GetSsrc());
 
 				break;
 			}
@@ -189,6 +195,29 @@ std::shared_ptr<RtcSession> RtcStream::FindRtcSessionByPeerSDPSessionID(uint32_t
 	return nullptr;
 }
 
+bool RtcStream::SendRtpToNetwork(std::unique_ptr<RtpPacket> packet)
+{
+	logte("RTP Packetizing completed : length(%d), payload_type(%d)", packet->GetData()->GetLength(), packet->PayloadType());
+
+	// 모든 Session에 만들어진 Packet을 전달한다.
+	for(auto const &x : GetSessionMap())
+	{
+		auto session = x.second;
+
+		// Session에 전달되면 SRTP로 인해 모두 변경되기 때문에 복제하여 보내야 한다.
+		auto session_packet = std::make_unique<RtpPacket>(*packet);
+		logte("Copy packet : packet length (%d)", packet->GetData()->GetLength());
+		std::static_pointer_cast<RtcSession>(session)->SendOutgoingData(std::move(session_packet));
+	}
+
+	return true;
+}
+
+bool RtcStream::SendRtcpToNetwork(std::unique_ptr<RtcpPacket> packet)
+{
+	return true;
+}
+
 void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
                                std::unique_ptr<EncodedFrame> encoded_frame,
                                std::unique_ptr<CodecSpecificInfo> codec_info,
@@ -205,26 +234,17 @@ void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 		MakeRtpVideoHeader(codec_info.get(), &rtp_video_header);
 	}
 
-	// 모든 Session에 Frame을 전달한다.
-	for(auto const &x : GetSessionMap())
-	{
-		auto session = x.second;
+	// RTP Packetizing
+	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
+	auto rtp_sender = GetRtpSender(track->GetId());
 
-		// RTP_RTCP는 Blocking 방식의 Packetizer이므로
-		// shared_ptr, unique_ptr을 사용하지 않아도 무방하다. 사실 다 고치기가 귀찮음 ㅠㅠ
-		// TODO(getroot): 향후 Performance 증가를 위해 RTP Packetize를 한번 하고 모든 Session에 전달하는 방법을
-		// 실험해보고 성능이 좋아지면 적용한다.
-		std::static_pointer_cast<RtcSession>(session)->SendOutgoingData(track,
-		                                                                encoded_frame->frame_type,
-		                                                                encoded_frame->time_stamp,
-		                                                                encoded_frame->buffer,
-		                                                                encoded_frame->length,
-		                                                                fragmentation.get(),
-		                                                                &rtp_video_header);
-	}
-
-	// TODO(getroot): 향후 ov::Data로 변경한다.
-	delete[] encoded_frame->buffer;
+	// RTP_SENDER에 등록된 RtpRtcpSession에 의해서 Packetizing이 완료되면 SendRtpToNetwork 함수가 호출된다.
+	rtp_sender->SendOutgoingData(encoded_frame->frame_type,
+		encoded_frame->time_stamp,
+		encoded_frame->buffer,
+		encoded_frame->length,
+		fragmentation.get(),
+		&rtp_video_header);
 }
 
 void RtcStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
@@ -233,30 +253,18 @@ void RtcStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
                                std::unique_ptr<FragmentationHeader> fragmentation)
 {
 	// AudioFrame 데이터를 Protocol에 맞게 변환한다.
-
 	OV_ASSERT2(encoded_frame != nullptr);
 	OV_ASSERT2(encoded_frame->buffer != nullptr);
 
-	// 모든 Session에 Frame을 전달한다.
-	for(auto const &x : GetSessionMap())
-	{
-		auto session = x.second;
-
-		// RTP_RTCP는 Blocking 방식의 Packetizer이므로
-		// shared_ptr, unique_ptr을 사용하지 않아도 무방하다. 사실 다 고치기가 귀찮음 ㅠㅠ
-		// TODO(getroot): 향후 Performance 증가를 위해 RTP Packetize를 한번 하고 모든 Session에 전달하는 방법을
-		// 실험해보고 성능이 좋아지면 적용한다.
-		std::static_pointer_cast<RtcSession>(session)->SendOutgoingData(track,
-		                                                                encoded_frame->frame_type,
-		                                                                encoded_frame->time_stamp,
-		                                                                encoded_frame->buffer,
-		                                                                encoded_frame->length,
-		                                                                fragmentation.get(),
-		                                                                nullptr);
-	}
-
-	// TODO(getroot): 향후 ov::Data로 변경한다.
-	delete[] encoded_frame->buffer;
+	// RTP Packetizing
+	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
+	auto rtp_sender = GetRtpSender(track->GetId());
+	rtp_sender->SendOutgoingData(encoded_frame->frame_type,
+	                             encoded_frame->time_stamp,
+	                             encoded_frame->buffer,
+	                             encoded_frame->length,
+	                             fragmentation.get(),
+	                             nullptr);
 }
 
 void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader *rtp_video_header)
@@ -282,6 +290,15 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 	}
 }
 
+void RtcStream::AddRtpPacketizer(bool audio, uint32_t payload_type, uint32_t ssrc)
+{
+	auto rtp_sender = std::make_shared<RTPSender>(audio, RtpRtcpSession::GetSharedPtr());
+	rtp_sender->SetPayloadType(payload_type);
+	rtp_sender->SetSSRC(ssrc);
+
+	_rtp_sender[payload_type] = rtp_sender;
+}
+
 void RtcStream::AddRtcTrack(uint32_t payload_type, std::shared_ptr<MediaTrack> track)
 {
 	_rtc_track[payload_type] = track;
@@ -295,4 +312,14 @@ std::shared_ptr<MediaTrack> RtcStream::GetRtcTrack(uint32_t payload_type)
 	}
 
 	return _rtc_track[payload_type];
+}
+
+std::shared_ptr<RTPSender> RtcStream::GetRtpSender(uint32_t payload_type)
+{
+	if(!_rtp_sender.count(payload_type))
+	{
+		return nullptr;
+	}
+
+	return _rtp_sender[payload_type];
 }
