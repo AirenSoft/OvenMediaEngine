@@ -3,16 +3,58 @@
 #include "session.h"
 #include "base/common_types.h"
 #include "base/application/stream_info.h"
+#include "application.h"
 
+#define DEFAULT_STREAM_THREAD_COUNT     32
+#define MAX_STREAM_THREAD_COUNT         32
 
-class Stream : public StreamInfo
+class StreamWorker
+{
+public:
+	StreamWorker();
+
+	bool Start(std::shared_ptr<Stream> parent);
+	bool Stop();
+
+	bool AddSession(std::shared_ptr<Session> session);
+	bool RemoveSession(session_id_t id);
+
+	void SendPacket(uint32_t id, std::shared_ptr<ov::Data> packet);
+
+private:
+	void WorkerThread();
+
+	std::map<session_id_t, std::shared_ptr<Session>> _sessions;
+
+	ov::Semaphore _queue_event;
+
+	class StreamPacket
+	{
+	public:
+		uint32_t                    _id;
+		std::shared_ptr<ov::Data>   _data;
+	};
+
+	std::queue<std::shared_ptr<StreamPacket>>   _packet_queue;
+	std::mutex _packet_queue_guard;
+
+	bool _stop_thread_flag;
+	std::thread _worker_thread;
+
+	std::shared_ptr<Stream> _parent;
+};
+
+class Stream : public StreamInfo, public ov::EnableSharedFromThis<Stream>
 {
 public:
 	// Session을 추가한다.
 	bool AddSession(std::shared_ptr<Session> session);
 	bool RemoveSession(session_id_t id);
-	std::shared_ptr<Session> GetSession(session_id_t id);
 
+	// Child call this function to delivery packet to all sessions
+	bool BroadcastPacket(uint32_t packet_id, std::shared_ptr<ov::Data> packet);
+
+	// Child must implement this function for packetizing and call BroadcastPacket to delivery to all sessions.
 	virtual void SendVideoFrame(std::shared_ptr<MediaTrack> track,
 	                            std::unique_ptr<EncodedFrame> encoded_frame,
 	                            std::unique_ptr<CodecSpecificInfo> codec_info,
@@ -23,18 +65,17 @@ public:
 	                            std::unique_ptr<CodecSpecificInfo> codec_info,
 	                            std::unique_ptr<FragmentationHeader> fragmentation) = 0;
 
-	const std::map<session_id_t, std::shared_ptr<Session>> &GetSessionMap();
-
-	virtual bool Start();
+	virtual bool Start(uint32_t worker_count=DEFAULT_STREAM_THREAD_COUNT);
 	virtual bool Stop();
 protected:
-	Stream(const std::shared_ptr<Application> application,
-	       const StreamInfo &info);
+	Stream(const std::shared_ptr<Application> application, const StreamInfo &info);
 	virtual ~Stream();
-	std::shared_ptr<Application> GetApplication();
+
+	std::shared_ptr<Application>    GetApplication();
 
 private:
-	std::map<session_id_t, std::shared_ptr<Session>> _sessions;
-	std::mutex _session_map_guard;
-	std::shared_ptr<Application> _application;
+	uint32_t                        _worker_count;
+	bool                            _run_flag;
+	StreamWorker                    _stream_workers[MAX_STREAM_THREAD_COUNT];
+	std::shared_ptr<Application>    _application;
 };

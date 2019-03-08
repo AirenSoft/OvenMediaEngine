@@ -4,11 +4,11 @@
 #include "rtcp_packet.h"
 
 // 상위 클래스는 RtpRtcp에 Session(Transport)과 관련된 모든 정보와 기능을 제공한다.
-class RtpRtcpSession : public ov::EnableSharedFromThis<RtpRtcpSession>
+class RtpRtcpPacketizerInterface : public ov::EnableSharedFromThis<RtpRtcpPacketizerInterface>
 {
 public:
     // RTP Packet을 전송한다.
-    virtual bool        SendRtpToNetwork(std::unique_ptr<RtpPacket> packet) = 0;
+    virtual bool        OnRtpPacketized(std::unique_ptr<RtpPacket> packet) = 0;
     // RTCP Packet을 전송한다.
-    virtual bool        SendRtcpToNetwork(std::unique_ptr<RtcpPacket> packet) = 0;
+    virtual bool        OnRtcpPacketized(std::unique_ptr<RtcpPacket> packet) = 0;
 };

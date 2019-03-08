@@ -25,6 +25,8 @@ public:
 	virtual bool Start();
 	virtual bool Stop();
 
+	// 패킷을 전송한다.
+	virtual bool SendOutgoingData(uint32_t id, std::shared_ptr<ov::Data> packet) = 0;
 	// 상위 Layer에서 Packet을 수신받는다.
 	virtual void OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std::shared_ptr<const ov::Data> data) = 0;
 

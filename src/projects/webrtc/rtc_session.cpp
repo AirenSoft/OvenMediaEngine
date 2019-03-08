@@ -28,37 +28,20 @@ RtcSession::RtcSession(std::shared_ptr<Application> application,
 	_offer_sdp = std::move(offer_sdp);
 	_peer_sdp = std::move(peer_sdp);
 	_ice_port = std::move(ice_port);
+
+	_video_payload_type = 0;
+	_audio_payload_type = 0;
 }
 
 RtcSession::~RtcSession()
 {
+	Stop();
 	logtd("RtcSession(%d) has been terminated finally", GetId());
-
-	_rtp_rtcp_map.clear();
-}
-
-std::shared_ptr<RtcStream> RtcSession::GetRtcStream()
-{
-	return std::static_pointer_cast<RtcStream>(GetStream());
 }
 
 bool RtcSession::Start()
 {
 	auto session = std::static_pointer_cast<Session>(GetSharedPtr());
-
-	// SRTP 생성
-	_srtp_transport = std::make_shared<SrtpTransport>((uint32_t)SessionNodeType::Srtp, session);
-
-	// DTLS 생성
-	_dtls_transport = std::make_shared<DtlsTransport>((uint32_t)SessionNodeType::Dtls, session);
-	std::shared_ptr<RtcApplication> application = std::static_pointer_cast<RtcApplication>(GetApplication());
-	_dtls_transport->SetLocalCertificate(application->GetCertificate());
-	_dtls_transport->StartDTLS();
-
-	// ICE-DTLS 생성
-	_dtls_ice_transport = std::make_shared<DtlsIceTransport>((uint32_t)SessionNodeType::Ice, session, _ice_port);
-
-	// RtpRtcp를 생성하면서 SRTP와 연결한다.
 
 	// Player가 준 SDP를 기준으로(플레이어가 받고자 하는 Track) RTP_RTCP를 생성한다.
 	auto offer_media_desc_list = _offer_sdp->GetMediaList();
@@ -85,33 +68,42 @@ bool RtcSession::Start()
 			return false;
 		}
 
-		// Payload값을 가지고 track을 찾는다.
-		auto track = GetRtcStream()->GetRtcTrack(payload->GetId());
-		if(track == nullptr)
+		if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
 		{
-			logte("Failed to find track associated with %d payload");
-			return false;
+			_audio_payload_type = payload->GetId();
+		}
+		else
+		{
+			_video_payload_type = payload->GetId();
 		}
 
 		// TODO(getroot): 향후 player에서 m= line을 선택하여 받는 기능이 만들어지면
 		// peer에서 받기 거부한 m= line이 있는지 체크하여 track에서 뺀다, 현재는 다 받기 때문에 모두 보낸다.
-
-		auto rtp_rtcp = std::make_shared<RtpRtcp>(track->GetId(),
-		                                          session,
-		                                          peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio);
-		rtp_rtcp->Initialize();
-		rtp_rtcp->SetSSRC(offer_media_desc->GetSsrc());
-		rtp_rtcp->SetPayloadType(payload->GetId());
-
-		rtp_rtcp->RegisterUpperNode(nullptr);
-		rtp_rtcp->RegisterLowerNode(_srtp_transport);
-		_srtp_transport->RegisterUpperNode(rtp_rtcp);
-		_rtp_rtcp_map[track->GetId()] = rtp_rtcp;
-
-		rtp_rtcp->Start();
 	}
 
-	// 나머지를 모두 연결한다.
+	// SessionNode를 생성하고 연결한다.
+
+	// RTP RTCP 생성
+	_rtp_rtcp = std::make_shared<RtpRtcp>((uint32_t)SessionNodeType::RtpRtcp, session);
+	_rtp_rtcp->Initialize();
+
+	// SRTP 생성
+	_srtp_transport = std::make_shared<SrtpTransport>((uint32_t)SessionNodeType::Srtp, session);
+
+	// DTLS 생성
+	_dtls_transport = std::make_shared<DtlsTransport>((uint32_t)SessionNodeType::Dtls, session);
+	std::shared_ptr<RtcApplication> application = std::static_pointer_cast<RtcApplication>(GetApplication());
+	_dtls_transport->SetLocalCertificate(application->GetCertificate());
+	_dtls_transport->StartDTLS();
+
+	// ICE-DTLS 생성
+	_dtls_ice_transport = std::make_shared<DtlsIceTransport>((uint32_t)SessionNodeType::Ice, session, _ice_port);
+
+
+	_rtp_rtcp->RegisterUpperNode(nullptr);
+	_rtp_rtcp->RegisterLowerNode(_srtp_transport);
+	_rtp_rtcp->Start();
+	_srtp_transport->RegisterUpperNode(_rtp_rtcp);
 	_srtp_transport->RegisterLowerNode(_dtls_transport);
 	_srtp_transport->Start();
 	_dtls_transport->RegisterUpperNode(_srtp_transport);
@@ -129,17 +121,10 @@ bool RtcSession::Stop()
 	logtd("Stop session. Peer sdp session id : %u", GetPeerSDP()->GetSessionId());
 
 	// 연결된 세션을 정리한다.
+	_rtp_rtcp->Stop();
 	_dtls_ice_transport->Stop();
 	_dtls_transport->Stop();
 	_srtp_transport->Stop();
-
-	for(const auto &x : _rtp_rtcp_map)
-	{
-		auto rtp_rtcp = x.second;
-		rtp_rtcp->Stop();
-	}
-
-	_rtp_rtcp_map.clear();
 
 	return Session::Stop();
 }
@@ -149,54 +134,30 @@ std::shared_ptr<SessionDescription> RtcSession::GetPeerSDP()
 	return _peer_sdp;
 }
 
+uint8_t RtcSession::GetVideoPayloadType()
+{
+	return _video_payload_type;
+}
+
+uint8_t RtcSession::GetAudioPayloadType()
+{
+	return _audio_payload_type;
+}
+
 // Application에서 바로 Session의 다음 함수를 호출해준다.
 void RtcSession::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, const std::shared_ptr<const ov::Data> data)
 {
 	// NETWORK에서 받은 Packet은 DTLS로 넘긴다.
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
-
 	_dtls_ice_transport->OnDataReceived(SessionNodeType::None, data);
 }
 
-bool RtcSession::SendOutgoingData(std::unique_ptr<RtpPacket> packet)
+bool RtcSession::SendOutgoingData(uint32_t payload_type, std::shared_ptr<ov::Data> packet)
 {
-	// PayloadType으로 rtp_rtcp를 찾는다.
-	auto it = _rtp_rtcp_map.find(packet->PayloadType());
-	// 없으면 peer가 원하는 track이 아니므로 돌려보냄
-	if(it == _rtp_rtcp_map.end())
+	if(payload_type != _video_payload_type && payload_type != _audio_payload_type)
 	{
 		return false;
 	}
 
-	auto rtp_rtcp = it->second;
-
-	return rtp_rtcp->SendOutgoingData(std::move(packet));
-}
-
-bool RtcSession::SendOutgoingData(std::shared_ptr<MediaTrack> track,
-                                  FrameType frame_type,
-                                  uint32_t timestamp,
-                                  const uint8_t *payload_data,
-                                  size_t payload_size,
-                                  const FragmentationHeader *fragmentation,
-                                  const RTPVideoHeader *rtp_video_header)
-{
-	// Track ID로 rtp_rtcp를 찾는다.
-	auto it = _rtp_rtcp_map.find(track->GetId());
-	// 없으면 peer가 원하는 track이 아니므로 돌려보냄
-	if(it == _rtp_rtcp_map.end())
-	{
-		return false;
-	}
-
-	auto rtp_rtcp = it->second;
-
-	//logtd("RtcSession Send first node : %d", payload_size);
-	// SendOutgoingData 를 호출하면 최종적으로 SendRtpToNetwork가 호출된다.
-	return rtp_rtcp->SendOutgoingData(frame_type,
-	                                  timestamp,
-	                                  payload_data,
-	                                  payload_size,
-	                                  fragmentation,
-	                                  rtp_video_header);
+	return _rtp_rtcp->SendOutgoingData(packet);
 }

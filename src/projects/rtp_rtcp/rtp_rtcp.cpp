@@ -1,9 +1,9 @@
 #include "rtp_rtcp.h"
 
-RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<Session> session, bool audio)
+RtpRtcp::RtpRtcp(std::shared_ptr<Session> session)
 	: SessionNode(id, SessionNodeType::RtpRtcp, session)
 {
-	_audio_session_flag = audio;
+
 }
 
 RtpRtcp::~RtpRtcp()
@@ -12,48 +12,9 @@ RtpRtcp::~RtpRtcp()
 
 void RtpRtcp::Initialize()
 {
-	_rtp_sender = std::make_unique<RTPSender>(_audio_session_flag, RtpRtcpSession::GetSharedPtr());
-	// TODO: _rtcp_sender, _rtcp_receiver 초기화
 }
 
-void RtpRtcp::SetPayloadType(uint8_t payload_type)
-{
-	_rtp_sender->SetPayloadType(payload_type);
-}
-
-void RtpRtcp::SetSSRC(const uint32_t ssrc)
-{
-	_rtp_sender->SetSSRC(ssrc);
-}
-
-void RtpRtcp::SetCsrcs(const std::vector<uint32_t> &csrcs)
-{
-	_rtp_sender->SetCsrcs(csrcs);
-}
-
-bool RtpRtcp::SendOutgoingData(std::unique_ptr<RtpPacket> packet)
-{
-	return SendRtpToNetwork(std::move(packet));
-}
-
-bool RtpRtcp::SendOutgoingData(FrameType frame_type,
-                               uint32_t time_stamp,
-                               const uint8_t *payload_data,
-                               size_t payload_size,
-                               const FragmentationHeader *fragmentation,
-                               const RTPVideoHeader *rtp_video_header)
-{
-
-
-	//TODO: RTCP SENDER REPORT를 전송해야 한다.
-//	logd("RTP_RTCP", "RtpRtcp::SendOutgoingData Enter");
-
-	return _rtp_sender->SendOutgoingData(frame_type, time_stamp, payload_data,
-	                                     payload_size, fragmentation, rtp_video_header);
-}
-
-// RtpSender에서 호출한다.
-bool RtpRtcp::SendRtpToNetwork(std::unique_ptr<RtpPacket> packet)
+bool RtpRtcp::SendOutgoingData(std::shared_ptr<ov::Data> packet)
 {
 	// Lower Node는 SRTP(DTLS 사용시) 또는 IcePort이다.
 	auto node = GetLowerNode();
@@ -63,13 +24,7 @@ bool RtpRtcp::SendRtpToNetwork(std::unique_ptr<RtpPacket> packet)
 	}
 
 	//logtd("RtpRtcp Send next node : %d", packet->GetData()->GetLength());
-	return node->SendData(GetNodeType(), packet->GetData());
-}
-
-// RtcpSender에서 호출한다.
-bool RtpRtcp::SendRtcpToNetwork(std::unique_ptr<RtcpPacket> packet)
-{
-	return true;
+	return node->SendData(GetNodeType(), packet);
 }
 
 bool RtpRtcp::SendData(SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)

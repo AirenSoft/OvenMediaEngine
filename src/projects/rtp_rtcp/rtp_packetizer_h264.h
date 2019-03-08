@@ -37,7 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include "rtp_packet.h"
-#include "rtp_packetizer.h"
+#include "rtp_packetizing_manager.h"
 #include <deque>
 #include <memory>
 #include <queue>
@@ -50,7 +50,7 @@ const size_t kLengthFieldSize = 2;
 enum NalDefs : uint8_t { kFBit = 0x80, kNriMask = 0x60, kTypeMask = 0x1F };
 enum FuDefs : uint8_t { kSBit = 0x80, kEBit = 0x40, kRBit = 0x20 };
 
-class RtpPacketizerH264 : public RtpPacketizer {
+class RtpPacketizerH264 : public RtpPacketizingManager {
 public:
 	RtpPacketizerH264(size_t max_payload_len,
 	                  size_t last_packet_reduction_len,

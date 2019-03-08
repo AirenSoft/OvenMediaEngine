@@ -37,12 +37,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include "rtp_packet.h"
-#include "rtp_packetizer.h"
+#include "rtp_packetizing_manager.h"
 #include <queue>
 
 
 // Packetizer for VP8.
-class RtpPacketizerVp8 : public RtpPacketizer 
+class RtpPacketizerVp8 : public RtpPacketizingManager 
 {
 public:
 	// Initialize with payload from encoder.
