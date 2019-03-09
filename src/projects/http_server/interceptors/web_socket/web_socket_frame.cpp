@@ -47,9 +47,9 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 	{
 		header_length = ProcessHeader(stream);
 
-		if(_last_status == WebSocketFrameParseStatus::Error)
+		if(_last_status != WebSocketFrameParseStatus::Parsing)
 		{
-			return -1L;
+			return header_length;
 		}
 	}
 
@@ -124,13 +124,17 @@ const WebSocketFrameHeader &WebSocketFrame::GetHeader()
 ssize_t WebSocketFrame::ProcessHeader(ov::ByteStream &stream)
 {
 	ssize_t before_offset = stream.GetOffset();
-	ssize_t read_count = stream.Read(&_header);
+	ssize_t read_count = stream.Read(reinterpret_cast<char *>(&_header) + _header_read_bytes, sizeof(_header) - _header_read_bytes);
 
-	if(read_count != 1)
+	if(read_count >= 0)
 	{
-		OV_ASSERT(read_count == 1, "Invalid read size: %d (expected: %d)", read_count, 1);
-		_last_status = WebSocketFrameParseStatus::Error;
-		return -1L;
+		_header_read_bytes += read_count;
+	}
+
+	if(_header_read_bytes != sizeof(_header))
+	{
+		// Not enough data to process
+		return read_count;
 	}
 
 	// extensions 사용 여부

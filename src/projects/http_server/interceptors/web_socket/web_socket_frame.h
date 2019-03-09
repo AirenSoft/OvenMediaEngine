@@ -50,6 +50,8 @@ protected:
 	ssize_t ProcessHeader(ov::ByteStream &stream);
 
 	WebSocketFrameHeader _header;
+	int _header_read_bytes = 0;
+
 	uint64_t _remained_length;
 	uint64_t _total_length;
 	uint32_t _frame_masking_key;

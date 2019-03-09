@@ -148,9 +148,8 @@ bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 	switch(frame->GetStatus())
 	{
 		case WebSocketFrameParseStatus::Prepare:
-			// 아직도 prepare 상태라면, 헤더 파싱을 못한 상황
-			logtw("Cannot parse header");
-			return false;
+			// Not enough data to parse header
+			break;
 
 		case WebSocketFrameParseStatus::Parsing:
 			break;
