@@ -24,6 +24,7 @@ class HttpServer : protected PhysicalPortObserver
 {
 public:
 	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpClient>>;
+	using ClientIterator = std::function<bool(const std::shared_ptr<HttpClient> &client)>;
 
 	HttpServer();
 	virtual ~HttpServer();
@@ -36,10 +37,12 @@ public:
 
 	std::shared_ptr<HttpDefaultInterceptor> GetDefaultInterceptor();
 
-	const ClientList &GetClientList() const;
+	// If the iterator returns true, FindClient() will return the client
+	ov::Socket *FindClient(ClientIterator iterator);
 
+	// If the iterator returns true, the client will be disconnected
+	bool Disconnect(ClientIterator iterator);
 	bool Disconnect(ov::Socket *remote);
-	bool Disconnect(ClientList::iterator client);
 
 protected:
 	// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨
@@ -56,12 +59,16 @@ protected:
 	void OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 	void OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 
+	bool Disconnect(ClientList::iterator client);
+
 protected:
 	// HttpServer와 연결된 physical port
 	std::shared_ptr<PhysicalPort> _physical_port = nullptr;
 
+	std::mutex _client_list_mutex;
 	ClientList _client_list;
 
+	std::mutex _interceptor_list_mutex;
 	std::vector<std::shared_ptr<HttpRequestInterceptor>> _interceptor_list;
 	std::shared_ptr<HttpRequestInterceptor> _default_interceptor = std::make_shared<HttpDefaultInterceptor>();
 };

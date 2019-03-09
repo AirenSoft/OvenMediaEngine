@@ -43,6 +43,7 @@ protected:
 		ov::String stream_name;
 
 		// signalling server에서 발급한 id
+		// WebSocket 접속만 되어 있고, request offer하지 않은 상태에서는 "" 로 되어 있음
 		ov::String id;
 
 		// client가 연결 한 뒤 request offer 했을 때 보내준 offer SDP
@@ -75,6 +76,7 @@ protected:
 
 	void ProcessCommand(const ov::String &command, const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message);
 	void ProcessRequestOffer(const std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message, SdpCallback callback);
+	void NotifyStopCommand(const std::shared_ptr<RtcSignallingInfo> &info);
 
 	const info::Application &_application_info;
 	std::shared_ptr<MediaRouteApplicationInterface> _application;

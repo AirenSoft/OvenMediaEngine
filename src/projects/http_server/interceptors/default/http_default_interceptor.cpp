@@ -37,19 +37,30 @@ bool HttpDefaultInterceptor::IsInterceptorForRequest(const std::shared_ptr<const
 	return true;
 }
 
-void HttpDefaultInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
+bool HttpDefaultInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
 {
 	// request body를 처리하기 위해 메모리를 미리 할당해놓음
+
 	// TODO: content-length가 너무 크면 비정상 종료 될 수 있으므로, 파일 업로드 지원 & 너무 큰 요청은 차단하는 기능 만들어야 함
-	if(request->GetContentLength() > 0L)
+	ssize_t content_length = request->GetContentLength();
+
+	if(content_length > (1024LL * 1024LL))
+	{
+		// Currently, OME does not handle requests larger than 1 MB
+		return false;
+	}
+
+	if(content_length > 0L)
 	{
 		const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
 
-		request_body->Reserve(request->GetContentLength());
+		return request_body->Reserve(static_cast<size_t>(request->GetContentLength()));
 	}
+
+	return true;
 }
 
-void HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data)
+bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data)
 {
 	const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
 	ssize_t current_length = (request_body != nullptr) ? request_body->GetLength() : 0L;
@@ -65,9 +76,9 @@ void HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 		// 원래는, 클라이언트가 보낸 데이터는 content-length를 넘어설 수 없으나,
 		// 만약에라도 넘어섰다면 data를 content_length까지만 처리함
 
-		if(content_length - current_length > 0L)
+		if(content_length > current_length)
 		{
-			process_data = data->Subdata(0L, content_length - current_length);
+			process_data = data->Subdata(0L, static_cast<size_t>(content_length - current_length));
 		}
 		else
 		{
@@ -75,7 +86,7 @@ void HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 
 			// 정상적인 시나리오 에서는, 여기로 진입하면 안됨
 			OV_ASSERT2(false);
-			process_data = nullptr;
+			return false;
 		}
 	}
 	else
@@ -133,11 +144,6 @@ void HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 						// URL을 처리할 수 있는 handler를 아예 찾을 수 없음
 						response->SetStatusCode(HttpStatusCode::NotFound);
 					}
-
-					if(_error_handler != nullptr)
-					{
-						_error_handler(request, response);
-					}
 				}
 				else
 				{
@@ -148,6 +154,9 @@ void HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 		else
 		{
 			// 클라이언트가 아직 데이터를 덜 보냄
+
+			// 데이터를 더 기다려야 함
+			return true;
 		}
 	}
 	else
@@ -155,15 +164,12 @@ void HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 		// content-length만큼 다 처리 한 상태
 	}
 
-	response->Response();
-	response->Close();
+	return false;
 }
 
 void HttpDefaultInterceptor::OnHttpError(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, HttpStatusCode status_code)
 {
 	response->SetStatusCode(status_code);
-	response->Response();
-	response->Close();
 }
 
 void HttpDefaultInterceptor::OnHttpClosed(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)

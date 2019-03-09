@@ -49,14 +49,15 @@ bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::sha
 		[this](const std::shared_ptr<WebSocketClient> &response) -> void
 		{
 			auto client = response->GetResponse()->GetRemote();
-			ov::String description = client->ToString();
 
 			if(client == nullptr)
 			{
-				OV_ASSERT(false, "Cannot find the client information: %s", description.CStr());
+				OV_ASSERT(false, "Cannot find the client information: %s", response->ToString().CStr());
 				response->Close();
 				return;
 			}
+
+			ov::String description = client->ToString();
 
 			logti("New client is connected: %s", description.CStr());
 
@@ -149,10 +150,20 @@ bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::sha
 			if(info == nullptr)
 			{
 				// Nothing to do (Already disconnected)
+
+				// 여기로 진입하면 안됨
+				OV_ASSERT2(false);
 			}
 			else
 			{
-				// Just log
+				if(info->id != "")
+				{
+					// The client is disconnected without send "close" command
+
+					// Forces the session to be cleaned up by sending a stop command
+					NotifyStopCommand(info);
+				}
+
 				logti("Client is disconnected: %s (%s / %s, ufrag: local: %s, remote: %s)",
 				      response->ToString().CStr(),
 				      info->application_name.CStr(), info->stream_name.CStr(),
@@ -206,35 +217,34 @@ bool RtcSignallingServer::RemoveObserver(const std::shared_ptr<RtcSignallingObse
 
 bool RtcSignallingServer::Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<SessionDescription> &peer_sdp)
 {
-	HttpServer::ClientList::const_iterator item;
-	auto &client_list = _http_server->GetClientList();
-
-	for(item = client_list.begin(); item != client_list.end(); ++item)
-	{
-		// HttpClient
-		auto info = item->second->GetRequest()->GetExtraAs<RtcSignallingInfo>();
-
-		if(
-			(info->application_name == application_name) &&
-			(info->stream_name == stream_name) &&
-			((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp))
-			)
+	bool disconnected = _http_server->Disconnect(
+		[application_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool
 		{
-			break;
-		}
-	}
+			auto info = client->GetRequest()->GetExtraAs<RtcSignallingInfo>();
 
-	if(item == client_list.end())
+			if(info == nullptr)
+			{
+				// info should never be nullptr
+				OV_ASSERT2(false);
+			}
+			else
+			{
+				return
+					(info->application_name == application_name) &&
+					(info->stream_name == stream_name) &&
+					((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
+			}
+
+			return false;
+		});
+
+	if(disconnected == false)
 	{
-		OV_ASSERT2(false);
-
-		logtw("Cannot find SDP for session id: %d", peer_sdp->GetSessionId());
-
-		return false;
+		// ICE 연결이 끊어져 Disconnect()이 호출 된 직후, _http_server->Disconnect()이 실행되기 전 타이밍에
+		// WebSocket 연결이 끊어져서 HttpServer::OnDisconnected() 이 처리되고 나면 실패 할 수 있음
 	}
 
-
-	return _http_server->Disconnect(item->first);
+	return disconnected;
 }
 
 bool RtcSignallingServer::Stop()
@@ -421,15 +431,22 @@ void RtcSignallingServer::ProcessCommand(const ov::String &command, const ov::Js
 	}
 	else if(command == "stop")
 	{
-		if(info->peer_sdp != nullptr)
-		{
-			for(auto &observer : _observers)
-			{
-				logtd("Trying to callback OnStopCommand to %p (%s / %s)...", observer.get(), info->application_name.CStr(), info->stream_name.CStr());
+		NotifyStopCommand(info);
+	}
+}
 
-				observer->OnStopCommand(info->application_name, info->stream_name, info->offer_sdp, info->peer_sdp);
-			};
+void RtcSignallingServer::NotifyStopCommand(const std::shared_ptr<RtcSignallingInfo> &info)
+{
+	if(info->peer_sdp != nullptr)
+	{
+		for(auto &observer : _observers)
+		{
+			logtd("Trying to callback OnStopCommand to %p for client %s (%s / %s)...", observer.get(), info->id.CStr(), info->application_name.CStr(), info->stream_name.CStr());
+
+			observer->OnStopCommand(info->application_name, info->stream_name, info->offer_sdp, info->peer_sdp);
 		}
+
+		info->id = "";
 	}
 }
 

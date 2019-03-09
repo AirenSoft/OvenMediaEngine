@@ -11,6 +11,7 @@
 
 #include <physical_port/physical_port_manager.h>
 
+
 HttpServer::HttpServer()
 {
 }
@@ -82,6 +83,8 @@ ssize_t HttpServer::TryParseHeader(const std::shared_ptr<const ov::Data> &data, 
 
 std::shared_ptr<HttpClient> HttpServer::FindClient(ov::Socket *remote)
 {
+	std::lock_guard<std::mutex> guard(_client_list_mutex);
+
 	auto item = _client_list.find(remote);
 
 	bool need_to_disconnect = false;
@@ -97,6 +100,8 @@ std::shared_ptr<HttpClient> HttpServer::FindClient(ov::Socket *remote)
 void HttpServer::OnConnected(ov::Socket *remote)
 {
 	logti("Client(%s) is connected on %s", remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
+
+	std::lock_guard<std::mutex> guard(_client_list_mutex);
 
 	_client_list[remote] = std::make_shared<HttpClient>(dynamic_cast<ov::ClientSocket *>(remote), _default_interceptor);
 }
@@ -117,18 +122,32 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 		std::shared_ptr<HttpRequest> &request = client->GetRequest();
 		std::shared_ptr<HttpResponse> &response = client->GetResponse();
 
+		bool need_to_disconnect = false;
+
 		switch(request->ParseStatus())
 		{
 			case HttpStatusCode::OK:
-				// If the request is parsed, bypass to the interceptor
-				request->GetRequestInterceptor()->OnHttpData(request, response, data);
+			{
+				auto &interceptor = request->GetRequestInterceptor();
 
-				if(response->IsConnected() == false)
+				if(interceptor != nullptr)
 				{
-					request->GetRequestInterceptor()->OnHttpClosed(request, response);
+					// If the request is parsed, bypass to the interceptor
+					need_to_disconnect = (interceptor->OnHttpData(request, response, data) == false);
+
+					if(need_to_disconnect)
+					{
+						need_to_disconnect = need_to_disconnect;
+					}
+				}
+				else
+				{
+					OV_ASSERT2(false);
+					need_to_disconnect = true;
 				}
 
 				break;
+			}
 
 			case HttpStatusCode::PartialContent:
 			{
@@ -142,6 +161,8 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 						// Parsing is completed
 
 						// Find interceptor for the request
+						_interceptor_list_mutex.lock();
+
 						for(auto &interceptor : _interceptor_list)
 						{
 							if(interceptor->IsInterceptorForRequest(request, response))
@@ -151,17 +172,18 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 							}
 						}
 
-						request->GetRequestInterceptor()->OnHttpPrepare(request, response);
+						_interceptor_list_mutex.unlock();
 
-						if(response->IsConnected())
+						auto interceptor = request->GetRequestInterceptor();
+
+						if(interceptor == nullptr)
 						{
-							request->GetRequestInterceptor()->OnHttpData(request, response, data->Subdata(processed_length));
+							need_to_disconnect = true;
+							OV_ASSERT2(false);
 						}
 
-						if(response->IsConnected() == false)
-						{
-							request->GetRequestInterceptor()->OnHttpClosed(request, response);
-						}
+						need_to_disconnect = need_to_disconnect || (interceptor->OnHttpPrepare(request, response) == false);
+						need_to_disconnect = need_to_disconnect || (interceptor->OnHttpData(request, response, data->Subdata(processed_length)) == false);
 					}
 					else if(request->ParseStatus() == HttpStatusCode::PartialContent)
 					{
@@ -172,6 +194,7 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 				{
 					// An error occurred with the request
 					request->GetRequestInterceptor()->OnHttpError(request, response, HttpStatusCode::BadRequest);
+					need_to_disconnect = true;
 				}
 
 				break;
@@ -181,17 +204,14 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 				// 이전에 parse 할 때 오류가 발생했다면 response한 뒤 close() 했으므로, 정상적인 상황이라면 여기에 진입하면 안됨
 				logte("Invalid parse status: %d", request->ParseStatus());
 				OV_ASSERT2(false);
-
+				need_to_disconnect = true;
 				break;
 		}
 
-		if(response->IsConnected() == false)
+		if(need_to_disconnect)
 		{
-			// interceptor 안에서 연결이 해제되었음. client map에서 삭제
-			auto remote = static_cast<ov::Socket *>(response->GetRemote());
-
-			logti("Client(%s) is disconnected from %s (In interceptor)", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
-			_client_list.erase(remote);
+			// 연결을 종료해야 함
+			Disconnect(static_cast<ov::Socket *>(response->GetRemote()));
 		}
 	}
 }
@@ -200,12 +220,16 @@ void HttpServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason
 {
 	logti("Client(%s) is disconnected from %s", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 
+	std::lock_guard<std::mutex> guard(_client_list_mutex);
+
 	_client_list.erase(remote);
 }
 
 bool HttpServer::AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor)
 {
 	// 기존에 등록된 processor가 있는지 확인
+	std::lock_guard<std::mutex> guard(_interceptor_list_mutex);
+
 	auto item = std::find_if(_interceptor_list.begin(), _interceptor_list.end(), [&](std::shared_ptr<HttpRequestInterceptor> const &value) -> bool
 	{
 		return value == interceptor;
@@ -224,6 +248,8 @@ bool HttpServer::AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &i
 
 bool HttpServer::RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor)
 {
+	std::lock_guard<std::mutex> guard(_interceptor_list_mutex);
+
 	// Find interceptor in the list
 	auto item = std::find_if(_interceptor_list.begin(), _interceptor_list.end(), [&](std::shared_ptr<HttpRequestInterceptor> const &value) -> bool
 	{
@@ -237,7 +263,6 @@ bool HttpServer::RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor>
 		return false;
 	}
 
-
 	_interceptor_list.erase(item);
 	return true;
 }
@@ -249,13 +274,40 @@ std::shared_ptr<HttpDefaultInterceptor> HttpServer::GetDefaultInterceptor()
 	return default_interceptor;
 }
 
-const HttpServer::ClientList &HttpServer::GetClientList() const
+ov::Socket *HttpServer::FindClient(ClientIterator iterator)
 {
-	return _client_list;
+	std::lock_guard<std::mutex> guard(_client_list_mutex);
+
+	for(auto &client : _client_list)
+	{
+		if(iterator(client.second))
+		{
+			return client.first;
+		}
+	}
+
+	return nullptr;
+}
+
+bool HttpServer::Disconnect(ClientIterator iterator)
+{
+	std::lock_guard<std::mutex> guard(_client_list_mutex);
+
+	for(auto client = _client_list.begin(); client != _client_list.end(); ++client)
+	{
+		if(iterator(client->second))
+		{
+			return Disconnect(client);
+		}
+	}
+
+	return false;
 }
 
 bool HttpServer::Disconnect(ov::Socket *remote)
 {
+	std::lock_guard<std::mutex> guard(_client_list_mutex);
+
 	auto client = _client_list.find(remote);
 
 	return Disconnect(client);
@@ -265,11 +317,17 @@ bool HttpServer::Disconnect(ClientList::iterator client)
 {
 	if(client != _client_list.end())
 	{
-		if(client->first->Close())
+		auto &response = client->second->GetResponse();
+
+		if(response != nullptr)
 		{
-			_client_list.erase(client);
-			return true;
+			response->Response();
 		}
+
+		client->first->Close();
+		_client_list.erase(client);
+
+		return true;
 	}
 
 	return false;

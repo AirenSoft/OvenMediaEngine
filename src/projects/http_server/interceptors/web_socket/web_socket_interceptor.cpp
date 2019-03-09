@@ -77,7 +77,7 @@ bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const H
 	return false;
 }
 
-void WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
+bool WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
 {
 	// RFC6455 - 4.2.2.  Sending the Server's Opening Handshake
 	response->SetStatusCode(HttpStatusCode::SwitchingProtocols);
@@ -114,13 +114,16 @@ void WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &req
 	{
 		_connection_handler(websocket_response);
 	}
+
+	return true;
 }
 
-void WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data)
+bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data)
 {
 	if(data->GetLength() == 0)
 	{
-		return;
+		// Nothing to do
+		return true;
 	}
 
 	auto item = _websocket_client_list.find(request);
@@ -129,7 +132,7 @@ void WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 	{
 		// 반드시 _websocket_client_list 목록 안에 있어야 함
 		OV_ASSERT2(false);
-		return;
+		return false;
 	}
 
 	logtd("Data is received\n%s", data->Dump().CStr());
@@ -147,8 +150,7 @@ void WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 		case WebSocketFrameParseStatus::Prepare:
 			// 아직도 prepare 상태라면, 헤더 파싱을 못한 상황
 			logtw("Cannot parse header");
-			response->Close();
-			break;
+			return false;
 
 		case WebSocketFrameParseStatus::Parsing:
 			break;
@@ -161,11 +163,10 @@ void WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 			{
 				// 접속 종료 요청됨
 				logtd("Client requested close connection: reason:\n%s", payload->Dump("Reason").CStr());
-				response->Close();
+				return false;
 			}
 			else
 			{
-
 				logtd("%s:\n%s", frame->ToString().CStr(), payload->Dump("Frame", 0L, 1024L, nullptr).CStr());
 
 				// 패킷 조립이 완료되었음
@@ -186,7 +187,7 @@ void WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 
 				if(processed_bytes > 0L)
 				{
-					OnHttpData(request, response, data->Subdata(processed_bytes));
+					return OnHttpData(request, response, data->Subdata(processed_bytes));
 				}
 			}
 
@@ -196,9 +197,10 @@ void WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 		case WebSocketFrameParseStatus::Error:
 			// 잘못된 데이터가 수신되었음 WebSocket 연결을 해제함
 			logtw("Invalid data received from %s", request->ToString().CStr());
-			response->Close();
-			break;
+			return false;
 	}
+
+	return true;
 }
 
 void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, HttpStatusCode status_code)
@@ -217,8 +219,6 @@ void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpRequest> &reque
 	_websocket_client_list.erase(item);
 
 	response->SetStatusCode(status_code);
-	response->Response();
-	response->Close();
 }
 
 void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)

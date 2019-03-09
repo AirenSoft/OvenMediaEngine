@@ -22,7 +22,12 @@ public:
 	virtual bool IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request, const std::shared_ptr<const HttpResponse> &response) = 0;
 
 	/// IsInterceptorForRequest() 직후, request/response를 초기화 하기 위해 호출됨
-	virtual void OnHttpPrepare(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response) = 0;
+	///
+	/// @param request HTTP 요청 정보
+	/// @param response HTTP 응답을 처리하는 instance
+	///
+	/// @return false를 반환할 경우, client와의 연결을 종료함
+	virtual bool OnHttpPrepare(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response) = 0;
 
 	/// 클라이언트로 부터 데이터를 수신함
 	///
@@ -30,7 +35,8 @@ public:
 	/// @param response HTTP 응답을 처리하는 instance
 	/// @param data 수신한 데이터
 	///
-	virtual void OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data) = 0;
+	/// @return false를 반환할 경우, client와의 연결을 종료함
+	virtual bool OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data) = 0;
 
 	/// 처리 도중 오류 발생
 	///
