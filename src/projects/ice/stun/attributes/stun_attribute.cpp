@@ -158,8 +158,25 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType 
 
 		case StunAttributeType::UnknownAttributes:
 		default:
-			// 잘못된 타입이 들어옴
-			logtw("Unknown attributes: %d (length: %d)", type, length);
+			switch(static_cast<int>(type))
+			{
+				case 0x8029:
+					// 0x8029 ICE-CONTROLLED
+				case 0x802A:
+					// 0x802A ICE-CONTROLLING
+				case 0xC057:
+					// 0xC057 NETWORK COST
+				case 0x0025:
+					// 0x0025 USE-CANDIDATE
+				case 0x0024:
+					// 0x0024 PRIORITY
+					break;
+
+				default:
+					// 잘못된 타입이 들어옴
+					logtw("Unknown attributes: %d (%x, length: %d)", type, type, length);
+					break;
+			}
 
 			attribute = std::make_unique<StunUnknownAttribute>((int)type, length);
 			break;

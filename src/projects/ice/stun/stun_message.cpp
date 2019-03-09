@@ -58,36 +58,24 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 {
 	logtd("Trying to check STUN header length...");
 
-	uint8_t fb;
-	stream.Peek(&fb);
+	size_t remained = stream.Remained();
 
-	/* First byte of STUN message is always 0x00 or 0x01. */
-	if (fb != 0x00 && fb != 0x01)
+	if((remained >= DefaultHeaderLength()) == false)
+	{
+		// Not enough data
+		return false;
+	}
+
+	// The message length MUST contain the size, in bytes, of the message
+	// not including the 20-byte STUN header. Since all STUN attributes are
+	// padded to a multiple of 4 bytes, the last 2 bits of this field are
+	// always zero. This provides another way to distinguish STUN packets
+	// from packets of other protocols. (RFC 5389)
+	if((remained & 0b11) != 0)
 	{
 		// This is not a stun packet
 		return false;
 	}
-
-	/*
-	 * The message length MUST contain the size, in bytes, of the message
-	 * not including the 20-byte STUN header. Since all STUN attributes are
-	 * padded to a multiple of 4 bytes, the last 2 bits of this field are
-	 * always zero. This provides another way to distinguish STUN packets
-	 * from packets of other protocols. (RFC 5389)
-	 */
-	if ((stream.Remained() & OV_STUN_LENGTH_AND_VALUE) != 0)
-	{
-		// This is not a stun packet
-		return false;
-	}
-
-	if((stream.Remained() >= DefaultHeaderLength()) == false)
-	{
-		// 데이터 부족 - STUN 메시지가 아님
-		return false;
-	}
-
-	logtd("Trying to parse STUN header...");
 
 	// RFC5389, section 6
 	// All STUN messages MUST start with a 20-byte header followed by zero
@@ -108,8 +96,20 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 	//
 	// Figure 2: Format of STUN Message Header
 
-	// byte ordering 때문에 하나씩 읽어서 구조체에 넣어줌
-	SetType(stream.ReadBE16());
+	// The incoming data is in big endian, so we can not use memcpy(), and we have to assign them one by one
+
+	uint16_t type = stream.ReadBE16();
+
+	// Validate MSB
+	if((type & 0xC000) != 0)
+	{
+		// This is not a stun packet
+		return false;
+	}
+
+	logtd("Trying to parse STUN header...");
+
+	SetType(type);
 
 	// Message Length
 	_message_length = stream.ReadBE16();
@@ -118,9 +118,10 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 
 	if(_magic_cookie != OV_STUN_MAGIC_COOKIE)
 	{
-		// RFC5389에 의하면 magic cookie값은 항상 고정되어 있음
+		// According to RFC5389, magic cookie values are always fixed
 
-		// TODO: RFC3489 형태로 올 경우, magic cookie값이 일치하지 않을 수 있음. RFC3489는 나중에 구현 할 예정
+		// If this STUN message is of the form shown in RFC3489, the magic cookie value may not match
+		// If this happens, we need to implement the RFC3489 format
 		logtd("Invalid magic cookie found: %08X", _magic_cookie);
 		return false;
 	}
@@ -277,7 +278,7 @@ bool StunMessage::WriteAttributes(ov::ByteStream &stream)
 		if(padding_count < 4)
 		{
 			// 4의 배수가 아니므로, zero-padding
-			stream.Write<uint8_t>(padding, padding_count);
+			stream.Write<uint8_t>(padding, static_cast<size_t>(padding_count));
 		}
 	}
 
@@ -301,8 +302,8 @@ bool StunMessage::WriteMessageIntegrityAttribute(ov::ByteStream &stream, const o
 	// ...
 
 	// Hash를 계산할 땐, STUN 헤더의 length에 integrity attribute 길이가 포함되어 있어야 함
-	uint8_t *buffer = (uint8_t *)(stream.GetData()->GetWritableData());
-	uint16_t *length = (uint16_t *)(buffer + sizeof(uint16_t));
+	auto buffer = (uint8_t *)(stream.GetData()->GetWritableData());
+	auto length = (uint16_t *)(buffer + sizeof(uint16_t));
 	int attribute_length = attribute->GetLength(true, true);
 
 	_message_length += attribute_length;
@@ -336,8 +337,8 @@ bool StunMessage::WriteFingerprintAttribute(ov::ByteStream &stream)
 	std::unique_ptr<StunFingerprintAttribute> attribute = std::make_unique<StunFingerprintAttribute>();
 
 	// Crc를 계산할 땐, STUN 헤더의 length에 fingerprint attribute 길이가 포함되어 있어야 함
-	uint8_t *buffer = stream.GetData()->GetWritableDataAs<uint8_t>();
-	uint16_t *length = reinterpret_cast<uint16_t *>(buffer + sizeof(uint16_t));
+	auto buffer = stream.GetData()->GetWritableDataAs<uint8_t>();
+	auto length = reinterpret_cast<uint16_t *>(buffer + sizeof(uint16_t));
 	int attribute_length = attribute->GetLength(true, true);
 
 	_message_length += attribute_length;
@@ -363,10 +364,10 @@ bool StunMessage::WriteFingerprintAttribute(ov::ByteStream &stream)
 bool StunMessage::CalculateFingerprint(ov::ByteStream &stream, ssize_t length, uint32_t *fingerprint) const
 {
 	uint32_t calculated = 0;
-	const uint8_t *buffer = stream.Read<>();
+	const auto buffer = stream.Read<>();
 
 	// 위에서 buffer 포인터에 현재 위치를 담아두었으므로, 나머지 데이터는 읽지 않게 skip
-	if(stream.Skip(length) == false)
+	if(stream.Skip(static_cast<size_t>(length)) == false)
 	{
 		// 데이터가 부족함
 		return false;
@@ -522,13 +523,16 @@ uint16_t StunMessage::GetType() const
 
 void StunMessage::SetType(uint16_t type)
 {
+	// In little endian, the type consist of these values:
+	//
 	// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 	// |13 12 11 10 09 08 07 06 05 04 03 02 01 00|
 	// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 	// |M |M |M |M |M |C |M |M |M |C |M |M |M |M |
 	// |11|10|9 |8 |7 |1 |6 |5 |4 |0 |3 |2 |1 |0 |
 	// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-	// Figure 3: Format of STUN Message Type Field
+	//
+	// Reference: https://tools.ietf.org/html/rfc5389#section-6
 
 	// Message Class
 	_type = type;
@@ -562,11 +566,11 @@ const char *StunMessage::GetClassString() const
 
 void StunMessage::SetClass(StunClass clazz)
 {
-	uint16_t class_value = ((OV_GET_BIT((uint16_t)clazz, 1) << 8) | (OV_GET_BIT((uint16_t)clazz, 0) << 4));
+	auto class_value = static_cast<uint16_t>((OV_GET_BIT((uint16_t)clazz, 1) << 8) | (OV_GET_BIT((uint16_t)clazz, 0) << 4));
 
 	// class 쪽 bit 초기화
 	// STUN Message Type에서, M 부분만 남기기 위한 bit_mask = 0b11111011101111 (0x3EEF)
-	_type = (_type & 0b11111011101111) | class_value;
+	_type = static_cast<uint16_t>((_type & 0b11111011101111) | class_value);
 }
 
 StunMethod StunMessage::GetMethod() const
