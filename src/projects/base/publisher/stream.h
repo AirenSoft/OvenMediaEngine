@@ -12,34 +12,46 @@ class StreamWorker
 {
 public:
 	StreamWorker();
+	~StreamWorker();
 
-	bool Start(std::shared_ptr<Stream> parent);
+	bool Start();
 	bool Stop();
 
 	bool AddSession(std::shared_ptr<Session> session);
 	bool RemoveSession(session_id_t id);
+	std::shared_ptr<Session> GetSession(session_id_t id);
 
 	void SendPacket(uint32_t id, std::shared_ptr<ov::Data> packet);
 
 private:
+
+
 	void WorkerThread();
 
 	std::map<session_id_t, std::shared_ptr<Session>> _sessions;
-
-	ov::Semaphore _queue_event;
+	std::mutex          _session_map_guard;
+	ov::Semaphore       _queue_event;
 
 	class StreamPacket
 	{
 	public:
+		StreamPacket(uint32_t id, std::shared_ptr<ov::Data> data)
+		{
+			_id = id;
+			_data = data->Clone();
+		}
+
 		uint32_t                    _id;
 		std::shared_ptr<ov::Data>   _data;
 	};
 
-	std::queue<std::shared_ptr<StreamPacket>>   _packet_queue;
-	std::mutex _packet_queue_guard;
+	std::shared_ptr<StreamPacket> PopStreamPacket();
 
-	bool _stop_thread_flag;
-	std::thread _worker_thread;
+	std::queue<std::shared_ptr<StreamPacket>>   _packet_queue;
+	std::mutex      _packet_queue_guard;
+
+	bool            _stop_thread_flag;
+	std::thread     _worker_thread;
 
 	std::shared_ptr<Stream> _parent;
 };
@@ -50,6 +62,8 @@ public:
 	// Session을 추가한다.
 	bool AddSession(std::shared_ptr<Session> session);
 	bool RemoveSession(session_id_t id);
+	std::shared_ptr<Session> GetSession(session_id_t id);
+	const std::map<session_id_t, std::shared_ptr<Session>> &GetAllSessions();
 
 	// Child call this function to delivery packet to all sessions
 	bool BroadcastPacket(uint32_t packet_id, std::shared_ptr<ov::Data> packet);
@@ -74,6 +88,9 @@ protected:
 	std::shared_ptr<Application>    GetApplication();
 
 private:
+	StreamWorker&                   GetWorkerByStreamID(session_id_t session_id);
+	std::map<session_id_t, std::shared_ptr<Session>> _sessions;
+
 	uint32_t                        _worker_count;
 	bool                            _run_flag;
 	StreamWorker                    _stream_workers[MAX_STREAM_THREAD_COUNT];

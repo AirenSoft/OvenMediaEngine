@@ -62,7 +62,7 @@ public:
 	std::shared_ptr<SessionDescription> GetPeerSDP();
 
 	bool SendOutgoingData(uint32_t id, std::shared_ptr<ov::Data> packet) override;
-	void OnPacketReceived(std::shared_ptr<SessionInfo> session_info, const std::shared_ptr<const ov::Data> data) override;
+	void OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std::shared_ptr<const ov::Data> data) override;
 
 	uint8_t GetVideoPayloadType();
 	uint8_t GetAudioPayloadType();

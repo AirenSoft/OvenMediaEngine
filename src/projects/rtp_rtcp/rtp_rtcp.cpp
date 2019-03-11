@@ -1,16 +1,12 @@
 #include "rtp_rtcp.h"
 
-RtpRtcp::RtpRtcp(std::shared_ptr<Session> session)
+RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<Session> session)
 	: SessionNode(id, SessionNodeType::RtpRtcp, session)
 {
 
 }
 
 RtpRtcp::~RtpRtcp()
-{
-}
-
-void RtpRtcp::Initialize()
 {
 }
 
@@ -29,7 +25,7 @@ bool RtpRtcp::SendOutgoingData(std::shared_ptr<ov::Data> packet)
 
 bool RtpRtcp::SendData(SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
-	// RTPRTCP는 Send를 하는 첫번 NODE로 SendData를 통해 스트림을 받지 않고 SendOutgoingData를 사용한다.
+	// RTPRTCP는 Send를 하는 첫번째 NODE이므로 SendData를 통해 스트림을 받지 않고 SendOutgoingData를 사용한다.
 	return true;
 }
 
@@ -45,7 +41,7 @@ bool RtpRtcp::OnDataReceived(SessionNodeType from_node, const std::shared_ptr<co
 		return false;
 	}
 
-	// 미디어 데이터를 받는 기능은 현재 없으므로 실질적으로는 RTCP만 들어오게 된다.
+	// Publisher에 미디어 데이터를 받는 기능은 없으므로 실질적으로는 RTCP만 들어오게 된다.
 	// TODO: RTCP는 여기부터 구현한다.
 	return true;
 }

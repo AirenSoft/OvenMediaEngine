@@ -29,7 +29,7 @@ RtcStream::~RtcStream()
 	Stop();
 }
 
-bool RtcStream::Start()
+bool RtcStream::Start(uint32_t worker_count)
 {
 	// OFFER SDP 생성
 	_offer_sdp = std::make_shared<SessionDescription>();
@@ -164,7 +164,7 @@ bool RtcStream::Start()
 
 	logti("Stream is created : %s/%u", GetName().CStr(), GetId());
 
-	return Stream::Start();
+	return Stream::Start(worker_count);
 }
 
 bool RtcStream::Stop()
@@ -179,26 +179,8 @@ std::shared_ptr<SessionDescription> RtcStream::GetSessionDescription()
 	return _offer_sdp;
 }
 
-std::shared_ptr<RtcSession> RtcStream::FindRtcSessionByPeerSDPSessionID(uint32_t session_id)
-{
-	// 모든 Session에 Frame을 전달한다.
-	for(auto const &x : GetSessionMap())
-	{
-		auto session = std::static_pointer_cast<RtcSession>(x.second);
-
-		if(session->GetPeerSDP() != nullptr && session->GetPeerSDP()->GetSessionId() == session_id)
-		{
-			return session;
-		}
-	}
-
-	return nullptr;
-}
-
 bool RtcStream::OnRtpPacketized(std::unique_ptr<RtpPacket> packet)
 {
-	logte("RTP Packetizing completed : length(%d), payload_type(%d)", packet->GetData()->GetLength(), packet->PayloadType());
-
 	BroadcastPacket(packet->PayloadType(), packet->GetData());
 
 	return true;

@@ -85,7 +85,6 @@ bool RtcSession::Start()
 
 	// RTP RTCP 생성
 	_rtp_rtcp = std::make_shared<RtpRtcp>((uint32_t)SessionNodeType::RtpRtcp, session);
-	_rtp_rtcp->Initialize();
 
 	// SRTP 생성
 	_srtp_transport = std::make_shared<SrtpTransport>((uint32_t)SessionNodeType::Srtp, session);
@@ -99,7 +98,7 @@ bool RtcSession::Start()
 	// ICE-DTLS 생성
 	_dtls_ice_transport = std::make_shared<DtlsIceTransport>((uint32_t)SessionNodeType::Ice, session, _ice_port);
 
-
+	// 노드를 연결한다.
 	_rtp_rtcp->RegisterUpperNode(nullptr);
 	_rtp_rtcp->RegisterLowerNode(_srtp_transport);
 	_rtp_rtcp->Start();
@@ -145,7 +144,7 @@ uint8_t RtcSession::GetAudioPayloadType()
 }
 
 // Application에서 바로 Session의 다음 함수를 호출해준다.
-void RtcSession::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, const std::shared_ptr<const ov::Data> data)
+void RtcSession::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std::shared_ptr<const ov::Data> data)
 {
 	// NETWORK에서 받은 Packet은 DTLS로 넘긴다.
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
