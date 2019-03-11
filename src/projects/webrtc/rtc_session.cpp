@@ -155,7 +155,6 @@ void RtcSession::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std
 
 bool RtcSession::SendOutgoingData(uint32_t payload_type, std::shared_ptr<ov::Data> packet)
 {
-	logte("Test : %d", packet->GetLength());
 	if(payload_type != _video_payload_type && payload_type != _audio_payload_type)
 	{
 		return false;
