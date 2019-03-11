@@ -10,7 +10,8 @@ std::shared_ptr<RtcSession> RtcSession::Create(std::shared_ptr<Application> appl
                                                std::shared_ptr<SessionDescription> peer_sdp,
                                                std::shared_ptr<IcePort> ice_port)
 {
-	auto session = std::make_shared<RtcSession>(application, stream, offer_sdp, peer_sdp, ice_port);
+	auto session_info = SessionInfo(peer_sdp->GetSessionId());
+	auto session = std::make_shared<RtcSession>(session_info, application, stream, offer_sdp, peer_sdp, ice_port);
 	if(!session->Start())
 	{
 		return nullptr;
@@ -18,12 +19,13 @@ std::shared_ptr<RtcSession> RtcSession::Create(std::shared_ptr<Application> appl
 	return session;
 }
 
-RtcSession::RtcSession(std::shared_ptr<Application> application,
-                       std::shared_ptr<Stream> stream,
-                       std::shared_ptr<SessionDescription> offer_sdp,
-                       std::shared_ptr<SessionDescription> peer_sdp,
-                       std::shared_ptr<IcePort> ice_port)
-	: Session(std::move(application), std::move(stream))
+RtcSession::RtcSession(SessionInfo &session_info,
+						std::shared_ptr<Application> application,
+                        std::shared_ptr<Stream> stream,
+                        std::shared_ptr<SessionDescription> offer_sdp,
+                        std::shared_ptr<SessionDescription> peer_sdp,
+                        std::shared_ptr<IcePort> ice_port)
+	: Session(session_info, std::move(application), std::move(stream))
 {
 	_offer_sdp = std::move(offer_sdp);
 	_peer_sdp = std::move(peer_sdp);
@@ -153,6 +155,7 @@ void RtcSession::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std
 
 bool RtcSession::SendOutgoingData(uint32_t payload_type, std::shared_ptr<ov::Data> packet)
 {
+	logte("Test : %d", packet->GetLength());
 	if(payload_type != _video_payload_type && payload_type != _audio_payload_type)
 	{
 		return false;

@@ -49,11 +49,12 @@ public:
 	                                          std::shared_ptr<SessionDescription> peer_sdp,
 	                                          std::shared_ptr<IcePort> ice_port);
 
-	RtcSession(std::shared_ptr<Application> application,
-	           std::shared_ptr<Stream> stream,
-	           std::shared_ptr<SessionDescription> offer_sdp,
-	           std::shared_ptr<SessionDescription> peer_sdp,
-	           std::shared_ptr<IcePort> ice_port);
+	RtcSession(SessionInfo &session_info,
+			std::shared_ptr<Application> application,
+	        std::shared_ptr<Stream> stream,
+	        std::shared_ptr<SessionDescription> offer_sdp,
+	        std::shared_ptr<SessionDescription> peer_sdp,
+	        std::shared_ptr<IcePort> ice_port);
 	~RtcSession() override;
 
 	bool Start() override;
