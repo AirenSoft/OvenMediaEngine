@@ -296,43 +296,32 @@ bool RtcSignallingServer::Stop()
 
 std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const ov::String &command, const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message)
 {
-	if(info->id == P2P_INVALID_PEER_ID)
+	if(command == "request_offer")
 	{
-		// 아직 request_offer를 하지 않았음
-
-		// 이 상황에서 사용 할 수 있는 명령은 "request_offer"와 "stop" 두 가지 뿐임
-		if(command == "request_offer")
-		{
-			return DispatchRequestOffer(info, response);
-		}
-		else if(command == "stop")
-		{
-			return DispatchStop(info);
-		}
+		return DispatchRequestOffer(info, response);
 	}
-	else
+
+	const Json::Value &id = object.GetJsonValue("id");
+
+	if(id.isNull() || (id.isInt() == false) || (info->id != id.asInt()))
 	{
-		// request_offer를 해서 id를 발급받은 상태
-
-		// client가 보낸 id와, 서버에서 보관하고 있는 id가 동일한지 체크
-		const Json::Value &id = object.GetJsonValue("id");
-
-		if(id.isNull() || (id.isInt() == false) || (info->id != id.asInt()))
-		{
-			return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid ID");
-		}
-		else if(command == "answer")
-		{
-			return DispatchAnswer(object, info);
-		}
-		else if(command == "candidate")
-		{
-			return DispatchCandidate(object, info);
-		}
-		else if(command == "stop")
-		{
-			return DispatchStop(info);
-		}
+		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid ID");
+	}
+	else if(command == "stop")
+	{
+		return DispatchStop(info);
+	}
+	else if(command == "answer")
+	{
+		return DispatchAnswer(object, info);
+	}
+	else if(command == "candidate")
+	{
+		return DispatchCandidate(object, info);
+	}
+	else if(command == "stop")
+	{
+		return DispatchStop(info);
 	}
 
 	// Unknown command
@@ -345,81 +334,87 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	ov::String stream_name = info->stream_name;
 
 	std::shared_ptr<SessionDescription> sdp = nullptr;
+	std::shared_ptr<ov::Error> error = nullptr;
 
-	// response를 처리 할 수 있는 P2P Host가 있는지 확인
-	peer_id_t t = _p2p_manager.FindHost(response);
+	// Check if there is a host that can accept this client
+	peer_id_t peer = _p2p_manager.FindHost(response);
 
-	if(t == P2P_OME_PEER_ID)
+	if(peer == P2P_OME_PEER_ID)
 	{
-		// 여기에 request offer가 있음.
+		// None of the hosts can accept this client
 		std::find_if(_observers.begin(), _observers.end(), [info, &sdp, application_name, stream_name](auto &observer) -> bool
 		{
-			// observer에 local_candidates를 채워달라고 요청함
+			// Ask observer to fill local_candidates
 			sdp = observer->OnRequestOffer(application_name, stream_name, &(info->local_candidates));
 			return sdp != nullptr;
 		});
-	}
 
-	std::shared_ptr<ov::Error> error = nullptr;
-
-	if(sdp != nullptr)
-	{
-		ov::JsonObject response_json;
-
-		Json::Value &value = response_json.GetJsonValue();
-
-		// SDP를 계산함
-		Json::Value &sdp_value = value["sdp"];
-
-		ov::String offer_sdp;
-
-		if(sdp->ToString(offer_sdp))
+		if(sdp != nullptr)
 		{
-			value["id"] = info->id;
-			value["peer_id"] = P2P_OME_PEER_ID;
-			sdp_value["sdp"] = offer_sdp.CStr();
-			sdp_value["type"] = "offer";
+			ov::JsonObject response_json;
 
-			// candidates: [ <candidate>, <candidate>, ... ]
-			Json::Value candidates(Json::ValueType::arrayValue);
+			Json::Value &value = response_json.GetJsonValue();
 
-			// candiate:
-			// {
-			//     "candidate":"candidate:0 1 UDP 50 192.168.0.183 10000 typ host generation 0",
-			//     "sdpMLineIndex":0,
-			//     "sdpMid":"video"
-			// }
-			// local candidate 목록을 client로 보냄
-			for(const auto &candidate : info->local_candidates)
+			// SDP를 계산함
+			Json::Value &sdp_value = value["sdp"];
+
+			ov::String offer_sdp;
+
+			if(sdp->ToString(offer_sdp))
 			{
-				Json::Value item;
+				value["id"] = info->id;
+				value["peer_id"] = P2P_OME_PEER_ID;
+				sdp_value["sdp"] = offer_sdp.CStr();
+				sdp_value["type"] = "offer";
 
-				item["candidate"] = candidate.GetCandidateString().CStr();
-				item["sdpMLineIndex"] = candidate.GetSdpMLineIndex();
-				if(candidate.GetSdpMid().IsEmpty() == false)
+				// candidates: [ <candidate>, <candidate>, ... ]
+				Json::Value candidates(Json::ValueType::arrayValue);
+
+				// candiate:
+				// {
+				//     "candidate":"candidate:0 1 UDP 50 192.168.0.183 10000 typ host generation 0",
+				//     "sdpMLineIndex":0,
+				//     "sdpMid":"video"
+				// }
+				// local candidate 목록을 client로 보냄
+				for(const auto &candidate : info->local_candidates)
 				{
-					item["sdpMid"] = candidate.GetSdpMid().CStr();
+					Json::Value item;
+
+					item["candidate"] = candidate.GetCandidateString().CStr();
+					item["sdpMLineIndex"] = candidate.GetSdpMLineIndex();
+					if(candidate.GetSdpMid().IsEmpty() == false)
+					{
+						item["sdpMid"] = candidate.GetSdpMid().CStr();
+					}
+
+					candidates.append(item);
 				}
+				value["candidates"] = candidates;
+				value["code"] = static_cast<int>(HttpStatusCode::OK);
 
-				candidates.append(item);
+				info->offer_sdp = sdp;
+
+				response->Send(response_json.ToString());
 			}
-			value["candidates"] = candidates;
-			value["code"] = static_cast<int>(HttpStatusCode::OK);
-
-			info->offer_sdp = sdp;
-
-			response->Send(response_json.ToString());
+			else
+			{
+				logtw("Could not create SDP for stream %s", info->stream_name.CStr());
+				error = ov::Error::CreateError(HttpStatusCode::NotFound, "Cannot create offer");
+			}
 		}
 		else
 		{
-			logtw("Could not create SDP for stream %s", info->stream_name.CStr());
+			// cannot create offer
 			error = ov::Error::CreateError(HttpStatusCode::NotFound, "Cannot create offer");
-
-			//TODO(dimiden): ERROR 처리 할 것
 		}
 	}
 	else
 	{
+		// Found a host that can accept this client
+		// Send 'request_offer_p2p' command to the host
+
+		// TODO(dimiden): implement this
 		error = ov::Error::CreateError(HttpStatusCode::NotFound, "Cannot create offer");
 	}
 
