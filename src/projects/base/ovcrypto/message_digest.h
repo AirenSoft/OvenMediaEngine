@@ -41,7 +41,7 @@ namespace ov
 		bool Update(const std::shared_ptr<const ov::Data> &data);
 
 		bool Finish(void *buffer, ssize_t length);
-		const std::shared_ptr<ov::Data> &Finish();
+		std::shared_ptr<ov::Data> Finish();
 
 		// RFC 2104 HMAC: H(K XOR opad, H(K XOR ipad, text))
 		static bool ComputeHmac(CryptoAlgorithm algorithm, const void *key, ssize_t key_length, const void *input, ssize_t input_length, void *output, ssize_t output_length);

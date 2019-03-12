@@ -210,18 +210,18 @@ HttpStatusCode HttpRequest::ParseHeader(const ov::String &line)
 	return HttpStatusCode::OK;
 }
 
-const ov::String &HttpRequest::GetHeader(const ov::String &key) const noexcept
+ov::String HttpRequest::GetHeader(const ov::String &key) const noexcept
 {
 	return GetHeader(key, "");
 }
 
-const ov::String &HttpRequest::GetHeader(const ov::String &key, const ov::String &default_value) const noexcept
+ov::String HttpRequest::GetHeader(const ov::String &key, ov::String default_value) const noexcept
 {
 	auto item = _request_header.find(key);
 
 	if(item == _request_header.cend())
 	{
-		return default_value;
+		return std::move(default_value);
 	}
 
 	return item->second;

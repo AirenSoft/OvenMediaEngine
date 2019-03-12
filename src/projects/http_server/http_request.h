@@ -82,8 +82,8 @@ public:
 		return _request_header;
 	}
 
-	const ov::String &GetHeader(const ov::String &key) const noexcept;
-	const ov::String &GetHeader(const ov::String &key, const ov::String &default_value) const noexcept;
+	ov::String GetHeader(const ov::String &key) const noexcept;
+	ov::String GetHeader(const ov::String &key, ov::String default_value) const noexcept;
 	const bool IsHeaderExists(const ov::String &key) const noexcept;
 
 	HttpResponse *GetHttpResponse() noexcept
