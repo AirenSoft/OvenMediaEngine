@@ -1,3 +1,9 @@
+#include <utility>
+
+#include <utility>
+
+#include <utility>
+
 //==============================================================================
 //
 //  OvenMediaEngine
@@ -10,6 +16,7 @@
 
 #include "rtc_signalling_observer.h"
 #include "rtc_ice_candidate.h"
+#include "p2p/rtc_p2p_manager.h"
 
 #include <memory>
 
@@ -43,8 +50,8 @@ protected:
 		ov::String stream_name;
 
 		// signalling server에서 발급한 id
-		// WebSocket 접속만 되어 있고, request offer하지 않은 상태에서는 "" 로 되어 있음
-		ov::String id;
+		// WebSocket 접속만 되어 있고, request offer하지 않은 상태에서는 P2P_INVALID_PEER_ID 로 되어 있음
+		peer_id_t id = P2P_INVALID_PEER_ID;
 
 		// client가 연결 한 뒤 request offer 했을 때 보내준 offer SDP
 		std::shared_ptr<SessionDescription> offer_sdp;
@@ -58,25 +65,29 @@ protected:
 		// client의 candidates
 		std::vector<RtcIceCandidate> remote_candidates;
 
-		RtcSignallingInfo(const ov::String &application_name, const ov::String &stream_name, const ov::String &id,
-		                  const std::shared_ptr<SessionDescription> &offer_sdp, const std::shared_ptr<SessionDescription> &peer_sdp,
-		                  const std::vector<RtcIceCandidate> &local_candidates, const std::vector<RtcIceCandidate> &remote_candidates)
-			: application_name(application_name),
-			  stream_name(stream_name),
+		RtcSignallingInfo(ov::String application_name, ov::String stream_name, peer_id_t id,
+		                  std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp,
+		                  std::vector<RtcIceCandidate> local_candidates, std::vector<RtcIceCandidate> remote_candidates)
+			: application_name(std::move(application_name)),
+			  stream_name(std::move(stream_name)),
 			  id(id),
-			  offer_sdp(offer_sdp),
-			  peer_sdp(peer_sdp),
-			  local_candidates(local_candidates),
-			  remote_candidates(remote_candidates)
+			  offer_sdp(std::move(offer_sdp)),
+			  peer_sdp(std::move(peer_sdp)),
+			  local_candidates(std::move(local_candidates)),
+			  remote_candidates(std::move(remote_candidates))
 		{
 		}
 	};
 
 	using SdpCallback = std::function<void(std::shared_ptr<SessionDescription> sdp, std::shared_ptr<ov::Error> error)>;
 
-	void ProcessCommand(const ov::String &command, const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message);
-	void ProcessRequestOffer(const std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message, SdpCallback callback);
-	void NotifyStopCommand(const std::shared_ptr<RtcSignallingInfo> &info);
+	bool InitializeWebSocketServer();
+
+	std::shared_ptr<ov::Error> DispatchCommand(const ov::String &command, const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message);
+	std::shared_ptr<ov::Error> DispatchRequestOffer(const std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response);
+	std::shared_ptr<ov::Error> DispatchAnswer(const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchCandidate(const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchStop(const std::shared_ptr<RtcSignallingInfo> &info);
 
 	const info::Application &_application_info;
 	std::shared_ptr<MediaRouteApplicationInterface> _application;
@@ -85,9 +96,8 @@ protected:
 
 	std::vector<std::shared_ptr<RtcSignallingObserver>> _observers;
 
-	ov::DelayQueue _sdp_timer;
+	std::map<peer_id_t, std::shared_ptr<RtcSignallingInfo>> _client_list;
+	std::mutex _client_list_mutex;
 
-	// key: response
-	// value: signalling info
-	std::map<std::shared_ptr<WebSocketClient>, std::shared_ptr<RtcSignallingInfo>> _client_list;
+	RtcP2PManager _p2p_manager;
 };
