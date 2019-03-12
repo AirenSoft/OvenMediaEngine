@@ -22,7 +22,7 @@ namespace info
 		explicit Application(const cfg::Application &application)
 			: cfg::Application(application)
 		{
-			_application_id = ov::Random::GenerateInteger();
+			_application_id = ov::Random::GenerateUInt32();
 		}
 
 		application_id_t GetId() const

@@ -33,7 +33,7 @@ bool RtcStream::Start()
 {
 	// OFFER SDP 생성
 	_offer_sdp = std::make_shared<SessionDescription>();
-	_offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateInteger(), 2, "IN", 4, "127.0.0.1");
+	_offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
 	_offer_sdp->SetTiming(0, 0);
 	_offer_sdp->SetIceOption("trickle");
 	_offer_sdp->SetIceUfrag(ov::Random::GenerateString(8));
@@ -96,7 +96,7 @@ bool RtcStream::Start()
 					video_media_desc->UseRtcpMux(true);
 					video_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
 					video_media_desc->SetMediaType(MediaDescription::MediaType::Video);
-					video_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
+					video_media_desc->SetCname(ov::Random::GenerateUInt32(), ov::Random::GenerateString(16));
 
 					_offer_sdp->AddMedia(video_media_desc);
 					first_video_desc = false;
@@ -144,7 +144,7 @@ bool RtcStream::Start()
 					audio_media_desc->UseRtcpMux(true);
 					audio_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
 					audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
-					audio_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
+					audio_media_desc->SetCname(ov::Random::GenerateUInt32(), ov::Random::GenerateString(16));
 					_offer_sdp->AddMedia(audio_media_desc);
 					first_audio_desc = false;
 				}

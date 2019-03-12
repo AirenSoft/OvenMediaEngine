@@ -334,7 +334,7 @@ void RelayClient::SendPacket(const RelayPacket &packet)
 	{
 		RelayPacket new_packet = packet;
 
-		new_packet.SetTransactionId(ov::Random::GenerateInteger());
+		new_packet.SetTransactionId(ov::Random::GenerateUInt32());
 
 		_client_socket.Send(&new_packet, sizeof(new_packet));
 	}

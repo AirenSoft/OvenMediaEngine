@@ -4,7 +4,7 @@
 
 SessionInfo::SessionInfo()
 {
-	_id = ov::Random::GenerateInteger();
+	_id = ov::Random::GenerateUInt32();
 }
 
 SessionInfo::SessionInfo(session_id_t session_id)

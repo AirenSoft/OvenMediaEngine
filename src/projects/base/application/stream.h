@@ -34,7 +34,7 @@ namespace info
 	public:
 		Stream()
 		{
-			_stream_id = ov::Random::GenerateInteger();
+			_stream_id = ov::Random::GenerateUInt32();
 		}
 
 		stream_id_t GetId() const
