@@ -201,7 +201,8 @@ HttpStatusCode HttpRequest::ParseHeader(const ov::String &line)
 		return HttpStatusCode::BadRequest;
 	}
 
-	ov::String field_name = line.Left(colon_index);
+	// 모든 헤더 이름은 대문자로 처리
+	ov::String field_name = line.Left(static_cast<size_t>(colon_index)).UpperCaseString();
 	// 처리를 용이하게 하기 위해 OWS(optional white space) 없앰
 	ov::String field_value = line.Substring(colon_index + 1).Trim();
 
@@ -217,7 +218,7 @@ const ov::String &HttpRequest::GetHeader(const ov::String &key) const noexcept
 
 const ov::String &HttpRequest::GetHeader(const ov::String &key, const ov::String &default_value) const noexcept
 {
-	auto item = _request_header.find(key);
+	auto item = _request_header.find(key.UpperCaseString());
 
 	if(item == _request_header.cend())
 	{

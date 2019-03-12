@@ -32,19 +32,19 @@ bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const H
 		if(
 			// 3.   An |Upgrade| header field containing the value "websocket",
 			//      treated as an ASCII case-insensitive value.
-			(request->GetHeader("Upgrade") == "websocket") &&
+			(request->GetHeader("UPGRADE") == "websocket") &&
 
 			// 4.   A |Connection| header field that includes the token "Upgrade",
 			//      treated as an ASCII case-insensitive value.
-			(request->GetHeader("Connection").UpperCaseString().IndexOf("UPGRADE") >= 0L) &&
+			(request->GetHeader("CONNECTION").UpperCaseString().IndexOf("UPGRADE") >= 0L) &&
 
 			// 5.   A |Sec-WebSocket-Key| header field with a base64-encoded (see
 			//      Section 4 of [RFC4648]) value that, when decoded, is 16 bytes in
 			//      length.
-			request->IsHeaderExists("Sec-WebSocket-Key") &&
+			request->IsHeaderExists("SEC-WEBSOCKET-KEY") &&
 
 			// 6.   A |Sec-WebSocket-Version| header field, with a value of 13.
-			(request->GetHeader("Sec-WebSocket-Version") == "13")
+			(request->GetHeader("SEC-WEBSOCKET-VERSION") == "13")
 			)
 		{
 			// 나머지 사항은 체크하지 않음
@@ -92,7 +92,7 @@ bool WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &req
 	//    concatenated value to obtain a 20-byte value and base64-
 	//    encoding (see Section 4 of [RFC4648]) this 20-byte hash.
 	const ov::String unique_id = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-	ov::String key = request->GetHeader("Sec-WebSocket-Key");
+	ov::String key = request->GetHeader("SEC-WEBSOCKET-KEY");
 
 	std::shared_ptr<ov::Data> hash = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Sha1, (key + unique_id).ToData(false));
 	ov::String base64 = ov::Base64::Encode(hash);
@@ -112,7 +112,7 @@ bool WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &req
 
 	if(_connection_handler != nullptr)
 	{
-		_connection_handler(websocket_response);
+		return _connection_handler(websocket_response);
 	}
 
 	return true;
@@ -175,7 +175,10 @@ bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 					if(payload->GetLength() > 0L)
 					{
 						// 데이터가 있을 경우에만 올림
-						_message_handler(item->second.response, frame);
+						if(_message_handler(item->second.response, frame) == false)
+						{
+							return false;
+						}
 					}
 
 					item->second.frame = nullptr;

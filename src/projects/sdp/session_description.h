@@ -111,7 +111,7 @@ private:
 
 	// origin
 	ov::String _user_name = "OvenMediaEngine";
-	uint32_t _session_id = ov::Random::GenerateInteger();
+	uint32_t _session_id = ov::Random::GenerateUInt32();
 	uint32_t _session_version = 2;
 	ov::String _net_type = "IN";
 	uint8_t _ip_version = 4;

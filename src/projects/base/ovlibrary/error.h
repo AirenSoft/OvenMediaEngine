@@ -12,23 +12,27 @@
 
 #include <memory>
 
+enum class HttpStatusCode : uint16_t;
+
 namespace ov
 {
+
 	class Error
 	{
 	public:
 		// 에러가 없는 상태
-		Error();
+		Error() = default;
 		Error(const ov::String &domain, int code);
 		Error(const ov::String &domain, int code, const char *format, ...);
 
 		explicit Error(int code);
 		Error(int code, const char *format, ...);
 
-		Error(const Error &error);
+		Error(const Error &error) = default;
 
 		static std::shared_ptr<Error> CreateError(ov::String domain, int code, const char *format, ...);
 		static std::shared_ptr<Error> CreateError(int code, const char *format, ...);
+		static std::shared_ptr<Error> CreateError(HttpStatusCode code, const char *format, ...);
 		static std::shared_ptr<Error> CreateErrorFromErrno();
 		static std::shared_ptr<Error> CreateErrorFromSrt();
 		static std::shared_ptr<Error> CreateErrorFromOpenSsl();
@@ -40,13 +44,10 @@ namespace ov
 
 		virtual String ToString() const;
 
-	protected:
-		void Initialize(ov::String domain, int code, String message);
-
 	private:
 		String _domain;
 
-		int _code;
+		int _code = 0;
 		String _message;
 	};
 }

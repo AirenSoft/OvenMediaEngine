@@ -18,13 +18,6 @@
 
 namespace ov
 {
-	Error::Error()
-		: _domain(""),
-
-		  _code(0)
-	{
-	}
-
 	Error::Error(const ov::String &domain, int code)
 		: _domain(domain),
 
@@ -57,14 +50,6 @@ namespace ov
 		va_end(list);
 	}
 
-	Error::Error(const Error &error)
-		: _domain(error._domain),
-
-		  _code(error._code),
-		  _message(error._message)
-	{
-	}
-
 	std::shared_ptr<Error> Error::CreateError(ov::String domain, int code, const char *format, ...)
 	{
 		String message;
@@ -85,6 +70,17 @@ namespace ov
 		va_end(list);
 
 		return std::make_shared<Error>(code, message);
+	}
+
+	std::shared_ptr<Error> Error::CreateError(HttpStatusCode code, const char *format, ...)
+	{
+		String message;
+		va_list list;
+		va_start(list, format);
+		message.VFormat(format, list);
+		va_end(list);
+
+		return std::make_shared<Error>(static_cast<int>(code), message);
 	}
 
 	std::shared_ptr<Error> Error::CreateErrorFromErrno()

@@ -114,8 +114,8 @@ struct WebSocketFrameHeader
 class WebSocketClient;
 class WebSocketFrame;
 
-typedef std::function<void(const std::shared_ptr<WebSocketClient> &response)> WebSocketConnectionHandler;
-typedef std::function<void(const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message)> WebSocketMessageHandler;
+typedef std::function<bool(const std::shared_ptr<WebSocketClient> &response)> WebSocketConnectionHandler;
+typedef std::function<bool(const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message)> WebSocketMessageHandler;
 typedef std::function<void(const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const ov::Error> &error)> WebSocketErrorHandler;
 typedef std::function<void(const std::shared_ptr<WebSocketClient> &response)> WebSocketCloseHandler;
 

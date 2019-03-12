@@ -285,7 +285,7 @@ bool SegmentStreamServer::CorsCheck(ov::String &app_name,
                                     const std::shared_ptr<HttpRequest> &request,
                                     const std::shared_ptr<HttpResponse> &response)
 {
-    ov::String origin_url = request->GetHeader("Origin");
+    ov::String origin_url = request->GetHeader("ORIGIN");
 
     //logtd("Cors Check : %s/%s/%s - %s", app_name.CStr(), stream_name.CStr(), file_name.CStr(), origin_url.CStr());
 
