@@ -85,7 +85,8 @@ bool RtpPacketizer::PacketizingVideo(RtpVideoCodecType video_type,
 	// Video Content Type Extension
 	// Video Timing Extension
 
-	size_t max_data_payload_length = DEFAULT_MAX_PACKET_SIZE - rtp_header_template->HeadersSize() - 10;
+	// -28 is for SRTP
+	size_t max_data_payload_length = DEFAULT_MAX_PACKET_SIZE - rtp_header_template->HeadersSize() - 28;
 	size_t last_packet_reduction_len = last_rtp_header->HeadersSize() - rtp_header_template->HeadersSize();
 
 	// Packetizer 생성

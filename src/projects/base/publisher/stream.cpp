@@ -25,7 +25,7 @@ bool StreamWorker::Stop()
 	// Generate Event
 	_queue_event.Notify();
 
-	//_worker_thread.join();
+	_worker_thread.join();
 
 	return true;
 }
@@ -44,7 +44,7 @@ bool StreamWorker::RemoveSession(session_id_t id)
 	std::unique_lock<std::mutex> lock(_session_map_guard);
 	if(_sessions.count(id) <= 0)
 	{
-		logtd("Cannot find session : %u", id);
+		logte("Cannot find session : %u", id);
 		return false;
 	}
 
@@ -62,7 +62,7 @@ std::shared_ptr<Session> StreamWorker::GetSession(session_id_t id)
 {
 	if(_sessions.count(id) <= 0)
 	{
-		logtd("Cannot find session : %u", id);
+		logte("Cannot find session : %u", id);
 		return nullptr;
 	}
 
@@ -74,9 +74,8 @@ void StreamWorker::SendPacket(uint32_t id, std::shared_ptr<ov::Data> packet)
 	// Queue에 패킷을 집어넣는다.
 	auto stream_packet = std::make_shared<StreamWorker::StreamPacket>(id, packet);
 
-	// Mutex (This function may be called by IcePort thread)
 	std::unique_lock<std::mutex> lock(_packet_queue_guard);
-	_packet_queue.push(std::move(stream_packet));
+	_packet_queue.push(stream_packet);
 	lock.unlock();
 
 	_queue_event.Notify();
@@ -91,8 +90,7 @@ std::shared_ptr<StreamWorker::StreamPacket> StreamWorker::PopStreamPacket()
 		return nullptr;
 	}
 
-	// 데이터를 하나 꺼낸다.
-	auto data = std::move(_packet_queue.front());
+	auto data = _packet_queue.front();
 	_packet_queue.pop();
 
 	return std::move(data);
@@ -100,6 +98,8 @@ std::shared_ptr<StreamWorker::StreamPacket> StreamWorker::PopStreamPacket()
 
 void StreamWorker::WorkerThread()
 {
+	std::unique_lock<std::mutex> session_lock(_session_map_guard, std::defer_lock);
+
 	// Queue Event를 기다린다.
 	while(!_stop_thread_flag)
 	{
@@ -114,12 +114,17 @@ void StreamWorker::WorkerThread()
 			continue;
 		}
 
+		session_lock.lock();
 		// 모든 Session에 전송한다.
 		for(auto const &x : _sessions)
 		{
 			auto session = std::static_pointer_cast<Session>(x.second);
-			session->SendOutgoingData(packet->_id, packet->_data);
+
+			// Session will change data
+			std::shared_ptr<ov::Data> session_data = packet->_data->Clone();
+			session->SendOutgoingData(packet->_id, session_data);
 		}
+		session_lock.unlock();
 	}
 }
 
@@ -138,6 +143,11 @@ Stream::~Stream()
 
 bool Stream::Start(uint32_t worker_count)
 {
+	if(worker_count > MAX_STREAM_THREAD_COUNT)
+	{
+		worker_count = MAX_STREAM_THREAD_COUNT;
+	}
+
 	_worker_count = worker_count;
 	// Create WorkerThread
 	for(int i=0; i<_worker_count; i++)
@@ -192,7 +202,7 @@ bool Stream::RemoveSession(session_id_t id)
 {
 	if(_sessions.count(id) <= 0)
 	{
-		logtd("Cannot find session : %u", id);
+		logte("Cannot find session : %u", id);
 		return false;
 	}
 	_sessions.erase(id);

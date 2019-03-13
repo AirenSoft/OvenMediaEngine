@@ -5,7 +5,7 @@
 #include "base/application/stream_info.h"
 #include "application.h"
 
-#define DEFAULT_STREAM_THREAD_COUNT     32
+#define DEFAULT_STREAM_THREAD_COUNT     2
 #define MAX_STREAM_THREAD_COUNT         32
 
 class StreamWorker
