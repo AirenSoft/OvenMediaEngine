@@ -216,7 +216,7 @@ namespace cfg
             if((target != nullptr) && (target->GetTarget() != nullptr)) \
             { \
                 *(target->GetTarget()) = dst; \
-                parsed = true; \
+                parse_item.is_parsed = true; \
                 logtd("%s[%s] [%s] = %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, false).CStr()); \
             } \
             else \
@@ -390,8 +390,6 @@ namespace cfg
 			}
 			else
 			{
-				bool parsed = false;
-
 				logtd("%s[%s] Trying to parse value from node [%s]...", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
 
 				switch(value->GetType())
@@ -410,14 +408,14 @@ namespace cfg
 						if((target != nullptr) && (target->GetTarget() != nullptr))
 						{
 							target->GetTarget()->_parent = this;
-							parsed = (target->GetTarget())->ParseFromNode(child_node, name, value->IsIncludable(), indent + 1);
+							parse_item.is_parsed = (target->GetTarget())->ParseFromNode(child_node, name, value->IsIncludable(), indent + 1);
 						}
 						else
 						{
 							OV_ASSERT2(false);
 						}
 
-						if(parsed)
+						if(parse_item.is_parsed)
 						{
 							logtd("%s[%s] [%s] = %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), "{ ... }");
 						}
@@ -436,7 +434,7 @@ namespace cfg
 							if(value->IsOptional())
 							{
 								// optional이라면 먼저 parse 된 상태로 전환
-								parsed = true;
+								parse_item.is_parsed = true;
 							}
 
 							while(child_node)
@@ -444,9 +442,9 @@ namespace cfg
 								Item *i = target->Create();
 
 								i->_parent = this;
-								parsed = i->ParseFromNode(child_node, name, value->IsIncludable(), indent + 1);
+								parse_item.is_parsed = i->ParseFromNode(child_node, name, value->IsIncludable(), indent + 1);
 
-								if(parsed == false)
+								if(parse_item.is_parsed == false)
 								{
 									break;
 								}
@@ -473,12 +471,10 @@ namespace cfg
 						break;
 				}
 
-				if(parsed == false)
+				if(parse_item.is_parsed == false)
 				{
 					logtd("%s[%s] Could not parse [%s]", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
 				}
-
-				parse_item.is_parsed = parsed;
 			}
 		}
 

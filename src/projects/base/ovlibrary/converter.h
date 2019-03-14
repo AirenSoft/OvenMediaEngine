@@ -173,7 +173,7 @@ namespace ov
 		{
 			try
 			{
-				std::stof(str.CStr(), nullptr);
+				return std::stof(str.CStr(), nullptr);
 			}
 			catch(std::invalid_argument &e)
 			{

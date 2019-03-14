@@ -191,7 +191,7 @@ namespace ov
 		return (final_length == Size());
 	}
 
-	const std::shared_ptr<ov::Data> &MessageDigest::Finish()
+	std::shared_ptr<ov::Data> MessageDigest::Finish()
 	{
 		std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>(Size());
 
