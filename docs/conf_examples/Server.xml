@@ -78,10 +78,12 @@
 							</CORS>
 						</DASH>
 						<WebRTC>
+							<!-- ICE Candidate IP/Port -->
 							<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
 							<IP>192.168.0.183</IP>
 							<MaxConnection>10</MaxConnection>
 							<Port>10000/udp</Port>
+							<!-- STUN timeout -->
 							<Timeout>30000</Timeout>
 							<Signalling>
 								<Port>3333</Port>
