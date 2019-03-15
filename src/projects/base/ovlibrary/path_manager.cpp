@@ -83,4 +83,9 @@ namespace ov
 
 		return path1;
 	}
+
+	bool PathManager::IsAbsolute(const String &path)
+	{
+		return path.HasPrefix("/");
+	}
 }

@@ -181,10 +181,10 @@ namespace cfg
 		// target은 하위 항목
 		bool IsParsed(const void *target) const;
 
-		bool ParseFromFile(const ov::String &file_name, const ov::String &tag_name, int indent);
+		bool ParseFromFile(const ov::String &base_file_name, ov::String file_name, const ov::String &tag_name, int indent);
 		// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
-		bool ParseFromNode(const pugi::xml_node &node, const ov::String &tag_name, int indent);
-		virtual bool ParseFromNode(const pugi::xml_node &node, const ov::String &tag_name, bool process_include, int indent);
+		bool ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent);
+		virtual bool ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, bool process_include, int indent);
 
 		virtual ov::String ToString(int indent) const;
 		ov::String ToString(const ParseItem *parse_item, int indent, bool append_new_line) const;

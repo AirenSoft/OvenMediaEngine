@@ -151,11 +151,6 @@ namespace cfg
 			}
 		}
 
-		if(_parent != nullptr)
-		{
-			return _parent->FindValue(name, parse_item_to_find);
-		}
-
 		return nullptr;
 	}
 
@@ -178,7 +173,7 @@ namespace cfg
 
 	bool Item::Parse(const ov::String &file_name, const ov::String &tag_name)
 	{
-		return ParseFromFile(file_name, tag_name, 0);
+		return ParseFromFile("", file_name, tag_name, 0);
 	}
 
 	bool Item::IsParsed() const
@@ -186,9 +181,14 @@ namespace cfg
 		return _parsed;
 	}
 
-	bool Item::ParseFromFile(const ov::String &file_name, const ov::String &tag_name, int indent)
+	bool Item::ParseFromFile(const ov::String &base_file_name, ov::String file_name, const ov::String &tag_name, int indent)
 	{
 		_tag_name = tag_name;
+
+		if((ov::PathManager::IsAbsolute(file_name) == false) && (base_file_name.IsEmpty() == false))
+		{
+			file_name = ov::PathManager::Combine(ov::PathManager::ExtractPath(base_file_name), file_name);
+		}
 
 		pugi::xml_document document;
 		pugi::xml_parse_result result = document.load_file(file_name);
@@ -199,13 +199,13 @@ namespace cfg
 			return false;
 		}
 
-		return ParseFromNode(document.child(_tag_name), tag_name, false, indent);
+		return ParseFromNode(file_name, document.child(_tag_name), tag_name, false, indent);
 	}
 
 	// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
-	bool Item::ParseFromNode(const pugi::xml_node &node, const ov::String &tag_name, int indent)
+	bool Item::ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent)
 	{
-		return ParseFromNode(node, tag_name, false, indent);
+		return ParseFromNode(base_file_name, node, tag_name, false, indent);
 	}
 
 #define CONFIG_DECLARE_PROCESSOR(value_type, type, dst) \
@@ -227,29 +227,7 @@ namespace cfg
             break; \
         }
 
-#define CONFIG_FROM_ANOTHER_VALUE(value_type, type, src) \
-        case value_type: \
-        { \
-            auto source = dynamic_cast<type *>(src); \
-            auto target = dynamic_cast<type *>(parse_item.value.get()); \
-            \
-            if((source != nullptr) && (target != nullptr)) \
-            { \
-                OV_ASSERT2(source->GetTarget() != nullptr); \
-                OV_ASSERT2(target->GetTarget() != nullptr); \
-                *(target->GetTarget()) = *(source->GetTarget()); \
-                parse_item.is_parsed = true; \
-                logtd("%s[%s] [%s] = %s (from parent value)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, false).CStr()); \
-            } \
-            else \
-            { \
-                OV_ASSERT(false, "Source: %p, Target: %p", source, target); \
-            } \
-            \
-            break; \
-        }
-
-	bool Item::ParseFromNode(const pugi::xml_node &node, const ov::String &tag_name, bool process_include, int indent)
+	bool Item::ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, bool process_include, int indent)
 	{
 		_tag_name = tag_name;
 		_parsed = false;
@@ -264,7 +242,7 @@ namespace cfg
 		{
 			logtd("%s[%s] Include file found: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), inc.value());
 
-			if(ParseFromFile(inc.value(), tag_name, indent) == false)
+			if(ParseFromFile(base_file_name, inc.value(), tag_name, indent) == false)
 			{
 				return false;
 			}
@@ -302,91 +280,7 @@ namespace cfg
 
 			if(child_node.empty() && attribute.empty())
 			{
-				logtd("%s[%s] [%s] is empty", MakeIndentString(indent + 1).CStr(), _tag_name.CStr(), name.CStr());
-
-				if(parse_item.is_parsed)
-				{
-					// the item was parsed from include file
-					continue;
-				}
-
-				ValueBase *parent_value = nullptr;
-
-				if(_parent != nullptr)
-				{
-					logtd("%s[%s] Trying to find [%s] from parent...", MakeIndentString(indent + 1).CStr(), _tag_name.CStr(), name.CStr());
-					parent_value = _parent->FindValue(name, &parse_item);
-				}
-
-				if(parent_value == nullptr)
-				{
-					continue;
-				}
-
-				if(parse_item.value->GetSize() != parent_value->GetSize())
-				{
-					logte("Element size does not matched: %zu != %zu", parse_item.value->GetSize(), parent_value->GetSize());
-					OV_ASSERT2(false);
-					continue;
-				}
-
-				switch(parse_item.value->GetType())
-				{
-					CONFIG_FROM_ANOTHER_VALUE(ValueType::Integer, Value<int>, parent_value)
-					CONFIG_FROM_ANOTHER_VALUE(ValueType::Boolean, Value<bool>, parent_value)
-					CONFIG_FROM_ANOTHER_VALUE(ValueType::Float, Value<float>, parent_value)
-					CONFIG_FROM_ANOTHER_VALUE(ValueType::String, Value<ov::String>, parent_value)
-					CONFIG_FROM_ANOTHER_VALUE(ValueType::Text, Value<ov::String>, parent_value)
-					CONFIG_FROM_ANOTHER_VALUE(ValueType::Attribute, Value<ov::String>, parent_value)
-
-					case ValueType::Element:
-					{
-						auto source = dynamic_cast<ValueForElementBase *>(parent_value);
-						auto target = dynamic_cast<ValueForElementBase *>(value);
-
-						if(source != nullptr)
-						{
-							parse_item.is_parsed = source->Copy(target);
-
-							if(parse_item.is_parsed)
-							{
-								logtd("%s[%s] [%s] = %s (from parent value)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, false).CStr());
-							}
-						}
-						else
-						{
-							OV_ASSERT(false, "Source: %p, Target: %p", source, target);
-						}
-
-						break;
-					}
-					case ValueType::List:
-					{
-						auto source = dynamic_cast<ValueForListBase *>(parent_value);
-						auto target = dynamic_cast<ValueForListBase *>(value);
-
-						if(source != nullptr)
-						{
-							parse_item.is_parsed = source->Copy(target);
-
-							if(parse_item.is_parsed)
-							{
-								logtd("%s[%s] [%s] = %s (from parent value)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, false).CStr());
-							}
-						}
-						else
-						{
-							OV_ASSERT(false, "Source: %p, Target: %p", source, target);
-						}
-
-						break;
-					}
-
-					case ValueType::Unknown:
-					default:
-						OV_ASSERT2(false);
-						break;
-				}
+				continue;
 			}
 			else
 			{
@@ -408,7 +302,7 @@ namespace cfg
 						if((target != nullptr) && (target->GetTarget() != nullptr))
 						{
 							target->GetTarget()->_parent = this;
-							parse_item.is_parsed = (target->GetTarget())->ParseFromNode(child_node, name, value->IsIncludable(), indent + 1);
+							parse_item.is_parsed = (target->GetTarget())->ParseFromNode(base_file_name, child_node, name, value->IsIncludable(), indent + 1);
 						}
 						else
 						{
@@ -442,7 +336,7 @@ namespace cfg
 								Item *i = target->Create();
 
 								i->_parent = this;
-								parse_item.is_parsed = i->ParseFromNode(child_node, name, value->IsIncludable(), indent + 1);
+								parse_item.is_parsed = i->ParseFromNode(base_file_name, child_node, name, value->IsIncludable(), indent + 1);
 
 								if(parse_item.is_parsed == false)
 								{

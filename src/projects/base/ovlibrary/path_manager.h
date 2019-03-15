@@ -24,5 +24,7 @@ namespace ov
 
 		// path1/path2 형태로 만듦
 		static String Combine(String path1, String path2);
+
+		static bool IsAbsolute(const String &path);
 	};
 }
