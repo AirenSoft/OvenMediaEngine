@@ -6,7 +6,7 @@
 		<Host>
 			<Name>default</Name>
 			<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
-			<IP>192.168.0.183</IP>
+			<IP>*</IP>
 			<Applications>
 				<Application>
 					<Name>app</Name>
@@ -56,13 +56,13 @@
 						<RTMP>
 							<MaxConnection>10</MaxConnection>
 							<Port>1935</Port>
-							<!--<OverlapStreamProcess>refresh</OverlapStreamSession>-->
 							<OverlapStreamProcess>reject</OverlapStreamProcess>
 						</RTMP>
 					</Providers>
 					<Publishers>
 						<RTMP />
 						<HLS>
+							<Port>80</Port>
 							<SegmentDuration>3</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
 							<CrossDomain>
@@ -85,6 +85,7 @@
 							<Timeout>30000</Timeout>
 							<Signalling>
 								<Port>3333</Port>
+								<TLS include="TLS.xml" />
 							</Signalling>
 						</WebRTC>
 					</Publishers>
