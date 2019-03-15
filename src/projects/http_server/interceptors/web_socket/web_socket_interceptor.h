@@ -24,7 +24,7 @@ public:
 	{
 	}
 
-	~WebSocketInterceptor() = default;
+	~WebSocketInterceptor();
 
 	// ws.on('connection');
 	void SetConnectionHandler(WebSocketConnectionHandler handler);

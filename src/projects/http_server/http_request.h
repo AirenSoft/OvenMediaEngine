@@ -93,12 +93,6 @@ public:
 
 	bool SetRequestInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor) noexcept
 	{
-		if(interceptor == nullptr)
-		{
-			OV_ASSERT2(false);
-			return false;
-		}
-
 		_interceptor = interceptor;
 		return true;
 	}

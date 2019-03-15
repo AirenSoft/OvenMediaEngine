@@ -503,6 +503,8 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const ov::Json
 			observer->OnIceCandidate(info->application_name, info->stream_name, ice_candidate, username_fragment);
 		}
 	}
+
+	return nullptr;
 }
 
 std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_ptr<RtcSignallingInfo> &info)

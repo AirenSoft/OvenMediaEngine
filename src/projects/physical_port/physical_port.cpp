@@ -189,7 +189,7 @@ bool PhysicalPort::Close()
 		case ov::SocketType::Tcp:
 			if(_server_socket != nullptr)
 			{
-				if(_server_socket->Close())
+				if((_server_socket->GetState() == ov::SocketState::Closed) || (_server_socket->Close()))
 				{
 					_server_socket = nullptr;
 					_observer_list.clear();
@@ -199,7 +199,7 @@ bool PhysicalPort::Close()
 			break;
 
 		case ov::SocketType::Udp:
-			if(_datagram_socket != nullptr)
+			if((_datagram_socket->GetState() == ov::SocketState::Closed) || (_datagram_socket->Close()))
 			{
 				_datagram_socket = nullptr;
 				_observer_list.clear();
@@ -252,4 +252,9 @@ bool PhysicalPort::RemoveObserver(PhysicalPortObserver *observer)
 	_observer_list.erase(item);
 
 	return true;
+}
+
+bool PhysicalPort::DisconnectClient(ov::ClientSocket *client_socket)
+{
+	return _server_socket->DisconnectClient(client_socket);
 }

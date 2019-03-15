@@ -83,6 +83,12 @@ void HttpsServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &ad
 {
 	auto client = FindClient(remote);
 
+	if(client == nullptr)
+	{
+		OV_ASSERT2(false);
+		return;
+	}
+
 	// Need to decrypt using TLS
 
 	// * Data flow:
@@ -117,8 +123,7 @@ void HttpsServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &ad
 
 			default:
 				logte("An error occurred while accept client: %s", remote->ToString().CStr());
-				client->GetResponse()->Close();
-				_client_list.erase(remote);
+				HttpServer::Disconnect(client);
 				return;
 		}
 	}

@@ -134,7 +134,7 @@ HttpStatusCode HttpRequest::ParseRequestLine(const ov::String &line)
 	_method = HttpMethod::Unknown;
 
 	// RFC7231 - 4. Request Methods
-	ov::String method = line.Left(first_space_index);
+	ov::String method = line.Left(static_cast<size_t>(first_space_index));
 
 	HTTP_COMPARE_METHOD("GET", HttpMethod::Get);
 	HTTP_COMPARE_METHOD("HEAD", HttpMethod::Head);
@@ -156,7 +156,7 @@ HttpStatusCode HttpRequest::ParseRequestLine(const ov::String &line)
 	//            / absolute-form
 	//            / authority-form
 	//            / asterisk-form
-	_request_target = line.Substring(first_space_index + 1, last_space_index - first_space_index - 1);
+	_request_target = line.Substring(first_space_index + 1, static_cast<size_t>(last_space_index - first_space_index - 1));
 
 	// RFC7230 - 2.6. Protocol Versioning
 	// HTTP-version  = HTTP-name "/" DIGIT "." DIGIT

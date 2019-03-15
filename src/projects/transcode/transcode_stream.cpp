@@ -413,7 +413,7 @@ TranscodeResult TranscodeStream::do_filter(int32_t track_id, std::unique_ptr<Med
 		return TranscodeResult::NoData;
 	}
 
-	logd("TranscodeStream.Packet", "SendBuffer to do_filter()\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
+	logtp("SendBuffer to do_filter()\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
 
 	filter->second->SendBuffer(std::move(frame));
 
@@ -428,7 +428,7 @@ TranscodeResult TranscodeStream::do_filter(int32_t track_id, std::unique_ptr<Med
 			case TranscodeResult::DataReady:
 				ret_frame->SetTrackId(track_id);
 
-				logd("Transcode.Packet", "Received from filter:\n%s", ov::Dump(ret_frame->GetBuffer(0), ret_frame->GetBufferSize(0), 32).CStr());
+				logtp("Received from filter:\n%s", ov::Dump(ret_frame->GetBuffer(0), ret_frame->GetBufferSize(0), 32).CStr());
 
 				if (_queue_filterd.size() > _max_queue_size)
 				{

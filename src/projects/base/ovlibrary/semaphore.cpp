@@ -30,6 +30,7 @@ namespace ov
 		{
 			_condition.wait(lock);
 		}
+
 		--_count;
 	}
 

@@ -26,8 +26,8 @@ public:
 	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpClient>>;
 	using ClientIterator = std::function<bool(const std::shared_ptr<HttpClient> &client)>;
 
-	HttpServer();
-	virtual ~HttpServer();
+	HttpServer() = default;
+	~HttpServer() override;
 
 	virtual bool Start(const ov::SocketAddress &address);
 	virtual bool Stop();
@@ -35,14 +35,12 @@ public:
 	bool AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor);
 	bool RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor);
 
-	std::shared_ptr<HttpDefaultInterceptor> GetDefaultInterceptor();
-
 	// If the iterator returns true, FindClient() will return the client
 	ov::Socket *FindClient(ClientIterator iterator);
 
 	// If the iterator returns true, the client will be disconnected
 	bool Disconnect(ClientIterator iterator);
-	bool Disconnect(ov::Socket *remote);
+	bool Disconnect(std::shared_ptr<HttpClient> client);
 
 protected:
 	// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨
@@ -59,7 +57,8 @@ protected:
 	void OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 	void OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 
-	bool Disconnect(ClientList::iterator client);
+	bool Disconnect(ov::Socket *remote);
+	bool DisconnectInternal(std::shared_ptr<HttpClient> client);
 
 protected:
 	// HttpServer와 연결된 physical port

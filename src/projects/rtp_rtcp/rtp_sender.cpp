@@ -171,7 +171,7 @@ bool RTPSender::SendAudio(FrameType frame_type,
 		return false;
 	}
 
-	// logd("RtpSender.Packet", "Trying to send packet:\n%s", packet->GetData()->Dump().CStr());
+	// logtp("Trying to send packet:\n%s", packet->GetData()->Dump().CStr());
 
 	_session->SendRtpToNetwork(std::move(packet));
 

@@ -106,15 +106,16 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 			logtd("HTTP message is parsed successfully");
 
 			// 처리할 수 있는 handler 찾음
+			int handler_count = 0;
+
+			// 403 Method not allowed 처리 하기 위한 수단
+			bool regex_found = false;
+
 			for(auto &request_info : _request_handler_list)
 			{
 #if DEBUG
 				logtd("Check if url [%s] is matches [%s]", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr());
 #endif // DEBUG
-
-				int handler_count = 0;
-				// 403 Method not allowed 처리 하기 위한 수단
-				bool regex_found = false;
 
 				response->SetStatusCode(HttpStatusCode::OK);
 
@@ -131,24 +132,24 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 						request_info.handler(request, response);
 					}
 				}
+			}
 
-				if(handler_count == 0)
+			if(handler_count == 0)
+			{
+				if(regex_found)
 				{
-					if(regex_found)
-					{
-						// 패턴에 일치하는 handler는 찾았으나, 실제로 1의 handler도 실행이 안되었다면 Method not allowed임
-						response->SetStatusCode(HttpStatusCode::MethodNotAllowed);
-					}
-					else
-					{
-						// URL을 처리할 수 있는 handler를 아예 찾을 수 없음
-						response->SetStatusCode(HttpStatusCode::NotFound);
-					}
+					// 패턴에 일치하는 handler는 찾았으나, 실제로 1의 handler도 실행이 안되었다면 Method not allowed임
+					response->SetStatusCode(HttpStatusCode::MethodNotAllowed);
 				}
 				else
 				{
-					// 처리 완료
+					// URL을 처리할 수 있는 handler를 아예 찾을 수 없음
+					response->SetStatusCode(HttpStatusCode::NotFound);
 				}
+			}
+			else
+			{
+				// 처리 완료
 			}
 		}
 		else

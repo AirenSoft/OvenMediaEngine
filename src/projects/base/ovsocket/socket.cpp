@@ -415,7 +415,7 @@ namespace ov
 			{
 				if(_epoll != InvalidSocket)
 				{
-					epoll_event event;
+					epoll_event event {};
 
 					event.data.ptr = parameter;
 					// EPOLLIN: input event 확인
@@ -627,6 +627,8 @@ namespace ov
 				return _last_epoll_event_count;
 			}
 		}
+
+		return -1;
 	}
 
 	const epoll_event *Socket::EpollEvents(int index)
@@ -655,13 +657,14 @@ namespace ov
 					return false;
 				}
 
-				logtd("[%p] [#%d] Trying to remove socket #%d from epoll...", this, _socket.GetSocket(), socket->_socket.GetSocket());
+				logtd("[%p] [#%d] Trying to remove a socket #%d from epoll...", this, _socket.GetSocket(), socket->_socket.GetSocket());
 
 				int result = ::epoll_ctl(_epoll, EPOLL_CTL_DEL, socket->_socket.GetSocket(), nullptr);
 
 				if(result == -1)
 				{
-					logte("[%p] [#%d] Could not delete from epoll for descriptor %d (result: %d)", this, _socket.GetSocket(), socket->_socket.GetSocket(), result);
+					logte("[%p] [#%d] Could not delete the socket from epoll for descriptor %d (result: %s)", this, _socket.GetSocket(), socket->_socket.GetSocket(), ov::Error::CreateErrorFromErrno()->ToString().CStr());
+					logte("\n%s", ov::StackTrace::GetStackTrace().CStr());
 					return false;
 				}
 
@@ -679,7 +682,7 @@ namespace ov
 
 				SRTSOCKET sock = socket->_socket.GetSocket();
 
-				logtd("[%p] [#%d] Trying to remove socket #%d from epoll...", this, _socket.GetSocket(), sock);
+				logtd("[%p] [#%d] Trying to remove a SRT socket #%d from epoll...", this, _socket.GetSocket(), sock);
 
 				int result = ::srt_epoll_remove_usock(_srt_epoll, sock);
 
@@ -687,7 +690,7 @@ namespace ov
 
 				if(result == SRT_ERROR)
 				{
-					logte("[%p] [#%d] Could not delete from epoll for descriptor %d (result: %s)", this, _socket.GetSocket(), sock, srt_getlasterror_str());
+					logte("[%p] [#%d] Could not delete the SRT socket from epoll for descriptor %d (result: %s)", this, _socket.GetSocket(), sock, ov::Error::CreateErrorFromSrt()->ToString().CStr());
 					return false;
 				}
 
@@ -761,7 +764,8 @@ namespace ov
 		// TODO: 별도 send queue를 만들어야 함
 		//OV_ASSERT2(_socket.IsValid());
 
-		logtd("[%p] [#%d] Trying to send data:\n%s", this, _socket.GetSocket(), ov::Dump(data, length, 64).CStr());
+		logtd("[%p] [#%d] Trying to send data %zu bytes...", this, _socket.GetSocket(), length);
+		logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, length, 64).CStr());
 
 		auto data_to_send = static_cast<const uint8_t *>(data);
 		size_t remained = length;
@@ -782,7 +786,7 @@ namespace ov
 							continue;
 						}
 
-						logtw("[%p] [#%d] Could not send data: %zd", this, sent);
+						logtw("[%p] [#%d] Could not send data: %zd", this, _socket.GetSocket(), sent);
 
 						break;
 					}
@@ -839,9 +843,12 @@ namespace ov
 
 				break;
 			}
+
+			case SocketType::Unknown:
+				break;
 		}
 
-		logtd("[%p] [#%d] Sent: %zu bytes", this, _socket.GetSocket(), total_sent);
+		logtd("[%p] [#%d] %zu bytes sent", this, _socket.GetSocket(), total_sent);
 
 		return total_sent;
 	}
@@ -912,17 +919,18 @@ namespace ov
 				break;
 		}
 
-		logtd("[%p] [#%d] Read bytes: %zd", this, _socket.GetSocket(), read_bytes);
-
 		if(read_bytes == 0L)
 		{
 			logtd("[%p] [#%d] Client is disconnected (errno: %d)", this, _socket.GetSocket(), errno);
 
 			data->SetLength(0L);
-			Close();
+
+			return Error::CreateErrorFromErrno();
 		}
 		else if(read_bytes < 0L)
 		{
+			logtd("[%p] [#%d] recv() returns: %zd", this, _socket.GetSocket(), read_bytes);
+
 			switch(GetType())
 			{
 				case SocketType::Udp:
@@ -948,6 +956,8 @@ namespace ov
 						default:
 							logte("[%p] [#%d] An error occurred while read data: %s", this, _socket.GetSocket(), error->ToString().CStr());
 							SetState(SocketState::Error);
+
+							logte("\n%s", ov::StackTrace::GetStackTrace().CStr());
 							return error;
 					}
 
@@ -1113,7 +1123,7 @@ namespace ov
 			return true;
 		}
 
-		logtd("[%p] Socket is already closed");
+		logtd("[%p] [#%d] Socket is already closed", this, socket.GetSocket());
 
 		OV_ASSERT2(_state == SocketState::Closed);
 

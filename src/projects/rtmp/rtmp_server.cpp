@@ -145,7 +145,7 @@ bool RtmpServer::Disconnect(const ov::String &app_name, uint32_t stream_id)
 
         if(chunk_stream->GetAppName() == app_name && chunk_stream->GetStreamId()== stream_id)
         {
-            _physical_port->RemoveClientSocket(dynamic_cast<ov::ClientSocket *>(item->first));
+	        _physical_port->DisconnectClient(dynamic_cast<ov::ClientSocket *>(item->first));
             _chunk_stream_list.erase(item);
             return true;
         }
@@ -194,7 +194,7 @@ void RtmpServer::OnDataReceived(ov::Socket *remote,
             }
 
             // Socket Close
-            _physical_port->RemoveClientSocket(dynamic_cast<ov::ClientSocket *>(item->first));
+	        _physical_port->DisconnectClient(dynamic_cast<ov::ClientSocket *>(item->first));
 
             // Strema Close
             _chunk_stream_list.erase(item);
@@ -407,7 +407,7 @@ void RtmpServer::OnGarbageCheck()
             }
 
             // Socket Close
-            _physical_port->RemoveClientSocket(dynamic_cast<ov::ClientSocket *>(item->first));
+	        _physical_port->DisconnectClient(dynamic_cast<ov::ClientSocket *>(item->first));
 
             // Strema Close
             _chunk_stream_list.erase(item++);

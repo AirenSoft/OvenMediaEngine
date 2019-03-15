@@ -70,13 +70,13 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer, bool convert_bi
 		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Aac)
 		{
 			_bsfa.convert_to(buffer.get());
-			logd("MediaRouter.Stream.AAC.Packet", "Enqueue for AAC\n%s", buffer->GetData()->Dump(32).CStr());
+			logtp("Enqueue for AAC\n%s", buffer->GetData()->Dump(32).CStr());
 		}
 		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Opus)
 		{
 			// logtw("%s", buffer->GetData()->Dump(32).CStr());
 			// _bsfa.convert_to(buffer.GetBuffer());
-			logd("MediaRouter.Stream.OPUS.Packet", "Enqueue for OPUS\n%s", buffer->GetData()->Dump(32).CStr());
+			logtp("Enqueue for OPUS\n%s", buffer->GetData()->Dump(32).CStr());
 		}
 		else
 		{

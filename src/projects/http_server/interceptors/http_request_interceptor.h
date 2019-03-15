@@ -52,7 +52,8 @@ public:
 	/// @param request HTTP 요청 정보
 	/// @param response HTTP 응답을 처리하는 instance
 	///
-	/// @remark 연결이 이미 해제 된 상태이기 때문에, 이 상태에서는 더 이상 클라이언트로 응답을 보낼 수 없음
+	/// @remark 연결이 이미 해제 된 상태이기 때문에, 이 상태에서는 더 이상 클라이언트로 응답을 보낼 수 없음.
+	/// Closed는 Error가 발생해도 항상 호출되는 것을 보장함
 	virtual void OnHttpClosed(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response) = 0;
 
 protected:

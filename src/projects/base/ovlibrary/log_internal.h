@@ -88,7 +88,7 @@ namespace ov
 
 		inline void ResetEnable()
 		{
-			std::unique_lock<std::mutex> lock(_mutex);
+			std::lock_guard<std::mutex> lock(_mutex);
 
 			_enable_map.clear();
 
@@ -109,7 +109,7 @@ namespace ov
 		///          예4) level이 info 이면서 is_enabled가 true, debug 로그 출력 안함, information~critical 로그 출력함.
 		inline void SetEnable(const char *tag_regex, OVLogLevel level, bool is_enabled)
 		{
-			std::unique_lock<std::mutex> lock(_mutex);
+			std::lock_guard<std::mutex> lock(_mutex);
 
 			// 캐시 모두 삭제
 			_enable_map.clear();
@@ -128,7 +128,7 @@ namespace ov
 
 		inline bool IsEnabled(const char *tag, OVLogLevel level)
 		{
-			std::unique_lock<std::mutex> lock(_mutex);
+			std::lock_guard<std::mutex> lock(_mutex);
 
 			auto item = _enable_map.find(tag);
 

@@ -11,11 +11,6 @@
 
 #include <physical_port/physical_port_manager.h>
 
-
-HttpServer::HttpServer()
-{
-}
-
 HttpServer::~HttpServer()
 {
 	// PhysicalPort should be stopped before release HttpServer
@@ -44,7 +39,18 @@ bool HttpServer::Stop()
 {
 	if(_physical_port == nullptr)
 	{
+		OV_ASSERT2(false);
 		return false;
+	}
+
+	// client들 정리
+	_client_list_mutex.lock();
+	auto client_list = std::move(_client_list);
+	_client_list_mutex.unlock();
+
+	for(auto &client : client_list)
+	{
+		Disconnect(client.second);
 	}
 
 	_physical_port->RemoveObserver(this);
@@ -161,18 +167,18 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 						// Parsing is completed
 
 						// Find interceptor for the request
-						_interceptor_list_mutex.lock();
-
-						for(auto &interceptor : _interceptor_list)
 						{
-							if(interceptor->IsInterceptorForRequest(request, response))
+							std::lock_guard<std::mutex> guard(_interceptor_list_mutex);
+
+							for(auto &interceptor : _interceptor_list)
 							{
-								request->SetRequestInterceptor(interceptor);
-								break;
+								if(interceptor->IsInterceptorForRequest(request, response))
+								{
+									request->SetRequestInterceptor(interceptor);
+									break;
+								}
 							}
 						}
-
-						_interceptor_list_mutex.unlock();
 
 						auto interceptor = request->GetRequestInterceptor();
 
@@ -211,7 +217,7 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 		if(need_to_disconnect)
 		{
 			// 연결을 종료해야 함
-			Disconnect(static_cast<ov::Socket *>(response->GetRemote()));
+			Disconnect(client);
 		}
 	}
 }
@@ -220,9 +226,7 @@ void HttpServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason
 {
 	logti("Client(%s) is disconnected from %s", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 
-	std::lock_guard<std::mutex> guard(_client_list_mutex);
-
-	_client_list.erase(remote);
+	Disconnect(remote);
 }
 
 bool HttpServer::AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor)
@@ -263,15 +267,9 @@ bool HttpServer::RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor>
 		return false;
 	}
 
+
 	_interceptor_list.erase(item);
 	return true;
-}
-
-std::shared_ptr<HttpDefaultInterceptor> HttpServer::GetDefaultInterceptor()
-{
-	std::shared_ptr<HttpDefaultInterceptor> default_interceptor = std::static_pointer_cast<HttpDefaultInterceptor>(_default_interceptor);
-
-	return default_interceptor;
 }
 
 ov::Socket *HttpServer::FindClient(ClientIterator iterator)
@@ -291,44 +289,71 @@ ov::Socket *HttpServer::FindClient(ClientIterator iterator)
 
 bool HttpServer::Disconnect(ClientIterator iterator)
 {
-	std::lock_guard<std::mutex> guard(_client_list_mutex);
+	std::shared_ptr<HttpClient> client;
 
-	for(auto client = _client_list.begin(); client != _client_list.end(); ++client)
 	{
-		if(iterator(client->second))
+		std::lock_guard<std::mutex> guard(_client_list_mutex);
+
+		for(auto client_iterator = _client_list.begin(); client_iterator != _client_list.end(); ++client_iterator)
 		{
-			return Disconnect(client);
+			if(iterator(client_iterator->second))
+			{
+				client = client_iterator->second;
+				_client_list.erase(client_iterator);
+			}
 		}
 	}
 
-	return false;
+	return DisconnectInternal(client);
+}
+
+bool HttpServer::Disconnect(std::shared_ptr<HttpClient> client)
+{
+	return Disconnect(client->GetRequest()->GetRemote());
 }
 
 bool HttpServer::Disconnect(ov::Socket *remote)
 {
-	std::lock_guard<std::mutex> guard(_client_list_mutex);
+	std::shared_ptr<HttpClient> client;
 
-	auto client = _client_list.find(remote);
-
-	return Disconnect(client);
-}
-
-bool HttpServer::Disconnect(ClientList::iterator client)
-{
-	if(client != _client_list.end())
 	{
-		auto &response = client->second->GetResponse();
+		std::lock_guard<std::mutex> guard(_client_list_mutex);
 
-		if(response != nullptr)
+		auto client_iterator = _client_list.find(remote);
+
+		if(client_iterator != _client_list.end())
 		{
-			response->Response();
+			client = client_iterator->second;
+			_client_list.erase(client_iterator);
 		}
-
-		client->first->Close();
-		_client_list.erase(client);
-
-		return true;
+		else
+		{
+			// 서버가 Stop() 되자마자 Client 접속을 끊으면 이곳으로 진입 할 수 있음
+		}
 	}
 
-	return false;
+	return DisconnectInternal(client);
+}
+
+bool HttpServer::DisconnectInternal(std::shared_ptr<HttpClient> client)
+{
+	if(client == nullptr)
+	{
+		return false;
+	}
+
+	auto request = client->GetRequest();
+	auto response = client->GetResponse();
+	auto interceptor = request->GetRequestInterceptor();
+
+	request->SetRequestInterceptor(nullptr);
+
+	_physical_port->DisconnectClient(request->GetRemote());
+
+	if(interceptor != nullptr)
+	{
+		interceptor->OnHttpClosed(request, response);
+	}
+
+	return true;
 }

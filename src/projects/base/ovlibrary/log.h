@@ -58,6 +58,8 @@ typedef enum OVLogLevel
 #define logc(tag, format, ...)                        ov_log_internal(OVLogLevelCritical,       tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
 
 #define logtd(format, ...)                            logd(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
+#define logtp(format, ...)                            logd(OV_LOG_TAG ".Packet", format, ## __VA_ARGS__) // NOLINT
+
 #define logti(format, ...)                            logi(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
 #define logtw(format, ...)                            logw(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
 #define logte(format, ...)                            loge(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT

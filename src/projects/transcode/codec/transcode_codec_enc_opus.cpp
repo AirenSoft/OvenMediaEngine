@@ -76,7 +76,7 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr <TranscodeContext> c
 
 void OvenCodecImplAvcodecEncOpus::SendBuffer(std::unique_ptr<const MediaFrame> frame)
 {
-	logd("Transcode.OPUS.Packet", "[-> RAW DATA for OPUS]\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
+	logtp("[-> RAW DATA for OPUS]\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
 
 	TranscodeEncoder::SendBuffer(std::move(frame));
 }
@@ -205,8 +205,6 @@ std::unique_ptr <MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeR
 	encoded->SetLength(static_cast<size_t>(encoded_bytes));
 
 	// Data is encoded successfully
-	logd("Transcode.OPUS.Packet", "Data before OPUS encoding\n%s", _buffer->Dump(32).CStr());
-	logd("Transcode.OPUS.Packet", "Data after OPUS encoding\n%s", encoded->Dump(32).CStr());
 
 	// dequeue <bytes_to_encoded> bytes
 	auto buffer = _buffer->GetWritableDataAs<uint8_t>();

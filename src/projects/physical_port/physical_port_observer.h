@@ -33,6 +33,8 @@ class PhysicalPortObserver
 public:
 	friend class PhysicalPort;
 
+	virtual ~PhysicalPortObserver() = default;
+
 	// TCP/SRT등 일 때, 상대방이 접속하면 호출됨
 	virtual void OnConnected(ov::Socket *remote)
 	{

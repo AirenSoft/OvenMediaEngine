@@ -11,18 +11,24 @@ LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES) \
 
 # =============
 # Precompiled Header (temporary solution)
-OVLIBRARY_PATH := $(LOCAL_PATH)/ovlibrary.h
-OVLIBRARY_GCH := $(OVLIBRARY_PATH).gch
-$(LOCAL_PATH)/log.cpp: $(OVLIBRARY_GCH)
+LOCAL_PRECOMPILE_FILE := $(LOCAL_PATH)/ovlibrary.h
+LOCAL_PRECOMPILE_TEMP_DEP := $(LOCAL_PATH)/log.cpp
 
-OVLIBRARY_DEPS := ovlibrary.h.P
-$(OVLIBRARY_GCH): $(OVLIBRARY_DEPS)
-$(OVLIBRARY_DEPS):
-	@g++ -I../ -I../third_party -MM $(OVLIBRARY_PATH) -MT $(OVLIBRARY_GCH) -o $@
-$(OVLIBRARY_GCH) : $(OVLIBRARY_DEPS)
+# Dummy dependency
+LOCAL_PRECOMPILE_TARGET := $(LOCAL_PRECOMPILE_FILE).gch
+LOCAL_PRECOMPILE_DEPS := $(LOCAL_PRECOMPILE_FILE).P
+
+$(LOCAL_PRECOMPILE_TEMP_DEP) : $(LOCAL_PRECOMPILE_TARGET)
+
+$(LOCAL_PRECOMPILE_DEPS):
+	@echo "Generating precompiled header dependencies for $@..."
+	@g++ -I../ -I../third_party -MM $(LOCAL_PRECOMPILE_FILE) -MT $(LOCAL_PRECOMPILE_TARGET) -o $@
+
+$(LOCAL_PRECOMPILE_TARGET) : $(LOCAL_PRECOMPILE_DEPS)
 	@echo "Creating precompiled header $@..."
-	@g++ -o $@ $(OVLIBRARY_PATH) -Iprojects/ -Iprojects/third_party
-include $(OVLIBRARY_DEPS)
+	@g++ -o $@ $(LOCAL_PRECOMPILE_FILE) -Iprojects/ -Iprojects/third_party
+
+include $(LOCAL_PRECOMPILE_DEPS)
 # =============
 
 include $(BUILD_STATIC_LIBRARY)

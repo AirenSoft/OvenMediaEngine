@@ -18,21 +18,24 @@ LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES) \
 
 # =============
 # Precompiled Header (temporary solution)
-OVCONFIG_PATH := $(LOCAL_PATH)/config.h
-OVCONFIG_GCH := $(OVCONFIG_PATH).gch
-OVCONFIG_DEPS := config.h.P
+LOCAL_PRECOMPILE_FILE := $(LOCAL_PATH)/config.h
+LOCAL_PRECOMPILE_TEMP_DEP := $(LOCAL_PATH)/config_loader.cpp
 
-$(LOCAL_PATH)/config_loader.cpp: $(OVCONFIG_GCH)
+# Dummy dependency
+LOCAL_PRECOMPILE_TARGET := $(LOCAL_PRECOMPILE_FILE).gch
+LOCAL_PRECOMPILE_DEPS := $(LOCAL_PRECOMPILE_FILE).P
 
-$(OVCONFIG_GCH): $(OVCONFIG_DEPS)
+$(LOCAL_PRECOMPILE_TEMP_DEP) : $(LOCAL_PRECOMPILE_TARGET)
 
-$(OVCONFIG_DEPS):
-	@g++ -I../ -I../third_party -MM $(OVCONFIG_PATH) -MT $(OVCONFIG_GCH) -o $@
+$(LOCAL_PRECOMPILE_DEPS):
+	@echo "Generating precompiled header dependencies for $@..."
+	@g++ -I../ -I../third_party -MM $(LOCAL_PRECOMPILE_FILE) -MT $(LOCAL_PRECOMPILE_TARGET) -o $@
 
-$(OVCONFIG_GCH) : $(OVCONFIG_DEPS)
+$(LOCAL_PRECOMPILE_TARGET) : $(LOCAL_PRECOMPILE_DEPS)
 	@echo "Creating precompiled header $@..."
-	@g++ -o $@ $(OVCONFIG_PATH) -Iprojects/ -Iprojects/third_party
-include $(OVCONFIG_DEPS)
+	@g++ -o $@ $(LOCAL_PRECOMPILE_FILE) -Iprojects/ -Iprojects/third_party
+
+include $(LOCAL_PRECOMPILE_DEPS)
 # =============
 
 include $(BUILD_STATIC_LIBRARY)

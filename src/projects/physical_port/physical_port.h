@@ -44,7 +44,7 @@ public:
 
 	bool RemoveObserver(PhysicalPortObserver *observer);
 
-	bool RemoveClientSocket(ov::ClientSocket * client_socket){ return _server_socket->RemoveClientSocket(client_socket); }
+	bool DisconnectClient(ov::ClientSocket *client_socket);
 
 protected:
 	bool CreateServerSocket(ov::SocketType type, const ov::SocketAddress &address);

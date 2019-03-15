@@ -79,9 +79,9 @@ namespace ov
 		instance_version = version;
 	}
 
-	void StackTrace::ShowTrace()
+	String StackTrace::GetStackTrace(int line_count)
 	{
-		PrintStackTrace(SIGUSR1, "ShowTrace");
+		return std::move(GetStackTraceInternal(2, line_count));
 	}
 
 	void StackTrace::AbortHandler(int signum, siginfo_t *si, void *unused)
@@ -162,7 +162,7 @@ namespace ov
 				sig_name = "UNKNOWN";
 		}
 
-		PrintStackTrace(signum, sig_name);
+		WriteStackTrace(signum, sig_name);
 
 		exit(signum);
 	}
@@ -407,42 +407,31 @@ namespace ov
 		return true;
 	}
 
-	void StackTrace::PrintStackTrace(int signum, String sig_name)
+	String StackTrace::GetStackTraceInternal(int offset, int line_count)
 	{
 		void *addr_list[64];
-		char time_buffer[30];
 
-		char file_name[32];
 		String log;
-
-		time_t t = ::time(nullptr);
-		::strftime(time_buffer, sizeof(time_buffer) / sizeof(time_buffer[0]), "%Y-%m-%dT%H:%M:%S%z", localtime(&t));
-
-		strftime(file_name, 32, "crash_%Y%m%d.dump", localtime(&t));
-		std::ofstream dump_file(file_name, std::ofstream::app);
-
-		log.AppendFormat(
-			"***** Crash dump *****\n"
-			"OvenMediaEngine v%s "
-			"(pid: %llu, tid: %llu)\n"
-			"Signal %d (%s) %s\n",
-			instance_version.CStr(),
-			Platform::GetProcessId(), Platform::GetThreadId(),
-			signum, sig_name.CStr(), time_buffer
-		);
 
 		int buffer_size = ::backtrace(addr_list, sizeof(addr_list) / sizeof(addr_list[0]));
 
 		if(buffer_size == 0)
 		{
-			return;
+			return "";
 		}
 
 		char **symbol_list = ::backtrace_symbols(addr_list, buffer_size);
+		int count = (line_count >= 0) ? std::min(line_count + offset, buffer_size) : buffer_size;
 
-		// #0: PrintStackTrace()
-		// #1: AbortHandler()
-		for(int i = 2; i < buffer_size; ++i)
+		// Called by signal handler (AbortHandler -> WriteStackTrace -> GetBackTrace):
+		// #0: GetBackTrace()
+		// #1: WriteStackTrace()
+		// #2: AbortHandler()
+
+		// Called by GetStackTrace (GetStackTrace -> GetBackTrace);
+		// #0: GetBackTrace()
+		// #1: GetStackTrace()
+		for(int i = offset; i < count; ++i)
 		{
 			char *line = symbol_list[i];
 
@@ -461,7 +450,7 @@ namespace ov
 			if(result)
 			{
 				log.AppendFormat("#%-3d %-35s %s %s + %s\n",
-				                 (i - 2),
+				                 (i - offset),
 				                 parse_result.module_name,
 				                 parse_result.address,
 				                 (parse_result.function_name == nullptr) ? "?" : parse_result.function_name,
@@ -470,7 +459,7 @@ namespace ov
 			}
 			else
 			{
-				log.AppendFormat("#%-3d || %s\n", (i - 2), line);
+				log.AppendFormat("#%-3d || %s\n", (i - offset), line);
 			}
 
 			if(parse_result.function_name != nullptr)
@@ -481,10 +470,39 @@ namespace ov
 
 		free(symbol_list);
 
-		// need not call fstream::close() explicitly to close the file
+		return std::move(log);
+	}
+
+	void StackTrace::WriteStackTrace(int signum, String sig_name)
+	{
+		char time_buffer[30];
+
+		char file_name[32];
+
+		String log;
+
+		time_t t = ::time(nullptr);
+		::strftime(time_buffer, sizeof(time_buffer) / sizeof(time_buffer[0]), "%Y-%m-%dT%H:%M:%S%z", localtime(&t));
+
+		strftime(file_name, 32, "crash_%Y%m%d.dump", localtime(&t));
+		std::ofstream dump_file(file_name, std::ofstream::app);
+
+		log.AppendFormat(
+			"***** Crash dump *****\n"
+			"OvenMediaEngine v%s "
+			"(pid: %llu, tid: %llu)\n"
+			"Signal %d (%s) %s\n",
+			instance_version.CStr(),
+			Platform::GetProcessId(), Platform::GetThreadId(),
+			signum, sig_name.CStr(), time_buffer
+		);
+
 		dump_file << log;
 
-		fputs(log, stderr);
-		fflush(stderr);
+		log = GetStackTraceInternal(3);
+
+		dump_file << log;
+
+		// need not call fstream::close() explicitly to close the file
 	}
 }

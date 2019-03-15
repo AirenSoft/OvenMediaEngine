@@ -77,17 +77,17 @@ int main(int argc, char *argv[])
 
 		if(app_info_list.empty() == false)
 		{
-			logtd("Trying to create MediaRouter for host [%s]...", host.GetName().CStr());
+			logti("Trying to create MediaRouter for host [%s]...", host.GetName().CStr());
 			router = MediaRouter::Create(app_info_list);
 
-			logtd("Trying to create Transcoder for host [%s]...", host.GetName().CStr());
+			logti("Trying to create Transcoder for host [%s]...", host.GetName().CStr());
 			transcoder = Transcoder::Create(app_info_list, router);
 
 			for(const auto &application_info : app_info_list)
 			{
 				if(application_info.GetType() == cfg::ApplicationType::Live)
 				{
-					logtd("Trying to create RTMP Provider for application [%s]...", application_info.GetName().CStr());
+					logti("Trying to create RTMP Provider for application [%s]...", application_info.GetName().CStr());
 					providers.push_back(RtmpProvider::Create(application_info, router));
 				}
 
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 						switch(publisher->GetType())
 						{
 							case cfg::PublisherType::Webrtc:
-								logtd("Trying to create WebRtc Publisher for application [%s]...", application_info.GetName().CStr());
+								logti("Trying to create WebRTC Publisher for application [%s]...", application_info.GetName().CStr());
 								publishers.push_back(WebRtcPublisher::Create(application_info, router, application));
 								break;
 
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 							case cfg::PublisherType::Hls:
 								if(!segment_publisher_create)
 								{
-									logtd("Trying to create SegmentStream Publisher for application [%s]...", application_info.GetName().CStr());
+									logti("Trying to create SegmentStream Publisher for application [%s]...", application_info.GetName().CStr());
 									publishers.push_back(SegmentStreamPublisher::Create(application_info, router));
 									segment_publisher_create = true;
 								}
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			logtd("Nothing to do for host [%s]", host.GetName().CStr());
+			logtw("Nothing to do for host [%s]", host.GetName().CStr());
 		}
 	}
 

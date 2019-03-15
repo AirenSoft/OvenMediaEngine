@@ -15,6 +15,10 @@
 #include <http_server/http_server.h>
 #include <utility>
 
+WebSocketInterceptor::~WebSocketInterceptor()
+{
+}
+
 bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request, const std::shared_ptr<const HttpResponse> &response)
 {
 	// 여기서 web socket request 인지 확인

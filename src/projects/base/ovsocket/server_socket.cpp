@@ -12,6 +12,10 @@
 
 namespace ov
 {
+	ServerSocket::~ServerSocket()
+	{
+	}
+
 	bool ServerSocket::Prepare(SocketType type, uint16_t port, int backlog)
 	{
 		return Prepare(type, SocketAddress(port), backlog);
@@ -83,11 +87,15 @@ namespace ov
 			}
 			else if(OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP))
 			{
-				logtd("[%p] [#%d] Client is disconnected - events(%s)", this, _socket.GetSocket(), StringFromEpollEvent(event).CStr());
-
 				if(client_socket != nullptr)
 				{
+					logtd("[%p] [#%d] Client #%d is disconnected - events(%s)", this, _socket.GetSocket(), client_socket->GetSocket().GetSocket(), StringFromEpollEvent(event).CStr());
+
 					connection_callback(client_socket, SocketConnectionState::Disconnected);
+				}
+				else
+				{
+					OV_ASSERT2(false);
 				}
 
 				// client map에서 삭제
@@ -107,7 +115,7 @@ namespace ov
 
 					if(client != nullptr)
 					{
-						logtd("[%p] [#%d] Client is connected - events(%s)", this, _socket.GetSocket(), StringFromEpollEvent(event).CStr());
+						logtd("[%p] [#%d] Client #%d is connected - events(%s)", this, _socket.GetSocket(), client->GetSocket().GetSocket(), StringFromEpollEvent(event).CStr());
 
 						// 정상적으로 accept 되었다면 callback
 						need_to_delete = connection_callback(client.get(), SocketConnectionState::Connected);
@@ -128,9 +136,11 @@ namespace ov
 			{
 				// client socket에서 데이터를 읽을 준비가 됨
 
-				while(true)
+				auto data = std::make_shared<Data>(TcpBufferSize);
+
+				while(client_socket->GetState() == SocketState::Connected)
 				{
-					auto data = std::make_shared<Data>(TcpBufferSize);
+					data->SetLength(0);
 
 					auto error = client_socket->Recv(data);
 
@@ -141,40 +151,40 @@ namespace ov
 						need_to_delete = need_to_delete || (client_socket->GetState() == SocketState::Error);
 					}
 
-					if(client_socket->GetState() == SocketState::Closed)
-					{
-						logtd("[%p] [#%d] Client %s is disconnected (Socket is closed)", this, _socket.GetSocket(), client_socket->ToString().CStr());
-						connection_callback(client_socket, SocketConnectionState::Disconnected);
-						break;
-					}
-					else if(client_socket->GetState() == SocketState::Error)
+					if(client_socket->GetState() == SocketState::Error)
 					{
 						logtd("[%p] [#%d] An error occurred on client %s", this, _socket.GetSocket(), client_socket->ToString().CStr());
 						connection_callback(client_socket, SocketConnectionState::Error);
+						need_to_delete = true;
 						break;
 					}
 
 					if(error != nullptr)
 					{
 						logtd("[%p] [#%d] Client %s is disconnected", this, _socket.GetSocket(), client_socket->ToString().CStr());
+						connection_callback(client_socket, SocketConnectionState::Disconnected);
 						need_to_delete = true;
 						break;
 					}
-					else
+
+					if(data->GetLength() == 0L)
 					{
-						if(data->GetLength() == 0L)
-						{
-							// 다음 데이터를 기다려야 함
-							break;
-						}
+						// 다음 데이터를 기다려야 함
+						break;
 					}
 				}
 			}
 
 			if(need_to_delete)
 			{
-				RemoveClientSocket(client_socket);
+				DisconnectClient(client_socket);
 			}
+		}
+
+		// Garbage collection
+		{
+			std::lock_guard<std::mutex> lock(_client_list_mutex);
+			_disconnected_client_list.clear();
 		}
 
 		return true;
@@ -190,11 +200,10 @@ namespace ov
 		{
 			logtd("[%p] [#%d] New client is connected: %s", this, _socket.GetSocket(), client->ToString().CStr());
 
-
-			std::unique_lock<std::mutex> lock(_client_list_mutex);
-
-			// 외부 Thread 접근 으로 동기화처리 필요
+			_client_list_mutex.lock();
 			_client_list[client.get()] = client;
+			logtd("ADD: Client count: %zu", _client_list.size());
+			_client_list_mutex.unlock();
 
 			AddToEpoll(client.get(), static_cast<void *>(client.get()));
 
@@ -206,9 +215,14 @@ namespace ov
 
 	bool ServerSocket::Close()
 	{
-		// TODO: client list 정리
+		_client_list_mutex.lock();
+		auto client_list = std::move(_client_list);
+		_client_list_mutex.unlock();
 
-		// std::map<ClientSocket *, std::shared_ptr<ClientSocket>> _client_list;
+		for(const auto &client : client_list)
+		{
+			client.second->Close();
+		}
 
 		return Socket::Close();
 	}
@@ -218,36 +232,45 @@ namespace ov
 		return Socket::ToString("ServerSocket");
 	}
 
-	bool ServerSocket::RemoveClientSocket(ClientSocket *client_socket)
+	bool ServerSocket::DisconnectClient(ClientSocket *client_socket)
 	{
-		// 리소스 해제
 		if(client_socket == nullptr)
 		{
+			OV_ASSERT2(false);
 			return false;
 		}
 
-		RemoveFromEpoll(client_socket);
+		bool remove = false;
 
-		if(client_socket->GetState() != SocketState::Closed)
 		{
-			client_socket->Close();
+			std::lock_guard<std::mutex> lock(_client_list_mutex);
+
+			auto item = _client_list.find(client_socket);
+
+			if(item != _client_list.end())
+			{
+				_disconnected_client_list[item->first] = item->second;
+				_client_list.erase(item);
+
+				remove = true;
+			}
+			else
+			{
+				logtd("[%d] Could not find socket instance for %s", _socket.GetSocket(), client_socket->ToString().CStr());
+			}
 		}
 
-		// 외부 Thread 접근 으로 동기화처리 필요
-		std::unique_lock<std::mutex> lock(_client_list_mutex);
-
-		// client list 에서도 해당 항목을 삭제 해야 함
-		auto item = _client_list.find(client_socket);
-
-		if(item != _client_list.end())
+		if(remove)
 		{
-			_client_list.erase(item);
-		}
-		else
-		{
-			logtd("[%d] Could not find socket instance for %s", _socket.GetSocket(), client_socket->ToString().CStr());
+			RemoveFromEpoll(client_socket);
+
+			if(client_socket->GetState() != SocketState::Closed)
+			{
+				client_socket->Close();
+			}
 		}
 
+		logtd("DEL: Client count: %zu", _client_list.size());
 
 		return true;
 	}
