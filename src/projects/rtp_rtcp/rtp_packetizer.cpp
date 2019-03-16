@@ -14,6 +14,8 @@ RtpPacketizer::RtpPacketizer(bool audio, std::shared_ptr<RtpRtcpPacketizerInterf
 	_audio_configured = audio;
 	_timestamp_offset = (uint32_t)rand();
 	_sequence_number = (uint16_t)rand();
+
+	_red_enabled = false;
 }
 
 RtpPacketizer::~RtpPacketizer()
@@ -50,23 +52,23 @@ bool RtpPacketizer::Packetize(FrameType frame_type,
 	// Audio, Video 분기 한다.
 	if(_audio_configured)
 	{
-		return PacketizingAudio(frame_type, rtp_timestamp, payload_data, payload_size);
+		return PacketizeAudio(frame_type, rtp_timestamp, payload_data, payload_size);
 	}
 	else
 	{
-		return PacketizingVideo(rtp_header->codec, frame_type, rtp_timestamp, payload_data, payload_size, fragmentation, rtp_header);
+		return PacketizeVideo(rtp_header->codec, frame_type, rtp_timestamp, payload_data, payload_size, fragmentation, rtp_header);
 	}
 }
 
-bool RtpPacketizer::PacketizingVideo(RtpVideoCodecType video_type,
-                                     FrameType frame_type,
-                                     uint32_t rtp_timestamp,
-                                     const uint8_t *payload_data,
-                                     size_t payload_size,
-                                     const FragmentationHeader *fragmentation,
-                                     const RTPVideoHeader *video_header)
+bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
+                                   FrameType frame_type,
+                                   uint32_t rtp_timestamp,
+                                   const uint8_t *payload_data,
+                                   size_t payload_size,
+                                   const FragmentationHeader *fragmentation,
+                                   const RTPVideoHeader *video_header)
 {
-//	logtd( "RtpPacketizer::PacketizingVideo Enter\n");
+//	logtd( "RtpPacketizer::PacketizeVideo Enter\n");
 
 	std::unique_ptr<RtpPacket> rtp_header_template;
 	std::unique_ptr<RtpPacket> last_rtp_header;
@@ -84,6 +86,13 @@ bool RtpPacketizer::PacketizingVideo(RtpVideoCodecType video_type,
 	// Rotation Extension
 	// Video Content Type Extension
 	// Video Timing Extension
+
+	if(_red_enabled)
+	{
+		// TODO(Getroot): 2019.03.16, Define RED payload type.
+		rtp_header_template->SetRed(87);
+		last_rtp_header->SetRed(87);
+	}
 
 	// -28 is for SRTP
 	size_t max_data_payload_length = DEFAULT_MAX_PACKET_SIZE - rtp_header_template->HeadersSize() - 28;
@@ -133,10 +142,28 @@ bool RtpPacketizer::PacketizingVideo(RtpVideoCodecType video_type,
 	return true;
 }
 
-bool RtpPacketizer::PacketizingAudio(FrameType frame_type,
-                                     uint32_t rtp_timestamp,
-                                     const uint8_t *payload_data,
-                                     size_t payload_size)
+bool RtpPacketizer::GenerateUlpfec(std::unique_ptr<RtpPacket> packet)
+{
+	// 2019.03.16 GO GO GO GO GO GO GO GO GO GO
+
+	// Create packet for ulpfec
+	std::unique_ptr<RtpPacket> ulpfec_packet;
+	_ulpfec_generator->AddRtpPacketAndGenerateUlpfec(packet)
+
+	if(AvaliableUlpfec())
+	{
+		GetUlpfecPacket(ulpfec_packet.get());
+	}
+
+	_session->OnRtpPacketized(std::move(ulpfec_packet));
+
+	return true;
+}
+
+bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
+                                   uint32_t rtp_timestamp,
+                                   const uint8_t *payload_data,
+                                   size_t payload_size)
 {
 	// Reference: rtp_sender_audio.cc:118
 

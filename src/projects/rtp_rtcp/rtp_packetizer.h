@@ -11,6 +11,7 @@ public:
 	RtpPacketizer(bool audio, std::shared_ptr<RtpRtcpPacketizerInterface> session);
 	~RtpPacketizer();
 
+	void SetUlpfec();
 	void SetPayloadType(uint8_t payload_type);
 	void SetSSRC(uint32_t ssrc);
 	void SetCsrcs(const std::vector<uint32_t> &csrcs);
@@ -31,19 +32,21 @@ private:
 	bool MarkerBit(FrameType frame_type, int8_t payload_type);
 
 	// Video Packet Sender Interface
-	bool PacketizingVideo(RtpVideoCodecType video_type,
-	                      FrameType frame_type,
-	                      uint32_t rtp_timestamp,
-	                      const uint8_t *payload_data,
-	                      size_t payload_size,
-	                      const FragmentationHeader *fragmentation,
-	                      const RTPVideoHeader *video_header);
+	bool PacketizeVideo(RtpVideoCodecType video_type,
+	                    FrameType frame_type,
+	                    uint32_t rtp_timestamp,
+	                    const uint8_t *payload_data,
+	                    size_t payload_size,
+	                    const FragmentationHeader *fragmentation,
+	                    const RTPVideoHeader *video_header);
+
+	bool GenerateUlpfec(std::unique_ptr<RtpPacket> packet);
 
 	// Audio Pakcet Sender Interface
-	bool PacketizingAudio(FrameType frame_type,
-	                      uint32_t rtp_timestamp,
-	                      const uint8_t *payload_data,
-	                      size_t payload_size);
+	bool PacketizeAudio(FrameType frame_type,
+	                    uint32_t rtp_timestamp,
+	                    const uint8_t *payload_data,
+	                    size_t payload_size);
 
 	// Member
 	uint32_t _timestamp_offset;
@@ -55,6 +58,8 @@ private:
 	std::vector<uint32_t> _csrcs;
 	// Sequence Number
 	uint16_t _sequence_number;
+
+	bool _red_enabled;
 
 	// Session Descriptor
 	std::shared_ptr<RtpRtcpPacketizerInterface> _session;

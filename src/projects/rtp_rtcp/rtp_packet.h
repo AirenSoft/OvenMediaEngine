@@ -6,9 +6,10 @@
 
 #define RTP_VERSION					2
 #define FIXED_HEADER_SIZE			12
+#define RED_HEADER_SIZE				1
 #define ONE_BYTE_EXTENSION_ID		0xBEDE
 #define ONE_BYTE_HEADER_SIZE		1
-#define DEFAULT_MAX_PACKET_SIZE		1500
+#define DEFAULT_MAX_PACKET_SIZE		1472
 
 //  0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -27,7 +28,7 @@
 // |                          Extensions                           |
 // |                             ....                              |
 // +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-// |                           Payload                             |
+// |RED(Optional)|            Payload                             |
 // |             ....              :  padding...                   |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |               padding         | Padding size  |
@@ -55,6 +56,7 @@ public:
 	void		SetSequenceNumber(uint16_t seq_no);
 	void		SetTimestamp(uint32_t timestamp);
 	void		SetSsrc(uint32_t ssrc);
+	void 		SetRed(uint8_t red_payload_type);
 	
 	// 버퍼에 남은 공간이 충분하고 extension, payload, padding이 
 	// 들어가기 전에 호출되어야 함
@@ -75,6 +77,7 @@ public:
 private:
 	bool		_marker;
 	uint8_t		_payload_type;
+	uint8_t 	_red_payload_type;
 	uint8_t		_padding_size;
 	uint16_t	_sequence_number;
 	uint32_t	_timestamp;
