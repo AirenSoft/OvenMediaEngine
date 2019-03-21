@@ -254,8 +254,7 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 
 			if(info == nullptr)
 			{
-				// info should never be nullptr
-				OV_ASSERT2(false);
+				// Client disconnected while Connect () is being processed
 			}
 			else
 			{
