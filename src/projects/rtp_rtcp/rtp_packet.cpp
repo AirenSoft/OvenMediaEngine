@@ -154,22 +154,6 @@ void RtpPacket::SetCsrcs(const std::vector<uint32_t>& csrcs)
 	}
 }
 
-void RtpPacket::SetRed(uint8_t red_payload_type)
-{
-	// TODO(Getroot): Check validation
-	// This function should be used after all header values have been set, before AllocatePayload.
-
-	_red_payload_type = red_payload_type;
-	// Replace payload type with read_payload_type
-	_buffer[1] = (_buffer[1] & 0x80) | red_payload_type;
-
-	// Write payload type at the end of the rtp header (Starting point of payload)
-	// The F bit in the RED header should be 0, but the first bit of the payload type is always 0,
-	// so no extra operation is required.
-	_buffer[_payload_offset] = _payload_type;
-	_payload_offset = _payload_offset + RED_HEADER_SIZE;
-}
-
 size_t RtpPacket::HeadersSize()
 {
 	return _payload_offset;
@@ -183,6 +167,20 @@ size_t RtpPacket::PayloadSize()
 size_t RtpPacket::PaddingSize()
 {
 	return _padding_size;
+}
+
+bool RtpPacket::SetPayload(const uint8_t *payload, size_t payload_size)
+{
+	auto payload_buffer = SetPayloadSize(payload_size);
+
+	if(payload_buffer == nullptr)
+	{
+		return false;
+	}
+
+	memcpy(payload_buffer, payload, payload_size);
+
+	return true;
 }
 
 uint8_t* RtpPacket::SetPayloadSize(size_t size_bytes)
@@ -204,7 +202,12 @@ uint8_t* RtpPacket::AllocatePayload(size_t size_bytes)
 	return SetPayloadSize(size_bytes);
 }
 
-uint8_t* RtpPacket::payload()
+uint8_t* RtpPacket::Header()
+{
+	return &_buffer[0];
+}
+
+uint8_t* RtpPacket::Payload()
 {
 	return &_buffer[_payload_offset];
 }

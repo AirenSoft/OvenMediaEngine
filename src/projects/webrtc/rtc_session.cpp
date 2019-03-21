@@ -66,7 +66,7 @@ bool RtcSession::Start()
 		auto payload = peer_media_desc->GetFirstPayload();
 		if(payload == nullptr)
 		{
-			logte("Failed to get the first payload type of peer sdp");
+			logte("Failed to get the first Payload type of peer sdp");
 			return false;
 		}
 

@@ -69,7 +69,7 @@ public:
 				memset(fragmentation_time_diff + oldVectorSize, 0, sizeof(uint16_t) * (size16 - oldVectorSize));
 				memcpy(fragmentation_time_diff, oldTimeDiffs, sizeof(uint16_t) * oldVectorSize);
 			}
-			// payload type
+			// Payload type
 			{
 				uint8_t* oldTimePlTypes = fragmentation_pl_type;
 				memset(fragmentation_pl_type + oldVectorSize, 0, sizeof(uint8_t) * (size16 - oldVectorSize));

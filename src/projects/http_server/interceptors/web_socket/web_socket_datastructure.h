@@ -43,12 +43,12 @@ enum class WebSocketFrameOpcode : uint8_t
 //  0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 // +-+-+-+-+-------+-+-------------+-------------------------------+
-// |F|R|R|R| opcode|M| Payload len |    Extended payload length    |
+// |F|R|R|R| opcode|M| Payload len |    Extended Payload length    |
 // |I|S|S|S|  (4)  |A|     (7)     |             (16/64)           |
-// |N|V|V|V|       |S|             |   (if payload len==126/127)   |
+// |N|V|V|V|       |S|             |   (if Payload len==126/127)   |
 // | |1|2|3|       |K|             |                               |
 // +-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
-// |     Extended payload length continued, if payload len == 127  |
+// |     Extended payload length continued, if Payload len == 127  |
 // + - - - - - - - - - - - - - - - +-------------------------------+
 // |                               |Masking-key, if MASK set to 1  |
 // +-------------------------------+-------------------------------+
@@ -87,17 +87,17 @@ struct WebSocketFrameHeader
 	// Payload length:  7 bits, 7+16 bits, or 7+64 bits
 	//
 	//    The length of the "Payload data", in bytes: if 0-125, that is the
-	//    payload length.  If 126, the following 2 bytes interpreted as a
-	//    16-bit unsigned integer are the payload length.  If 127, the
+	//    Payload length.  If 126, the following 2 bytes interpreted as a
+	//    16-bit unsigned integer are the Payload length.  If 127, the
 	//    following 8 bytes interpreted as a 64-bit unsigned integer (the
-	//    most significant bit MUST be 0) are the payload length.  Multibyte
+	//    most significant bit MUST be 0) are the Payload length.  Multibyte
 	//    length quantities are expressed in network byte order.  Note that
 	//    in all cases, the minimal number of bytes MUST be used to encode
 	//    the length, for example, the length of a 124-byte-long string
-	//    can't be encoded as the sequence 126, 0, 124.  The payload length
+	//    can't be encoded as the sequence 126, 0, 124.  The Payload length
 	//    is the length of the "Extension data" + the length of the
 	//    "Application data".  The length of the "Extension data" may be
-	//    zero, in which case the payload length is the length of the
+	//    zero, in which case the Payload length is the length of the
 	//    "Application data".
 	uint8_t payload_length: 7;
 

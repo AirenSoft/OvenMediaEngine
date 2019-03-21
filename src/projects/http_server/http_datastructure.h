@@ -24,9 +24,9 @@
 // | HEAD    | Same as GET, but only transfer the status line  | 4.3.2 |
 // |         | and header section.                             |       |
 // | POST    | Perform resource-specific processing on the     | 4.3.3 |
-// |         | request payload.                                |       |
+// |         | request Payload.                                |       |
 // | PUT     | Replace all current representations of the      | 4.3.4 |
-// |         | target resource with the request payload.       |       |
+// |         | target resource with the request Payload.       |       |
 // | DELETE  | Remove all current representations of the       | 4.3.5 |
 // |         | target resource.                                |       |
 // | CONNECT | Establish a tunnel to the server identified by  | 4.3.6 |

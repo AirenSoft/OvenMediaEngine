@@ -1,55 +1,13 @@
-//
-// Created by getroot on 19. 3. 14.
-//
-
 #include "ulpfec_generator.h"
+#include "base/ovlibrary/byte_io.h"
 
 constexpr size_t 	kFecHeaderSize					= 10;
-constexpr size_t 	kFecLevelHeaderSizeLbitClear 	= 4;
-constexpr size_t	kFecLevelHeaderSizeLbitSet		= 8;
+constexpr size_t 	kMaskSizeLbitClear				= 2;
+constexpr size_t	kMaskSizeLbitSet				= 6;
+constexpr size_t 	kFecLevelHeaderSizeLbitClear 	= 2 + kMaskSizeLbitClear;
+constexpr size_t	kFecLevelHeaderSizeLbitSet		= 2 + kMaskSizeLbitSet;
 constexpr size_t 	kUlpfecMaxMediaPacketsLbitClear	= 16;
 constexpr size_t 	kUlpfecMaxMediaPacketsLbitSet	= 48;
-
-RedPacket::RedPacket(size_t length)
-{
-
-}
-
-RedPacket::~RedPacket()
-{
-
-}
-
-void RedPacket::CreateHeader(const uint8_t* rtp_header, size_t header_length, int red_payload_type, int payload_type)
-{
-
-}
-
-void RedPacket::SetSeqNum(int seq_num)
-{
-
-}
-
-void RedPacket::AssignPayload(const uint8_t* payload, size_t length)
-{
-
-}
-
-void RedPacket::ClearMarkerBit()
-{
-
-}
-
-uint8_t* RedPacket::data() const
-{
-
-}
-
-size_t RedPacket::length() const
-{
-
-}
-
 
 UlpfecGenerator::UlpfecGenerator()
 {
@@ -80,7 +38,7 @@ void UlpfecGenerator::SetProtectRate(int32_t protection_rate)
 	}
 }
 
-bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::unique_ptr<RtpPacket> packet)
+bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::shared_ptr<RedRtpPacket> packet)
 {
 	if(_protection_rate <= 0)
 	{
@@ -93,7 +51,7 @@ bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::unique_ptr<RtpPacket> pack
 
 	if(_media_packets.size() >= (100/_protection_rate))
 	{
-		EncodeUlpfecWithRed();
+		Encode();
 
 		if(!packet->Marker())
 		{
@@ -102,7 +60,7 @@ bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::unique_ptr<RtpPacket> pack
 	}
 	else if(packet->Marker() && _prev_fec_sent)
 	{
-		EncodeUlpfecWithRed();
+		Encode();
 
 		_prev_fec_sent = false;
 
@@ -114,43 +72,149 @@ bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::unique_ptr<RtpPacket> pack
 }
 bool UlpfecGenerator::IsAvailableFecPackets() const
 {
-
+	return _generated_fec_packets.size() > 0;
 }
 
-std::unique_ptr<RedPacket> UlpfecGenerator::GetUlpfecPacketsAsRed(int red_payload_type, int ulpfec_payload_type, uint16_t first_seq_num)
+bool UlpfecGenerator::NextPacket(RedRtpPacket *packet)
 {
+	if(!IsAvailableFecPackets())
+	{
+		return false;
+	}
 
+	// First FEC
+	auto fec_packet = _generated_fec_packets.front();
+	_generated_fec_packets.pop();
+
+
+	return packet->SetPayload(fec_packet->GetDataAs<uint8_t>(), fec_packet->GetLength());
 }
 
-bool UlpfecGenerator::EncodeUlpfecWithRed()
+bool UlpfecGenerator::Encode()
 {
+	uint8_t mask[6];
+	size_t mask_len;
 
+	uint16_t sn_base;
+	bool first_media_packet = true;
 
+	// Multiple fec packets can be generated. However, in the current version, only one fec packet is generated.
+	auto fec_packet = new ov::Data();
+	auto fec_buffer = fec_packet->GetWritableDataAs<uint8_t>();
 
+	// Initialize mask
+	memset(mask, 0, sizeof(mask));
 
-
-	return true;
-}
-
-
-
-
-bool UlpfecGenerator::GeneratePayload()
-{
-	bool fist_media_packet = true;
+	size_t fec_header_size = kFecHeaderSize;
+	if(_media_packets.size() <= kUlpfecMaxMediaPacketsLbitClear)
+	{
+		fec_header_size += kFecLevelHeaderSizeLbitClear;
+		mask_len = kMaskSizeLbitClear;
+	}
+	else
+	{
+		fec_header_size += kFecLevelHeaderSizeLbitSet;
+		mask_len = kMaskSizeLbitSet;
+	}
 
 	for(auto const &media_packet : _media_packets)
 	{
 		media_packet->HeadersSize();
 		media_packet->PayloadSize();
-		size_t fec_packet_length = kFecHeaderSize + media_packet->PayloadSize();
+		size_t fec_packet_length = fec_header_size + media_packet->PayloadSize();
 
-		// First Media Packet
-		if(_fec_packet->Length() < fec_packet_length)
+		if(fec_packet->GetLength() < fec_packet_length)
 		{
-			_fec_packet->SetLength(fec_packet_length);
+			fec_packet->SetLength(fec_packet_length);
 		}
 
+		if(first_media_packet)
+		{
+			// Write P, X, CC, M, and PT recovery fields.
+			// Bits 0, 1 are overwritten in FinalizeFecHeaders.
+			memcpy(&fec_buffer[0], &media_packet->Buffer()[0], 2);
+			// SN Base
+			ByteWriter<uint16_t>::WriteBigEndian(&fec_buffer[2], media_packet->SequenceNumber());
+			// Write timestamp recovery field.
+			ByteWriter<uint32_t>::WriteBigEndian(&fec_buffer[4], media_packet->Timestamp());
+			// Write length recovery field.
+			ByteWriter<uint16_t>::WriteBigEndian(&fec_buffer[8], (uint16_t)media_packet->PayloadSize());
+			// Write Payload.
+			memcpy(&fec_buffer[fec_header_size], media_packet->Payload(), media_packet->PayloadSize());
 
+			sn_base = media_packet->SequenceNumber();
+
+			first_media_packet = false;
+		}
+		else
+		{
+			XorFecPacket(fec_buffer, fec_header_size,
+			             media_packet->Header(), media_packet->HeadersSize(),
+			             media_packet->Payload(), media_packet->PayloadSize());
+		}
+
+		mask[(media_packet->SequenceNumber() - sn_base)/8] |= 1 << (7 - ((media_packet->SequenceNumber() - sn_base) % 8));
+	}
+
+	FinalizeFecHeader(fec_buffer, fec_packet->GetLength() - fec_header_size, mask, mask_len);
+
+	_generated_fec_packets.push(fec_packet);
+
+	// clear media packet
+	_media_packets.clear();
+
+	return true;
+}
+
+
+void UlpfecGenerator::FinalizeFecHeader(uint8_t *fec_packet, const size_t fec_payload_len, const uint8_t *mask, const size_t mask_len)
+{
+	// Set E bit to zero.
+	fec_packet[0] &= 0x7f;
+
+	// Set L bit
+	if(_media_packets.size() <= kUlpfecMaxMediaPacketsLbitClear)
+	{
+		// Clear L bit
+		fec_packet[0] &= 0xbf;
+	}
+	else
+	{
+		// Set L bit
+		fec_packet[0] |= 0x40;
+	}
+
+	// FEC Level header
+
+	// Protection Length
+	ByteWriter<uint16_t>::WriteBigEndian(&fec_packet[10], (uint16_t)fec_payload_len);
+
+	// Mask
+	memcpy(&fec_packet[12], mask, mask_len);
+}
+
+void UlpfecGenerator::XorFecPacket(uint8_t *fec_packet, size_t fec_header_len,
+									uint8_t *rtp_header, size_t rtp_header_len, uint8_t *rtp_payload, size_t rtp_payload_len)
+{
+	// XOR the first 2 bytes of the header: V, P, X, CC, M, PT fields.
+	fec_packet[0] ^= rtp_header[0];
+	fec_packet[1] ^= rtp_header[1];
+
+	// XOR TS recovery
+	fec_packet[4] ^= rtp_header[4];
+	fec_packet[5] ^= rtp_header[5];
+	fec_packet[6] ^= rtp_header[6];
+	fec_packet[7] ^= rtp_header[7];
+
+	// XOR Length recovery
+	uint8_t rtp_payload_length_network_order[2];
+	ByteWriter<uint16_t>::WriteBigEndian(rtp_payload_length_network_order, (uint16_t)rtp_payload_len);
+	fec_packet[8] ^= rtp_payload_length_network_order[0];
+	fec_packet[9] ^= rtp_payload_length_network_order[1];
+
+	// XOR Payload
+	for (size_t i = 0; i < rtp_payload_len; i++)
+	{
+		fec_packet[fec_header_len + i] ^= rtp_payload[i];
 	}
 }

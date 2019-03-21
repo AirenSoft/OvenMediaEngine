@@ -2,6 +2,7 @@
 #include <iostream>
 #include <memory>
 #include "rtp_packet.h"
+#include "red_rtp_packet.h"
 #include "rtp_packetizing_manager.h"
 #include "rtp_packetizer.h"
 
@@ -15,7 +16,7 @@ RtpPacketizer::RtpPacketizer(bool audio, std::shared_ptr<RtpRtcpPacketizerInterf
 	_timestamp_offset = (uint32_t)rand();
 	_sequence_number = (uint16_t)rand();
 
-	_red_enabled = false;
+	_ulpfec_enabled = true;
 }
 
 RtpPacketizer::~RtpPacketizer()
@@ -36,6 +37,13 @@ void RtpPacketizer::SetSSRC(const uint32_t ssrc)
 void RtpPacketizer::SetCsrcs(const std::vector<uint32_t> &csrcs)
 {
 	_csrcs = csrcs;
+}
+
+void RtpPacketizer::SetUlpfec(uint8_t red_payload_type, uint8_t ulpfec_payload_type)
+{
+	_ulpfec_enabled = true;
+	_red_payload_type = red_payload_type;
+	_ulpfec_payload_type = ulpfec_payload_type;
 }
 
 bool RtpPacketizer::Packetize(FrameType frame_type,
@@ -68,34 +76,25 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
                                    const FragmentationHeader *fragmentation,
                                    const RTPVideoHeader *video_header)
 {
-//	logtd( "RtpPacketizer::PacketizeVideo Enter\n");
 
-	std::unique_ptr<RtpPacket> rtp_header_template;
-	std::unique_ptr<RtpPacket> last_rtp_header;
+	std::shared_ptr<RtpPacket> rtp_header_template;
+	std::shared_ptr<RtpPacket> last_rtp_header;
 
 	// 기본 패킷 헤더를 생성
-	rtp_header_template = AllocatePacket();
-	rtp_header_template->SetPayloadType(_payload_type);
+	rtp_header_template = AllocatePacket(_ulpfec_enabled);
 	rtp_header_template->SetTimestamp(rtp_timestamp);
 
 	// 마지막 패킷 헤더를 생성, 마지막 패킷에 extension과 marker=1을 보낸다.
-	last_rtp_header = AllocatePacket();
-	last_rtp_header->SetPayloadType(_payload_type);
+	last_rtp_header = AllocatePacket(_ulpfec_enabled);
 	last_rtp_header->SetTimestamp(rtp_timestamp);
+
 	// TODO: 향후 다음 Extension을 추가한다.
 	// Rotation Extension
 	// Video Content Type Extension
 	// Video Timing Extension
 
-	if(_red_enabled)
-	{
-		// TODO(Getroot): 2019.03.16, Define RED payload type.
-		rtp_header_template->SetRed(87);
-		last_rtp_header->SetRed(87);
-	}
-
-	// -28 is for SRTP
-	size_t max_data_payload_length = DEFAULT_MAX_PACKET_SIZE - rtp_header_template->HeadersSize() - 28;
+	// -16 is for FEC
+	size_t max_data_payload_length = DEFAULT_MAX_PACKET_SIZE - rtp_header_template->HeadersSize() - 16;
 	size_t last_packet_reduction_len = last_rtp_header->HeadersSize() - rtp_header_template->HeadersSize();
 
 	// Packetizer 생성
@@ -123,7 +122,7 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 	for(size_t i = 0; i < num_packets; ++i)
 	{
 		bool last = (i + 1) == num_packets;
-		auto packet = last ? std::move(last_rtp_header) : std::make_unique<RtpPacket>(*rtp_header_template);
+		auto packet = last ? std::move(last_rtp_header) : std::make_shared<RtpPacket>(*rtp_header_template);
 
 		if(!packetizer->NextPacket(packet.get()))
 		{
@@ -136,26 +135,38 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 		}
 
 		// RtcSession을 통해 전송한다.
-		_session->OnRtpPacketized(std::move(packet));
+		_session->OnRtpPacketized(packet);
+
+		if(_ulpfec_enabled)
+		{
+			GenerateUlpfec(std::static_pointer_cast<RedRtpPacket>(packet));
+		}
 	}
 
 	return true;
 }
 
-bool RtpPacketizer::GenerateUlpfec(std::unique_ptr<RtpPacket> packet)
+bool RtpPacketizer::GenerateUlpfec(std::shared_ptr<RedRtpPacket> packet)
 {
-	// 2019.03.16 GO GO GO GO GO GO GO GO GO GO
+	_ulpfec_generator.AddRtpPacketAndGenerateFec(packet);
 
-	// Create packet for ulpfec
-	std::unique_ptr<RtpPacket> ulpfec_packet;
-	_ulpfec_generator->AddRtpPacketAndGenerateUlpfec(packet)
-
-	if(AvaliableUlpfec())
+	while(_ulpfec_generator.IsAvailableFecPackets())
 	{
-		GetUlpfecPacket(ulpfec_packet.get());
-	}
+		auto red_fec_packet = std::static_pointer_cast<RedRtpPacket>(AllocatePacket(true));
 
-	_session->OnRtpPacketized(std::move(ulpfec_packet));
+		// Timestamp is same as last packet
+		red_fec_packet->SetTimestamp(packet->Timestamp());
+
+		// Sequence Number
+		if(!AssignSequenceNumber(red_fec_packet.get()))
+		{
+			return false;
+		}
+
+		_ulpfec_generator.NextPacket(red_fec_packet.get());
+
+		_session->OnRtpPacketized(red_fec_packet);
+	}
 
 	return true;
 }
@@ -165,8 +176,6 @@ bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
                                    const uint8_t *payload_data,
                                    size_t payload_size)
 {
-	// Reference: rtp_sender_audio.cc:118
-
 	if(payload_size == 0 || payload_data == nullptr)
 	{
 		if(frame_type == FrameType::EmptyFrame)
@@ -178,7 +187,7 @@ bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
 		return false;
 	}
 
-	std::unique_ptr<RtpPacket> packet = AllocatePacket();
+	std::shared_ptr<RtpPacket> packet = AllocatePacket();
 	packet->SetMarker(MarkerBit(frame_type, _payload_type));
 	packet->SetPayloadType(_payload_type);
 	packet->SetTimestamp(rtp_timestamp);
@@ -220,7 +229,7 @@ bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
 	{  // Too large payload buffer.
 		return false;
 	}
-	memcpy(payload, payload_data, payload_size);
+	memcpy(Payload, payload_data, payload_size);
 
 	if(!rtp_sender_->AssignSequenceNumber(packet.get()))
 	{
@@ -244,14 +253,30 @@ bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
 #endif
 }
 
-std::unique_ptr<RtpPacket> RtpPacketizer::AllocatePacket()
+std::shared_ptr<RtpPacket> RtpPacketizer::AllocatePacket(bool red)
 {
-	std::unique_ptr<RtpPacket> packet(new RtpPacket());
+	std::shared_ptr<RedRtpPacket> red_packet;
+	std::shared_ptr<RtpPacket> rtp_packet;
 
-	packet->SetSsrc(_ssrc);
-	packet->SetCsrcs(_csrcs);
+	if(red)
+	{
+		red_packet = std::make_shared<RedRtpPacket>();
+		red_packet->SetSsrc(_ssrc);
+		red_packet->SetCsrcs(_csrcs);
+		red_packet->SetPayloadType(_payload_type);
+		red_packet->SetRed(_red_payload_type);
 
-	return packet;
+		return red_packet;
+	}
+	else
+	{
+		rtp_packet = std::make_shared<RtpPacket>();
+		rtp_packet->SetSsrc(_ssrc);
+		rtp_packet->SetCsrcs(_csrcs);
+		rtp_packet->SetPayloadType(_payload_type);
+
+		return rtp_packet;
+	}
 }
 
 bool RtpPacketizer::AssignSequenceNumber(RtpPacket *packet)

@@ -81,7 +81,7 @@ void RelayServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &ad
 		case RelayPacketType::RequestSync:
 		{
 			// Extract application and stream name
-			// The payload must consist of "app/stream" when type is RequestOffer
+			// The Payload must consist of "app/stream" when type is RequestOffer
 			ov::String payload(reinterpret_cast<const char *>(packet.GetData()), packet.GetDataSize());
 			auto tokens = payload.Split("/");
 

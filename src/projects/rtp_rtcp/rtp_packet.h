@@ -39,7 +39,7 @@ class RtpPacket
 public:
 	RtpPacket();
 	RtpPacket(RtpPacket &src);
-	~RtpPacket();
+	virtual ~RtpPacket();
 
 	// Getter
 	bool		Marker();
@@ -56,10 +56,8 @@ public:
 	void		SetSequenceNumber(uint16_t seq_no);
 	void		SetTimestamp(uint32_t timestamp);
 	void		SetSsrc(uint32_t ssrc);
-	void 		SetRed(uint8_t red_payload_type);
 	
-	// 버퍼에 남은 공간이 충분하고 extension, payload, padding이 
-	// 들어가기 전에 호출되어야 함
+	// 버퍼에 남은 공간이 충분하고 extension, Payload, padding이 들어가기 전에 호출되어야 함
 	void		SetCsrcs(const std::vector<uint32_t>& csrcs);
 
 	size_t		HeadersSize();
@@ -67,22 +65,23 @@ public:
 	size_t		PaddingSize();
 
 	// Payload
+	bool 		SetPayload(const uint8_t *payload, size_t payload_size);
 	uint8_t*	SetPayloadSize(size_t size_bytes);
 	uint8_t*	AllocatePayload(size_t size_bytes);
-	uint8_t*	payload();
+	uint8_t*	Header();
+	uint8_t*	Payload();
 
 	// Data
 	std::shared_ptr<ov::Data> GetData();
-	
-private:
+
+protected:
+	size_t		_payload_offset;	// Header Start Point (Header size)
 	bool		_marker;
 	uint8_t		_payload_type;
-	uint8_t 	_red_payload_type;
 	uint8_t		_padding_size;
 	uint16_t	_sequence_number;
 	uint32_t	_timestamp;
 	uint32_t	_ssrc;
-	size_t		_payload_offset;	// Header Start Point (Header size)
 	size_t		_payload_size;		// Payload Size
 
 	//TODO: Extension은 향후 확장

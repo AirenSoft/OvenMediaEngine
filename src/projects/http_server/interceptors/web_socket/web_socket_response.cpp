@@ -41,21 +41,21 @@ ssize_t WebSocketResponse::Send(const std::shared_ptr<const ov::Data> &data, Web
 
 	if(length < 0x7D)
 	{
-		// frame-payload-length    = ( %x00-7D )
-		//                         / ( %x7E frame-payload-length-16 )
-		//                         / ( %x7F frame-payload-length-63 )
+		// frame-Payload-length    = ( %x00-7D )
+		//                         / ( %x7E frame-Payload-length-16 )
+		//                         / ( %x7F frame-Payload-length-63 )
 		//                         ; 7, 7+16, or 7+64 bits in length,
 		//                         ; respectively
 		header.payload_length = static_cast<uint8_t>(length);
 	}
 	else if(length < 0xFFFF)
 	{
-		// frame-payload-length-16 = %x0000-FFFF ; 16 bits in length
+		// frame-Payload-length-16 = %x0000-FFFF ; 16 bits in length
 		header.payload_length = 126;
 	}
 	else
 	{
-		// frame-payload-length-63 = %x0000000000000000-7FFFFFFFFFFFFFFF
+		// frame-Payload-length-63 = %x0000000000000000-7FFFFFFFFFFFFFFF
 		//                         ; 64 bits in length
 		header.payload_length = 127;
 	}

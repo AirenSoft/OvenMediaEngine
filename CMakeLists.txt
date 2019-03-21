@@ -544,4 +544,4 @@ add_executable(OvenMediaEngine-Source
         src/projects/webrtc/rtc_stream.h
         src/projects/webrtc/webrtc_publisher.cpp
         src/projects/webrtc/webrtc_publisher.h
-        src/projects/AMS.mk src/projects/rtp_rtcp/ulpfec_generator.cpp src/projects/rtp_rtcp/ulpfec_generator.h)
+        src/projects/AMS.mk src/projects/rtp_rtcp/ulpfec_generator.cpp src/projects/rtp_rtcp/ulpfec_generator.h src/projects/rtp_rtcp/red_rtp_packet.cpp src/projects/rtp_rtcp/red_rtp_packet.h)

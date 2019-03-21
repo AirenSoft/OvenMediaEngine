@@ -179,14 +179,14 @@ std::shared_ptr<SessionDescription> RtcStream::GetSessionDescription()
 	return _offer_sdp;
 }
 
-bool RtcStream::OnRtpPacketized(std::unique_ptr<RtpPacket> packet)
+bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 {
 	BroadcastPacket(packet->PayloadType(), packet->GetData());
 
 	return true;
 }
 
-bool RtcStream::OnRtcpPacketized(std::unique_ptr<RtcpPacket> packet)
+bool RtcStream::OnRtcpPacketized(std::shared_ptr<RtcpPacket> packet)
 {
 	return true;
 }

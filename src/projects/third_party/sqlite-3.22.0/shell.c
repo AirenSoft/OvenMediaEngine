@@ -6035,7 +6035,7 @@ struct IdxStatement {
 
 
 /*
-** A hash table for storing strings. With space for a payload string
+** A hash table for storing strings. With space for a Payload string
 ** with each entry. Methods are:
 **
 **   idxHashInit()
@@ -6134,7 +6134,7 @@ static int idxHashString(const char *z, int n){
 
 /*
 ** If zKey is already present in the hash table, return non-zero and do
-** nothing. Otherwise, add an entry with key zKey and payload string zVal to
+** nothing. Otherwise, add an entry with key zKey and Payload string zVal to
 ** the hash table passed as the second argument. 
 */
 static int idxHashAdd(
@@ -6191,7 +6191,7 @@ static IdxHashEntry *idxHashFind(IdxHash *pHash, const char *zKey, int nKey){
 /*
 ** If the hash table contains an entry with a key equal to the string
 ** passed as the final two arguments to this function, return a pointer
-** to the payload string. Otherwise, if zKey/nKey is not present in the
+** to the Payload string. Otherwise, if zKey/nKey is not present in the
 ** hash table, return NULL.
 */
 static const char *idxHashSearch(IdxHash *pHash, const char *zKey, int nKey){

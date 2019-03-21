@@ -45,7 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class RtpPacketizerVp8 : public RtpPacketizingManager 
 {
 public:
-	// Initialize with payload from encoder.
+	// Initialize with Payload from encoder.
 	// The payload_data must be exactly one encoded VP8 frame.
 	RtpPacketizerVp8(const RTPVideoHeaderVP8& hdr_info, size_t max_payload_len, size_t last_packet_reduction_len);
 
@@ -53,8 +53,8 @@ public:
 
 	size_t SetPayloadData(const uint8_t* payload_data, size_t payload_size, const FragmentationHeader* fragmentation) override;
 
-	// Get the next payload with VP8 payload header.
-	// Write payload and set marker bit of the |packet|.
+	// Get the next Payload with VP8 payload header.
+	// Write Payload and set marker bit of the |packet|.
 	// Returns true on success, false otherwise.
 	bool NextPacket(RtpPacket* packet) override;
 
@@ -82,7 +82,7 @@ private:
 	// Calculate all packet sizes and load to packet info queue.
 	int GeneratePackets();
 
-	// Splits given part of payload to packets with a given capacity. The last
+	// Splits given part of Payload to packets with a given capacity. The last
 	// packet should be reduced by last_packet_reduction_len_.
 	void GeneratePacketsSplitPayloadBalanced(size_t payload_len,
 		size_t capacity);
@@ -90,8 +90,8 @@ private:
 	// Insert packet into packet queue.
 	void QueuePacket(size_t start_pos, size_t packet_size, bool first_packet);
 
-	// Write the payload header and copy the payload to the buffer.
-	// The info in packet_info determines which part of the payload is written
+	// Write the payload header and copy the Payload to the buffer.
+	// The info in packet_info determines which part of the Payload is written
 	// and what to write in the header fields.
 	int WriteHeaderAndPayload(const InfoStruct& packet_info, uint8_t* buffer, size_t buffer_length) const;
 
@@ -135,7 +135,7 @@ private:
 
 	const uint8_t* payload_data_;
 	size_t payload_size_;
-	const size_t vp8_fixed_payload_descriptor_bytes_;  // Length of VP8 payload
+	const size_t vp8_fixed_payload_descriptor_bytes_;  // Length of VP8 Payload
 	// descriptors' fixed part.
 	const RTPVideoHeaderVP8 hdr_info_;
 	const size_t max_payload_len_;

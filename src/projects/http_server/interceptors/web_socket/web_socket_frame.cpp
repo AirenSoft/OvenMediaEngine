@@ -106,7 +106,7 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 
 	logtd("Data received: %ld / %ld (remained: %ld)", _payload->GetLength(), _total_length, _remained_length);
 
-	OV_ASSERT(_payload->GetLength() <= _total_length, "Invalid payload length: payload length (%ld) must less equal than total length (%ld)", _payload->GetLength(), _total_length);
+	OV_ASSERT(_payload->GetLength() <= _total_length, "Invalid payload length: Payload length (%ld) must less equal than total length (%ld)", _payload->GetLength(), _total_length);
 
 	return header_length + length;
 }
@@ -154,23 +154,23 @@ ssize_t WebSocketFrame::ProcessHeader(ov::ByteStream &stream)
 	// Payload length:  7 bits, 7+16 bits, or 7+64 bits
 	//
 	//     The length of the "Payload data", in bytes: if 0-125, that is the
-	//     payload length.  If 126, the following 2 bytes interpreted as a
-	//     16-bit unsigned integer are the payload length.  If 127, the
+	//     Payload length.  If 126, the following 2 bytes interpreted as a
+	//     16-bit unsigned integer are the Payload length.  If 127, the
 	//     following 8 bytes interpreted as a 64-bit unsigned integer (the
-	//     most significant bit MUST be 0) are the payload length.  Multibyte
+	//     most significant bit MUST be 0) are the Payload length.  Multibyte
 	//     length quantities are expressed in network byte order.  Note that
 	//     in all cases, the minimal number of bytes MUST be used to encode
 	//     the length, for example, the length of a 124-byte-long string
-	//     can't be encoded as the sequence 126, 0, 124.  The payload length
+	//     can't be encoded as the sequence 126, 0, 124.  The Payload length
 	//     is the length of the "Extension data" + the length of the
 	//     "Application data".  The length of the "Extension data" may be
-	//     zero, in which case the payload length is the length of the
+	//     zero, in which case the Payload length is the length of the
 	//     "Application data".
 	switch(_header.payload_length)
 	{
 		case 126:
 		{
-			// 126이면, 다음 이어서 오는 16bit가 payload length
+			// 126이면, 다음 이어서 오는 16bit가 Payload length
 			uint16_t extra_length;
 
 			if(stream.Read(&extra_length) == 1)
@@ -180,7 +180,7 @@ ssize_t WebSocketFrame::ProcessHeader(ov::ByteStream &stream)
 			}
 			else
 			{
-				OV_ASSERT(false, "Could not read payload length");
+				OV_ASSERT(false, "Could not read Payload length");
 				_last_status = WebSocketFrameParseStatus::Error;
 				return -1L;
 			}
@@ -190,7 +190,7 @@ ssize_t WebSocketFrame::ProcessHeader(ov::ByteStream &stream)
 
 		case 127:
 		{
-			// 127이면, 다음 이어서 오는 64bit가 payload length
+			// 127이면, 다음 이어서 오는 64bit가 Payload length
 			uint64_t extra_length;
 
 			if(stream.Read(&extra_length) == 1)
@@ -200,7 +200,7 @@ ssize_t WebSocketFrame::ProcessHeader(ov::ByteStream &stream)
 			}
 			else
 			{
-				OV_ASSERT(false, "Could not read payload length");
+				OV_ASSERT(false, "Could not read Payload length");
 				_last_status = WebSocketFrameParseStatus::Error;
 				return -1L;
 			}

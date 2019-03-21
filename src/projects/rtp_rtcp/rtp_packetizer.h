@@ -3,6 +3,7 @@
 #include "rtp_packet.h"
 #include "rtp_packetizing_manager.h"
 #include "rtp_rtcp_defines.h"
+#include "ulpfec_generator.h"
 #include <memory>
 
 class RtpPacketizer
@@ -11,7 +12,7 @@ public:
 	RtpPacketizer(bool audio, std::shared_ptr<RtpRtcpPacketizerInterface> session);
 	~RtpPacketizer();
 
-	void SetUlpfec();
+	void SetUlpfec(uint8_t _red_payload_type, uint8_t _ulpfec_payload_type);
 	void SetPayloadType(uint8_t payload_type);
 	void SetSSRC(uint32_t ssrc);
 	void SetCsrcs(const std::vector<uint32_t> &csrcs);
@@ -26,7 +27,7 @@ public:
 
 private:
 	// Basic
-	std::unique_ptr<RtpPacket> AllocatePacket();
+	std::shared_ptr<RtpPacket> AllocatePacket(bool red=false);
 	bool AssignSequenceNumber(RtpPacket *packet);
 
 	bool MarkerBit(FrameType frame_type, int8_t payload_type);
@@ -40,7 +41,7 @@ private:
 	                    const FragmentationHeader *fragmentation,
 	                    const RTPVideoHeader *video_header);
 
-	bool GenerateUlpfec(std::unique_ptr<RtpPacket> packet);
+	bool GenerateUlpfec(std::shared_ptr<RedRtpPacket> packet);
 
 	// Audio Pakcet Sender Interface
 	bool PacketizeAudio(FrameType frame_type,
@@ -59,7 +60,11 @@ private:
 	// Sequence Number
 	uint16_t _sequence_number;
 
-	bool _red_enabled;
+	bool _ulpfec_enabled;
+	uint8_t _red_payload_type;
+	uint8_t _ulpfec_payload_type;
+
+	UlpfecGenerator _ulpfec_generator;
 
 	// Session Descriptor
 	std::shared_ptr<RtpRtcpPacketizerInterface> _session;
