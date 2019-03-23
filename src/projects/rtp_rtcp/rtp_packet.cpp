@@ -172,7 +172,6 @@ size_t RtpPacket::PaddingSize()
 bool RtpPacket::SetPayload(const uint8_t *payload, size_t payload_size)
 {
 	auto payload_buffer = SetPayloadSize(payload_size);
-
 	if(payload_buffer == nullptr)
 	{
 		return false;
@@ -193,6 +192,7 @@ uint8_t* RtpPacket::SetPayloadSize(size_t size_bytes)
 
 	_payload_size = size_bytes;
 	_data->SetLength(_payload_offset + _payload_size);
+	_buffer = _data->GetWritableDataAs<uint8_t>();
 
 	return &_buffer[_payload_offset];
 }

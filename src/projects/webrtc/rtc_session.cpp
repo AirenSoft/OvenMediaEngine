@@ -155,10 +155,13 @@ void RtcSession::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std
 
 bool RtcSession::SendOutgoingData(uint32_t payload_type, std::shared_ptr<ov::Data> packet)
 {
-	if(payload_type != _video_payload_type && payload_type != _audio_payload_type)
+	if(payload_type != _video_payload_type && payload_type != 114 && payload_type != _audio_payload_type)
 	{
 		return false;
 	}
+
+	//printf("------------\n");
+	//printf("%d %d %d\n", packet->GetDataAs<uint8_t>()[1] & 0x7F, packet->GetDataAs<uint8_t>()[12], packet->GetLength());
 
 	return _rtp_rtcp->SendOutgoingData(packet);
 }

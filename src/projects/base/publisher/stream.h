@@ -38,7 +38,7 @@ private:
 		StreamPacket(uint32_t id, std::shared_ptr<ov::Data> data)
 		{
 			_id = id;
-			_data = data;
+			_data = data->Clone();
 		}
 
 		uint32_t                    _id;

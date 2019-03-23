@@ -5,6 +5,9 @@
 
 using namespace common;
 
+constexpr uint8_t	kRedPayloadType = 123;
+constexpr uint8_t	kUlpfecPayloadType = 114;
+
 std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<Application> application,
                                              const StreamInfo &info)
 {
@@ -69,6 +72,8 @@ bool RtcStream::Start(uint32_t worker_count)
 						break;
 					case MediaCodecId::H264:
 						codec = "H264";
+						// GTEST
+						continue;
 						break;
 					default:
 						logtw("Unsupported codec(%d) is being input from media track", track->GetCodecId());
@@ -89,6 +94,7 @@ bool RtcStream::Start(uint32_t worker_count)
 					video_media_desc->SetCname(ov::Random::GenerateInteger(), ov::Random::GenerateString(16));
 
 					_offer_sdp->AddMedia(video_media_desc);
+
 					first_video_desc = false;
 				}
 
@@ -159,6 +165,16 @@ bool RtcStream::Start(uint32_t worker_count)
 		}
 	}
 
+	// RED & ULPFEC
+	auto red_payload = std::make_shared<PayloadAttr>();
+	red_payload->SetRtpmap(kRedPayloadType, "red", 90000);
+
+	auto ulpfec_payload = std::make_shared<PayloadAttr>();
+	ulpfec_payload->SetRtpmap(kUlpfecPayloadType, "ulpfec", 90000);
+
+	video_media_desc->AddPayload(red_payload);
+	video_media_desc->AddPayload(ulpfec_payload);
+
 	ov::String offer_sdp_text;
 	_offer_sdp->ToString(offer_sdp_text);
 
@@ -210,6 +226,10 @@ void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 	// RTP Packetizing
 	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
 	auto packetizer = GetPacketizer(track->GetId());
+	if(packetizer == nullptr)
+	{
+		return;
+	}
 	// RTP_SENDER에 등록된 RtpRtcpSession에 의해서 Packetizing이 완료되면 OnRtpPacketized 함수가 호출된다.
 	packetizer->Packetize(encoded_frame->frame_type,
 	                      encoded_frame->time_stamp,
@@ -267,6 +287,11 @@ void RtcStream::AddPacketizer(bool audio, uint32_t payload_type, uint32_t ssrc)
 	auto packetizer = std::make_shared<RtpPacketizer>(audio, RtpRtcpPacketizerInterface::GetSharedPtr());
 	packetizer->SetPayloadType(payload_type);
 	packetizer->SetSSRC(ssrc);
+
+	if(!audio)
+	{
+		packetizer->SetUlpfec(kRedPayloadType, kUlpfecPayloadType);
+	}
 
 	_packetizers[payload_type] = packetizer;
 }

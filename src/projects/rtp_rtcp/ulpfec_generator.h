@@ -52,12 +52,11 @@ public:
 
 	bool AddRtpPacketAndGenerateFec(std::shared_ptr<RedRtpPacket> packet);
 	bool IsAvailableFecPackets() const;
-	bool NextPacket(RedRtpPacket *packet);
+	bool NextPacket(RtpPacket *packet);
 
 private:
 	bool Encode();
-	void XorFecPacket(uint8_t *fec_packet, size_t fec_header_len,
-						uint8_t *rtp_header, size_t rtp_header_len, uint8_t *rtp_payload, size_t rtp_payload_len);
+	void XorFecPacket(uint8_t *fec_packet, size_t fec_header_len, RedRtpPacket *packet);
 	void FinalizeFecHeader(uint8_t *fec_packet, const size_t fec_payload_len, const uint8_t *mask, const size_t mask_len);
 
 	// 0 ~ 100, 0 means no protect, Network traffic is increased by protect rate.

@@ -27,7 +27,7 @@ public:
 
 private:
 	// Basic
-	std::shared_ptr<RtpPacket> AllocatePacket(bool red=false);
+	std::shared_ptr<RtpPacket> AllocatePacket(bool red=false, bool ulpfec=false);
 	bool AssignSequenceNumber(RtpPacket *packet);
 
 	bool MarkerBit(FrameType frame_type, int8_t payload_type);
@@ -41,7 +41,7 @@ private:
 	                    const FragmentationHeader *fragmentation,
 	                    const RTPVideoHeader *video_header);
 
-	bool GenerateUlpfec(std::shared_ptr<RedRtpPacket> packet);
+	bool GenerateUlpfecPackets(std::shared_ptr<RedRtpPacket> packet);
 
 	// Audio Pakcet Sender Interface
 	bool PacketizeAudio(FrameType frame_type,

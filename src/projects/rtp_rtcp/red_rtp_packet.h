@@ -10,9 +10,11 @@ public:
 	RedRtpPacket(RtpPacket &src);
 	~RedRtpPacket();
 
-	void 		SetRed(uint8_t red_payload_type);
+	void 		PackageRed(uint8_t red_payload_type);
+	void 		SetMoreBlockBit(bool fBit);
 
 private:
 	uint8_t		_red_payload_type;
+	bool		_block_bit;
 };
 
