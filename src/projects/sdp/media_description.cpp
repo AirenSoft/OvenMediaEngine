@@ -291,98 +291,125 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			break;
 
 		case 'a':
-			// a=rtcp-mux
-			if(std::regex_search(content, matches, std::regex("^(rtcp-mux)")))
+			// For Performance
+			if(content.compare(0, OV_COUNTOF("rtp"),"rtp") == 0)
 			{
-				UseRtcpMux(true);
-			}
-				// a=sendonly
-			else if(std::regex_search(content, matches, std::regex("^(sendrecv|recvonly|sendonly|inactive)")))
-			{
-				if(matches.size() != 1 + 1)
-				{
-					parsing_error = true;
-					break;
-				}
-
-				if(!SetDirection(std::string(matches[1]).c_str()))
-				{
-					parsing_error = true;
-					break;
-				}
-			}
-				// a=mid:video,
-			else if(std::regex_search(content, matches, std::regex("^mid:([^\\s]*)")))
-			{
-				if(matches.size() != 1 + 1)
-				{
-					parsing_error = true;
-					break;
-				}
-
-				SetMid(std::string(matches[1]).c_str());
-			}
-				// a=setup:actpass
-			else if(std::regex_search(content, matches, std::regex("^setup:(\\w*)")))
-			{
-				if(matches.size() != 1 + 1)
-				{
-					parsing_error = true;
-					break;
-				}
-
-				SetSetup(std::string(matches[1]).c_str());
-			}
-				// a=framerate:29.97
-			else if(std::regex_search(content, matches, std::regex("^framerate:(\\d+(?:$|\\.\\d+))")))
-			{
-				if(matches.size() != 1 + 1)
-				{
-					parsing_error = true;
-					break;
-				}
-
-				SetFramerate(std::stof(matches[1]));
-			}
 				// a=rtpmap:96 VP8/50000/?
-			else if(std::regex_search(content,
-			                          matches,
-			                          std::regex("rtpmap:(\\d*) ([\\w\\-\\.]*)(?:\\s*\\/(\\d*)(?:\\s*\\/(\\S*))?)?")))
-			{
-				if(matches.size() < 3 + 1)
+				if(std::regex_search(content,
+				                     matches,
+				                     std::regex("rtpmap:(\\d*) ([\\w\\-\\.]*)(?:\\s*\\/(\\d*)(?:\\s*\\/(\\S*))?)?")))
 				{
-					parsing_error = true;
-					break;
-				}
+					if(matches.size() < 3 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
 
-				//TODO(getroot): matches[4]가 없는 경우에도 메모리는 할당 되는지 확인
-				AddRtpmap(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(),
-				          static_cast<uint32_t>(std::stoul(matches[3])), std::string(matches[4]).c_str());
+					//TODO(getroot): matches[4]가 없는 경우에도 메모리는 할당 되는지 확인
+					AddRtpmap(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(),
+					          static_cast<uint32_t>(std::stoul(matches[3])), std::string(matches[4]).c_str());
+				}
 			}
+				// a=rtcp-mux
+			else if(content.compare(0, OV_COUNTOF("rtcp-m"),"rtcp-m") == 0)
+			{
+				if(std::regex_search(content, matches, std::regex("^(rtcp-mux)")))
+				{
+					UseRtcpMux(true);
+				}
+			}
+			else if(content.compare(0, OV_COUNTOF("rtcp-f"), "rtcp-f") == 0)
+			{
 				// a=rtcp-fb:96 nack pli
 				// pli는 subtype으로 구분해야 하지만 여기서는 type-subtype 형태로 구분한다.
-			else if(std::regex_search(content,
-			                          matches,
-			                          std::regex("rtcp-fb:(\\*|\\d*) (.*)")))
-			{
-				if(matches.size() != 2 + 1)
+				if(std::regex_search(content,
+				                     matches,
+				                     std::regex("rtcp-fb:(\\*|\\d*) (.*)")))
 				{
-					parsing_error = true;
-					break;
-				}
+					if(matches.size() != 2 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
 
-				EnableRtcpFb(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(), true);
+					EnableRtcpFb(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(), true);
+				}
 			}
-				// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
-			else if(std::regex_search(content, matches, std::regex("ssrc:(\\d*) cname(?::(.*))?")))
+			else if(content.compare(0, OV_COUNTOF("mid"), "mid") == 0)
 			{
-				if(matches.size() != 2 + 1)
+				// a=mid:video,
+				if(std::regex_search(content, matches, std::regex("^mid:([^\\s]*)")))
 				{
-					parsing_error = true;
-					break;
-				}
+					if(matches.size() != 1 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
 
-				SetCname(stoul(matches[1]), std::string(matches[2]).c_str());
+					SetMid(std::string(matches[1]).c_str());
+				}
+			}
+			else if(content.compare(0, OV_COUNTOF("set"), "set") == 0)
+			{
+				// a=setup:actpass
+				if(std::regex_search(content, matches, std::regex("^setup:(\\w*)")))
+				{
+					if(matches.size() != 1 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
+
+					SetSetup(std::string(matches[1]).c_str());
+				}
+			}
+			else if(content.compare(0, OV_COUNTOF("ss"), "ss") == 0)
+			{
+				// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
+				if(std::regex_search(content, matches, std::regex("ssrc:(\\d*) cname(?::(.*))?")))
+				{
+					if(matches.size() != 2 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
+
+					SetCname(stoul(matches[1]), std::string(matches[2]).c_str());
+				}
+			}
+			else if(content.compare(0, OV_COUNTOF("fra"), "fra") == 0)
+			{
+				// a=framerate:29.97
+				if(std::regex_search(content, matches, std::regex("^framerate:(\\d+(?:$|\\.\\d+))")))
+				{
+					if(matches.size() != 1 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
+
+					SetFramerate(std::stof(matches[1]));
+				}
+			}
+				// a=sendonly
+			else if(content.compare(0, OV_COUNTOF("se"), "se") == 0 ||
+			        content.compare(0, OV_COUNTOF("re"), "re") == 0 ||
+			        content.compare(0, OV_COUNTOF("in"), "in") == 0)
+			{
+				if(std::regex_search(content, matches, std::regex("^(sendrecv|recvonly|sendonly|inactive)")))
+				{
+					if(matches.size() != 1 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
+
+					if(!SetDirection(std::string(matches[1]).c_str()))
+					{
+						parsing_error = true;
+						break;
+					}
+				}
 			}
 			else if(ParsingCommonAttrLine(type, content))
 			{
@@ -391,7 +418,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			else
 			{
 				// TODO Implementing of unknown attributes\
-				// a=fmtp:112 minptime=10;useinbandfec=1
+            // a=fmtp:112 minptime=10;useinbandfec=1
 				logw("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
 			}
 

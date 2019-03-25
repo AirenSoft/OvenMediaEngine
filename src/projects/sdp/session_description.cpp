@@ -91,7 +91,6 @@ bool SessionDescription::FromString(const ov::String &sdp)
 		if(!std::regex_search(line, ValidLineRegex))
 		{
 			continue;
-
 		}
 		char type = line[0];
 		std::string content = line.substr(2);
@@ -211,32 +210,38 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 			break;
 		case 'a':
 			// a=group:BUNDLE video audio ...
-			if(std::regex_search(content, matches, std::regex("^group:BUNDLE (.*)")))
+			if(content.compare(0, OV_COUNTOF("gr"), "gr") == 0)
 			{
-				if(matches.size() != 1 + 1)
+				if(std::regex_search(content, matches, std::regex("^group:BUNDLE (.*)")))
 				{
-					parsing_error = true;
-					break;
-				}
+					if(matches.size() != 1 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
 
-				std::string bundle;
-				std::stringstream bundles(matches[1]);
-				while(std::getline(bundles, bundle, ' '))
-				{
-					// 당장은 사용하는 곳이 없다. bundle only 이므로...
-					_bundles.emplace_back(bundle.c_str());
+					std::string bundle;
+					std::stringstream bundles(matches[1]);
+					while(std::getline(bundles, bundle, ' '))
+					{
+						// 당장은 사용하는 곳이 없다. bundle only 이므로...
+						_bundles.emplace_back(bundle.c_str());
+					}
 				}
 			}
-				// a=msid-semantic:WMS *
-			else if(std::regex_search(content, matches, std::regex(R"(^msid-semantic:\s?(\w*) (\S*))")))
+			// a=msid-semantic:WMS *
+			if(content.compare(0, OV_COUNTOF("ms"), "ms") == 0)
 			{
-				if(matches.size() != 2 + 1)
+				if(std::regex_search(content, matches, std::regex(R"(^msid-semantic:\s?(\w*) (\S*))")))
 				{
-					parsing_error = true;
-					break;
-				}
+					if(matches.size() != 2 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
 
-				SetMsidSemantic(std::string(matches[1]).c_str(), std::string(matches[2]).c_str());
+					SetMsidSemantic(std::string(matches[1]).c_str(), std::string(matches[2]).c_str());
+				}
 			}
 			else if(ParsingCommonAttrLine(type, content))
 			{
