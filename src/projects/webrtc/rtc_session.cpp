@@ -20,11 +20,11 @@ std::shared_ptr<RtcSession> RtcSession::Create(std::shared_ptr<Application> appl
 }
 
 RtcSession::RtcSession(SessionInfo &session_info,
-						std::shared_ptr<Application> application,
-                        std::shared_ptr<Stream> stream,
-                        std::shared_ptr<SessionDescription> offer_sdp,
-                        std::shared_ptr<SessionDescription> peer_sdp,
-                        std::shared_ptr<IcePort> ice_port)
+                       std::shared_ptr<Application> application,
+                       std::shared_ptr<Stream> stream,
+                       std::shared_ptr<SessionDescription> offer_sdp,
+                       std::shared_ptr<SessionDescription> peer_sdp,
+                       std::shared_ptr<IcePort> ice_port)
 	: Session(session_info, std::move(application), std::move(stream))
 {
 	_offer_sdp = std::move(offer_sdp);
@@ -122,10 +122,25 @@ bool RtcSession::Stop()
 	logtd("Stop session. Peer sdp session id : %u", GetPeerSDP()->GetSessionId());
 
 	// 연결된 세션을 정리한다.
-	_rtp_rtcp->Stop();
-	_dtls_ice_transport->Stop();
-	_dtls_transport->Stop();
-	_srtp_transport->Stop();
+	if(_rtp_rtcp != nullptr)
+	{
+		_rtp_rtcp->Stop();
+	}
+
+	if(_dtls_ice_transport != nullptr)
+	{
+		_dtls_ice_transport->Stop();
+	}
+
+	if(_dtls_transport != nullptr)
+	{
+		_dtls_transport->Stop();
+	}
+
+	if(_srtp_transport != nullptr)
+	{
+		_srtp_transport->Stop();
+	}
 
 	return Session::Stop();
 }
