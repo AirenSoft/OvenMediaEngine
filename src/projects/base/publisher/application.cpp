@@ -265,6 +265,7 @@ void Application::WorkerThread()
 	}
 }
 
+
 void Application::SendVideoFrame(std::shared_ptr<StreamInfo> info,
                                  std::shared_ptr<MediaTrack> track,
                                  std::unique_ptr<EncodedFrame> encoded_frame,

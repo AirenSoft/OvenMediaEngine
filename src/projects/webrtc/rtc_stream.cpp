@@ -29,7 +29,7 @@ RtcStream::~RtcStream()
 	Stop();
 }
 
-bool RtcStream::Start()
+bool RtcStream::Start(uint32_t worker_count)
 {
 	// OFFER SDP 생성
 	_offer_sdp = std::make_shared<SessionDescription>();
@@ -110,6 +110,9 @@ bool RtcStream::Start()
 				// WebRTC에서 사용하는 Track만 별도로 관리한다.
 				AddRtcTrack(payload->GetId(), track);
 
+				// RTP Packetizer를 추가한다.
+				AddPacketizer(false, payload->GetId(), video_media_desc->GetSsrc());
+
 				break;
 			}
 
@@ -157,6 +160,9 @@ bool RtcStream::Start()
 				// WebRTC에서 사용하는 Track만 별도로 관리한다.
 				AddRtcTrack(payload->GetId(), track);
 
+				// RTP Packetizer를 추가한다.
+				AddPacketizer(true, payload->GetId(), audio_media_desc->GetSsrc());
+
 				break;
 			}
 
@@ -172,7 +178,7 @@ bool RtcStream::Start()
 
 	logti("Stream is created : %s/%u", GetName().CStr(), GetId());
 
-	return Stream::Start();
+	return Stream::Start(worker_count);
 }
 
 bool RtcStream::Stop()
@@ -187,20 +193,16 @@ std::shared_ptr<SessionDescription> RtcStream::GetSessionDescription()
 	return _offer_sdp;
 }
 
-std::shared_ptr<RtcSession> RtcStream::FindRtcSessionByPeerSDPSessionID(uint32_t session_id)
+bool RtcStream::OnRtpPacketized(std::unique_ptr<RtpPacket> packet)
 {
-	// 모든 Session에 Frame을 전달한다.
-	for(auto const &x : GetSessionMap())
-	{
-		auto session = std::static_pointer_cast<RtcSession>(x.second);
+	BroadcastPacket(packet->PayloadType(), packet->GetData());
 
-		if(session->GetPeerSDP() != nullptr && session->GetPeerSDP()->GetSessionId() == session_id)
-		{
-			return session;
-		}
-	}
+	return true;
+}
 
-	return nullptr;
+bool RtcStream::OnRtcpPacketized(std::unique_ptr<RtcpPacket> packet)
+{
+	return true;
 }
 
 void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
@@ -219,26 +221,16 @@ void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 		MakeRtpVideoHeader(codec_info.get(), &rtp_video_header);
 	}
 
-	// 모든 Session에 Frame을 전달한다.
-	for(auto const &x : GetSessionMap())
-	{
-		auto session = x.second;
-
-		// RTP_RTCP는 Blocking 방식의 Packetizer이므로
-		// shared_ptr, unique_ptr을 사용하지 않아도 무방하다. 사실 다 고치기가 귀찮음 ㅠㅠ
-		// TODO(getroot): 향후 Performance 증가를 위해 RTP Packetize를 한번 하고 모든 Session에 전달하는 방법을
-		// 실험해보고 성능이 좋아지면 적용한다.
-		std::static_pointer_cast<RtcSession>(session)->SendOutgoingData(track,
-		                                                                encoded_frame->frame_type,
-		                                                                encoded_frame->time_stamp,
-		                                                                encoded_frame->buffer,
-		                                                                encoded_frame->length,
-		                                                                fragmentation.get(),
-		                                                                &rtp_video_header);
-	}
-
-	// TODO(getroot): 향후 ov::Data로 변경한다.
-	delete[] encoded_frame->buffer;
+	// RTP Packetizing
+	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
+	auto packetizer = GetPacketizer(track->GetId());
+	// RTP_SENDER에 등록된 RtpRtcpSession에 의해서 Packetizing이 완료되면 OnRtpPacketized 함수가 호출된다.
+	packetizer->Packetize(encoded_frame->frame_type,
+	                      encoded_frame->time_stamp,
+	                      encoded_frame->buffer,
+	                      encoded_frame->length,
+	                      fragmentation.get(),
+	                      &rtp_video_header);
 }
 
 void RtcStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
@@ -247,30 +239,18 @@ void RtcStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
                                std::unique_ptr<FragmentationHeader> fragmentation)
 {
 	// AudioFrame 데이터를 Protocol에 맞게 변환한다.
-
 	OV_ASSERT2(encoded_frame != nullptr);
 	OV_ASSERT2(encoded_frame->buffer != nullptr);
 
-	// 모든 Session에 Frame을 전달한다.
-	for(auto const &x : GetSessionMap())
-	{
-		auto session = x.second;
-
-		// RTP_RTCP는 Blocking 방식의 Packetizer이므로
-		// shared_ptr, unique_ptr을 사용하지 않아도 무방하다. 사실 다 고치기가 귀찮음 ㅠㅠ
-		// TODO(getroot): 향후 Performance 증가를 위해 RTP Packetize를 한번 하고 모든 Session에 전달하는 방법을
-		// 실험해보고 성능이 좋아지면 적용한다.
-		std::static_pointer_cast<RtcSession>(session)->SendOutgoingData(track,
-		                                                                encoded_frame->frame_type,
-		                                                                encoded_frame->time_stamp,
-		                                                                encoded_frame->buffer,
-		                                                                encoded_frame->length,
-		                                                                fragmentation.get(),
-		                                                                nullptr);
-	}
-
-	// TODO(getroot): 향후 ov::Data로 변경한다.
-	delete[] encoded_frame->buffer;
+	// RTP Packetizing
+	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
+	auto packetizer = GetPacketizer(track->GetId());
+	packetizer->Packetize(encoded_frame->frame_type,
+	                      encoded_frame->time_stamp,
+	                      encoded_frame->buffer,
+	                      encoded_frame->length,
+	                      fragmentation.get(),
+	                      nullptr);
 }
 
 void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader *rtp_video_header)
@@ -296,6 +276,15 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 	}
 }
 
+void RtcStream::AddPacketizer(bool audio, uint32_t payload_type, uint32_t ssrc)
+{
+	auto packetizer = std::make_shared<RtpPacketizer>(audio, RtpRtcpPacketizerInterface::GetSharedPtr());
+	packetizer->SetPayloadType(payload_type);
+	packetizer->SetSSRC(ssrc);
+
+	_packetizers[payload_type] = packetizer;
+}
+
 void RtcStream::AddRtcTrack(uint32_t payload_type, std::shared_ptr<MediaTrack> track)
 {
 	_rtc_track[payload_type] = track;
@@ -309,4 +298,14 @@ std::shared_ptr<MediaTrack> RtcStream::GetRtcTrack(uint32_t payload_type)
 	}
 
 	return _rtc_track[payload_type];
+}
+
+std::shared_ptr<RtpPacketizer> RtcStream::GetPacketizer(uint32_t payload_type)
+{
+	if(!_packetizers.count(payload_type))
+	{
+		return nullptr;
+	}
+
+	return _packetizers[payload_type];
 }

@@ -1,24 +1,61 @@
 #pragma once
 
-#include "rtp_rtcp_defines.h"
 #include "rtp_packet.h"
+#include "rtp_packetizing_manager.h"
+#include "rtp_rtcp_defines.h"
+#include <memory>
 
 class RtpPacketizer
 {
 public:
-	static RtpPacketizer *Create(RtpVideoCodecType type,
-	                             size_t max_payload_len,
-	                             size_t last_packet_reduction_len,
-	                             const RTPVideoTypeHeader *rtp_type_header,
-	                             FrameType frame_type);
+	RtpPacketizer(bool audio, std::shared_ptr<RtpRtcpPacketizerInterface> session);
+	~RtpPacketizer();
 
-	virtual ~RtpPacketizer()
-	{
-	}
+	void SetPayloadType(uint8_t payload_type);
+	void SetSSRC(uint32_t ssrc);
+	void SetCsrcs(const std::vector<uint32_t> &csrcs);
 
-	virtual size_t SetPayloadData(const uint8_t *payload_data, size_t payload_size,
-	                              const FragmentationHeader *fragmentation) = 0;
+	// RTP Packet
+	bool Packetize(FrameType frame_type,
+	               uint32_t timestamp,
+	               const uint8_t *payload_data,
+	               size_t payload_size,
+	               const FragmentationHeader *fragmentation,
+	               const RTPVideoHeader *rtp_header);
 
-	virtual bool NextPacket(RtpPacket *packet) = 0;
+private:
+	// Basic
+	std::unique_ptr<RtpPacket> AllocatePacket();
+	bool AssignSequenceNumber(RtpPacket *packet);
+
+	bool MarkerBit(FrameType frame_type, int8_t payload_type);
+
+	// Video Packet Sender Interface
+	bool PacketizingVideo(RtpVideoCodecType video_type,
+	                      FrameType frame_type,
+	                      uint32_t rtp_timestamp,
+	                      const uint8_t *payload_data,
+	                      size_t payload_size,
+	                      const FragmentationHeader *fragmentation,
+	                      const RTPVideoHeader *video_header);
+
+	// Audio Pakcet Sender Interface
+	bool PacketizingAudio(FrameType frame_type,
+	                      uint32_t rtp_timestamp,
+	                      const uint8_t *payload_data,
+	                      size_t payload_size);
+
+	// Member
+	uint32_t _timestamp_offset;
+	bool _audio_configured;
+
+	// Session Information
+	uint32_t _ssrc;
+	uint8_t _payload_type;
+	std::vector<uint32_t> _csrcs;
+	// Sequence Number
+	uint16_t _sequence_number;
+
+	// Session Descriptor
+	std::shared_ptr<RtpRtcpPacketizerInterface> _session;
 };
-

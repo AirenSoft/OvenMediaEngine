@@ -8,7 +8,7 @@
 #define FIXED_HEADER_SIZE			12
 #define ONE_BYTE_EXTENSION_ID		0xBEDE
 #define ONE_BYTE_HEADER_SIZE		1
-#define DEFAULT_MAX_PACKET_SIZE		1500 - 28
+#define DEFAULT_MAX_PACKET_SIZE		1500
 
 //  0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1

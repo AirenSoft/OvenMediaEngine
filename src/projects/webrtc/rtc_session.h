@@ -49,11 +49,12 @@ public:
 	                                          std::shared_ptr<SessionDescription> peer_sdp,
 	                                          std::shared_ptr<IcePort> ice_port);
 
-	RtcSession(std::shared_ptr<Application> application,
-	           std::shared_ptr<Stream> stream,
-	           std::shared_ptr<SessionDescription> offer_sdp,
-	           std::shared_ptr<SessionDescription> peer_sdp,
-	           std::shared_ptr<IcePort> ice_port);
+	RtcSession(SessionInfo &session_info,
+			std::shared_ptr<Application> application,
+	        std::shared_ptr<Stream> stream,
+	        std::shared_ptr<SessionDescription> offer_sdp,
+	        std::shared_ptr<SessionDescription> peer_sdp,
+	        std::shared_ptr<IcePort> ice_port);
 	~RtcSession() override;
 
 	bool Start() override;
@@ -61,27 +62,22 @@ public:
 
 	std::shared_ptr<SessionDescription> GetPeerSDP();
 
-	bool SendOutgoingData(std::shared_ptr<MediaTrack> track,
-	                      FrameType frame_type,
-	                      uint32_t timestamp,
-	                      const uint8_t *payload_data,
-	                      size_t payload_size,
-	                      const FragmentationHeader *fragmentation,
-	                      const RTPVideoHeader *rtp_video_header);
+	bool SendOutgoingData(uint32_t id, std::shared_ptr<ov::Data> packet) override;
+	void OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std::shared_ptr<const ov::Data> data) override;
 
-
-	void OnPacketReceived(std::shared_ptr<SessionInfo> session_info, const std::shared_ptr<const ov::Data> data) override;
-
+	uint8_t GetVideoPayloadType();
+	uint8_t GetAudioPayloadType();
 
 private:
-	std::shared_ptr<RtcStream> GetRtcStream();
-
-	std::map<uint32_t, std::shared_ptr<RtpRtcp>> _rtp_rtcp_map;
-	std::shared_ptr<SrtpTransport> _srtp_transport;
-	std::shared_ptr<DtlsTransport> _dtls_transport;
-	std::shared_ptr<DtlsIceTransport> _dtls_ice_transport;
+	std::shared_ptr<RtpRtcp>            _rtp_rtcp;
+	std::shared_ptr<SrtpTransport>      _srtp_transport;
+	std::shared_ptr<DtlsTransport>      _dtls_transport;
+	std::shared_ptr<DtlsIceTransport>   _dtls_ice_transport;
 
 	std::shared_ptr<SessionDescription> _offer_sdp;
 	std::shared_ptr<SessionDescription> _peer_sdp;
-	std::shared_ptr<IcePort> _ice_port;
+	std::shared_ptr<IcePort>            _ice_port;
+
+	uint8_t                             _video_payload_type;
+	uint8_t                             _audio_payload_type;
 };

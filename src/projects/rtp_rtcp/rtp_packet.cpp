@@ -32,12 +32,12 @@ RtpPacket::RtpPacket(RtpPacket &src)
 	_payload_size = src._payload_size;
 	_padding_size = src._padding_size;
 	_extension_size = src._extension_size;
+	_sequence_number = src._sequence_number;
+	_timestamp = src._timestamp;
 
 	_data = src._data->Clone();
+	_data->SetLength(src._data->GetLength());
 	_buffer = _data->GetWritableDataAs<uint8_t>();
-
-	_sequence_number = 0;
-	_timestamp = 0;
 }
 
 RtpPacket::~RtpPacket()

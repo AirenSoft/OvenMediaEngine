@@ -174,8 +174,7 @@ bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov
 	}
 
 	// Peer SDP의 Session ID로 세션을 찾는다.
-	auto session = stream->FindRtcSessionByPeerSDPSessionID(peer_sdp->GetSessionId());
-
+	auto session = stream->GetSession(peer_sdp->GetSessionId());
 	if(session == nullptr)
 	{
 		logte("To stop session failed. Cannot find session by peer sdp session id (%u)", peer_sdp->GetSessionId());
