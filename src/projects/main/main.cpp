@@ -17,10 +17,22 @@
 #include <base/ovcrypto/ovcrypto.h>
 #include <base/ovlibrary/stack_trace.h>
 
+uint32_t thread_count = 0;
+
 void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
 
 int main(int argc, char *argv[])
 {
+	if(argc >= 2)
+	{
+		thread_count = atoi(argv[1]);
+	}
+
+	if(thread_count > 0)
+	{
+		logtw("Thread count: %d\n", thread_count);
+	}
+
 	logtd("Trying to initialize StackTrace...");
 	ov::StackTrace::InitializeStackTrace(OME_VERSION);
 

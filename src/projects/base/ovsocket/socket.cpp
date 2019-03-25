@@ -17,10 +17,141 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <errno.h>
 
+#include <chrono>
+#include <atomic>
+
+#define USE_STATS_COUNTER                       1
+
 namespace ov
 {
+#if USE_STATS_COUNTER
+	class StatsCounter
+	{
+	public:
+		void IncreasePps()
+		{
+			_count++;
+			_total_count++;
+		}
+
+		void IncreaseRetry()
+		{
+			_retry_count++;
+			_total_retry_count++;
+		}
+
+		void IncreaseError()
+		{
+			_error_count++;
+			_total_error_count++;
+		}
+
+		void StartTracking()
+		{
+			{
+				std::lock_guard<std::mutex> lock_guard(_mutex);
+				if(_is_running)
+				{
+					return;
+				}
+
+				_is_running = true;
+			}
+
+			_stop = false;
+
+			_tracking_thread = std::thread(
+				[this]()
+				{
+					int64_t min = INT64_MAX;
+					int64_t max = INT64_MIN;
+
+					int64_t retry_min = INT64_MAX;
+					int64_t retry_max = INT64_MIN;
+
+					int64_t error_min = INT64_MAX;
+					int64_t error_max = INT64_MIN;
+
+					int64_t loop_count = 0;
+					while(_stop == false)
+					{
+						int64_t count = _count;
+						_count = 0;
+
+						int64_t retry_count = _retry_count;
+						_retry_count = 0;
+
+						int64_t error_count = _error_count;
+						_error_count = 0;
+
+						if((count > 0) || (retry_count) || (error_count > 0))
+						{
+							loop_count++;
+
+							min = std::min(min, count);
+							max = std::max(max, count);
+
+							retry_min = std::min(retry_min, retry_count);
+							retry_max = std::max(retry_max, retry_count);
+
+							error_min = std::min(error_min, error_count);
+							error_max = std::max(error_max, error_count);
+
+							int64_t average = _total_count / ((loop_count == 0) ? 1 : loop_count);
+							int64_t retry_average = _total_retry_count / ((loop_count == 0) ? 1 : loop_count);
+							int64_t error_average = _total_error_count / ((loop_count == 0) ? 1 : loop_count);
+
+							logi("SockStat",
+								"[Stats Counter] Total sampling count: %ld\n"
+								"+-------+---------+---------+---------+---------+--------------+\n"
+								"| Type  | Current |   Max   |   Min   | Average |    Total     |\n"
+								"+-------+---------+---------+---------+---------+--------------+\n"
+								"| PPS   | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
+								"| Retry | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
+								"| Error | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
+								"+-------+---------+---------+---------+---------+--------------+\n",
+								loop_count,
+								count, max, min, average, static_cast<int64_t>(_total_count),
+								retry_count, retry_max, retry_min, retry_average, static_cast<int64_t>(_total_retry_count),
+								error_count, error_max, error_min, error_average, static_cast<int64_t>(_total_error_count)
+							);
+						}
+
+						sleep(1);
+					}
+				});
+		}
+
+		void StopTracking()
+		{
+			_stop = true;
+		}
+
+	protected:
+		std::mutex _mutex;
+		volatile bool _is_running = false;
+
+		std::atomic<int64_t> _count { 0 };
+		std::atomic<int64_t> _total_count { 0 };
+
+		std::atomic<int64_t> _retry_count { 0 };
+		std::atomic<int64_t> _total_retry_count { 0 };
+
+		std::atomic<int64_t> _error_count { 0 };
+		std::atomic<int64_t> _total_error_count { 0 };
+
+		std::thread _tracking_thread;
+		volatile bool _stop = true;
+	};
+
+	static StatsCounter stats_counter;
+#endif // USE_STATS_COUNTER
+
 	Socket::Socket()
 	{
+#if USE_STATS_COUNTER
+		stats_counter.StartTracking();
+#endif // USE_STATS_COUNTER
 	}
 
 	// remote 정보가 들어왔으므로, connect상태로 간주함
@@ -871,7 +1002,35 @@ namespace ov
 		{
 			case SocketType::Udp:
 			case SocketType::Tcp:
-				return ::sendto(_socket.GetSocket(), data, length, MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0), address.Address(), address.AddressLength());
+			{
+				while(true)
+				{
+					int result = ::sendto(_socket.GetSocket(), data, length, MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0), address.Address(), address.AddressLength());
+
+					if(result >= 0)
+					{
+#if USE_STATS_COUNTER
+						stats_counter.IncreasePps();
+#endif // USE_STATS_COUNTER
+					}
+					else
+					{
+						if(errno == EAGAIN)
+						{
+#if USE_STATS_COUNTER
+							stats_counter.IncreaseRetry();
+#endif // USE_STATS_COUNTER
+							continue;
+						}
+
+#if USE_STATS_COUNTER
+						stats_counter.IncreaseError();
+#endif // USE_STATS_COUNTER
+					}
+
+					return result;
+				}
+			}
 
 			case SocketType::Srt:
 				// Does not support SendTo() for SRT
@@ -904,6 +1063,8 @@ namespace ov
 
 		ssize_t read_bytes = -1;
 
+		SRT_MSGCTRL msg_ctrl {};
+
 		switch(GetType())
 		{
 			case SocketType::Udp:
@@ -912,7 +1073,9 @@ namespace ov
 				break;
 
 			case SocketType::Srt:
-				read_bytes = ::srt_recv(_socket.GetSocket(), reinterpret_cast<char *>(data->GetWritableData()), static_cast<int>(data->GetLength()));
+				read_bytes = ::srt_recvmsg2(_socket.GetSocket(),
+				                            reinterpret_cast<char *>(data->GetWritableData()),
+				                            static_cast<int>(data->GetLength()), &msg_ctrl);
 				break;
 
 			default:

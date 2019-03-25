@@ -20,6 +20,34 @@
 
 class IcePort : protected PhysicalPortObserver
 {
+protected:
+	// 각각의 client들에 대한 접속 정보를 추적하기 위한 구조체
+	struct IcePortInfo
+	{
+		// client에 연결되어 있는 세션 정보
+		std::shared_ptr<SessionInfo> session_info;
+
+		std::shared_ptr<SessionDescription> offer_sdp;
+		std::shared_ptr<SessionDescription> peer_sdp;
+
+		ov::Socket *remote;
+		ov::SocketAddress address;
+
+		IcePortConnectionState state;
+
+		std::chrono::time_point<std::chrono::system_clock> expire_time;
+
+		void UpdateBindingTime()
+		{
+			expire_time = std::chrono::system_clock::now() + std::chrono::milliseconds(30 * 1000);
+		}
+
+		bool IsExpired() const
+		{
+			return (std::chrono::system_clock::now() > expire_time);
+		}
+	};
+
 public:
 	IcePort();
 	virtual ~IcePort();
@@ -81,7 +109,6 @@ protected:
 	void OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 	//--------------------------------------------------------------------
 
-	struct IcePortInfo;
 	void SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionState state);
 
 	// STUN 오류를 반환함
@@ -103,33 +130,6 @@ private:
 	bool SendBindingRequest(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<IcePortInfo> &info);
 	bool ProcessBindingResponse(ov::Socket *remote, const ov::SocketAddress &address, const StunMessage &response_message);
 
-	// 각각의 client들에 대한 접속 정보를 추적하기 위한 구조체
-	typedef struct IcePortInfo
-	{
-		// client에 연결되어 있는 세션 정보
-		std::shared_ptr<SessionInfo> session_info;
-		
-		std::shared_ptr<SessionDescription> offer_sdp;
-		std::shared_ptr<SessionDescription> peer_sdp;
-
-		ov::Socket *remote;
-		ov::SocketAddress address;
-
-		IcePortConnectionState state;
-
-		std::chrono::time_point<std::chrono::system_clock> expire_time;
-
-		void UpdateBindingTime()
-		{
-			expire_time = std::chrono::system_clock::now() + std::chrono::milliseconds(60 * 1000);
-		}
-
-		bool IsExpired() const
-		{
-			return (std::chrono::system_clock::now() > expire_time);
-		}
-	} IcePortInfo;
-
 	std::shared_ptr<PhysicalPort> _physical_port;
 
 	// IcePort로 부터 데이터가 들어오면 이벤트를 받을 옵져버 목록
@@ -147,6 +147,7 @@ private:
 	// 상대방의 ip:port로 IcePortInfo를 바로 찾을 수 있게 함
 	// key: SocketAddress
 	// value: IcePortInfo
+	std::mutex _ice_port_info_mutex;
 	std::map<ov::SocketAddress, std::shared_ptr<IcePortInfo>> _ice_port_info;
 	// session_id로 IcePortInfo를 바로 찾을 수 있게 함
 	std::map<session_id_t, std::shared_ptr<IcePortInfo>> _session_table;

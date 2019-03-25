@@ -1,6 +1,8 @@
 #include "publisher_private.h"
 #include "stream.h"
 
+extern uint32_t thread_count;
+
 StreamWorker::StreamWorker()
 {
 }
@@ -44,7 +46,7 @@ bool StreamWorker::RemoveSession(session_id_t id)
 	std::unique_lock<std::mutex> lock(_session_map_guard);
 	if(_sessions.count(id) <= 0)
 	{
-		logte("Cannot find session : %u", id);
+		fprintf(stderr, "Cannot find session : %u", id);
 		return false;
 	}
 
@@ -62,7 +64,7 @@ std::shared_ptr<Session> StreamWorker::GetSession(session_id_t id)
 {
 	if(_sessions.count(id) <= 0)
 	{
-		logte("Cannot find session : %u", id);
+		fprintf(stderr, "Cannot find session : %u", id);
 		return nullptr;
 	}
 
@@ -99,7 +101,6 @@ std::shared_ptr<StreamWorker::StreamPacket> StreamWorker::PopStreamPacket()
 void StreamWorker::WorkerThread()
 {
 	std::unique_lock<std::mutex> session_lock(_session_map_guard, std::defer_lock);
-
 	// Queue Event를 기다린다.
 	while(!_stop_thread_flag)
 	{
@@ -143,6 +144,12 @@ Stream::~Stream()
 
 bool Stream::Start(uint32_t worker_count)
 {
+	if(thread_count > 0)
+	{
+		// override
+		worker_count = thread_count;
+	}
+
 	if(worker_count > MAX_STREAM_THREAD_COUNT)
 	{
 		worker_count = MAX_STREAM_THREAD_COUNT;
