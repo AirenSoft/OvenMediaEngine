@@ -134,6 +134,6 @@ private:
 
 	uint8_t _stats_queue_full_count;
 
-	uint8_t _max_queue_size;
+	uint64_t _max_queue_size;
 };
 

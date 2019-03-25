@@ -143,8 +143,11 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 				tracks.push_back(track_id);
 			}
 		}
-		profile_tracks[profile_name] = tracks;
-		tracks.clear();
+
+		if (!tracks.empty()) {
+			profile_tracks[profile_name] = tracks;
+			tracks.clear();
+		}
 	}
 
 	// Generate track list by stream
@@ -213,8 +216,13 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 		CreateEncoders(cur_track);
 	}
 
-	OV_ASSERT2(_encoders.size());
-	_max_queue_size = _encoders.size() * 16;
+	if (_encoders.empty()) {
+		logte("One or more encoders are required");
+		exit(0);
+	}
+
+	// _max_queue_size : 255
+	_max_queue_size = (_encoders.size() > 0x0F) ? 0xFF : _encoders.size() * 16;
 
 	logti("Transcoder Information / Encoders(%d) / Streams(%d)", _encoders.size(), _stream_tracks.size());
 

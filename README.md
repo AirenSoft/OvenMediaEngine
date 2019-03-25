@@ -29,7 +29,11 @@ We will support the following platforms in the future:
 - Ubuntu
   - Install packages
   ```
-  $ sudo apt install build-essential nasm autoconf libtool zlib1g-dev libssl-dev libvpx-dev libopus-dev libsrtp2-dev pkg-config libfdk-aac-dev tclsh cmake
+  $ sudo apt install build-essential nasm autoconf libtool zlib1g-dev libssl-dev libvpx-dev libopus-dev pkg-config libfdk-aac-dev tclsh cmake
+  ```
+  - [libSRTP 2.2.0](https://github.com/cisco/libsrtp) [[Download]](https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz)
+  ```
+  $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure --enable-openssl && make && sudo make install)
   ```
   - [OpenH264 1.8.0](https://www.openh264.org/) [[Download]](http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2)
   ```
@@ -63,7 +67,7 @@ We will support the following platforms in the future:
   ```
   - [libSRTP 2.2.0](https://github.com/cisco/libsrtp) [[Download]](https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz)
   ```
-  $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure && make && sudo make install)
+  $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure --enable-openssl && make && sudo make install)
   ```
   - [FDK-AAC](https://github.com/mstorsjo/fdk-aac) [[Download]](https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz)
   ```
@@ -115,7 +119,7 @@ We will support the following platforms in the future:
   ```
   - [libSRTP 2.2.0](https://github.com/cisco/libsrtp) [[Download]](https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz)
   ```
-  $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure && make && sudo make install)
+  $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure --enable-openssl && make && sudo make install)
   ```
   - [FDK-AAC](https://github.com/mstorsjo/fdk-aac) [[Download]](https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz)
   ```
