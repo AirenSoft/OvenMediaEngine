@@ -210,7 +210,7 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 			break;
 		case 'a':
 			// a=group:BUNDLE video audio ...
-			if(content.compare(0, OV_COUNTOF("gr"), "gr") == 0)
+			if(content.compare(0, OV_COUNTOF("gr") - 1, "gr") == 0)
 			{
 				if(std::regex_search(content, matches, std::regex("^group:BUNDLE (.*)")))
 				{
@@ -230,7 +230,7 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 				}
 			}
 			// a=msid-semantic:WMS *
-			if(content.compare(0, OV_COUNTOF("ms"), "ms") == 0)
+			if(content.compare(0, OV_COUNTOF("ms") - 1, "ms") == 0)
 			{
 				if(std::regex_search(content, matches, std::regex(R"(^msid-semantic:\s?(\w*) (\S*))")))
 				{

@@ -292,7 +292,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 
 		case 'a':
 			// For Performance
-			if(content.compare(0, OV_COUNTOF("rtp"),"rtp") == 0)
+			if(content.compare(0, OV_COUNTOF("rtp") - 1,"rtp") == 0)
 			{
 				// a=rtpmap:96 VP8/50000/?
 				if(std::regex_search(content,
@@ -311,14 +311,14 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 				}
 			}
 				// a=rtcp-mux
-			else if(content.compare(0, OV_COUNTOF("rtcp-m"),"rtcp-m") == 0)
+			else if(content.compare(0, OV_COUNTOF("rtcp-m") - 1,"rtcp-m") == 0)
 			{
 				if(std::regex_search(content, matches, std::regex("^(rtcp-mux)")))
 				{
 					UseRtcpMux(true);
 				}
 			}
-			else if(content.compare(0, OV_COUNTOF("rtcp-f"), "rtcp-f") == 0)
+			else if(content.compare(0, OV_COUNTOF("rtcp-f") - 1, "rtcp-f") == 0)
 			{
 				// a=rtcp-fb:96 nack pli
 				// pli는 subtype으로 구분해야 하지만 여기서는 type-subtype 형태로 구분한다.
@@ -335,7 +335,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					EnableRtcpFb(static_cast<uint8_t>(std::stoul(matches[1])), std::string(matches[2]).c_str(), true);
 				}
 			}
-			else if(content.compare(0, OV_COUNTOF("mid"), "mid") == 0)
+			else if(content.compare(0, OV_COUNTOF("mid") - 1, "mid") == 0)
 			{
 				// a=mid:video,
 				if(std::regex_search(content, matches, std::regex("^mid:([^\\s]*)")))
@@ -349,7 +349,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					SetMid(std::string(matches[1]).c_str());
 				}
 			}
-			else if(content.compare(0, OV_COUNTOF("set"), "set") == 0)
+			else if(content.compare(0, OV_COUNTOF("set") - 1, "set") == 0)
 			{
 				// a=setup:actpass
 				if(std::regex_search(content, matches, std::regex("^setup:(\\w*)")))
@@ -363,7 +363,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					SetSetup(std::string(matches[1]).c_str());
 				}
 			}
-			else if(content.compare(0, OV_COUNTOF("ss"), "ss") == 0)
+			else if(content.compare(0, OV_COUNTOF("ss") - 1, "ss") == 0)
 			{
 				// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
 				if(std::regex_search(content, matches, std::regex("ssrc:(\\d*) cname(?::(.*))?")))
@@ -377,7 +377,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					SetCname(stoul(matches[1]), std::string(matches[2]).c_str());
 				}
 			}
-			else if(content.compare(0, OV_COUNTOF("fra"), "fra") == 0)
+			else if(content.compare(0, OV_COUNTOF("fra") - 1, "fra") == 0)
 			{
 				// a=framerate:29.97
 				if(std::regex_search(content, matches, std::regex("^framerate:(\\d+(?:$|\\.\\d+))")))
@@ -392,9 +392,9 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 				}
 			}
 				// a=sendonly
-			else if(content.compare(0, OV_COUNTOF("se"), "se") == 0 ||
-			        content.compare(0, OV_COUNTOF("re"), "re") == 0 ||
-			        content.compare(0, OV_COUNTOF("in"), "in") == 0)
+			else if(content.compare(0, OV_COUNTOF("se") - 1, "se") == 0 ||
+			        content.compare(0, OV_COUNTOF("re") - 1, "re") == 0 ||
+			        content.compare(0, OV_COUNTOF("in") - 1, "in") == 0)
 			{
 				if(std::regex_search(content, matches, std::regex("^(sendrecv|recvonly|sendonly|inactive)")))
 				{
