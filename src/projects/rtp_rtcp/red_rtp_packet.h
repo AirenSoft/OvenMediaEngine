@@ -2,19 +2,20 @@
 
 #include "rtp_packet.h"
 
+// We use only one block
+
 class RedRtpPacket : public RtpPacket
 {
 public:
 	RedRtpPacket();
 	RedRtpPacket(RedRtpPacket &src);
-	RedRtpPacket(RtpPacket &src);
 	~RedRtpPacket();
 
-	void 		PackageRed(uint8_t red_payload_type);
-	void 		SetMoreBlockBit(bool fBit);
+	void 		PackageAsRed(uint8_t red_payload_type, RtpPacket &src);
+	void 		PackageAsRed(uint8_t red_payload_type);
+	uint8_t 	BlockPT();
 
 private:
-	uint8_t		_red_payload_type;
-	bool		_block_bit;
+	uint8_t		_block_pt;
 };
 

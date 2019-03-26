@@ -2,19 +2,12 @@
 
 RedRtpPacket::RedRtpPacket()
 {
-
-}
-
-RedRtpPacket::RedRtpPacket(RtpPacket &src)
-	:RtpPacket(src)
-{
-
 }
 
 RedRtpPacket::RedRtpPacket(RedRtpPacket &src)
 	:RtpPacket(src)
 {
-	_red_payload_type = src._red_payload_type;
+	_block_pt = src._block_pt;
 }
 
 RedRtpPacket::~RedRtpPacket()
@@ -22,35 +15,44 @@ RedRtpPacket::~RedRtpPacket()
 
 }
 
-void RedRtpPacket::PackageRed(uint8_t red_payload_type)
+void RedRtpPacket::PackageAsRed(uint8_t red_payload_type, RtpPacket &src)
+{
+	SetMarker(src.Marker());
+	SetPayloadType(src.PayloadType());
+	SetUlpfec(src.IsUlpfec(), src.OriginPayloadType());
+	SetSsrc(src.Ssrc());
+	SetSequenceNumber(src.SequenceNumber());
+	SetTimestamp(src.Timestamp());
+
+	_payload_offset = src.HeadersSize();
+	_payload_size = src.PayloadSize();
+	_padding_size = src.PaddingSize();
+	_extension_size = src.ExtensionSize();
+
+	PackageAsRed(red_payload_type);
+
+	SetPayload(src.Payload(), src.PayloadSize());
+}
+
+//Implement RED as part of the RTP header to reduce memory copying and improve performance.
+void RedRtpPacket::PackageAsRed(uint8_t red_payload_type)
 {
 	// TODO(Getroot): Check validation
 	// This function should be used after SetCsrcs, Extensions and before AllocatePayload.
 
+	_block_pt = PayloadType();
+	SetPayloadType(red_payload_type);
+
+	// Increase 1 bytes for RED
 	_payload_offset = _payload_offset + RED_HEADER_SIZE;
 	_data->SetLength(_payload_offset);
 	_buffer = _data->GetWritableDataAs<uint8_t>();
 
-	_red_payload_type = red_payload_type;
-	// Replace Payload type with red_payload_type
-	_buffer[1] = (_buffer[1] & 0x80) | red_payload_type;
-
 	// Write payload type at the end of the rtp header
-	_buffer[_payload_offset-RED_HEADER_SIZE] = _payload_type;
+	_buffer[_payload_offset - RED_HEADER_SIZE] = _block_pt;
 }
 
-void RedRtpPacket::SetMoreBlockBit(bool f_bit)
+uint8_t RedRtpPacket::BlockPT()
 {
-	// TODO(Getroot): Check validation
-	// This function should be used after PackageRed
-
-	_block_bit = f_bit;
-	if(_block_bit)
-	{
-		_buffer[_payload_offset - RED_HEADER_SIZE] |= 0x80;
-	}
-	else
-	{
-		_buffer[_payload_offset - RED_HEADER_SIZE] &= 0x7F;
-	}
+	return _block_pt;
 }

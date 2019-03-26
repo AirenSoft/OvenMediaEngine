@@ -95,16 +95,8 @@ bool SrtpAdapter::ProtectRtp(std::shared_ptr<ov::Data> data)
 	int err = srtp_protect(_session, buffer, &out_len);
 	if(err != srtp_err_status_ok)
 	{
-		if(payload_type == 123)
-		{
-			logte("Failed to protect SRTP packet, err=%d, len=%d, seq=%u, payload_type=%d, red_payload_type=%d", err, out_len, seq, payload_type, red_payload_type);
-		}
+		logte("Failed to protect SRTP packet, err=%d, len=%d, seq=%u, payload_type=%d, red_payload_type=%d", err, out_len, seq, payload_type, red_payload_type);
 		return false;
-	}
-
-	if(payload_type == 123)
-	{
-	//	logte("Success to protect SRTP packet, err=%d, len=%d, seq=%u, payload_type=%d, red_payload_type=%d", err, out_len, seq, payload_type, red_payload_type);
 	}
 
 	return true;

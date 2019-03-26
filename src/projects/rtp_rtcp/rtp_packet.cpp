@@ -5,6 +5,8 @@ RtpPacket::RtpPacket()
 {
 	_marker = false;
 	_payload_type = 0;
+	_origin_payload_type = 0;
+	_is_fec = false;
 	_sequence_number = 0;
 	_timestamp = 0;
 	_ssrc = 0;
@@ -27,6 +29,7 @@ RtpPacket::RtpPacket(RtpPacket &src)
 {
 	_marker = src._marker;
 	_payload_type = src._payload_type;
+	_origin_payload_type = src._origin_payload_type;
 	_ssrc = src._ssrc;
 	_payload_offset = src._payload_offset;
 	_payload_size = src._payload_size;
@@ -55,10 +58,22 @@ bool RtpPacket::Marker()
 {
 	return _marker;
 }
+
+bool RtpPacket::IsUlpfec()
+{
+	return _is_fec;
+}
+
 uint8_t RtpPacket::PayloadType()
 {
 	return _payload_type;
 }
+
+uint8_t RtpPacket::OriginPayloadType()
+{
+	return _origin_payload_type;
+}
+
 uint16_t RtpPacket::SequenceNumber()
 {
 	return _sequence_number;
@@ -106,26 +121,37 @@ void RtpPacket::SetMarker(bool marker_bit)
 		_buffer[1] = _buffer[1] & 0x7F;
 	}
 }
+
 void RtpPacket::SetPayloadType(uint8_t payload_type)
 {
 	_payload_type = payload_type;
 	_buffer[1] = (_buffer[1] & 0x80) | payload_type;
 }
+
+void RtpPacket::SetUlpfec(bool is_fec, uint8_t origin_payload_type)
+{
+	_is_fec = is_fec;
+	_origin_payload_type = origin_payload_type;
+}
+
 void RtpPacket::SetSequenceNumber(uint16_t seq_no)
 {
 	_sequence_number = seq_no;
 	ByteWriter<uint16_t>::WriteBigEndian(&_buffer[2], seq_no);
 }
+
 void RtpPacket::SetTimestamp(uint32_t timestamp)
 {
 	_timestamp = timestamp;
 	ByteWriter<uint32_t>::WriteBigEndian(&_buffer[4], timestamp);
 }
+
 void RtpPacket::SetSsrc(uint32_t ssrc)
 {
 	_ssrc = ssrc;
 	ByteWriter<uint32_t>::WriteBigEndian(&_buffer[8], ssrc);
 }
+
 void RtpPacket::SetCsrcs(const std::vector<uint32_t>& csrcs)
 {
 	// TODO: Validation 체크
@@ -169,11 +195,17 @@ size_t RtpPacket::PaddingSize()
 	return _padding_size;
 }
 
+size_t RtpPacket::ExtensionSize()
+{
+	return _extension_size;
+}
+
 bool RtpPacket::SetPayload(const uint8_t *payload, size_t payload_size)
 {
 	auto payload_buffer = SetPayloadSize(payload_size);
 	if(payload_buffer == nullptr)
 	{
+		loge("RtpPacket", "Cannot set payload size");
 		return false;
 	}
 

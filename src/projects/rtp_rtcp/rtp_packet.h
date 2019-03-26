@@ -44,6 +44,9 @@ public:
 	// Getter
 	bool		Marker();
 	uint8_t		PayloadType();
+	// For FEC Payload
+	bool		IsUlpfec();
+	uint8_t 	OriginPayloadType();
 	uint16_t	SequenceNumber();
 	uint32_t	Timestamp();
 	uint32_t	Ssrc();
@@ -53,6 +56,8 @@ public:
 	// Setter
 	void		SetMarker(bool marker_bit);
 	void		SetPayloadType(uint8_t payload_type);
+	// For FEC Payload
+	void 		SetUlpfec(bool is_fec, uint8_t origin_payload_type);
 	void		SetSequenceNumber(uint16_t seq_no);
 	void		SetTimestamp(uint32_t timestamp);
 	void		SetSsrc(uint32_t ssrc);
@@ -63,6 +68,7 @@ public:
 	size_t		HeadersSize();
 	size_t		PayloadSize();
 	size_t		PaddingSize();
+	size_t 		ExtensionSize();
 
 	// Payload
 	bool 		SetPayload(const uint8_t *payload, size_t payload_size);
@@ -78,6 +84,8 @@ protected:
 	size_t		_payload_offset;	// Header Start Point (Header size)
 	bool		_marker;
 	uint8_t		_payload_type;
+	bool		_is_fec;
+	uint8_t 	_origin_payload_type;
 	uint8_t		_padding_size;
 	uint16_t	_sequence_number;
 	uint32_t	_timestamp;

@@ -11,69 +11,21 @@ constexpr size_t 	kUlpfecMaxMediaPacketsLbitSet	= 48;
 
 UlpfecGenerator::UlpfecGenerator()
 {
-	_prev_fec_sent = false;
-	_protection_rate = 20;
-	_new_protection_rate = 20;
 }
 
 UlpfecGenerator::~UlpfecGenerator()
 {
-
 }
 
-void UlpfecGenerator::SetProtectRate(int32_t protection_rate)
+bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::shared_ptr<RtpPacket> packet)
 {
-	// Minimum value of protection_rate is 10%
-	if(protection_rate !=0 && protection_rate < 10)
-	{
-		protection_rate = 10;
-	}
-
-	_new_protection_rate = protection_rate;
-
-	// First setting
-	if(_protection_rate == -1)
-	{
-		_protection_rate = _new_protection_rate;
-	}
-}
-
-bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::shared_ptr<RedRtpPacket> packet)
-{
-	if(_protection_rate <= 0)
-	{
-		return false;
-	}
-
 	_media_packets.push_back(packet);
 
-	//TODO(Getroot): Improve packet selection algorithm, using Bursty Mask or Random Mask
 	if(packet->Marker())
-	//if(_media_packets.size() >= (100/_protection_rate))
 	{
 		Encode();
 	}
 
-/*
-	if(_media_packets.size() >= (100/_protection_rate))
-	{
-		Encode();
-
-		if(!packet->Marker())
-		{
-			_prev_fec_sent = true;
-		}
-	}
-	else if(packet->Marker() && _prev_fec_sent)
-	{
-		Encode();
-
-		_prev_fec_sent = false;
-
-		// The new protection rate is applied from the first packet in the new frame.
-		_protection_rate = _new_protection_rate;
-	}
-*/
 	return true;
 }
 bool UlpfecGenerator::IsAvailableFecPackets() const
@@ -136,22 +88,10 @@ bool UlpfecGenerator::Encode()
 
 		if(first_media_packet)
 		{
-			// Write P, X, CC fields.
+			// Write P, X, CC, M, and PT recovery fields.
 			// Bits 0, 1 are overwritten in FinalizeFecHeaders.
 			fec_buffer[0] = media_packet->Header()[0];
-
-			// The media_packet is red packet. So buffer[1] has red payload type.
-			// We should use media payload type in the red header.
-			// M, and PT recovery
-			fec_buffer[1] = media_packet->Header()[media_packet->HeadersSize()-1];
-			if(media_packet->Marker())
-			{
-				fec_buffer[1] |= 0x80;
-			}
-			else
-			{
-				fec_buffer[1] &= 0x7F;
-			}
+			fec_buffer[1] = media_packet->Header()[1];
 
 			// SN Base
 			ByteWriter<uint16_t>::WriteBigEndian(&fec_buffer[2], media_packet->SequenceNumber());
@@ -185,7 +125,7 @@ bool UlpfecGenerator::Encode()
 	return true;
 }
 
-void UlpfecGenerator::XorFecPacket(uint8_t *fec_packet, size_t fec_header_len, RedRtpPacket *media_packet)
+void UlpfecGenerator::XorFecPacket(uint8_t *fec_packet, size_t fec_header_len, RtpPacket *media_packet)
 {
 	auto rtp_header = media_packet->Header();
 	auto rtp_header_len = media_packet->HeadersSize();
@@ -194,19 +134,7 @@ void UlpfecGenerator::XorFecPacket(uint8_t *fec_packet, size_t fec_header_len, R
 
 	// XOR the first 2 bytes of the header: V, P, X, CC
 	fec_packet[0] ^= rtp_header[0];
-
-	// Payload type from RED header
-	uint8_t m_pt_fields = rtp_header[rtp_header_len-1];
-	if(media_packet->Marker())
-	{
-		m_pt_fields |= 0x80;
-	}
-	else
-	{
-		m_pt_fields &= 0x7F;
-	}
-
-	fec_packet[1] ^= m_pt_fields;
+	fec_packet[1] ^= rtp_header[1];
 
 	// XOR TS recovery
 	fec_packet[4] ^= rtp_header[4];

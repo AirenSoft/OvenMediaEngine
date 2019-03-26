@@ -69,10 +69,10 @@ std::shared_ptr<Session> StreamWorker::GetSession(session_id_t id)
 	return _sessions[id];
 }
 
-void StreamWorker::SendPacket(uint32_t id, std::shared_ptr<ov::Data> packet)
+void StreamWorker::SendPacket(uint32_t type, std::shared_ptr<ov::Data> packet)
 {
 	// Queue에 패킷을 집어넣는다.
-	auto stream_packet = std::make_shared<StreamWorker::StreamPacket>(id, packet);
+	auto stream_packet = std::make_shared<StreamWorker::StreamPacket>(type, packet);
 
 	std::unique_lock<std::mutex> lock(_packet_queue_guard);
 	_packet_queue.push(stream_packet);
@@ -122,7 +122,7 @@ void StreamWorker::WorkerThread()
 
 			// Session will change data
 			std::shared_ptr<ov::Data> session_data = packet->_data->Clone();
-			session->SendOutgoingData(packet->_id, session_data);
+			session->SendOutgoingData(packet->_type, session_data);
 		}
 		session_lock.unlock();
 	}
@@ -220,12 +220,12 @@ const std::map<session_id_t, std::shared_ptr<Session>> &Stream::GetAllSessions()
 	return _sessions;
 }
 
-bool Stream::BroadcastPacket(uint32_t packet_id, std::shared_ptr<ov::Data> packet)
+bool Stream::BroadcastPacket(uint32_t packet_type, std::shared_ptr<ov::Data> packet)
 {
 	// 모든 StreamWorker에 나눠준다.
 	for(int i=0; i<_worker_count; i++)
 	{
-		_stream_workers[i].SendPacket(packet_id, packet);
+		_stream_workers[i].SendPacket(packet_type, packet);
 	}
 
 	return true;
