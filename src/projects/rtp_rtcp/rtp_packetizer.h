@@ -29,7 +29,7 @@ private:
 	// Basic
 	std::shared_ptr<RtpPacket> AllocatePacket(bool ulpfec=false);
 	std::shared_ptr<RedRtpPacket> PackageAsRed(std::shared_ptr<RtpPacket> rtp_packet);
-	bool AssignSequenceNumber(RtpPacket *packet);
+	bool AssignSequenceNumber(RtpPacket *packet, bool red = false);
 
 	bool MarkerBit(FrameType frame_type, int8_t payload_type);
 
@@ -60,6 +60,7 @@ private:
 	std::vector<uint32_t> _csrcs;
 	// Sequence Number
 	uint16_t _sequence_number;
+	uint16_t _red_sequence_number;
 
 	bool _ulpfec_enabled;
 	uint8_t _red_payload_type;
