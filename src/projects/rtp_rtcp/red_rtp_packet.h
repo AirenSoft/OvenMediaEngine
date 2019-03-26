@@ -8,6 +8,7 @@ class RedRtpPacket : public RtpPacket
 {
 public:
 	RedRtpPacket();
+	RedRtpPacket(uint8_t red_payload_type, RtpPacket &src);
 	RedRtpPacket(RedRtpPacket &src);
 	~RedRtpPacket();
 

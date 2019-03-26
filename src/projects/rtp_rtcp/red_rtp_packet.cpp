@@ -4,6 +4,11 @@ RedRtpPacket::RedRtpPacket()
 {
 }
 
+RedRtpPacket::RedRtpPacket(uint8_t red_payload_type, RtpPacket &src)
+{
+	PackageAsRed(red_payload_type, src);
+}
+
 RedRtpPacket::RedRtpPacket(RedRtpPacket &src)
 	:RtpPacket(src)
 {

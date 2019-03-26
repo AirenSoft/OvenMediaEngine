@@ -21,6 +21,7 @@ bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::shared_ptr<RtpPacket> pack
 {
 	_media_packets.push_back(packet);
 
+	// TODO(Getroot): A more efficient algorithm should be used like random mask or bursty mask.
 	if(packet->Marker())
 	{
 		Encode();
@@ -111,8 +112,8 @@ bool UlpfecGenerator::Encode()
 			XorFecPacket(fec_buffer, fec_header_size, media_packet.get());
 		}
 
-		//TODO(Getroot): It should be prepared for overflow of sequence number (16 bit)
-		mask[(media_packet->SequenceNumber() - sn_base)/8] |= 1 << (7 - ((media_packet->SequenceNumber() - sn_base) % 8));
+		uint16_t diff = media_packet->SequenceNumber() - sn_base;
+		mask[diff/8] |= 1 << (7 - (diff % 8));
 	}
 
 	FinalizeFecHeader(fec_buffer, fec_packet->GetLength() - fec_header_size, mask, mask_len);

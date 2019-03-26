@@ -154,8 +154,8 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 	// Send RED
 	auto red_packet = PackageAsRed(packet);
 
-	// GTEST
-	if(red_packet->SequenceNumber() % 20 != 0)
+	// Test FEC works
+	//if(!red_packet->Marker())
 	{
 		_stream->OnRtpPacketized(red_packet);
 	}
@@ -169,7 +169,7 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 		red_fec_packet->SetTimestamp(packet->Timestamp());
 
 		// Sequence Number
-		red_fec_packet->SetSequenceNumber(_sequence_number++);
+		AssignSequenceNumber(red_fec_packet.get());
 
 		_ulpfec_generator.NextPacket(red_fec_packet.get());
 
@@ -227,9 +227,7 @@ bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
 
 std::shared_ptr<RedRtpPacket> RtpPacketizer::PackageAsRed(std::shared_ptr<RtpPacket> rtp_packet)
 {
-	auto red_packet = std::make_shared<RedRtpPacket>();
-	red_packet->PackageAsRed(_red_payload_type, *rtp_packet);
-	return red_packet;
+	return std::make_shared<RedRtpPacket>(_red_payload_type, *rtp_packet);
 }
 
 std::shared_ptr<RtpPacket> RtpPacketizer::AllocatePacket(bool ulpfec)
