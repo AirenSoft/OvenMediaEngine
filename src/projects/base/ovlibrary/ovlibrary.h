@@ -24,6 +24,7 @@
 #include "./log.h"
 #include "./string.h"
 #include "./singleton.h"
+#include "./stop_watch.h"
 #include "./json.h"
 #include "./random.h"
 #include "./pcm_utilities.h"
