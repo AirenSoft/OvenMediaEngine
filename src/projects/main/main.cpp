@@ -17,21 +17,79 @@
 #include <base/ovcrypto/ovcrypto.h>
 #include <base/ovlibrary/stack_trace.h>
 
+void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
+
+//======================================================
+// For test purpose
 uint32_t thread_count = 0;
 
-void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
+struct ParseOption
+{
+	// -t <thread_count>
+	uint32_t thread_count = 0;
+
+	// -c <path>
+	ov::String config_path = "";
+};
+
+bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
+{
+	constexpr const char *opt_string = "ht:c:";
+
+	while(true)
+	{
+		int name = getopt(argc, argv, opt_string);
+
+		switch(name)
+		{
+			case -1:
+				// end of arguments
+				return true;
+
+			case 'h':
+				printf("Usage: %s [OPTION]...\n", argv[0]);
+				printf("    -t <thread_count>     Specify thread count\n");
+				printf("    -c <path>             Specify a path of config files\n");
+				return false;
+
+			case 't':
+				parse_option->thread_count = static_cast<uint32_t>(::strtol(optarg, nullptr, 10));
+
+				if(parse_option->thread_count == 0)
+				{
+					fprintf(stderr, "Invalid thread count: %s\n", optarg);
+					return false;
+				}
+				break;
+
+			case 'c':
+				parse_option->config_path = optarg;
+				break;
+
+			default: // '?'
+				// invalid argument
+				return false;
+		}
+	}
+}
+//======================================================
 
 int main(int argc, char *argv[])
 {
-	if(argc >= 2)
+	//======================================================
+	// For test purpose
+	ParseOption parse_option;
+
+	if(TryParseOption(argc, argv, &parse_option) == false)
 	{
-		thread_count = atoi(argv[1]);
+		return 1;
 	}
 
-	if(thread_count > 0)
+	if(parse_option.thread_count > 0)
 	{
-		logtw("Thread count: %d\n", thread_count);
+		thread_count = parse_option.thread_count;
 	}
+	//======================================================
 
 	logtd("Trying to initialize StackTrace...");
 	ov::StackTrace::InitializeStackTrace(OME_VERSION);
@@ -41,7 +99,7 @@ int main(int argc, char *argv[])
 
 	logti("OvenMediaEngine v%s is started on [%s] (%s %s - %s, %s)", OME_VERSION, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
 
-	if(cfg::ConfigManager::Instance()->LoadConfigs() == false)
+	if(cfg::ConfigManager::Instance()->LoadConfigs(parse_option.config_path) == false)
 	{
 		logte("An error occurred while load config");
 		return 1;

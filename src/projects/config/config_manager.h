@@ -18,6 +18,8 @@ namespace cfg
 		friend class ov::Singleton<ConfigManager>;
 		~ConfigManager() override;
 
+		bool LoadConfigs(ov::String config_path);
+		// Load configs from default path (<binary_path>/conf/*)
 		bool LoadConfigs();
 
 		std::shared_ptr<Server> GetServer() noexcept
@@ -47,7 +49,7 @@ namespace cfg
 
 		void PrepareMacros();
 
-		bool LoadLoggerConfig() noexcept;
+		bool LoadLoggerConfig(const ov::String &config_path) noexcept;
 
 		std::shared_ptr<Server> _server;
 		std::map<ov::String, ov::String> _macros;

@@ -25,23 +25,33 @@ namespace cfg
 	{
 	}
 
-	bool ConfigManager::LoadConfigs()
+	bool ConfigManager::LoadConfigs(ov::String config_path)
 	{
+		if(config_path.IsEmpty())
+		{
+			config_path = ov::PathManager::GetAppPath("conf");
+		}
+
 		PrepareMacros();
 
 		// Load Logger
-		if(LoadLoggerConfig() == false)
+		if(LoadLoggerConfig(config_path) == false)
 		{
 			return false;
 		}
 
-		ov::String config_path = ov::PathManager::Combine(ov::PathManager::GetAppPath("conf"), "Server.xml");
-		logti("Trying to load configurations... (%s)", config_path.CStr());
+		ov::String server_config_path = ov::PathManager::Combine(config_path, "Server.xml");
+		logti("Trying to load configurations... (%s)", server_config_path.CStr());
 
 		_server = std::make_shared<cfg::Server>();
 
 
-		return _server->Parse(config_path, "Server");
+		return _server->Parse(server_config_path, "Server");
+	}
+
+	bool ConfigManager::LoadConfigs()
+	{
+		return LoadConfigs("");
 	}
 
 	void ConfigManager::PrepareMacros()
@@ -51,14 +61,14 @@ namespace cfg
 		_macros["${ome.CurrentPath}"] = ov::PathManager::GetCurrentPath();
 	}
 
-	bool ConfigManager::LoadLoggerConfig() noexcept
+	bool ConfigManager::LoadLoggerConfig(const ov::String &config_path) noexcept
 	{
 		struct stat value = { 0 };
 
-		ov::String config_path = ov::PathManager::Combine(ov::PathManager::GetCurrentPath("conf"), "Logger.xml");
+		ov::String logger_config_path = ov::PathManager::Combine(config_path, "Logger.xml");
 
 		::memset(&_last_modified, 0, sizeof(_last_modified));
-		::stat(config_path, &value);
+		::stat(logger_config_path, &value);
 
 		if(
 			(_last_modified.tv_sec == value.st_mtim.tv_sec) &&
@@ -73,7 +83,7 @@ namespace cfg
 
 		_last_modified = value.st_mtim;
 
-		auto logger_loader = std::make_shared<ConfigLoggerLoader>(config_path);
+		auto logger_loader = std::make_shared<ConfigLoggerLoader>(logger_config_path);
 		if(logger_loader == nullptr)
 		{
 			logte("Failed to load config Logger.xml");
