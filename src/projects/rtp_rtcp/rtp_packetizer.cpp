@@ -15,7 +15,8 @@ RtpPacketizer::RtpPacketizer(bool audio, std::shared_ptr<RtpRtcpPacketizerInterf
 	_audio_configured = audio;
 	_timestamp_offset = (uint32_t)rand();
 	_sequence_number = (uint16_t)rand();
-	_red_sequence_number = (uint16_t)rand();
+	// GTEST : For overflow test
+	_red_sequence_number = 0xFFF0;//(uint16_t)rand();
 	_ulpfec_enabled = false;
 }
 
@@ -150,14 +151,15 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 
 bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 {
+	// Separate the sequence number of the RED packet from RTP packet.
+	// Because FEC packet should not affect the sequence number of the RTP packet.
+	AssignSequenceNumber(packet.get(), true);
+
 	_ulpfec_generator.AddRtpPacketAndGenerateFec(packet);
 
 	// Send RED
 	auto red_packet = PackageAsRed(packet);
 
-	// Separate the sequence number of the RED packet
-	// so that the fec packet does not affect the sequence number of the RTP packet.
-	AssignSequenceNumber(red_packet.get(), true);
 	// Test FEC works
 	//if(!red_packet->Marker())
 	{
