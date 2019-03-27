@@ -159,7 +159,6 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 
 	_ulpfec_generator.AddRtpPacketAndGenerateFec(red_packet);
 
-
 	// Test FEC works
 	//if(!red_packet->Marker())
 	{

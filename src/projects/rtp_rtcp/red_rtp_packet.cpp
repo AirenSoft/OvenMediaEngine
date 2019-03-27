@@ -22,7 +22,6 @@ RedRtpPacket::~RedRtpPacket()
 
 void RedRtpPacket::PackageAsRed(uint8_t red_payload_type, RtpPacket &src)
 {
-	SetMarker(src.Marker());
 	SetPayloadType(src.PayloadType());
 	SetUlpfec(src.IsUlpfec(), src.OriginPayloadType());
 	SetSsrc(src.Ssrc());
@@ -35,6 +34,8 @@ void RedRtpPacket::PackageAsRed(uint8_t red_payload_type, RtpPacket &src)
 	_extension_size = src.ExtensionSize();
 
 	PackageAsRed(red_payload_type);
+
+	SetMarker(src.Marker());
 
 	SetPayload(src.Payload(), src.PayloadSize());
 }
