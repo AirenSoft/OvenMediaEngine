@@ -51,9 +51,9 @@ public:
 public :
     bool
     AppendVideoData(uint64_t timestamp, uint32_t timescale, bool is_keyframe, uint64_t time_offset, uint32_t data_size,
-                    uint8_t *data);
+                    const uint8_t *data);
 
-    bool AppendAudioData(uint64_t timestamp, uint32_t timescale, uint32_t data_size, uint8_t *data);
+    bool AppendAudioData(uint64_t timestamp, uint32_t timescale, uint32_t data_size, const uint8_t *data);
 
     bool GetPlayList(PlayListType play_list_type, ov::String &segment_play_list);
 

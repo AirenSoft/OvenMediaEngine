@@ -79,7 +79,7 @@ public:
 struct EncodedFrame
 {
 public:
-	EncodedFrame(uint8_t *buffer, size_t length, size_t size)
+	EncodedFrame(std::shared_ptr<ov::Data> buffer, size_t length, size_t size)
 		: buffer(buffer), length(length), size(size)
 	{
 	}
@@ -90,7 +90,7 @@ public:
 	int32_t time_stamp = 0;
 
 	FrameType frame_type = FrameType::VideoFrameDelta;
-	uint8_t *buffer = nullptr;
+	std::shared_ptr<ov::Data> buffer;
 	size_t length = 0;
 	size_t size = 0;
 	bool complete_frame = false;

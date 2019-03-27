@@ -22,7 +22,7 @@ bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::shared_ptr<RtpPacket> pack
 	_media_packets.push_back(packet);
 
 	// TODO(Getroot): A more efficient algorithm should be used like random mask or bursty mask.
-	if(packet->Marker())
+	if(packet->Marker() || _media_packets.size() >= kUlpfecMaxMediaPacketsLbitClear)
 	{
 		Encode();
 	}

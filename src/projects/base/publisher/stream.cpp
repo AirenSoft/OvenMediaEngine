@@ -144,6 +144,11 @@ Stream::~Stream()
 
 bool Stream::Start(uint32_t worker_count)
 {
+	if(_run_flag == true)
+	{
+		return false;
+	}
+
 	if(thread_count > 0)
 	{
 		// override
@@ -175,6 +180,11 @@ bool Stream::Start(uint32_t worker_count)
 
 bool Stream::Stop()
 {
+	if(_run_flag == false)
+	{
+		return false;
+	}
+
 	_run_flag = false;
 
 	for(int i=0; i<_worker_count; i++)

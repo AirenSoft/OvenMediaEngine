@@ -173,7 +173,7 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
                                             encoded_frame->frame_type == FrameType::VideoFrameKey,
                                             0,
                                             encoded_frame->length,
-                                            encoded_frame->buffer);
+                                            encoded_frame->buffer->GetDataAs<uint8_t>());
 
         if (encoded_frame->frame_type == FrameType::VideoFrameKey)
         {
@@ -187,9 +187,6 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
             _previous_key_frame_timestamp = encoded_frame->time_stamp;
         }
     }
-
-    delete[] encoded_frame->buffer;
-
 }
 
 //====================================================================================================
@@ -208,10 +205,8 @@ void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
         _stream_packetyzer->AppendAudioData(encoded_frame->time_stamp,
                                             track->GetTimeBase().GetDen(),
                                             encoded_frame->length,
-                                            encoded_frame->buffer);
+                                            encoded_frame->buffer->GetDataAs<uint8_t>());
     }
-
-    delete[] encoded_frame->buffer;
 }
 
 //====================================================================================================

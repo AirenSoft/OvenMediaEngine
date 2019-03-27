@@ -254,7 +254,7 @@ void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 	// RTP_SENDER에 등록된 RtpRtcpSession에 의해서 Packetizing이 완료되면 OnRtpPacketized 함수가 호출된다.
 	packetizer->Packetize(encoded_frame->frame_type,
 	                      encoded_frame->time_stamp,
-	                      encoded_frame->buffer,
+	                      encoded_frame->buffer->GetDataAs<uint8_t>(),
 	                      encoded_frame->length,
 	                      fragmentation.get(),
 	                      &rtp_video_header);
@@ -274,7 +274,7 @@ void RtcStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
 	auto packetizer = GetPacketizer(track->GetId());
 	packetizer->Packetize(encoded_frame->frame_type,
 	                      encoded_frame->time_stamp,
-	                      encoded_frame->buffer,
+	                      encoded_frame->buffer->GetDataAs<uint8_t>(),
 	                      encoded_frame->length,
 	                      fragmentation.get(),
 	                      nullptr);

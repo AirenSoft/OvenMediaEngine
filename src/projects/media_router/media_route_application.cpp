@@ -456,7 +456,6 @@ void MediaRouteApplication::MainTask()
 		}
 
 		auto cur_buf = stream->Pop();
-
 		if(cur_buf)
 		{
 			MediaRouteApplicationConnector::ConnectorType connector_type = stream->GetConnectorType();
@@ -516,17 +515,12 @@ void MediaRouteApplication::MainTask()
 					{
 						case MediaType::Video:
 						{
-							auto &data = cur_buf->GetData();
-
-							// TODO: 공동 구조체로 변경해야함.
-							auto buffer = new uint8_t[data->GetLength()];
-							memcpy(buffer, data->GetData(), data->GetLength());
-
+							auto data = cur_buf->GetData();
 							auto &track = stream_info->GetTrack(cur_buf->GetTrackId());
 
 							OV_ASSERT2(track != nullptr);
 
-							auto encoded_frame = std::make_unique<EncodedFrame>(buffer, data->GetLength(), 0);
+							auto encoded_frame = std::make_unique<EncodedFrame>(data, data->GetLength(), 0);
 							encoded_frame->encoded_width = track->GetWidth();
 							encoded_frame->encoded_height = track->GetHeight();
 							encoded_frame->frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
@@ -576,18 +570,14 @@ void MediaRouteApplication::MainTask()
 
 						case MediaType::Audio:
 						{
-							auto &data = cur_buf->GetData();
-
-							auto buffer = new uint8_t[data->GetLength()];
-							memcpy(buffer, data->GetData(), data->GetLength());
-
+							auto data = cur_buf->GetData();
 							auto &track = stream_info->GetTrack(cur_buf->GetTrackId());
 
 							OV_ASSERT2(track != nullptr);
 
 							// RFC7587 - RTP Payload Format for the Opus Speech and Audio Codec (https://tools.ietf.org/html/rfc7587)
 
-							auto encoded_frame = std::make_unique<EncodedFrame>(buffer, data->GetLength(), 0);
+							auto encoded_frame = std::make_unique<EncodedFrame>(data, data->GetLength(), 0);
 							encoded_frame->encoded_width = track->GetWidth();
 							encoded_frame->encoded_height = track->GetHeight();
 							encoded_frame->frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
