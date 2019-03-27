@@ -17,7 +17,7 @@ UlpfecGenerator::~UlpfecGenerator()
 {
 }
 
-bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::shared_ptr<RtpPacket> packet)
+bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::shared_ptr<RedRtpPacket> packet)
 {
 	_media_packets.push_back(packet);
 
@@ -89,10 +89,22 @@ bool UlpfecGenerator::Encode()
 
 		if(first_media_packet)
 		{
-			// Write P, X, CC, M, and PT recovery fields.
+			// Write P, X, CC fields.
 			// Bits 0, 1 are overwritten in FinalizeFecHeaders.
-			fec_buffer[0] = media_packet->Header()[0];
-			fec_buffer[1] = media_packet->Header()[1];
+			fec_buffer[0] = media_packet->Buffer()[0];
+
+			// The media_packet is red packet. So buffer[1] has red payload type.
+			// We should use media payload type in the red header.
+			// M, and PT recovery
+			fec_buffer[1] = media_packet->Buffer()[media_packet->HeadersSize()-1];
+			if(media_packet->Marker())
+			{
+				fec_buffer[1] |= 0x80;
+			}
+			else
+			{
+				fec_buffer[1] &= 0x7F;
+			}
 
 			// SN Base
 			ByteWriter<uint16_t>::WriteBigEndian(&fec_buffer[2], media_packet->SequenceNumber());
@@ -126,7 +138,7 @@ bool UlpfecGenerator::Encode()
 	return true;
 }
 
-void UlpfecGenerator::XorFecPacket(uint8_t *fec_packet, size_t fec_header_len, RtpPacket *media_packet)
+void UlpfecGenerator::XorFecPacket(uint8_t *fec_packet, size_t fec_header_len, RedRtpPacket *media_packet)
 {
 	auto rtp_header = media_packet->Header();
 	auto rtp_header_len = media_packet->HeadersSize();
@@ -135,7 +147,17 @@ void UlpfecGenerator::XorFecPacket(uint8_t *fec_packet, size_t fec_header_len, R
 
 	// XOR the first 2 bytes of the header: V, P, X, CC
 	fec_packet[0] ^= rtp_header[0];
-	fec_packet[1] ^= rtp_header[1];
+
+	uint8_t m_pt_fields = rtp_header[rtp_header_len-1];
+	if(media_packet->Marker())
+	{
+		m_pt_fields |= 0x80;
+	}
+	else
+	{
+		m_pt_fields &= 0x7F;
+	}
+	fec_packet[1] ^= m_pt_fields;
 
 	// XOR TS recovery
 	fec_packet[4] ^= rtp_header[4];

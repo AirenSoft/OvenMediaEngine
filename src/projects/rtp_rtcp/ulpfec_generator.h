@@ -47,15 +47,17 @@ public:
 	UlpfecGenerator();
 	~UlpfecGenerator();
 
-	bool AddRtpPacketAndGenerateFec(std::shared_ptr<RtpPacket> packet);
+	// Because RTP is already being sent out, we execute ulpfec using the newly created red packet.
+	// I used this technique to reduce the copying and improve performance.
+	bool AddRtpPacketAndGenerateFec(std::shared_ptr<RedRtpPacket> packet);
 	bool IsAvailableFecPackets() const;
 	bool NextPacket(RtpPacket *packet);
 
 private:
 	bool Encode();
-	void XorFecPacket(uint8_t *fec_packet, size_t fec_header_len, RtpPacket *packet);
+	void XorFecPacket(uint8_t *fec_packet, size_t fec_header_len, RedRtpPacket *packet);
 	void FinalizeFecHeader(uint8_t *fec_packet, const size_t fec_payload_len, const uint8_t *mask, const size_t mask_len);
 
-	std::queue<ov::Data*>					_generated_fec_packets;
-	std::vector<std::shared_ptr<RtpPacket>>	_media_packets;
+	std::queue<ov::Data*>					    _generated_fec_packets;
+	std::vector<std::shared_ptr<RedRtpPacket>>	_media_packets;
 };
