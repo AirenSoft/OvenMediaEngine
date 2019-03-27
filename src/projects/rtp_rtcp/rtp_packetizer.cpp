@@ -161,7 +161,7 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 
 
 	// Test FEC works
-	if(!red_packet->Marker())
+	//if(!red_packet->Marker())
 	{
 		_stream->OnRtpPacketized(red_packet);
 	}
