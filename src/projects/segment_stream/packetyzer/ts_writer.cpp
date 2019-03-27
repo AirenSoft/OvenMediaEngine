@@ -444,7 +444,7 @@ bool TsWriter::MakeTsHeader(int pid, uint32_t continuity_count, bool payload_sta
 		adaptation_field_size +=  (2 + TS_PCR_ADAPTATION_SIZE);
 	}
 	
-	// clamp the payload size
+	// clamp the Payload size
 	if(payload_size + adaptation_field_size > TS_PACKET_PAYLOAD_SIZE)
 	{
 		payload_size = TS_PACKET_PAYLOAD_SIZE - adaptation_field_size;

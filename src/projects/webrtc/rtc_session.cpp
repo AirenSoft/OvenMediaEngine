@@ -1,6 +1,7 @@
 #include "rtc_private.h"
 #include "rtc_session.h"
 #include "rtc_application.h"
+#include "rtc_stream.h"
 
 #include <utility>
 
@@ -63,20 +64,30 @@ bool RtcSession::Start()
 		auto offer_media_desc = offer_media_desc_list[i];
 
 		// 첫번째 Payload가 가장 우선순위가 높다. Server에서 제시한 Payload중 첫번째 이므로 이것으로 통신하면 됨
-		auto payload = peer_media_desc->GetFirstPayload();
-		if(payload == nullptr)
+		auto first_payload = peer_media_desc->GetFirstPayload();
+		if(first_payload == nullptr)
 		{
-			logte("Failed to get the first payload type of peer sdp");
+			logte("Failed to get the first Payload type of peer sdp");
 			return false;
 		}
 
 		if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
 		{
-			_audio_payload_type = payload->GetId();
+			_audio_payload_type = first_payload->GetId();
 		}
 		else
 		{
-			_video_payload_type = payload->GetId();
+			// If there is a RED
+			if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
+			{
+				_video_payload_type = RED_PAYLOAD_TYPE;
+				_red_block_pt = first_payload->GetId();
+
+			}
+			else
+			{
+				_video_payload_type = first_payload->GetId();
+			}
 		}
 
 		// TODO(getroot): 향후 player에서 m= line을 선택하여 받는 기능이 만들어지면
@@ -168,12 +179,28 @@ void RtcSession::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std
 	_dtls_ice_transport->OnDataReceived(SessionNodeType::None, data);
 }
 
-bool RtcSession::SendOutgoingData(uint32_t payload_type, std::shared_ptr<ov::Data> packet)
+bool RtcSession::SendOutgoingData(uint32_t packet_type, std::shared_ptr<ov::Data> packet)
 {
-	if(payload_type != _video_payload_type && payload_type != _audio_payload_type)
+	auto rtp_payload_type = static_cast<uint8_t>(packet_type & 0xFF);
+	auto red_block_pt = static_cast<uint8_t>((packet_type & 0xFF00) >> 8);
+	auto origin_pt_of_fec = static_cast<uint8_t>((packet_type & 0xFF0000) >> 16);
+
+	if(rtp_payload_type != _video_payload_type && rtp_payload_type != _audio_payload_type)
 	{
 		return false;
 	}
+
+	if(rtp_payload_type == RED_PAYLOAD_TYPE)
+	{
+		// When red_block_pt is ULPFEC_PAYLOAD_TYPE, origin_pt_of_fec is origin media payload type.
+		if(red_block_pt != _red_block_pt && origin_pt_of_fec != _red_block_pt)
+		{
+			return false;
+		}
+	}
+
+	//printf("pt:%d session v pt:%d red pt:%d session red pt : %d origin pt:%d  session a pt:%d\n",
+	//	   rtp_payload_type, _video_payload_type, red_block_pt, _red_block_pt, origin_pt_of_fec, _audio_payload_type);
 
 	return _rtp_rtcp->SendOutgoingData(packet);
 }

@@ -21,7 +21,7 @@ public:
 	bool RemoveSession(session_id_t id);
 	std::shared_ptr<Session> GetSession(session_id_t id);
 
-	void SendPacket(uint32_t id, std::shared_ptr<ov::Data> packet);
+	void SendPacket(uint32_t type, std::shared_ptr<ov::Data> packet);
 
 private:
 
@@ -35,13 +35,13 @@ private:
 	class StreamPacket
 	{
 	public:
-		StreamPacket(uint32_t id, std::shared_ptr<ov::Data> data)
+		StreamPacket(uint32_t type, std::shared_ptr<ov::Data> data)
 		{
-			_id = id;
+			_type = type;
 			_data = data->Clone();
 		}
 
-		uint32_t                    _id;
+		uint32_t                    _type;
 		std::shared_ptr<ov::Data>   _data;
 	};
 
@@ -66,7 +66,7 @@ public:
 	const std::map<session_id_t, std::shared_ptr<Session>> &GetAllSessions();
 
 	// Child call this function to delivery packet to all sessions
-	bool BroadcastPacket(uint32_t packet_id, std::shared_ptr<ov::Data> packet);
+	bool BroadcastPacket(uint32_t packet_type, std::shared_ptr<ov::Data> packet);
 
 	// Child must implement this function for packetizing and call BroadcastPacket to delivery to all sessions.
 	virtual void SendVideoFrame(std::shared_ptr<MediaTrack> track,

@@ -92,8 +92,8 @@ int RtpPacketizerVp8::GeneratePackets()
 	                      PayloadDescriptorExtraLength() + 1 +
 	                      last_packet_reduction_len_)
 	{
-		// The provided payload length is not long enough for the payload
-		// descriptor and one payload byte in the last packet.
+		// The provided payload length is not long enough for the Payload
+		// descriptor and one Payload byte in the last packet.
 		// Return an error.
 		return -1;
 	}
@@ -108,7 +108,7 @@ int RtpPacketizerVp8::GeneratePackets()
 void RtpPacketizerVp8::GeneratePacketsSplitPayloadBalanced(size_t payload_len, size_t capacity)
 {
 	// Last packet of the last partition is smaller. Pretend that it's the same
-	// size, but we must write more payload to it.
+	// size, but we must write more Payload to it.
 	size_t total_bytes = payload_len + last_packet_reduction_len_;
 	// Integer divisions with rounding up.
 	size_t num_packets_left = (total_bytes + capacity - 1) / capacity;
@@ -118,7 +118,7 @@ void RtpPacketizerVp8::GeneratePacketsSplitPayloadBalanced(size_t payload_len, s
 	while(remaining_data > 0)
 	{
 		// Last num_larger_packets are 1 byte wider than the rest. Increase
-		// per-packet payload size when needed.
+		// per-packet Payload size when needed.
 		if(num_packets_left == num_larger_packets)
 		{
 			++bytes_per_packet;
@@ -128,7 +128,7 @@ void RtpPacketizerVp8::GeneratePacketsSplitPayloadBalanced(size_t payload_len, s
 		{
 			current_packet_bytes = remaining_data;
 		}
-		// This is not the last packet in the whole payload, but there's no data
+		// This is not the last packet in the whole Payload, but there's no data
 		// left for the last packet. Leave at least one byte for the last packet.
 		if(num_packets_left == 2 && current_packet_bytes == remaining_data)
 		{
@@ -152,7 +152,7 @@ void RtpPacketizerVp8::QueuePacket(size_t start_pos, size_t packet_size, bool fi
 
 int RtpPacketizerVp8::WriteHeaderAndPayload(const InfoStruct &packet_info, uint8_t *buffer, size_t buffer_length) const
 {
-	// Write the VP8 payload descriptor.
+	// Write the VP8 Payload descriptor.
 	//       0
 	//       0 1 2 3 4 5 6 7 8
 	//      +-+-+-+-+-+-+-+-+-+

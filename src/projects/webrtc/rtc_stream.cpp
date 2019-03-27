@@ -99,6 +99,7 @@ bool RtcStream::Start(uint32_t worker_count)
 					video_media_desc->SetCname(ov::Random::GenerateUInt32(), ov::Random::GenerateString(16));
 
 					_offer_sdp->AddMedia(video_media_desc);
+
 					first_video_desc = false;
 				}
 
@@ -106,9 +107,6 @@ bool RtcStream::Start(uint32_t worker_count)
 				payload->SetRtpmap(track->GetId(), codec, 90000);
 
 				video_media_desc->AddPayload(payload);
-
-				// WebRTC에서 사용하는 Track만 별도로 관리한다.
-				AddRtcTrack(payload->GetId(), track);
 
 				// RTP Packetizer를 추가한다.
 				AddPacketizer(false, payload->GetId(), video_media_desc->GetSsrc());
@@ -157,9 +155,6 @@ bool RtcStream::Start(uint32_t worker_count)
 
 				audio_media_desc->AddPayload(payload);
 
-				// WebRTC에서 사용하는 Track만 별도로 관리한다.
-				AddRtcTrack(payload->GetId(), track);
-
 				// RTP Packetizer를 추가한다.
 				AddPacketizer(true, payload->GetId(), audio_media_desc->GetSsrc());
 
@@ -172,6 +167,15 @@ bool RtcStream::Start(uint32_t worker_count)
 				break;
 		}
 	}
+
+	// RED & ULPFEC
+	auto red_payload = std::make_shared<PayloadAttr>();
+	red_payload->SetRtpmap(RED_PAYLOAD_TYPE, "red", 90000);
+	auto ulpfec_payload = std::make_shared<PayloadAttr>();
+	ulpfec_payload->SetRtpmap(ULPFEC_PAYLOAD_TYPE, "ulpfec", 90000);
+
+	video_media_desc->AddPayload(red_payload);
+	video_media_desc->AddPayload(ulpfec_payload);
 
 	ov::String offer_sdp_text;
 	_offer_sdp->ToString(offer_sdp_text);
@@ -193,14 +197,33 @@ std::shared_ptr<SessionDescription> RtcStream::GetSessionDescription()
 	return _offer_sdp;
 }
 
-bool RtcStream::OnRtpPacketized(std::unique_ptr<RtpPacket> packet)
+bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 {
-	BroadcastPacket(packet->PayloadType(), packet->GetData());
+	uint32_t rtp_payload_type = packet->PayloadType();
+	uint32_t red_block_pt = 0;
+	uint32_t origin_pt_of_fec = 0;
+
+	if(rtp_payload_type == RED_PAYLOAD_TYPE)
+	{
+		red_block_pt = packet->Header()[packet->HeadersSize()-1];
+
+		// RED includes FEC packet or Media packet.
+		if(packet->IsUlpfec())
+		{
+			origin_pt_of_fec = packet->OriginPayloadType();
+		}
+	}
+
+	// We make payload_type with the following structure:
+	// 0               8                 16             24                 32
+	//                 | origin_pt_of_fec | red block_pt | rtp_payload_type |
+	uint32_t payload_type = rtp_payload_type | (red_block_pt << 8) | (origin_pt_of_fec << 16);
+	BroadcastPacket(payload_type, packet->GetData());
 
 	return true;
 }
 
-bool RtcStream::OnRtcpPacketized(std::unique_ptr<RtcpPacket> packet)
+bool RtcStream::OnRtcpPacketized(std::shared_ptr<RtcpPacket> packet)
 {
 	return true;
 }
@@ -224,6 +247,10 @@ void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 	// RTP Packetizing
 	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
 	auto packetizer = GetPacketizer(track->GetId());
+	if(packetizer == nullptr)
+	{
+		return;
+	}
 	// RTP_SENDER에 등록된 RtpRtcpSession에 의해서 Packetizing이 완료되면 OnRtpPacketized 함수가 호출된다.
 	packetizer->Packetize(encoded_frame->frame_type,
 	                      encoded_frame->time_stamp,
@@ -276,31 +303,21 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 	}
 }
 
-void RtcStream::AddPacketizer(bool audio, uint32_t payload_type, uint32_t ssrc)
+void RtcStream::AddPacketizer(bool audio, uint8_t payload_type, uint32_t ssrc)
 {
 	auto packetizer = std::make_shared<RtpPacketizer>(audio, RtpRtcpPacketizerInterface::GetSharedPtr());
 	packetizer->SetPayloadType(payload_type);
 	packetizer->SetSSRC(ssrc);
 
+	if(!audio)
+	{
+		packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
+	}
+
 	_packetizers[payload_type] = packetizer;
 }
 
-void RtcStream::AddRtcTrack(uint32_t payload_type, std::shared_ptr<MediaTrack> track)
-{
-	_rtc_track[payload_type] = track;
-}
-
-std::shared_ptr<MediaTrack> RtcStream::GetRtcTrack(uint32_t payload_type)
-{
-	if(!_rtc_track.count(payload_type))
-	{
-		return nullptr;
-	}
-
-	return _rtc_track[payload_type];
-}
-
-std::shared_ptr<RtpPacketizer> RtcStream::GetPacketizer(uint32_t payload_type)
+std::shared_ptr<RtpPacketizer> RtcStream::GetPacketizer(uint8_t payload_type)
 {
 	if(!_packetizers.count(payload_type))
 	{

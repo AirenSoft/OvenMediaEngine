@@ -21,7 +21,7 @@ RtpPacketizingManager *RtpPacketizingManager::Create(RtpVideoCodecType type,
 	}
 
 	loge("rtp_rtcp", "RtpPacketizingManager::Create - Cannot create packizer");
-	loge("rtp_rtcp", "Video type : %d | Max payload len : %d | Last packet reduction len : %d",
+	loge("rtp_rtcp", "Video type : %d | Max Payload len : %d | Last packet reduction len : %d",
 	     type, max_payload_len, last_packet_reduction_len);
 
 	return nullptr;

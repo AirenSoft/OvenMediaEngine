@@ -37,7 +37,7 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 	// Make m line
 	sdp = ov::String::FormatString("m=%s %d %s", _media_type_str.CStr(), _port, _protocol.CStr());
 
-	// Append payload id
+	// Append Payload id
 	for(auto &t : _payload_list)
 	{
 		if(t->GetId() == 0)

@@ -49,33 +49,27 @@ public:
 			{
 				// offset
 				size_t* oldOffsets = fragmentation_offset;
-				memset(fragmentation_offset + oldVectorSize, 0,
-				       sizeof(size_t) * (size16 - oldVectorSize));
+				memset(fragmentation_offset + oldVectorSize, 0, sizeof(size_t) * (size16 - oldVectorSize));
 				// copy old values
 				memcpy(fragmentation_offset, oldOffsets, sizeof(size_t) * oldVectorSize);
 			}
 			// length
 			{
 				size_t* oldLengths = fragmentation_length;
-				memset(fragmentation_length + oldVectorSize, 0,
-				       sizeof(size_t) * (size16 - oldVectorSize));
+				memset(fragmentation_length + oldVectorSize, 0, sizeof(size_t) * (size16 - oldVectorSize));
 				memcpy(fragmentation_length, oldLengths, sizeof(size_t) * oldVectorSize);
 			}
 			// time diff
 			{
 				uint16_t* oldTimeDiffs = fragmentation_time_diff;
-				memset(fragmentation_time_diff + oldVectorSize, 0,
-				       sizeof(uint16_t) * (size16 - oldVectorSize));
-				memcpy(fragmentation_time_diff, oldTimeDiffs,
-				       sizeof(uint16_t) * oldVectorSize);
+				memset(fragmentation_time_diff + oldVectorSize, 0, sizeof(uint16_t) * (size16 - oldVectorSize));
+				memcpy(fragmentation_time_diff, oldTimeDiffs, sizeof(uint16_t) * oldVectorSize);
 			}
-			// payload type
+			// Payload type
 			{
 				uint8_t* oldTimePlTypes = fragmentation_pl_type;
-				memset(fragmentation_pl_type + oldVectorSize, 0,
-				       sizeof(uint8_t) * (size16 - oldVectorSize));
-				memcpy(fragmentation_pl_type, oldTimePlTypes,
-				       sizeof(uint8_t) * oldVectorSize);
+				memset(fragmentation_pl_type + oldVectorSize, 0, sizeof(uint8_t) * (size16 - oldVectorSize));
+				memcpy(fragmentation_pl_type, oldTimePlTypes, sizeof(uint8_t) * oldVectorSize);
 			}
 			fragmentation_vector_size = size16;
 		}

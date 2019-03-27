@@ -8,6 +8,7 @@
 //==============================================================================
 
 #include <openssl/srtp.h>
+#include <base/ovlibrary/byte_io.h>
 #include "srtp_adapter.h"
 
 #define OV_LOG_TAG "SRTP"
@@ -84,10 +85,17 @@ bool SrtpAdapter::ProtectRtp(std::shared_ptr<ov::Data> data)
 	auto buffer = data->GetWritableData();
 	int out_len = static_cast<int>(data->GetLength());
 	data->SetLength(need_len);
+
+	// FOR DEBUG
+	auto byte_buffer = data->GetDataAs<uint8_t>();
+	uint8_t payload_type = byte_buffer[1] & 0x7F;
+	uint8_t red_payload_type = byte_buffer[12];
+	uint16_t seq = ByteReader<uint16_t>::ReadBigEndian(&byte_buffer[2]);
+
 	int err = srtp_protect(_session, buffer, &out_len);
 	if(err != srtp_err_status_ok)
 	{
-		logte("Failed to protect SRTP packet, err=%d", err);
+		logte("Failed to protect SRTP packet, err=%d, len=%d, seq=%u, payload_type=%d, red_payload_type=%d", err, out_len, seq, payload_type, red_payload_type);
 		return false;
 	}
 
