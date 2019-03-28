@@ -67,6 +67,17 @@ void RelayClient::Start(const ov::String &application)
 					continue;
 				}
 
+				{
+					std::lock_guard<std::mutex> lock_guard(_stream_list_mutex);
+
+					for(auto &stream:_stream_list)
+					{
+						MediaRouteApplicationConnector::DeleteStream(stream.second->stream_info);
+					}
+
+					_stream_list.clear();
+				}
+
 				logti("Connected to %s origin server %s successfully", (is_primary) ? "primary" : "secondary", address.ToString().CStr());
 
 				logti("Trying to request register for application [%s]...", application.CStr());
