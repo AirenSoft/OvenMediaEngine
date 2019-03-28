@@ -964,7 +964,7 @@ namespace ov
 							continue;
 						}
 
-						logtw("[%p] [#%d] Could not send data: %zd (%s)", this, sent, ov::Error::CreateErrorFromSrt()->ToString().CStr());
+						logtw("[%p] [#%d] Could not send data: %zd (%s)", this, _socket.GetSocket(), sent, ov::Error::CreateErrorFromSrt()->ToString().CStr());
 
 						break;
 					}

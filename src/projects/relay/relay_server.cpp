@@ -30,7 +30,7 @@ RelayServer::RelayServer(MediaRouteApplicationInterface *media_route_application
 			const ov::String &ip = relay.GetIp();
 			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip, static_cast<uint16_t>(port));
 
-			_server_port = PhysicalPortManager::Instance()->CreatePort( ov::SocketType::Srt, address);
+			_server_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Srt, address);
 
 			if(_server_port != nullptr)
 			{
@@ -166,6 +166,8 @@ void RelayServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReaso
 	logti("RelayClient is disconnected: %s (reason: %d)", remote->ToString().CStr(), reason);
 
 	// remove from _client_list
+	std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
+
 	auto info_iter = _client_list.find(remote);
 
 	if(info_iter != _client_list.end())
@@ -193,7 +195,12 @@ void RelayServer::HandleRegister(ov::Socket *remote, const RelayPacket &packet)
 	}
 
 	logtd("Registering a relay client %s for application: %s", remote->ToString().CStr(), _application_info.GetName().CStr());
-	_client_list[remote] = ClientInfo();
+
+	{
+		std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
+
+		_client_list[remote] = ClientInfo();
+	}
 
 	// Send streams to the relay client
 	auto streams = _media_route_application->GetStreams();
@@ -243,9 +250,13 @@ void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_pack
 				packet.SetEnd(true);
 			}
 
-			for(auto &client : _client_list)
 			{
-				client.first->Send(&packet, sizeof(packet));
+				std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
+
+				for(auto &client : _client_list)
+				{
+					client.first->Send(&packet, sizeof(packet));
+				}
 			}
 
 			packet.SetStart(false);
@@ -255,9 +266,13 @@ void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_pack
 	{
 		packet.SetEnd(true);
 
-		for(auto &client : _client_list)
 		{
-			client.first->Send(&packet, sizeof(packet));
+			std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
+
+			for(auto &client : _client_list)
+			{
+				client.first->Send(&packet, sizeof(packet));
+			}
 		}
 	}
 }

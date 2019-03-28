@@ -67,6 +67,7 @@ protected:
 	std::shared_ptr<PhysicalPort> _server_port;
 
 	// All client list
+	std::mutex _client_list_mutex;
 	std::map<ov::Socket *, ClientInfo> _client_list;
 
 	uint32_t _transaction_id = 0;
