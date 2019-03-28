@@ -9,6 +9,8 @@ constexpr size_t	kFecLevelHeaderSizeLbitSet		= 2 + kMaskSizeLbitSet;
 constexpr size_t 	kUlpfecMaxMediaPacketsLbitClear	= 16;
 constexpr size_t 	kUlpfecMaxMediaPacketsLbitSet	= 48;
 
+constexpr size_t    kFecRate                        = 100 / 20; // 20% Rate, 1 fec packet per 5 media packets.
+
 UlpfecGenerator::UlpfecGenerator()
 {
 }
@@ -21,8 +23,7 @@ bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::shared_ptr<RedRtpPacket> p
 {
 	_media_packets.push_back(packet);
 
-	// TODO(Getroot): A more efficient algorithm should be used like random mask or bursty mask.
-	if(packet->Marker() || _media_packets.size() >= kUlpfecMaxMediaPacketsLbitClear)
+	if(packet->Marker())
 	{
 		Encode();
 	}
@@ -50,17 +51,11 @@ bool UlpfecGenerator::NextPacket(RtpPacket *packet)
 
 bool UlpfecGenerator::Encode()
 {
-	uint8_t mask[6];
-	size_t mask_len;
-
-	uint16_t sn_base;
-	bool first_media_packet = true;
-
-	// Multiple fec packets can be generated. However, in the current version, only one fec packet is generated.
-	auto fec_packet = new ov::Data();
-
-	// Initialize mask
-	memset(mask, 0, sizeof(mask));
+	uint32_t media_size = _media_packets.size();
+	uint32_t rate = kFecRate;
+	uint32_t fec_packet_count = std::ceil((float)media_size / (float)kFecRate);
+	uint32_t media_packet_idx = 0;
+	size_t mask_len = 0;
 
 	size_t fec_header_size = kFecHeaderSize;
 	if(_media_packets.size() <= kUlpfecMaxMediaPacketsLbitClear)
@@ -74,64 +69,83 @@ bool UlpfecGenerator::Encode()
 		mask_len = kMaskSizeLbitSet;
 	}
 
-	fec_packet->SetLength(fec_header_size);
-	auto fec_buffer = fec_packet->GetWritableDataAs<uint8_t>();
-
-	for(auto const &media_packet : _media_packets)
+	for(int i=0; i<fec_packet_count; i++)
 	{
-		size_t fec_packet_length = fec_header_size + media_packet->PayloadSize();
+		uint16_t sn_base;
+		bool first_media_packet;
+		uint8_t mask[6];
+		int selected_media_count;
 
-		if(fec_packet->GetLength() < fec_packet_length)
+		first_media_packet = true;
+
+		// TODO(Getroot): A more efficient algorithm should be used like random mask or bursty mask.
+		auto fec_packet = std::make_shared<ov::Data>();
+		fec_packet->SetLength(fec_header_size);
+		auto fec_buffer = fec_packet->GetWritableDataAs<uint8_t>();
+
+		// Initialize
+		memset(mask, 0, sizeof(mask));
+		first_media_packet = true;
+		selected_media_count = (media_size-media_packet_idx) / (fec_packet_count - i);
+
+		for(int j=0; j<selected_media_count; j++)
 		{
-			fec_packet->SetLength(fec_packet_length);
-			fec_buffer = fec_packet->GetWritableDataAs<uint8_t>();
-		}
+			auto media_packet = _media_packets[media_packet_idx];
 
-		if(first_media_packet)
-		{
-			// Write P, X, CC fields.
-			// Bits 0, 1 are overwritten in FinalizeFecHeaders.
-			fec_buffer[0] = media_packet->Buffer()[0];
+			size_t fec_packet_length = fec_header_size + media_packet->PayloadSize();
 
-			// The media_packet is red packet. So buffer[1] has red payload type.
-			// We should use media payload type in the red header.
-			// M, and PT recovery
-			fec_buffer[1] = media_packet->Buffer()[media_packet->HeadersSize()-1];
-			if(media_packet->Marker())
+			if(fec_packet->GetLength() < fec_packet_length)
 			{
-				fec_buffer[1] |= 0x80;
+				fec_packet->SetLength(fec_packet_length);
+				fec_buffer = fec_packet->GetWritableDataAs<uint8_t>();
+			}
+
+			if(first_media_packet)
+			{
+				// Write P, X, CC fields.
+				// Bits 0, 1 are overwritten in FinalizeFecHeaders.
+				fec_buffer[0] = media_packet->Buffer()[0];
+
+				// The media_packet is red packet. So buffer[1] has red payload type.
+				// We should use media payload type in the red header.
+				// M, and PT recovery
+				fec_buffer[1] = media_packet->Buffer()[media_packet->HeadersSize() - 1];
+				if(media_packet->Marker())
+				{
+					fec_buffer[1] |= 0x80;
+				}
+				else
+				{
+					fec_buffer[1] &= 0x7F;
+				}
+
+				// SN Base
+				ByteWriter<uint16_t>::WriteBigEndian(&fec_buffer[2], media_packet->SequenceNumber());
+				// Write timestamp recovery field.
+				ByteWriter<uint32_t>::WriteBigEndian(&fec_buffer[4], media_packet->Timestamp());
+				// Write length recovery field.
+				ByteWriter<uint16_t>::WriteBigEndian(&fec_buffer[8], (uint16_t)media_packet->PayloadSize());
+				// Write Payload.
+				memcpy(&fec_buffer[fec_header_size], media_packet->Payload(), media_packet->PayloadSize());
+
+				sn_base = media_packet->SequenceNumber();
+
+				first_media_packet = false;
 			}
 			else
 			{
-				fec_buffer[1] &= 0x7F;
+				XorFecPacket(fec_buffer, fec_header_size, media_packet.get());
 			}
 
-			// SN Base
-			ByteWriter<uint16_t>::WriteBigEndian(&fec_buffer[2], media_packet->SequenceNumber());
-			// Write timestamp recovery field.
-			ByteWriter<uint32_t>::WriteBigEndian(&fec_buffer[4], media_packet->Timestamp());
-			// Write length recovery field.
-			ByteWriter<uint16_t>::WriteBigEndian(&fec_buffer[8], (uint16_t)media_packet->PayloadSize());
-			// Write Payload.
-			memcpy(&fec_buffer[fec_header_size], media_packet->Payload(), media_packet->PayloadSize());
-
-			sn_base = media_packet->SequenceNumber();
-
-			first_media_packet = false;
-		}
-		else
-		{
-			XorFecPacket(fec_buffer, fec_header_size, media_packet.get());
+			uint16_t diff = media_packet->SequenceNumber() - sn_base;
+			mask[diff / 8] |= 1 << (7 - (diff % 8));
+			media_packet_idx++;
 		}
 
-		uint16_t diff = media_packet->SequenceNumber() - sn_base;
-		mask[diff/8] |= 1 << (7 - (diff % 8));
+		FinalizeFecHeader(fec_buffer, fec_packet->GetLength() - fec_header_size, mask, mask_len);
+
+		_generated_fec_packets.push(fec_packet);
 	}
-
-	FinalizeFecHeader(fec_buffer, fec_packet->GetLength() - fec_header_size, mask, mask_len);
-
-	_generated_fec_packets.push(fec_packet);
-
 	// clear media packet
 	_media_packets.clear();
 

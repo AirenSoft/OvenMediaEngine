@@ -58,6 +58,6 @@ private:
 	void XorFecPacket(uint8_t *fec_packet, size_t fec_header_len, RedRtpPacket *packet);
 	void FinalizeFecHeader(uint8_t *fec_packet, const size_t fec_payload_len, const uint8_t *mask, const size_t mask_len);
 
-	std::queue<ov::Data*>					    _generated_fec_packets;
+	std::queue<std::shared_ptr<ov::Data>>	    _generated_fec_packets;
 	std::vector<std::shared_ptr<RedRtpPacket>>	_media_packets;
 };
