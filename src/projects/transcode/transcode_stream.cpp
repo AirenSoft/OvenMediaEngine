@@ -217,8 +217,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 	}
 
 	if (_encoders.empty()) {
-		logte("One or more encoders are required");
-		exit(0);
+		return;
 	}
 
 	// _max_queue_size : 255
@@ -263,15 +262,20 @@ void TranscodeStream::Stop()
 	logtd("wait for terminated trancode stream thread. kill_flag(%s)", _kill_flag ? "true" : "false");
 
 	_queue.abort();
-	_thread_decode.join();
 
+	if (_thread_decode.joinable()) {
+        _thread_decode.join();
+    }
 	_queue_decoded.abort();
 
-	_thread_filter.join();
-
+	if (_thread_filter.joinable()) {
+        _thread_filter.join();
+    }
 	_queue_filterd.abort();
 
-	_thread_encode.join();
+	if (_thread_encode.joinable()) {
+        _thread_encode.join();
+    }
 }
 
 bool TranscodeStream::Push(std::unique_ptr<MediaPacket> packet)
@@ -279,10 +283,14 @@ bool TranscodeStream::Push(std::unique_ptr<MediaPacket> packet)
 	// logtd("Stage-1-1 : %f", (float)frame->GetPts());
 	// 변경된 스트림을 큐에 넣음
 
+	if (_encoders.empty()) {
+        return false;
+	}
+
 	if(_queue.size() > _max_queue_size)
 	{
 		logti("Queue(stream) is full, please check your system");
-		return true;
+		return false;
 	}
 
 	_queue.push(std::move(packet));

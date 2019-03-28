@@ -168,14 +168,17 @@ bool RtcStream::Start(uint32_t worker_count)
 		}
 	}
 
-	// RED & ULPFEC
-	auto red_payload = std::make_shared<PayloadAttr>();
-	red_payload->SetRtpmap(RED_PAYLOAD_TYPE, "red", 90000);
-	auto ulpfec_payload = std::make_shared<PayloadAttr>();
-	ulpfec_payload->SetRtpmap(ULPFEC_PAYLOAD_TYPE, "ulpfec", 90000);
+	if (video_media_desc)
+	{
+        // RED & ULPFEC
+        auto red_payload = std::make_shared<PayloadAttr>();
+        red_payload->SetRtpmap(RED_PAYLOAD_TYPE, "red", 90000);
+        auto ulpfec_payload = std::make_shared<PayloadAttr>();
+        ulpfec_payload->SetRtpmap(ULPFEC_PAYLOAD_TYPE, "ulpfec", 90000);
 
-	video_media_desc->AddPayload(red_payload);
-	video_media_desc->AddPayload(ulpfec_payload);
+        video_media_desc->AddPayload(red_payload);
+        video_media_desc->AddPayload(ulpfec_payload);
+    }
 
 	ov::String offer_sdp_text;
 	_offer_sdp->ToString(offer_sdp_text);
