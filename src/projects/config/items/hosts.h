@@ -22,7 +22,7 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<Optional, Includable>("Host", &_host_list);
+			RegisterValue<Optional>("Host", &_host_list);
 		}
 
 		std::vector<Host> _host_list;

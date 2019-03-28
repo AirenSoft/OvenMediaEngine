@@ -52,10 +52,10 @@ namespace cfg
 		{
 			RegisterValue("Name", &_name);
 			RegisterValue<Optional>("IP", &_ip);
-			RegisterValue<Optional, Includable>("TLS", &_tls);
-			RegisterValue<Optional, Includable>("Providers", &_providers);
-			RegisterValue<Optional, Includable>("Publishers", &_publishers);
-			RegisterValue<Optional, Includable>("Applications", &_applications);
+			RegisterValue<Optional>("TLS", &_tls);
+			RegisterValue<Optional>("Providers", &_providers);
+			RegisterValue<Optional>("Publishers", &_publishers);
+			RegisterValue<Optional>("Applications", &_applications);
 		}
 		
 		ov::String _name;

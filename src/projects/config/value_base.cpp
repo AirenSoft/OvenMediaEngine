@@ -32,16 +32,6 @@ namespace cfg
 		_is_optional = is_optional;
 	}
 
-	bool ValueBase::IsIncludable() const
-	{
-		return _is_includable;
-	}
-
-	void ValueBase::SetIncludable(bool is_includable)
-	{
-		_is_includable = is_includable;
-	}
-
 	size_t ValueBase::GetSize() const
 	{
 		return _value_size;

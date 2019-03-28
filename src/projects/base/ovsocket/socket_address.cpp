@@ -220,7 +220,7 @@ namespace ov
 	bool SocketAddress::SetHostname(const char *hostname)
 	{
 		// 문자열로 부터 IP를 계산함
-		if(hostname == nullptr)
+		if((hostname == nullptr) || ((hostname[0] == '*') && (hostname[1] == '\0')))
 		{
 			// host가 지정되어 있지 않으면 INADDR_ANY 로 설정
 			_address_storage.ss_family = AF_INET;
@@ -254,13 +254,16 @@ namespace ov
 				// IPv6으로 변환 실패
 
 				// DNS resolve 시도
-				addrinfo hints;
+				addrinfo hints {};
+
 				::memset(&hints, 0, sizeof(hints));
 				hints.ai_family = AF_UNSPEC;
 
 				addrinfo *result;
+
 				if(::getaddrinfo(hostname, nullptr, &hints, &result) != 0)
 				{
+					logte("An error occurred while resolve DNS for host [%s]", hostname);
 					return false;
 				}
 

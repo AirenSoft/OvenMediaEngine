@@ -197,7 +197,7 @@ namespace ov
 			return nullptr;
 		}
 
-		bool Connect(const SocketAddress &endpoint, int timeout = Infinite);
+		std::shared_ptr<ov::Error> Connect(const SocketAddress &endpoint, int timeout = Infinite);
 
 		bool PrepareEpoll();
 		bool AddToEpoll(Socket *socket, void *parameter);

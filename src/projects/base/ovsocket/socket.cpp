@@ -102,18 +102,18 @@ namespace ov
 							int64_t error_average = _total_error_count / ((loop_count == 0) ? 1 : loop_count);
 
 							logi("SockStat",
-								"[Stats Counter] Total sampling count: %ld\n"
-								"+-------+---------+---------+---------+---------+--------------+\n"
-								"| Type  | Current |   Max   |   Min   | Average |    Total     |\n"
-								"+-------+---------+---------+---------+---------+--------------+\n"
-								"| PPS   | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
-								"| Retry | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
-								"| Error | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
-								"+-------+---------+---------+---------+---------+--------------+\n",
-								loop_count,
-								count, max, min, average, static_cast<int64_t>(_total_count),
-								retry_count, retry_max, retry_min, retry_average, static_cast<int64_t>(_total_retry_count),
-								error_count, error_max, error_min, error_average, static_cast<int64_t>(_total_error_count)
+							     "[Stats Counter] Total sampling count: %ld\n"
+							     "+-------+---------+---------+---------+---------+--------------+\n"
+							     "| Type  | Current |   Max   |   Min   | Average |    Total     |\n"
+							     "+-------+---------+---------+---------+---------+--------------+\n"
+							     "| PPS   | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
+							     "| Retry | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
+							     "| Error | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
+							     "+-------+---------+---------+---------+---------+--------------+\n",
+							     loop_count,
+							     count, max, min, average, static_cast<int64_t>(_total_count),
+							     retry_count, retry_max, retry_min, retry_average, static_cast<int64_t>(_total_retry_count),
+							     error_count, error_max, error_min, error_average, static_cast<int64_t>(_total_error_count)
 							);
 						}
 
@@ -441,10 +441,12 @@ namespace ov
 		return SocketWrapper();
 	}
 
-	bool Socket::Connect(const SocketAddress &endpoint, int timeout)
+	std::shared_ptr<ov::Error> Socket::Connect(const SocketAddress &endpoint, int timeout)
 	{
 		OV_ASSERT2(_socket.IsValid());
-		CHECK_STATE(== SocketState::Created, false);
+		CHECK_STATE(== SocketState::Created, ov::Error::CreateError(EINVAL, "Invalid state: %d", static_cast<int>(_state)));
+
+		std::shared_ptr<ov::Error> error;
 
 		// TODO: timeout 코드 넣기
 		switch(GetType())
@@ -453,16 +455,20 @@ namespace ov
 			case SocketType::Udp:
 				if(::connect(_socket.GetSocket(), endpoint.Address(), endpoint.AddressLength()) == 0)
 				{
-					return true;
+					return nullptr;
 				}
+
+				error = ov::Error::CreateErrorFromErrno();
 
 				break;
 
 			case SocketType::Srt:
 				if(::srt_connect(_socket.GetSocket(), endpoint.Address(), endpoint.AddressLength()) != SRT_ERROR)
 				{
-					return true;
+					return nullptr;
 				}
+
+				error = ov::Error::CreateErrorFromSrt();
 
 				break;
 
@@ -472,7 +478,7 @@ namespace ov
 
 		Close();
 
-		return false;
+		return error;
 	}
 
 	bool Socket::PrepareEpoll()

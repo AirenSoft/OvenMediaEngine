@@ -17,7 +17,6 @@ namespace cfg
 	//region Annotations
 
 	struct Optional;
-	struct Includable;
 
 	//endregion
 
@@ -114,7 +113,7 @@ namespace cfg
 
 		//region ========== RegisterValue ==========
 
-		void Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_includable) const;
+		void Register(const ov::String &name, ValueBase *value, bool is_optional) const;
 
 		// For int, bool, float, ov::String with value_type
 		template<
@@ -126,8 +125,7 @@ namespace cfg
 		{
 			Register(
 				name, new Value<Ttype>(type, const_cast<Ttype *>(target)),
-				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value
 			);
 		};
 
@@ -140,8 +138,7 @@ namespace cfg
 		{
 			Register(
 				name, new Value<Ttype>(ProbeType(target), const_cast<Ttype *>(target)),
-				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value
 			);
 		}
 
@@ -154,8 +151,7 @@ namespace cfg
 		{
 			Register(
 				name, new ValueForElement<Ttype>(const_cast<Ttype *>(target)),
-				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value
 			);
 		}
 
@@ -168,8 +164,7 @@ namespace cfg
 		{
 			Register(
 				name, new ValueForList<Ttype>(const_cast<std::vector<Ttype> *>(target)),
-				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<Includable, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value
 			);
 		}
 
@@ -183,8 +178,7 @@ namespace cfg
 
 		bool ParseFromFile(const ov::String &base_file_name, ov::String file_name, const ov::String &tag_name, int indent);
 		// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
-		bool ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent);
-		virtual bool ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, bool process_include, int indent);
+		virtual bool ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent);
 
 		virtual ov::String ToString(int indent) const;
 		ov::String ToString(const ParseItem *parse_item, int indent, bool append_new_line) const;

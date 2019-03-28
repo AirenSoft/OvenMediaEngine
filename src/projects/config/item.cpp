@@ -107,10 +107,9 @@ namespace cfg
 	}
 
 
-	void Item::Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_includable) const
+	void Item::Register(const ov::String &name, ValueBase *value, bool is_optional) const
 	{
 		value->SetOptional(is_optional);
-		value->SetIncludable(is_includable);
 
 		bool is_parsed = false;
 
@@ -127,7 +126,6 @@ namespace cfg
 					// The attributes of two values must be the same
 					OV_ASSERT2(value->GetType() == base->GetType());
 					OV_ASSERT2(value->IsOptional() == base->IsOptional());
-					OV_ASSERT2(value->IsIncludable() == base->IsIncludable());
 				}
 
 				_parse_list.erase(old_value);
@@ -199,13 +197,7 @@ namespace cfg
 			return false;
 		}
 
-		return ParseFromNode(file_name, document.child(_tag_name), tag_name, false, indent);
-	}
-
-	// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
-	bool Item::ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent)
-	{
-		return ParseFromNode(base_file_name, node, tag_name, false, indent);
+		return ParseFromNode(file_name, document.child(_tag_name), tag_name, indent);
 	}
 
 #define CONFIG_DECLARE_PROCESSOR(value_type, type, dst) \
@@ -227,7 +219,8 @@ namespace cfg
             break; \
         }
 
-	bool Item::ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, bool process_include, int indent)
+	// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
+	bool Item::ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent)
 	{
 		_tag_name = tag_name;
 		_parsed = false;
@@ -302,7 +295,7 @@ namespace cfg
 						if((target != nullptr) && (target->GetTarget() != nullptr))
 						{
 							target->GetTarget()->_parent = this;
-							parse_item.is_parsed = (target->GetTarget())->ParseFromNode(base_file_name, child_node, name, value->IsIncludable(), indent + 1);
+							parse_item.is_parsed = (target->GetTarget())->ParseFromNode(base_file_name, child_node, name, indent + 1);
 						}
 						else
 						{
@@ -336,7 +329,7 @@ namespace cfg
 								Item *i = target->Create();
 
 								i->_parent = this;
-								parse_item.is_parsed = i->ParseFromNode(base_file_name, child_node, name, value->IsIncludable(), indent + 1);
+								parse_item.is_parsed = i->ParseFromNode(base_file_name, child_node, name, indent + 1);
 
 								if(parse_item.is_parsed == false)
 								{
@@ -510,7 +503,6 @@ namespace cfg
 			value->GetType() == ValueType::List ? ">" : "",
 			GetValueTypeAsString(value->GetType()).CStr(),
 			value->IsOptional() ? ", optional" : "",
-			value->IsIncludable() ? ", includable" : "",
 			parse_item->is_parsed ? str.CStr() : "N/A",
 			append_new_line ? "\n" : ""
 		);

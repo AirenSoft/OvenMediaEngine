@@ -8,12 +8,17 @@
 //==============================================================================
 #pragma once
 
-#include "../item.h"
+#include "./origin_listen.h"
 
 namespace cfg
 {
 	struct Origin : public Item
 	{
+		const OriginListen &GetListen() const
+		{
+			return _listen;
+		}
+
 		ov::String GetPrimary() const
 		{
 			return _primary;
@@ -27,9 +32,12 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue("Primary", &_primary);
+			RegisterValue<Optional>("Listen", &_listen);
+			RegisterValue<Optional>("Primary", &_primary);
 			RegisterValue<Optional>("Secondary", &_secondary);
 		}
+
+		OriginListen _listen;
 
 		ov::String _primary;
 		ov::String _secondary;

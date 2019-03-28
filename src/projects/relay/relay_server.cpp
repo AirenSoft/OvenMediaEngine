@@ -19,18 +19,37 @@ RelayServer::RelayServer(MediaRouteApplicationInterface *media_route_application
 	  _application_info(application_info)
 {
 	// Listen to localhost:<relay_port>
-	int port = application_info.GetRelayPort();
+	auto &relay = application_info.GetRelay();
 
-	_server_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Srt, ov::SocketAddress(static_cast<uint16_t>(port)));
-
-	if(_server_port != nullptr)
+	if(relay.IsParsed())
 	{
-		logti("Trying to start relay server on %d", port);
-		_server_port->AddObserver(this);
+		int port = relay.GetPort();
+
+		if(port > 0)
+		{
+			const ov::String &ip = relay.GetIp();
+			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip, static_cast<uint16_t>(port));
+
+			_server_port = PhysicalPortManager::Instance()->CreatePort( ov::SocketType::Srt, address);
+
+			if(_server_port != nullptr)
+			{
+				logti("Trying to start relay server on %s", address.ToString().CStr());
+				_server_port->AddObserver(this);
+			}
+			else
+			{
+				logte("Could not create relay port. Origin features will not work.");
+			}
+		}
+		else
+		{
+			logte("Invalid relay port: %d", port);
+		}
 	}
 	else
 	{
-		logtw("Could not create relay port. Origin features will not work.");
+		// Relay feature is disabled
 	}
 }
 
@@ -120,7 +139,7 @@ bool RelayServer::OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shar
 
 void RelayServer::OnConnected(ov::Socket *remote)
 {
-	logtd("New RelayClient is connected: %s", remote->ToString().CStr());
+	logti("New RelayClient is connected: %s", remote->ToString().CStr());
 }
 
 void RelayServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
@@ -144,7 +163,7 @@ void RelayServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &ad
 
 void RelayServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 {
-	logtd("RelayClient is disconnected: %s (reason: %d)", remote->ToString().CStr(), reason);
+	logti("RelayClient is disconnected: %s (reason: %d)", remote->ToString().CStr(), reason);
 
 	// remove from _client_list
 	auto info_iter = _client_list.find(remote);

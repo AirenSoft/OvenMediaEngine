@@ -22,7 +22,7 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<Optional, Includable>("Encode", &_encode_list);
+			RegisterValue<Optional>("Encode", &_encode_list);
 		}
 
 		std::vector<Encode> _encode_list;

@@ -11,9 +11,12 @@
 				<Application>
 					<Name>app</Name>
 					<Type>live</Type>
-					<!-- under construction -->
-					<Relay />
-					<RelayPort>9000</RelayPort>
+					<Origin>
+						<Listen>
+							<IP>*</IP>
+							<Port>9000</Port>
+						</Listen>
+					</Origin>
 					<Encodes>
 						<Encode>
 							<Name>FHD_VP8</Name>

@@ -24,6 +24,8 @@
 #include "providers.h"
 #include "publisher.h"
 #include "publishers.h"
+#include "origin.h"
+#include "origin_listen.h"
 #include "rtmp_provider.h"
 #include "rtmp_publisher.h"
 #include "server.h"

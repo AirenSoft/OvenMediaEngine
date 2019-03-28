@@ -14,6 +14,7 @@
 #include "streams.h"
 #include "providers.h"
 #include "publishers.h"
+#include "origin_listen.h"
 #include "origin.h"
 
 namespace cfg
@@ -61,9 +62,9 @@ namespace cfg
 			return _type;
 		}
 
-		int GetRelayPort() const
+		const OriginListen &GetRelay() const
 		{
-			return _relay_port;
+			return _relay;
 		}
 
 		const Origin &GetOrigin() const
@@ -106,19 +107,19 @@ namespace cfg
 		{
 			RegisterValue("Name", &_name);
 			RegisterValue<Optional>("Type", &_type);
-			RegisterValue<Optional>("RelayPort", &_relay_port);
-			RegisterValue<Optional, Includable>("Origin", &_origin);
-			RegisterValue<Optional, Includable>("TLS", &_tls);
-			RegisterValue<Optional, Includable>("Decode", &_decode);
-			RegisterValue<Optional, Includable>("Encodes", &_encodes);
-			RegisterValue<Optional, Includable>("Streams", &_streams);
-			RegisterValue<Optional, Includable>("Providers", &_providers);
-			RegisterValue<Optional, Includable>("Publishers", &_publishers);
+			RegisterValue<Optional>("Relay", &_relay);
+			RegisterValue<Optional>("Origin", &_origin);
+			RegisterValue<Optional>("TLS", &_tls);
+			RegisterValue<Optional>("Decode", &_decode);
+			RegisterValue<Optional>("Encodes", &_encodes);
+			RegisterValue<Optional>("Streams", &_streams);
+			RegisterValue<Optional>("Providers", &_providers);
+			RegisterValue<Optional>("Publishers", &_publishers);
 		}
 
 		ov::String _name;
 		ov::String _type;
-		int _relay_port = 9000;
+		OriginListen _relay;
 		Origin _origin;
 		Tls _tls;
 		Decode _decode;

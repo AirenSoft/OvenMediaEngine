@@ -56,9 +56,6 @@ namespace cfg
 		bool IsOptional() const;
 		void SetOptional(bool is_optional);
 
-		bool IsIncludable() const;
-		void SetIncludable(bool is_includable);
-
 		size_t GetSize() const;
 
 		void *GetTarget() const;
@@ -67,7 +64,6 @@ namespace cfg
 		ValueType _type = ValueType::Unknown;
 
 		bool _is_optional = false;
-		bool _is_includable = false;
 
 		size_t _value_size = 0;
 		void *_target = nullptr;

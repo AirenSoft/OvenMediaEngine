@@ -22,11 +22,10 @@
 class RelayClient : public MediaRouteApplicationConnector
 {
 public:
-	RelayClient(MediaRouteApplication *media_route_application, const info::Application &application_info, ov::String primary_server_address, ov::String secondary_server_address)
+	RelayClient(MediaRouteApplication *media_route_application, const info::Application &application_info, const cfg::Origin &origin_info)
 		: _media_route_application(media_route_application),
 		  _application_info(application_info),
-		  _primary_server_address(std::move(primary_server_address)),
-		  _secondary_server_address(std::move(secondary_server_address))
+		  _origin_info(origin_info)
 	{
 	}
 
@@ -58,6 +57,16 @@ protected:
 		uint8_t flags;
 	};
 
+	struct RelayStreamInfo
+	{
+		std::shared_ptr<StreamInfo> stream_info;
+
+		// [key: track_id, value: transaction data]
+		std::map<uint32_t, std::shared_ptr<Transaction>> transactions;
+	};
+
+	std::shared_ptr<RelayStreamInfo> GetStreamInfo(info::stream_id_t stream_id, bool create_info = false, bool *created = nullptr, bool delete_info = false);
+
 	void HandleCreateStream(const RelayPacket &packet);
 	void HandleDeleteStream(const RelayPacket &packet);
 	void HandleData(const RelayPacket &packet);
@@ -66,17 +75,12 @@ protected:
 
 	const info::Application &_application_info;
 
-	ov::String _primary_server_address;
-	ov::String _secondary_server_address;
+	const cfg::Origin _origin_info;
 	ov::Socket _client_socket;
 
 	std::thread _connection;
 	bool _stop = true;
 
-	// transactions are used to reassemble packets
-	std::mutex _transaction_lock;
-	// key: stream_id, value: [key: track_id, value: transaction data]
-	std::map<info::stream_id_t, std::map<uint32_t, std::shared_ptr<Transaction>>> _transactions;
-
-	std::map<info::stream_id_t, std::shared_ptr<StreamInfo>> _stream_list;
+	std::mutex _stream_list_mutex;
+	std::map<info::stream_id_t, std::shared_ptr<RelayStreamInfo>> _stream_list;
 };

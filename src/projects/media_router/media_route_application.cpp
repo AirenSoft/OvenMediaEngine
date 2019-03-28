@@ -66,7 +66,7 @@ bool MediaRouteApplication::Start()
 
 			if(origin.IsParsed() && (origin.GetPrimary().IsEmpty() == false))
 			{
-				_relay_client = std::make_shared<RelayClient>(this, _application_info, origin.GetPrimary(), origin.GetSecondary());
+				_relay_client = std::make_shared<RelayClient>(this, _application_info, origin);
 				_relay_client->Start(_application_info.GetName());
 			}
 
@@ -75,6 +75,9 @@ bool MediaRouteApplication::Start()
 
 		case cfg::ApplicationType::Vod:
 		case cfg::ApplicationType::VodEdge:
+			break;
+
+		case cfg::ApplicationType::Unknown:
 			break;
 	}
 
@@ -515,9 +518,9 @@ void MediaRouteApplication::MainTask()
 						std::move(media_buffer_clone)
 					);
 				}
-				// Transcoder -> MediaRouter -> Publisher
-				// or
-				// RelayClient -> MediaRouter -> Publisher
+					// Transcoder -> MediaRouter -> Publisher
+					// or
+					// RelayClient -> MediaRouter -> Publisher
 				else if(
 					(
 						(connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) ||

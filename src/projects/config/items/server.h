@@ -24,7 +24,7 @@ namespace cfg
 		{
 			RegisterValue<ValueType::Attribute>("version", &_version);
 			RegisterValue<Optional>("Name", &_name);
-			RegisterValue<Optional, Includable>("Hosts", &_hosts);
+			RegisterValue<Optional>("Hosts", &_hosts);
 		}
 
 		ov::String _version = "1.0";

@@ -8,23 +8,30 @@
 //==============================================================================
 #pragma once
 
-#include "application.h"
+#include "../item.h"
 
 namespace cfg
 {
-	struct Applications : public Item
+	struct OriginListen : public Item
 	{
-		const std::vector<Application> &GetApplications() const
+		ov::String GetIp() const
 		{
-			return _application_list;
+			return _ip;
+		}
+
+		int GetPort() const
+		{
+			return _port;
 		}
 
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<Optional>("Application", &_application_list);
+			RegisterValue<Optional>("IP", &_ip);
+			RegisterValue<Optional>("Port", &_port);
 		}
 
-		std::vector<Application> _application_list;
+		ov::String _ip = "*";
+		int _port = 9000;
 	};
 }

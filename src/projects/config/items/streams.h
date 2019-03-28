@@ -22,7 +22,7 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<Optional, Includable>("Stream", &_stream_list);
+			RegisterValue<Optional>("Stream", &_stream_list);
 		}
 
 		std::vector<Stream> _stream_list;

@@ -12,6 +12,7 @@
 					<Name>app</Name>
 					<Type>liveedge</Type>
 					<Origin>
+						<!-- Specify relay IP & port if needed -->
 						<Primary>192.168.0.183:9000</Primary>
 						<Secondary>192.168.0.183:9000</Secondary>
 					</Origin>
