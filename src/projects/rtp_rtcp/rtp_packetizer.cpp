@@ -135,7 +135,6 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 			return false;
 		}
 
-		// RTP packet transmission for sessions that do not support RED
 		_stream->OnRtpPacketized(packet);
 
 		// RED First
@@ -159,13 +158,12 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 
 	_ulpfec_generator.AddRtpPacketAndGenerateFec(red_packet);
 
-	// Test FEC works
-	//if(!red_packet->Marker())
+	// For recovery test
+	//if(red_packet->SequenceNumber() % 10 != 0)
 	{
 		_stream->OnRtpPacketized(red_packet);
 	}
 
-	uint16_t i = 0;
 	while(_ulpfec_generator.IsAvailableFecPackets())
 	{
 		auto red_fec_packet = AllocatePacket(true);
@@ -174,13 +172,13 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 		red_fec_packet->SetTimestamp(packet->Timestamp());
 
 		// Sequence Number
+		//red_fec_packet->SetSequenceNumber(red_packet->SequenceNumber());
 		AssignSequenceNumber(red_fec_packet.get(), true);
 
 		_ulpfec_generator.NextPacket(red_fec_packet.get());
 
 		// Send ULPFEC
 		_stream->OnRtpPacketized(red_fec_packet);
-		i++;
 	}
 
 	return true;

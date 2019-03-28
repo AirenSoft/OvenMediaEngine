@@ -26,6 +26,8 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 	: _application_info(application_info)
 {
 	logtd("Created media route application. application (%d: %s)", application_info.GetType(), application_info.GetName().CStr());
+
+	_vp8_picture_id = 0x8000; // 1 {000 0000 0000 0000} 1 is marker for 15 bit length
 }
 
 MediaRouteApplication::~MediaRouteApplication()
@@ -175,6 +177,19 @@ bool MediaRouteApplication::UnregisterObserverApp(
 	return true;
 }
 
+uint16_t MediaRouteApplication::AllocateVP8PictureID()
+{
+	_vp8_picture_id++;
+
+	// PictureID is 7 bit or 15 bit. We use only 15 bit.
+	if(_vp8_picture_id == 0)
+	{
+		// 1{000 0000 0000 0000} is initial number. (first bit means to use 15 bit size)
+		_vp8_picture_id = 0x8000;
+	}
+
+	return _vp8_picture_id;
+}
 
 bool MediaRouteApplication::OnCreateStream(
 	std::shared_ptr<MediaRouteApplicationConnector> app_conn,
@@ -539,14 +554,16 @@ void MediaRouteApplication::MainTask()
 
 							if(codec_id == MediaCodecId::Vp8)
 							{
+								//GTEST
+								static int i=0;
 								codec_info->codec_type = CodecType::Vp8;
-								codec_info->codec_specific.vp8.picture_id = -1;
+								codec_info->codec_specific.vp8.picture_id = AllocateVP8PictureID();
 								codec_info->codec_specific.vp8.non_reference = false;
 								codec_info->codec_specific.vp8.simulcast_idx = 0;
 								codec_info->codec_specific.vp8.temporal_idx = 0;
 								codec_info->codec_specific.vp8.layer_sync = false;
-								codec_info->codec_specific.vp8.tl0_pic_idx = 0;
-								codec_info->codec_specific.vp8.key_idx = 0;
+								codec_info->codec_specific.vp8.tl0_pic_idx = -1;
+								codec_info->codec_specific.vp8.key_idx = -1;
 							}
 							else if(codec_id == MediaCodecId::H264)
 							{

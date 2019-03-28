@@ -136,12 +136,16 @@ public:
 		uint32_t _stream_id;
 	};
 
+private:
+	uint16_t AllocateVP8PictureID();
+
 protected:
 	// 버퍼를 처리할 인디게이터
 	MediaQueue<std::unique_ptr<BufferIndicator>> _indicator;
 
-	std::shared_ptr<RelayServer> _relay_server;
+	std::shared_ptr<RelayServer>    _relay_server;
+	std::shared_ptr<RelayClient>    _relay_client;
+	ov::DelayQueue                  _retry_timer;
 
-	std::shared_ptr<RelayClient> _relay_client;
-	ov::DelayQueue _retry_timer;
+	uint16_t                        _vp8_picture_id;
 };

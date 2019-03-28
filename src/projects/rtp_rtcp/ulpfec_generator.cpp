@@ -9,14 +9,20 @@ constexpr size_t	kFecLevelHeaderSizeLbitSet		= 2 + kMaskSizeLbitSet;
 constexpr size_t 	kUlpfecMaxMediaPacketsLbitClear	= 16;
 constexpr size_t 	kUlpfecMaxMediaPacketsLbitSet	= 48;
 
-constexpr size_t    kFecRate                        = 100 / 20; // 20% Rate, 1 fec packet per 5 media packets.
+constexpr size_t    kMediaPacketNumMakeFec          = 100 / 25; // 20% Rate, 1 fec packet per 5 media packets.
 
 UlpfecGenerator::UlpfecGenerator()
 {
+	_high_level = false;
 }
 
 UlpfecGenerator::~UlpfecGenerator()
 {
+}
+
+void UlpfecGenerator::SetHighRateProtection(bool high_level)
+{
+	_high_level = high_level;
 }
 
 bool UlpfecGenerator::AddRtpPacketAndGenerateFec(std::shared_ptr<RedRtpPacket> packet)
@@ -52,8 +58,8 @@ bool UlpfecGenerator::NextPacket(RtpPacket *packet)
 bool UlpfecGenerator::Encode()
 {
 	uint32_t media_size = _media_packets.size();
-	uint32_t rate = kFecRate;
-	uint32_t fec_packet_count = std::ceil((float)media_size / (float)kFecRate);
+	uint32_t rate = kMediaPacketNumMakeFec / (_high_level?2:1);
+	uint32_t fec_packet_count = std::ceil((float)media_size / (float)kMediaPacketNumMakeFec);
 	uint32_t media_packet_idx = 0;
 	size_t mask_len = 0;
 

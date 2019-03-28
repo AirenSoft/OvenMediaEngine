@@ -47,6 +47,7 @@ public:
 	UlpfecGenerator();
 	~UlpfecGenerator();
 
+	void SetHighRateProtection(bool high_level);
 	// Because RTP is already being sent out, we execute ulpfec using the newly created red packet.
 	// I used this technique to reduce the copying and improve performance.
 	bool AddRtpPacketAndGenerateFec(std::shared_ptr<RedRtpPacket> packet);
@@ -60,4 +61,5 @@ private:
 
 	std::queue<std::shared_ptr<ov::Data>>	    _generated_fec_packets;
 	std::vector<std::shared_ptr<RedRtpPacket>>	_media_packets;
+	bool                                        _high_level;
 };

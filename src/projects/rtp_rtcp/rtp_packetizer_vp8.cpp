@@ -47,7 +47,6 @@ RtpPacketizerVp8::RtpPacketizerVp8(const RTPVideoHeaderVP8 &hdr_info,
 	  max_payload_len_(max_payload_len),
 	  last_packet_reduction_len_(last_packet_reduction_len)
 {
-
 }
 
 RtpPacketizerVp8::~RtpPacketizerVp8()
