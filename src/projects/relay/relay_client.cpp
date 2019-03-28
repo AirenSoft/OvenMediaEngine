@@ -64,8 +64,6 @@ void RelayClient::Start(const ov::String &application)
 				{
 					// retry
 					logtw("Cannot connect to %s origin server (%s)", (is_primary) ? "primary" : "secondary", error->ToString().CStr());
-					sleep(1);
-
 					continue;
 				}
 

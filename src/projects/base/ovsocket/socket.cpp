@@ -463,7 +463,12 @@ namespace ov
 				break;
 
 			case SocketType::Srt:
-				if(::srt_connect(_socket.GetSocket(), endpoint.Address(), endpoint.AddressLength()) != SRT_ERROR)
+
+				if(SetSockOpt(SRTO_CONNTIMEO, timeout) == false)
+				{
+					error = ov::Error::CreateErrorFromSrt();
+				}
+				else if(::srt_connect(_socket.GetSocket(), endpoint.Address(), endpoint.AddressLength()) != SRT_ERROR)
 				{
 					return nullptr;
 				}
