@@ -496,7 +496,7 @@ namespace cfg
 		}
 
 		return ov::String::FormatString(
-			"%s%s%s%s (%s%s%s) = %s%s",
+			"%s%s%s%s (%s%s) = %s%s",
 			MakeIndentString(indent).CStr(),
 			value->GetType() == ValueType::List ? "List<" : "",
 			parse_item->name.CStr(),
