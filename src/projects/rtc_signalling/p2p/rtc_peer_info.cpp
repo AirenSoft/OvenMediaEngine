@@ -11,15 +11,12 @@
 
 std::shared_ptr<RtcPeerInfo> RtcPeerInfo::FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<WebSocketClient> &response)
 {
-	RtcPeerBrowser browser;
-
 	if(user_agent.IsEmpty())
 	{
 		return nullptr;
 	}
 
-	// TODO(dimiden): Extract OS/Browser information from UA
-	browser.browser_type = RtcBrowserType::Chrome;
+	RtcPeerBrowser browser = ParseBrowserInfo(user_agent);
 
 	auto peer_info = std::make_shared<RtcPeerInfo>((PrivateToken){});
 
@@ -34,14 +31,37 @@ std::shared_ptr<RtcPeerInfo> RtcPeerInfo::FromUserAgent(peer_id_t id, const ov::
 	return peer_info;
 }
 
+RtcPeerBrowser RtcPeerInfo::ParseBrowserInfo(const ov::String &user_agent)
+{
+	RtcPeerBrowser browser;
+
+	if(user_agent.IndexOf("Chrome") >= 0)
+	{
+		browser.browser_type = RtcBrowserType::Chrome;
+	}
+	else if(user_agent.IndexOf("Safari") >= 0)
+	{
+		browser.browser_type = RtcBrowserType::Safari;
+	}
+	else if(user_agent.IndexOf("FireFox") >= 0)
+	{
+		browser.browser_type = RtcBrowserType::FireFox;
+	}
+	else if(user_agent.IndexOf("Edge") >= 0)
+	{
+		browser.browser_type = RtcBrowserType::Edge;
+	}
+
+	return std::move(browser);
+}
+
 bool RtcPeerInfo::IsCompatibleWith(const std::shared_ptr<RtcPeerInfo> &peer)
 {
-	return true;
+	if(_browser.browser_type == RtcBrowserType::Other)
+	{
+		// Unknown browser cannot become host peer
+		return false;
+	}
 
-	//if(host.browser_type == BrowserType::Other)
-	//{
-	//	return false;
-	//}
-	//
-	//return (host.browser_type == client.browser_type);
+	return (_browser.browser_type == peer->_browser.browser_type);
 }

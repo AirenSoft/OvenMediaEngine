@@ -252,6 +252,7 @@ protected:
 	RtcPeerInfo() = default;
 
 	static std::shared_ptr<RtcPeerInfo> FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<WebSocketClient> &response);
+	static RtcPeerBrowser ParseBrowserInfo(const ov::String &user_agent);
 
 	// peer id
 	peer_id_t _id = 0;
