@@ -15,6 +15,8 @@
 
 #include <ice/ice.h>
 
+#define USE_P2P                             0
+
 RtcSignallingServer::RtcSignallingServer(const info::Application &application_info, std::shared_ptr<MediaRouteApplicationInterface> application)
 	: _application_info(application_info),
 	  _application(std::move(application))
@@ -362,7 +364,9 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(std::shared
 		}
 		else
 		{
+#if USE_P2P
 			host_peer = _p2p_manager.TryToRegisterAsClientPeer(peer_info);
+#endif // USE_P2P
 		}
 	}
 
