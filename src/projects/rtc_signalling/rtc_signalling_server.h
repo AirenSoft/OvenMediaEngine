@@ -37,6 +37,9 @@ public:
 
 	bool Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<SessionDescription> &peer_sdp);
 
+	int GetTotalPeerCount() const;
+	int GetClientPeerCount() const;
+
 protected:
 	struct RtcSignallingInfo
 	{

@@ -17,7 +17,6 @@ public:
 	std::shared_ptr<RtcPeerInfo> CreatePeerInfo(peer_id_t id, const std::shared_ptr<WebSocketClient> &response);
 
 	// Add to _peer_list
-	bool AddPeer(const std::shared_ptr<RtcPeerInfo> &peer);
 	std::shared_ptr<RtcPeerInfo> FindPeer(peer_id_t peer_id);
 	bool RemovePeer(const std::shared_ptr<RtcPeerInfo> &peer);
 
@@ -27,8 +26,10 @@ public:
 	std::shared_ptr<RtcPeerInfo> GetClientPeerOf(const std::shared_ptr<RtcPeerInfo> &host, peer_id_t client_id);
 	std::map<peer_id_t, std::shared_ptr<RtcPeerInfo>> GetClientPeerList(const std::shared_ptr<RtcPeerInfo> &host);
 
+	int GetPeerCount() const;
+	int GetClientPeerCount() const;
+
 protected:
-	std::shared_ptr<RtcPeerInfo> FindHost(RtcPeerBrowser client_type);
 
 	std::recursive_mutex _list_mutex;
 

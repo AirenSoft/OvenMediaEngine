@@ -54,6 +54,11 @@ bool RtcP2PManager::RemovePeer(const std::shared_ptr<RtcPeerInfo> &peer)
 {
 	std::lock_guard<std::recursive_mutex> lock_guard(_list_mutex);
 
+	if(peer->IsHost() == false)
+	{
+		_total_client_count--;
+	}
+
 	_available_list.erase(peer->GetId());
 
 	auto peer_info = _peer_list.find(peer->GetId());
@@ -133,6 +138,7 @@ std::shared_ptr<RtcPeerInfo> RtcP2PManager::TryToRegisterAsClientPeer(const std:
 			if(client_peer == client_list.end())
 			{
 				client_list[client_id] = peer;
+				_total_client_count++;
 
 				peer->_host_peer = host_peer;
 			}
@@ -188,4 +194,14 @@ std::map<peer_id_t, std::shared_ptr<RtcPeerInfo>> RtcP2PManager::GetClientPeerLi
 	}
 
 	return std::move(list);
+}
+
+int RtcP2PManager::GetPeerCount() const
+{
+	return _peer_list.size();
+}
+
+int RtcP2PManager::GetClientPeerCount() const
+{
+	return _total_client_count;
 }

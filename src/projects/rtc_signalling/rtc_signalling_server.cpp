@@ -280,6 +280,16 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 	return disconnected;
 }
 
+int RtcSignallingServer::GetTotalPeerCount() const
+{
+	return _p2p_manager.GetPeerCount();
+}
+
+int RtcSignallingServer::GetClientPeerCount() const
+{
+	return _p2p_manager.GetClientPeerCount();
+}
+
 bool RtcSignallingServer::Stop()
 {
 	if(_http_server == nullptr)
@@ -790,7 +800,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(std::shared_ptr<Rtc
 				}
 				else
 				{
-					OV_ASSERT2(false);
+					// The peer disconnected before dispatch request_offer
 				}
 			}
 		}
