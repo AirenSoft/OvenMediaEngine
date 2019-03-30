@@ -17,7 +17,7 @@ public:
 	friend class HttpServer;
 	friend class HttpsServer;
 
-	HttpClient(ov::ClientSocket *socket, const std::shared_ptr<HttpRequestInterceptor> &interceptor);
+	HttpClient(std::shared_ptr<ov::ClientSocket> socket, const std::shared_ptr<HttpRequestInterceptor> &interceptor);
 	virtual ~HttpClient() = default;
 
 	std::shared_ptr<HttpRequest> &GetRequest()

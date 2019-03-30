@@ -30,7 +30,7 @@ protected:
 		std::shared_ptr<SessionDescription> offer_sdp;
 		std::shared_ptr<SessionDescription> peer_sdp;
 
-		ov::Socket *remote;
+		std::shared_ptr<ov::Socket> remote;
 		ov::SocketAddress address;
 
 		IcePortConnectionState state;
@@ -104,15 +104,15 @@ protected:
 	//--------------------------------------------------------------------
 	// Implementation of PhysicalPortObserver
 	//--------------------------------------------------------------------
-	void OnConnected(ov::Socket *remote) override;
-	void OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
-	void OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
+	void OnConnected(const std::shared_ptr<ov::Socket> &remote) override;
+	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
+	void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 	//--------------------------------------------------------------------
 
 	void SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionState state);
 
 	// STUN 오류를 반환함
-	void ResponseError(ov::Socket *remote);
+	void ResponseError(const std::shared_ptr<ov::Socket> &remote);
 
 private:
 	void CheckTimedoutItem();
@@ -125,10 +125,10 @@ private:
 	// [Server] --- 3. Binding Request          --> [Player]
 	// [Server] <-- 4. Binding Success Response --- [Player]
 	// (State: Connected)
-	bool ProcessBindingRequest(ov::Socket *remote, const ov::SocketAddress &address, const StunMessage &request_message);
-	bool SendBindingResponse(ov::Socket *remote, const ov::SocketAddress &address, const StunMessage &request_message, const std::shared_ptr<IcePortInfo> &info);
-	bool SendBindingRequest(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<IcePortInfo> &info);
-	bool ProcessBindingResponse(ov::Socket *remote, const ov::SocketAddress &address, const StunMessage &response_message);
+	bool ProcessBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &request_message);
+	bool SendBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &request_message, const std::shared_ptr<IcePortInfo> &info);
+	bool SendBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<IcePortInfo> &info);
+	bool ProcessBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &response_message);
 
 	std::shared_ptr<PhysicalPort> _physical_port;
 

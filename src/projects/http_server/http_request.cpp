@@ -12,9 +12,9 @@
 
 #include <algorithm>
 
-HttpRequest::HttpRequest(const std::shared_ptr<HttpRequestInterceptor> &interceptor, ov::ClientSocket *remote)
+HttpRequest::HttpRequest(const std::shared_ptr<HttpRequestInterceptor> &interceptor, std::shared_ptr<ov::ClientSocket> remote)
 	: _interceptor(interceptor),
-	  _remote(remote)
+	  _remote(std::move(remote))
 {
 }
 

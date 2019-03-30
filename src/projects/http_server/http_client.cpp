@@ -10,9 +10,9 @@
 #include "http_response.h"
 #include "http_client.h"
 
-HttpClient::HttpClient(ov::ClientSocket *socket, const std::shared_ptr<HttpRequestInterceptor> &interceptor)
+HttpClient::HttpClient(std::shared_ptr<ov::ClientSocket> socket, const std::shared_ptr<HttpRequestInterceptor> &interceptor)
 {
-	OV_ASSERT2(socket);
+	OV_ASSERT2(socket != nullptr);
 
 	_request = std::make_shared<HttpRequest>(interceptor, socket);
 	_response = std::make_shared<HttpResponse>(_request.get(), socket);

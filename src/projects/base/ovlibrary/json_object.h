@@ -63,6 +63,30 @@ namespace ov
 			return _value;
 		}
 
+		int GetIntValue(const ov::String &key) const
+		{
+			auto &value = _value[key];
+
+			if(value.isIntegral())
+			{
+				return value.asInt();
+			}
+
+			return 0;
+		}
+
+		int64_t GetInt64Value(const ov::String &key) const
+		{
+			auto &value = _value[key];
+
+			if(value.isIntegral())
+			{
+				return value.asInt64();
+			}
+
+			return 0;
+		}
+
 		const ::Json::Value &GetJsonValue(const ov::String &key) const
 		{
 			return _value[key];

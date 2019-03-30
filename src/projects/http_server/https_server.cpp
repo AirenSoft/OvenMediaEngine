@@ -28,7 +28,7 @@ void HttpsServer::SetChainCertificate(const std::shared_ptr<Certificate> &certif
 	_chain_certificate = certificate;
 }
 
-void HttpsServer::OnConnected(ov::Socket *remote)
+void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
 	HttpServer::OnConnected(remote);
 
@@ -79,7 +79,7 @@ void HttpsServer::OnConnected(ov::Socket *remote)
 	client->SetTls(tls);
 }
 
-void HttpsServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
+void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
 	auto client = FindClient(remote);
 

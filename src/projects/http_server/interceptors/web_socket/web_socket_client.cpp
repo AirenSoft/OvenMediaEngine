@@ -13,8 +13,8 @@
 #include <unistd.h>
 #include <algorithm>
 
-WebSocketClient::WebSocketClient(ov::ClientSocket *remote, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
-	: _remote(remote),
+WebSocketClient::WebSocketClient(std::shared_ptr<ov::ClientSocket> remote, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
+	: _remote(std::move(remote)),
 	  _request(request),
 	  _response(response)
 {
@@ -88,6 +88,11 @@ ssize_t WebSocketClient::Send(const std::shared_ptr<const ov::Data> &data)
 ssize_t WebSocketClient::Send(const ov::String &string)
 {
 	return Send(string.ToData(false), WebSocketFrameOpcode::Text);
+}
+
+ssize_t WebSocketClient::Send(const Json::Value &value)
+{
+	return Send(ov::Json::Stringify(value));
 }
 
 void WebSocketClient::Close()

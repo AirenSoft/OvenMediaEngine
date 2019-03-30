@@ -36,22 +36,22 @@ public:
 	virtual ~PhysicalPortObserver() = default;
 
 	// TCP/SRT등 일 때, 상대방이 접속하면 호출됨
-	virtual void OnConnected(ov::Socket *remote)
+	virtual void OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	{
 		// dummy function
 	}
 
 	// 데이터를 수신하였을 때 호출됨
-	virtual void OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) = 0;
+	virtual void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) = 0;
 
 	// TCP/SRT등 일 때, 상대방과의 접속이 해제되면 호출됨
-	virtual void OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
+	virtual void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 	{
 		// dummy function
 	}
 
 	// 데이터가 수신되었을 때, 자신이 처리할 수 있는 패킷인지 확인
-	virtual PhysicalPortProbeResult ProbePacket(ov::Socket *remote, const std::shared_ptr<const ov::Data> &data)
+	virtual PhysicalPortProbeResult ProbePacket(const std::shared_ptr<ov::Socket> &remote, const std::shared_ptr<const ov::Data> &data)
 	{
 		// dummy function
 		return PhysicalPortProbeResult::Failed;

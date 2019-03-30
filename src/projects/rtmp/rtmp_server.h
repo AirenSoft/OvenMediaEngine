@@ -38,13 +38,13 @@ protected:
     //--------------------------------------------------------------------
     // Implementation of PhysicalPortObserver
     //--------------------------------------------------------------------
-    void OnConnected(ov::Socket *remote) override;
+    void OnConnected(const std::shared_ptr<ov::Socket> &remote) override;
 
-    void OnDataReceived(ov::Socket *remote,
+    void OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
                         const ov::SocketAddress &address,
                         const std::shared_ptr<const ov::Data> &data) override;
 
-    void OnDisconnected(ov::Socket *remote,
+    void OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
                         PhysicalPortDisconnectReason reason,
                         const std::shared_ptr<const ov::Error> &error) override;
 

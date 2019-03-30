@@ -79,7 +79,7 @@ namespace ov
 
 				if(client_socket != nullptr && (OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP)))
 				{
-					connection_callback(client_socket, SocketConnectionState::Disconnected);
+					connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected);
 				}
 
 				// client map에서 삭제
@@ -91,7 +91,7 @@ namespace ov
 				{
 					logtd("[%p] [#%d] Client #%d is disconnected - events(%s)", this, _socket.GetSocket(), client_socket->GetSocket().GetSocket(), StringFromEpollEvent(event).CStr());
 
-					connection_callback(client_socket, SocketConnectionState::Disconnected);
+					connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected);
 				}
 				else
 				{
@@ -118,7 +118,7 @@ namespace ov
 						logtd("[%p] [#%d] Client #%d is connected - events(%s)", this, _socket.GetSocket(), client->GetSocket().GetSocket(), StringFromEpollEvent(event).CStr());
 
 						// 정상적으로 accept 되었다면 callback
-						need_to_delete = connection_callback(client.get(), SocketConnectionState::Connected);
+						need_to_delete = connection_callback(client, SocketConnectionState::Connected);
 
 						// callback의 반환 값이 true면(need_to_delete = true), 아래에서 client 없앰
 
@@ -146,7 +146,7 @@ namespace ov
 
 					if(data->GetLength() > 0L)
 					{
-						need_to_delete = data_callback(client_socket, data);
+						need_to_delete = data_callback(client_socket->GetSharedPtrAs<ClientSocket>(), data);
 						// socket이 error 상태가 되었다면 삭제
 						need_to_delete = need_to_delete || (client_socket->GetState() == SocketState::Error);
 					}
@@ -154,7 +154,7 @@ namespace ov
 					if(client_socket->GetState() == SocketState::Error)
 					{
 						logtd("[%p] [#%d] An error occurred on client %s", this, _socket.GetSocket(), client_socket->ToString().CStr());
-						connection_callback(client_socket, SocketConnectionState::Error);
+						connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Error);
 						need_to_delete = true;
 						break;
 					}
@@ -162,7 +162,7 @@ namespace ov
 					if(error != nullptr)
 					{
 						logtd("[%p] [#%d] Client %s is disconnected", this, _socket.GetSocket(), client_socket->ToString().CStr());
-						connection_callback(client_socket, SocketConnectionState::Disconnected);
+						connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected);
 						need_to_delete = true;
 						break;
 					}

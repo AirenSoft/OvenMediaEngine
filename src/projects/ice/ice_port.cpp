@@ -232,12 +232,12 @@ bool IcePort::Send(const std::shared_ptr<SessionInfo> &session_info, const std::
 	return ice_port_info->remote->SendTo(ice_port_info->address, data) >= 0;
 }
 
-void IcePort::OnConnected(ov::Socket *remote)
+void IcePort::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
 	// TODO: 일단은 UDP만 처리하므로, 비워둠. 나중에 TCP 지원할 때 구현해야 함
 }
 
-void IcePort::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
+void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
 	// 데이터를 수신했음
 
@@ -362,7 +362,7 @@ void IcePort::CheckTimedoutItem()
 	}
 }
 
-bool IcePort::ProcessBindingRequest(ov::Socket *remote, const ov::SocketAddress &address, const StunMessage &request_message)
+bool IcePort::ProcessBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &request_message)
 {
 	// Binding Request
 	ov::String local_ufrag;
@@ -438,7 +438,7 @@ bool IcePort::ProcessBindingRequest(ov::Socket *remote, const ov::SocketAddress 
 	return SendBindingResponse(remote, address, request_message, ice_port_info);
 }
 
-bool IcePort::SendBindingResponse(ov::Socket *remote, const ov::SocketAddress &address, const StunMessage &request_message, const std::shared_ptr<IcePortInfo> &info)
+bool IcePort::SendBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &request_message, const std::shared_ptr<IcePortInfo> &info)
 {
 	// Binding response 준비
 	StunMessage response_message;
@@ -487,7 +487,7 @@ bool IcePort::SendBindingResponse(ov::Socket *remote, const ov::SocketAddress &a
 	return true;
 }
 
-bool IcePort::SendBindingRequest(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<IcePortInfo> &info)
+bool IcePort::SendBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<IcePortInfo> &info)
 {
 	// Binding request 준비
 	StunMessage request_message;
@@ -555,7 +555,7 @@ bool IcePort::SendBindingRequest(ov::Socket *remote, const ov::SocketAddress &ad
 	return true;
 }
 
-bool IcePort::ProcessBindingResponse(ov::Socket *remote, const ov::SocketAddress &address, const StunMessage &response_message)
+bool IcePort::ProcessBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &response_message)
 {
 	// TODO: state가 checking 상태인지 확인
 
@@ -594,7 +594,7 @@ bool IcePort::ProcessBindingResponse(ov::Socket *remote, const ov::SocketAddress
 	return true;
 }
 
-void IcePort::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
+void IcePort::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 {
 	// TODO: TCP 연결이 해제되었을 때 처리. 일단은 UDP만 처리하므로, 비워둠
 }
@@ -608,7 +608,7 @@ void IcePort::SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionS
 }
 
 // STUN 오류를 반환함
-void IcePort::ResponseError(ov::Socket *remote)
+void IcePort::ResponseError(const std::shared_ptr<ov::Socket> &remote)
 {
 	// TOOD: 구현 필요 - chrome에서는 오류가 발생했을 때, 별다른 조치를 취하지 않는 것 같음
 }

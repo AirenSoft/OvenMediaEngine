@@ -21,8 +21,8 @@ protected:
 	//--------------------------------------------------------------------
 	// Implementation of PhysicalPortObserver
 	//--------------------------------------------------------------------
-	void OnConnected(ov::Socket *remote) override;
-	void OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
+	void OnConnected(const std::shared_ptr<ov::Socket> &remote) override;
+	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 
 protected:
 	std::shared_ptr<Certificate> _local_certificate = nullptr;

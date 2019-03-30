@@ -24,7 +24,7 @@ namespace ov
 		// address에 해당하는 주소로 bind
 		bool Prepare(const SocketAddress &address);
 
-		bool DispatchEvent(DatagramCallback data_callback, int timeout = Infinite);
+		bool DispatchEvent(const DatagramCallback& data_callback, int timeout = Infinite);
 
 		using Socket::Connect;
 		using Socket::GetState;

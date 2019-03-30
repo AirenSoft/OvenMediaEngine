@@ -17,7 +17,7 @@ class HttpResponse : public ov::EnableSharedFromThis<HttpResponse>
 public:
 	friend class HttpClient;
 
-	HttpResponse(HttpRequest *request, ov::ClientSocket *remote);
+	HttpResponse(HttpRequest *request, std::shared_ptr<ov::ClientSocket> remote);
 	~HttpResponse() override = default;
 
 	HttpStatusCode GetStatusCode() const
@@ -57,7 +57,7 @@ public:
 
 	bool Response();
 
-	ov::ClientSocket *GetRemote()
+	std::shared_ptr<ov::ClientSocket> GetRemote()
 	{
 		return _remote;
 	}
@@ -92,7 +92,7 @@ protected:
 	bool SendResponse();
 
 	HttpRequest *_request = nullptr;
-	ov::ClientSocket *_remote = nullptr;
+	std::shared_ptr<ov::ClientSocket> _remote = nullptr;
 
 	std::shared_ptr<ov::Tls> _tls = nullptr;
 	std::shared_ptr<const ov::Data> _tls_packet_buffer = nullptr;

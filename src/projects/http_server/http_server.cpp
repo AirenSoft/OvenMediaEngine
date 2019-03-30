@@ -87,11 +87,11 @@ ssize_t HttpServer::TryParseHeader(const std::shared_ptr<const ov::Data> &data, 
 	return processed_length;
 }
 
-std::shared_ptr<HttpClient> HttpServer::FindClient(ov::Socket *remote)
+std::shared_ptr<HttpClient> HttpServer::FindClient(const std::shared_ptr<ov::Socket> &remote)
 {
 	std::lock_guard<std::mutex> guard(_client_list_mutex);
 
-	auto item = _client_list.find(remote);
+	auto item = _client_list.find(remote.get());
 
 	bool need_to_disconnect = false;
 
@@ -103,16 +103,16 @@ std::shared_ptr<HttpClient> HttpServer::FindClient(ov::Socket *remote)
 	return nullptr;
 }
 
-void HttpServer::OnConnected(ov::Socket *remote)
+void HttpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
 	logti("Client(%s) is connected on %s", remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 
 	std::lock_guard<std::mutex> guard(_client_list_mutex);
 
-	_client_list[remote] = std::make_shared<HttpClient>(dynamic_cast<ov::ClientSocket *>(remote), _default_interceptor);
+	_client_list[remote.get()] = std::make_shared<HttpClient>(std::dynamic_pointer_cast<ov::ClientSocket>(remote), _default_interceptor);
 }
 
-void HttpServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
+void HttpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
 	auto client = FindClient(remote);
 
@@ -222,7 +222,7 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 	}
 }
 
-void HttpServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
+void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 {
 	logti("Client(%s) is disconnected from %s", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 
@@ -312,14 +312,14 @@ bool HttpServer::Disconnect(std::shared_ptr<HttpClient> client)
 	return Disconnect(client->GetRequest()->GetRemote());
 }
 
-bool HttpServer::Disconnect(ov::Socket *remote)
+bool HttpServer::Disconnect(const std::shared_ptr<ov::Socket> &remote)
 {
 	std::shared_ptr<HttpClient> client;
 
 	{
 		std::lock_guard<std::mutex> guard(_client_list_mutex);
 
-		auto client_iterator = _client_list.find(remote);
+		auto client_iterator = _client_list.find(remote.get());
 
 		if(client_iterator != _client_list.end())
 		{
@@ -348,7 +348,7 @@ bool HttpServer::DisconnectInternal(std::shared_ptr<HttpClient> client)
 
 	request->SetRequestInterceptor(nullptr);
 
-	_physical_port->DisconnectClient(request->GetRemote());
+	_physical_port->DisconnectClient(request->GetRemote().get());
 
 	if(interceptor != nullptr)
 	{

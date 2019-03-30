@@ -26,7 +26,7 @@ public:
 
 	void Send(info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data);
 	void Send(info::stream_id_t stream_id, const RelayPacket &base_packet, const void *data, uint16_t data_size);
-	void Send(ov::Socket *socket, info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data);
+	void Send(const std::shared_ptr<ov::Socket> &remote, info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data);
 	void SendMediaPacket(const std::shared_ptr<MediaRouteStream> &media_stream, const MediaPacket *packet);
 
 protected:
@@ -34,7 +34,7 @@ protected:
 	{
 	};
 
-	void SendStream(ov::Socket *remote, const std::shared_ptr<StreamInfo> &stream_info);
+	void SendStream(const std::shared_ptr<ov::Socket> &remote, const std::shared_ptr<StreamInfo> &stream_info);
 
 	//--------------------------------------------------------------------
 	// Implementation of MediaRouteApplicationObserver
@@ -54,12 +54,12 @@ protected:
 	//--------------------------------------------------------------------
 	// Implementation of PhysicalPortObserver
 	//--------------------------------------------------------------------
-	void OnConnected(ov::Socket *remote) override;
-	void OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
-	void OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
+	void OnConnected(const std::shared_ptr<ov::Socket> &remote) override;
+	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
+	void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 	//--------------------------------------------------------------------
 
-	void HandleRegister(ov::Socket *remote, const RelayPacket &packet);
+	void HandleRegister(const std::shared_ptr<ov::Socket> &remote, const RelayPacket &packet);
 
 	MediaRouteApplicationInterface *_media_route_application;
 

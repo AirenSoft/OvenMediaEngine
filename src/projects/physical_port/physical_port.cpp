@@ -62,7 +62,7 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type, const ov::SocketAddre
 
 		auto proc = [&, socket]() -> void
 		{
-			auto client_callback = [&](ov::ClientSocket *client, ov::SocketConnectionState state) -> bool
+			auto client_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state) -> bool
 			{
 				switch(state)
 				{
@@ -71,7 +71,7 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type, const ov::SocketAddre
 						logtd("New client is connected: %s", client->ToString().CStr());
 
 						// observer들에게 알림
-						auto func = std::bind(&PhysicalPortObserver::OnConnected, std::placeholders::_1, static_cast<ov::Socket *>(client));
+						auto func = std::bind(&PhysicalPortObserver::OnConnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client));
 						for_each(_observer_list.begin(), _observer_list.end(), func);
 
 						break;
@@ -82,7 +82,7 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type, const ov::SocketAddre
 						logtd("Client is disconnected: %s", client->ToString().CStr());
 
 						// observer들에게 알림
-						auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, static_cast<ov::Socket *>(client), PhysicalPortDisconnectReason::Disconnected, nullptr);
+						auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), PhysicalPortDisconnectReason::Disconnected, nullptr);
 						for_each(_observer_list.begin(), _observer_list.end(), func);
 
 						break;
@@ -96,12 +96,12 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type, const ov::SocketAddre
 				return false;
 			};
 
-			auto data_callback = [&](ov::ClientSocket *client, const std::shared_ptr<const ov::Data> &data) -> bool
+			auto data_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data) -> bool
 			{
 				logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
 
 				// observer들에게 알림
-				auto func = std::bind(&PhysicalPortObserver::OnDataReceived, std::placeholders::_1, static_cast<ov::Socket *>(client), std::ref(*(client->GetRemoteAddress().get())), ref(data));
+				auto func = std::bind(&PhysicalPortObserver::OnDataReceived, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), std::ref(*(client->GetRemoteAddress().get())), ref(data));
 				for_each(_observer_list.begin(), _observer_list.end(), func);
 
 				// TCP는 명시적으로 close하기 전까지 계속 사용해야 하므로 false 반환
@@ -141,7 +141,7 @@ bool PhysicalPort::CreateDatagramSocket(ov::SocketType type, const ov::SocketAdd
 
 		auto proc = [&, socket]() -> void
 		{
-			auto data_callback = [&](ov::DatagramSocket *socket, const ov::SocketAddress &remote_address, const std::shared_ptr<const ov::Data> &data) -> bool
+			auto data_callback = [&](const std::shared_ptr<ov::DatagramSocket> &socket, const ov::SocketAddress &remote_address, const std::shared_ptr<const ov::Data> &data) -> bool
 			{
 				logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
 

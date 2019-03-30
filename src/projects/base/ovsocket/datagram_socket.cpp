@@ -40,7 +40,7 @@ namespace ov
 		return true;
 	}
 
-	bool DatagramSocket::DispatchEvent(DatagramCallback data_callback, int timeout)
+	bool DatagramSocket::DispatchEvent(const DatagramCallback& data_callback, int timeout)
 	{
 		CHECK_STATE2(>= SocketState::Created, <= SocketState::Bound, false);
 		OV_ASSERT2(data_callback != nullptr);
@@ -87,7 +87,7 @@ namespace ov
 
 						if(data->GetLength() > 0L)
 						{
-							data_callback(this, *(remote.get()), data);
+							data_callback(this->GetSharedPtrAs<DatagramSocket>(), *(remote.get()), data);
 						}
 
 						if(error != nullptr)

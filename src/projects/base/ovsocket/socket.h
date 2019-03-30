@@ -165,7 +165,7 @@ namespace ov
 		} _socket { InvalidSocket };
 	};
 
-	class Socket
+	class Socket : public EnableSharedFromThis<Socket>
 	{
 	public:
 		Socket();

@@ -61,7 +61,7 @@ RelayServer::~RelayServer()
 	}
 }
 
-void RelayServer::SendStream(ov::Socket *remote, const std::shared_ptr<StreamInfo> &stream_info)
+void RelayServer::SendStream(const std::shared_ptr<ov::Socket> &remote, const std::shared_ptr<StreamInfo> &stream_info)
 {
 	// serialize media track
 	ov::String serialize = ov::String::FormatString("%s\n", stream_info->GetName().CStr());
@@ -137,12 +137,12 @@ bool RelayServer::OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shar
 	return true;
 }
 
-void RelayServer::OnConnected(ov::Socket *remote)
+void RelayServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
 	logti("New RelayClient is connected: %s", remote->ToString().CStr());
 }
 
-void RelayServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
+void RelayServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
 	logtd("Data received from %s: %zu bytes", remote->ToString().CStr(), data->GetLength());
 
@@ -161,14 +161,14 @@ void RelayServer::OnDataReceived(ov::Socket *remote, const ov::SocketAddress &ad
 	}
 }
 
-void RelayServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
+void RelayServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 {
 	logti("RelayClient is disconnected: %s (reason: %d)", remote->ToString().CStr(), reason);
 
 	// remove from _client_list
 	std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
 
-	auto info_iter = _client_list.find(remote);
+	auto info_iter = _client_list.find(remote.get());
 
 	if(info_iter != _client_list.end())
 	{
@@ -176,7 +176,7 @@ void RelayServer::OnDisconnected(ov::Socket *remote, PhysicalPortDisconnectReaso
 	}
 }
 
-void RelayServer::HandleRegister(ov::Socket *remote, const RelayPacket &packet)
+void RelayServer::HandleRegister(const std::shared_ptr<ov::Socket> &remote, const RelayPacket &packet)
 {
 	// The relay client wants to be registered on this server for the application
 	ov::String app_name(reinterpret_cast<const char *>(packet.GetData()), packet.GetDataSize());
@@ -199,7 +199,7 @@ void RelayServer::HandleRegister(ov::Socket *remote, const RelayPacket &packet)
 	{
 		std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
 
-		_client_list[remote] = ClientInfo();
+		_client_list[remote.get()] = ClientInfo();
 	}
 
 	// Send streams to the relay client
@@ -289,7 +289,7 @@ void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_pack
 	Send(stream_id, base_packet, &data_to_send);
 }
 
-void RelayServer::Send(ov::Socket *socket, info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data)
+void RelayServer::Send(const std::shared_ptr<ov::Socket> &socket, info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data)
 {
 	uint32_t transaction_id = _transaction_id++;
 

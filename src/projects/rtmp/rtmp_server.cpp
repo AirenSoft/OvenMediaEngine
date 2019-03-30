@@ -122,13 +122,13 @@ bool RtmpServer::RemoveObserver(const std::shared_ptr<RtmpObserver> &observer)
 // OnConnected
 // - client 세션 추가
 //====================================================================================================
-void RtmpServer::OnConnected(ov::Socket *remote)
+void RtmpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
     logtd("Rtmp encoder connected - remote(%s)", remote->ToString().CStr());
 
     std::unique_lock<std::recursive_mutex> lock(_chunk_stream_list_mutex);
 
-    _chunk_stream_list[remote] = std::make_shared<RtmpChunkStream>(dynamic_cast<ov::ClientSocket *>(remote), this);
+    _chunk_stream_list[remote.get()] = std::make_shared<RtmpChunkStream>(dynamic_cast<ov::ClientSocket *>(remote.get()), this);
 }
 
 //====================================================================================================
@@ -158,13 +158,13 @@ bool RtmpServer::Disconnect(const ov::String &app_name, uint32_t stream_id)
 // OnDataReceived
 // - 데이터 수신
 //====================================================================================================
-void RtmpServer::OnDataReceived(ov::Socket *remote,
+void RtmpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
                                 const ov::SocketAddress &address,
                                 const std::shared_ptr<const ov::Data> &data)
 {
     std::unique_lock<std::recursive_mutex> lock(_chunk_stream_list_mutex);
 
-	auto item = _chunk_stream_list.find(remote);
+	auto item = _chunk_stream_list.find(remote.get());
 
 	// clinet 세션 확인
 	if(item != _chunk_stream_list.end())
@@ -209,13 +209,13 @@ void RtmpServer::OnDataReceived(ov::Socket *remote,
 // - client(Encoder) 문제로 접속 종료 이벤트 발생
 // - socket 세션은 호출한 ServerSocket에서 스스로 정리
 //====================================================================================================
-void RtmpServer::OnDisconnected(ov::Socket *remote,
+void RtmpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
                                 PhysicalPortDisconnectReason reason,
                                 const std::shared_ptr<const ov::Error> &error)
 {
 	std::unique_lock<std::recursive_mutex> lock(_chunk_stream_list_mutex);
 
-    auto item = _chunk_stream_list.find(remote);
+    auto item = _chunk_stream_list.find(remote.get());
 
     if(item != _chunk_stream_list.end())
     {
