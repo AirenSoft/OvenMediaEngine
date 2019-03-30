@@ -47,6 +47,8 @@ protected:
 		// WebSocket 접속만 되어 있고, request offer하지 않은 상태에서는 P2P_INVALID_PEER_ID 로 되어 있음
 		peer_id_t id = P2P_INVALID_PEER_ID;
 
+		std::shared_ptr<RtcPeerInfo> peer_info;
+
 		// client가 연결 한 뒤 request offer 했을 때 보내준 offer SDP
 		std::shared_ptr<SessionDescription> offer_sdp;
 
@@ -59,12 +61,14 @@ protected:
 		// client의 candidates
 		std::vector<RtcIceCandidate> remote_candidates;
 
-		RtcSignallingInfo(ov::String application_name, ov::String stream_name, peer_id_t id,
+		RtcSignallingInfo(ov::String application_name, ov::String stream_name,
+		                  peer_id_t id, std::shared_ptr<RtcPeerInfo> peer_info,
 		                  std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp,
 		                  std::vector<RtcIceCandidate> local_candidates, std::vector<RtcIceCandidate> remote_candidates)
 			: application_name(std::move(application_name)),
 			  stream_name(std::move(stream_name)),
 			  id(id),
+			  peer_info(std::move(peer_info)),
 			  offer_sdp(std::move(offer_sdp)),
 			  peer_sdp(std::move(peer_sdp)),
 			  local_candidates(std::move(local_candidates)),
@@ -77,11 +81,13 @@ protected:
 
 	bool InitializeWebSocketServer();
 
-	std::shared_ptr<ov::Error> DispatchCommand(const ov::String &command, const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message);
-	std::shared_ptr<ov::Error> DispatchRequestOffer(const std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response);
-	std::shared_ptr<ov::Error> DispatchAnswer(const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<ov::Error> DispatchCandidate(const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info);
-	std::shared_ptr<ov::Error> DispatchStop(const std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchCommand(const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message);
+	std::shared_ptr<ov::Error> DispatchRequestOffer(std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response);
+	std::shared_ptr<ov::Error> DispatchAnswer(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchCandidate(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchOfferP2P(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchCandidateP2P(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
+	std::shared_ptr<ov::Error> DispatchStop(std::shared_ptr<RtcSignallingInfo> &info);
 
 	const info::Application &_application_info;
 	std::shared_ptr<MediaRouteApplicationInterface> _application;

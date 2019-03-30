@@ -82,6 +82,8 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 
 				// id
 				P2P_INVALID_PEER_ID,
+				// peer_info,
+				nullptr,
 				// offer_sdp
 				nullptr,
 				// peer_sdp
@@ -119,7 +121,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 	web_socket->SetMessageHandler(
 		[this](const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message) -> bool
 		{
-			logtd("The client sent a message:\n%s", message->GetPayload()->Dump().CStr());
+			logtp("The client sent a message:\n%s", message->GetPayload()->Dump().CStr());
 
 			auto info = response->GetRequest()->GetExtraAs<RtcSignallingInfo>();
 
@@ -293,22 +295,16 @@ bool RtcSignallingServer::Stop()
 	return false;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const ov::String &command, const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message)
 {
 	if(command == "request_offer")
 	{
 		return DispatchRequestOffer(info, response);
 	}
 
-	const Json::Value &id = object.GetJsonValue("id");
-
-	if(id.isNull() || (id.isInt() == false) || (info->id != id.asInt()))
+	if(info->id != object.GetInt64Value("id"))
 	{
 		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid ID");
-	}
-	else if(command == "stop")
-	{
-		return DispatchStop(info);
 	}
 	else if(command == "answer")
 	{
@@ -317,6 +313,14 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const ov::String
 	else if(command == "candidate")
 	{
 		return DispatchCandidate(object, info);
+	}
+	else if(command == "offer_p2p")
+	{
+		return DispatchOfferP2P(object, info);
+	}
+	else if(command == "candidate_p2p")
+	{
+		return DispatchCandidateP2P(object, info);
 	}
 	else if(command == "stop")
 	{
@@ -327,7 +331,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const ov::String
 	return ov::Error::CreateError(HttpStatusCode::BadRequest, "Unknown command: %s", command.CStr());
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response)
 {
 	ov::String application_name = info->application_name;
 	ov::String stream_name = info->stream_name;
@@ -335,11 +339,37 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	std::shared_ptr<SessionDescription> sdp = nullptr;
 	std::shared_ptr<ov::Error> error = nullptr;
 
-	// Check if there is a host that can accept this client
-	peer_id_t peer = _p2p_manager.FindHost(response);
+	logtd("Trying to find p2p host for client %s...", response->ToString().CStr());
 
-	if(peer == P2P_OME_PEER_ID)
+	// Check if there is a host that can accept this client
+	auto peer_info = _p2p_manager.CreatePeerInfo(info->id, response);
+
+	if(peer_info == nullptr)
 	{
+		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Cannot parse peer info from user agent: %s", response->GetRequest()->GetHeader("USER-AGENT").CStr());
+	}
+
+	info->peer_info = peer_info;
+
+	std::shared_ptr<RtcPeerInfo> host_peer;
+
+	{
+		std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
+
+		if(info->peer_info == nullptr)
+		{
+			// If client is stopped or disconnected and DispatchStop is executed, it enters here
+		}
+		else
+		{
+			host_peer = _p2p_manager.TryToRegisterAsClientPeer(peer_info);
+		}
+	}
+
+	if(host_peer == nullptr)
+	{
+		logtd("There is no p2p host for client %s.", response->ToString().CStr());
+
 		// None of the hosts can accept this client
 		std::find_if(_observers.begin(), _observers.end(), [info, &sdp, application_name, stream_name](auto &observer) -> bool
 		{
@@ -350,6 +380,14 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 
 		if(sdp != nullptr)
 		{
+			logtd("SDP is generated successfully");
+
+			if(_p2p_manager.RegisterAsHostPeer(peer_info) == false)
+			{
+				OV_ASSERT2(false);
+				return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Could not add host peer");
+			}
+
 			ov::JsonObject response_json;
 
 			Json::Value &value = response_json.GetJsonValue();
@@ -361,6 +399,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 
 			if(sdp->ToString(offer_sdp))
 			{
+				value["command"] = "offer";
 				value["id"] = info->id;
 				value["peer_id"] = P2P_OME_PEER_ID;
 				sdp_value["sdp"] = offer_sdp.CStr();
@@ -411,65 +450,109 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	else
 	{
 		// Found a host that can accept this client
-		// Send 'request_offer_p2p' command to the host
+		logtd("P2P host found: %s", host_peer->ToString().CStr());
 
-		// TODO(dimiden): implement this
-		error = ov::Error::CreateError(HttpStatusCode::NotFound, "Cannot create offer");
+		// Send 'request_offer_p2p' command to the host
+		Json::Value value;
+
+		value["command"] = "request_offer_p2p";
+		value["id"] = host_peer->GetId();
+		value["peer_id"] = peer_info->GetId();
+
+		host_peer->GetResponse()->Send(value);
+
+		// Wait for 'offer_p2p' command from the host
+
+		// TODO(dimiden): Timeout is required because host peer may not give offer for too long
 	}
 
 	return error;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
-	// sdp가 있는지 확인
+	auto &peer_info = info->peer_info;
+
+	if(peer_info == nullptr)
+	{
+		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not find peer id: %d", info->id);
+	}
+
 	const Json::Value &sdp_value = object.GetJsonValue("sdp");
 
-	if(sdp_value.isNull())
+	// Validate SDP
+	if(sdp_value.isNull() || (sdp_value.isObject() == false))
 	{
 		return ov::Error::CreateError(HttpStatusCode::BadRequest, "There is no SDP");
 	}
 
-	// client가 SDP를 보냈으므로, 처리함
 	const Json::Value &sdp_type = sdp_value["type"];
 
 	if((sdp_type.isString() == false) || (sdp_type != "answer"))
 	{
-		// 반드시 answer sdp여야 함
 		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid SDP type");
 	}
 
 	if(sdp_value["sdp"].isString() == false)
 	{
-		// 반드시 문자열 이어야 함
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "SDP must be string");
+		return ov::Error::CreateError(HttpStatusCode::BadRequest, "SDP must be a string");
 	}
 
-	logtd("The client sent a answer: %s", object.ToString().CStr());
-
-	info->peer_sdp = std::make_shared<SessionDescription>();
-
-	if(info->peer_sdp->FromString(sdp_value["sdp"].asCString()))
+	if(peer_info->IsHost())
 	{
-		for(auto &observer : _observers)
-		{
-			logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->application_name.CStr(), info->stream_name.CStr());
+		logtd("The host peer sent a answer: %s", object.ToString().CStr());
 
-			observer->OnAddRemoteDescription(info->application_name, info->stream_name, info->offer_sdp, info->peer_sdp);
+		info->peer_sdp = std::make_shared<SessionDescription>();
+
+		if(info->peer_sdp->FromString(sdp_value["sdp"].asCString()))
+		{
+			for(auto &observer : _observers)
+			{
+				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->application_name.CStr(), info->stream_name.CStr());
+
+				observer->OnAddRemoteDescription(info->application_name, info->stream_name, info->offer_sdp, info->peer_sdp);
+			}
+		}
+		else
+		{
+			// SDP를 파싱할 수 없음
+			return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse SDP");
 		}
 	}
 	else
 	{
-		// SDP를 파싱할 수 없음
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse SDP");
+		logtd("The client peer sent a answer: %s", object.ToString().CStr());
+
+		// The client peer sent this answer
+		auto peer_id = object.GetIntValue("peer_id");
+		auto host_peer = peer_info->GetHostPeer();
+
+		if(host_peer == nullptr)
+		{
+			OV_ASSERT2(false);
+			return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Could not find host information");
+		}
+
+		if(host_peer->GetId() != peer_id)
+		{
+			return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid peer id: %d", peer_id);
+		}
+
+		Json::Value value;
+
+		value["command"] = "answer";
+		value["id"] = host_peer->GetId();
+		value["peer_id"] = peer_info->GetId();
+		value["sdp"] = sdp_value;
+
+		host_peer->GetResponse()->Send(value);
 	}
 
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const ov::JsonObject &object, const std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
-	// candidates가 있는지 확인
 	const Json::Value &candidates_value = object.GetJsonValue("candidates");
 
 	if(candidates_value.isNull())
@@ -482,31 +565,149 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const ov::Json
 		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Candidates must be array");
 	}
 
-	// client가 candidate를 보냈으므로, 처리함
-	for(const auto &candidate_iterator : candidates_value)
+	auto peer_id = object.GetIntValue("peer_id");
+	auto peer_info = _p2p_manager.FindPeer(peer_id);
+
+	if(peer_info == nullptr)
 	{
-		ov::String candidate = ov::Converter::ToString(candidate_iterator["candidate"]);
-		uint32_t sdp_m_line_index = ov::Converter::ToUInt32(candidate_iterator["sdpMLineIndex"]);
-		ov::String sdp_mid = ov::Converter::ToString(candidate_iterator["sdpMid"]);
-		ov::String username_fragment = ov::Converter::ToString(candidate_iterator["usernameFragment"]);
-
-		auto ice_candidate = std::make_shared<RtcIceCandidate>(sdp_m_line_index, sdp_mid);
-
-		if(ice_candidate->ParseFromString(candidate) == false)
+		// Host -> OME
+		for(const auto &candidate_iterator : candidates_value)
 		{
-			return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid candidate: %s", candidate.CStr());
-		}
+			ov::String candidate = ov::Converter::ToString(candidate_iterator["candidate"]);
+			uint32_t sdp_m_line_index = ov::Converter::ToUInt32(candidate_iterator["sdpMLineIndex"]);
+			ov::String sdp_mid = ov::Converter::ToString(candidate_iterator["sdpMid"]);
+			ov::String username_fragment = ov::Converter::ToString(candidate_iterator["usernameFragment"]);
 
-		for(auto &observer : _observers)
-		{
-			observer->OnIceCandidate(info->application_name, info->stream_name, ice_candidate, username_fragment);
+			auto ice_candidate = std::make_shared<RtcIceCandidate>(sdp_m_line_index, sdp_mid);
+
+			if(ice_candidate->ParseFromString(candidate) == false)
+			{
+				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid candidate: %s", candidate.CStr());
+			}
+
+			for(auto &observer : _observers)
+			{
+				observer->OnIceCandidate(info->application_name, info->stream_name, ice_candidate, username_fragment);
+			}
 		}
+	}
+	else
+	{
+		// Client -> (OME) -> Host
+		Json::Value value;
+
+		value["command"] = "candidate_p2p";
+		value["id"] = info->id;
+		value["peer_id"] = peer_info->GetId();
+		value["candidates"] = candidates_value;
+
+		peer_info->GetResponse()->Send(value);
 	}
 
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchOfferP2P(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+{
+	auto &host = info->peer_info;
+
+	if(host == nullptr)
+	{
+		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Peer %d is not exists", info->id);
+	}
+
+	auto peer_id = object.GetIntValue("peer_id");
+	auto client_peer = _p2p_manager.GetClientPeerOf(host, peer_id);
+
+	if(client_peer == nullptr)
+	{
+		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid peer_id: %d", peer_id);
+	}
+
+	auto sdp_value = object.GetJsonValue("sdp");
+	auto candidates = object.GetJsonValue("candidates");
+
+	// Validate SDP
+	if(sdp_value.isNull() || (sdp_value.isObject() == false))
+	{
+		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid SDP: %s", sdp_value.asCString());
+	}
+
+	const Json::Value &sdp_type = sdp_value["type"];
+
+	if((sdp_type.isString() == false) || (sdp_type != "offer"))
+	{
+		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid SDP type");
+	}
+
+	if(sdp_value["sdp"].isString() == false)
+	{
+		return ov::Error::CreateError(HttpStatusCode::BadRequest, "SDP must be a string");
+	}
+
+	if((candidates.isNull() == false) && (candidates.isArray() == false))
+	{
+		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Candidates must be array, but: %d", candidates.type());
+	}
+
+	Json::Value value;
+
+	value["command"] = "offer";
+	value["id"] = client_peer->GetId();
+	value["peer_id"] = host->GetId();
+	value["sdp"] = sdp_value;
+	if(candidates.isNull() == false)
+	{
+		value["candidates"] = candidates;
+	}
+
+	client_peer->GetResponse()->Send(value);
+
+	return nullptr;
+}
+
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidateP2P(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+{
+	auto &host = info->peer_info;
+
+	if(host == nullptr)
+	{
+		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Peer %d is not exists", info->id);
+	}
+
+	auto peer_id = object.GetIntValue("peer_id");
+	auto client_peer = _p2p_manager.GetClientPeerOf(host, peer_id);
+
+	if(client_peer == nullptr)
+	{
+		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid peer_id: %d", peer_id);
+	}
+
+	const Json::Value &candidates_value = object.GetJsonValue("candidates");
+
+	if(candidates_value.isNull())
+	{
+		return ov::Error::CreateError(HttpStatusCode::BadRequest, "There is no candidate list");
+	}
+
+	if(candidates_value.isArray() == false)
+	{
+		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Candidates must be array");
+	}
+
+	Json::Value candidates;
+
+	candidates["command"] = "candidate";
+	candidates["id"] = client_peer->GetId();
+	candidates["peer_id"] = info->id;
+	candidates["candidates"] = candidates_value;
+
+	client_peer->GetResponse()->Send(candidates);
+
+	return nullptr;
+}
+
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(std::shared_ptr<RtcSignallingInfo> &info)
 {
 	bool result = true;
 
@@ -523,14 +724,76 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_p
 		}
 	}
 
-	if(info->id != P2P_INVALID_PEER_ID)
 	{
+		std::shared_ptr<RtcPeerInfo> peer_info;
+
 		{
 			std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
-			_client_list.erase(info->id);
+
+			peer_info = info->peer_info;
+
+			info->peer_info = nullptr;
+
+			if(info->id != P2P_INVALID_PEER_ID)
+			{
+				_client_list.erase(info->id);
+				info->id = P2P_INVALID_PEER_ID;
+			}
 		}
 
-		info->id = P2P_INVALID_PEER_ID;
+		if(peer_info != nullptr)
+		{
+			logtd("Deleting peer %s from p2p manager...", peer_info->ToString().CStr());
+
+			_p2p_manager.RemovePeer(peer_info);
+
+			if(peer_info->IsHost())
+			{
+				// Host peer -> OME
+
+				// Broadcast to client peers
+				auto client_list = _p2p_manager.GetClientPeerList(peer_info);
+
+				for(auto &client : client_list)
+				{
+					auto &client_info = client.second;
+
+					Json::Value value;
+
+					value["command"] = "stop";
+					value["id"] = client_info->GetId();
+					value["peer_id"] = peer_info->GetId();
+
+					client_info->GetResponse()->Send(value);
+				}
+			}
+			else
+			{
+				// Client peer -> OME
+
+				// Send to host peer
+				auto host_info = peer_info->GetHostPeer();
+
+				if(host_info != nullptr)
+				{
+					Json::Value value;
+
+					value["command"] = "stop";
+					value["id"] = host_info->GetId();
+					value["peer_id"] = peer_info->GetId();
+
+					host_info->GetResponse()->Send(value);
+				}
+				else
+				{
+					OV_ASSERT2(false);
+				}
+			}
+		}
+		else
+		{
+			// It enters here when if the peer has never requested a request_offer or DispatchRequestOffer() is in progress on another thread
+		}
 	}
 
 	if(result == false)
