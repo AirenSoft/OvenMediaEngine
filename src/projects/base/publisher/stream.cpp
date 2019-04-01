@@ -149,6 +149,8 @@ bool Stream::Start(uint32_t worker_count)
 		return false;
 	}
 
+    worker_count = _application->GetThreadCount();
+
 	if(thread_count > 0)
 	{
 		// override

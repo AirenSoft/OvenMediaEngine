@@ -102,6 +102,11 @@ namespace cfg
 			return std::move(_publishers.GetPublishers());
 		}
 
+        const int GetThreadCount() const
+        {
+            return _publishers.GetThreadCount();
+        }
+
 	protected:
 		void MakeParseList() const override
 		{

@@ -47,6 +47,11 @@ namespace cfg
 			return _webrtc_publisher;
 		}
 
+        const int GetThreadCount() const
+        {
+            return _thread_count;
+        }
+
 	protected:
 		void MakeParseList() const override
 		{
@@ -54,11 +59,13 @@ namespace cfg
 			RegisterValue<Optional>("HLS", &_hls_publisher);
 			RegisterValue<Optional>("DASH", &_dash_publisher);
 			RegisterValue<Optional>("WebRTC", &_webrtc_publisher);
+            RegisterValue<Optional>("ThreadCount", &_thread_count);
 		}
 
 		RtmpPublisher _rtmp_publisher;
 		HlsPublisher _hls_publisher;
 		DashPublisher _dash_publisher;
 		WebrtcPublisher _webrtc_publisher;
+        int _thread_count;
 	};
 }
