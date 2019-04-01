@@ -10,6 +10,8 @@
 
 #include "config_private.h"
 
+#include <regex>
+
 namespace cfg
 {
 	static ov::String MakeIndentString(int indent)
@@ -281,12 +283,12 @@ namespace cfg
 
 				switch(value->GetType())
 				{
-					CONFIG_DECLARE_PROCESSOR(ValueType::Integer, int, ov::Converter::ToInt32(child_node.child_value()))
-					CONFIG_DECLARE_PROCESSOR(ValueType::Boolean, bool, ov::Converter::ToBool(child_node.child_value()))
-					CONFIG_DECLARE_PROCESSOR(ValueType::Float, float, ov::Converter::ToFloat(child_node.child_value()))
-					CONFIG_DECLARE_PROCESSOR(ValueType::String, ov::String, child_node.child_value())
-					CONFIG_DECLARE_PROCESSOR(ValueType::Text, ov::String, child_node.child_value())
-					CONFIG_DECLARE_PROCESSOR(ValueType::Attribute, ov::String, attribute.value())
+					CONFIG_DECLARE_PROCESSOR(ValueType::Integer, int, ov::Converter::ToInt32(Preprocess(child_node.child_value())))
+					CONFIG_DECLARE_PROCESSOR(ValueType::Boolean, bool, ov::Converter::ToBool(Preprocess(child_node.child_value())))
+					CONFIG_DECLARE_PROCESSOR(ValueType::Float, float, ov::Converter::ToFloat(Preprocess(child_node.child_value())))
+					CONFIG_DECLARE_PROCESSOR(ValueType::String, ov::String, Preprocess(child_node.child_value()))
+					CONFIG_DECLARE_PROCESSOR(ValueType::Text, ov::String, Preprocess(child_node.child_value()))
+					CONFIG_DECLARE_PROCESSOR(ValueType::Attribute, ov::String, Preprocess(attribute.value()))
 
 					case ValueType::Element:
 					{
@@ -367,6 +369,62 @@ namespace cfg
 
 		_parsed = true;
 		return true;
+	}
+
+	ov::String Item::Preprocess(const char *value)
+	{
+		std::string str = value;
+		std::string result;
+		std::regex r(R"(\$\{env:([^}]*)\})");
+
+		auto start = str.cbegin();
+		std::sregex_iterator iterator = std::sregex_iterator(start, str.cend(), r);
+
+		while(iterator != std::sregex_iterator())
+		{
+			std::smatch matches = *iterator;
+			auto match = matches[0];
+			auto token = matches[1];
+
+			auto env_key = token.str();
+			auto position = env_key.find_first_of(':');
+
+			std::string default_value;
+			bool is_default_value = false;
+
+			if(position != std::string::npos)
+			{
+				default_value = env_key.substr(position + 1);
+			}
+
+			const char *key = env_key.c_str();
+			const char *env = getenv(key);
+			if(env == nullptr)
+			{
+				if(default_value.empty())
+				{
+					env = "";
+				}
+				else
+				{
+					is_default_value = true;
+					env = default_value.c_str();
+				}
+			}
+
+			logti("Configuration: %s = \"%s\"%s", key, env, is_default_value ? " (default value)" : "");
+
+			result.append(start, match.first);
+			result.append(env);
+
+			start = match.second;
+
+			++iterator;
+		}
+
+		result.append(start, str.cend());
+
+		return result.c_str();
 	}
 
 	ov::String Item::ToString() const

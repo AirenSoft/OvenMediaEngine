@@ -180,6 +180,8 @@ namespace cfg
 		// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
 		virtual bool ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent);
 
+		ov::String Preprocess(const char *value);
+
 		virtual ov::String ToString(int indent) const;
 		ov::String ToString(const ParseItem *parse_item, int indent, bool append_new_line) const;
 
