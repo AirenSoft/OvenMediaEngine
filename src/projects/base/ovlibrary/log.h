@@ -51,7 +51,16 @@ typedef enum OVLogLevel
 		OVLogLevelCritical
 } OVLogLevel;
 
-#define logd(tag, format, ...)                        ov_log_internal(OVLogLevelDebug,          tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
+#if DEBUG
+#   define logd(tag, format, ...)                     ov_log_internal(OVLogLevelDebug,          tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
+#else
+#   define logd                                       ov_log_dummy
+
+constexpr void ov_log_dummy(...)
+{
+}
+
+#endif // DEBUG
 #define logi(tag, format, ...)                        ov_log_internal(OVLogLevelInformation,    tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
 #define logw(tag, format, ...)                        ov_log_internal(OVLogLevelWarning,        tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
 #define loge(tag, format, ...)                        ov_log_internal(OVLogLevelError,          tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT

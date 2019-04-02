@@ -15,7 +15,7 @@
 
 #include <ice/ice.h>
 
-#define USE_P2P                             0
+#define USE_P2P                             1
 
 RtcSignallingServer::RtcSignallingServer(const info::Application &application_info, std::shared_ptr<MediaRouteApplicationInterface> application)
 	: _application_info(application_info),
@@ -163,7 +163,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 
 			if(error != nullptr)
 			{
-				logte("An error occurred while dispatch command: %s, disconnecting...", command.CStr());
+				logte("An error occurred while dispatch command: %s (%s), disconnecting...", command.CStr(), error->ToString().CStr());
 
 				ov::JsonObject response_json;
 				Json::Value &value = response_json.GetJsonValue();
@@ -206,6 +206,10 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 				      (info->offer_sdp != nullptr) ? info->offer_sdp->GetIceUfrag().CStr() : "(N/A)",
 				      (info->peer_sdp != nullptr) ? info->peer_sdp->GetIceUfrag().CStr() : "(N/A)"
 				);
+			}
+			else
+			{
+				// The client is disconnected before websocket negotiation
 			}
 		});
 
@@ -286,40 +290,40 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 //====================================================================================================
 bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections)
 {
-    std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
-    ov::String alias =  _application_info.GetOrigin().GetAlias();
-    ov::String app_name = _application_info.GetName();
+	std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
+	ov::String alias = _application_info.GetOrigin().GetAlias();
+	ov::String app_name = _application_info.GetName();
 
-    // lock(guard)
-    std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
+	// lock(guard)
+	std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
 
-     for(const auto &client_item  : _client_list)
-     {
-         ov::String stream_name = client_item.second->stream_name;
-        uint32_t bitrate = 0;
+	for(const auto &client_item  : _client_list)
+	{
+		ov::String stream_name = client_item.second->stream_name;
+		uint32_t bitrate = 0;
 
-        auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
-                                                                    alias,
-                                                                    app_name,
-                                                                    stream_name);
+		auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
+		                                                             alias,
+		                                                             app_name,
+		                                                             stream_name);
 
-        std::find_if(_observers.begin(), _observers.end(), [&bitrate, app_name, stream_name](auto &observer) -> bool
-         {
-             // Ask observer to fill bitrate
-             bitrate = observer->OnGetBitrate(app_name, stream_name);
-             return bitrate != 0;
-         });
+		std::find_if(_observers.begin(), _observers.end(), [&bitrate, app_name, stream_name](auto &observer) -> bool
+		{
+			// Ask observer to fill bitrate
+			bitrate = observer->OnGetBitrate(app_name, stream_name);
+			return bitrate != 0;
+		});
 
-        collection->edge_connection = 1;
-        collection->edge_bitrate = bitrate;
-        collection->p2p_connection = 0;
-        collection->p2p_bitrate = 0;
-        collection->check_time = current_time;
+		collection->edge_connection = 1;
+		collection->edge_bitrate = bitrate;
+		collection->p2p_connection = 0;
+		collection->p2p_bitrate = 0;
+		collection->check_time = current_time;
 
-        stream_collections.push_back(collection);
-     }
+		stream_collections.push_back(collection);
+	}
 
-     return true;
+	return true;
 }
 
 int RtcSignallingServer::GetTotalPeerCount() const
@@ -407,6 +411,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(std::shared
 
 	std::shared_ptr<RtcPeerInfo> host_peer;
 
+	if(info->peer_was_client == false)
 	{
 		std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
 
@@ -421,10 +426,14 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(std::shared
 #endif // USE_P2P
 		}
 	}
+	else
+	{
+		// make the peer as host
+	}
 
 	if(host_peer == nullptr)
 	{
-		logtd("There is no p2p host for client %s.", response->ToString().CStr());
+		logtd("peer %s became a host peer because there is no p2p host for client %s.", peer_info->ToString().CStr(), response->ToString().CStr());
 
 		// None of the hosts can accept this client
 		std::find_if(_observers.begin(), _observers.end(), [info, &sdp, application_name, stream_name](auto &observer) -> bool
@@ -505,8 +514,9 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(std::shared
 	}
 	else
 	{
+		info->peer_was_client = true;
 		// Found a host that can accept this client
-		logtd("P2P host found: %s", host_peer->ToString().CStr());
+		logtd("[Client -> Host] Host %s found for client %s", host_peer->ToString().CStr(), peer_info->ToString().CStr());
 
 		// Send 'request_offer_p2p' command to the host
 		Json::Value value;
@@ -556,7 +566,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const ov::JsonObj
 
 	if(peer_info->IsHost())
 	{
-		logtd("The host peer sent a answer: %s", object.ToString().CStr());
+		logtd("[Host -> OME] The host peer sent a answer: %s", object.ToString().CStr());
 
 		info->peer_sdp = std::make_shared<SessionDescription>();
 
@@ -577,7 +587,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const ov::JsonObj
 	}
 	else
 	{
-		logtd("The client peer sent a answer: %s", object.ToString().CStr());
+		logtd("[Client -> Host] The client peer sent a answer: %s", object.ToString().CStr());
 
 		// The client peer sent this answer
 		auto peer_id = object.GetIntValue("peer_id");
@@ -596,7 +606,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const ov::JsonObj
 
 		Json::Value value;
 
-		value["command"] = "answer";
+		value["command"] = "answer_p2p";
 		value["id"] = host_peer->GetId();
 		value["peer_id"] = peer_info->GetId();
 		value["sdp"] = sdp_value;
@@ -626,7 +636,8 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const ov::Json
 
 	if(peer_info == nullptr)
 	{
-		// Host -> OME
+		logtd("[Host -> OME] The host peer sent candidates: %s", object.ToString().CStr());
+
 		for(const auto &candidate_iterator : candidates_value)
 		{
 			ov::String candidate = ov::Converter::ToString(candidate_iterator["candidate"]);
@@ -649,12 +660,14 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const ov::Json
 	}
 	else
 	{
+		logtd("[Client -> Host] The client peer sent candidates: %s", object.ToString().CStr());
+
 		// Client -> (OME) -> Host
 		Json::Value value;
 
 		value["command"] = "candidate_p2p";
-		value["id"] = info->id;
-		value["peer_id"] = peer_info->GetId();
+		value["id"] = peer_info->GetId();
+		value["peer_id"] = info->id;
 		value["candidates"] = candidates_value;
 
 		peer_info->GetResponse()->Send(value);
@@ -706,6 +719,8 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchOfferP2P(const ov::JsonO
 		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Candidates must be array, but: %d", candidates.type());
 	}
 
+	logtd("[Host -> Client] The host peer sent an offer: %s", object.ToString().CStr());
+
 	Json::Value value;
 
 	value["command"] = "offer";
@@ -750,6 +765,8 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidateP2P(const ov::J
 	{
 		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Candidates must be array");
 	}
+
+	logtd("[Host -> Client] The host peer sent candidates: %s", object.ToString().CStr());
 
 	Json::Value candidates;
 
@@ -805,7 +822,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(std::shared_ptr<Rtc
 
 			if(peer_info->IsHost())
 			{
-				// Host peer -> OME
+				logtd("[Host -> OME] The host peer is requested stop", peer_info->ToString().CStr());
 
 				// Broadcast to client peers
 				auto client_list = _p2p_manager.GetClientPeerList(peer_info);
@@ -821,11 +838,15 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(std::shared_ptr<Rtc
 					value["peer_id"] = peer_info->GetId();
 
 					client_info->GetResponse()->Send(value);
+
+					// remove client from peer
+					_p2p_manager.RemovePeer(client_info);
 				}
 			}
 			else
 			{
 				// Client peer -> OME
+				logtd("[Client -> OME] The client peer is requested stop", peer_info->ToString().CStr());
 
 				// Send to host peer
 				auto host_info = peer_info->GetHostPeer();

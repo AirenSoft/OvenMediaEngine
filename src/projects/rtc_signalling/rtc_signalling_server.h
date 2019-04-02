@@ -52,6 +52,7 @@ protected:
 		// signalling server에서 발급한 id
 		// WebSocket 접속만 되어 있고, request offer하지 않은 상태에서는 P2P_INVALID_PEER_ID 로 되어 있음
 		peer_id_t id = P2P_INVALID_PEER_ID;
+		bool peer_was_client = false;
 
 		std::shared_ptr<RtcPeerInfo> peer_info;
 

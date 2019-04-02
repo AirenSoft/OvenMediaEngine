@@ -56,8 +56,28 @@ bool RtcP2PManager::RemovePeer(const std::shared_ptr<RtcPeerInfo> &peer)
 {
 	std::lock_guard<std::recursive_mutex> lock_guard(_list_mutex);
 
-	if(peer->IsHost() == false)
+	if(peer->IsHost())
 	{
+		// Remove client peers
+		auto client_list = peer->_client_list;
+	}
+	else
+	{
+		// Remove client from host peer
+		auto host_peer = peer->_host_peer;
+
+		if(host_peer != nullptr)
+		{
+			host_peer->_client_list.erase(peer->GetId());
+			if(host_peer->_client_list.size() < P2P_DEFAULT_MAX_CLIENTS_PER_HOST)
+			{
+				if(host_peer->CanAccept())
+				{
+					_available_list[peer->GetId()] = host_peer;
+				}
+			}
+		}
+
 		_total_client_count--;
 	}
 
@@ -122,7 +142,7 @@ std::shared_ptr<RtcPeerInfo> RtcP2PManager::TryToRegisterAsClientPeer(const std:
 
 	std::lock_guard<std::recursive_mutex> lock_guard(_list_mutex);
 
-	for(auto &host : _available_list)
+	for(const auto &host : _available_list)
 	{
 		auto &host_peer = host.second;
 
@@ -143,6 +163,12 @@ std::shared_ptr<RtcPeerInfo> RtcP2PManager::TryToRegisterAsClientPeer(const std:
 				_total_client_count++;
 
 				peer->_host_peer = host_peer;
+
+				if(client_list.size() >= P2P_DEFAULT_MAX_CLIENTS_PER_HOST)
+				{
+					// Now, the host cannot accept another client
+					_available_list.erase(host.first);
+				}
 			}
 			else
 			{
