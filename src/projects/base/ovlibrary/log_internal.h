@@ -26,8 +26,8 @@
 #   define OV_LOG_SHOW_FILE_NAME                1
 #   define OV_LOG_SHOW_FUNCTION_NAME            0
 #else // DEBUG
-#   define OV_LOG_SHOW_FILE_NAME                0
-#   define OV_LOG_SHOW_FUNCTION_NAME            1
+#   define OV_LOG_SHOW_FILE_NAME                1
+#   define OV_LOG_SHOW_FUNCTION_NAME            0
 #endif // DEBUG
 
 #define OV_LOG_COLOR_RESET                      "\x1B[0m"
