@@ -170,23 +170,23 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 
     if (_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
     {
-        _stream_packetyzer->AppendVideoData(encoded_frame->time_stamp,
+        _stream_packetyzer->AppendVideoData(encoded_frame->_time_stamp,
                                             track->GetTimeBase().GetDen(),
-                                            encoded_frame->frame_type == FrameType::VideoFrameKey,
+                                            encoded_frame->_frame_type == FrameType::VideoFrameKey,
                                             0,
-                                            encoded_frame->length,
-                                            encoded_frame->buffer->GetDataAs<uint8_t>());
+                                            encoded_frame->_length,
+                                            encoded_frame->_buffer->GetDataAs<uint8_t>());
 
-        if (encoded_frame->frame_type == FrameType::VideoFrameKey)
+        if (encoded_frame->_frame_type == FrameType::VideoFrameKey)
         {
-            if (encoded_frame->time_stamp - _key_frame_check_timestamp >= 60 * 90000)
+            if (encoded_frame->_time_stamp - _key_frame_check_timestamp >= 60 * 90000)
             {
                 logtd("KeyFrame Interval - time(%d)",
-                      (encoded_frame->time_stamp - _previous_key_frame_timestamp) / 90); // 1/90000 -> 1/1000
+                      (encoded_frame->_time_stamp - _previous_key_frame_timestamp) / 90); // 1/90000 -> 1/1000
 
-                _key_frame_check_timestamp = encoded_frame->time_stamp;
+                _key_frame_check_timestamp = encoded_frame->_time_stamp;
             }
-            _previous_key_frame_timestamp = encoded_frame->time_stamp;
+            _previous_key_frame_timestamp = encoded_frame->_time_stamp;
         }
     }
 }
@@ -204,10 +204,10 @@ void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
 
     if (_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
     {
-        _stream_packetyzer->AppendAudioData(encoded_frame->time_stamp,
+        _stream_packetyzer->AppendAudioData(encoded_frame->_time_stamp,
                                             track->GetTimeBase().GetDen(),
-                                            encoded_frame->length,
-                                            encoded_frame->buffer->GetDataAs<uint8_t>());
+                                            encoded_frame->_length,
+                                            encoded_frame->_buffer->GetDataAs<uint8_t>());
     }
 }
 

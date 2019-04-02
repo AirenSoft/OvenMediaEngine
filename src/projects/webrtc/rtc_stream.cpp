@@ -22,6 +22,7 @@ RtcStream::RtcStream(const std::shared_ptr<Application> application,
 	: Stream(application, info)
 {
 	_certificate = application->GetSharedPtrAs<RtcApplication>()->GetCertificate();
+	_vp8_picture_id = 0x8000; // 1 {000 0000 0000 0000} 1 is marker for 15 bit length
 }
 
 RtcStream::~RtcStream()
@@ -256,10 +257,10 @@ void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 		return;
 	}
 	// RTP_SENDER에 등록된 RtpRtcpSession에 의해서 Packetizing이 완료되면 OnRtpPacketized 함수가 호출된다.
-	packetizer->Packetize(encoded_frame->frame_type,
-	                      encoded_frame->time_stamp,
-	                      encoded_frame->buffer->GetDataAs<uint8_t>(),
-	                      encoded_frame->length,
+	packetizer->Packetize(encoded_frame->_frame_type,
+	                      encoded_frame->_time_stamp,
+	                      encoded_frame->_buffer->GetDataAs<uint8_t>(),
+	                      encoded_frame->_length,
 	                      fragmentation.get(),
 	                      &rtp_video_header);
 }
@@ -271,17 +272,31 @@ void RtcStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
 {
 	// AudioFrame 데이터를 Protocol에 맞게 변환한다.
 	OV_ASSERT2(encoded_frame != nullptr);
-	OV_ASSERT2(encoded_frame->buffer != nullptr);
+	OV_ASSERT2(encoded_frame->_buffer != nullptr);
 
 	// RTP Packetizing
 	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
 	auto packetizer = GetPacketizer(track->GetId());
-	packetizer->Packetize(encoded_frame->frame_type,
-	                      encoded_frame->time_stamp,
-	                      encoded_frame->buffer->GetDataAs<uint8_t>(),
-	                      encoded_frame->length,
+	packetizer->Packetize(encoded_frame->_frame_type,
+	                      encoded_frame->_time_stamp,
+	                      encoded_frame->_buffer->GetDataAs<uint8_t>(),
+	                      encoded_frame->_length,
 	                      fragmentation.get(),
 	                      nullptr);
+}
+
+uint16_t RtcStream::AllocateVP8PictureID()
+{
+	_vp8_picture_id++;
+
+	// PictureID is 7 bit or 15 bit. We use only 15 bit.
+	if(_vp8_picture_id == 0)
+	{
+		// 1{000 0000 0000 0000} is initial number. (first bit means to use 15 bit size)
+		_vp8_picture_id = 0x8000;
+	}
+
+	return _vp8_picture_id;
 }
 
 void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader *rtp_video_header)
@@ -291,7 +306,8 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 		case CodecType::Vp8:
 			rtp_video_header->codec = RtpVideoCodecType::Vp8;
 			rtp_video_header->codec_header.vp8.InitRTPVideoHeaderVP8();
-			rtp_video_header->codec_header.vp8.picture_id = info->codec_specific.vp8.picture_id;
+			// With Ulpfec, picture id is needed.
+			rtp_video_header->codec_header.vp8.picture_id = AllocateVP8PictureID();
 			rtp_video_header->codec_header.vp8.non_reference = info->codec_specific.vp8.non_reference;
 			rtp_video_header->codec_header.vp8.temporal_idx = info->codec_specific.vp8.temporal_idx;
 			rtp_video_header->codec_header.vp8.layer_sync = info->codec_specific.vp8.layer_sync;

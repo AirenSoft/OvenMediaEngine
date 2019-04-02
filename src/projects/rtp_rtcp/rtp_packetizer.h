@@ -30,7 +30,6 @@ private:
 	std::shared_ptr<RtpPacket> AllocatePacket(bool ulpfec=false);
 	std::shared_ptr<RedRtpPacket> PackageAsRed(std::shared_ptr<RtpPacket> rtp_packet);
 	bool AssignSequenceNumber(RtpPacket *packet, bool red = false);
-
 	bool MarkerBit(FrameType frame_type, int8_t payload_type);
 
 	// Video Packet Sender Interface

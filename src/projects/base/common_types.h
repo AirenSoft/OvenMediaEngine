@@ -80,20 +80,20 @@ struct EncodedFrame
 {
 public:
 	EncodedFrame(std::shared_ptr<ov::Data> buffer, size_t length, size_t size)
-		: buffer(buffer), length(length), size(size)
+		: _buffer(buffer), _length(length), _size(size)
 	{
 	}
 
-	int32_t encoded_width = 0;
-	int32_t encoded_height = 0;
+	int32_t _encoded_width = 0;
+	int32_t _encoded_height = 0;
 
-	int32_t time_stamp = 0;
+	int32_t _time_stamp = 0;
 
-	FrameType frame_type = FrameType::VideoFrameDelta;
-	std::shared_ptr<ov::Data> buffer;
-	size_t length = 0;
-	size_t size = 0;
-	bool complete_frame = false;
+	FrameType _frame_type = FrameType::VideoFrameDelta;
+	std::shared_ptr<ov::Data> _buffer;
+	size_t _length = 0;
+	size_t _size = 0;
+	bool _complete_frame = false;
 };
 
 struct CodecSpecificInfoGeneric

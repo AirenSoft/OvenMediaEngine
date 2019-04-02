@@ -26,8 +26,6 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 	: _application_info(application_info)
 {
 	logtd("Created media route application. application (%d: %s)", application_info.GetType(), application_info.GetName().CStr());
-
-	_vp8_picture_id = 0x8000; // 1 {000 0000 0000 0000} 1 is marker for 15 bit length
 }
 
 MediaRouteApplication::~MediaRouteApplication()
@@ -179,20 +177,6 @@ bool MediaRouteApplication::UnregisterObserverApp(
 	_observers.erase(position);
 
 	return true;
-}
-
-uint16_t MediaRouteApplication::AllocateVP8PictureID()
-{
-	_vp8_picture_id++;
-
-	// PictureID is 7 bit or 15 bit. We use only 15 bit.
-	if(_vp8_picture_id == 0)
-	{
-		// 1{000 0000 0000 0000} is initial number. (first bit means to use 15 bit size)
-		_vp8_picture_id = 0x8000;
-	}
-
-	return _vp8_picture_id;
 }
 
 bool MediaRouteApplication::OnCreateStream(
@@ -540,12 +524,12 @@ void MediaRouteApplication::MainTask()
 							OV_ASSERT2(track != nullptr);
 
 							auto encoded_frame = std::make_unique<EncodedFrame>(data, data->GetLength(), 0);
-							encoded_frame->encoded_width = track->GetWidth();
-							encoded_frame->encoded_height = track->GetHeight();
-							encoded_frame->frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
+							encoded_frame->_encoded_width = track->GetWidth();
+							encoded_frame->_encoded_height = track->GetHeight();
+							encoded_frame->_frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
 
 							// TODO(soulk): Publisher에서 Timestamp를 90000Hz로 변경하는 코드를 넣어야함. 지금은 임시로 넣음.
-							encoded_frame->time_stamp = (uint32_t)((double)cur_buf->GetPts() / (double)1000000 * (double)90000);
+							encoded_frame->_time_stamp = (uint32_t)((double)cur_buf->GetPts() / (double)1000000 * (double)90000);
 							// logtd("Video PTS: %ld", encoded_frame->time_stamp);
 							// encoded_frame->_timeStamp = (uint32_t)cur_buf->GetPts();
 
@@ -559,7 +543,7 @@ void MediaRouteApplication::MainTask()
 							if(codec_id == MediaCodecId::Vp8)
 							{
 								codec_info->codec_type = CodecType::Vp8;
-								codec_info->codec_specific.vp8.picture_id = AllocateVP8PictureID();
+								codec_info->codec_specific.vp8.picture_id = -1;
 								codec_info->codec_specific.vp8.non_reference = false;
 								codec_info->codec_specific.vp8.simulcast_idx = 0;
 								codec_info->codec_specific.vp8.temporal_idx = 0;
@@ -597,10 +581,10 @@ void MediaRouteApplication::MainTask()
 							// RFC7587 - RTP Payload Format for the Opus Speech and Audio Codec (https://tools.ietf.org/html/rfc7587)
 
 							auto encoded_frame = std::make_unique<EncodedFrame>(data, data->GetLength(), 0);
-							encoded_frame->encoded_width = track->GetWidth();
-							encoded_frame->encoded_height = track->GetHeight();
-							encoded_frame->frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
-							encoded_frame->time_stamp = static_cast<int32_t>(cur_buf->GetPts()); // / (double)1000000 * (double)90000;
+							encoded_frame->_encoded_width = track->GetWidth();
+							encoded_frame->_encoded_height = track->GetHeight();
+							encoded_frame->_frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
+							encoded_frame->_time_stamp = static_cast<int32_t>(cur_buf->GetPts()); // / (double)1000000 * (double)90000;
 							// logtd(">>> Audio PTS: %ld %ld", cur_buf->GetPts(), encoded_frame->time_stamp);
 							// encoded_frame->_timeStamp = (uint32_t)cur_buf->GetPts();
 
