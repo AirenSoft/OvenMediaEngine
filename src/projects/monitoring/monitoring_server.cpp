@@ -215,7 +215,7 @@ void MonitoringServer::StateRequest(const std::shared_ptr<HttpResponse> &respons
         if(stream_item == stream_sum.end())
         {
             auto stream_collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
-                                                                             collection->origin_address,
+                                                                             collection->origin_name,
                                                                              collection->app_name,
                                                                              collection->stream_name);
             stream_collection->Append(collection);
@@ -234,7 +234,7 @@ void MonitoringServer::StateRequest(const std::shared_ptr<HttpResponse> &respons
         if(app_item == app_sum.end())
         {
             auto app_collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::App,
-                                                                             collection->origin_address,
+                                                                             collection->origin_name,
                                                                              collection->app_name);
             app_collection->Append(collection);
             app_collection->check_time = current_time;
@@ -252,12 +252,12 @@ void MonitoringServer::StateRequest(const std::shared_ptr<HttpResponse> &respons
         if(origin_item == origin_sum.end())
         {
             auto origin_collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Origin,
-                                                                                collection->origin_address);
+                                                                                collection->origin_name);
             origin_collection->Append(collection);
             origin_collection->check_time = current_time;
 
             // push
-            origin_sum[origin_collection->origin_address] = origin_collection;
+            origin_sum[origin_collection->origin_name] = origin_collection;
         }
         else
         {
@@ -291,29 +291,29 @@ void MonitoringServer::StateRequest(const std::shared_ptr<HttpResponse> &respons
     for(const auto &collection : collections)
     {
         uint32_t total_connection = collection->edge_connection + collection->p2p_connection;
-        uint64_t total_bitrate = collection->edge_bitrate + collection->p2p_bitrate;
 
         if(total_connection == 0)
             continue;
 
+        uint64_t total_bitrate = collection->edge_bitrate + collection->p2p_bitrate;
+        uint64_t avg_bitrate = total_bitrate/total_connection;
+
         string_stream
-        << collection->type_string.CStr()       << COLLECTION_DATA_SEPARATOR
-        << collection->origin_address.CStr()    << COLLECTION_DATA_SEPARATOR
-        << collection->app_name.CStr()          << COLLECTION_DATA_SEPARATOR
-        << collection->stream_name.CStr()       << COLLECTION_DATA_SEPARATOR
-        << total_connection                     << COLLECTION_DATA_SEPARATOR
-        << collection->edge_connection          << COLLECTION_DATA_SEPARATOR
-        << collection->p2p_connection           << COLLECTION_DATA_SEPARATOR
-        << total_bitrate/total_connection       << COLLECTION_DATA_SEPARATOR
-        << collection->edge_bitrate             << COLLECTION_DATA_SEPARATOR
-        << collection->p2p_bitrate              << COLLECTION_DATA_SEPARATOR
-        << total_bitrate                        << COLLECTION_DATA_SEPARATOR
-        << GetCurrentIso8601Time().CStr()       << COLLECTION_DATA_LINE_END;
+        << collection->type_string.CStr()    << COLLECTION_DATA_SEPARATOR
+        << collection->origin_name.CStr()    << COLLECTION_DATA_SEPARATOR
+        << collection->app_name.CStr()       << COLLECTION_DATA_SEPARATOR
+        << collection->stream_name.CStr()    << COLLECTION_DATA_SEPARATOR
+        << total_connection                  << COLLECTION_DATA_SEPARATOR
+        << collection->edge_connection       << COLLECTION_DATA_SEPARATOR
+        << collection->p2p_connection        << COLLECTION_DATA_SEPARATOR
+        << avg_bitrate                       << COLLECTION_DATA_SEPARATOR
+        << collection->edge_bitrate          << COLLECTION_DATA_SEPARATOR
+        << collection->p2p_bitrate           << COLLECTION_DATA_SEPARATOR
+        << total_bitrate                     << COLLECTION_DATA_SEPARATOR
+        << GetCurrentIso8601Time().CStr()    << COLLECTION_DATA_LINE_END;
     }
 
     ov::String data = string_stream.str().c_str();
-
-    logtd("State Response \n%s", data.CStr());
 
     response->AppendString(data);
 

@@ -281,63 +281,35 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 }
 
 //====================================================================================================
-// config setting bitreate info
-// - current only  vodeo codec "vp8" check
-//====================================================================================================
-uint32_t RtcSignallingServer::GetSettingBitrate()
-{
-    auto encodes = _application_info.GetEncodes();
-    uint32_t bitrate = 0;
-
-    for(const auto &encode : encodes)
-    {
-        if(!encode.IsActive())
-        {
-            continue;
-        }
-
-        auto video_profile = encode.GetVideoProfile();
-        auto audio_profile = encode.GetAudioProfile();
-
-        if(video_profile == nullptr || video_profile->GetCodec() != "vp8")
-        {
-            continue;
-        }
-
-        if((video_profile != nullptr) && (video_profile->IsActive()))
-        {
-            bitrate += ov::Converter::ToUInt32(video_profile->GetBitrate());
-        }
-
-        if((audio_profile != nullptr) && (audio_profile->IsActive()))
-        {
-            bitrate += ov::Converter::ToUInt32(audio_profile->GetBitrate());
-        }
-
-        break;
-    }
-
-    return bitrate;
-}
-
-//====================================================================================================
 // monitoring data pure virtual function
 // - collections vector must be insert processed
 //====================================================================================================
 bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections)
 {
     std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
-    uint32_t bitrate = GetSettingBitrate();
+    ov::String alias =  _application_info.GetOrigin().GetAlias();
+    ov::String app_name = _application_info.GetName();
 
     // lock(guard)
     std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
 
      for(const auto &client_item  : _client_list)
      {
+         ov::String stream_name = client_item.second->stream_name;
+        uint32_t bitrate = 0;
+
         auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
-                                                                     _application_info.GetOrigin().GetPrimary(),
-                                                                     _application_info.GetName(),
-                                                                     client_item.second->stream_name);
+                                                                    alias,
+                                                                    app_name,
+                                                                    stream_name);
+
+        std::find_if(_observers.begin(), _observers.end(), [&bitrate, app_name, stream_name](auto &observer) -> bool
+         {
+             // Ask observer to fill bitrate
+             bitrate = observer->OnGetBitrate(app_name, stream_name);
+             return bitrate != 0;
+         });
+
         collection->edge_connection = 1;
         collection->edge_bitrate = bitrate;
         collection->p2p_connection = 0;

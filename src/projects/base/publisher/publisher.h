@@ -24,13 +24,13 @@ struct MonitoringCollectionData
     MonitoringCollectionData() = default;
 
     MonitoringCollectionData(MonitroingCollectionType type_,
-                           const ov::String &origin_address_ = "",
+                           const ov::String &origin_name_ = "",
                             const ov::String &app_name_ = "",
                             const ov::String &stream_name_ = "")
     {
         type = type_;
         type_string = GetTypeString(type);
-        origin_address = origin_address_;
+        origin_name = origin_name_;
         app_name = app_name_;
         stream_name = stream_name_;
     }
@@ -61,7 +61,7 @@ struct MonitoringCollectionData
 
     MonitroingCollectionType type = MonitroingCollectionType::Stream;
     ov::String type_string;
-    ov::String origin_address;
+    ov::String origin_name;
     ov::String app_name;
     ov::String stream_name;
     uint32_t edge_connection = 0;   // count

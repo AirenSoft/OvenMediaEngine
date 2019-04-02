@@ -38,8 +38,7 @@ public:
 
 	bool Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<SessionDescription> &peer_sdp);
 
-	uint32_t GetSettingBitrate();
-    	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections);
+   	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections);
 
 	int GetTotalPeerCount() const;
 	int GetClientPeerCount() const;

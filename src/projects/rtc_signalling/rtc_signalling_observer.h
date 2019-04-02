@@ -31,5 +31,9 @@ public:
 	virtual bool OnIceCandidate(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<RtcIceCandidate> &candidate, const ov::String &username_fragment) = 0;
 
 	// client에서 stop 이벤트가 도착했을 때 호출되는 메서드
-	virtual bool OnStopCommand(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<SessionDescription> &offer_sdp, const std::shared_ptr<SessionDescription> &peer_sdp) = 0;
+    virtual bool OnStopCommand(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<SessionDescription> &offer_sdp, const std::shared_ptr<SessionDescription> &peer_sdp) = 0;
+
+    // client bitrate info check method
+    virtual uint32_t OnGetBitrate(const ov::String &application_name, const ov::String &stream_name) = 0;
+
 };

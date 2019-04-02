@@ -29,17 +29,24 @@ namespace cfg
 			return _secondary;
 		}
 
+        ov::String GetAlias() const
+        {
+            return _alias;
+        }
+
 	protected:
 		void MakeParseList() const override
 		{
 			RegisterValue<Optional>("Listen", &_listen);
 			RegisterValue<Optional>("Primary", &_primary);
 			RegisterValue<Optional>("Secondary", &_secondary);
+            RegisterValue<Optional>("Alias", &_alias);
 		}
 
 		OriginListen _listen;
 
 		ov::String _primary;
 		ov::String _secondary;
+        ov::String _alias;
 	};
 }

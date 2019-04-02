@@ -49,6 +49,7 @@ public:
 	                   const std::shared_ptr<SessionDescription> &offer_sdp,
 	                   const std::shared_ptr<SessionDescription> &peer_sdp) override;
 
+    uint32_t OnGetBitrate(const ov::String &application_name, const ov::String &stream_name);
 
     bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) override;
 

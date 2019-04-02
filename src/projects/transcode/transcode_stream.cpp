@@ -643,6 +643,7 @@ void TranscodeStream::CreateEncoders(std::shared_ptr<MediaTrack> media_track)
 		new_track->SetMediaType(media_track->GetMediaType());
 		new_track->SetCodecId(iter.second->GetCodecId());
 		new_track->SetTimeBase(iter.second->GetTimeBase().GetNum(), iter.second->GetTimeBase().GetDen());
+        new_track->SetBitrate(iter.second->GetBitrate());
 
 		if(media_track->GetMediaType() == common::MediaType::Video)
 		{

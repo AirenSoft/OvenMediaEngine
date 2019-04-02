@@ -199,6 +199,33 @@ bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov
 	return true;
 }
 
+// bitrate info(frome signalling)
+uint32_t WebRtcPublisher::OnGetBitrate(const ov::String &application_name, const ov::String &stream_name)
+{
+    auto stream = GetStream(application_name, stream_name);
+    uint32_t bitrate = 0;
+
+    if(!stream)
+    {
+        logte("Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
+        return 0;
+    }
+
+    auto tracks = stream->GetTracks();
+    for(auto &track_iter : tracks)
+    {
+        MediaTrack *track = track_iter.second.get();
+
+        if(track->GetCodecId() == common::MediaCodecId::Vp8 || track->GetCodecId() == common::MediaCodecId::Opus)
+        {
+            bitrate += track->GetBitrate();
+        }
+    }
+
+    return bitrate;
+}
+
+
 // It does not be used because
 bool WebRtcPublisher::OnIceCandidate(const ov::String &application_name,
                                      const ov::String &stream_name,
