@@ -64,7 +64,8 @@ bool MediaRouteApplication::Start()
 
 			auto &origin = _application_info.GetOrigin();
 
-			if(origin.IsParsed() && (origin.GetPrimary().IsEmpty() == false))
+			if(origin.IsParsed() &&
+				((origin.GetPrimary().IsEmpty() == false) || (origin.GetSecondary().IsEmpty() == false)))
 			{
 				_relay_client = std::make_shared<RelayClient>(this, _application_info, origin);
 				_relay_client->Start(_application_info.GetName());

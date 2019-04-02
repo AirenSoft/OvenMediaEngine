@@ -19,6 +19,8 @@
 #include <base/media_route/media_route_application_connector.h>
 #include <media_router/media_route_application.h>
 
+#define RELAY_DEFAULT_PORT                              9000
+
 class RelayClient : public MediaRouteApplicationConnector
 {
 public:

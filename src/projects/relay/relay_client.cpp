@@ -23,9 +23,27 @@ void RelayClient::Start(const ov::String &application)
 		{
 			auto data = std::make_shared<ov::Data>(ov::MaxSrtPacketSize);
 
-			ov::SocketAddress primary_address(_origin_info.GetPrimary());
-			ov::SocketAddress secondary_address(_origin_info.GetSecondary());
-			bool secondary_server_available = (_origin_info.GetSecondary().IsEmpty() == false);
+			auto primary = _origin_info.GetPrimary();
+			auto secondary = _origin_info.GetSecondary();
+
+			if(primary.IsEmpty())
+			{
+				primary = secondary;
+			}
+
+			if(primary.IndexOf(':') == -1L)
+			{
+				primary.AppendFormat(":%d", RELAY_DEFAULT_PORT);
+			}
+
+			if((secondary.IsEmpty() == false) && (secondary.IndexOf(':') == -1L))
+			{
+				secondary.AppendFormat(":%d", RELAY_DEFAULT_PORT);
+			}
+
+			ov::SocketAddress primary_address(primary);
+			ov::SocketAddress secondary_address(secondary);
+			bool secondary_server_available = (secondary.IsEmpty() == false);
 
 			bool is_first = true;
 			bool is_primary = true;
@@ -63,7 +81,7 @@ void RelayClient::Start(const ov::String &application)
 				if(error != nullptr)
 				{
 					// retry
-					logtw("Cannot connect to %s origin server (%s)", (is_primary) ? "primary" : "secondary", error->ToString().CStr());
+					logtw("Cannot connect to %s origin server: %s (%s)", (is_primary) ? "primary" : "secondary", address.ToString().CStr(), error->ToString().CStr());
 					continue;
 				}
 
