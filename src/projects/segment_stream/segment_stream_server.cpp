@@ -52,13 +52,16 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address, const std::sha
 
     _http_server->AddInterceptor(segment_stream_interceptor);
 
-    if (_cross_domains.empty()) {
+    if (_cross_domains.empty())
+    {
         _cross_domain_xml = "<?xml version=\"1.0\"?>\r\n"\
                             "<cross-domain-policy>\r\n"\
                             "<allow-access-from domain=\"*\"/>\r\n"\
                             "<site-control permitted-cross-domain-policies=\"all\"/>\r\n"\
                             "</cross-domain-policy>";
-    } else {
+    }
+    else
+    {
         _cross_domains.clear();
     }
 
@@ -72,6 +75,15 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address, const std::sha
 bool SegmentStreamServer::Stop()
 {
     return false;
+}
+
+//====================================================================================================
+// monitoring data pure virtual function
+// - collections vector must be insert processed
+//====================================================================================================
+bool SegmentStreamServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections)
+{
+    return true;
 }
 
 //====================================================================================================

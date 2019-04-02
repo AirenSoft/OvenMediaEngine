@@ -88,6 +88,15 @@ bool WebRtcPublisher::Stop()
 	return Publisher::Stop();
 }
 
+//====================================================================================================
+// monitoring data pure virtual function
+// - collections vector must be insert processed
+//====================================================================================================
+bool WebRtcPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)
+{
+    return _signalling->GetMonitoringCollectionData(collections);
+}
+
 // Publisher에서 Application 생성 요청이 온다.
 std::shared_ptr<Application> WebRtcPublisher::OnCreateApplication(const info::Application &application_info)
 {

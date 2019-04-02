@@ -7,7 +7,7 @@
 //
 //==============================================================================
 #include "segment_stream_publisher.h"
-#include "config/config_manager.h"
+#include "../config/config_manager.h"
 #include "segment_stream_application.h"
 
 #define OV_LOG_TAG "SegmentStream"
@@ -146,6 +146,19 @@ bool SegmentStreamPublisher::Start()
 bool SegmentStreamPublisher::Stop()
 {
     return Publisher::Stop();
+}
+
+
+//====================================================================================================
+// monitoring data pure virtual function
+// - collections vector must be insert processed
+//====================================================================================================
+bool SegmentStreamPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)
+{
+    for(auto server : _segment_stream_servers)
+        server->GetMonitoringCollectionData(collections);
+
+    return true;
 }
 
 //====================================================================================================

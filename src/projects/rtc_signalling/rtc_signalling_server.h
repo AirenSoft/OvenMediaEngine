@@ -22,6 +22,7 @@
 #include <http_server/interceptors/http_request_interceptors.h>
 #include <media_router/media_route_application.h>
 #include <relay/relay.h>
+#include "../base/publisher/publisher.h"
 
 class RtcSignallingServer : public ov::EnableSharedFromThis<RtcSignallingServer>
 {
@@ -37,9 +38,12 @@ public:
 
 	bool Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<SessionDescription> &peer_sdp);
 
+	uint32_t GetSettingBitrate();
+    	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections);
+
 	int GetTotalPeerCount() const;
 	int GetClientPeerCount() const;
-
+	
 protected:
 	struct RtcSignallingInfo
 	{

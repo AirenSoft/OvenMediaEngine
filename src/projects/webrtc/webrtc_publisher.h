@@ -1,8 +1,8 @@
 #pragma once
 
-#include "base/common_types.h"
-#include "base/publisher/publisher.h"
-#include "base/media_route/media_route_application_interface.h"
+#include "../base/common_types.h"
+#include "../base/publisher/publisher.h"
+#include "../base/media_route/media_route_application_interface.h"
 #include "rtc_application.h"
 
 
@@ -48,6 +48,9 @@ public:
 	bool OnStopCommand(const ov::String &application_name, const ov::String &stream_name,
 	                   const std::shared_ptr<SessionDescription> &offer_sdp,
 	                   const std::shared_ptr<SessionDescription> &peer_sdp) override;
+
+
+    bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) override;
 
 private:
 	bool Start() override;

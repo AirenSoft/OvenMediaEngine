@@ -11,10 +11,11 @@
 
 #include "segment_stream_observer.h"
 #include <memory>
-#include <http_server/http_server.h>
-#include <http_server/https_server.h>
-#include <http_server/interceptors/http_request_interceptors.h>
-#include "config/config_manager.h"
+#include "../base/publisher/publisher.h"
+#include "../http_server/http_server.h"
+#include "../http_server/https_server.h"
+#include "../http_server/interceptors/http_request_interceptors.h"
+#include "../config/config_manager.h"
 
 enum class ProtocolFlag {
     NONE = 0x00,
@@ -52,6 +53,8 @@ public :
     void AddCors(const std::vector<cfg::Url> &cors_urls, ProtocolFlag protocol_flag);
 
     void AddCrossDomain(const std::vector<cfg::Url> &cross_domains);
+
+    bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections);
 
 protected:
     bool RequestUrlParsing(const ov::String &request_url,

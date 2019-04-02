@@ -280,6 +280,76 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 	return disconnected;
 }
 
+//====================================================================================================
+// config setting bitreate info
+// - current only  vodeo codec "vp8" check
+//====================================================================================================
+uint32_t RtcSignallingServer::GetSettingBitrate()
+{
+    auto encodes = _application_info.GetEncodes();
+    uint32_t bitrate = 0;
+
+    for(const auto &encode : encodes)
+    {
+        if(!encode.IsActive())
+        {
+            continue;
+        }
+
+        auto video_profile = encode.GetVideoProfile();
+        auto audio_profile = encode.GetAudioProfile();
+
+        if(video_profile == nullptr || video_profile->GetCodec() != "vp8")
+        {
+            continue;
+        }
+
+        if((video_profile != nullptr) && (video_profile->IsActive()))
+        {
+            bitrate += ov::Converter::ToUInt32(video_profile->GetBitrate());
+        }
+
+        if((audio_profile != nullptr) && (audio_profile->IsActive()))
+        {
+            bitrate += ov::Converter::ToUInt32(audio_profile->GetBitrate());
+        }
+
+        break;
+    }
+
+    return bitrate;
+}
+
+//====================================================================================================
+// monitoring data pure virtual function
+// - collections vector must be insert processed
+//====================================================================================================
+bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections)
+{
+    std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
+    uint32_t bitrate = GetSettingBitrate();
+
+    // lock(guard)
+    std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
+
+     for(const auto &client_item  : _client_list)
+     {
+        auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
+                                                                     _application_info.GetOrigin().GetPrimary(),
+                                                                     _application_info.GetName(),
+                                                                     client_item.second->stream_name);
+        collection->edge_connection = 1;
+        collection->edge_bitrate = bitrate;
+        collection->p2p_connection = 0;
+        collection->p2p_bitrate = 0;
+        collection->check_time = current_time;
+
+        stream_collections.push_back(collection);
+     }
+
+     return true;
+}
+
 int RtcSignallingServer::GetTotalPeerCount() const
 {
 	return _p2p_manager.GetPeerCount();

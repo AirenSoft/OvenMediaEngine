@@ -16,6 +16,7 @@
 #include <rtmp/rtmp_provider.h>
 #include <base/ovcrypto/ovcrypto.h>
 #include <base/ovlibrary/stack_trace.h>
+#include "../monitoring/monitoring_server.h"
 
 void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
 
@@ -126,6 +127,7 @@ int main(int argc, char *argv[])
 
 	std::shared_ptr<MediaRouter> router;
 	std::shared_ptr<Transcoder> transcoder;
+    std::shared_ptr<MonitoringServer> monitoring_server;
 
 	std::vector<std::shared_ptr<pvd::Provider>> providers;
 	std::vector<std::shared_ptr<Publisher>> publishers;
@@ -201,6 +203,11 @@ int main(int argc, char *argv[])
 		{
 			logtw("Nothing to do for host [%s]", host.GetName().CStr());
 		}
+
+        // Monitoring Server
+        monitoring_server = std::make_shared<MonitoringServer>();
+        monitoring_server->Start(ov::SocketAddress(host.GetMonitoringPort()), providers, publishers);
+
 	}
 
 #pragma clang diagnostic push

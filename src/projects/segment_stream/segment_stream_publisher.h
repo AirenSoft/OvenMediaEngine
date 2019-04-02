@@ -9,10 +9,10 @@
 
 #pragma once
 
-#include <config/config.h>
-#include "base/common_types.h"
-#include "base/publisher/publisher.h"
-#include "base/media_route/media_route_application_interface.h"
+#include "../config/config.h"
+#include "../base/common_types.h"
+#include "../base/publisher/publisher.h"
+#include "../base/media_route/media_route_application_interface.h"
 #include "segment_stream_server.h"
 
 //====================================================================================================
@@ -28,6 +28,7 @@ public:
     ~SegmentStreamPublisher();
 
 public :
+    bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) override;
 
 private :
     bool Start() override;
