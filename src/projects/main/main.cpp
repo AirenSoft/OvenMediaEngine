@@ -20,16 +20,9 @@
 
 void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
 
-//======================================================
-// For test purpose
-uint32_t thread_count = 0;
-
 struct ParseOption
 {
-	// -t <thread_count>
-	uint32_t thread_count = 0;
-
-	// -c <path>
+	// -c <config_path>
 	ov::String config_path = "";
 };
 
@@ -49,19 +42,8 @@ bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 
 			case 'h':
 				printf("Usage: %s [OPTION]...\n", argv[0]);
-				printf("    -t <thread_count>     Specify thread count\n");
 				printf("    -c <path>             Specify a path of config files\n");
 				return false;
-
-			case 't':
-				parse_option->thread_count = static_cast<uint32_t>(::strtol(optarg, nullptr, 10));
-
-				if(parse_option->thread_count == 0)
-				{
-					fprintf(stderr, "Invalid thread count: %s\n", optarg);
-					return false;
-				}
-				break;
 
 			case 'c':
 				parse_option->config_path = optarg;
@@ -73,24 +55,15 @@ bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 		}
 	}
 }
-//======================================================
 
 int main(int argc, char *argv[])
 {
-	//======================================================
-	// For test purpose
 	ParseOption parse_option;
 
 	if(TryParseOption(argc, argv, &parse_option) == false)
 	{
 		return 1;
 	}
-
-	if(parse_option.thread_count > 0)
-	{
-		thread_count = parse_option.thread_count;
-	}
-	//======================================================
 
 	logtd("Trying to initialize StackTrace...");
 	ov::StackTrace::InitializeStackTrace(OME_VERSION);
@@ -127,7 +100,7 @@ int main(int argc, char *argv[])
 
 	std::shared_ptr<MediaRouter> router;
 	std::shared_ptr<Transcoder> transcoder;
-    std::shared_ptr<MonitoringServer> monitoring_server;
+	std::shared_ptr<MonitoringServer> monitoring_server;
 
 	std::vector<std::shared_ptr<pvd::Provider>> providers;
 	std::vector<std::shared_ptr<Publisher>> publishers;
@@ -204,9 +177,9 @@ int main(int argc, char *argv[])
 			logtw("Nothing to do for host [%s]", host.GetName().CStr());
 		}
 
-        // Monitoring Server
-        monitoring_server = std::make_shared<MonitoringServer>();
-        monitoring_server->Start(ov::SocketAddress(host.GetMonitoringPort()), providers, publishers);
+		// Monitoring Server
+		monitoring_server = std::make_shared<MonitoringServer>();
+		monitoring_server->Start(ov::SocketAddress(host.GetMonitoringPort()), providers, publishers);
 
 	}
 
