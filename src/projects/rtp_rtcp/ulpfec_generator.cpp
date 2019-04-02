@@ -1,6 +1,8 @@
 #include "ulpfec_generator.h"
 #include "base/ovlibrary/byte_io.h"
 
+#include <string.h>
+
 constexpr size_t 	kFecHeaderSize					= 10;
 constexpr size_t 	kMaskSizeLbitClear				= 2;
 constexpr size_t	kMaskSizeLbitSet				= 6;
@@ -9,7 +11,7 @@ constexpr size_t	kFecLevelHeaderSizeLbitSet		= 2 + kMaskSizeLbitSet;
 constexpr size_t 	kUlpfecMaxMediaPacketsLbitClear	= 16;
 constexpr size_t 	kUlpfecMaxMediaPacketsLbitSet	= 48;
 
-constexpr size_t    kMediaPacketNumMakeFec          = 100 / 25; // 20% Rate, 1 fec packet per 5 media packets.
+constexpr size_t    kMediaPacketNumMakeFec          = 100 / 25; // 25% Rate, 1 fec packet per 4 media packets.
 
 UlpfecGenerator::UlpfecGenerator()
 {
@@ -112,7 +114,7 @@ bool UlpfecGenerator::Encode()
 				// Bits 0, 1 are overwritten in FinalizeFecHeaders.
 				fec_buffer[0] = media_packet->Buffer()[0];
 
-				// The media_packet is red packet. So buffer[1] has red payload type.
+				// The media_packet is red packet. So buffer[1] of RTP header has red payload type.
 				// We should use media payload type in the red header.
 				// M, and PT recovery
 				fec_buffer[1] = media_packet->Buffer()[media_packet->HeadersSize() - 1];

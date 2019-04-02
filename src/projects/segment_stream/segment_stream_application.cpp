@@ -70,9 +70,9 @@ bool SegmentStreamApplication::Stop()
 // - 스트림 별 Stream Packetyzer 생성
 // -
 //====================================================================================================
-std::shared_ptr<Stream> SegmentStreamApplication::CreateStream(std::shared_ptr<StreamInfo> info)
+std::shared_ptr<Stream> SegmentStreamApplication::CreateStream(std::shared_ptr<StreamInfo> info, uint32_t worker_count)
 {
 	// Stream Class 생성할때는 복사를 사용한다.
 	logtd("CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
-	return SegmentStream::Create(GetSharedPtrAs<Application>(), *info.get());
+	return SegmentStream::Create(GetSharedPtrAs<Application>(), *info.get(), worker_count);
 }

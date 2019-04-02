@@ -74,7 +74,7 @@ private:
 	// For child, 실제 구현부는 자식에서 처리한다.
 
 	// Stream을 자식을 통해 생성해서 받는다.
-	virtual std::shared_ptr<Stream> CreateStream(std::shared_ptr<StreamInfo> info) = 0;
+	virtual std::shared_ptr<Stream> CreateStream(std::shared_ptr<StreamInfo> info, uint32_t thread_count) = 0;
 	virtual bool DeleteStream(std::shared_ptr<StreamInfo> info) = 0;
 
 	// Audio Stream 전달 Interface를 구현해야 함

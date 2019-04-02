@@ -5,6 +5,7 @@ extern uint32_t thread_count;
 
 StreamWorker::StreamWorker()
 {
+	_stop_thread_flag = true;
 }
 
 StreamWorker::~StreamWorker()
@@ -22,11 +23,14 @@ bool StreamWorker::Start()
 
 bool StreamWorker::Stop()
 {
-	_stop_thread_flag = true;
+	if(_stop_thread_flag)
+	{
+		return true;
+	}
 
+	_stop_thread_flag = true;
 	// Generate Event
 	_queue_event.Notify();
-
 	_worker_thread.join();
 
 	return true;
@@ -149,21 +153,10 @@ bool Stream::Start(uint32_t worker_count)
 		return false;
 	}
 
-    worker_count = _application->GetThreadCount();
-
-	if(thread_count > 0)
-	{
-		// override
-		worker_count = thread_count;
-	}
-
 	if(worker_count > MAX_STREAM_THREAD_COUNT)
 	{
 		worker_count = MAX_STREAM_THREAD_COUNT;
 	}
-    else if (worker_count == 0) {
-        worker_count = DEFAULT_STREAM_THREAD_COUNT;
-    }
 
 	_worker_count = worker_count;
 	// Create WorkerThread
@@ -207,7 +200,6 @@ std::shared_ptr<Application> Stream::GetApplication()
 
 StreamWorker& Stream::GetWorkerByStreamID(session_id_t session_id)
 {
-	logte("Select worker : %d", session_id % _worker_count);
 	return _stream_workers[session_id % _worker_count];
 }
 

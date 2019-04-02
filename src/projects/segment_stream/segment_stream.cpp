@@ -18,10 +18,12 @@ using namespace common;
 // Create
 //====================================================================================================
 std::shared_ptr<SegmentStream>
-SegmentStream::Create(const std::shared_ptr<Application> application, const StreamInfo &info)
+SegmentStream::Create(const std::shared_ptr<Application> application, const StreamInfo &info, uint32_t worker_count)
 {
     auto stream = std::make_shared<SegmentStream>(application, info);
-    if (!stream->Start())
+
+    //TODO(Bong): SegmentStream should use stream_worker. Change 0 to worker_count.
+    if (!stream->Start(0))
     {
         return nullptr;
     }

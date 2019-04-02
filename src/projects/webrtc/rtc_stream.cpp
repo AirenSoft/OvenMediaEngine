@@ -6,10 +6,11 @@
 using namespace common;
 
 std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<Application> application,
-                                             const StreamInfo &info)
+                                             const StreamInfo &info,
+                                             uint32_t worker_count)
 {
 	auto stream = std::make_shared<RtcStream>(application, info);
-	if(!stream->Start())
+	if(!stream->Start(worker_count))
 	{
 		return nullptr;
 	}

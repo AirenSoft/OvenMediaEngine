@@ -36,7 +36,8 @@ bool Application::Stop()
 bool Application::OnCreateStream(std::shared_ptr<StreamInfo> info)
 {
 	// Stream을 자식을 통해 생성해서 연결한다.
-	auto stream = CreateStream(info);
+	auto worker_count = GetThreadCount();
+	auto stream = CreateStream(info, worker_count);
 
 	if(!stream)
 	{

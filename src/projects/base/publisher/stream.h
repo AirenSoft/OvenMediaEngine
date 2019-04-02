@@ -5,8 +5,8 @@
 #include "base/application/stream_info.h"
 #include "application.h"
 
-#define DEFAULT_STREAM_THREAD_COUNT     2
-#define MAX_STREAM_THREAD_COUNT         32
+#define MIN_STREAM_THREAD_COUNT     2
+#define MAX_STREAM_THREAD_COUNT     72
 
 class StreamWorker
 {
@@ -79,7 +79,7 @@ public:
 	                            std::unique_ptr<CodecSpecificInfo> codec_info,
 	                            std::unique_ptr<FragmentationHeader> fragmentation) = 0;
 
-	virtual bool Start(uint32_t worker_count=DEFAULT_STREAM_THREAD_COUNT);
+	virtual bool Start(uint32_t worker_count);
 	virtual bool Stop();
 protected:
 	Stream(const std::shared_ptr<Application> application, const StreamInfo &info);
