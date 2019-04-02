@@ -277,6 +277,11 @@ void RtcStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
 	// RTP Packetizing
 	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
 	auto packetizer = GetPacketizer(track->GetId());
+	if(packetizer == nullptr)
+	{
+		return;
+	}
+	
 	packetizer->Packetize(encoded_frame->_frame_type,
 	                      encoded_frame->_time_stamp,
 	                      encoded_frame->_buffer->GetDataAs<uint8_t>(),
