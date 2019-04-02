@@ -1,8 +1,6 @@
 #include "publisher_private.h"
 #include "stream.h"
 
-extern uint32_t thread_count;
-
 StreamWorker::StreamWorker()
 {
 	_stop_thread_flag = true;
@@ -15,6 +13,10 @@ StreamWorker::~StreamWorker()
 
 bool StreamWorker::Start()
 {
+	if(!_stop_thread_flag)
+	{
+		return true;
+	}
 	_stop_thread_flag = false;
 	_worker_thread = std::thread(&StreamWorker::WorkerThread, this);
 
@@ -32,6 +34,13 @@ bool StreamWorker::Stop()
 	// Generate Event
 	_queue_event.Notify();
 	_worker_thread.join();
+
+	for(auto const &x : _sessions)
+	{
+		auto session = std::static_pointer_cast<Session>(x.second);
+		session->Stop();
+	}
+	_sessions.clear();
 
 	return true;
 }
@@ -189,6 +198,8 @@ bool Stream::Stop()
 	{
 		_stream_workers[i].Stop();
 	}
+
+	_sessions.clear();
 
 	return true;
 }

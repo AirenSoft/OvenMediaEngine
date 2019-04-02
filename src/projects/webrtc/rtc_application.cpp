@@ -39,6 +39,7 @@ std::shared_ptr<Stream> RtcApplication::CreateStream(std::shared_ptr<StreamInfo>
 	logtd("CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 	if(worker_count == 0)
 	{
+		// RtcStream should have worker threads.
 		worker_count = MIN_STREAM_THREAD_COUNT;
 	}
 	return RtcStream::Create(GetSharedPtrAs<Application>(), *info, worker_count);

@@ -166,10 +166,8 @@ void IcePort::AddSession(const std::shared_ptr<SessionInfo> &session_info, std::
 	SetIceState(_user_mapping_table[local_ufrag], IcePortConnectionState::New);
 }
 
-bool IcePort::RemoveSession(const std::shared_ptr<SessionInfo> &session_info)
+bool IcePort::RemoveSession(const session_id_t session_id)
 {
-	session_id_t session_id = session_info->GetId();
-
 	std::shared_ptr<IcePortInfo> ice_port_info;
 
 	{
@@ -196,6 +194,12 @@ bool IcePort::RemoveSession(const std::shared_ptr<SessionInfo> &session_info)
 	}
 
 	return true;
+}
+
+bool IcePort::RemoveSession(const std::shared_ptr<SessionInfo> &session_info)
+{
+	session_id_t session_id = session_info->GetId();
+	return RemoveSession(session_id);
 }
 
 bool IcePort::Send(const std::shared_ptr<SessionInfo> &session_info, std::unique_ptr<RtpPacket> packet)

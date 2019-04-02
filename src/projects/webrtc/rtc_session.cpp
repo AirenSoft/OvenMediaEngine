@@ -44,6 +44,11 @@ RtcSession::~RtcSession()
 
 bool RtcSession::Start()
 {
+	if(GetState() != SessionState::Ready)
+	{
+		return false;
+	}
+
 	auto session = std::static_pointer_cast<Session>(GetSharedPtr());
 
 	// Player가 준 SDP를 기준으로(플레이어가 받고자 하는 Track) RTP_RTCP를 생성한다.
@@ -131,6 +136,11 @@ bool RtcSession::Start()
 bool RtcSession::Stop()
 {
 	logtd("Stop session. Peer sdp session id : %u", GetPeerSDP()->GetSessionId());
+
+	if(GetState() != SessionState::Started)
+	{
+		return true;
+	}
 
 	// 연결된 세션을 정리한다.
 	if(_rtp_rtcp != nullptr)

@@ -92,6 +92,7 @@ public:
 	}
 
 	void AddSession(const std::shared_ptr<SessionInfo> &session_info, std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp);
+	bool RemoveSession(const session_id_t session_id);
 	bool RemoveSession(const std::shared_ptr<SessionInfo> &session_info);
 
 	bool Send(const std::shared_ptr<SessionInfo> &session_info, std::unique_ptr<RtpPacket> packet);

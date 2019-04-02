@@ -18,6 +18,10 @@ Session::Session(const SessionInfo &info, std::shared_ptr<Application> applicati
 	_state = SessionState::Ready;
 }
 
+Session::~Session()
+{
+}
+
 std::shared_ptr<Application> Session::GetApplication()
 {
 	return _application;

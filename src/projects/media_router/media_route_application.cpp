@@ -558,8 +558,6 @@ void MediaRouteApplication::MainTask()
 
 							if(codec_id == MediaCodecId::Vp8)
 							{
-								//GTEST
-								static int i=0;
 								codec_info->codec_type = CodecType::Vp8;
 								codec_info->codec_specific.vp8.picture_id = AllocateVP8PictureID();
 								codec_info->codec_specific.vp8.non_reference = false;

@@ -65,13 +65,13 @@ bool Application::OnDeleteStream(std::shared_ptr<StreamInfo> info)
 		return false;
 	}
 
-	stream->Stop();
-
 	// Stream이 삭제되었음을 자식에게 알려서 처리하게 함
 	if(DeleteStream(info) == false)
 	{
 		return false;
 	}
+
+	stream->Stop();
 
 	_streams.erase(info->GetId());
 
