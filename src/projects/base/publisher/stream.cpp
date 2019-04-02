@@ -161,6 +161,9 @@ bool Stream::Start(uint32_t worker_count)
 	{
 		worker_count = MAX_STREAM_THREAD_COUNT;
 	}
+    else if (worker_count == 0) {
+        worker_count = DEFAULT_STREAM_THREAD_COUNT;
+    }
 
 	_worker_count = worker_count;
 	// Create WorkerThread
