@@ -123,6 +123,11 @@ struct RtcPeerBrowser
 	{
 	}
 
+	bool IsMobile() const
+	{
+		return (os_type == RtcOsType::iOS) || (os_type == RtcOsType::Android);
+	}
+
 	ov::String ToString() const
 	{
 		ov::String description;
@@ -238,15 +243,7 @@ public:
 
 	bool IsCompatibleWith(const std::shared_ptr<RtcPeerInfo> &peer);
 
-	ov::String ToString() const
-	{
-		return ov::String::FormatString(
-			"<PeerInfo: %p, id: %d, browser: %s>",
-			this,
-			_id,
-			_browser.ToString().CStr()
-		);
-	}
+	ov::String ToString() const;
 
 protected:
 	RtcPeerInfo() = default;

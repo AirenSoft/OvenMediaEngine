@@ -928,7 +928,7 @@ namespace ov
 							continue;
 						}
 
-						logtw("[%p] [#%d] Could not send data: %zd", this, _socket.GetSocket(), sent);
+						logtw("[%p] [#%d] Could not send data: %zd (%s)", this, _socket.GetSocket(), sent, ov::Error::CreateErrorFromErrno()->ToString().CStr());
 
 						break;
 					}
