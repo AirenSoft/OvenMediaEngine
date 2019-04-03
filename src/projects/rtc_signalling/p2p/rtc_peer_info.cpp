@@ -25,7 +25,10 @@ std::shared_ptr<RtcPeerInfo> RtcPeerInfo::FromUserAgent(peer_id_t id, const ov::
 	peer_info->_response = response;
 
 	peer_info->_can_accept =
-		(browser.IsMobile() == false) &&
+		(
+			(browser.IsMobile() == false) &&
+			(browser.os_type != RtcOsType::Linux)
+		) &&
 		!((browser.browser_type == RtcBrowserType::Edge) ||
 		  (browser.browser_type == RtcBrowserType::Other));
 
