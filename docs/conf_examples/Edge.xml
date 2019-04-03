@@ -17,6 +17,7 @@
 						<Secondary>192.168.0.183:9000</Secondary>
 					</Origin>
 					<Publishers>
+						<ThreadCount>2</ThreadCount>
 						<WebRTC>
 							<IP>192.168.0.183</IP>
 							<Port>10001/udp</Port>

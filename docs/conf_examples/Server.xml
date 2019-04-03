@@ -60,6 +60,7 @@
 						</RTMP>
 					</Providers>
 					<Publishers>
+						<ThreadCount>2</ThreadCount>
 						<RTMP />
 						<HLS>
 							<Port>8080</Port>

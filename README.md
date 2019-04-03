@@ -163,53 +163,111 @@ $ cd [OME_PATH]/src/bin/DEBUG
 $ cp -R ../../../docs/conf_examples conf
 $ cat conf/Server.xml
 <?xml version="1.0" encoding="UTF-8"?>
-<Server>
-        <Name>OvenMediaEngine</Name>
-        <Hosts>
-                <Host>
-                        <Name>default</Name>
-                        <!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
-                        <IPAddress>127.0.0.1</IPAddress>
-                        <MaxConnection>0</MaxConnection>
-                        <!--
-                        <WebConsole>
-                                <Port>8080</Port>
-                                <MaxConnection>10</MaxConnection>
-                        </WebConsole>
-                        <OpenAPI>
-                                <Port>8081</Port>
-                                <MaxConnection>10</MaxConnection>
-                        </OpenAPI>
-                        -->
-                        <Provider>
-                                <Port>1935/tcp</Port>
-                                <MaxConnection>10</MaxConnection>
-                        </Provider>
-                        <Publisher>
-                                <!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
-                                <IPAddress>127.0.0.1</IPAddress>
-                                <Port>1936/udp</Port>
-                                <MaxConnection>10</MaxConnection>
-                                <WebRTC>
-                                        <!-- millisecond -->
-                                        <SessionTimeout>30000</SessionTimeout>
-                                        <!-- port[/protocol], port[/protocol], ... -->
-                                        <CandidatePort>45050/udp</CandidatePort>
-                                        <SignallingPort>3333/tcp</SignallingPort>
-                                </WebRTC>
-                        </Publisher>
-                        <Applications-Ref>${ome.AppHome}/conf/Applications.xml</Applications-Ref>
-                </Host>
-        </Hosts>
+<Server version="1">
+	<Name>OvenMediaEngine</Name>
+	<Hosts>
+		<Host>
+			<Name>default</Name>
+			<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
+			<IP>*</IP>
+			<Applications>
+				<Application>
+					<Name>app</Name>
+					<Type>live</Type>
+					<!-- under construction -->
+					<Relay />
+					<RelayPort>9000</RelayPort>
+					<Encodes>
+						<Encode>
+							<Name>FHD_VP8</Name>
+							<Audio>
+								<Codec>opus</Codec>
+								<Bitrate>128000</Bitrate>
+								<Samplerate>48000</Samplerate>
+								<Channel>2</Channel>
+							</Audio>
+							<Video>
+								<!-- vp8, h264 -->
+								<Codec>vp8</Codec>
+								<Width>1280</Width>
+								<Height>720</Height>
+								<Bitrate>2000000</Bitrate>
+								<Framerate>30.0</Framerate>
+							</Video>
+						</Encode>
+						<Encode>
+							<Name>FHD_H264</Name>
+							<Video>
+								<Codec>h264</Codec>
+								<Width>1280</Width>
+								<Height>720</Height>
+								<Bitrate>2000000</Bitrate>
+								<Framerate>30.0</Framerate>
+							</Video>
+						</Encode>
+					</Encodes>
+					<Streams>
+						<Stream>
+							<Name>${OriginStreamName}_o</Name>
+							<Profiles>
+								<Profile>FHD_VP8</Profile>
+								<Profile>FHD_H264</Profile>
+							</Profiles>
+						</Stream>
+					</Streams>
+					<Providers>
+						<RTMP>
+							<MaxConnection>10</MaxConnection>
+							<Port>1935</Port>
+							<OverlapStreamProcess>reject</OverlapStreamProcess>
+						</RTMP>
+					</Providers>
+					<Publishers>
+					    <ThreadCount>2</ThreadCount>
+						<RTMP />
+						<HLS>
+							<Port>8080</Port>
+							<SegmentDuration>5</SegmentDuration>
+							<SegmentCount>3</SegmentCount>
+							<CrossDomain>
+								<Url>www.airensoft.com</Url>
+							</CrossDomain>
+						</HLS>
+						<DASH>
+							<Port>8080</Port>
+							<SegmentDuration>5</SegmentDuration>
+							<SegmentCount>3</SegmentCount>
+							<CORS>
+								<Url>http://www.airensoft.com</Url>
+								<Url>https://www.airensoft.com</Url>
+							</CORS>
+						</DASH>
+						<WebRTC>
+							<!-- ICE Candidate IP/Port -->
+							<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
+							<IP>127.0.0.1</IP>
+							<MaxConnection>10</MaxConnection>
+							<Port>10000/udp</Port>
+							<!-- STUN timeout -->
+							<Timeout>30000</Timeout>
+							<Signalling>
+								<Port>3333</Port>
+								<TLS include="TLS.xml" />
+							</Signalling>
+						</WebRTC>
+					</Publishers>
+				</Application>
+			</Applications>
+		</Host>
+	</Hosts>
 </Server>
 ```
 
 The first `<IPAddress>` in the `Server.xml` configuration file uses the IP address to listen to the RTMP stream being published, otherwise it uses the IP of the system. If the value of this item is not set correctly, the encoder may not be connected.
-The second `<IPAddress>` in `<Publisher>` is used to specify the IP address that the WebSocket server uses to listen to WebRTC Signaling, otherwise it uses the first `<IPAddress>` in the 'Server.xml' file. If the value of this item is not set correctly, playback may not be performed normally.
+The second `<IPAddress>` in `<Publishers>` is used to specify the IP address that the WebSocket server uses to listen to WebRTC Signaling, otherwise it uses the first `<IPAddress>` in the 'Server.xml' file. If the value of this item is not set correctly, playback may not be performed normally.
 
 #### HLS/DASH
-- Create Stream
-In server.xml, in <Publishers>, add the following:
+ - In server.xml, `<Publishers>`:
 ```
 <DASH>
   <Port>8080</Port>
@@ -223,13 +281,14 @@ In server.xml, in <Publishers>, add the following:
 </HLS>
 ```
 Here's what each item means:
-Port : Player Connection port
-SegmentDuration : Druatin(seconds) of segment file(.ts or .m4s)
-SegmentCount : Segment file count in playlist(playlist.m3u8 or manifest.mpd)
+
+  - `<Port>` : Player Connection port
+  - `<SegmentDuration>` : Druatin(seconds) of segment file(.ts or .m4s)
+  - `<SegmentCount>` : Segment file count in playlist(playlist.m3u8 or manifest.mpd)
 
 - Play URL
   - `hls : http://<OME Server IP>[:<OME HLS Port>]/<Application name>/<Stream name>/playlist.m3u8`
-  - `dash : http://<OME Server IP>[:<OME DASH Port>]/<Application name>/<Stream name>/manifest.m3u8`
+  - `dash : http://<OME Server IP>[:<OME DASH Port>]/<Application name>/<Stream name>/manifest.mpd`
 
  - For example, HLS URL is `http://192.168.0.1:8080/app/stream_o/playlist.m3u8`, DASH URL is `http://192.168.0.1:8080/app/stream_o/manifest.mpd`
 
