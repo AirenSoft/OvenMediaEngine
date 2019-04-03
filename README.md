@@ -10,8 +10,9 @@ Our goal is to make it easier for you to build a stable real-time broadcasting s
 - Embedded WebRTC signalling server (Websocket based server)
 - DTLS (Datagram Transport Layer Security)
 - SRTP (Secure Real-time Transport Protocol)
+- ULPFEC (Forward Error Correction)
 - Clustering
-    - Origin-Edge architecture 
+    - Origin-Edge architecture
 - Configuration
 
 ## Supported Platforms
@@ -60,7 +61,7 @@ We will support the following platforms in the future:
   ```
   sudo yum install gcc-c++ make nasm autoconf libtool zlib-devel openssl-devel libvpx-devel opus-devel tcl cmake
   ```
-  - Execute below commands and append them to ~/.bashrc using text editors 
+  - Execute below commands and append them to ~/.bashrc using text editors
   ```
   $ export PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig
   $ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib:/usr/local/lib64
@@ -99,7 +100,7 @@ We will support the following platforms in the future:
   $ sudo yum install centos-release-scl
   $ sudo yum install devtoolset-7 bc gcc-c++ nasm autoconf libtool glibc-static zlib-devel git bzip2 tcl cmake
   ```
-  - Execute below commands and append them to ~/.bashrc using text editors 
+  - Execute below commands and append them to ~/.bashrc using text editors
   ```
   $ source scl_source enable devtoolset-7
   $ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib:/usr/local/lib64:/usr/lib
@@ -145,7 +146,7 @@ We will support the following platforms in the future:
   ```
   $ (curl -OL https://github.com/Haivision/srt/archive/v1.3.1.tar.gz && tar xvf v1.3.1.tar.gz && cd srt-1.3.1 && ./configure && make && sudo make install)
   ```
-  
+
 ### Build
 You can build OME source with the following command. The built binary can be found in the `bin/DEBUG` or `bin/RELEASE` directory.
 ```
@@ -206,8 +207,34 @@ $ cat conf/Server.xml
 The first `<IPAddress>` in the `Server.xml` configuration file uses the IP address to listen to the RTMP stream being published, otherwise it uses the IP of the system. If the value of this item is not set correctly, the encoder may not be connected.
 The second `<IPAddress>` in `<Publisher>` is used to specify the IP address that the WebSocket server uses to listen to WebRTC Signaling, otherwise it uses the first `<IPAddress>` in the 'Server.xml' file. If the value of this item is not set correctly, playback may not be performed normally.
 
+#### HLS/DASH
+- Create Stream
+In server.xml, in <Publishers>, add the following:
 ```
-$ ./main
+<DASH>
+  <Port>8080</Port>
+  <SegmentDuration>5</SegmentDuration>
+  <SegmentCount>3</SegmentCount>
+</DASH>
+<HLS>
+  <Port>8080</Port>
+  <SegmentDuration>5</SegmentDuration>
+  <SegmentCount>3</SegmentCount>
+</HLS>
+```
+Here's what each item means:
+Port : Player Connection port
+SegmentDuration : Druatin(seconds) of segment file(.ts or .m4s)
+SegmentCount : Segment file count in playlist(playlist.m3u8 or manifest.mpd)
+
+- Play URL
+  - `hls : http://<OME Server IP>[:<OME HLS Port>]/<Application name>/<Stream name>/playlist.m3u8`
+  - `dash : http://<OME Server IP>[:<OME DASH Port>]/<Application name>/<Stream name>/manifest.m3u8`
+
+ - For example, HLS URL is `http://192.168.0.1:8080/app/stream_o/playlist.m3u8`, DASH URL is `http://192.168.0.1:8080/app/stream_o/manifest.mpd`
+
+```
+$ ./OvenMediaEngine
 [07-03 12:29:20.705] I 18780 OvenMediaEngine | main.cpp:22 | OvenMediaEngine v0.1.1 (build: 18062600) is started on [Dim-Ubuntu] (Linux x86_64 - 4.15.0-23-generic, #25-Ubuntu SMP Wed May 23 18:02:16 UTC 2018)
 ...
 ```

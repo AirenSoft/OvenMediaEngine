@@ -62,16 +62,17 @@
 					<Publishers>
 						<RTMP />
 						<HLS>
-							<Port>80</Port>
-							<SegmentDuration>3</SegmentDuration>
+							<Port>8080</Port>
+							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
 							<CrossDomain>
 								<Url>www.airensoft.com</Url>
 							</CrossDomain>
 						</HLS>
 						<DASH>
+							<Port>8080</Port>
 							<SegmentDuration>5</SegmentDuration>
-							<SegmentCount>5</SegmentCount>
+							<SegmentCount>3</SegmentCount>
 							<CORS>
 								<Url>http://www.airensoft.com</Url>
 								<Url>https://www.airensoft.com</Url>
