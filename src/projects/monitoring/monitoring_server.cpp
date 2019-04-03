@@ -17,10 +17,17 @@
 ov::String GetCurrentIso8601Time()
 {
     time_t now = time(nullptr);
+#if 0
     std::tm tm = *std::localtime(&now);
 
     std::ostringstream string_stream;
     string_stream << std::put_time(&tm, "%FT%T");
+#else
+    std::tm tm = *std::gmtime(&now);
+
+	std::ostringstream string_stream;
+	string_stream << std::put_time(&tm, "%FT%TZ");
+#endif
     ov::String result = string_stream.str().c_str();
 
     return result;
