@@ -102,18 +102,18 @@ namespace ov
 							int64_t error_average = _total_error_count / ((loop_count == 0) ? 1 : loop_count);
 
 							logi("SockStat",
-							     "[Stats Counter] Total sampling count: %ld\n"
-							     "+-------+---------+---------+---------+---------+--------------+\n"
-							     "| Type  | Current |   Max   |   Min   | Average |    Total     |\n"
-							     "+-------+---------+---------+---------+---------+--------------+\n"
-							     "| PPS   | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
-							     "| Retry | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
-							     "| Error | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
-							     "+-------+---------+---------+---------+---------+--------------+\n",
-							     loop_count,
-							     count, max, min, average, static_cast<int64_t>(_total_count),
-							     retry_count, retry_max, retry_min, retry_average, static_cast<int64_t>(_total_retry_count),
-							     error_count, error_max, error_min, error_average, static_cast<int64_t>(_total_error_count)
+								 "[Stats Counter] Total sampling count: %ld\n"
+								 "+-------+---------+---------+---------+---------+--------------+\n"
+								 "| Type  | Current |   Max   |   Min   | Average |    Total     |\n"
+								 "+-------+---------+---------+---------+---------+--------------+\n"
+								 "| PPS   | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
+								 "| Retry | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
+								 "| Error | %7ld | %7ld | %7ld | %7ld | %12ld |\n"
+								 "+-------+---------+---------+---------+---------+--------------+\n",
+								 loop_count,
+								 count, max, min, average, static_cast<int64_t>(_total_count),
+								 retry_count, retry_max, retry_min, retry_average, static_cast<int64_t>(_total_retry_count),
+								 error_count, error_max, error_min, error_average, static_cast<int64_t>(_total_error_count)
 							);
 						}
 
@@ -919,16 +919,41 @@ namespace ov
 			case SocketType::Tcp:
 				while(remained > 0L)
 				{
-					ssize_t sent = ::send(_socket.GetSocket(), data_to_send, remained, MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0));
+					int sock = _socket.GetSocket();
+					ssize_t sent = ::send(sock, data_to_send, remained, MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0));
 
 					if(sent == -1L)
 					{
 						if(errno == EAGAIN)
 						{
+							// Wait for the send buffer
+							fd_set write_fds {};
+							FD_ZERO(&write_fds);
+							FD_SET(sock, &write_fds);
+
+							timeval tv {};
+							tv.tv_sec = 1;
+
+							int select_result = select(sock + 1, nullptr, &write_fds, nullptr, &tv);
+
+							if(select_result > 0)
+							{
+								// send buffer is available
+							}
+							else if(select_result == 0)
+							{
+								// timed out
+							}
+							else
+							{
+								logtw("[%p] [#%d] An error occurred while select(): %d (%s)", this, sock, select_result, ov::Error::CreateErrorFromErrno()->ToString().CStr());
+								break;
+							}
+
 							continue;
 						}
 
-						logtw("[%p] [#%d] Could not send data: %zd (%s)", this, _socket.GetSocket(), sent, ov::Error::CreateErrorFromErrno()->ToString().CStr());
+						logtw("[%p] [#%d] Could not send data: %zd (%s)", this, sock, sent, ov::Error::CreateErrorFromErrno()->ToString().CStr());
 
 						break;
 					}
