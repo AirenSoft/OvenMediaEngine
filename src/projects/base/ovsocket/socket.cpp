@@ -20,7 +20,7 @@
 #include <chrono>
 #include <atomic>
 
-#define USE_STATS_COUNTER                       1
+#define USE_STATS_COUNTER                       0
 
 namespace ov
 {
