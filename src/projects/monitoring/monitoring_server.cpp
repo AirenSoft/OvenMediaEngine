@@ -169,7 +169,8 @@ void MonitoringServer::ProcessRequest(const std::shared_ptr<HttpRequest> &reques
     if (!RequestUrlParsing(request_url, file_name, file_ext))
     {
         logtd("Request URL Parsing Fail : %s", request_url.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
+        response->SetStatusCode(HttpStatusCode::NotFound);
+        response->Response();
         return;
     }
     // request file process
@@ -178,7 +179,10 @@ void MonitoringServer::ProcessRequest(const std::shared_ptr<HttpRequest> &reques
     else if(file_name == "test")
         StateRequest(response);
     else
-        response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
+    {
+        response->SetStatusCode(HttpStatusCode::NotFound);
+        response->Response();
+    }
 }
 
 //====================================================================================================

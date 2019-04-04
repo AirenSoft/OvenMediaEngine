@@ -254,7 +254,8 @@ void SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &req
     // app/strem/file.ext 기준
     if (!RequestUrlParsing(request_url, app_name, stream_name, file_name, file_ext)) {
         logtd("Request URL Parsing Fail : %s", request_url.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
+        response->SetStatusCode(HttpStatusCode::NotFound);
+        response->Response();
         return;
     }
 
@@ -283,7 +284,10 @@ void SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &req
     else if (file_ext == "m4s")
         SegmentRequest(app_name, stream_name, file_name, protocol_flag, SegmentType::M4S, response);
     else
+    {
         response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
+        response->Response();
+    }
 }
 
 //====================================================================================================
@@ -320,6 +324,7 @@ bool SegmentStreamServer::CorsCheck(ov::String &app_name,
             logtd("Cors Check Fail : %s/%s/%s - %s", app_name.CStr(), stream_name.CStr(), file_name.CStr(),
                   origin_url.CStr());
             response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
+            response->Response();
             return false;
         }
 
@@ -348,6 +353,7 @@ void SegmentStreamServer::PlayListRequest(ov::String &app_name,
     {
         logtd("App Allow Check Fail : %s/%s/%s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
         response->SetStatusCode(HttpStatusCode::NotFound);
+        response->Response();
         return;
     }
 
@@ -364,6 +370,7 @@ void SegmentStreamServer::PlayListRequest(ov::String &app_name,
     {
         logtd("PlayList Serarch Fail : %s/%s/%s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
         response->SetStatusCode(HttpStatusCode::NotFound);
+        response->Response();
         return;
     }
 
@@ -396,6 +403,7 @@ void SegmentStreamServer::SegmentRequest(ov::String &app_name,
     {
         logtd("App Allow Check Fail : %s/%s/%s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
         response->SetStatusCode(HttpStatusCode::NotFound);
+        response->Response();
         return;
     }
 
@@ -412,6 +420,7 @@ void SegmentStreamServer::SegmentRequest(ov::String &app_name,
     {
         logtd("Segment Data Serarch Fail : %s/%s/%s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
         response->SetStatusCode(HttpStatusCode::NotFound);
+        response->Response();
         return;
     }
 

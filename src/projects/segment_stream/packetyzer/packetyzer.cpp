@@ -26,7 +26,7 @@ Packetyzer::Packetyzer(PacketyzerType packetyzer_type,
     _segment_prefix = segment_prefix;
     _stream_type = stream_type;
     _segment_count = segment_count;
-    _segment_save_count = segment_count * 2;
+    _segment_save_count = segment_count * 3;
     _segment_duration = segment_duration;
 
     _media_info = media_info;
