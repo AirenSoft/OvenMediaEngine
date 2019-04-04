@@ -15,7 +15,7 @@
 
 #include <ice/ice.h>
 
-#define USE_P2P                             1
+#define USE_P2P                             0
 
 RtcSignallingServer::RtcSignallingServer(const info::Application &application_info, std::shared_ptr<MediaRouteApplicationInterface> application)
 	: _application_info(application_info),

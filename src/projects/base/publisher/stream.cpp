@@ -59,7 +59,7 @@ bool StreamWorker::RemoveSession(session_id_t id)
 	std::unique_lock<std::mutex> lock(_session_map_guard);
 	if(_sessions.count(id) <= 0)
 	{
-		fprintf(stderr, "Cannot find session : %u", id);
+		logte("Cannot find session : %u", id);
 		return false;
 	}
 
@@ -77,7 +77,7 @@ std::shared_ptr<Session> StreamWorker::GetSession(session_id_t id)
 {
 	if(_sessions.count(id) <= 0)
 	{
-		fprintf(stderr, "Cannot find session : %u", id);
+        logte("Cannot find session : %u", id);
 		return nullptr;
 	}
 
