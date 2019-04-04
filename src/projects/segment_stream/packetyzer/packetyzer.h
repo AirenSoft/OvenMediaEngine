@@ -63,6 +63,7 @@ protected :
     std::string _play_list;
     bool _video_init;
     bool _audio_init;
+    bool _init_segment_count_complete;
 
     std::map<std::string, std::shared_ptr<SegmentData>> _segment_datas;
     std::deque<std::string> _segment_indexer;            // (Video+Audio)Segment Name 인덱서(순차적 데이터 삭제를 위해 사용) - TS

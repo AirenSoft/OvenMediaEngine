@@ -38,6 +38,8 @@ Packetyzer::Packetyzer(PacketyzerType packetyzer_type,
     _video_init = false;
     _audio_init = false;
 
+    _init_segment_count_complete = false;
+
     if (_stream_type == PacketyzerStreamType::VideoOnly)_audio_init = true;
     if (_stream_type == PacketyzerStreamType::AudioOnly)_video_init = true;
 
@@ -155,6 +157,19 @@ bool Packetyzer::SetSegmentData(SegmentDataType data_type,
         fclose(file);
     }
 
+    if(!_init_segment_count_complete)
+    {
+        if (data_type == SegmentDataType::Ts && sequence_number >= _segment_count)
+        {
+            _init_segment_count_complete = true;
+        }
+        else if ((data_type == SegmentDataType::Mp4Video || data_type == SegmentDataType::Mp4Audio) && 
+		sequence_number >= _segment_count*2)
+        {
+            _init_segment_count_complete = true;
+        }
+    }
+
     return true;
 }
 
@@ -164,6 +179,9 @@ bool Packetyzer::SetSegmentData(SegmentDataType data_type,
 //====================================================================================================
 bool Packetyzer::GetPlayList(std::string &play_list)
 {
+    if(!_init_segment_count_complete)
+        return false;
+
     play_list = _play_list;
     return true;
 }
@@ -173,6 +191,9 @@ bool Packetyzer::GetPlayList(std::string &play_list)
 //====================================================================================================
 bool Packetyzer::GetSegmentData(std::string &file_name, std::shared_ptr<std::vector<uint8_t>> &data)
 {
+	if(!_init_segment_count_complete)
+        return false;
+
     std::unique_lock<std::mutex> segment_datas_lock(_segment_datas_mutex);
 
     auto segment_data_item = _segment_datas.find(file_name);

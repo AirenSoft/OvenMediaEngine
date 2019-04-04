@@ -290,38 +290,70 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 //====================================================================================================
 bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections)
 {
-	std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
-	ov::String alias = _application_info.GetOrigin().GetAlias();
-	ov::String app_name = _application_info.GetName();
 
-	// lock(guard)
-	std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
+    std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
+    ov::String alias = _application_info.GetOrigin().GetAlias();
+    ov::String app_name = _application_info.GetName();
+    ov::String stream_name;
+    uint32_t bitrate = 0;
 
-	for(const auto &client_item  : _client_list)
-	{
-		ov::String stream_name = client_item.second->stream_name;
-		uint32_t bitrate = 0;
+    // TODO : 임시 코드 차후에 p2p manager에서 실제 정보 처리
+    // - 1개의 스트림명과 비트레이트  확인
+    std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
 
-		auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
-		                                                             alias,
-		                                                             app_name,
-		                                                             stream_name);
+    for(const auto &client_item  : _client_list)
+    {
+       stream_name = client_item.second->stream_name;
 
-		std::find_if(_observers.begin(), _observers.end(), [&bitrate, app_name, stream_name](auto &observer) -> bool
-		{
-			// Ask observer to fill bitrate
-			bitrate = observer->OnGetBitrate(app_name, stream_name);
-			return bitrate != 0;
-		});
+        std::find_if(_observers.begin(), _observers.end(), [&bitrate, app_name, stream_name](auto &observer) -> bool
+        {
+            // Ask observer to fill bitrate
+            bitrate = observer->OnGetBitrate(app_name, stream_name);
+            return bitrate != 0;
+        });
 
-		collection->edge_connection = 1;
-		collection->edge_bitrate = bitrate;
-		collection->p2p_connection = 0;
-		collection->p2p_bitrate = 0;
-		collection->check_time = current_time;
+        if(bitrate != 0)
+        {
+            break;
+        }
+    }
 
-		stream_collections.push_back(collection);
-	}
+    uint32_t p2p_connection_count = GetClientPeerCount();
+    uint32_t edeg_connection_count = GetTotalPeerCount() - p2p_connection_count;
+
+    // p2p
+    for(int index = 0; index < p2p_connection_count; index++)
+    {
+        auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
+                                                                     alias,
+                                                                     app_name,
+                                                                     stream_name);
+        collection->edge_connection = 0;
+        collection->edge_bitrate = 0;
+        collection->p2p_connection = 1;
+        collection->p2p_bitrate = bitrate;
+        collection->check_time = current_time;
+
+        stream_collections.push_back(collection);
+
+    }
+
+    // edge connection
+    for(int index = 0; index < edeg_connection_count; index++)
+    {
+        auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
+                                                                     alias,
+                                                                     app_name,
+                                                                     stream_name);
+        collection->edge_connection = 1;
+        collection->edge_bitrate = bitrate;
+        collection->p2p_connection = 0;
+        collection->p2p_bitrate = 0;
+        collection->check_time = current_time;
+
+        stream_collections.push_back(collection);
+
+    }
 
 	return true;
 }
