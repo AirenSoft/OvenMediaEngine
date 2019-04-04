@@ -1,5 +1,3 @@
-#include <utility>
-
 //==============================================================================
 //
 //  OvenMediaEngine
@@ -9,8 +7,10 @@
 //
 //==============================================================================
 #include "http_response.h"
+#include "http_request.h"
 #include "http_private.h"
 
+#include <utility>
 #include <memory>
 #include <algorithm>
 

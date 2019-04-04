@@ -41,6 +41,7 @@ public:
 	// If the iterator returns true, the client will be disconnected
 	bool Disconnect(ClientIterator iterator);
 	bool Disconnect(std::shared_ptr<HttpClient> client);
+	bool Disconnect(const std::shared_ptr<ov::Socket> &remote);
 
 protected:
 	// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨
@@ -57,7 +58,7 @@ protected:
 	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 	void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 
-	bool Disconnect(const std::shared_ptr<ov::Socket> &remote);
+	bool DisconnectInternal(const std::shared_ptr<ov::Socket> &remote);
 	bool DisconnectInternal(std::shared_ptr<HttpClient> client);
 
 protected:

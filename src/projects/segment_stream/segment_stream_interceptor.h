@@ -20,6 +20,8 @@ public:
 
 	~SegmentStreamInterceptor() = default;
 
+	bool OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data) override;
+
 protected:
 
 	//--------------------------------------------------------------------

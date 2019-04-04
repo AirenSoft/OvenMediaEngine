@@ -194,7 +194,7 @@ bool HlsPacketyzer::UpdatePlayList()
             auto segment_data = item->second;
 
             m3u8_play_list << "#EXTINF:" << std::fixed << std::setprecision(3)
-                           << segment_data->duration / PACKTYZER_DEFAULT_TIMESCALE << ",\r\n"
+                           << (double)(segment_data->duration) / (double)(PACKTYZER_DEFAULT_TIMESCALE) << ",\r\n"
                            << file_name << "\r\n";
 
             if (segment_data->duration > max_duration)

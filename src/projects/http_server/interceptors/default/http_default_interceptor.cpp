@@ -70,7 +70,7 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 	OV_ASSERT2((content_length == 0L) || ((content_length > 0L) && (request_body != nullptr)));
 
 	std::shared_ptr<const ov::Data> process_data;
-	if((current_length + data->GetLength()) > content_length)
+	if((content_length > 0) && ((current_length + data->GetLength()) > content_length))
 	{
 		logtw("Client sent too many data: expected: %ld, sent: %ld", content_length, (current_length + data->GetLength()));
 		// 원래는, 클라이언트가 보낸 데이터는 content-length를 넘어설 수 없으나,

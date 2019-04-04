@@ -226,7 +226,7 @@ void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 {
 	logti("Client(%s) is disconnected from %s", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 
-	Disconnect(remote);
+	DisconnectInternal(remote);
 }
 
 bool HttpServer::AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor)
@@ -309,10 +309,15 @@ bool HttpServer::Disconnect(ClientIterator iterator)
 
 bool HttpServer::Disconnect(std::shared_ptr<HttpClient> client)
 {
-	return Disconnect(client->GetRequest()->GetRemote());
+	return DisconnectInternal(client->GetRequest()->GetRemote());
 }
 
 bool HttpServer::Disconnect(const std::shared_ptr<ov::Socket> &remote)
+{
+	return DisconnectInternal(remote);
+}
+
+bool HttpServer::DisconnectInternal(const std::shared_ptr<ov::Socket> &remote)
 {
 	std::shared_ptr<HttpClient> client;
 

@@ -26,3 +26,15 @@ bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<con
 
 	return true;
 }
+
+bool SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data)
+{
+	std::thread *thread = new std::thread(
+		[this, request, response, data]()
+		{
+			HttpDefaultInterceptor::OnHttpData(request, response, data);
+		}
+	);
+
+	return true;
+}
