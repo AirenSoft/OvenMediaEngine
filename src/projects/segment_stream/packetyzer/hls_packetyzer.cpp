@@ -13,7 +13,9 @@
 #include <iomanip>
 #include <array>
 #include <algorithm>
+#include <base/ovlibrary/ovlibrary.h>
 
+#define OV_LOG_TAG                  "SegmentStream"
 #define HLS_MAX_TEMP_VIDEO_DATA_COUNT        (500)
 
 //====================================================================================================
@@ -142,11 +144,11 @@ bool HlsPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame
 bool HlsPacketyzer::SegmentWrite(uint64_t start_timestamp, uint64_t duration)
 {
     auto ts_writer = std::make_unique<TsWriter>(_stream_type);
+    int64_t _first_audio_time_stamp = 0;
+    int64_t _first_video_time_stamp = 0;
 
     for (auto &frame_data : _frame_datas)
     {
-        //if (frame_data->type == PacketyzerFrameType::AudioFrame) continue;
-
         // TS(PES) Write
         ts_writer->WriteSample(frame_data->type != PacketyzerFrameType::AudioFrame,
                                frame_data->type == PacketyzerFrameType::AudioFrame ||
@@ -154,13 +156,23 @@ bool HlsPacketyzer::SegmentWrite(uint64_t start_timestamp, uint64_t duration)
                                frame_data->timestamp,
                                frame_data->time_offset,
                                frame_data->data);
+
+        if(_first_audio_time_stamp == 0 && frame_data->type == PacketyzerFrameType::AudioFrame)
+            _first_audio_time_stamp = frame_data->timestamp;
+        else if(_first_video_time_stamp == 0 && frame_data->type != PacketyzerFrameType::AudioFrame)
+            _first_video_time_stamp = frame_data->timestamp;
+
     }
+
+    if(_first_audio_time_stamp != 0 && _first_video_time_stamp != 0)
+        logtd("hls segment video/audio timestamp gap(%dms)",  (_first_video_time_stamp - _first_audio_time_stamp)/90);
+
 
     std::ostringstream file_name_stream;
     file_name_stream << _segment_prefix << "_" << _sequence_number << ".ts";
 
     SetSegmentData(SegmentDataType::Ts, _sequence_number, file_name_stream.str(), duration, start_timestamp,
-                   ts_writer->GetDataStream(), true);
+                   ts_writer->GetDataStream());
 
     UpdatePlayList();
 

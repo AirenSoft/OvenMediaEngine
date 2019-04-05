@@ -127,7 +127,7 @@ SegmentStream::SegmentStream(const std::shared_ptr<Application> application, con
                                                                 media_info);
     }
 
-    _key_frame_check_timestamp = 0;
+    _stream_check_time = time(nullptr);
     _previous_key_frame_timestamp = 0;
 }
 
@@ -179,14 +179,34 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 
         if (encoded_frame->_frame_type == FrameType::VideoFrameKey)
         {
-            if (encoded_frame->_time_stamp - _key_frame_check_timestamp >= 60 * 90000)
-            {
-                logtd("KeyFrame Interval - time(%d)",
-                      (encoded_frame->_time_stamp - _previous_key_frame_timestamp) / 90); // 1/90000 -> 1/1000
-
-                _key_frame_check_timestamp = encoded_frame->_time_stamp;
-            }
+            _key_frame_interval = encoded_frame->_time_stamp - _previous_key_frame_timestamp;
             _previous_key_frame_timestamp = encoded_frame->_time_stamp;
+        }
+
+        _last_video_timestamp = encoded_frame->_time_stamp/90;
+        _video_frame_count++;
+
+        time_t current_time = time(nullptr);
+        uint32_t check_gap = current_time - _stream_check_time;
+
+        if(check_gap >= 60)
+        {
+            logtd("Segment Stream Info - stram(%s) key(%ums) timestamp(v:%ums/a:%ums/g:%dms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
+                  GetName().CStr(),
+                  _key_frame_interval/90, // 90000 *1000
+                  _last_video_timestamp,
+                  _last_audio_timestamp,
+                  _last_video_timestamp - _last_audio_timestamp,
+                  _video_frame_count/check_gap,
+                  _audio_frame_count/check_gap,
+                  _last_video_timestamp - _previous_last_video_timestamp,
+                  _last_audio_timestamp - _previous__last_audio_timestamp);
+
+            _stream_check_time = current_time;
+            _video_frame_count = 0;
+            _audio_frame_count = 0;
+            _previous_last_video_timestamp = _last_video_timestamp;
+            _previous__last_audio_timestamp = _last_audio_timestamp;
         }
     }
 }
@@ -208,6 +228,9 @@ void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
                                             track->GetTimeBase().GetDen(),
                                             encoded_frame->_length,
                                             encoded_frame->_buffer->GetDataAs<uint8_t>());
+
+        _last_audio_timestamp = encoded_frame->_time_stamp/(track->GetTimeBase().GetDen()/1000);
+        _audio_frame_count++;
     }
 }
 

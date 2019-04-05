@@ -89,11 +89,14 @@ bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, b
             _video_timescale,
             frame);
 
+
     // Video data save
     if (_stream_type == PacketyzerStreamType::VideoOnly)
     {
         if (_dash_packetyzer != nullptr) _dash_packetyzer->AppendVideoFrame(video_data);
         if (_hls_packetyzer != nullptr) _hls_packetyzer->AppendVideoFrame(video_data);
+
+        _last_video_timestamp = timestamp;
     }
     else
     {
@@ -105,33 +108,52 @@ bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, b
 
 //====================================================================================================
 // Video Data SampleWrite
+// - audio 기준시간 보다 0.5초 이상 크면 저장 데이터의 마지막까지 써준다.
 //====================================================================================================
 bool StreamPacketyzer::VideoDataSampleWrite(uint64_t timestamp)
 {
-    // Queue size over check( Framerate X 3)
-    if (_video_data_queue.size() > _video_framerate * 3)
+    bool fource_append = false;
+
+    // none data
+   if(_video_data_queue.empty())
+        return true;
+
+    // Queue size over check( Framerate)
+    if (_video_data_queue.size() > _video_framerate)
     {
-        int delete_count = 0;
-
-        while (!_video_data_queue.empty())
+        // 첫 프레임 부터 오디오 기준 시간 보다 크면 모두 써준다.
+        // - 이미 sync 처리하기는 힘든 상황
+        // - 이처리가 없으면 I프레임 대기 상태로 Segment를 만들지 못함
+        if (_video_data_queue.front()->timestamp > timestamp + _video_timescale)
         {
-            auto video_data = _video_data_queue.front();
+            fource_append = true;
+        }
+        else
+        {
+            int delete_count = 0;
 
-            if (video_data->timestamp <= timestamp)
+            while (!_video_data_queue.empty())
             {
-                break;
+                auto video_data = _video_data_queue.front();
+
+                if (video_data->timestamp <= timestamp)
+                {
+                    break;
+                }
+//            logtd("VideoDataQueue Delete Frame - Timestamp(%lldms/%lldms)",
+//                    video_data->timestamp/(_video_timescale/1000), timestamp/(_video_timescale/1000));
+
+                delete_count++;
+                _video_data_queue.pop_front();
             }
 
-            delete_count++;
-            _video_data_queue.pop_front();
+            logtd("VideoDataQueue Count Over - Count(%d:%d) Timestamp(%lldms) Duration(%d) Delete(%d)",
+                  (int) _video_data_queue.size(),
+                  _video_framerate,
+                  timestamp / (_video_timescale / 1000),
+                  time(nullptr) - _start_time,
+                  delete_count);
         }
-
-        logtw("VideoDataQueue Count Over - Count(%d:%d) Timestamp(%lld) Duration(%d) Delete(%d)",
-              (int) _video_data_queue.size(),
-              _video_framerate * 3,
-              timestamp,
-              time(nullptr) - _start_time,
-              delete_count);
     }
 
     //Video data append
@@ -141,13 +163,16 @@ bool StreamPacketyzer::VideoDataSampleWrite(uint64_t timestamp)
 
         if (video_data != nullptr)
         {
-            if (video_data->timestamp > timestamp)
+            if ((video_data->timestamp > timestamp) && !fource_append)
             {
                 break;
             }
 
             if (_dash_packetyzer != nullptr) _dash_packetyzer->AppendVideoFrame(video_data);
             if (_hls_packetyzer != nullptr) _hls_packetyzer->AppendVideoFrame(video_data);
+
+            _last_video_timestamp = timestamp;
+
         }
 
         _video_data_queue.pop_front();
@@ -171,7 +196,7 @@ bool StreamPacketyzer::AppendAudioData(uint64_t timestamp, uint32_t timescale, u
     // logti("test - Append Audio - timestamp(%lld) data(%d)", Packetyzer::ConvertTimeScale(timestamp, timescale, _video_timescale), data_size);
 
 
-    // Video 데이터 삽입(오디오 타임스탬프 이전 데이터)
+    // // Video 데이터 삽입(오디오 타임스탬프 이전 데이터)
     VideoDataSampleWrite(Packetyzer::ConvertTimeScale(timestamp, timescale, _video_timescale));
 
     // timestamp change
@@ -181,12 +206,17 @@ bool StreamPacketyzer::AppendAudioData(uint64_t timestamp, uint32_t timescale, u
     }
 
     auto frame = std::make_shared<std::vector<uint8_t>>(data, data + data_size);
-    auto audio_data = std::make_shared<PacketyzerFrameData>(PacketyzerFrameType::AudioFrame, timestamp, 0,
-                                                            _audio_timescale, frame);
+    auto audio_data = std::make_shared<PacketyzerFrameData>(PacketyzerFrameType::AudioFrame,
+                                                            timestamp,
+                                                            0,
+                                                            _audio_timescale,
+                                                            frame);
 
     // hls/dash Audio 데이터 삽입
     if (_dash_packetyzer != nullptr) _dash_packetyzer->AppendAudioFrame(audio_data);
     if (_hls_packetyzer != nullptr) _hls_packetyzer->AppendAudioFrame(audio_data);
+
+    _last_audio_timestamp = timestamp;
 
     return true;
 }
@@ -205,7 +235,8 @@ bool StreamPacketyzer::GetPlayList(PlayListType play_list_type, ov::String &segm
     else if (play_list_type == PlayListType::M3u8 && _hls_packetyzer != nullptr)
         result = _hls_packetyzer->GetPlayList(play_list);
 
-    if (result)segment_play_list = play_list.c_str();
+    if (result)
+        segment_play_list = play_list.c_str();
 
     return result;
 }

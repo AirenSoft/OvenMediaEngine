@@ -12,6 +12,8 @@
 #include <map>
 #include "packetyzer_define.h"
 
+#define MPD_VIDEO_INIT_FILE_NAME "video_init.m4s"
+#define MPD_AUDIO_INIT_FILE_NAME "audio_init.m4s"
 //====================================================================================================
 // Packetyzer
 //====================================================================================================
@@ -37,8 +39,7 @@ public :
                         std::string file_name,
                         uint64_t duration,
                         uint64_t timestamp_,
-                        std::shared_ptr<std::vector<uint8_t>> &data,
-                        bool indexing = true);
+                        std::shared_ptr<std::vector<uint8_t>> &data);
 
     bool GetPlayList(std::string &play_list);
 
@@ -70,4 +71,8 @@ protected :
     std::deque<std::string> _video_segment_indexer;    // Video Segment Name 인덱서(순차적 데이터 삭제를 위해 사용)  - M3S(Video)
     std::deque<std::string> _audio_segment_indexer;    // Audio Segment Name 인덱서(순차적 데이터 삭제를 위해 사용)  - M3S(Audio)
     std::mutex _segment_datas_mutex;
+
+    std::shared_ptr<SegmentData> _mpd_video_init_file = nullptr;
+    std::shared_ptr<SegmentData> _mpd_audio_init_file = nullptr;
+
 };

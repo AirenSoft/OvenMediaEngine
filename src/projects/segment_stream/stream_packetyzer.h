@@ -71,5 +71,9 @@ private :
     time_t _start_time;
     uint32_t _video_framerate;
     std::deque<std::shared_ptr<PacketyzerFrameData>> _video_data_queue;
+
+    uint64_t _last_video_timestamp = 0;
+    uint64_t _last_audio_timestamp = 0;
+
 };
 

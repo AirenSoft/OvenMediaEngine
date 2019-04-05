@@ -77,7 +77,7 @@ RtmpChunkStream::RtmpChunkStream(ov::ClientSocket *remote, IRtmpChunkStream *str
     _video_sequence_info_process = false;
     _audio_sequence_info_process = false;
 
-    _key_frame_check_timestamp = 0;
+    _stream_check_time = time(nullptr);
     _previous_key_frame_timestamp = 0;
 
     _last_packet_time = time(nullptr);
@@ -1118,21 +1118,44 @@ bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &messag
                                                   message->body);
 
 
-        // KeyFrame 간격 출력
+
         if (frame_type == RtmpFrameType::VideoIFrame)
         {
-            if (message->message_header->timestamp - _key_frame_check_timestamp >= 60 * RTMP_TIME_SCALE)
-            {
-                logtd("KeyFrame Interval - app(%s) stram(%s) time(%d)",
-                      _app_name.CStr(),
-                      _stream_name.CStr(),
-                      (message->message_header->timestamp - _previous_key_frame_timestamp));
-
-                _key_frame_check_timestamp = message->message_header->timestamp;
-            }
+            _key_frame_interval = message->message_header->timestamp - _previous_key_frame_timestamp;
             _previous_key_frame_timestamp = message->message_header->timestamp;
         }
+
+        _last_video_timestamp = message->message_header->timestamp;
+        _video_frame_count++;
+
+        time_t current_time = time(nullptr);
+        uint32_t check_gap = current_time - _stream_check_time;
+
+        if(check_gap >= 60)
+        {
+            logtd("Rtmp Provider Info - app(%s) stram(%s) key(%ums) timestamp(v:%ums/a:%ums/g:%dms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
+                  _app_name.CStr(),
+                  _stream_name.CStr(),
+                  _key_frame_interval,
+                  _last_video_timestamp,
+                  _last_audio_timestamp,
+                  _last_video_timestamp - _last_audio_timestamp,
+                  _video_frame_count/check_gap,
+                  _audio_frame_count/check_gap,
+                  _last_video_timestamp - _previous_last_video_timestamp,
+                  _last_audio_timestamp - _previous__last_audio_timestamp);
+
+            _stream_check_time = time(nullptr);
+            _video_frame_count = 0;
+            _audio_frame_count = 0;
+            _previous_last_video_timestamp = _last_video_timestamp;
+            _previous__last_audio_timestamp = _last_audio_timestamp;
+        }
     }
+
+
+
+
 
     return true;
 }
@@ -1212,7 +1235,12 @@ bool RtmpChunkStream::ReceiveAudioMessage(std::shared_ptr<ImportMessage> &messag
                                                   _stream_id,
                                                   message->message_header->timestamp,
                                                   message->body);
+
+        _last_audio_timestamp = message->message_header->timestamp;
+        _audio_frame_count++;
     }
+
+
     return true;
 }
 

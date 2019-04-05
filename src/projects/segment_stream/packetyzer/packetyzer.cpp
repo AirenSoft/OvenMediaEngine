@@ -103,10 +103,21 @@ bool Packetyzer::SetSegmentData(SegmentDataType data_type,
                                 std::string file_name,
                                 uint64_t duration,
                                 uint64_t timestamp,
-                                std::shared_ptr<std::vector<uint8_t>> &data,
-                                bool indexing /* = true */)
+                                std::shared_ptr<std::vector<uint8_t>> &data)
 {
     auto segment_data = std::make_shared<SegmentData>(sequence_number, file_name, duration, timestamp, data);
+
+    if(file_name == MPD_VIDEO_INIT_FILE_NAME)
+    {
+        _mpd_video_init_file = segment_data;
+        return true;
+    }
+    else if(file_name == MPD_AUDIO_INIT_FILE_NAME)
+    {
+        _mpd_audio_init_file = segment_data;
+        return true;
+    }
+
 
     // Segment 저장
     std::unique_lock<std::mutex> segment_datas_lock(_segment_datas_mutex);
@@ -117,35 +128,32 @@ bool Packetyzer::SetSegmentData(SegmentDataType data_type,
     // - indexer 등록되지 않은 segment 데이터 유지(ex) init.m4s)
     std::deque<std::string> *indexer = nullptr;
 
-    if (indexing)
+    if (data_type == SegmentDataType::Ts) indexer = &_segment_indexer;
+    else if (data_type == SegmentDataType::Mp4Video) indexer = &_video_segment_indexer;
+    else if (data_type == SegmentDataType::Mp4Audio) indexer = &_audio_segment_indexer;
+    else indexer = &_segment_indexer;
+
+    indexer->push_back(file_name);
+
+    // 데이터 삭제(데이터 전송 요청을 받기 위해 특정 개수 이상 유지)
+    while (indexer->size() > _segment_save_count)
     {
-        if (data_type == SegmentDataType::Ts) indexer = &_segment_indexer;
-        else if (data_type == SegmentDataType::Mp4Video) indexer = &_video_segment_indexer;
-        else if (data_type == SegmentDataType::Mp4Audio) indexer = &_audio_segment_indexer;
-        else indexer = &_segment_indexer;
+        auto segment_data_item = _segment_datas.find(indexer->front());
 
-        indexer->push_back(file_name);
-
-        // 데이터 삭제(데이터 전송 요청을 받기 위해 특정 개수 이상 유지)
-        while (indexer->size() > _segment_save_count)
+        // segment data delete
+        if (segment_data_item != _segment_datas.end())
         {
-            auto segment_data_item = _segment_datas.find(indexer->front());
-
-            // segment data delete
-            if (segment_data_item != _segment_datas.end())
-            {
-                _segment_datas.erase(segment_data_item);
-            }
-
-            // file delete
-            if (_save_file)
-            {
-                remove(indexer->front().c_str());
-            }
-
-            // segment data indexer delete
-            indexer->pop_front();
+            _segment_datas.erase(segment_data_item);
         }
+
+        // file delete
+        if (_save_file)
+        {
+            remove(indexer->front().c_str());
+        }
+
+        // segment data indexer delete
+        indexer->pop_front();
     }
 
     segment_datas_lock.unlock();
@@ -193,6 +201,17 @@ bool Packetyzer::GetSegmentData(std::string &file_name, std::shared_ptr<std::vec
 {
 	if(!_init_segment_count_complete)
         return false;
+
+    if(file_name == MPD_VIDEO_INIT_FILE_NAME && _mpd_video_init_file != nullptr)
+    {
+        data =_mpd_video_init_file->data;
+        return true;
+    }
+    else if(file_name == MPD_AUDIO_INIT_FILE_NAME && _mpd_audio_init_file != nullptr)
+    {
+        data =_mpd_audio_init_file->data;
+        return true;
+    }
 
     std::unique_lock<std::mutex> segment_datas_lock(_segment_datas_mutex);
 

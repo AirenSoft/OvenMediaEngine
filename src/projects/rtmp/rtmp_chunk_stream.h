@@ -189,8 +189,16 @@ protected :
     bool _video_sequence_info_process;
     bool _audio_sequence_info_process;
 
-    uint32_t _key_frame_check_timestamp;
+    time_t _stream_check_time;
+    uint32_t _key_frame_interval = 0;
     uint32_t _previous_key_frame_timestamp;
+    uint32_t _last_video_timestamp = 0;
+    uint32_t _last_audio_timestamp = 0;
+    uint32_t _previous_last_video_timestamp = 0;
+    uint32_t _previous__last_audio_timestamp = 0;
+    uint32_t _video_frame_count = 0;
+    uint32_t _audio_frame_count = 0;
+
 
     time_t  _last_packet_time;
 

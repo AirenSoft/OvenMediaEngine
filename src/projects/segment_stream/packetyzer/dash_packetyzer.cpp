@@ -162,7 +162,7 @@ bool DashPacketyzer::VideoInit(std::shared_ptr<std::vector<uint8_t>> &data)
     auto data_stream = writer->GetDataStream();
 
     // Video init m4s Save
-    SetSegmentData(SegmentDataType::Mp4Video, 0, "video_init.m4s", 0, 0, data_stream, false);
+    SetSegmentData(SegmentDataType::Mp4Video, 0, MPD_VIDEO_INIT_FILE_NAME, 0, 0, data_stream);
 
     _video_init = true;
 
@@ -202,7 +202,7 @@ bool DashPacketyzer::AudioInit()
     auto data_stream = writer->GetDataStream();
 
     // Audio init m4s Save
-    SetSegmentData(SegmentDataType::Mp4Audio, 0, "audio_init.m4s", 0, 0, data_stream, false);
+    SetSegmentData(SegmentDataType::Mp4Audio, 0, MPD_AUDIO_INIT_FILE_NAME, 0, 0, data_stream);
 
     _audio_init = true;
 
@@ -341,8 +341,7 @@ bool DashPacketyzer::VideoSegmentWrite(uint64_t last_timestamp)
                     file_name.str(),
                     last_timestamp - start_timestamp,
                     start_timestamp,
-                    data_stream,
-                    true);
+                    data_stream);
 
     _sequence_number++;
     _video_sequence_number++;
@@ -412,8 +411,7 @@ bool DashPacketyzer::AudioSegmentWrite(uint64_t last_timestamp)
                     file_name.str(),
                     end_timestamp - start_timestamp,
                     start_timestamp,
-                    data_stream,
-                    true);
+                    data_stream);
 
     _sequence_number++;
     _audio_sequence_number++;

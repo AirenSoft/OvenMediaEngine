@@ -432,6 +432,7 @@ void SegmentStreamServer::SegmentRequest(ov::String &app_name,
         logte("Segment Response Fail  : %s/%s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), file_name.CStr(),
               segment_data->GetLength());
     }
+
 }
 
 //====================================================================================================
