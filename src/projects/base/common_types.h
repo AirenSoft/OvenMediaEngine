@@ -87,7 +87,7 @@ public:
 	int32_t _encoded_width = 0;
 	int32_t _encoded_height = 0;
 
-	int32_t _time_stamp = 0;
+	int64_t _time_stamp = 0;
 
 	FrameType _frame_type = FrameType::VideoFrameDelta;
 	std::shared_ptr<ov::Data> _buffer;

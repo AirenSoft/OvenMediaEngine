@@ -191,7 +191,7 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 
         if(check_gap >= 60)
         {
-            logtd("Segment Stream Info - stram(%s) key(%ums) timestamp(v:%ums/a:%ums/g:%dms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
+            logtd("Segment Stream Info - stram(%s) key(%ums) timestamp(v:%lldms/a:%lldms/g:%lldms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
                   GetName().CStr(),
                   _key_frame_interval/90, // 90000 *1000
                   _last_video_timestamp,

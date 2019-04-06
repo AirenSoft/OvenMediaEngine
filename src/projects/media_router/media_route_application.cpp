@@ -529,7 +529,7 @@ void MediaRouteApplication::MainTask()
 							encoded_frame->_frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
 
 							// TODO(soulk): Publisher에서 Timestamp를 90000Hz로 변경하는 코드를 넣어야함. 지금은 임시로 넣음.
-							encoded_frame->_time_stamp = (uint32_t)((double)cur_buf->GetPts() / (double)1000000 * (double)90000);
+							encoded_frame->_time_stamp = ((double)cur_buf->GetPts() / (double)1000000 * (double)90000);
 							// logtd("Video PTS: %ld", encoded_frame->time_stamp);
 							// encoded_frame->_timeStamp = (uint32_t)cur_buf->GetPts();
 
@@ -584,7 +584,7 @@ void MediaRouteApplication::MainTask()
 							encoded_frame->_encoded_width = track->GetWidth();
 							encoded_frame->_encoded_height = track->GetHeight();
 							encoded_frame->_frame_type = (cur_buf->GetFlags() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
-							encoded_frame->_time_stamp = static_cast<int32_t>(cur_buf->GetPts()); // / (double)1000000 * (double)90000;
+							encoded_frame->_time_stamp = cur_buf->GetPts(); // / (double)1000000 * (double)90000;
 							// logtd(">>> Audio PTS: %ld %ld", cur_buf->GetPts(), encoded_frame->time_stamp);
 							// encoded_frame->_timeStamp = (uint32_t)cur_buf->GetPts();
 
