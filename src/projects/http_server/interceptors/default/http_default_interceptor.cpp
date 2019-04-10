@@ -12,7 +12,10 @@
 #include "../../http_request.h"
 #include "../../http_response.h"
 
-bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &pattern, const HttpRequestHandler &handler)
+bool HttpDefaultInterceptor::Register(HttpMethod method,
+        const ov::String &pattern,
+        const HttpRequestHandler &handler,
+        bool is_pattern_check)
 {
 	if(handler == nullptr)
 	{
@@ -24,6 +27,7 @@ bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &patte
 		.pattern_string = pattern,
 #endif // DEBUG
 		.pattern = std::regex(pattern),
+		.is_pattern_check = is_pattern_check,
 		.method = method,
 		.handler = handler
 	});
@@ -31,13 +35,15 @@ bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &patte
 	return true;
 }
 
-bool HttpDefaultInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request, const std::shared_ptr<const HttpResponse> &response)
+bool HttpDefaultInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request,
+        const std::shared_ptr<const HttpResponse> &response)
 {
 	// 기본 handler 이므로, 모든 request에 대해 무조건 처리
 	return true;
 }
 
-bool HttpDefaultInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
+bool HttpDefaultInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &request,
+        const std::shared_ptr<HttpResponse> &response)
 {
 	// request body를 처리하기 위해 메모리를 미리 할당해놓음
 
@@ -60,7 +66,9 @@ bool HttpDefaultInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &r
 	return true;
 }
 
-bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data)
+bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request,
+        const std::shared_ptr<HttpResponse> &response,
+        const std::shared_ptr<const ov::Data> &data)
 {
 	const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
 	ssize_t current_length = (request_body != nullptr) ? request_body->GetLength() : 0L;
@@ -119,7 +127,7 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 
 				response->SetStatusCode(HttpStatusCode::OK);
 
-				if(std::regex_match(request->GetRequestTarget().CStr(), request_info.pattern))
+				if(!request_info.is_pattern_check || std::regex_match(request->GetRequestTarget().CStr(), request_info.pattern))
 				{
 					// 일단 패턴에 일치하는 handler 찾음
 					regex_found = true;
@@ -168,12 +176,15 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 	return false;
 }
 
-void HttpDefaultInterceptor::OnHttpError(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, HttpStatusCode status_code)
+void HttpDefaultInterceptor::OnHttpError(const std::shared_ptr<HttpRequest> &request,
+        const std::shared_ptr<HttpResponse> &response,
+        HttpStatusCode status_code)
 {
 	response->SetStatusCode(status_code);
 }
 
-void HttpDefaultInterceptor::OnHttpClosed(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
+void HttpDefaultInterceptor::OnHttpClosed(const std::shared_ptr<HttpRequest> &request,
+        const std::shared_ptr<HttpResponse> &response)
 {
 	// 아무 처리 하지 않아도 됨
 }

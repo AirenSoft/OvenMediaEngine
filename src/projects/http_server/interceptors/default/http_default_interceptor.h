@@ -22,7 +22,10 @@ public:
 
 	// ECMAScript regex (http://www.cplusplus.com/reference/regex/ECMAScript)
 	// method + pattern을 처리하는 handler 등록
-	bool Register(HttpMethod method, const ov::String &pattern, const HttpRequestHandler &handler);
+	bool Register(HttpMethod method, 
+			const ov::String &pattern, 
+			const HttpRequestHandler &handler, 
+			bool is_pattern_check = true);
 
 	//--------------------------------------------------------------------
 	// Implementation of HttpRequestInterceptorInterface
@@ -40,6 +43,7 @@ protected:
 		ov::String pattern_string;
 #endif // DEBUG
 		std::regex pattern;
+		bool is_pattern_check;
 		HttpMethod method;
 		HttpRequestHandler handler;
 	};

@@ -13,7 +13,7 @@
 #include <iomanip>
 #include <array>
 #include <algorithm>
-#include <base/ovlibrary/ovlibrary.h>
+#include "../base/ovlibrary/ovlibrary.h"
 
 #define OV_LOG_TAG                  "SegmentStream"
 #define HLS_MAX_TEMP_VIDEO_DATA_COUNT        (500)

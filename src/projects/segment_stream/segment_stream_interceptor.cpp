@@ -65,7 +65,10 @@ bool SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &re
     std::shared_ptr<std::thread> thread( new std::thread(
             [this, request, response, data, thread_checker]()
             {
-                HttpDefaultInterceptor::OnHttpData(request, response, data);
+               if(!HttpDefaultInterceptor::OnHttpData(request, response, data))
+                {
+                    // TODO : disconnect
+                }
 
                 thread_checker->is_closed = true;
             }

@@ -577,4 +577,9 @@ namespace ov
 
 		return true;
 	}
+
+    void Tls::Release()
+    {
+        _callback = TlsCallback();
+    }
 };

@@ -10,7 +10,7 @@
 #include "segment_stream_server.h"
 #include "segment_stream_interceptor.h"
 #include <sstream>
-
+#include <regex>
 
 #define OV_LOG_TAG "SegmentStream"
 
@@ -42,13 +42,10 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address, const std::sha
 
     auto segment_stream_interceptor = std::make_shared<SegmentStreamInterceptor>();
 
-    // 정규식 설정  app_name/stream_name/file_name.ext?param=value
-    ov::String regular_expression = "(([^ #?]*)/([^ #?]*)/)?([^ #?]*)[.](m3u8|mpd|ts|m4s|xml)[?]?([^ #]*)#?([^ ]*)?";
-
     auto process_func = std::bind(&SegmentStreamServer::ProcessRequest, this, std::placeholders::_1,
                                   std::placeholders::_2);
 
-    segment_stream_interceptor->Register(HttpMethod::Get, regular_expression, process_func);
+    segment_stream_interceptor->Register(HttpMethod::Get, "", process_func, false);
 
     _http_server->AddInterceptor(segment_stream_interceptor);
 
@@ -233,11 +230,24 @@ bool SegmentStreamServer::RequestUrlParsing(const ov::String &request_url,
 
 //====================================================================================================
 // ProcessRequest
+// - thread call processing
 //====================================================================================================
 void SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &request,
                                          const std::shared_ptr<HttpResponse> &response)
 {
-    ov::String request_url = request->GetRequestTarget();
+    ProcessRequestUrl(request, response, request->GetRequestTarget());
+
+    response->Response();
+    _http_server->Disconnect(request->GetRemote());
+}
+
+//====================================================================================================
+// ProcessRequest URL
+//====================================================================================================
+void SegmentStreamServer::ProcessRequestUrl(const std::shared_ptr<HttpRequest> &request,
+                          const std::shared_ptr<HttpResponse> &response,
+                          const ov::String &request_url)
+{
     ov::String stream_name;
     ov::String app_name;
     ov::String file_name;
@@ -250,9 +260,10 @@ void SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &req
         return;
     }
 
-    // URL 파싱
+    // URL parsing
     // app/strem/file.ext 기준
-    if (!RequestUrlParsing(request_url, app_name, stream_name, file_name, file_ext)) {
+    if (!RequestUrlParsing(request_url, app_name, stream_name, file_name, file_ext))
+    {
         logtd("Request URL Parsing Fail : %s", request_url.CStr());
         response->SetStatusCode(HttpStatusCode::NotFound);
         return;
@@ -265,10 +276,12 @@ void SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &req
     else if (file_ext == "ts" || file_ext == "m3u8")
         protocol_flag = ProtocolFlag::HLS;
 
-    // CORS 확인
-    if (request->IsHeaderExists("Origin")) {
+    // CORS check
+    if (request->IsHeaderExists("Origin"))
+    {
         if (!CorsCheck(app_name, stream_name, file_name, protocol_flag, request, response))
         {
+            response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
             return;
         }
     }
@@ -286,9 +299,6 @@ void SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &req
     {
         response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
     }
-
-	response->Response();
-	_http_server->Disconnect(request->GetRemote());
 }
 
 //====================================================================================================
@@ -324,7 +334,6 @@ bool SegmentStreamServer::CorsCheck(ov::String &app_name,
         {
             logtd("Cors Check Fail : %s/%s/%s - %s", app_name.CStr(), stream_name.CStr(), file_name.CStr(),
                   origin_url.CStr());
-            response->SetStatusCode(HttpStatusCode::NotFound);// Error 응답
             return false;
         }
 
@@ -379,11 +388,6 @@ void SegmentStreamServer::PlayListRequest(ov::String &app_name,
     // logtd("PlayList Append : %s/%s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), file_name.CStr(), play_list.GetLength());
     response->AppendString(play_list);
 
-    if (!response->Response())
-    {
-        logte("PlayList Response Fail  : %s/%s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), file_name.CStr(),
-              play_list.GetLength());
-    }
 }
 
 //====================================================================================================
@@ -426,13 +430,6 @@ void SegmentStreamServer::SegmentRequest(ov::String &app_name,
 
     // logtd("SegmentData Append : %s/%s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), file_name.CStr(), segment_data->GetLength());
     response->AppendData(segment_data);
-
-    if (!response->Response())
-    {
-        logte("Segment Response Fail  : %s/%s/%s  - Size(%d)", app_name.CStr(), stream_name.CStr(), file_name.CStr(),
-              segment_data->GetLength());
-    }
-
 }
 
 //====================================================================================================
@@ -445,12 +442,8 @@ void SegmentStreamServer::CrossdomainRequest(const std::shared_ptr<HttpRequest> 
     // header setting
     response->SetHeader("Content-Type", "text/x-cross-domain-policy");
 
+    // data setting
     response->AppendString(_cross_domain_xml);
-
-    if (!response->Response())
-    {
-        logte("PlayList Response Fail");
-    }
 }
 
 //====================================================================================================

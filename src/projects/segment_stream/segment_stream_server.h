@@ -64,6 +64,9 @@ protected:
                            ov::String &file_ext);
 
     void ProcessRequest(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
+    void ProcessRequestUrl(const std::shared_ptr<HttpRequest> &request,
+                            const std::shared_ptr<HttpResponse> &response,
+                            const ov::String &request_url);
 
     bool CorsCheck(ov::String &app_name,
                    ov::String &stream_name,

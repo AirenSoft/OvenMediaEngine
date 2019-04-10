@@ -85,7 +85,9 @@ void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, cons
 
 	if(client == nullptr)
 	{
-		OV_ASSERT2(false);
+		// client possible nullptr in thread 
+		//OV_ASSERT2(false);
+		logtw("http client is nullptr");
 		return;
 	}
 
