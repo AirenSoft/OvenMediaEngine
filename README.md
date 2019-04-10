@@ -327,7 +327,7 @@ Please refer to the following source code to create an HTML page that is linked 
 
 <!-- OvenPlayer will be added this area. -->
 <div id="player_id"></div>
-    
+
 <script>
     // Initialize OvenPlayer.
     var player = OvenPlayer.create("player_id", {
@@ -345,6 +345,49 @@ Please note that the WebRTC Signaling URL in the sample code above is similar to
     - `<Stream name>`: This is the name to distinguish the live stream. OvenMediaEngine uses the `_o` suffix to distinguish it from the output of `<Stream name>` in the encoder.
 
 For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC Signaling URL will be `ws://192.168.0.1:3333/app/stream_o`.
+
+### The following screen capture shows common settings for OME.###
+
+***conf - Server.xml***
+```
+<Server version="1">
+	<Name>OvenMediaEngine</Name>
+	<Hosts>
+		<Host>
+			<Name>default</Name>
+			<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
+			<IP>*</IP>
+			<Applications>
+				<Application>
+					<Name>app</Name>
+					<Type>live</Type>
+					<!-- under construction -->
+...
+```
+
+***OBS - Stream***
+![OBS - Stream](./image/obs_stream.png)
+
+***OBS - Output***
+- It is strongly recommended that the CPU, Profile, and Tune sections of the OBS configuration be as follows.
+![OBS - Output](./image/obs_output.png)
+
+***Javascript***
+```
+<script>
+    var webrtcSources = OvenPlayer.generateWebrtcUrls([
+		{
+            host : 'ws://192.168.0.225:3333',
+            application : 'app',
+            stream : "stream_o",
+            label : "local"
+    }
+    ]);
+    var player = OvenPlayer.create("player_id", {
+        sources: webrtcSources,
+    });
+</script>
+```
 
 ## How to Contribute
 Please read [Guidelines](CONTRIBUTING.md) and our [Rules](CODE_OF_CONDUCT.md).
