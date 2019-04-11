@@ -363,7 +363,7 @@ For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC
 					<!-- under construction -->
 ...
 ```
-#### Test to OME with OBS
+#### Testing OME with OBS
 OvenMediaEngine supports RTMP input used by an encoder such as OBS or XSplit.
 If you use OBS, please follow our instructions to test Ultra-low latency streaming.
 However, this server for testing has installed in Seoul, Korea.
