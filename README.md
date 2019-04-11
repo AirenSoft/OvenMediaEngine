@@ -314,7 +314,7 @@ Here's what each item means:
 After you enter the above RTMP URL into the encoder and start publishing, you will have an environment in which the player can view the live stream.
 
 #### Player
-The live stream being published can be played on the latest browsers that support WebRTC, such as Chrome, Safari, Firefox, Opera, and Edge. When playing over WebRTC, you need a special step called Signaling. These steps are processed automatically so you can easily make it work together if you are using '[OvenPlayer](https://github.com/AirenSoft/OvenPlayer)', which implements OvenMediaEngine's Signaling specification.
+The live stream being published can be played on the latest browsers that support WebRTC, such as Chrome. When playing over WebRTC, you need a special step called Signaling. These steps are processed automatically so you can easily make it work together if you are using '[OvenPlayer](https://github.com/AirenSoft/OvenPlayer)', which implements OvenMediaEngine's Signaling specification.
 Please refer to the following source code to create an HTML page that is linked with [OvenPlayer] (https://github.com/AirenSoft/OvenPlayer). When you open this HTML page in your browser, the live stream you are publishing will play. (For more information on how to work with [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), please refer to [OvenPlayer Quick Start](https://github.com/AirenSoft/OvenPlayer#quick-start).)
 
 
@@ -363,29 +363,11 @@ For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC
 					<!-- under construction -->
 ...
 ```
-#### Testing OME with OBS
-OvenMediaEngine supports RTMP input used by an encoder such as OBS or XSplit.
-If you use OBS, please follow our instructions to test Ultra-low latency streaming.
-However, this server for testing has installed in Seoul, Korea.
-```
-URL: rtmp://dev2.airensoft.com/app
-Stream Key: stream
-```
-
-1. Download "OBS Studio" at official website (https://obsproject.com/).
-2. Install OBS on your PC and launch it.
-3. Click "File" in the top menu and then "Settings," or press "Settings" on the bottom-right.
-4. Select the "Stream" tab and the following below:
-    - Stream Type: Custom Streaming Server
-    - URL: rtmp://dev2.airensoft.com/app
-    - Stream key: stream
-5. Go to the "Output" tab and set the following below because this setup was most compatible in our testing result:
-    - Output Mode: Advanced
-    - Profile: baseline
-    - Tune: zerolatency
-6. Click the "OK" button to complete the settings.
-7. Press the "Start Streaming" button on the lower-right to broadcast, and done.
-
+#### OBS - Stream
+![OBS - Stream](./image/obs_stream.png)
+#### OBS - Output
+- It is strongly recommended that the CPU, Profile, and Tune sections of the OBS configuration be as follows.
+![OBS - Output](./image/obs_output.png)
 #### Javascript
 ```
 <script>
