@@ -373,19 +373,19 @@ Stream Key: stream
 ```
 
   - How to test OME.
-  	# Download "OBS Studio" at official website (https://obsproject.com/).
-	# Install OBS on your PC and launch it.
-	# Click "File" in the top menu and then "Settings," or press "Settings" on the bottom-right.
-	# Select the "Stream" tab and the following below:
+  	  1. Download "OBS Studio" at official website (https://obsproject.com/).
+	  2. Install OBS on your PC and launch it.
+	  3. Click "File" in the top menu and then "Settings," or press "Settings" on the bottom-right.
+	  4. Select the "Stream" tab and the following below:
 		  - Stream Type: Custom Streaming Server
 		  - URL: rtmp://dev2.airensoft.com/app
 		  - Stream key: stream
-	# Go to the "Output" tab and set the following below because this setup was most compatible in our testing result:
+	  5. Go to the "Output" tab and set the following below because this setup was most compatible in our testing result:
 		  - Output Mode: Advanced
 		  - Profile: baseline
 		  - Tune: zerolatency
-	# Click the "OK" button to complete the settings.
-	# Press the "Start Streaming" button on the lower-right to broadcast, and done.
+	  6. Click the "OK" button to complete the settings.
+	  7. Press the "Start Streaming" button on the lower-right to broadcast, and done.
 
 #### Javascript
 ```
