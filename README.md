@@ -367,22 +367,23 @@ For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC
 OvenMediaEngine supports RTMP input used by an encoder such as OBS or XSplit.
 If you use OBS, please follow our instructions to test Ultra-low latency streaming.
 However, this server for testing has installed in Seoul, Korea.
-
+```
   - URL: rtmp://dev2.airensoft.com/app
   - Stream Key: stream
-  
+```
+
   - How to test OME.
   	1. Download "OBS Studio" at official website (https://obsproject.com/).
 	2. Install OBS on your PC and launch it.
 	3. Click "File" in the top menu and then "Settings," or press "Settings" on the bottom-right.
 	4. Select the "Stream" tab and the following below:
-		- Stream Type: Custom Streaming Server
-		- URL: rtmp://dev2.airensoft.com/app
-		- Stream key: stream
+		 - Stream Type: Custom Streaming Server
+		 - URL: rtmp://dev2.airensoft.com/app
+		 - Stream key: stream
 	5. Go to the "Output" tab and set the following below because this setup was most compatible in our testing result:
-		- Output Mode: Advanced
-		- Profile: baseline
-		- Tune: zerolatency
+		 - Output Mode: Advanced
+		 - Profile: baseline
+		 - Tune: zerolatency
 	6. Click the "OK" button to complete the settings.
 	7. Press the "Start Streaming" button on the lower-right to broadcast, and done.
 
