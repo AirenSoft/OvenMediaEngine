@@ -346,9 +346,8 @@ Please note that the WebRTC Signaling URL in the sample code above is similar to
 
 For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC Signaling URL will be `ws://192.168.0.1:3333/app/stream_o`.
 
-### The following screen capture shows common settings for OME.###
-
-***conf - Server.xml***
+### The following screen capture shows common settings for OME.
+#### conf - Server.xml
 ```
 <Server version="1">
 	<Name>OvenMediaEngine</Name>
@@ -364,15 +363,12 @@ For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC
 					<!-- under construction -->
 ...
 ```
-
-***OBS - Stream***
+#### OBS - Stream
 ![OBS - Stream](./image/obs_stream.png)
-
-***OBS - Output***
+#### OBS - Output
 - It is strongly recommended that the CPU, Profile, and Tune sections of the OBS configuration be as follows.
 ![OBS - Output](./image/obs_output.png)
-
-***Javascript***
+#### Javascript
 ```
 <script>
     var webrtcSources = OvenPlayer.generateWebrtcUrls([
