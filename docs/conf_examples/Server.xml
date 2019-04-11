@@ -62,6 +62,7 @@
 					<Publishers>
 						<ThreadCount>2</ThreadCount>
 						<RTMP />
+						<!--
 						<HLS>
 							<Port>8080</Port>
 							<SegmentDuration>5</SegmentDuration>
@@ -79,6 +80,7 @@
 								<Url>https://www.airensoft.com</Url>
 							</CORS>
 						</DASH>
+						-->
 						<WebRTC>
 							<!-- ICE Candidate IP/Port -->
 							<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
