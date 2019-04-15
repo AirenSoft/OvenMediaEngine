@@ -42,6 +42,11 @@ public:
 		return _is_tls_accepted;
 	}
 
+    void SetTlsWriteToResponse(bool tls_write_to_response)
+    {
+        _tls_write_to_response = tls_write_to_response;
+    }
+
 protected:
 	//--------------------------------------------------------------------
 	// APIs which is related to TLS
@@ -62,6 +67,7 @@ protected:
 	std::shared_ptr<HttpRequest> _request = nullptr;
 	std::shared_ptr<HttpResponse> _response = nullptr;
 
-	std::shared_ptr<const ov::Data> _tls_data = nullptr;
-	bool _is_tls_accepted = false;
+	std::shared_ptr<const ov::Data> _tls_read_data = nullptr;
+  	bool _is_tls_accepted = false;
+  	bool _tls_write_to_response = false;
 };

@@ -11,24 +11,25 @@
 
 #define OV_LOG_TAG "SegmentStream"
 
+
+
+SegmentStreamInterceptor::SegmentStreamInterceptor(int thread_count, const SegmentProcessHandler &process_handler)
+{
+    _worker_manager.Start(thread_count, process_handler);
+}
+
 SegmentStreamInterceptor::~SegmentStreamInterceptor()
 {
-    auto it = _thread_checkers.begin();
-    while(it != _thread_checkers.end())
-    {
-        if((*it)->thread->joinable())
-            (*it)->thread->join();
-    }
-
-    _thread_checkers.clear();
+    _worker_manager.Stop();
 }
 
 //====================================================================================================
 // IsInterceptorForRequest
 //====================================================================================================
-bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request, const std::shared_ptr<const HttpResponse> &response)
+bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request,
+        const std::shared_ptr<const HttpResponse> &response)
 {
-	logtd("Request Target : %s", request->GetRequestTarget().CStr());
+	// logtd("Request Target : %s", request->GetRequestTarget().CStr());
 
 	// Get Method 1.1 이상 체크
 	if((request->GetMethod() != HttpMethod::Get) || (request->GetHttpVersionAsNumber() <= 1.0))
@@ -39,44 +40,47 @@ bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<con
 	return true;
 }
 
-bool SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data)
+//====================================================================================================
+// OnHttpData
+// - (add thread) --> (SegmentStreamServer::ProcessRequest) function call
+//====================================================================================================
+bool SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request,
+                                        const std::shared_ptr<HttpResponse> &response,
+                                        const std::shared_ptr<const ov::Data> &data)
 {
-    //temp
-    // thread end check
-   //logtd("Begin thread begin(%d)", _thread_checkers.size());
-    auto it = _thread_checkers.begin();
-    while(it != _thread_checkers.end())
-    {
-        if((*it)->is_closed)
-        {
-            if((*it)->thread->joinable())
-                (*it)->thread->join();
+    const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
+    ssize_t current_length = (request_body != nullptr) ? request_body->GetLength() : 0L;
+    ssize_t content_length = request->GetContentLength();
 
-            _thread_checkers.erase(it++);
+    std::shared_ptr<const ov::Data> process_data;
+    if((content_length > 0) && ((current_length + data->GetLength()) > content_length))
+    {
+        if(content_length > current_length)
+        {
+            process_data = data->Subdata(0L, static_cast<size_t>(content_length - current_length));
         }
         else
-            ++it;
+        {
+            return false;
+        }
     }
-    //logtd("After thread check(%d)", _thread_checkers.size());
+    else
+    {
+        process_data = data;
+    }
 
-     auto thread_checker = std::make_shared<ThreadChecker>();
+    if(process_data != nullptr)
+    {
+        request_body->Append(process_data.get());
 
-    // create thread
-    std::shared_ptr<std::thread> thread( new std::thread(
-            [this, request, response, data, thread_checker]()
-            {
-               if(!HttpDefaultInterceptor::OnHttpData(request, response, data))
-                {
-                    // TODO : disconnect
-                }
+        if(request_body->GetLength() == content_length)
+        {
+            response->SetStatusCode(HttpStatusCode::OK);
+            _worker_manager.AddWork(request, response);
+        }
 
-                thread_checker->is_closed = true;
-            }
-    ));
-    thread_checker->thread = thread;
+        return true;
+    }
 
-    // insert
-    _thread_checkers.push_back(thread_checker);
-
-	return true;
+    return false;
 }

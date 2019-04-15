@@ -29,7 +29,7 @@ public:
 	HttpServer() = default;
 	~HttpServer() override;
 
-	virtual bool Start(const ov::SocketAddress &address);
+	virtual bool Start(const ov::SocketAddress &address, int sned_buffer_size = 0, int recv_buffer_size = 0);
 	virtual bool Stop();
 
 	bool AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor);

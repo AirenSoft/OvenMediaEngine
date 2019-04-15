@@ -17,6 +17,10 @@ public:
 	void SetLocalCertificate(const std::shared_ptr<Certificate> &certificate);
 	void SetChainCertificate(const std::shared_ptr<Certificate> &certificate);
 
+	void SetTlsWriteToResponse(bool tls_write_to_response)
+    {
+        _tls_write_to_response = tls_write_to_response;
+    }
 protected:
 	//--------------------------------------------------------------------
 	// Implementation of PhysicalPortObserver
@@ -27,4 +31,5 @@ protected:
 protected:
 	std::shared_ptr<Certificate> _local_certificate = nullptr;
 	std::shared_ptr<Certificate> _chain_certificate = nullptr;
+	bool _tls_write_to_response = false;
 };

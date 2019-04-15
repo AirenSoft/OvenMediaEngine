@@ -20,7 +20,11 @@ public:
 
 	virtual ~PhysicalPortManager();
 
-	std::shared_ptr<PhysicalPort> CreatePort(ov::SocketType type, const ov::SocketAddress &address);
+	std::shared_ptr<PhysicalPort> CreatePort(ov::SocketType type,
+	                                        const ov::SocketAddress &address,
+	                                        int sned_buffer_size = 0,
+	                                        int recv_buffer_size = 0);
+
 	bool DeletePort(std::shared_ptr<PhysicalPort> &port);
 
 protected:

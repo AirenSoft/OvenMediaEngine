@@ -242,6 +242,7 @@ namespace ov
 		// 데이터 송신
 		virtual ssize_t Send(const void *data, size_t length);
 		virtual ssize_t Send(const std::shared_ptr<const Data> &data);
+        virtual ssize_t Send(const void *data, size_t length, bool &is_retry);
 
 		virtual ssize_t SendTo(const ov::SocketAddress &address, const void *data, size_t length);
 		virtual ssize_t SendTo(const ov::SocketAddress &address, const std::shared_ptr<const Data> &data);

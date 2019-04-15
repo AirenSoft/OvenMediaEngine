@@ -36,7 +36,12 @@ public :
     ~SegmentStreamServer() = default;
 
 public :
-    bool Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate = nullptr);
+    bool Start(const ov::SocketAddress &address,
+              int thread_count,
+              int max_retry_count,
+              int send_buffer_size,
+              int recv_buffer_size,
+              const std::shared_ptr<Certificate> &certificate = nullptr);
 
     bool Stop();
 
@@ -63,7 +68,11 @@ protected:
                            ov::String &file_name,
                            ov::String &file_ext);
 
-    void ProcessRequest(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
+    bool ProcessRequest(const std::shared_ptr<HttpRequest> &request,
+                        const std::shared_ptr<HttpResponse> &response,
+                        int retry_count,
+                        bool &is_retry);
+
     void ProcessRequestUrl(const std::shared_ptr<HttpRequest> &request,
                             const std::shared_ptr<HttpResponse> &response,
                             const ov::String &request_url);
@@ -98,4 +107,6 @@ protected :
     std::map<ov::String, int> _cors_urls;       // key : url  value : flag(hls/dash allow flag)
     std::map<ov::String, int> _cross_domains;   // key : url  value : flag(hls/dash allow flag)
     ov::String _cross_domain_xml;
+
+    int _max_retry_count = 3;
 };

@@ -24,7 +24,10 @@ public:
 	PhysicalPort();
 	virtual ~PhysicalPort();
 
-	bool Create(ov::SocketType type, const ov::SocketAddress &address);
+	bool Create(ov::SocketType type,
+                const ov::SocketAddress &address,
+                int send_buffer_size = 0,
+                int recv_buffer_size = 0);
 
 	bool Close();
 
@@ -47,7 +50,11 @@ public:
 	bool DisconnectClient(ov::ClientSocket *client_socket);
 
 protected:
-	bool CreateServerSocket(ov::SocketType type, const ov::SocketAddress &address);
+	bool CreateServerSocket(ov::SocketType type,
+	                        const ov::SocketAddress &address,
+	                        int send_buffer_size,
+                            int recv_buffer_size);
+
 	bool CreateDatagramSocket(ov::SocketType type, const ov::SocketAddress &address);
 
 	std::shared_ptr<PhysicalPort> _self;

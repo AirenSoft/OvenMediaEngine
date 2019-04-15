@@ -45,6 +45,8 @@ public:
 	bool AppendData(const std::shared_ptr<const ov::Data> &data);
 	bool AppendString(const ov::String &string);
 	bool AppendFile(const ov::String &filename);
+    bool AppendTlsData(const void *data, size_t length); // HttpClient Call
+
 
 	template<typename T>
 	bool Send(const T *data)
@@ -54,8 +56,10 @@ public:
 
 	bool Send(const void *data, size_t length);
 	bool Send(const std::shared_ptr<const ov::Data> &data);
+    ssize_t Send(const void *data, size_t length, bool &is_retry);
 
 	bool Response();
+    ssize_t Response(bool &is_retry);
 
 	std::shared_ptr<ov::ClientSocket> GetRemote()
 	{
@@ -99,6 +103,9 @@ protected:
 	bool SendHeaderIfNeeded();
 	bool SendResponse();
 
+
+	bool MakeResponseData();
+
 	HttpRequest *_request = nullptr;
 	std::shared_ptr<ov::ClientSocket> _remote = nullptr;
 
@@ -115,4 +122,11 @@ protected:
 	std::vector<std::shared_ptr<const ov::Data>> _response_data_list;
 
 	ov::String _default_value = "";
+
+
+    std::shared_ptr<ov::Data> _http_response_data = nullptr; // header + body
+    std::shared_ptr<ov::Data> _http_tls_response_data = nullptr; // (header + body)tls encoded
+    bool _is_tls_write_save = false;
+
+
 };

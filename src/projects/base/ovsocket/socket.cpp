@@ -901,10 +901,11 @@ namespace ov
 		return _socket.GetType();
 	}
 
-	ssize_t Socket::Send(const void *data, size_t length)
+	ssize_t Socket::Send(const void *data, size_t length, bool &is_retry)
 	{
 		// TODO: 별도 send queue를 만들어야 함
 		//OV_ASSERT2(_socket.IsValid());
+        is_retry = false;
 
 		logtd("[%p] [#%d] Trying to send data %zu bytes...", this, _socket.GetSocket(), length);
 		logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, length, 64).CStr());
@@ -912,6 +913,7 @@ namespace ov
 		auto data_to_send = static_cast<const uint8_t *>(data);
 		size_t remained = length;
 		size_t total_sent = 0L;
+        int retry_count = 0;
 
 		switch(GetType())
 		{
@@ -932,7 +934,8 @@ namespace ov
 							FD_SET(sock, &write_fds);
 
 							timeval tv {};
-							tv.tv_sec = 1;
+							tv.tv_sec = 0;
+                            tv.tv_usec = 200000;
 
 							int select_result = select(sock + 1, nullptr, &write_fds, nullptr, &tv);
 
@@ -943,6 +946,12 @@ namespace ov
 							else if(select_result == 0)
 							{
 								// timed out
+                                retry_count++;
+                                if(retry_count > 5)
+                                {
+                                    is_retry = true;
+                                    break;
+                                }
 							}
 							else
 							{
@@ -1020,12 +1029,21 @@ namespace ov
 		return total_sent;
 	}
 
-	ssize_t Socket::Send(const std::shared_ptr<const Data> &data)
+	ssize_t Socket::Send(const void *data, size_t length)
 	{
 		OV_ASSERT2(data != nullptr);
 
-		return Send(data->GetData(), data->GetLength());
+		bool is_retry = false;
+		return Send(data, length, is_retry);
 	}
+
+    ssize_t Socket::Send(const std::shared_ptr<const Data> &data)
+    {
+        OV_ASSERT2(data != nullptr);
+
+        bool is_retry = false;
+        return Send(data->GetData(), data->GetLength(), is_retry);
+    }
 
 	ssize_t Socket::SendTo(const ov::SocketAddress &address, const void *data, size_t length)
 	{

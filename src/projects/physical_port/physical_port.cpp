@@ -26,7 +26,10 @@ PhysicalPort::~PhysicalPort()
 	OV_ASSERT2(_observer_list.empty());
 }
 
-bool PhysicalPort::Create(ov::SocketType type, const ov::SocketAddress &address)
+bool PhysicalPort::Create(ov::SocketType type,
+                          const ov::SocketAddress &address,
+                          int send_buffer_size,
+                          int recv_buffer_size)
 {
 	OV_ASSERT2((_server_socket == nullptr) && (_datagram_socket == nullptr));
 
@@ -37,7 +40,7 @@ bool PhysicalPort::Create(ov::SocketType type, const ov::SocketAddress &address)
 		case ov::SocketType::Srt:
 		case ov::SocketType::Tcp:
 		{
-			return CreateServerSocket(type, address);
+			return CreateServerSocket(type, address, send_buffer_size, recv_buffer_size);
 		}
 
 		case ov::SocketType::Udp:
@@ -49,11 +52,14 @@ bool PhysicalPort::Create(ov::SocketType type, const ov::SocketAddress &address)
 	return false;
 }
 
-bool PhysicalPort::CreateServerSocket(ov::SocketType type, const ov::SocketAddress &address)
+bool PhysicalPort::CreateServerSocket(ov::SocketType type,
+                                      const ov::SocketAddress &address,
+                                      int send_buffer_size,
+                                      int recv_buffer_size)
 {
 	auto socket = std::make_shared<ov::ServerSocket>();
 
-	if(socket->Prepare(type, address))
+	if(socket->Prepare(type, address, send_buffer_size, recv_buffer_size))
 	{
 		_type = type;
 		_server_socket = socket;

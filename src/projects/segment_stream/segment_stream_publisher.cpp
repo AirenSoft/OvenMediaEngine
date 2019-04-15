@@ -97,8 +97,14 @@ bool SegmentStreamPublisher::Start()
                                          hls_publisher_info->GetTls().GetKeyPath());
         }
 
-        // Start
-        segment_stream_server->Start(ov::SocketAddress(dash_publisher_info->GetPort()), certificate);
+        // DASH + HLS Server Start
+        segment_stream_server->Start(ov::SocketAddress(dash_publisher_info->GetPort()),
+                                     dash_publisher_info->GetThreadCount(),
+                                     dash_publisher_info->GetSegmentDuration()*1.5,
+                                     dash_publisher_info->GetSendBufferSize(),
+                                     dash_publisher_info->GetRecvBufferSize(),
+                                     certificate);
+
         _segment_stream_servers.push_back(segment_stream_server);
     }
     else
@@ -112,8 +118,12 @@ bool SegmentStreamPublisher::Start()
         dash_segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH);
         dash_segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());
 
-        // Start
+        // Dash Server Start
         dash_segment_stream_server->Start(ov::SocketAddress(dash_publisher_info->GetPort()),
+                                          dash_publisher_info->GetThreadCount(),
+                                          dash_publisher_info->GetSegmentDuration()*1.5,
+                                          dash_publisher_info->GetSendBufferSize(),
+                                          dash_publisher_info->GetRecvBufferSize(),
                                           GetCertificate(dash_publisher_info->GetTls().GetCertPath(),
                                                          dash_publisher_info->GetTls().GetKeyPath()));
 
@@ -128,10 +138,15 @@ bool SegmentStreamPublisher::Start()
         hls_segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);
         hls_segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());
 
-        // Start
+        // HLS Server Start
         hls_segment_stream_server->Start(ov::SocketAddress(hls_publisher_info->GetPort()),
+                                         hls_publisher_info->GetThreadCount(),
+                                         hls_publisher_info->GetSegmentDuration()*1.5,
+                                         hls_publisher_info->GetSendBufferSize(),
+                                         hls_publisher_info->GetRecvBufferSize(),
                                          GetCertificate(hls_publisher_info->GetTls().GetCertPath(),
                                                         hls_publisher_info->GetTls().GetKeyPath()));
+
         _segment_stream_servers.push_back(hls_segment_stream_server);
 
     }

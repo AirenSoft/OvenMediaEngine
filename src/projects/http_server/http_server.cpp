@@ -17,7 +17,7 @@ HttpServer::~HttpServer()
 	OV_ASSERT2(_physical_port == nullptr);
 }
 
-bool HttpServer::Start(const ov::SocketAddress &address)
+bool HttpServer::Start(const ov::SocketAddress &address, int sned_buffer_size, int recv_buffer_size)
 {
 	if(_physical_port != nullptr)
 	{
@@ -25,7 +25,10 @@ bool HttpServer::Start(const ov::SocketAddress &address)
 		return false;
 	}
 
-	_physical_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Tcp, address);
+	_physical_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Tcp,
+                                                                address,
+                                                                sned_buffer_size,
+                                                                recv_buffer_size);
 
 	if(_physical_port != nullptr)
 	{

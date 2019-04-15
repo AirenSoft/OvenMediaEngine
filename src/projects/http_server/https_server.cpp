@@ -77,6 +77,7 @@ void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	}
 
 	client->SetTls(tls);
+    client->SetTlsWriteToResponse(_tls_write_to_response);
 }
 
 void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
@@ -94,10 +95,10 @@ void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, cons
 	// Need to decrypt using TLS
 
 	// * Data flow:
-	//   1. HttpClient::SetTlsData() -> // save data to HttpClient::_tls_data
+	//   1. HttpClient::SetTlsData() -> // save data to HttpClient::_tls_read_data
 	//   2. ov::Tls::Read() ->
 	//   3. SSL_read() ->
-	//   4. HttpClient::TlsRead() -> // read data from HttpClient::_tls_data
+	//   4. HttpClient::TlsRead() -> // read data from HttpClient::_tls_read_data
 	//   5. (ov::Tls::Read returns decrypted data)
 	logtd("Trying to set data for TLS\n%s", data->Dump(32).CStr());
 	client->SetTlsData(data);

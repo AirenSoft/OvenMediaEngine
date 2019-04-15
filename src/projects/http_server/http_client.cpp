@@ -45,39 +45,45 @@ std::shared_ptr<const ov::Tls> HttpClient::GetTls() const
 
 void HttpClient::SetTlsData(const std::shared_ptr<const ov::Data> &data)
 {
-	OV_ASSERT2(_tls_data == nullptr);
+	OV_ASSERT2(_tls_read_data == nullptr);
 
-	_tls_data = data;
+    _tls_read_data = data;
 }
 
 ssize_t HttpClient::TlsRead(ov::Tls *tls, void *buffer, size_t length)
 {
-	if(_tls_data == nullptr)
+	if(_tls_read_data == nullptr)
 	{
 		return 0;
 	}
 
-	const void *data = _tls_data->GetData();
-	size_t bytes_to_copy = std::min(length, _tls_data->GetLength());
+	const void *data = _tls_read_data->GetData();
+	size_t bytes_to_copy = std::min(length, _tls_read_data->GetLength());
 
 	::memcpy(buffer, data, bytes_to_copy);
 
-	if(_tls_data->GetLength() > bytes_to_copy)
+	if(_tls_read_data->GetLength() > bytes_to_copy)
 	{
 		// Data is remained
-		_tls_data = _tls_data->Subdata(bytes_to_copy);
+        _tls_read_data = _tls_read_data->Subdata(bytes_to_copy);
 	}
 	else
 	{
-		_tls_data = nullptr;
+        _tls_read_data = nullptr;
 	}
 
 	return bytes_to_copy;
 }
 
-ssize_t HttpClient::TlsWrite(ov::Tls *tls, const void *data, size_t length)
-{
-	return _response->_remote->Send(data, length);
+ssize_t HttpClient::TlsWrite(ov::Tls *tls, const void *data, size_t length) {
+
+    if (_tls_write_to_response)
+    {
+        _response->AppendTlsData(data, length);
+        return length;
+    }
+
+    return _response->_remote->Send(data, length);
 }
 
 void HttpClient::Send(const std::shared_ptr<ov::Data> &data)

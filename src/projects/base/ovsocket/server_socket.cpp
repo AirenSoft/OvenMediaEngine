@@ -16,12 +16,20 @@ namespace ov
 	{
 	}
 
-	bool ServerSocket::Prepare(SocketType type, uint16_t port, int backlog)
+	bool ServerSocket::Prepare(SocketType type,
+                                uint16_t port,
+                                int send_buffer_size,
+                                int recv_buffer_size,
+                                int backlog)
 	{
-		return Prepare(type, SocketAddress(port), backlog);
+		return Prepare(type, SocketAddress(port), send_buffer_size, recv_buffer_size, backlog);
 	}
 
-	bool ServerSocket::Prepare(SocketType type, const SocketAddress &address, int backlog)
+	bool ServerSocket::Prepare(SocketType type,
+                               const SocketAddress &address,
+                               int send_buffer_size,
+                               int recv_buffer_size,
+                               int backlog)
 	{
 		CHECK_STATE(== SocketState::Closed, false);
 
@@ -31,7 +39,7 @@ namespace ov
 				MakeNonBlocking() &&
 				PrepareEpoll() &&
 				AddToEpoll(this, static_cast<void *>(this)) &&
-				SetSocketOptions(type) &&
+				SetSocketOptions(type, send_buffer_size, recv_buffer_size) &&
 				Bind(address) &&
 				Listen(backlog)
 			) == false)
@@ -275,7 +283,7 @@ namespace ov
 		return true;
 	}
 
-	bool ServerSocket::SetSocketOptions(SocketType type)
+	bool ServerSocket::SetSocketOptions(SocketType type, int send_buffer_size, int recv_buffer_size)
 	{
 		// SRT socket is already non-block mode
 		bool result = true;
@@ -283,6 +291,37 @@ namespace ov
 		if(type == SocketType::Tcp)
 		{
 			result &= SetSockOpt<int>(SO_REUSEADDR, 1);
+
+            int current_send_buffer_size;
+            int current_recv_buffer_size;
+            socklen_t data_size = sizeof(int);
+
+            ::getsockopt(_socket.GetSocket(), SOL_SOCKET, SO_SNDBUF,(void*)&current_send_buffer_size, &data_size);
+            ::getsockopt(_socket.GetSocket(), SOL_SOCKET, SO_RCVBUF,(void*)&current_recv_buffer_size, &data_size);
+
+
+            // Setting send buffer size( 0 = default)
+          	if(send_buffer_size != 0 && current_send_buffer_size < send_buffer_size)
+            {
+                // setsockopt function SO_SNDBUF/SO_RCVBUF result is (input value *2)
+                result &= SetSockOpt<int>(SO_SNDBUF, send_buffer_size/2);
+
+                ::getsockopt(_socket.GetSocket(), SOL_SOCKET, SO_SNDBUF,(void*)&current_send_buffer_size, &data_size);
+
+                logtd("TCP Server send buffer size (%u:%u)", current_send_buffer_size, send_buffer_size*2);
+            }
+
+            // Setting recv buffer size( 0 = default)
+         	if(recv_buffer_size != 0 && current_recv_buffer_size < recv_buffer_size)
+            {
+                // setsockopt function SO_SNDBUF/SO_RCVBUF result is (input value *2)
+                result &= SetSockOpt<int>(SO_RCVBUF, recv_buffer_size/2);
+
+                socklen_t data_size = sizeof(int);
+                ::getsockopt(_socket.GetSocket(), SOL_SOCKET, SO_RCVBUF,(void*)&current_recv_buffer_size, &data_size);
+
+                logtd("TCP Server recv buffer size (%u:%u)",current_recv_buffer_size, recv_buffer_size*2);
+            }
 		}
 		else
 		{

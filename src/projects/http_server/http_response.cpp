@@ -185,3 +185,119 @@ bool HttpResponse::SendResponse()
 
 	return sent;
 }
+
+// http header + body send
+// first retry check and result check
+ssize_t HttpResponse::Response(bool &is_retry)
+{
+    ssize_t sent = 0;
+
+    if (_http_response_data == nullptr)
+    {
+        if(!MakeResponseData())
+            return 0;
+    }
+
+    if(_tls == nullptr)
+        sent = Send(_http_response_data->GetData(), _http_response_data->GetLength(), is_retry);
+    else
+        sent = Send(_http_tls_response_data->GetData(), _http_tls_response_data->GetLength(), is_retry);
+
+    // sent data remove
+    if (is_retry && sent != 0)
+    {
+       if(_tls == nullptr)
+            _http_response_data = _http_response_data->Subdata(sent);
+        else
+            _http_tls_response_data = _http_tls_response_data->Subdata(sent);
+    }
+
+    return sent;
+}
+
+// http header + body data create
+bool HttpResponse::MakeResponseData()
+{
+    _http_response_data = std::make_shared<ov::Data>();
+
+    ov::ByteStream stream(_http_response_data.get());
+
+    // header
+    stream.Append(ov::String::FormatString("HTTP/1.1 %d %s\r\n", _status_code, _reason.CStr()).ToData(false));
+    std::for_each(_response_header.begin(), _response_header.end(), [&stream](const auto &pair) -> void
+    {
+        stream.Append(pair.first.ToData(false));
+        stream.Append(": ", 2);
+        stream.Append(pair.second.ToData(false));
+        stream.Append("\r\n", 2);
+    });
+    stream.Append("\r\n", 2);
+
+    // body
+    for(const auto &data : _response_data_list)
+    {
+        stream.Append(data->GetData(), data->GetLength());
+    }
+
+    // tls data
+    if(_tls != nullptr)
+    {
+        size_t written;
+
+        // Data will be sent to the client
+        //   ov::Tls::Write() -> HttpClient::TlsWriteToSave() -> HttpResponse::AppendTlsData()
+        int result = _tls->Write(_http_response_data->GetData(), _http_response_data->GetLength(), &written);
+
+        switch (result)
+        {
+            case SSL_ERROR_NONE:
+                // data was sent in HttpClient::TlsWriteToSave();
+                break;
+
+            case SSL_ERROR_WANT_WRITE:
+                // Need more data to encrypt
+                break;
+
+            default:
+                logte("An error occurred while accept client: %s", _remote->ToString().CStr());
+                return false;
+        }
+    }
+
+    return true;
+}
+
+// HttpClient::TlsWriteToSave()  Call
+bool HttpResponse::AppendTlsData(const void *data, size_t length)
+{
+    // tls handshake
+    if(_http_response_data == nullptr)
+    {
+        if(_remote == nullptr)
+            return false;
+
+        return _remote->Send(data, length) == length;
+    }
+    else
+    {
+        if(_http_tls_response_data == nullptr)
+            _http_tls_response_data = std::make_shared<ov::Data>();
+
+        _http_tls_response_data->Append(data, length);
+    }
+
+     return true;
+}
+
+ssize_t HttpResponse::Send(const void *data, size_t length, bool &is_retry)
+{
+    OV_ASSERT2(_remote != nullptr);
+
+    if(_remote == nullptr)
+    {
+        return false;
+    }
+
+    // Send the plain data to the client
+    return _remote->Send(data, length, is_retry);
+}
