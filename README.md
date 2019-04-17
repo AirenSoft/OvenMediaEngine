@@ -1,3 +1,7 @@
+---
+description: Ultra-low Latency Streaming Engine
+---
+
 # OvenMediaEngine \(OME\)
 
 ### What is OvenMediaEngine?
@@ -13,8 +17,9 @@ Our goal is to make it easier for you to build a stable real-time broadcasting s
 * Embedded WebRTC signalling server \(Websocket based server\)
 * DTLS \(Datagram Transport Layer Security\)
 * SRTP \(Secure Real-time Transport Protocol\)
+* ULPFEC \(Forward Error Correction\)
 * Clustering
-  * Origin-Edge architecture 
+  * Origin-Edge architecture
 * Configuration
 
 ### Supported Platforms
@@ -38,7 +43,13 @@ We will support the following platforms in the future:
   * Install packages
 
     ```text
-    $ sudo apt install build-essential nasm autoconf libtool zlib1g-dev libssl-dev libvpx-dev libopus-dev libsrtp2-dev pkg-config libfdk-aac-dev tclsh cmake
+    $ sudo apt install build-essential nasm autoconf libtool zlib1g-dev libssl-dev libvpx-dev libopus-dev pkg-config libfdk-aac-dev tclsh cmake
+    ```
+
+  * [libSRTP 2.2.0](https://github.com/cisco/libsrtp) [\[Download\]](https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz)
+
+    ```text
+    $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure --enable-openssl && make && sudo make install)
     ```
 
   * [OpenH264 1.8.0](https://www.openh264.org/) [\[Download\]](http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2)
@@ -73,7 +84,7 @@ We will support the following platforms in the future:
     sudo yum install gcc-c++ make nasm autoconf libtool zlib-devel openssl-devel libvpx-devel opus-devel tcl cmake
     ```
 
-  * Execute below commands and append them to ~/.bashrc using text editors 
+  * Execute below commands and append them to ~/.bashrc using text editors
 
     ```text
     $ export PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig
@@ -83,7 +94,7 @@ We will support the following platforms in the future:
   * [libSRTP 2.2.0](https://github.com/cisco/libsrtp) [\[Download\]](https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz)
 
     ```text
-    $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure && make && sudo make install)
+    $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure --enable-openssl && make && sudo make install)
     ```
 
   * [FDK-AAC](https://github.com/mstorsjo/fdk-aac) [\[Download\]](https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz)
@@ -125,7 +136,7 @@ We will support the following platforms in the future:
     $ sudo yum install devtoolset-7 bc gcc-c++ nasm autoconf libtool glibc-static zlib-devel git bzip2 tcl cmake
     ```
 
-  * Execute below commands and append them to ~/.bashrc using text editors 
+  * Execute below commands and append them to ~/.bashrc using text editors
 
     ```text
     $ source scl_source enable devtoolset-7
@@ -154,7 +165,7 @@ We will support the following platforms in the future:
   * [libSRTP 2.2.0](https://github.com/cisco/libsrtp) [\[Download\]](https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz)
 
     ```text
-    $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure && make && sudo make install)
+    $ (curl -OL https://github.com/cisco/libsrtp/archive/v2.2.0.tar.gz && tar xvfz v2.2.0.tar.gz && cd libsrtp-2.2.0 && ./configure --enable-openssl && make && sudo make install)
     ```
 
   * [FDK-AAC](https://github.com/mstorsjo/fdk-aac) [\[Download\]](https://github.com/mstorsjo/fdk-aac/archive/v0.1.5.tar.gz)
@@ -210,51 +221,138 @@ $ cd [OME_PATH]/src/bin/DEBUG
 $ cp -R ../../../docs/conf_examples conf
 $ cat conf/Server.xml
 <?xml version="1.0" encoding="UTF-8"?>
-<Server>
-        <Name>OvenMediaEngine</Name>
-        <Hosts>
-                <Host>
-                        <Name>default</Name>
-                        <!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
-                        <IPAddress>127.0.0.1</IPAddress>
-                        <MaxConnection>0</MaxConnection>
-                        <!--
-                        <WebConsole>
-                                <Port>8080</Port>
-                                <MaxConnection>10</MaxConnection>
-                        </WebConsole>
-                        <OpenAPI>
-                                <Port>8081</Port>
-                                <MaxConnection>10</MaxConnection>
-                        </OpenAPI>
-                        -->
-                        <Provider>
-                                <Port>1935/tcp</Port>
-                                <MaxConnection>10</MaxConnection>
-                        </Provider>
-                        <Publisher>
-                                <!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
-                                <IPAddress>127.0.0.1</IPAddress>
-                                <Port>1936/udp</Port>
-                                <MaxConnection>10</MaxConnection>
-                                <WebRTC>
-                                        <!-- millisecond -->
-                                        <SessionTimeout>30000</SessionTimeout>
-                                        <!-- port[/protocol], port[/protocol], ... -->
-                                        <CandidatePort>45050/udp</CandidatePort>
-                                        <SignallingPort>3333/tcp</SignallingPort>
-                                </WebRTC>
-                        </Publisher>
-                        <Applications-Ref>${ome.AppHome}/conf/Applications.xml</Applications-Ref>
-                </Host>
-        </Hosts>
+<Server version="1">
+    <Name>OvenMediaEngine</Name>
+    <Hosts>
+        <Host>
+            <Name>default</Name>
+            <!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
+            <IP>*</IP>
+            <Applications>
+                <Application>
+                    <Name>app</Name>
+                    <Type>live</Type>
+                    <!-- under construction -->
+                    <Relay />
+                    <RelayPort>9000</RelayPort>
+                    <Encodes>
+                        <Encode>
+                            <Name>FHD_VP8</Name>
+                            <Audio>
+                                <Codec>opus</Codec>
+                                <Bitrate>128000</Bitrate>
+                                <Samplerate>48000</Samplerate>
+                                <Channel>2</Channel>
+                            </Audio>
+                            <Video>
+                                <!-- vp8, h264 -->
+                                <Codec>vp8</Codec>
+                                <Width>1280</Width>
+                                <Height>720</Height>
+                                <Bitrate>2000000</Bitrate>
+                                <Framerate>30.0</Framerate>
+                            </Video>
+                        </Encode>
+                        <Encode>
+                            <Name>FHD_H264</Name>
+                            <Video>
+                                <Codec>h264</Codec>
+                                <Width>1280</Width>
+                                <Height>720</Height>
+                                <Bitrate>2000000</Bitrate>
+                                <Framerate>30.0</Framerate>
+                            </Video>
+                        </Encode>
+                    </Encodes>
+                    <Streams>
+                        <Stream>
+                            <Name>${OriginStreamName}_o</Name>
+                            <Profiles>
+                                <Profile>FHD_VP8</Profile>
+                                <Profile>FHD_H264</Profile>
+                            </Profiles>
+                        </Stream>
+                    </Streams>
+                    <Providers>
+                        <RTMP>
+                            <MaxConnection>10</MaxConnection>
+                            <Port>1935</Port>
+                            <OverlapStreamProcess>reject</OverlapStreamProcess>
+                        </RTMP>
+                    </Providers>
+                    <Publishers>
+                        <ThreadCount>2</ThreadCount>
+                        <RTMP />
+                        <HLS>
+                            <Port>8080</Port>
+                            <SegmentDuration>5</SegmentDuration>
+                            <SegmentCount>3</SegmentCount>
+                            <CrossDomain>
+                                <Url>www.airensoft.com</Url>
+                            </CrossDomain>
+                        </HLS>
+                        <DASH>
+                            <Port>8080</Port>
+                            <SegmentDuration>5</SegmentDuration>
+                            <SegmentCount>3</SegmentCount>
+                            <CORS>
+                                <Url>http://www.airensoft.com</Url>
+                                <Url>https://www.airensoft.com</Url>
+                            </CORS>
+                        </DASH>
+                        <WebRTC>
+                            <!-- ICE Candidate IP/Port -->
+                            <!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
+                            <IP>127.0.0.1</IP>
+                            <MaxConnection>10</MaxConnection>
+                            <Port>10000/udp</Port>
+                            <!-- STUN timeout -->
+                            <Timeout>30000</Timeout>
+                            <Signalling>
+                                <Port>3333</Port>
+                                <TLS include="TLS.xml" />
+                            </Signalling>
+                        </WebRTC>
+                    </Publishers>
+                </Application>
+            </Applications>
+        </Host>
+    </Hosts>
 </Server>
 ```
 
-The first `<IPAddress>` in the `Server.xml` configuration file uses the IP address to listen to the RTMP stream being published, otherwise it uses the IP of the system. If the value of this item is not set correctly, the encoder may not be connected. The second `<IPAddress>` in `<Publisher>` is used to specify the IP address that the WebSocket server uses to listen to WebRTC Signaling, otherwise it uses the first `<IPAddress>` in the 'Server.xml' file. If the value of this item is not set correctly, playback may not be performed normally.
+The first `<IPAddress>` in the `Server.xml` configuration file uses the IP address to listen to the RTMP stream being published, otherwise it uses the IP of the system. If the value of this item is not set correctly, the encoder may not be connected. The second `<IPAddress>` in `<Publishers>` is used to specify the IP address that the WebSocket server uses to listen to WebRTC Signaling, otherwise it uses the first `<IPAddress>` in the 'Server.xml' file. If the value of this item is not set correctly, playback may not be performed normally.
+
+**HLS/DASH**
+
+* In server.xml, `<Publishers>`:
+
+  ```text
+  <DASH>
+  <Port>8080</Port>
+  <SegmentDuration>5</SegmentDuration>
+  <SegmentCount>3</SegmentCount>
+  </DASH>
+  <HLS>
+  <Port>8080</Port>
+  <SegmentDuration>5</SegmentDuration>
+  <SegmentCount>3</SegmentCount>
+  </HLS>
+  ```
+
+  Here's what each item means:
+
+  * `<Port>` : Player Connection port
+  * `<SegmentDuration>` : Druatin\(seconds\) of segment file\(.ts or .m4s\)
+  * `<SegmentCount>` : Segment file count in playlist\(playlist.m3u8 or manifest.mpd\)
+
+* Play URL
+  * `hls : http://<OME Server IP>[:<OME HLS Port>]/<Application name>/<Stream name>/playlist.m3u8`
+  * `dash : http://<OME Server IP>[:<OME DASH Port>]/<Application name>/<Stream name>/manifest.mpd`
+  * For example, HLS URL is `http://192.168.0.1:8080/app/stream_o/playlist.m3u8`, DASH URL is `http://192.168.0.1:8080/app/stream_o/manifest.mpd`
 
 ```text
-$ ./main
+$ ./OvenMediaEngine
 [07-03 12:29:20.705] I 18780 OvenMediaEngine | main.cpp:22 | OvenMediaEngine v0.1.1 (build: 18062600) is started on [Dim-Ubuntu] (Linux x86_64 - 4.15.0-23-generic, #25-Ubuntu SMP Wed May 23 18:02:16 UTC 2018)
 ...
 ```
@@ -305,6 +403,54 @@ Please note that the WebRTC Signaling URL in the sample code above is similar to
   * `<Stream name>`: This is the name to distinguish the live stream. OvenMediaEngine uses the `_o` suffix to distinguish it from the output of `<Stream name>` in the encoder.
 
 For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC Signaling URL will be `ws://192.168.0.1:3333/app/stream_o`.
+
+#### The following screen capture shows common settings for OME.
+
+**conf - Server.xml**
+
+```text
+<Server version="1">
+    <Name>OvenMediaEngine</Name>
+    <Hosts>
+        <Host>
+            <Name>default</Name>
+            <!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
+            <IP>*</IP>
+            <Applications>
+                <Application>
+                    <Name>app</Name>
+                    <Type>live</Type>
+                    <!-- under construction -->
+...
+```
+
+**OBS - Stream**
+
+![](.gitbook/assets/image.png)
+
+**OBS - Output**
+
+* It is strongly recommended that the CPU, Profile, and Tune sections of the OBS configuration be as follows.
+
+![](.gitbook/assets/image%20%282%29.png)
+
+**Javascript**
+
+```text
+<script>
+  var webrtcSources = OvenPlayer.generateWebrtcUrls([
+      {
+          host : 'ws://192.168.0.225:3333',
+          application : 'app',
+          stream : "stream_o",
+          label : "local"
+  }
+  ]);
+  var player = OvenPlayer.create("player_id", {
+      sources: webrtcSources,
+  });
+</script>
+```
 
 ### How to Contribute
 
