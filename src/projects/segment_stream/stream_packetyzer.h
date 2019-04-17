@@ -21,9 +21,11 @@
 //====================================================================================================
 // SegmentConfigInfo
 //====================================================================================================
-struct SegmentConfigInfo {
+struct SegmentConfigInfo
+{
 public:
-    SegmentConfigInfo(bool enable, int count, int duration) {
+    SegmentConfigInfo(bool enable, int count, int duration)
+    {
         _enable = enable;
         _count = count;
         _duration = duration;
@@ -38,7 +40,8 @@ public:
 //====================================================================================================
 // StreamPacketyzer
 //====================================================================================================
-class StreamPacketyzer {
+class StreamPacketyzer
+{
 public:
     StreamPacketyzer(SegmentConfigInfo dash_segment_config_info,
                      SegmentConfigInfo hls_segment_config_info,
@@ -50,7 +53,11 @@ public:
 
 public :
     bool
-    AppendVideoData(uint64_t timestamp, uint32_t timescale, bool is_keyframe, uint64_t time_offset, uint32_t data_size,
+    AppendVideoData(uint64_t timestamp,
+                    uint32_t timescale,
+                    bool is_keyframe,
+                    uint64_t time_offset,
+                    uint32_t data_size,
                     const uint8_t *data);
 
     bool AppendAudioData(uint64_t timestamp, uint32_t timescale, uint32_t data_size, const uint8_t *data);
@@ -63,8 +70,8 @@ private :
     bool VideoDataSampleWrite(uint64_t timestamp);
 
 private :
-    std::shared_ptr<HlsPacketyzer> _hls_packetyzer;
-    std::shared_ptr<DashPacketyzer> _dash_packetyzer;
+    std::shared_ptr<HlsPacketyzer> _hls_packetyzer = nullptr;
+    std::shared_ptr<DashPacketyzer> _dash_packetyzer = nullptr;
     uint32_t _audio_timescale;
     uint32_t _video_timescale;
     PacketyzerStreamType _stream_type;

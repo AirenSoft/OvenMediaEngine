@@ -333,7 +333,7 @@ bool DashPacketyzer::VideoSegmentWrite(uint64_t last_timestamp)
     auto data_stream = fragment_writer->GetDataStream();
 
     std::ostringstream file_name;
-    file_name << _segment_prefix << "_" << start_timestamp << "_video.m4s";
+    file_name << _segment_prefix << "_" << start_timestamp << MPD_VIDEO_SUFFIX;
 
     // m4s 데이터 저장
     SetSegmentData(SegmentDataType::Mp4Video,
@@ -403,7 +403,7 @@ bool DashPacketyzer::AudioSegmentWrite(uint64_t last_timestamp)
 
     std::ostringstream file_name;
 
-    file_name << _segment_prefix << "_" << start_timestamp << "_audio.m4s";
+    file_name << _segment_prefix << "_" << start_timestamp << MPD_AUDIO_SUFFIX;
 
     // m4s 데이터 저장
     SetSegmentData(SegmentDataType::Mp4Audio,
@@ -431,46 +431,38 @@ bool DashPacketyzer::UpdatePlayList(bool video_update)
     uint64_t video_total_duration = 0;
     uint64_t audio_total_duration = 0;
 
-    std::unique_lock<std::mutex> segment_datas_lock(_segment_datas_mutex);
+    std::vector<std::shared_ptr<SegmentData>> segment_datas;
+    Packetyzer::GetVideoPlaySegments(segment_datas);
 
-    // Video Segment Listing
-    for (int index = std::max((int) (_video_segment_indexer.size() - _segment_count), 0);
-         index < _video_segment_indexer.size(); index++)
+    for(int index = 0; index < segment_datas.size(); index++)
     {
-        auto item = _segment_datas.find(_video_segment_indexer[index]);
-        if (item == _segment_datas.end()) continue;
-
         // Timeline Setting
-        if (index != std::max((int) (_video_segment_indexer.size() - _segment_count), 0))
-            video_segment_urls << "\t\t\t\t" << "<S d=\"" << item->second->duration << "\"/>\n";
-        else
-            video_segment_urls  << "\t\t\t\t" << "<S t=\"" << item->second->timestamp
-                                << "\" d=\"" << item->second->duration
+        if(index == 0)
+            video_segment_urls  << "\t\t\t\t" << "<S t=\"" << segment_datas[index]->timestamp
+                                << "\" d=\"" << segment_datas[index]->duration
                                 << "\"/>\n";
-        // 전체 duration
-        video_total_duration += item->second->duration;
-
-    }
-
-    // Audio Segment Listing
-    for (int index = std::max((int) (_audio_segment_indexer.size() - _segment_count), 0);
-         index < _audio_segment_indexer.size(); index++)
-    {
-        auto item = _segment_datas.find(_audio_segment_indexer[index]);
-        if (item == _segment_datas.end()) continue;
-
-        // Timeline Setting
-        if (index != std::max((int) (_audio_segment_indexer.size() - _segment_count), 0))
-            audio_segment_urls << "\t\t\t\t<S d=\"" << item->second->duration << "\"/>\n";
         else
-            audio_segment_urls << "\t\t\t\t<S t=\"" << item->second->timestamp
-                               << "\" d=\"" << item->second->duration
-                               << "\"/>\n";
-        // 전체 duration
-        audio_total_duration += item->second->duration;
+            video_segment_urls << "\t\t\t\t" << "<S d=\"" << segment_datas[index]->duration << "\"/>\n";
+
+        // total duration
+        video_total_duration += segment_datas[index]->duration;
     }
 
-    segment_datas_lock.unlock();
+    segment_datas.clear();
+    Packetyzer::GetAudioPlaySegments(segment_datas);
+    for(int index = 0; index < segment_datas.size(); index++)
+    {
+        // Timeline Setting
+        if(index == 0)
+            audio_segment_urls << "\t\t\t\t<S t=\"" << segment_datas[index]->timestamp
+                               << "\" d=\"" << segment_datas[index]->duration
+                               << "\"/>\n";
+        else
+            audio_segment_urls << "\t\t\t\t<S d=\"" << segment_datas[index]->duration << "\"/>\n";
+
+        // total duration
+        audio_total_duration += segment_datas[index]->duration;
+    }
 
     if (_start_time.empty())
     {
@@ -512,7 +504,7 @@ bool DashPacketyzer::UpdatePlayList(bool video_update)
             << "\" segmentAlignment=\"true\" startWithSAP=\"1\" subsegmentAlignment=\"true\" subsegmentStartsWithSAP=\"1\">"
             << "\n"
             << "\t\t<SegmentTemplate timescale=\"" << _media_info.video_timescale
-            << "\" initialization=\"video_init.m4s\" media=\"" << _segment_prefix << "_$Time$_video.m4s\">\n"
+            << "\" initialization=\"" << MPD_VIDEO_INIT_FILE_NAME << "\" media=\"" << _segment_prefix << "_$Time$" << MPD_VIDEO_SUFFIX << "\">\n"
             << "\t\t\t<SegmentTimeline>\n"
             << video_segment_urls.str()
             << "\t\t\t</SegmentTimeline>\n"
@@ -529,7 +521,7 @@ bool DashPacketyzer::UpdatePlayList(bool video_update)
             << "\t\t<AudioChannelConfiguration schemeIdUri=\"urn:mpeg:dash:23003:3:audio_channel_configuration:2011\" value=\""
             << _media_info.audio_channels << "\"/>\n"
             << "\t\t<SegmentTemplate timescale=\"" << _media_info.audio_timescale
-            << "\" initialization=\"audio_init.m4s\" media=\"" << _segment_prefix << "_$Time$_audio.m4s\">\n"
+            << "\" initialization=\"" << MPD_AUDIO_INIT_FILE_NAME << "\" media=\"" << _segment_prefix << "_$Time$" << MPD_AUDIO_SUFFIX << "\">\n"
             << "\t\t\t<SegmentTimeline>\n"
             << audio_segment_urls.str()
             << "\t\t\t</SegmentTimeline>\n"

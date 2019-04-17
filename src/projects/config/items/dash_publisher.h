@@ -20,6 +20,11 @@ namespace cfg
 			return PublisherType::Dash;
 		}
 
+		bool IsEnable() const
+		{
+			return IsParsed() && _is_enable;
+		}
+
 		int GetPort() const
 		{
 			return _port;
@@ -69,6 +74,7 @@ namespace cfg
 		{
 			Publisher::MakeParseList();
 
+			RegisterValue<Optional>("Enable", &_is_enable);
 			RegisterValue<Optional>("Port", &_port);
 			RegisterValue<Optional>("TLS", &_tls);
 			RegisterValue<Optional>("SegmentCount", &_segment_count);
@@ -80,6 +86,7 @@ namespace cfg
             RegisterValue<Optional>("RecvBufferSize", &_recv_buffer_size);
 		}
 
+		bool _is_enable = true;
 		int _port = 80;
 		Tls _tls;
 		int _segment_count = 3;

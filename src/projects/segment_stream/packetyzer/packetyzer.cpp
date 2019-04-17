@@ -43,10 +43,19 @@ Packetyzer::Packetyzer(PacketyzerType packetyzer_type,
     if (_stream_type == PacketyzerStreamType::VideoOnly)_audio_init = true;
     if (_stream_type == PacketyzerStreamType::AudioOnly)_video_init = true;
 
-    _segment_datas.clear();
-    _segment_indexer.clear();
-    _video_segment_indexer.clear();
-    _audio_segment_indexer.clear();
+
+    // init nullptr
+    for(int index = 0; index < _segment_save_count ;  index++)
+    {
+        _video_segment_datas.push_back(nullptr);
+
+        // only dash
+        if(_packetyzer_type == PacketyzerType::Dash)
+            _audio_segment_datas.push_back(nullptr);
+    }
+
+
+
 }
 
 //====================================================================================================
@@ -54,11 +63,47 @@ Packetyzer::Packetyzer(PacketyzerType packetyzer_type,
 //====================================================================================================
 Packetyzer::~Packetyzer()
 {
-    _segment_datas.clear();
-    _segment_indexer.clear();
-    _video_segment_indexer.clear();
-    _audio_segment_indexer.clear();
 
+}
+
+//====================================================================================================
+// Gcd(Util)
+//====================================================================================================
+uint32_t Packetyzer::Gcd(uint32_t n1, uint32_t n2)
+{
+    uint32_t temp;
+
+    while (n2 != 0)
+    {
+        temp = n1;
+        n1 = n2;
+        n2 = temp % n2;
+    }
+    return n1;
+}
+
+//====================================================================================================
+// Packetyzer(Util)
+// - 1/1000
+//====================================================================================================
+double Packetyzer::GetCurrentMilliseconds()
+{
+    struct timeval time_value;
+    gettimeofday(&time_value, nullptr); // get current time
+    double milliseconds = time_value.tv_sec*1000LL + time_value.tv_usec/1000; // calculate milliseconds
+    return milliseconds;
+}
+
+//====================================================================================================
+// MakeUtcTimeString
+// - ex)
+//====================================================================================================
+std::string Packetyzer::MakeUtcTimeString(time_t value)
+{
+    std::tm *now_tm = gmtime(&value);
+    char buf[42];
+    strftime(buf, 42, "\"%Y-%m-%dT%TZ\"", now_tm);
+    return buf;
 }
 
 //====================================================================================================
@@ -103,9 +148,14 @@ bool Packetyzer::SetSegmentData(SegmentDataType data_type,
                                 std::string file_name,
                                 uint64_t duration,
                                 uint64_t timestamp,
-                                std::shared_ptr<std::vector<uint8_t>> &data)
+                                const std::shared_ptr<std::vector<uint8_t>> &data)
 {
-    auto segment_data = std::make_shared<SegmentData>(sequence_number, file_name, duration, timestamp, data);
+    auto segment_data = std::make_shared<SegmentData>(sequence_number,
+                                                      file_name.c_str(),
+                                                      duration,
+                                                      timestamp,
+                                                      data->size(),
+                                                      data->data());
 
     if(file_name == MPD_VIDEO_INIT_FILE_NAME)
     {
@@ -118,45 +168,20 @@ bool Packetyzer::SetSegmentData(SegmentDataType data_type,
         return true;
     }
 
-
-    // Segment 저장
-    std::unique_lock<std::mutex> segment_datas_lock(_segment_datas_mutex);
-
-    _segment_datas[file_name] = segment_data;
-
-    // 특정 개수 이상 메모리/파일 삭제 처리를 위한 indexer
-    // - indexer 등록되지 않은 segment 데이터 유지(ex) init.m4s)
-    std::deque<std::string> *indexer = nullptr;
-
-    if (data_type == SegmentDataType::Ts) indexer = &_segment_indexer;
-    else if (data_type == SegmentDataType::Mp4Video) indexer = &_video_segment_indexer;
-    else if (data_type == SegmentDataType::Mp4Audio) indexer = &_audio_segment_indexer;
-    else indexer = &_segment_indexer;
-
-    indexer->push_back(file_name);
-
-    // 데이터 삭제(데이터 전송 요청을 받기 위해 특정 개수 이상 유지)
-    while (indexer->size() > _segment_save_count)
+    if (data_type == SegmentDataType::Ts || data_type == SegmentDataType::Mp4Video)
     {
-        auto segment_data_item = _segment_datas.find(indexer->front());
+        _video_segment_datas[_current_video_index++] = segment_data;
 
-        // segment data delete
-        if (segment_data_item != _segment_datas.end())
-        {
-            _segment_datas.erase(segment_data_item);
-        }
-
-        // file delete
-        if (_save_file)
-        {
-            remove(indexer->front().c_str());
-        }
-
-        // segment data indexer delete
-        indexer->pop_front();
+        if(_segment_save_count <= _current_video_index)
+            _current_video_index = 0;
     }
+    else if (data_type == SegmentDataType::Mp4Audio)
+    {
+        _audio_segment_datas[_current_audio_index++] = segment_data;
 
-    segment_datas_lock.unlock();
+        if(_segment_save_count <= _current_audio_index)
+            _current_audio_index = 0;
+    }
 
     if (_save_file)
     {
@@ -196,12 +221,16 @@ bool Packetyzer::GetPlayList(std::string &play_list)
 
 //====================================================================================================
 // Segment
+//
 //====================================================================================================
-bool Packetyzer::GetSegmentData(std::string &file_name, std::shared_ptr<std::vector<uint8_t>> &data)
+bool Packetyzer::GetSegmentData(SegmentDataType data_type,
+                                const ov::String &file_name,
+                                std::shared_ptr<ov::Data> &data)
 {
 	if(!_init_segment_count_complete)
         return false;
 
+	// mpd init file
     if(file_name == MPD_VIDEO_INIT_FILE_NAME && _mpd_video_init_file != nullptr)
     {
         data =_mpd_video_init_file->data;
@@ -213,54 +242,129 @@ bool Packetyzer::GetSegmentData(std::string &file_name, std::shared_ptr<std::vec
         return true;
     }
 
-    std::unique_lock<std::mutex> segment_datas_lock(_segment_datas_mutex);
-
-    auto segment_data_item = _segment_datas.find(file_name);
-
-    if (segment_data_item != _segment_datas.end())
+    // ts or mpd data
+    if (data_type == SegmentDataType::Ts || data_type == SegmentDataType::Mp4Video)
     {
-        data = segment_data_item->second->data;
-        return true;
+        auto item = std::find_if(_video_segment_datas.begin(), _video_segment_datas.end(), [&](std::shared_ptr<SegmentData> const &value) -> bool
+        {
+            return value->file_name == file_name;
+        });
+
+        if(item != _video_segment_datas.end())
+            data = (*item)->data;
+        else
+            data = nullptr;
     }
-    return false;
-}
-
-//====================================================================================================
-// Gcd(Util)
-//====================================================================================================
-uint32_t Packetyzer::Gcd(uint32_t n1, uint32_t n2)
-{
-    uint32_t temp;
-
-    while (n2 != 0)
+    else if (data_type == SegmentDataType::Mp4Audio)
     {
-        temp = n1;
-        n1 = n2;
-        n2 = temp % n2;
+        auto item = std::find_if(_audio_segment_datas.begin(), _audio_segment_datas.end(), [&](std::shared_ptr<SegmentData> const &value) -> bool
+        {
+            return value->file_name == file_name;
+        });
+
+        if(item != _audio_segment_datas.end())
+            data = (*item)->data;
+        else
+            data = nullptr;
     }
-    return n1;
+
+    return data != nullptr;
+
+    // TODO: search
+    // - (current index) == (last insert index + 1)
+    // - form (current index - 1) it reverse search  to (begin it)
+    // - form (end it) reverse to (current index)
+}
+
+
+
+//====================================================================================================
+// Last (segment count) Video(or Video+Audio) Segments
+//====================================================================================================
+bool Packetyzer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
+{
+    int begin_index = (_current_video_index >= _segment_count) ?
+                        (_current_video_index - _segment_count) :
+                        (_segment_save_count - (_segment_count - _current_video_index));
+
+
+    int end_index = (begin_index <= (_segment_save_count - _segment_count)) ?
+                    (begin_index + _segment_count) -1 :
+                    (_segment_count - (_segment_save_count - begin_index)) -1;
+
+    if(begin_index <= end_index)
+    {
+        for(auto item = _video_segment_datas.begin() + begin_index;item <= _video_segment_datas.begin() + end_index; item++)
+        {
+            if(*item == nullptr)
+                return true;
+
+            segment_datas.push_back(*item);
+        }
+    }
+    else
+    {
+        for(auto item = _video_segment_datas.begin() + begin_index;item < _video_segment_datas.end(); item++)
+        {
+            if(*item == nullptr)
+                return true;
+
+            segment_datas.push_back(*item);
+        }
+
+        for (auto item = _video_segment_datas.begin(); item <= _video_segment_datas.begin() + end_index; item++)
+        {
+            if(*item == nullptr)
+                return true;
+
+            segment_datas.push_back(*item);
+        }
+    }
+
+    return true;
 }
 
 //====================================================================================================
-// Packetyzer(Util)
-// - 1/1000
+// Last (segment count) Audio Segments
 //====================================================================================================
-double Packetyzer::GetCurrentMilliseconds()
+bool Packetyzer::GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
 {
-    struct timeval time_value;
-    gettimeofday(&time_value, nullptr); // get current time
-    double milliseconds = time_value.tv_sec*1000LL + time_value.tv_usec/1000; // calculate milliseconds
-    return milliseconds;
-}
+    int begin_index = (_current_audio_index >= _segment_count) ?
+                      (_current_audio_index - _segment_count) :
+                      (_segment_save_count - (_segment_count - _current_audio_index));
 
-//====================================================================================================
-// MakeUtcTimeString
-// - ex)
-//====================================================================================================
-std::string Packetyzer::MakeUtcTimeString(time_t value)
-{
-    std::tm *now_tm = gmtime(&value);
-    char buf[42];
-    strftime(buf, 42, "\"%Y-%m-%dT%TZ\"", now_tm);
-    return buf;
+
+    int end_index = (begin_index <= (_segment_save_count - _segment_count)) ?
+                    (begin_index + _segment_count) -1 :
+                    (_segment_count - (_segment_save_count - begin_index)) -1;
+
+    if(begin_index <= end_index)
+    {
+        for(auto item = _audio_segment_datas.begin() + begin_index;item <= _audio_segment_datas.begin() + end_index; item++)
+        {
+            if(*item == nullptr)
+                return true;
+
+            segment_datas.push_back(*item);
+        }
+    }
+    else
+    {
+        for(auto item = _audio_segment_datas.begin() + begin_index;item < _audio_segment_datas.end(); item++)
+        {
+            if(*item == nullptr)
+                return true;
+
+            segment_datas.push_back(*item);
+        }
+        for (auto item = _audio_segment_datas.begin(); item <= _audio_segment_datas.begin() + end_index; item++)
+        {
+            if(*item == nullptr)
+                return true;
+
+            segment_datas.push_back(*item);
+        }
+    }
+
+    return true;
 }

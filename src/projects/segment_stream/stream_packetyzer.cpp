@@ -59,8 +59,12 @@ StreamPacketyzer::~StreamPacketyzer() {
 //====================================================================================================
 // Append Video Data
 //====================================================================================================
-bool StreamPacketyzer::AppendVideoData(uint64_t timestamp, uint32_t timescale, bool is_keyframe, uint64_t time_offset,
-                                       uint32_t data_size, const uint8_t *data)
+bool StreamPacketyzer::AppendVideoData(uint64_t timestamp,
+                                        uint32_t timescale,
+                                        bool is_keyframe,
+                                        uint64_t time_offset,
+                                        uint32_t data_size,
+                                        const uint8_t *data)
 {
     // 임시
     timescale = 90000;
@@ -184,7 +188,10 @@ bool StreamPacketyzer::VideoDataSampleWrite(uint64_t timestamp)
 //====================================================================================================
 // Append Audio Data
 //====================================================================================================
-bool StreamPacketyzer::AppendAudioData(uint64_t timestamp, uint32_t timescale, uint32_t data_size, const uint8_t *data)
+bool StreamPacketyzer::AppendAudioData(uint64_t timestamp,
+                                        uint32_t timescale,
+                                        uint32_t data_size,
+                                        const uint8_t *data)
 {
     // data valid check
     if (data_size <= 0 || data_size > MAX_INPUT_DATA_SIZE)
@@ -245,20 +252,24 @@ bool StreamPacketyzer::GetPlayList(PlayListType play_list_type, ov::String &segm
 // GetSegment
 // - TS/MP4
 //====================================================================================================
-bool StreamPacketyzer::GetSegment(SegmentType type, const ov::String &segment_file_name,
-                                  std::shared_ptr<ov::Data> &segment_data)
+bool StreamPacketyzer::GetSegment(SegmentType type,
+                                const ov::String &segment_file_name,
+                                std::shared_ptr<ov::Data> &segment_data)
 {
     bool result = false;
-    std::string file_name = segment_file_name.CStr();
-    std::shared_ptr<std::vector<uint8_t>> data;
 
     if (type == SegmentType::M4S && _dash_packetyzer != nullptr)
-        result = _dash_packetyzer->GetSegmentData(file_name, data);
-    else if (type == SegmentType::MpegTs && _hls_packetyzer != nullptr)
-        result = _hls_packetyzer->GetSegmentData(file_name, data);
+    {
+        if(segment_file_name.IndexOf(MPD_AUDIO_SUFFIX) >= 0)
+            result = _dash_packetyzer->GetSegmentData(SegmentDataType::Mp4Audio, segment_file_name, segment_data);
+        else if(segment_file_name.IndexOf(MPD_VIDEO_SUFFIX) >= 0)
+            result = _dash_packetyzer->GetSegmentData(SegmentDataType::Mp4Video, segment_file_name, segment_data);
 
-    if (result)
-        segment_data = std::make_shared<ov::Data>(data->data(), data->size());
+    }
+    else if (type == SegmentType::MpegTs && _hls_packetyzer != nullptr)
+    {
+        result = _hls_packetyzer->GetSegmentData(SegmentDataType::Ts, segment_file_name, segment_data);
+    }
 
     return result;
 }

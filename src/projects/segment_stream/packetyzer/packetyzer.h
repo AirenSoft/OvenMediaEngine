@@ -8,12 +8,15 @@
 //==============================================================================
 
 #pragma once
-
 #include <map>
+#include "../base/ovlibrary/ovlibrary.h"
 #include "packetyzer_define.h"
 
-#define MPD_VIDEO_INIT_FILE_NAME "video_init.m4s"
-#define MPD_AUDIO_INIT_FILE_NAME "audio_init.m4s"
+#define MPD_AUDIO_SUFFIX            "_audio.m4s"
+#define MPD_VIDEO_SUFFIX            "_video.m4s"
+#define MPD_VIDEO_INIT_FILE_NAME    "init_video.m4s"
+#define MPD_AUDIO_INIT_FILE_NAME    "init_audio.m4s"
+
 //====================================================================================================
 // Packetyzer
 //====================================================================================================
@@ -39,11 +42,16 @@ public :
                         std::string file_name,
                         uint64_t duration,
                         uint64_t timestamp_,
-                        std::shared_ptr<std::vector<uint8_t>> &data);
+                        const std::shared_ptr<std::vector<uint8_t>> &data);
 
     bool GetPlayList(std::string &play_list);
 
-    bool GetSegmentData(std::string &file_name, std::shared_ptr<std::vector<uint8_t>> &data);
+    bool GetSegmentData(SegmentDataType data_type,
+                        const ov::String &file_name,
+                        std::shared_ptr<ov::Data> &data);
+
+    bool GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas);
+    bool GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas);
 
     static uint32_t Gcd(uint32_t n1, uint32_t n2);
     static std::string MakeUtcTimeString(time_t value);
@@ -66,13 +74,11 @@ protected :
     bool _audio_init;
     bool _init_segment_count_complete;
 
-    std::map<std::string, std::shared_ptr<SegmentData>> _segment_datas;
-    std::deque<std::string> _segment_indexer;            // (Video+Audio)Segment Name 인덱서(순차적 데이터 삭제를 위해 사용) - TS
-    std::deque<std::string> _video_segment_indexer;    // Video Segment Name 인덱서(순차적 데이터 삭제를 위해 사용)  - M3S(Video)
-    std::deque<std::string> _audio_segment_indexer;    // Audio Segment Name 인덱서(순차적 데이터 삭제를 위해 사용)  - M3S(Audio)
-    std::mutex _segment_datas_mutex;
-
     std::shared_ptr<SegmentData> _mpd_video_init_file = nullptr;
     std::shared_ptr<SegmentData> _mpd_audio_init_file = nullptr;
 
+    int _current_video_index = 0;
+    int _current_audio_index = 0;
+    std::vector<std::shared_ptr<SegmentData>> _video_segment_datas; // m4s : video , ts : video+audio
+    std::vector<std::shared_ptr<SegmentData>> _audio_segment_datas; // m4s : audio
 };

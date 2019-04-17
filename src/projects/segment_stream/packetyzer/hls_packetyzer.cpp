@@ -130,7 +130,11 @@ bool HlsPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame
     // 데이터 복사
     auto frame = std::make_shared<std::vector<uint8_t>>(frame_data->data->data(),
                                                         frame_data->data->data() + frame_data->data->size());
-    auto audio_data = std::make_shared<PacketyzerFrameData>(frame_data->type, timestamp, 0, _media_info.audio_timescale,
+
+    auto audio_data = std::make_shared<PacketyzerFrameData>(frame_data->type,
+                                                            timestamp,
+                                                            0,
+                                                            _media_info.audio_timescale,
                                                             frame);
 
     _frame_datas.push_back(audio_data);
@@ -167,12 +171,15 @@ bool HlsPacketyzer::SegmentWrite(uint64_t start_timestamp, uint64_t duration)
     if(_first_audio_time_stamp != 0 && _first_video_time_stamp != 0)
         logtd("hls segment video/audio timestamp gap(%lldms)",  (_first_video_time_stamp - _first_audio_time_stamp)/90);
 
-
     std::ostringstream file_name_stream;
     file_name_stream << _segment_prefix << "_" << _sequence_number << ".ts";
 
-    SetSegmentData(SegmentDataType::Ts, _sequence_number, file_name_stream.str(), duration, start_timestamp,
-                   ts_writer->GetDataStream());
+    SetSegmentData(SegmentDataType::Ts,
+                    _sequence_number,
+                    file_name_stream.str(),
+                    duration,
+                    start_timestamp,
+                    ts_writer->GetDataStream());
 
     UpdatePlayList();
 
@@ -193,29 +200,20 @@ bool HlsPacketyzer::UpdatePlayList()
     std::ostringstream m3u8_play_list;
     double max_duration = 0;
 
-    std::unique_lock<std::mutex> segment_datas_lock(_segment_datas_mutex);
+    std::vector<std::shared_ptr<SegmentData>> segment_datas;
+    Packetyzer::GetVideoPlaySegments(segment_datas);
 
-    for (int index = std::max(0, (int) (_segment_indexer.size() - _segment_count));
-         index < _segment_indexer.size(); index++)
+    for(const auto & segment_data : segment_datas)
     {
-        auto file_name = _segment_indexer[index];
-        auto item = _segment_datas.find(file_name);
+        m3u8_play_list << "#EXTINF:" << std::fixed << std::setprecision(3)
+                       << (double)(segment_data->duration) / (double)(PACKTYZER_DEFAULT_TIMESCALE) << ",\r\n"
+                       << segment_data->file_name.CStr() << "\r\n";
 
-        if (item != _segment_datas.end())
+        if (segment_data->duration > max_duration)
         {
-            auto segment_data = item->second;
-
-            m3u8_play_list << "#EXTINF:" << std::fixed << std::setprecision(3)
-                           << (double)(segment_data->duration) / (double)(PACKTYZER_DEFAULT_TIMESCALE) << ",\r\n"
-                           << file_name << "\r\n";
-
-            if (segment_data->duration > max_duration)
-            {
-                max_duration = segment_data->duration;
-            }
+            max_duration = segment_data->duration;
         }
     }
-    segment_datas_lock.unlock();
 
     play_list << "#EXTM3U" << "\r\n"
               << "#EXT-X-MEDIA-SEQUENCE:" << _sequence_number + 1 << "\r\n"

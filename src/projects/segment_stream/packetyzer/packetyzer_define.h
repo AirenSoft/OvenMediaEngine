@@ -14,6 +14,7 @@
 #include <deque>
 #include <mutex>
 #include <string.h>
+#include "../base/ovlibrary/ovlibrary.h"
 #include "bit_writer.h"
 
 #define PACKTYZER_DEFAULT_TIMESCALE                (90000)//90MHz
@@ -53,20 +54,31 @@ enum class SegmentDataType : int32_t {
 //====================================================================================================
 // SegmentData
 //====================================================================================================
-struct SegmentData {
+struct SegmentData
+{
 public :
-    SegmentData(int sequence_number_, std::string &file_name_, uint64_t duration_, uint64_t timestamp_, int data_size_,
-                uint8_t *data_) {
+
+    SegmentData(int sequence_number_,
+           const char * file_name_,
+            uint64_t duration_,
+            uint64_t timestamp_,
+            int data_size_,
+            uint8_t *data_)
+    {
         sequence_number = sequence_number_;
         file_name = file_name_;
         create_time = time(nullptr);
         duration = duration_;
         timestamp = timestamp_;
-        data = std::make_shared<std::vector<uint8_t>>(data_, data_ + data_size_);
+        data = std::make_shared<ov::Data>(data_, data_size_);
     }
 
-    SegmentData(int sequence_number_, std::string &file_name_, uint64_t duration_, uint64_t timestamp_,
-                std::shared_ptr<std::vector<uint8_t>> &data_) {
+    SegmentData(int sequence_number_,
+            ov::String &file_name_,
+            uint64_t duration_,
+            uint64_t timestamp_,
+            std::shared_ptr<ov::Data> &data_)
+    {
         sequence_number = sequence_number_;
         file_name = file_name_;
         create_time = time(nullptr);
@@ -77,11 +89,11 @@ public :
 
 public :
     int sequence_number;
-    std::string file_name;
+    ov::String file_name;
     time_t create_time;
     uint64_t duration;
     uint64_t timestamp;
-    std::shared_ptr<std::vector<uint8_t>> data;
+    std::shared_ptr<ov::Data> data;
 };
 
 //====================================================================================================
