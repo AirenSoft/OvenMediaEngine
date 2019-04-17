@@ -304,7 +304,7 @@ void SegmentStreamServer::ProcessRequestUrl(const std::shared_ptr<HttpRequest> &
 
     // URL parsing
     // app/strem/file.ext 기준
-    if (!RequetsUrlParsing(request_url, app_name, stream_name, file_name, file_ext))
+    if (!RequestUrlParsing(request_url, app_name, stream_name, file_name, file_ext))
     {
         logtd("Request URL Parsing Fail : %s", request_url.CStr());
         response->SetStatusCode(HttpStatusCode::NotFound);
