@@ -101,3 +101,26 @@ bool SrtpAdapter::ProtectRtp(std::shared_ptr<ov::Data> data)
 
 	return true;
 }
+
+bool SrtpAdapter::UnprotectRtcp(const std::shared_ptr<ov::Data> &data)
+{
+    if (!_session)
+    {
+        return false;
+    }
+
+    auto buffer = data->GetWritableData();
+    int out_len = static_cast<int>(data->GetLength());
+
+    int err = srtp_unprotect_rtcp(_session, buffer, &out_len);
+
+    if (err != srtp_err_status_ok)
+    {
+        printf("Failed to unprotect SRTP packet, err=%d", err);
+        return false;
+    }
+
+    data->SetLength(out_len);
+
+    return true;
+}

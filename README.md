@@ -343,7 +343,7 @@ The first `<IPAddress>` in the `Server.xml` configuration file uses the IP addre
   Here's what each item means:
 
   * `<Port>` : Player Connection port
-  * `<SegmentDuration>` : Druatin\(seconds\) of segment file\(.ts or .m4s\)
+  * `<SegmentDuration>` : Duration\(seconds\) of segment file\(.ts or .m4s\)
   * `<SegmentCount>` : Segment file count in playlist\(playlist.m3u8 or manifest.mpd\)
 
 * Play URL

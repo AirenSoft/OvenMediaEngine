@@ -113,3 +113,27 @@ bool RtcApplication::Stop()
 	// 그 전에는 프로그램 종료까지 본 함수는 호출되지 않음
 	return Application::Stop();
 }
+
+// RTCP RR packet info
+// call from stream->session->rtc_rtcp
+// packetyzer checkr check ssrc_1
+void RtcApplication::OnReceiveerRport(uint32_t stream_id,
+                      uint32_t session_id,
+                      time_t first_receiver_report_time,
+                      const std::shared_ptr<RtcpReceiverReport> &receiver_report)
+{
+    logtd("app(%u) stream(%u) session(%u) Rtcp RR : ssrc(%u/%u) "
+          "fraction(%u/256) packet_lost(%d) seq_cycle(%u) highest_seq(%u) jitter(%u) lsr(%u) dlsr(%u)",
+          GetId(),
+          stream_id,
+          session_id,
+          receiver_report->ssrc,
+          receiver_report->ssrc_1,
+          receiver_report->fraction_lost,
+          receiver_report->packet_lost,
+          receiver_report->sequence_number_cycle,
+          receiver_report->highest_sequence_number,
+          receiver_report->jitter,
+          receiver_report->lsr,
+          receiver_report->dlsr);
+}

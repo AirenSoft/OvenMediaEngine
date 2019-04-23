@@ -1,4 +1,8 @@
 #include "rtp_rtcp.h"
+#include "../webrtc/rtc_application.h"
+#include "../webrtc/rtc_stream.h"
+
+#define OV_LOG_TAG "RtpRtcp"
 
 RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<Session> session)
 	: SessionNode(id, SessionNodeType::RtpRtcp, session)
@@ -30,18 +34,73 @@ bool RtpRtcp::SendData(SessionNodeType from_node, const std::shared_ptr<ov::Data
 }
 
 // Implement SessionNode Interface
-// 데이터를 lower(SRTP)에서 받는다.
-// Upper Node는 없으므로 자체적으로 처리 완료한다.
+// decoded data from srtp
+// no upper node( receive data process end)
 bool RtpRtcp::OnDataReceived(SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
-	// Node 시작 전에는 아무것도 하지 않는다.
+	// nothing to do before node start
 	if(GetState() != SessionNode::NodeState::Started)
 	{
-		logd("RtpRtcp", "SessionNode has not started, so the received data has been canceled.");
+		logtd("SessionNode has not started, so the received data has been canceled.");
 		return false;
 	}
 
-	// Publisher에 미디어 데이터를 받는 기능은 없으므로 실질적으로는 RTCP만 들어오게 된다.
-	// TODO: RTCP는 여기부터 구현한다.
-	return true;
+    RtcpPacketType packet_type;
+    uint32_t payload_size;
+    int report_count;
+
+    // rtcp packet check
+    if (!RtcpPacket::IsRtcpPacket(data, packet_type, payload_size, report_count) || report_count <= 0)
+    {
+        logtd("Packet is not RTCP",RtcpPacket::GetPacketTypeString(packet_type).CStr());
+        return false;
+    }
+
+    return RtcpPacketProcess(packet_type, payload_size, report_count, data);
+}
+
+// rtcp packet process
+// - current process only RR type
+bool RtpRtcp::RtcpPacketProcess(RtcpPacketType packet_type,
+                               uint32_t payload_size,
+                               int report_count,
+                               const std::shared_ptr<const ov::Data> &data)
+{
+    // Receiver Report
+    if (packet_type != RtcpPacketType::RR)
+    {
+        logtd("RTCP(%s) packet type is not processing",RtcpPacket::GetPacketTypeString(packet_type).CStr());
+        return false;
+    }
+
+    auto rtcp_packet = std::make_shared<RtcpPacket>();
+
+    if (!rtcp_packet->RrParseing(report_count, data) )
+    {
+        logtd("RTCP(rr) packet parsing fail", (int) packet_type);
+        return false;
+    }
+
+    const auto &receiver_reports = rtcp_packet->GetReceiverReport();
+
+    if(_first_receiver_report_time == 0)
+    {
+        _first_receiver_report_time = receiver_reports[0]->create_time;
+    }
+
+    // logtd("RTCP RR(Receiver Report) Packet received - size(%d/%d) report_count(%d)",
+    //      payload_size + RTCP_HEADER_SIZE,
+    //      data->GetLength(),
+    //      report_count);
+
+    for(const auto &receiver_report : receiver_reports)
+    {
+        // RR info setting
+        std::static_pointer_cast<RtcApplication>(GetSession()->GetApplication())->OnReceiveerRport(
+                GetSession()->GetStream()->GetId(),
+                GetSession()->GetId(),
+                _first_receiver_report_time,
+                receiver_report);
+    }
+    return true;
 }

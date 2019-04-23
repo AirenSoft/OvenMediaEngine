@@ -2,10 +2,11 @@
 
 #include "rtp_rtcp_defines.h"
 #include "rtp_packetizer.h"
-#include <base/publisher/session_node.h>
+#include "../base/publisher/session_node.h"
 #include <memory>
 #include <vector>
-
+#include <map>
+#include "rtcp_packet.h"
 class RtpRtcp : public SessionNode
 {
 public:
@@ -21,6 +22,12 @@ public:
 	// Lower Node(SRTP)로부터 데이터를 받는다.
 	bool OnDataReceived(SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
-private:
+	bool RtcpPacketProcess(RtcpPacketType packet_type,
+                            uint32_t payload_size,
+                            int report_count,
+                            const std::shared_ptr<const ov::Data> &data);
 
+
+private:
+    time_t _first_receiver_report_time = 0; // 0 - not received RR packet
 };

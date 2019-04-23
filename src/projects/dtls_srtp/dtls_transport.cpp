@@ -284,13 +284,21 @@ bool DtlsTransport::OnDataReceived(SessionNodeType from_node, const std::shared_
 			{
 				// 이 서버는 현재 RTP를 받지 않으므로, RTCP가 유일하다.
 				// DTLS, RTP(RTCP) 이외의 패킷은 비정상 패킷이다.
-				if(!IsRtpPacket(data))
-				{
-					break;
-				}
+				// rtcp에서 검증 처리 있어 주석 처리
+				// if(!IsRtpPacket(data))
+				// {
+				// 	break;
+				// }
 
-				// TODO: SRTP로 보낸다.
-				// _srtp_transport->RecvPacket(session_info, data);
+				// pass to srtp
+				auto node = GetUpperNode();
+
+                if(node == nullptr)
+                {
+                    return false;
+                }
+                node->OnDataReceived(GetNodeType(), data);
+
 				return true;
 			}
 			break;

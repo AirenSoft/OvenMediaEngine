@@ -58,6 +58,23 @@ bool SrtpTransport::OnDataReceived(SessionNodeType from_node, const std::shared_
 		return false;
 	}
 
+	auto decode_data = data->Clone();
+
+    if(!_recv_session->UnprotectRtcp(decode_data))
+    {
+        logtd("stcp unprotected fail");
+        return false;
+    }
+
+	// pass to rtcp
+    auto node = GetUpperNode();
+
+    if(node == nullptr)
+    {
+        return false;
+    }
+    node->OnDataReceived(GetNodeType(), decode_data);
+
 	return true;
 }
 

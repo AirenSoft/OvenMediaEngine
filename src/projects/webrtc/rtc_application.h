@@ -6,7 +6,7 @@
 #include <base/ovcrypto/certificate.h>
 #include <ice/ice_port.h>
 #include <rtc_signalling/rtc_signalling.h>
-
+#include "../rtp_rtcp/rtcp_packet.h"
 #include "rtc_stream.h"
 
 class RtcApplication : public Application
@@ -21,6 +21,11 @@ public:
 	~RtcApplication() final;
 
 	std::shared_ptr<Certificate> GetCertificate();
+
+    void OnReceiveerRport(uint32_t stream_id,
+                        uint32_t session_id,
+                        time_t first_receiver_report_time,
+                        const std::shared_ptr<RtcpReceiverReport> &receiver_report);
 
 private:
 	bool Start() override;
