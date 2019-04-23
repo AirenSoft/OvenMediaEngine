@@ -74,14 +74,13 @@ bool RtpRtcp::RtcpPacketProcess(RtcpPacketType packet_type,
     }
 
     auto rtcp_packet = std::make_shared<RtcpPacket>();
+    std::vector<std::shared_ptr<RtcpReceiverReport>> receiver_reports;
 
-    if (!rtcp_packet->RrParseing(report_count, data) )
+    if (!rtcp_packet->RrParseing(report_count, data,  receiver_reports) )
     {
         logtd("RTCP(rr) packet parsing fail", (int) packet_type);
         return false;
     }
-
-    const auto &receiver_reports = rtcp_packet->GetReceiverReport();
 
     if(_first_receiver_report_time == 0)
     {
@@ -96,7 +95,7 @@ bool RtpRtcp::RtcpPacketProcess(RtcpPacketType packet_type,
     for(const auto &receiver_report : receiver_reports)
     {
         // RR info setting
-        std::static_pointer_cast<RtcApplication>(GetSession()->GetApplication())->OnReceiverRport(
+        std::static_pointer_cast<RtcApplication>(GetSession()->GetApplication())->OnReceiverReport(
                 GetSession()->GetStream()->GetId(),
                 GetSession()->GetId(),
                 _first_receiver_report_time,

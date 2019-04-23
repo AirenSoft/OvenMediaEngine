@@ -58,17 +58,12 @@ public :
                              uint32_t &payload_size,
                              int &report_count);
 
-    bool RrParseing(int report_count , const std::shared_ptr<const ov::Data> &data);
-
-    std::vector<std::shared_ptr<RtcpReceiverReport>> &GetReceiverReport()
-    {
-        return _receiver_reports;
-    }
+    static bool RrParseing(int report_count,
+                            const std::shared_ptr<const ov::Data> &data,
+                            std::vector<std::shared_ptr<RtcpReceiverReport>> &receiver_reports);
 
     bool MakeSrPacket();
 
-protected:
-
 private :
-    std::vector<std::shared_ptr<RtcpReceiverReport>> _receiver_reports;
+
 };

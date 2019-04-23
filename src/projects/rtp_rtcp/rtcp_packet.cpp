@@ -143,7 +143,9 @@ bool RtcpPacket::IsRtcpPacket(const std::shared_ptr<const ov::Data> &data,
 //====================================================================================================
 // RR type packet Parsing
 //====================================================================================================
-bool RtcpPacket::RrParseing(int report_count, const std::shared_ptr<const ov::Data> &data)
+bool RtcpPacket::RrParseing(int report_count,
+                            const std::shared_ptr<const ov::Data> &data,
+                            std::vector<std::shared_ptr<RtcpReceiverReport>> &receiver_reports)
 {
     ov::ByteStream stream(data.get());
     stream.Skip(RTCP_HEADER_SIZE);
@@ -166,7 +168,7 @@ bool RtcpPacket::RrParseing(int report_count, const std::shared_ptr<const ov::Da
         receiver_report->lsr = stream.ReadBE32(); // NTP timestamp
         receiver_report->dlsr = stream.ReadBE32(); // 1/65536 second
 
-        _receiver_reports.push_back(receiver_report);
+        receiver_reports.push_back(receiver_report);
     }
 
     return true;

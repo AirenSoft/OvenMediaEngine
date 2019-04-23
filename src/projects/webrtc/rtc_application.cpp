@@ -117,7 +117,7 @@ bool RtcApplication::Stop()
 // RTCP RR packet info
 // call from stream->session->rtc_rtcp
 // packetyzer checkr check ssrc_1
-void RtcApplication::OnReceiverRport(uint32_t stream_id,
+void RtcApplication::OnReceiverReport(uint32_t stream_id,
                       uint32_t session_id,
                       time_t first_receiver_report_time,
                       const std::shared_ptr<RtcpReceiverReport> &receiver_report)
