@@ -96,7 +96,7 @@ bool RtpRtcp::RtcpPacketProcess(RtcpPacketType packet_type,
     for(const auto &receiver_report : receiver_reports)
     {
         // RR info setting
-        std::static_pointer_cast<RtcApplication>(GetSession()->GetApplication())->OnReceiveerRport(
+        std::static_pointer_cast<RtcApplication>(GetSession()->GetApplication())->OnReceiverRport(
                 GetSession()->GetStream()->GetId(),
                 GetSession()->GetId(),
                 _first_receiver_report_time,
