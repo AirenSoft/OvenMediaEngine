@@ -580,6 +580,6 @@ namespace ov
 
     void Tls::Release()
     {
-        _callback = TlsCallback();
+        // _callback = TlsCallback();
     }
 };
