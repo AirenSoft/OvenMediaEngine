@@ -41,7 +41,7 @@ public :
               int max_retry_count,
               int send_buffer_size,
               int recv_buffer_size,
-              const std::shared_ptr<Certificate> &certificate = nullptr);
+              const std::shared_ptr<Certificate> &certificate = nullptr, const std::shared_ptr<Certificate> &chain_certificate = nullptr);
 
     bool Stop();
 

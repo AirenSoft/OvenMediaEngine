@@ -15,12 +15,12 @@
 std::shared_ptr<SegmentStreamPublisher>
 SegmentStreamPublisher::Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router)
 {
-    auto segment_stream = std::make_shared<SegmentStreamPublisher>(application_info, router);
+	auto segment_stream = std::make_shared<SegmentStreamPublisher>(application_info, router);
 
-    // CONFIG을 불러온다.
-    segment_stream->Start();
+	// CONFIG을 불러온다.
+	segment_stream->Start();
 
-    return segment_stream;
+	return segment_stream;
 }
 
 //====================================================================================================
@@ -28,12 +28,12 @@ SegmentStreamPublisher::Create(const info::Application &application_info, std::s
 //====================================================================================================
 SegmentStreamPublisher::SegmentStreamPublisher(const info::Application &application_info,
                                                std::shared_ptr<MediaRouteInterface> router)
-        : Publisher(application_info, std::move(router))
+	: Publisher(application_info, std::move(router))
 {
-    _publisher_type = cfg::PublisherType::Dash;
+	_publisher_type = cfg::PublisherType::Dash;
 
 
-    logtd("SegmentStreamPublisher Create Start");
+	logtd("SegmentStreamPublisher Create Start");
 }
 
 //====================================================================================================
@@ -41,7 +41,7 @@ SegmentStreamPublisher::SegmentStreamPublisher(const info::Application &applicat
 //====================================================================================================
 SegmentStreamPublisher::~SegmentStreamPublisher()
 {
-    logtd("SegmentStreamPublisher has been terminated finally");
+	logtd("SegmentStreamPublisher has been terminated finally");
 }
 
 //====================================================================================================
@@ -51,137 +51,146 @@ SegmentStreamPublisher::~SegmentStreamPublisher()
 bool SegmentStreamPublisher::Start()
 {
 
-    auto publisher_type = GetPublisherType();
+	auto publisher_type = GetPublisherType();
 
-    // Find Dash publisher configuration
-    _publisher_type = cfg::PublisherType::Dash;
-    auto dash_publisher_info = FindPublisherInfo<cfg::DashPublisher>();
+	// Find Dash publisher configuration
+	_publisher_type = cfg::PublisherType::Dash;
+	auto dash_publisher_info = FindPublisherInfo<cfg::DashPublisher>();
 
-    // Find Hls publisher configuration
-    _publisher_type = cfg::PublisherType::Hls;
-    auto hls_publisher_info = FindPublisherInfo<cfg::HlsPublisher>();
+	// Find Hls publisher configuration
+	_publisher_type = cfg::PublisherType::Hls;
+	auto hls_publisher_info = FindPublisherInfo<cfg::HlsPublisher>();
 
-    _publisher_type = publisher_type;
+	_publisher_type = publisher_type;
 
-    // disable both DASH and HLS
-    if(!dash_publisher_info->IsEnable() && !hls_publisher_info->IsEnable())
-    {
-        logtd("DASH/HLS disable setting");
-        return true;
-    }
+	// disable both DASH and HLS
+	if(!dash_publisher_info->IsEnable() && !hls_publisher_info->IsEnable())
+	{
+		logtd("DASH/HLS disable setting");
+		return true;
+	}
 
-    // DSH/HLS Server Start
-    // same port or one disable
-    if ((dash_publisher_info->GetPort() == hls_publisher_info->GetPort()) ||
-            !dash_publisher_info->IsEnable() ||
-            !hls_publisher_info->IsEnable())
-    {
-        auto segment_stream_server = std::make_shared<SegmentStreamServer>();
-        std::shared_ptr<Certificate> certificate = nullptr;
-        std::shared_ptr<ov::SocketAddress> address;
-        int thread_count = 0;
-        int max_retry_count = 0;
-        int send_buffer_size = 0;
-        int recv_buffer_size = 0;
+	// DSH/HLS Server Start
+	// same port or one disable
+	if((dash_publisher_info->GetPort() == hls_publisher_info->GetPort()) ||
+	   !dash_publisher_info->IsEnable() ||
+	   !hls_publisher_info->IsEnable())
+	{
+		auto segment_stream_server = std::make_shared<SegmentStreamServer>();
+		std::shared_ptr<Certificate> certificate = nullptr;
+		std::shared_ptr<Certificate> chain_certificate = nullptr;
+		std::shared_ptr<ov::SocketAddress> address;
+		int thread_count = 0;
+		int max_retry_count = 0;
+		int send_buffer_size = 0;
+		int recv_buffer_size = 0;
 
 
-        if(dash_publisher_info->IsEnable())
-        {
-            segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::DASH);
-            segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH);
-            segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());
+		if(dash_publisher_info->IsEnable())
+		{
+			segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::DASH);
+			segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH);
+			segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());
 
-            address  = std::make_shared<ov::SocketAddress>(dash_publisher_info->GetPort());
-            thread_count = dash_publisher_info->GetThreadCount();
-            max_retry_count = dash_publisher_info->GetSegmentDuration()*1.5;
-            send_buffer_size = dash_publisher_info->GetSendBufferSize();
-            recv_buffer_size = dash_publisher_info->GetRecvBufferSize();
+			address = std::make_shared<ov::SocketAddress>(dash_publisher_info->GetPort());
+			thread_count = dash_publisher_info->GetThreadCount();
+			max_retry_count = dash_publisher_info->GetSegmentDuration() * 1.5;
+			send_buffer_size = dash_publisher_info->GetSendBufferSize();
+			recv_buffer_size = dash_publisher_info->GetRecvBufferSize();
 
-            // TLS
-            certificate = GetCertificate(dash_publisher_info->GetTls().GetCertPath(),
-                                         dash_publisher_info->GetTls().GetKeyPath());
-        }
+			// TLS
+			certificate = GetCertificate(dash_publisher_info->GetTls().GetCertPath(),
+			                             dash_publisher_info->GetTls().GetKeyPath());
+			chain_certificate = GetChainCertificate(dash_publisher_info->GetTls().GetChainCertPath());
+		}
 
-        if(hls_publisher_info->IsEnable())
-        {
-            segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::HLS);
-            segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);
-            segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());
+		if(hls_publisher_info->IsEnable())
+		{
+			segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::HLS);
+			segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);
+			segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());
 
-            if(!dash_publisher_info->IsEnable())
-            {
-                address  = std::make_shared<ov::SocketAddress>(hls_publisher_info->GetPort());
-                thread_count = hls_publisher_info->GetThreadCount();
-                max_retry_count = hls_publisher_info->GetSegmentDuration()*1.5;
-                send_buffer_size = hls_publisher_info->GetSendBufferSize();
-                recv_buffer_size = hls_publisher_info->GetRecvBufferSize();
-            }
+			if(!dash_publisher_info->IsEnable())
+			{
+				address = std::make_shared<ov::SocketAddress>(hls_publisher_info->GetPort());
+				thread_count = hls_publisher_info->GetThreadCount();
+				max_retry_count = hls_publisher_info->GetSegmentDuration() * 1.5;
+				send_buffer_size = hls_publisher_info->GetSendBufferSize();
+				recv_buffer_size = hls_publisher_info->GetRecvBufferSize();
+			}
 
-            // TLS
-            if(certificate == nullptr)
-            {
-                certificate = GetCertificate(hls_publisher_info->GetTls().GetCertPath(),
-                                             hls_publisher_info->GetTls().GetKeyPath());
-            }
-        }
+			// TLS
+			if(certificate == nullptr)
+			{
+				certificate = GetCertificate(hls_publisher_info->GetTls().GetCertPath(),
+				                             hls_publisher_info->GetTls().GetKeyPath());
+			}
 
-        segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+			if(chain_certificate == nullptr)
+			{
+				chain_certificate = GetChainCertificate(dash_publisher_info->GetTls().GetChainCertPath());
+			}
+		}
 
-        // DASH + HLS Server Start
-        segment_stream_server->Start(*(address.get()),
-                                     thread_count,
-                                     max_retry_count,
-                                     send_buffer_size,
-                                     recv_buffer_size,
-                                     certificate);
+		segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
-        _segment_stream_servers.push_back(segment_stream_server);
-    }
-    else
-    {
-        auto dash_segment_stream_server = std::make_shared<SegmentStreamServer>();
+		// DASH + HLS Server Start
+		segment_stream_server->Start(*(address.get()),
+		                             thread_count,
+		                             max_retry_count,
+		                             send_buffer_size,
+		                             recv_buffer_size,
+		                             certificate);
 
-        dash_segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::DASH);
-        dash_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+		_segment_stream_servers.push_back(segment_stream_server);
+	}
+	else
+	{
+		auto dash_segment_stream_server = std::make_shared<SegmentStreamServer>();
 
-        // Cors/CrossDomain
-        dash_segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH);
-        dash_segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());
+		dash_segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::DASH);
+		dash_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
-        // Dash Server Start
-        dash_segment_stream_server->Start(ov::SocketAddress(dash_publisher_info->GetPort()),
-                                          dash_publisher_info->GetThreadCount(),
-                                          dash_publisher_info->GetSegmentDuration()*1.5,
-                                          dash_publisher_info->GetSendBufferSize(),
-                                          dash_publisher_info->GetRecvBufferSize(),
-                                          GetCertificate(dash_publisher_info->GetTls().GetCertPath(),
-                                                         dash_publisher_info->GetTls().GetKeyPath()));
+		// Cors/CrossDomain
+		dash_segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH);
+		dash_segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());
 
-        _segment_stream_servers.push_back(dash_segment_stream_server);
+		// Dash Server Start
+		dash_segment_stream_server->Start(ov::SocketAddress(dash_publisher_info->GetPort()),
+		                                  dash_publisher_info->GetThreadCount(),
+		                                  dash_publisher_info->GetSegmentDuration() * 1.5,
+		                                  dash_publisher_info->GetSendBufferSize(),
+		                                  dash_publisher_info->GetRecvBufferSize(),
+		                                  GetCertificate(dash_publisher_info->GetTls().GetCertPath(), dash_publisher_info->GetTls().GetKeyPath()),
+			                              GetChainCertificate(hls_publisher_info->GetTls().GetChainCertPath())
+		                                  );
 
-        auto hls_segment_stream_server = std::make_shared<SegmentStreamServer>();
+		_segment_stream_servers.push_back(dash_segment_stream_server);
 
-        hls_segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::HLS);
-        hls_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+		auto hls_segment_stream_server = std::make_shared<SegmentStreamServer>();
 
-        // Cors/CrossDomain
-        hls_segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);
-        hls_segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());
+		hls_segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::HLS);
+		hls_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
-        // HLS Server Start
-        hls_segment_stream_server->Start(ov::SocketAddress(hls_publisher_info->GetPort()),
-                                         hls_publisher_info->GetThreadCount(),
-                                         hls_publisher_info->GetSegmentDuration()*1.5,
-                                         hls_publisher_info->GetSendBufferSize(),
-                                         hls_publisher_info->GetRecvBufferSize(),
-                                         GetCertificate(hls_publisher_info->GetTls().GetCertPath(),
-                                                        hls_publisher_info->GetTls().GetKeyPath()));
+		// Cors/CrossDomain
+		hls_segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);
+		hls_segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());
 
-        _segment_stream_servers.push_back(hls_segment_stream_server);
+		// HLS Server Start
+		hls_segment_stream_server->Start(ov::SocketAddress(hls_publisher_info->GetPort()),
+		                                 hls_publisher_info->GetThreadCount(),
+		                                 hls_publisher_info->GetSegmentDuration() * 1.5,
+		                                 hls_publisher_info->GetSendBufferSize(),
+		                                 hls_publisher_info->GetRecvBufferSize(),
+		                                 GetCertificate(hls_publisher_info->GetTls().GetCertPath(), hls_publisher_info->GetTls().GetKeyPath()),
+		                                 GetChainCertificate(hls_publisher_info->GetTls().GetChainCertPath())
+		                                 );
 
-    }
+		_segment_stream_servers.push_back(hls_segment_stream_server);
 
-    return Publisher::Start();
+	}
+
+	return Publisher::Start();
 }
 
 //====================================================================================================
@@ -190,7 +199,7 @@ bool SegmentStreamPublisher::Start()
 //====================================================================================================
 bool SegmentStreamPublisher::Stop()
 {
-    return Publisher::Stop();
+	return Publisher::Stop();
 }
 
 
@@ -200,10 +209,12 @@ bool SegmentStreamPublisher::Stop()
 //====================================================================================================
 bool SegmentStreamPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)
 {
-    for(auto server : _segment_stream_servers)
-        server->GetMonitoringCollectionData(collections);
+	for(auto server : _segment_stream_servers)
+	{
+		server->GetMonitoringCollectionData(collections);
+	}
 
-    return true;
+	return true;
 }
 
 //====================================================================================================
@@ -211,7 +222,7 @@ bool SegmentStreamPublisher::GetMonitoringCollectionData(std::vector<std::shared
 //====================================================================================================
 std::shared_ptr<Application> SegmentStreamPublisher::OnCreateApplication(const info::Application &application_info)
 {
-    return SegmentStreamApplication::Create(application_info);
+	return SegmentStreamApplication::Create(application_info);
 }
 
 
@@ -225,15 +236,15 @@ bool SegmentStreamPublisher::OnPlayListRequest(const ov::String &app_name,
                                                PlayListType play_list_type,
                                                ov::String &play_list)
 {
-    auto stream = std::static_pointer_cast<SegmentStream>(GetStream(app_name, stream_name));
+	auto stream = std::static_pointer_cast<SegmentStream>(GetStream(app_name, stream_name));
 
-    if (!stream)
-    {
-        logte("Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
-        return false;
-    }
+	if(!stream)
+	{
+		logte("Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		return false;
+	}
 
-    return stream->GetPlayList(play_list_type, play_list);
+	return stream->GetPlayList(play_list_type, play_list);
 }
 
 //====================================================================================================
@@ -246,38 +257,13 @@ bool SegmentStreamPublisher::OnSegmentRequest(const ov::String &app_name,
                                               const ov::String &file_name,
                                               std::shared_ptr<ov::Data> &segment_data)
 {
-    auto stream = std::static_pointer_cast<SegmentStream>(GetStream(app_name, stream_name));
+	auto stream = std::static_pointer_cast<SegmentStream>(GetStream(app_name, stream_name));
 
-    if (!stream)
-    {
-        logte("Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
-        return false;
-    }
+	if(!stream)
+	{
+		logte("Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		return false;
+	}
 
-    return stream->GetSegment(segmnet_type, file_name, segment_data);
-}
-
-std::shared_ptr<Certificate> SegmentStreamPublisher::GetCertificate(ov::String cert_path, ov::String key_path)
-{
-    if(!cert_path.IsEmpty() && !key_path.IsEmpty())
-    {
-        auto certificate = std::make_shared<Certificate>();
-
-        logti("Trying to create a certificate using files - cert_path(%s) key_path(%s)",cert_path.CStr(),key_path.CStr());
-
-        auto error = certificate->GenerateFromPem(cert_path, key_path);
-
-        if(error == nullptr)
-        {
-            return certificate;
-        }
-
-        logte("Could not create a certificate from files: %s", error->ToString().CStr());
-    }
-    else
-    {
-        // TLS is disabled
-    }
-
-    return nullptr;
+	return stream->GetSegment(segmnet_type, file_name, segment_data);
 }

@@ -69,8 +69,9 @@ bool WebRtcPublisher::Start()
 		return false;
 	}
 
-	std::shared_ptr<Certificate> certificate = GetCertificate();
-	std::shared_ptr<Certificate> chain_certificate = GetChainCertificate();
+	cfg::Tls tls_info = _publisher_info->GetSignalling().GetTls();
+	std::shared_ptr<Certificate> certificate = GetCertificate(tls_info.GetCertPath(), tls_info.GetKeyPath());
+	std::shared_ptr<Certificate> chain_certificate = GetChainCertificate(tls_info.GetChainCertPath());
 
 	// Signalling에 Observer 연결
 	_signalling->AddObserver(RtcSignallingObserver::GetSharedPtr());
@@ -313,68 +314,4 @@ ov::String WebRtcPublisher::GetCandidateProto()
 	}
 
 	return "UDP";
-}
-
-std::shared_ptr<Certificate> WebRtcPublisher::GetCertificate()
-{
-	cfg::Tls tls_info = _publisher_info->GetSignalling().GetTls();
-
-	if(
-		(tls_info.GetCertPath().IsEmpty() == false) &&
-		(tls_info.GetKeyPath().IsEmpty() == false)
-		)
-	{
-		auto certificate = std::make_shared<Certificate>();
-
-		logti("Trying to create a certificate using files\n\tCert path: %s\n\tPrivate key path: %s",
-		      tls_info.GetCertPath().CStr(),
-		      tls_info.GetKeyPath().CStr()
-		);
-
-		auto error = certificate->GenerateFromPem(tls_info.GetCertPath(), tls_info.GetKeyPath());
-
-		if(error == nullptr)
-		{
-			return certificate;
-		}
-
-		logte("Could not create a certificate from files: %s", error->ToString().CStr());
-	}
-	else
-	{
-		// TLS is disabled
-	}
-
-	return nullptr;
-}
-
-std::shared_ptr<Certificate> WebRtcPublisher::GetChainCertificate()
-{
-	cfg::Tls tls_info = _publisher_info->GetSignalling().GetTls();
-
-	if(
-		(tls_info.GetChainCertPath().IsEmpty() == false)
-		)
-	{
-		auto certificate = std::make_shared<Certificate>();
-
-		logti("Trying to create a chain certificate using file: %s",
-		      tls_info.GetChainCertPath().CStr()
-		);
-
-		auto error = certificate->GenerateFromPem(tls_info.GetChainCertPath(), true);
-
-		if(error == nullptr)
-		{
-			return certificate;
-		}
-
-		logte("Could not create a chain certificate from file: %s", error->ToString().CStr());
-	}
-	else
-	{
-		// TLS is disabled
-	}
-
-	return nullptr;
 }

@@ -1,12 +1,15 @@
 #pragma once
 
 #include <base/common_types.h>
+#include <base/ovcrypto/ovcrypto.h>
+#include <base/publisher/application.h>
+#include <base/publisher/stream.h>
+#include <base/media_route/media_route_application_observer.h>
+
+#include <physical_port/physical_port.h>
+#include <ice/ice_port_manager.h>
+
 #include <chrono>
-#include "physical_port/physical_port.h"
-#include "ice/ice_port_manager.h"
-#include "base/publisher/application.h"
-#include "base/publisher/stream.h"
-#include "base/media_route/media_route_application_observer.h"
 
 //====================================================================================================
 // Monitoring Collect Data
@@ -112,6 +115,9 @@ protected:
 	// 모든 Publisher는 Type을 정의해야 하며, Config과 일치해야 한다.
 	virtual cfg::PublisherType GetPublisherType() = 0;
 	virtual std::shared_ptr<Application> OnCreateApplication(const info::Application &application_info) = 0;
+
+	std::shared_ptr<Certificate> GetCertificate(ov::String cert_path, ov::String key_path);
+	std::shared_ptr<Certificate> GetChainCertificate(ov::String chain_cert_path);
 
 	// 모든 application들의 map
 	std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
