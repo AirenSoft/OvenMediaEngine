@@ -397,6 +397,8 @@ void MediaRouteApplication::GarbageCollector()
 #if DEBUG
 			// debug 빌드 되었을 경우 stream 삭제 기능 동작 안하게 함
 #else // DEBUG
+            // Streams that do not receive data are automatically deleted after 30 seconds.
+            if (diff_time > TIMEOUT_STREAM_ALIVE)
 			{
 				logti("%s(%u) will delete the stream. diff time(%.0f)",
 					  stream->GetStreamInfo()->GetName().CStr(),
@@ -418,7 +420,7 @@ void MediaRouteApplication::GarbageCollector()
 				// 비효율적임
 				it = _streams.begin();
 			}
-#endif // DEBUG
+#endif
 		}
 	}
 }

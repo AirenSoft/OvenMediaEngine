@@ -37,6 +37,9 @@ class RelayClient;
 
 // 1. Connect App에 접속되면 어플리케이션으로 할당함.
 
+// Stream timout for GarbageCollector
+# define TIMEOUT_STREAM_ALIVE   30
+
 class MediaRouteApplication : public MediaRouteApplicationInterface
 {
 public:

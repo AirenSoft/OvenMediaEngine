@@ -1,0 +1,12 @@
+[Unit]
+Description=OvenMediaEngine
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/usr/share/ovenmediaengine
+ExecStart=/usr/bin/OvenMediaEngine
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

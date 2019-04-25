@@ -4,6 +4,13 @@
 SHELL := /bin/bash
 BUILD_ROOT := .
 BUILD_SYSTEM_DIRECTORY := core
+OME := OvenMediaEngine
+OME_SERVICE := ovenmediaengine.service
+INSTALL_DIRECTORY := /usr/share/ovenmediaengine
+INSTALL_CONF_DIRECTORY := $(INSTALL_DIRECTORY)/conf
+LINK_BIN_DIRECTORY := /usr/bin
+INSTALL_SERVICE_DIRECTORY := /lib/systemd/system
+LINK_SERVICE_DIRECTORY := /etc/systemd/system
 
 #===============================================================================
 # Include makefiles
@@ -72,7 +79,7 @@ directories_to_prepare:
 		fi \
 	done
 
-.PHONY: clean clean_internal
+.PHONY: clean clean_internal clean_release
 clean_internal:
 	@$(TARGET_COUNTER)
 	@echo $(CURRENT_PROGRESS)"$(CONFIG_CLEAN_COLOR)Deleting directories$(ANSI_RESET)..."$(INCREASE_COUNT)
@@ -91,3 +98,37 @@ clean: clean_internal
 	@$(TARGET_COUNTER)
 	@echo $(CURRENT_PROGRESS)"$(CONFIG_CLEAN_COLOR)Cleaned.$(ANSI_RESET)"$(INCREASE_COUNT)
 
+clean_release: clean_internal
+	@$(TARGET_COUNTER)
+	@echo $(CURRENT_PROGRESS)"$(CONFIG_CLEAN_COLOR)Cleaned.$(ANSI_RESET)"$(INCREASE_COUNT)
+
+.PHONY: install
+install:
+	@if test ! -f bin/$(BUILD_METHOD)/$(OME); then \
+	    echo $(CONFIG_CLEAN_COLOR)Create a release version using the \'make release\' command.$(ANSI_RESET); \
+	    exit 1; \
+	fi
+
+	@echo "$(ANSI_GREEN)Installing directory$(ANSI_RESET) $(INSTALL_DIRECTORY)"
+	@mkdir -p $(INSTALL_CONF_DIRECTORY)
+	@install -m 755 bin/$(BUILD_METHOD)/$(OME) $(INSTALL_DIRECTORY)
+	@install -m 644 ../docs/conf_examples/* $(INSTALL_CONF_DIRECTORY)
+	@echo "$(ANSI_GREEN)Creating link file$(ANSI_RESET) $(LINK_BIN_DIRECTORY)/$(OME) => \
+	$(ANSI_BLUE)$(INSTALL_DIRECTORY)/$(OME)$(ANSI_RESET)"
+	@ln -sf $(INSTALL_DIRECTORY)/$(OME) $(LINK_BIN_DIRECTORY)/$(OME)
+	@echo "$(ANSI_GREEN)Installing service$(ANSI_RESET) $(INSTALL_SERVICE_DIRECTORY)/$(OME_SERVICE)"
+	@install -m 644 ../docs/$(OME_SERVICE) $(INSTALL_SERVICE_DIRECTORY)
+	@echo "$(ANSI_GREEN)Creating link file$(ANSI_RESET) $(LINK_SERVICE_DIRECTORY)/$(OME_SERVICE) => \
+	$(ANSI_BLUE)$(INSTALL_SERVICE_DIRECTORY)/$(OME_SERVICE)$(ANSI_RESET)"
+	@ln -sf $(INSTALL_SERVICE_DIRECTORY)/$(OME_SERVICE) $(LINK_SERVICE_DIRECTORY)/$(OME_SERVICE)
+
+.PHONY: uninstall
+uninstall:
+	@echo "$(CONFIG_CLEAN_COLOR)Deleting directory$(ANSI_RESET) $(INSTALL_DIRECTORY)"
+	@rm -rf $(INSTALL_DIRECTORY)
+	@echo "$(CONFIG_CLEAN_COLOR)Deleting link file$(ANSI_RESET) $(LINK_BIN_DIRECTORY)/$(OME)"
+	@rm -rf $(LINK_BIN_DIRECTORY)/$(OME)
+	@echo "$(CONFIG_CLEAN_COLOR)Deleting service file$(ANSI_RESET) $(INSTALL_SERVICE_DIRECTORY)/$(OME_SERVICE)"
+	@rm -rf $(INSTALL_SERVICE_DIRECTORY)/$(OME_SERVICE)
+	@echo "$(CONFIG_CLEAN_COLOR)Deleting link file$(ANSI_RESET) $(LINK_SERVICE_DIRECTORY)/$(OME_SERVICE)"
+	@rm -rf $(LINK_SERVICE_DIRECTORY)/$(OME_SERVICE)
