@@ -52,8 +52,6 @@ private :
 
     // Publisher Implementation
     cfg::PublisherType GetPublisherType() override { return _publisher_type; }
-
-    std::shared_ptr<Certificate> GetCertificate(ov::String cert_path, ov::String key_path);
 private :
     cfg::PublisherType _publisher_type;
     std::vector<std::shared_ptr<SegmentStreamServer>> _segment_stream_servers;
