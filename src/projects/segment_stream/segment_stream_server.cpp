@@ -424,7 +424,7 @@ void SegmentStreamServer::PlayListRequest(ov::String &app_name,
     // header setting
     if (play_list_type == PlayListType::M3u8) response->SetHeader("Content-Type", "application/x-mpegURL");
     else if (play_list_type == PlayListType::Mpd) response->SetHeader("Content-Type", "application/dash+xml");
-    response->SetHeader("Content-Length", ov::Converter::ToString(play_list.GetLength()).CStr());
+    //response->SetHeader("Content-Length", ov::Converter::ToString(play_list.GetLength()).CStr());
 
     response->AppendString(play_list);
 
@@ -473,7 +473,7 @@ void SegmentStreamServer::SegmentRequest(ov::String &app_name,
     // header setting
     if (segment_type == SegmentType::MpegTs) response->SetHeader("Content-Type", "video/MP2T");
     else if (segment_type == SegmentType::M4S) response->SetHeader("Content-Type", "video/mp4");
-    response->SetHeader("Content-Length", ov::Converter::ToString(segment_data->GetLength()).CStr());
+    //response->SetHeader("Content-Length", ov::Converter::ToString(segment_data->GetLength()).CStr());
 
     response->AppendData(segment_data);
 
@@ -495,7 +495,7 @@ void SegmentStreamServer::CrossdomainRequest(const std::shared_ptr<HttpRequest> 
 {
     // header setting
     response->SetHeader("Content-Type", "text/x-cross-domain-policy");
-    response->SetHeader("Content-Length", ov::Converter::ToString(_cross_domain_xml.GetLength()).CStr());
+    //response->SetHeader("Content-Length", ov::Converter::ToString(_cross_domain_xml.GetLength()).CStr());
 
     // data setting
     response->AppendString(_cross_domain_xml);

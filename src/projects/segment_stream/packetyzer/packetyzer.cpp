@@ -121,12 +121,17 @@ uint64_t Packetyzer::ConvertTimeScale(uint64_t time, uint32_t from_timescale, ui
 
 //====================================================================================================
 // PlayList
+// - thread safe
 //====================================================================================================
 bool Packetyzer::SetPlayList(std::string &play_list)
 {
+    // playlist mutex
+    std::unique_lock<std::mutex> lock(_play_list_guard);
+
     _play_list = play_list;
 
-    if (_save_file) {
+    if (_save_file)
+    {
         std::string file_name;
 
         if (_packetyzer_type == PacketyzerType::Dash) file_name = "manifest.mpd";
@@ -142,6 +147,7 @@ bool Packetyzer::SetPlayList(std::string &play_list)
 
 //====================================================================================================
 // Segment
+// - thread safe
 //====================================================================================================
 bool Packetyzer::SetSegmentData(SegmentDataType data_type,
                                 uint32_t sequence_number,
@@ -170,6 +176,9 @@ bool Packetyzer::SetSegmentData(SegmentDataType data_type,
 
     if (data_type == SegmentDataType::Ts || data_type == SegmentDataType::Mp4Video)
     {
+        // video segment mutex
+        std::unique_lock<std::mutex> lock(_video_segment_guard);
+
         _video_segment_datas[_current_video_index++] = segment_data;
 
         if(_segment_save_count <= _current_video_index)
@@ -177,6 +186,9 @@ bool Packetyzer::SetSegmentData(SegmentDataType data_type,
     }
     else if (data_type == SegmentDataType::Mp4Audio)
     {
+        // audio segment mutex
+        std::unique_lock<std::mutex> lock(_audio_segment_guard);
+
         _audio_segment_datas[_current_audio_index++] = segment_data;
 
         if(_segment_save_count <= _current_audio_index)
@@ -209,19 +221,24 @@ bool Packetyzer::SetSegmentData(SegmentDataType data_type,
 
 //====================================================================================================
 // PlayList
+// - thread safe
 //====================================================================================================
 bool Packetyzer::GetPlayList(std::string &play_list)
 {
     if(!_init_segment_count_complete)
         return false;
 
+    // playlist mutex
+    std::unique_lock<std::mutex> lock(_play_list_guard);
+
     play_list = _play_list;
+
     return true;
 }
 
 //====================================================================================================
 // Segment
-//
+// - thread safe
 //====================================================================================================
 bool Packetyzer::GetSegmentData(SegmentDataType data_type,
                                 const ov::String &file_name,
@@ -245,9 +262,12 @@ bool Packetyzer::GetSegmentData(SegmentDataType data_type,
     // ts or mpd data
     if (data_type == SegmentDataType::Ts || data_type == SegmentDataType::Mp4Video)
     {
+        // video segment mutex
+        std::unique_lock<std::mutex> lock(_video_segment_guard);
+
         auto item = std::find_if(_video_segment_datas.begin(), _video_segment_datas.end(), [&](std::shared_ptr<SegmentData> const &value) -> bool
         {
-            return value->file_name == file_name;
+            return value != nullptr ? value->file_name == file_name : false;
         });
 
         if(item != _video_segment_datas.end())
@@ -257,9 +277,12 @@ bool Packetyzer::GetSegmentData(SegmentDataType data_type,
     }
     else if (data_type == SegmentDataType::Mp4Audio)
     {
+        // audio segment mutex
+        std::unique_lock<std::mutex> lock(_audio_segment_guard);
+
         auto item = std::find_if(_audio_segment_datas.begin(), _audio_segment_datas.end(), [&](std::shared_ptr<SegmentData> const &value) -> bool
         {
-            return value->file_name == file_name;
+            return value != nullptr ? value->file_name == file_name : false;
         });
 
         if(item != _audio_segment_datas.end())
@@ -280,6 +303,7 @@ bool Packetyzer::GetSegmentData(SegmentDataType data_type,
 
 //====================================================================================================
 // Last (segment count) Video(or Video+Audio) Segments
+// - thread safe
 //====================================================================================================
 bool Packetyzer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
 {
@@ -291,6 +315,9 @@ bool Packetyzer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> 
     int end_index = (begin_index <= (_segment_save_count - _segment_count)) ?
                     (begin_index + _segment_count) -1 :
                     (_segment_count - (_segment_save_count - begin_index)) -1;
+
+    // video segment mutex
+    std::unique_lock<std::mutex> lock(_video_segment_guard);
 
     if(begin_index <= end_index)
     {
@@ -326,6 +353,7 @@ bool Packetyzer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> 
 
 //====================================================================================================
 // Last (segment count) Audio Segments
+// - thread safe
 //====================================================================================================
 bool Packetyzer::GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
 {
@@ -337,6 +365,9 @@ bool Packetyzer::GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> 
     int end_index = (begin_index <= (_segment_save_count - _segment_count)) ?
                     (begin_index + _segment_count) -1 :
                     (_segment_count - (_segment_save_count - begin_index)) -1;
+
+    // audio segment mutex
+    std::unique_lock<std::mutex> lock(_audio_segment_guard);
 
     if(begin_index <= end_index)
     {

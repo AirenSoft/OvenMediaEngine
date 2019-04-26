@@ -61,24 +61,34 @@ protected :
     PacketyzerType _packetyzer_type;
     std::string _segment_prefix;
     PacketyzerStreamType _stream_type;
+
     int _segment_count;
     int _segment_save_count;
     uint64_t _segment_duration; // second
     PacketyzerMediaInfo _media_info;
+
     uint32_t _sequence_number;
     uint32_t _video_sequence_number;
     uint32_t _audio_sequence_number;
     bool _save_file;
+
+    bool _init_segment_count_complete;
     std::string _play_list;
+
+
     bool _video_init;
     bool _audio_init;
-    bool _init_segment_count_complete;
 
     std::shared_ptr<SegmentData> _mpd_video_init_file = nullptr;
     std::shared_ptr<SegmentData> _mpd_audio_init_file = nullptr;
 
     int _current_video_index = 0;
     int _current_audio_index = 0;
+
     std::vector<std::shared_ptr<SegmentData>> _video_segment_datas; // m4s : video , ts : video+audio
     std::vector<std::shared_ptr<SegmentData>> _audio_segment_datas; // m4s : audio
+
+    std::mutex _video_segment_guard;
+    std::mutex _audio_segment_guard;
+    std::mutex _play_list_guard;
 };
