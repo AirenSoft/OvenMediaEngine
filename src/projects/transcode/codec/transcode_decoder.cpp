@@ -54,7 +54,10 @@ std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(common::MediaC
 
 	if(decoder != nullptr)
 	{
-		decoder->Configure(transcode_context);
+		if (!decoder->Configure(transcode_context))
+		{
+		    return nullptr;
+		}
 	}
 
 	return std::move(decoder);

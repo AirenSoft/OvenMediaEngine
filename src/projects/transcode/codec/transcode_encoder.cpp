@@ -66,7 +66,10 @@ std::unique_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaC
 
 	if(encoder != nullptr)
 	{
-		encoder->Configure(std::move(transcode_context));
+        if (!encoder->Configure(std::move(transcode_context)))
+        {
+            return nullptr;
+        }
 	}
 
 	return std::move(encoder);

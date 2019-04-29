@@ -99,6 +99,10 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 		CreateDecoder(track.second->GetId());
 	}
 
+    if (_decoders.empty()) {
+        return;
+    }
+
 	// Generate track list by profile(=encode name)
 	auto encodes = _application_info.GetEncodes();
 	std::map <ov::String, std::vector <uint8_t >> profile_tracks;
@@ -315,7 +319,11 @@ void TranscodeStream::CreateDecoder(int32_t media_track_id)
 	}
 
 	// create decoder for codec id
-	_decoders[media_track_id] = std::move(TranscodeDecoder::CreateDecoder(track->GetCodecId()));
+	auto decoder = std::move(TranscodeDecoder::CreateDecoder(track->GetCodecId()));
+	if (decoder != nullptr)
+	{
+        _decoders[media_track_id] = std::move(decoder);
+	}
 }
 
 void TranscodeStream::CreateEncoder(std::shared_ptr<MediaTrack> media_track, std::shared_ptr<TranscodeContext> transcode_context)
@@ -326,7 +334,11 @@ void TranscodeStream::CreateEncoder(std::shared_ptr<MediaTrack> media_track, std
 	}
 
 	// create encoder for codec id
-	_encoders[media_track->GetId()] = std::move(TranscodeEncoder::CreateEncoder(media_track->GetCodecId(), transcode_context));
+	auto encoder = std::move(TranscodeEncoder::CreateEncoder(media_track->GetCodecId(), transcode_context));
+	if (encoder != nullptr)
+	{
+        _encoders[media_track->GetId()] = std::move(encoder);
+    }
 }
 
 void TranscodeStream::ChangeOutputFormat(MediaFrame *buffer)
