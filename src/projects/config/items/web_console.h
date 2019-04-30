@@ -12,40 +12,33 @@
 
 namespace cfg
 {
-	struct Origin : public Item
+	struct WebConsole : public Item
 	{
 		int GetListenPort() const
 		{
 			return _listen_port;
 		}
 
-		ov::String GetPrimary() const
+		ov::String GetLoginId() const
 		{
-			return _primary;
+			return _login_id;
 		}
 
-		ov::String GetSecondary() const
+		ov::String GetLoginPw() const
 		{
-			return _secondary;
-		}
-
-		ov::String GetAlias() const
-		{
-			return _alias;
+			return _login_pw;
 		}
 
 	protected:
 		void MakeParseList() const override
 		{
 			RegisterValue<Optional>("ListenPort", &_listen_port);
-			RegisterValue<Optional>("Primary", &_primary);
-			RegisterValue<Optional>("Secondary", &_secondary);
-			RegisterValue<Optional>("Alias", &_alias);
+			RegisterValue<Optional>("LoginID", &_login_id);
+			RegisterValue<Optional>("LoginPW", &_login_pw);
 		}
 
-		int _listen_port = 9000;
-		ov::String _primary;
-		ov::String _secondary;
-		ov::String _alias;
+		int _listen_port = 8888;
+		ov::String _login_id;
+		ov::String _login_pw;
 	};
 }

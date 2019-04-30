@@ -15,6 +15,8 @@
 #include <memory>
 #include <map>
 
+#include <config/config.h>
+
 class IcePortManager : public ov::Singleton<IcePortManager>
 {
 public:
@@ -22,13 +24,13 @@ public:
 
 	~IcePortManager() override = default;
 
-	std::shared_ptr<IcePort> CreatePort(ov::SocketType type, const ov::SocketAddress &address, std::shared_ptr<IcePortObserver> observer);
+	std::shared_ptr<IcePort> CreatePort(const cfg::IceCandidates &ice_candidates, std::shared_ptr<IcePortObserver> observer);
+
 	bool ReleasePort(std::shared_ptr<IcePort> ice_port, std::shared_ptr<IcePortObserver> observer);
 
 protected:
 	IcePortManager() = default;
 
-	// key: [type, address]
-	// value: IcePort
-	std::map<std::pair<ov::SocketType, ov::SocketAddress>, std::shared_ptr<IcePort>> _mapping_table;
+	bool GenerateIceCandidates(const cfg::IceCandidates &ice_candidates, std::vector<RtcIceCandidate> *parsed_ice_candidate_list);
+	bool ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, int *start_port, int *end_port);
 };

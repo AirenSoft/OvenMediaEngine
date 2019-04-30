@@ -12,7 +12,7 @@
 
 namespace cfg
 {
-    struct Urls : public Item
+    struct CrossDomain : public Item
     {
         const std::vector<Url> &GetUrls() const
         {

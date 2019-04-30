@@ -57,11 +57,6 @@ private:
 	bool Start() override;
 	bool Stop() override;
 
-	uint16_t GetSignallingPort();
-	ov::String GetCandidateIP();
-	uint16_t GetCandidatePort();
-	ov::String GetCandidateProto();
-
 	// Publisher Implementation
 	cfg::PublisherType GetPublisherType() override
 	{

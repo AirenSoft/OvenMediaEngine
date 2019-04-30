@@ -96,6 +96,21 @@ namespace cfg
 		return _tag_name;
 	}
 
+	const Item *Item::GetParent(const ov::String &name) const
+	{
+		if(_parent != nullptr)
+		{
+			if(_parent->GetTagName() == name)
+			{
+				return _parent;
+			}
+
+			return _parent->GetParent(name);
+		}
+
+		return nullptr;
+	}
+
 	Item &Item::operator =(const Item &item)
 	{
 		_tag_name = item._tag_name;

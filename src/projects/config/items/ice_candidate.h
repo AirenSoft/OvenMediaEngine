@@ -8,23 +8,23 @@
 //==============================================================================
 #pragma once
 
-#include "stream_profile.h"
+#include "application.h"
 
 namespace cfg
 {
-	struct StreamProfiles : public Item
+	struct IceCandidate : public Item
 	{
-		const std::vector<StreamProfile> &GetProfiles() const
+		ov::String GetCandidate() const
 		{
-			return _stream_profile_list;
+			return _candidate;
 		}
 
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue("Profile", &_stream_profile_list);
+			RegisterValue<ValueType::Text, Optional>(nullptr, &_candidate);
 		}
 
-		std::vector<StreamProfile> _stream_profile_list;
+		ov::String _candidate;
 	};
 }

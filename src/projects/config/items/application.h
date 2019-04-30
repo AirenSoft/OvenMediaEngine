@@ -8,14 +8,13 @@
 //==============================================================================
 #pragma once
 
-#include "tls.h"
+#include "origin.h"
+#include "web_console.h"
 #include "decode.h"
 #include "encodes.h"
 #include "streams.h"
 #include "providers.h"
 #include "publishers.h"
-#include "origin_listen.h"
-#include "origin.h"
 
 namespace cfg
 {
@@ -41,13 +40,13 @@ namespace cfg
 			{
 				return ApplicationType::Live;
 			}
-			else if(_type == "vod")
-			{
-				return ApplicationType::Vod;
-			}
 			else if(_type == "liveedge")
 			{
 				return ApplicationType::LiveEdge;
+			}
+			else if(_type == "vod")
+			{
+				return ApplicationType::Vod;
 			}
 			else if(_type == "vodedge")
 			{
@@ -62,19 +61,9 @@ namespace cfg
 			return _type;
 		}
 
-		const OriginListen &GetRelay() const
-		{
-			return _relay;
-		}
-
 		const Origin &GetOrigin() const
 		{
 			return _origin;
-		}
-
-		const Tls &GetTls() const
-		{
-			return _tls;
 		}
 
 		const Decode &GetDecode() const
@@ -102,20 +91,18 @@ namespace cfg
 			return std::move(_publishers.GetPublishers());
 		}
 
-        const int GetThreadCount() const
-        {
-            return _publishers.GetThreadCount();
-        }
+		const int GetThreadCount() const
+		{
+			return _publishers.GetThreadCount();
+		}
 
 	protected:
 		void MakeParseList() const override
 		{
 			RegisterValue("Name", &_name);
 			RegisterValue<Optional>("Type", &_type);
-			RegisterValue<Optional>("Relay", &_relay);
 			RegisterValue<Optional>("Origin", &_origin);
-			RegisterValue<Optional>("TLS", &_tls);
-			RegisterValue<Optional>("Decode", &_decode);
+			RegisterValue<Optional>("WebConsole", &_web_console);
 			RegisterValue<Optional>("Encodes", &_encodes);
 			RegisterValue<Optional>("Streams", &_streams);
 			RegisterValue<Optional>("Providers", &_providers);
@@ -124,9 +111,8 @@ namespace cfg
 
 		ov::String _name;
 		ov::String _type;
-		OriginListen _relay;
 		Origin _origin;
-		Tls _tls;
+		WebConsole _web_console;
 		Decode _decode;
 		Encodes _encodes;
 		Streams _streams;

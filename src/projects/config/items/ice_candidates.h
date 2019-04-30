@@ -8,30 +8,23 @@
 //==============================================================================
 #pragma once
 
-#include "../item.h"
+#include "ice_candidate.h"
 
 namespace cfg
 {
-	struct OriginListen : public Item
+	struct IceCandidates : public Item
 	{
-		ov::String GetIp() const
+		const std::vector<IceCandidate> &GetIceCandidateList() const
 		{
-			return _ip;
-		}
-
-		int GetPort() const
-		{
-			return _port;
+			return _ice_candidate_list;
 		}
 
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<Optional>("IP", &_ip);
-			RegisterValue<Optional>("Port", &_port);
+			RegisterValue("IceCandidate", &_ice_candidate_list);
 		}
 
-		ov::String _ip = "*";
-		int _port = 9000;
+		std::vector<IceCandidate> _ice_candidate_list;
 	};
 }

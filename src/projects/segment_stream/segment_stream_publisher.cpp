@@ -50,7 +50,6 @@ SegmentStreamPublisher::~SegmentStreamPublisher()
 //====================================================================================================
 bool SegmentStreamPublisher::Start()
 {
-
 	auto publisher_type = GetPublisherType();
 
 	// Find Dash publisher configuration
@@ -64,7 +63,7 @@ bool SegmentStreamPublisher::Start()
 	_publisher_type = publisher_type;
 
 	// disable both DASH and HLS
-	if(!dash_publisher_info->IsEnable() && !hls_publisher_info->IsEnable())
+	if(!dash_publisher_info->IsParsed() && !hls_publisher_info->IsParsed())
 	{
 		logtd("DASH/HLS disable setting");
 		return true;
@@ -72,9 +71,9 @@ bool SegmentStreamPublisher::Start()
 
 	// DSH/HLS Server Start
 	// same port or one disable
-	if((dash_publisher_info->GetPort() == hls_publisher_info->GetPort()) ||
-	   !dash_publisher_info->IsEnable() ||
-	   !hls_publisher_info->IsEnable())
+	if((dash_publisher_info->GetListenPort() == hls_publisher_info->GetListenPort()) ||
+	   !dash_publisher_info->IsParsed() ||
+	   !hls_publisher_info->IsParsed())
 	{
 		auto segment_stream_server = std::make_shared<SegmentStreamServer>();
 		std::shared_ptr<Certificate> certificate = nullptr;
@@ -86,13 +85,13 @@ bool SegmentStreamPublisher::Start()
 		int recv_buffer_size = 0;
 
 
-		if(dash_publisher_info->IsEnable())
+		if(dash_publisher_info->IsParsed())
 		{
 			segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::DASH);
-			segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH);
+			segment_stream_server->AddCors(dash_publisher_info->GetCrossDomains(), ProtocolFlag::DASH);
 			segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());
 
-			address = std::make_shared<ov::SocketAddress>(dash_publisher_info->GetPort());
+			address = std::make_shared<ov::SocketAddress>(dash_publisher_info->GetListenPort());
 			thread_count = dash_publisher_info->GetThreadCount();
 			max_retry_count = dash_publisher_info->GetSegmentDuration() * 1.5;
 			send_buffer_size = dash_publisher_info->GetSendBufferSize();
@@ -104,15 +103,15 @@ bool SegmentStreamPublisher::Start()
 			chain_certificate = GetChainCertificate(dash_publisher_info->GetTls().GetChainCertPath());
 		}
 
-		if(hls_publisher_info->IsEnable())
+		if(hls_publisher_info->IsParsed())
 		{
 			segment_stream_server->SetAllowApp(_application_info.GetName(), ProtocolFlag::HLS);
-			segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);
+			segment_stream_server->AddCors(hls_publisher_info->GetCrossDomains(), ProtocolFlag::HLS);
 			segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());
 
-			if(!dash_publisher_info->IsEnable())
+			if(!dash_publisher_info->IsParsed())
 			{
-				address = std::make_shared<ov::SocketAddress>(hls_publisher_info->GetPort());
+				address = std::make_shared<ov::SocketAddress>(hls_publisher_info->GetListenPort());
 				thread_count = hls_publisher_info->GetThreadCount();
 				max_retry_count = hls_publisher_info->GetSegmentDuration() * 1.5;
 				send_buffer_size = hls_publisher_info->GetSendBufferSize();
@@ -152,18 +151,18 @@ bool SegmentStreamPublisher::Start()
 		dash_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
 		// Cors/CrossDomain
-		dash_segment_stream_server->AddCors(dash_publisher_info->GetCorsUrls(), ProtocolFlag::DASH);
+		dash_segment_stream_server->AddCors(dash_publisher_info->GetCrossDomains(), ProtocolFlag::DASH);
 		dash_segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());
 
 		// Dash Server Start
-		dash_segment_stream_server->Start(ov::SocketAddress(dash_publisher_info->GetPort()),
+		dash_segment_stream_server->Start(ov::SocketAddress(dash_publisher_info->GetListenPort()),
 		                                  dash_publisher_info->GetThreadCount(),
 		                                  dash_publisher_info->GetSegmentDuration() * 1.5,
 		                                  dash_publisher_info->GetSendBufferSize(),
 		                                  dash_publisher_info->GetRecvBufferSize(),
 		                                  GetCertificate(dash_publisher_info->GetTls().GetCertPath(), dash_publisher_info->GetTls().GetKeyPath()),
-			                              GetChainCertificate(hls_publisher_info->GetTls().GetChainCertPath())
-		                                  );
+		                                  GetChainCertificate(hls_publisher_info->GetTls().GetChainCertPath())
+		);
 
 		_segment_stream_servers.push_back(dash_segment_stream_server);
 
@@ -173,18 +172,18 @@ bool SegmentStreamPublisher::Start()
 		hls_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
 		// Cors/CrossDomain
-		hls_segment_stream_server->AddCors(hls_publisher_info->GetCorsUrls(), ProtocolFlag::HLS);
+		hls_segment_stream_server->AddCors(hls_publisher_info->GetCrossDomains(), ProtocolFlag::HLS);
 		hls_segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());
 
 		// HLS Server Start
-		hls_segment_stream_server->Start(ov::SocketAddress(hls_publisher_info->GetPort()),
+		hls_segment_stream_server->Start(ov::SocketAddress(hls_publisher_info->GetListenPort()),
 		                                 hls_publisher_info->GetThreadCount(),
 		                                 hls_publisher_info->GetSegmentDuration() * 1.5,
 		                                 hls_publisher_info->GetSendBufferSize(),
 		                                 hls_publisher_info->GetRecvBufferSize(),
 		                                 GetCertificate(hls_publisher_info->GetTls().GetCertPath(), hls_publisher_info->GetTls().GetKeyPath()),
 		                                 GetChainCertificate(hls_publisher_info->GetTls().GetChainCertPath())
-		                                 );
+		);
 
 		_segment_stream_servers.push_back(hls_segment_stream_server);
 

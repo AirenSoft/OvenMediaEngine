@@ -52,7 +52,7 @@ std::shared_ptr<RtcPeerInfo> RtcP2PManager::FindPeer(peer_id_t peer_id)
 	return nullptr;
 }
 
-bool RtcP2PManager::RemovePeer(const std::shared_ptr<RtcPeerInfo> &peer)
+bool RtcP2PManager::RemovePeer(const std::shared_ptr<RtcPeerInfo> &peer, int max_clients_per_host)
 {
 	std::lock_guard<std::recursive_mutex> lock_guard(_list_mutex);
 
@@ -69,7 +69,7 @@ bool RtcP2PManager::RemovePeer(const std::shared_ptr<RtcPeerInfo> &peer)
 		if(host_peer != nullptr)
 		{
 			host_peer->_client_list.erase(peer->GetId());
-			if(host_peer->_client_list.size() < P2P_DEFAULT_MAX_CLIENTS_PER_HOST)
+			if(host_peer->_client_list.size() < max_clients_per_host)
 			{
 				if(host_peer->CanAccept())
 				{
@@ -130,7 +130,7 @@ bool RtcP2PManager::RegisterAsHostPeer(const std::shared_ptr<RtcPeerInfo> &peer)
 	return true;
 }
 
-std::shared_ptr<RtcPeerInfo> RtcP2PManager::TryToRegisterAsClientPeer(const std::shared_ptr<RtcPeerInfo> &peer)
+std::shared_ptr<RtcPeerInfo> RtcP2PManager::TryToRegisterAsClientPeer(const std::shared_ptr<RtcPeerInfo> &peer, int max_clients_per_host)
 {
 	if(peer == nullptr)
 	{
@@ -164,7 +164,7 @@ std::shared_ptr<RtcPeerInfo> RtcP2PManager::TryToRegisterAsClientPeer(const std:
 
 				peer->_host_peer = host_peer;
 
-				if(client_list.size() >= P2P_DEFAULT_MAX_CLIENTS_PER_HOST)
+				if(client_list.size() >= max_clients_per_host)
 				{
 					// Now, the host cannot accept another client
 					_available_list.erase(host.first);
@@ -226,7 +226,7 @@ std::map<peer_id_t, std::shared_ptr<RtcPeerInfo>> RtcP2PManager::GetClientPeerLi
 
 int RtcP2PManager::GetPeerCount() const
 {
-	return _peer_list.size();
+	return static_cast<int>(_peer_list.size());
 }
 
 int RtcP2PManager::GetClientPeerCount() const

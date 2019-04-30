@@ -14,17 +14,20 @@
 #include <vector>
 #include <memory>
 
+#include <config/config.h>
 #include <rtp_rtcp/rtp_packet.h>
 #include <rtp_rtcp/rtcp_packet.h>
 #include <physical_port/physical_port_manager.h>
 
+class RtcIceCandidate;
+
 class IcePort : protected PhysicalPortObserver
 {
 protected:
-	// 각각의 client들에 대한 접속 정보를 추적하기 위한 구조체
+	// A data structure to tracking client connection status
 	struct IcePortInfo
 	{
-		// client에 연결되어 있는 세션 정보
+		// Session information that connected with the client
 		std::shared_ptr<SessionInfo> session_info;
 
 		std::shared_ptr<SessionDescription> offer_sdp;
@@ -50,20 +53,13 @@ protected:
 
 public:
 	IcePort();
-	virtual ~IcePort();
+	~IcePort() override;
 
-	bool Create(ov::SocketType type, const ov::SocketAddress &address);
+	bool Create(std::vector<RtcIceCandidate> ice_candidate_list);
+
+	const std::vector<RtcIceCandidate> &GetIceCandidateList() const;
+
 	bool Close();
-
-	const ov::SocketType GetType() const
-	{
-		return _physical_port->GetType();
-	}
-
-	const ov::SocketAddress &GetAddress() const
-	{
-		return _physical_port->GetAddress();
-	}
 
 	IcePortConnectionState GetState(const std::shared_ptr<SessionInfo> &session_info) const
 	{
@@ -88,11 +84,11 @@ public:
 
 	bool HasObserver() const noexcept
 	{
-		return (_observers.size() > 0);
+		return (_observers.empty() == false);
 	}
 
 	void AddSession(const std::shared_ptr<SessionInfo> &session_info, std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp);
-	bool RemoveSession(const session_id_t session_id);
+	bool RemoveSession(session_id_t session_id);
 	bool RemoveSession(const std::shared_ptr<SessionInfo> &session_info);
 
 	bool Send(const std::shared_ptr<SessionInfo> &session_info, std::unique_ptr<RtpPacket> packet);
@@ -102,6 +98,9 @@ public:
 	ov::String ToString() const;
 
 protected:
+	std::shared_ptr<PhysicalPort> CreatePhysicalPort(const ov::SocketAddress &address, ov::SocketType type);
+	bool ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, int *start_port, int *end_port);
+
 	//--------------------------------------------------------------------
 	// Implementation of PhysicalPortObserver
 	//--------------------------------------------------------------------
@@ -111,14 +110,13 @@ protected:
 	//--------------------------------------------------------------------
 
 	void SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionState state);
-
 	// STUN 오류를 반환함
 	void ResponseError(const std::shared_ptr<ov::Socket> &remote);
 
 private:
 	void CheckTimedoutItem();
 
-	// STUN nego order:
+	// STUN negotiation order:
 	// (State: New)
 	// [Server] <-- 1. Binding Request          --- [Player]
 	// (State: Checking)
@@ -131,10 +129,13 @@ private:
 	bool SendBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<IcePortInfo> &info);
 	bool ProcessBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &response_message);
 
-	std::shared_ptr<PhysicalPort> _physical_port;
+	std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
+	std::recursive_mutex _physical_port_list_mutex;
 
 	// IcePort로 부터 데이터가 들어오면 이벤트를 받을 옵져버 목록
 	std::vector<std::shared_ptr<IcePortObserver>> _observers;
+
+	std::vector<RtcIceCandidate> _ice_candidate_list;
 
 	// STUN binding이 될 때까지 관련 정보를 담고 있는 mapping table
 	// binding이 완료되면 이후로는 destination ip & port로 구분하기 때문에 필요 없어짐

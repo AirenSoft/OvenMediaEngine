@@ -61,14 +61,17 @@ bool RtmpProvider::Start()
         return false;
     }
 
-    logtd("RtmpProvider Start");
+    auto host = _provider_info->GetParentAs<cfg::Host>("Host");
+    auto rtmp_address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(_provider_info->GetListenPort()));
+
+    logti("RTMP Provider is listening on %s...", rtmp_address.ToString().CStr());
 
     // RtmpServer 생성
     _rtmp_server = std::make_shared<RtmpServer>();
 
     // RtmpServer 에 Observer 연결
     _rtmp_server->AddObserver(RtmpObserver::GetSharedPtr());
-    _rtmp_server->Start(ov::SocketAddress(_provider_info->GetPort()));
+    _rtmp_server->Start(rtmp_address);
 
     return Provider::Start();
 }
