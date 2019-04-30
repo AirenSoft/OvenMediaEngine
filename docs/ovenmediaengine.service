@@ -10,4 +10,4 @@ ExecStart=/usr/bin/OvenMediaEngine
 Restart=always
 
 [Install]
-WantedBy=multi-user.targetroot
+WantedBy=multi-user.target
