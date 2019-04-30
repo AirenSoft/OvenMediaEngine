@@ -61,7 +61,6 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	if(_encoder->InitializeExt(&param))
 	{
 		logte("H264 encoder initialize failed");
-		WelsDestroySVCEncoder(_encoder);
 		return false;
 	}
 
