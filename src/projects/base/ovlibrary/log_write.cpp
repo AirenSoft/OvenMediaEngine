@@ -1,65 +1,73 @@
+//==============================================================================
 //
-// Created by benjamin on 19. 4. 24.
+//  OvenMediaEngine
 //
+//  Created by Benjamin
+//  Copyright (c) 2019 AirenSoft. All rights reserved.
+//
+//==============================================================================
 
 #include <iostream>
-#include <sstream>
 #include <iomanip>
-#include <fstream>
 #include <memory>
 #include <sys/stat.h>
 
 #include "log_write.h"
 
-#define OV_LOG_DIR      "/var/log/ovenmediaengine/"
-#define OV_LOG_FILE     OV_LOG_DIR "ovenmediaengine.log"
+#define OV_LOG_DIR      "logs"
+#define OV_LOG_FILE     "ovenmediaengine.log"
 
 namespace ov
 {
-    LogWrite::LogWrite() : _last_day(0)
+    LogWrite::LogWrite() :
+        _last_day(0),
+        _log_path(OV_LOG_DIR),
+        _log_file(_log_path + std::string("/") + std::string(OV_LOG_FILE))
     {
-        if ((::mkdir(OV_LOG_DIR, 0755) == -1) && errno != EEXIST)
+    }
+
+    void LogWrite::SetLogPath(const char* log_path)
+    {
+        _log_path = log_path;
+        _log_file = log_path + std::string("/") + std::string(OV_LOG_FILE);
+    }
+
+    void LogWrite::Initialize()
+    {
+        if ((::mkdir(_log_path.c_str(), 0755) == -1) && errno != EEXIST)
         {
-            std::cout << "Cannot create directory, errno=" << errno << std::endl;
             return;
         }
 
-        _log_stream = std::make_shared<std::ofstream>();
-        _log_stream->open(OV_LOG_FILE, std::ofstream::out | std::ofstream::app);
-        if (_log_stream->good())
-        {
-            std::cout.rdbuf(_log_stream->rdbuf());
-        }
+        _log_stream.close();
+        _log_stream.clear();
+        _log_stream.open(_log_file, std::ofstream::out | std::ofstream::app);
     }
 
     void LogWrite::Write(const char* log)
     {
-        if (_log_stream && _log_stream->good())
+        std::time_t time = std::time(nullptr);
+        std::tm localTime {};
+        ::localtime_r(&time, &localTime);
+
+        if (_last_day != localTime.tm_mday)
         {
-            std::time_t time = std::time(nullptr);
-            std::tm localTime {};
-            ::localtime_r(&time, &localTime);
-
-            if (_last_day != localTime.tm_mday)
+            if (_last_day)
             {
-                if (_last_day)
-                {
-                    std::ostringstream logfile;
-                    logfile << OV_LOG_DIR << std::put_time(&localTime, "%Y%m%d") << ".log";
-                    ::rename(OV_LOG_FILE, logfile.str().c_str());
-                }
-                _last_day = localTime.tm_mday;
+                std::ostringstream logfile;
+                logfile << _log_file << std::put_time(&localTime, "%Y%m%d") << ".log";
+                ::rename(_log_file.c_str(), logfile.str().c_str());
             }
-
-            struct stat file_stat {};
-            if (stat(OV_LOG_FILE, &file_stat) != 0)
-            {
-                _log_stream->close();
-                _log_stream->open(OV_LOG_FILE, std::ofstream::out | std::ofstream::app);
-            }
+            _last_day = localTime.tm_mday;
         }
 
-        std::cout << log;
-        std::cout.flush();
+        struct stat file_stat {};
+        if (!_log_stream.is_open() || _log_stream.fail() || ::stat(_log_file.c_str(), &file_stat) != 0)
+        {
+            Initialize();
+        }
+
+        _log_stream << log << std::endl;
+        _log_stream.flush();
     }
 }

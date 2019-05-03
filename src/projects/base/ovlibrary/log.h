@@ -97,6 +97,8 @@ void ov_log_set_enable(const char *tag_regex, OVLogLevel level, bool is_enabled)
 
 void ov_log_internal(OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, ...);
 
+void ov_log_set_path(const char *log_path);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

@@ -58,6 +58,8 @@ bool ConfigLoggerLoader::Parse()
         }
     }
 
+    _log_path = logger_node.child_value("Path");
+
     return true;
 }
 
@@ -71,6 +73,11 @@ void ConfigLoggerLoader::Reset()
 std::vector<std::shared_ptr<LoggerTagInfo>> ConfigLoggerLoader::GetTags() const noexcept
 {
     return _tags;
+}
+
+std::string ConfigLoggerLoader::GetLogPath() const noexcept
+{
+    return _log_path;
 }
 
 std::shared_ptr<LoggerTagInfo> ParseTag(pugi::xml_node tag_node)

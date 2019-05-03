@@ -37,3 +37,8 @@ void ov_log_internal(OVLogLevel level, const char *tag, const char *file, int li
 
 	va_end(arg_list);
 }
+
+void ov_log_set_path(const char *log_path)
+{
+    g_log_internal.SetLogPath(log_path);
+}

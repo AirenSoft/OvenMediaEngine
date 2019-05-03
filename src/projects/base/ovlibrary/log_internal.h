@@ -204,7 +204,7 @@ namespace ov
 				"E",
 				"C"
 			};
-#if DEBUG
+
 			const char *color_prefix[] = {
 				OV_LOG_COLOR_FG_CYAN,
 				OV_LOG_COLOR_FG_WHITE,
@@ -220,7 +220,7 @@ namespace ov
 				OV_LOG_COLOR_RESET,
 				OV_LOG_COLOR_RESET
 			};
-#endif  //DEBUG
+
 			// 현재 시각의 milliseconds를 얻어옴
 			auto current = std::chrono::system_clock::now();
 			auto mseconds = std::chrono::duration_cast<std::chrono::milliseconds>(current.time_since_epoch()).count() % 1000;
@@ -295,12 +295,7 @@ namespace ov
 				   "%s() | "
 #endif // OV_LOG_SHOW_FUNCTION_NAME
 				,
-#if DEBUG
-				       color_prefix[level],
-#else
-                       "",
-#endif
-
+				       "",
 #if DEBUG
                        localTime.tm_mon + 1, localTime.tm_mday,
 #else // DEBUG
@@ -321,25 +316,25 @@ namespace ov
 
 			// 맨 뒤에 <message> 추가
 			log.AppendVFormat(format, &(arg_list[0]));
-#if DEBUG
-			log.Append(color_suffix[level]);
-#endif
-			log.Append("\n");
-#if DEBUG
+
 			if(level < OVLogLevelWarning)
 			{
-				fputs(log.CStr(), stdout);
+                fprintf(stdout, "%s%s%s\n", color_prefix[level], log.CStr(), color_suffix[level]);
 				fflush(stdout);
 			}
 			else
 			{
-				fputs(log.CStr(), stderr);
-				fflush(stderr);
+                fprintf(stderr, "%s%s%s\n", color_prefix[level], log.CStr(), color_suffix[level]);
+                fflush(stderr);
 			}
-#else
+
             _log_file.Write(log.CStr());
-#endif
 		}
+
+        inline void SetLogPath(const char* log_path)
+        {
+            _log_file.SetLogPath(log_path);
+        }
 
 	protected:
 		OVLogLevel _level;

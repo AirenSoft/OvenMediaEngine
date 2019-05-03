@@ -8,6 +8,8 @@
 //==============================================================================
 #pragma once
 
+#include <fstream>
+
 namespace ov
 {
     class LogWrite
@@ -16,10 +18,15 @@ namespace ov
         LogWrite();
         virtual ~LogWrite() = default;
         void Write(const char* log);
+        void SetLogPath(const char* log_path);
 
     private:
-        std::shared_ptr<std::ofstream> _log_stream;
+        void Initialize();
+
+        std::ofstream _log_stream;
         int _last_day;
+        std::string _log_path;
+        std::string _log_file;
     };
 }
 
