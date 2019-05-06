@@ -4,13 +4,13 @@ description: Ultra-low Latency Streaming Engine
 
 # OvenMediaEngine \(OME\)
 
-### What is OvenMediaEngine?
+## What is OvenMediaEngine?
 
 OvenMediaEngine\(OME\) is a streaming engine for real-time live broadcasting with Ultra-low latency. It receives the RTMP stream from general broadcasting studios such as OBS, XSplit and transmit it on WebRTC. Video streams with Ultra-low latency can be played in a browser without plug-ins. To make it easier to play WebRTC streams in browsers, we are working on another HTML5 player project [OvenPlayer](https://github.com/AirenSoft/OvenPlayer).
 
 Our goal is to make it easier for you to build a stable real-time broadcasting service.
 
-### Features
+## Features
 
 * RTMP Input, WebRTC/HLS/MPEG-DASH Output
 * Live transcoding \(H.264, VP8, Opus, AAC\)
@@ -22,7 +22,7 @@ Our goal is to make it easier for you to build a stable real-time broadcasting s
   * Origin-Edge architecture
 * Configuration
 
-### Supported Platforms
+## Supported Platforms
 
 We support the following platforms:
 
@@ -35,9 +35,9 @@ We will support the following platforms in the future:
 * macOS
 * Windows
 
-### Quick Start
+## Quick Start
 
-#### Prerequisites
+### Prerequisites
 
 * Ubuntu
   * Install packages
@@ -200,7 +200,7 @@ We will support the following platforms in the future:
     $ (curl -OL https://github.com/Haivision/srt/archive/v1.3.1.tar.gz && tar xvf v1.3.1.tar.gz && cd srt-1.3.1 && ./configure && make && sudo make install)
     ```
 
-#### Build
+### Build
 
 You can build OME source with the following command. The built binary can be found in the `bin/DEBUG` or `bin/RELEASE` directory.
 
@@ -210,7 +210,7 @@ $ cd OvenMediaEngine/src
 $ make
 ```
 
-#### Try it
+### Try it
 
 **Server**
 
@@ -404,7 +404,7 @@ Please note that the WebRTC Signaling URL in the sample code above is similar to
 
 For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC Signaling URL will be `ws://192.168.0.1:3333/app/stream_o`.
 
-#### The following screen capture shows common settings for OME.
+### The following screen capture shows common settings for OME.
 
 **conf - Server.xml**
 
@@ -426,13 +426,13 @@ For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC
 
 **OBS - Stream**
 
-![](.gitbook/assets/image.png)
+![](.gitbook/assets/image%20%284%29.png)
 
 **OBS - Output**
 
 * It is strongly recommended that the CPU, Profile, and Tune sections of the OBS configuration be as follows.
 
-![](.gitbook/assets/image%20%282%29.png)
+![](.gitbook/assets/image%20%2811%29.png)
 
 **Javascript**
 
@@ -452,11 +452,11 @@ For example, if the RTMP URL is `rtmp://192.168.0.1:1935/app/stream`, the WebRTC
 </script>
 ```
 
-### How to Contribute
+## How to Contribute
 
-Please read [Guidelines](CONTRIBUTING.md) and our [Rules](CODE_OF_CONDUCT.md).
+Please read [Guidelines](https://github.com/AirenSoft/OvenMediaEngine/tree/e1686fcf6e3166aa87a7afde290130829450cca2/CONTRIBUTING.md) and our [Rules](https://github.com/AirenSoft/OvenMediaEngine/tree/e1686fcf6e3166aa87a7afde290130829450cca2/CODE_OF_CONDUCT.md).
 
-### Future works
+## Future works
 
 The following features will be supported, and check the milestones for more details.
 
@@ -470,7 +470,7 @@ The following features will be supported, and check the milestones for more deta
 * Recording live streams
 * WebRTC extensions
 
-### License
+## License
 
-OvenMediaEngine is licensed under the [GPLv2 license](LICENSE).
+OvenMediaEngine is licensed under the [GPLv2 license](https://github.com/AirenSoft/OvenMediaEngine/tree/e1686fcf6e3166aa87a7afde290130829450cca2/LICENSE/README.md).
 
