@@ -9,21 +9,27 @@
 #pragma once
 
 #include "publisher.h"
+#include "ice_candidates.h"
 #include "signalling.h"
-#include "tls.h"
+#include "p2p.h"
 
 namespace cfg
 {
 	struct WebrtcPublisher : public Publisher
 	{
+		WebrtcPublisher()
+			: Publisher(0)
+		{
+		}
+
+		const IceCandidates &GetIceCandidates() const
+		{
+			return _ice_candidates;
+		}
+
 		PublisherType GetType() const override
 		{
 			return PublisherType::Webrtc;
-		}
-
-		ov::String GetPort() const
-		{
-			return _port;
 		}
 
 		const Signalling &GetSignalling() const
@@ -31,18 +37,25 @@ namespace cfg
 			return _signalling;
 		}
 
+		const P2P &GetP2P() const
+		{
+			return _p2p;
+		}
+
 	protected:
 		void MakeParseList() const override
 		{
 			Publisher::MakeParseList();
 
-			RegisterValue<Optional>("Port", &_port);
+			RegisterValue("IceCandidates", &_ice_candidates);
 			RegisterValue<Optional>("Timeout", &_timeout);
 			RegisterValue("Signalling", &_signalling);
+			RegisterValue<Optional>("P2P", &_p2p);
 		}
 
-		ov::String _port = "10000/udp";
+		IceCandidates _ice_candidates;
 		int _timeout = 0;
 		Signalling _signalling;
+		P2P _p2p;
 	};
 }

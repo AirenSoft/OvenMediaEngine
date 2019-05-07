@@ -55,7 +55,11 @@ namespace ov
 			}
 		}
 
-		OV_ASSERT2(result);
+		if(result == false)
+		{
+			logte("An error occured: %s", host_port.CStr());
+			// OV_ASSERT2(result);
+		}
 	}
 
 	SocketAddress::SocketAddress(const ov::String &hostname, uint16_t port)
@@ -74,7 +78,11 @@ namespace ov
 		bool result = SetHostname(hostname);
 		result = result && SetPort(port);
 
-		OV_ASSERT2(result);
+		if(result == false)
+		{
+			logte("An error occured: %s:%d", hostname, port);
+			// OV_ASSERT2(result);
+		}
 	}
 
 	SocketAddress::SocketAddress(const sockaddr_in &addr_in)

@@ -2,29 +2,29 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Hyunjun Jang
+//  Created by Jaejong Bong
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
-#include "stream_profile.h"
+#include "../item.h"
 
 namespace cfg
 {
-	struct StreamProfiles : public Item
+	struct P2P : public Item
 	{
-		const std::vector<StreamProfile> &GetProfiles() const
+		int GetClientPeersPerHostPeer() const
 		{
-			return _stream_profile_list;
+			return _client_peers_per_host_peer;
 		}
 
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue("Profile", &_stream_profile_list);
+			RegisterValue("ClientPeersPerHostPeer", &_client_peers_per_host_peer);
 		}
 
-		std::vector<StreamProfile> _stream_profile_list;
+		int _client_peers_per_host_peer = 2;
 	};
 }

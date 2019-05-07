@@ -19,15 +19,16 @@ RelayServer::RelayServer(MediaRouteApplicationInterface *media_route_application
 	  _application_info(application_info)
 {
 	// Listen to localhost:<relay_port>
-	auto &relay = application_info.GetRelay();
+	auto &origin = application_info.GetOrigin();
 
-	if(relay.IsParsed())
+	if(origin.IsParsed())
 	{
-		int port = relay.GetPort();
+		int port = origin.GetListenPort();
 
 		if(port > 0)
 		{
-			const ov::String &ip = relay.GetIp();
+			auto host = origin.GetParentAs<cfg::Host>("Host");
+			const ov::String &ip = host->GetIp();
 			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip, static_cast<uint16_t>(port));
 
 			_server_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Srt, address);

@@ -9,11 +9,22 @@
 #pragma once
 
 #include "publisher.h"
+#include "cross_domain.h"
 
 namespace cfg
 {
 	struct RtmpPublisher : public Publisher
 	{
+		RtmpPublisher()
+			: Publisher(1935)
+		{
+		}
+
+		const std::vector<Url> &GetCrossDomains() const
+		{
+			return _cross_domain.GetUrls();
+		}
+
 		PublisherType GetType() const override
 		{
 			return PublisherType::Rtmp;
@@ -24,9 +35,9 @@ namespace cfg
 		{
 			Publisher::MakeParseList();
 
-			RegisterValue<Optional>("Port", &_port);
+			RegisterValue<Optional>("CrossDomain", &_cross_domain);
 		}
 
-		int _port = 1935;
+		CrossDomain _cross_domain;
 	};
 }

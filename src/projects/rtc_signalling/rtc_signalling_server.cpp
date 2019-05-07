@@ -15,12 +15,13 @@
 
 #include <ice/ice.h>
 
-#define USE_P2P                             0
-
-RtcSignallingServer::RtcSignallingServer(const info::Application &application_info, std::shared_ptr<MediaRouteApplicationInterface> application)
-	: _application_info(application_info),
+RtcSignallingServer::RtcSignallingServer(const cfg::WebrtcPublisher *webrtc_publisher, std::shared_ptr<MediaRouteApplicationInterface> application)
+	: _webrtc_publisher_info(webrtc_publisher),
 	  _application(std::move(application))
 {
+
+	_application_info = _webrtc_publisher_info->GetParentAs<cfg::Application>("Application");
+	_p2p_info = &(_webrtc_publisher_info->GetP2P());
 }
 
 bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate)
@@ -43,6 +44,15 @@ bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::sha
 	else
 	{
 		_http_server = std::make_shared<HttpServer>();
+	}
+
+	if(_p2p_info->IsParsed())
+	{
+		logti("P2P is enabled (Client peers per host peer: %d)", _p2p_info->GetClientPeersPerHostPeer());
+	}
+	else
+	{
+		logti("P2P is disabled");
 	}
 
 	return InitializeWebSocketServer() && _http_server->Start(address);
@@ -291,69 +301,69 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections)
 {
 
-    std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
-    ov::String alias = _application_info.GetOrigin().GetAlias();
-    ov::String app_name = _application_info.GetName();
-    ov::String stream_name;
-    uint32_t bitrate = 0;
+	std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
+	ov::String alias = _application_info->GetOrigin().GetAlias();
+	ov::String app_name = _application_info->GetName();
+	ov::String stream_name;
+	uint32_t bitrate = 0;
 
-    // TODO : 임시 코드 차후에 p2p manager에서 실제 정보 처리
-    // - 1개의 스트림명과 비트레이트  확인
-    std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
+	// TODO : 임시 코드 차후에 p2p manager에서 실제 정보 처리
+	// - 1개의 스트림명과 비트레이트  확인
+	std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
 
-    for(const auto &client_item  : _client_list)
-    {
-       stream_name = client_item.second->stream_name;
+	for(const auto &client_item  : _client_list)
+	{
+		stream_name = client_item.second->stream_name;
 
-        std::find_if(_observers.begin(), _observers.end(), [&bitrate, app_name, stream_name](auto &observer) -> bool
-        {
-            // Ask observer to fill bitrate
-            bitrate = observer->OnGetBitrate(app_name, stream_name);
-            return bitrate != 0;
-        });
+		std::find_if(_observers.begin(), _observers.end(), [&bitrate, app_name, stream_name](auto &observer) -> bool
+		{
+			// Ask observer to fill bitrate
+			bitrate = observer->OnGetBitrate(app_name, stream_name);
+			return bitrate != 0;
+		});
 
-        if(bitrate != 0)
-        {
-            break;
-        }
-    }
+		if(bitrate != 0)
+		{
+			break;
+		}
+	}
 
-    uint32_t p2p_connection_count = GetClientPeerCount();
-    uint32_t edeg_connection_count = GetTotalPeerCount() - p2p_connection_count;
+	uint32_t p2p_connection_count = GetClientPeerCount();
+	uint32_t edeg_connection_count = GetTotalPeerCount() - p2p_connection_count;
 
-    // p2p
-    for(int index = 0; index < p2p_connection_count; index++)
-    {
-        auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
-                                                                     alias,
-                                                                     app_name,
-                                                                     stream_name);
-        collection->edge_connection = 0;
-        collection->edge_bitrate = 0;
-        collection->p2p_connection = 1;
-        collection->p2p_bitrate = bitrate;
-        collection->check_time = current_time;
+	// p2p
+	for(int index = 0; index < p2p_connection_count; index++)
+	{
+		auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
+		                                                             alias,
+		                                                             app_name,
+		                                                             stream_name);
+		collection->edge_connection = 0;
+		collection->edge_bitrate = 0;
+		collection->p2p_connection = 1;
+		collection->p2p_bitrate = bitrate;
+		collection->check_time = current_time;
 
-        stream_collections.push_back(collection);
+		stream_collections.push_back(collection);
 
-    }
+	}
 
-    // edge connection
-    for(int index = 0; index < edeg_connection_count; index++)
-    {
-        auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
-                                                                     alias,
-                                                                     app_name,
-                                                                     stream_name);
-        collection->edge_connection = 1;
-        collection->edge_bitrate = bitrate;
-        collection->p2p_connection = 0;
-        collection->p2p_bitrate = 0;
-        collection->check_time = current_time;
+	// edge connection
+	for(int index = 0; index < edeg_connection_count; index++)
+	{
+		auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
+		                                                             alias,
+		                                                             app_name,
+		                                                             stream_name);
+		collection->edge_connection = 1;
+		collection->edge_bitrate = bitrate;
+		collection->p2p_connection = 0;
+		collection->p2p_bitrate = 0;
+		collection->check_time = current_time;
 
-        stream_collections.push_back(collection);
+		stream_collections.push_back(collection);
 
-    }
+	}
 
 	return true;
 }
@@ -453,9 +463,10 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(std::shared
 		}
 		else
 		{
-#if USE_P2P
-			host_peer = _p2p_manager.TryToRegisterAsClientPeer(peer_info);
-#endif // USE_P2P
+			if(_p2p_info->IsParsed())
+			{
+				host_peer = _p2p_manager.TryToRegisterAsClientPeer(peer_info, _p2p_info->GetClientPeersPerHostPeer());
+			}
 		}
 	}
 	else
@@ -850,7 +861,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(std::shared_ptr<Rtc
 		{
 			logtd("Deleting peer %s from p2p manager...", peer_info->ToString().CStr());
 
-			_p2p_manager.RemovePeer(peer_info);
+			_p2p_manager.RemovePeer(peer_info, _p2p_info->GetClientPeersPerHostPeer());
 
 			if(peer_info->IsHost())
 			{
@@ -872,7 +883,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(std::shared_ptr<Rtc
 					client_info->GetResponse()->Send(value);
 
 					// remove client from peer
-					_p2p_manager.RemovePeer(client_info);
+					_p2p_manager.RemovePeer(client_info, _p2p_info->GetClientPeersPerHostPeer());
 				}
 			}
 			else

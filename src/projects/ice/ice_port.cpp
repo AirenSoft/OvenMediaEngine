@@ -15,6 +15,8 @@
 #include <algorithm>
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <config/config.h>
+#include <rtc_signalling/rtc_ice_candidate.h>
 
 IcePort::IcePort()
 {
@@ -30,41 +32,107 @@ IcePort::~IcePort()
 {
 	_timer.Stop();
 
-	if(_physical_port != nullptr)
-	{
-		_physical_port->Close();
-	}
+	Close();
 }
 
-bool IcePort::Create(ov::SocketType type, const ov::SocketAddress &address)
+bool IcePort::Create(std::vector<RtcIceCandidate> ice_candidate_list)
 {
-	if(_physical_port != nullptr)
+	std::lock_guard<std::recursive_mutex> lock_guard(_physical_port_list_mutex);
+
+	if(_physical_port_list.empty() == false)
 	{
 		logtw("IcePort is running");
 		return false;
 	}
 
-	_physical_port = PhysicalPortManager::Instance()->CreatePort(type, address);
+	bool succeeded = true;
 
-	if(_physical_port == nullptr)
+	for(auto &ice_candidate: ice_candidate_list)
 	{
-		logte("Cannot create physical port for %s (type: %d)", address.ToString().CStr(), type);
-		return false;
+		auto transport = ice_candidate.GetTransport().UpperCaseString();
+		auto address = ice_candidate.GetAddress();
+		ov::SocketType socket_type = ov::SocketType::Udp;
+
+		if(transport == "TCP")
+		{
+			socket_type = ov::SocketType::Tcp;
+		}
+
+		// Create an ICE port using candidate information
+		auto physical_port = CreatePhysicalPort(address, socket_type);
+
+		if(physical_port == nullptr)
+		{
+			logte("Could not create physical port for %s/%s", address.ToString().CStr(), transport);
+			succeeded = false;
+			break;
+		}
+
+		logti("ICE port is bounded on %s/%s", address.ToString().CStr(), transport.CStr());
+		_physical_port_list.push_back(physical_port);
 	}
 
-	_physical_port->AddObserver(this);
+	if(succeeded)
+	{
+		_ice_candidate_list = std::move(ice_candidate_list);
+	}
+	else
+	{
+		Close();
+	}
 
-	return true;
+	return succeeded;
+}
+
+const std::vector<RtcIceCandidate> &IcePort::GetIceCandidateList() const
+{
+	return _ice_candidate_list;
+}
+
+std::shared_ptr<PhysicalPort> IcePort::CreatePhysicalPort(const ov::SocketAddress &address, ov::SocketType type)
+{
+	auto physical_port = PhysicalPortManager::Instance()->CreatePort(type, address);
+
+	if(physical_port != nullptr)
+	{
+		if(physical_port->AddObserver(this))
+		{
+			return physical_port;
+		}
+
+		logte("Cannot add a observer %p to %p", this, physical_port.get());
+
+		PhysicalPortManager::Instance()->DeletePort(physical_port);
+	}
+	else
+	{
+		logte("Cannot create physical port for %s (type: %d)", address.ToString().CStr(), type);
+	}
+
+	return nullptr;
 }
 
 bool IcePort::Close()
 {
-	if((_physical_port == nullptr) || _physical_port->Close())
+	std::lock_guard<std::recursive_mutex> lock_guard(_physical_port_list_mutex);
+
+	bool result = true;
+
+	for(auto &physical_port : _physical_port_list)
 	{
-		return true;
+		result = result && physical_port->RemoveObserver(this);
+		result = result && PhysicalPortManager::Instance()->DeletePort(physical_port);
+
+		if(result == false)
+		{
+			logte("Cannot close ICE port");
+			break;
+		}
 	}
 
-	return false;
+	_ice_candidate_list.clear();
+
+	return result;
 }
 
 ov::String IcePort::GenerateUfrag()
@@ -619,14 +687,5 @@ void IcePort::ResponseError(const std::shared_ptr<ov::Socket> &remote)
 
 ov::String IcePort::ToString() const
 {
-	if(_physical_port == nullptr)
-	{
-		return ov::String::FormatString("<IcePort: %p, [Invalid physical port]>", this);
-	}
-
-	return ov::String::FormatString("<IcePort: %p, %s - %s>",
-	                                this,
-	                                (_physical_port->GetType() == ov::SocketType::Tcp) ? "TCP" : ((_physical_port->GetType() == ov::SocketType::Udp) ? "UDP" : "Unknown"),
-	                                _physical_port->GetAddress().ToString().CStr()
-	);
+	return ov::String::FormatString("<IcePort: %p, %zu ports>", this, _physical_port_list.size());
 }

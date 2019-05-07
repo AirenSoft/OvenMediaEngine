@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "../item.h"
+#include "tls.h"
 
 namespace cfg
 {
@@ -19,19 +19,19 @@ namespace cfg
 			return _tls;
 		}
 
-		int GetPort() const
+		int GetListenPort() const
 		{
-			return _port;
+			return _listen_port;
 		}
 
 	protected:
 		void MakeParseList() const override
 		{
 			RegisterValue<Optional>("TLS", &_tls);
-			RegisterValue<Optional>("Port", &_port);
+			RegisterValue<Optional>("ListenPort", &_listen_port);
 		}
 
 		Tls _tls;
-		int _port = 3333;
+		int _listen_port = 3333;
 	};
 }

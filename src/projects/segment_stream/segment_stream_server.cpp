@@ -22,7 +22,7 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
                                 int max_retry_count,
                                 int send_buffer_size,
                                 int recv_buffer_size,
-                                const std::shared_ptr<Certificate> &certificate)
+                                const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate)
 {
     if (_http_server != nullptr)
     {
@@ -35,6 +35,7 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
         auto https_server = std::make_shared<HttpsServer>();
 
         https_server->SetLocalCertificate(certificate);
+        https_server->SetChainCertificate(chain_certificate);
         https_server->SetTlsWriteToResponse(true);
         _http_server = https_server;
     }

@@ -32,6 +32,21 @@ namespace cfg
 		bool Parse(const ov::String &file_name, const ov::String &tag_name);
 		bool IsParsed() const;
 
+		const Item *GetParent() const
+		{
+			return _parent;
+		}
+
+		const Item *GetParent(const ov::String &name) const;
+
+		template<class T>
+		const T *GetParentAs(const ov::String &name) const
+		{
+			auto parent = GetParent(name);
+
+			return dynamic_cast<const T *>(parent);
+		}
+
 		virtual ov::String ToString() const;
 
 	protected:

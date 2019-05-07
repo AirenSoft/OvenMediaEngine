@@ -10,25 +10,20 @@
 
 #include "publisher.h"
 #include "tls.h"
-#include "urls.h"
+#include "cross_domain.h"
 
 namespace cfg
 {
 	struct HlsPublisher : public Publisher
 	{
+		HlsPublisher()
+			: Publisher(8080)
+		{
+		}
+
 		PublisherType GetType() const override
 		{
 			return PublisherType::Hls;
-		}
-
-		bool IsEnable() const
-		{
-			return IsParsed() && _is_enable;
-		}
-
-		int GetPort() const
-		{
-			return _port;
 		}
 
 		const Tls &GetTls() const
@@ -48,55 +43,44 @@ namespace cfg
 
 		const std::vector<Url> &GetCrossDomains() const
 		{
-			return _cross_domain_list.GetUrls();
+			return _cross_domain.GetUrls();
 		}
 
-		const std::vector<Url> &GetCorsUrls() const
+		int GetThreadCount() const
 		{
-			return _cors_url_list.GetUrls();
+			return _thread_count > 0 ? _thread_count : 1;
 		}
 
-        int GetThreadCount() const
-        {
-            return _thread_count > 0 ? _thread_count : 1;
-        }
+		int GetSendBufferSize() const
+		{
+			return _send_buffer_size;
+		}
 
-        int GetSendBufferSize() const
-        {
-            return _send_buffer_size;
-        }
-
-        int GetRecvBufferSize() const
-        {
-            return _recv_buffer_size ;
-        }
+		int GetRecvBufferSize() const
+		{
+			return _recv_buffer_size;
+		}
 
 	protected:
 		void MakeParseList() const override
-        {
-            Publisher::MakeParseList();
+		{
+			Publisher::MakeParseList();
 
-	    RegisterValue<Optional>("Enable", &_is_enable);	
-            RegisterValue<Optional>("Port", &_port);
-            RegisterValue<Optional>("TLS", &_tls);
-            RegisterValue<Optional>("SegmentCount", &_segment_count);
-            RegisterValue<Optional>("SegmentDuration", &_segment_duration);
-            RegisterValue<Optional>("CrossDomain", &_cross_domain_list);
-            RegisterValue<Optional>("CORS", &_cors_url_list);
-            RegisterValue<Optional>("ThreadCount", &_thread_count);
-            RegisterValue<Optional>("SendBufferSize", &_send_buffer_size);
-            RegisterValue<Optional>("RecvBufferSize", &_recv_buffer_size);
-        }
+			RegisterValue<Optional>("TLS", &_tls);
+			RegisterValue<Optional>("SegmentCount", &_segment_count);
+			RegisterValue<Optional>("SegmentDuration", &_segment_duration);
+			RegisterValue<Optional>("CrossDomain", &_cross_domain);
+			RegisterValue<Optional>("ThreadCount", &_thread_count);
+			RegisterValue<Optional>("SendBufferSize", &_send_buffer_size);
+			RegisterValue<Optional>("RecvBufferSize", &_recv_buffer_size);
+		}
 
-		bool _is_enable = true;
-		int _port = 80;
 		Tls _tls;
 		int _segment_count = 3;
 		int _segment_duration = 5;
-		Urls _cross_domain_list;
-		Urls _cors_url_list;
-        int _thread_count = 4;
-        int _send_buffer_size = 1024*1024*20; // 20M
-        int _recv_buffer_size = 0;
+		CrossDomain _cross_domain;
+		int _thread_count = 4;
+		int _send_buffer_size = 1024 * 1024 * 20; // 20M
+		int _recv_buffer_size = 0;
 	};
 }

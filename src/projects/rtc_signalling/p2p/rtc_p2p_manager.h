@@ -18,10 +18,10 @@ public:
 
 	// Add to _peer_list
 	std::shared_ptr<RtcPeerInfo> FindPeer(peer_id_t peer_id);
-	bool RemovePeer(const std::shared_ptr<RtcPeerInfo> &peer);
+	bool RemovePeer(const std::shared_ptr<RtcPeerInfo> &peer, int max_clients_per_host);
 
 	bool RegisterAsHostPeer(const std::shared_ptr<RtcPeerInfo> &peer);
-	std::shared_ptr<RtcPeerInfo> TryToRegisterAsClientPeer(const std::shared_ptr<RtcPeerInfo> &peer);
+	std::shared_ptr<RtcPeerInfo> TryToRegisterAsClientPeer(const std::shared_ptr<RtcPeerInfo> &peer, int max_clients_per_host);
 
 	std::shared_ptr<RtcPeerInfo> GetClientPeerOf(const std::shared_ptr<RtcPeerInfo> &host, peer_id_t client_id);
 	std::map<peer_id_t, std::shared_ptr<RtcPeerInfo>> GetClientPeerList(const std::shared_ptr<RtcPeerInfo> &host);

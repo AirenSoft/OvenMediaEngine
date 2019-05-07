@@ -20,7 +20,7 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Application
 WebRtcPublisher::WebRtcPublisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router, std::shared_ptr<MediaRouteApplicationInterface> application)
 	: Publisher(application_info, std::move(router))
 {
-	_application = application;
+	_application = std::move(application);
 }
 
 WebRtcPublisher::~WebRtcPublisher()
@@ -43,38 +43,36 @@ bool WebRtcPublisher::Start()
 		return false;
 	}
 
-	// _ice_port 생성
-	ov::SocketType socket_type;
+	auto signalling = _publisher_info->GetSignalling();
+	auto host = signalling.GetParentAs<cfg::Host>("Host");
 
-	if(GetCandidateProto().UpperCaseString() == "UDP")
+	if(signalling.IsParsed() == false)
 	{
-		socket_type = ov::SocketType::Udp;
-	}
-	else if(GetCandidateProto().UpperCaseString() == "TCP")
-	{
-		socket_type = ov::SocketType::Tcp;
-	}
-	else
-	{
+		logte("Invalid signalling configuration");
 		return false;
 	}
 
-	_ice_port = IcePortManager::Instance()->CreatePort(socket_type, ov::SocketAddress(GetCandidatePort()), IcePortObserver::GetSharedPtr());
-	_signalling = std::make_shared<RtcSignallingServer>(_application_info, _application);
+	_ice_port = IcePortManager::Instance()->CreatePort(_publisher_info->GetIceCandidates(), IcePortObserver::GetSharedPtr());
 
-	if(_ice_port == nullptr || _signalling == nullptr)
+	if(_ice_port == nullptr)
 	{
-		// Something wrokng...
-		logte("Failed to start publisher");
+		logte("Cannot initialize ICE Port");
 		return false;
 	}
 
-	std::shared_ptr<Certificate> certificate = GetCertificate();
-	std::shared_ptr<Certificate> chain_certificate = GetChainCertificate();
+	cfg::Tls tls_info = signalling.GetTls();
+	std::shared_ptr<Certificate> certificate = GetCertificate(tls_info.GetCertPath(), tls_info.GetKeyPath());
+	std::shared_ptr<Certificate> chain_certificate = GetChainCertificate(tls_info.GetChainCertPath());
 
 	// Signalling에 Observer 연결
+
+	ov::SocketAddress signalling_address = ov::SocketAddress(host->GetIp(), signalling.GetListenPort());
+
+	logti("WebRTC Publisher is listening on %s...", signalling_address.ToString().CStr());
+
+	_signalling = std::make_shared<RtcSignallingServer>(_publisher_info, _application);
 	_signalling->AddObserver(RtcSignallingObserver::GetSharedPtr());
-	_signalling->Start(ov::SocketAddress(GetSignallingPort()), certificate, chain_certificate);
+	_signalling->Start(signalling_address, certificate, chain_certificate);
 
 	// Publisher::Start()에서 Application을 생성한다.
 	return Publisher::Start();
@@ -94,7 +92,7 @@ bool WebRtcPublisher::Stop()
 //====================================================================================================
 bool WebRtcPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)
 {
-    return _signalling->GetMonitoringCollectionData(collections);
+	return _signalling->GetMonitoringCollectionData(collections);
 }
 
 // Publisher에서 Application 생성 요청이 온다.
@@ -118,7 +116,9 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::St
 		return nullptr;
 	}
 
-	ice_candidates->push_back(RtcIceCandidate(GetCandidateProto(), ov::SocketAddress(GetCandidateIP(), GetCandidatePort()), 0, ""));
+	auto &candidates = _ice_port->GetIceCandidateList();
+
+	ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
 
 	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
 
@@ -202,27 +202,27 @@ bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov
 // bitrate info(frome signalling)
 uint32_t WebRtcPublisher::OnGetBitrate(const ov::String &application_name, const ov::String &stream_name)
 {
-    auto stream = GetStream(application_name, stream_name);
-    uint32_t bitrate = 0;
+	auto stream = GetStream(application_name, stream_name);
+	uint32_t bitrate = 0;
 
-    if(!stream)
-    {
-        logte("Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
-        return 0;
-    }
+	if(!stream)
+	{
+		logte("Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
+		return 0;
+	}
 
-    auto tracks = stream->GetTracks();
-    for(auto &track_iter : tracks)
-    {
-        MediaTrack *track = track_iter.second.get();
+	auto tracks = stream->GetTracks();
+	for(auto &track_iter : tracks)
+	{
+		MediaTrack *track = track_iter.second.get();
 
-        if(track->GetCodecId() == common::MediaCodecId::Vp8 || track->GetCodecId() == common::MediaCodecId::Opus)
-        {
-            bitrate += track->GetBitrate();
-        }
-    }
+		if(track->GetCodecId() == common::MediaCodecId::Vp8 || track->GetCodecId() == common::MediaCodecId::Opus)
+		{
+			bitrate += track->GetBitrate();
+		}
+	}
 
-    return bitrate;
+	return bitrate;
 }
 
 
@@ -278,103 +278,4 @@ void WebRtcPublisher::OnDataReceived(IcePort &port, const std::shared_ptr<Sessio
 	//받는 Data 형식을 협의해야 한다.
 	auto application = session->GetApplication();
 	application->PushIncomingPacket(session_info, data);
-}
-
-uint16_t WebRtcPublisher::GetSignallingPort()
-{
-	int port = _publisher_info->GetSignalling().GetPort();
-
-	return static_cast<uint16_t>((port == 0) ? 3333 : port);
-}
-
-ov::String WebRtcPublisher::GetCandidateIP()
-{
-	ov::String ip = _publisher_info->GetIp();
-
-	return ip.IsEmpty() ? "127.0.0.1" : ip;
-}
-
-uint16_t WebRtcPublisher::GetCandidatePort()
-{
-	auto tokens = _publisher_info->GetPort().Split("/");
-
-	int port = ov::Converter::ToUInt16(tokens[0]);
-
-	return static_cast<uint16_t>((port == 0) ? 10000 : port);
-}
-
-ov::String WebRtcPublisher::GetCandidateProto()
-{
-	auto tokens = _publisher_info->GetPort().Split("/");
-
-	if(tokens.size() >= 2)
-	{
-		return tokens[1].UpperCaseString();
-	}
-
-	return "UDP";
-}
-
-std::shared_ptr<Certificate> WebRtcPublisher::GetCertificate()
-{
-	cfg::Tls tls_info = _publisher_info->GetSignalling().GetTls();
-
-	if(
-		(tls_info.GetCertPath().IsEmpty() == false) &&
-		(tls_info.GetKeyPath().IsEmpty() == false)
-		)
-	{
-		auto certificate = std::make_shared<Certificate>();
-
-		logti("Trying to create a certificate using files\n\tCert path: %s\n\tPrivate key path: %s",
-		      tls_info.GetCertPath().CStr(),
-		      tls_info.GetKeyPath().CStr()
-		);
-
-		auto error = certificate->GenerateFromPem(tls_info.GetCertPath(), tls_info.GetKeyPath());
-
-		if(error == nullptr)
-		{
-			return certificate;
-		}
-
-		logte("Could not create a certificate from files: %s", error->ToString().CStr());
-	}
-	else
-	{
-		// TLS is disabled
-	}
-
-	return nullptr;
-}
-
-std::shared_ptr<Certificate> WebRtcPublisher::GetChainCertificate()
-{
-	cfg::Tls tls_info = _publisher_info->GetSignalling().GetTls();
-
-	if(
-		(tls_info.GetChainCertPath().IsEmpty() == false)
-		)
-	{
-		auto certificate = std::make_shared<Certificate>();
-
-		logti("Trying to create a chain certificate using file: %s",
-		      tls_info.GetChainCertPath().CStr()
-		);
-
-		auto error = certificate->GenerateFromPem(tls_info.GetChainCertPath(), true);
-
-		if(error == nullptr)
-		{
-			return certificate;
-		}
-
-		logte("Could not create a chain certificate from file: %s", error->ToString().CStr());
-	}
-	else
-	{
-		// TLS is disabled
-	}
-
-	return nullptr;
 }

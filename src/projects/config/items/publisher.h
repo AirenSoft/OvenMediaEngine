@@ -23,11 +23,13 @@ namespace cfg
 
 	struct Publisher : public Item
 	{
+		Publisher() = default;
+
 		virtual PublisherType GetType() const = 0;
 
-		ov::String GetIp() const
+		int GetListenPort() const
 		{
-			return _ip;
+			return _listen_port;
 		}
 
 		int GetMaxConnection() const
@@ -36,13 +38,18 @@ namespace cfg
 		}
 
 	protected:
+		Publisher(int default_listen_port)
+			: _listen_port(default_listen_port)
+		{
+		}
+
 		void MakeParseList() const override
 		{
-			RegisterValue<Optional>("IP", &_ip);
+			RegisterValue<Optional>("ListenPort", &_listen_port);
 			RegisterValue<Optional>("MaxConnection", &_max_connection);
 		}
 
-		ov::String _ip;
+		int _listen_port = 0;
 		int _max_connection = 0;
 	};
 }

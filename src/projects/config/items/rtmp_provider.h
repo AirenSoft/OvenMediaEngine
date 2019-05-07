@@ -20,14 +20,14 @@ namespace cfg
 
 	struct RtmpProvider : public Provider
 	{
+		RtmpProvider()
+			: Provider(1935)
+		{
+		}
+
 		ProviderType GetType() const override
 		{
 			return ProviderType::Rtmp;
-		}
-
-		int GetPort() const
-		{
-			return _port;
 		}
 
 		OverlapStreamProcessType GetOverlapStreamProcessType() const
@@ -40,11 +40,9 @@ namespace cfg
 		{
 			Provider::MakeParseList();
 
-			RegisterValue<Optional>("Port", &_port);
 			RegisterValue<Optional>("OverlapStreamProcess", &_overlap_stream_process);
 		}
 
-		int _port = 1935;
 		ov::String _overlap_stream_process;
 	};
 }

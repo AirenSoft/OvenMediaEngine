@@ -57,13 +57,6 @@ private:
 	bool Start() override;
 	bool Stop() override;
 
-	uint16_t GetSignallingPort();
-	ov::String GetCandidateIP();
-	uint16_t GetCandidatePort();
-	ov::String GetCandidateProto();
-	std::shared_ptr<Certificate> GetCertificate();
-	std::shared_ptr<Certificate> GetChainCertificate();
-
 	// Publisher Implementation
 	cfg::PublisherType GetPublisherType() override
 	{

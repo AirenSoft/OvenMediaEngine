@@ -15,7 +15,6 @@
 // Peer ID of OME
 #define P2P_OME_PEER_ID                             0
 #define P2P_INVALID_PEER_ID                         -1
-#define P2P_DEFAULT_MAX_CLIENTS_PER_HOST            3
 
 typedef int peer_id_t;
 

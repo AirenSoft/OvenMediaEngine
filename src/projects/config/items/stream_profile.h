@@ -57,7 +57,7 @@ namespace cfg
 		void MakeParseList() const override
 		{
 			RegisterValue<ValueType::Attribute>("use", &_use);
-			RegisterValue<ValueType::Text>("Name", &_name);
+			RegisterValue<ValueType::Text>(nullptr, &_name);
 		}
 
 		ov::String _use = "both";
