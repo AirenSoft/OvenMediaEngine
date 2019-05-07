@@ -1,3 +1,11 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Hyunjun Jang
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #pragma once
 
 #include "string.h"
@@ -26,5 +34,6 @@ namespace ov
 		static String Combine(String path1, String path2);
 
 		static bool IsAbsolute(const String &path);
+		static String GetCanonicalPath(const String &path);
 	};
 }

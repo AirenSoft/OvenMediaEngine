@@ -83,7 +83,7 @@ namespace ov
 		return Remained<uint8_t>();
 	}
 
-	bool ByteStream::IsRemained(int bytes) const noexcept
+	bool ByteStream::IsRemained(size_t bytes) const noexcept
 	{
 		return Remained() >= bytes;
 	}
@@ -114,7 +114,7 @@ namespace ov
 			return false;
 		}
 
-		if(offset < _read_only_data->GetLength())
+		if(offset < static_cast<off_t>(_read_only_data->GetLength()))
 		{
 			// 그냥 offset만 변경하면 됨
 		}

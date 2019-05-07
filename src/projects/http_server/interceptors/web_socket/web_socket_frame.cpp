@@ -89,7 +89,7 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 
 			auto current = _payload->GetWritableDataAs<uint64_t>();
 
-			for(int index = 0; index < count; index++)
+			for(size_t index = 0; index < count; index++)
 			{
 				*current ^= mask;
 				current++;

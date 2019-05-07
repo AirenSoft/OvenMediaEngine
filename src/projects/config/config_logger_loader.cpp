@@ -49,7 +49,7 @@ bool ConfigLoggerLoader::Parse()
 
     // Parse Tag
     std::shared_ptr<LoggerTagInfo> tag_info;
-    for(tag_node; tag_node; tag_node = tag_node.next_sibling())
+    for(; tag_node; tag_node = tag_node.next_sibling())
     {
         tag_info = ParseTag(tag_node);
         if(tag_info != nullptr)

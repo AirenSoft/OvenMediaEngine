@@ -27,7 +27,7 @@ namespace ov
 
 		const auto *buffer = static_cast<const uint8_t *>(data);
 
-		for(int index = 0; index < length; index++)
+		for(size_t index = 0; index < length; index++)
 		{
 			dump.AppendFormat("%02X", *buffer);
 
@@ -52,7 +52,7 @@ namespace ov
 
 		const auto *buffer = static_cast<const uint8_t *>(data);
 
-		for(int index = 0; index < length; index++)
+		for(size_t index = 0; index < length; index++)
 		{
 			dump.AppendFormat("%02X", *buffer);
 			buffer++;
@@ -63,7 +63,7 @@ namespace ov
 
 	String Dump(const void *data, size_t length, const char *title, off_t offset, size_t max_bytes, const char *line_prefix) noexcept
 	{
-		if(offset > length)
+		if(offset > static_cast<off_t>(length))
 		{
 			offset = length;
 		}
@@ -179,5 +179,7 @@ namespace ov
 
 		::fwrite(static_cast<const uint8_t *>(data) + offset, sizeof(uint8_t), static_cast<size_t>(length), *file);
 		::fflush(*file);
+
+		return true;
 	}
 }

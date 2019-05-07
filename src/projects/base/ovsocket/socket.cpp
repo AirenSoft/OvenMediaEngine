@@ -156,18 +156,18 @@ namespace ov
 
 	// remote 정보가 들어왔으므로, connect상태로 간주함
 	Socket::Socket(SocketWrapper socket, const SocketAddress &remote_address)
-		: _state(SocketState::Connected),
+		: _socket(socket),
 
-		  _socket(socket)
+		  _state(SocketState::Connected)
 	{
 		// 로컬 정보는 없으며, 상대 정보만 있음. 즉, send만 가능
 		_remote_address = std::make_shared<SocketAddress>(remote_address);
 	}
 
 	Socket::Socket(Socket &&socket) noexcept
-		: _state(socket._state),
+		: _socket(socket._socket),
 
-		  _socket(socket._socket),
+		  _state(socket._state),
 
 		  _local_address(std::move(socket._local_address)),
 		  _remote_address(std::move(socket._remote_address)),
@@ -692,8 +692,10 @@ namespace ov
 				{
 					if(count == 0)
 					{
+#if DEBUG
 						int srt_lasterror = srt_getlasterror(nullptr);
 						OV_ASSERT((srt_lasterror == SRT_ETIMEOUT), "Not handled last error: %d", srt_lasterror);
+#endif // DEBUG
 						_last_epoll_event_count = 0;
 					}
 					else if(count > 0)
@@ -768,6 +770,10 @@ namespace ov
 
 				return _last_epoll_event_count;
 			}
+
+			case SocketType::Unknown:
+				logte("[%p] [#%d] Unknown socket type", this, _socket.GetSocket());
+				break;
 		}
 
 		return -1;
@@ -986,7 +992,7 @@ namespace ov
 				while(remained > 0L)
 				{
 					// SRT limits packet size up to 1316
-					int to_send = std::min(1316, static_cast<int>(remained));
+					auto to_send = std::min(1316UL, remained);
 
 					if(remained == to_send)
 					{

@@ -1,8 +1,17 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Hyunjun Jang
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #include <utility>
 
 #include <unistd.h>
 #include <errno.h>
 #include <wordexp.h>
+#include <linux/limits.h>
 
 #include "path_manager.h"
 
@@ -74,7 +83,7 @@ namespace ov
 
 	String PathManager::Combine(String path1, String path2)
 	{
-		if(path1.Right(1) != "/")
+		if((path1.HasSuffix("/") == false) && (path2.HasPrefix("/") == false))
 		{
 			path1.Append("/");
 		}
@@ -86,6 +95,20 @@ namespace ov
 
 	bool PathManager::IsAbsolute(const String &path)
 	{
-		return path.HasPrefix("/");
+		return GetCanonicalPath(path).HasPrefix("/");
+	}
+
+	String PathManager::GetCanonicalPath(const String &path)
+	{
+		char buffer[PATH_MAX];
+
+		auto result = realpath(path, buffer);
+
+		if(result == nullptr)
+		{
+			return "";
+		}
+
+		return String(buffer);
 	}
 }

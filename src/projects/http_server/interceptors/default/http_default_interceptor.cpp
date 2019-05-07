@@ -78,7 +78,7 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 	OV_ASSERT2((content_length == 0L) || ((content_length > 0L) && (request_body != nullptr)));
 
 	std::shared_ptr<const ov::Data> process_data;
-	if((content_length > 0) && ((current_length + data->GetLength()) > content_length))
+	if((content_length > 0) && ((current_length + static_cast<ssize_t>(data->GetLength())) > content_length))
 	{
 		logtw("Client sent too many data: expected: %ld, sent: %ld", content_length, (current_length + data->GetLength()));
 		// 원래는, 클라이언트가 보낸 데이터는 content-length를 넘어설 수 없으나,
@@ -108,7 +108,7 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 		request_body->Append(process_data.get());
 
 		// 다 받아졌는지 확인
-		if(request_body->GetLength() == content_length)
+		if(static_cast<ssize_t>(request_body->GetLength()) == content_length)
 		{
 			// 데이터가 다 받아졌다면, Register()된 handler 호출
 			logtd("HTTP message is parsed successfully");

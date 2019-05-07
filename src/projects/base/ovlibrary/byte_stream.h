@@ -448,7 +448,7 @@ namespace ov
 		/// @param bytes 확인할 byte 수
 		///
 		/// @return 데이터 내 최소 bytes 만큼 있는지 여부
-		bool IsRemained(int bytes) const noexcept;
+		bool IsRemained(size_t bytes) const noexcept;
 
 		/// 저장되어 있는 쓰기 가능한 데이터를 얻어옴
 		///

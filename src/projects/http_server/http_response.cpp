@@ -119,12 +119,17 @@ bool HttpResponse::Send(const void *data, size_t length)
 	else
 	{
 		// Send the plain data to the client
-		return _remote->Send(data, length) == length;
+		return _remote->Send(data, length) == static_cast<ssize_t>(length);
 	}
 }
 
 bool HttpResponse::Send(const std::shared_ptr<const ov::Data> &data)
 {
+	if(data->GetLength() == 0)
+	{
+		return true;
+	}
+
 	return Send(data->GetData(), data->GetLength());
 }
 
@@ -276,7 +281,7 @@ bool HttpResponse::AppendTlsData(const void *data, size_t length)
         if(_remote == nullptr)
             return false;
 
-        return _remote->Send(data, length) == length;
+        return _remote->Send(data, length) == static_cast<ssize_t>(length);
     }
     else
     {

@@ -56,17 +56,17 @@ bool WebRtcPublisher::Start()
 
 	if(_ice_port == nullptr)
 	{
-		logte("Cannot initialize ICE Port");
+		logte("Cannot initialize ICE Port. Check your ICE configuration");
 		return false;
 	}
 
-	cfg::Tls tls_info = signalling.GetTls();
+	const cfg::Tls &tls_info = signalling.GetTls();
 	std::shared_ptr<Certificate> certificate = GetCertificate(tls_info.GetCertPath(), tls_info.GetKeyPath());
 	std::shared_ptr<Certificate> chain_certificate = GetChainCertificate(tls_info.GetChainCertPath());
 
 	// Signalling에 Observer 연결
 
-	ov::SocketAddress signalling_address = ov::SocketAddress(host->GetIp(), signalling.GetListenPort());
+	ov::SocketAddress signalling_address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(signalling.GetListenPort()));
 
 	logti("WebRTC Publisher is listening on %s...", signalling_address.ToString().CStr());
 

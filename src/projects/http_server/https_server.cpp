@@ -49,7 +49,7 @@ void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 			.destroy_callback = nullptr,
 			.ctrl_callback = [](ov::Tls *tls, int cmd, long num, void *arg) -> long
 			{
-				logti("[TLS] Ctrl: %d, %ld, %p", cmd, num, arg);
+				logtd("[TLS] Ctrl: %d, %ld, %p", cmd, num, arg);
 
 				switch(cmd)
 				{

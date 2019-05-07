@@ -216,7 +216,7 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 
 				default:
 					// Invalid port value
-					logte("Invalid ICE candidate found - invalid port expression: %s", port.CStr());
+					logte("Invalid ICE candidate found - invalid port expression: %s", ice_candidate.CStr());
 					return false;
 			}
 
@@ -225,7 +225,7 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 
 		default:
 			// Invalid expression
-			logte("Invalid ICE candidate found - too many port expressions: %s", port.CStr());
+			logte("Invalid ICE candidate found - too many port expressions: %s", ice_candidate.CStr());
 			return false;
 	}
 
@@ -235,7 +235,7 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 		(start > end)
 		)
 	{
-		logte("Invalid ICE candidate found - invalid port range: %s", port.CStr());
+		logte("Invalid ICE candidate found - invalid port range: %s", ice_candidate.CStr());
 		return false;
 	}
 

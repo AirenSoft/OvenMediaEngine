@@ -13,6 +13,7 @@ LOCAL_STATIC_LIBRARIES := \
 	rtp_rtcp \
 	sdp \
 	publisher \
+	web_console \
 	mediarouter \
 	application \
 	physical_port \

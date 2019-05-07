@@ -149,7 +149,7 @@ bool StunMessage::ParseAttributes(ov::ByteStream &stream)
 	OV_ASSERT2(_fingerprint_attribute != nullptr);
 
 	// fingerprint attribute는 다른 attribute들 보다 먼저 계산되기 때문에 제외하고 계산
-	int minimum_length = StunAttribute::DefaultHeaderSize() + _fingerprint_attribute->GetLength(true, false);
+	size_t minimum_length = StunAttribute::DefaultHeaderSize() + _fingerprint_attribute->GetLength(true, false);
 
 	// 파싱 가능한 최소한의 데이터가 발견되면 parsing 시작
 	while(stream.Remained() >= minimum_length)

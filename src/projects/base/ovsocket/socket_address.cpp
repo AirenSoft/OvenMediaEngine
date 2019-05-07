@@ -252,7 +252,7 @@ namespace ov
 			// IPv4로 변환 실패
 
 			// IPv6으로 시도
-			if(inet_pton(AF_INET6, hostname, &(_address_ipv6->sin6_addr)) != 0)
+			if(::inet_pton(AF_INET6, hostname, &(_address_ipv6->sin6_addr)) != 0)
 			{
 				// 변환 성공
 				_address_storage.ss_family = AF_INET6;
@@ -265,11 +265,13 @@ namespace ov
 				addrinfo hints {};
 
 				::memset(&hints, 0, sizeof(hints));
-				hints.ai_family = AF_UNSPEC;
+				hints.ai_family = PF_UNSPEC;
+				hints.ai_socktype = SOCK_STREAM;
+				hints.ai_flags |= AI_CANONNAME;
 
-				addrinfo *result;
+				addrinfo *result = nullptr;
 
-				if(::getaddrinfo(hostname, nullptr, &hints, &result) != 0)
+				if(::getaddrinfo(hostname, nullptr, nullptr, &result) != 0)
 				{
 					logte("An error occurred while resolve DNS for host [%s]", hostname);
 					return false;

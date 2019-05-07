@@ -66,6 +66,11 @@ namespace cfg
 			return _origin;
 		}
 
+		const WebConsole &GetWebConsole() const
+		{
+			return _web_console;
+		}
+
 		const Decode &GetDecode() const
 		{
 			return _decode;
@@ -103,6 +108,7 @@ namespace cfg
 			RegisterValue<Optional>("Type", &_type);
 			RegisterValue<Optional>("Origin", &_origin);
 			RegisterValue<Optional>("WebConsole", &_web_console);
+			RegisterValue<Optional>("Decode", &_decode);
 			RegisterValue<Optional>("Encodes", &_encodes);
 			RegisterValue<Optional>("Streams", &_streams);
 			RegisterValue<Optional>("Providers", &_providers);

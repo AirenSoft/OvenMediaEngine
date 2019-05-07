@@ -18,14 +18,14 @@
 #include "stun_fingerprint_attribute.h"
 #include "stun_unknown_attribute.h"
 
-StunAttribute::StunAttribute(StunAttributeType type, uint16_t type_number, int length)
+StunAttribute::StunAttribute(StunAttributeType type, uint16_t type_number, size_t length)
 	: _type(type),
 	  _type_number(type_number),
 	  _length(length)
 {
 }
 
-StunAttribute::StunAttribute(StunAttributeType type, int length)
+StunAttribute::StunAttribute(StunAttributeType type, size_t length)
 	: StunAttribute(type, static_cast<uint16_t>(type), length)
 {
 }
@@ -64,7 +64,7 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 	StunAttributeType type = (StunAttributeType)stream.ReadBE16();
 	// attribute 길이 읽음
 	uint16_t length = stream.ReadBE16();
-	uint16_t padded_length = ((length % 4) > 0) ? ((length / 4) + 1) * 4 : length;
+	uint16_t padded_length = static_cast<uint16_t>(((length % 4) > 0) ? ((length / 4) + 1) * 4 : length);
 
 	if(stream.Remained() < padded_length)
 	{
@@ -79,8 +79,6 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 #else // STUN_LOG_DATA
 	logtd("Parsing attribute: type: 0x%04X, length: %d (padded: %d)...", type, length, padded_length);
 #endif // STUN_LOG_DATA
-
-	int last_offset = stream.GetOffset();
 
 	if(type == StunAttributeType::Fingerprint)
 	{
@@ -114,8 +112,11 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 
 		logtd("Parsed: %s", attribute->ToString().CStr());
 
+#if DEBUG
 		// 헤더에 명시되어 있는 만큼 데이터를 읽지 않았는지 확인
+		off_t last_offset = stream.GetOffset();
 		OV_ASSERT(length == (stream.GetOffset() - last_offset), "Length is mismatch. (expected: %d, read length: %d)", length, (stream.GetOffset() - last_offset));
+#endif // DEBUG
 
 		stream.Skip<uint8_t>(padded_length - length);
 	}
@@ -195,9 +196,9 @@ uint16_t StunAttribute::GetTypeNumber() const noexcept
 	return _type_number;
 }
 
-int StunAttribute::GetLength(bool include_header, bool padding) const noexcept
+size_t StunAttribute::GetLength(bool include_header, bool padding) const noexcept
 {
-	int length = _length + (include_header ? DefaultHeaderSize() : 0);
+	size_t length = _length + (include_header ? DefaultHeaderSize() : 0);
 
 	if(padding)
 	{
@@ -214,7 +215,7 @@ bool StunAttribute::Serialize(ov::ByteStream &stream) const noexcept
 {
 	// Attribute header: Type + Length + (variable)
 	// 여기서는 Type + Length만 기록하고, variable는 하위 클래스들에서 기록함
-	return stream.WriteBE16(_type_number) && stream.WriteBE16(_length);
+	return stream.WriteBE16(_type_number) && stream.WriteBE16(static_cast<uint16_t>(_length));
 }
 
 const char *StunAttribute::StringFromType(StunAttributeType type) noexcept

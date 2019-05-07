@@ -47,6 +47,9 @@ bool PhysicalPort::Create(ov::SocketType type,
 		{
 			return CreateDatagramSocket(type, address);
 		}
+
+		case ov::SocketType::Unknown:
+			break;
 	}
 
 	return false;

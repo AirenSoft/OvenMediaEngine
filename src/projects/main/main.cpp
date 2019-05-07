@@ -13,10 +13,11 @@
 #include <segment_stream/segment_stream_publisher.h>
 #include <media_router/media_router.h>
 #include <transcode/transcoder.h>
+#include <monitoring/monitoring_server.h>
+#include <web_console/web_console.h>
 #include <rtmp/rtmp_provider.h>
 #include <base/ovcrypto/ovcrypto.h>
 #include <base/ovlibrary/stack_trace.h>
-#include "../monitoring/monitoring_server.h"
 
 void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
 
@@ -102,6 +103,8 @@ int main(int argc, char *argv[])
 	std::shared_ptr<Transcoder> transcoder;
 	std::shared_ptr<MonitoringServer> monitoring_server;
 
+	std::vector<std::shared_ptr<WebConsoleServer>> web_console_servers;
+
 	std::vector<std::shared_ptr<pvd::Provider>> providers;
 	std::vector<std::shared_ptr<Publisher>> publishers;
 
@@ -109,7 +112,9 @@ int main(int argc, char *argv[])
 
 	for(auto &host : hosts)
 	{
-		logtd("trying to create modules for host [%s]", host.GetName().CStr());
+		auto host_name = host.GetName();
+
+		logtd("Trying to create modules for host [%s]", host_name.CStr());
 
 		auto &app_info_list = application_infos[host.GetName()];
 
@@ -122,18 +127,26 @@ int main(int argc, char *argv[])
 
 		if(app_info_list.empty() == false)
 		{
-			logti("Trying to create MediaRouter for host [%s]...", host.GetName().CStr());
+			logti("Trying to create MediaRouter for host [%s]...", host_name.CStr());
 			router = MediaRouter::Create(app_info_list);
 
-			logti("Trying to create Transcoder for host [%s]...", host.GetName().CStr());
+			logti("Trying to create Transcoder for host [%s]...", host_name.CStr());
 			transcoder = Transcoder::Create(app_info_list, router);
 
 			for(const auto &application_info : app_info_list)
 			{
+				auto app_name = application_info.GetName();
+
 				if(application_info.GetType() == cfg::ApplicationType::Live)
 				{
-					logti("Trying to create RTMP Provider for application [%s]...", application_info.GetName().CStr());
+					logti("Trying to create RTMP Provider for application [%s/%s]...", host_name.CStr(), app_name.CStr());
 					providers.push_back(RtmpProvider::Create(application_info, router));
+				}
+
+				if(application_info.GetWebConsole().IsParsed())
+				{
+					logti("Trying to initialize WebConsole for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+					web_console_servers.push_back(WebConsoleServer::Create(application_info));
 				}
 
 				auto publisher_list = application_info.GetPublishers();
@@ -148,7 +161,7 @@ int main(int argc, char *argv[])
 						switch(publisher->GetType())
 						{
 							case cfg::PublisherType::Webrtc:
-								logti("Trying to create WebRTC Publisher for application [%s]...", application_info.GetName().CStr());
+								logti("Trying to create WebRTC Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
 								publishers.push_back(WebRtcPublisher::Create(application_info, router, application));
 								break;
 
@@ -156,7 +169,7 @@ int main(int argc, char *argv[])
 							case cfg::PublisherType::Hls:
 								if(!segment_publisher_create)
 								{
-									logti("Trying to create SegmentStream Publisher for application [%s]...", application_info.GetName().CStr());
+									logti("Trying to create SegmentStream Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
 									publishers.push_back(SegmentStreamPublisher::Create(application_info, router));
 									segment_publisher_create = true;
 								}
@@ -174,22 +187,19 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			logtw("Nothing to do for host [%s]", host.GetName().CStr());
+			logtw("Nothing to do for host [%s]", host_name.CStr());
 		}
 
 		// Monitoring Server
 		monitoring_server = std::make_shared<MonitoringServer>();
-		monitoring_server->Start(ov::SocketAddress(host.GetMonitoringPort()), providers, publishers);
+		monitoring_server->Start(ov::SocketAddress(static_cast<uint16_t>(host.GetMonitoringPort())), providers, publishers);
 
 	}
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
 	while(true)
 	{
 		sleep(1);
 	}
-#pragma clang diagnostic pop
 
 	logtd("Trying to uninitialize OpenSSL...");
 	ov::OpensslManager::ReleaseOpenSSL();

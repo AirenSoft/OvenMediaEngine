@@ -64,10 +64,10 @@ bool StunMappedAddressAttribute::Parse(ov::ByteStream &stream)
 	}
 
 	// Port
-	uint32_t port = stream.ReadBE16();
+	stream.ReadBE16();
 
 	// Address
-	int address_length = (family == StunAddressFamily::IPv4) ? 4 : 16;
+	size_t address_length = (family == StunAddressFamily::IPv4) ? 4 : 16;
 
 	if(stream.IsRemained(address_length) == false)
 	{

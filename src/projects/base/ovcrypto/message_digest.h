@@ -34,21 +34,21 @@ namespace ov
 		bool Destroy();
 		bool Reset();
 
-		static int Size(CryptoAlgorithm algorithm) noexcept;
-		int Size() const noexcept;
+		static unsigned int Size(CryptoAlgorithm algorithm) noexcept;
+		unsigned int Size() const noexcept;
 
-		bool Update(const void *buffer, ssize_t length);
+		bool Update(const void *buffer, size_t length);
 		bool Update(const std::shared_ptr<const ov::Data> &data);
 
-		bool Finish(void *buffer, ssize_t length);
+		bool Finish(void *buffer, size_t length);
 		std::shared_ptr<ov::Data> Finish();
 
 		// RFC 2104 HMAC: H(K XOR opad, H(K XOR ipad, text))
-		static bool ComputeHmac(CryptoAlgorithm algorithm, const void *key, ssize_t key_length, const void *input, ssize_t input_length, void *output, ssize_t output_length);
+		static bool ComputeHmac(CryptoAlgorithm algorithm, const void *key, size_t key_length, const void *input, size_t input_length, void *output, size_t output_length);
 		static std::shared_ptr<ov::Data> ComputeHmac(CryptoAlgorithm algorithm, const std::shared_ptr<const ov::Data> &key, const std::shared_ptr<const ov::Data> &input);
 
-		static bool ComputeDigest(CryptoAlgorithm algorithm, const void *input, ssize_t input_length, void *output, ssize_t output_length);
-		static std::shared_ptr<ov::Data> ComputeDigest(CryptoAlgorithm algorithm, const void *input, ssize_t input_length);
+		static bool ComputeDigest(CryptoAlgorithm algorithm, const void *input, size_t input_length, void *output, size_t output_length);
+		static std::shared_ptr<ov::Data> ComputeDigest(CryptoAlgorithm algorithm, const void *input, size_t input_length);
 		static std::shared_ptr<ov::Data> ComputeDigest(CryptoAlgorithm algorithm, const std::shared_ptr<const ov::Data> &input);
 
 	protected:

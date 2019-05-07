@@ -47,7 +47,7 @@ namespace ov
 	};
 
 	// TlsUniquePtr is like the unique_ptr, it was created to support custom deleter which has return values
-	template<typename Ttype, typename Treturn = void, Treturn (*delete_function)(Ttype *argument) = nullptr>
+	template<typename Ttype, typename Treturn, Treturn (*delete_function)(Ttype *argument)>
 	class TlsUniquePtr
 	{
 	public:
@@ -104,10 +104,7 @@ namespace ov
 	private:
 		static void Deleter(Ttype *variable)
 		{
-			if(delete_function != nullptr)
-			{
-				delete_function(variable);
-			}
+			delete_function(variable);
 		}
 
 		std::unique_ptr<Ttype, decltype(&Deleter)> _ptr;

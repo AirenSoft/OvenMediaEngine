@@ -96,8 +96,6 @@ std::shared_ptr<HttpClient> HttpServer::FindClient(const std::shared_ptr<ov::Soc
 
 	auto item = _client_list.find(remote.get());
 
-	bool need_to_disconnect = false;
-
 	if(item != _client_list.end())
 	{
 		return item->second;

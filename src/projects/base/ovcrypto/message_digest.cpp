@@ -109,7 +109,7 @@ namespace ov
 		return Destroy() && Create(algorithm);
 	}
 
-	int MessageDigest::Size(CryptoAlgorithm algorithm) noexcept
+	unsigned int MessageDigest::Size(CryptoAlgorithm algorithm) noexcept
 	{
 		switch(algorithm)
 		{
@@ -139,13 +139,13 @@ namespace ov
 		return 0;
 	}
 
-	int MessageDigest::Size() const noexcept
+	unsigned int MessageDigest::Size() const noexcept
 	{
 		// EVP_MD_size()를 사용해도 됨
 		return MessageDigest::Size(_algorithm);
 	}
 
-	bool MessageDigest::Update(const void *buffer, ssize_t length)
+	bool MessageDigest::Update(const void *buffer, size_t length)
 	{
 		OV_ASSERT2(_context != nullptr);
 
@@ -164,7 +164,7 @@ namespace ov
 		return Update(data->GetData(), data->GetLength());
 	}
 
-	bool MessageDigest::Finish(void *buffer, ssize_t length)
+	bool MessageDigest::Finish(void *buffer, size_t length)
 	{
 		OV_ASSERT2(_context != nullptr);
 
@@ -200,7 +200,7 @@ namespace ov
 		return std::move(data);
 	}
 
-	bool MessageDigest::ComputeHmac(CryptoAlgorithm algorithm, const void *key, ssize_t key_length, const void *input, ssize_t input_length, void *output, ssize_t output_length)
+	bool MessageDigest::ComputeHmac(CryptoAlgorithm algorithm, const void *key, size_t key_length, const void *input, size_t input_length, void *output, size_t output_length)
 	{
 		MessageDigest digest;
 
@@ -210,8 +210,8 @@ namespace ov
 		}
 
 		// 현재 코드에서는 SHA-256 이하만 처리 가능
-		int block_length = 64;
-		int digest_size = digest.Size();
+		unsigned int block_length = 64;
+		unsigned int digest_size = digest.Size();
 
 		// padding을 위해, 키를 임시 버퍼에 복사함
 		uint8_t new_key[block_length] = { 0 };
@@ -246,7 +246,7 @@ namespace ov
 		// output padding
 		uint8_t output_pad[block_length] = { 0 };
 
-		for(int index = 0; index < block_length; index++)
+		for(unsigned int index = 0; index < block_length; index++)
 		{
 			input_pad[index] = 0x36 ^ new_key[index];
 			output_pad[index] = 0x5C ^ new_key[index];
@@ -291,7 +291,7 @@ namespace ov
 		return nullptr;
 	}
 
-	bool MessageDigest::ComputeDigest(CryptoAlgorithm algorithm, const void *input, ssize_t input_length, void *output, ssize_t max_output_length)
+	bool MessageDigest::ComputeDigest(CryptoAlgorithm algorithm, const void *input, size_t input_length, void *output, size_t max_output_length)
 	{
 		MessageDigest digest;
 
@@ -310,7 +310,7 @@ namespace ov
 		return result;
 	}
 
-	std::shared_ptr<ov::Data> MessageDigest::ComputeDigest(CryptoAlgorithm algorithm, const void *input, ssize_t input_length)
+	std::shared_ptr<ov::Data> MessageDigest::ComputeDigest(CryptoAlgorithm algorithm, const void *input, size_t input_length)
 	{
 		std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>();
 

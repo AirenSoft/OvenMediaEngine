@@ -21,14 +21,14 @@ class StunAttribute
 {
 public:
 	// 헤더 상에 명시된 type 및 length
-	explicit StunAttribute(StunAttributeType type, uint16_t type_number, int length);
+	explicit StunAttribute(StunAttributeType type, uint16_t type_number, size_t length);
 	// type과 type_number가 같을 경우 편리하게 이 생성자로 호출
-	explicit StunAttribute(StunAttributeType type, int length);
-	explicit StunAttribute(const StunAttribute &type);
-	explicit StunAttribute(StunAttribute &&type) noexcept;
+	explicit StunAttribute(StunAttributeType type, size_t length);
+	StunAttribute(const StunAttribute &type);
+	StunAttribute(StunAttribute &&type) noexcept;
 	virtual ~StunAttribute();
 
-	static constexpr int DefaultHeaderSize()
+	static constexpr size_t DefaultHeaderSize()
 	{
 		// Attribute + Length 정보의 길이
 		return sizeof(uint16_t) + sizeof(uint16_t);
@@ -43,7 +43,7 @@ public:
 	StunAttributeType GetType() const noexcept;
 	uint16_t GetTypeNumber() const noexcept;
 
-	int GetLength(bool include_header = false, bool padding = true) const noexcept;
+	size_t GetLength(bool include_header = false, bool padding = true) const noexcept;
 
 	virtual bool Serialize(ov::ByteStream &stream) const noexcept;
 
@@ -59,5 +59,5 @@ protected:
 	uint16_t _type_number;
 
 	// 길이가 고정인 것들은 생성될 때부터 길이가 0보다 큼
-	int _length;
+	size_t _length = 0;
 };

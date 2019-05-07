@@ -77,6 +77,11 @@ public:
 		return _content_length;
 	}
 
+	std::shared_ptr<const ov::Data> GetRequestBody() const
+	{
+		return _request_body;
+	}
+
 	const std::map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetRequestHeader() const noexcept
 	{
 		return _request_header;
@@ -132,7 +137,7 @@ protected:
 	}
 
 	// HttpRequestInterceptorInterface를 통해, 다른 interceptor에서 사용됨
-	const std::shared_ptr<ov::Data> &GetRequestBody()
+	const std::shared_ptr<ov::Data> &GetRequestBodyInternal()
 	{
 		if(_request_body == nullptr)
 		{

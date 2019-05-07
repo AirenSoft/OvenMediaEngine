@@ -522,7 +522,6 @@ bool IcePort::SendBindingResponse(const std::shared_ptr<ov::Socket> &remote, con
 	std::unique_ptr<StunAttribute> attribute;
 
 	// XOR-MAPPED-ADDRESS attribute 추가
-	const sockaddr_in *addr_in = address.AddressForIPv4();
 	attribute = std::make_unique<StunXorMappedAddressAttribute>();
 	auto *mapped_attribute = dynamic_cast<StunXorMappedAddressAttribute *>(attribute.get());
 

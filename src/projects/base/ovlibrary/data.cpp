@@ -260,7 +260,7 @@ namespace ov
 			return false;
 		}
 
-		if(offset > _length)
+		if(offset > static_cast<off_t>(_length))
 		{
 			OV_ASSERT(false, "Invalid offset: %jd", offset);
 			return false;
