@@ -87,7 +87,7 @@ void BitstreamToAnnexB::convert_to(MediaPacket *packet)
 	// Composition time offset
 	// else
 	// 0
-	int composition_time = 0;
+	//int composition_time = 0;
 
 	if(codec_id == 7) // avcvideopacket
 	{
@@ -95,7 +95,7 @@ void BitstreamToAnnexB::convert_to(MediaPacket *packet)
 		avc_packet_type = pbuf[1];
 		if(avc_packet_type == 1)
 		{
-			composition_time = pbuf[2] << 16 | pbuf[3] << 8 | pbuf[4];
+			//composition_time = pbuf[2] << 16 | pbuf[3] << 8 | pbuf[4];
 		}
 	}
 

@@ -269,8 +269,6 @@ std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 			return nullptr;
 		}
 
-		int bytes_per_sample = av_get_bytes_per_sample(static_cast<AVSampleFormat>(_frame->format));
-
 		// Copy data into frame
 		if(IsPlanar(frame->GetFormat<AVSampleFormat>()))
 		{

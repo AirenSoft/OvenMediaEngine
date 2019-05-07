@@ -620,8 +620,6 @@ void TranscodeStream::SendFrame(std::unique_ptr<MediaPacket> packet)
 {
 	uint8_t track_id = static_cast<uint8_t>(packet->GetTrackId());
 
-	auto item = _contexts.find(track_id);
-
 	for(auto &iter : _stream_info_outputs)
 	{
 		auto stream_track = _stream_tracks.find(iter.first);
@@ -735,7 +733,7 @@ void TranscodeStream::DoFilters(std::unique_ptr<MediaFrame> frame)
 
 	for(auto &iter: _contexts)
 	{
-		if(track_id != (uint32_t)iter.second->GetMediaType())
+		if(track_id != (int32_t)iter.second->GetMediaType())
 		{
 			continue;
 		}

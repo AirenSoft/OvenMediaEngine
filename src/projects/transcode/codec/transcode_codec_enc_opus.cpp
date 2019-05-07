@@ -86,8 +86,8 @@ std::unique_ptr <MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeR
 	OV_ASSERT2(_transcode_context);
 
 	// 200ms
-	const int frame_count_to_encode = 480 * 2;
-	const int bytes_to_encode = frame_count_to_encode * _transcode_context->GetAudioChannel().GetCounts() * _transcode_context->GetAudioSample().GetSampleSize();
+	const unsigned int frame_count_to_encode = 480 * 2;
+	const unsigned int bytes_to_encode = frame_count_to_encode * _transcode_context->GetAudioChannel().GetCounts() * _transcode_context->GetAudioSample().GetSampleSize();
 
 	while((_input_buffer.empty() == false) && (_buffer->GetLength() < bytes_to_encode))
 	{

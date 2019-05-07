@@ -166,9 +166,8 @@ void BitstreamAnnexA::convert_to(MediaPacket *packet)
 		vertical_scale = AV_RL16(p + 8) >> 14;
 
 		// printf("%s", ov::Data::Dump(_pkt->data, _pkt->size, 0, 64).CStr());
-#if 0
+
 		logtd("frame_type=%d, profile=%d, sync_code=%d, width=%d(%d), height=%d(%d), show_frame=%d",
 		  frame_type, profile, sync_code, width, horizontal_scale, height, vertical_scale, show_frame);
-#endif
 	}
 }

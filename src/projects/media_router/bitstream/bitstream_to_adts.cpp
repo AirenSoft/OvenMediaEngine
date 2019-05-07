@@ -50,7 +50,6 @@ void BitstreamToADTS::convert_to(MediaPacket *packet)
 	}
 
 	uint8_t *pbuf = data->GetWritableDataAs<uint8_t>();
-	int32_t pbuf_len = static_cast<int32_t>(data->GetLength());
 
 	// 만약, ADTS 타입이면  그냥 종료함.
 	if(pbuf[0] == 0xff)
@@ -58,8 +57,6 @@ void BitstreamToADTS::convert_to(MediaPacket *packet)
 		logtd("already ADTS type");
 		return;
 	}
-
-	// logtd("%s", ov::Dump(pbuf, pbuf_len).CStr());
 
 	uint8_t sound_format = pbuf[0];
 
@@ -163,8 +160,6 @@ void BitstreamToADTS::convert_to(MediaPacket *packet)
 
 		data->Insert(aac_fixed_header, 0, sizeof(aac_fixed_header));
 	}
-
-	// Utils::Debug::DumpHex(pbuf, pbuf_len);
 }
 
 //====================================================================================================

@@ -113,10 +113,8 @@ public:
 	MediaFrame(common::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts, int32_t flags)
 		: _media_type(media_type),
 		  _track_id(track_id),
-
-		  _flags(flags),
-
-		  _pts(pts)
+          _pts(pts),
+		  _flags(flags)
 	{
 		SetBuffer(data, data_size);
 	}

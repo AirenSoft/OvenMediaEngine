@@ -191,11 +191,11 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 		// send_packet 이 완료된 이후에 데이터를 삭제해야함.
 		if(parsed_size > 0)
 		{
-			OV_ASSERT(cur_data->GetLength() >= parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", cur_data->GetLength(), parsed_size);
+			OV_ASSERT(cur_data->GetLength() >= (unsigned int)parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", cur_data->GetLength(), parsed_size);
 
 			offset += parsed_size;
 
-			if(cur_data->GetLength() <= parsed_size)
+			if(cur_data->GetLength() <= (unsigned int)parsed_size)
 			{
 				// pop the first item
 				_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
