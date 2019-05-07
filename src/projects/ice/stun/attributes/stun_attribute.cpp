@@ -61,10 +61,10 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 	}
 
 	// attribute type읽음
-	StunAttributeType type = (StunAttributeType)stream.ReadBE16();
+	StunAttributeType type = static_cast<StunAttributeType>(stream.ReadBE16());
 	// attribute 길이 읽음
 	uint16_t length = stream.ReadBE16();
-	uint16_t padded_length = static_cast<uint16_t>(((length % 4) > 0) ? ((length / 4) + 1) * 4 : length);
+	auto padded_length = static_cast<uint16_t>(((length % 4) > 0) ? ((length / 4) + 1) * 4 : length);
 
 	if(stream.Remained() < padded_length)
 	{
@@ -79,6 +79,10 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 #else // STUN_LOG_DATA
 	logtd("Parsing attribute: type: 0x%04X, length: %d (padded: %d)...", type, length, padded_length);
 #endif // STUN_LOG_DATA
+
+#if DEBUG
+	off_t last_offset = stream.GetOffset();
+#endif // DEBUG
 
 	if(type == StunAttributeType::Fingerprint)
 	{
@@ -114,7 +118,6 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 
 #if DEBUG
 		// 헤더에 명시되어 있는 만큼 데이터를 읽지 않았는지 확인
-		off_t last_offset = stream.GetOffset();
 		OV_ASSERT(length == (stream.GetOffset() - last_offset), "Length is mismatch. (expected: %d, read length: %d)", length, (stream.GetOffset() - last_offset));
 #endif // DEBUG
 
