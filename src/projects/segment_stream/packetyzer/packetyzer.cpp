@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <sys/time.h>
 
+#define OV_LOG_TAG "SegmentStream"
+
 //====================================================================================================
 // Constructor
 //====================================================================================================
@@ -45,7 +47,7 @@ Packetyzer::Packetyzer(PacketyzerType packetyzer_type,
 
 
     // init nullptr
-    for(int index = 0; index < _segment_save_count ;  index++)
+    for(uint32_t index = 0; index < _segment_save_count ;  index++)
     {
         _video_segment_datas.push_back(nullptr);
 
@@ -197,7 +199,7 @@ bool Packetyzer::SetSegmentData(SegmentDataType data_type,
 
     if (_save_file)
     {
-        FILE *file = file = fopen(file_name.c_str(), "wb");
+        FILE *file = fopen(file_name.c_str(), "wb");
         fwrite(data->data(), 1, data->size(), file);
         fclose(file);
     }
@@ -307,12 +309,12 @@ bool Packetyzer::GetSegmentData(SegmentDataType data_type,
 //====================================================================================================
 bool Packetyzer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
 {
-    int begin_index = (_current_video_index >= _segment_count) ?
+    uint32_t begin_index = (_current_video_index >= _segment_count) ?
                         (_current_video_index - _segment_count) :
                         (_segment_save_count - (_segment_count - _current_video_index));
 
 
-    int end_index = (begin_index <= (_segment_save_count - _segment_count)) ?
+    uint32_t end_index = (begin_index <= (_segment_save_count - _segment_count)) ?
                     (begin_index + _segment_count) -1 :
                     (_segment_count - (_segment_save_count - begin_index)) -1;
 
@@ -357,12 +359,12 @@ bool Packetyzer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> 
 //====================================================================================================
 bool Packetyzer::GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
 {
-    int begin_index = (_current_audio_index >= _segment_count) ?
+    uint32_t begin_index = (_current_audio_index >= _segment_count) ?
                       (_current_audio_index - _segment_count) :
                       (_segment_save_count - (_segment_count - _current_audio_index));
 
 
-    int end_index = (begin_index <= (_segment_save_count - _segment_count)) ?
+    uint32_t end_index = (begin_index <= (_segment_save_count - _segment_count)) ?
                     (begin_index + _segment_count) -1 :
                     (_segment_count - (_segment_save_count - begin_index)) -1;
 

@@ -332,7 +332,7 @@ bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_pt
 	uint32_t edeg_connection_count = GetTotalPeerCount() - p2p_connection_count;
 
 	// p2p
-	for(int index = 0; index < p2p_connection_count; index++)
+	for(uint32_t index = 0; index < p2p_connection_count; index++)
 	{
 		auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
 		                                                             alias,
@@ -349,7 +349,7 @@ bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_pt
 	}
 
 	// edge connection
-	for(int index = 0; index < edeg_connection_count; index++)
+	for(uint32_t index = 0; index < edeg_connection_count; index++)
 	{
 		auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
 		                                                             alias,

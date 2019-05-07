@@ -156,7 +156,6 @@ int M4sFragmentWriter::TrunBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_
 {
 	std::shared_ptr<std::vector<uint8_t>>	data				= std::make_shared<std::vector<uint8_t>>();
 	uint32_t								flag				= 0;
-	uint32_t								first_sample_flag	= 0;
 
 	if (M4sMediaType::VideoMediaType == _media_type)
 	{

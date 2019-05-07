@@ -126,7 +126,7 @@ RtmpImportChunk::AppendChunk(std::shared_ptr<ImportStream> &stream, uint8_t *chu
     }
 
     // 버퍼에 남아있는공간 체크. 부족하면 새로 할당
-    if ((stream->buffer->size() - stream->data_size) < append_size)
+    if ((static_cast<int>(stream->buffer->size()) - stream->data_size) < append_size)
     {
         stream->buffer->resize(
                 (stream->buffer->size() * 2) > (stream->buffer->size() + append_size) ? (stream->buffer->size() * 2) : (

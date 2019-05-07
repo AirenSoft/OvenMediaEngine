@@ -121,7 +121,7 @@ bool RtcpPacket::IsRtcpPacket(const std::shared_ptr<const ov::Data> &data,
 
     const uint8_t check_data =  stream.Read8();
     int version = (check_data >> 6);
-    bool padding = (check_data & 0x20) != 0;
+
     report_count = (check_data & RTCP_MAX_BLOCK_COUNT);
     int type = stream.Read8();
     payload_size = stream.ReadBE16()*4;

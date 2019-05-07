@@ -228,7 +228,7 @@ int32_t RtmpChunkStream::OnDataReceived(const std::unique_ptr<std::vector<uint8_
     }
 
     // remained 데이터 설정
-    if (process_size < process_data->size())
+    if (process_size < static_cast<int32_t>(process_data->size()))
     {
         _remained_data->assign(process_data->begin() + process_size, process_data->end());
     }
@@ -263,7 +263,7 @@ int32_t RtmpChunkStream::ReceiveHandshakePacket(const std::shared_ptr<const std:
     }
 
     // Process Data Size Check
-    if (data->size() < process_size)
+    if (static_cast<int32_t>(data->size()) < process_size)
     {
         return 0;
     }
@@ -292,7 +292,7 @@ int32_t RtmpChunkStream::ReceiveHandshakePacket(const std::shared_ptr<const std:
     _handshake_state = RtmpHandshakeState::C2;
 
     // 최종 c3와 chunk 패킷이 같이 들어오는 경우 처리(encoder 전송 대기 상태에 빠질 수 있음)
-    if (process_size < data->size())
+    if (process_size < static_cast<int32_t>(data->size()))
     {
         auto process_data = std::make_shared<std::vector<uint8_t>>(data->begin() + process_size, data->end());
         chunk_process_size = ReceiveChunkPacket(process_data);
@@ -361,7 +361,7 @@ int32_t RtmpChunkStream::ReceiveChunkPacket(const std::shared_ptr<const std::vec
     int32_t import_size = 0;
     bool message_complete = false;
 
-    while (process_size < data->size())
+    while (process_size <  static_cast<int32_t>(data->size()))
     {
         message_complete = false;
 

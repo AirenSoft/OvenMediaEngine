@@ -601,7 +601,9 @@ int RtmpMuxUtil::GetChunkDataRaw(int chunk_size, uint32_t chunk_stream_id, std::
 		}
 
 		// 읽어들일 크기 설정
-        size = (chunk_data->size() - read_data_size) > chunk_size ? chunk_size : (chunk_data->size() - read_data_size);
+        size = (static_cast<int>(chunk_data->size()) - read_data_size) > chunk_size ?
+                chunk_size :
+	            (static_cast<int>(chunk_data->size()) - read_data_size);
 
 		// 읽어들이기
 		memcpy(raw_data_pos, chunk_data->data() + read_data_size, (size_t)size);

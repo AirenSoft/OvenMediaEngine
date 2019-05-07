@@ -17,6 +17,8 @@
 #define VIDEO_TRACK_ID    (1)
 #define AUDIO_TRACK_ID    (2)
 
+#define OV_LOG_TAG "SegmentStream"
+
 //====================================================================================================
 // Constructor
 //====================================================================================================
@@ -66,14 +68,14 @@ DashPacketyzer::~DashPacketyzer()
 bool DashPacketyzer::VideoInit(std::shared_ptr<std::vector<uint8_t>> &data)
 {
     // 패턴 확인
-    int current_index = 0;
+    uint32_t current_index = 0;
     int sps_start_index = -1;
     int sps_end_index = -1;
     int pps_start_index = -1;
     int pps_end_index = -1;
 
     // sps/pps parsing
-    while (current_index + AVC_NAL_START_PATTERN_SIZE < data->size())
+    while ((current_index + AVC_NAL_START_PATTERN_SIZE) < data->size())
     {
         // 0x00 0x00 0x00 0x01 패턴 체크
         if (data->at(current_index) == 0 && data->at(current_index + 1) == 0 && data->at(current_index + 2) == 0 &&
@@ -154,7 +156,7 @@ bool DashPacketyzer::VideoInit(std::shared_ptr<std::vector<uint8_t>> &data)
 
     if (writer->CreateData() <= 0)
     {
-        printf("DashPacketyzer::VideoInit - InitWrite Fail\n");
+        logte("DashPacketyzer::VideoInit - InitWrite Fail");
         return false;
     }
 
@@ -195,7 +197,7 @@ bool DashPacketyzer::AudioInit()
 
     if (writer->CreateData() <= 0)
     {
-        printf("DashPacketyzer::VideoInit - InitWrite Fail\n");
+        logte("DashPacketyzer::VideoInit - InitWrite Fail");
         return false;
     }
 
@@ -434,7 +436,7 @@ bool DashPacketyzer::UpdatePlayList(bool video_update)
     std::vector<std::shared_ptr<SegmentData>> segment_datas;
     Packetyzer::GetVideoPlaySegments(segment_datas);
 
-    for(int index = 0; index < segment_datas.size(); index++)
+    for(uint32_t index = 0; index < segment_datas.size(); index++)
     {
         // Timeline Setting
         if(index == 0)
@@ -450,7 +452,7 @@ bool DashPacketyzer::UpdatePlayList(bool video_update)
 
     segment_datas.clear();
     Packetyzer::GetAudioPlaySegments(segment_datas);
-    for(int index = 0; index < segment_datas.size(); index++)
+    for(uint32_t index = 0; index < segment_datas.size(); index++)
     {
         // Timeline Setting
         if(index == 0)

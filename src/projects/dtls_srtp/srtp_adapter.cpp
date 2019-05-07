@@ -17,7 +17,6 @@ SrtpAdapter::SrtpAdapter()
 {
 	_session = nullptr;
 	_rtp_auth_tag_len = 0;
-	_rtcp_auth_tag_len = 0;
 }
 
 SrtpAdapter::~SrtpAdapter()
@@ -61,7 +60,6 @@ bool SrtpAdapter::SetKey(srtp_ssrc_type_t type, uint64_t crypto_suite, std::shar
 	srtp_set_user_data(_session, this);
 
 	_rtp_auth_tag_len = policy.rtp.auth_tag_len;
-	_rtcp_auth_tag_len = policy.rtcp.auth_tag_len;
 
 	return true;
 }
@@ -74,7 +72,7 @@ bool SrtpAdapter::ProtectRtp(std::shared_ptr<ov::Data> data)
 	}
 
 	// Protect를 하면 다음과 같은 사이즈가 필요하다. data의 Capacity가 충분해야 한다.
-	int need_len = static_cast<int>(data->GetLength()) + _rtp_auth_tag_len;
+	uint32_t need_len = data->GetLength() + _rtp_auth_tag_len;
 
 	if(need_len > data->GetCapacity())
 	{
@@ -116,7 +114,7 @@ bool SrtpAdapter::UnprotectRtcp(const std::shared_ptr<ov::Data> &data)
 
     if (err != srtp_err_status_ok)
     {
-        printf("Failed to unprotect SRTP packet, err=%d", err);
+        logte("Failed to unprotect SRTP packet, err=%d", err);
         return false;
     }
 

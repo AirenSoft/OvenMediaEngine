@@ -53,7 +53,7 @@ bool SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &re
     ssize_t content_length = request->GetContentLength();
 
     std::shared_ptr<const ov::Data> process_data;
-    if((content_length > 0) && ((current_length + data->GetLength()) > content_length))
+    if((content_length > 0) && ((current_length + static_cast<ssize_t>(data->GetLength())) > content_length))
     {
         if(content_length > current_length)
         {
@@ -73,7 +73,7 @@ bool SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &re
     {
         request_body->Append(process_data.get());
 
-        if(request_body->GetLength() == content_length)
+        if(static_cast<ssize_t>(request_body->GetLength()) == content_length)
         {
             response->SetStatusCode(HttpStatusCode::OK);
             _worker_manager.AddWork(request, response);

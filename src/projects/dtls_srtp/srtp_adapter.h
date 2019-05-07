@@ -27,6 +27,5 @@ public:
 
 private:
 	srtp_ctx_t_* 	_session;
-	int 			_rtp_auth_tag_len;
-	int 			_rtcp_auth_tag_len;
+	uint32_t 		_rtp_auth_tag_len;
 };

@@ -156,6 +156,8 @@ bool SegmentStreamServer::AddObserver(const std::shared_ptr<SegmentStreamObserve
 
     _observers.push_back(observer);
 
+    return true;
+
 }
 
 //====================================================================================================

@@ -101,10 +101,8 @@ void SegmentWorker::WorkerThread()
         }
 
         bool is_retry = false;// in/out value
-        bool result = _process_handler(work_info->request,
-                work_info->response,
-                work_info->retry_count,
-                is_retry);
+
+        _process_handler(work_info->request, work_info->response, work_info->retry_count, is_retry);
 
 //        logtd("Segment Worker Process : url(%s) retry(%d:%d) result(%d)",
 //              work_info->request->GetRequestTarget().CStr(),

@@ -262,8 +262,8 @@ int M4sInitWriter::MdhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 		WriteUint32(_duration, data);					// Duration
 	}
 
-	WriteUint8(((_language[0] - 0x60 << 2) | (_language[1] - 0x60) >> 3) & 0xFF , data); // Language 1
-	WriteUint8((((_language[1]-0x60) << 5) |  (_language[2]-0x60)) & 0xFF , data);          // Language 2
+	WriteUint8((((_language[0] - 0x60) << 2) | (_language[1] - 0x60) >> 3) & 0xFF , data); // Language 1
+	WriteUint8((((_language[1] - 0x60) << 5) |  (_language[2] - 0x60)) & 0xFF , data);          // Language 2
 	WriteUint16(0, data);					// Pre Define 
 
 	return BoxDataWrite("mdhd", 0, 0, data, data_stream);
