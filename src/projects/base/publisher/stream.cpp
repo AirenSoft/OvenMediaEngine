@@ -169,7 +169,7 @@ bool Stream::Start(uint32_t worker_count)
 
 	_worker_count = worker_count;
 	// Create WorkerThread
-	for(int i=0; i<_worker_count; i++)
+	for(uint32_t i=0; i<_worker_count; i++)
 	{
 		if(!_stream_workers[i].Start())
 		{
@@ -194,7 +194,7 @@ bool Stream::Stop()
 
 	_run_flag = false;
 
-	for(int i=0; i<_worker_count; i++)
+	for(uint32_t i=0; i<_worker_count; i++)
 	{
 		_stream_workers[i].Stop();
 	}
@@ -248,7 +248,7 @@ const std::map<session_id_t, std::shared_ptr<Session>> &Stream::GetAllSessions()
 bool Stream::BroadcastPacket(uint32_t packet_type, std::shared_ptr<ov::Data> packet)
 {
 	// 모든 StreamWorker에 나눠준다.
-	for(int i=0; i<_worker_count; i++)
+	for(uint32_t i=0; i<_worker_count; i++)
 	{
 		_stream_workers[i].SendPacket(packet_type, packet);
 	}

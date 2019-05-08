@@ -281,7 +281,7 @@ void RtcStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
 	{
 		return;
 	}
-	
+
 	packetizer->Packetize(encoded_frame->_frame_type,
 	                      encoded_frame->_time_stamp,
 	                      encoded_frame->_buffer->GetDataAs<uint8_t>(),

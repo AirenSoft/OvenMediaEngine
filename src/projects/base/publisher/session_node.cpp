@@ -42,6 +42,7 @@ SessionNodeType SessionNode::GetNodeType()
 bool SessionNode::Start()
 {
 	_state = NodeState::Started;
+	return true;
 }
 
 bool SessionNode::Stop()
@@ -49,6 +50,7 @@ bool SessionNode::Stop()
 	_state = NodeState::Stopped;
 	// Because it is a cross-reference to the parent, it forces the removal to free memory.
 	_session.reset();
+	return true;
 }
 
 SessionNode::NodeState SessionNode::GetState()
