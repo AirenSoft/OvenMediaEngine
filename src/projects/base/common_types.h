@@ -107,10 +107,9 @@ static const int32_t kCodecTypeVideo = 0x20000000;
 enum class CodecType : int32_t
 {
 	// Audio Codecs
-		Opus = kCodecTypeAudio + 1,
-
+	Opus = kCodecTypeAudio + 1,
 	// Video Codecs
-		Vp8 = kCodecTypeVideo + 1,
+	Vp8 = kCodecTypeVideo + 1,
 	Vp9,
 	H264,
 	I420,
@@ -119,7 +118,6 @@ enum class CodecType : int32_t
 	Flexfec,
 	Generic,
 	Stereo,
-
 	Unknown
 };
 

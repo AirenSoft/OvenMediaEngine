@@ -325,6 +325,18 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 			rtp_video_header->codec_header.h264.packetization_mode = info->codec_specific.h264.packetization_mode;
 			rtp_video_header->simulcast_idx = info->codec_specific.h264.simulcast_idx;
 			return;
+
+		case CodecType::Opus:
+		case CodecType::Vp9:
+		case CodecType::I420:
+		case CodecType::Red:
+		case CodecType::Ulpfec:
+		case CodecType::Flexfec:
+		case CodecType::Generic:
+		case CodecType::Stereo:
+		case CodecType::Unknown:
+		default:
+			break;
 	}
 }
 

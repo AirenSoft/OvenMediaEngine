@@ -267,6 +267,8 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<Sessio
 			// Signalling에 종료 명령을 내린다.
 			_signalling->Disconnect(application->GetName(), stream->GetName(), session->GetPeerSDP());
 			break;
+		default:
+			break;
 	}
 }
 

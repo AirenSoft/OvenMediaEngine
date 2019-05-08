@@ -165,7 +165,7 @@ void RtpPacket::SetCsrcs(const std::vector<uint32_t>& csrcs)
 	_payload_offset = FIXED_HEADER_SIZE + 4 * csrcs.size();
 
 	// 첫 바이트 하위 4비트에 csrs size 입력
-	_buffer[0] = _buffer[0] & 0xF0 | csrcs.size();
+	_buffer[0] = (_buffer[0] & 0xF0) | csrcs.size();
 
 	// _buffer 사이즈 조정
 	_data->SetLength(_payload_offset);

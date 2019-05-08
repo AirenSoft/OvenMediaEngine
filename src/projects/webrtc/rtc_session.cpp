@@ -63,7 +63,7 @@ bool RtcSession::Start()
 
 	// RFC3264
 	// For each "m=" line in the offer, there MUST be a corresponding "m=" line in the answer.
-	for(int i = 0; i < peer_media_desc_list.size(); i++)
+	for(size_t i = 0; i < peer_media_desc_list.size(); i++)
 	{
 		auto peer_media_desc = peer_media_desc_list[i];
 		auto offer_media_desc = offer_media_desc_list[i];

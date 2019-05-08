@@ -417,8 +417,8 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			}
 			else
 			{
-				// TODO Implementing of unknown attributes\
-            // a=fmtp:112 minptime=10;useinbandfec=1
+				//TODO: Implementing of unknown attributes
+            	//a=fmtp:112 minptime=10;useinbandfec=1
 				logw("SDP", "Unknown Attributes : %c=%s", type, content.c_str());
 			}
 

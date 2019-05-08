@@ -59,9 +59,9 @@ bool UlpfecGenerator::NextPacket(RtpPacket *packet)
 
 bool UlpfecGenerator::Encode()
 {
-	uint32_t media_size = _media_packets.size();
-	uint32_t rate = kMediaPacketNumMakeFec / (_high_level?2:1);
-	uint32_t fec_packet_count = std::ceil((float)media_size / (float)kMediaPacketNumMakeFec);
+	size_t media_size = _media_packets.size();
+	//uint32_t rate = static_cast<uint32_t>(kMediaPacketNumMakeFec / (_high_level?2:1));
+	uint32_t fec_packet_count = static_cast<uint32_t>(std::ceil((float)media_size / (float)kMediaPacketNumMakeFec));
 	uint32_t media_packet_idx = 0;
 	size_t mask_len = 0;
 
@@ -77,9 +77,9 @@ bool UlpfecGenerator::Encode()
 		mask_len = kMaskSizeLbitSet;
 	}
 
-	for(int i=0; i<fec_packet_count; i++)
+	for(uint32_t i=0; i<fec_packet_count; i++)
 	{
-		uint16_t sn_base;
+		uint16_t sn_base = 0;
 		bool first_media_packet;
 		uint8_t mask[6];
 		int selected_media_count;
