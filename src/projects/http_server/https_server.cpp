@@ -72,6 +72,8 @@ void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 
 	if(tls->Initialize(TLS_server_method(), _local_certificate, _chain_certificate, HTTP_INTERMEDIATE_COMPATIBILITY, callback) == false)
 	{
+        logte("Tls initialize fail");
+
 		// TODO: Disconnect
 		return;
 	}
@@ -103,6 +105,13 @@ void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, cons
 	logtd("Trying to set data for TLS\n%s", data->Dump(32).CStr());
 	client->SetTlsData(data);
 	auto tls = client->GetTls();
+
+	if(tls == nullptr)
+    {
+        logte("Tls is null: %s", remote->ToString().CStr());
+        HttpServer::Disconnect(client);
+        return;
+    }
 
 	if(client->IsAccepted() == false)
 	{

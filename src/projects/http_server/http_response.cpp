@@ -283,13 +283,11 @@ bool HttpResponse::AppendTlsData(const void *data, size_t length)
 
         return _remote->Send(data, length) == static_cast<ssize_t>(length);
     }
-    else
-    {
-        if(_http_tls_response_data == nullptr)
-            _http_tls_response_data = std::make_shared<ov::Data>();
 
-        _http_tls_response_data->Append(data, length);
-    }
+    if(_http_tls_response_data == nullptr)
+        _http_tls_response_data = std::make_shared<ov::Data>();
+
+    _http_tls_response_data->Append(data, length);
 
      return true;
 }

@@ -95,7 +95,7 @@ namespace ov
 				break;
 			}
 
-			if((chain_certificate != nullptr) && (::SSL_CTX_add0_chain_cert(ctx, chain_certificate->GetX509()) != 1))
+			if((chain_certificate != nullptr) && (::SSL_CTX_add1_chain_cert(ctx, chain_certificate->GetX509()) != 1))
 			{
 				logte("Cannot use chain certificate: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
 
@@ -287,7 +287,11 @@ namespace ov
 
 	int Tls::Accept()
 	{
-		OV_ASSERT2(_ssl != nullptr);
+	    if(_ssl == nullptr)
+        {
+            logte("Ssl is null");
+            return -1;
+        }
 
 		int result = ::SSL_accept(_ssl);
 
@@ -577,9 +581,4 @@ namespace ov
 
 		return true;
 	}
-
-    void Tls::Release()
-    {
-        // _callback = TlsCallback();
-    }
 };

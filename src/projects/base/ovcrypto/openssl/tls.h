@@ -148,7 +148,6 @@ namespace ov
 
 		bool GetKeySaltLen(unsigned long crypto_suite, size_t *key_len, size_t *salt_len) const;
 
-		void Release();
 	protected:
 		static BIO_METHOD *PrepareBioMethod();
 
