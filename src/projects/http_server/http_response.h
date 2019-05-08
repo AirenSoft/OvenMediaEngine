@@ -76,14 +76,6 @@ public:
 		return _remote->Close();
 	}
 
-	void Release()
-    {
-	    if(_tls)
-        {
-	        _tls->Release();
-        }
-    }
-
 protected:
 	void SetTls(const std::shared_ptr<ov::Tls> &tls)
 	{

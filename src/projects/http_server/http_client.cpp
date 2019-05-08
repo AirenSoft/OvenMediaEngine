@@ -9,6 +9,7 @@
 #include "http_request.h"
 #include "http_response.h"
 #include "http_client.h"
+#include "http_private.h"
 
 HttpClient::HttpClient(std::shared_ptr<ov::ClientSocket> socket, const std::shared_ptr<HttpRequestInterceptor> &interceptor)
 {
@@ -30,16 +31,27 @@ HttpClient::HttpClient(std::shared_ptr<ov::ClientSocket> socket, const std::shar
 
 void HttpClient::SetTls(const std::shared_ptr<ov::Tls> &tls)
 {
+    // response mutex(tls)
+    std::unique_lock<std::mutex> lock(_response_guard);
+
+    if(_response == nullptr)
+    {
+        return;
+    }
+
 	_response->SetTls(tls);
 }
 
 std::shared_ptr<ov::Tls> HttpClient::GetTls()
 {
-	return _response->GetTls();
-}
+    // response mutex(tls)
+    std::unique_lock<std::mutex> lock(_response_guard);
 
-std::shared_ptr<const ov::Tls> HttpClient::GetTls() const
-{
+    if(_response == nullptr)
+    {
+        return nullptr;
+    }
+
 	return _response->GetTls();
 }
 
@@ -75,7 +87,16 @@ ssize_t HttpClient::TlsRead(ov::Tls *tls, void *buffer, size_t length)
 	return bytes_to_copy;
 }
 
-ssize_t HttpClient::TlsWrite(ov::Tls *tls, const void *data, size_t length) {
+ssize_t HttpClient::TlsWrite(ov::Tls *tls, const void *data, size_t length)
+{
+    // response mutex(tls)
+    std::unique_lock<std::mutex> lock(_response_guard);
+
+    if(_response == nullptr)
+    {
+        logte("HttpReponse is null");
+        return 0;
+    }
 
     if (_tls_write_to_response)
     {

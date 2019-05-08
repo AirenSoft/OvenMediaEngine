@@ -361,8 +361,9 @@ bool HttpServer::DisconnectInternal(std::shared_ptr<HttpClient> client)
 		interceptor->OnHttpClosed(request, response);
 	}
 	
-	// HttpClient shared_ptr use count down 
-	response->Release();
+	// HttpClient shared_ptr use count down
+	// HttpResponse release -> Tls Release -> HttpClient(client) Release
+	client->Release();
 
 	return true;
 }
