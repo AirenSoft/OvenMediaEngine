@@ -112,7 +112,8 @@ install:
 	@echo "$(ANSI_GREEN)Installing directory$(ANSI_RESET) $(INSTALL_DIRECTORY)"
 	@mkdir -p $(INSTALL_CONF_DIRECTORY)
 	@install -m 755 -s bin/$(BUILD_METHOD)/$(OME) $(INSTALL_DIRECTORY)
-	@install -m 644 ../docs/conf_examples/* $(INSTALL_CONF_DIRECTORY)
+	@install -m 644 ../docs/conf_examples/Server.xml $(INSTALL_CONF_DIRECTORY)
+	@install -m 644 ../docs/conf_examples/Logger.xml $(INSTALL_CONF_DIRECTORY)
 	@echo "$(ANSI_GREEN)Creating link file$(ANSI_RESET) $(LINK_BIN_DIRECTORY)/$(OME) => \
 	$(ANSI_BLUE)$(INSTALL_DIRECTORY)/$(OME)$(ANSI_RESET)"
 	@ln -sf $(INSTALL_DIRECTORY)/$(OME) $(LINK_BIN_DIRECTORY)/$(OME)
