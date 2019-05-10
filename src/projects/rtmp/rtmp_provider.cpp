@@ -109,14 +109,18 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 
     if (GetStreamByName(app_name, stream_name))
     {
-        // 기존 접속 스트림 종료
-        if (_provider_info->GetOverlapStreamProcessType() == cfg::OverlapStreamProcessType::Refresh)
+        if (_provider_info->IsBlockDuplicateStreamName())
+        {
+            logti("Duplicate Stream Input(reject) - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
+            return false;
+        }
+        else
         {
             uint32_t stream_id = GetStreamByName(app_name, stream_name)->GetId();
 
-            logti("Overlap Stream Input(Refreah) - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
+            logti("Duplicate Stream Input(change) - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
 
-            // 세션 종료
+            // session close
             if(!_rtmp_server->Disconnect(app_name, stream_id))
             {
                 logte("Disconnect Fail - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
@@ -126,13 +130,7 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
             application->DeleteStream2(application->GetStreamByName(stream_name));
 
         }
-        else
-        {
-            logti("Overlap Stream Input(Reject) - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
-            return false;
-        }
     }
-
 
     // Application -> RtmpApplication: create rtmp stream -> Application 에 Stream 정보 저장
     auto stream = application->MakeStream();

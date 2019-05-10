@@ -12,12 +12,6 @@
 
 namespace cfg
 {
-	enum class OverlapStreamProcessType
-	{
-		Reject = 0,
-		Refresh,
-	};
-
 	struct RtmpProvider : public Provider
 	{
 		RtmpProvider()
@@ -30,9 +24,9 @@ namespace cfg
 			return ProviderType::Rtmp;
 		}
 
-		OverlapStreamProcessType GetOverlapStreamProcessType() const
+		bool IsBlockDuplicateStreamName () const
 		{
-			return _overlap_stream_process == "refresh" ? OverlapStreamProcessType::Refresh : OverlapStreamProcessType::Reject;
+			return _is_block_duplicate_stream_name;
 		}
 
 	protected:
@@ -40,9 +34,9 @@ namespace cfg
 		{
 			Provider::MakeParseList();
 
-			RegisterValue<Optional>("OverlapStreamProcess", &_overlap_stream_process);
+            RegisterValue<Optional>("BlockDuplicateStreamName", &_is_block_duplicate_stream_name);
 		}
 
-		ov::String _overlap_stream_process;
+		bool _is_block_duplicate_stream_name = true; // true - block   false - non block
 	};
 }

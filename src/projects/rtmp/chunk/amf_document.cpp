@@ -719,7 +719,7 @@ int AmfObjectArray::Encode(void *data)
 
         // 문자열 기록
         pt_out += WriteInt16(pt_out, (uint16_t) strlen(property_pair->_name));
-        strncpy((char *) pt_out, property_pair->_name, strlen(property_pair->_name));
+        memcpy((void *)pt_out, (const void *)property_pair->_name, strlen(property_pair->_name));
         pt_out += strlen(property_pair->_name);
 
         // value 기록
