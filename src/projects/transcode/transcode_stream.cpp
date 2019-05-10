@@ -174,6 +174,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 			auto item = profile_tracks.find(profile.GetName());
 			if(item == profile_tracks.end())
 			{
+                logtw("Encoder for [%s] does not exist in Server.xml", profile.GetName().CStr());
 				continue;
 			}
 			tracks.push_back(item->second[0]);  // Video
