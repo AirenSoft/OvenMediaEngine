@@ -26,11 +26,6 @@ namespace cfg
 			return PublisherType::Hls;
 		}
 
-		const Tls &GetTls() const
-		{
-			return _tls;
-		}
-
 		int GetSegmentCount() const
 		{
 			return _segment_count;
@@ -66,7 +61,6 @@ namespace cfg
 		{
 			Publisher::MakeParseList();
 
-			RegisterValue<Optional>("TLS", &_tls);
 			RegisterValue<Optional>("SegmentCount", &_segment_count);
 			RegisterValue<Optional>("SegmentDuration", &_segment_duration);
 			RegisterValue<Optional>("CrossDomain", &_cross_domain);
@@ -75,7 +69,6 @@ namespace cfg
 			RegisterValue<Optional>("RecvBufferSize", &_recv_buffer_size);
 		}
 
-		Tls _tls;
 		int _segment_count = 3;
 		int _segment_duration = 5;
 		CrossDomain _cross_domain;

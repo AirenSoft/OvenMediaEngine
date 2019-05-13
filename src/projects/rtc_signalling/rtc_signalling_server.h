@@ -27,10 +27,10 @@
 class RtcSignallingServer : public ov::EnableSharedFromThis<RtcSignallingServer>
 {
 public:
-	RtcSignallingServer(const cfg::WebrtcPublisher *webrtc_publisher, std::shared_ptr<MediaRouteApplicationInterface> application);
+	RtcSignallingServer(const info::Application *application_info, const cfg::WebrtcPublisher *webrtc_publisher, std::shared_ptr<MediaRouteApplicationInterface> application);
 	~RtcSignallingServer() override = default;
 
-	bool Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate = nullptr, const std::shared_ptr<Certificate> &chain_certificate = nullptr);
+	bool Start(const ov::SocketAddress &address);
 	bool Stop();
 
 	bool AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer);
@@ -96,8 +96,8 @@ protected:
 	std::shared_ptr<ov::Error> DispatchCandidateP2P(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
 	std::shared_ptr<ov::Error> DispatchStop(std::shared_ptr<RtcSignallingInfo> &info);
 
+	const info::Application *_application_info;
 	const cfg::WebrtcPublisher *_webrtc_publisher_info;
-	const cfg::Application *_application_info;
 	const cfg::P2P *_p2p_info;
 
 	std::shared_ptr<MediaRouteApplicationInterface> _application;

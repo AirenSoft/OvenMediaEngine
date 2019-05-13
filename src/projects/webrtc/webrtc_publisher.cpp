@@ -60,19 +60,14 @@ bool WebRtcPublisher::Start()
 		return false;
 	}
 
-	const cfg::Tls &tls_info = signalling.GetTls();
-	std::shared_ptr<Certificate> certificate = GetCertificate(tls_info.GetCertPath(), tls_info.GetKeyPath());
-	std::shared_ptr<Certificate> chain_certificate = GetChainCertificate(tls_info.GetChainCertPath());
-
 	// Signalling에 Observer 연결
-
 	ov::SocketAddress signalling_address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(signalling.GetListenPort()));
 
 	logti("WebRTC Publisher is listening on %s...", signalling_address.ToString().CStr());
 
-	_signalling = std::make_shared<RtcSignallingServer>(_publisher_info, _application);
+	_signalling = std::make_shared<RtcSignallingServer>(&_application_info, _publisher_info, _application);
 	_signalling->AddObserver(RtcSignallingObserver::GetSharedPtr());
-	_signalling->Start(signalling_address, certificate, chain_certificate);
+	_signalling->Start(signalling_address);
 
 	// Publisher::Start()에서 Application을 생성한다.
 	return Publisher::Start();

@@ -14,11 +14,6 @@ namespace cfg
 {
 	struct Signalling : public Item
 	{
-		const Tls &GetTls() const
-		{
-			return _tls;
-		}
-
 		int GetListenPort() const
 		{
 			return _listen_port;
@@ -27,11 +22,9 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<Optional>("TLS", &_tls);
 			RegisterValue<Optional>("ListenPort", &_listen_port);
 		}
 
-		Tls _tls;
 		int _listen_port = 3333;
 	};
 }

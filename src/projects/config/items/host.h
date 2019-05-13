@@ -27,17 +27,17 @@ namespace cfg
 			return _ip;
 		}
 
-		Tls GetTls() const
+		const Tls &GetTls() const
 		{
 			return _tls;
 		}
 
-		Providers GetProviders() const
+		const Providers &GetProviders() const
 		{
 			return _providers;
 		}
 
-		Publishers GetPublishers() const
+		const Publishers &GetPublishers() const
 		{
 			return _publishers;
 		}

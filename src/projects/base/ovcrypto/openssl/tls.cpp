@@ -471,7 +471,7 @@ namespace ov
 		::SSL_CTX_set_verify(_ssl_ctx, mode, nullptr);
 	}
 
-	std::shared_ptr<Certificate> Tls::GetPeerCertificate()
+	std::shared_ptr<Certificate> Tls::GetPeerCertificate() const
 	{
 		OV_ASSERT2(_ssl != nullptr);
 

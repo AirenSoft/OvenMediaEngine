@@ -9,6 +9,7 @@
 #pragma once
 
 #include <config/config.h>
+#include <base/ovcrypto/ovcrypto.h>
 
 #include "stream.h"
 
@@ -19,18 +20,28 @@ namespace info
 	class Application : public cfg::Application
 	{
 	public:
-		explicit Application(const cfg::Application &application)
-			: cfg::Application(application)
-		{
-			_application_id = ov::Random::GenerateUInt32();
-		}
+		explicit Application(const cfg::Application &application);
 
 		application_id_t GetId() const
 		{
 			return _application_id;
 		}
 
+		std::shared_ptr<Certificate> GetCertificate() const
+		{
+			return _certificate;
+		}
+
+		std::shared_ptr<Certificate> GetChainCertificate() const
+		{
+			return _chain_certificate;
+		}
+
 	protected:
+		std::shared_ptr<ov::Error> PrepareCertificates();
+
 		application_id_t _application_id = 0;
+		std::shared_ptr<Certificate> _certificate;
+		std::shared_ptr<Certificate> _chain_certificate;
 	};
 }

@@ -26,14 +26,10 @@ std::shared_ptr<WebConsoleServer> WebConsoleServer::Create(const info::Applicati
 
 		auto host = web_console.GetParentAs<cfg::Host>("Host");
 		auto address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(web_console.GetListenPort()));
-		const auto &tls = web_console.GetTls();
-
-		auto certificate = tls.IsParsed() ? instance->GetCertificate(tls.GetCertPath(), tls.GetKeyPath()) : nullptr;
-		auto chain_certificate = tls.IsParsed() ? instance->GetChainCertificate(tls.GetChainCertPath()) : nullptr;
 
 		logti("Trying to start WebConsole on %s...", address.ToString().CStr());
 
-		if(instance->Start(address, certificate, chain_certificate))
+		if(instance->Start(address))
 		{
 			return instance;
 		}
@@ -50,7 +46,7 @@ std::shared_ptr<WebConsoleServer> WebConsoleServer::Create(const info::Applicati
 	return nullptr;
 }
 
-bool WebConsoleServer::Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate)
+bool WebConsoleServer::Start(const ov::SocketAddress &address)
 {
 	if(_http_server != nullptr)
 	{
@@ -58,12 +54,14 @@ bool WebConsoleServer::Start(const ov::SocketAddress &address, const std::shared
 		return false;
 	}
 
+	auto certificate = _application_info.GetCertificate();
+
 	if(certificate != nullptr)
 	{
 		auto https_server = std::make_shared<HttpsServer>();
 
 		https_server->SetLocalCertificate(certificate);
-		https_server->SetChainCertificate(chain_certificate);
+		https_server->SetChainCertificate(_application_info.GetChainCertificate());
 
 		_http_server = https_server;
 	}
@@ -90,66 +88,6 @@ bool WebConsoleServer::Stop()
 	}
 
 	return false;
-}
-
-std::shared_ptr<Certificate> WebConsoleServer::GetCertificate(ov::String cert_path, ov::String key_path)
-{
-	if(
-		(cert_path.IsEmpty() == false) &&
-		(key_path.IsEmpty() == false)
-		)
-	{
-		auto certificate = std::make_shared<Certificate>();
-
-		logti("Trying to create a certificate using files\n\tCert path: %s\n\tPrivate key path: %s",
-		      cert_path.CStr(),
-		      key_path.CStr()
-		);
-
-		auto error = certificate->GenerateFromPem(cert_path, key_path);
-
-		if(error == nullptr)
-		{
-			return certificate;
-		}
-
-		logte("Could not create a certificate from files: %s", error->ToString().CStr());
-	}
-	else
-	{
-		// TLS is disabled
-	}
-
-	return nullptr;
-}
-
-std::shared_ptr<Certificate> WebConsoleServer::GetChainCertificate(ov::String chain_cert_path)
-{
-	if(
-		(chain_cert_path.IsEmpty() == false)
-		)
-	{
-		auto certificate = std::make_shared<Certificate>();
-
-		logti("Trying to create a chain certificate using file: %s",
-		      chain_cert_path.CStr()
-		);
-
-		auto error = certificate->GenerateFromPem(chain_cert_path, true);
-
-		if(error == nullptr)
-		{
-			return certificate;
-		}
-
-		logte("Could not create a chain certificate from file: %s", error->ToString().CStr());
-	}
-	else
-	{
-		// TLS is disabled
-	}
-
-	return nullptr;
 }
 
 bool WebConsoleServer::InitializeServer()

@@ -116,9 +116,6 @@ protected:
 	virtual cfg::PublisherType GetPublisherType() = 0;
 	virtual std::shared_ptr<Application> OnCreateApplication(const info::Application &application_info) = 0;
 
-	std::shared_ptr<Certificate> GetCertificate(ov::String cert_path, ov::String key_path);
-	std::shared_ptr<Certificate> GetChainCertificate(ov::String chain_cert_path);
-
 	// 모든 application들의 map
 	std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
 

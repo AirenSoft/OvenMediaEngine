@@ -25,6 +25,17 @@ namespace ov
 	{
 	}
 
+	Error::Error(const ov::String &domain, const char *format, ...)
+		: _domain(domain),
+
+		  _code(-1)
+	{
+		va_list list;
+		va_start(list, format);
+		_message.VFormat(format, list);
+		va_end(list);
+	}
+
 	Error::Error(const ov::String &domain, int code, const char *format, ...)
 		: _domain(domain),
 
@@ -59,6 +70,17 @@ namespace ov
 		va_end(list);
 
 		return std::make_shared<Error>(domain, code, message);
+	}
+
+	std::shared_ptr<Error> Error::CreateError(ov::String domain, const char *format, ...)
+	{
+		String message;
+		va_list list;
+		va_start(list, format);
+		message.VFormat(format, list);
+		va_end(list);
+
+		return std::make_shared<Error>(domain, message);
 	}
 
 	std::shared_ptr<Error> Error::CreateError(int code, const char *format, ...)

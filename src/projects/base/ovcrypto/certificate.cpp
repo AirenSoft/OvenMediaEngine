@@ -335,7 +335,7 @@ bool Certificate::GetDigestEVP(const ov::String &algorithm, const EVP_MD **mdp)
 	return true;
 }
 
-bool Certificate::ComputeDigest(const ov::String algorithm)
+bool Certificate::ComputeDigest(const ov::String &algorithm)
 {
 	const EVP_MD *md;
 	unsigned int n;
@@ -363,11 +363,11 @@ EVP_PKEY *Certificate::GetPkey()
 }
 
 //TODO(getroot): Algorithm을 enum값으로 변경
-ov::String Certificate::GetFingerprint(ov::String algorithm)
+ov::String Certificate::GetFingerprint(const ov::String &algorithm)
 {
 	if(_digest.GetLength() <= 0)
 	{
-		if(!ComputeDigest(std::move(algorithm)))
+		if(!ComputeDigest(algorithm))
 		{
 			return "";
 		}

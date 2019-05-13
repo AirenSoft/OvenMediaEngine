@@ -20,9 +20,10 @@ namespace ov
 	class Error
 	{
 	public:
-		// 에러가 없는 상태
+		// There is no error
 		Error() = default;
 		Error(const ov::String &domain, int code);
+		Error(const ov::String &domain, const char *format, ...);
 		Error(const ov::String &domain, int code, const char *format, ...);
 
 		explicit Error(int code);
@@ -31,6 +32,7 @@ namespace ov
 		Error(const Error &error) = default;
 
 		static std::shared_ptr<Error> CreateError(ov::String domain, int code, const char *format, ...);
+		static std::shared_ptr<Error> CreateError(ov::String domain, const char *format, ...);
 		static std::shared_ptr<Error> CreateError(int code, const char *format, ...);
 		static std::shared_ptr<Error> CreateError(HttpStatusCode code, const char *format, ...);
 		static std::shared_ptr<Error> CreateErrorFromErrno();

@@ -15,16 +15,16 @@
 
 #include <ice/ice.h>
 
-RtcSignallingServer::RtcSignallingServer(const cfg::WebrtcPublisher *webrtc_publisher, std::shared_ptr<MediaRouteApplicationInterface> application)
-	: _webrtc_publisher_info(webrtc_publisher),
+RtcSignallingServer::RtcSignallingServer(const info::Application *application_info, const cfg::WebrtcPublisher *webrtc_publisher, std::shared_ptr<MediaRouteApplicationInterface> application)
+	: _application_info(application_info),
+	  _webrtc_publisher_info(webrtc_publisher),
 	  _application(std::move(application))
 {
 
-	_application_info = _webrtc_publisher_info->GetParentAs<cfg::Application>("Application");
 	_p2p_info = &(_webrtc_publisher_info->GetP2P());
 }
 
-bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate)
+bool RtcSignallingServer::Start(const ov::SocketAddress &address)
 {
 	if(_http_server != nullptr)
 	{
@@ -32,12 +32,14 @@ bool RtcSignallingServer::Start(const ov::SocketAddress &address, const std::sha
 		return false;
 	}
 
+	auto certificate = _application_info->GetCertificate();
+
 	if(certificate != nullptr)
 	{
 		auto https_server = std::make_shared<HttpsServer>();
 
 		https_server->SetLocalCertificate(certificate);
-		https_server->SetChainCertificate(chain_certificate);
+		https_server->SetChainCertificate(_application_info->GetChainCertificate());
 
 		_http_server = https_server;
 	}

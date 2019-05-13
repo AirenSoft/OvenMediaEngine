@@ -41,7 +41,6 @@ namespace cfg
 	{
 		switch(type)
 		{
-			default:
 			case ValueType::Unknown:
 				return "Unknown";
 

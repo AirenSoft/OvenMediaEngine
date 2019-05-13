@@ -30,15 +30,11 @@ public:
 
 	static std::shared_ptr<WebConsoleServer> Create(const info::Application &application_info);
 
-	bool Start(const ov::SocketAddress &address, const std::shared_ptr<Certificate> &certificate = nullptr, const std::shared_ptr<Certificate> &chain_certificate = nullptr);
+	bool Start(const ov::SocketAddress &address);
 	bool Stop();
 
 protected:
 	bool InitializeServer();
-
-	// TODO(dimiden): These functions should be merged with the functions of Publisher
-	std::shared_ptr<Certificate> GetCertificate(ov::String cert_path, ov::String key_path);
-	std::shared_ptr<Certificate> GetChainCertificate(ov::String chain_cert_path);
 
 	const info::Application _application_info;
 	cfg::WebConsole _web_console;

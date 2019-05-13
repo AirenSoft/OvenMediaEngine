@@ -69,6 +69,9 @@ bool SegmentStreamPublisher::Start()
 		return true;
 	}
 
+	auto certificate = _application_info.GetCertificate();
+	auto chain_certificate = _application_info.GetChainCertificate();
+
 	// DSH/HLS Server Start
 	// same port or one disable
 	if((dash_publisher_info->GetListenPort() == hls_publisher_info->GetListenPort()) ||
@@ -76,14 +79,11 @@ bool SegmentStreamPublisher::Start()
 	   !hls_publisher_info->IsParsed())
 	{
 		auto segment_stream_server = std::make_shared<SegmentStreamServer>();
-		std::shared_ptr<Certificate> certificate = nullptr;
-		std::shared_ptr<Certificate> chain_certificate = nullptr;
 		std::shared_ptr<ov::SocketAddress> address;
 		int thread_count = 0;
 		int max_retry_count = 0;
 		int send_buffer_size = 0;
 		int recv_buffer_size = 0;
-
 
 		if(dash_publisher_info->IsParsed())
 		{
@@ -96,11 +96,6 @@ bool SegmentStreamPublisher::Start()
 			max_retry_count = dash_publisher_info->GetSegmentDuration() * 1.5;
 			send_buffer_size = dash_publisher_info->GetSendBufferSize();
 			recv_buffer_size = dash_publisher_info->GetRecvBufferSize();
-
-			// TLS
-			certificate = GetCertificate(dash_publisher_info->GetTls().GetCertPath(),
-			                             dash_publisher_info->GetTls().GetKeyPath());
-			chain_certificate = GetChainCertificate(dash_publisher_info->GetTls().GetChainCertPath());
 		}
 
 		if(hls_publisher_info->IsParsed())
@@ -116,18 +111,6 @@ bool SegmentStreamPublisher::Start()
 				max_retry_count = hls_publisher_info->GetSegmentDuration() * 1.5;
 				send_buffer_size = hls_publisher_info->GetSendBufferSize();
 				recv_buffer_size = hls_publisher_info->GetRecvBufferSize();
-			}
-
-			// TLS
-			if(certificate == nullptr)
-			{
-				certificate = GetCertificate(hls_publisher_info->GetTls().GetCertPath(),
-				                             hls_publisher_info->GetTls().GetKeyPath());
-			}
-
-			if(chain_certificate == nullptr)
-			{
-				chain_certificate = GetChainCertificate(dash_publisher_info->GetTls().GetChainCertPath());
 			}
 		}
 
@@ -160,8 +143,7 @@ bool SegmentStreamPublisher::Start()
 		                                  dash_publisher_info->GetSegmentDuration() * 1.5,
 		                                  dash_publisher_info->GetSendBufferSize(),
 		                                  dash_publisher_info->GetRecvBufferSize(),
-		                                  GetCertificate(dash_publisher_info->GetTls().GetCertPath(), dash_publisher_info->GetTls().GetKeyPath()),
-		                                  GetChainCertificate(hls_publisher_info->GetTls().GetChainCertPath())
+		                                  certificate, chain_certificate
 		);
 
 		_segment_stream_servers.push_back(dash_segment_stream_server);
@@ -181,8 +163,7 @@ bool SegmentStreamPublisher::Start()
 		                                 hls_publisher_info->GetSegmentDuration() * 1.5,
 		                                 hls_publisher_info->GetSendBufferSize(),
 		                                 hls_publisher_info->GetRecvBufferSize(),
-		                                 GetCertificate(hls_publisher_info->GetTls().GetCertPath(), hls_publisher_info->GetTls().GetKeyPath()),
-		                                 GetChainCertificate(hls_publisher_info->GetTls().GetChainCertPath())
+		                                 certificate, chain_certificate
 		);
 
 		_segment_stream_servers.push_back(hls_segment_stream_server);

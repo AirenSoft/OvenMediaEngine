@@ -140,7 +140,7 @@ namespace ov
 
 		void SetVerify(int flags);
 
-		std::shared_ptr<Certificate> GetPeerCertificate();
+		std::shared_ptr<Certificate> GetPeerCertificate() const;
 		bool ExportKeyingMaterial(unsigned long crypto_suite, const ov::String &label, std::shared_ptr<ov::Data> &server_key, std::shared_ptr<ov::Data> &client_key);
 
 		// APIs related to SRTP
