@@ -14,8 +14,8 @@
 
 namespace pvd
 {
-	Application::Application(const info::Application &application_info)
-		: info::Application(application_info)
+	Application::Application(const info::Application *application_info)
+		: info::Application(*application_info)
 	{
 
 	}

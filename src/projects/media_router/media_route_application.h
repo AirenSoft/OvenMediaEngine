@@ -43,9 +43,9 @@ class RelayClient;
 class MediaRouteApplication : public MediaRouteApplicationInterface
 {
 public:
-	static std::shared_ptr<MediaRouteApplication> Create(const info::Application &application_info);
+	static std::shared_ptr<MediaRouteApplication> Create(const info::Application *application_info);
 
-	explicit MediaRouteApplication(const info::Application &application_info);
+	explicit MediaRouteApplication(const info::Application *application_info);
 	~MediaRouteApplication() override;
 
 public:
@@ -95,7 +95,7 @@ public:
 
 public:
 	// Application information from configuration file
-	info::Application _application_info;
+	const info::Application *_application_info;
 
 	// Information of Connector instance
 	std::vector<std::shared_ptr<MediaRouteApplicationConnector>> _connectors;

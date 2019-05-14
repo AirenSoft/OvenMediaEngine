@@ -8,23 +8,28 @@
 //==============================================================================
 #pragma once
 
-#include "tls.h"
+#include "../item.h"
 
 namespace cfg
 {
-	struct Signalling : public Item
+	struct Port : public Item
 	{
-		int GetListenPort() const
+		Port(int port)
+			: _port(ov::Converter::ToString(port))
 		{
-			return _listen_port;
+		}
+
+		int GetPort() const
+		{
+			return ov::Converter::ToInt32(_port);
 		}
 
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<Optional>("ListenPort", &_listen_port);
+			RegisterValue<ValueType::Text>(nullptr, &_port);
 		}
 
-		int _listen_port = 3333;
+		ov::String _port;
 	};
 }

@@ -17,7 +17,7 @@
 
 namespace pvd
 {
-	Provider::Provider(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router)
+	Provider::Provider(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
 		: _application_info(application_info),
 		  _router(router)
 	{

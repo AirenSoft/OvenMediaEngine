@@ -25,10 +25,10 @@ class WebConsoleServer : public ov::EnableSharedFromThis<WebConsoleServer>
 protected:
 	struct PrivateToken {};
 public:
-	WebConsoleServer(const info::Application &application_info, PrivateToken token);
+	WebConsoleServer(const info::Application *application_info, PrivateToken token);
 	~WebConsoleServer() override = default;
 
-	static std::shared_ptr<WebConsoleServer> Create(const info::Application &application_info);
+	static std::shared_ptr<WebConsoleServer> Create(const info::Application *application_info);
 
 	bool Start(const ov::SocketAddress &address);
 	bool Stop();
@@ -36,7 +36,7 @@ public:
 protected:
 	bool InitializeServer();
 
-	const info::Application _application_info;
+	const info::Application *_application_info;
 	cfg::WebConsole _web_console;
 
 	std::shared_ptr<HttpServer> _http_server;

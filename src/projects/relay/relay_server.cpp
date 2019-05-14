@@ -14,22 +14,28 @@
 #include <base/media_route/media_route_application_interface.h>
 #include <base/media_route/media_buffer.h>
 
-RelayServer::RelayServer(MediaRouteApplicationInterface *media_route_application, const info::Application &application_info)
+RelayServer::RelayServer(MediaRouteApplicationInterface *media_route_application, const info::Application *application_info)
 	: _media_route_application(media_route_application),
 	  _application_info(application_info)
 {
 	// Listen to localhost:<relay_port>
-	auto &origin = application_info.GetOrigin();
+	auto host = application_info->GetParentAs<cfg::Host>("Host");
+
+	if(host == nullptr)
+	{
+		return;
+	}
+
+	auto &origin = host->GetPorts().GetOriginPort();
 
 	if(origin.IsParsed())
 	{
-		int port = origin.GetListenPort();
+		int port = origin.GetPort();
 
 		if(port > 0)
 		{
-			auto host = origin.GetParentAs<cfg::Host>("Host");
 			const ov::String &ip = host->GetIp();
-			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip, static_cast<uint16_t>(port));
+			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
 
 			_server_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Srt, address);
 
@@ -89,8 +95,8 @@ void RelayServer::SendStream(const std::shared_ptr<ov::Socket> &remote, const st
 	}
 
 	logtd("Trying to send a stream information for %s/%s (%u/%u)\n%s...",
-	      _application_info.GetName().CStr(), stream_info->GetName().CStr(),
-	      _application_info.GetId(), stream_info->GetId(),
+	      _application_info->GetName().CStr(), stream_info->GetName().CStr(),
+	      _application_info->GetId(), stream_info->GetId(),
 	      serialize.CStr()
 	);
 
@@ -181,7 +187,7 @@ void RelayServer::HandleRegister(const std::shared_ptr<ov::Socket> &remote, cons
 {
 	// The relay client wants to be registered on this server for the application
 	ov::String app_name(reinterpret_cast<const char *>(packet.GetData()), packet.GetDataSize());
-	if(_application_info.GetName() != app_name)
+	if(_application_info->GetName() != app_name)
 	{
 		// Cannot handle that application
 		logte("Cannot handle %s", app_name.CStr());
@@ -195,7 +201,7 @@ void RelayServer::HandleRegister(const std::shared_ptr<ov::Socket> &remote, cons
 		return;
 	}
 
-	logtd("Registering a relay client %s for application: %s", remote->ToString().CStr(), _application_info.GetName().CStr());
+	logtd("Registering a relay client %s for application: %s", remote->ToString().CStr(), _application_info->GetName().CStr());
 
 	{
 		std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
@@ -231,7 +237,7 @@ void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_pack
 
 	RelayPacket packet = base_packet;
 
-	packet.SetApplicationId(_application_info.GetId());
+	packet.SetApplicationId(_application_info->GetId());
 	packet.SetStreamId(stream_id);
 	packet.SetTransactionId(transaction_id);
 
@@ -296,7 +302,7 @@ void RelayServer::Send(const std::shared_ptr<ov::Socket> &socket, info::stream_i
 
 	RelayPacket packet = base_packet;
 
-	packet.SetApplicationId(_application_info.GetId());
+	packet.SetApplicationId(_application_info->GetId());
 	packet.SetStreamId(stream_id);
 	packet.SetTransactionId(transaction_id);
 

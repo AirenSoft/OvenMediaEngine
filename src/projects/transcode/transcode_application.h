@@ -31,9 +31,9 @@
 class TranscodeApplication : public MediaRouteApplicationConnector, public MediaRouteApplicationObserver
 {
 public:
-	static std::shared_ptr<TranscodeApplication> Create(const info::Application &application_info);
+	static std::shared_ptr<TranscodeApplication> Create(const info::Application *application_info);
 
-	explicit TranscodeApplication(const info::Application &application_info);
+	explicit TranscodeApplication(const info::Application *application_info);
 	~TranscodeApplication() override;
 
 	MediaRouteApplicationObserver::ObserverType GetObserverType()
@@ -73,6 +73,6 @@ private:
 	std::map<int32_t, std::shared_ptr<TranscodeStream>> _streams;
 	std::mutex _mutex;
 
-	info::Application _application_info;
+	const info::Application *_application_info;
 };
 

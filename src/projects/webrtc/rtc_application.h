@@ -12,10 +12,10 @@
 class RtcApplication : public Application
 {
 public:
-	static std::shared_ptr<RtcApplication> Create(const info::Application &application_info,
+	static std::shared_ptr<RtcApplication> Create(const info::Application *application_info,
 	                                              std::shared_ptr<IcePort> ice_port,
 	                                              std::shared_ptr<RtcSignallingServer> rtc_signalling);
-	RtcApplication(const info::Application &application_info,
+	RtcApplication(const info::Application *application_info,
 	               std::shared_ptr<IcePort> ice_port,
 	               std::shared_ptr<RtcSignallingServer> rtc_signalling);
 	~RtcApplication() final;

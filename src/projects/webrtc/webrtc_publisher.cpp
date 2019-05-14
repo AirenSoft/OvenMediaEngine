@@ -7,7 +7,7 @@
 
 #include "config/config_manager.h"
 
-std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router, std::shared_ptr<MediaRouteApplicationInterface> application)
+std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router, std::shared_ptr<MediaRouteApplicationInterface> application)
 {
 	auto webrtc = std::make_shared<WebRtcPublisher>(application_info, router, application);
 
@@ -17,7 +17,7 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Application
 	return webrtc;
 }
 
-WebRtcPublisher::WebRtcPublisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router, std::shared_ptr<MediaRouteApplicationInterface> application)
+WebRtcPublisher::WebRtcPublisher(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router, std::shared_ptr<MediaRouteApplicationInterface> application)
 	: Publisher(application_info, std::move(router))
 {
 	_application = std::move(application);
@@ -35,24 +35,17 @@ WebRtcPublisher::~WebRtcPublisher()
 bool WebRtcPublisher::Start()
 {
 	// Find WebRTC publisher configuration
-	_publisher_info = FindPublisherInfo<cfg::WebrtcPublisher>();
+	auto host = _application_info->GetParentAs<cfg::Host>("Host");
 
-	if(_publisher_info == nullptr)
-	{
-		logte("Cannot initialize WebrtcPublisher using config information");
-		return false;
-	}
+	auto webrtc = host->GetPorts().GetWebrtcPort();
 
-	auto signalling = _publisher_info->GetSignalling();
-	auto host = signalling.GetParentAs<cfg::Host>("Host");
-
-	if(signalling.IsParsed() == false)
+	if(webrtc.IsParsed() == false)
 	{
 		logte("Invalid signalling configuration");
 		return false;
 	}
 
-	_ice_port = IcePortManager::Instance()->CreatePort(_publisher_info->GetIceCandidates(), IcePortObserver::GetSharedPtr());
+	_ice_port = IcePortManager::Instance()->CreatePort(webrtc.GetIceCandidates(), IcePortObserver::GetSharedPtr());
 
 	if(_ice_port == nullptr)
 	{
@@ -61,11 +54,11 @@ bool WebRtcPublisher::Start()
 	}
 
 	// Signalling에 Observer 연결
-	ov::SocketAddress signalling_address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(signalling.GetListenPort()));
+	ov::SocketAddress signalling_address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(webrtc.GetSignallingPort()));
 
 	logti("WebRTC Publisher is listening on %s...", signalling_address.ToString().CStr());
 
-	_signalling = std::make_shared<RtcSignallingServer>(&_application_info, _publisher_info, _application);
+	_signalling = std::make_shared<RtcSignallingServer>(_application_info, _application);
 	_signalling->AddObserver(RtcSignallingObserver::GetSharedPtr());
 	_signalling->Start(signalling_address);
 
@@ -91,7 +84,7 @@ bool WebRtcPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<Mo
 }
 
 // Publisher에서 Application 생성 요청이 온다.
-std::shared_ptr<Application> WebRtcPublisher::OnCreateApplication(const info::Application &application_info)
+std::shared_ptr<Application> WebRtcPublisher::OnCreateApplication(const info::Application *application_info)
 {
 	return RtcApplication::Create(application_info, _ice_port, _signalling);
 }

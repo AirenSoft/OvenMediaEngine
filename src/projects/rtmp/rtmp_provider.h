@@ -31,9 +31,9 @@ class RtmpProvider : public pvd::Provider, public RtmpObserver
     // class TranscodeApplication;
 public:
     static std::shared_ptr<RtmpProvider>
-    Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
+    Create(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
 
-    explicit RtmpProvider(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
+    explicit RtmpProvider(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
 
     ~RtmpProvider() override;
 
@@ -46,7 +46,7 @@ public:
 
     bool Stop() override;
 
-    std::shared_ptr<pvd::Application> OnCreateApplication(const info::Application &application_info) override;
+    std::shared_ptr<pvd::Application> OnCreateApplication(const info::Application *application_info) override;
 
     //--------------------------------------------------------------------
     // Implementation of RtmpObserver

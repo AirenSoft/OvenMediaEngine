@@ -27,7 +27,7 @@
 class RtcSignallingServer : public ov::EnableSharedFromThis<RtcSignallingServer>
 {
 public:
-	RtcSignallingServer(const info::Application *application_info, const cfg::WebrtcPublisher *webrtc_publisher, std::shared_ptr<MediaRouteApplicationInterface> application);
+	RtcSignallingServer(const info::Application *application_info, std::shared_ptr<MediaRouteApplicationInterface> application);
 	~RtcSignallingServer() override = default;
 
 	bool Start(const ov::SocketAddress &address);

@@ -86,7 +86,7 @@ bool MediaRouter::CreateApplications()
 	{
 		info::application_id_t application_id = application_info.GetId();
 
-		auto route_app = MediaRouteApplication::Create(application_info);
+		auto route_app = MediaRouteApplication::Create(&application_info);
 
 		if(route_app == nullptr)
 		{

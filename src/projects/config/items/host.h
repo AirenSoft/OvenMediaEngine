@@ -9,6 +9,7 @@
 #pragma once
 
 #include "tls.h"
+#include "ports.h"
 #include "providers.h"
 #include "publishers.h"
 #include "applications.h"
@@ -30,6 +31,11 @@ namespace cfg
 		const Tls &GetTls() const
 		{
 			return _tls;
+		}
+
+		const Ports &GetPorts() const
+		{
+			return _ports;
 		}
 
 		const Providers &GetProviders() const
@@ -58,6 +64,7 @@ namespace cfg
 			RegisterValue("Name", &_name);
 			RegisterValue<Optional>("IP", &_ip);
 			RegisterValue<Optional>("TLS", &_tls);
+			RegisterValue<Optional>("Ports", &_ports);
 			RegisterValue<Optional>("Providers", &_providers);
 			RegisterValue<Optional>("Publishers", &_publishers);
 			RegisterValue<Optional>("Applications", &_applications);
@@ -67,6 +74,7 @@ namespace cfg
 		ov::String _name;
 		ov::String _ip;
 		Tls _tls;
+		Ports _ports;
 		Providers _providers;
 		Publishers _publishers;
 		Applications _applications;

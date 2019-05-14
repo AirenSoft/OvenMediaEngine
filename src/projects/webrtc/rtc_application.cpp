@@ -4,7 +4,7 @@
 #include "ice/ice_port_manager.h"
 
 
-std::shared_ptr<RtcApplication> RtcApplication::Create(const info::Application &application_info,
+std::shared_ptr<RtcApplication> RtcApplication::Create(const info::Application *application_info,
                                                        std::shared_ptr<IcePort> ice_port,
                                                        std::shared_ptr<RtcSignallingServer> rtc_signalling)
 {
@@ -13,7 +13,7 @@ std::shared_ptr<RtcApplication> RtcApplication::Create(const info::Application &
 	return application;
 }
 
-RtcApplication::RtcApplication(const info::Application &application_info,
+RtcApplication::RtcApplication(const info::Application *application_info,
                                std::shared_ptr<IcePort> ice_port,
                                std::shared_ptr<RtcSignallingServer> rtc_signalling)
 	: Application(application_info)

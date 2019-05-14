@@ -1,7 +1,7 @@
 #include "publisher_private.h"
 #include "publisher.h"
 
-Publisher::Publisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router)
+Publisher::Publisher(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
 	: _application_info(application_info),
 	  _router(std::move(router))
 {
@@ -9,7 +9,7 @@ Publisher::Publisher(const info::Application &application_info, std::shared_ptr<
 
 bool Publisher::Start()
 {
-	logti("Trying to start publisher %d for application: %s", GetPublisherType(), _application_info.GetName().CStr());
+	logti("Trying to start publisher %d for application: %s", GetPublisherType(), _application_info->GetName().CStr());
 
 	auto application = OnCreateApplication(_application_info);
 

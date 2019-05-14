@@ -16,11 +16,6 @@ namespace cfg
 {
 	struct DashPublisher : public Publisher
 	{
-		DashPublisher()
-			: Publisher(8080)
-		{
-		}
-
 		PublisherType GetType() const override
 		{
 			return PublisherType::Dash;

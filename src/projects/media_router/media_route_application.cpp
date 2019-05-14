@@ -15,22 +15,22 @@
 
 using namespace common;
 
-std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info::Application &application_info)
+std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info::Application *application_info)
 {
 	auto media_route_application = std::make_shared<MediaRouteApplication>(application_info);
 	media_route_application->Start();
 	return media_route_application;
 }
 
-MediaRouteApplication::MediaRouteApplication(const info::Application &application_info)
+MediaRouteApplication::MediaRouteApplication(const info::Application *application_info)
 	: _application_info(application_info)
 {
-	logtd("Created media route application. application (%d: %s)", application_info.GetType(), application_info.GetName().CStr());
+	logtd("Created media route application. application (%d: %s)", application_info->GetType(), application_info->GetName().CStr());
 }
 
 MediaRouteApplication::~MediaRouteApplication()
 {
-	logtd("Destroyed media router application. application (%d: %s)", _application_info.GetType(), _application_info.GetName().CStr());
+	logtd("Destroyed media router application. application (%d: %s)", _application_info->GetType(), _application_info->GetName().CStr());
 }
 
 bool MediaRouteApplication::Start()
@@ -47,7 +47,7 @@ bool MediaRouteApplication::Start()
 		return false;
 	}
 
-	switch(_application_info.GetType())
+	switch(_application_info->GetType())
 	{
 		case cfg::ApplicationType::Live:
 			_relay_server = std::make_shared<RelayServer>(this, _application_info);
@@ -60,13 +60,12 @@ bool MediaRouteApplication::Start()
 		{
 			_relay_server = std::make_shared<RelayServer>(this, _application_info);
 
-			auto &origin = _application_info.GetOrigin();
+			auto &origin = _application_info->GetOrigin();
 
-			if(origin.IsParsed() &&
-				((origin.GetPrimary().IsEmpty() == false) || (origin.GetSecondary().IsEmpty() == false)))
+			if(origin.IsParsed())
 			{
-				_relay_client = std::make_shared<RelayClient>(this, _application_info, origin);
-				_relay_client->Start(_application_info.GetName());
+				_relay_client = std::make_shared<RelayClient>(this, _application_info);
+				_relay_client->Start(_application_info->GetName());
 			}
 
 			break;
@@ -80,7 +79,7 @@ bool MediaRouteApplication::Start()
 			break;
 	}
 
-	logtd("started media route application thread. application(%s)", _application_info.GetName().CStr());
+	logtd("started media route application thread. application(%s)", _application_info->GetName().CStr());
 	return true;
 }
 
@@ -103,7 +102,7 @@ bool MediaRouteApplication::RegisterConnectorApp(
 		return false;
 	}
 
-	logtd("Register application connector. application(%s/%p) connector_type(%d)", _application_info.GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
+	logtd("Register application connector. application(%s/%p) connector_type(%d)", _application_info->GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
 
 	app_conn->SetMediaRouterApplication(GetSharedPtr());
 
@@ -122,7 +121,7 @@ bool MediaRouteApplication::UnregisterConnectorApp(
 		return false;
 	}
 
-	logtd("Unregister application connector. application(%s/%p) connector_type(%d)", _application_info.GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
+	logtd("Unregister application connector. application(%s/%p) connector_type(%d)", _application_info->GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
 
 	// 삭제
 	auto position = std::find(_connectors.begin(), _connectors.end(), app_conn);
@@ -148,7 +147,7 @@ bool MediaRouteApplication::RegisterObserverApp(
 		return false;
 	}
 
-	logtd("Register application observer. application(%s/%p) observer_type(%d)", _application_info.GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
+	logtd("Register application observer. application(%s/%p) observer_type(%d)", _application_info->GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
 
 	std::unique_lock<std::mutex> lock(_mutex);
 	_observers.push_back(app_obsrv);
@@ -166,7 +165,7 @@ bool MediaRouteApplication::UnregisterObserverApp(
 		return false;
 	}
 
-	logtd("Unregister application observer. application(%s/%p) observer_type(%d)", _application_info.GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
+	logtd("Unregister application observer. application(%s/%p) observer_type(%d)", _application_info->GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
 
 	auto position = std::find(_observers.begin(), _observers.end(), app_obsrv);
 	if(position == _observers.end())
@@ -209,7 +208,7 @@ bool MediaRouteApplication::OnCreateStream(
 	}
 
 
-	logtd("Created stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+	logtd("Created stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info->GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	std::unique_lock<std::mutex> lock(_mutex);
 
@@ -274,7 +273,7 @@ bool MediaRouteApplication::OnDeleteStream(
 		return false;
 	}
 
-	logtd("Deleted stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+	logtd("Deleted stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info->GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	auto new_stream_info = std::make_shared<StreamInfo>(*stream_info);
 
@@ -340,7 +339,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 	auto stream_bucket = _streams.find(stream_info->GetId());
 	if(stream_bucket == _streams.end())
 	{
-		logte("cannot find stream from router. appication(%s), stream(%s)", _application_info.GetName().CStr(), stream_info->GetName().CStr());
+		logte("cannot find stream from router. appication(%s), stream(%s)", _application_info->GetName().CStr(), stream_info->GetName().CStr());
 
 		return false;
 	}

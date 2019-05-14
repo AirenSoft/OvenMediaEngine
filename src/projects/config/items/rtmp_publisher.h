@@ -15,11 +15,6 @@ namespace cfg
 {
 	struct RtmpPublisher : public Publisher
 	{
-		RtmpPublisher()
-			: Publisher(1935)
-		{
-		}
-
 		const std::vector<Url> &GetCrossDomains() const
 		{
 			return _cross_domain.GetUrls();

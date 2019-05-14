@@ -14,7 +14,7 @@
 //====================================================================================================
 // Create
 //====================================================================================================
-std::shared_ptr<SegmentStreamApplication> SegmentStreamApplication::Create(const info::Application &application_info)
+std::shared_ptr<SegmentStreamApplication> SegmentStreamApplication::Create(const info::Application *application_info)
 {
 	auto application = std::make_shared<SegmentStreamApplication>(application_info);
 	application->Start();
@@ -24,7 +24,7 @@ std::shared_ptr<SegmentStreamApplication> SegmentStreamApplication::Create(const
 //====================================================================================================
 // SegmentStreamApplication
 //====================================================================================================
-SegmentStreamApplication::SegmentStreamApplication(const info::Application &application_info) : Application(application_info)
+SegmentStreamApplication::SegmentStreamApplication(const info::Application *application_info) : Application(application_info)
 {
 
 }

@@ -44,7 +44,7 @@ namespace pvd
 		virtual std::shared_ptr<Stream> OnCreateStream() = 0;
 
 	protected:
-		explicit Application(const info::Application &application_info);
+		explicit Application(const info::Application *application_info);
 		~Application() override;
 
 		std::map<uint32_t, std::shared_ptr<Stream>> _streams;

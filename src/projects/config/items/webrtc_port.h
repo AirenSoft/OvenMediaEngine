@@ -8,36 +8,36 @@
 //==============================================================================
 #pragma once
 
-#include "publisher.h"
 #include "ice_candidates.h"
-#include "p2p.h"
 
 namespace cfg
 {
-	struct WebrtcPublisher : public Publisher
+	struct WebrtcPort : public Item
 	{
-		PublisherType GetType() const override
+		WebrtcPort(int signalling_port)
+			: _signalling_port(signalling_port)
 		{
-			return PublisherType::Webrtc;
 		}
 
-		const P2P &GetP2P() const
+		const IceCandidates &GetIceCandidates() const
 		{
-			return _p2p;
+			return _ice_candidates;
+		}
+
+		int GetSignallingPort() const
+		{
+			return _signalling_port;
 		}
 
 	protected:
 		void MakeParseList() const override
 		{
-			Publisher::MakeParseList();
-
 			RegisterValue("IceCandidates", &_ice_candidates);
-			RegisterValue<Optional>("Timeout", &_timeout);
-			RegisterValue<Optional>("P2P", &_p2p);
+			RegisterValue("Signalling", &_signalling_port);
 		}
 
 		IceCandidates _ice_candidates;
-		int _timeout = 0;
-		P2P _p2p;
+		// Signalling port
+		int _signalling_port = 3333;
 	};
 }

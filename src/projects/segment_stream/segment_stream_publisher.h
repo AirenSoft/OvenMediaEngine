@@ -21,9 +21,9 @@
 class SegmentStreamPublisher : public Publisher, public SegmentStreamObserver {
 public:
     static std::shared_ptr<SegmentStreamPublisher>
-    Create(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
+    Create(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
 
-    SegmentStreamPublisher(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
+    SegmentStreamPublisher(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
 
     ~SegmentStreamPublisher();
 
@@ -35,7 +35,7 @@ private :
 
     bool Stop() override;
 
-    std::shared_ptr<Application> OnCreateApplication(const info::Application &application_info) override;
+    std::shared_ptr<Application> OnCreateApplication(const info::Application *application_info) override;
 
     // SegmentStreamObserver Implementation
     bool OnPlayListRequest(const ov::String &app_name,

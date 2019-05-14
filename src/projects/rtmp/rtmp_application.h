@@ -19,9 +19,9 @@ using namespace pvd;
 class RtmpApplication : public Application
 {
 public:
-	static std::shared_ptr<RtmpApplication> Create(const info::Application &application_info);
+	static std::shared_ptr<RtmpApplication> Create(const info::Application *application_info);
 
-	explicit RtmpApplication(const info::Application &info);
+	explicit RtmpApplication(const info::Application *info);
 	~RtmpApplication() override = default;
 
 public:

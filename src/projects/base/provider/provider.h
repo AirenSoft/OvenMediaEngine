@@ -31,30 +31,14 @@ namespace pvd
 		std::shared_ptr<Stream> GetStreamById(info::application_id_t app_id, uint32_t stream_id);
 
 	protected:
-		Provider(const info::Application &application_info, std::shared_ptr<MediaRouteInterface> router);
+		Provider(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
 		virtual ~Provider();
-
-		template<typename Tprovider>
-		const Tprovider *FindProviderInfo()
-		{
-			const auto &providers = _application_info.GetProviders();
-
-			for(auto &provider_info : providers)
-			{
-				if(GetProviderType() == provider_info->GetType())
-				{
-					return dynamic_cast<const Tprovider *>(provider_info);
-				}
-			}
-
-			return nullptr;
-		}
 
 		// 모든 Provider는 Name을 정의해야 하며, Config과 일치해야 한다.
 		virtual cfg::ProviderType GetProviderType() = 0;
-		virtual std::shared_ptr<Application> OnCreateApplication(const info::Application &application_info) = 0;
+		virtual std::shared_ptr<Application> OnCreateApplication(const info::Application *application_info) = 0;
 
-		info::Application _application_info;
+		const info::Application *_application_info;
 		std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
 
 		std::shared_ptr<MediaRouteInterface> _router;

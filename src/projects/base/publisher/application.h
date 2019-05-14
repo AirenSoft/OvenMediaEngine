@@ -45,7 +45,7 @@ public:
 	std::shared_ptr<Stream> GetStream(ov::String stream_name);
 
 protected:
-	explicit Application(const info::Application &application_info);
+	explicit Application(const info::Application *application_info);
 	virtual ~Application();
 
 	virtual bool Start();

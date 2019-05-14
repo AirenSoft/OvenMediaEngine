@@ -37,6 +37,40 @@ namespace info
 			return _chain_certificate;
 		}
 
+		template<typename Tpublisher>
+		const Tpublisher *GetPublisher() const
+		{
+			Tpublisher temp_publisher;
+			const auto &publishers = GetPublishers();
+
+			for(auto &publisher_info : publishers)
+			{
+				if(temp_publisher.GetType() == publisher_info->GetType())
+				{
+					return dynamic_cast<const Tpublisher *>(publisher_info);
+				}
+			}
+
+			return nullptr;
+		}
+
+		template<typename Tprovider>
+		const Tprovider *GetProvider() const
+		{
+			Tprovider temp_provider;
+			const auto &providers = GetProviders();
+
+			for(auto &provider_info : providers)
+			{
+				if(temp_provider.GetType() == provider_info->GetType())
+				{
+					return dynamic_cast<const Tprovider *>(provider_info);
+				}
+			}
+
+			return nullptr;
+		}
+
 	protected:
 		std::shared_ptr<ov::Error> PrepareCertificates();
 

@@ -24,10 +24,9 @@
 class RelayClient : public MediaRouteApplicationConnector
 {
 public:
-	RelayClient(MediaRouteApplication *media_route_application, const info::Application &application_info, const cfg::Origin &origin_info)
+	RelayClient(MediaRouteApplication *media_route_application, const info::Application *application_info)
 		: _media_route_application(media_route_application),
-		  _application_info(application_info),
-		  _origin_info(origin_info)
+		  _application_info(application_info)
 	{
 	}
 
@@ -67,6 +66,8 @@ protected:
 		std::map<uint32_t, std::shared_ptr<Transaction>> transactions;
 	};
 
+	ov::String ParseAddress(const ov::String &address);
+
 	std::shared_ptr<RelayStreamInfo> GetStreamInfo(info::stream_id_t stream_id, bool create_info = false, bool *created = nullptr, bool delete_info = false);
 
 	void HandleCreateStream(const RelayPacket &packet);
@@ -75,9 +76,8 @@ protected:
 
 	MediaRouteApplication *_media_route_application;
 
-	const info::Application &_application_info;
+	const info::Application *_application_info;
 
-	const cfg::Origin _origin_info;
 	ov::Socket _client_socket;
 
 	std::thread _connection;

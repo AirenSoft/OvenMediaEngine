@@ -36,7 +36,7 @@ typedef int32_t MediaTrackId;
 class TranscodeStream
 {
 public:
-	TranscodeStream(const info::Application &application_info, std::shared_ptr<StreamInfo> orig_stream_info, TranscodeApplication *parent);
+	TranscodeStream(const info::Application *application_info, std::shared_ptr<StreamInfo> orig_stream_info, TranscodeApplication *parent);
 	~TranscodeStream();
 
 	void Stop();
@@ -62,7 +62,7 @@ private:
 	uint8_t _last_track_audio = 0x70;     // 0x70 ~ 0x7F
 
 private:
-	info::Application _application_info;
+	const info::Application *_application_info;
 
 	// 디코더
 	std::map<MediaTrackId, std::unique_ptr<TranscodeDecoder>> _decoders;

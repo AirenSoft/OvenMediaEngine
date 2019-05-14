@@ -23,55 +23,35 @@ void RelayClient::Start(const ov::String &application)
 		{
 			auto data = std::make_shared<ov::Data>(ov::MaxSrtPacketSize);
 
-			auto primary = _origin_info.GetPrimary();
-			auto secondary = _origin_info.GetSecondary();
+			auto &origin = _application_info->GetOrigin();
 
-			if(primary.IsEmpty())
-			{
-				primary = secondary;
-			}
+			auto primary = origin.GetPrimary();
+			auto secondary = origin.GetSecondary();
 
-			if(primary.IndexOf(':') == -1L)
-			{
-				primary.AppendFormat(":%d", RELAY_DEFAULT_PORT);
-			}
+			// Extract scheme
+			primary = ParseAddress(primary);
+			secondary = ParseAddress(secondary);
 
-			if((secondary.IsEmpty() == false) && (secondary.IndexOf(':') == -1L))
+			if(primary.IsEmpty() && secondary.IsEmpty())
 			{
-				secondary.AppendFormat(":%d", RELAY_DEFAULT_PORT);
+				logte("Could not initialize relay client: both of addresses are invalid");
+				return;
 			}
 
 			ov::SocketAddress primary_address(primary);
 			ov::SocketAddress secondary_address(secondary);
-			bool secondary_server_available = (secondary.IsEmpty() == false);
 
-			bool is_first = true;
 			bool is_primary = true;
 
 			while(_stop == false)
 			{
 				if((_client_socket.GetState() == ov::SocketState::Closed) && (_client_socket.Create(ov::SocketType::Srt) == false))
 				{
+					logte("Could not create relay client socket");
 					return;
 				}
 
 				// Switch between primary and secondary server
-				if((is_first == false) && secondary_server_available)
-				{
-					is_primary = !is_primary;
-				}
-				else
-				{
-					is_first = false;
-				}
-
-				//if(_client_socket.SetSockOpt(SRTO_TRANSTYPE, SRTT_FILE) == false)
-				//{
-				//	logtw("Cannot set transtype (%s)", ov::Error::CreateErrorFromSrt()->ToString().CStr());
-				//
-				//	continue;
-				//}
-
 				const ov::SocketAddress &address = is_primary ? primary_address : secondary_address;
 
 				logti("Trying to connect to %s origin server...: %s", (is_primary) ? "primary" : "secondary", address.ToString().CStr());
@@ -82,6 +62,9 @@ void RelayClient::Start(const ov::String &application)
 				{
 					// retry
 					logtw("Cannot connect to %s origin server: %s (%s)", (is_primary) ? "primary" : "secondary", address.ToString().CStr(), error->ToString().CStr());
+
+					// switch
+					is_primary = !is_primary;
 					continue;
 				}
 
@@ -113,6 +96,7 @@ void RelayClient::Start(const ov::String &application)
 
 						// reconnect
 						_client_socket.Close();
+						is_primary = !is_primary;
 						break;
 					}
 
@@ -141,11 +125,8 @@ void RelayClient::Start(const ov::String &application)
 							// There was a problem
 
 							// reconnect
+							is_primary = !is_primary;
 							_client_socket.Close();
-							break;
-
-						default:
-							logtw("Unknown packet type: %d", packet.GetType());
 							break;
 					}
 				}
@@ -191,6 +172,40 @@ std::shared_ptr<RelayClient::RelayStreamInfo> RelayClient::GetStreamInfo(info::s
 	}
 
 	return relay_info;
+}
+
+ov::String RelayClient::ParseAddress(const ov::String &address)
+{
+	if(address.IsEmpty())
+	{
+		return "";
+	}
+
+	auto tokens = address.Split("://");
+
+	if(tokens.size() != 2)
+	{
+		logte("Invalid relay address: %s", address.CStr());
+		return "";
+	}
+
+	auto scheme = tokens[0];
+	scheme.MakeUpper();
+
+	if(scheme != "SRT")
+	{
+		logte("Not supported scheme in relay address: %s", address.CStr());
+		return "";
+	}
+
+	auto new_address = tokens[1];
+
+	if(new_address.IndexOf(':') == -1L)
+	{
+		new_address.AppendFormat(":%d", RELAY_DEFAULT_PORT);
+	}
+
+	return new_address;
 }
 
 void RelayClient::HandleCreateStream(const RelayPacket &packet)
@@ -306,7 +321,7 @@ void RelayClient::HandleCreateStream(const RelayPacket &packet)
 		MediaRouteApplicationConnector::CreateStream(stream_info);
 
 		logtd("A stream is created: %s/%s (%u/%u)",
-		      _application_info.GetName().CStr(), stream_info->GetName().CStr(),
+		      _application_info->GetName().CStr(), stream_info->GetName().CStr(),
 		      packet.GetApplicationId(), stream_info->GetId()
 		);
 	}
@@ -327,7 +342,7 @@ void RelayClient::HandleDeleteStream(const RelayPacket &packet)
 	auto stream = relay_info->stream_info;
 
 	logtd("A stream is deleted: %s/%s (%u/%u)",
-	      _application_info.GetName().CStr(), stream->GetName().CStr(),
+	      _application_info->GetName().CStr(), stream->GetName().CStr(),
 	      packet.GetApplicationId(), stream->GetId()
 	);
 
@@ -341,7 +356,7 @@ void RelayClient::HandleData(const RelayPacket &packet)
 	if(relay_info == nullptr)
 	{
 		// No sync occurred, or sync is in progress
-		Register(_application_info.GetName());
+		Register(_application_info->GetName());
 		return;
 	}
 

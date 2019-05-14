@@ -18,8 +18,8 @@
 class SegmentStreamApplication : public Application
 {
 public:
-	static std::shared_ptr<SegmentStreamApplication> Create(const info::Application &application_info);
-	SegmentStreamApplication(const info::Application &application_info);
+	static std::shared_ptr<SegmentStreamApplication> Create(const info::Application *application_info);
+	SegmentStreamApplication(const info::Application *application_info);
 	virtual ~SegmentStreamApplication() final;
 
 private:

@@ -140,13 +140,13 @@ int main(int argc, char *argv[])
 				if(application_info.GetType() == cfg::ApplicationType::Live)
 				{
 					logti("Trying to create RTMP Provider for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-					providers.push_back(RtmpProvider::Create(application_info, router));
+					providers.push_back(RtmpProvider::Create(&application_info, router));
 				}
 
 				if(application_info.GetWebConsole().IsParsed())
 				{
 					logti("Trying to initialize WebConsole for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-					web_console_servers.push_back(WebConsoleServer::Create(application_info));
+					web_console_servers.push_back(WebConsoleServer::Create(&application_info));
 				}
 
 				auto publisher_list = application_info.GetPublishers();
@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 						{
 							case cfg::PublisherType::Webrtc:
 								logti("Trying to create WebRTC Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-								publishers.push_back(WebRtcPublisher::Create(application_info, router, application));
+								publishers.push_back(WebRtcPublisher::Create(&application_info, router, application));
 								break;
 
 							case cfg::PublisherType::Dash:
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
 								if(!segment_publisher_create)
 								{
 									logti("Trying to create SegmentStream Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-									publishers.push_back(SegmentStreamPublisher::Create(application_info, router));
+									publishers.push_back(SegmentStreamPublisher::Create(&application_info, router));
 									segment_publisher_create = true;
 								}
 

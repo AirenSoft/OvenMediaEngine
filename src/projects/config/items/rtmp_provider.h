@@ -14,11 +14,6 @@ namespace cfg
 {
 	struct RtmpProvider : public Provider
 	{
-		RtmpProvider()
-			: Provider(1935)
-		{
-		}
-
 		ProviderType GetType() const override
 		{
 			return ProviderType::Rtmp;

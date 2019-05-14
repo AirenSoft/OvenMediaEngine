@@ -74,7 +74,7 @@ int GetBitrate(ov::String bitrate)
 	return static_cast<int>(ov::Converter::ToFloat(bitrate) * multiplier);
 }
 
-TranscodeStream::TranscodeStream(const info::Application &application_info, std::shared_ptr<StreamInfo> stream_info, TranscodeApplication *parent)
+TranscodeStream::TranscodeStream(const info::Application *application_info, std::shared_ptr<StreamInfo> stream_info, TranscodeApplication *parent)
 	: _application_info(application_info)
 {
 	logtd("Created Transcode stream. name(%s)", stream_info->GetName().CStr());
@@ -104,7 +104,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
     }
 
 	// Generate track list by profile(=encode name)
-	auto encodes = _application_info.GetEncodes();
+	auto encodes = _application_info->GetEncodes();
 	std::map <ov::String, std::vector <uint8_t >> profile_tracks;
 	std::vector <uint8_t> tracks;
 
@@ -155,7 +155,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, std:
 	}
 
 	// Generate track list by stream
-	auto streams = _application_info.GetStreamList();
+	auto streams = _application_info->GetStreamList();
 
 	for(const auto &stream : streams)
 	{

@@ -16,11 +16,6 @@ namespace cfg
 {
 	struct HlsPublisher : public Publisher
 	{
-		HlsPublisher()
-			: Publisher(8080)
-		{
-		}
-
 		PublisherType GetType() const override
 		{
 			return PublisherType::Hls;

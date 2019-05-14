@@ -21,7 +21,7 @@ class MediaRouteStream;
 class RelayServer : public PhysicalPortObserver, public MediaRouteApplicationObserver
 {
 public:
-	explicit RelayServer(MediaRouteApplicationInterface *media_route_application, const info::Application &application_info);
+	RelayServer(MediaRouteApplicationInterface *media_route_application, const info::Application *application_info);
 	~RelayServer() override;
 
 	void Send(info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data);
@@ -63,7 +63,7 @@ protected:
 
 	MediaRouteApplicationInterface *_media_route_application;
 
-	const info::Application &_application_info;
+	const info::Application *_application_info;
 	std::shared_ptr<PhysicalPort> _server_port;
 
 	// All client list
