@@ -7,10 +7,12 @@
 //
 //==============================================================================
 
+#include "../config/items/items.h"
 #include "segment_stream.h"
 #include "segment_stream_application.h"
-
-#define OV_LOG_TAG "SegmentStream"
+#include "segment_stream_private.h"
+#include "dash_stream_packetyzer.h"
+#include "hls_stream_packetyzer.h"
 
 using namespace common;
 
@@ -18,9 +20,12 @@ using namespace common;
 // Create
 //====================================================================================================
 std::shared_ptr<SegmentStream>
-SegmentStream::Create(const std::shared_ptr<Application> application, const StreamInfo &info, uint32_t worker_count)
+SegmentStream::Create(const std::shared_ptr<Application> application,
+        cfg::PublisherType publisher_type,
+        const StreamInfo &info,
+        uint32_t worker_count)
 {
-    auto stream = std::make_shared<SegmentStream>(application, info);
+    auto stream = std::make_shared<SegmentStream>(application, publisher_type, info);
 
     //TODO(Bong): SegmentStream should use stream_worker. Change 0 to worker_count.
     if (!stream->Start(0))
@@ -35,8 +40,9 @@ SegmentStream::Create(const std::shared_ptr<Application> application, const Stre
 // - DASH/HLS : H264/AAC only
 // TODO : 다중 트랜스코딩/다중 트랙 구분 및 처리 필요
 //====================================================================================================
-SegmentStream::SegmentStream(const std::shared_ptr<Application> application, const StreamInfo &info) : Stream(
-        application, info)
+SegmentStream::SegmentStream(const std::shared_ptr<Application> application,
+        cfg::PublisherType publisher_type,
+        const StreamInfo &info) : Stream(application, info)
 {
     std::string prefix = this->GetName().CStr();
     std::shared_ptr<MediaTrack> video_track = nullptr;
@@ -88,43 +94,50 @@ SegmentStream::SegmentStream(const std::shared_ptr<Application> application, con
         if (video_track == nullptr) stream_type = PacketyzerStreamType::AudioOnly;
         if (audio_track == nullptr) stream_type = PacketyzerStreamType::VideoOnly;
 
-        SegmentConfigInfo dash_segment_config_info(true, DEFAULT_SEGMENT_COUNT, DEFAULT_SEGMENT_DURATION);
-        SegmentConfigInfo hls_segment_config_info(true, DEFAULT_SEGMENT_COUNT, DEFAULT_SEGMENT_DURATION);
+        int segment_count = 0;
+        int segment_duration = 0;
 
-        const auto &publishers = application->GetPublishers();
-
-        for (auto &publisher_info : publishers)
+        for(auto &publisher_info : application->GetPublishers())
         {
-            if (cfg::PublisherType::Dash == publisher_info->GetType())
+            if(publisher_type == publisher_info->GetType())
             {
-                dash_segment_config_info._count = dynamic_cast<const cfg::DashPublisher *>(publisher_info)->GetSegmentCount();
-                dash_segment_config_info._duration = dynamic_cast<const cfg::DashPublisher *>(publisher_info)->GetSegmentDuration();
+                if(publisher_type == cfg::PublisherType::Dash)
+                {
+                    segment_count = dynamic_cast<const cfg::DashPublisher *>(publisher_info)->GetSegmentCount();
+                    segment_duration = dynamic_cast<const cfg::DashPublisher *>(publisher_info)->GetSegmentDuration();
+                }
+                else if(publisher_type == cfg::PublisherType::Hls)
+                {
+                    segment_count = dynamic_cast<const cfg::HlsPublisher *>(publisher_info)->GetSegmentCount();
+                    segment_duration = dynamic_cast<const cfg::HlsPublisher *>(publisher_info)->GetSegmentDuration();
+                }
 
-                if (dash_segment_config_info._count <= 0)
-                    dash_segment_config_info._count = DEFAULT_SEGMENT_COUNT;
-
-                if (dash_segment_config_info._duration <= 0)
-                    dash_segment_config_info._duration = DEFAULT_SEGMENT_DURATION;
-
-            }
-            else if (cfg::PublisherType::Hls == publisher_info->GetType())
-            {
-                hls_segment_config_info._count = dynamic_cast<const cfg::HlsPublisher *>(publisher_info)->GetSegmentCount();
-                hls_segment_config_info._duration = dynamic_cast<const cfg::HlsPublisher *>(publisher_info)->GetSegmentDuration();
-
-                if (hls_segment_config_info._count <= 0)
-                    hls_segment_config_info._count = DEFAULT_SEGMENT_COUNT;
-
-                if (hls_segment_config_info._duration <= 0)
-                    hls_segment_config_info._duration = DEFAULT_SEGMENT_DURATION;
+                break;
             }
         }
 
-        _stream_packetyzer = std::make_unique<StreamPacketyzer>(dash_segment_config_info,
-                                                                hls_segment_config_info,
-                                                                prefix,
-                                                                stream_type,
-                                                                media_info);
+        if(publisher_type == cfg::PublisherType::Dash)
+        {
+            auto stream_packetyzer =
+                    std::make_shared<DashStreamPacketyzer>(segment_count >  0 ? segment_count : DEFAULT_SEGMENT_COUNT,
+                                                    segment_duration >  0 ? segment_duration : DEFAULT_SEGMENT_DURATION,
+                                                    prefix,
+                                                    stream_type,
+                                                    media_info);
+
+            _stream_packetyzer = stream_packetyzer;
+        }
+        else if(publisher_type == cfg::PublisherType::Hls)
+        {
+            auto stream_packetyzer =
+                    std::make_shared<HlsStreamPacketyzer>(segment_count >  0 ? segment_count : DEFAULT_SEGMENT_COUNT,
+                                                    segment_duration >  0 ? segment_duration : DEFAULT_SEGMENT_DURATION,
+                                                    prefix,
+                                                    stream_type,
+                                                    media_info);
+
+            _stream_packetyzer = stream_packetyzer;
+        }
     }
 
     _stream_check_time = time(nullptr);
@@ -238,11 +251,11 @@ void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
 // GetPlayList
 // - M3U8/MPD
 //====================================================================================================
-bool SegmentStream::GetPlayList(PlayListType play_list_type, ov::String &play_list)
+bool SegmentStream::GetPlayList(ov::String &play_list)
 {
     if (_stream_packetyzer != nullptr)
     {
-        return _stream_packetyzer->GetPlayList(play_list_type, play_list);
+        return _stream_packetyzer->GetPlayList(play_list);
     }
 
     return false;
@@ -252,11 +265,11 @@ bool SegmentStream::GetPlayList(PlayListType play_list_type, ov::String &play_li
 // GetSegment
 // - TS/M4S(mp4)
 //====================================================================================================
-bool SegmentStream::GetSegment(SegmentType type, const ov::String &file_name, std::shared_ptr<ov::Data> &data)
+bool SegmentStream::GetSegment(const ov::String &file_name, std::shared_ptr<ov::Data> &data)
 {
     if (_stream_packetyzer != nullptr)
     {
-        return _stream_packetyzer->GetSegment(type, file_name, data);
+        return _stream_packetyzer->GetSegment(file_name, data);
     }
 
     return false;

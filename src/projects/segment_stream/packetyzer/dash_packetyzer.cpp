@@ -12,12 +12,10 @@
 #include <sstream>
 #include <algorithm>
 #include <numeric>
-
+#include "../segment_stream_private.h"
 
 #define VIDEO_TRACK_ID    (1)
 #define AUDIO_TRACK_ID    (2)
-
-#define OV_LOG_TAG "SegmentStream"
 
 //====================================================================================================
 // Constructor

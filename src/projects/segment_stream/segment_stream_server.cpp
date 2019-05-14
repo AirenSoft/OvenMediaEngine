@@ -11,26 +11,81 @@
 #include "segment_stream_interceptor.h"
 #include <sstream>
 #include <regex>
+#include "segment_stream_private.h"
 
-#define OV_LOG_TAG "SegmentStream"
+SegmentStreamServer::SegmentStreamServer()
+{
+//    _cross_domain_xml = "<?xml version=\"1.0\"?>\r\n"\
+//                            "<cross-domain-policy>\r\n"\
+//                            "<allow-access-from domain=\"*\"/>\r\n"\
+//                            "<site-control permitted-cross-domain-policies=\"all\"/>\r\n"\
+//                            "</cross-domain-policy>";
+
+
+    _cross_domain_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
+                        "<!DOCTYPE cross-domain-policy SYSTEM \"http://www.adobe.com/xml/dtds/cross-domain-policy.dtd\">\n"
+                        "<cross-domain-policy>\n"
+                        "\t<allow-access-from domain=\"*\" secure=\"false\"/>\n"
+                        "\t<site-control permitted-cross-domain-policies=\"all\"/>\n"
+                        "</cross-domain-policy>";
+}
 
 //====================================================================================================
 // Start
 //====================================================================================================
 bool SegmentStreamServer::Start(const ov::SocketAddress &address,
+                                std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
+                                const ov::String &app_name,
                                 int thread_count,
                                 int max_retry_count,
                                 int send_buffer_size,
                                 int recv_buffer_size,
-                                const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate)
+                                const std::shared_ptr<Certificate> &certificate,
+                                const std::shared_ptr<Certificate> &chain_certificate)
 {
     if (_http_server != nullptr)
     {
         OV_ASSERT(false, "Server is already running");
         return false;
     }
+    _app_name = app_name;
+    _max_retry_count = max_retry_count;
 
-    if(certificate != nullptr)
+    // Interceptor add
+    // - handler register
+    auto process_handler = std::bind(&SegmentStreamServer::ProcessRequest,
+                                     this,
+                                     std::placeholders::_1,
+                                     std::placeholders::_2,
+                                     std::placeholders::_3,
+                                     std::placeholders::_4);
+
+    auto segment_stream_interceptor = std::make_shared<SegmentStreamInterceptor>(GetPublisherType(),
+                                                                                thread_count,
+                                                                                process_handler);
+
+//    auto process_func = std::bind(&SegmentStreamServer::ProcessRequest,
+//                                this,
+//                                std::placeholders::_1,
+//                                std::placeholders::_2);
+//
+//    segment_stream_interceptor->Register(HttpMethod::Get, "", process_func, false);
+
+
+    // same port server check
+    if(http_server_manager.find(address.Port()) != http_server_manager.end())
+    {
+        auto item = http_server_manager.find(address.Port());
+        auto http_server = item->second;
+
+        segment_stream_interceptor->DisableCrossdomainResponse();
+        http_server->AddInterceptor(segment_stream_interceptor);
+        _http_server = http_server;
+
+        return true;
+    }
+
+    if (certificate != nullptr)
     {
         auto https_server = std::make_shared<HttpsServer>();
 
@@ -44,40 +99,9 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
         _http_server = std::make_shared<HttpServer>();
     }
 
-    _max_retry_count = max_retry_count;
-
-    // Interceptor add
-    // - handler register
-    auto process_handler = std::bind(&SegmentStreamServer::ProcessRequest,
-            this,
-            std::placeholders::_1,
-            std::placeholders::_2,
-            std::placeholders::_3,
-            std::placeholders::_4);
-
-    auto segment_stream_interceptor = std::make_shared<SegmentStreamInterceptor>(thread_count, process_handler);
-
-//    auto process_func = std::bind(&SegmentStreamServer::ProcessRequest,
-//                                this,
-//                                std::placeholders::_1,
-//                                std::placeholders::_2);
-//
-//    segment_stream_interceptor->Register(HttpMethod::Get, "", process_func, false);
+    http_server_manager[address.Port()] = _http_server;
 
     _http_server->AddInterceptor(segment_stream_interceptor);
-
-    if (_cross_domains.empty())
-    {
-        _cross_domain_xml = "<?xml version=\"1.0\"?>\r\n"\
-                            "<cross-domain-policy>\r\n"\
-                            "<allow-access-from domain=\"*\"/>\r\n"\
-                            "<site-control permitted-cross-domain-policies=\"all\"/>\r\n"\
-                            "</cross-domain-policy>";
-    }
-    else
-    {
-        _cross_domains.clear();
-    }
 
     return _http_server->Start(address, send_buffer_size, recv_buffer_size);
 }
@@ -98,44 +122,6 @@ bool SegmentStreamServer::Stop()
 bool SegmentStreamServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections)
 {
     return true;
-}
-
-//====================================================================================================
-// 접속 허용 app 및 Porotocol 설정
-//====================================================================================================
-bool SegmentStreamServer::SetAllowApp(ov::String app_name, ProtocolFlag protocol_flag)
-{
-    auto item = _allow_apps.find(app_name);
-
-    if (item == _allow_apps.end())
-    {
-        _allow_apps[app_name] = (int) protocol_flag;
-    }
-    else
-    {
-        uint32_t allow_flags = item->second;
-
-        allow_flags |= (uint32_t) protocol_flag;
-
-        _allow_apps[app_name] = allow_flags;
-    }
-
-    return true;
-}
-
-//====================================================================================================
-// 접속 허용 app 확인
-//====================================================================================================
-bool SegmentStreamServer::AllowAppCheck(ov::String &app_name, ProtocolFlag protocol_flag)
-{
-    auto item = _allow_apps.find(app_name);
-
-    if (item == _allow_apps.end())
-    {
-        return false;
-    }
-
-    return (item->second & (uint32_t) ProtocolFlag::ALL) > 0 || (item->second & (uint32_t) protocol_flag) > 0;
 }
 
 //====================================================================================================
@@ -262,7 +248,50 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &req
 {
     // prcess
     if(retry_count == 0)
-        ProcessRequestUrl(request, response, request->GetRequestTarget());
+    {
+        do
+        {
+            ov::String app_name;
+            ov::String stream_name;
+            ov::String file_name;
+            ov::String file_ext;
+
+            // Crossdomain 확인
+            if (request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0)
+            {
+                response->SetHeader("Content-Type", "text/x-cross-domain-policy");
+                //response->SetHeader("Content-Length", ov::Converter::ToString(_cross_domain_xml.GetLength()).CStr());
+                response->AppendString(_cross_domain_xml);
+                break;
+            }
+
+            // URL parsing
+            // app/strem/file.ext 기준
+            if (!RequestUrlParsing(request->GetRequestTarget(), app_name, stream_name, file_name, file_ext))
+            {
+                logtd("Request URL Parsing Fail : %s", request->GetRequestTarget().CStr());
+                response->SetStatusCode(HttpStatusCode::NotFound);
+                break;
+            }
+
+            // CORS check
+            if (request->IsHeaderExists("Origin"))
+            {
+                SetAllowOrigin(request->GetHeader("ORIGIN"), response);
+            }
+
+            // app check
+            if (_app_name != app_name)
+            {
+                logtd("App Allow Check Fail : %s", request->GetRequestTarget().CStr());
+                response->SetStatusCode(HttpStatusCode::NotFound);
+                break;
+            }
+
+            ProcessRequestStream(request, response, app_name, stream_name, file_name, file_ext);
+
+        }while(false);
+    }
 
     // response
     ssize_t sent = response->Response(is_retry);
@@ -287,99 +316,30 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &req
 }
 
 //====================================================================================================
-// ProcessRequest URL
+// SetOriginUrl
 //====================================================================================================
-void SegmentStreamServer::ProcessRequestUrl(const std::shared_ptr<HttpRequest> &request,
-                          const std::shared_ptr<HttpResponse> &response,
-                          const ov::String &request_url)
+bool SegmentStreamServer::SetAllowOrigin(const ov::String &origin_url, const std::shared_ptr<HttpResponse> &response)
 {
-    ov::String stream_name;
-    ov::String app_name;
-    ov::String file_name;
-    ov::String file_ext;
-
-    // Crossdomain 확인
-    if (request_url.IndexOf("crossdomain.xml") >= 0)
+    if(_cors_urls.empty())
     {
-        CrossdomainRequest(request, response);
-        return;
+        response->SetHeader("Access-Control-Allow-Origin", "*");
+        return true;
     }
 
-    // URL parsing
-    // app/strem/file.ext 기준
-    if (!RequestUrlParsing(request_url, app_name, stream_name, file_name, file_ext))
+    auto item = std::find_if(_cors_urls.begin(), _cors_urls.end(),
+             [&origin_url]( auto &url) -> bool
+             {
+                if(url.HasPrefix("http://*."))
+                    return origin_url.HasSuffix(url.Substring(strlen("http://*")));
+                else if(url.HasPrefix("https://*."))
+                    return origin_url.HasSuffix(url.Substring(strlen("https://*")));
+
+                return (origin_url == url);
+             });
+
+    if (item == _cors_urls.end())
     {
-        logtd("Request URL Parsing Fail : %s", request_url.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);
-        return;
-    }
-
-    ProtocolFlag protocol_flag = ProtocolFlag::NONE;
-
-    if (file_ext == "m4s" || file_ext == "mpd")
-        protocol_flag = ProtocolFlag::DASH;
-    else if (file_ext == "ts" || file_ext == "m3u8")
-        protocol_flag = ProtocolFlag::HLS;
-
-    // CORS check
-    if (request->IsHeaderExists("Origin"))
-    {
-        if (!CorsCheck(app_name, stream_name, file_name, protocol_flag, request, response))
-        {
-            response->SetStatusCode(HttpStatusCode::NotFound);// Error Response
-            return;
-        }
-    }
-
-    // 요청 파일 처리
-    if (file_name == "playlist.m3u8")
-        PlayListRequest(app_name, stream_name, file_name, protocol_flag, PlayListType::M3u8, response);
-    else if (file_name == "manifest.mpd")
-        PlayListRequest(app_name, stream_name, file_name, protocol_flag, PlayListType::Mpd, response);
-    else if (file_ext == "ts")
-        SegmentRequest(app_name, stream_name, file_name, protocol_flag, SegmentType::MpegTs, response);
-    else if (file_ext == "m4s")
-        SegmentRequest(app_name, stream_name, file_name, protocol_flag, SegmentType::M4S, response);
-    else
-        response->SetStatusCode(HttpStatusCode::NotFound);// Error Response
-}
-
-//====================================================================================================
-// CorsCheck
-// - Origin URL 설정 없으면 성공 Pass
-//====================================================================================================
-bool SegmentStreamServer::CorsCheck(ov::String &app_name,
-                                    ov::String &stream_name,
-                                    ov::String &file_name,
-                                    ProtocolFlag protocol_flag,
-                                    const std::shared_ptr<HttpRequest> &request,
-                                    const std::shared_ptr<HttpResponse> &response)
-{
-    ov::String origin_url = request->GetHeader("ORIGIN");
-
-    //logtd("Cors Check : %s/%s/%s - %s", app_name.CStr(), stream_name.CStr(), file_name.CStr(), origin_url.CStr());
-
-    // cors url 설정이 있는 경우에만 확인
-    if (!_cors_urls.empty())
-    {
-        bool find = false;
-        auto item = _cors_urls.find(origin_url);
-
-        if (item != _cors_urls.end())
-        {
-            if (((int) protocol_flag & (int) item->second) > 0)
-            {
-                find = true;
-            }
-        }
-
-        if (!find)
-        {
-            logtd("Cors Check Fail : %s/%s/%s - %s", app_name.CStr(), stream_name.CStr(), file_name.CStr(),
-                  origin_url.CStr());
-            return false;
-        }
-
+        return false;
     }
 
     // http 헤더 설정
@@ -394,27 +354,18 @@ bool SegmentStreamServer::CorsCheck(ov::String &app_name,
 // PlayListRequest
 // - m3u8/mpd
 //====================================================================================================
-void SegmentStreamServer::PlayListRequest(ov::String &app_name,
-                                          ov::String &stream_name,
-                                          ov::String &file_name,
-                                          ProtocolFlag protocol_flag,
+void SegmentStreamServer::PlayListRequest(const ov::String &app_name,
+                                          const ov::String &stream_name,
+                                          const ov::String &file_name,
                                           PlayListType play_list_type,
                                           const std::shared_ptr<HttpResponse> &response)
 {
-    if (!AllowAppCheck(app_name, protocol_flag))
-    {
-        logtd("App Allow Check Fail : %s/%s/%s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);
-        return;
-    }
-
     ov::String play_list;
 
     auto item = std::find_if(_observers.begin(), _observers.end(),
-                             [&app_name, &stream_name, &file_name, &play_list_type, &play_list](
+                             [&app_name, &stream_name, &file_name, &play_list](
                                      auto &observer) -> bool {
-                                 return observer->OnPlayListRequest(app_name, stream_name, file_name, play_list_type,
-                                                                    play_list);
+                                 return observer->OnPlayListRequest(app_name, stream_name, file_name, play_list);
                              });
 
     if (item == _observers.end() || play_list.IsEmpty())
@@ -430,40 +381,24 @@ void SegmentStreamServer::PlayListRequest(ov::String &app_name,
     //response->SetHeader("Content-Length", ov::Converter::ToString(play_list.GetLength()).CStr());
 
     response->AppendString(play_list);
-
-//    logtd("Playlist Resopnse : thread(%u) file(%s/%s/%s) size(%u)",
-//            std::this_thread::get_id(),
-//            app_name.CStr(),
-//            stream_name.CStr(),
-//            file_name.CStr(),
-//          	play_list.GetLength());
 }
 
 //====================================================================================================
 // SegmentRequest
 // - ts/mp4
 //====================================================================================================
-void SegmentStreamServer::SegmentRequest(ov::String &app_name,
-                                         ov::String &stream_name,
-                                         ov::String &file_name,
-                                         ProtocolFlag protocol_flag,
+void SegmentStreamServer::SegmentRequest(const ov::String &app_name,
+                                         const ov::String &stream_name,
+                                         const ov::String &file_name,
                                          SegmentType segment_type,
                                          const std::shared_ptr<HttpResponse> &response)
 {
-    if (!AllowAppCheck(app_name, protocol_flag))
-    {
-        logtd("App Allow Check Fail : %s/%s/%s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);
-        return;
-    }
-
     std::shared_ptr<ov::Data> segment_data = nullptr;
 
     auto item = std::find_if(_observers.begin(), _observers.end(),
-                             [&app_name, &stream_name, &segment_type, &file_name, &segment_data](
+                             [&app_name, &stream_name, &file_name, &segment_data](
                                      auto &observer) -> bool {
-                                 return observer->OnSegmentRequest(app_name, stream_name, segment_type, file_name,
-                                                                   segment_data);
+                                 return observer->OnSegmentRequest(app_name, stream_name, file_name, segment_data);
                              });
 
     if (item == _observers.end() || segment_data == nullptr)
@@ -479,93 +414,98 @@ void SegmentStreamServer::SegmentRequest(ov::String &app_name,
     //response->SetHeader("Content-Length", ov::Converter::ToString(segment_data->GetLength()).CStr());
 
     response->AppendData(segment_data);
-
-//    logtd("SegmentData Resopnse : thread(%u) file(%s/%s/%s) size(%u)",
-//            std::this_thread::get_id(),
-//            app_name.CStr(),
-//            stream_name.CStr(),
-//            file_name.CStr(),
-//          	segment_data->GetLength());
-
 }
 
 //====================================================================================================
-// CrossdomainRequest
-// - corssdomain.xml
+// SetCrossDomain Parsing/Setting
+//  crossdoamin : only domain
+//  CORS : http/htts check
+//
+// <Url>*</Url>
+// <Url>*.ovenplayer.com</Url>
+// <Url>http://demo.ovenplayer.com</Url>
+// <Url>https://demo.ovenplayer.com</Url>
+// <Url>http://*.ovenplayer.com</Url>
 //====================================================================================================
-void SegmentStreamServer::CrossdomainRequest(const std::shared_ptr<HttpRequest> &request,
-                                             const std::shared_ptr<HttpResponse> &response)
+void SegmentStreamServer::SetCrossDomain(const std::vector<cfg::Url> &url_list)
 {
-    // header setting
-    response->SetHeader("Content-Type", "text/x-cross-domain-policy");
-    //response->SetHeader("Content-Length", ov::Converter::ToString(_cross_domain_xml.GetLength()).CStr());
+    std::vector<ov::String> crossdmain_urls;
+    ov::String http_prefix =  "http://";
+    ov::String https_prefix =  "https://";
 
-    // data setting
-    response->AppendString(_cross_domain_xml);
-}
-
-//====================================================================================================
-// AddCors
-// - 요청 파일 별 확장자/이름으로 프로토콜 구분 가능
-// - flag 설정 필요
-// - 설정 데이터가 없으면 전체 접속 허용
-//====================================================================================================
-void SegmentStreamServer::AddCors(const std::vector<cfg::Url> &cors_urls, ProtocolFlag protocol_flag)
-{
-    if (cors_urls.empty())
-    {
+    if (url_list.empty())
         return;
-    }
 
-    for (auto &url : cors_urls)
+    for (auto &url_item : url_list)
     {
-        auto item = _cors_urls.find(url.GetUrl());
+        ov::String url = url_item.GetUrl();
 
-        if (item != _cors_urls.end())
+        // all access allow
+        if(url == "*")
         {
-            item->second |= (int) protocol_flag;
+            crossdmain_urls.clear();
+            _cors_urls.clear();
+            return;
         }
+
+        // http
+        if(url.HasPrefix(http_prefix))
+        {
+            if(!UrlExistCheck(crossdmain_urls, url.Substring(http_prefix.GetLength())))
+                crossdmain_urls.push_back(url.Substring(http_prefix.GetLength()));
+
+            if(!UrlExistCheck(_cors_urls, url))
+                _cors_urls.push_back(url);
+        }
+        // https
+        else if(url.HasPrefix(https_prefix))
+        {
+            if(!UrlExistCheck(crossdmain_urls, url.Substring(https_prefix.GetLength())))
+                crossdmain_urls.push_back(url.Substring(https_prefix.GetLength()));
+
+            if(!UrlExistCheck(_cors_urls, url))
+                _cors_urls.push_back(url);
+        }
+         // only domain
         else
         {
-            if(!url.GetUrl().IsEmpty())
-                _cors_urls[url.GetUrl()] = (int) protocol_flag;
+            if(!UrlExistCheck(crossdmain_urls, url))
+                crossdmain_urls.push_back(url);
+
+            if(!UrlExistCheck(_cors_urls, http_prefix + url))
+                _cors_urls.push_back(http_prefix + url);
+
+            if(!UrlExistCheck(_cors_urls, https_prefix + url))
+                _cors_urls.push_back(https_prefix + url);
         }
     }
-}
 
-//====================================================================================================
-// AddCrossDomain
-// - crossdomain.xml 파일 요청에 대해서 전체 응답
-// - 설정 데이터가 없으면 전체 접속 허용
-//====================================================================================================
-void SegmentStreamServer::AddCrossDomain(const std::vector<cfg::Url> &cross_domains)
-{
-    if (cross_domains.empty())
-    {
-        return;
-    }
-
-    for (auto &url : cross_domains)
-    {
-        if(!url.GetUrl().IsEmpty())
-            _cross_domains[url.GetUrl()] = (int) ProtocolFlag::ALL;
-    }
-
-    if(_cross_domains.empty())
-    {
-        return;
-    }
-
-    // crossdomain.xml 재설정
+    // crossdomain.xml
     std::ostringstream cross_domain_xml;
 
     cross_domain_xml << "<?xml version=\"1.0\"?>\r\n";
     cross_domain_xml << "<cross-domain-policy>\r\n";
-    for (auto &url : cross_domains)
+    for (auto &url : crossdmain_urls)
     {
-        cross_domain_xml << "    <allow-access-from domain=\"" << url.GetUrl().CStr() << "\"/>\r\n";
+        cross_domain_xml << "    <allow-access-from domain=\"" << url.CStr() << "\"/>\r\n";
     }
     cross_domain_xml << "</cross-domain-policy>";
 
     _cross_domain_xml = cross_domain_xml.str().c_str();
+    ov::String cors_urls;
+    for(auto & url : _cors_urls)
+        cors_urls += url + "\n";
+    logtd("<%s> CORS \n%s", _app_name.CStr(), cors_urls.CStr());
+
+    logtd("<%s> crossdomain.xml \n%s", _app_name.CStr(), _cross_domain_xml.CStr());
+}
+
+bool SegmentStreamServer::UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url)
+{
+    auto item = std::find_if(url_list.begin(), url_list.end(),
+                             [&check_url](auto &url) -> bool {
+                                 return  check_url == url;
+                             });
+
+    return (item != url_list.end());
 }

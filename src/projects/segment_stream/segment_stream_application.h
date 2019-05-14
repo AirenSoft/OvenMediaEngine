@@ -18,8 +18,11 @@
 class SegmentStreamApplication : public Application
 {
 public:
-	static std::shared_ptr<SegmentStreamApplication> Create(const info::Application *application_info);
-	SegmentStreamApplication(const info::Application *application_info);
+	static std::shared_ptr<SegmentStreamApplication> Create(cfg::PublisherType publisher_type,
+                                                            const info::Application *application_info);
+
+	SegmentStreamApplication(cfg::PublisherType publisher_type, const info::Application *application_info);
+
 	virtual ~SegmentStreamApplication() final;
 
 private:
@@ -31,5 +34,5 @@ private:
 	bool DeleteStream(std::shared_ptr<StreamInfo> info) override;
 
 private :
-
+    cfg::PublisherType _publisher_type;
 };

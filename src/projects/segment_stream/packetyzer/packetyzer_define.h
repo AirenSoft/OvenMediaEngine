@@ -109,7 +109,8 @@ enum class PacketyzerFrameType {
 //====================================================================================================
 // PacketyzerFrameData
 //====================================================================================================
-struct PacketyzerFrameData {
+struct PacketyzerFrameData
+{
 public:
     PacketyzerFrameData(PacketyzerFrameType type_, uint64_t timestamp_, uint64_t time_offset_, uint32_t time_scale_,
                         std::shared_ptr<std::vector<uint8_t>> &data_) {
@@ -140,7 +141,8 @@ public:
 //===============================================================================================
 //지원 코덱 타입
 //===============================================================================================
-enum class SegmentCodecType {
+enum class SegmentCodecType
+{
     UnknownCodec,
     Vp8Codec,
     H264Codec,
@@ -151,9 +153,11 @@ enum class SegmentCodecType {
 //====================================================================================================
 // Interface
 //====================================================================================================
-struct PacketyzerMediaInfo {
+struct PacketyzerMediaInfo
+{
 public :
-    PacketyzerMediaInfo() {
+    PacketyzerMediaInfo()
+    {
         video_codec_type = SegmentCodecType::UnknownCodec;
         video_width = 0;
         video_height = 0;
@@ -178,7 +182,8 @@ public :
                         uint32_t audio_channels_,
                         uint32_t audio_samplerate_,
                         uint32_t audio_bitrate_,
-                        uint32_t audio_timescale_) {
+                        uint32_t audio_timescale_)
+    {
         // 비디오 정보
         video_codec_type = video_codec_type_;
         video_width = video_width_;

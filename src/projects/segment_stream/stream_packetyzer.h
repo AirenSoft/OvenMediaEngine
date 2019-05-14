@@ -12,30 +12,10 @@
 #include <string>
 #include <deque>
 #include <base/ovlibrary/ovlibrary.h>
-#include "packetyzer/hls_packetyzer.h"
-#include "packetyzer/dash_packetyzer.h"
+#include "packetyzer/packetyzer.h"
 
-#define DEFAULT_SEGMENT_COUNT        (5)
+#define DEFAULT_SEGMENT_COUNT        (3)
 #define DEFAULT_SEGMENT_DURATION    (5)
-
-//====================================================================================================
-// SegmentConfigInfo
-//====================================================================================================
-struct SegmentConfigInfo
-{
-public:
-    SegmentConfigInfo(bool enable, int count, int duration)
-    {
-        _enable = enable;
-        _count = count;
-        _duration = duration;
-    }
-
-public:
-    bool _enable;
-    int _count;
-    int _duration;
-};
 
 //====================================================================================================
 // StreamPacketyzer
@@ -43,11 +23,10 @@ public:
 class StreamPacketyzer
 {
 public:
-    StreamPacketyzer(SegmentConfigInfo dash_segment_config_info,
-                     SegmentConfigInfo hls_segment_config_info,
-                     std::string &segment_prefix,
-                     PacketyzerStreamType stream_type,
-                     PacketyzerMediaInfo media_info);
+    StreamPacketyzer(PacketyzerStreamType stream_type,
+                     uint32_t video_timescale,
+                     uint32_t auddio_timescale,
+                     uint32_t video_framerate);
 
     virtual ~StreamPacketyzer();
 
@@ -62,16 +41,16 @@ public :
 
     bool AppendAudioData(uint64_t timestamp, uint32_t timescale, uint32_t data_size, const uint8_t *data);
 
-    bool GetPlayList(PlayListType play_list_type, ov::String &segment_play_list);
-
-    bool GetSegment(SegmentType type, const ov::String &file_name, std::shared_ptr<ov::Data> &data);
+    // Child must implement this function
+    virtual bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &data) = 0;
+    virtual bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &data)  = 0;
+    virtual bool GetPlayList(ov::String &segment_play_list)  = 0;
+    virtual bool GetSegment(const ov::String &file_name, std::shared_ptr<ov::Data> &data)  = 0;
 
 private :
     bool VideoDataSampleWrite(uint64_t timestamp);
 
-private :
-    std::shared_ptr<HlsPacketyzer> _hls_packetyzer = nullptr;
-    std::shared_ptr<DashPacketyzer> _dash_packetyzer = nullptr;
+protected :
     uint32_t _audio_timescale;
     uint32_t _video_timescale;
     PacketyzerStreamType _stream_type;

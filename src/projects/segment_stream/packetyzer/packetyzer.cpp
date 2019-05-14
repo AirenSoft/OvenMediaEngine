@@ -11,8 +11,7 @@
 #include <sstream>
 #include <algorithm>
 #include <sys/time.h>
-
-#define OV_LOG_TAG "SegmentStream"
+#include "../segment_stream_private.h"
 
 //====================================================================================================
 // Constructor

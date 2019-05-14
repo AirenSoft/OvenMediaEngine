@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 				}
 
 				auto publisher_list = application_info.GetPublishers();
-				bool segment_publisher_create = false;  // Dash + HLS --> segment_publisher
+                std::map<int,  std::shared_ptr<HttpServer>> segment_http_server_manager; // key : port number
 
 				for(const auto &publisher : publisher_list)
 				{
@@ -166,15 +166,20 @@ int main(int argc, char *argv[])
 								break;
 
 							case cfg::PublisherType::Dash:
-							case cfg::PublisherType::Hls:
-								if(!segment_publisher_create)
-								{
-									logti("Trying to create SegmentStream Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-									publishers.push_back(SegmentStreamPublisher::Create(&application_info, router));
-									segment_publisher_create = true;
-								}
+                                logti("Trying to create DASH Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+                                publishers.push_back(SegmentStreamPublisher::Create(cfg::PublisherType::Dash,
+                                                                                    segment_http_server_manager,
+                                                                                    &application_info,
+                                                                                    router));
+                                break;
 
-								break;
+							case cfg::PublisherType::Hls:
+                                logti("Trying to create HLS Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+                                publishers.push_back(SegmentStreamPublisher::Create(cfg::PublisherType::Hls,
+                                                                                    segment_http_server_manager,
+                                                                                    &application_info,
+                                                                                    router));
+                                break;
 
 							case cfg::PublisherType::Rtmp:
 							default:

@@ -1,6 +1,5 @@
 #include "segment_worker_manager.h"
-
-#define OV_LOG_TAG "SegmentStream"
+#include "segment_stream_private.h"
 
 //====================================================================================================
 // SegmentWorker constructorc

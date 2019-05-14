@@ -8,15 +8,15 @@
 //==============================================================================
 
 #include "segment_stream_application.h"
-
-#define OV_LOG_TAG "SegmentStream"
+#include "segment_stream_private.h"
 
 //====================================================================================================
 // Create
 //====================================================================================================
-std::shared_ptr<SegmentStreamApplication> SegmentStreamApplication::Create(const info::Application *application_info)
+std::shared_ptr<SegmentStreamApplication> SegmentStreamApplication::Create(cfg::PublisherType publisher_type,
+        const info::Application *application_info)
 {
-	auto application = std::make_shared<SegmentStreamApplication>(application_info);
+	auto application = std::make_shared<SegmentStreamApplication>(publisher_type, application_info);
 	application->Start();
 	return application;
 }
@@ -24,9 +24,10 @@ std::shared_ptr<SegmentStreamApplication> SegmentStreamApplication::Create(const
 //====================================================================================================
 // SegmentStreamApplication
 //====================================================================================================
-SegmentStreamApplication::SegmentStreamApplication(const info::Application *application_info) : Application(application_info)
+SegmentStreamApplication::SegmentStreamApplication(cfg::PublisherType publisher_type,
+        const info::Application *application_info) : Application(application_info)
 {
-
+    _publisher_type = publisher_type;
 }
 
 //====================================================================================================
@@ -74,5 +75,6 @@ std::shared_ptr<Stream> SegmentStreamApplication::CreateStream(std::shared_ptr<S
 {
 	// Stream Class 생성할때는 복사를 사용한다.
 	logtd("CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
-	return SegmentStream::Create(GetSharedPtrAs<Application>(), *info.get(), worker_count);
+
+	return SegmentStream::Create(GetSharedPtrAs<Application>(), _publisher_type, *info.get(), worker_count);
 }

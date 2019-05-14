@@ -14,8 +14,7 @@
 #include <array>
 #include <algorithm>
 #include "../base/ovlibrary/ovlibrary.h"
-
-#define OV_LOG_TAG                  "SegmentStream"
+#include "../segment_stream_private.h"
 #define HLS_MAX_TEMP_VIDEO_DATA_COUNT        (500)
 
 //====================================================================================================
@@ -29,7 +28,7 @@ HlsPacketyzer::HlsPacketyzer(std::string &segment_prefix,
         Packetyzer(PacketyzerType::Hls, segment_prefix, stream_type, segment_count, (uint32_t) segment_duration,
                    media_info)
 {
-    _media_info.audio_timescale = PACKTYZER_DEFAULT_TIMESCALE;
+
 }
 
 //====================================================================================================

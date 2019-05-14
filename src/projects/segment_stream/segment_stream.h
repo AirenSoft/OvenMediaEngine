@@ -20,9 +20,14 @@
 class SegmentStream : public Stream {
 public:
     static std::shared_ptr<SegmentStream>
-    Create(const std::shared_ptr<Application> application, const StreamInfo &info, uint32_t worker_count);
+    Create(const std::shared_ptr<Application> application,
+            cfg::PublisherType publisher_type,
+            const StreamInfo &info,
+            uint32_t worker_count);
 
-    explicit SegmentStream(const std::shared_ptr<Application> application, const StreamInfo &info);
+    explicit SegmentStream(const std::shared_ptr<Application> application,
+                            cfg::PublisherType publisher_type,
+                            const StreamInfo &info);
 
     virtual ~SegmentStream() final;
 
@@ -41,12 +46,12 @@ public :
 
     bool Stop() override;
 
-    bool GetPlayList(PlayListType play_list_type, ov::String &play_list);
+    bool GetPlayList(ov::String &play_list);
 
-    bool GetSegment(SegmentType type, const ov::String &file_name, std::shared_ptr<ov::Data> &data);
+    bool GetSegment(const ov::String &file_name, std::shared_ptr<ov::Data> &data);
 
 private :
-    std::unique_ptr<StreamPacketyzer> _stream_packetyzer;
+    std::shared_ptr<StreamPacketyzer> _stream_packetyzer = nullptr;
     std::map<uint32_t, std::shared_ptr<MediaTrack>> _media_tracks;
 
     time_t _stream_check_time;

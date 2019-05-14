@@ -9,16 +9,17 @@
 #include "segment_stream_publisher.h"
 #include "../config/config_manager.h"
 #include "segment_stream_application.h"
-
-#define OV_LOG_TAG "SegmentStream"
+#include "segment_stream_private.h"
 
 std::shared_ptr<SegmentStreamPublisher>
-SegmentStreamPublisher::Create(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
+SegmentStreamPublisher::Create(cfg::PublisherType publisher_type,
+                                std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
+                                const info::Application *application_info,
+                                std::shared_ptr<MediaRouteInterface> router)
 {
-	auto segment_stream = std::make_shared<SegmentStreamPublisher>(application_info, router);
+	auto segment_stream = std::make_shared<SegmentStreamPublisher>(publisher_type, application_info, router);
 
-	// CONFIG을 불러온다.
-	segment_stream->Start();
+	segment_stream->Start(http_server_manager);
 
 	return segment_stream;
 }
@@ -26,14 +27,12 @@ SegmentStreamPublisher::Create(const info::Application *application_info, std::s
 //====================================================================================================
 // SegmentStreamPublisher
 //====================================================================================================
-SegmentStreamPublisher::SegmentStreamPublisher(const info::Application *application_info,
-                                               std::shared_ptr<MediaRouteInterface> router)
+SegmentStreamPublisher::SegmentStreamPublisher(cfg::PublisherType publisher_type,
+                                                const info::Application *application_info,
+                                                std::shared_ptr<MediaRouteInterface> router)
 	: Publisher(application_info, std::move(router))
 {
-	_publisher_type = cfg::PublisherType::Dash;
-
-
-	logtd("SegmentStreamPublisher Create Start");
+	_publisher_type = publisher_type;
 }
 
 //====================================================================================================
@@ -48,154 +47,126 @@ SegmentStreamPublisher::~SegmentStreamPublisher()
 // Start
 // - Publisher override
 //====================================================================================================
-bool SegmentStreamPublisher::Start()
+bool SegmentStreamPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
 {
 	auto publisher_type = GetPublisherType();
 
-	// Find Dash publisher configuration
-	_publisher_type = cfg::PublisherType::Dash;
-	auto dash_publisher_info = _application_info->GetPublisher<cfg::DashPublisher>();
+	if(GetPublisherType() == cfg::PublisherType::Dash)
+	    return DashStart(http_server_manager);
+    else if (GetPublisherType() == cfg::PublisherType::Hls)
+        return HlsStart(http_server_manager);
 
-	// Find Hls publisher configuration
-	_publisher_type = cfg::PublisherType::Hls;
+    return true;
+}
 
-	auto hls_publisher_info = _application_info->GetPublisher<cfg::HlsPublisher>();
-	_publisher_type = publisher_type;
+//====================================================================================================
+// Dash Stream Server Start
+//====================================================================================================
+bool SegmentStreamPublisher::DashStart(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
+{
+    // Find Dash publisher configuration
+    auto publisher_info = _application_info->GetPublisher<cfg::DashPublisher>();
 
-	// disable both DASH and HLS
-	if(!dash_publisher_info->IsParsed() && !hls_publisher_info->IsParsed())
-	{
-		logtd("DASH/HLS is disabled");
-		return true;
-	}
+    auto stream_server = std::make_shared<DashStreamServer>();
 
-	auto certificate = _application_info->GetCertificate();
-	auto chain_certificate = _application_info->GetChainCertificate();
+    auto certificate = _application_info->GetCertificate();
 
-	auto host = _application_info->GetParentAs<cfg::Host>("Host");
+    auto chain_certificate = _application_info->GetChainCertificate();
 
-	if(host == nullptr)
-	{
-		OV_ASSERT2(false);
-		logte("Invalid configuration");
-		return false;
-	}
+    auto host = _application_info->GetParentAs<cfg::Host>("Host");
 
-	auto ports = host->GetPorts();
+    if(host == nullptr)
+    {
+        OV_ASSERT2(false);
+        logte("Invalid configuration");
+        return false;
+    }
 
-	// DSH/HLS Server Start
-	// same port or one disable
-	const auto &dash_port = ports.GetDashPort();
-	const auto &hls_port = ports.GetHlsPort();
+    auto ports = host->GetPorts();
 
-	if((dash_port.GetPort() == hls_port.GetPort()) ||
-	   !dash_port.IsParsed() ||
-	   !hls_port.IsParsed())
-	{
-		auto segment_stream_server = std::make_shared<SegmentStreamServer>();
-		std::shared_ptr<ov::SocketAddress> address;
-		int thread_count = 0;
-		int max_retry_count = 0;
-		int send_buffer_size = 0;
-		int recv_buffer_size = 0;
+    const auto &port = ports.GetDashPort();
 
-		if(dash_publisher_info->IsParsed())
-		{
-			segment_stream_server->SetAllowApp(_application_info->GetName(), ProtocolFlag::DASH);
-			segment_stream_server->AddCors(dash_publisher_info->GetCrossDomains(), ProtocolFlag::DASH);
-			segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());
+    // CORS/Crossdomain.xml setting
+    stream_server->SetCrossDomain(publisher_info->GetCrossDomains());
 
-			address = std::make_shared<ov::SocketAddress>(dash_port.GetPort());
-			thread_count = dash_publisher_info->GetThreadCount();
-			max_retry_count = dash_publisher_info->GetSegmentDuration() * 1.5;
-			send_buffer_size = dash_publisher_info->GetSendBufferSize();
-			recv_buffer_size = dash_publisher_info->GetRecvBufferSize();
-		}
+    stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
-		if(hls_publisher_info->IsParsed())
-		{
-			segment_stream_server->SetAllowApp(_application_info->GetName(), ProtocolFlag::HLS);
-			segment_stream_server->AddCors(hls_publisher_info->GetCrossDomains(), ProtocolFlag::HLS);
-			segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());
+    // DASH Server Start
+    stream_server->Start(ov::SocketAddress(port.GetPort()),
+                         http_server_manager,
+                        _application_info->GetName(),
+                        publisher_info->GetThreadCount(),
+                        publisher_info->GetSegmentDuration() * 1.5,
+                        publisher_info->GetSendBufferSize(),
+                        publisher_info->GetRecvBufferSize(),
+                        certificate,
+                        chain_certificate);
 
-			if(!dash_publisher_info->IsParsed())
-			{
-				address = std::make_shared<ov::SocketAddress>(hls_port.GetPort());
-				thread_count = hls_publisher_info->GetThreadCount();
-				max_retry_count = hls_publisher_info->GetSegmentDuration() * 1.5;
-				send_buffer_size = hls_publisher_info->GetSendBufferSize();
-				recv_buffer_size = hls_publisher_info->GetRecvBufferSize();
-			}
-		}
+    _segment_stream_server = stream_server;
 
-		segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+    logtd("DASH Publisher Create Start");
 
-		// DASH + HLS Server Start
-		segment_stream_server->Start(*(address.get()),
-		                             thread_count,
-		                             max_retry_count,
-		                             send_buffer_size,
-		                             recv_buffer_size,
-		                             certificate);
+    return Publisher::Start();
+}
 
-		_segment_stream_servers.push_back(segment_stream_server);
-	}
-	else
-	{
-		auto dash_segment_stream_server = std::make_shared<SegmentStreamServer>();
+//====================================================================================================
+// HLS Stream Server Start
+//====================================================================================================
+bool SegmentStreamPublisher::HlsStart(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
+{
+    // Find Hls publisher configuration
+    auto publisher_info = _application_info->GetPublisher<cfg::HlsPublisher>();
 
-		dash_segment_stream_server->SetAllowApp(_application_info->GetName(), ProtocolFlag::DASH);
-		dash_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+    auto stream_server = std::make_shared<HlsStreamServer>();
 
-		// Cors/CrossDomain
-		dash_segment_stream_server->AddCors(dash_publisher_info->GetCrossDomains(), ProtocolFlag::DASH);
-		dash_segment_stream_server->AddCrossDomain(dash_publisher_info->GetCrossDomains());
+    auto certificate = _application_info->GetCertificate();
 
-		// Dash Server Start
-		dash_segment_stream_server->Start(ov::SocketAddress(dash_port.GetPort()),
-		                                  dash_publisher_info->GetThreadCount(),
-		                                  dash_publisher_info->GetSegmentDuration() * 1.5,
-		                                  dash_publisher_info->GetSendBufferSize(),
-		                                  dash_publisher_info->GetRecvBufferSize(),
-		                                  certificate, chain_certificate
-		);
+    auto chain_certificate = _application_info->GetChainCertificate();
 
-		_segment_stream_servers.push_back(dash_segment_stream_server);
+    auto host = _application_info->GetParentAs<cfg::Host>("Host");
 
-		auto hls_segment_stream_server = std::make_shared<SegmentStreamServer>();
+    if(host == nullptr)
+    {
+        OV_ASSERT2(false);
+        logte("Invalid configuration");
+        return false;
+    }
 
-		hls_segment_stream_server->SetAllowApp(_application_info->GetName(), ProtocolFlag::HLS);
-		hls_segment_stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+    auto ports = host->GetPorts();
 
-		// Cors/CrossDomain
-		hls_segment_stream_server->AddCors(hls_publisher_info->GetCrossDomains(), ProtocolFlag::HLS);
-		hls_segment_stream_server->AddCrossDomain(hls_publisher_info->GetCrossDomains());
+    const auto &port = ports.GetHlsPort();
 
-		// HLS Server Start
-		hls_segment_stream_server->Start(ov::SocketAddress(hls_port.GetPort()),
-		                                 hls_publisher_info->GetThreadCount(),
-		                                 hls_publisher_info->GetSegmentDuration() * 1.5,
-		                                 hls_publisher_info->GetSendBufferSize(),
-		                                 hls_publisher_info->GetRecvBufferSize(),
-		                                 certificate, chain_certificate
-		);
+    // CORS/Crossdomain.xml setting
+    stream_server->SetCrossDomain(publisher_info->GetCrossDomains());
 
-		_segment_stream_servers.push_back(hls_segment_stream_server);
+    stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
-	}
+    // DASH Server Start
+    stream_server->Start(ov::SocketAddress(port.GetPort()),
+                         http_server_manager,
+                         _application_info->GetName(),
+                         publisher_info->GetThreadCount(),
+                         publisher_info->GetSegmentDuration() * 1.5,
+                         publisher_info->GetSendBufferSize(),
+                         publisher_info->GetRecvBufferSize(),
+                         certificate,
+                         chain_certificate);
 
-	return Publisher::Start();
+    _segment_stream_server = stream_server;
+
+    logtd("HLS Publisher Create Start");
+
+    return Publisher::Start();
 }
 
 //====================================================================================================
 // Stop
 // - Publisher override
-//====================================================================================================
+//======================== ============================================================================
 bool SegmentStreamPublisher::Stop()
 {
 	return Publisher::Stop();
 }
-
 
 //====================================================================================================
 // monitoring data pure virtual function
@@ -203,12 +174,10 @@ bool SegmentStreamPublisher::Stop()
 //====================================================================================================
 bool SegmentStreamPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)
 {
-	for(auto server : _segment_stream_servers)
-	{
-		server->GetMonitoringCollectionData(collections);
-	}
+    if(_segment_stream_server == nullptr)
+        return false;
 
-	return true;
+    return _segment_stream_server->GetMonitoringCollectionData(collections);
 }
 
 //====================================================================================================
@@ -216,9 +185,8 @@ bool SegmentStreamPublisher::GetMonitoringCollectionData(std::vector<std::shared
 //====================================================================================================
 std::shared_ptr<Application> SegmentStreamPublisher::OnCreateApplication(const info::Application *application_info)
 {
-	return SegmentStreamApplication::Create(application_info);
+	return SegmentStreamApplication::Create(_publisher_type, application_info);
 }
-
 
 //====================================================================================================
 // OnPlayListRequest
@@ -227,7 +195,6 @@ std::shared_ptr<Application> SegmentStreamPublisher::OnCreateApplication(const i
 bool SegmentStreamPublisher::OnPlayListRequest(const ov::String &app_name,
                                                const ov::String &stream_name,
                                                const ov::String &file_name,
-                                               PlayListType play_list_type,
                                                ov::String &play_list)
 {
 	auto stream = std::static_pointer_cast<SegmentStream>(GetStream(app_name, stream_name));
@@ -238,16 +205,15 @@ bool SegmentStreamPublisher::OnPlayListRequest(const ov::String &app_name,
 		return false;
 	}
 
-	return stream->GetPlayList(play_list_type, play_list);
+	return stream->GetPlayList(play_list);
 }
 
 //====================================================================================================
-// OnPlayListRequest
+// OnSegmentRequest
 //  - SegmentStreamObserver Implementation
 //====================================================================================================
 bool SegmentStreamPublisher::OnSegmentRequest(const ov::String &app_name,
                                               const ov::String &stream_name,
-                                              SegmentType segmnet_type,
                                               const ov::String &file_name,
                                               std::shared_ptr<ov::Data> &segment_data)
 {
@@ -259,5 +225,5 @@ bool SegmentStreamPublisher::OnSegmentRequest(const ov::String &app_name,
 		return false;
 	}
 
-	return stream->GetSegment(segmnet_type, file_name, segment_data);
+	return stream->GetSegment(file_name, segment_data);
 }

@@ -8,13 +8,14 @@
 //==============================================================================
 
 #include "segment_stream_interceptor.h"
+#include "segment_stream_private.h"
 
-#define OV_LOG_TAG "SegmentStream"
-
-
-
-SegmentStreamInterceptor::SegmentStreamInterceptor(int thread_count, const SegmentProcessHandler &process_handler)
+SegmentStreamInterceptor::SegmentStreamInterceptor(cfg::PublisherType publisher_type,
+                                                    int thread_count,
+                                                    const SegmentProcessHandler &process_handler)
 {
+    _publisher_type = publisher_type;
+    _is_crossdomain_response = true;
     _worker_manager.Start(thread_count, process_handler);
 }
 
@@ -37,7 +38,24 @@ bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<con
 		return false;
 	}
 
-	return true;
+	// mpd/m4s
+	if(_publisher_type == cfg::PublisherType::Dash)
+    {
+	    if( request->GetRequestTarget().IndexOf(".m4s") >= 0 ||
+	        request->GetRequestTarget().IndexOf(".mpd") >= 0 ||
+	        (_is_crossdomain_response && request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0))
+	        return true;
+    }
+	// m3u8/ts
+	else if(_publisher_type == cfg::PublisherType::Hls)
+    {
+        if( request->GetRequestTarget().IndexOf(".m3u8") >= 0 ||
+            request->GetRequestTarget().IndexOf(".ts") >= 0 ||
+            (_is_crossdomain_response && request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0))
+            return true;
+    }
+
+	return false;
 }
 
 //====================================================================================================
