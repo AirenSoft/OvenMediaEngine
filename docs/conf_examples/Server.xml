@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Server version="1">
-	<Value>1.0</Value>
 	<Name>OvenMediaEngine</Name>
 	<Hosts>
 		<Host>

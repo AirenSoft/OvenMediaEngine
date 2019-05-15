@@ -19,6 +19,14 @@ namespace cfg
 {
 	ConfigManager::ConfigManager()
 	{
+	    // Modify if supported xml version is added or changed
+        _supported_xml.insert(
+                std::make_pair("Server",std::vector<std::string>({"1", "1.0"}))
+                );
+
+        _supported_xml.insert(
+                std::make_pair("Logger", std::vector<std::string>({"1", "1.0"}))
+                );
 	}
 
 	ConfigManager::~ConfigManager()
@@ -44,9 +52,14 @@ namespace cfg
 		logti("Trying to load configurations... (%s)", server_config_path.CStr());
 
 		_server = std::make_shared<cfg::Server>();
+        bool result = _server->Parse(server_config_path, "Server");
 
+        if (IsValidVersion("Server", _server->GetVersion().CStr()) == false)
+        {
+            return false;
+        }
 
-		return _server->Parse(server_config_path, "Server");
+		return result;
 	}
 
 	bool ConfigManager::LoadConfigs()
@@ -96,6 +109,11 @@ namespace cfg
 			return false;
 		}
 
+		if (IsValidVersion("Logger", logger_loader->GetVersion().c_str()) == false)
+        {
+		    return false;
+        }
+
         auto log_path = logger_loader->GetLogPath();
         ov_log_set_path(log_path.c_str());
         logti("Trying to save logfile in directory... (%s)", log_path.c_str());
@@ -119,4 +137,26 @@ namespace cfg
 
 		return string;
 	}
+
+	bool ConfigManager::IsValidVersion(const std::string& name, const std::string& version)
+    {
+        auto supported_xml = _supported_xml.find(name);
+        if(supported_xml == _supported_xml.end())
+        {
+            logte("Cannot find conf XML (%s.xml)", name.c_str());
+            return false;
+        }
+
+        auto supported_version = supported_xml->second;
+        if (std::find(supported_version.begin(), supported_version.end(), version) != supported_version.end())
+        {
+            return true;
+        }
+
+        logte("The version of %s.xml is incorrect. If you have upgraded OME, see docs/conf/%s.xml",
+                name.c_str(),
+                name.c_str());
+
+	    return false;
+    }
 }

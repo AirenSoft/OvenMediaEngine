@@ -60,6 +60,11 @@ bool ConfigLoggerLoader::Parse()
 
     _log_path = logger_node.child_value("Path");
 
+    if (strlen(logger_node.attribute("version").value()) != 0)
+    {
+        _version = logger_node.attribute("version").value();
+    }
+
     return true;
 }
 
@@ -78,6 +83,11 @@ std::vector<std::shared_ptr<LoggerTagInfo>> ConfigLoggerLoader::GetTags() const 
 std::string ConfigLoggerLoader::GetLogPath() const noexcept
 {
     return _log_path;
+}
+
+std::string ConfigLoggerLoader::GetVersion() const noexcept
+{
+    return _version;
 }
 
 std::shared_ptr<LoggerTagInfo> ParseTag(pugi::xml_node tag_node)

@@ -51,9 +51,13 @@ namespace cfg
 
 		bool LoadLoggerConfig(const ov::String &config_path) noexcept;
 
+		bool IsValidVersion(const std::string& name, const std::string& version);
+
 		std::shared_ptr<Server> _server;
 		std::map<ov::String, ov::String> _macros;
 
 		timespec _last_modified;
+
+        std::map<std::string, std::vector<std::string>> _supported_xml;
 	};
 }

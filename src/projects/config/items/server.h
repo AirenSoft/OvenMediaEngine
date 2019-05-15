@@ -18,6 +18,10 @@ namespace cfg
 		{
 			return _hosts.GetHosts();
 		}
+        const ov::String &GetVersion() const
+        {
+            return _version;
+        }
 
 	protected:
 		void MakeParseList() const override
