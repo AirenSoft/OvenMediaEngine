@@ -49,42 +49,61 @@ SegmentStreamPublisher::~SegmentStreamPublisher()
 //====================================================================================================
 bool SegmentStreamPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
 {
-	auto publisher_type = GetPublisherType();
-
-	if(GetPublisherType() == cfg::PublisherType::Dash)
-	    return DashStart(http_server_manager);
-    else if (GetPublisherType() == cfg::PublisherType::Hls)
-        return HlsStart(http_server_manager);
-
-    return true;
-}
-
-//====================================================================================================
-// Dash Stream Server Start
-//====================================================================================================
-bool SegmentStreamPublisher::DashStart(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
-{
-    // Find Dash publisher configuration
-    auto publisher_info = _application_info->GetPublisher<cfg::DashPublisher>();
-
-    auto stream_server = std::make_shared<DashStreamServer>();
+    auto host = _application_info->GetParentAs<cfg::Host>("Host");
 
     auto certificate = _application_info->GetCertificate();
 
     auto chain_certificate = _application_info->GetChainCertificate();
 
-    auto host = _application_info->GetParentAs<cfg::Host>("Host");
-
-    if(host == nullptr)
+    // Dash Server Start
+    if(GetPublisherType() == cfg::PublisherType::Dash)
     {
-        OV_ASSERT2(false);
-        logte("Invalid configuration");
+        auto port = host->GetPorts().GetDashPort();
+
+        if(port.IsParsed() == false)
+        {
+            logte("Invalid dash configuration");
+            return false;
+        }
+
+        auto publisher_info = _application_info->GetPublisher<cfg::DashPublisher>();
+
+        DashStart(http_server_manager, port, certificate, chain_certificate, publisher_info);
+    }
+    // Hls Server Start
+    else if (GetPublisherType() == cfg::PublisherType::Hls)
+    {
+        auto port = host->GetPorts().GetHlsPort();
+
+        if(port.IsParsed() == false)
+        {
+            logte("Invalid hls configuration");
+            return false;
+        }
+
+        auto publisher_info = _application_info->GetPublisher<cfg::HlsPublisher>();
+
+        HlsStart(http_server_manager, port, certificate, chain_certificate, publisher_info);;
+    }
+    else
+    {
+        logte("Not supported segment stream publisher");
         return false;
     }
 
-    auto ports = host->GetPorts();
+    return Publisher::Start();
+}
 
-    const auto &port = ports.GetDashPort();
+//====================================================================================================
+// Dash Stream Server Start
+//====================================================================================================
+void SegmentStreamPublisher::DashStart(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
+                                       const cfg::Port &port,
+                                       std::shared_ptr<Certificate> certificate,
+                                       std::shared_ptr<Certificate> chain_certificate,
+                                       const cfg::DashPublisher *publisher_info)
+{
+    auto stream_server = std::make_shared<DashStreamServer>();
 
     // CORS/Crossdomain.xml setting
     stream_server->SetCrossDomain(publisher_info->GetCrossDomains());
@@ -94,47 +113,29 @@ bool SegmentStreamPublisher::DashStart(std::map<int, std::shared_ptr<HttpServer>
     // DASH Server Start
     stream_server->Start(ov::SocketAddress(port.GetPort()),
                          http_server_manager,
-                        _application_info->GetName(),
-                        publisher_info->GetThreadCount(),
-                        publisher_info->GetSegmentDuration() * 1.5,
-                        publisher_info->GetSendBufferSize(),
-                        publisher_info->GetRecvBufferSize(),
-                        certificate,
-                        chain_certificate);
+                         _application_info->GetName(),
+                         publisher_info->GetThreadCount(),
+                         publisher_info->GetSegmentDuration() * 1.5,
+                         publisher_info->GetSendBufferSize(),
+                         publisher_info->GetRecvBufferSize(),
+                         certificate,
+                         chain_certificate);
 
     _segment_stream_server = stream_server;
 
     logtd("DASH Publisher Create Start");
-
-    return Publisher::Start();
 }
 
 //====================================================================================================
 // HLS Stream Server Start
 //====================================================================================================
-bool SegmentStreamPublisher::HlsStart(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
+void SegmentStreamPublisher::HlsStart(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
+                                        const cfg::Port &port,
+                                        std::shared_ptr<Certificate> certificate,
+                                        std::shared_ptr<Certificate> chain_certificate,
+                                        const cfg::HlsPublisher *publisher_info)
 {
-    // Find Hls publisher configuration
-    auto publisher_info = _application_info->GetPublisher<cfg::HlsPublisher>();
-
     auto stream_server = std::make_shared<HlsStreamServer>();
-
-    auto certificate = _application_info->GetCertificate();
-
-    auto chain_certificate = _application_info->GetChainCertificate();
-
-    auto host = _application_info->GetParentAs<cfg::Host>("Host");
-
-    if(host == nullptr)
-    {
-        OV_ASSERT2(false);
-        logte("Invalid configuration");
-        return false;
-    }
-
-    auto ports = host->GetPorts();
-
-    const auto &port = ports.GetHlsPort();
 
     // CORS/Crossdomain.xml setting
     stream_server->SetCrossDomain(publisher_info->GetCrossDomains());
@@ -155,8 +156,6 @@ bool SegmentStreamPublisher::HlsStart(std::map<int, std::shared_ptr<HttpServer>>
     _segment_stream_server = stream_server;
 
     logtd("HLS Publisher Create Start");
-
-    return Publisher::Start();
 }
 
 //====================================================================================================

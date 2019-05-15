@@ -41,7 +41,8 @@ bool MonitoringServer::Start(const ov::SocketAddress &address,
                              const std::vector<std::shared_ptr<Publisher>> &publishers,
                              const std::shared_ptr<Certificate> &certificate)
 {
-    if (_http_server != nullptr) {
+    if (_http_server != nullptr)
+    {
         OV_ASSERT(false, "Server is already running");
         return false;
     }
@@ -80,10 +81,8 @@ bool MonitoringServer::Start(const ov::SocketAddress &address,
 
     logtd("Monitoring Server Start - provider(%u) publisher(%u)", _providers.size(), _publishers.size());
 
-
     return _http_server->Start(address);
 }
-
 
 //====================================================================================================
 // Stop
@@ -100,7 +99,6 @@ bool MonitoringServer::Disconnect(const ov::String &app_na, const ov::String &st
 {
     return true;
 }
-
 
 //====================================================================================================
 // RequestUrlParsing

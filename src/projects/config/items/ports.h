@@ -45,6 +45,11 @@ namespace cfg
 			return _webrtc_port;
 		}
 
+        const Port &GetMonitoringPort() const
+        {
+            return _monitoring_port;
+        }
+
 	protected:
 		void MakeParseList() const override
 		{
@@ -59,6 +64,7 @@ namespace cfg
 			RegisterValue<Optional>("HLS", &_hls_port);
 			RegisterValue<Optional>("DASH", &_dash_port);
 			RegisterValue<Optional>("WebRTC", &_webrtc_port);
+            RegisterValue<Optional>("Monitoring", &_monitoring_port);
 		}
 
 		// Listen port for Origin
@@ -72,5 +78,6 @@ namespace cfg
 		Port _hls_port { 80 };
 		Port _dash_port { 80 };
 		WebrtcPort _webrtc_port { 3333 };
+		Port _monitoring_port{ 8888 };
 	};
 }

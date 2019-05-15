@@ -101,12 +101,11 @@ int main(int argc, char *argv[])
 
 	std::shared_ptr<MediaRouter> router;
 	std::shared_ptr<Transcoder> transcoder;
-	std::shared_ptr<MonitoringServer> monitoring_server;
-
 	std::vector<std::shared_ptr<WebConsoleServer>> web_console_servers;
 
 	std::vector<std::shared_ptr<pvd::Provider>> providers;
 	std::vector<std::shared_ptr<Publisher>> publishers;
+    //std::shared_ptr<MonitoringServer> monitoring_server;
 
 	std::map<ov::String, std::vector<info::Application>> application_infos;
 
@@ -195,10 +194,17 @@ int main(int argc, char *argv[])
 			logtw("Nothing to do for host [%s]", host_name.CStr());
 		}
 
-		// Monitoring Server
-		monitoring_server = std::make_shared<MonitoringServer>();
-		monitoring_server->Start(ov::SocketAddress(static_cast<uint16_t>(host.GetMonitoringPort())), providers, publishers);
-
+//		// Monitoring Server
+//        auto monitoring_port = host.GetPorts().GetMonitoringPort();
+//        if(monitoring_port.IsParsed() && (providers.size() > 0 || publishers.size() > 0))
+//        {
+//            logtd("Monitoring Server Start - host[%s] port[%d]", host_name.CStr(), monitoring_port.GetPort());
+//
+//            monitoring_server = std::make_shared<MonitoringServer>();
+//            monitoring_server->Start(ov::SocketAddress(static_cast<uint16_t>(monitoring_port.GetPort())),
+//                                     providers,
+//                                     publishers);
+//        }
 	}
 
 	while(true)

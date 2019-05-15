@@ -38,8 +38,18 @@ public :
 
 private :
     bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager);
-    bool DashStart(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager);
-    bool HlsStart(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager);
+
+    void DashStart(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
+                   const cfg::Port &port,
+                   std::shared_ptr<Certificate> certificate,
+                   std::shared_ptr<Certificate> chain_certificate,
+                   const cfg::DashPublisher *publisher_info);
+
+    void HlsStart(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
+                  const cfg::Port &port,
+                  std::shared_ptr<Certificate> certificate,
+                  std::shared_ptr<Certificate> chain_certificate,
+                  const cfg::HlsPublisher *publisher_info);
 
     bool Stop() override;
 

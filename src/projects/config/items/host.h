@@ -53,11 +53,6 @@ namespace cfg
 			return _applications.GetApplications();
 		}
 
-        int GetMonitoringPort() const
-        {
-            return _monitoring_port;
-        }
-
 	protected:
 		void MakeParseList() const override
 		{
@@ -68,7 +63,6 @@ namespace cfg
 			RegisterValue<Optional>("Providers", &_providers);
 			RegisterValue<Optional>("Publishers", &_publishers);
 			RegisterValue<Optional>("Applications", &_applications);
-			RegisterValue<Optional>("MonitoringPort", &_monitoring_port);
 		}
 		
 		ov::String _name;
@@ -78,6 +72,5 @@ namespace cfg
 		Providers _providers;
 		Publishers _publishers;
 		Applications _applications;
-		int _monitoring_port = 8888;
 	};
 }
