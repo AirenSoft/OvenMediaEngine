@@ -259,6 +259,46 @@ namespace cfg
 			}
 		}
 
+		// Check for invalid XML elements
+		{
+			for(auto &child : node.children())
+			{
+				auto name = child.name();
+
+				auto item = std::find_if(_parse_list.begin(), _parse_list.end(), [&](const ParseItem &item) -> bool
+				{
+					return item.name == name;
+				});
+
+				if(item == _parse_list.end())
+				{
+					std::vector<ov::String> selectors;
+
+					auto parent = child.parent();
+
+					while(
+						(parent.type() != pugi::xml_node_type::node_null) &&
+						(parent.type() != pugi::xml_node_type::node_document)
+						)
+					{
+						selectors.insert(selectors.begin(), parent.name());
+
+						parent = parent.parent();
+					}
+
+					selectors.emplace_back(name);
+
+					ov::String selector = "<";
+					selector.Append(ov::String::Join(selectors, ">.<"));
+					selector.Append('>');
+
+					logte("Unknown configuration found: %s", selector.CStr());
+					return false;
+				}
+			}
+		}
+
+		// Parse the items from node
 		for(auto &parse_item : _parse_list)
 		{
 			auto &name = parse_item.name;
@@ -313,17 +353,20 @@ namespace cfg
 						if((target != nullptr) && (target->GetTarget() != nullptr))
 						{
 							target->GetTarget()->_parent = this;
-							parse_item.is_parsed = (target->GetTarget())->ParseFromNode(base_file_name, child_node, name, indent + 1);
+							if((target->GetTarget())->ParseFromNode(base_file_name, child_node, name, indent + 1) == false)
+							{
+								return false;
+							}
+
+							parse_item.is_parsed = true;
 						}
 						else
 						{
 							OV_ASSERT2(false);
+							return false;
 						}
 
-						if(parse_item.is_parsed)
-						{
-							logtd("%s[%s] [%s] = %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), "{ ... }");
-						}
+						logtd("%s[%s] [%s] = %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), "{ ... }");
 
 						break;
 					}
@@ -347,12 +390,13 @@ namespace cfg
 								Item *i = target->Create();
 
 								i->_parent = this;
-								parse_item.is_parsed = i->ParseFromNode(base_file_name, child_node, name, indent + 1);
 
-								if(parse_item.is_parsed == false)
+								if(i->ParseFromNode(base_file_name, child_node, name, indent + 1) == false)
 								{
-									break;
+									return false;
 								}
+
+								parse_item.is_parsed = true;
 
 								logtd("%s[%s] [List<%s>] = %s",
 								      MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(),
@@ -366,6 +410,7 @@ namespace cfg
 						else
 						{
 							OV_ASSERT2(false);
+							return false;
 						}
 
 						break;
@@ -373,7 +418,7 @@ namespace cfg
 
 					case ValueType::Unknown:
 						OV_ASSERT2(false);
-						break;
+						return false;
 				}
 
 				if(parse_item.is_parsed == false)
@@ -585,13 +630,14 @@ namespace cfg
 		}
 
 		return ov::String::FormatString(
-			"%s%s%s%s (%s%s) = %s%s",
+			"%s%s%s%s (%s%s%s) = %s%s",
 			MakeIndentString(indent).CStr(),
 			value->GetType() == ValueType::List ? "List<" : "",
 			parse_item->name.CStr(),
 			value->GetType() == ValueType::List ? ">" : "",
 			GetValueTypeAsString(value->GetType()).CStr(),
 			value->IsOptional() ? ", optional" : "",
+			value->IsNeedToResolvePath() ? ", path" : "",
 			parse_item->is_parsed ? str.CStr() : "N/A",
 			append_new_line ? "\n" : ""
 		);
