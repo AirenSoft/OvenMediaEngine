@@ -247,30 +247,32 @@ void SrtLogHandler(void *opaque, int level, const char *file, int line, const ch
 		mess = message;
 	}
 
+	const char *SRT_LOG_TAG = "SRT";
+
 	switch(level)
 	{
 		case logging::LogLevel::debug:
-			ov_log_internal(OVLogLevelDebug, "SRT", file, line, area, "%s", mess.CStr());
+			ov_log_internal(OVLogLevelDebug, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
 		case logging::LogLevel::note:
-			ov_log_internal(OVLogLevelInformation, "SRT", file, line, area, "%s", mess.CStr());
+			ov_log_internal(OVLogLevelInformation, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
 		case logging::LogLevel::warning:
-			ov_log_internal(OVLogLevelWarning, "SRT", file, line, area, "%s", mess.CStr());
+			ov_log_internal(OVLogLevelWarning, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
 		case logging::LogLevel::error:
-			ov_log_internal(OVLogLevelError, "SRT", file, line, area, "%s", mess.CStr());
+			ov_log_internal(OVLogLevelError, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
 		case logging::LogLevel::fatal:
-			ov_log_internal(OVLogLevelCritical, "SRT", file, line, area, "%s", mess.CStr());
+			ov_log_internal(OVLogLevelCritical, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
 		default:
-			ov_log_internal(OVLogLevelError, "SRT", file, line, area, "(Unknown level: %d) %s", level, mess.CStr());
+			ov_log_internal(OVLogLevelError, SRT_LOG_TAG, file, line, area, "(Unknown level: %d) %s", level, mess.CStr());
 			break;
 	}
 }
