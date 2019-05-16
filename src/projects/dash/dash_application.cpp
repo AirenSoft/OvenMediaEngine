@@ -3,47 +3,47 @@
 //  OvenMediaEngine
 //
 //  Created by Jaejong Bong
-//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
 
-#include "segment_stream_application.h"
-#include "segment_stream_private.h"
+#include "dash_application.h"
+#include "dash_stream.h"
+#include "dash_private.h"
 
 //====================================================================================================
 // Create
 //====================================================================================================
-std::shared_ptr<SegmentStreamApplication> SegmentStreamApplication::Create(cfg::PublisherType publisher_type,
-        const info::Application *application_info)
+std::shared_ptr<DashApplication> DashApplication::Create(const info::Application *application_info)
 {
-	auto application = std::make_shared<SegmentStreamApplication>(publisher_type, application_info);
+	auto application = std::make_shared<DashApplication>(application_info);
 	application->Start();
 	return application;
 }
 
 //====================================================================================================
-// SegmentStreamApplication
+// DashApplication
 //====================================================================================================
-SegmentStreamApplication::SegmentStreamApplication(cfg::PublisherType publisher_type,
-        const info::Application *application_info) : Application(application_info)
+DashApplication::DashApplication(const info::Application *application_info) : Application(application_info)
 {
-    _publisher_type = publisher_type;
+    auto publisher_info = application_info->GetPublisher<cfg::DashPublisher>();
+    _segment_count = publisher_info->GetSegmentCount();
+    _segment_duration = publisher_info->GetSegmentDuration();
 }
 
 //====================================================================================================
-// ~SegmentStreamApplication
+// ~DashApplication
 //====================================================================================================
-SegmentStreamApplication::~SegmentStreamApplication()
+DashApplication::~DashApplication()
 {
 	Stop();
-	logtd("SegmentStreamApplication(%d) has been terminated finally", GetId());
-
+	logtd("Dash Application(%d) has been terminated finally", GetId());
 }
 
 //====================================================================================================
 // DeleteStream
 //====================================================================================================
-bool SegmentStreamApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
+bool DashApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
 {
 	return true;
 }
@@ -51,7 +51,7 @@ bool SegmentStreamApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
 //====================================================================================================
 // Start
 //====================================================================================================
-bool SegmentStreamApplication::Start()
+bool DashApplication::Start()
 {
 	return Application::Start();
 }
@@ -59,7 +59,7 @@ bool SegmentStreamApplication::Start()
 //====================================================================================================
 // Stop
 //====================================================================================================
-bool SegmentStreamApplication::Stop()
+bool DashApplication::Stop()
 {
 	return Application::Stop();
 }
@@ -67,14 +67,14 @@ bool SegmentStreamApplication::Stop()
 //====================================================================================================
 // CreateStream
 // - Application Override
-// - 세션 기반이 아니라 Stream 생성 필요 없음
-// - 스트림 별 Stream Packetyzer 생성
-// -
 //====================================================================================================
-std::shared_ptr<Stream> SegmentStreamApplication::CreateStream(std::shared_ptr<StreamInfo> info, uint32_t worker_count)
+std::shared_ptr<Stream> DashApplication::CreateStream(std::shared_ptr<StreamInfo> info, uint32_t worker_count)
 {
-	// Stream Class 생성할때는 복사를 사용한다.
-	logtd("CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
+	logtd("Dash CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 
-	return SegmentStream::Create(GetSharedPtrAs<Application>(), _publisher_type, *info.get(), worker_count);
+	return DashStream::Create(_segment_count,
+                            _segment_duration,
+                            GetSharedPtrAs<Application>(),
+                            *info.get(),
+                            worker_count);
 }

@@ -22,6 +22,8 @@ LOCAL_STATIC_LIBRARIES := \
 	config \
 	ovlibrary \
 	rtmpprovider \
+	hls \
+	dash \
 	segment_stream \
 	monitoring \
 	jsoncpp \

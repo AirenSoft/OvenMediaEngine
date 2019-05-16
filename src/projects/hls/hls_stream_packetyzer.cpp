@@ -8,7 +8,7 @@
 //==============================================================================
 
 #include "hls_stream_packetyzer.h"
-#include "segment_stream_private.h"
+#include "hls_private.h"
 
 //====================================================================================================
 // Constructor
@@ -23,8 +23,6 @@ HlsStreamPacketyzer::HlsStreamPacketyzer(int segment_count,
                                                         PACKTYZER_DEFAULT_TIMESCALE,
                                                        static_cast<uint32_t>(media_info.video_framerate))
 {
-    logtd("HLS Packetyzer Create - count(%d) duration(%d)");
-
     media_info.video_timescale = PACKTYZER_DEFAULT_TIMESCALE;
     media_info.audio_timescale = PACKTYZER_DEFAULT_TIMESCALE;
 

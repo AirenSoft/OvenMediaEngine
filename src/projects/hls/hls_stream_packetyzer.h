@@ -9,8 +9,8 @@
 
 #pragma once
 
-#include "stream_packetyzer.h"
-#include "packetyzer/hls_packetyzer.h"
+#include "segment_stream/stream_packetyzer.h"
+#include "segment_stream/packetyzer/hls_packetyzer.h"
 
 //====================================================================================================
 // HlsStreamPacketyzer

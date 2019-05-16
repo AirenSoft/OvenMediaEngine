@@ -9,26 +9,32 @@
 
 #pragma once
 
-#include "segment_stream_server.h"
+#include "segment_stream/segment_stream_server.h"
+#include "hls_interceptor.h"
 
 //====================================================================================================
-// DashStreamServer
+// HlsStreamServer
 //====================================================================================================
-class DashStreamServer : public SegmentStreamServer
+class HlsStreamServer : public SegmentStreamServer
 {
 public :
-    DashStreamServer() = default;
+    HlsStreamServer() = default;
 
-    ~DashStreamServer() = default;
+    ~HlsStreamServer() = default;
 
 public :
     cfg::PublisherType GetPublisherType() override
     {
-        return cfg::PublisherType::Dash;
+        return cfg::PublisherType::Hls;
+    }
+
+    std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() override
+    {
+        auto interceptor = std::make_shared<HlsInterceptor>();
+        return std::static_pointer_cast<SegmentStreamInterceptor>(interceptor);
     }
 
 protected:
-
     void ProcessRequestStream(const std::shared_ptr<HttpRequest> &request,
                            const std::shared_ptr<HttpResponse> &response,
                            const ov::String &app_name,
@@ -36,5 +42,4 @@ protected:
                            const ov::String &file_name,
                            const ov::String &file_ext) override;
 
-protected :
 };

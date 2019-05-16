@@ -8,7 +8,7 @@
 //==============================================================================
 
 #include "dash_stream_packetyzer.h"
-#include "segment_stream_private.h"
+#include "dash_private.h"
 
 //====================================================================================================
 // Constructor
@@ -23,8 +23,6 @@ DashStreamPacketyzer::DashStreamPacketyzer(int segment_count,
                                                      media_info.audio_samplerate,
                                                      static_cast<uint32_t>(media_info.video_framerate))
 {
-    logtd("Dash Packetyzer Create - count(%d) duration(%d)");
-
     media_info.video_timescale = PACKTYZER_DEFAULT_TIMESCALE;
     media_info.audio_timescale = media_info.audio_samplerate;
 

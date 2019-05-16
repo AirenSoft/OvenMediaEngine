@@ -10,13 +10,9 @@
 #include "segment_stream_interceptor.h"
 #include "segment_stream_private.h"
 
-SegmentStreamInterceptor::SegmentStreamInterceptor(cfg::PublisherType publisher_type,
-                                                    int thread_count,
-                                                    const SegmentProcessHandler &process_handler)
+SegmentStreamInterceptor::SegmentStreamInterceptor()
 {
-    _publisher_type = publisher_type;
-    _is_crossdomain_response = true;
-    _worker_manager.Start(thread_count, process_handler);
+    _is_crossdomain_block = false;
 }
 
 SegmentStreamInterceptor::~SegmentStreamInterceptor()
@@ -30,32 +26,16 @@ SegmentStreamInterceptor::~SegmentStreamInterceptor()
 bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request,
         const std::shared_ptr<const HttpResponse> &response)
 {
-	// logtd("Request Target : %s", request->GetRequestTarget().CStr());
+	return true;
+}
 
-	// Get Method 1.1 이상 체크
-	if((request->GetMethod() != HttpMethod::Get) || (request->GetHttpVersionAsNumber() <= 1.0))
-	{
-		return false;
-	}
-
-	// mpd/m4s
-	if(_publisher_type == cfg::PublisherType::Dash)
-    {
-	    if( request->GetRequestTarget().IndexOf(".m4s") >= 0 ||
-	        request->GetRequestTarget().IndexOf(".mpd") >= 0 ||
-	        (_is_crossdomain_response && request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0))
-	        return true;
-    }
-	// m3u8/ts
-	else if(_publisher_type == cfg::PublisherType::Hls)
-    {
-        if( request->GetRequestTarget().IndexOf(".m3u8") >= 0 ||
-            request->GetRequestTarget().IndexOf(".ts") >= 0 ||
-            (_is_crossdomain_response && request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0))
-            return true;
-    }
-
-	return false;
+//====================================================================================================
+// Start
+// - work thread start
+//====================================================================================================
+void SegmentStreamInterceptor::Start(int thread_count, const SegmentProcessHandler &process_handler)
+{
+    _worker_manager.Start(thread_count, process_handler);
 }
 
 //====================================================================================================

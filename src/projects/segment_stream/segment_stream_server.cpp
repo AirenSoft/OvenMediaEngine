@@ -8,20 +8,12 @@
 //==============================================================================
 
 #include "segment_stream_server.h"
-#include "segment_stream_interceptor.h"
 #include <sstream>
 #include <regex>
 #include "segment_stream_private.h"
 
 SegmentStreamServer::SegmentStreamServer()
 {
-//    _cross_domain_xml = "<?xml version=\"1.0\"?>\r\n"\
-//                            "<cross-domain-policy>\r\n"\
-//                            "<allow-access-from domain=\"*\"/>\r\n"\
-//                            "<site-control permitted-cross-domain-policies=\"all\"/>\r\n"\
-//                            "</cross-domain-policy>";
-
-
     _cross_domain_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                         "<!DOCTYPE cross-domain-policy SYSTEM \"http://www.adobe.com/xml/dtds/cross-domain-policy.dtd\">\n"
                         "<cross-domain-policy>\n"
@@ -60,9 +52,8 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
                                      std::placeholders::_3,
                                      std::placeholders::_4);
 
-    auto segment_stream_interceptor = std::make_shared<SegmentStreamInterceptor>(GetPublisherType(),
-                                                                                thread_count,
-                                                                                process_handler);
+    auto segment_stream_interceptor = CreateInterceptor();
+    segment_stream_interceptor->Start(thread_count, process_handler);
 
 //    auto process_func = std::bind(&SegmentStreamServer::ProcessRequest,
 //                                this,
@@ -71,14 +62,13 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
 //
 //    segment_stream_interceptor->Register(HttpMethod::Get, "", process_func, false);
 
-
-    // same port server check
+    // same port http server check
     if(http_server_manager.find(address.Port()) != http_server_manager.end())
     {
         auto item = http_server_manager.find(address.Port());
         auto http_server = item->second;
 
-        segment_stream_interceptor->DisableCrossdomainResponse();
+        segment_stream_interceptor->SetCrossdomainBlock();
         http_server->AddInterceptor(segment_stream_interceptor);
         _http_server = http_server;
 
@@ -409,8 +399,13 @@ void SegmentStreamServer::SegmentRequest(const ov::String &app_name,
     }
 
     // header setting
-    if (segment_type == SegmentType::MpegTs) response->SetHeader("Content-Type", "video/MP2T");
-    else if (segment_type == SegmentType::M4S) response->SetHeader("Content-Type", "video/mp4");
+    if (segment_type == SegmentType::MpegTs)
+        response->SetHeader("Content-Type", "video/MP2T");
+    else if (segment_type == SegmentType::M4S && file_name.HasSuffix(MPD_VIDEO_SUFFIX))
+        response->SetHeader("Content-Type", "video/mp4");
+    else if (segment_type == SegmentType::M4S && file_name.HasSuffix(MPD_AUDIO_SUFFIX))
+        response->SetHeader("Content-Type", "audio/mp4");
+
     //response->SetHeader("Content-Length", ov::Converter::ToString(segment_data->GetLength()).CStr());
 
     response->AppendData(segment_data);

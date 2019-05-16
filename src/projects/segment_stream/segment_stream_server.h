@@ -11,11 +11,12 @@
 
 #include "segment_stream_observer.h"
 #include <memory>
-#include "../base/publisher/publisher.h"
-#include "../http_server/http_server.h"
-#include "../http_server/https_server.h"
-#include "../http_server/interceptors/http_request_interceptors.h"
-#include "../config/config_manager.h"
+#include "base/publisher/publisher.h"
+#include "http_server/http_server.h"
+#include "http_server/https_server.h"
+#include "http_server/interceptors/http_request_interceptors.h"
+#include "config/config_manager.h"
+#include "segment_stream_interceptor.h"
 
 //====================================================================================================
 // SegmentStreamServer
@@ -51,6 +52,7 @@ public :
     bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections);
 
     virtual cfg::PublisherType GetPublisherType() = 0;
+    virtual std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() = 0;
 
 protected:
     bool RequestUrlParsing(const ov::String &request_url,

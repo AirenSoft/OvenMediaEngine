@@ -8,7 +8,7 @@
 //==============================================================================
 
 #include "hls_stream_server.h"
-#include "segment_stream_private.h"
+#include "hls_private.h"
 
 #define SEGMENT_EXT "ts"
 #define PLAYLIST_EXT "m3u8"

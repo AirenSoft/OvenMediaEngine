@@ -3,27 +3,26 @@
 //  OvenMediaEngine
 //
 //  Created by Jaejong Bong
-//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
 
 #pragma once
 #include "base/common_types.h"
 #include "base/publisher/application.h"
-#include "segment_stream.h"
+#include "segment_stream/segment_stream.h"
 
 //====================================================================================================
-// SegmentStreamApplication
+// DashApplication
 //====================================================================================================
-class SegmentStreamApplication : public Application
+class DashApplication : public Application
 {
 public:
-	static std::shared_ptr<SegmentStreamApplication> Create(cfg::PublisherType publisher_type,
-                                                            const info::Application *application_info);
+	static std::shared_ptr<DashApplication> Create(const info::Application *application_info);
 
-	SegmentStreamApplication(cfg::PublisherType publisher_type, const info::Application *application_info);
+    DashApplication(const info::Application *application_info);
 
-	virtual ~SegmentStreamApplication() final;
+	virtual ~DashApplication() final;
 
 private:
 	bool Start() override;
@@ -34,5 +33,6 @@ private:
 	bool DeleteStream(std::shared_ptr<StreamInfo> info) override;
 
 private :
-    cfg::PublisherType _publisher_type;
+    int _segment_count;
+    int _segment_duration;
 };

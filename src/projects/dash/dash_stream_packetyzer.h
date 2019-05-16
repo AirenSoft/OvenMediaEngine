@@ -9,8 +9,8 @@
 
 #pragma once
 
-#include "stream_packetyzer.h"
-#include "packetyzer/dash_packetyzer.h"
+#include "segment_stream/stream_packetyzer.h"
+#include "segment_stream/packetyzer/dash_packetyzer.h"
 
 //====================================================================================================
 // DashStreamPacketyzer

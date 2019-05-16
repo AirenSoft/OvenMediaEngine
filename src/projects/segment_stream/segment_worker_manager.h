@@ -11,10 +11,10 @@
 
 #include <string>
 #include <queue>
-#include "../base/ovlibrary/ovlibrary.h"
-#include "../base/ovlibrary/semaphore.h"
-#include "../http_server/http_request.h"
-#include "../http_server/http_response.h"
+#include "base/ovlibrary/ovlibrary.h"
+#include "base/ovlibrary/semaphore.h"
+#include "http_server/http_request.h"
+#include "http_server/http_response.h"
 struct SegmentWorkInfo
 {
     SegmentWorkInfo(const std::shared_ptr<HttpRequest> &request_,

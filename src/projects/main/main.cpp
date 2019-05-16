@@ -10,7 +10,8 @@
 
 #include <config/config_manager.h>
 #include <webrtc/webrtc_publisher.h>
-#include <segment_stream/segment_stream_publisher.h>
+#include <dash/dash_publisher.h>
+#include <hls/hls_publisher.h>
 #include <media_router/media_router.h>
 #include <transcode/transcoder.h>
 #include <monitoring/monitoring_server.h>
@@ -166,18 +167,16 @@ int main(int argc, char *argv[])
 
 							case cfg::PublisherType::Dash:
                                 logti("Trying to create DASH Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-                                publishers.push_back(SegmentStreamPublisher::Create(cfg::PublisherType::Dash,
-                                                                                    segment_http_server_manager,
-                                                                                    &application_info,
-                                                                                    router));
+                                publishers.push_back(DashPublisher::Create(segment_http_server_manager,
+                                                                            &application_info,
+                                                                            router));
                                 break;
 
 							case cfg::PublisherType::Hls:
                                 logti("Trying to create HLS Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-                                publishers.push_back(SegmentStreamPublisher::Create(cfg::PublisherType::Hls,
-                                                                                    segment_http_server_manager,
-                                                                                    &application_info,
-                                                                                    router));
+                                publishers.push_back(HlsPublisher::Create(segment_http_server_manager,
+                                                                            &application_info,
+                                                                            router));
                                 break;
 
 							case cfg::PublisherType::Rtmp:

@@ -8,7 +8,7 @@
 //==============================================================================
 
 #include "dash_stream_server.h"
-#include "segment_stream_private.h"
+#include "dash_private.h"
 
 #define SEGMENT_EXT "m4s"
 #define PLAYLIST_EXT "mpd"

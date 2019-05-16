@@ -7,42 +7,36 @@
 //
 //==============================================================================
 
-#include "../config/items/items.h"
+#include "config/items/items.h"
 #include "segment_stream.h"
-#include "segment_stream_application.h"
 #include "segment_stream_private.h"
-#include "dash_stream_packetyzer.h"
-#include "hls_stream_packetyzer.h"
+#include "stream_packetyzer.h"
 
 using namespace common;
-
-//====================================================================================================
-// Create
-//====================================================================================================
-std::shared_ptr<SegmentStream>
-SegmentStream::Create(const std::shared_ptr<Application> application,
-        cfg::PublisherType publisher_type,
-        const StreamInfo &info,
-        uint32_t worker_count)
-{
-    auto stream = std::make_shared<SegmentStream>(application, publisher_type, info);
-
-    //TODO(Bong): SegmentStream should use stream_worker. Change 0 to worker_count.
-    if (!stream->Start(0))
-    {
-        return nullptr;
-    }
-    return stream;
-}
 
 //====================================================================================================
 // SegmentStream
 // - DASH/HLS : H264/AAC only
 // TODO : 다중 트랜스코딩/다중 트랙 구분 및 처리 필요
 //====================================================================================================
-SegmentStream::SegmentStream(const std::shared_ptr<Application> application,
-        cfg::PublisherType publisher_type,
-        const StreamInfo &info) : Stream(application, info)
+SegmentStream::SegmentStream(const std::shared_ptr<Application> application, const StreamInfo &info)
+                            : Stream(application, info)
+{
+
+}
+
+//====================================================================================================
+// ~SegmentStream
+//====================================================================================================
+SegmentStream::~SegmentStream()
+{
+    Stop();
+}
+
+//====================================================================================================
+// Start
+//====================================================================================================
+bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t worker_count)
 {
     std::string prefix = this->GetName().CStr();
     std::shared_ptr<MediaTrack> video_track = nullptr;
@@ -94,69 +88,21 @@ SegmentStream::SegmentStream(const std::shared_ptr<Application> application,
         if (video_track == nullptr) stream_type = PacketyzerStreamType::AudioOnly;
         if (audio_track == nullptr) stream_type = PacketyzerStreamType::VideoOnly;
 
-        int segment_count = 0;
-        int segment_duration = 0;
-
-        for(auto &publisher_info : application->GetPublishers())
-        {
-            if(publisher_type == publisher_info->GetType())
-            {
-                if(publisher_type == cfg::PublisherType::Dash)
-                {
-                    segment_count = dynamic_cast<const cfg::DashPublisher *>(publisher_info)->GetSegmentCount();
-                    segment_duration = dynamic_cast<const cfg::DashPublisher *>(publisher_info)->GetSegmentDuration();
-                }
-                else if(publisher_type == cfg::PublisherType::Hls)
-                {
-                    segment_count = dynamic_cast<const cfg::HlsPublisher *>(publisher_info)->GetSegmentCount();
-                    segment_duration = dynamic_cast<const cfg::HlsPublisher *>(publisher_info)->GetSegmentDuration();
-                }
-
-                break;
-            }
-        }
-
-        if(publisher_type == cfg::PublisherType::Dash)
-        {
-            auto stream_packetyzer =
-                    std::make_shared<DashStreamPacketyzer>(segment_count >  0 ? segment_count : DEFAULT_SEGMENT_COUNT,
+        _stream_packetyzer = CreateStreamPacketyzer(segment_count >  0 ? segment_count : DEFAULT_SEGMENT_COUNT,
                                                     segment_duration >  0 ? segment_duration : DEFAULT_SEGMENT_DURATION,
                                                     prefix,
                                                     stream_type,
                                                     media_info);
-
-            _stream_packetyzer = stream_packetyzer;
-        }
-        else if(publisher_type == cfg::PublisherType::Hls)
-        {
-            auto stream_packetyzer =
-                    std::make_shared<HlsStreamPacketyzer>(segment_count >  0 ? segment_count : DEFAULT_SEGMENT_COUNT,
-                                                    segment_duration >  0 ? segment_duration : DEFAULT_SEGMENT_DURATION,
-                                                    prefix,
-                                                    stream_type,
-                                                    media_info);
-
-            _stream_packetyzer = stream_packetyzer;
-        }
+    }
+    else
+    {
+        // log output
+        logti("For output DASH/HLS, one of H264(video) or AAC(audio) codecs must be encoded.");
     }
 
     _stream_check_time = time(nullptr);
     _previous_key_frame_timestamp = 0;
-}
 
-//====================================================================================================
-// ~SegmentStream
-//====================================================================================================
-SegmentStream::~SegmentStream()
-{
-    Stop();
-}
-
-//====================================================================================================
-// Start
-//====================================================================================================
-bool SegmentStream::Start(uint32_t worker_count)
-{
     return Stream::Start(worker_count);
 }
 
