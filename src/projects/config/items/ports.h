@@ -20,6 +20,11 @@ namespace cfg
 			return _origin_port;
 		}
 
+		const Port &GetWebConsolePort() const
+		{
+			return _web_console_port;
+		}
+
 		const Port &GetRtmpProviderPort() const
 		{
 			return _rtmp_provider_port;
@@ -45,16 +50,19 @@ namespace cfg
 			return _webrtc_port;
 		}
 
-        const Port &GetMonitoringPort() const
-        {
-            return _monitoring_port;
-        }
+		const Port &GetMonitoringPort() const
+		{
+			return _monitoring_port;
+		}
 
 	protected:
 		void MakeParseList() const override
 		{
 			// Origin
 			RegisterValue<Optional>("Origin", &_origin_port);
+
+			// WebConsole
+			RegisterValue<Optional>("WebConsole", &_web_console_port);
 
 			// Providers
 			RegisterValue<Optional>("RTMPProvider", &_rtmp_provider_port);
@@ -64,7 +72,7 @@ namespace cfg
 			RegisterValue<Optional>("HLS", &_hls_port);
 			RegisterValue<Optional>("DASH", &_dash_port);
 			RegisterValue<Optional>("WebRTC", &_webrtc_port);
-            RegisterValue<Optional>("Monitoring", &_monitoring_port);
+			RegisterValue<Optional>("Monitoring", &_monitoring_port);
 		}
 
 		// Listen port for Origin
@@ -75,9 +83,10 @@ namespace cfg
 
 		// Listen port for Publishers
 		Port _rtmp_port { 1935 };
+		Port _web_console_port { 8080 };
 		Port _hls_port { 80 };
 		Port _dash_port { 80 };
 		WebrtcPort _webrtc_port { 3333 };
-		Port _monitoring_port{ 8888 };
+		Port _monitoring_port { 8888 };
 	};
 }
