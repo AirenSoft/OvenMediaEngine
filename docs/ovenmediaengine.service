@@ -8,6 +8,7 @@ WorkingDirectory=/usr/share/ovenmediaengine
 Environment=LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib:/usr/local/lib64:/usr/lib
 ExecStart=/usr/bin/OvenMediaEngine
 Restart=always
+RestartPreventExitStatus=1
 
 [Install]
 WantedBy=multi-user.target

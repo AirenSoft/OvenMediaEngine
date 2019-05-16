@@ -1,17 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <Server version="1">
 	<Name>OvenMediaEngine</Name>
 	<Hosts>
 		<Host>
 			<Name>default</Name>
 			<IP>*</IP>
+			<!--
+            <TLS>
+                    <ChainCertPath>path/to/file.crt</ChainCertPath>
+                    <CertPath>path/to/file.crt</CertPath>
+                    <KeyPath>path/to/file.key</KeyPath>
+            </TLS>
+            -->
+			<Ports>
+				<Origin>9000</Origin>
+				<RTMPProvider>1935</RTMPProvider>
+				<HLS>80</HLS>
+				<DASH>80</DASH>
+				<WebRTC>
+					<IceCandidates>
+						<IceCandidate>*:10000-10005/udp</IceCandidate>
+					</IceCandidates>
+					<Signalling>3333</Signalling>
+				</WebRTC>
+			</Ports>
+
 			<Applications>
 				<Application>
 					<Name>app</Name>
 					<Type>live</Type>
-					<Origin>
-						<ListenPort>9000</ListenPort>
-					</Origin>
 					<Encodes>
 						<Encode>
 							<Name>VP8</Name>
@@ -23,9 +41,9 @@
 							</Audio>
 							<Video>
 								<Codec>vp8</Codec>
-								<Width>1280</Width>
-								<Height>720</Height>
-								<Bitrate>1500000</Bitrate>
+								<Width>640</Width>
+								<Height>360</Height>
+								<Bitrate>500000</Bitrate>
 								<Framerate>30.0</Framerate>
 							</Video>
 						</Encode>
@@ -39,9 +57,9 @@
 							<Name>H264</Name>
 							<Video>
 								<Codec>h264</Codec>
-								<Width>1280</Width>
-								<Height>720</Height>
-								<Bitrate>1500000</Bitrate>
+								<Width>640</Width>
+								<Height>360</Height>
+								<Bitrate>500000</Bitrate>
 								<Framerate>30.0</Framerate>
 							</Video>
 						</Encode>
@@ -56,29 +74,25 @@
 						</Stream>
 					</Streams>
 					<Providers>
-						<RTMP>
-							<ListenPort>1935</ListenPort>
-						</RTMP>
+						<RTMP />
 					</Providers>
 					<Publishers>
 						<HLS>
-							<ListenPort>80</ListenPort>
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
+							<CrossDomain>
+								<Url>*</Url>
+							</CrossDomain>
 						</HLS>
 						<DASH>
-							<ListenPort>80</ListenPort>
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
+							<CrossDomain>
+								<Url>*</Url>
+							</CrossDomain>
 						</DASH>
 						<WebRTC>
-							<IceCandidates>
-								<IceCandidate>*:10000-10005/udp</IceCandidate>
-							</IceCandidates>
 							<Timeout>30000</Timeout>
-							<Signalling>
-								<ListenPort>3333</ListenPort>
-							</Signalling>
 						</WebRTC>
 					</Publishers>
 				</Application>
