@@ -71,14 +71,14 @@ namespace ov
 		return path;
 	}
 
-	bool PathManager::MakeDirectory(String path, int mask)
+	bool PathManager::MakeDirectory(const char *path, int mask)
 	{
-		if(path.GetLength() == 0)
+		if((path == nullptr) || (path[0] == '\0'))
 		{
 			return false;
 		}
 
-		return (mkdir(path.CStr(), static_cast<__mode_t>(mask)) == 0) || (errno == EEXIST);
+		return (mkdir(path, static_cast<__mode_t>(mask)) == 0) || (errno == EEXIST);
 	}
 
 	String PathManager::Combine(String path1, String path2)
@@ -93,12 +93,12 @@ namespace ov
 		return path1;
 	}
 
-	bool PathManager::IsAbsolute(const String &path)
+	bool PathManager::IsAbsolute(const char *path)
 	{
-		return GetCanonicalPath(path).HasPrefix("/");
+		return (path != nullptr) && (path[0] == '/');
 	}
 
-	String PathManager::GetCanonicalPath(const String &path)
+	String PathManager::GetCanonicalPath(const char *path)
 	{
 		char buffer[PATH_MAX];
 

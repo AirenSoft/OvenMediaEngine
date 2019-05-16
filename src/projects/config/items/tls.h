@@ -32,9 +32,9 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue("CertPath", &_cert_path);
-			RegisterValue("KeyPath", &_key_path);
-			RegisterValue<Optional>("ChainCertPath", &_chain_cert_path);
+			RegisterValue<ResolvePath>("CertPath", &_cert_path);
+			RegisterValue<ResolvePath>("KeyPath", &_key_path);
+			RegisterValue<Optional, ResolvePath>("ChainCertPath", &_chain_cert_path);
 		}
 
 		ov::String _cert_path;

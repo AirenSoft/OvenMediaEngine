@@ -123,9 +123,10 @@ namespace cfg
 	}
 
 
-	void Item::Register(const ov::String &name, ValueBase *value, bool is_optional) const
+	void Item::Register(const ov::String &name, ValueBase *value, bool is_optional, bool need_to_resolve_path) const
 	{
 		value->SetOptional(is_optional);
+		value->SetNeedToResolvePath(need_to_resolve_path);
 
 		bool is_parsed = false;
 
@@ -142,6 +143,7 @@ namespace cfg
 					// The attributes of two values must be the same
 					OV_ASSERT2(value->GetType() == base->GetType());
 					OV_ASSERT2(value->IsOptional() == base->IsOptional());
+					OV_ASSERT2(value->IsNeedToResolvePath() == base->IsNeedToResolvePath());
 				}
 
 				_parse_list.erase(old_value);
@@ -216,14 +218,14 @@ namespace cfg
 		return ParseFromNode(file_name, document.child(_tag_name), tag_name, indent);
 	}
 
-#define CONFIG_DECLARE_PROCESSOR(value_type, type, dst) \
+#define CONFIG_DECLARE_PROCESSOR(value_type, type, converter, process_value) \
         case value_type: \
         { \
             auto target = dynamic_cast<Value<type> *>(parse_item.value.get()); \
             \
             if((target != nullptr) && (target->GetTarget() != nullptr)) \
             { \
-                *(target->GetTarget()) = dst; \
+                *(target->GetTarget()) = converter(Preprocess(base_file_name, value, process_value)); \
                 parse_item.is_parsed = true; \
                 logtd("%s[%s] [%s] = %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, false).CStr()); \
             } \
@@ -297,12 +299,12 @@ namespace cfg
 
 				switch(value->GetType())
 				{
-					CONFIG_DECLARE_PROCESSOR(ValueType::Integer, int, ov::Converter::ToInt32(Preprocess(child_node.child_value())))
-					CONFIG_DECLARE_PROCESSOR(ValueType::Boolean, bool, ov::Converter::ToBool(Preprocess(child_node.child_value())))
-					CONFIG_DECLARE_PROCESSOR(ValueType::Float, float, ov::Converter::ToFloat(Preprocess(child_node.child_value())))
-					CONFIG_DECLARE_PROCESSOR(ValueType::String, ov::String, Preprocess(child_node.child_value()))
-					CONFIG_DECLARE_PROCESSOR(ValueType::Text, ov::String, Preprocess(child_node.child_value()))
-					CONFIG_DECLARE_PROCESSOR(ValueType::Attribute, ov::String, Preprocess(attribute.value()))
+					CONFIG_DECLARE_PROCESSOR(ValueType::Integer, int, ov::Converter::ToInt32, child_node.child_value())
+					CONFIG_DECLARE_PROCESSOR(ValueType::Boolean, bool, ov::Converter::ToBool, child_node.child_value())
+					CONFIG_DECLARE_PROCESSOR(ValueType::Float, float, ov::Converter::ToFloat, child_node.child_value())
+					CONFIG_DECLARE_PROCESSOR(ValueType::String, ov::String, , child_node.child_value())
+					CONFIG_DECLARE_PROCESSOR(ValueType::Text, ov::String, , child_node.child_value())
+					CONFIG_DECLARE_PROCESSOR(ValueType::Attribute, ov::String, , attribute.value())
 
 					case ValueType::Element:
 					{
@@ -385,8 +387,9 @@ namespace cfg
 		return true;
 	}
 
-	ov::String Item::Preprocess(const char *value)
+	ov::String Item::Preprocess(const ov::String &xml_path, const ValueBase *value_base, const char *value)
 	{
+		// Preprocess for ${env:XXX} macro
 		std::string str = value;
 		std::string result;
 		std::regex r(R"(\$\{env:([^}]*)\})");
@@ -437,6 +440,20 @@ namespace cfg
 		}
 
 		result.append(start, str.cend());
+
+		// Preprocess for ResolvePath
+		if(value_base->IsNeedToResolvePath())
+		{
+			const char *path = result.c_str();
+
+			if(ov::PathManager::IsAbsolute(path) == false)
+			{
+				// relative path
+				ov::String base_path = ov::PathManager::ExtractPath(xml_path);
+
+				return ov::PathManager::Combine(base_path, path);
+			}
+		}
 
 		return result.c_str();
 	}

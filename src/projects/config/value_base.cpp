@@ -32,6 +32,16 @@ namespace cfg
 		_is_optional = is_optional;
 	}
 
+	bool ValueBase::IsNeedToResolvePath() const
+	{
+		return _need_to_resolve_path;
+	}
+
+	void ValueBase::SetNeedToResolvePath(bool need_to_resolve_path)
+	{
+		_need_to_resolve_path = need_to_resolve_path;
+	}
+
 	size_t ValueBase::GetSize() const
 	{
 		return _value_size;

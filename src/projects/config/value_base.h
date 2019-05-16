@@ -56,6 +56,9 @@ namespace cfg
 		bool IsOptional() const;
 		void SetOptional(bool is_optional);
 
+		bool IsNeedToResolvePath() const;
+		void SetNeedToResolvePath(bool need_to_resolve_path);
+
 		size_t GetSize() const;
 
 		void *GetTarget() const;
@@ -64,6 +67,7 @@ namespace cfg
 		ValueType _type = ValueType::Unknown;
 
 		bool _is_optional = false;
+		bool _need_to_resolve_path = false;
 
 		size_t _value_size = 0;
 		void *_target = nullptr;
