@@ -230,7 +230,7 @@ bool SessionDescription::ParsingSessionLine(char type, std::string content)
 				}
 			}
 			// a=msid-semantic:WMS *
-			if(content.compare(0, OV_COUNTOF("ms") - 1, "ms") == 0)
+			else if(content.compare(0, OV_COUNTOF("ms") - 1, "ms") == 0)
 			{
 				if(std::regex_search(content, matches, std::regex(R"(^msid-semantic:\s?(\w*) (\S*))")))
 				{
