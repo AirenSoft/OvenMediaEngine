@@ -30,7 +30,7 @@ struct ParseOption
 
 bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 {
-	constexpr const char *opt_string = "ht:c:";
+	constexpr const char *opt_string = "hvt:c:";
 
 	while(true)
 	{
@@ -45,6 +45,10 @@ bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 			case 'h':
 				printf("Usage: %s [OPTION]...\n", argv[0]);
 				printf("    -c <path>             Specify a path of config files\n");
+				return false;
+
+			case 'v':
+				printf("OvenMediaEngine v%s\n", OME_VERSION);
 				return false;
 
 			case 'c':
@@ -166,18 +170,18 @@ int main(int argc, char *argv[])
 								break;
 
 							case cfg::PublisherType::Dash:
-                                logti("Trying to create DASH Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-                                publishers.push_back(DashPublisher::Create(segment_http_server_manager,
-                                                                            &application_info,
-                                                                            router));
-                                break;
+								logti("Trying to create DASH Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+								publishers.push_back(DashPublisher::Create(segment_http_server_manager,
+								                                           &application_info,
+								                                           router));
+								break;
 
 							case cfg::PublisherType::Hls:
-                                logti("Trying to create HLS Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-                                publishers.push_back(HlsPublisher::Create(segment_http_server_manager,
-                                                                            &application_info,
-                                                                            router));
-                                break;
+								logti("Trying to create HLS Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+								publishers.push_back(HlsPublisher::Create(segment_http_server_manager,
+								                                          &application_info,
+								                                          router));
+								break;
 
 							case cfg::PublisherType::Rtmp:
 							default:
