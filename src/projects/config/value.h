@@ -82,6 +82,7 @@ namespace cfg
 	{
 	public:
 		virtual Item *Create() = 0;
+		virtual void Clear() = 0;
 		virtual std::vector<Item *> GetList() = 0;
 		virtual bool Copy(ValueForListBase *copy_to) const = 0;
 
@@ -112,6 +113,12 @@ namespace cfg
 			}
 
 			return list;
+		}
+
+		void Clear() override
+		{
+			auto target = static_cast<std::vector<Ttype> *>(_target);
+			target->clear();
 		}
 
 		Item *Create() override

@@ -396,6 +396,12 @@ namespace cfg
 
 						if((target != nullptr) && (target->GetTarget() != nullptr))
 						{
+							if((child_node.empty() == false) && (_parsed == false))
+							{
+								// Clear only when _parsed is false, as there may be a list of included items.
+								target->Clear();
+							}
+
 							while(child_node)
 							{
 								Item *i = target->Create();
