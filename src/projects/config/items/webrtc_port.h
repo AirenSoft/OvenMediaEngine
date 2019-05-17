@@ -34,9 +34,10 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			Port::MakeParseList();
+			// Port::MakeParseList();
 
 			RegisterValue<Optional>("IceCandidates", &_ice_candidates);
+			RegisterValue<Optional>("Signalling", &_port);
 		}
 
 		IceCandidates _ice_candidates;
