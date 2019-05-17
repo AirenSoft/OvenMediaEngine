@@ -188,7 +188,14 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 
 			if(error != nullptr)
 			{
-				logte("An error occurred while dispatch command: %s (%s), disconnecting...", command.CStr(), error->ToString().CStr());
+				if(error->GetCode() == 404)
+				{
+					logte("Cannot find stream (%s/%s)", info->application_name.CStr(), info->stream_name.CStr());
+				}
+				else
+				{
+					logte("An error occurred while dispatch command %s for stream (%s/%s): %s, disconnecting...", command.CStr(), info->application_name.CStr(), info->stream_name.CStr(), error->ToString().CStr());
+				}
 
 				ov::JsonObject response_json;
 				Json::Value &value = response_json.GetJsonValue();

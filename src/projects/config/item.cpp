@@ -42,7 +42,7 @@ namespace cfg
 		switch(type)
 		{
 			case ValueType::Unknown:
-				return "Unknown";
+				break;
 
 			case ValueType::String:
 				return "String";
@@ -68,6 +68,8 @@ namespace cfg
 			case ValueType::List:
 				return "List";
 		}
+
+		return "Unknown";
 	}
 
 	Item::Item(const Item &item)
