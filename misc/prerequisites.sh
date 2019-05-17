@@ -164,7 +164,7 @@ install_libopenh264()
 install_base_ubuntu()
 {
     PKGS="build-essential nasm autoconf libtool zlib1g-dev libssl-dev libvpx-dev libopus-dev pkg-config libfdk-aac-dev \
-tclsh cmake"
+tclsh cmake curl"
     for PKG in ${PKGS}; do
         sudo apt install -y ${PKG} || fail_exit ${PKG}
     done

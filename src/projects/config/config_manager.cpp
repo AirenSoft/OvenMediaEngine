@@ -153,7 +153,7 @@ namespace cfg
             return true;
         }
 
-        logte("The version of %s.xml is incorrect. If you have upgraded OME, see docs/conf/%s.xml",
+        logte("The version of %s.xml is incorrect. If you have upgraded OME, see misc/conf_examples/%s.xml",
                 name.c_str(),
                 name.c_str());
 
