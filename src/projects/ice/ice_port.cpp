@@ -46,6 +46,7 @@ bool IcePort::Create(std::vector<RtcIceCandidate> ice_candidate_list)
 	}
 
 	bool succeeded = true;
+	std::map<int, bool> bounded;
 
 	for(auto &ice_candidate: ice_candidate_list)
 	{
@@ -58,12 +59,28 @@ bool IcePort::Create(std::vector<RtcIceCandidate> ice_candidate_list)
 			socket_type = ov::SocketType::Tcp;
 		}
 
+		{
+			auto port = address.Port();
+			auto item = bounded.find(port);
+
+			if(item != bounded.end())
+			{
+				// Already opened
+				continue;
+			}
+
+			bounded[port] = true;
+		}
+
+		// Bind to 0.0.0.0
+		address.SetHostname(nullptr);
+
 		// Create an ICE port using candidate information
 		auto physical_port = CreatePhysicalPort(address, socket_type);
 
 		if(physical_port == nullptr)
 		{
-			logte("Could not create physical port for %s/%s", address.ToString().CStr(), transport);
+			logte("Could not create physical port for %s/%s", address.ToString().CStr(), transport.CStr());
 			succeeded = false;
 			break;
 		}
