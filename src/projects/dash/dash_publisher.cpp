@@ -67,12 +67,6 @@ bool DashPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
         return false;
     }
 
-    if(!port.IsParsed())
-    {
-        logte("Invalid dash port configuration");
-        return false;
-    }
-
     auto stream_server = std::make_shared<DashStreamServer>();
 
     // CORS/Crossdomain.xml setting

@@ -36,14 +36,15 @@ bool WebRtcPublisher::Start()
 {
 	// Find WebRTC publisher configuration
 	auto host = _application_info->GetParentAs<cfg::Host>("Host");
+	auto webrtc_publisher = _application_info->GetPublisher<cfg::WebrtcPublisher>();
 
-	auto webrtc = host->GetPorts().GetWebrtcPort();
-
-	if(webrtc.IsParsed() == false)
+	if(webrtc_publisher->IsParsed() == false)
 	{
-		logte("Invalid signalling configuration");
+		logte("Invalid WebRTC configuration");
 		return false;
 	}
+
+	auto webrtc = host->GetPorts().GetWebrtcPort();
 
 	_ice_port = IcePortManager::Instance()->CreatePort(webrtc.GetIceCandidates(), IcePortObserver::GetSharedPtr());
 

@@ -68,13 +68,6 @@ bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server
         return false;
     }
 
-    if(!port.IsParsed())
-    {
-        logte("Invalid hls port configuration");
-        return false;
-    }
-
-
     auto stream_server = std::make_shared<HlsStreamServer>();
 
     // CORS/Crossdomain.xml setting
