@@ -52,6 +52,14 @@ void RelayClient::Start(const ov::String &application)
 				}
 
 				// Switch between primary and secondary server
+				if(
+					(is_primary && (primary.IsEmpty())) ||
+					((is_primary == false) && (secondary.IsEmpty()))
+					)
+				{
+					is_primary = !is_primary;
+				}
+
 				const ov::SocketAddress &address = is_primary ? primary_address : secondary_address;
 
 				logti("Trying to connect to %s origin server...: %s", (is_primary) ? "primary" : "secondary", address.ToString().CStr());
