@@ -70,6 +70,11 @@ RelayServer::~RelayServer()
 
 void RelayServer::SendStream(const std::shared_ptr<ov::Socket> &remote, const std::shared_ptr<StreamInfo> &stream_info)
 {
+	if(_client_list.size() == 0)
+	{
+		return;
+	}
+
 	// serialize media track
 	ov::String serialize = ov::String::FormatString("%s\n", stream_info->GetName().CStr());
 

@@ -75,7 +75,7 @@ bool DashPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
     stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
     // DASH Server Start
-    stream_server->Start(ov::SocketAddress(port.GetPort()),
+    stream_server->Start(ov::SocketAddress(host->GetIp(), port.GetPort()),
                          http_server_manager,
                          _application_info->GetName(),
                          publisher_info->GetThreadCount(),

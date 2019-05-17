@@ -76,7 +76,7 @@ bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server
     stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
     // HLS Server Start
-    stream_server->Start(ov::SocketAddress(port.GetPort()),
+    stream_server->Start(ov::SocketAddress(host->GetIp(), port.GetPort()),
                          http_server_manager,
                          _application_info->GetName(),
                          publisher_info->GetThreadCount(),

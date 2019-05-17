@@ -228,7 +228,7 @@ namespace ov
 	bool SocketAddress::SetHostname(const char *hostname)
 	{
 		// 문자열로 부터 IP를 계산함
-		if((hostname == nullptr) || ((hostname[0] == '*') && (hostname[1] == '\0')))
+		if((hostname == nullptr) || (hostname[0] == '\0') || ((hostname[0] == '*') && (hostname[1] == '\0')))
 		{
 			// host가 지정되어 있지 않으면 INADDR_ANY 로 설정
 			_address_storage.ss_family = AF_INET;
