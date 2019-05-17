@@ -10,18 +10,47 @@
 
 #include "../item.h"
 
+#include <base/ovsocket/socket.h>
+
 namespace cfg
 {
 	struct Port : public Item
 	{
-		explicit Port(int port)
-			: _port(ov::Converter::ToString(port))
+		explicit Port(const char *port)
+			: _port(port)
 		{
 		}
 
-		int GetPort() const
+		virtual int GetPort() const
 		{
 			return ov::Converter::ToInt32(_port);
+		}
+
+		virtual ov::SocketType GetSocketType() const
+		{
+			auto tokens = _port.Split("/");
+
+			if(tokens.size() != 2)
+			{
+				return ov::SocketType::Tcp;
+			}
+
+			auto type = tokens[1].UpperCaseString();
+
+			if(type == "TCP")
+			{
+				return ov::SocketType::Tcp;
+			}
+			else if(type == "UDP")
+			{
+				return ov::SocketType::Udp;
+			}
+			else if(type == "SRT")
+			{
+				return ov::SocketType::Srt;
+			}
+
+			return ov::SocketType::Unknown;
 		}
 
 	protected:

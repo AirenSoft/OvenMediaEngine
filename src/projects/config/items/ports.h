@@ -76,17 +76,17 @@ namespace cfg
 		}
 
 		// Listen port for Origin
-		Port _origin_port { 9000 };
+		Port _origin_port { "9000/srt" };
 
 		// Listen port for Providers
-		Port _rtmp_provider_port { 1935 };
+		Port _rtmp_provider_port { "1935/tcp" };
 
 		// Listen port for Publishers
-		Port _rtmp_port { 1935 };
-		Port _web_console_port { 8080 };
-		Port _hls_port { 80 };
-		Port _dash_port { 80 };
-		WebrtcPort _webrtc_port { 3333 };
-		Port _monitoring_port { 8888 };
+		Port _rtmp_port { "1935/tcp" };
+		Port _web_console_port { "8080/tcp" };
+		Port _hls_port { "80/tcp" };
+		Port _dash_port { "80/tcp" };
+		WebrtcPort _webrtc_port { "3333/tcp" };
+		Port _monitoring_port { "8888/tcp" };
 	};
 }
