@@ -17,7 +17,7 @@ namespace cfg
 {
 	struct Publishers : public Item
 	{
-		std::vector<const Publisher *> GetPublishers() const
+		std::vector<const Publisher *> GetPublisherList() const
 		{
 			return {
 				&_rtmp_publisher,

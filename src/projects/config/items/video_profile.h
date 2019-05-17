@@ -67,7 +67,7 @@ namespace cfg
 			RegisterValue<Optional>("Active", &_active);
 			RegisterValue<Optional>("HWAcceleration", &_hw_acceleration);
 			RegisterValue("Codec", &_codec);
-			RegisterValue("Scale", &_scale);
+			RegisterValue<Optional>("Scale", &_scale);
 			RegisterValue("Width", &_width);
 			RegisterValue("Height", &_height);
 			RegisterValue("Bitrate", &_bitrate);

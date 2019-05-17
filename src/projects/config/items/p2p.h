@@ -22,7 +22,7 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue("ClientPeersPerHostPeer", &_client_peers_per_host_peer);
+			RegisterValue<Optional>("ClientPeersPerHostPeer", &_client_peers_per_host_peer);
 		}
 
 		int _client_peers_per_host_peer = 2;

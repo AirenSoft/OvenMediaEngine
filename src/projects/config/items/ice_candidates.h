@@ -22,9 +22,11 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue("IceCandidate", &_ice_candidate_list);
+			RegisterValue<Optional>("IceCandidate", &_ice_candidate_list);
 		}
 
-		std::vector<IceCandidate> _ice_candidate_list;
+		std::vector<IceCandidate> _ice_candidate_list {
+			IceCandidate("*:10000/udp")
+		};
 	};
 }

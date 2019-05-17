@@ -38,16 +38,6 @@ namespace cfg
 			return _ports;
 		}
 
-		const Providers &GetProviders() const
-		{
-			return _providers;
-		}
-
-		const Publishers &GetPublishers() const
-		{
-			return _publishers;
-		}
-
 		const std::vector<Application> &GetApplications() const
 		{
 			return _applications.GetApplications();
@@ -57,11 +47,9 @@ namespace cfg
 		void MakeParseList() const override
 		{
 			RegisterValue("Name", &_name);
-			RegisterValue<Optional>("IP", &_ip);
+			RegisterValue("IP", &_ip);
 			RegisterValue<Optional>("TLS", &_tls);
 			RegisterValue<Optional>("Ports", &_ports);
-			RegisterValue<Optional>("Providers", &_providers);
-			RegisterValue<Optional>("Publishers", &_publishers);
 			RegisterValue<Optional>("Applications", &_applications);
 		}
 		
@@ -69,8 +57,6 @@ namespace cfg
 		ov::String _ip;
 		Tls _tls;
 		Ports _ports;
-		Providers _providers;
-		Publishers _publishers;
 		Applications _applications;
 	};
 }

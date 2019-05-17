@@ -33,6 +33,8 @@ namespace cfg
 		bool Parse(const ov::String &file_name, const ov::String &tag_name);
 		bool IsParsed() const;
 
+		bool IsDefault(const void *target) const;
+
 		const Item *GetParent() const
 		{
 			return _parent;
@@ -48,9 +50,26 @@ namespace cfg
 			return dynamic_cast<const T *>(parent);
 		}
 
-		virtual ov::String ToString() const;
+		virtual ov::String ToString() const
+		{
+			return std::move(ToString(false));
+		}
+
+		virtual ov::String ToString(bool exclude_default) const;
 
 	protected:
+		enum class ParseResult
+		{
+			// Item was parsed successfully
+			Parsed,
+
+			// Item not found, and it is optional
+			NotParsed,
+
+			// Item not found, and it is mandatory
+			Error
+		};
+
 		const ov::String GetTagName() const;
 
 		//region ========== Annotation Utilities ==========
@@ -107,20 +126,22 @@ namespace cfg
 		{
 			ParseItem() = default;
 
-			ParseItem(ov::String name, bool is_parsed, ValueBase *value)
+			ParseItem(ov::String name, bool is_parsed, bool from_default, ValueBase *value)
 				: name(std::move(name)),
 				  is_parsed(is_parsed),
+				  from_default(from_default),
 				  value(value)
 			{
 			}
 
 			ParseItem(ov::String name, ValueBase *value)
-				: ParseItem(std::move(name), false, value)
+				: ParseItem(std::move(name), false, false, value)
 			{
 			}
 
 			ov::String name;
 			bool is_parsed = false;
+			bool from_default = true;
 
 			std::shared_ptr<ValueBase> value;
 		};
@@ -196,14 +217,16 @@ namespace cfg
 		// target은 하위 항목
 		bool IsParsed(const void *target) const;
 
-		bool ParseFromFile(const ov::String &base_file_name, ov::String file_name, const ov::String &tag_name, int indent);
+		Item::ParseResult ParseFromFile(const ov::String &base_file_name, ov::String file_name, const ov::String &tag_name, int indent);
 		// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
-		virtual bool ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent);
+		virtual Item::ParseResult ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent);
 
 		ov::String Preprocess(const ov::String &xml_path, const ValueBase *value_base, const char *value);
 
-		virtual ov::String ToString(int indent) const;
-		ov::String ToString(const ParseItem *parse_item, int indent, bool append_new_line) const;
+		ov::String GetSelector(const pugi::xml_node &node);
+
+		virtual ov::String ToString(int indent, bool exclude_default) const;
+		ov::String ToString(const ParseItem *parse_item, int indent, bool exclude_default, bool append_new_line) const;
 
 		ov::String _tag_name;
 		mutable std::vector<ParseItem> _parse_list;

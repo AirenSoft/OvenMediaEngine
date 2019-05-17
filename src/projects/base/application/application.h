@@ -41,7 +41,7 @@ namespace info
 		const Tpublisher *GetPublisher() const
 		{
 			Tpublisher temp_publisher;
-			const auto &publishers = GetPublishers();
+			const auto &publishers = GetPublishers().GetPublisherList();
 
 			for(auto &publisher_info : publishers)
 			{
@@ -58,7 +58,7 @@ namespace info
 		const Tprovider *GetProvider() const
 		{
 			Tprovider temp_provider;
-			const auto &providers = GetProviders();
+			const auto &providers = GetProviders().GetProviderList();
 
 			for(auto &provider_info : providers)
 			{

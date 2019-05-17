@@ -86,14 +86,14 @@ namespace cfg
 			return _streams.GetStreamList();
 		}
 
-		std::vector<const Provider *> GetProviders() const
+		const Providers &GetProviders() const
 		{
-			return std::move(_providers.GetProviders());
+			return _providers;
 		}
 
-		std::vector<const Publisher *> GetPublishers() const
+		const Publishers &GetPublishers() const
 		{
-			return std::move(_publishers.GetPublishers());
+			return _publishers;
 		}
 
 		const int GetThreadCount() const
@@ -105,7 +105,7 @@ namespace cfg
 		void MakeParseList() const override
 		{
 			RegisterValue("Name", &_name);
-			RegisterValue<Optional>("Type", &_type);
+			RegisterValue("Type", &_type);
 			RegisterValue<Optional>("Origin", &_origin);
 			RegisterValue<Optional>("WebConsole", &_web_console);
 			RegisterValue<Optional>("Decode", &_decode);

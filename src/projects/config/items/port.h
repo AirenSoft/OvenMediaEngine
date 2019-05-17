@@ -14,7 +14,7 @@ namespace cfg
 {
 	struct Port : public Item
 	{
-		Port(int port)
+		explicit Port(int port)
 			: _port(ov::Converter::ToString(port))
 		{
 		}

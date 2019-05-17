@@ -14,7 +14,7 @@ namespace cfg
 {
 	struct Providers : public Item
 	{
-		std::vector<const Provider *> GetProviders() const
+		std::vector<const Provider *> GetProviderList() const
 		{
 			return {
 				&_rtmp_provider

@@ -14,7 +14,8 @@ namespace cfg
 {
 	struct WebrtcPort : public Item
 	{
-		WebrtcPort(int signalling_port)
+		WebrtcPort() = default;
+		explicit WebrtcPort(int signalling_port)
 			: _signalling_port(signalling_port)
 		{
 		}
@@ -32,8 +33,8 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue("IceCandidates", &_ice_candidates);
-			RegisterValue("Signalling", &_signalling_port);
+			RegisterValue<Optional>("IceCandidates", &_ice_candidates);
+			RegisterValue<Optional>("Signalling", &_signalling_port);
 		}
 
 		IceCandidates _ice_candidates;

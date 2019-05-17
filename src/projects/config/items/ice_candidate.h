@@ -14,6 +14,12 @@ namespace cfg
 {
 	struct IceCandidate : public Item
 	{
+		IceCandidate() = default;
+		explicit IceCandidate(const char *candidate)
+			: _candidate(candidate)
+		{
+		}
+
 		ov::String GetCandidate() const
 		{
 			return _candidate;
@@ -22,7 +28,7 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<ValueType::Text, Optional>(nullptr, &_candidate);
+			RegisterValue<ValueType::Text>(nullptr, &_candidate);
 		}
 
 		ov::String _candidate;

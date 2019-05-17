@@ -56,7 +56,7 @@ namespace cfg
 	protected:
 		void MakeParseList() const override
 		{
-			RegisterValue<ValueType::Attribute>("use", &_use);
+			RegisterValue<ValueType::Attribute, Optional>("use", &_use);
 			RegisterValue<ValueType::Text>(nullptr, &_name);
 		}
 

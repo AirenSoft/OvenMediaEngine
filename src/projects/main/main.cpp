@@ -67,19 +67,19 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	logtd("Trying to initialize StackTrace...");
-	ov::StackTrace::InitializeStackTrace(OME_VERSION);
-
-    if(cfg::ConfigManager::Instance()->LoadConfigs(parse_option.config_path) == false)
-    {
-        logte("An error occurred while load config");
-        return 1;
-    }
-
 	struct utsname uts {};
 	::uname(&uts);
 
 	logti("OvenMediaEngine v%s is started on [%s] (%s %s - %s, %s)", OME_VERSION, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
+
+	logtd("Trying to initialize StackTrace...");
+	ov::StackTrace::InitializeStackTrace(OME_VERSION);
+
+	if(cfg::ConfigManager::Instance()->LoadConfigs(parse_option.config_path) == false)
+	{
+		logte("An error occurred while load config");
+		return 1;
+	}
 
 	logtd("Trying to initialize SRT...");
 	srt_startup();
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 
 	std::vector<std::shared_ptr<pvd::Provider>> providers;
 	std::vector<std::shared_ptr<Publisher>> publishers;
-    //std::shared_ptr<MonitoringServer> monitoring_server;
+	//std::shared_ptr<MonitoringServer> monitoring_server;
 
 	std::map<ov::String, std::vector<info::Application>> application_infos;
 
@@ -149,8 +149,8 @@ int main(int argc, char *argv[])
 					web_console_servers.push_back(WebConsoleServer::Create(&application_info));
 				}
 
-				auto publisher_list = application_info.GetPublishers();
-                std::map<int,  std::shared_ptr<HttpServer>> segment_http_server_manager; // key : port number
+				auto publisher_list = application_info.GetPublishers().GetPublisherList();
+				std::map<int, std::shared_ptr<HttpServer>> segment_http_server_manager; // key : port number
 
 				for(const auto &publisher : publisher_list)
 				{

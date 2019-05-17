@@ -31,12 +31,10 @@ namespace cfg
 		{
 			Publisher::MakeParseList();
 
-			RegisterValue("IceCandidates", &_ice_candidates);
 			RegisterValue<Optional>("Timeout", &_timeout);
 			RegisterValue<Optional>("P2P", &_p2p);
 		}
 
-		IceCandidates _ice_candidates;
 		int _timeout = 0;
 		P2P _p2p;
 	};
