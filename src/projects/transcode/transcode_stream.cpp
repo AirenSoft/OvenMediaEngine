@@ -164,6 +164,11 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 	for(const auto &stream : streams)
 	{
 		auto stream_name = stream.GetName();
+        if (::strstr(stream_name.CStr(),"${OriginStreamName}") == nullptr)
+        {
+            logtw("Current stream setting (%s) does not use ${OriginStreamName} macro", stream_name.CStr());
+        }
+
 		stream_name = stream_name.Replace("${OriginStreamName}", stream_info->GetName());
 
 		if(!AddStreamInfoOutput(stream_name))
