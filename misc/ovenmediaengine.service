@@ -9,6 +9,8 @@ Environment=LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib:/usr/local/lib64:/
 ExecStart=/usr/bin/OvenMediaEngine
 Restart=always
 RestartPreventExitStatus=1
+StandardOutput=null
+StandardError=null
 
 [Install]
 WantedBy=multi-user.target

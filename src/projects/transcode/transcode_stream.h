@@ -43,6 +43,8 @@ public:
 
 	bool Push(std::unique_ptr<MediaPacket> packet);
 
+	static std::map<uint32_t, std::set<ov::String>> _stream_list;
+
 private:
 
 	// 입력 스트림 정보

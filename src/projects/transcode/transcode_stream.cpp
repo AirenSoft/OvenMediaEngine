@@ -17,6 +17,8 @@
 
 #define OV_LOG_TAG "TranscodeStream"
 
+std::map<uint32_t, std::set<ov::String>> TranscodeStream::_stream_list;
+
 common::MediaCodecId GetCodecId(ov::String name)
 {
 	name.MakeUpper();
@@ -92,6 +94,8 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 
 	// 입력 스트림 정보
 	_stream_info_input = stream_info;
+
+    _stream_list[_application_info->GetId()];
 
 	// Prepare decoders
 	for(auto &track : _stream_info_input->GetTracks())
@@ -589,15 +593,27 @@ void TranscodeStream::EncodeTask()
 
 bool TranscodeStream::AddStreamInfoOutput(ov::String stream_name)
 {
+    auto stream_list = _stream_list.find(_application_info->GetId());
+    if (stream_list == _stream_list.end())
+    {
+        // This code cannot happen.
+        return false;
+    }
+
+    auto stream = stream_list->second.find(stream_name);
+    if (stream != stream_list->second.end())
+    {
+        logtw("Output stream with the same name (%s) already exists", stream_name.CStr());
+        return false;
+    }
+    stream_list->second.insert(stream_name);
+
 	auto stream_info_output = std::make_shared<StreamInfo>();
 	stream_info_output->SetName(stream_name);
 
-	if(!_stream_info_outputs.insert(
-			std::make_pair(stream_name, stream_info_output)).second)
-	{
-		logtw("The stream [%s] already exists", stream_name.CStr());
-		return false;
-	}
+	_stream_info_outputs.insert(
+		std::make_pair(stream_name, stream_info_output)
+	);
 	return true;
 }
 
@@ -615,6 +631,9 @@ void TranscodeStream::DeleteStreams()
 	{
 		_parent->DeleteStream(iter.second);
 	}
+
+    _stream_info_outputs.clear();
+    _stream_list[_application_info->GetId()].clear();
 }
 
 void TranscodeStream::SendFrame(std::unique_ptr<MediaPacket> packet)
