@@ -71,12 +71,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	struct utsname uts {};
-	::uname(&uts);
-
-	logti("OvenMediaEngine v%s is started on [%s] (%s %s - %s, %s)", OME_VERSION, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
-
-	logtd("Trying to initialize StackTrace...");
 	ov::StackTrace::InitializeStackTrace(OME_VERSION);
 
 	if(cfg::ConfigManager::Instance()->LoadConfigs(parse_option.config_path) == false)
@@ -84,6 +78,11 @@ int main(int argc, char *argv[])
 		logte("An error occurred while load config");
 		return 1;
 	}
+
+	struct utsname uts {};
+	::uname(&uts);
+
+	logti("OvenMediaEngine v%s is started on [%s] (%s %s - %s, %s)", OME_VERSION, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
 
 	logtd("Trying to initialize SRT...");
 	srt_startup();
