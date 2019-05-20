@@ -1,5 +1,5 @@
 <a href="https://ovenmediaengine.com/">
-    <img src="ome_favicon.svg" alt="OvenMediaEngine logo" title="OvenMediaEngine" align="right" height="60" />
+    <img src="ome_favicon.svg" alt="OvenMediaEngine logo" title="OvenMediaEngine" align="left" height="60" />
 </a>
 
 ## What is OvenMediaEngine?
