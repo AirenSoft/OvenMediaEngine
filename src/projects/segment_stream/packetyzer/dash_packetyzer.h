@@ -46,8 +46,6 @@ protected :
     bool UpdatePlayList(bool video_update);
 
 private :
-    bool _video_init;
-    bool _audio_init;
     int _avc_nal_header_size;
     std::string _start_time;
     std::string _mpd_pixel_aspect_ratio;

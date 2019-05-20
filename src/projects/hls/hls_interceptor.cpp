@@ -34,11 +34,13 @@ bool HlsInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpReq
 		return false;
 	}
 
-	// ts/m3u8
-    if( request->GetRequestTarget().IndexOf(".ts") >= 0 ||
-        request->GetRequestTarget().IndexOf(".m3u8") >= 0 ||
-        (!_is_crossdomain_block && request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0))
+    // ts/m3u8
+    if((request->GetRequestTarget().IndexOf(".ts") >= 0) ||
+       (request->GetRequestTarget().IndexOf(".m3u8") >= 0) ||
+       (!_is_crossdomain_block && request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0))
+    {
         return true;
+    }
 
 
 	return false;

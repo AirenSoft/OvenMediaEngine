@@ -34,11 +34,13 @@ bool DashInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRe
 		return false;
 	}
 
-	// mpd/m4s
-    if( request->GetRequestTarget().IndexOf(".m4s") >= 0 ||
-        request->GetRequestTarget().IndexOf(".mpd") >= 0 ||
-        (!_is_crossdomain_block && request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0))
+    // mpd/m4s
+    if((request->GetRequestTarget().IndexOf(".m4s") >= 0) ||
+       (request->GetRequestTarget().IndexOf(".mpd") >= 0) ||
+       (!_is_crossdomain_block && request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0))
+    {
         return true;
+    }
 
 
 	return false;
