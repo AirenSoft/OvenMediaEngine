@@ -55,7 +55,7 @@ namespace ov
             if (_last_day)
             {
                 std::ostringstream logfile;
-                logfile << _log_file << std::put_time(&localTime, "%Y%m%d") << ".log";
+                logfile << _log_file << "." << std::put_time(&localTime, "%Y%m%d");
                 ::rename(_log_file.c_str(), logfile.str().c_str());
             }
             _last_day = localTime.tm_mday;
