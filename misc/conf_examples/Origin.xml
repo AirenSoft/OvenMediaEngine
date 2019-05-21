@@ -1,25 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<Server version="1">
+<Server version="2">
 	<Name>OvenMediaEngine</Name>
 	<Hosts>
 		<Host>
 			<Name>default</Name>
-			<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
-			<IP>192.168.0.183</IP>
+			<IP>*</IP>
+
+			<Ports>
+				<Origin />
+			</Ports>
+
 			<Applications>
 				<Application>
 					<Name>app</Name>
 					<Type>live</Type>
-					<Origin>
-						<Listen>
-							<IP>*</IP>
-							<Port>9000</Port>
-						</Listen>
-					</Origin>
+
 					<Encodes>
 						<Encode>
-							<Name>FHD_VP8</Name>
+							<Name>VP8</Name>
 							<Audio>
 								<Codec>opus</Codec>
 								<Bitrate>128000</Bitrate>
@@ -27,21 +26,26 @@
 								<Channel>2</Channel>
 							</Audio>
 							<Video>
-								<!-- vp8, h264 -->
 								<Codec>vp8</Codec>
-								<Width>480</Width>
-								<Height>320</Height>
-								<Bitrate>1000000</Bitrate>
+								<Width>640</Width>
+								<Height>360</Height>
+								<Bitrate>300000</Bitrate>
 								<Framerate>30.0</Framerate>
 							</Video>
 						</Encode>
 						<Encode>
-							<Name>FHD_H264</Name>
+							<Name>H264</Name>
+							<Audio>
+								<Codec>aac</Codec>
+								<Bitrate>128000</Bitrate>
+								<Samplerate>48000</Samplerate>
+								<Channel>2</Channel>
+							</Audio>
 							<Video>
 								<Codec>h264</Codec>
-								<Width>480</Width>
-								<Height>320</Height>
-								<Bitrate>1000000</Bitrate>
+								<Width>640</Width>
+								<Height>360</Height>
+								<Bitrate>300000</Bitrate>
 								<Framerate>30.0</Framerate>
 							</Video>
 						</Encode>
@@ -50,49 +54,15 @@
 						<Stream>
 							<Name>${OriginStreamName}_o</Name>
 							<Profiles>
-								<Profile>FHD_VP8</Profile>
-								<Profile>FHD_H264</Profile>
+								<Profile>VP8</Profile>
+								<Profile>H264</Profile>
 							</Profiles>
 						</Stream>
 					</Streams>
+
 					<Providers>
-						<RTMP>
-							<MaxConnection>10</MaxConnection>
-							<Port>1935</Port>
-							<!--<OverlapStreamProcess>refresh</OverlapStreamSession>-->
-							<OverlapStreamProcess>reject</OverlapStreamProcess>
-						</RTMP>
-					</Providers>
-					<Publishers>
 						<RTMP />
-						<HLS>
-							<Port>8080</Port>
-							<SegmentDuration>5</SegmentDuration>
-							<SegmentCount>3</SegmentCount>
-							<CrossDomain>
-								<Url>www.airensoft.com</Url>
-							</CrossDomain>
-						</HLS>
-						<DASH>
-							<Port>8080</Port>
-							<SegmentDuration>5</SegmentDuration>
-							<SegmentCount>3</SegmentCount>
-							<CORS>
-								<Url>http://www.airensoft.com</Url>
-								<Url>https://www.airensoft.com</Url>
-							</CORS>
-						</DASH>
-						<WebRTC>
-							<!-- TODO: NEED TO CHANGE THIS IP ADDRESS -->
-							<IP>192.168.0.183</IP>
-							<MaxConnection>10</MaxConnection>
-							<Port>10000/udp</Port>
-							<Timeout>30000</Timeout>
-							<Signalling>
-								<Port>3333</Port>
-							</Signalling>
-						</WebRTC>
-					</Publishers>
+					</Providers>
 				</Application>
 			</Applications>
 		</Host>
