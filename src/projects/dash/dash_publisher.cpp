@@ -66,11 +66,6 @@ bool DashPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
 
     auto publisher_info = _application_info->GetPublisher<cfg::DashPublisher>();
 
-    if(!publisher_info->IsParsed())
-    {
-        return false;
-    }
-
     auto stream_server = std::make_shared<DashStreamServer>();
 
     // CORS/Crossdomain.xml setting
@@ -175,11 +170,17 @@ bool DashPublisher::OnPlayListRequest(const ov::String &app_name,
 
 	if(!stream)
 	{
-		logte("Dash Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+        logtw("Dash Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
 		return false;
 	}
 
-	return stream->GetPlayList(play_list);
+    if(!stream->GetPlayList(play_list))
+    {
+        logtw("Dash get playlist fail (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+        return false;
+    }
+
+    return true;
 }
 
 //====================================================================================================
@@ -201,9 +202,15 @@ bool DashPublisher::OnSegmentRequest(const ov::String &app_name,
 
 	if(!stream)
 	{
-		logte("Dash Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+        logtw("Dash cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
 		return false;
 	}
 
-	return stream->GetSegment(file_name, segment_data);
+	if(!stream->GetSegment(file_name, segment_data))
+    {
+        logtw("Dash get segment fail (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+        return false;
+    }
+
+	return true;
 }

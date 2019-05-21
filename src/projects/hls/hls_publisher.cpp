@@ -66,12 +66,6 @@ bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server
 
     auto publisher_info = _application_info->GetPublisher<cfg::HlsPublisher>();
 
-    if(!publisher_info->IsParsed())
-    {
-
-        return false;
-    }
-
     auto stream_server = std::make_shared<HlsStreamServer>();
 
     // CORS/Crossdomain.xml setting
@@ -176,11 +170,17 @@ bool HlsPublisher::OnPlayListRequest(const ov::String &app_name,
 
     if(!stream)
     {
-        logte("Hls Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+        logtw("Hls cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
         return false;
     }
 
-    return stream->GetPlayList(play_list);
+    if(!stream->GetPlayList(play_list))
+    {
+        logtw("Hls get playlist fail (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+        return false;
+    }
+
+    return true;
 }
 
 //====================================================================================================
@@ -202,9 +202,15 @@ bool HlsPublisher::OnSegmentRequest(const ov::String &app_name,
 
     if(!stream)
     {
-        logte("Hls Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+        logtw("Hls Cannot find stream (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
         return false;
     }
 
-    return stream->GetSegment(file_name, segment_data);
+    if(!stream->GetSegment(file_name, segment_data))
+    {
+        logtw("Hls get segment fail (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+        return false;
+    }
+
+    return true;
 }
