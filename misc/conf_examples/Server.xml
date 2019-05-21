@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<Server version="1">
+<Server version="2">
 	<Name>OvenMediaEngine</Name>
 	<Hosts>
 		<Host>
@@ -77,6 +77,7 @@
 						<RTMP />
 					</Providers>
 					<Publishers>
+						<ThreadCount>2</ThreadCount>
 						<HLS>
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
