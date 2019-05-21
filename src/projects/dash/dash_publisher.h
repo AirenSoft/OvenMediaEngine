@@ -60,4 +60,6 @@ private :
 private :
 
     std::shared_ptr<DashStreamServer> _stream_server = nullptr;
+    bool _supported_codec_check = false;
+
 };

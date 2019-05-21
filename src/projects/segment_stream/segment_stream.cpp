@@ -97,7 +97,7 @@ bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t work
     else
     {
         // log output
-        logti("For output DASH/HLS, one of H264(video) or AAC(audio) codecs must be encoded.");
+        //logtw("For output DASH/HLS, one of H264(video) or AAC(audio) codecs must be encoded.");
     }
 
     _stream_check_time = time(nullptr);

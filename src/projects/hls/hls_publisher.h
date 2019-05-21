@@ -60,4 +60,5 @@ private :
 private :
 
     std::shared_ptr<HlsStreamServer> _stream_server = nullptr;
+    bool _supported_codec_check = false;
 };

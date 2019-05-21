@@ -267,7 +267,7 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &req
             // CORS check
             if (request->IsHeaderExists("Origin"))
             {
-                SetAllowOrigin(request->GetHeader("ORIGIN"), response);
+                SetAllowOrigin(request->GetHeader("Origin"), response);
             }
 
             // app check

@@ -45,11 +45,15 @@ HlsPublisher::~HlsPublisher()
 //====================================================================================================
 bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
 {
-    if(!SupportedCodecCheck())
+    if(SupportedCodecCheck())
+    {
+        _supported_codec_check = true;
+    }
+    else
     {
         // log out put
-        logti("To output HLS, at least one of h264 or aac encoding setting information must be set.");
-        return false;
+        logtw("To output HLS, at least one of h264 or aac encoding setting information must be set.");
+        _supported_codec_check = false;
     }
 
     auto host = _application_info->GetParentAs<cfg::Host>("Host");
@@ -162,6 +166,12 @@ bool HlsPublisher::OnPlayListRequest(const ov::String &app_name,
                                       const ov::String &file_name,
                                       ov::String &play_list)
 {
+    if(!_supported_codec_check)
+    {
+        logtw("To output HLS, at least one of h264 or aac encoding setting information must be set.");
+        return false;
+    }
+
     auto stream = std::static_pointer_cast<HlsStream>(GetStream(app_name, stream_name));
 
     if(!stream)
@@ -182,6 +192,12 @@ bool HlsPublisher::OnSegmentRequest(const ov::String &app_name,
                                      const ov::String &file_name,
                                      std::shared_ptr<ov::Data> &segment_data)
 {
+    if(!_supported_codec_check)
+    {
+        logtw("To output HLS, at least one of h264 or aac encoding setting information must be set.");
+        return false;
+    }
+
     auto stream = std::static_pointer_cast<HlsStream>(GetStream(app_name, stream_name));
 
     if(!stream)
