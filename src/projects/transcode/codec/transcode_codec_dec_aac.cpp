@@ -183,8 +183,6 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 			else if(ret < 0)
 			{
 				logte("Error sending a packet for decoding : ERROR(Unknown %d)", ret);
-				*result = TranscodeResult::DataError;
-				return nullptr;
 			}
 		}
 
