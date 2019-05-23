@@ -218,8 +218,8 @@ check_version()
 
 proceed_yn()
 {
-    read -p "Your operating system (${OSNAME} ${OSVERSION}) is not officially supported.
-Do you want to continue installing libraries? (y/N) " ANS
+    read -p "This program [$0] is tested on [Ubuntu 18, CentOS 7, Fedora 28]
+Do you want to continue [y/N] ? " ANS
     if [[ "x${ANS}" != "xy" && "x$ANS" != "xyes" ]]; then
         cd ${CURRENT}
         exit 1
@@ -284,7 +284,8 @@ elif  [ "x${OSNAME}" == "xFedora" ]; then
 
     sudo ldconfig
 else
-    echo "Your operating system (${OSNAME}) is not supported."
+    echo "This program [$0] does not support your operating system [${OSNAME}]"
+    echo "Please refer to manual installation page"
 fi
 
 cd ${CURRENT}
