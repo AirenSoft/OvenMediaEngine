@@ -19,6 +19,7 @@
 #include <rtmp/rtmp_provider.h>
 #include <base/ovcrypto/ovcrypto.h>
 #include <base/ovlibrary/stack_trace.h>
+#include <base/ovlibrary/log_write.h>
 
 void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
 
@@ -26,11 +27,14 @@ struct ParseOption
 {
 	// -c <config_path>
 	ov::String config_path = "";
+
+	// -s start with systemctl
+    bool start_service = false;
 };
 
 bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 {
-	constexpr const char *opt_string = "hvt:c:";
+	constexpr const char *opt_string = "hvt:c:s";
 
 	while(true)
 	{
@@ -55,6 +59,11 @@ bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 				parse_option->config_path = optarg;
 				break;
 
+			case 's':
+			    // Don't use this option manually
+				parse_option->start_service = true;
+				break;
+
 			default: // '?'
 				// invalid argument
 				return false;
@@ -72,6 +81,8 @@ int main(int argc, char *argv[])
 	}
 
 	ov::StackTrace::InitializeStackTrace(OME_VERSION);
+
+    ov::LogWrite::Initialize(parse_option.start_service);
 
 	if(cfg::ConfigManager::Instance()->LoadConfigs(parse_option.config_path) == false)
 	{

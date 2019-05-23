@@ -20,6 +20,8 @@ namespace ov
         void Write(const char* log);
         void SetLogPath(const char* log_path);
 
+        static void Initialize(bool start_service);
+
     private:
         void Initialize();
 
@@ -27,6 +29,8 @@ namespace ov
         int _last_day;
         std::string _log_path;
         std::string _log_file;
+
+        static bool _start_service;
     };
 }
 

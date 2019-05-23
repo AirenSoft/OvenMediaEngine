@@ -15,10 +15,13 @@
 #include "log_write.h"
 
 #define OV_LOG_DIR      "logs"
+#define OV_LOG_DIR_SVC  "/var/log/ovenmediaengine"
 #define OV_LOG_FILE     "ovenmediaengine.log"
 
 namespace ov
 {
+    bool LogWrite::_start_service = false;
+
     LogWrite::LogWrite() :
         _last_day(0),
         _log_path(OV_LOG_DIR),
@@ -34,6 +37,14 @@ namespace ov
 
     void LogWrite::Initialize()
     {
+        if (_start_service)
+        {
+            SetLogPath(OV_LOG_DIR_SVC);
+
+            // Change default log path to /var once for running service
+            _start_service = false;
+        }
+
         if ((::mkdir(_log_path.c_str(), 0755) == -1) && errno != EEXIST)
         {
             return;
@@ -42,6 +53,11 @@ namespace ov
         _log_stream.close();
         _log_stream.clear();
         _log_stream.open(_log_file, std::ofstream::out | std::ofstream::app);
+    }
+
+    void LogWrite::Initialize(bool start_service)
+    {
+        _start_service = start_service;
     }
 
     void LogWrite::Write(const char* log)
