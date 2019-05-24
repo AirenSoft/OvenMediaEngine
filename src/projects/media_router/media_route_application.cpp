@@ -532,6 +532,7 @@ void MediaRouteApplication::MainTask()
 
 							// TODO(soulk): Publisher에서 Timestamp를 90000Hz로 변경하는 코드를 넣어야함. 지금은 임시로 넣음.
 							encoded_frame->_time_stamp = ((double)cur_buf->GetPts() / (double)1000000 * (double)90000);
+
 							// logtd("Video PTS: %ld", encoded_frame->time_stamp);
 							// encoded_frame->_timeStamp = (uint32_t)cur_buf->GetPts();
 

@@ -31,17 +31,15 @@ BitstreamToAnnexB::~BitstreamToAnnexB()
 // ([extradata]) | ([length] NALU) | ([length] NALU) |
 // In annexb, [start code] may be 0x000001 or 0x00000001.
 
-void BitstreamToAnnexB::convert_to(MediaPacket *packet)
+void BitstreamToAnnexB::convert_to(const std::shared_ptr<ov::Data> &data)
 {
-	auto &data = packet->GetData();
-
 	if(data->GetLength() < 4)
 	{
 		logtw("Could not determine bit stream type");
 		return;
 	}
 
-	const uint8_t *pbuf = data->GetDataAs<uint8_t>();
+	auto pbuf = data->GetDataAs<uint8_t>();
 
 	// Check if the bitstream is Annex-B type
 	if(
@@ -50,7 +48,7 @@ void BitstreamToAnnexB::convert_to(MediaPacket *packet)
 		((pbuf[2] == 0x01) || (pbuf[2] == 0x00 && pbuf[3] == 0x01))
 		)
 	{
-		logtd("already annexb type");
+		// The stream is already annexb type
 		return;
 	}
 
@@ -98,180 +96,251 @@ void BitstreamToAnnexB::convert_to(MediaPacket *packet)
 			//composition_time = pbuf[2] << 16 | pbuf[3] << 8 | pbuf[4];
 		}
 	}
+	else
+	{
+		logte("Not supported codec: %d", codec_id);
+		return;
+	}
 
 	// logtd("size : %d, time = %.0f - frame_type=%d, codec_id=%d, avc_packet_type=%d, composition_time=%d", 
 	// pkt->GetDataSize(), (float)pkt->GetPts(), frame_type, codec_id, avc_packet_type, composition_time);
 
-
-	// if(avc_packet_type == 0) AVCDecoderConfigurationRecord
-	if(frame_type == 1 && avc_packet_type == 0)
+	switch(frame_type)
 	{
-		// logtd("%s", ov::Dump(pbuf, 256).CStr());
-
-		const uint8_t *p = pbuf + 5;
-
-		logtd("configurationVersion = %d", *(p++));
-		logtd("AVCProfileIndication = %d", *(p++));
-		logtd("profile_compatibility = %d", *(p++));
-		logtd("AVCLevelIndication = %d", *(p++));
-		logtd("lengthSizeMinusOne = %d", *(p++) & 0x03);
-
-		logtd("numOfSequenceParameterSets = reserve(%02x) + %d", *p & 0xE0, *p & 0x1F); // reserve(3) + unsigned int(5)
-		int numOfSequenceParameterSets = *p & 0x1F;
-		p++;
-		for(int i = 0; i < numOfSequenceParameterSets; i++)
+		case 1:
 		{
-			int sequenceParameterSetLength = *p << 8 | *(p + 1);
-			logtd(" sequenceParameterSetLength : %d", sequenceParameterSetLength);
-			p += 2;
-
-			// Utils::Debug::DumpHex(p, sequenceParameterSetLength);
-
-			_sps.clear();
-			_sps.insert(_sps.end(), p, p + sequenceParameterSetLength);
-
-			p += sequenceParameterSetLength;
-		}
-
-		logtd("numOfPictureParameterSets = %d", *p); // reserve(3) + unsigned int(5)
-		int numOfPictureParameterSets = *p & 0x1F;
-		p++;
-		for(int i = 0; i < numOfPictureParameterSets; i++)
-		{
-			int pictureParameterSetLength = *p << 8 | *(p + 1);
-			logtd(" pictureParameterSetLength : %d", pictureParameterSetLength);
-			p += 2;
-			// Utils::Debug::DumpHex(p, pictureParameterSetLength);
-
-			_pps.clear();
-			_pps.insert(_pps.end(), p, p + pictureParameterSetLength);
-
-			p += pictureParameterSetLength;
-		}
-
-		data->Clear();
-		data->Append(start_code, 4);
-		data->Append(_sps.data(), _sps.size());
-
-		data->Append(start_code, 4);
-		data->Append(_pps.data(), _pps.size());
-
-		logtd("sps/pps packet size : %d", data->GetLength());
-	}
-		// NAL Unit
-		/*
-		0	Unspecified		non-VCL	non-VCL	non-VCL
-		1	Coded slice of a non-IDR picture
-		slice_layer_without_partitioning_rbsp( )	2, 3, 4	VCL	VCL	VCL
-		2	Coded slice data partition A
-		slice_data_partition_a_layer_rbsp( )	2	VCL	not applicable	not applicable
-		3	Coded slice data partition B
-		slice_data_partition_b_layer_rbsp( )	3	VCL	not applicable	not applicable
-		4	Coded slice data partition C
-		slice_data_partition_c_layer_rbsp( )	4	VCL	not applicable	not applicable
-		5	Coded slice of an IDR picture
-		slice_layer_without_partitioning_rbsp( )	2, 3	VCL	VCL	VCL
-		6	Supplemental enhancement information (SEI)
-		sei_rbsp( )	5	non-VCL	non-VCL	non-VCL
-		7	Sequence parameter set
-		seq_parameter_set_rbsp( )	0	non-VCL	non-VCL	non-VCL
-		8	Picture parameter set
-		pic_parameter_set_rbsp( )	1	non-VCL	non-VCL	non-VCL
-		9	Access unit delimiter
-		access_unit_delimiter_rbsp( )	6	non-VCL	non-VCL	non-VCL
-		10	End of sequence
-		end_of_seq_rbsp( )	7	non-VCL	non-VCL	non-VCL
-		11	End of stream
-		end_of_stream_rbsp( )	8	non-VCL	non-VCL	non-VCL
-		12	Filler data
-		filler_data_rbsp( )	9	non-VCL	non-VCL	non-VCL
-		13	Sequence parameter set extension
-		seq_parameter_set_extension_rbsp( )	10	non-VCL	non-VCL	non-VCL
-		14	Prefix NAL unit
-		prefix_nal_unit_rbsp( )	2	non-VCL	suffix dependent	suffix dependent
-		15	Subset sequence parameter set
-		subset_seq_parameter_set_rbsp( )	0	non-VCL	non-VCL	non-VCL
-		16 – 18	Reserved		non-VCL	non-VCL	non-VCL
-		19	Coded slice of an auxiliary coded picture without partitioning
-		slice_layer_without_partitioning_rbsp( )	2, 3, 4	non-VCL	non-VCL	non-VCL
-		20	Coded slice extension
-		slice_layer_extension_rbsp( )	2, 3, 4	non-VCL	VCL	VCL
-		21	Coded slice extension for depth view components
-		slice_layer_extension_rbsp( )
-		(specified in Annex I)	2, 3, 4	non-VCL	non-VCL	VCL
-		22 – 23	Reserved		non-VCL	non-VCL	VCL
-		24 – 31	Unspecified		non-VCL	non-VCL	non-VCL
-		*/
-	else if(frame_type == 1 && avc_packet_type == 1)
-	{
-		const uint8_t *p = pbuf + 5;
-
-		auto tmp_buf = std::make_shared<MediaFrame>();
-
-		while(1)
-		{
-			int32_t nal_length = static_cast<int32_t>(static_cast<uint8_t>(*(p)) << 24 |
-			                                          static_cast<uint8_t>(*(p + 1)) << 16 |
-			                                          static_cast<uint8_t>(*(p + 2)) << 8 |
-			                                          static_cast<uint8_t>(*(p + 3)));
-
-			// skip length 32bit
-			p += 4;
-
-			// logtd("nal_unit_type : %s", Nalu2Str( (AvcNaluType)((*p) & 0x1F) ).c_str());
-
-			tmp_buf->AppendBuffer(start_code, 4);
-			tmp_buf->AppendBuffer(p, nal_length);
-
-			p += nal_length;
-			if((p - pbuf) >= pbuf_length)
+			// keyframe (for AVC, a seekable frame)
+			switch(avc_packet_type)
 			{
-				break;
+				case 0:
+				{
+					// AVC sequence header
+
+					// pBuf[0] == CodecID (1B)
+					// pBuf[1] == AVCPacketType (1B)
+					// pBuf[2] == 0 (3B)
+					// pBuf[5] == AVCDecoderConfigurationRecord
+					const uint8_t *p = pbuf + 5;
+
+					//	aligned(8) class AVCDecoderConfigurationRecord {
+					//		unsigned int(8) configurationVersion = 1;
+					//		unsigned int(8) AVCProfileIndication;
+					//		unsigned int(8) profile_compatibility;
+					//		unsigned int(8) AVCLevelIndication;
+					//		bit(6) reserved = ‘111111’b;
+					//		unsigned int(2) lengthSizeMinusOne;
+					//		bit(3) reserved = ‘111’b;
+					//		unsigned int(5) numOfSequenceParameterSets;
+					//		for (i=0; i< numOfSequenceParameterSets;  i++) {
+					//			unsigned int(16) sequenceParameterSetLength ;
+					//			bit(8*sequenceParameterSetLength) sequenceParameterSetNALUnit;
+					//		}
+					//		unsigned int(8) numOfPictureParameterSets;
+					//		for (i=0; i< numOfPictureParameterSets;  i++) {
+					//			unsigned int(16) pictureParameterSetLength;
+					//			bit(8*pictureParameterSetLength) pictureParameterSetNALUnit;
+					//		}
+					//		if( profile_idc  ==  100  ||  profile_idc  ==  110  ||
+					//		    profile_idc  ==  122  ||  profile_idc  ==  144 )
+					//		{
+					//			bit(6) reserved = ‘111111’b;
+					//			unsigned int(2) chroma_format;
+					//			bit(5) reserved = ‘11111’b;
+					//			unsigned int(3) bit_depth_luma_minus8;
+					//			bit(5) reserved = ‘11111’b;
+					//			unsigned int(3) bit_depth_chroma_minus8;
+					//			unsigned int(8) numOfSequenceParameterSetExt;
+					//			for (i=0; i< numOfSequenceParameterSetExt; i++) {
+					//				unsigned int(16) sequenceParameterSetExtLength;
+					//				bit(8*sequenceParameterSetExtLength) sequenceParameterSetExtNALUnit;
+					//			}
+					//		}
+					//	}
+					logtd("configurationVersion = %d", *(p++));
+					logtd("AVCProfileIndication = %d", *(p++));
+					logtd("profile_compatibility = %d", *(p++));
+					logtd("AVCLevelIndication = %d", *(p++));
+					logtd("lengthSizeMinusOne = %d", *(p++) & 0x03);
+
+					logtd("numOfSequenceParameterSets = reserve(%02x) + %d", *p & 0xE0, *p & 0x1F); // reserve(3) + unsigned int(5)
+					int numOfSequenceParameterSets = *p & 0x1F;
+					p++;
+					for(int i = 0; i < numOfSequenceParameterSets; i++)
+					{
+						int sequenceParameterSetLength = *p << 8 | *(p + 1);
+						logtd(" sequenceParameterSetLength : %d", sequenceParameterSetLength);
+						p += 2;
+
+						// Utils::Debug::DumpHex(p, sequenceParameterSetLength);
+
+						_sps.clear();
+						_sps.insert(_sps.end(), p, p + sequenceParameterSetLength);
+
+						p += sequenceParameterSetLength;
+					}
+
+					logtd("numOfPictureParameterSets = %d", *p); // reserve(3) + unsigned int(5)
+					int numOfPictureParameterSets = *p & 0x1F;
+					p++;
+					for(int i = 0; i < numOfPictureParameterSets; i++)
+					{
+						int pictureParameterSetLength = *p << 8 | *(p + 1);
+						logtd(" pictureParameterSetLength : %d", pictureParameterSetLength);
+						p += 2;
+						// Utils::Debug::DumpHex(p, pictureParameterSetLength);
+
+						_pps.clear();
+						_pps.insert(_pps.end(), p, p + pictureParameterSetLength);
+
+						p += pictureParameterSetLength;
+					}
+
+					data->Clear();
+					data->Append(start_code, 4);
+					data->Append(_sps.data(), _sps.size());
+
+					data->Append(start_code, 4);
+					data->Append(_pps.data(), _pps.size());
+
+					logtd("sps/pps packet size : %d", data->GetLength());
+
+					break;
+				}
+
+				case 1:
+				{
+					// AVC NALU
+
+					// pBuf[0] == CodecID (1B)
+					// pBuf[1] == AVCPacketType (1B)
+					// pBuf[2] == CompositionTime offset (3B)
+					// pBuf[5] == One or more NALUs
+					//            (can be individual slices per FLV packets;
+					//            that is, full frames are not strictly required)
+					const uint8_t *p = pbuf + 5;
+
+					// 0      Unspecified                                                    non-VCL
+					// 1      Coded slice of a non-IDR picture                               VCL
+					// 2      Coded slice data partition A                                   VCL
+					// 3      Coded slice data partition B                                   VCL
+					// 4      Coded slice data partition C                                   VCL
+					// 5      Coded slice of an IDR picture                                  VCL
+					// 6      Supplemental enhancement information (SEI)                     non-VCL
+					// 7      Sequence parameter set                                         non-VCL
+					// 8      Picture parameter set                                          non-VCL
+					// 9      Access unit delimiter                                          non-VCL
+					// 10     End of sequence                                                non-VCL
+					// 11     End of stream                                                  non-VCL
+					// 12     Filler data                                                    non-VCL
+					// 13     Sequence parameter set extension                               non-VCL
+					// 14     Prefix NAL unit                                                non-VCL
+					// 15     Subset sequence parameter set                                  non-VCL
+					// 16     Depth parameter set                                            non-VCL
+					// 17..18 Reserved                                                       non-VCL
+					// 19     Coded slice of an auxiliary coded picture without partitioning non-VCL
+					// 20     Coded slice extension                                          non-VCL
+					// 21     Coded slice extension for depth view components                non-VCL
+					// 22..23 Reserved                                                       non-VCL
+					// 24..31 Unspecified                                                    non-VCL
+
+					auto tmp_buf = std::make_shared<MediaFrame>();
+
+					while(true)
+					{
+						int32_t nal_length = static_cast<int32_t>(static_cast<uint8_t>(*(p)) << 24 |
+						                                          static_cast<uint8_t>(*(p + 1)) << 16 |
+						                                          static_cast<uint8_t>(*(p + 2)) << 8 |
+						                                          static_cast<uint8_t>(*(p + 3)));
+
+						// skip length 32bit
+						p += 4;
+
+						tmp_buf->AppendBuffer(start_code, 4);
+						tmp_buf->AppendBuffer(p, nal_length);
+
+						p += nal_length;
+
+						if((p - pbuf) >= pbuf_length)
+						{
+							break;
+						}
+
+						// logtd("nal_unit_type : %s", Nalu2Str( (AvcNaluType)((*p) & 0x1F) ).c_str());
+					}
+
+					data->Clear();
+					data->Append(tmp_buf->GetBuffer(), tmp_buf->GetBufferSize());
+					break;
+				}
+
+				case 2:
+				{
+					// AVC end of sequence (lower level NALU sequence ender is not required or supported)
+					data->Clear();
+					data->Append(start_code, 4);
+					break;
+				}
+
+				default:
+					break;
 			}
+
+			break;
 		}
 
-		data->Clear();
-		data->Append(tmp_buf->GetBuffer(), tmp_buf->GetBufferSize());
-	}
-	else if(frame_type == 1 && avc_packet_type == 2)
-	{
-		// logtd("frame_type(%d), avc_packet_type(%d)", frame_type, avc_packet_type);
-		data->Clear();
-		data->Append(start_code, 4);
-	}
-		// intra-frame
-	else
-	{
-		const uint8_t *p = pbuf + 5;
-
-		auto tmp_buf = std::make_shared<MediaFrame>();
-
-		while(1)
+		case 2:
 		{
-			int32_t nal_length = static_cast<int32_t>(static_cast<uint8_t>(*(p)) << 24 |
-			                                          static_cast<uint8_t>(*(p + 1)) << 16 |
-			                                          static_cast<uint8_t>(*(p + 2)) << 8 |
-			                                          static_cast<uint8_t>(*(p + 3)));
+			// intra-frame
+			const uint8_t *p = pbuf + 5;
 
-			// logte("nal_lengh = %d, pbuf_length = %d", nal_length, pbuf_length);
+			auto tmp_buf = std::make_shared<MediaFrame>();
 
-			// skip length 32bit
-			p += 4;
-
-			// logtd("nal_unit_type : %s", Nalu2Str( (AvcNaluType)((*p) & 0x1F) ).c_str());
-
-			tmp_buf->AppendBuffer(start_code, 4);
-			tmp_buf->AppendBuffer(p, nal_length);
-
-			p += nal_length;
-			if((p - pbuf) >= pbuf_length)
+			while(true)
 			{
-				break;
+				int32_t nal_length = static_cast<int32_t>(static_cast<uint8_t>(*(p)) << 24 |
+				                                          static_cast<uint8_t>(*(p + 1)) << 16 |
+				                                          static_cast<uint8_t>(*(p + 2)) << 8 |
+				                                          static_cast<uint8_t>(*(p + 3)));
+
+				// logte("nal_lengh = %d, pbuf_length = %d", nal_length, pbuf_length);
+
+				// skip length 32bit
+				p += 4;
+
+				// logtd("n
+				// al_unit_type : %s", Nalu2Str( (AvcNaluType)((*p) & 0x1F) ).c_str());
+
+				tmp_buf->AppendBuffer(start_code, 4);
+				tmp_buf->AppendBuffer(p, nal_length);
+
+				p += nal_length;
+
+				if((p - pbuf) >= pbuf_length)
+				{
+					break;
+				}
 			}
+
+			data->Clear();
+			data->Append(tmp_buf->GetBuffer(), tmp_buf->GetBufferSize());
+
+			break;
 		}
 
-		data->Clear();
-		data->Append(tmp_buf->GetBuffer(), tmp_buf->GetBufferSize());
+		case 3:
+			// disposable inter frame (H.263 only)
+			break;
+
+		case 4:
+			// generated keyframe (reserved for server use only)
+			break;
+
+		case 5:
+			// video info/command frame
+			break;
+
+		default:
+			break;
 	}
 }
 
@@ -324,12 +393,12 @@ std::string BitstreamToAnnexB::Nalu2Str(AvcNaluType nalu_type)
 // - Bitstream(Rtmp Input Low Data) Sequence Info Parsing
 //====================================================================================================
 bool BitstreamToAnnexB::SequenceHeaderParsing(const uint8_t *data,
-                                                int data_size,
-                                                std::vector<uint8_t> &sps,
-                                                std::vector<uint8_t> &pps,
-                                                uint8_t &avc_profile,
-                                                uint8_t &avc_profile_compatibility,
-                                                uint8_t &avc_level)
+                                              int data_size,
+                                              std::vector<uint8_t> &sps,
+                                              std::vector<uint8_t> &pps,
+                                              uint8_t &avc_profile,
+                                              uint8_t &avc_profile_compatibility,
+                                              uint8_t &avc_level)
 {
 	if(data_size < 4)
 	{
@@ -348,7 +417,7 @@ bool BitstreamToAnnexB::SequenceHeaderParsing(const uint8_t *data,
 
 	data += 5;
 	logtd("configuration version = %d", *(data++));
-	avc_profile =  *(data++);
+	avc_profile = *(data++);
 	avc_profile_compatibility = *(data++);
 	avc_level = *(data++);
 	logtd("lengthSizeMinusOne = %d", *(data++) & 0x03);

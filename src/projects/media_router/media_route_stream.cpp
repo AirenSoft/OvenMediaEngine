@@ -61,15 +61,15 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer, bool convert_bi
 	{
 		if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::H264)
 		{
-			_bsfv.convert_to(buffer.get());
+			_bsfv.convert_to(buffer->GetData());
 		}
 		else if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::Vp8)
 		{
-			_bsf_vp8.convert_to(buffer.get());
+			_bsf_vp8.convert_to(buffer->GetData());
 		}
 		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Aac)
 		{
-			_bsfa.convert_to(buffer.get());
+			_bsfa.convert_to(buffer->GetData());
 			logtp("Enqueue for AAC\n%s", buffer->GetData()->Dump(32).CStr());
 		}
 		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Opus)

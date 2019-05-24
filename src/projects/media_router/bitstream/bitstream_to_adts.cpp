@@ -40,10 +40,8 @@ BitstreamToADTS::AacProfile BitstreamToADTS::codec_aac_rtmp2ts(AacObjectType obj
 	}
 }
 
-void BitstreamToADTS::convert_to(MediaPacket *packet)
+void BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 {
-	auto &data = packet->GetData();
-
 	if(data->GetLength() == 0)
 	{
 		return;

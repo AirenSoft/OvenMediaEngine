@@ -123,10 +123,8 @@ BitstreamAnnexA::~BitstreamAnnexA()
 {
 }
 
-void BitstreamAnnexA::convert_to(MediaPacket *packet)
+void BitstreamAnnexA::convert_to(const std::shared_ptr<ov::Data> &data)
 {
-	auto &data = packet->GetData();
-
 	uint8_t *p = data->GetWritableDataAs<uint8_t>();
 
 	unsigned int frame_type;
