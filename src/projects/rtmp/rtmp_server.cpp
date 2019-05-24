@@ -286,12 +286,13 @@ bool RtmpServer::OnChunkStreamVideoData(ov::ClientSocket *remote,
                                         info::application_id_t application_id,
                                         uint32_t stream_id,
                                         uint32_t timestamp,
+                                        RtmpFrameType frame_type,
                                         std::shared_ptr<std::vector<uint8_t>> &data)
 {
     // observer들에게 알림
     for(auto &observer : _observers)
     {
-        if(!observer->OnVideoData(application_id, stream_id, timestamp, data))
+        if(!observer->OnVideoData(application_id, stream_id, timestamp, frame_type, data))
         {
             logte("Rtmp video data fail - app(%u) stream(%u) client(%s)",
                     application_id,
@@ -313,12 +314,13 @@ bool RtmpServer::OnChunkStreamAudioData(ov::ClientSocket *remote,
                                         info::application_id_t application_id,
                                         uint32_t stream_id,
                                         uint32_t timestamp,
+                                        RtmpFrameType frame_type,
                                         std::shared_ptr<std::vector<uint8_t>> &data)
 {
     // observer들에게 알림
     for(auto &observer : _observers)
     {
-        if(!observer->OnAudioData(application_id, stream_id, timestamp, data))
+        if(!observer->OnAudioData(application_id, stream_id, timestamp, frame_type, data))
         {
             logte("Rtmp audio data fail - app(%u) stream(%u) client(%s)",
                     application_id,

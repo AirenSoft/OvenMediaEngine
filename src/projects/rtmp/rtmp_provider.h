@@ -60,11 +60,13 @@ public:
     bool OnVideoData(info::application_id_t application_id,
                      uint32_t stream_id,
                      uint32_t timestamp,
+                     RtmpFrameType frame_type,
                      std::shared_ptr<std::vector<uint8_t>> &data) override;
 
     bool OnAudioData(info::application_id_t application_id,
                      uint32_t stream_id,
                      uint32_t timestamp,
+                     RtmpFrameType frame_type,
                      std::shared_ptr<std::vector<uint8_t>> &data) override;
 
     bool OnDeleteStream(info::application_id_t application_id, uint32_t stream_id) override;

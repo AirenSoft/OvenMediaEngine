@@ -192,8 +192,6 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 			new_track->GetChannel().SetLayout(common::AudioChannel::Layout::LayoutStereo);
 		}
 
-		new_track->GetChannel().SetLayout(common::AudioChannel::Layout::LayoutStereo);
-
 		stream->AddTrack(new_track);
 	}
 
@@ -216,6 +214,7 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 bool RtmpProvider::OnVideoData(info::application_id_t application_id,
                                uint32_t stream_id,
                                uint32_t timestamp,
+                               RtmpFrameType frame_type,
                                std::shared_ptr<std::vector<uint8_t>> &data)
 {
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationById(application_id));
@@ -238,7 +237,7 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 	                                          data->data(),
 	                                          data->size(),
 	                                          timestamp,
-	                                          MediaPacketFlag::NoFlag);
+	                                          frame_type == RtmpFrameType::VideoIFrame ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
 
 	application->SendFrame(stream, std::move(pbuf));
 
@@ -252,6 +251,7 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 bool RtmpProvider::OnAudioData(info::application_id_t application_id,
                                uint32_t stream_id,
                                uint32_t timestamp,
+                               RtmpFrameType frame_type,
                                std::shared_ptr<std::vector<uint8_t>> &data)
 {
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationById(application_id));
@@ -275,7 +275,7 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 	                                          data->data(),
 	                                          data->size(),
 	                                          timestamp,
-	                                          MediaPacketFlag::NoFlag);
+	                                          MediaPacketFlag::Key);
 	application->SendFrame(stream, std::move(pbuf));
 
 	return true;
