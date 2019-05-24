@@ -26,7 +26,7 @@ namespace cfg
 		}
 
 		std::vector<IceCandidate> _ice_candidate_list {
-			IceCandidate("*:10000/udp")
+			IceCandidate("*:10000-10005/udp")
 		};
 	};
 }
