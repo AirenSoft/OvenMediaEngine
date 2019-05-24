@@ -84,9 +84,6 @@ protected:
 		}
 	}
 
-	int64_t _last_send_packet_pts = 0LL;
-	int64_t _last_recv_packet_pts = 0LL;
-
 	std::vector<std::unique_ptr<const InputType>> _input_buffer;
 	std::vector<std::unique_ptr<OutputType>> _output_buffer;
 };

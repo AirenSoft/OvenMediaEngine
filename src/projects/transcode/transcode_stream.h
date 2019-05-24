@@ -107,11 +107,11 @@ private:
 	void DoFilters(std::unique_ptr<MediaFrame> frame);
 
 	// 1. 디코딩
-	TranscodeResult do_decode(int32_t track_id, std::unique_ptr<const MediaPacket> packet);
+	TranscodeResult DecodePacket(int32_t track_id, std::unique_ptr<const MediaPacket> packet);
 	// 2. 필터링
-	TranscodeResult do_filter(int32_t track_id, std::unique_ptr<MediaFrame> frame);
+	TranscodeResult FilterFrame(int32_t track_id, std::unique_ptr<MediaFrame> frame);
 	// 3. 인코딩
-	TranscodeResult do_encode(int32_t track_id, std::unique_ptr<const MediaFrame> frame);
+	TranscodeResult EncodeFrame(int32_t track_id, std::unique_ptr<const MediaFrame> frame);
 
 	// 출력(변화된) 스트림 정보
 	bool AddStreamInfoOutput(ov::String stream_name);

@@ -23,6 +23,8 @@ public:
 	void SendBuffer(std::unique_ptr<const MediaPacket> packet) override;
 
 protected:
+	void ShowCodecParameters(const AVCodecParameters *parameters);
+
 	AVCodec *_codec = nullptr;
 	AVCodecContext *_context = nullptr;
 	AVCodecParserContext *_parser = nullptr;
