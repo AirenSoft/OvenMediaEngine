@@ -325,7 +325,7 @@ namespace ov
 
 			default:
 				// Another error
-				logte("An error occurred while accept SSL connection: code: %d, error: %d (errno: %d)", result, error, errno);
+				logte("An error occurred while accept SSL connection: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
 				// OV_ASSERT2(false);
 				break;
 		}
