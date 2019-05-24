@@ -32,6 +32,8 @@ namespace cfg
 		}
 
 	protected:
+		using Port::GetPort;
+
 		void MakeParseList() const override
 		{
 			// Port::MakeParseList();
