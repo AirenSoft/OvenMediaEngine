@@ -87,8 +87,8 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 				, _frame->linesize[1]	// stride
 				, _frame->linesize[2]	// stride
 				, av_get_pix_fmt_name((AVPixelFormat)_frame->format)
-				, (float)(_frame->pts==AV_NOPTS_VALUE)?-1.0f:_frame->pts
-				, (float)(_frame->pkt_dts==AV_NOPTS_VALUE)?-1.0f:_frame->pkt_dts
+				, (float)(_frame->pts==AV_NOPTS_VALUE)? -1LL : _frame->pts
+				, (float)(_frame->pkt_dts==AV_NOPTS_VALUE)? -1LL : _frame->pkt_dts
 				);
 #endif
 

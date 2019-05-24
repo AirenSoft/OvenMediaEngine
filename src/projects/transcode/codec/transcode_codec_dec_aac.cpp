@@ -89,7 +89,7 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 		output_frame->SetChannels(_frame->channels);
 		output_frame->SetSampleRate(_frame->sample_rate);
 		output_frame->SetFormat(_frame->format);
-		output_frame->SetPts(static_cast<int64_t>((_frame->pts == AV_NOPTS_VALUE) ? -1.0f : _frame->pts));
+		output_frame->SetPts(static_cast<int64_t>((_frame->pts == AV_NOPTS_VALUE) ? -1LL : _frame->pts));
 
 		auto data_length = static_cast<uint32_t>(output_frame->GetBytesPerSample() * output_frame->GetNbSamples());
 

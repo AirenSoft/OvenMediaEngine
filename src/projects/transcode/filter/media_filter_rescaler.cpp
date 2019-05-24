@@ -253,7 +253,7 @@ std::unique_ptr<MediaFrame> MediaFilterRescaler::RecvBuffer(TranscodeResult *res
 
 		if(av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0)
 		{
-			logte("Error while feeding the audio filtergraph. frame.format(%d), buffer.pts(%.0f) buffer.linesize(%d), buf.size(%d)\n", _frame->format, (double)_frame->pts, _frame->linesize[0], _pkt_buf.size());
+			logte("Error while feeding the audio filtergraph. frame.format(%d), buffer.pts(%lld) buffer.linesize(%d), buf.size(%d)\n", _frame->format, _frame->pts, _frame->linesize[0], _pkt_buf.size());
 		}
 
 		av_frame_unref(_frame);

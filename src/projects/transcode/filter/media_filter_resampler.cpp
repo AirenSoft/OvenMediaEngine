@@ -292,7 +292,7 @@ std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 		// Copy packet data into frame
 		if(av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0)
 		{
-			logte("Error while feeding the audio filtergraph. frame.format(%d), buffer.pts(%.0f) buffer.linesize(%d), buf.size(%d)", _frame->format, (double)_frame->pts, _frame->linesize[0], _input_buffer.size());
+			logte("Error while feeding the audio filtergraph. frame.format(%d), buffer.pts(%lld) buffer.linesize(%d), buf.size(%d)", _frame->format, _frame->pts, _frame->linesize[0], _input_buffer.size());
 		}
 
 		// 처리가 완료된 패킷은 큐에서 삭제함.

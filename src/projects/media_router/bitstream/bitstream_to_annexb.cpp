@@ -102,9 +102,6 @@ void BitstreamToAnnexB::convert_to(const std::shared_ptr<ov::Data> &data)
 		return;
 	}
 
-	// logtd("size : %d, time = %.0f - frame_type=%d, codec_id=%d, avc_packet_type=%d, composition_time=%d", 
-	// pkt->GetDataSize(), (float)pkt->GetPts(), frame_type, codec_id, avc_packet_type, composition_time);
-
 	switch(frame_type)
 	{
 		case 1:
