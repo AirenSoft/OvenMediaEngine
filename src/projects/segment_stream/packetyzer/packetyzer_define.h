@@ -59,18 +59,17 @@ struct SegmentData
 public :
 
     SegmentData(int sequence_number_,
-           const char * file_name_,
+           ov::String file_name_,
             uint64_t duration_,
             uint64_t timestamp_,
-            int data_size_,
-            uint8_t *data_)
+            const std::shared_ptr<std::vector<uint8_t>> &data_)
     {
         sequence_number = sequence_number_;
         file_name = file_name_;
         create_time = time(nullptr);
         duration = duration_;
         timestamp = timestamp_;
-        data = std::make_shared<ov::Data>(data_, data_size_);
+        data = std::make_shared<ov::Data>(data_->data(), data_->size());
     }
 
     SegmentData(int sequence_number_,
@@ -112,8 +111,12 @@ enum class PacketyzerFrameType {
 struct PacketyzerFrameData
 {
 public:
-    PacketyzerFrameData(PacketyzerFrameType type_, uint64_t timestamp_, uint64_t time_offset_, uint32_t time_scale_,
-                        std::shared_ptr<std::vector<uint8_t>> &data_) {
+    PacketyzerFrameData(PacketyzerFrameType type_,
+                        uint64_t timestamp_,
+                        uint64_t time_offset_,
+                        uint32_t time_scale_,
+                        std::shared_ptr<ov::Data> &data_)
+    {
         type = type_;
         timestamp = timestamp_;
         time_offset = time_offset_;
@@ -121,12 +124,13 @@ public:
         data = data_;
     }
 
-    PacketyzerFrameData(PacketyzerFrameType type_, uint64_t timestamp_, uint64_t time_offset_, uint32_t time_scale_) {
+    PacketyzerFrameData(PacketyzerFrameType type_, uint64_t timestamp_, uint64_t time_offset_, uint32_t time_scale_)
+    {
         type = type_;
         timestamp = timestamp_;
         time_offset = time_offset_;
         timescale = time_scale_;
-        data = std::make_shared<std::vector<uint8_t>>();
+        data = std::make_shared<ov::Data>();
     }
 
 public:
@@ -134,7 +138,7 @@ public:
     uint64_t timestamp;
     uint64_t time_offset;
     uint32_t timescale;
-    std::shared_ptr<std::vector<uint8_t>> data;
+    std::shared_ptr<ov::Data> data;
 };
 
 

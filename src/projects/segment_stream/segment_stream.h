@@ -45,24 +45,13 @@ public :
 
     virtual std::shared_ptr<StreamPacketyzer> CreateStreamPacketyzer(int segment_count,
                                                                     int segment_duration,
-                                                                    std::string &segment_prefix,
+                                                                    const  ov::String &segment_prefix,
                                                                     PacketyzerStreamType stream_type,
                                                                     PacketyzerMediaInfo media_info) = 0;
 
 private :
     std::shared_ptr<StreamPacketyzer> _stream_packetyzer = nullptr;
     std::map<uint32_t, std::shared_ptr<MediaTrack>> _media_tracks;
-
-    time_t _stream_check_time;
-    uint32_t _key_frame_interval = 0;
-    uint32_t _previous_key_frame_timestamp;
-    uint64_t _last_video_timestamp = 0;
-    uint64_t _last_audio_timestamp = 0;
-    uint64_t _previous_last_video_timestamp = 0;
-    uint64_t _previous__last_audio_timestamp = 0;
-    uint32_t _video_frame_count;
-    uint32_t _audio_frame_count;
-
 };
 
 

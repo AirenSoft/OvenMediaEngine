@@ -218,7 +218,7 @@ protected :
 	uint32_t _last_video_timestamp = 0;
 	uint32_t _last_audio_timestamp = 0;
 	uint32_t _previous_last_video_timestamp = 0;
-	uint32_t _previous__last_audio_timestamp = 0;
+	uint32_t _previous_last_audio_timestamp = 0;
 	uint32_t _video_frame_count = 0;
 	uint32_t _audio_frame_count = 0;
 

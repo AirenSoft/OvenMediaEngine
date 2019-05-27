@@ -29,11 +29,13 @@ public:
 
     std::shared_ptr<StreamPacketyzer> CreateStreamPacketyzer(int segment_count,
                                                              int segment_duration,
-                                                             std::string &segment_prefix,
+                                                             const ov::String &segment_prefix,
                                                              PacketyzerStreamType stream_type,
                                                              PacketyzerMediaInfo media_info) override
     {
-        auto stream_packetyzer = std::make_shared<HlsStreamPacketyzer>(segment_count,
+        auto stream_packetyzer = std::make_shared<HlsStreamPacketyzer>(GetApplication()->GetName(),
+                                                                        GetName(),
+                                                                        segment_count,
                                                                         segment_duration,
                                                                         segment_prefix,
                                                                         stream_type,

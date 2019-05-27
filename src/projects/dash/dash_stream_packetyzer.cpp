@@ -13,24 +13,32 @@
 //====================================================================================================
 // Constructor
 //====================================================================================================
-DashStreamPacketyzer::DashStreamPacketyzer(int segment_count,
-                                            int segment_duration,
-                                            std::string &segment_prefix,
+DashStreamPacketyzer::DashStreamPacketyzer(const ov::String &app_name,
+                                           const ov::String &stream_name,
+                                           int segment_count,
+                                           int segment_duration,
+                                           const ov::String &segment_prefix,
                                             PacketyzerStreamType stream_type,
                                             PacketyzerMediaInfo media_info) :
-                                            StreamPacketyzer(stream_type,
-                                                     PACKTYZER_DEFAULT_TIMESCALE,
-                                                     media_info.audio_samplerate,
-                                                     static_cast<uint32_t>(media_info.video_framerate))
+                                                StreamPacketyzer(app_name,
+                                                                stream_name,
+                                                                segment_count,
+                                                                segment_duration,
+                                                                stream_type,
+                                                                PACKTYZER_DEFAULT_TIMESCALE,
+                                                                media_info.audio_samplerate,
+                                                                static_cast<uint32_t>(media_info.video_framerate))
 {
     media_info.video_timescale = PACKTYZER_DEFAULT_TIMESCALE;
     media_info.audio_timescale = media_info.audio_samplerate;
 
-    _packetyzer = std::make_shared<DashPacketyzer>(segment_prefix,
-                                                    stream_type,
-                                                    segment_count,
-                                                    segment_duration,
-                                                    media_info);
+    _packetyzer = std::make_shared<DashPacketyzer>(app_name,
+                                                stream_name,
+                                                stream_type,
+                                                segment_prefix,
+                                                segment_count,
+                                                segment_duration,
+                                                media_info);
 }
 
 //====================================================================================================
@@ -45,8 +53,7 @@ DashStreamPacketyzer::~DashStreamPacketyzer()
 //====================================================================================================
 bool DashStreamPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &data)
 {
-    _packetyzer->AppendVideoFrame(data);
-    return true;
+    return _packetyzer->AppendVideoFrame(data);
 }
 
 //====================================================================================================
@@ -54,39 +61,23 @@ bool DashStreamPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData>
 //====================================================================================================
 bool DashStreamPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &data)
 {
-    _packetyzer->AppendAudioFrame(data);
-    return true;
+    return _packetyzer->AppendAudioFrame(data);
 }
 
 //====================================================================================================
 // Get PlayList
 // - MPD
 //====================================================================================================
-bool DashStreamPacketyzer::GetPlayList(ov::String &segment_play_list)
+bool DashStreamPacketyzer::GetPlayList(ov::String &play_list)
 {
-    bool result = false;
-    std::string play_list;
-
-    result = _packetyzer->GetPlayList(play_list);
-
-    if (result)
-        segment_play_list = play_list.c_str();
-
-    return result;
+   return _packetyzer->GetPlayList(play_list);
 }
 
 //====================================================================================================
 // GetSegment
-// - MP4
+// - M4S
 //====================================================================================================
 bool DashStreamPacketyzer::GetSegment(const ov::String &segment_file_name, std::shared_ptr<ov::Data> &segment_data)
 {
-    bool result = false;
-
-    if(segment_file_name.IndexOf(MPD_AUDIO_SUFFIX) >= 0)
-        result = _packetyzer->GetSegmentData(SegmentDataType::Mp4Audio, segment_file_name, segment_data);
-    else if(segment_file_name.IndexOf(MPD_VIDEO_SUFFIX) >= 0)
-        result = _packetyzer->GetSegmentData(SegmentDataType::Mp4Video, segment_file_name, segment_data);
-
-    return result;
+      return _packetyzer->GetSegmentData(segment_file_name, segment_data);
 }

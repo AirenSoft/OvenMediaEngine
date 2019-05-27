@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "segment_stream/stream_packetyzer.h"
+#include "../segment_stream/stream_packetyzer.h"
 #include "dash_packetyzer.h"
 
 //====================================================================================================
@@ -18,9 +18,11 @@
 class DashStreamPacketyzer : public StreamPacketyzer
 {
 public:
-    DashStreamPacketyzer(int segment_count,
+    DashStreamPacketyzer(const ov::String &app_name,
+                         const ov::String &stream_name,
+                         int segment_count,
                         int segment_duration,
-                        std::string &segment_prefix,
+                        const  ov::String &segment_prefix,
                         PacketyzerStreamType stream_type,
                         PacketyzerMediaInfo media_info);
 
@@ -31,10 +33,10 @@ public :
     // Implement StreamPacketyzer Interface
     bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &data) override;
     bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &data) override;
-    bool GetPlayList(ov::String &segment_play_list) override;
+    bool GetPlayList(ov::String &play_list) override;
     bool GetSegment(const ov::String &file_name, std::shared_ptr<ov::Data> &data) override;
 
 private :
-    std::shared_ptr<DashPacketyzer> _packetyzer = nullptr;
+    //std::shared_ptr<DashPacketyzer> _packetyzer = nullptr;
 };
 

@@ -32,12 +32,20 @@ bool M4sWriter::WriteText(std::string text, std::shared_ptr<std::vector<uint8_t>
 }
 
 //====================================================================================================
-// Data Write
+// Data Write(std::vector<uint8_t>)
 //====================================================================================================
 bool M4sWriter::WriteData(const std::vector<uint8_t> &data, std::shared_ptr<std::vector<uint8_t>> &data_stream)
 {
 	data_stream->insert(data_stream->end(), data.begin(), data.end());
 	return true;
+}
+
+//====================================================================================================
+// Data Write(std::shared_ptr<ov::Data>)
+//====================================================================================================
+bool M4sWriter::WriteData(const std::shared_ptr<ov::Data> &data,  std::shared_ptr<std::vector<uint8_t>> &data_stream)
+{
+    return WriteData(data->GetDataAs<uint8_t>(), data->GetLength(), data_stream);
 }
 
 //====================================================================================================

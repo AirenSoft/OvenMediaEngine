@@ -125,16 +125,18 @@ uint32_t TsWriter::MakeCrc(const uint8_t *data, uint32_t data_size)
 //====================================================================================================
 // Constructor
 //====================================================================================================
-TsWriter::TsWriter(PacketyzerStreamType stream_type)
+TsWriter::TsWriter(bool video_enable, bool audio_enable)
 {
 	_data_stream = std::make_shared<std::vector<uint8_t>>();
 	_data_stream->reserve(4096);
 
 	_audio_continuity_count	= 0;
 	_video_continuity_count	= 0;
-	_stream_type			= stream_type;
 
-	WritePAT();
+    _video_enable = video_enable;
+    _audio_enable = audio_enable;
+
+    WritePAT();
 	WritePMT();
 }
 
@@ -205,13 +207,13 @@ bool TsWriter::WritePMT()
 	// TS Header 설정
 	MakeTsHeader(TS_DEFAULT_PMT_PID, 0, true, payload_size, false, 0, false);
 
-	if(_stream_type == PacketyzerStreamType::Common || _stream_type == PacketyzerStreamType::AudioOnly)
+	if(_audio_enable)
 	{
 		section_size += 5;
 		pid = TS_DEFAULT_AUDIO_PID;
 	}
 
-	if(_stream_type == PacketyzerStreamType::Common || _stream_type == PacketyzerStreamType::VideoOnly)
+	if(_video_enable)
 	{
 		section_size += 5;
 		pid = TS_DEFAULT_VIDEO_PID;
@@ -236,7 +238,7 @@ bool TsWriter::WritePMT()
 	pmt_bit.Write(4,		0xF);      			// reserved
 	pmt_bit.Write(12,	0);      			// program_info_length
 
-	if(_stream_type == PacketyzerStreamType::Common || _stream_type == PacketyzerStreamType::VideoOnly)
+	if(_video_enable)
 	{
 		pmt_bit.Write(8,		TS_STREAM_TYPE_AVC); 			// stream_type
 		pmt_bit.Write(3,		0x7);                   		// reserved
@@ -245,7 +247,7 @@ bool TsWriter::WritePMT()
 		pmt_bit.Write(12,	0);                    			// ES_info_length
 	}
 
-	if(_stream_type == PacketyzerStreamType::Common || _stream_type == PacketyzerStreamType::AudioOnly)
+	if(_audio_enable)
 	{
 		pmt_bit.Write(8, 	TS_STREAM_TYPE_ISO_IEC_13818_7);// stream_type
 		pmt_bit.Write(3,		0x7);                   		// reserved
@@ -275,28 +277,32 @@ bool TsWriter::WritePMT()
 //    Header(9Byte) + PTS(5Byte) + [DTS(5Byte)] 
 // - TS 헤더 추가 
 //====================================================================================================
-bool TsWriter::WriteSample(bool is_video, bool is_keyframe, uint64_t timestamp, uint64_t time_offset, std::shared_ptr<std::vector<uint8_t>> &data)
+bool TsWriter::WriteSample(bool is_video,
+                            bool is_keyframe,
+                            uint64_t timestamp,
+                            uint64_t time_offset,
+                            std::shared_ptr<ov::Data> &data)
 {
-	uint8_t		pes_header[PES_HEADER_WIDTH_DTS_SIZE]	= {0, }; 
-	uint32_t	pes_header_size							= 0; 
-	uint32_t	rest_data_size							= 0;
-	uint32_t	payload_size 							= 0; 
-	uint8_t		*data_pos								= nullptr;
-	bool 		first_payload 							= true; 
-	
+	uint8_t pes_header[PES_HEADER_WIDTH_DTS_SIZE] = {0, };
+	uint32_t pes_header_size = 0;
+	uint32_t rest_data_size = 0;
+	uint32_t payload_size = 0;
+	const uint8_t *data_pos = nullptr;
+	bool first_payload = true;
 
 	//Video(H264) - access unit delimiter(AUD) 정보 추가
 	if(is_video)
 	{
-		data->insert(data->begin(), g_aud, g_aud + H264_AUD_SIZE);
+		data->Insert(g_aud, 0, H264_AUD_SIZE);
 	}
-	data_pos = data->data(); 
+
+	data_pos = data->GetDataAs<uint8_t>();
 
 	// PES Header 생성 
-	MakePesHeader(data->size(), is_video, timestamp, time_offset, pes_header, pes_header_size);
+	MakePesHeader(data->GetLength(), is_video, timestamp, time_offset, pes_header, pes_header_size);
 	
 	// TS Header + Payload 설정 
-	rest_data_size = pes_header_size + data->size();
+	rest_data_size = pes_header_size + data->GetLength();
 			
 	// Buffer 공간 체크 
 	// (Payload 개수 + 2)*  TS_PACKET_SIZE
@@ -315,8 +321,22 @@ bool TsWriter::WriteSample(bool is_video, bool is_keyframe, uint64_t timestamp, 
 			first_payload = false;
 	
 			// TS Header 설정 
-			if(is_video)	MakeTsHeader(TS_DEFAULT_VIDEO_PID, _video_continuity_count++, true, payload_size, true, timestamp*300, is_keyframe);
-			else 			MakeTsHeader(TS_DEFAULT_AUDIO_PID, _audio_continuity_count++, true, payload_size, _stream_type == PacketyzerStreamType::AudioOnly, timestamp*300, is_keyframe);
+			if(is_video)
+			    MakeTsHeader(TS_DEFAULT_VIDEO_PID,
+			            _video_continuity_count++,
+			            true,
+			            payload_size,
+			            true,
+			            timestamp*300,
+			            is_keyframe);
+			else
+			    MakeTsHeader(TS_DEFAULT_AUDIO_PID,
+			            _audio_continuity_count++,
+			            true,
+			            payload_size,
+			            (!_video_enable && _audio_enable),
+			            timestamp*300,
+			            is_keyframe);
 						
 			// PES헤더 설정 
 			WriteDataStream(pes_header_size, pes_header); 
@@ -326,8 +346,10 @@ bool TsWriter::WriteSample(bool is_video, bool is_keyframe, uint64_t timestamp, 
 		else
 		{
 			// TS Header 설정 
-			if(is_video)	MakeTsHeader(TS_DEFAULT_VIDEO_PID, _video_continuity_count++, false, payload_size, false, 0, is_keyframe);
-			else 			MakeTsHeader(TS_DEFAULT_AUDIO_PID, _audio_continuity_count++, false, payload_size, false, 0, is_keyframe);
+			if(is_video)
+			    MakeTsHeader(TS_DEFAULT_VIDEO_PID, _video_continuity_count++, false, payload_size, false, 0, is_keyframe);
+			else
+			    MakeTsHeader(TS_DEFAULT_AUDIO_PID, _audio_continuity_count++, false, payload_size, false, 0, is_keyframe);
 		}
 
 		// Data 설정
@@ -346,7 +368,12 @@ bool TsWriter::WriteSample(bool is_video, bool is_keyframe, uint64_t timestamp, 
 // - DTS : Deciding Time Stamp
 // - header 는 최대치인 PES_HEADER_WIDTH_DTS_SIZE로 전달 
 //====================================================================================================
-bool TsWriter::MakePesHeader(int data_size, bool is_video, uint64_t timestamp, uint64_t time_offset, uint8_t * header, uint32_t & header_size)
+bool TsWriter::MakePesHeader(int data_size,
+                            bool is_video,
+                            uint64_t timestamp,
+                            uint64_t time_offset,
+                            uint8_t * header,
+                            uint32_t & header_size)
 {
 	uint32_t	stream_id 		= 0;
 	uint32_t	pes_packet_size = 0;
@@ -428,7 +455,13 @@ bool TsWriter::MakePesHeader(int data_size, bool is_video, uint64_t timestamp, u
 // - Adaptation field control : Playload의 위치가 확인 
 // - Continuity counter : 0~15 순환되며  각각 패킷에 부여 
 //====================================================================================================
-bool TsWriter::MakeTsHeader(int pid, uint32_t continuity_count, bool payload_start, uint32_t & payload_size, bool use_pcr, uint64_t pcr, bool is_keyframe)
+bool TsWriter::MakeTsHeader(int pid,
+                            uint32_t continuity_count,
+                            bool payload_start,
+                            uint32_t & payload_size,
+                            bool use_pcr,
+                            uint64_t pcr,
+                            bool is_keyframe)
 {
 	uint8_t		header[TS_HEADER_SIZE] 					= {0,};
 	uint8_t		adaptation_data[TS_PCR_ADAPTATION_SIZE] = {0,};

@@ -58,8 +58,10 @@ int M4sFragmentWriter::CreateData()
 	uint32_t data_offset = _data_stream->size() + 8;
 	uint32_t position = 0;
 
-	if (_media_type == M4sMediaType::VideoMediaType)		position = _data_stream->size() - _sample_datas.size() * 16 - 4;
-	else if (_media_type == M4sMediaType::AudioMediaType)	position = _data_stream->size() - _sample_datas.size() * 8 - 4;
+	if (_media_type == M4sMediaType::VideoMediaType)
+	    position = _data_stream->size() - _sample_datas.size() * 16 - 4;
+	else if (_media_type == M4sMediaType::AudioMediaType)
+	    position = _data_stream->size() - _sample_datas.size() * 8 - 4;
 
 
 	(*_data_stream)[position] = ((uint8_t)(data_offset >> 24 & 0xFF));
@@ -154,8 +156,8 @@ int M4sFragmentWriter::TfdtBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_
 #define TRUN_FLAG_SAMPLE_COMPOSITION_TIME_OFFSET_PRESENT (0x0800)
 int M4sFragmentWriter::TrunBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>>	data				= std::make_shared<std::vector<uint8_t>>();
-	uint32_t								flag				= 0;
+	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	uint32_t flag = 0;
 
 	if (M4sMediaType::VideoMediaType == _media_type)
 	{
@@ -175,13 +177,13 @@ int M4sFragmentWriter::TrunBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_
 
 		if (_media_type == M4sMediaType::VideoMediaType)
 		{
-			WriteUint32(sample_data->data->size() + 4, data);			// size + sample
+			WriteUint32(sample_data->data->GetLength() + 4, data);			// size + sample
 			WriteUint32(sample_data->flag, data);;						// flag
 			WriteUint32(sample_data->composition_time_offset, data);	// compoistion timeoffset 
 		}
 		else if (_media_type == M4sMediaType::AudioMediaType)
 		{
-			WriteUint32(sample_data->data->size(), data);				// sample
+			WriteUint32(sample_data->data->GetLength(), data);				// sample
 		}
 	}
 
@@ -199,10 +201,10 @@ int M4sFragmentWriter::MdatBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_
 	{
 		if (_media_type == M4sMediaType::VideoMediaType)
 		{
-			WriteUint32(sample_data->data->size(), data);	// size
+			WriteUint32(sample_data->data->GetLength(), data);	// size
 		}
 
-		WriteData(*(sample_data->data), data);
+		WriteData(sample_data->data, data);
 	}
 	return BoxDataWrite("mdat", data, data_stream);
 }

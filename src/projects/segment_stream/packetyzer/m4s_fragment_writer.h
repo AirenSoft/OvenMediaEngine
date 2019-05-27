@@ -18,7 +18,7 @@
 struct FragmentSampleData
 {
 public:
-	FragmentSampleData(uint32_t duration_, uint32_t flag_, uint32_t composition_time_offset_, std::shared_ptr<std::vector<uint8_t>> &data_)
+	FragmentSampleData(uint64_t duration_, uint32_t flag_, uint32_t composition_time_offset_, std::shared_ptr<ov::Data> &data_)
 	{
 		duration                =  duration_;
 		flag                    = flag_;
@@ -27,10 +27,10 @@ public:
 	}
 
 public:
-	uint32_t duration;
+	uint64_t duration;
 	uint32_t flag;
 	uint32_t composition_time_offset;
-	std::shared_ptr<std::vector<uint8_t>> 	data;
+	std::shared_ptr<ov::Data> data;
 };
 
 //====================================================================================================

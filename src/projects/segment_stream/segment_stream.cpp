@@ -38,7 +38,6 @@ SegmentStream::~SegmentStream()
 //====================================================================================================
 bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t worker_count)
 {
-    std::string prefix = this->GetName().CStr();
     std::shared_ptr<MediaTrack> video_track = nullptr;
     std::shared_ptr<MediaTrack> audio_track = nullptr;
 
@@ -85,12 +84,15 @@ bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t work
     {
         PacketyzerStreamType stream_type = PacketyzerStreamType::Common;
 
-        if (video_track == nullptr) stream_type = PacketyzerStreamType::AudioOnly;
-        if (audio_track == nullptr) stream_type = PacketyzerStreamType::VideoOnly;
+        if (video_track == nullptr)
+            stream_type = PacketyzerStreamType::AudioOnly;
+
+        if (audio_track == nullptr)
+            stream_type = PacketyzerStreamType::VideoOnly;
 
         _stream_packetyzer = CreateStreamPacketyzer(segment_count >  0 ? segment_count : DEFAULT_SEGMENT_COUNT,
                                                     segment_duration >  0 ? segment_duration : DEFAULT_SEGMENT_DURATION,
-                                                    prefix,
+                                                    GetName(), // stream name --> prefix
                                                     stream_type,
                                                     media_info);
     }
@@ -99,9 +101,6 @@ bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t work
         // log output
         //logtw("For output DASH/HLS, one of H264(video) or AAC(audio) codecs must be encoded.");
     }
-
-    _stream_check_time = time(nullptr);
-    _previous_key_frame_timestamp = 0;
 
     return Stream::Start(worker_count);
 }
@@ -125,48 +124,11 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
                                    std::unique_ptr<CodecSpecificInfo> codec_info,
                                    std::unique_ptr<FragmentationHeader> fragmentation)
 {
-    //logtd("Video Timestamp : %d" , encoded_frame->time_stamp);
+    //logtd("Video Timestamp : %d" , encoded_frame->_time_stamp);
 
     if (_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
     {
-        _stream_packetyzer->AppendVideoData(encoded_frame->_time_stamp,
-                                            track->GetTimeBase().GetDen(),
-                                            encoded_frame->_frame_type == FrameType::VideoFrameKey,
-                                            0,
-                                            encoded_frame->_length,
-                                            encoded_frame->_buffer->GetDataAs<uint8_t>());
-
-        if (encoded_frame->_frame_type == FrameType::VideoFrameKey)
-        {
-            _key_frame_interval = encoded_frame->_time_stamp - _previous_key_frame_timestamp;
-            _previous_key_frame_timestamp = encoded_frame->_time_stamp;
-        }
-
-        _last_video_timestamp = encoded_frame->_time_stamp/90;
-        _video_frame_count++;
-
-        time_t current_time = time(nullptr);
-        uint32_t check_gap = current_time - _stream_check_time;
-
-        if(check_gap >= 60)
-        {
-            logtd("Segment Stream Info - stram(%s) key(%ums) timestamp(v:%lldms/a:%lldms/g:%lldms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
-                  GetName().CStr(),
-                  _key_frame_interval/90, // 90000 *1000
-                  _last_video_timestamp,
-                  _last_audio_timestamp,
-                  _last_video_timestamp - _last_audio_timestamp,
-                  _video_frame_count/check_gap,
-                  _audio_frame_count/check_gap,
-                  _last_video_timestamp - _previous_last_video_timestamp,
-                  _last_audio_timestamp - _previous__last_audio_timestamp);
-
-            _stream_check_time = current_time;
-            _video_frame_count = 0;
-            _audio_frame_count = 0;
-            _previous_last_video_timestamp = _last_video_timestamp;
-            _previous__last_audio_timestamp = _last_audio_timestamp;
-        }
+        _stream_packetyzer->AppendVideoData(std::move(encoded_frame), track->GetTimeBase().GetDen(), 0);
     }
 }
 
@@ -178,18 +140,12 @@ void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
                                    std::unique_ptr<EncodedFrame> encoded_frame,
                                    std::unique_ptr<CodecSpecificInfo> codec_info,
                                    std::unique_ptr<FragmentationHeader> fragmentation)
-                                   {
-    //logtd("Audio Timestamp : %d", encoded_frame->time_stamp);
+{
+    //logtd("Audio Timestamp : %d", encoded_frame->_time_stamp);
 
     if (_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
     {
-        _stream_packetyzer->AppendAudioData(encoded_frame->_time_stamp,
-                                            track->GetTimeBase().GetDen(),
-                                            encoded_frame->_length,
-                                            encoded_frame->_buffer->GetDataAs<uint8_t>());
-
-        _last_audio_timestamp = encoded_frame->_time_stamp/(track->GetTimeBase().GetDen()/1000);
-        _audio_frame_count++;
+        _stream_packetyzer->AppendAudioData(std::move(encoded_frame), track->GetTimeBase().GetDen());
     }
 }
 

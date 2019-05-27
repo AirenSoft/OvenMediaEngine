@@ -1143,13 +1143,13 @@ bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &messag
 			      _video_frame_count / check_gap,
 			      _audio_frame_count / check_gap,
 			      _last_video_timestamp - _previous_last_video_timestamp,
-			      _last_audio_timestamp - _previous__last_audio_timestamp);
+			      _last_audio_timestamp - _previous_last_audio_timestamp);
 
 			_stream_check_time = time(nullptr);
 			_video_frame_count = 0;
 			_audio_frame_count = 0;
 			_previous_last_video_timestamp = _last_video_timestamp;
-			_previous__last_audio_timestamp = _last_audio_timestamp;
+            _previous_last_audio_timestamp = _last_audio_timestamp;
 		}
 	}
 
