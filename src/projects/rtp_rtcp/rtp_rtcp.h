@@ -7,10 +7,27 @@
 #include <vector>
 #include <map>
 #include "rtcp_packet.h"
+
+struct RtcpInfo
+{
+    RtcpInfo(uint32_t ssrc_)
+    {
+        ssrc = ssrc_;
+        sequence_number = 0;
+    }
+
+    uint32_t ssrc = 0;
+    uint32_t sequence_number = 0;
+    // uint32_t rtp_packet_size = 0;
+    // time_t rtp_packt_send_time = time(nullptr);
+    // uint32_t rtp_packt_timestamp = 0;
+ };
+
 class RtpRtcp : public SessionNode
 {
 public:
-	RtpRtcp(uint32_t id, std::shared_ptr<Session> session);
+	RtpRtcp(uint32_t id, std::shared_ptr<Session> session, const std::vector<uint32_t> &ssrc_list);
+
 	~RtpRtcp() override;
 
 	// 패킷을 전송한다. 성능을 위해 상위에서 Packetizing을 하는 경우 사용한다.
@@ -26,8 +43,10 @@ public:
                             uint32_t payload_size,
                             int report_count,
                             const std::shared_ptr<const ov::Data> &data);
-
-
 private:
     time_t _first_receiver_report_time = 0; // 0 - not received RR packet
+
+    time_t _last_sender_report_time = 0;
+    uint64_t _send_packet_sequence_number = 0;
+    std::vector<std::shared_ptr<RtcpInfo>> _rtcp_infos;
 };

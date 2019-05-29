@@ -23,9 +23,11 @@ public:
 
 	bool	ProtectRtp(std::shared_ptr<ov::Data> data);
 
+    bool	ProtectRtcp(std::shared_ptr<ov::Data> data);
     bool	UnprotectRtcp(const std::shared_ptr<ov::Data> &data);
 
 private:
 	srtp_ctx_t_* 	_session;
 	uint32_t 		_rtp_auth_tag_len;
+    uint32_t 		_rtcp_auth_tag_len;
 };

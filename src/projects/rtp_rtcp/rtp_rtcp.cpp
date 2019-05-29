@@ -1,13 +1,19 @@
 #include "rtp_rtcp.h"
 #include "../webrtc/rtc_application.h"
 #include "../webrtc/rtc_stream.h"
+#include <base/ovlibrary/byte_io.h>
 
 #define OV_LOG_TAG "RtpRtcp"
+#define RTCP_AA_SEND_SEQUENCE (1000)
 
-RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<Session> session)
-	: SessionNode(id, SessionNodeType::RtpRtcp, session)
+RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<Session> session, const std::vector<uint32_t> &ssrc_list)
+	        : SessionNode(id, SessionNodeType::RtpRtcp, session)
 {
-
+    for(auto ssrc : ssrc_list)
+    {
+        auto rtcp_info = std::make_shared<RtcpInfo>(ssrc);
+        _rtcp_infos.push_back(rtcp_info);
+    }
 }
 
 RtpRtcp::~RtpRtcp()
@@ -16,12 +22,44 @@ RtpRtcp::~RtpRtcp()
 
 bool RtpRtcp::SendOutgoingData(std::shared_ptr<ov::Data> packet)
 {
-	// Lower Node는 SRTP(DTLS 사용시) 또는 IcePort이다.
+	// Lower Node is SRTP
 	auto node = GetLowerNode();
+
 	if(!node)
 	{
 		return false;
 	}
+
+	if(_first_receiver_report_time != 0)
+    {
+        auto byte_buffer = packet->GetDataAs<uint8_t>();
+        uint32_t ssrc = ByteReader<uint32_t>::ReadBigEndian(&byte_buffer[8]);
+
+        // rtcp aa packet send ( per 1000)
+        for(auto &rtcp_info : _rtcp_infos)
+        {
+            if(rtcp_info->ssrc == ssrc)
+            {
+                if (rtcp_info->sequence_number == 0)
+                {
+                    logtd("Send rtcp sr packet - ssrc(%u)", ssrc);
+
+                    if (!dynamic_cast<SrtpTransport *>(node.get())->SendRtcpData(GetNodeType(),
+                            RtcpPacket::MakeSrPacket(ssrc)))
+                    {
+                        logtw("Rtcp sr packet send fail - ssrc(%u)", ssrc);
+                    }
+                }
+
+                rtcp_info->sequence_number++;
+
+                if(rtcp_info->sequence_number >= RTCP_AA_SEND_SEQUENCE)
+                    rtcp_info->sequence_number = 0;
+
+                break;
+            }
+        }
+    }
 
 	//logtd("RtpRtcp Send next node : %d", packet->GetData()->GetLength());
 	return node->SendData(GetNodeType(), packet);
@@ -73,14 +111,15 @@ bool RtpRtcp::RtcpPacketProcess(RtcpPacketType packet_type,
         return false;
     }
 
-    auto rtcp_packet = std::make_shared<RtcpPacket>();
     std::vector<std::shared_ptr<RtcpReceiverReport>> receiver_reports;
 
-    if (!rtcp_packet->RrParseing(report_count, data,  receiver_reports) )
+    if (!RtcpPacket::RrParseing(report_count, data,  receiver_reports) )
     {
         logtd("RTCP(rr) packet parsing fail", (int) packet_type);
         return false;
     }
+
+
 
     if(_first_receiver_report_time == 0)
     {
@@ -97,9 +136,9 @@ bool RtpRtcp::RtcpPacketProcess(RtcpPacketType packet_type,
         // RR info setting
         std::static_pointer_cast<RtcApplication>(GetSession()->GetApplication())->OnReceiverReport(
                 GetSession()->GetStream()->GetId(),
-                GetSession()->GetId(),
-                _first_receiver_report_time,
-                receiver_report);
-    }
+            GetSession()->GetId(),
+            _first_receiver_report_time,
+            receiver_report);
+	}
     return true;
 }

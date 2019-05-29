@@ -37,6 +37,9 @@ struct RtcpReceiverReport
     uint32_t jitter = 0;                    // jitter
     uint32_t lsr = 0;                       // last SR(NTP timestamp)
     uint32_t dlsr = 0;                      // delay since last SR(1/65536 second)
+
+
+    double rtt = 0; // (Round Trip Time) calculation form rr packet
 };
 
 //====================================================================================================
@@ -62,8 +65,9 @@ public :
                             const std::shared_ptr<const ov::Data> &data,
                             std::vector<std::shared_ptr<RtcpReceiverReport>> &receiver_reports);
 
-    bool MakeSrPacket();
+    static std::shared_ptr<ov::Data> MakeSrPacket(uint32_t ssrc);
 
+    static double DelayCalculation(uint32_t lsr, uint32_t dlsr);
 private :
-
+    static void GetNtpTime(uint32_t &msw, uint32_t &lsw);
 };

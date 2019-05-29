@@ -100,9 +100,14 @@ bool RtcSession::Start()
 	}
 
 	// SessionNode를 생성하고 연결한다.
+	std::vector<uint32_t> ssrc_list;
+	for(auto media : _offer_sdp->GetMediaList())
+    {
+        ssrc_list.push_back(media->GetSsrc());
+    }
 
-	// RTP RTCP 생성
-	_rtp_rtcp = std::make_shared<RtpRtcp>((uint32_t)SessionNodeType::RtpRtcp, session);
+    // RTP RTCP 생성
+	_rtp_rtcp = std::make_shared<RtpRtcp>((uint32_t)SessionNodeType::RtpRtcp, session, ssrc_list);
 
 	// SRTP 생성
 	_srtp_transport = std::make_shared<SrtpTransport>((uint32_t)SessionNodeType::Srtp, session);

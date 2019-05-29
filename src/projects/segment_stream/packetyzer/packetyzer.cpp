@@ -83,9 +83,13 @@ uint32_t Packetyzer::Gcd(uint32_t n1, uint32_t n2)
 //====================================================================================================
 double Packetyzer::GetCurrentMilliseconds()
 {
-    struct timeval time_value;
-    gettimeofday(&time_value, nullptr); // get current time
-    double milliseconds = time_value.tv_sec*1000LL + time_value.tv_usec/1000; // calculate milliseconds
+    // struct timeval now;
+    // gettimeofday(&now, nullptr);
+
+    struct timespec now;
+    clock_gettime(CLOCK_REALTIME, &now);
+
+    double milliseconds = now.tv_sec*1000LL + now.tv_nsec/1000000; // calculate milliseconds
     return milliseconds;
 }
 

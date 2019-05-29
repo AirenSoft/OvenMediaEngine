@@ -17,6 +17,7 @@ SrtpAdapter::SrtpAdapter()
 {
 	_session = nullptr;
 	_rtp_auth_tag_len = 0;
+    _rtcp_auth_tag_len = 0;
 }
 
 SrtpAdapter::~SrtpAdapter()
@@ -36,7 +37,7 @@ bool SrtpAdapter::SetKey(srtp_ssrc_type_t type, uint64_t crypto_suite, std::shar
 			break;
 		case SRTP_AES128_CM_SHA1_32:
 			srtp_crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy.rtp);
-			srtp_crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtcp);
+			srtp_crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy.rtcp);
 			break;
 		default:
 			logte("Failed to create srtp adapter. Unsupported crypto suite %d", crypto_suite);
@@ -60,6 +61,10 @@ bool SrtpAdapter::SetKey(srtp_ssrc_type_t type, uint64_t crypto_suite, std::shar
 	srtp_set_user_data(_session, this);
 
 	_rtp_auth_tag_len = policy.rtp.auth_tag_len;
+    _rtcp_auth_tag_len = policy.rtcp.auth_tag_len;
+
+    logtd("srtp teg size rtp(%d) rtcp(%d)", _rtp_auth_tag_len, _rtcp_auth_tag_len);
+
 
 	return true;
 }
@@ -98,6 +103,36 @@ bool SrtpAdapter::ProtectRtp(std::shared_ptr<ov::Data> data)
 	}
 
 	return true;
+}
+
+bool SrtpAdapter::ProtectRtcp(std::shared_ptr<ov::Data> data)
+{
+    if(!_session)
+    {
+        return false;
+    }
+
+    // Protect size check( data + tag + (E, Encryption. 1 bit. + SRTCP index. 31 bits.)
+    uint32_t need_len = data->GetLength() + _rtcp_auth_tag_len + 4;
+
+    if(need_len > data->GetCapacity())
+    {
+        logte("Buffer capacity(%d) less than the needed(%d)", data->GetCapacity(), need_len);
+        return false;
+    }
+
+    auto buffer = data->GetWritableData();
+    int out_len = static_cast<int>(data->GetLength());
+    data->SetLength(need_len);
+
+    int err = srtp_protect_rtcp(_session, buffer, &out_len);
+    if(err != srtp_err_status_ok)
+    {
+        logte("Failed to protect SRTCP packet, err=%d, len=%d", err, out_len);
+        return false;
+    }
+
+    return true;
 }
 
 bool SrtpAdapter::UnprotectRtcp(const std::shared_ptr<ov::Data> &data)
