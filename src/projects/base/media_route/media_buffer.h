@@ -27,20 +27,22 @@ enum class MediaPacketFlag : uint8_t
 class MediaPacket
 {
 public:
-	MediaPacket(common::MediaType media_type, int32_t track_id, const void *data, int32_t data_size, int64_t pts, MediaPacketFlag flags)
+	MediaPacket(common::MediaType media_type, int32_t track_id, const void *data, int32_t data_size, int64_t pts, MediaPacketFlag flags, int64_t cts = 0)
 		: _media_type(media_type),
 		  _track_id(track_id),
 		  _pts(pts),
-		  _flags(flags)
+		  _flags(flags),
+		  _cts(cts)
 	{
 		_data->Append(data, data_size);
 	}
 
-	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, MediaPacketFlag flags)
+	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, MediaPacketFlag flags, int64_t cts = 0)
 		: _media_type(media_type),
 		  _track_id(track_id),
 		  _pts(pts),
-		  _flags(flags)
+		  _flags(flags),
+		  _cts(cts)
 	{
 		_data->Append(data.get());
 	}
@@ -80,6 +82,16 @@ public:
 		return _flags;
 	}
 
+    int64_t GetCts() const noexcept
+    {
+        return _cts;
+    }
+
+    void SetCts(int64_t cts)
+    {
+        _cts = cts;
+    }
+
 	std::unique_ptr<FragmentationHeader> _frag_hdr = std::make_unique<FragmentationHeader>();
 
 	std::unique_ptr<MediaPacket> ClonePacket()
@@ -89,7 +101,8 @@ public:
 			GetTrackId(),
 			GetData(),
 			GetPts(),
-			GetFlags()
+			GetFlags(),
+            GetCts()
 		);
 		::memcpy(packet->_frag_hdr.get(), _frag_hdr.get(), sizeof(FragmentationHeader));
 		return packet;
@@ -103,6 +116,7 @@ protected:
 
 	int64_t _pts = -1;
 	MediaPacketFlag _flags = MediaPacketFlag::NoFlag;
+    int64_t _cts = 0; // cts = pts - dts
 };
 
 class MediaFrame

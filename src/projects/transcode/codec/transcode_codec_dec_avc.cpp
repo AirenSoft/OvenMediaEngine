@@ -119,6 +119,8 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 			first_pts = pts;
 		}
 
+        // logtd("decode frame - pts(%lld) cts(%lld)", buffer->GetPts(), buffer->GetCts());
+
 		while(remained > 0)
 		{
 			av_init_packet(_pkt);

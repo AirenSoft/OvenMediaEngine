@@ -497,7 +497,8 @@ void MediaRouteApplication::MainTask()
 						cur_buf->GetTrackId(),
 						cur_buf->GetData(),
 						cur_buf->GetPts(),
-						cur_buf->GetFlags()
+						cur_buf->GetFlags(),
+						cur_buf->GetCts()
 					);
 
 					observer->OnSendFrame(

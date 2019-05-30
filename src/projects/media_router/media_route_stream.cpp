@@ -61,7 +61,12 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer, bool convert_bi
 	{
 		if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::H264)
 		{
-			_bsfv.convert_to(buffer->GetData());
+		    int64_t cts = 0;
+
+		    _bsfv.convert_to(buffer->GetData(), cts);
+            buffer->SetCts(cts);
+
+            // logtd("rtmp input h264 pts(%lld) cts(%lld)", buffer->GetPts(), buffer->GetCts());
 		}
 		else if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::Vp8)
 		{

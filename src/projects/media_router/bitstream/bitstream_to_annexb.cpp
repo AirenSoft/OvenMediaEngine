@@ -31,7 +31,7 @@ BitstreamToAnnexB::~BitstreamToAnnexB()
 // ([extradata]) | ([length] NALU) | ([length] NALU) |
 // In annexb, [start code] may be 0x000001 or 0x00000001.
 
-void BitstreamToAnnexB::convert_to(const std::shared_ptr<ov::Data> &data)
+void BitstreamToAnnexB::convert_to(const std::shared_ptr<ov::Data> &data, int64_t &cts)
 {
 	if(data->GetLength() < 4)
 	{
@@ -214,7 +214,11 @@ void BitstreamToAnnexB::convert_to(const std::shared_ptr<ov::Data> &data)
 					// pBuf[5] == One or more NALUs
 					//            (can be individual slices per FLV packets;
 					//            that is, full frames are not strictly required)
-					const uint8_t *p = pbuf + 5;
+                    cts += static_cast<int64_t>(static_cast<uint8_t>(*(pbuf + 2)) << 16 |
+                                                static_cast<uint8_t>(*(pbuf + 3)) << 8 |
+                                                static_cast<uint8_t>(*(pbuf + 4)));
+
+                    const uint8_t *p = pbuf + 5;
 
 					// 0      Unspecified                                                    non-VCL
 					// 1      Coded slice of a non-IDR picture                               VCL
@@ -287,6 +291,9 @@ void BitstreamToAnnexB::convert_to(const std::shared_ptr<ov::Data> &data)
 
 		case 2:
 		{
+            cts += static_cast<int64_t>(static_cast<uint8_t>(*(pbuf + 2)) << 16 |
+                                        static_cast<uint8_t>(*(pbuf + 3)) << 8 |
+                                        static_cast<uint8_t>(*(pbuf + 4)));
 			// intra-frame
 			const uint8_t *p = pbuf + 5;
 

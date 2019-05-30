@@ -62,7 +62,7 @@ public:
     BitstreamToAnnexB();
     ~BitstreamToAnnexB();
 
-	void convert_to(const std::shared_ptr<ov::Data> &data);
+	void convert_to(const std::shared_ptr<ov::Data> &data, int64_t &cts);
  	static bool SequenceHeaderParsing(const uint8_t *data,
                                         int data_size,
                                         std::vector<uint8_t> &_sps,
