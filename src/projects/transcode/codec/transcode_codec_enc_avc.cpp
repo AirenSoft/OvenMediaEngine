@@ -38,7 +38,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	param.iPicWidth = context->GetVideoWidth();
 	param.iPicHeight = context->GetVideoHeight();
 	param.iTargetBitrate = context->GetBitrate();
-	param.iRCMode = RC_BITRATE_MODE;
+	param.iRCMode = RC_OFF_MODE;
 	param.iTemporalLayerNum = 1;
 	param.iSpatialLayerNum = 1;
 	param.bEnableDenoise = false;
