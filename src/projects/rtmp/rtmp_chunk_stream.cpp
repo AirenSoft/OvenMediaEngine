@@ -178,9 +178,6 @@ int32_t RtmpChunkStream::OnDataReceived(const std::unique_ptr<std::vector<uint8_
 	int32_t process_size = 0;
 	std::shared_ptr<std::vector<uint8_t>> process_data = nullptr;
 
-	// setting packet time
-	_last_packet_time = time(nullptr);
-
 	if(!_remained_data->empty())
 	{
 		process_data = std::make_shared<std::vector<uint8_t>>(_remained_data->begin(), _remained_data->end());
@@ -195,10 +192,10 @@ int32_t RtmpChunkStream::OnDataReceived(const std::unique_ptr<std::vector<uint8_
 	// 최대 크기 확인
 	if(process_data->size() > RTMP_MAX_PACKET_SIZE)
 	{
-		logte("Process data size fail - app(%s/%u) stream(%s/%u) size(%d:%d)",
+		logte("Process data size fail - stream(%s/%s) id(%u/%u) size(%d:%d)",
 		      _app_name.CStr(),
+              _stream_name.CStr(),
 		      _app_id,
-		      _stream_name.CStr(),
 		      _stream_id,
 		      process_data->size(),
 		      RTMP_MAX_PACKET_SIZE);
@@ -217,10 +214,10 @@ int32_t RtmpChunkStream::OnDataReceived(const std::unique_ptr<std::vector<uint8_
 
 	if(process_size < 0)
 	{
-		logte("Process Size Fail - app(%s/%u) stream(%s/%u) size(%d)",
+		logte("Process Size Fail - stream(%s/%s) id(%u/%u) size(%d)",
 		      _app_name.CStr(),
+              _stream_name.CStr(),
 		      _app_id,
-		      _stream_name.CStr(),
 		      _stream_id,
 		      process_size);
 
@@ -745,7 +742,7 @@ void RtmpChunkStream::OnAmfDeleteStream(std::shared_ptr<RtmpMuxMessageHeader> &m
                                         AmfDocument &document,
                                         double transaction_id)
 {
-	logtd("Delete Stream - app(%s/%u) stream(%s/%u)", _app_name.CStr(), _app_id, _stream_name.CStr(), _stream_id);
+	logtd("Delete Stream - stream(%s/%s) id(%u/%u)", _app_name.CStr(),  _stream_name.CStr(), _app_id, _stream_id);
 
 	_media_info->video_streaming = false;
 	_media_info->audio_streaming = false;
@@ -1038,12 +1035,10 @@ bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &messag
 	RtmpFrameType frame_type = RtmpFrameType::VideoPFrame;
 
 	// size check
-	if(
-		(message->message_header->body_size < RTMP_VIDEO_DATA_MIN_SIZE) ||
-		(message->message_header->body_size > RTMP_MAX_PACKET_SIZE)
-		)
+	if((message->message_header->body_size < RTMP_VIDEO_DATA_MIN_SIZE) ||
+		(message->message_header->body_size > RTMP_MAX_PACKET_SIZE))
 	{
-		logte("Size Fail - app(%s) stram(%s) size(%d)",
+		logte("Size Fail - stream(%s/%s) size(%d)",
 		      _app_name.CStr(),
 		      _stream_name.CStr(),
 		      message->message_header->body_size);
@@ -1061,7 +1056,7 @@ bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &messag
 	}
 	else
 	{
-		logte("Frame type fail - app(%s) stram(%s) type(0x%x)",
+		logte("Frame type fail - stream(%s/%s) type(0x%x)",
 		      _app_name.CStr(),
 		      _stream_name.CStr(),
 		      (uint8_t)message->body->at(RTMP_VIDEO_CONTROL_HEADER_INDEX));
@@ -1077,7 +1072,7 @@ bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &messag
 		// control header/sequence type 정보 skip
 		if(!VideoSequenceHeaderProcess(message->body, message->body->at(RTMP_VIDEO_CONTROL_HEADER_INDEX)))
 		{
-			logtw("Video sequence info process fail - app(%s) stram(%s)", _app_name.CStr(), _stream_name.CStr());
+			logtw("Video sequence info process fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 
 		}
 
@@ -1086,7 +1081,7 @@ bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &messag
 		{
 			if(!StreamCreate())
 			{
-				logte("Input create fail - app(%s) stram(%s)", _app_name.CStr(), _stream_name.CStr());
+				logte("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 				return false;
 			}
 		}
@@ -1099,14 +1094,19 @@ bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &messag
 		_stream_messages.push_back(message);
 
 		if(_stream_messages.size() > MAX_STREAM_MESSAGE_COUNT)
-			logtw("Stream Message Count Over - app(%s) stram(%s) size(%d:%d)",
+        {
+			logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
 			      _app_name.CStr(),
 			      _stream_name.CStr(),
 			      _stream_messages.size(),
 			      MAX_STREAM_MESSAGE_COUNT);
+		}
 
 		return true;
 	}
+
+    // setting packet time
+    _last_packet_time = time(nullptr);
 
 	// video stream callback 호출
 	if(_media_info->video_streaming)
@@ -1133,7 +1133,7 @@ bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &messag
 
 		if(check_gap >= 60)
 		{
-			logtd("Rtmp Provider Info - app(%s) stram(%s) key(%ums) timestamp(v:%ums/a:%ums/g:%dms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
+			logtd("Rtmp Provider Info - stream(%s/%s) key(%ums) timestamp(v:%ums/a:%ums/g:%dms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
 			      _app_name.CStr(),
 			      _stream_name.CStr(),
 			      _key_frame_interval,
@@ -1180,7 +1180,7 @@ bool RtmpChunkStream::ReceiveAudioMessage(std::shared_ptr<ImportMessage> &messag
 		(message->message_header->body_size > RTMP_MAX_PACKET_SIZE)
 		)
 	{
-		logte("Size Fail - app(%s) stram(%s) size(%d)",
+		logte("Size Fail - stream(%s/%s) size(%d)",
 		      _app_name.CStr(),
 		      _stream_name.CStr(),
 		      message->message_header->body_size);
@@ -1196,7 +1196,7 @@ bool RtmpChunkStream::ReceiveAudioMessage(std::shared_ptr<ImportMessage> &messag
 
 		if(!AudioSequenceHeaderProcess(message->body, message->body->at(RTMP_AUDIO_CONTROL_HEADER_INDEX)))
 		{
-			logtw("Audio Sequence Info Process Fail - app(%s) stram(%s)", _app_name.CStr(), _stream_name.CStr());
+			logtw("Audio Sequence Info Process Fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 
 		}
 
@@ -1205,7 +1205,7 @@ bool RtmpChunkStream::ReceiveAudioMessage(std::shared_ptr<ImportMessage> &messag
 		{
 			if(!StreamCreate())
 			{
-				logte("Input create fail - app(%s) stram(%s)", _app_name.CStr(), _stream_name.CStr());
+				logte("Input create fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 				return false;
 			}
 		}
@@ -1217,7 +1217,7 @@ bool RtmpChunkStream::ReceiveAudioMessage(std::shared_ptr<ImportMessage> &messag
 		_stream_messages.push_back(message);
 
 		if(_stream_messages.size() > MAX_STREAM_MESSAGE_COUNT)
-			logtw("Stream Message Count Over - app(%s) stram(%s) size(%d:%d)",
+			logtw("Stream Message Count Over - stream(%s/%s) size(%d:%d)",
 			      _app_name.CStr(),
 			      _stream_name.CStr(),
 			      _stream_messages.size(),
@@ -1225,6 +1225,9 @@ bool RtmpChunkStream::ReceiveAudioMessage(std::shared_ptr<ImportMessage> &messag
 
 		return true;
 	}
+
+    // setting packet time
+    _last_packet_time = time(nullptr);
 
 	// audio stream callback 호출
 	if(_media_info->audio_streaming)
@@ -1271,12 +1274,12 @@ bool RtmpChunkStream::VideoSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 	// Codec Type Check(Only H264)
 	if((control_byte & 0x0f) != 7)
 	{
-		logtd("Not Supported Codec Type - app(%s) stram(%s) codec(%d)",
+		logtd("Not Supported Codec Type - stream(%s/%s) codec(%d)",
 		      _app_name.CStr(),
 		      _stream_name.CStr(),
 		      (control_byte & 0x0f));
 
-		logti("Please select H264 codec - app(%s) stram(%s)", _app_name.CStr(), _stream_name.CStr());
+		logti("Please select H264 codec - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 
 		return false;
 	}
@@ -1284,7 +1287,7 @@ bool RtmpChunkStream::VideoSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 	// data size check
 	if(data->size() < RTMP_SPS_PPS_MIN_DATA_SIZE)
 	{
-		logte("Data size fail - app(%s) stram(%s) size(%d)", _app_name.CStr(), _stream_name.CStr(), data->size());
+		logte("Data size fail - stream(%s/%s) size(%d)", _app_name.CStr(), _stream_name.CStr(), data->size());
 		return false;
 	}
 
@@ -1303,7 +1306,7 @@ bool RtmpChunkStream::VideoSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 	                                             avc_profile_compatibility,
 	                                             avc_level))
 	{
-		logte("Sequence header parsing fail - app(%s) stram(%s) size(%d)\n%s",
+		logte("Sequence header parsing fail - stream(%s/%s) size(%d)\n%s",
 		      _app_name.CStr(),
 		      _stream_name.CStr(),
 		      data->size(),
@@ -1317,7 +1320,7 @@ bool RtmpChunkStream::VideoSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 
 	_media_info->video_streaming = true;
 
-	logtd("Video sequence header - app(%s) stram(%s) sps(%d) pps(%d) profile(%d) compatibility(%d) level(%d)",
+	logtd("Video sequence header - stream(%s/%s) sps(%d) pps(%d) profile(%d) compatibility(%d) level(%d)",
 	      _app_name.CStr(),
 	      _stream_name.CStr(),
 	      _media_info->avc_sps->size(),
@@ -1344,12 +1347,12 @@ bool RtmpChunkStream::AudioSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 	// Format(4Bit) - 10(AAC), 2(MP3), 11(SPEEX) Only AAC
 	if((control_byte >> 4) != 10)
 	{
-		logtd("Not Supported Codec Type - app(%s) stram(%s) codec(%d)",
+		logtd("Not Supported Codec Type - stream(%s/%s) codec(%d)",
 		      _app_name.CStr(),
 		      _stream_name.CStr(),
 		      (control_byte >> 4));
 
-		logti("Please select AAC codec - app(%s) stram(%s)", _app_name.CStr(), _stream_name.CStr());
+		logti("Please select AAC codec - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 		return false;
 	}
 
@@ -1359,7 +1362,7 @@ bool RtmpChunkStream::AudioSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 	                                           sample_index,
 	                                           channels))
 	{
-		logte("Audio Sequence header parsing fail - app(%s) stram(%s) size(%d)\n%s",
+		logte("Audio Sequence header parsing fail - stream(%s/%s) size(%d)\n%s",
 		      _app_name.CStr(),
 		      _stream_name.CStr(),
 		      data->size(),
@@ -1371,7 +1374,7 @@ bool RtmpChunkStream::AudioSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 	// set samplerate
 	if(sample_index >= RTMP_SAMPLERATE_TABLE_SIZE)
 	{
-		logte("Sampleindex fail - app(%s) stram(%s) index(%d)",
+		logte("Sampleindex fail - stream(%s/%s) index(%d)",
 		      _app_name.CStr(),
 		      _stream_name.CStr(),
 		      sample_index);
@@ -1385,7 +1388,7 @@ bool RtmpChunkStream::AudioSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 
 	_media_info->audio_streaming = true;
 
-	logtd("Audio sequence header - app(%s) stram(%s) samplerate(%d) channels(%d)",
+	logtd("Audio sequence header - stream(%s/%s) samplerate(%d) channels(%d)",
 	      _app_name.CStr(),
 	      _stream_name.CStr(),
 	      samplerate,
@@ -1404,7 +1407,7 @@ bool RtmpChunkStream::StreamCreate()
 	// Streaming Check
 	if(!_media_info->video_streaming && !_media_info->audio_streaming)
 	{
-		logte("Not have both video and audio Stream - app(%s) stram(%s)",
+		logte("Not have both video and audio Stream - stream(%s/%s)",
 		      _app_name.CStr(),
 		      _stream_name.CStr());
 
@@ -1477,6 +1480,9 @@ bool RtmpChunkStream::StreamCreate()
 bool RtmpChunkStream::OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document,
                                     int32_t object_index)
 {
+    // setting packet time
+    _last_packet_time = time(nullptr);
+
 	RtmpCodecType video_codec_type = RtmpCodecType::Unknown;
 	RtmpCodecType audio_codec_type = RtmpCodecType::Unknown;
 	double frame_rate = 30.0;
@@ -1670,10 +1676,10 @@ bool RtmpChunkStream::OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &messa
 	// support codec check (H264/AAC 지원)
 	if(!(video_codec_type == RtmpCodecType::H264) && !(audio_codec_type == RtmpCodecType::AAC))
 	{
-		logtw("codec type fail - app(%s/%u) stream(%s/%u) video(%s) audio(%s)",
+		logtw("codec type fail - stream(%s/%s) id(%u/%u) video(%s) audio(%s)",
 		      _app_name.CStr(),
+              _stream_name.CStr(),
 		      _app_id,
-		      _stream_name.CStr(),
 		      _stream_id,
 		      GetCodecString(video_codec_type).CStr(),
 		      GetCodecString(audio_codec_type).CStr());

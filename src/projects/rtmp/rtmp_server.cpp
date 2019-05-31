@@ -124,7 +124,7 @@ bool RtmpServer::RemoveObserver(const std::shared_ptr<RtmpObserver> &observer)
 //====================================================================================================
 void RtmpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
-    logtd("Rtmp encoder connected - remote(%s)", remote->ToString().CStr());
+    logti("Rtmp input stream connected - remote(%s)", remote->ToString().CStr());
 
     std::unique_lock<std::recursive_mutex> lock(_chunk_stream_list_mutex);
 
@@ -172,7 +172,7 @@ void RtmpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
         // client 접속 상태 확인
         if(remote->GetState() != ov::SocketState::Connected)
         {
-            logte("Rtmp encoder erase - remote(%s)", remote->ToString().CStr());
+            logte("Rtmp input stream erase - remote(%s)", remote->ToString().CStr());
             _chunk_stream_list.erase(item);
             return;
         }
@@ -194,9 +194,15 @@ void RtmpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
             }
 
             // Socket Close
-	        _physical_port->DisconnectClient(dynamic_cast<ov::ClientSocket *>(item->first));
+            _physical_port->DisconnectClient(dynamic_cast<ov::ClientSocket *>(item->first));
 
-            // Strema Close
+            logti("Rtmp input stream disconnect - stream(%s/%s) id(%u/%u) remote(%s)",
+                  item->second->GetAppName().CStr(),
+                  item->second->GetStreamName().CStr(),
+                  item->second->GetAppId(),
+                  item->second->GetStreamId(),
+                  remote->ToString().CStr());
+
             _chunk_stream_list.erase(item);
 
             return;
@@ -219,14 +225,6 @@ void RtmpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 
     if(item != _chunk_stream_list.end())
     {
-
-        logtd("Rtmp encoder disconnected - app(%s/%u) stream(%s/%u) remote(%s)",
-                item->second->GetAppName().CStr(),
-                item->second->GetAppId(),
-                item->second->GetStreamName().CStr(),
-                item->second->GetStreamId(),
-                remote->ToString().CStr());
-
         // Stream Delete
         if(item->second->GetAppId() != 0 && item->second->GetStreamId() != 0)
         {
@@ -236,6 +234,13 @@ void RtmpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
                            item->second->GetAppId(),
                            item->second->GetStreamId());
         }
+
+        logti("Rtmp input stream disconnected - stream(%s/%s) id(%u/%u) remote(%s)",
+              item->second->GetAppName().CStr(),
+              item->second->GetStreamName().CStr(),
+              item->second->GetAppId(),
+              item->second->GetStreamId(),
+              remote->ToString().CStr());
 
         _chunk_stream_list.erase(item);
     }
@@ -259,7 +264,7 @@ bool RtmpServer::OnChunkStreamReadyComplete(ov::ClientSocket *remote,
     {
         if(!observer->OnStreamReadyComplete(app_name, stream_name, media_info, application_id, stream_id))
         {
-            logte("Rtmp input stream ready  fail - app(%s) stream(%s) remote(%s)",
+            logte("Rtmp input stream ready fail - app(%s) stream(%s) remote(%s)",
                     app_name.CStr(),
                     stream_name.CStr(),
                     remote->ToString().CStr());
@@ -267,11 +272,12 @@ bool RtmpServer::OnChunkStreamReadyComplete(ov::ClientSocket *remote,
         }
     }
 
-    logtd("Rtmp input stream create complete - app(%s/%u) stream(%s/%u) remote(%s)",
+    logti("Rtmp input stream create completed - strem(%s/%s) id(%u/%u) device(%s) remote(%s)",
             app_name.CStr(),
-            application_id,
             stream_name.CStr(),
+            application_id,
             stream_id,
+            RtmpChunkStream::GetEncoderTypeString(media_info->encoder_type).CStr(),
             remote->ToString().CStr());
 
     return true;
@@ -294,10 +300,10 @@ bool RtmpServer::OnChunkStreamVideoData(ov::ClientSocket *remote,
     {
         if(!observer->OnVideoData(application_id, stream_id, timestamp, frame_type, data))
         {
-            logte("Rtmp video data fail - app(%u) stream(%u) client(%s)",
-                    application_id,
-                    stream_id,
-                    remote->ToString().CStr());
+            logte("Rtmp input stream video data fail - id(%u/%u) remote(%s)",
+                  application_id,
+                  stream_id,
+                  remote->ToString().CStr());
             return false;
         }
     }
@@ -322,7 +328,7 @@ bool RtmpServer::OnChunkStreamAudioData(ov::ClientSocket *remote,
     {
         if(!observer->OnAudioData(application_id, stream_id, timestamp, frame_type, data))
         {
-            logte("Rtmp audio data fail - app(%u) stream(%u) client(%s)",
+            logte("Rtmp input stream audio data fail - id(%u/%u) remote(%s)",
                     application_id,
                     stream_id,
                     remote->ToString().CStr());
@@ -350,20 +356,20 @@ bool RtmpServer::OnDeleteStream(ov::ClientSocket *remote,
     {
         if(!observer->OnDeleteStream(application_id, stream_id))
         {
-            logte("Rtmp input stream delete fail - app(%s/%u) stream(%s/%u) remote(%s)",
+            logte("Rtmp input stream delete fail - stream(%s/%s) id(%u/%u) remote(%s)",
                     app_name.CStr(),
-                    application_id,
                     stream_name.CStr(),
+                    application_id,
                     stream_id,
                     remote->ToString().CStr());
             return false;
         }
     }
 
-    logtd("Rtmp input stream delete - app(%s/%u) stream(%s/%u) remote(%s)",
+    logtd("Rtmp input stream delete - stream(%s/%s) id(%u/%u) remote(%s)",
             app_name.CStr(),
-            application_id,
             stream_name.CStr(),
+            application_id,
             stream_id,
             remote->ToString().CStr());
 
@@ -388,16 +394,6 @@ void RtmpServer::OnGarbageCheck()
         // 10초 Stream Packet 체크
         if(current_time - chunk_stream->GetLastPacketTime() > MAX_STREAM_PACKET_GAP)
         {
-
-            logtd("RtmpServer garbage check - stream time over remove - app(%s/%u) stream(%s/%u) gap(%d/%d) remote(%s)",
-                               item->second->GetAppName().CStr(),
-                    item->second->GetAppId(),
-                    item->second->GetStreamName().CStr(),
-                    item->second->GetStreamId(),
-                    current_time - chunk_stream->GetLastPacketTime(),
-                    MAX_STREAM_PACKET_GAP,
-                    item->first->ToString().CStr());
-
             // Stream Close
             if(item->second->GetAppId() != 0 && item->second->GetStreamId() != 0)
             {
@@ -411,7 +407,14 @@ void RtmpServer::OnGarbageCheck()
             // Socket Close
 	        _physical_port->DisconnectClient(dynamic_cast<ov::ClientSocket *>(item->first));
 
-            // Strema Close
+            logtw("Rtmp input stream  timeout remove - stream(%s/%s) id(%u/%u) time(%d/%d)",
+                  item->second->GetAppName().CStr(),
+                  item->second->GetStreamName().CStr(),
+                  item->second->GetAppId(),
+                  item->second->GetStreamId(),
+                  current_time - chunk_stream->GetLastPacketTime(),
+                  MAX_STREAM_PACKET_GAP);
+
             _chunk_stream_list.erase(item++);
         }
         else
