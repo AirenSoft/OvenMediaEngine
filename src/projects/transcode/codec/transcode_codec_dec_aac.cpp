@@ -12,9 +12,7 @@
 
 std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResult *result)
 {
-	///////////////////////////////////////////////////
-	// 디코딩 가능한 프레임이 존재하는지 확인한다.
-	///////////////////////////////////////////////////
+    // Check the decoded frame is available
 	int ret = avcodec_receive_frame(_context, _frame);
 
 	if(ret == AVERROR(EAGAIN))
@@ -112,7 +110,7 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 
 		av_frame_unref(_frame);
 
-		// Notify가 필요한 경우에 1을 반환, 아닌 경우에는 일반적인 경우로 0을 반환
+		// Return 1, if notification is required
 		*result = need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady;
 		return std::move(output_frame);
 	}
@@ -124,7 +122,11 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 
 	while(_input_buffer.empty() == false)
 	{
-		const MediaPacket *cur_pkt = _input_buffer[0].get();
+		auto packet = std::move(_input_buffer[0]);
+        _input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
+
+        const MediaPacket *cur_pkt = packet.get();
+
 		std::shared_ptr<const ov::Data> cur_data = nullptr;
 
 		if(cur_pkt != nullptr)
@@ -134,7 +136,6 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 
 		if((cur_data == nullptr) || (cur_data->GetLength() == 0))
 		{
-			_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
 			continue;
 		}
 
@@ -165,8 +166,7 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 
 			if(ret == AVERROR(EAGAIN))
 			{
-				// 더이상 디코딩할 데이터가 없다면 빠짐
-				// printf("Error sending a packet for decoding : AVERROR(EAGAIN)\n");
+                // Need more data
 			}
 			else if(ret == AVERROR_EOF)
 			{
@@ -175,6 +175,8 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 			else if(ret == AVERROR(EINVAL))
 			{
 				logte("Error sending a packet for decoding : AVERROR(EINVAL)");
+                *result = TranscodeResult::DataError;
+                return nullptr;
 			}
 			else if(ret == AVERROR(ENOMEM))
 			{
@@ -183,10 +185,11 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 			else if(ret < 0)
 			{
 				logte("Error sending a packet for decoding : ERROR(Unknown %d)", ret);
+                *result = TranscodeResult::DataError;
+                return nullptr;
 			}
 		}
 
-		// send_packet 이 완료된 이후에 데이터를 삭제해야함.
 		if(parsed_size > 0)
 		{
 			OV_ASSERT(cur_data->GetLength() >= (unsigned int)parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", cur_data->GetLength(), parsed_size);
@@ -195,9 +198,6 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 
 			if(cur_data->GetLength() <= (unsigned int)parsed_size)
 			{
-				// pop the first item
-				_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
-
 				offset = 0;
 			}
 		}
