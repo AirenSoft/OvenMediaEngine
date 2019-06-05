@@ -58,8 +58,7 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 		decoded_frame->SetWidth(_frame->width);
 		decoded_frame->SetHeight(_frame->height);
 		decoded_frame->SetFormat(_frame->format);
-        decoded_frame->SetPts(_parser->pts - (33 * 2));
-		//decoded_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1 : _frame->pts);
+		decoded_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1LL : _frame->pts);
 
 		decoded_frame->SetStride(_frame->linesize[0], 0);
 		decoded_frame->SetStride(_frame->linesize[1], 1);
@@ -112,7 +111,7 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 		int64_t remained = packet_data->GetLength();
 		off_t offset = 0LL;
 		int64_t pts = buffer->GetPts();
-        int64_t cts  = buffer->GetCts();
+		int64_t cts = buffer->GetCts();
 		auto data = packet_data->GetDataAs<uint8_t>();
 
 		static int64_t first_pts = -1;
@@ -122,14 +121,12 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 			first_pts = pts;
 		}
 
-        // logtd("decode frame - pts(%lld) cts(%lld)", buffer->GetPts(), buffer->GetCts());
-
 		while(remained > 0)
 		{
 			av_init_packet(_pkt);
 
 			int parsed_size = av_parser_parse2(_parser, _context, &_pkt->data, &_pkt->size,
-			                                   data + offset, static_cast<int>(remained), pts, pts, 0);
+			                                   data + offset, static_cast<int>(remained), pts + cts, pts, 0);
 
 			if(parsed_size < 0)
 			{
@@ -141,6 +138,8 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 			if(_pkt->size > 0)
 			{
 				_pkt->pts = _parser->pts;
+				_pkt->dts = _parser->dts;
+
 				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
 
 				ret = avcodec_send_packet(_context, _pkt);
