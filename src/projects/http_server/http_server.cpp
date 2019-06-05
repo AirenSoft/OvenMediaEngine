@@ -106,7 +106,7 @@ std::shared_ptr<HttpClient> HttpServer::FindClient(const std::shared_ptr<ov::Soc
 
 void HttpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
-	logti("Client(%s) is connected on %s", remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
+	logti("Client(%s) is connected on %s", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 
 	std::lock_guard<std::mutex> guard(_client_list_mutex);
 

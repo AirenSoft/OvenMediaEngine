@@ -71,7 +71,7 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 
 		auto proc = [&, socket]() -> void
 		{
-			auto client_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state) -> bool
+			auto client_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error) -> bool
 			{
 				switch(state)
 				{
@@ -97,8 +97,16 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 						break;
 					}
 
-					default:
+					case ov::SocketConnectionState::Error:
+					{
+						logtd("Client is disconnected with error: %s (%s)", client->ToString().CStr(), (error != nullptr) ? error->ToString().CStr() : "N/A");
+
+						// observer들에게 알림
+						auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), PhysicalPortDisconnectReason::Error, error);
+						for_each(_observer_list.begin(), _observer_list.end(), func);
+
 						break;
+					}
 				}
 
 				// 명시적으로 close하기 전 까지 계속 사용해야 하므로 false 반환

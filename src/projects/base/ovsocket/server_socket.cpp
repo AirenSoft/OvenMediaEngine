@@ -87,7 +87,7 @@ namespace ov
 
 				if(client_socket != nullptr && (OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP)))
 				{
-					connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected);
+					connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected, nullptr);
 				}
 
 				// client map에서 삭제
@@ -99,7 +99,7 @@ namespace ov
 				{
 					logtd("[%p] [#%d] Client #%d is disconnected - events(%s)", this, _socket.GetSocket(), client_socket->GetSocket().GetSocket(), StringFromEpollEvent(event).CStr());
 
-					connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected);
+					connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected, nullptr);
 				}
 				else
 				{
@@ -126,7 +126,7 @@ namespace ov
 						logtd("[%p] [#%d] Client #%d is connected - events(%s)", this, _socket.GetSocket(), client->GetSocket().GetSocket(), StringFromEpollEvent(event).CStr());
 
 						// 정상적으로 accept 되었다면 callback
-						need_to_delete = connection_callback(client, SocketConnectionState::Connected);
+						need_to_delete = connection_callback(client, SocketConnectionState::Connected, nullptr);
 
 						// callback의 반환 값이 true면(need_to_delete = true), 아래에서 client 없앰
 
@@ -162,7 +162,7 @@ namespace ov
 					if(client_socket->GetState() == SocketState::Error)
 					{
 						logtd("[%p] [#%d] An error occurred on client %s", this, _socket.GetSocket(), client_socket->ToString().CStr());
-						connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Error);
+						connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Error, error);
 						need_to_delete = true;
 						break;
 					}
@@ -170,7 +170,7 @@ namespace ov
 					if(error != nullptr)
 					{
 						logtd("[%p] [#%d] Client %s is disconnected", this, _socket.GetSocket(), client_socket->ToString().CStr());
-						connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected);
+						connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected, nullptr);
 						need_to_delete = true;
 						break;
 					}

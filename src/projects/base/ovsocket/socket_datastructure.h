@@ -37,7 +37,7 @@ namespace ov
 	class ServerSocket;
 	class ClientSocket;
 
-	typedef std::function<bool(const std::shared_ptr<ov::ClientSocket> &client, SocketConnectionState state)> ClientConnectionCallback;
+	typedef std::function<bool(const std::shared_ptr<ov::ClientSocket> &client, SocketConnectionState state, const std::shared_ptr<ov::Error> &error)> ClientConnectionCallback;
 	typedef std::function<bool(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<Data> &data)> ClientDataCallback;
 
 	// for UDP socket

@@ -911,7 +911,7 @@ namespace ov
 	{
 		// TODO: 별도 send queue를 만들어야 함
 		//OV_ASSERT2(_socket.IsValid());
-        is_retry = false;
+		is_retry = false;
 
 		logtd("[%p] [#%d] Trying to send data %zu bytes...", this, _socket.GetSocket(), length);
 		logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, length, 64).CStr());
@@ -919,7 +919,7 @@ namespace ov
 		auto data_to_send = static_cast<const uint8_t *>(data);
 		size_t remained = length;
 		size_t total_sent = 0L;
-        int retry_count = 0;
+		int retry_count = 0;
 
 		switch(GetType())
 		{
@@ -941,7 +941,7 @@ namespace ov
 
 							timeval tv {};
 							tv.tv_sec = 0;
-                            tv.tv_usec = 200000;
+							tv.tv_usec = 200000;
 
 							int select_result = select(sock + 1, nullptr, &write_fds, nullptr, &tv);
 
@@ -952,12 +952,12 @@ namespace ov
 							else if(select_result == 0)
 							{
 								// timed out
-                                retry_count++;
-                                if(retry_count > 5)
-                                {
-                                    is_retry = true;
-                                    break;
-                                }
+								retry_count++;
+								if(retry_count > 5)
+								{
+									is_retry = true;
+									break;
+								}
 							}
 							else
 							{
@@ -1043,13 +1043,13 @@ namespace ov
 		return Send(data, length, is_retry);
 	}
 
-    ssize_t Socket::Send(const std::shared_ptr<const Data> &data)
-    {
-        OV_ASSERT2(data != nullptr);
+	ssize_t Socket::Send(const std::shared_ptr<const Data> &data)
+	{
+		OV_ASSERT2(data != nullptr);
 
-        bool is_retry = false;
-        return Send(data->GetData(), data->GetLength(), is_retry);
-    }
+		bool is_retry = false;
+		return Send(data->GetData(), data->GetLength(), is_retry);
+	}
 
 	ssize_t Socket::SendTo(const ov::SocketAddress &address, const void *data, size_t length)
 	{
@@ -1152,6 +1152,8 @@ namespace ov
 		}
 		else if(read_bytes < 0L)
 		{
+			auto socket_error = Error::CreateErrorFromErrno();
+
 			logtd("[%p] [#%d] recv() returns: %zd", this, _socket.GetSocket(), read_bytes);
 
 			switch(GetType())
@@ -1159,11 +1161,9 @@ namespace ov
 				case SocketType::Udp:
 				case SocketType::Tcp:
 				{
-					auto error = Error::CreateErrorFromErrno();
-
 					data->SetLength(0L);
 
-					switch(error->GetCode())
+					switch(socket_error->GetCode())
 					{
 						case EAGAIN:
 							// 클라이언트가 보낸 데이터를 끝까지 다 읽었음. 다음 데이터가 올 때까지 대기해야 함
@@ -1174,14 +1174,14 @@ namespace ov
 							// Connection reset by peer
 							logtw("[%p] [#%d] Connection reset by peer", this, _socket.GetSocket());
 							SetState(SocketState::Error);
-							return error;
+							return socket_error;
 
 						default:
-							logte("[%p] [#%d] An error occurred while read data: %s", this, _socket.GetSocket(), error->ToString().CStr());
+							logte("[%p] [#%d] An error occurred while read data: %s", this, _socket.GetSocket(), socket_error->ToString().CStr());
 							SetState(SocketState::Error);
 
 							logte("\n%s", ov::StackTrace::GetStackTrace().CStr());
-							return error;
+							return socket_error;
 					}
 
 					break;
