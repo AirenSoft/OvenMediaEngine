@@ -114,7 +114,11 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeRes
 	///////////////////////////////////////////////////
 	while(_input_buffer.size() > 0)
 	{
-		const MediaFrame *frame = _input_buffer[0].get();
+		auto frame_buffer = std::move(_input_buffer[0]);
+		_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
+
+		const MediaFrame *frame = frame_buffer.get();
+		OV_ASSERT2(frame != nullptr);
 
 		_frame->format = frame->GetFormat();
 		_frame->width = frame->GetWidth();
@@ -153,8 +157,6 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeRes
 		}
 
 		av_frame_unref(_frame);
-
-		_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
 	}
 
 	*result = TranscodeResult::NoData;

@@ -82,13 +82,16 @@ bool MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_trac
 		return false;
 	}
 
+    AVRational ifr = av_d2q((double)input_media_track->GetFrameRate(), INT_MAX);
+
 	// 입력 트랙의 정보를 설정함
 	ov::String input_formats = ov::String::FormatString(
-		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
+		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d:frame_rate=%d/%d:sws_param=flags=bicubic",
 		input_media_track->GetWidth(), input_media_track->GetHeight(),
 		AV_PIX_FMT_YUV420P,
 		input_media_track->GetTimeBase().GetNum(), input_media_track->GetTimeBase().GetDen(),
-		1, 1
+		1, 1,
+        ifr.num, ifr.den
 	);
 
 	ret = avfilter_graph_create_filter(&_buffersrc_ctx, buffersrc, "in", input_formats.CStr(), nullptr, _filter_graph);
@@ -100,9 +103,9 @@ bool MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_trac
 
 	// TODO: Timebase의 값을 설정이 가능하도록 할지, 기본값으로 고정할지 정해야함.
 	ov::String output_filter_descr = ov::String::FormatString(
-		"fps=fps=%.2f:round=near,scale=%dx%d:flags=bicubic,settb=expr=%f",
-		context->GetFrameRate(),
-		context->GetVideoWidth(), context->GetVideoHeight(),
+		"scale=%dx%d:flags=bicubic,settb=expr=%f",
+		context->GetVideoWidth(),
+        context->GetVideoHeight(),
 		context->GetTimeBase().GetExpr()
 	);
 

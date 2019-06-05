@@ -48,13 +48,13 @@
 							</Video>
 						</Encode>
 						<Encode>
+							<Name>H264</Name>
 							<Audio>
 								<Codec>aac</Codec>
 								<Bitrate>128000</Bitrate>
 								<Samplerate>48000</Samplerate>
 								<Channel>2</Channel>
 							</Audio>
-							<Name>H264</Name>
 							<Video>
 								<Codec>h264</Codec>
 								<Width>640</Width>
