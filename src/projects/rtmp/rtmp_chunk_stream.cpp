@@ -1298,13 +1298,13 @@ bool RtmpChunkStream::VideoSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 	uint8_t avc_level;
 
 	// Parsing
-	if(!BitstreamToAnnexB::SequenceHeaderParsing(data->data(),
-	                                             data->size(),
-	                                             sps,
-	                                             pps,
-	                                             avc_profile,
-	                                             avc_profile_compatibility,
-	                                             avc_level))
+	if(!BitstreamToAnnexB::ParseSequenceHeader(data->data(),
+	                                           data->size(),
+	                                           sps,
+	                                           pps,
+	                                           avc_profile,
+	                                           avc_profile_compatibility,
+	                                           avc_level))
 	{
 		logte("Sequence header parsing fail - stream(%s/%s) size(%d)\n%s",
 		      _app_name.CStr(),
