@@ -44,14 +44,20 @@ public :
 
     virtual bool SetSegmentData(ov::String file_name,
                                 uint64_t duration,
-                                uint64_t timestamp_,
+                                uint64_t timestamp,
                                 const std::shared_ptr<std::vector<uint8_t>> &data) override;
 
     bool VideoSegmentWrite(uint64_t max_timestamp);
 
-    bool AudioSegmentWrite(uint64_t max_timestamp, bool is_audio_timestamp);
+    bool AudioSegmentWrite(uint64_t max_timestamp);
 
 protected :
+
+    bool GetSegmentPlayInfos(ov::String & video_urls,
+                            ov::String &audio_urls,
+                            double &time_shift_buffer_depth,
+                            double &minimumUpdatePeriod);
+
     bool UpdatePlayList();
 
 private :
@@ -60,7 +66,6 @@ private :
     std::string _mpd_pixel_aspect_ratio;
     double _mpd_suggested_presentation_delay;
     double _mpd_min_buffer_time;
-    double _mpd_update_time;
 
     std::shared_ptr<SegmentData> _mpd_video_init_file = nullptr;
     std::shared_ptr<SegmentData> _mpd_audio_init_file = nullptr;

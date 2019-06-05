@@ -49,9 +49,8 @@ DashPacketyzer::DashPacketyzer(const ov::String &app_name,
         _mpd_pixel_aspect_ratio = pixel_aspect_ratio.str();
     }
 
-    _mpd_suggested_presentation_delay = (_segment_count / 2 * _segment_duration);
-    _mpd_min_buffer_time = (_segment_duration*1.2);
-    _mpd_update_time = GetCurrentMilliseconds();
+    _mpd_suggested_presentation_delay = _segment_duration;//(_segment_count / 2 * _segment_duration);
+    _mpd_min_buffer_time = 6; //_segment_duration; // (double)_segment_duration/2*1.2;
 
     _last_video_append_time = time(nullptr);
     _last_audio_append_time = time(nullptr);
@@ -247,17 +246,23 @@ bool DashPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
         if (frame_data->timestamp - _video_frame_datas[0]->timestamp >=
                 (_segment_duration * _media_info.video_timescale))
         {
+
             VideoSegmentWrite(frame_data->timestamp);
 
             if (!_audio_frame_datas.empty())
             {
                 AudioSegmentWrite(ConvertTimeScale(frame_data->timestamp,
                                                     _media_info.video_timescale,
-                                                    _media_info.audio_timescale), false);
+                                                    _media_info.audio_timescale));
             }
 
             UpdatePlayList();
         }
+    }
+
+    if (_start_time.empty())
+    {
+        _start_time = MakeUtcTimeString(time(nullptr));
     }
 
     _video_frame_datas.push_back(frame_data);
@@ -277,6 +282,14 @@ bool DashPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &fram
         return false;
     }
 
+    if (_start_time.empty())
+    {
+        _start_time = MakeUtcTimeString(time(nullptr));
+    }
+
+    _audio_frame_datas.push_back(frame_data);
+    _last_audio_append_time = time(nullptr);
+
     // audio only or video input error
     if ((time(nullptr) - _last_video_append_time >=
             static_cast<uint32_t>(_segment_duration)) && !_audio_frame_datas.empty())
@@ -284,14 +297,12 @@ bool DashPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &fram
         if ((frame_data->timestamp - _audio_frame_datas[0]->timestamp) >=
                 (_segment_duration * _media_info.audio_timescale))
         {
-            AudioSegmentWrite(frame_data->timestamp, true);
+            AudioSegmentWrite(frame_data->timestamp);
 
             UpdatePlayList();
         }
     }
 
-    _audio_frame_datas.push_back(frame_data);
-    _last_audio_append_time = time(nullptr);
 
     return true;
 }
@@ -312,7 +323,7 @@ bool DashPacketyzer::VideoSegmentWrite(uint64_t max_timestamp)
         if (start_timestamp == 0)
             start_timestamp = frame_data->timestamp;
 
-        if (frame_data->timestamp >= max_timestamp)
+       if (frame_data->timestamp >= max_timestamp)
             break;
 
         _video_frame_datas.pop_front();
@@ -320,10 +331,8 @@ bool DashPacketyzer::VideoSegmentWrite(uint64_t max_timestamp)
         uint64_t duration = _video_frame_datas.empty() ? (max_timestamp - frame_data->timestamp) :
                             (_video_frame_datas.front()->timestamp - frame_data->timestamp);
 
-        int offset = (frame_data->type == PacketyzerFrameType::VideoIFrame) ?
-                                        _avc_nal_header_size : AVC_NAL_START_PATTERN_SIZE;
-
-        frame_data->data = frame_data->data->Subdata(offset);
+        frame_data->data = frame_data->data->Subdata((frame_data->type == PacketyzerFrameType::VideoIFrame) ?
+                                                    _avc_nal_header_size : AVC_NAL_START_PATTERN_SIZE);
 
         auto sample_data = std::make_shared<FragmentSampleData>(duration,
                                                                 frame_data->type == PacketyzerFrameType::VideoIFrame
@@ -335,8 +344,7 @@ bool DashPacketyzer::VideoSegmentWrite(uint64_t max_timestamp)
     }
     _video_frame_datas.clear();
 
-
-    // Fragment 쓰기
+    // Fragment write
     auto fragment_writer = std::make_unique<M4sFragmentWriter>(M4sMediaType::VideoMediaType,
                                                                 4096,
                                                                 _video_sequence_number,
@@ -346,13 +354,11 @@ bool DashPacketyzer::VideoSegmentWrite(uint64_t max_timestamp)
 
     fragment_writer->CreateData();
 
-    std::ostringstream file_name_stream;
-    file_name_stream << _segment_prefix.CStr() << "_" << start_timestamp << MPD_VIDEO_SUFFIX;
-
-    ov::String file_name = file_name_stream.str().c_str();
-
-    // m4s 데이터 저장
-    SetSegmentData(file_name, max_timestamp - start_timestamp, start_timestamp, fragment_writer->GetDataStream());
+    // m4s data save
+    SetSegmentData(ov::String::FormatString("%s_%lld%s", _segment_prefix.CStr(), start_timestamp, MPD_VIDEO_SUFFIX),
+                max_timestamp - start_timestamp,
+                start_timestamp,
+                fragment_writer->GetDataStream());
 
     return true;
 }
@@ -361,32 +367,35 @@ bool DashPacketyzer::VideoSegmentWrite(uint64_t max_timestamp)
 // Audio Segment Write
 // - 비디오 Segment 생성이후 생성 or Audio Only 에서 생성
 //====================================================================================================
-bool DashPacketyzer::AudioSegmentWrite(uint64_t max_timestamp, bool is_audio_timestamp)
+#define AAC_SAMPLES_PER_FRAME (1024)
+bool DashPacketyzer::AudioSegmentWrite(uint64_t max_timestamp)
 {
     uint64_t start_timestamp = 0;
     uint64_t end_timestamp = 0;
     std::vector<std::shared_ptr<FragmentSampleData>> sample_datas;
 
-    while (!_audio_frame_datas.empty())
+    //  size > 1  for duration calculation
+    while (_audio_frame_datas.size() > 1)
     {
         auto frame_data = _audio_frame_datas.front();
 
         if (start_timestamp == 0)
             start_timestamp = frame_data->timestamp;
 
-        if ((!is_audio_timestamp && _audio_frame_datas.size() <= 1) || (frame_data->timestamp >= max_timestamp))
+        if (((frame_data->timestamp + AAC_SAMPLES_PER_FRAME) > max_timestamp))
             break;
 
         _audio_frame_datas.pop_front();
 
-        uint64_t duration = _audio_frame_datas.empty() ? (max_timestamp - frame_data->timestamp) :
-                            (_audio_frame_datas.front()->timestamp - frame_data->timestamp);
-
-        end_timestamp = _audio_frame_datas.empty() ? max_timestamp : _audio_frame_datas.front()->timestamp;
-
         frame_data->data = frame_data->data->Subdata(ADTS_HEADER_SIZE);
 
-        auto sample_data = std::make_shared<FragmentSampleData>(duration, 0, 0, frame_data->data);
+        auto sample_data = std::make_shared<FragmentSampleData>(
+                _audio_frame_datas.front()->timestamp - frame_data->timestamp,
+                0,
+                0,
+                frame_data->data);
+
+        end_timestamp = _audio_frame_datas.front()->timestamp;
 
         sample_datas.push_back(sample_data);
     }
@@ -401,13 +410,82 @@ bool DashPacketyzer::AudioSegmentWrite(uint64_t max_timestamp, bool is_audio_tim
 
     fragment_writer->CreateData();
 
-    std::ostringstream file_name_stream;
-    file_name_stream << _segment_prefix.CStr() << "_" << start_timestamp << MPD_AUDIO_SUFFIX;
-
-    ov::String file_name = file_name_stream.str().c_str();
-
     // m4s save
-    SetSegmentData(file_name, end_timestamp - start_timestamp, start_timestamp, fragment_writer->GetDataStream());
+    SetSegmentData(ov::String::FormatString("%s_%lld%s", _segment_prefix.CStr(), start_timestamp, MPD_AUDIO_SUFFIX),
+                    end_timestamp - start_timestamp,
+                    start_timestamp,
+                    fragment_writer->GetDataStream());
+
+    return true;
+}
+
+//====================================================================================================
+// GetSegmentPlayInfos
+// - video/audio mpd timeline
+//====================================================================================================
+bool DashPacketyzer::GetSegmentPlayInfos(ov::String &video_urls,
+                                        ov::String &audio_urls,
+                                        double &time_shift_buffer_depth,
+                                        double &minimumUpdatePeriod)
+{
+    std::ostringstream video_urls_stream;
+    std::ostringstream audio_urls_stream;
+    uint64_t video_total_duration = 0;
+    uint64_t video_last_duration = 0;
+    uint64_t audio_total_duration = 0;
+    uint64_t audio_last_duration = 0;
+    std::vector<std::shared_ptr<SegmentData>> video_segment_datas;
+    std::vector<std::shared_ptr<SegmentData>> audio_segment_datas;
+
+    Packetyzer::GetVideoPlaySegments(video_segment_datas);
+    Packetyzer::GetAudioPlaySegments(audio_segment_datas);
+
+    for(uint32_t index = 0; index < video_segment_datas.size(); index++)
+    {
+        // Timeline Setting
+        if(index == 0)
+            video_urls_stream  << "\t\t\t\t" << "<S t=\"" << video_segment_datas[index]->timestamp
+                        << "\" d=\"" << video_segment_datas[index]->duration
+                        << "\"/>\n";
+        else
+            video_urls_stream << "\t\t\t\t" << "<S d=\"" << video_segment_datas[index]->duration << "\"/>\n";
+
+        // total duration
+        video_total_duration += video_segment_datas[index]->duration;
+
+        video_last_duration = video_segment_datas[index]->duration;
+    }
+
+    video_urls = video_urls_stream.str().c_str();
+
+    for(uint32_t index = 0; index < audio_segment_datas.size(); index++)
+    {
+        // Timeline Setting
+        if(index == 0)
+            audio_urls_stream << "\t\t\t\t<S t=\"" << audio_segment_datas[index]->timestamp
+                       << "\" d=\"" << audio_segment_datas[index]->duration
+                       << "\"/>\n";
+        else
+            audio_urls_stream << "\t\t\t\t<S d=\"" << audio_segment_datas[index]->duration << "\"/>\n";
+
+        // total duration
+        audio_total_duration += audio_segment_datas[index]->duration;
+
+        audio_last_duration = audio_segment_datas[index]->duration;
+    }
+
+    audio_urls = audio_urls_stream.str().c_str();
+
+    if(!video_urls.IsEmpty() && _media_info.video_timescale != 0)
+    {
+        time_shift_buffer_depth = video_total_duration / (double)_media_info.video_timescale;
+        minimumUpdatePeriod = video_last_duration / (double)_media_info.video_timescale;
+    }
+    else if(!audio_urls.IsEmpty() && _media_info.audio_timescale != 0)
+    {
+        time_shift_buffer_depth = audio_total_duration / (double)_media_info.audio_timescale;
+        minimumUpdatePeriod = audio_last_duration / (double)_media_info.audio_timescale;
+    }
 
     return true;
 }
@@ -419,61 +497,12 @@ bool DashPacketyzer::AudioSegmentWrite(uint64_t max_timestamp, bool is_audio_tim
 bool DashPacketyzer::UpdatePlayList()
 {
     std::ostringstream play_list_stream;
-    std::ostringstream video_urls;
-    std::ostringstream audio_urls;
-    uint64_t video_total_duration = 0;
-    uint64_t audio_total_duration = 0;
-
-    std::vector<std::shared_ptr<SegmentData>> video_segment_datas;
-    Packetyzer::GetVideoPlaySegments(video_segment_datas);
-
-    for(uint32_t index = 0; index < video_segment_datas.size(); index++)
-    {
-        // Timeline Setting
-        if(index == 0)
-            video_urls  << "\t\t\t\t" << "<S t=\"" << video_segment_datas[index]->timestamp
-                        << "\" d=\"" << video_segment_datas[index]->duration
-                        << "\"/>\n";
-        else
-            video_urls << "\t\t\t\t" << "<S d=\"" << video_segment_datas[index]->duration << "\"/>\n";
-
-        // total duration
-        video_total_duration += video_segment_datas[index]->duration;
-    }
-
-    std::vector<std::shared_ptr<SegmentData>> audio_segment_datas;
-    Packetyzer::GetAudioPlaySegments(audio_segment_datas);
-    for(uint32_t index = 0; index < audio_segment_datas.size(); index++)
-    {
-        // Timeline Setting
-        if(index == 0)
-            audio_urls << "\t\t\t\t<S t=\"" << audio_segment_datas[index]->timestamp
-                       << "\" d=\"" << audio_segment_datas[index]->duration
-                       << "\"/>\n";
-        else
-            audio_urls << "\t\t\t\t<S d=\"" << audio_segment_datas[index]->duration << "\"/>\n";
-
-        // total duration
-        audio_total_duration += audio_segment_datas[index]->duration;
-    }
-
-    if (_start_time.empty())
-    {
-        _start_time = MakeUtcTimeString(time(nullptr));
-    }
-
+    ov::String video_urls;
+    ov::String audio_urls;
     double time_shift_buffer_depth = 0;
+    double minimumUpdatePeriod = 0;
 
-    if(video_urls.str().empty() && _media_info.audio_timescale != 0)
-    {
-        time_shift_buffer_depth = audio_total_duration / (double)_media_info.audio_timescale;
-    }
-    else if(_media_info.video_timescale != 0)
-    {
-        time_shift_buffer_depth = video_total_duration / (double)_media_info.video_timescale;
-    }
-
-    double current_milliseconds = GetCurrentMilliseconds();
+    GetSegmentPlayInfos(video_urls, audio_urls, time_shift_buffer_depth, minimumUpdatePeriod);
 
     play_list_stream << std::fixed << std::setprecision(3)
             << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
@@ -483,7 +512,7 @@ bool DashPacketyzer::UpdatePlayList()
             << "    xsi:schemaLocation=\"urn:mpeg:DASH:schema:MPD:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd\"\n"
             << "    profiles=\"urn:mpeg:dash:profile:isoff-live:2011\"\n"
             << "    type=\"dynamic\"\n"
-            << "    minimumUpdatePeriod=\"PT"  << (current_milliseconds - _mpd_update_time)/1000 << "S\"\n"
+            << "    minimumUpdatePeriod=\"PT" << minimumUpdatePeriod << "S\"\n"
             << "    publishTime=" << MakeUtcTimeString(time(nullptr)) << "\n"
             << "    availabilityStartTime=" << _start_time << "\n"
             << "    timeShiftBufferDepth=\"PT" << time_shift_buffer_depth << "S\"\n"
@@ -491,10 +520,8 @@ bool DashPacketyzer::UpdatePlayList()
             << "    minBufferTime=\"PT" << _mpd_min_buffer_time << "S\">\n"
             << "<Period id=\"0\" start=\"PT0S\">\n";
 
-    _mpd_update_time = current_milliseconds;
-
     // video listing
-    if (!video_urls.str().empty())
+    if (!video_urls.IsEmpty())
     {
         play_list_stream << "\t<AdaptationSet id=\"0\" group=\"1\" mimeType=\"video/mp4\" width=\"" << _media_info.video_width
             << "\" height=\"" << _media_info.video_height
@@ -504,7 +531,7 @@ bool DashPacketyzer::UpdatePlayList()
             << "\t\t<SegmentTemplate timescale=\"" << _media_info.video_timescale
             << "\" initialization=\"" << MPD_VIDEO_INIT_FILE_NAME << "\" media=\"" << _segment_prefix.CStr() << "_$Time$" << MPD_VIDEO_SUFFIX << "\">\n"
             << "\t\t\t<SegmentTimeline>\n"
-            << video_urls.str()
+            << video_urls.CStr()
             << "\t\t\t</SegmentTimeline>\n"
             << "\t\t</SegmentTemplate>\n"
             << "\t\t<Representation codecs=\"avc1.42401f\" sar=\"1:1\" bandwidth=\"" << _media_info.video_bitrate
@@ -513,7 +540,7 @@ bool DashPacketyzer::UpdatePlayList()
     }
 
     // audio listing
-    if (!audio_urls.str().empty())
+    if (!audio_urls.IsEmpty())
     {
         play_list_stream << "\t<AdaptationSet id=\"1\" group=\"2\" mimeType=\"audio/mp4\" lang=\"und\" segmentAlignment=\"true\" startWithSAP=\"1\" subsegmentAlignment=\"true\" subsegmentStartsWithSAP=\"1\">\n"
             << "\t\t<AudioChannelConfiguration schemeIdUri=\"urn:mpeg:dash:23003:3:audio_channel_configuration:2011\" value=\""
@@ -521,7 +548,7 @@ bool DashPacketyzer::UpdatePlayList()
             << "\t\t<SegmentTemplate timescale=\"" << _media_info.audio_timescale
             << "\" initialization=\"" << MPD_AUDIO_INIT_FILE_NAME << "\" media=\"" << _segment_prefix.CStr() << "_$Time$" << MPD_AUDIO_SUFFIX << "\">\n"
             << "\t\t\t<SegmentTimeline>\n"
-            << audio_urls.str()
+            << audio_urls.CStr()
             << "\t\t\t</SegmentTimeline>\n"
             << "\t\t</SegmentTemplate>\n"
             << "\t\t<Representation codecs=\"mp4a.40.2\" audioSamplingRate=\"" << _media_info.audio_samplerate
@@ -536,10 +563,10 @@ bool DashPacketyzer::UpdatePlayList()
 
     if(_stream_type == PacketyzerStreamType::Common && _init_segment_count_complete)
     {
-        if(video_urls.str().empty())
+        if(video_urls.IsEmpty())
             logtw("Dash video segment problems - %s/%s", _app_name.CStr(), _stream_name.CStr());
 
-        if(audio_urls.str().empty())
+        if(audio_urls.IsEmpty())
             logtw("Dash audio segment problems - %s/%s", _app_name.CStr(), _stream_name.CStr());
     }
 
@@ -648,8 +675,11 @@ bool DashPacketyzer::SetSegmentData(ov::String file_name,
         // video segment mutex
         std::unique_lock<std::mutex> lock(_video_segment_guard);
 
-        _video_segment_datas[_current_video_index++] =
-                std::make_shared<SegmentData>(_sequence_number++, file_name, duration, timestamp, data);
+        _video_segment_datas[_current_video_index++] = std::make_shared<SegmentData>(_sequence_number++,
+                                                                                    file_name,
+                                                                                    duration,
+                                                                                    timestamp,
+                                                                                    data);
 
         if(_segment_save_count <= _current_video_index)
             _current_video_index = 0;
@@ -661,8 +691,11 @@ bool DashPacketyzer::SetSegmentData(ov::String file_name,
         // audio segment mutex
         std::unique_lock<std::mutex> lock(_audio_segment_guard);
 
-        _audio_segment_datas[_current_audio_index++] =
-                std::make_shared<SegmentData>(_sequence_number++, file_name, duration, timestamp, data);
+        _audio_segment_datas[_current_audio_index++] = std::make_shared<SegmentData>(_sequence_number++,
+                                                                                    file_name,
+                                                                                    duration,
+                                                                                    timestamp,
+                                                                                    data);
 
         if(_segment_save_count <= _current_audio_index)
             _current_audio_index = 0;
