@@ -143,12 +143,10 @@ bool HlsPacketyzer::SegmentWrite(uint64_t start_timestamp, uint64_t duration)
     if(_first_audio_time_stamp != 0 && _first_video_time_stamp != 0)
         logtd("hls segment video/audio timestamp gap(%lldms)",  (_first_video_time_stamp - _first_audio_time_stamp)/90);
 
-    std::ostringstream file_name_stream;
-    file_name_stream << _segment_prefix << "_" << _sequence_number << ".ts";
-
-    ov::String file_name = file_name_stream.str().c_str();
-
-    SetSegmentData(file_name, duration, start_timestamp, ts_writer->GetDataStream());
+    SetSegmentData(ov::String::FormatString("%s_%u.ts", _segment_prefix.CStr(), _sequence_number),
+                    duration,
+                    start_timestamp,
+                    ts_writer->GetDataStream());
 
     UpdatePlayList();
 
