@@ -17,7 +17,11 @@ std::shared_ptr<DashPublisher> DashPublisher::Create(std::map<int, std::shared_p
 {
 	auto publisher = std::make_shared<DashPublisher>(application_info, router);
 
-    publisher->Start(http_server_manager);
+    if (!publisher->Start(http_server_manager))
+    {
+        logte("An error occurred while creating DashPublisher");
+        return nullptr;
+    }
 
 	return publisher;
 }
@@ -74,7 +78,7 @@ bool DashPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
     stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
     // DASH Server Start
-    stream_server->Start(ov::SocketAddress(host->GetIp(), port.GetPort()),
+    bool result = stream_server->Start(ov::SocketAddress(host->GetIp(), port.GetPort()),
                          http_server_manager,
                          _application_info->GetName(),
                          publisher_info->GetThreadCount(),
@@ -85,6 +89,11 @@ bool DashPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
                          chain_certificate);
 
     _stream_server = stream_server;
+
+    if(!result)
+    {
+        return false;
+    }
 
     logtd("Dash Publisher Create - prot(%d) count(%d) duration(%d) thread(%d)",
           port.GetPort(),

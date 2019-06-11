@@ -25,7 +25,11 @@ std::shared_ptr<RtmpProvider>
 RtmpProvider::Create(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
 {
 	auto provider = std::make_shared<RtmpProvider>(application_info, router);
-	provider->Start();
+	if (!provider->Start())
+	{
+		logte("An error occurred while creating RtmpProvider");
+		return nullptr;
+	}
 	return provider;
 }
 
@@ -81,7 +85,10 @@ bool RtmpProvider::Start()
 
 	// RtmpServer 에 Observer 연결
 	_rtmp_server->AddObserver(RtmpObserver::GetSharedPtr());
-	_rtmp_server->Start(rtmp_address);
+	if (!_rtmp_server->Start(rtmp_address))
+	{
+		return false;
+	}
 
 	return Provider::Start();
 }

@@ -18,7 +18,11 @@
 std::shared_ptr<MediaRouter> MediaRouter::Create(const std::vector<info::Application> &app_info_list)
 {
 	auto media_router = std::make_shared<MediaRouter>(app_info_list);
-	media_router->Start();
+	if (!media_router->Start())
+	{
+		logte("An error occurred while creating MediaRouter");
+		return nullptr;
+	}
 	return media_router;
 }
 
@@ -90,8 +94,8 @@ bool MediaRouter::CreateApplications()
 
 		if(route_app == nullptr)
 		{
-			logte("failed to allocation");
-			continue;
+			logte("failed to allocation route_app");
+			return false;
 		}
 
 		// 라우터 어플리케이션 관리 항목에 추가

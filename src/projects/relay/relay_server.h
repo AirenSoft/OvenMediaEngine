@@ -29,6 +29,11 @@ public:
 	void Send(const std::shared_ptr<ov::Socket> &remote, info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data);
 	void SendMediaPacket(const std::shared_ptr<MediaRouteStream> &media_stream, const MediaPacket *packet);
 
+    bool CheckPortNull()
+    {
+        return (_server_port == nullptr);
+    }
+
 protected:
 	struct ClientInfo
 	{

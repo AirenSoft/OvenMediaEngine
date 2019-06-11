@@ -21,6 +21,14 @@
 #include <base/ovlibrary/stack_trace.h>
 #include <base/ovlibrary/log_write.h>
 
+
+#define CHECK_FAIL(x) \
+    if((x) == nullptr) \
+    { \
+        srt_cleanup(); \
+        return 1; \
+    }
+
 void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
 
 struct ParseOption
@@ -34,7 +42,7 @@ struct ParseOption
 
 bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 {
-	constexpr const char *opt_string = "hvt:c:s";
+	constexpr const char *opt_string = "hvt:c:d";
 
 	while(true)
 	{
@@ -59,7 +67,7 @@ bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 				parse_option->config_path = optarg;
 				break;
 
-			case 's':
+			case 'd':
 			    // Don't use this option manually
 				parse_option->start_service = true;
 				break;
@@ -80,7 +88,26 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	ov::StackTrace::InitializeStackTrace(OME_VERSION);
+    // Daemonize OME with start_service argument
+    if (parse_option.start_service)
+    {
+        pid_t pid = fork();
+
+        if (pid < 0)
+        {
+            return 1;
+        }
+
+        if (pid > 0)
+        {
+            sleep(1);
+            return 0; // success : parent terminate
+        }
+
+        setsid();
+    }
+
+    ov::StackTrace::InitializeStackTrace(OME_VERSION);
 
     ov::LogWrite::Initialize(parse_option.start_service);
 
@@ -142,10 +169,12 @@ int main(int argc, char *argv[])
 		if(app_info_list.empty() == false)
 		{
 			logti("Trying to create MediaRouter for host [%s]...", host_name.CStr());
-			router = MediaRouter::Create(app_info_list);
+            router = MediaRouter::Create(app_info_list);
+            CHECK_FAIL(router);
 
 			logti("Trying to create Transcoder for host [%s]...", host_name.CStr());
 			transcoder = Transcoder::Create(app_info_list, router);
+            CHECK_FAIL(transcoder);
 
 			for(const auto &application_info : app_info_list)
 			{
@@ -154,13 +183,17 @@ int main(int argc, char *argv[])
 				if(application_info.GetType() == cfg::ApplicationType::Live)
 				{
 					logti("Trying to create RTMP Provider for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-					providers.push_back(RtmpProvider::Create(&application_info, router));
+                    auto provider = RtmpProvider::Create(&application_info, router);
+                    CHECK_FAIL(provider);
+					providers.push_back(provider);
 				}
 
 				if(application_info.GetWebConsole().IsParsed())
 				{
 					logti("Trying to initialize WebConsole for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-					web_console_servers.push_back(WebConsoleServer::Create(&application_info));
+					auto console = WebConsoleServer::Create(&application_info);
+                    CHECK_FAIL(console);
+					web_console_servers.push_back(console);
 				}
 
 				auto publisher_list = application_info.GetPublishers().GetPublisherList();
@@ -175,23 +208,31 @@ int main(int argc, char *argv[])
 						switch(publisher->GetType())
 						{
 							case cfg::PublisherType::Webrtc:
+							{
 								logti("Trying to create WebRTC Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-								publishers.push_back(WebRtcPublisher::Create(&application_info, router, application));
+								auto webrtc = WebRtcPublisher::Create(&application_info, router, application);
+                                CHECK_FAIL(webrtc);
+								publishers.push_back(webrtc);
 								break;
+							}
 
 							case cfg::PublisherType::Dash:
+							{
 								logti("Trying to create DASH Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-								publishers.push_back(DashPublisher::Create(segment_http_server_manager,
-								                                           &application_info,
-								                                           router));
+								auto dash = DashPublisher::Create(segment_http_server_manager, &application_info, router);
+                                CHECK_FAIL(dash);
+								publishers.push_back(dash);
 								break;
+							}
 
 							case cfg::PublisherType::Hls:
+							{
 								logti("Trying to create HLS Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-								publishers.push_back(HlsPublisher::Create(segment_http_server_manager,
-								                                          &application_info,
-								                                          router));
+								auto hls = HlsPublisher::Create(segment_http_server_manager, &application_info, router);
+                                CHECK_FAIL(hls);
+								publishers.push_back(hls);
 								break;
+							}
 
 							case cfg::PublisherType::Rtmp:
 							default:

@@ -43,6 +43,7 @@ std::shared_ptr<WebConsoleServer> WebConsoleServer::Create(const info::Applicati
 		logte("Could not initialize WebConsole");
 	}
 
+	logte("An error occurred while creating WebConsoleServer");
 	return nullptr;
 }
 

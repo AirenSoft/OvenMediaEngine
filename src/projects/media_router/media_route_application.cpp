@@ -18,7 +18,10 @@ using namespace common;
 std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info::Application *application_info)
 {
 	auto media_route_application = std::make_shared<MediaRouteApplication>(application_info);
-	media_route_application->Start();
+	if (!media_route_application->Start())
+	{
+		return nullptr;
+	}
 	return media_route_application;
 }
 
@@ -35,22 +38,15 @@ MediaRouteApplication::~MediaRouteApplication()
 
 bool MediaRouteApplication::Start()
 {
-	try
-	{
-		_kill_flag = false;
-		_thread = std::thread(&MediaRouteApplication::MainTask, this);
-	}
-	catch(const std::system_error &e)
-	{
-		_kill_flag = true;
-		logte("Failed to start media route application thread.");
-		return false;
-	}
-
 	switch(_application_info->GetType())
 	{
 		case cfg::ApplicationType::Live:
 			_relay_server = std::make_shared<RelayServer>(this, _application_info);
+
+            if (_relay_server->CheckPortNull())
+            {
+                return false;
+            }
 
 			RegisterObserverApp(_relay_server);
 
@@ -78,6 +74,18 @@ bool MediaRouteApplication::Start()
 		case cfg::ApplicationType::Unknown:
 			break;
 	}
+
+    try
+    {
+        _kill_flag = false;
+        _thread = std::thread(&MediaRouteApplication::MainTask, this);
+    }
+    catch(const std::system_error &e)
+    {
+        _kill_flag = true;
+        logte("Failed to start media route application thread.");
+        return false;
+    }
 
 	logtd("started media route application thread. application(%s)", _application_info->GetName().CStr());
 	return true;

@@ -20,9 +20,11 @@
 std::shared_ptr<Transcoder> Transcoder::Create(const std::vector<info::Application> &application_list, std::shared_ptr<MediaRouteInterface> router)
 {
 	auto transcoder = std::make_shared<Transcoder>(application_list, router);
-
-	transcoder->Start();
-
+	if (!transcoder->Start())
+	{
+		logte("An error occurred while creating Transcoder");
+		return nullptr;
+	}
 	return transcoder;
 }
 

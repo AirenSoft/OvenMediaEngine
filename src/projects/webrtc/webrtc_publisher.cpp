@@ -12,8 +12,11 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Application
 	auto webrtc = std::make_shared<WebRtcPublisher>(application_info, router, application);
 
 	// CONFIG을 불러온다.
-	webrtc->Start();
-
+	if (!webrtc->Start())
+	{
+		logte("An error occurred while creating WebRtcPublisher");
+		return nullptr;
+	}
 	return webrtc;
 }
 
@@ -61,7 +64,10 @@ bool WebRtcPublisher::Start()
 
 	_signalling = std::make_shared<RtcSignallingServer>(_application_info, _application);
 	_signalling->AddObserver(RtcSignallingObserver::GetSharedPtr());
-	_signalling->Start(signalling_address);
+	if(!_signalling->Start(signalling_address))
+    {
+        return false;
+    }
 
 	// Publisher::Start()에서 Application을 생성한다.
 	return Publisher::Start();
