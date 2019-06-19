@@ -38,3 +38,14 @@ int32_t VideoTrack::GetHeight()
 	return _height;
 }
 
+void VideoTrack::SetFormat(int32_t format)
+{
+	_format = format;
+}
+
+int32_t VideoTrack::GetFormat()
+{
+	return _format;
+}
+
+

@@ -22,8 +22,12 @@ public:
 	void SetHeight(int32_t height);
 	int32_t GetHeight();
 
+	void SetFormat(int32_t format);
+	int32_t GetFormat();
+
 protected:
 	double _framerate;
 	int32_t _width;
 	int32_t _height;
+	int32_t _format;
 };

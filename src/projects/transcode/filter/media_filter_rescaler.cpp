@@ -88,7 +88,7 @@ bool MediaFilterRescaler::Configure(std::shared_ptr<MediaTrack> input_media_trac
 	ov::String input_formats = ov::String::FormatString(
 		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d:frame_rate=%d/%d:sws_param=flags=bicubic",
 		input_media_track->GetWidth(), input_media_track->GetHeight(),
-		AV_PIX_FMT_YUV420P,
+		input_media_track->GetFormat(),
 		input_media_track->GetTimeBase().GetNum(), input_media_track->GetTimeBase().GetDen(),
 		1, 1,
         ifr.num, ifr.den

@@ -737,6 +737,7 @@ void TranscodeStream::CreateFilters(std::shared_ptr<MediaTrack> media_track, Med
 		{
 			media_track->SetWidth(buffer->GetWidth());
 			media_track->SetHeight(buffer->GetHeight());
+            media_track->SetFormat(buffer->GetFormat());
 		}
 		else if(media_track->GetMediaType() == common::MediaType::Audio)
 		{
