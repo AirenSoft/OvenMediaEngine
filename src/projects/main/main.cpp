@@ -20,12 +20,14 @@
 #include <base/ovcrypto/ovcrypto.h>
 #include <base/ovlibrary/stack_trace.h>
 #include <base/ovlibrary/log_write.h>
+#include <base/ovlibrary/daemon.h>
 
 
 #define CHECK_FAIL(x) \
     if((x) == nullptr) \
     { \
         srt_cleanup(); \
+        ov::Daemon::SetEvent(false); \
         return 1; \
     }
 
@@ -88,24 +90,25 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-    // Daemonize OME with start_service argument
-    if (parse_option.start_service)
-    {
-        pid_t pid = fork();
+	// Daemonize OME with start_service argument
+	if (parse_option.start_service)
+	{
+        auto state = ov::Daemon::Initialize();
 
-        if (pid < 0)
+        if (state == ov::Daemon::State::PARENT_SUCCESS)
         {
+            return 0;
+        }
+        else if (state == ov::Daemon::State::CHILD_SUCCESS)
+        {
+            // continue
+        }
+        else
+        {
+            logte("An error occurred while creating daemon");
             return 1;
         }
-
-        if (pid > 0)
-        {
-            sleep(1);
-            return 0; // success : parent terminate
-        }
-
-        setsid();
-    }
+	}
 
     ov::StackTrace::InitializeStackTrace(OME_VERSION);
 
@@ -260,6 +263,8 @@ int main(int argc, char *argv[])
 //                                     publishers);
 //        }
 	}
+
+	ov::Daemon::SetEvent();
 
 	while(true)
 	{

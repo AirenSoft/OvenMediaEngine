@@ -7,9 +7,7 @@ Type=forking
 PIDFile=/var/run/ovenmediaengine.pid
 WorkingDirectory=/usr/share/ovenmediaengine
 Environment=LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib:/usr/local/lib64:/usr/lib
-ExecStartPre=-/bin/sh -c 'kill -9 `pgrep OvenMediaEngine` 2>/dev/null'
 ExecStart=/usr/bin/OvenMediaEngine -d
-ExecStartPost=/bin/sh -c 'umask 022; pgrep OvenMediaEngine > /var/run/ovenmediaengine.pid'
 Restart=on-abort
 RestartPreventExitStatus=1
 StandardOutput=null
