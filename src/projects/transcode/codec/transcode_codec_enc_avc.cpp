@@ -7,184 +7,223 @@
 //
 //==============================================================================
 #include "transcode_codec_enc_avc.h"
-#include <unistd.h>
 
 #define OV_LOG_TAG "TranscodeCodec"
 
-OvenCodecImplAvcodecEncAVC::~OvenCodecImplAvcodecEncAVC()
-{
-	if(_encoder)
-	{
-		_encoder->Uninitialize();
-		WelsDestroySVCEncoder(_encoder);
-	}
-}
-
 bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> context)
 {
-	if(WelsCreateSVCEncoder(&_encoder))
+	_transcode_context = context;
+
+	AVCodec *codec = avcodec_find_encoder(GetCodecID());
+	if(!codec)
 	{
-		_encoder->Uninitialize();
-		logte("Unable to create H264 encoder");
+		logte("Codec not found");
 		return false;
 	}
 
-	SEncParamExt param;
-	::memset(&param, 0, sizeof(SEncParamExt));
-
-	_encoder->GetDefaultParams(&param);
-
-	param.fMaxFrameRate = context->GetFrameRate();
-	param.iPicWidth = context->GetVideoWidth();
-	param.iPicHeight = context->GetVideoHeight();
-	param.iTargetBitrate = context->GetBitrate();
-	param.iRCMode = RC_OFF_MODE;
-	param.iTemporalLayerNum = 1;
-	param.iSpatialLayerNum = 1;
-	param.bEnableDenoise = false;
-	param.bEnableBackgroundDetection = true;
-	param.bEnableAdaptiveQuant = true;
-	param.bEnableFrameSkip = false;
-	param.bEnableLongTermReference = false;
-	param.iLtrMarkPeriod = 30;
-	param.uiIntraPeriod = 30; // KeyFrame Interval (1 sec)
-	param.eSpsPpsIdStrategy = CONSTANT_ID;
-	param.bPrefixNalAddingCtrl = false;
-	param.sSpatialLayers[0].iVideoWidth = param.iPicWidth;
-	param.sSpatialLayers[0].iVideoHeight = param.iPicHeight;
-	param.sSpatialLayers[0].fFrameRate = param.fMaxFrameRate;
-	param.sSpatialLayers[0].iSpatialBitrate = param.iTargetBitrate;
-	param.sSpatialLayers[0].iMaxSpatialBitrate = param.iMaxBitrate;
-	param.sSpatialLayers[0].uiProfileIdc = PRO_BASELINE;
-	param.sSpatialLayers[0].uiLevelIdc = LEVEL_3_1;     // baseline & lvl 3.1 => profile-level-id=42e01f
-
-	if(_encoder->InitializeExt(&param))
+	_context = avcodec_alloc_context3(codec);
+	if(!_context)
 	{
-		logte("H264 encoder initialize failed");
+		logte("Could not allocate video codec context");
 		return false;
 	}
 
-	int videoFormat = videoFormatI420;
-	_encoder->SetOption (ENCODER_OPTION_DATAFORMAT, &videoFormat);
+    _context->bit_rate = _transcode_context->GetBitrate();
+	_context->rc_max_rate = _context->bit_rate;
+	_context->rc_buffer_size = static_cast<int>(_context->bit_rate * 2);
+	_context->sample_aspect_ratio = (AVRational){ 1, 1 };
+	_context->time_base = (AVRational){
+		_transcode_context->GetTimeBase().GetNum(),
+        static_cast<int>(_transcode_context->GetFrameRate())
+	};
+    _context->framerate = av_d2q(_transcode_context->GetFrameRate(), AV_TIME_BASE);
+    _context->gop_size = _transcode_context->GetGOP();
+    _context->max_b_frames = 0;
+	_context->pix_fmt = AV_PIX_FMT_YUV420P;
+	_context->width = _transcode_context->GetVideoWidth();
+	_context->height = _transcode_context->GetVideoHeight();
+	_context->thread_count = 4;
+
+    av_opt_set(_context->priv_data, "preset", "ultrafast", 0);
+    av_opt_set(_context->priv_data, "tune", "zerolatency", 0);
+    av_opt_set(_context->priv_data, "x264opts", "no-mbtree:sliced-threads:sync-lookahead=0", 0);
+
+	// open codec
+	if(avcodec_open2(_context, codec, nullptr) < 0)
+	{
+		logte("Could not open codec");
+		return false;
+	}
 
 	return true;
 }
 
-void OvenCodecImplAvcodecEncAVC::SendBuffer(std::unique_ptr<const MediaFrame> frame)
-{
-	TranscodeEncoder::SendBuffer(std::move(frame));
-}
-
 std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeResult *result)
 {
-	*result = TranscodeResult::NoData;
+	int ret = avcodec_receive_packet(_context, _pkt);
 
-	if(_input_buffer.empty())
-	{
-		return nullptr;
-	}
+    if(ret == AVERROR(EAGAIN))
+    {
+        // Packet is enqueued to encoder's buffer
+    }
+    else if(ret == AVERROR_EOF)
+    {
+        logte("Error receiving a packet for decoding : AVERROR_EOF");
 
-	while(!_input_buffer.empty())
+        *result = TranscodeResult::DataError;
+        return nullptr;
+    }
+    else if(ret < 0)
+    {
+        logte("Error receiving a packet for encoding : %d", ret);
+
+        *result = TranscodeResult::DataError;
+        return nullptr;
+    }
+    else
+    {
+        auto packet_buffer = std::make_unique<MediaPacket>(
+                common::MediaType::Video,
+                0,
+                _pkt->data,
+                _pkt->size,
+                _pkt->dts,
+                (_pkt->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag
+        );
+        packet_buffer->_frag_hdr = MakeFragmentHeader();
+
+        av_packet_unref(_pkt);
+
+        *result = TranscodeResult::DataReady;
+        return std::move(packet_buffer);
+    }
+
+	while(_input_buffer.size() > 0)
 	{
-		auto frame_buffer = std::move(_input_buffer[0]);
+		auto buffer = std::move(_input_buffer[0]);
 		_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
 
-		const MediaFrame *frame = frame_buffer.get();
+		const MediaFrame *frame = buffer.get();
 		OV_ASSERT2(frame != nullptr);
 
-		const uint8_t start_code[4] = { 0, 0, 0, 1 };
-		const int64_t pts = frame->GetPts();
-		SFrameBSInfo fbi = { 0 };
-		SSourcePicture sp = { 0 };
-		size_t required_size = 0, fragments_count = 0;
+		_frame->format = frame->GetFormat();
+		_frame->width = frame->GetWidth();
+		_frame->height = frame->GetHeight();
+		_frame->pts = frame->GetPts();
 
-		sp.iColorFormat = videoFormatI420;
-		for(int i = 0; i < 3; ++i)
-		{
-			sp.iStride[i] = frame->GetStride(i);
-			sp.pData[i] = (__u_char *)frame->GetBuffer(i);
-		}
-		sp.iPicWidth = frame->GetWidth();
-		sp.iPicHeight = frame->GetHeight();
+		_frame->linesize[0] = frame->GetStride(0);
+		_frame->linesize[1] = frame->GetStride(1);
+		_frame->linesize[2] = frame->GetStride(2);
 
-		if(_encoder->EncodeFrame(&sp, &fbi) != cmResultSuccess)
+		if(av_frame_get_buffer(_frame, 32) < 0)
 		{
-			logte("Encode Frame Error");
+			logte("Could not allocate the video frame data");
 			*result = TranscodeResult::DataError;
 			return nullptr;
 		}
 
-		if(fbi.eFrameType == videoFrameTypeSkip)
+		if(av_frame_make_writable(_frame) < 0)
 		{
+			logte("Could not make sure the frame data is writable");
+			*result = TranscodeResult::DataError;
+			return nullptr;
+		}
+
+		memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
+		memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
+		memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
+
+		ret = avcodec_send_frame(_context, _frame);
+
+		if(ret < 0)
+		{
+			logte("Error sending a frame for encoding : %d", ret);
+		}
+
+		av_frame_unref(_frame);
+	}
+
+	*result = TranscodeResult::NoData;
+	return nullptr;
+}
+
+std::unique_ptr<FragmentationHeader> OvenCodecImplAvcodecEncAVC::MakeFragmentHeader()
+{
+	auto fragment_header = std::make_unique<FragmentationHeader>();
+
+	int nal_pattern_size = 4;
+	int sps_start_index = -1;
+	int sps_end_index = -1;
+	int pps_start_index = -1;
+	int pps_end_index = -1;
+	int fragment_count = 0;
+	uint32_t current_index = 0;
+
+	while ((current_index + nal_pattern_size) < _pkt->size)
+	{
+		if (_pkt->data[current_index] == 0 && _pkt->data[current_index + 1] == 0 &&
+			_pkt->data[current_index + 2] == 0 && _pkt->data[current_index + 3] == 1)
+		{
+			// Pattern 0x00 0x00 0x00 0x01
+			nal_pattern_size = 4;
+		}
+		else if (_pkt->data[current_index] == 0 && _pkt->data[current_index + 1] == 0 &&
+				 _pkt->data[current_index + 2] == 1)
+		{
+			// Pattern 0x00 0x00 0x01
+			nal_pattern_size = 3;
+
+		}
+		else
+		{
+			current_index++;
 			continue;
 		}
 
-		for(int layer = 0; layer < fbi.iLayerNum; ++layer)
+        fragment_count++;
+
+		if (sps_start_index == -1)
 		{
-			const SLayerBSInfo &layerInfo = fbi.sLayerInfo[layer];
-			for(int nal = 0; nal < layerInfo.iNalCount; ++nal, ++fragments_count)
-			{
-				required_size += layerInfo.pNalLengthInByte[nal];
-			}
-		}
+			sps_start_index = current_index + nal_pattern_size;
+			current_index += nal_pattern_size;
 
-		if(required_size == 0)
+            if(_pkt->flags != AV_PKT_FLAG_KEY)
+            {
+                break;
+            }
+		}
+		else if (sps_end_index == -1)
 		{
-			logte("Encode Frame Error");
-			*result = TranscodeResult::DataError;
-			return nullptr;
+			sps_end_index = current_index - 1;
+			pps_start_index = current_index + nal_pattern_size;
+			current_index += nal_pattern_size;
 		}
-
-		auto encoded = std::make_unique<uint8_t[]>(required_size);
-		auto frag_hdr = std::make_unique<FragmentationHeader>();
-
-		if(fragments_count > MAX_FRAG_COUNT)
+		else // (pps_end_index == -1)
 		{
-			logte("Unexpected H264 fragments_count=%d", fragments_count);
-			*result = TranscodeResult::DataError;
-			return nullptr;
+			pps_end_index = current_index - 1;
+			break;
 		}
-
-		frag_hdr->VerifyAndAllocateFragmentationHeader(fragments_count);
-		size_t frag = 0;
-		size_t encoded_length = 0;
-		for(int layer = 0; layer < fbi.iLayerNum; ++layer)
-		{
-			const SLayerBSInfo &layerInfo = fbi.sLayerInfo[layer];
-			size_t layer_len = 0;
-			for(int nal = 0; nal < layerInfo.iNalCount; ++nal, ++frag)
-			{
-				frag_hdr->fragmentation_offset[frag] =
-					encoded_length + layer_len + sizeof(start_code);
-				frag_hdr->fragmentation_length[frag] =
-					layerInfo.pNalLengthInByte[nal] - sizeof(start_code);
-				layer_len += layerInfo.pNalLengthInByte[nal];
-			}
-			::memcpy(encoded.get() + encoded_length, layerInfo.pBsBuf, layer_len);
-			encoded_length += layer_len;
-		}
-
-		/*
-		NON-IDR(0x61) - fragments_count : 1
-			00 | 00 00 00 01 61 E0 00 40 00 9C 8F 03 8F 4E 28 6F
-			10 | A7 D0 D7 23 55 B8 1C 3A BA 07 8E 49 68 FF 88 B9
-
-		SPS(0x67) + PPS(0x68) + IDR(0x65) - fragments_count : 3
-			00 | 00 00 00 01 67 42 C0 1E 8C 8D 40 F0 52 40 3C 22
-			10 | 11 A8 00 00 00 01 68 CE 3C 80 00 00 00 01 65 B8
-		*/
-
-		auto packet_buffer = std::make_unique<MediaPacket>(
-			common::MediaType::Video,
-			0,
-			encoded.get(),
-			encoded_length,
-			(pts == 0) ? -1 : pts,
-			(fbi.eFrameType == videoFrameTypeIDR) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
-		packet_buffer->_frag_hdr = std::move(frag_hdr);
-
-		*result = TranscodeResult::DataReady;
-		return std::move(packet_buffer);
 	}
-	return nullptr;
+
+    fragment_header->VerifyAndAllocateFragmentationHeader(fragment_count);
+
+    if (_pkt->flags == AV_PKT_FLAG_KEY) // KeyFrame
+	{
+	    // SPS + PPS + IDR
+		fragment_header->fragmentation_offset[0] = sps_start_index;
+		fragment_header->fragmentation_offset[1] = pps_start_index;
+		fragment_header->fragmentation_offset[2] = (pps_end_index + 1) + nal_pattern_size;
+
+		fragment_header->fragmentation_length[0] = sps_end_index - (sps_start_index - 1);
+		fragment_header->fragmentation_length[1] = pps_end_index - (pps_start_index - 1);
+		fragment_header->fragmentation_length[2] = _pkt->size - (pps_end_index + nal_pattern_size);
+	}
+	else
+	{
+        // NON-IDR
+		fragment_header->fragmentation_offset[0] = sps_start_index ;
+		fragment_header->fragmentation_length[0] = _pkt->size - (sps_start_index - 1);
+	}
+
+	return std::move(fragment_header);
 }

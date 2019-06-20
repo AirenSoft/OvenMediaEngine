@@ -136,29 +136,12 @@ install_ffmpeg()
         --enable-ffprobe \
         --disable-ffplay --disable-ffserver --disable-filters --disable-vaapi --disable-avdevice --disable-doc --disable-symver \
         --disable-debug --disable-indevs --disable-outdevs --disable-devices --disable-hwaccels --disable-encoders \
-        --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac \
-        --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac \
+        --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-gpl --enable-nonfree \
+        --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264 \
         --disable-decoder=tiff \
         --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb
 
     ${MAKE} && sudo make install
-}
-
-install_libopenh264()
-{
-    BUILD_PRG="OPENH264"
-
-    cd ${WORKDIR}
-
-    curl -OLf http://ciscobinary.openh264.org/libopenh264-1.8.0-linux64.4.so.bz2  || fail_exit ${BUILD_PRG}
-
-    bzip2 -d libopenh264-1.8.0-linux64.4.so.bz2
-
-    sudo mv libopenh264-1.8.0-linux64.4.so /usr/lib
-
-    sudo ln -sf /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so
-
-    sudo ln -sf /usr/lib/libopenh264-1.8.0-linux64.4.so /usr/lib/libopenh264.so.4
 }
 
 install_base_ubuntu()
@@ -236,8 +219,6 @@ if [ "x${OSNAME}" == "xUbuntu" ]; then
 
     install_libsrtp
 
-    install_libopenh264
-
     install_libsrt
 
     install_ffmpeg
@@ -261,8 +242,6 @@ elif  [ "x${OSNAME}" == "xCentOS Linux" ]; then
 
     install_ffmpeg
 
-    install_libopenh264
-
     install_libsrt
 
     sudo ldconfig
@@ -277,8 +256,6 @@ elif  [ "x${OSNAME}" == "xFedora" ]; then
     install_fdk_aac
 
     install_ffmpeg
-
-    install_libopenh264
 
     install_libsrt
 
