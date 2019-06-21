@@ -61,6 +61,24 @@ install_fdk_aac()
     ${MAKE} && sudo make install
 }
 
+install_libx264()
+{
+    BUILD_PRG="X264"
+
+    cd ${WORKDIR}
+
+    if [ ! -d ${BUILD_PRG} ]; then
+        curl -OLf  https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-20190513-2245-stable.tar.bz2 || fail_exit ${BUILD_PRG}
+        tar xvf x264-* -C ${WORKDIR} && rm -rf x264-snapshot-20190513-2245-stable.tar.bz2 && mv x264-* ${BUILD_PRG}
+    fi
+
+    cd ${BUILD_PRG}
+
+    ./configure --enable-shared --disable-asm
+
+    ${MAKE} && sudo make install
+}
+
 install_libopus()
 {
     BUILD_PRG="OPUS"
@@ -147,7 +165,7 @@ install_ffmpeg()
 install_base_ubuntu()
 {
     PKGS="build-essential nasm autoconf libtool zlib1g-dev libssl-dev libvpx-dev libopus-dev pkg-config libfdk-aac-dev \
-tclsh cmake curl"
+libx264-dev tclsh cmake curl"
     for PKG in ${PKGS}; do
         sudo apt install -y ${PKG} || fail_exit ${PKG}
     done
@@ -240,6 +258,8 @@ elif  [ "x${OSNAME}" == "xCentOS Linux" ]; then
 
     install_fdk_aac
 
+    install_libx264
+
     install_ffmpeg
 
     install_libsrt
@@ -254,6 +274,8 @@ elif  [ "x${OSNAME}" == "xFedora" ]; then
     install_libsrtp
 
     install_fdk_aac
+
+    install_libx264
 
     install_ffmpeg
 
