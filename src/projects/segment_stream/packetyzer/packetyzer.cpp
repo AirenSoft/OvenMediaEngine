@@ -31,7 +31,7 @@ Packetyzer::Packetyzer(const ov::String &app_name,
     _stream_type = stream_type;
     _segment_prefix = segment_prefix;
     _segment_count = segment_count;
-    _segment_save_count = segment_count * 3;
+    _segment_save_count = segment_count * 10;
     _segment_duration = segment_duration;
 
     _media_info = media_info;
@@ -48,7 +48,7 @@ Packetyzer::Packetyzer(const ov::String &app_name,
         _video_segment_datas.push_back(nullptr);
 
         // only dash
-        if(_packetyzer_type == PacketyzerType::Dash)
+        if(_packetyzer_type == PacketyzerType::Dash || _packetyzer_type == PacketyzerType::Cmaf)
             _audio_segment_datas.push_back(nullptr);
     }
 }

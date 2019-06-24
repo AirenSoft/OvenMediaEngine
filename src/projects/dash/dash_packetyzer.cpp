@@ -17,6 +17,11 @@
 #define VIDEO_TRACK_ID    (1)
 #define AUDIO_TRACK_ID    (2)
 
+#define MPD_VIDEO_SUFFIX            "_video.m4s"
+#define MPD_AUDIO_SUFFIX            "_audio.m4s"
+#define MPD_VIDEO_INIT_FILE_NAME    "init_video.m4s"
+#define MPD_AUDIO_INIT_FILE_NAME    "init_audio.m4s"
+
 //====================================================================================================
 // Constructor
 //====================================================================================================
@@ -73,92 +78,87 @@ DashPacketyzer::~DashPacketyzer()
 // - profile
 // - level
 // - sps/pps
-// - init m4s 생성
+// - init m4s create
 //====================================================================================================
 bool DashPacketyzer::VideoInit(std::shared_ptr<ov::Data> &frame_data)
 {
-    // 패턴 확인
     uint32_t current_index = 0;
     int sps_start_index = -1;
     int sps_end_index = -1;
     int pps_start_index = -1;
     int pps_end_index = -1;
+    int total_start_pattern_size = 0;
+
     auto data = std::make_shared<std::vector<uint8_t>>(frame_data->GetDataAs<uint8_t>(),
             frame_data->GetDataAs<uint8_t>() + frame_data->GetLength());
 
     // sps/pps parsing
     while ((current_index + AVC_NAL_START_PATTERN_SIZE) < data->size())
     {
-        // 0x00 0x00 0x00 0x01 패턴 체크
+        int start_pattern_size = 0;
+
+        // 0x00 0x00 0x00 0x01 pattern check
         if (data->at(current_index) == 0 &&
             data->at(current_index + 1) == 0 &&
             data->at(current_index + 2) == 0 &&
             data->at(current_index + 3) == 1)
         {
-            if (sps_start_index == -1)
-            {
-                sps_start_index = current_index + AVC_NAL_START_PATTERN_SIZE;
-                current_index += AVC_NAL_START_PATTERN_SIZE;
-                continue;
-            }
-            else if (sps_end_index == -1)
-            {
-                sps_end_index = current_index - 1;
-                pps_start_index = current_index + AVC_NAL_START_PATTERN_SIZE;
-                current_index += AVC_NAL_START_PATTERN_SIZE;
-                continue;
-            }
-            else if (pps_end_index == -1)
-            {
-                pps_end_index = current_index - 1;
-                current_index++;
-                continue;
-            }
+            start_pattern_size = 4;
+            total_start_pattern_size += start_pattern_size;
         }
-        // 0x00 0x00 0x01 패턴 체크
-        else if (data->at(current_index) == 0 &&
+        // 0x00 0x00 0x00 0x01 pattern check
+        else if(data->at(current_index) == 0 &&
                 data->at(current_index + 1) == 0 &&
                 data->at(current_index + 2) == 1)
         {
-            if (sps_start_index == -1)
-            {
-                sps_start_index = current_index + (AVC_NAL_START_PATTERN_SIZE - 1);
-                current_index += (AVC_NAL_START_PATTERN_SIZE - 1);
-                continue;
-            }
-            else if (sps_end_index == -1)
-            {
-                sps_end_index = current_index - 1;
-                pps_start_index = current_index + (AVC_NAL_START_PATTERN_SIZE - 1);
-                current_index += (AVC_NAL_START_PATTERN_SIZE - 1);
-                continue;
-            }
-            else if (pps_end_index == -1)
-            {
-                pps_end_index = current_index - 1;
-                current_index++;
-                continue;
-            }
+            start_pattern_size = 3;
+            total_start_pattern_size += start_pattern_size;
         }
-        current_index++;
+        else
+        {
+            current_index++;
+            continue;
+        }
+
+        if (sps_start_index == -1)
+        {
+            sps_start_index = current_index + start_pattern_size;
+            current_index += start_pattern_size;
+            continue;
+        }
+        else if (sps_end_index == -1)
+        {
+            sps_end_index = current_index - 1;
+            pps_start_index = current_index + start_pattern_size;
+            current_index += start_pattern_size;
+            continue;
+        }
+        else
+        {
+            pps_end_index = current_index - 1;
+            break;
+        }
     }
 
     // parsing result check
-    if (sps_start_index < 0 || sps_end_index < 0 || pps_start_index < 0 || pps_end_index < 0)
+    if (!(sps_start_index >= 0 && sps_end_index >= (sps_start_index + 4))||
+        !(pps_start_index > sps_end_index && pps_end_index > pps_start_index) ||
+        !(total_start_pattern_size >= 9 && total_start_pattern_size <= 12))
     {
+        logte("Dash packetyzer sps/pps pars fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
         return false;
     }
 
-    // SPS/PPS 저장
+    // SPS save
     auto avc_sps = std::make_shared<std::vector<uint8_t>>(data->begin() + sps_start_index,
                                                           data->begin() + sps_end_index + 1);
 
+    // PPS save
     auto avc_pps = std::make_shared<std::vector<uint8_t>>(data->begin() + pps_start_index,
                                                           data->begin() + pps_end_index + 1);
 
-    // Video init m4s 생성(메모리)
-    auto writer = std::make_unique<M4sInitWriter>(M4sMediaType::VideoMediaType,
-                                                  1024,
+    // Video init m4s Create
+    auto writer = std::make_unique<M4sInitWriter>(M4sMediaType::Video,
                                                   _segment_duration * _media_info.video_timescale,
                                                   _media_info.video_timescale,
                                                   VIDEO_TRACK_ID,
@@ -172,16 +172,14 @@ bool DashPacketyzer::VideoInit(std::shared_ptr<ov::Data> &frame_data)
 
     if (writer->CreateData() <= 0)
     {
-        logte("video writer create fail");
+        logte("Dash video init writer create fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
         return false;
     }
 
-    _avc_nal_header_size = avc_sps->size() + avc_pps->size() + AVC_NAL_START_PATTERN_SIZE * 3;
+    _avc_nal_header_size = avc_sps->size() + avc_pps->size() + total_start_pattern_size;
 
     // Video init m4s Save
     SetSegmentData(MPD_VIDEO_INIT_FILE_NAME, 0, 0, writer->GetDataStream());
-
-    _video_init = true;
 
     return true;
 }
@@ -190,15 +188,14 @@ bool DashPacketyzer::VideoInit(std::shared_ptr<ov::Data> &frame_data)
 // Audio 설정 값 Load
 // - sample rate
 // - channels
-// - init m4s 생성
+// - init m4s create
 //====================================================================================================
 bool DashPacketyzer::AudioInit()
 {
     std::shared_ptr<std::vector<uint8_t>> temp = nullptr;
 
     // Audio init m4s 생성(메모리)
-    auto writer = std::make_unique<M4sInitWriter>(M4sMediaType::AudioMediaType,
-                                                  1024,
+    auto writer = std::make_unique<M4sInitWriter>(M4sMediaType::Audio,
                                                   _segment_duration * _media_info.audio_timescale,
                                                   _media_info.audio_timescale,
                                                   AUDIO_TRACK_ID,
@@ -212,14 +209,12 @@ bool DashPacketyzer::AudioInit()
 
     if (writer->CreateData() <= 0)
     {
-        logte("Audio writer create fail");
+        logte("Dash audio init writer create fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
         return false;
     }
 
     // Audio init m4s Save
     SetSegmentData(MPD_AUDIO_INIT_FILE_NAME, 0, 0, writer->GetDataStream());
-
-    _audio_init = true;
 
     return true;
 }
@@ -232,16 +227,18 @@ bool DashPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
 {
     if (!_video_init)
     {
-        if (frame_data->type != PacketyzerFrameType::VideoIFrame)
+        if (frame_data->type != PacketyzerFrameType::VideoKeyFrame)
             return false;
 
         if(!VideoInit(frame_data->data))
             return false;
+
+        _video_init = true;
     }
 
     // Fragment Check
-    // - KeyFrame ~ KeyFrame 전까지
-    if (frame_data->type == PacketyzerFrameType::VideoIFrame && !_video_frame_datas.empty())
+    // - KeyFrame ~ KeyFrame(before)
+    if (frame_data->type == PacketyzerFrameType::VideoKeyFrame && !_video_frame_datas.empty())
     {
         if (frame_data->timestamp - _video_frame_datas[0]->timestamp >=
                 (_segment_duration * _media_info.video_timescale))
@@ -265,8 +262,17 @@ bool DashPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
         _start_time = MakeUtcTimeString(time(nullptr));
     }
 
+    // nal header offset skip
+    frame_data->data = frame_data->data->Subdata((frame_data->type == PacketyzerFrameType::VideoKeyFrame) ?
+                                           _avc_nal_header_size : AVC_NAL_START_PATTERN_SIZE);
+
     _video_frame_datas.push_back(frame_data);
     _last_video_append_time = time(nullptr);
+
+    if (frame_data->type == PacketyzerFrameType::VideoKeyFrame)
+    {
+        logtd("dash video timestamp %lld", frame_data->timestamp);
+    }
 
     return true;
 }
@@ -277,15 +283,21 @@ bool DashPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
 //====================================================================================================
 bool DashPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame_data)
 {
-    if (!_audio_init && !AudioInit())
+    if (!_audio_init)
     {
-        return false;
+        if(!AudioInit())
+            return false;
+
+        _audio_init = true;
     }
 
     if (_start_time.empty())
     {
         _start_time = MakeUtcTimeString(time(nullptr));
     }
+
+    // adts offset skip
+    frame_data->data = frame_data->data->Subdata(ADTS_HEADER_SIZE);
 
     _audio_frame_datas.push_back(frame_data);
     _last_audio_append_time = time(nullptr);
@@ -302,7 +314,6 @@ bool DashPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &fram
             UpdatePlayList();
         }
     }
-
 
     return true;
 }
@@ -331,12 +342,10 @@ bool DashPacketyzer::VideoSegmentWrite(uint64_t max_timestamp)
         uint64_t duration = _video_frame_datas.empty() ? (max_timestamp - frame_data->timestamp) :
                             (_video_frame_datas.front()->timestamp - frame_data->timestamp);
 
-        frame_data->data = frame_data->data->Subdata((frame_data->type == PacketyzerFrameType::VideoIFrame) ?
-                                                    _avc_nal_header_size : AVC_NAL_START_PATTERN_SIZE);
-
         auto sample_data = std::make_shared<FragmentSampleData>(duration,
-                                                                frame_data->type == PacketyzerFrameType::VideoIFrame
+                                                                frame_data->type == PacketyzerFrameType::VideoKeyFrame
                                                                 ? 0X02000000 : 0X01010000,
+                                                                frame_data->timestamp,
                                                                 frame_data->time_offset,
                                                                 frame_data->data);
 
@@ -345,14 +354,16 @@ bool DashPacketyzer::VideoSegmentWrite(uint64_t max_timestamp)
     _video_frame_datas.clear();
 
     // Fragment write
-    auto fragment_writer = std::make_unique<M4sFragmentWriter>(M4sMediaType::VideoMediaType,
-                                                                4096,
+    auto fragment_writer = std::make_unique<M4sFragmentWriter>(M4sMediaType::Video,
                                                                 _video_sequence_number,
                                                                 VIDEO_TRACK_ID,
-                                                                start_timestamp,
-                                                                sample_datas);
+                                                                start_timestamp);
 
-    fragment_writer->CreateData();
+    if(fragment_writer->AppendSamples(sample_datas) <= 0)
+    {
+        logte("Dash video writer create fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
+        return false;
+    }
 
     // m4s data save
     SetSegmentData(ov::String::FormatString("%s_%lld%s", _segment_prefix.CStr(), start_timestamp, MPD_VIDEO_SUFFIX),
@@ -387,11 +398,10 @@ bool DashPacketyzer::AudioSegmentWrite(uint64_t max_timestamp)
 
         _audio_frame_datas.pop_front();
 
-        frame_data->data = frame_data->data->Subdata(ADTS_HEADER_SIZE);
-
         auto sample_data = std::make_shared<FragmentSampleData>(
                 _audio_frame_datas.front()->timestamp - frame_data->timestamp,
                 0,
+                frame_data->timestamp,
                 0,
                 frame_data->data);
 
@@ -401,14 +411,16 @@ bool DashPacketyzer::AudioSegmentWrite(uint64_t max_timestamp)
     }
 
     // Fragment write
-    auto fragment_writer = std::make_unique<M4sFragmentWriter>(M4sMediaType::AudioMediaType,
-                                                                4096,
+    auto fragment_writer = std::make_unique<M4sFragmentWriter>(M4sMediaType::Audio,
                                                                 _audio_sequence_number,
                                                                 AUDIO_TRACK_ID,
-                                                                start_timestamp,
-                                                                sample_datas);
+                                                                start_timestamp);
 
-    fragment_writer->CreateData();
+    if(fragment_writer->AppendSamples(sample_datas) <= 0)
+    {
+        logte("Dash audio writer create fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
+        return false;
+    }
 
     // m4s save
     SetSegmentData(ov::String::FormatString("%s_%lld%s", _segment_prefix.CStr(), start_timestamp, MPD_AUDIO_SUFFIX),
@@ -564,10 +576,10 @@ bool DashPacketyzer::UpdatePlayList()
     if(_stream_type == PacketyzerStreamType::Common && _init_segment_count_complete)
     {
         if(video_urls.IsEmpty())
-            logtw("Dash video segment problems - %s/%s", _app_name.CStr(), _stream_name.CStr());
+            logtw("Dash video segment urls empty - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 
         if(audio_urls.IsEmpty())
-            logtw("Dash audio segment problems - %s/%s", _app_name.CStr(), _stream_name.CStr());
+            logtw("Dash audio segment urls empty - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
     }
 
     return true;
@@ -685,6 +697,10 @@ bool DashPacketyzer::SetSegmentData(ov::String file_name,
             _current_video_index = 0;
 
         _video_sequence_number++;
+
+        logtd("Dash video segment add - stream(%s/%s) file(%s) duration(%lld/%0.3f)",
+          _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration, (double)duration/_media_info.video_timescale);
+
     }
     else if (file_name.IndexOf(MPD_AUDIO_SUFFIX) >= 0)
     {
@@ -701,16 +717,17 @@ bool DashPacketyzer::SetSegmentData(ov::String file_name,
             _current_audio_index = 0;
 
         _audio_sequence_number++;
+
+        logtd("Dash audio segment add - stream(%s/%s) file(%s) duration(%lld/%0.3f)",
+              _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration, (double)duration/_media_info.audio_timescale);
     }
 
     if(!_init_segment_count_complete &&
             (_video_sequence_number > _segment_count || _audio_sequence_number > _segment_count))
     {
         _init_segment_count_complete = true;
-        logti("Dash ready completed - prefix(%s) segment(%ds/%d)",
-                _segment_prefix.CStr(),
-                _segment_duration,
-                _segment_count);
+        logti("Dash ready completed - stream(%s/%s) prefix(%s) segment(%ds/%d)",
+              _app_name.CStr(), _stream_name.CStr(), _segment_prefix.CStr(), _segment_duration, _segment_count);
     }
 
     return true;

@@ -124,10 +124,16 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
                                    std::unique_ptr<CodecSpecificInfo> codec_info,
                                    std::unique_ptr<FragmentationHeader> fragmentation)
 {
-    //logtd("Video Timestamp : %d" , encoded_frame->_time_stamp);
-
-    if (_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
+     if (_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
     {
+//        int nul_header_size = 0;
+//
+//        if(fragmentation != nullptr && fragmentation->fragmentation_vector_size > 0)
+//        {
+//            nul_header_size = fragmentation->fragmentation_offset[fragmentation->fragmentation_vector_size - 1];
+//            logtd("null header size - %d", nul_header_size);
+//        }
+
         _stream_packetyzer->AppendVideoData(std::move(encoded_frame), track->GetTimeBase().GetDen(), 0);
     }
 }
@@ -141,8 +147,6 @@ void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
                                    std::unique_ptr<CodecSpecificInfo> codec_info,
                                    std::unique_ptr<FragmentationHeader> fragmentation)
 {
-    //logtd("Audio Timestamp : %d", encoded_frame->_time_stamp);
-
     if (_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
     {
         _stream_packetyzer->AppendAudioData(std::move(encoded_frame), track->GetTimeBase().GetDen());

@@ -400,11 +400,16 @@ void SegmentStreamServer::SegmentRequest(const ov::String &app_name,
 
     // header setting
     if (segment_type == SegmentType::MpegTs)
+    {
         response->SetHeader("Content-Type", "video/MP2T");
-    else if (segment_type == SegmentType::M4S && file_name.HasSuffix(MPD_VIDEO_SUFFIX))
-        response->SetHeader("Content-Type", "video/mp4");
-    else if (segment_type == SegmentType::M4S && file_name.HasSuffix(MPD_AUDIO_SUFFIX))
-        response->SetHeader("Content-Type", "audio/mp4");
+    }
+    else if (segment_type == SegmentType::M4S)
+    {
+        if(file_name.IndexOf("video") > 0)
+            response->SetHeader("Content-Type", "video/mp4");
+        else if(file_name.IndexOf("audio") > 0)
+            response->SetHeader("Content-Type", "audio/mp4");
+    }
 
     //response->SetHeader("Content-Length", ov::Converter::ToString(segment_data->GetLength()).CStr());
 

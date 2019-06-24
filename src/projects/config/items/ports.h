@@ -55,6 +55,11 @@ namespace cfg
 			return _monitoring_port;
 		}
 
+        const Port &GetCmafPort() const
+        {
+            return _cmaf_port;
+        }
+
 	protected:
 		void MakeParseList() const override
 		{
@@ -73,6 +78,7 @@ namespace cfg
 			RegisterValue<Optional>("DASH", &_dash_port);
 			RegisterValue<Optional>("WebRTC", &_webrtc_port);
 			RegisterValue<Optional>("Monitoring", &_monitoring_port);
+            RegisterValue<Optional>("CMAF", &_cmaf_port);
 		}
 
 		// Listen port for Origin
@@ -88,5 +94,6 @@ namespace cfg
 		Port _dash_port { "80/tcp" };
 		WebrtcPort _webrtc_port { "3333/tcp" };
 		Port _monitoring_port { "8888/tcp" };
+        Port _cmaf_port { "80/tcp" };
 	};
 }

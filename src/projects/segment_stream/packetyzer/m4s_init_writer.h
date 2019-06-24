@@ -18,7 +18,6 @@ class M4sInitWriter : public M4sWriter
 {
 public:
 	M4sInitWriter(	M4sMediaType 	media_type,
-					int 			data_init_size,
 					uint32_t		duration,
 					uint32_t		timescale,
 					uint32_t		track_id,
@@ -28,14 +27,14 @@ public:
 					std::shared_ptr<std::vector<uint8_t>> &avc_pps,
 					uint16_t        audio_channels,
 					uint16_t        audio_sample_size,
-					uint16_t        audio_sample_rate) ;
+					uint16_t        audio_sample_rate);
 
 
 	~M4sInitWriter() override = default;
 
 public :
 	int CreateData();
-
+    const std::shared_ptr<std::vector<uint8_t>> &GetDataStream(){ return _data_stream; };
 protected :
 	int FtypBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream);
 	int MoovBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream);
@@ -77,6 +76,8 @@ protected :
 	int TrexBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream);
 
 private :
+    std::shared_ptr<std::vector<uint8_t>> _data_stream;
+
 	uint32_t	_duration;
 	uint32_t	_timescale;
 	uint32_t	_track_id;

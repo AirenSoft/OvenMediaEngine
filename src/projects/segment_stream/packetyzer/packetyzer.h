@@ -12,11 +12,6 @@
 #include "../base/ovlibrary/ovlibrary.h"
 #include "packetyzer_define.h"
 
-#define MPD_AUDIO_SUFFIX            "_audio.m4s"
-#define MPD_VIDEO_SUFFIX            "_video.m4s"
-#define MPD_VIDEO_INIT_FILE_NAME    "init_video.m4s"
-#define MPD_AUDIO_INIT_FILE_NAME    "init_audio.m4s"
-
 //====================================================================================================
 // Packetyzer
 //====================================================================================================

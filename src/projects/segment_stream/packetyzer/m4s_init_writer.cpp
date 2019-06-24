@@ -49,7 +49,6 @@ const int g_sample_rate_table[] = {96000, 88200, 64000, 48000, 44100, 32000, 240
 // Constructor
 //====================================================================================================
 M4sInitWriter::M4sInitWriter(	M4sMediaType 	media_type,
-								int 			data_init_size,
 								uint32_t		duration,
 								uint32_t		timescale,
 								uint32_t		track_id,
@@ -59,8 +58,11 @@ M4sInitWriter::M4sInitWriter(	M4sMediaType 	media_type,
 								std::shared_ptr<std::vector<uint8_t>> &avc_pps,
 								uint16_t        audio_channels,
 								uint16_t        audio_sample_size,
-								uint16_t        audio_sample_rate) : M4sWriter(media_type, data_init_size)
-{	 
+								uint16_t        audio_sample_rate) : M4sWriter(media_type)
+{
+    _data_stream = std::make_shared<std::vector<uint8_t>>();
+    _data_stream->reserve(1024);
+
 	_duration			= duration;
 	_timescale			= timescale;
 	_track_id			= track_id;
@@ -84,17 +86,17 @@ M4sInitWriter::M4sInitWriter(	M4sMediaType 	media_type,
 		}
 	}
 
-	_language			    = "und";
+	_language = "und";
 
-	if (media_type == M4sMediaType::VideoMediaType)
+	if (media_type == M4sMediaType::Video)
 	{
-		_handler_type       = "vide";
-		_compressor_name    = "OmeVideoHandler";
+		_handler_type = "vide";
+		_compressor_name = "OmeVideoHandler";
 	}
-	else if (media_type == M4sMediaType::AudioMediaType)
+	else if (media_type == M4sMediaType::Audio)
 	{
-		_handler_type       = "soun";
-		_compressor_name    = "OmeAudioHandler";
+		_handler_type = "soun";
+		_compressor_name = "OmeAudioHandler";
 	}
  }
 
@@ -214,7 +216,7 @@ int M4sInitWriter::TkhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 	WriteInit(0, 2, data);					// Reserve(2Byte)
 	WriteData(metrix, data);				// Matrix
 
-	if(_media_type == M4sMediaType::VideoMediaType)
+	if(_media_type == M4sMediaType::Video)
 	{
 		WriteUint32(_video_width << 16, data);  // Width
 		WriteUint32(_video_height << 16, data); // Height
@@ -251,12 +253,12 @@ int M4sInitWriter::MdhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 
 	WriteUint32(0, data);               // Create Time
 	WriteUint32(0, data);               // Modification Time
-	if (_media_type == M4sMediaType::VideoMediaType)
+	if (_media_type == M4sMediaType::Video)
 	{
 		WriteUint32(_timescale, data);      // Timescale
 		WriteUint32(_duration, data);       // Duration
 	}
-	else if(_media_type == M4sMediaType::AudioMediaType)
+	else if(_media_type == M4sMediaType::Audio)
 	{
 		WriteUint32(_audio_sample_rate, data);  // Timescale
 		WriteUint32(_duration, data);					// Duration
@@ -292,8 +294,8 @@ int M4sInitWriter::MinfBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 {
 	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
 
-	if(_media_type == M4sMediaType::VideoMediaType)     	VmhdBoxWrite(data);
-	else if(_media_type == M4sMediaType::AudioMediaType)	SmhdBoxWrite(data);
+	if(_media_type == M4sMediaType::Video)     	VmhdBoxWrite(data);
+	else if(_media_type == M4sMediaType::Audio)	SmhdBoxWrite(data);
 
 	DinfBoxWrite(data); 
 	StblBoxWrite(data);
@@ -388,8 +390,8 @@ int M4sInitWriter::StsdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 
 	WriteUint32(1, data); // Child Count
 
-	if(_media_type == M4sMediaType::VideoMediaType)	Avc1BoxWrite(data);
-	if(_media_type == M4sMediaType::AudioMediaType)	Mp4aBoxWrite(data);
+	if(_media_type == M4sMediaType::Video)	Avc1BoxWrite(data);
+	if(_media_type == M4sMediaType::Audio)	Mp4aBoxWrite(data);
 
 	return BoxDataWrite("stsd", 0, 0, data, data_stream);
 }
@@ -428,10 +430,17 @@ int M4sInitWriter::Avc1BoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 int M4sInitWriter::AvccBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
 {
 	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
-	uint8_t avc_profile 				= _avc_sps->at(1);
-	uint8_t avc_profile_compatibility 	= _avc_sps->at(2);
-	uint8_t avc_level 					= _avc_sps->at(3);
+	uint8_t avc_profile 				= 0;
+	uint8_t avc_profile_compatibility 	= 0;
+	uint8_t avc_level 					= 0;
 	uint8_t avc_nal_unit_size			= 4;
+
+    if(_avc_sps->size() >= 4)
+    {
+        avc_profile = _avc_sps->at(1);
+        avc_profile_compatibility = _avc_sps->at(2);
+        avc_level = _avc_sps->at(3);
+    }
 
 	WriteUint8(1, data);							// Configuration Version
 	WriteUint8(avc_profile, data);					// Profile

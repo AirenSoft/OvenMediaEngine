@@ -51,7 +51,7 @@ bool HlsPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame
     if (!_video_init)
     {
         // First Key Frame Wait
-        if (frame_data->type != PacketyzerFrameType::VideoIFrame)
+        if (frame_data->type != PacketyzerFrameType::VideoKeyFrame)
         {
             return true;
         }
@@ -66,7 +66,7 @@ bool HlsPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame
         frame_data->timescale = _media_info.video_timescale;
     }
 
-    if (frame_data->type == PacketyzerFrameType::VideoIFrame && !_frame_datas.empty())
+    if (frame_data->type == PacketyzerFrameType::VideoKeyFrame && !_frame_datas.empty())
     {
         if ((frame_data->timestamp - _frame_datas[0]->timestamp) >= (_segment_duration * _media_info.video_timescale))
         {
@@ -75,7 +75,11 @@ bool HlsPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame
         }
     }
 
+    // copy
+    frame_data->data = frame_data->data->Clone();
+
     _frame_datas.push_back(frame_data);
+
     _last_video_append_time = time(nullptr);
     _video_enable = true;
 
@@ -105,7 +109,11 @@ bool HlsPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame
         }
     }
 
+    // copy
+    frame_data->data = frame_data->data->Clone();
+
     _frame_datas.push_back(frame_data);
+
     _last_audio_append_time = time(nullptr);
     _audio_enable = true;
 
@@ -126,7 +134,7 @@ bool HlsPacketyzer::SegmentWrite(uint64_t start_timestamp, uint64_t duration)
     {
         // TS(PES) Write
         ts_writer->WriteSample(frame_data->type != PacketyzerFrameType::AudioFrame,
-           frame_data->type == PacketyzerFrameType::AudioFrame || frame_data->type == PacketyzerFrameType::VideoIFrame,
+           frame_data->type == PacketyzerFrameType::AudioFrame || frame_data->type == PacketyzerFrameType::VideoKeyFrame,
            frame_data->timestamp,
            frame_data->time_offset,
            frame_data->data);

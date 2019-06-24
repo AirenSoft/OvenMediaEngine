@@ -14,12 +14,40 @@
 #include <string>
 #include <memory>
 #include <base/common_types.h>
+#include <base/ovlibrary/byte_io.h>
 
 enum class M4sMediaType
 {
-	VideoMediaType, 
-	AudioMediaType, 
-	DataMediaType,
+	Video,
+	Audio,
+	Data,
+};
+
+//====================================================================================================
+// Fragment Sample Data
+//====================================================================================================
+struct FragmentSampleData
+{
+public:
+    FragmentSampleData(uint64_t duration_,
+                       uint32_t flag_,
+                       uint64_t timestamp_,
+                       uint32_t composition_time_offset_,
+                       std::shared_ptr<ov::Data> &data_)
+    {
+        duration                =  duration_;
+        flag                    = flag_;
+        timestamp               = timestamp_;
+        composition_time_offset = composition_time_offset_;
+        data		            = data_;
+    }
+
+public:
+    uint64_t duration;
+    uint32_t flag;
+    uint64_t timestamp;
+    uint32_t composition_time_offset;
+    std::shared_ptr<ov::Data> data;
 };
 
 //====================================================================================================
@@ -28,11 +56,8 @@ enum class M4sMediaType
 class M4sWriter
 {
 public:
-	M4sWriter(M4sMediaType media_type, int data_init_size);
+	M4sWriter(M4sMediaType media_type);
 	virtual ~M4sWriter() = default;
-
-public :
-	const std::shared_ptr<std::vector<uint8_t>> &GetDataStream(){ return _data_stream; };
 
 protected :
 	bool WriteText(std::string text, std::shared_ptr<std::vector<uint8_t>> &data_stream);
@@ -50,6 +75,5 @@ protected :
 	int BoxDataWrite(std::string type, uint8_t version, uint32_t flags, std::shared_ptr<std::vector<uint8_t>> &data, std::shared_ptr<std::vector<uint8_t>> &data_stream);
 
 protected :
-	M4sMediaType							_media_type;
-	std::shared_ptr<std::vector<uint8_t>>	_data_stream;
+	M4sMediaType _media_type;
 };

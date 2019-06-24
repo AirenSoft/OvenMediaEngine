@@ -19,6 +19,7 @@ namespace cfg
 		Rtmp,
 		Hls,
 		Dash,
+		Cmaf
 	};
 
 	struct Publisher : public Item

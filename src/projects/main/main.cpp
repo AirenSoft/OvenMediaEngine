@@ -12,6 +12,7 @@
 #include <webrtc/webrtc_publisher.h>
 #include <dash/dash_publisher.h>
 #include <hls/hls_publisher.h>
+#include <cmaf/cmaf_publisher.h>
 #include <media_router/media_router.h>
 #include <transcode/transcoder.h>
 #include <monitoring/monitoring_server.h>
@@ -236,6 +237,15 @@ int main(int argc, char *argv[])
 								publishers.push_back(hls);
 								break;
 							}
+
+                            case cfg::PublisherType::Cmaf:
+                            {
+                                logti("Trying to create CMAF Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+                                auto cmaf = CmafPublisher::Create(segment_http_server_manager, &application_info, router);
+                                CHECK_FAIL(cmaf);
+                                publishers.push_back(cmaf);
+                                break;
+                            }
 
 							case cfg::PublisherType::Rtmp:
 							default:

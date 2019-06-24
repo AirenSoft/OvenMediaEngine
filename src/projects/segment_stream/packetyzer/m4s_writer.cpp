@@ -15,11 +15,9 @@
 //====================================================================================================
 // Constructor
 //====================================================================================================
-M4sWriter::M4sWriter(M4sMediaType media_type, int data_init_size)
+M4sWriter::M4sWriter(M4sMediaType media_type)
 {
 	_media_type		= media_type;
-	_data_stream	= std::make_shared<std::vector<uint8_t>>();
-	_data_stream->reserve(data_init_size);
 }
 
 //====================================================================================================

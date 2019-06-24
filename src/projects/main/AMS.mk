@@ -24,6 +24,7 @@ LOCAL_STATIC_LIBRARIES := \
 	rtmpprovider \
 	hls \
 	dash \
+	cmaf \
 	segment_stream \
 	monitoring \
 	jsoncpp \

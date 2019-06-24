@@ -32,6 +32,7 @@ enum class PacketyzerStreamType : int32_t {
 enum class PacketyzerType : int32_t {
     Dash,
     Hls,
+    Cmaf,
 };
 
 enum class PlayListType : int32_t {
@@ -99,7 +100,7 @@ public :
 // PacketyzerFrameData
 //====================================================================================================
 enum class PacketyzerFrameType {
-    VideoIFrame = 'I', // Key
+    VideoKeyFrame = 'I', // Key
     VideoPFrame = 'P',
     VideoBFrame = 'B',
     AudioFrame = 'A',

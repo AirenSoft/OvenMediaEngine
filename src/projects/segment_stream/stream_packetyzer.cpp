@@ -69,7 +69,7 @@ bool StreamPacketyzer::AppendVideoData(std::unique_ptr<EncodedFrame> encoded_fra
     }
 
     PacketyzerFrameType frame_type = (encoded_frame->_frame_type == FrameType::VideoFrameKey) ?
-                                     PacketyzerFrameType::VideoIFrame : PacketyzerFrameType::VideoPFrame;
+                                     PacketyzerFrameType::VideoKeyFrame : PacketyzerFrameType::VideoPFrame;
 
     auto frame_data = std::make_shared<PacketyzerFrameData>(frame_type,
                                                             encoded_frame->_time_stamp,
