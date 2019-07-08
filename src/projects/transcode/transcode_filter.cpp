@@ -45,8 +45,6 @@ bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, s
 			return false;
 	}
 
-	input_media_track->GetTimeBase().Set(1, 1000);
-
 	// 트랜스코딩 컨텍스트 정보 전달
 	_impl->Configure(std::move(input_media_track), std::move(context));
 
