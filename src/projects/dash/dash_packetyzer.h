@@ -11,7 +11,7 @@
 
 #include "segment_stream/packetyzer/packetyzer.h"
 #include "segment_stream/packetyzer/m4s_init_writer.h"
-#include "segment_stream/packetyzer/m4s_fragment_writer.h"
+#include "segment_stream/packetyzer/m4s_segment_writer.h"
 
 //====================================================================================================
 // DashPacketyzer
@@ -32,7 +32,7 @@ public:
     ~DashPacketyzer() final;
 
 public :
-    bool VideoInit(std::shared_ptr<ov::Data> &frame_data);
+    bool VideoInit(const std::shared_ptr<ov::Data> &frame_data);
 
     bool AudioInit();
 
@@ -40,12 +40,12 @@ public :
 
     virtual bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame_data) override;
 
-    virtual bool GetSegmentData(const ov::String &file_name, std::shared_ptr<ov::Data> &data) override;
+    virtual const std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) override;
 
     virtual bool SetSegmentData(ov::String file_name,
-                                uint64_t duration,
-                                uint64_t timestamp,
-                                const std::shared_ptr<std::vector<uint8_t>> &data) override;
+								uint64_t duration,
+								uint64_t timestamp,
+								std::shared_ptr<ov::Data> &data) override;
 
     bool VideoSegmentWrite(uint64_t max_timestamp);
 
@@ -79,5 +79,5 @@ private :
     time_t _last_video_append_time;
     time_t _last_audio_append_time;
 
-    double _duration_threshold;
+    double _duration_margen;
 };

@@ -33,9 +33,6 @@ public :
                 std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
                 const ov::String &app_name,
                 int thread_count,
-                int max_retry_count,
-                int send_buffer_size,
-                int recv_buffer_size,
                 const std::shared_ptr<Certificate> &certificate = nullptr,
                 const std::shared_ptr<Certificate> &chain_certificate = nullptr);
 
@@ -61,31 +58,30 @@ protected:
                            ov::String &file_name,
                            ov::String &file_ext);
 
-    bool ProcessRequest(const std::shared_ptr<HttpRequest> &request,
-                        const std::shared_ptr<HttpResponse> &response,
-                        int retry_count,
-                        bool &is_retry);
+    bool ProcessRequest(const std::shared_ptr<HttpResponse> &response,
+						const ov::String & request_target,
+						const ov::String & origin_url);
 
-    virtual void ProcessRequestStream(const std::shared_ptr<HttpRequest> &request,
-                                   const std::shared_ptr<HttpResponse> &response,
-                                   const ov::String &app_name,
-                                   const ov::String &stream_name,
-                                   const ov::String &file_name,
-                                   const ov::String &file_ext) = 0;
+	bool SetAllowOrigin(const ov::String &origin_url, const std::shared_ptr<HttpResponse> &response);
 
-    bool SetAllowOrigin(const ov::String &origin_url, const std::shared_ptr<HttpResponse> &response);
+	// interface
+    virtual void ProcessRequestStream(const std::shared_ptr<HttpResponse> &response,
+									   const ov::String &app_name,
+									   const ov::String &stream_name,
+									   const ov::String &file_name,
+									   const ov::String &file_ext) = 0;
 
-    void PlayListRequest(const ov::String &app_name,
-                         const ov::String &stream_name,
-                         const ov::String &file_name,
-                         PlayListType play_list_type,
-                         const std::shared_ptr<HttpResponse> &response);
+	virtual void PlayListRequest(const ov::String &app_name,
+								 const ov::String &stream_name,
+								 const ov::String &file_name,
+								 PlayListType play_list_type,
+								 const std::shared_ptr<HttpResponse> &response) = 0;
 
-    void SegmentRequest(const ov::String &app_name,
-                        const ov::String &stream_name,
-                        const ov::String &file_name,
-                        SegmentType segment_type,
-                        const std::shared_ptr<HttpResponse> &response);
+	virtual void SegmentRequest(const ov::String &app_name,
+								const ov::String &stream_name,
+								const ov::String &file_name,
+								SegmentType segment_type,
+								const std::shared_ptr<HttpResponse> &response) = 0;
 
     bool UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url);
 
@@ -95,6 +91,4 @@ protected :
     std::vector<std::shared_ptr<SegmentStreamObserver>> _observers;
     std::vector<ov::String> _cors_urls;  // key : url  value : flag(hls/dash allow flag)
     ov::String _cross_domain_xml;
-
-    int _max_retry_count = 3;
 };

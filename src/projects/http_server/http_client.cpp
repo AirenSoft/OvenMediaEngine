@@ -98,10 +98,9 @@ ssize_t HttpClient::TlsWrite(ov::Tls *tls, const void *data, size_t length)
         return 0;
     }
 
-    if (_tls_write_to_response)
+    if (_tls_post_send)
     {
-        _response->AppendTlsData(data, length);
-        return length;
+		return _response->_remote->PostSend(data, length) == true ? length : -1;
     }
 
     return _response->_remote->Send(data, length);

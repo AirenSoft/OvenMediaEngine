@@ -34,9 +34,9 @@ public :
     bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &data) override;
     bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &data) override;
     bool GetPlayList(ov::String &play_list) override;
-    bool GetSegment(const ov::String &file_name, std::shared_ptr<ov::Data> &data) override;
+	std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) override;
 
 private :
-    //std::shared_ptr<HlsPacketyzer> _packetyzer = nullptr;
+
 };
 

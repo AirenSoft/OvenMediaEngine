@@ -41,44 +41,40 @@ void SegmentStreamInterceptor::Start(int thread_count, const SegmentProcessHandl
 //====================================================================================================
 // OnHttpData
 // - (add thread) --> (SegmentStreamServer::ProcessRequest) function call
+// http 1.0  : request -> response
+// http 1.1  : request -> response -> request -> response ...
 //====================================================================================================
 bool SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request,
                                         const std::shared_ptr<HttpResponse> &response,
                                         const std::shared_ptr<const ov::Data> &data)
 {
-    const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
-    ssize_t current_length = (request_body != nullptr) ? request_body->GetLength() : 0L;
-    ssize_t content_length = request->GetContentLength();
+	OV_ASSERT2(request->GetContentLength() >= 0);
 
-    std::shared_ptr<const ov::Data> process_data;
-    if((content_length > 0) && ((current_length + static_cast<ssize_t>(data->GetLength())) > content_length))
-    {
-        if(content_length > current_length)
-        {
-            process_data = data->Subdata(0L, static_cast<size_t>(content_length - current_length));
-        }
-        else
-        {
-            return false;
-        }
-    }
-    else
-    {
-        process_data = data;
-    }
+	if(request->GetContentLength() == 0)
+	{
+		response->SetStatusCode(HttpStatusCode::OK);
+		_worker_manager.AddWork(response, request->GetRequestTarget(), request->GetHeader("Origin"));
+ 	}
+	else
+	{
+		const std::shared_ptr<ov::Data> request_body = GetRequestBody(request);
 
-    if(process_data != nullptr)
-    {
-        request_body->Append(process_data.get());
+		// data size over(error)
+		if(request_body == nullptr ||
+			request_body->GetLength() + data->GetLength() > static_cast<size_t>(request->GetContentLength()))
+		{
+			return false;
+		}
 
-        if(static_cast<ssize_t>(request_body->GetLength()) == content_length)
-        {
-            response->SetStatusCode(HttpStatusCode::OK);
-            _worker_manager.AddWork(request, response);
-        }
+		request_body->Append(data.get());
 
-        return true;
-    }
+		// http data completed
+		if(request_body->GetLength() == static_cast<size_t>(request->GetContentLength()))
+		{
+			response->SetStatusCode(HttpStatusCode::OK);
+			_worker_manager.AddWork(response, request->GetRequestTarget(), request->GetHeader("Origin"));
+		}
+	}
 
-    return false;
+     return true;
 }

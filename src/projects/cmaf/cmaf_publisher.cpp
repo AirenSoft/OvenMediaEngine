@@ -79,14 +79,11 @@ bool CmafPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
 
     // Cmaf Server Start
     bool result = stream_server->Start(ov::SocketAddress(host->GetIp(), port.GetPort()),
-                         http_server_manager,
-                         _application_info->GetName(),
-                         publisher_info->GetThreadCount(),
-                         publisher_info->GetSegmentDuration() * 1.5,
-                         0,
-                         0,
-                         certificate,
-                         chain_certificate);
+										 http_server_manager,
+										 _application_info->GetName(),
+										 publisher_info->GetThreadCount(),
+										 certificate,
+										 chain_certificate);
 
     _stream_server = stream_server;
 
@@ -157,7 +154,7 @@ bool CmafPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<Moni
 //====================================================================================================
 std::shared_ptr<Application> CmafPublisher::OnCreateApplication(const info::Application *application_info)
 {
-	return CmafApplication::Create(application_info);
+	return CmafApplication::Create(application_info, _stream_server);
 }
 
 //====================================================================================================
@@ -197,9 +194,9 @@ bool CmafPublisher::OnPlayListRequest(const ov::String &app_name,
 //  - SegmentStreamObserver Implementation
 //====================================================================================================
 bool CmafPublisher::OnSegmentRequest(const ov::String &app_name,
-                                      const ov::String &stream_name,
-                                      const ov::String &file_name,
-                                      std::shared_ptr<ov::Data> &segment_data)
+									 const ov::String &stream_name,
+									 const ov::String &file_name,
+									 std::shared_ptr<SegmentData> &segment)
 {
     if(!_supported_codec_check)
     {
@@ -215,7 +212,9 @@ bool CmafPublisher::OnSegmentRequest(const ov::String &app_name,
 		return false;
 	}
 
-	if(!stream->GetSegment(file_name, segment_data))
+	segment = stream->GetSegmentData(file_name);
+
+	if(segment == nullptr || segment->data == nullptr)
     {
         logtw("Cmaf get segment fail (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
         return false;

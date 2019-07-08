@@ -34,12 +34,12 @@ public :
 
     virtual bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame_data) = 0;
 
-    virtual bool GetSegmentData(const ov::String &file_name, std::shared_ptr<ov::Data> &data) = 0;
+    virtual const std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) = 0;
 
     virtual bool SetSegmentData(ov::String file_name,
-                                uint64_t duration,
-                                uint64_t timestamp_,
-                                const std::shared_ptr<std::vector<uint8_t>> &data) = 0;
+								uint64_t duration,
+								uint64_t timestamp,
+								std::shared_ptr<ov::Data> &data) = 0;
 
     static uint64_t ConvertTimeScale(uint64_t time, uint32_t from_timescale, uint32_t to_timescale);
 
@@ -64,7 +64,7 @@ protected :
 
     uint32_t _segment_count;
     uint32_t _segment_save_count;
-    uint64_t _segment_duration; // second
+    double _segment_duration; // second
     PacketyzerMediaInfo _media_info;
 
     uint32_t _sequence_number;

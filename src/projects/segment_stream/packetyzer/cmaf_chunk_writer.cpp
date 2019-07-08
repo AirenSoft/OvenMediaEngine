@@ -7,7 +7,9 @@
 //
 //==============================================================================
 
-#include "cmaf_m4s_fragment_writer.h"
+#include "cmaf_chunk_writer.h"
+
+#define DEFAULT_CHUNK_HEADER_SIZE (256)
 
 //Fragmented MP4
 // data m4s
@@ -21,39 +23,64 @@
 //    ...
 //
 
+
 //====================================================================================================
 // Constructor
 //====================================================================================================
-CmafM4sFragmentWriter::CmafM4sFragmentWriter(M4sMediaType media_type, uint32_t sequence_number, uint32_t track_id) :
-										M4sWriter(media_type)
+CmafChunkWriter::CmafChunkWriter(M4sMediaType media_type,
+											 uint32_t sequence_number,
+											 uint32_t track_id,
+											 bool http_chunked_transfer_support)
+												: M4sWriter(media_type)
 {
-    _data_stream = std::make_shared<std::vector<uint8_t>>();
-    _data_stream->reserve(4096);
-
-	_sequence_number    = sequence_number;
-	_track_id			= track_id;
+  	_sequence_number = sequence_number;
+	_track_id = track_id;
+	_http_chunked_transfer_support = http_chunked_transfer_support;
 }
 
 //====================================================================================================
 // Destructor
 //====================================================================================================
-CmafM4sFragmentWriter::~CmafM4sFragmentWriter( )
+CmafChunkWriter::~CmafChunkWriter( )
 {
+}
+//====================================================================================================
+//  GetHttpChunkedSegmentBody
+// - make http chunked transfer body
+//====================================================================================================
+std::shared_ptr<ov::Data> CmafChunkWriter::GetChunkedSegment()
+{
+	if(_total_chunk_data_size == 0)
+		return nullptr;
+
+	auto chunked_segment = std::make_shared<ov::Data>(_total_chunk_data_size + 5);
+
+	for(const auto &data : _chunk_data_list)
+	{
+		chunked_segment->Append(data->GetData(), data->GetLength());
+	}
+
+	if(_http_chunked_transfer_support)
+	{
+		chunked_segment->Append("0\r\n\r\n", 5);
+	}
+
+	return chunked_segment;
 }
 
 //====================================================================================================
 //  CreateData
 //====================================================================================================
-int CmafM4sFragmentWriter::AppendSamples(const std::vector<std::shared_ptr<FragmentSampleData>> &sample_datas)
+int CmafChunkWriter::AppendSamples(const std::vector<std::shared_ptr<SampleData>> &sample_datas)
 {
 	int write_size = 0;
 
 	for(auto &sample_data : sample_datas)
     {
-        auto chunk_stream = AppendSample(sample_data);
+        auto chunk_data = AppendSample(sample_data);
 
-        if(chunk_stream != nullptr)
-            write_size += chunk_stream->size();
+        if(chunk_data != nullptr)
+        	write_size += chunk_data->GetLength();
     }
 
 	return write_size;
@@ -62,7 +89,7 @@ int CmafM4sFragmentWriter::AppendSamples(const std::vector<std::shared_ptr<Fragm
 //====================================================================================================
 //  AppendSample
 //====================================================================================================
-std::shared_ptr<std::vector<uint8_t>> CmafM4sFragmentWriter::AppendSample(const std::shared_ptr<FragmentSampleData> &sample_data)
+const std::shared_ptr<ov::Data> CmafChunkWriter::AppendSample(const std::shared_ptr<SampleData> &sample_data)
 {
     if(!_write_started)
     {
@@ -70,53 +97,65 @@ std::shared_ptr<std::vector<uint8_t>> CmafM4sFragmentWriter::AppendSample(const 
         _start_timestamp = sample_data->timestamp;
     }
 
-    std::shared_ptr<std::vector<uint8_t>> chunk_stream = std::make_shared<std::vector<uint8_t>>();
+	auto chunk_stream = std::make_shared<ov::Data>(sample_data->data->GetLength() + DEFAULT_CHUNK_HEADER_SIZE);
 
     // moof box write
     MoofBoxWrite(chunk_stream, sample_data);
 
-    // trun data offset value change
-    uint32_t data_offset = chunk_stream->size() + 8;
-
-    int position = (_media_type == M4sMediaType::Video) ? chunk_stream->size() - 16 - 4 : chunk_stream->size() - 8 - 4;
-
-    if(position < 0)
-    {
-        return nullptr;
-    }
-
-    ByteWriter<uint32_t>::WriteBigEndian(chunk_stream->data() + position, data_offset);
-
     // mdata box write
-    MdatBoxWrite(chunk_stream, sample_data);
+    MdatBoxWrite(chunk_stream, sample_data->data);
 
-    _data_stream->insert(_data_stream->end(), chunk_stream->begin(), chunk_stream->end());
+    if(_http_chunked_transfer_support)
+	{
+		chunk_stream->Insert(ov::String::FormatString("%x\r\n", chunk_stream->GetLength()).ToData(false).get(), 0);
+		chunk_stream->Append(reinterpret_cast<const uint8_t *>("\r\n"), 2);
+	}
 
-    return chunk_stream;
+	_chunk_data_list.push_back(chunk_stream);
+
+    // total data length
+	_total_chunk_data_size += chunk_stream->GetLength();
+
+	return chunk_stream;
 }
 
 //====================================================================================================
 // moof(Movie Fragment)
 //====================================================================================================
-int CmafM4sFragmentWriter::MoofBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream,
-                                        const std::shared_ptr<FragmentSampleData> &sample_data)
+int CmafChunkWriter::MoofBoxWrite(std::shared_ptr<ov::Data> &data_stream,
+									const std::shared_ptr<SampleData> &sample_data)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>(DEFAULT_CHUNK_HEADER_SIZE);
 
 	MfhdBoxWrite(data);
 	TrafBoxWrite(data, sample_data);
 
-	return BoxDataWrite("moof", data, data_stream);
+	BoxDataWrite("moof", data, data_stream);
+
+	// trun data offset value change
+	uint32_t data_offset = data_stream->GetLength() + 8;
+	int position = (_media_type == M4sMediaType::Video) ?
+				   data_stream->GetLength() - 16 - 4 : data_stream->GetLength() - 8 - 4;
+
+	if(position < 0)
+	{
+		return -1;
+	}
+
+	ByteWriter<uint32_t>::WriteBigEndian(data_stream->GetWritableDataAs<uint8_t>() + position, data_stream->GetLength() + 8);
+
+
+	return data_stream->GetLength();
 }
 
 //====================================================================================================
 // mfhd(Movie Fragment Header)
 //====================================================================================================
-int CmafM4sFragmentWriter::MfhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int CmafChunkWriter::MfhdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
-	WriteUint32(_sequence_number++, data);	// Sequence Number
+	WriteUint32(_sequence_number++, data);
 
 	return BoxDataWrite("mfhd", 0, 0, data, data_stream);
 }
@@ -124,13 +163,13 @@ int CmafM4sFragmentWriter::MfhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &d
 //====================================================================================================
 // traf(Track Fragment)
 //====================================================================================================
-int CmafM4sFragmentWriter::TrafBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream,
-                                        const std::shared_ptr<FragmentSampleData> &sample_data)
+int CmafChunkWriter::TrafBoxWrite(std::shared_ptr<ov::Data> &data_stream,
+									const std::shared_ptr<SampleData> &sample_data)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	TfhdBoxWrite(data);
-	TfdtBoxWrite(data, sample_data);
+	TfdtBoxWrite(data, sample_data->timestamp);
 	TrunBoxWrite(data, sample_data);
 
 	return BoxDataWrite("traf", data, data_stream);
@@ -147,9 +186,9 @@ int CmafM4sFragmentWriter::TrafBoxWrite(std::shared_ptr<std::vector<uint8_t>> &d
 #define TFHD_FLAG_DURATION_IS_EMPTY                 (0x10000)
 #define TFHD_FLAG_DEFAULT_BASE_IS_MOOF              (0x20000)
 
-int CmafM4sFragmentWriter::TfhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int CmafChunkWriter::TfhdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 	uint32_t flag = TFHD_FLAG_DEFAULT_BASE_IS_MOOF;
 
 	WriteUint32(_track_id, data);	// track id
@@ -160,12 +199,11 @@ int CmafM4sFragmentWriter::TfhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &d
 //====================================================================================================
 // tfdt(Track Fragment Base Media Decode Time)
 //====================================================================================================
-int CmafM4sFragmentWriter::TfdtBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream,
-                                        const std::shared_ptr<FragmentSampleData> &sample_data)
+int CmafChunkWriter::TfdtBoxWrite(std::shared_ptr<ov::Data> &data_stream, uint64_t timestamp)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
-	WriteUint64(sample_data->timestamp, data);    // Base media decode time
+	WriteUint64(timestamp, data);    // Base media decode time
 
 	return BoxDataWrite("tfdt", 1, 0, data, data_stream);
 }
@@ -180,10 +218,10 @@ int CmafM4sFragmentWriter::TfdtBoxWrite(std::shared_ptr<std::vector<uint8_t>> &d
 #define TRUN_FLAG_SAMPLE_FLAGS_PRESENT                   (0x0400)
 #define TRUN_FLAG_SAMPLE_COMPOSITION_TIME_OFFSET_PRESENT (0x0800)
 
-int CmafM4sFragmentWriter::TrunBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream,
-                                        const std::shared_ptr<FragmentSampleData> &sample_data)
+int CmafChunkWriter::TrunBoxWrite(std::shared_ptr<ov::Data> &data_stream,
+									const std::shared_ptr<SampleData> &sample_data)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 	uint32_t flag = 0;
 
 	if (M4sMediaType::Video == _media_type)
@@ -218,17 +256,9 @@ int CmafM4sFragmentWriter::TrunBoxWrite(std::shared_ptr<std::vector<uint8_t>> &d
 //====================================================================================================
 // mdat(Media Data)
 //====================================================================================================
-int CmafM4sFragmentWriter::MdatBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream,
-        const std::shared_ptr<FragmentSampleData> &sample_data)
+int CmafChunkWriter::MdatBoxWrite(std::shared_ptr<ov::Data> &data_stream,
+										const std::shared_ptr<ov::Data> &frame_data)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	return BoxDataWrite("mdat", frame_data, data_stream, _media_type == M4sMediaType::Video ? true : false);
 
-    if (_media_type == M4sMediaType::Video)
-    {
-        WriteUint32(sample_data->data->GetLength(), data);	// size
-    }
-
-    WriteData(sample_data->data, data);
-
-	return BoxDataWrite("mdat", data, data_stream);
 }

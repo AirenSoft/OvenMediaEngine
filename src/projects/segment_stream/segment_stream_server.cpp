@@ -29,9 +29,6 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
                                 std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
                                 const ov::String &app_name,
                                 int thread_count,
-                                int max_retry_count,
-                                int send_buffer_size,
-                                int recv_buffer_size,
                                 const std::shared_ptr<Certificate> &certificate,
                                 const std::shared_ptr<Certificate> &chain_certificate)
 {
@@ -41,7 +38,6 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
         return false;
     }
     _app_name = app_name;
-    _max_retry_count = max_retry_count;
 
     // Interceptor add
     // - handler register
@@ -49,8 +45,7 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
                                      this,
                                      std::placeholders::_1,
                                      std::placeholders::_2,
-                                     std::placeholders::_3,
-                                     std::placeholders::_4);
+                                     std::placeholders::_3);
 
     auto segment_stream_interceptor = CreateInterceptor();
     segment_stream_interceptor->Start(thread_count, process_handler);
@@ -81,7 +76,7 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
 
         https_server->SetLocalCertificate(certificate);
         https_server->SetChainCertificate(chain_certificate);
-        https_server->SetTlsWriteToResponse(true);
+        https_server->SetTlsPostSend(true);
         _http_server = https_server;
     }
     else
@@ -93,7 +88,7 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
 
     _http_server->AddInterceptor(segment_stream_interceptor);
 
-    return _http_server->Start(address, send_buffer_size, recv_buffer_size);
+    return _http_server->Start(address);
 }
 
 
@@ -231,78 +226,55 @@ bool SegmentStreamServer::RequestUrlParsing(const ov::String &request_url,
 // ProcessRequest
 // - thread call processing
 //====================================================================================================
-bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpRequest> &request,
-                                         const std::shared_ptr<HttpResponse> &response,
-                                         int retry_count,
-                                         bool &is_retry)
+bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpResponse> &response,
+                                         const ov::String & request_target,
+                                         const ov::String & origin_url)
 {
     // prcess
-    if(retry_count == 0)
-    {
-        do
-        {
-            ov::String app_name;
-            ov::String stream_name;
-            ov::String file_name;
-            ov::String file_ext;
+    do
+	{
+		ov::String app_name;
+		ov::String stream_name;
+		ov::String file_name;
+		ov::String file_ext;
 
-            // Crossdomain 확인
-            if (request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0)
-            {
-                response->SetHeader("Content-Type", "text/x-cross-domain-policy");
-                //response->SetHeader("Content-Length", ov::Converter::ToString(_cross_domain_xml.GetLength()).CStr());
-                response->AppendString(_cross_domain_xml);
-                break;
-            }
+		// Crossdomain 확인
+		if (request_target.IndexOf("crossdomain.xml") >= 0)
+		{
+			response->SetHeader("Content-Type", "text/x-cross-domain-policy");
+			response->AppendString(_cross_domain_xml);
+			break;
+		}
 
-            // URL parsing
-            // app/strem/file.ext 기준
-            if (!RequestUrlParsing(request->GetRequestTarget(), app_name, stream_name, file_name, file_ext))
-            {
-                logtd("Request URL Parsing Fail : %s", request->GetRequestTarget().CStr());
-                response->SetStatusCode(HttpStatusCode::NotFound);
-                break;
-            }
+		// URL parsing
+		// app/strem/file.ext 기준
+		if (!RequestUrlParsing(request_target, app_name, stream_name, file_name, file_ext))
+		{
+			logtd("Request URL Parsing Fail : %s", request_target.CStr());
+			response->SetStatusCode(HttpStatusCode::NotFound);
+			break;
+		}
 
-            // CORS check
-            if (request->IsHeaderExists("Origin"))
-            {
-                SetAllowOrigin(request->GetHeader("Origin"), response);
-            }
+		// CORS check
+		if (!origin_url.IsEmpty())
+		{
+			SetAllowOrigin(origin_url, response);
+		}
 
-            // app check
-            if (_app_name != app_name)
-            {
-                logtd("App Allow Check Fail : %s", request->GetRequestTarget().CStr());
-                response->SetStatusCode(HttpStatusCode::NotFound);
-                break;
-            }
+		// app check
+		if (_app_name != app_name)
+		{
+			logtd("App Allow Check Fail : %s", request_target.CStr());
+			response->SetStatusCode(HttpStatusCode::NotFound);
+			break;
+		}
 
-            ProcessRequestStream(request, response, app_name, stream_name, file_name, file_ext);
+		ProcessRequestStream(response, app_name, stream_name, file_name, file_ext);
 
-        }while(false);
-    }
+	}while(false);
 
     // response
-    ssize_t sent = response->Response(is_retry);
-
-    if(is_retry)
-    {
-        logtd("Segment response result is retry - url(%s) retry(%d/max:%d) send(%u)",
-              request->GetRequestTarget().CStr(),
-              retry_count,
-              _max_retry_count,
-              sent);
-    }
-
-    // disconnect
-    if(!is_retry || retry_count >= _max_retry_count)
-    {
-        _http_server->Disconnect(request->GetRemote());
-        is_retry = false;
-    }
-
-    return true;
+    return response->PostResponse();
 }
 
 //====================================================================================================
@@ -338,82 +310,6 @@ bool SegmentStreamServer::SetAllowOrigin(const ov::String &origin_url, const std
     response->SetHeader("Access-Control-Allow-Origin", origin_url);
 
     return true;
-}
-
-//====================================================================================================
-// PlayListRequest
-// - m3u8/mpd
-//====================================================================================================
-void SegmentStreamServer::PlayListRequest(const ov::String &app_name,
-                                          const ov::String &stream_name,
-                                          const ov::String &file_name,
-                                          PlayListType play_list_type,
-                                          const std::shared_ptr<HttpResponse> &response)
-{
-    ov::String play_list;
-
-    auto item = std::find_if(_observers.begin(), _observers.end(),
-                             [&app_name, &stream_name, &file_name, &play_list](
-                                     auto &observer) -> bool {
-                                 return observer->OnPlayListRequest(app_name, stream_name, file_name, play_list);
-                             });
-
-    if (item == _observers.end() || play_list.IsEmpty())
-    {
-        logtd("PlayList Serarch Fail : %s/%s/%s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);
-        return;
-    }
-
-    // header setting
-    if (play_list_type == PlayListType::M3u8) response->SetHeader("Content-Type", "application/x-mpegURL");
-    else if (play_list_type == PlayListType::Mpd) response->SetHeader("Content-Type", "application/dash+xml");
-    //response->SetHeader("Content-Length", ov::Converter::ToString(play_list.GetLength()).CStr());
-
-    response->AppendString(play_list);
-}
-
-//====================================================================================================
-// SegmentRequest
-// - ts/mp4
-//====================================================================================================
-void SegmentStreamServer::SegmentRequest(const ov::String &app_name,
-                                         const ov::String &stream_name,
-                                         const ov::String &file_name,
-                                         SegmentType segment_type,
-                                         const std::shared_ptr<HttpResponse> &response)
-{
-    std::shared_ptr<ov::Data> segment_data = nullptr;
-
-    auto item = std::find_if(_observers.begin(), _observers.end(),
-                             [&app_name, &stream_name, &file_name, &segment_data](
-                                     auto &observer) -> bool {
-                                 return observer->OnSegmentRequest(app_name, stream_name, file_name, segment_data);
-                             });
-
-    if (item == _observers.end() || segment_data == nullptr)
-    {
-        logtd("Segment Data Serarch Fail : %s/%s/%s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);
-        return;
-    }
-
-    // header setting
-    if (segment_type == SegmentType::MpegTs)
-    {
-        response->SetHeader("Content-Type", "video/MP2T");
-    }
-    else if (segment_type == SegmentType::M4S)
-    {
-        if(file_name.IndexOf("video") > 0)
-            response->SetHeader("Content-Type", "video/mp4");
-        else if(file_name.IndexOf("audio") > 0)
-            response->SetHeader("Content-Type", "audio/mp4");
-    }
-
-    //response->SetHeader("Content-Length", ov::Converter::ToString(segment_data->GetLength()).CStr());
-
-    response->AppendData(segment_data);
 }
 
 //====================================================================================================

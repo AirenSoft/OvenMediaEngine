@@ -16,6 +16,9 @@
 #include <base/common_types.h>
 #include <base/ovlibrary/byte_io.h>
 
+#define MP4_BOX_HEADER_SIZE  (8)        // size(4) + type(4)
+#define MP4_BOX_EXT_HEADER_SIZE (12)    // size(4) + type(4) + version(1) + flag(3)
+
 enum class M4sMediaType
 {
 	Video,
@@ -26,10 +29,10 @@ enum class M4sMediaType
 //====================================================================================================
 // Fragment Sample Data
 //====================================================================================================
-struct FragmentSampleData
+struct SampleData
 {
 public:
-    FragmentSampleData(uint64_t duration_,
+	SampleData(uint64_t duration_,
                        uint32_t flag_,
                        uint64_t timestamp_,
                        uint32_t composition_time_offset_,
@@ -60,10 +63,12 @@ public:
 	virtual ~M4sWriter() = default;
 
 protected :
-	bool WriteText(std::string text, std::shared_ptr<std::vector<uint8_t>> &data_stream);
+
+	// std::vector<uint8_t> process
 	bool WriteData(const std::vector<uint8_t> &data,  std::shared_ptr<std::vector<uint8_t>> &data_stream);
     bool WriteData(const std::shared_ptr<ov::Data> &data,  std::shared_ptr<std::vector<uint8_t>> &data_stream);
 	bool WriteData(const uint8_t *data,  int data_size, std::shared_ptr<std::vector<uint8_t>> &data_stream);
+	bool WriteText(std::string value, std::shared_ptr<std::vector<uint8_t>> &data_stream);
 	bool WriteInit(uint8_t value, int init_size, std::shared_ptr<std::vector<uint8_t>> &data_stream);
 	bool WriteUint64(uint64_t value, std::shared_ptr<std::vector<uint8_t>> &data_stream);
 	bool WriteUint32(uint32_t value, std::shared_ptr<std::vector<uint8_t>> &data_stream);
@@ -71,8 +76,38 @@ protected :
 	bool WriteUint16(uint16_t value, std::shared_ptr<std::vector<uint8_t>> &data_stream);
 	bool WriteUint8(uint8_t value, std::shared_ptr<std::vector<uint8_t>> &data_stream);
 
-	int BoxDataWrite(std::string type, std::shared_ptr<std::vector<uint8_t>> &data, std::shared_ptr<std::vector<uint8_t>> &data_stream);
-	int BoxDataWrite(std::string type, uint8_t version, uint32_t flags, std::shared_ptr<std::vector<uint8_t>> &data, std::shared_ptr<std::vector<uint8_t>> &data_stream);
+	// ov::Data process
+	bool WriteData(const std::vector<uint8_t> &data,  std::shared_ptr<ov::Data> &data_stream);
+	bool WriteData(const std::shared_ptr<ov::Data> &data,  std::shared_ptr<ov::Data> &data_stream);
+	bool WriteData(const uint8_t *data,  int data_size, std::shared_ptr<ov::Data> &data_stream);
+	bool WriteInit(uint8_t value, int init_size, std::shared_ptr<ov::Data> &data_stream);
+	bool WriteText(const ov::String &value, std::shared_ptr<ov::Data> &data_stream);
+	bool WriteUint64(uint64_t value, std::shared_ptr<ov::Data> &data_stream);
+	bool WriteUint24(uint32_t value, std::shared_ptr<ov::Data> &data_stream);
+	bool WriteUint32(uint32_t value, std::shared_ptr<ov::Data> &data_stream);
+	bool WriteUint16(uint16_t value, std::shared_ptr<ov::Data> &data_stream);
+	bool WriteUint8(uint8_t value, std::shared_ptr<ov::Data> &data_stream);
+
+	int BoxDataWrite(std::string type,
+					const std::shared_ptr<std::vector<uint8_t>> &data,
+					std::shared_ptr<std::vector<uint8_t>> &data_stream);
+
+	int BoxDataWrite(std::string type,
+					uint8_t version,
+					uint32_t flags,
+					const std::shared_ptr<std::vector<uint8_t>> &data,
+					std::shared_ptr<std::vector<uint8_t>> &data_stream);
+
+	int BoxDataWrite(const ov::String &type,
+					const std::shared_ptr<ov::Data> &data,
+					std::shared_ptr<ov::Data> &data_stream,
+					 bool data_size_write = false);
+
+	int BoxDataWrite(const ov::String &type,
+					uint8_t version,
+					uint32_t flags,
+					const std::shared_ptr<ov::Data> &data,
+					std::shared_ptr<ov::Data> &data_stream);
 
 protected :
 	M4sMediaType _media_type;

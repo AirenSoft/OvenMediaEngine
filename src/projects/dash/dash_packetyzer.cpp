@@ -17,11 +17,6 @@
 #define VIDEO_TRACK_ID    (1)
 #define AUDIO_TRACK_ID    (2)
 
-#define MPD_VIDEO_SUFFIX            "_video.m4s"
-#define MPD_AUDIO_SUFFIX            "_audio.m4s"
-#define MPD_VIDEO_INIT_FILE_NAME    "init_video.m4s"
-#define MPD_AUDIO_INIT_FILE_NAME    "init_audio.m4s"
-
 //====================================================================================================
 // Constructor
 //====================================================================================================
@@ -57,10 +52,13 @@ DashPacketyzer::DashPacketyzer(const ov::String &app_name,
     _mpd_suggested_presentation_delay = _segment_duration;//(_segment_count / 2 * _segment_duration);
     _mpd_min_buffer_time = 6; //_segment_duration; // (double)_segment_duration/2*1.2;
 
+
+
+
     _last_video_append_time = time(nullptr);
     _last_audio_append_time = time(nullptr);
 
-    _duration_threshold = (double)_segment_duration * 0.9 * (double)_media_info.video_timescale;
+	_duration_margen = _segment_duration * 0.1;
 }
 
 //====================================================================================================
@@ -80,7 +78,7 @@ DashPacketyzer::~DashPacketyzer()
 // - sps/pps
 // - init m4s create
 //====================================================================================================
-bool DashPacketyzer::VideoInit(std::shared_ptr<ov::Data> &frame_data)
+bool DashPacketyzer::VideoInit(const std::shared_ptr<ov::Data> &frame_data)
 {
     uint32_t current_index = 0;
     int sps_start_index = -1;
@@ -89,27 +87,26 @@ bool DashPacketyzer::VideoInit(std::shared_ptr<ov::Data> &frame_data)
     int pps_end_index = -1;
     int total_start_pattern_size = 0;
 
-    auto data = std::make_shared<std::vector<uint8_t>>(frame_data->GetDataAs<uint8_t>(),
-            frame_data->GetDataAs<uint8_t>() + frame_data->GetLength());
+	auto buffer = frame_data->GetDataAs<uint8_t>();
 
     // sps/pps parsing
-    while ((current_index + AVC_NAL_START_PATTERN_SIZE) < data->size())
+    while ((current_index + AVC_NAL_START_PATTERN_SIZE) < frame_data->GetLength())
     {
         int start_pattern_size = 0;
 
         // 0x00 0x00 0x00 0x01 pattern check
-        if (data->at(current_index) == 0 &&
-            data->at(current_index + 1) == 0 &&
-            data->at(current_index + 2) == 0 &&
-            data->at(current_index + 3) == 1)
+        if (buffer[current_index] == 0 &&
+			buffer[current_index + 1] == 0 &&
+			buffer[current_index + 2] == 0 &&
+			buffer[current_index + 3] == 1)
         {
             start_pattern_size = 4;
             total_start_pattern_size += start_pattern_size;
         }
         // 0x00 0x00 0x00 0x01 pattern check
-        else if(data->at(current_index) == 0 &&
-                data->at(current_index + 1) == 0 &&
-                data->at(current_index + 2) == 1)
+        else if(buffer[current_index] == 0 &&
+				buffer[current_index + 1] == 0 &&
+				buffer[current_index + 2] == 1)
         {
             start_pattern_size = 3;
             total_start_pattern_size += start_pattern_size;
@@ -149,13 +146,11 @@ bool DashPacketyzer::VideoInit(std::shared_ptr<ov::Data> &frame_data)
         return false;
     }
 
-    // SPS save
-    auto avc_sps = std::make_shared<std::vector<uint8_t>>(data->begin() + sps_start_index,
-                                                          data->begin() + sps_end_index + 1);
+	// SPS save
+	auto avc_sps = frame_data->Subdata(sps_start_index, sps_end_index - sps_start_index + 1);
 
-    // PPS save
-    auto avc_pps = std::make_shared<std::vector<uint8_t>>(data->begin() + pps_start_index,
-                                                          data->begin() + pps_end_index + 1);
+	// PPS save
+	auto avc_pps = frame_data->Subdata(pps_start_index, pps_end_index - pps_start_index + 1);
 
     // Video init m4s Create
     auto writer = std::make_unique<M4sInitWriter>(M4sMediaType::Video,
@@ -170,16 +165,22 @@ bool DashPacketyzer::VideoInit(std::shared_ptr<ov::Data> &frame_data)
                                                   16,
                                                   _media_info.audio_samplerate);
 
-    if (writer->CreateData() <= 0)
+    auto init_data = writer->CreateData(false);
+
+    if (init_data == nullptr)
     {
         logte("Dash video init writer create fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
         return false;
     }
 
-    _avc_nal_header_size = avc_sps->size() + avc_pps->size() + total_start_pattern_size;
+    _avc_nal_header_size = avc_sps->GetLength() + avc_pps->GetLength() + total_start_pattern_size;
 
     // Video init m4s Save
-    SetSegmentData(MPD_VIDEO_INIT_FILE_NAME, 0, 0, writer->GetDataStream());
+    _mpd_video_init_file = std::make_shared<SegmentData>(0,
+														 DASH_MPD_VIDEO_INIT_FILE_NAME,
+														 0,
+														 0,
+														 init_data);
 
     return true;
 }
@@ -192,7 +193,7 @@ bool DashPacketyzer::VideoInit(std::shared_ptr<ov::Data> &frame_data)
 //====================================================================================================
 bool DashPacketyzer::AudioInit()
 {
-    std::shared_ptr<std::vector<uint8_t>> temp = nullptr;
+    std::shared_ptr<ov::Data> temp = nullptr;
 
     // Audio init m4s 생성(메모리)
     auto writer = std::make_unique<M4sInitWriter>(M4sMediaType::Audio,
@@ -207,14 +208,20 @@ bool DashPacketyzer::AudioInit()
                                                   16,
                                                   _media_info.audio_samplerate);
 
-    if (writer->CreateData() <= 0)
+	auto init_data = writer->CreateData(false);
+
+	if (init_data == nullptr)
     {
         logte("Dash audio init writer create fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
         return false;
     }
 
     // Audio init m4s Save
-    SetSegmentData(MPD_AUDIO_INIT_FILE_NAME, 0, 0, writer->GetDataStream());
+	_mpd_audio_init_file = std::make_shared<SegmentData>(0,
+														 DASH_MPD_AUDIO_INIT_FILE_NAME,
+														 0,
+														 0,
+														 init_data);
 
     return true;
 }
@@ -241,7 +248,7 @@ bool DashPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
     if (frame_data->type == PacketyzerFrameType::VideoKeyFrame && !_video_frame_datas.empty())
     {
         if (frame_data->timestamp - _video_frame_datas[0]->timestamp >=
-                (_segment_duration * _media_info.video_timescale))
+                ((_segment_duration - _duration_margen) * _media_info.video_timescale))
         {
 
             VideoSegmentWrite(frame_data->timestamp);
@@ -268,11 +275,6 @@ bool DashPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
 
     _video_frame_datas.push_back(frame_data);
     _last_video_append_time = time(nullptr);
-
-    if (frame_data->type == PacketyzerFrameType::VideoKeyFrame)
-    {
-        logtd("dash video timestamp %lld", frame_data->timestamp);
-    }
 
     return true;
 }
@@ -307,7 +309,7 @@ bool DashPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &fram
             static_cast<uint32_t>(_segment_duration)) && !_audio_frame_datas.empty())
     {
         if ((frame_data->timestamp - _audio_frame_datas[0]->timestamp) >=
-                (_segment_duration * _media_info.audio_timescale))
+                ((_segment_duration - _duration_margen) * _media_info.audio_timescale))
         {
             AudioSegmentWrite(frame_data->timestamp);
 
@@ -325,7 +327,7 @@ bool DashPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &fram
 bool DashPacketyzer::VideoSegmentWrite(uint64_t max_timestamp)
 {
     uint64_t start_timestamp = 0;
-    std::vector<std::shared_ptr<FragmentSampleData>> sample_datas;
+    std::vector<std::shared_ptr<SampleData>> sample_datas;
 
     while (!_video_frame_datas.empty())
     {
@@ -342,34 +344,36 @@ bool DashPacketyzer::VideoSegmentWrite(uint64_t max_timestamp)
         uint64_t duration = _video_frame_datas.empty() ? (max_timestamp - frame_data->timestamp) :
                             (_video_frame_datas.front()->timestamp - frame_data->timestamp);
 
-        auto sample_data = std::make_shared<FragmentSampleData>(duration,
-                                                                frame_data->type == PacketyzerFrameType::VideoKeyFrame
-                                                                ? 0X02000000 : 0X01010000,
-                                                                frame_data->timestamp,
-                                                                frame_data->time_offset,
-                                                                frame_data->data);
+        auto sample_data = std::make_shared<SampleData>(duration,
+														frame_data->type == PacketyzerFrameType::VideoKeyFrame
+														? 0X02000000 : 0X01010000,
+														frame_data->timestamp,
+														frame_data->time_offset,
+														frame_data->data);
 
         sample_datas.push_back(sample_data);
     }
     _video_frame_datas.clear();
 
     // Fragment write
-    auto fragment_writer = std::make_unique<M4sFragmentWriter>(M4sMediaType::Video,
+    auto fragment_writer = std::make_unique<M4sSegmentWriter>(M4sMediaType::Video,
                                                                 _video_sequence_number,
                                                                 VIDEO_TRACK_ID,
                                                                 start_timestamp);
 
-    if(fragment_writer->AppendSamples(sample_datas) <= 0)
+    auto segment_data = fragment_writer->AppendSamples(sample_datas);
+
+    if(segment_data == nullptr)
     {
         logte("Dash video writer create fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
         return false;
     }
 
     // m4s data save
-    SetSegmentData(ov::String::FormatString("%s_%lld%s", _segment_prefix.CStr(), start_timestamp, MPD_VIDEO_SUFFIX),
+    SetSegmentData(ov::String::FormatString("%s_%lld%s", _segment_prefix.CStr(), start_timestamp, DASH_MPD_VIDEO_SUFFIX),
                 max_timestamp - start_timestamp,
                 start_timestamp,
-                fragment_writer->GetDataStream());
+                segment_data);
 
     return true;
 }
@@ -383,7 +387,7 @@ bool DashPacketyzer::AudioSegmentWrite(uint64_t max_timestamp)
 {
     uint64_t start_timestamp = 0;
     uint64_t end_timestamp = 0;
-    std::vector<std::shared_ptr<FragmentSampleData>> sample_datas;
+    std::vector<std::shared_ptr<SampleData>> sample_datas;
 
     //  size > 1  for duration calculation
     while (_audio_frame_datas.size() > 1)
@@ -398,7 +402,7 @@ bool DashPacketyzer::AudioSegmentWrite(uint64_t max_timestamp)
 
         _audio_frame_datas.pop_front();
 
-        auto sample_data = std::make_shared<FragmentSampleData>(
+        auto sample_data = std::make_shared<SampleData>(
                 _audio_frame_datas.front()->timestamp - frame_data->timestamp,
                 0,
                 frame_data->timestamp,
@@ -411,22 +415,24 @@ bool DashPacketyzer::AudioSegmentWrite(uint64_t max_timestamp)
     }
 
     // Fragment write
-    auto fragment_writer = std::make_unique<M4sFragmentWriter>(M4sMediaType::Audio,
+    auto fragment_writer = std::make_unique<M4sSegmentWriter>(M4sMediaType::Audio,
                                                                 _audio_sequence_number,
                                                                 AUDIO_TRACK_ID,
                                                                 start_timestamp);
 
-    if(fragment_writer->AppendSamples(sample_datas) <= 0)
+	auto segment_data = fragment_writer->AppendSamples(sample_datas);
+
+	if(segment_data == nullptr)
     {
         logte("Dash audio writer create fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
         return false;
     }
 
     // m4s save
-    SetSegmentData(ov::String::FormatString("%s_%lld%s", _segment_prefix.CStr(), start_timestamp, MPD_AUDIO_SUFFIX),
-                    end_timestamp - start_timestamp,
-                    start_timestamp,
-                    fragment_writer->GetDataStream());
+	SetSegmentData(ov::String::FormatString("%s_%lld%s", _segment_prefix.CStr(), start_timestamp, DASH_MPD_AUDIO_SUFFIX),
+					end_timestamp - start_timestamp,
+					start_timestamp,
+					segment_data);
 
     return true;
 }
@@ -541,7 +547,7 @@ bool DashPacketyzer::UpdatePlayList()
             << "\" segmentAlignment=\"true\" startWithSAP=\"1\" subsegmentAlignment=\"true\" subsegmentStartsWithSAP=\"1\">"
             << "\n"
             << "\t\t<SegmentTemplate timescale=\"" << _media_info.video_timescale
-            << "\" initialization=\"" << MPD_VIDEO_INIT_FILE_NAME << "\" media=\"" << _segment_prefix.CStr() << "_$Time$" << MPD_VIDEO_SUFFIX << "\">\n"
+            << "\" initialization=\"" << DASH_MPD_VIDEO_INIT_FILE_NAME << "\" media=\"" << _segment_prefix.CStr() << "_$Time$" << DASH_MPD_VIDEO_SUFFIX << "\">\n"
             << "\t\t\t<SegmentTimeline>\n"
             << video_urls.CStr()
             << "\t\t\t</SegmentTimeline>\n"
@@ -558,7 +564,7 @@ bool DashPacketyzer::UpdatePlayList()
             << "\t\t<AudioChannelConfiguration schemeIdUri=\"urn:mpeg:dash:23003:3:audio_channel_configuration:2011\" value=\""
             << _media_info.audio_channels << "\"/>\n"
             << "\t\t<SegmentTemplate timescale=\"" << _media_info.audio_timescale
-            << "\" initialization=\"" << MPD_AUDIO_INIT_FILE_NAME << "\" media=\"" << _segment_prefix.CStr() << "_$Time$" << MPD_AUDIO_SUFFIX << "\">\n"
+            << "\" initialization=\"" << DASH_MPD_AUDIO_INIT_FILE_NAME << "\" media=\"" << _segment_prefix.CStr() << "_$Time$" << DASH_MPD_AUDIO_SUFFIX << "\">\n"
             << "\t\t\t<SegmentTimeline>\n"
             << audio_urls.CStr()
             << "\t\t\t</SegmentTimeline>\n"
@@ -588,37 +594,23 @@ bool DashPacketyzer::UpdatePlayList()
 //====================================================================================================
 // Get Segment
 //====================================================================================================
-bool DashPacketyzer::GetSegmentData(const ov::String &file_name, std::shared_ptr<ov::Data> &data)
+const std::shared_ptr<SegmentData> DashPacketyzer::GetSegmentData(const ov::String &file_name)
 {
     if(!_init_segment_count_complete)
-        return false;
+        return nullptr;
 
     // video init file
-    if(file_name == MPD_VIDEO_INIT_FILE_NAME)
+    if(file_name == DASH_MPD_VIDEO_INIT_FILE_NAME)
     {
-        if(_mpd_video_init_file == nullptr)
-        {
-            data = nullptr;
-            return false;
-        }
-
-        data =_mpd_video_init_file->data;
-        return true;
+        return _mpd_video_init_file;
     }
     // audio init file
-    else if(file_name == MPD_AUDIO_INIT_FILE_NAME)
+    else if(file_name == DASH_MPD_AUDIO_INIT_FILE_NAME)
     {
-        if(_mpd_audio_init_file == nullptr)
-        {
-            data = nullptr;
-            return false;
-        }
-
-        data =_mpd_audio_init_file->data;
-        return true;
+        return _mpd_audio_init_file;
     }
 
-    if (file_name.IndexOf(MPD_VIDEO_SUFFIX) >= 0)
+    if (file_name.IndexOf(DASH_MPD_VIDEO_SUFFIX) >= 0)
     {
         // video segment mutex
         std::unique_lock<std::mutex> lock(_video_segment_guard);
@@ -631,14 +623,12 @@ bool DashPacketyzer::GetSegmentData(const ov::String &file_name, std::shared_ptr
 
         if(item == _video_segment_datas.end())
         {
-            data = nullptr;
-            return false;
+           return nullptr;
         }
 
-        data = (*item)->data;
-        return data != nullptr;
+        return (*item);
     }
-    else if (file_name.IndexOf(MPD_AUDIO_SUFFIX) >= 0)
+    else if (file_name.IndexOf(DASH_MPD_AUDIO_SUFFIX) >= 0)
     {
         // audio segment mutex
         std::unique_lock<std::mutex> lock(_audio_segment_guard);
@@ -651,38 +641,24 @@ bool DashPacketyzer::GetSegmentData(const ov::String &file_name, std::shared_ptr
 
         if(item == _audio_segment_datas.end())
         {
-            data = nullptr;
-            return false;
+            return nullptr;
         }
 
-        data = (*item)->data;
-        return data != nullptr;
+		return (*item);
     }
 
-    data = nullptr;
-    return false;
+    return nullptr;
 }
 
 //====================================================================================================
 // Set Segment
 //====================================================================================================
 bool DashPacketyzer::SetSegmentData(ov::String file_name,
-                                   uint64_t duration,
-                                   uint64_t timestamp,
-                                   const std::shared_ptr<std::vector<uint8_t>> &data)
+									uint64_t duration,
+									uint64_t timestamp,
+									std::shared_ptr<ov::Data> &data)
 {
-    if(file_name == MPD_VIDEO_INIT_FILE_NAME)
-    {
-        _mpd_video_init_file = std::make_shared<SegmentData>(0, MPD_VIDEO_INIT_FILE_NAME, duration, timestamp, data);
-        return true;
-    }
-    else if(file_name == MPD_AUDIO_INIT_FILE_NAME)
-    {
-        _mpd_audio_init_file = std::make_shared<SegmentData>(0, MPD_AUDIO_INIT_FILE_NAME, duration, timestamp, data);
-        return true;
-    }
-
-    if (file_name.IndexOf(MPD_VIDEO_SUFFIX) >= 0)
+   	if (file_name.IndexOf(DASH_MPD_VIDEO_SUFFIX) >= 0)
     {
         // video segment mutex
         std::unique_lock<std::mutex> lock(_video_segment_guard);
@@ -702,7 +678,7 @@ bool DashPacketyzer::SetSegmentData(ov::String file_name,
           _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration, (double)duration/_media_info.video_timescale);
 
     }
-    else if (file_name.IndexOf(MPD_AUDIO_SUFFIX) >= 0)
+    else if (file_name.IndexOf(DASH_MPD_AUDIO_SUFFIX) >= 0)
     {
         // audio segment mutex
         std::unique_lock<std::mutex> lock(_audio_segment_guard);
@@ -726,8 +702,8 @@ bool DashPacketyzer::SetSegmentData(ov::String file_name,
             (_video_sequence_number > _segment_count || _audio_sequence_number > _segment_count))
     {
         _init_segment_count_complete = true;
-        logti("Dash ready completed - stream(%s/%s) prefix(%s) segment(%ds/%d)",
-              _app_name.CStr(), _stream_name.CStr(), _segment_prefix.CStr(), _segment_duration, _segment_count);
+        logti("Dash segment ready completed - stream(%s/%s) segment(%ds/%d)",
+              _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);
     }
 
     return true;

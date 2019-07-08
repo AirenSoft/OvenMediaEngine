@@ -47,9 +47,9 @@ private :
                            ov::String &play_list) override;
 
     bool OnSegmentRequest(const ov::String &app_name,
-                          const ov::String &stream_name,
-                          const ov::String &file_name,
-                          std::shared_ptr<ov::Data> &segment_data) override;
+						  const ov::String &stream_name,
+						  const ov::String &file_name,
+						  std::shared_ptr<SegmentData> &segment) override;
 
     // Publisher Implementation
     cfg::PublisherType GetPublisherType() override

@@ -19,12 +19,13 @@ class CmafStreamPacketyzer : public StreamPacketyzer
 {
 public:
     CmafStreamPacketyzer(const ov::String &app_name,
-                         const ov::String &stream_name,
-                         int segment_count,
-                        int segment_duration,
-                        const  ov::String &segment_prefix,
-                        PacketyzerStreamType stream_type,
-                        PacketyzerMediaInfo media_info);
+						const ov::String &stream_name,
+						int segment_count,
+						int segment_duration,
+						const  ov::String &segment_prefix,
+						PacketyzerStreamType stream_type,
+						PacketyzerMediaInfo media_info,
+						const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
     virtual ~CmafStreamPacketyzer();
 
@@ -34,7 +35,7 @@ public :
     bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &data) override;
     bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &data) override;
     bool GetPlayList(ov::String &play_list) override;
-    bool GetSegment(const ov::String &file_name, std::shared_ptr<ov::Data> &data) override;
+	std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) override;
 
 private :
 

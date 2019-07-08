@@ -17,7 +17,7 @@ HttpServer::~HttpServer()
 	OV_ASSERT2(_physical_port == nullptr);
 }
 
-bool HttpServer::Start(const ov::SocketAddress &address, int sned_buffer_size, int recv_buffer_size)
+bool HttpServer::Start(const ov::SocketAddress &address)
 {
 	if(_physical_port != nullptr)
 	{
@@ -25,10 +25,7 @@ bool HttpServer::Start(const ov::SocketAddress &address, int sned_buffer_size, i
 		return false;
 	}
 
-	_physical_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Tcp,
-                                                                address,
-                                                                sned_buffer_size,
-                                                                recv_buffer_size);
+	_physical_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Tcp, address);
 
 	if(_physical_port != nullptr)
 	{
@@ -130,6 +127,19 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 		std::shared_ptr<HttpResponse> &response = client->GetResponse();
 
 		bool need_to_disconnect = false;
+
+		 // header parse (temp)
+		 // - http1.0 Connection default : close
+		 // - http1.1 Connection default : keep-alive
+		 if(request->ParseStatus() == HttpStatusCode::OK && request->GetRequestInterceptor() != nullptr)
+		{
+			if((request->GetHttpVersionAsNumber() > 1.0 && request->GetHeader("Connection", "keep-alive") == "keep-alive") ||
+				(request->GetHttpVersionAsNumber() <= 1.0 && request->GetHeader("Connection", "close") == "keep-alive"))
+			{
+				request->InitParseInfo();
+			}
+		}
+
 
 		switch(request->ParseStatus())
 		{

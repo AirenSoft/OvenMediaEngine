@@ -33,12 +33,12 @@ public :
 
     virtual bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame_data) override;
 
-    virtual bool GetSegmentData(const ov::String &file_name, std::shared_ptr<ov::Data> &data) override;
+    virtual const std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) override;
 
     virtual bool SetSegmentData(ov::String file_name,
-                                uint64_t duration,
-                                uint64_t timestamp_,
-                                const std::shared_ptr<std::vector<uint8_t>> &data) override;
+								uint64_t duration,
+								uint64_t timestamp,
+								std::shared_ptr<ov::Data> &data) override;
 
     bool SegmentWrite(uint64_t start_timestamp, uint64_t duration);
 
@@ -47,7 +47,7 @@ protected :
 	
 protected :
 	std::vector<std::shared_ptr<PacketyzerFrameData>> _frame_datas;
-    double _duration_threshold;
+    double _duration_margen;
 
     time_t _last_video_append_time;
     time_t _last_audio_append_time;

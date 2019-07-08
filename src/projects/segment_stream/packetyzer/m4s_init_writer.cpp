@@ -48,22 +48,19 @@ const int g_sample_rate_table[] = {96000, 88200, 64000, 48000, 44100, 32000, 240
 //====================================================================================================
 // Constructor
 //====================================================================================================
-M4sInitWriter::M4sInitWriter(	M4sMediaType 	media_type,
-								uint32_t		duration,
-								uint32_t		timescale,
-								uint32_t		track_id,
-								uint32_t		video_width,
-								uint32_t		video_height,
-								std::shared_ptr<std::vector<uint8_t>> &avc_sps,
-								std::shared_ptr<std::vector<uint8_t>> &avc_pps,
-								uint16_t        audio_channels,
-								uint16_t        audio_sample_size,
-								uint16_t        audio_sample_rate) : M4sWriter(media_type)
+M4sInitWriter::M4sInitWriter(M4sMediaType media_type,
+							uint32_t duration,
+							uint32_t timescale,
+							uint32_t track_id,
+							uint32_t video_width,
+							uint32_t video_height,
+							std::shared_ptr<ov::Data> &avc_sps,
+							std::shared_ptr<ov::Data> &avc_pps,
+							uint16_t audio_channels,
+							uint16_t audio_sample_size,
+							uint16_t audio_sample_rate) : M4sWriter(media_type)
 {
-    _data_stream = std::make_shared<std::vector<uint8_t>>();
-    _data_stream->reserve(1024);
-
-	_duration			= duration;
+   	_duration			= duration;
 	_timescale			= timescale;
 	_track_id			= track_id;
 
@@ -102,30 +99,35 @@ M4sInitWriter::M4sInitWriter(	M4sMediaType 	media_type,
 
 //====================================================================================================
 // ftyp(File Type) / Init Segment
+// -  size \r\n data \r\n .......\r\n0\r\n\r\n
 //====================================================================================================
-int M4sInitWriter::CreateData()
+const std::shared_ptr<ov::Data> M4sInitWriter::CreateData(bool http_chunked_transfer_support)
 {
-	int ftyp_size = 0; 
-	int moov_size = 0; 
+	auto data_stream = std::make_shared<ov::Data>(4096);
 
-	ftyp_size += FtypBoxWrite(_data_stream);
-	moov_size += MoovBoxWrite(_data_stream);
+	FtypBoxWrite(data_stream);
+	MoovBoxWrite(data_stream);
 
-	return ftyp_size + moov_size;
+	// Audio init m4s Save
+	if(http_chunked_transfer_support)
+	{
+		data_stream->Insert(ov::String::FormatString("%x\r\n", data_stream->GetLength()).ToData(false).get(), 0);
+		data_stream->Append("\r\n0\r\n\r\n", 7);
+	}
+
+	return data_stream;
 }
 
 //====================================================================================================
 // ftyp(File Type) 
 //====================================================================================================
-int M4sInitWriter::FtypBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::FtypBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::string major_brand = "mp42";
-	std::string compatible_brands = "isommp42iso5dash";// isom(4)mp42(4)iso5(4)dash(4)
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>(); 
+	auto data = std::make_shared<ov::Data>();
 
-	WriteText(major_brand, data);         // Major brand
+	WriteText("mp42", data);         // Major brand
 	WriteUint32(0, data);                   // Minor version
-	WriteText(compatible_brands, data);   // Compatible brands
+	WriteText("isommp42iso5dash", data);   // Compatible brands // isom(4)mp42(4)iso5(4)dash(4)
 	
 	return BoxDataWrite("ftyp", data, data_stream);
 
@@ -134,9 +136,9 @@ int M4sInitWriter::FtypBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // Moov(Movie)
 //====================================================================================================
-int M4sInitWriter::MoovBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::MoovBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	MvhdBoxWrite(data);
 	MvexBoxWrite(data);
@@ -148,9 +150,9 @@ int M4sInitWriter::MoovBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // mvhd(Movie Header)
 //====================================================================================================
-int M4sInitWriter::MvhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::MvhdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 	std::vector<uint8_t> metrix = {0, 0x01, 0, 0,
 								   0, 0, 0, 0,
 								   0, 0, 0, 0,
@@ -178,9 +180,9 @@ int M4sInitWriter::MvhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // trak(Track)
 //====================================================================================================
-int M4sInitWriter::TrakBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::TrakBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	TkhdBoxWrite(data);
 	MdiaBoxWrite(data);
@@ -191,9 +193,9 @@ int M4sInitWriter::TrakBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // tkhd(Track Header) 
 //====================================================================================================
-int M4sInitWriter::TkhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::TkhdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 	std::vector<uint8_t> metrix = {0, 0x01, 0, 0,
 								   0, 0, 0, 0,
 								   0, 0, 0, 0,
@@ -233,9 +235,9 @@ int M4sInitWriter::TkhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // mdia(Media) 
 //====================================================================================================
-int M4sInitWriter::MdiaBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::MdiaBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	MdhdBoxWrite(data);
 	HdlrBoxWrite(data);
@@ -247,9 +249,9 @@ int M4sInitWriter::MdiaBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // mdhd(Media Information) 
 //====================================================================================================
-int M4sInitWriter::MdhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::MdhdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint32(0, data);               // Create Time
 	WriteUint32(0, data);               // Modification Time
@@ -274,9 +276,9 @@ int M4sInitWriter::MdhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // Hdlr(Handler Reference) 
 //====================================================================================================
-int M4sInitWriter::HdlrBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::HdlrBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint32(0, data);				// Pre Define
 	WriteText(_handler_type, data);		// Handler Type
@@ -290,9 +292,9 @@ int M4sInitWriter::HdlrBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // minf(Media) 
 //====================================================================================================
-int M4sInitWriter::MinfBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::MinfBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	if(_media_type == M4sMediaType::Video)     	VmhdBoxWrite(data);
 	else if(_media_type == M4sMediaType::Audio)	SmhdBoxWrite(data);
@@ -306,9 +308,9 @@ int M4sInitWriter::MinfBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // vmhd(Video Media Header) 
 //====================================================================================================
-int M4sInitWriter::VmhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::VmhdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint16(0, data);	// Graphics Mode
 	WriteInit(0, 6, data);	// Op Color
@@ -319,9 +321,9 @@ int M4sInitWriter::VmhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // smhd(Sound Media Header)
 //====================================================================================================
-int M4sInitWriter::SmhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::SmhdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint16(0, data);	// Balance
 	WriteUint16(0, data);	// Reserved
@@ -332,9 +334,9 @@ int M4sInitWriter::SmhdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // dinf(Data Information) 
 //====================================================================================================
-int M4sInitWriter::DinfBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::DinfBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	DrefBoxWrite(data);
 
@@ -344,9 +346,9 @@ int M4sInitWriter::DinfBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // dref(Data Reference)
 //====================================================================================================
-int M4sInitWriter::DrefBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::DrefBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint32(1, data); // child count
 	UrlBoxWrite(data);    // url child
@@ -358,9 +360,9 @@ int M4sInitWriter::DrefBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // url(Data Entry Url) 
 //====================================================================================================
-int M4sInitWriter::UrlBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::UrlBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = nullptr;
+	std::shared_ptr<ov::Data> data = nullptr;
 
 	return BoxDataWrite("url ", 0, 1, data, data_stream);
 }
@@ -368,9 +370,9 @@ int M4sInitWriter::UrlBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_strea
 //====================================================================================================
 // stbl(Sample Table)
 //====================================================================================================
-int M4sInitWriter::StblBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::StblBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	StsdBoxWrite(data);
 	SttsBoxWrite(data);
@@ -384,9 +386,9 @@ int M4sInitWriter::StblBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // stsd(Sample Description)
 //====================================================================================================
-int M4sInitWriter::StsdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::StsdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint32(1, data); // Child Count
 
@@ -399,9 +401,9 @@ int M4sInitWriter::StsdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // avc1(AVC Sample Entry)
 //====================================================================================================
-int M4sInitWriter::Avc1BoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::Avc1BoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint32(1, data);								// Child Count
 	WriteUint16(0, data);								// Pre Define
@@ -413,9 +415,9 @@ int M4sInitWriter::Avc1BoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 	WriteUint32(0x00480000, data);						// Vert Resolution
 	WriteUint32(0, data);								// Reserve(4Byte)
 	WriteUint16(1, data);								// Frame Count
-	WriteUint8((uint8_t)_compressor_name.size(), data); // Compressor Name Size(Max 31Byte) 
+	WriteUint8((uint8_t)_compressor_name.GetLength(), data); // Compressor Name Size(Max 31Byte)
 	WriteText(_compressor_name, data);					// Compressor Name 
-	WriteInit(0, 31 - _compressor_name.size(), data);	// Padding(31 - Compressor Name Size) 
+	WriteInit(0, 31 - _compressor_name.GetLength(), data);	// Padding(31 - Compressor Name Size)
 	WriteUint16(0x0018, data);							// Depth
 	WriteUint16(0xFFFF, data);							// Pre Define
 
@@ -427,19 +429,21 @@ int M4sInitWriter::Avc1BoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // avcC(AVC Decoder Configuration Record) 
 //====================================================================================================
-int M4sInitWriter::AvccBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::AvccBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 	uint8_t avc_profile 				= 0;
 	uint8_t avc_profile_compatibility 	= 0;
 	uint8_t avc_level 					= 0;
 	uint8_t avc_nal_unit_size			= 4;
 
-    if(_avc_sps->size() >= 4)
+    if(_avc_sps->GetLength() >= 4)
     {
-        avc_profile = _avc_sps->at(1);
-        avc_profile_compatibility = _avc_sps->at(2);
-        avc_level = _avc_sps->at(3);
+    	auto buffer = _avc_sps->GetDataAs<uint8_t>();
+
+        avc_profile = buffer[1];
+        avc_profile_compatibility = buffer[2];
+        avc_level = buffer[3];
     }
 
 	WriteUint8(1, data);							// Configuration Version
@@ -448,20 +452,20 @@ int M4sInitWriter::AvccBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 	WriteUint8(avc_level, data);					// Level
 	WriteUint8((uint8_t)((avc_nal_unit_size - 1) | 0xFC), data);	// Nal Unit Size
 	WriteUint8(1 | 0xE0, data);						// SPS Count
-	WriteUint16(_avc_sps->size(), data);				// SPS Size
-	WriteData(*_avc_sps, data);						// SPS
+	WriteUint16(_avc_sps->GetLength(), data);				// SPS Size
+	WriteData(_avc_sps, data);						// SPS
 	WriteUint8(1, data);							// PPS Count
-	WriteUint16(_avc_pps->size(), data);				// PPS Size
-	WriteData(*_avc_pps, data);						// PPS
+	WriteUint16(_avc_pps->GetLength(), data);				// PPS Size
+	WriteData(_avc_pps, data);						// PPS
 
 	return BoxDataWrite("avcC", data, data_stream);
 }
 //====================================================================================================
 // Mp4a(MPEG-4 Audio Sample Entry)
 //====================================================================================================
-int M4sInitWriter::Mp4aBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::Mp4aBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint32(1, data);				            // Child Count
 	WriteUint16(0, data);				            // QT version
@@ -481,9 +485,9 @@ int M4sInitWriter::Mp4aBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // esds(ES Description)
 //====================================================================================================
-int M4sInitWriter::EsdsBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::EsdsBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	// es id(3)
 	WriteUint8(3, data);							// tag
@@ -537,9 +541,9 @@ int M4sInitWriter::EsdsBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // stts(Decoding Time to Sample) 
 //====================================================================================================
-int M4sInitWriter::SttsBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::SttsBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint32(0, data); // Entry Count
 
@@ -549,9 +553,9 @@ int M4sInitWriter::SttsBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // stsc(Sample To Chunk) 
 //====================================================================================================
-int M4sInitWriter::StscBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::StscBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint32(0, data); // Entry Count
 
@@ -561,9 +565,9 @@ int M4sInitWriter::StscBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // stsz(Sample Size) 
 //====================================================================================================
-int M4sInitWriter::StszBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::StszBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint32(0, data); // Sample Size
 	WriteUint32(0, data); // Sample Count
@@ -574,9 +578,9 @@ int M4sInitWriter::StszBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // stco(Chunk Offset)
 //====================================================================================================
-int M4sInitWriter::StcoBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::StcoBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint32(0, data); // Entry Count
 
@@ -586,9 +590,9 @@ int M4sInitWriter::StcoBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // Mvex(Movie Extends) 
 //====================================================================================================
-int M4sInitWriter::MvexBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::MvexBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	//MehdBoxWrite(data);
 	TrexBoxWrite(data);
@@ -599,9 +603,9 @@ int M4sInitWriter::MvexBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // mehd(Movie Extends Header)
 //====================================================================================================
-int M4sInitWriter::MehdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::MehdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	return BoxDataWrite("mehd", 0, 0, data, data_stream);
 }
@@ -609,9 +613,9 @@ int M4sInitWriter::MehdBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stre
 //====================================================================================================
 // trex(Track Extends) 
 //====================================================================================================
-int M4sInitWriter::TrexBoxWrite(std::shared_ptr<std::vector<uint8_t>> &data_stream)
+int M4sInitWriter::TrexBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
-	std::shared_ptr<std::vector<uint8_t>> data = std::make_shared<std::vector<uint8_t>>();
+	auto data = std::make_shared<ov::Data>();
 
 	WriteUint32(_track_id, data);   // Track ID
 	WriteUint32(1, data);			// Sample Description Index

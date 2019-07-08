@@ -17,9 +17,10 @@ std::shared_ptr<CmafStream> CmafStream::Create(int segment_count,
                                               int segment_duration,
                                               const std::shared_ptr<Application> application,
                                               const StreamInfo &info,
-                                              uint32_t worker_count)
+                                              uint32_t worker_count,
+                                              const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
 {
-    auto stream = std::make_shared<CmafStream>(application, info);
+    auto stream = std::make_shared<CmafStream>(application, info, chunked_transfer);
 
     if (!stream->Start(segment_count, segment_duration, 0))
     {
@@ -34,10 +35,12 @@ std::shared_ptr<CmafStream> CmafStream::Create(int segment_count,
 // -  H264/AAC only
 // TODO : 다중 트랜스코딩/다중 트랙 구분 및 처리 필요
 //====================================================================================================
-CmafStream::CmafStream(const std::shared_ptr<Application> application, const StreamInfo &info)
-                    : SegmentStream(application, info)
+CmafStream::CmafStream(const std::shared_ptr<Application> application,
+					   const StreamInfo &info,
+					   const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
+					   	: SegmentStream(application, info)
 {
-
+	_chunked_transfer = chunked_transfer;
 }
 
 CmafStream::~CmafStream()

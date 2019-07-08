@@ -55,9 +55,9 @@ public:
 		return _is_tls_accepted;
 	}
 
-    void SetTlsWriteToResponse(bool tls_write_to_response)
+    void SetTlsPostSend(bool tls_post_send)
     {
-        _tls_write_to_response = tls_write_to_response;
+		_tls_post_send = tls_post_send;
     }
 
 protected:
@@ -82,5 +82,5 @@ protected:
 
 	std::shared_ptr<const ov::Data> _tls_read_data = nullptr;
   	bool _is_tls_accepted = false;
-  	bool _tls_write_to_response = false;
+  	bool _tls_post_send = false;
 };

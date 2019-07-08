@@ -99,22 +99,11 @@ void SegmentWorker::WorkerThread()
             continue;
         }
 
-        bool is_retry = false;// in/out value
+        if(!_process_handler(work_info->response, work_info->request_target, work_info->origin_url))
+        	logte("Segment process handler fail - target(%s)", work_info->request_target.CStr());
 
-        _process_handler(work_info->request, work_info->response, work_info->retry_count, is_retry);
+//        logtd("Segment process handler - target(%s)", work_info->request_target.CStr());
 
-//        logtd("Segment Worker Process : url(%s) retry(%d:%d) result(%d)",
-//              work_info->request->GetRequestTarget().CStr(),
-//              is_retry,
-//              work_info->retry_count,
-//              result);
-
-        if(is_retry)
-        {
-            // retry work input;
-            work_info->retry_count++;
-            AddWorkInfo(work_info);
-        }
     }
 }
 
@@ -154,10 +143,11 @@ bool SegmentWorkerManager::Stop()
 // Worker Add
 //====================================================================================================
 #define MAX_WORKER_INDEX 100000000
-bool SegmentWorkerManager::AddWork(const std::shared_ptr<HttpRequest> &request,
-                                   const std::shared_ptr<HttpResponse> &response)
+bool SegmentWorkerManager::AddWork(const std::shared_ptr<HttpResponse> &response,
+									const ov::String &request_target,
+									const ov::String &origin_url)
 {
-    auto work_info = std::make_shared<SegmentWorkInfo>(request, response);
+    auto work_info = std::make_shared<SegmentWorkInfo>(response, request_target, origin_url);
 
     // insert thread
     _workers[(_worker_index % _worker_count)]->AddWorkInfo(work_info);

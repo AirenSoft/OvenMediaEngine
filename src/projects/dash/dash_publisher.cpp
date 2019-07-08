@@ -79,14 +79,11 @@ bool DashPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
 
     // DASH Server Start
     bool result = stream_server->Start(ov::SocketAddress(host->GetIp(), port.GetPort()),
-                         http_server_manager,
-                         _application_info->GetName(),
-                         publisher_info->GetThreadCount(),
-                         publisher_info->GetSegmentDuration() * 1.5,
-                         publisher_info->GetSendBufferSize(),
-                         publisher_info->GetRecvBufferSize(),
-                         certificate,
-                         chain_certificate);
+										 http_server_manager,
+										 _application_info->GetName(),
+										 publisher_info->GetThreadCount(),
+										 certificate,
+										 chain_certificate);
 
     _stream_server = stream_server;
 
@@ -197,9 +194,9 @@ bool DashPublisher::OnPlayListRequest(const ov::String &app_name,
 //  - SegmentStreamObserver Implementation
 //====================================================================================================
 bool DashPublisher::OnSegmentRequest(const ov::String &app_name,
-                                      const ov::String &stream_name,
-                                      const ov::String &file_name,
-                                      std::shared_ptr<ov::Data> &segment_data)
+									 const ov::String &stream_name,
+									 const ov::String &file_name,
+									 std::shared_ptr<SegmentData> &segment)
 {
     if(!_supported_codec_check)
     {
@@ -215,7 +212,9 @@ bool DashPublisher::OnSegmentRequest(const ov::String &app_name,
 		return false;
 	}
 
-	if(!stream->GetSegment(file_name, segment_data))
+	segment = stream->GetSegmentData(file_name);
+
+	if(segment == nullptr || segment->data == nullptr)
     {
         logtw("Dash get segment fail (%s/%s/%s)", app_name.CStr(), stream_name.CStr(), file_name.CStr());
         return false;

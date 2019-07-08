@@ -9,6 +9,7 @@
 #pragma once
 
 #include "http_datastructure.h"
+#include "../base/ovlibrary/converter.h"
 
 class HttpRequest;
 
@@ -45,8 +46,6 @@ public:
 	bool AppendData(const std::shared_ptr<const ov::Data> &data);
 	bool AppendString(const ov::String &string);
 	bool AppendFile(const ov::String &filename);
-    bool AppendTlsData(const void *data, size_t length); // HttpClient Call
-
 
 	template<typename T>
 	bool Send(const T *data)
@@ -56,10 +55,11 @@ public:
 
 	bool Send(const void *data, size_t length);
 	bool Send(const std::shared_ptr<const ov::Data> &data);
-    ssize_t Send(const void *data, size_t length, bool &is_retry);
-
 	bool Response();
-    ssize_t Response(bool &is_retry);
+
+    bool PostResponse();
+	bool PostChunkedDataResponse(const std::shared_ptr<const ov::Data> &data);
+	bool PostSend(const void *data, size_t length);
 
 	std::shared_ptr<ov::ClientSocket> GetRemote()
 	{
@@ -75,6 +75,13 @@ public:
 	{
 		return _remote->Close();
 	}
+
+	void SetChunkedTransfer()
+	{
+		SetHeader("Transfer-Encoding", "chunked");
+		SetHeader("Connection", "keep-alive");
+		_chunked_transfer = true;
+ 	}
 
 protected:
 	void SetTls(const std::shared_ptr<ov::Tls> &tls)
@@ -95,8 +102,7 @@ protected:
 	bool SendHeaderIfNeeded();
 	bool SendResponse();
 
-
-	bool MakeResponseData();
+	std::shared_ptr<ov::Data> MakeResponseData();
 
 	HttpRequest *_request = nullptr;
 	std::shared_ptr<ov::ClientSocket> _remote = nullptr;
@@ -115,10 +121,5 @@ protected:
 
 	ov::String _default_value = "";
 
-
-    std::shared_ptr<ov::Data> _http_response_data = nullptr; // header + body
-    std::shared_ptr<ov::Data> _http_tls_response_data = nullptr; // (header + body)tls encoded
-    bool _is_tls_write_save = false;
-
-
+    bool _chunked_transfer = false;
 };

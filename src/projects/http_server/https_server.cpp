@@ -79,7 +79,7 @@ void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	}
 
 	client->SetTls(tls);
-    client->SetTlsWriteToResponse(_tls_write_to_response);
+    client->SetTlsPostSend(_tls_post_send);
 }
 
 void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)

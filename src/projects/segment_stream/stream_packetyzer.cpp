@@ -23,18 +23,11 @@ StreamPacketyzer::StreamPacketyzer(const ov::String &app_name,
                                    uint32_t auddio_timescale,
                                    uint32_t video_framerate)
 {
-    _app_name = app_name;
-    _stream_name = stream_name;
     _segment_count = segment_count;
     _segment_duration = segment_duration;
     _video_timescale = video_timescale;
     _audio_timescale = auddio_timescale;
-    _video_framerate = (uint32_t) video_framerate;
     _stream_type = stream_type;
-    _start_time = time(nullptr);
-
-    _last_video_append_time = _start_time;
-    _last_audio_append_time = _start_time;
 }
 
 //====================================================================================================
@@ -42,8 +35,7 @@ StreamPacketyzer::StreamPacketyzer(const ov::String &app_name,
 //====================================================================================================
 StreamPacketyzer::~StreamPacketyzer()
 {
-    // Video 데이터 정리
-    _video_data_queue.clear();
+
 }
 
 //====================================================================================================
@@ -78,8 +70,7 @@ bool StreamPacketyzer::AppendVideoData(std::unique_ptr<EncodedFrame> encoded_fra
                                                             encoded_frame->_buffer);
 
     AppendVideoFrame(frame_data);
-    _last_video_timestamp = encoded_frame->_time_stamp;
-    _last_video_append_time = time(nullptr);
+
     return true;
 }
 
@@ -104,7 +95,6 @@ bool StreamPacketyzer::AppendAudioData(std::unique_ptr<EncodedFrame> encoded_fra
                                                             encoded_frame->_buffer);
 
     AppendAudioFrame(frame_data);
-    _last_audio_timestamp = encoded_frame->_time_stamp;
-    _last_audio_append_time = time(nullptr);
+
     return true;
 }

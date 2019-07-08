@@ -74,10 +74,10 @@ bool DashStreamPacketyzer::GetPlayList(ov::String &play_list)
 }
 
 //====================================================================================================
-// GetSegment
+// GetSegmentData
 // - M4S
 //====================================================================================================
-bool DashStreamPacketyzer::GetSegment(const ov::String &segment_file_name, std::shared_ptr<ov::Data> &segment_data)
+std::shared_ptr<SegmentData> DashStreamPacketyzer::GetSegmentData(const ov::String &file_name)
 {
-      return _packetyzer->GetSegmentData(segment_file_name, segment_data);
+      return _packetyzer->GetSegmentData(file_name);
 }

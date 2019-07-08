@@ -130,6 +130,19 @@ public:
 
 	ov::String ToString() const;
 
+
+	void InitParseInfo()
+	{
+		_parse_status = HttpStatusCode::PartialContent;
+
+		_is_header_found = false;
+		_request_string = "";
+		_request_header.clear();
+
+		_method = HttpMethod::Unknown;
+		_request_target = "";
+		_http_version = "";
+	}
 protected:
 	void SetResponse(HttpResponse *response)
 	{

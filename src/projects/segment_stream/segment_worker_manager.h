@@ -17,21 +17,24 @@
 #include "http_server/http_response.h"
 struct SegmentWorkInfo
 {
-    SegmentWorkInfo(const std::shared_ptr<HttpRequest> &request_,
-                    const std::shared_ptr<HttpResponse> &response_)
+    SegmentWorkInfo(const std::shared_ptr<HttpResponse> &response_,
+    		const ov::String &request_target_,
+			const ov::String &origin_url_)
     {
-        request = request_;
+
         response = response_;
+		request_target = request_target_;
+		origin_url = origin_url_;
+
     }
-    std::shared_ptr<HttpRequest> request = nullptr;
     std::shared_ptr<HttpResponse> response = nullptr;
-    int retry_count = 0;
+    ov::String request_target;
+    ov::String origin_url;
 };
 
-using SegmentProcessHandler = std::function<bool(const std::shared_ptr<HttpRequest> &request,
-                                            const std::shared_ptr<HttpResponse> &response,
-                                            int retry_count,
-                                            bool &is_retry)>;
+using SegmentProcessHandler = std::function<bool(const std::shared_ptr<HttpResponse> &response,
+												const ov::String &request_target,
+												const ov::String &origin_url)>;
 //====================================================================================================
 // SegmentWorker
 //====================================================================================================
@@ -73,8 +76,9 @@ public :
 public :
     bool Start(int worker_count, const SegmentProcessHandler &process_handler);
     bool Stop();
-    bool AddWork(const std::shared_ptr<HttpRequest> &request,
-                 const std::shared_ptr<HttpResponse> &response);
+    bool AddWork(const std::shared_ptr<HttpResponse> &response,
+				const ov::String &request_target,
+				const ov::String &origin_url);
 
 private:
     int _worker_count = 0;

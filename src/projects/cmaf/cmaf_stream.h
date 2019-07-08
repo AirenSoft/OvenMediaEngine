@@ -21,17 +21,20 @@ public:
                                                int segment_duration,
                                                const std::shared_ptr<Application> application,
                                                const StreamInfo &info,
-                                               uint32_t worker_count);
+                                               uint32_t worker_count,
+                                               const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
-    CmafStream(const std::shared_ptr<Application> application, const StreamInfo &info);
+    CmafStream(const std::shared_ptr<Application> application,
+    		const StreamInfo &info,
+    		const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
 	~CmafStream();
 
     std::shared_ptr<StreamPacketyzer> CreateStreamPacketyzer(int segment_count,
-                                                            int segment_duration,
-                                                            const  ov::String &segment_prefix,
-                                                            PacketyzerStreamType stream_type,
-                                                            PacketyzerMediaInfo media_info) override
+												int segment_duration,
+												const  ov::String &segment_prefix,
+												PacketyzerStreamType stream_type,
+												PacketyzerMediaInfo media_info) override
     {
         auto stream_packetyzer = std::make_shared<CmafStreamPacketyzer>(GetApplication()->GetName(),
                                                                         GetName(),
@@ -39,11 +42,12 @@ public:
                                                                         segment_duration,
                                                                         segment_prefix,
                                                                         stream_type,
-                                                                        media_info);
+                                                                        media_info,
+																		_chunked_transfer);
 
         return std::static_pointer_cast<StreamPacketyzer>(stream_packetyzer);
     }
 
 private:
-
+	std::shared_ptr<ICmafChunkedTransfer> _chunked_transfer = nullptr;
 };

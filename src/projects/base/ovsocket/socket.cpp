@@ -907,10 +907,125 @@ namespace ov
 		return _socket.GetType();
 	}
 
+	bool Socket::StartSendThread()
+	{
+		// send thread
+		// - support only tcp
+		if(GetType() == SocketType::Tcp && !_send_thread_run)
+		{
+			// once check
+			_send_thread_created = true;
+
+			// thread start
+			_send_thread_run = true;
+			_send_thread = std::thread(&Socket::SendThread, this);
+		}
+
+		return true;
+	}
+
+	bool Socket::StopSendThread()
+	{
+		// send thread close
+		if(_send_thread_run)
+		{
+			_send_thread_run = false;
+
+			// Generate Event
+			_send_queue_event.Notify();
+
+			_send_thread.join();
+
+			// logd("SocketThread", "closed send thread");
+		}
+
+		return false;
+	}
+
+	// post send
+	// - input thred send queue
+	bool Socket::PostSend(const void *data, size_t length)
+	{
+		if(!_send_thread_created)
+			StartSendThread();
+
+		auto send_data = std::make_unique<SendData>(data, length);
+
+		std::unique_lock<std::mutex> lock(_send_queue_guard);
+
+		if(_max_send_queue == 0 || _send_data_queue.size() < _max_send_queue)
+		{
+			_send_data_queue.push(std::move(send_data));
+		}
+		else
+		{
+			logw("SocketThread", "[%p] [#%d] Send queue size over - %d/%d",
+					this, _socket.GetSocket(), _send_data_queue.size(), _max_send_queue);
+			return false;
+		}
+
+		lock.unlock();
+
+		_send_queue_event.Notify();
+
+		return true;
+	}
+
+	// pop send queue
+	std::unique_ptr<SendData> Socket::PopSendData()
+	{
+		std::unique_lock<std::mutex> lock(_send_queue_guard);
+
+		if(_send_data_queue.empty())
+			return nullptr;
+
+		auto send_data = std::move(_send_data_queue.front());
+		_send_data_queue.pop();
+
+		return  send_data;
+	}
+
+	// send thread
+	//  - only support tcp
+	void Socket::SendThread()
+	{
+		while(_send_thread_run)
+		{
+			// quequ event wait
+			_send_queue_event.Wait();
+
+			auto send_data = PopSendData();
+
+			if(send_data == nullptr)
+				continue;
+
+			while(!send_data->IsSendCompleted() && _send_thread_run)
+			{
+				bool is_retry = false;
+
+				ssize_t send_size = Send(send_data->GetRemainedData(), send_data->GetRemainedSize(), is_retry);
+
+				// real error
+				if(send_size < 0)
+				{
+					logw("SocketThread", "[%p] [#%d] send fail -  (%d)", this, _socket.GetSocket(), send_size);
+					_send_thread_run = false;
+					break;
+				}
+
+				if(send_size > 0)
+				{
+					send_data->SetSendedSizeAdd(send_size);
+				}
+				// logd("SocketThread", "[%p] [#%d] SendThread -  Send(%d)", this, _socket.GetSocket(), send_size);
+			}
+ 		}
+
+		// logd("SocketThread", "[%p] [#%d] SendThread End", this, _socket.GetSocket());
+	}
+
 	ssize_t Socket::Send(const void *data, size_t length, bool &is_retry)
 	{
-		// TODO: 별도 send queue를 만들어야 함
-		//OV_ASSERT2(_socket.IsValid());
 		is_retry = false;
 
 		logtd("[%p] [#%d] Trying to send data %zu bytes...", this, _socket.GetSocket(), length);
@@ -919,7 +1034,6 @@ namespace ov
 		auto data_to_send = static_cast<const uint8_t *>(data);
 		size_t remained = length;
 		size_t total_sent = 0L;
-		int retry_count = 0;
 
 		switch(GetType())
 		{
@@ -951,13 +1065,8 @@ namespace ov
 							}
 							else if(select_result == 0)
 							{
-								// timed out
-								retry_count++;
-								if(retry_count > 5)
-								{
-									is_retry = true;
-									break;
-								}
+								is_retry = true;
+								break;
 							}
 							else
 							{
@@ -1295,6 +1404,9 @@ namespace ov
 	bool Socket::Close()
 	{
 		SocketWrapper socket = _socket;
+
+		// send thread close
+		StopSendThread();
 
 		if(_socket.IsValid())
 		{

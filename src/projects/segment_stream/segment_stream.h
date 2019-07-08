@@ -41,7 +41,7 @@ public :
 
     bool GetPlayList(ov::String &play_list);
 
-    bool GetSegment(const ov::String &file_name, std::shared_ptr<ov::Data> &data);
+	std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name);
 
     virtual std::shared_ptr<StreamPacketyzer> CreateStreamPacketyzer(int segment_count,
                                                                     int segment_duration,

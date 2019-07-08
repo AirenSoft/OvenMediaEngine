@@ -40,7 +40,7 @@ HlsPacketyzer::HlsPacketyzer(const ov::String &app_name,
     _last_audio_append_time = time(nullptr);
     _video_enable = false;
     _audio_enable = false;
-    _duration_threshold = (double)_segment_duration * 0.9 * (double)_media_info.video_timescale;
+	_duration_margen = _segment_duration * 0.1;
 }
 
 //====================================================================================================
@@ -68,7 +68,8 @@ bool HlsPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame
 
     if (frame_data->type == PacketyzerFrameType::VideoKeyFrame && !_frame_datas.empty())
     {
-        if ((frame_data->timestamp - _frame_datas[0]->timestamp) >= (_segment_duration * _media_info.video_timescale))
+        if ((frame_data->timestamp - _frame_datas[0]->timestamp) >=
+        	((_segment_duration - _duration_margen) * _media_info.video_timescale))
         {
             // Segment Write
             SegmentWrite(_frame_datas[0]->timestamp, frame_data->timestamp - _frame_datas[0]->timestamp);
@@ -103,7 +104,8 @@ bool HlsPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame
 
     if ((time(nullptr) - _last_video_append_time >= static_cast<uint32_t>(_segment_duration)) && !_frame_datas.empty())
     {
-        if((frame_data->timestamp - _frame_datas[0]->timestamp) >= (_segment_duration * _media_info.audio_timescale))
+        if((frame_data->timestamp - _frame_datas[0]->timestamp) >=
+        	((_segment_duration - _duration_margen) * _media_info.audio_timescale))
         {
             SegmentWrite(_frame_datas[0]->timestamp, frame_data->timestamp - _frame_datas[0]->timestamp);
         }
@@ -145,16 +147,17 @@ bool HlsPacketyzer::SegmentWrite(uint64_t start_timestamp, uint64_t duration)
             _first_video_time_stamp = frame_data->timestamp;
 
     }
-
     _frame_datas.clear();
 
     if(_first_audio_time_stamp != 0 && _first_video_time_stamp != 0)
         logtd("hls segment video/audio timestamp gap(%lldms)",  (_first_video_time_stamp - _first_audio_time_stamp)/90);
 
+    auto ts_data = ts_writer->GetDataStream();
+
     SetSegmentData(ov::String::FormatString("%s_%u.ts", _segment_prefix.CStr(), _sequence_number),
-                    duration,
-                    start_timestamp,
-                    ts_writer->GetDataStream());
+					duration,
+					start_timestamp,
+					ts_data);
 
     UpdatePlayList();
 
@@ -215,11 +218,10 @@ bool HlsPacketyzer::UpdatePlayList()
 //====================================================================================================
 // Get Segment
 //====================================================================================================
-bool HlsPacketyzer::GetSegmentData(const ov::String &file_name, std::shared_ptr<ov::Data> &data)
+const std::shared_ptr<SegmentData> HlsPacketyzer::GetSegmentData(const ov::String &file_name)
 {
     if(!_init_segment_count_complete)
-        return false;
-
+        return nullptr;
 
     // video segment mutex
     std::unique_lock<std::mutex> lock(_video_segment_guard);
@@ -232,24 +234,25 @@ bool HlsPacketyzer::GetSegmentData(const ov::String &file_name, std::shared_ptr<
 
     if(item == _video_segment_datas.end())
     {
-        data = nullptr;
-        return false;
+       return nullptr;
     }
 
-    data = (*item)->data;
-
-    return data != nullptr;
+    return (*item);
 }
 
 //====================================================================================================
 // Set Segment
 //====================================================================================================
 bool HlsPacketyzer::SetSegmentData(ov::String file_name,
-                                    uint64_t duration,
-                                    uint64_t timestamp,
-                                    const std::shared_ptr<std::vector<uint8_t>> &data)
+								   uint64_t duration,
+								   uint64_t timestamp,
+								   std::shared_ptr<ov::Data> &data)
 {
-    auto segment_data = std::make_shared<SegmentData>(_sequence_number++, file_name, duration, timestamp, data);
+    auto segment_data = std::make_shared<SegmentData>(_sequence_number++,
+														file_name,
+														duration,
+														timestamp,
+														data);
 
     // video segment mutex
     std::unique_lock<std::mutex> lock(_video_segment_guard);
@@ -262,10 +265,8 @@ bool HlsPacketyzer::SetSegmentData(ov::String file_name,
     if(!_init_segment_count_complete  && _sequence_number > _segment_count)
     {
         _init_segment_count_complete = true;
-        logti("Hls ready completed - prefix(%s) segment(%ds/%d)",
-              _segment_prefix.CStr(),
-              _segment_duration,
-              _segment_count);
+		logti("Hls segment ready completed - stream(%s/%s) segment(%ds/%d)",
+			  _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);
     }
 
     return true;

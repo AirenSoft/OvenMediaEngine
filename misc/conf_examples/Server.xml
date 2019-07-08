@@ -6,14 +6,12 @@
 		<Host>
 			<Name>default</Name>
 			<IP>*</IP>
-			<!--
-            <TLS>
-                    <ChainCertPath>path/to/file.crt</ChainCertPath>
-                    <CertPath>path/to/file.crt</CertPath>
-                    <KeyPath>path/to/file.key</KeyPath>
+			<TLS>
+<!--                    <ChainCertPath>path/to/file.crt</ChainCertPath>-->
+                    <CertPath>server.crt</CertPath>
+                    <KeyPath>server.key</KeyPath>
             </TLS>
-            -->
-			<Ports>
+            <Ports>
 				<Origin>9000</Origin>
 				<RTMPProvider>1935</RTMPProvider>
 				<HLS>80</HLS>

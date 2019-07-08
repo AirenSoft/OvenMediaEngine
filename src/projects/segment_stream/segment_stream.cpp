@@ -168,15 +168,14 @@ bool SegmentStream::GetPlayList(ov::String &play_list)
 }
 
 //====================================================================================================
-// GetSegment
+// GetSegmentData
 // - TS/M4S(mp4)
 //====================================================================================================
-bool SegmentStream::GetSegment(const ov::String &file_name, std::shared_ptr<ov::Data> &data)
+std::shared_ptr<SegmentData> SegmentStream::GetSegmentData(const ov::String &file_name)
 {
-    if (_stream_packetyzer != nullptr)
-    {
-        return _stream_packetyzer->GetSegment(file_name, data);
-    }
+    if (_stream_packetyzer == nullptr)
+    	return nullptr;
 
-    return false;
+    return _stream_packetyzer->GetSegmentData(file_name);
+
 }

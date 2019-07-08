@@ -58,26 +58,11 @@ enum class SegmentDataType : int32_t {
 struct SegmentData
 {
 public :
-
     SegmentData(int sequence_number_,
-           ov::String file_name_,
-            uint64_t duration_,
-            uint64_t timestamp_,
-            const std::shared_ptr<std::vector<uint8_t>> &data_)
-    {
-        sequence_number = sequence_number_;
-        file_name = file_name_;
-        create_time = time(nullptr);
-        duration = duration_;
-        timestamp = timestamp_;
-        data = std::make_shared<ov::Data>(data_->data(), data_->size());
-    }
-
-    SegmentData(int sequence_number_,
-            ov::String &file_name_,
-            uint64_t duration_,
-            uint64_t timestamp_,
-            std::shared_ptr<ov::Data> &data_)
+				ov::String file_name_,
+				uint64_t duration_,
+				uint64_t timestamp_,
+				std::shared_ptr<ov::Data> &data_)
     {
         sequence_number = sequence_number_;
         file_name = file_name_;

@@ -14,12 +14,13 @@
 // Constructor
 //====================================================================================================
 CmafStreamPacketyzer::CmafStreamPacketyzer(const ov::String &app_name,
-                                           const ov::String &stream_name,
-                                           int segment_count,
-                                           int segment_duration,
-                                           const ov::String &segment_prefix,
-                                            PacketyzerStreamType stream_type,
-                                            PacketyzerMediaInfo media_info) :
+											const ov::String &stream_name,
+											int segment_count,
+											int segment_duration,
+											const ov::String &segment_prefix,
+											PacketyzerStreamType stream_type,
+											PacketyzerMediaInfo media_info,
+											const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer) :
                                                 StreamPacketyzer(app_name,
                                                                 stream_name,
                                                                 segment_count,
@@ -38,7 +39,8 @@ CmafStreamPacketyzer::CmafStreamPacketyzer(const ov::String &app_name,
                                                 segment_prefix,
                                                 segment_count,
                                                 segment_duration,
-                                                media_info);
+                                                media_info,
+                                                chunked_transfer);
 }
 
 //====================================================================================================
@@ -74,10 +76,10 @@ bool CmafStreamPacketyzer::GetPlayList(ov::String &play_list)
 }
 
 //====================================================================================================
-// GetSegment
+// GetSegmentData
 // - M4S
 //====================================================================================================
-bool CmafStreamPacketyzer::GetSegment(const ov::String &segment_file_name, std::shared_ptr<ov::Data> &segment_data)
+std::shared_ptr<SegmentData> CmafStreamPacketyzer::GetSegmentData(const ov::String &file_name)
 {
-      return _packetyzer->GetSegmentData(segment_file_name, segment_data);
+      return _packetyzer->GetSegmentData(file_name);
 }

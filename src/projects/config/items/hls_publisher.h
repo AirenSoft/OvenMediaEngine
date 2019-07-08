@@ -41,16 +41,6 @@ namespace cfg
 			return _thread_count > 0 ? _thread_count : 1;
 		}
 
-		int GetSendBufferSize() const
-		{
-			return _send_buffer_size;
-		}
-
-		int GetRecvBufferSize() const
-		{
-			return _recv_buffer_size;
-		}
-
 	protected:
 		void MakeParseList() const override
 		{
@@ -60,8 +50,6 @@ namespace cfg
 			RegisterValue<Optional>("SegmentDuration", &_segment_duration);
 			RegisterValue<Optional>("CrossDomain", &_cross_domain);
 			RegisterValue<Optional>("ThreadCount", &_thread_count);
-			RegisterValue<Optional>("SendBufferSize", &_send_buffer_size);
-			RegisterValue<Optional>("RecvBufferSize", &_recv_buffer_size);
 		}
 
 		int _segment_count = 3;

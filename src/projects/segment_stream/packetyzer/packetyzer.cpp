@@ -47,7 +47,7 @@ Packetyzer::Packetyzer(const ov::String &app_name,
     {
         _video_segment_datas.push_back(nullptr);
 
-        // only dash
+        // only dash/cmaf
         if(_packetyzer_type == PacketyzerType::Dash || _packetyzer_type == PacketyzerType::Cmaf)
             _audio_segment_datas.push_back(nullptr);
     }

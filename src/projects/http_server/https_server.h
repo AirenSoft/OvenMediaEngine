@@ -17,9 +17,9 @@ public:
 	void SetLocalCertificate(const std::shared_ptr<Certificate> &certificate);
 	void SetChainCertificate(const std::shared_ptr<Certificate> &certificate);
 
-	void SetTlsWriteToResponse(bool tls_write_to_response)
+	void SetTlsPostSend(bool tls_post_send)
     {
-        _tls_write_to_response = tls_write_to_response;
+		_tls_post_send = tls_post_send;
     }
 protected:
 	//--------------------------------------------------------------------
@@ -31,5 +31,5 @@ protected:
 protected:
 	std::shared_ptr<Certificate> _local_certificate = nullptr;
 	std::shared_ptr<Certificate> _chain_certificate = nullptr;
-	bool _tls_write_to_response = false;
+	bool _tls_post_send = false;
 };

@@ -35,11 +35,22 @@ public :
     }
 
 protected:
-    void ProcessRequestStream(const std::shared_ptr<HttpRequest> &request,
-                           const std::shared_ptr<HttpResponse> &response,
-                           const ov::String &app_name,
-                           const ov::String &stream_name,
-                           const ov::String &file_name,
-                           const ov::String &file_ext) override;
+    void ProcessRequestStream(const std::shared_ptr<HttpResponse> &response,
+							   const ov::String &app_name,
+							   const ov::String &stream_name,
+							   const ov::String &file_name,
+							   const ov::String &file_ext) override;
+
+	void PlayListRequest(const ov::String &app_name,
+						 const ov::String &stream_name,
+						 const ov::String &file_name,
+						 PlayListType play_list_type,
+						 const std::shared_ptr<HttpResponse> &response) override;
+
+	void SegmentRequest(const ov::String &app_name,
+						const ov::String &stream_name,
+						const ov::String &file_name,
+						SegmentType segment_type,
+						const std::shared_ptr<HttpResponse> &response) override;
 
 };

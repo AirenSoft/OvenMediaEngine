@@ -146,8 +146,6 @@ bool HttpResponse::SendHeaderIfNeeded()
 		return false;
 	}
 
-	// _response_header["Content-Length"] = ov::Converter::ToString(_response_data->GetCount());
-
 	std::shared_ptr<ov::Data> response = std::make_shared<ov::Data>();
 	ov::ByteStream stream(response.get());
 
@@ -191,41 +189,54 @@ bool HttpResponse::SendResponse()
 	return sent;
 }
 
-// http header + body send
-// first retry check and result check
-ssize_t HttpResponse::Response(bool &is_retry)
+
+
+// data : http header + body send
+// post send
+bool HttpResponse::PostResponse()
 {
-    ssize_t sent = 0;
+    bool result = false;
+	auto response_data = MakeResponseData();
 
-    if (_http_response_data == nullptr)
-    {
-        if(!MakeResponseData())
-            return 0;
-    }
+	if(response_data == nullptr || response_data->GetLength() == 0)
+	{
+		logte("Post response data fail : %s", _remote->ToString().CStr());
+		return false;
+	}
 
-    if(_tls == nullptr)
-        sent = Send(_http_response_data->GetData(), _http_response_data->GetLength(), is_retry);
-    else
-        sent = Send(_http_tls_response_data->GetData(), _http_tls_response_data->GetLength(), is_retry);
+	result = PostSend(response_data->GetData(), response_data->GetLength());
 
-    // sent data remove
-    if (is_retry && sent != 0)
-    {
-       if(_tls == nullptr)
-            _http_response_data = _http_response_data->Subdata(sent);
-        else
-            _http_tls_response_data = _http_tls_response_data->Subdata(sent);
-    }
+	_response_data_list.clear();
+	_response_header.clear();
 
-    return sent;
+	// Set default headers
+	 SetHeader("Server", "OvenMediaEngine");
+	 SetHeader("Content-Type", "text/html");
+
+	// chunked transfer init
+	_chunked_transfer = false;
+
+	return result;
 }
 
 // http header + body data create
-bool HttpResponse::MakeResponseData()
+// - supported : chunked-transfer
+std::shared_ptr<ov::Data> HttpResponse::MakeResponseData()
 {
-    _http_response_data = std::make_shared<ov::Data>();
+    auto response_data = std::make_shared<ov::Data>();
 
-    ov::ByteStream stream(_http_response_data.get());
+    ov::ByteStream stream(response_data.get());
+
+    // Content-Length
+    uint32_t content_length = 0;
+	for(const auto &data : _response_data_list)
+	{
+		content_length += data->GetLength();
+	}
+
+	// chunked-transfer supported
+	if(!_chunked_transfer)
+		_response_header["Content-Length"] = ov::Converter::ToString(content_length);
 
     // header
     stream.Append(ov::String::FormatString("HTTP/1.1 %d %s\r\n", _status_code, _reason.CStr()).ToData(false));
@@ -244,63 +255,66 @@ bool HttpResponse::MakeResponseData()
         stream.Append(data->GetData(), data->GetLength());
     }
 
-    // tls data
-    if(_tls != nullptr)
-    {
-        size_t written;
-
-        // Data will be sent to the client
-        //   ov::Tls::Write() -> HttpClient::TlsWriteToSave() -> HttpResponse::AppendTlsData()
-        int result = _tls->Write(_http_response_data->GetData(), _http_response_data->GetLength(), &written);
-
-        switch (result)
-        {
-            case SSL_ERROR_NONE:
-                // data was sent in HttpClient::TlsWriteToSave();
-                break;
-
-            case SSL_ERROR_WANT_WRITE:
-                // Need more data to encrypt
-                break;
-
-            default:
-                logte("An error occurred while accept client: %s", _remote->ToString().CStr());
-                return false;
-        }
-    }
-
-    return true;
+    return response_data;
 }
 
-// HttpClient::TlsWriteToSave()  Call
-bool HttpResponse::AppendTlsData(const void *data, size_t length)
+bool HttpResponse::PostChunkedDataResponse(const std::shared_ptr<const ov::Data> &data)
 {
-    // tls handshake
-    if(_http_response_data == nullptr)
-    {
-        if(_remote == nullptr)
-            return false;
+	// before data send
+	// TODO : data sync
+	if(!_response_data_list.empty())
+	{
+		_response_data_list.push_back(data);
+		return true;
+	}
 
-        return _remote->Send(data, length) == static_cast<ssize_t>(length);
-    }
+	// end data
+	if(data == nullptr)
+	{
+		// chunked transfer init
+		_chunked_transfer = false;
+		return PostSend("0\r\n\r\n", 5);
+	}
 
-    if(_http_tls_response_data == nullptr)
-        _http_tls_response_data = std::make_shared<ov::Data>();
-
-    _http_tls_response_data->Append(data, length);
-
-     return true;
+	return PostSend(data->GetData(), data->GetLength());
 }
 
-ssize_t HttpResponse::Send(const void *data, size_t length, bool &is_retry)
+bool HttpResponse::PostSend(const void *data, size_t length)
 {
-    OV_ASSERT2(_remote != nullptr);
+	OV_ASSERT2(_remote != nullptr);
 
-    if(_remote == nullptr)
-    {
-        return false;
-    }
+	if(_remote == nullptr)
+	{
+		return false;
+	}
 
-    // Send the plain data to the client
-    return _remote->Send(data, length, is_retry);
+	if(_tls == nullptr)
+	{
+		return _remote->PostSend(data, length);
+	}
+
+	size_t written;
+	bool result = false;
+
+	// ov::Tls::Write() -> HttpClient::TlsWrite() ->  PostSend() or Send()
+	int tls_result = _tls->Write(data, length, &written);
+
+	switch(tls_result)
+	{
+		case SSL_ERROR_NONE:
+			// data was sent in HttpClient::TlsWrite();
+			result = true;
+			break;
+
+		case SSL_ERROR_WANT_WRITE:
+			// Need more data to encrypt
+			result = true;
+			break;
+
+		default:
+			logte("An error occurred while accept client: %s", _remote->ToString().CStr());
+			result = false;
+	}
+
+	return result;
 }

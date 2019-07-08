@@ -10,9 +10,8 @@
 #include "cmaf_interceptor.h"
 #include "cmaf_private.h"
 
-#define MPD_VIDEO_SUFFIX    "_video_cmaf.m4s"
-#define MPD_AUDIO_SUFFIX    "_audio_cmaf.m4s"
-#define PLAYLIST_FILE_NAME  "manifest_cmaf.mpd"
+
+
 CmafInterceptor::CmafInterceptor()
 {
 
@@ -36,9 +35,9 @@ bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRe
 	}
 
     // mpd/m4s
-    if((request->GetRequestTarget().IndexOf(MPD_VIDEO_SUFFIX) >= 0) ||
-        (request->GetRequestTarget().IndexOf(MPD_AUDIO_SUFFIX) >= 0) ||
-        (request->GetRequestTarget().IndexOf(PLAYLIST_FILE_NAME) >= 0) ||
+    if((request->GetRequestTarget().IndexOf(CMAF_MPD_VIDEO_SUFFIX) >= 0) ||
+        (request->GetRequestTarget().IndexOf(CMAF_MPD_AUDIO_SUFFIX) >= 0) ||
+        (request->GetRequestTarget().IndexOf(CMAF_PLAYLIST_FILE_NAME) >= 0) ||
         (!_is_crossdomain_block && request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0))
     {
         return true;

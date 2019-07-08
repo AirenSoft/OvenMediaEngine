@@ -127,8 +127,7 @@ uint32_t TsWriter::MakeCrc(const uint8_t *data, uint32_t data_size)
 //====================================================================================================
 TsWriter::TsWriter(bool video_enable, bool audio_enable)
 {
-	_data_stream = std::make_shared<std::vector<uint8_t>>();
-	_data_stream->reserve(4096);
+	_data_stream = std::make_shared<ov::Data>(4096);
 
 	_audio_continuity_count	= 0;
 	_video_continuity_count	= 0;
@@ -145,7 +144,7 @@ TsWriter::TsWriter(bool video_enable, bool audio_enable)
 //====================================================================================================
 bool TsWriter::WriteDataStream(int data_size, const uint8_t * data)
 {
-	_data_stream->insert(_data_stream->end(), data, data + data_size);
+	_data_stream->Append(data, data_size);
 	return true;
 }
 
