@@ -128,13 +128,13 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 
 		bool need_to_disconnect = false;
 
-		 // header parse (temp)
-		 // - http1.0 Connection default : close
-		 // - http1.1 Connection default : keep-alive
-		 if(request->ParseStatus() == HttpStatusCode::OK && request->GetRequestInterceptor() != nullptr)
+		// header parse (temp)
+		// - http1.0 Connection default : close
+		// - http1.1 Connection default : keep-alive
+		if(request->ParseStatus() == HttpStatusCode::OK && request->GetRequestInterceptor() != nullptr)
 		{
 			if((request->GetHttpVersionAsNumber() > 1.0 && request->GetHeader("Connection", "keep-alive") == "keep-alive") ||
-				(request->GetHttpVersionAsNumber() <= 1.0 && request->GetHeader("Connection", "close") == "keep-alive"))
+			   (request->GetHttpVersionAsNumber() <= 1.0 && request->GetHeader("Connection", "close") == "keep-alive"))
 			{
 				request->InitParseInfo();
 			}
@@ -305,14 +305,18 @@ bool HttpServer::Disconnect(ClientIterator iterator)
 	{
 		std::lock_guard<std::mutex> guard(_client_list_mutex);
 
-		for(auto client_iterator = _client_list.begin(); client_iterator != _client_list.end(); ++client_iterator)
+		for(auto client_iterator = _client_list.begin(); client_iterator != _client_list.end();)
 		{
 			if(iterator(client_iterator->second))
 			{
 				client = client_iterator->second;
-				_client_list.erase(client_iterator);
+				client_iterator = _client_list.erase(client_iterator);
 			}
-		}
+			else
+			{
+				++client_iterator;
+			}
+		};
 	}
 
 	return DisconnectInternal(client);
@@ -370,7 +374,7 @@ bool HttpServer::DisconnectInternal(std::shared_ptr<HttpClient> client)
 	{
 		interceptor->OnHttpClosed(request, response);
 	}
-	
+
 	// HttpClient shared_ptr use count down
 	// HttpResponse release -> Tls Release -> HttpClient(client) Release
 	client->Release();
