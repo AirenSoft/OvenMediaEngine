@@ -50,40 +50,20 @@ CmafChunkWriter::~CmafChunkWriter( )
 //====================================================================================================
 std::shared_ptr<ov::Data> CmafChunkWriter::GetChunkedSegment()
 {
-	if(_total_chunk_data_size == 0)
+	if(_chunked_data->GetLength() <= 0)
 		return nullptr;
 
-	auto chunked_segment = std::make_shared<ov::Data>(_total_chunk_data_size + 5);
-
-	for(const auto &data : _chunk_data_list)
-	{
-		chunked_segment->Append(data->GetData(), data->GetLength());
-	}
+	auto chunked_segment = _chunked_data;
 
 	if(_http_chunked_transfer_support)
 	{
 		chunked_segment->Append("0\r\n\r\n", 5);
 	}
 
+	if(_max_chunked_data_size < chunked_segment->GetLength())
+		_max_chunked_data_size = chunked_segment->GetLength();
+
 	return chunked_segment;
-}
-
-//====================================================================================================
-//  CreateData
-//====================================================================================================
-int CmafChunkWriter::AppendSamples(const std::vector<std::shared_ptr<SampleData>> &sample_datas)
-{
-	int write_size = 0;
-
-	for(auto &sample_data : sample_datas)
-    {
-        auto chunk_data = AppendSample(sample_data);
-
-        if(chunk_data != nullptr)
-        	write_size += chunk_data->GetLength();
-    }
-
-	return write_size;
 }
 
 //====================================================================================================
@@ -95,6 +75,9 @@ const std::shared_ptr<ov::Data> CmafChunkWriter::AppendSample(const std::shared_
     {
         _write_started = true;
         _start_timestamp = sample_data->timestamp;
+
+        if(_chunked_data == nullptr)
+			_chunked_data = std::make_shared<ov::Data>(_max_chunked_data_size);
     }
 
 	auto chunk_stream = std::make_shared<ov::Data>(sample_data->data->GetLength() + DEFAULT_CHUNK_HEADER_SIZE);
@@ -108,13 +91,12 @@ const std::shared_ptr<ov::Data> CmafChunkWriter::AppendSample(const std::shared_
     if(_http_chunked_transfer_support)
 	{
 		chunk_stream->Insert(ov::String::FormatString("%x\r\n", chunk_stream->GetLength()).ToData(false).get(), 0);
-		chunk_stream->Append(reinterpret_cast<const uint8_t *>("\r\n"), 2);
+		chunk_stream->Append("\r\n", 2);
 	}
 
-	_chunk_data_list.push_back(chunk_stream);
+	_chunked_data->Append(chunk_stream->GetData(), chunk_stream->GetLength());
 
-    // total data length
-	_total_chunk_data_size += chunk_stream->GetLength();
+	_sample_count++;
 
 	return chunk_stream;
 }
@@ -133,7 +115,6 @@ int CmafChunkWriter::MoofBoxWrite(std::shared_ptr<ov::Data> &data_stream,
 	BoxDataWrite("moof", data, data_stream);
 
 	// trun data offset value change
-	uint32_t data_offset = data_stream->GetLength() + 8;
 	int position = (_media_type == M4sMediaType::Video) ?
 				   data_stream->GetLength() - 16 - 4 : data_stream->GetLength() - 8 - 4;
 

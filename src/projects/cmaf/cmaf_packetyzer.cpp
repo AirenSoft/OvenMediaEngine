@@ -39,34 +39,10 @@ CmafPacketyzer::CmafPacketyzer(const ov::String &app_name,
 {
     _avc_nal_header_size = 0;
 
-
-    uint32_t resolution_gcd = Gcd(media_info.video_width, media_info.video_height);
-    if (resolution_gcd != 0)
-    {
-        std::ostringstream pixel_aspect_ratio;
-        pixel_aspect_ratio << media_info.video_width / resolution_gcd << ":"
-                           << media_info.video_height / resolution_gcd;
-        _mpd_pixel_aspect_ratio = pixel_aspect_ratio.str();
-    }
-
-    _mpd_suggested_presentation_delay = 1;
-    _mpd_min_buffer_time = _segment_duration - (_segment_duration*0.05);
-
-	_mpd_video_availability_time_offset = _segment_duration;
-	if(media_info.video_framerate != 0)
-		_mpd_video_availability_time_offset = _segment_duration - (1/media_info.video_framerate);
-
-	_mpd_audio_availability_time_offset = _segment_duration;
-	if((media_info.audio_samplerate/1024) != 0)
-		_mpd_audio_availability_time_offset = _segment_duration - (1/((double)media_info.audio_samplerate/1024));
-
-    _video_segment_writer = std::make_unique<CmafChunkWriter>(M4sMediaType::Video, 1, VIDEO_TRACK_ID, true);
-    _audio_segment_writer = std::make_unique<CmafChunkWriter>(M4sMediaType::Audio, 1, AUDIO_TRACK_ID, true);
+	_video_chunk_writer = std::make_unique<CmafChunkWriter>(M4sMediaType::Video, 1, VIDEO_TRACK_ID, true);
+	_audio_chunk_writer = std::make_unique<CmafChunkWriter>(M4sMediaType::Audio, 1, AUDIO_TRACK_ID, true);
 
 	_chunked_transfer = chunked_transfer;
-
-	_duration_margen = _segment_duration * 0.1*1000; // 10% -> ms
-
 }
 
 //====================================================================================================
@@ -92,7 +68,6 @@ ov::String CmafPacketyzer::GetCurrentAudioFileName()
 {
 	return ov::String::FormatString("%s_%u%s", _segment_prefix.CStr(), _audio_sequence_number, CMAF_MPD_AUDIO_SUFFIX);
 }
-
 
 //====================================================================================================
 // Video 설정 값 Load ( Key Frame 데이터만 가능)
@@ -191,16 +166,10 @@ bool CmafPacketyzer::VideoInit(const std::shared_ptr<ov::Data> &frame_data)
                                                   16,
                                                   _media_info.audio_samplerate);
 
-
-
 	auto init_data = writer->CreateData(true);
 
     // Video init m4s Save
-    _mpd_video_init_file = std::make_shared<SegmentData>(0,CMAF_MPD_VIDEO_INIT_FILE_NAME, 0, 0, init_data);
-
-    // Set video time priority over audio
-    _start_time = GetCurrentMilliseconds();
-    _start_time_string = MakeUtcTimeString(time(nullptr));
+	_video_init_file = std::make_shared<SegmentData>(0,CMAF_MPD_VIDEO_INIT_FILE_NAME, 0, 0, init_data);
 
     return true;
 }
@@ -231,13 +200,7 @@ bool CmafPacketyzer::AudioInit()
 	auto init_data = writer->CreateData(true);
 
     // Audio init m4s Save
-	_mpd_audio_init_file = std::make_shared<SegmentData>(0,CMAF_MPD_AUDIO_INIT_FILE_NAME, 0, 0, init_data);
-
-    if (_start_time == 0)
-    {
-        _start_time = GetCurrentMilliseconds();
-        _start_time_string = MakeUtcTimeString(time(nullptr));
-    }
+	_audio_init_file = std::make_shared<SegmentData>(0,CMAF_MPD_AUDIO_INIT_FILE_NAME, 0, 0, init_data);
 
     return true;
 }
@@ -248,7 +211,11 @@ bool CmafPacketyzer::AudioInit()
 //====================================================================================================
 bool CmafPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame_data)
 {
-    if (!_video_init)
+	// nal header offset skip
+	frame_data->data = frame_data->data->Subdata((frame_data->type == PacketyzerFrameType::VideoKeyFrame) ?
+												 _avc_nal_header_size : AVC_NAL_START_PATTERN_SIZE);
+
+	if (!_video_init)
     {
         if((frame_data->type != PacketyzerFrameType::VideoKeyFrame) || !VideoInit(frame_data->data))
             return false;
@@ -256,22 +223,53 @@ bool CmafPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
         _video_init = true;
         logtd("Cmaf video packetyzer init - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 
-        // nal header offset skip
-        frame_data->data = frame_data->data->Subdata((frame_data->type == PacketyzerFrameType::VideoKeyFrame) ?
-                                                     _avc_nal_header_size : AVC_NAL_START_PATTERN_SIZE);
-
         _previous_video_frame = frame_data;
+
         return true;
     }
 
-    auto sample_data = std::make_shared<SampleData>(frame_data->timestamp - _previous_video_frame->timestamp,
-                                                            _previous_video_frame->type == PacketyzerFrameType::VideoKeyFrame
-                                                            ? 0X02000000 : 0X01010000,
-                                                            _previous_video_frame->timestamp,
-                                                            _previous_video_frame->time_offset,
-                                                            _previous_video_frame->data);
+	// available start time setting(first key frame)
+	if(!_is_video_time_base)
+	{
+		_is_video_time_base = true;
 
-    auto chunk_data = _video_segment_writer->AppendSample(sample_data);
+		_available_start_time = GetCurrentMilliseconds();
+
+		_video_start_timestamp = _previous_video_frame->timestamp;
+		_video_last_timestamp = _previous_video_frame->timestamp;
+
+		// audio chunk clear
+		if(_audio_chunk_writer != nullptr)
+		{
+			_audio_chunk_writer->Clear();
+
+			_audio_start_timestamp =
+					ConvertTimeScale(_video_start_timestamp, _media_info.video_timescale, _media_info.audio_timescale);
+
+			_audio_last_timestamp = _audio_start_timestamp;
+		}
+	}
+
+	if (_previous_video_frame->type ==  PacketyzerFrameType::VideoKeyFrame )
+	{
+		// segment start frame is key frame
+		uint32_t current_number =
+				(_previous_video_frame->timestamp - _video_start_timestamp)/
+				(_segment_duration*_media_info.video_timescale);
+
+		if(current_number >= _video_sequence_number)
+		{
+			VideoSegmentWrite(current_number, _previous_video_frame->timestamp);
+		}
+	}
+
+    auto sample_data = std::make_shared<SampleData>(frame_data->timestamp - _previous_video_frame->timestamp,
+							_previous_video_frame->type == PacketyzerFrameType::VideoKeyFrame ? 0X02000000 : 0X01010000,
+							_previous_video_frame->timestamp,
+							_previous_video_frame->time_offset,
+							_previous_video_frame->data);
+
+    auto chunk_data = _video_chunk_writer->AppendSample(sample_data);
 
     // chunk data push
     // - (chunk frame) -> cmaf stream server -> response -> client
@@ -280,24 +278,11 @@ bool CmafPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
 		_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetCurrentVideoFileName(), 0, chunk_data);
 	}
 
-    // nal header offset skip
-    frame_data->data = frame_data->data->Subdata((frame_data->type == PacketyzerFrameType::VideoKeyFrame) ?
-                                                 _avc_nal_header_size : AVC_NAL_START_PATTERN_SIZE);
+	_video_last_timestamp = sample_data->timestamp;
+
+	_video_last_tick = GetCurrentTick();
 
     _previous_video_frame = frame_data;
-
-    double current_time = GetCurrentMilliseconds();
-    uint32_t current_number = (current_time - _start_time + _duration_margen)/(_segment_duration*1000);
-
-    // - KeyFrame ~ KeyFrame(before)
-    if (frame_data->type != PacketyzerFrameType::VideoKeyFrame ||  current_number <_video_sequence_number)
-    {
-        return true;
-    }
-
-    VideoSegmentWrite(current_number, frame_data->timestamp);
-
-    UpdatePlayList();
 
     return true;
 }
@@ -308,7 +293,10 @@ bool CmafPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
 //====================================================================================================
 bool CmafPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame_data)
 {
-    if (!_audio_init)
+	// adts offset skip
+	frame_data->data = frame_data->data->Subdata(ADTS_HEADER_SIZE);
+
+	if (!_audio_init)
     {
         if(!AudioInit())
             return false;
@@ -316,20 +304,33 @@ bool CmafPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &fram
         _audio_init = true;
         logtd("Cmaf audio packetyzer init - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 
-        // adts offset skip
-        frame_data->data = frame_data->data->Subdata(ADTS_HEADER_SIZE);
-
         _previous_audio_frame = frame_data;
+
         return true;
     }
 
-    auto sample_data = std::make_shared<SampleData>(frame_data->timestamp - _previous_audio_frame->timestamp,
-													0,
+	// available start time setting
+	if (_available_start_time == 0)
+	{
+		_available_start_time =  GetCurrentMilliseconds();
+		_audio_start_timestamp = _previous_audio_frame->timestamp;
+		_audio_last_timestamp = _previous_audio_frame->timestamp;
+	}
+
+	// segment update check
+	uint32_t current_number =
+			(_previous_audio_frame->timestamp - _audio_start_timestamp)/(_segment_duration*_media_info.audio_timescale);
+
+	if(current_number >= _audio_sequence_number)
+	{
+		AudioSegmentWrite(current_number, _previous_audio_frame->timestamp);
+	}
+
+	auto sample_data = std::make_shared<SampleData>(frame_data->timestamp - _previous_audio_frame->timestamp,
 													_previous_audio_frame->timestamp,
-													0,
 													_previous_audio_frame->data);
 
-    auto chunk_data = _audio_segment_writer->AppendSample(sample_data);
+    auto chunk_data = _audio_chunk_writer->AppendSample(sample_data);
 
 	// chunk data push notify
 	if(chunk_data != nullptr && _chunked_transfer != nullptr)
@@ -337,29 +338,17 @@ bool CmafPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &fram
 		_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetCurrentAudioFileName(), 0, chunk_data);
 	}
 
-    // adts offset skip
-    frame_data->data = frame_data->data->Subdata(ADTS_HEADER_SIZE);
+	_audio_last_timestamp = sample_data->timestamp;
+
+	_audio_last_tick = GetCurrentTick();
 
     _previous_audio_frame = frame_data;
-
-    double current_time = GetCurrentMilliseconds();
-    uint32_t current_number = (current_time - _start_time + _duration_margen)/(_segment_duration*1000);
-
-    if (current_number <_audio_sequence_number)
-    {
-        return true;
-    }
-
-    AudioSegmentWrite(current_number, frame_data->timestamp);
-
-    UpdatePlayList();
 
     return true;
 }
 
 //====================================================================================================
 // Video Segment Write
-// - Duration/Key Frame 확인 이후 이전 데이터 까지 생성
 //====================================================================================================
 bool CmafPacketyzer::VideoSegmentWrite(uint32_t current_number, uint64_t max_timestamp)
 {
@@ -376,17 +365,8 @@ bool CmafPacketyzer::VideoSegmentWrite(uint32_t current_number, uint64_t max_tim
 		_video_sequence_number = current_number;
 	}
 
-    auto file_name = GetCurrentVideoFileName();
-
-	auto segment = _video_segment_writer->GetChunkedSegment();
-
-	// m4s data save
-    SetSegmentData(file_name,
-					max_timestamp - _video_segment_writer->GetStartTimestamp(),
-					_video_segment_writer->GetStartTimestamp(),
-				   segment);
-
-	_video_segment_writer->Clear();
+	uint64_t duration = max_timestamp - _video_chunk_writer->GetStartTimestamp();
+	auto file_name = GetCurrentVideoFileName();
 
 	// creating chunk data created notify
 	if(_chunked_transfer != nullptr)
@@ -394,12 +374,49 @@ bool CmafPacketyzer::VideoSegmentWrite(uint32_t current_number, uint64_t max_tim
 		_chunked_transfer->OnCmafChunkedComplete(_app_name, _stream_name, file_name);
 	}
 
-    return true;
+	// gap 100ms over check
+	if(std::fabs((double)duration/_media_info.video_timescale - _segment_duration) > 0.100)
+	{
+		logtw("Cmaf Video segment time fail - stream(%s/%s) seq(%u) duration(%.3f) frame(%u) timestamp(%.3f) system(%.3f)",
+			  _app_name.CStr(), _stream_name.CStr(), _video_sequence_number,
+			  (double)duration/_media_info.video_timescale,
+			  _video_chunk_writer->GetSampleCount(),
+			  (double)(max_timestamp - _video_start_timestamp)/(_media_info.video_timescale),
+			  (GetCurrentMilliseconds() -  _available_start_time)/1000.0);
+	}
+	else
+	{
+		logtd("Cmaf Video segment - stream(%s/%s) seq(%u) duration(%.3f) frame(%u) timestamp(%.3f) system(%.3f)",
+			  _app_name.CStr(), _stream_name.CStr(), _video_sequence_number,
+			  (double)duration/_media_info.video_timescale,
+			  _video_chunk_writer->GetSampleCount(),
+			  (double)(max_timestamp - _video_start_timestamp)/(_media_info.video_timescale),
+			  (GetCurrentMilliseconds() -  _available_start_time)/1000.0);
+	}
+
+	auto segment = _video_chunk_writer->GetChunkedSegment();
+	_video_chunk_writer->Clear();
+
+	// m4s data save
+    SetSegmentData(file_name, duration, _video_chunk_writer->GetStartTimestamp(), segment);
+
+	if(!_video_play_list_update)
+	{
+		_video_play_list_update = true;
+
+		UpdatePlayList();
+
+		logti("Cmaf Video segment ready completed(ull) - stream(%s/%s)  segment(%ds/%d)",
+			  _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);
+	}
+
+	return true;
 }
 
 //====================================================================================================
 // Audio Segment Write
-// - 비디오 Segment 생성이후 생성 or Audio Only 에서 생성
+// - append frame
+// - create segment
 //====================================================================================================
 bool CmafPacketyzer::AudioSegmentWrite(uint32_t current_number, uint64_t max_timestamp)
 {
@@ -416,17 +433,8 @@ bool CmafPacketyzer::AudioSegmentWrite(uint32_t current_number, uint64_t max_tim
 		_audio_sequence_number = current_number;
 	}
 
+	uint64_t duration = max_timestamp - _audio_chunk_writer->GetStartTimestamp();
 	auto file_name = GetCurrentAudioFileName();
-
-	auto segment = _audio_segment_writer->GetChunkedSegment();
-
-	// m4s data save
-    SetSegmentData(file_name,
-					max_timestamp - _audio_segment_writer->GetStartTimestamp(),
-					_audio_segment_writer->GetStartTimestamp(),
-				   segment);
-
-    _audio_segment_writer->Clear();
 
 	// creating chunk data created notify
 	if(_chunked_transfer != nullptr)
@@ -434,18 +442,55 @@ bool CmafPacketyzer::AudioSegmentWrite(uint32_t current_number, uint64_t max_tim
 		_chunked_transfer->OnCmafChunkedComplete(_app_name, _stream_name, file_name);
 	}
 
+	// gap 100ms over check
+	if(std::fabs((double)duration/_media_info.audio_timescale - _segment_duration) > 0.100)
+	{
+		logtw("Cmaf Audio segment time fail - stream(%s/%s) seq(%u) duration(%.3f) frame(%u) timestamp(%.3f) system(%.3f)",
+			  _app_name.CStr(), _stream_name.CStr(), _audio_sequence_number,
+			  (double)duration/_media_info.audio_timescale,
+			  _audio_chunk_writer->GetSampleCount(),
+			  (double)(max_timestamp - _audio_start_timestamp)/(_media_info.audio_timescale),
+			  (GetCurrentMilliseconds() -  _available_start_time)/1000.0);
+	}
+	else
+	{
+		logtd("Cmaf Audio segment - stream(%s/%s) seq(%u) duration(%.3f) frame(%u) timestamp(%.3f) system(%.3f)",
+			  _app_name.CStr(), _stream_name.CStr(), _audio_sequence_number,
+			  (double)duration/_media_info.audio_timescale,
+			  _audio_chunk_writer->GetSampleCount(),
+			  (double)(max_timestamp - _audio_start_timestamp)/(_media_info.audio_timescale),
+			  (GetCurrentMilliseconds() -  _available_start_time)/1000.0);
+	}
+
+	auto segment = _audio_chunk_writer->GetChunkedSegment();
+	_audio_chunk_writer->Clear();
+
+	// m4s data save
+    SetSegmentData(file_name, duration, _audio_chunk_writer->GetStartTimestamp(), segment);
+
+	// playlist format update
+	if(!_audio_play_list_update)
+	{
+		_audio_play_list_update = true;
+
+		UpdatePlayList();
+
+		logti("Cmaf Audio segment ready completed(ull) - stream(%s/%s)  segment(%ds/%d)",
+			  _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);
+
+	}
+
     return true;
 }
 
 //====================================================================================================
 // PlayList(mpd) Update
-// - 차후 자동 인덱싱 사용시 참고 : LSN = floor(now - (availabilityStartTime + PST) / segmentDuration + startNumber - 1)
+// - publishTime, UTCTiming : request time input form GetPlayList function
+//
 //====================================================================================================
 bool CmafPacketyzer::UpdatePlayList()
 {
-    std::ostringstream play_list_stream;
-    ov::String video_urls;
-    ov::String audio_urls;
+	std::ostringstream play_list_stream;
     // double time_shift_buffer_depth = 0;
     // double minimumUpdatePeriod = 30;
 
@@ -458,26 +503,38 @@ bool CmafPacketyzer::UpdatePlayList()
     << "    xsi:schemaLocation=\"urn:mpeg:DASH:schema:MPD:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd\"\n"
     << "    profiles=\"urn:mpeg:dash:profile:isoff-live:2011\"\n"
     << "    type=\"dynamic\"\n"
-    << "    minimumUpdatePeriod=\"P100Y\"\n" //<< minimumUpdatePeriod << "S\"\n"
-    << "    publishTime=" << MakeUtcTimeString(time(nullptr)) << "\n"
-    << "    availabilityStartTime=" << _start_time_string << "\n"
+    << "    minimumUpdatePeriod=\"PT30S\"\n" //<< minimumUpdatePeriod << "S\"\n"
+    << "    publishTime= %s\n"
+    << "    availabilityStartTime=" << MakeUtcMillisecond(_available_start_time).CStr() << "\n"
     << "    timeShiftBufferDepth=\"PT6S\"\n"
-    << "    suggestedPresentationDelay=\"PT" << _mpd_suggested_presentation_delay << "S\"\n"
-    << "    minBufferTime=\"PT" << _mpd_min_buffer_time << "S\">\n"
+    << "    suggestedPresentationDelay=\"PT" << _segment_duration << "S\"\n"
+    << "    minBufferTime=\"PT" << _segment_duration << "S\">\n"
     << "<Period id=\"0\" start=\"PT0S\">\n";
 
     // video listing
     if (_video_sequence_number > 1)
     {
+    	double availability_time_offset = _media_info.video_framerate != 0 ?
+										  (_segment_duration - (1.0/_media_info.video_framerate)) :
+										  _segment_duration;
+
+    	ov::String pixel_aspect_ratio;
+		uint32_t resolution_gcd = Gcd(_media_info.video_width, _media_info.video_height);
+		if (resolution_gcd != 0)
+		{
+			pixel_aspect_ratio = ov::String::FormatString("%d:%d", _media_info.video_width / resolution_gcd,
+														  _media_info.video_height / resolution_gcd);
+		}
+
         play_list_stream
         << "    <AdaptationSet id=\"0\" group=\"1\" mimeType=\"video/mp4\" width=\"" << _media_info.video_width
-        << "\" height=\"" << _media_info.video_height << "\" par=\"" << _mpd_pixel_aspect_ratio
+        << "\" height=\"" << _media_info.video_height << "\" par=\"" << pixel_aspect_ratio
         << "\" frameRate=\"" << _media_info.video_framerate
         << "\" segmentAlignment=\"true\" startWithSAP=\"1\" subsegmentAlignment=\"true\" subsegmentStartsWithSAP=\"1\">\n"
 
         << "        <SegmentTemplate presentationTimeOffset=\"0\" timescale=\"" << _media_info.video_timescale
         << "\" duration=\"" << (uint32_t)_segment_duration*_media_info.video_timescale
-        << "\" availabilityTimeOffset=\"" << _mpd_video_availability_time_offset
+        << "\" availabilityTimeOffset=\"" << availability_time_offset
         << "\" startNumber=\"1\" initialization=\"" << CMAF_MPD_VIDEO_INIT_FILE_NAME
         << "\" media=\"" << _segment_prefix.CStr() << "_$Number$" << CMAF_MPD_VIDEO_SUFFIX << "\" />\n"
 
@@ -489,6 +546,11 @@ bool CmafPacketyzer::UpdatePlayList()
     // audio listing
     if (_audio_sequence_number > 1)
     {
+		// segment duration - audio one frame duration
+		double availability_time_offset = (_media_info.audio_samplerate/1024) != 0 ?
+										  _segment_duration - (1.0/((double)_media_info.audio_samplerate/1024)) :
+										  _segment_duration;
+
         play_list_stream
         << "    <AdaptationSet id=\"1\" group=\"2\" mimeType=\"audio/mp4\" lang=\"und\" segmentAlignment=\"true\" "
         << "startWithSAP=\"1\" subsegmentAlignment=\"true\" subsegmentStartsWithSAP=\"1\">\n"
@@ -498,7 +560,7 @@ bool CmafPacketyzer::UpdatePlayList()
 
         << "        <SegmentTemplate presentationTimeOffset=\"0\" timescale=\"" << _media_info.audio_timescale
         << "\" duration=\"" << (uint32_t)_segment_duration*_media_info.audio_timescale
-		<< "\" availabilityTimeOffset=\"" << _mpd_audio_availability_time_offset
+		<< "\" availabilityTimeOffset=\"" << availability_time_offset
         << "\" startNumber=\"1\" initialization=\"" << CMAF_MPD_AUDIO_INIT_FILE_NAME
         << "\" media=\"" << _segment_prefix.CStr() << "_$Number$" << CMAF_MPD_AUDIO_SUFFIX << "\" />\n"
 
@@ -508,18 +570,18 @@ bool CmafPacketyzer::UpdatePlayList()
         << "    </AdaptationSet>\n";
     }
 
-    play_list_stream << "</Period>\n" << "</MPD>\n";
+    play_list_stream << "</Period>\n"
+    <<"<UTCTiming schemeIdUri=\"urn:mpeg:dash:utc:direct:2014\" value=%s/>\n"
+    << "</MPD>\n";
 
     ov::String play_list = play_list_stream.str().c_str();
     SetPlayList(play_list);
 
-
-	// segment start availability
-	if(_init_segment_count_complete == false && _video_init == true && _audio_init == true)
+    if((_video_play_list_update && _audio_play_list_update) ||			// Audio + video
+		(_video_play_list_update && _audio_start_timestamp == 0) ||		// Video Only
+		(_audio_play_list_update && _video_start_timestamp == 0))		// Audio Only
 	{
-		_init_segment_count_complete = true;
-		logti("Cmaf segment ready completed(ull) - stream(%s/%s)  segment(%ds/%d)",
-			  _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);
+		_streaming_start = true;
 	}
 
     return true;
@@ -530,18 +592,18 @@ bool CmafPacketyzer::UpdatePlayList()
 //====================================================================================================
 const std::shared_ptr<SegmentData> CmafPacketyzer::GetSegmentData(const ov::String &file_name)
 {
-    if(!_init_segment_count_complete)
+    if(!_streaming_start)
         return nullptr;
 
     // video init file
     if(file_name == CMAF_MPD_VIDEO_INIT_FILE_NAME)
     {
-        return _mpd_video_init_file;
+        return _video_init_file;
     }
     // audio init file
     else if(file_name == CMAF_MPD_AUDIO_INIT_FILE_NAME)
     {
-       return _mpd_audio_init_file;
+       return _audio_init_file;
     }
 
     if (file_name.IndexOf(CMAF_MPD_VIDEO_SUFFIX) >= 0)
@@ -555,12 +617,7 @@ const std::shared_ptr<SegmentData> CmafPacketyzer::GetSegmentData(const ov::Stri
             return value != nullptr ? value->file_name == file_name : false;
         });
 
-        if(item == _video_segment_datas.end())
-        {
-           return nullptr;
-        }
-
-        return (*item);
+        return (item != _video_segment_datas.end()) ? (*item) : nullptr;
     }
     else if (file_name.IndexOf(CMAF_MPD_AUDIO_SUFFIX) >= 0)
     {
@@ -573,13 +630,8 @@ const std::shared_ptr<SegmentData> CmafPacketyzer::GetSegmentData(const ov::Stri
             return value != nullptr ? value->file_name == file_name : false;
         });
 
-        if(item == _audio_segment_datas.end())
-        {
-           return nullptr;
-        }
-
-        return (*item);
-    }
+		return (item != _audio_segment_datas.end()) ? (*item) : nullptr;
+	}
 
     return nullptr;
 }
@@ -598,41 +650,57 @@ bool CmafPacketyzer::SetSegmentData(ov::String file_name,
         // video segment mutex
         std::unique_lock<std::mutex> lock(_video_segment_guard);
 
-        _video_segment_datas[_current_video_index++] = std::make_shared<SegmentData>(_sequence_number++,
-                                                                                    file_name,
-                                                                                    duration,
-                                                                                    timestamp,
-                                                                                    data);
+        _video_segment_datas[_current_video_index++] =
+        		std::make_shared<SegmentData>(_sequence_number++, file_name, duration, timestamp, data);
 
         if(_segment_save_count <= _current_video_index)
             _current_video_index = 0;
 
         _video_sequence_number++;
-
-        logtd("Cmaf video segment add - stream(%s/%s) file(%s) duration(%0.3f)",
-              _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), (double)duration/_media_info.video_timescale);
-
     }
     else if (file_name.IndexOf(CMAF_MPD_AUDIO_SUFFIX) >= 0)
     {
         // audio segment mutex
         std::unique_lock<std::mutex> lock(_audio_segment_guard);
 
-        _audio_segment_datas[_current_audio_index++] = std::make_shared<SegmentData>(_sequence_number++,
-                                                                                    file_name,
-                                                                                    duration,
-                                                                                    timestamp,
-                                                                                    data);
+        _audio_segment_datas[_current_audio_index++] =
+        		std::make_shared<SegmentData>(_sequence_number++, file_name, duration, timestamp, data);
 
         if(_segment_save_count <= _current_audio_index)
             _current_audio_index = 0;
 
         _audio_sequence_number++;
-
-        logtd("Cmaf audio segment add - stream(%s/%s) file(%s) duration(%0.3f)",
-              _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), (double)duration/_media_info.audio_timescale);
     }
 
     return true;
 }
 
+//====================================================================================================
+// Set Segment(override)
+// - mpd : "publishTime" and "UTCTiming" : current utc time setting
+// - current time : available start time + total timestamp duration + @
+//====================================================================================================
+bool CmafPacketyzer::GetPlayList(ov::String &play_list)
+{
+	if(!_streaming_start)
+		return false;
+
+	ov::String current_time;
+
+	if(_is_video_time_base)
+	{
+		current_time = MakeUtcMillisecond(_available_start_time +
+				ConvertTimeScale(_video_last_timestamp - _video_start_timestamp,  _media_info.video_timescale, 1000) +
+				(GetCurrentTick() - _video_last_tick));
+	}
+	else
+	{
+		current_time = MakeUtcMillisecond(_available_start_time +
+				ConvertTimeScale(_audio_last_timestamp - _audio_start_timestamp,  _media_info.audio_timescale, 1000) +
+				(GetCurrentTick() - _audio_last_tick));
+	}
+
+	play_list = ov::String::FormatString(_play_list.CStr(), current_time.CStr(), current_time.CStr());
+
+	return true;
+}

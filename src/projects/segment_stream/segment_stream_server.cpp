@@ -156,7 +156,7 @@ bool SegmentStreamServer::RemoveObserver(const std::shared_ptr<SegmentStreamObse
 //====================================================================================================
 // Disconnect
 //====================================================================================================
-bool SegmentStreamServer::Disconnect(const ov::String &app_na, const ov::String &stream_name)
+bool SegmentStreamServer::Disconnect(const ov::String &app_name, const ov::String &stream_name)
 {
     return true;
 }
@@ -237,6 +237,10 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpResponse> &re
 		ov::String stream_name;
 		ov::String file_name;
 		ov::String file_ext;
+
+		// Set default headers
+		response->SetHeader("Server", "OvenMediaEngine");
+		response->SetHeader("Content-Type", "text/html");
 
 		// Crossdomain 확인
 		if (request_target.IndexOf("crossdomain.xml") >= 0)

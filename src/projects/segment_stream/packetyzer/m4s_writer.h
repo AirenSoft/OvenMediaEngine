@@ -45,6 +45,18 @@ public:
         data		            = data_;
     }
 
+	SampleData(uint64_t duration_,
+			   uint64_t timestamp_,
+			   std::shared_ptr<ov::Data> &data_)
+	{
+		duration                =  duration_;
+		flag                    = 0;
+		timestamp               = timestamp_;
+		composition_time_offset = 0;
+		data		            = data_;
+	}
+
+
 public:
     uint64_t duration;
     uint32_t flag;

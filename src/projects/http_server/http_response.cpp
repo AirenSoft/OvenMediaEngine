@@ -195,6 +195,12 @@ bool HttpResponse::SendResponse()
 // post send
 bool HttpResponse::PostResponse()
 {
+	// data empty or already sended
+	if(_response_data_list.empty() && _response_header.empty())
+	{
+		return true;
+	}
+
     bool result = false;
 	auto response_data = MakeResponseData();
 
@@ -205,13 +211,6 @@ bool HttpResponse::PostResponse()
 	}
 
 	result = PostSend(response_data->GetData(), response_data->GetLength());
-
-	_response_data_list.clear();
-	_response_header.clear();
-
-	// Set default headers
-	 SetHeader("Server", "OvenMediaEngine");
-	 SetHeader("Content-Type", "text/html");
 
 	// chunked transfer init
 	_chunked_transfer = false;
@@ -255,28 +254,28 @@ std::shared_ptr<ov::Data> HttpResponse::MakeResponseData()
         stream.Append(data->GetData(), data->GetLength());
     }
 
+	_response_data_list.clear();
+	_response_header.clear();
+
     return response_data;
 }
 
 bool HttpResponse::PostChunkedDataResponse(const std::shared_ptr<const ov::Data> &data)
 {
-	// before data send
-	// TODO : data sync
-	if(!_response_data_list.empty())
+	if(data == nullptr || data->GetLength() <= 0)
 	{
-		_response_data_list.push_back(data);
-		return true;
-	}
-
-	// end data
-	if(data == nullptr)
-	{
-		// chunked transfer init
-		_chunked_transfer = false;
-		return PostSend("0\r\n\r\n", 5);
+		logtw("Post chunked data is empty : %s", _remote->ToString().CStr());
+		return false;
 	}
 
 	return PostSend(data->GetData(), data->GetLength());
+}
+
+bool HttpResponse::PostChunkedEndResponse()
+{
+	// chunked transfer init
+	_chunked_transfer = false;
+	return PostSend("0\r\n\r\n", 5);
 }
 
 bool HttpResponse::PostSend(const void *data, size_t length)

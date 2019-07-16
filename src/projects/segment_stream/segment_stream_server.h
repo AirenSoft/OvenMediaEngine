@@ -42,7 +42,7 @@ public :
 
     bool RemoveObserver(const std::shared_ptr<SegmentStreamObserver> &observer);
 
-    bool Disconnect(const ov::String &app_na, const ov::String &stream_name);
+    bool Disconnect(const ov::String &app_name, const ov::String &stream_name);
 
     void SetCrossDomain(const std::vector<cfg::Url> &url_list);
 

@@ -26,23 +26,22 @@ public:
 	~CmafChunkWriter() final;
 
 public :
-	int AppendSamples(const std::vector<std::shared_ptr<SampleData>> &sample_datas);
     const std::shared_ptr<ov::Data> AppendSample(const std::shared_ptr<SampleData> &sample_data);
 
     uint32_t GetSequenceNumber(){ return _sequence_number; }
     uint64_t GetStartTimestamp(){ return _start_timestamp; }
-    const std::vector<std::shared_ptr<ov::Data>> &GetChunkDataList(){ return _chunk_data_list; }
+
     bool IsWriteStarted(){ return _write_started; }
     void Clear()
     {
         _write_started = false;
         _start_timestamp = 0;
-		_chunk_data_list.clear();
-		_total_chunk_data_size = 0;
+		_sample_count = 0;
+		_chunked_data = nullptr;
     }
 
 	 std::shared_ptr<ov::Data> GetChunkedSegment();
-
+	uint32_t GetSampleCount(){ return _sample_count; }
 protected :
 
 	int MoofBoxWrite(std::shared_ptr<ov::Data> &data_stream, const std::shared_ptr<SampleData> &sample_data);
@@ -56,8 +55,10 @@ protected :
 	int MdatBoxWrite(std::shared_ptr<ov::Data> &data_stream, const std::shared_ptr<ov::Data> &frame_data);
 
 private :
-	std::vector<std::shared_ptr<ov::Data>> _chunk_data_list;
-	uint32_t _total_chunk_data_size;
+
+	 std::shared_ptr<ov::Data> _chunked_data = nullptr;
+	 uint32_t _max_chunked_data_size = 100*1024;
+
 	bool _http_chunked_transfer_support = true;
 
 	uint32_t _sequence_number;
@@ -65,4 +66,6 @@ private :
 
 	bool _write_started = false;
 	uint64_t _start_timestamp = 0;
+	uint32_t _sample_count = 0;
+
 };

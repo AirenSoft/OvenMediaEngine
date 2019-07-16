@@ -83,8 +83,6 @@ int M4sSegmentWriter::MoofBoxWrite(std::shared_ptr<ov::Data> &data_stream,
 
 	BoxDataWrite("moof", data, data_stream);
 
-	uint32_t data_offset = data_stream->GetLength() + 8;
-
 	int position = (_media_type == M4sMediaType::Video) ? data_stream->GetLength() - sample_datas.size() * 16 - 4:
 				   data_stream->GetLength() - sample_datas.size() * 8 - 4;
 
@@ -94,7 +92,7 @@ int M4sSegmentWriter::MoofBoxWrite(std::shared_ptr<ov::Data> &data_stream,
 	}
 
 	// trun data offset value change
-	ByteWriter<uint32_t>::WriteBigEndian(data_stream->GetWritableDataAs<uint8_t>() + position, data_offset);
+	ByteWriter<uint32_t>::WriteBigEndian(data_stream->GetWritableDataAs<uint8_t>() + position, data_stream->GetLength() + 8);
 
 	return data_stream->GetLength();
 }

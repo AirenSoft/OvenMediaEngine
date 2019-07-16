@@ -59,6 +59,7 @@ public:
 
     bool PostResponse();
 	bool PostChunkedDataResponse(const std::shared_ptr<const ov::Data> &data);
+	bool PostChunkedEndResponse();
 	bool PostSend(const void *data, size_t length);
 
 	std::shared_ptr<ov::ClientSocket> GetRemote()

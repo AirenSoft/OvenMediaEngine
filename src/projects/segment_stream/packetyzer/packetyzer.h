@@ -45,16 +45,17 @@ public :
 
     void SetPlayList(ov::String &play_list);
 
-    bool GetPlayList(ov::String &play_list);
+    virtual bool GetPlayList(ov::String &play_list);
 
     bool GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas);
 
     bool GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas);
 
     static uint32_t Gcd(uint32_t n1, uint32_t n2);
-    static std::string MakeUtcTimeString(time_t value);
+    static ov::String MakeUtcSecond(time_t value);
+	static ov::String MakeUtcMillisecond(double value);
     static double GetCurrentMilliseconds();
-
+	static double GetCurrentTick();
 protected :
     ov::String _app_name;
     ov::String _stream_name;
@@ -68,7 +69,7 @@ protected :
     PacketyzerMediaInfo _media_info;
 
     uint32_t _sequence_number;
-    bool _init_segment_count_complete;
+    bool _streaming_start;
     ov::String _play_list;
 
     bool _video_init;

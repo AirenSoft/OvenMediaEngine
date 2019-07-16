@@ -38,7 +38,7 @@ public :
 
     bool Stop();
 
-    bool Disconnect(const ov::String &app_na, const ov::String &stream_name);
+    bool Disconnect(const ov::String &app_name, const ov::String &stream_name);
 
 protected:
     bool RequestUrlParsing(const ov::String &request_url,

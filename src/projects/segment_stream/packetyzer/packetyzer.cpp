@@ -40,7 +40,7 @@ Packetyzer::Packetyzer(const ov::String &app_name,
     _video_init = false;
     _audio_init = false;
 
-    _init_segment_count_complete = false;
+	_streaming_start = false;
 
     // init nullptr
     for(uint32_t index = 0; index < _segment_save_count ;  index++)
@@ -83,10 +83,8 @@ uint32_t Packetyzer::Gcd(uint32_t n1, uint32_t n2)
 //====================================================================================================
 double Packetyzer::GetCurrentMilliseconds()
 {
-    // struct timeval now;
-    // gettimeofday(&now, nullptr);
-
     struct timespec now;
+
     clock_gettime(CLOCK_REALTIME, &now);
 
     double milliseconds = now.tv_sec*1000LL + now.tv_nsec/1000000; // calculate milliseconds
@@ -94,16 +92,47 @@ double Packetyzer::GetCurrentMilliseconds()
 }
 
 //====================================================================================================
-// MakeUtcTimeString
-// - ex)
+// Packetyzer(Util)
+// - 1/1000
 //====================================================================================================
-std::string Packetyzer::MakeUtcTimeString(time_t value)
+double Packetyzer::GetCurrentTick()
 {
-    std::tm *now_tm = gmtime(&value);
-    char buf[42];
-    strftime(buf, 42, "\"%Y-%m-%dT%TZ\"", now_tm);
-    return buf;
+	struct timespec now;
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+
+	double milliseconds = now.tv_sec*1000LL + now.tv_nsec/1000000; // calculate milliseconds
+	return milliseconds;
 }
+
+
+//====================================================================================================
+// MakeUtcSecond(second)
+//====================================================================================================
+ov::String Packetyzer::MakeUtcSecond(time_t value)
+{
+	std::tm *now_tm = gmtime(&value);
+	char buffer[42];
+
+	strftime(buffer, sizeof(buffer), "\"%Y-%m-%dT%TZ\"", now_tm);
+
+	return buffer;
+}
+
+//====================================================================================================
+// MakeUtcMillisecond(mille second)
+//====================================================================================================
+ov::String Packetyzer::MakeUtcMillisecond(double value)
+{
+	time_t time_vaule = (time_t)value/1000;
+	std::tm *now_tm = gmtime(&time_vaule);
+	char buffer[42];
+
+	strftime(buffer, sizeof(buffer), "%Y-%m-%dT%T", now_tm);
+
+	return ov::String::FormatString("\"%s.%uZ\"", buffer, (uint32_t)value%1000);
+}
+
 
 //====================================================================================================
 // TimeScale에 따라 시간값(Timestamp) 변경
@@ -135,7 +164,7 @@ void Packetyzer::SetPlayList(ov::String &play_list)
 //====================================================================================================
 bool Packetyzer::GetPlayList(ov::String &play_list)
 {
-    if(!_init_segment_count_complete)
+    if(!_streaming_start)
         return false;
 
     // playlist mutex

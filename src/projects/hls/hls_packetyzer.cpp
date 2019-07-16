@@ -203,7 +203,7 @@ bool HlsPacketyzer::UpdatePlayList()
     ov::String play_list = play_lis_stream.str().c_str();
     SetPlayList(play_list);
 
-    if(_stream_type == PacketyzerStreamType::Common && _init_segment_count_complete)
+    if(_stream_type == PacketyzerStreamType::Common && _streaming_start)
     {
         if(!_video_enable)
             logtw("Hls video segment problems - %s/%s", _app_name.CStr(), _stream_name.CStr());
@@ -220,7 +220,7 @@ bool HlsPacketyzer::UpdatePlayList()
 //====================================================================================================
 const std::shared_ptr<SegmentData> HlsPacketyzer::GetSegmentData(const ov::String &file_name)
 {
-    if(!_init_segment_count_complete)
+    if(!_streaming_start)
         return nullptr;
 
     // video segment mutex
@@ -262,9 +262,9 @@ bool HlsPacketyzer::SetSegmentData(ov::String file_name,
     if(_segment_save_count <= _current_video_index)
         _current_video_index = 0;
 
-    if(!_init_segment_count_complete  && _sequence_number > _segment_count)
+    if(!_streaming_start  && _sequence_number > _segment_count)
     {
-        _init_segment_count_complete = true;
+		_streaming_start = true;
 		logti("Hls segment ready completed - stream(%s/%s) segment(%ds/%d)",
 			  _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);
     }

@@ -69,6 +69,8 @@ public :
 
     virtual const std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) override;
 
+	virtual bool GetPlayList(ov::String &play_list) override;
+
     virtual bool SetSegmentData(ov::String file_name,
 								uint64_t duration,
 								uint64_t timestamp,
@@ -84,26 +86,31 @@ protected :
 private :
     int _avc_nal_header_size;
 
-    std::string _start_time_string;
-    double _start_time = 0; //ms
-    std::string _mpd_pixel_aspect_ratio;
-    double _mpd_suggested_presentation_delay;
-    double _mpd_min_buffer_time;
-    double _mpd_video_availability_time_offset;
-	double _mpd_audio_availability_time_offset;
+    double _available_start_time = 0;
 
-	double _duration_margen;
+    uint64_t _video_start_timestamp = 0;
+	uint64_t _video_last_timestamp = 0;
+	double _video_last_tick = 0;
 
-    std::shared_ptr<SegmentData> _mpd_video_init_file = nullptr;
-    std::shared_ptr<SegmentData> _mpd_audio_init_file = nullptr;
+    uint64_t _audio_start_timestamp = 0;
+	uint64_t _audio_last_timestamp = 0;
+	double _audio_last_tick = 0;
+
+    std::shared_ptr<SegmentData> _video_init_file = nullptr;
+    std::shared_ptr<SegmentData> _audio_init_file = nullptr;
 
     uint32_t _video_sequence_number = 1;
     uint32_t _audio_sequence_number = 1;
 
     std::shared_ptr<PacketyzerFrameData> _previous_video_frame = nullptr;
     std::shared_ptr<PacketyzerFrameData> _previous_audio_frame = nullptr;
-    std::unique_ptr<CmafChunkWriter> _video_segment_writer = nullptr;
-    std::unique_ptr<CmafChunkWriter> _audio_segment_writer = nullptr;
+
+    std::unique_ptr<CmafChunkWriter> _video_chunk_writer = nullptr;
+    std::unique_ptr<CmafChunkWriter> _audio_chunk_writer = nullptr;
 
 	std::shared_ptr<ICmafChunkedTransfer> _chunked_transfer = nullptr;
+
+	bool _is_video_time_base = false;
+	bool _video_play_list_update = false;
+	bool _audio_play_list_update = false;
 };

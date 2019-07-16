@@ -19,7 +19,7 @@ public:
 
 	CmafHttpChunkedData( )
 	{
-		chunked_data = std::make_shared<ov::Data>();
+		chunked_data = std::make_shared<ov::Data>(104*1024);
 	}
 
 	void AddChunkData(const std::shared_ptr<ov::Data> &data)

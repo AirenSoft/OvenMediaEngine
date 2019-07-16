@@ -95,7 +95,7 @@ bool MonitoringServer::Stop()
 //====================================================================================================
 // Disconnect
 //====================================================================================================
-bool MonitoringServer::Disconnect(const ov::String &app_na, const ov::String &stream_name)
+bool MonitoringServer::Disconnect(const ov::String &app_name, const ov::String &stream_name)
 {
     return true;
 }

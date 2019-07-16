@@ -62,13 +62,13 @@ protected :
 
 private :
     int _avc_nal_header_size;
-    std::string _start_time;
+	ov::String _start_time;
     std::string _mpd_pixel_aspect_ratio;
     double _mpd_suggested_presentation_delay;
     double _mpd_min_buffer_time;
 
-    std::shared_ptr<SegmentData> _mpd_video_init_file = nullptr;
-    std::shared_ptr<SegmentData> _mpd_audio_init_file = nullptr;
+    std::shared_ptr<SegmentData> _video_init_file = nullptr;
+    std::shared_ptr<SegmentData> _audio_init_file = nullptr;
 
     uint32_t _video_sequence_number = 1;
     uint32_t _audio_sequence_number = 1;
