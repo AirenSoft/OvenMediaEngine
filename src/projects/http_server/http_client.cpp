@@ -93,10 +93,10 @@ ssize_t HttpClient::TlsWrite(ov::Tls *tls, const void *data, size_t length)
     std::unique_lock<std::mutex> lock(_response_guard);
 
     if(_response == nullptr)
-    {
-        logte("HttpReponse is null");
-        return 0;
-    }
+	{
+		logte("HttpReponse is null");
+		return 0;
+	}
 
     if (_tls_post_send)
     {

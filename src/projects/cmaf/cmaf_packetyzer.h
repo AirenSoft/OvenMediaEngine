@@ -13,6 +13,16 @@
 #include "segment_stream/packetyzer/m4s_init_writer.h"
 #include "segment_stream/packetyzer/cmaf_chunk_writer.h"
 
+enum class CmafFileType : int32_t
+{
+	Unknown,
+	PlayList,
+	VideoInit,
+	AudioInit,
+	VideoSegment,
+	AudioSegment,
+};
+
 //====================================================================================================
 // Cmaf chunked transfer notify interface
 //====================================================================================================
@@ -23,13 +33,14 @@ public :
 	virtual void OnCmafChunkDataPush(const ov::String &app_name,
 										const ov::String &stream_name,
 										const ov::String &file_name,
-										uint32_t chunk_index, // 0 base
+										bool is_video,
 										std::shared_ptr<ov::Data> &chunk_data) = 0;// 1frame chunk
 
 	// chunked segment completed notify
 	virtual void OnCmafChunkedComplete(const ov::String &app_name,
 									   const ov::String &stream_name,
-									   const ov::String &file_name) = 0;
+									   const ov::String &file_name,
+									   bool is_video) = 0;
 
 
 };
@@ -55,6 +66,8 @@ public:
     ~CmafPacketyzer() final;
 
 public :
+	static CmafFileType GetFileType(const ov::String &file_name);
+
     bool VideoInit(const std::shared_ptr<ov::Data> &frame_data);
 
     bool AudioInit();
@@ -75,6 +88,8 @@ public :
 								uint64_t duration,
 								uint64_t timestamp,
 								std::shared_ptr<ov::Data> &data) override;
+
+
 
 
 protected :

@@ -944,12 +944,12 @@ namespace ov
 
 	// post send
 	// - input thred send queue
-	bool Socket::PostSend(const void *data, size_t length)
+	bool Socket::PostSend(const void *data, size_t length, bool self_close /*= false*/)
 	{
 		if(!_send_thread_created)
 			StartSendThread();
 
-		auto send_data = std::make_unique<SendData>(data, length);
+		auto send_data = std::make_unique<SocketSendData>(data, length, self_close);
 
 		std::unique_lock<std::mutex> lock(_send_queue_guard);
 
@@ -972,7 +972,7 @@ namespace ov
 	}
 
 	// pop send queue
-	std::unique_ptr<SendData> Socket::PopSendData()
+	std::unique_ptr<SocketSendData> Socket::PopSendData()
 	{
 		std::unique_lock<std::mutex> lock(_send_queue_guard);
 
@@ -1018,6 +1018,11 @@ namespace ov
 					send_data->SetSendedSizeAdd(send_size);
 				}
 				// logd("SocketThread", "[%p] [#%d] SendThread -  Send(%d)", this, _socket.GetSocket(), send_size);
+			}
+
+			if(send_data->self_close)
+			{
+				// 접속 종료
 			}
  		}
 

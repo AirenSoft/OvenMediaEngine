@@ -79,19 +79,24 @@ protected:
 	void OnCmafChunkDataPush(const ov::String &app_name,
 							 const ov::String &stream_name,
 							 const ov::String &file_name,
-							 uint32_t chunk_index, // 0 base
+							 bool is_video,
 							 std::shared_ptr<ov::Data> &chunk_data) override;
 
 	void OnCmafChunkedComplete(const ov::String &app_name,
 							   const ov::String &stream_name,
-							   const ov::String &file_name) override;
+							   const ov::String &file_name,
+							   bool is_video) override;
 
 
 private:
 
-	// key : app name + stream name + file name
-	std::map<std::tuple<ov::String, ov::String, ov::String>, std::shared_ptr<CmafHttpChunkedData>> _http_chunked_data_list;
-	std::mutex _htttp_chunked_data_guard;
+	// key : (app name)/(stream name)/ (file name)
+	std::map<ov::String, std::shared_ptr<CmafHttpChunkedData>> _http_chunked_video_list;
+	std::mutex _htttp_chunked_video_guard;
+
+	std::map<ov::String, std::shared_ptr<CmafHttpChunkedData>> _http_chunked_audio_list;
+	std::mutex _htttp_chunked_audio_guard;
+
 };
 
 

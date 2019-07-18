@@ -166,24 +166,26 @@ namespace ov
 	};
 
 	// send queue input data
-	struct SendData
+	struct SocketSendData
 	{
-		SendData(const void *data_, size_t length_)
+		SocketSendData(const void *data_, size_t length_, bool self_close_)
 		{
 			create_time = time(nullptr);
 			send_time = time(nullptr);
 			original_length = length_;
 			send_size = 0;
 			data = std::make_shared<ov::Data>(data_, length_);
+			self_close = self_close_;
 		}
 
-		SendData(std::shared_ptr<ov::Data> &data_)
+		SocketSendData(std::shared_ptr<ov::Data> &data_, bool self_close_)
 		{
 			create_time = time(nullptr);
 			send_time = time(nullptr);
 			original_length = data->GetLength();
 			send_size = 0;
 			data = data_;
+			self_close = self_close_;
 		}
 
 		const void *GetRemainedData() const
@@ -214,6 +216,9 @@ namespace ov
 		size_t original_length;
 		size_t send_size;
 		std::shared_ptr<ov::Data> data;
+
+		// TODO : send complete socket connect close
+		bool self_close = false;
 	};
 
 	class Socket : public EnableSharedFromThis<Socket>
@@ -291,7 +296,7 @@ namespace ov
 		SocketType GetType() const;
 
 		// data send(thread)
-		virtual bool PostSend(const void *data, size_t length);
+		virtual bool PostSend(const void *data, size_t length, bool self_close = false);
 		// virtual bool PostSend(std::shared_ptr<Data> &data);
 
 		// 데이터 송신
@@ -329,7 +334,7 @@ namespace ov
 
 		bool StopSendThread();
 
-		std::unique_ptr<SendData> PopSendData();
+		std::unique_ptr<SocketSendData> PopSendData();
 
 		virtual void SendThread();
 
@@ -356,7 +361,7 @@ namespace ov
 		ov::Semaphore _send_queue_event;
 		uint32_t _max_send_queue = 0; //  0 - infinity
 		std::mutex _send_queue_guard;
-		std::queue<std::unique_ptr<SendData>> _send_data_queue;
+		std::queue<std::unique_ptr<SocketSendData>> _send_data_queue;
 		std::thread _send_thread;
 		bool _send_thread_created = false;
 

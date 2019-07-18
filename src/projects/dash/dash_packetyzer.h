@@ -13,6 +13,16 @@
 #include "segment_stream/packetyzer/m4s_init_writer.h"
 #include "segment_stream/packetyzer/m4s_segment_writer.h"
 
+enum class DashFileType : int32_t
+{
+	Unknown,
+	PlayList,
+	VideoInit,
+	AudioInit,
+	VideoSegment,
+	AudioSegment,
+};
+
 //====================================================================================================
 // DashPacketyzer
 // m4s : [Prefix]_[Index]_[Suffix].m4s
@@ -32,6 +42,9 @@ public:
     ~DashPacketyzer() final;
 
 public :
+
+	static DashFileType GetFileType(const ov::String &file_name);
+
     bool VideoInit(const std::shared_ptr<ov::Data> &frame_data);
 
     bool AudioInit();

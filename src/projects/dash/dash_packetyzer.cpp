@@ -71,6 +71,23 @@ DashPacketyzer::~DashPacketyzer()
 }
 
 //====================================================================================================
+// Dash File Type
+//====================================================================================================
+DashFileType DashPacketyzer::GetFileType(const ov::String &file_name)
+{
+	if (file_name == DASH_MPD_VIDEO_INIT_FILE_NAME)
+		return DashFileType::VideoInit;
+	else if (file_name == DASH_MPD_AUDIO_INIT_FILE_NAME)
+		return DashFileType::AudioInit;
+	else if (file_name.IndexOf(DASH_MPD_VIDEO_SUFFIX) >= 0)
+		return DashFileType::VideoSegment;
+	else if (file_name.IndexOf(DASH_MPD_AUDIO_SUFFIX) >= 0)
+		return DashFileType::AudioSegment;
+
+	return DashFileType::Unknown;
+}
+
+//====================================================================================================
 // Video 설정 값 Load ( Key Frame 데이터만 가능)
 //  0001 + sps + 0001 + pps + 0001 + I-Frame 구조 파싱
 // - profile
@@ -588,16 +605,9 @@ const std::shared_ptr<SegmentData> DashPacketyzer::GetSegmentData(const ov::Stri
     if(!_streaming_start)
         return nullptr;
 
-    if(file_name == DASH_MPD_VIDEO_INIT_FILE_NAME)
-    {
-        return _video_init_file;
-    }
-    else if(file_name == DASH_MPD_AUDIO_INIT_FILE_NAME)
-    {
-        return _audio_init_file;
-    }
+	const auto &file_type = GetFileType(file_name);
 
-    if (file_name.IndexOf(DASH_MPD_VIDEO_SUFFIX) >= 0)
+	if (file_type == DashFileType::VideoSegment)
     {
         // video segment mutex
         std::unique_lock<std::mutex> lock(_video_segment_guard);
@@ -610,7 +620,7 @@ const std::shared_ptr<SegmentData> DashPacketyzer::GetSegmentData(const ov::Stri
 
         return (item != _video_segment_datas.end()) ? (*item) : nullptr;
     }
-    else if (file_name.IndexOf(DASH_MPD_AUDIO_SUFFIX) >= 0)
+	else if (file_type == DashFileType::AudioSegment)
     {
         // audio segment mutex
         std::unique_lock<std::mutex> lock(_audio_segment_guard);
@@ -623,6 +633,14 @@ const std::shared_ptr<SegmentData> DashPacketyzer::GetSegmentData(const ov::Stri
 
 		return (item != _audio_segment_datas.end()) ? (*item) : nullptr;
     }
+	else if (file_type == DashFileType::VideoInit)
+	{
+		return _video_init_file;
+	}
+	else if (file_type == DashFileType::AudioInit)
+	{
+		return _audio_init_file;
+	}
 
     return nullptr;
 }
@@ -635,7 +653,9 @@ bool DashPacketyzer::SetSegmentData(ov::String file_name,
 									uint64_t timestamp,
 									std::shared_ptr<ov::Data> &data)
 {
-   	if (file_name.IndexOf(DASH_MPD_VIDEO_SUFFIX) >= 0)
+	const auto &file_type = GetFileType(file_name);
+
+	if (file_type == DashFileType::VideoSegment)
     {
         // video segment mutex
         std::unique_lock<std::mutex> lock(_video_segment_guard);
@@ -655,7 +675,7 @@ bool DashPacketyzer::SetSegmentData(ov::String file_name,
           _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration, (double)duration/_media_info.video_timescale);
 
     }
-    else if (file_name.IndexOf(DASH_MPD_AUDIO_SUFFIX) >= 0)
+	else if (file_type == DashFileType::AudioSegment)
     {
         // audio segment mutex
         std::unique_lock<std::mutex> lock(_audio_segment_guard);

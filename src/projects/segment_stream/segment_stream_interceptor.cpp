@@ -49,7 +49,7 @@ bool SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &re
                                         const std::shared_ptr<const ov::Data> &data)
 {
 	OV_ASSERT2(request->GetContentLength() >= 0);
-
+ 
 	if(request->GetContentLength() == 0)
 	{
 		response->SetStatusCode(HttpStatusCode::OK);

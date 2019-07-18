@@ -54,6 +54,23 @@ CmafPacketyzer::~CmafPacketyzer()
 }
 
 //====================================================================================================
+// Cmaf File Type
+//====================================================================================================
+CmafFileType CmafPacketyzer::GetFileType(const ov::String &file_name)
+{
+	if (file_name == CMAF_MPD_VIDEO_INIT_FILE_NAME)
+		return CmafFileType::VideoInit;
+	else if (file_name == CMAF_MPD_AUDIO_INIT_FILE_NAME)
+		return CmafFileType::AudioInit;
+	else if (file_name.IndexOf(CMAF_MPD_VIDEO_SUFFIX) >= 0)
+		return CmafFileType::VideoSegment;
+	else if (file_name.IndexOf(CMAF_MPD_AUDIO_SUFFIX) >= 0)
+		return CmafFileType::AudioSegment;
+
+	return CmafFileType::Unknown;
+}
+
+//====================================================================================================
 // Current video file name
 //====================================================================================================
 ov::String CmafPacketyzer::GetCurrentVideoFileName()
@@ -275,7 +292,7 @@ bool CmafPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
     // - (chunk frame) -> cmaf stream server -> response -> client
     if(chunk_data != nullptr && _chunked_transfer != nullptr)
 	{
-		_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetCurrentVideoFileName(), 0, chunk_data);
+		_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetCurrentVideoFileName(), true, chunk_data);
 	}
 
 	_video_last_timestamp = sample_data->timestamp;
@@ -335,7 +352,7 @@ bool CmafPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &fram
 	// chunk data push notify
 	if(chunk_data != nullptr && _chunked_transfer != nullptr)
 	{
-		_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetCurrentAudioFileName(), 0, chunk_data);
+		_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetCurrentAudioFileName(), false, chunk_data);
 	}
 
 	_audio_last_timestamp = sample_data->timestamp;
@@ -360,7 +377,9 @@ bool CmafPacketyzer::VideoSegmentWrite(uint32_t current_number, uint64_t max_tim
 		// creating chunk data created notify
 		// - sequence change exception
 		if(_chunked_transfer != nullptr)
-			_chunked_transfer->OnCmafChunkedComplete(_app_name, _stream_name, GetCurrentVideoFileName());
+		{
+			_chunked_transfer->OnCmafChunkedComplete(_app_name, _stream_name, GetCurrentVideoFileName(), true);
+		}
 
 		_video_sequence_number = current_number;
 	}
@@ -371,8 +390,9 @@ bool CmafPacketyzer::VideoSegmentWrite(uint32_t current_number, uint64_t max_tim
 	// creating chunk data created notify
 	if(_chunked_transfer != nullptr)
 	{
-		_chunked_transfer->OnCmafChunkedComplete(_app_name, _stream_name, file_name);
+		_chunked_transfer->OnCmafChunkedComplete(_app_name, _stream_name, file_name, true);
 	}
+
 
 	// gap 100ms over check
 	if(std::fabs((double)duration/_media_info.video_timescale - _segment_duration) > 0.100)
@@ -428,7 +448,9 @@ bool CmafPacketyzer::AudioSegmentWrite(uint32_t current_number, uint64_t max_tim
 		// creating chunk data created notify
 		// - sequence change exception
 		if(_chunked_transfer != nullptr)
-			_chunked_transfer->OnCmafChunkedComplete(_app_name, _stream_name, GetCurrentAudioFileName());
+		{
+			_chunked_transfer->OnCmafChunkedComplete(_app_name, _stream_name, GetCurrentAudioFileName(), false);
+		}
 
 		_audio_sequence_number = current_number;
 	}
@@ -439,7 +461,7 @@ bool CmafPacketyzer::AudioSegmentWrite(uint32_t current_number, uint64_t max_tim
 	// creating chunk data created notify
 	if(_chunked_transfer != nullptr)
 	{
-		_chunked_transfer->OnCmafChunkedComplete(_app_name, _stream_name, file_name);
+		_chunked_transfer->OnCmafChunkedComplete(_app_name, _stream_name, file_name, false);
 	}
 
 	// gap 100ms over check
@@ -589,24 +611,19 @@ bool CmafPacketyzer::UpdatePlayList()
 
 //====================================================================================================
 // Get Segment
+// - video segment
+// - audio segment
+// - video init
+// - audio init
 //====================================================================================================
 const std::shared_ptr<SegmentData> CmafPacketyzer::GetSegmentData(const ov::String &file_name)
 {
     if(!_streaming_start)
         return nullptr;
 
-    // video init file
-    if(file_name == CMAF_MPD_VIDEO_INIT_FILE_NAME)
-    {
-        return _video_init_file;
-    }
-    // audio init file
-    else if(file_name == CMAF_MPD_AUDIO_INIT_FILE_NAME)
-    {
-       return _audio_init_file;
-    }
+	const auto &file_type = GetFileType(file_name);
 
-    if (file_name.IndexOf(CMAF_MPD_VIDEO_SUFFIX) >= 0)
+    if (file_type == CmafFileType::VideoSegment)
     {
         // video segment mutex
         std::unique_lock<std::mutex> lock(_video_segment_guard);
@@ -619,7 +636,7 @@ const std::shared_ptr<SegmentData> CmafPacketyzer::GetSegmentData(const ov::Stri
 
         return (item != _video_segment_datas.end()) ? (*item) : nullptr;
     }
-    else if (file_name.IndexOf(CMAF_MPD_AUDIO_SUFFIX) >= 0)
+    else if (file_type == CmafFileType::AudioSegment)
     {
         // audio segment mutex
         std::unique_lock<std::mutex> lock(_audio_segment_guard);
@@ -631,6 +648,14 @@ const std::shared_ptr<SegmentData> CmafPacketyzer::GetSegmentData(const ov::Stri
         });
 
 		return (item != _audio_segment_datas.end()) ? (*item) : nullptr;
+	}
+	else if (file_type == CmafFileType::VideoInit)
+	{
+		return _video_init_file;
+	}
+	else if (file_type == CmafFileType::AudioInit)
+	{
+		return _audio_init_file;
 	}
 
     return nullptr;
@@ -645,7 +670,9 @@ bool CmafPacketyzer::SetSegmentData(ov::String file_name,
 									uint64_t timestamp,
 									std::shared_ptr<ov::Data> &data)
 {
- 	if (file_name.IndexOf(CMAF_MPD_VIDEO_SUFFIX) >= 0)
+	const auto &file_type = GetFileType(file_name);
+
+ 	if (file_type == CmafFileType::VideoSegment)
     {
         // video segment mutex
         std::unique_lock<std::mutex> lock(_video_segment_guard);
@@ -658,7 +685,7 @@ bool CmafPacketyzer::SetSegmentData(ov::String file_name,
 
         _video_sequence_number++;
     }
-    else if (file_name.IndexOf(CMAF_MPD_AUDIO_SUFFIX) >= 0)
+    else if (file_type == CmafFileType::AudioSegment)
     {
         // audio segment mutex
         std::unique_lock<std::mutex> lock(_audio_segment_guard);

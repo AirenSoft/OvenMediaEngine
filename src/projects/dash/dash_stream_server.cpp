@@ -20,21 +20,13 @@ void DashStreamServer::ProcessRequestStream(const std::shared_ptr<HttpResponse> 
                                             const ov::String &file_name,
                                             const ov::String &file_ext)
 {
-    // file extension check
-    if(file_ext != DASH_SEGMENT_EXT && file_ext != DASH_PLAYLIST_EXT)
-    {
-        logtd("Request file extension fail - %s", file_ext.CStr());
-        response->SetStatusCode(HttpStatusCode::NotFound);
-        return;
-    }
-
-    // request dispatch
-   if (file_name == DASH_PLAYLIST_FILE_NAME)
-        PlayListRequest(app_name, stream_name, file_name, PlayListType::Mpd, response);
-    else if (file_ext == DASH_SEGMENT_EXT)
-        SegmentRequest(app_name, stream_name, file_name, SegmentType::M4S, response);
-    else
-        response->SetStatusCode(HttpStatusCode::NotFound);// Error Response
+	// request dispatch
+	if (file_name == DASH_PLAYLIST_FILE_NAME)
+		PlayListRequest(app_name, stream_name, file_name, PlayListType::Mpd, response);
+	else if (file_ext == DASH_SEGMENT_EXT)
+		SegmentRequest(app_name, stream_name, file_name, SegmentType::M4S, response);
+	else
+		response->SetStatusCode(HttpStatusCode::NotFound);// Error Response
 }
 
 //====================================================================================================
@@ -76,6 +68,9 @@ void DashStreamServer::SegmentRequest(const ov::String &app_name,
 									  SegmentType segment_type,
 									  const std::shared_ptr<HttpResponse> &response)
 {
+	auto type = DashPacketyzer::GetFileType(file_name);
+	bool is_video = (type == DashFileType::VideoSegment || type == DashFileType::VideoInit);
+
 	std::shared_ptr<SegmentData> segment = nullptr;
 
 	auto item = std::find_if(_observers.begin(), _observers.end(),
@@ -92,9 +87,9 @@ void DashStreamServer::SegmentRequest(const ov::String &app_name,
 	}
 
 	// header setting
-	if(file_name.IndexOf("video") > 0)
+	if(is_video)
 		response->SetHeader("Content-Type", "video/mp4");
-	else if(file_name.IndexOf("audio") > 0)
+	else
 		response->SetHeader("Content-Type", "audio/mp4");
 
 	response->AppendData(segment->data);
