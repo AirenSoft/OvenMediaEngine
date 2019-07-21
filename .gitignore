@@ -10,7 +10,7 @@ cmake-build-debug
 CMakeLists.txt
 
 # For VSCode
-.code-workspace
+*.code-workspace
 .vscode
 tasks.json
 settings.json
