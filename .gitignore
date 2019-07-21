@@ -4,12 +4,14 @@ bin
 intermediates
 logs
 
+# For CLion
 .idea
 cmake-build-debug
 CMakeLists.txt
 
 # For VSCode
 .code-workspace
+.vscode
 tasks.json
 settings.json
 launch.json
