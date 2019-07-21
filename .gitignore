@@ -8,6 +8,12 @@ logs
 cmake-build-debug
 CMakeLists.txt
 
+# For VSCode
+.code-workspace
+tasks.json
+settings.json
+launch.json
+
 *.o
 *.d
 *.pc
