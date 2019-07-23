@@ -37,7 +37,7 @@ ssize_t WebSocketClient::Send(const std::shared_ptr<const ov::Data> &data, WebSo
 		.mask = false
 	};
 
-	size_t length = data->GetLength();
+	size_t length = (data == nullptr) ? 0LL : data->GetLength();
 
 	if(length < 0x7D)
 	{
@@ -75,9 +75,14 @@ ssize_t WebSocketClient::Send(const std::shared_ptr<const ov::Data> &data, WebSo
 		_response->Send(&payload_length);
 	}
 
-	logtd("Trying to send data\n%s", data->Dump(32).CStr());
+	if(length > 0LL)
+	{
+		logtd("Trying to send data\n%s", data->Dump(32).CStr());
 
-	return _response->Send(data) ? data->GetLength() : -1;
+		return _response->Send(data) ? length : -1LL;
+	}
+	
+	return length;
 }
 
 ssize_t WebSocketClient::Send(const std::shared_ptr<const ov::Data> &data)

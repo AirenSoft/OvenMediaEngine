@@ -6,8 +6,8 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "../../http_private.h"
 #include "./web_socket_interceptor.h"
+#include "../../http_private.h"
 #include "./web_socket_datastructure.h"
 #include "./web_socket_frame.h"
 
@@ -31,9 +31,9 @@ bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const H
 	//
 	// 2.   A |Host| header field containing the server's authority.
 	//
-	if((request->GetMethod() == HttpMethod::Get) && (request->GetHttpVersionAsNumber() > 1.0))
+	if ((request->GetMethod() == HttpMethod::Get) && (request->GetHttpVersionAsNumber() > 1.0))
 	{
-		if(
+		if (
 			// 3.   An |Upgrade| header field containing the value "websocket",
 			//      treated as an ASCII case-insensitive value.
 			(request->GetHeader("UPGRADE") == "websocket") &&
@@ -48,8 +48,7 @@ bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const H
 			request->IsHeaderExists("SEC-WEBSOCKET-KEY") &&
 
 			// 6.   A |Sec-WebSocket-Version| header field, with a value of 13.
-			(request->GetHeader("SEC-WEBSOCKET-VERSION") == "13")
-			)
+			(request->GetHeader("SEC-WEBSOCKET-VERSION") == "13"))
 		{
 			// 나머지 사항은 체크하지 않음
 			// 7.   Optionally, an |Origin| header field.  This header field is sent
@@ -111,10 +110,9 @@ bool WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &req
 	auto websocket_response = std::make_shared<WebSocketClient>(response->GetRemote(), request, response);
 	_websocket_client_list[request] = (WebSocketInfo){
 		.response = websocket_response,
-		.frame = nullptr
-	};
+		.frame = nullptr};
 
-	if(_connection_handler != nullptr)
+	if (_connection_handler != nullptr)
 	{
 		return _connection_handler(websocket_response);
 	}
@@ -124,7 +122,7 @@ bool WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &req
 
 bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data)
 {
-	if(data->GetLength() == 0)
+	if (data->GetLength() == 0)
 	{
 		// Nothing to do
 		return true;
@@ -132,7 +130,7 @@ bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 
 	auto item = _websocket_client_list.find(request);
 
-	if(item == _websocket_client_list.end())
+	if (item == _websocket_client_list.end())
 	{
 		// 반드시 _websocket_client_list 목록 안에 있어야 함
 		OV_ASSERT2(false);
@@ -141,7 +139,7 @@ bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 
 	logtd("Data is received\n%s", data->Dump().CStr());
 
-	if(item->second.frame == nullptr)
+	if (item->second.frame == nullptr)
 	{
 		item->second.frame = std::make_shared<WebSocketFrame>();
 	}
@@ -149,7 +147,7 @@ bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 	auto frame = item->second.frame;
 	auto processed_bytes = frame->Process(data);
 
-	switch(frame->GetStatus())
+	switch (frame->GetStatus())
 	{
 		case WebSocketFrameParseStatus::Prepare:
 			// Not enough data to parse header
@@ -162,39 +160,57 @@ bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 		{
 			const std::shared_ptr<const ov::Data> payload = frame->GetPayload();
 
-			if(static_cast<WebSocketFrameOpcode>(frame->GetHeader().opcode) == WebSocketFrameOpcode::ConnectionClose)
+			switch (static_cast<WebSocketFrameOpcode>(frame->GetHeader().opcode))
 			{
-				// 접속 종료 요청됨
-				logtd("Client requested close connection: reason:\n%s", payload->Dump("Reason").CStr());
-				return false;
-			}
-			else
-			{
-				logtd("%s:\n%s", frame->ToString().CStr(), payload->Dump("Frame", 0L, 1024L, nullptr).CStr());
+				case WebSocketFrameOpcode::ConnectionClose:
+					// 접속 종료 요청됨
+					logtd("Client requested close connection: reason:\n%s", payload->Dump("Reason").CStr());
+					return false;
 
-				// 패킷 조립이 완료되었음
-				// 상위 레벨로 올림
-				if(_message_handler != nullptr)
-				{
-					if(payload->GetLength() > 0L)
-					{
-						// 데이터가 있을 경우에만 올림
-						if(_message_handler(item->second.response, frame) == false)
-						{
-							return false;
-						}
-					}
+				case WebSocketFrameOpcode::Ping:
+					logtd("A ping frame is received:\n%s", payload->Dump().CStr());
 
 					item->second.frame = nullptr;
-				}
 
-				// 나머지 데이터로 다시 파싱 시작
-				OV_ASSERT2(processed_bytes >= 0L);
+					// Send a pong frame to the client
+					item->second.response->Send(payload, WebSocketFrameOpcode::Pong);
 
-				if(processed_bytes > 0L)
-				{
-					return OnHttpData(request, response, data->Subdata(processed_bytes));
-				}
+					return true;
+
+				case WebSocketFrameOpcode::Pong:
+					// Ignore pong frame
+					logtd("A pong frame is received:\n%s", payload->Dump().CStr());
+
+					item->second.frame = nullptr;
+
+					return true;
+
+				default:
+					logtd("%s:\n%s", frame->ToString().CStr(), payload->Dump("Frame", 0L, 1024L, nullptr).CStr());
+
+					// 패킷 조립이 완료되었음
+					// 상위 레벨로 올림
+					if (_message_handler != nullptr)
+					{
+						if (payload->GetLength() > 0L)
+						{
+							// 데이터가 있을 경우에만 올림
+							if (_message_handler(item->second.response, frame) == false)
+							{
+								return false;
+							}
+						}
+
+						item->second.frame = nullptr;
+					}
+
+					// 나머지 데이터로 다시 파싱 시작
+					OV_ASSERT2(processed_bytes >= 0L);
+
+					if (processed_bytes > 0L)
+					{
+						return OnHttpData(request, response, data->Subdata(processed_bytes));
+					}
 			}
 
 			break;
@@ -217,7 +233,7 @@ void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpRequest> &reque
 
 	OV_ASSERT2(item != _websocket_client_list.end());
 
-	if(_error_handler != nullptr)
+	if (_error_handler != nullptr)
 	{
 		_error_handler(item->second.response, ov::Error::CreateError(static_cast<int>(status_code), "%s", StringFromHttpStatusCode(status_code)));
 	}
@@ -235,7 +251,7 @@ void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpRequest> &requ
 
 	OV_ASSERT2(item != _websocket_client_list.end());
 
-	if(_close_handler != nullptr)
+	if (_close_handler != nullptr)
 	{
 		_close_handler(item->second.response);
 	}
