@@ -2,6 +2,11 @@
 
 BasedOnStyle: Google
 
+# The column limit.
+#
+# A column limit of 0 means that there is no column limit. In this case, clang-format will respect the input’s line breaking decisions within statements unless they contradict other rules.
+ColumnLimit: 0
+
 # The number of columns to use for indentation.
 # 
 # IndentWidth: 3
@@ -13,6 +18,12 @@ BasedOnStyle: Google
 #    }
 # }
 IndentWidth: '4'
+
+# The extra indent or outdent of access modifiers, e.g. public:.
+AccessModifierOffset: -4
+
+# Allow breaking string literals when formatting.
+BreakStringLiterals: false
 
 # The number of columns used for tab stops.
 TabWidth: '4'
