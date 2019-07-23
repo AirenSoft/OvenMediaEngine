@@ -1,0 +1,322 @@
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+
+BasedOnStyle: Google
+
+# The number of columns to use for indentation.
+# 
+# IndentWidth: 3
+# 
+# void f() {
+#    someFunction();
+#    if (true, false) {
+#       f();
+#    }
+# }
+IndentWidth: '4'
+
+# The number of columns used for tab stops.
+TabWidth: '4'
+
+# The way to use tab characters in the resulting file.
+# 
+# Possible values:
+# 
+#     UT_Never (in configuration: Never) Never use tab.
+#     UT_ForIndentation (in configuration: ForIndentation) Use tabs only for indentation.
+#     UT_ForContinuationAndIndentation (in configuration: ForContinuationAndIndentation) Use tabs only for line continuation and indentation.
+#     UT_Always (in configuration: Always) Use tabs whenever we need to fill whitespace that spans at least from one tab stop to the next one.
+UseTab: Always
+
+# Options for aligning backslashes in escaped newlines.
+# 
+# Possible values:
+# 
+#     ENAS_DontAlign (in configuration: DontAlign) Don’t align escaped newlines.
+#         #define A \
+#           int aaaa; \
+#           int b; \
+#           int dddddddddd;
+#
+#     ENAS_Left (in configuration: Left) Align escaped newlines as far left as possible.
+#         #define A   \
+#           int aaaa; \
+#           int b;    \
+#           int dddddddddd;
+#         
+#     ENAS_Right (in configuration: Right) Align escaped newlines in the right-most column.
+#         #define A                                                                      \
+#           int aaaa;                                                                    \
+#           int b;                                                                       \
+#           int dddddddddd;
+AlignEscapedNewlines: Left
+
+# Dependent on the value, int f() { return 0; } can be put on a single line.
+# 
+# Possible values:
+# 
+#     SFS_None (in configuration: None) Never merge functions into a single line.
+#     
+#     SFS_InlineOnly (in configuration: InlineOnly) Only merge functions defined inside a class. Same as “inline”, except it does not implies “empty”: i.e. top level empty functions are not merged either.
+#         class Foo {
+#           void f() { foo(); }
+#         };
+#         void f() {
+#           foo();
+#         }
+#         void f() {
+#         }
+#
+#     SFS_Empty (in configuration: Empty) Only merge empty functions.
+#         void f() {}
+#         void f2() {
+#           bar2();
+#         }
+#     
+#     SFS_Inline (in configuration: Inline) Only merge functions defined inside a class. Implies “empty”.
+#         class Foo {
+#           void f() { foo(); }
+#         };
+#         void f() {
+#           foo();
+#         }
+#         void f() {}
+#     
+#     SFS_All (in configuration: All) Merge all functions fitting on a single line.
+#         class Foo {
+#           void f() { foo(); }
+#         };
+#         void f() { bar(); }
+AllowShortFunctionsOnASingleLine: Empty
+
+# If true, if (a) return; can be put on a single line.
+# 
+# Possible values:
+# 
+#     SIS_Never (in configuration: Never) Never put short ifs on the same line.
+#         if (a)
+#           return ;
+#         else {
+#           return;
+#         }
+#     
+#     SIS_WithoutElse (in configuration: WithoutElse) Without else put short ifs on the same line only if the else is not a compound statement.
+#         if (a) return;
+#         else
+#           return;
+#     
+#     SIS_Always (in configuration: Always) Always put short ifs on the same line if the else is not a compound statement or not.
+#         if (a) return;
+#         else {
+#           return;
+#         }
+AllowShortIfStatementsOnASingleLine: 'false'
+
+# If true, while (true) continue; can be put on a single line.
+AllowShortLoopsOnASingleLine: 'false'
+
+# The preprocessor directive indenting style to use.
+# 
+# Possible values:
+# 
+#     PPDIS_None (in configuration: None) Does not indent any directives.
+#         #if FOO
+#         #if BAR
+#         #include <foo>
+#         #endif
+#         #endif
+#
+#     PPDIS_AfterHash (in configuration: AfterHash) Indents directives after the hash.
+#         #if FOO
+#         #  if BAR
+#         #    include <foo>
+#         #  endif
+#         #endif
+#
+#     PPDIS_BeforeHash (in configuration: BeforeHash) Indents directives before the hash.
+#         #if FOO
+#           #if BAR
+#             #include <foo>
+#           #endif
+#         #endif
+IndentPPDirectives: AfterHash
+
+# The brace breaking style to use.
+#
+# Possible values:
+# 
+#     BS_Attach (in configuration: Attach) Always attach braces to surrounding context.
+#         try {
+#           foo();
+#         } catch () {
+#         }
+#         void foo() { bar(); }
+#         class foo {};
+#         if (foo()) {
+#         } else {
+#         }
+#         enum X : int { A, B };
+#     
+#     BS_Linux (in configuration: Linux) Like Attach, but break before braces on function, namespace and class definitions.
+#         try {
+#           foo();
+#         } catch () {
+#         }
+#         void foo() { bar(); }
+#         class foo
+#         {
+#         };
+#         if (foo()) {
+#         } else {
+#         }
+#         enum X : int { A, B };
+#     
+#     BS_Mozilla (in configuration: Mozilla) Like Attach, but break before braces on enum, function, and record definitions.
+#         try {
+#           foo();
+#         } catch () {
+#         }
+#         void foo() { bar(); }
+#         class foo
+#         {
+#         };
+#         if (foo()) {
+#         } else {
+#         }
+#         enum X : int { A, B };
+#     
+#     BS_Stroustrup (in configuration: Stroustrup) Like Attach, but break before function definitions, catch, and else.
+#         try {
+#           foo();
+#         }
+#         catch () {
+#         }
+#         void foo() { bar(); }
+#         class foo {
+#         };
+#         if (foo()) {
+#         }
+#         else {
+#         }
+#         enum X : int { A, B };
+#     
+#     BS_Allman (in configuration: Allman) Always break before braces.
+#         try
+#         {
+#           foo();
+#         }
+#         catch ()
+#         {
+#         }
+#         void foo() { bar(); }
+#         class foo
+#         {
+#         };
+#         if (foo())
+#         {
+#         }
+#         else
+#         {
+#         }
+#         enum X : int
+#         {
+#           A,
+#           B
+#         };
+#     
+#     BS_GNU (in configuration: GNU) Always break before braces and add an extra level of indentation to braces of control statements, not to those of class, function or other definitions.
+#         try
+#           {
+#             foo();
+#           }
+#         catch ()
+#           {
+#           }
+#         void foo() { bar(); }
+#         class foo
+#         {
+#         };
+#         if (foo())
+#           {
+#           }
+#         else
+#           {
+#           }
+#         enum X : int
+#         {
+#           A,
+#           B
+#         };
+#     
+#     BS_WebKit (in configuration: WebKit) Like Attach, but break before functions.
+#         try {
+#           foo();
+#         } catch () {
+#         }
+#         void foo() { bar(); }
+#         class foo {
+#         };
+#         if (foo()) {
+#         } else {
+#         }
+#         enum X : int { A, B };
+#
+#     BS_Custom (in configuration: Custom) Configure each individual brace in BraceWrapping.
+BreakBeforeBraces: Custom
+BraceWrapping: {
+    AfterClass: 'true'
+    AfterControlStatement: 'true'
+    AfterEnum : 'true'
+    AfterFunction : 'true'
+    AfterNamespace : 'true'
+    AfterStruct : 'true'
+    AfterUnion : 'true'
+    AfterExternBlock : 'true'
+    BeforeCatch : 'true'
+    BeforeElse : 'true'
+    IndentBraces : 'false'
+    SplitEmptyFunction : 'false'
+    SplitEmptyRecord : 'true'
+    SplitEmptyNamespace : 'true'
+}
+
+# The indentation used for namespaces.
+# 
+# Possible values:
+# 
+#     NI_None (in configuration: None) Don’t indent in namespaces.
+#         namespace out {
+#         int i;
+#         namespace in {
+#         int i;
+#         }
+#         }
+#
+#     NI_Inner (in configuration: Inner) Indent only in inner namespaces (nested in other namespaces).
+#         namespace out {
+#         int i;
+#         namespace in {
+#           int i;
+#         }
+#         }
+#
+#     NI_All (in configuration: All) Indent in all namespaces.
+#         namespace out {
+#           int i;
+#           namespace in {
+#             int i;
+#           }
+#         }
+NamespaceIndentation: All
+
+# If true, clang-format will attempt to re-flow comments.
+# 
+# false:
+# // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+# /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+# 
+# true:
+# // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+# // information
+# /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+#  * information */
+ReflowComments: false
