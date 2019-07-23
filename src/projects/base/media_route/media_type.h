@@ -2,6 +2,11 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
+extern "C"
+{
+	#include <libavutil/rational.h>
+}
+
 namespace common
 {
 	// 미디어 타입
@@ -103,6 +108,11 @@ namespace common
 		ov::String ToString()
 		{
 			return ov::String::FormatString("%d/%d", GetNum(), GetDen());
+		}
+
+		operator AVRational() const
+		{
+			return (AVRational){ _num, _den };
 		}
 
 	private:
