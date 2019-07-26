@@ -6,4 +6,6 @@ LOCAL_TARGET := segment_stream
 LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES) $(call get_sub_source_list,packetyzer)
 LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES) $(call get_sub_source_list,packetyzer)
 
+$(call add_pkg_config,srt)
+
 include $(BUILD_STATIC_LIBRARY)

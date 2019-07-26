@@ -9,7 +9,6 @@ LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES) \
 LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES) \
     $(call get_sub_header_list,openssl)
 
-LOCAL_CFLAGS := $(shell pkg-config --cflags openssl)
-LOCAL_LDFLAGS := $(shell pkg-config --libs openssl)
+$(call add_pkg_config,openssl)
 
 include $(BUILD_STATIC_LIBRARY)

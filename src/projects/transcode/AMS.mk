@@ -5,15 +5,14 @@ LOCAL_STATIC_LIBRARIES := \
 	application \
 	ovlibrary \
 
-LOCAL_LDFLAGS := \
-	`pkg-config --libs libavformat` \
-	`pkg-config --libs libavfilter` \
-	`pkg-config --libs libavcodec` \
-	`pkg-config --libs libswresample` \
-	`pkg-config --libs libswscale` \
-	`pkg-config --libs libavutil` \
-	`pkg-config --libs vpx` \
-	`pkg-config --libs opus`
+$(call add_pkg_config,libavformat)
+$(call add_pkg_config,libavfilter)
+$(call add_pkg_config,libavcodec)
+$(call add_pkg_config,libswresample)
+$(call add_pkg_config,libswscale)
+$(call add_pkg_config,libavutil)
+$(call add_pkg_config,vpx)
+$(call add_pkg_config,opus)
 
 LOCAL_TARGET := transcoder
 

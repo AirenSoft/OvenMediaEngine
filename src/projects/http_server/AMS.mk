@@ -11,4 +11,7 @@ LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES) \
     $(call get_sub_header_list,interceptors) \
     $(call get_sub_header_list,interceptors/**)
 
+$(call add_pkg_config,srt)
+$(call add_pkg_config,openssl)
+
 include $(BUILD_STATIC_LIBRARY)

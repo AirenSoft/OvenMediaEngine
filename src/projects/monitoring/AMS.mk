@@ -6,4 +6,6 @@ LOCAL_TARGET := monitoring
 LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES)
 LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES)
 
+$(call add_pkg_config,openssl)
+
 include $(BUILD_STATIC_LIBRARY)

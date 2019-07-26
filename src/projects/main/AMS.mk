@@ -33,20 +33,24 @@ LOCAL_STATIC_LIBRARIES := \
 LOCAL_PREBUILT_LIBRARIES := \
 	libpugixml.a
 
-LOCAL_LDFLAGS := \
-	-lpthread \
-	-ldl \
-	`pkg-config --libs srt` \
-	`pkg-config --libs libavformat` \
-	`pkg-config --libs libavfilter` \
-	`pkg-config --libs libavcodec` \
-	`pkg-config --libs libswresample` \
-	`pkg-config --libs libswscale` \
-	`pkg-config --libs libavutil` \
-	`pkg-config --libs openssl` \
-	`pkg-config --libs vpx` \
-	`pkg-config --libs opus` \
-	`pkg-config --libs libsrtp2`
+LOCAL_LDFLAGS :=
+
+ifeq ($(shell echo $${OSTYPE}),linux-musl) 
+# alpine linux
+LOCAL_LDFLAGS += -lexecinfo
+endif
+
+$(call add_pkg_config,srt)
+$(call add_pkg_config,libavformat)
+$(call add_pkg_config,libavfilter)
+$(call add_pkg_config,libavcodec)
+$(call add_pkg_config,libswresample)
+$(call add_pkg_config,libswscale)
+$(call add_pkg_config,libavutil)
+$(call add_pkg_config,openssl)
+$(call add_pkg_config,vpx)
+$(call add_pkg_config,opus)
+$(call add_pkg_config,libsrtp2)
 
 LOCAL_TARGET := OvenMediaEngine
 
