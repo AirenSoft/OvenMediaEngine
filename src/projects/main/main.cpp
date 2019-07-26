@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
 
 	logtd("Trying to initialize SRT...");
 	srt_startup();
-	srt_setloglevel(logging::LogLevel::debug);
+	srt_setloglevel(srt_logging::LogLevel::debug);
 	srt_setloghandler(nullptr, SrtLogHandler);
 
 	logtd("Trying to initialize OpenSSL...");
@@ -320,23 +320,23 @@ void SrtLogHandler(void *opaque, int level, const char *file, int line, const ch
 
 	switch(level)
 	{
-		case logging::LogLevel::debug:
+		case srt_logging::LogLevel::debug:
 			ov_log_internal(OVLogLevelDebug, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
-		case logging::LogLevel::note:
+		case srt_logging::LogLevel::note:
 			ov_log_internal(OVLogLevelInformation, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
-		case logging::LogLevel::warning:
+		case srt_logging::LogLevel::warning:
 			ov_log_internal(OVLogLevelWarning, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
-		case logging::LogLevel::error:
+		case srt_logging::LogLevel::error:
 			ov_log_internal(OVLogLevelError, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
-		case logging::LogLevel::fatal:
+		case srt_logging::LogLevel::fatal:
 			ov_log_internal(OVLogLevelCritical, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
