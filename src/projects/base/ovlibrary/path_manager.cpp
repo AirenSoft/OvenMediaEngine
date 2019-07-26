@@ -8,10 +8,10 @@
 //==============================================================================
 #include <utility>
 
-#include <unistd.h>
 #include <errno.h>
-#include <wordexp.h>
 #include <linux/limits.h>
+#include <unistd.h>
+#include <wordexp.h>
 
 #include "path_manager.h"
 
@@ -21,10 +21,10 @@ namespace ov
 {
 	String PathManager::GetAppPath(String sub_path)
 	{
-		char buffer[4096] = { 0 };
+		char buffer[4096] = {0};
 
 #ifndef __CYGWIN__
-		if(readlink("/proc/self/exe", buffer, OV_COUNTOF(buffer)) != -1)
+		if (readlink("/proc/self/exe", buffer, OV_COUNTOF(buffer)) != -1)
 		{
 			return Combine(Combine(ExtractPath(buffer), std::move(sub_path)), "");
 		}
@@ -35,9 +35,9 @@ namespace ov
 
 	String PathManager::GetCurrentPath(String sub_path)
 	{
-		char buffer[4096] = { 0 };
+		char buffer[4096] = {0};
 
-		if(getcwd(buffer, OV_COUNTOF(buffer)) == nullptr)
+		if (getcwd(buffer, OV_COUNTOF(buffer)) == nullptr)
 		{
 			return "";
 		}
@@ -49,7 +49,7 @@ namespace ov
 	{
 		wordexp_t exp_result;
 
-		if(wordexp(path, &exp_result, 0) == 0)
+		if (wordexp(path, &exp_result, 0) == 0)
 		{
 			path = exp_result.we_wordv[0];
 		}
@@ -63,7 +63,7 @@ namespace ov
 	{
 		off_t position = path.IndexOfRev('/');
 
-		if(position >= 0)
+		if (position >= 0)
 		{
 			path = path.Left(static_cast<size_t>(position + 1));
 		}
@@ -73,17 +73,17 @@ namespace ov
 
 	bool PathManager::MakeDirectory(const char *path, int mask)
 	{
-		if((path == nullptr) || (path[0] == '\0'))
+		if ((path == nullptr) || (path[0] == '\0'))
 		{
 			return false;
 		}
 
-		return (mkdir(path, static_cast<__mode_t>(mask)) == 0) || (errno == EEXIST);
+		return (mkdir(path, static_cast<mode_t>(mask)) == 0) || (errno == EEXIST);
 	}
 
 	String PathManager::Combine(String path1, String path2)
 	{
-		if((path1.HasSuffix("/") == false) && (path2.HasPrefix("/") == false))
+		if ((path1.HasSuffix("/") == false) && (path2.HasPrefix("/") == false))
 		{
 			path1.Append("/");
 		}
@@ -104,11 +104,11 @@ namespace ov
 
 		auto result = realpath(path, buffer);
 
-		if(result == nullptr)
+		if (result == nullptr)
 		{
 			return "";
 		}
 
 		return String(buffer);
 	}
-}
+}  // namespace ov
