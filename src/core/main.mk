@@ -11,8 +11,6 @@ INSTALL_CONF_DIRECTORY := $(INSTALL_DIRECTORY)/conf
 LINK_BIN_DIRECTORY := /usr/bin
 INSTALL_SERVICE_DIRECTORY := /lib/systemd/system
 LINK_SERVICE_DIRECTORY := /etc/systemd/system
-LIBRARY_PATHS := /opt/ovenmediaengine/lib:/opt/ovenmediaengine/lib64
-PKG_CONFIG_PATHS := /opt/ovenmediaengine/lib/pkgconfig:/opt/ovenmediaengine/lib64/pkgconfig
 
 #===============================================================================
 # Include makefiles
@@ -20,8 +18,8 @@ PKG_CONFIG_PATHS := /opt/ovenmediaengine/lib/pkgconfig:/opt/ovenmediaengine/lib6
 include $(BUILD_SYSTEM_DIRECTORY)/pre_processing.mk
 include $(BUILD_SYSTEM_DIRECTORY)/os_version.mk
 include $(BUILD_SYSTEM_DIRECTORY)/colors.mk
-include $(BUILD_SYSTEM_DIRECTORY)/global_config.mk
 include $(BUILD_SYSTEM_DIRECTORY)/config.mk
+include $(BUILD_SYSTEM_DIRECTORY)/global_config.mk
 include $(BUILD_SYSTEM_DIRECTORY)/environments.mk
 include $(BUILD_SYSTEM_DIRECTORY)/utilities.mk
 include $(BUILD_SYSTEM_DIRECTORY)/progress.mk

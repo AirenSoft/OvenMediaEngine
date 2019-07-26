@@ -31,6 +31,9 @@ CONFIG_C_HEADER_EXTENSION := .h
 CONFIG_CXX_EXTENSION := .cpp
 CONFIG_CXX_HEADER_EXTENSION := .h
 
+CONFIG_LIBRARY_PATHS := /opt/ovenmediaengine/lib:/opt/ovenmediaengine/lib64
+CONFIG_PKG_PATHS := /opt/ovenmediaengine/lib/pkgconfig:/opt/ovenmediaengine/lib64/pkgconfig
+
 CONFIG_CORE_COUNT := $(shell cat /proc/cpuinfo | grep processor | wc -l)
 
 CONFIG_TARGET_COLOR := $(ANSI_GREEN)

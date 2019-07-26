@@ -11,8 +11,8 @@ $(info $()   - $(ANSI_YELLOW)Operating system$(ANSI_RESET)        : $(OS_VERSION
 $(info $()   - $(ANSI_YELLOW)Core count$(ANSI_RESET)              : $(CONFIG_CORE_COUNT))
 $(info $()   - $(ANSI_YELLOW)GCC version$(ANSI_RESET)             : $(GCC_VERSION_MAJOR).$(GCC_VERSION_MINOR).$(GCC_VERSION_PATCH))
 $(info $()   - $(ANSI_YELLOW)Build option$(ANSI_RESET)            : $(BUILD_METHOD))
-$(info $()   - $(ANSI_YELLOW)Paths for linker$(ANSI_RESET)        : $(LIBRARY_PATHS))
-$(info $()   - $(ANSI_YELLOW)Paths for pkg-config$(ANSI_RESET)    : $(PKG_CONFIG_PATHS))
+$(info $()   - $(ANSI_YELLOW)Paths for linker$(ANSI_RESET)        : $(CONFIG_LIBRARY_PATHS))
+$(info $()   - $(ANSI_YELLOW)Paths for pkg-config$(ANSI_RESET)    : $(CONFIG_PKG_PATHS))
 ifneq ($(MAKECMDGOALS),clean)
 $(info $()   - $(ANSI_YELLOW)Total Projects count$(ANSI_RESET)    : $(words $(BUILD_TARGET_LIST)))
 endif
