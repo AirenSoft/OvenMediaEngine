@@ -15,4 +15,4 @@ include $(BUILD_PREBUILT_LIBRARY)
 include $(CLEAR_VARIABLES)
 
 $(PUGIXML_CONF_PATH):
-	@cd "$(PUGIXML_PATH)" && make config=release
+	@cd "$(PUGIXML_PATH)" && $(MAKE) config=release

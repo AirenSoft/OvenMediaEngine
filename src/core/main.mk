@@ -11,6 +11,8 @@ INSTALL_CONF_DIRECTORY := $(INSTALL_DIRECTORY)/conf
 LINK_BIN_DIRECTORY := /usr/bin
 INSTALL_SERVICE_DIRECTORY := /lib/systemd/system
 LINK_SERVICE_DIRECTORY := /etc/systemd/system
+LIBRARY_PATHS := /opt/ovenmediaengine/lib:/opt/ovenmediaengine/lib64
+PKG_CONFIG_PATHS := /opt/ovenmediaengine/lib/pkgconfig:/opt/ovenmediaengine/lib64/pkgconfig
 
 #===============================================================================
 # Include makefiles
@@ -50,12 +52,12 @@ help:
 	@echo "       $(ANSI_YELLOW)release$(ANSI_RESET): make project to release"
 	@echo ""
 
+include $(BUILD_SYSTEM_DIRECTORY)/informations.mk
+
 # clean할 때 target이 삭제될 수 있도록 함
 # ifneq ($(MAKECMDGOALS),clean)
 include $(BUILD_PROJECTS_DIRECTORY)/AMS.mk
 # endif
-
-include $(BUILD_SYSTEM_DIRECTORY)/informations.mk
 
 BUILD_TARGET_LIST := $(strip $(BUILD_TARGET_LIST))
 BUILD_BUILT_COUNT := 1
