@@ -76,3 +76,11 @@ $(strip \
 	$(patsubst %/,%,${sort ${dir ${wildcard $(1)/*/*}}}) \
 )
 endef
+
+# Add compiler/linker options into LOCAL_* variables
+# $(call add_pkg_config,<LIBRARY_NAME>)
+define add_pkg_config
+	$(eval LOCAL_CFLAGS += $(shell pkg-config --cflags $(1)))
+	$(eval LOCAL_CXXFLAGS += $(shell pkg-config --cflags $(1)))
+	$(eval LOCAL_LDFLAGS += $(shell pkg-config --libs $(1)))
+endef
