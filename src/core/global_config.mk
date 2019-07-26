@@ -26,7 +26,7 @@ endif
 
 __COMMA := ,
 ifneq ($(CONFIG_LIBRARY_PATHS),)
-__RPATH := -Wl,-rpath,$(subst :,$(__COMMA)-rpath,$(CONFIG_LIBRARY_PATHS))
+__RPATH := -Wl,-rpath,$(subst :,$(__COMMA)-rpath$(__COMMA),$(CONFIG_LIBRARY_PATHS))
 endif
 
 ifneq ($(CONFIG_PKG_PATHS),)
