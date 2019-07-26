@@ -29,8 +29,6 @@ ifneq ($(CONFIG_LIBRARY_PATHS),)
 __RPATH := -Wl,-rpath,$(subst :,$(__COMMA)-rpath,$(CONFIG_LIBRARY_PATHS))
 endif
 
-$(info >>>>>>>> $(__RPATH))
-
 ifneq ($(CONFIG_PKG_PATHS),)
 __PKG_CONFIG_PATH := --with-path=$(subst :, --with-path=,$(CONFIG_PKG_PATHS))
 endif
