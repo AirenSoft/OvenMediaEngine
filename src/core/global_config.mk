@@ -24,9 +24,12 @@ GLOBAL_LD := core/colorg++
 GCC_COLOR_OPTION :=
 endif
 
+__COMMA := ,
 ifneq ($(CONFIG_LIBRARY_PATHS),)
-__RPATH := -Wl,-rpath,$(subst :,-rpath,$(CONFIG_LIBRARY_PATHS))
+__RPATH := -Wl,-rpath,$(subst :,$(__COMMA)-rpath,$(CONFIG_LIBRARY_PATHS))
 endif
+
+$(info >>>>>>>> $(__RPATH))
 
 ifneq ($(CONFIG_PKG_PATHS),)
 __PKG_CONFIG_PATH := --with-path=$(subst :, --with-path=,$(CONFIG_PKG_PATHS))
