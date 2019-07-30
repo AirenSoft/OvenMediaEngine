@@ -1,3 +1,11 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Hyunjun Jang
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #include "main.h"
 
 #include <iostream>
@@ -10,9 +18,7 @@
 
 #include <config/config_manager.h>
 #include <webrtc/webrtc_publisher.h>
-#include <dash/dash_publisher.h>
-#include <hls/hls_publisher.h>
-#include <cmaf/cmaf_publisher.h>
+#include <publishers/publishers.h>
 #include <media_router/media_router.h>
 #include <transcode/transcoder.h>
 #include <monitoring/monitoring_server.h>

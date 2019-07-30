@@ -6,7 +6,6 @@
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #pragma once
 #include "base/common_types.h"
 #include "base/publisher/application.h"
@@ -21,7 +20,6 @@ public:
 	static std::shared_ptr<DashApplication> Create(const info::Application *application_info);
 
     DashApplication(const info::Application *application_info);
-
 	virtual ~DashApplication() final;
 
 private:

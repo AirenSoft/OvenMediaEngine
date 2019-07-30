@@ -1,6 +1,6 @@
 #pragma once
 
-#define OV_LOG_TAG						"Cmaf"
+#define OV_LOG_TAG						"Publisher.Cmaf"
 
 #define CMAF_MPD_VIDEO_SUFFIX			"_video_cmaf.m4s"
 #define CMAF_MPD_AUDIO_SUFFIX			"_audio_cmaf.m4s"
