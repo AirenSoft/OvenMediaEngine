@@ -30,7 +30,7 @@ __RPATH := -Wl,-rpath,$(subst :,$(__COMMA)-rpath$(__COMMA),$(CONFIG_LIBRARY_PATH
 endif
 
 ifneq ($(CONFIG_PKG_PATHS),)
-__PKG_CONFIG_PATH := --with-path=$(subst :, --with-path=,$(CONFIG_PKG_PATHS))
+__PKG_CONFIG_PATH := PKG_CONFIG_PATH="$(CONFIG_PKG_PATHS)"
 endif
 
 GLOBAL_CFLAGS_COMMON := $(GCC_COLOR_OPTION)

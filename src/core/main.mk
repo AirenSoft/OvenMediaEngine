@@ -50,8 +50,6 @@ help:
 	@echo "       $(ANSI_YELLOW)release$(ANSI_RESET): make project to release"
 	@echo ""
 
-include $(BUILD_SYSTEM_DIRECTORY)/informations.mk
-
 # clean할 때 target이 삭제될 수 있도록 함
 # ifneq ($(MAKECMDGOALS),clean)
 include $(BUILD_PROJECTS_DIRECTORY)/AMS.mk
@@ -60,6 +58,8 @@ include $(BUILD_PROJECTS_DIRECTORY)/AMS.mk
 BUILD_TARGET_LIST := $(strip $(BUILD_TARGET_LIST))
 BUILD_BUILT_COUNT := 1
 BUILD_TOTAL_PROJECTS_COUNT := $(words $(BUILD_TARGET_LIST))
+
+include $(BUILD_SYSTEM_DIRECTORY)/informations.mk
 
 .PHONY: build_target_list
 build_target_list: $(BUILD_TARGET_LIST)

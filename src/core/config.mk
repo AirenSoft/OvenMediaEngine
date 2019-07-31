@@ -16,10 +16,11 @@
 # 2017-10-19 0.6: Add PROJECT_*FLAGS variable
 # 2017-10-19 0.61: Add dependency to C/C++ object files for AMS.mk
 # 2017-10-19 0.62: Add progress indicator
+# 2019-07-27 0.63: Add some features to support pkg-config
 #
 ###########################################################################
 
-CONFIG_AMS_VERSION := 0.62
+CONFIG_AMS_VERSION := 0.63
 
 CONFIG_OUTPUT_DIRECTORY := bin
 CONFIG_OBJECT_DIRECTORY := intermediates
