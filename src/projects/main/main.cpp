@@ -28,7 +28,11 @@
     if((x) == nullptr) \
     { \
         srt_cleanup(); \
-        ov::Daemon::SetEvent(false); \
+		\
+		if(parse_option.start_service) \
+		{ \
+        	ov::Daemon::SetEvent(false); \
+		} \
         return 1; \
     }
 
@@ -274,7 +278,10 @@ int main(int argc, char *argv[])
 //        }
 	}
 
-	ov::Daemon::SetEvent();
+	if(parse_option.start_service)
+	{
+		ov::Daemon::SetEvent();
+	}
 
 	while(true)
 	{

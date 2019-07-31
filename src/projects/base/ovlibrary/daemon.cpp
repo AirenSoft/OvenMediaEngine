@@ -75,6 +75,7 @@ namespace ov
     void Daemon::SetEvent(bool success)
     {
         ssize_t bytes_write = ::write(_pipe_event[PIPE_WRITE], (success ? PRC_SUCCESS : PRC_FAIL), 1);
+        
         if (bytes_write < 0)
         {
             // write fail
