@@ -9,15 +9,11 @@
 #pragma once
 
 #include "hls_interceptor.h"
-#include "segment_stream/segment_stream_server.h"
+
+#include <segment_stream/segment_stream_server.h>
 
 class HlsStreamServer : public SegmentStreamServer
 {
-public:
-	HlsStreamServer() = default;
-
-	~HlsStreamServer() = default;
-
 public:
 	cfg::PublisherType GetPublisherType() override
 	{
@@ -31,17 +27,20 @@ public:
 	}
 
 protected:
+	//--------------------------------------------------------------------
+	// Implementation of SegmentStreamServer
+	//--------------------------------------------------------------------
 	void ProcessRequestStream(const std::shared_ptr<HttpResponse> &response,
 							  const ov::String &app_name, const ov::String &stream_name,
 							  const ov::String &file_name, const ov::String &file_ext) override;
 
-	void PlayListRequest(const ov::String &app_name, const ov::String &stream_name,
-						 const ov::String &file_name,
-						 PlayListType play_list_type,
-						 const std::shared_ptr<HttpResponse> &response) override;
+	void OnPlayListRequest(const ov::String &app_name, const ov::String &stream_name,
+						   const ov::String &file_name,
+						   PlayListType play_list_type,
+						   const std::shared_ptr<HttpResponse> &response) override;
 
-	void SegmentRequest(const ov::String &app_name, const ov::String &stream_name,
-						const ov::String &file_name,
-						SegmentType segment_type,
-						const std::shared_ptr<HttpResponse> &response) override;
+	void OnSegmentRequest(const ov::String &app_name, const ov::String &stream_name,
+						  const ov::String &file_name,
+						  SegmentType segment_type,
+						  const std::shared_ptr<HttpResponse> &response) override;
 };

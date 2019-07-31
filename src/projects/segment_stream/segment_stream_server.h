@@ -6,26 +6,24 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #pragma once
 
 #include <memory>
-#include "base/publisher/publisher.h"
-#include "config/config_manager.h"
-#include "http_server/http_server.h"
-#include "http_server/https_server.h"
-#include "http_server/interceptors/http_request_interceptors.h"
+
 #include "segment_stream_interceptor.h"
 #include "segment_stream_observer.h"
 
-//====================================================================================================
-// SegmentStreamServer
-//====================================================================================================
+#include <base/publisher/publisher.h>
+#include <config/config_manager.h>
+#include <http_server/http_server.h>
+#include <http_server/https_server.h>
+#include <http_server/interceptors/http_request_interceptors.h>
+
 class SegmentStreamServer
 {
 public:
 	SegmentStreamServer();
-	~SegmentStreamServer() = default;
+	virtual ~SegmentStreamServer() = default;
 
 public:
 	bool Start(const ov::SocketAddress &address,
@@ -34,7 +32,6 @@ public:
 			   int thread_count,
 			   const std::shared_ptr<Certificate> &certificate = nullptr,
 			   const std::shared_ptr<Certificate> &chain_certificate = nullptr);
-
 	bool Stop();
 
 	bool AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer);
@@ -50,11 +47,9 @@ public:
 	virtual std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() = 0;
 
 protected:
-	bool RequestUrlParsing(const ov::String &request_url,
-						   ov::String &app_name,
-						   ov::String &stream_name,
-						   ov::String &file_name,
-						   ov::String &file_ext);
+	bool ParseRequestUrl(const ov::String &request_url,
+						 ov::String &app_name, ov::String &stream_name,
+						 ov::String &file_name, ov::String &file_ext);
 
 	bool ProcessRequest(const std::shared_ptr<HttpResponse> &response,
 						const ov::String &request_target,
@@ -62,21 +57,20 @@ protected:
 
 	bool SetAllowOrigin(const ov::String &origin_url, const std::shared_ptr<HttpResponse> &response);
 
-	// interface
+	// Interfaces
 	virtual void ProcessRequestStream(const std::shared_ptr<HttpResponse> &response,
 									  const ov::String &app_name, const ov::String &stream_name,
-									  const ov::String &file_name,
-									  const ov::String &file_ext) = 0;
+									  const ov::String &file_name, const ov::String &file_ext) = 0;
 
-	virtual void PlayListRequest(const ov::String &app_name, const ov::String &stream_name,
-								 const ov::String &file_name,
-								 PlayListType play_list_type,
-								 const std::shared_ptr<HttpResponse> &response) = 0;
+	virtual void OnPlayListRequest(const ov::String &app_name, const ov::String &stream_name,
+								   const ov::String &file_name,
+								   PlayListType play_list_type,
+								   const std::shared_ptr<HttpResponse> &response) = 0;
 
-	virtual void SegmentRequest(const ov::String &app_name, const ov::String &stream_name,
-								const ov::String &file_name,
-								SegmentType segment_type,
-								const std::shared_ptr<HttpResponse> &response) = 0;
+	virtual void OnSegmentRequest(const ov::String &app_name, const ov::String &stream_name,
+								  const ov::String &file_name,
+								  SegmentType segment_type,
+								  const std::shared_ptr<HttpResponse> &response) = 0;
 
 	bool UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url);
 
@@ -84,6 +78,6 @@ protected:
 	ov::String _app_name;
 	std::shared_ptr<HttpServer> _http_server;
 	std::vector<std::shared_ptr<SegmentStreamObserver>> _observers;
-	std::vector<ov::String> _cors_urls;  // key : url  value : flag(hls/dash allow flag)
+	std::vector<ov::String> _cors_urls;
 	ov::String _cross_domain_xml;
 };

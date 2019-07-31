@@ -9,8 +9,8 @@
 
 #pragma once
 
-#include <memory>
 #include <base/ovlibrary/ovlibrary.h>
+#include <memory>
 #include "stream_packetyzer.h"
 
 //====================================================================================================
@@ -19,16 +19,13 @@
 class SegmentStreamObserver : public ov::EnableSharedFromThis<SegmentStreamObserver>
 {
 public:
-    // PlayList 요청
-    virtual bool
-    OnPlayListRequest(const ov::String &app_name,
-					const ov::String &stream_name,
-					const ov::String &file_name,
-					ov::String &play_list) = 0;
+	// PlayList 요청
+	virtual bool OnPlayListRequest(const ov::String &app_name, const ov::String &stream_name,
+								   const ov::String &file_name,
+								   ov::String &play_list) = 0;
 
-    // Segment 요청
-    virtual bool OnSegmentRequest(const ov::String &app_name,
-								const ov::String &stream_name,
-								const ov::String &file_name,
-								std::shared_ptr<SegmentData> &segment) = 0;
+	// Segment 요청
+	virtual bool OnSegmentRequest(const ov::String &app_name, const ov::String &stream_name,
+								  const ov::String &file_name,
+								  std::shared_ptr<SegmentData> &segment) = 0;
 };
