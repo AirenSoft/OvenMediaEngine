@@ -18,11 +18,6 @@
 class DashStreamServer : public SegmentStreamServer
 {
 public :
-    DashStreamServer() = default;
-
-    ~DashStreamServer() = default;
-
-public :
     cfg::PublisherType GetPublisherType() override
     {
         return cfg::PublisherType::Dash;
@@ -41,13 +36,13 @@ protected:
 							   const ov::String &file_name,
 							   const ov::String &file_ext) override;
 
-	void PlayListRequest(const ov::String &app_name,
+	void OnPlayListRequest(const ov::String &app_name,
 						 const ov::String &stream_name,
 						 const ov::String &file_name,
 						 PlayListType play_list_type,
 						 const std::shared_ptr<HttpResponse> &response) override;
 
-	void SegmentRequest(const ov::String &app_name,
+	void OnSegmentRequest(const ov::String &app_name,
 						const ov::String &stream_name,
 						const ov::String &file_name,
 						SegmentType segment_type,

@@ -47,12 +47,12 @@ protected :
 	
 protected :
 	std::vector<std::shared_ptr<PacketyzerFrameData>> _frame_datas;
-    double _duration_margen;
+    double _duration_margin;
 
     time_t _last_video_append_time;
     time_t _last_audio_append_time;
-    time_t _audio_enable;
-    time_t _video_enable;
+    bool _audio_enable;
+    bool _video_enable;
 
 };
 

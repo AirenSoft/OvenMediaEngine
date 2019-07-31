@@ -117,11 +117,24 @@ bool SegmentPublisher::OnSegmentRequest(const ov::String &app_name, const ov::St
 
 	auto stream = GetStreamAs<SegmentStream>(app_name, stream_name);
 
-	segment = stream->GetSegmentData(file_name);
-
-	if ((stream == nullptr) || (segment == nullptr) || (segment->data == nullptr))
+	if (stream != nullptr)
 	{
-		logtw("Could not find a segment for %s [%p, %p, %s/%s, %s]", GetPublisherName(), stream.get(), segment.get(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		segment = stream->GetSegmentData(file_name);
+
+		if (segment == nullptr)
+		{
+			logtw("Could not find a segment for %s [%s/%s, %s]", GetPublisherName(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+			return false;
+		}
+		else if (segment->data == nullptr)
+		{
+			logtw("Could not obtain segment data from %s for [%p, %s/%s, %s]", GetPublisherName(), segment.get(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+			return false;
+		}
+	}
+	else
+	{
+		logtw("Could not find a stream for %s [%s/%s, %s]", GetPublisherName(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
 		return false;
 	}
 

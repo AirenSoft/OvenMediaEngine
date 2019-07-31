@@ -101,11 +101,11 @@ bool MonitoringServer::Disconnect(const ov::String &app_name, const ov::String &
 }
 
 //====================================================================================================
-// RequestUrlParsing
+// ParseRequestUrl
 // - URL split
 //  ex) ..../app_name/stream_name/file_name.file_ext?param=param_value
 //====================================================================================================
-bool MonitoringServer::RequestUrlParsing(const ov::String &request_url,
+bool MonitoringServer::ParseRequestUrl(const ov::String &request_url,
                                             ov::String &file_name,
                                             ov::String &file_ext)
 {
@@ -164,7 +164,7 @@ void MonitoringServer::ProcessRequest(const std::shared_ptr<HttpRequest> &reques
     logtd("Request URL  : %s", request_url.CStr());
 
     // URL parsing
-    if (!RequestUrlParsing(request_url, file_name, file_ext))
+    if (!ParseRequestUrl(request_url, file_name, file_ext))
     {
         logtd("Request URL Parsing Fail : %s", request_url.CStr());
         response->SetStatusCode(HttpStatusCode::NotFound);

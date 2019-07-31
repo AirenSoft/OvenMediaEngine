@@ -41,7 +41,7 @@ public :
     bool Disconnect(const ov::String &app_name, const ov::String &stream_name);
 
 protected:
-    bool RequestUrlParsing(const ov::String &request_url,
+    bool ParseRequestUrl(const ov::String &request_url,
                             ov::String &file_name,
                             ov::String &file_ext);
 

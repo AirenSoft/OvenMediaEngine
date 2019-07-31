@@ -55,6 +55,8 @@ public :
 
     virtual const std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) override;
 
+    virtual bool GetPlayList(ov::String &play_list) override;
+
     virtual bool SetSegmentData(ov::String file_name,
 								uint64_t duration,
 								uint64_t timestamp,
@@ -74,7 +76,7 @@ protected :
     bool UpdatePlayList();
 
 private :
-    int _avc_nal_header_size;
+    int _avc_nal_header_size = 0;
 	ov::String _start_time;
     std::string _mpd_pixel_aspect_ratio;
     double _mpd_suggested_presentation_delay;
@@ -92,5 +94,5 @@ private :
     time_t _last_video_append_time;
     time_t _last_audio_append_time;
 
-    double _duration_margen;
+    double _duration_margin;
 };

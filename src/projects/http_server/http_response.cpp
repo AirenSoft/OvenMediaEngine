@@ -275,6 +275,7 @@ bool HttpResponse::PostChunkedEndResponse()
 {
 	// chunked transfer init
 	_chunked_transfer = false;
+	
 	return PostSend("0\r\n\r\n", 5);
 }
 

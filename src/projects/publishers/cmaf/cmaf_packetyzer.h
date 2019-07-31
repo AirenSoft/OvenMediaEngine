@@ -99,7 +99,7 @@ protected :
 	ov::String GetCurrentAudioFileName();
 
 private :
-    int _avc_nal_header_size;
+    int _avc_nal_header_size = 0;
 
     double _available_start_time = 0;
 
