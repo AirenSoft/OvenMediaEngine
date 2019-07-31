@@ -33,10 +33,10 @@ LOCAL_STATIC_LIBRARIES := \
 LOCAL_PREBUILT_LIBRARIES := \
 	libpugixml.a
 
-LOCAL_LDFLAGS :=
+LOCAL_LDFLAGS := -lpthread
 
 ifeq ($(shell echo $${OSTYPE}),linux-musl) 
-# alpine linux
+# For alpine linux
 LOCAL_LDFLAGS += -lexecinfo
 endif
 
