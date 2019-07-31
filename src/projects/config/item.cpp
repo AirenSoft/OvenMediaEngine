@@ -488,6 +488,7 @@ namespace cfg
 			if(position != std::string::npos)
 			{
 				default_value = env_key.substr(position + 1);
+				env_key = env_key.substr(0, position);
 			}
 
 			const char *key = env_key.c_str();
@@ -505,7 +506,7 @@ namespace cfg
 				}
 			}
 
-			logti("Configuration: %s = \"%s\"%s", key, env, is_default_value ? " (default value)" : "");
+			logtd("Configuration from env value: %s = \"%s\"%s", key, env, is_default_value ? " (default value)" : "");
 
 			result.append(start, match.first);
 			result.append(env);
