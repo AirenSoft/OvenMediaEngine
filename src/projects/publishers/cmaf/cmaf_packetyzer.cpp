@@ -273,7 +273,7 @@ bool CmafPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
 	}
 
 	auto sample_data = std::make_shared<SampleData>(frame_data->timestamp - _previous_video_frame->timestamp,
-													_previous_video_frame->type == PacketyzerFrameType::VideoKeyFrame ? 0X02000000 : 0X01010000,
+													(_previous_video_frame->type == PacketyzerFrameType::VideoKeyFrame) ? 0X02000000 : 0X01010000,
 													_previous_video_frame->timestamp,
 													_previous_video_frame->time_offset,
 													_previous_video_frame->data);

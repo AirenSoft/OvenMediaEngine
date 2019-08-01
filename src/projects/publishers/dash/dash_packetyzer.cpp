@@ -246,20 +246,25 @@ bool DashPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
 		_video_init = true;
 	}
 
-	// Fragment Check
-	// - KeyFrame ~ KeyFrame(before)
-	if (frame_data->type == PacketyzerFrameType::VideoKeyFrame && !_video_frame_datas.empty())
+	// Check whether frame_data is data for next segment
+	if ((frame_data->type == PacketyzerFrameType::VideoKeyFrame) && (_video_frame_datas.empty() == false))
 	{
-		if (frame_data->timestamp - _video_frame_datas[0]->timestamp >=
+		// Verify that frame_data should be included in the next segment
+		if ((frame_data->timestamp - _video_frame_datas[0]->timestamp) >=
 			((_segment_duration - _duration_margin) * _media_info.video_timescale))
 		{
+			// Flush video/audio data in queue because frame_data is a key frame of next segment
+
+			// Generate a segment from _video_frame_datas where timestamp < frame_data->timestamp
 			VideoSegmentWrite(frame_data->timestamp);
 
-			if (!_audio_frame_datas.empty())
+			// Generate a segment from _audio_frame_datas where timestamp < frame_data->timestamp
+			if (_audio_frame_datas.empty() == false)
 			{
-				AudioSegmentWrite(ConvertTimeScale(frame_data->timestamp,
-												   _media_info.video_timescale,
-												   _media_info.audio_timescale));
+				auto audio_timestamp = ConvertTimeScale(frame_data->timestamp,
+														_media_info.video_timescale,
+														_media_info.audio_timescale);
+				AudioSegmentWrite(audio_timestamp);
 			}
 
 			UpdatePlayList();
@@ -391,7 +396,7 @@ bool DashPacketyzer::AudioSegmentWrite(uint64_t max_timestamp)
 	uint64_t end_timestamp = 0;
 	std::vector<std::shared_ptr<SampleData>> sample_datas;
 
-	//  size > 1  for duration calculation
+	// Calculate the duration of data when more than two data available
 	while (_audio_frame_datas.size() > 1)
 	{
 		auto frame_data = _audio_frame_datas.front();

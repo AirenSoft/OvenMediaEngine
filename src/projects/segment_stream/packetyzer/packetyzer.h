@@ -41,6 +41,16 @@ public :
 								uint64_t timestamp,
 								std::shared_ptr<ov::Data> &data) = 0;
 
+    // Convert timescale of "time" to "to_timescale" from "from_timescale"
+    //
+    // For example:
+    //   +--------+---------+--------+-----------+
+    //   | time   | from_ts | to_ts  | result    |
+    //   +--------+---------+--------+-----------+
+    //   | 1000   | 2       | 10     | 5000      |
+    //   | 1000   | 5       | 10     | 2000      |
+    //   | 1000   | 10      | 2      | 200       |
+    //   +--------+---------+--------+-----------+
     static uint64_t ConvertTimeScale(uint64_t time, uint32_t from_timescale, uint32_t to_timescale);
 
     void SetPlayList(ov::String &play_list);
