@@ -13,7 +13,7 @@ ARG     MAKEFLAGS="-j16"
 ENV     OME_VERSION=temp/alpine \
         OPENSSL_VERSION=1.1.0g \
         SRTP_VERSION=2.2.0 \
-        SRT_VERSION=1.3.2 \
+        SRT_VERSION=1.3.3 \
         OPUS_VERSION=1.1.3 \
         X264_VERSION=20190513-2245-stable \
         VPX_VERSION=1.7.0 \
@@ -52,7 +52,8 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLf https://github.com/Haivision/srt/archive/v${SRT_VERSION}.tar.gz | tar -xz --strip-components=1 && \
-        ./configure --prefix="${PREFIX}" --enable-shared --disable-static && \
+        PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}" ./configure \
+        --prefix="${PREFIX}" --enable-shared --disable-static && \
         make && \
         make install && \
         rm -rf ${DIR} && \
@@ -111,12 +112,12 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLf https://www.ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
-        PKG_CONFIG_PATH="/opt/ovenmediaengine/lib/pkgconfig" ./configure \
+        PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}" ./configure \
         --prefix="${PREFIX}" \
         --enable-gpl \
         --enable-nonfree \
         --extra-cflags="-I${PREFIX}/include"  \
-        --extra-ldflags="-L${PREFIX}/lib" \
+        --extra-ldflags="-L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib" \
         --extra-libs=-ldl \
         --enable-shared \
         --disable-static \
