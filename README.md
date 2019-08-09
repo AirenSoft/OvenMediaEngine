@@ -35,7 +35,15 @@ We have tested OME on the platforms listed below. However, we think it can work 
 
 ## Getting Started
 
-Please read [Getting Started](https://airensoft.gitbook.io/ovenmediaengine/getting-started) chapter in tutorials.
+#### Quick Start
+```
+docker run -d 
+-e OME_VIDEO_BITRATE=2000000 -e OME_VIDEO_WIDTH=1280 -e OME_VIDEO_HEIGHT=720 \
+-p 1935:1935 -p 3333:3333 -p 80:80 -p 9000:9000/udp -p 10000-10005:10000-10005/udp \
+airensoft/ovenmediaengine:latest
+```
+
+For more information, please read [Getting Started](https://airensoft.gitbook.io/ovenmediaengine/getting-started) chapter in tutorials.
 
 ## How to Contribute
 
