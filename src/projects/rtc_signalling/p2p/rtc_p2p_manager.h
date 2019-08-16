@@ -29,7 +29,7 @@ public:
 	int GetPeerCount() const;
 	int GetClientPeerCount() const;
 
-	bool SetEnable(bool is_enable)
+	void SetEnable(bool is_enable)
 	{
 		_is_enabled = is_enable;
 	}
