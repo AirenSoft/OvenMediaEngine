@@ -27,7 +27,8 @@ namespace ov
 
 			while(temp_addr != nullptr)
 			{
-				if(temp_addr->ifa_addr->sa_family == AF_INET)
+				// temp_addr->ifa_addr may be nullptr when the interface doesn't have any address
+				if((temp_addr->ifa_addr != nullptr) && (temp_addr->ifa_addr->sa_family == AF_INET))
 				{
 					auto addr = (reinterpret_cast<struct sockaddr_in *>(temp_addr->ifa_addr))->sin_addr;
 
