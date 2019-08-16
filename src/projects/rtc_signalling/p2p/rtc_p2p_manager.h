@@ -29,7 +29,18 @@ public:
 	int GetPeerCount() const;
 	int GetClientPeerCount() const;
 
+	bool SetEnable(bool is_enable)
+	{
+		_is_enabled = is_enable;
+	}
+
+	bool IsEnabled() const
+	{
+		return _is_enabled;
+	}
+
 protected:
+	bool _is_enabled = false;
 
 	std::recursive_mutex _list_mutex;
 
