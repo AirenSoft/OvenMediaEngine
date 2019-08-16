@@ -637,9 +637,7 @@ namespace ov
 	{
 		std::vector<String> list;
 		const char *last;
-		size_t token_length;
 		size_t seperator_length;
-		char token[1024];
 
 		if(separator == nullptr)
 		{
@@ -667,22 +665,10 @@ namespace ov
 		{
 			last = ::strstr(string, separator);
 
-			if(last == nullptr)
-			{
-				token_length = ::strlen(string);
+			auto length = (last == nullptr) ? (::strlen(string) * sizeof(char)) : ((last - string) * sizeof(char));
 
-				::memcpy(&(token[0]), string, token_length * sizeof(char));
-			}
-			else
-			{
-				token_length = (last - string);
-
-				::memcpy(&(token[0]), string, token_length * sizeof(char));
-			}
-
-			token[token_length] = '\0';
-			list.emplace_back(token);
-
+			list.emplace_back(string, length);
+			
 			if(last == nullptr)
 			{
 				break;
