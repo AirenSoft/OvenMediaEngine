@@ -18,53 +18,43 @@ public:
 	MediaTrack(const MediaTrack &media_track);
 	~MediaTrack();
 
+	// Track ID
 	void SetId(uint32_t id);
-	uint32_t GetId();
+	uint32_t GetId() const;
 
-// private:
-	// 트랙 아이디
-	uint32_t _id;
-
-public:
 	// 비디오 오디오 설정
 	void SetMediaType(common::MediaType type);
-	common::MediaType GetMediaType();
+	common::MediaType GetMediaType() const;
 
 	// 코덱 설정
 	void SetCodecId(common::MediaCodecId id);
-	common::MediaCodecId GetCodecId();
+	common::MediaCodecId GetCodecId() const;
 
 	// 타임베이스 설정
-	common::Timebase &GetTimeBase();
+	const common::Timebase &GetTimeBase() const;
 	void SetTimeBase(int32_t num, int32_t den);
 
 	// bitrate 설정
 	void SetBitrate(int32_t bitrate);
-	int32_t GetBitrate();
+	int32_t GetBitrate() const;
 
 	void SetStartFrameTime(int64_t time);
-	int64_t GetStartFrameTime();
+	int64_t GetStartFrameTime() const;
 
 	void SetLastFrameTime(int64_t time);
-	int64_t GetLastFrameTime();
+	int64_t GetLastFrameTime() const;
 
-// private:
+private:
+	uint32_t _id;
 
-	// 코덱 아이디
 	common::MediaCodecId _codec_id;
-
-	// 트랙 타입
 	common::MediaType _media_type;
-
-	// 타입 베이스
 	common::Timebase _time_base;
-
-	// bitrate
 	int32_t _bitrate;
 
-	// 시작 프레임(패킷) 시간
+	// Time of start frame(packet)
 	int64_t _start_frame_time;
 
-	// 마지막 프레임(패킷) 시간
+	// Time of last frame(packet)
 	int64_t _last_frame_time;
 };

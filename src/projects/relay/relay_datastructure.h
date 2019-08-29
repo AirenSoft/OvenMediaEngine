@@ -22,7 +22,7 @@ enum class RelayPacketType : uint8_t
 	Error
 };
 
-constexpr const int RelayPacketDataSize = 1200;
+constexpr const int RelayPacketDataSize = 1190;
 
 #pragma pack(push, 1)
 struct RelayPacket
@@ -105,24 +105,44 @@ struct RelayPacket
 		return ov::BE32ToHost(_track_id);
 	}
 
-	void SetPts(uint64_t pts)
+	void SetPts(int64_t pts)
 	{
 		_pts = ov::HostToBE64(pts);
 	}
 
-	uint64_t GetPts() const
+	int64_t GetPts() const
 	{
 		return ov::BE64ToHost(_pts);
 	}
 
-	void SetFlags(uint8_t flags)
+	void SetDts(int64_t dts)
 	{
-		_flags = flags;
+		_dts = ov::HostToBE64(dts);
 	}
 
-	uint8_t GetFlags() const
+	int64_t GetDts() const
 	{
-		return _flags;
+		return ov::BE64ToHost(_dts);
+	}
+
+	void SetDuration(uint64_t duration)
+	{
+		_duration = ov::HostToBE64(duration);
+	}
+
+	uint64_t GetDuration() const
+	{
+		return ov::BE64ToHost(_duration);
+	}
+
+	void SetFlag(uint8_t flag)
+	{
+		_flag = flag;
+	}
+
+	uint8_t GetFlag() const
+	{
+		return _flag;
 	}
 
 	void SetFragmentHeader(const FragmentationHeader *header)
@@ -203,10 +223,12 @@ protected:
 
 	// common::MediaType
 	int8_t _media_type = 0;
-	uint32_t _track_id = 0;
-	uint64_t _pts = 0;
+	uint32_t _track_id = 0U;
+	int64_t _pts = 0LL;
+	int64_t _dts = 0LL;
+	uint64_t _duration = 0ULL;
 	// MediaPacketFlag
-	uint8_t _flags = 0;
+	uint8_t _flag = 0U;
 
 	FragmentationHeader _frag_header;
 

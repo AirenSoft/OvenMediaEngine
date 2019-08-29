@@ -2,39 +2,29 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Jaejong Bong
-//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//  Created by Hyunjun Jang
+//  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #pragma once
 
 #include "m4s_writer.h"
 
-//====================================================================================================
-// M4sWriter
-//====================================================================================================
 class M4sInitWriter : public M4sWriter
 {
 public:
 	M4sInitWriter(M4sMediaType media_type,
+				  // duration in second
 				  uint32_t duration,
-				  uint32_t timescale,
-				  uint32_t track_id,
-				  uint32_t video_width,
-				  uint32_t video_height,
-				  std::shared_ptr<ov::Data> &avc_sps,
-				  std::shared_ptr<ov::Data> &avc_pps,
-				  uint16_t audio_channels,
-				  uint16_t audio_sample_size,
-				  uint16_t audio_sample_rate);
+				  std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
+				  const std::shared_ptr<const ov::Data> &avc_sps, const std::shared_ptr<const ov::Data> &avc_pps);
 
 	~M4sInitWriter() override = default;
 
-public :
-	const std::shared_ptr<ov::Data> CreateData(bool http_chunked_transfer_support);
+public:
+	const std::shared_ptr<ov::Data> CreateData(M4sTransferType transfer_type);
 
-protected :
+protected:
 	int FtypBoxWrite(std::shared_ptr<ov::Data> &data_stream);
 	int MoovBoxWrite(std::shared_ptr<ov::Data> &data_stream);
 
@@ -55,7 +45,7 @@ protected :
 	int DinfBoxWrite(std::shared_ptr<ov::Data> &data_stream);
 	int DrefBoxWrite(std::shared_ptr<ov::Data> &data_stream);
 	int UrlBoxWrite(std::shared_ptr<ov::Data> &data_stream);
-	
+
 	int StblBoxWrite(std::shared_ptr<ov::Data> &data_stream);
 	int StsdBoxWrite(std::shared_ptr<ov::Data> &data_stream);
 
@@ -73,23 +63,20 @@ protected :
 	int MehdBoxWrite(std::shared_ptr<ov::Data> &data_stream);
 	int TrexBoxWrite(std::shared_ptr<ov::Data> &data_stream);
 
-private :
+private:
+	uint32_t _duration = 0U;
 
-	uint32_t _duration;
-	uint32_t _timescale;
-	uint32_t _track_id;
+	int _track_id = 0;
 
-	uint32_t _video_width;
-	uint32_t _video_height;
+	std::shared_ptr<MediaTrack> _main_track;
+	std::shared_ptr<MediaTrack> _video_track;
+	std::shared_ptr<MediaTrack> _audio_track;
 
 	// avc Configuration
-	std::shared_ptr<ov::Data> _avc_sps;
-	std::shared_ptr<ov::Data> _avc_pps;
-	 
-	uint16_t _audio_channels;
-	uint16_t _audio_sample_size;
-	uint16_t _audio_sample_rate;
-	uint32_t _audio_sample_index;
+	std::shared_ptr<const ov::Data> _avc_sps;
+	std::shared_ptr<const ov::Data> _avc_pps;
+
+	uint32_t _audio_sample_index = 0U;
 
 	ov::String _language;
 	ov::String _handler_type;

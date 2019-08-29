@@ -17,50 +17,59 @@
 class TranscodeContext
 {
 public:
-	TranscodeContext();
+	TranscodeContext(bool is_encoding_context);
 	~TranscodeContext();
 
 	// Video
 	TranscodeContext(
+		bool is_encoding_context,
 		common::MediaCodecId codec_id,
 		int32_t bitrate,
-		uint32_t width,
-		uint32_t height,
-		float frame_rate) : _codec_id(codec_id),
-	                        _bitrate(bitrate),
-	                        _video_width(width),
-	                        _video_height(height),
-	                        _video_frame_rate(frame_rate)
+		uint32_t width, uint32_t height,
+		float frame_rate)
+		: _is_encoding_context(is_encoding_context),
+		  _codec_id(codec_id),
+		  _bitrate(bitrate),
+		  _video_width(width), _video_height(height),
+		  _video_frame_rate(frame_rate)
 	{
 		_media_type = common::MediaType::Video;
-		_time_base.Set(1, 1000000);
+		_time_base.Set(1, 90000);
 		_video_gop = 30;
 	}
 
 	// Audio
 	TranscodeContext(
+		bool is_encoding_context,
 		common::MediaCodecId codec_id,
 		int32_t bitrate,
-		int32_t sample) : _codec_id(codec_id),
-	                      _bitrate(bitrate)
+		int32_t sample)
+		: _is_encoding_context(is_encoding_context), _codec_id(codec_id), _bitrate(bitrate)
 	{
 		_media_type = common::MediaType::Audio;
-		_time_base.Set(1, 1000000);
+		_time_base.Set(1, sample);
 		_audio_sample.SetRate((common::AudioSample::Rate)sample);
 		_audio_sample.SetFormat(common::AudioSample::Format::S16);
 		_audio_channel.SetLayout(common::AudioChannel::Layout::LayoutStereo);
+	}
+
+	// To determine whether this transcode context contains encoding/decoding information
+	bool IsEncodingContext() const
+	{
+		return _is_encoding_context;
 	}
 
 	//--------------------------------------------------------------------
 	// Video transcoding options
 	//--------------------------------------------------------------------
 	void SetCodecId(common::MediaCodecId val);
-	common::MediaCodecId GetCodecId();
+	common::MediaCodecId GetCodecId() const;
 
 	void SetBitrate(int32_t val);
 	int32_t GetBitrate();
 
-	common::Timebase &GetTimeBase();
+	const common::Timebase &GetTimeBase() const;
+	void SetTimeBase(const common::Timebase &timebase);
 	void SetTimeBase(int32_t num, int32_t den);
 
 	void SetVideoWidth(uint32_t val);
@@ -89,6 +98,11 @@ public:
 	common::MediaType GetMediaType() const;
 
 private:
+	// Context type
+	//    true = this context will be used for encoding
+	//    false = this context will be used for decoding
+	bool _is_encoding_context = false;
+
 	//--------------------------------------------------------------------
 	// Video transcoding options
 	//--------------------------------------------------------------------
@@ -118,4 +132,3 @@ private:
 	// Channel
 	common::AudioChannel _audio_channel;
 };
-

@@ -11,11 +11,6 @@
 
 std::shared_ptr<RtcPeerInfo> RtcPeerInfo::FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<WebSocketClient> &response)
 {
-	if(user_agent.IsEmpty())
-	{
-		return nullptr;
-	}
-
 	RtcPeerBrowser browser = ParseBrowserInfo(user_agent);
 
 	auto peer_info = std::make_shared<RtcPeerInfo>((PrivateToken){});

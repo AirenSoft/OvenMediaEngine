@@ -72,8 +72,11 @@ public:
     bool OnDeleteStream(info::application_id_t application_id, uint32_t stream_id) override;
 
 private:
-    const cfg::RtmpProvider *_provider_info;
+    const cfg::RtmpProvider *_provider_info = nullptr;
 
     std::shared_ptr<RtmpServer> _rtmp_server;
+
+    double _video_scale = 0.0;
+    double _audio_scale = 0.0;
 };
 

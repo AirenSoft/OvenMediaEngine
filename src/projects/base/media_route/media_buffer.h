@@ -12,11 +12,11 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
 #include <map>
+#include <vector>
 
-#include "media_type.h"
 #include "base/common_types.h"
+#include "media_type.h"
 
 enum class MediaPacketFlag : uint8_t
 {
@@ -27,24 +27,40 @@ enum class MediaPacketFlag : uint8_t
 class MediaPacket
 {
 public:
-	MediaPacket(common::MediaType media_type, int32_t track_id, const void *data, int32_t data_size, int64_t pts, MediaPacketFlag flags, int64_t cts = 0)
+	MediaPacket(common::MediaType media_type, int32_t track_id, const ov::Data *data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
 		: _media_type(media_type),
 		  _track_id(track_id),
 		  _pts(pts),
-		  _flags(flags),
-		  _cts(cts)
+		  _dts(dts),
+		  _duration(duration),
+		  _flag(flag)
 	{
-		_data->Append(data, data_size);
+		if (data != nullptr)
+		{
+			_data = data->Clone();
+		}
+		else
+		{
+			_data = std::make_shared<ov::Data>();
+		}
 	}
 
-	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, MediaPacketFlag flags, int64_t cts = 0)
-		: _media_type(media_type),
-		  _track_id(track_id),
-		  _pts(pts),
-		  _flags(flags),
-		  _cts(cts)
+	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<const ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
+		: MediaPacket(media_type, track_id, data.get(), pts, dts, duration, flag)
 	{
-		_data->Append(data.get());
+	}
+
+	MediaPacket(common::MediaType media_type, int32_t track_id, const void *data, int32_t data_size, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
+		: MediaPacket(media_type, track_id, nullptr, pts, dts, duration, flag)
+	{
+		if (data != nullptr)
+		{
+			_data->Append(data, data_size);
+		}
+		else
+		{
+			OV_ASSERT2(data_size == 0);
+		}
 	}
 
 	common::MediaType GetMediaType() const noexcept
@@ -67,6 +83,26 @@ public:
 		return _pts;
 	}
 
+	void SetPts(int64_t pts)
+	{
+		_pts = pts;
+	}
+
+	int64_t GetDts() const noexcept
+	{
+		return _dts;
+	}
+
+	void SetDts(int64_t dts)
+	{
+		_dts = dts;
+	}
+
+	int64_t GetDuration() const noexcept
+	{
+		return _duration;
+	}
+
 	int32_t GetTrackId() const noexcept
 	{
 		return _track_id;
@@ -77,22 +113,20 @@ public:
 		_track_id = track_id;
 	}
 
-	MediaPacketFlag GetFlags() const noexcept
+	MediaPacketFlag GetFlag() const noexcept
 	{
-		return _flags;
+		return _flag;
 	}
 
-    int64_t GetCts() const noexcept
-    {
-        return _cts;
-    }
+	void SetFragHeader(const FragmentationHeader *header)
+	{
+		::memcpy(&_frag_hdr, header, sizeof(_frag_hdr));
+	}
 
-    void SetCts(int64_t cts)
-    {
-        _cts = cts;
-    }
-
-	std::unique_ptr<FragmentationHeader> _frag_hdr = std::make_unique<FragmentationHeader>();
+	const FragmentationHeader *GetFragHeader() const
+	{
+		return &_frag_hdr;
+	}
 
 	std::unique_ptr<MediaPacket> ClonePacket()
 	{
@@ -101,10 +135,12 @@ public:
 			GetTrackId(),
 			GetData(),
 			GetPts(),
-			GetFlags(),
-            GetCts()
-		);
-		::memcpy(packet->_frag_hdr.get(), _frag_hdr.get(), sizeof(FragmentationHeader));
+			GetDts(),
+			GetDuration(),
+			GetFlag());
+
+		packet->_frag_hdr = _frag_hdr;
+
 		return packet;
 	}
 
@@ -112,11 +148,14 @@ protected:
 	common::MediaType _media_type = common::MediaType::Unknown;
 	int32_t _track_id = -1;
 
-	std::shared_ptr<ov::Data> _data = std::make_shared<ov::Data>();
+	std::shared_ptr<ov::Data> _data = nullptr;
 
-	int64_t _pts = -1;
-	MediaPacketFlag _flags = MediaPacketFlag::NoFlag;
-    int64_t _cts = 0; // cts = pts - dts
+	int64_t _pts = -1LL;
+	int64_t _dts = -1LL;
+	int64_t _duration = -1LL;
+	MediaPacketFlag _flag = MediaPacketFlag::NoFlag;
+
+	FragmentationHeader _frag_hdr;
 };
 
 class MediaFrame
@@ -124,22 +163,23 @@ class MediaFrame
 public:
 	MediaFrame() = default;
 
-	MediaFrame(common::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts, int32_t flags)
+	MediaFrame(common::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts, int64_t duration, int32_t flags)
 		: _media_type(media_type),
 		  _track_id(track_id),
-          _pts(pts),
+		  _pts(pts),
+		  _duration(duration),
 		  _flags(flags)
 	{
 		SetBuffer(data, data_size);
 	}
 
-	MediaFrame(common::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts)
-		: MediaFrame(media_type, track_id, data, data_size, pts, 0)
+	MediaFrame(common::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts, int64_t duration)
+		: MediaFrame(media_type, track_id, data, data_size, pts, duration, 0)
 	{
 	}
 
-	MediaFrame(const uint8_t *data, int32_t data_size, int64_t pts)
-		: MediaFrame(common::MediaType::Unknown, 0, data, data_size, pts, 0)
+	MediaFrame(const uint8_t *data, int32_t data_size, int64_t pts, int64_t duration)
+		: MediaFrame(common::MediaType::Unknown, 0, data, data_size, pts, duration, 0)
 	{
 	}
 
@@ -175,7 +215,7 @@ public:
 	{
 		auto list = GetPlainData(plane);
 
-		if(list != nullptr)
+		if (list != nullptr)
 		{
 			return list->data();
 		}
@@ -192,7 +232,7 @@ public:
 	{
 		auto list = GetPlainData(plane);
 
-		if(list != nullptr)
+		if (list != nullptr)
 		{
 			return (*list)[offset];
 		}
@@ -204,7 +244,7 @@ public:
 	{
 		auto list = GetPlainData(plane);
 
-		if(list != nullptr)
+		if (list != nullptr)
 		{
 			return list->size();
 		}
@@ -216,7 +256,7 @@ public:
 	{
 		auto list = GetPlainData(plane);
 
-		if(list != nullptr)
+		if (list != nullptr)
 		{
 			return list->size();
 		}
@@ -272,6 +312,16 @@ public:
 		_pts = pts;
 	}
 
+	int64_t GetDuration() const
+	{
+		return _duration;
+	}
+
+	void SetDuration(int64_t duration)
+	{
+		_duration = duration;
+	}
+
 	void SetOffset(size_t offset)
 	{
 		_offset = offset;
@@ -298,7 +348,7 @@ public:
 	{
 		const auto &stride = _stride.find(plane);
 
-		if(stride == _stride.cend())
+		if (stride == _stride.cend())
 		{
 			return 0;
 		}
@@ -336,7 +386,7 @@ public:
 		return _format;
 	}
 
-	template<typename T>
+	template <typename T>
 	T GetFormat() const
 	{
 		return static_cast<T>(_format);
@@ -369,7 +419,7 @@ public:
 
 	void SetChannels(int32_t channels)
 	{
-		switch(channels)
+		switch (channels)
 		{
 			case 1:
 				_channels = channels;
@@ -390,7 +440,7 @@ public:
 
 	void SetChannelLayout(common::AudioChannel::Layout channel_layout)
 	{
-		switch(channel_layout)
+		switch (channel_layout)
 		{
 			case common::AudioChannel::Layout::LayoutMono:
 				_channel_layout = channel_layout;
@@ -429,20 +479,21 @@ public:
 	{
 		auto frame = std::make_unique<MediaFrame>();
 
-		if(_track_id == (int32_t)common::MediaType::Video)
+		if (_track_id == (int32_t)common::MediaType::Video)
 		{
 			frame->SetWidth(_width);
 			frame->SetHeight(_height);
 			frame->SetFormat(_format);
 			frame->SetPts(_pts);
+			frame->SetDuration(_duration);
 
-			for(int i = 0; i < 3; ++i)
+			for (int i = 0; i < 3; ++i)
 			{
 				frame->SetStride(GetStride(i), i);
 				frame->SetBuffer(GetBuffer(i), GetDataSize(i), i);
 			}
 		}
-		else if(_track_id == (int32_t)common::MediaType::Audio)
+		else if (_track_id == (int32_t)common::MediaType::Audio)
 		{
 			frame->SetFormat(_format);
 			frame->SetBytesPerSample(_bytes_per_sample);
@@ -451,8 +502,9 @@ public:
 			frame->SetSampleRate(_sample_rate);
 			frame->SetChannelLayout(_channel_layout);
 			frame->SetPts(_pts);
+			frame->SetDuration(_duration);
 
-			for(int i = 0; i < _channels; ++i)
+			for (int i = 0; i < _channels; ++i)
 			{
 				frame->SetBuffer(GetBuffer(i), GetDataSize(i), i);
 			}
@@ -470,7 +522,7 @@ private:
 	{
 		auto item = _data_buffer.find(plane);
 
-		if(item == _data_buffer.cend())
+		if (item == _data_buffer.cend())
 		{
 			return nullptr;
 		}
@@ -489,6 +541,8 @@ private:
 
 	// 공통 시간 정보
 	int64_t _pts = 0LL;
+	int64_t _duration = 0LL;
+
 	size_t _offset = 0;
 
 	std::map<int32_t, int32_t> _stride;
@@ -505,5 +559,5 @@ private:
 	common::AudioChannel::Layout _channel_layout = common::AudioChannel::Layout::LayoutMono;
 	int32_t _sample_rate = 0;
 
-	int32_t _flags = 0;    // Key, non-Key
+	int32_t _flags = 0;  // Key, non-Key
 };

@@ -1,3 +1,11 @@
+//==============================================================================
+//
+//  Transcode
+//
+//  Created by Kwon Keuk Han
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #include <random>
 #include "stream_info.h"
 
@@ -129,9 +137,8 @@ void StreamInfo::ShowInfo()
 		{
 			case MediaType::Video:
 				out_str.AppendFormat(
-					" / Video Track -> "
-					"track_id(%d) "
-					"codec(%d,%s) "
+					"\n\tVideo Track #%d: "
+					"codec(%d, %s) "
 					"resolution(%dx%d) "
 					"framerate(%.2ffps) ",
 					track->GetId(),
@@ -143,8 +150,7 @@ void StreamInfo::ShowInfo()
 
 			case MediaType::Audio:
 				out_str.AppendFormat(
-					" / Audio Track -> "
-					"track_id(%d) "
+					"\n\tAudio Track #%d: "
 					"codec(%d, %s) "
 					"samplerate(%d) "
 					"format(%s, %d) "
@@ -152,7 +158,7 @@ void StreamInfo::ShowInfo()
 					track->GetId(),
 					track->GetCodecId(), codec_name.CStr(),
 					track->GetSampleRate(),
-					track->GetSample().GetName(), track->GetSample().GetSampleSize(),
+					track->GetSample().GetName(), track->GetSample().GetSampleSize() * 8,
 					track->GetChannel().GetName(), track->GetChannel().GetCounts()
 				);
 				break;

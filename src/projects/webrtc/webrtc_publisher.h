@@ -57,10 +57,16 @@ private:
 	bool Start() override;
 	bool Stop() override;
 
-	// Publisher Implementation
-	cfg::PublisherType GetPublisherType() override
+	//--------------------------------------------------------------------
+	// Implementation of Publisher
+	//--------------------------------------------------------------------
+	cfg::PublisherType GetPublisherType() const override
 	{
 		return cfg::PublisherType::Webrtc;
+	}
+	const char *GetPublisherName() const override
+	{
+		return "WebRTC";
 	}
 
 	std::shared_ptr<Application> OnCreateApplication(const info::Application *application_info) override;

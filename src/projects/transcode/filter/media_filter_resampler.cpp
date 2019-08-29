@@ -8,162 +8,140 @@
 //==============================================================================
 
 #include "media_filter_resampler.h"
+
 #include <base/ovlibrary/ovlibrary.h>
 
-#define OV_LOG_TAG "MediaFilter"
+#define OV_LOG_TAG "MediaFilter.Resampler"
 
-MediaFilterResampler::MediaFilterResampler() :
-	_frame(nullptr),
-	_buffersink_ctx(nullptr),
-	_buffersrc_ctx(nullptr),
-	_filter_graph(nullptr),
-	_outputs(nullptr),
-	_inputs(nullptr)
+MediaFilterResampler::MediaFilterResampler()
 {
-	avfilter_register_all();
+	::avfilter_register_all();
 
-	_frame = av_frame_alloc();
+	_frame = ::av_frame_alloc();
 
-	_outputs = avfilter_inout_alloc();
+	_outputs = ::avfilter_inout_alloc();
+	_inputs = ::avfilter_inout_alloc();
 
-	_inputs = avfilter_inout_alloc();
+	OV_ASSERT2(_frame != nullptr);
+	OV_ASSERT2(_inputs != nullptr);
+	OV_ASSERT2(_outputs != nullptr);
 }
 
 MediaFilterResampler::~MediaFilterResampler()
 {
-	if(_frame)
-	{
-		av_frame_free(&_frame);
-	}
+	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
 
-	if(_outputs)
-	{
-		avfilter_inout_free(&_outputs);
-	}
+	OV_SAFE_FUNC(_inputs, nullptr, ::avfilter_inout_free, &);
+	OV_SAFE_FUNC(_outputs, nullptr, ::avfilter_inout_free, &);
 
-	if(_inputs)
-	{
-		avfilter_inout_free(&_inputs);
-	}
-
-	if(_filter_graph)
-	{
-		avfilter_graph_free(&_filter_graph);
-	}
+	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
 }
 
-bool MediaFilterResampler::Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context)
+bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context)
 {
 	int ret;
-	const AVFilter *abuffersrc = avfilter_get_by_name("abuffer");
-	const AVFilter *abuffersink = avfilter_get_by_name("abuffersink");
 
-	_filter_graph = avfilter_graph_alloc();
-	if(!_outputs || !_inputs || !_filter_graph)
+	const AVFilter *abuffersrc = ::avfilter_get_by_name("abuffer");
+	const AVFilter *abuffersink = ::avfilter_get_by_name("abuffersink");
+
+	_filter_graph = ::avfilter_graph_alloc();
+
+	if ((_filter_graph == nullptr) || (_inputs == nullptr) || (_outputs == nullptr))
 	{
-		logte("cannot allocated filter graph");
+		logte("Could not allocate variables for filter graph: %p, %p, %p", _filter_graph, _inputs, _outputs);
 		return false;
 	}
 
-	ov::String input_formats;
-	input_formats.Format(
-		"time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%x",
-		input_media_track->GetTimeBase().GetNum(),                  // Timebase 1
-		input_media_track->GetTimeBase().GetDen(),                  // Timebase 1000
-		input_media_track->GetSampleRate(),                         // SampleRate
-		input_media_track->GetSample().GetName(),                   // SampleFormat
-		input_media_track->GetChannel().GetLayout()                 // SampleLayout
-	);
+	AVRational input_timebase = TimebaseToAVRational(input_context->GetTimeBase());
+	AVRational output_timebase = TimebaseToAVRational(output_context->GetTimeBase());
 
-	ret = avfilter_graph_create_filter(&_buffersrc_ctx, abuffersrc, "in", input_formats.CStr(), nullptr, _filter_graph);
-	if(ret < 0)
+	_scale = ::av_q2d(::av_div_q(input_timebase, output_timebase));
+
+	if (::isnan(_scale))
 	{
-		logte("Cannot create buffer source");
+		logte("Invalid timebase: input: %d/%d, output: %d/%d",
+			  input_timebase.num, input_timebase.den,
+			  output_timebase.num, output_timebase.den);
+
 		return false;
 	}
 
-	ov::String output_filter_descr;
+	// Prepare filters
+	//
+	// Filter graph:
+	//     [abuffer] -> [aresample] -> [asetnsamples] -> [aformat] -> [asettb] -> [abuffersink]
 
-	output_filter_descr.Format(
-		"aresample=%d,asetnsamples=n=1024,aformat=sample_fmts=%s:channel_layouts=%s,asettb=expr=%f",
-		//"aresample=%d,aformat=sample_fmts=%s:channel_layouts=%s,asettb=expr=%f",
-		context->GetAudioSampleRate(),
-		context->GetAudioSample().GetName(),
-		context->GetAudioChannel().GetName(),
-		context->GetTimeBase().GetExpr()
-	);
+	// Prepare the input filter
 
-	logtd("resample. track[%u] %s -> %s", input_media_track->GetId(), input_formats.CStr(), output_filter_descr.CStr());
+	// "abuffer" filter
+	ov::String input_args = ov::String::FormatString(
+		"time_base=%s:sample_rate=%d:sample_fmt=%s:channel_layout=0x%x",
+		input_context->GetTimeBase().GetStringExpr().CStr(),
+		input_context->GetAudioSampleRate(),
+		input_context->GetAudioSample().GetName(),
+		input_context->GetAudioChannel().GetLayout());
 
-	static const enum AVSampleFormat out_sample_fmts[] = {
-		(AVSampleFormat)context->GetAudioSample().GetFormat(),
-		(AVSampleFormat)-1
+	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, abuffersrc, "in", input_args, nullptr, _filter_graph);
+	if (ret < 0)
+	{
+		logte("Could not create audio buffer source filter for resampling: %d", ret);
+		return false;
+	}
+
+	// Prepare output filters
+	std::vector<ov::String> filters = {
+		// "asettb" filter options
+		ov::String::FormatString("asettb=%s", output_context->GetTimeBase().GetStringExpr().CStr()),
+		// "aresample" filter options
+		ov::String::FormatString("aresample=%d", output_context->GetAudioSampleRate()),
+		// "aformat" filter options
+		ov::String::FormatString("aformat=sample_fmts=%s:channel_layouts=%s", output_context->GetAudioSample().GetName(), output_context->GetAudioChannel().GetName()),
+		// "asetnsamples" filter options
+		ov::String::FormatString("asetnsamples=n=1024"),
 	};
-	static const int64_t out_channel_layouts[] = {
-		(int64_t)context->GetAudioChannel().GetLayout(),
-		-1
-	};
-	static const int out_sample_rates[] = {
-		context->GetAudioSampleRate(),
-		-1
-	};
 
-	// logtd("out_sample_fmts : %d", context->_audio_sample.GetFormat());
-	// logtd("out_channel_layouts : %x", context->_audio_channel.GetLayout());
-	// logtd("out_sample_rates : %d", context->GetAudioSampleRate());
+	ov::String output_filters = ov::String::Join(filters, ",");
 
-	ret = avfilter_graph_create_filter(&_buffersink_ctx, abuffersink, "out", nullptr, nullptr, _filter_graph);
-	if(ret < 0)
+	ret = ::avfilter_graph_create_filter(&_buffersink_ctx, abuffersink, "out", nullptr, nullptr, _filter_graph);
+	if (ret < 0)
 	{
-		logte("Cannot create audio buffer sink");
+		logte("Could not create audio buffer sink filter for resampling: %d", ret);
 		return false;
 	}
 
-	ret = av_opt_set_int_list(_buffersink_ctx, "sample_fmts", out_sample_fmts, -1, AV_OPT_SEARCH_CHILDREN);
-	if(ret < 0)
-	{
-		logte("Cannot set output sample format");
-		return false;
-	}
-
-	ret = av_opt_set_int_list(_buffersink_ctx, "channel_layouts", out_channel_layouts, -1, AV_OPT_SEARCH_CHILDREN);
-	if(ret < 0)
-	{
-		logte("Cannot set output channel layout");
-		return false;
-	}
-
-	ret = av_opt_set_int_list(_buffersink_ctx, "sample_rates", out_sample_rates, -1, AV_OPT_SEARCH_CHILDREN);
-	if(ret < 0)
-	{
-		logte("Cannot set output sample rate");
-		return false;
-	}
-
-	// 필터 연결
-	_outputs->name = av_strdup("in");
+	_outputs->name = ::av_strdup("in");
 	_outputs->filter_ctx = _buffersrc_ctx;
 	_outputs->pad_idx = 0;
 	_outputs->next = nullptr;
 
-
-	// 버퍼 싱크의 임력 설정
-	_inputs->name = av_strdup("out");
+	_inputs->name = ::av_strdup("out");
 	_inputs->filter_ctx = _buffersink_ctx;
 	_inputs->pad_idx = 0;
 	_inputs->next = nullptr;
 
-	if((ret = avfilter_graph_parse_ptr(_filter_graph, output_filter_descr.CStr(), &_inputs, &_outputs, nullptr)) < 0)
+	if ((_outputs->name == nullptr) || (_inputs->name == nullptr))
 	{
-		logte("Cannot create filter graph");
 		return false;
 	}
 
-	if((ret = avfilter_graph_config(_filter_graph, nullptr)) < 0)
+	ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr);
+	if (ret < 0)
 	{
-		logte("Cannot validation filter graph");
+		logte("Could not parse filter string for resampling: %d (%s)", ret, output_filters.CStr());
 		return false;
 	}
+
+	ret = ::avfilter_graph_config(_filter_graph, nullptr);
+	if (ret < 0)
+	{
+		logte("Could not validate filter graph for resampling: %d", ret);
+		return false;
+	}
+
+	logtd("Resampler is enabled for track #%u using parameters: input: %s, outputs: %s", input_media_track->GetId(), input_args.CStr(), output_filters.CStr());
+
+	_input_context = input_context;
+	_output_context = output_context;
 
 	return true;
 }
@@ -179,21 +157,21 @@ int32_t MediaFilterResampler::SendBuffer(std::unique_ptr<MediaFrame> buffer)
 
 std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *result)
 {
-	int ret = av_buffersink_get_frame(_buffersink_ctx, _frame);
+	int ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
 
-	if(ret == AVERROR(EAGAIN))
+	if (ret == AVERROR(EAGAIN))
 	{
-		// printf("eagain : %d\r\n", ret);
+		// Wait for more packet
 	}
-	else if(ret == AVERROR_EOF)
+	else if (ret == AVERROR_EOF)
 	{
-		logte("eof : %d", ret);
+		logte("Error receiving a packet for decoding : AVERROR_EOF");
 		*result = TranscodeResult::EndOfFile;
 		return nullptr;
 	}
-	else if(ret < 0)
+	else if (ret < 0)
 	{
-		logte("error : %d", ret);
+		logte("Error receiving a packet for decoding : %d", ret);
 		*result = TranscodeResult::DataError;
 		return nullptr;
 	}
@@ -202,21 +180,21 @@ std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 		auto output_frame = std::make_unique<MediaFrame>();
 
 		output_frame->SetFormat(_frame->format);
-		output_frame->SetBytesPerSample(av_get_bytes_per_sample((AVSampleFormat)_frame->format));
+		output_frame->SetBytesPerSample(::av_get_bytes_per_sample((AVSampleFormat)_frame->format));
 		output_frame->SetNbSamples(_frame->nb_samples);
 		output_frame->SetChannels(_frame->channels);
 		output_frame->SetSampleRate(_frame->sample_rate);
 		output_frame->SetChannelLayout((common::AudioChannel::Layout)_frame->channel_layout);
-
 		output_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1L : _frame->pts);
+		output_frame->SetDuration(_frame->pkt_duration * _scale);
 
 		auto data_length = static_cast<uint32_t>(output_frame->GetBytesPerSample() * output_frame->GetNbSamples());
 
 		// Copy frame data into out_buf
-		if(IsPlanar(static_cast<AVSampleFormat>(_frame->format)))
+		if (IsPlanar(static_cast<AVSampleFormat>(_frame->format)))
 		{
 			// If the frame is planar, the data is stored separately in the "_frame->data" array.
-			for(int channel = 0; channel < _frame->channels; channel++)
+			for (int channel = 0; channel < _frame->channels; channel++)
 			{
 				output_frame->Resize(data_length, channel);
 				uint8_t *output = output_frame->GetBuffer(channel);
@@ -229,31 +207,31 @@ std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 			output_frame->AppendBuffer(_frame->data[0], data_length * _frame->channels, 0);
 		}
 
-		logtp("Resampled data:\n%s", ov::Dump(_frame->data[0], _frame->linesize[0], 32).CStr());
+		logtp("Resampled data: %lld\n%s", output_frame->GetPts(), ov::Dump(_frame->data[0], _frame->linesize[0], 32).CStr());
 
-		av_frame_unref(_frame);
+		::av_frame_unref(_frame);
 
-		// Notify가 필요한 경우에 1을 반환, 아닌 경우에는 일반적인 경우로 0을 반환
 		*result = TranscodeResult::DataReady;
 		return std::move(output_frame);
 	}
 
-	while(_input_buffer.empty() == false)
+	while (_input_buffer.empty() == false)
 	{
-		MediaFrame *frame = _input_buffer[0].get();
+		auto frame = std::move(_input_buffer.front());
+		_input_buffer.pop_front();
 
-		logtp("Dequeued data for resampling:\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
+		logtp("Dequeued data for resampling: %lld\n%s", frame->GetPts(), ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
 
-		// ** 오디오 프레임에 들어갈 필수 항목
-		_frame->nb_samples = frame->GetNbSamples();
 		_frame->format = frame->GetFormat();
+		_frame->nb_samples = frame->GetNbSamples();
 		_frame->channel_layout = static_cast<uint64_t>(frame->GetChannelLayout());
 		_frame->channels = frame->GetChannels();
 		_frame->sample_rate = frame->GetSampleRate();
 		_frame->pts = frame->GetPts();
+		_frame->pkt_duration = frame->GetDuration();
 
-		// AVFrame 버퍼의 메모리 할당
-		if(av_frame_get_buffer(_frame, 0) < 0)
+		ret = ::av_frame_get_buffer(_frame, 0);
+		if (ret < 0)
 		{
 			logte("Could not allocate the audio frame data");
 
@@ -261,21 +239,22 @@ std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 			return nullptr;
 		}
 
-		if(av_frame_make_writable(_frame) < 0)
+		ret = ::av_frame_make_writable(_frame);
+		if (ret < 0)
 		{
-			logte("Could not make sure the frame data is writable");
+			logte("Could not make writable frame");
 
 			*result = TranscodeResult::DataError;
 			return nullptr;
 		}
 
 		// Copy data into frame
-		if(IsPlanar(frame->GetFormat<AVSampleFormat>()))
+		if (IsPlanar(frame->GetFormat<AVSampleFormat>()))
 		{
 			// If the frame is planar, the data should stored separately in the "_frame->data" array.
 			_frame->linesize[0] = 0;
 
-			for(int channel = 0; channel < _frame->channels; channel++)
+			for (int channel = 0; channel < _frame->channels; channel++)
 			{
 				size_t data_length = frame->GetBufferSize(channel);
 
@@ -290,15 +269,12 @@ std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 		}
 
 		// Copy packet data into frame
-		if(av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0)
+		if (::av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0)
 		{
-			logte("Error while feeding the audio filtergraph. frame.format(%d), buffer.pts(%lld) buffer.linesize(%d), buf.size(%d)", _frame->format, _frame->pts, _frame->linesize[0], _input_buffer.size());
+			logte("An error occurred while feeding the audio filtergraph: format: %d, pts: %lld, linesize: %d, size: %d", _frame->format, _frame->pts, _frame->linesize[0], _input_buffer.size());
 		}
 
-		// 처리가 완료된 패킷은 큐에서 삭제함.
-		_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
-
-		av_frame_unref(_frame);
+		::av_frame_unref(_frame);
 	}
 
 	*result = TranscodeResult::NoData;
@@ -307,7 +283,7 @@ std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 
 bool MediaFilterResampler::IsPlanar(AVSampleFormat format)
 {
-	switch(format)
+	switch (format)
 	{
 		case AV_SAMPLE_FMT_U8:
 		case AV_SAMPLE_FMT_S16:

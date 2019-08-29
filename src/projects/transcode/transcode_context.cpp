@@ -7,14 +7,15 @@
 //
 //==============================================================================
 
-#include <iostream>
 #include <unistd.h>
+#include <iostream>
 
 #include "transcode_context.h"
 
 #define OV_LOG_TAG "TranscodeContext"
 
-TranscodeContext::TranscodeContext()
+TranscodeContext::TranscodeContext(bool is_encoding_context)
+	: _is_encoding_context(is_encoding_context)
 {
 	SetTimeBase(1, 1000000);
 }
@@ -28,7 +29,7 @@ void TranscodeContext::SetCodecId(common::MediaCodecId val)
 	_codec_id = val;
 }
 
-common::MediaCodecId TranscodeContext::GetCodecId()
+common::MediaCodecId TranscodeContext::GetCodecId() const
 {
 	return _codec_id;
 }
@@ -94,9 +95,14 @@ float TranscodeContext::GetFrameRate()
 	return _video_frame_rate;
 }
 
-common::Timebase &TranscodeContext::GetTimeBase()
+const common::Timebase &TranscodeContext::GetTimeBase() const
 {
 	return _time_base;
+}
+
+void TranscodeContext::SetTimeBase(const common::Timebase &timebase)
+{
+	_time_base = timebase;
 }
 
 void TranscodeContext::SetTimeBase(int32_t num, int32_t den)
@@ -133,4 +139,3 @@ common::MediaType TranscodeContext::GetMediaType() const
 {
 	return _media_type;
 }
-

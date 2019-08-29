@@ -15,22 +15,22 @@ namespace cfg
 	enum class StreamProfileUse
 	{
 		// audio-only
-			AudioOnly,
+		AudioOnly,
 		// video-only
-			VideoOnly,
+		VideoOnly,
 		// both
-			Both
+		Both
 	};
 
 	struct StreamProfile : public Item
 	{
 		StreamProfileUse GetUse() const
 		{
-			if(_use == "audio-only")
+			if (_use == "audio-only")
 			{
 				return StreamProfileUse::AudioOnly;
 			}
-			else if(_use == "video-only")
+			else if (_use == "video-only")
 			{
 				return StreamProfileUse::VideoOnly;
 			}
@@ -63,4 +63,4 @@ namespace cfg
 		ov::String _use = "both";
 		ov::String _name;
 	};
-}
+}  // namespace cfg

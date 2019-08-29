@@ -47,11 +47,12 @@ public :
                                                                     int segment_duration,
                                                                     const  ov::String &segment_prefix,
                                                                     PacketyzerStreamType stream_type,
-                                                                    PacketyzerMediaInfo media_info) = 0;
+                                                                    std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track) = 0;
 
 private :
     std::shared_ptr<StreamPacketyzer> _stream_packetyzer = nullptr;
     std::map<uint32_t, std::shared_ptr<MediaTrack>> _media_tracks;
+
+    std::shared_ptr<MediaTrack> _video_track;
+    std::shared_ptr<MediaTrack> _audio_track;
 };
-
-

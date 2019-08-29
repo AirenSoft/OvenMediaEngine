@@ -6,95 +6,84 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #include "stream_packetyzer.h"
 #include "segment_stream_private.h"
 
-//====================================================================================================
-// Constructor
-//  - only dash or hls
-//====================================================================================================
-StreamPacketyzer::StreamPacketyzer(const ov::String &app_name,
-                                   const ov::String &stream_name,
-                                   int segment_count,
-                                   int segment_duration,
-                                   PacketyzerStreamType stream_type,
-                                   uint32_t video_timescale,
-                                   uint32_t auddio_timescale,
-                                   uint32_t video_framerate)
-{
-    _segment_count = segment_count;
-    _segment_duration = segment_duration;
-    _video_timescale = video_timescale;
-    _audio_timescale = auddio_timescale;
-    _stream_type = stream_type;
-}
-
-//====================================================================================================
-// Destructor
-//====================================================================================================
-StreamPacketyzer::~StreamPacketyzer()
-{
-
-}
-
-//====================================================================================================
-// Append Video Data
-//====================================================================================================
 bool StreamPacketyzer::AppendVideoData(std::unique_ptr<EncodedFrame> encoded_frame,
-                                        uint32_t timescale,
-                                        uint64_t time_offset)
+									   uint32_t timescale,
+									   uint64_t time_offset)
 {
-    if(_stream_type == PacketyzerStreamType::AudioOnly)
-        return true;
+	if (_stream_type == PacketyzerStreamType::AudioOnly)
+	{
+		OV_ASSERT2("Since it is audio-only, video data cannot be appended");
+		return true;
+	}
 
-    // 임시
-    timescale = 90000;
+	if (_video_track == nullptr)
+	{
+		OV_ASSERT2(_video_track != nullptr);
+		return false;
+	}
 
-    // timestamp change
-    if (timescale != _video_timescale)
-    {
-        encoded_frame->_time_stamp = Packetyzer::ConvertTimeScale(encoded_frame->_time_stamp, timescale, _video_timescale);
+	OV_ASSERT2(
+		(encoded_frame->_frame_type == FrameType::VideoFrameKey) ||
+		(encoded_frame->_frame_type == FrameType::VideoFrameDelta));
 
-        if (time_offset != 0)
-            time_offset = Packetyzer::ConvertTimeScale(time_offset, timescale, _video_timescale);
-    }
+	// Converting the timestamp using _video_timescale if needed
+	// if (encoded_frame->_timebase != _video_track->GetTimeBase())
+	// {
+	//		encoded_frame->_time_stamp = Packetyzer::ConvertTimeScale(encoded_frame->_time_stamp, timescale, _video_timescale);
+	//encoded_frame->_duration = Packetyzer::ConvertTimeScale(encoded_frame->_duration, timescale, _video_timescale);
+	//time_offset = Packetyzer::ConvertTimeScale(time_offset, timescale, _video_timescale);
+	//}
 
-    PacketyzerFrameType frame_type = (encoded_frame->_frame_type == FrameType::VideoFrameKey) ?
-                                     PacketyzerFrameType::VideoKeyFrame : PacketyzerFrameType::VideoPFrame;
+	PacketyzerFrameType frame_type = (encoded_frame->_frame_type == FrameType::VideoFrameKey) ? PacketyzerFrameType::VideoKeyFrame : PacketyzerFrameType::VideoPFrame;
 
-    auto frame_data = std::make_shared<PacketyzerFrameData>(frame_type,
-                                                            encoded_frame->_time_stamp,
-                                                            time_offset,
-                                                            _video_timescale,
-                                                            encoded_frame->_buffer);
+	auto frame_data = std::make_shared<PacketyzerFrameData>(
+		frame_type,
+		encoded_frame->_time_stamp,
+		encoded_frame->_duration,
+		time_offset,
+		_video_track->GetTimeBase(),
+		encoded_frame->_buffer);
 
-    AppendVideoFrame(frame_data);
+	AppendVideoFrame(frame_data);
 
-    return true;
+	return true;
 }
 
-//====================================================================================================
-// Append Audio Data
-//====================================================================================================
 bool StreamPacketyzer::AppendAudioData(std::unique_ptr<EncodedFrame> encoded_frame, uint32_t timescale)
 {
-    if(_stream_type == PacketyzerStreamType::VideoOnly)
-        return true;
+	if (_stream_type == PacketyzerStreamType::VideoOnly)
+	{
+		OV_ASSERT2("Since it is video-only, audio data cannot be appended");
+		return true;
+	}
 
-    // timestamp change
-    if (timescale != _audio_timescale)
-    {
-        encoded_frame->_time_stamp = Packetyzer::ConvertTimeScale(encoded_frame->_time_stamp, timescale, _audio_timescale);
-    }
+	if (_audio_track == nullptr)
+	{
+		OV_ASSERT2(_audio_track != nullptr);
+		return false;
+	}
 
-    auto frame_data = std::make_shared<PacketyzerFrameData>(PacketyzerFrameType::AudioFrame,
-                                                            encoded_frame->_time_stamp,
-                                                            0,
-                                                            _audio_timescale,
-                                                            encoded_frame->_buffer);
+	OV_ASSERT2(encoded_frame->_frame_type == FrameType::AudioFrameKey);
 
-    AppendAudioFrame(frame_data);
+	// Converting the timestamp using _audio_timescale if needed
+	// if (timescale != _audio_timescale)
+	// {
+	// 	encoded_frame->_time_stamp = Packetyzer::ConvertTimeScale(encoded_frame->_time_stamp, timescale, _audio_timescale);
+	// 	encoded_frame->_duration = Packetyzer::ConvertTimeScale(encoded_frame->_duration, timescale, _audio_timescale);
+	// }
 
-    return true;
+	auto frame_data = std::make_shared<PacketyzerFrameData>(
+		PacketyzerFrameType::AudioFrame,
+		encoded_frame->_time_stamp,
+		encoded_frame->_duration,
+		0,
+		_audio_track->GetTimeBase(),
+		encoded_frame->_buffer);
+
+	AppendAudioFrame(frame_data);
+
+	return true;
 }

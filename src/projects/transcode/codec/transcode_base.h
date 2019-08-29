@@ -12,6 +12,7 @@
 
 extern "C"
 {
+#include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libavutil/pixdesc.h>
 #include <libavutil/opt.h>
@@ -58,6 +59,14 @@ public:
 	virtual void SendBuffer(std::unique_ptr<const InputType> buf) = 0;
 	virtual std::unique_ptr<OutputType> RecvBuffer(TranscodeResult *result) = 0;
 
+	static AVRational TimebaseToAVRational(const common::Timebase &timebase)
+	{
+		return (AVRational){
+			.num = timebase.GetNum(),
+			.den = timebase.GetDen()
+		};
+	}
+
 protected:
 	static bool IsPlanar(AVSampleFormat format)
 	{
@@ -84,7 +93,7 @@ protected:
 		}
 	}
 
-	std::vector<std::unique_ptr<const InputType>> _input_buffer;
-	std::vector<std::unique_ptr<OutputType>> _output_buffer;
+	std::deque<std::unique_ptr<const InputType>> _input_buffer;
+	std::deque<std::unique_ptr<OutputType>> _output_buffer;
 };
 

@@ -26,13 +26,13 @@ namespace ov
 
 	Data::Data(const void *data, size_t length, bool reference_only)
 	{
-		if((length == 0) || (data == nullptr))
+		if ((length == 0) || (data == nullptr))
 		{
 			OV_ASSERT2(false);
 			return;
 		}
 
-		if(reference_only)
+		if (reference_only)
 		{
 			_reference_data = data;
 			_length = length;
@@ -49,7 +49,7 @@ namespace ov
 	Data::Data(const Data &data)
 	{
 		_reference_data = data._reference_data;
-		if(data._allocated_data != nullptr)
+		if (data._allocated_data != nullptr)
 		{
 			_allocated_data = std::make_shared<std::vector<uint8_t>>();
 			Append(&data);
@@ -73,13 +73,13 @@ namespace ov
 
 	std::shared_ptr<const Data> Data::SubdataInternal(off_t offset, size_t length) const
 	{
-		if(offset < 0)
+		if (offset < 0)
 		{
 			// If [offset] is negative, cut the data from the back.
 			offset = GetLength() + offset;
 		}
 
-		if(offset < 0)
+		if (offset < 0)
 		{
 			// Offset is too small
 			OV_ASSERT(false, "Invalid offset: %jd", static_cast<intmax_t>(offset));
@@ -90,7 +90,7 @@ namespace ov
 
 		size_t current_length = GetLength();
 
-		if(current_length < (offset + length))
+		if (current_length < (offset + length))
 		{
 			OV_ASSERT(false, "offset + length (%zu) must be smaller than %zd", (offset + length), current_length);
 			return nullptr;
@@ -100,7 +100,7 @@ namespace ov
 
 		OV_ASSERT2(new_offset >= 0);
 
-		if(_reference_data != nullptr)
+		if (_reference_data != nullptr)
 		{
 			// Refer _reference_data
 			instance->_reference_data = _reference_data;
@@ -137,21 +137,34 @@ namespace ov
 		return Subdata(offset, (offset >= 0) ? (GetLength() - offset) : (static_cast<size_t>(-1 * offset)));
 	}
 
-	bool Data::operator ==(const Data &data) const
+	Data &Data::operator=(const Data &data)
+	{
+		// Do not need to call Detach(). Just overwrite member variables
+
+		// ov::Data supports COW (Copy-on-write), so we just assign the variables of data to member variables.
+		_reference_data = data._reference_data;
+		_allocated_data = data._allocated_data;
+		_offset = data._offset;
+		_length = data._length;
+
+		return *this;
+	}
+
+	bool Data::operator==(const Data &data) const
 	{
 		return IsEqual(data);
 	}
 
-	bool Data::operator ==(const Data *data) const
+	bool Data::operator==(const Data *data) const
 	{
 		return IsEqual(data);
 	}
 
 	bool Data::IsEqual(const void *data, size_t length) const
 	{
-		if(GetLength() == length)
+		if (GetLength() == length)
 		{
-			if(length == 0)
+			if (length == 0)
 			{
 				return true;
 			}
@@ -169,7 +182,7 @@ namespace ov
 
 	bool Data::IsEqual(const Data *data) const
 	{
-		if(data == nullptr)
+		if (data == nullptr)
 		{
 			return false;
 		}
@@ -179,7 +192,7 @@ namespace ov
 
 	bool Data::Detach()
 	{
-		if(_reference_data != nullptr)
+		if (_reference_data != nullptr)
 		{
 			// Copy from original data
 			const void *original_data = _reference_data;
@@ -193,13 +206,13 @@ namespace ov
 			return Reserve(length) && Append(static_cast<const uint8_t *>(original_data) + offset, length);
 		}
 
-		if(_allocated_data == nullptr)
+		if (_allocated_data == nullptr)
 		{
 			OV_ASSERT2(false);
 			return false;
 		}
 
-		if(_allocated_data.use_count() == 1)
+		if (_allocated_data.use_count() == 1)
 		{
 			// Nobody references _allocated_data. So do not need to copy the data
 			return true;
@@ -222,9 +235,9 @@ namespace ov
 
 	bool Data::Reserve(size_t capacity)
 	{
-		if((_reference_data != nullptr) || (_allocated_data != nullptr))
+		if ((_reference_data != nullptr) || (_allocated_data != nullptr))
 		{
-			if(Detach() == false)
+			if (Detach() == false)
 			{
 				// Could not copy data from _reference_data
 				OV_ASSERT2(false);
@@ -254,29 +267,29 @@ namespace ov
 
 	bool Data::Insert(const void *data, off_t offset, size_t length)
 	{
-		if(data == nullptr)
+		if (data == nullptr)
 		{
 			OV_ASSERT(false, "Invalid parameter: data must not be NULL");
 			return false;
 		}
 
-		if(offset > static_cast<off_t>(_length))
+		if (offset > static_cast<off_t>(_length))
 		{
 			OV_ASSERT(false, "Invalid offset: %jd", offset);
 			return false;
 		}
 
-		if(offset < 0)
+		if (offset < 0)
 		{
 			offset = _length + offset;
 
-			if(offset < 0)
+			if (offset < 0)
 			{
 				OV_ASSERT(false, "Invalid offset: %jd", (offset - _length));
 			}
 		}
 
-		if(Detach() == false)
+		if (Detach() == false)
 		{
 			return false;
 		}
@@ -301,7 +314,7 @@ namespace ov
 
 	bool Data::Append(const Data *data)
 	{
-		if(data->GetData() != nullptr)
+		if (data->GetData() != nullptr)
 		{
 			return Append(data->GetData(), data->GetLength());
 		}
@@ -311,12 +324,12 @@ namespace ov
 
 	bool Data::Erase(off_t offset, size_t length)
 	{
-		if(Detach() == false)
+		if (Detach() == false)
 		{
 			return false;
 		}
 
-		if((offset < 0) || (offset + length >= _length))
+		if ((offset < 0) || (offset + length >= _length))
 		{
 			OV_ASSERT(false, "Invalid offset: %jd, length: %zu (current length: %zu)", offset, length, _length);
 		}
@@ -348,4 +361,4 @@ namespace ov
 	{
 		return ToHexString(static_cast<const uint8_t *>(GetData()) + _offset, GetLength());
 	}
-}
+}  // namespace ov

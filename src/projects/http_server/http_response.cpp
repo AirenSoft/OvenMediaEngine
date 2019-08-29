@@ -275,6 +275,7 @@ bool HttpResponse::PostChunkedEndResponse()
 {
 	// chunked transfer init
 	_chunked_transfer = false;
+	
 	return PostSend("0\r\n\r\n", 5);
 }
 
@@ -311,7 +312,7 @@ bool HttpResponse::PostSend(const void *data, size_t length)
 			break;
 
 		default:
-			logte("An error occurred while accept client: %s", _remote->ToString().CStr());
+			logtd("An error occurred while send to the client: %s", _remote->ToString().CStr());
 			result = false;
 	}
 

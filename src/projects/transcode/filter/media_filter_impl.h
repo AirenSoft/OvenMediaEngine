@@ -40,10 +40,17 @@ public:
 	// 원본 스트림 정보
 	// stream_info : 원본 파일 정보
 	// context : 변환 정보
-	virtual bool Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) = 0;
+	virtual bool Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context) = 0;
 
 	virtual int32_t SendBuffer(std::unique_ptr<MediaFrame> buffer) = 0;
 	virtual std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) = 0;
 
+	static AVRational TimebaseToAVRational(const common::Timebase &timebase)
+	{
+		return (AVRational){
+			.num = timebase.GetNum(),
+			.den = timebase.GetDen()
+		};
+	}
 };
 

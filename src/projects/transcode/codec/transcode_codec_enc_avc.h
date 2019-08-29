@@ -23,6 +23,10 @@ public:
 	std::unique_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
 
 private:
-	std::unique_ptr<FragmentationHeader> MakeFragmentHeader();
+	std::unique_ptr<MediaPacket> MakePacket() const;
 
+	// Used to convert output timebase -> codec timebase
+	double _scale;
+	// Used to convert codec timebase -> output timebase
+	double _scale_inv;
 };

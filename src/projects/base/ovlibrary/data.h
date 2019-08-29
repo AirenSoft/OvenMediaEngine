@@ -156,6 +156,8 @@ namespace ov
 		std::shared_ptr<Data> Subdata(off_t offset);
 		std::shared_ptr<const Data> Subdata(off_t offset) const;
 
+		Data &operator =(const Data &data);
+
 		bool operator ==(const Data &data) const;
 		bool operator ==(const Data *data) const;
 

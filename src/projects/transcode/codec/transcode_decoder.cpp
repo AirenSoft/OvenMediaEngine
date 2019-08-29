@@ -15,29 +15,28 @@
 
 TranscodeDecoder::TranscodeDecoder()
 {
-	avcodec_register_all();
+	::avcodec_register_all();
 
-	_pkt = av_packet_alloc();
-	_frame = av_frame_alloc();
-
+	_pkt = ::av_packet_alloc();
+	_frame = ::av_frame_alloc();
 }
 
 TranscodeDecoder::~TranscodeDecoder()
 {
-	avcodec_free_context(&_context);
-	avcodec_parameters_free(&_codec_par);
+	::avcodec_free_context(&_context);
+	::avcodec_parameters_free(&_codec_par);
 
-	av_frame_free(&_frame);
-	av_packet_free(&_pkt);
+	::av_frame_free(&_frame);
+	::av_packet_free(&_pkt);
 
-	av_parser_close(_parser);
+	::av_parser_close(_parser);
 }
 
-std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context)
+std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
 {
 	std::unique_ptr<TranscodeDecoder> decoder = nullptr;
 
-	switch(codec_id)
+	switch (codec_id)
 	{
 		case common::MediaCodecId::H264:
 			decoder = std::make_unique<OvenCodecImplAvcodecDecAVC>();
@@ -52,9 +51,9 @@ std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(common::MediaC
 			break;
 	}
 
-	if(decoder != nullptr)
+	if (decoder != nullptr)
 	{
-		if(!decoder->Configure(transcode_context))
+		if (decoder->Configure(input_context) == false)
 		{
 			return nullptr;
 		}
@@ -65,38 +64,45 @@ std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(common::MediaC
 
 bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 {
-	_transcode_context = context;
-
-	_codec = avcodec_find_decoder(GetCodecID());
-
-	if(_codec == nullptr)
+	if (context == nullptr)
 	{
-		logte("Codec not found");
+		return false;
+	}
+
+	_input_context = context;
+
+	_codec = ::avcodec_find_decoder(GetCodecID());
+
+	if (_codec == nullptr)
+	{
+		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
 
 	// create codec context
-	_context = avcodec_alloc_context3(_codec);
+	_context = ::avcodec_alloc_context3(_codec);
 
-	if(_context == nullptr)
+	if (_context == nullptr)
 	{
-		logte("Could not allocate video codec context");
+		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
 
-	if(avcodec_open2(_context, _codec, nullptr) < 0)
+	if (::avcodec_open2(_context, _codec, nullptr) < 0)
 	{
-		logte("Could not open codec");
+		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
 		return false;
 	}
 
-	_parser = av_parser_init(_codec->id);
+	_parser = ::av_parser_init(_codec->id);
 
-	if(!_parser)
+	if (_parser == nullptr)
 	{
 		logte("Parser not found");
 		return false;
 	}
+
+	_context->time_base = TimebaseToAVRational(_input_context->GetTimeBase());
 
 	return true;
 }
@@ -106,80 +112,98 @@ void TranscodeDecoder::SendBuffer(std::unique_ptr<const MediaPacket> packet)
 	_input_buffer.push_back(std::move(packet));
 }
 
-void TranscodeDecoder::ShowCodecParameters(const AVCodecParameters *parameters)
+void TranscodeDecoder::ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters)
 {
 	ov::String message;
 
-	switch(parameters->codec_type)
+	message.AppendFormat("[%s] ", ::av_get_media_type_string(parameters->codec_type));
+
+	switch (parameters->codec_type)
 	{
 		case AVMEDIA_TYPE_UNKNOWN:
 			message = "Unknown media type";
 			break;
 
 		case AVMEDIA_TYPE_VIDEO:
-			message.Format(
-				"codec_type(%d) "
-				"codec_id(%d) "
-				"codec_tag(%d) "
-				"extra(%d) "
-				"format(%d) "
-				"bit_rate(%d) "
-				"bits_per_coded_sample(%d) "
-				"bits_per_raw_sample(%d) "
-				"profile(%d) "
-				"level(%d) "
-				"sample_aspect_ratio(%d/%d) "
-
-				"width(%d) "
-				"height(%d) "
-
-				"field_order(%d) "
-				"color_range(%d) "
-				"color_primaries(%d) "
-				"color_trc(%d) "
-				"color_space(%d) "
-				"chroma_location(%d) "
-
-				"channel_layout(%ld) "
-				"channels(%d) "
-				"sample_rate(%d) "
-				"block_align(%d) "
-				"frame_size(%d)",
-
-				_codec_par->codec_type,
-				_codec_par->codec_id,
-				_codec_par->codec_tag,
-				_codec_par->extradata_size,
-				_codec_par->format,
-				_codec_par->bit_rate,
-				_codec_par->bits_per_coded_sample,
-				_codec_par->bits_per_raw_sample,
-				_codec_par->profile,
-				_codec_par->level,
-				_codec_par->sample_aspect_ratio.num, _codec_par->sample_aspect_ratio.den,
-
-				_codec_par->width,
-				_codec_par->height,
-
-				_codec_par->field_order,
-				_codec_par->color_range,
-				_codec_par->color_primaries,
-				_codec_par->color_trc,
-				_codec_par->color_space,
-				_codec_par->chroma_location,
-
-				_codec_par->channel_layout,
-				_codec_par->channels,
-				_codec_par->sample_rate,
-				_codec_par->block_align,
-				_codec_par->frame_size
-			);
-			break;
-
 		case AVMEDIA_TYPE_AUDIO:
-			message = "Audio";
-			break;
+			// H.264 (Baseline
+			message.AppendFormat("%s (%s", ::avcodec_get_name(parameters->codec_id), ::avcodec_profile_name(parameters->codec_id, parameters->profile));
 
+			if (parameters->level >= 0)
+			{
+				// lv: 5.2
+				message.AppendFormat(" %.1f", parameters->level / 10.0f);
+			}
+			message.Append(')');
+
+			if (parameters->codec_tag != 0)
+			{
+				char tag[AV_FOURCC_MAX_STRING_SIZE]{};
+				::av_fourcc_make_string(tag, parameters->codec_tag);
+
+				// (avc1 / 0x31637661
+				message.AppendFormat(", (%s / 0x%08X", tag, parameters->codec_tag);
+
+				if (parameters->extradata_size != 0)
+				{
+					// extra: 1234
+					message.AppendFormat(", extra: %d", parameters->extradata_size);
+				}
+
+				message.Append(')');
+			}
+
+			message.Append(", ");
+
+			if (parameters->codec_type == AVMEDIA_TYPE_VIDEO)
+			{
+				int gcd = ::av_gcd(parameters->width, parameters->height);
+
+				if (gcd == 0)
+				{
+					OV_ASSERT2(false);
+					gcd = 1;
+				}
+
+				int digit = 0;
+
+				if(context->framerate.den > 1)
+				{
+					digit = 3;
+				}
+
+				// yuv420p, 1920x1080 [SAR 1:1 DAR 16:9], 24 fps
+				message.AppendFormat("%s, %dx%d [SAR %d:%d DAR %d:%d], %.*f fps, ",
+									 ::av_get_pix_fmt_name(static_cast<AVPixelFormat>(parameters->format)),
+									 parameters->width, parameters->height,
+									 parameters->sample_aspect_ratio.num, parameters->sample_aspect_ratio.den,
+									 parameters->width / gcd, parameters->height / gcd,
+									 digit, ::av_q2d(context->framerate)
+									 );
+			}
+			else
+			{
+				char channel_layout[16]{};
+				::av_get_channel_layout_string(channel_layout, OV_COUNTOF(channel_layout), parameters->channels, parameters->channel_layout);
+
+				// 48000 Hz, stereo, fltp,
+				message.AppendFormat("%d Hz, %s, %s, ", parameters->sample_rate, channel_layout, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(parameters->format)));
+			}
+
+			// xxx kbps
+			message.AppendFormat("%d kbps, ", (parameters->bit_rate / 1024));
+			// timebase: 1/48000
+			message.AppendFormat("timebase: %d/%d, ", context->time_base.num, context->time_base.den);
+			// frame_size: 1234
+			message.AppendFormat("frame_size: %d", parameters->frame_size);
+			if (parameters->block_align != 0)
+			{
+				// align: 32
+				message.AppendFormat(", align: %d", parameters->block_align);
+			}
+
+			break;
+		
 		case AVMEDIA_TYPE_DATA:
 			message = "Data";
 			break;

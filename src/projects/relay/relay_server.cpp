@@ -10,9 +10,9 @@
 
 #include "relay_private.h"
 
-#include <media_router/media_router.h>
-#include <base/media_route/media_route_application_interface.h>
 #include <base/media_route/media_buffer.h>
+#include <base/media_route/media_route_application_interface.h>
+#include <media_router/media_router.h>
 
 RelayServer::RelayServer(MediaRouteApplicationInterface *media_route_application, const info::Application *application_info)
 	: _media_route_application(media_route_application),
@@ -21,25 +21,25 @@ RelayServer::RelayServer(MediaRouteApplicationInterface *media_route_application
 	// Listen to localhost:<relay_port>
 	auto host = application_info->GetParentAs<cfg::Host>("Host");
 
-	if(host == nullptr)
+	if (host == nullptr)
 	{
 		return;
 	}
 
 	auto &origin = host->GetPorts().GetOriginPort();
 
-	if(origin.IsParsed())
+	if (origin.IsParsed())
 	{
 		int port = origin.GetPort();
 
-		if(port > 0)
+		if (port > 0)
 		{
 			const ov::String &ip = host->GetIp();
 			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
 
-			_server_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Srt, address);
+			_server_port = PhysicalPortManager::Instance()->CreatePort(origin.GetSocketType(), address);
 
-			if(_server_port != nullptr)
+			if (_server_port != nullptr)
 			{
 				logti("Trying to start relay server on %s", address.ToString().CStr());
 				_server_port->AddObserver(this);
@@ -62,7 +62,7 @@ RelayServer::RelayServer(MediaRouteApplicationInterface *media_route_application
 
 RelayServer::~RelayServer()
 {
-	if(_server_port != nullptr)
+	if (_server_port != nullptr)
 	{
 		_server_port->RemoveObserver(this);
 	}
@@ -70,7 +70,7 @@ RelayServer::~RelayServer()
 
 void RelayServer::SendStream(const std::shared_ptr<ov::Socket> &remote, const std::shared_ptr<StreamInfo> &stream_info)
 {
-	if(_client_list.size() == 0)
+	if (_client_list.size() == 0)
 	{
 		return;
 	}
@@ -79,7 +79,7 @@ void RelayServer::SendStream(const std::shared_ptr<ov::Socket> &remote, const st
 	ov::String serialize = ov::String::FormatString("%s\n", stream_info->GetName().CStr());
 
 	// about 45 bytes per track
-	for(auto &track_iter : stream_info->GetTracks())
+	for (auto &track_iter : stream_info->GetTracks())
 	{
 		MediaTrack *track = track_iter.second.get();
 
@@ -95,19 +95,17 @@ void RelayServer::SendStream(const std::shared_ptr<ov::Socket> &remote, const st
 			"%d|%d|%d|%d|%d|%d|%lld|%lld\n",
 			track->GetFrameRate(), track->GetWidth(), track->GetHeight(),
 			track->GetSampleRate(), track->GetSample().GetFormat(), track->GetChannel().GetLayout(),
-			track->GetId(), track->GetCodecId(), track->GetMediaType(), track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), track->GetBitrate(), track->GetStartFrameTime(), track->GetLastFrameTime()
-		);
+			track->GetId(), track->GetCodecId(), track->GetMediaType(), track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), track->GetBitrate(), track->GetStartFrameTime(), track->GetLastFrameTime());
 	}
 
 	logtd("Trying to send a stream information for %s/%s (%u/%u)\n%s...",
-	      _application_info->GetName().CStr(), stream_info->GetName().CStr(),
-	      _application_info->GetId(), stream_info->GetId(),
-	      serialize.CStr()
-	);
+		  _application_info->GetName().CStr(), stream_info->GetName().CStr(),
+		  _application_info->GetId(), stream_info->GetId(),
+		  serialize.CStr());
 
 	RelayPacket response(RelayPacketType::CreateStream);
 
-	if(remote != nullptr)
+	if (remote != nullptr)
 	{
 		// send to specific relay client
 		Send(remote, stream_info->GetId(), response, serialize.ToData().get());
@@ -152,24 +150,47 @@ bool RelayServer::OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shar
 void RelayServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
 	logti("New RelayClient is connected: %s", remote->ToString().CStr());
+
+	std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
+
+	_client_list.emplace(remote.get(), ClientInfo());
 }
 
 void RelayServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
 	logtd("Data received from %s: %zu bytes", remote->ToString().CStr(), data->GetLength());
 
-	RelayPacket packet(data.get());
+	std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
 
-	switch(packet.GetType())
+	auto info_iter = _client_list.find(remote.get());
+
+	if (info_iter != _client_list.end())
 	{
-		case RelayPacketType::Register:
-			HandleRegister(remote, packet);
-			break;
+		auto &client_data = info_iter->second.data;
 
-		default:
-			OV_ASSERT2(false);
-			logte("Invalid packet received from client: %d", packet.GetType());
-			break;
+		if (client_data->Append(data.get()))
+		{
+			if (client_data->GetLength() >= sizeof(RelayPacket))
+			{
+				auto packet_data = client_data->Subdata(0, sizeof(RelayPacket));
+
+				RelayPacket packet(packet_data.get());
+
+				client_data = client_data->Subdata(sizeof(RelayPacket));
+
+				switch (packet.GetType())
+				{
+					case RelayPacketType::Register:
+						HandleRegister(remote, packet);
+						break;
+
+					default:
+						OV_ASSERT2(false);
+						logte("Invalid packet received from client: %d", packet.GetType());
+						break;
+				}
+			}
+		}
 	}
 }
 
@@ -182,7 +203,7 @@ void RelayServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Phys
 
 	auto info_iter = _client_list.find(remote.get());
 
-	if(info_iter != _client_list.end())
+	if (info_iter != _client_list.end())
 	{
 		_client_list.erase(info_iter);
 	}
@@ -192,7 +213,7 @@ void RelayServer::HandleRegister(const std::shared_ptr<ov::Socket> &remote, cons
 {
 	// The relay client wants to be registered on this server for the application
 	ov::String app_name(reinterpret_cast<const char *>(packet.GetData()), packet.GetDataSize());
-	if(_application_info->GetName() != app_name)
+	if (_application_info->GetName() != app_name)
 	{
 		// Cannot handle that application
 		logte("Cannot handle %s", app_name.CStr());
@@ -208,21 +229,15 @@ void RelayServer::HandleRegister(const std::shared_ptr<ov::Socket> &remote, cons
 
 	logtd("Registering a relay client %s for application: %s", remote->ToString().CStr(), _application_info->GetName().CStr());
 
-	{
-		std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
-
-		_client_list[remote.get()] = ClientInfo();
-	}
-
 	// Send streams to the relay client
 	auto streams = _media_route_application->GetStreams();
 
-	if(streams.empty() == false)
+	if (streams.empty() == false)
 	{
 		logtd("Trying to send streams (%zu streams found)...", streams.size());
 	}
 
-	for(auto &stream_iter : streams)
+	for (auto &stream_iter : streams)
 	{
 		const auto &stream_info = stream_iter.second->GetStreamInfo();
 
@@ -232,7 +247,7 @@ void RelayServer::HandleRegister(const std::shared_ptr<ov::Socket> &remote, cons
 
 void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_packet, const ov::Data *data)
 {
-	if(_client_list.empty())
+	if (_client_list.empty())
 	{
 		// There is no client to send
 		return;
@@ -248,16 +263,16 @@ void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_pack
 
 	packet.SetStart(true);
 
-	if(data != nullptr)
+	if (data != nullptr)
 	{
 		ov::ByteStream stream(data);
 
-		while(stream.Remained() > 0)
+		while (stream.Remained() > 0)
 		{
 			size_t read_bytes = stream.Read(static_cast<uint8_t *>(packet.GetData()), RelayPacketDataSize);
 			packet.SetDataSize(static_cast<uint16_t>(read_bytes));
 
-			if(stream.Remained() == 0)
+			if (stream.Remained() == 0)
 			{
 				packet.SetEnd(true);
 			}
@@ -265,7 +280,7 @@ void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_pack
 			{
 				std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
 
-				for(auto &client : _client_list)
+				for (auto &client : _client_list)
 				{
 					client.first->Send(&packet, sizeof(packet));
 				}
@@ -281,7 +296,7 @@ void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_pack
 		{
 			std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
 
-			for(auto &client : _client_list)
+			for (auto &client : _client_list)
 			{
 				client.first->Send(&packet, sizeof(packet));
 			}
@@ -291,7 +306,7 @@ void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_pack
 
 void RelayServer::Send(info::stream_id_t stream_id, const RelayPacket &base_packet, const void *data, uint16_t data_size)
 {
-	if(_client_list.empty())
+	if (_client_list.empty())
 	{
 		return;
 	}
@@ -313,17 +328,17 @@ void RelayServer::Send(const std::shared_ptr<ov::Socket> &socket, info::stream_i
 
 	packet.SetStart(true);
 
-	if(data != nullptr)
+	if (data != nullptr)
 	{
 		// separate the data to multiple packets
 		ov::ByteStream stream(data);
 
-		while(stream.Remained() > 0)
+		while (stream.Remained() > 0)
 		{
 			size_t read_bytes = stream.Read(static_cast<uint8_t *>(packet.GetData()), RelayPacketDataSize);
 			packet.SetDataSize(static_cast<uint16_t>(read_bytes));
 
-			if(stream.Remained() == 0)
+			if (stream.Remained() == 0)
 			{
 				packet.SetEnd(true);
 			}
@@ -343,7 +358,7 @@ void RelayServer::Send(const std::shared_ptr<ov::Socket> &socket, info::stream_i
 
 void RelayServer::SendMediaPacket(const std::shared_ptr<MediaRouteStream> &media_stream, const MediaPacket *packet)
 {
-	if(_client_list.empty())
+	if (_client_list.empty())
 	{
 		// Nothing to do
 		return;
@@ -354,12 +369,14 @@ void RelayServer::SendMediaPacket(const std::shared_ptr<MediaRouteStream> &media
 
 	RelayPacket relay_packet(RelayPacketType::Packet);
 
-	relay_packet.SetFragmentHeader(packet->_frag_hdr.get());
+	relay_packet.SetFragmentHeader(packet->GetFragHeader());
 
 	relay_packet.SetMediaType(static_cast<int8_t>(packet->GetMediaType()));
 	relay_packet.SetTrackId(static_cast<uint32_t>(packet->GetTrackId()));
 	relay_packet.SetPts(static_cast<uint64_t>(packet->GetPts()));
-	relay_packet.SetFlags(static_cast<uint8_t>(packet->GetFlags()));
+	relay_packet.SetDts(static_cast<uint64_t>(packet->GetDts()));
+	relay_packet.SetDuration(static_cast<uint64_t>(packet->GetDuration()));
+	relay_packet.SetFlag(static_cast<uint8_t>(packet->GetFlag()));
 
 	Send(stream_info->GetId(), relay_packet, packet->GetData().get());
 }

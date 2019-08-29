@@ -1,3 +1,11 @@
+//==============================================================================
+//
+//  Transcode
+//
+//  Created by Kwon Keuk Han
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
@@ -20,14 +28,14 @@ namespace common
 	// 디코딩된 비디오 프레임의 타입
 	enum class PictureType : uint8_t
 	{
-		None = 0, ///< Undefined
-		I,     ///< Intra
-		P,     ///< Predicted
-		B,     ///< Bi-dir predicted
-		S,     ///< S(GMC)-VOP MPEG4
-		SI,    ///< Switching Intra
-		SP,    ///< Switching Predicted
-		BI,    ///< BI type
+		None = 0,  ///< Undefined
+		I,		   ///< Intra
+		P,		   ///< Predicted
+		B,		   ///< Bi-dir predicted
+		S,		   ///< S(GMC)-VOP MPEG4
+		SI,		   ///< Switching Intra
+		SP,		   ///< Switching Predicted
+		BI,		   ///< BI type
 	};
 
 	// 미디어 코덱 아이디
@@ -43,7 +51,6 @@ namespace common
 		Opus
 	};
 
-
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	// 타입베이스
 	//////////////////////////////////////////////////////////////////////////////////////////////////
@@ -51,17 +58,17 @@ namespace common
 	class Timebase
 	{
 	public:
-		Timebase() :
-			Timebase(0, 0)
+		Timebase()
+			: Timebase(0, 0)
 		{
 		}
 
-		Timebase(int32_t num, int32_t den) :
-			_num(num), _den(den)
+		Timebase(int32_t num, int32_t den)
+			: _num(num), _den(den)
 		{
 		}
 
-		Timebase &operator =(const Timebase &T) noexcept
+		Timebase &operator=(const Timebase &T) noexcept
 		{
 			_num = T._num;
 			_den = T._den;
@@ -85,24 +92,54 @@ namespace common
 			_den = den;
 		}
 
-		int32_t GetNum()
+		int32_t GetNum() const
 		{
 			return _num;
 		}
 
-		int32_t GetDen()
+		int32_t GetDen() const
 		{
 			return _den;
 		}
 
-		double GetExpr()
+		double GetExpr() const
 		{
+			if (_den == 0)
+			{
+				return 0.0;
+			}
+
 			return (double)_num / (double)_den;
 		}
 
-		ov::String ToString()
+		double GetTimescale() const
+		{
+			if(_num == 0)
+			{
+				return 0.0;
+			}
+			
+			return (double)_den / (double)_num;
+		}
+
+		bool operator==(const Timebase &timebase) const
+		{
+			return (timebase._num == _num) && (timebase._den == _den);
+		}
+
+		bool operator!=(const Timebase &timebase) const
+		{
+			return operator==(timebase) == false;
+		}
+
+		ov::String GetStringExpr() const
 		{
 			return ov::String::FormatString("%d/%d", GetNum(), GetDen());
+		}
+
+		ov::String ToString() const
+		{
+			return std::move(GetStringExpr());
 		}
 
 	private:
@@ -124,17 +161,17 @@ namespace common
 		{
 			None = -1,
 
-			U8 = 0,          ///< unsigned 8 bits
-			S16 = 1,         ///< signed 16 bits
-			S32 = 2,         ///< signed 32 bits
-			Flt = 3,         ///< float
-			Dbl = 4,         ///< double
+			U8 = 0,   ///< unsigned 8 bits
+			S16 = 1,  ///< signed 16 bits
+			S32 = 2,  ///< signed 32 bits
+			Flt = 3,  ///< float
+			Dbl = 4,  ///< double
 
-			U8P = 5,         ///< unsigned 8 bits, planar
-			S16P = 6,        ///< signed 16 bits, planar
-			S32P = 7,        ///< signed 32 bits, planar
-			FltP = 8,        ///< float, planar
-			DblP = 9,        ///< double, planar
+			U8P = 5,   ///< unsigned 8 bits, planar
+			S16P = 6,  ///< signed 16 bits, planar
+			S32P = 7,  ///< signed 32 bits, planar
+			FltP = 8,  ///< float, planar
+			DblP = 9,  ///< double, planar
 
 			Nb
 		};
@@ -175,7 +212,7 @@ namespace common
 
 		~AudioSample() = default;
 
-		AudioSample &operator =(const AudioSample &T) noexcept
+		AudioSample &operator=(const AudioSample &T) noexcept
 		{
 			_sample_size = T._sample_size;
 			_format = T._format;
@@ -186,15 +223,15 @@ namespace common
 		}
 
 #define OV_MEDIA_TYPE_SET_VALUE(type, ...) \
-    case type: \
-        __VA_ARGS__; \
-        break
+	case type:                             \
+		__VA_ARGS__;                       \
+		break
 
 		void SetFormat(Format fmt)
 		{
 			_format = fmt;
 
-			switch(_format)
+			switch (_format)
 			{
 				OV_MEDIA_TYPE_SET_VALUE(Format::U8, _name = "u8", _sample_size = 1);
 				OV_MEDIA_TYPE_SET_VALUE(Format::S16, _name = "s16", _sample_size = 2);
@@ -208,16 +245,17 @@ namespace common
 				OV_MEDIA_TYPE_SET_VALUE(Format::DblP, _name = "dblp", _sample_size = 8);
 
 				default:
-				OV_MEDIA_TYPE_SET_VALUE(Format::None, _name = "none", _sample_size = 0);
+					OV_MEDIA_TYPE_SET_VALUE(Format::None, _name = "none", _sample_size = 0);
 			}
 		}
 
-		int32_t GetSampleSize()
+		// Unit: Bytes
+		int32_t GetSampleSize() const
 		{
 			return _sample_size;
 		}
-
-		AudioSample::Format GetFormat()
+		
+		AudioSample::Format GetFormat() const
 		{
 			return _format;
 		}
@@ -227,7 +265,7 @@ namespace common
 			_rate = rate;
 		}
 
-		Rate GetRate()
+		Rate GetRate() const
 		{
 			return _rate;
 		}
@@ -258,8 +296,8 @@ namespace common
 	public:
 		enum class Layout : uint32_t
 		{
-			LayoutMono = 0x00000004U, // AV_CH_LAYOUT_MONO
-			LayoutStereo = (0x00000001U | 0x00000002U) // AV_CH_FRONT_LEFT|AV_CH_FRONT_RIGHT
+			LayoutMono = 0x00000004U,					// AV_CH_LAYOUT_MONO
+			LayoutStereo = (0x00000001U | 0x00000002U)  // AV_CH_FRONT_LEFT|AV_CH_FRONT_RIGHT
 
 			// TODO(SOULK) : 추가적인 레이아웃을 지원해야함
 		};
@@ -268,7 +306,7 @@ namespace common
 		AudioChannel() = default;
 		~AudioChannel() = default;
 
-		AudioChannel &operator =(const AudioChannel &audio_channel) noexcept
+		AudioChannel &operator=(const AudioChannel &audio_channel) noexcept
 		{
 			_layout = audio_channel._layout;
 			_count = audio_channel._count;
@@ -281,7 +319,7 @@ namespace common
 		{
 			_layout = layout;
 
-			switch(_layout)
+			switch (_layout)
 			{
 				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutStereo, _count = 2, _name = "stereo");
 				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutMono, _count = 1, _name = "mono");
@@ -312,5 +350,4 @@ namespace common
 		std::string _name = "stereo";
 	};
 
-
-}
+}  // namespace common

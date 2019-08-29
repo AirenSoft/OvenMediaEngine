@@ -1,13 +1,21 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Kwon Keuk Han
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #pragma once
 
 #include <base/common_types.h>
+#include <base/media_route/media_route_application_observer.h>
 #include <base/ovcrypto/ovcrypto.h>
 #include <base/publisher/application.h>
 #include <base/publisher/stream.h>
-#include <base/media_route/media_route_application_observer.h>
 
-#include <physical_port/physical_port.h>
 #include <ice/ice_port_manager.h>
+#include <physical_port/physical_port.h>
 
 #include <chrono>
 
@@ -16,62 +24,62 @@
 //====================================================================================================
 enum class MonitroingCollectionType
 {
-    Stream = 0,
-    App,
-    Origin,
-    Host,
+	Stream = 0,
+	App,
+	Origin,
+	Host,
 };
 
 struct MonitoringCollectionData
 {
-    MonitoringCollectionData() = default;
+	MonitoringCollectionData() = default;
 
-    MonitoringCollectionData(MonitroingCollectionType type_,
-                           const ov::String &origin_name_ = "",
-                            const ov::String &app_name_ = "",
-                            const ov::String &stream_name_ = "")
-    {
-        type = type_;
-        type_string = GetTypeString(type);
-        origin_name = origin_name_;
-        app_name = app_name_;
-        stream_name = stream_name_;
-    }
+	MonitoringCollectionData(MonitroingCollectionType type_,
+							 const ov::String &origin_name_ = "",
+							 const ov::String &app_name_ = "",
+							 const ov::String &stream_name_ = "")
+	{
+		type = type_;
+		type_string = GetTypeString(type);
+		origin_name = origin_name_;
+		app_name = app_name_;
+		stream_name = stream_name_;
+	}
 
-    void Append(const std::shared_ptr<MonitoringCollectionData> &collection)
-    {
-        edge_connection += collection->edge_connection;
-        edge_bitrate += collection->edge_bitrate;
-        p2p_connection += collection->p2p_connection;
-        p2p_bitrate += collection->p2p_bitrate;
-    }
+	void Append(const std::shared_ptr<MonitoringCollectionData> &collection)
+	{
+		edge_connection += collection->edge_connection;
+		edge_bitrate += collection->edge_bitrate;
+		p2p_connection += collection->p2p_connection;
+		p2p_bitrate += collection->p2p_bitrate;
+	}
 
-    static ov::String GetTypeString(MonitroingCollectionType type)
-    {
-        ov::String result;
+	static ov::String GetTypeString(MonitroingCollectionType type)
+	{
+		ov::String result;
 
-        if(type == MonitroingCollectionType::Stream)
-            result = "stream";
-        else if(type == MonitroingCollectionType::App)
-            result = "app";
-        else if(type == MonitroingCollectionType::Origin)
-            result = "org";
-        else if(type == MonitroingCollectionType::Host)
-            result = "host";
+		if (type == MonitroingCollectionType::Stream)
+			result = "stream";
+		else if (type == MonitroingCollectionType::App)
+			result = "app";
+		else if (type == MonitroingCollectionType::Origin)
+			result = "org";
+		else if (type == MonitroingCollectionType::Host)
+			result = "host";
 
-        return result;
-    }
+		return result;
+	}
 
-    MonitroingCollectionType type = MonitroingCollectionType::Stream;
-    ov::String type_string;
-    ov::String origin_name;
-    ov::String app_name;
-    ov::String stream_name;
-    uint32_t edge_connection = 0;   // count
-    uint64_t edge_bitrate = 0;      // bps
-    uint32_t p2p_connection = 0;    // count
-    uint64_t p2p_bitrate = 0;       // bps
-    std::chrono::system_clock::time_point check_time ; // (chrono)
+	MonitroingCollectionType type = MonitroingCollectionType::Stream;
+	ov::String type_string;
+	ov::String origin_name;
+	ov::String app_name;
+	ov::String stream_name;
+	uint32_t edge_connection = 0;					   // count
+	uint64_t edge_bitrate = 0;						   // bps
+	uint32_t p2p_connection = 0;					   // count
+	uint64_t p2p_bitrate = 0;						   // bps
+	std::chrono::system_clock::time_point check_time;  // (chrono)
 };
 
 // WebRTC, HLS, MPEG-DASH 등 모든 Publisher는 다음 Interface를 구현하여 MediaRouterInterface에 자신을 등록한다.
@@ -84,9 +92,19 @@ public:
 	// app_name으로 Application을 찾아서 반환한다.
 	std::shared_ptr<Application> GetApplicationByName(ov::String app_name);
 	std::shared_ptr<Stream> GetStream(ov::String app_name, ov::String stream_name);
+	template <typename T>
+	std::shared_ptr<T> GetStreamAs(ov::String app_name, ov::String stream_name)
+	{
+		return std::static_pointer_cast<T>(GetStream(app_name, stream_name));
+	}
 
 	std::shared_ptr<Application> GetApplicationById(info::application_id_t application_id);
 	std::shared_ptr<Stream> GetStream(info::application_id_t application_id, uint32_t stream_id);
+	template <typename T>
+	std::shared_ptr<T> GetStreamAs(info::application_id_t application_id, uint32_t stream_id)
+	{
+		return std::static_pointer_cast<T>(GetStream(application_id, stream_id));
+	}
 
 	// monitoring data pure virtual function
 	// - collected_datas vector must be insert processed
@@ -97,7 +115,8 @@ protected:
 	virtual ~Publisher() = default;
 
 	// 모든 Publisher는 Type을 정의해야 하며, Config과 일치해야 한다.
-	virtual cfg::PublisherType GetPublisherType() = 0;
+	virtual cfg::PublisherType GetPublisherType() const = 0;
+	virtual const char *GetPublisherName() const = 0;
 	virtual std::shared_ptr<Application> OnCreateApplication(const info::Application *application_info) = 0;
 
 	// 모든 application들의 map
@@ -109,4 +128,3 @@ protected:
 
 	std::shared_ptr<MediaRouteInterface> _router;
 };
-

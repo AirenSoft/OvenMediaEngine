@@ -1,5 +1,3 @@
-#include <utility>
-
 //==============================================================================
 //
 //  OvenMediaEngine
@@ -15,29 +13,31 @@
 #include "transcode_codec_enc_vp8.h"
 #include "transcode_codec_enc_opus.h"
 
+#include <utility>
+
 #define OV_LOG_TAG "TranscodeCodec"
 
 TranscodeEncoder::TranscodeEncoder()
 {
 	avcodec_register_all();
 
-	_pkt = av_packet_alloc();
-	_frame = av_frame_alloc();
+	_packet = ::av_packet_alloc();
+	_frame = ::av_frame_alloc();
 
-	_codec_par = avcodec_parameters_alloc();
+	_codec_par = ::avcodec_parameters_alloc();
 }
 
 TranscodeEncoder::~TranscodeEncoder()
 {
-	OV_SAFE_FUNC(_context, nullptr, avcodec_free_context, &);
+	OV_SAFE_FUNC(_context, nullptr, ::avcodec_free_context, &);
 
-	OV_SAFE_FUNC(_frame, nullptr, av_frame_free, &);
-	OV_SAFE_FUNC(_pkt, nullptr, av_packet_free, &);
+	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
+	OV_SAFE_FUNC(_packet, nullptr, ::av_packet_free, &);
 
-	OV_SAFE_FUNC(_codec_par, nullptr, avcodec_parameters_free, &);
+	OV_SAFE_FUNC(_codec_par, nullptr, ::avcodec_parameters_free, &);
 }
 
-std::unique_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context)
+std::unique_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> output_context)
 {
 	std::unique_ptr<TranscodeEncoder> encoder = nullptr;
 
@@ -66,7 +66,7 @@ std::unique_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaC
 
 	if(encoder != nullptr)
 	{
-        if (!encoder->Configure(std::move(transcode_context)))
+        if (encoder->Configure(std::move(output_context)) == false)
         {
             return nullptr;
         }
@@ -77,9 +77,9 @@ std::unique_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaC
 
 bool TranscodeEncoder::Configure(std::shared_ptr<TranscodeContext> context)
 {
-	_transcode_context = context;
+	_output_context = context;
 
-	return (_transcode_context != nullptr);
+	return (_output_context != nullptr);
 }
 
 void TranscodeEncoder::SendBuffer(std::unique_ptr<const MediaFrame> frame)

@@ -16,21 +16,21 @@ public:
 	TranscodeDecoder();
 	~TranscodeDecoder() override;
 
-	static std::unique_ptr<TranscodeDecoder> CreateDecoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> transcode_context = nullptr);
+	static std::unique_ptr<TranscodeDecoder> CreateDecoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context);
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
 	void SendBuffer(std::unique_ptr<const MediaPacket> packet) override;
 
 protected:
-	void ShowCodecParameters(const AVCodecParameters *parameters);
+	static void ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters);
+
+	std::shared_ptr<TranscodeContext> _input_context;
 
 	AVCodec *_codec = nullptr;
 	AVCodecContext *_context = nullptr;
 	AVCodecParserContext *_parser = nullptr;
 	AVCodecParameters *_codec_par = avcodec_parameters_alloc();
-
-	std::shared_ptr<TranscodeContext> _transcode_context;
 
 	bool _change_format = false;
 

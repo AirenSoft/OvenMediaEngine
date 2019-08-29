@@ -37,6 +37,7 @@ public:
 protected:
 	struct ClientInfo
 	{
+		std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>();
 	};
 
 	void SendStream(const std::shared_ptr<ov::Socket> &remote, const std::shared_ptr<StreamInfo> &stream_info);

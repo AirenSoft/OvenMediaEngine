@@ -123,18 +123,21 @@ ov::String RtmpChunkStream::GetEncoderTypeString(RtmpEncoderType encoder_type)
 
 	switch(encoder_type)
 	{
-		case RtmpEncoderType::Xsplit :
-			codec_string = "xsplit";
+		case RtmpEncoderType::Xsplit:
+			codec_string = "Xsplit";
 			break;
-		case RtmpEncoderType::OBS :
-			codec_string = "obs";
+		case RtmpEncoderType::OBS:
+			codec_string = "OBS";
 			break;
-		case RtmpEncoderType::Lavf :
-			codec_string = "xsplit";
+		case RtmpEncoderType::Lavf:
+			codec_string = "Lavf/ffmpeg";
 			break;
-		case RtmpEncoderType::Custom :
+		case RtmpEncoderType::Custom:
+			codec_string = "Unknown";
+			break;
+			
 		default :
-			codec_string = "ffmpeg";
+			codec_string = "Unknown";
 			break;
 	}
 

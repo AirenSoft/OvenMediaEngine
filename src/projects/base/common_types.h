@@ -1,13 +1,21 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Kwon Keuk Han
+//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #pragma once
 
+#include <condition_variable>
 #include <cstdint>
 #include <memory>
-#include <vector>
-#include <queue>
 #include <mutex>
-#include <tuple>
+#include <queue>
 #include <thread>
-#include <condition_variable>
+#include <tuple>
+#include <vector>
 
 #include "ovlibrary/ovlibrary.h"
 
@@ -21,7 +29,7 @@ enum class FrameType : int8_t
 	AudioFrameKey,
 	AudioFrameDelta,
 	AudioFrameSpeech,
-	AudioFrameCN, // Comfort Noise, https://tools.ietf.org/html/rfc3389
+	AudioFrameCN,  // Comfort Noise, https://tools.ietf.org/html/rfc3389
 	VideoFrameKey,
 	VideoFrameDelta,
 };
@@ -32,19 +40,22 @@ public:
 	// Number of fragmentations
 	uint16_t fragmentation_vector_size = 0;
 	// Offset of pointer to data for each
-	size_t fragmentation_offset[MAX_FRAG_COUNT] {};
+	size_t fragmentation_offset[MAX_FRAG_COUNT]{};
 
 	// fragmentation
 	// Data size for each fragmentation
-	size_t fragmentation_length[MAX_FRAG_COUNT] {};
+	size_t fragmentation_length[MAX_FRAG_COUNT]{};
 	// Timestamp difference relative "now" for each fragmentation
-	uint16_t fragmentation_time_diff[MAX_FRAG_COUNT] {};
+	uint16_t fragmentation_time_diff[MAX_FRAG_COUNT]{};
 	// Payload type of each fragmentation
-	uint8_t fragmentation_pl_type[MAX_FRAG_COUNT] {};
+	uint8_t fragmentation_pl_type[MAX_FRAG_COUNT]{};
 
-	void VerifyAndAllocateFragmentationHeader(const size_t size) {
+	void VerifyAndAllocateFragmentationHeader(const size_t size)
+	{
 		const auto size16 = static_cast<uint16_t>(size);
-		if (fragmentation_vector_size < size16) {
+
+		if (fragmentation_vector_size < size16)
+		{
 			uint16_t oldVectorSize = fragmentation_vector_size;
 			{
 				// offset
@@ -87,7 +98,8 @@ public:
 	int32_t _encoded_width = 0;
 	int32_t _encoded_height = 0;
 
-	int64_t _time_stamp = 0;
+	int64_t _time_stamp = 0LL;
+	int64_t _duration = 0LL;
 
 	FrameType _frame_type = FrameType::VideoFrameDelta;
 	std::shared_ptr<ov::Data> _buffer;
@@ -98,7 +110,7 @@ public:
 
 struct CodecSpecificInfoGeneric
 {
-	uint8_t simulcast_idx = 0;      // TODO: 향후 확장 구현에서 사용
+	uint8_t simulcast_idx = 0;  // TODO: 향후 확장 구현에서 사용
 };
 
 static const int32_t kCodecTypeAudio = 0x10000000;
@@ -121,34 +133,36 @@ enum class CodecType : int32_t
 	Unknown
 };
 
-enum class H264PacketizationMode {
+enum class H264PacketizationMode
+{
 	NonInterleaved = 0,  // Mode 1 - STAP-A, FU-A is allowed
-	SingleNalUnit        // Mode 0 - only single NALU allowed
+	SingleNalUnit		 // Mode 0 - only single NALU allowed
 };
 
-struct CodecSpecificInfoH264 {
-	H264PacketizationMode packetization_mode;
-	uint8_t simulcast_idx;
+struct CodecSpecificInfoH264
+{
+	H264PacketizationMode packetization_mode = H264PacketizationMode::NonInterleaved;
+	uint8_t simulcast_idx = 0;
 };
 
 struct CodecSpecificInfoVp8
 {
-	int16_t picture_id = 0;         // Negative value to skip pictureId.
+	int16_t picture_id = -1;  // Negative value to skip pictureId.
 	bool non_reference = false;
 	uint8_t simulcast_idx = 0;
 	uint8_t temporal_idx = 0;
 	bool layer_sync = false;
-	int tl0_pic_idx = 0;            // Negative value to skip tl0PicIdx.
-	int8_t key_idx = 0;             // Negative value to skip keyIdx.
+	int tl0_pic_idx = -1;  // Negative value to skip tl0PicIdx.
+	int8_t key_idx = -1;   // Negative value to skip keyIdx.
 };
 
 struct CodecSpecificInfoOpus
 {
-	int sample_rate_hz;
-	size_t num_channels;
-	int default_bitrate_bps;
-	int min_bitrate_bps;
-	int max_bitrate_bps;
+	int sample_rate_hz = 0;
+	size_t num_channels = 0;
+	int default_bitrate_bps = 0;
+	int min_bitrate_bps = 0;
+	int max_bitrate_bps = 0;
 };
 
 union CodecSpecificInfoUnion
@@ -167,6 +181,6 @@ union CodecSpecificInfoUnion
 struct CodecSpecificInfo
 {
 	CodecType codec_type = CodecType::Unknown;
-	const char *codec_name = nullptr;
+	const char* codec_name = nullptr;
 	CodecSpecificInfoUnion codec_specific = { 0 };
 };

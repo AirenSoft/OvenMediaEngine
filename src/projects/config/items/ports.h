@@ -82,7 +82,7 @@ namespace cfg
 		}
 
 		// Listen port for Origin
-		Port _origin_port { "9000/srt" };
+		Port _origin_port { "9000/tcp" };
 
 		// Listen port for Providers
 		Port _rtmp_provider_port { "1935/tcp" };

@@ -14,10 +14,10 @@ TranscodeFilter::TranscodeFilter() :
 	// av_log_set_level(AV_LOG_TRACE);
 }
 
-TranscodeFilter::TranscodeFilter(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context) :
+TranscodeFilter::TranscodeFilter(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context) :
 	_impl(nullptr)
 {
-	Configure(input_media_track, context);
+	Configure(input_media_track, std::move(input_context), std::move(output_context));
 }
 
 TranscodeFilter::~TranscodeFilter()
@@ -28,7 +28,7 @@ TranscodeFilter::~TranscodeFilter()
 	}
 }
 
-bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> context)
+bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context)
 {
 	MediaType type = input_media_track->GetMediaType();
 
@@ -46,7 +46,7 @@ bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, s
 	}
 
 	// 트랜스코딩 컨텍스트 정보 전달
-	_impl->Configure(std::move(input_media_track), std::move(context));
+	_impl->Configure(std::move(input_media_track), std::move(input_context), std::move(output_context));
 
 	return true;
 }

@@ -78,7 +78,6 @@ private:
 	// 스트림별 트랙집합
 	std::map <ov::String, std::vector <uint8_t >> _stream_tracks;
 
-
 private:
 	volatile bool _kill_flag;
 
@@ -93,12 +92,10 @@ private:
 
 	TranscodeApplication *_parent;
 
-	// 디코더 생성
-	void CreateDecoder(int32_t track_id);
+	void CreateDecoder(int32_t track_id, std::shared_ptr<TranscodeContext> input_context);
 
-	// 인코더 생성
 	void CreateEncoders(std::shared_ptr<MediaTrack> media_track);
-	void CreateEncoder(std::shared_ptr<MediaTrack> media_track, std::shared_ptr<TranscodeContext> transcode_context);
+	void CreateEncoder(std::shared_ptr<MediaTrack> media_track, std::shared_ptr<TranscodeContext> output_context);
 
 	// 디코딩된 프레임의 포맷이 분석되거나 변경될 경우 호출됨.
 	void ChangeOutputFormat(MediaFrame *buffer);
@@ -106,20 +103,22 @@ private:
 	void CreateFilters(std::shared_ptr<MediaTrack> media_track, MediaFrame *buffer);
 	void DoFilters(std::unique_ptr<MediaFrame> frame);
 
-	// 1. 디코딩
+	// There are 3 steps to process packet
+	// Step 1: Decode (Decode a frame from given packets)
 	TranscodeResult DecodePacket(int32_t track_id, std::unique_ptr<const MediaPacket> packet);
-	// 2. 필터링
+	// Step 2: Filter (resample/rescale the decoded frame)
 	TranscodeResult FilterFrame(int32_t track_id, std::unique_ptr<MediaFrame> frame);
-	// 3. 인코딩
+	// Step 3: Encode (Encode the filtered frame to packets)
 	TranscodeResult EncodeFrame(int32_t track_id, std::unique_ptr<const MediaFrame> frame);
 
 	// 출력(변화된) 스트림 정보
 	bool AddStreamInfoOutput(ov::String stream_name);
 	std::map<ov::String, std::shared_ptr<StreamInfo>> _stream_info_outputs;
 
-	// 트랜스코딩 코덱 변환 정보
-	uint8_t AddContext(common::MediaType media_type, std::shared_ptr<TranscodeContext> context);
-	std::map<MediaTrackId, std::shared_ptr<TranscodeContext>> _contexts;
+	// Transcoding information
+	uint8_t AddOutputContext(common::MediaType media_type, std::shared_ptr<TranscodeContext> output_context);
+
+	std::map<MediaTrackId, std::shared_ptr<TranscodeContext>> _output_contexts;
 
 	// Create output streams
 	void CreateStreams();

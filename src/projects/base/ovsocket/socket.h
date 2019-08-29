@@ -10,19 +10,19 @@
 
 #include "socket_address.h"
 
-#include <sys/socket.h>
-#include <sys/epoll.h>
 #include <netinet/in.h>
+#include <sys/epoll.h>
+#include <sys/socket.h>
 
-#include <utility>
-#include <memory>
-#include <map>
 #include <functional>
+#include <map>
+#include <memory>
+#include <utility>
 
 // for SRT
-#include <srt/srt.h>
-#include <base/ovlibrary/semaphore.h>
 #include <base/ovlibrary/ovlibrary.h>
+#include <base/ovlibrary/semaphore.h>
+#include <srt/srt.h>
 
 namespace ov
 {
@@ -65,9 +65,9 @@ namespace ov
 			SetSocket(type, sock);
 		}
 
-		bool operator ==(const int &sock) const
+		bool operator==(const int &sock) const
 		{
-			switch(_type)
+			switch (_type)
 			{
 				case SocketType::Tcp:
 				case SocketType::Udp:
@@ -81,14 +81,14 @@ namespace ov
 			}
 		}
 
-		bool operator !=(const int &sock) const
+		bool operator!=(const int &sock) const
 		{
-			return !operator ==(sock);
+			return !operator==(sock);
 		}
 
 		int GetSocket() const
 		{
-			switch(_type)
+			switch (_type)
 			{
 				case SocketType::Tcp:
 				case SocketType::Udp:
@@ -104,13 +104,13 @@ namespace ov
 
 		void SetSocket(SocketType type, int sock)
 		{
-			switch(type)
+			switch (type)
 			{
 				case SocketType::Tcp:
 				case SocketType::Udp:
 					_socket.socket = sock;
 
-					if(sock != InvalidSocket)
+					if (sock != InvalidSocket)
 					{
 						_type = type;
 						_valid = true;
@@ -120,7 +120,7 @@ namespace ov
 				case SocketType::Srt:
 					_socket.srt_socket = sock;
 
-					if(sock != SRT_INVALID_SOCK)
+					if (sock != SRT_INVALID_SOCK)
 					{
 						_type = type;
 						_valid = true;
@@ -152,7 +152,7 @@ namespace ov
 			return _type;
 		}
 
-		SocketWrapper &operator =(const SocketWrapper &wrapper) = default;
+		SocketWrapper &operator=(const SocketWrapper &wrapper) = default;
 
 	protected:
 		SocketType _type = SocketType::Unknown;
@@ -162,7 +162,7 @@ namespace ov
 		{
 			socket_t socket;
 			SRTSOCKET srt_socket;
-		} _socket { InvalidSocket };
+		} _socket{InvalidSocket};
 	};
 
 	// send queue input data
@@ -202,13 +202,13 @@ namespace ov
 		{
 			send_size += send_size_;
 
-			if(send_size > original_length)
+			if (send_size > original_length)
 				send_size = original_length;
 		}
 
 		bool IsSendCompleted()
 		{
-			return  (send_size == original_length);
+			return (send_size == original_length);
 		}
 
 		time_t create_time;
@@ -238,13 +238,13 @@ namespace ov
 
 		bool Listen(int backlog = SOMAXCONN);
 
-		template<typename T>
+		template <typename T>
 		std::shared_ptr<T> AcceptClient()
 		{
 			SocketAddress client;
 			SocketWrapper client_socket = AcceptClientInternal(&client);
 
-			if(client_socket.IsValid())
+			if (client_socket.IsValid())
 			{
 				// Accept()는 TCP에서만 일어남
 				return std::make_shared<T>(client_socket, client);
@@ -265,7 +265,7 @@ namespace ov
 		std::shared_ptr<SocketAddress> GetRemoteAddress() const;
 
 		// for normal socket
-		template<class T>
+		template <class T>
 		bool SetSockOpt(int option, const T &value)
 		{
 			return SetSockOpt(option, &value, (socklen_t)sizeof(T));
@@ -274,7 +274,7 @@ namespace ov
 		bool SetSockOpt(int option, const void *value, socklen_t value_length);
 
 		// for SRT
-		template<class T>
+		template <class T>
 		bool SetSockOpt(SRT_SOCKOPT option, const T &value)
 		{
 			return SetSockOpt(option, &value, static_cast<int>(sizeof(T)));
@@ -302,19 +302,20 @@ namespace ov
 		// 데이터 송신
 		virtual ssize_t Send(const void *data, size_t length);
 		virtual ssize_t Send(const std::shared_ptr<const Data> &data);
-        virtual ssize_t Send(const void *data, size_t length, bool &is_retry);
+		virtual ssize_t Send(const void *data, size_t length, bool &is_retry);
 
 		virtual ssize_t SendTo(const ov::SocketAddress &address, const void *data, size_t length);
 		virtual ssize_t SendTo(const ov::SocketAddress &address, const std::shared_ptr<const Data> &data);
 
-		virtual // 데이터 수신
+		// 데이터 수신
 		// 최대 ByteData의 capacity만큼 데이터를 기록
 		// false가 반환되면 error를 체크해야 함
-		std::shared_ptr<ov::Error> Recv(std::shared_ptr<Data> &data);
+		virtual std::shared_ptr<ov::Error> Recv(std::shared_ptr<Data> &data);
+		virtual std::shared_ptr<ov::Error> Recv(void *data, size_t length, size_t *received_length);
 
-		virtual // 최대 ByteData의 capacity만큼 데이터를 기록
+		// 최대 ByteData의 capacity만큼 데이터를 기록
 		// nullptr이 반환되면 errno를 체크해야 함
-		std::shared_ptr<ov::Error> RecvFrom(std::shared_ptr<Data> &data, std::shared_ptr<ov::SocketAddress> *address);
+		virtual std::shared_ptr<ov::Error> RecvFrom(std::shared_ptr<Data> &data, std::shared_ptr<ov::SocketAddress> *address);
 
 		// 소켓을 닫음
 		virtual bool Close();
@@ -357,14 +358,12 @@ namespace ov
 		epoll_event *_epoll_events = nullptr;
 		int _last_epoll_event_count = 0;
 
-        bool _send_thread_run = false;
+		bool _send_thread_run = false;
 		ov::Semaphore _send_queue_event;
-		uint32_t _max_send_queue = 0; //  0 - infinity
+		uint32_t _max_send_queue = 0;  //  0 - infinity
 		std::mutex _send_queue_guard;
 		std::queue<std::unique_ptr<SocketSendData>> _send_data_queue;
 		std::thread _send_thread;
 		bool _send_thread_created = false;
-
-
 	};
-}
+}  // namespace ov

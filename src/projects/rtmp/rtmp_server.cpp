@@ -262,9 +262,9 @@ bool RtmpServer::OnChunkStreamReadyComplete(ov::ClientSocket *remote,
     // observer들에게 알림
     for(auto &observer : _observers)
     {
-        if(!observer->OnStreamReadyComplete(app_name, stream_name, media_info, application_id, stream_id))
+        if(observer->OnStreamReadyComplete(app_name, stream_name, media_info, application_id, stream_id) == false)
         {
-            logte("Rtmp input stream ready fail - app(%s) stream(%s) remote(%s)",
+            logte("An error occurred while notify RTMP ready event to observers for [%s/%s] remote(%s)",
                     app_name.CStr(),
                     stream_name.CStr(),
                     remote->ToString().CStr());
@@ -272,7 +272,7 @@ bool RtmpServer::OnChunkStreamReadyComplete(ov::ClientSocket *remote,
         }
     }
 
-    logti("Rtmp input stream create completed - strem(%s/%s) id(%u/%u) device(%s) remote(%s)",
+    logti("RTMP input stream is created for [%s/%s], id(%u/%u) device(%s) remote(%s)",
             app_name.CStr(),
             stream_name.CStr(),
             application_id,

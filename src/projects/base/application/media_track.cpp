@@ -58,7 +58,7 @@ void MediaTrack::SetId(uint32_t id)
 	_id = id;
 }
 
-uint32_t MediaTrack::GetId()
+uint32_t MediaTrack::GetId() const
 {
 	return _id;
 }
@@ -68,7 +68,7 @@ void MediaTrack::SetMediaType(MediaType type)
 	_media_type = type;
 }
 
-MediaType MediaTrack::GetMediaType()
+MediaType MediaTrack::GetMediaType() const
 {
 	return _media_type;
 }
@@ -78,12 +78,12 @@ void MediaTrack::SetCodecId(MediaCodecId id)
 	_codec_id = id;
 }
 
-MediaCodecId MediaTrack::GetCodecId()
+MediaCodecId MediaTrack::GetCodecId() const
 {
 	return _codec_id;
 }
 
-Timebase &MediaTrack::GetTimeBase()
+const Timebase &MediaTrack::GetTimeBase() const
 {
 	return _time_base;
 }
@@ -98,7 +98,7 @@ void MediaTrack::SetBitrate(int32_t bitrate)
 	_bitrate = bitrate;
 }
 
-int32_t MediaTrack::GetBitrate()
+int32_t MediaTrack::GetBitrate() const
 {
 	return _bitrate;
 }
@@ -108,7 +108,7 @@ void MediaTrack::SetStartFrameTime(int64_t time)
 	_start_frame_time = time;
 }
 
-int64_t MediaTrack::GetStartFrameTime()
+int64_t MediaTrack::GetStartFrameTime() const
 {
 	return _start_frame_time;
 }
@@ -118,7 +118,7 @@ void MediaTrack::SetLastFrameTime(int64_t time)
 	_last_frame_time = time;
 }
 
-int64_t MediaTrack::GetLastFrameTime()
+int64_t MediaTrack::GetLastFrameTime() const
 {
 	return _last_frame_time;
 }

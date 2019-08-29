@@ -108,7 +108,7 @@ namespace info
 						track->GetId(),
 						track->GetCodecId(), codec_name.CStr(),
 						track->GetSampleRate(),
-						track->GetSample().GetName(), track->GetSample().GetSampleSize(),
+						track->GetSample().GetName(), track->GetSample().GetSampleSize() * 8,
 						track->GetChannel().GetName(), track->GetChannel().GetCounts()
 					);
 					break;

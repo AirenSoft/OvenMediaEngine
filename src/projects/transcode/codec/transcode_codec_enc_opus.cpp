@@ -26,15 +26,15 @@ size_t AudioEncoderOpusImpl::SufficientOutputBufferSize() const {
 
 OvenCodecImplAvcodecEncOpus::~OvenCodecImplAvcodecEncOpus()
 {
-	if(_encoder)
+	if (_encoder)
 	{
 		::opus_encoder_destroy(_encoder);
 	}
 }
 
-bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr <TranscodeContext> context)
+bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> context)
 {
-	if(TranscodeEncoder::Configure(context) == false)
+	if (TranscodeEncoder::Configure(context) == false)
 	{
 		return false;
 	}
@@ -46,7 +46,7 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr <TranscodeContext> c
 
 	_encoder = ::opus_encoder_create(context->GetAudioSampleRate(), context->GetAudioChannel().GetCounts(), application, &error);
 
-	if((_encoder == nullptr) || (error != OPUS_OK))
+	if ((_encoder == nullptr) || (error != OPUS_OK))
 	{
 		logte("Could not create OPUS encoder: %d", error);
 
@@ -57,8 +57,6 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr <TranscodeContext> c
 	// Enable FEC
 	::opus_encoder_ctl(_encoder, OPUS_SET_INBAND_FEC(1));
 	::opus_encoder_ctl(_encoder, OPUS_SET_PACKET_LOSS_PERC(10));
-
-	_transcode_context = context;
 
 	// (48000Hz / 100ms) * 6 = 2880 samples / 600ms
 	const int max_opus_frame_count = (48000 / 100) * 6;
@@ -81,19 +79,21 @@ void OvenCodecImplAvcodecEncOpus::SendBuffer(std::unique_ptr<const MediaFrame> f
 	TranscodeEncoder::SendBuffer(std::move(frame));
 }
 
-std::unique_ptr <MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)
+std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)
 {
-	OV_ASSERT2(_transcode_context);
+	OV_ASSERT2(_output_context != nullptr);
 
 	// 200ms
 	const unsigned int frame_count_to_encode = 480 * 2;
-	const unsigned int bytes_to_encode = frame_count_to_encode * _transcode_context->GetAudioChannel().GetCounts() * _transcode_context->GetAudioSample().GetSampleSize();
+	const unsigned int bytes_to_encode = frame_count_to_encode * _output_context->GetAudioChannel().GetCounts() * _output_context->GetAudioSample().GetSampleSize();
 
-	while((_input_buffer.empty() == false) && (_buffer->GetLength() < bytes_to_encode))
+	int64_t duration = 0LL;
+
+	while ((_input_buffer.empty() == false) && (_buffer->GetLength() < bytes_to_encode))
 	{
-		auto frame_buffer = std::move(_input_buffer[0]);
 		// dequeue
-		_input_buffer.erase(_input_buffer.begin(), _input_buffer.begin() + 1);
+		auto frame_buffer = std::move(_input_buffer.front());
+		_input_buffer.pop_front();
 
 		const MediaFrame *frame = frame_buffer.get();
 
@@ -102,22 +102,24 @@ std::unique_ptr <MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeR
 		// Store frame informations
 		_format = frame->GetFormat<common::AudioSample::Format>();
 
-		if(_current_pts == -1)
+		if (_current_pts == -1)
 		{
 			_current_pts = frame->GetPts();
 		}
 
+		duration += frame->GetDuration();
+
 		// Append frame data into the buffer
 
-		if(frame->GetChannels() == 1)
+		if (frame->GetChannels() == 1)
 		{
 			// Just copy data into buffer
 			_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
 		}
-		else if(frame->GetChannels() >= 2)
+		else if (frame->GetChannels() >= 2)
 		{
 			// Currently, OME's OPUS encoder supports up to 2 channels
-			switch(_format)
+			switch (_format)
 			{
 				case common::AudioSample::Format::S16P:
 				case common::AudioSample::Format::FltP:
@@ -130,7 +132,7 @@ std::unique_ptr <MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeR
 					size_t total_bytes = frame->GetBufferSize(0) + frame->GetBufferSize(1);
 					_buffer->SetLength(current_offset + total_bytes);
 
-					if(_format == common::AudioSample::Format::S16P)
+					if (_format == common::AudioSample::Format::S16P)
 					{
 						// S16P
 						ov::Interleave<int16_t>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
@@ -162,7 +164,7 @@ std::unique_ptr <MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeR
 		}
 	}
 
-	if(_buffer->GetLength() < bytes_to_encode)
+	if (_buffer->GetLength() < bytes_to_encode)
 	{
 		// There is no data to encode
 		*result = TranscodeResult::NoData;
@@ -176,11 +178,11 @@ std::unique_ptr <MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeR
 
 	// "1275 * 3 + 7" formula is used in opusenc.c:813
 	// or, use the formula in "AudioEncoderOpusImpl::SufficientOutputBufferSize()" of the native code.
-	std::shared_ptr <ov::Data> encoded = std::make_shared<ov::Data>(1275 * 3 + 7);
+	std::shared_ptr<ov::Data> encoded = std::make_shared<ov::Data>(1275 * 3 + 7);
 	encoded->SetLength(encoded->GetCapacity());
 
 	// Encode
-	switch(_format)
+	switch (_format)
 	{
 		case common::AudioSample::Format::S16:
 			encoded_bytes = ::opus_encode(_encoder, _buffer->GetDataAs<const opus_int16>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
@@ -195,7 +197,7 @@ std::unique_ptr <MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeR
 			return nullptr;
 	}
 
-	if(encoded_bytes < 0)
+	if (encoded_bytes < 0)
 	{
 		logte("An error occurred while encode data %zu bytes: %d (Buffer: %zu bytes)", _buffer->GetLength(), encoded_bytes, encoded->GetCapacity());
 		*result = TranscodeResult::DataError;
@@ -211,9 +213,7 @@ std::unique_ptr <MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeR
 	::memmove(buffer, buffer + bytes_to_encode, _buffer->GetLength() - bytes_to_encode);
 	_buffer->SetLength(_buffer->GetLength() - bytes_to_encode);
 
-	// MediaPacket(common::MediaType media_type, int32_t track_id, const void *data, int32_t data_size, int64_t pts, MediaPacketFlag flags)
-	// MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, MediaPacketFlag flags)
-	auto packet_buffer = std::make_unique<MediaPacket>(common::MediaType::Audio, 1, encoded->GetData(), encoded->GetLength(), _current_pts, MediaPacketFlag::Key);
+	auto packet_buffer = std::make_unique<MediaPacket>(common::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
 
 	_current_pts += frame_count_to_encode;
 

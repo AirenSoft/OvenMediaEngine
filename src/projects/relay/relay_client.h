@@ -12,14 +12,14 @@
 
 #include <utility>
 
-#include <base/ovlibrary/ovlibrary.h>
-#include <base/ovsocket/socket.h>
 #include <base/application/application.h>
 #include <base/media_route/media_buffer.h>
 #include <base/media_route/media_route_application_connector.h>
+#include <base/ovlibrary/ovlibrary.h>
+#include <base/ovsocket/socket.h>
 #include <media_router/media_route_application.h>
 
-#define RELAY_DEFAULT_PORT                              9000
+#define RELAY_DEFAULT_PORT 9000
 
 class RelayClient : public MediaRouteApplicationConnector
 {
@@ -52,10 +52,19 @@ protected:
 	{
 		uint32_t transaction_id = 0xFFFFFFFF;
 		int8_t media_type;
-		uint64_t last_pts;
+		int64_t last_pts = 0LL;
+		int64_t last_dts = 0LL;
+		int64_t duration = 0LL;
 		uint32_t track_id;
 		ov::Data data;
-		uint8_t flags;
+		uint8_t flag;
+
+		std::unique_ptr<MediaPacket> CreatePacket() const
+		{
+			auto packet = std::make_unique<MediaPacket>(static_cast<common::MediaType>(media_type), track_id, &data, last_pts, last_dts, duration, static_cast<MediaPacketFlag>(flag));
+
+			return std::move(packet);
+		}
 	};
 
 	struct RelayStreamInfo
@@ -66,7 +75,7 @@ protected:
 		std::map<uint32_t, std::shared_ptr<Transaction>> transactions;
 	};
 
-	ov::String ParseAddress(const ov::String &address);
+	ov::String ParseAddress(const ov::String &address, ov::SocketType *socket_type);
 
 	std::shared_ptr<RelayStreamInfo> GetStreamInfo(info::stream_id_t stream_id, bool create_info = false, bool *created = nullptr, bool delete_info = false);
 

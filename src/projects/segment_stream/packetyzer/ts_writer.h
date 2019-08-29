@@ -25,7 +25,7 @@ public:
 public :
 	bool WriteSample(bool is_video,
                    bool is_keyframe,
-                   uint64_t timestamp,
+                   int64_t timestamp,
                    uint64_t time_offset,
                    std::shared_ptr<ov::Data> &frame_data);
 
@@ -40,7 +40,7 @@ protected :
 	bool WritePMT();
 	bool MakePesHeader(int data_size,
                         bool is_video,
-                        uint64_t timestamp,
+                        int64_t timestamp,
                         uint64_t time_offset,
                         uint8_t * header,
                         uint32_t & header_size);
