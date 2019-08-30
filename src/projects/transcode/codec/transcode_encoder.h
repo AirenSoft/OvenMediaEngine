@@ -25,14 +25,14 @@ public:
 protected:
 	std::shared_ptr<TranscodeContext> _output_context = nullptr;
 
-	AVCodecContext *_context;
-	AVCodecParserContext *_parser;
-	AVCodecParameters *_codec_par;
+	AVCodecContext *_context = nullptr;
+	AVCodecParserContext *_parser = nullptr;
+	AVCodecParameters *_codec_par = nullptr;
 
 	bool _change_format = false;
 
-	AVPacket *_packet;
-	AVFrame *_frame;
+	AVPacket *_packet = nullptr;
+	AVFrame *_frame = nullptr;
 
 	int _decoded_frame_num = 0;
 };

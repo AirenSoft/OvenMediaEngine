@@ -47,7 +47,8 @@ bool OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> con
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
-	_context->thread_count = 4;
+	_context->thread_count = 16;
+	_context->active_thread_type = FF_THREAD_FRAME;
 	_context->qmin = 0;
 	_context->qmax = 50;
 	// 0: CBR, 100:VBR
@@ -57,7 +58,8 @@ bool OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> con
 
 	AVDictionary *opts = nullptr;
 
-	::av_dict_set(&opts, "quality", "realtime", AV_OPT_FLAG_ENCODING_PARAM);
+	::av_dict_set(&opts, "quality", "realtime", 0);
+	::av_dict_set_int(&opts, "cpu-used", 16, 0);
 
 	if (::avcodec_open2(_context, codec, &opts) < 0)
 	{
