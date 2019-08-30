@@ -8,8 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include <segment_stream/packetyzer/cmaf_chunk_writer.h>
-#include "../dash/dash_packetyzer.h"
+#include <segment_stream/packetizer/cmaf_chunk_writer.h>
+#include "../dash/dash_packetizer.h"
 
 class ICmafChunkedTransfer
 {
@@ -25,18 +25,18 @@ public:
 									   bool is_video) = 0;
 };
 
-class CmafPacketyzer : public DashPacketyzer
+class CmafPacketizer : public DashPacketizer
 {
 public:
-	CmafPacketyzer(const ov::String &app_name, const ov::String &stream_name,
-				   PacketyzerStreamType stream_type,
+	CmafPacketizer(const ov::String &app_name, const ov::String &stream_name,
+				   PacketizerStreamType stream_type,
 				   const ov::String &segment_prefix,
 				   uint32_t segment_count, uint32_t segment_duration,
 				   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 				   const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
 	//--------------------------------------------------------------------
-	// Override DashPacketyzer
+	// Override DashPacketizer
 	//--------------------------------------------------------------------
 	bool WriteVideoInit(const std::shared_ptr<ov::Data> &frame) override;
 	bool WriteAudioInit(const std::shared_ptr<ov::Data> &frame) override;
@@ -45,12 +45,10 @@ public:
 	bool WriteAudioSegment() override;
 
 	//--------------------------------------------------------------------
-	// Override Packetyzer
+	// Override Packetizer
 	//--------------------------------------------------------------------
-	bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame) override;
-	bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame) override;
-
-	bool GetPlayList(ov::String &play_list) override;
+	bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame) override;
+	bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame) override;
 
 protected:
 	ov::String GetFileName(int64_t start_timestamp, common::MediaType media_type) const override;

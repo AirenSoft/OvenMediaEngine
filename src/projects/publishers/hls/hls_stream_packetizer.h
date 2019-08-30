@@ -9,30 +9,30 @@
 
 #pragma once
 
-#include "../segment_stream/stream_packetyzer.h"
-#include "dash_packetyzer.h"
+#include "segment_stream/stream_packetizer.h"
+#include "hls_packetizer.h"
 
 //====================================================================================================
-// DashStreamPacketyzer
+// HlsStreamPacketizer
 //====================================================================================================
-class DashStreamPacketyzer : public StreamPacketyzer
+class HlsStreamPacketizer : public StreamPacketizer
 {
 public:
-    DashStreamPacketyzer(const ov::String &app_name,
-                         const ov::String &stream_name,
-                         int segment_count,
+    HlsStreamPacketizer(const ov::String &app_name,
+                        const ov::String &stream_name,
+                        int segment_count,
                         int segment_duration,
-                        const  ov::String &segment_prefix,
-                        PacketyzerStreamType stream_type,
+                        const ov::String &segment_prefix,
+                        PacketizerStreamType stream_type,
                         std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track);
 
-    virtual ~DashStreamPacketyzer();
+    virtual ~HlsStreamPacketizer();
 
 public :
 
-    // Implement StreamPacketyzer Interface
-    bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &data) override;
-    bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &data) override;
+    // Implement StreamPacketizer Interface
+    bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &data) override;
+    bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &data) override;
     bool GetPlayList(ov::String &play_list) override;
 	std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) override;
 

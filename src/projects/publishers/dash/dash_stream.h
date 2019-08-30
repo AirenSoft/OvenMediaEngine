@@ -9,7 +9,7 @@
 
 #pragma once
 #include "segment_stream/segment_stream.h"
-#include "dash_stream_packetyzer.h"
+#include "dash_stream_packetizer.h"
 
 //====================================================================================================
 // DashStream
@@ -27,13 +27,13 @@ public:
 
 	~DashStream();
 
-    std::shared_ptr<StreamPacketyzer> CreateStreamPacketyzer(int segment_count,
+    std::shared_ptr<StreamPacketizer> CreateStreamPacketizer(int segment_count,
                                                             int segment_duration,
                                                             const  ov::String &segment_prefix,
-                                                            PacketyzerStreamType stream_type,
+                                                            PacketizerStreamType stream_type,
                                                             std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track) override
     {
-        auto stream_packetyzer = std::make_shared<DashStreamPacketyzer>(GetApplication()->GetName(),
+        auto stream_packetizer = std::make_shared<DashStreamPacketizer>(GetApplication()->GetName(),
                                                                         GetName(),
                                                                         segment_count,
                                                                         segment_duration,
@@ -41,7 +41,7 @@ public:
                                                                         stream_type,
                                                                         video_track, audio_track);
 
-        return std::static_pointer_cast<StreamPacketyzer>(stream_packetyzer);
+        return std::static_pointer_cast<StreamPacketizer>(stream_packetizer);
     }
 
 private:

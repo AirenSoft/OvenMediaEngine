@@ -118,7 +118,7 @@ bool RtcApplication::Stop()
 
 // RTCP RR packet info
 // call from stream -> session -> RtpRtcp
-// packetyzer checkr check ssrc_1(video/audio)
+// packetizer checkr check ssrc_1(video/audio)
 void RtcApplication::OnReceiverReport(uint32_t stream_id,
                                       uint32_t session_id,
                                       time_t first_receiver_report_time,

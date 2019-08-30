@@ -9,7 +9,7 @@
 #pragma once
 
 #include "cmaf_interceptor.h"
-#include "cmaf_packetyzer.h"
+#include "cmaf_packetizer.h"
 
 #include <segment_stream/segment_stream_server.h>
 

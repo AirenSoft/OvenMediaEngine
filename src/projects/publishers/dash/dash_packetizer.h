@@ -8,9 +8,9 @@
 //==============================================================================
 #pragma once
 
-#include <segment_stream/packetyzer/m4s_init_writer.h>
-#include <segment_stream/packetyzer/m4s_segment_writer.h>
-#include <segment_stream/packetyzer/packetyzer.h>
+#include <segment_stream/packetizer/m4s_init_writer.h>
+#include <segment_stream/packetizer/m4s_segment_writer.h>
+#include <segment_stream/packetizer/packetizer.h>
 
 enum class DashFileType : int32_t
 {
@@ -22,11 +22,11 @@ enum class DashFileType : int32_t
 	AudioSegment,
 };
 
-class DashPacketyzer : public Packetyzer
+class DashPacketizer : public Packetizer
 {
 public:
-	DashPacketyzer(const ov::String &app_name, const ov::String &stream_name,
-				   PacketyzerStreamType stream_type,
+	DashPacketizer(const ov::String &app_name, const ov::String &stream_name,
+				   PacketizerStreamType stream_type,
 				   const ov::String &segment_prefix,
 				   uint32_t segment_count, uint32_t segment_duration,
 				   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track);
@@ -40,13 +40,15 @@ public:
 	virtual bool WriteAudioSegment();
 
 	//--------------------------------------------------------------------
-	// Override Packetyzer
+	// Override Packetizer
 	//--------------------------------------------------------------------
-	bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame) override;
-	bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame) override;
+	bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame) override;
+	bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame) override;
 
 	const std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) override;
 	bool SetSegmentData(ov::String file_name, uint64_t duration, int64_t timestamp, std::shared_ptr<ov::Data> &data) override;
+
+	bool GetPlayList(ov::String &play_list) override;
 
 protected:
 	static int GetStartPatternSize(const uint8_t *buffer);
@@ -54,13 +56,13 @@ protected:
 	virtual ov::String GetFileName(int64_t start_timestamp, common::MediaType media_type) const;
 
 	bool WriteVideoInitInternal(const std::shared_ptr<ov::Data> &frame, M4sTransferType transfer_type, const ov::String &init_file_name);
-	bool WriteVideoInitIfNeeded(std::shared_ptr<PacketyzerFrameData> &frame);
+	bool WriteVideoInitIfNeeded(std::shared_ptr<PacketizerFrameData> &frame);
 
 	bool WriteAudioInitInternal(const std::shared_ptr<ov::Data> &frame, M4sTransferType transfer_type, const ov::String &init_file_name);
-	bool WriteAudioInitIfNeeded(std::shared_ptr<PacketyzerFrameData> &frame);
+	bool WriteAudioInitIfNeeded(std::shared_ptr<PacketizerFrameData> &frame);
 
-	bool AppendVideoFrameInternal(std::shared_ptr<PacketyzerFrameData> &frame, uint64_t current_segment_duration, std::function<void(const std::shared_ptr<const SampleData> &data)> data_callback);
-	bool AppendAudioFrameInternal(std::shared_ptr<PacketyzerFrameData> &frame, uint64_t current_segment_duration, std::function<void(const std::shared_ptr<const SampleData> &data)> data_callback);
+	bool AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, std::function<void(const std::shared_ptr<const SampleData> &data)> data_callback);
+	bool AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, std::function<void(const std::shared_ptr<const SampleData> &data)> data_callback);
 
 	bool GetSegmentInfos(ov::String *video_urls, ov::String *audio_urls, double *time_shift_buffer_depth, double *minimum_update_period);
 

@@ -8,7 +8,7 @@
 //==============================================================================
 #include "cmaf_stream_server.h"
 #include "../dash/dash_define.h"
-#include "cmaf_packetyzer.h"
+#include "cmaf_packetizer.h"
 #include "cmaf_private.h"
 
 #define CMAF_SEGMENT_EXT "m4s"
@@ -63,7 +63,7 @@ void CmafStreamServer::OnSegmentRequest(const ov::String &app_name, const ov::St
 										SegmentType segment_type,
 										const std::shared_ptr<HttpResponse> &response)
 {
-	auto type = DashPacketyzer::GetFileType(file_name);
+	auto type = DashPacketizer::GetFileType(file_name);
 
 	bool is_video = ((type == DashFileType::VideoSegment) || (type == DashFileType::VideoInit));
 

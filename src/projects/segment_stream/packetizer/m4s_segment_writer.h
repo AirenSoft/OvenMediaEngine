@@ -9,7 +9,7 @@
 #pragma once
 
 #include "m4s_writer.h"
-#include "packetyzer_define.h"
+#include "packetizer_define.h"
 
 class M4sSegmentWriter : public M4sWriter
 {

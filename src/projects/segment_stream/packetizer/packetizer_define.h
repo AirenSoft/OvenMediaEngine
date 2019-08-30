@@ -25,14 +25,14 @@
 
 #pragma pack(push, 1)
 
-enum class PacketyzerStreamType : int32_t
+enum class PacketizerStreamType : int32_t
 {
 	Common,  // Video + Audio
 	VideoOnly,
 	AudioOnly,
 };
 
-enum class PacketyzerType : int32_t
+enum class PacketizerType : int32_t
 {
 	Dash,
 	Hls,
@@ -87,7 +87,7 @@ public:
 	std::shared_ptr<ov::Data> data;
 };
 
-enum class PacketyzerFrameType
+enum class PacketizerFrameType
 {
 	Unknown = 'U',
 	VideoKeyFrame = 'I',  // Key
@@ -96,9 +96,9 @@ enum class PacketyzerFrameType
 	AudioFrame = 'A',
 };
 
-struct PacketyzerFrameData
+struct PacketizerFrameData
 {
-	PacketyzerFrameData(PacketyzerFrameType type,
+	PacketizerFrameData(PacketizerFrameType type,
 						int64_t timestamp,
 						uint64_t duration,
 						uint64_t time_offset,
@@ -113,7 +113,7 @@ struct PacketyzerFrameData
 	{
 	}
 
-	PacketyzerFrameData(PacketyzerFrameType type,
+	PacketizerFrameData(PacketizerFrameType type,
 						int64_t timestamp,
 						uint64_t duration,
 						uint64_t time_offset,
@@ -127,7 +127,7 @@ struct PacketyzerFrameData
 	{
 	}
 
-	PacketyzerFrameType type = PacketyzerFrameType::Unknown;
+	PacketizerFrameType type = PacketizerFrameType::Unknown;
 	int64_t timestamp = 0LL;
 	uint64_t duration = 0ULL;
 	uint64_t time_offset = 0ULL;

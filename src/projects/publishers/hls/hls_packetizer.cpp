@@ -7,7 +7,7 @@
 //
 //==============================================================================
 
-#include "hls_packetyzer.h"
+#include "hls_packetizer.h"
 #include "hls_private.h"
 
 #include <algorithm>
@@ -16,22 +16,22 @@
 #include <sstream>
 
 #include <base/ovlibrary/ovlibrary.h>
-#include <segment_stream/packetyzer/packetyzer_define.h>
+#include <segment_stream/packetizer/packetizer_define.h>
 
 #define HLS_MAX_TEMP_VIDEO_DATA_COUNT (500)
 
 const common::Timebase DEFAULT_TIMEBASE(1, PACKTYZER_DEFAULT_TIMESCALE);
 
-HlsPacketyzer::HlsPacketyzer(const ov::String &app_name,
+HlsPacketizer::HlsPacketizer(const ov::String &app_name,
 							 const ov::String &stream_name,
-							 PacketyzerStreamType stream_type,
+							 PacketizerStreamType stream_type,
 							 const ov::String &segment_prefix,
 							 uint32_t segment_count,
 							 uint32_t segment_duration,
 							 std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track)
-	: Packetyzer(app_name,
+	: Packetizer(app_name,
 				 stream_name,
-				 PacketyzerType::Hls,
+				 PacketizerType::Hls,
 				 stream_type,
 				 segment_prefix,
 				 segment_count,
@@ -47,7 +47,7 @@ HlsPacketyzer::HlsPacketyzer(const ov::String &app_name,
 	_duration_margin = _segment_duration * 0.1;
 }
 
-bool HlsPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame_data)
+bool HlsPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame_data)
 {
 	if (_video_track == nullptr)
 	{
@@ -60,7 +60,7 @@ bool HlsPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame
 	if (_video_init == false)
 	{
 		// Wait for first key frame
-		if (frame_data->type != PacketyzerFrameType::VideoKeyFrame)
+		if (frame_data->type != PacketizerFrameType::VideoKeyFrame)
 		{
 			// Skip the frame
 			return true;
@@ -76,7 +76,7 @@ bool HlsPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame
 		frame_data->timebase = DEFAULT_TIMEBASE;
 	}
 
-	if ((frame_data->type == PacketyzerFrameType::VideoKeyFrame) && (_frame_datas.empty() == false))
+	if ((frame_data->type == PacketizerFrameType::VideoKeyFrame) && (_frame_datas.empty() == false))
 	{
 		if ((frame_data->timestamp - _frame_datas[0]->timestamp) >=
 			((_segment_duration - _duration_margin) * DEFAULT_TIMEBASE.GetTimescale()))
@@ -97,7 +97,7 @@ bool HlsPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame
 	return true;
 }
 
-bool HlsPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame_data)
+bool HlsPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame_data)
 {
 	if (_audio_init == false)
 	{
@@ -132,7 +132,7 @@ bool HlsPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame
 	return true;
 }
 
-bool HlsPacketyzer::SegmentWrite(int64_t start_timestamp, uint64_t duration)
+bool HlsPacketizer::SegmentWrite(int64_t start_timestamp, uint64_t duration)
 {
 	int64_t _first_audio_time_stamp = 0;
 	int64_t _first_video_time_stamp = 0;
@@ -142,17 +142,17 @@ bool HlsPacketyzer::SegmentWrite(int64_t start_timestamp, uint64_t duration)
 	for (auto &frame_data : _frame_datas)
 	{
 		// Write TS(PES)
-		ts_writer->WriteSample(frame_data->type != PacketyzerFrameType::AudioFrame,
-							   (frame_data->type == PacketyzerFrameType::AudioFrame) || (frame_data->type == PacketyzerFrameType::VideoKeyFrame),
+		ts_writer->WriteSample(frame_data->type != PacketizerFrameType::AudioFrame,
+							   (frame_data->type == PacketizerFrameType::AudioFrame) || (frame_data->type == PacketizerFrameType::VideoKeyFrame),
 							   frame_data->timestamp,
 							   frame_data->time_offset,
 							   frame_data->data);
 
-		if ((_first_audio_time_stamp == 0) && (frame_data->type == PacketyzerFrameType::AudioFrame))
+		if ((_first_audio_time_stamp == 0) && (frame_data->type == PacketizerFrameType::AudioFrame))
 		{
 			_first_audio_time_stamp = frame_data->timestamp;
 		}
-		else if ((_first_video_time_stamp == 0) && (frame_data->type != PacketyzerFrameType::AudioFrame))
+		else if ((_first_video_time_stamp == 0) && (frame_data->type != PacketizerFrameType::AudioFrame))
 		{
 			_first_video_time_stamp = frame_data->timestamp;
 		}
@@ -183,14 +183,14 @@ bool HlsPacketyzer::SegmentWrite(int64_t start_timestamp, uint64_t duration)
 // PlayList(M3U8) 업데이트
 // 방송번호_인덱스.TS
 //====================================================================================================
-bool HlsPacketyzer::UpdatePlayList()
+bool HlsPacketizer::UpdatePlayList()
 {
 	std::ostringstream play_list_stream;
 	std::ostringstream m3u8_play_list;
 	double max_duration = 0;
 
 	std::vector<std::shared_ptr<SegmentData>> segment_datas;
-	Packetyzer::GetVideoPlaySegments(segment_datas);
+	Packetizer::GetVideoPlaySegments(segment_datas);
 
 	for (const auto &segment_data : segment_datas)
 	{
@@ -218,7 +218,7 @@ bool HlsPacketyzer::UpdatePlayList()
 	ov::String play_list = play_list_stream.str().c_str();
 	SetPlayList(play_list);
 
-	if ((_stream_type == PacketyzerStreamType::Common) && _streaming_start)
+	if ((_stream_type == PacketizerStreamType::Common) && _streaming_start)
 	{
 		if (_video_enable == false)
 		{
@@ -234,7 +234,7 @@ bool HlsPacketyzer::UpdatePlayList()
 	return true;
 }
 
-const std::shared_ptr<SegmentData> HlsPacketyzer::GetSegmentData(const ov::String &file_name)
+const std::shared_ptr<SegmentData> HlsPacketizer::GetSegmentData(const ov::String &file_name)
 {
 	if (_streaming_start == false)
 	{
@@ -257,7 +257,7 @@ const std::shared_ptr<SegmentData> HlsPacketyzer::GetSegmentData(const ov::Strin
 	return (*item);
 }
 
-bool HlsPacketyzer::SetSegmentData(ov::String file_name,
+bool HlsPacketizer::SetSegmentData(ov::String file_name,
 								   uint64_t duration,
 								   int64_t timestamp,
 								   std::shared_ptr<ov::Data> &data)

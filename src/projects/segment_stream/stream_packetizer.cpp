@@ -6,14 +6,14 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "stream_packetyzer.h"
+#include "stream_packetizer.h"
 #include "segment_stream_private.h"
 
-bool StreamPacketyzer::AppendVideoData(std::unique_ptr<EncodedFrame> encoded_frame,
+bool StreamPacketizer::AppendVideoData(std::unique_ptr<EncodedFrame> encoded_frame,
 									   uint32_t timescale,
 									   uint64_t time_offset)
 {
-	if (_stream_type == PacketyzerStreamType::AudioOnly)
+	if (_stream_type == PacketizerStreamType::AudioOnly)
 	{
 		OV_ASSERT2("Since it is audio-only, video data cannot be appended");
 		return true;
@@ -32,14 +32,14 @@ bool StreamPacketyzer::AppendVideoData(std::unique_ptr<EncodedFrame> encoded_fra
 	// Converting the timestamp using _video_timescale if needed
 	// if (encoded_frame->_timebase != _video_track->GetTimeBase())
 	// {
-	//		encoded_frame->_time_stamp = Packetyzer::ConvertTimeScale(encoded_frame->_time_stamp, timescale, _video_timescale);
-	//encoded_frame->_duration = Packetyzer::ConvertTimeScale(encoded_frame->_duration, timescale, _video_timescale);
-	//time_offset = Packetyzer::ConvertTimeScale(time_offset, timescale, _video_timescale);
+	//		encoded_frame->_time_stamp = Packetizer::ConvertTimeScale(encoded_frame->_time_stamp, timescale, _video_timescale);
+	//encoded_frame->_duration = Packetizer::ConvertTimeScale(encoded_frame->_duration, timescale, _video_timescale);
+	//time_offset = Packetizer::ConvertTimeScale(time_offset, timescale, _video_timescale);
 	//}
 
-	PacketyzerFrameType frame_type = (encoded_frame->_frame_type == FrameType::VideoFrameKey) ? PacketyzerFrameType::VideoKeyFrame : PacketyzerFrameType::VideoPFrame;
+	PacketizerFrameType frame_type = (encoded_frame->_frame_type == FrameType::VideoFrameKey) ? PacketizerFrameType::VideoKeyFrame : PacketizerFrameType::VideoPFrame;
 
-	auto frame_data = std::make_shared<PacketyzerFrameData>(
+	auto frame_data = std::make_shared<PacketizerFrameData>(
 		frame_type,
 		encoded_frame->_time_stamp,
 		encoded_frame->_duration,
@@ -52,9 +52,9 @@ bool StreamPacketyzer::AppendVideoData(std::unique_ptr<EncodedFrame> encoded_fra
 	return true;
 }
 
-bool StreamPacketyzer::AppendAudioData(std::unique_ptr<EncodedFrame> encoded_frame, uint32_t timescale)
+bool StreamPacketizer::AppendAudioData(std::unique_ptr<EncodedFrame> encoded_frame, uint32_t timescale)
 {
-	if (_stream_type == PacketyzerStreamType::VideoOnly)
+	if (_stream_type == PacketizerStreamType::VideoOnly)
 	{
 		OV_ASSERT2("Since it is video-only, audio data cannot be appended");
 		return true;
@@ -71,12 +71,12 @@ bool StreamPacketyzer::AppendAudioData(std::unique_ptr<EncodedFrame> encoded_fra
 	// Converting the timestamp using _audio_timescale if needed
 	// if (timescale != _audio_timescale)
 	// {
-	// 	encoded_frame->_time_stamp = Packetyzer::ConvertTimeScale(encoded_frame->_time_stamp, timescale, _audio_timescale);
-	// 	encoded_frame->_duration = Packetyzer::ConvertTimeScale(encoded_frame->_duration, timescale, _audio_timescale);
+	// 	encoded_frame->_time_stamp = Packetizer::ConvertTimeScale(encoded_frame->_time_stamp, timescale, _audio_timescale);
+	// 	encoded_frame->_duration = Packetizer::ConvertTimeScale(encoded_frame->_duration, timescale, _audio_timescale);
 	// }
 
-	auto frame_data = std::make_shared<PacketyzerFrameData>(
-		PacketyzerFrameType::AudioFrame,
+	auto frame_data = std::make_shared<PacketizerFrameData>(
+		PacketizerFrameType::AudioFrame,
 		encoded_frame->_time_stamp,
 		encoded_frame->_duration,
 		0,

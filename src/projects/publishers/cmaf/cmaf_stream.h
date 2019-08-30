@@ -9,7 +9,7 @@
 
 #pragma once
 #include "segment_stream/segment_stream.h"
-#include "cmaf_stream_packetyzer.h"
+#include "cmaf_stream_packetizer.h"
 
 //====================================================================================================
 // CmafStream
@@ -30,13 +30,13 @@ public:
 
 	~CmafStream();
 
-    std::shared_ptr<StreamPacketyzer> CreateStreamPacketyzer(int segment_count,
+    std::shared_ptr<StreamPacketizer> CreateStreamPacketizer(int segment_count,
 												int segment_duration,
 												const  ov::String &segment_prefix,
-												PacketyzerStreamType stream_type,
+												PacketizerStreamType stream_type,
 												std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track) override
     {
-        auto stream_packetyzer = std::make_shared<CmafStreamPacketyzer>(GetApplication()->GetName(),
+        auto stream_packetizer = std::make_shared<CmafStreamPacketizer>(GetApplication()->GetName(),
                                                                         GetName(),
                                                                         segment_count,
                                                                         segment_duration,
@@ -45,7 +45,7 @@ public:
                                                                         video_track, audio_track,
 																		_chunked_transfer);
 
-        return std::static_pointer_cast<StreamPacketyzer>(stream_packetyzer);
+        return std::static_pointer_cast<StreamPacketizer>(stream_packetizer);
     }
 
 private:

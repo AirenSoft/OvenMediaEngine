@@ -7,27 +7,27 @@
 //
 //==============================================================================
 
-#include "hls_stream_packetyzer.h"
+#include "hls_stream_packetizer.h"
 #include "hls_private.h"
 
 //====================================================================================================
 // Constructor
 //====================================================================================================
-HlsStreamPacketyzer::HlsStreamPacketyzer(const ov::String &app_name,
+HlsStreamPacketizer::HlsStreamPacketizer(const ov::String &app_name,
                                         const ov::String &stream_name,
                                         int segment_count,
                                         int segment_duration,
                                         const ov::String &segment_prefix,
-                                        PacketyzerStreamType stream_type,
+                                        PacketizerStreamType stream_type,
                                         std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track) :
-                                        StreamPacketyzer(app_name,
+                                        StreamPacketizer(app_name,
                                                         stream_name,
                                                         segment_count,
                                                         segment_duration,
                                                         stream_type,
                                                         video_track, audio_track)
 {
-    _packetyzer = std::make_shared<HlsPacketyzer>(app_name,
+    _packetizer = std::make_shared<HlsPacketizer>(app_name,
                                                 stream_name,
                                                 stream_type,
                                                 segment_prefix,
@@ -39,40 +39,40 @@ HlsStreamPacketyzer::HlsStreamPacketyzer(const ov::String &app_name,
 //====================================================================================================
 // Destructor
 //====================================================================================================
-HlsStreamPacketyzer::~HlsStreamPacketyzer()
+HlsStreamPacketizer::~HlsStreamPacketizer()
 {
 }
 
 //====================================================================================================
 // Append Video Frame
 //====================================================================================================
-bool HlsStreamPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &data)
+bool HlsStreamPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &data)
 {
-    return _packetyzer->AppendVideoFrame(data);
+    return _packetizer->AppendVideoFrame(data);
 }
 
 //====================================================================================================
 // Append Audi Frame
 //====================================================================================================
-bool HlsStreamPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &data)
+bool HlsStreamPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &data)
 {
-    return _packetyzer->AppendAudioFrame(data);
+    return _packetizer->AppendAudioFrame(data);
 }
 
 //====================================================================================================
 // Get PlayList
 // - M3U8
 //====================================================================================================
-bool HlsStreamPacketyzer::GetPlayList(ov::String &play_list)
+bool HlsStreamPacketizer::GetPlayList(ov::String &play_list)
 {
-    return _packetyzer->GetPlayList(play_list);
+    return _packetizer->GetPlayList(play_list);
 }
 
 //====================================================================================================
 // GetSegmentData
 // - TS
 //====================================================================================================
-std::shared_ptr<SegmentData> HlsStreamPacketyzer::GetSegmentData(const ov::String &file_name)
+std::shared_ptr<SegmentData> HlsStreamPacketizer::GetSegmentData(const ov::String &file_name)
 {
-     return _packetyzer->GetSegmentData(file_name);
+     return _packetizer->GetSegmentData(file_name);
 }

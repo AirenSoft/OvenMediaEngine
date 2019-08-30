@@ -7,27 +7,27 @@
 //
 //==============================================================================
 
-#include "dash_stream_packetyzer.h"
+#include "dash_stream_packetizer.h"
 #include "dash_private.h"
 
 //====================================================================================================
 // Constructor
 //====================================================================================================
-DashStreamPacketyzer::DashStreamPacketyzer(const ov::String &app_name,
+DashStreamPacketizer::DashStreamPacketizer(const ov::String &app_name,
 										   const ov::String &stream_name,
 										   int segment_count,
 										   int segment_duration,
 										   const ov::String &segment_prefix,
-										   PacketyzerStreamType stream_type,
+										   PacketizerStreamType stream_type,
 										   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track)
-	: StreamPacketyzer(app_name,
+	: StreamPacketizer(app_name,
 					   stream_name,
 					   segment_count,
 					   segment_duration,
 					   stream_type,
 					   video_track, audio_track)
 {
-	_packetyzer = std::make_shared<DashPacketyzer>(app_name,
+	_packetizer = std::make_shared<DashPacketizer>(app_name,
 												   stream_name,
 												   stream_type,
 												   segment_prefix,
@@ -39,40 +39,40 @@ DashStreamPacketyzer::DashStreamPacketyzer(const ov::String &app_name,
 //====================================================================================================
 // Destructor
 //====================================================================================================
-DashStreamPacketyzer::~DashStreamPacketyzer()
+DashStreamPacketizer::~DashStreamPacketizer()
 {
 }
 
 //====================================================================================================
 // Append Video Frame
 //====================================================================================================
-bool DashStreamPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &data)
+bool DashStreamPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &data)
 {
-	return _packetyzer->AppendVideoFrame(data);
+	return _packetizer->AppendVideoFrame(data);
 }
 
 //====================================================================================================
 // Append Audi Frame
 //====================================================================================================
-bool DashStreamPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &data)
+bool DashStreamPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &data)
 {
-	return _packetyzer->AppendAudioFrame(data);
+	return _packetizer->AppendAudioFrame(data);
 }
 
 //====================================================================================================
 // Get PlayList
 // - MPD
 //====================================================================================================
-bool DashStreamPacketyzer::GetPlayList(ov::String &play_list)
+bool DashStreamPacketizer::GetPlayList(ov::String &play_list)
 {
-	return _packetyzer->GetPlayList(play_list);
+	return _packetizer->GetPlayList(play_list);
 }
 
 //====================================================================================================
 // GetSegmentData
 // - M4S
 //====================================================================================================
-std::shared_ptr<SegmentData> DashStreamPacketyzer::GetSegmentData(const ov::String &file_name)
+std::shared_ptr<SegmentData> DashStreamPacketizer::GetSegmentData(const ov::String &file_name)
 {
-	return _packetyzer->GetSegmentData(file_name);
+	return _packetizer->GetSegmentData(file_name);
 }

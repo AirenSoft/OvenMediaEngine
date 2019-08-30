@@ -10,7 +10,7 @@
 #include "segment_stream.h"
 #include "config/items/items.h"
 #include "segment_stream_private.h"
-#include "stream_packetyzer.h"
+#include "stream_packetizer.h"
 
 using namespace common;
 
@@ -65,19 +65,19 @@ bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t work
 
 	if ((video_track != nullptr) || (audio_track != nullptr))
 	{
-		PacketyzerStreamType stream_type = PacketyzerStreamType::Common;
+		PacketizerStreamType stream_type = PacketizerStreamType::Common;
 
 		if (video_track == nullptr)
 		{
-			stream_type = PacketyzerStreamType::AudioOnly;
+			stream_type = PacketizerStreamType::AudioOnly;
 		}
 
 		if (audio_track == nullptr)
 		{
-			stream_type = PacketyzerStreamType::VideoOnly;
+			stream_type = PacketizerStreamType::VideoOnly;
 		}
 
-		_stream_packetyzer = CreateStreamPacketyzer(segment_count > 0 ? segment_count : DEFAULT_SEGMENT_COUNT,
+		_stream_packetizer = CreateStreamPacketizer(segment_count > 0 ? segment_count : DEFAULT_SEGMENT_COUNT,
 													segment_duration > 0 ? segment_duration : DEFAULT_SEGMENT_DURATION,
 													GetName(),  // stream name --> prefix
 													stream_type,
@@ -99,7 +99,7 @@ bool SegmentStream::Stop()
 
 //====================================================================================================
 // SendVideoFrame
-// - Packetyzer에 Video데이터 추가
+// - Packetizer에 Video데이터 추가
 // - 첫 key 프레임 에서 SPS/PPS 추출  이후 생성
 //
 //====================================================================================================
@@ -108,7 +108,7 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 								   std::unique_ptr<CodecSpecificInfo> codec_info,
 								   std::unique_ptr<FragmentationHeader> fragmentation)
 {
-	if (_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
+	if (_stream_packetizer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
 	{
 		//        int nul_header_size = 0;
 		//
@@ -118,22 +118,22 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 		//            logtd("null header size - %d", nul_header_size);
 		//        }
 
-		_stream_packetyzer->AppendVideoData(std::move(encoded_frame), _video_track->GetTimeBase().GetTimescale(), 0);
+		_stream_packetizer->AppendVideoData(std::move(encoded_frame), _video_track->GetTimeBase().GetTimescale(), 0);
 	}
 }
 
 //====================================================================================================
 // SendAudioFrame
-// - Packetyzer에 Audio데이터 추가
+// - Packetizer에 Audio데이터 추가
 //====================================================================================================
 void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
 								   std::unique_ptr<EncodedFrame> encoded_frame,
 								   std::unique_ptr<CodecSpecificInfo> codec_info,
 								   std::unique_ptr<FragmentationHeader> fragmentation)
 {
-	if (_stream_packetyzer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
+	if (_stream_packetizer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
 	{
-		_stream_packetyzer->AppendAudioData(std::move(encoded_frame), _audio_track->GetTimeBase().GetTimescale());
+		_stream_packetizer->AppendAudioData(std::move(encoded_frame), _audio_track->GetTimeBase().GetTimescale());
 	}
 }
 
@@ -143,9 +143,9 @@ void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
 //====================================================================================================
 bool SegmentStream::GetPlayList(ov::String &play_list)
 {
-	if (_stream_packetyzer != nullptr)
+	if (_stream_packetizer != nullptr)
 	{
-		return _stream_packetyzer->GetPlayList(play_list);
+		return _stream_packetizer->GetPlayList(play_list);
 	}
 
 	return false;
@@ -157,8 +157,8 @@ bool SegmentStream::GetPlayList(ov::String &play_list)
 //====================================================================================================
 std::shared_ptr<SegmentData> SegmentStream::GetSegmentData(const ov::String &file_name)
 {
-	if (_stream_packetyzer == nullptr)
+	if (_stream_packetizer == nullptr)
 		return nullptr;
 
-	return _stream_packetyzer->GetSegmentData(file_name);
+	return _stream_packetizer->GetSegmentData(file_name);
 }

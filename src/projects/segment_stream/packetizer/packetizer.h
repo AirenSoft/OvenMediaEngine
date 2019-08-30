@@ -8,24 +8,24 @@
 //==============================================================================
 #pragma once
 
-#include "packetyzer_define.h"
+#include "packetizer_define.h"
 
 #include <base/application/application.h>
 #include <base/ovlibrary/ovlibrary.h>
 
-class Packetyzer
+class Packetizer
 {
 public:
-	Packetyzer(const ov::String &app_name, const ov::String &stream_name,
-			   PacketyzerType packetyzer_type, PacketyzerStreamType stream_type,
+	Packetizer(const ov::String &app_name, const ov::String &stream_name,
+			   PacketizerType packetizer_type, PacketizerStreamType stream_type,
 			   const ov::String &segment_prefix,
 			   uint32_t segment_count, uint32_t segment_duration,
 			   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track);
 
-	virtual ~Packetyzer() = default;
+	virtual ~Packetizer() = default;
 
-	virtual bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame) = 0;
-	virtual bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame) = 0;
+	virtual bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame) = 0;
+	virtual bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame) = 0;
 
 	virtual const std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) = 0;
 	virtual bool SetSegmentData(ov::String file_name, uint64_t duration, int64_t timestamp, std::shared_ptr<ov::Data> &data) = 0;
@@ -58,9 +58,9 @@ public:
 protected:
 	ov::String _app_name;
 	ov::String _stream_name;
-	PacketyzerType _packetyzer_type;
+	PacketizerType _packetizer_type;
 	ov::String _segment_prefix;
-	PacketyzerStreamType _stream_type;
+	PacketizerStreamType _stream_type;
 
 	uint32_t _segment_count = 0U;
 	uint32_t _segment_save_count = 0U;

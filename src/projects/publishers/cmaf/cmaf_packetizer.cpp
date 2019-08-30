@@ -6,7 +6,7 @@
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "cmaf_packetyzer.h"
+#include "cmaf_packetizer.h"
 #include "cmaf_private.h"
 // TODO(dimiden): Merge DASH and CMAF module later
 #include "../dash/dash_define.h"
@@ -16,13 +16,13 @@
 #include <numeric>
 #include <sstream>
 
-CmafPacketyzer::CmafPacketyzer(const ov::String &app_name, const ov::String &stream_name,
-							   PacketyzerStreamType stream_type,
+CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &stream_name,
+							   PacketizerStreamType stream_type,
 							   const ov::String &segment_prefix,
 							   uint32_t segment_count, uint32_t segment_duration,
 							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 							   const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
-	: DashPacketyzer(app_name, stream_name,
+	: DashPacketizer(app_name, stream_name,
 					 stream_type,
 					 segment_prefix,
 					 1, segment_duration,
@@ -41,7 +41,7 @@ CmafPacketyzer::CmafPacketyzer(const ov::String &app_name, const ov::String &str
 	_chunked_transfer = chunked_transfer;
 }
 
-ov::String CmafPacketyzer::GetFileName(int64_t start_timestamp, common::MediaType media_type) const
+ov::String CmafPacketizer::GetFileName(int64_t start_timestamp, common::MediaType media_type) const
 {
 	switch (media_type)
 	{
@@ -55,17 +55,17 @@ ov::String CmafPacketyzer::GetFileName(int64_t start_timestamp, common::MediaTyp
 	return "";
 }
 
-bool CmafPacketyzer::WriteVideoInit(const std::shared_ptr<ov::Data> &frame_data)
+bool CmafPacketizer::WriteVideoInit(const std::shared_ptr<ov::Data> &frame_data)
 {
 	return WriteVideoInitInternal(frame_data, M4sTransferType::Chunked, CMAF_MPD_VIDEO_FULL_INIT_FILE_NAME);
 }
 
-bool CmafPacketyzer::WriteAudioInit(const std::shared_ptr<ov::Data> &frame_data)
+bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<ov::Data> &frame_data)
 {
 	return WriteAudioInitInternal(frame_data, M4sTransferType::Chunked, CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME);
 }
 
-bool CmafPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame)
+bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame)
 {
 	return AppendVideoFrameInternal(frame, _video_chunk_writer->GetSegmentDuration(), [frame, this](const std::shared_ptr<const SampleData> data) {
 		auto chunk_data = _video_chunk_writer->AppendSample(data);
@@ -80,7 +80,7 @@ bool CmafPacketyzer::AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &fram
 	});
 }
 
-bool CmafPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame)
+bool CmafPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame)
 {
 	return AppendAudioFrameInternal(frame, _audio_chunk_writer->GetSegmentDuration(), [frame, this](const std::shared_ptr<const SampleData> data) {
 		auto chunk_data = _audio_chunk_writer->AppendSample(data);
@@ -95,7 +95,7 @@ bool CmafPacketyzer::AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &fram
 	});
 }
 
-bool CmafPacketyzer::WriteVideoSegment()
+bool CmafPacketizer::WriteVideoSegment()
 {
 	if (_video_chunk_writer->GetSampleCount() == 0)
 	{
@@ -126,7 +126,7 @@ bool CmafPacketyzer::WriteVideoSegment()
 	return true;
 }
 
-bool CmafPacketyzer::WriteAudioSegment()
+bool CmafPacketizer::WriteAudioSegment()
 {
 	if (_audio_chunk_writer->GetSampleCount() == 0)
 	{
@@ -157,7 +157,7 @@ bool CmafPacketyzer::WriteAudioSegment()
 	return true;
 }
 
-bool CmafPacketyzer::UpdatePlayList()
+bool CmafPacketizer::UpdatePlayList()
 {
 	std::ostringstream play_list_stream;
 	double time_shift_buffer_depth = 6;
@@ -236,21 +236,6 @@ bool CmafPacketyzer::UpdatePlayList()
 
 		logtd("Time difference: A-V: %lld (Audio: %lld, Video: %lld)", audio_pts - video_pts, audio_pts, video_pts);
 	}
-
-	return true;
-}
-
-bool CmafPacketyzer::GetPlayList(ov::String &play_list)
-{
-	if (_streaming_start == false)
-	{
-		logtd("A playlist was requested before the stream began");
-		return false;
-	}
-
-	ov::String current_time = MakeUtcMillisecond();
-
-	play_list = ov::String::FormatString(_play_list.CStr(), current_time.CStr());
 
 	return true;
 }

@@ -8,30 +8,30 @@
 //==============================================================================
 
 #pragma once
-#include "segment_stream/packetyzer/ts_writer.h"
+#include "segment_stream/packetizer/ts_writer.h"
 
 //====================================================================================================
-// HlsPacketyzer
+// HlsPacketizer
 // TS : [Prefix]_[Index].TS
 // M3U8 : playlist.M3U8
 //====================================================================================================
-class HlsPacketyzer : public Packetyzer
+class HlsPacketizer : public Packetizer
 {
 public:
-	HlsPacketyzer(const ov::String &app_name,
+	HlsPacketizer(const ov::String &app_name,
                 const ov::String &stream_name,
-                PacketyzerStreamType stream_type,
+                PacketizerStreamType stream_type,
                 const ov::String &segment_prefix,
                 uint32_t segment_count,
                 uint32_t segment_duration,
                 std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track);
 
-	~HlsPacketyzer() = default;
+	~HlsPacketizer() = default;
 	
 public :
-    virtual bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &frame_data) override;
+    virtual bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame_data) override;
 
-    virtual bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &frame_data) override;
+    virtual bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame_data) override;
 
     virtual const std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) override;
 
@@ -46,7 +46,7 @@ protected :
 	bool UpdatePlayList();
 	
 protected :
-	std::vector<std::shared_ptr<PacketyzerFrameData>> _frame_datas;
+	std::vector<std::shared_ptr<PacketizerFrameData>> _frame_datas;
     double _duration_margin;
 
     time_t _last_video_append_time;

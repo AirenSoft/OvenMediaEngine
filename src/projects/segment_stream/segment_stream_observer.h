@@ -11,7 +11,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <memory>
-#include "stream_packetyzer.h"
+#include "stream_packetizer.h"
 
 //====================================================================================================
 // SegmentStreamObserver

@@ -6,21 +6,21 @@
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "packetyzer.h"
+#include "packetizer.h"
 #include "../segment_stream_private.h"
 
 #include <sys/time.h>
 #include <algorithm>
 #include <sstream>
 
-Packetyzer::Packetyzer(const ov::String &app_name, const ov::String &stream_name,
-					   PacketyzerType packetyzer_type, PacketyzerStreamType stream_type,
+Packetizer::Packetizer(const ov::String &app_name, const ov::String &stream_name,
+					   PacketizerType packetizer_type, PacketizerStreamType stream_type,
 					   const ov::String &segment_prefix,
 					   uint32_t segment_count, uint32_t segment_duration,
 					   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track)
 	: _app_name(app_name), _stream_name(stream_name),
 
-	  _packetyzer_type(packetyzer_type),
+	  _packetizer_type(packetizer_type),
 	  _stream_type(stream_type),
 	  _segment_prefix(segment_prefix),
 	  _segment_count(segment_count),
@@ -35,14 +35,14 @@ Packetyzer::Packetyzer(const ov::String &app_name, const ov::String &stream_name
 		_video_segment_datas.push_back(nullptr);
 
 		// Only for dash
-		if (_packetyzer_type == PacketyzerType::Dash)
+		if (_packetizer_type == PacketizerType::Dash)
 		{
 			_audio_segment_datas.push_back(nullptr);
 		}
 	}
 }
 
-uint32_t Packetyzer::Gcd(uint32_t n1, uint32_t n2)
+uint32_t Packetizer::Gcd(uint32_t n1, uint32_t n2)
 {
 	uint32_t temp;
 
@@ -55,7 +55,7 @@ uint32_t Packetyzer::Gcd(uint32_t n1, uint32_t n2)
 	return n1;
 }
 
-int64_t Packetyzer::GetCurrentMilliseconds()
+int64_t Packetizer::GetCurrentMilliseconds()
 {
 	struct timespec now;
 
@@ -64,7 +64,7 @@ int64_t Packetyzer::GetCurrentMilliseconds()
 	return now.tv_sec * 1000LL + now.tv_nsec / 1000000LL;
 }
 
-int64_t Packetyzer::GetCurrentTick()
+int64_t Packetizer::GetCurrentTick()
 {
 	struct timespec now;
 
@@ -73,7 +73,7 @@ int64_t Packetyzer::GetCurrentTick()
 	return now.tv_sec * 1000LL + now.tv_nsec / 1000000LL;
 }
 
-ov::String Packetyzer::MakeUtcSecond(time_t value)
+ov::String Packetizer::MakeUtcSecond(time_t value)
 {
 	std::tm *now_tm = ::gmtime(&value);
 	char buffer[42];
@@ -83,7 +83,7 @@ ov::String Packetyzer::MakeUtcSecond(time_t value)
 	return buffer;
 }
 
-ov::String Packetyzer::MakeUtcMillisecond(int64_t value)
+ov::String Packetizer::MakeUtcMillisecond(int64_t value)
 {
 	if (value == -1)
 	{
@@ -116,7 +116,7 @@ ov::String Packetyzer::MakeUtcMillisecond(int64_t value)
 	return "";
 }
 
-uint64_t Packetyzer::ConvertTimeScale(uint64_t time, const common::Timebase &from_timebase, const common::Timebase &to_timebase)
+uint64_t Packetizer::ConvertTimeScale(uint64_t time, const common::Timebase &from_timebase, const common::Timebase &to_timebase)
 {
 	if (from_timebase.GetExpr() == 0.0)
 	{
@@ -128,14 +128,14 @@ uint64_t Packetyzer::ConvertTimeScale(uint64_t time, const common::Timebase &fro
 	return (uint64_t)((double)time * ratio);
 }
 
-void Packetyzer::SetPlayList(ov::String &play_list)
+void Packetizer::SetPlayList(ov::String &play_list)
 {
 	std::unique_lock<std::mutex> lock(_play_list_guard);
 
 	_play_list = play_list;
 }
 
-bool Packetyzer::GetPlayList(ov::String &play_list)
+bool Packetizer::GetPlayList(ov::String &play_list)
 {
 	if (_streaming_start == false)
 	{
@@ -149,7 +149,7 @@ bool Packetyzer::GetPlayList(ov::String &play_list)
 	return true;
 }
 
-bool Packetyzer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
+bool Packetizer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
 {
 	uint32_t begin_index = (_current_video_index >= _segment_count) ? (_current_video_index - _segment_count) : (_segment_save_count - (_segment_count - _current_video_index));
 	uint32_t end_index = (begin_index <= (_segment_save_count - _segment_count)) ? (begin_index + _segment_count) - 1 : (_segment_count - (_segment_save_count - begin_index)) - 1;
@@ -195,7 +195,7 @@ bool Packetyzer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> 
 	return true;
 }
 
-bool Packetyzer::GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
+bool Packetizer::GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
 {
 	uint32_t begin_index = (_current_audio_index >= _segment_count) ? (_current_audio_index - _segment_count) : (_segment_save_count - (_segment_count - _current_audio_index));
 	uint32_t end_index = (begin_index <= (_segment_save_count - _segment_count)) ? (begin_index + _segment_count) - 1 : (_segment_count - (_segment_save_count - begin_index)) - 1;

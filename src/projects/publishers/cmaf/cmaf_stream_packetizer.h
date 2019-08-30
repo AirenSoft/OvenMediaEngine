@@ -8,28 +8,28 @@
 //==============================================================================
 #pragma once
 
-#include "../segment_stream/stream_packetyzer.h"
-#include "cmaf_packetyzer.h"
+#include "../segment_stream/stream_packetizer.h"
+#include "cmaf_packetizer.h"
 
-class CmafStreamPacketyzer : public StreamPacketyzer
+class CmafStreamPacketizer : public StreamPacketizer
 {
 public:
-    CmafStreamPacketyzer(const ov::String &app_name,
+    CmafStreamPacketizer(const ov::String &app_name,
 						const ov::String &stream_name,
 						int segment_count,
 						int segment_duration,
 						const  ov::String &segment_prefix,
-						PacketyzerStreamType stream_type,
+						PacketizerStreamType stream_type,
 						std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 						const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
-    virtual ~CmafStreamPacketyzer();
+    virtual ~CmafStreamPacketizer();
 
 public :
 
-    // Implement StreamPacketyzer Interface
-    bool AppendVideoFrame(std::shared_ptr<PacketyzerFrameData> &data) override;
-    bool AppendAudioFrame(std::shared_ptr<PacketyzerFrameData> &data) override;
+    // Implement StreamPacketizer Interface
+    bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &data) override;
+    bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &data) override;
     bool GetPlayList(ov::String &play_list) override;
 	std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) override;
 

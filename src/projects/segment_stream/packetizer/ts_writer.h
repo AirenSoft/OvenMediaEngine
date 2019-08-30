@@ -8,7 +8,7 @@
 //==============================================================================
 
 #pragma once
-#include "packetyzer.h"
+#include "packetizer.h"
 #include "bit_writer.h"
 #include <base/common_types.h>
 

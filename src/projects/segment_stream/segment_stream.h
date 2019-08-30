@@ -11,7 +11,7 @@
 
 #include "base/common_types.h"
 #include "base/publisher/stream.h"
-#include "stream_packetyzer.h"
+#include "stream_packetizer.h"
 #include <map>
 
 //====================================================================================================
@@ -43,14 +43,14 @@ public :
 
 	std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name);
 
-    virtual std::shared_ptr<StreamPacketyzer> CreateStreamPacketyzer(int segment_count,
+    virtual std::shared_ptr<StreamPacketizer> CreateStreamPacketizer(int segment_count,
                                                                     int segment_duration,
                                                                     const  ov::String &segment_prefix,
-                                                                    PacketyzerStreamType stream_type,
+                                                                    PacketizerStreamType stream_type,
                                                                     std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track) = 0;
 
 private :
-    std::shared_ptr<StreamPacketyzer> _stream_packetyzer = nullptr;
+    std::shared_ptr<StreamPacketizer> _stream_packetizer = nullptr;
     std::map<uint32_t, std::shared_ptr<MediaTrack>> _media_tracks;
 
     std::shared_ptr<MediaTrack> _video_track;

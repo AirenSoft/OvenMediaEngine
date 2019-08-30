@@ -8,7 +8,7 @@
 //==============================================================================
 
 #include "dash_stream_server.h"
-#include "../segment_stream/packetyzer/packetyzer_define.h"
+#include "../segment_stream/packetizer/packetizer_define.h"
 #include "dash_private.h"
 #include "../dash/dash_define.h"
 
