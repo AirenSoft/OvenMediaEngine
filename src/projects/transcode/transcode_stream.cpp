@@ -341,7 +341,7 @@ bool TranscodeStream::Push(std::unique_ptr<MediaPacket> packet)
 
 	if (_queue.size() > _max_queue_size)
 	{
-		logti("Queue(stream) is full, please check your system");
+		logti("Queue(stream) is full, please check your system: (queue: %zu > limit: %llu)", _queue.size(), _max_queue_size);
 		return false;
 	}
 
@@ -535,11 +535,13 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t track_id, std::unique_ptr<c
 	auto encoder = encoder_item->second.get();
 
 	logtp("[#%d] Trying to encode the frame (PTS: %lld)", track_id, frame->GetPts());
+
 	encoder->SendBuffer(std::move(frame));
 
 	while (true)
 	{
 		TranscodeResult result;
+
 		auto encoded_packet = encoder->RecvBuffer(&result);
 
 		if (static_cast<int>(result) < 0)
@@ -552,8 +554,6 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t track_id, std::unique_ptr<c
 			encoded_packet->SetTrackId(track_id);
 
 			logtp("[#%d] A packet is encoded (PTS: %lld)", track_id, encoded_packet->GetPts());
-
-			OV_ASSERT2(encoded_packet->GetPts() >= 0);
 
 			// Send the packet to MediaRouter
 			SendFrame(std::move(encoded_packet));
