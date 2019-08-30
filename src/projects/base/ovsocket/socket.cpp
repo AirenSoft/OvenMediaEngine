@@ -932,7 +932,10 @@ namespace ov
 			// Generate Event
 			_send_queue_event.Notify();
 
-			_send_thread.join();
+			if(_send_thread.joinable())
+			{
+				_send_thread.join();
+			}
 
 			// logd("SocketThread", "closed send thread");
 		}
