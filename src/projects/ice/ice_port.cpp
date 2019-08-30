@@ -399,7 +399,7 @@ void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov
 		{
 			// 포트 정보가 없음
 			// 이전 단계에서 관련 정보가 저장되어 있어야 함
-			logtw("Could not find client information. Dropping...");
+			logtd("Could not find client information. Dropping...");
 			return;
 		}
 
