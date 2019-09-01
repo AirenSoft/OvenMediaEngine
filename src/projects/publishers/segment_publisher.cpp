@@ -87,12 +87,6 @@ bool SegmentPublisher::OnPlayListRequest(const ov::String &app_name, const ov::S
 										 const ov::String &file_name,
 										 ov::String &play_list)
 {
-	if (_is_codec_available == false)
-	{
-		OV_ASSERT2(false);
-		return false;
-	}
-
 	auto stream = GetStreamAs<SegmentStream>(app_name, stream_name);
 
 	if ((stream == nullptr) || (stream->GetPlayList(play_list) == false))
@@ -108,12 +102,6 @@ bool SegmentPublisher::OnSegmentRequest(const ov::String &app_name, const ov::St
 										const ov::String &file_name,
 										std::shared_ptr<SegmentData> &segment)
 {
-	if (_is_codec_available == false)
-	{
-		OV_ASSERT2(false);
-		return false;
-	}
-
 	auto stream = GetStreamAs<SegmentStream>(app_name, stream_name);
 
 	if (stream != nullptr)
