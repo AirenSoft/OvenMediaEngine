@@ -29,7 +29,7 @@ bool HlsInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpReq
 	// logtd("Request Target : %s", request->GetRequestTarget().CStr());
 
 	// Get Method 1.1 이상 체크
-	if((request->GetMethod() != HttpMethod::Get) || (request->GetHttpVersionAsNumber() <= 1.0))
+	if((request->GetMethod() != HttpMethod::Get) || (request->GetHttpVersionAsNumber() < 1.0))
 	{
 		return false;
 	}

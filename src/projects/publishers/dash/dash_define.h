@@ -13,6 +13,7 @@
 #define DASH_MPD_VIDEO_INIT_FILE_NAME "init_video"
 #define DASH_MPD_AUDIO_INIT_FILE_NAME "init_audio"
 #define DASH_PLAYLIST_FILE_NAME "manifest"
+#define DASH_CORS_FILE_NAME "crossdomain.xml"
 
 #define DASH_SEGMENT_EXT "m4s"
 #define DASH_PLAYLIST_EXT "mpd"

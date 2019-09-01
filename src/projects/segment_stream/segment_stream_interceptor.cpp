@@ -21,15 +21,6 @@ SegmentStreamInterceptor::~SegmentStreamInterceptor()
 }
 
 //====================================================================================================
-// IsInterceptorForRequest
-//====================================================================================================
-bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request,
-        const std::shared_ptr<const HttpResponse> &response)
-{
-	return true;
-}
-
-//====================================================================================================
 // Start
 // - work thread start
 //====================================================================================================

@@ -165,21 +165,22 @@ bool CmafPacketizer::UpdatePlayList()
 
 	logtd("Trying to update playlist for CMAF...");
 
-	play_list_stream << std::fixed << std::setprecision(3)
-					 << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-						"<MPD xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
-						"\txmlns=\"urn:mpeg:dash:schema:mpd:2011\"\n"
-						"\txmlns:xlink=\"http://www.w3.org/1999/xlink\"\n"
-						"\txsi:schemaLocation=\"urn:mpeg:DASH:schema:MPD:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd\"\n"
-						"\tprofiles=\"urn:mpeg:dash:profile:isoff-live:2011\"\n"
-						"\ttype=\"dynamic\"\n"
-					 << "\tminimumUpdatePeriod=\"PT" << minimumUpdatePeriod << "S\"\n"
-					 << "\tpublishTime=\"" << MakeUtcSecond(::time(nullptr)).CStr() << "\"\n"
-					 << "\tavailabilityStartTime=\"" << _start_time.CStr() << "\"\n"
-					 << "\ttimeShiftBufferDepth=\"PT" << time_shift_buffer_depth << "S\"\n"
-					 << "\tsuggestedPresentationDelay=\"PT" << _segment_duration << "S\"\n"
-					 << "\tminBufferTime=\"PT" << _segment_duration << "S\">\n"
-					 << "\t<Period id=\"0\" start=\"PT0S\">\n";
+	play_list_stream
+		<< std::fixed << std::setprecision(3)
+		<< "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+		   "<MPD xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+		   "\txmlns=\"urn:mpeg:dash:schema:mpd:2011\"\n"
+		   "\txmlns:xlink=\"http://www.w3.org/1999/xlink\"\n"
+		   "\txsi:schemaLocation=\"urn:mpeg:DASH:schema:MPD:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd\"\n"
+		   "\tprofiles=\"urn:mpeg:dash:profile:isoff-live:2011\"\n"
+		   "\ttype=\"dynamic\"\n"
+		<< "\tminimumUpdatePeriod=\"PT" << minimumUpdatePeriod << "S\"\n"
+		<< "\tpublishTime=\"" << MakeUtcSecond(::time(nullptr)).CStr() << "\"\n"
+		<< "\tavailabilityStartTime=\"" << _start_time.CStr() << "\"\n"
+		<< "\ttimeShiftBufferDepth=\"PT" << time_shift_buffer_depth << "S\"\n"
+		<< "\tsuggestedPresentationDelay=\"PT" << std::setprecision(1) << _segment_duration << "S\"\n"
+		<< "\tminBufferTime=\"PT" << _segment_duration << "S\">\n"
+		<< "\t<Period id=\"0\" start=\"PT0S\">\n";
 
 	if (_video_sequence_number > 1)
 	{

@@ -199,6 +199,13 @@ void HttpServer::ProcessData(std::shared_ptr<HttpClient> &client, const std::sha
 							OV_ASSERT2(false);
 						}
 
+						auto remote = request->GetRemote();
+
+						if(remote != nullptr)
+						{
+							logti("Client(%s) is requested uri: [%s]", remote->GetRemoteAddress()->ToString().CStr(), request->GetUri().CStr());
+						}
+
 						need_to_disconnect = need_to_disconnect || (interceptor->OnHttpPrepare(request, response) == false);
 						need_to_disconnect = need_to_disconnect || (interceptor->OnHttpData(request, response, data->Subdata(processed_length)) == false);
 					}

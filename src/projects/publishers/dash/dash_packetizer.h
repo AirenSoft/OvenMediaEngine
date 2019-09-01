@@ -79,6 +79,18 @@ protected:
 	std::shared_ptr<SegmentData> _video_init_file = nullptr;
 	std::shared_ptr<SegmentData> _audio_init_file = nullptr;
 
+	// Since the m4s segment cannot be split exactly to the desired duration, an error is inevitable.
+	// As this error results in an incorrect segment index, use the delta to correct the error.
+	//
+	// delta = <Ideal duration> - <Prev segment duration>
+	//
+	// So,
+	//   delta == 0 means <Ideal duration> == <Average of total segment duration>
+	//   delta > 0 means <Ideal duration> > <Average of total segment duration>
+	//   delta < 0 means <Ideal duration> < <Average of total segment duration>
+	double _duration_delta_for_video = 0.0;
+	double _duration_delta_for_audio = 0.0;
+
 	uint32_t _video_sequence_number = 1;
 	uint32_t _audio_sequence_number = 1;
 
@@ -86,6 +98,6 @@ protected:
 	int64_t _last_video_pts = -1LL;
 	std::vector<std::shared_ptr<const SampleData>> _audio_datas;
 	int64_t _last_audio_pts = -1LL;
-	
+
 	double _duration_margin;
 };

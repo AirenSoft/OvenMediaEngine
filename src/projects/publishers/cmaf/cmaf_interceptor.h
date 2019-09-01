@@ -6,18 +6,13 @@
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #pragma once
 
-#include "segment_stream/segment_stream_interceptor.h"
+#include <segment_stream/segment_stream_interceptor.h>
 
 class CmafInterceptor : public SegmentStreamInterceptor
 {
 public:
-    CmafInterceptor();
-	~CmafInterceptor();
-
-protected:
     //--------------------------------------------------------------------
 	// Implementation of HttpRequestInterceptorInterface
 	//--------------------------------------------------------------------

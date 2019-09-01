@@ -445,7 +445,7 @@ void RelayClient::HandleData(const RelayPacket &packet)
 			if (data.GetLength() > 0)
 			{
 				auto media_packet = transaction->CreatePacket();
-				media_packet->SetFragHeader(packet.GetFragmentHeader());
+				media_packet->SetFragHeader(&(transaction->fragment_header));
 
 				_media_route_application->OnReceiveBuffer(this->GetSharedPtr(), stream->GetStreamInfo(), std::move(media_packet));
 			}
@@ -462,6 +462,7 @@ void RelayClient::HandleData(const RelayPacket &packet)
 	if (is_different_packet)
 	{
 		transaction->transaction_id = packet.GetTransactionId();
+		::memcpy(&(transaction->fragment_header), packet.GetFragmentHeader(), sizeof(FragmentationHeader));
 		transaction->media_type = packet.GetMediaType();
 		transaction->last_pts = packet.GetPts();
 		transaction->last_dts = packet.GetDts();

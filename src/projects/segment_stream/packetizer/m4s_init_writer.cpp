@@ -111,26 +111,54 @@ int M4sInitWriter::MoovBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 int M4sInitWriter::MvhdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 {
 	auto data = std::make_shared<ov::Data>();
-	std::vector<uint8_t> metrix = {0, 0x01, 0, 0,
-								   0, 0, 0, 0,
-								   0, 0, 0, 0,
-								   0, 0, 0, 0,
-								   0, 0x01, 0, 0,
-								   0, 0, 0, 0,
-								   0, 0, 0, 0,
-								   0, 0, 0, 0,
-								   0x40, 0, 0, 0};
 
-	WriteUint32(0, data);										   // Create Time
-	WriteUint32(0, data);										   // Modification Time
-	WriteUint32(_main_track->GetTimeBase().GetTimescale(), data);  // Timescale
-	WriteUint32(_duration, data);								   // Duration
-	WriteUint32(0x01 << 16, data);								   // rate version
-	WriteUint16(0x01 << 8, data);								   // volme version
-	WriteInit(0, 10, data);										   // Reserve(10Byte)
-	WriteData(metrix, data);									   // Matrix
-	WriteInit(0, 24, data);										   // pre-defined(24byte)
-	WriteUint32(0XFFFFFFFF, data);								   // Next Track ID
+	// 8.2.2.2 Syntax
+	//
+	// aligned(8) class MovieHeaderBox extends FullBox(‘mvhd’, version, 0) {
+	//     if (version==1) {
+	//         unsigned int(64) creation_time;
+	//         unsigned int(64) modification_time;
+	//         unsigned int(32) timescale;
+	//         unsigned int(64) duration;
+	//     } else { // version==0
+	//         unsigned int(32) creation_time;
+	//         unsigned int(32) modification_time;
+	//         unsigned int(32) timescale;
+	//         unsigned int(32) duration;
+	//     }
+	//     template int(32) rate = 0x00010000; // typically 1.0
+	//     template int(16) volume = 0x0100; // typically, full volume
+	//     const bit(16) reserved = 0;
+	//     const unsigned int(32)[2] reserved = 0;
+	//     template int(32)[9]  matrix =
+	//         { 0x00010000,0,0,0,0x00010000,0,0,0,0x40000000 };
+	//         // Unity matrix
+	//     bit(32)[6] pre_defined = 0;
+	//     unsigned int(32) next_track_ID;
+	// }
+	uint32_t matrix[9] =
+		{0x00010000, 0, 0, 0, 0x00010000, 0, 0, 0, 0x40000000};
+
+	WriteUint32(0x00000000, data);								   // creation_time
+	WriteUint32(0x00000000, data);								   // modification_time
+	WriteUint32(_main_track->GetTimeBase().GetTimescale(), data);  // timescale
+	WriteUint32(0x00000000, data);								   // duration
+	WriteUint32(0x00010000, data);								   // rate
+	WriteUint16(0x0100, data);									   // volume
+	WriteUint16(0x00000000, data);								   // reserved - bit(16)
+	for (int i = 0; i < 2; i++)									   // reserved - int(32)[0]
+	{
+		WriteUint32(0x00000000, data);
+	}
+	for (int i = 0; i < OV_COUNTOF(matrix); i++)  // matrix
+	{
+		WriteUint32(matrix[i], data);
+	}
+	for (int i = 0; i < 6; i++)  // pre_defined
+	{
+		WriteUint32(0x00000000, data);
+	}
+	WriteUint32(0XFFFFFFFF, data);  // Next Track ID
 
 	return WriteBoxData("mvhd", 0, 0, data, data_stream);
 }
@@ -202,7 +230,7 @@ int M4sInitWriter::MdhdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 	WriteUint32(0, data);																   // Create Time
 	WriteUint32(0, data);																   // Modification Time
 	WriteUint32(_main_track->GetTimeBase().GetTimescale(), data);						   // Timescale
-	WriteUint32(_duration, data);														   // Duration
+	WriteUint32(0, data);																   // Duration
 	WriteUint8((((_language[0] - 0x60) << 2) | (_language[1] - 0x60) >> 3) & 0xFF, data);  // Language 1
 	WriteUint8((((_language[1] - 0x60) << 5) | (_language[2] - 0x60)) & 0xFF, data);	   // Language 2
 	WriteUint16(0, data);																   // Pre Define
@@ -385,15 +413,15 @@ int M4sInitWriter::Mp4aBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 
 	OV_ASSERT2(_audio_track != nullptr);
 
-	WriteUint32(1, data);										   // Child Count
-	WriteUint16(0, data);										   // QT version
-	WriteUint16(0, data);										   // QT revision
-	WriteUint32(0, data);										   // QT vendor
-	WriteUint16(_audio_track->GetChannel().GetCounts(), data);	 // channel count
+	WriteUint32(1, data);											   // Child Count
+	WriteUint16(0, data);											   // QT version
+	WriteUint16(0, data);											   // QT revision
+	WriteUint32(0, data);											   // QT vendor
+	WriteUint16(_audio_track->GetChannel().GetCounts(), data);		   // channel count
 	WriteUint16(_audio_track->GetSample().GetSampleSize() * 8, data);  // sample size
-	WriteUint16(0, data);										   // QT compression ID
-	WriteUint16(0, data);										   // QT packet size
-	WriteUint32(_audio_track->GetSampleRate() << 16, data);		   // sample rate
+	WriteUint16(0, data);											   // QT compression ID
+	WriteUint16(0, data);											   // QT packet size
+	WriteUint32(_audio_track->GetSampleRate() << 16, data);			   // sample rate
 
 	EsdsBoxWrite(data);
 

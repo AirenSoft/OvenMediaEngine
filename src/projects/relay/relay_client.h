@@ -51,13 +51,14 @@ protected:
 	struct Transaction
 	{
 		uint32_t transaction_id = 0xFFFFFFFF;
-		int8_t media_type;
+		FragmentationHeader fragment_header;
+		int8_t media_type = 0;
 		int64_t last_pts = 0LL;
 		int64_t last_dts = 0LL;
 		int64_t duration = 0LL;
 		uint32_t track_id;
 		ov::Data data;
-		uint8_t flag;
+		uint8_t flag = 0U;
 
 		std::unique_ptr<MediaPacket> CreatePacket() const
 		{

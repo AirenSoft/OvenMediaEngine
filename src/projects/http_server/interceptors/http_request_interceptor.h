@@ -17,6 +17,8 @@
 class HttpRequestInterceptor
 {
 public:
+	virtual ~HttpRequestInterceptor() {}
+
 	// request를 처리할 수 있는 interceptor인지 여부 반환
 	// 만약, true를 반환하면 앞으로 이 interceptor만 호출됨
 	virtual bool IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request, const std::shared_ptr<const HttpResponse> &response) = 0;

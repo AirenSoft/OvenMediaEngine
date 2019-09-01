@@ -7,40 +7,30 @@
 //
 //==============================================================================
 #include "dash_interceptor.h"
-#include "dash_private.h"
 #include "dash_define.h"
+#include "dash_private.h"
 
-DashInterceptor::DashInterceptor()
-{
-
-}
-
-DashInterceptor::~DashInterceptor()
-{
-
-}
-
-//====================================================================================================
-// IsInterceptorForRequest
-//====================================================================================================
 bool DashInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request,
-        const std::shared_ptr<const HttpResponse> &response)
+											  const std::shared_ptr<const HttpResponse> &response)
 {
-	// Get Method 1.1 check
-	if((request->GetMethod() != HttpMethod::Get) || (request->GetHttpVersionAsNumber() <= 1.0))
+	// Temporary code to accept HTTP 1.0
+	if ((request->GetMethod() != HttpMethod::Get) || (request->GetHttpVersionAsNumber() < 1.0))
 	{
 		return false;
 	}
 
-    // mpd/m4s
-    if((request->GetRequestTarget().IndexOf(DASH_MPD_VIDEO_FULL_SUFFIX) >= 0) ||
-       (request->GetRequestTarget().IndexOf(DASH_MPD_AUDIO_FULL_SUFFIX) >= 0) ||
-       (request->GetRequestTarget().IndexOf(DASH_PLAYLIST_FULL_FILE_NAME) >= 0) ||
-       (!_is_crossdomain_block && request->GetRequestTarget().IndexOf("crossdomain.xml") >= 0))
-    {
-        return true;
-    }
+    // Check file pattern
+    // TODO(dimiden): Check this code later - IsInterceptorForRequest() should not filter method and filename. It is recommended to use Register()
+    auto &request_target = request->GetRequestTarget();
 
+	if (
+		(request_target.IndexOf(DASH_MPD_VIDEO_FULL_SUFFIX) >= 0) ||
+		(request_target.IndexOf(DASH_MPD_AUDIO_FULL_SUFFIX) >= 0) ||
+		(request_target.IndexOf(DASH_PLAYLIST_FULL_FILE_NAME) >= 0) ||
+		((_is_crossdomain_block == false) && request_target.IndexOf(DASH_CORS_FILE_NAME) >= 0))
+	{
+		return true;
+	}
 
 	return false;
 }

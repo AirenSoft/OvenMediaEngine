@@ -309,7 +309,7 @@ bool DashPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 	if (frame->type == PacketizerFrameType::VideoKeyFrame)
 	{
 		// Check the timestamp to determine if a new segment is to be created
-		if (current_segment_duration >= _ideal_duration_for_video)
+		if (current_segment_duration >= (_ideal_duration_for_video + _duration_delta_for_video))
 		{
 			// Need to create a new segment
 
@@ -377,7 +377,7 @@ bool DashPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameDat
 	// Since audio frame is always a key frame, don't need to check the frame type
 
 	// Check the timestamp to determine if a new segment is to be created
-	if (current_segment_duration >= _ideal_duration_for_audio)
+	if (current_segment_duration >= (_ideal_duration_for_audio + _duration_delta_for_audio))
 	{
 		// Need to create a new segment
 
@@ -454,6 +454,8 @@ bool DashPacketizer::WriteVideoSegment()
 		return false;
 	}
 
+	_duration_delta_for_video += (_ideal_duration_for_video - segment_duration);
+
 	_video_sequence_number++;
 
 	return true;
@@ -488,6 +490,8 @@ bool DashPacketizer::WriteAudioSegment()
 	{
 		return false;
 	}
+
+	_duration_delta_for_audio += (_ideal_duration_for_audio - segment_duration);
 
 	_audio_sequence_number++;
 
@@ -627,53 +631,56 @@ bool DashPacketizer::UpdatePlayList()
 		return false;
 	}
 
-	play_list_stream << std::fixed << std::setprecision(3)
-					 << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-						"<MPD xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
-						"\txmlns=\"urn:mpeg:dash:schema:mpd:2011\"\n"
-						"\txmlns:xlink=\"http://www.w3.org/1999/xlink\"\n"
-						"\txsi:schemaLocation=\"urn:mpeg:DASH:schema:MPD:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd\"\n"
-						"\tprofiles=\"urn:mpeg:dash:profile:isoff-live:2011\"\n"
-						"\ttype=\"dynamic\"\n"
-					 << "\tminimumUpdatePeriod=\"PT" << minimumUpdatePeriod << "S\"\n"
-					 << "\tpublishTime=\"" << MakeUtcSecond(::time(nullptr)).CStr() << "\"\n"
-					 << "\tavailabilityStartTime=\"" << _start_time.CStr() << "\"\n"
-					 << "\ttimeShiftBufferDepth=\"PT" << time_shift_buffer_depth << "S\"\n"
-					 << "\tsuggestedPresentationDelay=\"PT" << std::setprecision(1) << _segment_duration << "S\"\n"
-					 << "\tminBufferTime=\"PT" << _mpd_min_buffer_time << "S\">\n"
-					 << "\t<Period id=\"0\" start=\"PT0S\">\n";
+	play_list_stream
+		<< std::fixed << std::setprecision(3)
+		<< "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+		   "<MPD xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+		   "\txmlns=\"urn:mpeg:dash:schema:mpd:2011\"\n"
+		   "\txmlns:xlink=\"http://www.w3.org/1999/xlink\"\n"
+		   "\txsi:schemaLocation=\"urn:mpeg:DASH:schema:MPD:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd\"\n"
+		   "\tprofiles=\"urn:mpeg:dash:profile:isoff-live:2011\"\n"
+		   "\ttype=\"dynamic\"\n"
+		<< "\tminimumUpdatePeriod=\"PT" << minimumUpdatePeriod << "S\"\n"
+		<< "\tpublishTime=\"" << MakeUtcSecond(::time(nullptr)).CStr() << "\"\n"
+		<< "\tavailabilityStartTime=\"" << _start_time.CStr() << "\"\n"
+		<< "\ttimeShiftBufferDepth=\"PT" << time_shift_buffer_depth << "S\"\n"
+		<< "\tsuggestedPresentationDelay=\"PT" << std::setprecision(1) << (_segment_duration * _segment_count) << "S\"\n"
+		<< "\tminBufferTime=\"PT2S\">\n" // << _mpd_min_buffer_time << "S\">\n"
+		<< "\t<Period id=\"0\" start=\"PT0S\">\n";
 
 	if (video_urls.IsEmpty() == false)
 	{
-		play_list_stream << "\t\t<AdaptationSet id=\"0\" group=\"1\" mimeType=\"video/mp4\" "
-						 << "width=\"" << _video_track->GetWidth() << "\" height=\"" << _video_track->GetHeight()
-						 << "\" par=\"" << _pixel_aspect_ratio << "\" frameRate=\"" << _video_track->GetFrameRate()
-						 << "\" segmentAlignment=\"true\" startWithSAP=\"1\" subsegmentAlignment=\"true\" subsegmentStartsWithSAP=\"1\">\n"
-						 << "\t\t\t<SegmentTemplate timescale=\"" << static_cast<uint32_t>(_video_track->GetTimeBase().GetTimescale())
-						 << "\" initialization=\"" << DASH_MPD_VIDEO_FULL_INIT_FILE_NAME << "\" media=\"" << _segment_prefix.CStr() << "_$Time$" << DASH_MPD_VIDEO_FULL_SUFFIX << "\">\n"
-						 << "\t\t\t\t<SegmentTimeline>\n"
-						 << video_urls.CStr()
-						 << "\t\t\t\t</SegmentTimeline>\n"
-						 << "\t\t\t</SegmentTemplate>\n"
-						 << "\t\t\t<Representation codecs=\"avc1.42401f\" sar=\"1:1\" bandwidth=\"" << _video_track->GetBitrate()
-						 << "\" />\n"
-						 << "\t\t</AdaptationSet>\n";
+		play_list_stream
+			<< "\t\t<AdaptationSet group=\"1\" mimeType=\"video/mp4\" "
+			<< "width=\"" << _video_track->GetWidth() << "\" height=\"" << _video_track->GetHeight()
+			<< "\" par=\"" << _pixel_aspect_ratio << "\" frameRate=\"" << _video_track->GetFrameRate()
+			<< "\" segmentAlignment=\"true\" startWithSAP=\"1\" subsegmentAlignment=\"true\" subsegmentStartsWithSAP=\"1\">\n"
+			<< "\t\t\t<SegmentTemplate timescale=\"" << static_cast<uint32_t>(_video_track->GetTimeBase().GetTimescale())
+			<< "\" initialization=\"" << DASH_MPD_VIDEO_FULL_INIT_FILE_NAME << "\" media=\"" << _segment_prefix.CStr() << "_$Time$" << DASH_MPD_VIDEO_FULL_SUFFIX << "\">\n"
+			<< "\t\t\t\t<SegmentTimeline>\n"
+			<< video_urls.CStr()
+			<< "\t\t\t\t</SegmentTimeline>\n"
+			<< "\t\t\t</SegmentTemplate>\n"
+			<< "\t\t\t<Representation id=\"0\" codecs=\"avc1.42401f\" sar=\"1:1\" bandwidth=\"" << _video_track->GetBitrate()
+			<< "\" />\n"
+			<< "\t\t</AdaptationSet>\n";
 	}
 
 	if (audio_urls.IsEmpty() == false)
 	{
-		play_list_stream << "\t\t<AdaptationSet id=\"1\" group=\"2\" mimeType=\"audio/mp4\" lang=\"und\" segmentAlignment=\"true\" startWithSAP=\"1\" subsegmentAlignment=\"true\" subsegmentStartsWithSAP=\"1\">\n"
-						 << "\t\t\t<AudioChannelConfiguration schemeIdUri=\"urn:mpeg:dash:23003:3:audio_channel_configuration:2011\" value=\""
-						 << _audio_track->GetChannel().GetCounts() << "\"/>\n"
-						 << "\t\t\t<SegmentTemplate timescale=\"" << static_cast<uint32_t>(_audio_track->GetTimeBase().GetTimescale())
-						 << "\" initialization=\"" << DASH_MPD_AUDIO_FULL_INIT_FILE_NAME << "\" media=\"" << _segment_prefix.CStr() << "_$Time$" << DASH_MPD_AUDIO_FULL_SUFFIX << "\">\n"
-						 << "\t\t\t\t<SegmentTimeline>\n"
-						 << audio_urls.CStr()
-						 << "\t\t\t\t</SegmentTimeline>\n"
-						 << "\t\t\t</SegmentTemplate>\n"
-						 << "\t\t\t<Representation codecs=\"mp4a.40.2\" audioSamplingRate=\"" << _audio_track->GetSampleRate()
-						 << "\" bandwidth=\"" << _audio_track->GetBitrate() << "\" />\n"
-						 << "\t\t</AdaptationSet>\n";
+		play_list_stream
+			<< "\t\t<AdaptationSet group=\"2\" mimeType=\"audio/mp4\" lang=\"und\" segmentAlignment=\"true\" startWithSAP=\"1\" subsegmentAlignment=\"true\" subsegmentStartsWithSAP=\"1\">\n"
+			<< "\t\t\t<AudioChannelConfiguration schemeIdUri=\"urn:mpeg:dash:23003:3:audio_channel_configuration:2011\" value=\""
+			<< _audio_track->GetChannel().GetCounts() << "\"/>\n"
+			<< "\t\t\t<SegmentTemplate timescale=\"" << static_cast<uint32_t>(_audio_track->GetTimeBase().GetTimescale())
+			<< "\" initialization=\"" << DASH_MPD_AUDIO_FULL_INIT_FILE_NAME << "\" media=\"" << _segment_prefix.CStr() << "_$Time$" << DASH_MPD_AUDIO_FULL_SUFFIX << "\">\n"
+			<< "\t\t\t\t<SegmentTimeline>\n"
+			<< audio_urls.CStr()
+			<< "\t\t\t\t</SegmentTimeline>\n"
+			<< "\t\t\t</SegmentTemplate>\n"
+			<< "\t\t\t<Representation id=\"1\" codecs=\"mp4a.40.2\" audioSamplingRate=\"" << _audio_track->GetSampleRate()
+			<< "\" bandwidth=\"" << _audio_track->GetBitrate() << "\" />\n"
+			<< "\t\t</AdaptationSet>\n";
 	}
 
 	play_list_stream << "\t</Period>\n"

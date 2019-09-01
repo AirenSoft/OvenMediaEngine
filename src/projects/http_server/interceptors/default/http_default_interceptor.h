@@ -17,9 +17,6 @@
 class HttpDefaultInterceptor : public HttpRequestInterceptor
 {
 public:
-	HttpDefaultInterceptor() = default;
-	~HttpDefaultInterceptor() = default;
-
 	// ECMAScript regex (http://www.cplusplus.com/reference/regex/ECMAScript)
 	// method + pattern을 처리하는 handler 등록
 	bool Register(HttpMethod method, 

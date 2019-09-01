@@ -19,21 +19,11 @@ class SegmentStreamInterceptor : public HttpDefaultInterceptor
 {
 public:
     SegmentStreamInterceptor();
-	~SegmentStreamInterceptor() ;
+	~SegmentStreamInterceptor() override;
 
-public:
     void Start(int thread_count, const SegmentProcessHandler &process_handler);
-
 	bool OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data) override;
-
     void SetCrossdomainBlock() { _is_crossdomain_block = false; }
-
-protected:
-
-	//--------------------------------------------------------------------
-	// Implementation of HttpRequestInterceptorInterface
-	//--------------------------------------------------------------------
-	bool IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request, const std::shared_ptr<const HttpResponse> &response) override;
 
 protected :
     SegmentWorkerManager _worker_manager;

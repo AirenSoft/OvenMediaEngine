@@ -15,6 +15,18 @@
 
 class CmafStreamServer : public SegmentStreamServer, public ICmafChunkedTransfer
 {
+public:
+	cfg::PublisherType GetPublisherType() override
+	{
+		return cfg::PublisherType::Cmaf;
+	}
+
+	std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() override
+	{
+		auto interceptor = std::make_shared<CmafInterceptor>();
+		return std::static_pointer_cast<SegmentStreamInterceptor>(interceptor);
+	}
+
 protected:
 	struct CmafHttpChunkedData
 	{
@@ -33,19 +45,6 @@ protected:
 		std::vector<std::shared_ptr<HttpResponse>> response_list;
 	};
 
-public:
-	cfg::PublisherType GetPublisherType() override
-	{
-		return cfg::PublisherType::Cmaf;
-	}
-
-	std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() override
-	{
-		auto interceptor = std::make_shared<CmafInterceptor>();
-		return std::static_pointer_cast<SegmentStreamInterceptor>(interceptor);
-	}
-
-protected:
 	//--------------------------------------------------------------------
 	// Implementation of SegmentStreamServer
 	//--------------------------------------------------------------------
