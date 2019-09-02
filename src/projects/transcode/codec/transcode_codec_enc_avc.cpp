@@ -177,7 +177,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
 	int pps_start_index = -1;
 	int pps_end_index = -1;
 	int fragment_count = 0;
-	uint32_t current_index = 0;
+	int current_index = 0;
 
 	while ((current_index + nal_pattern_size) < _packet->size)
 	{
