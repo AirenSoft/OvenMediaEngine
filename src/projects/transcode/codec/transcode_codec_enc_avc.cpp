@@ -36,8 +36,9 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	}
 
 	_context->bit_rate = _output_context->GetBitrate();
+	_context->rc_min_rate = _context->bit_rate;
 	_context->rc_max_rate = _context->bit_rate;
-	_context->rc_buffer_size = static_cast<int>(_context->bit_rate * 2);
+	_context->rc_buffer_size = static_cast<int>(_context->bit_rate);
 	_context->sample_aspect_ratio = (AVRational){1, 1};
 	// From avcodec.h:
 	// For some codecs, the time base is closer to the field rate than the frame rate.
@@ -57,15 +58,17 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
 	_context->thread_count = 4;
-	_context->profile = FF_PROFILE_H264_BASELINE;
 	AVRational output_timebase = TimebaseToAVRational(_output_context->GetTimeBase());
 	_scale = ::av_q2d(::av_div_q(output_timebase, codec_timebase));
 	_scale_inv = ::av_q2d(::av_div_q(codec_timebase, output_timebase));
 
+	// For browser compatibility
+	_context->profile = FF_PROFILE_H264_BASELINE;
+
 	// zerolatency
 	::av_opt_set(_context->priv_data, "preset", "ultrafast", 0);
 	::av_opt_set(_context->priv_data, "tune", "zerolatency", 0);
-	::av_opt_set(_context->priv_data, "x264opts", "bframes=0:no-mbtree:sliced-threads=0:sync-lookahead=0", 0);
+	::av_opt_set(_context->priv_data, "x264opts", "bframes=0:no-mbtree:sliced-threads=0:sync-lookahead=0:no-scenecut", 0);
 
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{
