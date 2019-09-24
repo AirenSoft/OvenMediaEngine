@@ -107,10 +107,10 @@ namespace ov
 		ov::String ToString() const noexcept;
 
 	protected:
-		sockaddr_storage _address_storage;
+		sockaddr_storage _address_storage {};
 		// _address_storage내 데이터를 가리키는 포인터 (실제로 메모리가 할당되어 있거나 하지는 않음)
-		sockaddr_in *_address_ipv4;
-		sockaddr_in6 *_address_ipv6;
+		sockaddr_in *_address_ipv4 = nullptr;
+		sockaddr_in6 *_address_ipv6 = nullptr;
 
 		ov::String _hostname;
 		ov::String _ip_address;
