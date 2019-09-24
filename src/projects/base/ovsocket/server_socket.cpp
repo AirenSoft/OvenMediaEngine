@@ -10,6 +10,8 @@
 #include "socket_private.h"
 #include "client_socket.h"
 
+#include <netinet/tcp.h>
+
 namespace ov
 {
 	ServerSocket::~ServerSocket()
@@ -291,6 +293,7 @@ namespace ov
 		if(type == SocketType::Tcp)
 		{
 			result &= SetSockOpt<int>(SO_REUSEADDR, 1);
+			result &= SetSockOpt<int>(IPPROTO_TCP, TCP_NODELAY, 1);
 
             int current_send_buffer_size;
             int current_recv_buffer_size;
@@ -298,7 +301,6 @@ namespace ov
 
             ::getsockopt(_socket.GetSocket(), SOL_SOCKET, SO_SNDBUF,(void*)&current_send_buffer_size, &data_size);
             ::getsockopt(_socket.GetSocket(), SOL_SOCKET, SO_RCVBUF,(void*)&current_recv_buffer_size, &data_size);
-
 
             // Setting send buffer size( 0 = default)
           	if(send_buffer_size != 0 && current_send_buffer_size < send_buffer_size)
