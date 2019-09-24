@@ -266,11 +266,18 @@ namespace ov
 
 		// for normal socket
 		template <class T>
-		bool SetSockOpt(int option, const T &value)
+		bool SetSockOpt(int proto, int option, const T &value)
 		{
-			return SetSockOpt(option, &value, (socklen_t)sizeof(T));
+			return SetSockOpt(proto, option, &value, (socklen_t)sizeof(T));
 		}
 
+		template <class T>
+		bool SetSockOpt(int option, const T &value)
+		{
+			return SetSockOpt<T>(SOL_SOCKET, option, value);
+		}
+
+		bool SetSockOpt(int proto, int option, const void *value, socklen_t value_length);
 		bool SetSockOpt(int option, const void *value, socklen_t value_length);
 
 		// for SRT

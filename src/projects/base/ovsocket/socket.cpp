@@ -188,6 +188,11 @@ namespace ov
 		OV_ASSERT(_epoll == InvalidSocket, "Epoll is not uninitialized");
 		OV_ASSERT(_epoll_events == nullptr, "Epoll events are not freed");
 
+		if(_send_thread.joinable())
+		{
+			_send_thread.join();
+		}
+
 		// TODO(dimiden): PhysicalPort에서 이벤트를 모두 처리하지 않고 Socket을 바로 Close()하는 부분이 있는데,
 		// 나중에 half-close를 한 뒤, 나머지 이벤트들을 모두 처리하고 나서 최종적으로 Close()하도록 해야함
 		// OV_ASSERT(_last_epoll_event_count == 0, "Last epoll event count is remained: %d", _last_epoll_event_count);
@@ -860,11 +865,11 @@ namespace ov
 		return _remote_address;
 	}
 
-	bool Socket::SetSockOpt(int option, const void *value, socklen_t value_length)
+	bool Socket::SetSockOpt(int proto, int option, const void *value, socklen_t value_length)
 	{
 		CHECK_STATE(!= SocketState::Closed, false);
 
-		int result = ::setsockopt(_socket.GetSocket(), SOL_SOCKET, option, value, value_length);
+		int result = ::setsockopt(_socket.GetSocket(), proto, option, value, value_length);
 
 		if (result != 0)
 		{
@@ -873,6 +878,11 @@ namespace ov
 		}
 
 		return true;
+	}
+
+	bool Socket::SetSockOpt(int option, const void *value, socklen_t value_length)
+	{
+		return SetSockOpt(SOL_SOCKET, option, value, value_length);
 	}
 
 	bool Socket::SetSockOpt(SRT_SOCKOPT option, const void *value, int value_length)
@@ -1445,9 +1455,9 @@ namespace ov
 					{
 						// FIN 송신
 						::shutdown(_socket.GetSocket(), SHUT_WR);
+						::close(_socket.GetSocket());
 					}
-
-					// It is intended that there is no "break;" statement here
+					break;
 
 				case SocketType::Udp:
 					if (_socket.IsValid())
