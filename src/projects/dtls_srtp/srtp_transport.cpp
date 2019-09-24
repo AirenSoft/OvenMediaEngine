@@ -85,22 +85,23 @@ bool SrtpTransport::OnDataReceived(SessionNodeType from_node, const std::shared_
 		return false;
 	}
 
-	auto decode_data = data->Clone();
+	// TODO(getroot): _recv_session가 생성되기 전에 호출되는 경우가 있음. 확인 필요
+	// auto decode_data = data->Clone();
 
-    if(!_recv_session->UnprotectRtcp(decode_data))
-    {
-        logtd("stcp unprotected fail");
-        return false;
-    }
+    // if(!_recv_session->UnprotectRtcp(decode_data))
+    // {
+    //     logtd("stcp unprotected fail");
+    //     return false;
+    // }
 
-	// pass to rtcp
-    auto node = GetUpperNode();
+	// // pass to rtcp
+    // auto node = GetUpperNode();
 
-    if(node == nullptr)
-    {
-        return false;
-    }
-    node->OnDataReceived(GetNodeType(), decode_data);
+    // if(node == nullptr)
+    // {
+    //     return false;
+    // }
+    // node->OnDataReceived(GetNodeType(), decode_data);
 
 	return true;
 }

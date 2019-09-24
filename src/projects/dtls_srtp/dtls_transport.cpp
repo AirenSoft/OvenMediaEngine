@@ -291,13 +291,14 @@ bool DtlsTransport::OnDataReceived(SessionNodeType from_node, const std::shared_
 				// }
 
 				// pass to srtp
-				auto node = GetUpperNode();
+				// TODO(getroot): 나중에 RTCP 구현 할 것
+				// auto node = GetUpperNode();
 
-                if(node == nullptr)
-                {
-                    return false;
-                }
-                node->OnDataReceived(GetNodeType(), data);
+                // if(node == nullptr)
+                // {
+                //     return false;
+                // }
+                // node->OnDataReceived(GetNodeType(), data);
 
 				return true;
 			}
