@@ -20,8 +20,14 @@
 
 namespace ov
 {
+	enum class DelayQueueAction : char
+	{
+		Stop,
+		Repeat
+	};
+
 	// Return false if need to stop when using repeat mode
-	typedef std::function<bool(void *parameter)> DelayQueueFunction;
+	typedef std::function<DelayQueueAction(void *parameter)> DelayQueueFunction;
 
 	class DelayQueue
 	{
@@ -30,7 +36,7 @@ namespace ov
 		virtual ~DelayQueue();
 
 		// after의 단위는 ms
-		void Push(const DelayQueueFunction &func, void *parameter, int after, bool repeat);
+		void Push(const DelayQueueFunction &func, void *parameter, int after);
 		void Push(const DelayQueueFunction &func, int after);
 		ssize_t GetCount() const;
 
@@ -49,19 +55,17 @@ namespace ov
 			void *parameter;
 
 			int after;
-			bool repeat;
 
 			std::chrono::time_point<std::chrono::system_clock> time_point;
 
 			// after의 단위는 ms
-			DelayQueueItem(int64_t index, DelayQueueFunction function, void *parameter, int after, bool repeat)
+			DelayQueueItem(int64_t index, DelayQueueFunction function, void *parameter, int after)
 				: index(index),
 
 				  function(std::move(function)),
 				  parameter(parameter),
 
-				  after(after),
-				  repeat(repeat)
+				  after(after)
 			{
 				RecalculateTimePoint();
 			}

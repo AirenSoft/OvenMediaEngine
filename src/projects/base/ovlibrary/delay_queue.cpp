@@ -10,8 +10,8 @@
 #include "./log.h"
 #include "./ovlibrary_private.h"
 
-#include <thread>
 #include <unistd.h>
+#include <thread>
 
 namespace ov
 {
@@ -27,7 +27,7 @@ namespace ov
 		Stop();
 	}
 
-	void DelayQueue::Push(const DelayQueueFunction &func, void *parameter, int after, bool repeat)
+	void DelayQueue::Push(const DelayQueueFunction &func, void *parameter, int after)
 	{
 		std::lock_guard<std::mutex> lock(_mutex);
 
@@ -36,7 +36,7 @@ namespace ov
 
 		logtd("Pushing new item: %p (after %d ms)", parameter, after);
 
-		_queue.emplace(index, func, parameter, after, repeat);
+		_queue.emplace(index, func, parameter, after);
 
 		logtd("Notifying...");
 		_event.SetEvent();
@@ -44,7 +44,7 @@ namespace ov
 
 	void DelayQueue::Push(const DelayQueueFunction &func, int after)
 	{
-		Push(func, nullptr, after, false);
+		Push(func, nullptr, after);
 	}
 
 	ssize_t DelayQueue::GetCount() const
@@ -56,7 +56,7 @@ namespace ov
 
 	bool DelayQueue::Start()
 	{
-		if(_stop == false)
+		if (_stop == false)
 		{
 			// 이미 실행 중
 			return false;
@@ -70,7 +70,7 @@ namespace ov
 
 	bool DelayQueue::Stop()
 	{
-		if(_stop)
+		if (_stop)
 		{
 			// 이미 중지됨
 			return false;
@@ -84,9 +84,9 @@ namespace ov
 
 	void DelayQueue::DispatchThreadProc()
 	{
-		while(_stop == false)
+		while (_stop == false)
 		{
-			if(_queue.empty())
+			if (_queue.empty())
 			{
 				// queue에 아무 것도 없음. 새로운 항목이 Push될 때까지 대기
 				logtd("Queue is empty. Waiting for new item...");
@@ -100,19 +100,18 @@ namespace ov
 				// queue에 들어 있는 첫 번째 항목 처리
 				auto first_item = _queue.top();
 
-				if(_event.Wait(first_item.time_point) == false)
+				if (_event.Wait(first_item.time_point) == false)
 				{
 					// first_item.time_point 만큼 대기 할 때까지, 다른 항목이 Push() 되지 않았음
-					bool cont = first_item.function(first_item.parameter);
+					DelayQueueAction action = first_item.function(first_item.parameter);
 
 					std::lock_guard<std::mutex> lock(_mutex);
 
 					// 처리된 항목은 queue에서 제외
 					_queue.pop();
 
-					if(first_item.repeat && cont)
+					if (action == DelayQueueAction::Repeat)
 					{
-						// repeat이 활성화 되어 있고 true를 반환했다면 다음 번 실행을 위해 다시 등록
 						first_item.RecalculateTimePoint();
 
 						_queue.push(first_item);
@@ -127,4 +126,4 @@ namespace ov
 			}
 		}
 	}
-}
+}  // namespace ov
