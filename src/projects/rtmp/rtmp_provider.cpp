@@ -206,9 +206,9 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 
 bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 							   uint32_t stream_id,
-							   uint32_t timestamp,
+							   int64_t timestamp,
 							   RtmpFrameType frame_type,
-							   std::shared_ptr<std::vector<uint8_t>> &data)
+							   const std::shared_ptr<const ov::Data> &data)
 {
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationById(application_id));
 
@@ -227,10 +227,10 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 
 	auto pbuf = std::make_unique<MediaPacket>(MediaType::Video,
 											  0,
-											  data->data(), data->size(),
+											  data,
 											  // The timestamp used by RTMP is DTS. PTS will be recalculated later
-											  timestamp * _video_scale, // PTS
-											  timestamp * _video_scale, // DTS
+											  timestamp * _video_scale,  // PTS
+											  timestamp * _video_scale,  // DTS
 											  // RTMP doesn't know frame's duration
 											  -1LL,
 											  frame_type == RtmpFrameType::VideoIFrame ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
@@ -242,9 +242,9 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 
 bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 							   uint32_t stream_id,
-							   uint32_t timestamp,
+							   int64_t timestamp,
 							   RtmpFrameType frame_type,
-							   std::shared_ptr<std::vector<uint8_t>> &data)
+							   const std::shared_ptr<const ov::Data> &data)
 {
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationById(application_id));
 
@@ -264,10 +264,10 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 
 	auto pbuf = std::make_unique<MediaPacket>(MediaType::Audio,
 											  1,
-											  data->data(), data->size(),
+											  data,
 											  // The timestamp used by RTMP is DTS. PTS will be recalculated later
-											  timestamp * _audio_scale, // PTS
-											  timestamp * _audio_scale, // DTS
+											  timestamp * _audio_scale,  // PTS
+											  timestamp * _audio_scale,  // DTS
 											  // RTMP doesn't know frame's duration
 											  -1LL,
 											  MediaPacketFlag::Key);

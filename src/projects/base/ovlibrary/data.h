@@ -66,6 +66,24 @@ namespace ov
 			return reinterpret_cast<const T *>(GetData());
 		}
 
+		inline const uint8_t At(off_t index) const
+		{
+			return AtAs<uint8_t>(index);
+		}
+
+		template<typename T = uint8_t>
+		inline const T AtAs(off_t index) const
+		{
+			if((index < 0) || ((index * sizeof(T)) >= GetLength()))
+			{
+				return T();
+			}
+
+			auto data = GetDataAs<const T>();
+
+			return data[index];
+		}
+
 		/// Get the writable pointer
 		///
 		/// @return writable pointer
@@ -137,6 +155,8 @@ namespace ov
 
 		bool Append(const void *data, size_t length);
 		bool Append(const Data *data);
+		bool Append(const std::shared_ptr<Data> &data);
+		bool Append(const std::shared_ptr<const Data> &data);
 
 		bool Erase(off_t offset, size_t length);
 
@@ -168,6 +188,8 @@ namespace ov
 		{
 			return IsEqual(data->GetData(), data->GetLength());
 		}
+
+		bool IsEmpty() const;
 
 		String Dump(size_t max_bytes = 1024) const noexcept;
 		String Dump(const char *title, const char *line_prefix) const noexcept;

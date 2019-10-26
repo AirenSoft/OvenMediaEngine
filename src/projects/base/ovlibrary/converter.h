@@ -12,6 +12,7 @@
 #include "./json.h"
 
 #include <string>
+#include <inttypes.h>
 
 namespace ov
 {

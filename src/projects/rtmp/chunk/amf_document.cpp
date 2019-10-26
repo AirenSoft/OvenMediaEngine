@@ -8,8 +8,8 @@
 //==============================================================================
 #include "amf_document.h"
 
-
-
+#include <base/ovlibrary/ovlibrary.h>
+#include "../rtmp_provider_private.h"
 
 //////////////////////////////////////////////////////////////////////////
 //                              AmfUtil                                //
@@ -88,7 +88,7 @@ int AmfUtil::WriteInt32(void *data, uint32_t number)
 //====================================================================================================
 // AmfUtil - ReadInt8
 //====================================================================================================
-uint8_t AmfUtil::ReadInt8(void *data)
+uint8_t AmfUtil::ReadInt8(const void *data)
 {
     auto *pt_in = (uint8_t *) data;
     uint8_t number = 0;
@@ -105,7 +105,7 @@ uint8_t AmfUtil::ReadInt8(void *data)
 //====================================================================================================
 // AmfUtil - ReadInt16
 //====================================================================================================
-uint16_t AmfUtil::ReadInt16(void *data)
+uint16_t AmfUtil::ReadInt16(const void *data)
 {
     auto *pt_in = (uint8_t *) data;
     uint16_t number = 0;
@@ -123,7 +123,7 @@ uint16_t AmfUtil::ReadInt16(void *data)
 //====================================================================================================
 // AmfUtil - ReadInt24
 //====================================================================================================
-uint32_t AmfUtil::ReadInt24(void *data)
+uint32_t AmfUtil::ReadInt24(const void *data)
 {
     auto *pt_in = (uint8_t *) data;
     uint32_t number = 0;
@@ -142,7 +142,7 @@ uint32_t AmfUtil::ReadInt24(void *data)
 //====================================================================================================
 // AmfUtil - ReadInt32
 //====================================================================================================
-uint32_t AmfUtil::ReadInt32(void *data)
+uint32_t AmfUtil::ReadInt32(const void *data)
 {
     auto *pt_in = (uint8_t *) data;
     uint32_t number = 0;
@@ -228,9 +228,9 @@ int AmfUtil::EncodeString(void *data, char *string)
 //====================================================================================================
 // AmfUtil - DecodeNumber
 //====================================================================================================
-int AmfUtil::DecodeNumber(void *data, double *number)
+int AmfUtil::DecodeNumber(const void *data, double *number)
 {
-    auto *pt_in = (uint8_t *) data;
+    auto *pt_in = (const uint8_t *) data;
     auto *pt_out = (uint8_t *) number;
 
     // 파라미터 체크
@@ -256,9 +256,9 @@ int AmfUtil::DecodeNumber(void *data, double *number)
 //====================================================================================================
 // AmfUtil - DecodeBoolean
 //====================================================================================================
-int AmfUtil::DecodeBoolean(void *data, bool *boolean)
+int AmfUtil::DecodeBoolean(const void *data, bool *boolean)
 {
-    auto *pt_in = (uint8_t *) data;
+    auto *pt_in = (const uint8_t *) data;
 
     // 파라미터 체크
     if (!data || !boolean) { return 0; }
@@ -276,9 +276,9 @@ int AmfUtil::DecodeBoolean(void *data, bool *boolean)
 //====================================================================================================
 // AmfUtil - DecodeString
 //====================================================================================================
-int AmfUtil::DecodeString(void *data, char *string)
+int AmfUtil::DecodeString(const void *data, char *string)
 {
-    auto *pt_in = (uint8_t *) data;
+    auto *pt_in = (const uint8_t *) data;
     int str_len;
 
     // 파라미터 체크
@@ -292,7 +292,7 @@ int AmfUtil::DecodeString(void *data, char *string)
     str_len = (int) ReadInt16(pt_in);
     pt_in += 2;
     //
-    strncpy(string, (char *) pt_in, str_len);
+    strncpy(string, (const char *) pt_in, str_len);
     string[str_len] = '\0';
 
     return (1 + 2 + str_len);
@@ -528,9 +528,9 @@ int AmfProperty::Encode(void *data) // ret=0이면 실패
 //====================================================================================================
 // AmfProperty - Decode
 //====================================================================================================
-int AmfProperty::Decode(void *data, int data_length) // ret=0이면 실패
+int AmfProperty::Decode(const void *data, int data_length) // ret=0이면 실패
 {
-    auto *pt_in = (uint8_t *) data;
+    auto *pt_in = (const uint8_t *) data;
     int size = 0;
 
     // 파라미터 체크
@@ -539,6 +539,8 @@ int AmfProperty::Decode(void *data, int data_length) // ret=0이면 실패
 
     // 타입 초기화
     _amf_data_type = AmfDataType::Null;
+
+    // logtd("Trying to decode AMF: type: %d (%d bytes)", ReadInt8(data), data_length);
 
     // 타입에 따라 디코딩
     switch ((AmfTypeMarker) ReadInt8(data))
@@ -610,6 +612,8 @@ int AmfProperty::Decode(void *data, int data_length) // ret=0이면 실패
         default:
             break;
     }
+
+    // logtd("Decoded %d bytes", size);
 
     return size;
 }
@@ -736,9 +740,9 @@ int AmfObjectArray::Encode(void *data)
 //====================================================================================================
 // AmfObjectArray - Decode
 //====================================================================================================
-int AmfObjectArray::Decode(void *data, int data_length)
+int AmfObjectArray::Decode(const void *data, int data_length)
 {
-    auto *pt_in = (uint8_t *) data;
+    auto *pt_in = (const uint8_t *) data;
     uint8_t start_marker;
     uint8_t end_marker;
 
@@ -782,7 +786,7 @@ int AmfObjectArray::Decode(void *data, int data_length)
         property_pair->_property = new AmfProperty;
 
         // _name 읽기
-        strncpy(property_pair->_name, (char *) pt_in, len);
+        strncpy(property_pair->_name, (const char *) pt_in, len);
         pt_in += len;
         property_pair->_name[len] = '\0';
 
@@ -1214,9 +1218,9 @@ int AmfDocument::Encode(void *data) // ret=0이면 실패
 //====================================================================================================
 // AmfDocument - Decode
 //====================================================================================================
-int AmfDocument::Decode(void *data, int data_length) // ret=0이면 실패
+int AmfDocument::Decode(const void *data, int data_length) // ret=0이면 실패
 {
-    auto *pt_in = (uint8_t *) data;
+    auto *pt_in = (const uint8_t *) data;
     int total_len = 0;
     int ret_len;
 

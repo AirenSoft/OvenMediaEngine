@@ -44,7 +44,7 @@ public:
 private:
 	void									Destroy();
 	std::shared_ptr<ExportStream> 			GetStream(uint32_t chunk_stream_id);
-    std::shared_ptr<RtmpChunkHeader>        GetChunkHeader(std::shared_ptr<ExportStream> &stream, std::shared_ptr<RtmpMuxMessageHeader> &message_header, bool & extend_type);
+    std::shared_ptr<RtmpChunkHeader>        GetChunkHeader(std::shared_ptr<ExportStream> &stream, const std::shared_ptr<RtmpMuxMessageHeader> &message_header);
 
 private:
 	std::map<uint32_t, std::shared_ptr<ExportStream>>	_stream_map;

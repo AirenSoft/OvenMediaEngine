@@ -88,6 +88,11 @@ namespace ov
 		return Remained() >= bytes;
 	}
 
+	bool ByteStream::IsEmpty() const noexcept
+	{
+		return (Remained() == 0);
+	}
+
 	Data *ByteStream::GetData() noexcept
 	{
 		OV_ASSERT2(_data != nullptr);

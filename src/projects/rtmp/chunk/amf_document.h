@@ -72,13 +72,13 @@ public:
 
     static int WriteInt32(void *data, uint32_t number);
 
-    static uint8_t ReadInt8(void *data);
+    static uint8_t ReadInt8(const void *data);
 
-    static uint16_t ReadInt16(void *data);
+    static uint16_t ReadInt16(const void *data);
 
-    static uint32_t ReadInt24(void *data);
+    static uint32_t ReadInt24(const void *data);
 
-    static uint32_t ReadInt32(void *data);
+    static uint32_t ReadInt32(const void *data);
 
 public:
     // marker 포함 ENC/DEC
@@ -88,11 +88,11 @@ public:
 
     static int EncodeString(void *data, char *string);
 
-    static int DecodeNumber(void *data, double *number);
+    static int DecodeNumber(const void *data, double *number);
 
-    static int DecodeBoolean(void *data, bool *boolean);
+    static int DecodeBoolean(const void *data, bool *boolean);
 
-    static int DecodeString(void *data, char *string);
+    static int DecodeString(const void *data, char *string);
 };
 
 //====================================================================================================
@@ -118,7 +118,7 @@ public:
 
 public:
     int Encode(void *data); // ret=0이면 실패, type -> packet
-    int Decode(void *data, int data_length); // ret=0이면 실패, packet -> type
+    int Decode(const void *data, int data_length); // ret=0이면 실패, packet -> type
 
 public:
     AmfDataType GetType() { return _amf_data_type; }
@@ -165,7 +165,7 @@ public:
 
 public:
     int Encode(void *data); // ret=0이면 실패, type -> packet
-    int Decode(void *data, int data_length); // ret=0이면 실패, packet -> type
+    int Decode(const void *data, int data_length); // ret=0이면 실패, packet -> type
 
 public:
     bool AddProperty(const char *name, AmfDataType type);
@@ -247,7 +247,7 @@ public:
 
 public:
     int Encode(void *data);                    // ret=0이면 실패
-    int Decode(void *data, int data_length);        // ret=0이면 실패
+    int Decode(const void *data, int data_length);        // ret=0이면 실패
 
 public:
     bool AddProperty(AmfDataType type);

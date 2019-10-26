@@ -6,10 +6,10 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include <string>
 #include "rtmp_chunk_stream.h"
-#include "../media_router/bitstream/bitstream_to_annexb.h"
+#include <string>
 #include "../media_router/bitstream/bitstream_to_adts.h"
+#include "../media_router/bitstream/bitstream_to_annexb.h"
 
 /*Publishing 절차
 - Handshakeing
@@ -42,10 +42,10 @@
  - AAC : Control Byte 
 */
 
-#define OV_LOG_TAG                  "RtmpProvider"
-#define MAX_STREAM_MESSAGE_COUNT    (100)
-#define BASELINE_PROFILE            (66)
-#define MAIN_PROFILE            (77)
+#define OV_LOG_TAG "RtmpProvider"
+#define MAX_STREAM_MESSAGE_COUNT (100)
+#define BASELINE_PROFILE (66)
+#define MAIN_PROFILE (77)
 
 //====================================================================================================
 // RtmpChunkStream
@@ -57,7 +57,7 @@ RtmpChunkStream::RtmpChunkStream(ov::ClientSocket *remote, IRtmpChunkStream *str
 
 	_remote = remote;
 	_stream_interface = stream_interface;
-	_remained_data = std::make_unique<std::vector<uint8_t>>();
+	_remained_data = nullptr;
 	_app_id = info::application_id_t();
 	_stream_id = 0;
 	_device_string = RTMP_UNKNOWN_DEVICE_TYPE_STRING;
@@ -67,7 +67,7 @@ RtmpChunkStream::RtmpChunkStream(ov::ClientSocket *remote, IRtmpChunkStream *str
 	_media_info = std::make_shared<RtmpMediaInfo>();
 
 	_rtmp_stream_id = 0;
-	_handshake_state = RtmpHandshakeState::Ready;
+	_handshake_state = RtmpHandshakeState::Uninitialized;
 	_peer_bandwidth = RTMP_DEFAULT_PEER_BANDWIDTH;
 	_acknowledgement_size = RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE / 2;
 	_acknowledgement_traffic = 0;
@@ -81,7 +81,6 @@ RtmpChunkStream::RtmpChunkStream(ov::ClientSocket *remote, IRtmpChunkStream *str
 	_previous_key_frame_timestamp = 0;
 
 	_last_packet_time = time(nullptr);
-
 }
 
 //===============================================================================================
@@ -91,22 +90,22 @@ ov::String RtmpChunkStream::GetCodecString(RtmpCodecType codec_type)
 {
 	ov::String codec_string;
 
-	switch(codec_type)
+	switch (codec_type)
 	{
-		case RtmpCodecType::H264 :
+		case RtmpCodecType::H264:
 			codec_string = "h264";
 			break;
-		case RtmpCodecType::AAC :
+		case RtmpCodecType::AAC:
 			codec_string = "aac";
 			break;
-		case RtmpCodecType::MP3 :
+		case RtmpCodecType::MP3:
 			codec_string = "mp3";
 			break;
-		case RtmpCodecType::SPEEX :
+		case RtmpCodecType::SPEEX:
 			codec_string = "speex";
 			break;
-		case RtmpCodecType::Unknown :
-		default :
+		case RtmpCodecType::Unknown:
+		default:
 			codec_string = "unknown";
 			break;
 	}
@@ -121,7 +120,7 @@ ov::String RtmpChunkStream::GetEncoderTypeString(RtmpEncoderType encoder_type)
 {
 	ov::String codec_string;
 
-	switch(encoder_type)
+	switch (encoder_type)
 	{
 		case RtmpEncoderType::Xsplit:
 			codec_string = "Xsplit";
@@ -135,8 +134,8 @@ ov::String RtmpChunkStream::GetEncoderTypeString(RtmpEncoderType encoder_type)
 		case RtmpEncoderType::Custom:
 			codec_string = "Unknown";
 			break;
-			
-		default :
+
+		default:
 			codec_string = "Unknown";
 			break;
 	}
@@ -153,12 +152,12 @@ bool RtmpChunkStream::SendData(int data_size, uint8_t *data)
 	int remained = data_size;
 	uint8_t *data_to_send = data;
 
-	while(remained > 0L)
+	while (remained > 0L)
 	{
 		int to_send = std::min(remained, (int)(1024L * 1024L));
 		int sent = _remote->Send(data_to_send, to_send);
 
-		if(sent != to_send)
+		if (sent != to_send)
 		{
 			logtw("Send Data Loop Fail");
 			return false;
@@ -171,140 +170,163 @@ bool RtmpChunkStream::SendData(int data_size, uint8_t *data)
 	return true;
 }
 
-//====================================================================================================
-//  패킷 수신
-// - Handshake 처리
-// - Chunkstream 처리
-//====================================================================================================
-int32_t RtmpChunkStream::OnDataReceived(const std::unique_ptr<std::vector<uint8_t>> &data)
+int32_t RtmpChunkStream::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 {
-	int32_t process_size = 0;
-	std::shared_ptr<std::vector<uint8_t>> process_data = nullptr;
-
-	if(!_remained_data->empty())
+	if ((_remained_data == nullptr) || _remained_data->IsEmpty())
 	{
-		process_data = std::make_shared<std::vector<uint8_t>>(_remained_data->begin(), _remained_data->end());
-		process_data->insert(process_data->end(), data->begin(), data->end());
-		_remained_data->clear();
+		_remained_data = data->Clone();
 	}
 	else
 	{
-		process_data = std::make_shared<std::vector<uint8_t>>(data->begin(), data->end());
+		_remained_data->Append(data);
 	}
 
-	// 최대 크기 확인
-	if(process_data->size() > RTMP_MAX_PACKET_SIZE)
+	if (_remained_data->GetLength() > RTMP_MAX_PACKET_SIZE)
 	{
-		logte("Process data size fail - stream(%s/%s) id(%u/%u) size(%d:%d)",
-		      _app_name.CStr(),
-              _stream_name.CStr(),
-		      _app_id,
-		      _stream_id,
-		      process_data->size(),
-		      RTMP_MAX_PACKET_SIZE);
+		logte("The packet is ignored because the size is too large: [%s/%s] (%u/%u), packet size: %zu, threshold: %d",
+			  _app_name.CStr(), _stream_name.CStr(),
+			  _app_id, _stream_id,
+			  _remained_data->GetLength(),
+			  RTMP_MAX_PACKET_SIZE);
 
 		return -1;
 	}
 
-	if(_handshake_state != RtmpHandshakeState::Complete)
+	while(true)
 	{
-		process_size = ReceiveHandshakePacket(process_data);
-	}
-	else
-	{
-		process_size = ReceiveChunkPacket(process_data);
-	}
+		int32_t process_size = 0;
 
-	if(process_size < 0)
-	{
-		logte("Process Size Fail - stream(%s/%s) id(%u/%u) size(%d)",
-		      _app_name.CStr(),
-              _stream_name.CStr(),
-		      _app_id,
-		      _stream_id,
-		      process_size);
+		if (_handshake_state == RtmpHandshakeState::Complete)
+		{
+			process_size = ReceiveChunkPacket(_remained_data);
+		}
+		else
+		{
+			process_size = ReceiveHandshakePacket(_remained_data);
+		}
 
-		return -1;
+		if (process_size < 0)
+		{
+			logte("Could not parse RTMP packet: [%s/%s] (%u/%u), size: %zu bytes, returns: %d",
+				_app_name.CStr(), _stream_name.CStr(),
+				_app_id, _stream_id,
+				_remained_data->GetLength(),
+				process_size);
+
+			return process_size;
+		}
+		else if(process_size == 0)
+		{
+			// Need more data
+			break;
+		}
+
+		_remained_data = _remained_data->Subdata(process_size);
 	}
-
-	// remained 데이터 설정
-	if(process_size < static_cast<int32_t>(process_data->size()))
-	{
-		_remained_data->assign(process_data->begin() + process_size, process_data->end());
-	}
-
-	return process_size;
+	
+	// All data are already appended to _remained_data
+	return data->GetLength();
 }
 
-
-//====================================================================================================
-// Receive Handshake Packet
-// c0 + c1 Receive
-// s0 + s1 + s2 Send
-// c2 Receive
-//====================================================================================================
-int32_t RtmpChunkStream::ReceiveHandshakePacket(const std::shared_ptr<const std::vector<uint8_t>> &data)
+off_t RtmpChunkStream::ReceiveHandshakePacket(const std::shared_ptr<const ov::Data> &data)
 {
+	// +-------------+                           +-------------+
+	// |    Client   |       TCP/IP Network      |    Server   |
+	// +-------------+            |              +-------------+
+	//       |                    |                     |
+	// Uninitialized              |               Uninitialized
+	//       |          C0        |                     |
+	//       |------------------->|         C0          |
+	//       |                    |-------------------->|
+	//       |          C1        |                     |
+	//       |------------------->|         S0          |
+	//       |                    |<--------------------|
+	//       |                    |         S1          |
+	//  Version sent              |<--------------------|
+	//       |          S0        |                     |
+	//       |<-------------------|                     |
+	//       |          S1        |                     |
+	//       |<-------------------|                Version sent
+	//       |                    |         C1          |
+	//       |                    |-------------------->|
+	//       |          C2        |                     |
+	//       |------------------->|         S2          |
+	//       |                    |<--------------------|
+	//    Ack sent                |                  Ack Sent
+	//       |          S2        |                     |
+	//       |<-------------------|                     |
+	//       |                    |         C2          |
+	//       |                    |-------------------->|
+	//  Handshake Done            |               Handshake Done
+	//       |                    |                     |
+	//
+	//           Pictorial Representation of Handshake
+
 	int32_t process_size = 0;
 	int32_t chunk_process_size = 0;
 
-	if(_handshake_state == RtmpHandshakeState::Ready)
+	switch (_handshake_state)
 	{
-		process_size = (sizeof(uint8_t) + RTMP_HANDSHAKE_PACKET_SIZE);// c0 + c1
-	}
-	else if(_handshake_state == RtmpHandshakeState::S2)
-	{
-		process_size = (RTMP_HANDSHAKE_PACKET_SIZE);// c2
-	}
-	else
-	{
-		logte("Handshake State Fail - State(%d)", (int32_t)_handshake_state);
-		return -1;
+		case RtmpHandshakeState::Uninitialized:
+			logtd("Handshaking is started. Trying to parse for C0/C1 packets...");
+			process_size = (sizeof(uint8_t) + RTMP_HANDSHAKE_PACKET_SIZE);
+			break;
+
+		case RtmpHandshakeState::S2:
+			logtd("Trying to parse for C2 packet...");
+			process_size = (RTMP_HANDSHAKE_PACKET_SIZE);
+			break;
+
+		default:
+			logte("Failed to handshake: state: %d", static_cast<int32_t>(_handshake_state));
+			return -1LL;
 	}
 
-	// Process Data Size Check
-	if(static_cast<int32_t>(data->size()) < process_size)
+	if (static_cast<int32_t>(data->GetLength()) < process_size)
 	{
-		return 0;
+		// Need more data
+		logtd("Need more data: data: %zu bytes, expected: %d bytes"), data->GetLength(), process_size;
+		return 0LL;
 	}
 
-	// c0 + c1 / s0 + s1 + s2
-	if(_handshake_state == RtmpHandshakeState::Ready)
+	if (_handshake_state == RtmpHandshakeState::Uninitialized)
 	{
-		// c0 + c1 수신 확인
-		// 버전 체크
-		if(data->at(0) != RTMP_HANDSHAKE_VERSION)
+		logtd("C0/C1 packets are arrived");
+
+		char version = data->At(0);
+
+		logtd("Trying to check RTMP version (%d)...", RTMP_HANDSHAKE_VERSION);
+
+		if (version != RTMP_HANDSHAKE_VERSION)
 		{
-			logte("Handshake Version Fail - Version(%d:%d)", data->at(0), RTMP_HANDSHAKE_VERSION);
-			return -1;
+			logte("Invalid RTMP version: %d, expected: %d", version, RTMP_HANDSHAKE_VERSION);
+			return -1LL;
 		}
+
 		_handshake_state = RtmpHandshakeState::C0;
 
+		auto send_packet = data->Clone();
+
 		// S0,S1,S2 전송
-		if(!SendHandshake(data))
+
+		logtd("Trying to send S0/S1/S2 packets...");
+
+		if (SendHandshake(send_packet) == false)
 		{
-			return -1;
+			logte("Could not send S0/S1/S2 packets");
+			return -1LL;
 		}
 
 		return process_size;
 	}
 
+	logtd("C2 packet is arrived");
+
 	_handshake_state = RtmpHandshakeState::C2;
-
-	// 최종 c3와 chunk 패킷이 같이 들어오는 경우 처리(encoder 전송 대기 상태에 빠질 수 있음)
-	if(process_size < static_cast<int32_t>(data->size()))
-	{
-		auto process_data = std::make_shared<std::vector<uint8_t>>(data->begin() + process_size, data->end());
-		chunk_process_size = ReceiveChunkPacket(process_data);
-		if(chunk_process_size < 0)
-		{
-			return -1;
-		}
-		process_size += chunk_process_size;
-	}
-
 	_handshake_state = RtmpHandshakeState::Complete;
-	logtd("Handshake Complete");
+
+	logtd("Handshake is completed");
+
 	return process_size;
 }
 
@@ -312,20 +334,24 @@ int32_t RtmpChunkStream::ReceiveHandshakePacket(const std::shared_ptr<const std:
 // Handshake 전송
 // s0 + s1 + s2
 //====================================================================================================
-bool RtmpChunkStream::SendHandshake(const std::shared_ptr<const std::vector<uint8_t>> &data)
+bool RtmpChunkStream::SendHandshake(const std::shared_ptr<const ov::Data> &data)
 {
 	uint8_t s0 = 0;
-	uint8_t s1[RTMP_HANDSHAKE_PACKET_SIZE] = { 0, };
-	uint8_t s2[RTMP_HANDSHAKE_PACKET_SIZE] = { 0, };
+	uint8_t s1[RTMP_HANDSHAKE_PACKET_SIZE] = {
+		0,
+	};
+	uint8_t s2[RTMP_HANDSHAKE_PACKET_SIZE] = {
+		0,
+	};
 
 	// 데이터 설정
 	s0 = RTMP_HANDSHAKE_VERSION;
 	RtmpHandshake::MakeS1(s1);
-	RtmpHandshake::MakeS2((uint8_t *)data->data() + sizeof(uint8_t), s2);
+	RtmpHandshake::MakeS2(data->GetDataAs<uint8_t>() + sizeof(uint8_t), s2);
 	_handshake_state = RtmpHandshakeState::C1;
 
 	// s0 전송
-	if(!SendData(sizeof(s0), &s0))
+	if (SendData(sizeof(s0), &s0) == false)
 	{
 		logte("Handshake s0 Send Fail");
 		return false;
@@ -333,7 +359,7 @@ bool RtmpChunkStream::SendHandshake(const std::shared_ptr<const std::vector<uint
 	_handshake_state = RtmpHandshakeState::S0;
 
 	// s1 전송
-	if(!SendData(sizeof(s1), s1))
+	if (SendData(sizeof(s1), s1) == false)
 	{
 		logte("Handshake s1 Send Fail");
 		return false;
@@ -341,7 +367,7 @@ bool RtmpChunkStream::SendHandshake(const std::shared_ptr<const std::vector<uint
 	_handshake_state = RtmpHandshakeState::S1;
 
 	// s2 전송
-	if(!SendData(sizeof(s2), s2))
+	if (SendData(sizeof(s2), s2) == false)
 	{
 		logte("Handshake s2 Send Fail");
 		return false;
@@ -351,49 +377,47 @@ bool RtmpChunkStream::SendHandshake(const std::shared_ptr<const std::vector<uint
 	return true;
 }
 
-//====================================================================================================
-// Chunk 패킷 수신
-// - OnMetaData 이후에 스트리밍 시작
-//====================================================================================================
-int32_t RtmpChunkStream::ReceiveChunkPacket(const std::shared_ptr<const std::vector<uint8_t>> &data)
+int32_t RtmpChunkStream::ReceiveChunkPacket(const std::shared_ptr<const ov::Data> &data)
 {
 	int32_t process_size = 0;
 	int32_t import_size = 0;
 	bool message_complete = false;
+	std::shared_ptr<const ov::Data> current_data = data;
 
-	while(process_size < static_cast<int32_t>(data->size()))
+	while (current_data->IsEmpty() == false)
 	{
-		message_complete = false;
+		bool is_completed = false;
 
-		import_size = _import_chunk->ImportStreamData((uint8_t *)data->data() + process_size,
-		                                              data->size() - process_size, message_complete);
+		import_size = _import_chunk->Import(current_data, &is_completed);
 
-		if(import_size == 0)
+		if (import_size == 0)
 		{
+			// Need more data
 			break;
 		}
-		else if(import_size < 0)
+		else if (import_size < 0)
 		{
-			logte("ImportStream Fail");
+			logte("An error occurred while parse RTMP data: %d", import_size);
 			return import_size;
 		}
 
-		if(message_complete)
+		if (is_completed)
 		{
-			if(!ReceiveChunkMessage())
+			if (ReceiveChunkMessage() == false)
 			{
 				logte("ReceiveChunkMessage Fail");
-				return -1;
+				return -1LL;
 			}
 		}
 
 		process_size += import_size;
+		current_data = current_data->Subdata(import_size);
 	}
 
-	//Acknowledgement append
+	// Accumulate processed bytes for acknowledgement
 	_acknowledgement_traffic += process_size;
 
-	if(_acknowledgement_traffic > _acknowledgement_size)
+	if (_acknowledgement_traffic > _acknowledgement_size)
 	{
 		SendAcknowledgementSize();
 
@@ -410,25 +434,18 @@ int32_t RtmpChunkStream::ReceiveChunkPacket(const std::shared_ptr<const std::vec
 bool RtmpChunkStream::ReceiveChunkMessage()
 {
 	// 메시지 처리(지연 발생시 thread 에서  처리)
-	while(true)
+	while (true)
 	{
 		auto message = _import_chunk->GetMessage();
 
-		if(message == nullptr || message->body == nullptr)
+		if ((message == nullptr) || (message->payload == nullptr))
 		{
 			break;
 		}
 
-		if(message->message_header->body_size > RTMP_MAX_PACKET_SIZE)
-		{
-			logte("Packet Size Fail - Size(%u:%u)", message->message_header->body_size, RTMP_MAX_PACKET_SIZE);
-			return false;
-		}
-
 		bool bSuccess = true;
 
-		//처리
-		switch(message->message_header->type_id)
+		switch (message->header->completed.type_id)
 		{
 			case RTMP_MSGID_AUDIO_MESSAGE:
 				bSuccess = ReceiveAudioMessage(message);
@@ -436,25 +453,25 @@ bool RtmpChunkStream::ReceiveChunkMessage()
 			case RTMP_MSGID_VIDEO_MESSAGE:
 				bSuccess = ReceiveVideoMessage(message);
 				break;
-			case RTMP_MSGID_SET_CHUNK_SIZE :
+			case RTMP_MSGID_SET_CHUNK_SIZE:
 				bSuccess = ReceiveSetChunkSize(message);
 				break;
-			case RTMP_MSGID_AMF0_DATA_MESSAGE :
+			case RTMP_MSGID_AMF0_DATA_MESSAGE:
 				ReceiveAmfDataMessage(message);
 				break;
-			case RTMP_MSGID_AMF0_COMMAND_MESSAGE :
+			case RTMP_MSGID_AMF0_COMMAND_MESSAGE:
 				ReceiveAmfCommandMessage(message);
 				break;
-			case RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE :
+			case RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE:
 				ReceiveWindowAcknowledgementSize(message);
 				break;
 			default:
-				logtw("Unknown Type - Type(%d)", message->message_header->type_id);
+				logtw("Unknown Type - Type(%d)", message->header->completed.type_id);
 				break;
 		}
 
 		// 실패로 종료 처리 필요
-		if(!bSuccess)
+		if (!bSuccess)
 		{
 			return false;
 		}
@@ -466,11 +483,11 @@ bool RtmpChunkStream::ReceiveChunkMessage()
 //====================================================================================================
 // Chunk Message - SetChunkSize
 //====================================================================================================
-bool RtmpChunkStream::ReceiveSetChunkSize(std::shared_ptr<ImportMessage> &message)
+bool RtmpChunkStream::ReceiveSetChunkSize(const std::shared_ptr<const RtmpMessage> &message)
 {
-	auto chunk_size = RtmpMuxUtil::ReadInt32(message->body->data());
+	auto chunk_size = RtmpMuxUtil::ReadInt32(message->payload->GetData());
 
-	if(chunk_size <= 0)
+	if (chunk_size <= 0)
 	{
 		logte("ChunkSize Fail - Size(%d) ***", chunk_size);
 		return false;
@@ -485,11 +502,11 @@ bool RtmpChunkStream::ReceiveSetChunkSize(std::shared_ptr<ImportMessage> &messag
 //====================================================================================================
 // Chunk Message - WindowAcknowledgementSize
 //====================================================================================================
-void RtmpChunkStream::ReceiveWindowAcknowledgementSize(std::shared_ptr<ImportMessage> &message)
+void RtmpChunkStream::ReceiveWindowAcknowledgementSize(const std::shared_ptr<const RtmpMessage> &message)
 {
-	auto ackledgement_size = RtmpMuxUtil::ReadInt32(message->body->data());
+	auto ackledgement_size = RtmpMuxUtil::ReadInt32(message->payload->GetData());
 
-	if(ackledgement_size != 0)
+	if (ackledgement_size != 0)
 	{
 		_acknowledgement_size = ackledgement_size / 2;
 		_acknowledgement_traffic = 0;
@@ -499,21 +516,23 @@ void RtmpChunkStream::ReceiveWindowAcknowledgementSize(std::shared_ptr<ImportMes
 //====================================================================================================
 // Chunk Message - Amf0CommandMessage
 //====================================================================================================
-void RtmpChunkStream::ReceiveAmfCommandMessage(std::shared_ptr<ImportMessage> &message)
+void RtmpChunkStream::ReceiveAmfCommandMessage(const std::shared_ptr<const RtmpMessage> &message)
 {
 	AmfDocument document;
 	ov::String message_name;
 	double transaction_id = 0.0;
 
+	OV_ASSERT2(message->header != nullptr);
+	OV_ASSERT2(message->payload != nullptr);
 
-	if(document.Decode(message->body->data(), message->message_header->body_size) == 0)
+	if (document.Decode(message->payload->GetData(), message->header->payload_size) == 0)
 	{
 		logte("AmfDocument Size 0 ");
 		return;
 	}
 
 	// Message Name
-	if(document.GetProperty(0) == nullptr || document.GetProperty(0)->GetType() != AmfDataType::String)
+	if (document.GetProperty(0) == nullptr || document.GetProperty(0)->GetType() != AmfDataType::String)
 	{
 		logte("Message Name Fail");
 		return;
@@ -521,37 +540,39 @@ void RtmpChunkStream::ReceiveAmfCommandMessage(std::shared_ptr<ImportMessage> &m
 	message_name = document.GetProperty(0)->GetString();
 
 	// Message Transaction ID 얻기
-	if(document.GetProperty(1) != nullptr && document.GetProperty(1)->GetType() == AmfDataType::Number)
+	if (document.GetProperty(1) != nullptr && document.GetProperty(1)->GetType() == AmfDataType::Number)
 	{
 		transaction_id = document.GetProperty(1)->GetNumber();
 	}
 
 	// 처리
-	if(message_name == RTMP_CMD_NAME_CONNECT)
+	if (message_name == RTMP_CMD_NAME_CONNECT)
 	{
-		OnAmfConnect(message->message_header, document, transaction_id);
+		OnAmfConnect(message->header, document, transaction_id);
 	}
-	else if(message_name == RTMP_CMD_NAME_CREATESTREAM)
+	else if (message_name == RTMP_CMD_NAME_CREATESTREAM)
 	{
-		OnAmfCreateStream(message->message_header, document, transaction_id);
+		OnAmfCreateStream(message->header, document, transaction_id);
 	}
-	else if(message_name == RTMP_CMD_NAME_FCPUBLISH)
+	else if (message_name == RTMP_CMD_NAME_FCPUBLISH)
 	{
-		OnAmfFCPublish(message->message_header, document, transaction_id);
+		OnAmfFCPublish(message->header, document, transaction_id);
 	}
-	else if(message_name == RTMP_CMD_NAME_PUBLISH)
+	else if (message_name == RTMP_CMD_NAME_PUBLISH)
 	{
-		OnAmfPublish(message->message_header, document, transaction_id);
+		OnAmfPublish(message->header, document, transaction_id);
 	}
-	else if(message_name == RTMP_CMD_NAME_RELEASESTREAM)
-	{ ;
-	}
-	else if(message_name == RTMP_PING)
-	{ ;
-	}
-	else if(message_name == RTMP_CMD_NAME_DELETESTREAM)
+	else if (message_name == RTMP_CMD_NAME_RELEASESTREAM)
 	{
-		OnAmfDeleteStream(message->message_header, document, transaction_id);
+		;
+	}
+	else if (message_name == RTMP_PING)
+	{
+		;
+	}
+	else if (message_name == RTMP_CMD_NAME_DELETESTREAM)
+	{
+		OnAmfDeleteStream(message->header, document, transaction_id);
 	}
 	else
 	{
@@ -563,7 +584,7 @@ void RtmpChunkStream::ReceiveAmfCommandMessage(std::shared_ptr<ImportMessage> &m
 //====================================================================================================
 // Chunk Message - Amf0DataMessage
 //====================================================================================================
-void RtmpChunkStream::ReceiveAmfDataMessage(std::shared_ptr<ImportMessage> &message)
+void RtmpChunkStream::ReceiveAmfDataMessage(const std::shared_ptr<const RtmpMessage> &message)
 {
 	AmfDocument document;
 	int32_t decode_lehgth = 0;
@@ -571,33 +592,33 @@ void RtmpChunkStream::ReceiveAmfDataMessage(std::shared_ptr<ImportMessage> &mess
 	ov::String data_name;
 
 	// 응답 디코딩
-	decode_lehgth = document.Decode(message->body->data(), message->message_header->body_size);
-	if(decode_lehgth == 0)
+	decode_lehgth = document.Decode(message->payload->GetData(), message->header->payload_size);
+	if (decode_lehgth == 0)
 	{
 		logte("Amf0DataMessage Document Length 0");
 		return;
 	}
 
 	// Message Name 얻기
-	if(document.GetProperty(0) != nullptr && document.GetProperty(0)->GetType() == AmfDataType::String)
+	if (document.GetProperty(0) != nullptr && document.GetProperty(0)->GetType() == AmfDataType::String)
 	{
 		message_name = document.GetProperty(0)->GetString();
 	}
 
 	// Data 이름 얻기
-	if(document.GetProperty(1) != nullptr && document.GetProperty(1)->GetType() == AmfDataType::String)
+	if (document.GetProperty(1) != nullptr && document.GetProperty(1)->GetType() == AmfDataType::String)
 	{
 		data_name = document.GetProperty(1)->GetString();
 	}
 
 	// 처리
-	if(message_name == RTMP_CMD_DATA_SETDATAFRAME &&
-	   data_name == RTMP_CMD_DATA_ONMETADATA &&
-	   document.GetProperty(2) != nullptr &&
-	   (document.GetProperty(2)->GetType() == AmfDataType::Object ||
-	    document.GetProperty(2)->GetType() == AmfDataType::Array))
+	if (message_name == RTMP_CMD_DATA_SETDATAFRAME &&
+		data_name == RTMP_CMD_DATA_ONMETADATA &&
+		document.GetProperty(2) != nullptr &&
+		(document.GetProperty(2)->GetType() == AmfDataType::Object ||
+		 document.GetProperty(2)->GetType() == AmfDataType::Array))
 	{
-		OnAmfMetaData(message->message_header, document, 2);
+		OnAmfMetaData(message->header, document, 2);
 	}
 	else
 	{
@@ -610,48 +631,47 @@ void RtmpChunkStream::ReceiveAmfDataMessage(std::shared_ptr<ImportMessage> &mess
 // Amf Command - Connect
 // - application name 설정
 //====================================================================================================
-void RtmpChunkStream::OnAmfConnect(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document,
-                                   double transaction_id)
+void RtmpChunkStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 {
 	double object_encoding = 0.0;
 
-	if(document.GetProperty(2) != nullptr && document.GetProperty(2)->GetType() == AmfDataType::Object)
+	if (document.GetProperty(2) != nullptr && document.GetProperty(2)->GetType() == AmfDataType::Object)
 	{
 		AmfObject *object = document.GetProperty(2)->GetObject();
 		int32_t index;
 
 		// object encoding
-		if((index = object->FindName("objectEncoding")) >= 0 && object->GetType(index) == AmfDataType::Number)
+		if ((index = object->FindName("objectEncoding")) >= 0 && object->GetType(index) == AmfDataType::Number)
 		{
 			object_encoding = object->GetNumber(index);
 		}
 
 		// app 설정
-		if((index = object->FindName("app")) >= 0 && object->GetType(index) == AmfDataType::String)
+		if ((index = object->FindName("app")) >= 0 && object->GetType(index) == AmfDataType::String)
 		{
 			_app_name = object->GetString(index);
 		}
 	}
 
-	if(!SendWindowAcknowledgementSize())
+	if (!SendWindowAcknowledgementSize())
 	{
 		logte("SendWindowAcknowledgementSize Fail");
 		return;
 	}
 
-	if(!SendSetPeerBandwidth())
+	if (!SendSetPeerBandwidth())
 	{
 		logte("SendSetPeerBandwidth Fail");
 		return;
 	}
 
-	if(!SendStreamBegin())
+	if (!SendStreamBegin())
 	{
 		logte("SendStreamBegin Fail");
 		return;
 	}
 
-	if(!SendAmfConnectResult(message_header->chunk_stream_id, transaction_id, object_encoding))
+	if (!SendAmfConnectResult(header->basic_header.stream_id, transaction_id, object_encoding))
 	{
 		logte("SendAmfConnectResult Fail");
 		return;
@@ -661,10 +681,9 @@ void RtmpChunkStream::OnAmfConnect(std::shared_ptr<RtmpMuxMessageHeader> &messag
 //====================================================================================================
 // Amf Command - CreateStream
 //====================================================================================================
-void RtmpChunkStream::OnAmfCreateStream(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document,
-                                        double transaction_id)
+void RtmpChunkStream::OnAmfCreateStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 {
-	if(!SendAmfCreateStreamResult(message_header->chunk_stream_id, transaction_id))
+	if (!SendAmfCreateStreamResult(header->basic_header.stream_id, transaction_id))
 	{
 		logte("SendAmfCreateStreamResult Fail");
 		return;
@@ -674,13 +693,12 @@ void RtmpChunkStream::OnAmfCreateStream(std::shared_ptr<RtmpMuxMessageHeader> &m
 //====================================================================================================
 // Amf Command - FCPublish
 //====================================================================================================
-void RtmpChunkStream::OnAmfFCPublish(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document,
-                                     double transaction_id)
+void RtmpChunkStream::OnAmfFCPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 {
-	if(_stream_name.IsEmpty() && document.GetProperty(3) != nullptr &&
-	   document.GetProperty(3)->GetType() == AmfDataType::String)
+	if (_stream_name.IsEmpty() && document.GetProperty(3) != nullptr &&
+		document.GetProperty(3)->GetType() == AmfDataType::String)
 	{
-		if(!SendAmfOnFCPublish(message_header->chunk_stream_id, _rtmp_stream_id, _client_id))
+		if (!SendAmfOnFCPublish(header->basic_header.stream_id, _rtmp_stream_id, _client_id))
 		{
 			logte("SendAmfOnFCPublish Fail");
 			return;
@@ -692,12 +710,11 @@ void RtmpChunkStream::OnAmfFCPublish(std::shared_ptr<RtmpMuxMessageHeader> &mess
 //====================================================================================================
 // Amf Command - Publish
 //====================================================================================================
-void RtmpChunkStream::OnAmfPublish(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document,
-                                   double transaction_id)
+void RtmpChunkStream::OnAmfPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 {
-	if(_stream_name.IsEmpty())
+	if (_stream_name.IsEmpty())
 	{
-		if(document.GetProperty(3) != nullptr && document.GetProperty(3)->GetType() == AmfDataType::String)
+		if (document.GetProperty(3) != nullptr && document.GetProperty(3)->GetType() == AmfDataType::String)
 		{
 			_stream_name = document.GetProperty(3)->GetString();
 		}
@@ -706,32 +723,32 @@ void RtmpChunkStream::OnAmfPublish(std::shared_ptr<RtmpMuxMessageHeader> &messag
 			logte("OnPublish - Publish Name None");
 
 			//Reject
-			SendAmfOnStatus(message_header->chunk_stream_id,
-			                _rtmp_stream_id,
-			                (char *)"error",
-			                (char *)"NetStream.Publish.Rejected",
-			                (char *)"Authentication Failed.", _client_id);
+			SendAmfOnStatus(header->basic_header.stream_id,
+							_rtmp_stream_id,
+							(char *)"error",
+							(char *)"NetStream.Publish.Rejected",
+							(char *)"Authentication Failed.", _client_id);
 
 			return;
 		}
 	}
 
-	_chunk_stream_id = message_header->chunk_stream_id;
+	_chunk_stream_id = header->basic_header.stream_id;
 
 	// stream begin 전송
-	if(!SendStreamBegin())
+	if (!SendStreamBegin())
 	{
 		logte("SendStreamBegin Fail");
 		return;
 	}
 
 	// 시작 상태 값 전송
-	if(!SendAmfOnStatus((uint32_t)_chunk_stream_id,
-	                    _rtmp_stream_id,
-	                    (char *)"status",
-	                    (char *)"NetStream.Publish.Start",
-	                    (char *)"Publishing",
-	                    _client_id))
+	if (!SendAmfOnStatus((uint32_t)_chunk_stream_id,
+						 _rtmp_stream_id,
+						 (char *)"status",
+						 (char *)"NetStream.Publish.Start",
+						 (char *)"Publishing",
+						 _client_id))
 	{
 		logte("SendAmfOnStatus Fail");
 		return;
@@ -741,11 +758,9 @@ void RtmpChunkStream::OnAmfPublish(std::shared_ptr<RtmpMuxMessageHeader> &messag
 //====================================================================================================
 // Amf Command - Publish
 //====================================================================================================
-void RtmpChunkStream::OnAmfDeleteStream(std::shared_ptr<RtmpMuxMessageHeader> &message_header,
-                                        AmfDocument &document,
-                                        double transaction_id)
+void RtmpChunkStream::OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 {
-	logtd("Delete Stream - stream(%s/%s) id(%u/%u)", _app_name.CStr(),  _stream_name.CStr(), _app_id, _stream_id);
+	logtd("Delete Stream - stream(%s/%s) id(%u/%u)", _app_name.CStr(), _stream_name.CStr(), _app_id, _stream_id);
 
 	_media_info->video_streaming = false;
 	_media_info->audio_streaming = false;
@@ -760,17 +775,16 @@ void RtmpChunkStream::OnAmfDeleteStream(std::shared_ptr<RtmpMuxMessageHeader> &m
 //====================================================================================================
 // Message Packet 전송
 //====================================================================================================
-bool RtmpChunkStream::SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header,
-                                        std::shared_ptr<std::vector<uint8_t>> &data)
+bool RtmpChunkStream::SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data)
 {
-	if(message_header == nullptr)
+	if (message_header == nullptr)
 	{
 		return false;
 	}
 
 	auto export_data = _export_chunk->ExportStreamData(message_header, data);
 
-	if(export_data == nullptr || export_data->data() == nullptr)
+	if (export_data == nullptr || export_data->data() == nullptr)
 	{
 		return false;
 	}
@@ -786,17 +800,19 @@ bool RtmpChunkStream::SendAmfCommand(std::shared_ptr<RtmpMuxMessageHeader> &mess
 	auto body = std::make_shared<std::vector<uint8_t>>(2048);
 	uint32_t body_size = 0;
 
-	if(message_header == nullptr)
+	if (message_header == nullptr)
 	{
 		return false;
 	}
 
 	// body
-	body_size = (uint32_t)document.Encode(body->data());
-	if(body_size == 0)
+	body_size = document.Encode(body->data());
+
+	if (body_size == 0)
 	{
 		return false;
 	}
+
 	message_header->body_size = body_size;
 	body->resize(body_size);
 
@@ -809,10 +825,10 @@ bool RtmpChunkStream::SendAmfCommand(std::shared_ptr<RtmpMuxMessageHeader> &mess
 bool RtmpChunkStream::SendUserControlMessage(uint16_t message, std::shared_ptr<std::vector<uint8_t>> &data)
 {
 	auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-	                                                             0,
-	                                                             RTMP_MSGID_USER_CONTROL_MESSAGE,
-	                                                             0,
-	                                                             data->size() + 2);
+																 0,
+																 RTMP_MSGID_USER_CONTROL_MESSAGE,
+																 0,
+																 data->size() + 2);
 
 	data->insert(data->begin(), 0);
 	data->insert(data->begin(), 0);
@@ -828,10 +844,10 @@ bool RtmpChunkStream::SendWindowAcknowledgementSize()
 {
 	auto body = std::make_shared<std::vector<uint8_t>>(sizeof(int));
 	auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-	                                                             0,
-	                                                             RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE,
-	                                                             _rtmp_stream_id,
-	                                                             body->size());
+																 0,
+																 RTMP_MSGID_WINDOWACKNOWLEDGEMENT_SIZE,
+																 _rtmp_stream_id,
+																 body->size());
 
 	RtmpMuxUtil::WriteInt32(body->data(), RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE);
 
@@ -845,10 +861,10 @@ bool RtmpChunkStream::SendAcknowledgementSize()
 {
 	auto body = std::make_shared<std::vector<uint8_t>>(sizeof(int));
 	auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-	                                                             0,
-	                                                             RTMP_MSGID_ACKNOWLEDGEMENT,
-	                                                             0,
-	                                                             body->size());
+																 0,
+																 RTMP_MSGID_ACKNOWLEDGEMENT,
+																 0,
+																 body->size());
 
 	RtmpMuxUtil::WriteInt32(body->data(), _acknowledgement_traffic);
 
@@ -862,10 +878,10 @@ bool RtmpChunkStream::SendSetPeerBandwidth()
 {
 	auto body = std::make_shared<std::vector<uint8_t>>(5);
 	auto message_header = std::make_shared<RtmpMuxMessageHeader>(RTMP_CHUNK_STREAM_ID_URGENT,
-	                                                             0,
-	                                                             RTMP_MSGID_SET_PEERBANDWIDTH,
-	                                                             _rtmp_stream_id,
-	                                                             body->size());
+																 0,
+																 RTMP_MSGID_SET_PEERBANDWIDTH,
+																 _rtmp_stream_id,
+																 body->size());
 
 	RtmpMuxUtil::WriteInt32(body->data(), _peer_bandwidth);
 	RtmpMuxUtil::WriteInt8(body->data() + 4, 2);
@@ -891,10 +907,10 @@ bool RtmpChunkStream::SendStreamBegin()
 bool RtmpChunkStream::SendAmfConnectResult(uint32_t chunk_stream_id, double transaction_id, double object_encoding)
 {
 	auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-	                                                             0,
-	                                                             RTMP_MSGID_AMF0_COMMAND_MESSAGE,
-	                                                             _rtmp_stream_id,
-	                                                             0);
+																 0,
+																 RTMP_MSGID_AMF0_COMMAND_MESSAGE,
+																 _rtmp_stream_id,
+																 0);
 	AmfDocument document;
 	AmfObject *object = nullptr;
 	AmfArray *array = nullptr;
@@ -934,10 +950,10 @@ bool RtmpChunkStream::SendAmfConnectResult(uint32_t chunk_stream_id, double tran
 bool RtmpChunkStream::SendAmfOnFCPublish(uint32_t chunk_stream_id, uint32_t stream_id, double client_id)
 {
 	auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-	                                                             0,
-	                                                             RTMP_MSGID_AMF0_COMMAND_MESSAGE,
-	                                                             _rtmp_stream_id,
-	                                                             0);
+																 0,
+																 RTMP_MSGID_AMF0_COMMAND_MESSAGE,
+																 _rtmp_stream_id,
+																 0);
 	AmfDocument document;
 	AmfObject *object = nullptr;
 
@@ -956,17 +972,16 @@ bool RtmpChunkStream::SendAmfOnFCPublish(uint32_t chunk_stream_id, uint32_t stre
 	return SendAmfCommand(message_header, document);
 }
 
-
 //====================================================================================================
 // Create Stream Result 전송
 //====================================================================================================
 bool RtmpChunkStream::SendAmfCreateStreamResult(uint32_t chunk_stream_id, double transaction_id)
 {
 	auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-	                                                             0,
-	                                                             RTMP_MSGID_AMF0_COMMAND_MESSAGE,
-	                                                             0,
-	                                                             0);
+																 0,
+																 RTMP_MSGID_AMF0_COMMAND_MESSAGE,
+																 0,
+																 0);
 	AmfDocument document;
 
 	// 스트림ID 정하기
@@ -984,17 +999,17 @@ bool RtmpChunkStream::SendAmfCreateStreamResult(uint32_t chunk_stream_id, double
 // 상태 전송
 //====================================================================================================
 bool RtmpChunkStream::SendAmfOnStatus(uint32_t chunk_stream_id,
-                                      uint32_t stream_id,
-                                      char *level,
-                                      char *code,
-                                      char *description,
-                                      double client_id)
+									  uint32_t stream_id,
+									  char *level,
+									  char *code,
+									  char *description,
+									  double client_id)
 {
 	auto message_header = std::make_shared<RtmpMuxMessageHeader>(chunk_stream_id,
-	                                                             0,
-	                                                             RTMP_MSGID_AMF0_COMMAND_MESSAGE,
-	                                                             stream_id,
-	                                                             0);
+																 0,
+																 RTMP_MSGID_AMF0_COMMAND_MESSAGE,
+																 stream_id,
+																 0);
 	AmfDocument document;
 	AmfObject *object = nullptr;
 
@@ -1033,129 +1048,126 @@ bool RtmpChunkStream::SendAmfOnStatus(uint32_t chunk_stream_id,
 // 0x01 : NAL_SLICE -> 일반적인 프레임에서 나옴
 // 0x65 : NAL_SLICE_IDR    -> 키 프레임에서 나온다
 //====================================================================================================
-bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &message)
+bool RtmpChunkStream::ReceiveVideoMessage(const std::shared_ptr<const RtmpMessage> &message)
 {
 	RtmpFrameType frame_type = RtmpFrameType::VideoPFrame;
 
 	// size check
-	if((message->message_header->body_size < RTMP_VIDEO_DATA_MIN_SIZE) ||
-		(message->message_header->body_size > RTMP_MAX_PACKET_SIZE))
+	if ((message->header->payload_size < RTMP_VIDEO_DATA_MIN_SIZE) ||
+		(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
 	{
 		logte("Size Fail - stream(%s/%s) size(%d)",
-		      _app_name.CStr(),
-		      _stream_name.CStr(),
-		      message->message_header->body_size);
+			  _app_name.CStr(), _stream_name.CStr(),
+			  message->header->payload_size);
 		return false;
 	}
 
+	const std::shared_ptr<const ov::Data> &payload = message->payload;
+
 	// Frame Type 확인 (I/P(B) Frame)
-	if(message->body->at(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_I_FRAME_TYPE)
+	if (payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_I_FRAME_TYPE)
 	{
-		frame_type = RtmpFrameType::VideoIFrame; //I-Frame
+		frame_type = RtmpFrameType::VideoIFrame;  //I-Frame
 	}
-	else if(message->body->at(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_P_FRAME_TYPE)
+	else if (payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_P_FRAME_TYPE)
 	{
-		frame_type = RtmpFrameType::VideoPFrame; //P-Frame
+		frame_type = RtmpFrameType::VideoPFrame;  //P-Frame
 	}
 	else
 	{
 		logte("Frame type fail - stream(%s/%s) type(0x%x)",
-		      _app_name.CStr(),
-		      _stream_name.CStr(),
-		      (uint8_t)message->body->at(RTMP_VIDEO_CONTROL_HEADER_INDEX));
+			  _app_name.CStr(),
+			  _stream_name.CStr(),
+			  payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX));
 		return false;
 	}
 
 	// Seqence Data 처리
-	if(!_video_sequence_info_process &&
-	   message->body->at(RTMP_VIDEO_SEQUENCE_HEADER_INDEX) == RTMP_SEQUENCE_INFO_TYPE)
+	if (!_video_sequence_info_process &&
+		payload->At(RTMP_VIDEO_SEQUENCE_HEADER_INDEX) == RTMP_SEQUENCE_INFO_TYPE)
 	{
 		_video_sequence_info_process = true;
 
 		// control header/sequence type 정보 skip
-		if(!VideoSequenceHeaderProcess(message->body, message->body->at(RTMP_VIDEO_CONTROL_HEADER_INDEX)))
+		if (!VideoSequenceHeaderProcess(payload, payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX)))
 		{
 			logtw("Video sequence info process fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
-
 		}
 
 		// 스트림 생성
-		if(_video_sequence_info_process && _audio_sequence_info_process)
+		if (_video_sequence_info_process && _audio_sequence_info_process)
 		{
-			if(!StreamCreate())
+			if (!StreamCreate())
 			{
 				logte("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 				return false;
 			}
 		}
-
 	}
 
 	// video/audio sequence header 모두 처리 전에 임시 저장
-	if(!_video_sequence_info_process || !_audio_sequence_info_process)
+	if (!_video_sequence_info_process || !_audio_sequence_info_process)
 	{
 		_stream_messages.push_back(message);
 
-		if(_stream_messages.size() > MAX_STREAM_MESSAGE_COUNT)
-        {
+		if (_stream_messages.size() > MAX_STREAM_MESSAGE_COUNT)
+		{
 			logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
-			      _app_name.CStr(),
-			      _stream_name.CStr(),
-			      _stream_messages.size(),
-			      MAX_STREAM_MESSAGE_COUNT);
+				  _app_name.CStr(),
+				  _stream_name.CStr(),
+				  _stream_messages.size(),
+				  MAX_STREAM_MESSAGE_COUNT);
 		}
 
 		return true;
 	}
 
-    // setting packet time
-    _last_packet_time = time(nullptr);
+	// setting packet time
+	_last_packet_time = time(nullptr);
 
 	// video stream callback 호출
-	if(_media_info->video_streaming)
+	if (_media_info->video_streaming)
 	{
 		_stream_interface->OnChunkStreamVideoData(_remote,
-		                                          _app_id,
-		                                          _stream_id,
-		                                          message->message_header->timestamp,
-		                                          frame_type,
-		                                          message->body);
+												  _app_id,
+												  _stream_id,
+												  message->header->completed.timestamp,
+												  frame_type,
+												  message->payload);
 
-
-		if(frame_type == RtmpFrameType::VideoIFrame)
+		if (frame_type == RtmpFrameType::VideoIFrame)
 		{
-			_key_frame_interval = message->message_header->timestamp - _previous_key_frame_timestamp;
-			_previous_key_frame_timestamp = message->message_header->timestamp;
+			_key_frame_interval = message->header->completed.timestamp - _previous_key_frame_timestamp;
+			_previous_key_frame_timestamp = message->header->completed.timestamp;
 		}
 
-		_last_video_timestamp = message->message_header->timestamp;
+		_last_video_timestamp = message->header->completed.timestamp;
 		_video_frame_count++;
 
 		time_t current_time = time(nullptr);
 		uint32_t check_gap = current_time - _stream_check_time;
 
-		if(check_gap >= 60)
+		if (check_gap >= 60)
 		{
 			logtd("Rtmp Provider Info - stream(%s/%s) key(%ums) timestamp(v:%ums/a:%ums/g:%dms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
-			      _app_name.CStr(),
-			      _stream_name.CStr(),
-			      _key_frame_interval,
-			      _last_video_timestamp,
-			      _last_audio_timestamp,
-			      _last_video_timestamp - _last_audio_timestamp,
-			      _video_frame_count / check_gap,
-			      _audio_frame_count / check_gap,
-			      _last_video_timestamp - _previous_last_video_timestamp,
-			      _last_audio_timestamp - _previous_last_audio_timestamp);
+				  _app_name.CStr(),
+				  _stream_name.CStr(),
+				  _key_frame_interval,
+				  _last_video_timestamp,
+				  _last_audio_timestamp,
+				  _last_video_timestamp - _last_audio_timestamp,
+				  _video_frame_count / check_gap,
+				  _audio_frame_count / check_gap,
+				  _last_video_timestamp - _previous_last_video_timestamp,
+				  _last_audio_timestamp - _previous_last_audio_timestamp);
 
 			_stream_check_time = time(nullptr);
 			_video_frame_count = 0;
 			_audio_frame_count = 0;
 			_previous_last_video_timestamp = _last_video_timestamp;
-            _previous_last_audio_timestamp = _last_audio_timestamp;
+			_previous_last_audio_timestamp = _last_audio_timestamp;
 		}
 	}
-
 
 	return true;
 }
@@ -1175,38 +1187,38 @@ bool RtmpChunkStream::ReceiveVideoMessage(std::shared_ptr<ImportMessage> &messag
 //AAC : Adts 헤더 정보 추가
 //Speex : 크기 정보 추가
 //====================================================================================================
-bool RtmpChunkStream::ReceiveAudioMessage(std::shared_ptr<ImportMessage> &message)
+bool RtmpChunkStream::ReceiveAudioMessage(const std::shared_ptr<const RtmpMessage> &message)
 {
 	// size check
-	if(
-		(message->message_header->body_size < RTMP_AAC_AUDIO_DATA_MIN_SIZE) ||
-		(message->message_header->body_size > RTMP_MAX_PACKET_SIZE)
-		)
+	if (
+		(message->header->payload_size < RTMP_AAC_AUDIO_DATA_MIN_SIZE) ||
+		(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
 	{
 		logte("Size Fail - stream(%s/%s) size(%d)",
-		      _app_name.CStr(),
-		      _stream_name.CStr(),
-		      message->message_header->body_size);
+			  _app_name.CStr(),
+			  _stream_name.CStr(),
+			  message->header->payload_size);
 
 		return false;
 	}
 
+	auto &payload = message->payload;
+
 	// Seqence Data 처리
-	if(!_audio_sequence_info_process &&
-	   message->body->at(RTMP_AAC_AUDIO_SEQUENCE_HEADER_INDEX) == RTMP_SEQUENCE_INFO_TYPE)
+	if (!_audio_sequence_info_process &&
+		payload->At(RTMP_AAC_AUDIO_SEQUENCE_HEADER_INDEX) == RTMP_SEQUENCE_INFO_TYPE)
 	{
 		_audio_sequence_info_process = true;
 
-		if(!AudioSequenceHeaderProcess(message->body, message->body->at(RTMP_AUDIO_CONTROL_HEADER_INDEX)))
+		if (!AudioSequenceHeaderProcess(message->payload, payload->At(RTMP_AUDIO_CONTROL_HEADER_INDEX)))
 		{
 			logtw("Audio Sequence Info Process Fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
-
 		}
 
 		// 스트림 생성
-		if(_video_sequence_info_process && _audio_sequence_info_process)
+		if (_video_sequence_info_process && _audio_sequence_info_process)
 		{
-			if(!StreamCreate())
+			if (!StreamCreate())
 			{
 				logte("Input create fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 				return false;
@@ -1215,37 +1227,36 @@ bool RtmpChunkStream::ReceiveAudioMessage(std::shared_ptr<ImportMessage> &messag
 	}
 
 	// video/audio sequence header 모두 처리 전에 임시 저장
-	if(!_video_sequence_info_process || !_audio_sequence_info_process)
+	if (!_video_sequence_info_process || !_audio_sequence_info_process)
 	{
 		_stream_messages.push_back(message);
 
-		if(_stream_messages.size() > MAX_STREAM_MESSAGE_COUNT)
+		if (_stream_messages.size() > MAX_STREAM_MESSAGE_COUNT)
 			logtw("Stream Message Count Over - stream(%s/%s) size(%d:%d)",
-			      _app_name.CStr(),
-			      _stream_name.CStr(),
-			      _stream_messages.size(),
-			      MAX_STREAM_MESSAGE_COUNT);
+				  _app_name.CStr(),
+				  _stream_name.CStr(),
+				  _stream_messages.size(),
+				  MAX_STREAM_MESSAGE_COUNT);
 
 		return true;
 	}
 
-    // setting packet time
-    _last_packet_time = time(nullptr);
+	// setting packet time
+	_last_packet_time = time(nullptr);
 
 	// audio stream callback 호출
-	if(_media_info->audio_streaming)
+	if (_media_info->audio_streaming)
 	{
 		_stream_interface->OnChunkStreamAudioData(_remote,
-		                                          _app_id,
-		                                          _stream_id,
-		                                          message->message_header->timestamp,
-		                                          RtmpFrameType::AudioFrame,
-		                                          message->body);
+												  _app_id,
+												  _stream_id,
+												  message->header->completed.timestamp,
+												  RtmpFrameType::AudioFrame,
+												  message->payload);
 
-		_last_audio_timestamp = message->message_header->timestamp;
+		_last_audio_timestamp = message->header->completed.timestamp;
 		_audio_frame_count++;
 	}
-
 
 	return true;
 }
@@ -1271,16 +1282,15 @@ bool RtmpChunkStream::ReceiveAudioMessage(std::shared_ptr<ImportMessage> &messag
 //      - pps size			- 2 byte  *
 //      - pps data			- n byte  *
 //====================================================================================================
-bool RtmpChunkStream::VideoSequenceHeaderProcess(std::shared_ptr<std::vector<uint8_t>> &data, uint8_t control_byte)
+bool RtmpChunkStream::VideoSequenceHeaderProcess(const std::shared_ptr<const ov::Data> &data, uint8_t control_byte)
 {
-
 	// Codec Type Check(Only H264)
-	if((control_byte & 0x0f) != 7)
+	if ((control_byte & 0x0f) != 7)
 	{
 		logtd("Not Supported Codec Type - stream(%s/%s) codec(%d)",
-		      _app_name.CStr(),
-		      _stream_name.CStr(),
-		      (control_byte & 0x0f));
+			  _app_name.CStr(),
+			  _stream_name.CStr(),
+			  (control_byte & 0x0f));
 
 		logti("Please select H264 codec - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 
@@ -1288,9 +1298,9 @@ bool RtmpChunkStream::VideoSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 	}
 
 	// data size check
-	if(data->size() < RTMP_SPS_PPS_MIN_DATA_SIZE)
+	if (data->GetLength() < RTMP_SPS_PPS_MIN_DATA_SIZE)
 	{
-		logte("Data size fail - stream(%s/%s) size(%d)", _app_name.CStr(), _stream_name.CStr(), data->size());
+		logte("Data size fail - stream(%s/%s) size(%zu)", _app_name.CStr(), _stream_name.CStr(), data->GetLength());
 		return false;
 	}
 
@@ -1301,36 +1311,36 @@ bool RtmpChunkStream::VideoSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 	uint8_t avc_level;
 
 	// Parsing
-	if(!BitstreamToAnnexB::ParseSequenceHeader(data->data(),
-	                                           data->size(),
-	                                           sps,
-	                                           pps,
-	                                           avc_profile,
-	                                           avc_profile_compatibility,
-	                                           avc_level))
+	if (!BitstreamToAnnexB::ParseSequenceHeader(data->GetDataAs<uint8_t>(),
+												data->GetLength(),
+												sps,
+												pps,
+												avc_profile,
+												avc_profile_compatibility,
+												avc_level))
 	{
 		logte("Sequence header parsing fail - stream(%s/%s) size(%d)\n%s",
-		      _app_name.CStr(),
-		      _stream_name.CStr(),
-		      data->size(),
-		      ov::ToHexString(data->data(), data->size()).CStr());
+			  _app_name.CStr(),
+			  _stream_name.CStr(),
+			  data->GetLength(),
+			  data->ToString().CStr());
 
 		return false;
 	}
 
-	_media_info->avc_sps->assign(sps.begin(), sps.end()); // SPS
+	_media_info->avc_sps->assign(sps.begin(), sps.end());  // SPS
 	_media_info->avc_pps->assign(pps.begin(), pps.end());  // PPS
 
 	_media_info->video_streaming = true;
 
 	logtd("Video sequence header - stream(%s/%s) sps(%d) pps(%d) profile(%d) compatibility(%d) level(%d)",
-	      _app_name.CStr(),
-	      _stream_name.CStr(),
-	      _media_info->avc_sps->size(),
-	      _media_info->avc_pps->size(),
-	      avc_profile,
-	      avc_profile_compatibility,
-	      avc_level);
+		  _app_name.CStr(),
+		  _stream_name.CStr(),
+		  _media_info->avc_sps->size(),
+		  _media_info->avc_pps->size(),
+		  avc_profile,
+		  avc_profile_compatibility,
+		  avc_level);
 
 	return true;
 }
@@ -1341,46 +1351,46 @@ bool RtmpChunkStream::VideoSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 // - 오디오 samplerate/channels 등의 정보 추출 가능
 // - audio frame header나 메타데이터 정보 보다 정확
 //======================================================= =============================================
-bool RtmpChunkStream::AudioSequenceHeaderProcess(std::shared_ptr<std::vector<uint8_t>> &data, uint8_t control_byte)
+bool RtmpChunkStream::AudioSequenceHeaderProcess(const std::shared_ptr<const ov::Data> &data, uint8_t control_byte)
 {
 	int sample_index = 0;
 	int samplerate = 0;
 	int channels = 0;
 
 	// Format(4Bit) - 10(AAC), 2(MP3), 11(SPEEX) Only AAC
-	if((control_byte >> 4) != 10)
+	if ((control_byte >> 4) != 10)
 	{
 		logtd("Not Supported Codec Type - stream(%s/%s) codec(%d)",
-		      _app_name.CStr(),
-		      _stream_name.CStr(),
-		      (control_byte >> 4));
+			  _app_name.CStr(),
+			  _stream_name.CStr(),
+			  (control_byte >> 4));
 
 		logti("Please select AAC codec - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 		return false;
 	}
 
 	// Parsing
-	if(!BitstreamToADTS::SequenceHeaderParsing(data->data(),
-	                                           data->size(),
-	                                           sample_index,
-	                                           channels))
+	if (!BitstreamToADTS::SequenceHeaderParsing(data->GetDataAs<uint8_t>(),
+												data->GetLength(),
+												sample_index,
+												channels))
 	{
 		logte("Audio Sequence header parsing fail - stream(%s/%s) size(%d)\n%s",
-		      _app_name.CStr(),
-		      _stream_name.CStr(),
-		      data->size(),
-		      ov::ToHexString(data->data(), data->size()).CStr());
+			  _app_name.CStr(),
+			  _stream_name.CStr(),
+			  data->GetLength(),
+			  data->ToString().CStr());
 
 		return false;
 	}
 
 	// set samplerate
-	if(sample_index >= RTMP_SAMPLERATE_TABLE_SIZE)
+	if (sample_index >= RTMP_SAMPLERATE_TABLE_SIZE)
 	{
 		logte("Sampleindex fail - stream(%s/%s) index(%d)",
-		      _app_name.CStr(),
-		      _stream_name.CStr(),
-		      sample_index);
+			  _app_name.CStr(),
+			  _stream_name.CStr(),
+			  sample_index);
 		return false;
 	}
 	samplerate = g_rtmp_sample_rate_table[sample_index];
@@ -1392,10 +1402,10 @@ bool RtmpChunkStream::AudioSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 	_media_info->audio_streaming = true;
 
 	logtd("Audio sequence header - stream(%s/%s) samplerate(%d) channels(%d)",
-	      _app_name.CStr(),
-	      _stream_name.CStr(),
-	      samplerate,
-	      channels);
+		  _app_name.CStr(),
+		  _stream_name.CStr(),
+		  samplerate,
+		  channels);
 
 	return true;
 }
@@ -1407,12 +1417,13 @@ bool RtmpChunkStream::AudioSequenceHeaderProcess(std::shared_ptr<std::vector<uin
 //====================================================================================================
 bool RtmpChunkStream::StreamCreate()
 {
-	// Streaming Check
-	if(!_media_info->video_streaming && !_media_info->audio_streaming)
+// Streaming Check
+#if 0
+	if (!_media_info->video_streaming && !_media_info->audio_streaming)
 	{
 		logte("Not have both video and audio Stream - stream(%s/%s)",
-		      _app_name.CStr(),
-		      _stream_name.CStr());
+			  _app_name.CStr(),
+			  _stream_name.CStr());
 
 		_stream_messages.clear();
 		_media_info->video_streaming = false;
@@ -1420,14 +1431,15 @@ bool RtmpChunkStream::StreamCreate()
 		_remote->Close();
 		return false;
 	}
+#endif
 
 	// Stream Create
-	if(!(_stream_interface->OnChunkStreamReadyComplete(_remote,
-	                                                   _app_name,
-	                                                   _stream_name,
-	                                                   _media_info,
-	                                                   _app_id,
-	                                                   _stream_id)))
+	if (!(_stream_interface->OnChunkStreamReady(_remote,
+												_app_name,
+												_stream_name,
+												_media_info,
+												_app_id,
+												_stream_id)))
 	{
 		_stream_messages.clear();
 		_media_info->video_streaming = false;
@@ -1435,39 +1447,40 @@ bool RtmpChunkStream::StreamCreate()
 		return false;
 	}
 
-	logtd("\n======= Stream Crete Info ======= \n"\
-    "app : %s(%u)\n"\
-    "stream : %s(%u)\n"\
-    "encoder : %s(%s)/%s\n"\
-    "video : %s/%s/%d*%d/%.2ffps/%dkbps\n"\
-    "audio : %s/%s/%dch/%dhz/%dkbps",
-	      _app_name.CStr(),
-	      _app_id,
-	      _stream_name.CStr(),
-	      _stream_id,
-	      GetEncoderTypeString(_media_info->encoder_type).CStr(),
-	      _device_string.CStr(),
-	      _remote->ToString().CStr(),
-	      _media_info->video_streaming ? "enable" : "disable",
-	      GetCodecString(_media_info->video_codec_type).CStr(),
-	      _media_info->video_width,
-	      _media_info->video_height,
-	      _media_info->video_framerate,
-	      _media_info->video_bitrate,
-	      _media_info->audio_streaming ? "enable" : "disable",
-	      GetCodecString(_media_info->audio_codec_type).CStr(),
-	      _media_info->audio_channels,
-	      _media_info->audio_samplerate,
-	      _media_info->audio_bitrate);
+	logtd(
+		"\n======= Stream Crete Info ======= \n"
+		"app : %s(%u)\n"
+		"stream : %s(%u)\n"
+		"encoder : %s(%s)/%s\n"
+		"video : %s/%s/%d*%d/%.2ffps/%dkbps\n"
+		"audio : %s/%s/%dch/%dhz/%dkbps",
+		_app_name.CStr(),
+		_app_id,
+		_stream_name.CStr(),
+		_stream_id,
+		GetEncoderTypeString(_media_info->encoder_type).CStr(),
+		_device_string.CStr(),
+		_remote->ToString().CStr(),
+		_media_info->video_streaming ? "enable" : "disable",
+		GetCodecString(_media_info->video_codec_type).CStr(),
+		_media_info->video_width,
+		_media_info->video_height,
+		_media_info->video_framerate,
+		_media_info->video_bitrate,
+		_media_info->audio_streaming ? "enable" : "disable",
+		GetCodecString(_media_info->audio_codec_type).CStr(),
+		_media_info->audio_channels,
+		_media_info->audio_samplerate,
+		_media_info->audio_bitrate);
 
 	// 임시 저장 데이터 처리(재귀 호출 주의)
-	for(auto message : _stream_messages)
+	for (auto message : _stream_messages)
 	{
-		if(message->message_header->type_id == RTMP_MSGID_VIDEO_MESSAGE && _media_info->video_streaming)
+		if (message->header->completed.type_id == RTMP_MSGID_VIDEO_MESSAGE && _media_info->video_streaming)
 		{
 			ReceiveVideoMessage(message);
 		}
-		else if(message->message_header->type_id == RTMP_MSGID_AUDIO_MESSAGE && _media_info->audio_streaming)
+		else if (message->header->completed.type_id == RTMP_MSGID_AUDIO_MESSAGE && _media_info->audio_streaming)
 		{
 			ReceiveAudioMessage(message);
 		}
@@ -1480,11 +1493,11 @@ bool RtmpChunkStream::StreamCreate()
 //====================================================================================================
 // Amf Command - OnMetaData
 //====================================================================================================
-bool RtmpChunkStream::OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document,
-                                    int32_t object_index)
+bool RtmpChunkStream::OnAmfMetaData(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document,
+									int32_t object_index)
 {
-    // setting packet time
-    _last_packet_time = time(nullptr);
+	// setting packet time
+	_last_packet_time = time(nullptr);
 
 	RtmpCodecType video_codec_type = RtmpCodecType::Unknown;
 	RtmpCodecType audio_codec_type = RtmpCodecType::Unknown;
@@ -1507,7 +1520,7 @@ bool RtmpChunkStream::OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &messa
 	logtd(dump_string.c_str());
 
 	// object encoding 얻기
-	if(document.GetProperty(object_index)->GetType() == AmfDataType::Object)
+	if (document.GetProperty(object_index)->GetType() == AmfDataType::Object)
 	{
 		object = (AmfObjectArray *)(document.GetProperty(object_index)->GetObject());
 	}
@@ -1517,30 +1530,29 @@ bool RtmpChunkStream::OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &messa
 	}
 
 	// DeviceType
-	if((index = object->FindName("videodevice")) >= 0 && object->GetType(index) == AmfDataType::String)
+	if ((index = object->FindName("videodevice")) >= 0 && object->GetType(index) == AmfDataType::String)
 	{
-		_device_string = object->GetString(index);    //DeviceType - XSplit
+		_device_string = object->GetString(index);  //DeviceType - XSplit
 	}
-	else if((index = object->FindName("encoder")) >= 0 && object->GetType(index) == AmfDataType::String)
+	else if ((index = object->FindName("encoder")) >= 0 && object->GetType(index) == AmfDataType::String)
 	{
 		_device_string = object->GetString(index);
 	}
 
-
 	// Encoder 인식
-	if(_device_string.IndexOf("Open Broadcaster") >= 0)
+	if (_device_string.IndexOf("Open Broadcaster") >= 0)
 	{
 		encoder_type = RtmpEncoderType::OBS;
 	}
-	else if(_device_string.IndexOf("obs-output") >= 0)
+	else if (_device_string.IndexOf("obs-output") >= 0)
 	{
 		encoder_type = RtmpEncoderType::OBS;
 	}
-	else if(_device_string.IndexOf("XSplitBroadcaster") >= 0)
+	else if (_device_string.IndexOf("XSplitBroadcaster") >= 0)
 	{
 		encoder_type = RtmpEncoderType::Xsplit;
 	}
-	else if(_device_string.IndexOf("Lavf") >= 0)
+	else if (_device_string.IndexOf("Lavf") >= 0)
 	{
 		encoder_type = RtmpEncoderType::Lavf;
 	}
@@ -1550,142 +1562,141 @@ bool RtmpChunkStream::OnAmfMetaData(std::shared_ptr<RtmpMuxMessageHeader> &messa
 	}
 
 	// Video Codec
-	if((index = object->FindName("videocodecid")) >= 0)
+	if ((index = object->FindName("videocodecid")) >= 0)
 	{
-		if(object->GetType(index) == AmfDataType::String && strcmp("avc1", object->GetString(index)) == 0)
+		if (object->GetType(index) == AmfDataType::String && strcmp("avc1", object->GetString(index)) == 0)
 		{
 			video_codec_type = RtmpCodecType::H264;
 		}
-		else if(object->GetType(index) == AmfDataType::String && strcmp("H264Avc", object->GetString(index)) == 0)
+		else if (object->GetType(index) == AmfDataType::String && strcmp("H264Avc", object->GetString(index)) == 0)
 		{
 			video_codec_type = RtmpCodecType::H264;
 		}
-		else if(object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 7.0)
+		else if (object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 7.0)
 		{
 			video_codec_type = RtmpCodecType::H264;
 		}
 	}
 
 	// Video Framerate
-	if((index = object->FindName("framerate")) >= 0 && object->GetType(index) == AmfDataType::Number)
+	if ((index = object->FindName("framerate")) >= 0 && object->GetType(index) == AmfDataType::Number)
 	{
 		frame_rate = object->GetNumber(index);
 	}
-	else if((index = object->FindName("videoframerate")) >= 0 && object->GetType(index) == AmfDataType::Number)
+	else if ((index = object->FindName("videoframerate")) >= 0 && object->GetType(index) == AmfDataType::Number)
 	{
 		frame_rate = object->GetNumber(index);
 	}
 
 	// Video Width
-	if((index = object->FindName("width")) >= 0 && object->GetType(index) == AmfDataType::Number)
+	if ((index = object->FindName("width")) >= 0 && object->GetType(index) == AmfDataType::Number)
 	{
 		video_width = object->GetNumber(index);
 	}
 
 	// Video Height
-	if((index = object->FindName("height")) >= 0 && object->GetType(index) == AmfDataType::Number)
+	if ((index = object->FindName("height")) >= 0 && object->GetType(index) == AmfDataType::Number)
 	{
 		video_height = object->GetNumber(index);
 	}
 
 	// Video Bitrate
-	if((index = object->FindName("videodatarate")) >= 0 && object->GetType(index) == AmfDataType::Number)
+	if ((index = object->FindName("videodatarate")) >= 0 && object->GetType(index) == AmfDataType::Number)
 	{
 		video_bitrate = object->GetNumber(index);
-	}    // Video Data Rate
-	if((index = object->FindName("bitrate")) >= 0 && object->GetType(index) == AmfDataType::Number)
+	}  // Video Data Rate
+	if ((index = object->FindName("bitrate")) >= 0 && object->GetType(index) == AmfDataType::Number)
 	{
 		video_bitrate = object->GetNumber(index);
-	}    // Video Data Rate
-	if(((index = object->FindName("maxBitrate")) >= 0) && object->GetType(index) == AmfDataType::String)
+	}  // Video Data Rate
+	if (((index = object->FindName("maxBitrate")) >= 0) && object->GetType(index) == AmfDataType::String)
 	{
 		bitrate_string = object->GetString(index);
 		video_bitrate = strtol(bitrate_string.CStr(), nullptr, 0);
 	}
 
 	// Audio Codec
-	if((index = object->FindName("audiocodecid")) >= 0)
+	if ((index = object->FindName("audiocodecid")) >= 0)
 	{
-		if(object->GetType(index) == AmfDataType::String && strcmp("mp4a", object->GetString(index)) == 0)
+		if (object->GetType(index) == AmfDataType::String && strcmp("mp4a", object->GetString(index)) == 0)
 		{
-			audio_codec_type = RtmpCodecType::AAC;    //AAC
+			audio_codec_type = RtmpCodecType::AAC;  //AAC
 		}
-		else if(object->GetType(index) == AmfDataType::String && strcmp("mp3", object->GetString(index)) == 0)
+		else if (object->GetType(index) == AmfDataType::String && strcmp("mp3", object->GetString(index)) == 0)
 		{
-			audio_codec_type = RtmpCodecType::MP3;    //MP3
+			audio_codec_type = RtmpCodecType::MP3;  //MP3
 		}
-		else if(object->GetType(index) == AmfDataType::String && strcmp(".mp3", object->GetString(index)) == 0)
+		else if (object->GetType(index) == AmfDataType::String && strcmp(".mp3", object->GetString(index)) == 0)
 		{
-			audio_codec_type = RtmpCodecType::MP3;    //MP3
+			audio_codec_type = RtmpCodecType::MP3;  //MP3
 		}
-		else if(object->GetType(index) == AmfDataType::String && strcmp("speex", object->GetString(index)) == 0)
+		else if (object->GetType(index) == AmfDataType::String && strcmp("speex", object->GetString(index)) == 0)
 		{
-			audio_codec_type = RtmpCodecType::SPEEX;//Speex
+			audio_codec_type = RtmpCodecType::SPEEX;  //Speex
 		}
-		else if(object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 10.0)
+		else if (object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 10.0)
 		{
-			audio_codec_type = RtmpCodecType::AAC;//AAC
+			audio_codec_type = RtmpCodecType::AAC;  //AAC
 		}
-		else if(object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 11.0)
+		else if (object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 11.0)
 		{
-			audio_codec_type = RtmpCodecType::SPEEX;//Speex
+			audio_codec_type = RtmpCodecType::SPEEX;  //Speex
 		}
-		else if(object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 2.0)
+		else if (object->GetType(index) == AmfDataType::Number && object->GetNumber(index) == 2.0)
 		{
 			audio_codec_type = RtmpCodecType::MP3;
-		}    //MP3
+		}  //MP3
 	}
 
 	// Audio bitreate
-	if((index = object->FindName("audiodatarate")) >= 0 && object->GetType(index) == AmfDataType::Number)
+	if ((index = object->FindName("audiodatarate")) >= 0 && object->GetType(index) == AmfDataType::Number)
 	{
-		audio_bitrate = object->GetNumber(index);    // Audio Data Rate
+		audio_bitrate = object->GetNumber(index);  // Audio Data Rate
 	}
-	else if((index = object->FindName("audiobitrate")) >= 0 && object->GetType(index) == AmfDataType::Number)
+	else if ((index = object->FindName("audiobitrate")) >= 0 && object->GetType(index) == AmfDataType::Number)
 	{
 		audio_bitrate = object->GetNumber(index);
-	}    // Audio Data Rate
+	}  // Audio Data Rate
 
 	// Audio Channels
-	if((index = object->FindName("audiochannels")) >= 0)
+	if ((index = object->FindName("audiochannels")) >= 0)
 	{
-		if(object->GetType(index) == AmfDataType::Number)
+		if (object->GetType(index) == AmfDataType::Number)
 		{
 			audio_channels = object->GetNumber(index);
 		}
-		else if(object->GetType(index) == AmfDataType::String && strcmp("stereo", object->GetString(index)) == 0)
+		else if (object->GetType(index) == AmfDataType::String && strcmp("stereo", object->GetString(index)) == 0)
 		{
 			audio_channels = 2;
 		}
-		else if(object->GetType(index) == AmfDataType::String && strcmp("mono", object->GetString(index)) == 0)
+		else if (object->GetType(index) == AmfDataType::String && strcmp("mono", object->GetString(index)) == 0)
 		{
 			audio_channels = 1;
 		}
-
 	}
 
 	// Audio samplerate
-	if((index = object->FindName("audiosamplerate")) >= 0)
+	if ((index = object->FindName("audiosamplerate")) >= 0)
 	{
 		audio_samplerate = object->GetNumber(index);
-	}    // Audio Sample Rate
+	}  // Audio Sample Rate
 
 	// Audio samplesize
-	if((index = object->FindName("audiosamplesize")) >= 0)
+	if ((index = object->FindName("audiosamplesize")) >= 0)
 	{
 		audio_samplesize = object->GetNumber(index);
-	}    // Audio Sample Size
+	}  // Audio Sample Size
 
 	// support codec check (H264/AAC 지원)
-	if(!(video_codec_type == RtmpCodecType::H264) && !(audio_codec_type == RtmpCodecType::AAC))
+	if (!(video_codec_type == RtmpCodecType::H264) && !(audio_codec_type == RtmpCodecType::AAC))
 	{
 		logtw("codec type fail - stream(%s/%s) id(%u/%u) video(%s) audio(%s)",
-		      _app_name.CStr(),
-              _stream_name.CStr(),
-		      _app_id,
-		      _stream_id,
-		      GetCodecString(video_codec_type).CStr(),
-		      GetCodecString(audio_codec_type).CStr());
+			  _app_name.CStr(),
+			  _stream_name.CStr(),
+			  _app_id,
+			  _stream_id,
+			  GetCodecString(video_codec_type).CStr(),
+			  GetCodecString(audio_codec_type).CStr());
 	}
 
 	_media_info->video_codec_type = video_codec_type;

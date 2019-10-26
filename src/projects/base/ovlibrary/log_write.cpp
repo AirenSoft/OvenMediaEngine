@@ -60,7 +60,7 @@ namespace ov
         _start_service = start_service;
     }
 
-    void LogWrite::Write(const char* log)
+    void LogWrite::Write(const char *log)
     {
         std::time_t time = std::time(nullptr);
         std::tm localTime {};

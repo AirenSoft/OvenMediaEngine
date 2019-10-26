@@ -8,23 +8,23 @@
 //==============================================================================
 #pragma once
 
-#include "data.h"
-#include "assert.h" // NOLINT
+#include "assert.h"  // NOLINT
 #include "byte_ordering.h"
+#include "data.h"
 
 #include <memory>
 
 #define OV_DECLARE_READ_FUNCTION(type, name, func) \
-    inline type name() noexcept \
-    { \
-        return func(*Read<type>()); \
-    }
+	inline type name() noexcept                    \
+	{                                              \
+		return func(*Read<type>());                \
+	}
 
 #define OV_DECLARE_WRITE_FUNCTION(type, name, func) \
-    inline bool name(type value) noexcept \
-    { \
-        return Write<type>(func(value)); \
-    }
+	inline bool name(type value) noexcept           \
+	{                                               \
+		return Write<type>(func(value));            \
+	}
 
 namespace ov
 {
@@ -62,14 +62,14 @@ namespace ov
 		/// @param count 읽을 데이터 개수
 		///
 		/// @return 읽은 데이터 개수 (0 ~ count 사이)
-		template<typename T = uint8_t>
+		template <typename T = uint8_t>
 		inline size_t Peek(T *buffer, size_t count)
 		{
 			size_t peek_count = std::min(Remained<T>(), count);
 
-			if(peek_count > 0)
+			if (peek_count > 0)
 			{
-				if(buffer != nullptr)
+				if (buffer != nullptr)
 				{
 					::memcpy(buffer, CurrentBuffer<T>(), sizeof(T) * peek_count);
 				}
@@ -83,10 +83,23 @@ namespace ov
 		/// @param buffer 읽은 데이터가 저장될 버퍼
 		///
 		/// @return 읽은 데이터 개수 (0 ~ 1 사이)
-		template<typename T = uint8_t>
+		template <typename T = uint8_t>
 		inline size_t Peek(T *buffer)
 		{
 			return Peek<T>(buffer, 1);
+		}
+
+		template <typename T = uint8_t>
+		inline T Peek() const
+		{
+			T value;
+			
+			if(Peek<T>(&value) == sizeof(T))
+			{
+				return std::move(value);
+			}
+
+			return T();
 		}
 
 		/// T 타입의 데이터를 count개 읽은 만큼 offset을 변경함
@@ -95,7 +108,7 @@ namespace ov
 		/// @param count skip할 데이터 개수
 		///
 		/// @return skip된 데이터 개수 (0 ~ count 사이)
-		template<typename T = uint8_t>
+		template <typename T = uint8_t>
 		inline size_t Skip(size_t count)
 		{
 			return Read<T>(nullptr, count);
@@ -106,7 +119,7 @@ namespace ov
 		/// @tparam T skip할 데이터 타입
 		///
 		/// @return skip된 데이터 개수 (0 ~ 1 사이)
-		template<typename T = uint8_t>
+		template <typename T = uint8_t>
 		inline size_t Skip()
 		{
 			return Read<T>(nullptr, 1);
@@ -119,7 +132,7 @@ namespace ov
 		/// @param count 읽을 데이터 개수
 		///
 		/// @return 읽은 데이터 개수 (0 ~ count 사이)
-		template<typename T = uint8_t>
+		template <typename T = uint8_t>
 		inline size_t Read(T *buffer, size_t count)
 		{
 			size_t copied = Peek(buffer, count);
@@ -135,7 +148,7 @@ namespace ov
 		/// @param buffer 읽은 데이터가 저장될 버퍼
 		///
 		/// @return 읽은 데이터 개수 (0 ~ 1 사이)
-		template<typename T = uint8_t>
+		template <typename T = uint8_t>
 		inline size_t Read(T *buffer)
 		{
 			size_t copied = Peek(buffer, 1);
@@ -150,10 +163,10 @@ namespace ov
 		/// @tparam T 읽을 데이터 타입
 		///
 		/// @return T 타입의 데이터
-		template<typename T = uint8_t>
+		template <typename T = uint8_t>
 		inline const T *Read()
 		{
-			if(Remained<T>() == 0L)
+			if (Remained<T>() == 0L)
 			{
 				// 남은 데이터가 없는 상태
 				return nullptr;
@@ -172,66 +185,82 @@ namespace ov
 
 		// Host ordering
 
-		/// 현재 offset 위치의 데이터를 8bit 데이터 형식으로 읽음
+		/// 현재 offset 위치의 데이터를 8bit 만큼 읽음
 		///
-		/// @return 8bit 데이터 형식의 데이터
-		OV_DECLARE_READ_FUNCTION(uint8_t, Read8,);
-		/// 현재 offset 위치의 데이터를 16bit 데이터 형식으로 읽음 (endian을 별도로 지정하지 않음)
+		/// @return 읽은 데이터를 8bit로 반환
+		OV_DECLARE_READ_FUNCTION(uint8_t, Read8, );
+		/// 현재 offset 위치의 데이터를 16bit 만큼 읽음 (endian을 별도로 지정하지 않음)
 		///
-		/// @return 16bit 데이터 형식의 데이터
-		OV_DECLARE_READ_FUNCTION(uint16_t, Read16,);
-		/// 현재 offset 위치의 데이터를 32bit 데이터 형식으로 읽음 (endian을 별도로 지정하지 않음)
+		/// @return 읽은 데이터를 16bit로 반환
+		OV_DECLARE_READ_FUNCTION(uint16_t, Read16, );
+		/// 현재 offset 위치의 데이터를 24bit 만큼 읽음 (endian을 별도로 지정하지 않음)
 		///
-		/// @return 32bit 데이터 형식의 데이터
-		OV_DECLARE_READ_FUNCTION(uint32_t, Read32,);
-		/// 현재 offset 위치의 데이터를 64bit 데이터 형식으로 읽음 (endian을 별도로 지정하지 않음)
+		/// @return 읽은 데이터를 24bit로 반환
+		OV_DECLARE_READ_FUNCTION(uint24_t, Read24, );
+		/// 현재 offset 위치의 데이터를 32bit 만큼 읽음 (endian을 별도로 지정하지 않음)
 		///
-		/// @return 64bit 데이터 형식의 데이터
-		OV_DECLARE_READ_FUNCTION(uint64_t, Read64,);
+		/// @return 읽은 데이터를 32bit로 반환
+		OV_DECLARE_READ_FUNCTION(uint32_t, Read32, );
+		/// 현재 offset 위치의 데이터를 64bit 만큼 읽음 (endian을 별도로 지정하지 않음)
+		///
+		/// @return 읽은 데이터를 64bit로 반환
+		OV_DECLARE_READ_FUNCTION(uint64_t, Read64, );
 
 		// LE => HE (Data안에 Little Endian으로 저장되어 있는 것을 Host endian으로 읽음)
 
 		/// 현재 offset 위치의 데이터를 little endian 16bit 데이터로 간주하고 host endian으로 변환하여 읽음
 		///
-		/// @return 16bit 데이터 형식의 데이터
+		/// @return 읽은 데이터를 16bit로 반환
 		OV_DECLARE_READ_FUNCTION(uint16_t, ReadLE16, LE16ToHost);
+		/// 현재 offset 위치의 데이터를 little endian 24bit 데이터로 간주하고 host endian으로 변환하여 읽음
+		///
+		/// @return 읽은 데이터를 24bit로 반환
+		OV_DECLARE_READ_FUNCTION(uint24_t, ReadLE24, LE24ToHost);
 		/// 현재 offset 위치의 데이터를 little endian 32bit 데이터로 간주하고 host endian으로 변환하여 읽음
 		///
-		/// @return 32bit 데이터 형식의 데이터
+		/// @return 읽은 데이터를 32bit로 반환
 		OV_DECLARE_READ_FUNCTION(uint32_t, ReadLE32, LE32ToHost);
 		/// 현재 offset 위치의 데이터를 little endian 64bit 데이터로 간주하고 host endian으로 변환하여 읽음
 		///
-		/// @return 64bit 데이터 형식의 데이터
+		/// @return 읽은 데이터를 64bit로 반환
 		OV_DECLARE_READ_FUNCTION(uint64_t, ReadLE64, LE64ToHost);
 
 		// BE => HE (Data안에 Big Endian으로 저장되어 있는 것을 Host endian으로 읽음)
 
 		/// 현재 offset 위치의 데이터를 big endian 16bit 데이터로 간주하고 host endian으로 변환하여 읽음
 		///
-		/// @return 16bit 데이터 형식의 데이터
+		/// @return 읽은 데이터를 16bit로 반환
 		OV_DECLARE_READ_FUNCTION(uint16_t, ReadBE16, BE16ToHost);
+		/// 현재 offset 위치의 데이터를 big endian 24bit 데이터로 간주하고 host endian으로 변환하여 읽음
+		///
+		/// @return 읽은 데이터를 24bit로 반환
+		OV_DECLARE_READ_FUNCTION(uint24_t, ReadBE24, BE24ToHost);
 		/// 현재 offset 위치의 데이터를 big endian 32bit 데이터로 간주하고 host endian으로 변환하여 읽음
 		///
-		/// @return 32bit 데이터 형식의 데이터
+		/// @return 읽은 데이터를 32bit로 반환
 		OV_DECLARE_READ_FUNCTION(uint32_t, ReadBE32, BE32ToHost);
 		/// 현재 offset 위치의 데이터를 big endian 64bit 데이터로 간주하고 host endian으로 변환하여 읽음
 		///
-		/// @return 64bit 데이터 형식의 데이터
+		/// @return 읽은 데이터를 64bit로 반환
 		OV_DECLARE_READ_FUNCTION(uint64_t, ReadBE64, BE64ToHost);
 
 		// NE => HE (Data안에 Network Endian으로 저장되어 있는 것을 Host endian으로 읽음)
 
 		/// 현재 offset 위치의 데이터를 network endian 16bit 데이터로 간주하고 host endian으로 변환하여 읽음
 		///
-		/// @return 16bit 데이터 형식의 데이터
+		/// @return 읽은 데이터를 16bit로 반환
 		OV_DECLARE_READ_FUNCTION(uint16_t, ReadNE16, NetworkToHost16);
 		/// 현재 offset 위치의 데이터를 network endian 32bit 데이터로 간주하고 host endian으로 변환하여 읽음
 		///
-		/// @return 32bit 데이터 형식의 데이터
+		/// @return 읽은 데이터를 32bit로 반환
+		OV_DECLARE_READ_FUNCTION(uint24_t, ReadNE24, NetworkToHost24);
+		/// 현재 offset 위치의 데이터를 network endian 32bit 데이터로 간주하고 host endian으로 변환하여 읽음
+		///
+		/// @return 읽은 데이터를 32bit로 반환
 		OV_DECLARE_READ_FUNCTION(uint32_t, ReadNE32, NetworkToHost32);
 		/// 현재 offset 위치의 데이터를 network endian 64bit 데이터로 간주하고 host endian으로 변환하여 읽음
 		///
-		/// @return 64bit 데이터 형식의 데이터
+		/// @return 읽은 데이터를 64bit로 반환
 		OV_DECLARE_READ_FUNCTION(uint64_t, ReadNE64, NetworkToHost64);
 
 		/// 데이터를 현재 위치(offset)에 bytes만큼 기록함. 기록 후 현재 위치가 변경됨.
@@ -271,7 +300,7 @@ namespace ov
 		/// @remarks
 		/// 만약, _data가 is_reference 타입이라면 false가 반환될 수 있음.
 		/// 데이터를 기록할 공간이 부족할 경우 _data에 Append() 됨.
-		template<typename T>
+		template <typename T>
 		bool Write(const T *buffer, size_t count)
 		{
 			return Write((const void *)buffer, sizeof(T) * count);
@@ -287,7 +316,7 @@ namespace ov
 		/// @remarks
 		/// 만약, _data가 is_reference 타입이라면 false가 반환될 수 있음.
 		/// 데이터를 기록할 공간이 부족할 경우 _data에 Append() 됨.
-		template<typename T>
+		template <typename T>
 		bool Write(const T *buffer)
 		{
 			return Write(buffer, 1);
@@ -328,7 +357,7 @@ namespace ov
 		/// @remarks
 		/// 만약, _data가 is_reference 타입이라면 false가 반환될 수 있음.
 		/// 데이터를 기록할 공간이 부족할 경우 _data에 Append() 됨.
-		template<typename T>
+		template <typename T>
 		bool Append(const T *buffer, size_t count)
 		{
 			return Append((const void *)buffer, sizeof(T) * count);
@@ -343,7 +372,7 @@ namespace ov
 		///
 		/// @remarks
 		/// 만약, _data가 is_reference 타입이라면 false가 반환될 수 있음.
-		template<typename T>
+		template <typename T>
 		bool Append(const T *buffer)
 		{
 			return Append(buffer, 1);
@@ -358,64 +387,80 @@ namespace ov
 
 		/// 현재 offset 위치에 8bit 데이터를 기록함 (endian을 별도로 지정하지 않음)
 		///
-		/// @return 8bit 데이터 형식의 데이터
-		OV_DECLARE_WRITE_FUNCTION(uint8_t, Write8,);
+		/// @return 성공적으로 기록 되었는지 여부
+		OV_DECLARE_WRITE_FUNCTION(uint8_t, Write8, );
 		/// 현재 offset 위치에 16bit 데이터를 기록함 (endian을 별도로 지정하지 않음)
 		///
-		/// @return 16bit 데이터 형식의 데이터
-		OV_DECLARE_WRITE_FUNCTION(uint16_t, Write16,);
+		/// @return 성공적으로 기록 되었는지 여부
+		OV_DECLARE_WRITE_FUNCTION(uint16_t, Write16, );
+		/// 현재 offset 위치에 24bit 데이터를 기록함 (endian을 별도로 지정하지 않음)
+		///
+		/// @return 성공적으로 기록 되었는지 여부
+		OV_DECLARE_WRITE_FUNCTION(uint24_t, Write24, );
 		/// 현재 offset 위치에 32bit 데이터를 기록함 (endian을 별도로 지정하지 않음)
 		///
-		/// @return 32bit 데이터 형식의 데이터
-		OV_DECLARE_WRITE_FUNCTION(uint32_t, Write32,);
+		/// @return 성공적으로 기록 되었는지 여부
+		OV_DECLARE_WRITE_FUNCTION(uint32_t, Write32, );
 		/// 현재 offset 위치에 64bit 데이터를 기록함 (endian을 별도로 지정하지 않음)
 		///
-		/// @return 64bit 데이터 형식의 데이터
-		OV_DECLARE_WRITE_FUNCTION(uint64_t, Write64,);
+		/// @return 성공적으로 기록 되었는지 여부
+		OV_DECLARE_WRITE_FUNCTION(uint64_t, Write64, );
 
 		// LE => HE (Data안에 Little Endian으로 저장되어 있는 것을 Host endian으로 읽음)
 
 		/// 현재 offset 위치에 host endian 데이터를 little endian 16bit 데이터로 변환하여 기록함
 		///
-		/// @return 16bit 데이터 형식의 데이터
+		/// @return 성공적으로 기록 되었는지 여부
 		OV_DECLARE_WRITE_FUNCTION(uint16_t, WriteLE16, HostToLE16);
+		/// 현재 offset 위치에 host endian 데이터를 little endian 24bit 데이터로 변환하여 기록함
+		///
+		/// @return 성공적으로 기록 되었는지 여부
+		OV_DECLARE_WRITE_FUNCTION(uint24_t, WriteLE32, HostToLE24);
 		/// 현재 offset 위치에 host endian 데이터를 little endian 32bit 데이터로 변환하여 기록함
 		///
-		/// @return 32bit 데이터 형식의 데이터
+		/// @return 성공적으로 기록 되었는지 여부
 		OV_DECLARE_WRITE_FUNCTION(uint32_t, WriteLE32, HostToLE32);
 		/// 현재 offset 위치에 host endian 데이터를 little endian 64bit 데이터로 변환하여 기록함
 		///
-		/// @return 64bit 데이터 형식의 데이터
+		/// @return 성공적으로 기록 되었는지 여부
 		OV_DECLARE_WRITE_FUNCTION(uint64_t, WriteLE64, HostToLE64);
 
 		// BE => HE (Data안에 Big Endian으로 저장되어 있는 것을 Host endian으로 읽음)
 
 		/// 현재 offset 위치에 host endian 데이터를 big endian 16bit 데이터로 변환하여 기록함
 		///
-		/// @return 16bit 데이터 형식의 데이터
+		/// @return 성공적으로 기록 되었는지 여부
 		OV_DECLARE_WRITE_FUNCTION(uint16_t, WriteBE16, HostToBE16);
+		/// 현재 offset 위치에 host endian 데이터를 big endian 24bit 데이터로 변환하여 기록함
+		///
+		/// @return 성공적으로 기록 되었는지 여부
+		OV_DECLARE_WRITE_FUNCTION(uint24_t, WriteBE24, HostToBE24);
 		/// 현재 offset 위치에 host endian 데이터를 big endian 32bit 데이터로 변환하여 기록함
 		///
-		/// @return 32bit 데이터 형식의 데이터
+		/// @return 성공적으로 기록 되었는지 여부
 		OV_DECLARE_WRITE_FUNCTION(uint32_t, WriteBE32, HostToBE32);
 		/// 현재 offset 위치에 host endian 데이터를 big endian 64bit 데이터로 변환하여 기록함
 		///
-		/// @return 64bit 데이터 형식의 데이터
+		/// @return 성공적으로 기록 되었는지 여부
 		OV_DECLARE_WRITE_FUNCTION(uint64_t, WriteBE64, HostToBE64);
 
 		// NE => HE (Data안에 Network Endian으로 저장되어 있는 것을 Host endian으로 읽음)
 
 		/// 현재 offset 위치에 host endian 데이터를 network endian 16bit 데이터로 변환하여 기록함
 		///
-		/// @return 16bit 데이터 형식의 데이터
+		/// @return 성공적으로 기록 되었는지 여부
 		OV_DECLARE_WRITE_FUNCTION(uint16_t, WriteNE16, HostToNetwork16);
 		/// 현재 offset 위치에 host endian 데이터를 network endian 32bit 데이터로 변환하여 기록함
 		///
-		/// @return 32bit 데이터 형식의 데이터
+		/// @return 성공적으로 기록 되었는지 여부
 		OV_DECLARE_WRITE_FUNCTION(uint32_t, WriteNE32, HostToNetwork32);
+		/// 현재 offset 위치에 host endian 데이터를 network endian 24bit 데이터로 변환하여 기록함
+		///
+		/// @return 성공적으로 기록 되었는지 여부
+		OV_DECLARE_WRITE_FUNCTION(uint24_t, WriteNE24, HostToNetwork24);
 		/// 현재 offset 위치에 host endian 데이터를 network endian 64bit 데이터로 변환하여 기록함
 		///
-		/// @return 64bit 데이터 형식의 데이터
+		/// @return 성공적으로 기록 되었는지 여부
 		OV_DECLARE_WRITE_FUNCTION(uint64_t, WriteNE64, HostToNetwork64);
 
 		/// T 형태로 변환하였을 때, 남은(읽을 수 있는) 데이터 수. length와 offset만 고려하며, capacity와는 무관함
@@ -423,7 +468,7 @@ namespace ov
 		/// @tparam T 데이터 타입
 		///
 		/// @return 개수
-		template<typename T = uint8_t>
+		template <typename T = uint8_t>
 		inline size_t Remained() const noexcept
 		{
 			ssize_t remained_bytes = (_read_only_data->GetLength() - _offset);
@@ -449,6 +494,8 @@ namespace ov
 		///
 		/// @return 데이터 내 최소 bytes 만큼 있는지 여부
 		bool IsRemained(size_t bytes) const noexcept;
+
+		bool IsEmpty() const noexcept;
 
 		/// 저장되어 있는 쓰기 가능한 데이터를 얻어옴
 		///
@@ -504,7 +551,7 @@ namespace ov
 		/// @tparam T 데이터 타입
 		///
 		/// @return T 타입으로 변경된 현재 위치의 버퍼
-		template<typename T>
+		template <typename T>
 		inline const T *CurrentBuffer() const
 		{
 			return reinterpret_cast<const T *>((_read_only_data->GetDataAs<const uint8_t>()) + _offset);
@@ -520,7 +567,7 @@ namespace ov
 		/// @remarks
 		/// 만약, _data가 is_reference 타입이라면 false가 반환될 수 있음.
 		/// 데이터를 기록할 공간이 부족할 경우 _data에 Append() 됨.
-		template<typename T>
+		template <typename T>
 		bool Write(const T &buffer)
 		{
 			return Write<T>(&buffer, 1);
@@ -535,4 +582,4 @@ namespace ov
 		// offset push & pop 할 때 사용하는 history queue
 		std::vector<off_t> _offset_stack;
 	};
-}
+}  // namespace ov

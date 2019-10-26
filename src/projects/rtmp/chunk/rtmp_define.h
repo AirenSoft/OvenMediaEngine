@@ -21,6 +21,8 @@
 #include <arpa/inet.h>
 #endif
 
+#include "rtmp_datastructure.h"
+
 #pragma pack(1)
 #define RTMP_AVC_NAL_HEADER_SIZE            (4) // 00 00 00 01  or 00 00 01
 #define RTMP_ADTS_HEADER_SIZE                (7)
@@ -46,18 +48,8 @@ const int g_rtmp_sample_rate_table[] = {96000, 88200, 64000, 48000, 44100, 32000
 #define RTMP_CHUNK_MSG_HEADER_SIZE_MAX            (11 + 4)    // header + extended timestamp
 #define RTMP_PACKET_HEADER_SIZE_MAX                (RTMP_CHUNK_BASIC_HEADER_SIZE_MAX + RTMP_CHUNK_MSG_HEADER_SIZE_MAX)
 
-#define RTMP_CHUNK_BASIC_FORMAT_TYPE_MASK        (0xc0)
-#define RTMP_CHUNK_BASIC_CHUNK_STREAM_ID_MASK    (0x3f)
-
-#define RTMP_CHUNK_BASIC_FORMAT_TYPE0            (0x00)
-#define RTMP_CHUNK_BASIC_FORMAT_TYPE1            (0x40)
-#define RTMP_CHUNK_BASIC_FORMAT_TYPE2            (0x80)
-#define RTMP_CHUNK_BASIC_FORMAT_TYPE3            (0xc0)
-
-#define RTMP_CHUNK_BASIC_FORMAT_TYPE0_SIZE        (11)
-#define RTMP_CHUNK_BASIC_FORMAT_TYPE1_SIZE        (7)
-#define RTMP_CHUNK_BASIC_FORMAT_TYPE2_SIZE        (3)
-#define RTMP_CHUNK_BASIC_FORMAT_TYPE3_SIZE        (0)
+#define RTMP_CHUNK_TYPE_MASK        (0xc0)
+#define RTMP_CHUNK_STREAM_ID_MASK    (0x3f) // 00111111b
 
 #define RTMP_EXTEND_TIMESTAMP                    (0x00ffffff)
 #define RTMP_EXTEND_TIMESTAMP_SIZE                (4)            //sizeof(uint)
@@ -165,51 +157,6 @@ const int g_rtmp_sample_rate_table[] = {96000, 88200, 64000, 48000, 44100, 32000
 #define RTMP_DEFAULT_CLIENT_VERSION            ("rtmp client 1.0")//"afcCli 11,0,100,1 (compatible; FMSc/1.0)"
 #define RTMP_DEFULT_PORT                        (1935)
 
-//====================================================================================================
-// chunk_header 구조체
-//====================================================================================================
-struct RtmpChunkHeader {
-public :
-    RtmpChunkHeader() {
-        Init();
-    }
-
-    void Init() {
-        basic_header.format_type = 0;
-        basic_header.chunk_stream_id = 0;
-
-        type_0.timestamp = 0;
-        type_0.body_size = 0;
-        type_0.type_id = 0;
-        type_0.stream_id = 0;
-    }
-
-public :
-    struct {
-        uint8_t format_type;
-        uint32_t chunk_stream_id;                // 0,1,2 are reserved
-    } basic_header;
-
-    union {
-        struct {
-            uint32_t timestamp;
-            uint32_t body_size;            // msg len
-            uint8_t type_id;            // msg type id
-            uint32_t stream_id;            // msg stream id
-        } type_0;
-        //
-        struct {
-            uint32_t timestamp_delta;
-            uint32_t body_size;
-            uint8_t type_id;
-        } type_1;
-        //
-        struct {
-            uint32_t timestamp_delta;
-        } type_2;
-    };
-};
-
 //===============================================================================================
 // Rtmp Encoder Type
 //===============================================================================================
@@ -264,14 +211,14 @@ public :
 // Rtmp Handshake State
 //===============================================================================================
 enum class RtmpHandshakeState {
-    Ready = 0,
+    Uninitialized = 0,
     C0,
     C1,
     S0,
     S1,
     S2,
     C2,
-    Complete,
+    Complete = C2,
 };
 
 //===============================================================================================

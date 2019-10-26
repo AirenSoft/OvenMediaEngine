@@ -129,6 +129,15 @@ namespace ov
 
 	std::shared_ptr<Data> Data::Subdata(off_t offset)
 	{
+		if (offset >= 0)
+		{
+			OV_ASSERT2(GetLength() >= offset);
+		}
+		else
+		{
+			OV_ASSERT2(GetLength() > (-1LL * offset));
+		}
+
 		return Subdata(offset, (offset >= 0) ? (GetLength() - offset) : (static_cast<size_t>(-1 * offset)));
 	}
 
@@ -188,6 +197,11 @@ namespace ov
 		}
 
 		return IsEqual(data->GetData(), data->GetLength());
+	}
+
+	bool Data::IsEmpty() const
+	{
+		return (GetLength() == 0);
 	}
 
 	bool Data::Detach()
@@ -320,6 +334,16 @@ namespace ov
 		}
 
 		return false;
+	}
+
+	bool Data::Append(const std::shared_ptr<Data> &data)
+	{
+		return Append(data.get());
+	}
+
+	bool Data::Append(const std::shared_ptr<const Data> &data)
+	{
+		return Append(data.get());
 	}
 
 	bool Data::Erase(off_t offset, size_t length)

@@ -88,7 +88,8 @@ bool RtmpHandshake::MakeS1(uint8_t *sig)
 
 	memset(sig, 0, RTMP_HANDSHAKE_PACKET_SIZE);
 	*(uint32_t *)&sig[0] = htonl( (uint32_t )time(nullptr) );
-	*(uint32_t *)&sig[4] = 0x01020503; // 03 05 02 01
+	// Version: 0.1.0.1
+	*(uint32_t *)&sig[4] = 0x01000100;
 	
 	for(i=8; i<RTMP_HANDSHAKE_PACKET_SIZE; i++) 
 	{ 
@@ -107,7 +108,7 @@ bool RtmpHandshake::MakeS1(uint8_t *sig)
 //===============================================================================================
 // MakeS2
 //===============================================================================================
-bool RtmpHandshake::MakeS2(uint8_t * client_sig, uint8_t * sig)
+bool RtmpHandshake::MakeS2(const uint8_t * client_sig, uint8_t * sig)
 {
 	int		i;
 	int		offset;
@@ -118,7 +119,7 @@ bool RtmpHandshake::MakeS2(uint8_t * client_sig, uint8_t * sig)
 	if( !client_sig || !sig ) { return false; }
 
 	// 버전값이 0이면 echo
-	if( *(uint32_t *)&client_sig[4] == 0 )
+	if( *(const uint32_t *)&client_sig[4] == 0 )
 	{
 		memcpy(sig, client_sig, RTMP_HANDSHAKE_PACKET_SIZE);
 		return true;
@@ -185,9 +186,9 @@ bool RtmpHandshake::MakeC2(uint8_t * client_sig, uint8_t * sig)
 //===============================================================================================
 // GetDigestOffset1
 //===============================================================================================
-int RtmpHandshake::GetDigestOffset1(uint8_t * handshake)
+int RtmpHandshake::GetDigestOffset1(const uint8_t * handshake)
 {
-	uint8_t	*ptr = handshake + 8;
+	const uint8_t *ptr = handshake + 8;
 	int		offset = 0;
 
 	offset += (*ptr); ptr++;
@@ -201,9 +202,9 @@ int RtmpHandshake::GetDigestOffset1(uint8_t * handshake)
 //===============================================================================================
 // GetDigestOffset2
 //===============================================================================================
-int RtmpHandshake::GetDigestOffset2(uint8_t * handshake)
+int RtmpHandshake::GetDigestOffset2(const uint8_t * handshake)
 {
-	uint8_t	*ptr = handshake + 772;
+	const uint8_t *ptr = handshake + 772;
 	int		offset = 0;
 
 	offset += (*ptr); ptr++;
@@ -217,7 +218,7 @@ int RtmpHandshake::GetDigestOffset2(uint8_t * handshake)
 //===============================================================================================
 // HmacSha256
 //===============================================================================================
-void RtmpHandshake::HmacSha256(uint8_t *message, int message_size, uint8_t *key, int key_size, uint8_t *digest)
+void RtmpHandshake::HmacSha256(const uint8_t *message, int message_size, uint8_t *key, int key_size, uint8_t *digest)
 {
 	uint32_t result_size = 0;
 	
@@ -236,7 +237,7 @@ void RtmpHandshake::HmacSha256(uint8_t *message, int message_size, uint8_t *key,
 //===============================================================================================
 // CalculateDigest
 //===============================================================================================
-void RtmpHandshake::CalculateDigest(int digest_pos, uint8_t * message, uint8_t *key, int key_size, uint8_t *digest)
+void RtmpHandshake::CalculateDigest(int digest_pos, const uint8_t * message, uint8_t *key, int key_size, uint8_t *digest)
 {
 	const int	buffer_size = RTMP_HANDSHAKE_PACKET_SIZE - SHA256_DIGEST_LENGTH;
 	uint8_t		buffer[buffer_size] = {0,};
@@ -250,7 +251,7 @@ void RtmpHandshake::CalculateDigest(int digest_pos, uint8_t * message, uint8_t *
 //===============================================================================================
 // VerifyDigest
 //===============================================================================================
-bool RtmpHandshake::VerifyDigest(int digest_pos, uint8_t *message, uint8_t *key, int key_size)
+bool RtmpHandshake::VerifyDigest(int digest_pos, const uint8_t *message, uint8_t *key, int key_size)
 {
 	uint8_t	calc_digest[SHA256_DIGEST_LENGTH];
 

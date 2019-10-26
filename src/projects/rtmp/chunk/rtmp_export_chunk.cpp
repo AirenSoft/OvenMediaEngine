@@ -11,20 +11,19 @@
 #include "../rtmp_chunk_log_define.h"
 
 //====================================================================================================
-// 생성자 
+// 생성자
 //====================================================================================================
 RtmpExportChunk::RtmpExportChunk(bool compress_header, int chunk_size)
 {
 	_stream_map.clear();
 	_compress_header = compress_header;
-	_chunk_size		= chunk_size;
-
+	_chunk_size = chunk_size;
 }
 
 //====================================================================================================
-// 소멸자 
+// 소멸자
 //====================================================================================================
-RtmpExportChunk::~RtmpExportChunk( )
+RtmpExportChunk::~RtmpExportChunk()
 {
 	Destroy();
 }
@@ -38,15 +37,15 @@ void RtmpExportChunk::Destroy()
 }
 
 //====================================================================================================
-// Export 스트림 획득 
+// Export 스트림 획득
 //====================================================================================================
 std::shared_ptr<ExportStream> RtmpExportChunk::GetStream(uint32_t chunk_stream_id)
 {
 	auto item = _stream_map.find(chunk_stream_id);
 
-	if( item != _stream_map.end() )
-	{ 
-		return item->second; 
+	if (item != _stream_map.end())
+	{
+		return item->second;
 	}
 
 	// 새로 등록하기 위해 메모리 할당
@@ -61,57 +60,57 @@ std::shared_ptr<ExportStream> RtmpExportChunk::GetStream(uint32_t chunk_stream_i
 //====================================================================================================
 // Export 청크 헤더 설정
 // - Type3는 확장 헤더 확인 못함 - 이전 정보를 기반으로 이후에 확인
-// - 압축 헤더 : 프레임이 정상 적으로 않나오는 상황에서 헤더 압축 사용하면 타임스템프 전달이 정상적으로 않됨 
+// - 압축 헤더 : 프레임이 정상 적으로 않나오는 상황에서 헤더 압축 사용하면 타임스템프 전달이 정상적으로 않됨
 //====================================================================================================
-std::shared_ptr<RtmpChunkHeader> RtmpExportChunk::GetChunkHeader(std::shared_ptr<ExportStream> &stream, std::shared_ptr<RtmpMuxMessageHeader> &message_header, bool &extend_type)
+std::shared_ptr<RtmpChunkHeader> RtmpExportChunk::GetChunkHeader(std::shared_ptr<ExportStream> &stream, const std::shared_ptr<RtmpMuxMessageHeader> &message_header)
 {
 	auto chunk_header = std::make_shared<RtmpChunkHeader>();
 
-    // type 2
-	if(_compress_header &&
-	    stream->message_header->chunk_stream_id  == message_header->chunk_stream_id 	&&
+	// type 2
+	if (_compress_header &&
+		stream->message_header->chunk_stream_id == message_header->chunk_stream_id &&
 		stream->message_header->body_size == message_header->body_size &&
 		stream->message_header->stream_id == message_header->stream_id &&
 		stream->message_header->type_id == message_header->type_id)
 	{
-		chunk_header->basic_header.format_type		= RTMP_CHUNK_BASIC_FORMAT_TYPE2;
-		chunk_header->basic_header.chunk_stream_id	= message_header->chunk_stream_id;
-		chunk_header->type_2.timestamp_delta		= message_header->timestamp - stream->message_header->timestamp;
-		
-		if(chunk_header->type_2.timestamp_delta >= RTMP_EXTEND_TIMESTAMP)
+		chunk_header->basic_header.format_type = RtmpChunkType::T2;
+		chunk_header->basic_header.stream_id = message_header->chunk_stream_id;
+		chunk_header->header.type_2.timestamp_delta = message_header->timestamp - stream->message_header->timestamp;
+
+		if (chunk_header->header.type_2.timestamp_delta >= RTMP_EXTEND_TIMESTAMP)
 		{
-			extend_type = true; 
+			chunk_header->is_extended = true;
 		}
 	}
 	// type 1
-	else if(_compress_header &&
-	        stream->message_header->chunk_stream_id == message_header->chunk_stream_id &&
-	        stream->message_header->stream_id == message_header->stream_id)
+	else if (_compress_header &&
+			 stream->message_header->chunk_stream_id == message_header->chunk_stream_id &&
+			 stream->message_header->stream_id == message_header->stream_id)
 	{
-		chunk_header->basic_header.format_type		= RTMP_CHUNK_BASIC_FORMAT_TYPE1;
-		chunk_header->basic_header.chunk_stream_id	= message_header->chunk_stream_id;
-		chunk_header->type_1.timestamp_delta		= message_header->timestamp - stream->message_header->timestamp;
-		chunk_header->type_1.body_size				= message_header->body_size;
-		chunk_header->type_1.type_id				= message_header->type_id;
+		chunk_header->basic_header.format_type = RtmpChunkType::T1;
+		chunk_header->basic_header.stream_id = message_header->chunk_stream_id;
+		chunk_header->header.type_1.timestamp_delta = message_header->timestamp - stream->message_header->timestamp;
+		chunk_header->header.type_1.length = message_header->body_size;
+		chunk_header->header.type_1.type_id = message_header->type_id;
 
-		if(chunk_header->type_1.timestamp_delta >= RTMP_EXTEND_TIMESTAMP)
+		if (chunk_header->header.type_1.timestamp_delta >= RTMP_EXTEND_TIMESTAMP)
 		{
-			extend_type = true;
-		}	
+			chunk_header->is_extended = true;
+		}
 	}
-    // type_0  or none compress
+	// type_0  or none compress
 	else
 	{
-		chunk_header->basic_header.format_type		= RTMP_CHUNK_BASIC_FORMAT_TYPE0;
-		chunk_header->basic_header.chunk_stream_id	= message_header->chunk_stream_id;
-		chunk_header->type_0.timestamp				= message_header->timestamp;
-		chunk_header->type_0.body_size				= message_header->body_size;
-		chunk_header->type_0.type_id				= message_header->type_id;
-		chunk_header->type_0.stream_id				= message_header->stream_id;
+		chunk_header->basic_header.format_type = RtmpChunkType::T0;
+		chunk_header->basic_header.stream_id = message_header->chunk_stream_id;
+		chunk_header->header.type_0.timestamp = message_header->timestamp;
+		chunk_header->header.type_0.length = message_header->body_size;
+		chunk_header->header.type_0.type_id = message_header->type_id;
+		chunk_header->header.type_0.stream_id = message_header->stream_id;
 
-		if(chunk_header->type_0.timestamp >= RTMP_EXTEND_TIMESTAMP)
+		if (chunk_header->header.type_0.timestamp >= RTMP_EXTEND_TIMESTAMP)
 		{
-			extend_type = true; 
+			chunk_header->is_extended = true;
 		}
 	}
 
@@ -119,18 +118,17 @@ std::shared_ptr<RtmpChunkHeader> RtmpExportChunk::GetChunkHeader(std::shared_ptr
 }
 
 //====================================================================================================
-// Export 스트림 
+// Export 스트림
 //====================================================================================================
 std::shared_ptr<std::vector<uint8_t>> RtmpExportChunk::ExportStreamData(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data)
 {
-	int 		buffer_size = 0;
-	int			export_size = 0;
-	bool 		extend_type = false;
-	uint32_t	type3_time  = 0;
-	
+	int buffer_size = 0;
+	int export_size = 0;
+	uint32_t type3_time = 0;
+
 	// 파라미터 체크
-	if(message_header == nullptr || message_header->chunk_stream_id < 2 )
-	{ 
+	if (message_header == nullptr || message_header->chunk_stream_id < 2)
+	{
 		return nullptr;
 	}
 
@@ -138,20 +136,31 @@ std::shared_ptr<std::vector<uint8_t>> RtmpExportChunk::ExportStreamData(std::sha
 	auto stream = GetStream(message_header->chunk_stream_id);
 
 	// Chunk Header 구하기
-	auto chunk_header = GetChunkHeader(stream, message_header, extend_type);
+	auto chunk_header = GetChunkHeader(stream, message_header);
 
 	// 버퍼 크기 설정(최대치 계산)
-	buffer_size = RTMP_PACKET_HEADER_SIZE_MAX + GetChunkDataRawSize(_chunk_size, message_header->chunk_stream_id, message_header->body_size, extend_type);
+	buffer_size = RTMP_PACKET_HEADER_SIZE_MAX + GetChunkDataRawSize(_chunk_size, message_header->chunk_stream_id, message_header->body_size, chunk_header->is_extended);
 
-	if		(chunk_header->basic_header.format_type == RTMP_CHUNK_BASIC_FORMAT_TYPE0)type3_time = chunk_header->type_0.timestamp;
-	else if(chunk_header->basic_header.format_type == RTMP_CHUNK_BASIC_FORMAT_TYPE1)type3_time = chunk_header->type_1.timestamp_delta;
-	else if(chunk_header->basic_header.format_type == RTMP_CHUNK_BASIC_FORMAT_TYPE2)type3_time = chunk_header->type_2.timestamp_delta;
+	switch(chunk_header->basic_header.format_type)
+	{
+		case RtmpChunkType::T0:
+			type3_time = chunk_header->header.type_0.timestamp;
+			break;
+
+		case RtmpChunkType::T1:
+			type3_time = chunk_header->header.type_1.timestamp_delta;
+			break;
+
+		case RtmpChunkType::T2:
+			type3_time = chunk_header->header.type_2.timestamp_delta;
+			break;
+	}
 
 	auto export_data = std::make_shared<std::vector<uint8_t>>(buffer_size);
 
 	// Chunk Stream 인코딩
-    export_size += GetChunkHeaderRaw(chunk_header, export_data->data(), extend_type);
-    export_size += GetChunkDataRaw(_chunk_size, message_header->chunk_stream_id, data, export_data->data() + export_size, extend_type, type3_time);
+	export_size += GetChunkHeaderRaw(chunk_header, export_data->data(), chunk_header->is_extended);
+	export_size += GetChunkDataRaw(_chunk_size, message_header->chunk_stream_id, data, export_data->data() + export_size, chunk_header->is_extended, type3_time);
 	export_data->resize(export_size);
 
 	// 스트림 Message 헤더 정보 갱신
