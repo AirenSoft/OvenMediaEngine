@@ -797,6 +797,7 @@ void TranscodeStream::CreateFilters(std::shared_ptr<MediaTrack> media_track, Med
 
 			input_context->SetTimeBase(media_track->GetTimeBase());
 			input_context->SetAudioSample(media_track->GetSample());
+			input_context->GetAudioChannel().SetLayout(buffer->GetChannelLayout());
 		}
 		else
 		{
