@@ -125,9 +125,18 @@ namespace cfg
 	}
 
 
-	void Item::Register(const ov::String &name, ValueBase *value, bool is_optional, bool need_to_resolve_path) const
+	void Item::Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_conditional_optional, bool need_to_resolve_path, ValueBase::OptionalCallback conditional_optional_callback) const
 	{
 		value->SetOptional(is_optional);
+		if(is_conditional_optional)
+		{
+			OV_ASSERT2(conditional_optional_callback != nullptr);
+			value->SetOptionalCallback(conditional_optional_callback);
+		}
+		else
+		{
+			OV_ASSERT2(conditional_optional_callback == nullptr);
+		}
 		value->SetNeedToResolvePath(need_to_resolve_path);
 
 		bool is_parsed = false;

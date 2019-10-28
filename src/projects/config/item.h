@@ -17,6 +17,7 @@ namespace cfg
 	//region Annotations
 
 	struct Optional;
+	struct CondOptional;
 	struct ResolvePath;
 
 	//endregion
@@ -150,7 +151,7 @@ namespace cfg
 
 		//region ========== RegisterValue ==========
 
-		void Register(const ov::String &name, ValueBase *value, bool is_optional, bool need_to_resolve_path) const;
+		void Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_conditional_optional, bool need_to_resolve_path, ValueBase::OptionalCallback conditional_optional_callback) const;
 
 		// For int, bool, float, ov::String with value_type
 		template<
@@ -158,12 +159,14 @@ namespace cfg
 			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
 			typename Ttype
 		>
-		void RegisterValue(const ov::String &name, const Ttype *target, ValueType type = value_type) const
+		void RegisterValue(const ov::String &name, const Ttype *target, ValueType type = value_type, ValueBase::OptionalCallback optional_callback = nullptr) const
 		{
 			Register(
 				name, new Value<Ttype>(type, const_cast<Ttype *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<CondOptional, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
+				optional_callback
 			);
 		};
 
@@ -172,12 +175,14 @@ namespace cfg
 			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
 			typename Ttype, typename std::enable_if<std::is_base_of<Item, Ttype>::value == false>::type * = nullptr
 		>
-		void RegisterValue(const ov::String &name, const Ttype *target) const
+		void RegisterValue(const ov::String &name, const Ttype *target, ValueBase::OptionalCallback optional_callback = nullptr) const
 		{
 			Register(
 				name, new Value<Ttype>(ProbeType(target), const_cast<Ttype *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<CondOptional, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
+				optional_callback
 			);
 		}
 
@@ -186,12 +191,14 @@ namespace cfg
 			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
 			typename Ttype, typename std::enable_if<std::is_base_of<Item, Ttype>::value>::type * = nullptr
 		>
-		void RegisterValue(const ov::String &name, const Ttype *target) const
+		void RegisterValue(const ov::String &name, const Ttype *target, ValueBase::OptionalCallback optional_callback = nullptr) const
 		{
 			Register(
 				name, new ValueForElement<Ttype>(const_cast<Ttype *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<CondOptional, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
+				optional_callback
 			);
 		}
 
@@ -200,12 +207,14 @@ namespace cfg
 			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
 			typename Ttype
 		>
-		void RegisterValue(const ov::String &name, const std::vector<Ttype> *target) const
+		void RegisterValue(const ov::String &name, const std::vector<Ttype> *target, ValueBase::OptionalCallback optional_callback = nullptr) const
 		{
 			Register(
 				name, new ValueForList<Ttype>(const_cast<std::vector<Ttype> *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
-				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value
+				CheckAnnotations<CondOptional, Tannotation1, Tannotation2, Tannotation3>::value,
+				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
+				optional_callback
 			);
 		}
 

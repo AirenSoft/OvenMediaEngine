@@ -49,10 +49,22 @@ namespace cfg
 		{
 			RegisterValue<Optional>("Bypass", &_bypass);
 			RegisterValue<Optional>("Active", &_active);
-			RegisterValue("Codec", &_codec);
-			RegisterValue("Bitrate", &_bitrate);
-			RegisterValue("Samplerate", &_samplerate);
-			RegisterValue("Channel", &_channel);
+			RegisterValue<CondOptional>("Codec", &_codec, [this]() -> bool {
+				// <Codec> is an option when _bypass is true
+				return _bypass;
+			});
+			RegisterValue<CondOptional>("Bitrate", &_bitrate, [this]() -> bool {
+				// <Bitrate> is an option when _bypass is true
+				return _bypass;
+			});
+			RegisterValue<CondOptional>("Samplerate", &_samplerate, [this]() -> bool {
+				// <Samplerate> is an option when _bypass is true
+				return _bypass;
+			});
+			RegisterValue<CondOptional>("Channel", &_channel, [this]() -> bool {
+				// <Channel> is an option when _bypass is true
+				return _bypass;
+			});
 		}
 
 		bool _bypass = false;

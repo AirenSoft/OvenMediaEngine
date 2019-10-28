@@ -48,6 +48,8 @@ namespace cfg
 	class ValueBase
 	{
 	public:
+		using OptionalCallback = std::function<bool()>;
+
 		virtual ~ValueBase() = default;
 
 		ValueType GetType() const;
@@ -55,6 +57,7 @@ namespace cfg
 
 		bool IsOptional() const;
 		void SetOptional(bool is_optional);
+		void SetOptionalCallback(OptionalCallback optional_callback);
 
 		bool IsNeedToResolvePath() const;
 		void SetNeedToResolvePath(bool need_to_resolve_path);
@@ -67,6 +70,7 @@ namespace cfg
 		ValueType _type = ValueType::Unknown;
 
 		bool _is_optional = false;
+		OptionalCallback _optional_callback = nullptr;
 		bool _need_to_resolve_path = false;
 
 		size_t _value_size = 0;

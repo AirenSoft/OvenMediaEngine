@@ -66,12 +66,27 @@ namespace cfg
 
 			RegisterValue<Optional>("Active", &_active);
 			RegisterValue<Optional>("HWAcceleration", &_hw_acceleration);
-			RegisterValue("Codec", &_codec);
+			RegisterValue<CondOptional>("Codec", &_codec, [this]() -> bool {
+				// <Codec> is an option when _bypass is true
+				return _bypass;
+			});
 			RegisterValue<Optional>("Scale", &_scale);
-			RegisterValue("Width", &_width);
-			RegisterValue("Height", &_height);
-			RegisterValue("Bitrate", &_bitrate);
-			RegisterValue("Framerate", &_framerate);
+			RegisterValue<CondOptional>("Width", &_width, [this]() -> bool {
+				// <Width> is an option when _bypass is true
+				return _bypass;
+			});
+			RegisterValue<CondOptional>("Height", &_height, [this]() -> bool {
+				// <Height> is an option when _bypass is true
+				return _bypass;
+			});
+			RegisterValue<CondOptional>("Bitrate", &_bitrate, [this]() -> bool {
+				// <Bitrate> is an option when _bypass is true
+				return _bypass;
+			});
+			RegisterValue<CondOptional>("Framerate", &_framerate, [this]() -> bool {
+				// <Framerate> is an option when _bypass is true
+				return _bypass;
+			});
 		}
 
 		bool _bypass = false;

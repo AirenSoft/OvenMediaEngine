@@ -24,12 +24,17 @@ namespace cfg
 
 	bool ValueBase::IsOptional() const
 	{
-		return _is_optional;
+		return _is_optional || ((_optional_callback == nullptr) ? false : _optional_callback());
 	}
 
 	void ValueBase::SetOptional(bool is_optional)
 	{
 		_is_optional = is_optional;
+	}
+
+	void ValueBase::SetOptionalCallback(OptionalCallback optional_callback)
+	{
+		_optional_callback = optional_callback;
 	}
 
 	bool ValueBase::IsNeedToResolvePath() const
@@ -51,4 +56,4 @@ namespace cfg
 	{
 		return _target;
 	}
-}
+}  // namespace cfg

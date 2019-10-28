@@ -31,7 +31,7 @@ namespace cfg
 			RegisterValue<Optional>("Hosts", &_hosts);
 		}
 
-		ov::String _version = "1.0";
+		ov::String _version;
 		ov::String _name;
 
 		Hosts _hosts;
