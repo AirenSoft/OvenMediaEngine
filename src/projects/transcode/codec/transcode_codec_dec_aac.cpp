@@ -79,7 +79,7 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 			for (int channel = 0; channel < _frame->channels; channel++)
 			{
 				output_frame->Resize(data_length, channel);
-				uint8_t *output = output_frame->GetBuffer(channel);
+				uint8_t *output = output_frame->GetWritableBuffer(channel);
 				::memcpy(output, _frame->data[channel], data_length);
 			}
 		}
