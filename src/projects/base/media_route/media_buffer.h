@@ -13,9 +13,8 @@
 
 #include <cstdint>
 #include <map>
-#include <vector>
 
-#include "base/common_types.h"
+#include <base/common_types.h>
 #include "media_type.h"
 
 enum class MediaPacketFlag : uint8_t
@@ -187,99 +186,92 @@ public:
 
 	void ClearBuffer(int32_t plane = 0)
 	{
-		_data_buffer[plane].clear();
+		auto plane_data = AllocPlainData(plane);
+
+		if (plane_data != nullptr)
+		{
+			plane_data->Clear();
+		}
 	}
 
 	void SetBuffer(const uint8_t *data, int32_t data_size, int32_t plane = 0)
 	{
-		_data_buffer[plane].clear();
-		_data_buffer[plane].insert(_data_buffer[plane].end(), data, data + data_size);
+		auto plane_data = AllocPlainData(plane);
+
+		if (plane_data != nullptr)
+		{
+			plane_data->Clear();
+			plane_data->Append(data, data_size);
+		}
 	}
 
 	void AppendBuffer(const uint8_t *data, int32_t data_size, int32_t plane = 0)
 	{
-		_data_buffer[plane].insert(_data_buffer[plane].end(), data, data + data_size);
-	}
+		auto plane_data = AllocPlainData(plane);
 
-	void AppendBuffer(uint8_t byte, int32_t plane = 0)
-	{
-		_data_buffer[plane].push_back(byte);
-	}
-
-	void InsertBuffer(int offset, const uint8_t *data, int32_t data_size, int32_t plane = 0)
-	{
-		_data_buffer[plane].insert(_data_buffer[plane].begin() + offset, data, data + data_size);
+		if (plane_data != nullptr)
+		{
+			plane_data->Append(data, data_size);
+		}
 	}
 
 	const uint8_t *GetBuffer(int32_t plane = 0) const
 	{
-		auto list = GetPlainData(plane);
+		auto plane_data = GetPlainData(plane);
 
-		if (list != nullptr)
+		if(plane_data != nullptr)
 		{
-			return list->data();
+			return plane_data->GetDataAs<uint8_t>();
 		}
 
 		return nullptr;
 	}
 
-	uint8_t *GetBuffer(int32_t plane = 0)
+	uint8_t *GetWritableBuffer(int32_t plane = 0)
 	{
-		return reinterpret_cast<uint8_t *>(_data_buffer[plane].data());
-	}
+		auto plane_data = AllocPlainData(plane);
 
-	uint8_t GetByteAt(int32_t offset, int32_t plane = 0) const
-	{
-		auto list = GetPlainData(plane);
-
-		if (list != nullptr)
+		if (plane_data != nullptr)
 		{
-			return (*list)[offset];
+			return plane_data->GetWritableDataAs<uint8_t>();
 		}
 
-		return 0;
-	}
-
-	size_t GetDataSize(int32_t plane = 0) const
-	{
-		auto list = GetPlainData(plane);
-
-		if (list != nullptr)
-		{
-			return list->size();
-		}
-
-		return 0;
+		return nullptr;
 	}
 
 	size_t GetBufferSize(int32_t plane = 0) const
 	{
-		auto list = GetPlainData(plane);
+		auto plane_data = GetPlainData(plane);
 
-		if (list != nullptr)
+		if (plane_data != nullptr)
 		{
-			return list->size();
+			return plane_data->GetLength();
 		}
 
 		return 0;
-	}
-
-	void EraseBuffer(int32_t offset, int32_t length, int32_t plane = 0)
-	{
-		_data_buffer[plane].erase(_data_buffer[plane].begin() + offset, _data_buffer[plane].begin() + offset + length);
 	}
 
 	// 메모리만 미리 할당함
 	void Reserve(uint32_t capacity, int32_t plane = 0)
 	{
-		_data_buffer[plane].reserve(static_cast<unsigned long>(capacity));
+		auto plane_data = AllocPlainData(plane);
+
+		if (plane_data != nullptr)
+		{
+			plane_data->Reserve(capacity);
+		}
 	}
 
 	// 메모리 할당 및 데이터 오브젝트 할당
 	// Append Buffer의 성능문제로 Resize를 선작업한다음 GetBuffer로 포인터를 얻어와 데이터를 설정함.
 	void Resize(uint32_t capacity, int32_t plane = 0)
 	{
-		_data_buffer[plane].resize(static_cast<unsigned long>(capacity));
+		auto plane_data = AllocPlainData(plane);
+
+		if (plane_data != nullptr)
+		{
+			plane_data->SetLength(capacity);
+		}
 	}
 
 	void SetMediaType(common::MediaType media_type)
@@ -490,7 +482,7 @@ public:
 			for (int i = 0; i < 3; ++i)
 			{
 				frame->SetStride(GetStride(i), i);
-				frame->SetBuffer(GetBuffer(i), GetDataSize(i), i);
+				frame->SetPlainData(GetPlainData(i)->Clone(), i);
 			}
 		}
 		else if (_track_id == (int32_t)common::MediaType::Audio)
@@ -506,7 +498,7 @@ public:
 
 			for (int i = 0; i < _channels; ++i)
 			{
-				frame->SetBuffer(GetBuffer(i), GetDataSize(i), i);
+				frame->SetPlainData(GetPlainData(i)->Clone(), i);
 			}
 		}
 		else
@@ -518,7 +510,7 @@ public:
 	}
 
 private:
-	const std::vector<uint8_t> *GetPlainData(int32_t plane) const
+	std::shared_ptr<const ov::Data> GetPlainData(int32_t plane) const
 	{
 		auto item = _data_buffer.find(plane);
 
@@ -527,11 +519,32 @@ private:
 			return nullptr;
 		}
 
-		return &(item->second);
+		return item->second;
+	}
+
+	void SetPlainData(std::shared_ptr<ov::Data> plane_data, int32_t plane)
+	{
+		_data_buffer[plane] = std::move(plane_data);
+	}
+
+	std::shared_ptr<ov::Data> AllocPlainData(int32_t plane)
+	{
+		auto item = _data_buffer.find(plane);
+
+		if (item == _data_buffer.end())
+		{
+			auto data = std::make_shared<ov::Data>();
+
+			_data_buffer[plane] = data;
+
+			return std::move(data);
+		}
+
+		return item->second;
 	}
 
 	// Data plane, Data
-	std::map<int32_t, std::vector<uint8_t>> _data_buffer;
+	std::map<int32_t, std::shared_ptr<ov::Data>> _data_buffer;
 
 	// 미디어 타입
 	common::MediaType _media_type = common::MediaType::Unknown;
