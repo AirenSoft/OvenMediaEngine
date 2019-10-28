@@ -14,7 +14,7 @@ namespace cfg
 {
 	struct VideoProfile : public Item
 	{
-		bool GetBypass() const
+		bool IsBypass() const
 		{
 			return _bypass;
 		}
