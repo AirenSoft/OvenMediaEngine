@@ -12,12 +12,11 @@
 
 #define DEFAULT_CHUNK_HEADER_SIZE (256)
 
-CmafChunkWriter::CmafChunkWriter(M4sMediaType media_type, uint32_t sequence_number, uint32_t track_id, bool http_chunked_transfer_support)
+CmafChunkWriter::CmafChunkWriter(M4sMediaType media_type, uint32_t sequence_number, uint32_t track_id)
 	: M4sWriter(media_type)
 {
 	_sequence_number = sequence_number;
 	_track_id = track_id;
-	_http_chunked_transfer_support = http_chunked_transfer_support;
 }
 
 CmafChunkWriter::~CmafChunkWriter()
@@ -32,11 +31,6 @@ std::shared_ptr<ov::Data> CmafChunkWriter::GetChunkedSegment()
 	}
 
 	auto chunked_segment = _chunked_data;
-
-	if (_http_chunked_transfer_support)
-	{
-		chunked_segment->Append("0\r\n\r\n", 5);
-	}
 
 	if (_max_chunked_data_size < chunked_segment->GetLength())
 	{
@@ -68,12 +62,6 @@ const std::shared_ptr<ov::Data> CmafChunkWriter::AppendSample(const std::shared_
 
 	WriteMoofBox(chunk_stream, sample_data);
 	WriteMdatBox(chunk_stream, sample_data->data);
-
-	if (_http_chunked_transfer_support)
-	{
-		chunk_stream->Insert(ov::String::FormatString("%x\r\n", chunk_stream->GetLength()).ToData(false).get(), 0);
-		chunk_stream->Append("\r\n", 2);
-	}
 
 	_chunked_data->Append(chunk_stream.get());
 

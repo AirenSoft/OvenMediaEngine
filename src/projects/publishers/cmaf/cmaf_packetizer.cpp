@@ -30,12 +30,12 @@ CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &str
 {
 	if (_video_track != nullptr)
 	{
-		_video_chunk_writer = std::make_unique<CmafChunkWriter>(M4sMediaType::Video, 1, 1, true);
+		_video_chunk_writer = std::make_unique<CmafChunkWriter>(M4sMediaType::Video, 1, 1);
 	}
 
 	if (_audio_track != nullptr)
 	{
-		_audio_chunk_writer = std::make_unique<CmafChunkWriter>(M4sMediaType::Audio, 1, 2, true);
+		_audio_chunk_writer = std::make_unique<CmafChunkWriter>(M4sMediaType::Audio, 1, 2);
 	}
 
 	_chunked_transfer = chunked_transfer;
@@ -57,17 +57,17 @@ ov::String CmafPacketizer::GetFileName(int64_t start_timestamp, common::MediaTyp
 
 bool CmafPacketizer::WriteVideoInit(const std::shared_ptr<ov::Data> &frame_data)
 {
-	return WriteVideoInitInternal(frame_data, M4sTransferType::Chunked, CMAF_MPD_VIDEO_FULL_INIT_FILE_NAME);
+	return WriteVideoInitInternal(frame_data, CMAF_MPD_VIDEO_FULL_INIT_FILE_NAME);
 }
 
 bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<ov::Data> &frame_data)
 {
-	return WriteAudioInitInternal(frame_data, M4sTransferType::Chunked, CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME);
+	return WriteAudioInitInternal(frame_data, CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME);
 }
 
 bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame)
 {
-	return AppendVideoFrameInternal(frame, _video_chunk_writer->GetSegmentDuration(), [frame, this](const std::shared_ptr<const SampleData> data) {
+	return AppendVideoFrameInternal(frame, _video_chunk_writer->GetSegmentDuration(), [frame, this](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
 		auto chunk_data = _video_chunk_writer->AppendSample(data);
 
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
@@ -82,7 +82,7 @@ bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &fram
 
 bool CmafPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame)
 {
-	return AppendAudioFrameInternal(frame, _audio_chunk_writer->GetSegmentDuration(), [frame, this](const std::shared_ptr<const SampleData> data) {
+	return AppendAudioFrameInternal(frame, _audio_chunk_writer->GetSegmentDuration(), [frame, this](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
 		auto chunk_data = _audio_chunk_writer->AppendSample(data);
 
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
@@ -163,7 +163,14 @@ bool CmafPacketizer::UpdatePlayList()
 	double time_shift_buffer_depth = 6;
 	double minimumUpdatePeriod = 30;
 
-	logtd("Trying to update playlist for CMAF...");
+	if(IsReadyForStreaming() == false)
+	{
+		return false;
+	}
+
+	ov::String publishTime = MakeUtcSecond(::time(nullptr));
+
+	logtd("Trying to update playlist for CMAF with availabilityStartTime: %s, publishTime: %s", _start_time.CStr(), publishTime.CStr());
 
 	play_list_stream
 		<< std::fixed << std::setprecision(3)
@@ -175,15 +182,26 @@ bool CmafPacketizer::UpdatePlayList()
 		   "\tprofiles=\"urn:mpeg:dash:profile:isoff-live:2011\"\n"
 		   "\ttype=\"dynamic\"\n"
 		<< "\tminimumUpdatePeriod=\"PT" << minimumUpdatePeriod << "S\"\n"
-		<< "\tpublishTime=\"" << MakeUtcSecond(::time(nullptr)).CStr() << "\"\n"
+		<< "\tpublishTime=\"" << publishTime.CStr() << "\"\n"
 		<< "\tavailabilityStartTime=\"" << _start_time.CStr() << "\"\n"
 		<< "\ttimeShiftBufferDepth=\"PT" << time_shift_buffer_depth << "S\"\n"
-		<< "\tsuggestedPresentationDelay=\"PT" << std::setprecision(1) << _segment_duration << "S\"\n"
+		<< "\tsuggestedPresentationDelay=\"PT" << _segment_duration << "S\"\n"
 		<< "\tminBufferTime=\"PT" << _segment_duration << "S\">\n"
 		<< "\t<Period id=\"0\" start=\"PT0S\">\n";
 
-	if (_video_sequence_number > 1)
+	if (_last_video_pts >= 0LL)
 	{
+		// availabilityTimeOffset
+		//
+		// - Proposed DASH extension
+		// - Player usually sends request when entire segment available
+		// - availabilityTimeOffset indicates difference of availabilityStartTime of the segment and UTC time
+		//   of server when it can start delivering segment
+		//
+		// availabilityTimeOffset = [segment duration] - [chunk duration] - [UTC mismatch between server and client]
+
+		// Reference: http://mile-high.video/files/mhv2018/pdf/day2/2_06_Henthorne.pdf
+
 		double availability_time_offset = _video_track->GetFrameRate() != 0 ? (_segment_duration - (1.0 / _video_track->GetFrameRate())) : _segment_duration;
 
 		play_list_stream
@@ -201,8 +219,7 @@ bool CmafPacketizer::UpdatePlayList()
 			<< "\t\t</AdaptationSet>\n";
 	}
 
-	// audio listing
-	if (_audio_sequence_number > 1)
+	if (_last_audio_pts >= 0LL)
 	{
 		// segment duration - audio one frame duration
 		double availability_time_offset = (_audio_track->GetSampleRate() / 1024) != 0 ? _segment_duration - (1.0 / ((double)_audio_track->GetSampleRate() / 1024)) : _segment_duration;

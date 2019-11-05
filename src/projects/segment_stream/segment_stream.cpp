@@ -158,7 +158,9 @@ bool SegmentStream::GetPlayList(ov::String &play_list)
 std::shared_ptr<SegmentData> SegmentStream::GetSegmentData(const ov::String &file_name)
 {
 	if (_stream_packetizer == nullptr)
+	{
 		return nullptr;
+	}
 
 	return _stream_packetizer->GetSegmentData(file_name);
 }

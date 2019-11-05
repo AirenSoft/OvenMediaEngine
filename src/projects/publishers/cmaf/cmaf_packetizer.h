@@ -60,4 +60,7 @@ private:
 	std::unique_ptr<CmafChunkWriter> _audio_chunk_writer = nullptr;
 
 	std::shared_ptr<ICmafChunkedTransfer> _chunked_transfer = nullptr;
+
+	bool _is_first_video_frame = true;
+	bool _is_first_audio_frame = true;
 };

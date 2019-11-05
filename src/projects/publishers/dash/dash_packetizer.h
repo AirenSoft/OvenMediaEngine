@@ -51,22 +51,27 @@ public:
 	bool GetPlayList(ov::String &play_list) override;
 
 protected:
+	using DataCallback = std::function<void(const std::shared_ptr<const SampleData> &data, bool new_segment_written)>;
+
 	static int GetStartPatternSize(const uint8_t *buffer);
 
 	virtual ov::String GetFileName(int64_t start_timestamp, common::MediaType media_type) const;
 
-	bool WriteVideoInitInternal(const std::shared_ptr<ov::Data> &frame, M4sTransferType transfer_type, const ov::String &init_file_name);
+	bool WriteVideoInitInternal(const std::shared_ptr<ov::Data> &frame, const ov::String &init_file_name);
 	bool WriteVideoInitIfNeeded(std::shared_ptr<PacketizerFrameData> &frame);
 
-	bool WriteAudioInitInternal(const std::shared_ptr<ov::Data> &frame, M4sTransferType transfer_type, const ov::String &init_file_name);
+	bool WriteAudioInitInternal(const std::shared_ptr<ov::Data> &frame, const ov::String &init_file_name);
 	bool WriteAudioInitIfNeeded(std::shared_ptr<PacketizerFrameData> &frame);
 
-	bool AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, std::function<void(const std::shared_ptr<const SampleData> &data)> data_callback);
-	bool AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, std::function<void(const std::shared_ptr<const SampleData> &data)> data_callback);
+	// Enqueues the frame, and call the data_callback if a new segment is created
+	bool AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback);
+	bool AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback);
 
 	bool GetSegmentInfos(ov::String *video_urls, ov::String *audio_urls, double *time_shift_buffer_depth, double *minimum_update_period);
 
 	virtual bool UpdatePlayList();
+
+	virtual void SetReadyForStreaming() noexcept;
 
 	int _avc_nal_header_size = 0;
 	ov::String _start_time;
@@ -93,6 +98,9 @@ protected:
 
 	uint32_t _video_sequence_number = 1;
 	uint32_t _audio_sequence_number = 1;
+
+	time_t _video_start_time = 0;
+	time_t _audio_start_time = 0;
 
 	std::vector<std::shared_ptr<const SampleData>> _video_datas;
 	int64_t _last_video_pts = -1LL;

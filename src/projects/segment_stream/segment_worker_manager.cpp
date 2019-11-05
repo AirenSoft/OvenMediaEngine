@@ -96,11 +96,15 @@ void SegmentWorker::WorkerThread()
 
         if(work_info == nullptr)
         {
+            // It's a problem if there's nothing in the queue despite the event
+            OV_ASSERT2(false);
             continue;
         }
 
-        if(!_process_handler(work_info->response, work_info->request_target, work_info->origin_url))
+        if(_process_handler(work_info->client, work_info->request_target, work_info->origin_url) == false)
+        {
         	logte("Segment process handler fail - target(%s)", work_info->request_target.CStr());
+        }
 
 //        logtd("Segment process handler - target(%s)", work_info->request_target.CStr());
 
@@ -143,7 +147,7 @@ bool SegmentWorkerManager::Stop()
 // Worker Add
 //====================================================================================================
 #define MAX_WORKER_INDEX 100000000
-bool SegmentWorkerManager::AddWork(const std::shared_ptr<HttpResponse> &response,
+bool SegmentWorkerManager::AddWork(const std::shared_ptr<HttpClient> &response,
 									const ov::String &request_target,
 									const ov::String &origin_url)
 {

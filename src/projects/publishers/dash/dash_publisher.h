@@ -41,6 +41,6 @@ protected:
 
 	const char *GetPublisherName() const override
 	{
-		return "CMAF";
+		return "DASH";
 	}
 };

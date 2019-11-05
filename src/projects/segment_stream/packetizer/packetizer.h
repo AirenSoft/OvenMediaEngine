@@ -44,6 +44,7 @@ public:
 
 	void SetPlayList(ov::String &play_list);
 
+	virtual bool IsReadyForStreaming() const noexcept;
 	virtual bool GetPlayList(ov::String &play_list);
 
 	bool GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas);
@@ -56,6 +57,8 @@ public:
 	static int64_t GetCurrentTick();
 
 protected:
+	virtual void SetReadyForStreaming() noexcept;
+
 	ov::String _app_name;
 	ov::String _stream_name;
 	PacketizerType _packetizer_type;

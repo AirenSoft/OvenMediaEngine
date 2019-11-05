@@ -6,33 +6,28 @@
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #pragma once
 
 #include <string>
 #include <queue>
 #include "base/ovlibrary/ovlibrary.h"
 #include "base/ovlibrary/semaphore.h"
-#include "http_server/http_request.h"
-#include "http_server/http_response.h"
+#include "http_server/http_client.h"
 struct SegmentWorkInfo
 {
-    SegmentWorkInfo(const std::shared_ptr<HttpResponse> &response_,
-    		const ov::String &request_target_,
-			const ov::String &origin_url_)
+    SegmentWorkInfo(const std::shared_ptr<HttpClient> &client, const ov::String &request_target, const ov::String &origin_url)
+        : client(client),
+        request_target(request_target),
+        origin_url(origin_url)
     {
-
-        response = response_;
-		request_target = request_target_;
-		origin_url = origin_url_;
-
     }
-    std::shared_ptr<HttpResponse> response = nullptr;
+    
+    std::shared_ptr<HttpClient> client = nullptr;
     ov::String request_target;
     ov::String origin_url;
 };
 
-using SegmentProcessHandler = std::function<bool(const std::shared_ptr<HttpResponse> &response,
+using SegmentProcessHandler = std::function<bool(const std::shared_ptr<HttpClient> &client,
 												const ov::String &request_target,
 												const ov::String &origin_url)>;
 //====================================================================================================
@@ -76,7 +71,7 @@ public :
 public :
     bool Start(int worker_count, const SegmentProcessHandler &process_handler);
     bool Stop();
-    bool AddWork(const std::shared_ptr<HttpResponse> &response,
+    bool AddWork(const std::shared_ptr<HttpClient> &response,
 				const ov::String &request_target,
 				const ov::String &origin_url);
 

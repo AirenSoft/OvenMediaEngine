@@ -161,7 +161,7 @@ bool HlsPacketizer::SegmentWrite(int64_t start_timestamp, uint64_t duration)
 
 	if ((_video_track != nullptr) && (_audio_track != nullptr))
 	{
-		logtd("Time difference: A-V: %lld", (_first_audio_time_stamp - _first_video_time_stamp) / 90);
+		logti("Time difference: A-V: %lld", (_first_audio_time_stamp - _first_video_time_stamp) / 90);
 	}
 
 	auto ts_data = ts_writer->GetDataStream();
@@ -194,8 +194,8 @@ bool HlsPacketizer::UpdatePlayList()
 
 	for (const auto &segment_data : segment_datas)
 	{
-		m3u8_play_list << "#EXTINF:" << std::fixed << std::setprecision(3)
-					   << (double)(segment_data->duration) / (double)(PACKTYZER_DEFAULT_TIMESCALE) << ",\r\n"
+		m3u8_play_list << "#EXTINF:" << std::fixed << std::setprecision(0)
+					   << (double)(segment_data->duration) / (double)(PACKTYZER_DEFAULT_TIMESCALE) << "\r\n"
 					   << segment_data->file_name.CStr() << "\r\n";
 
 		if (segment_data->duration > max_duration)
@@ -211,14 +211,14 @@ bool HlsPacketizer::UpdatePlayList()
 					 << "\r\n"
 					 << "#EXT-X-ALLOW-CACHE:NO"
 					 << "\r\n"
-					 << "#EXT-X-TARGETDURATION:" << (int)(max_duration / PACKTYZER_DEFAULT_TIMESCALE) << "\r\n"
+					 << "#EXT-X-TARGETDURATION:" << std::fixed << std::setprecision(0) << (double)(max_duration) / PACKTYZER_DEFAULT_TIMESCALE << "\r\n"
 					 << m3u8_play_list.str();
 
 	// Playlist 설정
 	ov::String play_list = play_list_stream.str().c_str();
 	SetPlayList(play_list);
 
-	if ((_stream_type == PacketizerStreamType::Common) && _streaming_start)
+	if ((_stream_type == PacketizerStreamType::Common) && IsReadyForStreaming())
 	{
 		if (_video_enable == false)
 		{
@@ -236,7 +236,7 @@ bool HlsPacketizer::UpdatePlayList()
 
 const std::shared_ptr<SegmentData> HlsPacketizer::GetSegmentData(const ov::String &file_name)
 {
-	if (_streaming_start == false)
+	if (IsReadyForStreaming() == false)
 	{
 		return nullptr;
 	}
@@ -280,9 +280,9 @@ bool HlsPacketizer::SetSegmentData(ov::String file_name,
 		_current_video_index = 0;
 	}
 
-	if ((_streaming_start == false) && (_sequence_number > _segment_count))
+	if ((IsReadyForStreaming() == false) && (_sequence_number > _segment_count))
 	{
-		_streaming_start = true;
+		SetReadyForStreaming();
 
 		logti("HLS segment is ready for stream [%s/%s], segment duration: %fs, count: %u",
 			  _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);

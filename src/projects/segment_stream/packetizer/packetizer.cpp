@@ -135,9 +135,19 @@ void Packetizer::SetPlayList(ov::String &play_list)
 	_play_list = play_list;
 }
 
+bool Packetizer::IsReadyForStreaming() const noexcept
+{
+	return _streaming_start;
+}
+
+void Packetizer::SetReadyForStreaming() noexcept
+{
+	_streaming_start = true;
+}
+
 bool Packetizer::GetPlayList(ov::String &play_list)
 {
-	if (_streaming_start == false)
+	if (IsReadyForStreaming() == false)
 	{
 		return false;
 	}

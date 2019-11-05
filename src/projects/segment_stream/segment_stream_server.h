@@ -25,7 +25,6 @@ public:
 	SegmentStreamServer();
 	virtual ~SegmentStreamServer() = default;
 
-public:
 	bool Start(const ov::SocketAddress &address,
 			   std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
 			   const ov::String &app_name,
@@ -43,34 +42,38 @@ public:
 
 	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections);
 
-	virtual cfg::PublisherType GetPublisherType() = 0;
-	virtual std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() = 0;
+	virtual cfg::PublisherType GetPublisherType() const noexcept = 0;
+	virtual const char *GetPublisherName() const noexcept = 0;
+	virtual std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor()
+	{
+		return std::make_shared<SegmentStreamInterceptor>();
+	}
 
 protected:
 	bool ParseRequestUrl(const ov::String &request_url,
 						 ov::String &app_name, ov::String &stream_name,
 						 ov::String &file_name, ov::String &file_ext);
 
-	bool ProcessRequest(const std::shared_ptr<HttpResponse> &response,
+	bool ProcessRequest(const std::shared_ptr<HttpClient> &client,
 						const ov::String &request_target,
 						const ov::String &origin_url);
 
 	bool SetAllowOrigin(const ov::String &origin_url, const std::shared_ptr<HttpResponse> &response);
 
 	// Interfaces
-	virtual void ProcessRequestStream(const std::shared_ptr<HttpResponse> &response,
-									  const ov::String &app_name, const ov::String &stream_name,
-									  const ov::String &file_name, const ov::String &file_ext) = 0;
+	virtual HttpConnection ProcessRequestStream(const std::shared_ptr<HttpClient> &client,
+												const ov::String &app_name, const ov::String &stream_name,
+												const ov::String &file_name, const ov::String &file_ext) = 0;
 
-	virtual void OnPlayListRequest(const ov::String &app_name, const ov::String &stream_name,
-								   const ov::String &file_name,
-								   PlayListType play_list_type,
-								   const std::shared_ptr<HttpResponse> &response) = 0;
+	virtual HttpConnection OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
+											 const ov::String &app_name, const ov::String &stream_name,
+											 const ov::String &file_name,
+											 PlayListType play_list_type) = 0;
 
-	virtual void OnSegmentRequest(const ov::String &app_name, const ov::String &stream_name,
-								  const ov::String &file_name,
-								  SegmentType segment_type,
-								  const std::shared_ptr<HttpResponse> &response) = 0;
+	virtual HttpConnection OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
+											const ov::String &app_name, const ov::String &stream_name,
+											const ov::String &file_name,
+											SegmentType segment_type) = 0;
 
 	bool UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url);
 
