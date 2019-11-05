@@ -26,12 +26,6 @@ enum class M4sMediaType
 	Data,
 };
 
-enum class M4sTransferType
-{
-	Normal,
-	Chunked,
-};
-
 // Data for Fragment MP4
 struct SampleData
 {

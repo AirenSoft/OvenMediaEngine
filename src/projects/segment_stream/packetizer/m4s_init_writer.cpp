@@ -69,19 +69,12 @@ M4sInitWriter::M4sInitWriter(M4sMediaType media_type,
 	_language = "und";
 }
 
-const std::shared_ptr<ov::Data> M4sInitWriter::CreateData(M4sTransferType transfer_type)
+const std::shared_ptr<ov::Data> M4sInitWriter::CreateData()
 {
 	auto data_stream = std::make_shared<ov::Data>(4096);
 
 	FtypBoxWrite(data_stream);
 	MoovBoxWrite(data_stream);
-
-	// Audio init m4s Save
-	if (transfer_type == M4sTransferType::Chunked)
-	{
-		data_stream->Insert(ov::String::FormatString("%x\r\n", data_stream->GetLength()).ToData(false).get(), 0);
-		data_stream->Append("\r\n0\r\n\r\n", 7);
-	}
 
 	return data_stream;
 }

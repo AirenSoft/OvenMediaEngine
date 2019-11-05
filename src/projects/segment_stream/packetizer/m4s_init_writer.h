@@ -22,7 +22,7 @@ public:
 	~M4sInitWriter() override = default;
 
 public:
-	const std::shared_ptr<ov::Data> CreateData(M4sTransferType transfer_type);
+	const std::shared_ptr<ov::Data> CreateData();
 
 protected:
 	int FtypBoxWrite(std::shared_ptr<ov::Data> &data_stream);

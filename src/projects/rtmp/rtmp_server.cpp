@@ -186,8 +186,6 @@ void RtmpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 				  chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
 				  chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
 				  remote->ToString().CStr());
-
-			_chunk_context_list.erase(item);
 		}
 	}
 }
