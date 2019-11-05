@@ -237,7 +237,7 @@ public:
 
 	std::shared_ptr<WebSocketClient> GetResponse()
 	{
-		return _response;
+		return _ws_client;
 	}
 
 	bool IsCompatibleWith(const std::shared_ptr<RtcPeerInfo> &peer);
@@ -247,7 +247,7 @@ public:
 protected:
 	RtcPeerInfo() = default;
 
-	static std::shared_ptr<RtcPeerInfo> FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<WebSocketClient> &response);
+	static std::shared_ptr<RtcPeerInfo> FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<WebSocketClient> &ws_client);
 	static RtcPeerBrowser ParseBrowserInfo(const ov::String &user_agent);
 
 	// peer id
@@ -264,7 +264,7 @@ protected:
 	// host peer info (client only)
 	std::shared_ptr<RtcPeerInfo> _host_peer;
 
-	std::shared_ptr<WebSocketClient> _response;
+	std::shared_ptr<WebSocketClient> _ws_client;
 
 	std::map<peer_id_t, std::shared_ptr<RtcPeerInfo>> _client_list;
 };

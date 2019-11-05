@@ -14,7 +14,7 @@ class RtcP2PManager
 {
 public:
 	// Create a PeerInfo from user-agent
-	std::shared_ptr<RtcPeerInfo> CreatePeerInfo(peer_id_t id, const std::shared_ptr<WebSocketClient> &response);
+	std::shared_ptr<RtcPeerInfo> CreatePeerInfo(peer_id_t id, const std::shared_ptr<WebSocketClient> &ws_client);
 
 	// Add to _peer_list
 	std::shared_ptr<RtcPeerInfo> FindPeer(peer_id_t peer_id);

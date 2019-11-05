@@ -7,8 +7,8 @@
 //
 //==============================================================================
 
-#include "web_console_private.h"
 #include "web_console_server.h"
+#include "web_console_private.h"
 
 WebConsoleServer::WebConsoleServer(const info::Application *application_info, PrivateToken token)
 	: _application_info(application_info)
@@ -19,7 +19,7 @@ std::shared_ptr<WebConsoleServer> WebConsoleServer::Create(const info::Applicati
 {
 	auto instance = std::make_shared<WebConsoleServer>(application_info, (PrivateToken){});
 
-	if(instance != nullptr)
+	if (instance != nullptr)
 	{
 		const auto &web_console = application_info->GetWebConsole();
 		instance->_web_console = web_console;
@@ -29,7 +29,7 @@ std::shared_ptr<WebConsoleServer> WebConsoleServer::Create(const info::Applicati
 
 		logti("Trying to start WebConsole on %s...", address.ToString().CStr());
 
-		if(instance->Start(address))
+		if (instance->Start(address))
 		{
 			return instance;
 		}
@@ -49,7 +49,7 @@ std::shared_ptr<WebConsoleServer> WebConsoleServer::Create(const info::Applicati
 
 bool WebConsoleServer::Start(const ov::SocketAddress &address)
 {
-	if(_http_server != nullptr)
+	if (_http_server != nullptr)
 	{
 		OV_ASSERT(false, "Server is already running");
 		return false;
@@ -57,7 +57,7 @@ bool WebConsoleServer::Start(const ov::SocketAddress &address)
 
 	auto certificate = _application_info->GetCertificate();
 
-	if(certificate != nullptr)
+	if (certificate != nullptr)
 	{
 		auto https_server = std::make_shared<HttpsServer>();
 
@@ -76,12 +76,12 @@ bool WebConsoleServer::Start(const ov::SocketAddress &address)
 
 bool WebConsoleServer::Stop()
 {
-	if(_http_server == nullptr)
+	if (_http_server == nullptr)
 	{
 		return false;
 	}
 
-	if(_http_server->Stop())
+	if (_http_server->Stop())
 	{
 		_http_server = nullptr;
 
@@ -96,59 +96,66 @@ bool WebConsoleServer::InitializeServer()
 	auto http_interceptor = std::make_shared<HttpDefaultInterceptor>();
 	ov::String document_root = ov::PathManager::GetCanonicalPath(_web_console.GetDocumentPath());
 
-	http_interceptor->Register(HttpMethod::Post, "/api/login", [this](const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response) -> void
-	{
-		auto request_body = request->GetRequestBody();
-		auto json = ov::Json::Parse(request_body);
+	http_interceptor->Register(HttpMethod::Post, "/api/login", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+		// auto request_body = request->GetRequestBody();
+		// auto json = ov::Json::Parse(request_body);
+
+		return HttpNextHandler::DoNotCall;
 	});
 
-	http_interceptor->Register(HttpMethod::Post, "/api/logout", [this](const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response) -> void
-	{
-		auto request_body = request->GetRequestBody();
-		auto json = ov::Json::Parse(request_body);
+	http_interceptor->Register(HttpMethod::Post, "/api/logout", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+		// auto request_body = request->GetRequestBody();
+		// auto json = ov::Json::Parse(request_body);
 
-		logti("BODY: %s", json.ToString().CStr());
+		// logti("BODY: %s", json.ToString().CStr());
+
+		return HttpNextHandler::DoNotCall;
 	});
 
-	http_interceptor->Register(HttpMethod::Get, ".*", [document_root, this](const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response) -> void
-	{
+	http_interceptor->Register(HttpMethod::Get, ".*", [document_root, this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+		auto &request = client->GetRequest();
+		auto &response = client->GetResponse();
+
 		auto path = ov::PathManager::Combine(document_root, request->GetUri());
 		auto real_path = ov::PathManager::GetCanonicalPath(path);
 
-		if(real_path.IsEmpty())
+		if (real_path.IsEmpty())
 		{
 			response->SetStatusCode(HttpStatusCode::NotFound);
 			response->Response();
-			return;
+
+			return HttpNextHandler::DoNotCall;
 		}
 
-		if(real_path.HasPrefix(document_root) == false)
+		if (real_path.HasPrefix(document_root) == false)
 		{
 			// If the file exists but is not in the DocumentRoot, it is not provided because of the risk of attack
 			logtw("The client requested a resource, but the resource not in DocumentRoot: %s", real_path.CStr());
 			response->SetStatusCode(HttpStatusCode::NotFound);
 			response->Response();
-			return;
+
+			return HttpNextHandler::DoNotCall;
 		}
 
 		FILE *file = ::fopen(real_path, "rb");
 
-		if(file == nullptr)
+		if (file == nullptr)
 		{
 			response->SetStatusCode(HttpStatusCode::NotFound);
 			response->Response();
-			return;
+
+			return HttpNextHandler::DoNotCall;
 		}
 
 		auto data = std::make_shared<ov::Data>();
 		ov::ByteStream stream(data.get());
 		char buffer[4096];
 
-		while(!feof(file))
+		while (!feof(file))
 		{
 			auto read_bytes = ::fread(buffer, 1, OV_COUNTOF(buffer), file);
 
-			if(read_bytes == 0)
+			if (read_bytes == 0)
 			{
 				break;
 			}
@@ -156,7 +163,7 @@ bool WebConsoleServer::InitializeServer()
 			stream.Append(buffer, read_bytes);
 		}
 
-		if(response->GetStatusCode() == HttpStatusCode::OK)
+		if (response->GetStatusCode() == HttpStatusCode::OK)
 		{
 			response->SetHeader("Content-Length", ov::String::FormatString("%zu", data->GetLength()));
 			response->SetHeader("Content-Type", "text/html");
@@ -166,8 +173,9 @@ bool WebConsoleServer::InitializeServer()
 		::fclose(file);
 
 		response->Response();
+
+		return HttpNextHandler::DoNotCall;
 	});
 
 	return _http_server->AddInterceptor(http_interceptor);
 }
-

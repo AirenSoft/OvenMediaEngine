@@ -11,10 +11,10 @@
 
 #include "../rtc_signalling_server_private.h"
 
-std::shared_ptr<RtcPeerInfo> RtcP2PManager::CreatePeerInfo(peer_id_t id, const std::shared_ptr<WebSocketClient> &response)
+std::shared_ptr<RtcPeerInfo> RtcP2PManager::CreatePeerInfo(peer_id_t id, const std::shared_ptr<WebSocketClient> &ws_client)
 {
-	auto user_agent = response->GetRequest()->GetHeader("USER-AGENT");
-	auto peer_info = RtcPeerInfo::FromUserAgent(id, user_agent, response);
+	auto user_agent = ws_client->GetClient()->GetRequest()->GetHeader("USER-AGENT");
+	auto peer_info = RtcPeerInfo::FromUserAgent(id, user_agent, ws_client);
 
 	if ((peer_info != nullptr) && IsEnabled())
 	{

@@ -80,26 +80,27 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 	auto web_socket = std::make_shared<WebSocketInterceptor>();
 
 	web_socket->SetConnectionHandler(
-		[this](const std::shared_ptr<WebSocketClient> &response) -> bool {
-			auto remote = response->GetResponse()->GetRemote();
+		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> HttpInterceptorResult {
+			auto &client = ws_client->GetClient();
+			auto &remote = client->GetRemote();
 
 			if (remote == nullptr)
 			{
-				OV_ASSERT(false, "Cannot find the client information: %s", response->ToString().CStr());
-				return false;
+				OV_ASSERT(false, "Cannot find the client information: %s", ws_client->ToString().CStr());
+				return HttpInterceptorResult::Disconnect;
 			}
 
 			ov::String description = remote->ToString();
 
 			logti("New client is connected: %s", description.CStr());
 
-			auto tokens = response->GetRequest()->GetUri().Split("/");
+			auto tokens = client->GetRequest()->GetUri().Split("/");
 
 			// "/<app>/<stream>"
 			if (tokens.size() < 3)
 			{
-				logti("Invalid request from %s. Disconnecting...", description.CStr());
-				return false;
+				logtw("Invalid request from %s. Disconnecting...", description.CStr());
+				return HttpInterceptorResult::Disconnect;
 			}
 
 			auto info = std::make_shared<RtcSignallingInfo>(
@@ -140,16 +141,19 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 				}
 			}
 
-			response->GetRequest()->SetExtra(info);
+			client->GetRequest()->SetExtra(info);
 
-			return true;
+			return HttpInterceptorResult::Keep;
 		});
 
 	web_socket->SetMessageHandler(
-		[this](const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message) -> bool {
+		[this](const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const WebSocketFrame> &message) -> HttpInterceptorResult {
+			auto &client = ws_client->GetClient();
+			auto &remote = client->GetRemote();
+
 			logtp("The client sent a message:\n%s", message->GetPayload()->Dump().CStr());
 
-			auto info = response->GetRequest()->GetExtraAs<RtcSignallingInfo>();
+			auto info = client->GetRequest()->GetExtraAs<RtcSignallingInfo>();
 
 			if (info == nullptr)
 			{
@@ -157,17 +161,17 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 				//
 				// 1. An error occurred during the connection (request was wrong)
 				// 2. After the connection is lost, the callback is called late
-				logtw("Could not find client information: %s", response->ToString().CStr());
+				logtw("Could not find client information: %s", ws_client->ToString().CStr());
 
-				return false;
+				return HttpInterceptorResult::Disconnect;
 			}
 
 			ov::JsonObject object = ov::Json::Parse(message->GetPayload());
 
 			if (object.IsNull())
 			{
-				logtw("Invalid request message from %s", response->ToString().CStr());
-				return false;
+				logtw("Invalid request message from %s", ws_client->ToString().CStr());
+				return HttpInterceptorResult::Disconnect;
 			}
 
 			// TODO(dimiden): 이렇게 호출하면 "command": null 이 추가되어버림. 개선 필요
@@ -175,15 +179,15 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 
 			if (command_value.isNull())
 			{
-				logtw("Invalid request message from %s", response->ToString().CStr());
-				return false;
+				logtw("Invalid request message from %s", ws_client->ToString().CStr());
+				return HttpInterceptorResult::Disconnect;
 			}
 
 			ov::String command = ov::Converter::ToString(command_value);
 
 			logtd("Trying to dispatch command: %s...", command.CStr());
 
-			auto error = DispatchCommand(command, object, info, response, message);
+			auto error = DispatchCommand(ws_client, command, object, info, message);
 
 			if (error != nullptr)
 			{
@@ -202,22 +206,25 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 				value["code"] = error->GetCode();
 				value["error"] = error->GetMessage().CStr();
 
-				response->Send(response_json.ToString());
+				ws_client->Send(response_json.ToString());
 
-				return false;
+				return HttpInterceptorResult::Disconnect;
 			}
 
-			return true;
+			return HttpInterceptorResult::Keep;
 		});
 
 	web_socket->SetErrorHandler(
-		[this](const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const ov::Error> &error) -> void {
+		[this](const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const ov::Error> &error) -> void {
 			logtw("An error occurred: %s", error->ToString().CStr());
 		});
 
 	web_socket->SetCloseHandler(
-		[this](const std::shared_ptr<WebSocketClient> &response) -> void {
-			auto info = response->GetRequest()->GetExtraAs<RtcSignallingInfo>();
+		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> void {
+			auto &client = ws_client->GetClient();
+			auto &remote = client->GetRemote();
+
+			auto info = client->GetRequest()->GetExtraAs<RtcSignallingInfo>();
 
 			if (info != nullptr)
 			{
@@ -230,7 +237,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 				}
 
 				logti("Client is disconnected: %s (%s / %s, ufrag: local: %s, remote: %s)",
-					  response->ToString().CStr(),
+					  ws_client->ToString().CStr(),
 					  info->application_name.CStr(), info->stream_name.CStr(),
 					  (info->offer_sdp != nullptr) ? info->offer_sdp->GetIceUfrag().CStr() : "(N/A)",
 					  (info->peer_sdp != nullptr) ? info->peer_sdp->GetIceUfrag().CStr() : "(N/A)");
@@ -282,7 +289,7 @@ bool RtcSignallingServer::RemoveObserver(const std::shared_ptr<RtcSignallingObse
 
 bool RtcSignallingServer::Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<SessionDescription> &peer_sdp)
 {
-	bool disconnected = _http_server->Disconnect(
+	bool disconnected = _http_server->DisconnectIf(
 		[application_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool {
 			auto info = client->GetRequest()->GetExtraAs<RtcSignallingInfo>();
 
@@ -406,11 +413,11 @@ bool RtcSignallingServer::Stop()
 	return false;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const WebSocketFrame> &message)
 {
 	if (command == "request_offer")
 	{
-		return DispatchRequestOffer(info, response);
+		return DispatchRequestOffer(ws_client, info);
 	}
 
 	if (info->id != object.GetInt64Value("id"))
@@ -442,8 +449,10 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const ov::String
 	return ov::Error::CreateError(HttpStatusCode::BadRequest, "Unknown command: %s", command.CStr());
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<WebSocketClient> &response)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
 {
+	auto &client = ws_client->GetClient();
+
 	ov::String application_name = info->application_name;
 	ov::String stream_name = info->stream_name;
 
@@ -453,18 +462,18 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(std::shared
 	std::shared_ptr<RtcPeerInfo> peer_info = nullptr;
 	std::shared_ptr<RtcPeerInfo> host_peer = nullptr;
 
-	peer_info = _p2p_manager.CreatePeerInfo(info->id, response);
+	peer_info = _p2p_manager.CreatePeerInfo(info->id, ws_client);
 
 	if (peer_info == nullptr)
 	{
-		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Cannot parse peer info from user agent: %s", response->GetRequest()->GetHeader("USER-AGENT").CStr());
+		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Cannot parse peer info from user agent: %s", client->GetRequest()->GetHeader("USER-AGENT").CStr());
 	}
 
 	info->peer_info = peer_info;
 
 	if (_p2p_manager.IsEnabled())
 	{
-		logtd("Trying to find p2p host for client %s...", response->ToString().CStr());
+		logtd("Trying to find p2p host for client %s...", ws_client->ToString().CStr());
 
 		if (info->peer_was_client == false)
 		{
@@ -494,7 +503,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(std::shared
 	{
 		if (_p2p_manager.IsEnabled())
 		{
-			logtd("peer %s became a host peer because there is no p2p host for client %s.", peer_info->ToString().CStr(), response->ToString().CStr());
+			logtd("peer %s became a host peer because there is no p2p host for client %s.", peer_info->ToString().CStr(), ws_client->ToString().CStr());
 		}
 
 		// None of the hosts can accept this client, so the peer will be connectioned to OME
@@ -559,7 +568,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(std::shared
 
 				info->offer_sdp = sdp;
 
-				response->Send(response_json.ToString());
+				ws_client->Send(response_json.ToString());
 			}
 			else
 			{
