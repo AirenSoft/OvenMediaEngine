@@ -38,28 +38,52 @@ bool OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> con
 	// 인코딩 옵션 설정
 	_context->bit_rate = _output_context->GetBitrate();
 	_context->rc_max_rate = _context->bit_rate;
-	_context->rc_buffer_size = static_cast<int>(_context->bit_rate * 2);
+	_context->rc_min_rate = _context->bit_rate;
 	_context->sample_aspect_ratio = (AVRational){1, 1};
 	_context->time_base = TimebaseToAVRational(_output_context->GetTimeBase());
 	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
-	_context->gop_size = _output_context->GetGOP();
+	_context->gop_size = _output_context->GetFrameRate() * 1;  //_output_context->GetGOP();
 	_context->max_b_frames = 0;
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
-	_context->thread_count = 16;
-	_context->active_thread_type = FF_THREAD_FRAME;
+	_context->thread_count = 6;
+	// _context->active_thread_type = FF_THREAD_FRAME;
+#if 1
+	AVDictionary *opts = nullptr;
+	::av_dict_set_int(&opts, "cpu-used", _context->thread_count, 0);
+#else
 	_context->qmin = 0;
 	_context->qmax = 50;
-	// 0: CBR, 100:VBR
-	// _context->qcompress 				= 0;
-	_context->rc_initial_buffer_occupancy = static_cast<int>(500 * _context->bit_rate / 1000);
-	_context->rc_buffer_size = static_cast<int>(1000 * _context->bit_rate / 1000);
+
+	_context->rc_initial_buffer_occupancy = static_cast<int>(_context->bit_rate * 8);
+	_context->rc_buffer_size = static_cast<int>(_context->bit_rate * 10);
 
 	AVDictionary *opts = nullptr;
 
-	::av_dict_set(&opts, "quality", "realtime", 0);
-	::av_dict_set_int(&opts, "cpu-used", 16, 0);
+	::av_dict_set(&opts, "quality", "good", 0);
+	::av_dict_set_int(&opts, "cpu-used", 6, 0);
+	::av_dict_set(&opts, "end-usage", "cbr", 0);
+	// ::av_dict_set_int(&opts, "passes", 2, 0);
+	::av_dict_set_int(&opts, "maxsection-pct", 200, 0);
+	::av_dict_set_int(&opts, "minsection-pct", 20, 0);
+	// ::av_dict_set_int(&opts, "undershoot-pct", 95, 0);
+	::av_dict_set_int(&opts, "undershoot-pct", 5, 0);
+	::av_dict_set_int(&opts, "overshoot-pct", 5, 0);
+	// ::av_dict_set_int(&opts, "token-parts", 3, 0);
+	// ::av_dict_set_int(&opts, "auto-alt-ref", 0, 0);
+	// ::av_dict_set_int(&opts, "lag-in-frames", 25, 0);
+
+	::av_dict_set_int(&opts, "kf-max-dist", 120, 0);
+
+	_context->keyint_min = 120;
+	::av_dict_set_int(&opts, "max-intra-rate", _context->bit_rate, 0);
+
+	//  _context->qcompress = 0;
+//   _context->flags |= AV_CODEC_FLAG_PASS1;
+#endif
+	//   ::av_dict_set(&opts, "end-usage", "cbr", 0);
+	//   _context->flags |= AV_CODEC_FLAG_PASS1;
 
 	if (::avcodec_open2(_context, codec, &opts) < 0)
 	{

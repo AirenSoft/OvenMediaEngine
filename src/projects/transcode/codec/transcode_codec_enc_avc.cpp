@@ -35,10 +35,12 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 		return false;
 	}
 
+	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
+
 	_context->bit_rate = _output_context->GetBitrate();
 	_context->rc_min_rate = _context->bit_rate;
 	_context->rc_max_rate = _context->bit_rate;
-	_context->rc_buffer_size = static_cast<int>(_context->bit_rate);
+	_context->rc_buffer_size = static_cast<int>(_context->bit_rate / 2);
 	_context->sample_aspect_ratio = (AVRational){1, 1};
 	// From avcodec.h:
 	// For some codecs, the time base is closer to the field rate than the frame rate.
@@ -51,24 +53,32 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
 	AVRational codec_timebase = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
 	_context->time_base = codec_timebase;
-	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
-	_context->gop_size = _output_context->GetGOP();
+	_context->gop_size = _context->framerate.num;
 	_context->max_b_frames = 0;
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
-	_context->thread_count = 4;
+	_context->thread_count = 0;
 	AVRational output_timebase = TimebaseToAVRational(_output_context->GetTimeBase());
 	_scale = ::av_q2d(::av_div_q(output_timebase, codec_timebase));
 	_scale_inv = ::av_q2d(::av_div_q(codec_timebase, output_timebase));
 
+	// 인코딩 품질 및 브라우저 호환성
 	// For browser compatibility
-	_context->profile = FF_PROFILE_H264_BASELINE;
+	_context->profile = FF_PROFILE_H264_MAIN;
 
-	// zerolatency
-	::av_opt_set(_context->priv_data, "preset", "ultrafast", 0);
+	// 인코딩 성능
+	::av_opt_set(_context->priv_data, "preset", "fast", 0);
+
+	// 인코딩 딜레이
 	::av_opt_set(_context->priv_data, "tune", "zerolatency", 0);
-	::av_opt_set(_context->priv_data, "x264opts", "bframes=0:no-mbtree:sliced-threads=0:sync-lookahead=0:no-scenecut", 0);
+
+	// 인코딩 딜레이에서 sliced-thread 옵션 제거. MAC 환겨에서 브라우저 호환성
+	::av_opt_set(_context->priv_data, "x264opts", "bframes=0:sliced-threads=0:b-adapt=1:no-scenecut", 0);
+	// ::av_opt_set(_context->priv_data, "x264opts", "bframes=0:sliced-threads=0:b-adapt=1", 0);
+
+	// CBR 옵션 / bitrate는 kbps 단위 / *문제는 MAC 크롬에서 재생이 안된다. 그래서 maxrate 값만 지정해줌.
+	// x264opts.AppendFormat(":nal-hrd=cbr:force-cfr=1:bitrate=%d:vbv-maxrate=%d:vbv-bufsize=%d:", _context->bit_rate/1000,  _context->bit_rate/1000,  _context->bit_rate/1000);
 
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{
