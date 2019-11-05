@@ -11,8 +11,8 @@
 #include <functional>
 #include <memory>
 
-#include <base/ovlibrary/ovlibrary.h>
 #include <base/ovcrypto/ovcrypto.h>
+#include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
 
 // RFC7231 - 4. Request Methods
@@ -50,9 +50,29 @@ enum class HttpMethod : uint16_t
 	Trace = 0x0080
 };
 
-inline HttpMethod operator |(HttpMethod lhs, HttpMethod rhs)
+enum class HttpConnection : char
 {
-	return static_cast<HttpMethod> (static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs));
+	Closed,
+	KeepAlive
+};
+
+enum class HttpInterceptorResult : char
+{
+	Keep,
+	Disconnect,
+};
+
+enum class HttpNextHandler : char
+{
+	// Call the next handler
+	Call,
+	// Do not call the next handler
+	DoNotCall
+};
+
+inline HttpMethod operator|(HttpMethod lhs, HttpMethod rhs)
+{
+	return static_cast<HttpMethod>(static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs));
 }
 
 // RFC7231 - 6. Response Status Codes
@@ -147,12 +167,12 @@ enum class HttpStatusCode : uint16_t
 };
 
 #define HTTP_GET_STATUS_TEXT(condition, text) \
-    case condition: \
-        return text
+	case condition:                           \
+		return text
 
 inline constexpr const char *StringFromHttpStatusCode(HttpStatusCode status_code)
 {
-	switch(status_code)
+	switch (status_code)
 	{
 		HTTP_GET_STATUS_TEXT(HttpStatusCode::Continue, "Continue");
 		HTTP_GET_STATUS_TEXT(HttpStatusCode::SwitchingProtocols, "Switching Protocols");
@@ -201,10 +221,9 @@ inline constexpr const char *StringFromHttpStatusCode(HttpStatusCode status_code
 }
 
 class HttpServer;
-class HttpRequest;
-class HttpResponse;
+class HttpClient;
 
-using HttpRequestHandler = std::function<void(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)>;
-using HttpRequestErrorHandler = std::function<void(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)>;
+using HttpRequestHandler = std::function<HttpNextHandler(const std::shared_ptr<HttpClient> &client)>;
+using HttpRequestErrorHandler = std::function<void(const std::shared_ptr<HttpClient> &client)>;
 
 using HttpResponseWriteHandler = std::function<bool(const std::shared_ptr<ov::Data> &data)>;

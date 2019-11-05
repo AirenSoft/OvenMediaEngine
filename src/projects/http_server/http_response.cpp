@@ -7,35 +7,57 @@
 //
 //==============================================================================
 #include "http_response.h"
-#include "http_request.h"
+#include "http_client.h"
 #include "http_private.h"
 
-#include <utility>
-#include <memory>
 #include <algorithm>
+#include <memory>
+#include <utility>
 
 #include <base/ovsocket/ovsocket.h>
 
-HttpResponse::HttpResponse(HttpRequest *request, std::shared_ptr<ov::ClientSocket> remote)
-	: _request(request),
-	  _remote(std::move(remote))
+HttpResponse::HttpResponse(std::shared_ptr<HttpClient> client)
+	: _http_client(std::move(client))
 {
-	OV_ASSERT2(_remote != nullptr);
+	OV_ASSERT2(_http_client != nullptr);
 }
 
-bool HttpResponse::Response()
+bool HttpResponse::SetHeader(const ov::String &key, const ov::String &value)
 {
-	return SendHeaderIfNeeded() && SendResponse();
+	if (_is_header_sent)
+	{
+		logtw("Cannot modify header: Header is sent");
+		return false;
+	}
+
+	_response_header[key] = value;
+
+	return true;
+}
+
+const ov::String &HttpResponse::GetHeader(const ov::String &key)
+{
+	auto item = _response_header.find(key);
+
+	if (item == _response_header.end())
+	{
+		return _default_value;
+	}
+
+	return item->second;
 }
 
 bool HttpResponse::AppendData(const std::shared_ptr<const ov::Data> &data)
 {
-	if(data == nullptr)
+	if (data == nullptr)
 	{
 		return false;
 	}
 
+	std::lock_guard<__decltype(_response_mutex)> lock(_response_mutex);
+
 	_response_data_list.push_back(data);
+	_response_data_size += data->GetLength();
 
 	return true;
 }
@@ -53,110 +75,37 @@ bool HttpResponse::AppendFile(const ov::String &filename)
 	return false;
 }
 
-bool HttpResponse::SetHeader(const ov::String &key, const ov::String &value)
+bool HttpResponse::Response()
 {
-	if(_is_header_sent)
-	{
-		logtw("Cannot modify header: Header is sent");
-		return false;
-	}
+	std::lock_guard<__decltype(_response_mutex)> lock(_response_mutex);
 
-	_response_header[key] = value;
-
-	return true;
-}
-
-const ov::String &HttpResponse::GetHeader(const ov::String &key)
-{
-	auto item = _response_header.find(key);
-
-	if(item == _response_header.end())
-	{
-		return _default_value;
-	}
-
-	return item->second;
-}
-
-bool HttpResponse::Send(const void *data, size_t length)
-{
-	OV_ASSERT2(_remote != nullptr);
-
-	if(_remote == nullptr)
-	{
-		return false;
-	}
-
-	if(_tls != nullptr)
-	{
-		size_t written;
-
-		// Data will be sent to the client
-
-		// * Data flow:
-		//   1. ov::Tls::Write() ->
-		//   2. HttpClient::TlsWrite() ->
-		//   3. ClientSocket::Send() // using HttpResponse::_remote
-		int result = _tls->Write(data, length, &written);
-
-		switch(result)
-		{
-			case SSL_ERROR_NONE:
-				// data was sent in HttpClient::TlsWrite();
-				break;
-
-			case SSL_ERROR_WANT_WRITE:
-				// Need more data to encrypt
-				break;
-
-			default:
-				logte("An error occurred while accept client: %s", _remote->ToString().CStr());
-				return false;
-		}
-
-		return true;
-	}
-	else
-	{
-		// Send the plain data to the client
-		return _remote->Send(data, length) == static_cast<ssize_t>(length);
-	}
-}
-
-bool HttpResponse::Send(const std::shared_ptr<const ov::Data> &data)
-{
-	if(data->GetLength() == 0)
-	{
-		return true;
-	}
-
-	return Send(data->GetData(), data->GetLength());
+	return SendHeaderIfNeeded() && SendResponse();
 }
 
 bool HttpResponse::SendHeaderIfNeeded()
 {
-	if(_is_header_sent)
+	if (_is_header_sent)
 	{
-		// 헤더를 보낸 상태
+		// The headers are already sent
 		return true;
-	}
-
-	if(_remote == nullptr)
-	{
-		return false;
 	}
 
 	std::shared_ptr<ov::Data> response = std::make_shared<ov::Data>();
 	ov::ByteStream stream(response.get());
 
+	if (_chunked_transfer == false)
+	{
+		// Calculate the content length
+		SetHeader("Content-Length", ov::Converter::ToString(_response_data_size));
+	}
+
 	// RFC7230 - 3.1.2.  Status Line
 	// status-line = HTTP-version SP status-code SP reason-phrase CRLF
-	// TODO: HTTP version을 request에서 받은 것으로 대체
+	// TODO(dimiden): Replace this HTTP version with the version that received from the request
 	stream.Append(ov::String::FormatString("HTTP/1.1 %d %s\r\n", _status_code, _reason.CStr()).ToData(false));
 
 	// RFC7230 - 3.2.  Header Fields
-	std::for_each(_response_header.begin(), _response_header.end(), [&stream](const auto &pair) -> void
-	{
+	std::for_each(_response_header.begin(), _response_header.end(), [&stream](const auto &pair) -> void {
 		stream.Append(pair.first.ToData(false));
 		stream.Append(": ", 2);
 		stream.Append(pair.second.ToData(false));
@@ -165,8 +114,10 @@ bool HttpResponse::SendHeaderIfNeeded()
 
 	stream.Append("\r\n", 2);
 
-	if(Send(response))
+	if (_http_client->Send(response))
 	{
+		logtd("Header is sent");
+
 		_is_header_sent = true;
 
 		return true;
@@ -179,142 +130,31 @@ bool HttpResponse::SendResponse()
 {
 	bool sent = true;
 
-	for(const auto &data : _response_data_list)
+	std::lock_guard<__decltype(_response_mutex)> lock(_response_mutex);
+
+	logtd("Trying to send datas...");
+
+	for (const auto &data : _response_data_list)
 	{
-		sent &= Send(data);
+		if (_chunked_transfer)
+		{
+			sent &= _http_client->SendChunkedData(data);
+		}
+		else
+		{
+			sent &= _http_client->Send(data);
+		}
 	}
 
 	_response_data_list.clear();
+	_response_data_size = 0ULL;
+
+	logtd("All datas are sent...");
 
 	return sent;
 }
 
-
-
-// data : http header + body send
-// post send
-bool HttpResponse::PostResponse()
+bool HttpResponse::Close()
 {
-	// data empty or already sended
-	if(_response_data_list.empty() && _response_header.empty())
-	{
-		return true;
-	}
-
-    bool result = false;
-	auto response_data = MakeResponseData();
-
-	if(response_data == nullptr || response_data->GetLength() == 0)
-	{
-		logte("Post response data fail : %s", _remote->ToString().CStr());
-		return false;
-	}
-
-	result = PostSend(response_data->GetData(), response_data->GetLength());
-
-	// chunked transfer init
-	_chunked_transfer = false;
-
-	return result;
-}
-
-// http header + body data create
-// - supported : chunked-transfer
-std::shared_ptr<ov::Data> HttpResponse::MakeResponseData()
-{
-    auto response_data = std::make_shared<ov::Data>();
-
-    ov::ByteStream stream(response_data.get());
-
-    // Content-Length
-    uint32_t content_length = 0;
-	for(const auto &data : _response_data_list)
-	{
-		content_length += data->GetLength();
-	}
-
-	// chunked-transfer supported
-	if(!_chunked_transfer)
-		_response_header["Content-Length"] = ov::Converter::ToString(content_length);
-
-    // header
-    stream.Append(ov::String::FormatString("HTTP/1.1 %d %s\r\n", _status_code, _reason.CStr()).ToData(false));
-    std::for_each(_response_header.begin(), _response_header.end(), [&stream](const auto &pair) -> void
-    {
-        stream.Append(pair.first.ToData(false));
-        stream.Append(": ", 2);
-        stream.Append(pair.second.ToData(false));
-        stream.Append("\r\n", 2);
-    });
-    stream.Append("\r\n", 2);
-
-    // body
-    for(const auto &data : _response_data_list)
-    {
-        stream.Append(data->GetData(), data->GetLength());
-    }
-
-	_response_data_list.clear();
-	_response_header.clear();
-
-    return response_data;
-}
-
-bool HttpResponse::PostChunkedDataResponse(const std::shared_ptr<const ov::Data> &data)
-{
-	if(data == nullptr || data->GetLength() <= 0)
-	{
-		logtw("Post chunked data is empty : %s", _remote->ToString().CStr());
-		return false;
-	}
-
-	return PostSend(data->GetData(), data->GetLength());
-}
-
-bool HttpResponse::PostChunkedEndResponse()
-{
-	// chunked transfer init
-	_chunked_transfer = false;
-	
-	return PostSend("0\r\n\r\n", 5);
-}
-
-bool HttpResponse::PostSend(const void *data, size_t length)
-{
-	OV_ASSERT2(_remote != nullptr);
-
-	if(_remote == nullptr)
-	{
-		return false;
-	}
-
-	if(_tls == nullptr)
-	{
-		return _remote->PostSend(data, length);
-	}
-
-	size_t written;
-	bool result = false;
-
-	// ov::Tls::Write() -> HttpClient::TlsWrite() ->  PostSend() or Send()
-	int tls_result = _tls->Write(data, length, &written);
-
-	switch(tls_result)
-	{
-		case SSL_ERROR_NONE:
-			// data was sent in HttpClient::TlsWrite();
-			result = true;
-			break;
-
-		case SSL_ERROR_WANT_WRITE:
-			// Need more data to encrypt
-			result = true;
-			break;
-
-		default:
-			logtd("An error occurred while send to the client: %s", _remote->ToString().CStr());
-			result = false;
-	}
-
-	return result;
+	return _http_client->Close();
 }

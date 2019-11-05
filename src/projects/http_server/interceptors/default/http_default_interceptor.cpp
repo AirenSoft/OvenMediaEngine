@@ -8,68 +8,74 @@
 //==============================================================================
 #include "http_default_interceptor.h"
 
+#include "../../http_client.h"
 #include "../../http_private.h"
-#include "../../http_request.h"
-#include "../../http_response.h"
 
-bool HttpDefaultInterceptor::Register(HttpMethod method,
-        const ov::String &pattern,
-        const HttpRequestHandler &handler,
-        bool is_pattern_check)
+bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &pattern, const HttpRequestHandler &handler)
 {
-	if(handler == nullptr)
+	if (handler == nullptr)
 	{
 		return false;
 	}
 
-	_request_handler_list.push_back((RequestInfo){
+	try
+	{
+		_request_handler_list.push_back((RequestInfo) {
 #if DEBUG
-		.pattern_string = pattern,
-#endif // DEBUG
-		.pattern = std::regex(pattern),
-		.is_pattern_check = is_pattern_check,
-		.method = method,
-		.handler = handler
-	});
+			.pattern_string = pattern,
+#endif  // DEBUG
+			.pattern = std::regex(pattern),
+			.method = method,
+			.handler = handler
+		});
+	}
+	catch (std::regex_error &e)
+	{
+		logte("Invalid regex pattern: %s", pattern.CStr());
+		return false;
+	}
 
 	return true;
 }
 
-bool HttpDefaultInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request,
-        const std::shared_ptr<const HttpResponse> &response)
+bool HttpDefaultInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
 {
 	// 기본 handler 이므로, 모든 request에 대해 무조건 처리
 	return true;
 }
 
-bool HttpDefaultInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &request,
-        const std::shared_ptr<HttpResponse> &response)
+HttpInterceptorResult HttpDefaultInterceptor::OnHttpPrepare(const std::shared_ptr<HttpClient> &client)
 {
 	// request body를 처리하기 위해 메모리를 미리 할당해놓음
+	auto &request = client->GetRequest();
 
 	// TODO: content-length가 너무 크면 비정상 종료 될 수 있으므로, 파일 업로드 지원 & 너무 큰 요청은 차단하는 기능 만들어야 함
 	ssize_t content_length = request->GetContentLength();
 
-	if(content_length > (1024LL * 1024LL))
+	if (content_length > (1024LL * 1024LL))
 	{
 		// Currently, OME does not handle requests larger than 1 MB
-		return false;
+		return HttpInterceptorResult::Disconnect;
 	}
 
-	if(content_length > 0L)
+	if (content_length > 0L)
 	{
 		const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
 
-		return request_body->Reserve(static_cast<size_t>(request->GetContentLength()));
+		if (request_body->Reserve(static_cast<size_t>(request->GetContentLength())) == false)
+		{
+			return HttpInterceptorResult::Disconnect;
+		}
 	}
 
-	return true;
+	return HttpInterceptorResult::Keep;
 }
 
-bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request,
-        const std::shared_ptr<HttpResponse> &response,
-        const std::shared_ptr<const ov::Data> &data)
+HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
 {
+	auto &request = client->GetRequest();
+	auto &response = client->GetResponse();
+
 	const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
 	ssize_t current_length = (request_body != nullptr) ? request_body->GetLength() : 0L;
 	ssize_t content_length = request->GetContentLength();
@@ -78,13 +84,13 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 	OV_ASSERT2((content_length == 0L) || ((content_length > 0L) && (request_body != nullptr)));
 
 	std::shared_ptr<const ov::Data> process_data;
-	if((content_length > 0) && ((current_length + static_cast<ssize_t>(data->GetLength())) > content_length))
+	if ((content_length > 0) && ((current_length + static_cast<ssize_t>(data->GetLength())) > content_length))
 	{
 		logtw("Client sent too many data: expected: %ld, sent: %ld", content_length, (current_length + data->GetLength()));
 		// 원래는, 클라이언트가 보낸 데이터는 content-length를 넘어설 수 없으나,
 		// 만약에라도 넘어섰다면 data를 content_length까지만 처리함
 
-		if(content_length > current_length)
+		if (content_length > current_length)
 		{
 			process_data = data->Subdata(0L, static_cast<size_t>(content_length - current_length));
 		}
@@ -94,7 +100,7 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 
 			// 정상적인 시나리오 에서는, 여기로 진입하면 안됨
 			OV_ASSERT2(false);
-			return false;
+			return HttpInterceptorResult::Disconnect;
 		}
 	}
 	else
@@ -102,13 +108,13 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 		process_data = data;
 	}
 
-	if(process_data != nullptr)
+	if (process_data != nullptr)
 	{
 		// request body에 데이터를 추가한 뒤
 		request_body->Append(process_data.get());
 
 		// 다 받아졌는지 확인
-		if(static_cast<ssize_t>(request_body->GetLength()) == content_length)
+		if (static_cast<ssize_t>(request_body->GetLength()) >= content_length)
 		{
 			// 데이터가 다 받아졌다면, Register()된 handler 호출
 			logtd("HTTP message is parsed successfully");
@@ -119,34 +125,41 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 			// 403 Method not allowed 처리 하기 위한 수단
 			bool regex_found = false;
 
-			for(auto &request_info : _request_handler_list)
+			for (auto &request_info : _request_handler_list)
 			{
 #if DEBUG
 				logtd("Check if url [%s] is matches [%s]", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr());
-#endif // DEBUG
+#endif  // DEBUG
 
 				response->SetStatusCode(HttpStatusCode::OK);
 
-				if(!request_info.is_pattern_check || std::regex_match(request->GetRequestTarget().CStr(), request_info.pattern))
+				if (std::regex_match(request->GetRequestTarget().CStr(), request_info.pattern))
 				{
 					// 일단 패턴에 일치하는 handler 찾음
 					regex_found = true;
 
 					// method가 일치하는지 확인
-					if(HTTP_CHECK_METHOD(request_info.method, request->GetMethod()))
+					if (HTTP_CHECK_METHOD(request_info.method, request->GetMethod()))
 					{
 						handler_count++;
 
-						request_info.handler(request, response);
+						if (request_info.handler(client) == HttpNextHandler::DoNotCall)
+						{
+							break;
+						}
+						else
+						{
+							// Call the next handler
+						}
 					}
 				}
 			}
 
-			if(handler_count == 0)
+			if (handler_count == 0)
 			{
-				if(regex_found)
+				if (regex_found)
 				{
-					// 패턴에 일치하는 handler는 찾았으나, 실제로 1의 handler도 실행이 안되었다면 Method not allowed임
+					// 패턴에 일치하는 handler는 찾았으나, 실제로 handler가 실행이 안되었다면 Method not allowed임
 					response->SetStatusCode(HttpStatusCode::MethodNotAllowed);
 				}
 				else
@@ -165,7 +178,7 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 			// 클라이언트가 아직 데이터를 덜 보냄
 
 			// 데이터를 더 기다려야 함
-			return true;
+			return HttpInterceptorResult::Keep;
 		}
 	}
 	else
@@ -173,18 +186,17 @@ bool HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &requ
 		// content-length만큼 다 처리 한 상태
 	}
 
-	return false;
+	return HttpInterceptorResult::Disconnect;
 }
 
-void HttpDefaultInterceptor::OnHttpError(const std::shared_ptr<HttpRequest> &request,
-        const std::shared_ptr<HttpResponse> &response,
-        HttpStatusCode status_code)
+void HttpDefaultInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client, HttpStatusCode status_code)
 {
+	auto &response = client->GetResponse();
+
 	response->SetStatusCode(status_code);
 }
 
-void HttpDefaultInterceptor::OnHttpClosed(const std::shared_ptr<HttpRequest> &request,
-        const std::shared_ptr<HttpResponse> &response)
+void HttpDefaultInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client)
 {
 	// 아무 처리 하지 않아도 됨
 }

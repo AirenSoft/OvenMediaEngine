@@ -20,7 +20,7 @@
 // RFC7231 - Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content (https://tools.ietf.org/html/rfc7231)
 // RFC7232 - Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests (https://tools.ietf.org/html/rfc7232)
 
-class HttpServer : protected PhysicalPortObserver
+class HttpServer : protected PhysicalPortObserver, public ov::EnableSharedFromThis<HttpServer>
 {
 public:
 	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpClient>>;
@@ -39,17 +39,16 @@ public:
 	ov::Socket *FindClient(ClientIterator iterator);
 
 	// If the iterator returns true, the client will be disconnected
-	bool Disconnect(ClientIterator iterator);
-	bool Disconnect(std::shared_ptr<HttpClient> client);
-	bool Disconnect(const std::shared_ptr<ov::Socket> &remote);
+	bool DisconnectIf(ClientIterator iterator);
 
 protected:
 	// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨
-	ssize_t TryParseHeader(const std::shared_ptr<const ov::Data> &data, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
+	ssize_t TryParseHeader(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data);
 
+	virtual std::shared_ptr<HttpClient> CreateClient(const std::shared_ptr<ov::ClientSocket> &remote);
 	std::shared_ptr<HttpClient> FindClient(const std::shared_ptr<ov::Socket> &remote);
 
-	void ProcessData(std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data);
+	void ProcessData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data);
 
 	//--------------------------------------------------------------------
 	// Implementation of PhysicalPortObserver
@@ -58,10 +57,6 @@ protected:
 	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 	void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 
-	bool DisconnectInternal(const std::shared_ptr<ov::Socket> &remote);
-	bool DisconnectInternal(std::shared_ptr<HttpClient> client);
-
-protected:
 	// HttpServer와 연결된 physical port
 	std::shared_ptr<PhysicalPort> _physical_port = nullptr;
 

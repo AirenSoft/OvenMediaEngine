@@ -28,30 +28,44 @@ void HttpsServer::SetChainCertificate(const std::shared_ptr<Certificate> &certif
 	_chain_certificate = certificate;
 }
 
+std::shared_ptr<HttpsClient> HttpsServer::FindClient(const std::shared_ptr<ov::Socket> &remote)
+{
+	auto client = HttpServer::FindClient(remote);
+
+	return std::static_pointer_cast<HttpsClient>(client);
+}
+
+std::shared_ptr<HttpClient> HttpsServer::CreateClient(const std::shared_ptr<ov::ClientSocket> &remote)
+{
+	return std::make_shared<HttpsClient>(GetSharedPtr(), remote);
+}
+
 void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
 	HttpServer::OnConnected(remote);
 
 	auto client = FindClient(remote);
 
-	OV_ASSERT2(client != nullptr);
+	if (client == nullptr)
+	{
+		OV_ASSERT2(client != nullptr);
+		return;
+	}
 
 	// Prepare TLS for client
 	ov::TlsCallback callback =
 		{
-			.create_callback = [](ov::Tls *tls, SSL_CTX *context) -> bool
-			{
+			.create_callback = [](ov::Tls *tls, SSL_CTX *context) -> bool {
 				return true;
 			},
 
-			.read_callback = std::bind(&HttpClient::TlsRead, client, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
-			.write_callback = std::bind(&HttpClient::TlsWrite, client, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+			.read_callback = std::bind(&HttpsClient::TlsRead, client, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+			.write_callback = std::bind(&HttpsClient::TlsWrite, client, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
 			.destroy_callback = nullptr,
-			.ctrl_callback = [](ov::Tls *tls, int cmd, long num, void *arg) -> long
-			{
+			.ctrl_callback = [](ov::Tls *tls, int cmd, long num, void *arg) -> long {
 				logtd("[TLS] Ctrl: %d, %ld, %p", cmd, num, arg);
 
-				switch(cmd)
+				switch (cmd)
 				{
 					case BIO_CTRL_RESET:
 					case BIO_CTRL_WPENDING:
@@ -65,95 +79,38 @@ void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 						return 0;
 				}
 			},
-			.verify_callback = nullptr
-		};
+			.verify_callback = nullptr};
 
 	auto tls = std::make_shared<ov::Tls>();
 
-	if(tls->Initialize(TLS_server_method(), _local_certificate, _chain_certificate, HTTP_INTERMEDIATE_COMPATIBILITY, callback) == false)
+	if (tls->Initialize(::TLS_server_method(), _local_certificate, _chain_certificate, HTTP_INTERMEDIATE_COMPATIBILITY, callback) == false)
 	{
-        logte("Tls initialize fail");
-
-		// TODO: Disconnect
+		logte("Could not initialize TLS: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
 		return;
 	}
 
 	client->SetTls(tls);
-    client->SetTlsPostSend(_tls_post_send);
 }
 
 void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
 	auto client = FindClient(remote);
 
-	if(client == nullptr)
+	if (client == nullptr)
 	{
-		// client possible nullptr in thread 
-		//OV_ASSERT2(false);
-		logtw("http client is nullptr");
+		// This can be called in situations where the client closes the connection from the server at the same time as the data is sent
 		return;
 	}
 
-	// Need to decrypt using TLS
+	auto plain_data = client->DecryptData(data);
 
-	// * Data flow:
-	//   1. HttpClient::SetTlsData() -> // save data to HttpClient::_tls_read_data
-	//   2. ov::Tls::Read() ->
-	//   3. SSL_read() ->
-	//   4. HttpClient::TlsRead() -> // read data from HttpClient::_tls_read_data
-	//   5. (ov::Tls::Read returns decrypted data)
-	logtd("Trying to set data for TLS\n%s", data->Dump(32).CStr());
-	client->SetTlsData(data);
-	auto tls = client->GetTls();
-
-	if(tls == nullptr)
-    {
-        logte("Tls is null: %s", remote->ToString().CStr());
-        HttpServer::Disconnect(client);
-        return;
-    }
-
-	if(client->IsAccepted() == false)
+	if ((plain_data != nullptr) && (plain_data->GetLength() > 0))
 	{
-		logtd("Trying to accept TLS...");
-		int result = tls->Accept();
-
-		logtd("Accept result: %d", result);
-
-		switch(result)
-		{
-			case SSL_ERROR_NONE:
-				client->MarkAsAccepted();
-
-				logti("Accepted");
-				break;
-
-			case SSL_ERROR_WANT_READ:
-				// Need more data to decrypt
-				break;
-
-
-			default:
-				logte("An error occurred while accept client: %s", remote->ToString().CStr());
-				HttpServer::Disconnect(client);
-				return;
-		}
+		// Use the decrypted data
+		HttpServer::ProcessData(client, plain_data);
 	}
-
-	if(client->IsAccepted())
+	else
 	{
-		logtd("Trying to read data from TLS module...");
-
-		auto plain_data = tls->Read();
-
-		if((plain_data != nullptr) && (plain_data->GetLength() > 0))
-		{
-			// Use the decrypted data
-			HttpServer::ProcessData(client, plain_data);
-		}
-		else
-		{
-			// Cannot decrypt data
-		}
+		// Need more data to decrypt the data
 	}
 }

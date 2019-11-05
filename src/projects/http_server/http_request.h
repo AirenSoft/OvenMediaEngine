@@ -11,13 +11,25 @@
 #include "http_datastructure.h"
 #include "interceptors/http_request_interceptor.h"
 
+class HttpClient;
+
 class HttpRequest : public ov::EnableSharedFromThis<HttpRequest>
 {
 public:
 	friend class HttpRequestInterceptor;
 
-	HttpRequest(const std::shared_ptr<HttpRequestInterceptor> &interceptor, std::shared_ptr<ov::ClientSocket> remote);
+	HttpRequest(std::shared_ptr<HttpClient> client, std::shared_ptr<HttpRequestInterceptor> interceptor);
 	~HttpRequest() override = default;
+
+	std::shared_ptr<const HttpClient> GetHttpClient() const
+	{
+		return _client;
+	}
+
+	const std::shared_ptr<HttpClient> &GetHttpClient()
+	{
+		return _client;
+	}
 
 	/// HttpRequest 객체 초기화를 위해, client에서 보낸 데이터를 처리함
 	///
@@ -50,7 +62,7 @@ public:
 	{
 		auto tokens = _http_version.Split("/");
 
-		if(tokens.size() != 2)
+		if (tokens.size() != 2)
 		{
 			return 0.0;
 		}
@@ -91,11 +103,6 @@ public:
 	ov::String GetHeader(const ov::String &key, ov::String default_value) const noexcept;
 	const bool IsHeaderExists(const ov::String &key) const noexcept;
 
-	HttpResponse *GetHttpResponse() noexcept
-	{
-		return _response;
-	}
-
 	bool SetRequestInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor) noexcept
 	{
 		_interceptor = interceptor;
@@ -107,17 +114,12 @@ public:
 		return _interceptor;
 	}
 
-	std::shared_ptr<ov::ClientSocket> GetRemote()
-	{
-		return _remote;
-	}
-
 	std::shared_ptr<void> GetExtra() const
 	{
 		return _extra;
 	}
 
-	template<typename T>
+	template <typename T>
 	std::shared_ptr<T> GetExtraAs() const
 	{
 		return std::static_pointer_cast<T>(_extra);
@@ -129,7 +131,6 @@ public:
 	}
 
 	ov::String ToString() const;
-
 
 	void InitParseInfo()
 	{
@@ -143,16 +144,12 @@ public:
 		_request_target = "";
 		_http_version = "";
 	}
-protected:
-	void SetResponse(HttpResponse *response)
-	{
-		_response = response;
-	}
 
+protected:
 	// HttpRequestInterceptorInterface를 통해, 다른 interceptor에서 사용됨
 	const std::shared_ptr<ov::Data> &GetRequestBodyInternal()
 	{
-		if(_request_body == nullptr)
+		if (_request_body == nullptr)
 		{
 			_request_body = std::make_shared<ov::Data>();
 		}
@@ -167,8 +164,8 @@ protected:
 	void PostProcess();
 
 	// request 처리를 담당하는 객체
+	std::shared_ptr<HttpClient> _client = nullptr;
 	std::shared_ptr<HttpRequestInterceptor> _interceptor = nullptr;
-	std::shared_ptr<ov::ClientSocket> _remote = nullptr;
 
 	HttpStatusCode _parse_status = HttpStatusCode::PartialContent;
 
@@ -188,8 +185,6 @@ protected:
 
 	// HTTP body
 	std::shared_ptr<ov::Data> _request_body = nullptr;
-
-	HttpResponse *_response = nullptr;
 
 	std::shared_ptr<void> _extra = nullptr;
 };

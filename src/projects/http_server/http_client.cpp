@@ -6,22 +6,31 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "http_request.h"
-#include "http_response.h"
 #include "http_client.h"
 #include "http_private.h"
+#include "http_request.h"
+#include "http_response.h"
+#include "http_server.h"
 
-HttpClient::HttpClient(std::shared_ptr<ov::ClientSocket> socket, const std::shared_ptr<HttpRequestInterceptor> &interceptor)
+HttpClient::HttpClient(const std::shared_ptr<HttpServer> &server, const std::shared_ptr<ov::ClientSocket> &remote)
+	: _server(std::move(server)),
+	  _remote(remote)
+{
+	OV_ASSERT2(_server != nullptr);
+	OV_ASSERT2(_remote != nullptr);
+}
+
+bool HttpClient::Prepare(const std::shared_ptr<HttpClient> &http_client, const std::shared_ptr<ov::ClientSocket> &socket, std::shared_ptr<HttpRequestInterceptor> interceptor)
 {
 	OV_ASSERT2(socket != nullptr);
 
-	_request = std::make_shared<HttpRequest>(interceptor, socket);
-	_response = std::make_shared<HttpResponse>(_request.get(), socket);
+	_request = std::make_shared<HttpRequest>(http_client, std::move(interceptor));
+	_response = std::make_shared<HttpResponse>(http_client);
 
 	OV_ASSERT2(_request != nullptr);
 	OV_ASSERT2(_response != nullptr);
 
-	if(_response != nullptr)
+	if (_response != nullptr)
 	{
 		// Set default headers
 		_response->SetHeader("Server", "OvenMediaEngine");
@@ -29,86 +38,84 @@ HttpClient::HttpClient(std::shared_ptr<ov::ClientSocket> socket, const std::shar
 	}
 }
 
-void HttpClient::SetTls(const std::shared_ptr<ov::Tls> &tls)
+std::shared_ptr<HttpRequest> &HttpClient::GetRequest()
 {
-    // response mutex(tls)
-    std::unique_lock<std::mutex> lock(_response_guard);
-
-    if(_response == nullptr)
-    {
-        return;
-    }
-
-	_response->SetTls(tls);
+	return _request;
 }
 
-std::shared_ptr<ov::Tls> HttpClient::GetTls()
+std::shared_ptr<HttpResponse> &HttpClient::GetResponse()
 {
-    // response mutex(tls)
-    std::unique_lock<std::mutex> lock(_response_guard);
-
-    if(_response == nullptr)
-    {
-        return nullptr;
-    }
-
-	return _response->GetTls();
+	return _response;
 }
 
-void HttpClient::SetTlsData(const std::shared_ptr<const ov::Data> &data)
+std::shared_ptr<ov::ClientSocket> &HttpClient::GetRemote()
 {
-	OV_ASSERT2(_tls_read_data == nullptr);
-
-    _tls_read_data = data;
+	return _remote;
 }
 
-ssize_t HttpClient::TlsRead(ov::Tls *tls, void *buffer, size_t length)
+std::shared_ptr<const HttpRequest> HttpClient::GetRequest() const
 {
-	if(_tls_read_data == nullptr)
+	return _request;
+}
+
+std::shared_ptr<const HttpResponse> HttpClient::GetResponse() const
+{
+	return _response;
+}
+
+std::shared_ptr<const ov::ClientSocket> HttpClient::GetRemote() const
+{
+	return _remote;
+}
+
+bool HttpClient::IsConnected() const noexcept
+{
+	OV_ASSERT2(_remote != nullptr);
+	return _remote->GetState() == ov::SocketState::Connected;
+}
+
+bool HttpClient::Send(const void *data, size_t length)
+{
+	return Send(std::make_shared<ov::Data>(data, length));
+}
+
+bool HttpClient::Send(const std::shared_ptr<const ov::Data> &data)
+{
+	if (data == nullptr)
 	{
-		return 0;
+		OV_ASSERT2(data != nullptr);
+		return false;
 	}
 
-	const void *data = _tls_read_data->GetData();
-	size_t bytes_to_copy = std::min(length, _tls_read_data->GetLength());
-
-	::memcpy(buffer, data, bytes_to_copy);
-
-	if(_tls_read_data->GetLength() > bytes_to_copy)
-	{
-		// Data is remained
-        _tls_read_data = _tls_read_data->Subdata(bytes_to_copy);
-	}
-	else
-	{
-        _tls_read_data = nullptr;
-	}
-
-	return bytes_to_copy;
+	return (_remote->Send(data) == data->GetLength());
 }
 
-ssize_t HttpClient::TlsWrite(ov::Tls *tls, const void *data, size_t length)
+bool HttpClient::SendChunkedData(const void *data, size_t length)
 {
-    // response mutex(tls)
-    std::unique_lock<std::mutex> lock(_response_guard);
-
-    if(_response == nullptr)
-	{
-		logte("HttpReponse is null");
-		return 0;
-	}
-
-    if (_tls_post_send)
-    {
-		return _response->_remote->PostSend(data, length) == true ? length : -1;
-    }
-
-    return _response->_remote->Send(data, length);
+	return SendChunkedData(std::make_shared<ov::Data>(data, length, true));
 }
 
-void HttpClient::Send(const std::shared_ptr<ov::Data> &data)
+bool HttpClient::SendChunkedData(const std::shared_ptr<const ov::Data> &data)
 {
-	OV_ASSERT2(_response != nullptr);
+	if ((data == nullptr) || data->IsEmpty())
+	{
+		// Send a empty chunk
+		return Send("0\r\n\r\n", 5);
+	}
 
-	_response->AppendData(data);
+	bool result =
+		// Send the chunk header
+		Send(ov::String::FormatString("%x\r\n", data->GetLength()).ToData(false)) &&
+		// Send the chunk payload
+		Send(data) &&
+		// Send a last data of chunk
+		Send("\r\n", 2);
+
+	return result;
+}
+
+bool HttpClient::Close()
+{
+	OV_ASSERT2(_remote != nullptr);
+	_remote->Close();
 }

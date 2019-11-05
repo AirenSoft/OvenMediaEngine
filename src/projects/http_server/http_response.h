@@ -8,18 +8,28 @@
 //==============================================================================
 #pragma once
 
-#include "http_datastructure.h"
 #include "../base/ovlibrary/converter.h"
+#include "http_datastructure.h"
 
-class HttpRequest;
+class HttpClient;
 
 class HttpResponse : public ov::EnableSharedFromThis<HttpResponse>
 {
 public:
 	friend class HttpClient;
 
-	HttpResponse(HttpRequest *request, std::shared_ptr<ov::ClientSocket> remote);
+	HttpResponse(std::shared_ptr<HttpClient> client);
 	~HttpResponse() override = default;
+
+	std::shared_ptr<const HttpClient> GetHttpClient() const
+	{
+		return _http_client;
+	}
+
+	const std::shared_ptr<HttpClient> &GetHttpClient()
+	{
+		return _http_client;
+	}
 
 	HttpStatusCode GetStatusCode() const
 	{
@@ -42,74 +52,37 @@ public:
 	bool SetHeader(const ov::String &key, const ov::String &value);
 	const ov::String &GetHeader(const ov::String &key);
 
-	// message body
+	// Enqueue the data into the queue (This data will be sent when SendResponse() is called)
+	// Can be used for response with content-length
 	bool AppendData(const std::shared_ptr<const ov::Data> &data);
 	bool AppendString(const ov::String &string);
 	bool AppendFile(const ov::String &filename);
 
-	template<typename T>
-	bool Send(const T *data)
-	{
-		return Send(data, sizeof(T));
-	}
-
-	bool Send(const void *data, size_t length);
-	bool Send(const std::shared_ptr<const ov::Data> &data);
 	bool Response();
 
-    bool PostResponse();
-	bool PostChunkedDataResponse(const std::shared_ptr<const ov::Data> &data);
-	bool PostChunkedEndResponse();
-	bool PostSend(const void *data, size_t length);
+	bool Close();
 
-	std::shared_ptr<ov::ClientSocket> GetRemote()
+	void SetKeepAlive()
 	{
-		return _remote;
-	}
-
-	bool IsConnected() const
-	{
-		return _remote->GetState() == ov::SocketState::Connected;
-	}
-
-	bool Close()
-	{
-		return _remote->Close();
+		SetHeader("Connection", "keep-alive");
 	}
 
 	void SetChunkedTransfer()
 	{
 		SetHeader("Transfer-Encoding", "chunked");
-		SetHeader("Connection", "keep-alive");
 		_chunked_transfer = true;
- 	}
+	}
+
+	bool IsChunkedTransfer() const
+	{
+		return _chunked_transfer;
+	}
 
 protected:
-	void SetTls(const std::shared_ptr<ov::Tls> &tls)
-	{
-		_tls = tls;
-	}
-
-	std::shared_ptr<ov::Tls> GetTls()
-	{
-		return _tls;
-	}
-
-	std::shared_ptr<const ov::Tls> GetTls() const
-	{
-		return _tls;
-	}
-
 	bool SendHeaderIfNeeded();
 	bool SendResponse();
 
-	std::shared_ptr<ov::Data> MakeResponseData();
-
-	HttpRequest *_request = nullptr;
-	std::shared_ptr<ov::ClientSocket> _remote = nullptr;
-
-	std::shared_ptr<ov::Tls> _tls = nullptr;
-	std::shared_ptr<const ov::Data> _tls_packet_buffer = nullptr;
+	std::shared_ptr<HttpClient> _http_client = nullptr;
 
 	HttpStatusCode _status_code = HttpStatusCode::OK;
 	ov::String _reason = StringFromHttpStatusCode(HttpStatusCode::OK);
@@ -118,9 +91,12 @@ protected:
 
 	std::map<ov::String, ov::String> _response_header;
 
+	// FIXME(dimiden): It is supposed to be synchronized whenever a packet is sent, but performance needs to be improved
+	std::recursive_mutex _response_mutex;
+	size_t _response_data_size = 0;
 	std::vector<std::shared_ptr<const ov::Data>> _response_data_list;
 
 	ov::String _default_value = "";
 
-    bool _chunked_transfer = false;
+	bool _chunked_transfer = false;
 };

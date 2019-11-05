@@ -7,20 +7,21 @@
 //
 //==============================================================================
 #include "http_request.h"
+#include "http_client.h"
 #include "http_private.h"
-#include "http_response.h"
 
 #include <algorithm>
 
-HttpRequest::HttpRequest(const std::shared_ptr<HttpRequestInterceptor> &interceptor, std::shared_ptr<ov::ClientSocket> remote)
-	: _interceptor(interceptor),
-	  _remote(std::move(remote))
+HttpRequest::HttpRequest(std::shared_ptr<HttpClient> client, std::shared_ptr<HttpRequestInterceptor> interceptor)
+	: _client(std::move(client)),
+	  _interceptor(std::move(interceptor))
 {
+	OV_ASSERT2(_client != nullptr);
 }
 
 ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
 {
-	if(_is_header_found)
+	if (_is_header_found)
 	{
 		// 헤더를 찾은 상태에서는, 여기가 호출되면 안됨 (parse status가 이미 OK 이므로)
 		OV_ASSERT2(false);
@@ -39,7 +40,7 @@ ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
 	_request_string.Append(data->GetDataAs<char>(), data->GetLength());
 	ssize_t newline_position = _request_string.IndexOf(&(NewLines[0]));
 
-	if(newline_position >= 0)
+	if (newline_position >= 0)
 	{
 		// \r\n\r\n를 찾았다면, 파싱 시작
 		_request_string.SetLength(newline_position);
@@ -50,7 +51,7 @@ ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
 		_is_header_found = true;
 		_parse_status = ParseMessage();
 
-		if(_parse_status == HttpStatusCode::OK)
+		if (_parse_status == HttpStatusCode::OK)
 		{
 			// Content length와 같은 정보 계산
 			PostProcess();
@@ -89,23 +90,22 @@ HttpStatusCode HttpRequest::ParseMessage()
 	status_code = ParseRequestLine(tokens[0]);
 	tokens.erase(tokens.begin());
 
-	if(status_code == HttpStatusCode::OK)
+	if (status_code == HttpStatusCode::OK)
 	{
-		for(const ov::String &token : tokens)
+		for (const ov::String &token : tokens)
 		{
 			status_code = ParseHeader(token);
 
-			if(status_code != HttpStatusCode::OK)
+			if (status_code != HttpStatusCode::OK)
 			{
 				break;
 			}
 		}
 	}
 
-	logtd("Headers found: %ld:", _request_header.size());
+	logtd("Request Headers: %ld:", _request_header.size());
 
-	std::for_each(_request_header.begin(), _request_header.end(), [](const auto &pair) -> void
-	{
+	std::for_each(_request_header.begin(), _request_header.end(), [](const auto &pair) -> void {
 		logtd("\t>> %s: %s", pair.first.CStr(), pair.second.CStr());
 	});
 
@@ -113,10 +113,10 @@ HttpStatusCode HttpRequest::ParseMessage()
 }
 
 #define HTTP_COMPARE_METHOD(text, value_if_matches) \
-    if(method == text) \
-    { \
-        _method = value_if_matches; \
-    }
+	if (method == text)                             \
+	{                                               \
+		_method = value_if_matches;                 \
+	}
 
 HttpStatusCode HttpRequest::ParseRequestLine(const ov::String &line)
 {
@@ -125,7 +125,7 @@ HttpStatusCode HttpRequest::ParseRequestLine(const ov::String &line)
 	ssize_t first_space_index = line.IndexOf(' ');
 	ssize_t last_space_index = line.IndexOfRev(' ');
 
-	if((first_space_index < 0) || (last_space_index < 0) || (first_space_index == last_space_index))
+	if ((first_space_index < 0) || (last_space_index < 0) || (first_space_index == last_space_index))
 	{
 		logtw("Invalid space index: first: %d, last: %d, line: %s", first_space_index, last_space_index, line.CStr());
 		return HttpStatusCode::BadRequest;
@@ -145,7 +145,7 @@ HttpStatusCode HttpRequest::ParseRequestLine(const ov::String &line)
 	HTTP_COMPARE_METHOD("OPTIONS", HttpMethod::Options);
 	HTTP_COMPARE_METHOD("TRACE", HttpMethod::Trace);
 
-	if(_method == HttpMethod::Unknown)
+	if (_method == HttpMethod::Unknown)
 	{
 		logtw("Unknown method: %s", method.CStr());
 		return HttpStatusCode::MethodNotAllowed;
@@ -194,7 +194,7 @@ HttpStatusCode HttpRequest::ParseHeader(const ov::String &line)
 
 	ssize_t colon_index = line.IndexOf(':');
 
-	if(colon_index == -1)
+	if (colon_index == -1)
 	{
 		// 잘못된 헤더
 		logtw("Invalid header (could not find colon): %s", line.CStr());
@@ -220,7 +220,7 @@ ov::String HttpRequest::GetHeader(const ov::String &key, ov::String default_valu
 {
 	auto item = _request_header.find(key.UpperCaseString());
 
-	if(item == _request_header.cend())
+	if (item == _request_header.cend())
 	{
 		return std::move(default_value);
 	}
@@ -235,7 +235,7 @@ const bool HttpRequest::IsHeaderExists(const ov::String &key) const noexcept
 
 void HttpRequest::PostProcess()
 {
-	switch(_method)
+	switch (_method)
 	{
 		case HttpMethod::Get:
 			// http body가 없음
