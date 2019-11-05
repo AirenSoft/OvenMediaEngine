@@ -23,21 +23,22 @@ namespace ov
 
 		// 특정 port로 bind. backlog 지정 시, 해당 크기만큼 backlog 지정
 		bool Prepare(SocketType type,
-                     uint16_t port,
-                     int send_buffer_size,
-                     int recv_buffer_size,
-                     int backlog = SOMAXCONN);
+					 uint16_t port,
+					 int send_buffer_size,
+					 int recv_buffer_size,
+					 int backlog = SOMAXCONN);
 
 		// address에 해당하는 주소로 bind
 		bool Prepare(SocketType type,
-                    const SocketAddress &address,
-                    int send_buffer_size,
-                    int recv_buffer_size,
-                    int backlog = SOMAXCONN);
+					 const SocketAddress &address,
+					 int send_buffer_size,
+					 int recv_buffer_size,
+					 int backlog = SOMAXCONN);
 
-		bool DispatchEvent(ClientConnectionCallback connection_callback, ClientDataCallback data_callback, int timeout = Infinite);
+		virtual bool DispatchEvent(ClientConnectionCallback connection_callback, ClientDataCallback data_callback, int timeout = Infinite);
 
-		std::shared_ptr<ClientSocket> Accept();
+		virtual std::shared_ptr<ClientSocket> Accept();
+
 		bool Close() override;
 
 		using Socket::GetState;
@@ -45,14 +46,22 @@ namespace ov
 
 		String ToString() const override;
 
-		bool DisconnectClient(ClientSocket *client_socket);
+		virtual bool DisconnectClient(std::shared_ptr<ClientSocket> client_socket, SocketConnectionState state, const std::shared_ptr<Error> &error = nullptr);
+		virtual bool DisconnectClient(ClientSocket *client_socket, SocketConnectionState state, const std::shared_ptr<Error> &error = nullptr);
 
 	protected:
-		bool SetSocketOptions(SocketType type, int send_buffer_size, int recv_buffer_size);
+		virtual bool SetSocketOptions(SocketType type, int send_buffer_size, int recv_buffer_size);
+
+		void DispatchAccept();
+		void DispatchEvents(const void *key, const epoll_event *event);
 
 		std::mutex _client_list_mutex;
-		std::map<ClientSocket *, std::shared_ptr<ClientSocket>> _client_list;
+		std::map<const void *, std::shared_ptr<ClientSocket>> _client_list;
 		// To keep ClientSocket pointer while DispatchEvent() is running
-		std::map<ClientSocket *, std::shared_ptr<ClientSocket>> _disconnected_client_list;
+		// (In DispatchEvent(), the client_socket is not referenced as shared_ptr)
+		std::map<const void *, std::shared_ptr<ClientSocket>> _disconnected_client_list;
+
+		ClientConnectionCallback _connection_callback = nullptr;
+		ClientDataCallback _data_callback = nullptr;
 	};
-}
+}  // namespace ov

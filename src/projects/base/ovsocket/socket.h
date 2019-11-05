@@ -231,35 +231,22 @@ namespace ov
 		Socket(Socket &&socket) noexcept;
 		virtual ~Socket();
 
-		bool Create(SocketType type);
-		bool MakeNonBlocking();
+		virtual bool Create(SocketType type);
+		virtual bool MakeNonBlocking();
 
-		bool Bind(const SocketAddress &address);
+		virtual bool Bind(const SocketAddress &address);
 
-		bool Listen(int backlog = SOMAXCONN);
+		virtual bool Listen(int backlog = SOMAXCONN);
 
-		template <typename T>
-		std::shared_ptr<T> AcceptClient()
-		{
-			SocketAddress client;
-			SocketWrapper client_socket = AcceptClientInternal(&client);
+		virtual SocketWrapper Accept(SocketAddress *client);
 
-			if (client_socket.IsValid())
-			{
-				// Accept()는 TCP에서만 일어남
-				return std::make_shared<T>(client_socket, client);
-			}
+		virtual std::shared_ptr<ov::Error> Connect(const SocketAddress &endpoint, int timeout = Infinite);
 
-			return nullptr;
-		}
-
-		std::shared_ptr<ov::Error> Connect(const SocketAddress &endpoint, int timeout = Infinite);
-
-		bool PrepareEpoll();
-		bool AddToEpoll(Socket *socket, void *parameter);
-		int EpollWait(int timeout = Infinite);
-		const epoll_event *EpollEvents(int index);
-		bool RemoveFromEpoll(Socket *socket);
+		virtual bool PrepareEpoll();
+		virtual bool AddToEpoll(Socket *socket, void *parameter);
+		virtual int EpollWait(int timeout = Infinite);
+		virtual const epoll_event *EpollEvents(int index);
+		virtual bool RemoveFromEpoll(Socket *socket);
 
 		std::shared_ptr<SocketAddress> GetLocalAddress() const;
 		std::shared_ptr<SocketAddress> GetRemoteAddress() const;
@@ -277,8 +264,8 @@ namespace ov
 			return SetSockOpt<T>(SOL_SOCKET, option, value);
 		}
 
-		bool SetSockOpt(int proto, int option, const void *value, socklen_t value_length);
-		bool SetSockOpt(int option, const void *value, socklen_t value_length);
+		virtual bool SetSockOpt(int proto, int option, const void *value, socklen_t value_length);
+		virtual bool SetSockOpt(int option, const void *value, socklen_t value_length);
 
 		// for SRT
 		template <class T>
@@ -287,7 +274,7 @@ namespace ov
 			return SetSockOpt(option, &value, static_cast<int>(sizeof(T)));
 		}
 
-		bool SetSockOpt(SRT_SOCKOPT option, const void *value, int value_length);
+		virtual bool SetSockOpt(SRT_SOCKOPT option, const void *value, int value_length);
 
 		// 현재 소켓의 접속 상태
 		SocketState GetState() const;
@@ -302,14 +289,9 @@ namespace ov
 		// 소켓 타입
 		SocketType GetType() const;
 
-		// data send(thread)
-		virtual bool PostSend(const void *data, size_t length, bool self_close = false);
-		// virtual bool PostSend(std::shared_ptr<Data> &data);
-
 		// 데이터 송신
 		virtual ssize_t Send(const void *data, size_t length);
 		virtual ssize_t Send(const std::shared_ptr<const Data> &data);
-		virtual ssize_t Send(const void *data, size_t length, bool &is_retry);
 
 		virtual ssize_t SendTo(const ov::SocketAddress &address, const void *data, size_t length);
 		virtual ssize_t SendTo(const ov::SocketAddress &address, const std::shared_ptr<const Data> &data);
@@ -330,21 +312,13 @@ namespace ov
 		virtual String ToString() const;
 
 	protected:
-		SocketWrapper AcceptClientInternal(SocketAddress *client);
-
 		// utility method
 		static String StringFromEpollEvent(const epoll_event *event);
 		static String StringFromEpollEvent(const epoll_event &event);
 
 		virtual String ToString(const char *class_name) const;
 
-		bool StartSendThread();
-
-		bool StopSendThread();
-
-		std::unique_ptr<SocketSendData> PopSendData();
-
-		virtual void SendThread();
+		virtual bool CloseInternal();
 
 	protected:
 		SocketWrapper _socket;

@@ -19,8 +19,8 @@ namespace ov
 	enum class SocketConnectionState : int8_t
 	{
 		Connected,
-		Disconnected,                   // 연결이 끊어짐
-		Error                           // 오류가 발생해서 연결이 끊어짐
+		Disconnected,  // 연결이 끊어짐
+		Error		   // 오류가 발생해서 연결이 끊어짐
 	};
 
 	enum class SocketFamily : sa_family_t
@@ -37,8 +37,8 @@ namespace ov
 	class ServerSocket;
 	class ClientSocket;
 
-	typedef std::function<bool(const std::shared_ptr<ov::ClientSocket> &client, SocketConnectionState state, const std::shared_ptr<ov::Error> &error)> ClientConnectionCallback;
-	typedef std::function<bool(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<Data> &data)> ClientDataCallback;
+	typedef std::function<SocketConnectionState(const std::shared_ptr<ov::ClientSocket> &client, SocketConnectionState state, const std::shared_ptr<ov::Error> &error)> ClientConnectionCallback;
+	typedef std::function<SocketConnectionState(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<Data> &data)> ClientDataCallback;
 
 	// for UDP socket
 	class DatagramSocket;
@@ -48,4 +48,4 @@ namespace ov
 
 	const ssize_t TcpBufferSize = 4096;
 	const ssize_t UdpBufferSize = 4096;
-}
+}  // namespace ov

@@ -12,13 +12,19 @@
 
 #define OV_LOG_TAG "OpenSSL"
 
+#define MAX_TLS_WRITE_SIZE			(16 * 1024)
 #define DO_CALLBACK_IF_AVAILBLE(return_type, default_value, object, callback_name, ...) \
-    Tls::DoCallback<return_type, default_value, decltype(&TlsCallback::callback_name), &TlsCallback::callback_name>(object, ## __VA_ARGS__)
+	Tls::DoCallback<return_type, default_value, decltype(&TlsCallback::callback_name), &TlsCallback::callback_name>(object, ##__VA_ARGS__)
 
 namespace ov
 {
 	Tls::~Tls()
 	{
+		if (_ssl != nullptr)
+		{
+			::SSL_shutdown(_ssl);
+		}
+
 		_bio = nullptr;
 		_ssl = nullptr;
 		_ssl_ctx = nullptr;
@@ -28,7 +34,7 @@ namespace ov
 	{
 		static BIO_METHOD *bio_methods = nullptr;
 
-		if(bio_methods == nullptr)
+		if (bio_methods == nullptr)
 		{
 			bio_methods = ::BIO_meth_new(BIO_TYPE_MEM, "ov::Tls");
 
@@ -41,7 +47,7 @@ namespace ov
 			result = result && ::BIO_meth_set_puts(bio_methods, TlsPuts);
 			result = result && ::BIO_meth_set_destroy(bio_methods, TlsDestroy);
 
-			if(result == false)
+			if (result == false)
 			{
 				::BIO_meth_free(bio_methods);
 				bio_methods = nullptr;
@@ -66,7 +72,7 @@ namespace ov
 		// Create SSL
 		result = result && PrepareSsl(nullptr);
 
-		if(result == false)
+		if (result == false)
 		{
 			_callback = TlsCallback();
 		}
@@ -79,37 +85,44 @@ namespace ov
 		do
 		{
 			OV_ASSERT2(_ssl_ctx == nullptr);
+			OV_ASSERT2(certificate != nullptr);
+
+			if (certificate == nullptr)
+			{
+				logte("Invalid TLS certificate");
+				break;
+			}
 
 			// Create a new SSL session
 			decltype(_ssl_ctx) ctx(::SSL_CTX_new(method));
 
-			if(ctx == nullptr)
+			if (ctx == nullptr)
 			{
 				logte("Cannot create SSL context");
 				break;
 			}
 
-			if(::SSL_CTX_use_certificate(ctx, certificate->GetX509()) != 1)
+			if (::SSL_CTX_use_certificate(ctx, certificate->GetX509()) != 1)
 			{
 				logte("Cannot use certficate: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
 				break;
 			}
 
-			if((chain_certificate != nullptr) && (::SSL_CTX_add1_chain_cert(ctx, chain_certificate->GetX509()) != 1))
+			if ((chain_certificate != nullptr) && (::SSL_CTX_add1_chain_cert(ctx, chain_certificate->GetX509()) != 1))
 			{
 				logte("Cannot use chain certificate: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
 
 				break;
 			}
 
-			if(::SSL_CTX_use_PrivateKey(ctx, certificate->GetPkey()) != 1)
+			if (::SSL_CTX_use_PrivateKey(ctx, certificate->GetPkey()) != 1)
 			{
 				logte("Cannot use private key: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
 				break;
 			}
 
 			// Register peer certificate verification callback
-			if(_callback.verify_callback != nullptr)
+			if (_callback.verify_callback != nullptr)
 			{
 				::SSL_CTX_set_cert_verify_callback(ctx, TlsVerify, this);
 			}
@@ -126,7 +139,7 @@ namespace ov
 
 			bool result = DO_CALLBACK_IF_AVAILBLE(bool, false, this, create_callback, static_cast<SSL_CTX *>(_ssl_ctx));
 
-			if(result == false)
+			if (result == false)
 			{
 				logte("An error occurred inside create callback");
 
@@ -134,7 +147,7 @@ namespace ov
 
 				break;
 			}
-		} while(false);
+		} while (false);
 
 		return (_ssl_ctx != nullptr);
 	}
@@ -145,7 +158,7 @@ namespace ov
 
 		_bio = ::BIO_new(bio_method);
 
-		if(_bio == nullptr)
+		if (_bio == nullptr)
 		{
 			OV_ASSERT2(false);
 			return false;
@@ -187,11 +200,11 @@ namespace ov
 
 		auto read_bytes = DO_CALLBACK_IF_AVAILBLE(ssize_t, -1, BIO_get_data(b), read_callback, out, static_cast<size_t>(outl));
 
-		if(read_bytes > 0)
+		if (read_bytes > 0)
 		{
 			return static_cast<int>(read_bytes);
 		}
-		else if(read_bytes == 0)
+		else if (read_bytes == 0)
 		{
 			// No data to read
 			BIO_set_retry_read(b);
@@ -211,13 +224,17 @@ namespace ov
 		OV_ASSERT2(in != nullptr);
 		OV_ASSERT2(inl >= 0);
 
+		logtd("Trying to write %d bytes...\n%s", inl, ov::Dump(in, inl).CStr());
+
 		auto written_bytes = DO_CALLBACK_IF_AVAILBLE(ssize_t, -1, BIO_get_data(b), write_callback, in, static_cast<size_t>(inl));
 
-		if(written_bytes > 0)
+		logtd("Written: %zd/%d", written_bytes, inl);
+
+		if (written_bytes > 0)
 		{
 			return static_cast<int>(written_bytes);
 		}
-		else if(written_bytes == 0)
+		else if (written_bytes == 0)
 		{
 			// No data to write
 			BIO_set_retry_write(b);
@@ -248,7 +265,7 @@ namespace ov
 		// SSL 세션 생성
 		decltype(_ssl) ssl(::SSL_new(_ssl_ctx));
 
-		if(ssl == nullptr)
+		if (ssl == nullptr)
 		{
 			return false;
 		}
@@ -261,7 +278,7 @@ namespace ov
 
 		EC_KEY *ecdh = ::EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 
-		if(ecdh == nullptr)
+		if (ecdh == nullptr)
 		{
 			return false;
 		}
@@ -287,15 +304,15 @@ namespace ov
 
 	int Tls::Accept()
 	{
-	    if(_ssl == nullptr)
-        {
-            logte("Ssl is null");
-            return -1;
-        }
+		if (_ssl == nullptr)
+		{
+			logte("Ssl is null");
+			return -1;
+		}
 
 		int result = ::SSL_accept(_ssl);
 
-		switch(result)
+		switch (result)
 		{
 			case 1:
 				// The TLS/SSL handshake was successfully completed, a TLS/SSL connection has been established.
@@ -316,7 +333,7 @@ namespace ov
 
 		int error = GetError(result);
 
-		switch(error)
+		switch (error)
 		{
 			case SSL_ERROR_WANT_READ:
 			case SSL_ERROR_WANT_WRITE:
@@ -326,7 +343,6 @@ namespace ov
 			default:
 				// Another error
 				logte("An error occurred while accept SSL connection: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
-				// OV_ASSERT2(false);
 				break;
 		}
 
@@ -339,11 +355,11 @@ namespace ov
 
 		int result = ::SSL_read(_ssl, buffer, static_cast<int>(length));
 
-		if(result > 0)
+		if (result > 0)
 		{
 			// The read operation was successful.
 			// The return value is the number of bytes actually read from the TLS/SSL connection.
-			if(read_bytes != nullptr)
+			if (read_bytes != nullptr)
 			{
 				*read_bytes = static_cast<size_t>(result);
 			}
@@ -363,13 +379,13 @@ namespace ov
 
 		unsigned char buf[1024];
 
-		while(true)
+		while (true)
 		{
 			size_t read_bytes = 0;
 
 			int error = Read(buf, OV_COUNTOF(buf), &read_bytes);
 
-			switch(error)
+			switch (error)
 			{
 				case SSL_ERROR_NONE:
 					// Read successfully
@@ -385,14 +401,14 @@ namespace ov
 					return std::move(data);
 			}
 
-			if(data->Append(buf, read_bytes) == false)
+			if (data->Append(buf, read_bytes) == false)
 			{
 				return nullptr;
 			}
 
-			if(error == SSL_ERROR_WANT_READ)
+			if (error == SSL_ERROR_WANT_READ)
 			{
-				return data;
+				return std::move(data);
 			}
 		}
 	}
@@ -403,43 +419,48 @@ namespace ov
 
 		size_t write_size = 0;
 
-        do
-        {
-            // max 16384(2^14)byte write
-            int result = ::SSL_write(_ssl, (void *)((char *)data + write_size), static_cast<int>(length - write_size));
-
-            if(result <= 0)
-            {
-                // The write operation was not successful, because either the connection was closed,
-                // an error occurred or action must be taken by the calling process.
-                // Call SSL_get_error() with the return value ret to find out the reason.
-                return GetError(result);
-            }
-
-            write_size +=  static_cast<size_t>(result);
-        }while(write_size < length);
-
-        // The write operation was successful,
-        // the return value is the number of bytes actually written to the TLS/SSL connection.
-        if (written_bytes != nullptr)
+		do
 		{
-        	*written_bytes += write_size;
+			// max 16384(2^14)byte write
+			int result = ::SSL_write(_ssl, (void *)((char *)data + write_size), static_cast<int>(length - write_size));
+
+			if (result <= 0)
+			{
+				// The write operation was not successful, because either the connection was closed,
+				// an error occurred or action must be taken by the calling process.
+				// Call SSL_get_error() with the return value ret to find out the reason.
+				return GetError(result);
+			}
+
+			write_size += static_cast<size_t>(result);
+		} while (write_size < length);
+
+		// The write operation was successful,
+		// the return value is the number of bytes actually written to the TLS/SSL connection.
+		if (written_bytes != nullptr)
+		{
+			*written_bytes += write_size;
 		}
 
 		return SSL_ERROR_NONE;
+	}
+
+	int Tls::Write(const std::shared_ptr<const ov::Data> &data, size_t *written_bytes)
+	{
+		return Write(data->GetData(), data->GetLength(), written_bytes);
 	}
 
 	bool Tls::FlushInput()
 	{
 		unsigned char buf[1024];
 
-		while(HasPending())
+		while (HasPending())
 		{
 			size_t read_bytes;
 
 			int error = Read(buf, OV_COUNTOF(buf), &read_bytes);
 
-			if(error != SSL_ERROR_NONE)
+			if (error != SSL_ERROR_NONE)
 			{
 				OV_ASSERT2(false);
 				return false;
@@ -477,7 +498,7 @@ namespace ov
 
 		TlsUniquePtr<X509, void, ::X509_free> cert(::SSL_get_peer_certificate(_ssl));
 
-		if(cert == nullptr)
+		if (cert == nullptr)
 		{
 			logte("An error occurred while get peer certificate");
 			return nullptr;
@@ -493,7 +514,7 @@ namespace ov
 		size_t key_len;
 		size_t salt_len;
 
-		if(GetKeySaltLen(crypto_suite, &key_len, &salt_len) == false)
+		if (GetKeySaltLen(crypto_suite, &key_len, &salt_len) == false)
 		{
 			return false;
 		}
@@ -509,10 +530,9 @@ namespace ov
 			_ssl,
 			key_buffer, key_data->GetLength(),
 			label.CStr(), label.GetLength(),
-			nullptr, 0, false
-		);
+			nullptr, 0, false);
 
-		if(result != 1)
+		if (result != 1)
 		{
 			// SSL_export_keying_material() returns 0 or -1 on failure or 1 on success.
 			return false;
@@ -541,7 +561,7 @@ namespace ov
 
 		SRTP_PROTECTION_PROFILE *srtp_protection_profile = ::SSL_get_selected_srtp_profile(_ssl);
 
-		if(srtp_protection_profile == nullptr)
+		if (srtp_protection_profile == nullptr)
 		{
 			return 0;
 		}
@@ -551,7 +571,7 @@ namespace ov
 
 	bool Tls::GetKeySaltLen(unsigned long crypto_suite, size_t *key_len, size_t *salt_len) const
 	{
-		switch(crypto_suite)
+		switch (crypto_suite)
 		{
 			case SRTP_AES128_CM_SHA1_32:
 			case SRTP_AES128_CM_SHA1_80:
@@ -581,4 +601,4 @@ namespace ov
 
 		return true;
 	}
-};
+};  // namespace ov

@@ -129,6 +129,7 @@ namespace ov
 
 		// @return Returns SSL_ERROR_NONE on success
 		int Write(const void *data, size_t length, size_t *written_bytes);
+		int Write(const std::shared_ptr<const ov::Data> &data, size_t *written_bytes);
 
 		bool FlushInput();
 

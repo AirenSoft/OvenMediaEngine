@@ -21,9 +21,15 @@
 #include <chrono>
 
 #define USE_STATS_COUNTER 0
+#define USE_FILE_DUMP 0
 
 namespace ov
 {
+#if USE_FILE_DUMP
+	std::mutex __sock_map_lock;
+	std::map<SocketAddress, FILE *> __socket_map;
+#endif  // USE_FILE_DUMP
+
 #if USE_STATS_COUNTER
 	class StatsCounter
 	{
@@ -188,7 +194,7 @@ namespace ov
 		OV_ASSERT(_epoll == InvalidSocket, "Epoll is not uninitialized");
 		OV_ASSERT(_epoll_events == nullptr, "Epoll events are not freed");
 
-		if(_send_thread.joinable())
+		if (_send_thread.joinable())
 		{
 			_send_thread.join();
 		}
@@ -208,7 +214,7 @@ namespace ov
 			return false;
 		}
 
-		logtd("Trying to create new socket (type: %d)...", type);
+		logtd("[%p] Trying to create new socket (type: %d)...", this, type);
 
 		switch (type)
 		{
@@ -398,7 +404,7 @@ namespace ov
 		return false;
 	}
 
-	SocketWrapper Socket::AcceptClientInternal(SocketAddress *client)
+	SocketWrapper Socket::Accept(SocketAddress *client)
 	{
 		logtd("[%p] [#%d] New client is connected. Trying to accept the client...", this, _socket.GetSocket());
 
@@ -416,6 +422,20 @@ namespace ov
 				if (client_socket != InvalidSocket)
 				{
 					*client = SocketAddress(client_addr);
+
+#if USE_FILE_DUMP
+					{
+						String file_name = String::FormatString("dump/socket_dump_%s_%d.raw", client->GetIpAddress().CStr(), client->Port());
+						FILE *file = ::fopen(file_name, "wb");
+						logtv("Trying to open %s for writing... (%p)", file_name.CStr(), file);
+
+						if (file != nullptr)
+						{
+							std::lock_guard<std::mutex> lock(__sock_map_lock);
+							__socket_map[*client] = file;
+						}
+					}
+#endif  // USE_FILE_DUMP
 				}
 
 				return SocketWrapper(GetType(), client_socket);
@@ -644,12 +664,10 @@ namespace ov
 
 					if (errno == EINTR)
 					{
-						// Interrupted system call - 앱을 종료하면 이 오류가 반환됨
-						// TODO: 원래 그런것인가? close()를 잘 하면 괜찮을 것 같은데, 나중에 해결 방법을 찾자
+						// Interruption of system calls and library functions by signal handlers
 					}
 					else
 					{
-						// 기타 다른 오류 발생
 						logte("[%p] [#%d] Could not wait for socket: %s", this, _socket.GetSocket(), Error::CreateErrorFromErrno()->ToString().CStr());
 					}
 
@@ -915,141 +933,29 @@ namespace ov
 		return _socket.GetType();
 	}
 
-	bool Socket::StartSendThread()
+	ssize_t Socket::Send(const void *data, size_t length)
 	{
-		// send thread
-		// - support only tcp
-		if (GetType() == SocketType::Tcp && !_send_thread_run)
-		{
-			// once check
-			_send_thread_created = true;
-
-			// thread start
-			_send_thread_run = true;
-			_send_thread = std::thread(&Socket::SendThread, this);
-		}
-
-		return true;
-	}
-
-	bool Socket::StopSendThread()
-	{
-		// send thread close
-		if (_send_thread_run)
-		{
-			_send_thread_run = false;
-
-			// Generate Event
-			_send_queue_event.Notify();
-
-			if(_send_thread.joinable())
-			{
-				_send_thread.join();
-			}
-
-			// logd("SocketThread", "closed send thread");
-		}
-
-		return false;
-	}
-
-	// post send
-	// - input thred send queue
-	bool Socket::PostSend(const void *data, size_t length, bool self_close /*= false*/)
-	{
-		if (!_send_thread_created)
-			StartSendThread();
-
-		auto send_data = std::make_unique<SocketSendData>(data, length, self_close);
-
-		std::unique_lock<std::mutex> lock(_send_queue_guard);
-
-		if (_max_send_queue == 0 || _send_data_queue.size() < _max_send_queue)
-		{
-			_send_data_queue.push(std::move(send_data));
-		}
-		else
-		{
-			logw("SocketThread", "[%p] [#%d] Send queue size over - %d/%d",
-				 this, _socket.GetSocket(), _send_data_queue.size(), _max_send_queue);
-			return false;
-		}
-
-		lock.unlock();
-
-		_send_queue_event.Notify();
-
-		return true;
-	}
-
-	// pop send queue
-	std::unique_ptr<SocketSendData> Socket::PopSendData()
-	{
-		std::unique_lock<std::mutex> lock(_send_queue_guard);
-
-		if (_send_data_queue.empty())
-			return nullptr;
-
-		auto send_data = std::move(_send_data_queue.front());
-		_send_data_queue.pop();
-
-		return send_data;
-	}
-
-	// send thread
-	//  - only support tcp
-	void Socket::SendThread()
-	{
-		while (_send_thread_run)
-		{
-			// quequ event wait
-			_send_queue_event.Wait();
-
-			auto send_data = PopSendData();
-
-			if (send_data == nullptr)
-				continue;
-
-			while (!send_data->IsSendCompleted() && _send_thread_run)
-			{
-				bool is_retry = false;
-
-				ssize_t send_size = Send(send_data->GetRemainedData(), send_data->GetRemainedSize(), is_retry);
-
-				// real error
-				if (send_size < 0)
-				{
-					logw("SocketThread", "[%p] [#%d] send fail -  (%d)", this, _socket.GetSocket(), send_size);
-					_send_thread_run = false;
-					break;
-				}
-
-				if (send_size > 0)
-				{
-					send_data->SetSendedSizeAdd(send_size);
-				}
-				// logd("SocketThread", "[%p] [#%d] SendThread -  Send(%d)", this, _socket.GetSocket(), send_size);
-			}
-
-			if (send_data->self_close)
-			{
-				// 접속 종료
-			}
-		}
-
-		// logd("SocketThread", "[%p] [#%d] SendThread End", this, _socket.GetSocket());
-	}
-
-	ssize_t Socket::Send(const void *data, size_t length, bool &is_retry)
-	{
-		is_retry = false;
-
 		logtd("[%p] [#%d] Trying to send data %zu bytes...", this, _socket.GetSocket(), length);
 		logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, length, 64).CStr());
 
 		auto data_to_send = static_cast<const uint8_t *>(data);
 		size_t remained = length;
 		size_t total_sent = 0L;
+
+#if USE_FILE_DUMP
+		{
+			std::lock_guard<std::mutex> lock(__sock_map_lock);
+			SocketAddress address = *(this->GetRemoteAddress().get());
+			auto sock = __socket_map.find(address);
+			FILE *file = sock->second;
+
+			if (sock != __socket_map.end())
+			{
+				::fwrite(data, sizeof(uint8_t), length, file);
+				::fflush(file);
+			}
+		}
+#endif  // USE_FILE_DUMP
 
 		switch (GetType())
 		{
@@ -1077,12 +983,12 @@ namespace ov
 
 							if (select_result > 0)
 							{
-								// send buffer is available
+								// Send buffer is available
 							}
 							else if (select_result == 0)
 							{
-								is_retry = true;
-								break;
+								// There is no space in the send buffer
+								// TODO(dimiden): To improve performance, change to use queue
 							}
 							else
 							{
@@ -1092,8 +998,14 @@ namespace ov
 
 							continue;
 						}
-
-						logtw("[%p] [#%d] Could not send data: %zd (%s)", this, sock, sent, ov::Error::CreateErrorFromErrno()->ToString().CStr());
+						else if (errno == EBADF)
+						{
+							// Suppress 'Bad file descriptor' error
+						}
+						else
+						{
+							logtw("[%p] [#%d] Could not send data: %zd (%s)", this, sock, sent, ov::Error::CreateErrorFromErrno()->ToString().CStr());
+						}
 
 						break;
 					}
@@ -1160,20 +1072,16 @@ namespace ov
 		return total_sent;
 	}
 
-	ssize_t Socket::Send(const void *data, size_t length)
-	{
-		OV_ASSERT2(data != nullptr);
-
-		bool is_retry = false;
-		return Send(data, length, is_retry);
-	}
-
 	ssize_t Socket::Send(const std::shared_ptr<const Data> &data)
 	{
 		OV_ASSERT2(data != nullptr);
 
-		bool is_retry = false;
-		return Send(data->GetData(), data->GetLength(), is_retry);
+		if (data == nullptr)
+		{
+			return -1LL;
+		}
+
+		return Send(data->GetData(), data->GetLength());
 	}
 
 	ssize_t Socket::SendTo(const ov::SocketAddress &address, const void *data, size_t length)
@@ -1296,7 +1204,7 @@ namespace ov
 		{
 			auto socket_error = Error::CreateErrorFromErrno();
 
-			logtd("[%p] [#%d] recv() returns: %zd", this, _socket.GetSocket(), read_bytes);
+			logtd("[%p] [#%d] recv() returns: %zd (%s)", this, _socket.GetSocket(), read_bytes, socket_error->ToString().CStr());
 
 			switch (GetType())
 			{
@@ -1436,10 +1344,26 @@ namespace ov
 
 	bool Socket::Close()
 	{
+		return CloseInternal();
+	}
+
+	bool Socket::CloseInternal()
+	{
 		SocketWrapper socket = _socket;
 
-		// send thread close
-		StopSendThread();
+#if USE_FILE_DUMP
+		{
+			std::lock_guard<std::mutex> lock(__sock_map_lock);
+			SocketAddress address = *(this->GetRemoteAddress().get());
+			auto sock = __socket_map.find(address);
+
+			if (sock != __socket_map.end())
+			{
+				::fclose(sock->second);
+				__socket_map.erase(sock);
+			}
+		}
+#endif  // USE_FILE_DUMP
 
 		if (_socket.IsValid())
 		{
@@ -1456,6 +1380,7 @@ namespace ov
 						// FIN 송신
 						::shutdown(_socket.GetSocket(), SHUT_WR);
 						::close(_socket.GetSocket());
+						_socket.SetSocket(_socket.GetType(), InvalidSocket);
 					}
 					break;
 
@@ -1463,6 +1388,7 @@ namespace ov
 					if (_socket.IsValid())
 					{
 						::close(_socket.GetSocket());
+						_socket.SetSocket(_socket.GetType(), InvalidSocket);
 					}
 					break;
 
@@ -1470,6 +1396,7 @@ namespace ov
 					if (_socket.IsValid())
 					{
 						::srt_close(_socket.GetSocket());
+						_socket.SetSocket(_socket.GetType(), SRT_INVALID_SOCK);
 					}
 					break;
 

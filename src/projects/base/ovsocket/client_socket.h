@@ -18,15 +18,15 @@ namespace ov
 	public:
 		friend class ServerSocket;
 
-		ClientSocket();
-		ClientSocket(SocketWrapper socket, const SocketAddress &remote_address);
+		ClientSocket(ServerSocket *server_socket);
+		ClientSocket(ServerSocket *server_socket, SocketWrapper socket, const SocketAddress &remote_address);
 
 		~ClientSocket() override = default;
 
 		// 데이터 송신
 		ssize_t Send(const ov::String &string, bool include_null_char = false);
 
-		template<typename T>
+		template <typename T>
 		bool Send(const T *data)
 		{
 			ssize_t sent = Send(data, sizeof(T));
@@ -38,11 +38,16 @@ namespace ov
 		}
 
 		using Socket::Connect;
-		using Socket::Send;
 		using Socket::Recv;
-		using Socket::Close;
+		using Socket::Send;
+
+		bool Close() override;
+
 		using Socket::GetState;
 
 		String ToString() const override;
+
+	protected:
+		ServerSocket *_server_socket = nullptr;
 	};
-}
+}  // namespace ov

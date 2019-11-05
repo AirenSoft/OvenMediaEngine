@@ -462,6 +462,6 @@ namespace ov
 
 	ov::String SocketAddress::ToString() const noexcept
 	{
-		return ov::String::FormatString("[%s] %s:%d", (_address_storage.ss_family == AF_INET) ? "v4" : (_address_storage.ss_family == AF_INET6 ? "v6" : "?"), GetIpAddress().CStr(), Port());
+		return ov::String::FormatString("%s%s:%d", (_address_storage.ss_family == AF_INET) ? "" : (_address_storage.ss_family == AF_INET6 ? "[v6]" : "[?]"), GetIpAddress().CStr(), Port());
 	}
 }
