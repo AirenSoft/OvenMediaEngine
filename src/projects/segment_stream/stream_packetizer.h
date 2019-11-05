@@ -30,9 +30,9 @@ public:
 					 std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track)
 		: _segment_count(segment_count),
 		  _segment_duration(segment_duration),
+		  _stream_type(stream_type),
 		  _video_track(video_track),
-		  _audio_track(audio_track),
-		  _stream_type(stream_type)
+		  _audio_track(audio_track)
 	{
 	}
 

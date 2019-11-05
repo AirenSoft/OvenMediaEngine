@@ -84,13 +84,13 @@ uint64_t CmafChunkWriter::GetSegmentDuration() const
 			  _last_sample->timestamp, _last_sample->duration,
 			  _start_timestamp, duration);
 
-	if (duration < 0ULL)
+	if (duration < 0LL)
 	{
 		logtw("Segment duration is negative (%lld + %lld < %lld, duration: %lld)",
 			  _last_sample->timestamp, _last_sample->duration,
 			  _start_timestamp, duration);
 
-		duration = 0ULL;
+		duration = 0LL;
 	}
 
 	return duration;

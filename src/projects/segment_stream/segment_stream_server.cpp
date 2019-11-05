@@ -201,7 +201,6 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 										 const ov::String &request_target,
 										 const ov::String &origin_url)
 {
-	auto &request = client->GetRequest();
 	auto &response = client->GetResponse();
 	HttpConnection connetion = HttpConnection::Closed;
 

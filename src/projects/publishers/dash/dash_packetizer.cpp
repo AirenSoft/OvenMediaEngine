@@ -120,6 +120,9 @@ ov::String DashPacketizer::GetFileName(int64_t start_timestamp, common::MediaTyp
 
 		case common::MediaType::Audio:
 			return ov::String::FormatString("%s_%lld%s", _segment_prefix.CStr(), start_timestamp, DASH_MPD_AUDIO_FULL_SUFFIX);
+
+		default:
+			break;
 	}
 
 	return "";
@@ -295,7 +298,7 @@ bool DashPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 	// Calculate offset to skip NAL header
 	int offset = (frame->type == PacketizerFrameType::VideoKeyFrame) ? _avc_nal_header_size : GetStartPatternSize(data->GetDataAs<uint8_t>());
 
-	if (data->GetLength() < offset)
+	if (static_cast<int>(data->GetLength()) < offset)
 	{
 		// Not enough data
 		logtw("Invalid frame: frame is too short: %zu bytes", data->GetLength());
@@ -331,8 +334,6 @@ bool DashPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 	// Check whether the incoming frame is a key frame
 	if (frame->type == PacketizerFrameType::VideoKeyFrame)
 	{
-		auto expr = _video_track->GetTimeBase().GetExpr();
-
 		// Check the timestamp to determine if a new segment is to be created
 		if ((current_segment_duration >= (_ideal_duration_for_video + _duration_delta_for_video)))
 		{
@@ -375,8 +376,6 @@ bool DashPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameDat
 	{
 		return false;
 	}
-
-	auto &data = frame->data;
 
 	// Skip ADTS header
 	frame->data = frame->data->Subdata(ADTS_HEADER_SIZE);
@@ -817,6 +816,9 @@ bool DashPacketizer::SetSegmentData(ov::String file_name, uint64_t duration, int
 
 			break;
 		}
+
+		default:
+			break;
 	}
 
 	if ((IsReadyForStreaming() == false) && (((_video_track == nullptr) || (_video_sequence_number > _segment_count)) &&

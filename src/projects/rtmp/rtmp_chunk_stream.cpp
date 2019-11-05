@@ -263,8 +263,6 @@ off_t RtmpChunkStream::ReceiveHandshakePacket(const std::shared_ptr<const ov::Da
 	//           Pictorial Representation of Handshake
 
 	int32_t process_size = 0;
-	int32_t chunk_process_size = 0;
-
 	switch (_handshake_state)
 	{
 		case RtmpHandshakeState::Uninitialized:
@@ -285,7 +283,7 @@ off_t RtmpChunkStream::ReceiveHandshakePacket(const std::shared_ptr<const ov::Da
 	if (static_cast<int32_t>(data->GetLength()) < process_size)
 	{
 		// Need more data
-		logtd("Need more data: data: %zu bytes, expected: %d bytes"), data->GetLength(), process_size;
+		logtd("Need more data: data: %zu bytes, expected: %d bytes", data->GetLength(), process_size);
 		return 0LL;
 	}
 
@@ -381,7 +379,6 @@ int32_t RtmpChunkStream::ReceiveChunkPacket(const std::shared_ptr<const ov::Data
 {
 	int32_t process_size = 0;
 	int32_t import_size = 0;
-	bool message_complete = false;
 	std::shared_ptr<const ov::Data> current_data = data;
 
 	while (current_data->IsEmpty() == false)

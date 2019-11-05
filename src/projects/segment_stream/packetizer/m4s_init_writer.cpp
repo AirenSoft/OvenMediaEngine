@@ -45,6 +45,9 @@ M4sInitWriter::M4sInitWriter(M4sMediaType media_type,
 			_handler_type = "soun";
 			_compressor_name = "OvenMediaEngine";
 			break;
+
+		case M4sMediaType::Data:
+			break;
 	}
 
 	if (_main_track == nullptr)
@@ -143,7 +146,7 @@ int M4sInitWriter::MvhdBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 	{
 		WriteUint32(0x00000000, data);
 	}
-	for (int i = 0; i < OV_COUNTOF(matrix); i++)  // matrix
+	for (int i = 0; i < static_cast<int>(OV_COUNTOF(matrix)); i++)  // matrix
 	{
 		WriteUint32(matrix[i], data);
 	}

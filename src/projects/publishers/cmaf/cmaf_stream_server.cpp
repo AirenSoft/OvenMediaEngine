@@ -16,7 +16,6 @@ HttpConnection CmafStreamServer::OnSegmentRequest(const std::shared_ptr<HttpClie
 												  const ov::String &file_name,
 												  SegmentType segment_type)
 {
-	auto &request = client->GetRequest();
 	auto &response = client->GetResponse();
 
 	auto type = DashPacketizer::GetFileType(file_name);

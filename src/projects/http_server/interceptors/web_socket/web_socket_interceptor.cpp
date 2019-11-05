@@ -157,7 +157,6 @@ HttpInterceptorResult WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<
 HttpInterceptorResult WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
 {
 	auto &request = client->GetRequest();
-	auto &response = client->GetResponse();
 
 	if (data->GetLength() == 0)
 	{
@@ -308,7 +307,6 @@ void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client
 void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client)
 {
 	auto &request = client->GetRequest();
-	auto &response = client->GetResponse();
 	
 	std::shared_ptr<WebSocketInfo> socket_info;
 	{

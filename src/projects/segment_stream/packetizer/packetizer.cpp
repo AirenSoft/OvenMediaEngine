@@ -19,10 +19,10 @@ Packetizer::Packetizer(const ov::String &app_name, const ov::String &stream_name
 					   uint32_t segment_count, uint32_t segment_duration,
 					   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track)
 	: _app_name(app_name), _stream_name(stream_name),
-
 	  _packetizer_type(packetizer_type),
-	  _stream_type(stream_type),
 	  _segment_prefix(segment_prefix),
+	  _stream_type(stream_type),
+
 	  _segment_count(segment_count),
 	  _segment_save_count(segment_count * 10),
 	  _segment_duration(segment_duration),

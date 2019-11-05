@@ -189,8 +189,13 @@ bool BitstreamToAnnexB::ConvertInterFrame(AvcPacketType packet_type, ov::ByteStr
 		}
 
 		auto nal_data = read_stream.GetRemainData()->Subdata(0LL, nal_length);
+
+#if DEBUG
 		auto skipped = read_stream.Skip(nal_length);
 		OV_ASSERT2(skipped == nal_length);
+#else // DEBUG
+		read_stream.Skip(nal_length);
+#endif // DEBUG
 
 		data->Append(START_CODE, 4);
 		data->Append(nal_data.get());

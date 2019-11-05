@@ -225,7 +225,7 @@ bool RtmpImportChunk::ProcessChunkHeader(const std::shared_ptr<RtmpChunkHeader> 
 
 		case RtmpChunkType::T3:
 		{
-			auto &type_3 = chunk_header->header.type_3;
+			// auto &type_3 = chunk_header->header.type_3;
 
 			// Copy chunk header from last_chunk_header
 			completed = last_chunk_header->completed;

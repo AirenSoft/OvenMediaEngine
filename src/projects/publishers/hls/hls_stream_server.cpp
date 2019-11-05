@@ -39,10 +39,10 @@ HttpConnection HlsStreamServer::OnPlayListRequest(const std::shared_ptr<HttpClie
 
 	ov::String play_list;
 
-	auto item = std::find_if(_observers.begin(), _observers.end(),
-							 [&app_name, &stream_name, &file_name, &play_list](auto &observer) -> bool {
-								 return observer->OnPlayListRequest(app_name, stream_name, file_name, play_list);
-							 });
+	std::find_if(_observers.begin(), _observers.end(),
+				 [&app_name, &stream_name, &file_name, &play_list](auto &observer) -> bool {
+					 return observer->OnPlayListRequest(app_name, stream_name, file_name, play_list);
+				 });
 
 	if (play_list.IsEmpty())
 	{

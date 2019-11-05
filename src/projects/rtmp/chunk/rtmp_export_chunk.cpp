@@ -154,6 +154,9 @@ std::shared_ptr<std::vector<uint8_t>> RtmpExportChunk::ExportStreamData(std::sha
 		case RtmpChunkType::T2:
 			type3_time = chunk_header->header.type_2.timestamp_delta;
 			break;
+
+		case RtmpChunkType::T3:
+			break;
 	}
 
 	auto export_data = std::make_shared<std::vector<uint8_t>>(buffer_size);

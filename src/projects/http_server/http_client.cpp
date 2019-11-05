@@ -36,6 +36,8 @@ bool HttpClient::Prepare(const std::shared_ptr<HttpClient> &http_client, const s
 		_response->SetHeader("Server", "OvenMediaEngine");
 		_response->SetHeader("Content-Type", "text/html");
 	}
+
+	return true;
 }
 
 std::shared_ptr<HttpRequest> &HttpClient::GetRequest()
@@ -87,7 +89,7 @@ bool HttpClient::Send(const std::shared_ptr<const ov::Data> &data)
 		return false;
 	}
 
-	return (_remote->Send(data) == data->GetLength());
+	return (_remote->Send(data) == static_cast<ssize_t>(data->GetLength()));
 }
 
 bool HttpClient::SendChunkedData(const void *data, size_t length)
@@ -117,5 +119,11 @@ bool HttpClient::SendChunkedData(const std::shared_ptr<const ov::Data> &data)
 bool HttpClient::Close()
 {
 	OV_ASSERT2(_remote != nullptr);
-	_remote->Close();
+
+	if(_remote == nullptr)
+	{
+		return false;
+	}
+
+	return _remote->Close();
 }

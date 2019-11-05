@@ -149,7 +149,6 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 	web_socket->SetMessageHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const WebSocketFrame> &message) -> HttpInterceptorResult {
 			auto &client = ws_client->GetClient();
-			auto &remote = client->GetRemote();
 
 			logtp("The client sent a message:\n%s", message->GetPayload()->Dump().CStr());
 
@@ -222,7 +221,6 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 	web_socket->SetCloseHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> void {
 			auto &client = ws_client->GetClient();
-			auto &remote = client->GetRemote();
 
 			auto info = client->GetRequest()->GetExtraAs<RtcSignallingInfo>();
 

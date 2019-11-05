@@ -48,6 +48,9 @@ bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t work
 					audio_track = track;
 				}
 				break;
+
+			default:
+				break;
 		}
 	}
 

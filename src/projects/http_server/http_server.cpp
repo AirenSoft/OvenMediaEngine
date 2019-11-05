@@ -143,7 +143,6 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 	if (client != nullptr)
 	{
 		std::shared_ptr<HttpRequest> &request = client->GetRequest();
-		std::shared_ptr<HttpResponse> &response = client->GetResponse();
 
 		bool need_to_disconnect = false;
 

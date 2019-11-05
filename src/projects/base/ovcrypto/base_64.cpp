@@ -70,7 +70,7 @@ namespace ov
 		if(result > 0)
 		{
 			// 성공
-			BIO_flush(b64);
+			(void)BIO_flush(b64);
 
 			// 결과값 받음
 			char *buffer;

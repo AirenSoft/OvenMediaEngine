@@ -50,6 +50,9 @@ ov::String CmafPacketizer::GetFileName(int64_t start_timestamp, common::MediaTyp
 
 		case common::MediaType::Audio:
 			return ov::String::FormatString("%s_%u%s", _segment_prefix.CStr(), _audio_sequence_number, CMAF_MPD_AUDIO_FULL_SUFFIX);
+
+		default:
+			break;
 	}
 
 	return "";
