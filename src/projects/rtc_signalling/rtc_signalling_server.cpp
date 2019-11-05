@@ -103,6 +103,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 				return HttpInterceptorResult::Disconnect;
 			}
 
+
 			auto info = std::make_shared<RtcSignallingInfo>(
 				// application_name
 				tokens[1],
@@ -413,6 +414,8 @@ bool RtcSignallingServer::Stop()
 
 std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const WebSocketFrame> &message)
 {
+	//TODO(Getroot-1): 여기서 Application별로 분기하여 처리한다.
+
 	if (command == "request_offer")
 	{
 		return DispatchRequestOffer(ws_client, info);

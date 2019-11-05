@@ -18,17 +18,14 @@
 class RtmpServer : protected PhysicalPortObserver, public IRtmpChunkStream
 {
 public:
-	RtmpServer() = default;
-	~RtmpServer() override;
+    RtmpServer() = default;
+    virtual ~RtmpServer();
 
-public:
-	bool Start(const ov::SocketAddress &address);
-	bool Stop();
-
-	bool AddObserver(const std::shared_ptr<RtmpObserver> &observer);
-	bool RemoveObserver(const std::shared_ptr<RtmpObserver> &observer);
-
-	bool Disconnect(const ov::String &app_name, uint32_t stream_id);
+    bool Start(const ov::SocketAddress &address);
+    bool Stop();
+    bool AddObserver(const std::shared_ptr<RtmpObserver> &observer);
+    bool RemoveObserver(const std::shared_ptr<RtmpObserver> &observer);
+    bool Disconnect(const ov::String &app_name, uint32_t stream_id);
 
 protected:
 	//--------------------------------------------------------------------

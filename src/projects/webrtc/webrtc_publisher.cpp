@@ -7,9 +7,9 @@
 
 #include "config/config_manager.h"
 
-std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router, std::shared_ptr<MediaRouteApplicationInterface> application)
+std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 {
-	auto webrtc = std::make_shared<WebRtcPublisher>(application_info, router, application);
+	auto webrtc = std::make_shared<WebRtcPublisher>(host_info, router);
 
 	// CONFIG을 불러온다.
 	if (!webrtc->Start())
@@ -20,10 +20,10 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Application
 	return webrtc;
 }
 
-WebRtcPublisher::WebRtcPublisher(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router, std::shared_ptr<MediaRouteApplicationInterface> application)
-	: Publisher(application_info, std::move(router))
+WebRtcPublisher::WebRtcPublisher(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+	: Publisher(host_info, router)
 {
-	_application = std::move(application);
+
 }
 
 WebRtcPublisher::~WebRtcPublisher()

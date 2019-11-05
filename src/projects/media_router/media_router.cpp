@@ -15,6 +15,17 @@
 
 #define OV_LOG_TAG "MediaRouter"
 
+std::shared_ptr<MediaRouter> MediaRouter::Create()
+{
+	auto media_router = std::make_shared<MediaRouter>();
+	if (!media_router->Start())
+	{
+		logte("An error occurred while creating MediaRouter");
+		return nullptr;
+	}
+	return media_router;
+}
+
 std::shared_ptr<MediaRouter> MediaRouter::Create(const std::vector<info::Application> &app_info_list)
 {
 	auto media_router = std::make_shared<MediaRouter>(app_info_list);
@@ -26,11 +37,14 @@ std::shared_ptr<MediaRouter> MediaRouter::Create(const std::vector<info::Applica
 	return media_router;
 }
 
+MediaRouter::MediaRouter()
+{
+
+}
+
 MediaRouter::MediaRouter(const std::vector<info::Application> &app_info_list)
 {
 	_app_info_list = app_info_list;
-
-	// logtd("+ MediaRouter");
 }
 
 MediaRouter::~MediaRouter()
@@ -74,12 +88,29 @@ bool MediaRouter::Stop()
 	_kill_flag = true;
 	_thread.join();
 
-	if(!DeleteApplication())
+	if(!DeleteApplications())
 	{
 		return false;
 	}
 
 	// TODO: 패킷 처리 스레드를 만들어야함.. 어플리케이션 단위로 만들어 버릴까?
+	return true;
+}
+
+bool MediaRouter::CreateApplication(info::Application app_info)
+{
+	info::application_id_t application_id = app_info.GetId();
+	auto route_app = MediaRouteApplication::Create(&app_info);
+
+	if(route_app == nullptr)
+	{
+		logte("failed to allocation route_app");
+		return false;
+	}
+
+	// 라우터 어플리케이션 관리 항목에 추가
+	_route_apps.insert(std::make_pair(application_id, route_app));
+
 	return true;
 }
 
@@ -99,16 +130,14 @@ bool MediaRouter::CreateApplications()
 		}
 
 		// 라우터 어플리케이션 관리 항목에 추가
-		_route_apps.insert(
-			std::make_pair(application_id, route_app)
-		);
+		_route_apps.insert(std::make_pair(application_id, route_app));
 	}
 
 	return true;
 }
 
 // 어플리케이션의 스트림이 삭제됨
-bool MediaRouter::DeleteApplication()
+bool MediaRouter::DeleteApplications()
 {
 	for(auto const &_route_app : _route_apps)
 	{
@@ -145,7 +174,6 @@ bool MediaRouter::RegisterConnectorApp(
 
 	// 2. Media Route Application 모듈에 Connector를 등록함
 	auto media_route_app = GetRouteApplicationById(application_info->GetId());
-
 	if(media_route_app == nullptr)
 	{
 		return false;

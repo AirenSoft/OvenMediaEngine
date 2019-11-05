@@ -30,8 +30,10 @@ class Transcoder
 {
 	// class TranscodeApplication;
 public:
+	static std::shared_ptr<Transcoder> Create(std::shared_ptr<MediaRouteInterface> router);
 	static std::shared_ptr<Transcoder> Create(const std::vector<info::Application> &application_list, std::shared_ptr<MediaRouteInterface> router);
 
+	Transcoder(std::shared_ptr<MediaRouteInterface> router);
 	Transcoder(const std::vector<info::Application> &application_list, std::shared_ptr<MediaRouteInterface> router);
 	~Transcoder() = default;
 
@@ -41,18 +43,18 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 트랜스코드 어플리케이션 관련 모듈
 	////////////////////////////////////////////////////////////////////////////////////////////////
-public:
+	bool CreateApplication(info::Application application_info);
+
+private:
 	bool CreateApplications();
-	bool DeleteApplication();
+	bool DeleteApplications();
 
 	// Application Name으로 RouteApplication을 찾음
 	std::shared_ptr<TranscodeApplication> GetApplicationById(info::application_id_t application_id);
 
-private:
+
 	std::vector<info::Application> _app_info_list;
-
 	std::map<info::application_id_t, std::shared_ptr<TranscodeApplication>> _tracode_apps;
-
 	std::shared_ptr<MediaRouteInterface> _router;
 };
 

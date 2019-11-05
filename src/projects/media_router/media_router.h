@@ -34,8 +34,10 @@
 class MediaRouter : public MediaRouteInterface
 {
 public:
+	static std::shared_ptr<MediaRouter> Create();
 	static std::shared_ptr<MediaRouter> Create(const std::vector<info::Application> &app_info_list);
 
+	MediaRouter();
 	MediaRouter(const std::vector<info::Application> &app_info_list);
 	~MediaRouter();
 
@@ -46,20 +48,22 @@ public:
 	// 라우트 어플리케이션 관련 모듈
 	////////////////////////////////////////////////////////////////////////////////////////////////
 public:
-	bool CreateApplications();
-	bool DeleteApplication();
-
 	//  Application Name으로 RouteApplication을 찾음
 	std::shared_ptr<MediaRouteApplication> GetRouteApplicationById(info::application_id_t application_id);
+	bool CreateApplication(info::Application app_info);
+	bool DeleteApplication(info::Application app_info);
 
 private:
+	bool CreateApplications();
+	bool DeleteApplications();
+
 	std::map<info::application_id_t, std::shared_ptr<MediaRouteApplication>> _route_apps;
 
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 프로바이더(Provider) 관련 모듈
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 본 데이터 모듈에 넣어주는 놈들
+	// MediaRouter에 데이터를 전송하는 모듈 등록/해제
 public:
 	bool RegisterConnectorApp(
 		const info::Application *application_info,
@@ -73,7 +77,7 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 퍼블리셔 관련 모듈
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 본 데이터 모듈에서 가져가는 넘들
+	// MediaRouter가 데이터를 보내는 모듈 등록/해제
 	bool RegisterObserverApp(
 		const info::Application *application_info,
 		std::shared_ptr<MediaRouteApplicationObserver> application_observer) override;

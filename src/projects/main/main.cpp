@@ -185,10 +185,6 @@ int main(int argc, char *argv[])
 	std::shared_ptr<Transcoder> transcoder;
 	std::vector<std::shared_ptr<WebConsoleServer>> web_console_servers;
 
-	std::vector<std::shared_ptr<pvd::Provider>> providers;
-	std::vector<std::shared_ptr<Publisher>> publishers;
-	//std::shared_ptr<MonitoringServer> monitoring_server;
-
 	std::map<ov::String, std::vector<info::Application>> application_infos;
 
 	for (auto &host : hosts)
@@ -206,26 +202,50 @@ int main(int argc, char *argv[])
 			app_info_list.emplace_back(application);
 		}
 
+        // 1. Application을 없이 기본 생성하도록 수정 (Router, Transcoder, Provider, Publisher)
+        // 2. 그 후에 Application을 추가하는 구조로 변경
+        // 3. Application 생성과 Host 생성을 구분
+        // 4. RelayClient를 Provider 레벨로 올림
+        // 5. Origin 설정을 별도의 Table로 분리하고, Domain/App/Stream 을 추가한다.
+        // 6. RelayClient에 Application 생성 기능을 추가한다. (Provider 레벨)
+        // 7. WebRTC Signalling에 RelayClient를 연결하여, app/stream이 없으면 RelayClient에 요청하도록 한다. (Table에 없으면 즉시 오류 리턴)
+
+		//////////////////////////////
+        // Host Level Modules
+        //TODO(Getroot): Support Virtual Host Function. This code assumes that there is only one Host.
+        //////////////////////////////
+
+		logti("Trying to create MediaRouter for host [%s]...", host_name.CStr());
+		router = MediaRouter::Create();
+		CHECK_FAIL(router);
+
+		logti("Trying to create Transcoder for host [%s]...", host_name.CStr());
+		transcoder = Transcoder::Create(router);
+		CHECK_FAIL(transcoder);
+
+		logti("Trying to create RTMP Provider [%s]...", host_name.CStr());
+		auto provider = RtmpProvider::Create(host, router);
+		CHECK_FAIL(provider);
+
+		logti("Trying to create WebRTC Publisher for application [%s]...", host_name.CStr());
+		auto webrtc = WebRtcPublisher::Create(host, router);
+		CHECK_FAIL(webrtc);
+
+
+		//////////////////////////////
+		// Create applications that defined by the configuration
+		//////////////////////////////
+
+		/*
 		if (app_info_list.empty() == false)
 		{
-			logti("Trying to create MediaRouter for host [%s]...", host_name.CStr());
-			router = MediaRouter::Create(app_info_list);
-			CHECK_FAIL(router);
-
-			logti("Trying to create Transcoder for host [%s]...", host_name.CStr());
-			transcoder = Transcoder::Create(app_info_list, router);
-			CHECK_FAIL(transcoder);
-
 			for (const auto &application_info : app_info_list)
 			{
 				auto app_name = application_info.GetName();
 
 				if (application_info.GetType() == cfg::ApplicationType::Live)
 				{
-					logti("Trying to create RTMP Provider for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-					auto provider = RtmpProvider::Create(&application_info, router);
-					CHECK_FAIL(provider);
-					providers.push_back(provider);
+
 				}
 
 				if (application_info.GetWebConsole().IsParsed())
@@ -252,7 +272,6 @@ int main(int argc, char *argv[])
 								logti("Trying to create WebRTC Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
 								auto webrtc = WebRtcPublisher::Create(&application_info, router, application);
 								CHECK_FAIL(webrtc);
-								publishers.push_back(webrtc);
 								break;
 							}
 
@@ -261,7 +280,6 @@ int main(int argc, char *argv[])
 								logti("Trying to create DASH Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
 								auto dash = DashPublisher::Create(segment_http_server_manager, &application_info, router);
 								CHECK_FAIL(dash);
-								publishers.push_back(dash);
 								break;
 							}
 
@@ -270,7 +288,6 @@ int main(int argc, char *argv[])
 								logti("Trying to create HLS Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
 								auto hls = HlsPublisher::Create(segment_http_server_manager, &application_info, router);
 								CHECK_FAIL(hls);
-								publishers.push_back(hls);
 								break;
 							}
 
@@ -279,7 +296,6 @@ int main(int argc, char *argv[])
 								logti("Trying to create CMAF Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
 								auto cmaf = CmafPublisher::Create(segment_http_server_manager, &application_info, router);
 								CHECK_FAIL(cmaf);
-								publishers.push_back(cmaf);
 								break;
 							}
 
@@ -296,6 +312,7 @@ int main(int argc, char *argv[])
 		{
 			logtw("Nothing to do for host [%s]", host_name.CStr());
 		}
+		*/
 	}
 
 	if (parse_option.start_service)
