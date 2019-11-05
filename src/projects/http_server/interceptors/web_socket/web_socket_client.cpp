@@ -7,16 +7,14 @@
 //
 //==============================================================================
 #include "web_socket_client.h"
-#include "web_socket_datastructure.h"
 #include "../../http_private.h"
+#include "web_socket_datastructure.h"
 
 #include <unistd.h>
 #include <algorithm>
 
-WebSocketClient::WebSocketClient(std::shared_ptr<ov::ClientSocket> remote, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
-	: _remote(std::move(remote)),
-	  _request(request),
-	  _response(response)
+WebSocketClient::WebSocketClient(const std::shared_ptr<HttpClient> &client)
+	: _client(client)
 {
 }
 
@@ -29,17 +27,16 @@ ssize_t WebSocketClient::Send(const std::shared_ptr<const ov::Data> &data, WebSo
 	// RFC6455 - 5.2.  Base Framing Protocol
 	//
 	//
-	WebSocketFrameHeader header {
+	WebSocketFrameHeader header{
 		.opcode = static_cast<uint8_t>(opcode),
 		.reserved = 0x00,
 		.fin = true,
 		.payload_length = 0,
-		.mask = false
-	};
+		.mask = false};
 
 	size_t length = (data == nullptr) ? 0LL : data->GetLength();
 
-	if(length < 0x7D)
+	if (length < 0x7D)
 	{
 		// frame-payload-length    = ( %x00-7D )
 		//                         / ( %x7E frame-payload-length-16 )
@@ -48,7 +45,7 @@ ssize_t WebSocketClient::Send(const std::shared_ptr<const ov::Data> &data, WebSo
 		//                         ; respectively
 		header.payload_length = static_cast<uint8_t>(length);
 	}
-	else if(length < 0xFFFF)
+	else if (length < 0xFFFF)
 	{
 		// frame-payload-length-16 = %x0000-FFFF ; 16 bits in length
 		header.payload_length = 126;
@@ -60,28 +57,28 @@ ssize_t WebSocketClient::Send(const std::shared_ptr<const ov::Data> &data, WebSo
 		header.payload_length = 127;
 	}
 
-	_response->Send(&header);
+	_client->Send(&header);
 
-	if(header.payload_length == 126)
+	if (header.payload_length == 126)
 	{
 		auto payload_length = ov::HostToNetwork16(static_cast<uint16_t>(length));
 
-		_response->Send(&payload_length);
+		_client->Send(&payload_length);
 	}
-	else if(header.payload_length == 127)
+	else if (header.payload_length == 127)
 	{
 		auto payload_length = ov::HostToNetwork64(static_cast<uint64_t>(length));
 
-		_response->Send(&payload_length);
+		_client->Send(&payload_length);
 	}
 
-	if(length > 0LL)
+	if (length > 0LL)
 	{
 		logtd("Trying to send data\n%s", data->Dump(32).CStr());
 
-		return _response->Send(data) ? length : -1LL;
+		return _client->Send(data) ? length : -1LL;
 	}
-	
+
 	return length;
 }
 
@@ -102,10 +99,10 @@ ssize_t WebSocketClient::Send(const Json::Value &value)
 
 void WebSocketClient::Close()
 {
-	_remote->Close();
+	_client->Close();
 }
 
 ov::String WebSocketClient::ToString() const
 {
-	return ov::String::FormatString("<WebSocketClient: %p, %s>", this, _remote->ToString().CStr());
+	return ov::String::FormatString("<WebSocketClient: %p, %s>", this, _client->GetRemote()->ToString().CStr());
 }

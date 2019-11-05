@@ -8,8 +8,11 @@
 //==============================================================================
 #pragma once
 
-#include <functional>
+#include "../../http_datastructure.h"
+
 #include <base/ovlibrary/ovlibrary.h>
+
+#include <functional>
 
 class WebSocketClient;
 
@@ -23,18 +26,18 @@ typedef std::function<void(std::shared_ptr<WebSocketClient> &client, const std::
 enum class WebSocketFrameOpcode : uint8_t
 {
 	// *  %x0 denotes a continuation frame
-		Continuation = 0x00,
+	Continuation = 0x00,
 	// *  %x1 denotes a text frame
-		Text = 0x01,
+	Text = 0x01,
 	// *  %x2 denotes a binary frame
-		Binary = 0x02,
+	Binary = 0x02,
 	// *  %x3-7 are reserved for further non-control frames
 	// *  %x8 denotes a connection close
-		ConnectionClose = 0x08,
+	ConnectionClose = 0x08,
 	// *  %x9 denotes a ping
-		Ping = 0x09,
+	Ping = 0x09,
 	// *  %xA denotes a pong
-		Pong = 0x0A,
+	Pong = 0x0A,
 	// *  %xB-F are reserved for further control frames
 };
 
@@ -66,7 +69,7 @@ struct WebSocketFrameHeader
 	//    Defines the interpretation of the "Payload data".  If an unknown
 	//    opcode is received, the receiving endpoint MUST _Fail the
 	//    WebSocket Connection_.  The following values are defined.
-	uint8_t opcode: 4;
+	uint8_t opcode : 4;
 
 	// RSV1, RSV2, RSV3:  1 bit each
 	//
@@ -75,13 +78,13 @@ struct WebSocketFrameHeader
 	//    the negotiated extensions defines the meaning of such a nonzero
 	//    value, the receiving endpoint MUST _Fail the WebSocket
 	//    Connection_.
-	uint8_t reserved: 3;
+	uint8_t reserved : 3;
 
 	// FIN:  1 bit
 	//
 	//    Indicates that this is the final fragment in a message.  The first
 	//    fragment MAY also be the final fragment.
-	bool fin: 1;
+	bool fin : 1;
 
 	// 두 번째 바이트
 	// Payload length:  7 bits, 7+16 bits, or 7+64 bits
@@ -99,7 +102,7 @@ struct WebSocketFrameHeader
 	//    "Application data".  The length of the "Extension data" may be
 	//    zero, in which case the payload length is the length of the
 	//    "Application data".
-	uint8_t payload_length: 7;
+	uint8_t payload_length : 7;
 
 	// Mask:  1 bit
 	//
@@ -107,15 +110,14 @@ struct WebSocketFrameHeader
 	//    masking key is present in masking-key, and this is used to unmask
 	//    the "Payload data" as per Section 5.3.  All frames sent from
 	//    client to server have this bit set to 1.
-	bool mask: 1;
+	bool mask : 1;
 };
 #pragma pack(pop)
 
 class WebSocketClient;
 class WebSocketFrame;
 
-typedef std::function<bool(const std::shared_ptr<WebSocketClient> &response)> WebSocketConnectionHandler;
-typedef std::function<bool(const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const WebSocketFrame> &message)> WebSocketMessageHandler;
-typedef std::function<void(const std::shared_ptr<WebSocketClient> &response, const std::shared_ptr<const ov::Error> &error)> WebSocketErrorHandler;
-typedef std::function<void(const std::shared_ptr<WebSocketClient> &response)> WebSocketCloseHandler;
-
+typedef std::function<HttpInterceptorResult(const std::shared_ptr<WebSocketClient> &ws_client)> WebSocketConnectionHandler;
+typedef std::function<HttpInterceptorResult(const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const WebSocketFrame> &message)> WebSocketMessageHandler;
+typedef std::function<void(const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const ov::Error> &error)> WebSocketErrorHandler;
+typedef std::function<void(const std::shared_ptr<WebSocketClient> &ws_client)> WebSocketCloseHandler;

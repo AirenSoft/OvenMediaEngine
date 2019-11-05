@@ -19,7 +19,7 @@
 class WebSocketClient
 {
 public:
-	WebSocketClient(std::shared_ptr<ov::ClientSocket> remote, const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
+	WebSocketClient(const std::shared_ptr<HttpClient> &client);
 	virtual ~WebSocketClient();
 
 	ssize_t Send(const std::shared_ptr<const ov::Data> &data, WebSocketFrameOpcode opcode);
@@ -27,14 +27,9 @@ public:
 	ssize_t Send(const ov::String &string);
 	ssize_t Send(const Json::Value &value);
 
-	const std::shared_ptr<HttpRequest> &GetRequest()
+	const std::shared_ptr<HttpClient> &GetClient()
 	{
-		return _request;
-	}
-
-	const std::shared_ptr<HttpResponse> &GetResponse()
-	{
-		return _response;
+		return _client;
 	}
 
 	ov::String ToString() const;
@@ -42,8 +37,5 @@ public:
 	void Close();
 
 protected:
-	std::shared_ptr<ov::ClientSocket> _remote;
-
-	std::shared_ptr<HttpRequest> _request;
-	std::shared_ptr<HttpResponse> _response;
+	std::shared_ptr<HttpClient> _client;
 };

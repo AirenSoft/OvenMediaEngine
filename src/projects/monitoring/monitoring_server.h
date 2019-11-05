@@ -45,7 +45,7 @@ protected:
                             ov::String &file_name,
                             ov::String &file_ext);
 
-    void ProcessRequest(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response);
+    HttpNextHandler ProcessRequest(const std::shared_ptr<HttpClient> &client);
     void StateRequest(const std::shared_ptr<HttpResponse> &response);
 
 protected :

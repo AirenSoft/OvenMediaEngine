@@ -10,18 +10,19 @@
 #include "../dash/dash_define.h"
 #include "cmaf_private.h"
 
-bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request,
-											  const std::shared_ptr<const HttpResponse> &response)
+bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
 {
+	const auto &request = client->GetRequest();
+
 	// Temporary code to accept HTTP 1.0
 	if ((request->GetMethod() != HttpMethod::Get) || (request->GetHttpVersionAsNumber() < 1.0))
 	{
 		return false;
 	}
 
-    // Check file pattern
-    // TODO(dimiden): Check this code later - IsInterceptorForRequest() should not filter method and filename. It is recommended to use Register()
-    auto &request_target = request->GetRequestTarget();
+	// Check file pattern
+	// TODO(dimiden): Check this code later - IsInterceptorForRequest() should not filter method and filename. It is recommended to use Register()
+	auto &request_target = request->GetRequestTarget();
 
 	if (
 		(request_target.IndexOf(CMAF_MPD_VIDEO_FULL_SUFFIX) >= 0) ||

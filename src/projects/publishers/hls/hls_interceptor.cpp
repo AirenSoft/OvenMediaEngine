@@ -23,9 +23,10 @@ HlsInterceptor::~HlsInterceptor()
 //====================================================================================================
 // IsInterceptorForRequest
 //====================================================================================================
-bool HlsInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request,
-        const std::shared_ptr<const HttpResponse> &response)
+bool HlsInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
 {
+    const auto &request = client->GetRequest();
+    
 	// logtd("Request Target : %s", request->GetRequestTarget().CStr());
 
 	// Get Method 1.1 이상 체크

@@ -14,9 +14,10 @@
 //====================================================================================================
 // IsInterceptorForRequest
 //====================================================================================================
-bool MonitoringInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request,
-                                                    const std::shared_ptr<const HttpResponse> &response)
+bool MonitoringInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
 {
+	const auto &request = client->GetRequest();
+	
 	// logtd("Request Target : %s", request->GetRequestTarget().CStr());
 
 	// Get Method 1.1 check

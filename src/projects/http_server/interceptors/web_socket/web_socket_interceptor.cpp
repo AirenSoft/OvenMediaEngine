@@ -15,12 +15,40 @@
 #include <http_server/http_server.h>
 #include <utility>
 
+WebSocketInterceptor::WebSocketInterceptor()
+{
+	_ping_timer.Push(std::bind(&WebSocketInterceptor::DoPing, this, std::placeholders::_1), 30 * 1000);
+	_ping_timer.Start();
+}
+
 WebSocketInterceptor::~WebSocketInterceptor()
 {
 }
 
-bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpRequest> &request, const std::shared_ptr<const HttpResponse> &response)
+ov::DelayQueueAction WebSocketInterceptor::DoPing(void *parameter)
 {
+	{
+		logti("Trying to ping to WebSocket clients...");
+
+		ov::String str("OvenMediaEngine");
+		auto payload = std::move(str.ToData(false));
+
+		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);
+
+		for (auto client : _websocket_client_list)
+		{
+			client.second->response->Send(payload, WebSocketFrameOpcode::Ping);
+		}
+	}
+
+	return ov::DelayQueueAction::Repeat;
+}
+
+bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
+{
+	const auto &request = client->GetRequest();
+	const auto &response = client->GetResponse();
+
 	// 여기서 web socket request 인지 확인
 	// RFC6455 - 4.2.1.  Reading the Client's Opening Handshake
 	//
@@ -80,8 +108,11 @@ bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const H
 	return false;
 }
 
-bool WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
+HttpInterceptorResult WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpClient> &client)
 {
+	auto &request = client->GetRequest();
+	auto &response = client->GetResponse();
+
 	// RFC6455 - 4.2.2.  Sending the Server's Opening Handshake
 	response->SetStatusCode(HttpStatusCode::SwitchingProtocols);
 
@@ -107,44 +138,64 @@ bool WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpRequest> &req
 
 	// 지속적으로 통신해야 하므로, 연결은 끊지 않음
 	logtd("Add to websocket client list: %s", request->ToString().CStr());
-	auto websocket_response = std::make_shared<WebSocketClient>(response->GetRemote(), request, response);
-	_websocket_client_list[request] = (WebSocketInfo){
-		.response = websocket_response,
-		.frame = nullptr};
+	auto websocket_response = std::make_shared<WebSocketClient>(client);
+
+	{
+		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);
+
+		_websocket_client_list.emplace(request, std::make_shared<WebSocketInfo>(websocket_response, nullptr));
+	}
 
 	if (_connection_handler != nullptr)
 	{
 		return _connection_handler(websocket_response);
 	}
 
-	return true;
+	return HttpInterceptorResult::Keep;
 }
 
-bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data)
+HttpInterceptorResult WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
 {
+	auto &request = client->GetRequest();
+	auto &response = client->GetResponse();
+
 	if (data->GetLength() == 0)
 	{
 		// Nothing to do
-		return true;
+		return HttpInterceptorResult::Keep;
 	}
 
-	auto item = _websocket_client_list.find(request);
+	std::shared_ptr<WebSocketInfo> info = nullptr;
 
-	if (item == _websocket_client_list.end())
 	{
-		// 반드시 _websocket_client_list 목록 안에 있어야 함
+		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);
+
+		auto item = _websocket_client_list.find(request);
+
+		if (item == _websocket_client_list.end())
+		{
+			// 반드시 _websocket_client_list 목록 안에 있어야 함
+			OV_ASSERT2(false);
+			return HttpInterceptorResult::Disconnect;
+		}
+
+		info = item->second;
+	}
+
+	if (info == nullptr)
+	{
 		OV_ASSERT2(false);
-		return false;
+		return HttpInterceptorResult::Disconnect;
 	}
 
 	logtd("Data is received\n%s", data->Dump().CStr());
 
-	if (item->second.frame == nullptr)
+	if (info->frame == nullptr)
 	{
-		item->second.frame = std::make_shared<WebSocketFrame>();
+		info->frame = std::make_shared<WebSocketFrame>();
 	}
 
-	auto frame = item->second.frame;
+	auto frame = info->frame;
 	auto processed_bytes = frame->Process(data);
 
 	switch (frame->GetStatus())
@@ -165,25 +216,25 @@ bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 				case WebSocketFrameOpcode::ConnectionClose:
 					// 접속 종료 요청됨
 					logtd("Client requested close connection: reason:\n%s", payload->Dump("Reason").CStr());
-					return false;
+					return HttpInterceptorResult::Disconnect;
 
 				case WebSocketFrameOpcode::Ping:
 					logtd("A ping frame is received:\n%s", payload->Dump().CStr());
 
-					item->second.frame = nullptr;
+					info->frame = nullptr;
 
 					// Send a pong frame to the client
-					item->second.response->Send(payload, WebSocketFrameOpcode::Pong);
+					info->response->Send(payload, WebSocketFrameOpcode::Pong);
 
-					return true;
+					return HttpInterceptorResult::Keep;
 
 				case WebSocketFrameOpcode::Pong:
 					// Ignore pong frame
 					logtd("A pong frame is received:\n%s", payload->Dump().CStr());
 
-					item->second.frame = nullptr;
+					info->frame = nullptr;
 
-					return true;
+					return HttpInterceptorResult::Keep;
 
 				default:
 					logtd("%s:\n%s", frame->ToString().CStr(), payload->Dump("Frame", 0L, 1024L, nullptr).CStr());
@@ -195,13 +246,13 @@ bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 						if (payload->GetLength() > 0L)
 						{
 							// 데이터가 있을 경우에만 올림
-							if (_message_handler(item->second.response, frame) == false)
+							if (_message_handler(info->response, frame) == HttpInterceptorResult::Disconnect)
 							{
-								return false;
+								return HttpInterceptorResult::Disconnect;
 							}
 						}
 
-						item->second.frame = nullptr;
+						info->frame = nullptr;
 					}
 
 					// 나머지 데이터로 다시 파싱 시작
@@ -209,7 +260,7 @@ bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 
 					if (processed_bytes > 0L)
 					{
-						return OnHttpData(request, response, data->Subdata(processed_bytes));
+						return OnHttpData(client, data->Subdata(processed_bytes));
 					}
 			}
 
@@ -219,44 +270,63 @@ bool WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpRequest> &reques
 		case WebSocketFrameParseStatus::Error:
 			// 잘못된 데이터가 수신되었음 WebSocket 연결을 해제함
 			logtw("Invalid data received from %s", request->ToString().CStr());
-			return false;
+			return HttpInterceptorResult::Disconnect;
 	}
 
-	return true;
+	return HttpInterceptorResult::Keep;
 }
 
-void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, HttpStatusCode status_code)
+void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client, HttpStatusCode status_code)
 {
-	auto item = _websocket_client_list.find(request);
+	auto &request = client->GetRequest();
+	auto &response = client->GetResponse();
 
-	logtd("An error occurred: %s...", request->ToString().CStr());
+	std::shared_ptr<WebSocketInfo> socket_info;
 
-	OV_ASSERT2(item != _websocket_client_list.end());
-
-	if (_error_handler != nullptr)
 	{
-		_error_handler(item->second.response, ov::Error::CreateError(static_cast<int>(status_code), "%s", StringFromHttpStatusCode(status_code)));
+		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);
+
+		auto item = _websocket_client_list.find(request);
+
+		logtd("An error occurred: %s...", request->ToString().CStr());
+
+		OV_ASSERT2(item != _websocket_client_list.end());
+
+		socket_info = item->second;
+
+		_websocket_client_list.erase(item);
 	}
 
-	_websocket_client_list.erase(item);
+	if ((_error_handler != nullptr) && (socket_info != nullptr))
+	{
+		_error_handler(socket_info->response, ov::Error::CreateError(static_cast<int>(status_code), "%s", StringFromHttpStatusCode(status_code)));
+	}
 
 	response->SetStatusCode(status_code);
 }
 
-void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response)
+void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client)
 {
-	auto item = _websocket_client_list.find(request);
-
-	logtd("Deleting %s from websocket client list...", request->ToString().CStr());
-
-	OV_ASSERT2(item != _websocket_client_list.end());
-
-	if (_close_handler != nullptr)
+	auto &request = client->GetRequest();
+	auto &response = client->GetResponse();
+	
+	std::shared_ptr<WebSocketInfo> socket_info;
 	{
-		_close_handler(item->second.response);
+		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);
+
+		auto item = _websocket_client_list.find(request);
+
+		logtd("Deleting %s from websocket client list...", request->ToString().CStr());
+
+		OV_ASSERT2(item != _websocket_client_list.end());
+
+		_websocket_client_list.erase(item);
 	}
 
-	_websocket_client_list.erase(item);
+	if ((_close_handler != nullptr) && (socket_info != nullptr))
+	{
+		_close_handler(socket_info->response);
+	}
 }
 
 void WebSocketInterceptor::SetConnectionHandler(WebSocketConnectionHandler handler)

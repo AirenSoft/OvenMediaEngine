@@ -27,15 +27,15 @@ PhysicalPort::~PhysicalPort()
 }
 
 bool PhysicalPort::Create(ov::SocketType type,
-                          const ov::SocketAddress &address,
-                          int send_buffer_size,
-                          int recv_buffer_size)
+						  const ov::SocketAddress &address,
+						  int send_buffer_size,
+						  int recv_buffer_size)
 {
 	OV_ASSERT2((_server_socket == nullptr) && (_datagram_socket == nullptr));
 
 	logtd("Trying to start server...");
 
-	switch(type)
+	switch (type)
 	{
 		case ov::SocketType::Srt:
 		case ov::SocketType::Tcp:
@@ -56,24 +56,22 @@ bool PhysicalPort::Create(ov::SocketType type,
 }
 
 bool PhysicalPort::CreateServerSocket(ov::SocketType type,
-                                      const ov::SocketAddress &address,
-                                      int send_buffer_size,
-                                      int recv_buffer_size)
+									  const ov::SocketAddress &address,
+									  int send_buffer_size,
+									  int recv_buffer_size)
 {
 	auto socket = std::make_shared<ov::ServerSocket>();
 
-	if(socket->Prepare(type, address, send_buffer_size, recv_buffer_size))
+	if (socket->Prepare(type, address, send_buffer_size, recv_buffer_size))
 	{
 		_type = type;
 		_server_socket = socket;
 
 		_need_to_stop = false;
 
-		auto proc = [&, socket]() -> void
-		{
-			auto client_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error) -> bool
-			{
-				switch(state)
+		auto proc = [&, socket]() -> void {
+			auto client_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error) -> ov::SocketConnectionState {
+				switch (state)
 				{
 					case ov::SocketConnectionState::Connected:
 					{
@@ -82,7 +80,7 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 						// observer들에게 알림
 						auto func = std::bind(&PhysicalPortObserver::OnConnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client));
 						for_each(_observer_list.begin(), _observer_list.end(), func);
-
+						
 						break;
 					}
 
@@ -109,23 +107,20 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 					}
 				}
 
-				// 명시적으로 close하기 전 까지 계속 사용해야 하므로 false 반환
-				return false;
+				return state;
 			};
 
-			auto data_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data) -> bool
-			{
+			auto data_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data) -> ov::SocketConnectionState {
 				logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
 
 				// observer들에게 알림
 				auto func = std::bind(&PhysicalPortObserver::OnDataReceived, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), std::ref(*(client->GetRemoteAddress().get())), ref(data));
 				for_each(_observer_list.begin(), _observer_list.end(), func);
 
-				// TCP는 명시적으로 close하기 전까지 계속 사용해야 하므로 false 반환
-				return false;
+				return ov::SocketConnectionState::Connected;
 			};
 
-			while((_need_to_stop == false) && (socket->DispatchEvent(client_callback, data_callback, 500)))
+			while ((_need_to_stop == false) && (socket->DispatchEvent(client_callback, data_callback, 500)))
 			{
 			}
 
@@ -149,17 +144,15 @@ bool PhysicalPort::CreateDatagramSocket(ov::SocketType type, const ov::SocketAdd
 {
 	auto socket = std::make_shared<ov::DatagramSocket>();
 
-	if(socket->Prepare(address))
+	if (socket->Prepare(address))
 	{
 		_type = type;
 		_datagram_socket = socket;
 
 		_need_to_stop = false;
 
-		auto proc = [&, socket]() -> void
-		{
-			auto data_callback = [&](const std::shared_ptr<ov::DatagramSocket> &socket, const ov::SocketAddress &remote_address, const std::shared_ptr<const ov::Data> &data) -> bool
-			{
+		auto proc = [&, socket]() -> void {
+			auto data_callback = [&](const std::shared_ptr<ov::DatagramSocket> &socket, const ov::SocketAddress &remote_address, const std::shared_ptr<const ov::Data> &data) -> bool {
 				logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
 
 				// observer들에게 알림
@@ -170,7 +163,7 @@ bool PhysicalPort::CreateDatagramSocket(ov::SocketType type, const ov::SocketAdd
 				return true;
 			};
 
-			while((_need_to_stop == false) && (socket->DispatchEvent(data_callback, 500)))
+			while ((_need_to_stop == false) && (socket->DispatchEvent(data_callback, 500)))
 			{
 			}
 
@@ -194,19 +187,19 @@ bool PhysicalPort::Close()
 {
 	_need_to_stop = true;
 
-	if(_thread.joinable())
+	if (_thread.joinable())
 	{
 		_thread.join();
 	}
 
 	_thread = std::thread();
 
-	switch(_type)
+	switch (_type)
 	{
 		case ov::SocketType::Tcp:
-			if(_server_socket != nullptr)
+			if (_server_socket != nullptr)
 			{
-				if((_server_socket->GetState() == ov::SocketState::Closed) || (_server_socket->Close()))
+				if ((_server_socket->GetState() == ov::SocketState::Closed) || (_server_socket->Close()))
 				{
 					_server_socket = nullptr;
 					_observer_list.clear();
@@ -216,7 +209,7 @@ bool PhysicalPort::Close()
 			break;
 
 		case ov::SocketType::Udp:
-			if((_datagram_socket->GetState() == ov::SocketState::Closed) || (_datagram_socket->Close()))
+			if ((_datagram_socket->GetState() == ov::SocketState::Closed) || (_datagram_socket->Close()))
 			{
 				_datagram_socket = nullptr;
 				_observer_list.clear();
@@ -233,7 +226,7 @@ bool PhysicalPort::Close()
 
 ov::SocketState PhysicalPort::GetState()
 {
-	switch(_type)
+	switch (_type)
 	{
 		case ov::SocketType::Tcp:
 			OV_ASSERT2(_server_socket != nullptr);
@@ -261,7 +254,7 @@ bool PhysicalPort::RemoveObserver(PhysicalPortObserver *observer)
 {
 	auto item = std::find(_observer_list.begin(), _observer_list.end(), observer);
 
-	if(item == _observer_list.end())
+	if (item == _observer_list.end())
 	{
 		return false;
 	}
@@ -273,5 +266,5 @@ bool PhysicalPort::RemoveObserver(PhysicalPortObserver *observer)
 
 bool PhysicalPort::DisconnectClient(ov::ClientSocket *client_socket)
 {
-	return _server_socket->DisconnectClient(client_socket);
+	return _server_socket->DisconnectClient(client_socket, ov::SocketConnectionState::Disconnected);
 }

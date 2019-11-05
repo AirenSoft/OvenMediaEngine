@@ -67,8 +67,7 @@ bool MonitoringServer::Start(const ov::SocketAddress &address,
 
     auto process_func = std::bind(&MonitoringServer::ProcessRequest,
                                     this,
-                                    std::placeholders::_1,
-                                    std::placeholders::_2);
+                                    std::placeholders::_1);
 
     std::static_pointer_cast<HttpDefaultInterceptor>(monitoring_interceptor)->Register(HttpMethod::Get,
                                                                                     regular_expression,
@@ -154,9 +153,11 @@ bool MonitoringServer::ParseRequestUrl(const ov::String &request_url,
 //====================================================================================================
 // ProcessRequest
 //====================================================================================================
-void MonitoringServer::ProcessRequest(const std::shared_ptr<HttpRequest> &request,
-                                         const std::shared_ptr<HttpResponse> &response)
+HttpNextHandler MonitoringServer::ProcessRequest(const std::shared_ptr<HttpClient> &client)
 {
+    auto &request = client->GetRequest();
+	auto &response = client->GetResponse();
+    
     ov::String request_url = request->GetRequestTarget();
     ov::String file_name;
     ov::String file_ext;
@@ -169,7 +170,7 @@ void MonitoringServer::ProcessRequest(const std::shared_ptr<HttpRequest> &reques
         logtd("Request URL Parsing Fail : %s", request_url.CStr());
         response->SetStatusCode(HttpStatusCode::NotFound);
         response->Response();
-        return;
+        return HttpNextHandler::DoNotCall;
     }
     // request file process
     if (file_name == "stat")
@@ -181,6 +182,8 @@ void MonitoringServer::ProcessRequest(const std::shared_ptr<HttpRequest> &reques
         response->SetStatusCode(HttpStatusCode::NotFound);
         response->Response();
     }
+
+    return HttpNextHandler::DoNotCall;
 }
 
 //====================================================================================================

@@ -22,7 +22,7 @@ public:
 	~SegmentStreamInterceptor() override;
 
     void Start(int thread_count, const SegmentProcessHandler &process_handler);
-	bool OnHttpData(const std::shared_ptr<HttpRequest> &request, const std::shared_ptr<HttpResponse> &response, const std::shared_ptr<const ov::Data> &data) override;
+	HttpInterceptorResult OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data) override;
     void SetCrossdomainBlock() { _is_crossdomain_block = false; }
 
 protected :
