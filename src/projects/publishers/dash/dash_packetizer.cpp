@@ -395,12 +395,6 @@ bool DashPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameDat
 			_audio_start_time = ::time(nullptr) - (current_segment_duration * _audio_track->GetTimeBase().GetExpr());
 		}
 
-		if (_start_time.IsEmpty())
-		{
-			_start_time = MakeUtcSecond(::time(nullptr) - (current_segment_duration * _audio_track->GetTimeBase().GetExpr()));
-			// _start_time = MakeUtcSecond(::time(nullptr));
-		}
-
 		// Flush frames
 		if (WriteAudioSegment() == false)
 		{
@@ -522,8 +516,8 @@ bool DashPacketizer::GetSegmentInfos(ov::String *video_urls, ov::String *audio_u
 	OV_ASSERT2(time_shift_buffer_depth != nullptr);
 	OV_ASSERT2(minimum_update_period != nullptr);
 
-	double time_shift_buffer_depth_for_video = static_cast<double>(UINT64_MAX);
-	double time_shift_buffer_depth_for_audio = static_cast<double>(UINT64_MAX);
+	double time_shift_buffer_depth_for_video = static_cast<double>(INT64_MIN);
+	double time_shift_buffer_depth_for_audio = static_cast<double>(INT64_MIN);
 	double minimum_update_period_for_video = static_cast<double>(UINT64_MAX);
 	double minimum_update_period_for_audio = static_cast<double>(UINT64_MAX);
 
@@ -626,7 +620,7 @@ bool DashPacketizer::GetSegmentInfos(ov::String *video_urls, ov::String *audio_u
 		return false;
 	}
 
-	*time_shift_buffer_depth = std::min(time_shift_buffer_depth_for_video, time_shift_buffer_depth_for_audio);
+	*time_shift_buffer_depth = std::max(time_shift_buffer_depth_for_video, time_shift_buffer_depth_for_audio);
 	*minimum_update_period = std::min(minimum_update_period_for_video, minimum_update_period_for_audio);
 
 	return true;
@@ -640,11 +634,14 @@ bool DashPacketizer::UpdatePlayList()
 	double time_shift_buffer_depth = 0;
 	double minimumUpdatePeriod = 0;
 
+	if (IsReadyForStreaming() == false)
+	{
+		return false;
+	}
+
 	ov::String publishTime = MakeUtcSecond(::time(nullptr));
 
-	logtd("Trying to update playlist for DASH...");
-	logtd("    availabilityStartTime: %s", _start_time.CStr());
-	logtd("    publishTime: %s", publishTime.CStr());
+	logtd("Trying to update playlist for DASH with availabilityStartTime: %s, publishTime: %s", _start_time.CStr(), publishTime.CStr());
 
 	if (GetSegmentInfos(&video_urls, &audio_urls, &time_shift_buffer_depth, &minimumUpdatePeriod) == false)
 	{

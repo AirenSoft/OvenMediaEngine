@@ -163,7 +163,7 @@ bool CmafPacketizer::UpdatePlayList()
 	double time_shift_buffer_depth = 6;
 	double minimumUpdatePeriod = 30;
 
-	if(IsReadyForStreaming() == false)
+	if (IsReadyForStreaming() == false)
 	{
 		return false;
 	}
