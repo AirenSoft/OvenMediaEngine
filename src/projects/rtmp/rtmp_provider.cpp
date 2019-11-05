@@ -18,9 +18,9 @@
 
 using namespace common;
 
-std::shared_ptr<RtmpProvider> RtmpProvider::Create(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
+std::shared_ptr<RtmpProvider> RtmpProvider::Create(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 {
-	auto provider = std::make_shared<RtmpProvider>(application_info, router);
+	auto provider = std::make_shared<RtmpProvider>(host_info, router);
 	if (!provider->Start())
 	{
 		logte("An error occurred while creating RtmpProvider");
@@ -29,10 +29,10 @@ std::shared_ptr<RtmpProvider> RtmpProvider::Create(const info::Application *appl
 	return provider;
 }
 
-RtmpProvider::RtmpProvider(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
-	: Provider(application_info, router)
+RtmpProvider::RtmpProvider(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+	: Provider(host_info, router)
 {
-	logtd("Created Rtmp Provider modules.");
+	logtd("Created Rtmp Provider module.");
 }
 
 RtmpProvider::~RtmpProvider()
@@ -43,27 +43,11 @@ RtmpProvider::~RtmpProvider()
 
 bool RtmpProvider::Start()
 {
-	// Find RTMP provider configuration
-	_provider_info = _application_info->GetProvider<cfg::RtmpProvider>();
-
-	if (_provider_info == nullptr)
-	{
-		logte("Cannot initialize RtmpProvider using config information");
-		return false;
-	}
-
-	auto host = _application_info->GetParentAs<cfg::Host>("Host");
-
-	if (host == nullptr)
-	{
-		OV_ASSERT2(false);
-		return false;
-	}
-
-	int port = host->GetPorts().GetRtmpProviderPort().GetPort();
+	// Get Host configuration
+	auto host = GetHostInfo();
 
 	// auto rtmp_provider = host->
-	auto rtmp_address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(port));
+	auto rtmp_address = ov::SocketAddress(host.GetIp(), static_cast<uint16_t>(host.GetPorts().GetRtmpProviderPort().GetPort()));
 
 	logti("RTMP Provider is listening on %s...", rtmp_address.ToString().CStr());
 
@@ -72,6 +56,7 @@ bool RtmpProvider::Start()
 
 	// RtmpServer 에 Observer 연결
 	_rtmp_server->AddObserver(RtmpObserver::GetSharedPtr());
+
 	if (!_rtmp_server->Start(rtmp_address))
 	{
 		return false;
@@ -85,7 +70,7 @@ bool RtmpProvider::Stop()
 	return Provider::Stop();
 }
 
-std::shared_ptr<Application> RtmpProvider::OnCreateApplication(const info::Application *application_info)
+std::shared_ptr<Application> RtmpProvider::OnCreateApplication(const info::Application &application_info)
 {
 	return RtmpApplication::Create(application_info);
 }
@@ -94,19 +79,18 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 										 const ov::String &stream_name,
 										 std::shared_ptr<RtmpMediaInfo> &media_info,
 										 info::application_id_t &application_id,
-										 uint32_t &stream_id)
-{
+										 uint32_t &stream_id) {
 	// 어플리케이션 조회, 어플리케이션명에 해당하는 정보가 없다면 RTMP 커넥션을 종료함.
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationByName(app_name.CStr()));
-	if (application == nullptr)
-	{
+	if (application == nullptr) {
 		logte("Cannot Find Applicaton - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
 	if (GetStreamByName(app_name, stream_name))
 	{
-		if (_provider_info->IsBlockDuplicateStreamName())
+		//TODO(Getroot): _provider_info는 Application에서 구해서 사용해야 한다.
+		if (0) // _provider_info->IsBlockDuplicateStreamName())
 		{
 			logti("Duplicate Stream Input(reject) - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
 			return false;
@@ -211,7 +195,6 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 							   std::shared_ptr<std::vector<uint8_t>> &data)
 {
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationById(application_id));
-
 	if (application == nullptr)
 	{
 		logte("cannot find application");

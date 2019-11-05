@@ -15,13 +15,13 @@
 
 #define OV_LOG_TAG "RtmpApplication"
 
-std::shared_ptr<RtmpApplication> RtmpApplication::Create(const info::Application *application_info)
+std::shared_ptr<RtmpApplication> RtmpApplication::Create(const info::Application &application_info)
 {
 	auto application = std::make_shared<RtmpApplication>(application_info);
 	return application;
 }
 
-RtmpApplication::RtmpApplication(const info::Application *application_info)
+RtmpApplication::RtmpApplication(const info::Application &application_info)
 	: Application(application_info)
 {
 }

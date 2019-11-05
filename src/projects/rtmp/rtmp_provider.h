@@ -30,11 +30,9 @@ class RtmpProvider : public pvd::Provider, public RtmpObserver
 {
     // class TranscodeApplication;
 public:
-    static std::shared_ptr<RtmpProvider>
-    Create(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
+    static std::shared_ptr<RtmpProvider> Create(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 
-    explicit RtmpProvider(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
-
+    explicit RtmpProvider(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
     ~RtmpProvider() override;
 
     cfg::ProviderType GetProviderType() override
@@ -43,10 +41,11 @@ public:
     }
 
     bool Start() override;
-
     bool Stop() override;
 
-    std::shared_ptr<pvd::Application> OnCreateApplication(const info::Application *application_info) override;
+protected:
+
+	std::shared_ptr<pvd::Application> OnCreateApplication(const info::Application &application_info) override;
 
     //--------------------------------------------------------------------
     // Implementation of RtmpObserver
@@ -72,8 +71,6 @@ public:
     bool OnDeleteStream(info::application_id_t application_id, uint32_t stream_id) override;
 
 private:
-    const cfg::RtmpProvider *_provider_info = nullptr;
-
     std::shared_ptr<RtmpServer> _rtmp_server;
 
     double _video_scale = 0.0;

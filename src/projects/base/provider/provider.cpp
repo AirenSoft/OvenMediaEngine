@@ -17,9 +17,8 @@
 
 namespace pvd
 {
-	Provider::Provider(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
-		: _application_info(application_info),
-		  _router(router)
+	Provider::Provider(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+		: _host_info(host_info), _router(router)
 	{
 	}
 
@@ -27,20 +26,13 @@ namespace pvd
 	{
 	}
 
+	const cfg::Host& Provider::GetHostInfo()
+	{
+		return _host_info;
+	}
+
 	bool Provider::Start()
 	{
-		// Application 을 자식에게 생성하게 한다.
-		auto application = OnCreateApplication(_application_info);
-
-		// 생성한 Application을 Router와 연결하고 Start
-		_router->RegisterConnectorApp(application.get(), application);
-
-		// Apllication Map에 보관
-		_applications[application->GetId()] = application;
-
-		// 시작한다.
-		application->Start();
-
 		return true;
 	}
 
@@ -53,11 +45,27 @@ namespace pvd
 			auto application = it->second;
 
 			_router->UnregisterConnectorApp(application.get(), application);
-
 			application->Stop();
 
 			it = _applications.erase(it);
 		}
+
+		return true;
+	}
+
+	bool Provider::CreateApplication(const info::Application &application_info)
+	{
+		// Application 을 자식에게 생성하게 한다.
+		auto application = OnCreateApplication(application_info);
+
+		// 생성한 Application을 Router와 연결하고 Start
+		_router->RegisterConnectorApp(application.get(), application);
+
+		// Apllication Map에 보관
+		_applications[application->GetId()] = application;
+
+		// 시작한다.
+		application->Start();
 
 		return true;
 	}

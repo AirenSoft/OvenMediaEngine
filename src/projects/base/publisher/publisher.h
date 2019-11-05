@@ -111,7 +111,7 @@ public:
 	virtual bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) = 0;
 
 protected:
-	explicit Publisher(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
+	explicit Publisher(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 	virtual ~Publisher() = default;
 
 	// 모든 Publisher는 Type을 정의해야 하며, Config과 일치해야 한다.
