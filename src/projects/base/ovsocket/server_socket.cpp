@@ -358,7 +358,7 @@ namespace ov
 		if (type == SocketType::Tcp)
 		{
 			result &= SetSockOpt<int>(SO_REUSEADDR, 1);
-			result &= SetSockOpt<int>(IPPROTO_TCP, TCP_NODELAY, 1);
+			// result &= SetSockOpt<int>(IPPROTO_TCP, TCP_NODELAY, 1);
 
 			int current_send_buffer_size;
 			int current_recv_buffer_size;
