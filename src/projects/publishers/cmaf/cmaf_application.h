@@ -18,10 +18,10 @@
 class CmafApplication : public Application
 {
 public:
-	static std::shared_ptr<CmafApplication> Create(const info::Application *application_info,
+	static std::shared_ptr<CmafApplication> Create(const info::Application &application_info,
 			const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
-    CmafApplication(const info::Application *application_info,
+    CmafApplication(const info::Application &application_info,
     		const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
 	virtual ~CmafApplication() final;

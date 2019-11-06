@@ -16,19 +16,9 @@
 #include <ice/ice.h>
 #include <webrtc/webrtc_publisher.h>
 
-RtcSignallingServer::RtcSignallingServer(const info::Application *application_info, std::shared_ptr<MediaRouteApplicationInterface> application)
-	: _application_info(application_info),
-	  _application(std::move(application))
+RtcSignallingServer::RtcSignallingServer(const cfg::Host &host_info)
+	: _host_info(host_info)
 {
-	_webrtc_publisher_info = _application_info->GetPublisher<cfg::WebrtcPublisher>();
-
-	if ((_webrtc_publisher_info == nullptr) || (_webrtc_publisher_info->IsParsed() == false))
-	{
-		logte("Cannot initialize WebRTC Publisher using config information");
-		return;
-	}
-
-	_p2p_info = &(_webrtc_publisher_info->GetP2P());
 }
 
 bool RtcSignallingServer::Start(const ov::SocketAddress &address)
@@ -36,12 +26,6 @@ bool RtcSignallingServer::Start(const ov::SocketAddress &address)
 	if (_http_server != nullptr)
 	{
 		OV_ASSERT(false, "Server is already running");
-		return false;
-	}
-
-	if (_webrtc_publisher_info == nullptr)
-	{
-		logte("Invalid configuration for WebRTC publisher");
 		return false;
 	}
 

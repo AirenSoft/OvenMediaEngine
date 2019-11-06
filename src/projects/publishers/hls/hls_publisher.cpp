@@ -13,15 +13,15 @@
 
 #include <config/config_manager.h>
 
-std::shared_ptr<HlsPublisher> HlsPublisher::Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-												   const info::Application *application_info,
-												   std::shared_ptr<MediaRouteInterface> router)
+std::shared_ptr<HlsPublisher> HlsPublisher::Create(const std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
+												   const info::Application &application_info,
+												   const std::shared_ptr<MediaRouteInterface> &router)
 {
 	return SegmentPublisher::Create<HlsPublisher>(http_server_manager, application_info, std::move(router));
 }
 
-HlsPublisher::HlsPublisher(PrivateToken token, const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
-	: SegmentPublisher(application_info, std::move(router))
+HlsPublisher::HlsPublisher(PrivateToken token, const info::Application &application_info, const std::shared_ptr<MediaRouteInterface> &router)
+	: SegmentPublisher(application_info, router)
 {
 }
 

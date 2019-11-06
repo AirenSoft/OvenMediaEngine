@@ -10,7 +10,7 @@
 
 #define _CONSOLE
 
-#include <base/application/application.h>
+#include <base/info/application.h>
 #include <base/common_types.h>
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>

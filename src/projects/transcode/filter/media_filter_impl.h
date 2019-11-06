@@ -29,7 +29,7 @@ extern "C"
 
 #include <base/media_route/media_buffer.h>
 #include <base/media_route/media_type.h>
-#include <base/application/application.h>
+#include <base/info/application.h>
 
 class MediaFilterImpl
 {

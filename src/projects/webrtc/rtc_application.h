@@ -2,7 +2,7 @@
 
 #include <base/common_types.h>
 #include <base/publisher/application.h>
-#include <base/application/session_info.h>
+#include <base/info/session_info.h>
 #include <base/ovcrypto/certificate.h>
 #include <ice/ice_port.h>
 #include <rtc_signalling/rtc_signalling.h>
@@ -12,12 +12,12 @@
 class RtcApplication : public Application
 {
 public:
-	static std::shared_ptr<RtcApplication> Create(const info::Application *application_info,
-	                                              std::shared_ptr<IcePort> ice_port,
-	                                              std::shared_ptr<RtcSignallingServer> rtc_signalling);
-	RtcApplication(const info::Application *application_info,
-	               std::shared_ptr<IcePort> ice_port,
-	               std::shared_ptr<RtcSignallingServer> rtc_signalling);
+	static std::shared_ptr<RtcApplication> Create(const info::Application &application_info,
+	                                              const std::shared_ptr<IcePort> &ice_port,
+	                                              const std::shared_ptr<RtcSignallingServer> &rtc_signalling);
+	RtcApplication(const info::Application &application_info,
+	               const std::shared_ptr<IcePort> &ice_port,
+	               const std::shared_ptr<RtcSignallingServer> &rtc_signalling);
 	~RtcApplication() final;
 
 	std::shared_ptr<Certificate> GetCertificate();

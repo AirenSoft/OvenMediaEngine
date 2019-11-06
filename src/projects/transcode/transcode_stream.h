@@ -19,7 +19,7 @@
 #include "base/media_route/media_buffer.h"
 #include "base/media_route/media_queue.h"
 #include "base/media_route/media_type.h"
-#include "base/application/stream_info.h"
+#include "base/info/stream_info.h"
 
 #include "transcode_context.h"
 #include "transcode_filter.h"
@@ -27,7 +27,7 @@
 #include "codec/transcode_encoder.h"
 #include "codec/transcode_decoder.h"
 
-#include <base/application/application.h>
+#include <base/info/application.h>
 
 class TranscodeApplication;
 

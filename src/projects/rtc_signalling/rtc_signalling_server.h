@@ -14,7 +14,7 @@
 
 #include <memory>
 
-#include <base/application/application.h>
+#include <base/info/application.h>
 #include <base/media_route/media_route_interface.h>
 #include <ice/ice.h>
 #include <http_server/http_server.h>
@@ -27,7 +27,7 @@
 class RtcSignallingServer : public ov::EnableSharedFromThis<RtcSignallingServer>
 {
 public:
-	RtcSignallingServer(const info::Application *application_info, std::shared_ptr<MediaRouteApplicationInterface> application);
+	RtcSignallingServer(const cfg::Host &host_info);
 	~RtcSignallingServer() override = default;
 
 	bool Start(const ov::SocketAddress &address);
@@ -96,18 +96,11 @@ protected:
 	std::shared_ptr<ov::Error> DispatchCandidateP2P(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
 	std::shared_ptr<ov::Error> DispatchStop(std::shared_ptr<RtcSignallingInfo> &info);
 
-	const info::Application *_application_info;
-	const cfg::WebrtcPublisher *_webrtc_publisher_info;
-	const cfg::P2P *_p2p_info;
-
-	std::shared_ptr<MediaRouteApplicationInterface> _application;
+	const cfg::Host _host_info;
 
 	std::shared_ptr<HttpServer> _http_server;
-
 	std::vector<std::shared_ptr<RtcSignallingObserver>> _observers;
 
 	std::map<peer_id_t, std::shared_ptr<RtcSignallingInfo>> _client_list;
 	std::mutex _client_list_mutex;
-
-	RtcP2PManager _p2p_manager;
 };

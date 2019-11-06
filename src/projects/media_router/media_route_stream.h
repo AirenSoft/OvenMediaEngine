@@ -16,7 +16,7 @@
 #include "base/media_route/media_route_application_connector.h"
 #include "base/media_route/media_buffer.h"
 #include "base/media_route/media_type.h"
-#include "base/application/stream_info.h"
+#include "base/info/stream_info.h"
 
 #include "bitstream/bitstream_to_annexb.h"
 #include "bitstream/bitstream_to_adts.h"

@@ -19,7 +19,7 @@
 #include "base/media_route/media_buffer.h"
 
 // 공옹 구조체
-#include "base/application/stream_info.h"
+#include "base/info/stream_info.h"
 
 #include "transcode_application.h"
 

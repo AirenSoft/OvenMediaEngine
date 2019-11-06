@@ -17,9 +17,9 @@
 class DashApplication : public Application
 {
 public:
-	static std::shared_ptr<DashApplication> Create(const info::Application *application_info);
+	static std::shared_ptr<DashApplication> Create(const info::Application &application_info);
 
-    DashApplication(const info::Application *application_info);
+    DashApplication(const info::Application &application_info);
 	virtual ~DashApplication() final;
 
 private:

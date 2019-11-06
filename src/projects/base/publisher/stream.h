@@ -2,7 +2,7 @@
 
 #include "session.h"
 #include "base/common_types.h"
-#include "base/application/stream_info.h"
+#include "base/info/stream_info.h"
 #include "application.h"
 
 #define MIN_STREAM_THREAD_COUNT     2

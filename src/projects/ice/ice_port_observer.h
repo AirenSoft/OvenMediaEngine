@@ -11,7 +11,7 @@
 #include <memory>
 
 #include <base/ovlibrary/ovlibrary.h>
-#include <base/application/session_info.h>
+#include <base/info/session_info.h>
 #include <sdp/session_description.h>
 
 enum class IcePortConnectionState : int

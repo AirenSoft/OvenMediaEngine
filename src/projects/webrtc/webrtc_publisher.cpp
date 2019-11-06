@@ -37,20 +37,10 @@ WebRtcPublisher::~WebRtcPublisher()
 
 bool WebRtcPublisher::Start()
 {
-	// Find WebRTC publisher configuration
-	auto host = _application_info->GetParentAs<cfg::Host>("Host");
-	auto webrtc_publisher = _application_info->GetPublisher<cfg::WebrtcPublisher>();
+	auto host_info = GetHostInfo();
+	auto webrtc_port_info = host_info.GetPorts().GetWebrtcPort();
 
-	if(webrtc_publisher->IsParsed() == false)
-	{
-		logte("Invalid WebRTC configuration");
-		return false;
-	}
-
-	auto webrtc = host->GetPorts().GetWebrtcPort();
-
-	_ice_port = IcePortManager::Instance()->CreatePort(webrtc.GetIceCandidates(), IcePortObserver::GetSharedPtr());
-
+	_ice_port = IcePortManager::Instance()->CreatePort(webrtc_port_info.GetIceCandidates(), IcePortObserver::GetSharedPtr());
 	if(_ice_port == nullptr)
 	{
 		logte("Cannot initialize ICE Port. Check your ICE configuration");
@@ -58,7 +48,7 @@ bool WebRtcPublisher::Start()
 	}
 
 	// Signalling에 Observer 연결
-	ov::SocketAddress signalling_address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(webrtc.GetSignallingPort()));
+	ov::SocketAddress signalling_address = ov::SocketAddress(host_info.GetIp(), static_cast<uint16_t>(webrtc_port_info.GetSignallingPort()));
 
 	logti("WebRTC Publisher is listening on %s...", signalling_address.ToString().CStr());
 
@@ -91,7 +81,7 @@ bool WebRtcPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<Mo
 }
 
 // Publisher에서 Application 생성 요청이 온다.
-std::shared_ptr<Application> WebRtcPublisher::OnCreateApplication(const info::Application *application_info)
+std::shared_ptr<Application> WebRtcPublisher::OnCreateApplication(const info::Application &application_info)
 {
 	return RtcApplication::Create(application_info, _ice_port, _signalling);
 }

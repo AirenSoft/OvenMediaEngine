@@ -37,7 +37,7 @@ bool CmafPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
 						 publisher_info->GetThreadCount());
 }
 
-std::shared_ptr<Application> CmafPublisher::OnCreateApplication(const info::Application *application_info)
+std::shared_ptr<Application> CmafPublisher::OnCreateApplication(const info::Application &application_info)
 {
 	return CmafApplication::Create(application_info, std::static_pointer_cast<CmafStreamServer>(_stream_server));
 }

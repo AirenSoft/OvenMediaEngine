@@ -9,7 +9,7 @@
 #pragma once
 
 #include "base/common_types.h"
-#include "base/application/stream_info.h"
+#include "base/info/stream_info.h"
 
 namespace pvd
 {

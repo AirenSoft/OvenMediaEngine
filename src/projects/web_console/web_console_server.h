@@ -10,7 +10,7 @@
 
 #include <memory>
 
-#include <base/application/application.h>
+#include <base/info/application.h>
 #include <base/media_route/media_route_interface.h>
 #include <ice/ice.h>
 #include <http_server/http_server.h>

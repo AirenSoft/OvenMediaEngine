@@ -14,21 +14,18 @@
 //====================================================================================================
 // Create
 //====================================================================================================
-std::shared_ptr<CmafApplication> CmafApplication::Create(const info::Application *application_info,
+std::shared_ptr<CmafApplication> CmafApplication::Create(const info::Application &application_info,
 		const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
 {
 	auto application = std::make_shared<CmafApplication>(application_info, chunked_transfer);
 	application->Start();
-
-
-
 	return application;
 }
 
 //====================================================================================================
 // CmafApplication
 //====================================================================================================
-CmafApplication::CmafApplication(const info::Application *application_info,
+CmafApplication::CmafApplication(const info::Application &application_info,
 								const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
 									: Application(application_info)
 {

@@ -13,11 +13,11 @@
 class HlsPublisher : public SegmentPublisher
 {
 public:
-	static std::shared_ptr<HlsPublisher> Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-												const info::Application *application_info,
-												std::shared_ptr<MediaRouteInterface> router);
+	static std::shared_ptr<HlsPublisher> Create(const std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
+												const info::Application &application_info,
+												const std::shared_ptr<MediaRouteInterface> &router);
 
-	HlsPublisher(PrivateToken token, const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
+	HlsPublisher(PrivateToken token, const info::Application &application_info, const std::shared_ptr<MediaRouteInterface> &router);
 
 protected:
 	//--------------------------------------------------------------------
@@ -28,7 +28,7 @@ protected:
 	//--------------------------------------------------------------------
 	// Implementation of Publisher
 	//--------------------------------------------------------------------
-	std::shared_ptr<Application> OnCreateApplication(const info::Application *application_info) override;
+	std::shared_ptr<Application> OnCreateApplication(const info::Application &application_info) override;
 
 	cfg::PublisherType GetPublisherType() const override
 	{

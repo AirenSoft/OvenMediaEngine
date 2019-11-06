@@ -81,7 +81,7 @@ bool DashPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
 						 publisher_info->GetThreadCount());
 }
 
-std::shared_ptr<Application> DashPublisher::OnCreateApplication(const info::Application *application_info)
+std::shared_ptr<Application> DashPublisher::OnCreateApplication(const info::Application &application_info)
 {
 	return DashApplication::Create(application_info);
 }
