@@ -8,7 +8,7 @@
 //==============================================================================
 #include "media_route_application.h"
 
-#include <base/application/stream_info.h>
+#include <base/info/stream_info.h>
 #include <relay/relay.h>
 
 #define OV_LOG_TAG "MediaRouter.App"
@@ -28,53 +28,16 @@ std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info:
 MediaRouteApplication::MediaRouteApplication(const info::Application *application_info)
 	: _application_info(application_info)
 {
-	logtd("Created media route application. application (%d: %s)", application_info->GetType(), application_info->GetName().CStr());
+	logtd("Created media route application. application (%s)", application_info->GetName().CStr());
 }
 
 MediaRouteApplication::~MediaRouteApplication()
 {
-	logtd("Destroyed media router application. application (%d: %s)", _application_info->GetType(), _application_info->GetName().CStr());
+	logtd("Destroyed media router application. application (%s)", _application_info->GetName().CStr());
 }
 
 bool MediaRouteApplication::Start()
 {
-	switch (_application_info->GetType())
-	{
-		case cfg::ApplicationType::Live:
-			_relay_server = std::make_shared<RelayServer>(this, _application_info);
-
-			if (_relay_server->CheckPortNull())
-			{
-				return false;
-			}
-
-			RegisterObserverApp(_relay_server);
-
-			break;
-
-		case cfg::ApplicationType::LiveEdge:
-		{
-			_relay_server = std::make_shared<RelayServer>(this, _application_info);
-
-			auto &origin = _application_info->GetOrigin();
-
-			if (origin.IsParsed())
-			{
-				_relay_client = std::make_shared<RelayClient>(this, _application_info);
-				_relay_client->Start(_application_info->GetName());
-			}
-
-			break;
-		}
-
-		case cfg::ApplicationType::Vod:
-		case cfg::ApplicationType::VodEdge:
-			break;
-
-		case cfg::ApplicationType::Unknown:
-			break;
-	}
-
 	try
 	{
 		_kill_flag = false;

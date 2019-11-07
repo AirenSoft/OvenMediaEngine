@@ -18,15 +18,6 @@
 
 namespace cfg
 {
-	enum class ApplicationType
-	{
-		Unknown,
-		Live,
-		Vod,
-		LiveEdge,
-		VodEdge
-	};
-
 	struct Application : public Item
 	{
 		ov::String GetName() const
@@ -34,41 +25,9 @@ namespace cfg
 			return _name;
 		}
 
-		ApplicationType GetType() const
-		{
-			if(_type == "live")
-			{
-				return ApplicationType::Live;
-			}
-			else if(_type == "liveedge")
-			{
-				return ApplicationType::LiveEdge;
-			}
-			else if(_type == "vod")
-			{
-				return ApplicationType::Vod;
-			}
-			else if(_type == "vodedge")
-			{
-				return ApplicationType::VodEdge;
-			}
-
-			return ApplicationType::Unknown;
-		}
-
-		ov::String GetTypeName() const
-		{
-			return _type;
-		}
-
 		const Origin &GetOrigin() const
 		{
 			return _origin;
-		}
-
-		const WebConsole &GetWebConsole() const
-		{
-			return _web_console;
 		}
 
 		const Decode &GetDecode() const
@@ -105,9 +64,8 @@ namespace cfg
 		void MakeParseList() const override
 		{
 			RegisterValue("Name", &_name);
-			RegisterValue("Type", &_type);
+
 			RegisterValue<Optional>("Origin", &_origin);
-			RegisterValue<Optional>("WebConsole", &_web_console);
 			RegisterValue<Optional>("Decode", &_decode);
 			RegisterValue<Optional>("Encodes", &_encodes);
 			RegisterValue<Optional>("Streams", &_streams);
@@ -116,9 +74,7 @@ namespace cfg
 		}
 
 		ov::String _name;
-		ov::String _type;
 		Origin _origin;
-		WebConsole _web_console;
 		Decode _decode;
 		Encodes _encodes;
 		Streams _streams;

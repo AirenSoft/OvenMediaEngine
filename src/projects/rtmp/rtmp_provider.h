@@ -30,9 +30,9 @@ class RtmpProvider : public pvd::Provider, public RtmpObserver
 {
     // class TranscodeApplication;
 public:
-    static std::shared_ptr<RtmpProvider> Create(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+    static std::shared_ptr<RtmpProvider> Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 
-    explicit RtmpProvider(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+    explicit RtmpProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
     ~RtmpProvider() override;
 
     cfg::ProviderType GetProviderType() override

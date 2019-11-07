@@ -27,16 +27,6 @@ namespace info
 			return _application_id;
 		}
 
-		std::shared_ptr<Certificate> GetCertificate() const
-		{
-			return _certificate;
-		}
-
-		std::shared_ptr<Certificate> GetChainCertificate() const
-		{
-			return _chain_certificate;
-		}
-
 		template<typename Tpublisher>
 		const Tpublisher *GetPublisher() const
 		{
@@ -72,10 +62,6 @@ namespace info
 		}
 
 	protected:
-		std::shared_ptr<ov::Error> PrepareCertificates();
-
 		application_id_t _application_id = 0;
-		std::shared_ptr<Certificate> _certificate;
-		std::shared_ptr<Certificate> _chain_certificate;
 	};
 }

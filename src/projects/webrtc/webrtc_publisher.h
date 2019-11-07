@@ -11,9 +11,9 @@ class WebRtcPublisher : public Publisher,
                         public RtcSignallingObserver
 {
 public:
-	static std::shared_ptr<WebRtcPublisher> Create(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+	static std::shared_ptr<WebRtcPublisher> Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 
-	WebRtcPublisher(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+	WebRtcPublisher(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 	~WebRtcPublisher() override;
 
 	// IcePortObserver Implementation

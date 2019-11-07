@@ -9,6 +9,7 @@
 #pragma once
 
 #include "base/common_types.h"
+#include "base/info/host.h"
 #include "base/media_route/media_route_interface.h"
 
 namespace pvd
@@ -32,17 +33,17 @@ namespace pvd
 		std::shared_ptr<Stream> GetStreamById(info::application_id_t app_id, uint32_t stream_id);
 
 	protected:
-		Provider(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+		Provider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 		virtual ~Provider();
 
-		const cfg::Host& GetHostInfo();
+		const info::Host& GetHostInfo();
 
 		// 모든 Provider는 Name을 정의해야 하며, Config과 일치해야 한다.
 		virtual cfg::ProviderType GetProviderType() = 0;
 		virtual std::shared_ptr<Application> OnCreateApplication(const info::Application &application_info) = 0;
 
 	private:
-		const cfg::Host _host_info;
+		const info::Host _host_info;
 		std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
 		std::shared_ptr<MediaRouteInterface> _router;
 	};

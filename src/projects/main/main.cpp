@@ -185,20 +185,27 @@ int main(int argc, char *argv[])
 	std::shared_ptr<Transcoder> transcoder;
 	std::vector<std::shared_ptr<WebConsoleServer>> web_console_servers;
 
+	std::vector<info::Host> host_info_list;
 	std::map<ov::String, std::vector<info::Application>> application_infos;
 
-	for (auto &host : hosts)
+	// Create info::Host
+	for (const auto &host : hosts)
 	{
-		auto host_name = host.GetName();
+		logti("Trying to create host info [%s]...", host.GetName().CStr());
+		host_info_list.emplace_back(host);
+	}
+
+	for (auto &host_info : host_info_list)
+	{
+		auto host_name = host_info.GetName();
 
 		logtd("Trying to create modules for host [%s]", host_name.CStr());
 
-		auto &app_info_list = application_infos[host.GetName()];
+		auto &app_info_list = application_infos[host_info.GetName()];
 
-		for (const auto &application : host.GetApplications())
+		for (const auto &application : host_info.GetApplications())
 		{
-			logti("Trying to create application [%s] (%s)...", application.GetName().CStr(), application.GetTypeName().CStr());
-
+			logti("Trying to create application [%s]...", application.GetName().CStr());
 			app_info_list.emplace_back(application);
 		}
 
@@ -224,14 +231,13 @@ int main(int argc, char *argv[])
 		CHECK_FAIL(transcoder);
 
 		logti("Trying to create RTMP Provider [%s]...", host_name.CStr());
-		auto provider = RtmpProvider::Create(host, router);
+		auto provider = RtmpProvider::Create(host_info, router);
 		CHECK_FAIL(provider);
 
 		logti("Trying to create WebRTC Publisher for application [%s]...", host_name.CStr());
-		auto webrtc = WebRtcPublisher::Create(host, router);
+		auto webrtc = WebRtcPublisher::Create(host_info, router);
 		CHECK_FAIL(webrtc);
-
-
+		
 		//////////////////////////////
 		// Create applications that defined by the configuration
 		//////////////////////////////
@@ -243,7 +249,7 @@ int main(int argc, char *argv[])
 			{
 				auto app_name = application_info.GetName();
 
-				if (application_info.GetType() == cfg::ApplicationType::Live)
+				if (application_info.GetType() == cfg::HostType::Live)
 				{
 
 				}

@@ -1,39 +1,80 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<Server version="2">
+<Server version="3">
 	<Name>OvenMediaEngine</Name>
 	<Hosts>
 		<Host>
 			<Name>default</Name>
-			<IP>*</IP>
-			<!--
-            <TLS>
-                    <ChainCertPath>path/to/file.crt</ChainCertPath>
-                    <CertPath>path/to/file.crt</CertPath>
-                    <KeyPath>path/to/file.key</KeyPath>
-            </TLS>
-            -->
-			<Ports>
-				<DASH>8080</DASH>
-				<HLS>8080</HLS>
-			</Ports>
+            <Type>edge</Type>
 
-			<Applications>
-				<Application>
-					<Name>app</Name>
-					<Type>liveedge</Type>
+            # IP 지정, *은 모든 IP
+            <IP>*</IP>
 
-					<Origin>
-						<Primary>srt://[ORIGIN_IP]:9000</Primary>
-					</Origin>
+            # 멀티 도메인과 TLS 설정
+            <Domains>
+                <Domain>
+                    <Names>
+                        <Name>stream1.airensoft.com</Name>
+                        <Name>stream2.airensoft.com</Name>
+                        <Name>stream3.airensoft.com</Name>
+                        <Name>*.airensoft.com</Name>
+                    </Names>
+                    <TLS>
+                        <CertPath>path/to/file.crt</CertPath>
+                        <KeyPath>path/to/file.key</KeyPath>
+                        <ChainCertPath>path/to/file.crt</ChainCertPath>
+                    </TLS>
+                </Domain>
+                <Domain>
+                    <Names>
+                        <Name>ovenmediaengine.com</Name>
+                    </Names>
+                    <TLS>
+                        <CertPath>path/to/file1.crt</CertPath>
+                        <KeyPath>path/to/file1.key</KeyPath>
+                        <ChainCertPath>path/to/file1.crt</ChainCertPath>
+                    </TLS>
+                </Domain>
+            </Domains>
 
-					<Publishers>
-						<WebRTC />
-						<DASH />
-						<HLS />
-					</Publishers>
-				</Application>
-			</Applications>
+            # 포트 설정
+            <Listen>
+                <Providers>
+                    <RTMP>${env:OME_RTMP_PROV_PORT:1935}</RTMP>
+                </Providers>
+
+                <Publishers>
+                    <Relay>${env:OME_ORIGIN_PORT:9000}</Relay>
+                    <HLS>${env:OME_HLS_PUB_PORT:80}</HLS>
+                    <DASH>${env:OME_DASH_PUB_PORT:80}</DASH>
+                    <WebRTC>
+                        <Signalling>${env:OME_SIGNALLING_PORT:3333}</Signalling>
+                        <IceCandidates>
+                            <IceCandidate>${env:OME_ICE_CANDIDATES:*:10000-10005/udp}</IceCandidate>
+                        </IceCandidates>
+                    </WebRTC>
+                </Publishers>
+            </Listen>
+
+            # ProxyPass 설정, 경로별로 Origin을 지정할 수 있다.
+            <Origins>
+                <Origin>
+                    <Location>/app/stream3</Location>
+                    <Pass>
+                        <Url>origin3.airensoft.com:9000/app3/stream3</Url>
+                        <Url>origin4.airensoft.com:9000/app3/stream3</Url>
+                    </Pass>
+                </Origin>
+                <Origin>
+                    <Location>/app</Location>
+                    <Pass><Url>origin2.airensoft.com:9000/app2</Url></Pass>
+                </Origin>
+                <Origin>
+                    <Location>default</Location>
+                    <Pass><Url>origin1.airensoft.com:9000</Url></Pass>
+                </Origin>
+            </Origins>
+
 		</Host>
 	</Hosts>
 </Server>

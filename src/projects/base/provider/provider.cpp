@@ -17,7 +17,7 @@
 
 namespace pvd
 {
-	Provider::Provider(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+	Provider::Provider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 		: _host_info(host_info), _router(router)
 	{
 	}
@@ -26,7 +26,7 @@ namespace pvd
 	{
 	}
 
-	const cfg::Host& Provider::GetHostInfo()
+	const info::Host& Provider::GetHostInfo()
 	{
 		return _host_info;
 	}

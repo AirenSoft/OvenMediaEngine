@@ -1,7 +1,7 @@
 #include "publisher_private.h"
 #include "publisher.h"
 
-Publisher::Publisher(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+Publisher::Publisher(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 	: _host_info(host_info),
 	  _router(router)
 {
@@ -30,7 +30,7 @@ bool Publisher::Stop()
 	return true;
 }
 
-const cfg::Host& Publisher::GetHostInfo()
+const info::Host& Publisher::GetHostInfo()
 {
 	return _host_info;
 }

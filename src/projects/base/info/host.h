@@ -22,9 +22,9 @@ namespace info
 	public:
 		explicit Host(const cfg::Host &host_info);
 
-		application_id_t GetId() const
+		host_id_t GetId() const
 		{
-			return _application_id;
+			return _host_id;
 		}
 
 		std::shared_ptr<Certificate> GetCertificate() const
@@ -40,7 +40,7 @@ namespace info
 	protected:
 		std::shared_ptr<ov::Error> PrepareCertificates();
 
-		application_id_t _application_id = 0;
+		host_id_t _host_id = 0;
 		std::shared_ptr<Certificate> _certificate;
 		std::shared_ptr<Certificate> _chain_certificate;
 

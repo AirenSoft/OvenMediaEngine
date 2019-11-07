@@ -18,7 +18,7 @@
 
 using namespace common;
 
-std::shared_ptr<RtmpProvider> RtmpProvider::Create(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<RtmpProvider> RtmpProvider::Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 {
 	auto provider = std::make_shared<RtmpProvider>(host_info, router);
 	if (!provider->Start())
@@ -29,7 +29,7 @@ std::shared_ptr<RtmpProvider> RtmpProvider::Create(const cfg::Host &host_info, c
 	return provider;
 }
 
-RtmpProvider::RtmpProvider(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+RtmpProvider::RtmpProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 	: Provider(host_info, router)
 {
 	logtd("Created Rtmp Provider module.");

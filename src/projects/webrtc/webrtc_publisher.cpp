@@ -7,7 +7,7 @@
 
 #include "config/config_manager.h"
 
-std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 {
 	auto webrtc = std::make_shared<WebRtcPublisher>(host_info, router);
 
@@ -20,7 +20,7 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Host &host_i
 	return webrtc;
 }
 
-WebRtcPublisher::WebRtcPublisher(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+WebRtcPublisher::WebRtcPublisher(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 	: Publisher(host_info, router)
 {
 
@@ -52,7 +52,7 @@ bool WebRtcPublisher::Start()
 
 	logti("WebRTC Publisher is listening on %s...", signalling_address.ToString().CStr());
 
-	_signalling = std::make_shared<RtcSignallingServer>(_application_info, _application);
+	_signalling = std::make_shared<RtcSignallingServer>(host_info);
 	_signalling->AddObserver(RtcSignallingObserver::GetSharedPtr());
 	if(!_signalling->Start(signalling_address))
     {

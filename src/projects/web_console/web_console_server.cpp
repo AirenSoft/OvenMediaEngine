@@ -10,18 +10,18 @@
 #include "web_console_server.h"
 #include "web_console_private.h"
 
-WebConsoleServer::WebConsoleServer(const info::Application *application_info, PrivateToken token)
-	: _application_info(application_info)
+WebConsoleServer::WebConsoleServer(const info::Host &host_info, PrivateToken token)
+	: _host_info(host_info)
 {
 }
 
-std::shared_ptr<WebConsoleServer> WebConsoleServer::Create(const info::Application *application_info)
+std::shared_ptr<WebConsoleServer> WebConsoleServer::Create(const info::Host &host_info)
 {
-	auto instance = std::make_shared<WebConsoleServer>(application_info, (PrivateToken){});
+	auto instance = std::make_shared<WebConsoleServer>(host_info, (PrivateToken){});
 
 	if (instance != nullptr)
 	{
-		const auto &web_console = application_info->GetWebConsole();
+		const auto &web_console = host_info.GetWebConsole();
 		instance->_web_console = web_console;
 
 		auto host = web_console.GetParentAs<cfg::Host>("Host");
@@ -55,14 +55,14 @@ bool WebConsoleServer::Start(const ov::SocketAddress &address)
 		return false;
 	}
 
-	auto certificate = _application_info->GetCertificate();
+	auto certificate = _host_info.GetCertificate();
 
 	if (certificate != nullptr)
 	{
 		auto https_server = std::make_shared<HttpsServer>();
 
 		https_server->SetLocalCertificate(certificate);
-		https_server->SetChainCertificate(_application_info->GetChainCertificate());
+		https_server->SetChainCertificate(_host_info.GetChainCertificate());
 
 		_http_server = https_server;
 	}

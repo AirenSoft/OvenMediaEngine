@@ -16,7 +16,7 @@
 #include <ice/ice.h>
 #include <webrtc/webrtc_publisher.h>
 
-RtcSignallingServer::RtcSignallingServer(const cfg::Host &host_info)
+RtcSignallingServer::RtcSignallingServer(const info::Host &host_info)
 	: _host_info(host_info)
 {
 }
@@ -29,14 +29,14 @@ bool RtcSignallingServer::Start(const ov::SocketAddress &address)
 		return false;
 	}
 
-	auto certificate = _application_info->GetCertificate();
+	auto certificate = _host_info.GetCertificate();
 
 	if (certificate != nullptr)
 	{
 		auto https_server = std::make_shared<HttpsServer>();
 
 		https_server->SetLocalCertificate(certificate);
-		https_server->SetChainCertificate(_application_info->GetChainCertificate());
+		https_server->SetChainCertificate(_host_info.GetChainCertificate());
 
 		_http_server = https_server;
 	}
@@ -45,9 +45,9 @@ bool RtcSignallingServer::Start(const ov::SocketAddress &address)
 		_http_server = std::make_shared<HttpServer>();
 	}
 
-	if (_p2p_info->IsParsed())
+	if (_p2p_info.IsParsed())
 	{
-		logti("P2P is enabled (Client peers per host peer: %d)", _p2p_info->GetClientPeersPerHostPeer());
+		logti("P2P is enabled (Client peers per host peer: %d)", _p2p_info.GetClientPeersPerHostPeer());
 		_p2p_manager.SetEnable(true);
 	}
 	else
@@ -87,6 +87,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 				return HttpInterceptorResult::Disconnect;
 			}
 
+			//TODO(Getroot) : Application 을 구분한 후 Application 설정을 구해서 여기에 적용한다.
 
 			auto info = std::make_shared<RtcSignallingInfo>(
 				// application_name
@@ -305,8 +306,11 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 //====================================================================================================
 bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections)
 {
+	// TODO(Getroot): Need to refactoring
+	/*
 	std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
-	ov::String alias = _application_info->GetOrigin().GetAlias();
+
+	ov::String alias = _host_info.GetOrigin().GetAlias();
 	ov::String app_name = _application_info->GetName();
 	ov::String stream_name;
 	uint32_t bitrate = 0;
@@ -365,6 +369,7 @@ bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_pt
 
 		stream_collections.push_back(collection);
 	}
+	*/
 
 	return true;
 }
@@ -398,8 +403,6 @@ bool RtcSignallingServer::Stop()
 
 std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const WebSocketFrame> &message)
 {
-	//TODO(Getroot-1): 여기서 Application별로 분기하여 처리한다.
-
 	if (command == "request_offer")
 	{
 		return DispatchRequestOffer(ws_client, info);
@@ -448,7 +451,6 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	std::shared_ptr<RtcPeerInfo> host_peer = nullptr;
 
 	peer_info = _p2p_manager.CreatePeerInfo(info->id, ws_client);
-
 	if (peer_info == nullptr)
 	{
 		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Cannot parse peer info from user agent: %s", client->GetRequest()->GetHeader("USER-AGENT").CStr());
@@ -471,7 +473,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 			else
 			{
 				// Check if there is a host that can accept this client
-				host_peer = _p2p_manager.TryToRegisterAsClientPeer(peer_info, _p2p_info->GetClientPeersPerHostPeer());
+				host_peer = _p2p_manager.TryToRegisterAsClientPeer(peer_info, _p2p_info.GetClientPeersPerHostPeer());
 			}
 		}
 		else
@@ -483,6 +485,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	{
 		// Every peer is host
 	}
+
 
 	if (host_peer == nullptr)
 	{
@@ -884,7 +887,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(std::shared_ptr<Rtc
 		{
 			logtd("Deleting peer %s from p2p manager...", peer_info->ToString().CStr());
 
-			_p2p_manager.RemovePeer(peer_info, _p2p_info->GetClientPeersPerHostPeer());
+			_p2p_manager.RemovePeer(peer_info, _p2p_info.GetClientPeersPerHostPeer());
 
 			if (peer_info->IsHost())
 			{
@@ -906,7 +909,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(std::shared_ptr<Rtc
 					client_info->GetResponse()->Send(value);
 
 					// remove client from peer
-					_p2p_manager.RemovePeer(client_info, _p2p_info->GetClientPeersPerHostPeer());
+					_p2p_manager.RemovePeer(client_info, _p2p_info.GetClientPeersPerHostPeer());
 				}
 			}
 			else

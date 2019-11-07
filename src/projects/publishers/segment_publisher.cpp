@@ -11,8 +11,8 @@
 
 #include <segment_stream/segment_stream.h>
 
-SegmentPublisher::SegmentPublisher(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
-	: Publisher(application_info, std::move(router))
+SegmentPublisher::SegmentPublisher(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+	: Publisher(host_info, router)
 {
 }
 

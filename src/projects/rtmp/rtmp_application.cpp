@@ -11,7 +11,7 @@
 #include "rtmp_stream.h"
 
 #include "base/provider/application.h"
-#include "base/application/stream_info.h"
+#include "base/info/stream_info.h"
 
 #define OV_LOG_TAG "RtmpApplication"
 

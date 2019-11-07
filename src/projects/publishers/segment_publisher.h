@@ -42,7 +42,7 @@ public:
 	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) override;
 
 protected:
-	SegmentPublisher(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
+	SegmentPublisher(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 	~SegmentPublisher() override;
 
 	bool CheckCodecAvailability(const std::vector<ov::String> &video_codecs, const std::vector<ov::String> &audio_codecs);

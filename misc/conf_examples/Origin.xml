@@ -5,7 +5,9 @@
 	<Hosts>
 		<Host>
 			<Name>default</Name>
+            <Type>origin</Type>
 			<IP>*</IP>
+			<Domain>*.airensoft.com</Domain>
 
 			<Ports>
 				<Origin />
@@ -14,8 +16,6 @@
 			<Applications>
 				<Application>
 					<Name>app</Name>
-					<Type>live</Type>
-
 					<Encodes>
 						<Encode>
 							<Name>VP8</Name>

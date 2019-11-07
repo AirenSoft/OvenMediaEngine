@@ -244,10 +244,10 @@ public:
 
 	ov::String ToString() const;
 
+	static std::shared_ptr<RtcPeerInfo> FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<WebSocketClient> &ws_client);
+
 protected:
 	RtcPeerInfo() = default;
-
-	static std::shared_ptr<RtcPeerInfo> FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<WebSocketClient> &ws_client);
 	static RtcPeerBrowser ParseBrowserInfo(const ov::String &user_agent);
 
 	// peer id

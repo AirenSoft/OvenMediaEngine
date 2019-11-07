@@ -9,6 +9,7 @@
 #pragma once
 
 #include <base/common_types.h>
+#include <base/info/host.h>
 #include <base/media_route/media_route_application_observer.h>
 #include <base/ovcrypto/ovcrypto.h>
 #include <base/publisher/application.h>
@@ -114,11 +115,11 @@ public:
 	virtual bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) = 0;
 
 protected:
-	explicit Publisher(const cfg::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+	explicit Publisher(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 	virtual ~Publisher() = default;
 
 	// Host Info
-	const cfg::Host& GetHostInfo();
+	const info::Host& GetHostInfo();
 
 	// 모든 Publisher는 Type을 정의해야 하며, Config과 일치해야 한다.
 	virtual cfg::PublisherType GetPublisherType() const = 0;
@@ -129,7 +130,7 @@ protected:
 	std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
 
 	// Publisher를 상속받은 클래스에서 사용되는 정보
-	const cfg::Host _host_info;
+	const info::Host _host_info;
 
 	std::shared_ptr<MediaRouteInterface> _router;
 };
