@@ -58,7 +58,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
-	_context->thread_count = 0;
+	_context->thread_count = 4;
 	AVRational output_timebase = TimebaseToAVRational(_output_context->GetTimeBase());
 	_scale = ::av_q2d(::av_div_q(output_timebase, codec_timebase));
 	_scale_inv = ::av_q2d(::av_div_q(codec_timebase, output_timebase));
