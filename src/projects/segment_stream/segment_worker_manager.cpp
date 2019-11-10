@@ -6,7 +6,7 @@
 //====================================================================================================
 SegmentWorker::SegmentWorker()
 {
-    _stop_thread_flag = true;
+	_stop_thread_flag = true;
 }
 
 //====================================================================================================
@@ -14,7 +14,7 @@ SegmentWorker::SegmentWorker()
 //====================================================================================================
 SegmentWorker::~SegmentWorker()
 {
-    Stop();
+	Stop();
 }
 
 //====================================================================================================
@@ -22,17 +22,17 @@ SegmentWorker::~SegmentWorker()
 //====================================================================================================
 bool SegmentWorker::Start(const SegmentProcessHandler &process_handler)
 {
-    if(!_stop_thread_flag)
-    {
-        return true;
-    }
+	if (!_stop_thread_flag)
+	{
+		return true;
+	}
 
-    _process_handler = process_handler;
+	_process_handler = process_handler;
 
-    _stop_thread_flag = false;
-    _worker_thread = std::thread(&SegmentWorker::WorkerThread, this);
+	_stop_thread_flag = false;
+	_worker_thread = std::thread(&SegmentWorker::WorkerThread, this);
 
-    return true;
+	return true;
 }
 
 //====================================================================================================
@@ -40,17 +40,17 @@ bool SegmentWorker::Start(const SegmentProcessHandler &process_handler)
 //====================================================================================================
 bool SegmentWorker::Stop()
 {
-    if(_stop_thread_flag)
-    {
-        return true;
-    }
+	if (_stop_thread_flag)
+	{
+		return true;
+	}
 
-    _stop_thread_flag = true;
-    // Generate Event
-    _queue_event.Notify();
-    _worker_thread.join();
+	_stop_thread_flag = true;
+	// Generate Event
+	_queue_event.Notify();
+	_worker_thread.join();
 
-    return true;
+	return true;
 }
 
 //====================================================================================================
@@ -58,12 +58,12 @@ bool SegmentWorker::Stop()
 //====================================================================================================
 bool SegmentWorker::AddWorkInfo(std::shared_ptr<SegmentWorkInfo> work_info)
 {
-    std::unique_lock<std::mutex> lock(_work_info_guard);
-    _work_infos.push(work_info);
+	std::unique_lock<std::mutex> lock(_work_info_guard);
+	_work_infos.push(work_info);
 
-    _queue_event.Notify();
+	_queue_event.Notify();
 
-    return true;
+	return true;
 }
 
 //====================================================================================================
@@ -71,15 +71,15 @@ bool SegmentWorker::AddWorkInfo(std::shared_ptr<SegmentWorkInfo> work_info)
 //====================================================================================================
 std::shared_ptr<SegmentWorkInfo> SegmentWorker::PopWorkInfo()
 {
-    std::unique_lock<std::mutex> lock(_work_info_guard);
+	std::unique_lock<std::mutex> lock(_work_info_guard);
 
-    if(_work_infos.empty())
-        return nullptr;
+	if (_work_infos.empty())
+		return nullptr;
 
-    auto work_info = _work_infos.front();
-    _work_infos.pop();
+	auto work_info = _work_infos.front();
+	_work_infos.pop();
 
-    return work_info;
+	return work_info;
 }
 
 //====================================================================================================
@@ -87,28 +87,31 @@ std::shared_ptr<SegmentWorkInfo> SegmentWorker::PopWorkInfo()
 //====================================================================================================
 void SegmentWorker::WorkerThread()
 {
-    while(!_stop_thread_flag)
-    {
-        // quequ event wait
-        _queue_event.Wait();
+	while (!_stop_thread_flag)
+	{
+		// quequ event wait
+		_queue_event.Wait();
 
-        auto work_info = PopWorkInfo();
+		auto work_info = PopWorkInfo();
 
-        if(work_info == nullptr)
-        {
-            // It's a problem if there's nothing in the queue despite the event
-            OV_ASSERT2(false);
-            continue;
-        }
+		if (work_info == nullptr)
+		{
+			if (_stop_thread_flag == false)
+			{
+				// It's a problem if there's nothing in the queue despite the event
+				OV_ASSERT2(false);
+			}
 
-        if(_process_handler(work_info->client, work_info->request_target, work_info->origin_url) == false)
-        {
-        	logte("Segment process handler fail - target(%s)", work_info->request_target.CStr());
-        }
+			continue;
+		}
 
-//        logtd("Segment process handler - target(%s)", work_info->request_target.CStr());
+		if (_process_handler(work_info->client, work_info->request_target, work_info->origin_url) == false)
+		{
+			logte("Segment process handler fail - target(%s)", work_info->request_target.CStr());
+		}
 
-    }
+		//        logtd("Segment process handler - target(%s)", work_info->request_target.CStr());
+	}
 }
 
 //====================================================================================================
@@ -116,20 +119,20 @@ void SegmentWorker::WorkerThread()
 //====================================================================================================
 bool SegmentWorkerManager::Start(int worker_count, const SegmentProcessHandler &process_handler)
 {
-    if(worker_count <= 0)
-        return false;
+	if (worker_count <= 0)
+		return false;
 
-    _worker_count = worker_count;
+	_worker_count = worker_count;
 
-    // Create WorkerThread
-    for(int index = 0; index < _worker_count ; index++)
-    {
-        auto worker = std::make_shared<SegmentWorker>();
-        worker->Start(process_handler);
-        _workers.push_back(worker);
-    }
+	// Create WorkerThread
+	for (int index = 0; index < _worker_count; index++)
+	{
+		auto worker = std::make_shared<SegmentWorker>();
+		worker->Start(process_handler);
+		_workers.push_back(worker);
+	}
 
-    return true;
+	return true;
 }
 
 //====================================================================================================
@@ -137,10 +140,10 @@ bool SegmentWorkerManager::Start(int worker_count, const SegmentProcessHandler &
 //====================================================================================================
 bool SegmentWorkerManager::Stop()
 {
-    for(const auto &worker : _workers)
-        worker->Stop();
+	for (const auto &worker : _workers)
+		worker->Stop();
 
-    return true;
+	return true;
 }
 
 //====================================================================================================
@@ -148,18 +151,18 @@ bool SegmentWorkerManager::Stop()
 //====================================================================================================
 #define MAX_WORKER_INDEX 100000000
 bool SegmentWorkerManager::AddWork(const std::shared_ptr<HttpClient> &response,
-									const ov::String &request_target,
-									const ov::String &origin_url)
+								   const ov::String &request_target,
+								   const ov::String &origin_url)
 {
-    auto work_info = std::make_shared<SegmentWorkInfo>(response, request_target, origin_url);
+	auto work_info = std::make_shared<SegmentWorkInfo>(response, request_target, origin_url);
 
-    // insert thread
-    _workers[(_worker_index % _worker_count)]->AddWorkInfo(work_info);
+	// insert thread
+	_workers[(_worker_index % _worker_count)]->AddWorkInfo(work_info);
 
-    if(_worker_index < MAX_WORKER_INDEX)
-        _worker_index++;
-    else
-        _worker_index = 0;
+	if (_worker_index < MAX_WORKER_INDEX)
+		_worker_index++;
+	else
+		_worker_index = 0;
 
-    return true;
+	return true;
 }
