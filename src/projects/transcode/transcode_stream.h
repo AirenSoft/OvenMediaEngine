@@ -29,14 +29,14 @@
 
 #include <base/info/application.h>
 
-class TranscodeApplication;
-
 typedef int32_t MediaTrackId;
+
+class TranscodeApplication;
 
 class TranscodeStream
 {
 public:
-	TranscodeStream(const info::Application *application_info, std::shared_ptr<StreamInfo> orig_stream_info, TranscodeApplication *parent);
+	TranscodeStream(const info::Application &application_info, const std::shared_ptr<StreamInfo> &orig_stream_info, TranscodeApplication *parent);
 	~TranscodeStream();
 
 	void Stop();
@@ -47,16 +47,16 @@ public:
 
 private:
 
-	// 입력 스트림 정보
+	// Input stream info
 	std::shared_ptr<StreamInfo> _stream_info_input;
 
-	// 미디어 인코딩된 원본 패킷 버퍼
+	// Buffer for encoded media packets
 	MediaQueue<std::unique_ptr<MediaPacket>> _queue;
 
-	// 디코딩된 프레임 버퍼
+	// Buffer for decoded frames
 	MediaQueue<std::unique_ptr<MediaFrame>> _queue_decoded;
 
-	// 필터링된 프레임 버퍼
+	// Buffer for filtered frames
 	MediaQueue<std::unique_ptr<MediaFrame>> _queue_filterd;
 
 	// 96-127 dynamic : RTP Payload Types for standard audio and video encodings
@@ -64,18 +64,18 @@ private:
 	uint8_t _last_track_audio = 0x70;     // 0x70 ~ 0x7F
 
 private:
-	const info::Application *_application_info;
+	const info::Application _application_info;
 
-	// 디코더
+	// Decoder
 	std::map<MediaTrackId, std::unique_ptr<TranscodeDecoder>> _decoders;
 
-	// 인코더
+	// Encoder
 	std::map<MediaTrackId, std::unique_ptr<TranscodeEncoder>> _encoders;
 
-	// 필터
+	// Filter
 	std::map<MediaTrackId, std::unique_ptr<TranscodeFilter>> _filters;
 
-	// 스트림별 트랙집합
+	// Track Group
 	std::map <ov::String, std::vector <uint8_t >> _stream_tracks;
 
 private:
@@ -132,9 +132,7 @@ private:
 	// 통계 정보
 private:
 	uint32_t _stats_decoded_frame_count;
-
 	uint8_t _stats_queue_full_count;
-
 	uint64_t _max_queue_size;
 };
 

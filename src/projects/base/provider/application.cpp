@@ -61,8 +61,9 @@ namespace pvd
 		return nullptr;
 	}
 
-	// 스트림을 생성한다
-	std::shared_ptr<Stream> Application::MakeStream()
+	// Create Stream
+	// The provider creates itself because it is the entry point of the stream creation.
+	std::shared_ptr<Stream> Application::CreateProviderStream()
 	{
 		auto stream = OnCreateStream();
 		if(!stream)
@@ -74,7 +75,7 @@ namespace pvd
 		return stream;
 	}
 
-	bool Application::CreateStream2(std::shared_ptr<Stream> stream)
+	bool Application::NotifyStreamCreated(std::shared_ptr<Stream> stream)
 	{
 		logtd("CreateStream");
 
@@ -87,11 +88,10 @@ namespace pvd
 
 		_streams[stream->GetId()] = stream;
 
-
 		return true;
 	}
 
-	bool Application::DeleteStream2(std::shared_ptr<Stream> stream)
+	bool Application::NotifyStreamDeleted(std::shared_ptr<Stream> stream)
 	{
 		logtd("DeleteStream");
 

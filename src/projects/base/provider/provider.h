@@ -18,12 +18,11 @@ namespace pvd
 	class Stream;
 
 	// RTMP Server와 같은 모든 Provider는 다음 Interface를 구현하여 MediaRouterInterface에 자신을 등록한다.
-	class Provider
+	class Provider : public MediaRouteObserver
 	{
 	public:
 		virtual bool Start();
 		virtual bool Stop();
-		virtual bool CreateApplication(const info::Application &application_info);
 
 		// app_name으로 Application을 찾아서 반환한다.
 		std::shared_ptr<Application> GetApplicationByName(ov::String app_name);
@@ -38,9 +37,18 @@ namespace pvd
 
 		const info::Host& GetHostInfo();
 
-		// 모든 Provider는 Name을 정의해야 하며, Config과 일치해야 한다.
+		// For child class
 		virtual cfg::ProviderType GetProviderType() = 0;
-		virtual std::shared_ptr<Application> OnCreateApplication(const info::Application &application_info) = 0;
+		virtual std::shared_ptr<Application> OnCreateProviderApplication(const info::Application &app_info) = 0;
+
+		///////////////////////////////////////
+		// Implement MediaRouteObserver
+		///////////////////////////////////////
+		// Create Application
+		bool OnCreateApplication(const info::Application &app_info) override;
+
+		// Delete Application
+		bool OnDeleteApplication(const info::Application &app_info) override;
 
 	private:
 		const info::Host _host_info;

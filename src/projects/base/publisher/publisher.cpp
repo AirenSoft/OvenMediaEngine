@@ -22,7 +22,7 @@ bool Publisher::Stop()
 	{
 		auto application = it->second;
 
-		_router->UnregisterObserverApp(application.get(), application);
+		_router->UnregisterObserverApp(*application.get(), application);
 
 		it = _applications.erase(it);
 	}
@@ -35,15 +35,25 @@ const info::Host& Publisher::GetHostInfo()
 	return _host_info;
 }
 
-bool Publisher::CreateApplication(const info::Application &app_info)
+// Create Application
+bool Publisher::OnCreateApplication(const info::Application &app_info)
 {
-	auto application = OnCreateApplication(app_info);
+	auto application = OnCreatePublisherApplication(app_info);
 
 	// 생성한 Application을 Router와 연결하고 Start
-	_router->RegisterObserverApp(application.get(), application);
+	_router->RegisterObserverApp(*application.get(), application);
 
 	// Application Map에 보관
 	_applications[application->GetId()] = application;
+
+	return true;
+}
+
+// Delete Application
+bool Publisher::OnDeleteApplication(const info::Application &app_info)
+{
+	_applications[app_info.GetId()]->Stop();
+	_applications.erase(app_info.GetId());
 
 	return true;
 }

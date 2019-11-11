@@ -201,8 +201,8 @@ int main(int argc, char *argv[])
 
 		logtd("Trying to create modules for host [%s]", host_name.CStr());
 
+		// Create info::Application
 		auto &app_info_list = application_infos[host_info.GetName()];
-
 		for (const auto &application : host_info.GetApplications())
 		{
 			logti("Trying to create application [%s]...", application.GetName().CStr());
@@ -231,94 +231,104 @@ int main(int argc, char *argv[])
 		CHECK_FAIL(transcoder);
 
 		logti("Trying to create RTMP Provider [%s]...", host_name.CStr());
-		auto provider = RtmpProvider::Create(host_info, router);
-		CHECK_FAIL(provider);
+		auto rtmp_provider = RtmpProvider::Create(host_info, router);
+		CHECK_FAIL(rtmp_provider);
 
 		logti("Trying to create WebRTC Publisher for application [%s]...", host_name.CStr());
-		auto webrtc = WebRtcPublisher::Create(host_info, router);
-		CHECK_FAIL(webrtc);
-		
+		auto webrtc_publisher = WebRtcPublisher::Create(host_info, router);
+		CHECK_FAIL(webrtc_publisher);
+
+		router->RegisterModule(transcoder);
+		router->RegisterModule(rtmp_provider);
+		router->RegisterModule(webrtc_publisher);
+
 		//////////////////////////////
 		// Create applications that defined by the configuration
 		//////////////////////////////
 
-		/*
-		if (app_info_list.empty() == false)
+		for (const auto &app_info : app_info_list)
 		{
-			for (const auto &application_info : app_info_list)
+			auto app_name = app_info.GetName();
+			router->CreateApplication(app_info);
+		}
+
+			/*
+			if (app_info_list.empty() == false)
 			{
-				auto app_name = application_info.GetName();
-
-				if (application_info.GetType() == cfg::HostType::Live)
+				for (const auto &application_info : app_info_list)
 				{
+					auto app_name = application_info.GetName();
 
-				}
-
-				if (application_info.GetWebConsole().IsParsed())
-				{
-					logti("Trying to initialize WebConsole for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-					auto console = WebConsoleServer::Create(&application_info);
-					CHECK_FAIL(console);
-					web_console_servers.push_back(console);
-				}
-
-				auto publisher_list = application_info.GetPublishers().GetPublisherList();
-				std::map<int, std::shared_ptr<HttpServer>> segment_http_server_manager;  // key : port number
-
-				for (const auto &publisher : publisher_list)
-				{
-					if (publisher->IsParsed())
+					if (application_info.GetType() == cfg::HostType::Live)
 					{
-						auto application = router->GetRouteApplicationById(application_info.GetId());
 
-						switch (publisher->GetType())
+					}
+
+					if (application_info.GetWebConsole().IsParsed())
+					{
+						logti("Trying to initialize WebConsole for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+						auto console = WebConsoleServer::Create(&application_info);
+						CHECK_FAIL(console);
+						web_console_servers.push_back(console);
+					}
+
+					auto publisher_list = application_info.GetPublishers().GetPublisherList();
+					std::map<int, std::shared_ptr<HttpServer>> segment_http_server_manager;  // key : port number
+
+					for (const auto &publisher : publisher_list)
+					{
+						if (publisher->IsParsed())
 						{
-							case cfg::PublisherType::Webrtc:
-							{
-								logti("Trying to create WebRTC Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-								auto webrtc = WebRtcPublisher::Create(&application_info, router, application);
-								CHECK_FAIL(webrtc);
-								break;
-							}
+							auto application = router->GetRouteApplicationById(application_info.GetId());
 
-							case cfg::PublisherType::Dash:
+							switch (publisher->GetType())
 							{
-								logti("Trying to create DASH Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-								auto dash = DashPublisher::Create(segment_http_server_manager, &application_info, router);
-								CHECK_FAIL(dash);
-								break;
-							}
+								case cfg::PublisherType::Webrtc:
+								{
+									logti("Trying to create WebRTC Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+									auto webrtc = WebRtcPublisher::Create(&application_info, router, application);
+									CHECK_FAIL(webrtc);
+									break;
+								}
 
-							case cfg::PublisherType::Hls:
-							{
-								logti("Trying to create HLS Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-								auto hls = HlsPublisher::Create(segment_http_server_manager, &application_info, router);
-								CHECK_FAIL(hls);
-								break;
-							}
+								case cfg::PublisherType::Dash:
+								{
+									logti("Trying to create DASH Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+									auto dash = DashPublisher::Create(segment_http_server_manager, &application_info, router);
+									CHECK_FAIL(dash);
+									break;
+								}
 
-							case cfg::PublisherType::Cmaf:
-							{
-								logti("Trying to create CMAF Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-								auto cmaf = CmafPublisher::Create(segment_http_server_manager, &application_info, router);
-								CHECK_FAIL(cmaf);
-								break;
-							}
+								case cfg::PublisherType::Hls:
+								{
+									logti("Trying to create HLS Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+									auto hls = HlsPublisher::Create(segment_http_server_manager, &application_info, router);
+									CHECK_FAIL(hls);
+									break;
+								}
 
-							case cfg::PublisherType::Rtmp:
-							default:
-								// not implemented
-								break;
+								case cfg::PublisherType::Cmaf:
+								{
+									logti("Trying to create CMAF Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+									auto cmaf = CmafPublisher::Create(segment_http_server_manager, &application_info, router);
+									CHECK_FAIL(cmaf);
+									break;
+								}
+
+								case cfg::PublisherType::Rtmp:
+								default:
+									// not implemented
+									break;
+							}
 						}
 					}
 				}
 			}
-		}
-		else
-		{
-			logtw("Nothing to do for host [%s]", host_name.CStr());
-		}
-		*/
+			else
+			{
+				logtw("Nothing to do for host [%s]", host_name.CStr());
+			}
+			*/
 	}
 
 	if (parse_option.start_service)

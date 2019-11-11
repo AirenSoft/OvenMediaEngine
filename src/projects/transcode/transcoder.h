@@ -13,20 +13,15 @@
 #include <vector>
 #include <algorithm>
 #include <thread>
-
-// 미디어 라우터 구조체
 #include "base/media_route/media_route_interface.h"
 #include "base/media_route/media_buffer.h"
-
-// 공옹 구조체
 #include "base/info/stream_info.h"
-
 #include "transcode_application.h"
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <config/config.h>
 
-class Transcoder
+class Transcoder : public MediaRouteObserver
 {
 	// class TranscodeApplication;
 public:
@@ -39,11 +34,17 @@ public:
 
 	bool Start();
 	bool Stop();
-
-	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 트랜스코드 어플리케이션 관련 모듈
-	////////////////////////////////////////////////////////////////////////////////////////////////
 	bool CreateApplication(info::Application application_info);
+
+	//////////////////////////////////////////
+	// Implement MediaRouteObserver
+	//////////////////////////////////////////
+
+	// Create Application
+	virtual bool OnCreateApplication(const info::Application &app_info) override;
+
+	// Delete Application
+	virtual bool OnDeleteApplication(const info::Application &app_info) override;
 
 private:
 	bool CreateApplications();

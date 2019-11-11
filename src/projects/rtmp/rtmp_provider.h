@@ -45,7 +45,7 @@ public:
 
 protected:
 
-	std::shared_ptr<pvd::Application> OnCreateApplication(const info::Application &application_info) override;
+	std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &application_info) override;
 
     //--------------------------------------------------------------------
     // Implementation of RtmpObserver

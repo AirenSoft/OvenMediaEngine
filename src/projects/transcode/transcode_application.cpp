@@ -14,17 +14,17 @@
 
 #define OV_LOG_TAG "TranscodeApplication"
 
-std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(const info::Application *application_info)
+std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(const info::Application &application_info)
 {
 	auto instance = std::make_shared<TranscodeApplication>(application_info);
 
 	return instance;
 }
 
-TranscodeApplication::TranscodeApplication(const info::Application *application_info)
+TranscodeApplication::TranscodeApplication(const info::Application &application_info)
 	: _application_info(application_info)
 {
-	logtd("Transcode application [%s] is created", _application_info->GetName().CStr());
+	logtd("Transcode application [%s] is created", _application_info.GetName().CStr());
 }
 
 TranscodeApplication::~TranscodeApplication()

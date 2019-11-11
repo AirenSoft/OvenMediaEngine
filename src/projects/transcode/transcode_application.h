@@ -14,26 +14,19 @@
 #include <vector>
 #include <algorithm>
 #include <thread>
-
-// 미디어 라우터 구조체
 #include "base/media_route/media_route_application_observer.h"
 #include "base/media_route/media_route_application_connector.h"
 #include "base/media_route/media_buffer.h"
-
-// 공옹 구조체
 #include "base/info/stream_info.h"
-
 #include "transcode_stream.h"
-
 #include <base/ovlibrary/ovlibrary.h>
-
 
 class TranscodeApplication : public MediaRouteApplicationConnector, public MediaRouteApplicationObserver
 {
 public:
-	static std::shared_ptr<TranscodeApplication> Create(const info::Application *application_info);
+	static std::shared_ptr<TranscodeApplication> Create(const info::Application &application_info);
 
-	explicit TranscodeApplication(const info::Application *application_info);
+	explicit TranscodeApplication(const info::Application &application_info);
 	~TranscodeApplication() override;
 
 	MediaRouteApplicationObserver::ObserverType GetObserverType()
@@ -73,6 +66,6 @@ private:
 	std::map<int32_t, std::shared_ptr<TranscodeStream>> _streams;
 	std::mutex _mutex;
 
-	const info::Application *_application_info;
+	const info::Application _application_info;
 };
 

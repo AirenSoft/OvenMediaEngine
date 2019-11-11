@@ -36,9 +36,9 @@ namespace pvd
 		std::shared_ptr<Stream> GetStreamById(uint32_t stream_id);
 		std::shared_ptr<Stream> GetStreamByName(ov::String stream_name);
 
-		std::shared_ptr<Stream> MakeStream();
-		bool CreateStream2(std::shared_ptr<Stream> stream);
-		bool DeleteStream2(std::shared_ptr<Stream> stream);
+		std::shared_ptr<Stream> CreateProviderStream();
+		bool NotifyStreamCreated(std::shared_ptr<Stream> stream);
+		bool NotifyStreamDeleted(std::shared_ptr<Stream> stream);
 
 		// 상위 클래스에서 Stream 객체를 생성해서 받아옴
 		virtual std::shared_ptr<Stream> OnCreateStream() = 0;

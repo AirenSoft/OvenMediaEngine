@@ -43,9 +43,9 @@ class RelayClient;
 class MediaRouteApplication : public MediaRouteApplicationInterface
 {
 public:
-	static std::shared_ptr<MediaRouteApplication> Create(const info::Application *application_info);
+	static std::shared_ptr<MediaRouteApplication> Create(const info::Application &application_info);
 
-	explicit MediaRouteApplication(const info::Application *application_info);
+	explicit MediaRouteApplication(const info::Application &application_info);
 	~MediaRouteApplication() override;
 
 public:
@@ -95,7 +95,7 @@ public:
 
 public:
 	// Application information from configuration file
-	const info::Application *_application_info;
+	const info::Application _application_info;
 
 	// Information of Connector instance
 	std::vector<std::shared_ptr<MediaRouteApplicationConnector>> _connectors;
@@ -118,10 +118,12 @@ public:
 		return _streams;
 	}
 
+/*
 	std::shared_ptr<RelayClient> GetOriginConnector() override
 	{
 		return _relay_client;
 	}
+*/
 
 	enum
 	{
@@ -144,7 +146,7 @@ protected:
 	// 버퍼를 처리할 인디게이터
 	MediaQueue<std::unique_ptr<BufferIndicator>> _indicator;
 
-	std::shared_ptr<RelayServer>    _relay_server;
-	std::shared_ptr<RelayClient>    _relay_client;
-	ov::DelayQueue                  _retry_timer;
+	//std::shared_ptr<RelayServer>    _relay_server;
+	//std::shared_ptr<RelayClient>    _relay_client;
+ov::DelayQueue                  	_retry_timer;
 };

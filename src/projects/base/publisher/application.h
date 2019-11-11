@@ -44,12 +44,12 @@ public:
 	std::shared_ptr<Stream> GetStream(uint32_t stream_id);
 	std::shared_ptr<Stream> GetStream(ov::String stream_name);
 
+	virtual bool Start();
+	virtual bool Stop();
+
 protected:
 	explicit Application(const info::Application &application_info);
 	virtual ~Application();
-
-	virtual bool Start();
-	virtual bool Stop();
 
 	// Stream에 VideoFrame을 전송한다.
 	// virtual로 Child에서 원하면 다른 작업을 할 수 있게 한다.

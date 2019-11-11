@@ -77,18 +77,31 @@ bool Transcoder::Stop()
 	return true;
 }
 
-// 어플리케이션의 스트림이 생성됨
-bool Transcoder::CreateApplication(info::Application application_info)
+// Create Application
+bool Transcoder::OnCreateApplication(const info::Application &app_info)
 {
-	info::application_id_t application_id = application_info.GetId();
+	info::application_id_t application_id = app_info.GetId();
 
-	auto trans_app = std::make_shared<TranscodeApplication>(&application_info);
+	auto trans_app = std::make_shared<TranscodeApplication>(app_info);
 
 	// 라우터 어플리케이션 관리 항목에 추가
 	_tracode_apps[application_id] = trans_app;
 
-	_router->RegisterObserverApp(&application_info, trans_app);
-	_router->RegisterConnectorApp(&application_info, trans_app);
+	_router->RegisterObserverApp(app_info, trans_app);
+	_router->RegisterConnectorApp(app_info, trans_app);
+
+	return true;
+}
+
+// Delete Application
+bool Transcoder::OnDeleteApplication(const info::Application &app_info)
+{
+
+}
+
+// 어플리케이션의 스트림이 생성됨
+bool Transcoder::CreateApplication(info::Application application_info)
+{
 
 	return true;
 }
@@ -99,13 +112,13 @@ bool Transcoder::CreateApplications()
 	{
 		info::application_id_t application_id = application_info.GetId();
 
-		auto trans_app = std::make_shared<TranscodeApplication>(&application_info);
+		auto trans_app = std::make_shared<TranscodeApplication>(application_info);
 
 		// 라우터 어플리케이션 관리 항목에 추가
 		_tracode_apps[application_id] = trans_app;
 
-		_router->RegisterObserverApp(&application_info, trans_app);
-		_router->RegisterConnectorApp(&application_info, trans_app);
+		_router->RegisterObserverApp(application_info, trans_app);
+		_router->RegisterConnectorApp(application_info, trans_app);
 	}
 
 	return true;

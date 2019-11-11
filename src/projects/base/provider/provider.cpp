@@ -44,7 +44,7 @@ namespace pvd
 		{
 			auto application = it->second;
 
-			_router->UnregisterConnectorApp(application.get(), application);
+			_router->UnregisterConnectorApp(*application.get(), application);
 			application->Stop();
 
 			it = _applications.erase(it);
@@ -53,21 +53,28 @@ namespace pvd
 		return true;
 	}
 
-	bool Provider::CreateApplication(const info::Application &application_info)
+	// Create Application
+	bool Provider::OnCreateApplication(const info::Application &app_info)
 	{
-		// Application 을 자식에게 생성하게 한다.
-		auto application = OnCreateApplication(application_info);
+		// Let child create application
+		auto application = OnCreateProviderApplication(app_info);
 
-		// 생성한 Application을 Router와 연결하고 Start
-		_router->RegisterConnectorApp(application.get(), application);
+		// Connect created application to router
+		_router->RegisterConnectorApp(*application.get(), application);
 
-		// Apllication Map에 보관
+		// Store created application
 		_applications[application->GetId()] = application;
 
-		// 시작한다.
 		application->Start();
 
 		return true;
+	}
+
+	// Delete Application
+	bool Provider::OnDeleteApplication(const info::Application &app_info)
+	{
+		_applications[app_info.GetId()]->Stop();
+		_applications.erase(app_info.GetId());
 	}
 
 	std::shared_ptr<Application> Provider::GetApplicationByName(ov::String app_name)

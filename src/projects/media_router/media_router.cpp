@@ -26,41 +26,18 @@ std::shared_ptr<MediaRouter> MediaRouter::Create()
 	return media_router;
 }
 
-std::shared_ptr<MediaRouter> MediaRouter::Create(const std::vector<info::Application> &app_info_list)
-{
-	auto media_router = std::make_shared<MediaRouter>(app_info_list);
-	if (!media_router->Start())
-	{
-		logte("An error occurred while creating MediaRouter");
-		return nullptr;
-	}
-	return media_router;
-}
 
 MediaRouter::MediaRouter()
 {
-
-}
-
-MediaRouter::MediaRouter(const std::vector<info::Application> &app_info_list)
-{
-	_app_info_list = app_info_list;
 }
 
 MediaRouter::~MediaRouter()
 {
-	// logtd("- MediaRouter");
 }
 
 bool MediaRouter::Start()
 {
 	logti("Trying to start media router...");
-
-	// Create applications using information in the config
-	if(CreateApplications() == false)
-	{
-		return false;
-	}
 
 	try
 	{
@@ -88,19 +65,20 @@ bool MediaRouter::Stop()
 	_kill_flag = true;
 	_thread.join();
 
-	if(!DeleteApplications())
+	for(auto const &_route_app : _route_apps)
 	{
-		return false;
+		_route_app.second->Stop();
 	}
 
-	// TODO: 패킷 처리 스레드를 만들어야함.. 어플리케이션 단위로 만들어 버릴까?
+	_route_apps.clear();
+
 	return true;
 }
 
-bool MediaRouter::CreateApplication(info::Application app_info)
+bool MediaRouter::CreateApplication(const info::Application &app_info)
 {
 	info::application_id_t application_id = app_info.GetId();
-	auto route_app = MediaRouteApplication::Create(&app_info);
+	auto route_app = MediaRouteApplication::Create(app_info);
 
 	if(route_app == nullptr)
 	{
@@ -108,43 +86,30 @@ bool MediaRouter::CreateApplication(info::Application app_info)
 		return false;
 	}
 
-	// 라우터 어플리케이션 관리 항목에 추가
 	_route_apps.insert(std::make_pair(application_id, route_app));
 
-	return true;
-}
-
-// 어플리케이션의 스트림이 생성됨
-bool MediaRouter::CreateApplications()
-{
-	for(auto const &application_info : _app_info_list)
+	// Notify each module that the app has been created
+	for(auto module : _modules)
 	{
-		info::application_id_t application_id = application_info.GetId();
-
-		auto route_app = MediaRouteApplication::Create(&application_info);
-
-		if(route_app == nullptr)
-		{
-			logte("failed to allocation route_app");
-			return false;
-		}
-
-		// 라우터 어플리케이션 관리 항목에 추가
-		_route_apps.insert(std::make_pair(application_id, route_app));
+		module->OnCreateApplication(app_info);
 	}
 
 	return true;
 }
 
-// 어플리케이션의 스트림이 삭제됨
-bool MediaRouter::DeleteApplications()
+bool MediaRouter::DeleteApplication(const info::Application &app_info)
 {
-	for(auto const &_route_app : _route_apps)
+	info::application_id_t application_id = app_info.GetId();
+
+	// Notify each module that the app has been deleted
+	for(auto module : _modules)
 	{
-		_route_app.second->Stop();
+		module->OnDeleteApplication(app_info);
 	}
 
-	_route_apps.clear();
+	// Remove from the Route App Map
+	_route_apps[application_id]->Stop();
+	_route_apps.erase(application_id);
 
 	return true;
 }
@@ -162,10 +127,17 @@ std::shared_ptr<MediaRouteApplication> MediaRouter::GetRouteApplicationById(info
 	return obj->second;
 }
 
+bool MediaRouter::RegisterModule(const std::shared_ptr<MediaRouteObserver> &module)
+{
+	_modules.push_back(module);
+
+	return true;
+}
+
 // Connector의 Application이 생성되면 라우터에 등록함
 bool MediaRouter::RegisterConnectorApp(
-	const info::Application *application_info,
-	std::shared_ptr<MediaRouteApplicationConnector> app_conn)
+	const info::Application &application_info,
+	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn)
 {
 	// logtd("Register connector application. app_ptr(%p) name(%s)", app_conn.get(), app_name.CStr());
 
@@ -173,7 +145,7 @@ bool MediaRouter::RegisterConnectorApp(
 	// app_conn->SetMediaRouter(this->GetSharedPtr());
 
 	// 2. Media Route Application 모듈에 Connector를 등록함
-	auto media_route_app = GetRouteApplicationById(application_info->GetId());
+	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if(media_route_app == nullptr)
 	{
 		return false;
@@ -184,12 +156,12 @@ bool MediaRouter::RegisterConnectorApp(
 
 // 어플리케이션의 스트림이 생성됨
 bool MediaRouter::UnregisterConnectorApp(
-	const info::Application *application_info,
-	std::shared_ptr<MediaRouteApplicationConnector> app_conn)
+	const info::Application &application_info,
+	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn)
 {
 	// logtd("Unregistred connector application. app_ptr(%p) name(%s)", app_conn.get(), app_name.CStr());
 
-	auto media_route_app = GetRouteApplicationById(application_info->GetId());
+	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if(media_route_app == nullptr)
 	{
 		return false;
@@ -199,7 +171,7 @@ bool MediaRouter::UnregisterConnectorApp(
 }
 
 bool MediaRouter::RegisterObserverApp(
-	const info::Application *application_info, std::shared_ptr<MediaRouteApplicationObserver> app_obsrv)
+	const info::Application &application_info, const std::shared_ptr<MediaRouteApplicationObserver> &app_obsrv)
 {
 	if(app_obsrv == nullptr)
 	{
@@ -210,11 +182,11 @@ bool MediaRouter::RegisterObserverApp(
 
 
 	// 2. Media Route Application 모듈에 Connector를 등록함
-	auto media_route_app = GetRouteApplicationById(application_info->GetId());
+	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 
 	if(media_route_app == nullptr)
 	{
-		logtw("cannot find application. name(%s)", application_info->GetName().CStr());
+		logtw("cannot find application. name(%s)", application_info.GetName().CStr());
 		return false;
 	}
 
@@ -222,7 +194,7 @@ bool MediaRouter::RegisterObserverApp(
 }
 
 bool MediaRouter::UnregisterObserverApp(
-	const info::Application *application_info, std::shared_ptr<MediaRouteApplicationObserver> app_obsrv)
+	const info::Application &application_info, const std::shared_ptr<MediaRouteApplicationObserver> &app_obsrv)
 {
 	if(app_obsrv == nullptr)
 	{
@@ -231,10 +203,10 @@ bool MediaRouter::UnregisterObserverApp(
 
 	// logtd("- Unregistred observer applicaiton. app_ptr(%p) name(%s)", app_obsrv.get(), app_name.CStr());
 
-	auto media_route_app = GetRouteApplicationById(application_info->GetId());
+	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if(media_route_app == nullptr)
 	{
-		logtw("cannot find application. name(%s)", application_info->GetName().CStr());
+		logtw("cannot find application. name(%s)", application_info.GetName().CStr());
 		return false;
 	}
 

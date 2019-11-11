@@ -15,81 +15,73 @@
 #include <algorithm>
 #include <thread>
 
-// 미디어 라우터 구조체
+// Media Router base class
+#include "base/media_route/media_route_observer.h"
 #include "base/media_route/media_route_application_observer.h"
 #include "base/media_route/media_route_application_connector.h"
 #include "base/media_route/media_route_interface.h"
 #include "base/media_route/media_buffer.h"
 
-// 공옹 구조체
 #include "base/info/stream_info.h"
 #include "media_route_application.h"
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <config/config.h>
 
-// -어플리케이션(Application) 별 스트림(Stream)을 관리해야 한다
-// - Publisher를 관리해야한다
-// - Provider를 관리해야한다
 class MediaRouter : public MediaRouteInterface
 {
 public:
 	static std::shared_ptr<MediaRouter> Create();
-	static std::shared_ptr<MediaRouter> Create(const std::vector<info::Application> &app_info_list);
 
 	MediaRouter();
-	MediaRouter(const std::vector<info::Application> &app_info_list);
-	~MediaRouter();
+	~MediaRouter() final;
 
 	bool Start();
 	bool Stop();
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 라우트 어플리케이션 관련 모듈
+	// For Applications
 	////////////////////////////////////////////////////////////////////////////////////////////////
-public:
 	//  Application Name으로 RouteApplication을 찾음
 	std::shared_ptr<MediaRouteApplication> GetRouteApplicationById(info::application_id_t application_id);
-	bool CreateApplication(info::Application app_info);
-	bool DeleteApplication(info::Application app_info);
-
-private:
-	bool CreateApplications();
-	bool DeleteApplications();
-
-	std::map<info::application_id_t, std::shared_ptr<MediaRouteApplication>> _route_apps;
-
+	bool CreateApplication(const info::Application &app_info);
+	bool DeleteApplication(const info::Application &app_info);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 프로바이더(Provider) 관련 모듈
+	// Implement MediaRouterInterface
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	// MediaRouter에 데이터를 전송하는 모듈 등록/해제
-public:
+
+	bool RegisterModule(const std::shared_ptr<MediaRouteObserver> &module) override;
+
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	// For Providers
+	////////////////////////////////////////////////////////////////////////////////////////////////
+
 	bool RegisterConnectorApp(
-		const info::Application *application_info,
-		std::shared_ptr<MediaRouteApplicationConnector> application_connector) override;
+		const info::Application &application_info,
+		const std::shared_ptr<MediaRouteApplicationConnector> &application_connector) override;
 
 	bool UnregisterConnectorApp(
-		const info::Application *application_info,
-		std::shared_ptr<MediaRouteApplicationConnector> application_connector) override;
+		const info::Application &application_info,
+		const std::shared_ptr<MediaRouteApplicationConnector> &application_connector) override;
 
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 퍼블리셔 관련 모듈
+	// For Publishers
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	// MediaRouter가 데이터를 보내는 모듈 등록/해제
 	bool RegisterObserverApp(
-		const info::Application *application_info,
-		std::shared_ptr<MediaRouteApplicationObserver> application_observer) override;
+		const info::Application &application_info,
+		const std::shared_ptr<MediaRouteApplicationObserver> &application_observer) override;
 
 	bool UnregisterObserverApp(
-		const info::Application *application_info,
-		std::shared_ptr<MediaRouteApplicationObserver> application_observer) override;
+		const info::Application &application_info,
+		const std::shared_ptr<MediaRouteApplicationObserver> &application_observer) override;
 
 private:
 	void MainTask();
 
-	std::vector<info::Application> _app_info_list;
+	std::map<info::application_id_t, std::shared_ptr<MediaRouteApplication>> _route_apps;
+	std::vector<std::shared_ptr<MediaRouteObserver>> _modules;
 
 	volatile bool _kill_flag;
 	std::thread _thread;

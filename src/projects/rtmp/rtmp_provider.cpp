@@ -70,7 +70,7 @@ bool RtmpProvider::Stop()
 	return Provider::Stop();
 }
 
-std::shared_ptr<Application> RtmpProvider::OnCreateApplication(const info::Application &application_info)
+std::shared_ptr<Application> RtmpProvider::OnCreateProviderApplication(const info::Application &application_info)
 {
 	return RtmpApplication::Create(application_info);
 }
@@ -79,18 +79,27 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 										 const ov::String &stream_name,
 										 std::shared_ptr<RtmpMediaInfo> &media_info,
 										 info::application_id_t &application_id,
-										 uint32_t &stream_id) {
+										 uint32_t &stream_id)
+{
 	// 어플리케이션 조회, 어플리케이션명에 해당하는 정보가 없다면 RTMP 커넥션을 종료함.
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationByName(app_name.CStr()));
-	if (application == nullptr) {
+	if (application == nullptr)
+	{
 		logte("Cannot Find Applicaton - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
+	auto provider_info = application->GetProvider<cfg::RtmpProvider>();
+	if(provider_info == nullptr)
+	{
+		logte("Cannot Find ProviderInfo from Applicaton - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
+		return false;
+	}
+
+	// Handle duplicated stream name
 	if (GetStreamByName(app_name, stream_name))
 	{
-		//TODO(Getroot): _provider_info는 Application에서 구해서 사용해야 한다.
-		if (0) // _provider_info->IsBlockDuplicateStreamName())
+		if (provider_info->IsBlockDuplicateStreamName())
 		{
 			logti("Duplicate Stream Input(reject) - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
 			return false;
@@ -108,12 +117,12 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 			}
 
 			// 스트림 정보 종료
-			application->DeleteStream2(application->GetStreamByName(stream_name));
+			application->NotifyStreamDeleted(application->GetStreamByName(stream_name));
 		}
 	}
 
 	// Application -> RtmpApplication: create rtmp stream -> Application 에 Stream 정보 저장
-	auto stream = application->MakeStream();
+	auto stream = application->CreateProviderStream();
 	if (stream == nullptr)
 	{
 		logte("can not create stream - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
@@ -177,7 +186,7 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 	}
 
 	// 라우터에 스트림이 생성되었다고 알림
-	application->CreateStream2(stream);
+	application->NotifyStreamCreated(stream);
 
 	// id 설정
 	application_id = application->GetId();
@@ -276,5 +285,5 @@ bool RtmpProvider::OnDeleteStream(info::application_id_t app_id, uint32_t stream
 	}
 
 	// 라우터에 스트림이 삭제되었다고 알림
-	return application->DeleteStream2(stream);
+	return application->NotifyStreamDeleted(stream);
 }

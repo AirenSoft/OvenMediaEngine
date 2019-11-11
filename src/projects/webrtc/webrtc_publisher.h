@@ -69,7 +69,7 @@ private:
 		return "WebRTC";
 	}
 
-	std::shared_ptr<Application> OnCreateApplication(const info::Application &application_info) override;
+	std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 
 	std::shared_ptr<IcePort> _ice_port;
 	std::shared_ptr<RtcSignallingServer> _signalling;

@@ -73,7 +73,7 @@ int GetBitrate(ov::String bitrate)
 	return static_cast<int>(ov::Converter::ToFloat(bitrate) * multiplier);
 }
 
-TranscodeStream::TranscodeStream(const info::Application *application_info, std::shared_ptr<StreamInfo> stream_info, TranscodeApplication *parent)
+TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<StreamInfo> &stream_info, TranscodeApplication *parent)
 	: _application_info(application_info)
 {
 	logtd("Transcode stream is created: %s", stream_info->GetName().CStr());
@@ -92,7 +92,7 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 	// 입력 스트림 정보
 	_stream_info_input = stream_info;
 
-	_stream_list[_application_info->GetId()];
+	_stream_list[_application_info.GetId()];
 
 	// Prepare decoders
 	for (auto &track_item : _stream_info_input->GetTracks())
@@ -138,7 +138,7 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 	}
 
 	// Generate track list by profile(=encode name)
-	auto encodes = _application_info->GetEncodes();
+	auto encodes = _application_info.GetEncodes();
 	std::map<ov::String, std::vector<uint8_t>> profile_tracks;
 	std::vector<uint8_t> tracks;
 
@@ -192,7 +192,7 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 	}
 
 	// Generate track list by stream
-	auto streams = _application_info->GetStreamList();
+	auto streams = _application_info.GetStreamList();
 
 	for (const auto &stream : streams)
 	{
@@ -636,7 +636,7 @@ void TranscodeStream::EncodeTask()
 
 bool TranscodeStream::AddStreamInfoOutput(ov::String stream_name)
 {
-	auto stream_list = _stream_list.find(_application_info->GetId());
+	auto stream_list = _stream_list.find(_application_info.GetId());
 	if (stream_list == _stream_list.end())
 	{
 		// This code cannot happen.
@@ -675,7 +675,7 @@ void TranscodeStream::DeleteStreams()
 	}
 
 	_stream_info_outputs.clear();
-	_stream_list[_application_info->GetId()].clear();
+	_stream_list[_application_info.GetId()].clear();
 }
 
 void TranscodeStream::SendFrame(std::unique_ptr<MediaPacket> packet)
