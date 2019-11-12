@@ -12,7 +12,7 @@
 
 #include <base/ovsocket/socket.h>
 #include <base/info/application.h>
-#include <physical_port/physical_port_manager.h>
+#include <modules/physical_port/physical_port_manager.h>
 #include <base/media_route/media_route_application_interface.h>
 #include <base/media_route/media_route_application_observer.h>
 

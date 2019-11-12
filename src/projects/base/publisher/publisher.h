@@ -15,8 +15,8 @@
 #include <base/publisher/application.h>
 #include <base/publisher/stream.h>
 
-#include <ice/ice_port_manager.h>
-#include <physical_port/physical_port.h>
+#include <modules/ice/ice_port_manager.h>
+#include <modules/physical_port/physical_port.h>
 
 #include <chrono>
 

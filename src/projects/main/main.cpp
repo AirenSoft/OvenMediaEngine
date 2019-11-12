@@ -23,11 +23,11 @@
 #include <config/config_manager.h>
 #include <media_router/media_router.h>
 #include <monitoring/monitoring_server.h>
-#include <publishers/publishers.h>
-#include <rtmp/rtmp_provider.h>
+#include <publishers/segment/publishers.h>
+#include <providers/rtmp/rtmp_provider.h>
 #include <transcode/transcoder.h>
 #include <web_console/web_console.h>
-#include <webrtc/webrtc_publisher.h>
+#include <publishers/webrtc/webrtc_publisher.h>
 
 extern "C"
 {
@@ -234,7 +234,7 @@ int main(int argc, char *argv[])
 		auto rtmp_provider = RtmpProvider::Create(host_info, router);
 		CHECK_FAIL(rtmp_provider);
 
-		logti("Trying to create WebRTC Publisher for application [%s]...", host_name.CStr());
+		logti("Trying to create WebRTC Publisher [%s]...", host_name.CStr());
 		auto webrtc_publisher = WebRtcPublisher::Create(host_info, router);
 		CHECK_FAIL(webrtc_publisher);
 

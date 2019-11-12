@@ -9,7 +9,7 @@
 #include "http_server.h"
 #include "http_private.h"
 
-#include <physical_port/physical_port_manager.h>
+#include <modules/physical_port/physical_port_manager.h>
 
 HttpServer::~HttpServer()
 {

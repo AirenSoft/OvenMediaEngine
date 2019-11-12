@@ -13,7 +13,7 @@
 #include "http_client.h"
 #include "interceptors/default/http_default_interceptor.h"
 
-#include <physical_port/physical_port.h>
+#include <modules/physical_port/physical_port.h>
 
 // 참고 자료
 // RFC7230 - Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing (https://tools.ietf.org/html/rfc7230)
