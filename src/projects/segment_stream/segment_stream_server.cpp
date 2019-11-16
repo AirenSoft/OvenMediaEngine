@@ -370,6 +370,10 @@ void SegmentStreamServer::PlayListRequest(const ov::String &app_name,
     else if (play_list_type == PlayListType::Mpd) response->SetHeader("Content-Type", "application/dash+xml");
     //response->SetHeader("Content-Length", ov::Converter::ToString(play_list.GetLength()).CStr());
 
+    response->SetHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    response->SetHeader("Pragma", "no-cache");
+    response->SetHeader("Expires", "0");
+
     response->AppendString(play_list);
 }
 

@@ -706,6 +706,13 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const ov::Json
 		for(const auto &candidate_iterator : candidates_value)
 		{
 			ov::String candidate = ov::Converter::ToString(candidate_iterator["candidate"]);
+			
+			if (candidate.IsEmpty())
+			{
+				logtw("[Host -> OME] the host peer sent an empty candidate");
+				continue;
+			}
+			
 			uint32_t sdp_m_line_index = ov::Converter::ToUInt32(candidate_iterator["sdpMLineIndex"]);
 			ov::String sdp_mid = ov::Converter::ToString(candidate_iterator["sdpMid"]);
 			ov::String username_fragment = ov::Converter::ToString(candidate_iterator["usernameFragment"]);
