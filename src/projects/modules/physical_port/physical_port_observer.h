@@ -35,22 +35,22 @@ public:
 
 	virtual ~PhysicalPortObserver() = default;
 
-	// TCP/SRT등 일 때, 상대방이 접속하면 호출됨
+	// Called when the client is connected
 	virtual void OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	{
 		// dummy function
 	}
 
-	// 데이터를 수신하였을 때 호출됨
+	// Called when the packet is received
 	virtual void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) = 0;
 
-	// TCP/SRT등 일 때, 상대방과의 접속이 해제되면 호출됨
+	// Called when the client is disconnected
 	virtual void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 	{
 		// dummy function
 	}
 
-	// 데이터가 수신되었을 때, 자신이 처리할 수 있는 패킷인지 확인
+	// When data is received, the PhysicalPort asks if it is your data
 	virtual PhysicalPortProbeResult ProbePacket(const std::shared_ptr<ov::Socket> &remote, const std::shared_ptr<const ov::Data> &data)
 	{
 		// dummy function

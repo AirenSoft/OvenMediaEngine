@@ -21,13 +21,16 @@
 #include <base/ovlibrary/log_write.h>
 #include <base/ovlibrary/stack_trace.h>
 #include <config/config_manager.h>
+
 #include <media_router/media_router.h>
-#include <monitoring/monitoring_server.h>
-#include <publishers/segment/publishers.h>
-#include <providers/rtmp/rtmp_provider.h>
 #include <transcode/transcoder.h>
-#include <web_console/web_console.h>
+#include <providers/rtmp/rtmp_provider.h>
 #include <publishers/webrtc/webrtc_publisher.h>
+#include <publishers/segment/publishers.h>
+#include <publishers/ovt/ovt_publisher.h>
+
+#include <monitoring/monitoring_server.h>
+#include <web_console/web_console.h>
 
 extern "C"
 {
@@ -238,9 +241,14 @@ int main(int argc, char *argv[])
 		auto webrtc_publisher = WebRtcPublisher::Create(host_info, router);
 		CHECK_FAIL(webrtc_publisher);
 
+		logti("Trying to create OVT Publisher [%s]...", host_name.CStr());
+		auto ovt_publisher = OvtPublisher::Create(host_info, router);
+		CHECK_FAIL(ovt_publisher);
+
 		router->RegisterModule(transcoder);
 		router->RegisterModule(rtmp_provider);
 		router->RegisterModule(webrtc_publisher);
+		router->RegisterModule(ovt_publisher);
 
 		//////////////////////////////
 		// Create applications that defined by the configuration

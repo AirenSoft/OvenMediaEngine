@@ -36,7 +36,7 @@ std::shared_ptr<Certificate> RtcApplication::GetCertificate()
 std::shared_ptr<Stream> RtcApplication::CreateStream(std::shared_ptr<StreamInfo> info, uint32_t worker_count)
 {
 	// Stream Class 생성할때는 복사를 사용한다.
-	logtd("CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
+	logtd("RtcApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 	if(worker_count == 0)
 	{
 		// RtcStream should have worker threads.
@@ -54,7 +54,7 @@ bool RtcApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(info->GetId()));
 	if(stream == nullptr)
 	{
-		logte("Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
+		logte("RtcApplication::Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
 		return false;
 	}
 
@@ -72,7 +72,7 @@ bool RtcApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
 		_rtc_signalling->Disconnect(GetName(), stream->GetName(), session->GetPeerSDP());
 	}
 
-	logti("%s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
+	logti("RtcApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
 
 	return true;
 }
@@ -103,7 +103,7 @@ bool RtcApplication::Start()
 			return false;
 		}
 
-		logti("WebRTC Application Started");
+		logti("WebRTC Application [%s] Started", GetName().CStr());
 	}
 
 	return Application::Start();

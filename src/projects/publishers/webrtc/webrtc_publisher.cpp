@@ -11,7 +11,6 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Host &host_
 {
 	auto webrtc = std::make_shared<WebRtcPublisher>(host_info, router);
 
-	// CONFIG을 불러온다.
 	if (!webrtc->Start())
 	{
 		logte("An error occurred while creating WebRtcPublisher");
