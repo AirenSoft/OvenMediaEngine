@@ -59,7 +59,7 @@ bool RtcApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
 	}
 
 	// 모든 Session의 연결을 종료한다.
-	const auto& sessions = stream->GetAllSessions();
+	const auto &sessions = stream->GetAllSessions();
 	for(auto it = sessions.begin(); it != sessions.end();)
 	{
 		auto session = std::static_pointer_cast<RtcSession>(it->second);
