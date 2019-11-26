@@ -1,6 +1,6 @@
 #pragma once
 
-#include "relay_datastructure.h"
+#include "ovt_packet.h"
 
 #include "base/common_types.h"
 #include "base/publisher/publisher.h"
