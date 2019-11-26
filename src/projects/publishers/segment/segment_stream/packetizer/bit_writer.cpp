@@ -10,7 +10,7 @@
 
 BitWriter::BitWriter(uint32_t data_size)
 {
-	_data = std::make_unique<std::vector<uint8_t>>(data_size, 0);
+	_data = std::make_shared<std::vector<uint8_t>>(data_size, 0);
 	_bit_count = 0; 
 }
 

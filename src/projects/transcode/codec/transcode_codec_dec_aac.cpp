@@ -10,7 +10,7 @@
 
 #define OV_LOG_TAG "TranscodeCodec"
 
-std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResult *result)
 {
 	// Check the decoded frame is available
 	int ret = ::avcodec_receive_frame(_context, _frame);
@@ -57,7 +57,7 @@ std::unique_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 
 		_decoded_frame_num++;
 
-		auto output_frame = std::make_unique<MediaFrame>();
+		auto output_frame = std::make_shared<MediaFrame>();
 
 		output_frame->SetBytesPerSample(::av_get_bytes_per_sample(static_cast<AVSampleFormat>(_frame->format)));
 		output_frame->SetNbSamples(_frame->nb_samples);

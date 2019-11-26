@@ -51,12 +51,12 @@ bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, s
 	return true;
 }
 
-int32_t TranscodeFilter::SendBuffer(std::unique_ptr<MediaFrame> buffer)
+int32_t TranscodeFilter::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
 	return _impl->SendBuffer(std::move(buffer));
 }
 
-std::unique_ptr<MediaFrame> TranscodeFilter::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaFrame> TranscodeFilter::RecvBuffer(TranscodeResult *result)
 {
 	return _impl->RecvBuffer(result);
 }

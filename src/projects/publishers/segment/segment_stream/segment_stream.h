@@ -26,14 +26,14 @@ public:
 
 public :
     void SendVideoFrame(std::shared_ptr<MediaTrack> track,
-                        std::unique_ptr<EncodedFrame> encoded_frame,
-                        std::unique_ptr<CodecSpecificInfo> codec_info,
-                        std::unique_ptr<FragmentationHeader> fragmentation) override;
+                        std::shared_ptr<EncodedFrame> encoded_frame,
+                        std::shared_ptr<CodecSpecificInfo> codec_info,
+                        std::shared_ptr<FragmentationHeader> fragmentation) override;
 
     void SendAudioFrame(std::shared_ptr<MediaTrack> track,
-                        std::unique_ptr<EncodedFrame> encoded_frame,
-                        std::unique_ptr<CodecSpecificInfo> codec_info,
-                        std::unique_ptr<FragmentationHeader> fragmentation) override;
+                        std::shared_ptr<EncodedFrame> encoded_frame,
+                        std::shared_ptr<CodecSpecificInfo> codec_info,
+                        std::shared_ptr<FragmentationHeader> fragmentation) override;
 
     bool Start(int segment_count, int segment_duration, uint32_t worker_count);
 

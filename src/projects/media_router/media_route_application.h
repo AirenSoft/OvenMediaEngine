@@ -81,7 +81,7 @@ public:
 	bool OnReceiveBuffer(
 		std::shared_ptr<MediaRouteApplicationConnector> app_conn,
 		std::shared_ptr<StreamInfo> stream,
-		std::unique_ptr<MediaPacket> packet) override;
+		std::shared_ptr<MediaPacket> packet) override;
 
 
 public:
@@ -144,7 +144,7 @@ public:
 
 protected:
 	// 버퍼를 처리할 인디게이터
-	MediaQueue<std::unique_ptr<BufferIndicator>> _indicator;
+	MediaQueue<std::shared_ptr<BufferIndicator>> _indicator;
 
 	//std::shared_ptr<RelayServer>    _relay_server;
 	//std::shared_ptr<RelayClient>    _relay_client;

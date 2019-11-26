@@ -33,7 +33,7 @@ std::shared_ptr<Certificate> RtcApplication::GetCertificate()
 	return _certificate;
 }
 
-std::shared_ptr<Stream> RtcApplication::CreateStream(std::shared_ptr<StreamInfo> info, uint32_t worker_count)
+std::shared_ptr<Stream> RtcApplication::CreateStream(const std::shared_ptr<StreamInfo> &info, uint32_t worker_count)
 {
 	// Stream Class 생성할때는 복사를 사용한다.
 	logtd("RtcApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
@@ -45,7 +45,7 @@ std::shared_ptr<Stream> RtcApplication::CreateStream(std::shared_ptr<StreamInfo>
 	return RtcStream::Create(GetSharedPtrAs<Application>(), *info, worker_count);
 }
 
-bool RtcApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
+bool RtcApplication::DeleteStream(const std::shared_ptr<StreamInfo> &info)
 {
 	// Input이 종료된 경우에 호출됨, 이 경우에는 Stream을 삭제 해야 하고, 그 전에 연결된 모든 Session을 종료
 	// StreamInfo로 Stream을 구한다.
@@ -75,18 +75,6 @@ bool RtcApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
 	logti("RtcApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
 
 	return true;
-}
-
-// 전송
-void RtcApplication::SendVideoFrame(std::shared_ptr<StreamInfo> info,
-                                    std::shared_ptr<MediaTrack> track,
-                                    std::unique_ptr<EncodedFrame> encoded_frame,
-                                    std::unique_ptr<CodecSpecificInfo> codec_info,
-                                    std::unique_ptr<FragmentationHeader> fragmentation)
-{
-	// 향후 필요한 경우 추가 동작을 구현한다.
-
-	Application::SendVideoFrame(info, track, std::move(encoded_frame), std::move(codec_info), std::move(fragmentation));
 }
 
 bool RtcApplication::Start()

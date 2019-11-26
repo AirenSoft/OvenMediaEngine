@@ -107,9 +107,9 @@ bool SegmentStream::Stop()
 //
 //====================================================================================================
 void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
-								   std::unique_ptr<EncodedFrame> encoded_frame,
-								   std::unique_ptr<CodecSpecificInfo> codec_info,
-								   std::unique_ptr<FragmentationHeader> fragmentation)
+								   std::shared_ptr<EncodedFrame> encoded_frame,
+								   std::shared_ptr<CodecSpecificInfo> codec_info,
+								   std::shared_ptr<FragmentationHeader> fragmentation)
 {
 	if (_stream_packetizer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
 	{
@@ -130,9 +130,9 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 // - Packetizer에 Audio데이터 추가
 //====================================================================================================
 void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
-								   std::unique_ptr<EncodedFrame> encoded_frame,
-								   std::unique_ptr<CodecSpecificInfo> codec_info,
-								   std::unique_ptr<FragmentationHeader> fragmentation)
+								   std::shared_ptr<EncodedFrame> encoded_frame,
+								   std::shared_ptr<CodecSpecificInfo> codec_info,
+								   std::shared_ptr<FragmentationHeader> fragmentation)
 {
 	if (_stream_packetizer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
 	{

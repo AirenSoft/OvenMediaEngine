@@ -25,40 +25,37 @@
 class MediaRouteStream
 {
 public:
-	MediaRouteStream(std::shared_ptr<StreamInfo> stream_info);
+	MediaRouteStream(std::shared_ptr<StreamInfo> &stream_info);
 	~MediaRouteStream();
 
-public:
-	// 우너본 스트림 정보 조회
+	// Query original stream information
 	std::shared_ptr<StreamInfo> GetStreamInfo();
-
 	void SetConnectorType(MediaRouteApplicationConnector::ConnectorType type);
 	MediaRouteApplicationConnector::ConnectorType GetConnectorType();
 
-private:
-	std::shared_ptr<StreamInfo> _stream_info;
-
-	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
-
-public:
-	// 패킷 관리
-	bool Push(std::unique_ptr<MediaPacket> buffer, bool convert_bitstream);
-	std::unique_ptr<MediaPacket> Pop();
+	// Queue interfaces
+	bool Push(std::shared_ptr<MediaPacket> media_packet, bool convert_bitstream);
+	std::shared_ptr<MediaPacket> Pop();
 	uint32_t Size();
 
 	time_t getLastReceivedTime();
 private:
-	std::queue<std::unique_ptr<MediaPacket>> _queue;
+	std::shared_ptr<StreamInfo> _stream_info;
+	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
 
-private:
+
+	// 2019/11/22 Getroot
+	// Change shared_ptr to shared_ptr
+	std::queue<std::shared_ptr<MediaPacket>> _media_packets;
+
 	////////////////////////////
-	// 비트 스트림 필터
+	// bitstream filters
 	////////////////////////////
 	BitstreamToAnnexB _bsfv;
 	BitstreamToADTS _bsfa;
 	BitstreamAnnexA _bsf_vp8;
 
-	// 마지막으로 받은 패킷의 시간
+	// time of last packet received
 	time_t _last_rb_time;
 };
 

@@ -137,12 +137,12 @@ bool RelayServer::OnDeleteStream(std::shared_ptr<StreamInfo> info)
 	return true;
 }
 
-bool RelayServer::OnSendVideoFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::unique_ptr<EncodedFrame> encoded_frame, std::unique_ptr<CodecSpecificInfo> codec_info, std::unique_ptr<FragmentationHeader> fragmentation)
+bool RelayServer::OnSendVideoFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::shared_ptr<EncodedFrame> encoded_frame, std::shared_ptr<CodecSpecificInfo> codec_info, std::shared_ptr<FragmentationHeader> fragmentation)
 {
 	return true;
 }
 
-bool RelayServer::OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::unique_ptr<EncodedFrame> encoded_frame, std::unique_ptr<CodecSpecificInfo> codec_info, std::unique_ptr<FragmentationHeader> fragmentation)
+bool RelayServer::OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::shared_ptr<EncodedFrame> encoded_frame, std::shared_ptr<CodecSpecificInfo> codec_info, std::shared_ptr<FragmentationHeader> fragmentation)
 {
 	return true;
 }

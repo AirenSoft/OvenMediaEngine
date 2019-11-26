@@ -39,8 +39,8 @@ public:
 	virtual ~StreamPacketizer() = default;
 
 public:
-	bool AppendVideoData(std::unique_ptr<EncodedFrame> encoded_frame, uint32_t timescale, uint64_t time_offset);
-	bool AppendAudioData(std::unique_ptr<EncodedFrame> encoded_frame, uint32_t timescale);
+	bool AppendVideoData(std::shared_ptr<EncodedFrame> encoded_frame, uint32_t timescale, uint64_t time_offset);
+	bool AppendAudioData(std::shared_ptr<EncodedFrame> encoded_frame, uint32_t timescale);
 
 	// Child must implement this functions
 	virtual bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &dEncodedFrameata) = 0;

@@ -32,7 +32,7 @@ TranscodeApplication::~TranscodeApplication()
 	logtd("Destroyed transcode application.");
 }
 
-bool TranscodeApplication::OnCreateStream(std::shared_ptr<StreamInfo> stream_info)
+bool TranscodeApplication::OnCreateStream(const std::shared_ptr<StreamInfo> &stream_info)
 {
 	logtd("OnCreateStream (%s)", stream_info->GetName().CStr());
 
@@ -45,7 +45,7 @@ bool TranscodeApplication::OnCreateStream(std::shared_ptr<StreamInfo> stream_inf
 	return true;
 }
 
-bool TranscodeApplication::OnDeleteStream(std::shared_ptr<StreamInfo> stream_info)
+bool TranscodeApplication::OnDeleteStream(const std::shared_ptr<StreamInfo> &stream_info)
 {
 	logtd("OnDeleteStream (%s)", stream_info->GetName().CStr());
 
@@ -67,17 +67,8 @@ bool TranscodeApplication::OnDeleteStream(std::shared_ptr<StreamInfo> stream_inf
 	return true;
 }
 
-bool TranscodeApplication::OnSendVideoFrame(std::shared_ptr<StreamInfo> stream_info, std::shared_ptr<MediaTrack> track, std::unique_ptr<EncodedFrame> encoded_frame, std::unique_ptr<CodecSpecificInfo> codec_info, std::unique_ptr<FragmentationHeader> fragmentation)
-{
-	return true;
-}
 
-bool TranscodeApplication::OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::unique_ptr<EncodedFrame> encoded_frame, std::unique_ptr<CodecSpecificInfo> codec_info, std::unique_ptr<FragmentationHeader> fragmentation)
-{
-	return true;
-}
-
-bool TranscodeApplication::OnSendFrame(std::shared_ptr<StreamInfo> stream_info, std::unique_ptr<MediaPacket> packet)
+bool TranscodeApplication::OnSendFrame(const std::shared_ptr<StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &packet)
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 

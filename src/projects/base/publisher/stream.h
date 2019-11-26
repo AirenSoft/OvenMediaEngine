@@ -65,19 +65,12 @@ public:
 	std::shared_ptr<Session> GetSession(session_id_t id);
 	const std::map<session_id_t, std::shared_ptr<Session>> &GetAllSessions();
 
-	// Child call this function to delivery packet to all sessions
+	// A child call this function to delivery packet to all sessions
 	bool BroadcastPacket(uint32_t packet_type, std::shared_ptr<ov::Data> packet);
 
 	// Child must implement this function for packetizing and call BroadcastPacket to delivery to all sessions.
-	virtual void SendVideoFrame(std::shared_ptr<MediaTrack> track,
-	                            std::unique_ptr<EncodedFrame> encoded_frame,
-	                            std::unique_ptr<CodecSpecificInfo> codec_info,
-	                            std::unique_ptr<FragmentationHeader> fragmentation) = 0;
-
-	virtual void SendAudioFrame(std::shared_ptr<MediaTrack> track,
-	                            std::unique_ptr<EncodedFrame> encoded_frame,
-	                            std::unique_ptr<CodecSpecificInfo> codec_info,
-	                            std::unique_ptr<FragmentationHeader> fragmentation) = 0;
+	virtual void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) = 0;
+	virtual void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) = 0;
 
 	virtual bool Start(uint32_t worker_count);
 	virtual bool Stop();

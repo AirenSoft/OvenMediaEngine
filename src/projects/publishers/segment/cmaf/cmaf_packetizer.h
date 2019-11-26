@@ -56,8 +56,8 @@ protected:
 	bool UpdatePlayList() override;
 
 private:
-	std::unique_ptr<CmafChunkWriter> _video_chunk_writer = nullptr;
-	std::unique_ptr<CmafChunkWriter> _audio_chunk_writer = nullptr;
+	std::shared_ptr<CmafChunkWriter> _video_chunk_writer = nullptr;
+	std::shared_ptr<CmafChunkWriter> _audio_chunk_writer = nullptr;
 
 	std::shared_ptr<ICmafChunkedTransfer> _chunked_transfer = nullptr;
 

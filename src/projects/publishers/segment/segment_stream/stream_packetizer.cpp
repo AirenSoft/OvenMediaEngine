@@ -9,7 +9,7 @@
 #include "stream_packetizer.h"
 #include "segment_stream_private.h"
 
-bool StreamPacketizer::AppendVideoData(std::unique_ptr<EncodedFrame> encoded_frame,
+bool StreamPacketizer::AppendVideoData(std::shared_ptr<EncodedFrame> encoded_frame,
 									   uint32_t timescale,
 									   uint64_t time_offset)
 {
@@ -52,7 +52,7 @@ bool StreamPacketizer::AppendVideoData(std::unique_ptr<EncodedFrame> encoded_fra
 	return true;
 }
 
-bool StreamPacketizer::AppendAudioData(std::unique_ptr<EncodedFrame> encoded_frame, uint32_t timescale)
+bool StreamPacketizer::AppendAudioData(std::shared_ptr<EncodedFrame> encoded_frame, uint32_t timescale)
 {
 	if (_stream_type == PacketizerStreamType::VideoOnly)
 	{

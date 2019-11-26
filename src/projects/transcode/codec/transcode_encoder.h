@@ -16,11 +16,11 @@ public:
 	TranscodeEncoder();
 	~TranscodeEncoder() override;
 
-	static std::unique_ptr<TranscodeEncoder> CreateEncoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> output_context);
+	static std::shared_ptr<TranscodeEncoder> CreateEncoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> output_context);
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
-	void SendBuffer(std::unique_ptr<const MediaFrame> frame) override;
+	void SendBuffer(std::shared_ptr<const MediaFrame> frame) override;
 
 protected:
 	std::shared_ptr<TranscodeContext> _output_context = nullptr;

@@ -14,11 +14,10 @@
 
 using namespace common;
 
-MediaRouteStream::MediaRouteStream(std::shared_ptr<StreamInfo> stream_info)
+MediaRouteStream::MediaRouteStream(std::shared_ptr<StreamInfo> &stream_info)
 {
 	logtd("Trying to create media route stream: name(%s) id(%u)", stream_info->GetName().CStr(), stream_info->GetId());
 
-	// 스트림 정보 저정
 	_stream_info = stream_info;
 	_stream_info->ShowInfo();
 
@@ -45,10 +44,10 @@ MediaRouteApplicationConnector::ConnectorType MediaRouteStream::GetConnectorType
 	return _application_connector_type;
 }
 
-bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer, bool convert_bitstream)
+bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet, bool convert_bitstream)
 {
-	MediaType media_type = buffer->GetMediaType();
-	int32_t track_id = buffer->GetTrackId();
+	MediaType media_type = media_packet->GetMediaType();
+	int32_t track_id = media_packet->GetTrackId();
 	auto media_track = _stream_info->GetTrack(track_id);
 
 	if(media_track == nullptr)
@@ -64,7 +63,7 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer, bool convert_bi
 		{
 		    int64_t cts = 0;
 
-			if(_bsfv.Convert(buffer->GetData(), cts) == false)
+			if(_bsfv.Convert(media_packet->GetData(), cts) == false)
 			{
 				return false;
 			}
@@ -73,25 +72,25 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer, bool convert_bi
 			// cts = pts - dts
 			// pts = dts + cts
 			// Convert timebase 1/1000 to 1/90000
-			buffer->SetPts(buffer->GetDts() + (cts * 90));
+			media_packet->SetPts(media_packet->GetDts() + (cts * 90));
 
-			OV_ASSERT2(buffer->GetPts() >= 0LL);
+			OV_ASSERT2(media_packet->GetPts() >= 0LL);
 		}
 		else if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::Vp8)
 		{
-			_bsf_vp8.convert_to(buffer->GetData());
+			_bsf_vp8.convert_to(media_packet->GetData());
 		}
 		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Aac)
 		{
-			_bsfa.convert_to(buffer->GetData());
+			_bsfa.convert_to(media_packet->GetData());
 
-			logtp("Enqueue for AAC\n%s", buffer->GetData()->Dump(32).CStr());
+			logtp("Enqueue for AAC\n%s", media_packet->GetData()->Dump(32).CStr());
 		}
 		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Opus)
 		{
-			// logtw("%s", buffer->GetData()->Dump(32).CStr());
-			// _bsfa.convert_to(buffer.GetBuffer());
-			logtp("Enqueue for OPUS\n%s", buffer->GetData()->Dump(32).CStr());
+			// logtw("%s", media_packet->GetData()->Dump(32).CStr());
+			// _bsfa.convert_to(media_packet.GetBuffer());
+			logtp("Enqueue for OPUS\n%s", media_packet->GetData()->Dump(32).CStr());
 		}
 		else
 		{
@@ -100,22 +99,21 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer, bool convert_bi
 	}
 
 #if 0
-	buffer->SetPts(media_track->GetStartFrameTime() + buffer->GetPts());
+	media_packet->SetPts(media_track->GetStartFrameTime() + media_packet->GetPts());
 	
 	// 수신된 버퍼의 PTS값이 초기화되면 마지막에 받은 PTS값을 기준으로 증가시켜준다
-	if( (media_track->GetLastFrameTime()-1000000) > buffer->GetPts())
+	if( (media_track->GetLastFrameTime()-1000000) > media_packet->GetPts())
 	{
 		logtw("change start time");
-		logtd("start buffer : %.0f, last buffer : %.0f, buffer : %.0f", (float)media_track->GetStartFrameTime(), (float)media_track->GetLastFrameTime(), (float)buffer->GetPts());
+		logtd("start media_packet : %.0f, last media_packet : %.0f, media_packet : %.0f", (float)media_track->GetStartFrameTime(), (float)media_track->GetLastFrameTime(), (float)media_packet->GetPts());
 
 		media_track->SetStartFrameTime(media_track->GetLastFrameTime());
 	}
 
-	media_track->SetLastFrameTime(buffer->GetPts());
+	media_track->SetLastFrameTime(media_packet->GetPts());
 #endif
 
-	// 변경된 스트림을 큐에 넣음
-	_queue.push(std::move(buffer));
+	_media_packets.push(std::move(media_packet));
 
 	time(&_last_rb_time);
 	// logtd("last time : %s", asctime(gmtime(&_last_rb_time)) );
@@ -123,22 +121,22 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer, bool convert_bi
 	return true;
 }
 
-std::unique_ptr<MediaPacket> MediaRouteStream::Pop()
+std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 {
-	if(_queue.empty())
+	if(_media_packets.empty())
 	{
 		return nullptr;
 	}
 
-	auto p2 = std::move(_queue.front());
-	_queue.pop();
+	auto p2 = std::move(_media_packets.front());
+	_media_packets.pop();
 
 	return p2;
 }
 
 uint32_t MediaRouteStream::Size()
 {
-	return _queue.size();
+	return _media_packets.size();
 }
 
 

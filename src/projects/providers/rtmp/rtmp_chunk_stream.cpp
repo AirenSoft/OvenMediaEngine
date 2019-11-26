@@ -62,8 +62,8 @@ RtmpChunkStream::RtmpChunkStream(ov::ClientSocket *remote, IRtmpChunkStream *str
 	_stream_id = 0;
 	_device_string = RTMP_UNKNOWN_DEVICE_TYPE_STRING;
 
-	_import_chunk = std::make_unique<RtmpImportChunk>(RTMP_DEFAULT_CHUNK_SIZE);
-	_export_chunk = std::make_unique<RtmpExportChunk>(false, RTMP_DEFAULT_CHUNK_SIZE);
+	_import_chunk = std::make_shared<RtmpImportChunk>(RTMP_DEFAULT_CHUNK_SIZE);
+	_export_chunk = std::make_shared<RtmpExportChunk>(false, RTMP_DEFAULT_CHUNK_SIZE);
 	_media_info = std::make_shared<RtmpMediaInfo>();
 
 	_rtmp_stream_id = 0;

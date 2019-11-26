@@ -6,10 +6,8 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "media_route_application.h"
-
 #include <base/info/stream_info.h>
-#include <relay/relay.h>
+#include "media_route_application.h"
 
 #define OV_LOG_TAG "MediaRouter.App"
 
@@ -280,7 +278,7 @@ bool MediaRouteApplication::OnDeleteStream(
 bool MediaRouteApplication::OnReceiveBuffer(
 	std::shared_ptr<MediaRouteApplicationConnector> app_conn,
 	std::shared_ptr<StreamInfo> stream_info,
-	std::unique_ptr<MediaPacket> packet)
+	std::shared_ptr<MediaPacket> packet)
 {
 	if (app_conn == nullptr || stream_info == nullptr)
 	{
@@ -311,15 +309,14 @@ bool MediaRouteApplication::OnReceiveBuffer(
 	// TODO(SOULK) : Connector(Provider, Transcoder)에서 수신된 데이터에 대한 정보를 바로 처리하기 위해 버퍼의 Indicator 정보를
 	// MainTask에 전달한다. 패킷이 수신되어 처리(재분배)되는 속도가 0.001초 이하의 초저지연으로 동작하나, 효율적인 구조는
 	// 아닌것으로 판단되므로, 향후에 개선이 필요하다
-	_indicator.push(std::make_unique<BufferIndicator>(
-		stream_info->GetId()));
+	_indicator.push(std::make_shared<BufferIndicator>(stream_info->GetId()));
 
 	return ret;
 }
 
 void MediaRouteApplication::OnGarbageCollector()
 {
-	_indicator.push(std::make_unique<BufferIndicator>(
+	_indicator.push(std::make_shared<BufferIndicator>(
 		BUFFFER_INDICATOR_UNIQUEID_GC  // 가비지 컬렉터를 실행
 		));
 }
@@ -401,6 +398,8 @@ void MediaRouteApplication::MainTask()
 		// TODO: 동기화 처리가 필요 하지만 자주 호출 부분이라 성능 적으로 확인 필요
 		std::unique_lock<std::mutex> lock(_mutex);
 		auto it = _streams.find(indicator->_stream_id);
+
+		// stream : std::shared_ptr<MediaRouteStream>
 		auto stream = (it != _streams.end()) ? it->second : nullptr;
 		lock.unlock();
 
@@ -410,15 +409,16 @@ void MediaRouteApplication::MainTask()
 			continue;
 		}
 
-		auto cur_buf = stream->Pop();
-		if (cur_buf)
+		// cur_buf : std::shared_ptr<MediaPacket>
+		auto media_packet = stream->Pop();
+		if (media_packet)
 		{
 			MediaRouteApplicationConnector::ConnectorType connector_type = stream->GetConnectorType();
 
 			auto stream_info = stream->GetStreamInfo();
 
 			// Find Media Track
-			auto media_track = stream_info->GetTrack(cur_buf->GetTrackId());
+			auto media_track = stream_info->GetTrack(media_packet->GetTrackId());
 
 			/*
 			// Transcoder -> MediaRouter -> RelayClient
@@ -441,92 +441,26 @@ void MediaRouteApplication::MainTask()
 					(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder))
 				{
 					// TODO(soulk): Application Observer의 타입에 따라서 호출하는 함수를 다르게 한다
-					auto media_buffer_clone = cur_buf->ClonePacket();
+					auto media_buffer_clone = media_packet->ClonePacket();
 
 					observer->OnSendFrame(stream_info, std::move(media_buffer_clone));
 				}
 				// Transcoder -> MediaRouter -> Publisher
 				// or
 				// RelayClient -> MediaRouter -> Publisher
-				else if (
-					(
-						(connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) ||
+				else if (((connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) ||
 						(connector_type == MediaRouteApplicationConnector::ConnectorType::Relay)) &&
 					(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
 				{
-					switch (cur_buf->GetMediaType())
+					if (media_packet->GetMediaType() == MediaType::Video)
 					{
-						case MediaType::Video:
-						{
-							auto data = cur_buf->GetData();
-							auto &track = stream_info->GetTrack(cur_buf->GetTrackId());
-
-							OV_ASSERT2(track != nullptr);
-
-							auto encoded_frame = std::make_unique<EncodedFrame>(data, data->GetLength(), 0);
-							encoded_frame->_encoded_width = track->GetWidth();
-							encoded_frame->_encoded_height = track->GetHeight();
-							encoded_frame->_frame_type = (cur_buf->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
-							encoded_frame->_time_stamp = cur_buf->GetPts();
-							encoded_frame->_duration = cur_buf->GetDuration();
-
-							auto codec_info = std::make_unique<CodecSpecificInfo>();
-
-							MediaCodecId codec_id = media_track->GetCodecId();
-
-							if (codec_id == MediaCodecId::Vp8)
-							{
-								codec_info->codec_type = CodecType::Vp8;
-								codec_info->codec_specific.vp8 = CodecSpecificInfoVp8();
-							}
-							else if (codec_id == MediaCodecId::H264)
-							{
-								codec_info->codec_type = CodecType::H264;
-								codec_info->codec_specific.h264 = CodecSpecificInfoH264();
-							}
-
-							auto fragmentation = std::make_unique<FragmentationHeader>();
-							::memcpy(fragmentation.get(), cur_buf->GetFragHeader(), sizeof(FragmentationHeader));
-
-							// logtd("send to publisher (1000k cr):%u, (90k cr):%u", cur_buf->GetPts(), encoded_frame->_timeStamp);
-							observer->OnSendVideoFrame(stream_info, media_track, std::move(encoded_frame), std::move(codec_info), std::move(fragmentation));
-
-							break;
-						}
-
-						case MediaType::Audio:
-						{
-							auto data = cur_buf->GetData();
-							auto &track = stream_info->GetTrack(cur_buf->GetTrackId());
-
-							OV_ASSERT2(track != nullptr);
-
-							// RFC7587 - RTP Payload Format for the Opus Speech and Audio Codec (https://tools.ietf.org/html/rfc7587)
-
-							auto encoded_frame = std::make_unique<EncodedFrame>(data, data->GetLength(), 0);
-							encoded_frame->_encoded_width = track->GetWidth();
-							encoded_frame->_encoded_height = track->GetHeight();
-							encoded_frame->_frame_type = (cur_buf->GetFlag() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
-							encoded_frame->_time_stamp = cur_buf->GetPts();
-							encoded_frame->_duration = cur_buf->GetDuration();
-
-							auto codec_info = std::make_unique<CodecSpecificInfo>();
-
-							codec_info->codec_type = CodecType::Opus;
-
-							codec_info->codec_specific.opus.sample_rate_hz = media_track->GetSampleRate();
-							codec_info->codec_specific.opus.num_channels = static_cast<size_t>(media_track->GetChannel().GetCounts());
-
-							auto fragmentation = std::make_unique<FragmentationHeader>();
-
-							// logtd("send to publisher (1000k cr):%u, (90k cr):%u", cur_buf->GetPts(), encoded_frame->_timeStamp);
-							observer->OnSendAudioFrame(stream_info, media_track, std::move(encoded_frame), std::move(codec_info), std::move(fragmentation));
-							break;
-						}
-
-						default:
-							// ignore stream data
-							break;
+						// logtd("send to publisher (1000k cr):%u, (90k cr):%u", cur_buf->GetPts(), encoded_frame->_timeStamp);
+						observer->OnSendVideoFrame(stream_info, media_packet);
+					}
+					else if (media_packet->GetMediaType() == MediaType::Audio)
+					{
+						// logtd("send to publisher (1000k cr):%u, (90k cr):%u", cur_buf->GetPts(), encoded_frame->_timeStamp);
+						observer->OnSendAudioFrame(stream_info, media_packet);
 					}
 				}
 			}

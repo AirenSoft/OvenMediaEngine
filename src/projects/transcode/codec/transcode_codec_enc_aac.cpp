@@ -59,7 +59,7 @@ bool OvenCodecImplAvcodecEncAAC::Configure(std::shared_ptr<TranscodeContext> out
 	return true;
 }
 
-std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAAC::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAAC::RecvBuffer(TranscodeResult *result)
 {
 	// Check frame is availble
 	int ret = ::avcodec_receive_packet(_context, _packet);
@@ -87,7 +87,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAAC::RecvBuffer(TranscodeRes
 		if (_packet->pts >= 0LL)
 		{
 			// Packet is ready
-			auto packet_buffer = std::make_unique<MediaPacket>(common::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts / 1000, _packet->dts / 1000, _packet->duration, MediaPacketFlag::Key);
+			auto packet_buffer = std::make_shared<MediaPacket>(common::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts / 1000, _packet->dts / 1000, _packet->duration, MediaPacketFlag::Key);
 
 			// logte("ENCODED:: %lld, %lld", packet_buffer->GetPts(), _packet->pts);
 			::av_packet_unref(_packet);

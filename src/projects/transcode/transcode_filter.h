@@ -27,8 +27,8 @@ public:
 
 	bool Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context);
 
-	int32_t SendBuffer(std::unique_ptr<MediaFrame> buffer);
-	std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result);
+	int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer);
+	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result);
 
 private:
 	MediaFilterImpl *_impl;

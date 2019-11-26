@@ -23,9 +23,9 @@ public:
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
-	void SendBuffer(std::unique_ptr<const MediaFrame> frame) override;
+	void SendBuffer(std::shared_ptr<const MediaFrame> frame) override;
 
-	std::unique_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
+	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
 
 protected:
 	std::shared_ptr<ov::Data> _buffer;

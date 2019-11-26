@@ -30,12 +30,12 @@ CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &str
 {
 	if (_video_track != nullptr)
 	{
-		_video_chunk_writer = std::make_unique<CmafChunkWriter>(M4sMediaType::Video, 1, 1);
+		_video_chunk_writer = std::make_shared<CmafChunkWriter>(M4sMediaType::Video, 1, 1);
 	}
 
 	if (_audio_track != nullptr)
 	{
-		_audio_chunk_writer = std::make_unique<CmafChunkWriter>(M4sMediaType::Audio, 1, 2);
+		_audio_chunk_writer = std::make_shared<CmafChunkWriter>(M4sMediaType::Audio, 1, 2);
 	}
 
 	_chunked_transfer = chunked_transfer;

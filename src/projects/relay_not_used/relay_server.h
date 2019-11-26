@@ -47,8 +47,8 @@ protected:
 	//--------------------------------------------------------------------
 	bool OnCreateStream(std::shared_ptr<StreamInfo> info) override;
 	bool OnDeleteStream(std::shared_ptr<StreamInfo> info) override;
-	bool OnSendVideoFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::unique_ptr<EncodedFrame> encoded_frame, std::unique_ptr<CodecSpecificInfo> codec_info, std::unique_ptr<FragmentationHeader> fragmentation) override;
-	bool OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::unique_ptr<EncodedFrame> encoded_frame, std::unique_ptr<CodecSpecificInfo> codec_info, std::unique_ptr<FragmentationHeader> fragmentation) override;
+	bool OnSendVideoFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::shared_ptr<EncodedFrame> encoded_frame, std::shared_ptr<CodecSpecificInfo> codec_info, std::shared_ptr<FragmentationHeader> fragmentation) override;
+	bool OnSendAudioFrame(std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaTrack> track, std::shared_ptr<EncodedFrame> encoded_frame, std::shared_ptr<CodecSpecificInfo> codec_info, std::shared_ptr<FragmentationHeader> fragmentation) override;
 
 	ObserverType GetObserverType() override
 	{

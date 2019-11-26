@@ -33,7 +33,7 @@ bool OvtApplication::Stop()
 	return Application::Stop();
 }
 
-std::shared_ptr<Stream> OvtApplication::CreateStream(std::shared_ptr<StreamInfo> info, uint32_t worker_count)
+std::shared_ptr<Stream> OvtApplication::CreateStream(const std::shared_ptr<StreamInfo> &info, uint32_t worker_count)
 {
 	logtd("OvtApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 	if(worker_count == 0)
@@ -44,7 +44,7 @@ std::shared_ptr<Stream> OvtApplication::CreateStream(std::shared_ptr<StreamInfo>
 	return OvtStream::Create(GetSharedPtrAs<Application>(), *info, worker_count);
 }
 
-bool OvtApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
+bool OvtApplication::DeleteStream(const std::shared_ptr<StreamInfo> &info)
 {
 	// Input이 종료된 경우에 호출됨, 이 경우에는 Stream을 삭제 해야 하고, 그 전에 연결된 모든 Session을 종료
 	// StreamInfo로 Stream을 구한다.

@@ -20,5 +20,5 @@ public:
 
 	bool Configure(std::shared_ptr<TranscodeContext> output_context) override;
 
-	std::unique_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
+	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
 };

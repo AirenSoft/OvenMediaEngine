@@ -217,7 +217,7 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 		return false;
 	}
 
-	auto pbuf = std::make_unique<MediaPacket>(MediaType::Video,
+	auto pbuf = std::make_shared<MediaPacket>(MediaType::Video,
 											  0,
 											  data,
 											  // The timestamp used by RTMP is DTS. PTS will be recalculated later
@@ -254,7 +254,7 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 		return false;
 	}
 
-	auto pbuf = std::make_unique<MediaPacket>(MediaType::Audio,
+	auto pbuf = std::make_shared<MediaPacket>(MediaType::Audio,
 											  1,
 											  data,
 											  // The timestamp used by RTMP is DTS. PTS will be recalculated later

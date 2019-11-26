@@ -9,7 +9,6 @@ LOCAL_STATIC_LIBRARIES := \
 	ice \
 	jsoncpp \
 	http_server \
-	relay \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \

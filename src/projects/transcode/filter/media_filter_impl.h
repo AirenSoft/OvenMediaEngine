@@ -42,8 +42,8 @@ public:
 	// context : 변환 정보
 	virtual bool Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context) = 0;
 
-	virtual int32_t SendBuffer(std::unique_ptr<MediaFrame> buffer) = 0;
-	virtual std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) = 0;
+	virtual int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) = 0;
+	virtual std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) = 0;
 
 	static AVRational TimebaseToAVRational(const common::Timebase &timebase)
 	{

@@ -233,60 +233,76 @@ bool RtcStream::OnRtcpPacketized(std::shared_ptr<RtcpPacket> packet)
 	return true;
 }
 
-void RtcStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
-                               std::unique_ptr<EncodedFrame> encoded_frame,
-                               std::unique_ptr<CodecSpecificInfo> codec_info,
-                               std::unique_ptr<FragmentationHeader> fragmentation)
+void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	// VideoFrame 데이터를 Protocol에 맞게 변환한다.
+	auto media_track = GetTrack(media_packet->GetTrackId());
 
-	// RTP Video Header를 생성한다. 사용한 CodecSpecificInfo는 버린다. (자동 삭제 됨)
+	// Create RTP Video Header
+	CodecSpecificInfo codec_info;
 	RTPVideoHeader rtp_video_header;
+
+	auto codec_id = media_track->GetCodecId();
+	if(codec_id == MediaCodecId::Vp8)
+	{
+		codec_info.codec_type = CodecType::Vp8;
+
+		// Structure for future expansion.
+		// In the future, when OME uses codec-specific features, certain information is obtained from media_packet.
+		codec_info.codec_specific.vp8 = CodecSpecificInfoVp8();
+	}
+	else if(codec_id == MediaCodecId::H264)
+	{
+		codec_info.codec_type = CodecType::H264;
+		codec_info.codec_specific.h264 = CodecSpecificInfoH264();
+	}
+
 	memset(&rtp_video_header, 0, sizeof(RTPVideoHeader));
 
-	if(codec_info)
-	{
-		MakeRtpVideoHeader(codec_info.get(), &rtp_video_header);
-	}
+	MakeRtpVideoHeader(&codec_info, &rtp_video_header);
 
 	// RTP Packetizing
 	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
-	auto packetizer = GetPacketizer(track->GetId());
+	auto packetizer = GetPacketizer(media_track->GetId());
 	if(packetizer == nullptr)
 	{
 		return;
 	}
+
 	// RTP_SENDER에 등록된 RtpRtcpSession에 의해서 Packetizing이 완료되면 OnRtpPacketized 함수가 호출된다.
-	packetizer->Packetize(encoded_frame->_frame_type,
-	                      encoded_frame->_time_stamp,
-	                      encoded_frame->_buffer->GetDataAs<uint8_t>(),
-	                      encoded_frame->_length,
-	                      fragmentation.get(),
+
+	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
+	auto timestamp = media_packet->GetPts();
+	auto data = media_packet->GetData();
+	auto fragmentation = media_packet->GetFragHeader();
+
+	packetizer->Packetize(frame_type,
+	                      timestamp,
+	                      data->GetDataAs<uint8_t>(),
+	                      data->GetLength(),
+						  fragmentation,
 	                      &rtp_video_header);
 }
 
-void RtcStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
-                               std::unique_ptr<EncodedFrame> encoded_frame,
-                               std::unique_ptr<CodecSpecificInfo> codec_info,
-                               std::unique_ptr<FragmentationHeader> fragmentation)
+void RtcStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	// AudioFrame 데이터를 Protocol에 맞게 변환한다.
-	OV_ASSERT2(encoded_frame != nullptr);
-	OV_ASSERT2(encoded_frame->_buffer != nullptr);
-
 	// RTP Packetizing
 	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
-	auto packetizer = GetPacketizer(track->GetId());
+	auto packetizer = GetPacketizer(media_packet->GetTrackId());
 	if(packetizer == nullptr)
 	{
 		return;
 	}
 
-	packetizer->Packetize(encoded_frame->_frame_type,
-	                      encoded_frame->_time_stamp,
-	                      encoded_frame->_buffer->GetDataAs<uint8_t>(),
-	                      encoded_frame->_length,
-	                      fragmentation.get(),
+	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
+	auto timestamp = media_packet->GetPts();
+	auto data = media_packet->GetData();
+	auto fragmentation = media_packet->GetFragHeader();
+
+	packetizer->Packetize(frame_type,
+						  timestamp,
+						  data->GetDataAs<uint8_t>(),
+						  data->GetLength(),
+						  fragmentation,
 	                      nullptr);
 }
 

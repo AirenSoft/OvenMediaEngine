@@ -26,7 +26,7 @@ public :
 	size_t			GetDataSize(){ return _data->size(); }
 
 private :
-	std::unique_ptr<std::vector<uint8_t>> _data;
+	std::shared_ptr<std::vector<uint8_t>> _data;
 	uint32_t  _bit_count;
 };
 

@@ -60,9 +60,9 @@ protected:
 		ov::Data data;
 		uint8_t flag = 0U;
 
-		std::unique_ptr<MediaPacket> CreatePacket() const
+		std::shared_ptr<MediaPacket> CreatePacket() const
 		{
-			auto packet = std::make_unique<MediaPacket>(static_cast<common::MediaType>(media_type), track_id, &data, last_pts, last_dts, duration, static_cast<MediaPacketFlag>(flag));
+			auto packet = std::make_shared<MediaPacket>(static_cast<common::MediaType>(media_type), track_id, &data, last_pts, last_dts, duration, static_cast<MediaPacketFlag>(flag));
 
 			return std::move(packet);
 		}

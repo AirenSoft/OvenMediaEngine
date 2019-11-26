@@ -72,14 +72,14 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> co
 	return true;
 }
 
-void OvenCodecImplAvcodecEncOpus::SendBuffer(std::unique_ptr<const MediaFrame> frame)
+void OvenCodecImplAvcodecEncOpus::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 {
 	logtp("[-> RAW DATA for OPUS]\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
 
 	TranscodeEncoder::SendBuffer(std::move(frame));
 }
 
-std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)
 {
 	OV_ASSERT2(_output_context != nullptr);
 
@@ -213,7 +213,7 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeRe
 	::memmove(buffer, buffer + bytes_to_encode, _buffer->GetLength() - bytes_to_encode);
 	_buffer->SetLength(_buffer->GetLength() - bytes_to_encode);
 
-	auto packet_buffer = std::make_unique<MediaPacket>(common::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
+	auto packet_buffer = std::make_shared<MediaPacket>(common::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
 
 	_current_pts += frame_count_to_encode;
 

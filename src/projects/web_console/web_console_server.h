@@ -17,7 +17,6 @@
 #include <http_server/https_server.h>
 #include <http_server/interceptors/http_request_interceptors.h>
 #include <media_router/media_route_application.h>
-#include <relay/relay.h>
 #include "../base/publisher/publisher.h"
 
 class WebConsoleServer : public ov::EnableSharedFromThis<WebConsoleServer>

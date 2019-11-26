@@ -46,7 +46,7 @@ public:
 	}
 
 	// MediaRouteApplication -> Stream-> Frame
-	inline bool SendFrame(std::shared_ptr<StreamInfo> stream_info, std::unique_ptr<MediaPacket> packet)
+	inline bool SendFrame(std::shared_ptr<StreamInfo> stream_info, std::shared_ptr<MediaPacket> packet)
 	{
 		if(GetMediaRouteApplication() == nullptr)
 		{

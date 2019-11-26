@@ -20,7 +20,7 @@ class MediaRouteApplicationInterface : public ov::EnableSharedFromThis<MediaRout
 public:
 	virtual bool OnCreateStream(std::shared_ptr<MediaRouteApplicationConnector> application, std::shared_ptr<StreamInfo> stream) = 0;
 	virtual bool OnDeleteStream(std::shared_ptr<MediaRouteApplicationConnector> application, std::shared_ptr<StreamInfo> stream) = 0;
-	virtual bool OnReceiveBuffer(std::shared_ptr<MediaRouteApplicationConnector> application, std::shared_ptr<StreamInfo> stream, std::unique_ptr<MediaPacket> packet) = 0;
+	virtual bool OnReceiveBuffer(std::shared_ptr<MediaRouteApplicationConnector> application, std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaPacket> packet) = 0;
 
 	virtual const std::map<uint32_t, std::shared_ptr<MediaRouteStream>> GetStreams() const = 0;
 };

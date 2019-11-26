@@ -20,8 +20,8 @@ public:
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
-	std::unique_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
+	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
 
 private:
-	std::unique_ptr<MediaPacket> MakePacket() const;
+	std::shared_ptr<MediaPacket> MakePacket() const;
 };

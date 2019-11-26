@@ -329,7 +329,7 @@ void TranscodeStream::Stop()
 	}
 }
 
-bool TranscodeStream::Push(std::unique_ptr<MediaPacket> packet)
+bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
 {
 	// logtd("Stage-1-1 : %f", (float)frame->GetPts());
 	// 변경된 스트림을 큐에 넣음
@@ -350,9 +350,9 @@ bool TranscodeStream::Push(std::unique_ptr<MediaPacket> packet)
 	return true;
 }
 
-// std::unique_ptr<MediaFrame> TranscodeStream::Pop()
+// std::shared_ptr<MediaFrame> TranscodeStream::Pop()
 // {
-// 	return _queue.pop_unique();
+// 	return _media_packets.pop_unique();
 // }
 
 void TranscodeStream::CreateDecoder(int32_t media_track_id, std::shared_ptr<TranscodeContext> input_context)
@@ -416,7 +416,7 @@ void TranscodeStream::ChangeOutputFormat(MediaFrame *buffer)
 	CreateFilters(track, buffer);
 }
 
-TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::unique_ptr<const MediaPacket> packet)
+TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<const MediaPacket> packet)
 {
 	auto decoder_item = _decoders.find(track_id);
 	if (decoder_item == _decoders.end())
@@ -478,7 +478,7 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::unique_ptr<
 	}
 }
 
-TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::unique_ptr<MediaFrame> frame)
+TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<MediaFrame> frame)
 {
 	auto filter_item = _filters.find(track_id);
 	if (filter_item == _filters.end())
@@ -525,7 +525,7 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::unique_ptr<M
 	}
 }
 
-TranscodeResult TranscodeStream::EncodeFrame(int32_t track_id, std::unique_ptr<const MediaFrame> frame)
+TranscodeResult TranscodeStream::EncodeFrame(int32_t track_id, std::shared_ptr<const MediaFrame> frame)
 {
 	auto encoder_item = _encoders.find(track_id);
 	if (encoder_item == _encoders.end())
@@ -678,7 +678,7 @@ void TranscodeStream::DeleteStreams()
 	_stream_list[_application_info.GetId()].clear();
 }
 
-void TranscodeStream::SendFrame(std::unique_ptr<MediaPacket> packet)
+void TranscodeStream::SendFrame(std::shared_ptr<MediaPacket> packet)
 {
 	uint8_t track_id = static_cast<uint8_t>(packet->GetTrackId());
 
@@ -805,11 +805,11 @@ void TranscodeStream::CreateFilters(std::shared_ptr<MediaTrack> media_track, Med
 			continue;
 		}
 
-		_filters[context_item.first] = std::make_unique<TranscodeFilter>(media_track, std::move(input_context), context_item.second);
+		_filters[context_item.first] = std::make_shared<TranscodeFilter>(media_track, std::move(input_context), context_item.second);
 	}
 }
 
-void TranscodeStream::DoFilters(std::unique_ptr<MediaFrame> frame)
+void TranscodeStream::DoFilters(std::shared_ptr<MediaFrame> frame)
 {
 	// 패킷의 트랙 아이디를 조회
 	int32_t track_id = frame->GetTrackId();

@@ -32,18 +32,18 @@ TranscodeDecoder::~TranscodeDecoder()
 	::av_parser_close(_parser);
 }
 
-std::unique_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
+std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
 {
-	std::unique_ptr<TranscodeDecoder> decoder = nullptr;
+	std::shared_ptr<TranscodeDecoder> decoder = nullptr;
 
 	switch (codec_id)
 	{
 		case common::MediaCodecId::H264:
-			decoder = std::make_unique<OvenCodecImplAvcodecDecAVC>();
+			decoder = std::make_shared<OvenCodecImplAvcodecDecAVC>();
 			break;
 
 		case common::MediaCodecId::Aac:
-			decoder = std::make_unique<OvenCodecImplAvcodecDecAAC>();
+			decoder = std::make_shared<OvenCodecImplAvcodecDecAAC>();
 			break;
 
 		default:
@@ -107,7 +107,7 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 	return true;
 }
 
-void TranscodeDecoder::SendBuffer(std::unique_ptr<const MediaPacket> packet)
+void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)
 {
 	_input_buffer.push_back(std::move(packet));
 }

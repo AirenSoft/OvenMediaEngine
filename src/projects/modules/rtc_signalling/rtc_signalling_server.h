@@ -22,7 +22,6 @@
 #include <http_server/https_server.h>
 #include <http_server/interceptors/http_request_interceptors.h>
 #include <media_router/media_route_application.h>
-#include <relay/relay.h>
 
 class RtcSignallingServer : public ov::EnableSharedFromThis<RtcSignallingServer>
 {

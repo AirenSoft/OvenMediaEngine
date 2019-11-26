@@ -137,7 +137,7 @@ bool HlsPacketizer::SegmentWrite(int64_t start_timestamp, uint64_t duration)
 	int64_t _first_audio_time_stamp = 0;
 	int64_t _first_video_time_stamp = 0;
 
-	auto ts_writer = std::make_unique<TsWriter>(_video_enable, _audio_enable);
+	auto ts_writer = std::make_shared<TsWriter>(_video_enable, _audio_enable);
 
 	for (auto &frame_data : _frame_datas)
 	{

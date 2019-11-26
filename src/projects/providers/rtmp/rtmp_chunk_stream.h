@@ -170,8 +170,8 @@ protected:
 
 	std::shared_ptr<ov::Data> _remained_data;
 	RtmpHandshakeState _handshake_state;
-	std::unique_ptr<RtmpImportChunk> _import_chunk;
-	std::unique_ptr<RtmpExportChunk> _export_chunk;
+	std::shared_ptr<RtmpImportChunk> _import_chunk;
+	std::shared_ptr<RtmpExportChunk> _export_chunk;
 	std::shared_ptr<RtmpMediaInfo> _media_info;
 
 	uint32_t _rtmp_stream_id;

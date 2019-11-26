@@ -41,44 +41,46 @@ public:
 
 	void Stop();
 
-	bool Push(std::unique_ptr<MediaPacket> packet);
+	bool Push(std::shared_ptr<MediaPacket> packet);
 
 	static std::map<uint32_t, std::set<ov::String>> _stream_list;
 
-private:
+	// For statistics
+	uint32_t _stats_decoded_frame_count;
+	uint8_t _stats_queue_full_count;
+	uint64_t _max_queue_size;
 
+private:
 	// Input stream info
 	std::shared_ptr<StreamInfo> _stream_info_input;
 
 	// Buffer for encoded media packets
-	MediaQueue<std::unique_ptr<MediaPacket>> _queue;
+	MediaQueue<std::shared_ptr<MediaPacket>> _queue;
 
 	// Buffer for decoded frames
-	MediaQueue<std::unique_ptr<MediaFrame>> _queue_decoded;
+	MediaQueue<std::shared_ptr<MediaFrame>> _queue_decoded;
 
 	// Buffer for filtered frames
-	MediaQueue<std::unique_ptr<MediaFrame>> _queue_filterd;
+	MediaQueue<std::shared_ptr<MediaFrame>> _queue_filterd;
 
 	// 96-127 dynamic : RTP Payload Types for standard audio and video encodings
 	uint8_t _last_track_video = 0x60;     // 0x60 ~ 0x6F
 	uint8_t _last_track_audio = 0x70;     // 0x70 ~ 0x7F
 
-private:
 	const info::Application _application_info;
 
 	// Decoder
-	std::map<MediaTrackId, std::unique_ptr<TranscodeDecoder>> _decoders;
+	std::map<MediaTrackId, std::shared_ptr<TranscodeDecoder>> _decoders;
 
 	// Encoder
-	std::map<MediaTrackId, std::unique_ptr<TranscodeEncoder>> _encoders;
+	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
 
 	// Filter
-	std::map<MediaTrackId, std::unique_ptr<TranscodeFilter>> _filters;
+	std::map<MediaTrackId, std::shared_ptr<TranscodeFilter>> _filters;
 
 	// Track Group
 	std::map <ov::String, std::vector <uint8_t >> _stream_tracks;
 
-private:
 	volatile bool _kill_flag;
 
 	void DecodeTask();
@@ -101,15 +103,15 @@ private:
 	void ChangeOutputFormat(MediaFrame *buffer);
 
 	void CreateFilters(std::shared_ptr<MediaTrack> media_track, MediaFrame *buffer);
-	void DoFilters(std::unique_ptr<MediaFrame> frame);
+	void DoFilters(std::shared_ptr<MediaFrame> frame);
 
 	// There are 3 steps to process packet
 	// Step 1: Decode (Decode a frame from given packets)
-	TranscodeResult DecodePacket(int32_t track_id, std::unique_ptr<const MediaPacket> packet);
+	TranscodeResult DecodePacket(int32_t track_id, std::shared_ptr<const MediaPacket> packet);
 	// Step 2: Filter (resample/rescale the decoded frame)
-	TranscodeResult FilterFrame(int32_t track_id, std::unique_ptr<MediaFrame> frame);
+	TranscodeResult FilterFrame(int32_t track_id, std::shared_ptr<MediaFrame> frame);
 	// Step 3: Encode (Encode the filtered frame to packets)
-	TranscodeResult EncodeFrame(int32_t track_id, std::unique_ptr<const MediaFrame> frame);
+	TranscodeResult EncodeFrame(int32_t track_id, std::shared_ptr<const MediaFrame> frame);
 
 	// 출력(변화된) 스트림 정보
 	bool AddStreamInfoOutput(ov::String stream_name);
@@ -127,12 +129,6 @@ private:
 	void DeleteStreams();
 
 	// Send frame with output stream's information
-	void SendFrame(std::unique_ptr<MediaPacket> packet);
-
-	// 통계 정보
-private:
-	uint32_t _stats_decoded_frame_count;
-	uint8_t _stats_queue_full_count;
-	uint64_t _max_queue_size;
+	void SendFrame(std::shared_ptr<MediaPacket> packet);
 };
 

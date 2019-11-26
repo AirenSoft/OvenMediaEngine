@@ -23,8 +23,8 @@ public:
 
 	bool Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context) override;
 
-	int32_t SendBuffer(std::unique_ptr<MediaFrame> buffer) override;
-	std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
+	int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) override;
+	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
 
 private:
 	AVFrame *_frame = nullptr;
@@ -36,7 +36,7 @@ private:
 
 	double _scale = 0.0;
 
-	std::deque<std::unique_ptr<MediaFrame>> _input_buffer;
+	std::deque<std::shared_ptr<MediaFrame>> _input_buffer;
 
 	std::shared_ptr<TranscodeContext> _input_context;
 	std::shared_ptr<TranscodeContext> _output_context;

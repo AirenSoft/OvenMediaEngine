@@ -99,7 +99,7 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 	size_t last_packet_reduction_len = last_rtp_header->HeadersSize() - rtp_header_template->HeadersSize();
 
 	// Packetizer 생성
-	std::unique_ptr<RtpPacketizingManager> packetizer(RtpPacketizingManager::Create(video_type,
+	std::shared_ptr<RtpPacketizingManager> packetizer(RtpPacketizingManager::Create(video_type,
 	                                                                max_data_payload_length,
 	                                                                last_packet_reduction_len,
 	                                                                video_header ? &(video_header->codec_header) : nullptr, frame_type));

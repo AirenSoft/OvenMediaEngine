@@ -146,7 +146,7 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 	return true;
 }
 
-int32_t MediaFilterResampler::SendBuffer(std::unique_ptr<MediaFrame> buffer)
+int32_t MediaFilterResampler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
 	logtp("Data before resampling:\n%s", ov::Dump(buffer->GetBuffer(0), buffer->GetBufferSize(0), 32).CStr());
 
@@ -155,7 +155,7 @@ int32_t MediaFilterResampler::SendBuffer(std::unique_ptr<MediaFrame> buffer)
 	return 0;
 }
 
-std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *result)
 {
 	int ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
 
@@ -177,7 +177,7 @@ std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 	}
 	else
 	{
-		auto output_frame = std::make_unique<MediaFrame>();
+		auto output_frame = std::make_shared<MediaFrame>();
 
 		output_frame->SetFormat(_frame->format);
 		output_frame->SetBytesPerSample(::av_get_bytes_per_sample((AVSampleFormat)_frame->format));

@@ -31,16 +31,9 @@ private:
 	bool Start() override;
 	bool Stop() override;
 
-
-	void SendVideoFrame(std::shared_ptr<StreamInfo> info,
-	                    std::shared_ptr<MediaTrack> track,
-	                    std::unique_ptr<EncodedFrame> encoded_frame,
-	                    std::unique_ptr<CodecSpecificInfo> codec_info,
-	                    std::unique_ptr<FragmentationHeader> fragmentation) override;
-
 	// Application Implementation
-	std::shared_ptr<Stream> CreateStream(std::shared_ptr<StreamInfo> info, uint32_t worker_count) override;
-	bool DeleteStream(std::shared_ptr<StreamInfo> info) override;
+	std::shared_ptr<Stream> CreateStream(const std::shared_ptr<StreamInfo> &info, uint32_t worker_count) override;
+	bool DeleteStream(const std::shared_ptr<StreamInfo> &info) override;
 
 	std::shared_ptr<IcePort> _ice_port;
 	std::shared_ptr<RtcSignallingServer> _rtc_signalling;

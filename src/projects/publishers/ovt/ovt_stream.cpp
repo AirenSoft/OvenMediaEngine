@@ -22,12 +22,14 @@ OvtStream::OvtStream(const std::shared_ptr<Application> application,
 
 OvtStream::~OvtStream()
 {
-	logtd("OvtStream(%d) has been terminated finally", GetId());
+	logtd("OvtStream(%s/%d) has been terminated finally", GetName().CStr(), GetId());
 	Stop();
 }
 
 bool OvtStream::Start(uint32_t worker_count)
 {
+
+
 	return Stream::Start(worker_count);
 }
 
@@ -36,18 +38,12 @@ bool OvtStream::Stop()
 	return Stream::Stop();
 }
 
-void OvtStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
-							   std::unique_ptr<EncodedFrame> encoded_frame,
-							   std::unique_ptr<CodecSpecificInfo> codec_info,
-							   std::unique_ptr<FragmentationHeader> fragmentation)
+void OvtStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 
 }
 
-void OvtStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
-							   std::unique_ptr<EncodedFrame> encoded_frame,
-							   std::unique_ptr<CodecSpecificInfo> codec_info,
-							   std::unique_ptr<FragmentationHeader> fragmentation)
+void OvtStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 
 }

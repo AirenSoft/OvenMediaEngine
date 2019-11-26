@@ -89,7 +89,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	return true;
 }
 
-std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeResult *result)
 {
 	// Check frame is availble
 	int ret = ::avcodec_receive_packet(_context, _packet);
@@ -172,13 +172,13 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 	return nullptr;
 }
 
-std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
+std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
 {
 	auto flag = (_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
 	// This is workaround: avcodec_receive_packet() does not give the duration that sent to avcodec_send_frame()
 	int den = _output_context->GetTimeBase().GetDen();
 	int64_t duration = (den == 0) ? 0LL : (float)den / _output_context->GetFrameRate();
-	auto packet = std::make_unique<MediaPacket>(common::MediaType::Video, 0, _packet->data, _packet->size, _packet->pts * _scale_inv, _packet->dts * _scale_inv, duration, flag);
+	auto packet = std::make_shared<MediaPacket>(common::MediaType::Video, 0, _packet->data, _packet->size, _packet->pts * _scale_inv, _packet->dts * _scale_inv, duration, flag);
 	FragmentationHeader fragment_header;
 
 	int nal_pattern_size = 4;
