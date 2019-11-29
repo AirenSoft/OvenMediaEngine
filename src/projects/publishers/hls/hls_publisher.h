@@ -23,7 +23,7 @@ protected:
 	//--------------------------------------------------------------------
 	// Implementation of SegmentPublisher
 	//--------------------------------------------------------------------
-	bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager);
+	bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager) override;
 
 	//--------------------------------------------------------------------
 	// Implementation of Publisher
@@ -35,7 +35,7 @@ protected:
 		return cfg::PublisherType::Hls;
 	}
 
-	const char *GetPublisherName() const
+	const char *GetPublisherName() const override
 	{
 		return "HLS";
 	}

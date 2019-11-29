@@ -57,7 +57,8 @@ protected:
 								info::application_id_t application_id, uint32_t stream_id,
 								uint64_t timestamp,
 								RtmpFrameType frame_type,
-								const std::shared_ptr<const ov::Data> &data) override;
+								const std::shared_ptr<const ov::Data> &data,
+								std::unique_ptr<FragmentationHeader> fragmentation_header = nullptr) override;
 
 	bool OnChunkStreamAudioData(ov::ClientSocket *remote,
 								info::application_id_t application_id, uint32_t stream_id,

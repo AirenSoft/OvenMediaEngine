@@ -71,7 +71,7 @@ protected:
 
 	virtual bool UpdatePlayList();
 
-	virtual void SetReadyForStreaming() noexcept;
+	virtual void SetReadyForStreaming() noexcept override;
 
 	int _avc_nal_header_size = 0;
 	ov::String _start_time;

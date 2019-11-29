@@ -29,6 +29,10 @@
 
 #include <base/application/application.h>
 
+#include <media_router/bitstream/bitstream_to_annexb.h>
+#include <media_router/bitstream/bitstream_to_adts.h>
+#include <media_router/bitstream/bitstream_to_annexa.h>
+
 class TranscodeApplication;
 
 typedef int32_t MediaTrackId;
@@ -113,12 +117,14 @@ private:
 
 	// 출력(변화된) 스트림 정보
 	bool AddStreamInfoOutput(ov::String stream_name);
+	uint8_t GetTrackId(common::MediaType media_type);
 	std::map<ov::String, std::shared_ptr<StreamInfo>> _stream_info_outputs;
 
 	// Transcoding information
 	uint8_t AddOutputContext(common::MediaType media_type, std::shared_ptr<TranscodeContext> output_context);
 
 	std::map<MediaTrackId, std::shared_ptr<TranscodeContext>> _output_contexts;
+	std::map<MediaTrackId, uint8_t> _bypass_routes;
 
 	// Create output streams
 	void CreateStreams();
@@ -128,6 +134,7 @@ private:
 
 	// Send frame with output stream's information
 	void SendFrame(std::unique_ptr<MediaPacket> packet);
+	void SendFrame(std::unique_ptr<MediaPacket> packet, uint8_t track_id);
 
 	// 통계 정보
 private:
@@ -136,5 +143,12 @@ private:
 	uint8_t _stats_queue_full_count;
 
 	uint64_t _max_queue_size;
+
+	////////////////////////////
+	// 비트 스트림 필터
+	////////////////////////////
+	BitstreamToAnnexB _bsfv;
+	BitstreamToADTS _bsfa;
+	BitstreamAnnexA _bsf_vp8;
 };
 

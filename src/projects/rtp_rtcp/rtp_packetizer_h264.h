@@ -66,11 +66,12 @@ public:
 
 private:
 	struct Fragment {
-		Fragment(const uint8_t* buffer, size_t length);
+		Fragment(const uint8_t* buffer, size_t length, bool complete);
 		Fragment(const Fragment& fragment);
 		~Fragment();
 		const uint8_t* buffer = nullptr;
 		size_t length = 0;
+		bool complete = true;
 	};
 
 	struct PacketUnit {
@@ -104,5 +105,6 @@ private:
 	size_t num_packets_left_;
 	const H264PacketizationMode packetization_mode_;
 	std::deque<Fragment> input_fragments_;
+	bool last_fragment_complete_ = true;
 	std::queue<PacketUnit> packets_;
 };

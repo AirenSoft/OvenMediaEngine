@@ -431,6 +431,10 @@ void RelayClient::HandleData(const RelayPacket &packet)
 	}
 	else
 	{
+		if (transaction->had_first_packet == false)
+		{
+ 			transaction->had_first_packet = packet.IsStart();
+		}
 		data.Append(packet.GetData(), packet.GetDataSize());
 	}
 
@@ -444,8 +448,23 @@ void RelayClient::HandleData(const RelayPacket &packet)
 		{
 			if (data.GetLength() > 0)
 			{
+				std::unique_ptr<FragmentationHeader> frag_hdr;
+				size_t bytes_consumed = 0;
+				if (transaction->had_first_packet)
+				{
+					frag_hdr = std::make_unique<FragmentationHeader>();
+					const auto frag_hdr_deserialized = frag_hdr->Deserialize(data, bytes_consumed);
+					if (frag_hdr_deserialized == false)
+					{
+						logtw("Failed to deserialize fragmentation heder");
+					}
+				}
+				
 				auto media_packet = transaction->CreatePacket();
-				media_packet->SetFragHeader(&(transaction->fragment_header));
+				if (frag_hdr && frag_hdr->IsEmpty() == false)
+				{
+					media_packet->SetFragHeader(std::move(frag_hdr));
+				}
 
 				_media_route_application->OnReceiveBuffer(this->GetSharedPtr(), stream->GetStreamInfo(), std::move(media_packet));
 			}
@@ -457,12 +476,12 @@ void RelayClient::HandleData(const RelayPacket &packet)
 
 		// clear the data
 		data.Clear();
+		transaction->had_first_packet = false;
 	}
 
 	if (is_different_packet)
 	{
 		transaction->transaction_id = packet.GetTransactionId();
-		::memcpy(&(transaction->fragment_header), packet.GetFragmentHeader(), sizeof(FragmentationHeader));
 		transaction->media_type = packet.GetMediaType();
 		transaction->last_pts = packet.GetPts();
 		transaction->last_dts = packet.GetDts();
@@ -470,6 +489,7 @@ void RelayClient::HandleData(const RelayPacket &packet)
 		transaction->track_id = packet.GetTrackId();
 		data.Append(packet.GetData(), packet.GetDataSize());
 		transaction->flag = packet.GetFlag();
+		transaction->had_first_packet = packet.IsStart();
 	}
 }
 

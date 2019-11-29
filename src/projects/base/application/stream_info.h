@@ -31,6 +31,8 @@ public:
 
 	void ShowInfo();
 
+	std::shared_ptr<MediaTrack> FindFirstTrack(common::MediaType media_type);
+
 protected:
 	uint32_t _id;
 	ov::String _name;

@@ -339,9 +339,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 		return false;
 	}
 
-	bool convert_bitstream = app_conn->GetConnectorType() != MediaRouteApplicationConnector::ConnectorType::Relay;
-
-	bool ret = stream->Push(std::move(packet), convert_bitstream);
+	bool ret = stream->Push(std::move(packet));
 
 	// TODO(SOULK) : Connector(Provider, Transcoder)에서 수신된 데이터에 대한 정보를 바로 처리하기 위해 버퍼의 Indicator 정보를
 	// MainTask에 전달한다. 패킷이 수신되어 처리(재분배)되는 속도가 0.001초 이하의 초저지연으로 동작하나, 효율적인 구조는
@@ -518,8 +516,11 @@ void MediaRouteApplication::MainTask()
 								codec_info->codec_specific.h264 = CodecSpecificInfoH264();
 							}
 
-							auto fragmentation = std::make_unique<FragmentationHeader>();
-							::memcpy(fragmentation.get(), cur_buf->GetFragHeader(), sizeof(FragmentationHeader));
+							std::unique_ptr<FragmentationHeader> fragmentation;
+							if (cur_buf->GetFragHeader())
+							{
+								fragmentation = std::make_unique<FragmentationHeader>(*cur_buf->GetFragHeader());
+							}
 
 							// logtd("send to publisher (1000k cr):%u, (90k cr):%u", cur_buf->GetPts(), encoded_frame->_timeStamp);
 							observer->OnSendVideoFrame(stream_info, media_track, std::move(encoded_frame), std::move(codec_info), std::move(fragmentation));

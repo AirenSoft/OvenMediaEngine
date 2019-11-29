@@ -1059,16 +1059,19 @@ bool RtmpChunkStream::ReceiveVideoMessage(const std::shared_ptr<const RtmpMessag
 		return false;
 	}
 
+	std::unique_ptr<FragmentationHeader> fragmentation_header;
 	const std::shared_ptr<const ov::Data> &payload = message->payload;
 
 	// Frame Type 확인 (I/P(B) Frame)
 	if (payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_I_FRAME_TYPE)
 	{
-		frame_type = RtmpFrameType::VideoIFrame;  //I-Frame
+		frame_type = RtmpFrameType::VideoIFrame; //I-Frame
+		fragmentation_header = std::move(_avc_video_packet_fragmentizer.FromAvcVideoPacket(static_cast<const uint8_t*>(payload->GetData()), payload->GetLength()));
 	}
 	else if (payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_P_FRAME_TYPE)
 	{
-		frame_type = RtmpFrameType::VideoPFrame;  //P-Frame
+		frame_type = RtmpFrameType::VideoPFrame; //P-Frame
+		fragmentation_header = std::move(_avc_video_packet_fragmentizer.FromAvcVideoPacket(static_cast<const uint8_t*>(payload->GetData()), payload->GetLength()));
 	}
 	else
 	{
@@ -1126,11 +1129,13 @@ bool RtmpChunkStream::ReceiveVideoMessage(const std::shared_ptr<const RtmpMessag
 	if (_media_info->video_streaming)
 	{
 		_stream_interface->OnChunkStreamVideoData(_remote,
-												  _app_id,
-												  _stream_id,
-												  message->header->completed.timestamp,
-												  frame_type,
-												  message->payload);
+		                                          _app_id,
+		                                          _stream_id,
+		                                          message->header->completed.timestamp,
+		                                          frame_type,
+		                                          message->payload,
+												  std::move(fragmentation_header));
+
 
 		if (frame_type == RtmpFrameType::VideoIFrame)
 		{

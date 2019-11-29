@@ -219,4 +219,42 @@ namespace ov
 		//     <length of _reference_data>
 		size_t _length = 0;
 	};
+
+	template<typename T>
+	bool Serialize(ov::Data &data, const std::vector<T> &vector)
+	{
+		// TODO: implement network byte order
+		size_t size = vector.size();
+		return data.Append(&size, sizeof(size)) && ((size == 0) || (data.Append(vector.data(), size * sizeof(T))));
+	}
+
+
+	template<typename T>
+	bool Deserialize(const uint8_t *&bytes, size_t &length, std::vector<T> &vector, size_t &bytes_consumed)
+	{
+		// TODO: implement network byte order
+		const uint8_t *position = bytes;
+		size_t bytes_remaining = length;
+
+		if (bytes_remaining < sizeof(size_t))
+		{
+			return false;
+		}
+		const size_t size = *reinterpret_cast<const size_t*>(position);
+		position += sizeof(size_t);
+		bytes_remaining -= sizeof(size_t);
+		
+		if (bytes_remaining < size * sizeof(T))
+		{
+			return false;
+		}
+		vector.insert(vector.end(), reinterpret_cast<const T*>(position), reinterpret_cast<const T*>(position) + size);
+		position += size * sizeof(T);
+		bytes_remaining -= size * sizeof(T);
+
+		bytes_consumed += length - bytes_remaining;
+		length = bytes_remaining;
+		bytes = position;
+		return true;
+	}
 }

@@ -179,7 +179,6 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
 	int den = _output_context->GetTimeBase().GetDen();
 	int64_t duration = (den == 0) ? 0LL : (float)den / _output_context->GetFrameRate();
 	auto packet = std::make_unique<MediaPacket>(common::MediaType::Video, 0, _packet->data, _packet->size, _packet->pts * _scale_inv, _packet->dts * _scale_inv, duration, flag);
-	FragmentationHeader fragment_header;
 
 	int nal_pattern_size = 4;
 	int sps_start_index = -1;
@@ -240,27 +239,27 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
 		}
 	}
 
-	fragment_header.VerifyAndAllocateFragmentationHeader(fragment_count);
+	auto fragment_header = std::make_unique<FragmentationHeader>();
 
 	if (_packet->flags == AV_PKT_FLAG_KEY)  // KeyFrame
 	{
 		// SPS + PPS + IDR
-		fragment_header.fragmentation_offset[0] = sps_start_index;
-		fragment_header.fragmentation_offset[1] = pps_start_index;
-		fragment_header.fragmentation_offset[2] = (pps_end_index + 1) + nal_pattern_size;
+		fragment_header->fragmentation_offset.emplace_back(sps_start_index);
+		fragment_header->fragmentation_offset.emplace_back(pps_start_index);
+		fragment_header->fragmentation_offset.emplace_back((pps_end_index + 1) + nal_pattern_size);
 
-		fragment_header.fragmentation_length[0] = sps_end_index - (sps_start_index - 1);
-		fragment_header.fragmentation_length[1] = pps_end_index - (pps_start_index - 1);
-		fragment_header.fragmentation_length[2] = _packet->size - (pps_end_index + nal_pattern_size);
+		fragment_header->fragmentation_length.emplace_back(sps_end_index - (sps_start_index - 1));
+		fragment_header->fragmentation_length.emplace_back(pps_end_index - (pps_start_index - 1));
+		fragment_header->fragmentation_length.emplace_back(_packet->size - (pps_end_index + nal_pattern_size));
 	}
 	else
 	{
 		// NON-IDR
-		fragment_header.fragmentation_offset[0] = sps_start_index;
-		fragment_header.fragmentation_length[0] = _packet->size - (sps_start_index - 1);
+		fragment_header->fragmentation_offset.emplace_back(sps_start_index);
+		fragment_header->fragmentation_length.emplace_back(_packet->size - (sps_start_index - 1));
 	}
 
-	packet->SetFragHeader(&fragment_header);
+	packet->SetFragHeader(std::move(fragment_header));
 
 	return std::move(packet);
 }

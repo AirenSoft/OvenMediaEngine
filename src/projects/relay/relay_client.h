@@ -58,7 +58,8 @@ protected:
 		int64_t duration = 0LL;
 		uint32_t track_id;
 		ov::Data data;
-		uint8_t flag = 0U;
+		uint8_t flag;
+		bool had_first_packet = false;
 
 		std::unique_ptr<MediaPacket> CreatePacket() const
 		{

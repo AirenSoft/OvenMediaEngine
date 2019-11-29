@@ -22,6 +22,7 @@
 #include "chunk/rtmp_export_chunk.h"
 #include "chunk/rtmp_handshake.h"
 #include "chunk/rtmp_import_chunk.h"
+#include "avc_video_packet_fragmentizer.h"
 
 class IRtmpChunkStream
 {
@@ -35,7 +36,8 @@ public:
 										info::application_id_t application_id, uint32_t stream_id,
 										uint64_t timestamp,
 										RtmpFrameType frame_type,
-										const std::shared_ptr<const ov::Data> &data) = 0;
+										const std::shared_ptr<const ov::Data> &data,
+										std::unique_ptr<FragmentationHeader> fragmentation_header = nullptr) = 0;
 
 	virtual bool OnChunkStreamAudioData(ov::ClientSocket *remote,
 										info::application_id_t application_id, uint32_t stream_id,
@@ -197,4 +199,7 @@ protected:
 	uint32_t _audio_frame_count = 0;
 
 	time_t _last_packet_time;
+
+	AvcVideoPacketFragmentizer _avc_video_packet_fragmentizer;
+
 };
