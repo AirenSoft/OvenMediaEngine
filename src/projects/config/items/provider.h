@@ -16,6 +16,7 @@ namespace cfg
 	{
 		Unknown,
 		Rtmp,
+		Rtsp,
 	};
 
 	struct Provider : public Item

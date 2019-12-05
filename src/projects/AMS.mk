@@ -16,7 +16,7 @@ PROJECT_CFLAGS := \
 PROJECT_CXXFLAGS := \
 	$(PROJECT_CFLAGS) \
 	-Wliteral-suffix \
-	-std=c++14
+	-std=c++17
 
 PROJECT_LDFLAGS := \
 	-ldl -lz

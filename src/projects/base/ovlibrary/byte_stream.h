@@ -13,6 +13,8 @@
 #include "data.h"
 
 #include <memory>
+#include <string>
+#include <string_view>
 
 #define OV_DECLARE_READ_FUNCTION(type, name, func) \
 	inline type name() noexcept                    \
@@ -582,4 +584,15 @@ namespace ov
 		// offset push & pop 할 때 사용하는 history queue
 		std::vector<off_t> _offset_stack;
 	};
-}  // namespace ov
+} // namespace ov
+
+ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const char *string);
+ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string &string);
+ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string_view &string);
+
+template<size_t length>
+ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const char (&string)[length])
+{
+	byte_stream.Write(string, length);
+	return byte_stream;
+}

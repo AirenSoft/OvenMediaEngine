@@ -25,6 +25,10 @@
 #include <monitoring/monitoring_server.h>
 #include <publishers/publishers.h>
 #include <rtmp/rtmp_provider.h>
+#include <base/ovcrypto/ovcrypto.h>
+#include <base/ovlibrary/stack_trace.h>
+#include <base/ovlibrary/log_write.h>
+#include <rtsp/rtsp_provider.h>
 #include <transcode/transcoder.h>
 #include <web_console/web_console.h>
 #include <webrtc/webrtc_publisher.h>
@@ -226,6 +230,12 @@ int main(int argc, char *argv[])
 					auto provider = RtmpProvider::Create(&application_info, router);
 					CHECK_FAIL(provider);
 					providers.push_back(provider);
+				}
+
+				if (application_info.GetProvider<cfg::RtspProvider>() && application_info.GetType() == cfg::ApplicationType::Live)
+				{
+					logti("Trying to create RTSP Provider for application [%s/%s]...", host_name.CStr(), app_name.CStr());
+					providers.push_back(RtspProvider::Create(&application_info, router));
 				}
 
 				if (application_info.GetWebConsole().IsParsed())

@@ -70,7 +70,7 @@ size_t RtpPacketizerH264::SetPayloadData(
 		{
 			complete = last_fragment_complete_;
 		}
-		if (i == fragmentation->fragmentation_offset.size())
+		if (i == fragmentation->fragmentation_offset.size() - 1)
 		{
 			complete = fragmentation->last_fragment_complete;
 		}
@@ -83,6 +83,7 @@ size_t RtpPacketizerH264::SetPayloadData(
 		}
 		return 0;
 	}
+	last_fragment_complete_ = fragmentation->last_fragment_complete;
 	return num_packets_left_;
 }
 
@@ -113,7 +114,7 @@ bool RtpPacketizerH264::GeneratePackets() {
 
 void RtpPacketizerH264::PacketizeFuA(size_t fragment_index) {
 	const Fragment& fragment = input_fragments_[fragment_index];
-	bool is_last_fragment = fragment_index + 1 == input_fragments_.size() && last_fragment_complete_;
+	bool is_last_fragment = fragment_index + 1 == input_fragments_.size() && input_fragments_[fragment_index].complete;
 	size_t payload_left = fragment.length - kNalHeaderSize;
 	size_t offset = kNalHeaderSize;
 	size_t per_packet_capacity = max_payload_len_ - kFuAHeaderSize;
@@ -140,7 +141,6 @@ void RtpPacketizerH264::PacketizeFuA(size_t fragment_index) {
 		                         (offset - kNalHeaderSize == 0) && last_fragment_complete_,
 		                         (payload_left == packet_length) && fragment.complete, false,
 		                         fragment.buffer[0]));
-		last_fragment_complete_ = fragment.complete;
 		offset += packet_length;
 		payload_left -= packet_length;
 		--num_packets;

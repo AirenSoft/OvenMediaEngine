@@ -26,7 +26,9 @@ LOCAL_STATIC_LIBRARIES := \
 	segment_stream \
 	monitoring \
 	jsoncpp \
-	sqlite
+	sqlite \
+	rtsp \
+	h264
 
 LOCAL_PREBUILT_LIBRARIES := \
 	libpugixml.a

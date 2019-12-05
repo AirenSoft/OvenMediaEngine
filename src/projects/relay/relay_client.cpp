@@ -360,6 +360,8 @@ void RelayClient::HandleCreateStream(const RelayPacket &packet)
 			track->SetStartFrameTime(ov::Converter::ToInt64(info[index++]));
 			track->SetLastFrameTime(ov::Converter::ToInt64(info[index++]));
 
+			// TODO: codec extradata
+
 			stream_info->AddTrack(track);
 
 			auto transaction = std::make_shared<Transaction>();

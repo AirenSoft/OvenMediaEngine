@@ -94,7 +94,6 @@ public:
 
 	bool Deserialize(ov::Data &data, size_t &bytes_consumed)
 	{
-		size_t base_bytes_consumed = bytes_consumed;
 		auto *bytes = reinterpret_cast<const uint8_t*>(data.GetData());
 		auto length = data.GetLength();
 		bool deserialized = ov::Deserialize(bytes, length, fragmentation_offset, bytes_consumed)

@@ -46,6 +46,9 @@ public:
 
 	void SetBypass(bool bypass);
 
+	void SetCodecExtradata(std::vector<uint8_t> codec_extradata);
+	const std::vector<uint8_t> &GetCodecExtradata() const;
+
 private:
 	uint32_t _id;
 
@@ -61,4 +64,6 @@ private:
 	int64_t _last_frame_time;
 
 	bool _bypass = false;
+
+	std::vector<uint8_t> _codec_extradata;
 };

@@ -83,6 +83,7 @@ void RelayServer::SendStream(const std::shared_ptr<ov::Socket> &remote, const st
 	{
 		MediaTrack *track = track_iter.second.get();
 
+		// TODO: codec extradata
 		serialize.AppendFormat(
 			// Serialize VideoTrack
 			// framerate|width|height

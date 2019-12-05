@@ -95,10 +95,159 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 
 	_stream_list[_application_info->GetId()];
 
-	// Prepare decoders
-	for (auto &track_item : _stream_info_input->GetTracks())
+	// Generate track list by profile(=encode name)
+	auto encodes = _application_info->GetEncodes();
+	std::map<ov::String, std::vector<uint8_t>> profile_tracks;
+	std::vector<uint8_t> tracks;
+	std::vector<std::pair<uint8_t, std::shared_ptr<MediaTrack>>> bypass_tracks;
+
+	// Build a list of all input audio/video tracks so that 
+	const auto &stream_tracks = _stream_info_input->GetTracks();
+	std::vector<std::shared_ptr<MediaTrack>> input_video_tracks, input_audio_tracks, transcoded_tracks;
+	for (const auto &stream_track : stream_tracks)
 	{
-		auto &track = track_item.second;
+		if (stream_track.second->GetMediaType() == common::MediaType::Video)
+		{
+			input_video_tracks.emplace_back(stream_track.second);
+		}
+		else if (stream_track.second->GetMediaType() == common::MediaType::Audio)
+		{
+			input_audio_tracks.emplace_back(stream_track.second);
+		}
+	}
+
+	for(const auto &encode : encodes)
+	{
+		if (encode.IsActive() == false)
+		{
+			continue;
+		}
+
+		const auto &video_profiles = encode.GetVideoProfiles();
+		
+		auto profile_name = encode.GetName();
+		auto input_video_track_iterator = input_video_tracks.begin();
+
+		for (const auto &video_profile : video_profiles)
+		{
+			if (input_video_track_iterator == input_video_tracks.end())
+			{
+				logtw("Encode %s has more active video tracks specified than the input stream provides (%zu)", profile_name.CStr(), input_video_tracks.size());
+				break;
+			}
+
+			if(video_profile.IsActive())
+			{
+				if (*input_video_track_iterator != nullptr)
+				{
+					if (video_profile.IsBypass())
+					{
+						if (*input_video_track_iterator)
+						{
+							uint8_t track_id = GetTrackId(common::MediaType::Video);
+							if (track_id)
+							{
+								_bypass_routes.emplace((*input_video_track_iterator)->GetId(), track_id);
+								bypass_tracks.emplace_back(track_id, *input_video_track_iterator);
+								tracks.push_back(track_id);
+							}
+						}
+					}
+					else
+					{
+						auto context = std::make_shared<TranscodeContext>(
+							true,
+							GetCodecId(video_profile.GetCodec()),
+							GetBitrate(video_profile.GetBitrate()),
+							video_profile.GetWidth(), video_profile.GetHeight(),
+							video_profile.GetFramerate()
+						);
+						uint8_t track_id = AddOutputContext(common::MediaType::Video, context);
+						if(track_id)
+						{
+							tracks.push_back(track_id);
+							transcoded_tracks.emplace_back(*input_video_track_iterator);
+						}
+					}
+				}
+				else
+				{
+					logte("Empty input video track provided");
+				}
+			}
+
+			// This is put here intentionally - by having the iterator here and not inside the previous block
+			// allows to "skip" some streams in case of multiple video tracks from a single provider by adding inactive
+			// video encodes
+			++input_video_track_iterator;
+		}
+
+		const auto &audio_profiles = encode.GetAudioProfiles();
+		auto input_audio_track_iterator = input_audio_tracks.begin();
+	
+		for (const auto &audio_profile : audio_profiles)
+		{
+			if (input_audio_track_iterator == input_audio_tracks.end())
+			{
+				logtw("Encode %s has more active audio tracks specified than the input stream provides (%zu)", profile_name.CStr(), input_audio_tracks.size());
+				continue;
+			}
+
+			if(audio_profile.IsActive())
+			{
+				if (*input_video_track_iterator != nullptr)
+				{
+					if (audio_profile.IsBypass())
+					{
+						if (*input_audio_track_iterator)
+						{
+							uint8_t track_id = GetTrackId(common::MediaType::Audio);
+							if (track_id)
+							{
+								_bypass_routes.emplace((*input_audio_track_iterator)->GetId(), track_id);
+								bypass_tracks.emplace_back(track_id, *input_audio_track_iterator);
+								tracks.push_back(track_id);
+							}
+						}
+					}
+					else
+					{
+						auto context = std::make_shared<TranscodeContext>(
+							true,
+							GetCodecId(audio_profile.GetCodec()),
+							GetBitrate(audio_profile.GetBitrate()),
+							audio_profile.GetSamplerate()
+						);
+						uint8_t track_id = AddOutputContext(common::MediaType::Audio, context);
+						if(track_id)
+						{
+							tracks.push_back(track_id);
+							transcoded_tracks.emplace_back(*input_audio_track_iterator);
+						}
+					}
+				}
+				else
+				{
+					logte("Empty input audio track provided");
+				}
+			}
+
+			// This is put here intentionally - by having the iterator here and not inside the previous block
+			// allows to "skip" some tracks in case of multiple audio tracks from a single provider by adding inactive
+			// audio encodes
+			++input_audio_track_iterator;
+		}
+
+		if (!tracks.empty())
+		{
+			profile_tracks[profile_name] = tracks;
+			tracks.clear();
+		}
+	}
+
+	// Prepare decoders if needed
+	for(auto &track : transcoded_tracks)
+	{
 		std::shared_ptr<TranscodeContext> input_context = nullptr;
 
 		OV_ASSERT2(track != nullptr);
@@ -133,81 +282,10 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 		CreateDecoder(track->GetId(), input_context);
 	}
 
-	if (_decoders.empty())
+	if(_decoders.empty() && bypass_tracks.empty())
 	{
+		_output_contexts.clear();
 		return;
-	}
-
-	// Generate track list by profile(=encode name)
-	auto encodes = _application_info->GetEncodes();
-	std::map<ov::String, std::vector<uint8_t>> profile_tracks;
-	std::vector<uint8_t> tracks;
-	std::vector<std::pair<uint8_t, std::shared_ptr<MediaTrack>>> bypass_tracks;
-
-	for (const auto &encode : encodes)
-	{
-		if (encode.IsActive() == false)
-		{
-			continue;
-		}
-
-		auto video_profile = encode.GetVideoProfile();
-		auto audio_profile = encode.GetAudioProfile();
-		auto profile_name = encode.GetName();
-
-		if ((video_profile != nullptr) && (video_profile->IsActive()))
-		{
-			if (video_profile->IsBypass())
-			{
-				auto video_track = _stream_info_input->FindFirstTrack(common::MediaType::Video);
-				if (video_track)
-				{
-					uint8_t track_id = GetTrackId(common::MediaType::Video);
-					if (track_id)
-					{
-						_bypass_routes.emplace(video_track->GetId(), track_id);
-						bypass_tracks.emplace_back(track_id, video_track);
-						tracks.push_back(track_id);
-					}
-				}
-			}
-			else
-			{
-				auto output_context = std::make_shared<TranscodeContext>(
-					true,
-					GetCodecId(video_profile->GetCodec()),
-					GetBitrate(video_profile->GetBitrate()),
-					video_profile->GetWidth(), video_profile->GetHeight(),
-					video_profile->GetFramerate());
-
-				uint8_t track_id = AddOutputContext(common::MediaType::Video, output_context);
-				if (track_id)		
-				{
-					tracks.push_back(track_id);
-				}
-			}
-		}
-
-		if ((audio_profile != nullptr) && (audio_profile->IsActive()))
-		{
-			auto output_context = std::make_shared<TranscodeContext>(
-				true,
-				GetCodecId(audio_profile->GetCodec()),
-				GetBitrate(audio_profile->GetBitrate()),
-				audio_profile->GetSamplerate());
-
-			uint8_t track_id = AddOutputContext(common::MediaType::Audio, output_context);
-			if (track_id)
-			{
-				tracks.push_back(track_id);
-			}
-		}
-
-		if (!tracks.empty())
-		{
-			profile_tracks[profile_name] = tracks;
-			tracks.clear();
-		}
 	}
 
 	// Generate track list by stream
@@ -238,8 +316,7 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 				logtw("Encoder for [%s] does not exist in Server.xml", profile.GetName().CStr());
 				continue;
 			}
-			tracks.push_back(item->second[0]);  // Video
-			tracks.push_back(item->second[1]);  // Audio
+			tracks = item->second;
 		}
 		_stream_tracks[stream_name] = tracks;
 		tracks.clear();
@@ -308,7 +385,9 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 		CreateEncoders(cur_track);
 	}
 
-	if (_encoders.empty())
+	CreateStreams();
+
+	if(_encoders.empty())
 	{
 		return;
 	}
@@ -372,6 +451,10 @@ void TranscodeStream::Stop()
 	{
 		_thread_encode.join();
 	}
+
+	// Delete the streams here since if all streams are bypassed the TranscodeStream::DecodeTask(),
+	// which previously deleted the streams won't be run
+	DeleteStreams();
 }
 
 bool TranscodeStream::Push(std::unique_ptr<MediaPacket> packet)
@@ -682,8 +765,6 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t track_id, std::unique_ptr<c
 // 디코딩 & 인코딩 스레드
 void TranscodeStream::DecodeTask()
 {
-	CreateStreams();
-
 	logtd("Started transcode stream decode thread");
 
 	while (!_kill_flag)
@@ -701,9 +782,6 @@ void TranscodeStream::DecodeTask()
 
 		DecodePacket(track_id, std::move(packet));
 	}
-
-	// 스트림 삭제 전송
-	DeleteStreams();
 
 	logtd("Terminated transcode stream decode thread");
 }

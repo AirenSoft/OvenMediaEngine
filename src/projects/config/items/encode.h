@@ -25,14 +25,14 @@ namespace cfg
 			return _name;
 		}
 
-		const AudioProfile *GetAudioProfile() const
+		const std::vector<AudioProfile> &GetAudioProfiles() const
 		{
-			return IsParsed(&_audio) ? &_audio : nullptr;
+			return _audio;
 		}
 
-		const VideoProfile *GetVideoProfile() const
+		const std::vector<VideoProfile> &GetVideoProfiles() const
 		{
-			return IsParsed(&_video) ? &_video : nullptr;
+			return _video;
 		}
 
 	protected:
@@ -46,7 +46,7 @@ namespace cfg
 
 		bool _active = true;
 		ov::String _name;
-		AudioProfile _audio;
-		VideoProfile _video;
+		std::vector<AudioProfile> _audio;
+		std::vector<VideoProfile> _video;
 	};
 }

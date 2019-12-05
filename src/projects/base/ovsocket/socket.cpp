@@ -55,86 +55,86 @@ public:
 		switch (op)
 		{
 		case EPOLL_CTL_ADD:
-				if (event == nullptr)
+			if (event == nullptr)
 			{
 					return EINVAL;
 			}
-				if ((event->events & (EPOLLIN | EPOLLOUT)) == (EPOLLIN | EPOLLOUT))
+			if ((event->events & (EPOLLIN | EPOLLOUT)) == (EPOLLIN | EPOLLOUT))
 			{
-					// This wrapper currently does not support EPOLLIN | EPOLLOUT, but there is no such use case so far,
-					// this is not trivial since two explicit kevent structures need to be added in this case and when epoll_wait
-					// needs to know how to combine the flags back together
-					logte("epoll_ctl() currently does not support EPOLLIN | EPOLLOUT");
-					return EINVAL;
+				// This wrapper currently does not support EPOLLIN | EPOLLOUT, but there is no such use case so far,
+				// this is not trivial since two explicit kevent structures need to be added in this case and when epoll_wait
+				// needs to know how to combine the flags back together
+				logte("epoll_ctl() currently does not support EPOLLIN | EPOLLOUT");
+				return EINVAL;
 			}
 			{
-					const auto events = event->events;
-					ke.flags = EV_ADD;
-					if (event->events & EPOLLIN)
-					{
-						if (event->events & EPOLLET)
-						{
-							ke.flags |= EV_CLEAR;	
-			}
-						ke.filter = EVFILT_READ;
-						event->events &= ~EPOLLIN;
-					}
-					else if (event->events & EPOLLOUT)
-			{
-						if (event->events & EPOLLET)
+				const auto events = event->events;
+				ke.flags = EV_ADD;
+				if (event->events & EPOLLIN)
 				{
-							ke.flags |= EV_CLEAR;	
-						}
-						ke.filter = EVFILT_WRITE;
-						event->events &= ~EPOLLOUT;
-					}
 					if (event->events & EPOLLET)
 					{
-						event->events &= ~EPOLLET;
+						ke.flags |= EV_CLEAR;	
 					}
-					if (event->events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
-					{
-						event->events &= ~(EPOLLERR | EPOLLHUP | EPOLLRDHUP);
-					}
-					if (event->events != 0)
-					{
-						// Unhandled epoll flags provided
-						logte("unhandled flags %u passed to epoll_ctl", event->events);
-						return EINVAL;
-					}
-					std::unique_lock<decltype(_mutex)> lock(_mutex);
-					auto& epoll_fd_data = _epoll_data[epfd];
-					if (epoll_fd_data.find(fd) != epoll_fd_data.end())
-					{
-
-						lock.unlock();
-						logte("socket %d has already been added to epoll %d", fd, epfd);
-						return EINVAL;
+					ke.filter = EVFILT_READ;
+					event->events &= ~EPOLLIN;
 				}
-					epoll_data = &_epoll_data[epfd].emplace(std::piecewise_construct, std::forward_as_tuple(fd), std::forward_as_tuple(events, event->data.ptr, ke.filter)).first->second;
+				else if (event->events & EPOLLOUT)
+				{
+					if (event->events & EPOLLET)
+					{
+						ke.flags |= EV_CLEAR;	
+					}
+					ke.filter = EVFILT_WRITE;
+					event->events &= ~EPOLLOUT;
+				}
+				if (event->events & EPOLLET)
+				{
+					event->events &= ~EPOLLET;
+				}
+				if (event->events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
+				{
+					event->events &= ~(EPOLLERR | EPOLLHUP | EPOLLRDHUP);
+				}
+				if (event->events != 0)
+				{
+					// Unhandled epoll flags provided
+					logte("unhandled flags %u passed to epoll_ctl", event->events);
+					return EINVAL;
+				}
+				std::unique_lock<decltype(_mutex)> lock(_mutex);
+				auto& epoll_fd_data = _epoll_data[epfd];
+				if (epoll_fd_data.find(fd) != epoll_fd_data.end())
+				{
+
+					lock.unlock();
+					logte("socket %d has already been added to epoll %d", fd, epfd);
+					return EINVAL;
+				}
+				epoll_data = &_epoll_data[epfd].emplace(std::piecewise_construct, std::forward_as_tuple(fd), std::forward_as_tuple(events, event->data.ptr, ke.filter)).first->second;
 			}		
 			break;
 		case EPOLL_CTL_DEL:
-				ke.flags = EV_DELETE;
+			ke.flags = EV_DELETE;
 			{
-					std::lock_guard<decltype(_mutex)> lock(_mutex);
-					auto& epoll_fd_data = _epoll_data[epfd];
-					const auto it = epoll_fd_data.find(fd);
-					if (it != epoll_fd_data.end())
+				std::lock_guard<decltype(_mutex)> lock(_mutex);
+				auto& epoll_fd_data = _epoll_data[epfd];
+				const auto it = epoll_fd_data.find(fd);
+				if (it != epoll_fd_data.end())
 				{
-						ke.filter = it->second._filter;
-						epoll_fd_data.erase(fd);
+					ke.filter = it->second._filter;
+					epoll_fd_data.erase(fd);
 				}
 				else
 				{
-						logte("socket %d has not been added to epoll %d", fd, epfd);
-						return EINVAL;
+					logte("socket %d has not been added to epoll %d", fd, epfd);
+					return EINVAL;
 				}
 				
 			}
 			break;
 		}
-			EV_SET(&ke, fd, ke.filter, ke.flags, 0, 0, epoll_data);
+		EV_SET(&ke, fd, ke.filter, ke.flags, 0, 0, epoll_data);
 		int result = kevent(epfd, &ke, 1, nullptr, 0, nullptr);
 		return result;
 	}
@@ -142,7 +142,7 @@ public:
 	int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout)
 	{
 		struct kevent ke[maxevents];
-			memset(&ke, 0, sizeof(ke));
+		memset(&ke, 0, sizeof(ke));
 		const timespec t 
 		{
 			.tv_sec = timeout / 1000,
@@ -201,7 +201,6 @@ public:
 				{
 					// TODO: handle EV_ERROR
 				}
-				
 			}
 		}
 		return result;

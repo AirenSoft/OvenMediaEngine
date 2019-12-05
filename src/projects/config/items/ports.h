@@ -54,6 +54,11 @@ namespace cfg
 		{
 			return _monitoring_port;
 		}
+		
+		const Port &GetRtspProviderPort() const
+		{
+			return _rtsp_provider_port;
+		}
 
         const Port &GetCmafPort() const
         {
@@ -71,6 +76,7 @@ namespace cfg
 
 			// Providers
 			RegisterValue<Optional>("RTMPProvider", &_rtmp_provider_port);
+			RegisterValue<Optional>("RTSPProvider", &_rtsp_provider_port);
 
 			// Publishers
 			RegisterValue<Optional>("RTMP", &_rtmp_port);
@@ -78,7 +84,7 @@ namespace cfg
 			RegisterValue<Optional>("DASH", &_dash_port);
 			RegisterValue<Optional>("WebRTC", &_webrtc_port);
 			RegisterValue<Optional>("Monitoring", &_monitoring_port);
-            RegisterValue<Optional>("CMAF", &_cmaf_port);
+			RegisterValue<Optional>("CMAF", &_cmaf_port);
 		}
 
 		// Listen port for Origin
@@ -86,7 +92,8 @@ namespace cfg
 
 		// Listen port for Providers
 		Port _rtmp_provider_port { "1935/tcp" };
-
+		Port _rtsp_provider_port { "554/tcp" };
+	
 		// Listen port for Publishers
 		Port _rtmp_port { "1935/tcp" };
 		Port _web_console_port { "8080/tcp" };
@@ -94,6 +101,6 @@ namespace cfg
 		Port _dash_port { "80/tcp" };
 		WebrtcPort _webrtc_port { "3333/tcp" };
 		Port _monitoring_port { "8888/tcp" };
-        Port _cmaf_port { "80/tcp" };
+		Port _cmaf_port { "80/tcp" };
 	};
 }

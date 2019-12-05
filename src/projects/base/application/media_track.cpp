@@ -48,6 +48,7 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_last_frame_time = 0;
 
 	_bypass = media_track._bypass;
+	_codec_extradata = media_track._codec_extradata;
 }
 
 MediaTrack::~MediaTrack()
@@ -128,4 +129,14 @@ int64_t MediaTrack::GetLastFrameTime() const
 void MediaTrack::SetBypass(bool bypass)
 {
 	_bypass = bypass;
+}
+
+void MediaTrack::SetCodecExtradata(std::vector<uint8_t> codec_extradata)
+{
+	_codec_extradata = std::move(codec_extradata);
+}
+
+const std::vector<uint8_t> &MediaTrack::GetCodecExtradata() const
+{
+	return _codec_extradata;
 }
