@@ -5,13 +5,14 @@
 
 #include <utility>
 
-std::shared_ptr<RtcSession> RtcSession::Create(std::shared_ptr<Application> application,
-                                               std::shared_ptr<Stream> stream,
-                                               std::shared_ptr<SessionDescription> offer_sdp,
-                                               std::shared_ptr<SessionDescription> peer_sdp,
-                                               std::shared_ptr<IcePort> ice_port)
+std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<Application> &application,
+                                               const std::shared_ptr<Stream> &stream,
+                                               const std::shared_ptr<SessionDescription> &offer_sdp,
+                                               const std::shared_ptr<SessionDescription> &peer_sdp,
+                                               const std::shared_ptr<IcePort> &ice_port)
 {
-	auto session_info = SessionInfo(peer_sdp->GetSessionId());
+	// Session Id of the offer sdp is unique value
+	auto session_info = SessionInfo(offer_sdp->GetSessionId());
 	auto session = std::make_shared<RtcSession>(session_info, application, stream, offer_sdp, peer_sdp, ice_port);
 	if(!session->Start())
 	{
@@ -20,17 +21,17 @@ std::shared_ptr<RtcSession> RtcSession::Create(std::shared_ptr<Application> appl
 	return session;
 }
 
-RtcSession::RtcSession(SessionInfo &session_info,
-                       std::shared_ptr<Application> application,
-                       std::shared_ptr<Stream> stream,
-                       std::shared_ptr<SessionDescription> offer_sdp,
-                       std::shared_ptr<SessionDescription> peer_sdp,
-                       std::shared_ptr<IcePort> ice_port)
-	: Session(session_info, std::move(application), std::move(stream))
+RtcSession::RtcSession(const SessionInfo &session_info,
+					   const std::shared_ptr<Application> &application,
+					   const std::shared_ptr<Stream> &stream,
+					   const std::shared_ptr<SessionDescription> &offer_sdp,
+					   const std::shared_ptr<SessionDescription> &peer_sdp,
+					   const std::shared_ptr<IcePort> &ice_port)
+	: Session(session_info, application, stream)
 {
-	_offer_sdp = std::move(offer_sdp);
-	_peer_sdp = std::move(peer_sdp);
-	_ice_port = std::move(ice_port);
+	_offer_sdp = offer_sdp;
+	_peer_sdp = peer_sdp;
+	_ice_port = ice_port;
 
 	_video_payload_type = 0;
 	_audio_payload_type = 0;
@@ -140,7 +141,7 @@ bool RtcSession::Start()
 
 bool RtcSession::Stop()
 {
-	logtd("Stop session. Peer sdp session id : %u", GetPeerSDP()->GetSessionId());
+	logtd("Stop session. Peer sdp session id : %u", GetOfferSDP()->GetSessionId());
 
 	if(GetState() != SessionState::Started)
 	{
@@ -171,7 +172,12 @@ bool RtcSession::Stop()
 	return Session::Stop();
 }
 
-std::shared_ptr<SessionDescription> RtcSession::GetPeerSDP()
+const std::shared_ptr<SessionDescription>& RtcSession::GetOfferSDP()
+{
+	return _offer_sdp;
+}
+
+const std::shared_ptr<SessionDescription>& RtcSession::GetPeerSDP()
 {
 	return _peer_sdp;
 }
@@ -187,14 +193,15 @@ uint8_t RtcSession::GetAudioPayloadType()
 }
 
 // Application에서 바로 Session의 다음 함수를 호출해준다.
-void RtcSession::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std::shared_ptr<const ov::Data> data)
+void RtcSession::OnPacketReceived(const std::shared_ptr<SessionInfo> &session_info,
+								const std::shared_ptr<const ov::Data> &data)
 {
 	// NETWORK에서 받은 Packet은 DTLS로 넘긴다.
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
 	_dtls_ice_transport->OnDataReceived(SessionNodeType::None, data);
 }
 
-bool RtcSession::SendOutgoingData(uint32_t packet_type, std::shared_ptr<ov::Data> packet)
+bool RtcSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet)
 {
 	auto rtp_payload_type = static_cast<uint8_t>(packet_type & 0xFF);
 	auto red_block_pt = static_cast<uint8_t>((packet_type & 0xFF00) >> 8);

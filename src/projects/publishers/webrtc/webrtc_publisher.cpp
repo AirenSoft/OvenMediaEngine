@@ -106,6 +106,8 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::St
 
 	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
 
+	// Generate Unique Session Id
+	session_description->SetOrigin("OvenMediaEngine", stream->IssueUniqueSessionId(), 2, "IN", 4, "127.0.0.1");
 	session_description->SetIceUfrag(_ice_port->GenerateUfrag());
 	session_description->Update();
 
@@ -133,7 +135,6 @@ bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
 
 	// Stream에 Session을 생성한다.
 	auto session = RtcSession::Create(application, stream, offer_sdp, peer_sdp, _ice_port);
-
 	if(session != nullptr)
 	{
 		// Stream에 Session을 등록한다.
@@ -157,7 +158,7 @@ bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov
                                     const std::shared_ptr<SessionDescription> &peer_sdp)
 {
 	// 플레이어에서 stop 이벤트가 수신 된 경우 처리
-	logtd("Stop commnad received : %s/%s/%u", application_name.CStr(), stream_name.CStr(), peer_sdp->GetSessionId());
+	logtd("Stop commnad received : %s/%s/%u", application_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 	// Find Stream
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
 	if(!stream)
@@ -166,11 +167,11 @@ bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov
 		return false;
 	}
 
-	// Peer SDP의 Session ID로 세션을 찾는다.
-	auto session = stream->GetSession(peer_sdp->GetSessionId());
+	// Offer SDP의 Session ID로 세션을 찾는다.
+	auto session = stream->GetSession(offer_sdp->GetSessionId());
 	if(session == nullptr)
 	{
-		logte("To stop session failed. Cannot find session by peer sdp session id (%u)", peer_sdp->GetSessionId());
+		logte("To stop session failed. Cannot find session by peer sdp session id (%u)", offer_sdp->GetSessionId());
 		return false;
 	}
 

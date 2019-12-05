@@ -43,27 +43,28 @@ class RtcStream;
 class RtcSession : public Session
 {
 public:
-	static std::shared_ptr<RtcSession> Create(std::shared_ptr<Application> application,
-	                                          std::shared_ptr<Stream> stream,
-	                                          std::shared_ptr<SessionDescription> offer_sdp,
-	                                          std::shared_ptr<SessionDescription> peer_sdp,
-	                                          std::shared_ptr<IcePort> ice_port);
+	static std::shared_ptr<RtcSession> Create(const std::shared_ptr<Application> &application,
+	                                          const std::shared_ptr<Stream> &stream,
+	                                          const std::shared_ptr<SessionDescription> &offer_sdp,
+	                                          const std::shared_ptr<SessionDescription> &peer_sdp,
+	                                          const std::shared_ptr<IcePort> &ice_port);
 
-	RtcSession(SessionInfo &session_info,
-			std::shared_ptr<Application> application,
-	        std::shared_ptr<Stream> stream,
-	        std::shared_ptr<SessionDescription> offer_sdp,
-	        std::shared_ptr<SessionDescription> peer_sdp,
-	        std::shared_ptr<IcePort> ice_port);
+	RtcSession(const SessionInfo &session_info,
+			const std::shared_ptr<Application> &application,
+	        const std::shared_ptr<Stream> &stream,
+	        const std::shared_ptr<SessionDescription> &offer_sdp,
+	        const std::shared_ptr<SessionDescription> &peer_sdp,
+	        const std::shared_ptr<IcePort> &ice_port);
 	~RtcSession() override;
 
 	bool Start() override;
 	bool Stop() override;
 
-	std::shared_ptr<SessionDescription> GetPeerSDP();
+	const std::shared_ptr<SessionDescription>& GetPeerSDP();
+	const std::shared_ptr<SessionDescription>& GetOfferSDP();
 
-	bool SendOutgoingData(uint32_t packet_type, std::shared_ptr<ov::Data> packet) override;
-	void OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std::shared_ptr<const ov::Data> data) override;
+	bool SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet) override;
+	void OnPacketReceived(const std::shared_ptr<SessionInfo> &session_info, const std::shared_ptr<const ov::Data> &data) override;
 
 	uint8_t GetVideoPayloadType();
 	uint8_t GetAudioPayloadType();

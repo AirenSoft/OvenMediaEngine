@@ -61,6 +61,7 @@
                 <Origin>
                     <Location>/app/stream3</Location>
                     <Pass>
+                        <Scheme>rtsp</Scheme>
                         <Url>origin3.airensoft.com:9000/app3/stream3</Url>
                         <Url>origin4.airensoft.com:9000/app3/stream3</Url>
                     </Pass>

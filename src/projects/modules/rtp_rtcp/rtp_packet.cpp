@@ -218,7 +218,7 @@ uint8_t* RtpPacket::SetPayloadSize(size_t size_bytes)
 {
 	if (_payload_offset + size_bytes > _data->GetCapacity())
 	{
-		OV_ASSERT(false, "Data capacity must be greater than %ld (offset: %ld + bytes: %ld)", _data->GetCapacity(), _payload_offset, size_bytes, _payload_offset + size_bytes);
+		OV_ASSERT(false, "Data capacity must be greater than %ld (packet : %ld)", _data->GetCapacity(), _payload_offset + size_bytes);
 		return nullptr;
 	}
 

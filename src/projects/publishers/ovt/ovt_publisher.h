@@ -1,8 +1,9 @@
 #pragma once
 
-#include "ovt_packet.h"
+#include "modules/ovt_packetizer/ovt_packet.h"
 
 #include "base/common_types.h"
+#include "base/ovlibrary/url.h"
 #include "base/publisher/publisher.h"
 #include "base/media_route/media_route_application_interface.h"
 
@@ -45,8 +46,22 @@ private:
 	void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 	//--------------------------------------------------------------------
 
-	void HandleRegister(const std::shared_ptr<ov::Socket> &remote, const RelayPacket &packet);
 
-private:
+	void HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<ov::Url> &url);
+	void HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<ov::Url> &url);
+	void HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<ov::Url> &url);
+
+	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg);
+	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg, const ov::String &key, const Json::Value &value);
+
+	void SendResponse(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String &payload);
+
+
+	bool LinkRemoteWithStream(int remote_id, std::shared_ptr<OvtStream> &stream);
+	bool UnlinkRemoteFromStream(int remote_id);
+
 	std::shared_ptr<PhysicalPort> _server_port;
+
+	// When a client is disconnected ungracefully, this map helps to find stream and delete the session quickly
+	std::map<int, std::shared_ptr<std::vector<std::shared_ptr<OvtStream>>>>	_remote_stream_map;
 };

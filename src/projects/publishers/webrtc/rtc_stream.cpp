@@ -27,7 +27,7 @@ RtcStream::RtcStream(const std::shared_ptr<Application> application,
 
 RtcStream::~RtcStream()
 {
-	logtd("RtcStream(%d) has been terminated finally", GetId());
+	logti("RtcStream(%d) has been terminated finally", GetId());
 	Stop();
 }
 
@@ -181,9 +181,6 @@ bool RtcStream::Start(uint32_t worker_count)
         video_media_desc->AddPayload(red_payload);
         video_media_desc->AddPayload(ulpfec_payload);
     }
-
-	ov::String offer_sdp_text;
-	_offer_sdp->ToString(offer_sdp_text);
 
 	logti("Stream is created : %s/%u", GetName().CStr(), GetId());
 

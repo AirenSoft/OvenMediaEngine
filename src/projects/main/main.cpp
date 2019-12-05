@@ -20,6 +20,7 @@
 #include <base/ovlibrary/daemon.h>
 #include <base/ovlibrary/log_write.h>
 #include <base/ovlibrary/stack_trace.h>
+#include <base/ovlibrary/url.h>
 #include <config/config_manager.h>
 
 #include <media_router/media_router.h>
@@ -108,6 +109,7 @@ bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 		}
 	}
 }
+
 
 int main(int argc, char *argv[])
 {

@@ -47,8 +47,6 @@ std::shared_ptr<Stream> RtcApplication::CreateStream(const std::shared_ptr<Strea
 
 bool RtcApplication::DeleteStream(const std::shared_ptr<StreamInfo> &info)
 {
-	// Input이 종료된 경우에 호출됨, 이 경우에는 Stream을 삭제 해야 하고, 그 전에 연결된 모든 Session을 종료
-	// StreamInfo로 Stream을 구한다.
 	logtd("DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
 
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(info->GetId()));
@@ -60,7 +58,6 @@ bool RtcApplication::DeleteStream(const std::shared_ptr<StreamInfo> &info)
 
 	// 모든 Session의 연결을 종료한다.
 	auto sessions = stream->GetAllSessions();
-
 	for(auto const &x : sessions)
 	{
 		auto session = std::static_pointer_cast<RtcSession>(x.second);

@@ -4,6 +4,7 @@ include $(DEFAULT_VARIABLES)
 LOCAL_STATIC_LIBRARIES := \
 	webrtc \
 	ovt \
+	ovt_packetizer \
 	transcoder \
 	rtc_signalling \
 	ice \

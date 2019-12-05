@@ -5,7 +5,7 @@
 #include "base/common_types.h"
 
 // 세션 ID 타입
-typedef int session_id_t;
+typedef uint32_t session_id_t;
 
 class SessionInfo : public ov::EnableSharedFromThis<SessionInfo>
 {

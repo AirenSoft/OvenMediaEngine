@@ -286,6 +286,11 @@ namespace ov
 			return _socket;
 		}
 
+		int GetId() const
+		{
+			return _socket.GetSocket();
+		}
+
 		// 소켓 타입
 		SocketType GetType() const;
 

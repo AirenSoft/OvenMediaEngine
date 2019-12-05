@@ -25,7 +25,6 @@ public:
 
 private:
 
-
 	void WorkerThread();
 
 	std::map<session_id_t, std::shared_ptr<Session>> _sessions;
@@ -74,6 +73,10 @@ public:
 
 	virtual bool Start(uint32_t worker_count);
 	virtual bool Stop();
+
+
+	uint32_t IssueUniqueSessionId();
+
 protected:
 	Stream(const std::shared_ptr<Application> application, const StreamInfo &info);
 	virtual ~Stream();
@@ -88,4 +91,6 @@ private:
 	bool                            _run_flag;
 	StreamWorker                    _stream_workers[MAX_STREAM_THREAD_COUNT];
 	std::shared_ptr<Application>    _application;
+
+	session_id_t					_last_issued_session_id;
 };

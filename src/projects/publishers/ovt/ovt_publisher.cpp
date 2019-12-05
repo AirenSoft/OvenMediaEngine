@@ -1,5 +1,7 @@
+#include <base/ovlibrary/url.h>
 #include "ovt_private.h"
 #include "ovt_publisher.h"
+#include "ovt_session.h"
 
 std::shared_ptr<OvtPublisher> OvtPublisher::Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 {
@@ -41,7 +43,6 @@ bool OvtPublisher::Start()
 			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
 
 			_server_port = PhysicalPortManager::Instance()->CreatePort(origin.GetSocketType(), address);
-
 			if (_server_port != nullptr)
 			{
 				logti("Trying to start relay server on %s", address.ToString().CStr());
@@ -63,7 +64,7 @@ bool OvtPublisher::Start()
 	}
 
 
-	return true;
+	return Publisher::Start();
 }
 
 bool OvtPublisher::Stop()
@@ -73,7 +74,7 @@ bool OvtPublisher::Stop()
 		_server_port->RemoveObserver(this);
 	}
 
-	return true;
+	return Publisher::Stop();
 }
 
 std::shared_ptr<Application> OvtPublisher::OnCreatePublisherApplication(const info::Application &application_info)
@@ -81,32 +82,232 @@ std::shared_ptr<Application> OvtPublisher::OnCreatePublisherApplication(const in
 	return OvtApplication::Create(application_info);
 }
 
-bool OvtPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)
-{
-	return true;
-}
-
 void OvtPublisher::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
-	// 접속하면 이 함수가 호출되지만 여기서는 알바 아니다.
-	// OnDataReceived에서 register를 하면 정식 Client로 처리한다.
+	// NOTHING
 }
 
 void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 									const ov::SocketAddress &address,
 									const std::shared_ptr<const ov::Data> &data)
 {
-	// ovt_client가 register를 할 때 본 함수가 호출된다.
-	// 여기서 seesion을 만들어서 요청한 stream에 등록해야 한다.
+	auto packet = std::make_shared<OvtPacket>(*data);
+	if(!packet->IsValid())
+	{
+		// If packet is not valid, it is not necessary to response
+		return;
+	}
+
+	// Parsing Payload
+	ov::String payload((const char *)packet->Payload(), packet->PayloadLength());
+	ov::JsonObject object = ov::Json::Parse(payload);
+
+	if(object.IsNull())
+	{
+		ResponseResult(remote, packet->SessionId(), 0, 404, "An invalid request : Json format");
+		return;
+	}
+
+	Json::Value &json_request_id = object.GetJsonValue()["id"];
+	Json::Value &json_request_url = object.GetJsonValue()["url"];
+
+	if(json_request_id.isNull() || json_request_url.isNull() || !json_request_id.isUInt())
+	{
+		ResponseResult(remote, packet->SessionId(), 0, 404, "An invalid request : Id or Url are not valid");
+		return;
+	}
+
+	uint32_t request_id = json_request_id.asUInt();
+	auto url = ov::Url::Parse(json_request_url.asString());
+	if(url == nullptr)
+	{
+		ResponseResult(remote, packet->SessionId(), json_request_id.asUInt(), 404, "An invalid request : Url is not valid");
+		return;
+	}
+
+	switch(packet->PayloadType())
+	{
+		case OVT_PAYLOAD_TYPE_DESCRIBE:
+			// Add session
+			HandleDescribeRequest(remote, request_id, url);
+			break;
+		case OVT_PAYLOAD_TYPE_PLAY:
+			HandlePlayRequest(remote, request_id, url);
+			break;
+		case OVT_PAYLOAD_TYPE_STOP:
+			// Remove session
+			HandleStopRequest(remote, packet->SessionId(), request_id, url);
+			break;
+		default:
+			// Response error message and disconnect
+			ResponseResult(remote, packet->SessionId(), request_id, 404, "An invalid request");
+			break;
+	}
 }
+
+// It it only called when the OVT runs over TCP or SRT
 void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 									PhysicalPortDisconnectReason reason,
 									const std::shared_ptr<const ov::Error> &error)
 {
-	// seesion을 제거한다.
+	// Remove session
+	auto streams = _remote_stream_map[remote->GetId()];
+	for(const auto &stream : *streams)
+	{
+		stream->RemoveSessionByConnectorId(remote->GetId());
+	}
+
+	UnlinkRemoteFromStream(remote->GetId());
 }
 
-void OvtPublisher::HandleRegister(const std::shared_ptr<ov::Socket> &remote, const RelayPacket &packet)
+void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, const uint32_t request_id, const std::shared_ptr<ov::Url> &url)
 {
+	auto stream = std::static_pointer_cast<OvtStream>(GetStream(url->App(), url->Stream()));
+	if(stream == nullptr)
+	{
+		ov::String msg;
+		msg.Format("There is no such %s/%s", url->App().CStr(), url->Stream().CStr());
+		ResponseResult(remote, 0, request_id, 404, msg);
+		return;
+	}
 
+	Json::Value description = stream->GetDescription();
+	ResponseResult(remote, 0, request_id, 200, "ok", "stream", description);
 }
+
+void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<ov::Url> &url)
+{
+	auto app = std::static_pointer_cast<OvtApplication>(GetApplicationByName(url->App().CStr()));
+	if(app == nullptr)
+	{
+		ov::String msg;
+		msg.Format("There is no such app(%s)", url->App().CStr());
+		ResponseResult(remote, 0, request_id, 404, msg);
+		return;
+	}
+
+	auto stream = std::static_pointer_cast<OvtStream>(GetStream(url->App(), url->Stream()));
+	if(stream == nullptr)
+	{
+		ov::String msg;
+		msg.Format("There is no such stream (%s/%s)", url->App().CStr(), url->Stream().CStr());
+		ResponseResult(remote, 0, request_id, 404, msg);
+		return;
+	}
+
+	auto session = OvtSession::Create(app, stream, stream->IssueUniqueSessionId(), remote);
+	if(session == nullptr)
+	{
+		ov::String msg;
+		msg.Format("Internal Error : Cannot create session");
+		ResponseResult(remote, 0, request_id, 404, msg);
+		return;
+	}
+
+	stream->AddSession(session);
+
+	LinkRemoteWithStream(remote->GetId(), stream);
+
+	ResponseResult(remote, session->GetId(), request_id, 200, "ok");
+}
+
+void OvtPublisher::HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<ov::Url> &url)
+{
+	auto stream = std::static_pointer_cast<OvtStream>(GetStream(url->App(), url->Stream()));
+	if(stream == nullptr)
+	{
+		ov::String msg;
+		msg.Format("There is no such stream (%s/%s)", url->App().CStr(), url->Stream().CStr());
+		ResponseResult(remote, 0, request_id, 404, msg);
+		return;
+	}
+
+	stream->RemoveSession(session_id);
+
+	ResponseResult(remote, session_id, request_id, 200, "ok");
+}
+
+void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg)
+{
+	Json::Value root;
+
+	root["id"] = request_id;
+	root["code"] = code;
+	root["message"] = msg.CStr();
+
+	SendResponse(remote, session_id, "");
+}
+
+void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id,
+									uint32_t code, const ov::String &msg, const ov::String &key, const Json::Value &value)
+{
+	Json::Value root;
+
+	root["id"] = request_id;
+	root["code"] = code;
+	root["message"] = msg.CStr();
+	root[key.CStr()] = value;
+
+	SendResponse(remote, session_id, ov::Json::Stringify(value));
+}
+
+void OvtPublisher::SendResponse(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String &payload)
+{
+	OvtPacket	packet;
+
+	using namespace std::chrono;
+	uint64_t 	timestamp = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+
+	packet.SetSessionId(session_id);
+	packet.SetPayloadType(OVT_PAYLOAD_TYPE_RESPONSE);
+	packet.SetMarker(0);
+	packet.SetTimestamp(timestamp);
+
+	if(!payload.IsEmpty())
+	{
+		auto payload_data = payload.ToData(false);
+		packet.SetPayload(payload_data->GetDataAs<uint8_t>(), payload_data->GetLength());
+	}
+
+	remote->Send(packet.GetData());
+}
+
+bool OvtPublisher::LinkRemoteWithStream(int remote_id, std::shared_ptr<OvtStream> &stream)
+{
+	// For ungracefull disconnect
+
+
+	if(_remote_stream_map.find(remote_id) == _remote_stream_map.end())
+	{
+		auto stream_vector = std::make_shared<std::vector<std::shared_ptr<OvtStream>>>();
+		stream_vector->push_back(stream);
+		_remote_stream_map[remote_id] = stream_vector;
+	}
+	else
+	{
+		_remote_stream_map[remote_id]->push_back(stream);
+	}
+
+	return true;
+}
+
+bool OvtPublisher::UnlinkRemoteFromStream(int remote_id)
+{
+	_remote_stream_map.erase(remote_id);
+}
+
+bool OvtPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)
+{
+	return true;
+}
+
+
+
+
+
+
+
+
+
+
+

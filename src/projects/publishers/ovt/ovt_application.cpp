@@ -1,6 +1,7 @@
 
 #include "ovt_private.h"
 #include "ovt_application.h"
+#include "ovt_session.h"
 
 std::shared_ptr<OvtApplication> OvtApplication::Create(const info::Application &application_info)
 {
@@ -46,18 +47,21 @@ std::shared_ptr<Stream> OvtApplication::CreateStream(const std::shared_ptr<Strea
 
 bool OvtApplication::DeleteStream(const std::shared_ptr<StreamInfo> &info)
 {
-	// Input이 종료된 경우에 호출됨, 이 경우에는 Stream을 삭제 해야 하고, 그 전에 연결된 모든 Session을 종료
-	// StreamInfo로 Stream을 구한다.
 	logtd("OvtApplication::DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
 
 	auto stream = std::static_pointer_cast<OvtStream>(GetStream(info->GetId()));
 	if(stream == nullptr)
 	{
-		logte("Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
+		logte("OvtApplication::Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
 		return false;
 	}
 
-	// 모든 Session의 연결을 종료한다.
+	auto sessions = stream->GetAllSessions();
+	for(auto const &x : sessions)
+	{
+		auto session = std::static_pointer_cast<OvtSession>(x.second);
+	}
+
 	logti("OvtApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
 
 	return true;
