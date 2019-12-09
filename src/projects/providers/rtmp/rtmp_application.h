@@ -24,8 +24,7 @@ public:
 	explicit RtmpApplication(const info::Application &info);
 	~RtmpApplication() override = default;
 
-public:
-	std::shared_ptr<Stream> OnCreateStream() override;
+	std::shared_ptr<Stream> CreateStream();
 
 private:
 };

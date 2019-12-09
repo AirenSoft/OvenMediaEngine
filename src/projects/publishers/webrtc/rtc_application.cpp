@@ -69,7 +69,7 @@ bool RtcApplication::DeleteStream(const std::shared_ptr<StreamInfo> &info)
 		_rtc_signalling->Disconnect(GetName(), stream->GetName(), session->GetPeerSDP());
 	}
 
-	logti("RtcApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
+	logtd("RtcApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
 
 	return true;
 }

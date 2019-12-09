@@ -30,18 +30,14 @@ namespace pvd
 		};
 
 	public:
-		bool Start();
-		bool Stop();
+		virtual bool Start();
+		virtual bool Stop();
 
 		std::shared_ptr<Stream> GetStreamById(uint32_t stream_id);
 		std::shared_ptr<Stream> GetStreamByName(ov::String stream_name);
 
-		std::shared_ptr<Stream> CreateProviderStream();
 		bool NotifyStreamCreated(std::shared_ptr<Stream> stream);
 		bool NotifyStreamDeleted(std::shared_ptr<Stream> stream);
-
-		// 상위 클래스에서 Stream 객체를 생성해서 받아옴
-		virtual std::shared_ptr<Stream> OnCreateStream() = 0;
 
 	protected:
 		explicit Application(const info::Application &application_info);

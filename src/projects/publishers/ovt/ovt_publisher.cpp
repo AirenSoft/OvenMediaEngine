@@ -146,6 +146,12 @@ void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 }
 
 // It it only called when the OVT runs over TCP or SRT
+
+// TODO(Getroot): If the Ovt uses UDP, OME cannot know that the connection was forcibly terminated.(Ungraceful termination)
+// In this case, OME should add PING/PONG function to check if the connection is broken.
+// However, this version of OVT does not need to be considered because it does not use UDP but only tcp or srt.
+// If the OVT is extended to use UDP in the future, then the protocol needs to be advanced.
+
 void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 									PhysicalPortDisconnectReason reason,
 									const std::shared_ptr<const ov::Error> &error)
@@ -275,7 +281,7 @@ void OvtPublisher::SendResponse(const std::shared_ptr<ov::Socket> &remote, uint3
 bool OvtPublisher::LinkRemoteWithStream(int remote_id, std::shared_ptr<OvtStream> &stream)
 {
 	// For ungracefull disconnect
-
+	// one remote id can be join multiple streams.
 
 	if(_remote_stream_map.find(remote_id) == _remote_stream_map.end())
 	{

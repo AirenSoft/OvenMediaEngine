@@ -26,7 +26,8 @@ RtmpApplication::RtmpApplication(const info::Application &application_info)
 {
 }
 
-std::shared_ptr<Stream> RtmpApplication::OnCreateStream()
+// Create Stream
+std::shared_ptr<Stream> RtmpApplication::CreateStream()
 {
 	logtd("OnCreateStream");
 

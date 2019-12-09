@@ -16,6 +16,16 @@ namespace pvd
 	{
 	}
 
+	Stream::Stream(uint32_t stream_id)
+		:StreamInfo(stream_id)
+	{
+	}
+
+	Stream::Stream(const StreamInfo &stream_info)
+		:StreamInfo(stream_info)
+	{
+	}
+
 	Stream::~Stream()
 	{
 

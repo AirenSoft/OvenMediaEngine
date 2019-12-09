@@ -61,20 +61,6 @@ namespace pvd
 		return nullptr;
 	}
 
-	// Create Stream
-	// The provider creates itself because it is the entry point of the stream creation.
-	std::shared_ptr<Stream> Application::CreateProviderStream()
-	{
-		auto stream = OnCreateStream();
-		if(!stream)
-		{
-			// Stream 생성 실패
-			return nullptr;
-		}
-
-		return stream;
-	}
-
 	bool Application::NotifyStreamCreated(std::shared_ptr<Stream> stream)
 	{
 		logtd("CreateStream");

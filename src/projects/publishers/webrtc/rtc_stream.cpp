@@ -27,7 +27,7 @@ RtcStream::RtcStream(const std::shared_ptr<Application> application,
 
 RtcStream::~RtcStream()
 {
-	logti("RtcStream(%d) has been terminated finally", GetId());
+	logtd("RtcStream(%d) has been terminated finally", GetId());
 	Stop();
 }
 

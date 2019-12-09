@@ -15,11 +15,11 @@ namespace pvd
 {
 	class Stream : public StreamInfo
 	{
-	public:
-
 	protected:
 		Stream();
+		Stream(uint32_t stream_id);
+		Stream(const StreamInfo &stream_info);
+		
 		virtual ~Stream();
-
 	};
 }

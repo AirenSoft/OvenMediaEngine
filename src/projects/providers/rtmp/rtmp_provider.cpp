@@ -51,10 +51,10 @@ bool RtmpProvider::Start()
 
 	logti("RTMP Provider is listening on %s...", rtmp_address.ToString().CStr());
 
-	// RtmpServer 생성
+	// Create RtmpServer
 	_rtmp_server = std::make_shared<RtmpServer>();
 
-	// RtmpServer 에 Observer 연결
+	// Connect RtmpServer to Observer
 	_rtmp_server->AddObserver(RtmpObserver::GetSharedPtr());
 
 	if (!_rtmp_server->Start(rtmp_address))
@@ -81,7 +81,7 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 										 info::application_id_t &application_id,
 										 uint32_t &stream_id)
 {
-	// 어플리케이션 조회, 어플리케이션명에 해당하는 정보가 없다면 RTMP 커넥션을 종료함.
+	// Find applicaiton, if there is no application, it will disconnect RTMP connection.
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationByName(app_name.CStr()));
 	if (application == nullptr)
 	{
@@ -116,13 +116,13 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 				logte("Disconnect Fail - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
 			}
 
-			// 스트림 정보 종료
+			// delete new stream
 			application->NotifyStreamDeleted(application->GetStreamByName(stream_name));
 		}
 	}
 
 	// Application -> RtmpApplication: create rtmp stream -> Application 에 Stream 정보 저장
-	auto stream = application->CreateProviderStream();
+	auto stream = application->CreateStream();
 	if (stream == nullptr)
 	{
 		logte("can not create stream - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
@@ -135,7 +135,7 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 	{
 		auto new_track = std::make_shared<MediaTrack>();
 
-		// 비디오는 TrackId 0으로 고정
+		// Video is fixed on Track 0
 		new_track->SetId(0);
 		new_track->SetMediaType(MediaType::Video);
 		new_track->SetCodecId(MediaCodecId::H264);
@@ -157,7 +157,7 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 	{
 		auto new_track = std::make_shared<MediaTrack>();
 
-		// 오디오는 TrackID를 1로 고정
+		// Video is fixed on Track 1
 		new_track->SetId(1);
 		new_track->SetMediaType(MediaType::Audio);
 		new_track->SetCodecId(MediaCodecId::Aac);
@@ -185,10 +185,9 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 		stream->AddTrack(new_track);
 	}
 
-	// 라우터에 스트림이 생성되었다고 알림
+	// Notify MediaRouter that the stream has been created.
 	application->NotifyStreamCreated(stream);
 
-	// id 설정
 	application_id = application->GetId();
 	stream_id = stream->GetId();
 
@@ -284,6 +283,6 @@ bool RtmpProvider::OnDeleteStream(info::application_id_t app_id, uint32_t stream
 		return false;
 	}
 
-	// 라우터에 스트림이 삭제되었다고 알림
+	// Notify MediaRouter that the stream has been deleted.
 	return application->NotifyStreamDeleted(stream);
 }

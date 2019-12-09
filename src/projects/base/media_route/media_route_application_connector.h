@@ -24,37 +24,37 @@ public:
 	};
 
 	// MediaRouteApplication -> Stream 생성
-	inline bool CreateStream(std::shared_ptr<StreamInfo> stream_info)
+	inline bool CreateStream(const std::shared_ptr<StreamInfo> &stream_info)
 	{
 		if(GetMediaRouteApplication() == nullptr)
 		{
 			return false;
 		}
 
-		return GetMediaRouteApplication()->OnCreateStream(this->GetSharedPtr(), std::move(stream_info));
+		return GetMediaRouteApplication()->OnCreateStream(this->GetSharedPtr(), stream_info);
 	}
 
 	// MediaRouteApplication -> Stream 삭제
-	inline bool DeleteStream(std::shared_ptr<StreamInfo> stream_info)
+	inline bool DeleteStream(const std::shared_ptr<StreamInfo> &stream_info)
 	{
 		if(GetMediaRouteApplication() == nullptr)
 		{
 			return false;
 		}
 
-		return GetMediaRouteApplication()->OnDeleteStream(this->GetSharedPtr(), std::move(stream_info));
+		return GetMediaRouteApplication()->OnDeleteStream(this->GetSharedPtr(), stream_info);
 	}
 
 	// MediaRouteApplication -> Stream-> Frame
-	inline bool SendFrame(std::shared_ptr<StreamInfo> stream_info, std::shared_ptr<MediaPacket> packet)
+	inline bool SendFrame(const std::shared_ptr<StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &packet)
 	{
 		if(GetMediaRouteApplication() == nullptr)
 		{
-			OV_ASSERT(false, "MediaRouteAppplication MUST BE NOT NULL");
+			OV_ASSERT(false, "MediaRouteAppplication MUST NOT BE NULL");
 			return false;
 		}
 
-		return GetMediaRouteApplication()->OnReceiveBuffer(this->GetSharedPtr(), std::move(stream_info), std::move(packet));
+		return GetMediaRouteApplication()->OnReceiveBuffer(this->GetSharedPtr(), stream_info, packet);
 	}
 
 	virtual ConnectorType GetConnectorType()

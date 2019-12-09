@@ -23,6 +23,7 @@ LOCAL_STATIC_LIBRARIES := \
 	config \
 	ovlibrary \
 	rtmpprovider \
+	ovtprovider \
 	monitoring \
 	jsoncpp \
 	sqlite
