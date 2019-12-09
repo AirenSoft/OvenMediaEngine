@@ -13,9 +13,15 @@ VPX_VERSION=1.7.0
 FDKAAC_VERSION=0.1.5
 FFMPEG_VERSION=3.4.2
 
-OSNAME=$(cat /etc/*-release | grep "^NAME" | tr -d "\"" | cut -d"=" -f2)
-OSVERSION=$(cat /etc/*-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f1 | awk '{print  $1}')
-NCPU=$(nproc)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    NCPU=$(sysctl -n hw.ncpu)
+    OSNAME=$(sw_vers -productName)
+    OSVERSION=$(sw_vers -productVersion)
+else
+    NCPU=$(nproc)
+    OSNAME=$(cat /etc/*-release | grep "^NAME" | tr -d "\"" | cut -d"=" -f2)
+    OSVERSION=$(cat /etc/*-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f1 | awk '{print  $1}')
+fi
 MAKEFLAGS="${MAKEFLAGS} -j${NCPU}"
 CURRENT=$(pwd)
 
@@ -25,7 +31,7 @@ install_openssl()
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz | tar -xz --strip-components=1 && \
-    ./config --prefix="${PREFIX}" --openssldir="${PREFIX}" -Wl,-rpath="${PREFIX}/lib" shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa no-async && \
+    ./config --prefix="${PREFIX}" --openssldir="${PREFIX}" -Wl,-rpath,"${PREFIX}/lib" shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa no-async && \
     make && \
     sudo make install_sw && \
     rm -rf ${DIR} && \
@@ -85,11 +91,18 @@ install_libx264()
 
 install_libvpx()
 {
+    ADDITIONAL_FLAGS=
+    if [ "x${OSNAME}" == "xMac OS X" ]; then
+        case $OSVERSION in
+            10.12.* | 10.13.* | 10.14.*  | 10.15.*) ADDITIONAL_FLAGS=--target=x86_64-darwin16-gcc;;
+        esac
+    fi
+
     (DIR=${TEMP_PATH}/vpx && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf https://codeload.github.com/webmproject/libvpx/tar.gz/v${VPX_VERSION} | tar -xz --strip-components=1 && \
-    ./configure --prefix="${PREFIX}" --enable-vp8 --enable-pic --enable-shared --disable-static --disable-vp9 --disable-debug --disable-examples --disable-docs --disable-install-bins && \
+    ./configure --prefix="${PREFIX}" --enable-vp8 --enable-pic --enable-shared --disable-static --disable-vp9 --disable-debug --disable-examples --disable-docs --disable-install-bins ${ADDITIONAL_FLAGS} && \
     make && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "vpx"
@@ -159,6 +172,20 @@ install_base_centos()
     source scl_source enable devtoolset-7
 }
 
+install_base_macos()
+{
+    BREW_PATH=$(which brew)
+    if [ ! -x "$BREW_PATH" ] ; then
+        /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" || exit 1
+    fi
+
+    # the default make on macOS does not work with these makefiles
+    brew install pkg-config nasm automake libtool xz cmake make
+
+    # the nasm that comes with macOS does not work with libvpx thus put the path where the homebrew stuff is installed in front of PATH
+    export PATH=/usr/local/bin:$PATH
+}
+
 install_ovenmediaengine()
 {
     (DIR=${TEMP_PATH}/ome && \
@@ -212,6 +239,8 @@ elif  [ "x${OSNAME}" == "xCentOS Linux" ]; then
 elif  [ "x${OSNAME}" == "xFedora" ]; then
     check_version
     install_base_fedora
+elif  [ "x${OSNAME}" == "xMac OS X" ]; then
+    install_base_macos
 else
     echo "This program [$0] does not support your operating system [${OSNAME}]"
     echo "Please refer to manual installation page"

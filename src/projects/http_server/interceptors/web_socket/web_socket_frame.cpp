@@ -54,7 +54,7 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 	}
 
 	// 남은 데이터와 websocket frame 크기 중, 작은 크기를 구해 데이터를 누적함
-	size_t length = std::min(stream.Remained(), _remained_length);
+	size_t length = std::min(static_cast<uint64_t>(stream.Remained()), _remained_length);
 
 	if(length > 0L)
 	{

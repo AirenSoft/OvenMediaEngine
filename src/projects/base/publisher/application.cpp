@@ -54,14 +54,14 @@ bool Application::OnDeleteStream(std::shared_ptr<StreamInfo> info)
 {
 	if(_streams.count(info->GetId()) <= 0)
 	{
-		logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName(), info->GetName());
+		logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
 		return false;
 	}
 
 	auto stream = std::static_pointer_cast<Stream>(GetStream(info->GetId()));
 	if(stream == nullptr)
 	{
-		logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName(), info->GetName());
+		logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
 		return false;
 	}
 

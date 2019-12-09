@@ -11,7 +11,54 @@
 #include "socket_address.h"
 
 #include <netinet/in.h>
+#if defined(__APPLE__)
+#include <sys/event.h>
+
+typedef union epoll_data {
+	void    *ptr;
+	int      fd;
+	uint32_t u32;
+	uint64_t u64;
+} epoll_data_t;
+
+struct epoll_event {
+	uint32_t		events;
+	epoll_data_t	data;
+};
+
+static inline int epoll_create1(int)
+{
+	return kqueue();
+}
+
+// epoll_ctl flags
+constexpr int EPOLL_CTL_ADD = 1;
+constexpr int EPOLL_CTL_DEL = 2;
+
+// epoll_event event values
+constexpr int EPOLLIN  		= 0x0001;
+constexpr int EPOLLOUT		= 0x0002;
+constexpr int EPOLLHUP 		= 0x0004;
+constexpr int EPOLLERR 		= 0x0008;
+constexpr int EPOLLRDHUP 	= 0x0010;
+constexpr int EPOLLPRI		= 0x0020;
+constexpr int EPOLLRDNORM	= 0x0040;
+constexpr int EPOLLRDBAND	= 0x0080;
+constexpr int EPOLLWRNORM	= 0x0100;
+constexpr int EPOLLWRBAND	= 0x0200;
+constexpr int EPOLLMSG		= 0x0400;
+constexpr int EPOLLWAKEUP	= 0x0800;
+constexpr int EPOLLONESHOT	= 0x1000;
+constexpr int EPOLLET		= 0x2000;
+
+int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
+int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout);
+
+// macOS does not have a MSG_NOSIGNAL, has a SO_NOSIGPIPE, need to test to understand equality
+#define MSG_NOSIGNAL 0x2000
+#else
 #include <sys/epoll.h>
+#endif
 #include <sys/socket.h>
 
 #include <functional>

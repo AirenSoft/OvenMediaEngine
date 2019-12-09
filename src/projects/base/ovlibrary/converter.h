@@ -47,6 +47,11 @@ namespace ov
 			return ov::String::FormatString("%" PRIu64, number);
 		}
 
+		static ov::String ToString(size_t number)
+		{
+			return ov::String::FormatString("%zu", number);
+		}
+
 		static ov::String ToString(float number)
 		{
 			return ov::String::FormatString("%f", number);

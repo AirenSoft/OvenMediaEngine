@@ -70,7 +70,7 @@ namespace ov
 
 		String dump;
 		const char *buffer = ((const char *)data + offset);
-		max_bytes = std::min((length - offset), max_bytes);
+		max_bytes = std::min(length - static_cast<size_t>(offset), max_bytes);
 
 		// 최대 1MB 까지 덤프 가능
 		int dump_bytes = (int)std::min(max_bytes, (1024UL * 1024UL));
