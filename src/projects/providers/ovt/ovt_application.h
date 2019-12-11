@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <base/ovlibrary/url.h>
 #include <base/common_types.h>
 #include <base/provider/application.h>
 #include <base/provider/stream.h>
@@ -16,7 +17,7 @@ public:
 	explicit OvtApplication(const info::Application &info);
 	~OvtApplication() override;
 
-	std::shared_ptr<pvd::Stream> CreateStream(const ov::String &url);
+	std::shared_ptr<pvd::Stream> CreateStream(const std::shared_ptr<ov::Url> &url);
 
 private:
 	bool	Start() override;

@@ -73,8 +73,12 @@ namespace pvd
 	// Delete Application
 	bool Provider::OnDeleteApplication(const info::Application &app_info)
 	{
+		OnDeleteProviderApplication(app_info);
+
 		_applications[app_info.GetId()]->Stop();
 		_applications.erase(app_info.GetId());
+
+		return true;
 	}
 
 	std::shared_ptr<Application> Provider::GetApplicationByName(ov::String app_name)

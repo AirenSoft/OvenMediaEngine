@@ -43,9 +43,10 @@ public:
 	bool Start() override;
 	bool Stop() override;
 
-	bool PullStream(ov::String app_name, ov::String stream_name, ov::String url);
+	bool PullStream(ov::String url);
 
 
 protected:
-	std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &application_info) override;
+	std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;
+	bool OnDeleteProviderApplication(const info::Application &app_info) override;
 };

@@ -11,6 +11,8 @@ namespace ov
 		auto object = std::make_shared<Url>();
 		std::smatch matches;
 
+		object->_source = url.c_str();
+
 		if(std::regex_search(url, matches, std::regex("(.+)://([^:]+)((:)([0-9]+))?/([^\\?/]+)/([^\\?/]+)(/([^\\?]+)?)?((\\?)([^\\?]+)?(.+)?)?")))
 		{
 			object->_scheme = std::string(matches[1]).c_str();

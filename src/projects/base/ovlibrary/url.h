@@ -13,6 +13,8 @@ namespace ov
 
 		static const std::shared_ptr<Url> Parse(const std::string &url);
 
+		ov::String& Source(){return _source;}
+
 		ov::String& Scheme(){return _scheme;}
 		ov::String& Domain(){return _domain;}
 		uint32_t Port(){return _port;}
@@ -31,5 +33,7 @@ namespace ov
 		ov::String 	_stream;
 		ov::String 	_file;
 		ov::String 	_query;
+
+		ov::String	_source;
 	};
 }

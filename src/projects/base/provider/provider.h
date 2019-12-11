@@ -40,6 +40,7 @@ namespace pvd
 		// For child class
 		virtual cfg::ProviderType GetProviderType() = 0;
 		virtual std::shared_ptr<Application> OnCreateProviderApplication(const info::Application &app_info) = 0;
+		virtual bool OnDeleteProviderApplication(const info::Application &app_info) = 0;
 
 		///////////////////////////////////////
 		// Implement MediaRouteObserver

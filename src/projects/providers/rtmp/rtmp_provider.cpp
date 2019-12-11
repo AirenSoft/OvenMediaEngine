@@ -75,6 +75,12 @@ std::shared_ptr<Application> RtmpProvider::OnCreateProviderApplication(const inf
 	return RtmpApplication::Create(application_info);
 }
 
+//TODO(soulk): Implement this function
+bool RtmpProvider::OnDeleteProviderApplication(const info::Application &app_info)
+{
+	return true;
+}
+
 bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 										 const ov::String &stream_name,
 										 std::shared_ptr<RtmpMediaInfo> &media_info,

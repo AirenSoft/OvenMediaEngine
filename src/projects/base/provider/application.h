@@ -39,6 +39,8 @@ namespace pvd
 		bool NotifyStreamCreated(std::shared_ptr<Stream> stream);
 		bool NotifyStreamDeleted(std::shared_ptr<Stream> stream);
 
+		uint32_t 	IssueUniqueStreamId();
+
 	protected:
 		explicit Application(const info::Application &application_info);
 		~Application() override;
@@ -46,7 +48,8 @@ namespace pvd
 		std::map<uint32_t, std::shared_ptr<Stream>> _streams;
 
 	private:
-		std::mutex _queue_guard;
-		std::condition_variable _queue_cv;
+		std::mutex 				_queue_guard;
+		std::condition_variable	_queue_cv;
+		uint32_t 				_last_issued_stream_id;
 	};
 }

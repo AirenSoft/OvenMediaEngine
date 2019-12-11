@@ -176,6 +176,7 @@ public:
 	OvtPacket(const ov::Data &data);
 	virtual ~OvtPacket();
 
+	bool 		LoadHeader(const ov::Data &data);
 	bool 		Load(const ov::Data &data);
 
 	bool 		IsValid();
@@ -193,6 +194,7 @@ public:
 	void 		SetMarker(bool marker_bit);
 	void 		SetPayloadType(uint8_t payload_type);
 	void 		SetSequenceNumber(uint16_t sequence_number);
+	void 		SetTimestampNow();
 	void 		SetTimestamp(uint64_t timestamp);
 	void 		SetSessionId(uint32_t session_id);
 
@@ -202,6 +204,8 @@ public:
 	const std::shared_ptr<ov::Data>& GetData();
 
 private:
+	bool 		SetPayloadLength(size_t payload_length);
+
 	bool 		_is_valid;
 
 	uint8_t		_version;

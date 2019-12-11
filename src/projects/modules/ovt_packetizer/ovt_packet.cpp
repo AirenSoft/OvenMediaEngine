@@ -30,7 +30,7 @@ OvtPacket::~OvtPacket()
 {
 }
 
-bool OvtPacket::Load(const ov::Data &data)
+bool OvtPacket::LoadHeader(const ov::Data &data)
 {
 	if(data.GetLength() < OVT_FIXED_HEADER_SIZE)
 	{
@@ -58,10 +58,26 @@ bool OvtPacket::Load(const ov::Data &data)
 	SetSequenceNumber(ByteReader<uint16_t>::ReadBigEndian(&buffer[2]));
 	SetTimestamp(ByteReader<uint64_t>::ReadBigEndian(&buffer[4]));
 	SetSessionId(ByteReader<uint32_t>::ReadBigEndian(&buffer[12]));
+	SetPayloadLength(ByteReader<uint16_t>::ReadBigEndian(&buffer[16]));
 
-	auto payload_len = ByteReader<uint16_t>::ReadBigEndian(&buffer[16]);
+	return true;
+}
 
-	SetPayload(&buffer[OVT_FIXED_HEADER_SIZE], payload_len);
+bool OvtPacket::Load(const ov::Data &data)
+{
+	if(!LoadHeader(data))
+	{
+		return false;
+	}
+
+	if(data.GetLength() != OVT_FIXED_HEADER_SIZE + _payload_length)
+	{
+		// Invalid data
+		return false;
+	}
+
+	auto buffer = data.GetDataAs<uint8_t>();
+	SetPayload(&buffer[OVT_FIXED_HEADER_SIZE], _payload_length);
 
 	return true;
 }
@@ -152,6 +168,13 @@ void OvtPacket::SetSequenceNumber(uint16_t sequence_number)
 	ByteWriter<uint16_t>::WriteBigEndian(&_buffer[2], _sequence_number);
 }
 
+void OvtPacket::SetTimestampNow()
+{
+	using namespace std::chrono;
+	uint64_t 	timestamp = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+	SetTimestamp(timestamp);
+}
+
 void OvtPacket::SetTimestamp(uint64_t timestamp)
 {
 	_timestamp = timestamp;
@@ -164,6 +187,12 @@ void OvtPacket::SetSessionId(uint32_t session_id)
 	ByteWriter<uint32_t>::WriteBigEndian(&_buffer[12], _session_id);
 }
 
+bool OvtPacket::SetPayloadLength(size_t payload_length)
+{
+	_payload_length = payload_length;
+	ByteWriter<uint16_t>::WriteBigEndian(&_buffer[16], _payload_length);
+}
+
 bool OvtPacket::SetPayload(const uint8_t *payload, size_t payload_length)
 {
 	if(OVT_FIXED_HEADER_SIZE + payload_length > _data->GetCapacity())
@@ -173,8 +202,7 @@ bool OvtPacket::SetPayload(const uint8_t *payload, size_t payload_length)
 		return false;
 	}
 
-	_payload_length = payload_length;
-	ByteWriter<uint16_t>::WriteBigEndian(&_buffer[16], _payload_length);
+	SetPayloadLength(payload_length);
 
 	// OVT_DEFAULT_MAX_PACKET_SIZE
 	//_data->SetLength(_payload_length);

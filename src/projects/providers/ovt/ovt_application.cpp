@@ -27,7 +27,7 @@ OvtApplication::~OvtApplication()
 
 }
 
-std::shared_ptr<pvd::Stream> OvtApplication::CreateStream(const ov::String &url)
+std::shared_ptr<pvd::Stream> OvtApplication::CreateStream(const std::shared_ptr<ov::Url> &url)
 {
 	logtd("OnCreateStream");
 	auto stream = OvtStream::Create(GetSharedPtrAs<pvd::Application>(), url);

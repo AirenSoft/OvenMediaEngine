@@ -37,6 +37,24 @@ namespace pvd
 		return false;
 	}
 
+	uint32_t Application::IssueUniqueStreamId()
+	{
+		auto new_stream_id = _last_issued_stream_id++;
+
+		while(true)
+		{
+			if (_streams.find(new_stream_id) == _streams.end())
+			{
+				// not found
+				break;
+			}
+
+			new_stream_id++;
+		}
+
+		return new_stream_id;
+	}
+
 	std::shared_ptr<Stream> Application::GetStreamById(uint32_t stream_id)
 	{
 		if(_streams.find(stream_id) == _streams.end())

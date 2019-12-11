@@ -261,13 +261,10 @@ void OvtPublisher::SendResponse(const std::shared_ptr<ov::Socket> &remote, uint3
 {
 	OvtPacket	packet;
 
-	using namespace std::chrono;
-	uint64_t 	timestamp = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-
 	packet.SetSessionId(session_id);
 	packet.SetPayloadType(OVT_PAYLOAD_TYPE_RESPONSE);
 	packet.SetMarker(0);
-	packet.SetTimestamp(timestamp);
+	packet.SetTimestampNow();
 
 	if(!payload.IsEmpty())
 	{
