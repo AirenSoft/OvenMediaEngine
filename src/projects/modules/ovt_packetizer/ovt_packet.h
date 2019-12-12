@@ -66,7 +66,7 @@
 					{
 						"id" : 3291291,
 						"codecId" : 32198392,
-						"mediaType" : "video" | "audio" | "data",
+						"mediaType" : 0 //0:"video" | 1:"audio" | 2:"data",
 						"timebase_num" : 90000,
 						"timebase_den" : 90000,
 						"bitrate" : 5000000,

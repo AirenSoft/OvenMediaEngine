@@ -164,7 +164,56 @@ bool OvtStream::ReceiveDescribe(uint32_t request_id)
 	}
 
 	// Parse stream and add track
-	// TODO(Getroot): 2019/12/12 
+	auto json_tracks = json_stream["tracks"];
+
+
+
+	// Validation
+	if(json_stream["appName"].isNull() || json_stream["streamName"].isNull() || json_stream["tracks"].isNull() ||
+		!json_tracks.isArray())
+	{
+		logte("Invalid json payload : stream");
+		return false;
+	}
+
+	SetName(json_stream["streamName"].asString());
+
+	for(int i=0; i<json_tracks.size(); i++)
+	{
+		auto json_track = json_tracks[i];
+		auto new_track = std::make_shared<MediaTrack>();
+
+		// Validation
+		if(!json_track["id"].isUInt() || !json_track["codecId"].isUInt() || !json_track["mediaType"].isUInt() ||
+			!json_track["timebase_num"].isUInt() || !json_track["timebase_den"].isUInt() || !json_track["bitrate"].isUInt() ||
+			!json_track["startFrameTime"].isUInt64() || !json_track["lastFrameTime"].isUInt64())
+		{
+			logte("Invalid json track [%d]", i);
+			return false;
+		}
+
+		new_track->SetId(json_track["id"].asUInt());
+		new_track->SetCodecId(static_cast<common::MediaCodecId>(json_track["codecId"].asUInt()));
+		new_track->SetMediaType(static_cast<common::MediaType>(json_track["mediaType"].asUInt()));
+		new_track->SetTimeBase(json_track["timebase_num"].asUInt(), json_track["timebase_den"].asUInt());
+		new_track->SetBitrate(json_track["bitrate"].asUInt());
+		new_track->SetStartFrameTime(json_track["startFrameTime"].asUInt64());
+		new_track->SetLastFrameTime(json_track["lastFrameTime"].asUInt64());
+
+		// video or audio
+		if(new_track->GetMediaType() == common::MediaType::Video)
+		{
+			auto json_video_track = json_track["videoTrack"];
+			
+		}
+		else if(new_track->GetMediaType() == common::MediaType::Audio)
+		{
+			auto json_audio_track = json_track["audioTrack"];
+
+		}
+	}
+
+
 
 	return true;
 }

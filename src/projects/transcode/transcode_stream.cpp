@@ -649,6 +649,7 @@ bool TranscodeStream::AddStreamInfoOutput(ov::String stream_name)
 		logtw("Output stream with the same name (%s) already exists", stream_name.CStr());
 		return false;
 	}
+
 	stream_list->second.insert(stream_name);
 
 	auto stream_info_output = std::make_shared<StreamInfo>();
