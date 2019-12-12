@@ -10,6 +10,7 @@
 #include <iostream>
 #include <iomanip>
 #include <memory>
+#include <sstream>
 #include <sys/stat.h>
 
 #include "log_write.h"

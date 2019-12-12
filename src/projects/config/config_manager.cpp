@@ -84,8 +84,13 @@ namespace cfg
 		::stat(logger_config_path, &value);
 
 		if(
+#if defined(__APPLE__)
+			(_last_modified.tv_sec == value.st_mtimespec.tv_sec) &&
+			(_last_modified.tv_nsec == value.st_mtimespec.tv_nsec)
+#else
 			(_last_modified.tv_sec == value.st_mtim.tv_sec) &&
 			(_last_modified.tv_nsec == value.st_mtim.tv_nsec)
+#endif
 			)
 		{
 			// log.config가 변경되지 않음
@@ -94,7 +99,11 @@ namespace cfg
 
 		ov_log_reset_enable();
 
+#if defined(__APPLE__)
+		_last_modified = value.st_mtimespec;
+#else
 		_last_modified = value.st_mtim;
+#endif
 
 		auto logger_loader = std::make_shared<ConfigLoggerLoader>(logger_config_path);
 		if(logger_loader == nullptr)

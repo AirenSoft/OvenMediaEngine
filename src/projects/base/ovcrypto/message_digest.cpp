@@ -210,8 +210,8 @@ namespace ov
 		}
 
 		// 현재 코드에서는 SHA-256 이하만 처리 가능
-		unsigned int block_length = 64;
-		unsigned int digest_size = digest.Size();
+		constexpr unsigned int block_length = 64;
+		const unsigned int digest_size = digest.Size();
 
 		// padding을 위해, 키를 임시 버퍼에 복사함
 		uint8_t new_key[block_length] = { 0 };
@@ -253,7 +253,12 @@ namespace ov
 		}
 
 		// padding 데이터 및 입력 데이터를 hash
+#if defined(__clang__)
+		uint8_t inner[digest_size];
+		memset(&inner, 0, digest_size);
+#else
 		uint8_t inner[digest_size] = { 0 };
+#endif
 		bool result = true;
 
 		// inner hash

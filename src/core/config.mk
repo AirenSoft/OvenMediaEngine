@@ -35,7 +35,11 @@ CONFIG_CXX_HEADER_EXTENSION := .h
 CONFIG_LIBRARY_PATHS := /opt/ovenmediaengine/lib:/opt/ovenmediaengine/lib64
 CONFIG_PKG_PATHS := /opt/ovenmediaengine/lib/pkgconfig:/opt/ovenmediaengine/lib64/pkgconfig
 
-CONFIG_CORE_COUNT := $(shell nproc)
+ifeq (${OS_VERSION},darwin)
+    CONFIG_CORE_COUNT := $(shell sysctl -n hw.ncpu)
+else
+	CONFIG_CORE_COUNT := $(shell nproc)
+endif
 
 CONFIG_TARGET_COLOR := $(ANSI_GREEN)
 CONFIG_TARGET_FILE_COLOR := $(ANSI_BLUE)
