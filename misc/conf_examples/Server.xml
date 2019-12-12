@@ -9,20 +9,18 @@
 
             <IP>*</IP>
 
-            <Domains>
-                <Domain>
-                    <Names>
-                        <Name>stream1.airensoft.com</Name>
-                        <Name>stream2.airensoft.com</Name>
-                        <Name>stream3.airensoft.com</Name>
-                    </Names>
-                    <TLS>
-                        <CertPath>path/to/file.crt</CertPath>
-                        <KeyPath>path/to/file.key</KeyPath>
-                        <ChainCertPath>path/to/file.crt</ChainCertPath>
-                    </TLS>
-                </Domain>
-            </Domains>
+			<Domain>
+				<Names>
+					<Name>stream1.airensoft.com</Name>
+					<Name>stream2.airensoft.com</Name>
+					<Name>stream3.airensoft.com</Name>
+				</Names>
+				<TLS>
+					<CertPath>path/to/file.crt</CertPath>
+					<KeyPath>path/to/file.key</KeyPath>
+					<ChainCertPath>path/to/file.crt</ChainCertPath>
+				</TLS>
+			</Domain>
 
             <Listen>
                 <Providers>
@@ -45,6 +43,7 @@
 			<Applications>
 				<Application>
 					<Name>app</Name>
+					<Type>live</Type>
 					<Encodes>
 						<Encode>
 							<Name>VP8</Name>

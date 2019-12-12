@@ -1,43 +1,33 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 
 <Server version="3">
-	<Name>OvenMediaEngine</Name>
-	<Hosts>
-		<Host>
-			<Name>default</Name>
+    <Name>OvenMediaEngine</Name>
+    <Hosts>
+        <Host>
+            <Name>default</Name>
             <Type>edge</Type>
 
-            # IP 지정, *은 모든 IP
+            <!-- IP 지정, *은 모든 IP -->
             <IP>*</IP>
 
-            # 멀티 도메인과 TLS 설정
-            <Domains>
-                <Domain>
-                    <Names>
-                        <Name>stream1.airensoft.com</Name>
-                        <Name>stream2.airensoft.com</Name>
-                        <Name>stream3.airensoft.com</Name>
-                        <Name>*.airensoft.com</Name>
-                    </Names>
-                    <TLS>
-                        <CertPath>path/to/file.crt</CertPath>
-                        <KeyPath>path/to/file.key</KeyPath>
-                        <ChainCertPath>path/to/file.crt</ChainCertPath>
-                    </TLS>
-                </Domain>
-                <Domain>
-                    <Names>
-                        <Name>ovenmediaengine.com</Name>
-                    </Names>
-                    <TLS>
-                        <CertPath>path/to/file1.crt</CertPath>
-                        <KeyPath>path/to/file1.key</KeyPath>
-                        <ChainCertPath>path/to/file1.crt</ChainCertPath>
-                    </TLS>
-                </Domain>
-            </Domains>
+            <!-- 멀티 도메인과 TLS 설정 -->
+            <Domain>
+                <Names>
+                    <Name>stream1.airensoft.com</Name>
+                    <Name>stream2.airensoft.com</Name>
+                    <Name>stream3.airensoft.com</Name>
+                    <Name>*.airensoft.com</Name>
+                </Names>
+                <!--
+                <TLS>
+                    <CertPath>path/to/file.crt</CertPath>
+                    <KeyPath>path/to/file.key</KeyPath>
+                    <ChainCertPath>path/to/file.crt</ChainCertPath>
+                </TLS>
+            -->
+            </Domain>
 
-            # 포트 설정
+            <!-- 포트 설정 -->
             <Listen>
                 <Providers>
                     <RTMP>${env:OME_RTMP_PROV_PORT:1935}</RTMP>
@@ -56,7 +46,7 @@
                 </Publishers>
             </Listen>
 
-            # ProxyPass 설정, 경로별로 Origin을 지정할 수 있다.
+            <!-- ProxyPass 설정, 경로별로 Origin을 지정할 수 있다. -->
             <Origins>
                 <Origin>
                     <Location>/app/stream3</Location>
@@ -68,14 +58,18 @@
                 </Origin>
                 <Origin>
                     <Location>/app</Location>
-                    <Pass><Url>origin2.airensoft.com:9000/app2</Url></Pass>
+                    <Pass>
+                        <Url>origin2.airensoft.com:9000/app2</Url>
+                    </Pass>
                 </Origin>
                 <Origin>
                     <Location>default</Location>
-                    <Pass><Url>origin1.airensoft.com:9000</Url></Pass>
+                    <Pass>
+                        <Url>origin1.airensoft.com:9000</Url>
+                    </Pass>
                 </Origin>
             </Origins>
 
-		</Host>
-	</Hosts>
+        </Host>
+    </Hosts>
 </Server>

@@ -21,7 +21,11 @@ std::shared_ptr<WebConsoleServer> WebConsoleServer::Create(const info::Host &hos
 
 	if (instance != nullptr)
 	{
-		const auto &web_console = host_info.GetWebConsole();
+		// const auto &web_console = host_info.GetListen().GetWebConsole();
+		cfg::WebConsole web_console;
+
+		// TODO(dimiden): Implement web console
+		OV_ASSERT2(false);
 		instance->_web_console = web_console;
 
 		auto host = web_console.GetParentAs<cfg::Host>("Host");

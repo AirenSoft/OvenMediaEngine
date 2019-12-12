@@ -58,10 +58,12 @@ namespace cfg
 			RegisterValue<Optional>("Domain", &_domain);
 			RegisterValue("Listen", &_listen);
 			RegisterValue<CondOptional>("Origins", &_origins, [this]() -> bool {
-				return (_type == HostType::Edge);
+				// <Origins> is not optional when the host type is edge
+				return (_type != HostType::Edge);
 			});
 			RegisterValue<CondOptional>("Applications", &_applications, [this]() -> bool {
-				return (_type == HostType::Origin);
+				// <Applications> is not optional when the host type is origin
+				return (_type != HostType::Origin);
 			});
 		}
 
