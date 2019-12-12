@@ -34,9 +34,9 @@ protected:
 	//--------------------------------------------------------------------
 	std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 
-	cfg::PublisherType GetPublisherType() const override
+	PublisherType GetPublisherType() const override
 	{
-		return cfg::PublisherType::Dash;
+		return PublisherType::Dash;
 	}
 
 	const char *GetPublisherName() const override

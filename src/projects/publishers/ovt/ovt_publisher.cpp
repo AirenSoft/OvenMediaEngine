@@ -31,7 +31,8 @@ bool OvtPublisher::Start()
 {
 	// Listen to localhost:<relay_port>
 	auto host_info = GetHostInfo();
-	auto &origin = host_info.GetPorts().GetOriginPort();
+
+	const auto &origin = host_info.GetListen().GetPublishers().GetRelay();
 
 	if (origin.IsParsed())
 	{

@@ -46,8 +46,7 @@ bool RtmpProvider::Start()
 	// Get Host configuration
 	auto host = GetHostInfo();
 
-	// auto rtmp_provider = host->
-	auto rtmp_address = ov::SocketAddress(host.GetIp(), static_cast<uint16_t>(host.GetPorts().GetRtmpProviderPort().GetPort()));
+	auto rtmp_address = ov::SocketAddress(host.GetIp(), static_cast<uint16_t>(host.GetListen().GetProviders().GetRtmpPort()));
 
 	logti("RTMP Provider is listening on %s...", rtmp_address.ToString().CStr());
 
@@ -96,7 +95,7 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 	}
 
 	auto provider_info = application->GetProvider<cfg::RtmpProvider>();
-	if(provider_info == nullptr)
+	if (provider_info == nullptr)
 	{
 		logte("Cannot Find ProviderInfo from Applicaton - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
 		return false;

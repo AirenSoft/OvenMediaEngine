@@ -37,6 +37,16 @@ namespace cfg
 		_optional_callback = optional_callback;
 	}
 
+	void ValueBase::SetValidationCallback(ValidationCallback validation_callback)
+	{
+		_validation_callback = validation_callback;
+	}
+
+	bool ValueBase::DoValidation()
+	{
+		return (_validation_callback == nullptr) ? true : _validation_callback();
+	}
+
 	bool ValueBase::IsNeedToResolvePath() const
 	{
 		return _need_to_resolve_path;

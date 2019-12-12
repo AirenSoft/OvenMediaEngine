@@ -23,6 +23,24 @@
 
 #define MAX_FRAG_COUNT 3
 
+enum class ProviderType : int8_t
+{
+	Unknown,
+	Rtmp,
+	Ovt,
+};
+
+enum class PublisherType : int8_t
+{
+	Unknown,
+	Webrtc,
+	Rtmp,
+	Hls,
+	Dash,
+	Cmaf,
+	Ovt
+};
+
 enum class FrameType : int8_t
 {
 	EmptyFrame,
@@ -182,5 +200,5 @@ struct CodecSpecificInfo
 {
 	CodecType codec_type = CodecType::Unknown;
 	const char* codec_name = nullptr;
-	CodecSpecificInfoUnion codec_specific = { 0 };
+	CodecSpecificInfoUnion codec_specific = {0};
 };

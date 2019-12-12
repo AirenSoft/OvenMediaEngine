@@ -17,11 +17,12 @@ namespace cfg
 	//region Value
 
 	// int, float, string 등 처리용
-	template<typename Ttype, typename Tdummy = void>
+	template <typename Ttype, typename Tdummy = void>
 	class Value : public ValueBase
 	{
 	public:
-		Value(ValueType type, Ttype *target) : ValueBase()
+		Value(ValueType type, Ttype *target)
+			: ValueBase()
 		{
 			_type = type;
 			_target = target;
@@ -49,11 +50,12 @@ namespace cfg
 		}
 	};
 
-	template<typename Ttype>
+	template <typename Ttype>
 	class ValueForElement : public ValueForElementBase
 	{
 	public:
-		explicit ValueForElement(Ttype *item) : ValueForElementBase()
+		explicit ValueForElement(Ttype *item)
+			: ValueForElementBase()
 		{
 			_type = ValueType::Element;
 			_target = item;
@@ -65,7 +67,7 @@ namespace cfg
 			auto source = static_cast<Ttype *>(_target);
 			auto target = static_cast<Ttype *>(copy_to->GetTarget());
 
-			if((source == nullptr) || (target == nullptr))
+			if ((source == nullptr) || (target == nullptr))
 			{
 				OV_ASSERT2(false);
 				return false;
@@ -92,11 +94,12 @@ namespace cfg
 		}
 	};
 
-	template<typename Ttype>
+	template <typename Ttype>
 	class ValueForList : public ValueForListBase
 	{
 	public:
-		explicit ValueForList(std::vector<Ttype> *target) : ValueForListBase()
+		explicit ValueForList(std::vector<Ttype> *target)
+			: ValueForListBase()
 		{
 			_type = ValueType::List;
 			_target = target;
@@ -107,7 +110,7 @@ namespace cfg
 		{
 			std::vector<Item *> list;
 
-			for(auto &item : *(static_cast<std::vector<Ttype> *>(_target)))
+			for (auto &item : *(static_cast<std::vector<Ttype> *>(_target)))
 			{
 				list.push_back(&item);
 			}
@@ -141,4 +144,4 @@ namespace cfg
 	};
 
 	//endregion
-}
+}  // namespace cfg

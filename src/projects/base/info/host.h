@@ -8,8 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include <config/config.h>
 #include <base/ovcrypto/ovcrypto.h>
+#include <config/config.h>
 
 #include "application.h"
 
@@ -43,7 +43,6 @@ namespace info
 		host_id_t _host_id = 0;
 		std::shared_ptr<Certificate> _certificate;
 		std::shared_ptr<Certificate> _chain_certificate;
-
 	};
 
-}
+}  // namespace info

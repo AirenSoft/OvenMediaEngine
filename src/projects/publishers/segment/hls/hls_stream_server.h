@@ -15,9 +15,9 @@
 class HlsStreamServer : public SegmentStreamServer
 {
 public:
-	cfg::PublisherType GetPublisherType() const noexcept override
+	PublisherType GetPublisherType() const noexcept override
 	{
-		return cfg::PublisherType::Hls;
+		return PublisherType::Hls;
 	}
 
 	const char *GetPublisherName() const noexcept override

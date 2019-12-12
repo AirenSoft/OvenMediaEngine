@@ -21,7 +21,7 @@
 
 #include "media_route_stream.h"
 
-#include <config/items/application.h>
+#include <config/items/items.h>
 
 class ApplicationInfo;
 class StreamInfo;

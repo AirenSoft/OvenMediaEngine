@@ -16,9 +16,9 @@
 class CmafStreamServer : public DashStreamServer, public ICmafChunkedTransfer
 {
 public:
-	cfg::PublisherType GetPublisherType() const noexcept override
+	PublisherType GetPublisherType() const noexcept override
 	{
-		return cfg::PublisherType::Cmaf;
+		return PublisherType::Cmaf;
 	}
 
 	const char *GetPublisherName() const noexcept override

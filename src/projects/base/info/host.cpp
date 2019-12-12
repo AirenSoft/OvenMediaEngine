@@ -29,7 +29,7 @@ namespace info
 
     std::shared_ptr<ov::Error> Host::PrepareCertificates()
     {
-        const cfg::Tls &tls = GetTls();
+        const cfg::Tls &tls = GetDomain().GetTls();
 
         if(tls.IsParsed() == false)
         {

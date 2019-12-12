@@ -60,9 +60,9 @@ private:
 	//--------------------------------------------------------------------
 	// Implementation of Publisher
 	//--------------------------------------------------------------------
-	cfg::PublisherType GetPublisherType() const override
+	PublisherType GetPublisherType() const override
 	{
-		return cfg::PublisherType::Webrtc;
+		return PublisherType::Webrtc;
 	}
 	const char *GetPublisherName() const override
 	{

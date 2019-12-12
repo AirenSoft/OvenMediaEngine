@@ -16,9 +16,9 @@
 class DashStreamServer : public SegmentStreamServer
 {
 public:
-	cfg::PublisherType GetPublisherType() const noexcept override
+	PublisherType GetPublisherType() const noexcept override
 	{
-		return cfg::PublisherType::Dash;
+		return PublisherType::Dash;
 	}
 
 	const char *GetPublisherName() const noexcept override

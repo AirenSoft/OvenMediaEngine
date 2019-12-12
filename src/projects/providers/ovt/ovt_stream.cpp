@@ -176,7 +176,7 @@ bool OvtStream::ReceiveDescribe(uint32_t request_id)
 		return false;
 	}
 
-	SetName(json_stream["streamName"].asString());
+	SetName(json_stream["streamName"].asString().c_str());
 
 	for(int i=0; i<json_tracks.size(); i++)
 	{

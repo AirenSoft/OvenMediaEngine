@@ -35,9 +35,9 @@ public:
 	explicit OvtProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 	~OvtProvider() override;
 
-	cfg::ProviderType GetProviderType() override
+	ProviderType GetProviderType() override
 	{
-		return cfg::ProviderType::Ovt;
+		return ProviderType::Ovt;
 	}
 
 	bool Start() override;

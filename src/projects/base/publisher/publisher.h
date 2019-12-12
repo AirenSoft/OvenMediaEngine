@@ -128,7 +128,7 @@ protected:
 	const info::Host& GetHostInfo();
 
 	// Each Publisher should define their type
-	virtual cfg::PublisherType GetPublisherType() const = 0;
+	virtual PublisherType GetPublisherType() const = 0;
 	virtual const char *GetPublisherName() const = 0;
 	virtual std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) = 0;
 

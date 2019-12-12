@@ -24,9 +24,9 @@ private:
 	//--------------------------------------------------------------------
 	// Implementation of Publisher
 	//--------------------------------------------------------------------
-	cfg::PublisherType GetPublisherType() const override
+	PublisherType GetPublisherType() const override
 	{
-		return cfg::PublisherType::Ovt;
+		return PublisherType::Ovt;
 	}
 	const char *GetPublisherName() const override
 	{

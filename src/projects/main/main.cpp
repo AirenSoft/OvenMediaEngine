@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
 	}
 
 	std::shared_ptr<cfg::Server> server = cfg::ConfigManager::Instance()->GetServer();
-	std::vector<cfg::Host> hosts = server->GetHosts();
+	std::vector<cfg::Host> hosts = server->GetHostList();
 
 	std::shared_ptr<MediaRouter> router;
 	std::shared_ptr<Transcoder> transcoder;
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 
 		// Create info::Application
 		auto &app_info_list = application_infos[host_info.GetName()];
-		for (const auto &application : host_info.GetApplications())
+		for (const auto &application : host_info.GetApplicationList())
 		{
 			logti("Trying to create application [%s]...", application.GetName().CStr());
 			app_info_list.emplace_back(application);
@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
 
 							switch (publisher->GetType())
 							{
-								case cfg::PublisherType::Webrtc:
+								case PublisherType::Webrtc:
 								{
 									logti("Trying to create WebRTC Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
 									auto webrtc = WebRtcPublisher::Create(&application_info, router, application);
@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
 									break;
 								}
 
-								case cfg::PublisherType::Dash:
+								case PublisherType::Dash:
 								{
 									logti("Trying to create DASH Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
 									auto dash = DashPublisher::Create(segment_http_server_manager, &application_info, router);
@@ -309,7 +309,7 @@ int main(int argc, char *argv[])
 									break;
 								}
 
-								case cfg::PublisherType::Hls:
+								case PublisherType::Hls:
 								{
 									logti("Trying to create HLS Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
 									auto hls = HlsPublisher::Create(segment_http_server_manager, &application_info, router);
@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
 									break;
 								}
 
-								case cfg::PublisherType::Cmaf:
+								case PublisherType::Cmaf:
 								{
 									logti("Trying to create CMAF Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
 									auto cmaf = CmafPublisher::Create(segment_http_server_manager, &application_info, router);
@@ -325,7 +325,7 @@ int main(int argc, char *argv[])
 									break;
 								}
 
-								case cfg::PublisherType::Rtmp:
+								case PublisherType::Rtmp:
 								default:
 									// not implemented
 									break;

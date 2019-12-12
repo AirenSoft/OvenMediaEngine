@@ -34,9 +34,9 @@ public:
     explicit RtmpProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
     ~RtmpProvider() override;
 
-    cfg::ProviderType GetProviderType() override
+    ProviderType GetProviderType() override
     {
-        return cfg::ProviderType::Rtmp;
+        return ProviderType::Rtmp;
     }
 
     bool Start() override;

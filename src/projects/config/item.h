@@ -12,6 +12,34 @@
 
 #include <utility>
 
+// virtual int GetInt() const { ... }
+#define CFG_DECLARE_VIRTUAL_GETTER_OF(type, function_name, variable_name) \
+	virtual type function_name() const                                    \
+	{                                                                     \
+		return variable_name;                                             \
+	}
+
+// int GetInt() const { ... }
+#define CFG_DECLARE_GETTER_OF(function_name, variable_name) \
+	auto function_name() const                              \
+	{                                                       \
+		return variable_name;                               \
+	}
+
+// const Object &GetObject() const { ... }
+#define CFG_DECLARE_REF_GETTER_OF(function_name, variable_name) \
+	const auto &function_name() const                           \
+	{                                                           \
+		return variable_name;                                   \
+	}
+
+// int GetInt() const override { ... }
+#define CFG_DECLARE_OVERRIDED_GETTER_OF(type, function_name, variable_name) \
+	type function_name() const override                                     \
+	{                                                                       \
+		return variable_name;                                               \
+	}
+
 namespace cfg
 {
 	//region Annotations
@@ -29,7 +57,7 @@ namespace cfg
 		Item(Item &&item) noexcept;
 		virtual ~Item() = default;
 
-		Item &operator =(const Item &item);
+		Item &operator=(const Item &item);
 
 		bool Parse(const ov::String &file_name, const ov::String &tag_name);
 		bool IsParsed() const;
@@ -43,7 +71,7 @@ namespace cfg
 
 		const Item *GetParent(const ov::String &name) const;
 
-		template<class T>
+		template <class T>
 		const T *GetParentAs(const ov::String &name) const
 		{
 			auto parent = GetParent(name);
@@ -75,16 +103,16 @@ namespace cfg
 
 		//region ========== Annotation Utilities ==========
 
-		template<typename... Args>
+		template <typename... Args>
 		struct CheckAnnotations;
 
-		template<typename Texpected, typename Ttype, typename... Ttypes>
+		template <typename Texpected, typename Ttype, typename... Ttypes>
 		struct CheckAnnotations<Texpected, Ttype, Ttypes...>
 		{
 			static constexpr bool value = std::is_same<Texpected, Ttype>::value || CheckAnnotations<Texpected, Ttypes...>::value;
 		};
 
-		template<typename Texpected>
+		template <typename Texpected>
 		struct CheckAnnotations<Texpected>
 		{
 			static constexpr bool value = false;
@@ -151,76 +179,74 @@ namespace cfg
 
 		//region ========== RegisterValue ==========
 
-		void Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_conditional_optional, bool need_to_resolve_path, ValueBase::OptionalCallback conditional_optional_callback) const;
+		void Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_conditional_optional, bool need_to_resolve_path, ValueBase::OptionalCallback conditional_optional_callback, ValueBase::ValidationCallback validation_callback = nullptr);
 
 		// For int, bool, float, ov::String with value_type
-		template<
+		template <
 			ValueType value_type,
 			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
-			typename Ttype
-		>
-		void RegisterValue(const ov::String &name, const Ttype *target, ValueType type = value_type, ValueBase::OptionalCallback optional_callback = nullptr) const
+			typename Ttype>
+		void RegisterValue(const ov::String &name, const Ttype *target, ValueBase::OptionalCallback optional_callback = nullptr, ValueBase::ValidationCallback validation_callback = nullptr, ValueType type = value_type)
 		{
 			Register(
 				name, new Value<Ttype>(type, const_cast<Ttype *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
 				CheckAnnotations<CondOptional, Tannotation1, Tannotation2, Tannotation3>::value,
 				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
-				optional_callback
-			);
+				optional_callback, validation_callback);
 		};
 
 		// For int, bool, float, ov::String without value_type (use ProbeType())
-		template<
+		template <
 			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
-			typename Ttype, typename std::enable_if<std::is_base_of<Item, Ttype>::value == false>::type * = nullptr
-		>
-		void RegisterValue(const ov::String &name, const Ttype *target, ValueBase::OptionalCallback optional_callback = nullptr) const
+			typename Ttype, typename std::enable_if<std::is_base_of<Item, Ttype>::value == false>::type * = nullptr>
+		void RegisterValue(const ov::String &name, const Ttype *target, ValueBase::OptionalCallback optional_callback = nullptr, ValueBase::ValidationCallback validation_callback = nullptr)
 		{
 			Register(
 				name, new Value<Ttype>(ProbeType(target), const_cast<Ttype *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
 				CheckAnnotations<CondOptional, Tannotation1, Tannotation2, Tannotation3>::value,
 				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
-				optional_callback
-			);
+				optional_callback, validation_callback);
 		}
 
 		// For subclass of Item
-		template<
+		template <
 			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
-			typename Ttype, typename std::enable_if<std::is_base_of<Item, Ttype>::value>::type * = nullptr
-		>
-		void RegisterValue(const ov::String &name, const Ttype *target, ValueBase::OptionalCallback optional_callback = nullptr) const
+			typename Ttype, typename std::enable_if<std::is_base_of<Item, Ttype>::value>::type * = nullptr>
+		void RegisterValue(const ov::String &name, const Ttype *target, ValueBase::OptionalCallback optional_callback = nullptr, ValueBase::ValidationCallback validation_callback = nullptr)
 		{
 			Register(
 				name, new ValueForElement<Ttype>(const_cast<Ttype *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
 				CheckAnnotations<CondOptional, Tannotation1, Tannotation2, Tannotation3>::value,
 				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
-				optional_callback
-			);
+				optional_callback, validation_callback);
 		}
 
 		// For list of Items
-		template<
+		template <
 			typename Tannotation1 = void, typename Tannotation2 = void, typename Tannotation3 = void,
-			typename Ttype
-		>
-		void RegisterValue(const ov::String &name, const std::vector<Ttype> *target, ValueBase::OptionalCallback optional_callback = nullptr) const
+			typename Ttype>
+		void RegisterValue(const ov::String &name, const std::vector<Ttype> *target, ValueBase::OptionalCallback optional_callback = nullptr, ValueBase::ValidationCallback validation_callback = nullptr)
 		{
 			Register(
 				name, new ValueForList<Ttype>(const_cast<std::vector<Ttype> *>(target)),
 				CheckAnnotations<Optional, Tannotation1, Tannotation2, Tannotation3>::value,
 				CheckAnnotations<CondOptional, Tannotation1, Tannotation2, Tannotation3>::value,
 				CheckAnnotations<ResolvePath, Tannotation1, Tannotation2, Tannotation3>::value,
-				optional_callback
-			);
+				optional_callback, validation_callback);
 		}
 
 		//endregion
 
-		virtual void MakeParseList() const = 0;
+		void MakeParseList() const
+		{
+			// This is a safe operation because _parse_list is intended for keeping items up to date at all times
+			(const_cast<Item *>(this))->MakeParseList();
+		}
+
+		virtual void MakeParseList() = 0;
 
 		ValueBase *FindValue(const ov::String &name, const ParseItem *parse_item_to_find);
 		// target은 하위 항목
@@ -238,10 +264,10 @@ namespace cfg
 		ov::String ToString(const ParseItem *parse_item, int indent, bool exclude_default, bool append_new_line) const;
 
 		ov::String _tag_name;
-		mutable std::vector<ParseItem> _parse_list;
+		std::vector<ParseItem> _parse_list;
 
 		bool _parsed = false;
 
 		Item *_parent = nullptr;
 	};
-};
+};  // namespace cfg

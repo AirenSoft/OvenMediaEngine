@@ -138,7 +138,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 	}
 
 	// Generate track list by profile(=encode name)
-	auto encodes = _application_info.GetEncodes();
+	auto encodes = _application_info.GetEncodeList();
 	std::map<ov::String, std::vector<uint8_t>> profile_tracks;
 	std::vector<uint8_t> tracks;
 
@@ -209,7 +209,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 			continue;
 		}
 
-		auto profiles = stream.GetProfiles();
+		auto profiles = stream.GetProfileList();
 
 		for (const auto &profile : profiles)
 		{

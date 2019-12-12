@@ -42,7 +42,7 @@ public:
 
 	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections);
 
-	virtual cfg::PublisherType GetPublisherType() const noexcept = 0;
+	virtual PublisherType GetPublisherType() const noexcept = 0;
 	virtual const char *GetPublisherName() const noexcept = 0;
 	virtual std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor()
 	{
