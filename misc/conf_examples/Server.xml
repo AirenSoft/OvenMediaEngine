@@ -1,45 +1,40 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 
 <Server version="3">
 	<Name>OvenMediaEngine</Name>
 	<Hosts>
 		<Host>
 			<Name>default</Name>
+			<!-- Host type (origin/edge) -->
 			<Type>origin</Type>
+			<!-- Specify IP address to bind (* means all IPs) -->
+			<IP>*</IP>
 
-            <IP>*</IP>
-
+			<!-- Settings for multi domain and TLS -->
 			<Domain>
 				<Names>
-					<Name>stream1.airensoft.com</Name>
-					<Name>stream2.airensoft.com</Name>
-					<Name>stream3.airensoft.com</Name>
+					<Name>*.airensoft.com</Name>
 				</Names>
-				<TLS>
-					<CertPath>path/to/file.crt</CertPath>
-					<KeyPath>path/to/file.key</KeyPath>
-					<ChainCertPath>path/to/file.crt</ChainCertPath>
-				</TLS>
 			</Domain>
 
-            <Listen>
-                <Providers>
-                    <RTMP>${env:OME_RTMP_PROV_PORT:1935}</RTMP>
-                </Providers>
+			<!-- Settings for the ports to bind -->
+			<Bind>
+				<Providers>
+					<RTMP>${env:OME_RTMP_PROV_PORT:1935}</RTMP>
+				</Providers>
+				<Publishers>
+					<HLS>${env:OME_HLS_PUB_PORT:80}</HLS>
+					<DASH>${env:OME_DASH_PUB_PORT:80}</DASH>
+					<WebRTC>
+						<Signalling>${env:OME_SIGNALLING_PORT:3333}</Signalling>
+						<IceCandidates>
+							<IceCandidate>${env:OME_ICE_CANDIDATES:*:10000-10005/udp}</IceCandidate>
+						</IceCandidates>
+					</WebRTC>
+				</Publishers>
+			</Bind>
 
-                <Publishers>
-                    <Relay>${env:OME_ORIGIN_PORT:9000}</Relay>
-                    <HLS>${env:OME_HLS_PUB_PORT:80}</HLS>
-                    <DASH>${env:OME_DASH_PUB_PORT:80}</DASH>
-                    <WebRTC>
-                        <Signalling>${env:OME_SIGNALLING_PORT:3333}</Signalling>
-                        <IceCandidates>
-                            <IceCandidate>${env:OME_ICE_CANDIDATES:*:10000-10005/udp}</IceCandidate>
-                        </IceCandidates>
-                    </WebRTC>
-                </Publishers>
-            </Listen>
-
+			<!-- Settings for applications -->
 			<Applications>
 				<Application>
 					<Name>app</Name>

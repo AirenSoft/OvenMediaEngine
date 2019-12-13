@@ -46,7 +46,7 @@ bool RtmpProvider::Start()
 	// Get Host configuration
 	auto host = GetHostInfo();
 
-	auto rtmp_address = ov::SocketAddress(host.GetIp(), static_cast<uint16_t>(host.GetListen().GetProviders().GetRtmpPort()));
+	auto rtmp_address = ov::SocketAddress(host.GetIp(), static_cast<uint16_t>(host.GetBind().GetProviders().GetRtmpPort()));
 
 	logti("RTMP Provider is listening on %s...", rtmp_address.ToString().CStr());
 

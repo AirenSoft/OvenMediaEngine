@@ -8,18 +8,24 @@
 //==============================================================================
 #pragma once
 
+#include "providers/providers.h"
+#include "publishers/publishers.h"
+
 namespace cfg
 {
-	struct ListenProviders : public Item
+	struct Bind : public Item
 	{
-		CFG_DECLARE_GETTER_OF(GetRtmpPort, _rtmp.GetPort())
+		CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
+		CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
 
 	protected:
 		void MakeParseList() override
 		{
-			RegisterValue<Optional>("RTMP", &_rtmp);
-		};
+			RegisterValue("Providers", &_providers);
+			RegisterValue("Publishers", &_publishers);
+		}
 
-		Port _rtmp{"1935/tcp"};
+		BindProviders _providers;
+		BindPublishers _publishers;
 	};
 }  // namespace cfg

@@ -9,8 +9,8 @@
 #pragma once
 
 #include "applications/applications.h"
+#include "bind/bind.h"
 #include "domain/domain.h"
-#include "listen/listen.h"
 #include "origins/origins.h"
 
 namespace cfg
@@ -31,7 +31,7 @@ namespace cfg
 		CFG_DECLARE_REF_GETTER_OF(GetIp, _ip)
 
 		CFG_DECLARE_REF_GETTER_OF(GetDomain, _domain)
-		CFG_DECLARE_REF_GETTER_OF(GetListen, _listen)
+		CFG_DECLARE_REF_GETTER_OF(GetBind, _bind)
 		CFG_DECLARE_REF_GETTER_OF(GetApplicationList, _applications.GetApplicationList())
 
 	protected:
@@ -56,7 +56,7 @@ namespace cfg
 			RegisterValue("IP", &_ip);
 
 			RegisterValue<Optional>("Domain", &_domain);
-			RegisterValue("Listen", &_listen);
+			RegisterValue("Bind", &_bind);
 			RegisterValue<CondOptional>("Origins", &_origins, [this]() -> bool {
 				// <Origins> is not optional when the host type is edge
 				return (_type != HostType::Edge);
@@ -74,7 +74,7 @@ namespace cfg
 		ov::String _ip;
 
 		Domain _domain;
-		Listen _listen;
+		Bind _bind;
 		Origins _origins;
 		Applications _applications;
 	};

@@ -12,10 +12,10 @@
 
 namespace cfg
 {
-	struct ListenPublishers : public Item
+	struct BindPublishers : public Item
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetRelay, _relay);
-		CFG_DECLARE_GETTER_OF(GetRelayPort, _relay.GetPort())
+		CFG_DECLARE_REF_GETTER_OF(GetOvt, _ovt);
+		CFG_DECLARE_GETTER_OF(GetOvtPort, _ovt.GetPort())
 		CFG_DECLARE_REF_GETTER_OF(GetRtmp, _rtmp)
 		CFG_DECLARE_GETTER_OF(GetRtmpPort, _rtmp.GetPort())
 		CFG_DECLARE_REF_GETTER_OF(GetHlsP, _hls)
@@ -28,14 +28,14 @@ namespace cfg
 	protected:
 		void MakeParseList() override
 		{
-			RegisterValue<Optional>("Relay", &_relay);
+			RegisterValue<Optional>("OVT", &_ovt);
 			RegisterValue<Optional>("RTMP", &_rtmp);
 			RegisterValue<Optional>("HLS", &_hls);
 			RegisterValue<Optional>("DASH", &_dash);
 			RegisterValue<Optional>("WebRTC", &_webrtc);
 		};
 
-		Port _relay{"9000/tcp"};
+		Port _ovt{"9000/tcp"};
 		Port _rtmp{"1935/tcp"};
 		Port _hls{"80/tcp"};
 		Port _dash{"80/tcp"};
