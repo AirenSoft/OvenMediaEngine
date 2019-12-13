@@ -11,6 +11,7 @@
 #include <base/ovlibrary/semaphore.h>
 #include <base/provider/application.h>
 #include <modules/ovt_packetizer/ovt_packet.h>
+#include <modules/ovt_packetizer/ovt_depacketizer.h>
 
 class OvtStream : public pvd::Stream
 {
@@ -20,30 +21,31 @@ public:
 	explicit OvtStream(const std::shared_ptr<pvd::Application> &app, const StreamInfo &stream_info, const std::shared_ptr<ov::Url> &url);
 	~OvtStream() final;
 
-	void OnReceivePacket(const std::shared_ptr<OvtPacket> &packet);
-
 private:
 	bool Start();
 	bool Stop();
 	void WorkerThread();
-	std::shared_ptr<OvtPacket> PopReceivedPacket();
 
 	bool ConnectOrigin();
 	bool RequestDescribe();
 	bool ReceiveDescribe(uint32_t request_id);
+	bool RequestPlay();
+	bool ReceivePlay(uint32_t request_id);
+	bool RequestStop();
+	bool ReceiveStop(uint32_t request_id);
 
 	std::shared_ptr<OvtPacket> ReceivePacket();
 
 	std::shared_ptr<ov::Url> _url;
 	bool            _stop_thread_flag;
 	std::thread     _worker_thread;
-	std::mutex      _packet_queue_guard;
-	std::queue<std::shared_ptr<OvtPacket>>   _packet_queue;
-	ov::Semaphore	_queue_event;
 
 	ov::Socket 		_client_socket;
 
 	uint32_t 		_last_request_id;
+	uint32_t 		_session_id;
+
+	OvtDepacketizer	_depacketizer;
 
 	std::shared_ptr<pvd::Application> _app;
 };

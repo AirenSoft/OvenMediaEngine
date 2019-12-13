@@ -13,7 +13,7 @@
 
 namespace pvd
 {
-	class Stream : public StreamInfo
+	class Stream : public StreamInfo, public ov::EnableSharedFromThis<Stream>
 	{
 	protected:
 		Stream();

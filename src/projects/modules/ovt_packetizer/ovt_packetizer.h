@@ -16,8 +16,6 @@ public:
 	bool Packetize(uint8_t payload_type, uint64_t timestamp, const std::shared_ptr<ov::Data> &packet);
 
 private:
-
-	uint16_t 									_session_id;
 	uint16_t 									_sequence_number;
 	std::shared_ptr<OvtPacketizerInterface> 	_stream;
 };

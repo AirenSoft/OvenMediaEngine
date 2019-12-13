@@ -16,12 +16,14 @@ OvtPacketizer::~OvtPacketizer()
 
 }
 
+
+
 // Packetizing the MediaPacket
 bool OvtPacketizer::Packetize(uint64_t timestamp, const std::shared_ptr<MediaPacket> &media_packet)
 {
 	// Serialize
 	auto packet = std::make_shared<OvtPacket>();
-	// Session ID will be set in Session Level
+	// Session ID should be set in Session Level
 	packet->SetSessionId(0);
 
 	packet->SetPayloadType(OVT_PAYLOAD_TYPE_MEDIA_PACKET);
@@ -60,7 +62,7 @@ bool OvtPacketizer::Packetize(uint64_t timestamp, const std::shared_ptr<MediaPac
 	ov::Data payload;
 
 	// Header + Data
-	payload.SetLength(((32+64+64+64+8+8+32)/8) + media_packet->GetData()->GetLength());
+	payload.SetLength(MEDIA_PACKET_HEADER_SIZE + media_packet->GetData()->GetLength());
 
 	auto buffer = payload.GetWritableDataAs<uint8_t>();
 
