@@ -56,7 +56,7 @@ bool OvtPublisher::Start()
 		}
 		else
 		{
-			logte("Invalid relay port: %d", port);
+			logte("Invalid ovt port: %d", port);
 		}
 	}
 	else

@@ -7,41 +7,44 @@
 
 #define OV_LOG_TAG "OvtApplication"
 
-std::shared_ptr<OvtApplication> OvtApplication::Create(const info::Application &application_info)
+namespace pvd
 {
-	auto application = std::make_shared<OvtApplication>(application_info);
+	std::shared_ptr<OvtApplication> OvtApplication::Create(const info::Application &application_info)
+	{
+		auto application = std::make_shared<OvtApplication>(application_info);
 
-	application->Start();
+		application->Start();
 
-	return application;
-}
+		return application;
+	}
 
-OvtApplication::OvtApplication(const info::Application &info)
-	: Application(info)
-{
+	OvtApplication::OvtApplication(const info::Application &info)
+			: Application(info)
+	{
 
-}
+	}
 
-OvtApplication::~OvtApplication()
-{
+	OvtApplication::~OvtApplication()
+	{
 
-}
+	}
 
-std::shared_ptr<pvd::Stream> OvtApplication::CreateStream(const std::shared_ptr<ov::Url> &url)
-{
-	logtd("OnCreateStream");
-	auto stream = OvtStream::Create(GetSharedPtrAs<pvd::Application>(), url);
-	return stream;
-}
+	std::shared_ptr<pvd::Stream> OvtApplication::CreateStream(const std::shared_ptr<ov::Url> &url)
+	{
+		logtd("OnCreateStream");
+		auto stream = OvtStream::Create(GetSharedPtrAs<pvd::Application>(), url);
+		return stream;
+	}
 
-bool OvtApplication::Start()
-{
+	bool OvtApplication::Start()
+	{
 
-	return pvd::Application::Start();
-}
+		return pvd::Application::Start();
+	}
 
-bool OvtApplication::Stop()
-{
+	bool OvtApplication::Stop()
+	{
 
-	return pvd::Application::Stop();
+		return pvd::Application::Stop();
+	}
 }

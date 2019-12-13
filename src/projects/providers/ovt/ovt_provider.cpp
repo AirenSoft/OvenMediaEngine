@@ -10,82 +10,85 @@
 
 using namespace common;
 
-std::shared_ptr<OvtProvider> OvtProvider::Create(const info::Host &host_info,
-												const std::shared_ptr<MediaRouteInterface> &router)
+namespace pvd
 {
-	auto provider = std::make_shared<OvtProvider>(host_info, router);
-	if (!provider->Start())
+	std::shared_ptr<OvtProvider> OvtProvider::Create(const info::Host &host_info,
+													 const std::shared_ptr<MediaRouteInterface> &router)
 	{
-		logte("An error occurred while creating RtmpProvider");
-		return nullptr;
+		auto provider = std::make_shared<OvtProvider>(host_info, router);
+		if (!provider->Start())
+		{
+			logte("An error occurred while creating RtmpProvider");
+			return nullptr;
+		}
+		return provider;
 	}
-	return provider;
-}
 
-OvtProvider::OvtProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
-		: Provider(host_info, router)
-{
+	OvtProvider::OvtProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+			: Provider(host_info, router)
+	{
 
-}
+	}
 
-OvtProvider::~OvtProvider()
-{
-	Stop();
-	logtd("Terminated OvtProvider modules.");
-}
+	OvtProvider::~OvtProvider()
+	{
+		Stop();
+		logtd("Terminated OvtProvider modules.");
+	}
 
-bool OvtProvider::Start()
-{
-	return pvd::Provider::Start();
-}
+	bool OvtProvider::Start()
+	{
+		return pvd::Provider::Start();
+	}
 
-bool OvtProvider::Stop()
-{
-	return pvd::Provider::Stop();
-}
+	bool OvtProvider::Stop()
+	{
+		return pvd::Provider::Stop();
+	}
 
 // Pull Stream
-bool OvtProvider::PullStream(ov::String url)
-{
-	auto url_parser = ov::Url::Parse(url.CStr());
-	auto app_name = url_parser->App();
-	auto stream_name = url_parser->Stream();
-
-	// Find App
-	auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationByName(app_name));
-	if(app == nullptr)
+	bool OvtProvider::PullStream(ov::String url)
 	{
-		logte("There is no such app (%s)", app_name.CStr());
-		return false;
+		auto url_parser = ov::Url::Parse(url.CStr());
+		auto app_name = url_parser->App();
+		auto stream_name = url_parser->Stream();
+
+		// Find App
+		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationByName(app_name));
+		if (app == nullptr)
+		{
+			logte("There is no such app (%s)", app_name.CStr());
+			return false;
+		}
+
+		// Find Stream (The stream must not exist)
+		auto stream = app->GetStreamByName(stream_name);
+		if (stream != nullptr)
+		{
+			logte("%s stream already exists.", stream_name.CStr());
+			return false;
+		}
+
+		// Create Stream
+		stream = app->CreateStream(url_parser);
+		if (stream == nullptr)
+		{
+			logte("Cannot create %s stream.", stream_name.CStr());
+			return false;
+		}
+
+		// Notify stream has been created
+		return app->NotifyStreamCreated(stream);
 	}
 
-	// Find Stream (The stream must not exist)
-	auto stream = app->GetStreamByName(stream_name);
-	if(stream != nullptr)
+	std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{
-		logte("%s stream already exists.", stream_name.CStr());
-		return false;
+		return OvtApplication::Create(app_info);
 	}
 
-	// Create Stream
-	stream = app->CreateStream(url_parser);
-	if(stream == nullptr)
+	bool OvtProvider::OnDeleteProviderApplication(const info::Application &app_info)
 	{
-		logte("Cannot create %s stream.", stream_name.CStr());
-		return false;
+
+		return true;
 	}
-
-	// Notify stream has been created
-	return app->NotifyStreamCreated(stream);
-}
-
-std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)
-{
-	return OvtApplication::Create(app_info);
-}
-
-bool OvtProvider::OnDeleteProviderApplication(const info::Application &app_info)
-{
-
-	return true;
 }

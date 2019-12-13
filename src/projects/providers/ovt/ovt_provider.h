@@ -26,27 +26,33 @@
  *
  */
 
-
-class OvtProvider : public pvd::Provider
+namespace pvd
 {
-public:
-	static std::shared_ptr<OvtProvider> Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
-
-	explicit OvtProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
-	~OvtProvider() override;
-
-	ProviderType GetProviderType() override
+	class OvtProvider : public pvd::Provider
 	{
-		return ProviderType::Ovt;
-	}
+	public:
+		static std::shared_ptr<OvtProvider>
+		Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 
-	bool Start() override;
-	bool Stop() override;
+		explicit OvtProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 
-	bool PullStream(ov::String url);
+		~OvtProvider() override;
+
+		ProviderType GetProviderType() override
+		{
+			return ProviderType::Ovt;
+		}
+
+		bool Start() override;
+
+		bool Stop() override;
+
+		bool PullStream(ov::String url);
 
 
-protected:
-	std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;
-	bool OnDeleteProviderApplication(const info::Application &app_info) override;
-};
+	protected:
+		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;
+
+		bool OnDeleteProviderApplication(const info::Application &app_info) override;
+	};
+}

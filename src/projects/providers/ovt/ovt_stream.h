@@ -13,39 +13,53 @@
 #include <modules/ovt_packetizer/ovt_packet.h>
 #include <modules/ovt_packetizer/ovt_depacketizer.h>
 
-class OvtStream : public pvd::Stream
+namespace pvd
 {
-public:
-	static std::shared_ptr<OvtStream> Create(const std::shared_ptr<pvd::Application> &app, const std::shared_ptr<ov::Url> &url);
+	class OvtStream : public pvd::Stream
+	{
+	public:
+		static std::shared_ptr<OvtStream>
+		Create(const std::shared_ptr<pvd::Application> &app, const std::shared_ptr<ov::Url> &url);
 
-	explicit OvtStream(const std::shared_ptr<pvd::Application> &app, const StreamInfo &stream_info, const std::shared_ptr<ov::Url> &url);
-	~OvtStream() final;
+		explicit OvtStream(const std::shared_ptr<pvd::Application> &app, const StreamInfo &stream_info,
+						   const std::shared_ptr<ov::Url> &url);
 
-private:
-	bool Start();
-	bool Stop();
-	void WorkerThread();
+		~OvtStream() final;
 
-	bool ConnectOrigin();
-	bool RequestDescribe();
-	bool ReceiveDescribe(uint32_t request_id);
-	bool RequestPlay();
-	bool ReceivePlay(uint32_t request_id);
-	bool RequestStop();
-	bool ReceiveStop(uint32_t request_id);
+	private:
+		bool Start();
 
-	std::shared_ptr<OvtPacket> ReceivePacket();
+		bool Stop();
 
-	std::shared_ptr<ov::Url> _url;
-	bool            _stop_thread_flag;
-	std::thread     _worker_thread;
+		void WorkerThread();
 
-	ov::Socket 		_client_socket;
+		bool ConnectOrigin();
 
-	uint32_t 		_last_request_id;
-	uint32_t 		_session_id;
+		bool RequestDescribe();
 
-	OvtDepacketizer	_depacketizer;
+		bool ReceiveDescribe(uint32_t request_id);
 
-	std::shared_ptr<pvd::Application> _app;
-};
+		bool RequestPlay();
+
+		bool ReceivePlay(uint32_t request_id);
+
+		bool RequestStop();
+
+		bool ReceiveStop(uint32_t request_id);
+
+		std::shared_ptr<OvtPacket> ReceivePacket();
+
+		std::shared_ptr<ov::Url> _url;
+		bool _stop_thread_flag;
+		std::thread _worker_thread;
+
+		ov::Socket _client_socket;
+
+		uint32_t _last_request_id;
+		uint32_t _session_id;
+
+		OvtDepacketizer _depacketizer;
+
+		std::shared_ptr<pvd::Application> _app;
+	};
+}

@@ -3,8 +3,9 @@ include $(DEFAULT_VARIABLES)
 
 LOCAL_STATIC_LIBRARIES := \
 	webrtc \
-	ovt \
-	ovt_packetizer \
+	ovtpublisher \
+	ovtprovider \
+	rtmpprovider \
 	transcoder \
 	rtc_signalling \
 	ice \
@@ -13,17 +14,16 @@ LOCAL_STATIC_LIBRARIES := \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \
-	publisher \
 	web_console \
 	mediarouter \
+	ovt_packetizer \
+	publisher \
 	application \
 	physical_port \
 	socket \
 	ovcrypto \
 	config \
 	ovlibrary \
-	rtmpprovider \
-	ovtprovider \
 	monitoring \
 	jsoncpp \
 	sqlite

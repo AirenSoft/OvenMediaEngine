@@ -9,17 +9,22 @@
 #include <base/provider/application.h>
 #include <base/provider/stream.h>
 
-class OvtApplication : public pvd::Application
+namespace pvd
 {
-public:
-	static std::shared_ptr<OvtApplication> Create(const info::Application &application_info);
+	class OvtApplication : public pvd::Application
+	{
+	public:
+		static std::shared_ptr<OvtApplication> Create(const info::Application &application_info);
 
-	explicit OvtApplication(const info::Application &info);
-	~OvtApplication() override;
+		explicit OvtApplication(const info::Application &info);
 
-	std::shared_ptr<pvd::Stream> CreateStream(const std::shared_ptr<ov::Url> &url);
+		~OvtApplication() override;
 
-private:
-	bool	Start() override;
-	bool	Stop() override;
-};
+		std::shared_ptr<pvd::Stream> CreateStream(const std::shared_ptr<ov::Url> &url);
+
+	private:
+		bool Start() override;
+
+		bool Stop() override;
+	};
+}

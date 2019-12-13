@@ -26,12 +26,14 @@
 #include <media_router/media_router.h>
 #include <transcode/transcoder.h>
 #include <providers/rtmp/rtmp_provider.h>
+#include <providers/ovt/ovt_provider.h>
 #include <publishers/webrtc/webrtc_publisher.h>
 #include <publishers/segment/publishers.h>
 #include <publishers/ovt/ovt_publisher.h>
 
 #include <monitoring/monitoring_server.h>
 #include <web_console/web_console.h>
+
 
 extern "C"
 {
@@ -214,14 +216,6 @@ int main(int argc, char *argv[])
 			app_info_list.emplace_back(application);
 		}
 
-        // 1. Application을 없이 기본 생성하도록 수정 (Router, Transcoder, Provider, Publisher)
-        // 2. 그 후에 Application을 추가하는 구조로 변경
-        // 3. Application 생성과 Host 생성을 구분
-        // 4. RelayClient를 Provider 레벨로 올림
-        // 5. Origin 설정을 별도의 Table로 분리하고, Domain/App/Stream 을 추가한다.
-        // 6. RelayClient에 Application 생성 기능을 추가한다. (Provider 레벨)
-        // 7. WebRTC Signalling에 RelayClient를 연결하여, app/stream이 없으면 RelayClient에 요청하도록 한다. (Table에 없으면 즉시 오류 리턴)
-
 		//////////////////////////////
         // Host Level Modules
         //TODO(Getroot): Support Virtual Host Function. This code assumes that there is only one Host.
@@ -239,6 +233,10 @@ int main(int argc, char *argv[])
 		auto rtmp_provider = RtmpProvider::Create(host_info, router);
 		CHECK_FAIL(rtmp_provider);
 
+		logti("Trying to create OVT Provider [%s]...", host_name.CStr());
+		auto ovt_provider = pvd::OvtProvider::Create(host_info, router);
+		CHECK_FAIL(ovt_provider);
+
 		logti("Trying to create WebRTC Publisher [%s]...", host_name.CStr());
 		auto webrtc_publisher = WebRtcPublisher::Create(host_info, router);
 		CHECK_FAIL(webrtc_publisher);
@@ -246,6 +244,8 @@ int main(int argc, char *argv[])
 		logti("Trying to create OVT Publisher [%s]...", host_name.CStr());
 		auto ovt_publisher = OvtPublisher::Create(host_info, router);
 		CHECK_FAIL(ovt_publisher);
+
+
 
 		router->RegisterModule(transcoder);
 		router->RegisterModule(rtmp_provider);
@@ -261,84 +261,6 @@ int main(int argc, char *argv[])
 			auto app_name = app_info.GetName();
 			router->CreateApplication(app_info);
 		}
-
-			/*
-			if (app_info_list.empty() == false)
-			{
-				for (const auto &application_info : app_info_list)
-				{
-					auto app_name = application_info.GetName();
-
-					if (application_info.GetType() == cfg::HostType::Live)
-					{
-
-					}
-
-					if (application_info.GetWebConsole().IsParsed())
-					{
-						logti("Trying to initialize WebConsole for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-						auto console = WebConsoleServer::Create(&application_info);
-						CHECK_FAIL(console);
-						web_console_servers.push_back(console);
-					}
-
-					auto publisher_list = application_info.GetPublishers().GetPublisherList();
-					std::map<int, std::shared_ptr<HttpServer>> segment_http_server_manager;  // key : port number
-
-					for (const auto &publisher : publisher_list)
-					{
-						if (publisher->IsParsed())
-						{
-							auto application = router->GetRouteApplicationById(application_info.GetId());
-
-							switch (publisher->GetType())
-							{
-								case PublisherType::Webrtc:
-								{
-									logti("Trying to create WebRTC Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-									auto webrtc = WebRtcPublisher::Create(&application_info, router, application);
-									CHECK_FAIL(webrtc);
-									break;
-								}
-
-								case PublisherType::Dash:
-								{
-									logti("Trying to create DASH Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-									auto dash = DashPublisher::Create(segment_http_server_manager, &application_info, router);
-									CHECK_FAIL(dash);
-									break;
-								}
-
-								case PublisherType::Hls:
-								{
-									logti("Trying to create HLS Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-									auto hls = HlsPublisher::Create(segment_http_server_manager, &application_info, router);
-									CHECK_FAIL(hls);
-									break;
-								}
-
-								case PublisherType::Cmaf:
-								{
-									logti("Trying to create CMAF Publisher for application [%s/%s]...", host_name.CStr(), app_name.CStr());
-									auto cmaf = CmafPublisher::Create(segment_http_server_manager, &application_info, router);
-									CHECK_FAIL(cmaf);
-									break;
-								}
-
-								case PublisherType::Rtmp:
-								default:
-									// not implemented
-									break;
-							}
-						}
-					}
-				}
-			}
-			else
-			{
-				logtw("Nothing to do for host [%s]", host_name.CStr());
-			}
-			*/
 	}
 
 	if (parse_option.start_service)
