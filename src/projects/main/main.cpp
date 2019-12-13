@@ -245,10 +245,9 @@ int main(int argc, char *argv[])
 		auto ovt_publisher = OvtPublisher::Create(host_info, router);
 		CHECK_FAIL(ovt_publisher);
 
-
-
 		router->RegisterModule(transcoder);
 		router->RegisterModule(rtmp_provider);
+		router->RegisterModule(ovt_provider);
 		router->RegisterModule(webrtc_publisher);
 		router->RegisterModule(ovt_publisher);
 
