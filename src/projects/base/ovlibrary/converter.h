@@ -47,10 +47,13 @@ namespace ov
 			return ov::String::FormatString("%" PRIu64, number);
 		}
 
+		// Due to conflict between size_t and uint64_t in linux, make sure that the OS is only active when macOS
+ #if defined(__APPLE__)
 		static ov::String ToString(size_t number)
 		{
 			return ov::String::FormatString("%zu", number);
 		}
+ #endif // defined(__APPLE__)
 
 		static ov::String ToString(float number)
 		{
