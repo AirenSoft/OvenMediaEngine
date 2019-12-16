@@ -266,9 +266,6 @@ int main(int argc, char *argv[])
 		while(true)
 		{
 			sleep(1);
-
-			logte("FragHeader size : %d", sizeof(FragmentationHeader));
-
 			if(ovt_provider->PullStream("ovt://192.168.0.199:9000/app/stream_o"))
 			{
 				break;

@@ -22,6 +22,11 @@ namespace pvd
 
 		std::shared_ptr<pvd::Stream> CreateStream(const std::shared_ptr<ov::Url> &url);
 
+		MediaRouteApplicationConnector::ConnectorType GetConnectorType() override
+		{
+			return MediaRouteApplicationConnector::ConnectorType::Relay;
+		}
+
 	private:
 		bool Start() override;
 

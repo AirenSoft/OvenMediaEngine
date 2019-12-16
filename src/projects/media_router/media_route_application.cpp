@@ -210,7 +210,6 @@ bool MediaRouteApplication::OnCreateStream(
 		{
 			observer->OnCreateStream(new_stream->GetStreamInfo());
 		}
-		/*
 		else if (
 			// RelayClient -> MediaRoute -> Publisher
 			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Relay) &&
@@ -218,7 +217,6 @@ bool MediaRouteApplication::OnCreateStream(
 		{
 			observer->OnCreateStream(new_stream->GetStreamInfo());
 		}
-		*/
 	}
 
 	return true;

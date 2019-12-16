@@ -51,8 +51,6 @@ bool OvtDepacketizer::AppendPacket(const std::shared_ptr<OvtPacket> &packet)
 			return false;
 		}
 
-		logte("%d %ul %ul %ul %d %d %d", track_id, pts, dts, duration, media_type, media_flag, data_size);
-
 		auto media_packet = std::make_shared<MediaPacket>(media_type, track_id,
 														_payload_buffer.Subdata(MEDIA_PACKET_HEADER_SIZE),
 														pts, dts, duration, media_flag);
