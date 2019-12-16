@@ -36,9 +36,13 @@ bool OvtDepacketizer::AppendPacket(const std::shared_ptr<OvtPacket> &packet)
 		auto pts = ByteReader<uint64_t>::ReadBigEndian(&buffer[4]);
 		auto dts = ByteReader<uint64_t>::ReadBigEndian(&buffer[12]);
 		auto duration = ByteReader<uint64_t>::ReadBigEndian(&buffer[20]);
-		auto media_type = static_cast<common::MediaType>(ByteReader<uint8_t>::ReadBigEndian(&buffer[28]));
-		auto media_flag = static_cast<MediaPacketFlag>(ByteReader<uint8_t>::ReadBigEndian(&buffer[29]));
-		auto data_size = ByteReader<uint32_t>::ReadBigEndian(&buffer[30]);
+
+		FragmentationHeader frag_header;
+		memcpy(&frag_header, &buffer[28], sizeof(FragmentationHeader));
+
+		auto media_type = static_cast<common::MediaType>(ByteReader<uint8_t>::ReadBigEndian(&buffer[100]));
+		auto media_flag = static_cast<MediaPacketFlag>(ByteReader<uint8_t>::ReadBigEndian(&buffer[101]));
+		auto data_size = ByteReader<uint32_t>::ReadBigEndian(&buffer[102]);
 
 		if(data_size != _payload_buffer.GetLength() - MEDIA_PACKET_HEADER_SIZE)
 		{
@@ -47,10 +51,12 @@ bool OvtDepacketizer::AppendPacket(const std::shared_ptr<OvtPacket> &packet)
 			return false;
 		}
 
+		logte("%d %ul %ul %ul %d %d %d", track_id, pts, dts, duration, media_type, media_flag, data_size);
+
 		auto media_packet = std::make_shared<MediaPacket>(media_type, track_id,
 														_payload_buffer.Subdata(MEDIA_PACKET_HEADER_SIZE),
 														pts, dts, duration, media_flag);
-
+		media_packet->SetFragHeader(&frag_header);
 		_media_packets.push(media_packet);
 
 		_payload_buffer.Clear();
@@ -66,7 +72,7 @@ bool OvtDepacketizer::IsAvaliableMediaPacket()
 
 const std::shared_ptr<MediaPacket> OvtDepacketizer::PopMediaPacket()
 {
-	if(IsAvaliableMediaPacket())
+	if(!IsAvaliableMediaPacket())
 	{
 		return nullptr;
 	}

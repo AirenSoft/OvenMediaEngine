@@ -21,15 +21,6 @@ OvtPacketizer::~OvtPacketizer()
 // Packetizing the MediaPacket
 bool OvtPacketizer::Packetize(uint64_t timestamp, const std::shared_ptr<MediaPacket> &media_packet)
 {
-	// Serialize
-	auto packet = std::make_shared<OvtPacket>();
-	// Session ID should be set in Session Level
-	packet->SetSessionId(0);
-
-	packet->SetPayloadType(OVT_PAYLOAD_TYPE_MEDIA_PACKET);
-	packet->SetMarker(0);
-	packet->SetTimestamp(timestamp);
-
 	/**********************************************************************
 	 * MediaPacket Serialization
 	 **********************************************************************
@@ -46,6 +37,15 @@ bool OvtPacketizer::Packetize(uint64_t timestamp, const std::shared_ptr<MediaPac
 	 |                                                               |
 	 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	 |                            Duration                           |
+	 |                                                               |
+	 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	 |                      Fragmentation Header               		 |
+	 |                                                               |
+	 |                                                       		 |
+	 |                                                               |
+	 |                                                       		 |
+	 |                                                               |
+	 |                                                       		 |
 	 |                                                               |
 	 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	 |    MediaType  |    MediaFlag   |            Data Size
@@ -70,11 +70,14 @@ bool OvtPacketizer::Packetize(uint64_t timestamp, const std::shared_ptr<MediaPac
 	ByteWriter<uint64_t>::WriteBigEndian(&buffer[4], media_packet->GetPts());
 	ByteWriter<uint64_t>::WriteBigEndian(&buffer[12], media_packet->GetDts());
 	ByteWriter<uint64_t>::WriteBigEndian(&buffer[20], media_packet->GetDuration());
-	ByteWriter<uint8_t>::WriteBigEndian(&buffer[28], static_cast<int8_t>(media_packet->GetMediaType()));
-	ByteWriter<uint8_t>::WriteBigEndian(&buffer[29], static_cast<int8_t>(media_packet->GetFlag()));
-	ByteWriter<uint32_t>::WriteBigEndian(&buffer[30], media_packet->GetData()->GetLength());
 
-	memcpy(&buffer[34], media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetData()->GetLength());
+	memcpy(&buffer[28], media_packet->GetFragHeader(), sizeof(FragmentationHeader));
+
+	ByteWriter<uint8_t>::WriteBigEndian(&buffer[100], static_cast<int8_t>(media_packet->GetMediaType()));
+	ByteWriter<uint8_t>::WriteBigEndian(&buffer[101], static_cast<int8_t>(media_packet->GetFlag()));
+	ByteWriter<uint32_t>::WriteBigEndian(&buffer[102], media_packet->GetData()->GetLength());
+
+	memcpy(&buffer[106], media_packet->GetData()->GetData(), media_packet->GetData()->GetLength());
 
 	size_t max_payload_size = OVT_DEFAULT_MAX_PACKET_SIZE - OVT_FIXED_HEADER_SIZE;
 	size_t remain_payload_len = payload.GetLength();
@@ -82,6 +85,14 @@ bool OvtPacketizer::Packetize(uint64_t timestamp, const std::shared_ptr<MediaPac
 
 	while(remain_payload_len != 0)
 	{
+		// Serialize
+		auto packet = std::make_shared<OvtPacket>();;
+		// Session ID should be set in Session Level
+		packet->SetSessionId(0);
+		packet->SetPayloadType(OVT_PAYLOAD_TYPE_MEDIA_PACKET);
+		packet->SetMarker(0);
+		packet->SetTimestamp(timestamp);
+
 		if(remain_payload_len > max_payload_size)
 		{
 			packet->SetPayload(&buffer[offset], max_payload_size);

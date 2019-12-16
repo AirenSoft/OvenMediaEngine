@@ -51,7 +51,7 @@ bool OvtSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov
 	auto buffer = packet->GetWritableDataAs<uint8_t>();
 	ByteWriter<uint16_t>::WriteBigEndian(&buffer[12], GetId());
 
-	_connector->Send(&packet, packet->GetLength());
+	_connector->Send(packet->GetData(), packet->GetLength());
 }
 
 const std::shared_ptr<ov::Socket> OvtSession::GetConnector()

@@ -78,7 +78,9 @@ namespace pvd
 		}
 
 		// Notify stream has been created
-		return app->NotifyStreamCreated(stream);
+		app->NotifyStreamCreated(stream);
+
+		return true;
 	}
 
 	std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)

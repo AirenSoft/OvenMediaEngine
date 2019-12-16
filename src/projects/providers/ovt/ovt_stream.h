@@ -18,6 +18,16 @@ namespace pvd
 	class OvtStream : public pvd::Stream
 	{
 	public:
+		enum class State
+		{
+			IDLE,
+			CONNECTED,
+			DESCRIBED,
+			PLAYING,
+			STOPPED,
+			ERROR
+		};
+
 		static std::shared_ptr<OvtStream>
 		Create(const std::shared_ptr<pvd::Application> &app, const std::shared_ptr<ov::Url> &url);
 
@@ -28,23 +38,14 @@ namespace pvd
 
 	private:
 		bool Start();
-
 		bool Stop();
-
 		void WorkerThread();
-
 		bool ConnectOrigin();
-
 		bool RequestDescribe();
-
 		bool ReceiveDescribe(uint32_t request_id);
-
 		bool RequestPlay();
-
 		bool ReceivePlay(uint32_t request_id);
-
 		bool RequestStop();
-
 		bool ReceiveStop(uint32_t request_id);
 
 		std::shared_ptr<OvtPacket> ReceivePacket();
@@ -61,5 +62,7 @@ namespace pvd
 		OvtDepacketizer _depacketizer;
 
 		std::shared_ptr<pvd::Application> _app;
+
+		State	_state;
 	};
 }

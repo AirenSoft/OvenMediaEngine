@@ -86,6 +86,7 @@ std::shared_ptr<Application> OvtPublisher::OnCreatePublisherApplication(const in
 void OvtPublisher::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
 	// NOTHING
+	logti("OvtProvider is connected : %s", remote->ToString().CStr());
 }
 
 void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
@@ -159,6 +160,11 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 {
 	// Remove session
 	auto streams = _remote_stream_map[remote->GetId()];
+	if(streams == nullptr)
+	{
+		return;
+	}
+
 	for(const auto &stream : *streams)
 	{
 		stream->RemoveSessionByConnectorId(remote->GetId());
@@ -173,7 +179,7 @@ void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remo
 	if(stream == nullptr)
 	{
 		ov::String msg;
-		msg.Format("There is no such %s/%s", url->App().CStr(), url->Stream().CStr());
+		msg.Format("There is no such stream (%s/%s)", url->App().CStr(), url->Stream().CStr());
 		ResponseResult(remote, 0, request_id, 404, msg);
 		return;
 	}
@@ -188,7 +194,7 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 	if(app == nullptr)
 	{
 		ov::String msg;
-		msg.Format("There is no such app(%s)", url->App().CStr());
+		msg.Format("There is no such app (%s)", url->App().CStr());
 		ResponseResult(remote, 0, request_id, 404, msg);
 		return;
 	}
@@ -211,11 +217,11 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 		return;
 	}
 
-	stream->AddSession(session);
-
-	LinkRemoteWithStream(remote->GetId(), stream);
+	//LinkRemoteWithStream(remote->GetId(), stream);
 
 	ResponseResult(remote, session->GetId(), request_id, 200, "ok");
+
+	stream->AddSession(session);
 }
 
 void OvtPublisher::HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<ov::Url> &url)
@@ -242,7 +248,7 @@ void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uin
 	root["code"] = code;
 	root["message"] = msg.CStr();
 
-	SendResponse(remote, session_id, "");
+	SendResponse(remote, session_id, ov::Json::Stringify(root));
 }
 
 void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id,
@@ -255,7 +261,7 @@ void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uin
 	root["message"] = msg.CStr();
 	root[key.CStr()] = value;
 
-	SendResponse(remote, session_id, ov::Json::Stringify(value));
+	SendResponse(remote, session_id, ov::Json::Stringify(root));
 }
 
 void OvtPublisher::SendResponse(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String &payload)

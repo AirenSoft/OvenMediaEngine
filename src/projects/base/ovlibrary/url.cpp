@@ -13,7 +13,7 @@ namespace ov
 
 		object->_source = url.c_str();
 
-		if(std::regex_search(url, matches, std::regex("(.+)://([^:]+)((:)([0-9]+))?/([^\\?/]+)/([^\\?/]+)(/([^\\?]+)?)?((\\?)([^\\?]+)?(.+)?)?")))
+		if(std::regex_search(url, matches, std::regex("(.+)://([^:/]+)((:)([0-9]+))?/([^\\?/]+)/([^\\?/]+)(/([^\\?]+)?)?((\\?)([^\\?]+)?(.+)?)?")))
 		{
 			object->_scheme = std::string(matches[1]).c_str();
 			object->_domain = std::string(matches[2]).c_str();

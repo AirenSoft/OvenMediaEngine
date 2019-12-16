@@ -13,10 +13,10 @@ OvtPacket::OvtPacket()
 
 	_data = std::make_shared<ov::Data>();
 	_data->Reserve(OVT_DEFAULT_MAX_PACKET_SIZE);
-	_data->SetLength(OVT_DEFAULT_MAX_PACKET_SIZE);
+	_data->SetLength(OVT_FIXED_HEADER_SIZE);
 	_buffer = _data->GetWritableDataAs<uint8_t>();
 
-	_buffer[0] = _version << 6;
+	_buffer[0] = OVT_VERSION << 6;
 
 	_is_valid = true;
 }
@@ -39,22 +39,25 @@ bool OvtPacket::LoadHeader(const ov::Data &data)
 
 	auto buffer = data.GetDataAs<uint8_t>();
 
-	uint8_t version = buffer[0] >> 6;
+	uint8_t version = (buffer[0] & 0xC0) >> 6;
 	if(version != OVT_VERSION)
 	{
+		loge("ERROR", "Version : %d, %d", buffer[0], version);
 		return false;
 	}
 
+	_data.reset();
+
 	_data = std::make_shared<ov::Data>();
 	_data->Reserve(OVT_DEFAULT_MAX_PACKET_SIZE);
-	_data->SetLength(OVT_DEFAULT_MAX_PACKET_SIZE);
+	_data->SetLength(OVT_FIXED_HEADER_SIZE);
 	_buffer = _data->GetWritableDataAs<uint8_t>();
 
-	_buffer[0] = _version << 6;
+	_buffer[0] = OVT_VERSION << 6;
 
 	// Read header
 	SetMarker(buffer[0] & 0x20);
-	SetPayloadType(buffer[1]);
+	SetPayloadType(ByteReader<uint8_t>::ReadBigEndian(&buffer[1]));
 	SetSequenceNumber(ByteReader<uint16_t>::ReadBigEndian(&buffer[2]));
 	SetTimestamp(ByteReader<uint64_t>::ReadBigEndian(&buffer[4]));
 	SetSessionId(ByteReader<uint32_t>::ReadBigEndian(&buffer[12]));
@@ -152,7 +155,7 @@ void OvtPacket::SetMarker(bool marker_bit)
 	}
 	else
 	{
-		_buffer[0] = _buffer[0] | 0xDF;
+		_buffer[0] = _buffer[0] & 0xDF;
 	}
 }
 
@@ -191,6 +194,8 @@ bool OvtPacket::SetPayloadLength(size_t payload_length)
 {
 	_payload_length = payload_length;
 	ByteWriter<uint16_t>::WriteBigEndian(&_buffer[16], _payload_length);
+
+	_data->SetLength(OVT_FIXED_HEADER_SIZE + payload_length);
 }
 
 bool OvtPacket::SetPayload(const uint8_t *payload, size_t payload_length)
