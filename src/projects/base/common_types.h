@@ -27,6 +27,7 @@ enum class ProviderType : int8_t
 {
 	Unknown,
 	Rtmp,
+	Rtsp,
 	Ovt,
 };
 

@@ -46,8 +46,8 @@ namespace pvd
 		return pvd::Provider::Stop();
 	}
 
-// Pull Stream
-	bool OvtProvider::PullStream(ov::String url)
+	// Pull Stream
+	bool OvtProvider::PullStream(const ov::String &url)
 	{
 		auto url_parser = ov::Url::Parse(url.CStr());
 		auto app_name = url_parser->App();

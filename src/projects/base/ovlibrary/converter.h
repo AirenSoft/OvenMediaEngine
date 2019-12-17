@@ -96,16 +96,20 @@ namespace ov
 			}
 		}
 
-		static uint32_t ToUInt32(const ov::String &str, int base = 10)
+		static uint32_t ToUInt32(const char *str, int base = 10)
 		{
 			try
 			{
-				return (uint32_t)std::stoul(str.CStr(), nullptr, base);
+				if(str != nullptr)
+				{
+					return (uint32_t)std::stoul(str, nullptr, base);
+				}
 			}
 			catch(std::invalid_argument &e)
 			{
-				return 0;
 			}
+
+			return 0;
 		}
 
 		static uint32_t ToUInt32(const ::Json::Value &value, int base = 10)

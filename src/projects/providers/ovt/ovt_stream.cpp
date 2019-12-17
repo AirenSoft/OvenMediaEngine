@@ -10,7 +10,7 @@
 namespace pvd
 {
 	std::shared_ptr<OvtStream>
-	OvtStream::Create(const std::shared_ptr<pvd::Application> &app, const std::shared_ptr<ov::Url> &url)
+	OvtStream::Create(const std::shared_ptr<pvd::Application> &app, const std::shared_ptr<const ov::Url> &url)
 	{
 		StreamInfo stream_info;
 
@@ -29,7 +29,7 @@ namespace pvd
 	}
 
 	OvtStream::OvtStream(const std::shared_ptr<pvd::Application> &app, const StreamInfo &stream_info,
-						 const std::shared_ptr<ov::Url> &url)
+						 const std::shared_ptr<const ov::Url> &url)
 			: pvd::Stream(stream_info)
 	{
 		_app = app;
@@ -90,13 +90,14 @@ namespace pvd
 
 		ov::SocketType socket_type;
 
-		_url->Scheme().MakeUpper();
-		if (_url->Scheme() != "OVT")
+		auto scheme = _url->Scheme();
+		if (scheme == "OVT")
 		{
 			_state = State::ERROR;
-			logte("The scheme is not OVT : %s", _url->Scheme().CStr());
+			logte("The scheme is not OVT : %s", scheme.CStr());
 			return false;
 		}
+		
 
 		if (!_client_socket.Create(ov::SocketType::Tcp))
 		{

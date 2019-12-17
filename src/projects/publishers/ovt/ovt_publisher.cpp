@@ -173,7 +173,7 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 	UnlinkRemoteFromStream(remote->GetId());
 }
 
-void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, const uint32_t request_id, const std::shared_ptr<ov::Url> &url)
+void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, const uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
 	auto stream = std::static_pointer_cast<OvtStream>(GetStream(url->App(), url->Stream()));
 	if(stream == nullptr)
@@ -188,7 +188,7 @@ void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remo
 	ResponseResult(remote, 0, request_id, 200, "ok", "stream", description);
 }
 
-void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<ov::Url> &url)
+void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
 	auto app = std::static_pointer_cast<OvtApplication>(GetApplicationByName(url->App().CStr()));
 	if(app == nullptr)
@@ -224,7 +224,7 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 	stream->AddSession(session);
 }
 
-void OvtPublisher::HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<ov::Url> &url)
+void OvtPublisher::HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
 	auto stream = std::static_pointer_cast<OvtStream>(GetStream(url->App(), url->Stream()));
 	if(stream == nullptr)

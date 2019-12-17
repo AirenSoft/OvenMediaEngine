@@ -23,6 +23,7 @@
 #include <base/ovlibrary/url.h>
 #include <config/config_manager.h>
 
+#include <orchestrator/orchestrator.h>
 #include <media_router/media_router.h>
 #include <transcode/transcoder.h>
 #include <providers/rtmp/rtmp_provider.h>
@@ -195,6 +196,8 @@ int main(int argc, char *argv[])
 	std::vector<info::Host> host_info_list;
 	std::map<ov::String, std::vector<info::Application>> application_infos;
 
+	auto orchestrator = Orchestrator::GetInstance();
+
 	// Create info::Host
 	for (const auto &host : hosts)
 	{
@@ -215,6 +218,9 @@ int main(int argc, char *argv[])
 			logti("Trying to create application [%s]...", application.GetName().CStr());
 			app_info_list.emplace_back(application);
 		}
+
+		// TODO(dimiden): Support virtual host
+		orchestrator->PrepareOriginMap(host_info.GetOrigins());
 
 		//////////////////////////////
         // Host Level Modules
@@ -245,11 +251,28 @@ int main(int argc, char *argv[])
 		auto ovt_publisher = OvtPublisher::Create(host_info, router);
 		CHECK_FAIL(ovt_publisher);
 
+		//--------------------------------------------------------------------
+		// Register modules to MediaRouter
+		//--------------------------------------------------------------------
 		router->RegisterModule(transcoder);
 		router->RegisterModule(rtmp_provider);
 		router->RegisterModule(ovt_provider);
 		router->RegisterModule(webrtc_publisher);
 		router->RegisterModule(ovt_publisher);
+
+		//--------------------------------------------------------------------
+		// Register modules to Orchestrator
+		//--------------------------------------------------------------------
+		// Register providers
+		orchestrator->RegisterModule(rtmp_provider);
+		orchestrator->RegisterModule(ovt_provider);
+		// Register media router
+		orchestrator->RegisterModule(router);
+		// Register transcoder
+		orchestrator->RegisterModule(transcoder);
+		// Register publishers
+		orchestrator->RegisterModule(webrtc_publisher);
+		orchestrator->RegisterModule(ovt_publisher);
 
 		//////////////////////////////
 		// Create applications that defined by the configuration

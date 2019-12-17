@@ -20,8 +20,10 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <config/config.h>
+#include <orchestrator/orchestrator.h>
 
-class Transcoder : public MediaRouteObserver
+
+class Transcoder : public MediaRouteObserver, public OrchestratorTranscoderModuleInterface
 {
 	// class TranscodeApplication;
 public:

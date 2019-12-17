@@ -9,7 +9,9 @@
 
 #include "ovt_application.h"
 
-class OvtPublisher : public Publisher, public PhysicalPortObserver
+#include <orchestrator/orchestrator.h>
+
+class OvtPublisher : public Publisher, public PhysicalPortObserver, public OrchestratorPublisherModuleInterface
 {
 public:
 	static std::shared_ptr<OvtPublisher> Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
@@ -47,9 +49,9 @@ private:
 	//--------------------------------------------------------------------
 
 
-	void HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<ov::Url> &url);
-	void HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<ov::Url> &url);
-	void HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<ov::Url> &url);
+	void HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<const ov::Url> &url);
+	void HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<const ov::Url> &url);
+	void HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<const ov::Url> &url);
 
 	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg);
 	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg, const ov::String &key, const Json::Value &value);

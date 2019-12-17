@@ -27,8 +27,9 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <config/config.h>
+#include <orchestrator/orchestrator.h>
 
-class MediaRouter : public MediaRouteInterface
+class MediaRouter : public MediaRouteInterface, public OrchestratorMediaRouterModuleInterface
 {
 public:
 	static std::shared_ptr<MediaRouter> Create();

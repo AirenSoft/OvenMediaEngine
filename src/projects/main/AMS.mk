@@ -17,6 +17,7 @@ LOCAL_STATIC_LIBRARIES := \
 	web_console \
 	mediarouter \
 	ovt_packetizer \
+	orchestrator \
 	publisher \
 	application \
 	physical_port \

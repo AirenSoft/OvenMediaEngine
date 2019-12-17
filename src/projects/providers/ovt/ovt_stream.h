@@ -29,10 +29,10 @@ namespace pvd
 		};
 
 		static std::shared_ptr<OvtStream>
-		Create(const std::shared_ptr<pvd::Application> &app, const std::shared_ptr<ov::Url> &url);
+		Create(const std::shared_ptr<pvd::Application> &app, const std::shared_ptr<const ov::Url> &url);
 
 		explicit OvtStream(const std::shared_ptr<pvd::Application> &app, const StreamInfo &stream_info,
-						   const std::shared_ptr<ov::Url> &url);
+						   const std::shared_ptr<const ov::Url> &url);
 
 		~OvtStream() final;
 
@@ -50,7 +50,7 @@ namespace pvd
 
 		std::shared_ptr<OvtPacket> ReceivePacket();
 
-		std::shared_ptr<ov::Url> _url;
+		std::shared_ptr<const ov::Url> _url;
 		bool _stop_thread_flag;
 		std::thread _worker_thread;
 

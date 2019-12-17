@@ -29,7 +29,7 @@ namespace pvd
 
 	}
 
-	std::shared_ptr<pvd::Stream> OvtApplication::CreateStream(const std::shared_ptr<ov::Url> &url)
+	std::shared_ptr<pvd::Stream> OvtApplication::CreateStream(const std::shared_ptr<const ov::Url> &url)
 	{
 		logtd("OnCreateStream");
 		auto stream = OvtStream::Create(GetSharedPtrAs<pvd::Application>(), url);

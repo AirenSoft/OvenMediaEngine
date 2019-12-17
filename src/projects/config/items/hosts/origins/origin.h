@@ -12,7 +12,7 @@
 
 namespace cfg
 {
-	struct ListenOrigin : public Item
+	struct OriginsOrigin : public Item
 	{
 		CFG_DECLARE_REF_GETTER_OF(GetLocation, _location)
 		CFG_DECLARE_REF_GETTER_OF(GetPass, _pass)

@@ -32,6 +32,8 @@ namespace cfg
 
 		CFG_DECLARE_REF_GETTER_OF(GetDomain, _domain)
 		CFG_DECLARE_REF_GETTER_OF(GetBind, _bind)
+		CFG_DECLARE_REF_GETTER_OF(GetOrigins, _origins)
+		CFG_DECLARE_REF_GETTER_OF(GetOriginList, _origins.GetOriginList())
 		CFG_DECLARE_REF_GETTER_OF(GetApplicationList, _applications.GetApplicationList())
 
 	protected:

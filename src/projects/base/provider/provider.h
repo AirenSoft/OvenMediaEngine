@@ -21,6 +21,8 @@ namespace pvd
 	class Provider : public MediaRouteObserver
 	{
 	public:
+		virtual ProviderType GetProviderType() = 0;
+
 		virtual bool Start();
 		virtual bool Stop();
 
@@ -38,7 +40,6 @@ namespace pvd
 		const info::Host& GetHostInfo();
 
 		// For child class
-		virtual ProviderType GetProviderType() = 0;
 		virtual std::shared_ptr<Application> OnCreateProviderApplication(const info::Application &app_info) = 0;
 		virtual bool OnDeleteProviderApplication(const info::Application &app_info) = 0;
 

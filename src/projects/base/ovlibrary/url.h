@@ -1,3 +1,11 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Getroot
+//  Copyright (c) 2019 AirenSoft. All rights reserved.
+//
+//==============================================================================
 #pragma once
 
 #include "./ovlibrary.h"
@@ -8,32 +16,75 @@ namespace ov
 	class Url
 	{
 	public:
-		Url() = default;
-		~Url() = default;
+		// <scheme>://<domain>[:<port>][/<path/to/resource>][?<query string>]
+		static std::shared_ptr<const Url> Parse(const std::string &url, bool make_query_map = false);
 
-		static const std::shared_ptr<Url> Parse(const std::string &url);
+		const ov::String &Source() const
+		{
+			return _source;
+		}
 
-		ov::String& Source(){return _source;}
+		const ov::String &Scheme() const
+		{
+			return _scheme;
+		}
 
-		ov::String& Scheme(){return _scheme;}
-		ov::String& Domain(){return _domain;}
-		uint32_t Port(){return _port;}
-		ov::String& App(){return _app;}
-		ov::String& Stream(){return _stream;}
-		ov::String& File(){return _file;}
-		ov::String& Query(){return _query;}
+		const ov::String &Domain() const
+		{
+			return _domain;
+		}
 
-		void Print();
+		uint32_t Port() const
+		{
+			return _port;
+		}
+
+		const ov::String &Path() const
+		{
+			return _path;
+		}
+
+		const ov::String &App() const
+		{
+			return _app;
+		}
+
+		const ov::String &Stream() const
+		{
+			return _stream;
+		}
+
+		const ov::String &File() const
+		{
+			return _file;
+		}
+
+		const ov::String &Query() const
+		{
+			return _query_string;
+		}
+
+		const std::map<ov::String, ov::String> &QueryMap() const
+		{
+			return _query_map;
+		}
+
+		void Print() const;
+		ov::String ToString() const;
 
 	private:
-		ov::String 	_scheme;
-		ov::String 	_domain;
-		uint32_t	_port;
-		ov::String 	_app;
-		ov::String 	_stream;
-		ov::String 	_file;
-		ov::String 	_query;
+		// Full URL
+		ov::String _source;
+		ov::String _scheme;
+		ov::String _domain;
+		uint32_t _port;
+		ov::String _path;
+		ov::String _query_string;
+		std::map<ov::String, ov::String> _query_map;
 
-		ov::String	_source;
+		// Valid for URLs of the form: <scheme>://<domain>[:<port>]/<app>/<stream>[<file>][?<query string>]
+		ov::String _app;
+		ov::String _stream;
+		ov::String _file;
 	};
-}
+}  // namespace ov

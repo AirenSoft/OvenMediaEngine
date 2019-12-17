@@ -7,6 +7,8 @@
 
 #include "config/config_manager.h"
 
+#include <orchestrator/orchestrator.h>
+
 std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 {
 	auto webrtc = std::make_shared<WebRtcPublisher>(host_info, router);
@@ -96,9 +98,19 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::St
 {
 	// Application -> Stream에서 SDP를 얻어서 반환한다.
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
-	if(!stream)
+
+	if(stream == nullptr)
 	{
-		return nullptr;
+		// If the stream is not exists, request to the provider
+		auto orchestrator = Orchestrator::GetInstance();
+
+		if(orchestrator->RequestPullStream(application_name, stream_name) == false)
+		{
+			logtd("Could not pull the stream: [%s/%s]", application_name.CStr(), stream_name.CStr());
+			return nullptr;
+		}
+
+		stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
 	}
 
 	auto &candidates = _ice_port->GetIceCandidateList();

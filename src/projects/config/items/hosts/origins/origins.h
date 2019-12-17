@@ -22,6 +22,6 @@ namespace cfg
 			RegisterValue<Optional>("Origin", &_origin_list);
 		}
 
-		std::vector<ListenOrigin> _origin_list;
+		std::vector<OriginsOrigin> _origin_list;
 	};
 }  // namespace cfg

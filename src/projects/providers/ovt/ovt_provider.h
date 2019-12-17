@@ -3,12 +3,12 @@
 //
 #pragma once
 
-#include <base/ovlibrary/ovlibrary.h>
-#include <base/provider/provider.h>
-#include <base/provider/application.h>
 #include <base/media_route/media_buffer.h>
 #include <base/media_route/media_type.h>
-
+#include <base/ovlibrary/ovlibrary.h>
+#include <base/provider/application.h>
+#include <base/provider/provider.h>
+#include <orchestrator/orchestrator.h>
 
 /*
  * OvtProvider
@@ -28,7 +28,7 @@
 
 namespace pvd
 {
-	class OvtProvider : public pvd::Provider
+	class OvtProvider : public pvd::Provider, public OrchestratorProviderModuleInterface
 	{
 	public:
 		static std::shared_ptr<OvtProvider>
@@ -47,12 +47,14 @@ namespace pvd
 
 		bool Stop() override;
 
-		bool PullStream(ov::String url);
-
+		//--------------------------------------------------------------------
+		// Implementation of OrchestratorProviderModuleInterface
+		//--------------------------------------------------------------------
+		bool PullStream(const ov::String &url) override;
 
 	protected:
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;
 
 		bool OnDeleteProviderApplication(const info::Application &app_info) override;
 	};
-}
+}  // namespace pvd

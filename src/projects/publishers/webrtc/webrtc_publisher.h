@@ -5,10 +5,13 @@
 #include "base/media_route/media_route_application_interface.h"
 #include "rtc_application.h"
 
+#include <orchestrator/orchestrator.h>
+
 
 class WebRtcPublisher : public Publisher,
                         public IcePortObserver,
-                        public RtcSignallingObserver
+                        public RtcSignallingObserver,
+						public OrchestratorPublisherModuleInterface
 {
 public:
 	static std::shared_ptr<WebRtcPublisher> Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);

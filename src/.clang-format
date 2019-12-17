@@ -331,3 +331,7 @@ NamespaceIndentation: All
 # /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
 #  * information */
 ReflowComments: false
+
+# https://reviews.llvm.org/D33029
+# The current version doesn't support this option, but I put it for later.
+# DanglingParenthesis: false

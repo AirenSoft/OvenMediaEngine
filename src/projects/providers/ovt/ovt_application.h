@@ -20,7 +20,7 @@ namespace pvd
 
 		~OvtApplication() override;
 
-		std::shared_ptr<pvd::Stream> CreateStream(const std::shared_ptr<ov::Url> &url);
+		std::shared_ptr<pvd::Stream> CreateStream(const std::shared_ptr<const ov::Url> &url);
 
 		MediaRouteApplicationConnector::ConnectorType GetConnectorType() override
 		{
