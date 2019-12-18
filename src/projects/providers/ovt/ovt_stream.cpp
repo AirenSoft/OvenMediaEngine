@@ -233,7 +233,6 @@ namespace pvd
 			return false;
 		}
 
-		SetName("edge");
 		//SetName(json_stream["streamName"].asString().c_str());
 		std::shared_ptr<MediaTrack> new_track;
 
