@@ -9,15 +9,15 @@
 
 namespace pvd
 {
-	std::shared_ptr<OvtStream>
-	OvtStream::Create(const std::shared_ptr<pvd::Application> &app, const std::shared_ptr<const ov::Url> &url)
+	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::Application> &app, const ov::String &stream_name,
+					  						const std::vector<ov::String> &url_list)
 	{
 		StreamInfo stream_info;
 
 		stream_info.SetId(app->IssueUniqueStreamId());
-		stream_info.SetName("edge");//url->Stream());
+		stream_info.SetName(stream_name);
 
-		auto stream = std::make_shared<OvtStream>(app, stream_info, url);
+		auto stream = std::make_shared<OvtStream>(app, stream_info, url_list);
 		if (!stream->Start())
 		{
 			// Explicit deletion
@@ -28,15 +28,27 @@ namespace pvd
 		return stream;
 	}
 
-	OvtStream::OvtStream(const std::shared_ptr<pvd::Application> &app, const StreamInfo &stream_info,
-						 const std::shared_ptr<const ov::Url> &url)
+	OvtStream::OvtStream(const std::shared_ptr<pvd::Application> &app, const StreamInfo &stream_info, const std::vector<ov::String> &url_list)
 			: pvd::Stream(stream_info)
 	{
 		_app = app;
-		_url = url;
 		_last_request_id = 0;
 		_stop_thread_flag = false;
 		_state = State::IDLE;
+
+		for(auto &url : url_list)
+		{
+			auto parsed_url = ov::Url::Parse(url.CStr());
+			if(parsed_url)
+			{
+				_url_list.push_back(parsed_url);
+			}
+		}
+
+		if(!_url_list.empty())
+		{
+			_curr_url = _url_list[0];
+		}
 	}
 
 	OvtStream::~OvtStream()
@@ -90,7 +102,7 @@ namespace pvd
 
 		ov::SocketType socket_type;
 
-		auto scheme = _url->Scheme();
+		auto scheme = _curr_url->Scheme();
 		if (scheme == "OVT")
 		{
 			_state = State::ERROR;
@@ -106,13 +118,13 @@ namespace pvd
 			return false;
 		}
 
-		ov::SocketAddress socket_address(_url->Domain(), _url->Port());
+		ov::SocketAddress socket_address(_curr_url->Domain(), _curr_url->Port());
 
 		auto error = _client_socket.Connect(socket_address, 1000);
 		if (error != nullptr)
 		{
 			_state = State::ERROR;
-			logte("Cannot connect to origin server (%s) : %s:%d", error->GetMessage().CStr(), _url->Domain().CStr(), _url->Port());
+			logte("Cannot connect to origin server (%s) : %s:%d", error->GetMessage().CStr(), _curr_url->Domain().CStr(), _curr_url->Port());
 			return false;
 		}
 
@@ -139,7 +151,7 @@ namespace pvd
 
 		_last_request_id++;
 		root["id"] = _last_request_id;
-		root["url"] = _url->Source().CStr();
+		root["url"] = _curr_url->Source().CStr();
 
 		auto payload = ov::Json::Stringify(root).ToData(false);
 
@@ -306,7 +318,7 @@ namespace pvd
 		Json::Value root;
 		_last_request_id++;
 		root["id"] = _last_request_id;
-		root["url"] = _url->Source().CStr();
+		root["url"] = _curr_url->Source().CStr();
 
 		auto payload = ov::Json::Stringify(root).ToData(false);
 
@@ -391,7 +403,7 @@ namespace pvd
 		Json::Value root;
 		_last_request_id++;
 		root["id"] = _last_request_id;
-		root["url"] = _url->Source().CStr();
+		root["url"] = _curr_url->Source().CStr();
 
 		auto payload = ov::Json::Stringify(root).ToData(false);
 
@@ -475,6 +487,7 @@ namespace pvd
 		size_t read_bytes = 0ULL;
 		while (true)
 		{
+			//TODO(Getroot): It is blocking function. It can be caused system hang. Need improvement.
 			auto error = _client_socket.Recv(buffer + offset, remained, &read_bytes);
 			if (error != nullptr)
 			{

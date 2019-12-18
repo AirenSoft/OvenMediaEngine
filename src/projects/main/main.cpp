@@ -262,10 +262,12 @@ int main(int argc, char *argv[])
 
 		/* For Edge Test */
 #if 0
+		info::Application app_info(123, "app", cfg::Application());
+
 		while(true)
 		{
 			sleep(1);
-			if(ovt_provider->PullStream("ovt://192.168.0.199:9000/app/stream_o"))
+			if(ovt_provider->PullStream(app_info, "edge", {"ovt://192.168.0.199:9000/app/stream_o"}))
 			{
 				break;
 			}

@@ -78,7 +78,7 @@ namespace pvd
 		}
 
 		// Create Stream
-		stream = app->CreateStream(url_parser);
+		stream = app->CreateStream(stream_name, url_list);
 		if (stream == nullptr)
 		{
 			logte("Cannot create %s stream.", stream_name.CStr());
