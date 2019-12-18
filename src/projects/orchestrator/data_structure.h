@@ -54,14 +54,16 @@ public:
 	/// @param url_list The URLs to determine
 	///
 	/// @return Returns true if the URLs is valid and the stream can be obtained
-	virtual bool CheckOriginsAvailability(const std::vector<ov::String> &url_list) = 0;
+	virtual bool CheckOriginAvailability(const std::vector<ov::String> &url_list) = 0;
 
 	/// Called when another module is requested to pull stream list
 	///
-	/// @param url_list The streaming URL list to pull
+	/// @param app_info An information of the application
+	/// @param stream_name A stream name to create
+	/// @param url_list The streaming URLs to pull
 	///
 	/// @return Returns true if successfully pulled and finishes creating the stream, false otherwise
-	virtual bool PullStreams(info::application_id_t app_id, const ov::String &app_name, const ov::String stream_name, const std::vector<ov::String> &url_list) = 0;
+	virtual bool PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list) = 0;
 };
 
 class OrchestratorMediaRouterModuleInterface : public OrchestratorModuleInterface

@@ -20,8 +20,9 @@ namespace info
 	class Application : public cfg::Application
 	{
 	public:
-		explicit Application(application_id_t app_id, const cfg::Application &application);
-		explicit Application(application_id_t app_id, const ov::String &name, const cfg::Application &application);
+		Application() = default;
+		Application(application_id_t app_id, const cfg::Application &application);
+		Application(application_id_t app_id, const ov::String &name, const cfg::Application &application);
 
 		application_id_t GetId() const
 		{

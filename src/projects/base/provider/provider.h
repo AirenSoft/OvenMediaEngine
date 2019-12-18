@@ -53,12 +53,12 @@ namespace pvd
 		//--------------------------------------------------------------------
 		// Implementation of OrchestratorProviderModuleInterface
 		//--------------------------------------------------------------------
-		bool CheckOriginsAvailability(const std::vector<ov::String> &url_list) override
+		bool CheckOriginAvailability(const std::vector<ov::String> &url_list) override
 		{
 			return false;
 		}
 
-		bool PullStreams(info::application_id_t app_id, const ov::String &app_name, const ov::String stream_name, const std::vector<ov::String> &url_list)
+		bool PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list)
 		{
 			return false;
 		}

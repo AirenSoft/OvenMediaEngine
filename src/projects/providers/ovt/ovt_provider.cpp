@@ -46,13 +46,13 @@ namespace pvd
 		return pvd::Provider::Stop();
 	}
 
-	bool OvtProvider::CheckOriginsAvailability(const std::vector<ov::String> &url_list)
+	bool OvtProvider::CheckOriginAvailability(const std::vector<ov::String> &url_list)
 	{
 		return true;
 	}
 
 	// Pull Stream
-	bool OvtProvider::PullStreams(info::application_id_t app_id, const ov::String &app_name, const ov::String stream_name, const std::vector<ov::String> &url_list)
+	bool OvtProvider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list)
 	{
 		// Dummy code
 		auto url = url_list[0];
@@ -62,10 +62,10 @@ namespace pvd
 		// auto stream_name = url_parser->Stream();
 
 		// Find App
-		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationByName(app_name));
+		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
 		if (app == nullptr)
 		{
-			logte("There is no such app (%s)", app_name.CStr());
+			logte("There is no such app (%s)", app_info.GetName().CStr());
 			return false;
 		}
 

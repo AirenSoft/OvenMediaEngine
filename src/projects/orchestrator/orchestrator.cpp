@@ -244,7 +244,7 @@ bool Orchestrator::GetUrlListForLocation(const ov::String &location, std::vector
 	return false;
 }
 
-Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &name, info::application_id_t *application_id)
+Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &name, info::Application *app_info)
 {
 	for (auto &app : _app_map)
 	{
@@ -255,14 +255,14 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &n
 		}
 	}
 
-	info::Application app_info(GenerateApplicationId(), name, cfg::Application());
+	info::Application new_app_info(GenerateApplicationId(), name, cfg::Application());
 
-	if (application_id != nullptr)
+	if (app_info != nullptr)
 	{
-		*application_id = app_info.GetId();
+		*app_info = new_app_info;
 	}
 
-	return CreateApplicationInternal(app_info);
+	return CreateApplicationInternal(new_app_info);
 }
 
 Orchestrator::Result Orchestrator::CreateApplicationInternal(const info::Application &app_info)
@@ -392,19 +392,19 @@ bool Orchestrator::RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> 
 
 	auto provider_module = std::dynamic_pointer_cast<OrchestratorProviderModuleInterface>(provider);
 
-	if (provider_module->CheckOriginsAvailability({source}) == false)
+	if (provider_module->CheckOriginAvailability({source}) == false)
 	{
 		logte("The URL is not available: %s", source.CStr());
 		return false;
 	}
 
-	info::application_id_t application_id;
-	auto result = CreateApplicationInternal(url->App(), &application_id);
+	info::Application app_info;
+	auto result = CreateApplicationInternal(url->App(), &app_info);
 
 	if (result != Result::Failed)
 	{
 		// The application is created successfully (or already exists)
-		if (provider_module->PullStreams(application_id, url->App(), url->Stream(), {source}))
+		if (provider_module->PullStream(app_info, url->Stream(), {source}))
 		{
 			// The stream pulled successfully
 			return true;
@@ -420,7 +420,7 @@ bool Orchestrator::RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> 
 	if (result == Result::Succeeded)
 	{
 		// If there is no existing app and it is created, delete the app
-		DeleteApplicationInternal(application_id);
+		DeleteApplicationInternal(app_info.GetId());
 	}
 
 	return false;

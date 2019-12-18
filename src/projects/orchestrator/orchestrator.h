@@ -134,7 +134,7 @@ protected:
 
 	bool GetUrlListForLocation(const ov::String &location, std::vector<ov::String> *url_list, ov::String *scheme = nullptr) const;
 
-	Result CreateApplicationInternal(const ov::String &name, info::application_id_t *application_id = nullptr);
+	Result CreateApplicationInternal(const ov::String &name, info::Application *app_info = nullptr);
 	Result CreateApplicationInternal(const info::Application &app_info);
 
 	Result DeleteApplicationInternal(info::application_id_t app_id);
