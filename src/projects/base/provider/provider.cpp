@@ -60,7 +60,10 @@ namespace pvd
 		auto application = OnCreateProviderApplication(app_info);
 
 		// Connect created application to router
-		_router->RegisterConnectorApp(*application.get(), application);
+		if(_router->RegisterConnectorApp(*application.get(), application) == false)
+		{
+			return false;
+		}
 
 		// Store created application
 		_applications[application->GetId()] = application;
