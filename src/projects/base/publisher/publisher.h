@@ -17,6 +17,7 @@
 
 #include <modules/ice/ice_port_manager.h>
 #include <modules/physical_port/physical_port.h>
+#include <orchestrator/orchestrator.h>
 
 #include <chrono>
 
@@ -84,7 +85,7 @@ struct MonitoringCollectionData
 };
 
 // All publishers such as WebRTC, HLS and MPEG-DASH has to inherit the Publisher class and implement that interfaces
-class Publisher : public MediaRouteObserver
+class Publisher : public OrchestratorPublisherModuleInterface
 {
 public:
 	virtual bool Start();
@@ -110,14 +111,10 @@ public:
 	// - collected_datas vector must be insert processed
 	virtual bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) = 0;
 
-
-	///////////////////////////////////////
-	// Implement MediaRouteObserver
-	///////////////////////////////////////
-	// Create Application
+	//--------------------------------------------------------------------
+	// Implementation of OrchestratorModuleInterface
+	//--------------------------------------------------------------------
 	bool OnCreateApplication(const info::Application &app_info) override;
-
-	// Delete Application
 	bool OnDeleteApplication(const info::Application &app_info) override;
 
 protected:

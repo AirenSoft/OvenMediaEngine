@@ -23,18 +23,17 @@
 #include <base/ovlibrary/url.h>
 #include <config/config_manager.h>
 
-#include <orchestrator/orchestrator.h>
 #include <media_router/media_router.h>
-#include <transcode/transcoder.h>
-#include <providers/rtmp/rtmp_provider.h>
+#include <orchestrator/orchestrator.h>
 #include <providers/ovt/ovt_provider.h>
-#include <publishers/webrtc/webrtc_publisher.h>
-#include <publishers/segment/publishers.h>
+#include <providers/rtmp/rtmp_provider.h>
 #include <publishers/ovt/ovt_publisher.h>
+#include <publishers/segment/publishers.h>
+#include <publishers/webrtc/webrtc_publisher.h>
+#include <transcode/transcoder.h>
 
 #include <monitoring/monitoring_server.h>
 #include <web_console/web_console.h>
-
 
 extern "C"
 {
@@ -43,17 +42,17 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
-#define CHECK_FAIL(x) \
-    if((x) == nullptr) \
-    { \
-        srt_cleanup(); \
-		\
-		if(parse_option.start_service) \
-		{ \
-        	ov::Daemon::SetEvent(false); \
-		} \
-        return 1; \
-    }
+#define CHECK_FAIL(x)                    \
+	if ((x) == nullptr)                  \
+	{                                    \
+		srt_cleanup();                   \
+                                         \
+		if (parse_option.start_service)  \
+		{                                \
+			ov::Daemon::SetEvent(false); \
+		}                                \
+		return 1;                        \
+	}
 
 void SrtLogHandler(void *opaque, int level, const char *file, int line, const char *area, const char *message);
 
@@ -112,7 +111,6 @@ bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 		}
 	}
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -194,7 +192,6 @@ int main(int argc, char *argv[])
 	std::vector<std::shared_ptr<WebConsoleServer>> web_console_servers;
 
 	std::vector<info::Host> host_info_list;
-	std::map<ov::String, std::vector<info::Application>> application_infos;
 
 	auto orchestrator = Orchestrator::GetInstance();
 
@@ -211,21 +208,13 @@ int main(int argc, char *argv[])
 
 		logtd("Trying to create modules for host [%s]", host_name.CStr());
 
-		// Create info::Application
-		auto &app_info_list = application_infos[host_info.GetName()];
-		for (const auto &application : host_info.GetApplicationList())
-		{
-			logti("Trying to create application [%s]...", application.GetName().CStr());
-			app_info_list.emplace_back(application);
-		}
-
 		// TODO(dimiden): Support virtual host
 		orchestrator->PrepareOriginMap(host_info.GetOrigins());
 
 		//////////////////////////////
-        // Host Level Modules
-        //TODO(Getroot): Support Virtual Host Function. This code assumes that there is only one Host.
-        //////////////////////////////
+		// Host Level Modules
+		//TODO(Getroot): Support Virtual Host Function. This code assumes that there is only one Host.
+		//////////////////////////////
 
 		logti("Trying to create MediaRouter for host [%s]...", host_name.CStr());
 		router = MediaRouter::Create();
@@ -252,15 +241,6 @@ int main(int argc, char *argv[])
 		CHECK_FAIL(ovt_publisher);
 
 		//--------------------------------------------------------------------
-		// Register modules to MediaRouter
-		//--------------------------------------------------------------------
-		router->RegisterModule(transcoder);
-		router->RegisterModule(rtmp_provider);
-		router->RegisterModule(ovt_provider);
-		router->RegisterModule(webrtc_publisher);
-		router->RegisterModule(ovt_publisher);
-
-		//--------------------------------------------------------------------
 		// Register modules to Orchestrator
 		//--------------------------------------------------------------------
 		// Register providers
@@ -274,14 +254,10 @@ int main(int argc, char *argv[])
 		orchestrator->RegisterModule(webrtc_publisher);
 		orchestrator->RegisterModule(ovt_publisher);
 
-		//////////////////////////////
 		// Create applications that defined by the configuration
-		//////////////////////////////
-
-		for (const auto &app_info : app_info_list)
+		for (auto app_cfg : host_info.GetApplicationList())
 		{
-			auto app_name = app_info.GetName();
-			router->CreateApplication(app_info);
+			orchestrator->CreateApplication(app_cfg);
 		}
 
 		/* For Edge Test */
@@ -295,14 +271,12 @@ int main(int argc, char *argv[])
 			}
 		}
 #endif
-
 	}
 
 	if (parse_option.start_service)
 	{
 		ov::Daemon::SetEvent();
 	}
-
 
 	while (true)
 	{

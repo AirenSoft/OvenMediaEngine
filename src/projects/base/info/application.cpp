@@ -11,9 +11,16 @@
 
 namespace info
 {
-	Application::Application(const cfg::Application &application)
-			: cfg::Application(application)
+	Application::Application(application_id_t app_id, const cfg::Application &application)
+		: cfg::Application(application),
+		  _application_id(app_id)
 	{
-		_application_id = ov::Random::GenerateUInt32();
 	}
-}
+
+	Application::Application(application_id_t app_id, const ov::String &name, const cfg::Application &application)
+		: Application(app_id, application)
+	{
+		_name = name;
+	}
+
+}  // namespace info

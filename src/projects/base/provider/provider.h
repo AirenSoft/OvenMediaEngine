@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  Provider Base Class 
+//  Provider Base Class
 //
 //  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
@@ -8,9 +8,10 @@
 //==============================================================================
 #pragma once
 
-#include "base/common_types.h"
-#include "base/info/host.h"
-#include "base/media_route/media_route_interface.h"
+#include <base/common_types.h>
+#include <base/info/host.h>
+#include <base/media_route/media_route_interface.h>
+#include <orchestrator/data_structure.h>
 
 namespace pvd
 {
@@ -18,7 +19,7 @@ namespace pvd
 	class Stream;
 
 	// RTMP Server와 같은 모든 Provider는 다음 Interface를 구현하여 MediaRouterInterface에 자신을 등록한다.
-	class Provider : public MediaRouteObserver
+	class Provider : public OrchestratorProviderModuleInterface
 	{
 	public:
 		virtual ProviderType GetProviderType() = 0;
@@ -37,20 +38,30 @@ namespace pvd
 		Provider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 		virtual ~Provider();
 
-		const info::Host& GetHostInfo();
+		const info::Host &GetHostInfo();
 
 		// For child class
 		virtual std::shared_ptr<Application> OnCreateProviderApplication(const info::Application &app_info) = 0;
 		virtual bool OnDeleteProviderApplication(const info::Application &app_info) = 0;
 
-		///////////////////////////////////////
-		// Implement MediaRouteObserver
-		///////////////////////////////////////
-		// Create Application
+		//--------------------------------------------------------------------
+		// Implementation of OrchestratorModuleInterface
+		//--------------------------------------------------------------------
 		bool OnCreateApplication(const info::Application &app_info) override;
-
-		// Delete Application
 		bool OnDeleteApplication(const info::Application &app_info) override;
+
+		//--------------------------------------------------------------------
+		// Implementation of OrchestratorProviderModuleInterface
+		//--------------------------------------------------------------------
+		bool CheckOriginsAvailability(const std::vector<ov::String> &url_list) override
+		{
+			return false;
+		}
+
+		bool PullStreams(info::application_id_t app_id, const ov::String &app_name, const ov::String stream_name, const std::vector<ov::String> &url_list)
+		{
+			return false;
+		}
 
 	private:
 		const info::Host _host_info;
@@ -58,4 +69,4 @@ namespace pvd
 		std::shared_ptr<MediaRouteInterface> _router;
 	};
 
-}
+}  // namespace pvd

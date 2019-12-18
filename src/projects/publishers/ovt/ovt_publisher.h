@@ -11,7 +11,7 @@
 
 #include <orchestrator/orchestrator.h>
 
-class OvtPublisher : public Publisher, public PhysicalPortObserver, public OrchestratorPublisherModuleInterface
+class OvtPublisher : public Publisher, public PhysicalPortObserver
 {
 public:
 	static std::shared_ptr<OvtPublisher> Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);

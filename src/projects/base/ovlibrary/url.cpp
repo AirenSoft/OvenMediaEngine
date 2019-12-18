@@ -38,21 +38,22 @@ namespace ov
 		object->_path = std::string(matches[5]).c_str();
 		object->_query_string = std::string(matches[8]).c_str();
 
-		// split <path> to <app>/<stream>/<file>
+		// split <path> to /<app>/<stream>/<file> (4 tokens)
 		auto tokens = object->_path.Split("/");
 
 		switch (tokens.size())
 		{
 			default:
+			case 4:
+				object->_file = tokens[3];
+				// It is intended that there is no "break;" statement here
 			case 3:
-				object->_file = tokens[2];
+				object->_stream = tokens[2];
 				// It is intended that there is no "break;" statement here
 			case 2:
-				object->_stream = tokens[1];
+				object->_app = tokens[1];
 				// It is intended that there is no "break;" statement here
 			case 1:
-				object->_app = tokens[0];
-				// It is intended that there is no "break;" statement here
 			case 0:
 				// Nothing to do
 				break;

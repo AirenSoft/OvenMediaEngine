@@ -23,7 +23,7 @@
 #include <orchestrator/orchestrator.h>
 
 
-class Transcoder : public MediaRouteObserver, public OrchestratorTranscoderModuleInterface
+class Transcoder : public OrchestratorTranscoderModuleInterface
 {
 	// class TranscodeApplication;
 public:
@@ -38,15 +38,11 @@ public:
 	bool Stop();
 	bool CreateApplication(info::Application application_info);
 
-	//////////////////////////////////////////
-	// Implement MediaRouteObserver
-	//////////////////////////////////////////
-
-	// Create Application
-	virtual bool OnCreateApplication(const info::Application &app_info) override;
-
-	// Delete Application
-	virtual bool OnDeleteApplication(const info::Application &app_info) override;
+	//--------------------------------------------------------------------
+	// Implementation of OrchestratorModuleInterface
+	//--------------------------------------------------------------------
+	bool OnCreateApplication(const info::Application &app_info) override;
+	bool OnDeleteApplication(const info::Application &app_info) override;
 
 private:
 	bool CreateApplications();

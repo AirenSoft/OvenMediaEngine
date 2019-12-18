@@ -10,6 +10,8 @@
 
 #include "data_structure.h"
 
+#include <base/provider/provider.h>
+
 //
 // Orchestrator is responsible for passing commands to registered modules, such as Provider/MediaRouter/Transcoder/Publisher.
 //
@@ -25,6 +27,18 @@
 class Orchestrator
 {
 public:
+	enum class Result
+	{
+		// An error occurred
+		Failed,
+		// Created successfully
+		Succeeded,
+		// The item is exists
+		Exists,
+		// The item is not exists
+		NotExists
+	};
+
 	static Orchestrator *GetInstance()
 	{
 		static Orchestrator orchestrator;
@@ -49,6 +63,23 @@ public:
 	/// @return If the module is not already registered, false is returned. Otherwise, true is returned.
 	bool UnregisterModule(const std::shared_ptr<OrchestratorModuleInterface> &module);
 
+	/// Create an application and notify the modules
+	///
+	/// @param app_conf Application configuration to create
+	///
+	/// @return Creation result
+	///
+	/// @note Automatically DeleteApplication() when application creation fails
+	Result CreateApplication(const cfg::Application &app_conf);
+	/// Delete the application and notify the modules
+	///
+	/// @param app_info Application information to delete
+	///
+	/// @return
+	///
+	/// @note If an error occurs during deletion, do not recreate the application
+	Result DeleteApplication(const info::Application &app_info);
+
 	bool RequestPullStream(const ov::String &url);
 	bool RequestPullStream(const ov::String &application, const ov::String &stream);
 
@@ -58,11 +89,23 @@ protected:
 		Origin(const cfg::OriginsOrigin &origin)
 		{
 			location = origin.GetLocation();
-			for (auto url : origin.GetPass().GetUrlList())
+			scheme = origin.GetPass().GetScheme();
+
+			for (auto &item : origin.GetPass().GetUrlList())
 			{
-				url_list.push_back(url.GetUrl());
+				auto url = item.GetUrl();
+
+				// Prepend "<scheme>://"
+				url.Prepend("://");
+				url.Prepend(scheme);
+
+				url_list.push_back(item.GetUrl());
 			}
 		}
+
+		info::application_id_t app_id = 0U;
+
+		ov::String scheme;
 
 		// Origin/Location
 		ov::String location;
@@ -84,13 +127,32 @@ protected:
 
 	Orchestrator() = default;
 
-	bool RequestPullStreamUsingMap(const ov::String &location);
-	bool RequestPullStreamUsingScheme(const ov::String &url);
+	info::application_id_t GenerateApplicationId() const;
 
+	std::shared_ptr<pvd::Provider> GetProviderForScheme(const ov::String &scheme);
+	std::shared_ptr<pvd::Provider> GetProviderForUrl(const ov::String &url);
+
+	bool GetUrlListForLocation(const ov::String &location, std::vector<ov::String> *url_list, ov::String *scheme = nullptr) const;
+
+	Result CreateApplicationInternal(const ov::String &name, info::application_id_t *application_id = nullptr);
+	Result CreateApplicationInternal(const info::Application &app_info);
+
+	Result DeleteApplicationInternal(info::application_id_t app_id);
+	Result DeleteApplicationInternal(const info::Application &app_info);
+
+	bool RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> &url);
+	bool RequestPullStreamForLocation(const ov::String &scheme, const ov::String &location, const std::vector<ov::String> &url_list);
+
+	// Origin map
 	std::mutex _origin_map_mutex;
 	std::vector<Origin> _origin_list;
 
+	// Modules
 	std::mutex _modules_mutex;
 	std::vector<Module> _modules;
 	std::map<OrchestratorModuleType, std::vector<std::shared_ptr<OrchestratorModuleInterface>>> _module_map;
+
+	// Application list
+	std::mutex _app_map_mutex;
+	std::map<info::application_id_t, info::Application> _app_map;
 };

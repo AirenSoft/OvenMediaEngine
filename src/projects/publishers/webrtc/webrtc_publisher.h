@@ -10,8 +10,7 @@
 
 class WebRtcPublisher : public Publisher,
                         public IcePortObserver,
-                        public RtcSignallingObserver,
-						public OrchestratorPublisherModuleInterface
+                        public RtcSignallingObserver
 {
 public:
 	static std::shared_ptr<WebRtcPublisher> Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);

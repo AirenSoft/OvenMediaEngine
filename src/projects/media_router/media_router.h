@@ -16,7 +16,6 @@
 #include <thread>
 
 // Media Router base class
-#include "base/media_route/media_route_observer.h"
 #include "base/media_route/media_route_application_observer.h"
 #include "base/media_route/media_route_application_connector.h"
 #include "base/media_route/media_route_interface.h"
@@ -40,19 +39,17 @@ public:
 	bool Start();
 	bool Stop();
 
+	//--------------------------------------------------------------------
+	// Implementation of OrchestratorModuleInterface
+	//--------------------------------------------------------------------
+	bool OnCreateApplication(const info::Application &app_info) override;
+	bool OnDeleteApplication(const info::Application &app_info) override;
+
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// For Applications
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	//  Application Name으로 RouteApplication을 찾음
 	std::shared_ptr<MediaRouteApplication> GetRouteApplicationById(info::application_id_t application_id);
-	bool CreateApplication(const info::Application &app_info);
-	bool DeleteApplication(const info::Application &app_info);
-
-	////////////////////////////////////////////////////////////////////////////////////////////////
-	// Implement MediaRouterInterface
-	////////////////////////////////////////////////////////////////////////////////////////////////
-
-	bool RegisterModule(const std::shared_ptr<MediaRouteObserver> &module) override;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// For Providers
@@ -82,7 +79,6 @@ private:
 	void MainTask();
 
 	std::map<info::application_id_t, std::shared_ptr<MediaRouteApplication>> _route_apps;
-	std::vector<std::shared_ptr<MediaRouteObserver>> _modules;
 
 	volatile bool _kill_flag;
 	std::thread _thread;

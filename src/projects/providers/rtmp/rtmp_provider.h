@@ -27,7 +27,7 @@
 #include "rtmp_observer.h"
 #include "rtmp_server.h"
 
-class RtmpProvider : public pvd::Provider, public RtmpObserver, public OrchestratorProviderModuleInterface
+class RtmpProvider : public pvd::Provider, public RtmpObserver
 {
 public:
 	static std::shared_ptr<RtmpProvider> Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
@@ -42,15 +42,6 @@ public:
 
 	bool Start() override;
 	bool Stop() override;
-
-	//--------------------------------------------------------------------
-	// Implementation of OrchestratorProviderModuleInterface
-	//--------------------------------------------------------------------
-	bool PullStream(const ov::String &url) override
-	{
-		// Currently, RTMP Provider does not support pull
-		return false;
-	}
 
 protected:
 	std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &application_info) override;

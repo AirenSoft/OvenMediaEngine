@@ -28,11 +28,10 @@
 
 namespace pvd
 {
-	class OvtProvider : public pvd::Provider, public OrchestratorProviderModuleInterface
+	class OvtProvider : public pvd::Provider
 	{
 	public:
-		static std::shared_ptr<OvtProvider>
-		Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+		static std::shared_ptr<OvtProvider> Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 
 		explicit OvtProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 
@@ -50,7 +49,8 @@ namespace pvd
 		//--------------------------------------------------------------------
 		// Implementation of OrchestratorProviderModuleInterface
 		//--------------------------------------------------------------------
-		bool PullStream(const ov::String &url) override;
+		bool CheckOriginsAvailability(const std::vector<ov::String> &url_list) override;
+		bool PullStreams(info::application_id_t app_id, const ov::String &app_name, const ov::String stream_name, const std::vector<ov::String> &url_list) override;
 
 	protected:
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;

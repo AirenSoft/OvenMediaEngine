@@ -7,7 +7,6 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/info/application.h>
 #include <modules/physical_port/physical_port.h>
-#include "media_route_observer.h"
 
 class MediaRouteApplicationObserver;
 class MediaRouteApplicationConnector;
@@ -16,8 +15,6 @@ class StreamInfo;
 class MediaRouteInterface : public ov::EnableSharedFromThis<MediaRouteInterface>
 {
 public:
-
-	virtual bool RegisterModule(const std::shared_ptr<MediaRouteObserver> &module) = 0;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// Used by Provider modules

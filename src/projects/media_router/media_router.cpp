@@ -75,7 +75,7 @@ bool MediaRouter::Stop()
 	return true;
 }
 
-bool MediaRouter::CreateApplication(const info::Application &app_info)
+bool MediaRouter::OnCreateApplication(const info::Application &app_info)
 {
 	info::application_id_t application_id = app_info.GetId();
 	auto route_app = MediaRouteApplication::Create(app_info);
@@ -88,24 +88,12 @@ bool MediaRouter::CreateApplication(const info::Application &app_info)
 
 	_route_apps.insert(std::make_pair(application_id, route_app));
 
-	// Notify each module that the app has been created
-	for(auto module : _modules)
-	{
-		module->OnCreateApplication(app_info);
-	}
-
 	return true;
 }
 
-bool MediaRouter::DeleteApplication(const info::Application &app_info)
+bool MediaRouter::OnDeleteApplication(const info::Application &app_info)
 {
 	info::application_id_t application_id = app_info.GetId();
-
-	// Notify each module that the app has been deleted
-	for(auto module : _modules)
-	{
-		module->OnDeleteApplication(app_info);
-	}
 
 	// Remove from the Route App Map
 	_route_apps[application_id]->Stop();
@@ -125,13 +113,6 @@ std::shared_ptr<MediaRouteApplication> MediaRouter::GetRouteApplicationById(info
 	}
 
 	return obj->second;
-}
-
-bool MediaRouter::RegisterModule(const std::shared_ptr<MediaRouteObserver> &module)
-{
-	_modules.push_back(module);
-
-	return true;
 }
 
 // Connector의 Application이 생성되면 라우터에 등록함
