@@ -243,11 +243,12 @@ int main(int argc, char *argv[])
 		//--------------------------------------------------------------------
 		// Register modules to Orchestrator
 		//--------------------------------------------------------------------
+		// Currently, MediaRouter must be registered first
+		// Register media router
+		orchestrator->RegisterModule(router);
 		// Register providers
 		orchestrator->RegisterModule(rtmp_provider);
 		orchestrator->RegisterModule(ovt_provider);
-		// Register media router
-		orchestrator->RegisterModule(router);
 		// Register transcoder
 		orchestrator->RegisterModule(transcoder);
 		// Register publishers

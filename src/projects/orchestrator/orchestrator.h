@@ -132,7 +132,7 @@ protected:
 	std::shared_ptr<pvd::Provider> GetProviderForScheme(const ov::String &scheme);
 	std::shared_ptr<pvd::Provider> GetProviderForUrl(const ov::String &url);
 
-	bool GetUrlListForLocation(const ov::String &location, std::vector<ov::String> *url_list, ov::String *scheme = nullptr) const;
+	std::shared_ptr<Origin> GetUrlListForLocation(const ov::String &location, ov::String *app_name, ov::String *stream_name, std::vector<ov::String> *url_list);
 
 	Result CreateApplicationInternal(const ov::String &name, info::Application *app_info = nullptr);
 	Result CreateApplicationInternal(const info::Application &app_info);
@@ -141,11 +141,11 @@ protected:
 	Result DeleteApplicationInternal(const info::Application &app_info);
 
 	bool RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> &url);
-	bool RequestPullStreamForLocation(const ov::String &scheme, const ov::String &location, const std::vector<ov::String> &url_list);
+	bool RequestPullStreamForLocation(const ov::String &location);
 
 	// Origin map
 	std::mutex _origin_map_mutex;
-	std::vector<Origin> _origin_list;
+	std::vector<std::shared_ptr<Origin>> _origin_list;
 
 	// Modules
 	std::mutex _modules_mutex;

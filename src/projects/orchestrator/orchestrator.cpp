@@ -32,7 +32,7 @@ bool Orchestrator::PrepareOriginMap(const cfg::Origins &origins)
 			logtd("    - %s", url.GetUrl().CStr());
 		}
 
-		_origin_list.emplace_back(origin);
+		_origin_list.emplace_back(std::make_shared<Origin>(origin));
 	}
 }
 
@@ -192,7 +192,7 @@ std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForUrl(const ov::String 
 	return GetProviderForScheme(parsed_url->Scheme());
 }
 
-bool Orchestrator::GetUrlListForLocation(const ov::String &location, std::vector<ov::String> *url_list, ov::String *scheme) const
+std::shared_ptr<Orchestrator::Origin> Orchestrator::GetUrlListForLocation(const ov::String &location, ov::String *app_name, ov::String *stream_name, std::vector<ov::String> *url_list)
 {
 	// Find the origin using the location
 	for (auto &origin : _origin_list)
@@ -200,7 +200,7 @@ bool Orchestrator::GetUrlListForLocation(const ov::String &location, std::vector
 		logtd("Trying to find the item that match location: %s", location.CStr());
 
 		// TODO(dimien): Replace with the regex
-		if (location.HasPrefix(origin.location))
+		if (location.HasPrefix(origin->location))
 		{
 			// If the location has the prefix that configured in <Origins>, extract the remaining part
 			// For example, if the settings is:
@@ -215,11 +215,41 @@ bool Orchestrator::GetUrlListForLocation(const ov::String &location, std::vector
 			// <Location>: /app/stream
 			// location:   /app/stream_o
 			//                        ~~ <= remaining part
-			auto remaining_part = location.Substring(origin.location.GetLength());
+			auto remaining_part = location.Substring(origin->location.GetLength());
 
-			logtd("Found: location: %s, remaining_part: %s", origin.location.CStr(), remaining_part.CStr());
+			// Obtain the application name and the stream name
+			auto tokens = location.Split("/");
 
-			for (auto url : origin.url_list)
+			switch (tokens.size())
+			{
+				default:
+				case 3:
+					// "/app/stream"
+					*app_name = tokens[1];
+					*stream_name = tokens[2];
+					break;
+
+				case 2:
+					// "app/stream"
+					*app_name = tokens[0];
+					*stream_name = tokens[1];
+					break;
+
+				case 1:
+				case 0:
+					logte("Invalid location: %s", location.CStr());
+					return nullptr;
+			}
+
+			if (app_name->IsEmpty() || stream_name->IsEmpty())
+			{
+				logte("Invalid location: %s (%s, %s)", app_name->CStr(), stream_name->CStr());
+				return nullptr;
+			}
+
+			logtd("Found: location: %s (app: %s, stream: %s), remaining_part: %s", origin->location.CStr(), app_name->CStr(), stream_name->CStr(), remaining_part.CStr());
+
+			for (auto url : origin->url_list)
 			{
 				// Append the remaining_part to the URL
 
@@ -227,21 +257,22 @@ bool Orchestrator::GetUrlListForLocation(const ov::String &location, std::vector
 				//    url:     ovt://origin.airensoft.com:9000/another_app/and_stream
 				//    new_url: ovt://origin.airensoft.com:9000/another_app/and_stream_o
 				//                                                                   ~~ <= remaining part
+
+				// Prepend "<scheme>://"
+				url.Prepend("://");
+				url.Prepend(origin->scheme);
+
+				// Append remaining_part
 				url.Append(remaining_part);
 
 				url_list->push_back(url);
 			}
 
-			if (scheme != nullptr)
-			{
-				*scheme = origin.scheme;
-			}
-
-			return (url_list->size() > 0);
+			return (url_list->size() > 0) ? origin : nullptr;
 		}
 	}
 
-	return false;
+	return nullptr;
 }
 
 Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &name, info::Application *app_info)
@@ -350,6 +381,8 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(info::application_i
 		}
 	}
 
+	// TODO(dimiden): Need to find the app in _origin_map and delete it
+
 	return Result::Succeeded;
 }
 
@@ -426,51 +459,65 @@ bool Orchestrator::RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> 
 	return false;
 }
 
-bool Orchestrator::RequestPullStreamForLocation(const ov::String &location, const ov::String &scheme, const std::vector<ov::String> &url_list)
+bool Orchestrator::RequestPullStreamForLocation(const ov::String &location)
 {
-	#if 0
-	auto provider = GetProviderForScheme(scheme);
+	ov::String app_name;
+	ov::String stream_name;
+	std::vector<ov::String> url_list;
 
-	if (provider == nullptr)
+	auto origin = GetUrlListForLocation(location, &app_name, &stream_name, &url_list);
+
+	if (origin != nullptr)
 	{
-		logte("Could not find provider for the location: %s", location.CStr());
-		return false;
-	}
+		auto provider = GetProviderForScheme(origin->scheme);
 
-	auto provider_module = std::dynamic_pointer_cast<OrchestratorProviderModuleInterface>(provider);
-
-	if (provider_module->CheckOriginsAvailability(url_list) == false)
-	{
-		logte("The URLs is not available: %s", ov::String::Join(url_list, ", "));
-		return false;
-	}
-
-	info::application_id_t application_id;
-	auto result = CreateApplicationInternal(url->App(), &application_id);
-
-	if (result != Result::Failed)
-	{
-		// The application is created successfully (or already exists)
-		if (provider_module->PullStream(source))
+		if (provider == nullptr)
 		{
-			// The stream pulled successfully
-			return true;
+			logte("Could not find provider for the location: %s", location.CStr());
+			return false;
+		}
+
+		auto provider_module = std::dynamic_pointer_cast<OrchestratorProviderModuleInterface>(provider);
+
+		if (provider_module->CheckOriginAvailability(url_list) == false)
+		{
+			logte("The URLs is not available: %s", ov::String::Join(url_list, ", "));
+			return false;
+		}
+
+		auto item = _app_map.find(origin->app_id);
+		info::Application app_info(GenerateApplicationId(), app_name, cfg::Application());
+		Result result;
+
+		if (item != _app_map.end())
+		{
+			app_info = item->second;
+			result = Result::Exists;
+		}
+		else
+		{
+			// Create a new application
+			result = CreateApplicationInternal(app_info);
+
+			if (result == Result::Failed)
+			{
+				// Failed to create the application
+				return false;
+			}
+		}
+
+		if (provider_module->PullStream(app_info, stream_name, url_list) == false)
+		{
+			// Rollback if needed
+			if (result == Result::Succeeded)
+			{
+				DeleteApplicationInternal(app_info);
+			}
 		}
 	}
-	else
-	{
-		// Could not create the application
-		return false;
-	}
 
-	// Rollback if failed
-	if (result == Result::Succeeded)
-	{
-		// If there is no existing app and it is created, delete the app
-		DeleteApplicationInternal(application_id);
-	}
+	logte("Could not find Origin for the location: %s", location.CStr());
 
-#endif
 	return false;
 }
 
@@ -491,19 +538,7 @@ bool Orchestrator::RequestPullStream(const ov::String &url)
 		// There is no scheme in the URL
 		std::lock_guard<__decltype(_origin_map_mutex)> lock_guard_for_origin_map(_origin_map_mutex);
 
-		ov::String scheme;
-		std::vector<ov::String> url_list;
-
-		if (GetUrlListForLocation(url, &url_list, &scheme))
-		{
-			std::shared_ptr<OrchestratorProviderModuleInterface> provider_module;
-
-			return RequestPullStreamForLocation(url, scheme, url_list);
-		}
-		else
-		{
-			logte("Could not find Origin for the URL: %s", url.CStr());
-		}
+		return RequestPullStreamForLocation(url);
 	}
 
 	return false;
