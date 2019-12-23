@@ -45,7 +45,7 @@ MediaRouteApplicationConnector::ConnectorType MediaRouteStream::GetConnectorType
 	return _application_connector_type;
 }
 
-bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer, bool convert_bitstream)
+bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer)
 {
 	MediaType media_type = buffer->GetMediaType();
 	int32_t track_id = buffer->GetTrackId();
@@ -55,48 +55,6 @@ bool MediaRouteStream::Push(std::unique_ptr<MediaPacket> buffer, bool convert_bi
 	{
 		logte("Cannot find media track. type(%s), id(%d)", (media_type == MediaType::Video) ? "video" : "audio", track_id);
 		return false;
-	}
-
-	// TODO(soulk): Move this code to RTMP provider/Transcoder (RTMP need to calculate pts using dts and cts)
-	if(convert_bitstream)
-	{
-		if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::H264)
-		{
-		    int64_t cts = 0;
-
-			if(_bsfv.Convert(buffer->GetData(), cts) == false)
-			{
-				return false;
-			}
-
-			// The timestamp used by RTMP is DTS
-			// cts = pts - dts
-			// pts = dts + cts
-			// Convert timebase 1/1000 to 1/90000
-			buffer->SetPts(buffer->GetDts() + (cts * 90));
-
-			OV_ASSERT2(buffer->GetPts() >= 0LL);
-		}
-		else if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::Vp8)
-		{
-			_bsf_vp8.convert_to(buffer->GetData());
-		}
-		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Aac)
-		{
-			_bsfa.convert_to(buffer->GetData());
-
-			logtp("Enqueue for AAC\n%s", buffer->GetData()->Dump(32).CStr());
-		}
-		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Opus)
-		{
-			// logtw("%s", buffer->GetData()->Dump(32).CStr());
-			// _bsfa.convert_to(buffer.GetBuffer());
-			logtp("Enqueue for OPUS\n%s", buffer->GetData()->Dump(32).CStr());
-		}
-		else
-		{
-			OV_ASSERT2(false);
-		}
 	}
 
 #if 0

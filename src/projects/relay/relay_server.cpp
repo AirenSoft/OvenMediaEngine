@@ -369,8 +369,6 @@ void RelayServer::SendMediaPacket(const std::shared_ptr<MediaRouteStream> &media
 
 	RelayPacket relay_packet(RelayPacketType::Packet);
 
-	relay_packet.SetFragmentHeader(packet->GetFragHeader());
-
 	relay_packet.SetMediaType(static_cast<int8_t>(packet->GetMediaType()));
 	relay_packet.SetTrackId(static_cast<uint32_t>(packet->GetTrackId()));
 	relay_packet.SetPts(static_cast<uint64_t>(packet->GetPts()));
@@ -378,5 +376,8 @@ void RelayServer::SendMediaPacket(const std::shared_ptr<MediaRouteStream> &media
 	relay_packet.SetDuration(static_cast<uint64_t>(packet->GetDuration()));
 	relay_packet.SetFlag(static_cast<uint8_t>(packet->GetFlag()));
 
-	Send(stream_info->GetId(), relay_packet, packet->GetData().get());
+	const auto &frag_hdr = packet->GetFragHeader();
+	ov::Data data(frag_hdr ? frag_hdr->Serialize() : FragmentationHeader().Serialize());
+	data.Append(packet->GetData().get());
+	Send(stream_info->GetId(), relay_packet, &data);
 }

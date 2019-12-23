@@ -61,7 +61,8 @@ public:
                      uint32_t stream_id,
                      int64_t timestamp,
                      RtmpFrameType frame_type,
-                     const std::shared_ptr<const ov::Data> &data) override;
+                     const std::shared_ptr<const ov::Data> &data,
+                     std::unique_ptr<FragmentationHeader> fragmentation_header) override;
 
     bool OnAudioData(info::application_id_t application_id,
                      uint32_t stream_id,

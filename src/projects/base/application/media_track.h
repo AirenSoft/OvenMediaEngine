@@ -44,6 +44,8 @@ public:
 	void SetLastFrameTime(int64_t time);
 	int64_t GetLastFrameTime() const;
 
+	void SetBypass(bool bypass);
+
 private:
 	uint32_t _id;
 
@@ -57,4 +59,6 @@ private:
 
 	// Time of last frame(packet)
 	int64_t _last_frame_time;
+
+	bool _bypass = false;
 };

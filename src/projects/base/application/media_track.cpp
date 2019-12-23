@@ -46,6 +46,8 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 
 	_start_frame_time = 0;
 	_last_frame_time = 0;
+
+	_bypass = media_track._bypass;
 }
 
 MediaTrack::~MediaTrack()
@@ -121,4 +123,9 @@ void MediaTrack::SetLastFrameTime(int64_t time)
 int64_t MediaTrack::GetLastFrameTime() const
 {
 	return _last_frame_time;
+}
+
+void MediaTrack::SetBypass(bool bypass)
+{
+	_bypass = bypass;
 }

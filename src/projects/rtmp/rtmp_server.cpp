@@ -237,12 +237,13 @@ bool RtmpServer::OnChunkStreamVideoData(ov::ClientSocket *remote,
 										info::application_id_t application_id, uint32_t stream_id,
 										uint64_t timestamp,
 										RtmpFrameType frame_type,
-										const std::shared_ptr<const ov::Data> &data)
+										const std::shared_ptr<const ov::Data> &data,
+										std::unique_ptr<FragmentationHeader> fragmentation_header)
 {
 	// Notify the video data to the observers
 	for (auto &observer : _observers)
 	{
-		if (observer->OnVideoData(application_id, stream_id, timestamp, frame_type, data) == false)
+		if (observer->OnVideoData(application_id, stream_id, timestamp, frame_type, data, std::move(fragmentation_header)) == false)
 		{
 			logte("Could not send video data to observer %p: (%u/%u), remote: %s",
 				  observer.get(),

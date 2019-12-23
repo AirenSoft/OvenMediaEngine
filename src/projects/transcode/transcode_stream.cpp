@@ -11,6 +11,7 @@
 #include "transcode_stream.h"
 
 #include <config/config_manager.h>
+#include <base/common_types.h>
 
 #define OV_LOG_TAG "TranscodeStream"
 
@@ -141,6 +142,7 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 	auto encodes = _application_info->GetEncodes();
 	std::map<ov::String, std::vector<uint8_t>> profile_tracks;
 	std::vector<uint8_t> tracks;
+	std::vector<std::pair<uint8_t, std::shared_ptr<MediaTrack>>> bypass_tracks;
 
 	for (const auto &encode : encodes)
 	{
@@ -155,17 +157,34 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 
 		if ((video_profile != nullptr) && (video_profile->IsActive()))
 		{
-			auto output_context = std::make_shared<TranscodeContext>(
-				true,
-				GetCodecId(video_profile->GetCodec()),
-				GetBitrate(video_profile->GetBitrate()),
-				video_profile->GetWidth(), video_profile->GetHeight(),
-				video_profile->GetFramerate());
-
-			uint8_t track_id = AddOutputContext(common::MediaType::Video, output_context);
-			if (track_id)
+			if (video_profile->IsBypass())
 			{
-				tracks.push_back(track_id);
+				auto video_track = _stream_info_input->FindFirstTrack(common::MediaType::Video);
+				if (video_track)
+				{
+					uint8_t track_id = GetTrackId(common::MediaType::Video);
+					if (track_id)
+					{
+						_bypass_routes.emplace(video_track->GetId(), track_id);
+						bypass_tracks.emplace_back(track_id, video_track);
+						tracks.push_back(track_id);
+					}
+				}
+			}
+			else
+			{
+				auto output_context = std::make_shared<TranscodeContext>(
+					true,
+					GetCodecId(video_profile->GetCodec()),
+					GetBitrate(video_profile->GetBitrate()),
+					video_profile->GetWidth(), video_profile->GetHeight(),
+					video_profile->GetFramerate());
+
+				uint8_t track_id = AddOutputContext(common::MediaType::Video, output_context);
+				if (track_id)		
+				{
+					tracks.push_back(track_id);
+				}
 			}
 		}
 
@@ -224,6 +243,32 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 		}
 		_stream_tracks[stream_name] = tracks;
 		tracks.clear();
+	}
+
+	// Generate streams for bypassed tracks
+	for(const auto &bypass_track : bypass_tracks)
+	{
+		for(auto stream_track : _stream_tracks)
+		{
+			auto it = find(stream_track.second.begin(), stream_track.second.end(), bypass_track.first);
+			if(it == stream_track.second.end())
+			{
+				continue;
+			}
+
+			auto item = _stream_info_outputs.find(stream_track.first);
+			if(item == _stream_info_outputs.end())
+			{
+				OV_ASSERT2(false);
+				continue;
+			}
+
+			auto new_track = std::make_shared<MediaTrack>(*bypass_track.second);
+			new_track->SetId(bypass_track.first);
+			new_track->SetBypass(true);
+			item->second->AddTrack(new_track);
+			logti("stream_name(%s), track_id(%d)", stream_track.first.CStr(), bypass_track.first);
+		}	
 	}
 
 	// Generate unused track list to delete
@@ -334,18 +379,91 @@ bool TranscodeStream::Push(std::unique_ptr<MediaPacket> packet)
 	// logtd("Stage-1-1 : %f", (float)frame->GetPts());
 	// 변경된 스트림을 큐에 넣음
 
-	if (_encoders.empty())
+	std::unique_ptr<MediaPacket> packet_for_encoding;
+	bool no_encoders = _encoders.empty();
+	bool pushed = false;
+	auto it = _bypass_routes.find(packet->GetTrackId());
+	if (it != _bypass_routes.end())
+	{
+		if (no_encoders == false)
+		{
+			packet_for_encoding = packet->ClonePacket();
+		}
+		packet->SetTrackId(it->second);
+		SendFrame(std::move(packet), it->second);
+		pushed = true;
+	}
+	else
+	{
+		packet_for_encoding = std::move(packet);
+	}
+	
+	if(no_encoders)
+	{
+		return pushed;
+	}
+
+	auto input_tracks = _stream_info_input->GetTracks();
+	auto input_track_iterator = input_tracks.find(packet_for_encoding->GetTrackId());
+	if (input_track_iterator == input_tracks.end())
 	{
 		return false;
 	}
 
-	if (_queue.size() > _max_queue_size)
+	const auto media_type = packet_for_encoding->GetMediaType();
+	const auto media_codec = input_track_iterator->second->GetCodecId();
+	// Fragmentation headers need to be reset if any modifications to the bitstreams are performed
+	if(media_type == common::MediaType::Video && media_codec == common::MediaCodecId::H264)
+	{
+		int64_t cts = 0;
+
+		if(_bsfv.Convert(packet_for_encoding->GetData(), cts) == false)
+		{
+			return false;
+		}
+
+		// The timestamp used by RTMP is DTS
+		// cts = pts - dts
+		// pts = dts + cts
+		// Convert timebase 1/1000 to 1/90000
+		packet_for_encoding->SetPts(packet_for_encoding->GetDts() + (cts * 90));
+
+		OV_ASSERT2(packet_for_encoding->GetPts() >= 0LL);
+
+		packet_for_encoding->SetFragHeader(nullptr);
+	}
+	else if(media_type == common::MediaType::Video && media_codec == common::MediaCodecId::Vp8)
+	{
+		_bsf_vp8.convert_to(packet_for_encoding->GetData());
+
+		packet_for_encoding->SetFragHeader(nullptr);
+	}
+	else if(media_type == common::MediaType::Audio && media_codec == common::MediaCodecId::Aac)
+	{
+		_bsfa.convert_to(packet_for_encoding->GetData());
+
+		logtp("Enqueue for AAC\n%s", packet_for_encoding->GetData()->Dump(32).CStr());
+
+		packet_for_encoding->SetFragHeader(nullptr);
+	}
+	else if(media_type == common::MediaType::Audio && media_codec == common::MediaCodecId::Opus)
+	{
+		// logtw("%s", buffer->GetData()->Dump(32).CStr());
+		// _bsfa.convert_to(buffer.GetBuffer());
+		logtp("Enqueue for OPUS\n%s", packet_for_encoding->GetData()->Dump(32).CStr());
+	}
+	else
+	{
+		OV_ASSERT2(false);
+	}
+
+	if(_queue.size() > _max_queue_size)
 	{
 		logti("Queue(stream) is full, please check your system: (queue: %zu > limit: %llu)", _queue.size(), _max_queue_size);
 		return false;
 	}
 
-	_queue.push(std::move(packet));
+	_queue.push(std::move(packet_for_encoding));
 
 	return true;
 }
@@ -682,7 +800,12 @@ void TranscodeStream::SendFrame(std::unique_ptr<MediaPacket> packet)
 {
 	uint8_t track_id = static_cast<uint8_t>(packet->GetTrackId());
 
-	for (auto &iter : _stream_info_outputs)
+	SendFrame(std::move(packet), track_id);
+}
+
+void TranscodeStream::SendFrame(std::unique_ptr<MediaPacket> packet, uint8_t track_id)
+{
+	for(auto &iter : _stream_info_outputs)
 	{
 		auto stream_track = _stream_tracks.find(iter.first);
 		if (stream_track == _stream_tracks.end())
@@ -833,11 +956,18 @@ void TranscodeStream::DoFilters(std::unique_ptr<MediaFrame> frame)
 }
 
 uint8_t TranscodeStream::AddOutputContext(common::MediaType media_type, std::shared_ptr<TranscodeContext> output_context)
-{
+{	
 	// output_context must be encoding context
 	OV_ASSERT2(output_context != nullptr);
 	OV_ASSERT2(output_context->IsEncodingContext());
 
+	const auto index = GetTrackId(media_type);
+	_output_contexts[index] = output_context;
+	return index;
+}
+
+uint8_t TranscodeStream::GetTrackId(common::MediaType media_type)
+{
 	uint8_t last_index = 0;
 
 	// 96-127 dynamic : RTP Payload Types for standard audio and video encodings
@@ -863,8 +993,5 @@ uint8_t TranscodeStream::AddOutputContext(common::MediaType media_type, std::sha
 		last_index = _last_track_audio;
 		++_last_track_audio;
 	}
-
-	_output_contexts[last_index] = output_context;
-
 	return last_index;
 }

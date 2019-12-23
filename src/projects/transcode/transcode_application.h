@@ -36,12 +36,12 @@ public:
 	explicit TranscodeApplication(const info::Application *application_info);
 	~TranscodeApplication() override;
 
-	MediaRouteApplicationObserver::ObserverType GetObserverType()
+	MediaRouteApplicationObserver::ObserverType GetObserverType() override
 	{
 		return MediaRouteApplicationObserver::ObserverType::Transcoder;
 	}
 
-	MediaRouteApplicationConnector::ConnectorType GetConnectorType()
+	MediaRouteApplicationConnector::ConnectorType GetConnectorType() override
 	{
 		return MediaRouteApplicationConnector::ConnectorType::Transcoder;
 	}
