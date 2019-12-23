@@ -30,4 +30,5 @@ public:
 
 private:
 	std::shared_ptr<ov::Socket>		_connector;
+	bool 							_sent_ready;
 };

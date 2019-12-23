@@ -133,7 +133,7 @@ void OvtStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 {
 	// Broadcasting
-	BroadcastPacket(OVT_PAYLOAD_TYPE_MEDIA_PACKET, packet->GetData());
+	BroadcastPacket(packet->Marker(), packet->GetData());
 	return true;
 }
 

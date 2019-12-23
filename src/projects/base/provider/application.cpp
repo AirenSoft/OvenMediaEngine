@@ -17,7 +17,7 @@ namespace pvd
 	Application::Application(const info::Application &application_info)
 		: info::Application(application_info)
 	{
-
+		_last_issued_stream_id = 100;
 	}
 
 	Application::~Application()
@@ -52,6 +52,7 @@ namespace pvd
 			new_stream_id++;
 		}
 
+		_last_issued_stream_id = new_stream_id;
 		return new_stream_id;
 	}
 

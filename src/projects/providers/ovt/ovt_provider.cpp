@@ -54,15 +54,9 @@ namespace pvd
 	// Pull Stream
 	bool OvtProvider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list)
 	{
-		// Dummy code
-		auto url = url_list[0];
-
-		auto url_parser = ov::Url::Parse(url.CStr());
-		// auto app_name = url_parser->App();
-		// auto stream_name = url_parser->Stream();
-
 		// Find App
-		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
+		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationByName("app2"));
+		//auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
 		if (app == nullptr)
 		{
 			logte("There is no such app (%s)", app_info.GetName().CStr());

@@ -24,6 +24,7 @@ OvtSession::OvtSession(const SessionInfo &session_info,
    : Session(session_info, application, stream)
 {
 	_connector = connector;
+	_sent_ready = false;
 }
 
 OvtSession::~OvtSession()
@@ -46,6 +47,18 @@ bool OvtSession::Stop()
 
 bool OvtSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet)
 {
+	// packet_type in OvtSession means marker of OVT Packet
+	// OvtSession should send full packet so it will start to send from next packet of marker packet.
+	if(_sent_ready == false)
+	{
+		if(packet_type == true) // Set marker
+		{
+			_sent_ready = true;
+		}
+
+		return false;
+	}
+
 	// Set OVT Session ID into packet
 	// It is also possible to use OvtPacket::Load, but for performance, as follows.
 	auto buffer = packet->GetWritableDataAs<uint8_t>();

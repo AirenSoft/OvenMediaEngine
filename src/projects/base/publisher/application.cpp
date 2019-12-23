@@ -26,6 +26,7 @@ bool Application::Start()
 bool Application::Stop()
 {
 	_stop_thread_flag = true;
+	_queue_event.Notify();
 	_worker_thread.join();
 
 	return true;
