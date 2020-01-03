@@ -123,26 +123,25 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 			continue;
 		}
 
-		const auto &video_profiles = encode.GetVideoProfiles();
-		
 		auto profile_name = encode.GetName();
-		auto input_video_track_iterator = input_video_tracks.begin();
 
-		for (const auto &video_profile : video_profiles)
 		{
-			if (input_video_track_iterator == input_video_tracks.end())
-			{
-				logtw("Encode %s has more active video tracks specified than the input stream provides (%zu)", profile_name.CStr(), input_video_tracks.size());
-				break;
-			}
+			const auto &video_profiles = encode.GetVideoProfiles();
+			auto input_video_track_iterator = input_video_tracks.begin();
 
-			if(video_profile.IsActive())
+			for (const auto &video_profile : video_profiles)
 			{
-				if (*input_video_track_iterator != nullptr)
+				if (input_video_track_iterator == input_video_tracks.end())
 				{
-					if (video_profile.IsBypass())
+					logtw("Encode %s has more active video tracks specified than the input stream provides (%zu)", profile_name.CStr(), input_video_tracks.size());
+					break;
+				}
+
+				if(video_profile.IsActive())
+				{
+					if (*input_video_track_iterator != nullptr)
 					{
-						if (*input_video_track_iterator)
+						if (video_profile.IsBypass())
 						{
 							uint8_t track_id = GetTrackId(common::MediaType::Video);
 							if (track_id)
@@ -152,54 +151,53 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 								tracks.push_back(track_id);
 							}
 						}
+						else
+						{
+							auto context = std::make_shared<TranscodeContext>(
+								true,
+								GetCodecId(video_profile.GetCodec()),
+								GetBitrate(video_profile.GetBitrate()),
+								video_profile.GetWidth(), video_profile.GetHeight(),
+								video_profile.GetFramerate()
+							);
+							uint8_t track_id = AddOutputContext(common::MediaType::Video, context);
+							if(track_id)
+							{
+								tracks.push_back(track_id);
+								transcoded_tracks.emplace_back(*input_video_track_iterator);
+							}
+						}
 					}
 					else
 					{
-						auto context = std::make_shared<TranscodeContext>(
-							true,
-							GetCodecId(video_profile.GetCodec()),
-							GetBitrate(video_profile.GetBitrate()),
-							video_profile.GetWidth(), video_profile.GetHeight(),
-							video_profile.GetFramerate()
-						);
-						uint8_t track_id = AddOutputContext(common::MediaType::Video, context);
-						if(track_id)
-						{
-							tracks.push_back(track_id);
-							transcoded_tracks.emplace_back(*input_video_track_iterator);
-						}
+						logte("Empty input video track provided");
 					}
 				}
-				else
-				{
-					logte("Empty input video track provided");
-				}
-			}
 
-			// This is put here intentionally - by having the iterator here and not inside the previous block
-			// allows to "skip" some streams in case of multiple video tracks from a single provider by adding inactive
-			// video encodes
-			++input_video_track_iterator;
+				// This is put here intentionally - by having the iterator here and not inside the previous block
+				// allows to "skip" some streams in case of multiple video tracks from a single provider by adding inactive
+				// video encodes
+				++input_video_track_iterator;
+			}
 		}
 
-		const auto &audio_profiles = encode.GetAudioProfiles();
-		auto input_audio_track_iterator = input_audio_tracks.begin();
-	
-		for (const auto &audio_profile : audio_profiles)
 		{
-			if (input_audio_track_iterator == input_audio_tracks.end())
+			const auto &audio_profiles = encode.GetAudioProfiles();
+			auto input_audio_track_iterator = input_audio_tracks.begin();
+		
+			for (const auto &audio_profile : audio_profiles)
 			{
-				logtw("Encode %s has more active audio tracks specified than the input stream provides (%zu)", profile_name.CStr(), input_audio_tracks.size());
-				continue;
-			}
-
-			if(audio_profile.IsActive())
-			{
-				if (*input_video_track_iterator != nullptr)
+				if (input_audio_track_iterator == input_audio_tracks.end())
 				{
-					if (audio_profile.IsBypass())
+					logtw("Encode %s has more active audio tracks specified than the input stream provides (%zu)", profile_name.CStr(), input_audio_tracks.size());
+					break;
+				}
+
+				if(audio_profile.IsActive())
+				{
+					if (*input_audio_track_iterator != nullptr)
 					{
-						if (*input_audio_track_iterator)
+						if (audio_profile.IsBypass())
 						{
 							uint8_t track_id = GetTrackId(common::MediaType::Audio);
 							if (track_id)
@@ -209,33 +207,33 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 								tracks.push_back(track_id);
 							}
 						}
+						else
+						{
+							auto context = std::make_shared<TranscodeContext>(
+								true,
+								GetCodecId(audio_profile.GetCodec()),
+								GetBitrate(audio_profile.GetBitrate()),
+								audio_profile.GetSamplerate()
+							);
+							uint8_t track_id = AddOutputContext(common::MediaType::Audio, context);
+							if(track_id)
+							{
+								tracks.push_back(track_id);
+								transcoded_tracks.emplace_back(*input_audio_track_iterator);
+							}
+						}
 					}
 					else
 					{
-						auto context = std::make_shared<TranscodeContext>(
-							true,
-							GetCodecId(audio_profile.GetCodec()),
-							GetBitrate(audio_profile.GetBitrate()),
-							audio_profile.GetSamplerate()
-						);
-						uint8_t track_id = AddOutputContext(common::MediaType::Audio, context);
-						if(track_id)
-						{
-							tracks.push_back(track_id);
-							transcoded_tracks.emplace_back(*input_audio_track_iterator);
-						}
+						logte("Empty input audio track provided");
 					}
 				}
-				else
-				{
-					logte("Empty input audio track provided");
-				}
-			}
 
-			// This is put here intentionally - by having the iterator here and not inside the previous block
-			// allows to "skip" some tracks in case of multiple audio tracks from a single provider by adding inactive
-			// audio encodes
-			++input_audio_track_iterator;
+				// This is put here intentionally - by having the iterator here and not inside the previous block
+				// allows to "skip" some tracks in case of multiple audio tracks from a single provider by adding inactive
+				// audio encodes
+				++input_audio_track_iterator;
+			}
 		}
 
 		if (!tracks.empty())
