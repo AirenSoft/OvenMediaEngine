@@ -10,6 +10,8 @@
 #include "rtp_rtcp/rtp_rtcp_interface.h"
 #include "dtls_srtp/dtls_transport.h"
 
+#include <unordered_set>
+
 /*
  *
  * RtcSession은 RtpRtcp를 이용하여 VideoFrame/AudioSample을 Packetize를 하고
@@ -76,5 +78,5 @@ private:
 	std::shared_ptr<IcePort>            _ice_port;
 
 	uint8_t 							_red_block_pt;
-	std::vector<uint8_t>				_payload_types;
+	std::unordered_set<uint8_t>			_payload_types;
 };

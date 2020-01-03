@@ -73,7 +73,7 @@ bool RtcSession::Start()
 			return false;
 		}
 
-		_payload_types.emplace_back(first_payload->GetId());
+		_payload_types.emplace(first_payload->GetId());
 		// If there is a RED
 		if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Video && peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
 		{
@@ -175,7 +175,7 @@ bool RtcSession::SendOutgoingData(uint32_t packet_type, std::shared_ptr<ov::Data
 	auto red_block_pt = static_cast<uint8_t>((packet_type & 0xFF00) >> 8);
 	auto origin_pt_of_fec = static_cast<uint8_t>((packet_type & 0xFF0000) >> 16);
 
-	if (std::find(_payload_types.begin(), _payload_types.end(), rtp_payload_type) == _payload_types.end())
+	if (_payload_types.find(rtp_payload_type) == _payload_types.end())
 	{
 		return false;
 	}
