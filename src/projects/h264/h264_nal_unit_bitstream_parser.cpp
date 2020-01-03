@@ -39,7 +39,7 @@ bool H264NalUnitBitstreamParser::ReadBit(uint8_t &value)
     {
         return false;
     }
-    value = bitstream_[bit_offset_ / 8] & (0x80 >> (bit_offset_ % 8));
+    value = bitstream_[bit_offset_ / 8] & (0x80 >> (bit_offset_ % 8)) ? 1 : 0;
     bit_offset_ += 1;
     return true;
 }

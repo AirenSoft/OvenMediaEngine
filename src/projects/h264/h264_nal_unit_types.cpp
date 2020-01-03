@@ -33,3 +33,8 @@ bool operator==(uint8_t first, H264NalUnitType second)
 {
     return first == static_cast<uint8_t>(second);
 }
+
+bool operator!=(uint8_t first, H264NalUnitType second)
+{
+    return first != static_cast<uint8_t>(second);
+}

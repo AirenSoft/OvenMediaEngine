@@ -1,5 +1,6 @@
 #include "sdp.h"
 
+#include <h264/h264_sps.h>
 #include <base/ovlibrary/stl.h>
 #include <base/ovcrypto/base_64.h>
 
@@ -88,12 +89,28 @@ bool ParseSdp(const std::vector<uint8_t> &sdp, RtspMediaInfo &rtsp_media_info)
                                         auto parameter_sets = Split(format_component_value, ',');
                                         if (parameter_sets.size() == 2)
                                         {
-                                            auto sps = ov::Base64::Decode(ov::String(parameter_sets[0].data(), parameter_sets[0].size()));
-                                            auto pps = ov::Base64::Decode(ov::String(parameter_sets[1].data(), parameter_sets[1].size()));
+                                            auto sps_bytes = ov::Base64::Decode(ov::String(parameter_sets[0].data(), parameter_sets[0].size()));
+                                            auto pps_bytes = ov::Base64::Decode(ov::String(parameter_sets[1].data(), parameter_sets[1].size()));
                                             H264Extradata h264_extradata;
-                                            h264_extradata.AddSps(std::vector<uint8_t>(sps->GetDataAs<uint8_t>(), sps->GetDataAs<uint8_t>() +sps->GetLength()));
-                                            h264_extradata.AddPps(std::vector<uint8_t>(pps->GetDataAs<uint8_t>(), pps->GetDataAs<uint8_t>() + pps->GetLength()));
-                                            rtsp_media_info.payloads_[payload_type].SetCodecExtradata(h264_extradata.Serialize());
+                                            h264_extradata.AddSps(std::vector<uint8_t>(sps_bytes->GetDataAs<uint8_t>(), sps_bytes->GetDataAs<uint8_t>() +sps_bytes->GetLength()));
+                                            h264_extradata.AddPps(std::vector<uint8_t>(pps_bytes->GetDataAs<uint8_t>(), pps_bytes->GetDataAs<uint8_t>() + pps_bytes->GetLength()));
+                                            auto &payload = rtsp_media_info.payloads_[payload_type];
+                                            payload.SetCodecExtradata(h264_extradata.Serialize());
+                                            // Attempt to parse SPS to propely set width/height/frame rate
+                                            H264Sps sps;
+                                            if (H264Sps::Parse(sps_bytes->GetDataAs<uint8_t>(), sps_bytes->GetLength(), sps))
+                                            {
+                                                payload.SetWidth(sps.GetWidth());
+                                                payload.SetHeight(sps.GetHeight());
+                                                payload.SetFrameRate(sps.GetFps());
+                                            }
+                                            else
+                                            {
+                                                // At least clear the variables
+                                                payload.SetWidth(0);
+                                                payload.SetHeight(0);
+                                                payload.SetFrameRate(0);
+                                            }
                                         }
                                     }
                                     else if (format_component_name == "sprop-stereo")
