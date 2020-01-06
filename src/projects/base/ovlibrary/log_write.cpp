@@ -50,6 +50,7 @@ namespace ov
             return;
         }
 
+        std::lock_guard<std::mutex> lock_guard(_log_stream_mutex);
         _log_stream.close();
         _log_stream.clear();
         _log_stream.open(_log_file, std::ofstream::out | std::ofstream::app);
@@ -83,6 +84,7 @@ namespace ov
             Initialize();
         }
 
+        std::lock_guard<std::mutex> lock_guard(_log_stream_mutex);
         _log_stream << log << std::endl;
         _log_stream.flush();
     }

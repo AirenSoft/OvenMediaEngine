@@ -9,6 +9,7 @@
 #pragma once
 
 #include <fstream>
+#include <mutex>
 
 namespace ov
 {
@@ -25,6 +26,7 @@ namespace ov
     private:
         void Initialize();
 
+        std::mutex _log_stream_mutex;
         std::ofstream _log_stream;
         int _last_day;
         std::string _log_path;

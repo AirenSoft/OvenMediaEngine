@@ -33,12 +33,6 @@ public:
 
 	static DashFileType GetFileType(const ov::String &file_name);
 
-	virtual bool WriteVideoInit(const std::shared_ptr<ov::Data> &frame);
-	virtual bool WriteAudioInit(const std::shared_ptr<ov::Data> &frame);
-
-	virtual bool WriteVideoSegment();
-	virtual bool WriteAudioSegment();
-
 	//--------------------------------------------------------------------
 	// Override Packetizer
 	//--------------------------------------------------------------------
@@ -55,16 +49,21 @@ protected:
 
 	static int GetStartPatternSize(const uint8_t *buffer);
 
+	// start_timestamp: a timestamp of the first frame of the segment
 	virtual ov::String GetFileName(int64_t start_timestamp, common::MediaType media_type) const;
 
 	bool WriteVideoInitInternal(const std::shared_ptr<ov::Data> &frame, const ov::String &init_file_name);
+	virtual bool WriteVideoInit(const std::shared_ptr<ov::Data> &frame);
+	virtual bool WriteVideoSegment();
 	bool WriteVideoInitIfNeeded(std::shared_ptr<PacketizerFrameData> &frame);
+	// Enqueues the video frame, and call the data_callback if a new segment is created
+	bool AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback);
 
 	bool WriteAudioInitInternal(const std::shared_ptr<ov::Data> &frame, const ov::String &init_file_name);
+	virtual bool WriteAudioInit(const std::shared_ptr<ov::Data> &frame);
+	virtual bool WriteAudioSegment();
 	bool WriteAudioInitIfNeeded(std::shared_ptr<PacketizerFrameData> &frame);
-
-	// Enqueues the frame, and call the data_callback if a new segment is created
-	bool AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback);
+	// Enqueues the audio frame, and call the data_callback if a new segment is created
 	bool AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback);
 
 	bool GetSegmentInfos(ov::String *video_urls, ov::String *audio_urls, double *time_shift_buffer_depth, double *minimum_update_period);
@@ -74,6 +73,7 @@ protected:
 	virtual void SetReadyForStreaming() noexcept;
 
 	int _avc_nal_header_size = 0;
+	// Date & Time (YYYY-MM-DDTHH:II:SS.sssZ)
 	ov::String _start_time;
 	std::string _pixel_aspect_ratio;
 	double _mpd_min_buffer_time;
@@ -96,9 +96,10 @@ protected:
 	double _duration_delta_for_video = 0.0;
 	double _duration_delta_for_audio = 0.0;
 
-	uint32_t _video_sequence_number = 1;
-	uint32_t _audio_sequence_number = 1;
+	uint32_t _video_segment_count = 0U;
+	uint32_t _audio_segment_count = 0U;
 
+	// Unit: milliseconds
 	time_t _video_start_time = 0;
 	time_t _audio_start_time = 0;
 

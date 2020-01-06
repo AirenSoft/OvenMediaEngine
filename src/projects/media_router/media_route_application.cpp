@@ -13,6 +13,8 @@
 
 using namespace common;
 
+#define TEMP_USE_LOCK
+
 std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info::Application &application_info)
 {
 	auto media_route_application = std::make_shared<MediaRouteApplication>(application_info);
@@ -157,6 +159,10 @@ bool MediaRouteApplication::OnCreateStream(
 	// 기존에 사용하던 Stream의 ID를 재사용한다
 	if (app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
+#ifdef TEMP_USE_LOCK
+		std::lock_guard<decltype(_mutex)> lock_guard(_mutex);
+#endif // TEMP_USE_LOCK
+
 		for (auto it = _streams.begin(); it != _streams.end(); ++it)
 		{
 			auto istream = it->second;
@@ -174,17 +180,19 @@ bool MediaRouteApplication::OnCreateStream(
 
 	logtd("Created stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
-	std::unique_lock<std::mutex> lock(_mutex);
-
 	auto new_stream_info = std::make_shared<StreamInfo>(*stream_info);
 	auto new_stream = std::make_shared<MediaRouteStream>(new_stream_info);
 
-	new_stream->SetConnectorType(app_conn->GetConnectorType());
+	{
+#ifdef TEMP_USE_LOCK
+		std::lock_guard<std::mutex> lock_guard(_mutex);
+#endif // TEMP_USE_LOCK
 
-	_streams.insert(
-		std::make_pair(new_stream_info->GetId(), new_stream));
 
-	lock.unlock();
+		new_stream->SetConnectorType(app_conn->GetConnectorType());
+
+		_streams.insert(std::make_pair(new_stream_info->GetId(), new_stream));
+	}
 
 	// 옵저버에 스트림 생성을 알림
 	for (auto observer : _observers)
@@ -228,6 +236,7 @@ bool MediaRouteApplication::OnDeleteStream(
 {
 	if (app_conn == nullptr || stream_info == nullptr)
 	{
+		logte("Invalid arguments: connector: %p, stream_info: %p", app_conn.get(), stream_info.get());
 		return false;
 	}
 
@@ -263,9 +272,10 @@ bool MediaRouteApplication::OnDeleteStream(
 		}
 	}
 
-	std::unique_lock<std::mutex> lock(_mutex);
-	_streams.erase(new_stream_info->GetId());
-	lock.unlock();
+	{
+		std::lock_guard<std::mutex> lock_guard(_mutex);
+		_streams.erase(new_stream_info->GetId());
+	}
 
 	return true;
 }
@@ -284,15 +294,23 @@ bool MediaRouteApplication::OnReceiveBuffer(
 	}
 
 	// 스트림 ID에 해당하는 스트림을 탐색
-	auto stream_bucket = _streams.find(stream_info->GetId());
-	if (stream_bucket == _streams.end())
-	{
-		logte("cannot find stream from router. appication(%s), stream(%s)", _application_info.GetName().CStr(), stream_info->GetName().CStr());
+	std::shared_ptr<MediaRouteStream> stream = nullptr;
 
-		return false;
+	{
+#ifdef TEMP_USE_LOCK
+		std::lock_guard<decltype(_mutex)> lock_guard(_mutex);
+#endif // TEMP_USE_LOCK
+		auto stream_bucket = _streams.find(stream_info->GetId());
+		if (stream_bucket == _streams.end())
+		{
+			logte("cannot find stream from router. appication(%s), stream(%s)", _application_info.GetName().CStr(), stream_info->GetName().CStr());
+
+			return false;
+		}
+
+		stream = stream_bucket->second;
 	}
 
-	auto stream = stream_bucket->second;
 	if (stream == nullptr)
 	{
 		logte("invalid stream bucket");
@@ -325,11 +343,16 @@ void MediaRouteApplication::GarbageCollector()
 	time_t curr_time;
 	time(&curr_time);
 
+#ifdef TEMP_USE_LOCK
+	std::lock_guard<decltype(_mutex)> lock_guard(_mutex);
+#endif // TEMP_USE_LOCK
+
 	for (auto it = _streams.begin(); it != _streams.end(); ++it)
 	{
 		auto stream = (*it).second;
 
 		MediaRouteApplicationConnector::ConnectorType connector_type = stream->GetConnectorType();
+		
 		if (connector_type == MediaRouteApplicationConnector::ConnectorType::Provider)
 		{
 			double diff_time;

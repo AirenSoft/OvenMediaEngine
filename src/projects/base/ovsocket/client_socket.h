@@ -21,9 +21,12 @@ namespace ov
 		ClientSocket(ServerSocket *server_socket);
 		ClientSocket(ServerSocket *server_socket, SocketWrapper socket, const SocketAddress &remote_address);
 
-		~ClientSocket() override = default;
+		~ClientSocket() override;
 
 		// 데이터 송신
+		ssize_t Send(const std::shared_ptr<const Data> &data) override;
+		ssize_t Send(const void *data, size_t length) override;
+
 		ssize_t Send(const ov::String &string, bool include_null_char = false);
 
 		template <typename T>
@@ -41,13 +44,52 @@ namespace ov
 		using Socket::Recv;
 		using Socket::Send;
 
-		bool Close() override;
+		bool Close() override
+		{
+			return Close(true);
+		}
+
+		bool Close(bool wait_for_send);
 
 		using Socket::GetState;
 
 		String ToString() const override;
 
 	protected:
+		struct SendItem
+		{
+			SendItem() = default;
+			SendItem(const std::shared_ptr<const ov::Data> &data)
+			{
+				this->data = data;
+				this->enqueued_time = std::chrono::system_clock::now();
+			}
+
+			bool IsExpired(int millisecond_time) const
+			{
+				auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - enqueued_time);
+				return (delta.count() >= millisecond_time);
+			}
+
+			std::shared_ptr<const ov::Data> data;
+			std::chrono::time_point<std::chrono::system_clock> enqueued_time;
+		};
+
+		bool StartSendThread();
+		bool StopSendThread(bool send_remained_data);
+
+		void SendThread();
+
+		bool CloseInternal() override;
+
 		ServerSocket *_server_socket = nullptr;
+
+		// TODO(dimiden): If the receiver does not read the data, EAGAIN may occur continuously.
+		//                At this time, it can be blocked, so it creates a thread and processes it.
+		//                I know it's inefficient to use one thread per Socket, and I'll create a send pool later.
+		std::thread _send_thread;
+		ov::Queue<SendItem> _send_queue;
+		bool _stop_send_thread = true;
+		bool _send_remained_data = false;
 	};
 }  // namespace ov

@@ -51,6 +51,7 @@ public:
 	bool GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas);
 
 	static uint32_t Gcd(uint32_t n1, uint32_t n2);
+	static int64_t GetTimestampInMs();
 	static ov::String MakeUtcSecond(time_t value);
 	static ov::String MakeUtcMillisecond(int64_t value = -1LL);
 	static int64_t GetCurrentMilliseconds();

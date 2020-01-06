@@ -30,12 +30,12 @@ CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &str
 {
 	if (_video_track != nullptr)
 	{
-		_video_chunk_writer = std::make_shared<CmafChunkWriter>(M4sMediaType::Video, 1, 1);
+		_video_chunk_writer = std::make_shared<CmafChunkWriter>(M4sMediaType::Video, 1, _ideal_duration_for_video);
 	}
 
 	if (_audio_track != nullptr)
 	{
-		_audio_chunk_writer = std::make_shared<CmafChunkWriter>(M4sMediaType::Audio, 1, 2);
+		_audio_chunk_writer = std::make_shared<CmafChunkWriter>(M4sMediaType::Audio, 2, _ideal_duration_for_audio);
 	}
 
 	_chunked_transfer = chunked_transfer;
@@ -43,13 +43,16 @@ CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &str
 
 ov::String CmafPacketizer::GetFileName(int64_t start_timestamp, common::MediaType media_type) const
 {
+	// start_timestamp must be -1 because it is an unused parameter
+	OV_ASSERT2(start_timestamp == -1LL);
+
 	switch (media_type)
 	{
 		case common::MediaType::Video:
-			return ov::String::FormatString("%s_%u%s", _segment_prefix.CStr(), _video_sequence_number, CMAF_MPD_VIDEO_FULL_SUFFIX);
+			return ov::String::FormatString("%s_%u%s", _segment_prefix.CStr(), _video_chunk_writer->GetSequenceNumber(), CMAF_MPD_VIDEO_FULL_SUFFIX);
 
 		case common::MediaType::Audio:
-			return ov::String::FormatString("%s_%u%s", _segment_prefix.CStr(), _audio_sequence_number, CMAF_MPD_AUDIO_FULL_SUFFIX);
+			return ov::String::FormatString("%s_%u%s", _segment_prefix.CStr(), _audio_chunk_writer->GetSequenceNumber(), CMAF_MPD_AUDIO_FULL_SUFFIX);
 
 		default:
 			break;
@@ -70,13 +73,13 @@ bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<ov::Data> &frame_data)
 
 bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame)
 {
-	return AppendVideoFrameInternal(frame, _video_chunk_writer->GetSegmentDuration(), [frame, this](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
+	return AppendVideoFrameInternal(frame, _video_chunk_writer->GetSegmentDuration(), [this, frame](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
 		auto chunk_data = _video_chunk_writer->AppendSample(data);
 
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
 		{
 			// Response chunk data to HTTP client
-			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(0, common::MediaType::Video), true, chunk_data);
+			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(-1LL, common::MediaType::Video), true, chunk_data);
 		}
 
 		_last_video_pts = data->timestamp;
@@ -85,13 +88,13 @@ bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &fram
 
 bool CmafPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame)
 {
-	return AppendAudioFrameInternal(frame, _audio_chunk_writer->GetSegmentDuration(), [frame, this](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
+	return AppendAudioFrameInternal(frame, _audio_chunk_writer->GetSegmentDuration(), [this, frame](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
 		auto chunk_data = _audio_chunk_writer->AppendSample(data);
 
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
 		{
 			// Response chunk data to HTTP client
-			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(0, common::MediaType::Audio), false, chunk_data);
+			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(-1LL, common::MediaType::Audio), false, chunk_data);
 		}
 
 		_last_audio_pts = data->timestamp;
@@ -106,9 +109,8 @@ bool CmafPacketizer::WriteVideoSegment()
 		return true;
 	}
 
-	auto file_name = GetFileName(0ULL, common::MediaType::Video);
-
-	int64_t start_timestamp = _video_chunk_writer->GetStartTimestamp();
+	auto file_name = GetFileName(-1LL, common::MediaType::Video);
+	auto start_timestamp = _video_chunk_writer->GetStartTimestamp();
 	auto segment_duration = _video_chunk_writer->GetSegmentDuration();
 
 	// Create a fragment
@@ -120,6 +122,8 @@ bool CmafPacketizer::WriteVideoSegment()
 	{
 		return false;
 	}
+
+	_duration_delta_for_video += (_ideal_duration_for_video - segment_duration);
 
 	if (_chunked_transfer != nullptr)
 	{
@@ -137,9 +141,8 @@ bool CmafPacketizer::WriteAudioSegment()
 		return true;
 	}
 
-	auto file_name = GetFileName(0ULL, common::MediaType::Audio);
-
-	int64_t start_timestamp = _audio_chunk_writer->GetStartTimestamp();
+	auto file_name = GetFileName(-1LL, common::MediaType::Audio);
+	auto start_timestamp = _audio_chunk_writer->GetStartTimestamp();
 	auto segment_duration = _audio_chunk_writer->GetSegmentDuration();
 
 	// Create a fragment
@@ -151,6 +154,8 @@ bool CmafPacketizer::WriteAudioSegment()
 	{
 		return false;
 	}
+
+	_duration_delta_for_audio += (_ideal_duration_for_audio - segment_duration);
 
 	if (_chunked_transfer != nullptr)
 	{
@@ -215,7 +220,7 @@ bool CmafPacketizer::UpdatePlayList()
 			<< "\t\t\t<SegmentTemplate presentationTimeOffset=\"0\" timescale=\"" << static_cast<uint32_t>(_video_track->GetTimeBase().GetTimescale())
 			<< "\" duration=\"" << static_cast<uint32_t>(_segment_duration * _video_track->GetTimeBase().GetTimescale())
 			<< "\" availabilityTimeOffset=\"" << availability_time_offset
-			<< "\" startNumber=\"1\" initialization=\"" << CMAF_MPD_VIDEO_FULL_INIT_FILE_NAME
+			<< "\" startNumber=\"0\" initialization=\"" << CMAF_MPD_VIDEO_FULL_INIT_FILE_NAME
 			<< "\" media=\"" << _segment_prefix.CStr() << "_$Number$" << CMAF_MPD_VIDEO_FULL_SUFFIX << "\" />\n"
 			<< "\t\t\t<Representation codecs=\"avc1.42401f\" sar=\"1:1\" "
 			<< "bandwidth=\"" << _video_track->GetBitrate() << "\" />\n"
@@ -235,7 +240,7 @@ bool CmafPacketizer::UpdatePlayList()
 			<< "\t\t\t<SegmentTemplate presentationTimeOffset=\"0\" timescale=\"" << static_cast<uint32_t>(_audio_track->GetTimeBase().GetTimescale())
 			<< "\" duration=\"" << static_cast<uint32_t>(_segment_duration * _audio_track->GetTimeBase().GetTimescale())
 			<< "\" availabilityTimeOffset=\"" << availability_time_offset
-			<< "\" startNumber=\"1\" initialization=\"" << CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME
+			<< "\" startNumber=\"0\" initialization=\"" << CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME
 			<< "\" media=\"" << _segment_prefix.CStr() << "_$Number$" << CMAF_MPD_AUDIO_FULL_SUFFIX << "\" />\n"
 			<< "\t\t\t<Representation codecs=\"mp4a.40.2\" audioSamplingRate=\"" << _audio_track->GetSampleRate()
 			<< "\" bandwidth=\"" << _audio_track->GetBitrate() << "\" />\n"
@@ -243,7 +248,7 @@ bool CmafPacketizer::UpdatePlayList()
 	}
 
 	play_list_stream << "\t</Period>\n"
-					 << "\t<UTCTiming schemeIdUri=\"urn:mpeg:dash:utc:direct:2014\" value=\"%s\"/>\n"
+					//  << "\t<UTCTiming schemeIdUri=\"urn:mpeg:dash:utc:direct:2014\" value=\"%s\"/>\n"
 					 << "</MPD>\n";
 
 	ov::String play_list = play_list_stream.str().c_str();

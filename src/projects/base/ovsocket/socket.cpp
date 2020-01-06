@@ -20,6 +20,10 @@
 #include <atomic>
 #include <chrono>
 
+/// 임시 코드
+#include <linux/sockios.h>
+#include <sys/ioctl.h>
+
 #define USE_STATS_COUNTER 0
 #define USE_FILE_DUMP 0
 
@@ -193,11 +197,6 @@ namespace ov
 		// epoll 관련 변수들이 정상적으로 해제되었는지 확인
 		OV_ASSERT(_epoll == InvalidSocket, "Epoll is not uninitialized");
 		OV_ASSERT(_epoll_events == nullptr, "Epoll events are not freed");
-
-		if (_send_thread.joinable())
-		{
-			_send_thread.join();
-		}
 
 		// TODO(dimiden): PhysicalPort에서 이벤트를 모두 처리하지 않고 Socket을 바로 Close()하는 부분이 있는데,
 		// 나중에 half-close를 한 뒤, 나머지 이벤트들을 모두 처리하고 나서 최종적으로 Close()하도록 해야함
@@ -933,7 +932,7 @@ namespace ov
 		return _socket.GetType();
 	}
 
-	ssize_t Socket::Send(const void *data, size_t length)
+	ssize_t Socket::SendInternal(const void *data, size_t length)
 	{
 		logtd("[%p] [#%d] Trying to send data %zu bytes...", this, _socket.GetSocket(), length);
 		logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, length, 64).CStr());
@@ -970,6 +969,10 @@ namespace ov
 					{
 						if (errno == EAGAIN)
 						{
+							// Suppress 'Resource temporarily available' error
+
+							return total_sent;
+#if 0
 							// Wait for the send buffer
 							fd_set write_fds{};
 							FD_ZERO(&write_fds);
@@ -989,6 +992,10 @@ namespace ov
 							{
 								// There is no space in the send buffer
 								// TODO(dimiden): To improve performance, change to use queue
+
+								int remainSize;
+								ioctl(sock, SIOCOUTQ, &remainSize);
+								logte("remain data size in buffer: %d (%zu / %zu)\n", remainSize, remained, length);
 							}
 							else
 							{
@@ -997,10 +1004,15 @@ namespace ov
 							}
 
 							continue;
+#endif
 						}
 						else if (errno == EBADF)
 						{
 							// Suppress 'Bad file descriptor' error
+						}
+						else if (errno == EPIPE)
+						{
+							// Suppress 'Broken pipe' error
 						}
 						else
 						{
@@ -1070,6 +1082,11 @@ namespace ov
 		logtd("[%p] [#%d] %zu bytes sent", this, _socket.GetSocket(), total_sent);
 
 		return total_sent;
+	}
+
+	ssize_t Socket::Send(const void *data, size_t length)
+	{
+		return SendInternal(data, length);
 	}
 
 	ssize_t Socket::Send(const std::shared_ptr<const Data> &data)
@@ -1204,8 +1221,6 @@ namespace ov
 		{
 			auto socket_error = Error::CreateErrorFromErrno();
 
-			logtd("[%p] [#%d] recv() returns: %zd (%s)", this, _socket.GetSocket(), read_bytes, socket_error->ToString().CStr());
-
 			switch (GetType())
 			{
 				case SocketType::Udp:
@@ -1227,10 +1242,10 @@ namespace ov
 							return socket_error;
 
 						default:
-							logte("[%p] [#%d] An error occurred while read data: %s", this, _socket.GetSocket(), socket_error->ToString().CStr());
+							logte("[%p] [#%d] An error occurred while read data: %s\nStack trace: %s", this, _socket.GetSocket(),
+								  socket_error->ToString().CStr(),
+								  ov::StackTrace::GetStackTrace().CStr());
 							SetState(SocketState::Error);
-
-							logte("\n%s", ov::StackTrace::GetStackTrace().CStr());
 							return socket_error;
 					}
 
@@ -1264,6 +1279,7 @@ namespace ov
 				}
 
 				case SocketType::Unknown:
+					logtd("[%p] [#%d] recv() returns: %zd (%s)", this, _socket.GetSocket(), read_bytes, socket_error->ToString().CStr());
 					break;
 			}
 		}
@@ -1377,8 +1393,33 @@ namespace ov
 				case SocketType::Tcp:
 					if (_socket.IsValid())
 					{
-						// FIN 송신
-						::shutdown(_socket.GetSocket(), SHUT_WR);
+						if(_state == SocketState::Connected)
+						{
+							// FIN 송신
+							::shutdown(_socket.GetSocket(), SHUT_WR);
+
+							// Receive remained data
+							auto data = std::make_shared<ov::Data>();
+							data->Reserve(MAX_BUFFER_SIZE);
+
+							while (true)
+							{
+								auto error = Recv(data);
+
+								if (error != nullptr)
+								{
+									// ignore the error
+									logtd("[%p] [#%d] An error received: %s", this, socket.GetSocket(), error->ToString().CStr());
+									break;
+								}
+
+								if (data->GetLength() == 0LL)
+								{
+									break;
+								}
+							}
+						}
+
 						::close(_socket.GetSocket());
 						_socket.SetSocket(_socket.GetType(), InvalidSocket);
 					}

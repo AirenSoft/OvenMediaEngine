@@ -133,13 +133,17 @@ void HttpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 {
 	auto client = FindClient(remote);
 
+	if (client == nullptr)
+	{
+		// This can be called in situations where the client closes the connection from the server at the same time as the data is sent
+		return;
+	}
+
 	ProcessData(client, data);
 }
 
 void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
 {
-	OV_ASSERT2(client != nullptr);
-
 	if (client != nullptr)
 	{
 		std::shared_ptr<HttpRequest> &request = client->GetRequest();

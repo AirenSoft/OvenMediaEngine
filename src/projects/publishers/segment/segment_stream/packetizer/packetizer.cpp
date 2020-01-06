@@ -73,6 +73,13 @@ int64_t Packetizer::GetCurrentTick()
 	return now.tv_sec * 1000LL + now.tv_nsec / 1000000LL;
 }
 
+int64_t Packetizer::GetTimestampInMs()
+{
+	auto current = std::chrono::system_clock::now().time_since_epoch();
+
+	return std::chrono::duration_cast<std::chrono::milliseconds>(current).count();
+}
+
 ov::String Packetizer::MakeUtcSecond(time_t value)
 {
 	std::tm *now_tm = ::gmtime(&value);
@@ -87,8 +94,7 @@ ov::String Packetizer::MakeUtcMillisecond(int64_t value)
 {
 	if (value == -1)
 	{
-		auto current = std::chrono::system_clock::now();
-		value = std::chrono::duration_cast<std::chrono::milliseconds>(current.time_since_epoch()).count();
+		value = GetTimestampInMs();
 	}
 
 	ov::String result;
@@ -97,8 +103,8 @@ ov::String Packetizer::MakeUtcMillisecond(int64_t value)
 	// 012345678901234567890123
 	result.SetCapacity(24);
 
-	time_t time_vaule = static_cast<time_t>(value) / 1000;
-	std::tm *now_tm = ::gmtime(&time_vaule);
+	time_t time_value = static_cast<time_t>(value) / 1000;
+	std::tm *now_tm = ::gmtime(&time_value);
 	char *buffer = result.GetBuffer();
 
 	// YYYY-MM-DDTHH:II:SS.sssZ
@@ -109,7 +115,7 @@ ov::String Packetizer::MakeUtcMillisecond(int64_t value)
 	{
 		// YYYY-MM-DDTHH:II:SS.sssZ
 		//                    ~~~~~
-		result.AppendFormat(".%03uZ", static_cast<uint32_t>(value) % 1000);
+		result.AppendFormat(".%03uZ", static_cast<uint32_t>(value % 1000LL));
 		return result;
 	}
 

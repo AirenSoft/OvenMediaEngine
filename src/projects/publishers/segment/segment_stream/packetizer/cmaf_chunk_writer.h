@@ -14,8 +14,7 @@
 class CmafChunkWriter : public M4sWriter
 {
 public:
-	CmafChunkWriter(M4sMediaType media_type, uint32_t sequence_number, uint32_t track_id);
-	~CmafChunkWriter() final;
+	CmafChunkWriter(M4sMediaType media_type, uint32_t track_id, double ideal_duration);
 
 	const std::shared_ptr<ov::Data> AppendSample(const std::shared_ptr<const SampleData> &sample_data);
 
@@ -63,15 +62,15 @@ protected:
 	int WriteMdatBox(std::shared_ptr<ov::Data> &data_stream, const std::shared_ptr<ov::Data> &frame_data);
 
 private:
-	std::shared_ptr<ov::Data> _chunked_data = nullptr;
 	uint32_t _max_chunked_data_size = 100 * 1024;
 
-	uint32_t _sequence_number;
+	uint32_t _sequence_number = 0U;
 	uint32_t _track_id;
+	double _ideal_duration = 0.0;
 
 	bool _write_started = false;
 	int64_t _start_timestamp = 0LL;
 	uint32_t _sample_count = 0U;
-
+	std::shared_ptr<ov::Data> _chunked_data = nullptr;
 	std::shared_ptr<const SampleData> _last_sample;
 };

@@ -382,6 +382,7 @@ void TranscodeStream::CreateEncoder(std::shared_ptr<MediaTrack> media_track, std
 {
 	if (media_track == nullptr)
 	{
+		logte("Invalid media track");
 		return;
 	}
 
@@ -670,6 +671,8 @@ void TranscodeStream::CreateStreams()
 
 void TranscodeStream::DeleteStreams()
 {
+	logti("Deleting all streams");
+	
 	for (auto &iter : _stream_info_outputs)
 	{
 		_parent->DeleteStream(iter.second);

@@ -31,6 +31,8 @@ namespace ov
 			_condition.wait(lock);
 		}
 
+		OV_ASSERT2(_count > 0);
+		
 		--_count;
 	}
 

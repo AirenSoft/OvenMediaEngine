@@ -113,7 +113,6 @@ bool RtmpServer::Disconnect(const ov::String &app_name, uint32_t stream_id)
 		if (chunk_stream->GetAppName() == app_name && chunk_stream->GetStreamId() == stream_id)
 		{
 			_physical_port->DisconnectClient(dynamic_cast<ov::ClientSocket *>(item->first));
-			_chunk_context_list.erase(item);
 			return true;
 		}
 	}
@@ -143,7 +142,6 @@ void RtmpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 		if (remote->GetState() != ov::SocketState::Connected)
 		{
 			logte("A data received from disconnected clinet: [%s/%s] %s", chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(), remote->ToString().CStr());
-			_chunk_context_list.erase(item);
 			return;
 		}
 
@@ -171,21 +169,12 @@ void RtmpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 
 		if (succeeded == false)
 		{
-			// An error occurred while process the RTMP packet
-
-			// Close the stream
-			if (chunk_stream->GetAppId() != 0 && chunk_stream->GetStreamId() != 0)
-			{
-				OnDeleteStream(chunk_stream->GetRemoteSocket(), chunk_stream->GetAppName(), chunk_stream->GetStreamName(), chunk_stream->GetAppId(), chunk_stream->GetStreamId());
-			}
-
-			// Close the socket
-			_physical_port->DisconnectClient(dynamic_cast<ov::ClientSocket *>(item->first));
-
-			logti("The RTMP client is disconnected: [%s/%s] (%u/%u), remote: %s",
+			logti("An error occurred while process the RTMP packet: [%s/%s] (%u/%u), remote: %s, Disconnecting...",
 				  chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
 				  chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
 				  remote->ToString().CStr());
+
+			_physical_port->DisconnectClient(chunk_stream->GetRemoteSocket());
 		}
 	}
 }
@@ -208,7 +197,7 @@ void RtmpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 						   chunk_stream->GetAppId(), chunk_stream->GetStreamId());
 		}
 
-		logti("RTMP client is disconnected: [%s/%s] (%u/%u), remote: %s",
+		logti("The RTMP client is disconnected: [%s/%s] (%u/%u), remote: %s",
 			  chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
 			  chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
 			  remote->ToString().CStr());
@@ -317,41 +306,46 @@ bool RtmpServer::OnDeleteStream(ov::ClientSocket *remote,
 
 ov::DelayQueueAction RtmpServer::OnGarbageCheck(void *parameter)
 {
-	time_t current_time = time(nullptr);
+	time_t current_time = ::time(nullptr);
+	std::map<ov::Socket *, std::shared_ptr<RtmpChunkStream>> garbage_list;
 
-	std::unique_lock<std::recursive_mutex> lock(_chunk_context_list_mutex);
-
-	for (auto item = _chunk_context_list.begin(); item != _chunk_context_list.end();)
 	{
-		auto &chunk_stream = item->second;
-		auto elapsed = current_time - chunk_stream->GetLastPacketTime();
+		std::unique_lock<std::recursive_mutex> lock(_chunk_context_list_mutex);
 
-		if (elapsed > MAX_STREAM_PACKET_GAP)
+		for (auto &item : _chunk_context_list)
 		{
-			// Close the stream
-			if (chunk_stream->GetAppId() != 0 && chunk_stream->GetStreamId() != 0)
+			auto &chunk_stream = item.second;
+			auto elapsed = current_time - chunk_stream->GetLastPacketTime();
+
+			if (elapsed > MAX_STREAM_PACKET_GAP)
 			{
-				OnDeleteStream(chunk_stream->GetRemoteSocket(),
-							   chunk_stream->GetAppName(), chunk_stream->GetStreamName(),
-							   chunk_stream->GetAppId(), chunk_stream->GetStreamId());
+				logtw("RTMP input stream has timed out: [%s/%s] (%u/%u), elapsed: %d, threshold: %d",
+					  chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
+					  chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
+					  elapsed, MAX_STREAM_PACKET_GAP);
+
+				garbage_list.emplace(item);
 			}
-
-			// Close the socket
-			_physical_port->DisconnectClient(dynamic_cast<ov::ClientSocket *>(item->first));
-
-			logtw("RTMP input stream has timed out: [%s/%s] (%u/%u), elapsed: %d, threshold: %d",
-				  chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
-				  chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
-				  elapsed, MAX_STREAM_PACKET_GAP);
-
-			_chunk_context_list.erase(item++);
-		}
-		else
-		{
-			item++;
 		}
 	}
 
+	for (auto &garbage : garbage_list)
+	{
+		auto &chunk_stream = garbage.second;
+
+		if(chunk_stream->GetRemoteSocket() != nullptr)
+		{
+			logtw("RTMP stream %s is timed out. Disconnecting...", chunk_stream->GetRemoteSocket()->ToString().CStr());
+		}
+		else
+		{
+			OV_ASSERT2(chunk_stream->GetRemoteSocket() != nullptr);
+			logtw("RTMP stream (Unknown) is timed out. Disconnecting...");
+		}
+
+		// Close the socket
+		_physical_port->DisconnectClient(dynamic_cast<ov::ClientSocket *>(garbage.first));
+	}
+
 	return ov::DelayQueueAction::Repeat;
-	;
 }

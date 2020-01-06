@@ -12,15 +12,12 @@
 
 #define DEFAULT_CHUNK_HEADER_SIZE (256)
 
-CmafChunkWriter::CmafChunkWriter(M4sMediaType media_type, uint32_t sequence_number, uint32_t track_id)
-	: M4sWriter(media_type)
+CmafChunkWriter::CmafChunkWriter(M4sMediaType media_type, uint32_t track_id, double ideal_duration)
+	: M4sWriter(media_type),
+	  _track_id(track_id),
+	  _ideal_duration(ideal_duration)
 {
-	_sequence_number = sequence_number;
-	_track_id = track_id;
-}
-
-CmafChunkWriter::~CmafChunkWriter()
-{
+	OV_ASSERT2(_ideal_duration > 0.0);
 }
 
 std::shared_ptr<ov::Data> CmafChunkWriter::GetChunkedSegment()
@@ -49,13 +46,18 @@ const std::shared_ptr<ov::Data> CmafChunkWriter::AppendSample(const std::shared_
 
 		if (_start_timestamp < 0)
 		{
-			// OV_ASSERT2(false);
+			OV_ASSERT2(false);
+			return nullptr;
 		}
 
 		if (_chunked_data == nullptr)
 		{
 			_chunked_data = std::make_shared<ov::Data>(_max_chunked_data_size);
 		}
+
+		// 0-based sequence number
+		_sequence_number = (_start_timestamp / _ideal_duration);
+		logtd("Calculated sequence number: %lld, %f = %u", _start_timestamp, _ideal_duration, _sequence_number);
 	}
 
 	auto chunk_stream = std::make_shared<ov::Data>(sample_data->data->GetLength() + DEFAULT_CHUNK_HEADER_SIZE);
@@ -122,7 +124,7 @@ int CmafChunkWriter::WriteMfhdBox(std::shared_ptr<ov::Data> &data_stream)
 {
 	auto data = std::make_shared<ov::Data>();
 
-	WriteUint32(_sequence_number++, data);
+	WriteUint32(_sequence_number, data);
 
 	return WriteBoxData("mfhd", 0, 0, data, data_stream);
 }
