@@ -14,7 +14,7 @@
 
 #define OV_LOG_TAG "TranscodeStream"
 
-std::map<uint32_t, std::set<ov::String>> TranscodeStream::_stream_list;
+// std::map<uint32_t, std::set<ov::String>> TranscodeStream::_stream_list;
 
 #define ENABLE_SINGLE_THREAD	1
 
@@ -78,24 +78,21 @@ int GetBitrate(ov::String bitrate)
 TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<StreamInfo> &stream_info, TranscodeApplication *parent)
 	: _application_info(application_info)
 {
-	// 통계 정보 초기화
+	// Statistical parameters
 	_stats_decoded_frame_count = 0;
-
 	_stats_queue_full_count = 0;
 
-	// maximum queue size
+	// Determine maximum queue size
 	_max_queue_size = 0;
 
-	// 부모 클래스
+	//store Parent information
 	_parent = parent;
 
-	// 입력 스트림 정보
+	// Store Stream information
 	_stream_info_input = stream_info;
 
-	// TODO: What? for what?
-	_stream_list[_application_info.GetId()];
-
-	// Prepare decoders
+	// Create Docoders
+	//  - Create docder by the number of tracks
 	for (auto &track_item : _stream_info_input->GetTracks())
 	{
 		auto &track = track_item.second;
@@ -150,10 +147,10 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 			continue;
 		}
 
+		auto profile_name = encode.GetName();
 		auto video_profile = encode.GetVideoProfile();
 		auto audio_profile = encode.GetAudioProfile();
-		auto profile_name = encode.GetName();
-
+		
 		if ((video_profile != nullptr) && (video_profile->IsActive()))
 		{
 			auto output_context = std::make_shared<TranscodeContext>(
@@ -319,9 +316,6 @@ void TranscodeStream::Stop()
 
 bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
 {
-	// logtd("Stage-1-1 : %f", (float)frame->GetPts());
-	// 변경된 스트림을 큐에 넣음
-
 	if (_encoders.empty())
 	{
 		return false;
@@ -337,11 +331,6 @@ bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
 
 	return true;
 }
-
-// std::shared_ptr<MediaFrame> TranscodeStream::Pop()
-// {
-// 	return _media_packets.pop_unique();
-// }
 
 void TranscodeStream::CreateDecoder(int32_t media_track_id, std::shared_ptr<TranscodeContext> input_context)
 {
@@ -446,7 +435,7 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 
 				if (_stats_decoded_frame_count % 300 == 0)
 				{
-					logtd("Decode stats: queue(%d), decoded_queue(%d), filtered_queue(%d)", _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
+					logtd("stats: input.pkts(%d), decoded.frms(%d), filterd.frms(%d)", _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
 				}
 
 				if (_queue_decoded_frames.size() > _max_queue_size)
@@ -611,21 +600,14 @@ void TranscodeStream::LoopTask()
 
 bool TranscodeStream::AddStreamInfoOutput(ov::String stream_name)
 {
-	auto stream_list = _stream_list.find(_application_info.GetId());
-	if (stream_list == _stream_list.end())
-	{
-		// This code cannot happen.
-		return false;
-	}
-
-	auto stream = stream_list->second.find(stream_name);
-	if (stream != stream_list->second.end())
+	auto stream = _stream_list.find(stream_name);
+	if (stream != _stream_list.end())
 	{
 		logtw("Output stream with the same name (%s) already exists", stream_name.CStr());
 		return false;
 	}
 
-	stream_list->second.insert(stream_name);
+	_stream_list.insert(stream_name);
 
 	auto stream_info_output = std::make_shared<StreamInfo>();
 	stream_info_output->SetName(stream_name);
@@ -651,7 +633,7 @@ void TranscodeStream::DeleteStreams()
 	}
 
 	_stream_info_outputs.clear();
-	_stream_list[_application_info.GetId()].clear();
+	_stream_list.clear();
 }
 
 void TranscodeStream::SendFrame(std::shared_ptr<MediaPacket> packet)
