@@ -450,6 +450,8 @@ namespace cfg
 										return ParseResult::Error;
 									}
 
+									auto base_path = ov::PathManager::ExtractPath(base_file_name);
+
 									for (auto file : file_list)
 									{
 										auto i = target->Create();
@@ -457,6 +459,9 @@ namespace cfg
 										i->_parent = this;
 
 										logtd("%s<%s> Trying to parse node from file: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), file.CStr());
+
+										// strip "base_path" from "file"
+										auto file_name = file.Substring(base_path.GetLength());
 
 										result = i->ParseFromFile(base_file_name, file, name, indent + 1);
 

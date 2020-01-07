@@ -12,10 +12,10 @@ using namespace common;
 
 namespace pvd
 {
-	std::shared_ptr<OvtProvider> OvtProvider::Create(const info::Host &host_info,
+	std::shared_ptr<OvtProvider> OvtProvider::Create(const cfg::Server &server_config, const info::Host &host_info,
 													 const std::shared_ptr<MediaRouteInterface> &router)
 	{
-		auto provider = std::make_shared<OvtProvider>(host_info, router);
+		auto provider = std::make_shared<OvtProvider>(server_config, host_info, router);
 		if (!provider->Start())
 		{
 			logte("An error occurred while creating RtmpProvider");
@@ -24,8 +24,8 @@ namespace pvd
 		return provider;
 	}
 
-	OvtProvider::OvtProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
-			: Provider(host_info, router)
+	OvtProvider::OvtProvider(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+			: Provider(server_config, host_info, router)
 	{
 
 	}
@@ -55,8 +55,8 @@ namespace pvd
 	bool OvtProvider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list)
 	{
 		// Find App
-		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationByName("app2"));
-		//auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
+		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
+		
 		if (app == nullptr)
 		{
 			logte("There is no such app (%s)", app_info.GetName().CStr());

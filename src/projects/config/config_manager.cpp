@@ -21,7 +21,7 @@ namespace cfg
 	{
 		// Modify if supported xml version is added or changed
 		_supported_xml.insert(
-			std::make_pair("Server", std::vector<std::string>({"3", "3.0"})));
+			std::make_pair("Server", std::vector<std::string>({"4", "4.0"})));
 
 		_supported_xml.insert(
 			std::make_pair("Logger", std::vector<std::string>({"2", "2.0"})));

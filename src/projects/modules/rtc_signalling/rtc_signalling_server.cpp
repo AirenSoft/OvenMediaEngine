@@ -16,8 +16,9 @@
 #include <modules/ice/ice.h>
 #include <publishers/webrtc/webrtc_publisher.h>
 
-RtcSignallingServer::RtcSignallingServer(const info::Host &host_info)
-	: _host_info(host_info)
+RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config, const info::Host &host_info)
+	: _server_config(server_config),
+	  _host_info(host_info)
 {
 }
 
@@ -485,7 +486,6 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	{
 		// Every peer is host
 	}
-
 
 	if (host_peer == nullptr)
 	{

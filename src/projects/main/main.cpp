@@ -184,8 +184,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	std::shared_ptr<cfg::Server> server = cfg::ConfigManager::Instance()->GetServer();
-	std::vector<cfg::Host> hosts = server->GetHostList();
+	std::shared_ptr<cfg::Server> server_config = cfg::ConfigManager::Instance()->GetServer();
+	std::vector<cfg::VirtualHost> hosts = server_config->GetVirtualHostList();
 
 	std::shared_ptr<MediaRouter> router;
 	std::shared_ptr<Transcoder> transcoder;
@@ -225,19 +225,19 @@ int main(int argc, char *argv[])
 		CHECK_FAIL(transcoder);
 
 		logti("Trying to create RTMP Provider [%s]...", host_name.CStr());
-		auto rtmp_provider = RtmpProvider::Create(host_info, router);
+		auto rtmp_provider = RtmpProvider::Create(*server_config, host_info, router);
 		CHECK_FAIL(rtmp_provider);
 
 		logti("Trying to create OVT Provider [%s]...", host_name.CStr());
-		auto ovt_provider = pvd::OvtProvider::Create(host_info, router);
+		auto ovt_provider = pvd::OvtProvider::Create(*server_config, host_info, router);
 		CHECK_FAIL(ovt_provider);
 
 		logti("Trying to create WebRTC Publisher [%s]...", host_name.CStr());
-		auto webrtc_publisher = WebRtcPublisher::Create(host_info, router);
+		auto webrtc_publisher = WebRtcPublisher::Create(*server_config, host_info, router);
 		CHECK_FAIL(webrtc_publisher);
 
 		logti("Trying to create OVT Publisher [%s]...", host_name.CStr());
-		auto ovt_publisher = OvtPublisher::Create(host_info, router);
+		auto ovt_publisher = OvtPublisher::Create(*server_config, host_info, router);
 		CHECK_FAIL(ovt_publisher);
 
 		//--------------------------------------------------------------------
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 		}
 
 		/* For Edge Test */
-#if 1
+#if 0
 		info::Application app_info(123, "app2", cfg::Application());
 		sleep(5);
 		if(orchestrator->CreateApplication(app_info) == Orchestrator::Result::Failed)

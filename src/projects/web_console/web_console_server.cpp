@@ -26,21 +26,21 @@ std::shared_ptr<WebConsoleServer> WebConsoleServer::Create(const info::Host &hos
 
 		// TODO(dimiden): Implement web console
 		OV_ASSERT2(false);
-		instance->_web_console = web_console;
+		// instance->_web_console = web_console;
 
-		auto host = web_console.GetParentAs<cfg::Host>("Host");
-		auto address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(web_console.GetListenPort()));
+		// auto host = web_console.GetParentAs<cfg::VirtualHost>("VirtualHost");
+		// auto address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(web_console.GetListenPort()));
 
-		logti("Trying to start WebConsole on %s...", address.ToString().CStr());
+		// logti("Trying to start WebConsole on %s...", address.ToString().CStr());
 
-		if (instance->Start(address))
-		{
-			return instance;
-		}
-		else
-		{
-			logte("Could not start WebConsole");
-		}
+		// if (instance->Start(address))
+		// {
+		// 	return instance;
+		// }
+		// else
+		// {
+		// 	logte("Could not start WebConsole");
+		// }
 	}
 	else
 	{

@@ -8,20 +8,20 @@
 //==============================================================================
 #pragma once
 
-#include "host.h"
+#include "virtual_host.h"
 
 namespace cfg
 {
-	struct Hosts : public Item
+	struct VirtualHosts : public Item
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetHostList, _host_list)
+		CFG_DECLARE_REF_GETTER_OF(GetVirtualHostList, _virtual_host_list)
 
 	protected:
 		void MakeParseList() override
 		{
-			RegisterValue("Host", &_host_list);
+			RegisterValue("VirtualHost", &_virtual_host_list);
 		}
 
-		std::vector<Host> _host_list;
+		std::vector<VirtualHost> _virtual_host_list;
 	};
 }  // namespace cfg

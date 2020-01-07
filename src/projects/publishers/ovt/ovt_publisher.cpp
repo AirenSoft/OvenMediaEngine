@@ -3,9 +3,9 @@
 #include "ovt_publisher.h"
 #include "ovt_session.h"
 
-std::shared_ptr<OvtPublisher> OvtPublisher::Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<OvtPublisher> OvtPublisher::Create(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 {
-	auto ovt = std::make_shared<OvtPublisher>(host_info, router);
+	auto ovt = std::make_shared<OvtPublisher>(server_config, host_info, router);
 
 	if (!ovt->Start())
 	{
@@ -16,8 +16,8 @@ std::shared_ptr<OvtPublisher> OvtPublisher::Create(const info::Host &host_info, 
 	return ovt;
 }
 
-OvtPublisher::OvtPublisher(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
-		: Publisher(host_info, router)
+OvtPublisher::OvtPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+		: Publisher(server_config, host_info, router)
 {
 
 }
@@ -30,9 +30,9 @@ OvtPublisher::~OvtPublisher()
 bool OvtPublisher::Start()
 {
 	// Listen to localhost:<relay_port>
-	auto host_info = GetHostInfo();
+	auto server_config = GetServerConfig();
 
-	const auto &origin = host_info.GetBind().GetPublishers().GetOvt();
+	const auto &origin = server_config.GetBind().GetPublishers().GetOvt();
 
 	if (origin.IsParsed())
 	{
@@ -40,7 +40,7 @@ bool OvtPublisher::Start()
 
 		if (port > 0)
 		{
-			const ov::String &ip = host_info.GetIp();
+			const ov::String &ip = server_config.GetIp();
 			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
 
 			_server_port = PhysicalPortManager::Instance()->CreatePort(origin.GetSocketType(), address);

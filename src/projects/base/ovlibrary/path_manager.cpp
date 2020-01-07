@@ -8,6 +8,9 @@
 //==============================================================================
 #include "path_manager.h"
 
+#include "./assert.h"
+#include "./memory_utilities.h"
+
 #include <regex>
 #include <utility>
 
@@ -16,8 +19,6 @@
 #include <linux/limits.h>
 #include <unistd.h>
 #include <wordexp.h>
-
-#include "./memory_utilities.h"
 
 namespace ov
 {
@@ -114,9 +115,14 @@ namespace ov
 		return String(buffer);
 	}
 
-	std::shared_ptr<ov::Error> PathManager::GetFileList(const ov::String &base_file_name, const ov::String &pattern, std::vector<ov::String> *file_list)
+	std::shared_ptr<ov::Error> PathManager::GetFileList(const ov::String &base_file_name, const ov::String &pattern, std::vector<ov::String> *file_list, bool exclude_base_path)
 	{
-		ov::String path_pattern = ov::PathManager::IsAbsolute(pattern) ? pattern : ov::PathManager::Combine(ov::PathManager::ExtractPath(base_file_name), pattern);
+		auto base_path = ov::PathManager::ExtractPath(base_file_name);
+		ov::String path_pattern;
+		bool is_absolute = ov::PathManager::IsAbsolute(pattern);
+
+		path_pattern = (is_absolute) ? pattern : ov::PathManager::Combine(base_path, pattern);
+
 		// Extract path from the pattern
 		auto path = ov::PathManager::ExtractPath(path_pattern);
 		// Escape special characters
@@ -197,6 +203,19 @@ namespace ov
 			if (std::regex_match(file_name.CStr(), expression))
 			{
 				// matched
+				if (exclude_base_path && (is_absolute == false))
+				{
+					if (file_name.HasPrefix(base_path))
+					{
+						file_name = file_name.Substring(base_path.GetLength());
+					}
+					else
+					{
+						// file_name MUST always have base_path prefix
+						OV_ASSERT2(false);
+					}
+				}
+
 				file_list->push_back(std::move(file_name));
 			}
 			else

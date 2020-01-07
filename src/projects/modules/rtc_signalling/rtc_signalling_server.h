@@ -26,7 +26,7 @@
 class RtcSignallingServer : public ov::EnableSharedFromThis<RtcSignallingServer>
 {
 public:
-	RtcSignallingServer(const info::Host &host_info);
+	RtcSignallingServer(const cfg::Server &server_config, const info::Host &host_info);
 	~RtcSignallingServer() override = default;
 
 	bool Start(const ov::SocketAddress &address);
@@ -95,6 +95,7 @@ protected:
 	std::shared_ptr<ov::Error> DispatchCandidateP2P(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info);
 	std::shared_ptr<ov::Error> DispatchStop(std::shared_ptr<RtcSignallingInfo> &info);
 
+	const cfg::Server _server_config;
 	const info::Host _host_info;
 
 	std::shared_ptr<HttpServer> _http_server;

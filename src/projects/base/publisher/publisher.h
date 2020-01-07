@@ -118,11 +118,12 @@ public:
 	bool OnDeleteApplication(const info::Application &app_info) override;
 
 protected:
-	explicit Publisher(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+	explicit Publisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 	virtual ~Publisher() = default;
 
+	const cfg::Server& GetServerConfig() const;
 	// Host Info
-	const info::Host& GetHostInfo();
+	const info::Host& GetHostInfo() const;
 
 	// Each Publisher should define their type
 	virtual PublisherType GetPublisherType() const = 0;
@@ -131,6 +132,7 @@ protected:
 
 	std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
 
+	const cfg::Server _server_config;
 	const info::Host _host_info;
 	std::shared_ptr<MediaRouteInterface> _router;
 };

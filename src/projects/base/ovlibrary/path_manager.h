@@ -37,6 +37,6 @@ namespace ov
 		static bool IsAbsolute(const char *path);
 		static String GetCanonicalPath(const char *path);
 
-		static std::shared_ptr<ov::Error> GetFileList(const ov::String &base_file_name, const ov::String &pattern, std::vector<ov::String> *file_list);
+		static std::shared_ptr<ov::Error> GetFileList(const ov::String &base_file_name, const ov::String &pattern, std::vector<ov::String> *file_list, bool exclude_base_path = true);
 	};
 }

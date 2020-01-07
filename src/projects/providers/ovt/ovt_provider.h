@@ -31,9 +31,9 @@ namespace pvd
 	class OvtProvider : public pvd::Provider
 	{
 	public:
-		static std::shared_ptr<OvtProvider> Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+		static std::shared_ptr<OvtProvider> Create(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 
-		explicit OvtProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+		explicit OvtProvider(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 
 		~OvtProvider() override;
 

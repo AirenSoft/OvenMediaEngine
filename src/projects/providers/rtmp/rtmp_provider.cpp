@@ -18,9 +18,9 @@
 
 using namespace common;
 
-std::shared_ptr<RtmpProvider> RtmpProvider::Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<RtmpProvider> RtmpProvider::Create(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 {
-	auto provider = std::make_shared<RtmpProvider>(host_info, router);
+	auto provider = std::make_shared<RtmpProvider>(server_config, host_info, router);
 	if (!provider->Start())
 	{
 		logte("An error occurred while creating RtmpProvider");
@@ -29,8 +29,8 @@ std::shared_ptr<RtmpProvider> RtmpProvider::Create(const info::Host &host_info, 
 	return provider;
 }
 
-RtmpProvider::RtmpProvider(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
-	: Provider(host_info, router)
+RtmpProvider::RtmpProvider(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+	: Provider(server_config, host_info, router)
 {
 	logtd("Created Rtmp Provider module.");
 }
@@ -43,10 +43,10 @@ RtmpProvider::~RtmpProvider()
 
 bool RtmpProvider::Start()
 {
-	// Get Host configuration
-	auto host = GetHostInfo();
+	// Get Server & Host configuration
+	auto server = GetServerConfig();
 
-	auto rtmp_address = ov::SocketAddress(host.GetIp(), static_cast<uint16_t>(host.GetBind().GetProviders().GetRtmpPort()));
+	auto rtmp_address = ov::SocketAddress(server.GetIp(), static_cast<uint16_t>(server.GetBind().GetProviders().GetRtmpPort()));
 
 	logti("RTMP Provider is listening on %s...", rtmp_address.ToString().CStr());
 

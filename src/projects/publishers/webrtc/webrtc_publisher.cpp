@@ -9,9 +9,9 @@
 
 #include <orchestrator/orchestrator.h>
 
-std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 {
-	auto webrtc = std::make_shared<WebRtcPublisher>(host_info, router);
+	auto webrtc = std::make_shared<WebRtcPublisher>(server_config, host_info, router);
 
 	if (!webrtc->Start())
 	{
@@ -21,8 +21,8 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const info::Host &host_
 	return webrtc;
 }
 
-WebRtcPublisher::WebRtcPublisher(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
-	: Publisher(host_info, router)
+WebRtcPublisher::WebRtcPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+	: Publisher(server_config, host_info, router)
 {
 
 }
@@ -38,9 +38,9 @@ WebRtcPublisher::~WebRtcPublisher()
 
 bool WebRtcPublisher::Start()
 {
-	auto host_info = GetHostInfo();
+	auto server_config = GetServerConfig();
 
-	auto webrtc_port_info = host_info.GetBind().GetPublishers().GetWebrtc();
+	auto webrtc_port_info = server_config.GetBind().GetPublishers().GetWebrtc();
 
 	_ice_port = IcePortManager::Instance()->CreatePort(webrtc_port_info.GetIceCandidates(), IcePortObserver::GetSharedPtr());
 	if(_ice_port == nullptr)
@@ -50,11 +50,11 @@ bool WebRtcPublisher::Start()
 	}
 
 	// Signalling에 Observer 연결
-	ov::SocketAddress signalling_address = ov::SocketAddress(host_info.GetIp(), static_cast<uint16_t>(webrtc_port_info.GetSignallingPort()));
+	ov::SocketAddress signalling_address = ov::SocketAddress(server_config.GetIp(), static_cast<uint16_t>(webrtc_port_info.GetSignallingPort()));
 
 	logti("WebRTC Publisher is listening on %s...", signalling_address.ToString().CStr());
 
-	_signalling = std::make_shared<RtcSignallingServer>(host_info);
+	_signalling = std::make_shared<RtcSignallingServer>(server_config, GetHostInfo());
 	_signalling->AddObserver(RtcSignallingObserver::GetSharedPtr());
 	if(!_signalling->Start(signalling_address))
     {

@@ -11,8 +11,8 @@
 
 namespace info
 {
-    Host::Host(const cfg::Host &host_info)
-            : cfg::Host(host_info)
+    Host::Host(const cfg::VirtualHost &host_info)
+            : cfg::VirtualHost(host_info)
     {
         _host_id = ov::Random::GenerateUInt32();
 
