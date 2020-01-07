@@ -41,6 +41,8 @@ namespace pvd
 		const cfg::Server &GetServerConfig() const;
 		const info::Host &GetHostInfo() const;
 
+		bool SetUseAutoStreamRemover(bool use);
+
 		// For child class
 		virtual std::shared_ptr<Application> OnCreateProviderApplication(const info::Application &app_info) = 0;
 		virtual bool OnDeleteProviderApplication(const info::Application &app_info) = 0;
@@ -69,6 +71,11 @@ namespace pvd
 		const info::Host _host_info;
 		std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
 		std::shared_ptr<MediaRouteInterface> _router;
+
+
+		void 			GarbageCollector();
+		bool 			_use_garbage_collector;
+		std::thread 	_worker_thread;
 	};
 
 }  // namespace pvd

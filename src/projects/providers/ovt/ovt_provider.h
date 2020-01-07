@@ -43,7 +43,6 @@ namespace pvd
 		}
 
 		bool Start() override;
-
 		bool Stop() override;
 
 		//--------------------------------------------------------------------

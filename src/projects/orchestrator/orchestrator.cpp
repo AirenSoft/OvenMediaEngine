@@ -514,6 +514,10 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &location)
 				DeleteApplicationInternal(app_info);
 			}
 		}
+		else
+		{
+			return true;
+		}
 	}
 
 	logte("Could not find Origin for the location: %s", location.CStr());

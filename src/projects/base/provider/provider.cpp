@@ -8,6 +8,7 @@
 //==============================================================================
 
 
+#include <zconf.h>
 #include "provider.h"
 
 #include "application.h"
@@ -20,6 +21,7 @@ namespace pvd
 	Provider::Provider(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 		: _server_config(server_config), _host_info(host_info), _router(router)
 	{
+		_use_garbage_collector = false;
 	}
 
 	Provider::~Provider()
@@ -38,11 +40,23 @@ namespace pvd
 
 	bool Provider::Start()
 	{
+		if(_use_garbage_collector)
+		{
+			_worker_thread = std::thread(&Provider::GarbageCollector, this);
+		}
+
 		return true;
+	}
+
+	bool Provider::SetUseAutoStreamRemover(bool use)
+	{
+		_use_garbage_collector = use;
 	}
 
 	bool Provider::Stop()
 	{
+		_use_garbage_collector = false;
+
 		auto it = _applications.begin();
 
 		while(it != _applications.end())
@@ -137,5 +151,19 @@ namespace pvd
 		}
 
 		return nullptr;
+	}
+
+	void Provider::GarbageCollector()
+	{
+		while(_use_garbage_collector)
+		{
+			for(auto const &x : _applications)
+			{
+				auto app = x.second;
+				app->DeleteTerminatedStreams();
+			}
+
+			sleep(1);
+		}
 	}
 }

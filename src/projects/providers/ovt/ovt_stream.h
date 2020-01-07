@@ -25,8 +25,6 @@ namespace pvd
 
 		~OvtStream() final;
 
-
-
 	private:
 		bool Start();
 		bool Stop();
@@ -54,7 +52,5 @@ namespace pvd
 		OvtDepacketizer _depacketizer;
 
 		std::shared_ptr<pvd::Application> _app;
-
-		State	_state;
 	};
 }

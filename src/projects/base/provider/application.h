@@ -41,6 +41,9 @@ namespace pvd
 
 		uint32_t 	IssueUniqueStreamId();
 
+		bool DeleteAllStreams();
+		bool DeleteTerminatedStreams();
+
 	protected:
 		explicit Application(const info::Application &application_info);
 		~Application() override;
@@ -51,5 +54,6 @@ namespace pvd
 		std::mutex 				_queue_guard;
 		std::condition_variable	_queue_cv;
 		uint32_t 				_last_issued_stream_id;
+		std::mutex 				_streams_map_guard;
 	};
 }

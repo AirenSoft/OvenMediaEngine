@@ -33,7 +33,7 @@ namespace pvd
 
 	bool Application::Stop()
 	{
-		// TODO(soulk): Check this return value
+		DeleteAllStreams();
 		return false;
 	}
 
@@ -82,13 +82,14 @@ namespace pvd
 
 	bool Application::NotifyStreamCreated(std::shared_ptr<Stream> stream)
 	{
-		logtd("CreateStream");
+		std::unique_lock<std::mutex> lock(_streams_map_guard);
 
 		if(stream == nullptr)
 		{
 			return false;
 		}
 
+		logtd("CreateStream");
 		MediaRouteApplicationConnector::CreateStream(stream);
 
 		_streams[stream->GetId()] = stream;
@@ -98,17 +99,47 @@ namespace pvd
 
 	bool Application::NotifyStreamDeleted(std::shared_ptr<Stream> stream)
 	{
-		logtd("DeleteStream");
-
+		std::unique_lock<std::mutex> lock(_streams_map_guard);
 		if(_streams.find(stream->GetId()) == _streams.end())
 		{
 			return false;
 		}
+
+		logtd("DeleteStream");
 
 		MediaRouteApplicationConnector::DeleteStream(stream);
 
 		_streams.erase(stream->GetId());
 
 		return true;
+	}
+
+	bool Application::DeleteAllStreams()
+	{
+		std::unique_lock<std::mutex> lock(_streams_map_guard);
+		_streams.clear();
+	}
+
+	bool Application::DeleteTerminatedStreams()
+	{
+		std::unique_lock<std::mutex> lock(_streams_map_guard);
+
+		for(auto it = _streams.cbegin(); it != _streams.cend(); )
+		{
+			auto stream = it->second;
+			logte("find %s stream. State : %d", stream->GetName().CStr(), stream->GetState());
+
+			if(stream->GetState() == Stream::State::STOPPED ||
+				stream->GetState() == Stream::State::ERROR)
+			{
+				logte("The terminated stream (%s) has deleted", stream->GetName().CStr());
+				MediaRouteApplicationConnector::DeleteStream(stream);
+				it = _streams.erase(it);
+			}
+			else
+			{
+				++it;
+			}
+		}
 	}
 }

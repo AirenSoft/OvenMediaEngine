@@ -39,6 +39,7 @@ namespace pvd
 
 	bool OvtProvider::Start()
 	{
+		//SetUseAutoStreamRemover(true);
 		return pvd::Provider::Start();
 	}
 
@@ -57,7 +58,7 @@ namespace pvd
 	{
 		// Find App
 		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
-		
+
 		if (app == nullptr)
 		{
 			logte("There is no such app (%s)", app_info.GetName().CStr());

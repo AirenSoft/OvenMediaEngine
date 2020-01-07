@@ -82,25 +82,25 @@ namespace pvd
 
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&OvtStream::WorkerThread, this);
+		_worker_thread.detach();
 
 		return true;
 	}
 
 	bool OvtStream::Stop()
 	{
-		if(_state == State::ERROR || _state == State::IDLE)
+		if(_state == State::STOPPED || _state == State::ERROR || _state == State::IDLE)
 		{
 			return false;
 		}
 
 		_stop_thread_flag = true;
-
 		RequestStop();
 
 		// It will be deleted later when the Provider tries to create a stream which is same name.
 		// Because it cannot delete it self.
 		_state = State::STOPPED;
-		//_app->NotifyStreamDeleted(GetSharedPtrAs<pvd::Stream>());
+		_app->NotifyStreamDeleted(GetSharedPtrAs<pvd::Stream>());
 
 		return true;
 	}
