@@ -54,14 +54,14 @@ private:
 	// Input stream info
 	std::shared_ptr<StreamInfo> _stream_info_input;
 
-	// Buffer for encoded media packets
-	MediaQueue<std::shared_ptr<MediaPacket>> _queue;
+	// Buffer for encoded(input) media packets
+	MediaQueue<std::shared_ptr<MediaPacket>> _queue_input_packets;
 
 	// Buffer for decoded frames
-	MediaQueue<std::shared_ptr<MediaFrame>> _queue_decoded;
+	MediaQueue<std::shared_ptr<MediaFrame>> _queue_decoded_frames;
 
 	// Buffer for filtered frames
-	MediaQueue<std::shared_ptr<MediaFrame>> _queue_filterd;
+	MediaQueue<std::shared_ptr<MediaFrame>> _queue_filterd_frames;
 
 	// 96-127 dynamic : RTP Payload Types for standard audio and video encodings
 	uint8_t _last_track_video = 0x60;     // 0x60 ~ 0x6F
@@ -83,14 +83,8 @@ private:
 
 	volatile bool _kill_flag;
 
-	void DecodeTask();
-	std::thread _thread_decode;
-
-	void FilterTask();
-	std::thread _thread_filter;
-
-	void EncodeTask();
-	std::thread _thread_encode;
+	void LoopTask();
+	std::thread _thread_looptask;
 
 	TranscodeApplication *_parent;
 

@@ -74,7 +74,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet, bool conv
 			// Convert timebase 1/1000 to 1/90000
 			media_packet->SetPts(media_packet->GetDts() + (cts * 90));
 
-			OV_ASSERT2(media_packet->GetPts() >= 0LL);
+			// OV_ASSERT2(media_packet->GetPts() >= 0LL);
 		}
 		else if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::Vp8)
 		{

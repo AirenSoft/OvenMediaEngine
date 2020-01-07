@@ -34,11 +34,16 @@ TranscodeApplication::~TranscodeApplication()
 
 bool TranscodeApplication::OnCreateStream(const std::shared_ptr<StreamInfo> &stream_info)
 {
-	logtd("OnCreateStream (%s)", stream_info->GetName().CStr());
+	logtd("OnCreateStream. name(%s), id(%d)", stream_info->GetName().CStr(), stream_info->GetId());
 
 	std::unique_lock<std::mutex> lock(_mutex);
 
 	auto stream = std::make_shared<TranscodeStream>(_application_info, stream_info, this);
+
+	if (stream == nullptr)
+	{
+		return false;
+	}
 
 	_streams.insert(std::make_pair(stream_info->GetId(), stream));
 
@@ -47,13 +52,13 @@ bool TranscodeApplication::OnCreateStream(const std::shared_ptr<StreamInfo> &str
 
 bool TranscodeApplication::OnDeleteStream(const std::shared_ptr<StreamInfo> &stream_info)
 {
-	logtd("OnDeleteStream (%s)", stream_info->GetName().CStr());
-
+	logtd("OnDeleteStream. name(%s), id(%d)", stream_info->GetName().CStr(), stream_info->GetId());
+	
 	std::unique_lock<std::mutex> lock(_mutex);
 
 	auto stream_bucket = _streams.find(stream_info->GetId());
 
-	if(stream_bucket == _streams.end())
+	if (stream_bucket == _streams.end())
 	{
 		return false;
 	}
@@ -74,7 +79,7 @@ bool TranscodeApplication::OnSendFrame(const std::shared_ptr<StreamInfo> &stream
 
 	auto stream_bucket = _streams.find(stream_info->GetId());
 
-	if(stream_bucket == _streams.end())
+	if (stream_bucket == _streams.end())
 	{
 		return false;
 	}

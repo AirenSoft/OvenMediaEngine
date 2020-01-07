@@ -16,6 +16,8 @@
 
 std::map<uint32_t, std::set<ov::String>> TranscodeStream::_stream_list;
 
+#define ENABLE_SINGLE_THREAD	1
+
 common::MediaCodecId GetCodecId(ov::String name)
 {
 	name.MakeUpper();
@@ -76,15 +78,13 @@ int GetBitrate(ov::String bitrate)
 TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<StreamInfo> &stream_info, TranscodeApplication *parent)
 	: _application_info(application_info)
 {
-	logtd("Transcode stream is created: %s", stream_info->GetName().CStr());
-
 	// 통계 정보 초기화
 	_stats_decoded_frame_count = 0;
 
+	_stats_queue_full_count = 0;
+
 	// maximum queue size
 	_max_queue_size = 0;
-
-	_stats_queue_full_count = 0;
 
 	// 부모 클래스
 	_parent = parent;
@@ -92,6 +92,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 	// 입력 스트림 정보
 	_stream_info_input = stream_info;
 
+	// TODO: What? for what?
 	_stream_list[_application_info.GetId()];
 
 	// Prepare decoders
@@ -278,9 +279,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 	{
 		_kill_flag = false;
 
-		_thread_decode = std::thread(&TranscodeStream::DecodeTask, this);
-		_thread_filter = std::thread(&TranscodeStream::FilterTask, this);
-		_thread_encode = std::thread(&TranscodeStream::EncodeTask, this);
+		_thread_looptask = std::thread(&TranscodeStream::LoopTask, this);
 	}
 	catch (const std::system_error &e)
 	{
@@ -294,8 +293,6 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 
 TranscodeStream::~TranscodeStream()
 {
-	logtd("Destroyed Transcode Stream.  name(%s) id(%u)", _stream_info_input->GetName().CStr(), _stream_info_input->GetId());
-
 	// 스레드가 종료가 안된경우를 확인해서 종료함
 	if (_kill_flag != true)
 	{
@@ -309,24 +306,15 @@ void TranscodeStream::Stop()
 
 	logtd("wait for terminated trancode stream thread. kill_flag(%s)", _kill_flag ? "true" : "false");
 
-	_queue.abort();
+	_queue_input_packets.abort();
+	_queue_decoded_frames.abort();
+	_queue_filterd_frames.abort();
 
-	if (_thread_decode.joinable())
+	if (_thread_looptask.joinable())
 	{
-		_thread_decode.join();
+		_thread_looptask.join();
 	}
-	_queue_decoded.abort();
 
-	if (_thread_filter.joinable())
-	{
-		_thread_filter.join();
-	}
-	_queue_filterd.abort();
-
-	if (_thread_encode.joinable())
-	{
-		_thread_encode.join();
-	}
 }
 
 bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
@@ -339,13 +327,13 @@ bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
 		return false;
 	}
 
-	if (_queue.size() > _max_queue_size)
+	if (_queue_input_packets.size() > _max_queue_size)
 	{
-		logti("Queue(stream) is full, please check your system: (queue: %zu > limit: %llu)", _queue.size(), _max_queue_size);
+		logti("Queue(stream) is full, please check your system: (queue: %zu > limit: %llu)", _queue_input_packets.size(), _max_queue_size);
 		return false;
 	}
 
-	_queue.push(std::move(packet));
+	_queue_input_packets.push(std::move(packet));
 
 	return true;
 }
@@ -458,16 +446,16 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 
 				if (_stats_decoded_frame_count % 300 == 0)
 				{
-					logtd("Decode stats: queue(%d), decoded_queue(%d), filtered_queue(%d)", _queue.size(), _queue_decoded.size(), _queue_filterd.size());
+					logtd("Decode stats: queue(%d), decoded_queue(%d), filtered_queue(%d)", _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
 				}
 
-				if (_queue_decoded.size() > _max_queue_size)
+				if (_queue_decoded_frames.size() > _max_queue_size)
 				{
 					logti("Decoded frame queue is full, please check your system");
 					return result;
 				}
 
-				_queue_decoded.push(std::move(decoded_frame));
+				_queue_decoded_frames.push(std::move(decoded_frame));
 
 				break;
 
@@ -504,7 +492,7 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 
 				logtp("[#%d] A frame is filtered (PTS: %lld)", track_id, filtered_frame->GetPts());
 
-				if (_queue_filterd.size() > _max_queue_size)
+				if (_queue_filterd_frames.size() > _max_queue_size)
 				{
 					_stats_queue_full_count++;
 
@@ -516,7 +504,7 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 					return result;
 				}
 
-				_queue_filterd.push(std::move(filtered_frame));
+				_queue_filterd_frames.push(std::move(filtered_frame));
 
 				break;
 
@@ -563,7 +551,7 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t track_id, std::shared_ptr<c
 }
 
 // 디코딩 & 인코딩 스레드
-void TranscodeStream::DecodeTask()
+void TranscodeStream::LoopTask()
 {
 	CreateStreams();
 
@@ -571,68 +559,54 @@ void TranscodeStream::DecodeTask()
 
 	while (!_kill_flag)
 	{
-		// 큐에 있는 인코딩된 패킷을 읽어옴
-		auto packet = _queue.pop_unique();
-		if (packet == nullptr)
+		if(_queue_input_packets.size() > 0)
 		{
-			// logtw("invliad media buffer");
-			continue;
+
+			auto packet = _queue_input_packets.pop_unique();
+			if(packet != nullptr)
+			{
+				// 패킷의 트랙 아이디를 조회
+				int32_t track_id = packet->GetTrackId();
+
+				DecodePacket(track_id, std::move(packet));
+			}
 		}
 
-		// 패킷의 트랙 아이디를 조회
-		int32_t track_id = packet->GetTrackId();
 
-		DecodePacket(track_id, std::move(packet));
+		////////////////////////////////////////////////
+		// 큐에 있는 인코딩된 패킷을 읽어옴
+		if(_queue_decoded_frames.size() > 0)
+		{
+			auto frame = _queue_decoded_frames.pop_unique();
+			if(frame != nullptr)
+			{
+				DoFilters(std::move(frame));
+			}
+		}
+
+
+		//////////////////////////////////////////////
+		// 큐에 있는 인코딩된 패킷을 읽어옴
+		if(_queue_filterd_frames.size() > 0)
+		{
+			auto frame = _queue_filterd_frames.pop_unique();
+			if(frame != nullptr)
+			{
+				// 패킷의 트랙 아이디를 조회
+				int32_t track_id = frame->GetTrackId();
+
+				EncodeFrame(track_id, std::move(frame));
+			}
+		}
+
+		// TODO Packet이 존재하는 경우에만 Loop를 처리할 수 있는 방법은 없나?
+		usleep(1);	
 	}
 
 	// 스트림 삭제 전송
 	DeleteStreams();
 
 	logtd("Terminated transcode stream decode thread");
-}
-
-void TranscodeStream::FilterTask()
-{
-	logtd("Transcode filter thread is started");
-
-	while (!_kill_flag)
-	{
-		// 큐에 있는 인코딩된 패킷을 읽어옴
-		auto frame = _queue_decoded.pop_unique();
-		if (frame == nullptr)
-		{
-			// logtw("invliad media buffer");
-			continue;
-		}
-
-		DoFilters(std::move(frame));
-	}
-
-	logtd("Transcode filter thread is terminated");
-}
-
-void TranscodeStream::EncodeTask()
-{
-	logtd("Started transcode stream encode thread");
-
-	while (!_kill_flag)
-	{
-		// 큐에 있는 인코딩된 패킷을 읽어옴
-		auto frame = _queue_filterd.pop_unique();
-		if (frame == nullptr)
-		{
-			// logtw("invliad media buffer");
-			continue;
-		}
-
-		// 패킷의 트랙 아이디를 조회
-		int32_t track_id = frame->GetTrackId();
-
-		// logtd("Stage-1-2 : %f", (float)frame->GetPts());
-		EncodeFrame(track_id, std::move(frame));
-	}
-
-	logtd("Terminated transcode stream encode thread");
 }
 
 bool TranscodeStream::AddStreamInfoOutput(ov::String stream_name)
@@ -671,8 +645,6 @@ void TranscodeStream::CreateStreams()
 
 void TranscodeStream::DeleteStreams()
 {
-	logti("Deleting all streams");
-	
 	for (auto &iter : _stream_info_outputs)
 	{
 		_parent->DeleteStream(iter.second);

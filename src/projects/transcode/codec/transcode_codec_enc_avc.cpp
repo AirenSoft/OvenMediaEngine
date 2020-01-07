@@ -10,6 +10,11 @@
 
 #define OV_LOG_TAG "TranscodeCodec"
 
+
+// Notes. 
+//
+// - B-frame must be disabled. because, WEBRTC does not support B-Frame. 
+//
 bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	if (TranscodeEncoder::Configure(context) == false)
@@ -42,6 +47,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	_context->rc_max_rate = _context->bit_rate;
 	_context->rc_buffer_size = static_cast<int>(_context->bit_rate / 2);
 	_context->sample_aspect_ratio = (AVRational){1, 1};
+
 	// From avcodec.h:
 	// For some codecs, the time base is closer to the field rate than the frame rate.
 	// Most notably, H.264 and MPEG-2 specify time_base as half of frame duration
@@ -51,6 +57,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	// From avcodec.h:
 	// For fixed-fps content, timebase should be 1/framerate and timestamp increments should be identically 1.
 	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
+	
 	AVRational codec_timebase = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
 	_context->time_base = codec_timebase;
 	_context->gop_size = _context->framerate.num;

@@ -99,7 +99,8 @@ bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 
 }
 
-// 어플리케이션의 스트림이 생성됨
+// Create Application
+//  @called by main function
 bool Transcoder::CreateApplication(info::Application application_info)
 {
 
