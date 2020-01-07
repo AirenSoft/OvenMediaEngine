@@ -43,7 +43,7 @@ public:
 
 	bool Push(std::shared_ptr<MediaPacket> packet);
 
-	static std::map<uint32_t, std::set<ov::String>> _stream_list;
+	std::set<ov::String> _stream_list;
 
 	// For statistics
 	uint32_t _stats_decoded_frame_count;
