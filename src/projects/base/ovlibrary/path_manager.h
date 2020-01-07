@@ -8,7 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include "string.h"
+#include "./string.h"
+#include "./error.h"
 
 #include <sys/stat.h>
 
@@ -35,5 +36,7 @@ namespace ov
 
 		static bool IsAbsolute(const char *path);
 		static String GetCanonicalPath(const char *path);
+
+		static std::shared_ptr<ov::Error> GetFileList(const ov::String &base_file_name, const ov::String &pattern, std::vector<ov::String> *file_list);
 	};
 }

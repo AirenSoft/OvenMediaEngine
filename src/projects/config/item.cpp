@@ -256,9 +256,10 @@ namespace cfg
 		if ((target != nullptr) && (target->GetTarget() != nullptr))                                                                                                         \
 		{                                                                                                                                                                    \
 			auto temp_value = process_value;                                                                                                                                 \
+			parse_item.is_parsed = true;                                                                                                                                     \
 			if ((temp_value != nullptr) && (temp_value[0] != '\0'))                                                                                                          \
 			{                                                                                                                                                                \
-				*(target->GetTarget()) = converter(Preprocess(base_file_name, value, temp_value));                                                                           \
+				*(target->GetTarget()) = converter(Preprocess(base_file_name, value, temp_value, name, indent));                                                             \
 				logtd("%s<%s> <%s> = %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, true, false).CStr());                     \
 				parse_item.from_default = false;                                                                                                                             \
 			}                                                                                                                                                                \
@@ -266,7 +267,6 @@ namespace cfg
 			{                                                                                                                                                                \
 				logtd("%s<%s> <%s> = %s (use default value)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, true, false).CStr()); \
 			}                                                                                                                                                                \
-			parse_item.is_parsed = true;                                                                                                                                     \
 			result = ParseResult::Parsed;                                                                                                                                    \
 		}                                                                                                                                                                    \
 		else                                                                                                                                                                 \
@@ -293,6 +293,26 @@ namespace cfg
 		if (inc.empty() == false)
 		{
 			logtd("%s<%s> Include file found: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), inc.value());
+
+			std::vector<ov::String> file_list;
+			auto error = ov::PathManager::GetFileList(base_file_name, inc.value(), &file_list);
+
+			if (error != nullptr)
+			{
+				logte("%s<%s> Could not obtain file list: base_file: %s, include pattern: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), base_file_name.CStr(), inc.value());
+				return ParseResult::Error;
+			}
+
+			if (file_list.size() == 0)
+			{
+				logte("%s<%s> There is no file: base_file: %s, include pattern: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), base_file_name.CStr(), inc.value());
+				return ParseResult::Error;
+			}
+			else if (file_list.size() > 1)
+			{
+				logte("%s<%s> Too many files found for single element: base_file: %s, include pattern: %s (%zu files found)", MakeIndentString(indent).CStr(), _tag_name.CStr(), base_file_name.CStr(), inc.value(), file_list.size());
+				return ParseResult::Error;
+			}
 
 			auto result = ParseFromFile(base_file_name, inc.value(), tag_name, indent + 1);
 
@@ -410,18 +430,59 @@ namespace cfg
 
 							while (child_node)
 							{
-								Item *i = target->Create();
+								// Check the child has a include attribute
+								auto inc = child_node.attribute("include");
 
-								i->_parent = this;
-
-								result = i->ParseFromNode(base_file_name, child_node, name, indent + 1);
-
-								if (result == ParseResult::Error)
+								if (inc.empty() == false)
 								{
-									return result;
-								}
+									// Create items from the include files
+									logtd("%s<%s> Include file pattern found: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), inc.value());
 
-								parse_item.is_parsed = (result == ParseResult::Parsed);
+									std::vector<ov::String> file_list;
+									auto error = ov::PathManager::GetFileList(base_file_name, inc.value(), &file_list);
+
+									if (error != nullptr)
+									{
+										logte("%s<%s> Could not obtain file list: base_file: %s, include pattern: %s",
+											  MakeIndentString(indent).CStr(), _tag_name.CStr(),
+											  base_file_name.CStr(), inc.value());
+
+										return ParseResult::Error;
+									}
+
+									for (auto file : file_list)
+									{
+										auto i = target->Create();
+
+										i->_parent = this;
+
+										logtd("%s<%s> Trying to parse node from file: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), file.CStr());
+
+										result = i->ParseFromFile(base_file_name, file, name, indent + 1);
+
+										if (result == ParseResult::Error)
+										{
+											return result;
+										}
+									}
+
+									parse_item.is_parsed = (result == ParseResult::Parsed);
+								}
+								else
+								{
+									auto i = target->Create();
+
+									i->_parent = this;
+
+									result = i->ParseFromNode(base_file_name, child_node, name, indent + 1);
+
+									if (result == ParseResult::Error)
+									{
+										return result;
+									}
+
+									parse_item.is_parsed = (result == ParseResult::Parsed);
+								}
 
 								logtd("%s<%s> [List<%s>] = %s",
 									  MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(),
@@ -474,7 +535,7 @@ namespace cfg
 		return ParseResult::Parsed;
 	}
 
-	ov::String Item::Preprocess(const ov::String &xml_path, const ValueBase *value_base, const char *value)
+	ov::String Item::Preprocess(const ov::String &xml_path, const ValueBase *value_base, const char *value, const ov::String &tag_name, int indent)
 	{
 		// Preprocess for ${env:XXX} macro
 		std::string str = value;
@@ -517,7 +578,11 @@ namespace cfg
 				}
 			}
 
-			logtd("Configuration from env value: %s = \"%s\"%s", key, env, is_default_value ? " (default value)" : "");
+			// _tag_name: Tag name of current element
+			// tag_name: Tag name of child element
+			logtd("%s<%s> <%s> Configuration from env: %s = \"%s\"%s",
+				  MakeIndentString(indent).CStr(), _tag_name.CStr(), tag_name.CStr(),
+				  key, env, is_default_value ? " (default value)" : "");
 
 			result.append(start, match.first);
 			result.append(env);
