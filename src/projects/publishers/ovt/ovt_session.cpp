@@ -62,7 +62,7 @@ bool OvtSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov
 	// Set OVT Session ID into packet
 	// It is also possible to use OvtPacket::Load, but for performance, as follows.
 	auto buffer = packet->GetWritableDataAs<uint8_t>();
-	ByteWriter<uint16_t>::WriteBigEndian(&buffer[12], GetId());
+	ByteWriter<uint32_t>::WriteBigEndian(&buffer[12], GetId());
 
 	_connector->Send(packet->GetData(), packet->GetLength());
 }

@@ -53,8 +53,6 @@ bool RtpPacketizer::Packetize(FrameType frame_type,
                                    const FragmentationHeader *fragmentation,
                                    const RTPVideoHeader *rtp_header)
 {
-	// TODO: 현재 시간을 넣어서 생성하지만 향후에는 Capture한 당시 Timestamp를 넣는다.
-	// uint32_t rtp_timestamp = _timestamp_offset + (uint32_t)time(nullptr);
 	uint32_t rtp_timestamp = timestamp;
 
 	// Audio, Video 분기 한다.

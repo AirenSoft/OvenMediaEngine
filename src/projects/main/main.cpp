@@ -261,23 +261,19 @@ int main(int argc, char *argv[])
 			orchestrator->CreateApplication(app_cfg);
 		}
 
-		/* For Edge Test */
 #if 0
+		/* For Edge Test */
 		info::Application app_info(123, "app2", cfg::Application());
-		sleep(5);
-		if(orchestrator->CreateApplication(app_info) == Orchestrator::Result::Failed)
-		{
-			logte("?");
-		}
+		orchestrator->CreateApplication(app_info);
 		while (true)
 		{
-			logte("Input!!");
-			sleep(5);
 			if (ovt_provider->PullStream(app_info, "edge", {"ovt://192.168.0.199:9000/app/stream_o"}))
 			{
 				logte("Pull stream is completed");
 				break;
 			}
+
+			sleep(1);
 		}
 #endif
 	}
