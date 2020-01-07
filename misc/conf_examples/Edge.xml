@@ -1,74 +1,72 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<Server version="3">
+<Server version="4">
 	<Name>OvenMediaEngine</Name>
-	<Hosts>
-		<Host>
-			<Name>default</Name>
-			<!-- Host type (origin/edge) -->
-			<Type>edge</Type>
-			<!-- Specify IP address to bind (* means all IPs) -->
-			<IP>*</IP>
+	<!-- Host type (origin/edge) -->
+	<Type>edge</Type>
+	<!-- Specify IP address to bind (* means all IPs) -->
+	<IP>*</IP>
 
-			<!-- Settings for multi domain and TLS -->
+	<!-- Settings for the ports to bind -->
+	<Bind>
+		<Providers>
+			<!-- Currently not supported -->
+			<OVT>9000</OVT>
+		</Providers>
+
+		<Publishers>
+			<!-- Default: 80 -->
+			<!-- <HLS /> -->
+			<!-- <CMAF /> -->
+			<!-- <DASH /> -->
+			<WebRTC>
+				<Signalling>3333</Signalling>
+				<IceCandidates>
+					<IceCandidate>*:10000-10005/udp</IceCandidate>
+				</IceCandidates>
+			</WebRTC>
+		</Publishers>
+	</Bind>
+
+	<VirtualHosts>
+		<!--
+			You can include multiple XML files by doing the following:
+		
+			<VirtualHost include="sites-enabled/*.xml" />
+		-->
+		<VirtualHost>
+			<Name>default</Name>
 			<Domain>
 				<Names>
-					<Name>stream1.airensoft.com</Name>
-					<Name>stream2.airensoft.com</Name>
-					<Name>stream3.airensoft.com</Name>
 					<Name>*.airensoft.com</Name>
 				</Names>
 				<!--
-                <TLS>
-                    <CertPath>path/to/file.crt</CertPath>
-                    <KeyPath>path/to/file.key</KeyPath>
-                    <ChainCertPath>path/to/file.crt</ChainCertPath>
-                </TLS>
-            	-->
+				<TLS>
+					<CertPath>path/to/file.crt</CertPath>
+					<KeyPath>path/to/file.key</KeyPath>
+					<ChainCertPath>path/to/file.crt</ChainCertPath>
+				</TLS>
+				-->
 			</Domain>
-
-			<!-- Settings for the ports to bind -->
-			<Bind>
-				<Providers>
-					<OVT>${env:OME_OVT_PROV_PORT:9000}</OVT>
-					<RTMP>${env:OME_RTMP_PROV_PORT:1935}</RTMP>
-				</Providers>
-
-				<Publishers>
-					<HLS>${env:OME_HLS_PUB_PORT:80}</HLS>
-					<DASH>${env:OME_DASH_PUB_PORT:80}</DASH>
-					<WebRTC>
-						<Signalling>${env:OME_SIGNALLING_PORT:3333}</Signalling>
-						<IceCandidates>
-							<IceCandidate>${env:OME_ICE_CANDIDATES:*:10000-10005/udp}</IceCandidate>
-						</IceCandidates>
-					</WebRTC>
-				</Publishers>
-			</Bind>
 
 			<!-- Settings for ProxyPass (It can specify origin for each path) -->
 			<Origins>
 				<Origin>
-					<Location>/app/stream3</Location>
+					<Location>/app/edge_stream</Location>
 					<Pass>
-						<Scheme>rtsp</Scheme>
-						<Url>origin3.airensoft.com:9000/app3/stream3</Url>
-						<Url>origin4.airensoft.com:9000/app3/stream3</Url>
+						<Scheme>ovt</Scheme>
+						<Url>origin.com:9000/app/stream</Url>
 					</Pass>
 				</Origin>
 				<Origin>
-					<Location>/app</Location>
+					<Location>/app/another_stream</Location>
 					<Pass>
-						<Url>origin2.airensoft.com:9000/app2</Url>
-					</Pass>
-				</Origin>
-				<Origin>
-					<Location>default</Location>
-					<Pass>
-						<Url>origin1.airensoft.com:9000</Url>
+						<Scheme>ovt</Scheme>
+						<Url>origin2.com:9000/app/stream</Url>
+						<Url>origin3.com:9000/app/stream</Url>
 					</Pass>
 				</Origin>
 			</Origins>
-		</Host>
-	</Hosts>
+		</VirtualHost>
+	</VirtualHosts>
 </Server>

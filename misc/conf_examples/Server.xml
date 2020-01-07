@@ -1,75 +1,92 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<Server version="3">
+<Server version="4">
 	<Name>OvenMediaEngine</Name>
-	<Hosts>
-		<Host>
+	<!-- Host type (origin/edge) -->
+	<Type>origin</Type>
+	<!-- Specify IP address to bind (* means all IPs) -->
+	<IP>*</IP>
+
+	<!-- Settings for the ports to bind -->
+	<Bind>
+		<Providers>
+			<RTMP>1935</RTMP>
+		</Providers>
+
+		<Publishers>
+			<HLS>80</HLS>
+			<DASH>80</DASH>
+			<WebRTC>
+				<Signalling>3333</Signalling>
+				<IceCandidates>
+					<IceCandidate>*:10000-10005/udp</IceCandidate>
+				</IceCandidates>
+			</WebRTC>
+		</Publishers>
+	</Bind>
+
+	<VirtualHosts>
+		<!--
+			You can include multiple XML files by doing the following:
+		
+			<VirtualHost include="sites-enabled/*.xml" />
+		-->
+		<VirtualHost>
 			<Name>default</Name>
-			<!-- Host type (origin/edge) -->
-			<Type>origin</Type>
-			<!-- Specify IP address to bind (* means all IPs) -->
-			<IP>*</IP>
 
 			<!-- Settings for multi domain and TLS -->
 			<Domain>
 				<Names>
-					<Name>*.airensoft.com</Name>
+					<Name>stream1.airensoft.com</Name>
+					<Name>stream2.airensoft.com</Name>
+					<Name>stream3.airensoft.com</Name>
 				</Names>
+				<!--
+				<TLS>
+					<CertPath>path/to/file.crt</CertPath>
+					<KeyPath>path/to/file.key</KeyPath>
+					<ChainCertPath>path/to/file.crt</ChainCertPath>
+				</TLS>
+				-->
 			</Domain>
-
-			<!-- Settings for the ports to bind -->
-			<Bind>
-				<Providers>
-					<RTMP>${env:OME_RTMP_PROV_PORT:1935}</RTMP>
-				</Providers>
-				<Publishers>
-					<HLS>${env:OME_HLS_PUB_PORT:80}</HLS>
-					<DASH>${env:OME_DASH_PUB_PORT:80}</DASH>
-					<WebRTC>
-						<Signalling>${env:OME_SIGNALLING_PORT:3333}</Signalling>
-						<IceCandidates>
-							<IceCandidate>${env:OME_ICE_CANDIDATES:*:10000-10005/udp}</IceCandidate>
-						</IceCandidates>
-					</WebRTC>
-				</Publishers>
-			</Bind>
 
 			<!-- Settings for applications -->
 			<Applications>
 				<Application>
 					<Name>app</Name>
+					<!-- Application type (live/vod) -->
 					<Type>live</Type>
 					<Encodes>
 						<Encode>
 							<Name>VP8</Name>
 							<Audio>
 								<Codec>opus</Codec>
-								<Bitrate>${env:OME_AUDIO_BITRATE:128000}</Bitrate>
-								<Samplerate>${env:OME_AUDIO_SAMPLERATE:48000}</Samplerate>
-								<Channel>${env:OME_AUDIO_CHANNEL:2}</Channel>
+								<Bitrate>128000</Bitrate>
+								<Samplerate>48000</Samplerate>
+								<Channel>2</Channel>
 							</Audio>
 							<Video>
 								<Codec>vp8</Codec>
-								<Width>${env:OME_VIDEO_WIDTH:640}</Width>
-								<Height>${env:OME_VIDEO_HEIGHT:360}</Height>
-								<Bitrate>${env:OME_VIDEO_BITRATE:500000}</Bitrate>
-								<Framerate>${env:OME_VIDEO_FRAMERATE:30}</Framerate>
+								<Width>640</Width>
+								<Height>360</Height>
+								<Bitrate>500000</Bitrate>
+								<Framerate>30</Framerate>
 							</Video>
 						</Encode>
 						<Encode>
 							<Name>H264</Name>
 							<Audio>
 								<Codec>aac</Codec>
-								<Bitrate>${env:OME_AUDIO_BITRATE:128000}</Bitrate>
-								<Samplerate>${env:OME_AUDIO_SAMPLERATE:48000}</Samplerate>
-								<Channel>${env:OME_AUDIO_CHANNEL:2}</Channel>
+								<Bitrate>128000</Bitrate>
+								<Samplerate>48000</Samplerate>
+								<Channel>2</Channel>
 							</Audio>
 							<Video>
 								<Codec>h264</Codec>
-								<Width>${env:OME_VIDEO_WIDTH:640}</Width>
-								<Height>${env:OME_VIDEO_HEIGHT:360}</Height>
-								<Bitrate>${env:OME_VIDEO_BITRATE:500000}</Bitrate>
-								<Framerate>${env:OME_VIDEO_FRAMERATE:30}</Framerate>
+								<Width>640</Width>
+								<Height>360</Height>
+								<Bitrate>500000</Bitrate>
+								<Framerate>30</Framerate>
 							</Video>
 						</Encode>
 					</Encodes>
@@ -86,7 +103,7 @@
 						<RTMP />
 					</Providers>
 					<Publishers>
-						<ThreadCount>2</ThreadCount>
+						<ThreadCount>4</ThreadCount>
 						<HLS>
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
@@ -107,6 +124,6 @@
 					</Publishers>
 				</Application>
 			</Applications>
-		</Host>
-	</Hosts>
+		</VirtualHost>
+	</VirtualHosts>
 </Server>
