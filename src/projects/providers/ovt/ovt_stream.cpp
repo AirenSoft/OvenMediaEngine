@@ -54,6 +54,8 @@ namespace pvd
 	OvtStream::~OvtStream()
 	{
 		Stop();
+
+		_client_socket.Close();
 	}
 
 	bool OvtStream::Start()
@@ -86,9 +88,19 @@ namespace pvd
 
 	bool OvtStream::Stop()
 	{
+		if(_state == State::ERROR || _state == State::IDLE)
+		{
+			return false;
+		}
+
 		_stop_thread_flag = true;
+
 		RequestStop();
-		_client_socket.Close();
+
+		// It will be deleted later when the Provider tries to create a stream which is same name.
+		// Because it cannot delete it self.
+		_state = State::STOPPED;
+		//_app->NotifyStreamDeleted(GetSharedPtrAs<pvd::Stream>());
 
 		return true;
 	}
@@ -125,6 +137,14 @@ namespace pvd
 		{
 			_state = State::ERROR;
 			logte("Cannot connect to origin server (%s) : %s:%d", error->GetMessage().CStr(), _curr_url->Domain().CStr(), _curr_url->Port());
+			return false;
+		}
+
+		timeval tv = {3,0};
+		if(!_client_socket.SetRecvTimeout(tv))
+		{
+			_state = State::ERROR;
+			logte("To set sockopt error");
 			return false;
 		}
 
@@ -412,7 +432,7 @@ namespace pvd
 		if(sent_size != packet.GetData()->GetLength())
 		{
 			_state = State::ERROR;
-			logte("Could not send Play message");
+			logte("Could not send Stop message");
 			return false;
 		}
 
@@ -486,13 +506,19 @@ namespace pvd
 		size_t read_bytes = 0ULL;
 		while (true)
 		{
-			//TODO(Getroot): It is blocking function. It can be caused system hang. Need improvement.
+			// The Recv function is returned when timed out (3 sec)
 			auto error = _client_socket.Recv(buffer + offset, remained, &read_bytes);
 			if (error != nullptr)
 			{
 				_state = State::ERROR;
 				logte("An error occurred while receive data: %s", error->ToString().CStr());
 				_client_socket.Close();
+				return nullptr;
+			}
+
+			// It means timeout
+			if(read_bytes == 0)
+			{
 				return nullptr;
 			}
 
@@ -590,14 +616,18 @@ namespace pvd
 			auto packet = ReceivePacket();
 
 			// Validation
-			if (packet == nullptr || packet->SessionId() != _session_id ||
-				packet->PayloadType() != OVT_PAYLOAD_TYPE_MEDIA_PACKET)
+			if (packet == nullptr)
 			{
-				_state = State::ERROR;
+				Stop();
+				logte("The origin server may have problems. Try to terminate %s stream", GetName().CStr());
+				break;
+			}
+			else if(packet->SessionId() != _session_id ||
+					packet->PayloadType() != OVT_PAYLOAD_TYPE_MEDIA_PACKET)
+			{
+				Stop();
 				logte("An error occurred while receive data: An unexpected packet was received. Delete stream : %s",
 					  GetName().CStr());
-				Stop();
-				//_app->NotifyStreamDeleted(GetSharedPtrAs<pvd::Stream>());
 				break;
 			}
 

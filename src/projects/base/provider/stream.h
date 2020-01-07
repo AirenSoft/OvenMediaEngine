@@ -15,11 +15,26 @@ namespace pvd
 {
 	class Stream : public StreamInfo, public ov::EnableSharedFromThis<Stream>
 	{
+	public:
+		enum class State
+		{
+			IDLE,
+			CONNECTED,
+			DESCRIBED,
+			PLAYING,
+			STOPPED,
+			ERROR
+		};
+
+		State GetState(){return _state;};
+
 	protected:
 		Stream();
 		Stream(uint32_t stream_id);
 		Stream(const StreamInfo &stream_info);
 
 		virtual ~Stream();
+
+		State 	_state;
 	};
 }

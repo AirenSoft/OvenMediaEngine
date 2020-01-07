@@ -5,6 +5,7 @@
 #include <base/ovlibrary/url.h>
 #include "ovt_provider.h"
 #include "ovt_application.h"
+#include "ovt_stream.h"
 
 #define OV_LOG_TAG "OvtProvider"
 
@@ -55,8 +56,8 @@ namespace pvd
 	bool OvtProvider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list)
 	{
 		// Find App
-		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationByName("app2"));
-		//auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
+		//auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationByName("app2"));
+		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
 		if (app == nullptr)
 		{
 			logte("There is no such app (%s)", app_info.GetName().CStr());
@@ -67,8 +68,16 @@ namespace pvd
 		auto stream = app->GetStreamByName(stream_name);
 		if (stream != nullptr)
 		{
-			logte("%s stream already exists.", stream_name.CStr());
-			return false;
+			// If stream is not running it can be deleted.
+			if(stream->GetState() == Stream::State::STOPPED)
+			{
+				app->NotifyStreamDeleted(stream);
+			}
+			else
+			{
+				logte("%s stream already exists.", stream_name.CStr());
+				return false;
+			}
 		}
 
 		// Create Stream

@@ -148,7 +148,7 @@ Stream::Stream(const std::shared_ptr<Application> application,
 {
 	_application = application;
 	_run_flag = false;
-	_last_issued_session_id = 0;
+	_last_issued_session_id = 100;
 }
 
 Stream::~Stream()
@@ -272,6 +272,8 @@ uint32_t Stream::IssueUniqueSessionId()
 
 		new_session_id++;
 	}
+
+	_last_issued_session_id = new_session_id;
 
 	return new_session_id;
 }

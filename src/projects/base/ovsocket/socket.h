@@ -179,12 +179,11 @@ namespace ov
 		virtual bool MakeNonBlocking();
 
 		virtual bool Bind(const SocketAddress &address);
-
 		virtual bool Listen(int backlog = SOMAXCONN);
-
 		virtual SocketWrapper Accept(SocketAddress *client);
-
 		virtual std::shared_ptr<ov::Error> Connect(const SocketAddress &endpoint, int timeout = Infinite);
+
+		virtual bool SetRecvTimeout(timeval &tv);
 
 		virtual bool PrepareEpoll();
 		virtual bool AddToEpoll(Socket *socket, void *parameter);

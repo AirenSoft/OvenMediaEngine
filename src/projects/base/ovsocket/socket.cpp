@@ -477,6 +477,7 @@ namespace ov
 			case SocketType::Udp:
 				if (::connect(_socket.GetSocket(), endpoint.Address(), endpoint.AddressLength()) == 0)
 				{
+					SetState(SocketState::Connected);
 					return nullptr;
 				}
 
@@ -492,6 +493,7 @@ namespace ov
 				}
 				else if (::srt_connect(_socket.GetSocket(), endpoint.Address(), endpoint.AddressLength()) != SRT_ERROR)
 				{
+					SetState(SocketState::Connected);
 					return nullptr;
 				}
 
@@ -506,6 +508,26 @@ namespace ov
 		Close();
 
 		return error;
+	}
+
+	bool Socket::SetRecvTimeout(timeval &tv)
+	{
+		OV_ASSERT2(_socket.IsValid());
+		CHECK_STATE(== SocketState::Connected, false);
+
+		switch (GetType())
+		{
+			case SocketType::Tcp:
+			case SocketType::Udp:
+				setsockopt(_socket.GetSocket(), SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(timeval));
+				break;
+
+			case SocketType::Srt:
+			default:
+				break;
+		}
+
+		return true;
 	}
 
 	bool Socket::PrepareEpoll()
