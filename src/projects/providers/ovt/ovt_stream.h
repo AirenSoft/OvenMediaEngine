@@ -38,6 +38,7 @@ namespace pvd
 		bool ReceiveStop(uint32_t request_id);
 
 		std::shared_ptr<OvtPacket> ReceivePacket();
+		std::shared_ptr<ov::Data> ReceiveMessage();
 
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		std::shared_ptr<const ov::Url>				_curr_url;

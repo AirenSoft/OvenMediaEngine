@@ -266,20 +266,42 @@ void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uin
 
 void OvtPublisher::SendResponse(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String &payload)
 {
-	OvtPacket	packet;
+	size_t max_payload_size = OVT_DEFAULT_MAX_PACKET_SIZE - OVT_FIXED_HEADER_SIZE;
+	size_t remain_payload_len = payload.GetLength();
+	size_t offset = 0;
+	uint32_t sn = 0;
 
-	packet.SetSessionId(session_id);
-	packet.SetPayloadType(OVT_PAYLOAD_TYPE_RESPONSE);
-	packet.SetMarker(0);
-	packet.SetTimestampNow();
+	auto data = payload.ToData(false);
+	auto buffer = data->GetDataAs<uint8_t>();
 
-	if(!payload.IsEmpty())
+	while(remain_payload_len != 0)
 	{
-		auto payload_data = payload.ToData(false);
-		packet.SetPayload(payload_data->GetDataAs<uint8_t>(), payload_data->GetLength());
-	}
+		// Serialize
+		auto packet = std::make_shared<OvtPacket>();;
+		// Session ID should be set in Session Level
+		packet->SetSessionId(session_id);
+		packet->SetPayloadType(OVT_PAYLOAD_TYPE_RESPONSE);
+		packet->SetMarker(0);
+		packet->SetTimestampNow();
 
-	remote->Send(packet.GetData());
+		if(remain_payload_len > max_payload_size)
+		{
+			packet->SetPayload(&buffer[offset], max_payload_size);
+			offset += max_payload_size;
+			remain_payload_len -= max_payload_size;
+		}
+		else
+		{
+			// The last packet of group has marker bit.
+			packet->SetMarker(true);
+			packet->SetPayload(&buffer[offset], remain_payload_len);
+			remain_payload_len = 0;
+		}
+
+		packet->SetSequenceNumber(sn++);
+
+		remote->Send(packet->GetData());
+	}
 }
 
 bool OvtPublisher::LinkRemoteWithStream(int remote_id, std::shared_ptr<OvtStream> &stream)

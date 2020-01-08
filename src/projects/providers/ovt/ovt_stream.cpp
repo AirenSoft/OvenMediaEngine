@@ -190,15 +190,15 @@ namespace pvd
 
 	bool OvtStream::ReceiveDescribe(uint32_t request_id)
 	{
-		auto packet = ReceivePacket();
-		if (packet == nullptr || packet->PayloadLength() <= 0)
+		auto data = ReceiveMessage();
+		if (data == nullptr || data->GetLength() <= 0)
 		{
 			_state = State::ERROR;
 			return false;
 		}
 
 		// Parsing Payload
-		ov::String payload((const char *) packet->Payload(), packet->PayloadLength());
+		ov::String payload = data->GetDataAs<char>();
 		ov::JsonObject object = ov::Json::Parse(payload);
 
 		if (object.IsNull())
@@ -486,6 +486,29 @@ namespace pvd
 
 		_state = State::STOPPED;
 		return true;
+	}
+
+	std::shared_ptr<ov::Data> OvtStream::ReceiveMessage()
+	{
+		auto data = std::make_shared<ov::Data>();
+
+		while(true)
+		{
+			auto packet = ReceivePacket();
+			if(packet == nullptr)
+			{
+				return nullptr;
+			}
+
+			data->Append(packet->Payload(), packet->PayloadLength());
+
+			if(packet->Marker())
+			{
+				break;
+			}
+		}
+
+		return data;
 	}
 
 	std::shared_ptr<OvtPacket> OvtStream::ReceivePacket()

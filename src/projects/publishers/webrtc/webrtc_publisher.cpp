@@ -111,6 +111,11 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::St
 		}
 
 		stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
+		if(stream == nullptr)
+		{
+			logtd("Could not pull the stream: [%s/%s]", application_name.CStr(), stream_name.CStr());
+			return nullptr;
+		}
 	}
 
 	auto &candidates = _ice_port->GetIceCandidateList();
