@@ -1320,7 +1320,7 @@ bool RtmpChunkStream::VideoSequenceHeaderProcess(const std::shared_ptr<const ov:
 			  _app_name.CStr(),
 			  _stream_name.CStr(),
 			  data->GetLength(),
-			  data->ToString().CStr());
+			  data->ToHexString().CStr());
 
 		return false;
 	}
@@ -1376,7 +1376,7 @@ bool RtmpChunkStream::AudioSequenceHeaderProcess(const std::shared_ptr<const ov:
 			  _app_name.CStr(),
 			  _stream_name.CStr(),
 			  data->GetLength(),
-			  data->ToString().CStr());
+			  data->ToHexString().CStr());
 
 		return false;
 	}
