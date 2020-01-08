@@ -207,7 +207,8 @@ std::shared_ptr<Orchestrator::Origin> Orchestrator::GetUrlListForLocation(const 
 			//      <Origin>
 			//      	<Location>/app/stream</Location>
 			//      	<Pass>
-			//      		<Url>ovt://origin.airensoft.com:9000/another_app/and_stream</Url>
+			//              <Scheme>ovt</Scheme>
+			//      		<Url>origin.airensoft.com:9000/another_app/and_stream</Url>
 			//      	</Pass>
 			//      </Origin>
 			// And when the location is "/app/stream_o",
