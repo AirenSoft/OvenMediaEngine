@@ -89,13 +89,17 @@ namespace pvd
 
 	bool OvtStream::Stop()
 	{
-		if(_state == State::STOPPED || _state == State::ERROR || _state == State::IDLE)
+		if(_state == State::STOPPED || _state == State::IDLE)
 		{
 			return false;
 		}
 
 		_stop_thread_flag = true;
-		RequestStop();
+
+		if(_state == State::PLAYING || _state == State::CONNECTED || _state == State::DESCRIBED)
+		{
+			RequestStop();
+		}
 
 		// It will be deleted later when the Provider tries to create a stream which is same name.
 		// Because it cannot delete it self.
@@ -531,17 +535,11 @@ namespace pvd
 		{
 			// The Recv function is returned when timed out (3 sec)
 			auto error = _client_socket.Recv(buffer + offset, remained, &read_bytes);
-			if (error != nullptr)
+			if (error != nullptr || read_bytes == 0)
 			{
 				_state = State::ERROR;
 				logte("An error occurred while receive data: %s", error->ToString().CStr());
 				_client_socket.Close();
-				return nullptr;
-			}
-
-			// It means timeout
-			if(read_bytes == 0)
-			{
 				return nullptr;
 			}
 
