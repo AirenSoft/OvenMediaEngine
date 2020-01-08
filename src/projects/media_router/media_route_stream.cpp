@@ -44,78 +44,69 @@ MediaRouteApplicationConnector::ConnectorType MediaRouteStream::GetConnectorType
 	return _application_connector_type;
 }
 
+// 비트스트림 컨버팅 기능을.. 어디에 넣는게 좋을까? Push? Pop?
 bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet, bool convert_bitstream)
 {
-	MediaType media_type = media_packet->GetMediaType();
-	int32_t track_id = media_packet->GetTrackId();
+	auto media_type = media_packet->GetMediaType();
+
+	auto track_id = media_packet->GetTrackId();
+
 	auto media_track = _stream_info->GetTrack(track_id);
 
-	if(media_track == nullptr)
+	if (media_track == nullptr)
 	{
-		logte("Cannot find media track. type(%s), id(%d)", (media_type == MediaType::Video) ? "video" : "audio", track_id);
+		logte("Cannot find media track. media_type(%s), track_id(%d)", (media_type == MediaType::Video) ? "video" : "audio", media_packet->GetTrackId());
 		return false;
 	}
 
 	// TODO(soulk): Move this code to RTMP provider/Transcoder (RTMP need to calculate pts using dts and cts)
-	if(convert_bitstream)
+	if (convert_bitstream)
 	{
-		if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::H264)
+		if (media_type == MediaType::Video)
 		{
-		    int64_t cts = 0;
-
-			if(_bsfv.Convert(media_packet->GetData(), cts) == false)
+			if (media_track->GetCodecId() == MediaCodecId::H264)
 			{
+
+			}
+			else if (media_track->GetCodecId() == MediaCodecId::Vp8)
+			{
+				// TODO: Vp8 코덱과 같은 경우에는 Provider로 나중에 옮겨야 겠음.
+				_bsf_vp8.convert_to(media_packet->GetData());
+			}
+			else
+			{
+				logte("Unsupported video codec. codec_id(%d)", media_track->GetCodecId());
 				return false;
 			}
-
-			// The timestamp used by RTMP is DTS
-			// cts = pts - dts
-			// pts = dts + cts
-			// Convert timebase 1/1000 to 1/90000
-			media_packet->SetPts(media_packet->GetDts() + (cts * 90));
-
-			// OV_ASSERT2(media_packet->GetPts() >= 0LL);
 		}
-		else if(media_type == MediaType::Video && media_track->GetCodecId() == MediaCodecId::Vp8)
+		else if (media_type == MediaType::Audio)
 		{
-			_bsf_vp8.convert_to(media_packet->GetData());
-		}
-		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Aac)
-		{
-			_bsfa.convert_to(media_packet->GetData());
+			if (media_track->GetCodecId() == MediaCodecId::Aac)
+			{
+			}
+			else if (media_track->GetCodecId() == MediaCodecId::Opus)
+			{
 
-			logtp("Enqueue for AAC\n%s", media_packet->GetData()->Dump(32).CStr());
-		}
-		else if(media_type == MediaType::Audio && media_track->GetCodecId() == MediaCodecId::Opus)
-		{
-			// logtw("%s", media_packet->GetData()->Dump(32).CStr());
-			// _bsfa.convert_to(media_packet.GetBuffer());
-			logtp("Enqueue for OPUS\n%s", media_packet->GetData()->Dump(32).CStr());
+			}
+			else
+			{
+				logte("Unsupported audio codec. codec_id(%d)", media_track->GetCodecId());
+				return false;
+			}
 		}
 		else
 		{
-			OV_ASSERT2(false);
+			logte("Unsupported media typec. media_type(%d)", media_type);
+			return false;
 		}
 	}
 
-#if 0
-	media_packet->SetPts(media_track->GetStartFrameTime() + media_packet->GetPts());
-	
-	// 수신된 버퍼의 PTS값이 초기화되면 마지막에 받은 PTS값을 기준으로 증가시켜준다
-	if( (media_track->GetLastFrameTime()-1000000) > media_packet->GetPts())
-	{
-		logtw("change start time");
-		logtd("start media_packet : %.0f, last media_packet : %.0f, media_packet : %.0f", (float)media_track->GetStartFrameTime(), (float)media_track->GetLastFrameTime(), (float)media_packet->GetPts());
-
-		media_track->SetStartFrameTime(media_track->GetLastFrameTime());
-	}
-
-	media_track->SetLastFrameTime(media_packet->GetPts());
-#endif
-
 	_media_packets.push(std::move(media_packet));
 
-	time(&_last_rb_time);
+	// Purpose of keeping time for last received packets. 
+	// In the future, it will be utilized in the wrong stream or garbage collector.
+	
+	// time(&_last_rb_time);
 	// logtd("last time : %s", asctime(gmtime(&_last_rb_time)) );
 
 	return true;
