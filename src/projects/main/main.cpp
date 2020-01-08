@@ -86,8 +86,6 @@ int main(int argc, char *argv[])
 		host_info_list.emplace_back(host);
 	}
 
-	logti("%s", server_config->ToString().CStr());
-
 	for (auto &host_info : host_info_list)
 	{
 		auto host_name = host_info.GetName();
