@@ -104,7 +104,7 @@ namespace pvd
 		// It will be deleted later when the Provider tries to create a stream which is same name.
 		// Because it cannot delete it self.
 		_state = State::STOPPED;
-		_app->NotifyStreamDeleted(GetSharedPtrAs<pvd::Stream>());
+		//_app->NotifyStreamDeleted(GetSharedPtrAs<pvd::Stream>());
 
 		return true;
 	}
@@ -538,7 +538,10 @@ namespace pvd
 			if (error != nullptr || read_bytes == 0)
 			{
 				_state = State::ERROR;
-				logte("An error occurred while receive data: %s", error->ToString().CStr());
+				if(error != nullptr)
+				{
+					logte("An error occurred while receive data: %s", error->ToString().CStr());
+				}
 				_client_socket.Close();
 				return nullptr;
 			}

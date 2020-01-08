@@ -28,7 +28,7 @@ namespace pvd
 	OvtProvider::OvtProvider(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 			: Provider(server_config, host_info, router)
 	{
-
+		
 	}
 
 	OvtProvider::~OvtProvider()
@@ -39,7 +39,7 @@ namespace pvd
 
 	bool OvtProvider::Start()
 	{
-		//SetUseAutoStreamRemover(true);
+		SetUseAutoStreamRemover(true);
 		return pvd::Provider::Start();
 	}
 
@@ -72,7 +72,9 @@ namespace pvd
 			// If stream is not running it can be deleted.
 			if(stream->GetState() == Stream::State::STOPPED)
 			{
+				logte("1");
 				app->NotifyStreamDeleted(stream);
+				logte("2");
 			}
 			else
 			{

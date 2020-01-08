@@ -98,7 +98,6 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::St
 {
 	// Application -> Stream에서 SDP를 얻어서 반환한다.
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
-
 	if(stream == nullptr)
 	{
 		// If the stream is not exists, request to the provider

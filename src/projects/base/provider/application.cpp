@@ -105,7 +105,7 @@ namespace pvd
 			return false;
 		}
 
-		logtd("DeleteStream");
+		logte("DeleteStream!!!!!!!!!!!!!!!!!!!!");
 
 		MediaRouteApplicationConnector::DeleteStream(stream);
 
@@ -127,12 +127,9 @@ namespace pvd
 		for(auto it = _streams.cbegin(); it != _streams.cend(); )
 		{
 			auto stream = it->second;
-			logte("find %s stream. State : %d", stream->GetName().CStr(), stream->GetState());
-
 			if(stream->GetState() == Stream::State::STOPPED ||
 				stream->GetState() == Stream::State::ERROR)
 			{
-				logte("The terminated stream (%s) has deleted", stream->GetName().CStr());
 				MediaRouteApplicationConnector::DeleteStream(stream);
 				it = _streams.erase(it);
 			}

@@ -32,7 +32,7 @@ ov::DelayQueueAction WebSocketInterceptor::DoPing(void *parameter)
 
 		if (_websocket_client_list.size() > 0)
 		{
-			logti("Trying to ping to WebSocket clients...");
+			logtd("Trying to ping to WebSocket clients...");
 
 			ov::String str("OvenMediaEngine");
 			auto payload = std::move(str.ToData(false));
