@@ -24,3 +24,15 @@ RtmpStream::RtmpStream()
 RtmpStream::~RtmpStream()
 {
 }
+
+bool RtmpStream::ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts)
+{
+	return _bsfv.Convert(data, cts);
+}
+
+
+bool RtmpStream::ConvertToAudioData(const std::shared_ptr<ov::Data> &data)
+{
+	_bsfa.convert_to(data);
+	return true;
+}

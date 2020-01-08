@@ -221,12 +221,35 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 		return false;
 	}
 
+
+	// TODO: This is a memory copy overhead code.
+	// Change is required in a way that does not copy memory.
+	const std::shared_ptr<ov::Data> &new_data = data->Clone();
+
+	// In the case of the h264 codec, the pts(presentation timestamp) value is calculated using the cts(composition timestamp) value.
+	// The timestamp used by RTMP is DTS.
+	// formula:
+	// 		cts = pts - dts
+	// 		pts = dts + cts
+
+	// TODO: It is currently fixed to h264.
+	// Depending on the codec, the bitstream conversion must be processed.
+	int64_t cts = 0;
+	stream->ConvertToVideoData( new_data, cts);
+
+	int64_t dts = timestamp;
+	int64_t pts = dts + cts;
+
+	// Change the timebase specification: 1/1000 -> 1/90000
+	dts *= _video_scale;
+	pts *= _video_scale;
+
 	auto pbuf = std::make_shared<MediaPacket>(MediaType::Video,
 											  0,
-											  data,
+											  new_data,
 											  // The timestamp used by RTMP is DTS. PTS will be recalculated later
-											  timestamp * _video_scale,  // PTS
-											  timestamp * _video_scale,  // DTS
+											  pts, // PTS
+											  dts, // DTS
 											  // RTMP doesn't know frame's duration
 											  -1LL,
 											  frame_type == RtmpFrameType::VideoIFrame ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
@@ -251,22 +274,36 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 	}
 
 	auto stream = std::dynamic_pointer_cast<RtmpStream>(application->GetStreamById(stream_id));
-
 	if (stream == nullptr)
 	{
 		logte("cannot find stream");
 		return false;
 	}
 
+	// TODO: This is a memory copy overhead code.
+	// Change is required in a way that does not copy memory.
+	const std::shared_ptr<ov::Data> &new_data = data->Clone();
+
+	// TODO: It is currently fixed to AAC.
+	// Depending on the codec, the bitstream conversion must be processed.
+	stream->ConvertToAudioData(new_data);
+
+	// Change the timebase specification: 1/1000 -> 1/90000
+	int64_t dts = timestamp;
+	int64_t pts = timestamp;
+	dts *= _video_scale;
+	pts *= _video_scale;
+
 	auto pbuf = std::make_shared<MediaPacket>(MediaType::Audio,
 											  1,
-											  data,
+											  new_data,
 											  // The timestamp used by RTMP is DTS. PTS will be recalculated later
-											  timestamp * _audio_scale,  // PTS
-											  timestamp * _audio_scale,  // DTS
+											  pts,  // PTS
+											  dts,  // DTS
 											  // RTMP doesn't know frame's duration
 											  -1LL,
 											  MediaPacketFlag::Key);
+	
 	application->SendFrame(stream, std::move(pbuf));
 
 	return true;

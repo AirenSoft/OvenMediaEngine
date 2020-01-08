@@ -13,8 +13,6 @@
 
 using namespace common;
 
-#define TEMP_USE_LOCK
-
 std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info::Application &application_info)
 {
 	auto media_route_application = std::make_shared<MediaRouteApplication>(application_info);
@@ -159,9 +157,7 @@ bool MediaRouteApplication::OnCreateStream(
 	// 기존에 사용하던 Stream의 ID를 재사용한다
 	if (app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
-#ifdef TEMP_USE_LOCK
 		std::lock_guard<decltype(_mutex)> lock_guard(_mutex);
-#endif // TEMP_USE_LOCK
 
 		for (auto it = _streams.begin(); it != _streams.end(); ++it)
 		{
@@ -184,10 +180,7 @@ bool MediaRouteApplication::OnCreateStream(
 	auto new_stream = std::make_shared<MediaRouteStream>(new_stream_info);
 
 	{
-#ifdef TEMP_USE_LOCK
 		std::lock_guard<std::mutex> lock_guard(_mutex);
-#endif // TEMP_USE_LOCK
-
 
 		new_stream->SetConnectorType(app_conn->GetConnectorType());
 
@@ -297,9 +290,8 @@ bool MediaRouteApplication::OnReceiveBuffer(
 	std::shared_ptr<MediaRouteStream> stream = nullptr;
 
 	{
-#ifdef TEMP_USE_LOCK
 		std::lock_guard<decltype(_mutex)> lock_guard(_mutex);
-#endif // TEMP_USE_LOCK
+
 		auto stream_bucket = _streams.find(stream_info->GetId());
 		if (stream_bucket == _streams.end())
 		{
@@ -332,9 +324,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 
 void MediaRouteApplication::OnGarbageCollector()
 {
-	_indicator.push(std::make_shared<BufferIndicator>(
-		BUFFFER_INDICATOR_UNIQUEID_GC  // 가비지 컬렉터를 실행
-		));
+	// _indicator.push(std::make_shared<BufferIndicator>(BUFFFER_INDICATOR_UNIQUEID_GC));
 }
 
 // 스트림 객제중에 데이터가 수신되지 않은 스트림은 N초후에 자동 삭제를 진행함.
@@ -343,9 +333,7 @@ void MediaRouteApplication::GarbageCollector()
 	time_t curr_time;
 	time(&curr_time);
 
-#ifdef TEMP_USE_LOCK
 	std::lock_guard<decltype(_mutex)> lock_guard(_mutex);
-#endif // TEMP_USE_LOCK
 
 	for (auto it = _streams.begin(); it != _streams.end(); ++it)
 	{
