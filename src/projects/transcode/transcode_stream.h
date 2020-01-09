@@ -124,7 +124,7 @@ private:
 	uint8_t AddOutputContext(common::MediaType media_type, std::shared_ptr<TranscodeContext> output_context);
 
 	std::map<MediaTrackId, std::shared_ptr<TranscodeContext>> _output_contexts;
-	std::map<MediaTrackId, uint8_t> _bypass_routes;
+	std::map<MediaTrackId, std::vector<uint8_t>> _bypass_routes;
 
 	// Create output streams
 	void CreateStreams();

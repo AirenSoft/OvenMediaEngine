@@ -146,7 +146,7 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 							uint8_t track_id = GetTrackId(common::MediaType::Video);
 							if (track_id)
 							{
-								_bypass_routes.emplace((*input_video_track_iterator)->GetId(), track_id);
+								_bypass_routes[(*input_video_track_iterator)->GetId()].emplace_back(track_id);
 								bypass_tracks.emplace_back(track_id, *input_video_track_iterator);
 								tracks.push_back(track_id);
 							}
@@ -202,7 +202,7 @@ TranscodeStream::TranscodeStream(const info::Application *application_info, std:
 							uint8_t track_id = GetTrackId(common::MediaType::Audio);
 							if (track_id)
 							{
-								_bypass_routes.emplace((*input_audio_track_iterator)->GetId(), track_id);
+								_bypass_routes[(*input_audio_track_iterator)->GetId()].emplace_back(track_id);
 								bypass_tracks.emplace_back(track_id, *input_audio_track_iterator);
 								tracks.push_back(track_id);
 							}
@@ -460,29 +460,29 @@ bool TranscodeStream::Push(std::unique_ptr<MediaPacket> packet)
 	// logtd("Stage-1-1 : %f", (float)frame->GetPts());
 	// 변경된 스트림을 큐에 넣음
 
-	std::unique_ptr<MediaPacket> packet_for_encoding;
 	bool no_encoders = _encoders.empty();
 	bool pushed = false;
 	auto it = _bypass_routes.find(packet->GetTrackId());
 	if (it != _bypass_routes.end())
 	{
-		if (no_encoders == false)
+		const bool single_route = it->second.size() == 1;
+		for (auto track_it = it->second.begin(); track_it != it->second.end(); ++track_it)
 		{
-			packet_for_encoding = packet->ClonePacket();
+			// We can move the packet if there are no encoders and we are on the only or the last route
+			const bool can_move = no_encoders && (single_route || (std::next(track_it) == it->second.end()));
+			auto packet_for_track = can_move ? std::move(packet) : packet->ClonePacket();
+			packet_for_track->SetTrackId(*track_it);
+			SendFrame(std::move(packet_for_track), *track_it);
+			pushed = true;
 		}
-		packet->SetTrackId(it->second);
-		SendFrame(std::move(packet), it->second);
-		pushed = true;
-	}
-	else
-	{
-		packet_for_encoding = std::move(packet);
 	}
 	
 	if(no_encoders)
 	{
 		return pushed;
 	}
+
+	std::unique_ptr<MediaPacket> packet_for_encoding(std::move(packet));
 
 	auto input_tracks = _stream_info_input->GetTracks();
 	auto input_track_iterator = input_tracks.find(packet_for_encoding->GetTrackId());
