@@ -231,6 +231,8 @@ bool Stream::RemoveSession(session_id_t id)
 		logte("Cannot find session : %u", id);
 		return false;
 	}
+
+	logte("REMOVE SESSION : %d", id);
 	_sessions.erase(id);
 
 	return GetWorkerByStreamID(id).RemoveSession(id);

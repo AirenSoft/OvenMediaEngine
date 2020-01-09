@@ -83,7 +83,6 @@ namespace pvd
 	bool Application::NotifyStreamCreated(std::shared_ptr<Stream> stream)
 	{
 		std::unique_lock<std::mutex> lock(_streams_map_guard);
-
 		if(stream == nullptr)
 		{
 			return false;
@@ -104,8 +103,6 @@ namespace pvd
 		{
 			return false;
 		}
-
-		logte("DeleteStream!!!!!!!!!!!!!!!!!!!!");
 
 		MediaRouteApplicationConnector::DeleteStream(stream);
 

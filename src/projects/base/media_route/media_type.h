@@ -270,6 +270,11 @@ namespace common
 			return _rate;
 		}
 
+		int32_t GetRateNum() const
+		{
+			return static_cast<std::underlying_type<AudioSample::Rate>::type>(_rate);
+		}
+
 		const char *GetName()
 		{
 			return _name.c_str();

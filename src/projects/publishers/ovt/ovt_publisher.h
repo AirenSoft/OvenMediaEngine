@@ -65,5 +65,5 @@ private:
 	std::shared_ptr<PhysicalPort> _server_port;
 
 	// When a client is disconnected ungracefully, this map helps to find stream and delete the session quickly
-	std::map<int, std::shared_ptr<std::vector<std::shared_ptr<OvtStream>>>>	_remote_stream_map;
+	std::multimap<int, std::shared_ptr<OvtStream>>	_remote_stream_map;
 };

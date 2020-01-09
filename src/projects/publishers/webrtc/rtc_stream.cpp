@@ -153,8 +153,7 @@ bool RtcStream::Start(uint32_t worker_count)
 					first_audio_desc = false;
 				}
 
-				payload->SetRtpmap(track->GetId(), codec,
-								   static_cast<std::underlying_type<AudioSample::Rate>::type>(track->GetSample().GetRate()),
+				payload->SetRtpmap(payload_type_num++, codec, static_cast<uint32_t>(track->GetSample().GetRateNum()),
 								   std::to_string(track->GetChannel().GetCounts()).c_str());
 
 				audio_media_desc->AddPayload(payload);

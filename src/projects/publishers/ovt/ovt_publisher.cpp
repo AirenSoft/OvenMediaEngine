@@ -158,15 +158,10 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 									PhysicalPortDisconnectReason reason,
 									const std::shared_ptr<const ov::Error> &error)
 {
-	// Remove session
-	auto streams = _remote_stream_map[remote->GetId()];
-	if(streams == nullptr)
+	auto streams = _remote_stream_map.equal_range(remote->GetId());
+	for(auto it = streams.first; it != streams.second; ++it)
 	{
-		return;
-	}
-
-	for(const auto &stream : *streams)
-	{
+		auto stream = it->second;
 		stream->RemoveSessionByConnectorId(remote->GetId());
 	}
 
@@ -217,7 +212,7 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 		return;
 	}
 
-	//LinkRemoteWithStream(remote->GetId(), stream);
+	LinkRemoteWithStream(remote->GetId(), stream);
 
 	ResponseResult(remote, session->GetId(), request_id, 200, "ok");
 
@@ -308,17 +303,7 @@ bool OvtPublisher::LinkRemoteWithStream(int remote_id, std::shared_ptr<OvtStream
 {
 	// For ungracefull disconnect
 	// one remote id can be join multiple streams.
-
-	if(_remote_stream_map.find(remote_id) == _remote_stream_map.end())
-	{
-		auto stream_vector = std::make_shared<std::vector<std::shared_ptr<OvtStream>>>();
-		stream_vector->push_back(stream);
-		_remote_stream_map[remote_id] = stream_vector;
-	}
-	else
-	{
-		_remote_stream_map[remote_id]->push_back(stream);
-	}
+	_remote_stream_map.insert(std::pair<int, std::shared_ptr<OvtStream>>(remote_id, stream));
 
 	return true;
 }
