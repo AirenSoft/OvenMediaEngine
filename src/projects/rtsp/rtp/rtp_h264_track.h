@@ -13,9 +13,16 @@
 
 #include <base/ovlibrary/byte_ordering.h>
 
+/*
+    NOTE: The H.264 RTP track emits video with AnnexB start codes so that it is easier to ingest it for
+    decoders, and publishers of bypassed streams
+*/
 template<typename T>
 class RtpH264Track : public T
 {
+    static constexpr uint8_t four_byte_prefix[4] = { 0, 0, 0, 1 };
+    static constexpr uint8_t three_byte_prefix[3] = { 0, 0, 1 };
+
 public:
     using T::T;
 
@@ -56,13 +63,16 @@ protected:
                 auto *pps_sps = sps_pps_tracker_.GetPpsSps(pps_id);
                 if (pps_sps)
                 {
-                    OV_ASSERT2(media_packet.empty());
+                    // SPS + AnnexB prefix
+                    media_packet.insert(media_packet.end(), four_byte_prefix, four_byte_prefix + sizeof(four_byte_prefix));
+                    fragmentation_header.fragmentation_offset.emplace_back(media_packet.size());
                     media_packet.insert(media_packet.end(), pps_sps->second.begin(), pps_sps->second.end());
-                    fragmentation_header.fragmentation_offset.emplace_back(0);
                     fragmentation_header.fragmentation_length.emplace_back(pps_sps->second.size());
                     fragmentation_header.fragmentation_pl_type.emplace_back(static_cast<uint8_t>(H264NalUnitType::Sps));
+                    // PPS + AnnexB prefix
+                    media_packet.insert(media_packet.end(), four_byte_prefix, four_byte_prefix + sizeof(four_byte_prefix));
+                    fragmentation_header.fragmentation_offset.emplace_back(media_packet.size());
                     media_packet.insert(media_packet.end(), pps_sps->first.begin(), pps_sps->first.end());
-                    fragmentation_header.fragmentation_offset.emplace_back(pps_sps->second.size());
                     fragmentation_header.fragmentation_length.emplace_back(pps_sps->first.size());
                     fragmentation_header.fragmentation_pl_type.emplace_back(static_cast<uint8_t>(H264NalUnitType::Pps));
                 }
@@ -102,6 +112,7 @@ protected:
                 {
                     GetSpsPpsForSlice(nal_unit_type, rtp_payload, rtp_payload_length, *media_packet, *fragmentation_header);
                 }
+                media_packet->insert(media_packet->end(), three_byte_prefix, three_byte_prefix + sizeof(three_byte_prefix));
                 fragmentation_header->fragmentation_offset.emplace_back(media_packet->size());
                 fragmentation_header->fragmentation_length.emplace_back(rtp_payload_length);
                 fragmentation_header->fragmentation_pl_type.emplace_back(nal_unit_type);
@@ -150,7 +161,7 @@ protected:
                         */
                        T::rtsp_server_.OnVideoData(T::stream_id_,
                             T::track_id_,
-                            rtp_packet_header.timestamp_,
+                            rtp_packet_header.timestamp_ - T::first_timestamp_,
                             media_packet,
                             is_key_frame ? static_cast<uint8_t>(RtpVideoFlags::Keyframe) : 0,
                             std::move(fragmentation_header));
@@ -167,6 +178,7 @@ protected:
                     {
                         GetSpsPpsForSlice(nal_unit_type, nal_unit_bytes, nal_unit_size, *media_packet, *fragmentation_header);
                     }
+                    media_packet->insert(media_packet->end(), three_byte_prefix, three_byte_prefix + sizeof(three_byte_prefix));
                     fragmentation_header->fragmentation_offset.emplace_back(media_packet->size());
                     fragmentation_header->fragmentation_length.emplace_back(nal_unit_size);
                     fragmentation_header->fragmentation_pl_type.emplace_back(nal_unit_type);
@@ -207,6 +219,7 @@ protected:
                     {
                         GetSpsPpsForSlice(nal_unit_type, rtp_payload + payload_offset, rtp_payload_length - payload_offset, *fu_a_packet_, *fu_a_fragmentation_header_);
                     }
+                    fu_a_packet_->insert(fu_a_packet_->end(), three_byte_prefix, three_byte_prefix + sizeof(three_byte_prefix));
                     fu_a_fragmentation_header_->fragmentation_offset.emplace_back(fu_a_packet_->size());
                     fu_a_fragmentation_header_->fragmentation_length.emplace_back(0);
                     fu_a_fragmentation_header_->fragmentation_pl_type.emplace_back(nal_unit_type);
@@ -219,6 +232,7 @@ protected:
                     {
                         GetSpsPpsForSlice(nal_unit_type, rtp_payload + payload_offset, rtp_payload_length - payload_offset, *media_packet, *fragmentation_header);
                     }
+                    media_packet->insert(media_packet->end(), three_byte_prefix, three_byte_prefix + sizeof(three_byte_prefix));
                 }
             }
             else
@@ -246,7 +260,7 @@ protected:
             }
             else
             {
-                fragmentation_header->fragmentation_offset.emplace_back(0);
+                fragmentation_header->fragmentation_offset.emplace_back(media_packet->size());
                 fragmentation_header->fragmentation_length.emplace_back(rtp_payload_length);
                 fragmentation_header->fragmentation_pl_type.emplace_back(nal_unit_type);
                 fragmentation_header->last_fragment_complete = is_last_fu_a_segment; 
@@ -261,7 +275,7 @@ protected:
         {
             T::rtsp_server_.OnVideoData(T::stream_id_,
                 T::track_id_,
-                rtp_packet_header.timestamp_,
+                rtp_packet_header.timestamp_ - T::first_timestamp_,
                 media_packet,
                 is_key_frame ? static_cast<uint8_t>(RtpVideoFlags::Keyframe) : 0,
                 std::move(fragmentation_header));
@@ -270,6 +284,8 @@ protected:
     }
 
 private:
+    // TODO(rubu): until the H264 packetizer in the WebRTC end is reworked we must assemble FU-A packets, since the packetizer in the WebRTC
+    // end is recreated each time and cannot handle separate FU-A segments in multiple packets
     bool assemble_fu_a_packets_ = true;
     std::shared_ptr<std::vector<uint8_t>> fu_a_packet_;
     std::unique_ptr<FragmentationHeader> fu_a_fragmentation_header_;

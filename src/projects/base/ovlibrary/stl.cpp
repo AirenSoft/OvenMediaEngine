@@ -38,3 +38,17 @@ std::string_view Trim(const std::string_view &value)
     const size_t length = back.base() == front ? 1 : back.base() - front + 1;
     return std::string_view(front, length);
 }
+
+std::string_view operator "" _str_v(const char *str, size_t length)
+{
+    return std::string_view(str, length);
+}
+
+bool CaseInsensitiveEqual(const std::string_view &first, const std::string_view &second)
+{
+    if (first.size() == second.size())
+    {
+        return strncasecmp(first.data(), second.data(), std::min(first.size(), second.size())) == 0;
+    }
+    return false;
+}

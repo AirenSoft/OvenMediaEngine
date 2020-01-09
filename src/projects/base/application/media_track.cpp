@@ -140,3 +140,8 @@ const std::vector<uint8_t> &MediaTrack::GetCodecExtradata() const
 {
 	return _codec_extradata;
 }
+
+std::vector<uint8_t> &MediaTrack::GetCodecExtradata()
+{
+	return _codec_extradata;
+}

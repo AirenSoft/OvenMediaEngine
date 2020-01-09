@@ -74,6 +74,10 @@ void RtspConnection::OnRtspRequest(const RtspRequest &rtsp_request)
     {
         const auto &data = rtsp_request.GetData();
         logtd("Incoming RTSP request:\n%s", std::string(reinterpret_cast<const char*>(data.data()), data.size()).c_str());
+        for (const auto& header : rtsp_request.GetHeaders())
+        {
+            logtd("%s: %s", std::string(header.first.data(), header.first.size()).c_str(), std::string(header.second.data(), header.second.size()).c_str());
+        }
         const auto &body = rtsp_request.GetBody();
         if (body.empty() == false)
         {

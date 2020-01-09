@@ -48,6 +48,7 @@ public:
 
 	void SetCodecExtradata(std::vector<uint8_t> codec_extradata);
 	const std::vector<uint8_t> &GetCodecExtradata() const;
+	std::vector<uint8_t> &GetCodecExtradata();
 
 private:
 	uint32_t _id;

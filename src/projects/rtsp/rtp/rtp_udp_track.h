@@ -54,6 +54,7 @@ public:
         common::MediaCodecId media_codec_id,
         uint32_t stream_id,
         uint8_t track_id,
+        uint32_t clock_frequency,
         std::shared_ptr<PhysicalPort> rtp_physical_port,
         std::shared_ptr<PhysicalPort> rtcp_physical_port);
     RtpUdpTrack(const RtpUdpTrack&) = delete;
@@ -67,6 +68,7 @@ public:
         common::MediaCodecId media_codec_id,
         uint32_t stream_id,
         uint8_t track_id,
+        uint32_t clock_frequency,
         ov::PortRange<socket_type> &port_range,
         const char *host = "*")
     {
@@ -94,7 +96,7 @@ public:
 
         if (rtp_physical_port && rtcp_physical_port)
         {
-            return std::make_unique<U>(rtsp_server, media_type, media_codec_id, stream_id, track_id, rtp_physical_port, rtcp_physical_port);
+            return std::make_unique<U>(rtsp_server, media_type, media_codec_id, stream_id, track_id, clock_frequency, rtp_physical_port, rtcp_physical_port);
         }
         return nullptr;
     }

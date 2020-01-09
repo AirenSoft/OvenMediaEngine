@@ -32,11 +32,14 @@ std::vector<std::string_view> Split(const std::string_view &value, char delimite
 std::string_view Trim(const std::string_view &value);
 
 // A safe noexcept wrapper around std::stoi
-template<typename T>
+template<typename T, typename = std::enable_if<std::is_arithmetic<T>::value>>
 bool Stoi(const std::string &string, T& value)
 {
     try
     {
+        auto int_value = std::stoi(string);
+        if (int_value > 0 && int_value > std::numeric_limits<T>::max()) return false;
+        if (std::is_signed<T>::value && int_value < 0 && int_value < std::numeric_limits<T>::min()) return false;
         value = static_cast<T>(std::stoi(string));
         return true;
     }
@@ -59,3 +62,7 @@ bool HasSubstring(const std::string_view &value, size_t offset, const T (&substr
     }
     return value.substr(offset, substring_length) == std::string_view(substring, substring_length);
 }
+
+std::string_view operator "" _str_v(const char *str, size_t length);
+
+bool CaseInsensitiveEqual(const std::string_view &first, const std::string_view  &second);

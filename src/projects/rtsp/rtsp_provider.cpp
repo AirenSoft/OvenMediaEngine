@@ -181,7 +181,7 @@ bool RtspProvider::OnAudioData(info::application_id_t application_id,
         timestamp,
         timestamp,
         -1LL,
-        MediaPacketFlag::NoFlag);
+        MediaPacketFlag::Key);
     application->SendFrame(stream, std::move(media_packet));
     return true;
 }

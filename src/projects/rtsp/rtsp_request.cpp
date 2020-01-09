@@ -46,6 +46,11 @@ std::string_view RtspRequest::GetHeader(const std::string &header_name) const
     return std::string_view();
 }
 
+const std::unordered_map<std::string_view, std::string_view> &RtspRequest::GetHeaders() const
+{
+    return headers_;
+}
+
 std::unique_ptr<RtspRequest> RtspRequest::Parse(std::vector<uint8_t> data)
 {
     auto rtsp_request = std::make_unique<RtspRequest>(std::move(data));

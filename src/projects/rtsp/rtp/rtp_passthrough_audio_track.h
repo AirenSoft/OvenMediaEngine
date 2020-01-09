@@ -13,7 +13,7 @@ public:
         {
             T::rtsp_server_.OnAudioData(T::stream_id_,
                 T::track_id_,
-                rtp_packet_header.timestamp_,
+                rtp_packet_header.timestamp_ - T::first_timestamp_,
                 std::make_shared<std::vector<uint8_t>>(rtp_payload, rtp_payload + rtp_payload_length));
         }
         return true;

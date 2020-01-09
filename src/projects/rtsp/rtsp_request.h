@@ -21,6 +21,7 @@ public:
     uint32_t GetCSeq() const;
     size_t GetContentLength();
     std::string_view GetHeader(const std::string &header_name) const;
+    const std::unordered_map<std::string_view, std::string_view> &GetHeaders() const;
     const std::vector<uint8_t> &GetBody() const;
     void SetBody(std::vector<uint8_t> body);
 

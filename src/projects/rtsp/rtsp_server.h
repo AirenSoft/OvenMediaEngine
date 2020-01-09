@@ -6,6 +6,7 @@
 #include "rtp/rtp_track.h"
 #include "rtp/rtp_udp_track.h"
 #include "rtp/rtp_tcp_track.h"
+#include "rtcp/rtcp_packet_header.h"
 
 #include <map>
 #include <base/base_traits.h>
@@ -20,17 +21,32 @@ class RtspServer : public ServerBase<RtspServer, ov::SocketType::Tcp>, public Ob
 {
 public:
     /*
-        Maps stream id to tuple of media type, codec, track id and codec extradata
+        Keeps stream id matched with track media type, codec, id, sdp parameters and clock frequency
     */
-    typedef std::pair<uint32_t, std::tuple<common::MediaType, common::MediaCodecId, uint8_t, std::vector<uint8_t>>> StreamTrackInfo;
+    struct StreamTrackInfo
+    {
+        uint32_t stream_id_;
+        MediaTrack media_track_;
+        std::shared_ptr<SdpFormatParameters> sdp_format_parameters_;
+    };
 
     static constexpr char ClassName[] = "RtspServer";
 
 private:
+    struct RtspStreamTimestamp
+    {
+        uint32_t rtp_timestamp_ = 0;
+        struct timeval ntp_timestamp_ = {};
+        uint32_t offset_ = 0;
+    };
+
     struct RtspStreamContext
     {
         uint32_t session_id_;
+        size_t track_count_;
         std::vector<std::tuple<std::shared_ptr<RtspObserver>, info::application_id_t, uint32_t>> routes_;
+        std::unordered_map<uint8_t, RtspStreamTimestamp> track_timestamps_;
+        bool stream_offsets_initialized_ = false;
     };
 
 public:
@@ -64,7 +80,10 @@ public:
         uint8_t track_id,
         uint32_t timestamp,
         const std::shared_ptr<std::vector<uint8_t>> &data);
-    
+    void OnRtcpSenderReport(uint32_t stream_id,
+        uint8_t track_id,
+        const RtcpSenderReport &rtcp_sender_report);
+
 protected:
     // PhysicalPortObserver
     void OnConnected(const std::shared_ptr<ov::Socket> &remote) override;
