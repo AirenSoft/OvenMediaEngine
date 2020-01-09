@@ -55,6 +55,8 @@ bool RtcStream::Start(uint32_t worker_count)
 	bool first_video_desc = true;
 	bool first_audio_desc = true;
 
+	uint8_t payload_type_num = PAYLOAD_TYPE_OFFSET;
+
 	for(auto &track_item : _tracks)
 	{
 		ov::String codec = "";
@@ -105,13 +107,12 @@ bool RtcStream::Start(uint32_t worker_count)
 					first_video_desc = false;
 				}
 
-				//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
-				payload->SetRtpmap(track->GetId(), codec, 90000);
+				payload->SetRtpmap(payload_type_num++, codec, 90000);
 
 				video_media_desc->AddPayload(payload);
 
 				// RTP Packetizer를 추가한다.
-				AddPacketizer(false, payload->GetId(), video_media_desc->GetSsrc());
+				AddPacketizer(false, track->GetId(), payload->GetId(), video_media_desc->GetSsrc());
 
 				break;
 			}
@@ -152,13 +153,14 @@ bool RtcStream::Start(uint32_t worker_count)
 					first_audio_desc = false;
 				}
 
-				// TODO(dimiden): Need to change to transcoding profile's bitrate and channel
-				payload->SetRtpmap(track->GetId(), codec, 48000, "2");
+				payload->SetRtpmap(track->GetId(), codec,
+								   static_cast<std::underlying_type<AudioSample::Rate>::type>(track->GetSample().GetRate()),
+								   std::to_string(track->GetChannel().GetCounts()).c_str());
 
 				audio_media_desc->AddPayload(payload);
 
 				// RTP Packetizer를 추가한다.
-				AddPacketizer(true, payload->GetId(), audio_media_desc->GetSsrc());
+				AddPacketizer(true, track->GetId(), payload->GetId(), audio_media_desc->GetSsrc());
 
 				break;
 			}
@@ -258,7 +260,6 @@ void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	MakeRtpVideoHeader(&codec_info, &rtp_video_header);
 
 	// RTP Packetizing
-	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
 	auto packetizer = GetPacketizer(media_track->GetId());
 	if(packetizer == nullptr)
 	{
@@ -282,9 +283,11 @@ void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 
 void RtcStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	auto media_track = GetTrack(media_packet->GetTrackId());
+
 	// RTP Packetizing
 	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
-	auto packetizer = GetPacketizer(media_packet->GetTrackId());
+	auto packetizer = GetPacketizer(media_track->GetId());
 	if(packetizer == nullptr)
 	{
 		return;
@@ -353,7 +356,7 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 	}
 }
 
-void RtcStream::AddPacketizer(bool audio, uint8_t payload_type, uint32_t ssrc)
+void RtcStream::AddPacketizer(bool audio, uint32_t id, uint8_t payload_type, uint32_t ssrc)
 {
 	auto packetizer = std::make_shared<RtpPacketizer>(audio, RtpRtcpPacketizerInterface::GetSharedPtr());
 	packetizer->SetPayloadType(payload_type);
@@ -364,15 +367,15 @@ void RtcStream::AddPacketizer(bool audio, uint8_t payload_type, uint32_t ssrc)
 		packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
 	}
 
-	_packetizers[payload_type] = packetizer;
+	_packetizers[id] = packetizer;
 }
 
-std::shared_ptr<RtpPacketizer> RtcStream::GetPacketizer(uint8_t payload_type)
+std::shared_ptr<RtpPacketizer> RtcStream::GetPacketizer(uint32_t id)
 {
-	if(!_packetizers.count(payload_type))
+	if(!_packetizers.count(id))
 	{
 		return nullptr;
 	}
 
-	return _packetizers[payload_type];
+	return _packetizers[id];
 }

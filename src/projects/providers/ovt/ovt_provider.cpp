@@ -28,7 +28,7 @@ namespace pvd
 	OvtProvider::OvtProvider(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 			: Provider(server_config, host_info, router)
 	{
-		
+
 	}
 
 	OvtProvider::~OvtProvider()
