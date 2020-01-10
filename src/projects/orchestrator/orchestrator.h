@@ -33,9 +33,9 @@ public:
 		Failed,
 		// Created successfully
 		Succeeded,
-		// The item is exists
+		// The item does exists
 		Exists,
-		// The item is not exists
+		// The item does not exists
 		NotExists
 	};
 
@@ -65,12 +65,12 @@ public:
 
 	/// Create an application and notify the modules
 	///
-	/// @param app_conf Application configuration to create
+	/// @param app_config Application configuration to create
 	///
 	/// @return Creation result
 	///
 	/// @note Automatically DeleteApplication() when application creation fails
-	Result CreateApplication(const cfg::Application &app_conf);
+	Result CreateApplication(const cfg::Application &app_config);
 	/// Delete the application and notify the modules
 	///
 	/// @param app_info Application information to delete
@@ -80,7 +80,10 @@ public:
 	/// @note If an error occurs during deletion, do not recreate the application
 	Result DeleteApplication(const info::Application &app_info);
 
-	bool RequestPullStream(const ov::String &url);
+	const info::Application &GetApplication(const ov::String &app_name) const;
+	const info::Application &GetApplication(info::application_id_t app_id) const;
+
+	// bool RequestPullStream(const ov::String &url);
 	bool RequestPullStream(const ov::String &application, const ov::String &stream);
 
 protected:
@@ -127,32 +130,39 @@ protected:
 
 	Orchestrator() = default;
 
-	info::application_id_t GenerateApplicationId() const;
+	info::application_id_t GetNextAppId();
 
 	std::shared_ptr<pvd::Provider> GetProviderForScheme(const ov::String &scheme);
+	std::shared_ptr<OrchestratorProviderModuleInterface> GetProviderModuleForScheme(const ov::String &scheme);
 	std::shared_ptr<pvd::Provider> GetProviderForUrl(const ov::String &url);
 
-	std::shared_ptr<Origin> GetUrlListForLocation(const ov::String &location, ov::String *app_name, ov::String *stream_name, std::vector<ov::String> *url_list);
+	std::shared_ptr<Origin> GetUrlListForLocation(const ov::String &app_name, const ov::String &stream_name, std::vector<ov::String> *url_list);
 
-	Result CreateApplicationInternal(const ov::String &name, info::Application *app_info = nullptr);
 	Result CreateApplicationInternal(const info::Application &app_info);
+	Result CreateApplicationInternal(const ov::String &name, info::Application *app_info);
 
+	Result NotifyModulesForDeleteEvent(const std::vector<Module> &modules, const info::Application &app_info);
 	Result DeleteApplicationInternal(info::application_id_t app_id);
 	Result DeleteApplicationInternal(const info::Application &app_info);
 
-	bool RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> &url);
-	bool RequestPullStreamForLocation(const ov::String &location);
+	const info::Application &GetApplicationInternal(const ov::String &app_name) const;
+	const info::Application &GetApplicationInternal(info::application_id_t app_id) const;
+
+	// bool RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> &url);
+	bool RequestPullStreamForLocation(const ov::String &app_name, const ov::String &stream_name);
+
+	info::application_id_t _last_application_id = info::MinApplicationId;
 
 	// Origin map
-	std::mutex _origin_map_mutex;
+	std::recursive_mutex _origin_map_mutex;
 	std::vector<std::shared_ptr<Origin>> _origin_list;
 
 	// Modules
-	std::mutex _modules_mutex;
+	std::recursive_mutex _modules_mutex;
 	std::vector<Module> _modules;
 	std::map<OrchestratorModuleType, std::vector<std::shared_ptr<OrchestratorModuleInterface>>> _module_map;
 
 	// Application list
-	std::mutex _app_map_mutex;
+	mutable std::recursive_mutex _app_map_mutex;
 	std::map<info::application_id_t, info::Application> _app_map;
 };

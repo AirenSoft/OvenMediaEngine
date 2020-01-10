@@ -179,11 +179,11 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			{
 				if (error->GetCode() == 404)
 				{
-					logte("Cannot find stream (%s/%s)", info->application_name.CStr(), info->stream_name.CStr());
+					logte("Cannot find stream [%s/%s]", info->application_name.CStr(), info->stream_name.CStr());
 				}
 				else
 				{
-					logte("An error occurred while dispatch command %s for stream (%s/%s): %s, disconnecting...", command.CStr(), info->application_name.CStr(), info->stream_name.CStr(), error->ToString().CStr());
+					logte("An error occurred while dispatch command %s for stream [%s/%s]: %s, disconnecting...", command.CStr(), info->application_name.CStr(), info->stream_name.CStr(), error->ToString().CStr());
 				}
 
 				ov::JsonObject response_json;
@@ -751,7 +751,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchOfferP2P(const ov::JsonO
 
 	if (host == nullptr)
 	{
-		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Peer %d is not exists", info->id);
+		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Peer %d does not exists", info->id);
 	}
 
 	auto peer_id = object.GetIntValue("peer_id");
@@ -812,7 +812,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidateP2P(const ov::J
 
 	if (host == nullptr)
 	{
-		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Peer %d is not exists", info->id);
+		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Peer %d does not exists", info->id);
 	}
 
 	auto peer_id = object.GetIntValue("peer_id");

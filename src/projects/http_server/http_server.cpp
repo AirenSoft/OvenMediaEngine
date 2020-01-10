@@ -278,7 +278,7 @@ void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 		}
 		else
 		{
-			logtw("Interceptor is not exists for HTTP client %p", client.get());
+			logtw("Interceptor does not exists for HTTP client %p", client.get());
 		}
 
 		_client_list.erase(client_iterator);
@@ -321,7 +321,7 @@ bool HttpServer::RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor>
 
 	if (item == _interceptor_list.end())
 	{
-		// interceptor is not exists in the list
+		// interceptor does not exists in the list
 		logtw("%p is not found.", interceptor.get());
 		return false;
 	}

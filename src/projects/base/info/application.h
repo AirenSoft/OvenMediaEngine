@@ -13,27 +13,38 @@
 
 #include "stream.h"
 
+class Orchestrator;
+
 namespace info
 {
 	typedef uint32_t application_id_t;
+	constexpr application_id_t InvalidApplicationId = std::numeric_limits<application_id_t>::max();
+	constexpr application_id_t MinApplicationId = (0U);
+	constexpr application_id_t MaxApplicationId = (InvalidApplicationId - 1U);
 
-	class Application : public cfg::Application
+	class Application
 	{
 	public:
-		Application() = default;
-		Application(application_id_t app_id, const cfg::Application &application);
-		Application(application_id_t app_id, const ov::String &name, const cfg::Application &application);
+		bool IsValid() const
+		{
+			return (_application_id != InvalidApplicationId);
+		}
 
 		application_id_t GetId() const
 		{
 			return _application_id;
 		}
 
+		const ov::String &GetName() const
+		{
+			return _name;
+		}
+
 		template <typename Tpublisher>
 		const Tpublisher *GetPublisher() const
 		{
 			Tpublisher temp_publisher;
-			const auto &publishers = GetPublishers().GetPublisherList();
+			const auto &publishers = _app_config.GetPublishers().GetPublisherList();
 
 			for (auto &publisher_info : publishers)
 			{
@@ -50,7 +61,7 @@ namespace info
 		const Tprovider *GetProvider() const
 		{
 			Tprovider temp_provider;
-			const auto &providers = GetProviders().GetProviderList();
+			const auto &providers = _app_config.GetProviders().GetProviderList();
 
 			for (auto &provider_info : providers)
 			{
@@ -63,7 +74,29 @@ namespace info
 			return nullptr;
 		}
 
+		const cfg::Application &GetConfig() const
+		{
+			return _app_config;
+		}
+
+		cfg::Application &GetConfig()
+		{
+			return _app_config;
+		}
+
 	protected:
-		application_id_t _application_id = 0;
+		// These constructors will be called from Orchestrator
+		friend class ::Orchestrator;
+		Application() = default;
+		Application(application_id_t app_id, cfg::Application app_config);
+		Application(application_id_t app_id, const ov::String &name);
+
+		// This function is created to minimize the creation of temporary instances
+		static const Application &GetInvalidApplication();
+
+		application_id_t _application_id = InvalidApplicationId;
+		ov::String _name;
+
+		cfg::Application _app_config;
 	};
 }  // namespace info

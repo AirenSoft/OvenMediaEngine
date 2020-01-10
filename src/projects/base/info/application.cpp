@@ -11,16 +11,23 @@
 
 namespace info
 {
-	Application::Application(application_id_t app_id, const cfg::Application &application)
-		: cfg::Application(application),
-		  _application_id(app_id)
+	Application::Application(application_id_t app_id, cfg::Application app_config)
+		: _application_id(app_id),
+		  _app_config(std::move(app_config)),
+		  _name(app_config.GetName())
 	{
 	}
 
-	Application::Application(application_id_t app_id, const ov::String &name, const cfg::Application &application)
-		: Application(app_id, application)
+	Application::Application(application_id_t app_id, const ov::String &name)
+		: _application_id(app_id),
+		  _name(name)
 	{
-		_name = name;
 	}
 
+	const Application &Application::GetInvalidApplication()
+	{
+		static Application application;
+		
+		return application;
+	}
 }  // namespace info

@@ -100,7 +100,7 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::St
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
 	if(stream == nullptr)
 	{
-		// If the stream is not exists, request to the provider
+		// If the stream does not exists, request to the provider
 		auto orchestrator = Orchestrator::GetInstance();
 
 		if(orchestrator->RequestPullStream(application_name, stream_name) == false)
