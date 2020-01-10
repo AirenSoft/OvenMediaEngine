@@ -45,7 +45,7 @@ MediaRouteApplicationConnector::ConnectorType MediaRouteStream::GetConnectorType
 }
 
 // 비트스트림 컨버팅 기능을.. 어디에 넣는게 좋을까? Push? Pop?
-bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet, bool convert_bitstream)
+bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 {
 	auto media_type = media_packet->GetMediaType();
 
@@ -59,53 +59,60 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet, bool conv
 		return false;
 	}
 
-	// TODO(soulk): Move this code to RTMP provider/Transcoder (RTMP need to calculate pts using dts and cts)
-	if (convert_bitstream)
+	if(_stream_info->GetName() == "stream_o")
 	{
-		if (media_type == MediaType::Video)
-		{
-			if (media_track->GetCodecId() == MediaCodecId::H264)
-			{
+		if(media_type==MediaType::Video)
+			_last_video_pts = media_packet->GetPts();
+		else
+			_last_audio_pts = media_packet->GetPts();
 
-			}
-			else if (media_track->GetCodecId() == MediaCodecId::Vp8)
-			{
-				// TODO: Vp8 코덱과 같은 경우에는 Provider로 나중에 옮겨야 겠음.
-				_bsf_vp8.convert_to(media_packet->GetData());
-			}
-			else
-			{
-				logte("Unsupported video codec. codec_id(%d)", media_track->GetCodecId());
-				return false;
-			}
+		logtd("name(%10s) tid(%2d) type(%s), pts(%10lld), dts(%10lld) diff(%5lld)",
+		 _stream_info->GetName().CStr(), track_id, (media_type==MediaType::Video)?"Video":"Audio", media_packet->GetPts(), media_packet->GetDts(), _last_video_pts - _last_audio_pts);
+	}
+
+	if (media_type == MediaType::Video)
+	{
+		if (media_track->GetCodecId() == MediaCodecId::H264)
+		{
+
 		}
-		else if (media_type == MediaType::Audio)
+		else if (media_track->GetCodecId() == MediaCodecId::Vp8)
 		{
-			if (media_track->GetCodecId() == MediaCodecId::Aac)
-			{
-			}
-			else if (media_track->GetCodecId() == MediaCodecId::Opus)
-			{
-
-			}
-			else
-			{
-				logte("Unsupported audio codec. codec_id(%d)", media_track->GetCodecId());
-				return false;
-			}
+			// TODO: Vp8 코덱과 같은 경우에는 Provider로 나중에 옮겨야 겠음.
+			_bsf_vp8.convert_to(media_packet->GetData());
 		}
 		else
 		{
-			logte("Unsupported media typec. media_type(%d)", media_type);
+			logte("Unsupported video codec. codec_id(%d)", media_track->GetCodecId());
 			return false;
 		}
+	}
+	else if (media_type == MediaType::Audio)
+	{
+		if (media_track->GetCodecId() == MediaCodecId::Aac)
+		{
+		}
+		else if (media_track->GetCodecId() == MediaCodecId::Opus)
+		{
+
+		}
+		else
+		{
+			logte("Unsupported audio codec. codec_id(%d)", media_track->GetCodecId());
+			return false;
+		}
+	}
+	else
+	{
+		logte("Unsupported media typec. media_type(%d)", media_type);
+		return false;
 	}
 
 	_media_packets.push(std::move(media_packet));
 
 	// Purpose of keeping time for last received packets. 
 	// In the future, it will be utilized in the wrong stream or garbage collector.
-	
+
 	// time(&_last_rb_time);
 	// logtd("last time : %s", asctime(gmtime(&_last_rb_time)) );
 

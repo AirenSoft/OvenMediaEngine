@@ -52,6 +52,8 @@ Transcoder::Transcoder(const std::vector<info::Application> &application_list, s
 
 bool Transcoder::Start()
 {
+	// av_log_set_level(AV_LOG_TRACE);
+
 	logtd("Started media trancode modules.");
 
 	if(CreateApplications() == false)

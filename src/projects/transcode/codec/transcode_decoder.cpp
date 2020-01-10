@@ -32,6 +32,11 @@ TranscodeDecoder::~TranscodeDecoder()
 	::av_parser_close(_parser);
 }
 
+std::shared_ptr<TranscodeContext>& TranscodeDecoder::GetContext()
+{
+	return _input_context;
+}
+
 std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
 {
 	std::shared_ptr<TranscodeDecoder> decoder = nullptr;

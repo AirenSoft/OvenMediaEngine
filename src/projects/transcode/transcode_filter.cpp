@@ -11,13 +11,14 @@ using namespace common;
 TranscodeFilter::TranscodeFilter() :
 	_impl(nullptr)
 {
-	// av_log_set_level(AV_LOG_TRACE);
+	
 }
 
 TranscodeFilter::TranscodeFilter(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context) :
 	_impl(nullptr)
 {
-	Configure(input_media_track, std::move(input_context), std::move(output_context));
+	// Configure(input_media_track, std::move(input_context), std::move(output_context));
+	Configure(input_media_track, input_context, output_context);
 }
 
 TranscodeFilter::~TranscodeFilter()
@@ -30,6 +31,8 @@ TranscodeFilter::~TranscodeFilter()
 
 bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context)
 {
+	logti("Create a transcode filter.");
+
 	MediaType type = input_media_track->GetMediaType();
 
 	switch(type)
@@ -45,8 +48,9 @@ bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, s
 			return false;
 	}
 
+
 	// 트랜스코딩 컨텍스트 정보 전달
-	_impl->Configure(std::move(input_media_track), std::move(input_context), std::move(output_context));
+	_impl->Configure(input_media_track, input_context, output_context);
 
 	return true;
 }

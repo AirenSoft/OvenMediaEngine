@@ -22,6 +22,9 @@ public:
 
 	void SendBuffer(std::shared_ptr<const MediaFrame> frame) override;
 
+
+	std::shared_ptr<TranscodeContext>& GetContext();
+	
 protected:
 	std::shared_ptr<TranscodeContext> _output_context = nullptr;
 
