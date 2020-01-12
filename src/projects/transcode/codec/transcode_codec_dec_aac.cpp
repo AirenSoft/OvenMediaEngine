@@ -59,6 +59,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 
 		auto output_frame = std::make_shared<MediaFrame>();
 
+		output_frame->SetMediaType(common::MediaType::Audio);
 		output_frame->SetBytesPerSample(::av_get_bytes_per_sample(static_cast<AVSampleFormat>(_frame->format)));
 		output_frame->SetNbSamples(_frame->nb_samples);
 		output_frame->SetChannels(_frame->channels);

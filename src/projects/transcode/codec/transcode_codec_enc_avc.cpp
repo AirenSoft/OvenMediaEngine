@@ -73,6 +73,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	// 인코딩 품질 및 브라우저 호환성
 	// For browser compatibility
 	_context->profile = FF_PROFILE_H264_MAIN;
+	_context->profile = FF_PROFILE_H264_BASELINE;
 
 	// 인코딩 성능
 	::av_opt_set(_context->priv_data, "preset", "fast", 0);

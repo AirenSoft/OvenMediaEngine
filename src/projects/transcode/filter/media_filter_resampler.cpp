@@ -75,11 +75,13 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 
 	// "abuffer" filter
 	ov::String input_args = ov::String::FormatString(
-		"time_base=%s:sample_rate=%d:sample_fmt=%s:channel_layout=0x%x",
+		// "time_base=%s:sample_rate=%d:sample_fmt=%s:channel_layout=0x%x",
+		"time_base=%s:sample_rate=%d:sample_fmt=%s:channel_layout=%s",
 		input_context->GetTimeBase().GetStringExpr().CStr(),
 		input_context->GetAudioSampleRate(),
 		input_context->GetAudioSample().GetName(),
-		input_context->GetAudioChannel().GetLayout());
+		input_context->GetAudioChannel().GetName());
+		// input_context->GetAudioChannel().GetLayout().GetName());
 
 	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, abuffersrc, "in", input_args, nullptr, _filter_graph);
 	if (ret < 0)
@@ -220,6 +222,7 @@ std::shared_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 		auto frame = std::move(_input_buffer.front());
 		_input_buffer.pop_front();
 
+		// logtd("format(%d), channels(%d), samples(%d)", frame->GetFormat(), frame->GetChannels(), frame->GetNbSamples());
 		logtp("Dequeued data for resampling: %lld\n%s", frame->GetPts(), ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
 
 		_frame->format = frame->GetFormat();

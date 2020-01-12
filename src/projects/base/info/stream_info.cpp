@@ -138,10 +138,14 @@ void StreamInfo::ShowInfo()
 			case MediaType::Video:
 				out_str.AppendFormat(
 					"\n\tVideo Track #%d: "
+					"Bypass(%s) "
+					"Bitrate(%d) "
 					"codec(%d, %s) "
 					"resolution(%dx%d) "
 					"framerate(%.2ffps) ",
 					track->GetId(),
+					track->IsBypass()?"true":"false",
+					track->GetBitrate(),
 					track->GetCodecId(), codec_name.CStr(),
 					track->GetWidth(), track->GetHeight(),
 					track->GetFrameRate()
@@ -151,11 +155,15 @@ void StreamInfo::ShowInfo()
 			case MediaType::Audio:
 				out_str.AppendFormat(
 					"\n\tAudio Track #%d: "
+					"Bypass(%s) "
+					"Bitrate(%d) "
 					"codec(%d, %s) "
 					"samplerate(%d) "
 					"format(%s, %d) "
 					"channel(%s, %d) ",
 					track->GetId(),
+					track->IsBypass()?"true":"false",
+					track->GetBitrate(),
 					track->GetCodecId(), codec_name.CStr(),
 					track->GetSampleRate(),
 					track->GetSample().GetName(), track->GetSample().GetSampleSize() * 8,

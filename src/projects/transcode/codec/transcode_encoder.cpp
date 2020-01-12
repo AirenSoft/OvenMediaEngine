@@ -86,3 +86,8 @@ void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 {
 	_input_buffer.push_back(std::move(frame));
 }
+
+std::shared_ptr<TranscodeContext>& TranscodeEncoder::GetContext()
+{
+	return _output_context;
+}

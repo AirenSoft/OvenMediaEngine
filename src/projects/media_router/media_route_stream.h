@@ -34,7 +34,7 @@ public:
 	MediaRouteApplicationConnector::ConnectorType GetConnectorType();
 
 	// Queue interfaces
-	bool Push(std::shared_ptr<MediaPacket> media_packet, bool convert_bitstream);
+	bool Push(std::shared_ptr<MediaPacket> media_packet);
 	std::shared_ptr<MediaPacket> Pop();
 	uint32_t Size();
 
@@ -55,6 +55,8 @@ private:
 	BitstreamToADTS _bsfa;
 	BitstreamAnnexA _bsf_vp8;
 
+	int64_t _last_video_pts;
+	int64_t _last_audio_pts;
 	// time of last packet received
 	time_t _last_rb_time;
 };

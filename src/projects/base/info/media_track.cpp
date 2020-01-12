@@ -19,7 +19,8 @@ MediaTrack::MediaTrack()
 	  _codec_id(MediaCodecId::None),
 	  _bitrate(0),
 	  _start_frame_time(0),
-	  _last_frame_time(0)
+	  _last_frame_time(0),
+	  _byass(false)
 {
 
 }
@@ -43,6 +44,8 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_time_base = media_track._time_base;
 
 	_bitrate = media_track._bitrate;
+
+	_byass = media_track._byass;
 
 	_start_frame_time = 0;
 	_last_frame_time = 0;
@@ -121,4 +124,18 @@ void MediaTrack::SetLastFrameTime(int64_t time)
 int64_t MediaTrack::GetLastFrameTime() const
 {
 	return _last_frame_time;
+}
+
+void MediaTrack::SetBypass(bool flag){
+	_byass = flag;
+}
+
+bool MediaTrack::IsBypass()
+{
+	return _byass;
+}
+
+bool MediaTrack::GetBypass()
+{
+	return _byass;
 }
