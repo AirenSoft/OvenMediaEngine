@@ -43,6 +43,7 @@ namespace pvd
 		if(_use_garbage_collector)
 		{
 			_worker_thread = std::thread(&Provider::GarbageCollector, this);
+			_worker_thread.detach();
 		}
 
 		return true;
@@ -75,12 +76,26 @@ namespace pvd
 	// Create Application
 	bool Provider::OnCreateApplication(const info::Application &app_info)
 	{
+		if(_router == nullptr)
+		{
+			logte("Could not find MediaRouter");
+			OV_ASSERT2(false);
+			return false;
+		}
+
 		// Let child create application
 		auto application = OnCreateProviderApplication(app_info);
+
+		if(application == nullptr)
+		{
+			logte("Could not create application for [%s]", app_info.GetName().CStr());
+			return false;
+		}
 
 		// Connect created application to router
 		if(_router->RegisterConnectorApp(*application.get(), application) == false)
 		{
+			logte("Could not register the application: %p", application.get());
 			return false;
 		}
 
@@ -95,7 +110,23 @@ namespace pvd
 	// Delete Application
 	bool Provider::OnDeleteApplication(const info::Application &app_info)
 	{
-		OnDeleteProviderApplication(app_info);
+		auto item = _applications.find(app_info.GetId());
+
+		logti("Deleting the application: [%s]", app_info.GetName().CStr());
+
+		if(item == _applications.end())
+		{
+			logte("The application does not exists: [%s]", app_info.GetName().CStr());
+			return false;
+		}
+
+		bool result = OnDeleteProviderApplication(app_info);
+
+		if(result == false)
+		{
+			logte("Could not delete the application: [%s]", app_info.GetName().CStr());
+			return false;
+		}
 
 		_applications[app_info.GetId()]->Stop();
 		_applications.erase(app_info.GetId());

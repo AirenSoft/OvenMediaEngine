@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "main.h"
+#include "./signals.h"
 #include "./third_parties.h"
 #include "./utilities.h"
 #include "main_private.h"
@@ -86,14 +87,13 @@ int main(int argc, char *argv[])
 		host_info_list.emplace_back(host);
 	}
 
+	orchestrator->ApplyOriginMap(hosts);
+
 	for (auto &host_info : host_info_list)
 	{
 		auto host_name = host_info.GetName();
 
 		logtd("Trying to create modules for host [%s]", host_name.CStr());
-
-		// TODO(dimiden): Support virtual host
-		orchestrator->PrepareOriginMap(host_info.GetOrigins());
 
 		//////////////////////////////
 		// Host Level Modules
@@ -239,7 +239,12 @@ static bool Initialize(int argc, char *argv[], ParseOption *parse_option)
 		}
 	}
 
-	ov::StackTrace::InitializeStackTrace(OME_VERSION);
+	if (InitializeSignals() == false)
+	{
+		logte("Could not initialize signals");
+		return false;
+	}
+
 	ov::LogWrite::Initialize(parse_option->start_service);
 
 	if (cfg::ConfigManager::Instance()->LoadConfigs(parse_option->config_path) == false)

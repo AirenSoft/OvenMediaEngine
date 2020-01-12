@@ -57,12 +57,19 @@ namespace cfg
 			return false;
 		}
 
+		_config_path = config_path;
+
 		return result;
 	}
 
 	bool ConfigManager::LoadConfigs()
 	{
 		return LoadConfigs("");
+	}
+
+	bool ConfigManager::ReloadConfigs()
+	{
+		return LoadConfigs(_config_path);
 	}
 
 	void ConfigManager::PrepareMacros()
@@ -113,7 +120,7 @@ namespace cfg
 
 		auto log_path = logger_loader->GetLogPath();
 		ov_log_set_path(log_path.c_str());
-		logti("Trying to save logfile in directory... (%s)", log_path.c_str());
+		logti("Trying to set logfile in directory... (%s)", log_path.c_str());
 
 		std::vector<std::shared_ptr<LoggerTagInfo>> tags = logger_loader->GetTags();
 		for (auto iterator = tags.begin(); iterator != tags.end(); ++iterator)

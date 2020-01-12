@@ -48,11 +48,6 @@ namespace pvd
 		return pvd::Provider::Stop();
 	}
 
-	bool OvtProvider::CheckOriginAvailability(const std::vector<ov::String> &url_list)
-	{
-		return true;
-	}
-
 	// Pull Stream
 	bool OvtProvider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list)
 	{

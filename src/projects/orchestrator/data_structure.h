@@ -49,13 +49,6 @@ public:
 		return OrchestratorModuleType::Provider;
 	}
 
-	/// Called when trying to determine whether an app can be created from urls
-	///
-	/// @param url_list The URLs to determine
-	///
-	/// @return Returns true if the URLs is valid and the stream can be obtained
-	virtual bool CheckOriginAvailability(const std::vector<ov::String> &url_list) = 0;
-
 	/// Called when another module is requested to pull stream list
 	///
 	/// @param app_info An information of the application
