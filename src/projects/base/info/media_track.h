@@ -22,27 +22,33 @@ public:
 	void SetId(uint32_t id);
 	uint32_t GetId() const;
 
-	// 비디오 오디오 설정
+	// Video Type Settings
 	void SetMediaType(common::MediaType type);
 	common::MediaType GetMediaType() const;
 
-	// 코덱 설정
+	// Codec Settings
 	void SetCodecId(common::MediaCodecId id);
 	common::MediaCodecId GetCodecId() const;
 
-	// 타임베이스 설정
+	// Timebase Settings
 	const common::Timebase &GetTimeBase() const;
 	void SetTimeBase(int32_t num, int32_t den);
 
-	// bitrate 설정
+	// Bitrate Settings
 	void SetBitrate(int32_t bitrate);
 	int32_t GetBitrate() const;
 
+	// Frame Time Settings
 	void SetStartFrameTime(int64_t time);
 	int64_t GetStartFrameTime() const;
 
 	void SetLastFrameTime(int64_t time);
 	int64_t GetLastFrameTime() const;
+
+	// Bypass Settings
+	void SetBypass(bool flag);
+	bool IsBypass();
+	bool GetBypass();
 
 private:
 	uint32_t _id;
@@ -51,6 +57,8 @@ private:
 	common::MediaType _media_type;
 	common::Timebase _time_base;
 	int32_t _bitrate;
+
+	bool	_byass;
 
 	// Time of start frame(packet)
 	int64_t _start_frame_time;

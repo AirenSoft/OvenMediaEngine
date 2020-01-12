@@ -59,6 +59,8 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		return false;
 	}
 
+
+	// for debug... 
 	if(_stream_info->GetName() == "stream_o")
 	{
 		if(media_type==MediaType::Video)
@@ -66,9 +68,10 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		else
 			_last_audio_pts = media_packet->GetPts();
 
-		logtd("name(%10s) tid(%2d) type(%s), pts(%10lld), dts(%10lld) diff(%5lld)",
-		 _stream_info->GetName().CStr(), track_id, (media_type==MediaType::Video)?"Video":"Audio", media_packet->GetPts(), media_packet->GetDts(), _last_video_pts - _last_audio_pts);
+		// logtd("name(%10s) tid(%2d) type(%s), pts(%10lld), dts(%10lld) diff(%5lld)",
+		//  _stream_info->GetName().CStr(), track_id, (media_type==MediaType::Video)?"Video":"Audio", media_packet->GetPts(), media_packet->GetDts(), _last_video_pts - _last_audio_pts);
 	}
+
 
 	if (media_type == MediaType::Video)
 	{

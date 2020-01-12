@@ -61,9 +61,8 @@ private:
 	std::map<ov::String, std::shared_ptr<StreamInfo>> _stream_info_outputs;
 
 	// Map with track ID. Maps from one input track to multiple output tracks.
-	// INPUT_TRACK_ID, OUTPUT_TRACK_ID ARRAY
-	std::map <uint8_t, std::vector <uint8_t >> _tracks_map;
-
+	// [INPUT_TRACK_ID, [OUTPUT_TRACK_ID,MediaTrack] ARRAY]
+	std::map <uint8_t, std::vector<std::pair<uint8_t,std::shared_ptr<MediaTrack>>> > _tracks_map;
 
 	// Decoder
 	// INPUT_TRACK_ID, DECODER
@@ -87,7 +86,6 @@ private:
 	// Buffer for filtered frames
 	MediaQueue<std::shared_ptr<MediaFrame>> _queue_filterd_frames;
 
-
 	// last generated output track id.
 	uint8_t _last_track_index = 0;
 
@@ -109,7 +107,7 @@ private:
 	// 디코딩된 프레임의 포맷이 분석되거나 변경될 경우 호출됨.
 	void ChangeOutputFormat(MediaFrame *buffer);
 
-	void CreateFilters(std::shared_ptr<MediaTrack> media_track, MediaFrame *buffer);
+	void CreateFilters(MediaFrame *buffer);
 	void DoFilters(std::shared_ptr<MediaFrame> frame);
 
 	// There are 3 steps to process packet
@@ -119,9 +117,6 @@ private:
 	TranscodeResult FilterFrame(int32_t track_id, std::shared_ptr<MediaFrame> frame);
 	// Step 3: Encode (Encode the filtered frame to packets)
 	TranscodeResult EncodeFrame(int32_t track_id, std::shared_ptr<const MediaFrame> frame);
-
-	// 출력(변화된) 스트림 정보
-	bool AddStreamInfoOutput(ov::String stream_name);
 
 	// Transcoding information
 	uint8_t NewTrackId(common::MediaType media_type);
@@ -135,7 +130,10 @@ private:
 	// Send frame with output stream's information
 	void SendFrame(std::shared_ptr<MediaPacket> packet);
 
-	//
+	void GetByassTrackInfo(int32_t track_id, int32_t& bypass, int32_t& non_bypass);
+
 	const cfg::Encode* GetEncodeByProfileName(const info::Application &application_info, ov::String encode_name);
+	common::MediaCodecId GetCodecId(ov::String name);
+	int GetBitrate(ov::String bitrate)	;
 };
 
