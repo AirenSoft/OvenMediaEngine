@@ -57,15 +57,15 @@ bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_lis
 				break;
 
 			case DomainItemState::NotChanged:
-				logtd("%s is not changed", domain_item.name.CStr());
+				logtd("- %s is not changed", domain_item.name.CStr());
 				break;
 
 			case DomainItemState::New:
-				logtd("%s is a new domain", domain_item.name.CStr());
+				logtd("- %s is a new domain", domain_item.name.CStr());
 				break;
 
 			case DomainItemState::Changed:
-				logtd("%s is changed", domain_item.name.CStr());
+				logtd("- %s is changed", domain_item.name.CStr());
 				break;
 		}
 
@@ -76,7 +76,7 @@ bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_lis
 	{
 		if (deleted_domain_item.state == DomainItemState::Delete)
 		{
-			logtd("%s is deleted", deleted_domain_item.name.CStr());
+			logtd("- %s is deleted", deleted_domain_item.name.CStr());
 		}
 		else
 		{
@@ -216,6 +216,25 @@ bool Orchestrator::UnregisterModule(const std::shared_ptr<OrchestratorModuleInte
 	return false;
 }
 
+ov::String Orchestrator::GetVhostNameFromDomain(const ov::String &domain_name)
+{
+	std::lock_guard<decltype(_domain_list_mutex)> lock_guard(_domain_list_mutex);
+
+	if (domain_name.IsEmpty() == false)
+	{
+		// Search for the domain corresponding to domain_name
+		for (auto &domain_item : _domain_list)
+		{
+			if (std::regex_match(domain_name.CStr(), domain_item.regex_for_domain))
+			{
+				return domain_item.vhost_name;
+			}
+		}
+	}
+
+	return "";
+}
+
 ov::String Orchestrator::ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name)
 {
 	ov::String new_app_name;
@@ -235,23 +254,9 @@ ov::String Orchestrator::ResolveApplicationName(const ov::String &vhost_name, co
 	return std::move(new_app_name);
 }
 
-ov::String Orchestrator::GetVhostNameFromDomain(const ov::String &domain_name)
+ov::String Orchestrator::ResolveApplicationNameFromDomain(const ov::String &domain_name, const ov::String &app_name)
 {
-	std::lock_guard<decltype(_domain_list_mutex)> lock_guard(_domain_list_mutex);
-
-	if (domain_name.IsEmpty() == false)
-	{
-		// Search for the domain corresponding to domain_name
-		for (auto &domain_item : _domain_list)
-		{
-			if (std::regex_match(domain_name.CStr(), domain_item.regex_for_domain))
-			{
-				return domain_item.vhost_name;
-			}
-		}
-	}
-
-	return "";
+	return ResolveApplicationName(GetVhostNameFromDomain(domain_name), app_name);
 }
 
 info::application_id_t Orchestrator::GetNextAppId()

@@ -665,9 +665,7 @@ void RtmpChunkStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> 
 
 		if (url != nullptr)
 		{
-			auto orchestrator = Orchestrator::GetInstance();
-
-			_app_name = orchestrator->ResolveApplicationName(orchestrator->GetVhostNameFromDomain(url->Domain()), _app_name);
+			_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), _app_name);
 		}
 	}
 

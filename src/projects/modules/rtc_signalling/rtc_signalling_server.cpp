@@ -91,9 +91,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			// Find the "Host" header
 			auto host_name = client->GetRequest()->GetHeader("HOST").Split(":")[0];
 
-			auto orchestrator = Orchestrator::GetInstance();
-			host_name = orchestrator->GetVhostNameFromDomain(host_name);
-			ov::String internal_app_name = orchestrator->ResolveApplicationName(host_name, tokens[1]);
+			ov::String internal_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
 
 			//TODO(Getroot) : Application 을 구분한 후 Application 설정을 구해서 여기에 적용한다.
 

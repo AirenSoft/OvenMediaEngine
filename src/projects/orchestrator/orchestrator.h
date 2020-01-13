@@ -65,15 +65,23 @@ public:
 	/// @return If the module is not already registered, false is returned. Otherwise, true is returned.
 	bool UnregisterModule(const std::shared_ptr<OrchestratorModuleInterface> &module);
 
-	/// Generate an application name for domain/app
+	ov::String GetVhostNameFromDomain(const ov::String &domain_name);
+
+	/// Generate an application name for vhost/app
 	///
 	/// @param vhost_name A name of VirtualHost
 	/// @param app_name An application name
 	///
-	/// @return A new application name corresponding to domain/app
+	/// @return A new application name corresponding to vhost/app
 	ov::String ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name);
 
-	ov::String GetVhostNameFromDomain(const ov::String &domain_name);
+	///  Generate an application name for domain/app
+	/// 
+	/// @param domain_name A name of the domain
+	/// @param app_name An application name
+	///
+	/// @return A new application name corresponding to domain/app
+	ov::String ResolveApplicationNameFromDomain(const ov::String &domain_name, const ov::String &app_name);
 
 	/// Create an application and notify the modules
 	///

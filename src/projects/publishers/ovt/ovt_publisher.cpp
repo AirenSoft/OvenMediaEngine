@@ -170,11 +170,13 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 
 void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, const uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
-	auto stream = std::static_pointer_cast<OvtStream>(GetStream(url->App(), url->Stream()));
+	auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), url->App());
+
+	auto stream = std::static_pointer_cast<OvtStream>(GetStream(vhost_app_name, url->Stream()));
 	if(stream == nullptr)
 	{
 		ov::String msg;
-		msg.Format("There is no such stream (%s/%s)", url->App().CStr(), url->Stream().CStr());
+		msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
 		ResponseResult(remote, 0, request_id, 404, msg);
 		return;
 	}
@@ -185,20 +187,22 @@ void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remo
 
 void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
-	auto app = std::static_pointer_cast<OvtApplication>(GetApplicationByName(url->App().CStr()));
+	auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), url->App());
+	
+	auto app = std::static_pointer_cast<OvtApplication>(GetApplicationByName(vhost_app_name.CStr()));
 	if(app == nullptr)
 	{
 		ov::String msg;
-		msg.Format("There is no such app (%s)", url->App().CStr());
+		msg.Format("There is no such app (%s)", vhost_app_name.CStr());
 		ResponseResult(remote, 0, request_id, 404, msg);
 		return;
 	}
 
-	auto stream = std::static_pointer_cast<OvtStream>(GetStream(url->App(), url->Stream()));
+	auto stream = std::static_pointer_cast<OvtStream>(app->GetStream(url->Stream()));
 	if(stream == nullptr)
 	{
 		ov::String msg;
-		msg.Format("There is no such stream (%s/%s)", url->App().CStr(), url->Stream().CStr());
+		msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
 		ResponseResult(remote, 0, request_id, 404, msg);
 		return;
 	}
@@ -221,11 +225,13 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 
 void OvtPublisher::HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
-	auto stream = std::static_pointer_cast<OvtStream>(GetStream(url->App(), url->Stream()));
+	auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), url->App());
+	auto stream = std::static_pointer_cast<OvtStream>(GetStream(vhost_app_name, url->Stream()));
+
 	if(stream == nullptr)
 	{
 		ov::String msg;
-		msg.Format("There is no such stream (%s/%s)", url->App().CStr(), url->Stream().CStr());
+		msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
 		ResponseResult(remote, 0, request_id, 404, msg);
 		return;
 	}
