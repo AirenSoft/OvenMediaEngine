@@ -148,7 +148,7 @@ bool AvcVideoPacketFragmentizer::MakeHeader(std::shared_ptr<MediaPacket> packet)
     return true;
 }
 
-#if 0
+#if 1
 FragmentationHeader* AvcVideoPacketFragmentizer::FromAvcVideoPacket2(std::shared_ptr<MediaPacket> packet)
 {
         FragmentationHeader *fragment_header = new FragmentationHeader();
