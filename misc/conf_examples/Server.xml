@@ -37,9 +37,14 @@
 			<!-- Settings for multi domain and TLS -->
 			<Domain>
 				<Names>
-					<Name>stream1.airensoft.com</Name>
-					<Name>stream2.airensoft.com</Name>
-					<Name>stream3.airensoft.com</Name>
+					<!--
+						Domain names
+
+						<Name>stream1.airensoft.com</Name>
+						<Name>stream2.airensoft.com</Name>
+						<Name>*.sub.airensoft.com</Name>
+					-->
+					<Name>*</Name>
 				</Names>
 				<!--
 				<TLS>
