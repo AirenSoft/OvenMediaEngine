@@ -49,7 +49,7 @@ public:
 	}
 
 	bool ApplyOriginMap(const std::vector<cfg::VirtualHost> &host_list);
-	bool ApplyOriginMap(const cfg::Domain &domain, const cfg::Origins &origins);
+	bool ApplyOriginMap(const ov::String &vhost_name, const cfg::Domain &domain_config, const cfg::Origins &origins_config);
 
 	/// Register the module
 	///
@@ -66,14 +66,26 @@ public:
 	/// @return If the module is not already registered, false is returned. Otherwise, true is returned.
 	bool UnregisterModule(const std::shared_ptr<OrchestratorModuleInterface> &module);
 
+	/// Generate an application name for domain/app
+	///
+	/// @param vhost_name A name of VirtualHost
+	/// @param app_name An application name
+	///
+	/// @return A new application name corresponding to domain/app
+	ov::String ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name);
+
+
+	ov::String GetVhostNameFromDomain(const ov::String &domain_name);
+
 	/// Create an application and notify the modules
 	///
+	/// @param vhost_name A name of VirtualHost
 	/// @param app_config Application configuration to create
 	///
 	/// @return Creation result
 	///
 	/// @note Automatically DeleteApplication() when application creation fails
-	Result CreateApplication(const cfg::Application &app_config);
+	Result CreateApplication(const ov::String &vhost_name, const cfg::Application &app_config);
 	/// Delete the application and notify the modules
 	///
 	/// @param app_info Application information to delete
@@ -92,12 +104,12 @@ public:
 protected:
 	struct Origin
 	{
-		Origin(const cfg::OriginsOrigin &origin)
+		Origin(const cfg::OriginsOrigin &origin_config)
 		{
-			location = origin.GetLocation();
-			scheme = origin.GetPass().GetScheme();
+			location = origin_config.GetLocation();
+			scheme = origin_config.GetPass().GetScheme();
 
-			for (auto &item : origin.GetPass().GetUrlList())
+			for (auto &item : origin_config.GetPass().GetUrlList())
 			{
 				auto url = item.GetUrl();
 
@@ -107,51 +119,40 @@ protected:
 
 				url_list.push_back(item.GetUrl());
 			}
+
+			this->origin_config = origin_config;
 		}
 
-		bool operator==(const Origin &origin) const
+		bool operator==(const Origin *origin) const
 		{
-			auto this_list = origins.GetOriginList();
-			auto target_list = origin.origins.GetOriginList();
+			auto &first = origin_config;
+			auto &second = origin->origin_config;
 
-			// Compare two cfg::Origins
+			if (first.GetLocation() != second.GetLocation())
+			{
+				return false;
+			}
 
-			if (this_list.size() != target_list.size())
+			auto &first_pass = first.GetPass();
+			auto &second_pass = second.GetPass();
+
+			if (first_pass.GetScheme() != second_pass.GetScheme())
+			{
+				return false;
+			}
+
+			auto &first_url_list = first_pass.GetUrlList();
+			auto &second_url_list = second_pass.GetUrlList();
+
+			if (first_url_list.size() != second_url_list.size())
 			{
 				return false;
 			}
 
 			return std::equal(
-				this_list.begin(), this_list.end(), target_list.begin(),
-				[](const cfg::OriginsOrigin &first, const cfg::OriginsOrigin &second) -> bool {
-					if (first.GetLocation() != second.GetLocation())
-					{
-						return false;
-					}
-
-					auto &first_pass = first.GetPass();
-					auto &second_pass = second.GetPass();
-
-					if (first_pass.GetScheme() != second_pass.GetScheme())
-					{
-						return false;
-					}
-
-					auto &first_url_list = first_pass.GetUrlList();
-					auto &second_url_list = second_pass.GetUrlList();
-
-					if (first_url_list.size() != second_url_list.size())
-					{
-						return false;
-					}
-
-					if (std::equal(first_url_list.begin(), first_url_list.end(), second_url_list.begin(),
-								   [](const cfg::Url &url1, const cfg::Url &url2) -> bool {
-									   return url1.GetUrl() == url2.GetUrl();
-								   }) == false)
-					{
-						return false;
-					}
+				first_url_list.begin(), first_url_list.end(), second_url_list.begin(),
+				[](const cfg::Url &url1, const cfg::Url &url2) -> bool {
+					return url1.GetUrl() == url2.GetUrl();
 				});
 		}
 
@@ -165,7 +166,7 @@ protected:
 		std::vector<ov::String> url_list;
 
 		// Original configuration
-		cfg::Origins origins;
+		cfg::OriginsOrigin origin_config;
 	};
 
 	struct Module
@@ -197,11 +198,13 @@ protected:
 
 	struct Domain
 	{
-		Domain(const ov::String &name, const std::vector<std::shared_ptr<const Origin>> &origin_list)
-			: name(name),
+		Domain(const ov::String &vhost_name, const ov::String &name, const std::vector<std::shared_ptr<const Origin>> &origin_list)
+			: vhost_name(vhost_name),
+			  name(name),
 			  origin_list(origin_list),
 			  state(DomainItemState::New)
 		{
+			UpdateRegex();
 		}
 
 		bool UpdateRegex()
@@ -227,6 +230,10 @@ protected:
 			return true;
 		}
 
+		// The name of VirtualHost (eg: AirenSoft-VHost)
+		ov::String vhost_name;
+
+		// The name of Domain (eg: *.airensoft.com)
 		ov::String name;
 		std::regex regex_for_domain;
 

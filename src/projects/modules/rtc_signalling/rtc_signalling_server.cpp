@@ -88,13 +88,25 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 				return HttpInterceptorResult::Disconnect;
 			}
 
+			// Find the "Host" header
+			auto host_name = client->GetRequest()->GetHeader("HOST").Split(":")[0];
+
+			auto orchestrator = Orchestrator::GetInstance();
+			host_name = orchestrator->GetVhostNameFromDomain(host_name);
+			ov::String internal_app_name = orchestrator->ResolveApplicationName(host_name, tokens[1]);
+
 			//TODO(Getroot) : Application 을 구분한 후 Application 설정을 구해서 여기에 적용한다.
 
 			auto info = std::make_shared<RtcSignallingInfo>(
-				// application_name
+				// host_name
+				host_name,
+				// app_name
 				tokens[1],
 				// stream_name
 				tokens[2],
+
+				// internal_app_name
+				internal_app_name,
 
 				// id
 				P2P_INVALID_PEER_ID,
@@ -179,11 +191,11 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			{
 				if (error->GetCode() == 404)
 				{
-					logte("Cannot find stream [%s/%s]", info->application_name.CStr(), info->stream_name.CStr());
+					logte("Cannot find stream [%s/%s]", info->internal_app_name.CStr(), info->stream_name.CStr());
 				}
 				else
 				{
-					logte("An error occurred while dispatch command %s for stream [%s/%s]: %s, disconnecting...", command.CStr(), info->application_name.CStr(), info->stream_name.CStr(), error->ToString().CStr());
+					logte("An error occurred while dispatch command %s for stream [%s/%s]: %s, disconnecting...", command.CStr(), info->internal_app_name.CStr(), info->stream_name.CStr(), error->ToString().CStr());
 				}
 
 				ov::JsonObject response_json;
@@ -223,7 +235,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 
 				logti("Client is disconnected: %s (%s / %s, ufrag: local: %s, remote: %s)",
 					  ws_client->ToString().CStr(),
-					  info->application_name.CStr(), info->stream_name.CStr(),
+					  info->internal_app_name.CStr(), info->stream_name.CStr(),
 					  (info->offer_sdp != nullptr) ? info->offer_sdp->GetIceUfrag().CStr() : "(N/A)",
 					  (info->peer_sdp != nullptr) ? info->peer_sdp->GetIceUfrag().CStr() : "(N/A)");
 			}
@@ -284,7 +296,7 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 			}
 			else
 			{
-				return (info->application_name == application_name) &&
+				return (info->internal_app_name == application_name) &&
 					   (info->stream_name == stream_name) &&
 					   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
 			}
@@ -441,8 +453,9 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::share
 std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &client = ws_client->GetClient();
+	auto orchestrator = Orchestrator::GetInstance();
 
-	ov::String application_name = info->application_name;
+	ov::String application_name = info->internal_app_name;
 	ov::String stream_name = info->stream_name;
 
 	std::shared_ptr<SessionDescription> sdp = nullptr;
@@ -636,9 +649,9 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const ov::JsonObj
 		{
 			for (auto &observer : _observers)
 			{
-				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->application_name.CStr(), info->stream_name.CStr());
+				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->internal_app_name.CStr(), info->stream_name.CStr());
 
-				observer->OnAddRemoteDescription(info->application_name, info->stream_name, info->offer_sdp, info->peer_sdp);
+				observer->OnAddRemoteDescription(info->internal_app_name, info->stream_name, info->offer_sdp, info->peer_sdp);
 			}
 		}
 		else
@@ -723,7 +736,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const ov::Json
 
 			for (auto &observer : _observers)
 			{
-				observer->OnIceCandidate(info->application_name, info->stream_name, ice_candidate, username_fragment);
+				observer->OnIceCandidate(info->internal_app_name, info->stream_name, ice_candidate, username_fragment);
 			}
 		}
 	}
@@ -857,9 +870,9 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(std::shared_ptr<Rtc
 	{
 		for (auto &observer : _observers)
 		{
-			logtd("Trying to callback OnStopCommand to %p for client %d (%s / %s)...", observer.get(), info->id, info->application_name.CStr(), info->stream_name.CStr());
+			logtd("Trying to callback OnStopCommand to %p for client %d (%s / %s)...", observer.get(), info->id, info->internal_app_name.CStr(), info->stream_name.CStr());
 
-			if (observer->OnStopCommand(info->application_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+			if (observer->OnStopCommand(info->internal_app_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
 			{
 				result = false;
 			}

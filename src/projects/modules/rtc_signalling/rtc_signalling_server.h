@@ -8,20 +8,20 @@
 //==============================================================================
 #pragma once
 
-#include "rtc_signalling_observer.h"
-#include "rtc_ice_candidate.h"
 #include "modules/rtc_signalling/p2p/rtc_p2p_manager.h"
+#include "rtc_ice_candidate.h"
+#include "rtc_signalling_observer.h"
 
 #include <memory>
 
 #include <base/info/host.h>
-#include <base/publisher/publisher.h>
 #include <base/media_route/media_route_interface.h>
-#include <modules/ice/ice.h>
+#include <base/publisher/publisher.h>
 #include <http_server/http_server.h>
 #include <http_server/https_server.h>
 #include <http_server/interceptors/http_request_interceptors.h>
 #include <media_router/media_route_application.h>
+#include <modules/ice/ice.h>
 
 class RtcSignallingServer : public ov::EnableSharedFromThis<RtcSignallingServer>
 {
@@ -37,16 +37,37 @@ public:
 
 	bool Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<SessionDescription> &peer_sdp);
 
-   	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections);
+	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections);
 
 	int GetTotalPeerCount() const;
 	int GetClientPeerCount() const;
-	
+
 protected:
 	struct RtcSignallingInfo
 	{
-		ov::String application_name;
+		RtcSignallingInfo(ov::String host_name, ov::String app_name, ov::String stream_name,
+						  ov::String internal_app_name,
+						  peer_id_t id, std::shared_ptr<RtcPeerInfo> peer_info,
+						  std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp,
+						  std::vector<RtcIceCandidate> local_candidates, std::vector<RtcIceCandidate> remote_candidates)
+			: host_name(host_name),
+			  app_name(std::move(app_name)),
+			  stream_name(std::move(stream_name)),
+			  internal_app_name(internal_app_name),
+			  id(id),
+			  peer_info(std::move(peer_info)),
+			  offer_sdp(std::move(offer_sdp)),
+			  peer_sdp(std::move(peer_sdp)),
+			  local_candidates(std::move(local_candidates)),
+			  remote_candidates(std::move(remote_candidates))
+		{
+		}
+
+		ov::String host_name;
+		ov::String app_name;
 		ov::String stream_name;
+
+		ov::String internal_app_name;
 
 		// signalling server에서 발급한 id
 		// WebSocket 접속만 되어 있고, request offer하지 않은 상태에서는 P2P_INVALID_PEER_ID 로 되어 있음
@@ -66,21 +87,6 @@ protected:
 
 		// client의 candidates
 		std::vector<RtcIceCandidate> remote_candidates;
-
-		RtcSignallingInfo(ov::String application_name, ov::String stream_name,
-		                  peer_id_t id, std::shared_ptr<RtcPeerInfo> peer_info,
-		                  std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp,
-		                  std::vector<RtcIceCandidate> local_candidates, std::vector<RtcIceCandidate> remote_candidates)
-			: application_name(std::move(application_name)),
-			  stream_name(std::move(stream_name)),
-			  id(id),
-			  peer_info(std::move(peer_info)),
-			  offer_sdp(std::move(offer_sdp)),
-			  peer_sdp(std::move(peer_sdp)),
-			  local_candidates(std::move(local_candidates)),
-			  remote_candidates(std::move(remote_candidates))
-		{
-		}
 	};
 
 	using SdpCallback = std::function<void(std::shared_ptr<SessionDescription> sdp, std::shared_ptr<ov::Error> error)>;

@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 		// Create applications that defined by the configuration
 		for (auto app_cfg : host_info.GetApplicationList())
 		{
-			orchestrator->CreateApplication(app_cfg);
+			orchestrator->CreateApplication(host_name, app_cfg);
 		}
 
 #if 0

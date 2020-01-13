@@ -87,8 +87,7 @@ namespace info
 	protected:
 		// These constructors will be called from Orchestrator
 		friend class ::Orchestrator;
-		Application() = default;
-		Application(application_id_t app_id, cfg::Application app_config);
+		Application(application_id_t app_id, const ov::String &name, cfg::Application app_config);
 		Application(application_id_t app_id, const ov::String &name);
 
 		// This function is created to minimize the creation of temporary instances

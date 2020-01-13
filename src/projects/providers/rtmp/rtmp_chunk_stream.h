@@ -60,6 +60,11 @@ public:
 
 	static ov::String GetEncoderTypeString(RtmpEncoderType encoder_type);
 
+	ov::String &GetDomainName()
+	{
+		return _domain_name;
+	}
+
 	ov::String &GetAppName()
 	{
 		return _app_name;
@@ -162,6 +167,7 @@ private:
 protected:
 	ov::ClientSocket *_remote;
 	IRtmpChunkStream *_stream_interface;
+	ov::String _domain_name;
 	ov::String _app_name;
 	ov::String _stream_name;
 	info::application_id_t _app_id;

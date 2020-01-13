@@ -11,6 +11,8 @@
 #include "media_router/bitstream/bitstream_to_adts.h"
 #include "media_router/bitstream/bitstream_to_annexb.h"
 
+#include <orchestrator/orchestrator.h>
+
 /*Publishing 절차
 - Handshakeing
  C->S : C0 + C1
@@ -631,6 +633,7 @@ void RtmpChunkStream::ReceiveAmfDataMessage(const std::shared_ptr<const RtmpMess
 void RtmpChunkStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 {
 	double object_encoding = 0.0;
+	ov::String tc_url;
 
 	if (document.GetProperty(2) != nullptr && document.GetProperty(2)->GetType() == AmfDataType::Object)
 	{
@@ -647,6 +650,24 @@ void RtmpChunkStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> 
 		if ((index = object->FindName("app")) >= 0 && object->GetType(index) == AmfDataType::String)
 		{
 			_app_name = object->GetString(index);
+		}
+
+		// app 설정
+		if ((index = object->FindName("tcUrl")) >= 0 && object->GetType(index) == AmfDataType::String)
+		{
+			tc_url = object->GetString(index);
+		}
+	}
+
+	// Parse the URL to obtain the domain name
+	{
+		auto url = ov::Url::Parse(tc_url.CStr());
+
+		if (url != nullptr)
+		{
+			auto orchestrator = Orchestrator::GetInstance();
+
+			_app_name = orchestrator->ResolveApplicationName(orchestrator->GetVhostNameFromDomain(url->Domain()), _app_name);
 		}
 	}
 

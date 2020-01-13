@@ -19,7 +19,7 @@ bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &host_list
 	{
 		logtd("Trying to apply OriginMap for host %s", host.GetName().CStr());
 
-		if (ApplyOriginMap(host.GetDomain(), host.GetOrigins()) == false)
+		if (ApplyOriginMap(host.GetName(), host.GetDomain(), host.GetOrigins()) == false)
 		{
 			logte("Could not apply OriginMap for host %s", host.GetName().CStr());
 			result = false;
@@ -29,7 +29,7 @@ bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &host_list
 	return result;
 }
 
-bool Orchestrator::ApplyOriginMap(const cfg::Domain &domain, const cfg::Origins &origins)
+bool Orchestrator::ApplyOriginMap(const ov::String &vhost_name, const cfg::Domain &domain_config, const cfg::Origins &origins_config)
 {
 	std::lock_guard<decltype(_domain_list_mutex)> lock_guard(_domain_list_mutex);
 	decltype(_domain_list) old_domain_list = std::move(_domain_list);
@@ -44,14 +44,14 @@ bool Orchestrator::ApplyOriginMap(const cfg::Domain &domain, const cfg::Origins 
 	auto new_origin_list = std::vector<std::shared_ptr<const Origin>>();
 
 	logtd("Generating OriginList...");
-	for (auto &origin : origins.GetOriginList())
+	for (auto &origin : origins_config.GetOriginList())
 	{
 		new_origin_list.emplace_back(std::make_shared<const Origin>(origin));
 	}
 
 	// Check for the new/modified items
 	// TODO(dimiden): Is there a way to reduce the cost of O(n^2)?
-	for (auto &domain_name : domain.GetNameList())
+	for (auto &domain_name : domain_config.GetNameList())
 	{
 		bool found = false;
 		auto name = domain_name.GetName();
@@ -71,7 +71,11 @@ bool Orchestrator::ApplyOriginMap(const cfg::Domain &domain, const cfg::Origins 
 				}
 				else
 				{
-					if (std::equal(old_origin_list.begin(), old_origin_list.end(), new_origin_list.begin()))
+					if (std::equal(
+							old_origin_list.begin(), old_origin_list.end(), new_origin_list.begin(),
+							[](const std::shared_ptr<const Origin> &origin1, const std::shared_ptr<const Origin> &origin2) -> bool {
+								return origin1->operator==(origin2.get());
+							}))
 					{
 						logtd("OriginList does the same");
 						old_item->state = DomainItemState::NotChanged;
@@ -94,7 +98,7 @@ bool Orchestrator::ApplyOriginMap(const cfg::Domain &domain, const cfg::Origins 
 		if (found == false)
 		{
 			// Add the item if not found
-			_domain_list.emplace_back(name, new_origin_list);
+			_domain_list.emplace_back(vhost_name, name, new_origin_list);
 
 			if (old_item != old_domain_list.end())
 			{
@@ -212,6 +216,44 @@ bool Orchestrator::UnregisterModule(const std::shared_ptr<OrchestratorModuleInte
 	return false;
 }
 
+ov::String Orchestrator::ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name)
+{
+	ov::String new_app_name;
+
+	if (vhost_name.IsEmpty() == false)
+	{
+		// Replace all # to _
+		new_app_name = ov::String::FormatString("#%s#%s", vhost_name.Replace("#", "_").CStr(), app_name.Replace("#", "_").CStr());
+	}
+	else
+	{
+		new_app_name = ov::String::FormatString("#%s", app_name.Replace("#", "_").CStr());
+	}
+
+	logtd("Resolved application name: %s (from host: %s, app: %s)", new_app_name.CStr(), vhost_name.CStr(), app_name.CStr());
+
+	return std::move(new_app_name);
+}
+
+ov::String Orchestrator::GetVhostNameFromDomain(const ov::String &domain_name)
+{
+	std::lock_guard<decltype(_domain_list_mutex)> lock_guard(_domain_list_mutex);
+
+	if (domain_name.IsEmpty() == false)
+	{
+		// Search for the domain corresponding to domain_name
+		for (auto &domain_item : _domain_list)
+		{
+			if (std::regex_match(domain_name.CStr(), domain_item.regex_for_domain))
+			{
+				return domain_item.vhost_name;
+			}
+		}
+	}
+
+	return "";
+}
+
 info::application_id_t Orchestrator::GetNextAppId()
 {
 	while (true)
@@ -314,7 +356,38 @@ std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForUrl(const ov::String 
 
 std::shared_ptr<const Orchestrator::Origin> Orchestrator::GetUrlListForLocation(const ov::String &app_name, const ov::String &stream_name, std::vector<ov::String> *url_list)
 {
-	ov::String location = ov::String::FormatString("/%s/%s", app_name.CStr(), stream_name.CStr());
+	auto tokens = app_name.Split("#");
+	ov::String host_name;
+	ov::String real_app_name;
+
+	switch (tokens.size())
+	{
+		case 1:
+		default:
+			// app only - this is a bug
+			// app_name must always start with a "#"
+			OV_ASSERT2(false);
+			real_app_name = tokens[0];
+			break;
+
+		case 2:
+			// default host & app_name
+			// #<app_name>
+			host_name = tokens[0];
+			OV_ASSERT2(host_name == "");
+			real_app_name = tokens[1];
+			break;
+
+		case 3:
+			// domain & app_name
+			// #<domain>#<app_name>
+			OV_ASSERT2(tokens[0] == "");
+			host_name = tokens[1];
+			real_app_name = tokens[2];
+			break;
+	}
+
+	ov::String location = ov::String::FormatString("/%s/%s", real_app_name.CStr(), stream_name.CStr());
 
 	logtd("Domains: %zu", _domain_list.size());
 
@@ -346,7 +419,7 @@ std::shared_ptr<const Orchestrator::Origin> Orchestrator::GetUrlListForLocation(
 				//                        ~~ <= remaining part
 				auto remaining_part = location.Substring(origin->location.GetLength());
 
-				logtd("Found: location: %s (app: %s, stream: %s), remaining_part: %s", origin->location.CStr(), app_name.CStr(), stream_name.CStr(), remaining_part.CStr());
+				logtd("Found: location: %s (app: %s, stream: %s), remaining_part: %s", origin->location.CStr(), real_app_name.CStr(), stream_name.CStr(), remaining_part.CStr());
 
 				for (auto url : origin->url_list)
 				{
@@ -473,12 +546,12 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(const info::Applica
 	return DeleteApplicationInternal(app_info.GetId());
 }
 
-Orchestrator::Result Orchestrator::CreateApplication(const cfg::Application &app_config)
+Orchestrator::Result Orchestrator::CreateApplication(const ov::String &vhost_name, const cfg::Application &app_config)
 {
 	std::lock_guard<decltype(_modules_mutex)> lock_guard_for_modules(_modules_mutex);
 	std::lock_guard<decltype(_app_map_mutex)> lock_guard_for_app_map(_app_map_mutex);
 
-	info::Application app_info(GetNextAppId(), app_config);
+	info::Application app_info(GetNextAppId(), ResolveApplicationName(vhost_name, app_config.GetName()), app_config);
 
 	return CreateApplicationInternal(app_info);
 }
