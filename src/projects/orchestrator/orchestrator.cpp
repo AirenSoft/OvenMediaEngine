@@ -676,7 +676,7 @@ bool Orchestrator::RequestPullStream(const ov::String &url)
 }
 #endif
 
-bool Orchestrator::RequestPullStreamForLocation(const ov::String &app_name, const ov::String &stream_name)
+bool Orchestrator::RequestPullStreamForLocation(const ov::String &app_name, const ov::String &stream_name, off_t offset)
 {
 	std::vector<ov::String> url_list;
 
@@ -721,7 +721,7 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &app_name, cons
 
 	logti("Trying to pull stream [%s/%s] from provider: %s", app_name.CStr(), stream_name.CStr(), GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
 
-	if (provider_module->PullStream(app_info, stream_name, url_list))
+	if (provider_module->PullStream(app_info, stream_name, url_list, offset))
 	{
 		logti("The stream was pulled successfully: [%s/%s]", app_name.CStr(), stream_name.CStr());
 		return true;
@@ -751,11 +751,11 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &app_name, cons
 	return false;
 }
 
-bool Orchestrator::RequestPullStream(const ov::String &application, const ov::String &stream)
+bool Orchestrator::RequestPullStream(const ov::String &application, const ov::String &stream, off_t offset)
 {
 	std::lock_guard<decltype(_modules_mutex)> lock_guard_for_modules(_modules_mutex);
 	std::lock_guard<decltype(_app_map_mutex)> lock_guard_for_app_map(_app_map_mutex);
 	std::lock_guard<decltype(_domain_list_mutex)> lock_guard_for_domain_list(_domain_list_mutex);
 
-	return RequestPullStreamForLocation(application, stream);
+	return RequestPullStreamForLocation(application, stream, offset);
 }

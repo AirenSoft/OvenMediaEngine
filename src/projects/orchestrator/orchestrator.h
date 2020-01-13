@@ -74,7 +74,6 @@ public:
 	/// @return A new application name corresponding to domain/app
 	ov::String ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name);
 
-
 	ov::String GetVhostNameFromDomain(const ov::String &domain_name);
 
 	/// Create an application and notify the modules
@@ -99,7 +98,11 @@ public:
 	const info::Application &GetApplication(info::application_id_t app_id) const;
 
 	// bool RequestPullStream(const ov::String &url);
-	bool RequestPullStream(const ov::String &application, const ov::String &stream);
+	bool RequestPullStream(const ov::String &application, const ov::String &stream, off_t offset);
+	bool RequestPullStream(const ov::String &application, const ov::String &stream)
+	{
+		return RequestPullStream(application, stream, 0);
+	}
 
 protected:
 	struct Origin
@@ -264,7 +267,7 @@ protected:
 	const info::Application &GetApplicationInternal(info::application_id_t app_id) const;
 
 	// bool RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> &url);
-	bool RequestPullStreamForLocation(const ov::String &app_name, const ov::String &stream_name);
+	bool RequestPullStreamForLocation(const ov::String &app_name, const ov::String &stream_name, off_t offset);
 
 	info::application_id_t _last_application_id = info::MinApplicationId;
 

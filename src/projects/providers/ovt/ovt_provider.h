@@ -48,7 +48,7 @@ namespace pvd
 		//--------------------------------------------------------------------
 		// Implementation of OrchestratorProviderModuleInterface
 		//--------------------------------------------------------------------
-		bool PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list) override;
+		bool PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset) override;
 
 	protected:
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;

@@ -54,9 +54,10 @@ public:
 	/// @param app_info An information of the application
 	/// @param stream_name A stream name to create
 	/// @param url_list The streaming URLs to pull
+	/// @param offset Specifies the starting point of the streaming URL (unit: milliseconds)
 	///
 	/// @return Returns true if successfully pulled and finishes creating the stream, false otherwise
-	virtual bool PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list) = 0;
+	virtual bool PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset) = 0;
 };
 
 class OrchestratorMediaRouterModuleInterface : public OrchestratorModuleInterface
