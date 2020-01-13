@@ -457,15 +457,54 @@ void TranscodeStream::GetByassTrackInfo(int32_t track_id, int32_t& bypass, int32
 	}
 }
 
-TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<const MediaPacket> packet)
+TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<MediaPacket> packet)
 {
+	// return TranscodeResult::NoData;
+#if 1
 	// 만약, 출력 트랙에 BYPASS 옵션에 해당 되는 패킷이라면, 디코딩에서 인코딩 프로세스 없이 바로 미디어 라우트로 전달한다
 	int32_t bypass_cnt=0, nbypass_cnt=0;
-	GetByassTrackInfo(track_id, bypass_cnt, nbypass_cnt);
+	// GetByassTrackInfo(track_id, bypass_cnt, nbypass_cnt);
+	
+
+	auto output_track_ids = _tracks_map.find(track_id);
+	if (output_track_ids == _tracks_map.end())
+	{
+		return TranscodeResult::NoData;
+	}
+
+	auto pair_mapped_tracks = output_track_ids->second;
+	for ( auto pair_item : pair_mapped_tracks )
+	{
+		int32_t output_track_id = pair_item.first;
+		auto output_track = pair_item.second;
+		
+		if(output_track->IsBypass() == true)
+		{
+			// 바이패스 패킷이면... 다이렉트로 미디어 라우터에 보낸다
+			auto clone_packet = packet->ClonePacket();
+
+			// std::shared_ptr<MediaPacket> clone_packet = packet->ClonePacket();
+			clone_packet->SetTrackId(output_track_id);
+			SendFrame(std::move(clone_packet));
+
+			bypass_cnt++;
+		}
+		else
+		{
+			nbypass_cnt++;
+		}
+	}
+
 	// logti(" track_id(%d) bypass track count(%d), non-bypass track count(%d)", track_id, bypass_cnt, nbypass_cnt);
 
 
 	// BYPASS가 아닌 트랙이 존재한다면... 디코딩 프로세스도 태운다
+	if(nbypass_cnt == 0)
+	{
+		// 디코딩이 필요없는 패킷이라면.. 디코더로 넘기지 않는다
+		return TranscodeResult::NoData;
+	}
+#endif
 
 	auto decoder_item = _decoders.find(track_id);
 	if (decoder_item == _decoders.end())
@@ -495,7 +534,7 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 			decoded_frame->SetTrackId(track_id);
 			ChangeOutputFormat(decoded_frame.get());
 
-		// It is intended that there is no "break;" statement here
+			// It is intended that there is no "break;" statement here
 
 		case TranscodeResult::DataReady:
 			decoded_frame->SetTrackId(track_id);
@@ -503,11 +542,6 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 			logtp("[#%d] A packet is decoded (PTS: %lld)", track_id, decoded_frame->GetPts());
 
 			_stats_decoded_frame_count++;
-
-			if (_stats_decoded_frame_count % 300 == 0)
-			{
-				logtd("stats: input.pkts(%d), decoded.frms(%d), filterd.frms(%d)", _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
-			}
 
 			if (_queue_decoded_frames.size() > _max_queue_size)
 			{
@@ -534,6 +568,7 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 	{
 		return TranscodeResult::NoData;
 	}
+
 	auto filter = filter_item->second.get();
 
 	logtp("[#%d] Trying to apply a filter to the frame (PTS: %lld)", track_id, decoded_frame->GetPts());
@@ -581,6 +616,7 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t track_id, std::shared_ptr<c
 	{
 		return TranscodeResult::NoData;
 	}
+
 	auto encoder = encoder_item->second.get();
 
 	logtp("[#%d] Trying to encode the frame (PTS: %lld)", track_id, frame->GetPts());
@@ -616,7 +652,7 @@ void TranscodeStream::LoopTask()
 	CreateStreams();
 
 	logtd("Started transcode stream decode thread");
-
+	int32_t loop_cnt = 0;
 	while (!_kill_flag)
 	{
 		if (_queue_input_packets.size() > 0)
@@ -629,7 +665,6 @@ void TranscodeStream::LoopTask()
 				DecodePacket(track_id, std::move(packet));
 			}
 		}
-
 
 		if (_queue_decoded_frames.size() > 0)
 		{
@@ -652,8 +687,17 @@ void TranscodeStream::LoopTask()
 			}
 		}
 
+
+		// // Print Statistics
+		// if (loop_cnt++ % 20000 == 0)
+		// {
+		// 	loop_cnt = 1;
+		// 	logtd("stats: input.pkts(%d), decoded.frms(%d), filterd.frms(%d)", _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
+		// }
+
+
 		// TODO Packet이 존재하는 경우에만 Loop를 처리할 수 있는 방법은 없나?
-		// usleep(1);
+		usleep(1);
 	}
 
 	// 스트림 삭제 전송
@@ -759,6 +803,7 @@ void TranscodeStream::CreateFilters(MediaFrame *buffer)
 
 void TranscodeStream::DoFilters(std::shared_ptr<MediaFrame> frame)
 {
+
 	// 패킷의 트랙 아이디를 조회
 	int32_t track_id = frame->GetTrackId();
 

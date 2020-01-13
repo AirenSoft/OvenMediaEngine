@@ -22,6 +22,8 @@
 #include "bitstream/bitstream_to_adts.h"
 #include "bitstream/bitstream_to_annexa.h"
 
+#include "bitstream/avc_video_packet_fragmentizer.h"
+
 class MediaRouteStream
 {
 public:
@@ -55,6 +57,8 @@ private:
 	BitstreamToADTS _bsfa;
 	BitstreamAnnexA _bsf_vp8;
 
+	AvcVideoPacketFragmentizer _avc_video_packet_fragmentizer;
+	
 	int64_t _last_video_pts;
 	int64_t _last_audio_pts;
 	// time of last packet received

@@ -57,6 +57,98 @@ static const uint8_t *ParseNalUnits(const uint8_t *nal_unit_buffer,
     return nal_unit_buffer;
 }
 
+bool AvcVideoPacketFragmentizer::MakeHeader(std::shared_ptr<MediaPacket> packet)
+{
+    FragmentationHeader *fragment_header = (FragmentationHeader *)packet->GetFragHeader();
+
+    const uint8_t* srcData = static_cast<const uint8_t*>(packet->GetData()->GetData());
+    size_t dataOffset = 0;
+    size_t dataSize = packet->GetData()->GetLength();
+
+    size_t previous_offset = -1;
+
+    // offset, nal_size
+    std::vector<std::pair<size_t, size_t>> offset_list;
+
+    while ( dataOffset < dataSize )
+    {
+        size_t remainDataSize = dataSize - dataOffset;
+        const uint8_t* data = srcData + dataOffset;
+
+        if (remainDataSize >= 3 &&
+                0x00 == data[0] &&
+                0x00 == data[1] &&
+                0x01 == data[2])
+        {
+            offset_list.emplace_back(dataOffset, 3);
+            dataOffset += 3;
+        }
+        else if (remainDataSize >= 4 &&
+                 0x00 == data[0] &&
+                 0x00 == data[1] &&
+                 0x00 == data[2] &&
+                 0x01 == data[3])
+        {
+            offset_list.emplace_back(dataOffset, 4);
+            dataOffset += 4;
+        }
+        else
+        {
+            dataOffset += 1;
+        }
+    }
+
+    fragment_header->VerifyAndAllocateFragmentationHeader(offset_list.size());
+
+    // logtd("data.length(%d) fragment.length(%d)", dataSize, offset_list.size());
+
+    for (size_t index = 0; index < offset_list.size(); ++index)
+    {
+        size_t nalu_offset = 0;
+        size_t nalu_data_len = 0;
+
+        if (index != offset_list.size() - 1)
+        {
+            nalu_offset = offset_list[index].first + offset_list[index].second;
+            nalu_data_len = offset_list[index + 1].first - nalu_offset;
+        }
+        else
+        {
+            nalu_offset = offset_list[index].first + offset_list[index].second;
+            nalu_data_len = dataSize - nalu_offset;
+        }
+
+        uint8_t nalu_header = *(srcData + nalu_offset);
+        uint8_t forbidden_zero_bit = (nalu_header >> 7)  & 0x01;
+        uint8_t nal_ref_idc = (nalu_header >> 5)  & 0x03;
+        uint8_t nal_unit_type = (nalu_header)  & 0x01F;
+
+        // logtd("[%d] offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d\nnal_ref_idc:%d, nal_unit_type:%d\n%s"
+        //     , index
+        //     , offset_list[index].first
+        //     , offset_list[index].second
+        //     , nalu_offset
+        //     , nalu_data_len
+        //     , nal_ref_idc, nal_unit_type
+        //     , ov::Dump(srcData+nalu_offset, nalu_data_len, 32).CStr() );
+
+        // logtd("[%d] offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d\nnal_ref_idc:%d, nal_unit_type:%d\n"
+        //     , index
+        //     , offset_list[index].first
+        //     , offset_list[index].second
+        //     , nalu_offset
+        //     , nalu_data_len
+        //     , nal_ref_idc, nal_unit_type);
+
+
+        fragment_header->fragmentation_offset[index] = nalu_offset;
+        fragment_header->fragmentation_length[index] = nalu_data_len ;
+    }
+
+    return true;
+}
+
+#if 0
 FragmentationHeader* AvcVideoPacketFragmentizer::FromAvcVideoPacket2(std::shared_ptr<MediaPacket> packet)
 {
         FragmentationHeader *fragment_header = new FragmentationHeader();
@@ -149,6 +241,7 @@ FragmentationHeader* AvcVideoPacketFragmentizer::FromAvcVideoPacket2(std::shared
     return fragment_header;
 }
 
+// Deprecated 
 FragmentationHeader* AvcVideoPacketFragmentizer::FromAvcVideoPacket(const uint8_t *packet, size_t length)
 {
 
@@ -266,3 +359,5 @@ FragmentationHeader* AvcVideoPacketFragmentizer::FromAvcVideoPacket(const uint8_
 
     return fragmentation_header;
 }
+
+#endif

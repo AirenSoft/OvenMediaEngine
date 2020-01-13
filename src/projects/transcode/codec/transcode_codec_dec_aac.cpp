@@ -121,7 +121,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 			continue;
 		}
 
-		logtp("Decoding AAC packet\n%s", cur_data->Dump(32).CStr());
+		// logtp("Decoding AAC packet\n%s", cur_data->Dump(32).CStr());
 
 		int parsed_size = ::av_parser_parse2(
 			_parser,

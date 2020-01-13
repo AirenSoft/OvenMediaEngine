@@ -83,6 +83,7 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeRe
 {
 	OV_ASSERT2(_output_context != nullptr);
 
+
 	// 200ms
 	const unsigned int frame_count_to_encode = 480 * 2;
 	const unsigned int bytes_to_encode = frame_count_to_encode * _output_context->GetAudioChannel().GetCounts() * _output_context->GetAudioSample().GetSampleSize();
@@ -170,7 +171,7 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeRe
 		*result = TranscodeResult::NoData;
 		return nullptr;
 	}
-
+	
 	OV_ASSERT2(_current_pts >= 0);
 	OV_ASSERT2(_buffer->GetLength() >= bytes_to_encode);
 
@@ -203,20 +204,16 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeRe
 		*result = TranscodeResult::DataError;
 		return nullptr;
 	}
-
 	encoded->SetLength(static_cast<size_t>(encoded_bytes));
 
 	// Data is encoded successfully
-
 	// dequeue <bytes_to_encoded> bytes
 	auto buffer = _buffer->GetWritableDataAs<uint8_t>();
 	::memmove(buffer, buffer + bytes_to_encode, _buffer->GetLength() - bytes_to_encode);
 	_buffer->SetLength(_buffer->GetLength() - bytes_to_encode);
 
 	auto packet_buffer = std::make_shared<MediaPacket>(common::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
-
 	_current_pts += frame_count_to_encode;
-
 	*result = TranscodeResult::DataReady;
 	return std::move(packet_buffer);
 }

@@ -61,6 +61,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 
 
 	// for debug... 
+#if 0
 	if(_stream_info->GetName() == "stream_o")
 	{
 		if(media_type==MediaType::Video)
@@ -68,16 +69,27 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		else
 			_last_audio_pts = media_packet->GetPts();
 
-		// logtd("name(%10s) tid(%2d) type(%s), pts(%10lld), dts(%10lld) diff(%5lld)",
-		//  _stream_info->GetName().CStr(), track_id, (media_type==MediaType::Video)?"Video":"Audio", media_packet->GetPts(), media_packet->GetDts(), _last_video_pts - _last_audio_pts);
+		logtd("name(%10s) tid(%2d) type(%s), pts(%10lld), dts(%10lld) diff(%5lld)",
+		 _stream_info->GetName().CStr(), track_id, (media_type==MediaType::Video)?"Video":"Audio", media_packet->GetPts(), media_packet->GetDts(), _last_video_pts - _last_audio_pts);
 	}
+#endif
 
 
 	if (media_type == MediaType::Video)
 	{
 		if (media_track->GetCodecId() == MediaCodecId::H264)
 		{
+			// 플레그멘테이션 헤더를 생성한다. 만약 헤더정보가 생성되어 있다면.. 패스한다
+			if(media_packet->GetFragHeader()->fragmentation_vector_size == 0)
+			{
+				// FragmentationHeader* fragmentation_header = _avc_video_packet_fragmentizer.FromAvcVideoPacket2(media_packet);
 
+				// media_packet->SetFragHeader(fragmentation_header);
+
+				// delete fragmentation_header;
+
+				_avc_video_packet_fragmentizer.MakeHeader(media_packet);
+			}
 		}
 		else if (media_track->GetCodecId() == MediaCodecId::Vp8)
 		{

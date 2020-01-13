@@ -112,7 +112,7 @@ private:
 
 	// There are 3 steps to process packet
 	// Step 1: Decode (Decode a frame from given packets)
-	TranscodeResult DecodePacket(int32_t track_id, std::shared_ptr<const MediaPacket> packet);
+	TranscodeResult DecodePacket(int32_t track_id, std::shared_ptr<MediaPacket> packet);
 	// Step 2: Filter (resample/rescale the decoded frame)
 	TranscodeResult FilterFrame(int32_t track_id, std::shared_ptr<MediaFrame> frame);
 	// Step 3: Encode (Encode the filtered frame to packets)

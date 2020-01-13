@@ -34,7 +34,6 @@ bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, s
 	logti("Create a transcode filter.");
 
 	MediaType type = input_media_track->GetMediaType();
-
 	switch(type)
 	{
 		case MediaType::Audio:
@@ -48,10 +47,8 @@ bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, s
 			return false;
 	}
 
-
 	// 트랜스코딩 컨텍스트 정보 전달
 	_impl->Configure(input_media_track, input_context, output_context);
-
 	return true;
 }
 
