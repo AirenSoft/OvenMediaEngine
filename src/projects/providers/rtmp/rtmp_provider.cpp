@@ -18,9 +18,9 @@
 
 using namespace common;
 
-std::shared_ptr<RtmpProvider> RtmpProvider::Create(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<RtmpProvider> RtmpProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
-	auto provider = std::make_shared<RtmpProvider>(server_config, host_info, router);
+	auto provider = std::make_shared<RtmpProvider>(server_config, router);
 	if (!provider->Start())
 	{
 		logte("An error occurred while creating RtmpProvider");
@@ -29,8 +29,8 @@ std::shared_ptr<RtmpProvider> RtmpProvider::Create(const cfg::Server &server_con
 	return provider;
 }
 
-RtmpProvider::RtmpProvider(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
-	: Provider(server_config, host_info, router)
+RtmpProvider::RtmpProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	: Provider(server_config, router)
 {
 	logtd("Created Rtmp Provider module.");
 }

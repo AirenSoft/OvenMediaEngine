@@ -751,8 +751,6 @@ void TranscodeStream::CreateFilters(MediaFrame *buffer)
 	{
 		int32_t output_track_id = pair_item.first;
 
-		logte("Create filter. track[%d -> %d]", buffer->GetTrackId(), output_track_id);
-		
 		auto output_transcode_context = _encoders[output_track_id]->GetContext();
 
 		_filters[output_track_id] = std::make_shared<TranscodeFilter>(input_media_track, input_transcode_context, output_transcode_context);

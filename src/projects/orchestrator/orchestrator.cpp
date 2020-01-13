@@ -11,28 +11,12 @@
 
 #include <base/media_route/media_route_interface.h>
 
-bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &host_list)
-{
-	bool result = true;
-
-	for (auto &host : host_list)
-	{
-		logtd("Trying to apply OriginMap for host %s", host.GetName().CStr());
-
-		if (ApplyOriginMap(host.GetName(), host.GetDomain(), host.GetOrigins()) == false)
-		{
-			logte("Could not apply OriginMap for host %s", host.GetName().CStr());
-			result = false;
-		}
-	}
-
-	return result;
-}
-
-bool Orchestrator::ApplyOriginMap(const ov::String &vhost_name, const cfg::Domain &domain_config, const cfg::Origins &origins_config)
+bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_list)
 {
 	std::lock_guard<decltype(_domain_list_mutex)> lock_guard(_domain_list_mutex);
+
 	decltype(_domain_list) old_domain_list = std::move(_domain_list);
+	bool result = true;
 
 	// Mark all items as deleted
 	for (auto &old_domain : old_domain_list)
@@ -41,14 +25,70 @@ bool Orchestrator::ApplyOriginMap(const ov::String &vhost_name, const cfg::Domai
 		old_domain.state = DomainItemState::Delete;
 	}
 
-	auto new_origin_list = std::vector<std::shared_ptr<const Origin>>();
-
-	logtd("Generating OriginList...");
-	for (auto &origin : origins_config.GetOriginList())
+	for (auto &vhost : vhost_list)
 	{
-		new_origin_list.emplace_back(std::make_shared<const Origin>(origin));
+		logtd("Trying to apply OriginMap for host %s", vhost.GetName().CStr());
+
+		auto new_origin_list = std::vector<std::shared_ptr<const Origin>>();
+
+		logtd("Generating OriginMap for host %s...", vhost.GetName().CStr());
+
+		for (auto &origin_config : vhost.GetOrigins().GetOriginList())
+		{
+			new_origin_list.emplace_back(std::make_shared<const Origin>(origin_config));
+		}
+
+		if (ApplyOriginMap(vhost.GetName(), vhost.GetDomain(), &old_domain_list, new_origin_list) == false)
+		{
+			logte("Could not apply OriginMap for host %s", vhost.GetName().CStr());
+			result = false;
+		}
 	}
 
+	for (auto &domain_item : _domain_list)
+	{
+		switch (domain_item.state)
+		{
+			case DomainItemState::Unknown:
+			case DomainItemState::Applied:
+			case DomainItemState::Delete:
+				// This situation should never happen here
+				OV_ASSERT2(false);
+				break;
+
+			case DomainItemState::NotChanged:
+				logtd("%s is not changed", domain_item.name.CStr());
+				break;
+
+			case DomainItemState::New:
+				logtd("%s is a new domain", domain_item.name.CStr());
+				break;
+
+			case DomainItemState::Changed:
+				logtd("%s is changed", domain_item.name.CStr());
+				break;
+		}
+
+		domain_item.state = DomainItemState::Applied;
+	}
+
+	for (auto &deleted_domain_item : old_domain_list)
+	{
+		if (deleted_domain_item.state == DomainItemState::Delete)
+		{
+			logtd("%s is deleted", deleted_domain_item.name.CStr());
+		}
+		else
+		{
+			OV_ASSERT2(false);
+		}
+	}
+
+	return result;
+}
+
+bool Orchestrator::ApplyOriginMap(const ov::String &vhost_name, const cfg::Domain &domain_config, std::vector<Domain> *old_domain_list, const std::vector<std::shared_ptr<const Origin>> &new_origin_list)
+{
 	// Check for the new/modified items
 	// TODO(dimiden): Is there a way to reduce the cost of O(n^2)?
 	for (auto &domain_name : domain_config.GetNameList())
@@ -56,8 +96,8 @@ bool Orchestrator::ApplyOriginMap(const ov::String &vhost_name, const cfg::Domai
 		bool found = false;
 		auto name = domain_name.GetName();
 
-		auto old_item = old_domain_list.begin();
-		for (; old_item != old_domain_list.end(); ++old_item)
+		auto old_item = old_domain_list->begin();
+		for (; old_item != old_domain_list->end(); ++old_item)
 		{
 			if ((old_item->state == DomainItemState::Delete) && (old_item->name == name))
 			{
@@ -81,7 +121,7 @@ bool Orchestrator::ApplyOriginMap(const ov::String &vhost_name, const cfg::Domai
 						old_item->state = DomainItemState::NotChanged;
 
 						_domain_list.push_back(*old_item);
-						old_domain_list.erase(old_item);
+						old_domain_list->erase(old_item);
 						found = true;
 					}
 					else
@@ -100,49 +140,10 @@ bool Orchestrator::ApplyOriginMap(const ov::String &vhost_name, const cfg::Domai
 			// Add the item if not found
 			_domain_list.emplace_back(vhost_name, name, new_origin_list);
 
-			if (old_item != old_domain_list.end())
+			if (old_item != old_domain_list->end())
 			{
-				old_domain_list.erase(old_item);
+				old_domain_list->erase(old_item);
 			}
-		}
-	}
-
-	for (auto &domain_item : _domain_list)
-	{
-		switch (domain_item.state)
-		{
-			case DomainItemState::Unknown:
-			case DomainItemState::Applied:
-			case DomainItemState::Delete:
-				// This situation should never happen here
-				OV_ASSERT2(false);
-				break;
-
-			case DomainItemState::NotChanged:
-				logtd("%s is not changed", domain_item.name.CStr());
-				break;
-
-			case DomainItemState::New:
-				logtd("%s is new domain", domain_item.name.CStr());
-				break;
-
-			case DomainItemState::Changed:
-				logtd("%s is changed", domain_item.name.CStr());
-				break;
-		}
-
-		domain_item.state = DomainItemState::Applied;
-	}
-
-	for (auto &deleted_domain_item : old_domain_list)
-	{
-		if (deleted_domain_item.state == DomainItemState::Delete)
-		{
-			logtd("%s is deleted", deleted_domain_item.name.CStr());
-		}
-		else
-		{
-			OV_ASSERT2(false);
 		}
 	}
 
@@ -153,7 +154,6 @@ bool Orchestrator::RegisterModule(const std::shared_ptr<OrchestratorModuleInterf
 {
 	if (module == nullptr)
 	{
-		OV_ASSERT2(module != nullptr);
 		return false;
 	}
 

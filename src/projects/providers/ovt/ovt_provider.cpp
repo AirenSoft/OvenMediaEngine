@@ -13,10 +13,10 @@ using namespace common;
 
 namespace pvd
 {
-	std::shared_ptr<OvtProvider> OvtProvider::Create(const cfg::Server &server_config, const info::Host &host_info,
+	std::shared_ptr<OvtProvider> OvtProvider::Create(const cfg::Server &server_config,
 													 const std::shared_ptr<MediaRouteInterface> &router)
 	{
-		auto provider = std::make_shared<OvtProvider>(server_config, host_info, router);
+		auto provider = std::make_shared<OvtProvider>(server_config, router);
 		if (!provider->Start())
 		{
 			logte("An error occurred while creating RtmpProvider");
@@ -25,8 +25,8 @@ namespace pvd
 		return provider;
 	}
 
-	OvtProvider::OvtProvider(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
-			: Provider(server_config, host_info, router)
+	OvtProvider::OvtProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+			: Provider(server_config, router)
 	{
 
 	}

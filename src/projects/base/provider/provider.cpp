@@ -18,8 +18,8 @@
 
 namespace pvd
 {
-	Provider::Provider(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
-		: _server_config(server_config), _host_info(host_info), _router(router)
+	Provider::Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+		: _server_config(server_config), _router(router)
 	{
 		_use_garbage_collector = false;
 	}
@@ -31,11 +31,6 @@ namespace pvd
 	const cfg::Server &Provider::GetServerConfig() const
 	{
 		return _server_config;
-	}
-
-	const info::Host& Provider::GetHostInfo() const
-	{
-		return _host_info;
 	}
 
 	bool Provider::Start()

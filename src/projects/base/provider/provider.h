@@ -35,11 +35,10 @@ namespace pvd
 		std::shared_ptr<Stream> GetStreamById(info::application_id_t app_id, uint32_t stream_id);
 
 	protected:
-		Provider(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+		Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 		virtual ~Provider();
 
 		const cfg::Server &GetServerConfig() const;
-		const info::Host &GetHostInfo() const;
 
 		bool SetUseAutoStreamRemover(bool use);
 
@@ -60,7 +59,6 @@ namespace pvd
 
 	private:
 		const cfg::Server _server_config;
-		const info::Host _host_info;
 		std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
 		std::shared_ptr<MediaRouteInterface> _router;
 

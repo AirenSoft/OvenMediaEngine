@@ -48,8 +48,7 @@ public:
 		return &orchestrator;
 	}
 
-	bool ApplyOriginMap(const std::vector<cfg::VirtualHost> &host_list);
-	bool ApplyOriginMap(const ov::String &vhost_name, const cfg::Domain &domain_config, const cfg::Origins &origins_config);
+	bool ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_list);
 
 	/// Register the module
 	///
@@ -247,6 +246,8 @@ protected:
 	};
 
 	Orchestrator() = default;
+
+	bool ApplyOriginMap(const ov::String &vhost_name, const cfg::Domain &domain_config, std::vector<Domain> *old_domain_list, const std::vector<std::shared_ptr<const Origin>> &new_origin_list);
 
 	info::application_id_t GetNextAppId();
 

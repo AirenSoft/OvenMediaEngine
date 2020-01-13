@@ -26,19 +26,16 @@
 #include <transcode/transcoder.h>
 #include <web_console/web_console.h>
 
-#define CHECK_FAIL(x)                    \
-	if ((x) == nullptr)                  \
-	{                                    \
-		::srt_cleanup();                 \
-                                         \
-		if (parse_option.start_service)  \
-		{                                \
-			ov::Daemon::SetEvent(false); \
-		}                                \
-		return 1;                        \
+#define INIT_MODULE(variable, name, create)                                         \
+	logti("Trying to create a module " name " for host [%s]...", host_name.CStr()); \
+	auto variable = create;                                                         \
+	if (variable == nullptr)                                                        \
+	{                                                                               \
+		initialized = false;                                                        \
+		break;                                                                      \
 	}
 
-#define INIT_MODULE(name, func)                                                   \
+#define INIT_EXTERNAL_MODULE(name, func)                                          \
 	{                                                                             \
 		logtd("Trying to initialize " name "...");                                \
 		auto error = func();                                                      \
@@ -65,15 +62,16 @@ int main(int argc, char *argv[])
 
 	PrintBanner();
 
-	INIT_MODULE("SRT", InitializeSrt);
-	INIT_MODULE("OpenSSL", InitializeOpenSsl);
-	INIT_MODULE("SRTP", InitializeSrtp);
+	INIT_EXTERNAL_MODULE("SRT", InitializeSrt);
+	INIT_EXTERNAL_MODULE("OpenSSL", InitializeOpenSsl);
+	INIT_EXTERNAL_MODULE("SRTP", InitializeSrtp);
+
+	const bool is_service = parse_option.start_service;
 
 	std::shared_ptr<cfg::Server> server_config = cfg::ConfigManager::Instance()->GetServer();
 	std::vector<cfg::VirtualHost> hosts = server_config->GetVirtualHostList();
 
-	std::shared_ptr<MediaRouter> router;
-	std::shared_ptr<Transcoder> transcoder;
+	bool initialized = false;
 	std::vector<std::shared_ptr<WebConsoleServer>> web_console_servers;
 
 	std::vector<info::Host> host_info_list;
@@ -83,11 +81,12 @@ int main(int argc, char *argv[])
 	// Create info::Host
 	for (const auto &host : hosts)
 	{
-		logti("Trying to create host info [%s]...", host.GetName().CStr());
 		host_info_list.emplace_back(host);
 	}
 
 	orchestrator->ApplyOriginMap(hosts);
+
+	bool succeeded = true;
 
 	for (auto &host_info : host_info_list)
 	{
@@ -100,76 +99,63 @@ int main(int argc, char *argv[])
 		//TODO(Getroot): Support Virtual Host Function. This code assumes that there is only one Host.
 		//////////////////////////////
 
-		logti("Trying to create MediaRouter for host [%s]...", host_name.CStr());
-		router = MediaRouter::Create();
-		CHECK_FAIL(router);
+		if (initialized == false)
+		{
+			do
+			{
+				initialized = true;
 
-		logti("Trying to create Transcoder for host [%s]...", host_name.CStr());
-		transcoder = Transcoder::Create(router);
-		CHECK_FAIL(transcoder);
+				//--------------------------------------------------------------------
+				// Create the modules
+				//--------------------------------------------------------------------
+				INIT_MODULE(media_router, "MediaRouter", MediaRouter::Create());
+				INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
+				INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
+				INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
+				INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
+				INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, host_info, media_router));
 
-		logti("Trying to create RTMP Provider [%s]...", host_name.CStr());
-		auto rtmp_provider = RtmpProvider::Create(*server_config, host_info, router);
-		CHECK_FAIL(rtmp_provider);
+				//--------------------------------------------------------------------
+				// Register modules to Orchestrator
+				//--------------------------------------------------------------------
+				// Currently, MediaRouter must be registered first
+				// Register media router
+				initialized = initialized && orchestrator->RegisterModule(media_router);
+				// Register providers
+				initialized = initialized && orchestrator->RegisterModule(rtmp_provider);
+				initialized = initialized && orchestrator->RegisterModule(ovt_provider);
+				// Register transcoder
+				initialized = initialized && orchestrator->RegisterModule(transcoder);
+				// Register publishers
+				initialized = initialized && orchestrator->RegisterModule(webrtc_publisher);
+				initialized = initialized && orchestrator->RegisterModule(ovt_publisher);
+			} while (false);
 
-		logti("Trying to create OVT Provider [%s]...", host_name.CStr());
-		auto ovt_provider = pvd::OvtProvider::Create(*server_config, host_info, router);
-		CHECK_FAIL(ovt_provider);
-
-		logti("Trying to create WebRTC Publisher [%s]...", host_name.CStr());
-		auto webrtc_publisher = WebRtcPublisher::Create(*server_config, host_info, router);
-		CHECK_FAIL(webrtc_publisher);
-
-		logti("Trying to create OVT Publisher [%s]...", host_name.CStr());
-		auto ovt_publisher = OvtPublisher::Create(*server_config, host_info, router);
-		CHECK_FAIL(ovt_publisher);
-
-		//--------------------------------------------------------------------
-		// Register modules to Orchestrator
-		//--------------------------------------------------------------------
-		// Currently, MediaRouter must be registered first
-		// Register media router
-		orchestrator->RegisterModule(router);
-		// Register providers
-		orchestrator->RegisterModule(rtmp_provider);
-		orchestrator->RegisterModule(ovt_provider);
-		// Register transcoder
-		orchestrator->RegisterModule(transcoder);
-		// Register publishers
-		orchestrator->RegisterModule(webrtc_publisher);
-		orchestrator->RegisterModule(ovt_publisher);
+			if (initialized == false)
+			{
+				logte("Failed to initialize module");
+				succeeded = false;
+			}
+		}
 
 		// Create applications that defined by the configuration
 		for (auto app_cfg : host_info.GetApplicationList())
 		{
 			orchestrator->CreateApplication(host_name, app_cfg);
 		}
+	}
 
-#if 0
-		/* For Edge Test */
-		info::Application app_info(123, "app2", cfg::Application());
-		orchestrator->CreateApplication(app_info);
+	if (succeeded)
+	{
+		if (is_service)
+		{
+			ov::Daemon::SetEvent(succeeded);
+		}
+
 		while (true)
 		{
-			if (ovt_provider->PullStream(app_info, "edge", {"ovt://192.168.0.199:9000/app/stream_o"}))
-			{
-				logte("Pull stream is completed");
-				break;
-			}
-
 			sleep(1);
 		}
-#endif
-	}
-
-	if (parse_option.start_service)
-	{
-		ov::Daemon::SetEvent();
-	}
-
-	while (true)
-	{
-		sleep(1);
 	}
 
 	Uninitialize();
