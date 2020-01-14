@@ -100,7 +100,7 @@ bool BitstreamToAnnexB::ConvertKeyFrame(AvcPacketType packet_type, ov::ByteStrea
 					return false;
 				}
 
-				logtd(" sequenceParameterSetLength : %d", sequenceParameterSetLength);
+				logtd(" sequenceParameterSetLength = %d", sequenceParameterSetLength);
 
 				_sps = read_stream.GetRemainData()->Subdata(0LL, static_cast<size_t>(sequenceParameterSetLength));
 				read_stream.Skip(static_cast<size_t>(sequenceParameterSetLength));
@@ -129,7 +129,7 @@ bool BitstreamToAnnexB::ConvertKeyFrame(AvcPacketType packet_type, ov::ByteStrea
 					return false;
 				}
 
-				logtd(" pictureParameterSetLength : %d", pictureParameterSetLength);
+				logtd(" pictureParameterSetLength = %d", pictureParameterSetLength);
 
 				_pps = read_stream.GetRemainData()->Subdata(0LL, static_cast<size_t>(pictureParameterSetLength));
 				read_stream.Skip(static_cast<size_t>(pictureParameterSetLength));
@@ -143,14 +143,24 @@ bool BitstreamToAnnexB::ConvertKeyFrame(AvcPacketType packet_type, ov::ByteStrea
 			data->Append(START_CODE, 4);
 			data->Append(_pps.get());
 
-			logtd("sps/pps packet size : %d", data->GetLength());
-
 			return true;
 		}
 
 		case AvcPacketType::Nalu:
 		{
-			// AVC NALU
+			data->Clear();
+
+			// Important! 
+			//  주기적으로 SPS/PPS를 전달하기위한 목적으로 사용된다. 만약, 주기적으로 SPS, PPS가 전달되지 않으면 플레이어에서 재생이 안된다. 
+			//  x264 SW 코덱은 Key Frame에 IDR NAL 패킷만 포함되어 있어서 아래와 같이 SPS, PPS 패킷을 추가해줘야 한다.
+			// TODO(soulk) : NVENC HW 코덱은 Key Frame 에 SPS+PPS+IDR NAL 패킷이 모두 포함되어 있다. 중복으로 SPS/PPS 전송되지 않도록 예외 처리해야 한다.
+
+			data->Append(START_CODE, 4);
+			data->Append(_sps.get());
+
+			data->Append(START_CODE, 4);
+			data->Append(_pps.get());
+
 			return ConvertInterFrame(packet_type, read_stream, data);
 		}
 
@@ -170,7 +180,7 @@ bool BitstreamToAnnexB::ConvertKeyFrame(AvcPacketType packet_type, ov::ByteStrea
 
 bool BitstreamToAnnexB::ConvertInterFrame(AvcPacketType packet_type, ov::ByteStream read_stream, const std::shared_ptr<ov::Data> &data)
 {
-	data->Clear();
+	// data->Clear();
 
 	while(read_stream.Remained() > 0)
 	{
@@ -196,6 +206,8 @@ bool BitstreamToAnnexB::ConvertInterFrame(AvcPacketType packet_type, ov::ByteStr
 #else // DEBUG
 		read_stream.Skip(nal_length);
 #endif // DEBUG
+
+
 
 		data->Append(START_CODE, 4);
 		data->Append(nal_data.get());
@@ -267,6 +279,7 @@ bool BitstreamToAnnexB::Convert(const std::shared_ptr<ov::Data> &data, int64_t &
 			return ConvertKeyFrame(packet_type, read_stream, data);
 
 		case AvcFrameType::Inter:
+			data->Clear();
 			return ConvertInterFrame(packet_type, read_stream, data);
 
 		case AvcFrameType::DisposableInter:
@@ -306,13 +319,13 @@ bool BitstreamToAnnexB::ParseSequenceHeader(const uint8_t *data,
 	}
 
 	data += 5;
-	logtd("configuration version = %d", *(data++));
+	logtd("configurationVersion  = %d", *(data++));
 	avc_profile = *(data++);
 	avc_profile_compatibility = *(data++);
 	avc_level = *(data++);
 	logtd("lengthSizeMinusOne = %d", *(data++) & 0x03);
 
-	logtd("sps count = reserve(%02x) + %d", *data & 0xE0, *data & 0x1F); // reserve(3) + unsigned int(5)
+	logtd("numOfSequenceParameterSets = reserve(%02x) + %d", *data & 0xE0, *data & 0x1F); // reserve(3) + unsigned int(5)
 	int sps_count = *data & 0x1F;
 	data++;
 	for(int index = 0; index < sps_count; index++)
@@ -323,9 +336,12 @@ bool BitstreamToAnnexB::ParseSequenceHeader(const uint8_t *data,
 		sps.clear();
 		sps.insert(sps.end(), data, data + sps_size);
 		data += sps_size;
+
+		logtd(" sequenceParameterSetLength = %d", sps_size);
 	}
 
-	logtd("pps count = %d", *data); // reserve(3) + unsigned int(5)
+
+	logtd("numOfPictureParameterSets = %d", *data); // reserve(3) + unsigned int(5)
 	int pps_count = *data & 0x1F;
 	data++;
 	for(int index = 0; index < pps_count; index++)
@@ -336,6 +352,8 @@ bool BitstreamToAnnexB::ParseSequenceHeader(const uint8_t *data,
 		pps.clear();
 		pps.insert(pps.end(), data, data + pps_size);
 		data += pps_size;
+
+		logtd(" pictureParameterSetLength = %d", pps_size);
 	}
 
 	return true;

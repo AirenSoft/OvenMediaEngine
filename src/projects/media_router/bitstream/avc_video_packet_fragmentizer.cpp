@@ -22,12 +22,12 @@ static uint32_t UnpackNalLength(const uint8_t *buffer, uint8_t nal_length_size)
 }
 
 static const uint8_t *ParseNalUnits(const uint8_t *nal_unit_buffer,
-    size_t length,
-    uint8_t nal_length_size,
-    std::vector<std::pair<size_t, size_t>> &fragments, 
-    size_t offset,
-    size_t &continuation_length,
-    size_t nal_unit_count = 0)
+                                    size_t length,
+                                    uint8_t nal_length_size,
+                                    std::vector<std::pair<size_t, size_t>> &fragments,
+                                    size_t offset,
+                                    size_t &continuation_length,
+                                    size_t nal_unit_count = 0)
 {
     if (nal_length_size == 0) return nullptr;
     size_t nal_units_parsed = 0;
@@ -64,12 +64,11 @@ bool AvcVideoPacketFragmentizer::MakeHeader(std::shared_ptr<MediaPacket> packet)
     const uint8_t* srcData = static_cast<const uint8_t*>(packet->GetData()->GetData());
     size_t dataOffset = 0;
     size_t dataSize = packet->GetData()->GetLength();
-
     size_t previous_offset = -1;
 
-    // offset, nal_size
     std::vector<std::pair<size_t, size_t>> offset_list;
 
+    // NAL 헤더의 START_CODE를 탐색하여, START 코드 정보를 제외한 NAL 패킷의 위치 정보를 리스트로 만든다.
     while ( dataOffset < dataSize )
     {
         size_t remainDataSize = dataSize - dataOffset;
@@ -80,7 +79,7 @@ bool AvcVideoPacketFragmentizer::MakeHeader(std::shared_ptr<MediaPacket> packet)
                 0x00 == data[1] &&
                 0x01 == data[2])
         {
-            offset_list.emplace_back(dataOffset, 3);
+            offset_list.emplace_back(dataOffset, 3); // Offset, SIZEOF(START_CODE=3)
             dataOffset += 3;
         }
         else if (remainDataSize >= 4 &&
@@ -89,7 +88,7 @@ bool AvcVideoPacketFragmentizer::MakeHeader(std::shared_ptr<MediaPacket> packet)
                  0x00 == data[2] &&
                  0x01 == data[3])
         {
-            offset_list.emplace_back(dataOffset, 4);
+            offset_list.emplace_back(dataOffset, 4); // Offset, SIZEOF(START_CODE=3)
             dataOffset += 4;
         }
         else
@@ -100,7 +99,6 @@ bool AvcVideoPacketFragmentizer::MakeHeader(std::shared_ptr<MediaPacket> packet)
 
     fragment_header->VerifyAndAllocateFragmentationHeader(offset_list.size());
 
-    // logtd("data.length(%d) fragment.length(%d)", dataSize, offset_list.size());
 
     for (size_t index = 0; index < offset_list.size(); ++index)
     {
@@ -123,14 +121,19 @@ bool AvcVideoPacketFragmentizer::MakeHeader(std::shared_ptr<MediaPacket> packet)
         uint8_t nal_ref_idc = (nalu_header >> 5)  & 0x03;
         uint8_t nal_unit_type = (nalu_header)  & 0x01F;
 
-        // logtd("[%d] offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d\nnal_ref_idc:%d, nal_unit_type:%d\n%s"
-        //     , index
-        //     , offset_list[index].first
-        //     , offset_list[index].second
-        //     , nalu_offset
-        //     , nalu_data_len
-        //     , nal_ref_idc, nal_unit_type
-        //     , ov::Dump(srcData+nalu_offset, nalu_data_len, 32).CStr() );
+#if 0
+        logtd("[%d] nal_ref_idc:%2d, nal_unit_type:%2d => offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d"
+        , index
+        , nal_ref_idc, nal_unit_type
+        , offset_list[index].first
+        , offset_list[index].second
+        , nalu_offset
+        , nalu_data_len
+             );
+#endif
+
+        // if (nal_unit_type == 6) // SEI
+        //     logtd("%s", ov::Dump(srcData+nalu_offset, nalu_data_len, 32).CStr());
 
         fragment_header->fragmentation_offset[index] = nalu_offset;
         fragment_header->fragmentation_length[index] = nalu_data_len ;

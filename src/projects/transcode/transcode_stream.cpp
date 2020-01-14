@@ -359,7 +359,7 @@ int32_t TranscodeStream::CreateEncoders()
 			{
 			case common::MediaType::Video:
 			{
-				// TODO: 추가 파라미터 설정
+				// TODO(soulk): 추가 파라미터 설정
 				//	 - 프로파일 레벨
 				auto new_output_transcode_context = std::make_shared<TranscodeContext>(
 				                                        true,
@@ -375,7 +375,7 @@ int32_t TranscodeStream::CreateEncoders()
 			break;
 			case common::MediaType::Audio:
 			{
-				// TODO: 추가 파라미터 설정
+				// TODO(soulk): 추가 파라미터 설정
 				//   - 채널 레이아웃
 				//	 - 프로파일 레벨
 				auto new_output_transcode_context = std::make_shared<TranscodeContext>(
@@ -649,10 +649,12 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t track_id, std::shared_ptr<c
 // 디코딩 & 인코딩 스레드
 void TranscodeStream::LoopTask()
 {
+	logtd("Started transcode stream decode thread");
+	
 	CreateStreams();
 
-	logtd("Started transcode stream decode thread");
 	int32_t loop_cnt = 0;
+	
 	while (!_kill_flag)
 	{
 		if (_queue_input_packets.size() > 0)
@@ -688,15 +690,15 @@ void TranscodeStream::LoopTask()
 		}
 
 
-		// // Print Statistics
-		// if (loop_cnt++ % 20000 == 0)
-		// {
-		// 	loop_cnt = 1;
-		// 	logtd("stats: input.pkts(%d), decoded.frms(%d), filterd.frms(%d)", _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
-		// }
+		// Print Statistics
+		if (loop_cnt++ % 1000000 == 0)
+		{
+			loop_cnt = 1;
+			logtd("stats: input.pkts(%d), decoded.frms(%d), filterd.frms(%d)", _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
+		}
 
 
-		// TODO Packet이 존재하는 경우에만 Loop를 처리할 수 있는 방법은 없나?
+		// TODO(soulk) Packet이 존재하는 경우에만 Loop를 처리할 수 있는 방법은 없나?
 		usleep(1);
 	}
 
@@ -728,7 +730,7 @@ void TranscodeStream::SendFrame(std::shared_ptr<MediaPacket> packet)
 {
 	uint8_t track_id = static_cast<uint8_t>(packet->GetTrackId());
 
-	// TODO: 성능 개선이 필요하다!!!!!! 시급하다!!!!!!
+	// TODO(soulk): 성능 개선이 필요하다!!!!!! 시급하다!!!!!!
 	for (auto &iter : _stream_info_outputs)
 	{
 		auto &output_stream_info = iter.second;
