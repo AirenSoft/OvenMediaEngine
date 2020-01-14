@@ -237,26 +237,24 @@ ov::String Orchestrator::GetVhostNameFromDomain(const ov::String &domain_name)
 
 ov::String Orchestrator::ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name)
 {
-	ov::String new_app_name;
-
-	if (vhost_name.IsEmpty() == false)
-	{
-		// Replace all # to _
-		new_app_name = ov::String::FormatString("#%s#%s", vhost_name.Replace("#", "_").CStr(), app_name.Replace("#", "_").CStr());
-	}
-	else
-	{
-		new_app_name = ov::String::FormatString("#%s", app_name.Replace("#", "_").CStr());
-	}
-
-	logtd("Resolved application name: %s (from host: %s, app: %s)", new_app_name.CStr(), vhost_name.CStr(), app_name.CStr());
-
-	return std::move(new_app_name);
+	// Replace all # to _
+	return ov::String::FormatString("#%s#%s", vhost_name.Replace("#", "_").CStr(), app_name.Replace("#", "_").CStr());
 }
 
 ov::String Orchestrator::ResolveApplicationNameFromDomain(const ov::String &domain_name, const ov::String &app_name)
 {
-	return ResolveApplicationName(GetVhostNameFromDomain(domain_name), app_name);
+	auto vhost_name = GetVhostNameFromDomain(domain_name);
+
+	if (vhost_name.IsEmpty())
+	{
+		logtw("Could not find VirtualHost for domain: %s", domain_name.CStr());
+	}
+
+	auto resolved = ResolveApplicationName(vhost_name, app_name);
+
+	logtd("Resolved application name: %s (from domain: %s, app: %s)", resolved.CStr(), domain_name.CStr(), app_name.CStr());
+
+	return std::move(resolved);
 }
 
 info::application_id_t Orchestrator::GetNextAppId()
@@ -361,35 +359,23 @@ std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForUrl(const ov::String 
 
 std::shared_ptr<const Orchestrator::Origin> Orchestrator::GetUrlListForLocation(const ov::String &app_name, const ov::String &stream_name, std::vector<ov::String> *url_list)
 {
-	auto tokens = app_name.Split("#");
-	ov::String host_name;
+	ov::String vhost_name;
 	ov::String real_app_name;
 
-	switch (tokens.size())
+	auto tokens = app_name.Split("#");
+
+	if (tokens.size() == 3)
 	{
-		case 1:
-		default:
-			// app only - this is a bug
-			// app_name must always start with a "#"
-			OV_ASSERT2(false);
-			real_app_name = tokens[0];
-			break;
-
-		case 2:
-			// default host & app_name
-			// #<app_name>
-			host_name = tokens[0];
-			OV_ASSERT2(host_name == "");
-			real_app_name = tokens[1];
-			break;
-
-		case 3:
-			// domain & app_name
-			// #<domain>#<app_name>
-			OV_ASSERT2(tokens[0] == "");
-			host_name = tokens[1];
-			real_app_name = tokens[2];
-			break;
+		// #<vhost_name>#<app_name>
+		OV_ASSERT2(tokens[0] == "");
+		vhost_name = tokens[1];
+		real_app_name = tokens[2];
+	}
+	else
+	{
+		// Invalid format
+		OV_ASSERT2(false);
+		real_app_name = tokens[0];
 	}
 
 	ov::String location = ov::String::FormatString("/%s/%s", real_app_name.CStr(), stream_name.CStr());
@@ -399,6 +385,12 @@ std::shared_ptr<const Orchestrator::Origin> Orchestrator::GetUrlListForLocation(
 	// Find the origin using the location
 	for (auto &domain : _domain_list)
 	{
+		if (domain.vhost_name != vhost_name)
+		{
+			// VHost does not matched
+			continue;
+		}
+
 		logtd("OriginList for domain %s: %zu", domain.name.CStr(), domain.origin_list.size());
 
 		for (auto &origin : domain.origin_list)
