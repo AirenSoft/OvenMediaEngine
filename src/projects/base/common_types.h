@@ -21,7 +21,7 @@
 
 #include "media_route/media_type.h"
 
-#define MAX_FRAG_COUNT 5
+#define MAX_FRAG_COUNT 3
 
 enum class ProviderType : int8_t
 {
