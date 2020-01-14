@@ -778,7 +778,8 @@ void TranscodeStream::CreateFilters(MediaFrame *buffer)
 	}
 	else if (buffer->GetMediaType() == common::MediaType::Audio)
 	{
-		input_transcode_context->SetAudioSampleFormat( buffer->GetFormat<common::AudioSample::Format>() );
+		input_transcode_context->SetAudioSampleFormat(buffer->GetFormat<common::AudioSample::Format>());
+		input_transcode_context->GetAudioChannel().SetLayout(buffer->GetChannelLayout());
 	}
 
 
