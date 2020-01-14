@@ -75,73 +75,89 @@ int main(int argc, char *argv[])
 	std::vector<std::shared_ptr<WebConsoleServer>> web_console_servers;
 
 	std::vector<info::Host> host_info_list;
+	std::map<ov::String, bool> vhost_map;
 
 	auto orchestrator = Orchestrator::GetInstance();
+	bool succeeded = true;
 
 	// Create info::Host
 	for (const auto &host : hosts)
 	{
-		host_info_list.emplace_back(host);
+		auto item = vhost_map.find(host.GetName());
+
+		if (item == vhost_map.end())
+		{
+			host_info_list.emplace_back(host);
+			vhost_map[host.GetName()] = true;
+		}
+		else
+		{
+			logte("Duplicated VirtualHost found: %s", host.GetName().CStr());
+			succeeded = false;
+
+			break;
+		}
 	}
 
-	orchestrator->ApplyOriginMap(hosts);
-
-	bool succeeded = true;
-
-	for (auto &host_info : host_info_list)
+	if (succeeded)
 	{
-		auto host_name = host_info.GetName();
+		orchestrator->ApplyOriginMap(hosts);
 
-		logtd("Trying to create modules for host [%s]", host_name.CStr());
-
-		//////////////////////////////
-		// Host Level Modules
-		//TODO(Getroot): Support Virtual Host Function. This code assumes that there is only one Host.
-		//////////////////////////////
-
-		if (initialized == false)
+		for (auto &host_info : host_info_list)
 		{
-			do
-			{
-				initialized = true;
+			auto host_name = host_info.GetName();
 
-				//--------------------------------------------------------------------
-				// Create the modules
-				//--------------------------------------------------------------------
-				INIT_MODULE(media_router, "MediaRouter", MediaRouter::Create());
-				INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
-				INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
-				INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
-				INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
-				INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, host_info, media_router));
+			logtd("Trying to create modules for host [%s]", host_name.CStr());
 
-				//--------------------------------------------------------------------
-				// Register modules to Orchestrator
-				//--------------------------------------------------------------------
-				// Currently, MediaRouter must be registered first
-				// Register media router
-				initialized = initialized && orchestrator->RegisterModule(media_router);
-				// Register providers
-				initialized = initialized && orchestrator->RegisterModule(rtmp_provider);
-				initialized = initialized && orchestrator->RegisterModule(ovt_provider);
-				// Register transcoder
-				initialized = initialized && orchestrator->RegisterModule(transcoder);
-				// Register publishers
-				initialized = initialized && orchestrator->RegisterModule(webrtc_publisher);
-				initialized = initialized && orchestrator->RegisterModule(ovt_publisher);
-			} while (false);
+			//////////////////////////////
+			// Host Level Modules
+			//TODO(Getroot): Support Virtual Host Function. This code assumes that there is only one Host.
+			//////////////////////////////
 
 			if (initialized == false)
 			{
-				logte("Failed to initialize module");
-				succeeded = false;
-			}
-		}
+				do
+				{
+					initialized = true;
 
-		// Create applications that defined by the configuration
-		for (auto app_cfg : host_info.GetApplicationList())
-		{
-			orchestrator->CreateApplication(host_name, app_cfg);
+					//--------------------------------------------------------------------
+					// Create the modules
+					//--------------------------------------------------------------------
+					INIT_MODULE(media_router, "MediaRouter", MediaRouter::Create());
+					INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
+					INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
+					INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
+					INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
+					INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, host_info, media_router));
+
+					//--------------------------------------------------------------------
+					// Register modules to Orchestrator
+					//--------------------------------------------------------------------
+					// Currently, MediaRouter must be registered first
+					// Register media router
+					initialized = initialized && orchestrator->RegisterModule(media_router);
+					// Register providers
+					initialized = initialized && orchestrator->RegisterModule(rtmp_provider);
+					initialized = initialized && orchestrator->RegisterModule(ovt_provider);
+					// Register transcoder
+					initialized = initialized && orchestrator->RegisterModule(transcoder);
+					// Register publishers
+					initialized = initialized && orchestrator->RegisterModule(webrtc_publisher);
+					initialized = initialized && orchestrator->RegisterModule(ovt_publisher);
+				} while (false);
+
+				if (initialized == false)
+				{
+					logte("Failed to initialize module");
+					succeeded = false;
+				}
+			}
+
+			// Create applications that defined by the configuration
+			for (auto app_cfg : host_info.GetApplicationList())
+			{
+				orchestrator->CreateApplication(host_name, app_cfg);
+			}
 		}
 	}
 
