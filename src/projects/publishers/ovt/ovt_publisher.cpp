@@ -97,6 +97,7 @@ void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 	if(!packet->IsValid())
 	{
 		// If packet is not valid, it is not necessary to response
+		logte("Invalid packet received and ignored");
 		return;
 	}
 
@@ -170,8 +171,9 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 
 void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, const uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
+	logte("11");
 	auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), url->App());
-
+	logte("22");
 	auto stream = std::static_pointer_cast<OvtStream>(GetStream(vhost_app_name, url->Stream()));
 	if(stream == nullptr)
 	{

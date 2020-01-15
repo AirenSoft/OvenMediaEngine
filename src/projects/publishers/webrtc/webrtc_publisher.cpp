@@ -39,7 +39,6 @@ WebRtcPublisher::~WebRtcPublisher()
 bool WebRtcPublisher::Start()
 {
 	auto server_config = GetServerConfig();
-
 	auto webrtc_port_info = server_config.GetBind().GetPublishers().GetWebrtc();
 
 	_ice_port = IcePortManager::Instance()->CreatePort(webrtc_port_info.GetIceCandidates(), IcePortObserver::GetSharedPtr());
