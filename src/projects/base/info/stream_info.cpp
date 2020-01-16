@@ -19,7 +19,7 @@ StreamInfo::StreamInfo(StreamSourceType source)
 	// _input_source_type = kSourceTypeOrigin;
 
 	// ID RANDOM 생성
-	SetId(ov::Random::GenerateUInt32());
+	SetId(ov::Random::GenerateUInt32()-1);
 
 	_created_time = std::chrono::system_clock::now();
 	_source_type = source;
