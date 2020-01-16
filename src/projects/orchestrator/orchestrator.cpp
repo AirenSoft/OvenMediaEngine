@@ -197,7 +197,7 @@ bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_con
 	// Dump all items
 	for (auto vhost_item = _virtual_host_list.begin(); vhost_item != _virtual_host_list.end();)
 	{
-		auto vhost = *vhost_item;
+		auto &vhost = *vhost_item;
 
 		switch (vhost->state)
 		{
@@ -811,8 +811,12 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &v
 
 	for (auto &module : _module_list)
 	{
+		logtd("Notifying %p (%s) for the create event (%s)", module.module.get(), GetOrchestratorModuleTypeName(module.module->GetModuleType()), app_info.GetName().CStr());
+
 		if (module.module->OnCreateApplication(app_info))
 		{
+			logtd("The module %p (%s) returns true", module.module.get(), GetOrchestratorModuleTypeName(module.module->GetModuleType()));
+
 			created_list.push_back(module.module);
 		}
 		else
@@ -855,6 +859,8 @@ Orchestrator::Result Orchestrator::NotifyModulesForDeleteEvent(const std::vector
 	// Notify modules of deletion events
 	for (auto &module : modules)
 	{
+		logtd("Notifying %p (%s) for the delete event (%s)", module.module.get(), GetOrchestratorModuleTypeName(module.module->GetModuleType()), app_info.GetName().CStr());
+
 		if (module.module->OnDeleteApplication(app_info) == false)
 		{
 			logte("The module %p (%s) returns error while deleting the application %s",
@@ -862,6 +868,10 @@ Orchestrator::Result Orchestrator::NotifyModulesForDeleteEvent(const std::vector
 
 			// Ignore this error
 			result = Result::Failed;
+		}
+		else
+		{
+			logtd("The module %p (%s) returns true", module.module.get(), GetOrchestratorModuleTypeName(module.module->GetModuleType()));
 		}
 	}
 
@@ -877,7 +887,7 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(const ov::String &v
 		return Result::Failed;
 	}
 
-	auto app_map = vhost->app_map;
+	auto &app_map = vhost->app_map;
 	auto app = app_map.find(app_id);
 
 	if (app == app_map.end())
@@ -891,13 +901,8 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(const ov::String &v
 	logti("Trying to delete the application: [%s] (%u)", app_info.GetName().CStr(), app_info.GetId());
 	app_map.erase(app_id);
 
-	logtd("Notifying modules for delete event...");
-
-	auto result = NotifyModulesForDeleteEvent(_module_list, app_info);
-
-	logtd("Notified");
-
-	return result;
+	logtd("Notifying modules for the delete event...");
+	return NotifyModulesForDeleteEvent(_module_list, app_info);
 }
 
 Orchestrator::Result Orchestrator::DeleteApplicationInternal(const info::Application &app_info)
@@ -940,7 +945,7 @@ const info::Application &Orchestrator::GetApplicationInternal(const ov::String &
 
 		if (vhost != nullptr)
 		{
-			auto app_map = vhost->app_map;
+			auto &app_map = vhost->app_map;
 
 			for (auto &app : app_map)
 			{
