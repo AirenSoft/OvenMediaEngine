@@ -143,10 +143,10 @@ RUN \
         cd ${DIR} && \
         curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1 && \
         cd src && \
-        make && \
+        make release && \
         mkdir -p ${PREFIX}/bin/conf && \
-        strip ./bin/DEBUG/OvenMediaEngine && \
-        cp ./bin/DEBUG/OvenMediaEngine ${PREFIX}/bin/ && \
+        strip ./bin/RELEASE/OvenMediaEngine && \
+        cp ./bin/RELEASE/OvenMediaEngine ${PREFIX}/bin/ && \
         cp ../misc/conf_examples/Server.xml ${PREFIX}/bin/conf/ && \
         rm -rf ${DIR}
 
