@@ -9,14 +9,14 @@
 
 #include "rtmp_stream.h"
 
-std::shared_ptr<RtmpStream> RtmpStream::Create()
+std::shared_ptr<RtmpStream> RtmpStream::Create(const std::shared_ptr<pvd::Application> &application)
 {
-    auto stream = std::make_shared<RtmpStream>();
+    auto stream = std::make_shared<RtmpStream>(application);
     return stream;
 }
 
-RtmpStream::RtmpStream()
-	: Stream(StreamSourceType::RTMP_PROVIDER)
+RtmpStream::RtmpStream(const std::shared_ptr<pvd::Application> &application)
+	: Stream(application, StreamSourceType::RTMP_PROVIDER)
 {
 	
 }

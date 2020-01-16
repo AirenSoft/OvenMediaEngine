@@ -10,15 +10,15 @@
 
 namespace pvd
 {
-	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::Application> &app, const ov::String &stream_name,
+	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::Application> &application, const ov::String &stream_name,
 					  						const std::vector<ov::String> &url_list)
 	{
 		StreamInfo stream_info(StreamSourceType::OVT_PROVIDER);
 
-		stream_info.SetId(app->IssueUniqueStreamId());
+		stream_info.SetId(application->IssueUniqueStreamId());
 		stream_info.SetName(stream_name);
 
-		auto stream = std::make_shared<OvtStream>(app, stream_info, url_list);
+		auto stream = std::make_shared<OvtStream>(application, stream_info, url_list);
 		if (!stream->Start())
 		{
 			// Explicit deletion
@@ -29,10 +29,9 @@ namespace pvd
 		return stream;
 	}
 
-	OvtStream::OvtStream(const std::shared_ptr<pvd::Application> &app, const StreamInfo &stream_info, const std::vector<ov::String> &url_list)
-			: pvd::Stream(stream_info)
+	OvtStream::OvtStream(const std::shared_ptr<pvd::Application> &application, const StreamInfo &stream_info, const std::vector<ov::String> &url_list)
+			: pvd::Stream(application, stream_info)
 	{
-		_app = app;
 		_last_request_id = 0;
 		_stop_thread_flag = false;
 		_state = State::IDLE;
@@ -681,7 +680,7 @@ namespace pvd
 					fragmentizer.MakeHeader(media_packet);
 				}
 
-				_app->SendFrame(GetSharedPtrAs<StreamInfo>(), media_packet);
+				_application->SendFrame(GetSharedPtrAs<StreamInfo>(), media_packet);
 			}
 		}
 	}

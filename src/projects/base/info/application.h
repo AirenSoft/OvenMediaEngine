@@ -19,8 +19,8 @@ namespace info
 {
 	typedef uint32_t application_id_t;
 	constexpr application_id_t InvalidApplicationId = std::numeric_limits<application_id_t>::max();
-	constexpr application_id_t MinApplicationId = (0U);
-	constexpr application_id_t MaxApplicationId = (InvalidApplicationId - 1U);
+	constexpr application_id_t MinApplicationId = std::numeric_limits<application_id_t>::min();
+	constexpr application_id_t MaxApplicationId = (InvalidApplicationId - static_cast<application_id_t>(1));
 
 	class Application
 	{

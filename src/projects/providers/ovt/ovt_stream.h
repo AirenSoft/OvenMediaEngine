@@ -19,9 +19,9 @@ namespace pvd
 	{
 	public:
 		static std::shared_ptr<OvtStream>
-		Create(const std::shared_ptr<pvd::Application> &app, const ov::String &stream_name,	const std::vector<ov::String> &url_list);
+		Create(const std::shared_ptr<pvd::Application> &application, const ov::String &stream_name,	const std::vector<ov::String> &url_list);
 
-		explicit OvtStream(const std::shared_ptr<pvd::Application> &app, const StreamInfo &stream_info, const std::vector<ov::String> &url_list);
+		OvtStream(const std::shared_ptr<pvd::Application> &application, const StreamInfo &stream_info, const std::vector<ov::String> &url_list);
 
 		~OvtStream() final;
 
@@ -51,7 +51,5 @@ namespace pvd
 		uint32_t _session_id;
 
 		OvtDepacketizer _depacketizer;
-
-		std::shared_ptr<pvd::Application> _app;
 	};
 }

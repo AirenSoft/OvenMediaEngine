@@ -8,9 +8,9 @@
 //==============================================================================
 #pragma once
 
-#include <config/config.h>
 #include <base/common_types.h>
 #include <base/info/media_track.h>
+#include <config/config.h>
 
 namespace info
 {
@@ -28,6 +28,9 @@ namespace info
 	//};
 
 	typedef uint32_t stream_id_t;
+	constexpr stream_id_t InvalidStreamId = std::numeric_limits<stream_id_t>::max();
+	constexpr stream_id_t MinStreamId = std::numeric_limits<stream_id_t>::min();
+	constexpr stream_id_t MaxStreamId = (InvalidStreamId - static_cast<stream_id_t>(1));
 
 	class Stream : public cfg::Stream
 	{
@@ -49,9 +52,9 @@ namespace info
 		void ShowInfo();
 
 	protected:
-		uint32_t _stream_id = 0;
+		stream_id_t _stream_id = 0;
 
 		// MediaTrack ID 값을 Key로 활용함
 		std::map<int32_t, std::shared_ptr<MediaTrack>> _tracks;
 	};
-}
+}  // namespace info

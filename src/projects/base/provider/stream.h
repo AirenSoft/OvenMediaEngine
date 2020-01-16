@@ -13,6 +13,8 @@
 
 namespace pvd
 {
+	class Application;
+
 	class Stream : public StreamInfo, public ov::EnableSharedFromThis<Stream>
 	{
 	public:
@@ -28,13 +30,25 @@ namespace pvd
 
 		State GetState(){return _state;};
 
+		const std::shared_ptr<pvd::Application> &GetApplication()
+		{
+			return _application;
+		}
+
+		std::shared_ptr<const pvd::Application> GetApplication() const
+		{
+			return _application;
+		}
+
 	protected:
-		Stream(StreamSourceType source_type);
-		Stream(uint32_t stream_id, StreamSourceType source_type);
-		Stream(const StreamInfo &stream_info);
+		Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type);
+		Stream(const std::shared_ptr<pvd::Application> &application, info::stream_id_t stream_id, StreamSourceType source_type);
+		Stream(const std::shared_ptr<pvd::Application> &application, const StreamInfo &stream_info);
 
 		virtual ~Stream();
 
 		State 	_state;
+
+		std::shared_ptr<pvd::Application> _application;
 	};
 }

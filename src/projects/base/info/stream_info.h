@@ -1,5 +1,6 @@
 #pragma once
 
+#include "stream.h"
 #include "base/common_types.h"
 #include "base/info/media_track.h"
 
@@ -7,13 +8,13 @@ class StreamInfo
 {
 public:
 	StreamInfo(StreamSourceType source);
-	StreamInfo(uint32_t stream_id, StreamSourceType source);
+	StreamInfo(info::stream_id_t stream_id, StreamSourceType source);
 	StreamInfo(const StreamInfo &stream_info);
 
 	virtual ~StreamInfo();
 
-	void SetId(uint32_t id);
-	uint32_t GetId() const;
+	void SetId(info::stream_id_t id);
+	info::stream_id_t GetId() const;
 
 	ov::String GetName();
 	void SetName(ov::String name);
@@ -28,7 +29,7 @@ public:
 	void ShowInfo();
 
 protected:
-	uint32_t _id;
+	info::stream_id_t _id = 0;
 	ov::String _name;
 
 	// MediaTrack ID 값을 Key로 활용함

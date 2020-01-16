@@ -19,10 +19,10 @@ using namespace pvd;
 class RtmpStream : public Stream
 {
 public:
-	static std::shared_ptr<RtmpStream> Create();
+	static std::shared_ptr<RtmpStream> Create(const std::shared_ptr<pvd::Application> &application);
 
 public:
-	explicit RtmpStream();
+	explicit RtmpStream(const std::shared_ptr<pvd::Application> &application);
 	~RtmpStream() final;
 
 	bool ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts);

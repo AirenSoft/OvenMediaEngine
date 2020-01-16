@@ -31,7 +31,7 @@ std::shared_ptr<Stream> RtmpApplication::CreateStream()
 {
 	logtd("OnCreateStream");
 
-	auto stream = RtmpStream::Create();
+	auto stream = RtmpStream::Create(GetSharedPtrAs<pvd::Application>());
 
 	return stream;
 }

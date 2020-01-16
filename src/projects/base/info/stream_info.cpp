@@ -26,7 +26,7 @@ StreamInfo::StreamInfo(StreamSourceType source)
 
 }
 
-StreamInfo::StreamInfo(uint32_t stream_id, StreamSourceType source)
+StreamInfo::StreamInfo(info::stream_id_t stream_id, StreamSourceType source)
 {
 	_id = stream_id;
 	_created_time = std::chrono::system_clock::now();
@@ -52,12 +52,12 @@ StreamInfo::~StreamInfo()
 
 }
 
-void StreamInfo::SetId(uint32_t id)
+void StreamInfo::SetId(info::stream_id_t id)
 {
 	_id = id;
 }
 
-uint32_t StreamInfo::GetId() const
+info::stream_id_t StreamInfo::GetId() const
 {
 	return _id;
 }
