@@ -163,7 +163,6 @@ protected:
 
 	struct Origin
 	{
-		Origin() = default;
 		Origin(const cfg::OriginsOrigin &origin_config)
 			: location(origin_config.GetLocation()),
 			  scheme(origin_config.GetPass().GetScheme()),
@@ -210,7 +209,6 @@ protected:
 
 	struct Domain
 	{
-		Domain() = default;
 		Domain(const ov::String &name)
 			: name(name),
 			  state(ItemState::New)
@@ -359,7 +357,7 @@ protected:
 	std::shared_ptr<VirtualHost> GetVirtualHost(const ov::String &vhost_app_name, ov::String *real_app_name);
 	std::shared_ptr<const VirtualHost> GetVirtualHost(const ov::String &vhost_app_name, ov::String *real_app_name) const;
 
-	Orchestrator::Origin &GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Domain **used_domain);
+	bool GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **used_origin, Domain **used_domain);
 
 	Result CreateApplicationInternal(const ov::String &vhost_name, const info::Application &app_info);
 	Result CreateApplicationInternal(const ov::String &name, info::Application *app_info);
@@ -375,8 +373,6 @@ protected:
 	bool RequestPullStreamForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset);
 
 	std::atomic<info::application_id_t> _last_application_id{info::MinApplicationId};
-
-	Origin _invalid_origin_value;
 
 	// Modules
 	std::recursive_mutex _module_list_mutex;

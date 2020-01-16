@@ -41,13 +41,16 @@ bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtu
 			{
 				default:
 					// This situation should never happen here
+					OV_ASSERT2(false);
 					logte("Invalid domain state: %s, %d", domain_item->name.CStr(), domain_item->state);
 					break;
 
 				case ItemState::Applied:
+				case ItemState::NotChanged:
 					// Nothing to do
 					break;
 
+				case ItemState::Changed:
 				case ItemState::Delete:
 					for (auto &stream_item : domain_item->stream_map)
 					{
@@ -84,9 +87,11 @@ bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtu
 					break;
 
 				case ItemState::Applied:
+				case ItemState::NotChanged:
 					// Nothing to do
 					break;
 
+				case ItemState::Changed:
 				case ItemState::Delete:
 					for (auto &stream_item : origin_item->stream_map)
 					{
@@ -564,7 +569,7 @@ std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForScheme(const ov::Stri
 	}
 	else
 	{
-		logte("Could not find a provider for scheme %s", scheme.CStr());
+		logte("Could not find a provider for scheme [%s]", scheme.CStr());
 		return nullptr;
 	}
 
@@ -701,14 +706,15 @@ std::shared_ptr<const Orchestrator::VirtualHost> Orchestrator::GetVirtualHost(co
 	return nullptr;
 }
 
-Orchestrator::Origin &Orchestrator::GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Domain **used_domain)
+bool Orchestrator::GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **used_origin, Domain **used_domain)
 {
 	ov::String real_app_name;
 	auto vhost = GetVirtualHost(vhost_app_name, &real_app_name);
 
 	if (vhost == nullptr)
 	{
-		return _invalid_origin_value;
+		logte("Could not find VirtualHost for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+		return false;
 	}
 
 	auto domain_list = vhost->domain_list;
@@ -764,13 +770,14 @@ Orchestrator::Origin &Orchestrator::GetUrlListForLocation(const ov::String &vhos
 				}
 
 				*used_domain = &domain;
+				*used_origin = &origin;
 
-				return (url_list->size() > 0) ? origin : _invalid_origin_value;
+				return (url_list->size() > 0) ? true : false;
 			}
 		}
 	}
 
-	return _invalid_origin_value;
+	return false;
 }
 
 Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &vhost_name, const info::Application &app_info)
@@ -1044,27 +1051,28 @@ bool Orchestrator::RequestPullStream(const ov::String &url)
 bool Orchestrator::RequestPullStreamForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset)
 {
 	std::vector<ov::String> url_list;
+
+	Origin *used_origin;
 	Domain *used_domain;
 
-	auto &origin = GetUrlListForLocation(vhost_app_name, stream_name, &url_list, &used_domain);
-
-	if (origin.IsValid() == false)
+	if (GetUrlListForLocation(vhost_app_name, stream_name, &url_list, &used_origin, &used_domain) == false)
 	{
 		logte("Could not find Origin for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
-	if (used_domain == nullptr)
+	if ((used_origin == nullptr) || (used_domain == nullptr))
 	{
-		// Domain can never be nullptr if origin is found
-		OV_ASSERT2(used_domain != nullptr);
-		logte("Could not find Domain for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+		// Origin/Domain can never be nullptr if origin is found
+		OV_ASSERT2((used_origin != nullptr) && (used_domain != nullptr));
+
+		logte("Could not find URL list for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
 	// This is a safe operation because origin_list is managed by Orchestrator
 
-	auto provider_module = GetProviderModuleForScheme(origin.scheme);
+	auto provider_module = GetProviderModuleForScheme(used_origin->scheme);
 
 	if (provider_module == nullptr)
 	{
@@ -1103,7 +1111,7 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &vhost_app_name
 	{
 		auto orchestrator_stream = std::make_shared<Stream>(app_info, provider_module, stream, ov::String::FormatString("%s/%s", vhost_app_name.CStr(), stream_name.CStr()));
 
-		origin.stream_map[stream->GetId()] = orchestrator_stream;
+		used_origin->stream_map[stream->GetId()] = orchestrator_stream;
 		used_domain->stream_map[stream->GetId()] = orchestrator_stream;
 
 		logti("The stream was pulled successfully: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
