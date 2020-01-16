@@ -10,139 +10,239 @@
 #include "orchestrator_private.h"
 
 #include <base/media_route/media_route_interface.h>
+#include <base/provider/stream.h>
 
-bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_list)
+bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host)
 {
-	std::lock_guard<decltype(_domain_list_mutex)> lock_guard(_domain_list_mutex);
-	bool result = true;
+	auto succeeded = true;
 
-	// Mark all items as deleted
-	for (auto &domain : _domain_list)
+	if (virtual_host->state == ItemState::Delete)
 	{
-		if (domain.state != ItemState::Applied)
+		// Delete all apps that were created by this VirtualHost
+		for (auto &app : virtual_host->app_map)
 		{
-			logte("Invalid domain state: %d (Expected: %d)", domain.state, ItemState::Applied);
-			OV_ASSERT2(false);
-		}
+			auto result = DeleteApplicationInternal(app.second);
 
-		domain.state = ItemState::Delete;
-
-		for (auto &origin_item : domain.origin_list)
-		{
-			// This is a safe operation because origin_list is managed by Orchestrator
-			if (origin_item.state != ItemState::Applied)
+			if (result != Result::Succeeded)
 			{
-				logte("Invalid origin state: %d (Expected: %d)", origin_item.state, ItemState::Applied);
-				OV_ASSERT2(false);
-			}
-
-			origin_item.state = ItemState::Delete;
-		}
-	}
-
-	std::vector<Domain> added_domain_list;
-
-	// Compare with existing values
-	for (auto &vhost : vhost_list)
-	{
-		logtd("Trying to apply OriginMap for host %s", vhost.GetName().CStr());
-
-		if (ProcessDomainList(&_domain_list, vhost, &added_domain_list))
-		{
-			if (added_domain_list.size() > 0)
-			{
-				std::move(added_domain_list.begin(), added_domain_list.end(), std::back_inserter(_domain_list));
+				logte("Could not delete application: %s", app.second.GetName().CStr());
+				succeeded = false;
 			}
 		}
-		else
-		{
-			logte("Could not apply OriginMap for host %s", vhost.GetName().CStr());
-			result = false;
-		}
 	}
-
-	// Organize domain_list
-	for (auto domain_item = _domain_list.begin(); domain_item != _domain_list.end();)
+	else
 	{
-		auto &origin_list = domain_item->origin_list;
+		// Check if there is a deleted domain, and then check if there are any apps created by that domain.
+		auto &domain_list = virtual_host->domain_list;
 
-		switch (domain_item->state)
+		for (auto domain_item = domain_list.begin(); domain_item != domain_list.end();)
 		{
-			case ItemState::Unknown:
-			case ItemState::Applied:
-				// This situation should never happen here
-				OV_ASSERT2(false);
-				++domain_item;
-				continue;
+			switch (domain_item->state)
+			{
+				default:
+					// This situation should never happen here
+					logte("Invalid domain state: %s, %d", domain_item->name.CStr(), domain_item->state);
+					break;
 
-			case ItemState::NotChanged:
-				logtd("  - Domain is not changed: %s", domain_item->name.CStr());
+				case ItemState::Applied:
+					// Nothing to do
+					break;
 
-				// Just need to mark as Applied
-				for (auto &origin : origin_list)
-				{
-					origin.state = ItemState::Applied;
-				}
+				case ItemState::Delete:
+					for (auto &stream_item : domain_item->stream_map)
+					{
+						auto &stream = stream_item.second;
 
-				domain_item->state = ItemState::Applied;
-				++domain_item;
-				continue;
+						if (stream->is_valid)
+						{
+							logti("Trying to stop stream [%s]...", stream->full_name.CStr());
 
-			case ItemState::New:
-				logtd("  - Domain is created: %s", domain_item->name.CStr());
-				// Nothing to do
-				break;
+							if (stream->provider->StopStream(stream->app_info, stream->provider_stream) == false)
+							{
+								logte("Failed to stop stream [%s] in provider: %s", stream->full_name.CStr(), GetOrchestratorModuleTypeName(stream->provider->GetModuleType()));
+							}
 
-			case ItemState::Changed:
-				logtd("  - Domain is changed: %s", domain_item->name.CStr());
+							stream->is_valid = false;
+						}
+					}
 
-				break;
-
-			case ItemState::Delete:
-				logtd("  - Domain is deleted: %s", domain_item->name.CStr());
-				domain_item = _domain_list.erase(domain_item);
-				continue;
+					domain_item = domain_list.erase(domain_item);
+					break;
+			}
 		}
 
-		domain_item->state = ItemState::Applied;
+		// Check if there is a deleted origin, and then check if there are any apps created by that origin.
+		auto &origin_list = virtual_host->origin_list;
 
 		for (auto origin_item = origin_list.begin(); origin_item != origin_list.end();)
 		{
 			switch (origin_item->state)
 			{
-				case ItemState::Unknown:
-				case ItemState::Applied:
+				default:
 					// This situation should never happen here
-					OV_ASSERT2(false);
-					++origin_item;
-					continue;
-
-				case ItemState::NotChanged:
-					logtd("    - Origin is not changed: %s", origin_item->location.CStr());
-					// Nothing to do
+					logte("Invalid origin state: %s, %d", origin_item->location.CStr(), origin_item->state);
 					break;
 
-				case ItemState::New:
-					logtd("    - Origin is created: %s", origin_item->location.CStr());
+				case ItemState::Applied:
 					// Nothing to do
-					break;
-
-				case ItemState::Changed:
-					logtd("    - Origin is changed: %s", origin_item->location.CStr());
-
 					break;
 
 				case ItemState::Delete:
-					logtd("    - Origin is deleted: %s", origin_item->location.CStr());
+					for (auto &stream_item : origin_item->stream_map)
+					{
+						auto &stream = stream_item.second;
+
+						if (stream->is_valid)
+						{
+							logti("Trying to stop stream [%s]...", stream->full_name.CStr());
+
+							if (stream->provider->StopStream(stream->app_info, stream->provider_stream) == false)
+							{
+								logte("Failed to stop stream [%s] in provider: %s", stream->full_name.CStr(), GetOrchestratorModuleTypeName(stream->provider->GetModuleType()));
+							}
+
+							stream->is_valid = false;
+						}
+					}
+
 					origin_item = origin_list.erase(origin_item);
-					continue;
+					break;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_config_list)
+{
+	bool result = true;
+	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard(_virtual_host_map_mutex);
+
+	// Mark all items as NeedToCheck
+	for (auto &vhost_item : _virtual_host_map)
+	{
+		if (vhost_item.second->MarkAllAs(ItemState::Applied, ItemState::NeedToCheck) == false)
+		{
+			logtd("Something was wrong with VirtualHost: %s", vhost_item.second->name.CStr());
+
+			OV_ASSERT2(false);
+			result = false;
+		}
+	}
+
+	logtd("- Processing for VirtualHosts");
+
+	for (auto &vhost_config : vhost_config_list)
+	{
+		auto previous_vhost_item = _virtual_host_map.find(vhost_config.GetName());
+
+		if (previous_vhost_item == _virtual_host_map.end())
+		{
+			logtd("  - %s: New", vhost_config.GetName().CStr());
+			auto vhost = std::make_shared<VirtualHost>();
+
+			vhost->name = vhost_config.GetName();
+
+			logtd("    - Processing for domains: %d items", vhost_config.GetDomain().GetNameList().size());
+
+			for (auto &domain_name : vhost_config.GetDomain().GetNameList())
+			{
+				logtd("      - %s: New", domain_name.GetName().CStr());
+				vhost->domain_list.emplace_back(domain_name.GetName());
 			}
 
-			origin_item->state = ItemState::Applied;
-			++origin_item;
+			logtd("    - Processing for origins: %d items", vhost_config.GetOriginList().size());
+
+			for (auto &origin_config : vhost_config.GetOriginList())
+			{
+				logtd("      - %s: New (%zu urls)",
+					  origin_config.GetLocation().CStr(),
+					  origin_config.GetPass().GetUrlList().size());
+
+				vhost->origin_list.emplace_back(origin_config);
+			}
+
+			_virtual_host_map[vhost_config.GetName()] = vhost;
+			_virtual_host_list.push_back(vhost);
+
+			continue;
 		}
 
-		++domain_item;
+		logtd("  - %s: Not changed", vhost_config.GetName().CStr());
+
+		// Check the previous VirtualHost item
+		auto &vhost = previous_vhost_item->second;
+
+		logtd("    - Processing for domains");
+		auto new_state_for_domain = ProcessDomainList(&(vhost->domain_list), vhost_config.GetDomain());
+		logtd("    - Processing for origins");
+		auto new_state_for_origin = ProcessOriginList(&(vhost->origin_list), vhost_config.GetOrigins());
+
+		if ((new_state_for_domain == ItemState::NotChanged) && (new_state_for_origin == ItemState::NotChanged))
+		{
+			vhost->state = ItemState::NotChanged;
+		}
+		else
+		{
+			vhost->state = ItemState::Changed;
+		}
+	}
+
+	// Dump all items
+	for (auto vhost_item = _virtual_host_list.begin(); vhost_item != _virtual_host_list.end();)
+	{
+		auto vhost = *vhost_item;
+
+		switch (vhost->state)
+		{
+			case ItemState::Unknown:
+			case ItemState::Applied:
+			case ItemState::Delete:
+			default:
+				// This situation should never happen here
+				logte("  - %s: Invalid VirtualHost state: %d", vhost->name.CStr(), vhost->state);
+				result = false;
+				OV_ASSERT2(false);
+
+				// Delete the invalid item
+				vhost_item = _virtual_host_list.erase(vhost_item);
+				_virtual_host_map.erase(vhost->name);
+
+				vhost->MarkAllAs(ItemState::Delete);
+				ApplyForVirtualHost(vhost);
+
+				break;
+
+			case ItemState::NeedToCheck:
+				// This item was deleted because it was never processed in the above process
+				logtd("  - %s: Deleted", vhost->name.CStr());
+
+				vhost_item = _virtual_host_list.erase(vhost_item);
+				_virtual_host_map.erase(vhost->name);
+
+				vhost->MarkAllAs(ItemState::Delete);
+				ApplyForVirtualHost(vhost);
+
+				break;
+
+			case ItemState::NotChanged:
+			case ItemState::New:
+				// Nothing to do
+				vhost->MarkAllAs(ItemState::Applied);
+				++vhost_item;
+				break;
+
+			case ItemState::Changed:
+				++vhost_item;
+
+				if (ApplyForVirtualHost(vhost))
+				{
+					vhost->MarkAllAs(ItemState::Applied);
+				}
+
+				break;
+		}
 	}
 
 	logtd("All items are applied");
@@ -150,139 +250,177 @@ bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_lis
 	return result;
 }
 
-bool Orchestrator::ProcessOriginList(const std::vector<Origin> &origin_list, const std::vector<Origin> &new_origin_list, std::vector<Origin> *added_origin_list) const
+Orchestrator::ItemState Orchestrator::ProcessDomainList(std::vector<Domain> *domain_list, const cfg::Domain &domain_config) const
 {
-	bool is_equal = true;
+	bool is_changed = false;
 
-	// Verify that the same item in origin_list as the one in new_origin_list
-	for (auto &new_origin : new_origin_list)
-	{
-		bool found = false;
-		auto &new_config = new_origin.origin_config;
-
-		for (auto &origin : origin_list)
-		{
-			auto &old_config = origin.origin_config;
-
-			if (
-				// ItemState::Delete means "It is not processed"
-				(origin.state == ItemState::Delete) &&
-				(new_config.GetLocation() == old_config.GetLocation()))
-			{
-				auto &new_pass = new_config.GetPass();
-				auto &old_pass = old_config.GetPass();
-
-				if (old_pass.GetScheme() != new_pass.GetScheme())
-				{
-					logtd("Scheme does not the same: %s != %s", old_pass.GetScheme().CStr(), new_pass.GetScheme().CStr());
-					origin.state = ItemState::Changed;
-				}
-				else
-				{
-					auto &first_url_list = new_pass.GetUrlList();
-					auto &second_url_list = old_pass.GetUrlList();
-
-					if (std::equal(
-							first_url_list.begin(), first_url_list.end(), second_url_list.begin(),
-							[](const cfg::Url &url1, const cfg::Url &url2) -> bool {
-								bool result = url1.GetUrl() == url2.GetUrl();
-
-								if (result == false)
-								{
-									logtd("URL does not the same: %s != %s", url1.GetUrl().CStr(), url2.GetUrl().CStr());
-								}
-
-								return result;
-							}) == false)
-					{
-						origin.state = ItemState::Changed;
-					}
-				}
-
-				found = true;
-				origin.state = (origin.state == ItemState::Delete) ? ItemState::NotChanged : ItemState::Changed;
-
-				break;
-			}
-		}
-
-		if (found == false)
-		{
-			// new_origin is a new item
-			added_origin_list->push_back(new_origin);
-			is_equal = false;
-		}
-	}
-
-	return is_equal;
-}
-
-bool Orchestrator::ProcessDomainList(std::vector<Domain> *domain_list, const cfg::VirtualHost &vhost, std::vector<Domain> *added_domain_list) const
-{
-	auto &vhost_name = vhost.GetName();
-	auto &domain_config = vhost.GetDomain();
-
-	auto new_origin_list = std::vector<Origin>();
-
-	logtd("Generating OriginMap for host %s...", vhost.GetName().CStr());
-	for (auto &origin_config : vhost.GetOrigins().GetOriginList())
-	{
-		new_origin_list.emplace_back(origin_config);
-	}
-
-	// Check for the new/changed items
 	// TODO(dimiden): Is there a way to reduce the cost of O(n^2)?
 	for (auto &domain_name : domain_config.GetNameList())
 	{
 		auto name = domain_name.GetName();
 		bool found = false;
 
-		std::vector<Origin> added_origin_list;
-
 		for (auto &domain : *domain_list)
 		{
-			if (
-				// ItemState::Delete means "It is not processed"
-				(domain.state == ItemState::Delete) &&
-				(domain.vhost_name == vhost_name) && ((domain.name == name)))
+			if (domain.state == ItemState::NeedToCheck)
 			{
-				// This is a safe operation because origin_list is managed by Orchestrator
-				if (ProcessOriginList(domain.origin_list, new_origin_list, &added_origin_list) == false)
+				if (domain.name == name)
 				{
-					// Mark as changed
-					logtd("Origin list of the domain does not the same");
-					domain.state = ItemState::Changed;
-
-					if (added_origin_list.size() > 0)
-					{
-						std::move(added_origin_list.begin(), added_origin_list.end(), std::back_inserter(domain.origin_list));
-					}
-				}
-				else
-				{
-					// Mark as not changed
-					logtd("Origin list of the domain does the same");
+					logtd("      - %s: Not changed", domain.name.CStr());
 					domain.state = ItemState::NotChanged;
+					found = true;
+					break;
 				}
-
-				found = true;
-				break;
-			}
-			else
-			{
-				// does not matched
 			}
 		}
 
 		if (found == false)
 		{
-			// domain_name is a new domain
-			logtd("New domain found: %s", vhost_name.CStr());
-			added_domain_list->emplace_back(vhost_name, name, new_origin_list);
+			logtd("      - %s: New", domain_name.GetName().CStr());
+			// Adding items here causes unnecessary iteration in the for statement above
+			// To avoid this, we need to create a separate list for each added item
+			domain_list->push_back(name);
+			is_changed = true;
 		}
 	}
 
-	return true;
+	if (is_changed == false)
+	{
+		// There was no new item
+
+		// Check for deleted items
+		for (auto &domain : *domain_list)
+		{
+			switch (domain.state)
+			{
+				case ItemState::NeedToCheck:
+					// This item was deleted because it was never processed in the above process
+					logtd("      - %s: Deleted", domain.name.CStr());
+					domain.state = ItemState::Delete;
+					is_changed = true;
+					break;
+
+				case ItemState::NotChanged:
+					// Nothing to do
+					break;
+
+				case ItemState::Unknown:
+				case ItemState::Applied:
+				case ItemState::Changed:
+				case ItemState::New:
+				case ItemState::Delete:
+				default:
+					// This situation should never happen here
+					OV_ASSERT2(false);
+					is_changed = true;
+					break;
+			}
+		}
+	}
+
+	return is_changed ? ItemState::Changed : ItemState::NotChanged;
+}
+
+Orchestrator::ItemState Orchestrator::ProcessOriginList(std::vector<Origin> *origin_list, const cfg::Origins &origins_config) const
+{
+	bool is_changed = false;
+
+	// TODO(dimiden): Is there a way to reduce the cost of O(n^2)?
+	for (auto &origin_config : origins_config.GetOriginList())
+	{
+		bool found = false;
+
+		for (auto &origin : *origin_list)
+		{
+			if (origin.state == ItemState::NeedToCheck)
+			{
+				if (origin.location == origin_config.GetLocation())
+				{
+					auto &prev_pass_config = origin.origin_config.GetPass();
+					auto &new_pass_config = origin_config.GetPass();
+
+					if (prev_pass_config.GetScheme() != new_pass_config.GetScheme())
+					{
+						logtd("      - %s: Changed (Scheme does not the same: %s != %s)", origin.location.CStr(), prev_pass_config.GetScheme().CStr(), new_pass_config.GetScheme().CStr());
+						origin.state = ItemState::Changed;
+					}
+					else
+					{
+						auto &first_url_list = new_pass_config.GetUrlList();
+						auto &second_url_list = prev_pass_config.GetUrlList();
+
+						bool is_equal = std::equal(
+							first_url_list.begin(), first_url_list.end(), second_url_list.begin(),
+							[&origin](const cfg::Url &url1, const cfg::Url &url2) -> bool {
+								bool result = url1.GetUrl() == url2.GetUrl();
+
+								if (result == false)
+								{
+									logtd("      - %s: Changed (URL does not the same: %s != %s)", origin.location.CStr(), url1.GetUrl().CStr(), url2.GetUrl().CStr());
+								}
+
+								return result;
+							});
+
+						origin.state = (is_equal == false) ? ItemState::Changed : ItemState::NotChanged;
+					}
+
+					if (origin.state == ItemState::Changed)
+					{
+						is_changed = true;
+					}
+
+					found = true;
+					break;
+				}
+			}
+		}
+
+		if (found == false)
+		{
+			// Adding items here causes unnecessary iteration in the for statement above
+			// To avoid this, we need to create a separate list for each added item
+			logtd("      - %s: New (%zd urls)", origin_config.GetLocation().CStr(), origin_config.GetPass().GetUrlList().size());
+			origin_list->push_back(origin_config);
+			is_changed = true;
+		}
+	}
+
+	if (is_changed == false)
+	{
+		// There was no new item
+
+		// Check for deleted items
+		for (auto &origin : *origin_list)
+		{
+			switch (origin.state)
+			{
+				case ItemState::NeedToCheck:
+					// This item was deleted because it was never processed in the above process
+					logtd("      - %s: Deleted", origin.location.CStr());
+					origin.state = ItemState::Delete;
+					is_changed = true;
+					break;
+
+				case ItemState::NotChanged:
+					// Nothing to do
+					break;
+
+				case ItemState::Unknown:
+				case ItemState::Applied:
+				case ItemState::Changed:
+				case ItemState::New:
+				case ItemState::Delete:
+				default:
+					// This situation should never happen here
+					OV_ASSERT2(false);
+					is_changed = true;
+					break;
+			}
+		}
+	}
+
+	return is_changed ? ItemState::Changed : ItemState::NotChanged;
 }
 
 bool Orchestrator::RegisterModule(const std::shared_ptr<OrchestratorModuleInterface> &module)
@@ -295,9 +433,9 @@ bool Orchestrator::RegisterModule(const std::shared_ptr<OrchestratorModuleInterf
 	auto type = module->GetModuleType();
 
 	// Check if module exists
-	std::lock_guard<decltype(_modules_mutex)> lock_guard(_modules_mutex);
+	std::lock_guard<decltype(_module_list_mutex)> lock_guard(_module_list_mutex);
 
-	for (auto &info : _modules)
+	for (auto &info : _module_list)
 	{
 		if (info.module == module)
 		{
@@ -315,7 +453,7 @@ bool Orchestrator::RegisterModule(const std::shared_ptr<OrchestratorModuleInterf
 		}
 	}
 
-	_modules.emplace_back(type, module);
+	_module_list.emplace_back(type, module);
 	auto &list = _module_map[type];
 	list.push_back(module);
 
@@ -332,13 +470,13 @@ bool Orchestrator::UnregisterModule(const std::shared_ptr<OrchestratorModuleInte
 		return false;
 	}
 
-	std::lock_guard<decltype(_modules_mutex)> lock_guard(_modules_mutex);
+	std::lock_guard<decltype(_module_list_mutex)> lock_guard(_module_list_mutex);
 
-	for (auto info = _modules.begin(); info != _modules.end(); ++info)
+	for (auto info = _module_list.begin(); info != _module_list.end(); ++info)
 	{
 		if (info->module == module)
 		{
-			_modules.erase(info);
+			_module_list.erase(info);
 			auto &list = _module_map[info->type];
 			logtd("%s module (%p) is unregistered", GetOrchestratorModuleTypeName(info->type), module.get());
 			return true;
@@ -353,16 +491,23 @@ bool Orchestrator::UnregisterModule(const std::shared_ptr<OrchestratorModuleInte
 
 ov::String Orchestrator::GetVhostNameFromDomain(const ov::String &domain_name)
 {
-	std::lock_guard<decltype(_domain_list_mutex)> lock_guard(_domain_list_mutex);
+	// TODO(dimiden): I think it would be nice to create a VHost cache for performance
 
 	if (domain_name.IsEmpty() == false)
 	{
+		std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard(_virtual_host_map_mutex);
+
 		// Search for the domain corresponding to domain_name
-		for (auto &domain_item : _domain_list)
+
+		// CAUTION: This code is important to order, so don't use _virtual_host_map
+		for (auto &vhost_item : _virtual_host_list)
 		{
-			if (std::regex_match(domain_name.CStr(), domain_item.regex_for_domain))
+			for (auto &domain_item : vhost_item->domain_list)
 			{
-				return domain_item.vhost_name;
+				if (std::regex_match(domain_name.CStr(), domain_item.regex_for_domain))
+				{
+					return vhost_item->name;
+				}
 			}
 		}
 	}
@@ -394,20 +539,7 @@ ov::String Orchestrator::ResolveApplicationNameFromDomain(const ov::String &doma
 
 info::application_id_t Orchestrator::GetNextAppId()
 {
-	while (true)
-	{
-		_last_application_id++;
-
-		if (_last_application_id == info::MaxApplicationId)
-		{
-			_last_application_id = info::MinApplicationId;
-		}
-
-		if (_app_map.find(_last_application_id) == _app_map.end())
-		{
-			return _last_application_id;
-		}
-	}
+	return _last_application_id++;
 }
 
 std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForScheme(const ov::String &scheme)
@@ -440,7 +572,7 @@ std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForScheme(const ov::Stri
 	std::shared_ptr<OrchestratorProviderModuleInterface> module = nullptr;
 	bool succeeded = false;
 
-	for (auto info = _modules.begin(); info != _modules.end(); ++info)
+	for (auto info = _module_list.begin(); info != _module_list.end(); ++info)
 	{
 		if (info->type == OrchestratorModuleType::Provider)
 		{
@@ -492,43 +624,102 @@ std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForUrl(const ov::String 
 	return GetProviderForScheme(parsed_url->Scheme());
 }
 
-const Orchestrator::Origin &Orchestrator::GetUrlListForLocation(const ov::String &app_name, const ov::String &stream_name, std::vector<ov::String> *url_list)
+bool Orchestrator::ParseVHostAppName(const ov::String &vhost_app_name, ov::String *vhost_name, ov::String *real_app_name) const
 {
-	ov::String vhost_name;
-	ov::String real_app_name;
-
-	auto tokens = app_name.Split("#");
+	auto tokens = vhost_app_name.Split("#");
 
 	if (tokens.size() == 3)
 	{
 		// #<vhost_name>#<app_name>
 		OV_ASSERT2(tokens[0] == "");
-		vhost_name = tokens[1];
-		real_app_name = tokens[2];
+
+		if (vhost_name != nullptr)
+		{
+			*vhost_name = tokens[1];
+		}
+
+		if (real_app_name != nullptr)
+		{
+			*real_app_name = tokens[2];
+		}
+		return true;
 	}
-	else
+
+	OV_ASSERT2(false);
+	return false;
+}
+
+std::shared_ptr<Orchestrator::VirtualHost> Orchestrator::GetVirtualHost(const ov::String &vhost_name)
+{
+	auto vhost_item = _virtual_host_map.find(vhost_name);
+
+	if (vhost_item == _virtual_host_map.end())
 	{
-		// Invalid format
-		OV_ASSERT2(false);
-		real_app_name = tokens[0];
+		return nullptr;
 	}
+
+	return vhost_item->second;
+}
+
+std::shared_ptr<const Orchestrator::VirtualHost> Orchestrator::GetVirtualHost(const ov::String &vhost_name) const
+{
+	auto vhost_item = _virtual_host_map.find(vhost_name);
+
+	if (vhost_item == _virtual_host_map.end())
+	{
+		return nullptr;
+	}
+
+	return vhost_item->second;
+}
+
+std::shared_ptr<Orchestrator::VirtualHost> Orchestrator::GetVirtualHost(const ov::String &vhost_app_name, ov::String *real_app_name)
+{
+	ov::String vhost_name;
+
+	if (ParseVHostAppName(vhost_app_name, &vhost_name, real_app_name))
+	{
+		return GetVirtualHost(vhost_name);
+	}
+
+	// Invalid format
+	OV_ASSERT2(false);
+	return nullptr;
+}
+
+std::shared_ptr<const Orchestrator::VirtualHost> Orchestrator::GetVirtualHost(const ov::String &vhost_app_name, ov::String *real_app_name) const
+{
+	ov::String vhost_name;
+
+	if (ParseVHostAppName(vhost_app_name, &vhost_name, real_app_name))
+	{
+		return GetVirtualHost(vhost_name);
+	}
+
+	// Invalid format
+	OV_ASSERT2(false);
+	return nullptr;
+}
+
+Orchestrator::Origin &Orchestrator::GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Domain **used_domain)
+{
+	ov::String real_app_name;
+	auto vhost = GetVirtualHost(vhost_app_name, &real_app_name);
+
+	if (vhost == nullptr)
+	{
+		return _invalid_origin_value;
+	}
+
+	auto domain_list = vhost->domain_list;
+	auto origin_list = vhost->origin_list;
 
 	ov::String location = ov::String::FormatString("/%s/%s", real_app_name.CStr(), stream_name.CStr());
 
-	logtd("Domains: %zu", _domain_list.size());
-
 	// Find the origin using the location
-	for (auto &domain : _domain_list)
+	for (auto &domain : domain_list)
 	{
-		if (domain.vhost_name != vhost_name)
-		{
-			// VHost does not matched
-			continue;
-		}
-
-		logtd("OriginList for domain %s: %zu", domain.name.CStr(), domain.origin_list.size());
-
-		for (auto &origin : domain.origin_list)
+		for (auto &origin : origin_list)
 		{
 			logtd("Trying to find the item that match location: %s", location.CStr());
 
@@ -572,19 +763,29 @@ const Orchestrator::Origin &Orchestrator::GetUrlListForLocation(const ov::String
 					url_list->push_back(url);
 				}
 
-				return (url_list->size() > 0) ? origin : Origin::InvalidValue();
+				*used_domain = &domain;
+
+				return (url_list->size() > 0) ? origin : _invalid_origin_value;
 			}
 		}
 	}
 
-	return Origin::InvalidValue();
+	return _invalid_origin_value;
 }
 
-Orchestrator::Result Orchestrator::CreateApplicationInternal(const info::Application &app_info)
+Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &vhost_name, const info::Application &app_info)
 {
+	auto vhost = GetVirtualHost(vhost_name);
+
+	if (vhost == nullptr)
+	{
+		return Result::Failed;
+	}
+
+	auto &app_map = vhost->app_map;
 	auto &app_name = app_info.GetName();
 
-	for (auto &app : _app_map)
+	for (auto &app : app_map)
 	{
 		if (app.second.GetName() == app_name)
 		{
@@ -599,9 +800,9 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const info::Applica
 	std::vector<std::shared_ptr<OrchestratorModuleInterface>> created_list;
 	bool succeeded = true;
 
-	_app_map.emplace(app_info.GetId(), app_info);
+	app_map.emplace(app_info.GetId(), app_info);
 
-	for (auto &module : _modules)
+	for (auto &module : _module_list)
 	{
 		if (module.module->OnCreateApplication(app_info))
 		{
@@ -625,13 +826,19 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const info::Applica
 	return DeleteApplicationInternal(app_info);
 }
 
-Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &app_name, info::Application *app_info)
+Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &vhost_app_name, info::Application *app_info)
 {
 	OV_ASSERT2(app_info != nullptr);
 
-	*app_info = info::Application(GetNextAppId(), app_name);
+	ov::String vhost_name;
 
-	return CreateApplicationInternal(*app_info);
+	if (ParseVHostAppName(vhost_app_name, &vhost_name, nullptr))
+	{
+		*app_info = info::Application(GetNextAppId(), vhost_app_name);
+		return CreateApplicationInternal(vhost_name, *app_info);
+	}
+
+	return Result::Failed;
 }
 
 Orchestrator::Result Orchestrator::NotifyModulesForDeleteEvent(const std::vector<Module> &modules, const info::Application &app_info)
@@ -654,11 +861,19 @@ Orchestrator::Result Orchestrator::NotifyModulesForDeleteEvent(const std::vector
 	return result;
 }
 
-Orchestrator::Result Orchestrator::DeleteApplicationInternal(info::application_id_t app_id)
+Orchestrator::Result Orchestrator::DeleteApplicationInternal(const ov::String &vhost_name, info::application_id_t app_id)
 {
-	auto app = _app_map.find(app_id);
+	auto vhost = GetVirtualHost(vhost_name);
 
-	if (app == _app_map.end())
+	if (vhost == nullptr)
+	{
+		return Result::Failed;
+	}
+
+	auto app_map = vhost->app_map;
+	auto app = app_map.find(app_id);
+
+	if (app == app_map.end())
 	{
 		logti("Application %d does not exists", app_id);
 		return Result::NotExists;
@@ -668,71 +883,89 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(info::application_i
 
 	logti("Trying to delete the application: [%s] (%u)", app_info.GetName().CStr(), app_info.GetId());
 
-	_app_map.erase(app_id);
+	app_map.erase(app_id);
 
-	return NotifyModulesForDeleteEvent(_modules, app_info);
+	return NotifyModulesForDeleteEvent(_module_list, app_info);
 }
 
 Orchestrator::Result Orchestrator::DeleteApplicationInternal(const info::Application &app_info)
 {
-	return DeleteApplicationInternal(app_info.GetId());
+	ov::String vhost_name;
+
+	if (ParseVHostAppName(app_info.GetName(), &vhost_name, nullptr) == false)
+	{
+		return Result::Failed;
+	}
+
+	return DeleteApplicationInternal(vhost_name, app_info.GetId());
 }
 
 Orchestrator::Result Orchestrator::CreateApplication(const ov::String &vhost_name, const cfg::Application &app_config)
 {
-	std::lock_guard<decltype(_modules_mutex)> lock_guard_for_modules(_modules_mutex);
-	std::lock_guard<decltype(_app_map_mutex)> lock_guard_for_app_map(_app_map_mutex);
+	std::lock_guard<decltype(_module_list_mutex)> lock_guard_for_modules(_module_list_mutex);
+	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
 
 	info::Application app_info(GetNextAppId(), ResolveApplicationName(vhost_name, app_config.GetName()), app_config);
 
-	return CreateApplicationInternal(app_info);
+	return CreateApplicationInternal(vhost_name, app_info);
 }
 
 Orchestrator::Result Orchestrator::DeleteApplication(const info::Application &app_info)
 {
-	std::lock_guard<decltype(_modules_mutex)> lock_guard_for_modules(_modules_mutex);
-	std::lock_guard<decltype(_app_map_mutex)> lock_guard_for_app_map(_app_map_mutex);
+	std::lock_guard<decltype(_module_list_mutex)> lock_guard_for_modules(_module_list_mutex);
+	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
 
 	return DeleteApplicationInternal(app_info);
 }
 
-const info::Application &Orchestrator::GetApplicationInternal(const ov::String &app_name) const
+const info::Application &Orchestrator::GetApplicationInternal(const ov::String &vhost_app_name) const
 {
-	for (auto &app : _app_map)
+	ov::String vhost_name;
+
+	if (ParseVHostAppName(vhost_app_name, &vhost_name, nullptr))
 	{
-		if (app.second.GetName() == app_name)
+		auto vhost = GetVirtualHost(vhost_name);
+
+		if (vhost != nullptr)
 		{
-			return app.second;
+			auto app_map = vhost->app_map;
+
+			for (auto &app : app_map)
+			{
+				if (app.second.GetName() == vhost_app_name)
+				{
+					return app.second;
+				}
+			}
 		}
 	}
 
 	return info::Application::GetInvalidApplication();
 }
 
-const info::Application &Orchestrator::GetApplication(const ov::String &app_name) const
+const info::Application &Orchestrator::GetApplication(const ov::String &vhost_app_name) const
 {
-	std::lock_guard<decltype(_app_map_mutex)> lock_guard_for_app_map(_app_map_mutex);
+	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
 
-	return GetApplicationInternal(app_name);
+	return GetApplicationInternal(vhost_app_name);
 }
 
-const info::Application &Orchestrator::GetApplicationInternal(info::application_id_t app_id) const
+const info::Application &Orchestrator::GetApplicationInternal(const ov::String &vhost_name, info::application_id_t app_id) const
 {
-	auto app = _app_map.find(app_id);
+	auto vhost = GetVirtualHost(vhost_name);
 
-	if (app != _app_map.end())
+	if (vhost != nullptr)
 	{
-		return app->second;
+		auto &app_map = vhost->app_map;
+		auto app = app_map.find(app_id);
+
+		if (app != app_map.end())
+		{
+			return app->second;
+		}
 	}
 
 	return info::Application::GetInvalidApplication();
-}
-
-const info::Application &Orchestrator::GetApplication(info::application_id_t app_id) const
-{
-	std::lock_guard<decltype(_app_map_mutex)> lock_guard_for_app_map(_app_map_mutex);
-
-	return GetApplicationInternal(app_id);
 }
 
 #if 0
@@ -789,7 +1022,7 @@ bool Orchestrator::RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> 
 bool Orchestrator::RequestPullStream(const ov::String &url)
 {
 	std::lock_guard<decltype(_modules_mutex)> lock_guard_for_modules(_modules_mutex);
-	std::lock_guard<decltype(_app_map_mutex)> lock_guard_for_app_map(_app_map_mutex);
+	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
 
 	auto parsed_url = ov::Url::Parse(url.CStr());
 
@@ -808,28 +1041,39 @@ bool Orchestrator::RequestPullStream(const ov::String &url)
 }
 #endif
 
-bool Orchestrator::RequestPullStreamForLocation(const ov::String &app_name, const ov::String &stream_name, off_t offset)
+bool Orchestrator::RequestPullStreamForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset)
 {
 	std::vector<ov::String> url_list;
+	Domain *used_domain;
 
-	auto &origin = GetUrlListForLocation(app_name, stream_name, &url_list);
+	auto &origin = GetUrlListForLocation(vhost_app_name, stream_name, &url_list, &used_domain);
 
 	if (origin.IsValid() == false)
 	{
-		logte("Could not find Origin for the stream: [%s/%s]", app_name.CStr(), stream_name.CStr());
+		logte("Could not find Origin for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 		return false;
 	}
+
+	if (used_domain == nullptr)
+	{
+		// Domain can never be nullptr if origin is found
+		OV_ASSERT2(used_domain != nullptr);
+		logte("Could not find Domain for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+		return false;
+	}
+
+	// This is a safe operation because origin_list is managed by Orchestrator
 
 	auto provider_module = GetProviderModuleForScheme(origin.scheme);
 
 	if (provider_module == nullptr)
 	{
-		logte("Could not find provider for the stream: [%s/%s]", app_name.CStr(), stream_name.CStr());
+		logte("Could not find provider for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
 	// Check if the application does exists
-	auto app_info = GetApplicationInternal(app_name);
+	auto app_info = GetApplicationInternal(vhost_app_name);
 	Result result;
 
 	if (app_info.IsValid())
@@ -839,7 +1083,7 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &app_name, cons
 	else
 	{
 		// Create a new application
-		result = CreateApplicationInternal(app_name, &app_info);
+		result = CreateApplicationInternal(vhost_app_name, &app_info);
 
 		if (
 			// Failed to create the application
@@ -851,18 +1095,22 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &app_name, cons
 		}
 	}
 
-	logti("Trying to pull stream [%s/%s] from provider: %s", app_name.CStr(), stream_name.CStr(), GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
+	logti("Trying to pull stream [%s/%s] from provider: %s", vhost_app_name.CStr(), stream_name.CStr(), GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
 
 	auto stream = provider_module->PullStream(app_info, stream_name, url_list, offset);
 
 	if (stream != nullptr)
 	{
-		// TODO(dimiden): Store the stream into the origin_list
-		logti("The stream was pulled successfully: [%s/%s]", app_name.CStr(), stream_name.CStr());
+		auto orchestrator_stream = std::make_shared<Stream>(app_info, provider_module, stream, ov::String::FormatString("%s/%s", vhost_app_name.CStr(), stream_name.CStr()));
+
+		origin.stream_map[stream->GetId()] = orchestrator_stream;
+		used_domain->stream_map[stream->GetId()] = orchestrator_stream;
+
+		logti("The stream was pulled successfully: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 		return true;
 	}
 
-	logte("Could not pull stream [%s/%s] from provider: %s", app_name.CStr(), stream_name.CStr(), GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
+	logte("Could not pull stream [%s/%s] from provider: %s", vhost_app_name.CStr(), stream_name.CStr(), GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
 	// Rollback if needed
 
 	switch (result)
@@ -886,11 +1134,10 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &app_name, cons
 	return false;
 }
 
-bool Orchestrator::RequestPullStream(const ov::String &application, const ov::String &stream, off_t offset)
+bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream, off_t offset)
 {
-	std::lock_guard<decltype(_modules_mutex)> lock_guard_for_modules(_modules_mutex);
-	std::lock_guard<decltype(_app_map_mutex)> lock_guard_for_app_map(_app_map_mutex);
-	std::lock_guard<decltype(_domain_list_mutex)> lock_guard_for_domain_list(_domain_list_mutex);
+	std::lock_guard<decltype(_module_list_mutex)> lock_guard_for_modules(_module_list_mutex);
+	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
 
-	return RequestPullStreamForLocation(application, stream, offset);
+	return RequestPullStreamForLocation(vhost_app_name, stream, offset);
 }

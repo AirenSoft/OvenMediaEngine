@@ -101,6 +101,8 @@ int main(int argc, char *argv[])
 
 	if (succeeded)
 	{
+		orchestrator->ApplyOriginMap(hosts);
+
 		for (auto &host_info : host_info_list)
 		{
 			auto host_name = host_info.GetName();
@@ -160,11 +162,6 @@ int main(int argc, char *argv[])
 			{
 				orchestrator->CreateApplication(host_name, app_cfg);
 			}
-		}
-
-		if(succeeded)
-		{
-			orchestrator->ApplyOriginMap(hosts);
 		}
 	}
 
