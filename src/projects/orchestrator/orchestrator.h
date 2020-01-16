@@ -12,6 +12,7 @@
 
 #include <regex>
 
+#include <base/media_route/media_route_application_observer.h>
 #include <base/provider/provider.h>
 
 //
@@ -26,8 +27,16 @@
 //    using the APIs of Providers, MediaRouter, and Publishers as appropriate.
 //
 // TODO(dimiden): Modification is required so that the module can be managed per Host
-class Orchestrator
+
+class MediaRouter;
+
+class Orchestrator : public MediaRouteApplicationObserver
 {
+protected:
+	struct PrivateToken
+	{
+	};
+
 public:
 	enum class Result
 	{
@@ -41,11 +50,17 @@ public:
 		NotExists
 	};
 
-	static Orchestrator *GetInstance()
+	Orchestrator(PrivateToken token)
 	{
-		static Orchestrator orchestrator;
+	}
 
-		return &orchestrator;
+	~Orchestrator() = default;
+
+	static const std::shared_ptr<Orchestrator> &GetInstance()
+	{
+		static auto orchestrator = std::make_shared<Orchestrator>(PrivateToken{});
+
+		return orchestrator;
 	}
 
 	bool ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_config_list);
@@ -108,6 +123,36 @@ public:
 	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream)
 	{
 		return RequestPullStream(vhost_app_name, stream, 0);
+	}
+
+	//--------------------------------------------------------------------
+	// Implementation of MediaRouteApplicationObserver
+	//--------------------------------------------------------------------
+	// Temporarily used until Orchestrator takes stream management
+	bool OnCreateStream(const std::shared_ptr<StreamInfo> &info) override;
+	bool OnDeleteStream(const std::shared_ptr<StreamInfo> &info) override;
+
+	bool OnSendVideoFrame(const std::shared_ptr<StreamInfo> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
+	{
+		// Ignore packets
+		return true;
+	}
+
+	bool OnSendAudioFrame(const std::shared_ptr<StreamInfo> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
+	{
+		// Ignore packets
+		return true;
+	}
+
+	bool OnSendFrame(const std::shared_ptr<StreamInfo> &info, const std::shared_ptr<MediaPacket> &packet) override
+	{
+		// Ignore packets
+		return true;
+	}
+
+	ObserverType GetObserverType() override
+	{
+		return ObserverType::Orchestrator;
 	}
 
 protected:
@@ -325,8 +370,6 @@ protected:
 		ItemState state = ItemState::Unknown;
 	};
 
-	Orchestrator() = default;
-
 	bool ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host);
 
 	/// Compares a list of domains and adds them to added_domain_list if a new entry is found
@@ -371,6 +414,8 @@ protected:
 
 	// bool RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> &url);
 	bool RequestPullStreamForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset);
+
+	std::shared_ptr<MediaRouter> _media_router;
 
 	std::atomic<info::application_id_t> _last_application_id{info::MinApplicationId};
 

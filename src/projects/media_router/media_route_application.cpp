@@ -245,21 +245,24 @@ bool MediaRouteApplication::OnDeleteStream(
 		if (
 			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
 			((observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
-			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay)))
+			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay) ||
+			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator) ))
 		{
 			observer->OnDeleteStream(new_stream_info);
 		}
 		else if (
 			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
 			((observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher) ||
-			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay)))
+			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay) ||
+			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator)))
 		{
 			observer->OnDeleteStream(new_stream_info);
 		}
 		else if (
 			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Relay) &&
 			((observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
-			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher)))
+			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher) ||
+			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator)))
 		{
 			observer->OnDeleteStream(new_stream_info);
 		}

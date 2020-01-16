@@ -18,7 +18,10 @@ public:
 	{
 		Publisher = 0,
 		Transcoder,
-		Relay
+		Relay,
+
+		// Temporarily used until Orchestrator takes stream management
+		Orchestrator
 	};
 
 	////////////////////////////////////////////////////////////////////////////////////////////////

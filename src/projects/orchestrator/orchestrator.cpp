@@ -11,13 +11,18 @@
 
 #include <base/media_route/media_route_interface.h>
 #include <base/provider/stream.h>
+#include <media_router/media_router.h>
 
 bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host)
 {
 	auto succeeded = true;
 
+	logtd("Trying to apply new configuration of VirtualHost: %s...", virtual_host->name.CStr());
+
 	if (virtual_host->state == ItemState::Delete)
 	{
+		logtd("VirtualHost is deleted");
+
 		// Delete all apps that were created by this VirtualHost
 		for (auto &app : virtual_host->app_map)
 		{
@@ -32,6 +37,8 @@ bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtu
 	}
 	else
 	{
+		logtd("VirtualHost is changed");
+
 		// Check if there is a deleted domain, and then check if there are any apps created by that domain.
 		auto &domain_list = virtual_host->domain_list;
 
@@ -43,15 +50,22 @@ bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtu
 					// This situation should never happen here
 					OV_ASSERT2(false);
 					logte("Invalid domain state: %s, %d", domain_item->name.CStr(), domain_item->state);
+					++domain_item;
 					break;
 
 				case ItemState::Applied:
 				case ItemState::NotChanged:
+				case ItemState::New:
 					// Nothing to do
+					logtd("Domain is not changed/just created: %s", domain_item->name.CStr());
+					++domain_item;
 					break;
 
+				case ItemState::NeedToCheck:
+					// This item was deleted because it was never processed in the above process
 				case ItemState::Changed:
 				case ItemState::Delete:
+					logtd("Domain is changed/deleted: %s", domain_item->name.CStr());
 					for (auto &stream_item : domain_item->stream_map)
 					{
 						auto &stream = stream_item.second;
@@ -84,15 +98,22 @@ bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtu
 				default:
 					// This situation should never happen here
 					logte("Invalid origin state: %s, %d", origin_item->location.CStr(), origin_item->state);
+					++origin_item;
 					break;
 
 				case ItemState::Applied:
 				case ItemState::NotChanged:
+				case ItemState::New:
 					// Nothing to do
+					logtd("Origin is not changed/just created: %s", origin_item->location.CStr());
+					++origin_item;
 					break;
 
+				case ItemState::NeedToCheck:
+					// This item was deleted because it was never processed in the above process
 				case ItemState::Changed:
 				case ItemState::Delete:
+					logtd("Origin is changed/deleted: %s", origin_item->location.CStr());
 					for (auto &stream_item : origin_item->stream_map)
 					{
 						auto &stream = stream_item.second;
@@ -116,7 +137,7 @@ bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtu
 		}
 	}
 
-	return false;
+	return succeeded;
 }
 
 bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_config_list)
@@ -271,7 +292,6 @@ Orchestrator::ItemState Orchestrator::ProcessDomainList(std::vector<Domain> *dom
 			{
 				if (domain.name == name)
 				{
-					logtd("      - %s: Not changed", domain.name.CStr());
 					domain.state = ItemState::NotChanged;
 					found = true;
 					break;
@@ -307,6 +327,7 @@ Orchestrator::ItemState Orchestrator::ProcessDomainList(std::vector<Domain> *dom
 
 				case ItemState::NotChanged:
 					// Nothing to do
+					logtd("      - %s: Not changed", domain.name.CStr());
 					break;
 
 				case ItemState::Unknown:
@@ -408,6 +429,7 @@ Orchestrator::ItemState Orchestrator::ProcessOriginList(std::vector<Origin> *ori
 					break;
 
 				case ItemState::NotChanged:
+					logtd("      - %s: Not changed (%zu)", origin.location.CStr(), origin.url_list.size());
 					// Nothing to do
 					break;
 
@@ -461,6 +483,15 @@ bool Orchestrator::RegisterModule(const std::shared_ptr<OrchestratorModuleInterf
 	_module_list.emplace_back(type, module);
 	auto &list = _module_map[type];
 	list.push_back(module);
+
+	if (module->GetModuleType() == OrchestratorModuleType::MediaRouter)
+	{
+		auto media_router = std::dynamic_pointer_cast<MediaRouter>(module);
+
+		OV_ASSERT2(media_router != nullptr);
+
+		_media_router = media_router;
+	}
 
 	logtd("%s module (%p) is registered", GetOrchestratorModuleTypeName(type), module.get());
 
@@ -828,6 +859,11 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &v
 		}
 	}
 
+	if (_media_router != nullptr)
+	{
+		_media_router->RegisterObserverApp(app_info, GetSharedPtrAs<MediaRouteApplicationObserver>());
+	}
+
 	if (succeeded)
 	{
 		return Result::Succeeded;
@@ -896,10 +932,15 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(const ov::String &v
 		return Result::NotExists;
 	}
 
-	auto app_info = app->second;
+	auto &app_info = app->second;
 
 	logti("Trying to delete the application: [%s] (%u)", app_info.GetName().CStr(), app_info.GetId());
 	app_map.erase(app_id);
+
+	if (_media_router != nullptr)
+	{
+		_media_router->UnregisterObserverApp(app_info, GetSharedPtrAs<MediaRouteApplicationObserver>());
+	}
 
 	logtd("Notifying modules for the delete event...");
 	return NotifyModulesForDeleteEvent(_module_list, app_info);
@@ -1158,4 +1199,16 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
 
 	return RequestPullStreamForLocation(vhost_app_name, stream, offset);
+}
+
+bool Orchestrator::OnCreateStream(const std::shared_ptr<StreamInfo> &info)
+{
+	logtd("%s stream is created", info->GetName().CStr());
+	return true;
+}
+
+bool Orchestrator::OnDeleteStream(const std::shared_ptr<StreamInfo> &info)
+{
+	logtd("%s stream is deleted", info->GetName().CStr());
+	return true;
 }
