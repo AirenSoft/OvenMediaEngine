@@ -57,7 +57,7 @@ static const uint8_t *ParseNalUnits(const uint8_t *nal_unit_buffer,
     return nal_unit_buffer;
 }
 
-bool AvcVideoPacketFragmentizer::MakeHeader(std::shared_ptr<MediaPacket> packet)
+bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &packet)
 {
     FragmentationHeader *fragment_header = (FragmentationHeader *)packet->GetFragHeader();
 

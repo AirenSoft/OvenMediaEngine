@@ -3,6 +3,7 @@
 //
 
 
+#include "media_router/bitstream/avc_video_packet_fragmentizer.h"
 #include "ovt_stream.h"
 
 #define OV_LOG_TAG "OvtStream"
@@ -542,6 +543,10 @@ namespace pvd
 				{
 					logte("An error occurred while receive data: %s", error->ToString().CStr());
 				}
+				else
+				{
+					logte("No message received from Origin server : timeout");
+				}
 				_client_socket.Close();
 				return nullptr;
 			}
@@ -593,10 +598,17 @@ namespace pvd
 		while (true)
 		{
 			auto error = _client_socket.Recv(buffer + offset, remained, &read_bytes);
-			if (error != nullptr)
+			if (error != nullptr || read_bytes == 0)
 			{
 				_state = State::ERROR;
-				logte("An error occurred while receive data: %s", error->ToString().CStr());
+				if(error != nullptr)
+				{
+					logte("An error occurred while receive data: %s", error->ToString().CStr());
+				}
+				else
+				{
+					logte("No message received from Origin server : timeout");
+				}
 				_client_socket.Close();
 				return nullptr;
 			}
@@ -660,6 +672,15 @@ namespace pvd
 			if (_depacketizer.IsAvaliableMediaPacket())
 			{
 				auto media_packet = _depacketizer.PopMediaPacket();
+
+				// Make Header (Fragmentation) if it is H.264
+				auto track = GetTrack(media_packet->GetTrackId());
+				if(track->GetCodecId() == common::MediaCodecId::H264)
+				{
+					AvcVideoPacketFragmentizer fragmentizer;
+					fragmentizer.MakeHeader(media_packet);
+				}
+
 				_app->SendFrame(GetSharedPtrAs<StreamInfo>(), media_packet);
 			}
 		}

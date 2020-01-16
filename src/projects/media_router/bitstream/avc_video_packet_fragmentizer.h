@@ -9,7 +9,7 @@
 class AvcVideoPacketFragmentizer
 {
 public:
-	bool MakeHeader(std::shared_ptr<MediaPacket> packet);
+	bool MakeHeader(const std::shared_ptr<MediaPacket> &packet);
 
 private:
     uint8_t nal_length_size_ = 0;

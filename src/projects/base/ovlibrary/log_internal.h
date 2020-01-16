@@ -178,7 +178,7 @@ namespace ov
 			return !item->second.is_enabled;
 		}
 
-		inline void Log(OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, va_list &arg_list)
+		inline void Log(bool show_format, OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, va_list &arg_list)
 		{
 			if(level < _level)
 			{
@@ -265,54 +265,57 @@ namespace ov
 	}
 #endif // OV_LOG_SHOW_FUNCTION_NAME
 
-			// log format
-			//  [<date> <time>] <tag> <log level> <thread id> | <message>
-			log.Format(""
-			           // color
-			           "%s"
-			           // date, time ([mm-dd hh:mm:ss.sss])
-			           #if DEBUG
-			           // DEBUG 모드일 땐 년도 표시 안함
-			           "[%02d-%02d %02d:%02d:%02d.%03d]"
-			           #else // DEBUG
-			           // DEBUG 모드가 아닐 땐 년도 표시
+			if(show_format)
+			{
+				// log format
+				//  [<date> <time>] <tag> <log level> <thread id> | <message>
+				log.Format(""
+						   // color
+						   "%s"
+						   // date, time ([mm-dd hh:mm:ss.sss])
+						   #if DEBUG
+						   // DEBUG 모드일 땐 년도 표시 안함
+						   "[%02d-%02d %02d:%02d:%02d.%03d]"
+						   #else // DEBUG
+						   // DEBUG 모드가 아닐 땐 년도 표시
 		           "[%04d-%02d-%02d %02d:%02d:%02d.%03d]"
-			           #endif // DEBUG
-			           // <log level>
-			           " %s"
-			           // <thread id>
-			           " %ld"
-			           // tag
-			           "%s%s"
-			           // |
-			           " | "
-			           #if OV_LOG_SHOW_FILE_NAME
-			           // File:Line
-			           "%s:%-4d | "
+						   #endif // DEBUG
+						   // <log level>
+						   " %s"
+						   // <thread id>
+						   " %ld"
+						   // tag
+						   "%s%s"
+						   // |
+						   " | "
+						   #if OV_LOG_SHOW_FILE_NAME
+						   // File:Line
+						   "%s:%-4d | "
 #endif // OV_LOG_SHOW_FILE_NAME
 #if OV_LOG_SHOW_FUNCTION_NAME
-			// Method
-				   "%s() | "
+				// Method
+					   "%s() | "
 #endif // OV_LOG_SHOW_FUNCTION_NAME
-				,
-				       "",
+						,
+						   "",
 #if DEBUG
-                       localTime.tm_mon + 1, localTime.tm_mday,
+						   localTime.tm_mon + 1, localTime.tm_mday,
 #else // DEBUG
-				1900 + localTime.tm_year, localTime.tm_mon + 1, localTime.tm_mday,
+						1900 + localTime.tm_year, localTime.tm_mon + 1, localTime.tm_mday,
 #endif // DEBUG
-                       localTime.tm_hour, localTime.tm_min, localTime.tm_sec, mseconds,
-                       log_level[level],
-                       GetThreadId(),
-                       (tag[0] == '\0') ? "" : " ", tag
+						   localTime.tm_hour, localTime.tm_min, localTime.tm_sec, mseconds,
+						   log_level[level],
+						   GetThreadId(),
+						   (tag[0] == '\0') ? "" : " ", tag
 
 #if OV_LOG_SHOW_FILE_NAME
-				, fileName.CStr(), line
+						, fileName.CStr(), line
 #endif // OV_LOG_SHOW_FILE_NAME
 #if OV_LOG_SHOW_FUNCTION_NAME
-				, func.CStr()
+						, func.CStr()
 #endif // OV_LOG_SHOW_FUNCTION_NAME
-			);
+				);
+			}
 
 			// 맨 뒤에 <message> 추가
 			log.AppendVFormat(format, &(arg_list[0]));

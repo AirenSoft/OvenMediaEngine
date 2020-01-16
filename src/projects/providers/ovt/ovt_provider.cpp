@@ -53,7 +53,6 @@ namespace pvd
 	{
 		// Find App
 		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
-
 		if (app == nullptr)
 		{
 			logte("There is no such app (%s)", app_info.GetName().CStr());
@@ -67,9 +66,7 @@ namespace pvd
 			// If stream is not running it can be deleted.
 			if(stream->GetState() == Stream::State::STOPPED)
 			{
-				logte("1");
 				app->NotifyStreamDeleted(stream);
-				logte("2");
 			}
 			else
 			{
