@@ -189,8 +189,9 @@ void RtmpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 	{
 		auto &chunk_stream = item->second;
 
+		// logte("chunk_stream->GetAppId() : %u, chunk_stream->GetStreamId() : %u", chunk_stream->GetAppId(), chunk_stream->GetStreamId());
 		// Stream Delete
-		if (chunk_stream->GetAppId() != 0 && chunk_stream->GetStreamId() != 0)
+		if (chunk_stream->GetAppId() != info::InvalidApplicationId && chunk_stream->GetStreamId() != info::InvalidStreamId)
 		{
 			OnDeleteStream(chunk_stream->GetRemoteSocket(),
 						   chunk_stream->GetAppName(), chunk_stream->GetStreamName(),
