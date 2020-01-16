@@ -717,8 +717,8 @@ bool Orchestrator::GetUrlListForLocation(const ov::String &vhost_app_name, const
 		return false;
 	}
 
-	auto domain_list = vhost->domain_list;
-	auto origin_list = vhost->origin_list;
+	auto &domain_list = vhost->domain_list;
+	auto &origin_list = vhost->origin_list;
 
 	ov::String location = ov::String::FormatString("/%s/%s", real_app_name.CStr(), stream_name.CStr());
 
@@ -1052,8 +1052,8 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &vhost_app_name
 {
 	std::vector<ov::String> url_list;
 
-	Origin *used_origin;
-	Domain *used_domain;
+	Origin *used_origin = nullptr;
+	Domain *used_domain = nullptr;
 
 	if (GetUrlListForLocation(vhost_app_name, stream_name, &url_list, &used_origin, &used_domain) == false)
 	{
