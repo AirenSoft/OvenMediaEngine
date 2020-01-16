@@ -151,7 +151,7 @@ RUN \
         rm -rf ${DIR}
 
 
-FROM base AS release
+FROM	base AS release
 MAINTAINER  Jeheon Han <getroot@airensoft.com>
 
 WORKDIR         /opt/ovenmediaengine/bin

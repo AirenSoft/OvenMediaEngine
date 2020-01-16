@@ -27,14 +27,13 @@ namespace pvd
 
 	bool Application::Start()
 	{
-		// TODO(soulk): Check this return value
-		return false;
+		return true;
 	}
 
 	bool Application::Stop()
 	{
 		DeleteAllStreams();
-		return false;
+		return true;
 	}
 
 	uint32_t Application::IssueUniqueStreamId()
@@ -115,6 +114,8 @@ namespace pvd
 	{
 		std::unique_lock<std::mutex> lock(_streams_map_guard);
 		_streams.clear();
+
+		return true;
 	}
 
 	bool Application::DeleteTerminatedStreams()
@@ -135,5 +136,7 @@ namespace pvd
 				++it;
 			}
 		}
+
+		return true;
 	}
 }

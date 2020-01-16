@@ -190,7 +190,7 @@ void OvtPacket::SetSessionId(uint32_t session_id)
 	ByteWriter<uint32_t>::WriteBigEndian(&_buffer[12], _session_id);
 }
 
-bool OvtPacket::SetPayloadLength(size_t payload_length)
+void OvtPacket::SetPayloadLength(size_t payload_length)
 {
 	_payload_length = payload_length;
 	ByteWriter<uint16_t>::WriteBigEndian(&_buffer[16], _payload_length);

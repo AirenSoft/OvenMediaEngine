@@ -38,13 +38,11 @@ namespace pvd
 
 	bool OvtApplication::Start()
 	{
-
 		return pvd::Application::Start();
 	}
 
 	bool OvtApplication::Stop()
 	{
-
 		return pvd::Application::Stop();
 	}
 }

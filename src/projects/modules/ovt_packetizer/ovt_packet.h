@@ -208,7 +208,7 @@ public:
 	const std::shared_ptr<ov::Data>& GetData();
 
 private:
-	bool 		SetPayloadLength(size_t payload_length);
+	void 		SetPayloadLength(size_t payload_length);
 
 	bool 		_is_valid;
 
