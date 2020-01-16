@@ -889,10 +889,15 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(const ov::String &v
 	auto app_info = app->second;
 
 	logti("Trying to delete the application: [%s] (%u)", app_info.GetName().CStr(), app_info.GetId());
-
 	app_map.erase(app_id);
 
-	return NotifyModulesForDeleteEvent(_module_list, app_info);
+	logtd("Notifying modules for delete event...");
+
+	auto result = NotifyModulesForDeleteEvent(_module_list, app_info);
+
+	logtd("Notified");
+
+	return result;
 }
 
 Orchestrator::Result Orchestrator::DeleteApplicationInternal(const info::Application &app_info)
