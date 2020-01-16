@@ -29,13 +29,12 @@
 	</Bind>
 
 	<VirtualHosts>
-		<!--
-			You can include multiple XML files by doing the following:
-		
-			<VirtualHost include="sites-enabled/*.xml" />
-		-->
+		<!-- You can use wildcard like this to include multiple XMLs -->
+		<VirtualHost include="VHost*.xml" />
 		<VirtualHost>
 			<Name>default</Name>
+
+			<!-- Settings for multi domain and TLS -->
 			<Domain>
 				<Names>
 					<!--
