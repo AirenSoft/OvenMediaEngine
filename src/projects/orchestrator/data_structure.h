@@ -20,6 +20,12 @@ enum class OrchestratorModuleType
 	Publisher
 };
 
+// Forward declaration
+namespace pvd
+{
+	class Stream;
+}
+
 const char *GetOrchestratorModuleTypeName(OrchestratorModuleType type);
 
 class OrchestratorModuleInterface : public ov::EnableSharedFromThis<OrchestratorModuleInterface>
@@ -56,8 +62,10 @@ public:
 	/// @param url_list The streaming URLs to pull
 	/// @param offset Specifies the starting point of the streaming URL (unit: milliseconds)
 	///
-	/// @return Returns true if successfully pulled and finishes creating the stream, false otherwise
-	virtual bool PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset) = 0;
+	/// @return Newly created stream instance
+	virtual std::shared_ptr<pvd::Stream> PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset) = 0;
+
+	virtual bool StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream) = 0;
 };
 
 class OrchestratorMediaRouterModuleInterface : public OrchestratorModuleInterface

@@ -107,8 +107,6 @@ int main(int argc, char *argv[])
 		{
 			auto host_name = host_info.GetName();
 
-			logtd("Trying to create modules for host [%s]", host_name.CStr());
-
 			//////////////////////////////
 			// Host Level Modules
 			//TODO(Getroot): Support Virtual Host Function. This code assumes that there is only one Host.
@@ -116,6 +114,8 @@ int main(int argc, char *argv[])
 
 			if (initialized == false)
 			{
+				logtd("Trying to create modules for host [%s]", host_name.CStr());
+
 				do
 				{
 					initialized = true;
@@ -146,7 +146,11 @@ int main(int argc, char *argv[])
 					initialized = initialized && orchestrator->RegisterModule(ovt_publisher);
 				} while (false);
 
-				if (initialized == false)
+				if (initialized)
+				{
+					logti("All modules are initialized successfully");
+				}
+				else
 				{
 					logte("Failed to initialize module");
 					succeeded = false;

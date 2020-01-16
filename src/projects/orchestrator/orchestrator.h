@@ -76,7 +76,7 @@ public:
 	ov::String ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name);
 
 	///  Generate an application name for domain/app
-	/// 
+	///
 	/// @param domain_name A name of the domain
 	/// @param app_name An application name
 	///
@@ -112,13 +112,53 @@ public:
 	}
 
 protected:
+	struct Module
+	{
+		Module(OrchestratorModuleType type, const std::shared_ptr<OrchestratorModuleInterface> &module)
+			: type(type),
+			  module(module)
+		{
+		}
+
+		OrchestratorModuleType type = OrchestratorModuleType::Unknown;
+		std::shared_ptr<OrchestratorModuleInterface> module = nullptr;
+	};
+
+	enum class ItemState
+	{
+		Unknown,
+		// This item is applied to OriginMap
+		Applied,
+		// This item is applied, and not changed
+		NotChanged,
+		// This item is not applied, and will be applied to OriginMap/OriginList
+		New,
+		// This item is applied, but need to change some values
+		Changed,
+		// This item is applied, and will be deleted from OriginMap/OriginList
+		Delete
+	};
+
 	struct Origin
 	{
-		Origin(const cfg::OriginsOrigin &origin_config)
+		static const Origin &InvalidValue()
 		{
-			location = origin_config.GetLocation();
-			scheme = origin_config.GetPass().GetScheme();
+			static Origin invalid_value;
 
+			return invalid_value;
+		}
+
+		bool IsValid() const
+		{
+			return state != ItemState::Unknown;
+		}
+
+		Origin(const cfg::OriginsOrigin &origin_config)
+			: location(origin_config.GetLocation()),
+			  scheme(origin_config.GetPass().GetScheme()),
+			  state(ItemState::New)
+
+		{
 			for (auto &item : origin_config.GetPass().GetUrlList())
 			{
 				auto url = item.GetUrl();
@@ -133,39 +173,6 @@ protected:
 			this->origin_config = origin_config;
 		}
 
-		bool operator==(const Origin *origin) const
-		{
-			auto &first = origin_config;
-			auto &second = origin->origin_config;
-
-			if (first.GetLocation() != second.GetLocation())
-			{
-				return false;
-			}
-
-			auto &first_pass = first.GetPass();
-			auto &second_pass = second.GetPass();
-
-			if (first_pass.GetScheme() != second_pass.GetScheme())
-			{
-				return false;
-			}
-
-			auto &first_url_list = first_pass.GetUrlList();
-			auto &second_url_list = second_pass.GetUrlList();
-
-			if (first_url_list.size() != second_url_list.size())
-			{
-				return false;
-			}
-
-			return std::equal(
-				first_url_list.begin(), first_url_list.end(), second_url_list.begin(),
-				[](const cfg::Url &url1, const cfg::Url &url2) -> bool {
-					return url1.GetUrl() == url2.GetUrl();
-				});
-		}
-
 		info::application_id_t app_id = 0U;
 
 		ov::String scheme;
@@ -177,42 +184,21 @@ protected:
 
 		// Original configuration
 		cfg::OriginsOrigin origin_config;
-	};
 
-	struct Module
-	{
-		Module(OrchestratorModuleType type, const std::shared_ptr<OrchestratorModuleInterface> &module)
-			: type(type),
-			  module(module)
-		{
-		}
+		// A flag used by ApplyOriginMap() to determine if an item has changed
+		mutable ItemState state = ItemState::Unknown;
 
-		OrchestratorModuleType type = OrchestratorModuleType::Unknown;
-		std::shared_ptr<OrchestratorModuleInterface> module = nullptr;
-	};
-
-	enum class DomainItemState
-	{
-		Unknown,
-		// This item is applied to OriginMap
-		Applied,
-		// This item is applied, and not changed
-		NotChanged,
-		// This item is not applied, and will be applied to OriginMap
-		New,
-		// This item is applied, but need to change some values of cfg::Origins
-		Changed,
-		// This item is applied, and will be deleted from OriginMap
-		Delete
+	private:
+		Origin() = default;
 	};
 
 	struct Domain
 	{
-		Domain(const ov::String &vhost_name, const ov::String &name, const std::vector<std::shared_ptr<const Origin>> &origin_list)
+		Domain(const ov::String &vhost_name, const ov::String &name, const std::vector<Origin> &origin_list)
 			: vhost_name(vhost_name),
 			  name(name),
 			  origin_list(origin_list),
-			  state(DomainItemState::New)
+			  state(ItemState::New)
 		{
 			UpdateRegex();
 		}
@@ -247,15 +233,30 @@ protected:
 		ov::String name;
 		std::regex regex_for_domain;
 
-		std::vector<std::shared_ptr<const Origin>> origin_list;
+		std::vector<Origin> origin_list;
 
 		// A flag used by ApplyOriginMap() to determine if an item has changed
-		DomainItemState state = DomainItemState::Unknown;
+		ItemState state = ItemState::Unknown;
 	};
 
 	Orchestrator() = default;
 
-	bool ApplyOriginMap(const ov::String &vhost_name, const cfg::Domain &domain_config, std::vector<Domain> *old_domain_list, const std::vector<std::shared_ptr<const Origin>> &new_origin_list);
+	/// Compares a list of origin and adds them to added_origin_list if a new entry is found
+	///
+	/// @param origin_list The origin list
+	/// @param new_origin_list Origin to compare
+	/// @param added_origin_list Added origin list
+	///
+	/// @return Whether there are items added/modified/deleted
+	bool ProcessOriginList(const std::vector<Origin> &origin_list, const std::vector<Origin> &new_origin_list, std::vector<Origin> *added_origin_list) const;
+	/// Compares a list of domains and adds them to added_domain_list if a new entry is found
+	///
+	/// @param domain_list The domain list
+	/// @param vhost VirtualHost configuration to compare
+	/// @param added_domain_list Added domain list
+	///
+	/// @return Whether there are items added/modified/deleted
+	bool ProcessDomainList(std::vector<Domain> *domain_list, const cfg::VirtualHost &vhost, std::vector<Domain> *added_domain_list) const;
 
 	info::application_id_t GetNextAppId();
 
@@ -263,7 +264,7 @@ protected:
 	std::shared_ptr<OrchestratorProviderModuleInterface> GetProviderModuleForScheme(const ov::String &scheme);
 	std::shared_ptr<pvd::Provider> GetProviderForUrl(const ov::String &url);
 
-	std::shared_ptr<const Orchestrator::Origin> GetUrlListForLocation(const ov::String &app_name, const ov::String &stream_name, std::vector<ov::String> *url_list);
+	const Orchestrator::Origin &GetUrlListForLocation(const ov::String &app_name, const ov::String &stream_name, std::vector<ov::String> *url_list);
 
 	Result CreateApplicationInternal(const info::Application &app_info);
 	Result CreateApplicationInternal(const ov::String &name, info::Application *app_info);

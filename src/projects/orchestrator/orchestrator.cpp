@@ -14,122 +14,193 @@
 bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_list)
 {
 	std::lock_guard<decltype(_domain_list_mutex)> lock_guard(_domain_list_mutex);
-
-	decltype(_domain_list) old_domain_list = std::move(_domain_list);
 	bool result = true;
 
 	// Mark all items as deleted
-	for (auto &old_domain : old_domain_list)
+	for (auto &domain : _domain_list)
 	{
-		OV_ASSERT(old_domain.state == DomainItemState::Applied, "%s: %d", old_domain.name.CStr(), old_domain.state);
-		old_domain.state = DomainItemState::Delete;
+		if (domain.state != ItemState::Applied)
+		{
+			logte("Invalid domain state: %d (Expected: %d)", domain.state, ItemState::Applied);
+			OV_ASSERT2(false);
+		}
+
+		domain.state = ItemState::Delete;
+
+		for (auto &origin_item : domain.origin_list)
+		{
+			// This is a safe operation because origin_list is managed by Orchestrator
+			if (origin_item.state != ItemState::Applied)
+			{
+				logte("Invalid origin state: %d (Expected: %d)", origin_item.state, ItemState::Applied);
+				OV_ASSERT2(false);
+			}
+
+			origin_item.state = ItemState::Delete;
+		}
 	}
 
+	std::vector<Domain> added_domain_list;
+
+	// Compare with existing values
 	for (auto &vhost : vhost_list)
 	{
 		logtd("Trying to apply OriginMap for host %s", vhost.GetName().CStr());
 
-		auto new_origin_list = std::vector<std::shared_ptr<const Origin>>();
-
-		logtd("Generating OriginMap for host %s...", vhost.GetName().CStr());
-
-		for (auto &origin_config : vhost.GetOrigins().GetOriginList())
+		if (ProcessDomainList(&_domain_list, vhost, &added_domain_list))
 		{
-			new_origin_list.emplace_back(std::make_shared<const Origin>(origin_config));
+			if (added_domain_list.size() > 0)
+			{
+				std::move(added_domain_list.begin(), added_domain_list.end(), std::back_inserter(_domain_list));
+			}
 		}
-
-		if (ApplyOriginMap(vhost.GetName(), vhost.GetDomain(), &old_domain_list, new_origin_list) == false)
+		else
 		{
 			logte("Could not apply OriginMap for host %s", vhost.GetName().CStr());
 			result = false;
 		}
 	}
 
-	for (auto &domain_item : _domain_list)
+	// Organize domain_list
+	for (auto domain_item = _domain_list.begin(); domain_item != _domain_list.end();)
 	{
-		switch (domain_item.state)
+		auto &origin_list = domain_item->origin_list;
+
+		switch (domain_item->state)
 		{
-			case DomainItemState::Unknown:
-			case DomainItemState::Applied:
-			case DomainItemState::Delete:
+			case ItemState::Unknown:
+			case ItemState::Applied:
 				// This situation should never happen here
 				OV_ASSERT2(false);
+				++domain_item;
+				continue;
+
+			case ItemState::NotChanged:
+				logtd("  - Domain is not changed: %s", domain_item->name.CStr());
+
+				// Just need to mark as Applied
+				for (auto &origin : origin_list)
+				{
+					origin.state = ItemState::Applied;
+				}
+
+				domain_item->state = ItemState::Applied;
+				++domain_item;
+				continue;
+
+			case ItemState::New:
+				logtd("  - Domain is created: %s", domain_item->name.CStr());
+				// Nothing to do
 				break;
 
-			case DomainItemState::NotChanged:
-				logtd("- %s is not changed", domain_item.name.CStr());
+			case ItemState::Changed:
+				logtd("  - Domain is changed: %s", domain_item->name.CStr());
+
 				break;
 
-			case DomainItemState::New:
-				logtd("- %s is a new domain", domain_item.name.CStr());
-				break;
-
-			case DomainItemState::Changed:
-				logtd("- %s is changed", domain_item.name.CStr());
-				break;
+			case ItemState::Delete:
+				logtd("  - Domain is deleted: %s", domain_item->name.CStr());
+				domain_item = _domain_list.erase(domain_item);
+				continue;
 		}
 
-		domain_item.state = DomainItemState::Applied;
+		domain_item->state = ItemState::Applied;
+
+		for (auto origin_item = origin_list.begin(); origin_item != origin_list.end();)
+		{
+			switch (origin_item->state)
+			{
+				case ItemState::Unknown:
+				case ItemState::Applied:
+					// This situation should never happen here
+					OV_ASSERT2(false);
+					++origin_item;
+					continue;
+
+				case ItemState::NotChanged:
+					logtd("    - Origin is not changed: %s", origin_item->location.CStr());
+					// Nothing to do
+					break;
+
+				case ItemState::New:
+					logtd("    - Origin is created: %s", origin_item->location.CStr());
+					// Nothing to do
+					break;
+
+				case ItemState::Changed:
+					logtd("    - Origin is changed: %s", origin_item->location.CStr());
+
+					break;
+
+				case ItemState::Delete:
+					logtd("    - Origin is deleted: %s", origin_item->location.CStr());
+					origin_item = origin_list.erase(origin_item);
+					continue;
+			}
+
+			origin_item->state = ItemState::Applied;
+			++origin_item;
+		}
+
+		++domain_item;
 	}
 
-	for (auto &deleted_domain_item : old_domain_list)
-	{
-		if (deleted_domain_item.state == DomainItemState::Delete)
-		{
-			logtd("- %s is deleted", deleted_domain_item.name.CStr());
-		}
-		else
-		{
-			OV_ASSERT2(false);
-		}
-	}
+	logtd("All items are applied");
 
 	return result;
 }
 
-bool Orchestrator::ApplyOriginMap(const ov::String &vhost_name, const cfg::Domain &domain_config, std::vector<Domain> *old_domain_list, const std::vector<std::shared_ptr<const Origin>> &new_origin_list)
+bool Orchestrator::ProcessOriginList(const std::vector<Origin> &origin_list, const std::vector<Origin> &new_origin_list, std::vector<Origin> *added_origin_list) const
 {
-	// Check for the new/modified items
-	// TODO(dimiden): Is there a way to reduce the cost of O(n^2)?
-	for (auto &domain_name : domain_config.GetNameList())
+	bool is_equal = true;
+
+	// Verify that the same item in origin_list as the one in new_origin_list
+	for (auto &new_origin : new_origin_list)
 	{
 		bool found = false;
-		auto name = domain_name.GetName();
+		auto &new_config = new_origin.origin_config;
 
-		auto old_item = old_domain_list->begin();
-		for (; old_item != old_domain_list->end(); ++old_item)
+		for (auto &origin : origin_list)
 		{
-			if ((old_item->state == DomainItemState::Delete) && (old_item->name == name))
-			{
-				auto old_origin_list = old_item->origin_list;
+			auto &old_config = origin.origin_config;
 
-				// TODO(dimiden): Need to pick out the changed "Origin" here
-				if (old_origin_list.size() != new_origin_list.size())
+			if (
+				// ItemState::Delete means "It is not processed"
+				(origin.state == ItemState::Delete) &&
+				(new_config.GetLocation() == old_config.GetLocation()))
+			{
+				auto &new_pass = new_config.GetPass();
+				auto &old_pass = old_config.GetPass();
+
+				if (old_pass.GetScheme() != new_pass.GetScheme())
 				{
-					logtd("Size does not the same: %zu, %zu", old_origin_list.size(), new_origin_list.size());
-					old_item->state = DomainItemState::Changed;
+					logtd("Scheme does not the same: %s != %s", old_pass.GetScheme().CStr(), new_pass.GetScheme().CStr());
+					origin.state = ItemState::Changed;
 				}
 				else
 				{
-					if (std::equal(
-							old_origin_list.begin(), old_origin_list.end(), new_origin_list.begin(),
-							[](const std::shared_ptr<const Origin> &origin1, const std::shared_ptr<const Origin> &origin2) -> bool {
-								return origin1->operator==(origin2.get());
-							}))
-					{
-						logtd("OriginList does the same");
-						old_item->state = DomainItemState::NotChanged;
+					auto &first_url_list = new_pass.GetUrlList();
+					auto &second_url_list = old_pass.GetUrlList();
 
-						_domain_list.push_back(*old_item);
-						old_domain_list->erase(old_item);
-						found = true;
-					}
-					else
+					if (std::equal(
+							first_url_list.begin(), first_url_list.end(), second_url_list.begin(),
+							[](const cfg::Url &url1, const cfg::Url &url2) -> bool {
+								bool result = url1.GetUrl() == url2.GetUrl();
+
+								if (result == false)
+								{
+									logtd("URL does not the same: %s != %s", url1.GetUrl().CStr(), url2.GetUrl().CStr());
+								}
+
+								return result;
+							}) == false)
 					{
-						logtd("OriginList does not the same");
-						old_item->state = DomainItemState::Changed;
+						origin.state = ItemState::Changed;
 					}
 				}
+
+				found = true;
+				origin.state = (origin.state == ItemState::Delete) ? ItemState::NotChanged : ItemState::Changed;
 
 				break;
 			}
@@ -137,13 +208,77 @@ bool Orchestrator::ApplyOriginMap(const ov::String &vhost_name, const cfg::Domai
 
 		if (found == false)
 		{
-			// Add the item if not found
-			_domain_list.emplace_back(vhost_name, name, new_origin_list);
+			// new_origin is a new item
+			added_origin_list->push_back(new_origin);
+			is_equal = false;
+		}
+	}
 
-			if (old_item != old_domain_list->end())
+	return is_equal;
+}
+
+bool Orchestrator::ProcessDomainList(std::vector<Domain> *domain_list, const cfg::VirtualHost &vhost, std::vector<Domain> *added_domain_list) const
+{
+	auto &vhost_name = vhost.GetName();
+	auto &domain_config = vhost.GetDomain();
+
+	auto new_origin_list = std::vector<Origin>();
+
+	logtd("Generating OriginMap for host %s...", vhost.GetName().CStr());
+	for (auto &origin_config : vhost.GetOrigins().GetOriginList())
+	{
+		new_origin_list.emplace_back(origin_config);
+	}
+
+	// Check for the new/changed items
+	// TODO(dimiden): Is there a way to reduce the cost of O(n^2)?
+	for (auto &domain_name : domain_config.GetNameList())
+	{
+		auto name = domain_name.GetName();
+		bool found = false;
+
+		std::vector<Origin> added_origin_list;
+
+		for (auto &domain : *domain_list)
+		{
+			if (
+				// ItemState::Delete means "It is not processed"
+				(domain.state == ItemState::Delete) &&
+				(domain.vhost_name == vhost_name) && ((domain.name == name)))
 			{
-				old_domain_list->erase(old_item);
+				// This is a safe operation because origin_list is managed by Orchestrator
+				if (ProcessOriginList(domain.origin_list, new_origin_list, &added_origin_list) == false)
+				{
+					// Mark as changed
+					logtd("Origin list of the domain does not the same");
+					domain.state = ItemState::Changed;
+
+					if (added_origin_list.size() > 0)
+					{
+						std::move(added_origin_list.begin(), added_origin_list.end(), std::back_inserter(domain.origin_list));
+					}
+				}
+				else
+				{
+					// Mark as not changed
+					logtd("Origin list of the domain does the same");
+					domain.state = ItemState::NotChanged;
+				}
+
+				found = true;
+				break;
 			}
+			else
+			{
+				// does not matched
+			}
+		}
+
+		if (found == false)
+		{
+			// domain_name is a new domain
+			logtd("New domain found: %s", vhost_name.CStr());
+			added_domain_list->emplace_back(vhost_name, name, new_origin_list);
 		}
 	}
 
@@ -357,7 +492,7 @@ std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForUrl(const ov::String 
 	return GetProviderForScheme(parsed_url->Scheme());
 }
 
-std::shared_ptr<const Orchestrator::Origin> Orchestrator::GetUrlListForLocation(const ov::String &app_name, const ov::String &stream_name, std::vector<ov::String> *url_list)
+const Orchestrator::Origin &Orchestrator::GetUrlListForLocation(const ov::String &app_name, const ov::String &stream_name, std::vector<ov::String> *url_list)
 {
 	ov::String vhost_name;
 	ov::String real_app_name;
@@ -398,7 +533,7 @@ std::shared_ptr<const Orchestrator::Origin> Orchestrator::GetUrlListForLocation(
 			logtd("Trying to find the item that match location: %s", location.CStr());
 
 			// TODO(dimien): Replace with the regex
-			if (location.HasPrefix(origin->location))
+			if (location.HasPrefix(origin.location))
 			{
 				// If the location has the prefix that configured in <Origins>, extract the remaining part
 				// For example, if the settings is:
@@ -414,11 +549,11 @@ std::shared_ptr<const Orchestrator::Origin> Orchestrator::GetUrlListForLocation(
 				// <Location>: /app/stream
 				// location:   /app/stream_o
 				//                        ~~ <= remaining part
-				auto remaining_part = location.Substring(origin->location.GetLength());
+				auto remaining_part = location.Substring(origin.location.GetLength());
 
-				logtd("Found: location: %s (app: %s, stream: %s), remaining_part: %s", origin->location.CStr(), real_app_name.CStr(), stream_name.CStr(), remaining_part.CStr());
+				logtd("Found: location: %s (app: %s, stream: %s), remaining_part: %s", origin.location.CStr(), real_app_name.CStr(), stream_name.CStr(), remaining_part.CStr());
 
-				for (auto url : origin->url_list)
+				for (auto url : origin.url_list)
 				{
 					// Append the remaining_part to the URL
 
@@ -429,7 +564,7 @@ std::shared_ptr<const Orchestrator::Origin> Orchestrator::GetUrlListForLocation(
 
 					// Prepend "<scheme>://"
 					url.Prepend("://");
-					url.Prepend(origin->scheme);
+					url.Prepend(origin.scheme);
 
 					// Append remaining_part
 					url.Append(remaining_part);
@@ -437,12 +572,12 @@ std::shared_ptr<const Orchestrator::Origin> Orchestrator::GetUrlListForLocation(
 					url_list->push_back(url);
 				}
 
-				return (url_list->size() > 0) ? origin : nullptr;
+				return (url_list->size() > 0) ? origin : Origin::InvalidValue();
 			}
 		}
 	}
 
-	return nullptr;
+	return Origin::InvalidValue();
 }
 
 Orchestrator::Result Orchestrator::CreateApplicationInternal(const info::Application &app_info)
@@ -677,15 +812,15 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &app_name, cons
 {
 	std::vector<ov::String> url_list;
 
-	auto origin = GetUrlListForLocation(app_name, stream_name, &url_list);
+	auto &origin = GetUrlListForLocation(app_name, stream_name, &url_list);
 
-	if (origin == nullptr)
+	if (origin.IsValid() == false)
 	{
 		logte("Could not find Origin for the stream: [%s/%s]", app_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
-	auto provider_module = GetProviderModuleForScheme(origin->scheme);
+	auto provider_module = GetProviderModuleForScheme(origin.scheme);
 
 	if (provider_module == nullptr)
 	{
@@ -718,8 +853,11 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &app_name, cons
 
 	logti("Trying to pull stream [%s/%s] from provider: %s", app_name.CStr(), stream_name.CStr(), GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
 
-	if (provider_module->PullStream(app_info, stream_name, url_list, offset))
+	auto stream = provider_module->PullStream(app_info, stream_name, url_list, offset);
+
+	if (stream != nullptr)
 	{
+		// TODO(dimiden): Store the stream into the origin_list
 		logti("The stream was pulled successfully: [%s/%s]", app_name.CStr(), stream_name.CStr());
 		return true;
 	}

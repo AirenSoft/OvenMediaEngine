@@ -49,7 +49,7 @@ namespace pvd
 	}
 
 	// Pull Stream
-	bool OvtProvider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
+	std::shared_ptr<pvd::Stream> OvtProvider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
 	{
 		// Find App
 		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
@@ -57,7 +57,7 @@ namespace pvd
 		if (app == nullptr)
 		{
 			logte("There is no such app (%s)", app_info.GetName().CStr());
-			return false;
+			return nullptr;
 		}
 
 		// Find Stream (The stream must not exist)
@@ -74,7 +74,7 @@ namespace pvd
 			else
 			{
 				logte("%s stream already exists.", stream_name.CStr());
-				return false;
+				return nullptr;
 			}
 		}
 
@@ -83,13 +83,19 @@ namespace pvd
 		if (stream == nullptr)
 		{
 			logte("Cannot create %s stream.", stream_name.CStr());
-			return false;
+			return nullptr;
 		}
 
 		// Notify stream has been created
 		app->NotifyStreamCreated(stream);
 
-		return true;
+		return stream;
+	}
+
+	bool OvtProvider::StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream)
+	{
+		// TODO(getroot): Need to implement this function
+		return false;
 	}
 
 	std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)
