@@ -44,7 +44,7 @@ namespace pvd
 		return true;
 	}
 
-	bool Provider::SetUseAutoStreamRemover(bool use)
+	void Provider::SetUseAutoStreamRemover(bool use)
 	{
 		_use_garbage_collector = use;
 	}

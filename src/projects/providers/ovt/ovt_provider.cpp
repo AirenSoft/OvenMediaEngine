@@ -19,7 +19,7 @@ namespace pvd
 		auto provider = std::make_shared<OvtProvider>(server_config, router);
 		if (!provider->Start())
 		{
-			logte("An error occurred while creating RtmpProvider");
+			logte("An error occurred while creating OvtProvider");
 			return nullptr;
 		}
 		return provider;

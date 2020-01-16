@@ -40,7 +40,7 @@ namespace pvd
 
 		const cfg::Server &GetServerConfig() const;
 
-		bool SetUseAutoStreamRemover(bool use);
+		void SetUseAutoStreamRemover(bool use);
 
 		// For child class
 		virtual std::shared_ptr<Application> OnCreateProviderApplication(const info::Application &app_info) = 0;
