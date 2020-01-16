@@ -74,8 +74,9 @@ namespace ov
 	class LogInternal
 	{
 	public:
-		LogInternal() noexcept
-			: _level(OVLogLevelDebug)
+		LogInternal(std::string log_file_name) noexcept
+			: _level(OVLogLevelDebug),
+			_log_file(log_file_name)
 		{
 		}
 

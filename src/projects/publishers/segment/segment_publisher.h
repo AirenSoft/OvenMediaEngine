@@ -25,10 +25,10 @@ protected:
 public:
 	template <typename Tpublisher>
 	static std::shared_ptr<Tpublisher> Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-											  const info::Application *application_info,
-											  std::shared_ptr<MediaRouteInterface> router)
+											  const info::Application &application_info,
+											  const std::shared_ptr<MediaRouteInterface> &router)
 	{
-		auto publisher = std::make_shared<Tpublisher>((PrivateToken){}, application_info, std::move(router));
+		auto publisher = std::make_shared<Tpublisher>((PrivateToken){}, application_info, router);
 
 		auto instance = std::static_pointer_cast<SegmentPublisher>(publisher);
 		if (instance->Start(http_server_manager) == false)
@@ -42,7 +42,8 @@ public:
 	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) override;
 
 protected:
-	SegmentPublisher(const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+	SegmentPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+
 	~SegmentPublisher() override;
 
 	bool CheckCodecAvailability(const std::vector<ov::String> &video_codecs, const std::vector<ov::String> &audio_codecs);

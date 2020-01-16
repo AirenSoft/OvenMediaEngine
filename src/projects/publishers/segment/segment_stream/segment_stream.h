@@ -25,24 +25,14 @@ public:
     ~SegmentStream();
 
 public :
-    void SendVideoFrame(std::shared_ptr<MediaTrack> track,
-                        std::shared_ptr<EncodedFrame> encoded_frame,
-                        std::shared_ptr<CodecSpecificInfo> codec_info,
-                        std::shared_ptr<FragmentationHeader> fragmentation) override;
-
-    void SendAudioFrame(std::shared_ptr<MediaTrack> track,
-                        std::shared_ptr<EncodedFrame> encoded_frame,
-                        std::shared_ptr<CodecSpecificInfo> codec_info,
-                        std::shared_ptr<FragmentationHeader> fragmentation) override;
+    void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
+    void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
     bool Start(int segment_count, int segment_duration, uint32_t worker_count);
-
     bool Stop() override;
 
     bool GetPlayList(ov::String &play_list);
-
 	std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name);
-
     virtual std::shared_ptr<StreamPacketizer> CreateStreamPacketizer(int segment_count,
                                                                     int segment_duration,
                                                                     const  ov::String &segment_prefix,

@@ -9,10 +9,11 @@
 
 #pragma once
 
-#include <base/common_types.h>
-#include <base/ovlibrary/ovlibrary.h>
 #include <deque>
 #include <string>
+#include <base/common_types.h>
+#include <base/ovlibrary/ovlibrary.h>
+#include <base/media_route/media_buffer.h>
 #include "publishers/segment/segment_stream/packetizer/packetizer.h"
 
 #define DEFAULT_SEGMENT_COUNT (3)
@@ -39,8 +40,8 @@ public:
 	virtual ~StreamPacketizer() = default;
 
 public:
-	bool AppendVideoData(std::shared_ptr<EncodedFrame> encoded_frame, uint32_t timescale, uint64_t time_offset);
-	bool AppendAudioData(std::shared_ptr<EncodedFrame> encoded_frame, uint32_t timescale);
+	bool AppendVideoData(const std::shared_ptr<MediaPacket> &media_packet, uint32_t timescale, uint64_t time_offset);
+	bool AppendAudioData(const std::shared_ptr<MediaPacket> &media_packet, uint32_t timescale);
 
 	// Child must implement this functions
 	virtual bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &dEncodedFrameata) = 0;

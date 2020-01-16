@@ -8,7 +8,7 @@
 //==============================================================================
 
 #pragma once
-#include "segment_stream/segment_stream.h"
+#include "../segment_stream/segment_stream.h"
 #include "dash_stream_packetizer.h"
 
 //====================================================================================================

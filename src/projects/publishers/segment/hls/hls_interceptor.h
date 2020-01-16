@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "segment_stream/segment_stream_interceptor.h"
+#include "../segment_stream/segment_stream_interceptor.h"
 
 class HlsInterceptor : public SegmentStreamInterceptor
 {

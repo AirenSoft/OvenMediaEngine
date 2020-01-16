@@ -41,14 +41,6 @@ HlsApplication::~HlsApplication()
 }
 
 //====================================================================================================
-// DeleteStream
-//====================================================================================================
-bool HlsApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
-{
-	return true;
-}
-
-//====================================================================================================
 // Start
 //====================================================================================================
 bool HlsApplication::Start()
@@ -68,7 +60,7 @@ bool HlsApplication::Stop()
 // CreateStream
 // - Application Override
 //====================================================================================================
-std::shared_ptr<Stream> HlsApplication::CreateStream(std::shared_ptr<StreamInfo> info, uint32_t worker_count)
+std::shared_ptr<Stream> HlsApplication::CreateStream(const std::shared_ptr<StreamInfo> &info, uint32_t thread_count)
 {
 	logtd("Hls CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 
@@ -76,5 +68,13 @@ std::shared_ptr<Stream> HlsApplication::CreateStream(std::shared_ptr<StreamInfo>
                              _segment_duration,
                              GetSharedPtrAs<Application>(),
                              *info.get(),
-                             worker_count);
+							 thread_count);
+}
+
+//====================================================================================================
+// DeleteStream
+//====================================================================================================
+bool HlsApplication::DeleteStream(const std::shared_ptr<StreamInfo> &info)
+{
+	return true;
 }

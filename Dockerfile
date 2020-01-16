@@ -10,7 +10,7 @@ WORKDIR /tmp
 ARG     PREFIX=/opt/ovenmediaengine
 ARG     MAKEFLAGS="-j16"
 
-ENV     OME_VERSION=temp/alpine \
+ENV     OME_VERSION=temp/ass \
         OPENSSL_VERSION=1.1.0g \
         SRTP_VERSION=2.2.0 \
         SRT_VERSION=1.3.3 \
@@ -143,10 +143,10 @@ RUN \
         cd ${DIR} && \
         curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1 && \
         cd src && \
-        make release && \
+        make && \
         mkdir -p ${PREFIX}/bin/conf && \
-        strip ./bin/RELEASE/OvenMediaEngine && \
-        cp ./bin/RELEASE/OvenMediaEngine ${PREFIX}/bin/ && \
+        strip ./bin/DEBUG/OvenMediaEngine && \
+        cp ./bin/DEBUG/OvenMediaEngine ${PREFIX}/bin/ && \
         cp ../misc/conf_examples/Server.xml ${PREFIX}/bin/conf/ && \
         rm -rf ${DIR}
 

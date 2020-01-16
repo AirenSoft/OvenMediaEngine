@@ -13,7 +13,7 @@ namespace pvd
 	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::Application> &app, const ov::String &stream_name,
 					  						const std::vector<ov::String> &url_list)
 	{
-		StreamInfo stream_info;
+		StreamInfo stream_info(StreamSourceType::OVT_PROVIDER);
 
 		stream_info.SetId(app->IssueUniqueStreamId());
 		stream_info.SetName(stream_name);

@@ -16,6 +16,7 @@ std::shared_ptr<RtmpStream> RtmpStream::Create()
 }
 
 RtmpStream::RtmpStream()
+	: Stream(StreamSourceType::RTMP_PROVIDER)
 {
 	
 }

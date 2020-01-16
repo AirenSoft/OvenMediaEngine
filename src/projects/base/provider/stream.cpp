@@ -12,12 +12,13 @@
 
 namespace pvd
 {
-	Stream::Stream()
+	Stream::Stream(StreamSourceType source_type)
+		:StreamInfo(source_type)
 	{
 	}
 
-	Stream::Stream(uint32_t stream_id)
-		:StreamInfo(stream_id)
+	Stream::Stream(uint32_t stream_id, StreamSourceType source_type)
+		:StreamInfo(stream_id, source_type)
 	{
 	}
 

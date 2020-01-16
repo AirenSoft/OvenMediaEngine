@@ -86,7 +86,13 @@ namespace cfg
 		ov::String logger_config_path = ov::PathManager::Combine(config_path, "Logger.xml");
 
 		::memset(&_last_modified, 0, sizeof(_last_modified));
-		::stat(logger_config_path, &value);
+		if(::stat(logger_config_path, &value) == -1)
+		{
+			// There is no file or to open file error
+			// OME will work with the default settings.
+			logtw("There is no configuration file for logs : %s. OME will run with the default settings.", logger_config_path.CStr());
+			return true;
+		}
 
 		if (
 			(_last_modified.tv_sec == value.st_mtim.tv_sec) &&
@@ -120,6 +126,8 @@ namespace cfg
 
 		auto log_path = logger_loader->GetLogPath();
 		ov_log_set_path(log_path.c_str());
+		ov_stat_log_set_path(log_path.c_str());
+
 		logti("Trying to set logfile in directory... (%s)", log_path.c_str());
 
 		std::vector<std::shared_ptr<LoggerTagInfo>> tags = logger_loader->GetTags();

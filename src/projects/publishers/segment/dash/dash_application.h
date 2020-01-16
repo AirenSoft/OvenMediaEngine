@@ -9,7 +9,7 @@
 #pragma once
 #include "base/common_types.h"
 #include "base/publisher/application.h"
-#include "segment_stream/segment_stream.h"
+#include "../segment_stream/segment_stream.h"
 
 //====================================================================================================
 // DashApplication

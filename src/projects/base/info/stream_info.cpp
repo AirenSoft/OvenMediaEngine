@@ -13,24 +13,32 @@
 
 using namespace common;
 
-StreamInfo::StreamInfo()
+StreamInfo::StreamInfo(StreamSourceType source)
 {
 	// 소스 타입
 	// _input_source_type = kSourceTypeOrigin;
 
 	// ID RANDOM 생성
 	SetId(ov::Random::GenerateUInt32());
+
+	_created_time = std::chrono::system_clock::now();
+	_source_type = source;
+
 }
 
-StreamInfo::StreamInfo(uint32_t stream_id)
+StreamInfo::StreamInfo(uint32_t stream_id, StreamSourceType source)
 {
 	_id = stream_id;
+	_created_time = std::chrono::system_clock::now();
+	_source_type = source;
 }
 
 StreamInfo::StreamInfo(const StreamInfo &stream_info)
 {
 	_id = stream_info._id;
 	_name = stream_info._name;
+	_source_type = stream_info._source_type;
+	_created_time = stream_info._created_time;
 
 	for(auto &track : stream_info._tracks)
 	{
@@ -62,6 +70,16 @@ ov::String StreamInfo::GetName()
 void StreamInfo::SetName(ov::String name)
 {
 	_name = name;
+}
+
+std::chrono::system_clock::time_point StreamInfo::GetCreatedTime() const
+{
+	return _created_time;
+}
+
+StreamSourceType  StreamInfo::GetSourceType() const
+{
+	return _source_type;
 }
 
 bool StreamInfo::AddTrack(std::shared_ptr<MediaTrack> track)

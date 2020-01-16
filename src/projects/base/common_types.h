@@ -23,6 +23,14 @@
 
 #define MAX_FRAG_COUNT 20
 
+enum class StreamSourceType : int8_t
+{
+	OVT_PROVIDER ,
+	RTMP_PROVIDER,
+	LIVE_TRANSCODER
+};
+
+
 enum class ProviderType : int8_t
 {
 	Unknown,

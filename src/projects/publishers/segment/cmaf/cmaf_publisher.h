@@ -14,10 +14,10 @@ class CmafPublisher : public DashPublisher
 {
 public:
 	static std::shared_ptr<CmafPublisher> Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-												 const info::Application *application_info,
-												 std::shared_ptr<MediaRouteInterface> router);
+												 const info::Application &application_info,
+												 const std::shared_ptr<MediaRouteInterface> &router);
 
-	CmafPublisher(PrivateToken token, const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
+	CmafPublisher(PrivateToken token, const info::Application &application_info, const std::shared_ptr<MediaRouteInterface> &router);
 
 private:
 	//--------------------------------------------------------------------

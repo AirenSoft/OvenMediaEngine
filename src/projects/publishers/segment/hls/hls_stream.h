@@ -9,7 +9,7 @@
 #pragma once
 
 #include "hls_stream_packetizer.h"
-#include "segment_stream/segment_stream.h"
+#include "../segment_stream/segment_stream.h"
 
 //====================================================================================================
 // HlsStream

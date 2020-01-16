@@ -29,8 +29,8 @@ namespace pvd
 		State GetState(){return _state;};
 
 	protected:
-		Stream();
-		Stream(uint32_t stream_id);
+		Stream(StreamSourceType source_type);
+		Stream(uint32_t stream_id, StreamSourceType source_type);
 		Stream(const StreamInfo &stream_info);
 
 		virtual ~Stream();

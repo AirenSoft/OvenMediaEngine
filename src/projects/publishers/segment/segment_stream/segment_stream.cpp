@@ -106,12 +106,11 @@ bool SegmentStream::Stop()
 // - 첫 key 프레임 에서 SPS/PPS 추출  이후 생성
 //
 //====================================================================================================
-void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
-								   std::shared_ptr<EncodedFrame> encoded_frame,
-								   std::shared_ptr<CodecSpecificInfo> codec_info,
-								   std::shared_ptr<FragmentationHeader> fragmentation)
+void SegmentStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if (_stream_packetizer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
+
+
+	if (_stream_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
 	{
 		//        int nul_header_size = 0;
 		//
@@ -129,11 +128,10 @@ void SegmentStream::SendVideoFrame(std::shared_ptr<MediaTrack> track,
 // SendAudioFrame
 // - Packetizer에 Audio데이터 추가
 //====================================================================================================
-void SegmentStream::SendAudioFrame(std::shared_ptr<MediaTrack> track,
-								   std::shared_ptr<EncodedFrame> encoded_frame,
-								   std::shared_ptr<CodecSpecificInfo> codec_info,
-								   std::shared_ptr<FragmentationHeader> fragmentation)
+void SegmentStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+
+
 	if (_stream_packetizer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
 	{
 		_stream_packetizer->AppendAudioData(std::move(encoded_frame), _audio_track->GetTimeBase().GetTimescale());
