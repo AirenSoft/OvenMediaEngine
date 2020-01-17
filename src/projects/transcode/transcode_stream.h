@@ -51,6 +51,8 @@ public:
 	uint64_t _max_queue_size;
 
 private:
+	ov::Semaphore _queue_event;
+	
 	const info::Application _application_info;
 
 	// Input Stream Info 

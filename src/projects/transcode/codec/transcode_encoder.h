@@ -24,7 +24,7 @@ public:
 
 	std::shared_ptr<TranscodeContext>& GetContext();
 
-	virtual void ThreadWorker();
+	virtual void ThreadEncode();
 
 	virtual void Stop();
 
@@ -44,7 +44,7 @@ protected:
 
 	bool _kill_flag = false;
 	std::mutex _mutex;
-	std::condition_variable _cond;
-	std::thread _thread_work;;
+	std::thread _thread_work;
+	ov::Semaphore _queue_event;
 
 };

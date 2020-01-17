@@ -14,6 +14,7 @@ class OvenCodecImplAvcodecEncAVC : public TranscodeEncoder
 {
 public:
 	~OvenCodecImplAvcodecEncAVC();
+
 	AVCodecID GetCodecID() const noexcept override
 	{
 		return AV_CODEC_ID_H264;
@@ -23,7 +24,7 @@ public:
 
 	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
 
-	void ThreadWorker() override;
+	void ThreadEncode() override;
 
 	void Stop() override;
 

@@ -90,7 +90,7 @@ void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 	
 	mlock.unlock();
 	
-	_cond.notify_one();
+	_queue_event.Notify();;
 }
 
 std::shared_ptr<TranscodeContext>& TranscodeEncoder::GetContext()
@@ -98,7 +98,7 @@ std::shared_ptr<TranscodeContext>& TranscodeEncoder::GetContext()
 	return _output_context;
 }
 
-void TranscodeEncoder::ThreadWorker()
+void TranscodeEncoder::ThreadEncode()
 {
 	// nothing...
 }

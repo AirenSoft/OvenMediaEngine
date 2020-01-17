@@ -106,7 +106,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&OvenCodecImplAvcodecEncAVC::ThreadWorker, this);
+		_thread_work = std::thread(&OvenCodecImplAvcodecEncAVC::ThreadEncode, this);
 	}
 	catch (const std::system_error &e)
 	{
@@ -122,7 +122,7 @@ void OvenCodecImplAvcodecEncAVC::Stop()
 {
 	_kill_flag = true;
 
-	_cond.notify_one();
+	_queue_event.Notify();
 
 	if (_thread_work.joinable())
 	{
@@ -131,22 +131,18 @@ void OvenCodecImplAvcodecEncAVC::Stop()
 	}
 }
 
-void OvenCodecImplAvcodecEncAVC::ThreadWorker()
+void OvenCodecImplAvcodecEncAVC::ThreadEncode()
 {
 	while(!_kill_flag)
 	{
-		// logte("OvenCodecImplAvcodecEncAVC Thread has worked.");
+		_queue_event.Wait();
+
 		std::unique_lock<std::mutex> mlock(_mutex);
 
-		// // If there is data in the input buffer, pull it out, or if there isn't... Wait.
-		if(_input_buffer.empty())
+		// 스레드 종료와 같이 큐에 데이터가 없는 경우에는 다시 대기를 한다
+		if (_input_buffer.empty())
 		{
-			_cond.wait(mlock);
-		}
-
-		if(_kill_flag == true)
-		{
-			break;
+			continue;
 		}
 
 		auto frame = std::move(_input_buffer.front());
@@ -154,7 +150,10 @@ void OvenCodecImplAvcodecEncAVC::ThreadWorker()
 
 		mlock.unlock();
 
-		// continue;
+		///////////////////////////////////////////////////
+		// Request frame encoding to codec
+		///////////////////////////////////////////////////
+
 
 		_frame->format = frame->GetFormat();
 		_frame->nb_samples = 1;
@@ -198,9 +197,12 @@ void OvenCodecImplAvcodecEncAVC::ThreadWorker()
 			std::unique_lock<std::mutex> mlock(_mutex);
 			_input_buffer.push_front(std::move(frame));
 			mlock.unlock();
+			_queue_event.Notify();
 		}
 
+		///////////////////////////////////////////////////
 		// The encoded packet is taken from the codec.
+		///////////////////////////////////////////////////
 		while(true)
 		{
 			// Check frame is availble
@@ -227,13 +229,10 @@ void OvenCodecImplAvcodecEncAVC::ThreadWorker()
 			else
 			{
 				// Encoded packet is ready
-
 				auto packet = MakePacket();
 				::av_packet_unref(_packet);
 
 				std::unique_lock<std::mutex> mlock(_mutex);
-
-				// logte("stats. _input_buffer:%d _output_buffer.queue:%d", _input_buffer.size(), _output_buffer.size());
 
 				_output_buffer.push_back(std::move(packet));			
 

@@ -96,6 +96,8 @@ void TranscodeStream::Stop()
 	_queue_decoded_frames.abort();
 	_queue_filterd_frames.abort();
 
+	_queue_event.Notify();
+
 	if (_thread_looptask.joinable())
 	{
 		_thread_looptask.join();
@@ -112,6 +114,8 @@ bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
 	}
 
 	_queue_input_packets.push(std::move(packet));
+
+	_queue_event.Notify();
 
 	return true;
 }
@@ -513,6 +517,8 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 
 			_queue_decoded_frames.push(std::move(decoded_frame));
 
+			_queue_event.Notify();
+
 			break;
 
 		default:
@@ -549,14 +555,16 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 
 			logtp("[#%d] A frame is filtered (PTS: %lld)", track_id, filtered_frame->GetPts());
 
-			if (_queue_filterd_frames.size() > _max_queue_size)
-			{
-				logti("Filtered frame queue is full, please decrease encoding options (resolution, bitrate, framerate)");
+			// if (_queue_filterd_frames.size() > _max_queue_size)
+			// {
+			// 	logti("Filtered frame queue is full, please decrease encoding options (resolution, bitrate, framerate)");
 
-				return result;
-			}
+			// 	return result;
+			// }
 
 			_queue_filterd_frames.push(std::move(filtered_frame));
+
+			_queue_event.Notify();
 
 			break;
 
@@ -615,12 +623,20 @@ void TranscodeStream::LoopTask()
 
 	while (!_kill_flag)
 	{
+		_queue_event.Wait();
+
 		time_t curr_time;
 		time(&curr_time);
 
-		if(difftime(curr_time, base_time) >= 10)
+		if(difftime(curr_time, base_time) >= 1)
 		{
-			logtd("stats: input.pkts(%d), decoded.frms(%d), filterd.frms(%d)", _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
+			logtd("stats stream[%s/%s], decode.ready[%d], filter.ready[%d], encode.ready[%d]"
+				,_application_info.GetName().CStr()
+				,_stream_info_input->GetName().CStr()
+				,_queue_input_packets.size()
+				,_queue_decoded_frames.size()
+				,_queue_filterd_frames.size());
+
 			base_time = curr_time;
 		}
 

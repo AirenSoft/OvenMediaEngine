@@ -13,6 +13,8 @@
 class OvenCodecImplAvcodecEncVP8 : public TranscodeEncoder
 {
 public:
+	~OvenCodecImplAvcodecEncVP8();
+
 	AVCodecID GetCodecID() const noexcept override
 	{
 		return AV_CODEC_ID_VP8;
@@ -22,6 +24,15 @@ public:
 
 	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
 
+	void ThreadEncode() override;
+
+	void Stop() override;
+
 private:
 	std::shared_ptr<MediaPacket> MakePacket() const;
+
+	// Used to convert output timebase -> codec timebase
+	double _scale;
+	// Used to convert codec timebase -> output timebase
+	double _scale_inv;
 };

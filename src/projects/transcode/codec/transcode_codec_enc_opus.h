@@ -27,7 +27,7 @@ public:
 
 	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
 
-	void ThreadWorker() override;
+	void ThreadEncode() override;
 
 	void Stop() override;
 

@@ -13,6 +13,8 @@
 class OvenCodecImplAvcodecEncAAC : public TranscodeEncoder
 {
 public:
+	~OvenCodecImplAvcodecEncAAC();
+
 	AVCodecID GetCodecID() const noexcept override
 	{
 		return AV_CODEC_ID_AAC;
@@ -21,4 +23,8 @@ public:
 	bool Configure(std::shared_ptr<TranscodeContext> output_context) override;
 
 	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
+
+	void ThreadEncode() override;
+
+	void Stop() override;	
 };
