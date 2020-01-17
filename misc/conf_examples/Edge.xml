@@ -16,12 +16,12 @@
 
 		<Publishers>
 			<!-- Default: 80 -->
-            <HLS>${env:OME_HLS_STREAM_PORT:80}</HLS>
-            <DASH>${env:OME_DASH_STREAM_PORT:80}</DASH>
+            <HLS>${env:OME_HLS_STREAM_PORT:8080}</HLS>
+            <DASH>${env:OME_DASH_STREAM_PORT:8080}</DASH>
 			<WebRTC>
-				<Signalling>${env:OME_SIGNALLING_PORT:3333}</Signalling>
+				<Signalling>${env:OME_SIGNALLING_PORT:5555}</Signalling>
 				<IceCandidates>
-					<IceCandidate>*:10000-10005/udp</IceCandidate>
+					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006-10010/udp}</IceCandidate>
 				</IceCandidates>
 			</WebRTC>
 		</Publishers>

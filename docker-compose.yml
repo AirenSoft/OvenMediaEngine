@@ -4,7 +4,7 @@ services:
   origin:
     build:
       context: .
-    image: ovenmediaengine:origin
+    image: ovenmediaengine:latest
     ports:
       - "1935:1935/tcp"
       - "3334:3334/tcp"
@@ -29,7 +29,7 @@ services:
   edge:
     build:
       context: .
-    image: ovenmediaengine:edge
+    image: ovenmediaengine:latest
     ports:
     - "3333:3333/tcp"
     - "80:80/tcp"
