@@ -138,7 +138,7 @@ RUN \
 
 ## Build OvenMediaEngine
 RUN \
-        DIR=/tmp/ome && \
+        DIR=/tmp/ome1 && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1 && \
@@ -147,7 +147,7 @@ RUN \
 
 ## Make running environment
 RUN \
-        DIR=/tmp/ome&& \
+        DIR=/tmp/ome1 && \
         cd ${DIR} && \
         cd src && \
         mkdir -p ${PREFIX}/bin/origin_conf && \
@@ -164,7 +164,7 @@ FROM	base AS release
 MAINTAINER  Jeheon Han <getroot@airensoft.com>
 
 WORKDIR         /opt/ovenmediaengine/bin
-EXPOSE          80/tcp 1953/tcp 3333/tcp 10000-10005/udp 9000/tcp
+EXPOSE          80/tcp 1935/tcp 3333/tcp 3334/tcp 10000-10010/udp 9000/tcp
 
 COPY            --from=build /opt/ovenmediaengine /opt/ovenmediaengine
 
