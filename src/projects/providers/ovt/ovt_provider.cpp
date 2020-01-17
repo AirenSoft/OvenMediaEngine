@@ -91,8 +91,7 @@ namespace pvd
 
 	bool OvtProvider::StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream)
 	{
-		// TODO(getroot): Need to implement this function
-		return false;
+		return stream->Stop();
 	}
 
 	std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)

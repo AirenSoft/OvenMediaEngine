@@ -14,6 +14,7 @@
 		</Providers>
 
 		<Publishers>
+			<OVT>9000</OVT>
 			<HLS>80</HLS>
 			<DASH>80</DASH>
 			<WebRTC>

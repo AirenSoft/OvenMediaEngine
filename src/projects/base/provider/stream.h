@@ -40,6 +40,9 @@ namespace pvd
 			return _application;
 		}
 
+		virtual bool Start() {return true;}
+		virtual bool Stop() {return true;}
+
 	protected:
 		Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type);
 		Stream(const std::shared_ptr<pvd::Application> &application, info::stream_id_t stream_id, StreamSourceType source_type);

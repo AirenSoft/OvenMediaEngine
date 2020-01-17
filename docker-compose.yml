@@ -1,0 +1,27 @@
+version: '3.7'
+
+services:
+  origin:
+    build:
+      context: .
+    image: ovenmediaengine:origin
+    ports:
+      - "1935:1935/tcp"
+      - "3334:3334/tcp"
+      - "8080:8080/tcp"
+      - "9000:9000/tcp"
+      - "10006-10010:10006-10010/udp"
+    environment:
+      - OME_ORIGIN_PORT=9000
+      - OME_HLS_STREAM_PORT=8080
+      - OME_DASH_STREAM_PORT=8080
+      - OME_SIGNALLING_PORT=3334
+      - OME_ICE_CANDIDATES=*:10006-10010/udp
+      - OME_VIDEO_WIDTH=640
+      - OME_VIDEO_HEIGHT=360
+      - OME_VIDEO_BITRATE=500000
+      - OME_VIDEO_FRAMERATE=30
+      - OME_AUDIO_BITRATE=128000
+      - OME_AUDIO_SAMPLERATE=48000
+      - OME_AUDIO_CHANNEL=2
+    command: /opt/ovenmediaengine/bin/OvenMediaEngine -c origin_conf

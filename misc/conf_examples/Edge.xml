@@ -10,17 +10,16 @@
 	<!-- Settings for the ports to bind -->
 	<Bind>
 		<Providers>
-			<!-- Currently not supported -->
-			<OVT>9000</OVT>
+			<!-- Currently, OME doesn't support using the specified port for OVT Provider -->
+			<OVT>9001</OVT>
 		</Providers>
 
 		<Publishers>
 			<!-- Default: 80 -->
-			<!-- <HLS /> -->
-			<!-- <CMAF /> -->
-			<!-- <DASH /> -->
+            <HLS>${env:OME_HLS_STREAM_PORT:80}</HLS>
+            <DASH>${env:OME_DASH_STREAM_PORT:80}</DASH>
 			<WebRTC>
-				<Signalling>3333</Signalling>
+				<Signalling>${env:OME_SIGNALLING_PORT:3333}</Signalling>
 				<IceCandidates>
 					<IceCandidate>*:10000-10005/udp</IceCandidate>
 				</IceCandidates>
@@ -57,19 +56,27 @@
 
 			<!-- Settings for ProxyPass (It can specify origin for each path) -->
 			<Origins>
-				<Origin>
-					<Location>/app/edge_stream</Location>
+                <!--
+                <Origin>
+					<Location>/app/stream</Location>
 					<Pass>
 						<Scheme>ovt</Scheme>
-						<Url>origin.com:9000/app/stream</Url>
+						<Url>origin.com:9000/app/stream_720p</Url>
 					</Pass>
 				</Origin>
 				<Origin>
-					<Location>/app/another_stream</Location>
+					<Location>/app/</Location>
 					<Pass>
 						<Scheme>ovt</Scheme>
-						<Url>origin2.com:9000/app/stream</Url>
-						<Url>origin3.com:9000/app/stream</Url>
+						<Url>origin.com:9000/app/</Url>
+					</Pass>
+				</Origin>
+				-->
+				<Origin>
+					<Location>/</Location>
+					<Pass>
+						<Scheme>ovt</Scheme>
+						<Url>${env:DEFAULT_ORIGIN_SERVER:}:${env:DEFAULT_ORIGIN_PORT:9000}/</Url>
 					</Pass>
 				</Origin>
 			</Origins>

@@ -26,8 +26,8 @@ namespace pvd
 		~OvtStream() final;
 
 	private:
-		bool Start();
-		bool Stop();
+		bool Start() override;
+		bool Stop() override;
 		void WorkerThread();
 		bool ConnectOrigin();
 		bool RequestDescribe();

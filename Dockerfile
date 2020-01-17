@@ -143,20 +143,30 @@ RUN \
         cd ${DIR} && \
         curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1 && \
         cd src && \
-        make release && \
-        mkdir -p ${PREFIX}/bin/conf && \
+        make release
+
+## Make running environment
+RUN \
+        DIR=/tmp/ome&& \
+        cd ${DIR} && \
+        cd src && \
+        mkdir -p ${PREFIX}/bin/origin_conf && \
+        mkdir -p ${PREFIX}/bin/edge_conf && \
         strip ./bin/RELEASE/OvenMediaEngine && \
         cp ./bin/RELEASE/OvenMediaEngine ${PREFIX}/bin/ && \
-        cp ../misc/conf_examples/Server.xml ${PREFIX}/bin/conf/ && \
+        cp ../misc/conf_examples/Origin.xml ${PREFIX}/bin/origin_conf/Server.xml && \
+        cp ../misc/conf_examples/Logger.xml ${PREFIX}/bin/origin_conf/Logger.xml && \
+        cp ../misc/conf_examples/Edge.xml ${PREFIX}/bin/edge_conf/Server.xml && \
+        cp ../misc/conf_examples/Logger.xml ${PREFIX}/bin/edge_conf/Logger.xml && \
         rm -rf ${DIR}
-
 
 FROM	base AS release
 MAINTAINER  Jeheon Han <getroot@airensoft.com>
 
 WORKDIR         /opt/ovenmediaengine/bin
-EXPOSE          80/tcp 1953/tcp 3333/tcp 10000-10005/udp 9000/udp
+EXPOSE          80/tcp 1953/tcp 3333/tcp 10000-10005/udp 9000/tcp
 
 COPY            --from=build /opt/ovenmediaengine /opt/ovenmediaengine
 
-ENTRYPOINT      ["/opt/ovenmediaengine/bin/OvenMediaEngine"]
+# Default run as Origin mode
+CMD             ["OvenMediaEngine", "-c", "origin_conf"]
