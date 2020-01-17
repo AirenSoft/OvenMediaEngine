@@ -77,7 +77,7 @@ ssize_t HttpServer::TryParseHeader(const std::shared_ptr<HttpClient> &client, co
 
 		case HttpStatusCode::PartialContent:
 			// 데이터 더 필요 - 이 상태에서는 반드시 모든 데이터를 소진했어야 함
-			OV_ASSERT2(processed_length == data->GetLength());
+			OV_ASSERT2((processed_length >= 0LL) && (static_cast<size_t>(processed_length) == data->GetLength()));
 			break;
 
 		default:

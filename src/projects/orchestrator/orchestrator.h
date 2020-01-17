@@ -30,7 +30,7 @@
 
 class MediaRouter;
 
-class Orchestrator : public MediaRouteApplicationObserver
+class Orchestrator
 {
 protected:
 	struct PrivateToken
@@ -50,17 +50,11 @@ public:
 		NotExists
 	};
 
-	Orchestrator(PrivateToken token)
+	static Orchestrator *GetInstance()
 	{
-	}
+		static Orchestrator orchestrator;
 
-	~Orchestrator() = default;
-
-	static const std::shared_ptr<Orchestrator> &GetInstance()
-	{
-		static auto orchestrator = std::make_shared<Orchestrator>(PrivateToken{});
-
-		return orchestrator;
+		return &orchestrator;
 	}
 
 	bool ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_config_list);
@@ -125,36 +119,6 @@ public:
 		return RequestPullStream(vhost_app_name, stream, 0);
 	}
 
-	//--------------------------------------------------------------------
-	// Implementation of MediaRouteApplicationObserver
-	//--------------------------------------------------------------------
-	// Temporarily used until Orchestrator takes stream management
-	bool OnCreateStream(const std::shared_ptr<StreamInfo> &info) override;
-	bool OnDeleteStream(const std::shared_ptr<StreamInfo> &info) override;
-
-	bool OnSendVideoFrame(const std::shared_ptr<StreamInfo> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
-	{
-		// Ignore packets
-		return true;
-	}
-
-	bool OnSendAudioFrame(const std::shared_ptr<StreamInfo> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
-	{
-		// Ignore packets
-		return true;
-	}
-
-	bool OnSendFrame(const std::shared_ptr<StreamInfo> &info, const std::shared_ptr<MediaPacket> &packet) override
-	{
-		// Ignore packets
-		return true;
-	}
-
-	ObserverType GetObserverType() override
-	{
-		return ObserverType::Orchestrator;
-	}
-
 protected:
 	struct Module
 	{
@@ -189,6 +153,55 @@ protected:
 		bool is_valid = false;
 	};
 
+	struct Application : public MediaRouteApplicationObserver
+	{
+		Application(Orchestrator *orchestrator, const info::Application &app_info)
+			: orchestrator(orchestrator),
+			  app_info(app_info)
+		{
+		}
+
+		//--------------------------------------------------------------------
+		// Implementation of MediaRouteApplicationObserver
+		//--------------------------------------------------------------------
+		// Temporarily used until Orchestrator takes stream management
+		bool OnCreateStream(const std::shared_ptr<StreamInfo> &info) override
+		{
+			return orchestrator->OnCreateStream(app_info, info);
+		}
+
+		bool OnDeleteStream(const std::shared_ptr<StreamInfo> &info) override
+		{
+			return orchestrator->OnDeleteStream(app_info, info);
+		}
+
+		bool OnSendVideoFrame(const std::shared_ptr<StreamInfo> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
+		{
+			// Ignore packets
+			return true;
+		}
+
+		bool OnSendAudioFrame(const std::shared_ptr<StreamInfo> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
+		{
+			// Ignore packets
+			return true;
+		}
+
+		bool OnSendFrame(const std::shared_ptr<StreamInfo> &info, const std::shared_ptr<MediaPacket> &packet) override
+		{
+			// Ignore packets
+			return true;
+		}
+
+		ObserverType GetObserverType() override
+		{
+			return ObserverType::Orchestrator;
+		}
+
+		Orchestrator *orchestrator = nullptr;
+		info::Application app_info;
+	};
+
 	enum class ItemState
 	{
 		Unknown,
@@ -209,8 +222,8 @@ protected:
 	struct Origin
 	{
 		Origin(const cfg::OriginsOrigin &origin_config)
-			: location(origin_config.GetLocation()),
-			  scheme(origin_config.GetPass().GetScheme()),
+			: scheme(origin_config.GetPass().GetScheme()),
+			  location(origin_config.GetLocation()),
 			  state(ItemState::New)
 
 		{
@@ -364,11 +377,13 @@ protected:
 		std::vector<Origin> origin_list;
 
 		// Application list
-		std::map<info::application_id_t, info::Application> app_map;
+		std::map<info::application_id_t, std::shared_ptr<Application>> app_map;
 
 		// A flag used to determine if an item has changed
 		ItemState state = ItemState::Unknown;
 	};
+
+	Orchestrator() = default;
 
 	bool ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host);
 
@@ -414,6 +429,10 @@ protected:
 
 	// bool RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> &url);
 	bool RequestPullStreamForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset);
+
+	// Called from Application
+	bool OnCreateStream(const info::Application &app_info, const std::shared_ptr<StreamInfo> &info);
+	bool OnDeleteStream(const info::Application &app_info, const std::shared_ptr<StreamInfo> &info);
 
 	std::shared_ptr<MediaRouter> _media_router;
 

@@ -24,13 +24,15 @@ bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtu
 		logtd("VirtualHost is deleted");
 
 		// Delete all apps that were created by this VirtualHost
-		for (auto &app : virtual_host->app_map)
+		for (auto app_item : virtual_host->app_map)
 		{
-			auto result = DeleteApplicationInternal(app.second);
+			auto &app_info = app_item.second->app_info;
+
+			auto result = DeleteApplicationInternal(app_info);
 
 			if (result != Result::Succeeded)
 			{
-				logte("Could not delete application: %s", app.second.GetName().CStr());
+				logte("Could not delete application: %s", app_info.GetName().CStr());
 				succeeded = false;
 			}
 		}
@@ -513,7 +515,6 @@ bool Orchestrator::UnregisterModule(const std::shared_ptr<OrchestratorModuleInte
 		if (info->module == module)
 		{
 			_module_list.erase(info);
-			auto &list = _module_map[info->type];
 			logtd("%s module (%p) is unregistered", GetOrchestratorModuleTypeName(info->type), module.get());
 			return true;
 		}
@@ -606,7 +607,6 @@ std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForScheme(const ov::Stri
 
 	// Find the provider
 	std::shared_ptr<OrchestratorProviderModuleInterface> module = nullptr;
-	bool succeeded = false;
 
 	for (auto info = _module_list.begin(); info != _module_list.end(); ++info)
 	{
@@ -825,7 +825,7 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &v
 
 	for (auto &app : app_map)
 	{
-		if (app.second.GetName() == app_name)
+		if (app.second->app_info.GetName() == app_name)
 		{
 			// The application does exists
 			return Result::Exists;
@@ -838,7 +838,8 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &v
 	std::vector<std::shared_ptr<OrchestratorModuleInterface>> created_list;
 	bool succeeded = true;
 
-	app_map.emplace(app_info.GetId(), app_info);
+	auto new_app = std::make_shared<Application>(this, app_info);
+	app_map.emplace(app_info.GetId(), new_app);
 
 	for (auto &module : _module_list)
 	{
@@ -861,7 +862,7 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &v
 
 	if (_media_router != nullptr)
 	{
-		_media_router->RegisterObserverApp(app_info, GetSharedPtrAs<MediaRouteApplicationObserver>());
+		_media_router->RegisterObserverApp(app_info, new_app->GetSharedPtrAs<MediaRouteApplicationObserver>());
 	}
 
 	if (succeeded)
@@ -924,22 +925,23 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(const ov::String &v
 	}
 
 	auto &app_map = vhost->app_map;
-	auto app = app_map.find(app_id);
+	auto app_item = app_map.find(app_id);
 
-	if (app == app_map.end())
+	if (app_item == app_map.end())
 	{
 		logti("Application %d does not exists", app_id);
 		return Result::NotExists;
 	}
 
-	auto &app_info = app->second;
+	auto app = app_item->second;
+	auto &app_info = app->app_info;
 
 	logti("Trying to delete the application: [%s] (%u)", app_info.GetName().CStr(), app_info.GetId());
 	app_map.erase(app_id);
 
 	if (_media_router != nullptr)
 	{
-		_media_router->UnregisterObserverApp(app_info, GetSharedPtrAs<MediaRouteApplicationObserver>());
+		_media_router->UnregisterObserverApp(app_info, app->GetSharedPtrAs<MediaRouteApplicationObserver>());
 	}
 
 	logtd("Notifying modules for the delete event...");
@@ -988,11 +990,13 @@ const info::Application &Orchestrator::GetApplicationInternal(const ov::String &
 		{
 			auto &app_map = vhost->app_map;
 
-			for (auto &app : app_map)
+			for (auto app_item : app_map)
 			{
-				if (app.second.GetName() == vhost_app_name)
+				auto &app_info = app_item.second->app_info;
+
+				if (app_info.GetName() == vhost_app_name)
 				{
-					return app.second;
+					return app_info;
 				}
 			}
 		}
@@ -1015,11 +1019,11 @@ const info::Application &Orchestrator::GetApplicationInternal(const ov::String &
 	if (vhost != nullptr)
 	{
 		auto &app_map = vhost->app_map;
-		auto app = app_map.find(app_id);
+		auto app_item = app_map.find(app_id);
 
-		if (app != app_map.end())
+		if (app_item != app_map.end())
 		{
-			return app->second;
+			return app_item->second->app_info;
 		}
 	}
 
@@ -1201,13 +1205,13 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 	return RequestPullStreamForLocation(vhost_app_name, stream, offset);
 }
 
-bool Orchestrator::OnCreateStream(const std::shared_ptr<StreamInfo> &info)
+bool Orchestrator::OnCreateStream(const info::Application &app_info, const std::shared_ptr<StreamInfo> &info)
 {
 	logtd("%s stream is created", info->GetName().CStr());
 	return true;
 }
 
-bool Orchestrator::OnDeleteStream(const std::shared_ptr<StreamInfo> &info)
+bool Orchestrator::OnDeleteStream(const info::Application &app_info, const std::shared_ptr<StreamInfo> &info)
 {
 	logtd("%s stream is deleted", info->GetName().CStr());
 	return true;

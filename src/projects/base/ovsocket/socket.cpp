@@ -1044,7 +1044,7 @@ namespace ov
 						break;
 					}
 
-					OV_ASSERT2(remained >= sent);
+					OV_ASSERT2(static_cast<ssize_t>(remained) >= sent);
 
 					remained -= sent;
 					total_sent += sent;
@@ -1085,7 +1085,7 @@ namespace ov
 						break;
 					}
 
-					OV_ASSERT2(remained >= sent);
+					OV_ASSERT2(static_cast<ssize_t>(remained) >= sent);
 
 					remained -= sent;
 					total_sent += sent;

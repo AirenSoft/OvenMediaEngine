@@ -451,7 +451,6 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::share
 std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &client = ws_client->GetClient();
-	auto orchestrator = Orchestrator::GetInstance();
 
 	ov::String application_name = info->internal_app_name;
 	ov::String stream_name = info->stream_name;

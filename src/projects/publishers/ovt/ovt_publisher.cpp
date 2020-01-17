@@ -317,6 +317,8 @@ bool OvtPublisher::LinkRemoteWithStream(int remote_id, std::shared_ptr<OvtStream
 bool OvtPublisher::UnlinkRemoteFromStream(int remote_id)
 {
 	_remote_stream_map.erase(remote_id);
+
+	return true;
 }
 
 bool OvtPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)

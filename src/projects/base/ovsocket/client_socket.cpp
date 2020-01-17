@@ -152,7 +152,7 @@ namespace ov
 					break;
 				}
 
-				OV_ASSERT2(remained >= sent_bytes);
+				OV_ASSERT2(static_cast<ssize_t>(remained) >= sent_bytes);
 
 				remained -= sent_bytes;
 				data += sent_bytes;
