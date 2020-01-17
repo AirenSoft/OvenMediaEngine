@@ -79,7 +79,7 @@ bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &
                 0x00 == data[1] &&
                 0x01 == data[2])
         {
-            offset_list.emplace_back(dataOffset, 3); // Offset, SIZEOF(START_CODE=3)
+            offset_list.emplace_back(dataOffset, 3); // Offset, SIZEOF(START_CODE[3])
             dataOffset += 3;
         }
         else if (remainDataSize >= 4 &&
@@ -88,7 +88,7 @@ bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &
                  0x00 == data[2] &&
                  0x01 == data[3])
         {
-            offset_list.emplace_back(dataOffset, 4); // Offset, SIZEOF(START_CODE=3)
+            offset_list.emplace_back(dataOffset, 4); // Offset, SIZEOF(START_CODE[4])
             dataOffset += 4;
         }
         else

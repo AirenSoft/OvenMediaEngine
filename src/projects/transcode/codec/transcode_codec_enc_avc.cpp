@@ -8,8 +8,15 @@
 //==============================================================================
 #include "transcode_codec_enc_avc.h"
 
+#include <unistd.h>
+
 #define OV_LOG_TAG "TranscodeCodec"
 
+
+OvenCodecImplAvcodecEncAVC::~OvenCodecImplAvcodecEncAVC()
+{
+	Stop();
+}
 
 // Notes. 
 //
@@ -94,47 +101,60 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 		return false;
 	}
 
+	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
+	try
+	{
+		_kill_flag = false;
+
+		_thread_work = std::thread(&OvenCodecImplAvcodecEncAVC::ThreadWorker, this);
+	}
+	catch (const std::system_error &e)
+	{
+		_kill_flag = true;
+
+		logte("Failed to start transcode stream thread.");
+	}
+
 	return true;
 }
 
-std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeResult *result)
+void OvenCodecImplAvcodecEncAVC::Stop()
 {
-	// Check frame is availble
-	int ret = ::avcodec_receive_packet(_context, _packet);
+	_kill_flag = true;
 
-	if (ret == AVERROR(EAGAIN))
+	_cond.notify_one();
+
+	if (_thread_work.joinable())
 	{
-		// Wait for more packet
+		_thread_work.join();
+		logtd("AVC encoder thread has ended.");
 	}
-	else if (ret == AVERROR_EOF)
+}
+
+void OvenCodecImplAvcodecEncAVC::ThreadWorker()
+{
+	while(!_kill_flag)
 	{
-		logte("Error receiving a packet for decoding : AVERROR_EOF");
+		// logte("OvenCodecImplAvcodecEncAVC Thread has worked.");
+		std::unique_lock<std::mutex> mlock(_mutex);
 
-		*result = TranscodeResult::DataError;
-		return nullptr;
-	}
-	else if (ret < 0)
-	{
-		logte("Error receiving a packet for encoding : %d", ret);
+		// // If there is data in the input buffer, pull it out, or if there isn't... Wait.
+		if(_input_buffer.empty())
+		{
+			_cond.wait(mlock);
+		}
 
-		*result = TranscodeResult::DataError;
-		return nullptr;
-	}
-	else
-	{
-		// Packet is ready
-		auto packet = MakePacket();
-		::av_packet_unref(_packet);
+		if(_kill_flag == true)
+		{
+			break;
+		}
 
-		*result = TranscodeResult::DataReady;
-
-		return std::move(packet);
-	}
-
-	while (_input_buffer.size() > 0)
-	{
 		auto frame = std::move(_input_buffer.front());
 		_input_buffer.pop_front();
+
+		mlock.unlock();
+
+		// continue;
 
 		_frame->format = frame->GetFormat();
 		_frame->nb_samples = 1;
@@ -151,33 +171,96 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 		if (::av_frame_get_buffer(_frame, 32) < 0)
 		{
 			logte("Could not allocate the video frame data");
-			*result = TranscodeResult::DataError;
-			return nullptr;
+			// *result = TranscodeResult::DataError;
+			break;
 		}
 
 		if (::av_frame_make_writable(_frame) < 0)
 		{
 			logte("Could not make sure the frame data is writable");
-			*result = TranscodeResult::DataError;
-			return nullptr;
+			// *result = TranscodeResult::DataError;
+			break;
 		}
 
 		::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
 		::memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
 		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
 
-		ret = ::avcodec_send_frame(_context, _frame);
+		int ret = ::avcodec_send_frame(_context, _frame);
+		// int ret = 0;
+		::av_frame_unref(_frame);
 
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
+
+			// Failure to send frame to encoder. Wait and put it back in. But it doesn't happen as often as possible.
+			std::unique_lock<std::mutex> mlock(_mutex);
+			_input_buffer.push_front(std::move(frame));
+			mlock.unlock();
 		}
 
-		::av_frame_unref(_frame);
+		// The encoded packet is taken from the codec.
+		while(true)
+		{
+			// Check frame is availble
+			int ret = ::avcodec_receive_packet(_context, _packet);
+
+			if (ret == AVERROR(EAGAIN))
+			{
+				// More packets are needed for encoding.
+
+				// logte("Error receiving a packet for decoding : EAGAIN");
+
+				break;
+			}
+			else if (ret == AVERROR_EOF)
+			{
+				logte("Error receiving a packet for decoding : AVERROR_EOF");
+				break;
+			}
+			else if (ret < 0)
+			{
+				logte("Error receiving a packet for decoding : %d", ret);
+				break;
+			}
+			else
+			{
+				// Encoded packet is ready
+
+				auto packet = MakePacket();
+				::av_packet_unref(_packet);
+
+				std::unique_lock<std::mutex> mlock(_mutex);
+
+				// logte("stats. _input_buffer:%d _output_buffer.queue:%d", _input_buffer.size(), _output_buffer.size());
+
+				_output_buffer.push_back(std::move(packet));			
+
+				mlock.unlock();
+			}			
+		}
+	}
+}
+
+
+std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeResult *result)
+{
+	std::unique_lock<std::mutex> mlock(_mutex);
+	if(!_output_buffer.empty())
+	{
+		*result = TranscodeResult::DataReady;
+
+		auto packet = std::move(_output_buffer.front());
+		_output_buffer.pop_front();
+		
+		return std::move(packet);
 	}
 
 	*result = TranscodeResult::NoData;
+
 	return nullptr;
+
 }
 
 std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const

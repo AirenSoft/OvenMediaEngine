@@ -55,6 +55,7 @@ bool MediaRouteApplication::Start()
 bool MediaRouteApplication::Stop()
 {
 	_kill_flag = true;
+	_indicator.abort();
 	_thread.join();
 
 	return true;
@@ -143,6 +144,8 @@ bool MediaRouteApplication::UnregisterObserverApp(
 	return true;
 }
 
+
+// OnCreateStream 함수는 Provider, Relay, Trasncoder 타입의 Connector에서 호출된다
 bool MediaRouteApplication::OnCreateStream(
 	std::shared_ptr<MediaRouteApplicationConnector> app_conn,
 	std::shared_ptr<StreamInfo> stream_info)

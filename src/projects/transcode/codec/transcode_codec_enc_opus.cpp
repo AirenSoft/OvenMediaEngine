@@ -8,6 +8,8 @@
 //==============================================================================
 #include "transcode_codec_enc_opus.h"
 
+#include <unistd.h>
+
 #include <opus/opus.h>
 
 #define OV_LOG_TAG "TranscodeCodec"
@@ -26,6 +28,8 @@ size_t AudioEncoderOpusImpl::SufficientOutputBufferSize() const {
 
 OvenCodecImplAvcodecEncOpus::~OvenCodecImplAvcodecEncOpus()
 {
+	// Stop();
+
 	if (_encoder)
 	{
 		::opus_encoder_destroy(_encoder);
@@ -69,7 +73,59 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> co
 	_format = common::AudioSample::Format::None;
 	_current_pts = -1;
 
+	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
+	// try
+	// {
+	// 	_kill_flag = false;
+
+	// 	_thread_work = std::thread(&OvenCodecImplAvcodecEncOpus::ThreadWorker, this);
+	// }
+	// catch (const std::system_error &e)
+	// {
+	// 	_kill_flag = true;
+
+	// 	logte("Failed to start transcode stream thread.");
+	// }
+
+
 	return true;
+}
+
+void OvenCodecImplAvcodecEncOpus::Stop()
+{
+	_kill_flag = true;
+
+	_cond.notify_one();
+
+	if (_thread_work.joinable())
+	{
+		_thread_work.join();
+		logtd("OPUS encoder thread has ended.");
+
+	}
+}
+
+void OvenCodecImplAvcodecEncOpus::ThreadWorker()
+{
+#if 0
+	while(!_kill_flag)
+	{
+		std::unique_lock<std::mutex> mlock(_mutex);
+
+		// // If there is data in the input buffer, pull it out, or if there isn't... Wait.
+		if(_input_buffer.empty())
+		{
+			_cond.wait(mlock);
+		}
+
+		if(_kill_flag == true)
+		{
+			break;
+		}
+
+		logte("OvenCodecImplAvcodecEncOpus Thread has worked.");
+	}
+#endif	
 }
 
 void OvenCodecImplAvcodecEncOpus::SendBuffer(std::shared_ptr<const MediaFrame> frame)

@@ -22,9 +22,12 @@ public:
 
 	void SendBuffer(std::shared_ptr<const MediaFrame> frame) override;
 
-
 	std::shared_ptr<TranscodeContext>& GetContext();
-	
+
+	virtual void ThreadWorker();
+
+	virtual void Stop();
+
 protected:
 	std::shared_ptr<TranscodeContext> _output_context = nullptr;
 
@@ -38,4 +41,10 @@ protected:
 	AVFrame *_frame = nullptr;
 
 	int _decoded_frame_num = 0;
+
+	bool _kill_flag = false;
+	std::mutex _mutex;
+	std::condition_variable _cond;
+	std::thread _thread_work;;
+
 };

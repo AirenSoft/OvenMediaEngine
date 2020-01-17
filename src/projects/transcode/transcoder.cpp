@@ -98,7 +98,7 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 // Delete Application
 bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 {
-
+	return true;
 }
 
 // Create Application

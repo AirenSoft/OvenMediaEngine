@@ -83,16 +83,10 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	{
 		if (media_track->GetCodecId() == MediaCodecId::H264)
 		{
-			// 플레그멘테이션 헤더를 생성한다. 만약 헤더정보가 생성되어 있다면.. 패스한다
+			// 만약, RTP 프레그멘테이션을 위한 헤더 정보가 없다면 생성한다.
 			if(media_packet->GetFragHeader()->fragmentation_vector_size == 0)
 			{
-				// FragmentationHeader* fragmentation_header = _avc_video_packet_fragmentizer.FromAvcVideoPacket2(media_packet);
-
-				// media_packet->SetFragHeader(fragmentation_header);
-
-				// delete fragmentation_header;
-
-				_avc_video_packet_fragmentizer.MakeHeader(media_packet);
+				_avc_video_fragmentizer.MakeHeader(media_packet);
 			}
 		}
 		else if (media_track->GetCodecId() == MediaCodecId::Vp8)

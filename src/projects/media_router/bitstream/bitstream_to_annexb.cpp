@@ -153,7 +153,8 @@ bool BitstreamToAnnexB::ConvertKeyFrame(AvcPacketType packet_type, ov::ByteStrea
 			// Important! 
 			//  주기적으로 SPS/PPS를 전달하기위한 목적으로 사용된다. 만약, 주기적으로 SPS, PPS가 전달되지 않으면 플레이어에서 재생이 안된다. 
 			//  x264 SW 코덱은 Key Frame에 IDR NAL 패킷만 포함되어 있어서 아래와 같이 SPS, PPS 패킷을 추가해줘야 한다.
-			// TODO(soulk) : NVENC HW 코덱은 Key Frame 에 SPS+PPS+IDR NAL 패킷이 모두 포함되어 있다. 중복으로 SPS/PPS 전송되지 않도록 예외 처리해야 한다.
+			// TODO(soulk) : NVENC HW 코덱은 Key Frame 에 SPS+PPS+IDR NAL 패킷이 모두 포함되어 있다. 
+			//				 중복으로 SPS/PPS 전송되지 않도록 예외 처리해야 한다.
 
 			data->Append(START_CODE, 4);
 			data->Append(_sps.get());
@@ -206,8 +207,6 @@ bool BitstreamToAnnexB::ConvertInterFrame(AvcPacketType packet_type, ov::ByteStr
 #else // DEBUG
 		read_stream.Skip(nal_length);
 #endif // DEBUG
-
-
 
 		data->Append(START_CODE, 4);
 		data->Append(nal_data.get());

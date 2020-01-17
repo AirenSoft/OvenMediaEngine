@@ -84,10 +84,26 @@ bool TranscodeEncoder::Configure(std::shared_ptr<TranscodeContext> context)
 
 void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 {
+	std::unique_lock<std::mutex> mlock(_mutex);
+
 	_input_buffer.push_back(std::move(frame));
+	
+	mlock.unlock();
+	
+	_cond.notify_one();
 }
 
 std::shared_ptr<TranscodeContext>& TranscodeEncoder::GetContext()
 {
 	return _output_context;
+}
+
+void TranscodeEncoder::ThreadWorker()
+{
+	// nothing...
+}
+
+void TranscodeEncoder::Stop()
+{
+	// nothing...
 }

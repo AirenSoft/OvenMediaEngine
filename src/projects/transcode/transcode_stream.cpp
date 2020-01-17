@@ -428,44 +428,12 @@ void TranscodeStream::ChangeOutputFormat(MediaFrame *buffer)
 	CreateFilters(buffer);
 }
 
-// 매번... 카운팅하지 말고.. 성능 개선할 수 있는 구조로 변경해야함. 
-void TranscodeStream::GetByassTrackInfo(int32_t track_id, int32_t& bypass, int32_t& non_bypass)
-{
-	// bypass = 0;
-	// non_bypass = 0;
-
-	auto output_track_ids = _tracks_map.find(track_id);
-	if (output_track_ids == _tracks_map.end())
-	{
-		return;
-	}
-
-	auto pair_mapped_tracks = output_track_ids->second;
-	for ( auto pair_item : pair_mapped_tracks )
-	{
-		int32_t output_track_id = pair_item.first;
-		auto output_track = pair_item.second;
-		
-		if(output_track->IsBypass())
-		{
-			bypass++;
-		}
-		else
-		{
-			non_bypass++;
-		}
-	}
-}
-
 TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<MediaPacket> packet)
 {
-	// return TranscodeResult::NoData;
-#if 1
-	// 만약, 출력 트랙에 BYPASS 옵션에 해당 되는 패킷이라면, 디코딩에서 인코딩 프로세스 없이 바로 미디어 라우트로 전달한다
-	int32_t bypass_cnt=0, nbypass_cnt=0;
+	// If the output track is a packet equivalent to BYPASS, it will be forwarded directly to the media route without any transcoding process.
+	bool needed_bypass = false, needed_transcode = false;
 	// GetByassTrackInfo(track_id, bypass_cnt, nbypass_cnt);
 	
-
 	auto output_track_ids = _tracks_map.find(track_id);
 	if (output_track_ids == _tracks_map.end())
 	{
@@ -480,31 +448,25 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 		
 		if(output_track->IsBypass() == true)
 		{
-			// 바이패스 패킷이면... 다이렉트로 미디어 라우터에 보낸다
 			auto clone_packet = packet->ClonePacket();
 
-			// std::shared_ptr<MediaPacket> clone_packet = packet->ClonePacket();
 			clone_packet->SetTrackId(output_track_id);
 			SendFrame(std::move(clone_packet));
 
-			bypass_cnt++;
+			needed_bypass = true;
 		}
 		else
 		{
-			nbypass_cnt++;
+			needed_transcode = true;
 		}
 	}
 
-	// logti(" track_id(%d) bypass track count(%d), non-bypass track count(%d)", track_id, bypass_cnt, nbypass_cnt);
 
-
-	// BYPASS가 아닌 트랙이 존재한다면... 디코딩 프로세스도 태운다
-	if(nbypass_cnt == 0)
+	// If there are no tracks that require transcoding, exit.
+	if(needed_transcode == false)
 	{
-		// 디코딩이 필요없는 패킷이라면.. 디코더로 넘기지 않는다
 		return TranscodeResult::NoData;
 	}
-#endif
 
 	auto decoder_item = _decoders.find(track_id);
 	if (decoder_item == _decoders.end())
@@ -589,12 +551,7 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 
 			if (_queue_filterd_frames.size() > _max_queue_size)
 			{
-				_stats_queue_full_count++;
-
-				if (_stats_queue_full_count % 256 == 0)
-				{
-					logti("Filtered frame queue is full, please decrease encoding options (resolution, bitrate, framerate)");
-				}
+				logti("Filtered frame queue is full, please decrease encoding options (resolution, bitrate, framerate)");
 
 				return result;
 			}
@@ -653,10 +610,20 @@ void TranscodeStream::LoopTask()
 	
 	CreateStreams();
 
-	int32_t loop_cnt = 0;
-	
+	time_t base_time;
+	time(&base_time);
+
 	while (!_kill_flag)
 	{
+		time_t curr_time;
+		time(&curr_time);
+
+		if(difftime(curr_time, base_time) >= 10)
+		{
+			logtd("stats: input.pkts(%d), decoded.frms(%d), filterd.frms(%d)", _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
+			base_time = curr_time;
+		}
+
 		if (_queue_input_packets.size() > 0)
 		{
 			auto packet = _queue_input_packets.pop_unique();
@@ -678,7 +645,7 @@ void TranscodeStream::LoopTask()
 		}
 
 
-		if (_queue_filterd_frames.size() > 0)
+		if(_queue_filterd_frames.size() > 0)
 		{
 			auto frame = _queue_filterd_frames.pop_unique();
 			if (frame != nullptr)
@@ -690,16 +657,8 @@ void TranscodeStream::LoopTask()
 		}
 
 
-		// Print Statistics
-		if (loop_cnt++ % 1000000 == 0)
-		{
-			loop_cnt = 1;
-			logtd("stats: input.pkts(%d), decoded.frms(%d), filterd.frms(%d)", _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
-		}
-
-
 		// TODO(soulk) Packet이 존재하는 경우에만 Loop를 처리할 수 있는 방법은 없나?
-		usleep(1);
+		// usleep(1);
 	}
 
 	// 스트림 삭제 전송
@@ -730,20 +689,22 @@ void TranscodeStream::SendFrame(std::shared_ptr<MediaPacket> packet)
 {
 	uint8_t track_id = static_cast<uint8_t>(packet->GetTrackId());
 
-	// TODO(soulk): 성능 개선이 필요하다!!!!!! 시급하다!!!!!!
+	// TODO(soulk): Performance improvement is needed!!! It's urgent!!!
 	for (auto &iter : _stream_info_outputs)
 	{
 		auto &output_stream_info = iter.second;
 
 		for (auto &media_track : output_stream_info->GetTracks())
 		{
-			if (track_id == media_track.first)
+			if (packet->GetTrackId() == media_track.first)
 			{
 				auto clone_packet = packet->ClonePacket();
+
+				// logtd("[#%d] Trying to outgoing the packet (%s, PTS: %lld)", clone_packet->GetTrackId(), output_stream_info->GetName().CStr(), clone_packet->GetPts());
+
 				_parent->SendFrame(output_stream_info, std::move(clone_packet));
 			}
 		}
-
 	}
 }
 
@@ -820,6 +781,14 @@ void TranscodeStream::DoFilters(std::shared_ptr<MediaFrame> frame)
 	for ( auto pair_item : pair_mapped_tracks )
 	{
 		int32_t output_track_id = pair_item.first;
+		auto output_track = pair_item.second;
+		
+		// 디코딩된 프레임의 대상 트랙이 Bybass 이면, 필터에 전송하지 않는다.
+		if(output_track->IsBypass() == true)
+		{
+			continue;
+		}		
+
 		auto frame_clone = frame->CloneFrame();
 		if (frame_clone == nullptr)
 		{
@@ -837,39 +806,11 @@ uint8_t TranscodeStream::NewTrackId(common::MediaType media_type)
 {
 	uint8_t last_index = 0;
 
-	// The generated track ID is changed in such a way that sequentially.
-#if 0
-	// 96-127 dynamic : RTP Payload Types for standard audio and video encodings
-	if (media_type == common::MediaType::Video)
-	{
-		// 0x60 ~ 0x6F
-		if (_last_track_video >= 0x70)
-		{
-			logte("The number of video encoders that can be supported is 16");
-			return 0;
-		}
-		last_index = _last_track_video;
-		++_last_track_video;
-	}
-	else if (media_type == common::MediaType::Audio)
-	{
-		// 0x70 ~ 0x7F
-		if (_last_track_audio > 0x7F)
-		{
-			logte("The number of audio encoders that can be supported is 16");
-			return 0;
-		}
-		last_index = _last_track_audio;
-		++_last_track_audio;
-	}
-#else
 	last_index = _last_track_index;
 	_last_track_index++;
-#endif
 
 	return last_index;
 }
-
 
 
 common::MediaCodecId TranscodeStream::GetCodecId(ov::String name)

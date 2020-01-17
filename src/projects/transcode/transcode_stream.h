@@ -104,7 +104,7 @@ private:
 	int32_t CreateEncoders();
 	bool CreateEncoder(std::shared_ptr<MediaTrack> media_track, std::shared_ptr<TranscodeContext> output_context);
 
-	// 디코딩된 프레임의 포맷이 분석되거나 변경될 경우 호출됨.
+	// Called when formatting of decoded frames is analyzed or changed.
 	void ChangeOutputFormat(MediaFrame *buffer);
 
 	void CreateFilters(MediaFrame *buffer);
@@ -130,10 +130,10 @@ private:
 	// Send frame with output stream's information
 	void SendFrame(std::shared_ptr<MediaPacket> packet);
 
-	void GetByassTrackInfo(int32_t track_id, int32_t& bypass, int32_t& non_bypass);
-
 	const cfg::Encode* GetEncodeByProfileName(const info::Application &application_info, ov::String encode_name);
+
 	common::MediaCodecId GetCodecId(ov::String name);
-	int GetBitrate(ov::String bitrate)	;
+
+	int GetBitrate(ov::String bitrate);
 };
 
