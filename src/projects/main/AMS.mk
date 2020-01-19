@@ -6,6 +6,7 @@ LOCAL_STATIC_LIBRARIES := \
 	ovtpublisher \
 	ovtprovider \
 	rtmpprovider \
+	rtspcprovider \
 	transcoder \
 	rtc_signalling \
 	ice \

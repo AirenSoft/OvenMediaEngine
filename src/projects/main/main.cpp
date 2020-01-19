@@ -127,9 +127,10 @@ int main(int argc, char *argv[])
 					INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
 					INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
 					INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
+					INIT_MODULE(rtspc_provider, "RTSP Client Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 					INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
 					INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, host_info, media_router));
-
+					
 					//--------------------------------------------------------------------
 					// Register modules to Orchestrator
 					//--------------------------------------------------------------------
@@ -139,6 +140,7 @@ int main(int argc, char *argv[])
 					// Register providers
 					initialized = initialized && orchestrator->RegisterModule(rtmp_provider);
 					initialized = initialized && orchestrator->RegisterModule(ovt_provider);
+					initialized = initialized && orchestrator->RegisterModule(rtspc_provider);
 					// Register transcoder
 					initialized = initialized && orchestrator->RegisterModule(transcoder);
 					// Register publishers

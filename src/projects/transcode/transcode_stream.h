@@ -78,7 +78,6 @@ private:
 	// OUTPUT_TRACK_ID, ENCODER
 	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
 
-
 	// Buffer for encoded(input) media packets
 	MediaQueue<std::shared_ptr<MediaPacket>> _queue_input_packets;
 
