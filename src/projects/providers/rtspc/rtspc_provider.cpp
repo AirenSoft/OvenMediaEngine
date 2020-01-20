@@ -28,13 +28,13 @@ namespace pvd
 	RtspcProvider::RtspcProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 			: Provider(server_config, router)
 	{
-
+		logtd("Created Rtspc Provider module.");
 	}
 
 	RtspcProvider::~RtspcProvider()
 	{
 		Stop();
-		logtd("Terminated RtspcProvider modules.");
+		logtd("Terminated Rtspc Provider modules.");
 	}
 
 	bool RtspcProvider::Start()

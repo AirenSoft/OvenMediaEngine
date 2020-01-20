@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 					INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
 					INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
 					INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
-					INIT_MODULE(rtspc_provider, "RTSP Client Provider", pvd::RtspcProvider::Create(*server_config, media_router));
+					INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 					INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
 					INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, host_info, media_router));
 					
@@ -174,9 +174,10 @@ int main(int argc, char *argv[])
 			ov::Daemon::SetEvent(succeeded);
 		}
 
+		int cnt = 0;
 		while (true)
 		{
-			sleep(1);
+			sleep(1);		
 		}
 	}
 

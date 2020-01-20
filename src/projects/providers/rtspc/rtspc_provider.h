@@ -30,6 +30,7 @@ namespace pvd
 {
 	class RtspcProvider : public pvd::Provider
 	{
+
 	public:
 		static std::shared_ptr<RtspcProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 
@@ -39,7 +40,7 @@ namespace pvd
 
 		ProviderType GetProviderType() override
 		{
-			return ProviderType::Ovt;
+			return ProviderType::Rtsp;
 		}
 
 		bool Start() override;

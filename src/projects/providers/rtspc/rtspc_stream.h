@@ -1,5 +1,5 @@
 //
-// Created by getroot on 19. 12. 9.
+// Created by soulk on 20. 1. 20.
 //
 
 #pragma once
@@ -37,27 +37,16 @@ namespace pvd
 		bool Start() override;
 		bool Stop() override;
 		void WorkerThread();
-		bool ConnectOrigin();
+		bool ConnectTo();
 		bool RequestDescribe();
-		bool ReceiveDescribe(uint32_t request_id);
 		bool RequestPlay();
-		bool ReceivePlay(uint32_t request_id);
 		bool RequestStop();
-		bool ReceiveStop(uint32_t request_id);
-
-		std::shared_ptr<OvtPacket> ReceivePacket();
-		std::shared_ptr<ov::Data> ReceiveMessage();
 
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		std::shared_ptr<const ov::Url>				_curr_url;
 		bool _stop_thread_flag;
 		std::thread _worker_thread;
 
-		ov::Socket _client_socket;
-
-		uint32_t _last_request_id;
-		uint32_t _session_id;
-
-		OvtDepacketizer _depacketizer;
+		AVFormatContext *_format_context = NULL;
 	};
 }
