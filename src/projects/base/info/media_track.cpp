@@ -17,10 +17,12 @@ using namespace common;
 MediaTrack::MediaTrack()
 	: _id(0),
 	  _codec_id(MediaCodecId::None),
+	  _media_type(MediaType::Unknown),
 	  _bitrate(0),
+	  _byass(false),
 	  _start_frame_time(0),
-	  _last_frame_time(0),
-	  _byass(false)
+	  _last_frame_time(0)
+	  
 {
 
 }
