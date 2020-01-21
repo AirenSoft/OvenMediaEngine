@@ -64,7 +64,7 @@ bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &
     const uint8_t* srcData = static_cast<const uint8_t*>(packet->GetData()->GetData());
     size_t dataOffset = 0;
     size_t dataSize = packet->GetData()->GetLength();
-    size_t previous_offset = -1;
+    // size_t previous_offset = -1;
 
     std::vector<std::pair<size_t, size_t>> offset_list;
 
@@ -116,12 +116,13 @@ bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &
             nalu_data_len = dataSize - nalu_offset;
         }
 
+
+#if 0
         uint8_t nalu_header = *(srcData + nalu_offset);
         uint8_t forbidden_zero_bit = (nalu_header >> 7)  & 0x01;
         uint8_t nal_ref_idc = (nalu_header >> 5)  & 0x03;
         uint8_t nal_unit_type = (nalu_header)  & 0x01F;
 
-#if 0
         logtd("[%d] nal_ref_idc:%2d, nal_unit_type:%2d => offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d"
         , index
         , nal_ref_idc, nal_unit_type

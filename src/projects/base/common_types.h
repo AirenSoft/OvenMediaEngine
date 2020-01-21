@@ -27,7 +27,7 @@ enum class StreamSourceType : int8_t
 {
 	OVT_PROVIDER ,
 	RTMP_PROVIDER,
-	RTMPC_PROVIDER,
+	RTSPC_PROVIDER,
 	LIVE_TRANSCODER
 };
 
