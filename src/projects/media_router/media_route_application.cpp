@@ -316,9 +316,6 @@ bool MediaRouteApplication::OnReceiveBuffer(
 		return false;
 	}
 
-	// bool convert_bitstream = app_conn->GetConnectorType() != MediaRouteApplicationConnector::ConnectorType::Relay;
-	bool convert_bitstream = true; // app_conn->GetConnectorType() != MediaRouteApplicationConnector::ConnectorType::Relay;
-
 	bool ret = stream->Push(std::move(packet));
 
 	// TODO(SOULK) : Connector(Provider, Transcoder)에서 수신된 데이터에 대한 정보를 바로 처리하기 위해 버퍼의 Indicator 정보를
@@ -350,15 +347,10 @@ void MediaRouteApplication::GarbageCollector()
 		
 		if (connector_type == MediaRouteApplicationConnector::ConnectorType::Provider)
 		{
-			double diff_time;
-
-			diff_time = difftime(curr_time, stream->getLastReceivedTime());
+			double diff_time = difftime(curr_time, stream->getLastReceivedTime());
 
 			// TODO(soulk) 삭제 Treshold 값은 설정서 읽어오도록 수정해야함.
 			// Observer 에게 삭제 메세지를 전달하는 구조도 비효율적임. 레이스컨디션 발생 가능성 있음.
-#if DEBUG
-			// debug 빌드 되었을 경우 stream 삭제 기능 동작 안하게 함
-#else   // DEBUG
 
 			// Streams that do not receive data are automatically deleted after 30 seconds.
 			if (diff_time > TIMEOUT_STREAM_ALIVE)
@@ -378,12 +370,10 @@ void MediaRouteApplication::GarbageCollector()
 
 				std::unique_lock<std::mutex> lock(_mutex);
 				_streams.erase(stream->GetStreamInfo()->GetId());
-				lock.unlock();
 
 				// 비효율적임
 				it = _streams.begin();
 			}
-#endif  // DEBUG
 		}
 	}
 }

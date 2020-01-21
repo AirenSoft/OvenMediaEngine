@@ -17,6 +17,7 @@
 #define ENABLE_SINGLE_THREAD	1
 
 
+
 TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<StreamInfo> &stream_info, TranscodeApplication *parent)
 	: _application_info(application_info)
 {
@@ -231,7 +232,7 @@ int32_t TranscodeStream::CreateOutputStream()
 		// Look up all tracks in the input stream.
 		for (auto &input_track_item : _stream_info_input->GetTracks())
 		{
-			auto  input_track_id = input_track_item.first;
+			// auto  input_track_id = input_track_item.first;
 			auto &input_track = input_track_item.second;
 			auto input_track_media_type = input_track->GetMediaType();
 
@@ -350,12 +351,12 @@ int32_t TranscodeStream::CreateEncoders()
 
 	for (auto &iter : _stream_info_outputs)
 	{
-		auto &output_stream_name = iter.first;
+		// auto &output_stream_name = iter.first;
 		auto &output_stream_info = iter.second;
 
 		for (auto &media_track : output_stream_info->GetTracks())
 		{
-			auto &track_id = media_track.first;
+			// auto &track_id = media_track.first;
 			auto &track = media_track.second;
 			auto track_media_type = track->GetMediaType();
 
@@ -390,6 +391,11 @@ int32_t TranscodeStream::CreateEncoders()
 
 				CreateEncoder(track, new_output_transcode_context);
 				created_encoder_count++;
+			}
+			break;
+			default:
+			{
+				logte("Unsuported media type");	
 			}
 			break;
 			}
@@ -435,7 +441,7 @@ void TranscodeStream::ChangeOutputFormat(MediaFrame *buffer)
 TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<MediaPacket> packet)
 {
 	// If the output track is a packet equivalent to BYPASS, it will be forwarded directly to the media route without any transcoding process.
-	bool needed_bypass = false, needed_transcode = false;
+	bool needed_transcode = false;
 	// GetByassTrackInfo(track_id, bypass_cnt, nbypass_cnt);
 	
 	auto output_track_ids = _tracks_map.find(track_id);
@@ -456,8 +462,6 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 
 			clone_packet->SetTrackId(output_track_id);
 			SendFrame(std::move(clone_packet));
-
-			needed_bypass = true;
 		}
 		else
 		{
@@ -703,7 +707,7 @@ void TranscodeStream::DeleteStreams()
 
 void TranscodeStream::SendFrame(std::shared_ptr<MediaPacket> packet)
 {
-	uint8_t track_id = static_cast<uint8_t>(packet->GetTrackId());
+	// uint8_t track_id = static_cast<uint8_t>(packet->GetTrackId());
 
 	// TODO(soulk): Performance improvement is needed!!! It's urgent!!!
 	for (auto &iter : _stream_info_outputs)
@@ -901,7 +905,7 @@ const cfg::Encode* TranscodeStream::GetEncodeByProfileName(const info::Applicati
 
 		if (encode.GetName() == encode_name)
 		{
-			auto &i = encodes.at(0);
+			// auto &i = encodes.at(0);
 			// logte("%p %p %s", &i, &encode, encode.ToString().CStr());
 			return &encode;
 		}

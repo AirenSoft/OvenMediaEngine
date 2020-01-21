@@ -106,9 +106,8 @@ public:
 	{
 		std::unique_lock<std::mutex> mlock(_mutex);
 		size_t size = _queue.size();
-		mlock.unlock();
 		
-		return _queue.size();
+		return size;
 	}
 
 	// TODO: Abort

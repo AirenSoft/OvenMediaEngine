@@ -174,7 +174,6 @@ int main(int argc, char *argv[])
 			ov::Daemon::SetEvent(succeeded);
 		}
 
-		int cnt = 0;
 		while (true)
 		{
 			sleep(1);		
