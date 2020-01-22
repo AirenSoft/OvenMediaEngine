@@ -116,8 +116,6 @@ namespace pvd
 			return false;
 		}
 
-		ov::SocketType socket_type;
-
 		auto scheme = _curr_url->Scheme();
 		if (scheme == "OVT")
 		{
@@ -182,7 +180,7 @@ namespace pvd
 		packet.SetPayload(payload->GetDataAs<uint8_t>(), payload->GetLength());
 
 		auto sent_size = _client_socket.Send(packet.GetData());
-		if(sent_size != packet.GetData()->GetLength())
+		if(sent_size != static_cast<ssize_t>(packet.GetData()->GetLength()))
 		{
 			_state = State::ERROR;
 			logte("Could not send Describe message");
@@ -260,9 +258,9 @@ namespace pvd
 		//SetName(json_stream["streamName"].asString().c_str());
 		std::shared_ptr<MediaTrack> new_track;
 
-		for (int i = 0; i < json_tracks.size(); i++)
+		for (size_t i = 0; i < json_tracks.size(); i++)
 		{
-			auto json_track = json_tracks[i];
+			auto json_track = json_tracks[static_cast<int>(i)];
 
 			new_track = std::make_shared<MediaTrack>();
 
@@ -348,7 +346,7 @@ namespace pvd
 		packet.SetPayload(payload->GetDataAs<uint8_t>(), payload->GetLength());
 
 		auto sent_size = _client_socket.Send(packet.GetData());
-		if(sent_size != packet.GetData()->GetLength())
+		if(sent_size != static_cast<ssize_t>(packet.GetData()->GetLength()))
 		{
 			_state = State::ERROR;
 			logte("Could not send Play message");
@@ -433,7 +431,7 @@ namespace pvd
 		packet.SetPayload(payload->GetDataAs<uint8_t>(), payload->GetLength());
 
 		auto sent_size = _client_socket.Send(packet.GetData());
-		if(sent_size != packet.GetData()->GetLength())
+		if(sent_size != static_cast<ssize_t>(packet.GetData()->GetLength()))
 		{
 			_state = State::ERROR;
 			logte("Could not send Stop message");

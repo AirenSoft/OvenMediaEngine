@@ -117,14 +117,14 @@ public:
 		return _flag;
 	}
 
-	void SetFragHeader(std::unique_ptr<FragmentationHeader> frag_hdr)
+	void SetFragHeader(const FragmentationHeader *header)
 	{
-		_frag_hdr = std::move(frag_hdr);
+		::memcpy(&_frag_hdr, header, sizeof(_frag_hdr));
 	}
 
-	const std::unique_ptr<FragmentationHeader> &GetFragHeader() const
+	const FragmentationHeader *GetFragHeader() const
 	{
-		return _frag_hdr;
+		return &_frag_hdr;
 	}
 
 	std::shared_ptr<MediaPacket> ClonePacket()
@@ -138,10 +138,7 @@ public:
 			GetDuration(),
 			GetFlag());
 
-		if (_frag_hdr)
-		{
-			packet->_frag_hdr = std::make_unique<FragmentationHeader>(*_frag_hdr);
-		}
+		packet->_frag_hdr = _frag_hdr;
 
 		return packet;
 	}
@@ -157,7 +154,7 @@ protected:
 	int64_t _duration = -1LL;
 	MediaPacketFlag _flag = MediaPacketFlag::NoFlag;
 
-	std::unique_ptr<FragmentationHeader> _frag_hdr;
+	FragmentationHeader _frag_hdr;
 };
 
 class MediaFrame

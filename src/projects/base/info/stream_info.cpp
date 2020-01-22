@@ -198,15 +198,3 @@ void StreamInfo::ShowInfo()
 
 	logti("%s", out_str.CStr());
 }
-
-std::shared_ptr<MediaTrack> StreamInfo::FindFirstTrack(common::MediaType media_type)
-{
-	for(auto it = _tracks.begin(); it != _tracks.end(); ++it)
-	{
-		if (it->second->GetMediaType() == media_type)
-		{
-			return it->second;
-		}
-	}
-	return nullptr;
-}
