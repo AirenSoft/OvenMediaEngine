@@ -11,7 +11,7 @@
 #include "cmaf_interceptor.h"
 #include "cmaf_packetizer.h"
 
-#include "projects/publishers/segment/dash/dash_stream_server.h"
+#include "../dash/dash_stream_server.h"
 
 class CmafStreamServer : public DashStreamServer, public ICmafChunkedTransfer
 {

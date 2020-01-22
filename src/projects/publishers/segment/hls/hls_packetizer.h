@@ -8,7 +8,7 @@
 //==============================================================================
 
 #pragma once
-#include "../segment_stream/packetizer/ts_writer.h"
+#include <modules/segment_stream/packetizer/ts_writer.h>
 
 //====================================================================================================
 // HlsPacketizer

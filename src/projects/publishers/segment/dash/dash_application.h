@@ -9,7 +9,7 @@
 #pragma once
 #include "base/common_types.h"
 #include "base/publisher/application.h"
-#include "../segment_stream/segment_stream.h"
+#include <modules/segment_stream/segment_stream.h>
 
 //====================================================================================================
 // DashApplication
@@ -27,8 +27,8 @@ private:
 	bool Stop() override;
 
 	// Application Implementation
-	std::shared_ptr<Stream> CreateStream(std::shared_ptr<StreamInfo> info, uint32_t worker_count) override;
-	bool DeleteStream(std::shared_ptr<StreamInfo> info) override;
+	std::shared_ptr<Stream> CreateStream(const std::shared_ptr<StreamInfo> &info, uint32_t thread_count) override;
+	bool DeleteStream(const std::shared_ptr<StreamInfo> &info) override;
 
 private :
     int _segment_count;

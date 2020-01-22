@@ -109,7 +109,6 @@ int main(int argc, char *argv[])
 
 			//////////////////////////////
 			// Host Level Modules
-			//TODO(Getroot): Support Virtual Host Function. This code assumes that there is only one Host.
 			//////////////////////////////
 
 			if (initialized == false)
@@ -119,6 +118,10 @@ int main(int argc, char *argv[])
 				do
 				{
 					initialized = true;
+
+					// Create an HTTP Manager for Segment Publishers
+					// TODO(Dimiden): Move HTTP Manager into another instance.
+					std::map<int, std::shared_ptr<HttpServer>> segment_http_server_manager;
 
 					//--------------------------------------------------------------------
 					// Create the modules
@@ -130,6 +133,9 @@ int main(int argc, char *argv[])
 					INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
 					INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 					INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
+					INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(segment_http_server_manager, *server_config, host_info, media_router));
+					INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(segment_http_server_manager, *server_config, host_info, media_router));
+					INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(segment_http_server_manager, *server_config, host_info, media_router));
 					INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, host_info, media_router));
 
 					//--------------------------------------------------------------------
@@ -147,6 +153,9 @@ int main(int argc, char *argv[])
 					initialized = initialized && orchestrator->RegisterModule(transcoder);
 					// Register publishers
 					initialized = initialized && orchestrator->RegisterModule(webrtc_publisher);
+					initialized = initialized && orchestrator->RegisterModule(hls_publisher);
+					initialized = initialized && orchestrator->RegisterModule(dash_publisher);
+					initialized = initialized && orchestrator->RegisterModule(lldash_publisher);
 					initialized = initialized && orchestrator->RegisterModule(ovt_publisher);
 				} while (false);
 

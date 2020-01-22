@@ -9,7 +9,7 @@
 #include "stream_packetizer.h"
 #include "segment_stream_private.h"
 
-bool StreamPacketizer::AppendVideoData(std::shared_ptr<EncodedFrame> encoded_frame,
+bool StreamPacketizer::AppendVideoData(const std::shared_ptr<MediaPacket> &media_packet,
 									   uint32_t timescale,
 									   uint64_t time_offset)
 {
@@ -25,9 +25,10 @@ bool StreamPacketizer::AppendVideoData(std::shared_ptr<EncodedFrame> encoded_fra
 		return false;
 	}
 
-	OV_ASSERT2(
-		(encoded_frame->_frame_type == FrameType::VideoFrameKey) ||
-		(encoded_frame->_frame_type == FrameType::VideoFrameDelta));
+	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
+	auto timestamp = media_packet->GetPts();
+	auto buffer = media_packet->GetData();
+	auto duration = media_packet->GetDuration();
 
 	// Converting the timestamp using _video_timescale if needed
 	// if (encoded_frame->_timebase != _video_track->GetTimeBase())
@@ -37,22 +38,16 @@ bool StreamPacketizer::AppendVideoData(std::shared_ptr<EncodedFrame> encoded_fra
 	//time_offset = Packetizer::ConvertTimeScale(time_offset, timescale, _video_timescale);
 	//}
 
-	PacketizerFrameType frame_type = (encoded_frame->_frame_type == FrameType::VideoFrameKey) ? PacketizerFrameType::VideoKeyFrame : PacketizerFrameType::VideoPFrame;
+	PacketizerFrameType packetizer_frame_type = (frame_type == FrameType::VideoFrameKey) ? PacketizerFrameType::VideoKeyFrame : PacketizerFrameType::VideoPFrame;
 
-	auto frame_data = std::make_shared<PacketizerFrameData>(
-		frame_type,
-		encoded_frame->_time_stamp,
-		encoded_frame->_duration,
-		time_offset,
-		_video_track->GetTimeBase(),
-		encoded_frame->_buffer);
+	auto frame_data = std::make_shared<PacketizerFrameData>(packetizer_frame_type, timestamp, duration, time_offset, _video_track->GetTimeBase(), buffer);
 
 	AppendVideoFrame(frame_data);
 
 	return true;
 }
 
-bool StreamPacketizer::AppendAudioData(std::shared_ptr<EncodedFrame> encoded_frame, uint32_t timescale)
+bool StreamPacketizer::AppendAudioData(const std::shared_ptr<MediaPacket> &media_packet, uint32_t timescale)
 {
 	if (_stream_type == PacketizerStreamType::VideoOnly)
 	{
@@ -66,7 +61,10 @@ bool StreamPacketizer::AppendAudioData(std::shared_ptr<EncodedFrame> encoded_fra
 		return false;
 	}
 
-	OV_ASSERT2(encoded_frame->_frame_type == FrameType::AudioFrameKey);
+	//auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
+	auto timestamp = media_packet->GetPts();
+	auto buffer = media_packet->GetData();
+	auto duration = media_packet->GetDuration();
 
 	// Converting the timestamp using _audio_timescale if needed
 	// if (timescale != _audio_timescale)
@@ -75,13 +73,7 @@ bool StreamPacketizer::AppendAudioData(std::shared_ptr<EncodedFrame> encoded_fra
 	// 	encoded_frame->_duration = Packetizer::ConvertTimeScale(encoded_frame->_duration, timescale, _audio_timescale);
 	// }
 
-	auto frame_data = std::make_shared<PacketizerFrameData>(
-		PacketizerFrameType::AudioFrame,
-		encoded_frame->_time_stamp,
-		encoded_frame->_duration,
-		0,
-		_audio_track->GetTimeBase(),
-		encoded_frame->_buffer);
+	auto frame_data = std::make_shared<PacketizerFrameData>(PacketizerFrameType::AudioFrame, timestamp, duration, 0, _audio_track->GetTimeBase(), buffer);
 
 	AppendAudioFrame(frame_data);
 

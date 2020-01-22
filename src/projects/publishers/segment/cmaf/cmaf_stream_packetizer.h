@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "projects/segment_stream/stream_packetizer.h"
+#include <modules/segment_stream/stream_packetizer.h>
 #include "cmaf_packetizer.h"
 
 class CmafStreamPacketizer : public StreamPacketizer

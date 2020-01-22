@@ -7,7 +7,7 @@
 //
 //==============================================================================
 #include "cmaf_stream_server.h"
-#include "projects/publishers/segment/dash/dash_define.h"
+#include "../dash/dash_define.h"
 #include "cmaf_packetizer.h"
 #include "cmaf_private.h"
 

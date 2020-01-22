@@ -7,7 +7,7 @@
 //
 //==============================================================================
 #include "cmaf_interceptor.h"
-#include "projects/publishers/segment/dash/dash_define.h"
+#include "../dash/dash_define.h"
 #include "cmaf_private.h"
 
 bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)

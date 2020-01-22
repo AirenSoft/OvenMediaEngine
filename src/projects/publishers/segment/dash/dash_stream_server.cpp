@@ -8,7 +8,7 @@
 //==============================================================================
 #include "dash_stream_server.h"
 #include "dash_define.h"
-#include "../segment_stream/packetizer/packetizer_define.h"
+#include <modules/segment_stream/packetizer/packetizer_define.h>
 #include "dash_private.h"
 
 HttpConnection DashStreamServer::ProcessRequestStream(const std::shared_ptr<HttpClient> &client,

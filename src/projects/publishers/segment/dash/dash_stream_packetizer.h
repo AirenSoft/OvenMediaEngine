@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "../segment_stream/stream_packetizer.h"
+#include <modules/segment_stream/stream_packetizer.h>
 #include "dash_packetizer.h"
 
 //====================================================================================================

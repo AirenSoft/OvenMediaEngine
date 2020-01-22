@@ -17,7 +17,10 @@
 std::shared_ptr<HlsApplication> HlsApplication::Create(const info::Application &application_info)
 {
 	auto application = std::make_shared<HlsApplication>(application_info);
-	application->Start();
+	if(!application->Start())
+	{
+		return nullptr;
+	}
 	return application;
 }
 
@@ -28,8 +31,8 @@ HlsApplication::HlsApplication(const info::Application &application_info)
 	: Application(application_info)
 {
     auto publisher_info = application_info.GetPublisher<cfg::HlsPublisher>();
-    _segment_count = publisher_info->GetSegmentCount();
-    _segment_duration = publisher_info->GetSegmentDuration();
+    _segment_count = 3; publisher_info->GetSegmentCount();
+    _segment_duration = 5; publisher_info->GetSegmentDuration();
 }
 
 //====================================================================================================
@@ -46,6 +49,16 @@ HlsApplication::~HlsApplication()
 //====================================================================================================
 bool HlsApplication::Start()
 {
+	auto publisher_info = GetPublisher<cfg::HlsPublisher>();
+	// This application doesn't enable HLS
+	if(publisher_info == nullptr)
+	{
+		return false;
+	}
+
+	_segment_count = publisher_info->GetSegmentCount();
+	_segment_duration = publisher_info->GetSegmentDuration();
+
 	return Application::Start();
 }
 

@@ -13,53 +13,45 @@
 
 #include <config/config_manager.h>
 
-std::shared_ptr<HlsPublisher> HlsPublisher::Create(const std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-												   const info::Application &application_info,
+std::shared_ptr<HlsPublisher> HlsPublisher::Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
+												   const cfg::Server &server_config,
+												   const info::Host &host_info,
 												   const std::shared_ptr<MediaRouteInterface> &router)
 {
-	return SegmentPublisher::Create<HlsPublisher>(http_server_manager, application_info, std::move(router));
+	return SegmentPublisher::Create<HlsPublisher>(http_server_manager, server_config, host_info, router);
 }
 
-HlsPublisher::HlsPublisher(PrivateToken token, const info::Application &application_info, const std::shared_ptr<MediaRouteInterface> &router)
-	: SegmentPublisher(application_info, router)
+HlsPublisher::HlsPublisher(PrivateToken token,
+						   const cfg::Server &server_config,
+						   const info::Host &host_info,
+						   const std::shared_ptr<MediaRouteInterface> &router)
+	: SegmentPublisher(server_config, host_info, router)
 {
 }
 
 bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
 {
-	if (_application_info->GetOrigin().IsParsed())
-	{
-		// OME is running as edge
-	}
-	else
-	{
-		if (CheckCodecAvailability({"h264"}, {"aac"}) == false)
-		{
-			return false;
-		}
-	}
+	auto server_config = GetServerConfig();
+	auto host_info = GetHostInfo();
 
-	auto host = _application_info->GetParentAs<cfg::Host>("Host");
-	auto port = host->GetPorts().GetHlsPort();
-	ov::SocketAddress address(host->GetIp(), port.GetPort());
+	auto &name = host_info.GetName();
 
-	auto stream_server = std::make_shared<HlsStreamServer>();
-	auto publisher_info = _application_info->GetPublisher<cfg::HlsPublisher>();
+	auto &ip = server_config.GetIp();
+	auto port = server_config.GetBind().GetPublishers().GetDashPort();
+
+	ov::SocketAddress address(ip, port);
 
 	// Register as observer
+	auto stream_server = std::make_shared<HlsStreamServer>();
 	stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
 	// Apply CORS settings
-	stream_server->SetCrossDomain(publisher_info->GetCrossDomains());
+	// TODO(Dimiden): The Cross Domain configure must be at VHost Level.
+	//stream_server->SetCrossDomain(cross_domains);
 
 	// Start the HLS Server
-	if (stream_server->Start(
-			address,
-			http_server_manager,
-			_application_info->GetName(),
-			publisher_info->GetThreadCount(),
-			_application_info->GetCertificate(),
-			_application_info->GetChainCertificate()) == false)
+	if (!stream_server->Start(address, http_server_manager, name, DEFAULT_SEGMENT_WORKER_THREAD_COUNT,
+							  host_info.GetCertificate(), host_info.GetChainCertificate()))
 	{
 		logte("An error occurred while start %s Publisher", GetPublisherName());
 		return false;
@@ -67,19 +59,16 @@ bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server
 
 	_stream_server = stream_server;
 
-	logtd(
-		"%s Publisher is created successfully on %s"
-		"(SegmentCount: %d, SegmentDuration: %d, Threads: %d)",
-		GetPublisherName(),
-		address.ToString().CStr(),
-		publisher_info->GetSegmentCount(),
-		publisher_info->GetSegmentDuration(),
-		publisher_info->GetThreadCount());
-
 	return Publisher::Start();
 }
 
-std::shared_ptr<Application> HlsPublisher::OnCreateApplication(const info::Application *application_info)
+std::shared_ptr<Application> HlsPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
+	if (!application_info.CheckCodecAvailability({"h264"}, {"aac"}))
+	{
+		logtw("There is no suitable encoding setting for %s (Encoding setting must contains h264 and aac)", GetPublisherName());
+		return nullptr;
+	}
+
 	return HlsApplication::Create(application_info);
 }

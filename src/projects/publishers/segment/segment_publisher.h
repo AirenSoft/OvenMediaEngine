@@ -12,7 +12,9 @@
 #include <base/media_route/media_route_application_interface.h>
 #include <base/publisher/publisher.h>
 #include <config/config.h>
-#include <publishers/segment/segment_stream/segment_stream_server.h>
+#include <modules/segment_stream/segment_stream_server.h>
+
+#define DEFAULT_SEGMENT_WORKER_THREAD_COUNT		4
 
 class SegmentPublisher : public Publisher, public SegmentStreamObserver
 {
@@ -25,10 +27,11 @@ protected:
 public:
 	template <typename Tpublisher>
 	static std::shared_ptr<Tpublisher> Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-											  const info::Application &application_info,
+											  const cfg::Server &server_config,
+											  const info::Host &host_info,
 											  const std::shared_ptr<MediaRouteInterface> &router)
 	{
-		auto publisher = std::make_shared<Tpublisher>((PrivateToken){}, application_info, router);
+		auto publisher = std::make_shared<Tpublisher>((PrivateToken){}, server_config, host_info, router);
 
 		auto instance = std::static_pointer_cast<SegmentPublisher>(publisher);
 		if (instance->Start(http_server_manager) == false)

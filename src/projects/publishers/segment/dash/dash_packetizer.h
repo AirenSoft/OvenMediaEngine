@@ -8,9 +8,9 @@
 //==============================================================================
 #pragma once
 
-#include "../segment_stream/packetizer/m4s_init_writer.h"
-#include "../segment_stream/packetizer/m4s_segment_writer.h"
-#include "../segment_stream/packetizer/packetizer.h"
+#include <modules/segment_stream/packetizer/m4s_init_writer.h>
+#include <modules/segment_stream/packetizer/m4s_segment_writer.h>
+#include <modules/segment_stream/packetizer/packetizer.h>
 
 enum class DashFileType : int32_t
 {

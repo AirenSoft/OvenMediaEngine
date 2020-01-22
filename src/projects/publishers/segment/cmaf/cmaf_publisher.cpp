@@ -14,44 +14,61 @@
 #include <config/config_manager.h>
 
 std::shared_ptr<CmafPublisher> CmafPublisher::Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-													 const info::Application &application_info,
+													 const cfg::Server &server_config,
+													 const info::Host &host_info,
 													 const std::shared_ptr<MediaRouteInterface> &router)
 {
-	return SegmentPublisher::Create<CmafPublisher>(http_server_manager, application_info, router);
+	return SegmentPublisher::Create<CmafPublisher>(http_server_manager, server_config, host_info, router);
 }
 
-CmafPublisher::CmafPublisher(PrivateToken token, const info::Application &application_info, const std::shared_ptr<MediaRouteInterface> &router)
-	: DashPublisher(token, application_info, std::move(router))
+CmafPublisher::CmafPublisher(PrivateToken token,
+							const cfg::Server &server_config,
+							const info::Host &host_info,
+							const std::shared_ptr<MediaRouteInterface> &router)
+	: DashPublisher(token, server_config, host_info, router)
 {
 }
 
 bool CmafPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
 {
+	auto server_config = GetServerConfig();
 	auto host_info = GetHostInfo();
-	// <Server><VirtualHosts><VirtualHost><Applications><Application><Publishers><DASH> 옵션 얻어오기
-	auto application_list = host_info.GetApplicationList();
 
-	for(auto &app : application_list)
+	auto &name = host_info.GetName();
+
+	auto &ip = server_config.GetIp();
+	auto port = server_config.GetBind().GetPublishers().GetDashPort();
+
+	ov::SocketAddress address(ip, port);
+
+	// Register as observer
+	auto stream_server = std::make_shared<CmafStreamServer>();
+	stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+
+	// Apply CORS settings
+	// TODO(Dimiden): The Cross Domain configure must be at VHost Level.
+	//stream_server->SetCrossDomain(cross_domains);
+
+	// Start the HLS Server
+	if (!stream_server->Start(address, http_server_manager, name, DEFAULT_SEGMENT_WORKER_THREAD_COUNT,
+							  host_info.GetCertificate(), host_info.GetChainCertificate()))
 	{
-		if(app.GetName() == "app")
-		{
-			auto dash_pub_info = app.GetPublishers().GetDashPublisher();
-			auto segment_count = dash_pub_info.GetSegmentCount();
-			// ...
-		}
+		logte("An error occurred while start %s Publisher", GetPublisherName());
+		return false;
 	}
 
-	auto host = _application_info->GetParentAs<cfg::Host>("Host");
-	auto port = host->GetPorts().GetCmafPort();
-	auto publisher_info = _application_info->GetPublisher<cfg::CmafPublisher>();
+	_stream_server = stream_server;
 
-	return StartInternal(http_server_manager, port.GetPort(), std::make_shared<CmafStreamServer>(),
-						 publisher_info->GetCrossDomains(),
-						 publisher_info->GetSegmentCount(), publisher_info->GetSegmentDuration(),
-						 publisher_info->GetThreadCount());
+	return Publisher::Start();
 }
 
 std::shared_ptr<Application> CmafPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
+	if (!application_info.CheckCodecAvailability({"h264"}, {"aac"}))
+	{
+		logtw("There is no suitable encoding setting for %s (Encoding setting must contains h264 and aac)", GetPublisherName());
+		return nullptr;
+	}
+
 	return CmafApplication::Create(application_info, std::static_pointer_cast<CmafStreamServer>(_stream_server));
 }

@@ -9,7 +9,7 @@
 #include "cmaf_packetizer.h"
 #include "cmaf_private.h"
 // TODO(dimiden): Merge DASH and CMAF module later
-#include "projects/publishers/segment/dash/dash_define.h"
+#include "../dash/dash_define.h"
 
 #include <algorithm>
 #include <iomanip>

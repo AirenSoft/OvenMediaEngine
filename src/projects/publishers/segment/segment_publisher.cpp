@@ -9,7 +9,7 @@
 #include "segment_publisher.h"
 #include "publisher_private.h"
 
-#include "segment_stream/segment_stream.h"
+#include <modules/segment_stream/segment_stream.h>
 
 SegmentPublisher::SegmentPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 	: Publisher(server_config, host_info, router)
@@ -19,33 +19,6 @@ SegmentPublisher::SegmentPublisher(const cfg::Server &server_config, const info:
 SegmentPublisher::~SegmentPublisher()
 {
 	logtd("Publisher has been destroyed");
-}
-
-bool SegmentPublisher::CheckCodecAvailability(const std::vector<ov::String> &video_codecs, const std::vector<ov::String> &audio_codecs)
-{
-	for (const auto &stream : _application_info->GetStreamList())
-	{
-		const auto &profiles = stream.GetProfiles();
-
-		for (const auto &profile : profiles)
-		{
-			cfg::StreamProfileUse use = profile.GetUse();
-			ov::String profile_name = profile.GetName();
-
-			if (_application_info->HasEncodeWithCodec(profile_name, use, video_codecs, audio_codecs))
-			{
-				_is_codec_available = true;
-				return _is_codec_available;
-			}
-		}
-	}
-
-	logtw("There is no suitable encoding setting for %s (Encoding setting must contains %s or %s)",
-		  GetPublisherName(), ov::String::Join(video_codecs, ", ").CStr(), ov::String::Join(audio_codecs, ", ").CStr());
-
-	_is_codec_available = false;
-	
-	return _is_codec_available;
 }
 
 bool SegmentPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)

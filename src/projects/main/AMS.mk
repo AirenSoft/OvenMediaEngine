@@ -4,11 +4,12 @@ include $(DEFAULT_VARIABLES)
 #  rtsp
 # h264
 LOCAL_STATIC_LIBRARIES := \
-	webrtc \
-	ovtpublisher \
-	ovtprovider \
-	rtmpprovider \
-	rtspcprovider \
+	webrtc_publisher \
+	segment_publishers \
+	ovt_publisher \
+	ovt_provider \
+	rtmp_provider \
+	rtspc_provider \
 	transcoder \
 	rtc_signalling \
 	ice \

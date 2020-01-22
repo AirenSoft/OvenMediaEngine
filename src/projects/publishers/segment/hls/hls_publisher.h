@@ -13,11 +13,12 @@
 class HlsPublisher : public SegmentPublisher
 {
 public:
-	static std::shared_ptr<HlsPublisher> Create(const std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-												const info::Application &application_info,
+	static std::shared_ptr<HlsPublisher> Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
+												const cfg::Server &server_config,
+												const info::Host &host_info,
 												const std::shared_ptr<MediaRouteInterface> &router);
 
-	HlsPublisher(PrivateToken token, const info::Application &application_info, const std::shared_ptr<MediaRouteInterface> &router);
+	HlsPublisher(PrivateToken token, const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 
 protected:
 	//--------------------------------------------------------------------

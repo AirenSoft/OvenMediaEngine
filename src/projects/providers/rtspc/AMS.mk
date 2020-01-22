@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call get_local_path)
 include $(DEFAULT_VARIABLES)
 
-LOCAL_TARGET := rtspcprovider
+LOCAL_TARGET := rtspc_provider
 
 $(call add_pkg_config,srt)
 

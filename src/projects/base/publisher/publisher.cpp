@@ -45,6 +45,10 @@ const info::Host& Publisher::GetHostInfo() const
 bool Publisher::OnCreateApplication(const info::Application &app_info)
 {
 	auto application = OnCreatePublisherApplication(app_info);
+	if(application == nullptr)
+	{
+		return false;
+	}
 
 	// 생성한 Application을 Router와 연결하고 Start
 	_router->RegisterObserverApp(*application.get(), application);
@@ -58,6 +62,11 @@ bool Publisher::OnCreateApplication(const info::Application &app_info)
 // Delete Application
 bool Publisher::OnDeleteApplication(const info::Application &app_info)
 {
+	if(_applications.find(app_info.GetId()) == _applications.end())
+	{
+		return true;
+	}
+
 	_applications[app_info.GetId()]->Stop();
 	_applications.erase(app_info.GetId());
 

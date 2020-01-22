@@ -10,7 +10,7 @@
 #pragma once
 #include "base/common_types.h"
 #include "base/publisher/application.h"
-#include "../segment_stream/segment_stream.h"
+#include <modules/segment_stream/segment_stream.h>
 
 //====================================================================================================
 // HlsApplication

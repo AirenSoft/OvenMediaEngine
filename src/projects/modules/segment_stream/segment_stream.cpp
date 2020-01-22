@@ -108,8 +108,6 @@ bool SegmentStream::Stop()
 //====================================================================================================
 void SegmentStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-
-
 	if (_stream_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
 	{
 		//        int nul_header_size = 0;
@@ -120,7 +118,7 @@ void SegmentStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_pac
 		//            logtd("null header size - %d", nul_header_size);
 		//        }
 
-		_stream_packetizer->AppendVideoData(std::move(encoded_frame), _video_track->GetTimeBase().GetTimescale(), 0);
+		_stream_packetizer->AppendVideoData(media_packet, _video_track->GetTimeBase().GetTimescale(), 0);
 	}
 }
 
@@ -130,11 +128,9 @@ void SegmentStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_pac
 //====================================================================================================
 void SegmentStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-
-
-	if (_stream_packetizer != nullptr && _media_tracks.find(track->GetId()) != _media_tracks.end())
+	if (_stream_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
 	{
-		_stream_packetizer->AppendAudioData(std::move(encoded_frame), _audio_track->GetTimeBase().GetTimescale());
+		_stream_packetizer->AppendAudioData(media_packet, _audio_track->GetTimeBase().GetTimescale());
 	}
 }
 

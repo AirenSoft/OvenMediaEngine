@@ -17,7 +17,10 @@
 std::shared_ptr<DashApplication> DashApplication::Create(const info::Application &application_info)
 {
 	auto application = std::make_shared<DashApplication>(application_info);
-	application->Start();
+	if(!application->Start())
+	{
+		return nullptr;
+	}
 	return application;
 }
 
@@ -27,9 +30,8 @@ std::shared_ptr<DashApplication> DashApplication::Create(const info::Application
 DashApplication::DashApplication(const info::Application &application_info)
 	: Application(application_info)
 {
-    auto publisher_info = application_info->GetPublisher<cfg::DashPublisher>();
-    _segment_count = publisher_info->GetSegmentCount();
-    _segment_duration = publisher_info->GetSegmentDuration();
+    _segment_count = 3;
+    _segment_duration = 5;
 }
 
 //====================================================================================================
@@ -42,18 +44,19 @@ DashApplication::~DashApplication()
 }
 
 //====================================================================================================
-// DeleteStream
-//====================================================================================================
-bool DashApplication::DeleteStream(std::shared_ptr<StreamInfo> info)
-{
-	return true;
-}
-
-//====================================================================================================
 // Start
 //====================================================================================================
 bool DashApplication::Start()
 {
+	auto publisher_info = GetPublisher<cfg::DashPublisher>();
+	// This application doesn't enable DASH
+	if(publisher_info == nullptr)
+	{
+		return false;
+	}
+	_segment_count = publisher_info->GetSegmentCount();
+	_segment_duration = publisher_info->GetSegmentDuration();
+
 	return Application::Start();
 }
 
@@ -69,7 +72,7 @@ bool DashApplication::Stop()
 // CreateStream
 // - Application Override
 //====================================================================================================
-std::shared_ptr<Stream> DashApplication::CreateStream(std::shared_ptr<StreamInfo> info, uint32_t worker_count)
+std::shared_ptr<Stream> DashApplication::CreateStream(const std::shared_ptr<StreamInfo> &info, uint32_t thread_count)
 {
 	logtd("Dash CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 
@@ -77,5 +80,14 @@ std::shared_ptr<Stream> DashApplication::CreateStream(std::shared_ptr<StreamInfo
                             _segment_duration,
                             GetSharedPtrAs<Application>(),
                             *info.get(),
-                            worker_count);
+                            thread_count);
+}
+
+
+//====================================================================================================
+// DeleteStream
+//====================================================================================================
+bool DashApplication::DeleteStream(const std::shared_ptr<StreamInfo> &info)
+{
+	return true;
 }

@@ -7,7 +7,7 @@
 //
 //==============================================================================
 #include "packetizer.h"
-#include "projects/publishers/segment/segment_stream/segment_stream_private.h"
+#include "../segment_stream_private.h"
 
 #include <sys/time.h>
 #include <algorithm>

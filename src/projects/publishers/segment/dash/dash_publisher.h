@@ -14,16 +14,13 @@ class DashPublisher : public SegmentPublisher
 {
 public:
 	static std::shared_ptr<DashPublisher> Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-												 const info::Application *application_info,
-												 std::shared_ptr<MediaRouteInterface> router);
+												 const cfg::Server &server_config,
+												 const info::Host &host_info,
+												 const std::shared_ptr<MediaRouteInterface> &router);
 
-	DashPublisher(PrivateToken token, const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
+	DashPublisher(PrivateToken token, const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 
 protected:
-	bool StartInternal(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager, int port,
-					   const std::shared_ptr<SegmentStreamServer> &stream_server, const std::vector<cfg::Url> &cross_domains,
-					   int segment_count, int segment_duration, int thread_count);
-
 	//--------------------------------------------------------------------
 	// Implementation of SegmentPublisher
 	//--------------------------------------------------------------------

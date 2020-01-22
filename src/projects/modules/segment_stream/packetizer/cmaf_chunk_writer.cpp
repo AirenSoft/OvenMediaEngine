@@ -82,7 +82,7 @@ uint64_t CmafChunkWriter::GetSegmentDuration() const
 
 	int64_t duration = (_last_sample->timestamp + _last_sample->duration) - _start_timestamp;
 
-	OV_ASSERT((_last_sample->timestamp + _last_sample->duration) >= _start_timestamp, "%lld + %lld < %lld (duration: %lld)",
+	OV_ASSERT((_last_sample->timestamp + static_cast<int64_t>(_last_sample->duration)) >= _start_timestamp, "%lld + %lld < %lld (duration: %lld)",
 			  _last_sample->timestamp, _last_sample->duration,
 			  _start_timestamp, duration);
 

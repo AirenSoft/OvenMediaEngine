@@ -217,11 +217,6 @@ bool RtcStream::Start(uint32_t worker_count)
 
 	logti("Stream is created : %s/%u", GetName().CStr(), GetId());
 
-	ov::String test;
-	_offer_sdp->ToString(test);
-
-	logte("%s", test.CStr());
-
 	return Stream::Start(worker_count);
 }
 
@@ -329,7 +324,7 @@ void RtcStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 		return;
 	}
 
-	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
+	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
 	auto timestamp = media_packet->GetPts();
 	auto data = media_packet->GetData();
 	auto fragmentation = media_packet->GetFragHeader();
