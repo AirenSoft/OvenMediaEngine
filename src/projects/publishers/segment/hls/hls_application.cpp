@@ -14,7 +14,7 @@
 //====================================================================================================
 // Create
 //====================================================================================================
-std::shared_ptr<HlsApplication> HlsApplication::Create(const info::Application *application_info)
+std::shared_ptr<HlsApplication> HlsApplication::Create(const info::Application &application_info)
 {
 	auto application = std::make_shared<HlsApplication>(application_info);
 	application->Start();
@@ -24,9 +24,10 @@ std::shared_ptr<HlsApplication> HlsApplication::Create(const info::Application *
 //====================================================================================================
 // DashApplication
 //====================================================================================================
-HlsApplication::HlsApplication(const info::Application *application_info) : Application(application_info)
+HlsApplication::HlsApplication(const info::Application &application_info)
+	: Application(application_info)
 {
-    auto publisher_info = application_info->GetPublisher<cfg::HlsPublisher>();
+    auto publisher_info = application_info.GetPublisher<cfg::HlsPublisher>();
     _segment_count = publisher_info->GetSegmentCount();
     _segment_duration = publisher_info->GetSegmentDuration();
 }

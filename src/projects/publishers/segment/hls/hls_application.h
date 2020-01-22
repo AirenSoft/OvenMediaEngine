@@ -18,9 +18,9 @@
 class HlsApplication : public Application
 {
 public:
-	static std::shared_ptr<HlsApplication> Create(const info::Application *application_info);
+	static std::shared_ptr<HlsApplication> Create(const info::Application &application_info);
 
-    HlsApplication(const info::Application *application_info);
+    HlsApplication(const info::Application &application_info);
 
 	virtual ~HlsApplication() final;
 

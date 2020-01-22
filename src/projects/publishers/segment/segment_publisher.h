@@ -43,11 +43,9 @@ public:
 
 protected:
 	SegmentPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
-
 	~SegmentPublisher() override;
 
 	bool CheckCodecAvailability(const std::vector<ov::String> &video_codecs, const std::vector<ov::String> &audio_codecs);
-
 	virtual bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager) = 0;
 
 	//--------------------------------------------------------------------
