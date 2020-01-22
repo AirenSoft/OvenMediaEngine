@@ -32,9 +32,6 @@ RtcSession::RtcSession(const SessionInfo &session_info,
 	_offer_sdp = offer_sdp;
 	_peer_sdp = peer_sdp;
 	_ice_port = ice_port;
-
-	_video_payload_type = 0;
-	_audio_payload_type = 0;
 }
 
 RtcSession::~RtcSession()
@@ -168,16 +165,6 @@ const std::shared_ptr<SessionDescription>& RtcSession::GetOfferSDP()
 const std::shared_ptr<SessionDescription>& RtcSession::GetPeerSDP()
 {
 	return _peer_sdp;
-}
-
-uint8_t RtcSession::GetVideoPayloadType()
-{
-	return _video_payload_type;
-}
-
-uint8_t RtcSession::GetAudioPayloadType()
-{
-	return _audio_payload_type;
 }
 
 // Application에서 바로 Session의 다음 함수를 호출해준다.

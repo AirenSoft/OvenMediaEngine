@@ -9,7 +9,7 @@
 #pragma once
 
 #include "rtmp_provider.h"
-#include "rtsp_provider.h"
+#include "rtsp_pull_provider.h"
 
 namespace cfg
 {
@@ -25,6 +25,12 @@ namespace cfg
 				return true;
 			});
 
+			RegisterValue<Optional>("RTSPPull", &_rtsp_pull_provider, nullptr, [this]() -> bool {
+				_provider_list.push_back(&_rtsp_pull_provider);
+				return true;
+			});
+
+
 			RegisterValue<Optional>("RTSP", &_rtsp_provider, nullptr, [this]() -> bool {
 				_provider_list.push_back(&_rtsp_provider);
 				return true;
@@ -34,6 +40,7 @@ namespace cfg
 		std::vector<const Provider *> _provider_list;
 
 		RtmpProvider _rtmp_provider;
-		RtspProvider _rtsp_provider;
+		RtspPullProvider _rtsp_pull_provider;
+		RtspPullProvider _rtsp_provider;
 	};
 }  // namespace cfg

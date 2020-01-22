@@ -588,7 +588,7 @@ namespace ov
 
 ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const char *string);
 ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string &string);
-ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string_view &string);
+// ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string_view &string);
 
 template<size_t length>
 ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const char (&string)[length])

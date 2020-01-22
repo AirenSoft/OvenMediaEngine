@@ -23,7 +23,6 @@
 #include <orchestrator/orchestrator.h>
 #include <providers/providers.h>
 #include <publishers/publishers.h>
-#include <rtsp/rtsp_provider.h>
 #include <transcode/transcoder.h>
 #include <web_console/web_console.h>
 

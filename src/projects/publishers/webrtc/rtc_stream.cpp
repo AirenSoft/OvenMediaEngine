@@ -2,7 +2,7 @@
 #include "rtc_stream.h"
 #include "rtc_application.h"
 #include "rtc_session.h"
-#include "base/application/media_extradata.h"
+#include <base/info/media_extradata.h>
 
 using namespace common;
 
@@ -137,7 +137,7 @@ bool RtcStream::Start(uint32_t worker_count)
 				_offer_sdp->AddMedia(video_media_desc);
 
 				//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
-				payload->SetRtpmap(track->GetId(), codec, 90000);
+				payload->SetRtpmap(payload_type_num++, codec, 90000);
 
 				video_media_desc->AddPayload(payload);
 
@@ -216,6 +216,11 @@ bool RtcStream::Start(uint32_t worker_count)
     }
 
 	logti("Stream is created : %s/%u", GetName().CStr(), GetId());
+
+	ov::String test;
+	_offer_sdp->ToString(test);
+
+	logte("%s", test.CStr());
 
 	return Stream::Start(worker_count);
 }

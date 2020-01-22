@@ -73,7 +73,7 @@ bool OvtPacket::Load(const ov::Data &data)
 		return false;
 	}
 
-	if(data.GetLength() != OVT_FIXED_HEADER_SIZE + _payload_length)
+	if(data.GetLength() != static_cast<size_t>(OVT_FIXED_HEADER_SIZE + _payload_length))
 	{
 		// Invalid data
 		return false;

@@ -186,8 +186,8 @@ ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string &strin
 	return byte_stream;
 }
 
-ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string_view &string)
-{
-	byte_stream.Write(string.data(), string.size());
-	return byte_stream;
-}
+//ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string_view &string)
+//{
+//	byte_stream.Write(string.data(), string.size());
+//	return byte_stream;
+//}

@@ -12,7 +12,7 @@
 
 namespace cfg
 {
-	struct RtspProvider : public Provider
+	struct RtspPullProvider : public Provider
 	{
 		CFG_DECLARE_OVERRIDED_GETTER_OF(ProviderType, GetType, ProviderType::Rtsp)
 

@@ -2,8 +2,8 @@
 
 #include "sdp_format_parameters.h"
 
-#include <base/application/media_track.h>
-#include <base/application/media_extradata.h>
+#include <base/info/media_track.h>
+#include <base/info/media_extradata.h>
 
 #include <unordered_map>
 #include <string>

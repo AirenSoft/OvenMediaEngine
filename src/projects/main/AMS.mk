@@ -1,6 +1,8 @@
 LOCAL_PATH := $(call get_local_path)
 include $(DEFAULT_VARIABLES)
 
+#  rtsp
+# h264
 LOCAL_STATIC_LIBRARIES := \
 	webrtc \
 	ovtpublisher \
@@ -28,9 +30,7 @@ LOCAL_STATIC_LIBRARIES := \
 	ovlibrary \
 	monitoring \
 	jsoncpp \
-	sqlite \
-	rtsp \
-	h264
+	sqlite
 
 LOCAL_PREBUILT_LIBRARIES := \
 	libpugixml.a

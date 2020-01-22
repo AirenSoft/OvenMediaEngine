@@ -13,7 +13,7 @@
 #include "rtmp_application.h"
 #include "rtmp_provider.h"
 #include "rtmp_stream.h"
-#include "base/application/media_extradata.h"
+#include <base/info/media_extradata.h>
 
 #define OV_LOG_TAG "RtmpProvider"
 

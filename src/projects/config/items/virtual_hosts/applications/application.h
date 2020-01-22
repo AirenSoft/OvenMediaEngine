@@ -38,6 +38,35 @@ namespace cfg
 		CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
 		CFG_DECLARE_GETTER_OF(GetThreadCount, _publishers.GetThreadCount())
 
+		bool HasEncodeWithCodec(const ov::String &profile_name,
+								cfg::StreamProfileUse use,
+								const std::vector<ov::String> &video_codecs, const
+								std::vector<ov::String> &audio_codecs) const
+		{
+			for(const auto &encode : GetEncodeList())
+			{
+				if(encode.IsActive() && encode.GetName() == profile_name)
+				{
+					// video codec
+					if ((video_codecs.empty() == false)
+						&& (use == cfg::StreamProfileUse::Both || use == cfg::StreamProfileUse::VideoOnly))
+					{
+						const auto &video_profile = encode.GetVideoProfile();
+						return std::find(video_codecs.begin(), video_codecs.end(), video_profile->GetCodec()) != video_codecs.end();
+					}
+
+					// audio codec
+					if ((audio_codecs.empty() == false)
+						&& (use == cfg::StreamProfileUse::Both || use == cfg::StreamProfileUse::AudioOnly))
+					{
+						const auto &audio_profile = encode.GetAudioProfile();
+						return std::find(audio_codecs.begin(), audio_codecs.end(), audio_profile->GetCodec()) != audio_codecs.end();
+					}
+				}
+			}
+			return false;
+		}
+
 	protected:
 		void MakeParseList() override
 		{
