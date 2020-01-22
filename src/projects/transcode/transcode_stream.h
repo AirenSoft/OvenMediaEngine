@@ -19,7 +19,7 @@
 #include "base/media_route/media_buffer.h"
 #include "base/media_route/media_queue.h"
 #include "base/media_route/media_type.h"
-#include "base/application/stream_info.h"
+#include "base/info/stream_info.h"
 
 #include "transcode_context.h"
 #include "transcode_filter.h"
@@ -27,104 +27,100 @@
 #include "codec/transcode_encoder.h"
 #include "codec/transcode_decoder.h"
 
-#include <base/application/application.h>
-
-#include <media_router/bitstream/bitstream_to_annexb.h>
-#include <media_router/bitstream/bitstream_to_adts.h>
-#include <media_router/bitstream/bitstream_to_annexa.h>
-
-class TranscodeApplication;
+#include <base/info/application.h>
 
 typedef int32_t MediaTrackId;
+
+class TranscodeApplication;
 
 class TranscodeStream
 {
 public:
-	TranscodeStream(const info::Application *application_info, std::shared_ptr<StreamInfo> orig_stream_info, TranscodeApplication *parent);
+	TranscodeStream(const info::Application &application_info, const std::shared_ptr<StreamInfo> &orig_stream_info, TranscodeApplication *parent);
 	~TranscodeStream();
 
 	void Stop();
 
-	bool Push(std::unique_ptr<MediaPacket> packet);
+	bool Push(std::shared_ptr<MediaPacket> packet);
 
-	static std::map<uint32_t, std::set<ov::String>> _stream_list;
+	// std::set<ov::String> _stream_list;
+
+	// For statistics
+	uint32_t _stats_decoded_frame_count;
+	uint8_t _stats_queue_full_count;
+	uint64_t _max_queue_size;
 
 private:
+	ov::Semaphore _queue_event;
 
-	// 입력 스트림 정보
+	const info::Application _application_info;
+
+	// Input Stream Info
 	std::shared_ptr<StreamInfo> _stream_info_input;
 
-	// 미디어 인코딩된 원본 패킷 버퍼
-	MediaQueue<std::unique_ptr<MediaPacket>> _queue;
+	// Output Stream Info
+	// [OUTPUT_STREAM_NAME, OUTPUT_STREAM_INFO]
+	std::map<ov::String, std::shared_ptr<StreamInfo>> _stream_info_outputs;
 
-	// 디코딩된 프레임 버퍼
-	MediaQueue<std::unique_ptr<MediaFrame>> _queue_decoded;
+	// Map with track ID. Maps from one input track to multiple output tracks.
+	// [INPUT_TRACK_ID, [OUTPUT_TRACK_ID,MediaTrack] ARRAY]
+	std::map <uint8_t, std::vector<std::pair<uint8_t,std::shared_ptr<MediaTrack>>> > _tracks_map;
 
-	// 필터링된 프레임 버퍼
-	MediaQueue<std::unique_ptr<MediaFrame>> _queue_filterd;
+	// Decoder
+	// INPUT_TRACK_ID, DECODER
+	std::map<MediaTrackId, std::shared_ptr<TranscodeDecoder>> _decoders;
 
-	// 96-127 dynamic : RTP Payload Types for standard audio and video encodings
-	uint8_t _last_track_video = 0x60;     // 0x60 ~ 0x6F
-	uint8_t _last_track_audio = 0x70;     // 0x70 ~ 0x7F
+	// Filter
+	// OUTPUT_TRACK_ID, FILTER
+	std::map<MediaTrackId, std::shared_ptr<TranscodeFilter>> _filters;
 
-private:
-	const info::Application *_application_info;
+	// Encoder
+	// OUTPUT_TRACK_ID, ENCODER
+	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
 
-	// 디코더
-	std::map<MediaTrackId, std::unique_ptr<TranscodeDecoder>> _decoders;
+	// Buffer for encoded(input) media packets
+	MediaQueue<std::shared_ptr<MediaPacket>> _queue_input_packets;
 
-	// 인코더
-	std::map<MediaTrackId, std::unique_ptr<TranscodeEncoder>> _encoders;
+	// Buffer for decoded frames
+	MediaQueue<std::shared_ptr<MediaFrame>> _queue_decoded_frames;
 
-	// 필터
-	std::map<MediaTrackId, std::unique_ptr<TranscodeFilter>> _filters;
+	// Buffer for filtered frames
+	MediaQueue<std::shared_ptr<MediaFrame>> _queue_filterd_frames;
 
-	// 스트림별 트랙집합
-	std::map <ov::String, std::vector <uint8_t >> _stream_tracks;
+	// last generated output track id.
+	uint8_t _last_track_index = 0;
 
-private:
 	volatile bool _kill_flag;
 
-	void DecodeTask();
-	std::thread _thread_decode;
-
-	void FilterTask();
-	std::thread _thread_filter;
-
-	void EncodeTask();
-	std::thread _thread_encode;
+	void LoopTask();
+	std::thread _thread_looptask;
 
 	TranscodeApplication *_parent;
 
-	void CreateDecoder(int32_t track_id, std::shared_ptr<TranscodeContext> input_context);
+	int32_t CreateOutputStream();
 
-	void CreateEncoders(std::shared_ptr<MediaTrack> media_track);
-	void CreateEncoder(std::shared_ptr<MediaTrack> media_track, std::shared_ptr<TranscodeContext> output_context);
+	int32_t CreateDecoders();
+	bool CreateDecoder(int32_t track_id, std::shared_ptr<TranscodeContext> input_context);
 
-	// 디코딩된 프레임의 포맷이 분석되거나 변경될 경우 호출됨.
+	int32_t CreateEncoders();
+	bool CreateEncoder(std::shared_ptr<MediaTrack> media_track, std::shared_ptr<TranscodeContext> output_context);
+
+	// Called when formatting of decoded frames is analyzed or changed.
 	void ChangeOutputFormat(MediaFrame *buffer);
 
-	void CreateFilters(std::shared_ptr<MediaTrack> media_track, MediaFrame *buffer);
-	void DoFilters(std::unique_ptr<MediaFrame> frame);
+	void CreateFilters(MediaFrame *buffer);
+	void DoFilters(std::shared_ptr<MediaFrame> frame);
 
 	// There are 3 steps to process packet
 	// Step 1: Decode (Decode a frame from given packets)
-	TranscodeResult DecodePacket(int32_t track_id, std::unique_ptr<const MediaPacket> packet);
+	TranscodeResult DecodePacket(int32_t track_id, std::shared_ptr<MediaPacket> packet);
 	// Step 2: Filter (resample/rescale the decoded frame)
-	TranscodeResult FilterFrame(int32_t track_id, std::unique_ptr<MediaFrame> frame);
+	TranscodeResult FilterFrame(int32_t track_id, std::shared_ptr<MediaFrame> frame);
 	// Step 3: Encode (Encode the filtered frame to packets)
-	TranscodeResult EncodeFrame(int32_t track_id, std::unique_ptr<const MediaFrame> frame);
-
-	// 출력(변화된) 스트림 정보
-	bool AddStreamInfoOutput(ov::String stream_name);
-	uint8_t GetTrackId(common::MediaType media_type);
-	std::map<ov::String, std::shared_ptr<StreamInfo>> _stream_info_outputs;
+	TranscodeResult EncodeFrame(int32_t track_id, std::shared_ptr<const MediaFrame> frame);
 
 	// Transcoding information
-	uint8_t AddOutputContext(common::MediaType media_type, std::shared_ptr<TranscodeContext> output_context);
-
-	std::map<MediaTrackId, std::shared_ptr<TranscodeContext>> _output_contexts;
-	std::map<MediaTrackId, uint8_t> _bypass_routes;
+	uint8_t NewTrackId(common::MediaType media_type);
 
 	// Create output streams
 	void CreateStreams();
@@ -133,22 +129,12 @@ private:
 	void DeleteStreams();
 
 	// Send frame with output stream's information
-	void SendFrame(std::unique_ptr<MediaPacket> packet);
-	void SendFrame(std::unique_ptr<MediaPacket> packet, uint8_t track_id);
+	void SendFrame(std::shared_ptr<MediaPacket> packet);
 
-	// 통계 정보
-private:
-	uint32_t _stats_decoded_frame_count;
+	const cfg::Encode* GetEncodeByProfileName(const info::Application &application_info, ov::String encode_name);
 
-	uint8_t _stats_queue_full_count;
+	common::MediaCodecId GetCodecId(ov::String name);
 
-	uint64_t _max_queue_size;
-
-	////////////////////////////
-	// 비트 스트림 필터
-	////////////////////////////
-	BitstreamToAnnexB _bsfv;
-	BitstreamToADTS _bsfa;
-	BitstreamAnnexA _bsf_vp8;
+	int GetBitrate(ov::String bitrate);
 };
 

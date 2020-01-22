@@ -1,23 +1,16 @@
 #include "publisher_private.h"
 #include "publisher.h"
 
-Publisher::Publisher(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
-	: _application_info(application_info),
-	  _router(std::move(router))
+Publisher::Publisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+	: _server_config(server_config),
+	  _host_info(host_info),
+	  _router(router)
 {
 }
 
 bool Publisher::Start()
 {
-	logti("Trying to start publisher %d for application: %s", GetPublisherType(), _application_info->GetName().CStr());
-
-	auto application = OnCreateApplication(_application_info);
-
-	// 생성한 Application을 Router와 연결하고 Start
-	_router->RegisterObserverApp(application.get(), application);
-
-	// Application Map에 보관
-	_applications[application->GetId()] = application;
+	logti("Trying to start publisher %d", GetPublisherType());
 
 	return true;
 }
@@ -30,10 +23,43 @@ bool Publisher::Stop()
 	{
 		auto application = it->second;
 
-		_router->UnregisterObserverApp(application.get(), application);
+		_router->UnregisterObserverApp(*application.get(), application);
 
 		it = _applications.erase(it);
 	}
+
+	return true;
+}
+
+const cfg::Server& Publisher::GetServerConfig() const
+{
+	return _server_config;
+}
+
+const info::Host& Publisher::GetHostInfo() const
+{
+	return _host_info;
+}
+
+// Create Application
+bool Publisher::OnCreateApplication(const info::Application &app_info)
+{
+	auto application = OnCreatePublisherApplication(app_info);
+
+	// 생성한 Application을 Router와 연결하고 Start
+	_router->RegisterObserverApp(*application.get(), application);
+
+	// Application Map에 보관
+	_applications[application->GetId()] = application;
+
+	return true;
+}
+
+// Delete Application
+bool Publisher::OnDeleteApplication(const info::Application &app_info)
+{
+	_applications[app_info.GetId()]->Stop();
+	_applications.erase(app_info.GetId());
 
 	return true;
 }

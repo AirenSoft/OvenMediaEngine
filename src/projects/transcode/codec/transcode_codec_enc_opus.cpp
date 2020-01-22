@@ -8,6 +8,8 @@
 //==============================================================================
 #include "transcode_codec_enc_opus.h"
 
+#include <unistd.h>
+
 #include <opus/opus.h>
 
 #define OV_LOG_TAG "TranscodeCodec"
@@ -26,6 +28,8 @@ size_t AudioEncoderOpusImpl::SufficientOutputBufferSize() const {
 
 OvenCodecImplAvcodecEncOpus::~OvenCodecImplAvcodecEncOpus()
 {
+	Stop();
+
 	if (_encoder)
 	{
 		::opus_encoder_destroy(_encoder);
@@ -69,58 +73,85 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> co
 	_format = common::AudioSample::Format::None;
 	_current_pts = -1;
 
+	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
+	try
+	{
+		_kill_flag = false;
+
+		_thread_work = std::thread(&OvenCodecImplAvcodecEncOpus::ThreadEncode, this);
+	}
+	catch (const std::system_error &e)
+	{
+		_kill_flag = true;
+
+		logte("Failed to start transcode stream thread.");
+	}
+
+
 	return true;
 }
 
-void OvenCodecImplAvcodecEncOpus::SendBuffer(std::unique_ptr<const MediaFrame> frame)
+void OvenCodecImplAvcodecEncOpus::Stop()
 {
-	logtp("[-> RAW DATA for OPUS]\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
+	_kill_flag = true;
 
-	TranscodeEncoder::SendBuffer(std::move(frame));
+	_queue_event.Notify();
+
+	if (_thread_work.joinable())
+	{
+		_thread_work.join();
+		logtd("OPUS encoder thread has ended.");
+	}
 }
 
-std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)
+void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 {
-	OV_ASSERT2(_output_context != nullptr);
-
-	// 200ms
 	const unsigned int frame_count_to_encode = 480 * 2;
 	const unsigned int bytes_to_encode = frame_count_to_encode * _output_context->GetAudioChannel().GetCounts() * _output_context->GetAudioSample().GetSampleSize();
 
-	int64_t duration = 0LL;
 
-	while ((_input_buffer.empty() == false) && (_buffer->GetLength() < bytes_to_encode))
+	while(!_kill_flag)
 	{
-		// dequeue
-		auto frame_buffer = std::move(_input_buffer.front());
-		_input_buffer.pop_front();
+		_queue_event.Wait();
 
-		const MediaFrame *frame = frame_buffer.get();
+		int64_t duration = 0LL;
 
-		OV_ASSERT2(frame != nullptr);
-
-		// Store frame informations
-		_format = frame->GetFormat<common::AudioSample::Format>();
-
-		if (_current_pts == -1)
+		// If there is data in the input buffer, pull it out, or if there isn't... Wait.
+		while ((_input_buffer.empty() == false) && (_buffer->GetLength() < bytes_to_encode))
 		{
-			_current_pts = frame->GetPts();
-		}
+			// dequeue
+			std::unique_lock<std::mutex> mlock(_mutex);
+			auto frame_buffer = std::move(_input_buffer.front());
+			_input_buffer.pop_front();
+			
+			mlock.unlock();
 
-		duration += frame->GetDuration();
+			const MediaFrame *frame = frame_buffer.get();
 
-		// Append frame data into the buffer
+			OV_ASSERT2(frame != nullptr);
 
-		if (frame->GetChannels() == 1)
-		{
-			// Just copy data into buffer
-			_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
-		}
-		else if (frame->GetChannels() >= 2)
-		{
-			// Currently, OME's OPUS encoder supports up to 2 channels
-			switch (_format)
+			// Store frame informations
+			_format = frame->GetFormat<common::AudioSample::Format>();
+
+			if (_current_pts == -1)
 			{
+				_current_pts = frame->GetPts();
+			}
+
+			duration += frame->GetDuration();
+
+			// Append frame data into the buffer
+
+			if (frame->GetChannels() == 1)
+			{
+				// Just copy data into buffer
+				_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
+			}
+			else if (frame->GetChannels() >= 2)
+			{
+				// Currently, OME's OPUS encoder supports up to 2 channels
+				switch (_format)
+				{
 				case common::AudioSample::Format::S16P:
 				case common::AudioSample::Format::FltP:
 				{
@@ -156,34 +187,30 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeRe
 
 				default:
 					logte("Not supported format: %d", _format);
-					*result = TranscodeResult::DataError;
-
-					OV_ASSERT2(false);
-					return nullptr;
+					break;
+				}
 			}
 		}
-	}
 
-	if (_buffer->GetLength() < bytes_to_encode)
-	{
-		// There is no data to encode
-		*result = TranscodeResult::NoData;
-		return nullptr;
-	}
+		if (_buffer->GetLength() < bytes_to_encode)
+		{
+			// There is no data to encode
+			continue;
+		}
 
-	OV_ASSERT2(_current_pts >= 0);
-	OV_ASSERT2(_buffer->GetLength() >= bytes_to_encode);
+		OV_ASSERT2(_current_pts >= 0);
+		OV_ASSERT2(_buffer->GetLength() >= bytes_to_encode);
 
-	int encoded_bytes = -1;
+		int encoded_bytes = -1;
 
-	// "1275 * 3 + 7" formula is used in opusenc.c:813
-	// or, use the formula in "AudioEncoderOpusImpl::SufficientOutputBufferSize()" of the native code.
-	std::shared_ptr<ov::Data> encoded = std::make_shared<ov::Data>(1275 * 3 + 7);
-	encoded->SetLength(encoded->GetCapacity());
+		// "1275 * 3 + 7" formula is used in opusenc.c:813
+		// or, use the formula in "AudioEncoderOpusImpl::SufficientOutputBufferSize()" of the native code.
+		std::shared_ptr<ov::Data> encoded = std::make_shared<ov::Data>(1275 * 3 + 7);
+		encoded->SetLength(encoded->GetCapacity());
 
-	// Encode
-	switch (_format)
-	{
+		// Encode
+		switch (_format)
+		{
 		case common::AudioSample::Format::S16:
 			encoded_bytes = ::opus_encode(_encoder, _buffer->GetDataAs<const opus_int16>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
 			break;
@@ -193,30 +220,60 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeRe
 			break;
 
 		default:
-			*result = TranscodeResult::DataError;
-			return nullptr;
+			// *result = TranscodeResult::DataError;
+			continue;
+		}
+
+		if (encoded_bytes < 0)
+		{
+			logte("An error occurred while encode data %zu bytes: %d (Buffer: %zu bytes)", _buffer->GetLength(), encoded_bytes, encoded->GetCapacity());
+			// *result = TranscodeResult::DataError;
+			continue;
+		}
+
+		encoded->SetLength(static_cast<size_t>(encoded_bytes));
+
+		// Data is encoded successfully
+		// dequeue <bytes_to_encoded> bytes
+		auto buffer = _buffer->GetWritableDataAs<uint8_t>();
+		::memmove(buffer, buffer + bytes_to_encode, _buffer->GetLength() - bytes_to_encode);
+		_buffer->SetLength(_buffer->GetLength() - bytes_to_encode);
+
+		auto packet_buffer = std::make_shared<MediaPacket>(common::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
+		_current_pts += frame_count_to_encode;
+
+		// *result = TranscodeResult::DataReady;
+		std::unique_lock<std::mutex> mlock(_mutex);
+
+		_output_buffer.push_back(std::move(packet_buffer));			
+
+		mlock.unlock();
 	}
 
-	if (encoded_bytes < 0)
+}
+
+void OvenCodecImplAvcodecEncOpus::SendBuffer(std::shared_ptr<const MediaFrame> frame)
+{
+	logtp("[-> RAW DATA for OPUS]\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
+
+	TranscodeEncoder::SendBuffer(std::move(frame));
+}
+
+std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)
+{
+	std::unique_lock<std::mutex> mlock(_mutex);
+
+	if (!_output_buffer.empty())
 	{
-		logte("An error occurred while encode data %zu bytes: %d (Buffer: %zu bytes)", _buffer->GetLength(), encoded_bytes, encoded->GetCapacity());
-		*result = TranscodeResult::DataError;
-		return nullptr;
+		*result = TranscodeResult::DataReady;
+
+		auto packet = std::move(_output_buffer.front());
+		_output_buffer.pop_front();
+
+		return std::move(packet);
 	}
 
-	encoded->SetLength(static_cast<size_t>(encoded_bytes));
+	*result = TranscodeResult::NoData;
 
-	// Data is encoded successfully
-
-	// dequeue <bytes_to_encoded> bytes
-	auto buffer = _buffer->GetWritableDataAs<uint8_t>();
-	::memmove(buffer, buffer + bytes_to_encode, _buffer->GetLength() - bytes_to_encode);
-	_buffer->SetLength(_buffer->GetLength() - bytes_to_encode);
-
-	auto packet_buffer = std::make_unique<MediaPacket>(common::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
-
-	_current_pts += frame_count_to_encode;
-
-	*result = TranscodeResult::DataReady;
-	return std::move(packet_buffer);
+	return nullptr;
 }

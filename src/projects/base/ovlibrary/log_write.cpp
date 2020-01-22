@@ -15,25 +15,30 @@
 
 #include "log_write.h"
 
-#define OV_LOG_DIR      "logs"
-#define OV_LOG_DIR_SVC  "/var/log/ovenmediaengine"
-#define OV_LOG_FILE     "ovenmediaengine.log"
-
 namespace ov
 {
     bool LogWrite::_start_service = false;
 
-    LogWrite::LogWrite() :
+    LogWrite::LogWrite(std::string log_file_name) :
         _last_day(0),
-        _log_path(OV_LOG_DIR),
-        _log_file(_log_path + std::string("/") + std::string(OV_LOG_FILE))
+        _log_path(OV_LOG_DIR)
     {
+        if(log_file_name.empty())
+        {
+            _log_file_name = OV_LOG_FILE;
+        }
+        else
+        {
+            _log_file_name = log_file_name;
+        }
+
+        _log_file = _log_path + std::string("/") + log_file_name;
     }
 
     void LogWrite::SetLogPath(const char* log_path)
     {
         _log_path = log_path;
-        _log_file = log_path + std::string("/") + std::string(OV_LOG_FILE);
+        _log_file = log_path + std::string("/") + _log_file_name;
     }
 
     void LogWrite::Initialize()
@@ -51,6 +56,7 @@ namespace ov
             return;
         }
 
+        std::lock_guard<std::mutex> lock_guard(_log_stream_mutex);
         _log_stream.close();
         _log_stream.clear();
         _log_stream.open(_log_file, std::ofstream::out | std::ofstream::app);
@@ -84,6 +90,7 @@ namespace ov
             Initialize();
         }
 
+        std::lock_guard<std::mutex> lock_guard(_log_stream_mutex);
         _log_stream << log << std::endl;
         _log_stream.flush();
     }

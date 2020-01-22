@@ -8,6 +8,6 @@
 //==============================================================================
 #pragma once
 
-#include "cmaf/cmaf_publisher.h"
-#include "dash/dash_publisher.h"
-#include "hls/hls_publisher.h"
+#include "./ovt/ovt_publisher.h"
+#include "./segment/publishers.h"
+#include "./webrtc/webrtc_publisher.h"

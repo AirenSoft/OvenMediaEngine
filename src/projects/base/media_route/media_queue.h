@@ -104,7 +104,10 @@ public:
 
 	size_t size()
 	{
-		return _queue.size();
+		std::lock_guard<std::mutex> mlock(_mutex);
+		size_t size = _queue.size();
+		
+		return size;
 	}
 
 	// TODO: Abort

@@ -127,9 +127,9 @@ public:
 		return _frag_hdr;
 	}
 
-	std::unique_ptr<MediaPacket> ClonePacket()
+	std::shared_ptr<MediaPacket> ClonePacket()
 	{
-		auto packet = std::make_unique<MediaPacket>(
+		auto packet = std::make_shared<MediaPacket>(
 			GetMediaType(),
 			GetTrackId(),
 			GetData(),
@@ -470,9 +470,9 @@ public:
 	}
 
 	// This function should only be called before filtering (_track_id 0, 1)
-	std::unique_ptr<MediaFrame> CloneFrame()
+	std::shared_ptr<MediaFrame> CloneFrame()
 	{
-		auto frame = std::make_unique<MediaFrame>();
+		auto frame = std::make_shared<MediaFrame>();
 
 		if (_track_id == (int32_t)common::MediaType::Video)
 		{

@@ -131,11 +131,11 @@ namespace ov
 	{
 		if (offset >= 0)
 		{
-			OV_ASSERT2(GetLength() >= offset);
+			OV_ASSERT2(GetLength() >= static_cast<size_t>(offset));
 		}
 		else
 		{
-			OV_ASSERT2(GetLength() > (-1LL * offset));
+			OV_ASSERT2(GetLength() > static_cast<size_t>(-1LL * offset));
 		}
 
 		return Subdata(offset, (offset >= 0) ? (GetLength() - offset) : (static_cast<size_t>(-1 * offset)));
@@ -383,6 +383,11 @@ namespace ov
 
 	String Data::ToString() const
 	{
-		return ToHexString(static_cast<const uint8_t *>(GetData()) + _offset, GetLength());
+		return String(GetDataAs<const char>(), GetLength());
+	}
+
+	String Data::ToHexString() const
+	{
+		return ov::ToHexString(static_cast<const uint8_t *>(GetData()) + _offset, GetLength());
 	}
 }  // namespace ov

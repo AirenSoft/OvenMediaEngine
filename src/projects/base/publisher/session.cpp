@@ -2,7 +2,7 @@
 #include "session.h"
 #include "application.h"
 
-Session::Session(std::shared_ptr<Application> application, std::shared_ptr<Stream> stream)
+Session::Session(const std::shared_ptr<Application> &application, const std::shared_ptr<Stream> &stream)
 	: SessionInfo()
 {
 	_application = application;
@@ -10,7 +10,7 @@ Session::Session(std::shared_ptr<Application> application, std::shared_ptr<Strea
 	_state = SessionState::Ready;
 }
 
-Session::Session(const SessionInfo &info, std::shared_ptr<Application> application, std::shared_ptr<Stream> stream)
+Session::Session(const SessionInfo &info, const std::shared_ptr<Application> &application, const std::shared_ptr<Stream> &stream)
 	: SessionInfo(info)
 {
 	_application = application;
@@ -22,12 +22,12 @@ Session::~Session()
 {
 }
 
-std::shared_ptr<Application> Session::GetApplication()
+const std::shared_ptr<Application>& Session::GetApplication()
 {
 	return _application;
 }
 
-std::shared_ptr<Stream> Session::GetStream()
+const std::shared_ptr<Stream>& Session::GetStream()
 {
 	return _stream;
 }

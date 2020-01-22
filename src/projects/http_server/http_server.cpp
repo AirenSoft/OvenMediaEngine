@@ -9,7 +9,7 @@
 #include "http_server.h"
 #include "http_private.h"
 
-#include <physical_port/physical_port_manager.h>
+#include <modules/physical_port/physical_port_manager.h>
 
 HttpServer::~HttpServer()
 {
@@ -77,7 +77,7 @@ ssize_t HttpServer::TryParseHeader(const std::shared_ptr<HttpClient> &client, co
 
 		case HttpStatusCode::PartialContent:
 			// 데이터 더 필요 - 이 상태에서는 반드시 모든 데이터를 소진했어야 함
-			OV_ASSERT2(processed_length == data->GetLength());
+			OV_ASSERT2((processed_length >= 0LL) && (static_cast<size_t>(processed_length) == data->GetLength()));
 			break;
 
 		default:
@@ -133,13 +133,17 @@ void HttpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 {
 	auto client = FindClient(remote);
 
+	if (client == nullptr)
+	{
+		// This can be called in situations where the client closes the connection from the server at the same time as the data is sent
+		return;
+	}
+
 	ProcessData(client, data);
 }
 
 void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
 {
-	OV_ASSERT2(client != nullptr);
-
 	if (client != nullptr)
 	{
 		std::shared_ptr<HttpRequest> &request = client->GetRequest();
@@ -274,7 +278,7 @@ void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 		}
 		else
 		{
-			logtw("Interceptor is not exists for HTTP client %p", client.get());
+			logtw("Interceptor does not exists for HTTP client %p", client.get());
 		}
 
 		_client_list.erase(client_iterator);
@@ -317,7 +321,7 @@ bool HttpServer::RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor>
 
 	if (item == _interceptor_list.end())
 	{
-		// interceptor is not exists in the list
+		// interceptor does not exists in the list
 		logtw("%p is not found.", interceptor.get());
 		return false;
 	}

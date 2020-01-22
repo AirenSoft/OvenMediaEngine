@@ -229,7 +229,7 @@ namespace ov
 							break;
 
 						case SocketConnectionState::Disconnected:
-							logtd("[%p] [#%d] The connection callback requested to disconnect the client #%d",
+							logtd("[%p] [#%d] The data callback requested to disconnect the client #%d",
 								  this, _socket.GetSocket(), client->GetSocket().GetSocket());
 							DisconnectClient(client, SocketConnectionState::Disconnected);
 							break;

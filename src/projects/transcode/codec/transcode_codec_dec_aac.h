@@ -18,7 +18,7 @@ public:
 		return AV_CODEC_ID_AAC;
 	}
 
-	std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
+	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
 
 protected:
 };

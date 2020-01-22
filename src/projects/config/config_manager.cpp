@@ -10,8 +10,8 @@
 
 #include "items/items.h"
 
-#include "config_private.h"
 #include "config_logger_loader.h"
+#include "config_private.h"
 
 #include <iostream>
 
@@ -19,14 +19,12 @@ namespace cfg
 {
 	ConfigManager::ConfigManager()
 	{
-	    // Modify if supported xml version is added or changed
-        _supported_xml.insert(
-                std::make_pair("Server",std::vector<std::string>({"2", "2.0"}))
-                );
+		// Modify if supported xml version is added or changed
+		_supported_xml.insert(
+			std::make_pair("Server", std::vector<std::string>({"4", "4.0"})));
 
-        _supported_xml.insert(
-                std::make_pair("Logger", std::vector<std::string>({"2", "2.0"}))
-                );
+		_supported_xml.insert(
+			std::make_pair("Logger", std::vector<std::string>({"2", "2.0"})));
 	}
 
 	ConfigManager::~ConfigManager()
@@ -35,7 +33,7 @@ namespace cfg
 
 	bool ConfigManager::LoadConfigs(ov::String config_path)
 	{
-		if(config_path.IsEmpty())
+		if (config_path.IsEmpty())
 		{
 			config_path = ov::PathManager::GetAppPath("conf");
 		}
@@ -43,7 +41,7 @@ namespace cfg
 		PrepareMacros();
 
 		// Load Logger
-		if(LoadLoggerConfig(config_path) == false)
+		if (LoadLoggerConfig(config_path) == false)
 		{
 			return false;
 		}
@@ -52,12 +50,14 @@ namespace cfg
 		logti("Trying to load configurations... (%s)", server_config_path.CStr());
 
 		_server = std::make_shared<cfg::Server>();
-        bool result = _server->Parse(server_config_path, "Server");
+		bool result = _server->Parse(server_config_path, "Server");
 
-        if (IsValidVersion("Server", _server->GetVersion().CStr()) == false)
-        {
-            return false;
-        }
+		if (IsValidVersion("Server", _server->GetVersion().CStr()) == false)
+		{
+			return false;
+		}
+
+		_config_path = config_path;
 
 		return result;
 	}
@@ -65,6 +65,11 @@ namespace cfg
 	bool ConfigManager::LoadConfigs()
 	{
 		return LoadConfigs("");
+	}
+
+	bool ConfigManager::ReloadConfigs()
+	{
+		return LoadConfigs(_config_path);
 	}
 
 	void ConfigManager::PrepareMacros()
@@ -81,7 +86,13 @@ namespace cfg
 		ov::String logger_config_path = ov::PathManager::Combine(config_path, "Logger.xml");
 
 		::memset(&_last_modified, 0, sizeof(_last_modified));
-		::stat(logger_config_path, &value);
+		if(::stat(logger_config_path, &value) == -1)
+		{
+			// There is no file or to open file error
+			// OME will work with the default settings.
+			logtw("There is no configuration file for logs : %s. OME will run with the default settings.", logger_config_path.CStr());
+			return true;
+		}
 
 		if(
 #if defined(__APPLE__)
@@ -106,29 +117,31 @@ namespace cfg
 #endif
 
 		auto logger_loader = std::make_shared<ConfigLoggerLoader>(logger_config_path);
-		if(logger_loader == nullptr)
+		if (logger_loader == nullptr)
 		{
 			logte("Failed to load config Logger.xml");
 			return false;
 		}
 
-		if(!logger_loader->Parse())
+		if (!logger_loader->Parse())
 		{
 			// Logger.xml 파싱에 실패한 경우
 			return false;
 		}
 
 		if (IsValidVersion("Logger", logger_loader->GetVersion().c_str()) == false)
-        {
-		    return false;
-        }
+		{
+			return false;
+		}
 
-        auto log_path = logger_loader->GetLogPath();
-        ov_log_set_path(log_path.c_str());
-        logti("Trying to save logfile in directory... (%s)", log_path.c_str());
+		auto log_path = logger_loader->GetLogPath();
+		ov_log_set_path(log_path.c_str());
+		ov_stat_log_set_path(log_path.c_str());
+
+		logti("Trying to set logfile in directory... (%s)", log_path.c_str());
 
 		std::vector<std::shared_ptr<LoggerTagInfo>> tags = logger_loader->GetTags();
-		for(auto iterator = tags.begin(); iterator != tags.end(); ++iterator)
+		for (auto iterator = tags.begin(); iterator != tags.end(); ++iterator)
 		{
 			ov_log_set_enable((*iterator)->GetName().CStr(), (*iterator)->GetLevel(), true);
 		}
@@ -139,7 +152,7 @@ namespace cfg
 
 	ov::String ConfigManager::ResolveMacros(ov::String string)
 	{
-		for(auto macro : _macros)
+		for (auto macro : _macros)
 		{
 			string = string.Replace(macro.first, macro.second);
 		}
@@ -148,24 +161,24 @@ namespace cfg
 	}
 
 	bool ConfigManager::IsValidVersion(const std::string& name, const std::string& version)
-    {
-        auto supported_xml = _supported_xml.find(name);
-        if(supported_xml == _supported_xml.end())
-        {
-            logte("Cannot find conf XML (%s.xml)", name.c_str());
-            return false;
-        }
+	{
+		auto supported_xml = _supported_xml.find(name);
+		if (supported_xml == _supported_xml.end())
+		{
+			logte("Cannot find conf XML (%s.xml)", name.c_str());
+			return false;
+		}
 
-        auto supported_version = supported_xml->second;
-        if (std::find(supported_version.begin(), supported_version.end(), version) != supported_version.end())
-        {
-            return true;
-        }
+		auto supported_version = supported_xml->second;
+		if (std::find(supported_version.begin(), supported_version.end(), version) != supported_version.end())
+		{
+			return true;
+		}
 
-        logte("The version of %s.xml is incorrect. If you have upgraded OME, see misc/conf_examples/%s.xml",
-                name.c_str(),
-                name.c_str());
+		logte("The version of %s.xml is incorrect. If you have upgraded OME, see misc/conf_examples/%s.xml",
+			  name.c_str(),
+			  name.c_str());
 
-	    return false;
-    }
-}
+		return false;
+	}
+}  // namespace cfg

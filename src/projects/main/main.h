@@ -8,8 +8,6 @@
 //==============================================================================
 #pragma once
 
-#define OV_LOG_TAG                      "OvenMediaEngine"
-
 // Version format: [MAJOR].[MINOR].[RELEASE]
 // Major changes
 #define OME_VERSION_MAJOR               0

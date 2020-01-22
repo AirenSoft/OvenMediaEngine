@@ -75,11 +75,13 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 
 	// "abuffer" filter
 	ov::String input_args = ov::String::FormatString(
-		"time_base=%s:sample_rate=%d:sample_fmt=%s:channel_layout=0x%x",
+		// "time_base=%s:sample_rate=%d:sample_fmt=%s:channel_layout=0x%x",
+		"time_base=%s:sample_rate=%d:sample_fmt=%s:channel_layout=%s",
 		input_context->GetTimeBase().GetStringExpr().CStr(),
 		input_context->GetAudioSampleRate(),
 		input_context->GetAudioSample().GetName(),
-		input_context->GetAudioChannel().GetLayout());
+		input_context->GetAudioChannel().GetName());
+		// input_context->GetAudioChannel().GetLayout().GetName());
 
 	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, abuffersrc, "in", input_args, nullptr, _filter_graph);
 	if (ret < 0)
@@ -146,7 +148,7 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 	return true;
 }
 
-int32_t MediaFilterResampler::SendBuffer(std::unique_ptr<MediaFrame> buffer)
+int32_t MediaFilterResampler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
 	logtp("Data before resampling:\n%s", ov::Dump(buffer->GetBuffer(0), buffer->GetBufferSize(0), 32).CStr());
 
@@ -155,7 +157,7 @@ int32_t MediaFilterResampler::SendBuffer(std::unique_ptr<MediaFrame> buffer)
 	return 0;
 }
 
-std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *result)
 {
 	int ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
 
@@ -177,7 +179,7 @@ std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 	}
 	else
 	{
-		auto output_frame = std::make_unique<MediaFrame>();
+		auto output_frame = std::make_shared<MediaFrame>();
 
 		output_frame->SetFormat(_frame->format);
 		output_frame->SetBytesPerSample(::av_get_bytes_per_sample((AVSampleFormat)_frame->format));
@@ -220,6 +222,7 @@ std::unique_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 		auto frame = std::move(_input_buffer.front());
 		_input_buffer.pop_front();
 
+		// logtd("format(%d), channels(%d), samples(%d)", frame->GetFormat(), frame->GetChannels(), frame->GetNbSamples());
 		logtp("Dequeued data for resampling: %lld\n%s", frame->GetPts(), ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
 
 		_frame->format = frame->GetFormat();

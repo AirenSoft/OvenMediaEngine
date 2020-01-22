@@ -8,6 +8,7 @@
 //==============================================================================
 
 
+#include <zconf.h>
 #include "provider.h"
 
 #include "application.h"
@@ -17,47 +18,113 @@
 
 namespace pvd
 {
-	Provider::Provider(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
-		: _application_info(application_info),
-		  _router(router)
+	Provider::Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+		: _server_config(server_config), _router(router)
 	{
+		_use_garbage_collector = false;
 	}
 
 	Provider::~Provider()
 	{
 	}
 
+	const cfg::Server &Provider::GetServerConfig() const
+	{
+		return _server_config;
+	}
+
 	bool Provider::Start()
 	{
-		// Application 을 자식에게 생성하게 한다.
-		auto application = OnCreateApplication(_application_info);
-
-		// 생성한 Application을 Router와 연결하고 Start
-		_router->RegisterConnectorApp(application.get(), application);
-
-		// Apllication Map에 보관
-		_applications[application->GetId()] = application;
-
-		// 시작한다.
-		application->Start();
+		if(_use_garbage_collector)
+		{
+			_worker_thread = std::thread(&Provider::GarbageCollector, this);
+			_worker_thread.detach();
+		}
 
 		return true;
 	}
 
+	void Provider::SetUseAutoStreamRemover(bool use)
+	{
+		_use_garbage_collector = use;
+	}
+
 	bool Provider::Stop()
 	{
+		_use_garbage_collector = false;
+
 		auto it = _applications.begin();
 
 		while(it != _applications.end())
 		{
 			auto application = it->second;
 
-			_router->UnregisterConnectorApp(application.get(), application);
-
+			_router->UnregisterConnectorApp(*application.get(), application);
 			application->Stop();
 
 			it = _applications.erase(it);
 		}
+
+		return true;
+	}
+
+	// Create Application
+	bool Provider::OnCreateApplication(const info::Application &app_info)
+	{
+		if(_router == nullptr)
+		{
+			logte("Could not find MediaRouter");
+			OV_ASSERT2(false);
+			return false;
+		}
+
+		// Let child create application
+		auto application = OnCreateProviderApplication(app_info);
+
+		if(application == nullptr)
+		{
+			logte("Could not create application for [%s]", app_info.GetName().CStr());
+			return false;
+		}
+
+		// Connect created application to router
+		if(_router->RegisterConnectorApp(*application.get(), application) == false)
+		{
+			logte("Could not register the application: %p", application.get());
+			return false;
+		}
+
+		// Store created application
+		_applications[application->GetId()] = application;
+
+		application->Start();
+
+		return true;
+	}
+
+	// Delete Application
+	bool Provider::OnDeleteApplication(const info::Application &app_info)
+	{
+		auto item = _applications.find(app_info.GetId());
+
+		logti("Deleting the application: [%s]", app_info.GetName().CStr());
+
+		if(item == _applications.end())
+		{
+			logte("The application does not exists: [%s]", app_info.GetName().CStr());
+			return false;
+		}
+
+		bool result = OnDeleteProviderApplication(app_info);
+
+		if(result == false)
+		{
+			logte("Could not delete the application: [%s]", app_info.GetName().CStr());
+			return false;
+		}
+
+		_applications[app_info.GetId()]->Stop();
+		_applications.erase(app_info.GetId());
 
 		return true;
 	}
@@ -110,5 +177,19 @@ namespace pvd
 		}
 
 		return nullptr;
+	}
+
+	void Provider::GarbageCollector()
+	{
+		while(_use_garbage_collector)
+		{
+			for(auto const &x : _applications)
+			{
+				auto app = x.second;
+				app->DeleteTerminatedStreams();
+			}
+
+			sleep(1);
+		}
 	}
 }

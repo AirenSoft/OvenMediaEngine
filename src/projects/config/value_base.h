@@ -49,6 +49,7 @@ namespace cfg
 	{
 	public:
 		using OptionalCallback = std::function<bool()>;
+		using ValidationCallback = std::function<bool()>;
 
 		virtual ~ValueBase() = default;
 
@@ -58,6 +59,8 @@ namespace cfg
 		bool IsOptional() const;
 		void SetOptional(bool is_optional);
 		void SetOptionalCallback(OptionalCallback optional_callback);
+		void SetValidationCallback(ValidationCallback validation_callback);
+		bool DoValidation();
 
 		bool IsNeedToResolvePath() const;
 		void SetNeedToResolvePath(bool need_to_resolve_path);
@@ -71,6 +74,7 @@ namespace cfg
 
 		bool _is_optional = false;
 		OptionalCallback _optional_callback = nullptr;
+		ValidationCallback _validation_callback = nullptr;
 		bool _need_to_resolve_path = false;
 
 		size_t _value_size = 0;

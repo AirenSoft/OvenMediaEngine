@@ -3,8 +3,8 @@
 
 #include <algorithm>
 
-Application::Application(const info::Application *application_info)
-	: info::Application(*application_info)
+Application::Application(const info::Application &application_info)
+	: info::Application(application_info)
 {
 	_stop_thread_flag = false;
 }
@@ -26,6 +26,7 @@ bool Application::Start()
 bool Application::Stop()
 {
 	_stop_thread_flag = true;
+	_queue_event.Notify();
 	_worker_thread.join();
 
 	return true;
@@ -33,10 +34,10 @@ bool Application::Stop()
 
 // Call by MediaRouteApplicationObserver
 // Stream이 생성되었을 때 호출된다.
-bool Application::OnCreateStream(std::shared_ptr<StreamInfo> info)
+bool Application::OnCreateStream(const std::shared_ptr<StreamInfo> &info)
 {
 	// Stream을 자식을 통해 생성해서 연결한다.
-	auto worker_count = GetThreadCount();
+	auto worker_count = GetConfig().GetThreadCount();
 	auto stream = CreateStream(info, worker_count);
 
 	if(!stream)
@@ -50,7 +51,7 @@ bool Application::OnCreateStream(std::shared_ptr<StreamInfo> info)
 	return true;
 }
 
-bool Application::OnDeleteStream(std::shared_ptr<StreamInfo> info)
+bool Application::OnDeleteStream(const std::shared_ptr<StreamInfo> &info)
 {
 	if(_streams.count(info->GetId()) <= 0)
 	{
@@ -78,17 +79,11 @@ bool Application::OnDeleteStream(std::shared_ptr<StreamInfo> info)
 	return true;
 }
 
-bool Application::OnSendVideoFrame(std::shared_ptr<StreamInfo> stream_info,
-                                   std::shared_ptr<MediaTrack> track,
-                                   std::unique_ptr<EncodedFrame> encoded_frame,
-                                   std::unique_ptr<CodecSpecificInfo> codec_info,
-                                   std::unique_ptr<FragmentationHeader> fragmentation)
+bool Application::OnSendVideoFrame(const std::shared_ptr<StreamInfo> &stream_info,
+                                   const std::shared_ptr<MediaPacket> &media_packet)
 {
-	auto data = std::make_unique<Application::VideoStreamData>(stream_info,
-	                                                           track,
-	                                                           std::move(encoded_frame),
-	                                                           std::move(codec_info),
-	                                                           std::move(fragmentation));
+	auto data = std::make_shared<Application::VideoStreamData>(stream_info,
+	                                                           media_packet);
 
 	// Mutex (This function may be called by Router thread)
 	std::unique_lock<std::mutex> lock(_video_stream_queue_guard);
@@ -99,17 +94,11 @@ bool Application::OnSendVideoFrame(std::shared_ptr<StreamInfo> stream_info,
 	return true;
 }
 
-bool Application::OnSendAudioFrame(std::shared_ptr<StreamInfo> stream_info,
-                                   std::shared_ptr<MediaTrack> track,
-                                   std::unique_ptr<EncodedFrame> encoded_frame,
-                                   std::unique_ptr<CodecSpecificInfo> codec_info,
-                                   std::unique_ptr<FragmentationHeader> fragmentation)
+bool Application::OnSendAudioFrame(const std::shared_ptr<StreamInfo> &stream_info,
+								   const std::shared_ptr<MediaPacket> &media_packet)
 {
-	auto data = std::make_unique<Application::AudioStreamData>(stream_info,
-	                                                           track,
-	                                                           std::move(encoded_frame),
-	                                                           std::move(codec_info),
-	                                                           std::move(fragmentation));
+	auto data = std::make_shared<Application::AudioStreamData>(stream_info,
+	                                                           media_packet);
 
 	// Mutex (This function may be called by Router thread)
 	std::unique_lock<std::mutex> lock(_audio_stream_queue_guard);
@@ -121,10 +110,10 @@ bool Application::OnSendAudioFrame(std::shared_ptr<StreamInfo> stream_info,
 	return true;
 }
 
-bool Application::PushIncomingPacket(std::shared_ptr<SessionInfo> session_info,
-                                     std::shared_ptr<const ov::Data> data)
+bool Application::PushIncomingPacket(const std::shared_ptr<SessionInfo> &session_info,
+                                     const std::shared_ptr<const ov::Data> &data)
 {
-	auto packet = std::make_unique<Application::IncomingPacket>(session_info, data);
+	auto packet = std::make_shared<Application::IncomingPacket>(session_info, data);
 
 	// Mutex (This function may be called by IcePort thread)
 	std::unique_lock<std::mutex> lock(this->_incoming_packet_queue_guard);
@@ -160,7 +149,7 @@ std::shared_ptr<Stream> Application::GetStream(ov::String stream_name)
 	return nullptr;
 }
 
-std::unique_ptr<Application::VideoStreamData> Application::PopVideoStreamData()
+std::shared_ptr<Application::VideoStreamData> Application::PopVideoStreamData()
 {
 	std::unique_lock<std::mutex> lock(_video_stream_queue_guard);
 
@@ -175,7 +164,7 @@ std::unique_ptr<Application::VideoStreamData> Application::PopVideoStreamData()
 	return data;
 }
 
-std::unique_ptr<Application::AudioStreamData> Application::PopAudioStreamData()
+std::shared_ptr<Application::AudioStreamData> Application::PopAudioStreamData()
 {
 	std::unique_lock<std::mutex> lock(_audio_stream_queue_guard);
 
@@ -190,7 +179,7 @@ std::unique_ptr<Application::AudioStreamData> Application::PopAudioStreamData()
 	return data;
 }
 
-std::unique_ptr<Application::IncomingPacket> Application::PopIncomingPacket()
+std::shared_ptr<Application::IncomingPacket> Application::PopIncomingPacket()
 {
 	std::unique_lock<std::mutex> lock(this->_incoming_packet_queue_guard);
 
@@ -227,35 +216,23 @@ void Application::WorkerThread()
 		// Queue에 입력된 데이터를 처리한다.
 
 		// Check video data is available
-		std::unique_ptr<Application::VideoStreamData> video_data = PopVideoStreamData();
+		std::shared_ptr<Application::VideoStreamData> video_data = PopVideoStreamData();
 
-		if((video_data != nullptr) && (video_data->_stream_info != nullptr) && (video_data->_track != nullptr))
+		if((video_data != nullptr) && (video_data->_stream_info != nullptr) && (video_data->_media_packet != nullptr))
 		{
-			OV_ASSERT2(video_data->_encoded_frame != nullptr);
-
-			SendVideoFrame(video_data->_stream_info,
-			               video_data->_track,
-			               std::move(video_data->_encoded_frame),
-			               std::move(video_data->_codec_info),
-			               std::move(video_data->_framgmentation_header));
+			SendVideoFrame(video_data->_stream_info, video_data->_media_packet);
 		}
 
 		// Check audio data is available
-		std::unique_ptr<Application::AudioStreamData> audio_data = PopAudioStreamData();
+		std::shared_ptr<Application::AudioStreamData> audio_data = PopAudioStreamData();
 
-		if((audio_data != nullptr) && (audio_data->_stream_info != nullptr) && (audio_data->_track != nullptr))
+		if((audio_data != nullptr) && (audio_data->_stream_info != nullptr) && (audio_data->_media_packet != nullptr))
 		{
-			OV_ASSERT2(audio_data->_encoded_frame != nullptr);
-
-			SendAudioFrame(audio_data->_stream_info,
-			               audio_data->_track,
-			               std::move(audio_data->_encoded_frame),
-			               std::move(audio_data->_codec_info),
-			               std::move(audio_data->_framgmentation_header));
+			SendAudioFrame(audio_data->_stream_info, audio_data->_media_packet);
 		}
 
 		// Check incoming packet is available
-		std::unique_ptr<IncomingPacket> packet = PopIncomingPacket();
+		std::shared_ptr<IncomingPacket> packet = PopIncomingPacket();
 		if(packet)
 		{
 			OnPacketReceived(packet->_session_info, packet->_data);
@@ -266,48 +243,33 @@ void Application::WorkerThread()
 	}
 }
 
-
-void Application::SendVideoFrame(std::shared_ptr<StreamInfo> info,
-                                 std::shared_ptr<MediaTrack> track,
-                                 std::unique_ptr<EncodedFrame> encoded_frame,
-                                 std::unique_ptr<CodecSpecificInfo> codec_info,
-                                 std::unique_ptr<FragmentationHeader> fragmentation)
+void Application::SendVideoFrame(const std::shared_ptr<StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &media_packet)
 {
 	// Stream에 Packet을 전송한다.
-	auto stream = GetStream(info->GetId());
+	auto stream = GetStream(stream_info->GetId());
 	if(!stream)
 	{
 		// stream을 찾을 수 없다.
 		return;
 	}
 
-	stream->SendVideoFrame(track,
-	                       std::move(encoded_frame),
-	                       std::move(codec_info),
-	                       std::move(fragmentation));
+	stream->SendVideoFrame(media_packet);
 }
 
-void Application::SendAudioFrame(std::shared_ptr<StreamInfo> info,
-                                 std::shared_ptr<MediaTrack> track,
-                                 std::unique_ptr<EncodedFrame> encoded_frame,
-                                 std::unique_ptr<CodecSpecificInfo> codec_info,
-                                 std::unique_ptr<FragmentationHeader> fragmentation)
+void Application::SendAudioFrame(const std::shared_ptr<StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &media_packet)
 {
 	// Stream에 Packet을 전송한다.
-	auto stream = GetStream(info->GetId());
+	auto stream = GetStream(stream_info->GetId());
 	if(!stream)
 	{
 		// stream을 찾을 수 없다.
 		return;
 	}
 
-	stream->SendAudioFrame(track,
-	                       std::move(encoded_frame),
-	                       std::move(codec_info),
-	                       std::move(fragmentation));
+	stream->SendAudioFrame(media_packet);
 }
 
-void Application::OnPacketReceived(std::shared_ptr<SessionInfo> session_info, std::shared_ptr<const ov::Data> data)
+void Application::OnPacketReceived(const std::shared_ptr<SessionInfo> &session_info, const std::shared_ptr<const ov::Data> &data)
 {
 	// Stream으로 갈 필요없이 바로 Session으로 간다.
 	// Stream은 Broad하게 전송할때만 필요하다.

@@ -8,8 +8,20 @@
 //==============================================================================
 #include "transcode_codec_enc_avc.h"
 
+#include <unistd.h>
+
 #define OV_LOG_TAG "TranscodeCodec"
 
+
+OvenCodecImplAvcodecEncAVC::~OvenCodecImplAvcodecEncAVC()
+{
+	Stop();
+}
+
+// Notes.
+//
+// - B-frame must be disabled. because, WEBRTC does not support B-Frame.
+//
 bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	if (TranscodeEncoder::Configure(context) == false)
@@ -42,6 +54,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	_context->rc_max_rate = _context->bit_rate;
 	_context->rc_buffer_size = static_cast<int>(_context->bit_rate / 2);
 	_context->sample_aspect_ratio = (AVRational){1, 1};
+
 	// From avcodec.h:
 	// For some codecs, the time base is closer to the field rate than the frame rate.
 	// Most notably, H.264 and MPEG-2 specify time_base as half of frame duration
@@ -51,6 +64,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	// From avcodec.h:
 	// For fixed-fps content, timebase should be 1/framerate and timestamp increments should be identically 1.
 	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
+
 	AVRational codec_timebase = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
 	_context->time_base = codec_timebase;
 	_context->gop_size = _context->framerate.num;
@@ -58,7 +72,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
-	_context->thread_count = 4;
+	_context->thread_count = 0;
 	AVRational output_timebase = TimebaseToAVRational(_output_context->GetTimeBase());
 	_scale = ::av_q2d(::av_div_q(output_timebase, codec_timebase));
 	_scale_inv = ::av_q2d(::av_div_q(codec_timebase, output_timebase));
@@ -66,6 +80,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	// 인코딩 품질 및 브라우저 호환성
 	// For browser compatibility
 	_context->profile = FF_PROFILE_H264_MAIN;
+	_context->profile = FF_PROFILE_H264_BASELINE;
 
 	// 인코딩 성능
 	::av_opt_set(_context->priv_data, "preset", "fast", 0);
@@ -86,47 +101,59 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 		return false;
 	}
 
+	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
+	try
+	{
+		_kill_flag = false;
+
+		_thread_work = std::thread(&OvenCodecImplAvcodecEncAVC::ThreadEncode, this);
+	}
+	catch (const std::system_error &e)
+	{
+		_kill_flag = true;
+
+		logte("Failed to start transcode stream thread.");
+	}
+
 	return true;
 }
 
-std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeResult *result)
+void OvenCodecImplAvcodecEncAVC::Stop()
 {
-	// Check frame is availble
-	int ret = ::avcodec_receive_packet(_context, _packet);
+	_kill_flag = true;
 
-	if (ret == AVERROR(EAGAIN))
+	_queue_event.Notify();
+
+	if (_thread_work.joinable())
 	{
-		// Wait for more packet
+		_thread_work.join();
+		logtd("AVC encoder thread has ended.");
 	}
-	else if (ret == AVERROR_EOF)
+}
+
+void OvenCodecImplAvcodecEncAVC::ThreadEncode()
+{
+	while(!_kill_flag)
 	{
-		logte("Error receiving a packet for decoding : AVERROR_EOF");
+		_queue_event.Wait();
 
-		*result = TranscodeResult::DataError;
-		return nullptr;
-	}
-	else if (ret < 0)
-	{
-		logte("Error receiving a packet for encoding : %d", ret);
+		std::unique_lock<std::mutex> mlock(_mutex);
 
-		*result = TranscodeResult::DataError;
-		return nullptr;
-	}
-	else
-	{
-		// Packet is ready
-		auto packet = MakePacket();
-		::av_packet_unref(_packet);
+		// 스레드 종료와 같이 큐에 데이터가 없는 경우에는 다시 대기를 한다
+		if (_input_buffer.empty())
+		{
+			continue;
+		}
 
-		*result = TranscodeResult::DataReady;
-
-		return std::move(packet);
-	}
-
-	while (_input_buffer.size() > 0)
-	{
 		auto frame = std::move(_input_buffer.front());
 		_input_buffer.pop_front();
+
+		mlock.unlock();
+
+		///////////////////////////////////////////////////
+		// Request frame encoding to codec
+		///////////////////////////////////////////////////
+
 
 		_frame->format = frame->GetFormat();
 		_frame->nb_samples = 1;
@@ -143,42 +170,106 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 		if (::av_frame_get_buffer(_frame, 32) < 0)
 		{
 			logte("Could not allocate the video frame data");
-			*result = TranscodeResult::DataError;
-			return nullptr;
+			// *result = TranscodeResult::DataError;
+			break;
 		}
 
 		if (::av_frame_make_writable(_frame) < 0)
 		{
 			logte("Could not make sure the frame data is writable");
-			*result = TranscodeResult::DataError;
-			return nullptr;
+			// *result = TranscodeResult::DataError;
+			break;
 		}
 
 		::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
 		::memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
 		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
 
-		ret = ::avcodec_send_frame(_context, _frame);
+		int ret = ::avcodec_send_frame(_context, _frame);
+		// int ret = 0;
+		::av_frame_unref(_frame);
 
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
+
+			// Failure to send frame to encoder. Wait and put it back in. But it doesn't happen as often as possible.
+			std::unique_lock<std::mutex> mlock(_mutex);
+			_input_buffer.push_front(std::move(frame));
+			mlock.unlock();
+			_queue_event.Notify();
 		}
 
-		::av_frame_unref(_frame);
+		///////////////////////////////////////////////////
+		// The encoded packet is taken from the codec.
+		///////////////////////////////////////////////////
+		while(true)
+		{
+			// Check frame is availble
+			int ret = ::avcodec_receive_packet(_context, _packet);
+
+			if (ret == AVERROR(EAGAIN))
+			{
+				// More packets are needed for encoding.
+
+				// logte("Error receiving a packet for decoding : EAGAIN");
+
+				break;
+			}
+			else if (ret == AVERROR_EOF)
+			{
+				logte("Error receiving a packet for decoding : AVERROR_EOF");
+				break;
+			}
+			else if (ret < 0)
+			{
+				logte("Error receiving a packet for decoding : %d", ret);
+				break;
+			}
+			else
+			{
+				// Encoded packet is ready
+				auto packet = MakePacket();
+				::av_packet_unref(_packet);
+
+				std::unique_lock<std::mutex> mlock(_mutex);
+
+				_output_buffer.push_back(std::move(packet));
+
+				mlock.unlock();
+			}
+		}
+	}
+}
+
+
+std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeResult *result)
+{
+	std::unique_lock<std::mutex> mlock(_mutex);
+	if(!_output_buffer.empty())
+	{
+		*result = TranscodeResult::DataReady;
+
+		auto packet = std::move(_output_buffer.front());
+		_output_buffer.pop_front();
+
+		return std::move(packet);
 	}
 
 	*result = TranscodeResult::NoData;
+
 	return nullptr;
+
 }
 
-std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
+std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
 {
 	auto flag = (_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
 	// This is workaround: avcodec_receive_packet() does not give the duration that sent to avcodec_send_frame()
 	int den = _output_context->GetTimeBase().GetDen();
 	int64_t duration = (den == 0) ? 0LL : (float)den / _output_context->GetFrameRate();
-	auto packet = std::make_unique<MediaPacket>(common::MediaType::Video, 0, _packet->data, _packet->size, _packet->pts * _scale_inv, _packet->dts * _scale_inv, duration, flag);
+	auto packet = std::make_shared<MediaPacket>(common::MediaType::Video, 0, _packet->data, _packet->size, _packet->pts * _scale_inv, _packet->dts * _scale_inv, duration, flag);
+	FragmentationHeader fragment_header;
 
 	int nal_pattern_size = 4;
 	int sps_start_index = -1;
@@ -239,27 +330,27 @@ std::unique_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
 		}
 	}
 
-	auto fragment_header = std::make_unique<FragmentationHeader>();
+	fragment_header.VerifyAndAllocateFragmentationHeader(fragment_count);
 
 	if (_packet->flags == AV_PKT_FLAG_KEY)  // KeyFrame
 	{
 		// SPS + PPS + IDR
-		fragment_header->fragmentation_offset.emplace_back(sps_start_index);
-		fragment_header->fragmentation_offset.emplace_back(pps_start_index);
-		fragment_header->fragmentation_offset.emplace_back((pps_end_index + 1) + nal_pattern_size);
+		fragment_header.fragmentation_offset[0] = sps_start_index;
+		fragment_header.fragmentation_offset[1] = pps_start_index;
+		fragment_header.fragmentation_offset[2] = (pps_end_index + 1) + nal_pattern_size;
 
-		fragment_header->fragmentation_length.emplace_back(sps_end_index - (sps_start_index - 1));
-		fragment_header->fragmentation_length.emplace_back(pps_end_index - (pps_start_index - 1));
-		fragment_header->fragmentation_length.emplace_back(_packet->size - (pps_end_index + nal_pattern_size));
+		fragment_header.fragmentation_length[0] = sps_end_index - (sps_start_index - 1);
+		fragment_header.fragmentation_length[1] = pps_end_index - (pps_start_index - 1);
+		fragment_header.fragmentation_length[2] = _packet->size - (pps_end_index + nal_pattern_size);
 	}
 	else
 	{
 		// NON-IDR
-		fragment_header->fragmentation_offset.emplace_back(sps_start_index);
-		fragment_header->fragmentation_length.emplace_back(_packet->size - (sps_start_index - 1));
+		fragment_header.fragmentation_offset[0] = sps_start_index;
+		fragment_header.fragmentation_length[0] = _packet->size - (sps_start_index - 1);
 	}
 
-	packet->SetFragHeader(std::move(fragment_header));
+	packet->SetFragHeader(&fragment_header);
 
 	return std::move(packet);
 }

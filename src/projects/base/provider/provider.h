@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  Provider Base Class 
+//  Provider Base Class
 //
 //  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
@@ -8,18 +8,22 @@
 //==============================================================================
 #pragma once
 
-#include "base/common_types.h"
-#include "base/media_route/media_route_interface.h"
+#include <base/common_types.h>
+#include <base/info/host.h>
+#include <base/media_route/media_route_interface.h>
+#include <orchestrator/data_structure.h>
 
 namespace pvd
 {
 	class Application;
 	class Stream;
 
-	// WebRTC, HLS, MPEG-DASH 등 모든 Provider는 다음 Interface를 구현하여 MediaRouterInterface에 자신을 등록한다.
-	class Provider
+	// RTMP Server와 같은 모든 Provider는 다음 Interface를 구현하여 MediaRouterInterface에 자신을 등록한다.
+	class Provider : public OrchestratorProviderModuleInterface
 	{
 	public:
+		virtual ProviderType GetProviderType() = 0;
+
 		virtual bool Start();
 		virtual bool Stop();
 
@@ -31,17 +35,42 @@ namespace pvd
 		std::shared_ptr<Stream> GetStreamById(info::application_id_t app_id, uint32_t stream_id);
 
 	protected:
-		Provider(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
+		Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 		virtual ~Provider();
 
-		// 모든 Provider는 Name을 정의해야 하며, Config과 일치해야 한다.
-		virtual cfg::ProviderType GetProviderType() = 0;
-		virtual std::shared_ptr<Application> OnCreateApplication(const info::Application *application_info) = 0;
+		const cfg::Server &GetServerConfig() const;
 
-		const info::Application *_application_info;
+		void SetUseAutoStreamRemover(bool use);
+
+		// For child class
+		virtual std::shared_ptr<Application> OnCreateProviderApplication(const info::Application &app_info) = 0;
+		virtual bool OnDeleteProviderApplication(const info::Application &app_info) = 0;
+
+		//--------------------------------------------------------------------
+		// Implementation of OrchestratorModuleInterface
+		//--------------------------------------------------------------------
+		bool OnCreateApplication(const info::Application &app_info) override;
+		bool OnDeleteApplication(const info::Application &app_info) override;
+
+		std::shared_ptr<pvd::Stream> PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset) override
+		{
+			return nullptr;
+		}
+
+		bool StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream) override
+		{
+			return false;
+		}
+
+	private:
+		const cfg::Server _server_config;
 		std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
-
 		std::shared_ptr<MediaRouteInterface> _router;
+
+
+		void 			GarbageCollector();
+		bool 			_use_garbage_collector;
+		std::thread 	_worker_thread;
 	};
 
-}
+}  // namespace pvd

@@ -2,20 +2,22 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Kwon Keuk Han
+//  Created by Getroot
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
 #include <base/common_types.h>
+#include <base/info/host.h>
 #include <base/media_route/media_route_application_observer.h>
 #include <base/ovcrypto/ovcrypto.h>
 #include <base/publisher/application.h>
 #include <base/publisher/stream.h>
 
-#include <ice/ice_port_manager.h>
-#include <physical_port/physical_port.h>
+#include <modules/ice/ice_port_manager.h>
+#include <modules/physical_port/physical_port.h>
+#include <orchestrator/orchestrator.h>
 
 #include <chrono>
 
@@ -82,14 +84,13 @@ struct MonitoringCollectionData
 	std::chrono::system_clock::time_point check_time;  // (chrono)
 };
 
-// WebRTC, HLS, MPEG-DASH 등 모든 Publisher는 다음 Interface를 구현하여 MediaRouterInterface에 자신을 등록한다.
-class Publisher
+// All publishers such as WebRTC, HLS and MPEG-DASH has to inherit the Publisher class and implement that interfaces
+class Publisher : public OrchestratorPublisherModuleInterface
 {
 public:
 	virtual bool Start();
 	virtual bool Stop();
 
-	// app_name으로 Application을 찾아서 반환한다.
 	std::shared_ptr<Application> GetApplicationByName(ov::String app_name);
 	std::shared_ptr<Stream> GetStream(ov::String app_name, ov::String stream_name);
 	template <typename T>
@@ -110,21 +111,28 @@ public:
 	// - collected_datas vector must be insert processed
 	virtual bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) = 0;
 
+	//--------------------------------------------------------------------
+	// Implementation of OrchestratorModuleInterface
+	//--------------------------------------------------------------------
+	bool OnCreateApplication(const info::Application &app_info) override;
+	bool OnDeleteApplication(const info::Application &app_info) override;
+
 protected:
-	explicit Publisher(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
+	explicit Publisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 	virtual ~Publisher() = default;
 
-	// 모든 Publisher는 Type을 정의해야 하며, Config과 일치해야 한다.
-	virtual cfg::PublisherType GetPublisherType() const = 0;
-	virtual const char *GetPublisherName() const = 0;
-	virtual std::shared_ptr<Application> OnCreateApplication(const info::Application *application_info) = 0;
+	const cfg::Server& GetServerConfig() const;
+	// Host Info
+	const info::Host& GetHostInfo() const;
 
-	// 모든 application들의 map
+	// Each Publisher should define their type
+	virtual PublisherType GetPublisherType() const = 0;
+	virtual const char *GetPublisherName() const = 0;
+	virtual std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) = 0;
+
 	std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
 
-	// Publisher를 상속받은 클래스에서 사용되는 정보
-	std::shared_ptr<MediaRouteApplicationInterface> _application;
-	const info::Application *_application_info;
-
+	const cfg::Server _server_config;
+	const info::Host _host_info;
 	std::shared_ptr<MediaRouteInterface> _router;
 };

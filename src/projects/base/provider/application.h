@@ -30,27 +30,30 @@ namespace pvd
 		};
 
 	public:
-		bool Start();
-		bool Stop();
+		virtual bool Start();
+		virtual bool Stop();
 
 		std::shared_ptr<Stream> GetStreamById(uint32_t stream_id);
 		std::shared_ptr<Stream> GetStreamByName(ov::String stream_name);
 
-		std::shared_ptr<Stream> MakeStream();
-		bool CreateStream2(std::shared_ptr<Stream> stream);
-		bool DeleteStream2(std::shared_ptr<Stream> stream);
+		bool NotifyStreamCreated(std::shared_ptr<Stream> stream);
+		bool NotifyStreamDeleted(std::shared_ptr<Stream> stream);
 
-		// 상위 클래스에서 Stream 객체를 생성해서 받아옴
-		virtual std::shared_ptr<Stream> OnCreateStream() = 0;
+		uint32_t 	IssueUniqueStreamId();
+
+		bool DeleteAllStreams();
+		bool DeleteTerminatedStreams();
 
 	protected:
-		explicit Application(const info::Application *application_info);
+		explicit Application(const info::Application &application_info);
 		~Application() override;
 
 		std::map<uint32_t, std::shared_ptr<Stream>> _streams;
 
 	private:
-		std::mutex _queue_guard;
-		std::condition_variable _queue_cv;
+		std::mutex 				_queue_guard;
+		std::condition_variable	_queue_cv;
+		uint32_t 				_last_issued_stream_id;
+		std::mutex 				_streams_map_guard;
 	};
 }

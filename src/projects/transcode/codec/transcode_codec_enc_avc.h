@@ -13,6 +13,8 @@
 class OvenCodecImplAvcodecEncAVC : public TranscodeEncoder
 {
 public:
+	~OvenCodecImplAvcodecEncAVC();
+
 	AVCodecID GetCodecID() const noexcept override
 	{
 		return AV_CODEC_ID_H264;
@@ -20,10 +22,14 @@ public:
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
-	std::unique_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
+	std::shared_ptr<MediaPacket> RecvBuffer(TranscodeResult *result) override;
+
+	void ThreadEncode() override;
+
+	void Stop() override;
 
 private:
-	std::unique_ptr<MediaPacket> MakePacket() const;
+	std::shared_ptr<MediaPacket> MakePacket() const;
 
 	// Used to convert output timebase -> codec timebase
 	double _scale;

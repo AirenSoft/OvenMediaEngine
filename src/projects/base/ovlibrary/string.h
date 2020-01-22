@@ -86,8 +86,8 @@ namespace ov
 		String UpperCaseString() const;
 		String LowerCaseString() const;
 
-		std::vector<String> Split(const char *separator) const;
-		std::vector<String> Split(const char *string, const char *separator) const;
+		std::vector<String> Split(const char *separator, size_t max_count = SIZE_MAX) const;
+		std::vector<String> Split(const char *string, const char *separator, size_t max_count = SIZE_MAX) const;
 
 		static String Join(const std::vector<String> &list, const char *seperator);
 

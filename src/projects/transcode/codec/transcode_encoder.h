@@ -16,11 +16,17 @@ public:
 	TranscodeEncoder();
 	~TranscodeEncoder() override;
 
-	static std::unique_ptr<TranscodeEncoder> CreateEncoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> output_context);
+	static std::shared_ptr<TranscodeEncoder> CreateEncoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> output_context);
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
-	void SendBuffer(std::unique_ptr<const MediaFrame> frame) override;
+	void SendBuffer(std::shared_ptr<const MediaFrame> frame) override;
+
+	std::shared_ptr<TranscodeContext>& GetContext();
+
+	virtual void ThreadEncode();
+
+	virtual void Stop();
 
 protected:
 	std::shared_ptr<TranscodeContext> _output_context = nullptr;
@@ -35,4 +41,10 @@ protected:
 	AVFrame *_frame = nullptr;
 
 	int _decoded_frame_num = 0;
+
+	bool _kill_flag = false;
+	std::mutex _mutex;
+	std::thread _thread_work;
+	ov::Semaphore _queue_event;
+
 };

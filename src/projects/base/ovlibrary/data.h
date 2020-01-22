@@ -195,6 +195,7 @@ namespace ov
 		String Dump(const char *title, const char *line_prefix) const noexcept;
 		String Dump(const char *title, off_t offset = 0, size_t max_bytes = 1024, const char *line_prefix = nullptr) const noexcept;
 		String ToString() const;
+		String ToHexString() const;
 
 	protected:
 		std::shared_ptr<const Data> SubdataInternal(off_t offset, size_t length) const;

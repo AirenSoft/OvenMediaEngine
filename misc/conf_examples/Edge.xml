@@ -1,39 +1,85 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 
-<Server version="2">
+<Server version="4">
 	<Name>OvenMediaEngine</Name>
-	<Hosts>
-		<Host>
+	<!-- Host type (origin/edge) -->
+	<Type>edge</Type>
+	<!-- Specify IP address to bind (* means all IPs) -->
+	<IP>*</IP>
+
+	<!-- Settings for the ports to bind -->
+	<Bind>
+		<Providers>
+			<!-- Currently, OME doesn't support using the specified port for OVT Provider -->
+			<OVT>9001</OVT>
+		</Providers>
+
+		<Publishers>
+			<!-- Default: 80 -->
+            <HLS>${env:OME_HLS_STREAM_PORT:8080}</HLS>
+            <DASH>${env:OME_DASH_STREAM_PORT:8080}</DASH>
+			<WebRTC>
+				<Signalling>${env:OME_SIGNALLING_PORT:5555}</Signalling>
+				<IceCandidates>
+					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006-10010/udp}</IceCandidate>
+				</IceCandidates>
+			</WebRTC>
+		</Publishers>
+	</Bind>
+
+	<VirtualHosts>
+		<!-- You can use wildcard like this to include multiple XMLs -->
+		<VirtualHost include="VHost*.xml" />
+		<VirtualHost>
 			<Name>default</Name>
-			<IP>*</IP>
-			<!--
-            <TLS>
-                    <ChainCertPath>path/to/file.crt</ChainCertPath>
-                    <CertPath>path/to/file.crt</CertPath>
-                    <KeyPath>path/to/file.key</KeyPath>
-            </TLS>
-            -->
-			<Ports>
-				<DASH>8080</DASH>
-				<HLS>8080</HLS>
-			</Ports>
 
-			<Applications>
-				<Application>
-					<Name>app</Name>
-					<Type>liveedge</Type>
+			<!-- Settings for multi domain and TLS -->
+			<Domain>
+				<Names>
+					<!--
+						Domain names
 
-					<Origin>
-						<Primary>srt://[ORIGIN_IP]:9000</Primary>
-					</Origin>
+						<Name>stream1.airensoft.com</Name>
+						<Name>stream2.airensoft.com</Name>
+						<Name>*.sub.airensoft.com</Name>
+					-->
+					<Name>*</Name>
+				</Names>
+				<!--
+				<TLS>
+					<CertPath>path/to/file.crt</CertPath>
+					<KeyPath>path/to/file.key</KeyPath>
+					<ChainCertPath>path/to/file.crt</ChainCertPath>
+				</TLS>
+				-->
+			</Domain>
 
-					<Publishers>
-						<WebRTC />
-						<DASH />
-						<HLS />
-					</Publishers>
-				</Application>
-			</Applications>
-		</Host>
-	</Hosts>
+			<!-- Settings for ProxyPass (It can specify origin for each path) -->
+			<Origins>
+                <!--
+                <Origin>
+					<Location>/app/stream</Location>
+					<Pass>
+						<Scheme>ovt</Scheme>
+						<Url>origin.com:9000/app/stream_720p</Url>
+					</Pass>
+				</Origin>
+				<Origin>
+					<Location>/app/</Location>
+					<Pass>
+						<Scheme>ovt</Scheme>
+						<Url>origin.com:9000/app/</Url>
+					</Pass>
+				</Origin>
+				-->
+				<Origin>
+					<Location>/</Location>
+					<Pass>
+						<Scheme>ovt</Scheme>
+						<Url>${env:DEFAULT_ORIGIN_SERVER:}:${env:DEFAULT_ORIGIN_PORT:9000}/</Url>
+					</Pass>
+				</Origin>
+			</Origins>
+		</VirtualHost>
+	</VirtualHosts>
 </Server>

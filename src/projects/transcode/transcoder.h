@@ -13,46 +13,47 @@
 #include <vector>
 #include <algorithm>
 #include <thread>
-
-// 미디어 라우터 구조체
 #include "base/media_route/media_route_interface.h"
 #include "base/media_route/media_buffer.h"
-
-// 공옹 구조체
-#include "base/application/stream_info.h"
-
+#include "base/info/stream_info.h"
 #include "transcode_application.h"
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <config/config.h>
+#include <orchestrator/orchestrator.h>
 
-class Transcoder
+
+class Transcoder : public OrchestratorTranscoderModuleInterface
 {
 	// class TranscodeApplication;
 public:
+	static std::shared_ptr<Transcoder> Create(std::shared_ptr<MediaRouteInterface> router);
 	static std::shared_ptr<Transcoder> Create(const std::vector<info::Application> &application_list, std::shared_ptr<MediaRouteInterface> router);
 
+	Transcoder(std::shared_ptr<MediaRouteInterface> router);
 	Transcoder(const std::vector<info::Application> &application_list, std::shared_ptr<MediaRouteInterface> router);
 	~Transcoder() = default;
 
 	bool Start();
 	bool Stop();
+	bool CreateApplication(info::Application application_info);
 
-	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 트랜스코드 어플리케이션 관련 모듈
-	////////////////////////////////////////////////////////////////////////////////////////////////
-public:
+	//--------------------------------------------------------------------
+	// Implementation of OrchestratorModuleInterface
+	//--------------------------------------------------------------------
+	bool OnCreateApplication(const info::Application &app_info) override;
+	bool OnDeleteApplication(const info::Application &app_info) override;
+
+private:
 	bool CreateApplications();
-	bool DeleteApplication();
+	bool DeleteApplications();
 
 	// Application Name으로 RouteApplication을 찾음
 	std::shared_ptr<TranscodeApplication> GetApplicationById(info::application_id_t application_id);
 
-private:
+
 	std::vector<info::Application> _app_info_list;
-
 	std::map<info::application_id_t, std::shared_ptr<TranscodeApplication>> _tracode_apps;
-
 	std::shared_ptr<MediaRouteInterface> _router;
 };
 

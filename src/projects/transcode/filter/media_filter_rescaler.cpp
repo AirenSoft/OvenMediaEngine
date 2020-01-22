@@ -150,7 +150,7 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	return true;
 }
 
-int32_t MediaFilterRescaler::SendBuffer(std::unique_ptr<MediaFrame> buffer)
+int32_t MediaFilterRescaler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
 	logtp("Data before rescaling: %lld (%.0f)\n%s", buffer->GetPts(), buffer->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(buffer->GetBuffer(0), buffer->GetBufferSize(0), 32).CStr());
 
@@ -159,7 +159,7 @@ int32_t MediaFilterRescaler::SendBuffer(std::unique_ptr<MediaFrame> buffer)
 	return 0;
 }
 
-std::unique_ptr<MediaFrame> MediaFilterRescaler::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaFrame> MediaFilterRescaler::RecvBuffer(TranscodeResult *result)
 {
 	// 출력될 프레임이 있는지 확인함
 	int ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
@@ -182,7 +182,7 @@ std::unique_ptr<MediaFrame> MediaFilterRescaler::RecvBuffer(TranscodeResult *res
 	}
 	else
 	{
-		auto output_frame = std::make_unique<MediaFrame>();
+		auto output_frame = std::make_shared<MediaFrame>();
 
 		output_frame->SetFormat(_frame->format);
 		output_frame->SetWidth(_frame->width);

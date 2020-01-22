@@ -230,7 +230,7 @@ ov::String HttpRequest::GetHeader(const ov::String &key, ov::String default_valu
 
 const bool HttpRequest::IsHeaderExists(const ov::String &key) const noexcept
 {
-	return _request_header.find(key) != _request_header.cend();
+	return _request_header.find(key.UpperCaseString()) != _request_header.cend();
 }
 
 void HttpRequest::PostProcess()

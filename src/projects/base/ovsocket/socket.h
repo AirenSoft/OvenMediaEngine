@@ -212,62 +212,6 @@ namespace ov
 		} _socket{InvalidSocket};
 	};
 
-	// send queue input data
-	struct SocketSendData
-	{
-		SocketSendData(const void *data_, size_t length_, bool self_close_)
-		{
-			create_time = time(nullptr);
-			send_time = time(nullptr);
-			original_length = length_;
-			send_size = 0;
-			data = std::make_shared<ov::Data>(data_, length_);
-			self_close = self_close_;
-		}
-
-		SocketSendData(std::shared_ptr<ov::Data> &data_, bool self_close_)
-		{
-			create_time = time(nullptr);
-			send_time = time(nullptr);
-			original_length = data->GetLength();
-			send_size = 0;
-			data = data_;
-			self_close = self_close_;
-		}
-
-		const void *GetRemainedData() const
-		{
-			return data->GetDataAs<uint8_t>() + send_size;
-		}
-
-		size_t GetRemainedSize()
-		{
-			return data->GetLength() - send_size;
-		}
-
-		void SetSendedSizeAdd(size_t send_size_)
-		{
-			send_size += send_size_;
-
-			if (send_size > original_length)
-				send_size = original_length;
-		}
-
-		bool IsSendCompleted()
-		{
-			return (send_size == original_length);
-		}
-
-		time_t create_time;
-		time_t send_time;
-		size_t original_length;
-		size_t send_size;
-		std::shared_ptr<ov::Data> data;
-
-		// TODO : send complete socket connect close
-		bool self_close = false;
-	};
-
 	class Socket : public EnableSharedFromThis<Socket>
 	{
 	public:
@@ -282,12 +226,11 @@ namespace ov
 		virtual bool MakeNonBlocking();
 
 		virtual bool Bind(const SocketAddress &address);
-
 		virtual bool Listen(int backlog = SOMAXCONN);
-
 		virtual SocketWrapper Accept(SocketAddress *client);
-
 		virtual std::shared_ptr<ov::Error> Connect(const SocketAddress &endpoint, int timeout = Infinite);
+
+		virtual bool SetRecvTimeout(timeval &tv);
 
 		virtual bool PrepareEpoll();
 		virtual bool AddToEpoll(Socket *socket, void *parameter);
@@ -333,6 +276,11 @@ namespace ov
 			return _socket;
 		}
 
+		int GetId() const
+		{
+			return _socket.GetSocket();
+		}
+
 		// 소켓 타입
 		SocketType GetType() const;
 
@@ -363,11 +311,12 @@ namespace ov
 		static String StringFromEpollEvent(const epoll_event *event);
 		static String StringFromEpollEvent(const epoll_event &event);
 
+		ssize_t SendInternal(const void *data, size_t length);
+		
 		virtual String ToString(const char *class_name) const;
 
 		virtual bool CloseInternal();
 
-	protected:
 		SocketWrapper _socket;
 
 		SocketState _state = SocketState::Closed;
@@ -385,13 +334,5 @@ namespace ov
 		int _srt_epoll = SRT_INVALID_SOCK;
 		epoll_event *_epoll_events = nullptr;
 		int _last_epoll_event_count = 0;
-
-		bool _send_thread_run = false;
-		ov::Semaphore _send_queue_event;
-		uint32_t _max_send_queue = 0;  //  0 - infinity
-		std::mutex _send_queue_guard;
-		std::queue<std::unique_ptr<SocketSendData>> _send_data_queue;
-		std::thread _send_thread;
-		bool _send_thread_created = false;
 	};
 }  // namespace ov

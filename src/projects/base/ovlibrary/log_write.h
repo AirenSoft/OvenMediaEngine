@@ -9,13 +9,19 @@
 #pragma once
 
 #include <fstream>
+#include <mutex>
+
+#define OV_LOG_DIR          "logs"
+#define OV_LOG_DIR_SVC      "/var/log/ovenmediaengine"
+#define OV_LOG_FILE         "ovenmediaengine.log"
+#define OV_STAT_LOG_FILE    "ovenmediaengine_stat.log"
 
 namespace ov
 {
     class LogWrite
     {
     public:
-        LogWrite();
+        LogWrite(std::string log_file_name);
         virtual ~LogWrite() = default;
         void Write(const char* log);
         void SetLogPath(const char* log_path);
@@ -25,9 +31,11 @@ namespace ov
     private:
         void Initialize();
 
+        std::mutex _log_stream_mutex;
         std::ofstream _log_stream;
         int _last_day;
         std::string _log_path;
+        std::string _log_file_name;
         std::string _log_file;
 
         static bool _start_service;

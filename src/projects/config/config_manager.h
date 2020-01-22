@@ -22,6 +22,8 @@ namespace cfg
 		// Load configs from default path (<binary_path>/conf/*)
 		bool LoadConfigs();
 
+		bool ReloadConfigs();
+
 		std::shared_ptr<Server> GetServer() noexcept
 		{
 			return _server;
@@ -49,15 +51,17 @@ namespace cfg
 
 		void PrepareMacros();
 
-		bool LoadLoggerConfig(const ov::String &config_path) noexcept;
+		bool LoadLoggerConfig(const ov::String& config_path) noexcept;
 
 		bool IsValidVersion(const std::string& name, const std::string& version);
+
+		ov::String _config_path;
 
 		std::shared_ptr<Server> _server;
 		std::map<ov::String, ov::String> _macros;
 
 		timespec _last_modified;
 
-        std::map<std::string, std::vector<std::string>> _supported_xml;
+		std::map<std::string, std::vector<std::string>> _supported_xml;
 	};
-}
+}  // namespace cfg

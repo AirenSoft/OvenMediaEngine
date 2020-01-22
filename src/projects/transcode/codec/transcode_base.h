@@ -56,8 +56,8 @@ public:
 
 	virtual bool Configure(std::shared_ptr<TranscodeContext> context) = 0;
 
-	virtual void SendBuffer(std::unique_ptr<const InputType> buf) = 0;
-	virtual std::unique_ptr<OutputType> RecvBuffer(TranscodeResult *result) = 0;
+	virtual void SendBuffer(std::shared_ptr<const InputType> buf) = 0;
+	virtual std::shared_ptr<OutputType> RecvBuffer(TranscodeResult *result) = 0;
 
 	static AVRational TimebaseToAVRational(const common::Timebase &timebase)
 	{
@@ -93,7 +93,7 @@ protected:
 		}
 	}
 
-	std::deque<std::unique_ptr<const InputType>> _input_buffer;
-	std::deque<std::unique_ptr<OutputType>> _output_buffer;
+	std::deque<std::shared_ptr<const InputType>> _input_buffer;
+	std::deque<std::shared_ptr<OutputType>> _output_buffer;
 };
 

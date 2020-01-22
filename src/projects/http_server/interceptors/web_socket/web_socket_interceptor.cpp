@@ -28,16 +28,19 @@ WebSocketInterceptor::~WebSocketInterceptor()
 ov::DelayQueueAction WebSocketInterceptor::DoPing(void *parameter)
 {
 	{
-		logti("Trying to ping to WebSocket clients...");
-
-		ov::String str("OvenMediaEngine");
-		auto payload = std::move(str.ToData(false));
-
 		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);
 
-		for (auto client : _websocket_client_list)
+		if (_websocket_client_list.size() > 0)
 		{
-			client.second->response->Send(payload, WebSocketFrameOpcode::Ping);
+			logtd("Trying to ping to WebSocket clients...");
+
+			ov::String str("OvenMediaEngine");
+			auto payload = std::move(str.ToData(false));
+
+			for (auto client : _websocket_client_list)
+			{
+				client.second->response->Send(payload, WebSocketFrameOpcode::Ping);
+			}
 		}
 	}
 
@@ -307,7 +310,7 @@ void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client
 void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client)
 {
 	auto &request = client->GetRequest();
-	
+
 	std::shared_ptr<WebSocketInfo> socket_info;
 	{
 		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);

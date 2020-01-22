@@ -148,6 +148,7 @@ Stream::Stream(const std::shared_ptr<Application> application,
 {
 	_application = application;
 	_run_flag = false;
+	_last_issued_session_id = 100;
 }
 
 Stream::~Stream()
@@ -230,6 +231,7 @@ bool Stream::RemoveSession(session_id_t id)
 		logte("Cannot find session : %u", id);
 		return false;
 	}
+
 	_sessions.erase(id);
 
 	return GetWorkerByStreamID(id).RemoveSession(id);
@@ -254,4 +256,25 @@ bool Stream::BroadcastPacket(uint32_t packet_type, std::shared_ptr<ov::Data> pac
 	}
 
 	return true;
+}
+
+
+uint32_t Stream::IssueUniqueSessionId()
+{
+	auto new_session_id = _last_issued_session_id++;
+
+	while(true)
+	{
+		if (_sessions.find(new_session_id) == _sessions.end())
+		{
+			// not found
+			break;
+		}
+
+		new_session_id++;
+	}
+
+	_last_issued_session_id = new_session_id;
+
+	return new_session_id;
 }

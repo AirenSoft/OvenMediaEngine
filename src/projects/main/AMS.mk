@@ -3,27 +3,29 @@ include $(DEFAULT_VARIABLES)
 
 LOCAL_STATIC_LIBRARIES := \
 	webrtc \
+	ovtpublisher \
+	ovtprovider \
+	rtmpprovider \
+	rtspcprovider \
 	transcoder \
 	rtc_signalling \
 	ice \
 	jsoncpp \
 	http_server \
-	relay \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \
-	publisher \
 	web_console \
 	mediarouter \
+	ovt_packetizer \
+	orchestrator \
+	publisher \
 	application \
 	physical_port \
 	socket \
 	ovcrypto \
 	config \
 	ovlibrary \
-	rtmpprovider \
-	publishers \
-	segment_stream \
 	monitoring \
 	jsoncpp \
 	sqlite

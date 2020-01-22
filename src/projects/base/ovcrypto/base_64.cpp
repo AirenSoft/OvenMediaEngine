@@ -40,7 +40,7 @@ namespace ov
 
 			if(result > 0)
 			{
-				OV_ASSERT2(result == data->GetLength());
+				OV_ASSERT2(static_cast<size_t>(result) == data->GetLength());
 				// 성공
 				break;
 			}

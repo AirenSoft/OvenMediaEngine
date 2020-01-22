@@ -6,8 +6,15 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
+#include "path_manager.h"
+
+#include "./assert.h"
+#include "./memory_utilities.h"
+
+#include <regex>
 #include <utility>
 
+#include <dirent.h>
 #include <errno.h>
 #if defined(__APPLE__)
 #include <sys/stat.h>
@@ -18,10 +25,6 @@ typedef mode_t __mode_t;
 #endif
 #include <unistd.h>
 #include <wordexp.h>
-
-#include "path_manager.h"
-
-#include "memory_utilities.h"
 
 namespace ov
 {
@@ -128,4 +131,119 @@ namespace ov
 
 		return String(buffer);
 	}
+
+	std::shared_ptr<ov::Error> PathManager::GetFileList(const ov::String &base_file_name, const ov::String &pattern, std::vector<ov::String> *file_list, bool exclude_base_path)
+	{
+		auto base_path = ov::PathManager::ExtractPath(base_file_name);
+		ov::String path_pattern;
+		bool is_absolute = ov::PathManager::IsAbsolute(pattern);
+
+		path_pattern = (is_absolute) ? pattern : ov::PathManager::Combine(base_path, pattern);
+
+		// Extract path from the pattern
+		auto path = ov::PathManager::ExtractPath(path_pattern);
+		// Escape special characters
+		auto special_characters = std::regex(R"([[\\./+{}$^|])");
+		ov::String escaped = std::regex_replace(path_pattern.CStr(), special_characters, R"(\$&)").c_str();
+		// Change "*"/"?" to ".*"/".?"
+		escaped = escaped.Replace("*", ".*");
+		escaped = escaped.Replace("?", ".?");
+		escaped.Prepend("^");
+		escaped.Append("$");
+
+		std::regex expression;
+
+		try
+		{
+			expression = std::regex(escaped);
+		}
+		catch (std::exception &e)
+		{
+			// Invalid expression
+			return ov::Error::CreateError("", "Invalid expression: %s ([%s], from: [%s])", e.what(), escaped.CStr(), path_pattern.CStr());
+		}
+
+		auto dir_item = ::opendir(path);
+
+		if (dir_item == nullptr)
+		{
+			return ov::Error::CreateErrorFromErrno();
+		}
+
+		while (true)
+		{
+			dirent *item = ::readdir(dir_item);
+
+			if (item == nullptr)
+			{
+				// End of list
+				break;
+			}
+
+			auto file_name = ov::PathManager::Combine(path, item->d_name);
+
+			switch (item->d_type)
+			{
+				case DT_REG:
+					// Regular file
+					break;
+
+				case DT_LNK:
+				{
+					// Make sure symbolic points to file
+					struct stat file_stat;
+
+					if (::stat(file_name, &file_stat) == 0)
+					{
+						if (S_ISREG(file_stat.st_mode))
+						{
+							break;
+						}
+						else
+						{
+							// Target is not a regular file
+						}
+					}
+					else
+					{
+						// Could not obtain stat of the file
+					}
+
+					continue;
+				}
+
+				default:
+					continue;
+			}
+
+			// Test the pattern
+			if (std::regex_match(file_name.CStr(), expression))
+			{
+				// matched
+				if (exclude_base_path && (is_absolute == false))
+				{
+					if (file_name.HasPrefix(base_path))
+					{
+						file_name = file_name.Substring(base_path.GetLength());
+					}
+					else
+					{
+						// file_name MUST always have base_path prefix
+						OV_ASSERT2(false);
+					}
+				}
+
+				file_list->push_back(std::move(file_name));
+			}
+			else
+			{
+				// not matched
+			}
+		}
+
+		::closedir(dir_item);
+
+		return nullptr;
+	}
+
 }  // namespace ov

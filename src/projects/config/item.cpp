@@ -20,14 +20,14 @@ namespace cfg
 
 		auto item = cache.find(indent);
 
-		if(item != cache.end())
+		if (item != cache.end())
 		{
 			return item->second;
 		}
 
 		ov::String indent_string;
 
-		for(int count = 0; count < indent; count++)
+		for (int count = 0; count < indent; count++)
 		{
 			indent_string += "    ";
 		}
@@ -39,7 +39,7 @@ namespace cfg
 
 	static ov::String GetValueTypeAsString(ValueType type)
 	{
-		switch(type)
+		switch (type)
 		{
 			case ValueType::Unknown:
 				break;
@@ -76,7 +76,7 @@ namespace cfg
 	{
 		_tag_name = item._tag_name;
 
-		for(auto &parse_item : item._parse_list)
+		for (auto &parse_item : item._parse_list)
 		{
 			_parse_list.emplace_back(parse_item.name, parse_item.is_parsed, parse_item.from_default, nullptr);
 		}
@@ -99,9 +99,9 @@ namespace cfg
 
 	const Item *Item::GetParent(const ov::String &name) const
 	{
-		if(_parent != nullptr)
+		if (_parent != nullptr)
 		{
-			if(_parent->GetTagName() == name)
+			if (_parent->GetTagName() == name)
 			{
 				return _parent;
 			}
@@ -112,7 +112,7 @@ namespace cfg
 		return nullptr;
 	}
 
-	Item &Item::operator =(const Item &item)
+	Item &Item::operator=(const Item &item)
 	{
 		_tag_name = item._tag_name;
 		_parent = item._parent;
@@ -124,11 +124,10 @@ namespace cfg
 		return *this;
 	}
 
-
-	void Item::Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_conditional_optional, bool need_to_resolve_path, ValueBase::OptionalCallback conditional_optional_callback) const
+	void Item::Register(const ov::String &name, ValueBase *value, bool is_optional, bool is_conditional_optional, bool need_to_resolve_path, ValueBase::OptionalCallback conditional_optional_callback, ValueBase::ValidationCallback post_process_callback)
 	{
 		value->SetOptional(is_optional);
-		if(is_conditional_optional)
+		if (is_conditional_optional)
 		{
 			OV_ASSERT2(conditional_optional_callback != nullptr);
 			value->SetOptionalCallback(conditional_optional_callback);
@@ -137,14 +136,15 @@ namespace cfg
 		{
 			OV_ASSERT2(conditional_optional_callback == nullptr);
 		}
+		value->SetValidationCallback(post_process_callback);
 		value->SetNeedToResolvePath(need_to_resolve_path);
 
 		bool is_parsed = false;
 		bool from_default = true;
 
-		for(auto old_value = _parse_list.begin(); old_value != _parse_list.end(); ++old_value)
+		for (auto old_value = _parse_list.begin(); old_value != _parse_list.end(); ++old_value)
 		{
-			if(old_value->name == name)
+			if (old_value->name == name)
 			{
 				// restore some values before overwrite
 				is_parsed = old_value->is_parsed;
@@ -152,7 +152,7 @@ namespace cfg
 
 				ValueBase *base = old_value->value.get();
 
-				if(base != nullptr)
+				if (base != nullptr)
 				{
 					// The attributes of two values must be the same
 					OV_ASSERT2(value->GetType() == base->GetType());
@@ -170,12 +170,11 @@ namespace cfg
 
 	ValueBase *Item::FindValue(const ov::String &name, const ParseItem *parse_item_to_find)
 	{
-		for(auto &parse_item : _parse_list)
+		for (auto &parse_item : _parse_list)
 		{
-			if(
+			if (
 				(parse_item.name == name) &&
-				((parse_item.value != nullptr) && (parse_item.value->GetType() == parse_item_to_find->value->GetType()))
-				)
+				((parse_item.value != nullptr) && (parse_item.value->GetType() == parse_item_to_find->value->GetType())))
 			{
 				return parse_item.value.get();
 			}
@@ -188,11 +187,11 @@ namespace cfg
 	{
 		MakeParseList();
 
-		for(auto &parse_item : _parse_list)
+		for (auto &parse_item : _parse_list)
 		{
 			OV_ASSERT2(parse_item.value != nullptr);
 
-			if(parse_item.value->GetTarget() == target)
+			if (parse_item.value->GetTarget() == target)
 			{
 				return parse_item.is_parsed;
 			}
@@ -215,11 +214,11 @@ namespace cfg
 	{
 		MakeParseList();
 
-		for(auto &parse_item : _parse_list)
+		for (auto &parse_item : _parse_list)
 		{
 			OV_ASSERT2(parse_item.value != nullptr);
 
-			if(parse_item.value->GetTarget() == target)
+			if (parse_item.value->GetTarget() == target)
 			{
 				return parse_item.from_default;
 			}
@@ -232,7 +231,7 @@ namespace cfg
 	{
 		_tag_name = tag_name;
 
-		if((ov::PathManager::IsAbsolute(file_name) == false) && (base_file_name.IsEmpty() == false))
+		if ((ov::PathManager::IsAbsolute(file_name) == false) && (base_file_name.IsEmpty() == false))
 		{
 			file_name = ov::PathManager::Combine(ov::PathManager::ExtractPath(base_file_name), file_name);
 		}
@@ -240,7 +239,7 @@ namespace cfg
 		pugi::xml_document document;
 		pugi::xml_parse_result result = document.load_file(file_name);
 
-		if(result == false)
+		if (result == false)
 		{
 			logte("Could not read the file: %s (reason: %s)", file_name.CStr(), result.description());
 			return ParseResult::Error;
@@ -249,35 +248,35 @@ namespace cfg
 		return ParseFromNode(file_name, document.child(_tag_name), tag_name, indent);
 	}
 
-#define CONFIG_DECLARE_PROCESSOR(value_type, type, converter, process_value) \
-        case value_type: \
-        { \
-            auto target = dynamic_cast<Value<type> *>(parse_item.value.get()); \
-            \
-            if((target != nullptr) && (target->GetTarget() != nullptr)) \
-            { \
-                auto temp_value = process_value; \
-                if((temp_value != nullptr) && (temp_value[0] != '\0')) \
-                { \
-                    *(target->GetTarget()) = converter(Preprocess(base_file_name, value, temp_value)); \
-                    logtd("%s<%s> <%s> = %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, true, false).CStr()); \
-                    parse_item.from_default = false; \
-                } \
-                else \
-                { \
-                    logtd("%s<%s> <%s> = %s (use default value)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, true, false).CStr()); \
-                } \
-                parse_item.is_parsed = true; \
-                result = ParseResult::Parsed; \
-            } \
-            else \
-            { \
-                OV_ASSERT2(false); \
-                return ParseResult::Error; \
-            } \
-            \
-            break; \
-        }
+#define CONFIG_DECLARE_PROCESSOR(value_type, type, converter, process_value)                                                                                                 \
+	case value_type:                                                                                                                                                         \
+	{                                                                                                                                                                        \
+		auto target = dynamic_cast<Value<type> *>(parse_item.value.get());                                                                                                   \
+                                                                                                                                                                             \
+		if ((target != nullptr) && (target->GetTarget() != nullptr))                                                                                                         \
+		{                                                                                                                                                                    \
+			auto temp_value = process_value;                                                                                                                                 \
+			parse_item.is_parsed = true;                                                                                                                                     \
+			if ((temp_value != nullptr) && (temp_value[0] != '\0'))                                                                                                          \
+			{                                                                                                                                                                \
+				*(target->GetTarget()) = converter(Preprocess(base_file_name, value, temp_value, name, indent));                                                             \
+				logtd("%s<%s> <%s> = %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, true, false).CStr());                     \
+				parse_item.from_default = false;                                                                                                                             \
+			}                                                                                                                                                                \
+			else                                                                                                                                                             \
+			{                                                                                                                                                                \
+				logtd("%s<%s> <%s> = %s (use default value)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), ToString(&parse_item, 0, true, false).CStr()); \
+			}                                                                                                                                                                \
+			result = ParseResult::Parsed;                                                                                                                                    \
+		}                                                                                                                                                                    \
+		else                                                                                                                                                                 \
+		{                                                                                                                                                                    \
+			OV_ASSERT2(false);                                                                                                                                               \
+			return ParseResult::Error;                                                                                                                                       \
+		}                                                                                                                                                                    \
+                                                                                                                                                                             \
+		break;                                                                                                                                                               \
+	}
 
 	// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
 	Item::ParseResult Item::ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent)
@@ -291,13 +290,33 @@ namespace cfg
 
 		auto inc = node.attribute("include");
 
-		if(inc.empty() == false)
+		if (inc.empty() == false)
 		{
 			logtd("%s<%s> Include file found: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), inc.value());
 
+			std::vector<ov::String> file_list;
+			auto error = ov::PathManager::GetFileList(base_file_name, inc.value(), &file_list);
+
+			if (error != nullptr)
+			{
+				logte("%s<%s> Could not obtain file list: base_file: %s, include pattern: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), base_file_name.CStr(), inc.value());
+				return ParseResult::Error;
+			}
+
+			if (file_list.size() == 0)
+			{
+				logte("%s<%s> There is no file: base_file: %s, include pattern: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), base_file_name.CStr(), inc.value());
+				return ParseResult::Error;
+			}
+			else if (file_list.size() > 1)
+			{
+				logte("%s<%s> Too many files found for single element: base_file: %s, include pattern: %s (%zu files found)", MakeIndentString(indent).CStr(), _tag_name.CStr(), base_file_name.CStr(), inc.value(), file_list.size());
+				return ParseResult::Error;
+			}
+
 			auto result = ParseFromFile(base_file_name, inc.value(), tag_name, indent + 1);
 
-			if(result == ParseResult::Error)
+			if (result == ParseResult::Error)
 			{
 				return ParseResult::Error;
 			}
@@ -307,16 +326,15 @@ namespace cfg
 
 		// Check for invalid XML elements
 		{
-			for(auto &child : node.children())
+			for (auto &child : node.children())
 			{
 				auto name = child.name();
 
-				auto item = std::find_if(_parse_list.begin(), _parse_list.end(), [&](const ParseItem &item) -> bool
-				{
+				auto item = std::find_if(_parse_list.begin(), _parse_list.end(), [&](const ParseItem &item) -> bool {
 					return item.name == name;
 				});
 
-				if(item == _parse_list.end())
+				if (item == _parse_list.end())
 				{
 					logte("Unknown configuration found: %s", GetSelector(child).CStr());
 					return ParseResult::Error;
@@ -325,13 +343,13 @@ namespace cfg
 		}
 
 		// Parse the items from node
-		for(auto &parse_item : _parse_list)
+		for (auto &parse_item : _parse_list)
 		{
 			auto &name = parse_item.name;
 			ValueBase *value = parse_item.value.get();
 			auto result = ParseResult::NotParsed;
 
-			if(value == nullptr)
+			if (value == nullptr)
 			{
 				logte("%s<%s> Cannot obtain value for <%s> (this is a bug)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
 				return ParseResult::Error;
@@ -340,7 +358,7 @@ namespace cfg
 			pugi::xml_node child_node;
 			pugi::xml_attribute attribute;
 
-			switch(value->GetType())
+			switch (value->GetType())
 			{
 				case ValueType::Text:
 					child_node = node;
@@ -355,12 +373,11 @@ namespace cfg
 					break;
 			}
 
-			if(
+			if (
 				((value->GetType() != ValueType::Attribute) && (child_node.empty() == false)) ||
-				((value->GetType() == ValueType::Attribute) && (attribute.empty() == false))
-				)
+				((value->GetType() == ValueType::Attribute) && (attribute.empty() == false)))
 			{
-				switch(value->GetType())
+				switch (value->GetType())
 				{
 					CONFIG_DECLARE_PROCESSOR(ValueType::Integer, int, ov::Converter::ToInt32, child_node.child_value())
 					CONFIG_DECLARE_PROCESSOR(ValueType::Boolean, bool, ov::Converter::ToBool, child_node.child_value())
@@ -373,13 +390,13 @@ namespace cfg
 					{
 						auto target = dynamic_cast<ValueForElementBase *>(value);
 
-						if((target != nullptr) && (target->GetTarget() != nullptr))
+						if ((target != nullptr) && (target->GetTarget() != nullptr))
 						{
 							target->GetTarget()->_parent = this;
 
 							result = (target->GetTarget())->ParseFromNode(base_file_name, child_node, name, indent + 1);
 
-							if(result == ParseResult::Error)
+							if (result == ParseResult::Error)
 							{
 								return result;
 							}
@@ -403,33 +420,78 @@ namespace cfg
 
 						auto target = dynamic_cast<ValueForListBase *>(value);
 
-						if((target != nullptr) && (target->GetTarget() != nullptr))
+						if ((target != nullptr) && (target->GetTarget() != nullptr))
 						{
-							if((child_node.empty() == false) && (_parsed == false))
+							if ((child_node.empty() == false) && (_parsed == false))
 							{
 								// Clear only when _parsed is false, as there may be a list of included items.
 								target->Clear();
 							}
 
-							while(child_node)
+							while (child_node)
 							{
-								Item *i = target->Create();
+								// Check the child has a include attribute
+								auto inc = child_node.attribute("include");
 
-								i->_parent = this;
-
-								result = i->ParseFromNode(base_file_name, child_node, name, indent + 1);
-
-								if(result == ParseResult::Error)
+								if (inc.empty() == false)
 								{
-									return result;
+									// Create items from the include files
+									logtd("%s<%s> Include file pattern found: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), inc.value());
+
+									std::vector<ov::String> file_list;
+									auto error = ov::PathManager::GetFileList(base_file_name, inc.value(), &file_list);
+
+									if (error != nullptr)
+									{
+										logte("%s<%s> Could not obtain file list: base_file: %s, include pattern: %s",
+											  MakeIndentString(indent).CStr(), _tag_name.CStr(),
+											  base_file_name.CStr(), inc.value());
+
+										return ParseResult::Error;
+									}
+
+									auto base_path = ov::PathManager::ExtractPath(base_file_name);
+
+									for (auto file : file_list)
+									{
+										auto i = target->Create();
+
+										i->_parent = this;
+
+										logtd("%s<%s> Trying to parse node from file: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), file.CStr());
+
+										// strip "base_path" from "file"
+										auto file_name = file.Substring(base_path.GetLength());
+
+										result = i->ParseFromFile(base_file_name, file, name, indent + 1);
+
+										if (result == ParseResult::Error)
+										{
+											return result;
+										}
+									}
+
+									parse_item.is_parsed = (result == ParseResult::Parsed);
+								}
+								else
+								{
+									auto i = target->Create();
+
+									i->_parent = this;
+
+									result = i->ParseFromNode(base_file_name, child_node, name, indent + 1);
+
+									if (result == ParseResult::Error)
+									{
+										return result;
+									}
+
+									parse_item.is_parsed = (result == ParseResult::Parsed);
 								}
 
-								parse_item.is_parsed = (result == ParseResult::Parsed);
-
 								logtd("%s<%s> [List<%s>] = %s",
-								      MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(),
-								      ov::String::FormatString("{ %zu items }", target->GetList().size()).CStr()
-								);
+									  MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(),
+									  ov::String::FormatString("{ %zu items }", target->GetList().size()).CStr());
 
 								child_node = child_node.next_sibling(name);
 							}
@@ -449,16 +511,22 @@ namespace cfg
 				}
 			}
 
-			if(result == ParseResult::Parsed)
+			if (result == ParseResult::Parsed)
 			{
+				if (value->DoValidation() == false)
+				{
+					logte("Failed to validate %s.<%s>", GetSelector(node).CStr(), name.CStr());
+					return ParseResult::Error;
+				}
+
 				parse_item.from_default = false;
 			}
 
 			// Check parsed from include file
-			if(_parsed == false)
+			if (_parsed == false)
 			{
 				// It may parsed from XML, not include file
-				if((value->IsOptional() == false) && (result != ParseResult::Parsed))
+				if ((value->IsOptional() == false) && (result != ParseResult::Parsed))
 				{
 					logtd("%s<%s> Could not parse node <%s>", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
 
@@ -472,7 +540,7 @@ namespace cfg
 		return ParseResult::Parsed;
 	}
 
-	ov::String Item::Preprocess(const ov::String &xml_path, const ValueBase *value_base, const char *value)
+	ov::String Item::Preprocess(const ov::String &xml_path, const ValueBase *value_base, const char *value, const ov::String &tag_name, int indent)
 	{
 		// Preprocess for ${env:XXX} macro
 		std::string str = value;
@@ -482,7 +550,7 @@ namespace cfg
 		auto start = str.cbegin();
 		std::sregex_iterator iterator = std::sregex_iterator(start, str.cend(), r);
 
-		while(iterator != std::sregex_iterator())
+		while (iterator != std::sregex_iterator())
 		{
 			std::smatch matches = *iterator;
 			auto match = matches[0];
@@ -494,7 +562,7 @@ namespace cfg
 			std::string default_value;
 			bool is_default_value = false;
 
-			if(position != std::string::npos)
+			if (position != std::string::npos)
 			{
 				default_value = env_key.substr(position + 1);
 				env_key = env_key.substr(0, position);
@@ -502,9 +570,9 @@ namespace cfg
 
 			const char *key = env_key.c_str();
 			const char *env = getenv(key);
-			if(env == nullptr)
+			if (env == nullptr)
 			{
-				if(default_value.empty())
+				if (default_value.empty())
 				{
 					env = "";
 				}
@@ -515,7 +583,11 @@ namespace cfg
 				}
 			}
 
-			logtd("Configuration from env value: %s = \"%s\"%s", key, env, is_default_value ? " (default value)" : "");
+			// _tag_name: Tag name of current element
+			// tag_name: Tag name of child element
+			logtd("%s<%s> <%s> Configuration from env: %s = \"%s\"%s",
+				  MakeIndentString(indent).CStr(), _tag_name.CStr(), tag_name.CStr(),
+				  key, env, is_default_value ? " (default value)" : "");
 
 			result.append(start, match.first);
 			result.append(env);
@@ -528,11 +600,11 @@ namespace cfg
 		result.append(start, str.cend());
 
 		// Preprocess for ResolvePath annotation
-		if(value_base->IsNeedToResolvePath())
+		if (value_base->IsNeedToResolvePath())
 		{
 			const char *path = result.c_str();
 
-			if(ov::PathManager::IsAbsolute(path) == false)
+			if (ov::PathManager::IsAbsolute(path) == false)
 			{
 				// relative path
 				ov::String base_path = ov::PathManager::ExtractPath(xml_path);
@@ -552,10 +624,9 @@ namespace cfg
 
 		auto parent = node.parent();
 
-		while(
+		while (
 			(parent.type() != pugi::xml_node_type::node_null) &&
-			(parent.type() != pugi::xml_node_type::node_document)
-			)
+			(parent.type() != pugi::xml_node_type::node_document))
 		{
 			selectors.insert(selectors.begin(), parent.name());
 
@@ -580,12 +651,12 @@ namespace cfg
 
 		MakeParseList();
 
-		if(indent == 0)
+		if (indent == 0)
 		{
 			result.AppendFormat("%s = ", _tag_name.CStr());
 		}
 
-		if(_parse_list.empty())
+		if (_parse_list.empty())
 		{
 			result.Append("{}");
 		}
@@ -593,7 +664,7 @@ namespace cfg
 		{
 			result.Append("{\n");
 
-			for(auto &parse_item : _parse_list)
+			for (auto &parse_item : _parse_list)
 			{
 				result.Append(ToString(&parse_item, indent + 1, exclude_default, true));
 			}
@@ -610,7 +681,7 @@ namespace cfg
 
 		ValueBase *value = parse_item->value.get();
 
-		switch(value->GetType())
+		switch (value->GetType())
 		{
 			case ValueType::Integer:
 			{
@@ -656,7 +727,7 @@ namespace cfg
 				ov::String indent_string = MakeIndentString(indent + 1);
 				auto item_list = target->GetList();
 
-				if(item_list.empty())
+				if (item_list.empty())
 				{
 					str = "(no items) []";
 				}
@@ -665,15 +736,15 @@ namespace cfg
 					str = ov::String::FormatString("(%d items) [", item_list.size());
 					bool is_first = true;
 
-					for(auto &item: item_list)
+					for (auto &item : item_list)
 					{
-						if(item == nullptr)
+						if (item == nullptr)
 						{
 							OV_ASSERT2(false);
 							return "";
 						}
 
-						if(is_first)
+						if (is_first)
 						{
 							str.AppendFormat("%s", item->ToString(indent, exclude_default).CStr());
 							is_first = false;
@@ -692,7 +763,6 @@ namespace cfg
 
 			default:
 				break;
-
 		}
 
 		return ov::String::FormatString(
@@ -707,7 +777,6 @@ namespace cfg
 			parse_item->is_parsed ? ", parsed" : "",
 			parse_item->from_default ? ", default" : "",
 			exclude_default ? (parse_item->is_parsed ? str.CStr() : "N/A") : str.CStr(),
-			append_new_line ? "\n" : ""
-		);
+			append_new_line ? "\n" : "");
 	}
-};
+};  // namespace cfg

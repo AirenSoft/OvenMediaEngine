@@ -21,6 +21,36 @@
 
 #include "media_route/media_type.h"
 
+#define MAX_FRAG_COUNT 20
+
+enum class StreamSourceType : int8_t
+{
+	OVT_PROVIDER ,
+	RTMP_PROVIDER,
+	RTSPC_PROVIDER,
+	LIVE_TRANSCODER
+};
+
+
+enum class ProviderType : int8_t
+{
+	Unknown,
+	Rtmp,
+	Rtsp,
+	Ovt,
+};
+
+enum class PublisherType : int8_t
+{
+	Unknown,
+	Webrtc,
+	Rtmp,
+	Hls,
+	Dash,
+	Cmaf,
+	Ovt
+};
+
 enum class FrameType : int8_t
 {
 	EmptyFrame,
@@ -35,79 +65,53 @@ enum class FrameType : int8_t
 struct FragmentationHeader
 {
 public:
-	// Offset of pointer to data for each fragmentation
-	std::vector<size_t> fragmentation_offset;
+	// Number of fragmentations
+	uint16_t fragmentation_vector_size = 0;
+	// Offset of pointer to data for each
+	size_t fragmentation_offset[MAX_FRAG_COUNT]{};
+
+	// fragmentation
 	// Data size for each fragmentation
-	std::vector<size_t> fragmentation_length;
+	size_t fragmentation_length[MAX_FRAG_COUNT]{};
 	// Timestamp difference relative "now" for each fragmentation
-	std::vector<uint16_t> fragmentation_time_diff;
+	uint16_t fragmentation_time_diff[MAX_FRAG_COUNT]{};
 	// Payload type of each fragmentation
-	std::vector<uint8_t> fragmentation_pl_type;
-	// Is last fragment compete
-	bool last_fragment_complete = false;
+	uint8_t fragmentation_pl_type[MAX_FRAG_COUNT]{};
 
-	bool operator==(const FragmentationHeader &other) const
+	void VerifyAndAllocateFragmentationHeader(const size_t size)
 	{
-		return fragmentation_offset == other.fragmentation_offset
-			&& fragmentation_length == other.fragmentation_length
-			&& fragmentation_time_diff == other.fragmentation_time_diff
-			&& fragmentation_pl_type == other.fragmentation_pl_type
-			&& last_fragment_complete == other.last_fragment_complete;
-	}
+		const auto size16 = static_cast<uint16_t>(size);
 
-	bool operator!=(const FragmentationHeader &other)
-	{
-		return !(other == *this);
-	}
-
-	size_t GetSize() const
-	{
-		return fragmentation_offset.size() * sizeof(decltype(fragmentation_offset)::value_type) +
-			fragmentation_length.size() * sizeof(decltype(fragmentation_length)::value_type) +
-			fragmentation_time_diff.size() * sizeof(decltype(fragmentation_time_diff)::value_type) +
-			fragmentation_pl_type.size() * sizeof(decltype(fragmentation_pl_type)::value_type);
-	}
-
-	void Clear()
-	{
-		fragmentation_offset.clear();
-		fragmentation_length.clear();
-		fragmentation_time_diff.clear();
-		fragmentation_pl_type.clear();
-	}
-
-	bool IsEmpty() const
-	{
-		return fragmentation_offset.empty() && fragmentation_length.empty();
-	}
-
-	ov::Data Serialize() const
-	{
-		ov::Data fragmentation_header_data;
-		ov::Serialize(fragmentation_header_data, fragmentation_offset);
-		ov::Serialize(fragmentation_header_data, fragmentation_length);
-		ov::Serialize(fragmentation_header_data, fragmentation_time_diff);
-		ov::Serialize(fragmentation_header_data, fragmentation_pl_type);
-		fragmentation_header_data.Append(&last_fragment_complete, sizeof(last_fragment_complete));
-		return fragmentation_header_data;
-	}
-
-	bool Deserialize(ov::Data &data, size_t &bytes_consumed)
-	{
-		size_t base_bytes_consumed = bytes_consumed;
-		auto *bytes = reinterpret_cast<const uint8_t*>(data.GetData());
-		auto length = data.GetLength();
-		bool deserialized = ov::Deserialize(bytes, length, fragmentation_offset, bytes_consumed)
-			&& ov::Deserialize(bytes, length, fragmentation_length, bytes_consumed)
-			&& ov::Deserialize(bytes, length, fragmentation_time_diff, bytes_consumed)
-			&& ov::Deserialize(bytes, length, fragmentation_pl_type, bytes_consumed);
-		if (deserialized && length >= sizeof(last_fragment_complete))
+		if (fragmentation_vector_size < size16)
 		{
-			last_fragment_complete = *reinterpret_cast<const decltype(last_fragment_complete)*>(bytes);
-			bytes_consumed += sizeof(last_fragment_complete);
-			return true;
+			uint16_t oldVectorSize = fragmentation_vector_size;
+			{
+				// offset
+				size_t* oldOffsets = fragmentation_offset;
+				memset(fragmentation_offset + oldVectorSize, 0, sizeof(size_t) * (size16 - oldVectorSize));
+				// copy old values
+				memcpy(fragmentation_offset, oldOffsets, sizeof(size_t) * oldVectorSize);
+			}
+			// length
+			{
+				size_t* oldLengths = fragmentation_length;
+				memset(fragmentation_length + oldVectorSize, 0, sizeof(size_t) * (size16 - oldVectorSize));
+				memcpy(fragmentation_length, oldLengths, sizeof(size_t) * oldVectorSize);
+			}
+			// time diff
+			{
+				uint16_t* oldTimeDiffs = fragmentation_time_diff;
+				memset(fragmentation_time_diff + oldVectorSize, 0, sizeof(uint16_t) * (size16 - oldVectorSize));
+				memcpy(fragmentation_time_diff, oldTimeDiffs, sizeof(uint16_t) * oldVectorSize);
+			}
+			// Payload type
+			{
+				uint8_t* oldTimePlTypes = fragmentation_pl_type;
+				memset(fragmentation_pl_type + oldVectorSize, 0, sizeof(uint8_t) * (size16 - oldVectorSize));
+				memcpy(fragmentation_pl_type, oldTimePlTypes, sizeof(uint8_t) * oldVectorSize);
+			}
+			fragmentation_vector_size = size16;
 		}
-		return false;
 	}
 };
 
@@ -206,5 +210,5 @@ struct CodecSpecificInfo
 {
 	CodecType codec_type = CodecType::Unknown;
 	const char* codec_name = nullptr;
-	CodecSpecificInfoUnion codec_specific = { 0 };
+	CodecSpecificInfoUnion codec_specific = {0};
 };

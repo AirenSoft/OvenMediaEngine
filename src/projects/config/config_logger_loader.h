@@ -10,7 +10,7 @@
 
 #include "config_loader.h"
 
-#include <base/application/logger_tag_info.h>
+#include <base/info/logger_tag_info.h>
 
 class ConfigLoggerLoader : public ConfigLoader
 {

@@ -18,5 +18,5 @@ public:
         return AV_CODEC_ID_H264;
     }
 
-    std::unique_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
+    std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
 };

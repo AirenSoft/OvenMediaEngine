@@ -154,7 +154,7 @@ install_ffmpeg()
 
 install_base_ubuntu()
 {
-    sudo apt install -y build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl
+    sudo apt install -y build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config
 }
 
 install_base_fedora()

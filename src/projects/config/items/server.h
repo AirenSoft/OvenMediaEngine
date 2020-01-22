@@ -3,37 +3,75 @@
 //  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
-//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
-#include "hosts.h"
+#include "bind/bind.h"
+#include "virtual_hosts/virtual_hosts.h"
 
 namespace cfg
 {
+	enum class ServerType
+	{
+		Unknown,
+		Origin,
+		Edge
+	};
+
 	struct Server : public Item
 	{
-		const std::vector<Host> &GetHosts() const
-		{
-			return _hosts.GetHosts();
-		}
-        const ov::String &GetVersion() const
-        {
-            return _version;
-        }
+		CFG_DECLARE_REF_GETTER_OF(GetVersion, _version)
+
+		CFG_DECLARE_REF_GETTER_OF(GetName, _name)
+
+		CFG_DECLARE_REF_GETTER_OF(GetTypeName, _typeName)
+		CFG_DECLARE_GETTER_OF(GetType, _type)
+
+		CFG_DECLARE_REF_GETTER_OF(GetIp, _ip)
+		CFG_DECLARE_REF_GETTER_OF(GetBind, _bind)
+
+		CFG_DECLARE_REF_GETTER_OF(GetVirtualHostList, _virtual_hosts.GetVirtualHostList())
 
 	protected:
-		void MakeParseList() const override
+		void MakeParseList() override
 		{
 			RegisterValue<ValueType::Attribute>("version", &_version);
+
 			RegisterValue<Optional>("Name", &_name);
-			RegisterValue<Optional>("Hosts", &_hosts);
+
+			RegisterValue("Type", &_typeName, nullptr, [this]() -> bool {
+				_type = ServerType::Unknown;
+
+				if (_typeName == "origin")
+				{
+					_type = ServerType::Origin;
+				}
+				else if (_typeName == "edge")
+				{
+					_type = ServerType::Edge;
+				}
+
+				return _type != ServerType::Unknown;
+			});
+
+			RegisterValue("IP", &_ip);
+			RegisterValue("Bind", &_bind);
+
+			RegisterValue<Optional>("VirtualHosts", &_virtual_hosts);
 		}
 
 		ov::String _version;
+
 		ov::String _name;
 
-		Hosts _hosts;
+		ov::String _typeName;
+		ServerType _type;
+
+		ov::String _ip;
+		Bind _bind;
+
+		VirtualHosts _virtual_hosts;
 	};
-}
+}  // namespace cfg

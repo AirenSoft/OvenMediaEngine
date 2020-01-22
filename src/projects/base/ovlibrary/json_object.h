@@ -42,6 +42,11 @@ namespace ov
 			return JsonObject(null_value);
 		}
 
+		bool IsMember() const noexcept
+		{
+			return _value.asInt();
+		}
+
 		bool IsNull() const noexcept
 		{
 			return _value.isNull();
