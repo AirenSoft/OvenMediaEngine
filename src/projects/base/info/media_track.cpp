@@ -51,6 +51,8 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 
 	_start_frame_time = 0;
 	_last_frame_time = 0;
+
+	_codec_extradata = media_track._codec_extradata;
 }
 
 MediaTrack::~MediaTrack()
@@ -137,7 +139,17 @@ bool MediaTrack::IsBypass()
 	return _byass;
 }
 
-bool MediaTrack::GetBypass()
+void MediaTrack::SetCodecExtradata(std::vector<uint8_t> codec_extradata)
 {
-	return _byass;
+	_codec_extradata = std::move(codec_extradata);
+}
+
+const std::vector<uint8_t> &MediaTrack::GetCodecExtradata() const
+{
+	return _codec_extradata;
+}
+
+std::vector<uint8_t> &MediaTrack::GetCodecExtradata()
+{
+	return _codec_extradata;
 }

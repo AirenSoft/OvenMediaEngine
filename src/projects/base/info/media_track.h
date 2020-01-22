@@ -48,7 +48,10 @@ public:
 	// Bypass Settings
 	void SetBypass(bool flag);
 	bool IsBypass();
-	bool GetBypass();
+
+	void SetCodecExtradata(std::vector<uint8_t> codec_extradata);
+	const std::vector<uint8_t> &GetCodecExtradata() const;
+	std::vector<uint8_t> &GetCodecExtradata();
 
 private:
 	uint32_t _id;
@@ -65,4 +68,6 @@ private:
 
 	// Time of last frame(packet)
 	int64_t _last_frame_time;
+
+	std::vector<uint8_t> _codec_extradata;
 };

@@ -18,6 +18,7 @@ public:
 
 	common::AudioSample &GetSample();
 	common::AudioChannel &GetChannel();
+	const common::AudioChannel &GetChannel() const;
 
 protected:
 	// sample format, sample rate

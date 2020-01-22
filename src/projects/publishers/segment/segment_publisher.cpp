@@ -32,40 +32,10 @@ bool SegmentPublisher::CheckCodecAvailability(const std::vector<ov::String> &vid
 			cfg::StreamProfileUse use = profile.GetUse();
 			ov::String profile_name = profile.GetName();
 
-			for (const auto &encode : _application_info->GetEncodes())
+			if (_application_info->HasEncodeWithCodec(profile_name, use, video_codecs, audio_codecs))
 			{
-				if (encode.IsActive() && (encode.GetName() == profile_name))
-				{
-					// Check video codec is available
-					if (
-						((use == cfg::StreamProfileUse::Both) || (use == cfg::StreamProfileUse::VideoOnly)) &&
-						(encode.GetVideoProfile() != nullptr))
-					{
-						for (const ov::String &video_codec : video_codecs)
-						{
-							if (encode.GetVideoProfile()->GetCodec() == video_codec)
-							{
-								_is_codec_available = true;
-								return _is_codec_available;
-							}
-						}
-					}
-
-					// Check audio codec is available
-					if (
-						((use == cfg::StreamProfileUse::Both) || (use == cfg::StreamProfileUse::AudioOnly)) &&
-						(encode.GetAudioProfile() != nullptr))
-					{
-						for (const ov::String &audio_codec : audio_codecs)
-						{
-							if (encode.GetAudioProfile()->GetCodec() == audio_codec)
-							{
-								_is_codec_available = true;
-								return _is_codec_available;
-							}
-						}
-					}
-				}
+				_is_codec_available = true;
+				return _is_codec_available;
 			}
 		}
 	}

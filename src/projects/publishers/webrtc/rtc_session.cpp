@@ -77,23 +77,11 @@ bool RtcSession::Start()
 			return false;
 		}
 
-		if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
+		_payload_types.emplace(first_payload->GetId());
+		// If there is a RED
+		if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Video && peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
 		{
-			_audio_payload_type = first_payload->GetId();
-		}
-		else
-		{
-			// If there is a RED
-			if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
-			{
-				_video_payload_type = RED_PAYLOAD_TYPE;
-				_red_block_pt = first_payload->GetId();
-
-			}
-			else
-			{
-				_video_payload_type = first_payload->GetId();
-			}
+			_red_block_pt = first_payload->GetId();
 		}
 
 		// TODO(getroot): 향후 player에서 m= line을 선택하여 받는 기능이 만들어지면
@@ -207,7 +195,7 @@ bool RtcSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov
 	auto red_block_pt = static_cast<uint8_t>((packet_type & 0xFF00) >> 8);
 	auto origin_pt_of_fec = static_cast<uint8_t>((packet_type & 0xFF0000) >> 16);
 
-	if(rtp_payload_type != _video_payload_type && rtp_payload_type != _audio_payload_type)
+	if (_payload_types.find(rtp_payload_type) == _payload_types.end())
 	{
 		return false;
 	}

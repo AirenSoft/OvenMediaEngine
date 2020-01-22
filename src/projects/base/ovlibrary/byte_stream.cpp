@@ -173,3 +173,21 @@ namespace ov
 		return _read_only_data->Dump(title, _offset, max_bytes);
 	}
 }
+
+ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const char *string)
+{
+	byte_stream.Write(string, strlen(string));
+	return byte_stream;
+}
+
+ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string &string)
+{
+	byte_stream.Write(string.c_str(), string.size());
+	return byte_stream;
+}
+
+ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string_view &string)
+{
+	byte_stream.Write(string.data(), string.size());
+	return byte_stream;
+}

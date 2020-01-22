@@ -28,7 +28,9 @@ LOCAL_STATIC_LIBRARIES := \
 	ovlibrary \
 	monitoring \
 	jsoncpp \
-	sqlite
+	sqlite \
+	rtsp \
+	h264
 
 LOCAL_PREBUILT_LIBRARIES := \
 	libpugixml.a

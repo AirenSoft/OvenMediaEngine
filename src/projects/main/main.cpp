@@ -23,6 +23,7 @@
 #include <orchestrator/orchestrator.h>
 #include <providers/providers.h>
 #include <publishers/publishers.h>
+#include <rtsp/rtsp_provider.h>
 #include <transcode/transcoder.h>
 #include <web_console/web_console.h>
 
@@ -126,11 +127,12 @@ int main(int argc, char *argv[])
 					INIT_MODULE(media_router, "MediaRouter", MediaRouter::Create());
 					INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
 					INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
+					// RtspProvider::Create(&application_info, router)
 					INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
 					INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 					INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
 					INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, host_info, media_router));
-					
+
 					//--------------------------------------------------------------------
 					// Register modules to Orchestrator
 					//--------------------------------------------------------------------
@@ -141,6 +143,7 @@ int main(int argc, char *argv[])
 					initialized = initialized && orchestrator->RegisterModule(rtmp_provider);
 					initialized = initialized && orchestrator->RegisterModule(ovt_provider);
 					initialized = initialized && orchestrator->RegisterModule(rtspc_provider);
+					// RtspProvider::Create(&application_info, router)
 					// Register transcoder
 					initialized = initialized && orchestrator->RegisterModule(transcoder);
 					// Register publishers
@@ -176,7 +179,7 @@ int main(int argc, char *argv[])
 
 		while (true)
 		{
-			sleep(1);		
+			sleep(1);
 		}
 	}
 

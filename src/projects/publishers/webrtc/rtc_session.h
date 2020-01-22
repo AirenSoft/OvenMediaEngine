@@ -10,6 +10,8 @@
 #include "modules/rtp_rtcp/rtp_rtcp_interface.h"
 #include "modules/dtls_srtp/dtls_transport.h"
 
+#include <unordered_set>
+
 /*
  *
  * RtcSession은 RtpRtcp를 이용하여 VideoFrame/AudioSample을 Packetize를 하고
@@ -66,9 +68,6 @@ public:
 	bool SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet) override;
 	void OnPacketReceived(const std::shared_ptr<SessionInfo> &session_info, const std::shared_ptr<const ov::Data> &data) override;
 
-	uint8_t GetVideoPayloadType();
-	uint8_t GetAudioPayloadType();
-
 private:
 	std::shared_ptr<RtpRtcp>            _rtp_rtcp;
 	std::shared_ptr<SrtpTransport>      _srtp_transport;
@@ -79,7 +78,6 @@ private:
 	std::shared_ptr<SessionDescription> _peer_sdp;
 	std::shared_ptr<IcePort>            _ice_port;
 
-	uint8_t                             _video_payload_type;
 	uint8_t 							_red_block_pt;
-	uint8_t                             _audio_payload_type;
+	std::unordered_set<uint8_t>			_payload_types;
 };

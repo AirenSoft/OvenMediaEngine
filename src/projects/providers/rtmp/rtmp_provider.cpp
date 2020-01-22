@@ -13,6 +13,7 @@
 #include "rtmp_application.h"
 #include "rtmp_provider.h"
 #include "rtmp_stream.h"
+#include "base/application/media_extradata.h"
 
 #define OV_LOG_TAG "RtmpProvider"
 
@@ -150,6 +151,11 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 		// Kbps -> bps
 		new_track->SetBitrate(media_info->video_bitrate * 1000);
 
+		if (media_info->avc_sps && media_info->avc_pps)
+		{
+			new_track->SetCodecExtradata(std::move(H264Extradata().AddSps(*media_info->avc_sps).AddPps(*media_info->avc_pps).Serialize()));
+		}
+	
 		// I know RTMP uses 1/1000 timebase, however, this timebase was used due to low precision.
 		// new_track->SetTimeBase(1, 1000);
 		new_track->SetTimeBase(1, 90000);

@@ -29,3 +29,8 @@ AudioChannel &AudioTrack::GetChannel()
 {
 	return _channel_layout;
 }
+
+const AudioChannel &AudioTrack::GetChannel() const
+{
+	return _channel_layout;
+}
