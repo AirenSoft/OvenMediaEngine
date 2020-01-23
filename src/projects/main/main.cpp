@@ -129,8 +129,8 @@ int main(int argc, char *argv[])
 					INIT_MODULE(media_router, "MediaRouter", MediaRouter::Create());
 					INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
 					INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
-					// RtspProvider::Create(&application_info, router)
 					INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
+					INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
 					INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 					INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
 					INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(segment_http_server_manager, *server_config, host_info, media_router));
@@ -147,8 +147,8 @@ int main(int argc, char *argv[])
 					// Register providers
 					initialized = initialized && orchestrator->RegisterModule(rtmp_provider);
 					initialized = initialized && orchestrator->RegisterModule(ovt_provider);
+					initialized = initialized && orchestrator->RegisterModule(rtsp_provider);
 					initialized = initialized && orchestrator->RegisterModule(rtspc_provider);
-					// RtspProvider::Create(&application_info, router)
 					// Register transcoder
 					initialized = initialized && orchestrator->RegisterModule(transcoder);
 					// Register publishers
