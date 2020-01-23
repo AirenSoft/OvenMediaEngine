@@ -50,6 +50,10 @@ DashApplication::~DashApplication()
 bool DashApplication::Start()
 {
 	auto publisher_info = GetPublisher<cfg::DashPublisher>();
+	if(!publisher_info->IsParsed())
+	{
+		return false;
+	}
 	_segment_count = publisher_info->GetSegmentCount();
 	_segment_duration = publisher_info->GetSegmentDuration();
 

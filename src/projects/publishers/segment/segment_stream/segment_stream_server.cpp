@@ -24,7 +24,6 @@ SegmentStreamServer::SegmentStreamServer()
 
 bool SegmentStreamServer::Start(const ov::SocketAddress &address,
 								std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-								const ov::String &app_name,
 								int thread_count,
 								const std::shared_ptr<Certificate> &certificate,
 								const std::shared_ptr<Certificate> &chain_certificate)
@@ -34,7 +33,6 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
 		OV_ASSERT(false, "Server is already running");
 		return false;
 	}
-	_app_name = app_name;
 
 	// Interceptor add
 	// - handler register
@@ -84,6 +82,8 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
 
 bool SegmentStreamServer::Stop()
 {
+	// Remove Interceptor
+
 	return false;
 }
 
@@ -237,15 +237,12 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 			SetAllowOrigin(origin_url, response);
 		}
 
-		// Check app name
-		if (_app_name != app_name)
-		{
-			logtd("Failed to check app name: %s", request_target.CStr());
-			response->SetStatusCode(HttpStatusCode::NotFound);
-			break;
-		}
 
-		connetion = ProcessRequestStream(client, app_name, stream_name, file_name, file_ext);
+		auto tokens = client->GetRequest()->GetUri().Split("/");
+		auto host_name = client->GetRequest()->GetHeader("HOST").Split(":")[0];
+		ov::String internal_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
+
+		connetion = ProcessRequestStream(client, internal_app_name, stream_name, file_name, file_ext);
 	} while (false);
 
 	switch (connetion)
@@ -375,9 +372,9 @@ void SegmentStreamServer::SetCrossDomain(const std::vector<cfg::Url> &url_list)
 	ov::String cors_urls;
 	for (auto &url : _cors_urls)
 		cors_urls += url + "\n";
-	logtd("<%s> CORS \n%s", _app_name.CStr(), cors_urls.CStr());
+	logtd("CORS \n%s", cors_urls.CStr());
 
-	logtd("<%s> crossdomain.xml \n%s", _app_name.CStr(), _cross_domain_xml.CStr());
+	logtd("crossdomain.xml \n%s", _cross_domain_xml.CStr());
 }
 
 bool SegmentStreamServer::UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url)

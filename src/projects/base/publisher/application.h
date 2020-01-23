@@ -129,5 +129,4 @@ private:
 	std::mutex _incoming_packet_queue_guard;
 
 	//std::queue<std::shared_ptr<AudioStreamData>>	_audio_stream_queue;
-
 };

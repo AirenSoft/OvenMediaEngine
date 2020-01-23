@@ -80,11 +80,13 @@ namespace pvd
 
 		// Let child create application
 		auto application = OnCreateProviderApplication(app_info);
-
 		if(application == nullptr)
 		{
 			logte("Could not create application for [%s]", app_info.GetName().CStr());
-			return false;
+			// It may not be a error that the Application failed due to disabling that Publisher.
+			// Failure to create a single application should not affect the whole.
+			// TODO(Getroot): The reason for the error must be defined and handled in detail.
+			return true;
 		}
 
 		// Connect created application to router

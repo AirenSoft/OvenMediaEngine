@@ -11,7 +11,7 @@
 #include "dash_interceptor.h"
 #include "dash_packetizer.h"
 
-#include <modules/segment_stream/segment_stream_server.h>
+#include <publishers/segment/segment_stream/segment_stream_server.h>
 
 class DashStreamServer : public SegmentStreamServer
 {

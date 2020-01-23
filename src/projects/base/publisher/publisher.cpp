@@ -47,7 +47,10 @@ bool Publisher::OnCreateApplication(const info::Application &app_info)
 	auto application = OnCreatePublisherApplication(app_info);
 	if(application == nullptr)
 	{
-		return false;
+		// It may not be a error that the Application failed due to disabling that Publisher.
+		// Failure to create a single application should not affect the whole.
+		// TODO(Getroot): The reason for the error must be defined and handled in detail.
+		return true;
 	}
 
 	// 생성한 Application을 Router와 연결하고 Start

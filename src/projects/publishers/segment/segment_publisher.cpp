@@ -9,7 +9,7 @@
 #include "segment_publisher.h"
 #include "publisher_private.h"
 
-#include <modules/segment_stream/segment_stream.h>
+#include <publishers/segment/segment_stream/segment_stream.h>
 
 SegmentPublisher::SegmentPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 	: Publisher(server_config, host_info, router)

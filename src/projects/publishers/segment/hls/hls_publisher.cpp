@@ -34,7 +34,7 @@ bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server
 	auto server_config = GetServerConfig();
 	auto host_info = GetHostInfo();
 
-	auto &name = host_info.GetName();
+	//auto &name = host_info.GetName();
 
 	auto &ip = server_config.GetIp();
 	auto port = server_config.GetBind().GetPublishers().GetDashPort();
@@ -50,7 +50,7 @@ bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server
 	//stream_server->SetCrossDomain(cross_domains);
 
 	// Start the HLS Server
-	if (!stream_server->Start(address, http_server_manager, name, DEFAULT_SEGMENT_WORKER_THREAD_COUNT,
+	if (!stream_server->Start(address, http_server_manager, DEFAULT_SEGMENT_WORKER_THREAD_COUNT,
 							  host_info.GetCertificate(), host_info.GetChainCertificate()))
 	{
 		logte("An error occurred while start %s Publisher", GetPublisherName());

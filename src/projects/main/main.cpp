@@ -120,8 +120,7 @@ int main(int argc, char *argv[])
 					initialized = true;
 
 					// Create an HTTP Manager for Segment Publishers
-					// TODO(Dimiden): Move HTTP Manager into another instance.
-					std::map<int, std::shared_ptr<HttpServer>> segment_http_server_manager;
+					std::map<int, std::shared_ptr<HttpServer>> http_server_manager;
 
 					//--------------------------------------------------------------------
 					// Create the modules
@@ -133,9 +132,9 @@ int main(int argc, char *argv[])
 					INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
 					INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 					INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
-					INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(segment_http_server_manager, *server_config, host_info, media_router));
-					INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(segment_http_server_manager, *server_config, host_info, media_router));
-					INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(segment_http_server_manager, *server_config, host_info, media_router));
+					INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(http_server_manager, *server_config, host_info, media_router));
+					INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(http_server_manager, *server_config, host_info, media_router));
+					INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(http_server_manager, *server_config, host_info, media_router));
 					INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, host_info, media_router));
 
 					//--------------------------------------------------------------------

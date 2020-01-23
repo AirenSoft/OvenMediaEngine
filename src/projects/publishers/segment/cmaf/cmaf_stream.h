@@ -8,7 +8,7 @@
 //==============================================================================
 
 #pragma once
-#include <modules/segment_stream/segment_stream.h>
+#include <publishers/segment/segment_stream/segment_stream.h>
 #include "cmaf_stream_packetizer.h"
 
 //====================================================================================================
