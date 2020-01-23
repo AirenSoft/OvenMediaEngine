@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 					INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
 					INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(http_server_manager, *server_config, host_info, media_router));
 					INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(http_server_manager, *server_config, host_info, media_router));
-					INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(http_server_manager, *server_config, host_info, media_router));
+					//INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(http_server_manager, *server_config, host_info, media_router));
 					INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, host_info, media_router));
 
 					//--------------------------------------------------------------------
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 					initialized = initialized && orchestrator->RegisterModule(webrtc_publisher);
 					initialized = initialized && orchestrator->RegisterModule(hls_publisher);
 					initialized = initialized && orchestrator->RegisterModule(dash_publisher);
-					initialized = initialized && orchestrator->RegisterModule(lldash_publisher);
+					//initialized = initialized && orchestrator->RegisterModule(lldash_publisher);
 					initialized = initialized && orchestrator->RegisterModule(ovt_publisher);
 				} while (false);
 

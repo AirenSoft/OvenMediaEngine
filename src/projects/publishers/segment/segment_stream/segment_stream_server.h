@@ -27,7 +27,6 @@ public:
 
 	bool Start(const ov::SocketAddress &address,
 			   std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-			   const ov::String &app_name,
 			   int thread_count,
 			   const std::shared_ptr<Certificate> &certificate = nullptr,
 			   const std::shared_ptr<Certificate> &chain_certificate = nullptr);
@@ -78,7 +77,6 @@ protected:
 	bool UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url);
 
 protected:
-	ov::String _app_name;
 	std::shared_ptr<HttpServer> _http_server;
 	std::vector<std::shared_ptr<SegmentStreamObserver>> _observers;
 	std::vector<ov::String> _cors_urls;
