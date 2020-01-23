@@ -3,9 +3,11 @@
 #include "rtsp_provider.h"
 #include "rtsp_application.h"
 
+#include <orchestrator/orchestrator.h>
+
 using namespace common;
 
-RtspProvider::RtspProvider(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router) : Provider(application_info, router)
+RtspProvider::RtspProvider(const cfg::Server &server_config, std::shared_ptr<MediaRouteInterface> router) : Provider(server_config, router)
 {
 }
 
@@ -14,52 +16,44 @@ RtspProvider::~RtspProvider()
     Stop();
 }
 
-cfg::ProviderType RtspProvider::GetProviderType()
+ProviderType RtspProvider::GetProviderType()
 {
-    return cfg::ProviderType::Rtsp;
+    return ProviderType::Rtsp;
 }
 
-std::shared_ptr<Application> RtspProvider::OnCreateApplication(const info::Application *application_info)
+std::shared_ptr<pvd::Application> RtspProvider::OnCreateProviderApplication(const info::Application &application_info)
 {
     return RtspApplication::Create(application_info);
 }
 
+bool RtspProvider::OnDeleteProviderApplication(const info::Application &app_info)
+{
+    return true;
+}
+
 bool RtspProvider::Start()
 {
-    provider_info_ = _application_info->GetProvider<cfg::RtspProvider>();
+    // Get Server & Host configuration
+	auto server = GetServerConfig();
 
-    if(provider_info_ == nullptr)
-    {
-        logte("Cannot initialize RtspProvider using config information");
-        return false;
-    }
+	auto rtsp_address = ov::SocketAddress(server.GetIp(), static_cast<uint16_t>(server.GetBind().GetProviders().GetRtspPort()));
 
-    auto host = _application_info->GetParentAs<cfg::Host>("Host");
-
-    if(host == nullptr)
-    {
-        OV_ASSERT2(false);
-        return false;
-    }
-
-    int port = host->GetPorts().GetRtspProviderPort().GetPort();
-
-    auto rtsp_address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(port));
-
-    logti("RTSP Provider is listening on %s...", rtsp_address.ToString().CStr());
+	logti("RTSP Provider is listening on %s...", rtsp_address.ToString().CStr());
 
     rtsp_server_ = std::make_shared<RtspServer>();
 
-
     rtsp_server_->AddObserver(RtspObserver::GetSharedPtr());
-    rtsp_server_->Start(rtsp_address);
+    if(rtsp_server_->Start(rtsp_address) == false)
+    {
+        return false;
+    }
 
     return Provider::Start();
 }
 
-std::shared_ptr<RtspProvider> RtspProvider::Create(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router)
+std::shared_ptr<RtspProvider> RtspProvider::Create(const cfg::Server &server_config, std::shared_ptr<MediaRouteInterface> router)
 {
-    auto provider = std::make_shared<RtspProvider>(application_info, router);
+    auto provider = std::make_shared<RtspProvider>(server_config, router);
     provider->Start();
     return provider;
 }
@@ -70,30 +64,43 @@ bool RtspProvider::OnStreamAnnounced(const ov::String &app_name,
     info::application_id_t &application_id,
     uint32_t &stream_id)
 {
-    auto application = std::dynamic_pointer_cast<RtspApplication>(GetApplicationByName(app_name.CStr()));
+    ov::String internal_app_name = app_name;
+
+    // TODO: domain name or vhost_info is needed
+#if 0
+    // Make an internal app name by domain_name
+    ov::String domain_name = "dummy.com";
+    auto internal_app_name = Orchestrator::ResolveApplicationNameFromDomain(domain_name, app);
+
+    // Make an internal app name by cfg::VirtualHost
+    cfg::VirtualHost vhost_config;
+    Orchestrator::ResolveApplicationName(vhost_config.GetName(), app);
+#endif
+
+    auto application = std::dynamic_pointer_cast<RtspApplication>(GetApplicationByName(internal_app_name.CStr()));
     if(application == nullptr)
     {
-        logte("Cannot find applicaton - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
+        logte("Cannot find applicaton - app(%s) stream(%s)", internal_app_name.CStr(), stream_name.CStr());
         return false;
     }
 
-    auto existing_stream = GetStreamByName(app_name, stream_name);
+    auto existing_stream = application->GetStreamByName(stream_name);
     if(existing_stream)
     {
-        logti("Duplicate stream input(change) - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
+        logti("Duplicate stream input(change) - app(%s) stream(%s)", internal_app_name.CStr(), stream_name.CStr());
 
-        if(!rtsp_server_->Disconnect(app_name, existing_stream->GetId()))
+        if(!rtsp_server_->Disconnect(internal_app_name, existing_stream->GetId()))
         {
-            logte("Disconnect fail - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
+            logte("Disconnect fail - app(%s) stream(%s)", internal_app_name.CStr(), stream_name.CStr());
         }
 
-        application->DeleteStream2(application->GetStreamByName(stream_name));
+        application->NotifyStreamDeleted(application->GetStreamByName(stream_name));
     }
 
-    auto stream = application->MakeStream();
+    auto stream = application->CreateStream();
     if(stream == nullptr)
     {
-        logte("Can not create stream - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
+        logte("Can not create stream - app(%s) stream(%s)", internal_app_name.CStr(), stream_name.CStr());
         return false;
     }
 
@@ -109,12 +116,12 @@ bool RtspProvider::OnStreamAnnounced(const ov::String &app_name,
             stream->AddTrack(media_track);
         }
     }
-    application->CreateStream2(stream);
+    application->NotifyStreamCreated(stream);
 
     application_id = application->GetId();
     stream_id = stream->GetId();
 
-    logtd("Strem ready complete - app(%s/%u) stream(%s/%u)", app_name.CStr(), application_id, stream_name.CStr(), stream_id);
+    logtd("Strem ready complete - app(%s/%u) stream(%s/%u)", internal_app_name.CStr(), application_id, stream_name.CStr(), stream_id);
 
     return true;
 }
@@ -149,7 +156,7 @@ bool RtspProvider::OnVideoData(info::application_id_t application_id,
         timestamp,
         -1LL,
         flags & static_cast<uint8_t>(RtpVideoFlags::Keyframe) ?  MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
-    media_packet->SetFragHeader(std::move(fragmentation_header));
+    media_packet->SetFragHeader(fragmentation_header.get());
     application->SendFrame(stream, std::move(media_packet));
     return true;
 }
@@ -202,6 +209,6 @@ bool RtspProvider::OnStreamTeardown(info::application_id_t application_id, uint3
         return false;
     }
 
-    application->DeleteStream2(stream);
+    application->NotifyStreamDeleted(stream);
     return true;
 }

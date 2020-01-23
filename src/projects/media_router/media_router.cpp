@@ -200,7 +200,7 @@ void MediaRouter::MainTask()
 {
 	while(!_kill_flag)
 	{
-		sleep(5);
+		// sleep(5);
 		// logtd("Perform a garbage collector");
 		for(auto it = _route_apps.begin(); it != _route_apps.end(); ++it)
 		{

@@ -30,8 +30,9 @@ std::shared_ptr<DashApplication> DashApplication::Create(const info::Application
 DashApplication::DashApplication(const info::Application &application_info)
 	: Application(application_info)
 {
-    _segment_count = 3;
-    _segment_duration = 5;
+    auto publisher_info = application_info.GetPublisher<cfg::DashPublisher>();
+    _segment_count = publisher_info->GetSegmentCount();
+    _segment_duration = publisher_info->GetSegmentDuration();
 }
 
 //====================================================================================================
@@ -49,11 +50,6 @@ DashApplication::~DashApplication()
 bool DashApplication::Start()
 {
 	auto publisher_info = GetPublisher<cfg::DashPublisher>();
-	// This application doesn't enable DASH
-	if(publisher_info == nullptr)
-	{
-		return false;
-	}
 	_segment_count = publisher_info->GetSegmentCount();
 	_segment_duration = publisher_info->GetSegmentDuration();
 

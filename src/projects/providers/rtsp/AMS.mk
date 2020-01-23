@@ -13,7 +13,7 @@ LOCAL_LDFLAGS := \
     -ldl \
     -lz
  
-LOCAL_TARGET := rtsp
+LOCAL_TARGET := rtsp_provider
 
 LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES) \
     $(call get_sub_source_list,rtp) \

@@ -2,26 +2,26 @@
 #include "rtsp_stream.h"
 
 #include "base/provider/application.h"
-#include "base/application/stream_info.h"
+#include "base/info/stream_info.h"
 
 #define OV_LOG_TAG "RtspApplication"
 
-std::shared_ptr<RtspApplication> RtspApplication::Create(const info::Application *application_info)
+std::shared_ptr<RtspApplication> RtspApplication::Create(const info::Application &application_info)
 {
 	auto application = std::make_shared<RtspApplication>(application_info);
 	return application;
 }
 
-RtspApplication::RtspApplication(const info::Application *application_info)
+RtspApplication::RtspApplication(const info::Application &application_info)
 	: Application(application_info)
 {
 }
 
-std::shared_ptr<Stream> RtspApplication::OnCreateStream()
+std::shared_ptr<Stream> RtspApplication::CreateStream()
 {
 	logtd("OnCreateStream");
 
-	auto stream = RtspStream::Create();
+	auto stream = RtspStream::Create(GetSharedPtrAs<pvd::Application>());
 
 	return stream;
 }

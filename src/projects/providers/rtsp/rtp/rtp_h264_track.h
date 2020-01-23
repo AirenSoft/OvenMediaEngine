@@ -3,12 +3,12 @@
 #include "../rtsp_library.h"
 #include "rtp.h"
 
-#include <h264/h264.h>
-#include <h264/h264_sps_pps_tracker.h>
-#include <h264/h264_nal_unit_bitstream_parser.h>
+#include <modules/h264/h264.h>
+#include <modules/h264/h264_sps_pps_tracker.h>
+#include <modules/h264/h264_nal_unit_bitstream_parser.h>
 
 #if defined(PARANOID_STREAM_VALIDATION)
-#include <h264/h264_bitstream_analyzer.h>
+#include <modules/h264/h264_bitstream_analyzer.h>
 #endif
 
 #include <base/ovlibrary/byte_ordering.h>

@@ -32,9 +32,9 @@ CmafApplication::CmafApplication(const info::Application &application_info,
 								const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
 									: Application(application_info)
 {
-    // 3, 2 are default values
-    _segment_count = 3;
-    _segment_duration = 2;
+    auto publisher_info = application_info.GetPublisher<cfg::CmafPublisher>();
+    _segment_count = publisher_info->GetSegmentCount();
+    _segment_duration = publisher_info->GetSegmentDuration();
 	_chunked_transfer = chunked_transfer;
 }
 
@@ -53,11 +53,6 @@ CmafApplication::~CmafApplication()
 bool CmafApplication::Start()
 {
 	auto publisher_info = GetPublisher<cfg::CmafPublisher>();
-	// This application doesn't enable LLDASH
-	if(publisher_info == nullptr)
-	{
-		return false;
-	}
 
 	_segment_count = publisher_info->GetSegmentCount();
 	_segment_duration = publisher_info->GetSegmentDuration();

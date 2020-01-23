@@ -27,6 +27,7 @@ enum class StreamSourceType : int8_t
 {
 	OVT_PROVIDER ,
 	RTMP_PROVIDER,
+	RTSP_PROVIDER,
 	RTSPC_PROVIDER,
 	LIVE_TRANSCODER
 };
@@ -37,6 +38,7 @@ enum class ProviderType : int8_t
 	Unknown,
 	Rtmp,
 	Rtsp,
+	RtspPull,
 	Ovt,
 };
 
@@ -65,53 +67,74 @@ enum class FrameType : int8_t
 struct FragmentationHeader
 {
 public:
-	// Number of fragmentations
-	uint16_t fragmentation_vector_size = 0;
 	// Offset of pointer to data for each
-	size_t fragmentation_offset[MAX_FRAG_COUNT]{};
+	std::vector<size_t> fragmentation_offset;
 
 	// fragmentation
 	// Data size for each fragmentation
-	size_t fragmentation_length[MAX_FRAG_COUNT]{};
+	std::vector<size_t> fragmentation_length;
 	// Timestamp difference relative "now" for each fragmentation
-	uint16_t fragmentation_time_diff[MAX_FRAG_COUNT]{};
+	std::vector<uint16_t> fragmentation_time_diff;
 	// Payload type of each fragmentation
-	uint8_t fragmentation_pl_type[MAX_FRAG_COUNT]{};
+	std::vector<uint8_t> fragmentation_pl_type;
 
-	void VerifyAndAllocateFragmentationHeader(const size_t size)
+	// Currently only used for RTSP Provider only
+	bool last_fragment_complete = false;
+
+	size_t GetCount() const
 	{
-		const auto size16 = static_cast<uint16_t>(size);
+		OV_ASSERT2(fragmentation_offset.size() == fragmentation_length.size());
+		
+		return std::min(fragmentation_offset.size(), fragmentation_length.size());
+	}
 
-		if (fragmentation_vector_size < size16)
+	bool operator==(const FragmentationHeader &other) const
+	{
+		return fragmentation_offset == other.fragmentation_offset && fragmentation_length == other.fragmentation_length && fragmentation_time_diff == other.fragmentation_time_diff && fragmentation_pl_type == other.fragmentation_pl_type && last_fragment_complete == other.last_fragment_complete;
+	}
+
+	bool operator!=(const FragmentationHeader &other)
+	{
+		return !(other == *this);
+	}
+
+	void Clear()
+	{
+		fragmentation_offset.clear();
+		fragmentation_length.clear();
+		fragmentation_time_diff.clear();
+		fragmentation_pl_type.clear();
+		last_fragment_complete = false;
+	}
+
+	bool IsEmpty() const
+	{
+		return fragmentation_offset.empty() && fragmentation_length.empty();
+	}
+
+	ov::Data Serialize() const
+	{
+		ov::Data fragmentation_header_data;
+		ov::Serialize(fragmentation_header_data, fragmentation_offset);
+		ov::Serialize(fragmentation_header_data, fragmentation_length);
+		ov::Serialize(fragmentation_header_data, fragmentation_time_diff);
+		ov::Serialize(fragmentation_header_data, fragmentation_pl_type);
+		fragmentation_header_data.Append(&last_fragment_complete, sizeof(last_fragment_complete));
+		return fragmentation_header_data;
+	}
+
+	bool Deserialize(ov::Data &data, size_t &bytes_consumed)
+	{
+		auto *bytes = reinterpret_cast<const uint8_t *>(data.GetData());
+		auto length = data.GetLength();
+		bool deserialized = ov::Deserialize(bytes, length, fragmentation_offset, bytes_consumed) && ov::Deserialize(bytes, length, fragmentation_length, bytes_consumed) && ov::Deserialize(bytes, length, fragmentation_time_diff, bytes_consumed) && ov::Deserialize(bytes, length, fragmentation_pl_type, bytes_consumed);
+		if (deserialized && length >= sizeof(last_fragment_complete))
 		{
-			uint16_t oldVectorSize = fragmentation_vector_size;
-			{
-				// offset
-				size_t* oldOffsets = fragmentation_offset;
-				memset(fragmentation_offset + oldVectorSize, 0, sizeof(size_t) * (size16 - oldVectorSize));
-				// copy old values
-				memcpy(fragmentation_offset, oldOffsets, sizeof(size_t) * oldVectorSize);
-			}
-			// length
-			{
-				size_t* oldLengths = fragmentation_length;
-				memset(fragmentation_length + oldVectorSize, 0, sizeof(size_t) * (size16 - oldVectorSize));
-				memcpy(fragmentation_length, oldLengths, sizeof(size_t) * oldVectorSize);
-			}
-			// time diff
-			{
-				uint16_t* oldTimeDiffs = fragmentation_time_diff;
-				memset(fragmentation_time_diff + oldVectorSize, 0, sizeof(uint16_t) * (size16 - oldVectorSize));
-				memcpy(fragmentation_time_diff, oldTimeDiffs, sizeof(uint16_t) * oldVectorSize);
-			}
-			// Payload type
-			{
-				uint8_t* oldTimePlTypes = fragmentation_pl_type;
-				memset(fragmentation_pl_type + oldVectorSize, 0, sizeof(uint8_t) * (size16 - oldVectorSize));
-				memcpy(fragmentation_pl_type, oldTimePlTypes, sizeof(uint8_t) * oldVectorSize);
-			}
-			fragmentation_vector_size = size16;
+			last_fragment_complete = *reinterpret_cast<const decltype(last_fragment_complete) *>(bytes);
+			bytes_consumed += sizeof(last_fragment_complete);
+			return true;
 		}
+		return false;
 	}
 };
 

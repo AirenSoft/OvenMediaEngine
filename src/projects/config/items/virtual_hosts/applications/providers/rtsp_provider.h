@@ -12,7 +12,7 @@ namespace cfg
 		}
 
 	protected:
-		void MakeParseList() const override
+		void MakeParseList() override
 		{
 			Provider::MakeParseList();
 		}

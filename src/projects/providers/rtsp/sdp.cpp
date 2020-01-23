@@ -1,6 +1,6 @@
 #include "sdp.h"
 
-#include <h264/h264_sps.h>
+#include <modules/h264/h264_sps.h>
 #include <base/ovlibrary/stl.h>
 #include <base/ovcrypto/base_64.h>
 

@@ -10,6 +10,7 @@
 
 #include "config_private.h"
 
+#include <unistd.h>
 #include <regex>
 
 namespace cfg
@@ -540,6 +541,43 @@ namespace cfg
 		return ParseResult::Parsed;
 	}
 
+	ov::String Item::GetEnv(const char *key, const char *default_value, bool *is_default_value)
+	{
+		auto env = std::getenv(key);
+
+		if (env != nullptr)
+		{
+			return env;
+		}
+
+		if (::strcmp(key, "HOSTNAME") == 0)
+		{
+			ov::String hostname;
+
+			if (hostname.SetCapacity(HOST_NAME_MAX))
+			{
+				if (::gethostname(hostname.GetBuffer(), hostname.GetCapacity()) == 0)
+				{
+					return std::move(hostname);
+				}
+			}
+		}
+
+		if ((default_value != nullptr) && (default_value[0] != '\0'))
+		{
+			// Use the default value
+			if (is_default_value != nullptr)
+			{
+				*is_default_value = true;
+			}
+
+			return default_value;
+		}
+
+		// There is no default value
+		return "";
+	}
+
 	ov::String Item::Preprocess(const ov::String &xml_path, const ValueBase *value_base, const char *value, const ov::String &tag_name, int indent)
 	{
 		// Preprocess for ${env:XXX} macro
@@ -568,29 +606,17 @@ namespace cfg
 				env_key = env_key.substr(0, position);
 			}
 
-			const char *key = env_key.c_str();
-			const char *env = getenv(key);
-			if (env == nullptr)
-			{
-				if (default_value.empty())
-				{
-					env = "";
-				}
-				else
-				{
-					is_default_value = true;
-					env = default_value.c_str();
-				}
-			}
+			auto key = env_key.c_str();
+			ov::String value = GetEnv(key, default_value.c_str(), &is_default_value);
 
 			// _tag_name: Tag name of current element
 			// tag_name: Tag name of child element
 			logtd("%s<%s> <%s> Configuration from env: %s = \"%s\"%s",
 				  MakeIndentString(indent).CStr(), _tag_name.CStr(), tag_name.CStr(),
-				  key, env, is_default_value ? " (default value)" : "");
+				  key, value.CStr(), is_default_value ? " (default value)" : "");
 
 			result.append(start, match.first);
-			result.append(env);
+			result.append(value);
 
 			start = match.second;
 
