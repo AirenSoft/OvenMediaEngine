@@ -59,7 +59,7 @@ public:
 
     bool ReadBit(uint8_t &value)
     {
-        if (position_ - buffer_ == capacity_) return false;
+        if (static_cast<size_t>(position_ - buffer_) == capacity_) return false;
         value = *position_ & (1  << (7 - bit_offset_)) ? 1 : 0;
         if (bit_offset_ == 7)
         {

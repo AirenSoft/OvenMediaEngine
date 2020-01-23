@@ -77,6 +77,13 @@ bool RtcApplication::DeleteStream(const std::shared_ptr<StreamInfo> &info)
 
 bool RtcApplication::Start()
 {
+	auto publisher_info = GetPublisher<cfg::WebrtcPublisher>();
+	if(!publisher_info->IsParsed())
+	{
+		// There is no config for webrtc, it means admin doesn't want to enable webrtc
+		return false;
+	}
+
 	if(_certificate == nullptr)
 	{
 		// 인증서를 생성한다.
