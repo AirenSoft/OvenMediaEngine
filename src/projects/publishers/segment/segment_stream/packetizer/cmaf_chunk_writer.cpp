@@ -41,14 +41,14 @@ const std::shared_ptr<ov::Data> CmafChunkWriter::AppendSample(const std::shared_
 {
 	if (_write_started == false)
 	{
-		_write_started = true;
-		_start_timestamp = sample_data->timestamp;
-
-		if (_start_timestamp < 0)
+		if (sample_data->timestamp < 0)
 		{
-			OV_ASSERT2(false);
+			// OV_ASSERT2(false);
 			return nullptr;
 		}
+
+		_write_started = true;
+		_start_timestamp = sample_data->timestamp;
 
 		if (_chunked_data == nullptr)
 		{
