@@ -18,14 +18,13 @@
 class RtspProvider : public pvd::Provider, public RtspObserver
 {
 public:
-    explicit RtspProvider(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
+    explicit RtspProvider(const cfg::Server &server_config, std::shared_ptr<MediaRouteInterface> router);
     ~RtspProvider() override;
 
-    cfg::ProviderType GetProviderType() override;
+    ProviderType GetProviderType() override;
     bool Start() override;
-    std::shared_ptr<pvd::Application> OnCreateApplication(const info::Application *application_info) override;
 
-    static std::shared_ptr<RtspProvider> Create(const info::Application *application_info, std::shared_ptr<MediaRouteInterface> router);
+    static std::shared_ptr<RtspProvider> Create(const cfg::Server &server_config, std::shared_ptr<MediaRouteInterface> router);
 
     // RtspObserver
     bool OnStreamAnnounced(const ov::String &app_name, 
@@ -47,8 +46,11 @@ public:
         const std::shared_ptr<std::vector<uint8_t>> &data) override;
     bool OnStreamTeardown(info::application_id_t application_id, uint32_t stream_id) override;
 
+protected:
+	std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &application_info) override;
+	bool OnDeleteProviderApplication(const info::Application &app_info) override;
+
 private:
-    const cfg::RtspPullProvider *provider_info_;
     std::shared_ptr<RtspServer> rtsp_server_;
 };
 

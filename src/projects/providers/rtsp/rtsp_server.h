@@ -12,7 +12,7 @@
 #include <base/base_traits.h>
 #include <base/ovsocket/ovsocket.h>
 #include <base/ovsocket/port_range.h>
-#include <physical_port/physical_port_manager.h>
+#include <modules/physical_port/physical_port_manager.h>
 
 #include <unordered_map>
 #include <mutex>

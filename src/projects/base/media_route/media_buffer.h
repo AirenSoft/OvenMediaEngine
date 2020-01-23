@@ -119,7 +119,12 @@ public:
 
 	void SetFragHeader(const FragmentationHeader *header)
 	{
-		::memcpy(&_frag_hdr, header, sizeof(_frag_hdr));
+		_frag_hdr = *header;
+	}
+
+	FragmentationHeader *GetFragHeader()
+	{
+		return &_frag_hdr;
 	}
 
 	const FragmentationHeader *GetFragHeader() const

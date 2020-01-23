@@ -8,7 +8,7 @@
 #include "rtp/rtp_mpeg4_track.h"
 #include "rtp/rtp_aac_track.h"
 
-#include <h264/h264_nal_unit_types.h>
+#include <modules/h264/h264_nal_unit_types.h>
 
 #include <limits>
 

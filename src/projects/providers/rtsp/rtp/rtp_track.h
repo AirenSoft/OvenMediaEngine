@@ -4,7 +4,7 @@
 #include "rtp_packet_header.h"
 
 #include <base/common_types.h>
-#include <base/application/media_track.h>
+#include <base/info/media_track.h>
 
 #include <optional>
 

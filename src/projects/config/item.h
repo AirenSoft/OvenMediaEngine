@@ -256,6 +256,7 @@ namespace cfg
 		// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
 		virtual Item::ParseResult ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent);
 
+		static ov::String GetEnv(const char *key, const char *default_value, bool *is_default_value);
 		ov::String Preprocess(const ov::String &xml_path, const ValueBase *value_base, const char *value, const ov::String &tag_name, int indent);
 
 		ov::String GetSelector(const pugi::xml_node &node);

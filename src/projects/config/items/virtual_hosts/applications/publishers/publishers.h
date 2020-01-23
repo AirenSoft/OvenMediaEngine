@@ -30,28 +30,19 @@ namespace cfg
 	protected:
 		void MakeParseList() override
 		{
+			_publisher_list.push_back(&_rtmp_publisher);
+			_publisher_list.push_back(&_hls_publisher);
+			_publisher_list.push_back(&_dash_publisher);
+			_publisher_list.push_back(&_cmaf_publisher);
+			_publisher_list.push_back(&_webrtc_publisher);
+
 			RegisterValue<Optional>("ThreadCount", &_thread_count);
 
-			RegisterValue<Optional>("RTMP", &_rtmp_publisher, nullptr, [this]() -> bool {
-				_publisher_list.push_back(&_rtmp_publisher);
-				return true;
-			});
-			RegisterValue<Optional>("HLS", &_hls_publisher, nullptr, [this]() -> bool {
-				_publisher_list.push_back(&_hls_publisher);
-				return true;
-			});
-			RegisterValue<Optional>("DASH", &_dash_publisher, nullptr, [this]() -> bool {
-				_publisher_list.push_back(&_dash_publisher);
-				return true;
-			});
-			RegisterValue<Optional>("CMAF", &_cmaf_publisher, nullptr, [this]() -> bool {
-				_publisher_list.push_back(&_cmaf_publisher);
-				return true;
-			});
-			RegisterValue<Optional>("WebRTC", &_webrtc_publisher, nullptr, [this]() -> bool {
-				_publisher_list.push_back(&_webrtc_publisher);
-				return true;
-			});
+			RegisterValue<Optional>("RTMP", &_rtmp_publisher);
+			RegisterValue<Optional>("HLS", &_hls_publisher);
+			RegisterValue<Optional>("DASH", &_dash_publisher);
+			RegisterValue<Optional>("CMAF", &_cmaf_publisher);
+			RegisterValue<Optional>("WebRTC", &_webrtc_publisher);
 		}
 
 		std::vector<const Publisher *> _publisher_list;

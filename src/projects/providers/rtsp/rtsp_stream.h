@@ -8,10 +8,10 @@ using namespace pvd;
 class RtspStream : public Stream
 {
 public:
-	static std::shared_ptr<RtspStream> Create();
+	static std::shared_ptr<RtspStream> Create(const std::shared_ptr<pvd::Application> &application);
 
 public:
-	explicit RtspStream();
+	explicit RtspStream(const std::shared_ptr<pvd::Application> &application);
 	~RtspStream() final;
 
 private:

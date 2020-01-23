@@ -1,14 +1,13 @@
 LOCAL_PATH := $(call get_local_path)
 include $(DEFAULT_VARIABLES)
 
-#  rtsp
-# h264
 LOCAL_STATIC_LIBRARIES := \
 	webrtc_publisher \
 	segment_publishers \
 	ovt_publisher \
 	ovt_provider \
 	rtmp_provider \
+	rtsp_provider \
 	rtspc_provider \
 	transcoder \
 	rtc_signalling \
@@ -18,6 +17,7 @@ LOCAL_STATIC_LIBRARIES := \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \
+	h264 \
 	web_console \
 	mediarouter \
 	ovt_packetizer \

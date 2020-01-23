@@ -330,24 +330,24 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
 		}
 	}
 
-	fragment_header.VerifyAndAllocateFragmentationHeader(fragment_count);
+	fragment_header.Clear();
 
 	if (_packet->flags == AV_PKT_FLAG_KEY)  // KeyFrame
 	{
 		// SPS + PPS + IDR
-		fragment_header.fragmentation_offset[0] = sps_start_index;
-		fragment_header.fragmentation_offset[1] = pps_start_index;
-		fragment_header.fragmentation_offset[2] = (pps_end_index + 1) + nal_pattern_size;
+		fragment_header.fragmentation_offset.emplace_back(sps_start_index);
+		fragment_header.fragmentation_offset.emplace_back(pps_start_index);
+		fragment_header.fragmentation_offset.emplace_back((pps_end_index + 1) + nal_pattern_size);
 
-		fragment_header.fragmentation_length[0] = sps_end_index - (sps_start_index - 1);
-		fragment_header.fragmentation_length[1] = pps_end_index - (pps_start_index - 1);
-		fragment_header.fragmentation_length[2] = _packet->size - (pps_end_index + nal_pattern_size);
+		fragment_header.fragmentation_length.emplace_back(sps_end_index - (sps_start_index - 1));
+		fragment_header.fragmentation_length.emplace_back(pps_end_index - (pps_start_index - 1));
+		fragment_header.fragmentation_length.emplace_back(_packet->size - (pps_end_index + nal_pattern_size));
 	}
 	else
 	{
 		// NON-IDR
-		fragment_header.fragmentation_offset[0] = sps_start_index;
-		fragment_header.fragmentation_length[0] = _packet->size - (sps_start_index - 1);
+		fragment_header.fragmentation_offset.emplace_back(sps_start_index);
+		fragment_header.fragmentation_length.emplace_back(_packet->size - (sps_start_index - 1));
 	}
 
 	packet->SetFragHeader(&fragment_header);

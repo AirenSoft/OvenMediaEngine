@@ -59,7 +59,7 @@ static const uint8_t *ParseNalUnits(const uint8_t *nal_unit_buffer,
 
 bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &packet)
 {
-    FragmentationHeader *fragment_header = (FragmentationHeader *)packet->GetFragHeader();
+    auto fragment_header = packet->GetFragHeader();
 
     const uint8_t* srcData = static_cast<const uint8_t*>(packet->GetData()->GetData());
     size_t dataOffset = 0;
@@ -97,8 +97,7 @@ bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &
         }
     }
 
-    fragment_header->VerifyAndAllocateFragmentationHeader(offset_list.size());
-
+    fragment_header->Clear();
 
     for (size_t index = 0; index < offset_list.size(); ++index)
     {
@@ -136,8 +135,8 @@ bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &
         // if (nal_unit_type == 6) // SEI
         //     logtd("%s", ov::Dump(srcData+nalu_offset, nalu_data_len, 32).CStr());
 
-        fragment_header->fragmentation_offset[index] = nalu_offset;
-        fragment_header->fragmentation_length[index] = nalu_data_len ;
+        fragment_header->fragmentation_offset.emplace_back(nalu_offset);
+        fragment_header->fragmentation_length.emplace_back(nalu_data_len);
     }
 
     return true;

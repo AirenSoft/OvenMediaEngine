@@ -10,13 +10,13 @@ using namespace pvd;
 class RtspApplication : public Application
 {
 public:
-	static std::shared_ptr<RtspApplication> Create(const info::Application *application_info);
+	static std::shared_ptr<RtspApplication> Create(const info::Application &application_info);
 
-	explicit RtspApplication(const info::Application *info);
+	explicit RtspApplication(const info::Application &info);
+	
 	~RtspApplication() override = default;
 
-public:
-	std::shared_ptr<Stream> OnCreateStream() override;
+	std::shared_ptr<Stream> CreateStream();
 
 private:
 };
