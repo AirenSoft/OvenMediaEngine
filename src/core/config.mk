@@ -14,7 +14,7 @@
 # 2012-11-29 0.53: Fix CFLAG/CXXFLAG bugs
 # 2012-11-29 0.54: Supports prebuilt type
 # 2017-10-19 0.6: Add PROJECT_*FLAGS variable
-# 2017-10-19 0.61: Add dependency to C/C++ object files for AMS_.mk
+# 2017-10-19 0.61: Add dependency to C/C++ object files for AMS.mk
 # 2017-10-19 0.62: Add progress indicator
 # 2019-07-27 0.63: Add some features to support pkg-config
 #
