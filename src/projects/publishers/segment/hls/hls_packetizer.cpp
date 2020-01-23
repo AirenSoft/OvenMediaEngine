@@ -16,7 +16,7 @@
 #include <sstream>
 
 #include <base/ovlibrary/ovlibrary.h>
-#include <modules/segment_stream/packetizer/packetizer_define.h>
+#include <publishers/segment/segment_stream/packetizer/packetizer_define.h>
 
 #define HLS_MAX_TEMP_VIDEO_DATA_COUNT (500)
 

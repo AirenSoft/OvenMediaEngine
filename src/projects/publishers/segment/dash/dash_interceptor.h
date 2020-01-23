@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <modules/segment_stream/segment_stream_interceptor.h>
+#include <publishers/segment/segment_stream/segment_stream_interceptor.h>
 
 class DashInterceptor : public SegmentStreamInterceptor
 {

@@ -19,3 +19,4 @@ LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES) \
 $(call add_pkg_config,srt)
 
 include $(BUILD_STATIC_LIBRARY)
+include $(BUILD_SUB_AMS)

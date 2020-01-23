@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <modules/segment_stream/packetizer/cmaf_chunk_writer.h>
+#include <publishers/segment/segment_stream/packetizer/cmaf_chunk_writer.h>
 #include "../dash/dash_packetizer.h"
 
 class ICmafChunkedTransfer

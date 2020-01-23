@@ -14,7 +14,7 @@
 #include <base/common_types.h>
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/media_route/media_buffer.h>
-#include <modules/segment_stream/packetizer/packetizer.h>
+#include <publishers/segment/segment_stream/packetizer/packetizer.h>
 
 #define DEFAULT_SEGMENT_COUNT (3)
 #define DEFAULT_SEGMENT_DURATION (5)

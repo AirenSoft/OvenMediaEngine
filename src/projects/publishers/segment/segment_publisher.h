@@ -12,7 +12,7 @@
 #include <base/media_route/media_route_application_interface.h>
 #include <base/publisher/publisher.h>
 #include <config/config.h>
-#include <modules/segment_stream/segment_stream_server.h>
+#include <publishers/segment/segment_stream/segment_stream_server.h>
 
 #define DEFAULT_SEGMENT_WORKER_THREAD_COUNT		4
 
@@ -48,7 +48,6 @@ protected:
 	SegmentPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 	~SegmentPublisher() override;
 
-	bool CheckCodecAvailability(const std::vector<ov::String> &video_codecs, const std::vector<ov::String> &audio_codecs);
 	virtual bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager) = 0;
 
 	//--------------------------------------------------------------------
@@ -63,5 +62,4 @@ protected:
 						  std::shared_ptr<SegmentData> &segment) override;
 
 	std::shared_ptr<SegmentStreamServer> _stream_server = nullptr;
-	bool _is_codec_available = false;
 };

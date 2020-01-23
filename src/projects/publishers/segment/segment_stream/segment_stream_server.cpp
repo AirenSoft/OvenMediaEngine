@@ -84,6 +84,8 @@ bool SegmentStreamServer::Start(const ov::SocketAddress &address,
 
 bool SegmentStreamServer::Stop()
 {
+	// Remove Interceptor
+
 	return false;
 }
 
@@ -244,8 +246,11 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 			response->SetStatusCode(HttpStatusCode::NotFound);
 			break;
 		}
+		auto tokens = client->GetRequest()->GetUri().Split("/");
+		auto host_name = client->GetRequest()->GetHeader("HOST").Split(":")[0];
+		ov::String internal_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
 
-		connetion = ProcessRequestStream(client, app_name, stream_name, file_name, file_ext);
+		connetion = ProcessRequestStream(client, internal_app_name, stream_name, file_name, file_ext);
 	} while (false);
 
 	switch (connetion)
