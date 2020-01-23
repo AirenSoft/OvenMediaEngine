@@ -40,27 +40,28 @@ namespace cfg
 
 		bool HasEncodeWithCodec(const ov::String &profile_name,
 								cfg::StreamProfileUse use,
-								const std::vector<ov::String> &video_codecs, const
-								std::vector<ov::String> &audio_codecs) const
+								const std::vector<ov::String> &video_codecs, const std::vector<ov::String> &audio_codecs) const
 		{
-			for(const auto &encode : GetEncodeList())
+			for (const auto &encode : GetEncodeList())
 			{
-				if(encode.IsActive() && encode.GetName() == profile_name)
+				if (encode.IsActive() && encode.GetName() == profile_name)
 				{
 					// video codec
-					if ((video_codecs.empty() == false)
-						&& (use == cfg::StreamProfileUse::Both || use == cfg::StreamProfileUse::VideoOnly))
+					if ((video_codecs.empty() == false) && (use == cfg::StreamProfileUse::Both || use == cfg::StreamProfileUse::VideoOnly))
 					{
-						const auto &video_profile = encode.GetVideoProfile();
-						return std::find(video_codecs.begin(), video_codecs.end(), video_profile->GetCodec()) != video_codecs.end();
+						const auto &video_profiles = encode.GetVideoProfileList();
+						return std::find_if(video_profiles.begin(), video_profiles.end(), [video_codecs](const auto &video_profile) {
+								   return std::find(video_codecs.begin(), video_codecs.end(), video_profile.GetCodec()) != video_codecs.end();
+							   }) != video_profiles.end();
 					}
 
 					// audio codec
-					if ((audio_codecs.empty() == false)
-						&& (use == cfg::StreamProfileUse::Both || use == cfg::StreamProfileUse::AudioOnly))
+					if ((audio_codecs.empty() == false) && (use == cfg::StreamProfileUse::Both || use == cfg::StreamProfileUse::AudioOnly))
 					{
-						const auto &audio_profile = encode.GetAudioProfile();
-						return std::find(audio_codecs.begin(), audio_codecs.end(), audio_profile->GetCodec()) != audio_codecs.end();
+						const auto &audio_profiles = encode.GetAudioProfileList();
+						return std::find_if(audio_profiles.begin(), audio_profiles.end(), [audio_codecs](const auto &audio_profile) {
+								   return std::find(audio_codecs.begin(), audio_codecs.end(), audio_profile.GetCodec()) != audio_codecs.end();
+							   }) != audio_profiles.end();
 					}
 				}
 			}
