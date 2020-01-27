@@ -321,7 +321,7 @@ int32_t TranscodeStream::CreateOutputStream()
 
 							// The timebase, sample format will change by the decoder event.
 							new_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
-							new_track->SetTimeBase(input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen());
+							new_track->SetTimeBase(1, cfg_encode_audio->GetSamplerate());
 						}
 
 						logti("mapping to audio track [%s][%d] => [%s][%d]", _stream_info_input->GetName().CStr(), input_track->GetId(), stream_name.CStr(), new_track->GetId());
@@ -557,7 +557,7 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 		case TranscodeResult::DataReady:
 			filtered_frame->SetTrackId(track_id);
 
-			logtp("[#%d] A frame is filtered (PTS: %lld)", track_id, filtered_frame->GetPts());
+			// logtd("[#%d] A frame is filtered (PTS: %lld)", track_id, filtered_frame->GetPts());
 
 			// if (_queue_filterd_frames.size() > _max_queue_size)
 			// {
@@ -720,7 +720,7 @@ void TranscodeStream::SendFrame(std::shared_ptr<MediaPacket> packet)
 			{
 				auto clone_packet = packet->ClonePacket();
 
-				// logtd("[#%d] Trying to outgoing the packet (%s, PTS: %lld)", clone_packet->GetTrackId(), output_stream_info->GetName().CStr(), clone_packet->GetPts());
+				// logtd("[#%d] Trying to outgoing the packet (%s, PTS: %lld)", clone_packet->GetTrackId(), output_stream_info->GetName().CStr(), clone_packet->GetPts() * 1000 / (int64_t)media_track.second->GetTimeBase().GetDen());
 
 				_parent->SendFrame(output_stream_info, std::move(clone_packet));
 			}
@@ -816,7 +816,9 @@ void TranscodeStream::DoFilters(std::shared_ptr<MediaFrame> frame)
 			continue;
 		}
 
-		// logtd("[#%d -> #%d] Trying to filter a frame (PTS: %lld)", track_id, output_track_id,  frame->GetPts());
+		// if(output_track_id == 1)
+			// logtd("[#%d -> #%d] Trying to filter a frame (PTS: %lld)", track_id, output_track_id,  frame->GetPts());
+		
 		FilterFrame(output_track_id, std::move(frame_clone));
 	}
 }
