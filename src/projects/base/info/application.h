@@ -22,6 +22,7 @@ namespace info
 	constexpr application_id_t MinApplicationId = std::numeric_limits<application_id_t>::min();
 	constexpr application_id_t MaxApplicationId = (InvalidApplicationId - static_cast<application_id_t>(1));
 
+	class Host; // For stroing parent
 	class Application
 	{
 	public:
@@ -38,6 +39,11 @@ namespace info
 		const ov::String &GetName() const
 		{
 			return _name;
+		}
+
+		const info::Host &GetHostInfo() const
+		{
+			return *_host_info;
 		}
 
 		template <typename Tpublisher>
@@ -107,8 +113,8 @@ namespace info
 	protected:
 		// These constructors will be called from Orchestrator
 		friend class ::Orchestrator;
-		Application(application_id_t app_id, const ov::String &name, cfg::Application app_config);
-		Application(application_id_t app_id, const ov::String &name);
+		Application(const info::Host &host_info, application_id_t app_id, const ov::String &name, cfg::Application app_config);
+		Application(const info::Host &host_info, application_id_t app_id, const ov::String &name);
 
 		// This function is created to minimize the creation of temporary instances
 		static const Application &GetInvalidApplication();
@@ -117,5 +123,8 @@ namespace info
 		ov::String _name;
 
 		cfg::Application _app_config;
+
+	private:
+		std::shared_ptr<info::Host>		_host_info;
 	};
 }  // namespace info

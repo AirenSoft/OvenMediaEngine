@@ -11,7 +11,7 @@ namespace mon
 {
 	class HostMetrics
 	{
-
+	
 	private:
 		std::map<uint32_t, std::shared_ptr<ApplicationMetrics>> _applications;
 	};

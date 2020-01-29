@@ -6,26 +6,29 @@
 
 #include "base/common_types.h"
 #include "base/info/info.h"
-#include "base/info/stream.h"
+#include "base/info/stream_info.h"
 #include "monitoring_common_types.h"
 
 namespace mon
 {
-	class StreamMetrics : public info::Stream
+	class StreamMetrics : public StreamInfo
 	{
 
 	private:
-		// Related to origin
+		// Related to origin, From Provider
 		uint32_t _origin_request_time_msec;
 		uint32_t _origin_response_time_msec;
 
 		// TODO: If the source type is LIVE_TRANSCODER, what can we provide some metrics
 
-		// Total
+		// From Provider
 		uint64_t _bytes_in;
+
+		// From Publishers
 		uint64_t _bytes_out;
 		uint32_t _total_connections;
 
+		// From Publishers
 		class PublisherMetrics
 		{
 		public:

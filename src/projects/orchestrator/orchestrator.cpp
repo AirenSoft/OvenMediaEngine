@@ -142,7 +142,7 @@ bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtu
 	return succeeded;
 }
 
-bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_config_list)
+bool Orchestrator::ApplyOriginMap(const std::vector<info::Host> &host_list)
 {
 	bool result = true;
 	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard(_virtual_host_map_mutex);
@@ -161,28 +161,28 @@ bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_con
 
 	logtd("- Processing for VirtualHosts");
 
-	for (auto &vhost_config : vhost_config_list)
+	for (auto &host_info : host_list)
 	{
-		auto previous_vhost_item = _virtual_host_map.find(vhost_config.GetName());
+		auto previous_vhost_item = _virtual_host_map.find(host_info.GetName());
 
 		if (previous_vhost_item == _virtual_host_map.end())
 		{
-			logtd("  - %s: New", vhost_config.GetName().CStr());
-			auto vhost = std::make_shared<VirtualHost>();
+			logtd("  - %s: New", host_info.GetName().CStr());
+			auto vhost = std::make_shared<VirtualHost>(host_info);
+			
+			vhost->name = host_info.GetName();
 
-			vhost->name = vhost_config.GetName();
+			logtd("    - Processing for domains: %d items", host_info.GetDomain().GetNameList().size());
 
-			logtd("    - Processing for domains: %d items", vhost_config.GetDomain().GetNameList().size());
-
-			for (auto &domain_name : vhost_config.GetDomain().GetNameList())
+			for (auto &domain_name : host_info.GetDomain().GetNameList())
 			{
 				logtd("      - %s: New", domain_name.GetName().CStr());
 				vhost->domain_list.emplace_back(domain_name.GetName());
 			}
 
-			logtd("    - Processing for origins: %d items", vhost_config.GetOriginList().size());
+			logtd("    - Processing for origins: %d items", host_info.GetOriginList().size());
 
-			for (auto &origin_config : vhost_config.GetOriginList())
+			for (auto &origin_config : host_info.GetOriginList())
 			{
 				logtd("      - %s: New (%zu urls)",
 					  origin_config.GetLocation().CStr(),
@@ -191,21 +191,21 @@ bool Orchestrator::ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_con
 				vhost->origin_list.emplace_back(origin_config);
 			}
 
-			_virtual_host_map[vhost_config.GetName()] = vhost;
+			_virtual_host_map[host_info.GetName()] = vhost;
 			_virtual_host_list.push_back(vhost);
 
 			continue;
 		}
 
-		logtd("  - %s: Not changed", vhost_config.GetName().CStr());
+		logtd("  - %s: Not changed", host_info.GetName().CStr());
 
 		// Check the previous VirtualHost item
 		auto &vhost = previous_vhost_item->second;
 
 		logtd("    - Processing for domains");
-		auto new_state_for_domain = ProcessDomainList(&(vhost->domain_list), vhost_config.GetDomain());
+		auto new_state_for_domain = ProcessDomainList(&(vhost->domain_list), host_info.GetDomain());
 		logtd("    - Processing for origins");
-		auto new_state_for_origin = ProcessOriginList(&(vhost->origin_list), vhost_config.GetOrigins());
+		auto new_state_for_origin = ProcessOriginList(&(vhost->origin_list), host_info.GetOrigins());
 
 		if ((new_state_for_domain == ItemState::NotChanged) && (new_state_for_origin == ItemState::NotChanged))
 		{
@@ -882,7 +882,8 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &v
 
 	if (ParseVHostAppName(vhost_app_name, &vhost_name, nullptr))
 	{
-		*app_info = info::Application(GetNextAppId(), vhost_app_name);
+		auto vhost = GetVirtualHost(vhost_name);
+		*app_info = info::Application(vhost->host_info, GetNextAppId(), vhost_app_name);
 		return CreateApplicationInternal(vhost_name, *app_info);
 	}
 
@@ -960,12 +961,14 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(const info::Applica
 	return DeleteApplicationInternal(vhost_name, app_info.GetId());
 }
 
-Orchestrator::Result Orchestrator::CreateApplication(const ov::String &vhost_name, const cfg::Application &app_config)
+Orchestrator::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::Application &app_config)
 {
 	std::lock_guard<decltype(_module_list_mutex)> lock_guard_for_modules(_module_list_mutex);
 	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
 
-	info::Application app_info(GetNextAppId(), ResolveApplicationName(vhost_name, app_config.GetName()), app_config);
+	auto vhost_name = host_info.GetName();
+
+	info::Application app_info(host_info, GetNextAppId(), ResolveApplicationName(vhost_name, app_config.GetName()), app_config);
 
 	return CreateApplicationInternal(vhost_name, app_info);
 }

@@ -9,7 +9,7 @@
 #pragma once
 
 #include "data_structure.h"
-
+#include "base/info/host.h"
 #include <regex>
 
 #include <base/media_route/media_route_application_observer.h>
@@ -57,7 +57,7 @@ public:
 		return &orchestrator;
 	}
 
-	bool ApplyOriginMap(const std::vector<cfg::VirtualHost> &vhost_config_list);
+	bool ApplyOriginMap(const std::vector<info::Host> &host_list);
 
 	/// Register the module
 	///
@@ -100,7 +100,7 @@ public:
 	/// @return Creation result
 	///
 	/// @note Automatically DeleteApplication() when application creation fails
-	Result CreateApplication(const ov::String &vhost_name, const cfg::Application &app_config);
+	Result CreateApplication(const info::Host &vhost_info, const cfg::Application &app_config);
 	/// Delete the application and notify the modules
 	///
 	/// @param app_info Application information to delete
@@ -315,8 +315,9 @@ protected:
 
 	struct VirtualHost
 	{
-		VirtualHost()
-			: state(ItemState::New)
+		VirtualHost(const info::Host &host_info)
+			: host_info(host_info), state(ItemState::New)
+			  
 		{
 		}
 
@@ -366,6 +367,9 @@ protected:
 
 			return true;
 		}
+
+		// Origin Host Info
+		info::Host	host_info;
 
 		// The name of VirtualHost (eg: AirenSoft-VHost)
 		ov::String name;
@@ -417,7 +421,7 @@ protected:
 
 	bool GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **used_origin, Domain **used_domain);
 
-	Result CreateApplicationInternal(const ov::String &vhost_name, const info::Application &app_info);
+	Result CreateApplicationInternal(const ov::String &name, const info::Application &app_info);
 	Result CreateApplicationInternal(const ov::String &name, info::Application *app_info);
 
 	Result NotifyModulesForDeleteEvent(const std::vector<Module> &modules, const info::Application &app_info);

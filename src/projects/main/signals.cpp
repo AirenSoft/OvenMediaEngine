@@ -119,7 +119,16 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 	}
 
 	logti("Trying to apply OriginMap to Orchestrator...");
-	if (Orchestrator::GetInstance()->ApplyOriginMap(config_manager->GetServer()->GetVirtualHostList()) == false)
+
+	std::vector<info::Host> host_info_list;
+	// Create info::Host
+	auto hosts = config_manager->GetServer()->GetVirtualHostList();
+	for (const auto &host : hosts)
+	{
+		host_info_list.emplace_back(host);
+	}
+
+	if (Orchestrator::GetInstance()->ApplyOriginMap(host_info_list) == false)
 	{
 		logte("Could not reload OriginMap");
 	}

@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 
 	if (succeeded)
 	{
-		orchestrator->ApplyOriginMap(hosts);
+		orchestrator->ApplyOriginMap(host_info_list);
 
 		for (auto &host_info : host_info_list)
 		{
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 			// Create applications that defined by the configuration
 			for (auto &app_cfg : host_info.GetApplicationList())
 			{
-				orchestrator->CreateApplication(host_name, app_cfg);
+				orchestrator->CreateApplication(host_info, app_cfg);
 			}
 		}
 	}
