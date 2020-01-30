@@ -157,7 +157,12 @@ bool InitializeSignals()
 
 	sa.sa_flags = SA_SIGINFO;
 	sa.sa_sigaction = AbortHandler;
+	// sigemptyset is a macro on macOS, so :: breaks compilation 
+#if defined(__APPLE__)
+	sigemptyset(&sa.sa_mask);
+#else
 	::sigemptyset(&sa.sa_mask);
+#endif
 
 	// Intentional signals (ignore)
 	//     SIGQUIT, SIGINT, SIGTERM, SIGTRAP, SIGHUP, SIGKILL

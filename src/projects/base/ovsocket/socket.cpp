@@ -21,7 +21,9 @@
 #include <chrono>
 
 /// 임시 코드
+#if !defined(__APPLE__)
 #include <linux/sockios.h>
+#endif
 #include <sys/ioctl.h>
 
 #define USE_STATS_COUNTER 0
