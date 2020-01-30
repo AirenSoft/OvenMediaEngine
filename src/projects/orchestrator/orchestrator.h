@@ -165,29 +165,29 @@ protected:
 		// Implementation of MediaRouteApplicationObserver
 		//--------------------------------------------------------------------
 		// Temporarily used until Orchestrator takes stream management
-		bool OnCreateStream(const std::shared_ptr<StreamInfo> &info) override
+		bool OnCreateStream(const std::shared_ptr<info::StreamInfo> &info) override
 		{
 			return orchestrator->OnCreateStream(app_info, info);
 		}
 
-		bool OnDeleteStream(const std::shared_ptr<StreamInfo> &info) override
+		bool OnDeleteStream(const std::shared_ptr<info::StreamInfo> &info) override
 		{
 			return orchestrator->OnDeleteStream(app_info, info);
 		}
 
-		bool OnSendVideoFrame(const std::shared_ptr<StreamInfo> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
+		bool OnSendVideoFrame(const std::shared_ptr<info::StreamInfo> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
 		{
 			// Ignore packets
 			return true;
 		}
 
-		bool OnSendAudioFrame(const std::shared_ptr<StreamInfo> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
+		bool OnSendAudioFrame(const std::shared_ptr<info::StreamInfo> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
 		{
 			// Ignore packets
 			return true;
 		}
 
-		bool OnSendFrame(const std::shared_ptr<StreamInfo> &info, const std::shared_ptr<MediaPacket> &packet) override
+		bool OnSendFrame(const std::shared_ptr<info::StreamInfo> &info, const std::shared_ptr<MediaPacket> &packet) override
 		{
 			// Ignore packets
 			return true;
@@ -435,8 +435,8 @@ protected:
 	bool RequestPullStreamForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset);
 
 	// Called from Application
-	bool OnCreateStream(const info::Application &app_info, const std::shared_ptr<StreamInfo> &info);
-	bool OnDeleteStream(const info::Application &app_info, const std::shared_ptr<StreamInfo> &info);
+	bool OnCreateStream(const info::Application &app_info, const std::shared_ptr<info::StreamInfo> &info);
+	bool OnDeleteStream(const info::Application &app_info, const std::shared_ptr<info::StreamInfo> &info);
 
 	std::shared_ptr<MediaRouter> _media_router;
 

@@ -11,7 +11,7 @@
 
 namespace mon
 {
-	class StreamMetrics : public StreamInfo
+	class StreamMetrics : public info::StreamInfo
 	{
 
 	private:

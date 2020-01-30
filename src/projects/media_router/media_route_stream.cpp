@@ -14,7 +14,7 @@
 
 using namespace common;
 
-MediaRouteStream::MediaRouteStream(std::shared_ptr<StreamInfo> &stream_info)
+MediaRouteStream::MediaRouteStream(std::shared_ptr<info::StreamInfo> &stream_info)
 {
 	logtd("Trying to create media route stream: name(%s) id(%u)", stream_info->GetName().CStr(), stream_info->GetId());
 
@@ -29,7 +29,7 @@ MediaRouteStream::~MediaRouteStream()
 	logtd("Delete media route stream name(%s) id(%u)", _stream_info->GetName().CStr(), _stream_info->GetId());
 }
 
-std::shared_ptr<StreamInfo> MediaRouteStream::GetStreamInfo()
+std::shared_ptr<info::StreamInfo> MediaRouteStream::GetStreamInfo()
 {
 	return _stream_info;
 }

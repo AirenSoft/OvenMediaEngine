@@ -4,6 +4,7 @@
 
 
 #include "media_router/bitstream/avc_video_packet_fragmentizer.h"
+#include "base/info/application.h"
 #include "ovt_stream.h"
 
 #define OV_LOG_TAG "OvtStream"
@@ -13,7 +14,7 @@ namespace pvd
 	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::Application> &application, const ov::String &stream_name,
 					  						const std::vector<ov::String> &url_list)
 	{
-		StreamInfo stream_info(StreamSourceType::OVT_PROVIDER);
+		StreamInfo stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::OVT_PROVIDER);
 
 		stream_info.SetId(application->IssueUniqueStreamId());
 		stream_info.SetName(stream_name);
@@ -678,7 +679,7 @@ namespace pvd
 					fragmentizer.MakeHeader(media_packet);
 				}
 
-				_application->SendFrame(GetSharedPtrAs<StreamInfo>(), media_packet);
+				_application->SendFrame(GetSharedPtrAs<info::StreamInfo>(), media_packet);
 			}
 		}
 	}

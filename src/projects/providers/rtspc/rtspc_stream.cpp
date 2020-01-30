@@ -4,6 +4,7 @@
 
 
 #include "media_router/bitstream/avc_video_packet_fragmentizer.h"
+#include "base/info/application.h"
 #include "rtspc_stream.h"
 
 #define OV_LOG_TAG "RtspcStream"
@@ -13,7 +14,7 @@ namespace pvd
 	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::Application> &application, const ov::String &stream_name,
 					  						const std::vector<ov::String> &url_list)
 	{
-		StreamInfo stream_info(StreamSourceType::RTSPC_PROVIDER);
+		StreamInfo stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::RTSPC_PROVIDER);
 
 		stream_info.SetId(application->IssueUniqueStreamId());
 		stream_info.SetName(stream_name);
@@ -325,7 +326,7 @@ namespace pvd
 			auto flag = (packet.flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
 			auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Video, 0, packet.data, packet.size, packet.pts, packet.dts, packet.duration, flag);
 
-			_application->SendFrame(GetSharedPtrAs<StreamInfo>(), media_packet);
+			_application->SendFrame(GetSharedPtrAs<info::StreamInfo>(), media_packet);
 
 			::av_packet_unref(&packet);
 		}

@@ -147,8 +147,8 @@ bool MediaRouteApplication::UnregisterObserverApp(
 
 // OnCreateStream 함수는 Provider, Relay, Trasncoder 타입의 Connector에서 호출된다
 bool MediaRouteApplication::OnCreateStream(
-	std::shared_ptr<MediaRouteApplicationConnector> app_conn,
-	std::shared_ptr<StreamInfo> stream_info)
+	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
+	const std::shared_ptr<info::StreamInfo> &stream_info)
 {
 	if (app_conn == nullptr || stream_info == nullptr)
 	{
@@ -179,7 +179,7 @@ bool MediaRouteApplication::OnCreateStream(
 
 	logtd("Created stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
-	auto new_stream_info = std::make_shared<StreamInfo>(*stream_info);
+	auto new_stream_info = std::make_shared<info::StreamInfo>(*stream_info);
 	auto new_stream = std::make_shared<MediaRouteStream>(new_stream_info);
 
 	{
@@ -227,8 +227,8 @@ bool MediaRouteApplication::OnCreateStream(
 }
 
 bool MediaRouteApplication::OnDeleteStream(
-	std::shared_ptr<MediaRouteApplicationConnector> app_conn,
-	std::shared_ptr<StreamInfo> stream_info)
+	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
+	const std::shared_ptr<info::StreamInfo> &stream_info)
 {
 	if (app_conn == nullptr || stream_info == nullptr)
 	{
@@ -238,7 +238,7 @@ bool MediaRouteApplication::OnDeleteStream(
 
 	logtd("Deleted stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
-	auto new_stream_info = std::make_shared<StreamInfo>(*stream_info);
+	auto new_stream_info = std::make_shared<info::StreamInfo>(*stream_info);
 
 	// 옵저버에 스트림 삭제를 알림
 	for (auto it = _observers.begin(); it != _observers.end(); ++it)
@@ -283,9 +283,9 @@ bool MediaRouteApplication::OnDeleteStream(
 // @from RtmpProvider
 // @from TranscoderProvider
 bool MediaRouteApplication::OnReceiveBuffer(
-	std::shared_ptr<MediaRouteApplicationConnector> app_conn,
-	std::shared_ptr<StreamInfo> stream_info,
-	std::shared_ptr<MediaPacket> packet)
+	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
+	const std::shared_ptr<info::StreamInfo> &stream_info,
+	const std::shared_ptr<MediaPacket> &packet)
 {
 	if (app_conn == nullptr || stream_info == nullptr)
 	{

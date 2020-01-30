@@ -72,7 +72,7 @@ bool DashApplication::Stop()
 // CreateStream
 // - Application Override
 //====================================================================================================
-std::shared_ptr<Stream> DashApplication::CreateStream(const std::shared_ptr<StreamInfo> &info, uint32_t thread_count)
+std::shared_ptr<Stream> DashApplication::CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t thread_count)
 {
 	logtd("Dash CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 
@@ -87,7 +87,7 @@ std::shared_ptr<Stream> DashApplication::CreateStream(const std::shared_ptr<Stre
 //====================================================================================================
 // DeleteStream
 //====================================================================================================
-bool DashApplication::DeleteStream(const std::shared_ptr<StreamInfo> &info)
+bool DashApplication::DeleteStream(const std::shared_ptr<info::StreamInfo> &info)
 {
 	return true;
 }

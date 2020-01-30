@@ -21,14 +21,14 @@ class Application : public info::Application, public MediaRouteApplicationObserv
 {
 public:
 	// MediaRouteApplicationObserver Implementation
-	bool OnCreateStream(const std::shared_ptr<StreamInfo> &info) override;
-	bool OnDeleteStream(const std::shared_ptr<StreamInfo> &info) override;
+	bool OnCreateStream(const std::shared_ptr<info::StreamInfo> &info) override;
+	bool OnDeleteStream(const std::shared_ptr<info::StreamInfo> &info) override;
 
 	// Queue에 데이터를 넣는다.
-	bool OnSendVideoFrame(const std::shared_ptr<StreamInfo> &stream_info,
+	bool OnSendVideoFrame(const std::shared_ptr<info::StreamInfo> &stream_info,
 	                      const std::shared_ptr<MediaPacket> &media_packet) override;
 
-	bool OnSendAudioFrame(const std::shared_ptr<StreamInfo> &stream_info,
+	bool OnSendAudioFrame(const std::shared_ptr<info::StreamInfo> &stream_info,
 	                      const std::shared_ptr<MediaPacket> &media_packet) override;
 
 	// 수신된 Network Packet을 Application에 넣고 처리를 기다린다.
@@ -47,10 +47,10 @@ protected:
 
 	// Stream에 VideoFrame을 전송한다.
 	// virtual로 Child에서 원하면 다른 작업을 할 수 있게 한다.
-	virtual void SendVideoFrame(const std::shared_ptr<StreamInfo> &stream_info,
+	virtual void SendVideoFrame(const std::shared_ptr<info::StreamInfo> &stream_info,
 	                            const std::shared_ptr<MediaPacket> &media_packet);
 
-	virtual void SendAudioFrame(const std::shared_ptr<StreamInfo> &info,
+	virtual void SendAudioFrame(const std::shared_ptr<info::StreamInfo> &info,
 	                            const std::shared_ptr<MediaPacket> &media_packet);
 
 	virtual void OnPacketReceived(const std::shared_ptr<SessionInfo> &session_info, const std::shared_ptr<const ov::Data> &data);
@@ -62,8 +62,8 @@ private:
 	// For child, 실제 구현부는 자식에서 처리한다.
 
 	// Stream을 자식을 통해 생성해서 받는다.
-	virtual std::shared_ptr<Stream> CreateStream(const std::shared_ptr<StreamInfo> &info, uint32_t thread_count) = 0;
-	virtual bool DeleteStream(const std::shared_ptr<StreamInfo> &info) = 0;
+	virtual std::shared_ptr<Stream> CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t thread_count) = 0;
+	virtual bool DeleteStream(const std::shared_ptr<info::StreamInfo> &info) = 0;
 
 	// Audio Stream 전달 Interface를 구현해야 함
 	//virtual void						OnAudioFrame(int32_t stream_id) = 0;
@@ -73,14 +73,14 @@ private:
 	class VideoStreamData
 	{
 	public:
-		VideoStreamData(const std::shared_ptr<StreamInfo> &stream_info,
+		VideoStreamData(const std::shared_ptr<info::StreamInfo> &stream_info,
 		                const std::shared_ptr<MediaPacket> &media_packet)
 		{
 			_stream_info = stream_info;
 			_media_packet = media_packet;
 		}
 
-		std::shared_ptr<StreamInfo> _stream_info;
+		std::shared_ptr<info::StreamInfo> _stream_info;
 		std::shared_ptr<MediaPacket> _media_packet;
 	};
 	std::shared_ptr<Application::VideoStreamData> PopVideoStreamData();
@@ -88,14 +88,14 @@ private:
 	class AudioStreamData
 	{
 	public:
-		AudioStreamData(const std::shared_ptr<StreamInfo> &stream_info,
+		AudioStreamData(const std::shared_ptr<info::StreamInfo> &stream_info,
 						const std::shared_ptr<MediaPacket> &media_packet)
 		{
 			_stream_info = stream_info;
 			_media_packet = media_packet;
 		}
 
-		std::shared_ptr<StreamInfo> _stream_info;
+		std::shared_ptr<info::StreamInfo> _stream_info;
 		std::shared_ptr<MediaPacket> _media_packet;
 	};
 	std::shared_ptr<Application::AudioStreamData> PopAudioStreamData();

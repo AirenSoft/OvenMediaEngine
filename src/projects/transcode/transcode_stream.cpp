@@ -18,7 +18,7 @@
 
 
 
-TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<StreamInfo> &stream_info, TranscodeApplication *parent)
+TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::StreamInfo> &stream_info, TranscodeApplication *parent)
 	: _application_info(application_info)
 {
 	// Statistical parameters
@@ -218,7 +218,7 @@ int32_t TranscodeStream::CreateOutputStream()
 			continue;
 		}
 
-		auto stream_info_output = std::make_shared<StreamInfo>(StreamSourceType::LIVE_TRANSCODER);
+		auto stream_info_output = std::make_shared<info::StreamInfo>(_application_info, StreamSourceType::LIVE_TRANSCODER);
 
 		// Create a new stream name.
 		auto stream_name = cfg_stream.GetName();

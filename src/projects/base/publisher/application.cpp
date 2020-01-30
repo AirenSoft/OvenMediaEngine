@@ -38,7 +38,7 @@ bool Application::Stop()
 
 // Call by MediaRouteApplicationObserver
 // Stream이 생성되었을 때 호출된다.
-bool Application::OnCreateStream(const std::shared_ptr<StreamInfo> &info)
+bool Application::OnCreateStream(const std::shared_ptr<info::StreamInfo> &info)
 {
 	// Stream을 자식을 통해 생성해서 연결한다.
 	auto worker_count = GetConfig().GetThreadCount();
@@ -55,7 +55,7 @@ bool Application::OnCreateStream(const std::shared_ptr<StreamInfo> &info)
 	return true;
 }
 
-bool Application::OnDeleteStream(const std::shared_ptr<StreamInfo> &info)
+bool Application::OnDeleteStream(const std::shared_ptr<info::StreamInfo> &info)
 {
 	if(_streams.count(info->GetId()) <= 0)
 	{
@@ -83,7 +83,7 @@ bool Application::OnDeleteStream(const std::shared_ptr<StreamInfo> &info)
 	return true;
 }
 
-bool Application::OnSendVideoFrame(const std::shared_ptr<StreamInfo> &stream_info,
+bool Application::OnSendVideoFrame(const std::shared_ptr<info::StreamInfo> &stream_info,
                                    const std::shared_ptr<MediaPacket> &media_packet)
 {
 	auto data = std::make_shared<Application::VideoStreamData>(stream_info,
@@ -98,7 +98,7 @@ bool Application::OnSendVideoFrame(const std::shared_ptr<StreamInfo> &stream_inf
 	return true;
 }
 
-bool Application::OnSendAudioFrame(const std::shared_ptr<StreamInfo> &stream_info,
+bool Application::OnSendAudioFrame(const std::shared_ptr<info::StreamInfo> &stream_info,
 								   const std::shared_ptr<MediaPacket> &media_packet)
 {
 	auto data = std::make_shared<Application::AudioStreamData>(stream_info,
@@ -247,7 +247,7 @@ void Application::WorkerThread()
 	}
 }
 
-void Application::SendVideoFrame(const std::shared_ptr<StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &media_packet)
+void Application::SendVideoFrame(const std::shared_ptr<info::StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &media_packet)
 {
 	// Stream에 Packet을 전송한다.
 	auto stream = GetStream(stream_info->GetId());
@@ -260,7 +260,7 @@ void Application::SendVideoFrame(const std::shared_ptr<StreamInfo> &stream_info,
 	stream->SendVideoFrame(media_packet);
 }
 
-void Application::SendAudioFrame(const std::shared_ptr<StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &media_packet)
+void Application::SendAudioFrame(const std::shared_ptr<info::StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &media_packet)
 {
 	// Stream에 Packet을 전송한다.
 	auto stream = GetStream(stream_info->GetId());

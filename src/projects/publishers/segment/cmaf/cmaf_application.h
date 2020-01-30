@@ -31,8 +31,8 @@ private:
 	bool Stop() override;
 
 	// Application Implementation
-	std::shared_ptr<Stream> CreateStream(const std::shared_ptr<StreamInfo> &info, uint32_t thread_count) override;
-	bool DeleteStream(const std::shared_ptr<StreamInfo> &info) override;
+	std::shared_ptr<Stream> CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t thread_count) override;
+	bool DeleteStream(const std::shared_ptr<info::StreamInfo> &info) override;
 
 private :
     int _segment_count;

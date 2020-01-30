@@ -27,11 +27,11 @@
 class MediaRouteStream
 {
 public:
-	MediaRouteStream(std::shared_ptr<StreamInfo> &stream_info);
+	MediaRouteStream(std::shared_ptr<info::StreamInfo> &stream_info);
 	~MediaRouteStream();
 
 	// Query original stream information
-	std::shared_ptr<StreamInfo> GetStreamInfo();
+	std::shared_ptr<info::StreamInfo> GetStreamInfo();
 	void SetConnectorType(MediaRouteApplicationConnector::ConnectorType type);
 	MediaRouteApplicationConnector::ConnectorType GetConnectorType();
 
@@ -42,7 +42,7 @@ public:
 
 	time_t getLastReceivedTime();
 private:
-	std::shared_ptr<StreamInfo> _stream_info;
+	std::shared_ptr<info::StreamInfo> _stream_info;
 	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
 
 

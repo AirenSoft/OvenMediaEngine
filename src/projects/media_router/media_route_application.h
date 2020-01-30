@@ -69,20 +69,19 @@ public:
 
 	// 스트림 생성
 	bool OnCreateStream(
-		std::shared_ptr<MediaRouteApplicationConnector> app_conn,
-		std::shared_ptr<StreamInfo> stream) override;
+		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
+		const std::shared_ptr<info::StreamInfo> &stream) override;
 
 	// 스트림 삭제
 	bool OnDeleteStream(
-		std::shared_ptr<MediaRouteApplicationConnector> app_conn,
-		std::shared_ptr<StreamInfo> stream) override;
+		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
+		const std::shared_ptr<info::StreamInfo> &stream) override;
 
 	// 미디어 버퍼 수신
 	bool OnReceiveBuffer(
-		std::shared_ptr<MediaRouteApplicationConnector> app_conn,
-		std::shared_ptr<StreamInfo> stream,
-		std::shared_ptr<MediaPacket> packet) override;
-
+		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
+		const std::shared_ptr<info::StreamInfo> &stream,
+		const std::shared_ptr<MediaPacket> &packet) override;
 
 public:
 

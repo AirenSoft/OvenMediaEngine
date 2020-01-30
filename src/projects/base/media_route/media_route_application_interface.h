@@ -9,7 +9,7 @@
 
 class MediaRouteApplicationObserver;
 class MediaRouteApplicationConnector;
-class StreamInfo;
+namespace info{class StreamInfo;}
 class MediaPacket;
 class MediaRouteStream;
 
@@ -18,9 +18,9 @@ class RelayClient;
 class MediaRouteApplicationInterface : public ov::EnableSharedFromThis<MediaRouteApplicationInterface>
 {
 public:
-	virtual bool OnCreateStream(std::shared_ptr<MediaRouteApplicationConnector> application, std::shared_ptr<StreamInfo> stream) = 0;
-	virtual bool OnDeleteStream(std::shared_ptr<MediaRouteApplicationConnector> application, std::shared_ptr<StreamInfo> stream) = 0;
-	virtual bool OnReceiveBuffer(std::shared_ptr<MediaRouteApplicationConnector> application, std::shared_ptr<StreamInfo> stream, std::shared_ptr<MediaPacket> packet) = 0;
+	virtual bool OnCreateStream(const std::shared_ptr<MediaRouteApplicationConnector> &application, const std::shared_ptr<info::StreamInfo> &stream) = 0;
+	virtual bool OnDeleteStream(const std::shared_ptr<MediaRouteApplicationConnector> &application, const std::shared_ptr<info::StreamInfo> &stream) = 0;
+	virtual bool OnReceiveBuffer(const std::shared_ptr<MediaRouteApplicationConnector> &application, const std::shared_ptr<info::StreamInfo> &stream, const std::shared_ptr<MediaPacket> &packet) = 0;
 
 	virtual const std::map<uint32_t, std::shared_ptr<MediaRouteStream>> GetStreams() const = 0;
 };

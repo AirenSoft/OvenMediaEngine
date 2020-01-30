@@ -42,20 +42,20 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 트랜스코드 어플리케이션 관련 모듈
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	bool OnCreateStream(const std::shared_ptr<StreamInfo> &stream_info) override;
-	bool OnDeleteStream(const std::shared_ptr<StreamInfo> &stream_info) override;
+	bool OnCreateStream(const std::shared_ptr<info::StreamInfo> &stream_info) override;
+	bool OnDeleteStream(const std::shared_ptr<info::StreamInfo> &stream_info) override;
 
-	bool OnSendVideoFrame(const std::shared_ptr<StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &media_packet) override
+	bool OnSendVideoFrame(const std::shared_ptr<info::StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &media_packet) override
 	{
 		return true;
 	}
 
-	bool OnSendAudioFrame(const std::shared_ptr<StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &media_packet) override
+	bool OnSendAudioFrame(const std::shared_ptr<info::StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &media_packet) override
 	{
 		return true;
 	}
 
-	bool OnSendFrame(const std::shared_ptr<StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &packet) override;
+	bool OnSendFrame(const std::shared_ptr<info::StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &packet) override;
 
 private:
 	std::map<int32_t, std::shared_ptr<TranscodeStream>> _streams;

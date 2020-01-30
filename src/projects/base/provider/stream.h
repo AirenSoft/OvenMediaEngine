@@ -15,7 +15,7 @@ namespace pvd
 {
 	class Application;
 
-	class Stream : public StreamInfo, public ov::EnableSharedFromThis<Stream>
+	class Stream : public info::StreamInfo, public ov::EnableSharedFromThis<Stream>
 	{
 	public:
 		enum class State

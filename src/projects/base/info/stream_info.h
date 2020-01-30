@@ -1,42 +1,55 @@
 #pragma once
 
-#include "stream.h"
 #include "base/common_types.h"
 #include "base/info/media_track.h"
+#include "stream.h"
 
-class StreamInfo
+namespace info
 {
-public:
-	StreamInfo(StreamSourceType source);
-	StreamInfo(info::stream_id_t stream_id, StreamSourceType source);
-	StreamInfo(const StreamInfo &stream_info);
+	class Application;
 
-	virtual ~StreamInfo();
+	//TODO: It should be changed class name to Stream
+	class StreamInfo
+	{
+	public:
+		StreamInfo(const info::Application &app_info, StreamSourceType source);
+		StreamInfo(const info::Application &app_info, info::stream_id_t stream_id, StreamSourceType source);
+		StreamInfo(const StreamInfo &stream_info);
 
-	void SetId(info::stream_id_t id);
-	info::stream_id_t GetId() const;
+		virtual ~StreamInfo();
 
-	ov::String GetName();
-	void SetName(ov::String name);
+		void SetId(info::stream_id_t id);
+		info::stream_id_t GetId() const;
 
-	std::chrono::system_clock::time_point GetCreatedTime() const;
-	StreamSourceType  GetSourceType() const;
+		ov::String GetName();
+		void SetName(ov::String name);
 
-	bool AddTrack(std::shared_ptr<MediaTrack> track);
-	const std::shared_ptr<MediaTrack> GetTrack(int32_t id) const;
-	const std::map<int32_t, std::shared_ptr<MediaTrack>> &GetTracks() const;
+		std::chrono::system_clock::time_point GetCreatedTime() const;
+		StreamSourceType GetSourceType() const;
 
-	void ShowInfo();
+		bool AddTrack(std::shared_ptr<MediaTrack> track);
+		const std::shared_ptr<MediaTrack> GetTrack(int32_t id) const;
+		const std::map<int32_t, std::shared_ptr<MediaTrack>> &GetTracks() const;
 
-protected:
-	info::stream_id_t _id = 0;
-	ov::String _name;
+		void ShowInfo();
 
-	// MediaTrack ID 값을 Key로 활용함
-	std::map<int32_t, std::shared_ptr<MediaTrack>> _tracks;
+		const Application &GetApplicationInfo() const
+		{
+			return *_app_info;
+		}
 
-private:
-	std::chrono::system_clock::time_point 			_created_time;
-	// Where does the stream come from?
-	StreamSourceType 								_source_type;
-};
+	protected:
+		info::stream_id_t _id = 0;
+		ov::String _name;
+
+		// MediaTrack ID 값을 Key로 활용함
+		std::map<int32_t, std::shared_ptr<MediaTrack>> _tracks;
+
+	private:
+		std::chrono::system_clock::time_point _created_time;
+		// Where does the stream come from?
+		StreamSourceType _source_type;
+
+		std::shared_ptr<Application>	_app_info;
+	};
+}  // namespace info

@@ -41,7 +41,7 @@ namespace info
 			return _name;
 		}
 
-		const info::Host &GetHostInfo() const
+		const Host &GetHostInfo() const
 		{
 			return *_host_info;
 		}
@@ -125,6 +125,6 @@ namespace info
 		cfg::Application _app_config;
 
 	private:
-		std::shared_ptr<info::Host>		_host_info;
+		std::shared_ptr<Host>		_host_info;
 	};
 }  // namespace info

@@ -36,7 +36,7 @@ class TranscodeApplication;
 class TranscodeStream
 {
 public:
-	TranscodeStream(const info::Application &application_info, const std::shared_ptr<StreamInfo> &orig_stream_info, TranscodeApplication *parent);
+	TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::StreamInfo> &orig_stream_info, TranscodeApplication *parent);
 	~TranscodeStream();
 
 	void Stop();
@@ -56,11 +56,11 @@ private:
 	const info::Application _application_info;
 
 	// Input Stream Info
-	std::shared_ptr<StreamInfo> _stream_info_input;
+	std::shared_ptr<info::StreamInfo> _stream_info_input;
 
 	// Output Stream Info
 	// [OUTPUT_STREAM_NAME, OUTPUT_STREAM_INFO]
-	std::map<ov::String, std::shared_ptr<StreamInfo>> _stream_info_outputs;
+	std::map<ov::String, std::shared_ptr<info::StreamInfo>> _stream_info_outputs;
 
 	// Map with track ID. Maps from one input track to multiple output tracks.
 	// [INPUT_TRACK_ID, [OUTPUT_TRACK_ID,MediaTrack] ARRAY]

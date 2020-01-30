@@ -55,7 +55,7 @@ private:
 	std::shared_ptr<Stream> _parent;
 };
 
-class Stream : public StreamInfo, public ov::EnableSharedFromThis<Stream>
+class Stream : public info::StreamInfo, public ov::EnableSharedFromThis<Stream>
 {
 public:
 	// Session을 추가한다.

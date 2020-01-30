@@ -15,7 +15,7 @@ public:
     void        OnHostDelete(const info::Host &host_info);
     void        OnApplicationCreated(const info::Application &app_info);
     void        OnApplicationDeleted(const info::Application &app_info);
-    void        OnStreamCreated(const StreamInfo &stream_info);
-    void        OnStreamDeleted(const StreamInfo &stream_info);
+    void        OnStreamCreated(const info::StreamInfo &stream_info);
+    void        OnStreamDeleted(const info::StreamInfo &stream_info);
 };
 
