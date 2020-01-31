@@ -147,7 +147,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 #if 1
 	if(_media_packets.size() > 10)
 	{
-		logte("Packet accumulation is suspected.")
+		logte("Packet accumulation is suspected.");
 	}
 #endif
 
