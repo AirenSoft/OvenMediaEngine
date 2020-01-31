@@ -33,6 +33,14 @@ typedef int32_t MediaTrackId;
 
 class TranscodeApplication;
 
+class TranscodeStageContext
+{
+public:
+	MediaTrackId _transcoder_id;
+	std::shared_ptr<MediaTrack> _input_track;
+	std::vector< std::pair<std::shared_ptr<info::StreamInfo>, std::shared_ptr<MediaTrack>> > _output_tracks;
+};
+
 class TranscodeStream
 {
 public:
@@ -62,21 +70,43 @@ private:
 	// [OUTPUT_STREAM_NAME, OUTPUT_STREAM_INFO]
 	std::map<ov::String, std::shared_ptr<info::StreamInfo>> _stream_info_outputs;
 
-	// Map with track ID. Maps from one input track to multiple output tracks.
-	// [INPUT_TRACK_ID, [OUTPUT_TRACK_ID,MediaTrack] ARRAY]
-	std::map <uint8_t, std::vector<std::pair<uint8_t,std::shared_ptr<MediaTrack>>> > _tracks_map;
+
+	// Store information for track mapping by stage
+	void StoreStageContext(ov::String encode_profile_name, common::MediaType media_type,  std::shared_ptr<MediaTrack> input_track, std::shared_ptr<info::StreamInfo> output_stream, std::shared_ptr<MediaTrack> output_track);
+	std::map< std::pair<ov::String, common::MediaType>, std::shared_ptr<TranscodeStageContext> > _map_stage_context;
+	MediaTrackId _last_transcode_id;
+
+	// Input Track -> Decoder or Router(bypasS)
+	// [INPUT_TRACK, DECODER_ID]
+	std::map <MediaTrackId, MediaTrackId> _stage_input_to_decoder;
+	// [INPUT_TRACK, Output Stream + Track Id]
+	std::map <MediaTrackId, std::vector<std::pair<std::shared_ptr<info::StreamInfo>, MediaTrackId>> > _stage_input_to_output;
+
+	// [DECODER_ID, FILTER_ID(trasncode_id)]
+	std::map <MediaTrackId, std::vector<MediaTrackId> > _stage_decoder_to_filter;
+
+	// [FILTER_ID(trasncode_id), ENCODER_ID(trasncode_id)]
+	std::map <MediaTrackId, MediaTrackId> _stage_filter_to_encoder;
+
+	// [ENCODER_ID(trasncode_id), OUTPUT_TRACKS]
+	std::map <MediaTrackId, std::vector<std::pair<std::shared_ptr<info::StreamInfo>, MediaTrackId>>> _stage_encoder_to_output;
+
+
 
 	// Decoder
-	// INPUT_TRACK_ID, DECODER
+	// DECODR_ID, DECODER
 	std::map<MediaTrackId, std::shared_ptr<TranscodeDecoder>> _decoders;
 
 	// Filter
-	// OUTPUT_TRACK_ID, FILTER
+	// FILTER_ID, FILTER
 	std::map<MediaTrackId, std::shared_ptr<TranscodeFilter>> _filters;
 
 	// Encoder
-	// OUTPUT_TRACK_ID, ENCODER
+	// ENCODER_ID, ENCODER
 	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
+
+
+
 
 	// Buffer for encoded(input) media packets
 	MediaQueue<std::shared_ptr<MediaPacket>> _queue_input_packets;
@@ -99,11 +129,13 @@ private:
 
 	int32_t CreateOutputStream();
 
+	int32_t CreateStageMapping();
+
 	int32_t CreateDecoders();
-	bool CreateDecoder(int32_t track_id, std::shared_ptr<TranscodeContext> input_context);
+	bool CreateDecoder(int32_t input_track_id, int32_t decoder_track_id, std::shared_ptr<TranscodeContext> input_context);
 
 	int32_t CreateEncoders();
-	bool CreateEncoder(std::shared_ptr<MediaTrack> media_track, std::shared_ptr<TranscodeContext> output_context);
+	bool CreateEncoder(int32_t encoder_track_id, std::shared_ptr<MediaTrack> media_track, std::shared_ptr<TranscodeContext> output_context);
 
 	// Called when formatting of decoded frames is analyzed or changed.
 	void ChangeOutputFormat(MediaFrame *buffer);
@@ -129,7 +161,7 @@ private:
 	void DeleteStreams();
 
 	// Send frame with output stream's information
-	void SendFrame(std::shared_ptr<MediaPacket> packet);
+	void SendFrame(std::shared_ptr<info::StreamInfo> &stream_info, std::shared_ptr<MediaPacket> packet);
 
 	const cfg::Encode* GetEncodeByProfileName(const info::Application &application_info, ov::String encode_name);
 
