@@ -114,7 +114,7 @@ bool Application::OnSendAudioFrame(const std::shared_ptr<info::StreamInfo> &stre
 	return true;
 }
 
-bool Application::PushIncomingPacket(const std::shared_ptr<SessionInfo> &session_info,
+bool Application::PushIncomingPacket(const std::shared_ptr<info::SessionInfo> &session_info,
                                      const std::shared_ptr<const ov::Data> &data)
 {
 	auto packet = std::make_shared<Application::IncomingPacket>(session_info, data);
@@ -273,7 +273,7 @@ void Application::SendAudioFrame(const std::shared_ptr<info::StreamInfo> &stream
 	stream->SendAudioFrame(media_packet);
 }
 
-void Application::OnPacketReceived(const std::shared_ptr<SessionInfo> &session_info, const std::shared_ptr<const ov::Data> &data)
+void Application::OnPacketReceived(const std::shared_ptr<info::SessionInfo> &session_info, const std::shared_ptr<const ov::Data> &data)
 {
 	// Stream으로 갈 필요없이 바로 Session으로 간다.
 	// Stream은 Broad하게 전송할때만 필요하다.

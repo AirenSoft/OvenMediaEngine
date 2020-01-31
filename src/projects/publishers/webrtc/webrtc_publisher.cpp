@@ -240,7 +240,7 @@ bool WebRtcPublisher::OnIceCandidate(const ov::String &application_name,
  * IcePort Implementation
  */
 
-void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<SessionInfo> &session_info,
+void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::SessionInfo> &session_info,
                                      IcePortConnectionState state)
 {
 	logtd("IcePort OnStateChanged : %d", state);
@@ -273,7 +273,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<Sessio
 	}
 }
 
-void WebRtcPublisher::OnDataReceived(IcePort &port, const std::shared_ptr<SessionInfo> &session_info, std::shared_ptr<const ov::Data> data)
+void WebRtcPublisher::OnDataReceived(IcePort &port, const std::shared_ptr<info::SessionInfo> &session_info, std::shared_ptr<const ov::Data> data)
 {
 	// ice_port를 통해 STUN을 제외한 모든 Packet이 들어온다.
 	auto session = std::static_pointer_cast<Session>(session_info);

@@ -22,7 +22,7 @@ public:
 	bool Stop() override;
 
 	bool SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet) override;
-	void OnPacketReceived(const std::shared_ptr<SessionInfo> &session_info,
+	void OnPacketReceived(const std::shared_ptr<info::SessionInfo> &session_info,
 						const std::shared_ptr<const ov::Data> &data) override;
 
 

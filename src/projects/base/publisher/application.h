@@ -32,7 +32,7 @@ public:
 	                      const std::shared_ptr<MediaPacket> &media_packet) override;
 
 	// 수신된 Network Packet을 Application에 넣고 처리를 기다린다.
-	bool PushIncomingPacket(const std::shared_ptr<SessionInfo> &session_info,
+	bool PushIncomingPacket(const std::shared_ptr<info::SessionInfo> &session_info,
 	                        const std::shared_ptr<const ov::Data> &data);
 
 	std::shared_ptr<Stream> GetStream(uint32_t stream_id);
@@ -53,7 +53,7 @@ protected:
 	virtual void SendAudioFrame(const std::shared_ptr<info::StreamInfo> &info,
 	                            const std::shared_ptr<MediaPacket> &media_packet);
 
-	virtual void OnPacketReceived(const std::shared_ptr<SessionInfo> &session_info, const std::shared_ptr<const ov::Data> &data);
+	virtual void OnPacketReceived(const std::shared_ptr<info::SessionInfo> &session_info, const std::shared_ptr<const ov::Data> &data);
 
 	std::map<uint32_t, std::shared_ptr<Stream>> _streams;
 
@@ -103,14 +103,14 @@ private:
 	class IncomingPacket
 	{
 	public:
-		IncomingPacket(const std::shared_ptr<SessionInfo> &session_info,
+		IncomingPacket(const std::shared_ptr<info::SessionInfo> &session_info,
 						const std::shared_ptr<const ov::Data> &data)
 		{
 			_session_info = session_info;
 			_data = data;
 		}
 
-		std::shared_ptr<SessionInfo> _session_info;
+		std::shared_ptr<info::SessionInfo> _session_info;
 		std::shared_ptr<const ov::Data> _data;
 	};
 	std::shared_ptr<Application::IncomingPacket> PopIncomingPacket();

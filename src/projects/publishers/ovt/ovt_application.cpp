@@ -1,6 +1,7 @@
 
 #include "ovt_private.h"
 #include "ovt_application.h"
+#include "ovt_stream.h"
 #include "ovt_session.h"
 
 std::shared_ptr<OvtApplication> OvtApplication::Create(const info::Application &application_info)

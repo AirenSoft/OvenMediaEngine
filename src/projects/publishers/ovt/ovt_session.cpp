@@ -1,14 +1,15 @@
-#include <base/ovlibrary/byte_io.h>
+#include "base/info/stream_info.h"
+#include "base/ovlibrary/byte_io.h"
+#include "base/publisher/stream.h"
 #include "ovt_session.h"
 #include "ovt_private.h"
 
 std::shared_ptr<OvtSession> OvtSession::Create(const std::shared_ptr<Application> &application,
-										  const std::shared_ptr<Stream> &stream,
-										  uint32_t session_id,
-										  const std::shared_ptr<ov::Socket> &connector)
+										  	   const std::shared_ptr<Stream> &stream,
+										  	   uint32_t session_id,
+										  	   const std::shared_ptr<ov::Socket> &connector)
 {
-
-	auto session_info = SessionInfo(session_id);
+	auto session_info = SessionInfo(*std::static_pointer_cast<info::StreamInfo>(stream), session_id);
 	auto session = std::make_shared<OvtSession>(session_info, application, stream, connector);
 	if(!session->Start())
 	{
@@ -74,7 +75,7 @@ const std::shared_ptr<ov::Socket> OvtSession::GetConnector()
 	return _connector;
 }
 
-void OvtSession::OnPacketReceived(const std::shared_ptr<SessionInfo> &session_info,
+void OvtSession::OnPacketReceived(const std::shared_ptr<info::SessionInfo> &session_info,
 									const std::shared_ptr<const ov::Data> &data)
 {
 	// NOTHING YET

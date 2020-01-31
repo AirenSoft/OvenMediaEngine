@@ -1,9 +1,10 @@
+#include "base/info/stream_info.h"
 #include "publisher_private.h"
 #include "session.h"
 #include "application.h"
 
 Session::Session(const std::shared_ptr<Application> &application, const std::shared_ptr<Stream> &stream)
-	: SessionInfo()
+	: info::SessionInfo(*std::static_pointer_cast<info::StreamInfo>(stream))
 {
 	_application = application;
 	_stream = stream;
@@ -11,7 +12,7 @@ Session::Session(const std::shared_ptr<Application> &application, const std::sha
 }
 
 Session::Session(const SessionInfo &info, const std::shared_ptr<Application> &application, const std::shared_ptr<Stream> &stream)
-	: SessionInfo(info)
+	: info::SessionInfo(*std::static_pointer_cast<info::StreamInfo>(stream), info)
 {
 	_application = application;
 	_stream = stream;

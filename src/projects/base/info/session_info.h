@@ -1,24 +1,34 @@
 #pragma once
 
 #include <string>
-#include "base/ovlibrary/enable_shared_from_this.h"
 #include "base/common_types.h"
+#include "base/ovlibrary/enable_shared_from_this.h"
 
-// 세션 ID 타입
 typedef uint32_t session_id_t;
 
-class SessionInfo : public ov::EnableSharedFromThis<SessionInfo>
+namespace info
 {
-public:
-	SessionInfo();
-	explicit SessionInfo(session_id_t session_id);
-	SessionInfo(const SessionInfo &T);
-	SessionInfo(SessionInfo &&T) = default;
-	~SessionInfo() override = default;
+	class StreamInfo;
 
-	session_id_t GetId() const;
+	class SessionInfo : public ov::EnableSharedFromThis<info::SessionInfo>
+	{
+	public:
+		SessionInfo(const info::StreamInfo &stream_info);
+		explicit SessionInfo(const info::StreamInfo &stream_info, session_id_t session_id);
+		SessionInfo(const info::StreamInfo &stream_info, const SessionInfo &T);
+		SessionInfo(SessionInfo &&T) = default;
+		~SessionInfo() override = default;
 
-private:
-	// 세션 ID
-	session_id_t _id;
-};
+		session_id_t GetId() const;
+
+		const StreamInfo &GetStreamInfo() const
+		{
+			return *_stream_info;
+		}
+
+	private:
+		// 세션 ID
+		session_id_t _id;
+		std::shared_ptr<info::StreamInfo>		_stream_info;
+	};
+}  // namespace info
