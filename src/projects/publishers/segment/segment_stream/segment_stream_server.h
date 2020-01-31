@@ -39,7 +39,7 @@ public:
 
 	void SetCrossDomain(const std::vector<cfg::Url> &url_list);
 
-	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections);
+	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections);
 
 	virtual PublisherType GetPublisherType() const noexcept = 0;
 	virtual const char *GetPublisherName() const noexcept = 0;

@@ -35,7 +35,7 @@ bool OvtApplication::Stop()
 	return Application::Stop();
 }
 
-std::shared_ptr<Stream> OvtApplication::CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t worker_count)
+std::shared_ptr<pub::Stream> OvtApplication::CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t worker_count)
 {
 	logtd("OvtApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 	if(worker_count == 0)
@@ -44,7 +44,7 @@ std::shared_ptr<Stream> OvtApplication::CreateStream(const std::shared_ptr<info:
 		worker_count = MIN_STREAM_THREAD_COUNT;
 	}
 
-	return OvtStream::Create(GetSharedPtrAs<Application>(), *info, worker_count);
+	return OvtStream::Create(GetSharedPtrAs<pub::Application>(), *info, worker_count);
 }
 
 bool OvtApplication::DeleteStream(const std::shared_ptr<info::StreamInfo> &info)

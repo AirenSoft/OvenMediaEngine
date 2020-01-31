@@ -3,8 +3,10 @@
 #include "ovt_private.h"
 #include "ovt_stream.h"
 #include "ovt_session.h"
+#include "base/publisher/application.h"
+#include "base/publisher/stream.h"
 
-std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<Application> application,
+std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pub::Application> application,
 											 const StreamInfo &info,
 											 uint32_t worker_count)
 {
@@ -16,7 +18,7 @@ std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<Application> 
 	return stream;
 }
 
-OvtStream::OvtStream(const std::shared_ptr<Application> application,
+OvtStream::OvtStream(const std::shared_ptr<pub::Application> application,
 					 const StreamInfo &info)
 		: Stream(application, info)
 {
@@ -24,7 +26,7 @@ OvtStream::OvtStream(const std::shared_ptr<Application> application,
 
 OvtStream::~OvtStream()
 {
-	logtd("OvtStream(%s/%s) has been terminated finally", Stream::GetApplication()->GetName().CStr() , GetName().CStr());
+	logtd("OvtStream(%s/%s) has been terminated finally", GetApplication()->GetName().CStr() , GetName().CStr());
 	Stop();
 }
 

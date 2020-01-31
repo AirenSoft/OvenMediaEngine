@@ -4,13 +4,13 @@
 #include <base/publisher/stream.h>
 #include <modules/ovt_packetizer/ovt_packetizer.h>
 
-class OvtStream : public Stream, public OvtPacketizerInterface
+class OvtStream : public pub::Stream, public OvtPacketizerInterface
 {
 public:
-	static std::shared_ptr<OvtStream> Create(const std::shared_ptr<Application> application,
+	static std::shared_ptr<OvtStream> Create(const std::shared_ptr<pub::Application> application,
 											 const StreamInfo &info,
 											 uint32_t worker_count);
-	explicit OvtStream(const std::shared_ptr<Application> application,
+	explicit OvtStream(const std::shared_ptr<pub::Application> application,
 					   const StreamInfo &info);
 	~OvtStream() final;
 

@@ -14,7 +14,7 @@
 
 using namespace common;
 
-SegmentStream::SegmentStream(const std::shared_ptr<Application> application, const StreamInfo &info)
+SegmentStream::SegmentStream(const std::shared_ptr<pub::Application> application, const StreamInfo &info)
 	: Stream(application, info)
 {
 }

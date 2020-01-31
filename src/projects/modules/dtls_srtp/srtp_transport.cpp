@@ -11,8 +11,8 @@
 
 #define OV_LOG_TAG "SRTP"
 
-SrtpTransport::SrtpTransport(uint32_t node_id, std::shared_ptr<Session> session)
-	: SessionNode(node_id, SessionNodeType::Srtp, session)
+SrtpTransport::SrtpTransport(uint32_t node_id, std::shared_ptr<pub::Session> session)
+	: SessionNode(node_id, pub::SessionNodeType::Srtp, session)
 {
 
 }
@@ -22,7 +22,7 @@ SrtpTransport::~SrtpTransport()
 }
 
 // 데이터를 upper(RTP_RTCP)에서 받는다. lower node(DTLS)로 보낸다.
-bool SrtpTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
+bool SrtpTransport::SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
@@ -49,7 +49,7 @@ bool SrtpTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov
 }
 
 // srtcp transfer
-bool SrtpTransport::SendRtcpData(SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
+bool SrtpTransport::SendRtcpData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
     if(GetState() != SessionNode::NodeState::Started)
     {
@@ -76,7 +76,7 @@ bool SrtpTransport::SendRtcpData(SessionNodeType from_node, const std::shared_pt
 
 
 // 데이터를 lower(DTLS)에서 받는다. upper node(RTP_RTCP)로 보낸다.
-bool SrtpTransport::OnDataReceived(SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
+bool SrtpTransport::OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)

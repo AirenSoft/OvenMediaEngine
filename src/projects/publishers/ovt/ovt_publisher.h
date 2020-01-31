@@ -11,7 +11,7 @@
 
 #include <orchestrator/orchestrator.h>
 
-class OvtPublisher : public Publisher, public PhysicalPortObserver
+class OvtPublisher : public pub::Publisher, public PhysicalPortObserver
 {
 public:
 	static std::shared_ptr<OvtPublisher> Create(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
@@ -35,8 +35,8 @@ private:
 		return "OVT";
 	}
 
-	std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) override;
-	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) override;
+	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
+	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
 
 	//--------------------------------------------------------------------
 

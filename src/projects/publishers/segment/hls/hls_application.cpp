@@ -70,13 +70,13 @@ bool HlsApplication::Stop()
 // CreateStream
 // - Application Override
 //====================================================================================================
-std::shared_ptr<Stream> HlsApplication::CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t thread_count)
+std::shared_ptr<pub::Stream> HlsApplication::CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t thread_count)
 {
 	logtd("Hls CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 
 	return HlsStream::Create(_segment_count,
                              _segment_duration,
-                             GetSharedPtrAs<Application>(),
+                             GetSharedPtrAs<pub::Application>(),
                              *info.get(),
 							 thread_count);
 }

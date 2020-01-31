@@ -6,8 +6,8 @@
 
 #include <utility>
 
-std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<Application> &application,
-                                               const std::shared_ptr<Stream> &stream,
+std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Application> &application,
+                                               const std::shared_ptr<pub::Stream> &stream,
                                                const std::shared_ptr<SessionDescription> &offer_sdp,
                                                const std::shared_ptr<SessionDescription> &peer_sdp,
                                                const std::shared_ptr<IcePort> &ice_port)
@@ -23,8 +23,8 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<Application
 }
 
 RtcSession::RtcSession(const SessionInfo &session_info,
-					   const std::shared_ptr<Application> &application,
-					   const std::shared_ptr<Stream> &stream,
+					   const std::shared_ptr<pub::Application> &application,
+					   const std::shared_ptr<pub::Stream> &stream,
 					   const std::shared_ptr<SessionDescription> &offer_sdp,
 					   const std::shared_ptr<SessionDescription> &peer_sdp,
 					   const std::shared_ptr<IcePort> &ice_port)
@@ -48,7 +48,7 @@ bool RtcSession::Start()
 		return false;
 	}
 
-	auto session = std::static_pointer_cast<Session>(GetSharedPtr());
+	auto session = std::static_pointer_cast<pub::Session>(GetSharedPtr());
 
 	// Player가 준 SDP를 기준으로(플레이어가 받고자 하는 Track) RTP_RTCP를 생성한다.
 	auto offer_media_desc_list = _offer_sdp->GetMediaList();
@@ -94,19 +94,19 @@ bool RtcSession::Start()
     }
 
     // RTP RTCP 생성
-	_rtp_rtcp = std::make_shared<RtpRtcp>((uint32_t)SessionNodeType::RtpRtcp, session, ssrc_list);
+	_rtp_rtcp = std::make_shared<RtpRtcp>((uint32_t)pub::SessionNodeType::RtpRtcp, session, ssrc_list);
 
 	// SRTP 생성
-	_srtp_transport = std::make_shared<SrtpTransport>((uint32_t)SessionNodeType::Srtp, session);
+	_srtp_transport = std::make_shared<SrtpTransport>((uint32_t)pub::SessionNodeType::Srtp, session);
 
 	// DTLS 생성
-	_dtls_transport = std::make_shared<DtlsTransport>((uint32_t)SessionNodeType::Dtls, session);
+	_dtls_transport = std::make_shared<DtlsTransport>((uint32_t)pub::SessionNodeType::Dtls, session);
 	std::shared_ptr<RtcApplication> application = std::static_pointer_cast<RtcApplication>(GetApplication());
 	_dtls_transport->SetLocalCertificate(application->GetCertificate());
 	_dtls_transport->StartDTLS();
 
 	// ICE-DTLS 생성
-	_dtls_ice_transport = std::make_shared<DtlsIceTransport>((uint32_t)SessionNodeType::Ice, session, _ice_port);
+	_dtls_ice_transport = std::make_shared<DtlsIceTransport>((uint32_t)pub::SessionNodeType::Ice, session, _ice_port);
 
 	// 노드를 연결한다.
 	_rtp_rtcp->RegisterUpperNode(nullptr);
@@ -174,7 +174,7 @@ void RtcSession::OnPacketReceived(const std::shared_ptr<info::SessionInfo> &sess
 {
 	// NETWORK에서 받은 Packet은 DTLS로 넘긴다.
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
-	_dtls_ice_transport->OnDataReceived(SessionNodeType::None, data);
+	_dtls_ice_transport->OnDataReceived(pub::SessionNodeType::None, data);
 }
 
 bool RtcSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet)

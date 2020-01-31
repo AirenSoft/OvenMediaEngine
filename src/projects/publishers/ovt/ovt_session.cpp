@@ -4,12 +4,12 @@
 #include "ovt_session.h"
 #include "ovt_private.h"
 
-std::shared_ptr<OvtSession> OvtSession::Create(const std::shared_ptr<Application> &application,
-										  	   const std::shared_ptr<Stream> &stream,
+std::shared_ptr<OvtSession> OvtSession::Create(const std::shared_ptr<pub::Application> &application,
+										  	   const std::shared_ptr<pub::Stream> &stream,
 										  	   uint32_t session_id,
 										  	   const std::shared_ptr<ov::Socket> &connector)
 {
-	auto session_info = SessionInfo(*std::static_pointer_cast<info::StreamInfo>(stream), session_id);
+	auto session_info = info::SessionInfo(*std::static_pointer_cast<info::StreamInfo>(stream), session_id);
 	auto session = std::make_shared<OvtSession>(session_info, application, stream, connector);
 	if(!session->Start())
 	{
@@ -18,11 +18,11 @@ std::shared_ptr<OvtSession> OvtSession::Create(const std::shared_ptr<Application
 	return session;
 }
 
-OvtSession::OvtSession(const SessionInfo &session_info,
-		   const std::shared_ptr<Application> &application,
-		   const std::shared_ptr<Stream> &stream,
+OvtSession::OvtSession(const info::SessionInfo &session_info,
+		   const std::shared_ptr<pub::Application> &application,
+		   const std::shared_ptr<pub::Stream> &stream,
 		   const std::shared_ptr<ov::Socket> &connector)
-   : Session(session_info, application, stream)
+   : pub::Session(session_info, application, stream)
 {
 	_connector = connector;
 	_sent_ready = false;

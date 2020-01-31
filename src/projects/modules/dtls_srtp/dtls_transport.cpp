@@ -5,8 +5,8 @@
 
 #define OV_LOG_TAG              "DTLS"
 
-DtlsTransport::DtlsTransport(uint32_t id, std::shared_ptr<Session> session)
-	: SessionNode(id, SessionNodeType::Dtls, std::move(session))
+DtlsTransport::DtlsTransport(uint32_t id, std::shared_ptr<pub::Session> session)
+	: SessionNode(id, pub::SessionNodeType::Dtls, std::move(session))
 {
 	_state = SSL_NONE;
 	_peer_cerificate_verified = false;
@@ -145,7 +145,7 @@ bool DtlsTransport::MakeSrtpKey()
 	// SRTP를 쓸때는 꼭 SRTP - DTLS 순서로 연결해야 한다.
 	auto node = GetUpperNode();
 
-	if(node->GetNodeType() == SessionNodeType::Srtp)
+	if(node->GetNodeType() == pub::SessionNodeType::Srtp)
 	{
 		auto srtp_transport = std::static_pointer_cast<SrtpTransport>(node);
 
@@ -165,7 +165,7 @@ bool DtlsTransport::VerifyPeerCertificate()
 
 // 데이터를 upper에서 받는다. lower node로 보낸다.
 // Session -> Makes SRTP Packet -> DtlsTransport -> Ice로 전송
-bool DtlsTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
+bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
@@ -183,9 +183,9 @@ bool DtlsTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov
 			break;
 		case SSL_CONNECTED:
 			// SRTP는 이미 암호화가 되었으므로 ICE로 바로 전송한다.
-			if(from_node == SessionNodeType::Srtp)
+			if(from_node == pub::SessionNodeType::Srtp)
 			{
-				auto node = GetLowerNode(SessionNodeType::Ice);
+				auto node = GetLowerNode(pub::SessionNodeType::Ice);
 				if(node == nullptr)
 				{
 					return false;
@@ -222,7 +222,7 @@ bool DtlsTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov
 
 // 데이터를 lower에서 받는다. upper node로 보낸다.
 // IcePort -> Publisher ->[queue] Application {thread}-> Session -> DtlsTransport -> SRTP || SCTP
-bool DtlsTransport::OnDataReceived(SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
+bool DtlsTransport::OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
@@ -336,7 +336,7 @@ ssize_t DtlsTransport::Write(ov::Tls *tls, const void *data, size_t length)
 {
 	auto packet = std::make_shared<ov::Data>(data, length);
 
-	auto node = GetLowerNode(SessionNodeType::Ice);
+	auto node = GetLowerNode(pub::SessionNodeType::Ice);
 
 	if(node == nullptr)
 	{

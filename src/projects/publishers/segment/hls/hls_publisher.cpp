@@ -62,7 +62,7 @@ bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server
 	return Publisher::Start();
 }
 
-std::shared_ptr<Application> HlsPublisher::OnCreatePublisherApplication(const info::Application &application_info)
+std::shared_ptr<pub::Application> HlsPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
 	if (!application_info.CheckCodecAvailability({"h264"}, {"aac"}))
 	{

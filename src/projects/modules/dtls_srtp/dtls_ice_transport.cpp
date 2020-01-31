@@ -11,8 +11,8 @@
 
 #define OV_LOG_TAG "DTLS.ICE"
 
-DtlsIceTransport::DtlsIceTransport(uint32_t node_id, std::shared_ptr<Session> session, std::shared_ptr<IcePort> ice_port)
-	: SessionNode(node_id, SessionNodeType::Ice, session)
+DtlsIceTransport::DtlsIceTransport(uint32_t node_id, std::shared_ptr<pub::Session> session, std::shared_ptr<IcePort> ice_port)
+	: SessionNode(node_id, pub::SessionNodeType::Ice, session)
 {
 	_ice_port = ice_port;
 }
@@ -23,7 +23,7 @@ DtlsIceTransport::~DtlsIceTransport()
 
 // Implement SessionNode Interface
 // 데이터를 upper에서 받는다. lower node로 보낸다.
-bool DtlsIceTransport::SendData(SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
+bool DtlsIceTransport::SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
@@ -40,7 +40,7 @@ bool DtlsIceTransport::SendData(SessionNodeType from_node, const std::shared_ptr
 }
 
 // 데이터를 lower에서 받는다. upper node로 보낸다.
-bool DtlsIceTransport::OnDataReceived(SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
+bool DtlsIceTransport::OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)

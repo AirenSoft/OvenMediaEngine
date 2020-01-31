@@ -30,7 +30,7 @@ private:
 	//--------------------------------------------------------------------
 	// Implementation of Publisher
 	//--------------------------------------------------------------------
-	std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) override;
+	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 
 	PublisherType GetPublisherType() const override
 	{

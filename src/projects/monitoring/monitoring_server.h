@@ -33,7 +33,7 @@ public :
 public :
     bool Start(const ov::SocketAddress &address,
                const std::vector<std::shared_ptr<pvd::Provider>> &providers,
-                const std::vector<std::shared_ptr<Publisher>> &publishers,
+                const std::vector<std::shared_ptr<pub::Publisher>> &publishers,
                 const std::shared_ptr<Certificate> &certificate = nullptr);
 
     bool Stop();
@@ -51,6 +51,6 @@ protected:
 protected :
     std::shared_ptr<HttpServer> _http_server;
     std::vector<std::shared_ptr<pvd::Provider>> _providers;
-    std::vector<std::shared_ptr<Publisher>> _publishers;
+    std::vector<std::shared_ptr<pub::Publisher>> _publishers;
 
 };

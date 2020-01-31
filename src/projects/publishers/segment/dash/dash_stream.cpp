@@ -15,7 +15,7 @@
 //====================================================================================================
 std::shared_ptr<DashStream> DashStream::Create(int segment_count,
                                               int segment_duration,
-                                              const std::shared_ptr<Application> application,
+                                              const std::shared_ptr<pub::Application> application,
                                               const StreamInfo &info,
                                               uint32_t worker_count)
 {
@@ -34,7 +34,7 @@ std::shared_ptr<DashStream> DashStream::Create(int segment_count,
 // - DASH/HLS : H264/AAC only
 // TODO : 다중 트랜스코딩/다중 트랙 구분 및 처리 필요
 //====================================================================================================
-DashStream::DashStream(const std::shared_ptr<Application> application, const StreamInfo &info)
+DashStream::DashStream(const std::shared_ptr<pub::Application> application, const StreamInfo &info)
                     : SegmentStream(application, info)
 {
 

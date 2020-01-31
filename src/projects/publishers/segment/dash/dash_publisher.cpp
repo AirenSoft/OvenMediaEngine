@@ -59,7 +59,7 @@ bool DashPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
 	return Publisher::Start();
 }
 
-std::shared_ptr<Application> DashPublisher::OnCreatePublisherApplication(const info::Application &application_info)
+std::shared_ptr<pub::Application> DashPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
 	if(!application_info.CheckCodecAvailability({"h264"}, {"aac"}))
 	{

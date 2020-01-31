@@ -9,6 +9,8 @@
 
 #pragma once
 #include <publishers/segment/segment_stream/segment_stream.h>
+#include "base/publisher/application.h"
+#include "base/publisher/stream.h"
 #include "cmaf_stream_packetizer.h"
 
 //====================================================================================================
@@ -19,12 +21,12 @@ class CmafStream : public SegmentStream
 public:
     static std::shared_ptr<CmafStream> Create(int segment_count,
                                                int segment_duration,
-                                               const std::shared_ptr<Application> application,
+                                               const std::shared_ptr<pub::Application> application,
                                                const StreamInfo &info,
                                                uint32_t worker_count,
                                                const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
-    CmafStream(const std::shared_ptr<Application> application,
+    CmafStream(const std::shared_ptr<pub::Application> application,
     		const StreamInfo &info,
     		const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 

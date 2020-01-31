@@ -78,7 +78,7 @@ bool OvtPublisher::Stop()
 	return Publisher::Stop();
 }
 
-std::shared_ptr<Application> OvtPublisher::OnCreatePublisherApplication(const info::Application &application_info)
+std::shared_ptr<pub::Application> OvtPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
 	return OvtApplication::Create(application_info);
 }
@@ -321,7 +321,7 @@ bool OvtPublisher::UnlinkRemoteFromStream(int remote_id)
 	return true;
 }
 
-bool OvtPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)
+bool OvtPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections)
 {
 	return true;
 }

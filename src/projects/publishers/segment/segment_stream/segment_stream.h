@@ -17,10 +17,10 @@
 //====================================================================================================
 // SegmentStream
 //====================================================================================================
-class SegmentStream : public Stream
+class SegmentStream : public pub::Stream
 {
 public:
-    explicit SegmentStream(const std::shared_ptr<Application> application, const StreamInfo &info);
+    explicit SegmentStream(const std::shared_ptr<pub::Application> application, const info::StreamInfo &info);
 
     ~SegmentStream();
 

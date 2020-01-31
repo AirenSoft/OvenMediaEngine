@@ -76,13 +76,13 @@ bool WebRtcPublisher::Stop()
 // monitoring data pure virtual function
 // - collections vector must be insert processed
 //====================================================================================================
-bool WebRtcPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)
+bool WebRtcPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections)
 {
 	return _signalling->GetMonitoringCollectionData(collections);
 }
 
 // Publisher에서 Application 생성 요청이 온다.
-std::shared_ptr<Application> WebRtcPublisher::OnCreatePublisherApplication(const info::Application &application_info)
+std::shared_ptr<pub::Application> WebRtcPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
 	return RtcApplication::Create(application_info, _ice_port, _signalling);
 }
@@ -276,7 +276,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 void WebRtcPublisher::OnDataReceived(IcePort &port, const std::shared_ptr<info::SessionInfo> &session_info, std::shared_ptr<const ov::Data> data)
 {
 	// ice_port를 통해 STUN을 제외한 모든 Packet이 들어온다.
-	auto session = std::static_pointer_cast<Session>(session_info);
+	auto session = std::static_pointer_cast<pub::Session>(session_info);
 
 	//받는 Data 형식을 협의해야 한다.
 	auto application = session->GetApplication();

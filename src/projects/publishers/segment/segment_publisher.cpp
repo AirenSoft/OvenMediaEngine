@@ -21,7 +21,7 @@ SegmentPublisher::~SegmentPublisher()
 	logtd("Publisher has been destroyed");
 }
 
-bool SegmentPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections)
+bool SegmentPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections)
 {
 	return (_stream_server != nullptr) ? _stream_server->GetMonitoringCollectionData(collections) : false;
 }

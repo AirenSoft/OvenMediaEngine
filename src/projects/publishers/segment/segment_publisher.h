@@ -16,7 +16,7 @@
 
 #define DEFAULT_SEGMENT_WORKER_THREAD_COUNT		4
 
-class SegmentPublisher : public Publisher, public SegmentStreamObserver
+class SegmentPublisher : public pub::Publisher, public SegmentStreamObserver
 {
 protected:
 	// This is used to prevent create new instance without factory class
@@ -42,7 +42,7 @@ public:
 		return publisher;
 	}
 
-	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) override;
+	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
 
 protected:
 	SegmentPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);

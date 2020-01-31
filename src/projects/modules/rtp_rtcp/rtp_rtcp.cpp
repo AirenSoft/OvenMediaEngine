@@ -6,8 +6,8 @@
 #define OV_LOG_TAG "RtpRtcp"
 #define RTCP_AA_SEND_SEQUENCE (1000)
 
-RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<Session> session, const std::vector<uint32_t> &ssrc_list)
-	        : SessionNode(id, SessionNodeType::RtpRtcp, session)
+RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<pub::Session> session, const std::vector<uint32_t> &ssrc_list)
+	        : SessionNode(id, pub::SessionNodeType::RtpRtcp, session)
 {
     for(auto ssrc : ssrc_list)
     {
@@ -65,7 +65,7 @@ bool RtpRtcp::SendOutgoingData(std::shared_ptr<ov::Data> packet)
 	return node->SendData(GetNodeType(), packet);
 }
 
-bool RtpRtcp::SendData(SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
+bool RtpRtcp::SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
 	// RTPRTCP는 Send를 하는 첫번째 NODE이므로 SendData를 통해 스트림을 받지 않고 SendOutgoingData를 사용한다.
 	return true;
@@ -74,7 +74,7 @@ bool RtpRtcp::SendData(SessionNodeType from_node, const std::shared_ptr<ov::Data
 // Implement SessionNode Interface
 // decoded data from srtp
 // no upper node( receive data process end)
-bool RtpRtcp::OnDataReceived(SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
+bool RtpRtcp::OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
 	// nothing to do before node start
 	if(GetState() != SessionNode::NodeState::Started)

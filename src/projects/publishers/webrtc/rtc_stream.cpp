@@ -6,7 +6,7 @@
 
 using namespace common;
 
-std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<Application> application,
+std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<pub::Application> application,
                                              const StreamInfo &info,
                                              uint32_t worker_count)
 {
@@ -18,7 +18,7 @@ std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<Application> 
 	return stream;
 }
 
-RtcStream::RtcStream(const std::shared_ptr<Application> application,
+RtcStream::RtcStream(const std::shared_ptr<pub::Application> application,
                      const StreamInfo &info)
 	: Stream(application, info)
 {

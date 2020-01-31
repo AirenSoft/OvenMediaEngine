@@ -70,7 +70,7 @@ bool RtmpProvider::Stop()
 	return Provider::Stop();
 }
 
-std::shared_ptr<Application> RtmpProvider::OnCreateProviderApplication(const info::Application &application_info)
+std::shared_ptr<pvd::Application> RtmpProvider::OnCreateProviderApplication(const info::Application &application_info)
 {
 	return RtmpApplication::Create(application_info);
 }

@@ -9,7 +9,7 @@
 #include <modules/rtp_rtcp/rtcp_packet.h>
 #include "rtc_stream.h"
 
-class RtcApplication : public Application
+class RtcApplication : public pub::Application
 {
 public:
 	static std::shared_ptr<RtcApplication> Create(const info::Application &application_info,
@@ -32,7 +32,7 @@ private:
 	bool Stop() override;
 
 	// Application Implementation
-	std::shared_ptr<Stream> CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t worker_count) override;
+	std::shared_ptr<pub::Stream> CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t worker_count) override;
 	bool DeleteStream(const std::shared_ptr<info::StreamInfo> &info) override;
 
 	std::shared_ptr<IcePort> _ice_port;

@@ -4,17 +4,17 @@
 #include <base/ovsocket/socket.h>
 #include <base/publisher/session.h>
 
-class OvtSession : public Session
+class OvtSession : public pub::Session
 {
 public:
-	static std::shared_ptr<OvtSession> Create(const std::shared_ptr<Application> &application,
-											  const std::shared_ptr<Stream> &stream,
+	static std::shared_ptr<OvtSession> Create(const std::shared_ptr<pub::Application> &application,
+											  const std::shared_ptr<pub::Stream> &stream,
 											  uint32_t ovt_session_id,
 											  const std::shared_ptr<ov::Socket> &connector);
 
-	OvtSession(const SessionInfo &session_info,
-			const std::shared_ptr<Application> &application,
-			const std::shared_ptr<Stream> &stream,
+	OvtSession(const info::SessionInfo &session_info,
+			const std::shared_ptr<pub::Application> &application,
+			const std::shared_ptr<pub::Stream> &stream,
 			const std::shared_ptr<ov::Socket> &connector);
 	~OvtSession() override;
 

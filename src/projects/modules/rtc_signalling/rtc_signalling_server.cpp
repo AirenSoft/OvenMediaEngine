@@ -81,7 +81,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 
 			auto tokens = client->GetRequest()->GetUri().Split("/");
 
-			// "/<app>/<stream>"
+			// "/<app>/<pub::Stream>"
 			if (tokens.size() < 3)
 			{
 				logtw("Invalid request from %s. Disconnecting...", description.CStr());
@@ -315,7 +315,7 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 // monitoring data pure virtual function
 // - collections vector must be insert processed
 //====================================================================================================
-bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections)
+bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &stream_collections)
 {
 	// TODO(Getroot): Need to refactoring
 	/*
@@ -352,7 +352,7 @@ bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_pt
 	// p2p
 	for (uint32_t index = 0; index < p2p_connection_count; index++)
 	{
-		auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
+		auto collection = std::make_shared<pub::MonitoringCollectionData>(MonitroingCollectionType::Stream,
 																	 alias,
 																	 app_name,
 																	 stream_name);
@@ -368,7 +368,7 @@ bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_pt
 	// edge connection
 	for (uint32_t index = 0; index < edeg_connection_count; index++)
 	{
-		auto collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
+		auto collection = std::make_shared<pub::MonitoringCollectionData>(MonitroingCollectionType::Stream,
 																	 alias,
 																	 app_name,
 																	 stream_name);

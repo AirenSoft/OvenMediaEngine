@@ -15,7 +15,7 @@
 //====================================================================================================
 // CmafApplication
 //====================================================================================================
-class CmafApplication : public Application
+class CmafApplication : public pub::Application
 {
 public:
 	static std::shared_ptr<CmafApplication> Create(const info::Application &application_info,
@@ -31,7 +31,7 @@ private:
 	bool Stop() override;
 
 	// Application Implementation
-	std::shared_ptr<Stream> CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t thread_count) override;
+	std::shared_ptr<pub::Stream> CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t thread_count) override;
 	bool DeleteStream(const std::shared_ptr<info::StreamInfo> &info) override;
 
 private :

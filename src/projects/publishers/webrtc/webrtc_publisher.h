@@ -8,7 +8,7 @@
 #include <orchestrator/orchestrator.h>
 
 
-class WebRtcPublisher : public Publisher,
+class WebRtcPublisher : public pub::Publisher,
                         public IcePortObserver,
                         public RtcSignallingObserver
 {
@@ -53,7 +53,7 @@ public:
 
     uint32_t OnGetBitrate(const ov::String &application_name, const ov::String &stream_name) override;
 
-    bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) override;
+    bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
 
 private:
 	bool Start() override;
@@ -71,7 +71,7 @@ private:
 		return "WebRTC";
 	}
 
-	std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) override;
+	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 
 	std::shared_ptr<IcePort> _ice_port;
 	std::shared_ptr<RtcSignallingServer> _signalling;

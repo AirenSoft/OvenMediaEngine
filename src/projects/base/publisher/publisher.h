@@ -21,118 +21,121 @@
 
 #include <chrono>
 
-//====================================================================================================
-// Monitoring Collect Data
-//====================================================================================================
-enum class MonitroingCollectionType
+namespace pub
 {
-	Stream = 0,
-	App,
-	Origin,
-	Host,
-};
-
-struct MonitoringCollectionData
-{
-	MonitoringCollectionData() = default;
-
-	MonitoringCollectionData(MonitroingCollectionType type_,
-							 const ov::String &origin_name_ = "",
-							 const ov::String &app_name_ = "",
-							 const ov::String &stream_name_ = "")
+	//====================================================================================================
+	// Monitoring Collect Data
+	//====================================================================================================
+	enum class MonitroingCollectionType
 	{
-		type = type_;
-		type_string = GetTypeString(type);
-		origin_name = origin_name_;
-		app_name = app_name_;
-		stream_name = stream_name_;
-	}
+		Stream = 0,
+		App,
+		Origin,
+		Host,
+	};
 
-	void Append(const std::shared_ptr<MonitoringCollectionData> &collection)
+	struct MonitoringCollectionData
 	{
-		edge_connection += collection->edge_connection;
-		edge_bitrate += collection->edge_bitrate;
-		p2p_connection += collection->p2p_connection;
-		p2p_bitrate += collection->p2p_bitrate;
-	}
+		MonitoringCollectionData() = default;
 
-	static ov::String GetTypeString(MonitroingCollectionType type)
+		MonitoringCollectionData(MonitroingCollectionType type_,
+								 const ov::String &origin_name_ = "",
+								 const ov::String &app_name_ = "",
+								 const ov::String &stream_name_ = "")
+		{
+			type = type_;
+			type_string = GetTypeString(type);
+			origin_name = origin_name_;
+			app_name = app_name_;
+			stream_name = stream_name_;
+		}
+
+		void Append(const std::shared_ptr<pub::MonitoringCollectionData> &collection)
+		{
+			edge_connection += collection->edge_connection;
+			edge_bitrate += collection->edge_bitrate;
+			p2p_connection += collection->p2p_connection;
+			p2p_bitrate += collection->p2p_bitrate;
+		}
+
+		static ov::String GetTypeString(MonitroingCollectionType type)
+		{
+			ov::String result;
+
+			if (type == MonitroingCollectionType::Stream)
+				result = "stream";
+			else if (type == MonitroingCollectionType::App)
+				result = "app";
+			else if (type == MonitroingCollectionType::Origin)
+				result = "org";
+			else if (type == MonitroingCollectionType::Host)
+				result = "host";
+
+			return result;
+		}
+
+		MonitroingCollectionType type = MonitroingCollectionType::Stream;
+		ov::String type_string;
+		ov::String origin_name;
+		ov::String app_name;
+		ov::String stream_name;
+		uint32_t edge_connection = 0;					   // count
+		uint64_t edge_bitrate = 0;						   // bps
+		uint32_t p2p_connection = 0;					   // count
+		uint64_t p2p_bitrate = 0;						   // bps
+		std::chrono::system_clock::time_point check_time;  // (chrono)
+	};
+
+	// All publishers such as WebRTC, HLS and MPEG-DASH has to inherit the Publisher class and implement that interfaces
+	class Publisher : public OrchestratorPublisherModuleInterface
 	{
-		ov::String result;
+	public:
+		virtual bool Start();
+		virtual bool Stop();
 
-		if (type == MonitroingCollectionType::Stream)
-			result = "stream";
-		else if (type == MonitroingCollectionType::App)
-			result = "app";
-		else if (type == MonitroingCollectionType::Origin)
-			result = "org";
-		else if (type == MonitroingCollectionType::Host)
-			result = "host";
+		std::shared_ptr<Application> GetApplicationByName(ov::String app_name);
+		std::shared_ptr<Stream> GetStream(ov::String app_name, ov::String stream_name);
+		template <typename T>
+		std::shared_ptr<T> GetStreamAs(ov::String app_name, ov::String stream_name)
+		{
+			return std::static_pointer_cast<T>(GetStream(app_name, stream_name));
+		}
 
-		return result;
-	}
+		std::shared_ptr<Application> GetApplicationById(info::application_id_t application_id);
+		std::shared_ptr<Stream> GetStream(info::application_id_t application_id, uint32_t stream_id);
+		template <typename T>
+		std::shared_ptr<T> GetStreamAs(info::application_id_t application_id, uint32_t stream_id)
+		{
+			return std::static_pointer_cast<T>(GetStream(application_id, stream_id));
+		}
 
-	MonitroingCollectionType type = MonitroingCollectionType::Stream;
-	ov::String type_string;
-	ov::String origin_name;
-	ov::String app_name;
-	ov::String stream_name;
-	uint32_t edge_connection = 0;					   // count
-	uint64_t edge_bitrate = 0;						   // bps
-	uint32_t p2p_connection = 0;					   // count
-	uint64_t p2p_bitrate = 0;						   // bps
-	std::chrono::system_clock::time_point check_time;  // (chrono)
-};
+		// monitoring data pure virtual function
+		// - collected_datas vector must be insert processed
+		virtual bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) = 0;
 
-// All publishers such as WebRTC, HLS and MPEG-DASH has to inherit the Publisher class and implement that interfaces
-class Publisher : public OrchestratorPublisherModuleInterface
-{
-public:
-	virtual bool Start();
-	virtual bool Stop();
+		//--------------------------------------------------------------------
+		// Implementation of OrchestratorModuleInterface
+		//--------------------------------------------------------------------
+		bool OnCreateApplication(const info::Application &app_info) override;
+		bool OnDeleteApplication(const info::Application &app_info) override;
 
-	std::shared_ptr<Application> GetApplicationByName(ov::String app_name);
-	std::shared_ptr<Stream> GetStream(ov::String app_name, ov::String stream_name);
-	template <typename T>
-	std::shared_ptr<T> GetStreamAs(ov::String app_name, ov::String stream_name)
-	{
-		return std::static_pointer_cast<T>(GetStream(app_name, stream_name));
-	}
+	protected:
+		explicit Publisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+		virtual ~Publisher() = default;
 
-	std::shared_ptr<Application> GetApplicationById(info::application_id_t application_id);
-	std::shared_ptr<Stream> GetStream(info::application_id_t application_id, uint32_t stream_id);
-	template <typename T>
-	std::shared_ptr<T> GetStreamAs(info::application_id_t application_id, uint32_t stream_id)
-	{
-		return std::static_pointer_cast<T>(GetStream(application_id, stream_id));
-	}
+		const cfg::Server &GetServerConfig() const;
+		// Host Info
+		const info::Host &GetHostInfo() const;
 
-	// monitoring data pure virtual function
-	// - collected_datas vector must be insert processed
-	virtual bool GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &collections) = 0;
+		// Each Publisher should define their type
+		virtual PublisherType GetPublisherType() const = 0;
+		virtual const char *GetPublisherName() const = 0;
+		virtual std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) = 0;
 
-	//--------------------------------------------------------------------
-	// Implementation of OrchestratorModuleInterface
-	//--------------------------------------------------------------------
-	bool OnCreateApplication(const info::Application &app_info) override;
-	bool OnDeleteApplication(const info::Application &app_info) override;
+		std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
 
-protected:
-	explicit Publisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
-	virtual ~Publisher() = default;
-
-	const cfg::Server& GetServerConfig() const;
-	// Host Info
-	const info::Host& GetHostInfo() const;
-
-	// Each Publisher should define their type
-	virtual PublisherType GetPublisherType() const = 0;
-	virtual const char *GetPublisherName() const = 0;
-	virtual std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) = 0;
-
-	std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
-
-	const cfg::Server _server_config;
-	const info::Host _host_info;
-	std::shared_ptr<MediaRouteInterface> _router;
-};
+		const cfg::Server _server_config;
+		const info::Host _host_info;
+		std::shared_ptr<MediaRouteInterface> _router;
+	};
+}  // namespace pub

@@ -42,18 +42,18 @@
 class RtcApplication;
 class RtcStream;
 
-class RtcSession : public Session
+class RtcSession : public pub::Session
 {
 public:
-	static std::shared_ptr<RtcSession> Create(const std::shared_ptr<Application> &application,
-	                                          const std::shared_ptr<Stream> &stream,
+	static std::shared_ptr<RtcSession> Create(const std::shared_ptr<pub::Application> &application,
+	                                          const std::shared_ptr<pub::Stream> &stream,
 	                                          const std::shared_ptr<SessionDescription> &offer_sdp,
 	                                          const std::shared_ptr<SessionDescription> &peer_sdp,
 	                                          const std::shared_ptr<IcePort> &ice_port);
 
-	RtcSession(const SessionInfo &session_info,
-			const std::shared_ptr<Application> &application,
-	        const std::shared_ptr<Stream> &stream,
+	RtcSession(const info::SessionInfo &session_info,
+			const std::shared_ptr<pub::Application> &application,
+	        const std::shared_ptr<pub::Stream> &stream,
 	        const std::shared_ptr<SessionDescription> &offer_sdp,
 	        const std::shared_ptr<SessionDescription> &peer_sdp,
 	        const std::shared_ptr<IcePort> &ice_port);

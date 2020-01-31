@@ -9,6 +9,8 @@
 
 #pragma once
 #include <publishers/segment/segment_stream/segment_stream.h>
+#include "base/publisher/application.h"
+#include "base/publisher/stream.h"
 #include "dash_stream_packetizer.h"
 
 //====================================================================================================
@@ -19,11 +21,11 @@ class DashStream : public SegmentStream
 public:
     static std::shared_ptr<DashStream> Create(int segment_count,
                                                int segment_duration,
-                                               const std::shared_ptr<Application> application,
+                                               const std::shared_ptr<pub::Application> application,
                                                const StreamInfo &info,
                                                uint32_t worker_count);
 
-	DashStream(const std::shared_ptr<Application> application, const StreamInfo &info);
+	DashStream(const std::shared_ptr<pub::Application> application, const StreamInfo &info);
 
 	~DashStream();
 

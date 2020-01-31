@@ -11,12 +11,12 @@
 #define MAX_DTLS_PACKET_LEN                     2048
 #define MIN_RTP_PACKET_LEN                      12
 
-class DtlsTransport : public SessionNode
+class DtlsTransport : public pub::SessionNode
 {
 public:
 	// Send : Srtp -> this -> Ice
 	// Recv : Ice -> {[Queue] -> Application -> Session} -> this -> Srtp
-	explicit DtlsTransport(uint32_t id, std::shared_ptr<Session> session);
+	explicit DtlsTransport(uint32_t id, std::shared_ptr<pub::Session> session);
 	virtual ~DtlsTransport() = default;
 
 	// Set Local Certificate
@@ -32,9 +32,9 @@ public:
 	// Implementation of SessionNode
 	//--------------------------------------------------------------------
 	// Receive data from upper node, and send data to lower node.
-	bool SendData(SessionNodeType from_node, const std::shared_ptr<ov::Data> &data);
+	bool SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data);
 	// Receive data from lower node, and send data to upper node.
-	bool OnDataReceived(SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data);
+	bool OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data);
 
 	// IcePort -> Publisher ->[queue] Application {thread}-> Session -> DtlsTransport -> SRTP -> RTP/RTCP
 	// ICE에서는 STUN을 제외한 모든 패킷을 위로 올린다.

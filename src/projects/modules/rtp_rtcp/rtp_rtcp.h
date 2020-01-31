@@ -23,10 +23,10 @@ struct RtcpInfo
     // uint32_t rtp_packt_timestamp = 0;
  };
 
-class RtpRtcp : public SessionNode
+class RtpRtcp : public pub::SessionNode
 {
 public:
-	RtpRtcp(uint32_t id, std::shared_ptr<Session> session, const std::vector<uint32_t> &ssrc_list);
+	RtpRtcp(uint32_t id, std::shared_ptr<pub::Session> session, const std::vector<uint32_t> &ssrc_list);
 
 	~RtpRtcp() override;
 
@@ -35,9 +35,9 @@ public:
 
 	// Implement SessionNode Interface
 	// RtpRtcp는 최상위 노드로 SendData를 사용하지 않는다. SendOutgoingData를 사용한다.
-	bool SendData(SessionNodeType from_node, const std::shared_ptr<ov::Data> &data) override;
+	bool SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data) override;
 	// Lower Node(SRTP)로부터 데이터를 받는다.
-	bool OnDataReceived(SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
+	bool OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
 	bool RtcpPacketProcess(RtcpPacketType packet_type,
                             uint32_t payload_size,

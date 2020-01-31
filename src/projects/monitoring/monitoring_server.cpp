@@ -38,7 +38,7 @@ ov::String GetCurrentIso8601Time()
 //====================================================================================================
 bool MonitoringServer::Start(const ov::SocketAddress &address,
                              const std::vector<std::shared_ptr<pvd::Provider>> &providers,
-                             const std::vector<std::shared_ptr<Publisher>> &publishers,
+                             const std::vector<std::shared_ptr<pub::Publisher>> &publishers,
                              const std::shared_ptr<Certificate> &certificate)
 {
     if (_http_server != nullptr)
@@ -202,15 +202,15 @@ HttpNextHandler MonitoringServer::ProcessRequest(const std::shared_ptr<HttpClien
 #include <map>
 void MonitoringServer::StateRequest(const std::shared_ptr<HttpResponse> &response)
 {
-    std::map<std::pair<ov::String, ov::String>, std::shared_ptr<MonitoringCollectionData>> stream_sum; // key : app + stream pair
-    std::map<ov::String, std::shared_ptr<MonitoringCollectionData>> app_sum; // key : app name
-    std::map<ov::String, std::shared_ptr<MonitoringCollectionData>> origin_sum; // key : app name
+    std::map<std::pair<ov::String, ov::String>, std::shared_ptr<pub::MonitoringCollectionData>> stream_sum; // key : app + stream pair
+    std::map<ov::String, std::shared_ptr<pub::MonitoringCollectionData>> app_sum; // key : app name
+    std::map<ov::String, std::shared_ptr<pub::MonitoringCollectionData>> origin_sum; // key : app name
     std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
 
-    std::shared_ptr<MonitoringCollectionData> host_sum =
-            std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Host);// host(total)
+    std::shared_ptr<pub::MonitoringCollectionData> host_sum =
+            std::make_shared<pub::MonitoringCollectionData>(pub::MonitroingCollectionType::Host);// host(total)
 
-    std::vector<std::shared_ptr<MonitoringCollectionData>> collections;
+    std::vector<std::shared_ptr<pub::MonitoringCollectionData>> collections;
 
     // stream sum
     for (const auto &publisher : _publishers)
@@ -226,7 +226,7 @@ void MonitoringServer::StateRequest(const std::shared_ptr<HttpResponse> &respons
         auto stream_item = stream_sum.find(std::pair<ov::String, ov::String>(collection->app_name, collection->stream_name));
         if(stream_item == stream_sum.end())
         {
-            auto stream_collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Stream,
+            auto stream_collection = std::make_shared<pub::MonitoringCollectionData>(pub::MonitroingCollectionType::Stream,
                                                                              collection->origin_name,
                                                                              collection->app_name,
                                                                              collection->stream_name);
@@ -245,7 +245,7 @@ void MonitoringServer::StateRequest(const std::shared_ptr<HttpResponse> &respons
         auto app_item = app_sum.find(collection->app_name);
         if(app_item == app_sum.end())
         {
-            auto app_collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::App,
+            auto app_collection = std::make_shared<pub::MonitoringCollectionData>(pub::MonitroingCollectionType::App,
                                                                              collection->origin_name,
                                                                              collection->app_name);
             app_collection->Append(collection);
@@ -263,7 +263,7 @@ void MonitoringServer::StateRequest(const std::shared_ptr<HttpResponse> &respons
         auto origin_item = origin_sum.find(collection->app_name);
         if(origin_item == origin_sum.end())
         {
-            auto origin_collection = std::make_shared<MonitoringCollectionData>(MonitroingCollectionType::Origin,
+            auto origin_collection = std::make_shared<pub::MonitoringCollectionData>(pub::MonitroingCollectionType::Origin,
                                                                                 collection->origin_name);
             origin_collection->Append(collection);
             origin_collection->check_time = current_time;

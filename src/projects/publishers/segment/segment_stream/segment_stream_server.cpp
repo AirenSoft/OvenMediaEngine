@@ -87,7 +87,7 @@ bool SegmentStreamServer::Stop()
 	return false;
 }
 
-bool SegmentStreamServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<MonitoringCollectionData>> &stream_collections)
+bool SegmentStreamServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &stream_collections)
 {
 	return true;
 }

@@ -6,7 +6,7 @@
 
 #include "ovt_stream.h"
 
-class OvtApplication : public Application
+class OvtApplication : public pub::Application
 {
 public:
 	static std::shared_ptr<OvtApplication> Create(const info::Application &application_info);
@@ -18,6 +18,6 @@ private:
 	bool Stop() override;
 
 	// Application Implementation
-	std::shared_ptr<Stream> CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t worker_count) override;
+	std::shared_ptr<pub::Stream> CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t worker_count) override;
 	bool DeleteStream(const std::shared_ptr<info::StreamInfo> &info) override;
 };
