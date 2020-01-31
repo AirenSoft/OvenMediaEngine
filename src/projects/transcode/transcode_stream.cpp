@@ -629,10 +629,11 @@ void TranscodeStream::LoopTask()
 	{
 		_queue_event.Wait();
 
+
 		time_t curr_time;
 		time(&curr_time);
 
-		if(difftime(curr_time, base_time) >= 1)
+		if(difftime(curr_time, base_time) >= 30)
 		{
 			logtd("stats stream[%s/%s], decode.ready[%d], filter.ready[%d], encode.ready[%d]"
 				,_application_info.GetName().CStr()
@@ -643,6 +644,7 @@ void TranscodeStream::LoopTask()
 
 			base_time = curr_time;
 		}
+
 
 		if (_queue_input_packets.size() > 0)
 		{
@@ -720,7 +722,7 @@ void TranscodeStream::SendFrame(std::shared_ptr<MediaPacket> packet)
 			{
 				auto clone_packet = packet->ClonePacket();
 
-				// logtd("[#%d] Trying to outgoing the packet (%s, PTS: %lld)", clone_packet->GetTrackId(), output_stream_info->GetName().CStr(), clone_packet->GetPts() * 1000 / (int64_t)media_track.second->GetTimeBase().GetDen());
+				logtd("[#%d] Trying to outgoing the packet (%s, PTS: %lld)", clone_packet->GetTrackId(), output_stream_info->GetName().CStr(), clone_packet->GetPts() * 1000 / (int64_t)media_track.second->GetTimeBase().GetDen());
 
 				_parent->SendFrame(output_stream_info, std::move(clone_packet));
 			}
@@ -818,7 +820,7 @@ void TranscodeStream::DoFilters(std::shared_ptr<MediaFrame> frame)
 
 		// if(output_track_id == 1)
 			// logtd("[#%d -> #%d] Trying to filter a frame (PTS: %lld)", track_id, output_track_id,  frame->GetPts());
-		
+
 		FilterFrame(output_track_id, std::move(frame_clone));
 	}
 }

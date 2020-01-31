@@ -39,19 +39,20 @@ bool MediaRouter::Start()
 {
 	logti("Trying to start media router...");
 
-	try
-	{
-		_kill_flag = false;
-		_thread = std::thread(&MediaRouter::MainTask, this);
-	}
-	catch(const std::system_error &e)
-	{
-		_kill_flag = true;
+	// Deorecated Garbage collect thread
+	// try
+	// {
+	// 	_kill_flag = false;
+	// 	_thread = std::thread(&MediaRouter::MainTask, this);
+	// }
+	// catch(const std::system_error &e)
+	// {
+	// 	_kill_flag = true;
 
-		logte("Failed to start media router thread.");
+	// 	logte("Failed to start media router thread.");
 
-		return false;
-	}
+	// 	return false;
+	// }
 
 	logti("Media router is started.");
 
