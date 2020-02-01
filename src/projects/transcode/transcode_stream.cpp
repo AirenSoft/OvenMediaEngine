@@ -868,7 +868,7 @@ void TranscodeStream::LoopTask()
 		time_t curr_time;
 		time(&curr_time);
 
-		if(difftime(curr_time, base_time) >= 30)
+		if(difftime(curr_time, base_time) >= 5)
 		{
 			logtd("stats stream[%s/%s], decode.ready[%d], filter.ready[%d], encode.ready[%d]"
 				,_application_info.GetName().CStr()
@@ -902,7 +902,7 @@ void TranscodeStream::LoopTask()
 		}
 
 
-		if(_queue_filterd_frames.size() > 0)
+		while(_queue_filterd_frames.size() > 0)
 		{
 			auto frame = _queue_filterd_frames.pop_unique();
 			if (frame != nullptr)
