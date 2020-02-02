@@ -126,8 +126,8 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 		return false;
 	}
 
-	logte("%s", input_args.CStr());
-	logte("%s", output_filters.CStr());
+	// logte("%s", input_args.CStr());
+	// logte("%s", output_filters.CStr());
 
 	ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr);
 	if (ret < 0)

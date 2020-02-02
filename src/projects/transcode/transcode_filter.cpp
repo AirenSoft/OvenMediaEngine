@@ -31,7 +31,7 @@ TranscodeFilter::~TranscodeFilter()
 
 bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context)
 {
-	logti("Create a transcode filter.");
+	logti("Create a transcode filter. track_id(%d). type(%s)", input_media_track->GetId(), (input_media_track->GetMediaType()==MediaType::Video)?"Video":"Audio");
 
 	MediaType type = input_media_track->GetMediaType();
 	switch(type)

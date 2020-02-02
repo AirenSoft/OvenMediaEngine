@@ -204,8 +204,6 @@ void OvenCodecImplAvcodecEncAAC::ThreadEncode()
 
 std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAAC::RecvBuffer(TranscodeResult *result)
 {
-#if 1
-
 	std::unique_lock<std::mutex> mlock(_mutex);
 	if(!_output_buffer.empty())
 	{
@@ -220,93 +218,4 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAAC::RecvBuffer(TranscodeRes
 	*result = TranscodeResult::NoData;
 
 	return nullptr;	
-
-#else	
-	// Check frame is availble
-	int ret = ::avcodec_receive_packet(_context, _packet);
-
-	if (ret == AVERROR(EAGAIN))
-	{
-		// Wait for more packet
-	}
-	else if (ret == AVERROR_EOF)
-	{
-		logte("Error receiving a packet for decoding : AVERROR_EOF");
-
-		*result = TranscodeResult::DataError;
-		return nullptr;
-	}
-	else if (ret < 0)
-	{
-		logte("Error receiving a packet for encoding : %d", ret);
-
-		*result = TranscodeResult::DataError;
-		return nullptr;
-	}
-	else
-	{
-		if (_packet->pts >= 0LL)
-		{
-			// Packet is ready
-			auto packet_buffer = std::make_shared<MediaPacket>(common::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts / 1000, _packet->dts / 1000, _packet->duration, MediaPacketFlag::Key);
-
-			// logte("ENCODED:: %lld, %lld", packet_buffer->GetPts(), _packet->pts);
-			::av_packet_unref(_packet);
-
-
-			*result = TranscodeResult::DataReady;
-			return std::move(packet_buffer);
-		}
-	}
-
-	while (_input_buffer.empty() == false)
-	{
-		// Dequeue the frame
-		auto buffer = std::move(_input_buffer.front());
-		_input_buffer.pop_front();
-
-		const MediaFrame *frame = buffer.get();
-
-		// logte("DECODE:: %lld %lld", frame->GetPts(), frame->GetPts() * 1000);
-
-		_frame->format = _context->sample_fmt;
-		_frame->nb_samples = _context->frame_size;
-		_frame->pts = frame->GetPts() * 1000;
-		_frame->pkt_duration = frame->GetDuration();
-
-		_frame->channel_layout = _context->channel_layout;
-		_frame->channels = _context->channels;
-		_frame->sample_rate = _context->sample_rate;
-
-		if (::av_frame_get_buffer(_frame, 0) < 0)
-		{
-			logte("Could not allocate the audio frame data");
-
-			*result = TranscodeResult::DataError;
-			return nullptr;
-		}
-
-		if (::av_frame_make_writable(_frame) < 0)
-		{
-			logte("Could not make sure the frame data is writable");
-
-			*result = TranscodeResult::DataError;
-			return nullptr;
-		}
-
-		::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
-
-		ret = ::avcodec_send_frame(_context, _frame);
-
-		if (ret < 0)
-		{
-			logte("Error sending a frame for encoding: %d", ret);
-		}
-
-		::av_frame_unref(_frame);
-	}
-
-	*result = TranscodeResult::NoData;
-	return nullptr;
-#endif	
 }
