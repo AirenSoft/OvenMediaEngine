@@ -21,7 +21,7 @@ namespace info
 		void SetId(info::stream_id_t id);
 		info::stream_id_t GetId() const;
 
-		ov::String GetName();
+		ov::String GetName() const;
 		void SetName(ov::String name);
 
 		std::chrono::system_clock::time_point GetCreatedTime() const;

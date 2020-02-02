@@ -42,6 +42,7 @@ namespace info
 		_name = stream_info._name;
 		_source_type = stream_info._source_type;
 		_created_time = stream_info._created_time;
+		_app_info = std::make_shared<info::Application>(stream_info.GetApplicationInfo());
 
 		for (auto &track : stream_info._tracks)
 		{
@@ -64,7 +65,7 @@ namespace info
 		return _id;
 	}
 
-	ov::String StreamInfo::GetName()
+	ov::String StreamInfo::GetName() const 
 	{
 		return _name;
 	}

@@ -22,7 +22,7 @@ namespace info
 	constexpr application_id_t MinApplicationId = std::numeric_limits<application_id_t>::min();
 	constexpr application_id_t MaxApplicationId = (InvalidApplicationId - static_cast<application_id_t>(1));
 
-	class Host; // For stroing parent
+	class Host; // For storing parent
 	class Application
 	{
 	public:

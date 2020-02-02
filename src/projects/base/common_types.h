@@ -16,6 +16,7 @@
 #include <thread>
 #include <tuple>
 #include <vector>
+#include <iostream>
 
 #include "ovlibrary/ovlibrary.h"
 
@@ -50,7 +51,8 @@ enum class PublisherType : int8_t
 	Hls,
 	Dash,
 	Cmaf,
-	Ovt
+	Ovt,
+	NumberOfPublishers,
 };
 
 enum class FrameType : int8_t

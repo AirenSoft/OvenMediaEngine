@@ -12,7 +12,6 @@
 #define RED_PAYLOAD_TYPE		123
 #define	ULPFEC_PAYLOAD_TYPE		124
 
-
 class RtcStream : public pub::Stream, public RtpRtcpPacketizerInterface
 {
 public:
