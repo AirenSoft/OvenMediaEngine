@@ -902,7 +902,7 @@ void TranscodeStream::LoopTask()
 		}
 
 
-		while(_queue_filterd_frames.size() > 0)
+		while((_queue_filterd_frames.size() > 0) && (_queue_filterd_frames.IsAborted() == false))
 		{
 			auto frame = _queue_filterd_frames.pop_unique();
 			if (frame != nullptr)
