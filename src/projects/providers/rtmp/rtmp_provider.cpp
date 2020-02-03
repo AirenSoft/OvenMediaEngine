@@ -249,6 +249,8 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 	int64_t dts = timestamp;
 	int64_t pts = dts + cts;
 
+	//logte("video.pts=%10lld", pts);
+
 	// Change the timebase specification: 1/1000 -> 1/90000
 	dts *= _video_scale;
 	pts *= _video_scale;
@@ -297,11 +299,12 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 	// Depending on the codec, the bitstream conversion must be processed.
 	stream->ConvertToAudioData(new_data);
 
-	// Change the timebase specification: 1/1000 -> 1/90000
+	// Change the timebase specification: 1/1000 -> 1/Samplerate
 	int64_t dts = timestamp;
 	int64_t pts = timestamp;
-	dts *= _video_scale;
-	pts *= _video_scale;
+	//logte("audio.pts=%10lld", pts);
+	dts *= _audio_scale;
+	pts *= _audio_scale;
 
 	auto pbuf = std::make_shared<MediaPacket>(MediaType::Audio,
 											  1,
