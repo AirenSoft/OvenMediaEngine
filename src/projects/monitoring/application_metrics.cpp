@@ -8,43 +8,50 @@
 
 namespace mon
 {
-    bool ApplicationMetrics::OnStreamCreated(const info::StreamInfo &stream_info)
+    bool ApplicationMetrics::OnStreamCreated(const info::Stream &stream)
     {
-        auto stream_metrics = std::make_shared<StreamMetrics>(GetSharedPtr(), stream_info);
+        std::unique_lock<std::mutex> lock(_map_guard);
+        
+        // If already stream metrics is exist,
+        if(_streams.find(stream.GetId()) != _streams.end())
+        {
+            return true;
+        }
+
+        auto stream_metrics = std::make_shared<StreamMetrics>(GetSharedPtr(), stream);
         if(stream_metrics == nullptr)
         {
-            logte("Cannot create StreamMetrics (%s/%s)", GetName().CStr(), stream_info.GetName().CStr());
+            logte("Cannot create StreamMetrics (%s/%s)", GetName().CStr(), stream.GetName().CStr());
             return false;
         }
 
-        std::unique_lock<std::mutex> lock(_map_guard);
-        _streams[stream_info.GetId()] = stream_metrics;
+        _streams[stream.GetId()] = stream_metrics;
 
-        logti("Create StreamMetrics(%s) for monitoring", stream_info.GetName().CStr());
+        logti("Create StreamMetrics(%s) for monitoring", stream.GetName().CStr());
         return true;
     }
 
-    bool ApplicationMetrics::OnStreamDeleted(const info::StreamInfo &stream_info)
+    bool ApplicationMetrics::OnStreamDeleted(const info::Stream &stream)
     {
         std::unique_lock<std::mutex> lock(_map_guard);
-        if(_streams.find(stream_info.GetId()) == _streams.end())
+        if(_streams.find(stream.GetId()) == _streams.end())
         {
             return false;
         }
-        _streams.erase(stream_info.GetId());
+        _streams.erase(stream.GetId());
 
-        logti("Delete StreamMetrics(%s) for monitoring", stream_info.GetName().CStr());
+        logti("Delete StreamMetrics(%s) for monitoring", stream.GetName().CStr());
         return true;
     }
 
-    std::shared_ptr<StreamMetrics> ApplicationMetrics::GetStreamMetrics(const info::StreamInfo &stream_info)
+    std::shared_ptr<StreamMetrics> ApplicationMetrics::GetStreamMetrics(const info::Stream &stream)
     {
         std::unique_lock<std::mutex> lock(_map_guard);
-        if(_streams.find(stream_info.GetId()) == _streams.end())
+        if(_streams.find(stream.GetId()) == _streams.end())
         {
             return nullptr;
         }
         
-        return _streams[stream_info.GetId()];
+        return _streams[stream.GetId()];
     }
 }

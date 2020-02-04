@@ -16,7 +16,7 @@ std::shared_ptr<RtmpStream> RtmpStream::Create(const std::shared_ptr<pvd::Applic
 }
 
 RtmpStream::RtmpStream(const std::shared_ptr<pvd::Application> &application)
-	: Stream(application, StreamSourceType::RTMP_PROVIDER)
+	: pvd::Stream(application, StreamSourceType::RTMP_PROVIDER)
 {
 	
 }

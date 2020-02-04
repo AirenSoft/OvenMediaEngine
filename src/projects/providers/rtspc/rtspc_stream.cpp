@@ -14,7 +14,7 @@ namespace pvd
 	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::Application> &application, const ov::String &stream_name,
 					  						const std::vector<ov::String> &url_list)
 	{
-		StreamInfo stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::RTSPC_PROVIDER);
+		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::RTSPC_PROVIDER);
 
 		stream_info.SetId(application->IssueUniqueStreamId());
 		stream_info.SetName(stream_name);
@@ -30,7 +30,7 @@ namespace pvd
 		return stream;
 	}
 
-	RtspcStream::RtspcStream(const std::shared_ptr<pvd::Application> &application, const StreamInfo &stream_info, const std::vector<ov::String> &url_list)
+	RtspcStream::RtspcStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
 			: pvd::Stream(application, stream_info)
 	{
 		av_register_all();
@@ -65,14 +65,14 @@ namespace pvd
 		// 		RTSP_URL=$(wget -qO- http://211.235.108.156:50202/hls/live1)
 		// 		echo $RTSP_URL
 
-		FILE* stream = popen( "/home/soulk/rtsp/get_url.sh", "r" );
+		FILE* file_stream = popen( "/home/soulk/rtsp/get_url.sh", "r" );
 
 		std::ostringstream output;
 
-		while ( !feof(stream) && !ferror(stream) )
+		while ( !feof(file_stream) && !ferror(file_stream) )
 		{
 			char buf[128];
-			int32_t bytesRead = fread( buf, 1, 128, stream );
+			int32_t bytesRead = fread( buf, 1, 128, file_stream );
 			output.write( buf, bytesRead );
 		}
 
@@ -178,7 +178,8 @@ namespace pvd
 			return false;
 		}
 
-		if (::avformat_find_stream_info(_format_context, NULL) < 0) {
+		if (::avformat_find_stream_info(_format_context, NULL) < 0) 
+		{
         	_state = State::ERROR;        	
         	logte("Could not find stream information");
 
@@ -326,7 +327,7 @@ namespace pvd
 			auto flag = (packet.flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
 			auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Video, 0, packet.data, packet.size, packet.pts, packet.dts, packet.duration, flag);
 
-			_application->SendFrame(GetSharedPtrAs<info::StreamInfo>(), media_packet);
+			_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
 
 			::av_packet_unref(&packet);
 		}

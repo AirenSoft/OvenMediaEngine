@@ -16,7 +16,7 @@
 #include "base/media_route/media_route_application_connector.h"
 #include "base/media_route/media_buffer.h"
 #include "base/media_route/media_type.h"
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
 
 #include "bitstream/bitstream_to_annexb.h"
 #include "bitstream/bitstream_to_adts.h"
@@ -27,11 +27,11 @@
 class MediaRouteStream
 {
 public:
-	MediaRouteStream(std::shared_ptr<info::StreamInfo> &stream_info);
+	MediaRouteStream(std::shared_ptr<info::Stream> &stream);
 	~MediaRouteStream();
 
 	// Query original stream information
-	std::shared_ptr<info::StreamInfo> GetStreamInfo();
+	std::shared_ptr<info::Stream> GetStream();
 	void SetConnectorType(MediaRouteApplicationConnector::ConnectorType type);
 	MediaRouteApplicationConnector::ConnectorType GetConnectorType();
 
@@ -42,7 +42,7 @@ public:
 
 	time_t getLastReceivedTime();
 private:
-	std::shared_ptr<info::StreamInfo> _stream_info;
+	std::shared_ptr<info::Stream> _stream;
 	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
 
 

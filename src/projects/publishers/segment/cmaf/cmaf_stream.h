@@ -22,12 +22,12 @@ public:
     static std::shared_ptr<CmafStream> Create(int segment_count,
                                                int segment_duration,
                                                const std::shared_ptr<pub::Application> application,
-                                               const StreamInfo &info,
+                                               const info::Stream &info,
                                                uint32_t worker_count,
                                                const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
     CmafStream(const std::shared_ptr<pub::Application> application,
-    		const StreamInfo &info,
+    		const info::Stream &info,
     		const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
 	~CmafStream();

@@ -22,10 +22,10 @@ public:
 	static std::shared_ptr<HlsStream> Create(int segment_count,
 											 int segment_duration,
 											 const std::shared_ptr<pub::Application> application,
-											 const StreamInfo &info,
+											 const info::Stream &info,
 											 uint32_t worker_count);
 
-	HlsStream(const std::shared_ptr<pub::Application> application, const StreamInfo &info);
+	HlsStream(const std::shared_ptr<pub::Application> application, const info::Stream &info);
 
 	~HlsStream();
 

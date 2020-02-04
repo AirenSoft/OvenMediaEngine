@@ -11,7 +11,7 @@
 #include "rtmp_stream.h"
 
 #include "base/provider/application.h"
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
 
 #define OV_LOG_TAG "RtmpApplication"
 
@@ -27,7 +27,7 @@ RtmpApplication::RtmpApplication(const info::Application &application_info)
 }
 
 // Create Stream
-std::shared_ptr<Stream> RtmpApplication::CreateStream()
+std::shared_ptr<pvd::Stream> RtmpApplication::CreateStream()
 {
 	logtd("OnCreateStream");
 

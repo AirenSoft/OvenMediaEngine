@@ -6,7 +6,7 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include <base/info/stream_info.h>
+#include <base/info/stream.h>
 #include "media_route_application.h"
 #include "monitoring/monitoring.h"
 
@@ -149,9 +149,9 @@ bool MediaRouteApplication::UnregisterObserverApp(
 // OnCreateStream 함수는 Provider, Trasncoder 타입의 Connector에서 호출된다
 bool MediaRouteApplication::OnCreateStream(
 	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-	const std::shared_ptr<info::StreamInfo> &stream_info)
+	const std::shared_ptr<info::Stream> &stream)
 {
-	if (app_conn == nullptr || stream_info == nullptr)
+	if (app_conn == nullptr || stream == nullptr)
 	{
 		OV_ASSERT2(false);
 		return false;
@@ -167,20 +167,20 @@ bool MediaRouteApplication::OnCreateStream(
 		{
 			auto istream = it->second;
 
-			if (stream_info->GetName() == istream->GetStreamInfo()->GetName())
+			if (stream->GetName() == istream->GetStream()->GetName())
 			{
 				// 기존에 사용하던 ID를 재사용
-				stream_info->SetId(istream->GetStreamInfo()->GetId());
-				logtw("Reconnected same stream from provider(%s, %d)", stream_info->GetName().CStr(), stream_info->GetId());
+				stream->SetId(istream->GetStream()->GetId());
+				logtw("Reconnected same stream from provider(%s, %d)", stream->GetName().CStr(), stream->GetId());
 
 				return true;
 			}
 		}
 	}
 
-	logtd("Created stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+	logtd("Created stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
 
-	auto new_stream_info = std::make_shared<info::StreamInfo>(*stream_info);
+	auto new_stream_info = std::make_shared<info::Stream>(*stream);
 	auto new_stream = std::make_shared<MediaRouteStream>(new_stream_info);
 
 	{
@@ -192,7 +192,7 @@ bool MediaRouteApplication::OnCreateStream(
 	}
 
 	// For Monitoring
-	mon::Monitoring::GetInstance()->OnStreamCreated(*stream_info);
+	mon::Monitoring::GetInstance()->OnStreamCreated(*stream);
 
 	// 옵저버에 스트림 생성을 알림
 	for (auto observer : _observers)
@@ -202,28 +202,28 @@ bool MediaRouteApplication::OnCreateStream(
 			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
 			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder))
 		{
-			observer->OnCreateStream(new_stream->GetStreamInfo());
+			observer->OnCreateStream(new_stream->GetStream());
 		}
 		else if (
 			// Provider -> MediaRoute -> Relay
 			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
 			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay))
 		{
-			observer->OnCreateStream(new_stream->GetStreamInfo());
+			observer->OnCreateStream(new_stream->GetStream());
 		}
 		else if (
 			// Transcoder -> MediaRoute -> Publisher
 			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
 			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
 		{
-			observer->OnCreateStream(new_stream->GetStreamInfo());
+			observer->OnCreateStream(new_stream->GetStream());
 		}
 		else if (
 			// RelayClient -> MediaRoute -> Publisher
 			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Relay) &&
 			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
 		{
-			observer->OnCreateStream(new_stream->GetStreamInfo());
+			observer->OnCreateStream(new_stream->GetStream());
 		}
 	}
 
@@ -232,19 +232,19 @@ bool MediaRouteApplication::OnCreateStream(
 
 bool MediaRouteApplication::OnDeleteStream(
 	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-	const std::shared_ptr<info::StreamInfo> &stream_info)
+	const std::shared_ptr<info::Stream> &stream)
 {
-	if (app_conn == nullptr || stream_info == nullptr)
+	if (app_conn == nullptr || stream == nullptr)
 	{
-		logte("Invalid arguments: connector: %p, stream_info: %p", app_conn.get(), stream_info.get());
+		logte("Invalid arguments: connector: %p, stream: %p", app_conn.get(), stream.get());
 		return false;
 	}
 
 	// For Monitoring
-	mon::Monitoring::GetInstance()->OnStreamDeleted(*stream_info);
+	mon::Monitoring::GetInstance()->OnStreamDeleted(*stream);
 
-	logtd("Deleted stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
-	auto new_stream_info = std::make_shared<info::StreamInfo>(*stream_info);
+	logtd("Deleted stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+	auto new_stream = std::make_shared<info::Stream>(*stream);
 
 	// 옵저버에 스트림 삭제를 알림
 	for (auto it = _observers.begin(); it != _observers.end(); ++it)
@@ -257,7 +257,7 @@ bool MediaRouteApplication::OnDeleteStream(
 			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay) ||
 			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator) ))
 		{
-			observer->OnDeleteStream(new_stream_info);
+			observer->OnDeleteStream(new_stream);
 		}
 		else if (
 			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
@@ -265,7 +265,7 @@ bool MediaRouteApplication::OnDeleteStream(
 			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay) ||
 			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator)))
 		{
-			observer->OnDeleteStream(new_stream_info);
+			observer->OnDeleteStream(new_stream);
 		}
 		else if (
 			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Relay) &&
@@ -273,13 +273,13 @@ bool MediaRouteApplication::OnDeleteStream(
 			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher) ||
 			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator)))
 		{
-			observer->OnDeleteStream(new_stream_info);
+			observer->OnDeleteStream(new_stream);
 		}
 	}
 
 	{
 		std::lock_guard<std::mutex> lock_guard(_mutex);
-		_streams.erase(new_stream_info->GetId());
+		_streams.erase(new_stream->GetId());
 	}
 
 	return true;
@@ -290,7 +290,7 @@ bool MediaRouteApplication::OnDeleteStream(
 // @from TranscoderProvider
 bool MediaRouteApplication::OnReceiveBuffer(
 	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-	const std::shared_ptr<info::StreamInfo> &stream_info,
+	const std::shared_ptr<info::Stream> &stream_info,
 	const std::shared_ptr<MediaPacket> &packet)
 {
 	if (app_conn == nullptr || stream_info == nullptr)
@@ -362,20 +362,20 @@ void MediaRouteApplication::GarbageCollector()
 			if (diff_time > TIMEOUT_STREAM_ALIVE)
 			{
 				logti("%s(%u) will delete the stream. diff time(%.0f)",
-					  stream->GetStreamInfo()->GetName().CStr(),
-					  stream->GetStreamInfo()->GetId(),
+					  stream->GetStream()->GetName().CStr(),
+					  stream->GetStream()->GetId(),
 					  diff_time);
 
 				for (auto observer : _observers)
 				{
 					if (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder)
 					{
-						observer->OnDeleteStream(stream->GetStreamInfo());
+						observer->OnDeleteStream(stream->GetStream());
 					}
 				}
 
 				std::unique_lock<std::mutex> lock(_mutex);
-				_streams.erase(stream->GetStreamInfo()->GetId());
+				_streams.erase(stream->GetStream()->GetId());
 
 				// 비효율적임
 				it = _streams.begin();
@@ -427,7 +427,7 @@ void MediaRouteApplication::MainTask()
 		{
 			MediaRouteApplicationConnector::ConnectorType connector_type = stream->GetConnectorType();
 
-			auto stream_info = stream->GetStreamInfo();
+			auto stream_info = stream->GetStream();
 
 			// Find Media Track
 			auto media_track = stream_info->GetTrack(media_packet->GetTrackId());

@@ -7,7 +7,7 @@
 #include "base/publisher/stream.h"
 
 std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pub::Application> application,
-											 const StreamInfo &info,
+											 const info::Stream &info,
 											 uint32_t worker_count)
 {
 	auto stream = std::make_shared<OvtStream>(application, info);
@@ -19,7 +19,7 @@ std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pub::Applicat
 }
 
 OvtStream::OvtStream(const std::shared_ptr<pub::Application> application,
-					 const StreamInfo &info)
+					 const info::Stream &info)
 		: Stream(application, info)
 {
 }

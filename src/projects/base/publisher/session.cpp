@@ -1,12 +1,12 @@
 #include "session.h"
 #include "application.h"
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
 #include "publisher_private.h"
 
 namespace pub
 {
 	Session::Session(const std::shared_ptr<Application> &application, const std::shared_ptr<Stream> &stream)
-		: info::SessionInfo(*std::static_pointer_cast<info::StreamInfo>(stream))
+		: info::SessionInfo(*std::static_pointer_cast<info::Stream>(stream))
 	{
 		_application = application;
 		_stream = stream;
@@ -14,7 +14,7 @@ namespace pub
 	}
 
 	Session::Session(const SessionInfo &info, const std::shared_ptr<Application> &application, const std::shared_ptr<Stream> &stream)
-		: info::SessionInfo(*std::static_pointer_cast<info::StreamInfo>(stream), info)
+		: info::SessionInfo(*std::static_pointer_cast<info::Stream>(stream), info)
 	{
 		_application = application;
 		_stream = stream;

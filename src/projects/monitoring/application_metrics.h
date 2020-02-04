@@ -24,10 +24,10 @@ namespace mon
 			return _host_metrics;
 		}
 
-		bool OnStreamCreated(const info::StreamInfo &stream_info);
-		bool OnStreamDeleted(const info::StreamInfo &stream_info);
+		bool OnStreamCreated(const info::Stream &stream);
+		bool OnStreamDeleted(const info::Stream &stream);
 
-		std::shared_ptr<StreamMetrics> GetStreamMetrics(const info::StreamInfo &stream_info);
+		std::shared_ptr<StreamMetrics> GetStreamMetrics(const info::Stream &stream);
 
 	private:
 		std::shared_ptr<HostMetrics> _host_metrics;

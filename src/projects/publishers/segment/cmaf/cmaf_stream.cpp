@@ -18,7 +18,7 @@
 std::shared_ptr<CmafStream> CmafStream::Create(int segment_count,
                                               int segment_duration,
                                               const std::shared_ptr<pub::Application> application,
-                                              const StreamInfo &info,
+                                              const info::Stream &info,
                                               uint32_t worker_count,
                                               const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
 {
@@ -38,7 +38,7 @@ std::shared_ptr<CmafStream> CmafStream::Create(int segment_count,
 // TODO : 다중 트랜스코딩/다중 트랙 구분 및 처리 필요
 //====================================================================================================
 CmafStream::CmafStream(const std::shared_ptr<pub::Application> application,
-					   const StreamInfo &info,
+					   const info::Stream &info,
 					   const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
 					   	: SegmentStream(application, info)
 {

@@ -7,7 +7,7 @@
 using namespace common;
 
 std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<pub::Application> application,
-                                             const StreamInfo &info,
+                                             const info::Stream &info,
                                              uint32_t worker_count)
 {
 	auto stream = std::make_shared<RtcStream>(application, info);
@@ -19,7 +19,7 @@ std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<pub::Applicat
 }
 
 RtcStream::RtcStream(const std::shared_ptr<pub::Application> application,
-                     const StreamInfo &info)
+                     const info::Stream &info)
 	: Stream(application, info)
 {
 	_certificate = application->GetSharedPtrAs<RtcApplication>()->GetCertificate();

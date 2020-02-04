@@ -1,49 +1,38 @@
-//==============================================================================
-//
-//  OvenMediaEngine
-//
-//  Created by Hyunjun Jang
-//  Copyright (c) 2018 AirenSoft. All rights reserved.
-//
-//==============================================================================
 #pragma once
 
-#include <base/common_types.h>
-#include <base/info/media_track.h>
-#include <config/config.h>
+#include "base/common_types.h"
+#include "base/info/media_track.h"
 
 namespace info
 {
-	//struct stream_id_t
-	//{
-	//	bool operator <(const stream_id_t &string) const
-	//	{
-	//		return true;
-	//	}
-	//
-	//	bool operator >(const stream_id_t &string) const
-	//	{
-	//		return true;
-	//	}
-	//};
-
 	typedef uint32_t stream_id_t;
 	constexpr stream_id_t InvalidStreamId = std::numeric_limits<stream_id_t>::max();
 	constexpr stream_id_t MinStreamId = std::numeric_limits<stream_id_t>::min();
 	constexpr stream_id_t MaxStreamId = (InvalidStreamId - static_cast<stream_id_t>(1));
 
-	class Stream : public cfg::Stream
+	class Application;
+
+	//TODO: It should be changed class name to Stream
+	class Stream
 	{
 	public:
-		Stream()
-		{
-			_stream_id = ov::Random::GenerateUInt32();
-		}
+		Stream(const info::Application &app_info, StreamSourceType source);
+		Stream(const info::Application &app_info, info::stream_id_t stream_id, StreamSourceType source);
+		Stream(const Stream &stream);
 
-		stream_id_t GetId() const
-		{
-			return _stream_id;
-		}
+		virtual ~Stream();
+
+		void SetId(info::stream_id_t id);
+		info::stream_id_t GetId() const;
+
+		ov::String GetName() const;
+		void SetName(ov::String name);
+
+		void SetOriginStream(const std::shared_ptr<Stream> &stream);
+		const std::shared_ptr<Stream> GetOriginStream();
+
+		std::chrono::system_clock::time_point GetCreatedTime() const;
+		StreamSourceType GetSourceType() const;
 
 		bool AddTrack(std::shared_ptr<MediaTrack> track);
 		const std::shared_ptr<MediaTrack> GetTrack(int32_t id) const;
@@ -51,10 +40,27 @@ namespace info
 
 		void ShowInfo();
 
+		const Application &GetApplicationInfo() const
+		{
+			return *_app_info;
+		}
+
 	protected:
-		stream_id_t _stream_id = 0;
+		info::stream_id_t _id = 0;
+		ov::String _name;
 
 		// MediaTrack ID 값을 Key로 활용함
 		std::map<int32_t, std::shared_ptr<MediaTrack>> _tracks;
+
+	private:
+		std::chrono::system_clock::time_point _created_time;
+		// Where does the stream come from?
+		StreamSourceType _source_type;
+
+		std::shared_ptr<Application>	_app_info = nullptr;
+
+		// If the Source Type of this stream is LiveTranscoder,
+		// the original stream coming from the Provider can be recognized with _origin_stream.
+		std::shared_ptr<Stream> 	_origin_stream = nullptr;
 	};
 }  // namespace info

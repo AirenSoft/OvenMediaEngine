@@ -24,7 +24,7 @@
 #include <config/items/items.h>
 
 class ApplicationInfo;
-class StreamInfo;
+class Stream;
 
 class RelayServer;
 class RelayClient;
@@ -70,17 +70,17 @@ public:
 	// 스트림 생성
 	bool OnCreateStream(
 		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-		const std::shared_ptr<info::StreamInfo> &stream) override;
+		const std::shared_ptr<info::Stream> &stream) override;
 
 	// 스트림 삭제
 	bool OnDeleteStream(
 		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-		const std::shared_ptr<info::StreamInfo> &stream) override;
+		const std::shared_ptr<info::Stream> &stream) override;
 
 	// 미디어 버퍼 수신
 	bool OnReceiveBuffer(
 		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-		const std::shared_ptr<info::StreamInfo> &stream,
+		const std::shared_ptr<info::Stream> &stream,
 		const std::shared_ptr<MediaPacket> &packet) override;
 
 public:
@@ -103,7 +103,7 @@ public:
 	std::vector<std::shared_ptr<MediaRouteApplicationObserver>> _observers;
 
 	// Information of MediaStream instance
-	// Key : StreamInfo.id
+	// Key : Stream.id
 	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _streams;
 
 public:

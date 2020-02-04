@@ -6,7 +6,7 @@
 
 #include "base/common_types.h"
 #include "base/info/info.h"
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
 
 namespace mon
 {

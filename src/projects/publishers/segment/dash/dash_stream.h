@@ -22,10 +22,10 @@ public:
     static std::shared_ptr<DashStream> Create(int segment_count,
                                                int segment_duration,
                                                const std::shared_ptr<pub::Application> application,
-                                               const StreamInfo &info,
+                                               const info::Stream &info,
                                                uint32_t worker_count);
 
-	DashStream(const std::shared_ptr<pub::Application> application, const StreamInfo &info);
+	DashStream(const std::shared_ptr<pub::Application> application, const info::Stream &info);
 
 	~DashStream();
 

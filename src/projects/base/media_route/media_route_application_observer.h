@@ -6,7 +6,7 @@
 #include <vector>
 
 #include <base/ovlibrary/enable_shared_from_this.h>
-#include <base/info/stream_info.h>
+#include <base/info/stream.h>
 
 #include "media_route_interface.h"
 #include "media_route_application_interface.h"
@@ -27,19 +27,19 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// Interface
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	virtual bool OnCreateStream(const std::shared_ptr<info::StreamInfo> &info) = 0;
-	virtual bool OnDeleteStream(const std::shared_ptr<info::StreamInfo> &info) = 0;
+	virtual bool OnCreateStream(const std::shared_ptr<info::Stream> &info) = 0;
+	virtual bool OnDeleteStream(const std::shared_ptr<info::Stream> &info) = 0;
 
 	// Delivery encoded video frame
-	virtual bool OnSendVideoFrame(const std::shared_ptr<info::StreamInfo> &stream,
+	virtual bool OnSendVideoFrame(const std::shared_ptr<info::Stream> &stream,
 									const std::shared_ptr<MediaPacket> &media_packet) = 0;
 
 	// Delivery encoded audio frame
-	virtual bool OnSendAudioFrame(const std::shared_ptr<info::StreamInfo> &stream,
+	virtual bool OnSendAudioFrame(const std::shared_ptr<info::Stream> &stream,
 									const std::shared_ptr<MediaPacket> &media_packet) = 0;
 
 	// Provider 등에서 전달 받은 비디오/오디오 프레임 전달
-	virtual bool OnSendFrame(const std::shared_ptr<info::StreamInfo> &info,
+	virtual bool OnSendFrame(const std::shared_ptr<info::Stream> &info,
 								const std::shared_ptr<MediaPacket> &packet)
 	{
 		return false;

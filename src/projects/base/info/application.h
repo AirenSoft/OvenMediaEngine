@@ -10,7 +10,6 @@
 
 #include <base/ovcrypto/ovcrypto.h>
 #include <config/config.h>
-
 #include "stream.h"
 
 class Orchestrator;

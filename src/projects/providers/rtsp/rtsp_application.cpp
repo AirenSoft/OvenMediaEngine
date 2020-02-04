@@ -2,7 +2,7 @@
 #include "rtsp_stream.h"
 
 #include "base/provider/application.h"
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
 
 #define OV_LOG_TAG "RtspApplication"
 
@@ -17,7 +17,7 @@ RtspApplication::RtspApplication(const info::Application &application_info)
 {
 }
 
-std::shared_ptr<Stream> RtspApplication::CreateStream()
+std::shared_ptr<pvd::Stream> RtspApplication::CreateStream()
 {
 	logtd("OnCreateStream");
 

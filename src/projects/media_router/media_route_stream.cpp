@@ -14,24 +14,24 @@
 
 using namespace common;
 
-MediaRouteStream::MediaRouteStream(std::shared_ptr<info::StreamInfo> &stream_info)
+MediaRouteStream::MediaRouteStream(std::shared_ptr<info::Stream> &stream)
 {
-	logtd("Trying to create media route stream: name(%s) id(%u)", stream_info->GetName().CStr(), stream_info->GetId());
+	logtd("Trying to create media route stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 
-	_stream_info = stream_info;
-	_stream_info->ShowInfo();
+	_stream = stream;
+	_stream->ShowInfo();
 
 	time(&_last_rb_time);
 }
 
 MediaRouteStream::~MediaRouteStream()
 {
-	logtd("Delete media route stream name(%s) id(%u)", _stream_info->GetName().CStr(), _stream_info->GetId());
+	logtd("Delete media route stream name(%s) id(%u)", _stream->GetName().CStr(), _stream->GetId());
 }
 
-std::shared_ptr<info::StreamInfo> MediaRouteStream::GetStreamInfo()
+std::shared_ptr<info::Stream> MediaRouteStream::GetStream()
 {
-	return _stream_info;
+	return _stream;
 }
 
 void MediaRouteStream::SetConnectorType(MediaRouteApplicationConnector::ConnectorType type)
@@ -51,7 +51,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 
 	auto track_id = media_packet->GetTrackId();
 
-	auto media_track = _stream_info->GetTrack(track_id);
+	auto media_track = _stream->GetTrack(track_id);
 
 	if (media_track == nullptr)
 	{
@@ -62,7 +62,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 
 
 #if 0 // for debug...
-	if(_stream_info->GetName() == "stream")
+	if(_stream->GetName() == "stream")
 	{
 		if(media_type==MediaType::Video)
 			_last_video_pts = media_packet->GetPts();
@@ -70,11 +70,11 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 			_last_audio_pts = media_packet->GetPts();
 
 		// logtd("name(%10s) tid(%2d) type(%s), pts(%10lld), dts(%10lld) diff(%5lld)",
-		//  _stream_info->GetName().CStr(), track_id, (media_type==MediaType::Video)?"Video":"Audio", media_packet->GetPts(), media_packet->GetDts(), _last_video_pts - _last_audio_pts);
+		//  _stream->GetName().CStr(), track_id, (media_type==MediaType::Video)?"Video":"Audio", media_packet->GetPts(), media_packet->GetDts(), _last_video_pts - _last_audio_pts);
 
 		if(media_type == MediaType::Video)
 		logtd("name(%10s) tid(%2d) type(%s), pts(%10lld), dts(%10lld) dif(%5lld)",
-		_stream_info->GetName().CStr(), track_id, (media_type == MediaType::Video) ? "Video" : "Audio", media_packet->GetPts(), media_packet->GetDts(), media_packet->GetPts()-media_packet->GetDts());
+		_stream->GetName().CStr(), track_id, (media_type == MediaType::Video) ? "Video" : "Audio", media_packet->GetPts(), media_packet->GetDts(), media_packet->GetPts()-media_packet->GetDts());
 	}
 #endif
 

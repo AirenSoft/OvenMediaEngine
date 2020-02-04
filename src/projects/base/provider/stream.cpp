@@ -15,19 +15,19 @@
 namespace pvd
 {
 	Stream::Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type)
-		:info::StreamInfo(*(std::static_pointer_cast<info::Application>(application)), source_type),
+		:info::Stream(*(std::static_pointer_cast<info::Application>(application)), source_type),
 		_application(application)
 	{
 	}
 
 	Stream::Stream(const std::shared_ptr<pvd::Application> &application, info::stream_id_t stream_id, StreamSourceType source_type)
-		:info::StreamInfo((*std::static_pointer_cast<info::Application>(application)), stream_id, source_type),
+		:info::Stream((*std::static_pointer_cast<info::Application>(application)), stream_id, source_type),
 		_application(application)
 	{
 	}
 
-	Stream::Stream(const std::shared_ptr<pvd::Application> &application, const StreamInfo &stream_info)
-		:info::StreamInfo(stream_info),
+	Stream::Stream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info)
+		:info::Stream(stream_info),
 		_application(application)
 	{
 	}
@@ -35,5 +35,18 @@ namespace pvd
 	Stream::~Stream()
 	{
 
+	}
+
+	bool Stream::Start() 
+	{
+		_stream_metrics = mon::Monitoring::GetInstance()->GetStreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
+
+
+		return true;
+	}
+	
+	bool Stream::Stop() 
+	{
+		return true;
 	}
 }

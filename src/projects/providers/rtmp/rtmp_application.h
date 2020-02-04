@@ -10,7 +10,6 @@
 #pragma once
 
 #include "base/common_types.h"
-
 #include "base/provider/application.h"
 #include "base/provider/stream.h"
 
@@ -24,7 +23,7 @@ public:
 	explicit RtmpApplication(const info::Application &info);
 	~RtmpApplication() override = default;
 
-	std::shared_ptr<Stream> CreateStream();
+	std::shared_ptr<pvd::Stream> CreateStream();
 
 private:
 };

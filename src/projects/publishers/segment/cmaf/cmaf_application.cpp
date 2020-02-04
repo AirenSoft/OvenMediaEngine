@@ -75,7 +75,7 @@ bool CmafApplication::Stop()
 // CreateStream
 // - Application Override
 //====================================================================================================
-std::shared_ptr<pub::Stream> CmafApplication::CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t thread_count)
+std::shared_ptr<pub::Stream> CmafApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count)
 {
 	logtd("Cmaf CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 
@@ -90,7 +90,7 @@ std::shared_ptr<pub::Stream> CmafApplication::CreateStream(const std::shared_ptr
 //====================================================================================================
 // DeleteStream
 //====================================================================================================
-bool CmafApplication::DeleteStream(const std::shared_ptr<info::StreamInfo> &info)
+bool CmafApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
 	return true;
 }

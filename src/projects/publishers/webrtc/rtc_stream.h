@@ -16,10 +16,10 @@ class RtcStream : public pub::Stream, public RtpRtcpPacketizerInterface
 {
 public:
 	static std::shared_ptr<RtcStream> Create(const std::shared_ptr<pub::Application> application,
-	                                         const StreamInfo &info,
+	                                         const info::Stream &info,
 	                                         uint32_t worker_count);
 	explicit RtcStream(const std::shared_ptr<pub::Application> application,
-	                   const StreamInfo &info);
+	                   const info::Stream &info);
 	~RtcStream() final;
 
 	// SDP를 생성하고 관리한다.

@@ -1,6 +1,7 @@
 #include "stream.h"
 #include "application.h"
 #include "publisher_private.h"
+
 namespace pub
 {
 	StreamWorker::StreamWorker()
@@ -145,8 +146,8 @@ namespace pub
 	}
 
 	Stream::Stream(const std::shared_ptr<Application> application,
-				   const StreamInfo &info)
-		: StreamInfo(info)
+				   const info::Stream &info)
+		: info::Stream(info)
 	{
 		_application = application;
 		_run_flag = false;

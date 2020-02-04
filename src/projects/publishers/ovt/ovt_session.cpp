@@ -1,4 +1,4 @@
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
 #include "base/ovlibrary/byte_io.h"
 #include "base/publisher/stream.h"
 #include "ovt_session.h"
@@ -9,7 +9,7 @@ std::shared_ptr<OvtSession> OvtSession::Create(const std::shared_ptr<pub::Applic
 										  	   uint32_t session_id,
 										  	   const std::shared_ptr<ov::Socket> &connector)
 {
-	auto session_info = info::SessionInfo(*std::static_pointer_cast<info::StreamInfo>(stream), session_id);
+	auto session_info = info::SessionInfo(*std::static_pointer_cast<info::Stream>(stream), session_id);
 	auto session = std::make_shared<OvtSession>(session_info, application, stream, connector);
 	if(!session->Start())
 	{

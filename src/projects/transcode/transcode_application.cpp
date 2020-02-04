@@ -32,14 +32,13 @@ TranscodeApplication::~TranscodeApplication()
 	logtd("Destroyed transcode application.");
 }
 
-bool TranscodeApplication::OnCreateStream(const std::shared_ptr<info::StreamInfo> &stream_info)
+bool TranscodeApplication::OnCreateStream(const std::shared_ptr<info::Stream> &stream_info)
 {
 	logtd("OnCreateStream. name(%s), id(%d)", stream_info->GetName().CStr(), stream_info->GetId());
 
 	std::unique_lock<std::mutex> lock(_mutex);
 
 	auto stream = std::make_shared<TranscodeStream>(_application_info, stream_info, this);
-
 	if (stream == nullptr)
 	{
 		return false;
@@ -50,7 +49,7 @@ bool TranscodeApplication::OnCreateStream(const std::shared_ptr<info::StreamInfo
 	return true;
 }
 
-bool TranscodeApplication::OnDeleteStream(const std::shared_ptr<info::StreamInfo> &stream_info)
+bool TranscodeApplication::OnDeleteStream(const std::shared_ptr<info::Stream> &stream_info)
 {
 	logtd("OnDeleteStream. name(%s), id(%d)", stream_info->GetName().CStr(), stream_info->GetId());
 	
@@ -73,7 +72,7 @@ bool TranscodeApplication::OnDeleteStream(const std::shared_ptr<info::StreamInfo
 }
 
 
-bool TranscodeApplication::OnSendFrame(const std::shared_ptr<info::StreamInfo> &stream_info, const std::shared_ptr<MediaPacket> &packet)
+bool TranscodeApplication::OnSendFrame(const std::shared_ptr<info::Stream> &stream_info, const std::shared_ptr<MediaPacket> &packet)
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 

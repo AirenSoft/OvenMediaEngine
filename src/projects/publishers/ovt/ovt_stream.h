@@ -8,10 +8,10 @@ class OvtStream : public pub::Stream, public OvtPacketizerInterface
 {
 public:
 	static std::shared_ptr<OvtStream> Create(const std::shared_ptr<pub::Application> application,
-											 const StreamInfo &info,
+											 const info::Stream &info,
 											 uint32_t worker_count);
 	explicit OvtStream(const std::shared_ptr<pub::Application> application,
-					   const StreamInfo &info);
+					   const info::Stream &info);
 	~OvtStream() final;
 
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;

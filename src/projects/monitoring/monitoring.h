@@ -23,12 +23,12 @@ namespace mon
 		bool OnHostDeleted(const info::Host &host_info);
 		bool OnApplicationCreated(const info::Application &app_info);
 		bool OnApplicationDeleted(const info::Application &app_info);
-		bool OnStreamCreated(const info::StreamInfo &stream_info);
-		bool OnStreamDeleted(const info::StreamInfo &stream_info);
+		bool OnStreamCreated(const info::Stream &stream_info);
+		bool OnStreamDeleted(const info::Stream &stream_info);
 
         std::shared_ptr<HostMetrics> GetHostMetrics(const info::Host &host_info);
         std::shared_ptr<ApplicationMetrics> GetApplicationMetrics(const info::Application &app_info);
-        std::shared_ptr<StreamMetrics>  GetStreamMetrics(const info::StreamInfo &stream_info);
+        std::shared_ptr<StreamMetrics>  GetStreamMetrics(const info::Stream &stream_info);
 
 	private:
 		std::mutex _map_guard;

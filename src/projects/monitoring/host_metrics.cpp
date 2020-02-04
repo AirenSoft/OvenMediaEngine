@@ -9,6 +9,12 @@ namespace mon
 {
 	bool HostMetrics::OnApplicationCreated(const info::Application &app_info)
 	{
+		std::unique_lock<std::mutex> lock(_map_guard);
+		if(_applications.find(app_info.GetId()) != _applications.end())
+		{
+			return true;
+		}
+
 		auto app_metrics = std::make_shared<ApplicationMetrics>(GetSharedPtr(), app_info);
         if(app_metrics == nullptr)
         {
@@ -16,7 +22,6 @@ namespace mon
             return false;
         }
 
-        std::unique_lock<std::mutex> lock(_map_guard);
         _applications[app_info.GetId()] = app_metrics;
 
 		logti("Create ApplicationMetrics(%s) for monitoring", app_info.GetName().CStr());

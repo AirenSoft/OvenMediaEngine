@@ -15,7 +15,7 @@
 #include <thread>
 #include "base/media_route/media_route_interface.h"
 #include "base/media_route/media_buffer.h"
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
 #include "transcode_application.h"
 
 #include <base/ovlibrary/ovlibrary.h>

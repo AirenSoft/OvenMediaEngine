@@ -19,7 +19,7 @@
 #include "base/media_route/media_buffer.h"
 #include "base/media_route/media_queue.h"
 #include "base/media_route/media_type.h"
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
 
 #include "transcode_context.h"
 #include "transcode_filter.h"
@@ -38,13 +38,13 @@ class TranscodeStageContext
 public:
 	MediaTrackId _transcoder_id;
 	std::shared_ptr<MediaTrack> _input_track;
-	std::vector< std::pair<std::shared_ptr<info::StreamInfo>, std::shared_ptr<MediaTrack>> > _output_tracks;
+	std::vector< std::pair<std::shared_ptr<info::Stream>, std::shared_ptr<MediaTrack>> > _output_tracks;
 };
 
 class TranscodeStream
 {
 public:
-	TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::StreamInfo> &orig_stream_info, TranscodeApplication *parent);
+	TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &orig_stream, TranscodeApplication *parent);
 	~TranscodeStream();
 
 	void Stop();
@@ -64,15 +64,15 @@ private:
 	const info::Application _application_info;
 
 	// Input Stream Info
-	std::shared_ptr<info::StreamInfo> _stream_info_input;
+	std::shared_ptr<info::Stream> _stream_input;
 
 	// Output Stream Info
-	// [OUTPUT_STREAM_NAME, OUTPUT_STREAM_INFO]
-	std::map<ov::String, std::shared_ptr<info::StreamInfo>> _stream_info_outputs;
+	// [OUTPUT_STREAM_NAME, OUTPUT_stream]
+	std::map<ov::String, std::shared_ptr<info::Stream>> _stream_outputs;
 
 
 	// Store information for track mapping by stage
-	void StoreStageContext(ov::String encode_profile_name, common::MediaType media_type,  std::shared_ptr<MediaTrack> input_track, std::shared_ptr<info::StreamInfo> output_stream, std::shared_ptr<MediaTrack> output_track);
+	void StoreStageContext(ov::String encode_profile_name, common::MediaType media_type,  std::shared_ptr<MediaTrack> input_track, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
 	std::map< std::pair<ov::String, common::MediaType>, std::shared_ptr<TranscodeStageContext> > _map_stage_context;
 	MediaTrackId _last_transcode_id;
 
@@ -80,7 +80,7 @@ private:
 	// [INPUT_TRACK, DECODER_ID]
 	std::map <MediaTrackId, MediaTrackId> _stage_input_to_decoder;
 	// [INPUT_TRACK, Output Stream + Track Id]
-	std::map <MediaTrackId, std::vector<std::pair<std::shared_ptr<info::StreamInfo>, MediaTrackId>> > _stage_input_to_output;
+	std::map <MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>> > _stage_input_to_output;
 
 	// [DECODER_ID, FILTER_ID(trasncode_id)]
 	std::map <MediaTrackId, std::vector<MediaTrackId> > _stage_decoder_to_filter;
@@ -89,7 +89,7 @@ private:
 	std::map <MediaTrackId, MediaTrackId> _stage_filter_to_encoder;
 
 	// [ENCODER_ID(trasncode_id), OUTPUT_TRACKS]
-	std::map <MediaTrackId, std::vector<std::pair<std::shared_ptr<info::StreamInfo>, MediaTrackId>>> _stage_encoder_to_output;
+	std::map <MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _stage_encoder_to_output;
 
 
 
@@ -161,7 +161,7 @@ private:
 	void DeleteStreams();
 
 	// Send frame with output stream's information
-	void SendFrame(std::shared_ptr<info::StreamInfo> &stream_info, std::shared_ptr<MediaPacket> packet);
+	void SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet);
 
 	const cfg::Encode* GetEncodeByProfileName(const info::Application &application_info, ov::String encode_name);
 

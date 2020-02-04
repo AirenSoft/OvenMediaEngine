@@ -10,7 +10,7 @@
 
 class MediaRouteApplicationObserver;
 class MediaRouteApplicationConnector;
-class StreamInfo;
+class Stream;
 
 class MediaRouteInterface : public ov::EnableSharedFromThis<MediaRouteInterface>
 {

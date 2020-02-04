@@ -6,17 +6,17 @@
 
 #include "base/common_types.h"
 #include "base/info/info.h"
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
 #include "common_metrics.h"
 
 namespace mon
 {
 	class ApplicationMetrics;
-	class StreamMetrics : public info::StreamInfo, public CommonMetrics
+	class StreamMetrics : public info::Stream, public CommonMetrics
 	{
 	public:
-		StreamMetrics(const std::shared_ptr<ApplicationMetrics> &app_metrics, const info::StreamInfo &stream_info)
-		: info::StreamInfo(stream_info), 
+		StreamMetrics(const std::shared_ptr<ApplicationMetrics> &app_metrics, const info::Stream &stream)
+		: info::Stream(stream), 
             _app_metrics(app_metrics)
 		{
 		}

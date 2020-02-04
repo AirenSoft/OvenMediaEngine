@@ -1,7 +1,7 @@
 #pragma once
 
 #include "base/common_types.h"
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
 #include "base/media_route/media_buffer.h"
 #include "session.h"
 
@@ -57,7 +57,7 @@ namespace pub
 	};
 
 	class Application;
-	class Stream : public info::StreamInfo, public ov::EnableSharedFromThis<Stream>
+	class Stream : public info::Stream, public ov::EnableSharedFromThis<Stream>
 	{
 	public:
 		// Session을 추가한다.
@@ -79,7 +79,7 @@ namespace pub
 		uint32_t IssueUniqueSessionId();
 
 	protected:
-		Stream(const std::shared_ptr<Application> application, const StreamInfo &info);
+		Stream(const std::shared_ptr<Application> application, const info::Stream &info);
 		virtual ~Stream();
 
 		std::shared_ptr<Application> GetApplication();

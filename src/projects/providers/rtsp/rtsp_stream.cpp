@@ -7,7 +7,7 @@ std::shared_ptr<RtspStream> RtspStream::Create(const std::shared_ptr<pvd::Applic
 }
 
 RtspStream::RtspStream(const std::shared_ptr<pvd::Application> &application)
-	: Stream(application, StreamSourceType::RTSP_PROVIDER)
+	: pvd::Stream(application, StreamSourceType::RTSP_PROVIDER)
 {	
 }
 

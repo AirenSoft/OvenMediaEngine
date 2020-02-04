@@ -14,11 +14,10 @@
 #include "base/ovlibrary/ovlibrary.h"
 
 #include "base/media_route/media_route_application_connector.h"
+#include "stream.h"
 
 namespace pvd
 {
-	class Stream;
-
 	class Application : public info::Application, public MediaRouteApplicationConnector
 	{
 		enum class ApplicationState : int8_t

@@ -9,13 +9,14 @@
 #pragma once
 
 #include "base/common_types.h"
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
+#include "monitoring/monitoring.h"
 
 namespace pvd
 {
 	class Application;
 
-	class Stream : public info::StreamInfo, public ov::EnableSharedFromThis<Stream>
+	class Stream : public info::Stream, public ov::EnableSharedFromThis<Stream>
 	{
 	public:
 		enum class State
@@ -40,18 +41,19 @@ namespace pvd
 			return _application;
 		}
 
-		virtual bool Start() {return true;}
-		virtual bool Stop() {return true;}
+		virtual bool Start();
+		virtual bool Stop();
 
 	protected:
 		Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type);
 		Stream(const std::shared_ptr<pvd::Application> &application, info::stream_id_t stream_id, StreamSourceType source_type);
-		Stream(const std::shared_ptr<pvd::Application> &application, const StreamInfo &stream_info);
+		Stream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info);
 
 		virtual ~Stream();
 
 		State 	_state;
 
+		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 		std::shared_ptr<pvd::Application> _application;
 	};
 }

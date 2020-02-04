@@ -16,7 +16,7 @@ public:
 	
 	~RtspApplication() override = default;
 
-	std::shared_ptr<Stream> CreateStream();
+	std::shared_ptr<pvd::Stream> CreateStream();
 
 private:
 };

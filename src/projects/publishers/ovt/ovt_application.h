@@ -18,6 +18,6 @@ private:
 	bool Stop() override;
 
 	// Application Implementation
-	std::shared_ptr<pub::Stream> CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t worker_count) override;
-	bool DeleteStream(const std::shared_ptr<info::StreamInfo> &info) override;
+	std::shared_ptr<pub::Stream> CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count) override;
+	bool DeleteStream(const std::shared_ptr<info::Stream> &info) override;
 };

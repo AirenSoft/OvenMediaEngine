@@ -14,9 +14,10 @@
 
 #include "media_router/bitstream/bitstream_to_annexb.h"
 #include "media_router/bitstream/bitstream_to_adts.h"
+
 using namespace pvd;
 
-class RtmpStream : public Stream
+class RtmpStream : public pvd::Stream
 {
 public:
 	static std::shared_ptr<RtmpStream> Create(const std::shared_ptr<pvd::Application> &application);

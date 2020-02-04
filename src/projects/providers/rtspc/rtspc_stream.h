@@ -29,7 +29,7 @@ namespace pvd
 		static std::shared_ptr<RtspcStream>
 		Create(const std::shared_ptr<pvd::Application> &application, const ov::String &stream_name,	const std::vector<ov::String> &url_list);
 
-		RtspcStream(const std::shared_ptr<pvd::Application> &application, const StreamInfo &stream_info, const std::vector<ov::String> &url_list);
+		RtspcStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list);
 
 		~RtspcStream() final;
 

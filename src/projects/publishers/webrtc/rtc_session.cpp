@@ -1,4 +1,4 @@
-#include "base/info/stream_info.h"
+#include "base/info/stream.h"
 #include "rtc_private.h"
 #include "rtc_session.h"
 #include "rtc_application.h"
@@ -13,7 +13,7 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Applic
                                                const std::shared_ptr<IcePort> &ice_port)
 {
 	// Session Id of the offer sdp is unique value
-	auto session_info = SessionInfo(*std::static_pointer_cast<info::StreamInfo>(stream), offer_sdp->GetSessionId());
+	auto session_info = SessionInfo(*std::static_pointer_cast<info::Stream>(stream), offer_sdp->GetSessionId());
 	auto session = std::make_shared<RtcSession>(session_info, application, stream, offer_sdp, peer_sdp, ice_port);
 	if(!session->Start())
 	{

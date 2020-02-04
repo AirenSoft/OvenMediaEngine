@@ -5,7 +5,7 @@
 
 using namespace pvd;
 
-class RtspStream : public Stream
+class RtspStream : public pvd::Stream
 {
 public:
 	static std::shared_ptr<RtspStream> Create(const std::shared_ptr<pvd::Application> &application);

@@ -33,7 +33,7 @@ std::shared_ptr<Certificate> RtcApplication::GetCertificate()
 	return _certificate;
 }
 
-std::shared_ptr<pub::Stream> RtcApplication::CreateStream(const std::shared_ptr<info::StreamInfo> &info, uint32_t worker_count)
+std::shared_ptr<pub::Stream> RtcApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count)
 {
 	// Stream Class 생성할때는 복사를 사용한다.
 	logtd("RtcApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
@@ -45,7 +45,7 @@ std::shared_ptr<pub::Stream> RtcApplication::CreateStream(const std::shared_ptr<
 	return RtcStream::Create(GetSharedPtrAs<pub::Application>(), *info, worker_count);
 }
 
-bool RtcApplication::DeleteStream(const std::shared_ptr<info::StreamInfo> &info)
+bool RtcApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
 	logtd("DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
 
