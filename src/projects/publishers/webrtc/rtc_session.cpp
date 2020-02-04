@@ -13,7 +13,7 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Applic
                                                const std::shared_ptr<IcePort> &ice_port)
 {
 	// Session Id of the offer sdp is unique value
-	auto session_info = SessionInfo(*std::static_pointer_cast<info::Stream>(stream), offer_sdp->GetSessionId());
+	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), offer_sdp->GetSessionId());
 	auto session = std::make_shared<RtcSession>(session_info, application, stream, offer_sdp, peer_sdp, ice_port);
 	if(!session->Start())
 	{
@@ -22,7 +22,7 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Applic
 	return session;
 }
 
-RtcSession::RtcSession(const SessionInfo &session_info,
+RtcSession::RtcSession(const info::Session &session_info,
 					   const std::shared_ptr<pub::Application> &application,
 					   const std::shared_ptr<pub::Stream> &stream,
 					   const std::shared_ptr<SessionDescription> &offer_sdp,
@@ -169,7 +169,7 @@ const std::shared_ptr<SessionDescription>& RtcSession::GetPeerSDP()
 }
 
 // Application에서 바로 Session의 다음 함수를 호출해준다.
-void RtcSession::OnPacketReceived(const std::shared_ptr<info::SessionInfo> &session_info,
+void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
 								const std::shared_ptr<const ov::Data> &data)
 {
 	// NETWORK에서 받은 Packet은 DTLS로 넘긴다.

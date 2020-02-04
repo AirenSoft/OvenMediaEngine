@@ -214,7 +214,7 @@ bool IcePort::RemoveObservers()
 	return true;
 }
 
-void IcePort::AddSession(const std::shared_ptr<info::SessionInfo> &session_info, std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp)
+void IcePort::AddSession(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp)
 {
 	const ov::String &local_ufrag = offer_sdp->GetIceUfrag();
 	const ov::String &remote_ufrag = peer_sdp->GetIceUfrag();
@@ -280,23 +280,23 @@ bool IcePort::RemoveSession(const session_id_t session_id)
 	return true;
 }
 
-bool IcePort::RemoveSession(const std::shared_ptr<info::SessionInfo> &session_info)
+bool IcePort::RemoveSession(const std::shared_ptr<info::Session> &session_info)
 {
 	session_id_t session_id = session_info->GetId();
 	return RemoveSession(session_id);
 }
 
-bool IcePort::Send(const std::shared_ptr<info::SessionInfo> &session_info, std::unique_ptr<RtpPacket> packet)
+bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, std::unique_ptr<RtpPacket> packet)
 {
 	return Send(session_info, packet->GetData());
 }
 
-bool IcePort::Send(const std::shared_ptr<info::SessionInfo> &session_info, std::unique_ptr<RtcpPacket> packet)
+bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, std::unique_ptr<RtcpPacket> packet)
 {
 	return Send(session_info, packet->GetData());
 }
 
-bool IcePort::Send(const std::shared_ptr<info::SessionInfo> &session_info, const std::shared_ptr<const ov::Data> &data)
+bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data)
 {
 	// logtd("Finding socket from session #%d...", session_info->GetId());
 

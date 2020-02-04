@@ -28,7 +28,7 @@ protected:
 	struct IcePortInfo
 	{
 		// Session information that connected with the client
-		std::shared_ptr<info::SessionInfo> session_info;
+		std::shared_ptr<info::Session> session_info;
 
 		std::shared_ptr<SessionDescription> offer_sdp;
 		std::shared_ptr<SessionDescription> peer_sdp;
@@ -61,7 +61,7 @@ public:
 
 	bool Close();
 
-	IcePortConnectionState GetState(const std::shared_ptr<info::SessionInfo> &session_info) const
+	IcePortConnectionState GetState(const std::shared_ptr<info::Session> &session_info) const
 	{
 		OV_ASSERT2(session_info != nullptr);
 
@@ -87,13 +87,13 @@ public:
 		return (_observers.empty() == false);
 	}
 
-	void AddSession(const std::shared_ptr<info::SessionInfo> &session_info, std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp);
+	void AddSession(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp);
 	bool RemoveSession(session_id_t session_id);
-	bool RemoveSession(const std::shared_ptr<info::SessionInfo> &session_info);
+	bool RemoveSession(const std::shared_ptr<info::Session> &session_info);
 
-	bool Send(const std::shared_ptr<info::SessionInfo> &session_info, std::unique_ptr<RtpPacket> packet);
-	bool Send(const std::shared_ptr<info::SessionInfo> &session_info, std::unique_ptr<RtcpPacket> packet);
-	bool Send(const std::shared_ptr<info::SessionInfo> &session_info, const std::shared_ptr<const ov::Data> &data);
+	bool Send(const std::shared_ptr<info::Session> &session_info, std::unique_ptr<RtpPacket> packet);
+	bool Send(const std::shared_ptr<info::Session> &session_info, std::unique_ptr<RtcpPacket> packet);
+	bool Send(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data);
 
 	ov::String ToString() const;
 

@@ -9,7 +9,7 @@ std::shared_ptr<OvtSession> OvtSession::Create(const std::shared_ptr<pub::Applic
 										  	   uint32_t session_id,
 										  	   const std::shared_ptr<ov::Socket> &connector)
 {
-	auto session_info = info::SessionInfo(*std::static_pointer_cast<info::Stream>(stream), session_id);
+	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), session_id);
 	auto session = std::make_shared<OvtSession>(session_info, application, stream, connector);
 	if(!session->Start())
 	{
@@ -18,7 +18,7 @@ std::shared_ptr<OvtSession> OvtSession::Create(const std::shared_ptr<pub::Applic
 	return session;
 }
 
-OvtSession::OvtSession(const info::SessionInfo &session_info,
+OvtSession::OvtSession(const info::Session &session_info,
 		   const std::shared_ptr<pub::Application> &application,
 		   const std::shared_ptr<pub::Stream> &stream,
 		   const std::shared_ptr<ov::Socket> &connector)
@@ -75,7 +75,7 @@ const std::shared_ptr<ov::Socket> OvtSession::GetConnector()
 	return _connector;
 }
 
-void OvtSession::OnPacketReceived(const std::shared_ptr<info::SessionInfo> &session_info,
+void OvtSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
 									const std::shared_ptr<const ov::Data> &data)
 {
 	// NOTHING YET

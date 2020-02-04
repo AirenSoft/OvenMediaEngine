@@ -1,30 +1,30 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <random>
 
-#include "session_info.h"
+#include "session.h"
 #include "stream.h"
 
 namespace info
 {
-	SessionInfo::SessionInfo(const info::Stream &stream)
+	Session::Session(const info::Stream &stream)
 	{
 		_id = ov::Random::GenerateUInt32();
 		_stream = std::make_shared<info::Stream>(stream);
 	}
 
-	SessionInfo::SessionInfo(const info::Stream &stream, session_id_t session_id)
+	Session::Session(const info::Stream &stream, session_id_t session_id)
 	{
 		_id = session_id;
 		_stream = std::make_shared<info::Stream>(stream);
 	}
 
-	SessionInfo::SessionInfo(const info::Stream &stream, const SessionInfo &T)
+	Session::Session(const info::Stream &stream, const Session &T)
 	{
 		_id = T._id;
 		_stream = std::make_shared<info::Stream>(stream);
 	}
 
-	session_id_t SessionInfo::GetId() const
+	session_id_t Session::GetId() const
 	{
 		return _id;
 	}

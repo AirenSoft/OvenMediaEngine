@@ -2,7 +2,7 @@
 
 #include <base/common_types.h>
 #include <base/publisher/application.h>
-#include <base/info/session_info.h>
+#include <base/info/session.h>
 
 #include "ovt_stream.h"
 

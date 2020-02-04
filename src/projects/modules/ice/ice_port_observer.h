@@ -11,7 +11,7 @@
 #include <memory>
 
 #include <base/ovlibrary/ovlibrary.h>
-#include <base/info/session_info.h>
+#include <base/info/session.h>
 #include <modules/sdp/session_description.h>
 
 enum class IcePortConnectionState : int
@@ -39,7 +39,7 @@ class IcePortObserver : public ov::EnableSharedFromThis<IcePortObserver>
 {
 public:
 	// ICE 접속 상태가 바뀜
-	virtual void OnStateChanged(IcePort &port, const std::shared_ptr<info::SessionInfo> &session, IcePortConnectionState state)
+	virtual void OnStateChanged(IcePort &port, const std::shared_ptr<info::Session> &session, IcePortConnectionState state)
 	{
 		// dummy function
 	}
@@ -53,5 +53,5 @@ public:
 	}
 
 	// 데이터가 수신됨
-	virtual void OnDataReceived(IcePort &port, const std::shared_ptr<info::SessionInfo> &session, std::shared_ptr<const ov::Data> data) = 0;
+	virtual void OnDataReceived(IcePort &port, const std::shared_ptr<info::Session> &session, std::shared_ptr<const ov::Data> data) = 0;
 };

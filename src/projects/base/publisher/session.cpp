@@ -6,15 +6,15 @@
 namespace pub
 {
 	Session::Session(const std::shared_ptr<Application> &application, const std::shared_ptr<Stream> &stream)
-		: info::SessionInfo(*std::static_pointer_cast<info::Stream>(stream))
+		: info::Session(*std::static_pointer_cast<info::Stream>(stream))
 	{
 		_application = application;
 		_stream = stream;
 		_state = SessionState::Ready;
 	}
 
-	Session::Session(const SessionInfo &info, const std::shared_ptr<Application> &application, const std::shared_ptr<Stream> &stream)
-		: info::SessionInfo(*std::static_pointer_cast<info::Stream>(stream), info)
+	Session::Session(const info::Session &info, const std::shared_ptr<Application> &application, const std::shared_ptr<Stream> &stream)
+		: info::Session(*std::static_pointer_cast<info::Stream>(stream), info)
 	{
 		_application = application;
 		_stream = stream;

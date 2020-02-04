@@ -2,7 +2,7 @@
 
 #include <base/common_types.h>
 #include <base/publisher/application.h>
-#include <base/info/session_info.h>
+#include <base/info/session.h>
 #include <base/ovcrypto/certificate.h>
 #include <modules/ice/ice_port.h>
 #include <modules/rtc_signalling/rtc_signalling.h>

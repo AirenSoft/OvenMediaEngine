@@ -5,7 +5,7 @@
 #pragma once
 
 #include "base/common_types.h"
-#include "base/info/session_info.h"
+#include "base/info/session.h"
 
 #include <base/ovlibrary/ovlibrary.h>
 
@@ -14,11 +14,11 @@ namespace pub
 	class Application;
 	class Stream;
 
-	class Session : public info::SessionInfo
+	class Session : public info::Session
 	{
 	public:
 		Session(const std::shared_ptr<Application> &application, const std::shared_ptr<Stream> &stream);
-		Session(const info::SessionInfo &info, const std::shared_ptr<Application> &app, const std::shared_ptr<Stream> &stream);
+		Session(const info::Session &info, const std::shared_ptr<Application> &app, const std::shared_ptr<Stream> &stream);
 		virtual ~Session();
 
 		const std::shared_ptr<Application> &GetApplication();
@@ -30,7 +30,7 @@ namespace pub
 		// 패킷을 전송한다.
 		virtual bool SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet) = 0;
 		// 상위 Layer에서 Packet을 수신받는다.
-		virtual void OnPacketReceived(const std::shared_ptr<info::SessionInfo> &session_info, const std::shared_ptr<const ov::Data> &data) = 0;
+		virtual void OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data) = 0;
 
 		enum class SessionState : int8_t
 		{

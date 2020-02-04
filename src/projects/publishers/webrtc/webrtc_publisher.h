@@ -21,8 +21,8 @@ public:
 	// IcePortObserver Implementation
 
 	// ICE 연결 상태가 바뀌면 통지해준다.
-	void OnStateChanged(IcePort &port, const std::shared_ptr<info::SessionInfo> &session, IcePortConnectionState state) override;
-	void OnDataReceived(IcePort &port, const std::shared_ptr<info::SessionInfo> &session, std::shared_ptr<const ov::Data> data) override;
+	void OnStateChanged(IcePort &port, const std::shared_ptr<info::Session> &session, IcePortConnectionState state) override;
+	void OnDataReceived(IcePort &port, const std::shared_ptr<info::Session> &session, std::shared_ptr<const ov::Data> data) override;
 
 	// SignallingObserver Implementation
 	// 클라이언트가 Request Offer를 하면 다음 함수를 통해 SDP를 받아서 넘겨준다.

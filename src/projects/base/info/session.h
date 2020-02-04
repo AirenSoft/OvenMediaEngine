@@ -10,14 +10,14 @@ namespace info
 {
 	class Stream;
 
-	class SessionInfo : public ov::EnableSharedFromThis<info::SessionInfo>
+	class Session : public ov::EnableSharedFromThis<info::Session>
 	{
 	public:
-		SessionInfo(const info::Stream &stream);
-		explicit SessionInfo(const info::Stream &stream, session_id_t session_id);
-		SessionInfo(const info::Stream &stream, const SessionInfo &T);
-		SessionInfo(SessionInfo &&T) = default;
-		~SessionInfo() override = default;
+		Session(const info::Stream &stream);
+		explicit Session(const info::Stream &stream, session_id_t session_id);
+		Session(const info::Stream &stream, const Session &T);
+		Session(Session &&T) = default;
+		~Session() override = default;
 
 		session_id_t GetId() const;
 

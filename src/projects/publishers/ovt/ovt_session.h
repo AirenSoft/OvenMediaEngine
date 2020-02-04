@@ -12,7 +12,7 @@ public:
 											  uint32_t ovt_session_id,
 											  const std::shared_ptr<ov::Socket> &connector);
 
-	OvtSession(const info::SessionInfo &session_info,
+	OvtSession(const info::Session &session_info,
 			const std::shared_ptr<pub::Application> &application,
 			const std::shared_ptr<pub::Stream> &stream,
 			const std::shared_ptr<ov::Socket> &connector);
@@ -22,7 +22,7 @@ public:
 	bool Stop() override;
 
 	bool SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet) override;
-	void OnPacketReceived(const std::shared_ptr<info::SessionInfo> &session_info,
+	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
 						const std::shared_ptr<const ov::Data> &data) override;
 
 
