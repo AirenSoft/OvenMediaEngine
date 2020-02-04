@@ -13,6 +13,10 @@
 #include <unistd.h>
 #include <regex>
 
+#if defined(__APPLE__)
+#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+#endif
+
 namespace cfg
 {
 	static ov::String MakeIndentString(int indent)

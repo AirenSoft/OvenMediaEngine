@@ -164,8 +164,8 @@ bool H264Sps::Parse(const uint8_t *sps_bitstream, size_t length, H264Sps &sps)
                 {
                     uint8_t video_format = 0, bit;
                     if (!(sps_bitstream_parser.ReadBit(bit) &&
-                        (video_format |= bit, video_format << 1, sps_bitstream_parser.ReadBit(bit)) &&
-                        (video_format |= bit, video_format << 1, sps_bitstream_parser.ReadBit(bit))))
+                        (video_format |= bit, video_format <<= 1, sps_bitstream_parser.ReadBit(bit)) &&
+                        (video_format |= bit, video_format <<= 1, sps_bitstream_parser.ReadBit(bit))))
                     {
                         return false;
                     }
