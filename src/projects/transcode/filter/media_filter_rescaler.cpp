@@ -66,8 +66,6 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		return false;
 	}
 
-	AVRational framerate = ::av_d2q(input_context->GetFrameRate(), AV_TIME_BASE);
-
 	// Prepare filters
 	//
 	// Filter graph:
@@ -76,6 +74,10 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	// Prepare the input filter
 
 	// "buffer" filter
+/*	
+	AVRational framerate = ::av_d2q(input_context->GetFrameRate(), AV_TIME_BASE);
+	logte("framerate=%0.2f, num=%d, den=%d", input_context->GetFrameRate(), framerate.num, framerate.den);
+
 	ov::String input_args = ov::String::FormatString(
 		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d:frame_rate=%d/%d:sws_param=flags=bicubic",
 		input_media_track->GetWidth(), input_media_track->GetHeight(),
@@ -83,6 +85,16 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		input_media_track->GetTimeBase().GetNum(), input_media_track->GetTimeBase().GetDen(),
 		1, 1,
 		framerate.num, framerate.den);
+*/
+	// Removed framerate filter. because, Timestamp of frame is shifted. In case of not constant framerate as is VFR.
+	ov::String input_args = ov::String::FormatString(
+		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d:sws_param=flags=bicubic",
+		input_media_track->GetWidth(), input_media_track->GetHeight(),
+		input_media_track->GetFormat(),
+		input_media_track->GetTimeBase().GetNum(), input_media_track->GetTimeBase().GetDen(),
+		1, 1);
+
+
 
 	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, buffersrc, "in", input_args, nullptr, _filter_graph);
 	if (ret < 0)
@@ -94,7 +106,7 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	// Prepare output filters
 	std::vector<ov::String> filters = {
 		// "fps" filter options
-		ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()),
+		ov::String::FormatString("fps=fps=%.2f:0:round=near", output_context->GetFrameRate()),
 		// "scale" filter options
 		ov::String::FormatString("scale=%dx%d:flags=bicubic", output_context->GetVideoWidth(), output_context->GetVideoHeight()),
 		// "settb" filter options
@@ -152,7 +164,7 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 
 int32_t MediaFilterRescaler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
-	logtp("Data before rescaling: %lld (%.0f)\n%s", buffer->GetPts(), buffer->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(buffer->GetBuffer(0), buffer->GetBufferSize(0), 32).CStr());
+	//logtp("Data before rescaling: %lld (%.0f)\n%s", buffer->GetPts(), buffer->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(buffer->GetBuffer(0), buffer->GetBufferSize(0), 32).CStr());
 
 	_input_buffer.push_back(std::move(buffer));
 
@@ -198,7 +210,7 @@ std::shared_ptr<MediaFrame> MediaFilterRescaler::RecvBuffer(TranscodeResult *res
 		output_frame->SetBuffer(_frame->data[1], output_frame->GetStride(1) * output_frame->GetHeight() / 2, 1);  // Cb Plane
 		output_frame->SetBuffer(_frame->data[2], output_frame->GetStride(2) * output_frame->GetHeight() / 2, 2);  // Cr Plane
 
-		logtp("Rescaled data: %lld (%.0f)\n%s", output_frame->GetPts(), output_frame->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(_frame->data[0], _frame->linesize[0], 32).CStr());
+		//logtp("Rescaled data: %lld (%.0f)\n%s", output_frame->GetPts(), output_frame->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(_frame->data[0], _frame->linesize[0], 32).CStr());
 
 		::av_frame_unref(_frame);
 
@@ -212,7 +224,7 @@ std::shared_ptr<MediaFrame> MediaFilterRescaler::RecvBuffer(TranscodeResult *res
 		auto frame = std::move(_input_buffer.front());
 		_input_buffer.pop_front();
 
-		logtp("Dequeued data for rescaling: %lld (%.0f)\n%s", frame->GetPts(), frame->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
+		//logtp("Dequeued data for rescaling: %lld (%.0f)\n%s", frame->GetPts(), frame->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
 
 		_frame->format = frame->GetFormat();
 		_frame->width = frame->GetWidth();

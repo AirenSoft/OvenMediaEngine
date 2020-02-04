@@ -60,22 +60,18 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	}
 
 
-
 #if 0 // for debug...
-	if(_stream->GetName() == "stream")
-	{
-		if(media_type==MediaType::Video)
-			_last_video_pts = media_packet->GetPts();
-		else
-			_last_audio_pts = media_packet->GetPts();
+        if(_stream->GetName() == "livestream_o2" || _stream->GetName() == "livestream_o")
+        {
+                if(media_type==MediaType::Video)
+                        _last_video_pts = media_packet->GetPts() * 1000 / media_track->GetTimeBase().GetDen();
+                else
+                        _last_audio_pts = media_packet->GetPts() * 1000 / media_track->GetTimeBase().GetDen();
 
-		// logtd("name(%10s) tid(%2d) type(%s), pts(%10lld), dts(%10lld) diff(%5lld)",
-		//  _stream->GetName().CStr(), track_id, (media_type==MediaType::Video)?"Video":"Audio", media_packet->GetPts(), media_packet->GetDts(), _last_video_pts - _last_audio_pts);
-
-		if(media_type == MediaType::Video)
-		logtd("name(%10s) tid(%2d) type(%s), pts(%10lld), dts(%10lld) dif(%5lld)",
-		_stream->GetName().CStr(), track_id, (media_type == MediaType::Video) ? "Video" : "Audio", media_packet->GetPts(), media_packet->GetDts(), media_packet->GetPts()-media_packet->GetDts());
-	}
+                logtd("name(%10s) tid(%2d) type(%s), lvpts(%10lld), lapts(%10lld) diff(%5lld)",
+                 _stream->GetName().CStr(), track_id, (media_type==MediaType::Video)?"Video":"Audio",
+                 _last_video_pts, _last_audio_pts, _last_video_pts - _last_audio_pts);
+        }
 #endif
 
 
@@ -142,14 +138,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	auto p2 = std::move(_media_packets.front());
 	_media_packets.pop();
-
-// for debuging
-#if 0
-	if(_media_packets.size() > 10)
-	{
-		logte("Packet accumulation is suspected.");
-	}
-#endif
 
 	return p2;
 }
