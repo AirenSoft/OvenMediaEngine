@@ -11,7 +11,7 @@
 
 #include "socket_private.h"
 
-#define CLIENT_SOCKET_SEND_TIMEOUT (1 * 1000)
+#define CLIENT_SOCKET_SEND_TIMEOUT (60 * 1000)
 #define CLIENT_SOCKET_SEND_QUEUE_TIMEOUT (100)
 
 namespace ov
