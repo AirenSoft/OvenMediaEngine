@@ -19,8 +19,8 @@
 #include <config/config_manager.h>
 
 #include <media_router/media_router.h>
-#include <monitoring/monitoring_server.h>
 #include <orchestrator/orchestrator.h>
+#include <monitoring/monitoring.h>	
 #include <providers/providers.h>
 #include <publishers/publishers.h>
 #include <transcode/transcoder.h>
@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
 	std::map<ov::String, bool> vhost_map;
 
 	auto orchestrator = Orchestrator::GetInstance();
+	auto monitor = mon::Monitoring::GetInstance();
 	bool succeeded = true;
 
 	// Create info::Host
@@ -106,6 +107,8 @@ int main(int argc, char *argv[])
 		for (auto &host_info : host_info_list)
 		{
 			auto host_name = host_info.GetName();
+
+			monitor->OnHostCreated(host_info);
 
 			//////////////////////////////
 			// Host Level Modules

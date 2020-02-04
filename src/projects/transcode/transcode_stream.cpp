@@ -168,6 +168,8 @@ int32_t TranscodeStream::CreateOutputStream()
 		}
 		stream_info_output->SetName(stream_name);
 
+		// It helps modules to reconize origin stream from provider
+		stream_info_output->SetOriginStreamInfo(_stream_info_input);
 
 		// Look up all tracks in the input stream.
 		for (auto &input_track_item : _stream_info_input->GetTracks())

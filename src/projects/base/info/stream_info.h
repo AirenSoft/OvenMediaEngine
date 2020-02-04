@@ -24,6 +24,9 @@ namespace info
 		ov::String GetName() const;
 		void SetName(ov::String name);
 
+		void SetOriginStreamInfo(const std::shared_ptr<StreamInfo> &stream_info);
+		const std::shared_ptr<StreamInfo> GetOriginStreamInfo();
+
 		std::chrono::system_clock::time_point GetCreatedTime() const;
 		StreamSourceType GetSourceType() const;
 
@@ -50,6 +53,10 @@ namespace info
 		// Where does the stream come from?
 		StreamSourceType _source_type;
 
-		std::shared_ptr<Application>	_app_info;
+		std::shared_ptr<Application>	_app_info = nullptr;
+
+		// If the Source Type of this stream is LiveTranscoder,
+		// the original stream coming from the Provider can be recognized with _origin_stream_info.
+		std::shared_ptr<StreamInfo> 	_origin_stream_info = nullptr;
 	};
 }  // namespace info

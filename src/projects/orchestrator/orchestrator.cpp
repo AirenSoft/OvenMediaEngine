@@ -12,6 +12,7 @@
 #include <base/media_route/media_route_interface.h>
 #include <base/provider/stream.h>
 #include <media_router/media_router.h>
+#include <monitoring/monitoring.h>
 
 bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host)
 {
@@ -970,6 +971,8 @@ Orchestrator::Result Orchestrator::CreateApplication(const info::Host &host_info
 
 	info::Application app_info(host_info, GetNextAppId(), ResolveApplicationName(vhost_name, app_config.GetName()), app_config);
 
+	mon::Monitoring::GetInstance()->OnApplicationCreated(app_info);
+
 	return CreateApplicationInternal(vhost_name, app_info);
 }
 
@@ -977,6 +980,8 @@ Orchestrator::Result Orchestrator::DeleteApplication(const info::Application &ap
 {
 	std::lock_guard<decltype(_module_list_mutex)> lock_guard_for_modules(_module_list_mutex);
 	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
+
+	mon::Monitoring::GetInstance()->OnApplicationDeleted(app_info);
 
 	return DeleteApplicationInternal(app_info);
 }

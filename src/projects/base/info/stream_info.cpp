@@ -75,6 +75,16 @@ namespace info
 		_name = name;
 	}
 
+	void StreamInfo::SetOriginStreamInfo(const std::shared_ptr<StreamInfo> &stream_info)
+	{
+		_origin_stream_info = stream_info;
+	}
+
+	const std::shared_ptr<StreamInfo> StreamInfo::GetOriginStreamInfo()
+	{
+		return _origin_stream_info;
+	}
+
 	std::chrono::system_clock::time_point StreamInfo::GetCreatedTime() const
 	{
 		return _created_time;

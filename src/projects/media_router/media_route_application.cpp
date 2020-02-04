@@ -8,6 +8,7 @@
 //==============================================================================
 #include <base/info/stream_info.h>
 #include "media_route_application.h"
+#include "monitoring/monitoring.h"
 
 #define OV_LOG_TAG "MediaRouter.App"
 
@@ -145,7 +146,7 @@ bool MediaRouteApplication::UnregisterObserverApp(
 }
 
 
-// OnCreateStream 함수는 Provider, Relay, Trasncoder 타입의 Connector에서 호출된다
+// OnCreateStream 함수는 Provider, Trasncoder 타입의 Connector에서 호출된다
 bool MediaRouteApplication::OnCreateStream(
 	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
 	const std::shared_ptr<info::StreamInfo> &stream_info)
@@ -189,6 +190,9 @@ bool MediaRouteApplication::OnCreateStream(
 
 		_streams.insert(std::make_pair(new_stream_info->GetId(), new_stream));
 	}
+
+	// For Monitoring
+	mon::Monitoring::GetInstance()->OnStreamCreated(*stream_info);
 
 	// 옵저버에 스트림 생성을 알림
 	for (auto observer : _observers)
@@ -236,8 +240,10 @@ bool MediaRouteApplication::OnDeleteStream(
 		return false;
 	}
 
-	logtd("Deleted stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+	// For Monitoring
+	mon::Monitoring::GetInstance()->OnStreamDeleted(*stream_info);
 
+	logtd("Deleted stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 	auto new_stream_info = std::make_shared<info::StreamInfo>(*stream_info);
 
 	// 옵저버에 스트림 삭제를 알림

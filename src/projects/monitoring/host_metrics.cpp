@@ -18,6 +18,8 @@ namespace mon
 
         std::unique_lock<std::mutex> lock(_map_guard);
         _applications[app_info.GetId()] = app_metrics;
+
+		logti("Create ApplicationMetrics(%s) for monitoring", app_info.GetName().CStr());
         return true;
 	}
 	bool HostMetrics::OnApplicationDeleted(const info::Application &app_info)
@@ -28,6 +30,8 @@ namespace mon
             return false;
         }
         _applications.erase(app_info.GetId());
+
+		logti("Delete ApplicationMetrics(%s) for monitoring", app_info.GetName().CStr());
         return true;
 	}
 

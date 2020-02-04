@@ -15,9 +15,11 @@ namespace mon
 			logte("Cannot create HostMetrics (%s)", host_info.GetName().CStr());
 			return false;
 		}
-
+		
 		std::unique_lock<std::mutex> lock(_map_guard);
 		_hosts[host_info.GetId()] = host_metrics;
+
+		logti("Create HostMetrics(%s) for monitoring", host_info.GetName().CStr());
 		return true;
 	}
 	bool Monitoring::OnHostDeleted(const info::Host &host_info)
@@ -28,6 +30,8 @@ namespace mon
 			return false;
 		}
 		_hosts.erase(host_info.GetId());
+
+		logti("Delete HostMetrics(%s) for monitoring", host_info.GetName().CStr());
 		return true;
 	}
 	bool Monitoring::OnApplicationCreated(const info::Application &app_info)

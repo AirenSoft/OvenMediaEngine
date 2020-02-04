@@ -19,6 +19,8 @@ namespace mon
 
         std::unique_lock<std::mutex> lock(_map_guard);
         _streams[stream_info.GetId()] = stream_metrics;
+
+        logti("Create StreamMetrics(%s) for monitoring", stream_info.GetName().CStr());
         return true;
     }
 
@@ -30,6 +32,8 @@ namespace mon
             return false;
         }
         _streams.erase(stream_info.GetId());
+
+        logti("Delete StreamMetrics(%s) for monitoring", stream_info.GetName().CStr());
         return true;
     }
 
