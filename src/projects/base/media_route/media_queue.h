@@ -117,6 +117,11 @@ public:
 		_cond.notify_one();
 	}
 
+	bool IsAborted() const
+	{
+		return _abort;
+	}
+
 private:
 	std::queue<T> _queue;
 	std::mutex _mutex;
