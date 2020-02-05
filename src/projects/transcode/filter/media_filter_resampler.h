@@ -26,6 +26,10 @@ public:
 	int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) override;
 	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
 
+	void ThreadEncode();
+
+	void Stop();
+
 protected:
 	bool IsPlanar(AVSampleFormat format);
 
@@ -39,7 +43,13 @@ protected:
 	double _scale = 0.0;
 
 	std::deque<std::shared_ptr<MediaFrame>> _input_buffer;
+	std::deque<std::shared_ptr<MediaFrame>> _output_buffer;
 
 	std::shared_ptr<TranscodeContext> _input_context;
 	std::shared_ptr<TranscodeContext> _output_context;
+
+	bool _kill_flag = false;
+	std::mutex _mutex;
+	std::thread _thread_work;
+	ov::Semaphore _queue_event;
 };

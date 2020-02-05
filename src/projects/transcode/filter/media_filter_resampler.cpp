@@ -29,6 +29,8 @@ MediaFilterResampler::MediaFilterResampler()
 
 MediaFilterResampler::~MediaFilterResampler()
 {
+	Stop();
+
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
 
 	OV_SAFE_FUNC(_inputs, nullptr, ::avfilter_inout_free, &);
@@ -149,20 +151,209 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 	_input_context = input_context;
 	_output_context = output_context;
 
+	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
+	try
+	{
+		_kill_flag = false;
+
+		_thread_work = std::thread(&MediaFilterResampler::ThreadEncode, this);
+	}
+	catch (const std::system_error &e)
+	{
+		_kill_flag = true;
+
+		logte("Failed to start transcode stream thread.");
+	}
+
 	return true;
+}
+
+
+void MediaFilterResampler::Stop()
+{
+	_kill_flag = true;
+
+	_queue_event.Notify();
+
+	if (_thread_work.joinable())
+	{
+		_thread_work.join();
+		logtd("AVC encoder thread has ended.");
+	}
+}
+
+
+void MediaFilterResampler::ThreadEncode()
+{
+	logte("Start to start transcode resampler filter thread.");
+
+	while (!_kill_flag)
+	{
+		_queue_event.Wait();
+
+		std::unique_lock<std::mutex> mlock(_mutex);
+
+		if (_input_buffer.empty())
+		{
+			continue;
+		}
+
+		auto frame = std::move(_input_buffer.front());
+		_input_buffer.pop_front();
+
+		mlock.unlock();
+
+		// logtd("format(%d), channels(%d), samples(%d)", frame->GetFormat(), frame->GetChannels(), frame->GetNbSamples());
+		///logtp("Dequeued data for resampling: %lld\n%s", frame->GetPts(), ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
+
+		_frame->format = frame->GetFormat();
+		_frame->nb_samples = frame->GetNbSamples();
+		_frame->channel_layout = static_cast<uint64_t>(frame->GetChannelLayout());
+		_frame->channels = frame->GetChannels();
+		_frame->sample_rate = frame->GetSampleRate();
+		_frame->pts = frame->GetPts();
+		_frame->pkt_duration = frame->GetDuration();
+
+		int ret = ::av_frame_get_buffer(_frame, 0);
+		if (ret < 0)
+		{
+			logte("Could not allocate the audio frame data");
+
+			// *result = TranscodeResult::DataError;
+			// return nullptr;
+			break;
+		}
+
+		ret = ::av_frame_make_writable(_frame);
+		if (ret < 0)
+		{
+			logte("Could not make writable frame");
+
+			// *result = TranscodeResult::DataError;
+			// return nullptr;
+			 break;
+		}
+
+		// Copy data into frame
+		if (IsPlanar(frame->GetFormat<AVSampleFormat>()))
+		{
+			// If the frame is planar, the data should stored separately in the "_frame->data" array.
+			_frame->linesize[0] = 0;
+
+			for (int channel = 0; channel < _frame->channels; channel++)
+			{
+				size_t data_length = frame->GetBufferSize(channel);
+
+				::memcpy(_frame->data[channel], frame->GetBuffer(channel), data_length);
+				_frame->linesize[0] += data_length;
+			}
+		}
+		else
+		{
+			// If the frame is non-planar, Just copy interleaved data to "_frame->data[0]"
+			::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
+		}
+
+		// Copy packet data into frame
+		if (::av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0)
+		{
+			logte("An error occurred while feeding the audio filtergraph: format: %d, pts: %lld, linesize: %d, size: %d", _frame->format, _frame->pts, _frame->linesize[0], _input_buffer.size());
+
+			std::unique_lock<std::mutex> mlock(_mutex);
+			_input_buffer.push_front(std::move(frame));
+			mlock.unlock();
+			_queue_event.Notify();
+		}
+
+		::av_frame_unref(_frame);
+
+
+		while (true)
+		{
+			int ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
+
+			if (ret == AVERROR(EAGAIN))
+			{
+				// Wait for more packet
+				break;
+			}
+			else if (ret == AVERROR_EOF)
+			{
+				logte("Error receiving a packet for decoding : AVERROR_EOF");
+				// *result = TranscodeResult::EndOfFile;
+				// return nullptr;
+				break;
+			}
+			else if (ret < 0)
+			{
+				logte("Error receiving a packet for decoding : %d", ret);
+				// *result = TranscodeResult::DataError;
+				// return nullptr;
+			
+				break;
+			}
+			else
+			{
+				auto output_frame = std::make_shared<MediaFrame>();
+
+				output_frame->SetFormat(_frame->format);
+				output_frame->SetBytesPerSample(::av_get_bytes_per_sample((AVSampleFormat)_frame->format));
+				output_frame->SetNbSamples(_frame->nb_samples);
+				output_frame->SetChannels(_frame->channels);
+				output_frame->SetSampleRate(_frame->sample_rate);
+				output_frame->SetChannelLayout((common::AudioChannel::Layout)_frame->channel_layout);
+				output_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1L : _frame->pts);
+				output_frame->SetDuration(_frame->pkt_duration * _scale);
+
+				auto data_length = static_cast<uint32_t>(output_frame->GetBytesPerSample() * output_frame->GetNbSamples());
+
+				// Copy frame data into out_buf
+				if (IsPlanar(static_cast<AVSampleFormat>(_frame->format)))
+				{
+					// If the frame is planar, the data is stored separately in the "_frame->data" array.
+					for (int channel = 0; channel < _frame->channels; channel++)
+					{
+						output_frame->Resize(data_length, channel);
+						uint8_t *output = output_frame->GetWritableBuffer(channel);
+						::memcpy(output, _frame->data[channel], data_length);
+					}
+				}
+				else
+				{
+					// If the frame is non-planar, it means interleaved data. So, just copy from "_frame->data[0]" into the output_frame
+					output_frame->AppendBuffer(_frame->data[0], data_length * _frame->channels, 0);
+				}
+
+				//logtp("Resampled data: %lld\n%s", output_frame->GetPts(), ov::Dump(_frame->data[0], _frame->linesize[0], 32).CStr());
+
+				::av_frame_unref(_frame);
+
+				// *result = TranscodeResult::DataReady;
+				// return std::move(output_frame);
+				std::unique_lock<std::mutex> mlock(_mutex);
+
+				_output_buffer.push_back(std::move(output_frame));
+			}
+		}
+	}
 }
 
 int32_t MediaFilterResampler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
-	//logtp("Data before resampling:\n%s", ov::Dump(buffer->GetBuffer(0), buffer->GetBufferSize(0), 32).CStr());
+	std::unique_lock<std::mutex> mlock(_mutex);
 
 	_input_buffer.push_back(std::move(buffer));
+	
+	mlock.unlock();
+	
+	_queue_event.Notify();;
 
 	return 0;
 }
 
 std::shared_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *result)
 {
+#if 0	
 	int ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
 
 	if (ret == AVERROR(EAGAIN))
@@ -285,6 +476,21 @@ std::shared_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *re
 	}
 
 	*result = TranscodeResult::NoData;
+	return nullptr;
+#endif
+	std::unique_lock<std::mutex> mlock(_mutex);
+	if(!_output_buffer.empty())
+	{
+		*result = TranscodeResult::DataReady;
+
+		auto frame = std::move(_output_buffer.front());
+		_output_buffer.pop_front();
+
+		return std::move(frame);
+	}
+
+	*result = TranscodeResult::NoData;
+
 	return nullptr;
 }
 
