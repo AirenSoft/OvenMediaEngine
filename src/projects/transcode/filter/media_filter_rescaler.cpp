@@ -208,7 +208,7 @@ void MediaFilterRescaler::Stop()
 
 void MediaFilterRescaler::ThreadEncode()
 {
-	logte("Start transcode rescaler filter thread.");
+	logtd("Start transcode rescaler filter thread.");
 
 	while(!_kill_flag)
 	{

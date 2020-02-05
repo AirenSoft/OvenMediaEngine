@@ -185,7 +185,7 @@ void MediaFilterResampler::Stop()
 
 void MediaFilterResampler::ThreadEncode()
 {
-	logte("Start transcode resampler filter thread.");
+	logtd("Start transcode resampler filter thread.");
 
 	while (!_kill_flag)
 	{

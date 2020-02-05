@@ -877,7 +877,7 @@ void TranscodeStream::LoopTask()
 
 		if(difftime(curr_time, base_time) >= 5)
 		{
-			logtd("stats stream[%s/%s], decode.ready[%d], filter.ready[%d], encode.ready[%d]"
+			logti("stats of stream [%s/%s], decode.ready[%d], filter.ready[%d], encode.ready[%d]"
 				,_application_info.GetName().CStr()
 				,_stream_input->GetName().CStr()
 				,_queue_input_packets.size()
