@@ -162,7 +162,7 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 	{
 		_kill_flag = true;
 
-		logte("Failed to start transcode stream thread.");
+		logte("Failed to start transcode resample filter thread.");
 	}
 
 	return true;
@@ -178,14 +178,14 @@ void MediaFilterResampler::Stop()
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
-		logtd("AVC encoder thread has ended.");
+		logtd("Terminated transcode resample filter thread.");
 	}
 }
 
 
 void MediaFilterResampler::ThreadEncode()
 {
-	logte("Start to start transcode resampler filter thread.");
+	logte("Start transcode resampler filter thread.");
 
 	while (!_kill_flag)
 	{

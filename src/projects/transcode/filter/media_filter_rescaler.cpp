@@ -172,7 +172,7 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	{
 		_kill_flag = true;
 
-		logte("Failed to start transcode rescaler filter thread.");
+		logte("Failed to start transcode rescale filter thread.");
 	}
 
 	return true;
@@ -202,13 +202,13 @@ void MediaFilterRescaler::Stop()
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
-		logtd("AVC encoder thread has ended.");
+		logtd("Terminated transcode rescale filter thread.");
 	}
 }
 
 void MediaFilterRescaler::ThreadEncode()
 {
-	logte("Start to start transcode rescaler filter thread.");
+	logte("Start transcode rescaler filter thread.");
 
 	while(!_kill_flag)
 	{
