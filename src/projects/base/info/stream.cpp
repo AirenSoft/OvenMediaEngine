@@ -119,7 +119,9 @@ namespace info
 
 	void Stream::ShowInfo()
 	{
-		ov::String out_str = ov::String::FormatString("Stream Information / id(%u), name(%s)", GetId(), GetName().CStr());
+		ov::String out_str = ov::String::FormatString("[Stream Info]\nid(%u), name(%s), SourceType(%s)\nCreated Time (%s)\n", 														
+														GetId(), GetName().CStr(), ov::Converter::ToString(_source_type).CStr(),
+														ov::Converter::ToString(_created_time).CStr());
 
 		for (auto it = _tracks.begin(); it != _tracks.end(); ++it)
 		{

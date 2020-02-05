@@ -230,6 +230,11 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 		return false;
 	}
 
+	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+	if(stream_metrics != nullptr)
+	{
+		stream_metrics->IncreaseBytesIn(data->GetLength());
+	}
 
 	// TODO: This is a memory copy overhead code.
 	// Change is required in a way that does not copy memory.
@@ -289,6 +294,12 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 	{
 		logte("cannot find stream");
 		return false;
+	}
+
+	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+	if(stream_metrics != nullptr)
+	{
+		stream_metrics->IncreaseBytesIn(data->GetLength());
 	}
 
 	// TODO: This is a memory copy overhead code.

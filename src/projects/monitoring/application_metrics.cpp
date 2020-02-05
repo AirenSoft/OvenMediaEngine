@@ -8,6 +8,23 @@
 
 namespace mon
 {
+    void ApplicationMetrics::ShowInfo(bool show_streams)
+    {
+        //TODO(Getroot): Print detailed information of application
+        ov::String out_str = ov::String::FormatString("[Application Info]\nid(%u), name(%s)\nCreated Time (%s)\n", 														
+														GetId(), GetName().CStr(),
+														ov::Converter::ToString(_created_time).CStr());
+        // 주간보고 보내기, ShowInfo 만들기, Monitoring 테스트하기
+        if(show_streams)
+        {
+            for(auto &t : _streams)
+            {
+                auto stream = t.second;
+                stream->ShowInfo();
+            }
+        }
+    }
+
     bool ApplicationMetrics::OnStreamCreated(const info::Stream &stream)
     {
         std::unique_lock<std::mutex> lock(_map_guard);

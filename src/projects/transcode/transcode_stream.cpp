@@ -158,7 +158,7 @@ int32_t TranscodeStream::CreateOutputStream()
 			continue;
 		}
 		
-		auto stream_output = std::make_shared<info::Stream>(_application_info, StreamSourceType::LIVE_TRANSCODER);
+		auto stream_output = std::make_shared<info::Stream>(_application_info, StreamSourceType::Transcoder);
 
 		// Create a new stream name.
 		auto stream_name = cfg_stream.GetName();

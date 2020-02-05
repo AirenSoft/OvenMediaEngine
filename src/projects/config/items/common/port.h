@@ -9,6 +9,7 @@
 #pragma once
 
 #include <base/ovsocket/socket.h>
+#include <base/ovlibrary/converter.h>
 
 namespace cfg
 {

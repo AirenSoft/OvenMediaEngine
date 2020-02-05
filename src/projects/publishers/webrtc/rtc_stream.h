@@ -2,10 +2,12 @@
 
 #include <base/ovcrypto/certificate.h>
 #include <base/common_types.h>
+#include <base/info/stream.h>
 #include <base/publisher/stream.h>
 #include "modules/ice/ice_port.h"
 #include "modules/sdp/session_description.h"
 #include "modules/rtp_rtcp/rtp_rtcp_defines.h"
+#include "monitoring/monitoring.h"
 #include "rtc_session.h"
 
 #define PAYLOAD_TYPE_OFFSET		100
@@ -52,4 +54,6 @@ private:
 
 	// Packetizing을 위해 RtpSender를 이용한다.
 	std::map<uint32_t, std::shared_ptr<RtpPacketizer>> _packetizers;
+
+	std::shared_ptr<mon::StreamMetrics>		_stream_metrics;
 };

@@ -132,6 +132,7 @@ namespace pub
 			}
 
 			session_lock.lock();
+			
 			// 모든 Session에 전송한다.
 			for (auto const &x : _sessions)
 			{

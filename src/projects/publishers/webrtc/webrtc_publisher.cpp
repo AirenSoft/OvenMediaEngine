@@ -1,9 +1,9 @@
 #include <utility>
 
 #include "rtc_private.h"
-#include "webrtc_publisher.h"
-#include "rtc_stream.h"
 #include "rtc_session.h"
+#include "rtc_stream.h"
+#include "webrtc_publisher.h"
 
 #include "config/config_manager.h"
 
@@ -24,7 +24,6 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Server &serv
 WebRtcPublisher::WebRtcPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 	: Publisher(server_config, host_info, router)
 {
-
 }
 
 WebRtcPublisher::~WebRtcPublisher()
@@ -42,7 +41,7 @@ bool WebRtcPublisher::Start()
 	auto webrtc_port_info = server_config.GetBind().GetPublishers().GetWebrtc();
 
 	_ice_port = IcePortManager::Instance()->CreatePort(webrtc_port_info.GetIceCandidates(), IcePortObserver::GetSharedPtr());
-	if(_ice_port == nullptr)
+	if (_ice_port == nullptr)
 	{
 		logte("Cannot initialize ICE Port. Check your ICE configuration");
 		return false;
@@ -55,10 +54,10 @@ bool WebRtcPublisher::Start()
 
 	_signalling = std::make_shared<RtcSignallingServer>(server_config, GetHostInfo());
 	_signalling->AddObserver(RtcSignallingObserver::GetSharedPtr());
-	if(!_signalling->Start(signalling_address))
-    {
-        return false;
-    }
+	if (!_signalling->Start(signalling_address))
+	{
+		return false;
+	}
 
 	// Publisher::Start()에서 Application을 생성한다.
 	return Publisher::Start();
@@ -91,25 +90,24 @@ std::shared_ptr<pub::Application> WebRtcPublisher::OnCreatePublisherApplication(
  * Signalling Implementation
  */
 
-
 // 클라이언트가 Request Offer를 하면 다음 함수를 통해 SDP를 받아서 넘겨준다.
 std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::String &application_name, const ov::String &stream_name, std::vector<RtcIceCandidate> *ice_candidates)
 {
 	// Application -> Stream에서 SDP를 얻어서 반환한다.
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
-	if(stream == nullptr)
+	if (stream == nullptr)
 	{
 		// If the stream does not exists, request to the provider
 		auto orchestrator = Orchestrator::GetInstance();
 
-		if(orchestrator->RequestPullStream(application_name, stream_name) == false)
+		if (orchestrator->RequestPullStream(application_name, stream_name) == false)
 		{
 			logtd("Could not pull the stream: [%s/%s]", application_name.CStr(), stream_name.CStr());
 			return nullptr;
 		}
 
 		stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
-		if(stream == nullptr)
+		if (stream == nullptr)
 		{
 			logtd("Could not pull the stream: [%s/%s]", application_name.CStr(), stream_name.CStr());
 			return nullptr;
@@ -132,14 +130,14 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::St
 
 // 클라이언트가 자신의 SDP를 보내면 다음 함수를 호출한다.
 bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
-                                             const ov::String &stream_name,
-                                             const std::shared_ptr<SessionDescription> &offer_sdp,
-                                             const std::shared_ptr<SessionDescription> &peer_sdp)
+											 const ov::String &stream_name,
+											 const std::shared_ptr<SessionDescription> &offer_sdp,
+											 const std::shared_ptr<SessionDescription> &peer_sdp)
 {
 	auto application = GetApplicationByName(application_name);
 	auto stream = GetStream(application_name, stream_name);
 
-	if(!stream)
+	if (!stream)
 	{
 		logte("Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
 		return false;
@@ -151,10 +149,15 @@ bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
 
 	// Stream에 Session을 생성한다.
 	auto session = RtcSession::Create(application, stream, offer_sdp, peer_sdp, _ice_port);
-	if(session != nullptr)
+	if (session != nullptr)
 	{
 		// Stream에 Session을 등록한다.
 		stream->AddSession(session);
+		auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+		if (stream_metrics != nullptr)
+		{
+			stream_metrics->OnSessionConnected(PublisherType::Webrtc);
+		}
 
 		// ice_port에 SessionInfo을 전달한다.
 		// 향후 해당 session에서 Ice를 통해 패킷이 들어오면 SessionInfo와 함께 Callback을 준다.
@@ -170,14 +173,14 @@ bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
 }
 
 bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov::String &stream_name,
-                                    const std::shared_ptr<SessionDescription> &offer_sdp,
-                                    const std::shared_ptr<SessionDescription> &peer_sdp)
+									const std::shared_ptr<SessionDescription> &offer_sdp,
+									const std::shared_ptr<SessionDescription> &peer_sdp)
 {
 	// 플레이어에서 stop 이벤트가 수신 된 경우 처리
 	logtd("Stop commnad received : %s/%s/%u", application_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 	// Find Stream
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
-	if(!stream)
+	if (!stream)
 	{
 		logte("To stop session failed. Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
 		return false;
@@ -185,7 +188,7 @@ bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov
 
 	// Offer SDP의 Session ID로 세션을 찾는다.
 	auto session = stream->GetSession(offer_sdp->GetSessionId());
-	if(session == nullptr)
+	if (session == nullptr)
 	{
 		logte("To stop session failed. Cannot find session by peer sdp session id (%u)", offer_sdp->GetSessionId());
 		return false;
@@ -193,7 +196,11 @@ bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov
 
 	// Session을 Stream에서 정리한다.
 	stream->RemoveSession(session->GetId());
-
+	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+	if (stream_metrics != nullptr)
+	{
+		stream_metrics->OnSessionDisconnected(PublisherType::Webrtc);
+	}
 	// IcePort에서 Remove 한다.
 	_ice_port->RemoveSession(session);
 
@@ -206,18 +213,18 @@ uint32_t WebRtcPublisher::OnGetBitrate(const ov::String &application_name, const
 	auto stream = GetStream(application_name, stream_name);
 	uint32_t bitrate = 0;
 
-	if(!stream)
+	if (!stream)
 	{
 		logte("Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
 		return 0;
 	}
 
 	auto tracks = stream->GetTracks();
-	for(auto &track_iter : tracks)
+	for (auto &track_iter : tracks)
 	{
 		MediaTrack *track = track_iter.second.get();
 
-		if(track->GetCodecId() == common::MediaCodecId::Vp8 || track->GetCodecId() == common::MediaCodecId::Opus)
+		if (track->GetCodecId() == common::MediaCodecId::Vp8 || track->GetCodecId() == common::MediaCodecId::Opus)
 		{
 			bitrate += track->GetBitrate();
 		}
@@ -226,12 +233,11 @@ uint32_t WebRtcPublisher::OnGetBitrate(const ov::String &application_name, const
 	return bitrate;
 }
 
-
 // It does not be used because
 bool WebRtcPublisher::OnIceCandidate(const ov::String &application_name,
-                                     const ov::String &stream_name,
-                                     const std::shared_ptr<RtcIceCandidate> &candidate,
-                                     const ov::String &username_fragment)
+									 const ov::String &stream_name,
+									 const std::shared_ptr<RtcIceCandidate> &candidate,
+									 const ov::String &username_fragment)
 {
 	return true;
 }
@@ -241,7 +247,7 @@ bool WebRtcPublisher::OnIceCandidate(const ov::String &application_name,
  */
 
 void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::Session> &session_info,
-                                     IcePortConnectionState state)
+									 IcePortConnectionState state)
 {
 	logtd("IcePort OnStateChanged : %d", state);
 
@@ -250,7 +256,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 	auto stream = session->GetStream();
 
 	// state를 보고 session을 처리한다.
-	switch(state)
+	switch (state)
 	{
 		case IcePortConnectionState::New:
 		case IcePortConnectionState::Checking:
@@ -261,13 +267,19 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 		case IcePortConnectionState::Failed:
 		case IcePortConnectionState::Disconnected:
 		case IcePortConnectionState::Closed:
-
+		{
 			// Session을 Stream에서 정리한다.
 			stream->RemoveSession(session->GetId());
+			auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+			if (stream_metrics != nullptr)
+			{
+				stream_metrics->OnSessionDisconnected(PublisherType::Webrtc);
+			}
 
 			// Signalling에 종료 명령을 내린다.
 			_signalling->Disconnect(application->GetName(), stream->GetName(), session->GetPeerSDP());
 			break;
+		}
 		default:
 			break;
 	}
