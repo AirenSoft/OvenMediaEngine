@@ -99,7 +99,7 @@ std::shared_ptr<LoggerTagInfo> ParseTag(pugi::xml_node tag_node)
 
     if(!LoggerTagInfo::ValidateLogLevel(level))
     {
-        logtw("Invalid log level... Tag name: [%s]", name.CStr());
+        logtw("Invalid log level: %s (Tag name: [%s])", level.CStr(), name.CStr());
 
         return nullptr;
     }

@@ -94,7 +94,7 @@ bool HttpClient::Send(const std::shared_ptr<const ov::Data> &data)
 
 bool HttpClient::SendChunkedData(const void *data, size_t length)
 {
-	return SendChunkedData(std::make_shared<ov::Data>(data, length, true));
+	return SendChunkedData(std::make_shared<ov::Data>(data, length));
 }
 
 bool HttpClient::SendChunkedData(const std::shared_ptr<const ov::Data> &data)

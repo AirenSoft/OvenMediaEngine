@@ -122,11 +122,11 @@ bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
 		return true;
 	}
 
-	if (_queue_input_packets.size() > _max_queue_size)
-	{
-		logti("Queue(stream) is full, please check your system: (queue: %zu > limit: %llu)", _queue_input_packets.size(), _max_queue_size);
-		return false;
-	}
+	// if (_queue_input_packets.size() > _max_queue_size)
+	// {
+	// 	logti("Queue(stream) is full, please check your system: (queue: %zu > limit: %llu)", _queue_input_packets.size(), _max_queue_size);
+	// 	return false;
+	// }
 
 	_queue_input_packets.push(std::move(packet));
 
@@ -767,13 +767,18 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 		TranscodeResult result;
 		auto filtered_frame = filter->RecvBuffer(&result);
 
+		if (static_cast<int>(result) < 0)
+		{
+			return result;
+		}
+
 		// 에러, 또는 디코딩된 패킷이 없다면 종료
 		switch (result)
 		{
 		case TranscodeResult::DataReady:
 			filtered_frame->SetTrackId(track_id);
 
-			// logtd("[#%d] A frame is filtered (PTS: %lld)", track_id, filtered_frame->GetPts());
+			logtp("[#%d] A frame is filtered (PTS: %lld)", track_id, filtered_frame->GetPts());
 
 			// if (_queue_filterd_frames.size() > _max_queue_size)
 			// {
@@ -872,7 +877,7 @@ void TranscodeStream::LoopTask()
 
 		if(difftime(curr_time, base_time) >= 5)
 		{
-			logtd("stats stream[%s/%s], decode.ready[%d], filter.ready[%d], encode.ready[%d]"
+			logti("stats of stream [%s/%s], decode.ready[%d], filter.ready[%d], encode.ready[%d]"
 				,_application_info.GetName().CStr()
 				,_stream_input->GetName().CStr()
 				,_queue_input_packets.size()
@@ -990,7 +995,6 @@ void TranscodeStream::CreateFilters(MediaFrame *buffer)
 	}
 
 	// 3. Get Output Track List. Creates a filter by looking up the encoding context information of the output track.
-	// Decoder ID에 해당하는 필더 아이디 목록을 얻어온다
 	auto filter_item = _stage_decoder_to_filter.find(decoder_id);
 	if(filter_item == _stage_decoder_to_filter.end())
 	{
@@ -1000,12 +1004,22 @@ void TranscodeStream::CreateFilters(MediaFrame *buffer)
 
 	for(auto &filter_id : filter_item->second)
 	{
-		// 필터 아이디에 대한 인코더 아이디 가져오기
 		auto encoder_id = _stage_filter_to_encoder[filter_id];
 
 		auto output_transcode_context = _encoders[encoder_id]->GetContext();
 
-		_filters[filter_id] = std::make_shared<TranscodeFilter>(input_media_track, input_transcode_context, output_transcode_context);
+		auto transcode_filter = std::make_shared<TranscodeFilter>();
+
+		bool ret = transcode_filter->Configure(input_media_track, input_transcode_context, output_transcode_context);
+		if(ret == true)
+		{
+			_filters[filter_id] = transcode_filter;
+		}
+		else
+		{
+			// TODO(soulk) : Create exception processing code if filter creation fails
+			logte("Failed to create filter");
+		}
 	}
 }
 
