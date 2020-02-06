@@ -97,8 +97,10 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 		// "asettb" filter options
 		ov::String::FormatString("asettb=%s", output_context->GetTimeBase().GetStringExpr().CStr()),
 		// "aresample" filter options
-		// ov::String::FormatString("aresample=%d", output_context->GetAudioSampleRate()),
+		// Restore Missing Samples
 		ov::String::FormatString("aresample=async=1000", output_context->GetAudioSampleRate()),
+		// Change the number of samples
+		ov::String::FormatString("aresample=%d", output_context->GetAudioSampleRate()),
 		// "aformat" filter options
 		ov::String::FormatString("aformat=sample_fmts=%s:channel_layouts=%s", output_context->GetAudioSample().GetName(), output_context->GetAudioChannel().GetName()),
 		// "asetnsamples" filter options
