@@ -23,7 +23,7 @@ namespace mon
             return &monitor;
 	    }
 
-		void PrintInfo();
+		void ShowInfo();
 
 		bool OnHostCreated(const info::Host &host_info);
 		bool OnHostDeleted(const info::Host &host_info);

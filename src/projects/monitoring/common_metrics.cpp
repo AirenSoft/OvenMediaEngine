@@ -11,12 +11,12 @@ namespace mon
         UpdateDate();
     }
 
-    std::chrono::system_clock::time_point CommonMetrics::GetCreatedTime()
+    const std::chrono::system_clock::time_point& CommonMetrics::GetCreatedTime()
     {
         return _created_time;
     }
 
-    std::chrono::system_clock::time_point CommonMetrics::GetLastUpdatedTime()
+    const std::chrono::system_clock::time_point& CommonMetrics::GetLastUpdatedTime()
     {
         return _last_updated_time;
     }

@@ -24,7 +24,7 @@ namespace mon
 			return _host_metrics;
 		}
 
-		void ShowInfo(bool show_streams);
+		void ShowInfo(bool show_children=true);
 
 		bool OnStreamCreated(const info::Stream &stream);
 		bool OnStreamDeleted(const info::Stream &stream);
