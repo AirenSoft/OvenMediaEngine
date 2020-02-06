@@ -14,23 +14,23 @@ namespace mon
 
 		ov::String out_str = ov::String::FormatString("\n------------ Statistics ------------\n");
 		out_str.AppendFormat(
-			"Last update time : %s\n"
-			"Elapsed time to request to origin server : %d ms\n"
-			"Elapsed time to response from origin server : %d ms\n",
+			"\tLast update time : %s\n"
+			"\tElapsed time to request to origin server : %d ms\n"
+			"\tElapsed time to response from origin server : %d ms\n",
 			ov::Converter::ToString(GetLastUpdatedTime()).CStr(),
 			GetOriginRequestTimeMSec(), GetOriginResponseTimeMSec());
 
 		out_str.AppendFormat(
-			"Total bytes in : %u "
-			"Total bytes out : %u "
-			"Concurrent connections : %u "
-			"Max total connections : %u ",
+			"\tTotal bytes in : %u\n"
+			"\tTotal bytes out : %u\n"
+			"\tConcurrent connections : %u\n"
+			"\tMax total connections : %u\n",
 			GetTotalBytesIn(), GetTotalBytesOut(), GetTotalConnections(), GetMaxTotalConnections());
 
-		out_str.AppendFormat("\n[Publisher Info]\n");
+		out_str.AppendFormat("\n\t\t[Publisher Info]\n");
 		for (int i = 0; i < static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
 		{
-			out_str.AppendFormat("[%s] Bytes out(%u) Concurrent connections (%u)\n",
+			out_str.AppendFormat("\t\t >> %s : Bytes out(%u) Concurrent connections (%u)\n",
 								 ov::Converter::ToString(static_cast<PublisherType>(i)).CStr(),
 								 GetBytesOut(static_cast<PublisherType>(i)),
 								 GetConnections(static_cast<PublisherType>(i)));
