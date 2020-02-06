@@ -5,7 +5,6 @@
 
 #include "media_router/bitstream/avc_video_packet_fragmentizer.h"
 #include "base/info/application.h"
-#include "monitoring/monitoring.h"
 #include "ovt_stream.h"
 
 #define OV_LOG_TAG "OvtStream"
@@ -15,7 +14,7 @@ namespace pvd
 	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::Application> &application, const ov::String &stream_name,
 					  						const std::vector<ov::String> &url_list)
 	{
-		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::OVT_PROVIDER);
+		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::Ovt);
 
 		stream_info.SetId(application->IssueUniqueStreamId());
 		stream_info.SetName(stream_name);
@@ -67,22 +66,22 @@ namespace pvd
 			return false;
 		}
 
-		mon::Monitoring::GetInstance()->GetStreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
+		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
 
 		// For statistics
 		auto begin = std::chrono::steady_clock::now();
-
 		if (!ConnectOrigin())
 		{
 			return false;
 		}
 
 		auto end = std::chrono::steady_clock::now();
+		if(_stream_metrics != nullptr)
+		{
+			_stream_metrics->SetOriginRequestTimeMSec(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
+		}
 
-		std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-
-		
-
+		begin = std::chrono::steady_clock::now();
 		if (!RequestDescribe())
 		{
 			return false;
@@ -91,6 +90,11 @@ namespace pvd
 		if (!RequestPlay())
 		{
 			return false;
+		}
+		end = std::chrono::steady_clock::now();
+		if(_stream_metrics != nullptr)
+		{
+			_stream_metrics->SetOriginResponseTimeMSet(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
 		}
 
 		_stop_thread_flag = false;
@@ -561,6 +565,11 @@ namespace pvd
 				return nullptr;
 			}
 
+			if(_stream_metrics != nullptr)
+			{
+				_stream_metrics->IncreaseBytesIn(read_bytes);
+			}
+
 			remained -= read_bytes;
 			offset += read_bytes;
 
@@ -625,6 +634,11 @@ namespace pvd
 
 			remained -= read_bytes;
 			offset += read_bytes;
+
+			if(_stream_metrics != nullptr)
+			{
+				_stream_metrics->IncreaseBytesIn(read_bytes);
+			}
 
 			if (remained == 0)
 			{

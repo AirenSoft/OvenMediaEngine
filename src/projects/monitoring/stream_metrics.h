@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <base/ovlibrary/converter.h>
 #include "base/common_types.h"
 #include "base/info/info.h"
 #include "base/info/stream.h"
@@ -24,6 +25,8 @@ namespace mon
 		{
 			return _app_metrics;
 		}
+
+		void ShowInfo();
 
 		// Getter
 		uint32_t GetOriginRequestTimeMSec();

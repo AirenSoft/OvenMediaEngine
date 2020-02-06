@@ -13,7 +13,6 @@
 #include "./assert.h"
 #include "./byte_ordering.h"
 #include "./byte_stream.h"
-#include "./converter.h"
 #include "./data.h"
 #include "./delay_queue.h"
 #include "./dump_utilities.h"

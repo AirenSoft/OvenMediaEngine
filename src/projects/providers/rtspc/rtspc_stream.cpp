@@ -14,7 +14,7 @@ namespace pvd
 	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::Application> &application, const ov::String &stream_name,
 					  						const std::vector<ov::String> &url_list)
 	{
-		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::RTSPC_PROVIDER);
+		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::RtspPull);
 
 		stream_info.SetId(application->IssueUniqueStreamId());
 		stream_info.SetName(stream_name);

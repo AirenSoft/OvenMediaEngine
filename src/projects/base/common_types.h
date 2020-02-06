@@ -19,20 +19,18 @@
 #include <iostream>
 
 #include "ovlibrary/ovlibrary.h"
-
 #include "media_route/media_type.h"
 
 #define MAX_FRAG_COUNT 20
 
 enum class StreamSourceType : int8_t
 {
-	OVT_PROVIDER ,
-	RTMP_PROVIDER,
-	RTSP_PROVIDER,
-	RTSPC_PROVIDER,
-	LIVE_TRANSCODER
+	Ovt,
+	Rtmp,
+	Rtsp,
+	RtspPull,
+	Transcoder,
 };
-
 
 enum class ProviderType : int8_t
 {

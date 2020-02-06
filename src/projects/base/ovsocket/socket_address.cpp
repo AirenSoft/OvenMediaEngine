@@ -15,6 +15,7 @@
 #include "../ovlibrary/assert.h"
 #include "../ovlibrary/byte_ordering.h"
 #include "../ovlibrary/ovlibrary.h"
+#include "../ovlibrary/converter.h"
 
 namespace ov
 {

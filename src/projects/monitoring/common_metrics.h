@@ -16,8 +16,8 @@ namespace mon
 		CommonMetrics();
 		~CommonMetrics() = default;
 
-		std::chrono::system_clock::time_point GetCreatedTime();
-		std::chrono::system_clock::time_point GetLastUpdatedTime();
+		const std::chrono::system_clock::time_point& GetCreatedTime();
+		const std::chrono::system_clock::time_point& GetLastUpdatedTime();
 
 		// Renew last updated time
 		void UpdateDate();

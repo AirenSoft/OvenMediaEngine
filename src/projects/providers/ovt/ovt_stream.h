@@ -13,6 +13,8 @@
 #include <modules/ovt_packetizer/ovt_packet.h>
 #include <modules/ovt_packetizer/ovt_depacketizer.h>
 
+#include <monitoring/monitoring.h>
+
 namespace pvd
 {
 	class OvtStream : public pvd::Stream
@@ -51,5 +53,7 @@ namespace pvd
 		uint32_t _session_id;
 
 		OvtDepacketizer _depacketizer;
+
+		std::shared_ptr<mon::StreamMetrics>	_stream_metrics;
 	};
 }

@@ -9,6 +9,7 @@
 #include "rtmp_server.h"
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <monitoring/monitoring.h>
 
 #include "rtmp_provider_private.h"
 

@@ -217,6 +217,8 @@ bool RtcStream::Start(uint32_t worker_count)
 
 	logti("Stream is created : %s/%u", GetName().CStr(), GetId());
 
+	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
+
 	return Stream::Start(worker_count);
 }
 
@@ -253,7 +255,12 @@ bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 	// 0               8                 16             24                 32
 	//                 | origin_pt_of_fec | red block_pt | rtp_payload_type |
 	uint32_t payload_type = rtp_payload_type | (red_block_pt << 8) | (origin_pt_of_fec << 16);
+
 	BroadcastPacket(payload_type, packet->GetData());
+	if(_stream_metrics != nullptr)
+	{
+		_stream_metrics->IncreaseBytesOut(PublisherType::Webrtc, packet->GetData()->GetLength() * GetAllSessions().size());
+	}
 
 	return true;
 }

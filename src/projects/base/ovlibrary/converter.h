@@ -8,11 +8,14 @@
 //==============================================================================
 #pragma once
 
-#include "./string.h"
+#include "base/common_types.h"
 #include "./json.h"
+#include "./string.h"
 
-#include <string>
 #include <inttypes.h>
+#include <string>
+#include <ctime>
+#include <chrono>
 
 namespace ov
 {
@@ -48,12 +51,12 @@ namespace ov
 		}
 
 		// Due to conflict between size_t and uint64_t in linux, make sure that the OS is only active when macOS
- #if defined(__APPLE__)
+#if defined(__APPLE__)
 		static ov::String ToString(size_t number)
 		{
 			return ov::String::FormatString("%zu", number);
 		}
- #endif // defined(__APPLE__)
+#endif  // defined(__APPLE__)
 
 		static ov::String ToString(float number)
 		{
@@ -72,12 +75,62 @@ namespace ov
 
 		static ov::String ToString(const ::Json::Value &value)
 		{
-			if(value.isString())
+			if (value.isString())
 			{
 				return value.asCString();
 			}
 
 			return ov::Json::Stringify(value);
+		}
+	
+		static ov::String ToString(const std::chrono::system_clock::time_point &tp)
+		{
+			std::time_t t = std::chrono::system_clock::to_time_t(tp);
+			ov::String ts = std::ctime(&t);
+			ts.SetLength(ts.GetLength() - 1);
+			return ts;
+		}
+
+		static ov::String ToString(const StreamSourceType &type)
+		{
+			switch(type)
+			{
+				case StreamSourceType::Ovt:
+					return "Ovt";
+				case StreamSourceType::Rtmp:
+					return "Rtmp";
+				case StreamSourceType::Rtsp:
+					return "Rtsp";
+				case StreamSourceType::RtspPull:
+					return "RtspPull";
+				case StreamSourceType::Transcoder:
+					return "Transcoder";
+				default:
+					return "Unknown";
+			}
+		}
+
+
+		static ov::String ToString(const PublisherType &type)
+		{
+			switch(type)
+			{
+				case PublisherType::Webrtc:
+					return "Webrtc";
+				case PublisherType::Rtmp:
+					return "Rtmp";
+				case PublisherType::Hls:
+					return "Hls";
+				case PublisherType::Dash:
+					return "Dash";
+				case PublisherType::Cmaf:
+					return "Cmaf";
+				case PublisherType::Ovt:
+					return "Ovt";
+				case PublisherType::Unknown:
+				default:
+					return "Unknown";
+			}
 		}
 
 		static int32_t ToInt32(const ov::String &str, int base = 10)
@@ -86,7 +139,7 @@ namespace ov
 			{
 				return std::stoi(str.CStr(), nullptr, base);
 			}
-			catch(std::invalid_argument &e)
+			catch (std::invalid_argument &e)
 			{
 				return 0;
 			}
@@ -98,7 +151,7 @@ namespace ov
 			{
 				return (uint16_t)std::stoi(str.CStr(), nullptr, base);
 			}
-			catch(std::invalid_argument &e)
+			catch (std::invalid_argument &e)
 			{
 				return 0;
 			}
@@ -108,12 +161,12 @@ namespace ov
 		{
 			try
 			{
-				if(str != nullptr)
+				if (str != nullptr)
 				{
 					return (uint32_t)std::stoul(str, nullptr, base);
 				}
 			}
-			catch(std::invalid_argument &e)
+			catch (std::invalid_argument &e)
 			{
 			}
 
@@ -124,19 +177,19 @@ namespace ov
 		{
 			try
 			{
-				if(value.isNumeric())
+				if (value.isNumeric())
 				{
 					return (uint32_t)value.asUInt();
 				}
 
-				if(value.isString())
+				if (value.isString())
 				{
 					return (uint32_t)std::stoul(value.asCString(), nullptr, base);
 				}
 
 				return 0;
 			}
-			catch(std::invalid_argument &e)
+			catch (std::invalid_argument &e)
 			{
 				return 0;
 			}
@@ -148,7 +201,7 @@ namespace ov
 			{
 				return std::stoll(str.CStr(), nullptr, base);
 			}
-			catch(std::invalid_argument &e)
+			catch (std::invalid_argument &e)
 			{
 				return 0L;
 			}
@@ -160,7 +213,7 @@ namespace ov
 			{
 				return std::stoull(str.CStr(), nullptr, base);
 			}
-			catch(std::invalid_argument &e)
+			catch (std::invalid_argument &e)
 			{
 				return 0UL;
 			}
@@ -170,11 +223,11 @@ namespace ov
 		{
 			ov::String value = str.LowerCaseString();
 
-			if(str == "true")
+			if (str == "true")
 			{
 				return true;
 			}
-			else if(str == "false")
+			else if (str == "false")
 			{
 				return false;
 			}
@@ -188,7 +241,7 @@ namespace ov
 			{
 				return std::stof(str.CStr(), nullptr);
 			}
-			catch(std::invalid_argument &e)
+			catch (std::invalid_argument &e)
 			{
 				return 0.0f;
 			}
@@ -200,10 +253,10 @@ namespace ov
 			{
 				return std::stod(str.CStr(), nullptr);
 			}
-			catch(std::invalid_argument &e)
+			catch (std::invalid_argument &e)
 			{
 				return 0.0;
 			}
 		}
 	};
-}
+}  // namespace ov

@@ -8,6 +8,10 @@
 #include "base/info/info.h"
 #include "host_metrics.h"
 
+#define HostMetrics(info)			mon::Monitoring::GetInstance()->GetHostMetrics(info);
+#define ApplicationMetrics(info)	mon::Monitoring::GetInstance()->GetAplicationMetrics(info);
+#define StreamMetrics(info)			mon::Monitoring::GetInstance()->GetStreamMetrics(info);
+
 namespace mon
 {
 	class Monitoring
@@ -18,6 +22,8 @@ namespace mon
             static Monitoring monitor;
             return &monitor;
 	    }
+
+		void ShowInfo();
 
 		bool OnHostCreated(const info::Host &host_info);
 		bool OnHostDeleted(const info::Host &host_info);

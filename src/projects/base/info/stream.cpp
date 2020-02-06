@@ -43,6 +43,7 @@ namespace info
 		_source_type = stream._source_type;
 		_created_time = stream._created_time;
 		_app_info = std::make_shared<info::Application>(stream.GetApplicationInfo());
+		_origin_stream = stream._origin_stream;
 
 		for (auto &track : stream._tracks)
 		{
@@ -119,7 +120,15 @@ namespace info
 
 	void Stream::ShowInfo()
 	{
-		ov::String out_str = ov::String::FormatString("Stream Information / id(%u), name(%s)", GetId(), GetName().CStr());
+		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), name(%s), SourceType(%s), Created Time (%s)\n", 														
+														GetId(), GetName().CStr(), ov::Converter::ToString(_source_type).CStr(),
+														ov::Converter::ToString(_created_time).CStr());
+		if(GetOriginStream() != nullptr)
+		{
+			out_str.AppendFormat("\t>> Origin Stream Info\n\tid(%u), name(%s), SourceType(%s), Created Time (%s)\n",
+				GetOriginStream()->GetId(), GetOriginStream()->GetName().CStr(), ov::Converter::ToString(GetOriginStream()->GetSourceType()).CStr(),
+														ov::Converter::ToString(GetOriginStream()->GetCreatedTime()).CStr());
+		}
 
 		for (auto it = _tracks.begin(); it != _tracks.end(); ++it)
 		{

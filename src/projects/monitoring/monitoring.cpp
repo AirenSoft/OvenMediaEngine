@@ -7,6 +7,15 @@
 
 namespace mon
 {
+	void Monitoring::ShowInfo()
+	{
+		for(const auto &t : _hosts)
+		{
+			auto &host = t.second;
+			host->ShowInfo();
+		}
+	}
+	
 	bool Monitoring::OnHostCreated(const info::Host &host_info)
 	{
 		std::unique_lock<std::mutex> lock(_map_guard);
