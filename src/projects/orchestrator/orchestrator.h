@@ -92,6 +92,8 @@ public:
 	/// @return A new application name corresponding to domain/app
 	ov::String ResolveApplicationNameFromDomain(const ov::String &domain_name, const ov::String &app_name);
 
+	bool GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list);
+
 	/// Create an application and notify the modules
 	///
 	/// @param vhost_name A name of VirtualHost
@@ -419,7 +421,7 @@ protected:
 	std::shared_ptr<VirtualHost> GetVirtualHost(const ov::String &vhost_app_name, ov::String *real_app_name);
 	std::shared_ptr<const VirtualHost> GetVirtualHost(const ov::String &vhost_app_name, ov::String *real_app_name) const;
 
-	bool GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **used_origin, Domain **used_domain);
+	bool GetUrlListForLocationInternal(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **used_origin, Domain **used_domain);
 
 	Result CreateApplicationInternal(const ov::String &name, const info::Application &app_info);
 	Result CreateApplicationInternal(const ov::String &name, info::Application *app_info);

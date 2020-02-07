@@ -738,8 +738,14 @@ std::shared_ptr<const Orchestrator::VirtualHost> Orchestrator::GetVirtualHost(co
 	return nullptr;
 }
 
-// url_list : scheme://domain/app/stream
-bool Orchestrator::GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **used_origin, Domain **used_domain)
+bool Orchestrator::GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list)
+{
+	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
+
+	return GetUrlListForLocationInternal(vhost_app_name, stream_name, url_list, nullptr, nullptr);
+}
+
+bool Orchestrator::GetUrlListForLocationInternal(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **used_origin, Domain **used_domain)
 {
 	ov::String real_app_name;
 	auto vhost = GetVirtualHost(vhost_app_name, &real_app_name);
@@ -802,8 +808,15 @@ bool Orchestrator::GetUrlListForLocation(const ov::String &vhost_app_name, const
 					url_list->push_back(url);
 				}
 
-				*used_domain = &domain;
-				*used_origin = &origin;
+				if(used_domain != nullptr)
+				{
+					*used_domain = &domain;
+				}
+
+				if(used_origin != nullptr)
+				{
+					*used_origin = &origin;
+				}
 
 				return (url_list->size() > 0) ? true : false;
 			}
@@ -1119,7 +1132,7 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &vhost_app_name
 	Origin *used_origin = nullptr;
 	Domain *used_domain = nullptr;
 
-	if (GetUrlListForLocation(vhost_app_name, stream_name, &url_list, &used_origin, &used_domain) == false)
+	if (GetUrlListForLocationInternal(vhost_app_name, stream_name, &url_list, &used_origin, &used_domain) == false)
 	{
 		logte("Could not find Origin for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 		return false;
