@@ -10,11 +10,12 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Applic
                                                const std::shared_ptr<pub::Stream> &stream,
                                                const std::shared_ptr<SessionDescription> &offer_sdp,
                                                const std::shared_ptr<SessionDescription> &peer_sdp,
-                                               const std::shared_ptr<IcePort> &ice_port)
+                                               const std::shared_ptr<IcePort> &ice_port,
+											   const std::shared_ptr<WebSocketClient> &ws_client)
 {
 	// Session Id of the offer sdp is unique value
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), offer_sdp->GetSessionId());
-	auto session = std::make_shared<RtcSession>(session_info, application, stream, offer_sdp, peer_sdp, ice_port);
+	auto session = std::make_shared<RtcSession>(session_info, application, stream, offer_sdp, peer_sdp, ice_port, ws_client);
 	if(!session->Start())
 	{
 		return nullptr;
@@ -27,12 +28,14 @@ RtcSession::RtcSession(const info::Session &session_info,
 					   const std::shared_ptr<pub::Stream> &stream,
 					   const std::shared_ptr<SessionDescription> &offer_sdp,
 					   const std::shared_ptr<SessionDescription> &peer_sdp,
-					   const std::shared_ptr<IcePort> &ice_port)
+					   const std::shared_ptr<IcePort> &ice_port,
+					   const std::shared_ptr<WebSocketClient> &ws_client)
 	: Session(session_info, application, stream)
 {
 	_offer_sdp = offer_sdp;
 	_peer_sdp = peer_sdp;
 	_ice_port = ice_port;
+	_ws_client = ws_client;
 }
 
 RtcSession::~RtcSession()
@@ -166,6 +169,11 @@ const std::shared_ptr<SessionDescription>& RtcSession::GetOfferSDP()
 const std::shared_ptr<SessionDescription>& RtcSession::GetPeerSDP()
 {
 	return _peer_sdp;
+}
+
+const std::shared_ptr<WebSocketClient>& RtcSession::GetWSClient()
+{
+	return _ws_client;
 }
 
 // Application에서 바로 Session의 다음 함수를 호출해준다.

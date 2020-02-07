@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
 		{
 			sleep(5);
 			// For Debug if monitoring is working
-			//mon::Monitoring::GetInstance()->ShowInfo();
+			mon::Monitoring::GetInstance()->ShowInfo();
 		}
 	}
 

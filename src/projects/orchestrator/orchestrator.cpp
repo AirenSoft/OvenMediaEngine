@@ -738,6 +738,7 @@ std::shared_ptr<const Orchestrator::VirtualHost> Orchestrator::GetVirtualHost(co
 	return nullptr;
 }
 
+// url_list : scheme://domain/app/stream
 bool Orchestrator::GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **used_origin, Domain **used_domain)
 {
 	ov::String real_app_name;

@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include <http_server/interceptors/web_socket/web_socket_client.h>
 #include "base/info/media_track.h"
 #include "base/publisher/session.h"
 #include "modules/sdp/session_description.h"
@@ -9,7 +9,6 @@
 #include "modules/rtp_rtcp/rtp_rtcp.h"
 #include "modules/rtp_rtcp/rtp_rtcp_interface.h"
 #include "modules/dtls_srtp/dtls_transport.h"
-
 #include <unordered_set>
 
 /*
@@ -49,14 +48,16 @@ public:
 	                                          const std::shared_ptr<pub::Stream> &stream,
 	                                          const std::shared_ptr<SessionDescription> &offer_sdp,
 	                                          const std::shared_ptr<SessionDescription> &peer_sdp,
-	                                          const std::shared_ptr<IcePort> &ice_port);
+	                                          const std::shared_ptr<IcePort> &ice_port,
+											  const std::shared_ptr<WebSocketClient> &ws_client);
 
 	RtcSession(const info::Session &session_info,
 			const std::shared_ptr<pub::Application> &application,
 	        const std::shared_ptr<pub::Stream> &stream,
 	        const std::shared_ptr<SessionDescription> &offer_sdp,
 	        const std::shared_ptr<SessionDescription> &peer_sdp,
-	        const std::shared_ptr<IcePort> &ice_port);
+	        const std::shared_ptr<IcePort> &ice_port,
+			const std::shared_ptr<WebSocketClient> &ws_client);
 	~RtcSession() override;
 
 	bool Start() override;
@@ -64,6 +65,7 @@ public:
 
 	const std::shared_ptr<SessionDescription>& GetPeerSDP();
 	const std::shared_ptr<SessionDescription>& GetOfferSDP();
+	const std::shared_ptr<WebSocketClient>& GetWSClient();
 
 	bool SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet) override;
 	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data) override;
@@ -77,6 +79,7 @@ private:
 	std::shared_ptr<SessionDescription> _offer_sdp;
 	std::shared_ptr<SessionDescription> _peer_sdp;
 	std::shared_ptr<IcePort>            _ice_port;
+	std::shared_ptr<WebSocketClient> 	_ws_client; // Signalling  
 
 	uint8_t 							_red_block_pt;
 	std::unordered_set<uint8_t>			_payload_types;

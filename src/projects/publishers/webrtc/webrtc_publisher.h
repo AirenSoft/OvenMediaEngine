@@ -26,11 +26,13 @@ public:
 
 	// SignallingObserver Implementation
 	// 클라이언트가 Request Offer를 하면 다음 함수를 통해 SDP를 받아서 넘겨준다.
-	std::shared_ptr<SessionDescription> OnRequestOffer(const ov::String &application_name,
+	std::shared_ptr<SessionDescription> OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,
+													   const ov::String &application_name,
 	                                                   const ov::String &stream_name,
 	                                                   std::vector<RtcIceCandidate> *ice_candidates) override;
 	// 클라이언트가 자신의 SDP를 보내면 다음 함수를 호출한다.
-	bool OnAddRemoteDescription(const ov::String &application_name,
+	bool OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
+								const ov::String &application_name,
 	                            const ov::String &stream_name,
 	                            const std::shared_ptr<SessionDescription> &offer_sdp,
 	                            const std::shared_ptr<SessionDescription> &peer_sdp) override;
@@ -42,16 +44,18 @@ public:
 	//bool OnAddRemoteIceCandidate(session_info, std::vector<std::shared_ptr<IceCandidate>> candidates);
 	// 여기서 IcePort->AddSession(session_info, candidates)를 함
 	// IcePort->SendPacket(session_info, packet);
-	bool OnIceCandidate(const ov::String &application_name,
+	bool OnIceCandidate(const std::shared_ptr<WebSocketClient> &ws_client,
+						const ov::String &application_name,
 	                    const ov::String &stream_name,
 	                    const std::shared_ptr<RtcIceCandidate> &candidate,
 	                    const ov::String &username_fragment) override;
 
-	bool OnStopCommand(const ov::String &application_name, const ov::String &stream_name,
+	bool OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_client,
+					   const ov::String &application_name, const ov::String &stream_name,
 	                   const std::shared_ptr<SessionDescription> &offer_sdp,
 	                   const std::shared_ptr<SessionDescription> &peer_sdp) override;
 
-    uint32_t OnGetBitrate(const ov::String &application_name, const ov::String &stream_name) override;
+    uint32_t OnGetBitrate(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &application_name, const ov::String &stream_name) override;
 
     bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
 

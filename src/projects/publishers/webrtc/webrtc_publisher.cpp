@@ -90,36 +90,124 @@ std::shared_ptr<pub::Application> WebRtcPublisher::OnCreatePublisherApplication(
  * Signalling Implementation
  */
 
-// 클라이언트가 Request Offer를 하면 다음 함수를 통해 SDP를 받아서 넘겨준다.
-std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::String &application_name, const ov::String &stream_name, std::vector<RtcIceCandidate> *ice_candidates)
+// Called when receives request offer sdp from client
+std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &application_name, const ov::String &stream_name, std::vector<RtcIceCandidate> *ice_candidates)
 {
 	// Application -> Stream에서 SDP를 얻어서 반환한다.
+	auto orchestrator = Orchestrator::GetInstance();
+
+	enum class InternalStatus : int8_t
+	{
+		init = 0,
+		local_success,
+		local_failed,
+		origin_success,
+		origin_failed
+	};
+	// 0(init) 1(local ok) 2(local fail) 3(upstream ok) 4()
+	InternalStatus status = InternalStatus::init;
+
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
 	if (stream == nullptr)
 	{
 		// If the stream does not exists, request to the provider
-		auto orchestrator = Orchestrator::GetInstance();
-
 		if (orchestrator->RequestPullStream(application_name, stream_name) == false)
 		{
 			logtd("Could not pull the stream: [%s/%s]", application_name.CStr(), stream_name.CStr());
-			return nullptr;
+			status = InternalStatus::origin_failed;
 		}
-
-		stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
-		if (stream == nullptr)
+		else
 		{
-			logtd("Could not pull the stream: [%s/%s]", application_name.CStr(), stream_name.CStr());
-			return nullptr;
+			stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
+			if (stream == nullptr)
+			{
+				logtd("Could not pull the stream: [%s/%s]", application_name.CStr(), stream_name.CStr());
+				status = InternalStatus::local_failed;
+			}
+			else
+			{
+				status = InternalStatus::origin_success;
+			}
 		}
+	}
+	else
+	{
+		status = InternalStatus::local_success;
+	}
+	
+
+	// logging for statistics 
+	// server domain yyyy-mm-dd tt:MM:ss url sent_bytes request_time upstream_cache_status http_status client_ip http_user_agent http_referer origin_addr origin_http_status geoip geoip_org http_encoding content_length upstream_connect_time upstream_header_time upstream_response_time
+	// OvenMediaEngine 127.0.0.1       02-2020-08      01:18:21        /app/stream_o   -       -       -       200     127.0.0.1:57233 Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36                -       -       -       -       -       -       -       -
+	ov::String log;
+
+	// Server Name
+	log.AppendFormat("%s", _server_config.GetName().CStr());
+	// Domain
+	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("HOST").Split(":")[0].CStr());
+	// Current Time
+	std::time_t t = std::time(nullptr);
+    char mbstr[100];
+	memset(mbstr, 0, sizeof(mbstr));
+	// yyyy-mm-dd
+    std::strftime(mbstr, sizeof(mbstr), "%Y-%m-%d", std::localtime(&t));
+	log.AppendFormat("\t%s", mbstr);
+	// tt:mm:ss
+	memset(mbstr, 0, sizeof(mbstr));
+	std::strftime(mbstr, sizeof(mbstr), "%H:%M:%S", std::localtime(&t));
+	log.AppendFormat("\t%s", mbstr);
+	// Url
+	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetUri().CStr());
+	// Bytes sents : -
+	// request_time : -
+	// upstream_cache_status : -
+	log.AppendFormat("\t-\t-\t-");
+	// http_status : 200 or 404
+	log.AppendFormat("\t%s", stream!=nullptr?"200":"404");
+	// client_ip
+	log.AppendFormat("\t%s", ws_client->GetClient()->GetRemote()->GetRemoteAddress()->ToString().CStr());
+	// http user agent
+	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("User-Agent").CStr());
+	// http referrer
+	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("Referer").CStr());
+	// origin addr 
+		// orchestrator->GetUrlListForLocation()
+	auto stream_metric = mon::Monitoring::GetInstance()->GetStreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+	if(status == InternalStatus::origin_success)
+	{
+		// origin http status : 200 or 404
+		// geoip : -
+		// geoip_org : -
+		// http_encoding : - 
+		// content_length : -
+		log.AppendFormat("\t%s\t-\t-\t-\t-", "200");
+		// upstream_connect_time
+		// upstream_header_time : -
+		// upstream_response_time
+		log.AppendFormat("\t%u\t-\t%u", stream_metric->GetOriginRequestTimeMSec(), stream_metric->GetOriginResponseTimeMSec());
+	}
+	else if(status == InternalStatus::origin_failed)
+	{
+		log.AppendFormat("\t%s\t-\t-\t-\t-", "404");
+		log.AppendFormat("\t-\t-\t-");
+	}
+	else
+	{
+		log.AppendFormat("\t-\t-\t-\t-\t-");
+		log.AppendFormat("\t-\t-\t-");
+	}
+	
+	stat_log("%s", log.CStr());
+	logti("%s", log.CStr());
+
+	if(stream == nullptr)
+	{
+		return nullptr;
 	}
 
 	auto &candidates = _ice_port->GetIceCandidateList();
-
 	ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
-
 	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
-
 	// Generate Unique Session Id
 	session_description->SetOrigin("OvenMediaEngine", stream->IssueUniqueSessionId(), 2, "IN", 4, "127.0.0.1");
 	session_description->SetIceUfrag(_ice_port->GenerateUfrag());
@@ -128,8 +216,9 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const ov::St
 	return session_description;
 }
 
-// 클라이언트가 자신의 SDP를 보내면 다음 함수를 호출한다.
-bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
+// Called when receives an answer sdp from client
+bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
+											 const ov::String &application_name,
 											 const ov::String &stream_name,
 											 const std::shared_ptr<SessionDescription> &offer_sdp,
 											 const std::shared_ptr<SessionDescription> &peer_sdp)
@@ -148,7 +237,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
 	logtd("OnAddRemoteDescription: %s", remote_sdp_text.CStr());
 
 	// Stream에 Session을 생성한다.
-	auto session = RtcSession::Create(application, stream, offer_sdp, peer_sdp, _ice_port);
+	auto session = RtcSession::Create(application, stream, offer_sdp, peer_sdp, _ice_port, ws_client);
 	if (session != nullptr)
 	{
 		// Stream에 Session을 등록한다.
@@ -172,7 +261,8 @@ bool WebRtcPublisher::OnAddRemoteDescription(const ov::String &application_name,
 	return true;
 }
 
-bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov::String &stream_name,
+bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_client,
+									const ov::String &application_name, const ov::String &stream_name,
 									const std::shared_ptr<SessionDescription> &offer_sdp,
 									const std::shared_ptr<SessionDescription> &peer_sdp)
 {
@@ -208,7 +298,7 @@ bool WebRtcPublisher::OnStopCommand(const ov::String &application_name, const ov
 }
 
 // bitrate info(frome signalling)
-uint32_t WebRtcPublisher::OnGetBitrate(const ov::String &application_name, const ov::String &stream_name)
+uint32_t WebRtcPublisher::OnGetBitrate(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &application_name, const ov::String &stream_name)
 {
 	auto stream = GetStream(application_name, stream_name);
 	uint32_t bitrate = 0;
@@ -233,8 +323,8 @@ uint32_t WebRtcPublisher::OnGetBitrate(const ov::String &application_name, const
 	return bitrate;
 }
 
-// It does not be used because
-bool WebRtcPublisher::OnIceCandidate(const ov::String &application_name,
+bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<WebSocketClient> &ws_client,
+									 const ov::String &application_name,
 									 const ov::String &stream_name,
 									 const std::shared_ptr<RtcIceCandidate> &candidate,
 									 const ov::String &username_fragment)

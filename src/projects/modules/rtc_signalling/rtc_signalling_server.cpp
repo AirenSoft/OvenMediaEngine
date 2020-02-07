@@ -93,8 +93,6 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 
 			ov::String internal_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
 
-			//TODO(Getroot) : Application 을 구분한 후 Application 설정을 구해서 여기에 적용한다.
-
 			auto info = std::make_shared<RtcSignallingInfo>(
 				// host_name
 				host_name,
@@ -228,7 +226,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 					// The client is disconnected without send "close" command
 
 					// Forces the session to be cleaned up by sending a stop command
-					DispatchStop(info);
+					DispatchStop(ws_client, info);
 				}
 
 				logti("Client is disconnected: %s (%s / %s, ufrag: local: %s, remote: %s)",
@@ -425,23 +423,23 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::share
 	}
 	else if (command == "answer")
 	{
-		return DispatchAnswer(object, info);
+		return DispatchAnswer(ws_client, object, info);
 	}
 	else if (command == "candidate")
 	{
-		return DispatchCandidate(object, info);
+		return DispatchCandidate(ws_client, object, info);
 	}
 	else if (command == "offer_p2p")
 	{
-		return DispatchOfferP2P(object, info);
+		return DispatchOfferP2P(ws_client, object, info);
 	}
 	else if (command == "candidate_p2p")
 	{
-		return DispatchCandidateP2P(object, info);
+		return DispatchCandidateP2P(ws_client, object, info);
 	}
 	else if (command == "stop")
 	{
-		return DispatchStop(info);
+		return DispatchStop(ws_client, info);
 	}
 
 	// Unknown command
@@ -505,9 +503,9 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 		}
 
 		// None of the hosts can accept this client, so the peer will be connectioned to OME
-		std::find_if(_observers.begin(), _observers.end(), [info, &sdp, application_name, stream_name](auto &observer) -> bool {
+		std::find_if(_observers.begin(), _observers.end(), [ws_client, info, &sdp, application_name, stream_name](auto &observer) -> bool {
 			// Ask observer to fill local_candidates
-			sdp = observer->OnRequestOffer(application_name, stream_name, &(info->local_candidates));
+			sdp = observer->OnRequestOffer(ws_client, application_name, stream_name, &(info->local_candidates));
 			return sdp != nullptr;
 		});
 
@@ -607,7 +605,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	return error;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared_ptr<WebSocketClient> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &peer_info = info->peer_info;
 
@@ -647,8 +645,8 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const ov::JsonObj
 			for (auto &observer : _observers)
 			{
 				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->internal_app_name.CStr(), info->stream_name.CStr());
-
-				observer->OnAddRemoteDescription(info->internal_app_name, info->stream_name, info->offer_sdp, info->peer_sdp);
+				// TODO(Getroot): Add param "client->GetRequest()->GetUri()"
+				observer->OnAddRemoteDescription(ws_client, info->internal_app_name, info->stream_name, info->offer_sdp, info->peer_sdp);
 			}
 		}
 		else
@@ -689,7 +687,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const ov::JsonObj
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const std::shared_ptr<WebSocketClient> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	const Json::Value &candidates_value = object.GetJsonValue("candidates");
 
@@ -733,7 +731,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const ov::Json
 
 			for (auto &observer : _observers)
 			{
-				observer->OnIceCandidate(info->internal_app_name, info->stream_name, ice_candidate, username_fragment);
+				observer->OnIceCandidate(ws_client, info->internal_app_name, info->stream_name, ice_candidate, username_fragment);
 			}
 		}
 	}
@@ -755,7 +753,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const ov::Json
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchOfferP2P(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchOfferP2P(const std::shared_ptr<WebSocketClient> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &host = info->peer_info;
 
@@ -816,7 +814,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchOfferP2P(const ov::JsonO
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidateP2P(const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidateP2P(const std::shared_ptr<WebSocketClient> &ws_client, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &host = info->peer_info;
 
@@ -859,7 +857,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidateP2P(const ov::J
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(std::shared_ptr<RtcSignallingInfo> &info)
+std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_ptr<WebSocketClient> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	bool result = true;
 
@@ -869,7 +867,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(std::shared_ptr<Rtc
 		{
 			logtd("Trying to callback OnStopCommand to %p for client %d (%s / %s)...", observer.get(), info->id, info->internal_app_name.CStr(), info->stream_name.CStr());
 
-			if (observer->OnStopCommand(info->internal_app_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+			if (observer->OnStopCommand(ws_client, info->internal_app_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
 			{
 				result = false;
 			}
