@@ -29,8 +29,8 @@ namespace info
 		}
 
 	protected:
-		uint64_t								_sent_bytes;
-		uint64_t								_received_bytes;
+		uint64_t								_sent_bytes = 0;
+		uint64_t								_received_bytes = 0;
 
 	private:
 		session_id_t 							_id;

@@ -10,7 +10,7 @@ WORKDIR /tmp
 ARG     PREFIX=/opt/ovenmediaengine
 ARG     MAKEFLAGS="-j16"
 
-ENV     OME_VERSION=temp/ass \
+ENV     OME_VERSION=dev \
         OPENSSL_VERSION=1.1.0g \
         SRTP_VERSION=2.2.0 \
         SRT_VERSION=1.3.3 \
