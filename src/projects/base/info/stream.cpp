@@ -86,7 +86,7 @@ namespace info
 		return _origin_stream;
 	}
 
-	std::chrono::system_clock::time_point Stream::GetCreatedTime() const
+	const std::chrono::system_clock::time_point& Stream::GetCreatedTime() const
 	{
 		return _created_time;
 	}
@@ -216,6 +216,6 @@ namespace info
 			out_str.AppendFormat("timebase(%s)", track->GetTimeBase().ToString().CStr());
 		}
 
-		logti("%s", out_str.CStr());
+		logi("Monitor", "%s", out_str.CStr());
 	}
 }  // namespace info

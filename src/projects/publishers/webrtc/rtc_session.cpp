@@ -180,6 +180,7 @@ const std::shared_ptr<WebSocketClient>& RtcSession::GetWSClient()
 void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
 								const std::shared_ptr<const ov::Data> &data)
 {
+	_received_bytes += data->GetLength();
 	// NETWORK에서 받은 Packet은 DTLS로 넘긴다.
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
 	_dtls_ice_transport->OnDataReceived(pub::SessionNodeType::None, data);
@@ -207,6 +208,8 @@ bool RtcSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov
 
 	//printf("pt:%d session v pt:%d red pt:%d session red pt : %d origin pt:%d  session a pt:%d\n",
 	//	   rtp_payload_type, _video_payload_type, red_block_pt, _red_block_pt, origin_pt_of_fec, _audio_payload_type);
+
+	_sent_bytes += packet->GetLength();
 
 	return _rtp_rtcp->SendOutgoingData(packet);
 }

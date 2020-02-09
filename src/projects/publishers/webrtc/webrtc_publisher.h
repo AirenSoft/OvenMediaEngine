@@ -60,9 +60,23 @@ public:
     bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
 
 private:
+	enum class RequestStreamResult : int8_t
+	{
+		init = 0,
+		local_success,
+		local_failed,
+		origin_success,
+		origin_failed,
+		transfer_completed,
+	};
+
 	bool Start() override;
 	bool Stop() override;
 
+	void StatLog(const std::shared_ptr<WebSocketClient> &ws_client, 
+				const std::shared_ptr<RtcStream> &stream, 
+				const std::shared_ptr<RtcSession> &session, 
+				const RequestStreamResult &result);
 	//--------------------------------------------------------------------
 	// Implementation of Publisher
 	//--------------------------------------------------------------------

@@ -20,15 +20,21 @@ namespace info
 		~Session() override = default;
 
 		session_id_t GetId() const;
+		const std::chrono::system_clock::time_point &GetCreatedTime() const;
+		uint64_t GetSentBytes();
 
 		const Stream &GetStream() const
 		{
 			return *_stream;
 		}
 
+	protected:
+		uint64_t								_sent_bytes;
+		uint64_t								_received_bytes;
+
 	private:
-		// 세션 ID
-		session_id_t _id;
-		std::shared_ptr<info::Stream>		_stream;
+		session_id_t 							_id;
+		std::chrono::system_clock::time_point 	_created_time;
+		std::shared_ptr<info::Stream>			_stream;
 	};
 }  // namespace info

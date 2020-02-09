@@ -71,6 +71,99 @@ bool WebRtcPublisher::Stop()
 	return Publisher::Stop();
 }
 
+void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
+							  const std::shared_ptr<RtcStream> &stream,
+							  const std::shared_ptr<RtcSession> &session,
+							  const RequestStreamResult &result)
+{
+	// logging for statistics
+	// server domain yyyy-mm-dd tt:MM:ss url sent_bytes request_time upstream_cache_status http_status client_ip http_user_agent http_referer origin_addr origin_http_status geoip geoip_org http_encoding content_length upstream_connect_time upstream_header_time upstream_response_time
+	// OvenMediaEngine 127.0.0.1       02-2020-08      01:18:21        /app/stream_o   -       -       -       200     127.0.0.1:57233 Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36                -       -       -       -       -       -       -       -
+	ov::String log;
+
+	// Server Name
+	log.AppendFormat("%s", _server_config.GetName().CStr());
+	// Domain
+	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("HOST").Split(":")[0].CStr());
+	// Current Time
+	std::time_t t = std::time(nullptr);
+	char mbstr[100];
+	memset(mbstr, 0, sizeof(mbstr));
+	// yyyy-mm-dd
+	std::strftime(mbstr, sizeof(mbstr), "%Y-%m-%d", std::localtime(&t));
+	log.AppendFormat("\t%s", mbstr);
+	// tt:mm:ss
+	memset(mbstr, 0, sizeof(mbstr));
+	std::strftime(mbstr, sizeof(mbstr), "%H:%M:%S", std::localtime(&t));
+	log.AppendFormat("\t%s", mbstr);
+	// Url
+	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetUri().CStr());
+	
+	if(result == RequestStreamResult::transfer_completed && session != nullptr)
+	{
+		// Bytes sents
+		log.AppendFormat("\t%llu", session->GetSentBytes());
+		// request_time
+		auto now = std::chrono::system_clock::now();
+		std::chrono::duration<double, std::ratio<1>> elapsed = now - session->GetCreatedTime();
+		log.AppendFormat("\t%f", elapsed.count());
+	}
+	else
+	{
+		// Bytes sents : -
+		// request_time : -
+		log.AppendFormat("\t-\t-");
+	}
+	
+	// upstream_cache_status : -
+	if(result == RequestStreamResult::local_success)
+	{
+		log.AppendFormat("\t%s", "hit");
+	}
+	else
+	{
+		log.AppendFormat("\t%s", "miss");
+	}
+	// http_status : 200 or 404
+	log.AppendFormat("\t%s", stream != nullptr ? "200" : "404");
+	// client_ip
+	log.AppendFormat("\t%s", ws_client->GetClient()->GetRemote()->GetRemoteAddress()->ToString().CStr());
+	// http user agent
+	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("User-Agent").CStr());
+	// http referrer
+	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("Referer").CStr());
+	// origin addr
+	// orchestrator->GetUrlListForLocation()
+	
+	if (result == RequestStreamResult::origin_success && stream != nullptr)
+	{
+		// origin http status : 200 or 404
+		// geoip : -
+		// geoip_org : -
+		// http_encoding : -
+		// content_length : -
+		log.AppendFormat("\t%s\t-\t-\t-\t-", "200");
+		// upstream_connect_time
+		// upstream_header_time : -
+		// upstream_response_time
+		auto stream_metric = mon::Monitoring::GetInstance()->GetStreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+		log.AppendFormat("\t%u\t-\t%u", stream_metric->GetOriginRequestTimeMSec(), stream_metric->GetOriginResponseTimeMSec());
+	}
+	else if (result == RequestStreamResult::origin_failed)
+	{
+		log.AppendFormat("\t%s\t-\t-\t-\t-", "404");
+		log.AppendFormat("\t-\t-\t-");
+	}
+	else
+	{
+		log.AppendFormat("\t-\t-\t-\t-\t-");
+		log.AppendFormat("\t-\t-\t-");
+	}
+
+	stat_log("%s", log.CStr());
+	logti("%s", log.CStr());
+}
+
 //====================================================================================================
 // monitoring data pure virtual function
 // - collections vector must be insert processed
@@ -95,17 +188,7 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const std::s
 {
 	// Application -> Stream에서 SDP를 얻어서 반환한다.
 	auto orchestrator = Orchestrator::GetInstance();
-
-	enum class InternalStatus : int8_t
-	{
-		init = 0,
-		local_success,
-		local_failed,
-		origin_success,
-		origin_failed
-	};
-	// 0(init) 1(local ok) 2(local fail) 3(upstream ok) 4()
-	InternalStatus status = InternalStatus::init;
+	RequestStreamResult result = RequestStreamResult::init;
 
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
 	if (stream == nullptr)
@@ -114,7 +197,7 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const std::s
 		if (orchestrator->RequestPullStream(application_name, stream_name) == false)
 		{
 			logtd("Could not pull the stream: [%s/%s]", application_name.CStr(), stream_name.CStr());
-			status = InternalStatus::origin_failed;
+			result = RequestStreamResult::origin_failed;
 		}
 		else
 		{
@@ -122,85 +205,22 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const std::s
 			if (stream == nullptr)
 			{
 				logtd("Could not pull the stream: [%s/%s]", application_name.CStr(), stream_name.CStr());
-				status = InternalStatus::local_failed;
+				result = RequestStreamResult::local_failed;
 			}
 			else
 			{
-				status = InternalStatus::origin_success;
+				result = RequestStreamResult::origin_success;
 			}
 		}
 	}
 	else
 	{
-		status = InternalStatus::local_success;
+		result = RequestStreamResult::local_success;
 	}
-	
 
-	// logging for statistics 
-	// server domain yyyy-mm-dd tt:MM:ss url sent_bytes request_time upstream_cache_status http_status client_ip http_user_agent http_referer origin_addr origin_http_status geoip geoip_org http_encoding content_length upstream_connect_time upstream_header_time upstream_response_time
-	// OvenMediaEngine 127.0.0.1       02-2020-08      01:18:21        /app/stream_o   -       -       -       200     127.0.0.1:57233 Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36                -       -       -       -       -       -       -       -
-	ov::String log;
+	StatLog(ws_client, stream, nullptr, result);
 
-	// Server Name
-	log.AppendFormat("%s", _server_config.GetName().CStr());
-	// Domain
-	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("HOST").Split(":")[0].CStr());
-	// Current Time
-	std::time_t t = std::time(nullptr);
-    char mbstr[100];
-	memset(mbstr, 0, sizeof(mbstr));
-	// yyyy-mm-dd
-    std::strftime(mbstr, sizeof(mbstr), "%Y-%m-%d", std::localtime(&t));
-	log.AppendFormat("\t%s", mbstr);
-	// tt:mm:ss
-	memset(mbstr, 0, sizeof(mbstr));
-	std::strftime(mbstr, sizeof(mbstr), "%H:%M:%S", std::localtime(&t));
-	log.AppendFormat("\t%s", mbstr);
-	// Url
-	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetUri().CStr());
-	// Bytes sents : -
-	// request_time : -
-	// upstream_cache_status : -
-	log.AppendFormat("\t-\t-\t-");
-	// http_status : 200 or 404
-	log.AppendFormat("\t%s", stream!=nullptr?"200":"404");
-	// client_ip
-	log.AppendFormat("\t%s", ws_client->GetClient()->GetRemote()->GetRemoteAddress()->ToString().CStr());
-	// http user agent
-	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("User-Agent").CStr());
-	// http referrer
-	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("Referer").CStr());
-	// origin addr 
-		// orchestrator->GetUrlListForLocation()
-	auto stream_metric = mon::Monitoring::GetInstance()->GetStreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
-	if(status == InternalStatus::origin_success)
-	{
-		// origin http status : 200 or 404
-		// geoip : -
-		// geoip_org : -
-		// http_encoding : - 
-		// content_length : -
-		log.AppendFormat("\t%s\t-\t-\t-\t-", "200");
-		// upstream_connect_time
-		// upstream_header_time : -
-		// upstream_response_time
-		log.AppendFormat("\t%u\t-\t%u", stream_metric->GetOriginRequestTimeMSec(), stream_metric->GetOriginResponseTimeMSec());
-	}
-	else if(status == InternalStatus::origin_failed)
-	{
-		log.AppendFormat("\t%s\t-\t-\t-\t-", "404");
-		log.AppendFormat("\t-\t-\t-");
-	}
-	else
-	{
-		log.AppendFormat("\t-\t-\t-\t-\t-");
-		log.AppendFormat("\t-\t-\t-");
-	}
-	
-	stat_log("%s", log.CStr());
-	logti("%s", log.CStr());
-
-	if(stream == nullptr)
+	if (stream == nullptr)
 	{
 		return nullptr;
 	}
@@ -277,12 +297,14 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 	}
 
 	// Offer SDP의 Session ID로 세션을 찾는다.
-	auto session = stream->GetSession(offer_sdp->GetSessionId());
+	auto session = std::static_pointer_cast<RtcSession>(stream->GetSession(offer_sdp->GetSessionId()));
 	if (session == nullptr)
 	{
 		logte("To stop session failed. Cannot find session by peer sdp session id (%u)", offer_sdp->GetSessionId());
 		return false;
 	}
+
+	StatLog(session->GetWSClient(), stream, session, RequestStreamResult::transfer_completed);
 
 	// Session을 Stream에서 정리한다.
 	stream->RemoveSession(session->GetId());
@@ -343,8 +365,8 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 
 	auto session = std::static_pointer_cast<RtcSession>(session_info);
 	auto application = session->GetApplication();
-	auto stream = session->GetStream();
-
+	auto stream = std::static_pointer_cast<RtcStream>(session->GetStream());
+	
 	// state를 보고 session을 처리한다.
 	switch (state)
 	{
@@ -358,6 +380,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 		case IcePortConnectionState::Disconnected:
 		case IcePortConnectionState::Closed:
 		{
+			StatLog(session->GetWSClient(), stream, session, RequestStreamResult::transfer_completed);
 			// Session을 Stream에서 정리한다.
 			stream->RemoveSession(session->GetId());
 			auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
