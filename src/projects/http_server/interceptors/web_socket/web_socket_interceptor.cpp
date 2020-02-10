@@ -319,9 +319,15 @@ void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &clien
 
 		logtd("Deleting %s from websocket client list...", request->ToString().CStr());
 
-		OV_ASSERT2(item != _websocket_client_list.end());
-
-		_websocket_client_list.erase(item);
+		if(item != _websocket_client_list.end())
+		{
+			socket_info = item->second;
+			_websocket_client_list.erase(item);
+		}
+		else
+		{
+			OV_ASSERT2(item != _websocket_client_list.end());
+		}
 	}
 
 	if ((_close_handler != nullptr) && (socket_info != nullptr))
