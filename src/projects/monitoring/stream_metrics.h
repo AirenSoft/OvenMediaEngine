@@ -20,6 +20,19 @@ namespace mon
 		: info::Stream(stream), 
             _app_metrics(app_metrics)
 		{
+			_request_time_to_origin_msec = 0;
+			_response_time_from_origin_msec = 0;
+			_total_bytes_in = 0;
+			_total_bytes_out = 0;
+			_total_connections = 0;
+
+			_max_total_connection_time = std::chrono::system_clock::from_time_t(0);
+
+			for(int i=0; i<static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
+			{
+				_publisher_metrics[i]._bytes_out = 0;
+				_publisher_metrics[i]._connections = 0;
+			}
 		}
 		std::shared_ptr<ApplicationMetrics> GetApplicationMetrics()
 		{
@@ -29,8 +42,8 @@ namespace mon
 		void ShowInfo();
 
 		// Getter
-		uint32_t GetOriginRequestTimeMSec();
-		uint32_t GetOriginResponseTimeMSec();
+		double GetOriginRequestTimeMSec();
+		double GetOriginResponseTimeMSec();
 
 		uint64_t GetTotalBytesIn();
 		uint64_t GetTotalBytesOut();
@@ -42,8 +55,8 @@ namespace mon
 		uint64_t GetConnections(PublisherType type);
 
 		// Setter
-		void SetOriginRequestTimeMSec(uint32_t value);
-		void SetOriginResponseTimeMSet(uint32_t value);
+		void SetOriginRequestTimeMSec(double value);
+		void SetOriginResponseTimeMSet(double value);
 
 		void IncreaseBytesIn(uint64_t value);
 		void IncreaseBytesOut(PublisherType type, uint64_t value);
@@ -53,8 +66,8 @@ namespace mon
 
 	private:
 		// Related to origin, From Provider
-		std::atomic<uint32_t> _request_time_to_origin_msec;
-		std::atomic<uint32_t> _response_time_from_origin_msec;
+		std::atomic<double> _request_time_to_origin_msec;
+		std::atomic<double> _response_time_from_origin_msec;
 
 		// TODO: If the source type is LIVE_TRANSCODER, what can we provide some more metrics
 

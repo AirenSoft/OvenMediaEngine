@@ -849,6 +849,8 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &v
 
 	logti("Trying to create an application: [%s]", app_name.CStr());
 
+	mon::Monitoring::GetInstance()->OnApplicationCreated(app_info);
+
 	// Notify modules of creation events
 	std::vector<std::shared_ptr<OrchestratorModuleInterface>> created_list;
 	bool succeeded = true;
@@ -984,8 +986,6 @@ Orchestrator::Result Orchestrator::CreateApplication(const info::Host &host_info
 	auto vhost_name = host_info.GetName();
 
 	info::Application app_info(host_info, GetNextAppId(), ResolveApplicationName(vhost_name, app_config.GetName()), app_config);
-
-	mon::Monitoring::GetInstance()->OnApplicationCreated(app_info);
 
 	return CreateApplicationInternal(vhost_name, app_info);
 }

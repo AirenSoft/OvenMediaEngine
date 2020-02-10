@@ -76,9 +76,10 @@ namespace pvd
 		}
 
 		auto end = std::chrono::steady_clock::now();
+		std::chrono::duration<double, std::milli> elapsed = end - begin;
 		if(_stream_metrics != nullptr)
 		{
-			_stream_metrics->SetOriginRequestTimeMSec(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
+			_stream_metrics->SetOriginRequestTimeMSec(elapsed.count());
 		}
 
 		begin = std::chrono::steady_clock::now();
@@ -92,9 +93,10 @@ namespace pvd
 			return false;
 		}
 		end = std::chrono::steady_clock::now();
+		elapsed = end - begin;
 		if(_stream_metrics != nullptr)
 		{
-			_stream_metrics->SetOriginResponseTimeMSet(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
+			_stream_metrics->SetOriginResponseTimeMSet(elapsed.count());
 		}
 
 		_stop_thread_flag = false;
@@ -130,6 +132,12 @@ namespace pvd
 	{
 		if(_state != State::IDLE && _state != State::ERROR)
 		{
+			return false;
+		}
+
+		if(_curr_url == nullptr)
+		{
+			logte("Origin url is not set");
 			return false;
 		}
 

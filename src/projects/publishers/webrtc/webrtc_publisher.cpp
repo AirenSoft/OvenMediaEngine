@@ -147,7 +147,14 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 		// upstream_header_time : -
 		// upstream_response_time
 		auto stream_metric = mon::Monitoring::GetInstance()->GetStreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
-		log.AppendFormat("\t%u\t-\t%u", stream_metric->GetOriginRequestTimeMSec(), stream_metric->GetOriginResponseTimeMSec());
+		if(stream_metric != nullptr)
+		{
+			log.AppendFormat("\t%f\t-\t%f", stream_metric->GetOriginRequestTimeMSec(), stream_metric->GetOriginResponseTimeMSec());
+		}
+		else
+		{
+			log.AppendFormat("\t-\t-\t-");
+		}
 	}
 	else if (result == RequestStreamResult::origin_failed)
 	{

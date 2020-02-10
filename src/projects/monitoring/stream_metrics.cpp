@@ -15,8 +15,8 @@ namespace mon
 		ov::String out_str = ov::String::FormatString("\n------------ Statistics ------------\n");
 		out_str.AppendFormat(
 			"\tLast update time : %s\n"
-			"\tElapsed time to request to origin server : %d ms\n"
-			"\tElapsed time to response from origin server : %d ms\n",
+			"\tElapsed time to request to origin server : %f ms\n"
+			"\tElapsed time to response from origin server : %f ms\n",
 			ov::Converter::ToString(GetLastUpdatedTime()).CStr(),
 			GetOriginRequestTimeMSec(), GetOriginResponseTimeMSec());
 
@@ -40,11 +40,11 @@ namespace mon
 	}
 
 	// Getter
-	uint32_t StreamMetrics::GetOriginRequestTimeMSec()
+	double StreamMetrics::GetOriginRequestTimeMSec()
 	{
 		return _request_time_to_origin_msec;
 	}
-	uint32_t StreamMetrics::GetOriginResponseTimeMSec()
+	double StreamMetrics::GetOriginResponseTimeMSec()
 	{
 		return _response_time_from_origin_msec;
 	}
@@ -81,12 +81,12 @@ namespace mon
 	}
 
 	// Setter
-	void StreamMetrics::SetOriginRequestTimeMSec(uint32_t value)
+	void StreamMetrics::SetOriginRequestTimeMSec(double value)
 	{
 		_request_time_to_origin_msec = value;
 		UpdateDate();
 	}
-	void StreamMetrics::SetOriginResponseTimeMSet(uint32_t value)
+	void StreamMetrics::SetOriginResponseTimeMSet(double value)
 	{
 		_response_time_from_origin_msec = value;
 		UpdateDate();
