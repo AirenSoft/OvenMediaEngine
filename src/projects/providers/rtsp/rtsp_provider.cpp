@@ -60,24 +60,16 @@ namespace pvd
         return provider;
     }
 
-    bool RtspProvider::OnStreamAnnounced(const ov::String &app_name, 
+    bool RtspProvider::OnStreamAnnounced(const std::string_view &address,
+        const ov::String &app_name, 
         const ov::String &stream_name,
         const RtspMediaInfo &media_info,
         info::application_id_t &application_id,
         uint32_t &stream_id)
     {
-        ov::String internal_app_name = app_name;
-
-        // TODO: domain name or vhost_info is needed
-    #if 0
         // Make an internal app name by domain_name
-        ov::String domain_name = "dummy.com";
-        auto internal_app_name = Orchestrator::ResolveApplicationNameFromDomain(domain_name, app);
-
-        // Make an internal app name by cfg::VirtualHost
-        cfg::VirtualHost vhost_config;
-        Orchestrator::ResolveApplicationName(vhost_config.GetName(), app);
-    #endif
+        ov::String domain_name(address.data(), address.size());
+        auto internal_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(domain_name, app_name);
 
         auto application = std::dynamic_pointer_cast<RtspApplication>(GetApplicationByName(internal_app_name.CStr()));
         if(application == nullptr)

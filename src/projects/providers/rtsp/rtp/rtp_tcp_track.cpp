@@ -28,9 +28,9 @@ bool RtpTcpTrack::AddPacket(uint8_t channel, const std::shared_ptr<std::vector<u
     {
         return AddRtpPacket(packet);
     }
-    else
+    else if (channel == rtcp_channel_)
     {
         return AddRtcpPacket(packet);
     }
-    return true;
+    return false;
 }

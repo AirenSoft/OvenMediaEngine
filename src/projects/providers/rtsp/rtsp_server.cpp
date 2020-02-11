@@ -200,7 +200,8 @@ void RtspServer::DeleteStream(const std::lock_guard<std::mutex> &lock, std::unor
     stream_ids_.erase(stream_id_iterator);
 }
 
-bool RtspServer::OnStreamAnnounced(const std::string_view &app_name, 
+bool RtspServer::OnStreamAnnounced(const std::string_view &address,
+        const std::string_view &app_name, 
         const std::string_view &stream_name,
         const RtspMediaInfo &media_info)
 {
@@ -253,12 +254,19 @@ bool RtspServer::OnStreamAnnounced(const std::string_view &app_name,
     }
     uint32_t routed_stream_id;
     info::application_id_t routed_application_id;
+    bool success = false;
     for (const auto &observer : observers_)
     {
-        observer->OnStreamAnnounced(ov::String(app_name.data(), app_name.size()), ov::String(stream_name.data(), stream_name.size()), media_info, routed_application_id, routed_stream_id);
+        success |= observer->OnStreamAnnounced(address,
+            ov::String(app_name.data(), app_name.size()),
+            ov::String(stream_name.data(), stream_name.size()),
+            media_info,
+            routed_application_id,
+            routed_stream_id
+        );
         stream_context_iterator->second.routes_.emplace_back(observer, routed_application_id, routed_stream_id);
     }
-    return true;
+    return success;
 }
 
 bool RtspServer::OnUdpStreamTrackSetup(const std::string_view &rtsp_uri,
@@ -420,7 +428,6 @@ bool RtspServer::OnAudioData(uint32_t stream_id,
 int32_t operator-(const struct timeval &first, const struct timeval &second)
 {
     auto seconds = first.tv_sec - second.tv_sec;
-    decltype(timeval::tv_usec) milliseconds = 0;
     uint32_t first_usec = first.tv_usec;
     if (first_usec < second.tv_usec)
     {

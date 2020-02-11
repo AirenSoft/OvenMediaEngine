@@ -304,5 +304,14 @@ bool ParseSdp(const std::vector<uint8_t> &sdp, RtspMediaInfo &rtsp_media_info)
             }
         }
     }
+    // Check if all the payloads have codec ids deduced while parsing,
+    // if not return false since there is not much we can do
+    for (const auto &payload : rtsp_media_info.payloads_)
+    {
+        if (payload.second.GetCodecId() == common::MediaCodecId::None)
+        {
+            return false;
+        }
+    }
     return true;
 }

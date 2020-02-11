@@ -55,7 +55,8 @@ public:
 public:
     bool Disconnect(const ov::String &app_name, uint32_t stream_id);
 
-    bool OnStreamAnnounced(const std::string_view &app_name, 
+    bool OnStreamAnnounced(const std::string_view &address,
+        const std::string_view &app_name, 
         const std::string_view &stream_name,
         const RtspMediaInfo &media_info);
     bool OnUdpStreamTrackSetup(const std::string_view &rtsp_uri,

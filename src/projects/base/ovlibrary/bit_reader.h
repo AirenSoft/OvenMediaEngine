@@ -12,8 +12,7 @@ public:
     BitReader(const uint8_t *buffer, size_t capacity) : buffer_(buffer),
         position_(buffer),
         capacity_(capacity),
-        bit_offset_(0),
-        mask_(0x80)
+        bit_offset_(0)
     {
     }
 
@@ -88,5 +87,4 @@ private:
     const uint8_t* position_;
     const size_t capacity_;
     int bit_offset_;
-    uint8_t mask_;
 };

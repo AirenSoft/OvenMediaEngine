@@ -12,7 +12,8 @@ class RtspObserver : public ov::EnableSharedFromThis<RtspObserver>
 {
 public:
 
-    virtual bool OnStreamAnnounced(const ov::String &app_name, 
+    virtual bool OnStreamAnnounced(const std::string_view &address,
+        const ov::String &app_name, 
         const ov::String &stream_name,
         const RtspMediaInfo& rtsp_media_info,
         info::application_id_t &application_id,

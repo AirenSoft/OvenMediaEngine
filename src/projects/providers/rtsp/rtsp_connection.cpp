@@ -100,8 +100,8 @@ void RtspConnection::OnRtspRequest(const RtspRequest &rtsp_request)
         break;
     case RtspMethod::Announce:
         {
-            std::string_view application_name, stream_name;
-            if (ExtractApplicationAndStreamNames(rtsp_request.GetUri(), application_name, stream_name) == false)
+            std::string_view application_name, stream_name, address;
+            if (ExtractApplicationAndStreamNames(rtsp_request.GetUri(), address, application_name, stream_name) == false)
             {
                 // We can't split the uri into application name and stream components, give up and return 400;
                 SendResponse(rtsp_request, 400);
@@ -109,8 +109,7 @@ void RtspConnection::OnRtspRequest(const RtspRequest &rtsp_request)
             }
             RtspMediaInfo rtsp_media_info;
             const auto &sdp = rtsp_request.GetBody();
-            ParseSdp(sdp, rtsp_media_info);
-            bool success = rtsp_server_.OnStreamAnnounced(application_name, stream_name, rtsp_media_info);
+            bool success = ParseSdp(sdp, rtsp_media_info) && rtsp_server_.OnStreamAnnounced(address, application_name, stream_name, rtsp_media_info);
             SendResponse(rtsp_request, success ? 200 : 500);
         }
         break;
@@ -153,8 +152,8 @@ void RtspConnection::OnRtspRequest(const RtspRequest &rtsp_request)
                     return;  
                 }
             }
-            std::string_view rtsp_path;
-            if (ExtractPath(rtsp_request.GetUri(), rtsp_path) == false)
+            std::string_view rtsp_path, address;
+            if (ExtractPath(rtsp_request.GetUri(), address, rtsp_path) == false)
             {
                 SendResponse(rtsp_request, 400);
                 return;              
@@ -233,8 +232,8 @@ void RtspConnection::OnRtspRequest(const RtspRequest &rtsp_request)
         break;
     case RtspMethod::Teardown:
         {
-            std::string_view application_name, stream_name;
-            if (ExtractApplicationAndStreamNames(rtsp_request.GetUri(), application_name, stream_name) == false)
+            std::string_view address, application_name, stream_name;
+            if (ExtractApplicationAndStreamNames(rtsp_request.GetUri(), address, application_name, stream_name) == false)
             {
                 // We can't split the uri into application name and stream components, give up and return 400;
                 SendResponse(rtsp_request, 400);

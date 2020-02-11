@@ -29,7 +29,8 @@ namespace pvd
         static std::shared_ptr<RtspProvider> Create(const cfg::Server &server_config, std::shared_ptr<MediaRouteInterface> router);
 
         // RtspObserver
-        bool OnStreamAnnounced(const ov::String &app_name, 
+        bool OnStreamAnnounced(const std::string_view &address,
+            const ov::String &app_name, 
             const ov::String &stream_name,
             const RtspMediaInfo &media_info,
             info::application_id_t &application_id,
