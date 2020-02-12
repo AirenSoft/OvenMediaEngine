@@ -60,16 +60,16 @@ protected:
 	bool SetAllowOrigin(const ov::String &origin_url, const std::shared_ptr<HttpResponse> &response);
 
 	// Interfaces
-	virtual HttpConnection ProcessRequestStream(const std::shared_ptr<HttpClient> &client,
+	virtual HttpConnection ProcessStreamRequest(const std::shared_ptr<HttpClient> &client,
 												const ov::String &app_name, const ov::String &stream_name,
 												const ov::String &file_name, const ov::String &file_ext) = 0;
 
-	virtual HttpConnection OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
+	virtual HttpConnection ProcessPlayListRequest(const std::shared_ptr<HttpClient> &client,
 											 const ov::String &app_name, const ov::String &stream_name,
 											 const ov::String &file_name,
 											 PlayListType play_list_type) = 0;
 
-	virtual HttpConnection OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
+	virtual HttpConnection ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
 											const ov::String &app_name, const ov::String &stream_name,
 											const ov::String &file_name,
 											SegmentType segment_type) = 0;

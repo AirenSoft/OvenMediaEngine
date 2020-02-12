@@ -8,6 +8,7 @@
 //==============================================================================
 #include "http_request.h"
 #include "http_client.h"
+#include "https_client.h"
 #include "http_private.h"
 
 #include <algorithm>
@@ -252,6 +253,17 @@ void HttpRequest::PostProcess()
 			_content_length = ov::Converter::ToInt64(GetHeader("CONTENT-LENGTH", "0"));
 			break;
 	}
+
+	auto host = GetHeader("Host");
+
+	if(host.IsEmpty())
+	{
+		host = _client->GetRemote()->GetLocalAddress()->GetIpAddress();
+	}
+
+	auto temp_client = std::dynamic_pointer_cast<HttpsClient>(_client);
+
+	_request_uri.Format("http%s://%s%s", (temp_client == nullptr) ? "" : "s", host.CStr(), _request_target.CStr());
 }
 
 ov::String HttpRequest::ToString() const

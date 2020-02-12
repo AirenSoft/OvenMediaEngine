@@ -79,7 +79,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 
 			logti("New client is connected: %s", description.CStr());
 
-			auto tokens = client->GetRequest()->GetUri().Split("/");
+			auto tokens = client->GetRequest()->GetRequestTarget().Split("/");
 
 			// "/<app>/<pub::Stream>"
 			if (tokens.size() < 3)
@@ -645,7 +645,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 			for (auto &observer : _observers)
 			{
 				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->internal_app_name.CStr(), info->stream_name.CStr());
-				// TODO(Getroot): Add param "client->GetRequest()->GetUri()"
+				// TODO(Getroot): Add param "client->GetRequest()->GetRequestTarget()"
 				observer->OnAddRemoteDescription(ws_client, info->internal_app_name, info->stream_name, info->offer_sdp, info->peer_sdp);
 			}
 		}

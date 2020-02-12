@@ -114,11 +114,16 @@ public:
 
 	const info::Application &GetApplication(const ov::String &vhost_app_name) const;
 
-	// bool RequestPullStream(const ov::String &url);
-	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream, off_t offset);
-	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream)
+	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, const ov::String &url, off_t offset);
+	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, const ov::String &url)
 	{
-		return RequestPullStream(vhost_app_name, stream, 0);
+		return RequestPullStream(vhost_app_name, stream_name, url, 0);
+	}
+
+	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset);
+	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name)
+	{
+		return RequestPullStream(vhost_app_name, stream_name, 0);
 	}
 
 protected:
@@ -433,7 +438,7 @@ protected:
 	const info::Application &GetApplicationInternal(const ov::String &vhost_app_name) const;
 	const info::Application &GetApplicationInternal(const ov::String &vhost_name, info::application_id_t app_id) const;
 
-	// bool RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> &url);
+	bool RequestPullStreamForUrl(const ov::String &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<const ov::Url> &url, off_t offset);
 	bool RequestPullStreamForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset);
 
 	// Called from Application

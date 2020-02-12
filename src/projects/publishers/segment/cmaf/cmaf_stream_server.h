@@ -53,7 +53,7 @@ protected:
 	//--------------------------------------------------------------------
 	// Overriding functions of DashStreamServer
 	//--------------------------------------------------------------------
-	HttpConnection OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
+	HttpConnection ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
 									const ov::String &app_name, const ov::String &stream_name,
 									const ov::String &file_name,
 									SegmentType segment_type) override;

@@ -32,15 +32,15 @@ public:
 	}
 
 protected:
-	HttpConnection ProcessRequestStream(const std::shared_ptr<HttpClient> &client,
+	HttpConnection ProcessStreamRequest(const std::shared_ptr<HttpClient> &client,
 										const ov::String &app_name, const ov::String &stream_name,
 										const ov::String &file_name, const ov::String &file_ext) override;
 
-	HttpConnection OnPlayListRequest(const std::shared_ptr<HttpClient> &client, const ov::String &app_name, const ov::String &stream_name,
+	HttpConnection ProcessPlayListRequest(const std::shared_ptr<HttpClient> &client, const ov::String &app_name, const ov::String &stream_name,
 									 const ov::String &file_name,
 									 PlayListType play_list_type) override;
 
-	HttpConnection OnSegmentRequest(const std::shared_ptr<HttpClient> &client, const ov::String &app_name, const ov::String &stream_name,
+	HttpConnection ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client, const ov::String &app_name, const ov::String &stream_name,
 									const ov::String &file_name,
 									SegmentType segment_type) override;
 };

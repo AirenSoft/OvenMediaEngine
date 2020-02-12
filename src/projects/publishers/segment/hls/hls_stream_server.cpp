@@ -9,7 +9,7 @@
 #include "hls_stream_server.h"
 #include "hls_private.h"
 
-HttpConnection HlsStreamServer::ProcessRequestStream(const std::shared_ptr<HttpClient> &client,
+HttpConnection HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<HttpClient> &client,
 													 const ov::String &app_name, const ov::String &stream_name,
 													 const ov::String &file_name, const ov::String &file_ext)
 {
@@ -17,11 +17,11 @@ HttpConnection HlsStreamServer::ProcessRequestStream(const std::shared_ptr<HttpC
 
 	if (file_name == HLS_PLAYLIST_FILE_NAME)
 	{
-		return OnPlayListRequest(client, app_name, stream_name, file_name, PlayListType::M3u8);
+		return ProcessPlayListRequest(client, app_name, stream_name, file_name, PlayListType::M3u8);
 	}
 	else if (file_ext == HLS_SEGMENT_EXT)
 	{
-		return OnSegmentRequest(client, app_name, stream_name, file_name, SegmentType::MpegTs);
+		return ProcessSegmentRequest(client, app_name, stream_name, file_name, SegmentType::MpegTs);
 	}
 
 	response->SetStatusCode(HttpStatusCode::NotFound);
@@ -30,18 +30,18 @@ HttpConnection HlsStreamServer::ProcessRequestStream(const std::shared_ptr<HttpC
 	return HttpConnection::Closed;
 }
 
-HttpConnection HlsStreamServer::OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
-												  const ov::String &app_name, const ov::String &stream_name,
-												  const ov::String &file_name,
-												  PlayListType play_list_type)
+HttpConnection HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<HttpClient> &client,
+													   const ov::String &app_name, const ov::String &stream_name,
+													   const ov::String &file_name,
+													   PlayListType play_list_type)
 {
 	auto &response = client->GetResponse();
 
 	ov::String play_list;
 
 	std::find_if(_observers.begin(), _observers.end(),
-				 [&app_name, &stream_name, &file_name, &play_list](auto &observer) -> bool {
-					 return observer->OnPlayListRequest(app_name, stream_name, file_name, play_list);
+				 [&client, &app_name, &stream_name, &file_name, &play_list](auto &observer) -> bool {
+					 return observer->OnPlayListRequest(client, app_name, stream_name, file_name, play_list);
 				 });
 
 	if (play_list.IsEmpty())
@@ -61,18 +61,18 @@ HttpConnection HlsStreamServer::OnPlayListRequest(const std::shared_ptr<HttpClie
 	return HttpConnection::Closed;
 }
 
-HttpConnection HlsStreamServer::OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
-												 const ov::String &app_name, const ov::String &stream_name,
-												 const ov::String &file_name,
-												 SegmentType segment_type)
+HttpConnection HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
+													  const ov::String &app_name, const ov::String &stream_name,
+													  const ov::String &file_name,
+													  SegmentType segment_type)
 {
 	auto &response = client->GetResponse();
 
 	std::shared_ptr<SegmentData> segment = nullptr;
 
 	auto item = std::find_if(_observers.begin(), _observers.end(),
-							 [&app_name, &stream_name, &file_name, &segment](auto &observer) -> bool {
-								 return observer->OnSegmentRequest(app_name, stream_name, file_name, segment);
+							 [&client, &app_name, &stream_name, &file_name, &segment](auto &observer) -> bool {
+								 return observer->OnSegmentRequest(client, app_name, stream_name, file_name, segment);
 							 });
 
 	if (item == _observers.end())

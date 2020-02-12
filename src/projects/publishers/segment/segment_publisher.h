@@ -14,7 +14,7 @@
 #include <config/config.h>
 #include <publishers/segment/segment_stream/segment_stream_server.h>
 
-#define DEFAULT_SEGMENT_WORKER_THREAD_COUNT		4
+#define DEFAULT_SEGMENT_WORKER_THREAD_COUNT 4
 
 class SegmentPublisher : public pub::Publisher, public SegmentStreamObserver
 {
@@ -53,11 +53,13 @@ protected:
 	//--------------------------------------------------------------------
 	// Implementation of SegmentStreamObserver
 	//--------------------------------------------------------------------
-	bool OnPlayListRequest(const ov::String &app_name, const ov::String &stream_name,
+	bool OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
+						   const ov::String &app_name, const ov::String &stream_name,
 						   const ov::String &file_name,
 						   ov::String &play_list) override;
 
-	bool OnSegmentRequest(const ov::String &app_name, const ov::String &stream_name,
+	bool OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
+						  const ov::String &app_name, const ov::String &stream_name,
 						  const ov::String &file_name,
 						  std::shared_ptr<SegmentData> &segment) override;
 

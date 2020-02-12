@@ -23,6 +23,8 @@ namespace ov
 	{
 		OV_ASSERT2(_server_socket != nullptr);
 
+		_local_address = (server_socket != nullptr) ? server_socket->GetLocalAddress() : nullptr;
+
 		StartSendThread();
 	}
 
@@ -32,6 +34,8 @@ namespace ov
 		  _server_socket(server_socket)
 	{
 		OV_ASSERT2(_server_socket != nullptr);
+
+		_local_address = (server_socket != nullptr) ? server_socket->GetLocalAddress() : nullptr;
 
 		MakeNonBlocking();
 

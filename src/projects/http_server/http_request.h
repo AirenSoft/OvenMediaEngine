@@ -70,12 +70,15 @@ public:
 		return ov::Converter::ToDouble(tokens[1]);
 	}
 
-	// GetRequestTarget의 alias
+	// Full URI (including domain and port)
+	// Example: http://<domain>:<port>/<app>/<stream>/...
 	const ov::String &GetUri() const noexcept
 	{
-		return GetRequestTarget();
+		return _request_uri;
 	}
 
+	// Path of the URI (excluding domain and port)
+	// Example: /<app>/<stream>/...
 	const ov::String &GetRequestTarget() const noexcept
 	{
 		return _request_target;
@@ -171,6 +174,7 @@ protected:
 
 	// request 관련 정보 저장
 	HttpMethod _method = HttpMethod::Unknown;
+	ov::String _request_uri;
 	ov::String _request_target;
 	ov::String _http_version;
 
