@@ -107,6 +107,7 @@ namespace pvd
 
 	void RtspcProvider::OnStreamNotInUse(const info::Stream &stream_info)
 	{
+		return;
 		logti("%s stream will be deleted becase it is not used", stream_info.GetName().CStr());
 
 		// Find App

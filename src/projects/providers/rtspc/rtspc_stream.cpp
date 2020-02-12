@@ -139,7 +139,8 @@ namespace pvd
 		::av_dict_set(&options, "rtsp_transport", "tcp", 0);
 
 		int err = 0;
-    	if ( (err = ::avformat_open_input(&_format_context, _curr_url->Source().CStr(), NULL, &options))  < 0) {
+    	if ( (err = ::avformat_open_input(&_format_context, _curr_url->Source().CStr(), NULL, &options))  < 0) 
+		{
         	_state = State::ERROR;
         	
 			char errbuf[256];
