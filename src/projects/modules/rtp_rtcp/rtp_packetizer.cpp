@@ -112,7 +112,7 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 	size_t num_packets = packetizer->SetPayloadData(payload_data, payload_size, fragmentation);
 	if(num_packets == 0)
 	{
-		logte("Packetizer returns 0 packet");
+		//logte("Packetizer returns 0 packet");
 		return false;
 	}
 

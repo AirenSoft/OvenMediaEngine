@@ -33,8 +33,9 @@ namespace pvd
 	RtspcStream::RtspcStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
 			: pvd::Stream(application, stream_info)
 	{
-		av_register_all();
-		avformat_network_init();
+		av_register_all(); 
+		avcodec_register_all(); 
+		avformat_network_init(); 
 
 		_stop_thread_flag = false;
 		_state = State::IDLE;
@@ -56,7 +57,6 @@ namespace pvd
 
 
 // For Test
-		_curr_url = ov::Url::Parse("rtsp://203.67.18.25:554/0");
 #if 0
 		// -------------------------------------------------------------------------------
 		// TODO(soulk): It is a temporary code. Import the RTSP URL from the bash script.
@@ -121,19 +121,7 @@ namespace pvd
 
 	bool RtspcStream::Stop()
 	{
-		if(_state == State::STOPPING || _state == State::STOPPED || _state == State::IDLE)
-		{
-			return false;
-		}
-
-		_state = State::STOPPING;
 		RequestStop();
-
-    	if (_format_context)
-    	{
-        	avformat_close_input(&_format_context);
-        	_format_context = nullptr;
-    	}
 
 		return true;
 	}
@@ -145,15 +133,20 @@ namespace pvd
 			return false;
 		}
 
-		logti("Requested url : %s", _curr_url->Source().CStr());
+		logti("Requested url[%d] : %s", strlen(_curr_url->Source().CStr()), _curr_url->Source().CStr() );
 
 		AVDictionary *options = NULL;
 		::av_dict_set(&options, "rtsp_transport", "tcp", 0);
 
-    	if (::avformat_open_input(&_format_context, _curr_url->Source().CStr(), NULL, &options)  < 0) {
+		int err = 0;
+    	if ( (err = ::avformat_open_input(&_format_context, _curr_url->Source().CStr(), NULL, &options))  < 0) {
         	_state = State::ERROR;
-        	logte("Cannot open input file");
         	
+			char errbuf[256];
+			av_strerror(err, errbuf, sizeof(errbuf));
+
+			logte("Cannot open input file. error : %s", errbuf);
+
         	return false;
     	}
 
@@ -257,13 +250,9 @@ namespace pvd
 			return false;
 		}
 
-		_stop_thread_flag = true;
+		_state = State::STOPPING;
 
-		if (_worker_thread.joinable())
-		{
-			_worker_thread.join();
-			logtd("Packet receive thread terminated.");
-		}
+		_stop_thread_flag = true;
 
 		return true;
 	}
@@ -325,6 +314,12 @@ namespace pvd
 
 			::av_packet_unref(&packet);
 		}
+
+		if (_format_context)
+    	{
+        	avformat_close_input(&_format_context);
+        	_format_context = nullptr;
+    	}
 
 		_state = State::STOPPED;
 	}

@@ -145,6 +145,7 @@ install_ffmpeg()
     --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264 \
     --enable-decoder=aac,aac_latm,aac_fixed,h264 \
     --enable-parser=aac,aac_latm,aac_fixed,h264 \
+    --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp --enable-demuxer=rtsp \
     --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && \
     make && \
     sudo make install && \
