@@ -55,7 +55,9 @@ namespace pvd
 		}
 
 
-#if 1
+// For Test
+		_curr_url = ov::Url::Parse("rtsp://203.67.18.25:554/0");
+#if 0
 		// -------------------------------------------------------------------------------
 		// TODO(soulk): It is a temporary code. Import the RTSP URL from the bash script.
 		// -------------------------------------------------------------------------------
@@ -119,30 +121,19 @@ namespace pvd
 
 	bool RtspcStream::Stop()
 	{
-		logtd("Stop");
-
-		if(_state == State::STOPPED || _state == State::IDLE)
+		if(_state == State::STOPPING || _state == State::STOPPED || _state == State::IDLE)
 		{
 			return false;
 		}
 
-		// TODO(soulk): If the thread is in lock state at av_read_frame, let's use AVIOInterruptCB to get out of lock.
-		_stop_thread_flag = true;
-
-		if(_state == State::PLAYING || _state == State::CONNECTED || _state == State::DESCRIBED)
-		{
-			RequestStop();
-		}
+		_state = State::STOPPING;
+		RequestStop();
 
     	if (_format_context)
     	{
         	avformat_close_input(&_format_context);
         	_format_context = nullptr;
     	}
-
-		// It will be deleted later when the Provider tries to create a stream which is same name.
-		// Because it cannot delete it self.
-		_state = State::STOPPED;
 
 		return true;
 	}
@@ -154,7 +145,7 @@ namespace pvd
 			return false;
 		}
 
-		// logtd("Requested url : %s", _curr_url->Source().CStr());
+		logti("Requested url : %s", _curr_url->Source().CStr());
 
 		AVDictionary *options = NULL;
 		::av_dict_set(&options, "rtsp_transport", "tcp", 0);
@@ -266,6 +257,8 @@ namespace pvd
 			return false;
 		}
 
+		_stop_thread_flag = true;
+
 		if (_worker_thread.joinable())
 		{
 			_worker_thread.join();
@@ -298,7 +291,8 @@ namespace pvd
 				if (_format_context->pb && _format_context->pb->error)
 				{
 					logte("Connection is broken");
-					break;
+					_state = State::ERROR;
+					return;
 				}
 
 				// logtw("Error by timeout. Receive packets again.");
@@ -306,7 +300,7 @@ namespace pvd
 			}
 			else
 			{
-				is_eof = true;
+				is_eof = false;
 			}
 
 			// If the first packet is received as NOPTS_VALUE, reset the PTS value to zero.
@@ -331,5 +325,7 @@ namespace pvd
 
 			::av_packet_unref(&packet);
 		}
+
+		_state = State::STOPPED;
 	}
 }

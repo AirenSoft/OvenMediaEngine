@@ -90,7 +90,6 @@ namespace pvd
 
 	bool OvtProvider::StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream)
 	{
-		// It will be erased by the regular task in pvd::Provider
 		return stream->Stop();
 	}
 

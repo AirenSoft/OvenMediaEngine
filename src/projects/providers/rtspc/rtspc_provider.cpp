@@ -104,4 +104,28 @@ namespace pvd
 		// TODO(soulk) : application deletion function should be developed.
 		return true;
 	}
+
+	void RtspcProvider::OnStreamNotInUse(const info::Stream &stream_info)
+	{
+		logti("%s stream will be deleted becase it is not used", stream_info.GetName().CStr());
+
+		// Find App
+		auto app_info = stream_info.GetApplicationInfo();
+		auto app = std::dynamic_pointer_cast<RtspcApplication>(GetApplicationById(app_info.GetId()));
+		if (app == nullptr)
+		{
+			logte("There is no such app (%s)", app_info.GetName().CStr());
+			return;
+		}
+
+		// Find Stream (The stream must not exist)
+		auto stream = app->GetStreamById(stream_info.GetId());
+		if (stream == nullptr)
+		{
+			logte("There is no such stream (%s)", app_info.GetName().CStr());
+			return;
+		}
+
+		StopStream(app_info, stream);
+	}
 }

@@ -40,7 +40,7 @@ namespace pvd
 
 		ProviderType GetProviderType() override
 		{
-			return ProviderType::Rtsp;
+			return ProviderType::RtspPull;
 		}
 
 		bool Start() override;
@@ -54,7 +54,7 @@ namespace pvd
 
 	protected:
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;
-
 		bool OnDeleteProviderApplication(const info::Application &app_info) override;
+		void OnStreamNotInUse(const info::Stream &stream_info) override;
 	};
 }  // namespace pvd

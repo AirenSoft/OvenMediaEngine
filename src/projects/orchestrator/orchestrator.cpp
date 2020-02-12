@@ -596,6 +596,10 @@ std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForScheme(const ov::Stri
 	{
 		type = ProviderType::Rtsp;
 	}
+	else if (lower_scheme == "rtspc")
+	{
+		type = ProviderType::RtspPull;
+	}
 	else if (lower_scheme == "ovt")
 	{
 		type = ProviderType::Ovt;
