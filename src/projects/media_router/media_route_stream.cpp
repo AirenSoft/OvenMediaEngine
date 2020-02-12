@@ -21,7 +21,8 @@ MediaRouteStream::MediaRouteStream(std::shared_ptr<info::Stream> &stream)
 	_stream = stream;
 	_stream->ShowInfo();
 
-	time(&_last_rb_time);
+	time(&_stat_start_time);
+	time(&_last_recv_time);
 }
 
 MediaRouteStream::~MediaRouteStream()
@@ -59,23 +60,12 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		return false;
 	}
 
-
-#if 0 // for debug...
-        if(_stream->GetName() == "livestream" || _stream->GetName() == "livestream_o")
-        {
-
-                if(media_type==MediaType::Video)
-                        _last_video_pts = media_packet->GetPts() * 1000 / media_track->GetTimeBase().GetDen();
-                else
-                        _last_audio_pts = media_packet->GetPts() * 1000 / media_track->GetTimeBase().GetDen();
-
-                if(media_type==MediaType::Audio)
-                logtd("name(%10s) tid(%2d) type(%s), lvpts(%10lld), lapts(%10lld) diff(%5lld)",
-                 _stream->GetName().CStr(), track_id, (media_type==MediaType::Video)?"Video":"Audio",
-                 _last_video_pts, _last_audio_pts, _last_video_pts - _last_audio_pts);
-        }
-#endif
-
+	if(1)
+	{
+		_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
+		_stat_recv_pkt_size[track_id] += media_packet->GetData()->GetLength();
+		_stat_recv_pkt_count[track_id] ++;
+	}
 
 	if (media_type == MediaType::Video)
 	{
@@ -122,8 +112,34 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	_media_packets.push(std::move(media_packet));
 
 
-	// Purpose of keeping time for last received packets.
-	// In the future, it will be utilized in the wrong stream or garbage collector.
+	// for statistics...s
+	time_t curr_time;
+	time(&curr_time);
+
+	if(difftime(curr_time, _last_recv_time) >= 10)
+	{
+		ov::String temp_str = "\n";
+
+		time_t uptime = curr_time-_stat_start_time;
+		temp_str.AppendFormat("stats of stream[%s] uptime : %llds \n" ,_stream->GetName().CStr(), uptime);
+		for(const auto &iter : _stream->GetTracks())
+		{
+			auto track_id = iter.first;
+			auto track = iter.second;
+
+			temp_str.AppendFormat("\t[%d] media : %s, last timestamp : %lldms (%lld), recv count : %lld, recv szie : %lldb\n"
+				, track_id
+				, track->GetMediaType()==MediaType::Video?"video":"audio"
+				, _stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen()
+				, _stat_recv_pkt_lpts[track_id]
+				, _stat_recv_pkt_count[track_id]
+				, _stat_recv_pkt_size[track_id]);
+		}
+
+		logti("%s", temp_str.CStr());
+
+		_last_recv_time = curr_time;
+	}
 
 	// time(&_last_rb_time);
 	// logtd("last time : %s", asctime(gmtime(&_last_rb_time)) );
@@ -152,5 +168,5 @@ uint32_t MediaRouteStream::Size()
 
 time_t MediaRouteStream::getLastReceivedTime()
 {
-	return _last_rb_time;
+	return _last_recv_time;
 }

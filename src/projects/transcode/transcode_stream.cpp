@@ -53,19 +53,18 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 	// Create Docoders
 	if (CreateDecoders() == 0)
 	{
-		logte("No decoder generated");
-		return;
+		logtw("No decoder generated");
 	}
 
 	// Create Encoders
 	if (CreateEncoders() == 0)
 	{
-		logte("No encoder generated");
-		return;
+		logtw("No encoder generated");
 	}
 
+	// TODO(soulk)
+	// I will make and apply a packet drop policy.
 	_max_queue_size = 256;
-	// _max_queue_size = (_encoders.size() > 0x0F) ? 0xFF : _encoders.size() * 256;
 
 	logti("Transcoder Information. Decoders(%d) Encoders(%d)", _decoders.size(), _encoders.size());
 
@@ -122,11 +121,11 @@ bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
 		return true;
 	}
 
-	// if (_queue_input_packets.size() > _max_queue_size)
-	// {
-	// 	logti("Queue(stream) is full, please check your system: (queue: %zu > limit: %llu)", _queue_input_packets.size(), _max_queue_size);
-	// 	return false;
-	// }
+	if (_queue_input_packets.size() > _max_queue_size)
+	{
+		logti("Queue(stream) is full, please check your system: (queue: %zu > limit: %llu)", _queue_input_packets.size(), _max_queue_size);
+		return false;
+	}
 
 	_queue_input_packets.push(std::move(packet));
 
@@ -143,7 +142,7 @@ int32_t TranscodeStream::CreateOutputStream()
 
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	// 1 단계: 스트림 생성 && 트랙 생성
+	// 1. Create new stream and new track
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Get [application->Streams] list of application configuration.
@@ -231,6 +230,7 @@ int32_t TranscodeStream::CreateOutputStream()
 						}
 
 						stream_output->AddTrack(new_outupt_track);
+						
 						StoreStageContext(cfg_profile.GetName(), input_track_media_type, input_track, stream_output, new_outupt_track);
 					}
 				}
@@ -259,13 +259,15 @@ int32_t TranscodeStream::CreateOutputStream()
 							new_outupt_track->SetBitrate( GetBitrate(cfg_encode_audio->GetBitrate()) );
 							new_outupt_track->SetSampleRate(cfg_encode_audio->GetSamplerate());
 							new_outupt_track->GetChannel().SetLayout(cfg_encode_audio->GetChannel() == 1 ? common::AudioChannel::Layout::LayoutMono : common::AudioChannel::Layout::LayoutStereo);
-
-							// The timebase, sample format will change by the decoder event.
-							new_outupt_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
 							new_outupt_track->SetTimeBase(1, cfg_encode_audio->GetSamplerate());
+
+							// The sample format will change by the decoder event.
+							new_outupt_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
+
 						}
 						
 						stream_output->AddTrack(new_outupt_track);
+
 						StoreStageContext(cfg_profile.GetName(), input_track_media_type, input_track, stream_output, new_outupt_track);
 					}
 				}
@@ -871,13 +873,13 @@ void TranscodeStream::LoopTask()
 	{
 		_queue_event.Wait();
 
-
 		time_t curr_time;
 		time(&curr_time);
 
-		if(difftime(curr_time, base_time) >= 5)
+		// for statistics 
+		if(difftime(curr_time, base_time) >= 60)
 		{
-			logti("stats of stream [%s/%s], decode.ready[%d], filter.ready[%d], encode.ready[%d]"
+			logti("stats of stream[%s/%s], decode.ready[%d], filter.ready[%d], encode.ready[%d]"
 				,_application_info.GetName().CStr()
 				,_stream_input->GetName().CStr()
 				,_queue_input_packets.size()
