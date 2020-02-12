@@ -18,7 +18,15 @@ namespace cfg
 {
 	struct Publishers : public Item
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetPublisherList, _publisher_list)
+		std::vector<const Publisher *> GetPublisherList() const
+		{
+			return {
+				&_rtmp_publisher,
+				&_hls_publisher,
+				&_dash_publisher,
+				&_cmaf_publisher,
+				&_webrtc_publisher};
+		}
 
 		CFG_DECLARE_GETTER_OF(GetThreadCount, _thread_count)
 		CFG_DECLARE_REF_GETTER_OF(GetRtmpPublisher, _rtmp_publisher)
@@ -30,12 +38,6 @@ namespace cfg
 	protected:
 		void MakeParseList() override
 		{
-			_publisher_list.push_back(&_rtmp_publisher);
-			_publisher_list.push_back(&_hls_publisher);
-			_publisher_list.push_back(&_dash_publisher);
-			_publisher_list.push_back(&_cmaf_publisher);
-			_publisher_list.push_back(&_webrtc_publisher);
-
 			RegisterValue<Optional>("ThreadCount", &_thread_count);
 
 			RegisterValue<Optional>("RTMP", &_rtmp_publisher);
@@ -44,8 +46,6 @@ namespace cfg
 			RegisterValue<Optional>("CMAF", &_cmaf_publisher);
 			RegisterValue<Optional>("WebRTC", &_webrtc_publisher);
 		}
-
-		std::vector<const Publisher *> _publisher_list;
 
 		int _thread_count = 4;
 
