@@ -33,7 +33,7 @@ namespace cfg
 		}
 
 		int _segment_count = 3;
-		int _segment_duration = 5;
+		int _segment_duration = 4;
 		CrossDomain _cross_domain;
 		int _thread_count = 4;
 		int _send_buffer_size = 1024 * 1024 * 20;  // 20M

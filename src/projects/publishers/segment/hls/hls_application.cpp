@@ -52,8 +52,8 @@ bool HlsApplication::Start()
 		return false;
 	}
 
-	publisher_info->GetSegmentCount();
-	publisher_info->GetSegmentDuration();
+	_segment_count = publisher_info->GetSegmentCount();
+	_segment_duration = publisher_info->GetSegmentDuration();
 
 	return Application::Start();
 }
