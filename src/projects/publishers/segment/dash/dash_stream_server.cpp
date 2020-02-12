@@ -11,7 +11,7 @@
 #include <publishers/segment/segment_stream/packetizer/packetizer_define.h>
 #include "dash_private.h"
 
-HttpConnection DashStreamServer::ProcessRequestStream(const std::shared_ptr<HttpClient> &client,
+HttpConnection DashStreamServer::ProcessStreamRequest(const std::shared_ptr<HttpClient> &client,
 													  const ov::String &app_name, const ov::String &stream_name,
 													  const ov::String &file_name, const ov::String &file_ext)
 {
@@ -19,11 +19,11 @@ HttpConnection DashStreamServer::ProcessRequestStream(const std::shared_ptr<Http
 
 	if (file_ext == DASH_PLAYLIST_EXT)
 	{
-		return OnPlayListRequest(client, app_name, stream_name, file_name, PlayListType::Mpd);
+		return ProcessPlayListRequest(client, app_name, stream_name, file_name, PlayListType::Mpd);
 	}
 	else if (file_ext == DASH_SEGMENT_EXT)
 	{
-		return OnSegmentRequest(client, app_name, stream_name, file_name, SegmentType::M4S);
+		return ProcessSegmentRequest(client, app_name, stream_name, file_name, SegmentType::M4S);
 	}
 
 	response->SetStatusCode(HttpStatusCode::NotFound);
@@ -32,7 +32,7 @@ HttpConnection DashStreamServer::ProcessRequestStream(const std::shared_ptr<Http
 	return HttpConnection::Closed;
 }
 
-HttpConnection DashStreamServer::OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
+HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<HttpClient> &client,
 												   const ov::String &app_name, const ov::String &stream_name,
 												   const ov::String &file_name,
 												   PlayListType play_list_type)
@@ -42,8 +42,8 @@ HttpConnection DashStreamServer::OnPlayListRequest(const std::shared_ptr<HttpCli
 	ov::String play_list;
 
 	auto item = std::find_if(_observers.begin(), _observers.end(),
-							 [&app_name, &stream_name, &file_name, &play_list](auto &observer) -> bool {
-								 return observer->OnPlayListRequest(app_name, stream_name, file_name, play_list);
+							 [&client, &app_name, &stream_name, &file_name, &play_list](auto &observer) -> bool {
+								 return observer->OnPlayListRequest(client, app_name, stream_name, file_name, play_list);
 							 });
 
 	if ((item == _observers.end()) || play_list.IsEmpty())
@@ -63,7 +63,7 @@ HttpConnection DashStreamServer::OnPlayListRequest(const std::shared_ptr<HttpCli
 	return HttpConnection::Closed;
 }
 
-HttpConnection DashStreamServer::OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
+HttpConnection DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
 												  const ov::String &app_name, const ov::String &stream_name,
 												  const ov::String &file_name,
 												  SegmentType segment_type)
@@ -73,8 +73,8 @@ HttpConnection DashStreamServer::OnSegmentRequest(const std::shared_ptr<HttpClie
 	std::shared_ptr<SegmentData> segment = nullptr;
 
 	auto item = std::find_if(_observers.begin(), _observers.end(),
-							 [&app_name, &stream_name, &file_name, &segment](auto &observer) -> bool {
-								 return observer->OnSegmentRequest(app_name, stream_name, file_name, segment);
+							 [&client, &app_name, &stream_name, &file_name, &segment](auto &observer) -> bool {
+								 return observer->OnSegmentRequest(client, app_name, stream_name, file_name, segment);
 							 });
 
 	if (item == _observers.end())

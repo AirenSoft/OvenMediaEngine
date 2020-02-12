@@ -120,7 +120,7 @@ bool WebConsoleServer::InitializeServer()
 		auto &request = client->GetRequest();
 		auto &response = client->GetResponse();
 
-		auto path = ov::PathManager::Combine(document_root, request->GetUri());
+		auto path = ov::PathManager::Combine(document_root, request->GetRequestTarget());
 		auto real_path = ov::PathManager::GetCanonicalPath(path);
 
 		if (real_path.IsEmpty())

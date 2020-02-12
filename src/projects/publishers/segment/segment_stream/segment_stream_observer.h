@@ -19,13 +19,15 @@
 class SegmentStreamObserver : public ov::EnableSharedFromThis<SegmentStreamObserver>
 {
 public:
-	// PlayList 요청
-	virtual bool OnPlayListRequest(const ov::String &app_name, const ov::String &stream_name,
+	// Called when the client requests a playlist (such as .m3u8, .mpd)
+	virtual bool OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
+								   const ov::String &app_name, const ov::String &stream_name,
 								   const ov::String &file_name,
 								   ov::String &play_list) = 0;
 
-	// Segment 요청
-	virtual bool OnSegmentRequest(const ov::String &app_name, const ov::String &stream_name,
+	// Called when the client requests a segment (such as .ts, .m4s)
+	virtual bool OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
+								  const ov::String &app_name, const ov::String &stream_name,
 								  const ov::String &file_name,
 								  std::shared_ptr<SegmentData> &segment) = 0;
 };

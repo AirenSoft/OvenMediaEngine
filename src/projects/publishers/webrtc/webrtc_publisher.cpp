@@ -97,7 +97,7 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 	std::strftime(mbstr, sizeof(mbstr), "%H:%M:%S", std::localtime(&t));
 	log.AppendFormat("\t%s", mbstr);
 	// Url
-	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetUri().CStr());
+	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetRequestTarget().CStr());
 	
 	if(result == RequestStreamResult::transfer_completed && session != nullptr)
 	{

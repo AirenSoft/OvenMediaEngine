@@ -170,7 +170,7 @@ bool Orchestrator::ApplyOriginMap(const std::vector<info::Host> &host_list)
 		{
 			logtd("  - %s: New", host_info.GetName().CStr());
 			auto vhost = std::make_shared<VirtualHost>(host_info);
-			
+
 			vhost->name = host_info.GetName();
 
 			logtd("    - Processing for domains: %d items", host_info.GetDomain().GetNameList().size());
@@ -812,12 +812,12 @@ bool Orchestrator::GetUrlListForLocationInternal(const ov::String &vhost_app_nam
 					url_list->push_back(url);
 				}
 
-				if(used_domain != nullptr)
+				if (used_domain != nullptr)
 				{
 					*used_domain = &domain;
 				}
 
-				if(used_origin != nullptr)
+				if (used_origin != nullptr)
 				{
 					*used_origin = &origin;
 				}
@@ -1056,60 +1056,77 @@ const info::Application &Orchestrator::GetApplicationInternal(const ov::String &
 	return info::Application::GetInvalidApplication();
 }
 
-#if 0
-bool Orchestrator::RequestPullStreamForUrl(const std::shared_ptr<const ov::Url> &url)
+bool Orchestrator::RequestPullStreamForUrl(const ov::String &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<const ov::Url> &url, off_t offset)
 {
-	// TODO(dimiden): The part that creates an app using the origin map is considered to handle different Origin's apps,
-	// But, this part is not considered
-
 	auto source = url->Source();
-	auto provider = GetProviderForScheme(url->Scheme());
+	auto provider_module = GetProviderModuleForScheme(url->Scheme());
 
-	if (provider == nullptr)
+	if (provider_module == nullptr)
 	{
-		logte("Could not find provider for URL: %s", source.CStr());
+		logte("Could not find provider for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
-	auto provider_module = std::dynamic_pointer_cast<OrchestratorProviderModuleInterface>(provider);
+	// Check if the application does exists
+	auto app_info = GetApplicationInternal(vhost_app_name);
+	Result result;
 
-	if (provider_module->CheckOriginAvailability({source}) == false)
+	if (app_info.IsValid())
 	{
-		logte("The URL is not available: %s", source.CStr());
-		return false;
-	}
-
-	info::Application app_info;
-	auto result = CreateApplicationInternal(url->App(), &app_info);
-
-	if (result != Result::Failed)
-	{
-		// The application is created successfully (or already exists)
-		if (provider_module->PullStream(app_info, url->Stream(), {source}))
-		{
-			// The stream pulled successfully
-			return true;
-		}
+		result = Result::Exists;
 	}
 	else
 	{
-		// Could not create the application
-		return false;
+		// Create a new application
+		result = CreateApplicationInternal(vhost_app_name, &app_info);
+
+		if (
+			// Failed to create the application
+			(result == Result::Failed) ||
+			// result always must be Result::Succeeded
+			(result != Result::Succeeded))
+		{
+			return false;
+		}
 	}
 
-	// Rollback if failed
-	if (result == Result::Succeeded)
+	logti("Trying to pull stream [%s/%s] from provider using URL: %s", vhost_app_name.CStr(), stream_name.CStr(), GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
+
+	auto stream = provider_module->PullStream(app_info, stream_name, {source}, offset);
+
+	if (stream != nullptr)
 	{
-		// If there is no existing app and it is created, delete the app
-		DeleteApplicationInternal(app_info.GetId());
+		logti("The stream was pulled successfully: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+		return true;
+	}
+
+	logte("Could not pull stream [%s/%s] from provider: %s", vhost_app_name.CStr(), stream_name.CStr(), GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
+	// Rollback if needed
+
+	switch (result)
+	{
+		case Result::Failed:
+		case Result::NotExists:
+			// This is a bug - Must be handled above
+			OV_ASSERT2(false);
+			break;
+
+		case Result::Succeeded:
+			// New application is created. Rollback is required
+			DeleteApplicationInternal(app_info);
+			break;
+
+		case Result::Exists:
+			// Used a previously created application. Do not need to rollback
+			break;
 	}
 
 	return false;
 }
 
-bool Orchestrator::RequestPullStream(const ov::String &url)
+bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, const ov::String &url, off_t offset)
 {
-	std::lock_guard<decltype(_modules_mutex)> lock_guard_for_modules(_modules_mutex);
+	std::lock_guard<decltype(_module_list_mutex)> lock_guard_for_modules(_module_list_mutex);
 	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
 
 	auto parsed_url = ov::Url::Parse(url.CStr());
@@ -1117,7 +1134,7 @@ bool Orchestrator::RequestPullStream(const ov::String &url)
 	if (parsed_url != nullptr)
 	{
 		// The URL has a scheme
-		return RequestPullStreamForUrl(parsed_url);
+		return RequestPullStreamForUrl(vhost_app_name, stream_name, parsed_url, offset);
 	}
 	else
 	{
@@ -1127,7 +1144,6 @@ bool Orchestrator::RequestPullStream(const ov::String &url)
 
 	return false;
 }
-#endif
 
 bool Orchestrator::RequestPullStreamForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset)
 {
@@ -1150,8 +1166,6 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &vhost_app_name
 		logte("Could not find URL list for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 		return false;
 	}
-
-	// This is a safe operation because origin_list is managed by Orchestrator
 
 	auto provider_module = GetProviderModuleForScheme(used_origin->scheme);
 
@@ -1184,7 +1198,7 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &vhost_app_name
 		}
 	}
 
-	logti("Trying to pull stream [%s/%s] from provider: %s", vhost_app_name.CStr(), stream_name.CStr(), GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
+	logti("Trying to pull stream [%s/%s] from provider using origin map: %s", vhost_app_name.CStr(), stream_name.CStr(), GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
 
 	auto stream = provider_module->PullStream(app_info, stream_name, url_list, offset);
 
@@ -1223,12 +1237,12 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &vhost_app_name
 	return false;
 }
 
-bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream, off_t offset)
+bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset)
 {
 	std::lock_guard<decltype(_module_list_mutex)> lock_guard_for_modules(_module_list_mutex);
 	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
 
-	return RequestPullStreamForLocation(vhost_app_name, stream, offset);
+	return RequestPullStreamForLocation(vhost_app_name, stream_name, offset);
 }
 
 bool Orchestrator::OnCreateStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)

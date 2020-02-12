@@ -11,7 +11,7 @@
 #include "cmaf_packetizer.h"
 #include "cmaf_private.h"
 
-HttpConnection CmafStreamServer::OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
+HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
 												  const ov::String &app_name, const ov::String &stream_name,
 												  const ov::String &file_name,
 												  SegmentType segment_type)
@@ -52,7 +52,7 @@ HttpConnection CmafStreamServer::OnSegmentRequest(const std::shared_ptr<HttpClie
 		}
 	}
 
-	return DashStreamServer::OnSegmentRequest(client, app_name, stream_name, file_name, segment_type);
+	return DashStreamServer::ProcessSegmentRequest(client, app_name, stream_name, file_name, segment_type);
 }
 
 void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov::String &stream_name,

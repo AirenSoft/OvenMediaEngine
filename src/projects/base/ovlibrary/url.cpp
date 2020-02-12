@@ -6,12 +6,65 @@
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
+#include "url.h"
 #include <base/ovlibrary/converter.h>
 #include <regex>
-#include "url.h"
 
 namespace ov
 {
+	ov::String Url::Decode(const ov::String &value)
+	{
+		ov::String result_string;
+		result_string.SetCapacity(value.GetLength());
+
+		auto val = value.CStr();
+		auto length = value.GetLength();
+
+		auto result = result_string.GetBuffer();
+		size_t result_index = 0;
+		char place_holder[3];
+		place_holder[3] = '\0';
+
+		for (size_t index = 0; index < length;)
+		{
+			char character = val[index];
+
+			if (character == '%')
+			{
+				// Change '%??' to ascii character
+				if ((length - index) > 2)
+				{
+					auto val1 = val[index + 1];
+					auto val2 = val[index + 2];
+
+					if (::isxdigit(val1) && ::isxdigit(val2))
+					{
+						place_holder[0] = val1;
+						place_holder[1] = val2;
+						result[result_index] = static_cast<char>(static_cast<int>(::strtol(place_holder, nullptr, 16)));
+
+						index += 3;
+						result_index++;
+
+						continue;
+					}
+				}
+			}
+			else if (character == '+')
+			{
+				// Change '+' to ' '
+				character = ' ';
+			}
+
+			result[result_index] = val[index];
+
+			index++;
+			result_index++;
+		}
+
+		return std::move(result_string);
+	}
+
 	std::shared_ptr<const Url> Url::Parse(const std::string &url, bool make_query_map)
 	{
 		auto object = std::make_shared<Url>();
@@ -72,7 +125,7 @@ namespace ov
 
 				if (tokens.size() == 2)
 				{
-					query_map[tokens[0]] = tokens[1];
+					query_map[tokens[0]] = Decode(tokens[1]);
 				}
 				else
 				{

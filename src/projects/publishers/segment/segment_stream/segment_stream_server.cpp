@@ -238,11 +238,10 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 		}
 
 
-		auto tokens = client->GetRequest()->GetUri().Split("/");
 		auto host_name = client->GetRequest()->GetHeader("HOST").Split(":")[0];
-		ov::String internal_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
+		ov::String internal_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
 
-		connetion = ProcessRequestStream(client, internal_app_name, stream_name, file_name, file_ext);
+		connetion = ProcessStreamRequest(client, internal_app_name, stream_name, file_name, file_ext);
 	} while (false);
 
 	switch (connetion)

@@ -73,6 +73,8 @@ namespace ov
 		ov::String ToString() const;
 
 	private:
+		static ov::String Decode(const ov::String &value);
+
 		// Full URL
 		ov::String _source;
 		ov::String _scheme;
