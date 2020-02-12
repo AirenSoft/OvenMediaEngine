@@ -39,7 +39,6 @@ namespace pvd
 
 	bool RtspcProvider::Start()
 	{
-		SetUseAutoStreamRemover(true);
 		return pvd::Provider::Start();
 	}
 

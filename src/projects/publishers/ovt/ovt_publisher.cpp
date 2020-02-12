@@ -107,7 +107,7 @@ void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 
 	if(object.IsNull())
 	{
-		ResponseResult(remote, packet->SessionId(), 0, 404, "An invalid request : Json format");
+		ResponseResult(remote, OVT_PAYLOAD_TYPE_ERROR, packet->SessionId(), 0, 404, "An invalid request : Json format");
 		return;
 	}
 
@@ -116,7 +116,7 @@ void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 
 	if(json_request_id.isNull() || json_request_url.isNull() || !json_request_id.isUInt())
 	{
-		ResponseResult(remote, packet->SessionId(), 0, 404, "An invalid request : Id or Url are not valid");
+		ResponseResult(remote, OVT_PAYLOAD_TYPE_ERROR, packet->SessionId(), 0, 404, "An invalid request : Id or Url are not valid");
 		return;
 	}
 
@@ -124,7 +124,7 @@ void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 	auto url = ov::Url::Parse(json_request_url.asString());
 	if(url == nullptr)
 	{
-		ResponseResult(remote, packet->SessionId(), json_request_id.asUInt(), 404, "An invalid request : Url is not valid");
+		ResponseResult(remote, OVT_PAYLOAD_TYPE_ERROR, packet->SessionId(), json_request_id.asUInt(), 404, "An invalid request : Url is not valid");
 		return;
 	}
 
@@ -143,7 +143,7 @@ void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 			break;
 		default:
 			// Response error message and disconnect
-			ResponseResult(remote, packet->SessionId(), request_id, 404, "An invalid request");
+			ResponseResult(remote, OVT_PAYLOAD_TYPE_ERROR, packet->SessionId(), request_id, 404, "An invalid request");
 			break;
 	}
 }
@@ -177,12 +177,12 @@ void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remo
 	{
 		ov::String msg;
 		msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
-		ResponseResult(remote, 0, request_id, 404, msg);
+		ResponseResult(remote, OVT_PAYLOAD_TYPE_DESCRIBE, 0, request_id, 404, msg);
 		return;
 	}
 
 	Json::Value description = stream->GetDescription();
-	ResponseResult(remote, 0, request_id, 200, "ok", "stream", description);
+	ResponseResult(remote, OVT_PAYLOAD_TYPE_DESCRIBE, 0, request_id, 200, "ok", "stream", description);
 }
 
 void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
@@ -194,7 +194,7 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 	{
 		ov::String msg;
 		msg.Format("There is no such app (%s)", vhost_app_name.CStr());
-		ResponseResult(remote, 0, request_id, 404, msg);
+		ResponseResult(remote, OVT_PAYLOAD_TYPE_PLAY, 0, request_id, 404, msg);
 		return;
 	}
 
@@ -203,7 +203,7 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 	{
 		ov::String msg;
 		msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
-		ResponseResult(remote, 0, request_id, 404, msg);
+		ResponseResult(remote, OVT_PAYLOAD_TYPE_PLAY, 0, request_id, 404, msg);
 		return;
 	}
 
@@ -212,13 +212,13 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 	{
 		ov::String msg;
 		msg.Format("Internal Error : Cannot create session");
-		ResponseResult(remote, 0, request_id, 404, msg);
+		ResponseResult(remote, OVT_PAYLOAD_TYPE_PLAY, 0, request_id, 404, msg);
 		return;
 	}
 
 	LinkRemoteWithStream(remote->GetId(), stream);
 
-	ResponseResult(remote, session->GetId(), request_id, 200, "ok");
+	ResponseResult(remote, OVT_PAYLOAD_TYPE_PLAY, session->GetId(), request_id, 200, "ok");
 
 	stream->AddSession(session);
 }
@@ -232,16 +232,16 @@ void OvtPublisher::HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, 
 	{
 		ov::String msg;
 		msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
-		ResponseResult(remote, 0, request_id, 404, msg);
+		ResponseResult(remote, OVT_PAYLOAD_TYPE_STOP, 0, request_id, 404, msg);
 		return;
 	}
 
-	stream->RemoveSession(session_id);
+	ResponseResult(remote, OVT_PAYLOAD_TYPE_STOP, session_id, request_id, 200, "ok");
 
-	ResponseResult(remote, session_id, request_id, 200, "ok");
+	stream->RemoveSession(session_id);
 }
 
-void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg)
+void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg)
 {
 	Json::Value root;
 
@@ -249,10 +249,10 @@ void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uin
 	root["code"] = code;
 	root["message"] = msg.CStr();
 
-	SendResponse(remote, session_id, ov::Json::Stringify(root));
+	SendResponse(remote, payload_type, session_id, ov::Json::Stringify(root));
 }
 
-void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id,
+void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, uint32_t request_id,
 									uint32_t code, const ov::String &msg, const ov::String &key, const Json::Value &value)
 {
 	Json::Value root;
@@ -262,10 +262,10 @@ void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uin
 	root["message"] = msg.CStr();
 	root[key.CStr()] = value;
 
-	SendResponse(remote, session_id, ov::Json::Stringify(root));
+	SendResponse(remote, payload_type, session_id, ov::Json::Stringify(root));
 }
 
-void OvtPublisher::SendResponse(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String &payload)
+void OvtPublisher::SendResponse(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, const ov::String &payload)
 {
 	size_t max_payload_size = OVT_DEFAULT_MAX_PACKET_SIZE - OVT_FIXED_HEADER_SIZE;
 	size_t remain_payload_len = payload.GetLength();
@@ -281,7 +281,7 @@ void OvtPublisher::SendResponse(const std::shared_ptr<ov::Socket> &remote, uint3
 		auto packet = std::make_shared<OvtPacket>();;
 		// Session ID should be set in Session Level
 		packet->SetSessionId(session_id);
-		packet->SetPayloadType(OVT_PAYLOAD_TYPE_RESPONSE);
+		packet->SetPayloadType(payload_type);
 		packet->SetMarker(0);
 		packet->SetTimestampNow();
 

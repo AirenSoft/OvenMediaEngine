@@ -20,7 +20,6 @@ namespace pvd
 	Provider::Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 		: _server_config(server_config), _router(router)
 	{
-		_use_garbage_collector = false;
 	}
 
 	Provider::~Provider()
@@ -34,23 +33,16 @@ namespace pvd
 
 	bool Provider::Start()
 	{
-		if(_use_garbage_collector)
-		{
-			_worker_thread = std::thread(&Provider::GarbageCollector, this);
-			_worker_thread.detach();
-		}
+		_run_thread = true;
+		_worker_thread = std::thread(&Provider::RegularTask, this);
+		_worker_thread.detach();
 
 		return true;
 	}
 
-	void Provider::SetUseAutoStreamRemover(bool use)
-	{
-		_use_garbage_collector = use;
-	}
-
 	bool Provider::Stop()
 	{
-		_use_garbage_collector = false;
+		_run_thread = false;
 
 		auto it = _applications.begin();
 
@@ -180,14 +172,30 @@ namespace pvd
 		return nullptr;
 	}
 
-	void Provider::GarbageCollector()
+	void Provider::RegularTask()
 	{
-		while(_use_garbage_collector)
+		while(_run_thread)
 		{
 			for(auto const &x : _applications)
 			{
 				auto app = x.second;
+
+				// Check if there are terminated streams and delete it
 				app->DeleteTerminatedStreams();
+
+				// Check if there are streams have no any viewers
+				for(auto const &s : app->GetStreams())
+				{
+					auto stream = s.second;
+					auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+					if(stream_metrics != nullptr)
+					{
+						if(stream_metrics->GetTotalConnections() == 0 && stream_metrics->GetUptimeSec() > 30)
+						{
+							OnStreamNotInUse(*stream);
+						}
+					}
+				}
 			}
 
 			sleep(1);

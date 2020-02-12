@@ -113,12 +113,35 @@ namespace mon
 			_max_total_connections.exchange(_total_connections);
 			_max_total_connection_time = std::chrono::system_clock::now();
 		}
+
+		// If this stream is child then send event to parent
+		auto origin_stream_info = GetOriginStream();
+		if(origin_stream_info != nullptr)
+		{
+			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
+			if(origin_stream_metric != nullptr)
+			{
+				origin_stream_metric->OnSessionConnected(type);
+			}
+		}
+
 		UpdateDate();
 	}
 	void StreamMetrics::OnSessionDisconnected(PublisherType type)
 	{
 		_publisher_metrics[static_cast<int8_t>(type)]._connections--;
 		_total_connections--;
+
+		// If this stream is child then send event to parent
+		auto origin_stream_info = GetOriginStream();
+		if(origin_stream_info != nullptr)
+		{
+			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
+			if(origin_stream_metric != nullptr)
+			{
+				origin_stream_metric->OnSessionDisconnected(type);
+			}
+		}
 		UpdateDate();
 	}
 }  // namespace mon

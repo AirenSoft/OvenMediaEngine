@@ -53,10 +53,10 @@ private:
 	void HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<const ov::Url> &url);
 	void HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<const ov::Url> &url);
 
-	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg);
-	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg, const ov::String &key, const Json::Value &value);
+	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg);
+	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg, const ov::String &key, const Json::Value &value);
 
-	void SendResponse(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String &payload);
+	void SendResponse(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, const ov::String &payload);
 
 
 	bool LinkRemoteWithStream(int remote_id, std::shared_ptr<OvtStream> &stream);

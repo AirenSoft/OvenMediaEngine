@@ -230,6 +230,8 @@ namespace pub
 
 	bool Stream::RemoveSession(session_id_t id)
 	{
+		// TODO(Getroot): Mutex
+
 		if (_sessions.count(id) <= 0)
 		{
 			logte("Cannot find session : %u", id);

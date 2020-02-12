@@ -55,21 +55,26 @@ namespace pvd
 		return new_stream_id;
 	}
 
-	std::shared_ptr<Stream> Application::GetStreamById(uint32_t stream_id)
+	const std::map<uint32_t, std::shared_ptr<Stream>>& Application::GetStreams() const
+	{
+		return _streams;
+	}
+
+	const std::shared_ptr<Stream> Application::GetStreamById(uint32_t stream_id) const
 	{
 		if(_streams.find(stream_id) == _streams.end())
 		{
 			return nullptr;
 		}
 
-		return _streams[stream_id];
+		return _streams.at(stream_id);
 	}
 
-	std::shared_ptr<Stream> Application::GetStreamByName(ov::String stream_name)
+	const std::shared_ptr<Stream> Application::GetStreamByName(ov::String stream_name) const
 	{
 		for(auto const &x : _streams)
 		{
-			auto stream = x.second;
+			auto& stream = x.second;
 			if(stream->GetName() == stream_name)
 			{
 				return stream;

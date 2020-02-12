@@ -39,7 +39,6 @@ namespace pvd
 
 	bool OvtProvider::Start()
 	{
-		SetUseAutoStreamRemover(true);
 		return pvd::Provider::Start();
 	}
 
@@ -91,6 +90,7 @@ namespace pvd
 
 	bool OvtProvider::StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream)
 	{
+		// It will be erased by the regular task in pvd::Provider
 		return stream->Stop();
 	}
 
@@ -101,7 +101,30 @@ namespace pvd
 
 	bool OvtProvider::OnDeleteProviderApplication(const info::Application &app_info)
 	{
-
 		return true;
+	}
+
+	void OvtProvider::OnStreamNotInUse(const info::Stream &stream_info)
+	{
+		logti("%s stream will be deleted becase it is not used", stream_info.GetName().CStr());
+
+		// Find App
+		auto app_info = stream_info.GetApplicationInfo();
+		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
+		if (app == nullptr)
+		{
+			logte("There is no such app (%s)", app_info.GetName().CStr());
+			return;
+		}
+
+		// Find Stream (The stream must not exist)
+		auto stream = app->GetStreamById(stream_info.GetId());
+		if (stream == nullptr)
+		{
+			logte("There is no such stream (%s)", app_info.GetName().CStr());
+			return;
+		}
+
+		StopStream(app_info, stream);
 	}
 }

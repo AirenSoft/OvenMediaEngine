@@ -39,12 +39,10 @@ namespace pvd
 
 		const cfg::Server &GetServerConfig() const;
 
-		void SetUseAutoStreamRemover(bool use);
-
 		// For child class
 		virtual std::shared_ptr<Application> OnCreateProviderApplication(const info::Application &app_info) = 0;
 		virtual bool OnDeleteProviderApplication(const info::Application &app_info) = 0;
-
+		virtual void OnStreamNotInUse(const info::Stream &stream_info){};
 		//--------------------------------------------------------------------
 		// Implementation of OrchestratorModuleInterface
 		//--------------------------------------------------------------------
@@ -67,8 +65,8 @@ namespace pvd
 		std::shared_ptr<MediaRouteInterface> _router;
 
 
-		void 			GarbageCollector();
-		bool 			_use_garbage_collector;
+		void 			RegularTask();
+		bool			_run_thread = false;
 		std::thread 	_worker_thread;
 	};
 

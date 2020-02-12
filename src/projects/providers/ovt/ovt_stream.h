@@ -37,7 +37,7 @@ namespace pvd
 		bool RequestPlay();
 		bool ReceivePlay(uint32_t request_id);
 		bool RequestStop();
-		bool ReceiveStop(uint32_t request_id);
+		bool ReceiveStop(uint32_t request_id, const std::shared_ptr<OvtPacket> &packet);
 
 		std::shared_ptr<OvtPacket> ReceivePacket();
 		std::shared_ptr<ov::Data> ReceiveMessage();

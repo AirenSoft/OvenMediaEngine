@@ -25,6 +25,7 @@ namespace pvd
 			CONNECTED,
 			DESCRIBED,
 			PLAYING,
+			STOPPING,
 			STOPPED,
 			ERROR
 		};

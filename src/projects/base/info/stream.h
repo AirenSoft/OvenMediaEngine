@@ -32,6 +32,7 @@ namespace info
 		const std::shared_ptr<Stream> GetOriginStream();
 
 		const std::chrono::system_clock::time_point &GetCreatedTime() const;
+		uint32_t GetUptimeSec();
 		StreamSourceType GetSourceType() const;
 
 		bool AddTrack(std::shared_ptr<MediaTrack> track);
