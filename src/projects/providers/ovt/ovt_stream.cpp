@@ -67,7 +67,7 @@ namespace pvd
 		}
 
 		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
-
+		
 		// For statistics
 		auto begin = std::chrono::steady_clock::now();
 		if (!ConnectOrigin())
@@ -103,7 +103,7 @@ namespace pvd
 		_worker_thread = std::thread(&OvtStream::WorkerThread, this);
 		_worker_thread.detach();
 
-		return true;
+		return pvd::Stream::Start();
 	}
 
 	bool OvtStream::Stop()
@@ -116,7 +116,7 @@ namespace pvd
 		_state = State::STOPPING;
 		RequestStop();
 
-		return true;
+		return pvd::Stream::Stop();
 	}
 
 	bool OvtStream::ConnectOrigin()

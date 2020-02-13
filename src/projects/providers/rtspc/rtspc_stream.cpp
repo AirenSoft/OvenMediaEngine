@@ -97,11 +97,22 @@ namespace pvd
 			return false;
 		}
 
+		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
+
+		auto begin = std::chrono::steady_clock::now();
 		if (!ConnectTo())
 		{
 			return false;
 		}
 
+		auto end = std::chrono::steady_clock::now();
+		std::chrono::duration<double, std::milli> elapsed = end - begin;
+		if(_stream_metrics != nullptr)
+		{
+			_stream_metrics->SetOriginRequestTimeMSec(elapsed.count());
+		}
+
+		begin = std::chrono::steady_clock::now();
 		if (!RequestDescribe())
 		{
 			return false;
@@ -112,18 +123,25 @@ namespace pvd
 			return false;
 		}
 
+		end = std::chrono::steady_clock::now();
+		elapsed = end - begin;
+		if(_stream_metrics != nullptr)
+		{
+			_stream_metrics->SetOriginResponseTimeMSet(elapsed.count());
+		}
+
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&RtspcStream::WorkerThread, this);
 		_worker_thread.detach();
 
-		return true;
+		return pvd::Stream::Start();
 	}
 
 	bool RtspcStream::Stop()
 	{
 		RequestStop();
 
-		return true;
+		return pvd::Stream::Stop();
 	}
 
 	bool RtspcStream::ConnectTo()
@@ -306,7 +324,10 @@ namespace pvd
 			}
 
 			logtp("track_id(%d), flags(%d), pts(%10lld), dts(%10lld), size(%d)", packet.stream_index, packet.flags, packet.pts, packet.dts, packet.size);
-
+			if(_stream_metrics != nullptr)
+			{
+				_stream_metrics->IncreaseBytesIn(packet.size);
+			}
 
 			auto flag = (packet.flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
 			auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Video, 0, packet.data, packet.size, packet.pts, packet.dts, packet.duration, flag);

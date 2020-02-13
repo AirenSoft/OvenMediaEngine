@@ -15,9 +15,11 @@ namespace mon
 		ov::String out_str = ov::String::FormatString("\n------------ Statistics ------------\n");
 		out_str.AppendFormat(
 			"\tLast update time : %s\n"
-			"\tElapsed time to request to origin server : %f ms\n"
-			"\tElapsed time to response from origin server : %f ms\n",
+			"\tLast sent time : %s\n"
+			"\tElapsed time to connect to origin server : %f ms\n"
+			"\tElapsed time to request from origin server : %f ms\n",
 			ov::Converter::ToString(GetLastUpdatedTime()).CStr(),
+			ov::Converter::ToString(GetLastSentTime()).CStr(),
 			GetOriginRequestTimeMSec(), GetOriginResponseTimeMSec());
 
 		out_str.AppendFormat(
@@ -71,6 +73,11 @@ namespace mon
 		return _max_total_connection_time;
 	}
 
+	std::chrono::system_clock::time_point StreamMetrics::GetLastSentTime()
+	{
+		return _last_sent_time;
+	}
+
 	uint64_t StreamMetrics::GetBytesOut(PublisherType type)
 	{
 		return _publisher_metrics[static_cast<int8_t>(type)]._bytes_out;
@@ -99,8 +106,14 @@ namespace mon
 	}
 	void StreamMetrics::IncreaseBytesOut(PublisherType type, uint64_t value)
 	{
+		if(value == 0)
+		{
+			return;
+		}
+		
 		_publisher_metrics[static_cast<int8_t>(type)]._bytes_out += value;
 		_total_bytes_out += value;
+		_last_sent_time = std::chrono::system_clock::now();
 		UpdateDate();
 	}
 

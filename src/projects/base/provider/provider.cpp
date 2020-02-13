@@ -190,7 +190,10 @@ namespace pvd
 					auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
 					if(stream_metrics != nullptr)
 					{
-						if(stream_metrics->GetTotalConnections() == 0 && stream_metrics->GetUptimeSec() > 30)
+						auto current = std::chrono::high_resolution_clock::now();
+        				auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastSentTime()).count();
+						
+						if(elapsed_time > 30)
 						{
 							OnStreamNotInUse(*stream);
 						}

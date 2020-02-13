@@ -39,9 +39,6 @@ namespace pvd
 
 	bool Stream::Start() 
 	{
-		_stream_metrics = mon::Monitoring::GetInstance()->GetStreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
-
-
 		return true;
 	}
 	

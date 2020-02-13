@@ -12,12 +12,13 @@ namespace mon
 {
 	class CommonMetrics
 	{
+	public:
+		uint32_t GetUnusedTimeSec();
+		const std::chrono::system_clock::time_point& GetLastUpdatedTime();
+		
 	protected:
 		CommonMetrics();
 		~CommonMetrics() = default;
-
-		const std::chrono::system_clock::time_point& GetCreatedTime();
-		const std::chrono::system_clock::time_point& GetLastUpdatedTime();
 
 		// Renew last updated time
 		void UpdateDate();

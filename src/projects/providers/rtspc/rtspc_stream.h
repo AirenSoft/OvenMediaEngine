@@ -48,5 +48,7 @@ namespace pvd
 		std::thread _worker_thread;
 
 		AVFormatContext *_format_context = NULL;
+
+		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 	};
 }

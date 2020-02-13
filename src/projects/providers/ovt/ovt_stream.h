@@ -53,7 +53,6 @@ namespace pvd
 		uint32_t _session_id;
 
 		OvtDepacketizer _depacketizer;
-
-		std::shared_ptr<mon::StreamMetrics>	_stream_metrics;
+		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 	};
 }
