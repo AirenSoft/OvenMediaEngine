@@ -15,7 +15,7 @@ namespace ov
 	ov::String Url::Decode(const ov::String &value)
 	{
 		ov::String result_string;
-		result_string.SetCapacity(value.GetLength());
+		result_string.SetCapacity(value.GetLength() + 1);
 
 		auto val = value.CStr();
 		auto length = value.GetLength();
@@ -62,7 +62,7 @@ namespace ov
 			result_index++;
 		}
 
-		return std::move(result_string);
+		return result_string;
 	}
 
 	std::shared_ptr<const Url> Url::Parse(const std::string &url, bool make_query_map)
