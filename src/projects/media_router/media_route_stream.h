@@ -59,9 +59,19 @@ private:
 
 	AvcVideoPacketFragmentizer _avc_video_fragmentizer;
 
-	int64_t _last_video_pts;
-	int64_t _last_audio_pts;
-	// time of last packet received
-	time_t _last_rb_time;
+
+	// statistics 
+	time_t _last_recv_time;
+	time_t 	_stat_start_time;
+	std::map<uint8_t, int64_t> _stat_recv_pkt_lpts;
+	std::map<uint8_t, int64_t> _stat_recv_pkt_size;
+	std::map<uint8_t, int64_t> _stat_recv_pkt_count;
+	
+	// int64_t _last_video_pts = 0;
+	// int64_t _last_audio_pts = 0 ;
+	// int64_t _pkt_video_count = 0;
+	// int64_t _pkt_aaudio_count = 0;
+	// // time of last packet received
+	// time_t _last_rb_time;
 };
 

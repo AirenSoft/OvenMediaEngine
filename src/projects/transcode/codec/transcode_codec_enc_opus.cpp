@@ -109,21 +109,25 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 	const unsigned int frame_count_to_encode = 480 * 2;
 	const unsigned int bytes_to_encode = frame_count_to_encode * _output_context->GetAudioChannel().GetCounts() * _output_context->GetAudioSample().GetSampleSize();
 
+	int64_t duration = 0LL;
 
 	while(!_kill_flag)
 	{
-		_queue_event.Wait();
-
-		int64_t duration = 0LL;
-
-		// If there is data in the input buffer, pull it out, or if there isn't... Wait.
-		while ((_input_buffer.empty() == false) && (_buffer->GetLength() < bytes_to_encode))
+		if (_buffer->GetLength() < bytes_to_encode)
 		{
 			// dequeue
+			_queue_event.Wait();
+
 			std::unique_lock<std::mutex> mlock(_mutex);
+
+			if (_input_buffer.empty())
+			{
+				continue;
+			}
+
 			auto frame_buffer = std::move(_input_buffer.front());
 			_input_buffer.pop_front();
-			
+
 			mlock.unlock();
 
 			const MediaFrame *frame = frame_buffer.get();
@@ -195,6 +199,7 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 		if (_buffer->GetLength() < bytes_to_encode)
 		{
 			// There is no data to encode
+			// logte("There is no data to encode");
 			continue;
 		}
 
@@ -241,13 +246,14 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 
 		auto packet_buffer = std::make_shared<MediaPacket>(common::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
 		_current_pts += frame_count_to_encode;
-
+		// logte("opus pts : %lld, queue:%d, buffer:%d", _current_pts, _input_buffer.size(), _buffer->GetLength());
 		// *result = TranscodeResult::DataReady;
-		std::unique_lock<std::mutex> mlock(_mutex);
+		
+		std::unique_lock<std::mutex> mlock2(_mutex);
 
-		_output_buffer.push_back(std::move(packet_buffer));			
+		_output_buffer.push_back(std::move(packet_buffer));	
 
-		mlock.unlock();
+		duration = 0L;		
 	}
 
 }
