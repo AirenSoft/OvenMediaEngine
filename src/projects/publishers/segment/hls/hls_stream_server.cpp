@@ -8,6 +8,8 @@
 //==============================================================================
 #include "hls_stream_server.h"
 #include "hls_private.h"
+#include "../segment_publisher.h"
+#include <monitoring/monitoring.h>
 
 HttpConnection HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<HttpClient> &client,
 													 const ov::String &app_name, const ov::String &stream_name,
@@ -26,7 +28,6 @@ HttpConnection HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<HttpC
 
 	response->SetStatusCode(HttpStatusCode::NotFound);
 	response->Response();
-
 	return HttpConnection::Closed;
 }
 
@@ -38,11 +39,15 @@ HttpConnection HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<Htt
 	auto &response = client->GetResponse();
 
 	ov::String play_list;
+	std::shared_ptr<info::Stream> stream_info;
 
 	std::find_if(_observers.begin(), _observers.end(),
-				 [&client, &app_name, &stream_name, &file_name, &play_list](auto &observer) -> bool {
-					 return observer->OnPlayListRequest(client, app_name, stream_name, file_name, play_list);
-				 });
+						[&client, &app_name, &stream_name, &file_name, &play_list, &stream_info](auto &observer) -> bool {
+							auto publisher = std::static_pointer_cast<SegmentPublisher>(observer);
+							auto stream = publisher->GetStream(app_name, stream_name);
+							stream_info = std::static_pointer_cast<info::Stream>(stream);
+							return observer->OnPlayListRequest(client, app_name, stream_name, file_name, play_list);
+						});
 
 	if (play_list.IsEmpty())
 	{
@@ -56,7 +61,16 @@ HttpConnection HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<Htt
 	// Set HTTP header
 	response->SetHeader("Content-Type", "application/x-mpegURL");
 	response->AppendString(play_list);
-	response->Response();
+	auto sent_bytes = response->Response();
+
+	if(stream_info != nullptr)
+	{
+		auto stream_metric = StreamMetrics(*stream_info);
+		if(stream_metric != nullptr)
+		{
+			stream_metric->IncreaseBytesOut(PublisherType::Hls, sent_bytes);
+		}
+	}
 
 	return HttpConnection::Closed;
 }
@@ -69,11 +83,15 @@ HttpConnection HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<Http
 	auto &response = client->GetResponse();
 
 	std::shared_ptr<SegmentData> segment = nullptr;
+	std::shared_ptr<info::Stream> stream_info;
 
 	auto item = std::find_if(_observers.begin(), _observers.end(),
-							 [&client, &app_name, &stream_name, &file_name, &segment](auto &observer) -> bool {
-								 return observer->OnSegmentRequest(client, app_name, stream_name, file_name, segment);
-							 });
+						[&client, &app_name, &stream_name, &file_name, &segment, &stream_info](auto &observer) -> bool {
+							auto publisher = std::static_pointer_cast<SegmentPublisher>(observer);
+							auto stream = publisher->GetStream(app_name, stream_name);
+							stream_info = std::static_pointer_cast<info::Stream>(stream);
+							return observer->OnSegmentRequest(client, app_name, stream_name, file_name, segment);
+						});
 
 	if (item == _observers.end())
 	{
@@ -87,7 +105,16 @@ HttpConnection HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<Http
 	// Set HTTP header
 	response->SetHeader("Content-Type", "video/MP2T");
 	response->AppendData(segment->data);
-	response->Response();
+	auto sent_bytes = response->Response();
+
+	if(stream_info != nullptr)
+	{
+		auto stream_metric = StreamMetrics(*stream_info);
+		if(stream_metric != nullptr)
+		{
+			stream_metric->IncreaseBytesOut(PublisherType::Hls, sent_bytes);
+		}
+	}
 
 	return HttpConnection::Closed;
 }

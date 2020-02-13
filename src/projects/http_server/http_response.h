@@ -58,7 +58,7 @@ public:
 	bool AppendString(const ov::String &string);
 	bool AppendFile(const ov::String &filename);
 
-	bool Response();
+	uint32_t Response();
 
 	bool Close();
 
@@ -79,8 +79,8 @@ public:
 	}
 
 protected:
-	bool SendHeaderIfNeeded();
-	bool SendResponse();
+	uint32_t SendHeaderIfNeeded();
+	uint32_t SendResponse();
 
 	std::shared_ptr<HttpClient> _http_client = nullptr;
 

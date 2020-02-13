@@ -75,19 +75,19 @@ bool HttpResponse::AppendFile(const ov::String &filename)
 	return false;
 }
 
-bool HttpResponse::Response()
+uint32_t HttpResponse::Response()
 {
 	std::lock_guard<__decltype(_response_mutex)> lock(_response_mutex);
 
-	return SendHeaderIfNeeded() && SendResponse();
+	return SendHeaderIfNeeded() + SendResponse();
 }
 
-bool HttpResponse::SendHeaderIfNeeded()
+uint32_t HttpResponse::SendHeaderIfNeeded()
 {
 	if (_is_header_sent)
 	{
 		// The headers are already sent
-		return true;
+		return 0;
 	}
 
 	std::shared_ptr<ov::Data> response = std::make_shared<ov::Data>();
@@ -120,13 +120,13 @@ bool HttpResponse::SendHeaderIfNeeded()
 
 		_is_header_sent = true;
 
-		return true;
+		return response->GetLength();
 	}
 
-	return false;
+	return 0;
 }
 
-bool HttpResponse::SendResponse()
+uint32_t HttpResponse::SendResponse()
 {
 	bool sent = true;
 
@@ -134,15 +134,24 @@ bool HttpResponse::SendResponse()
 
 	logtd("Trying to send datas...");
 
+	uint32_t sent_bytes = 0;
 	for (const auto &data : _response_data_list)
 	{
 		if (_chunked_transfer)
 		{
 			sent &= _http_client->SendChunkedData(data);
+			if(sent == true)
+			{
+				sent_bytes += data->GetLength();
+			}
 		}
 		else
 		{
 			sent &= _http_client->Send(data);
+			if(sent == true)
+			{
+				sent_bytes += data->GetLength();
+			}
 		}
 	}
 
@@ -151,7 +160,7 @@ bool HttpResponse::SendResponse()
 
 	logtd("All datas are sent...");
 
-	return sent;
+	return sent_bytes;
 }
 
 bool HttpResponse::Close()
