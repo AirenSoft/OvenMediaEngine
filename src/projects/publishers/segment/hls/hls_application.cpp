@@ -47,10 +47,6 @@ HlsApplication::~HlsApplication()
 bool HlsApplication::Start()
 {
 	auto publisher_info = GetPublisher<cfg::HlsPublisher>();
-	if(!publisher_info->IsParsed())
-	{
-		return false;
-	}
 
 	_segment_count = publisher_info->GetSegmentCount();
 	_segment_duration = publisher_info->GetSegmentDuration();
