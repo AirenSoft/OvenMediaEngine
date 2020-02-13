@@ -54,7 +54,6 @@ namespace pvd
 
 		State 	_state;
 
-		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 		std::shared_ptr<pvd::Application> _application;
 	};
 }

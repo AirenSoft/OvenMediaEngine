@@ -11,9 +11,10 @@ namespace mon
         UpdateDate();
     }
 
-    const std::chrono::system_clock::time_point& CommonMetrics::GetCreatedTime()
+    uint32_t CommonMetrics::GetUnusedTimeSec()
     {
-        return _created_time;
+        auto current = std::chrono::high_resolution_clock::now();
+        return std::chrono::duration_cast<std::chrono::seconds>(current - GetLastUpdatedTime()).count();
     }
 
     const std::chrono::system_clock::time_point& CommonMetrics::GetLastUpdatedTime()

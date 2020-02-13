@@ -26,7 +26,8 @@ namespace mon
 			_total_bytes_out = 0;
 			_total_connections = 0;
 
-			_max_total_connection_time = std::chrono::system_clock::from_time_t(0);
+			_max_total_connection_time = std::chrono::system_clock::now();
+			_last_sent_time = std::chrono::system_clock::now();
 
 			for(int i=0; i<static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
 			{
@@ -50,17 +51,18 @@ namespace mon
 		uint32_t GetTotalConnections();
 		uint32_t GetMaxTotalConnections();
 		std::chrono::system_clock::time_point GetMaxTotalConnectionsTime();
+		std::chrono::system_clock::time_point GetLastSentTime();
 
 		uint64_t GetBytesOut(PublisherType type);
 		uint64_t GetConnections(PublisherType type);
 
-		// Setter
+		// From Providers
 		void SetOriginRequestTimeMSec(double value);
 		void SetOriginResponseTimeMSet(double value);
-
 		void IncreaseBytesIn(uint64_t value);
+
+		// From Publishers
 		void IncreaseBytesOut(PublisherType type, uint64_t value);
-		
 		void OnSessionConnected(PublisherType type);
 		void OnSessionDisconnected(PublisherType type);
 
@@ -82,6 +84,7 @@ namespace mon
 		// Time to reach maximum number of connections. 
 		// TODO(Getroot): Does it need mutex? Check!
 		std::chrono::system_clock::time_point	_max_total_connection_time;
+		std::chrono::system_clock::time_point	_last_sent_time;
 
 		// From Publishers
 		class PublisherMetrics
