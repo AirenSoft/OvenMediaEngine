@@ -158,10 +158,12 @@ struct RtmpChunkHeader
 
 		if (basic_header_size > 0U)
 		{
-			result.AppendFormat("<Size: %d, Type: %d, StreamID: %u>, Message: ",
+			result.AppendFormat("<Size: %d, Type: %d, StreamID: %u, TS: %lld>, Message: ",
 								basic_header_size,
 								static_cast<int>(basic_header.format_type) >> 6,
-								basic_header.stream_id);
+								basic_header.stream_id,
+								completed.timestamp
+								);
 
 			if ((basic_header.format_type == RtmpChunkType::T3) || (message_header_size > 0U))
 			{

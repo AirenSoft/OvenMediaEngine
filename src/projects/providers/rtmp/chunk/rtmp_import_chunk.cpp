@@ -30,9 +30,12 @@ int RtmpImportChunk::Import(const std::shared_ptr<const ov::Data> &data, bool *i
 
 	ov::ByteStream stream(data.get());
 
+	// logtw("Trying to parse data\n%s", data->Dump(data->GetLength()).CStr());
+
 	if (_parser.IsParseCompleted() == false)
 	{
-		parsed_bytes = _parser.Parse(stream);
+		// TODO(dimiden): Need to refactor because referencing _chunk_map in _parser isn't a good idea
+		parsed_bytes = _parser.Parse(_chunk_map, stream);
 
 		if (parsed_bytes < 0LL)
 		{
@@ -65,8 +68,10 @@ int RtmpImportChunk::Import(const std::shared_ptr<const ov::Data> &data, bool *i
 		}
 		else
 		{
-			// This is first chunk
+			// This is the first chunk
 		}
+
+		logtd("RTMP header is parsed: %s", chunk_header->ToString().CStr());
 
 		if (ProcessChunkHeader(chunk_header, last_chunk_header) == false)
 		{
@@ -114,12 +119,57 @@ int RtmpImportChunk::Import(const std::shared_ptr<const ov::Data> &data, bool *i
 		return -1LL;
 	}
 
+	logtd("Finalized message: %s", message->header->ToString().CStr());
+
 	_message_queue.push_back(message);
 
 	*is_completed = true;
 	_parser.Reset();
 
 	return parsed_bytes + last_chunk_header->expected_payload_size;
+}
+
+int64_t RtmpImportChunk::CalculateRolledTimestamp(int64_t last_timestamp, int64_t new_timestamp)
+{
+	if (last_timestamp > new_timestamp)
+	{
+		// RTMP specification
+		//
+		// Because timestamps are 32 bits long, they roll over every 49 days, 17
+		// hours, 2 minutes and 47.296 seconds. Because streams are allowed to
+		// run continuously, potentially for years on end, an RTMP application
+		// SHOULD use serial number arithmetic [RFC1982] when processing
+		// timestamps, and SHOULD be capable of handling wraparound. For
+		// example, an application assumes that all adjacent timestamps are
+		// within 2^31 - 1 milliseconds of each other, so 10000 comes after
+		// 4000000000, and 3000000000 comes before 4000000000.
+
+		// completed.timestamp calculated from this formula (https://tools.ietf.org/html/rfc1982#section-3.1):
+		//
+		// Serial numbers may be incremented by the addition of a positive
+		// integer n, where n is taken from the range of integers
+		// [0 .. (2^(SERIAL_BITS - 1) - 1)].  For a sequence number s, the
+		// result of such an addition, s', is defined as
+		//
+		//                 s' = (s + n) modulo (2 ^ SERIAL_BITS)
+		//
+		// where the addition and modulus operations here act upon values that
+		// are non-negative values of unbounded size in the usual ways of
+		// integer arithmetic.
+
+		// Check if the timestamp is an adjacent timestamp
+		if (new_timestamp < ((1LL << 31) - 1))
+		{
+			// Adjacent timestamp
+			return last_timestamp + (1LL << 31) - (last_timestamp % (1LL << 31)) + new_timestamp;
+		}
+		else
+		{
+			// Non-adjacent timestamp
+		}
+	}
+
+	return new_timestamp;
 }
 
 bool RtmpImportChunk::ProcessChunkHeader(const std::shared_ptr<RtmpChunkHeader> &chunk_header, const std::shared_ptr<const RtmpChunkHeader> &last_chunk_header)
@@ -149,47 +199,7 @@ bool RtmpImportChunk::ProcessChunkHeader(const std::shared_ptr<RtmpChunkHeader> 
 			if (last_chunk_header != nullptr)
 			{
 				// Check if the timestamp is rolled
-				auto last_timestamp = last_chunk_header->completed.timestamp;
-				auto new_timestamp = completed.timestamp;
-
-				if (last_timestamp > new_timestamp)
-				{
-					// RTMP specification
-					//
-					// Because timestamps are 32 bits long, they roll over every 49 days, 17
-					// hours, 2 minutes and 47.296 seconds. Because streams are allowed to
-					// run continuously, potentially for years on end, an RTMP application
-					// SHOULD use serial number arithmetic [RFC1982] when processing
-					// timestamps, and SHOULD be capable of handling wraparound. For
-					// example, an application assumes that all adjacent timestamps are
-					// within 2^31 - 1 milliseconds of each other, so 10000 comes after
-					// 4000000000, and 3000000000 comes before 4000000000.
-
-					// completed.timestamp calculated from this formula (https://tools.ietf.org/html/rfc1982#section-3.1):
-					//
-					// Serial numbers may be incremented by the addition of a positive
-					// integer n, where n is taken from the range of integers
-					// [0 .. (2^(SERIAL_BITS - 1) - 1)].  For a sequence number s, the
-					// result of such an addition, s', is defined as
-					//
-					//                 s' = (s + n) modulo (2 ^ SERIAL_BITS)
-					//
-					// where the addition and modulus operations here act upon values that
-					// are non-negative values of unbounded size in the usual ways of
-					// integer arithmetic.
-
-					// Check if the timestamp is an adjacent timestamp
-					if (new_timestamp < ((1LL << 31) - 1))
-					{
-						// Adjacent timestamp
-
-						completed.timestamp = last_timestamp + (1LL << 31) - (last_timestamp % (1LL << 31)) + new_timestamp;
-					}
-					else
-					{
-						// Non-adjacent timestamp
-					}
-				}
+				completed.timestamp = CalculateRolledTimestamp(last_chunk_header->completed.timestamp, completed.timestamp);
 			}
 
 			break;
@@ -238,7 +248,6 @@ bool RtmpImportChunk::ProcessChunkHeader(const std::shared_ptr<RtmpChunkHeader> 
 
 	chunk_header->message_header_size = sizeof(RtmpChunkHeader::completed);
 	chunk_header->payload_size = chunk_header->completed.length;
-	chunk_header->is_extended = (last_chunk_header != nullptr) ? last_chunk_header->is_extended : false;
 
 	chunk_header->RecalculateHeaderSize();
 
@@ -299,7 +308,8 @@ bool RtmpImportChunk::CalculateForType3Header(const std::shared_ptr<RtmpChunkHea
 	}
 
 	int type_3_count = (chunk_header->payload_size - 1) / _chunk_size;
-	chunk_header->expected_payload_size = chunk_header->payload_size + (type_3_count * chunk_header->basic_header_size);
+	int expected_type_3_size = chunk_header->basic_header_size + (chunk_header->is_extended ? sizeof(RtmpChunkHeader::extended_timestamp) : 0);
+	chunk_header->expected_payload_size = chunk_header->payload_size + (type_3_count * expected_type_3_size);
 
 	OV_ASSERT2(type_3_count >= 0);
 
@@ -315,11 +325,23 @@ std::shared_ptr<const RtmpMessage> RtmpImportChunk::FinalizeMessage(const std::s
 	const auto *expected_type_3_header = &(chunk_header->expected_type_3_header);
 	auto payload_data = std::make_shared<ov::Data>(chunk_header->payload_size);
 	const uint8_t *current = stream.GetRemainData()->GetDataAs<uint8_t>();
+	int extended_header_size = 0;
+
+	if (chunk_header->is_extended)
+	{
+		extended_header_size = sizeof(RtmpChunkHeader::extended_timestamp);
+	}
 
 	while (payload_size > 0)
 	{
 		if (index > 0)
 		{
+			if (payload_size < static_cast<size_t>(basic_header_size + extended_header_size))
+			{
+				logte("Not enough data: %zu bytes, expected: %zu bytes", payload_size, basic_header_size + extended_header_size);
+				return nullptr;
+			}
+
 			// Make sure that the message type of payload is type 3 and matches what was expected
 			if (::memcmp(current, expected_type_3_header, basic_header_size) != 0)
 			{
@@ -332,11 +354,17 @@ std::shared_ptr<const RtmpMessage> RtmpImportChunk::FinalizeMessage(const std::s
 			}
 
 			// skip type 3 header
-			current += basic_header_size;
-			payload_size -= basic_header_size;
+			current += basic_header_size + extended_header_size;
+			payload_size -= basic_header_size + extended_header_size;
 		}
 
 		size_t read_size = std::min(_chunk_size, payload_size);
+
+		if (payload_size < read_size)
+		{
+			logte("Not enough data: %zu bytes, expected: %zu bytes", payload_size, read_size);
+			return nullptr;
+		}
 
 		payload_data->Append(current, read_size);
 

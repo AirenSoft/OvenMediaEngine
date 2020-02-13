@@ -9,7 +9,7 @@
 #include "rtmp_chunk_parser.h"
 #include "providers/rtmp/rtmp_provider_private.h"
 
-off_t RtmpChunkParser::Parse(ov::ByteStream &stream)
+off_t RtmpChunkParser::Parse(std::map<uint32_t, std::shared_ptr<const RtmpChunkHeader>> chunk_map, ov::ByteStream &stream)
 {
 	off_t total_parsed_bytes = 0LL;
 	off_t parsed_bytes = 0LL;
@@ -19,17 +19,21 @@ off_t RtmpChunkParser::Parse(ov::ByteStream &stream)
 		switch (_parse_status)
 		{
 			case ParseStatus::BasicHeader:
+				logtd("Trying to parse basic header...");
+
 				_current_chunk_header = std::make_shared<RtmpChunkHeader>();
 				total_parsed_bytes = 0LL;
 
 				switch (ParseBasicHeader(stream, &parsed_bytes))
 				{
 					case ParseResult::NeedMoreData:
+						logtd("Waiting for more data to parse (%jd bytes used)", total_parsed_bytes);
 						return total_parsed_bytes;
 
 					case ParseResult::Completed:
 						_parse_status = ParseStatus::MessageHeader;
 						total_parsed_bytes += parsed_bytes;
+						logtd("RTMP chunk is parsed (%jd bytes used)", total_parsed_bytes);
 						break;
 
 					case ParseResult::Failed:
@@ -56,7 +60,16 @@ off_t RtmpChunkParser::Parse(ov::ByteStream &stream)
 				break;
 
 			case ParseStatus::ExtendedTimestamp:
-				switch (ParseExtendedTimestamp(stream, &parsed_bytes))
+			{
+				auto last_chunk_item = chunk_map.find(_current_chunk_header->basic_header.stream_id);
+				std::shared_ptr<const RtmpChunkHeader> last_chunk;
+
+				if (last_chunk_item != chunk_map.end())
+				{
+					last_chunk = last_chunk_item->second;
+				}
+
+				switch (ParseExtendedTimestamp(last_chunk, stream, &parsed_bytes))
 				{
 					case ParseResult::NeedMoreData:
 						return 0LL;
@@ -73,6 +86,7 @@ off_t RtmpChunkParser::Parse(ov::ByteStream &stream)
 				}
 
 				break;
+			}
 
 			case ParseStatus::Completed:
 				_parse_status = ParseStatus::BasicHeader;
@@ -306,7 +320,7 @@ RtmpChunkParser::ParseResult RtmpChunkParser::ParseMessageHeader(ov::ByteStream 
 	return ParseResult::Completed;
 }
 
-RtmpChunkParser::ParseResult RtmpChunkParser::ParseExtendedTimestamp(ov::ByteStream &stream, off_t *parsed_bytes)
+RtmpChunkParser::ParseResult RtmpChunkParser::ParseExtendedTimestamp(std::shared_ptr<const RtmpChunkHeader> last_chunk, ov::ByteStream &stream, off_t *parsed_bytes)
 {
 	uint32_t target_timestamp = 0U;
 
@@ -326,6 +340,13 @@ RtmpChunkParser::ParseResult RtmpChunkParser::ParseExtendedTimestamp(ov::ByteStr
 
 		case RtmpChunkType::T3:
 			// Type 3 hasn't a header
+			if ((last_chunk != nullptr) && (last_chunk->is_extended))
+			{
+				// Need to parse extended timestamp
+				target_timestamp = RTMP_EXTEND_TIMESTAMP;
+				break;
+			}
+
 			return ParseResult::Completed;
 
 		default:

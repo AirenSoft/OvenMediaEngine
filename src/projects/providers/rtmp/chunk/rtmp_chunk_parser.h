@@ -22,7 +22,7 @@ public:
 	// <0: An error occurred while parsing
 	//  0: Need more data
 	// >0: Parsing is completed (The header & the payload are available)
-	off_t Parse(ov::ByteStream &stream);
+	off_t Parse(std::map<uint32_t, std::shared_ptr<const RtmpChunkHeader>> chunk_map, ov::ByteStream &stream);
 
 	bool IsParseCompleted() const noexcept
 	{
@@ -69,7 +69,7 @@ protected:
 
 	ParseResult ParseBasicHeader(ov::ByteStream &stream, off_t *parsed_bytes);
 	ParseResult ParseMessageHeader(ov::ByteStream &stream, off_t *parsed_bytes);
-	ParseResult ParseExtendedTimestamp(ov::ByteStream &stream, off_t *parsed_bytes);
+	ParseResult ParseExtendedTimestamp(std::shared_ptr<const RtmpChunkHeader> last_chunk, ov::ByteStream &stream, off_t *parsed_bytes);
 	ParseResult ParsePayload(ov::ByteStream &stream, off_t *parsed_bytes);
 
 	std::shared_ptr<RtmpChunkHeader> _current_chunk_header;
