@@ -136,7 +136,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 				, _stat_recv_pkt_size[track_id]);
 		}
 
-		logti("%s", temp_str.CStr());
+		logtd("%s", temp_str.CStr());
 
 		_last_recv_time = curr_time;
 	}
