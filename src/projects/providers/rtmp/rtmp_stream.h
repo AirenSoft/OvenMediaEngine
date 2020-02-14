@@ -28,9 +28,18 @@ public:
 
 	bool ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts);
 	bool ConvertToAudioData(const std::shared_ptr<ov::Data> &data);
+
+	void SetAudioTimestampScale(double scale);
+	double GetAudioTimestampScale();
+
+	void SetVideoTimestampScale(double scale);
+	double GetVideoTimestampScale();
+
 private:
 
-	
+	double _audio_timestamp_scale;
+	double _video_timestamp_scale;
+
 	// bitstream filters
 	BitstreamToAnnexB _bsfv;
 	BitstreamToADTS _bsfa;

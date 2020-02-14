@@ -37,3 +37,23 @@ bool RtmpStream::ConvertToAudioData(const std::shared_ptr<ov::Data> &data)
 	_bsfa.convert_to(data);
 	return true;
 }
+
+
+void RtmpStream::SetAudioTimestampScale(double scale){
+	_audio_timestamp_scale = scale;
+}
+
+double RtmpStream::GetAudioTimestampScale()
+{
+	return _audio_timestamp_scale;
+}
+
+
+void RtmpStream::SetVideoTimestampScale(double scale){
+	_video_timestamp_scale = scale;
+}
+
+double RtmpStream::GetVideoTimestampScale()
+{
+	return _video_timestamp_scale;
+}
