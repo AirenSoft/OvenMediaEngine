@@ -67,6 +67,37 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		_stat_recv_pkt_count[track_id] ++;
 	}
 
+	// for statistics...s
+	time_t curr_time;
+	time(&curr_time);
+
+	if(difftime(curr_time, _last_recv_time) >= 10)
+	{
+		ov::String temp_str = "\n";
+
+		time_t uptime = curr_time-_stat_start_time;
+		temp_str.AppendFormat("stats of stream[%s] uptime : %llds queue : %d\n" ,_stream->GetName().CStr(), uptime, _media_packets.size());
+		for(const auto &iter : _stream->GetTracks())
+		{
+			auto track_id = iter.first;
+			auto track = iter.second;
+
+			temp_str.AppendFormat("\t[%d] media : %s, last timestamp : %lldms (%lld), recv count : %lld, recv szie : %lldb\n"
+				, track_id
+				, track->GetMediaType()==MediaType::Video?"video":"audio"
+				, _stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen()
+				, _stat_recv_pkt_lpts[track_id]
+				, _stat_recv_pkt_count[track_id]
+				, _stat_recv_pkt_size[track_id]);
+		}
+
+		logtd("%s", temp_str.CStr());
+
+		_last_recv_time = curr_time;
+	}
+
+
+
 	if (media_type == MediaType::Video)
 	{
 		if (media_track->GetCodecId() == MediaCodecId::H264)
@@ -111,35 +142,6 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 
 	_media_packets.push(std::move(media_packet));
 
-
-	// for statistics...s
-	time_t curr_time;
-	time(&curr_time);
-
-	if(difftime(curr_time, _last_recv_time) >= 10)
-	{
-		ov::String temp_str = "\n";
-
-		time_t uptime = curr_time-_stat_start_time;
-		temp_str.AppendFormat("stats of stream[%s] uptime : %llds \n" ,_stream->GetName().CStr(), uptime);
-		for(const auto &iter : _stream->GetTracks())
-		{
-			auto track_id = iter.first;
-			auto track = iter.second;
-
-			temp_str.AppendFormat("\t[%d] media : %s, last timestamp : %lldms (%lld), recv count : %lld, recv szie : %lldb\n"
-				, track_id
-				, track->GetMediaType()==MediaType::Video?"video":"audio"
-				, _stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen()
-				, _stat_recv_pkt_lpts[track_id]
-				, _stat_recv_pkt_count[track_id]
-				, _stat_recv_pkt_size[track_id]);
-		}
-
-		logtd("%s", temp_str.CStr());
-
-		_last_recv_time = curr_time;
-	}
 
 	// time(&_last_rb_time);
 	// logtd("last time : %s", asctime(gmtime(&_last_rb_time)) );
