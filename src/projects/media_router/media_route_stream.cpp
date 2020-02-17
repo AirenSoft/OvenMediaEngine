@@ -14,7 +14,7 @@
 
 using namespace common;
 
-#define PTS_CORRECT_THRESHOLD_US	5000000	// 
+#define PTS_CORRECT_THRESHOLD_US	5000	
 
 MediaRouteStream::MediaRouteStream(std::shared_ptr<info::Stream> &stream)
 {
@@ -88,27 +88,31 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 
 	// Set the corrected PTS.
 	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
+	media_packet->SetDts( media_packet->GetDts() - _pts_correct[track_id] );
 
 	// for statistics...s
 	time_t curr_time;
 	time(&curr_time);
 
-	if(difftime(curr_time, _last_recv_time) >= 30)
+	if(difftime(curr_time, _last_recv_time) >= 5)
 	{
 		ov::String temp_str = "\n";
 
 		time_t uptime = curr_time-_stat_start_time;
-		temp_str.AppendFormat("stats of stream[%s] uptime : %llds queue : %d\n" ,_stream->GetName().CStr(), uptime, _media_packets.size());
+		temp_str.AppendFormat("stats of stream[%s] uptime : %llds , queue : %d\n" ,_stream->GetName().CStr(), uptime, _media_packets.size());
 		for(const auto &iter : _stream->GetTracks())
 		{
 			auto track_id = iter.first;
 			auto track = iter.second;
 
-			temp_str.AppendFormat("\t[%d] media : %s, last timestamp : %lldms (%lld), recv count : %lld, recv szie : %lldb\n"
+			temp_str.AppendFormat("\t[%d] media : %s, crt : %lld, last_ts : %lldms->%lldms(%lld->%lld), rcv_cnt : %lld, rcv_siz : %lldb\n"
 				, track_id
 				, track->GetMediaType()==MediaType::Video?"video":"audio"
+				, _pts_correct[track_id]
 				, _stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen()
+				, (_stat_recv_pkt_lpts[track_id] - _pts_correct[track_id])  * 1000 / track->GetTimeBase().GetDen()
 				, _stat_recv_pkt_lpts[track_id]
+				, _stat_recv_pkt_lpts[track_id] - _pts_correct[track_id]
 				, _stat_recv_pkt_count[track_id]
 				, _stat_recv_pkt_size[track_id]);
 		}
