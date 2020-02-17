@@ -877,7 +877,7 @@ void TranscodeStream::LoopTask()
 		time(&curr_time);
 
 		// for statistics 
-		if(difftime(curr_time, base_time) >= 60)
+		if(difftime(curr_time, base_time) >= 30)
 		{
 			logti("stats of stream[%s/%s], decode.ready[%d], filter.ready[%d], encode.ready[%d]"
 				,_application_info.GetName().CStr()

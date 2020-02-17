@@ -264,6 +264,11 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 	int64_t cts = 0;
 	stream->ConvertToVideoData( new_data, cts);
 
+	if(new_data->GetLength() <= 0)
+	{
+		return true;
+	}
+
 	int64_t dts = timestamp;
 	int64_t pts = dts + cts;
 
@@ -323,6 +328,11 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 	// Depending on the codec, the bitstream conversion must be processed.
 	stream->ConvertToAudioData(new_data);
 
+	if(new_data->GetLength() <= 0)
+	{
+		return true;
+	}
+
 	// Change the timebase specification: 1/1000 -> 1/Samplerate
 	int64_t dts = timestamp;
 	int64_t pts = timestamp;
@@ -337,7 +347,7 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 											  pts,  // PTS
 											  dts,  // DTS
 											  // RTMP doesn't know frame's duration
-											  -1LL,
+											 -1LL,
 											  MediaPacketFlag::Key);
 	
 	application->SendFrame(stream, std::move(pbuf));
