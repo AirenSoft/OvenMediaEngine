@@ -27,7 +27,7 @@ private:
     bool ProcessType0(const ov::String &key, const ov::String &data);
     bool Parse(const ov::String &plain_string);
 
-    uint64_t	GetNowMS();
+    uint64_t	GetNowMS() const;
 
     ov::String  _key;
     ov::String  _full_string;

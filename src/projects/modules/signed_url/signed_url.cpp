@@ -27,27 +27,27 @@ std::shared_ptr<const SignedUrl> SignedUrl::Load(SignedUrlType type, const ov::S
     return signed_url;
 }
 
-const ov::String& SignedUrl::GetUrl()
+const ov::String& SignedUrl::GetUrl() const
 {
     return _url;
 }
 
-const ov::String& SignedUrl::GetClientIP()
+const ov::String& SignedUrl::GetClientIP() const
 {
     return _client_ip;
 }
 
-uint64_t SignedUrl::GetTokenExpiredTime()
+uint64_t SignedUrl::GetTokenExpiredTime() const 
 {
     return _token_expired_time;
 }
 
-uint64_t SignedUrl::GetStreamExpiredTime()
+uint64_t SignedUrl::GetStreamExpiredTime() const
 {
     return _stream_expired_time;
 }
 
-bool SignedUrl::IsTokenExpired()
+bool SignedUrl::IsTokenExpired() const
 {
 	if(GetNowMS() > _token_expired_time)
 	{
@@ -57,7 +57,7 @@ bool SignedUrl::IsTokenExpired()
 	return false;
 }
 
-bool SignedUrl::IsStreamExpired()
+bool SignedUrl::IsStreamExpired() const
 {
     if(GetNowMS() > _stream_expired_time)
 	{
@@ -67,7 +67,7 @@ bool SignedUrl::IsStreamExpired()
 	return false;
 }
 
-uint64_t SignedUrl::GetNowMS()
+uint64_t SignedUrl::GetNowMS() const
 {
 	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
