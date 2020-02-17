@@ -72,7 +72,4 @@ protected:
 
 private:
 	std::shared_ptr<RtmpServer> _rtmp_server;
-
-	double _video_scale = 0.0;
-	double _audio_scale = 0.0;
 };

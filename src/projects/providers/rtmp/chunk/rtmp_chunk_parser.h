@@ -22,7 +22,7 @@ public:
 	// <0: An error occurred while parsing
 	//  0: Need more data
 	// >0: Parsing is completed (The header & the payload are available)
-	off_t Parse(std::map<uint32_t, std::shared_ptr<const RtmpChunkHeader>> chunk_map, ov::ByteStream &stream);
+	off_t Parse(const std::map<uint32_t, std::shared_ptr<const RtmpChunkHeader>> &chunk_map, ov::ByteStream &stream);
 
 	bool IsParseCompleted() const noexcept
 	{

@@ -9,7 +9,7 @@
 #include "rtmp_chunk_parser.h"
 #include "providers/rtmp/rtmp_provider_private.h"
 
-off_t RtmpChunkParser::Parse(std::map<uint32_t, std::shared_ptr<const RtmpChunkHeader>> chunk_map, ov::ByteStream &stream)
+off_t RtmpChunkParser::Parse(const std::map<uint32_t, std::shared_ptr<const RtmpChunkHeader>> &chunk_map, ov::ByteStream &stream)
 {
 	off_t total_parsed_bytes = 0LL;
 	off_t parsed_bytes = 0LL;

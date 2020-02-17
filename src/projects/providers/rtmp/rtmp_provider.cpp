@@ -161,7 +161,14 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 		new_track->SetTimeBase(1, 90000);
 
 		// A value to change to 1/90000 from 1/1000
-		_video_scale = 90000.0 / 1000.0;
+		double video_scale = 90000.0 / 1000.0;
+		
+		auto rtmp_stream = std::dynamic_pointer_cast<RtmpStream>(stream);
+		if(rtmp_stream != nullptr)
+		{
+			rtmp_stream->SetVideoTimestampScale(video_scale);
+		}
+
 
 		stream->AddTrack(new_track);
 	}
@@ -194,7 +201,13 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 		new_track->SetTimeBase(1, media_info->audio_samplerate);
 
 		// A value to change to 1/sample_rate from 1/1000
-		_audio_scale = (double)(media_info->audio_samplerate) / 1000.0;
+		double  audio_scale = (double)(media_info->audio_samplerate) / 1000.0;
+		
+		auto rtmp_stream = std::dynamic_pointer_cast<RtmpStream>(stream);
+		if(rtmp_stream != nullptr)
+		{
+			rtmp_stream->SetAudioTimestampScale(audio_scale);
+		}
 
 		stream->AddTrack(new_track);
 	}
@@ -251,14 +264,19 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 	int64_t cts = 0;
 	stream->ConvertToVideoData( new_data, cts);
 
+	if(new_data->GetLength() <= 0)
+	{
+		return true;
+	}
+
 	int64_t dts = timestamp;
 	int64_t pts = dts + cts;
 
 	//logte("video.pts=%10lld", pts);
 
 	// Change the timebase specification: 1/1000 -> 1/90000
-	dts *= _video_scale;
-	pts *= _video_scale;
+	dts *= stream->GetVideoTimestampScale();
+	pts *= stream->GetVideoTimestampScale();
 
 	auto pbuf = std::make_shared<MediaPacket>(MediaType::Video,
 											  0,
@@ -310,12 +328,17 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 	// Depending on the codec, the bitstream conversion must be processed.
 	stream->ConvertToAudioData(new_data);
 
+	if(new_data->GetLength() <= 0)
+	{
+		return true;
+	}
+
 	// Change the timebase specification: 1/1000 -> 1/Samplerate
 	int64_t dts = timestamp;
 	int64_t pts = timestamp;
-	//logte("audio.pts=%10lld", pts);
-	dts *= _audio_scale;
-	pts *= _audio_scale;
+	// logte("audio.pts=%10lld, scale=%f", pts, stream->GetAudioTimestampScale());
+	dts *= stream->GetAudioTimestampScale();
+	pts *= stream->GetAudioTimestampScale();
 
 	auto pbuf = std::make_shared<MediaPacket>(MediaType::Audio,
 											  1,
@@ -324,7 +347,7 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 											  pts,  // PTS
 											  dts,  // DTS
 											  // RTMP doesn't know frame's duration
-											  -1LL,
+											 -1LL,
 											  MediaPacketFlag::Key);
 	
 	application->SendFrame(stream, std::move(pbuf));

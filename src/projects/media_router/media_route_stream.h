@@ -59,6 +59,11 @@ private:
 
 	AvcVideoPacketFragmentizer _avc_video_fragmentizer;
 
+	// Store the correction values in case of sudden change in PTS.
+	// If the PTS suddenly increases, the filter behaves incorrectly.
+	std::map<uint8_t, int64_t> _pts_correct;
+	// Average Pts Incresement
+	std::map<uint8_t, int64_t> _pts_avg_inc;
 
 	// statistics 
 	time_t _last_recv_time;
