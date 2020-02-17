@@ -229,7 +229,12 @@ namespace ov
 		if (_allocated_data.use_count() == 1)
 		{
 			// Nobody references _allocated_data. So do not need to copy the data
-			return true;
+			if(_allocated_data->size() == GetLength())
+			{
+				return true;
+			}
+
+			// Need to shrink the vector size
 		}
 
 		// Copy data from <_offset> to <_offset + length>
