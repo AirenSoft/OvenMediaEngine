@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/ovsocket/socket_address.h>
 #include <base/ovlibrary/ovlibrary.h>
 
 enum class SignedUrlType
@@ -19,6 +20,7 @@ public:
     const ov::String&       GetClientIP() const;
     uint64_t                GetTokenExpiredTime() const;
     uint64_t                GetStreamExpiredTime() const;
+    bool                    IsAllowedClient(const ov::SocketAddress &address) const;
     bool                    IsTokenExpired() const;
     bool                    IsStreamExpired() const;
 

@@ -47,8 +47,23 @@ uint64_t SignedUrl::GetStreamExpiredTime() const
     return _stream_expired_time;
 }
 
+bool SignedUrl::IsAllowedClient(const ov::SocketAddress &address) const
+{
+    if(_client_ip.IsEmpty() || _client_ip == "0.0.0.0" || _client_ip == "0" || _client_ip == address.GetIpAddress())
+    {
+        return true;
+    }
+
+    return false;
+}
+
 bool SignedUrl::IsTokenExpired() const
 {
+    if(_token_expired_time == 0)
+    {
+        return false;
+    }
+
 	if(GetNowMS() > _token_expired_time)
 	{
 		return true;
@@ -59,6 +74,11 @@ bool SignedUrl::IsTokenExpired() const
 
 bool SignedUrl::IsStreamExpired() const
 {
+    if(_stream_expired_time == 0)
+    {
+        return false;
+    }
+
     if(GetNowMS() > _stream_expired_time)
 	{
 		return true;
