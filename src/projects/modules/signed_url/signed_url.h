@@ -15,12 +15,12 @@ class SignedUrl
 public:
 	static std::shared_ptr<const SignedUrl> Load(SignedUrlType type, const ov::String &key, const ov::String &data);
 
-    const ov::String&       GetUrl();
-    const ov::String&       GetClientIP();
-    uint64_t                GetTokenExpiredTime();
-    uint64_t                GetStreamExpiredTime();
-    bool                    IsTokenExpired();
-    bool                    IsStreamExpired();
+    const ov::String&       GetUrl() const;
+    const ov::String&       GetClientIP() const;
+    uint64_t                GetTokenExpiredTime() const;
+    uint64_t                GetStreamExpiredTime() const;
+    bool                    IsTokenExpired() const;
+    bool                    IsStreamExpired() const;
 
 private:
 

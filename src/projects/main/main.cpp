@@ -51,6 +51,8 @@ static void PrintBanner();
 static bool Initialize(int argc, char *argv[], ParseOption *parse_option);
 static bool Uninitialize();
 
+
+
 int main(int argc, char *argv[])
 {
 	ParseOption parse_option;
