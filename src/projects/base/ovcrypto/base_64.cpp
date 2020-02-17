@@ -10,14 +10,14 @@
 #include "ovcrypto_private.h"
 
 #include <openssl/bio.h>
-#include <openssl/evp.h>
 #include <openssl/buffer.h>
+#include <openssl/evp.h>
 
 namespace ov
 {
-	ov::String Base64::Encode(const std::shared_ptr<const Data> &data)
+	ov::String Base64::Encode(const Data &data)
 	{
-		if(data->GetLength() == 0L)
+		if (data.GetLength() == 0L)
 		{
 			return "";
 		}
@@ -26,34 +26,27 @@ namespace ov
 		BIO *b64 = BIO_new(BIO_f_base64());
 
 		BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+		mem = BIO_push(b64, mem);
 
-		// b64의 결과를 mem이 받을 수 있게 함
-		BIO_push(b64, mem);
-
-		// base64 계산
 		int result;
 		int retry = 0;
 
-		while(true)
+		while (true)
 		{
-			result = BIO_write(b64, data->GetData(), static_cast<int>(data->GetLength()));
+			result = BIO_write(b64, data.GetData(), static_cast<int>(data.GetLength()));
 
-			if(result > 0)
+			if (result > 0)
 			{
-				OV_ASSERT2(static_cast<size_t>(result) == data->GetLength());
-				// 성공
+				OV_ASSERT2(static_cast<size_t>(result) == data.GetLength());
 				break;
 			}
 
-			if(BIO_should_retry(b64))
+			if (BIO_should_retry(b64))
 			{
-				// 계속 진행
-
 				retry++;
 
-				if(retry == 10)
+				if (retry == 10)
 				{
-					// 10회만 재시도 하고 종료
 					OV_ASSERT2(false);
 					break;
 				}
@@ -61,18 +54,15 @@ namespace ov
 				continue;
 			}
 
-			// 오류 발생
 			break;
 		}
 
 		ov::String base64;
 
-		if(result > 0)
+		if (result > 0)
 		{
-			// 성공
 			(void)BIO_flush(b64);
 
-			// 결과값 받음
 			char *buffer;
 			long length = BIO_get_mem_data(mem, &buffer);
 
@@ -80,7 +70,6 @@ namespace ov
 		}
 		else
 		{
-			// 오류 발생
 			logtw("An error occurred while generate base64");
 			OV_ASSERT2(false);
 		}
@@ -90,9 +79,14 @@ namespace ov
 		return base64;
 	}
 
+	ov::String Base64::Encode(const std::shared_ptr<const Data> &data)
+	{
+		return Encode(*data);
+	}
+
 	std::shared_ptr<Data> Base64::Decode(const ov::String &text)
 	{
-		if(text.IsEmpty())
+		if (text.IsEmpty())
 		{
 			return nullptr;
 		}
@@ -102,40 +96,33 @@ namespace ov
 
 		BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
 
-		// b64의 결과를 mem이 받을 수 있게 함
 		mem = BIO_push(b64, mem);
 
-		// [base64 문자열 길이 / 4 * 3] + [null 문자] = (length / 4 * 3) + 1
-		auto max_length = static_cast<int>((text.GetLength() / 4 * 3) + 1);
+		// [base64 string length / 4 * 3] + [null character] = (length / 4 * 3) + 1
+		auto max_length = static_cast<int>((text.GetLength()) + 1);
 
 		auto data = std::make_shared<ov::Data>(max_length);
 		data->SetLength(max_length);
 
-		// base64 계산
+		// base64 calculate
 		int result;
 		int retry = 0;
 
-		while(true)
+		while (true)
 		{
-			result = BIO_read(b64, data->GetWritableData(), max_length);
-
-			if(result > 0)
+			result = BIO_read(mem, data->GetWritableData(), max_length);
+			if (result > 0)
 			{
-				// 성공
 				data->SetLength(result);
-
 				break;
 			}
 
-			if(BIO_should_retry(b64))
+			if (BIO_should_retry(mem))
 			{
-				// 계속 진행
-
 				retry++;
 
-				if(retry == 10)
+				if (retry == 10)
 				{
-					// 10회만 재시도 하고 종료
 					OV_ASSERT2(false);
 					break;
 				}
@@ -143,22 +130,20 @@ namespace ov
 				continue;
 			}
 
-			// 오류 발생
 			break;
 		}
 
 		ov::String base64;
 
-		if(result <= 0)
+		if (result <= 0)
 		{
-			// 오류 발생
 			logtw("An error occurred while generate base64");
 			OV_ASSERT2(false);
 			data = nullptr;
 		}
 
-		BIO_free_all(b64);
+		BIO_free_all(mem);
 
 		return data;
 	}
-}
+}  // namespace ov
