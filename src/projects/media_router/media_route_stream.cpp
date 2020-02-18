@@ -74,7 +74,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	if(abs( scaled_delta ) > PTS_CORRECT_THRESHOLD_US )
 	{
 		_pts_correct[track_id] = media_packet->GetPts() - _stat_recv_pkt_lpts[track_id] - _pts_avg_inc[track_id];
-		logtw("Detected abnormal increased pts. track_id : %d, avginc : %lld, corrected pts : %lld", track_id,  _pts_avg_inc[track_id], _pts_correct[track_id]);
+		logtw("Detected abnormal increased pts. track_id : %d, pts : %lld, avginc : %lld, corrected pts : %lld", track_id,  scaled_pts_new, _pts_avg_inc[track_id], _pts_correct[track_id]);
 	}
 	else 
 	{

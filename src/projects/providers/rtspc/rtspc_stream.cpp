@@ -213,7 +213,7 @@ namespace pvd
 
 			if (media_type == common::MediaType::Unknown || media_codec == common::MediaCodecId::None)
 			{
-				logte("Unknown media type or codec_id. media_type(%d), media_codec(%d)", media_type, media_codec);
+				logtp("Unknown media type or codec_id. media_type(%d), media_codec(%d)", media_type, media_codec);
 
 				continue;
 			}
@@ -313,24 +313,35 @@ namespace pvd
 
 			// If the first packet is received as NOPTS_VALUE, reset the PTS value to zero.
 			// TODO(soulk) : If the first packet per track is NOPTS_VALUE, the code below should be modify.
+
 			if (!is_received_first_packet)
 			{
 				if (packet.pts == AV_NOPTS_VALUE)
+				{
 					packet.pts = 0;
+				}
 				if (packet.dts == AV_NOPTS_VALUE)
+				{	
 					packet.dts = 0;
+				}
 
 				is_received_first_packet = true;
 			}
-
+			
 			logtp("track_id(%d), flags(%d), pts(%10lld), dts(%10lld), size(%d)", packet.stream_index, packet.flags, packet.pts, packet.dts, packet.size);
 			if(_stream_metrics != nullptr)
 			{
 				_stream_metrics->IncreaseBytesIn(packet.size);
 			}
 
+			auto track = GetTrack(packet.stream_index);
+			if(track == nullptr)
+			{
+				continue;
+			}
+			
 			auto flag = (packet.flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
-			auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Video, 0, packet.data, packet.size, packet.pts, packet.dts, packet.duration, flag);
+			auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), track->GetId(), packet.data, packet.size, packet.pts, packet.dts, packet.duration, flag);
 
 			_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
 
