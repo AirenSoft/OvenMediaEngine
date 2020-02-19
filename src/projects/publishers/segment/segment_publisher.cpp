@@ -68,32 +68,10 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 			auto orchestrator = Orchestrator::GetInstance();
 			auto rtsp_uri = rtsp_uri_item->second;
 
-			// rtsp://...............
-			auto parsed_rtsp_url = ov::Url::Parse(rtsp_uri.CStr(), true);
-
-			if (parsed_rtsp_url == nullptr)
+			if (orchestrator->RequestPullStream(app_name, stream_name, rtsp_uri) == false)
 			{
-				logte("Invalid RTSP URL: %s", rtsp_uri.CStr());
+				logte("Could not request pull stream for URL: %s", rtsp_uri.CStr());
 				return false;
-			}
-
-			auto rtsp_query_map = parsed_rtsp_url->QueryMap();
-			auto id_item = rtsp_query_map.find("sessionID");
-			auto new_stream_name = stream_name;
-
-			if(id_item != rtsp_query_map.end())
-			{
-				new_stream_name.AppendFormat("_%s", id_item->second.CStr());
-			}
-
-			stream = GetStreamAs<SegmentStream>(app_name, new_stream_name);
-			if(stream == nullptr)
-			{
-				if (orchestrator->RequestPullStream(app_name, new_stream_name, rtsp_uri) == false)
-				{
-					logte("Could not request pull stream for URL: %s", rtsp_uri.CStr());
-					return false;
-				}
 			}
 
 			logti("URL %s is requested");
