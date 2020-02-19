@@ -11,6 +11,7 @@
 #include "applications/applications.h"
 #include "domain/domain.h"
 #include "origins/origins.h"
+#include "signed_url/signed_url.h"
 
 namespace cfg
 {
@@ -31,6 +32,8 @@ namespace cfg
 
 			RegisterValue<Optional>("Domain", &_domain);
 
+			RegisterValue<Optional>("SignedURL", &_signed_url);
+
 			RegisterValue<CondOptional>("Origins", &_origins, [this]() -> bool {
 				// <Origins> is not optional when the host type is edge
 				// return (_type != HostType::Edge);
@@ -46,6 +49,7 @@ namespace cfg
 		ov::String _name;
 
 		Domain _domain;
+		SignedUrl _signed_url;
 		Origins _origins;
 		Applications _applications;
 	};
