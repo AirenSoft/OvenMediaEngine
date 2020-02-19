@@ -16,6 +16,8 @@ namespace ov
 	class Url
 	{
 	public:
+		static ov::String Decode(const ov::String &value);
+
 		// <scheme>://<domain>[:<port>][/<path/to/resource>][?<query string>]
 		static std::shared_ptr<const Url> Parse(const std::string &url, bool make_query_map = false);
 
@@ -73,8 +75,6 @@ namespace ov
 		ov::String ToString() const;
 
 	private:
-		static ov::String Decode(const ov::String &value);
-
 		// Full URL
 		ov::String _source;
 		ov::String _scheme;
