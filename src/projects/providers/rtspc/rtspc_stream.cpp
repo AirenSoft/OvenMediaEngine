@@ -307,7 +307,7 @@ namespace pvd
 
 				if (_format_context->pb && _format_context->pb->error)
 				{
-					// 커넥션이 종료되면 패킷 읽는 것을 종료한다.
+					// If the connection is broken, terminate the thread.
 					logte("Connection is broken");
 					_state = State::ERROR;
 					break;
