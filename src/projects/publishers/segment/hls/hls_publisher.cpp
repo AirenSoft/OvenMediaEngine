@@ -94,7 +94,7 @@ bool HlsPublisher::HandleSignedUrl(const std::shared_ptr<HttpClient> &client, co
 					signed_url->IsTokenExpired() ||
 					signed_url->IsStreamExpired() ||
 					(signed_url->IsAllowedClient(*remote_address) == false) ||
-					(signed_url->GetUrl() != url_to_compare))
+					(signed_url->GetUrl().UpperCaseString() != url_to_compare.UpperCaseString()))
 				{
 					std::vector<ov::String> messages;
 					auto now = signed_url->GetNowMS();
