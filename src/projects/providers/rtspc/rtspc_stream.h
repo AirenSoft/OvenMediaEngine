@@ -33,6 +33,8 @@ namespace pvd
 
 		~RtspcStream() final;
 
+		bool IsStopThread();
+
 	private:
 		bool Start() override;
 		bool Stop() override;
@@ -48,6 +50,7 @@ namespace pvd
 		std::thread _worker_thread;
 
 		AVFormatContext *_format_context = NULL;
+		static int InterruptCallback(void *ctx);
 
 		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 	};
