@@ -80,11 +80,21 @@ bool HlsPublisher::HandleSignedUrl(const std::shared_ptr<HttpClient> &client, co
 					return false;
 				}
 
+				auto rtsp_item = query_map.find("rtspURI");
+				if(rtsp_item == query_map.end())
+				{			
+					logte("Could not find rtspURI in query string");
+					return false;
+				}
+
+				auto url_to_compare = request_url->ToUrlString(false);
+				url_to_compare.AppendFormat("?rtspURI=%s", ov::Url::Encode(rtsp_item->second).CStr());
+
 				if (
 					signed_url->IsTokenExpired() ||
 					signed_url->IsStreamExpired() ||
 					(signed_url->IsAllowedClient(*remote_address) == false) ||
-					(signed_url->GetUrl() != request_url->Source()))
+					(signed_url->GetUrl() != url_to_compare))
 				{
 					std::vector<ov::String> messages;
 					auto now = signed_url->GetNowMS();
@@ -113,11 +123,11 @@ bool HlsPublisher::HandleSignedUrl(const std::shared_ptr<HttpClient> &client, co
 							signed_url->GetClientIP().CStr()));
 					}
 
-					if (signed_url->GetUrl() != request_url->Source())
+					if (signed_url->GetUrl() != url_to_compare)
 					{
 						messages.push_back(ov::String::FormatString(
 							"Invalid URL: %s (Expected: %s)",
-							request_url->Source().CStr(),
+							url_to_compare.CStr(),
 							signed_url->GetUrl().CStr()));
 					}
 
