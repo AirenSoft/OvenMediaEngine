@@ -16,6 +16,53 @@
 
 #define DEFAULT_SEGMENT_WORKER_THREAD_COUNT 4
 
+class SessionRequestInfo
+{
+public:
+	SessionRequestInfo(const PublisherType &type, const info::Stream &stream_info, const ov::String &ip, int seq, int64_t duration)
+		: _stream_info(stream_info)
+	{
+		_publisher_type = type;
+		_session_ip_address = ip;
+		_sequence_number = seq;
+		_duration = duration;
+		_last_requested_time = std::chrono::system_clock::now();
+	}
+
+	bool IsNextRequest(const SessionRequestInfo &next)
+	{
+		// Is this a series of requests?
+		if(_publisher_type == next._publisher_type && 
+			_stream_info == next._stream_info && 
+			_session_ip_address == next._session_ip_address && 
+			_sequence_number + 1 == next._sequence_number)
+		{
+			auto gap = std::chrono::duration_cast<std::chrono::seconds>(_last_requested_time - next._last_requested_time).count();
+			
+			// the next request comes in within a short time
+			if(gap < _duration * 2)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	const PublisherType& GetPublisherType() const { return _publisher_type; }
+	const info::Stream& GetStreamInfo() const { return _stream_info; }
+	const ov::String& GetIpAddress() const { return _session_ip_address; }
+	int	GetSequenceNumber() { return _sequence_number; }
+	int64_t GetDuration(){ return _duration; }
+
+private:
+	PublisherType		_publisher_type;
+	info::Stream		_stream_info;
+	ov::String			_session_ip_address;
+	int					_sequence_number;
+	int64_t				_duration;
+	std::chrono::system_clock::time_point	_last_requested_time;
+};
+
 class SegmentPublisher : public pub::Publisher, public SegmentStreamObserver
 {
 protected:
@@ -64,4 +111,11 @@ protected:
 						  std::shared_ptr<SegmentData> &segment) override;
 
 	std::shared_ptr<SegmentStreamServer> _stream_server = nullptr;
+
+private:
+	void		AddSessionRequestInfo(const info::Stream &stream_info, const SessionRequestInfo &info);
+	void 		SessionTableUpdateThread();
+
+	// key: ip address, Probabliy, the ip address won't be the most duplicated in the session table.
+	std::multimap<std::string, std::shared_ptr<SessionRequestInfo>>	_session_table[static_cast<int8_t>(PublisherType::NumberOfPublishers)];
 };

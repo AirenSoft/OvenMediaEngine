@@ -56,6 +56,16 @@ namespace info
 	{
 	}
 
+	bool Stream::operator==(const Stream &stream_info) const
+	{
+		if(_id == stream_info._id && *_app_info == *stream_info._app_info)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	void Stream::SetId(info::stream_id_t id)
 	{
 		_id = id;

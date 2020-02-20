@@ -11,6 +11,7 @@
 
 #include <orchestrator/orchestrator.h>
 #include <publishers/segment/segment_stream/segment_stream.h>
+#include <monitoring/monitoring.h>
 
 SegmentPublisher::SegmentPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
 	: Publisher(server_config, host_info, router)
@@ -86,14 +87,10 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 				new_stream_name.AppendFormat("_%s", id_item->second.CStr());
 			}
 
-			stream = GetStreamAs<SegmentStream>(app_name, new_stream_name);
-			if(stream == nullptr)
+			if (orchestrator->RequestPullStream(app_name, new_stream_name, rtsp_uri) == false)
 			{
-				if (orchestrator->RequestPullStream(app_name, new_stream_name, rtsp_uri) == false)
-				{
-					logte("Could not request pull stream for URL: %s", rtsp_uri.CStr());
-					return false;
-				}
+				logte("Could not request pull stream for URL: %s", rtsp_uri.CStr());
+				return false;
 			}
 
 			logti("URL %s is requested");
@@ -137,18 +134,49 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &clien
 		return false;
 	}
 
-	// To start from here
-	// 아래 3가지 정보를 이용하여 Table을 만든다. 
-	// 1. 새로운 요청이 들어왔을 때, 
-	// 2. X = (PublisherType, Sequence Num - 1)가 존재한다면 X를 삭제
-	//		- X의 시간이 Now - X.CreatedTime > Segment_Length + 1 (1은 버퍼), 즉 너무 오래전이라면 접속자 + 1
-	// 3. X가 존재하지 않는다면 이 정보를 입력하고 접속자 + 1
-	// 4. 주기적으로 돌면서 접속자 중 너무 오래된 (Now - I.CreateTime > Segment_Length) 것은 삭제하고 접속자 - 1
-	// 5. mon::Monitoring에 보고 한다. 
-
-	GetPublisherType();
-	segment->sequence_number;
-	std::chrono::system_clock::now();
-	
 	return true;
+}
+
+void SegmentPublisher::SessionTableUpdateThread()
+{
+	while(true)
+	{
+		// Remove old session request
+
+		break;
+	}
+}
+
+void SegmentPublisher::AddSessionRequestInfo(const info::Stream &stream_info, const SessionRequestInfo &info)
+{
+	bool new_session = true;
+	auto select_count = _session_table->count(info.GetIpAddress().CStr());
+	if(select_count > 0)
+	{
+		// select * where IP=info.ip from _session_table
+		auto it = _session_table->equal_range(info.GetIpAddress().CStr());
+		for (auto itr = it.first; itr != it.second;) 
+		{ 
+        	auto item = itr->second;
+			if(item->IsNextRequest(info))
+			{
+				itr = _session_table->erase(itr);
+				new_session = false;
+				break;
+			}
+
+			++ itr;
+    	} 
+	}
+
+	if(new_session)
+	{
+		auto stream_metrics = StreamMetrics(stream_info);
+		if(stream_metrics != nullptr)
+		{
+			stream_metrics->OnSessionConnected(info.GetPublisherType());
+		}
+	}
+
+	_session_table->insert(std::pair<std::string, std::shared_ptr<SessionRequestInfo>>(info.GetIpAddress().CStr(), std::make_shared<SessionRequestInfo>(info)));
 }

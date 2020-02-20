@@ -128,7 +128,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	{
 		if (media_track->GetCodecId() == MediaCodecId::H264)
 		{
-			// 만약, RTP 프레그멘테이션을 위한 헤더 정보가 없다면 생성한다.
+			// If there is no RTP fragmentation, Create!
 			if(media_packet->GetFragHeader()->GetCount() == 0)
 			{
 				_avc_video_fragmentizer.MakeHeader(media_packet);

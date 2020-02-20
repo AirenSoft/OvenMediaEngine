@@ -25,6 +25,15 @@ namespace info
 	class Application
 	{
 	public:
+		bool operator==(const Application &app_info) const
+		{
+			if(_application_id == app_info._application_id)
+			{
+				return true;
+			}
+			return false;
+		}
+
 		bool IsValid() const
 		{
 			return (_application_id != InvalidApplicationId);

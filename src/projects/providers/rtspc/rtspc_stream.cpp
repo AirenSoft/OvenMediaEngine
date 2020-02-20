@@ -64,10 +64,10 @@ namespace pvd
 		// Below is sample code for GET_URL.SH.
 		//	
 		// 		#!/bin/bash
-		// 		RTSP_URL=$(wget -qO- http://211.235.108.156:50202/hls/live1)
+		// 		RTSP_URL=$(wget -qO- http://211.235.108.156:50202/rtsp/record1)
 		// 		echo $RTSP_URL
 
-		FILE* file_stream = popen( "/home/soulk/rtsp/get_url.sh", "r" );
+		FILE* file_stream = popen( "/home/getroot/get_url.sh", "r" );
 
 		std::ostringstream output;
 

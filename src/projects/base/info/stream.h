@@ -22,6 +22,8 @@ namespace info
 
 		virtual ~Stream();
 
+		bool operator==(const Stream &stream_info) const;
+
 		void SetId(info::stream_id_t id);
 		info::stream_id_t GetId() const;
 
