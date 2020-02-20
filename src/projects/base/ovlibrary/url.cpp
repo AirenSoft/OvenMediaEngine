@@ -12,6 +12,46 @@
 
 namespace ov
 {
+	ov::String Url::Encode(const ov::String &value)
+	{
+		static char hex_table[] = "0123456789abcdef";
+		ov::String encoded_string;
+
+		encoded_string.SetCapacity(value.GetLength() * 3);
+		auto plain_buffer = value.CStr();
+
+		while (true)
+		{
+			unsigned char buf = *plain_buffer;
+
+			if (buf == '\0')
+			{
+				break;
+			}
+			else if (::isalnum(buf) || (buf == '-') || (buf == '_') || (buf == '.') || (buf == '~'))
+			{
+				// Append the character
+				encoded_string.Append(buf);
+			}
+			else if (buf == ' ')
+			{
+				// Append '+' character if the buffer is a space
+				encoded_string.Append('+');
+			}
+			else
+			{
+				// Escape
+				encoded_string.Append('%');
+				encoded_string.Append(hex_table[buf >> 4]);
+				encoded_string.Append(hex_table[buf & 15]);
+			}
+
+			plain_buffer++;
+		}
+
+		return encoded_string;
+	}
+
 	ov::String Url::Decode(const ov::String &value)
 	{
 		ov::String result_string;
@@ -142,6 +182,15 @@ namespace ov
 		logi("URL Parser", "%s %s %d %s %s %s %s",
 			 _scheme.CStr(), _domain.CStr(), _port,
 			 _app.CStr(), _stream.CStr(), _file.CStr(), _query_string.CStr());
+	}
+
+	ov::String Url::ToUrlString(bool include_query_string) const
+	{
+		return ov::String::FormatString(
+			"%s://%s%s%s%s%s",
+			_scheme.CStr(),
+			_domain.CStr(), (_port > 0) ? ov::String::FormatString(":%d", _port).CStr() : "",
+			_path.CStr(), ((include_query_string == false) || _query_string.IsEmpty()) ? "" : "?", include_query_string ? _query_string.CStr() : "");
 	}
 
 	ov::String Url::ToString() const

@@ -16,6 +16,7 @@ namespace ov
 	class Url
 	{
 	public:
+		static ov::String Encode(const ov::String &value);
 		static ov::String Decode(const ov::String &value);
 
 		// <scheme>://<domain>[:<port>][/<path/to/resource>][?<query string>]
@@ -36,7 +37,7 @@ namespace ov
 			return _domain;
 		}
 
-		uint32_t Port() const
+		const uint32_t &Port() const
 		{
 			return _port;
 		}
@@ -72,6 +73,7 @@ namespace ov
 		}
 
 		void Print() const;
+		ov::String ToUrlString(bool include_query_string = true) const;
 		ov::String ToString() const;
 
 	private:
