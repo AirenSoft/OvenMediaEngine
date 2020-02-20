@@ -25,8 +25,18 @@ public:
 		_publisher_type = type;
 		_session_ip_address = ip;
 		_sequence_number = seq;
-		_duration = duration;
+		_duration = (double)duration / (double)(PACKTYZER_DEFAULT_TIMESCALE); // convert to second
 		_last_requested_time = std::chrono::system_clock::now();
+	}
+
+	SessionRequestInfo(const SessionRequestInfo &info)
+		: _stream_info(info._stream_info)
+	{
+		_publisher_type = info._publisher_type;
+		_session_ip_address = info._session_ip_address;
+		_sequence_number = info._sequence_number;
+		_duration = info._duration;
+		_last_requested_time = info._last_requested_time;
 	}
 
 	bool IsNextRequest(const SessionRequestInfo &next)
@@ -37,7 +47,9 @@ public:
 			_session_ip_address == next._session_ip_address && 
 			_sequence_number + 1 == next._sequence_number)
 		{
-			auto gap = std::chrono::duration_cast<std::chrono::seconds>(_last_requested_time - next._last_requested_time).count();
+			return true;
+
+			auto gap = std::chrono::duration_cast<std::chrono::seconds>(next._last_requested_time - _last_requested_time).count();
 			
 			// the next request comes in within a short time
 			if(gap < _duration * 2)
@@ -48,11 +60,27 @@ public:
 		return false;
 	}
 
+	bool IsExpiredRequest()
+	{
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - _last_requested_time).count();
+		if(elapsed > _duration * 3)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	const ov::String GetTimeStr() const
+	{
+		return ov::Converter::ToString(_last_requested_time);
+	}
+
 	const PublisherType& GetPublisherType() const { return _publisher_type; }
 	const info::Stream& GetStreamInfo() const { return _stream_info; }
 	const ov::String& GetIpAddress() const { return _session_ip_address; }
-	int	GetSequenceNumber() { return _sequence_number; }
-	int64_t GetDuration(){ return _duration; }
+	int	GetSequenceNumber() const { return _sequence_number; }
+	int64_t GetDuration() const { return _duration; }
 
 private:
 	PublisherType		_publisher_type;
@@ -86,6 +114,11 @@ public:
 			return nullptr;
 		}
 
+		if (instance->StartSessionTableManager() == false)
+		{
+			return nullptr;
+		}
+
 		return publisher;
 	}
 
@@ -113,9 +146,14 @@ protected:
 	std::shared_ptr<SegmentStreamServer> _stream_server = nullptr;
 
 private:
-	void		AddSessionRequestInfo(const info::Stream &stream_info, const SessionRequestInfo &info);
+	bool		StartSessionTableManager();
 	void 		SessionTableUpdateThread();
 
+	void		AddSessionRequestInfo(const SessionRequestInfo &info);
+
+	bool					_run_thread = false;
+	std::recursive_mutex 	_session_table_lock;
+	std::thread 			_worker_thread;
 	// key: ip address, Probabliy, the ip address won't be the most duplicated in the session table.
-	std::multimap<std::string, std::shared_ptr<SessionRequestInfo>>	_session_table[static_cast<int8_t>(PublisherType::NumberOfPublishers)];
+	std::multimap<std::string, std::shared_ptr<SessionRequestInfo>>	_session_table;;
 };

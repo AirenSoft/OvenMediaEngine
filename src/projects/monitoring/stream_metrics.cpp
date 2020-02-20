@@ -142,8 +142,11 @@ namespace mon
 	}
 	void StreamMetrics::OnSessionDisconnected(PublisherType type)
 	{
-		_publisher_metrics[static_cast<int8_t>(type)]._connections--;
-		_total_connections--;
+		if(_publisher_metrics[static_cast<int8_t>(type)]._connections > 0)
+		{
+			_publisher_metrics[static_cast<int8_t>(type)]._connections--;
+			_total_connections--;
+		}
 
 		// If this stream is child then send event to parent
 		auto origin_stream_info = GetOriginStream();
