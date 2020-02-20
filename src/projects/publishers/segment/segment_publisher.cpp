@@ -34,50 +34,6 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 {
 	auto stream = GetStreamAs<SegmentStream>(app_name, stream_name);
 
-	// These names are used for testing purposes
-	// TODO(dimiden): Need to delete this code after testing
-	if (stream == nullptr)
-	{
-		if (app_name.HasSuffix("#rtsp_live") || app_name.HasSuffix("#rtsp_playback"))
-		{
-			auto &request = client->GetRequest();
-			auto host_name = request->GetHeader("HOST").Split(":")[0];
-			auto uri = request->GetUri();
-			auto parsed_url = ov::Url::Parse(uri.CStr(), true);
-
-			if (parsed_url == nullptr)
-			{
-				logte("Could not parse the url: %s", uri.CStr());
-				return false;
-			}
-
-			auto &query_map = parsed_url->QueryMap();
-			auto rtsp_uri_item = query_map.find("rtspURI");
-
-			if (rtsp_uri_item == query_map.end())
-			{
-				logte("There is no rtspURI parameter in the query string: %s", uri.CStr());
-				logtd("Query map:");
-				for (auto &query : query_map)
-				{
-					logtd("    %s = %s", query.first.CStr(), query.second.CStr());
-				}
-				return false;
-			}
-
-			auto orchestrator = Orchestrator::GetInstance();
-			auto rtsp_uri = rtsp_uri_item->second;
-
-			if (orchestrator->RequestPullStream(app_name, stream_name, rtsp_uri) == false)
-			{
-				logte("Could not request pull stream for URL: %s", rtsp_uri.CStr());
-				return false;
-			}
-
-			logti("URL %s is requested");
-		}
-	}
-
 	if ((stream == nullptr) || (stream->GetPlayList(play_list) == false))
 	{
 		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), app_name.CStr(), stream_name.CStr(), file_name.CStr());

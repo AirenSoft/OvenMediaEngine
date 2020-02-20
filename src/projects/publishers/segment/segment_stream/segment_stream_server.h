@@ -25,11 +25,12 @@ public:
 	SegmentStreamServer();
 	virtual ~SegmentStreamServer() = default;
 
-	bool Start(const ov::SocketAddress &address,
-			   std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-			   int thread_count,
-			   const std::shared_ptr<Certificate> &certificate = nullptr,
-			   const std::shared_ptr<Certificate> &chain_certificate = nullptr);
+	bool Start(
+		const ov::SocketAddress &address,
+		std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
+		int thread_count,
+		const std::shared_ptr<Certificate> &certificate = nullptr,
+		const std::shared_ptr<Certificate> &chain_certificate = nullptr);
 	bool Stop();
 
 	bool AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer);
@@ -65,14 +66,14 @@ protected:
 												const ov::String &file_name, const ov::String &file_ext) = 0;
 
 	virtual HttpConnection ProcessPlayListRequest(const std::shared_ptr<HttpClient> &client,
-											 const ov::String &app_name, const ov::String &stream_name,
-											 const ov::String &file_name,
-											 PlayListType play_list_type) = 0;
+												  const ov::String &app_name, const ov::String &stream_name,
+												  const ov::String &file_name,
+												  PlayListType play_list_type) = 0;
 
 	virtual HttpConnection ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
-											const ov::String &app_name, const ov::String &stream_name,
-											const ov::String &file_name,
-											SegmentType segment_type) = 0;
+												 const ov::String &app_name, const ov::String &stream_name,
+												 const ov::String &file_name,
+												 SegmentType segment_type) = 0;
 
 	bool UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url);
 

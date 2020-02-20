@@ -16,6 +16,7 @@ class SignedUrl
 public:
 	static std::shared_ptr<const SignedUrl> Load(SignedUrlType type, const ov::String &key, const ov::String &data);
 
+    uint64_t	            GetNowMS() const;
     const ov::String&       GetUrl() const;
     const ov::String&       GetClientIP() const;
     uint64_t                GetTokenExpiredTime() const;
@@ -28,8 +29,6 @@ private:
 
     bool ProcessType0(const ov::String &key, const ov::String &data);
     bool Parse(const ov::String &plain_string);
-
-    uint64_t	GetNowMS() const;
 
     ov::String  _key;
     ov::String  _full_string;
