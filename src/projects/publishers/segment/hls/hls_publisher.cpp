@@ -227,7 +227,7 @@ bool HlsPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
 				return false;
 			}
 
-			logti("URL %s is requested");
+			logti("URL %s is requested", rtsp_uri.CStr());
 		}
 	}
 
