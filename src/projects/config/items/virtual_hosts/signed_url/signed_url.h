@@ -8,20 +8,21 @@
 //==============================================================================
 #pragma once
 
-#include "applications/applications.h"
-
 namespace cfg
 {
 	struct SignedUrl : public Item
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetApplicationList, _applications.GetApplicationList())
+		CFG_DECLARE_REF_GETTER_OF(GetCryptoKey, _crypto_key)
+		CFG_DECLARE_REF_GETTER_OF(GetQueryStringKey, _query_string_key)
 
 	protected:
 		void MakeParseList() override
 		{
-			RegisterValue("Applications", &_applications);
+			RegisterValue("CryptoKey", &_crypto_key);
+			RegisterValue("QueryStringKey", &_query_string_key);
 		}
 
-		SignedUrlApplications _applications;
+		ov::String _crypto_key;
+		ov::String _query_string_key;
 	};
 }  // namespace cfg

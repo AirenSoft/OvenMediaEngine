@@ -27,6 +27,11 @@ std::shared_ptr<const SignedUrl> SignedUrl::Load(SignedUrlType type, const ov::S
     return signed_url;
 }
 
+uint64_t SignedUrl::GetNowMS() const
+{
+	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 const ov::String& SignedUrl::GetUrl() const
 {
     return _url;
@@ -85,11 +90,6 @@ bool SignedUrl::IsStreamExpired() const
 	}
 
 	return false;
-}
-
-uint64_t SignedUrl::GetNowMS() const
-{
-	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 bool SignedUrl::Parse(const ov::String &plain_string)

@@ -7,8 +7,9 @@
 //
 //==============================================================================
 #include "hls_stream_server.h"
-#include "hls_private.h"
 #include "../segment_publisher.h"
+#include "hls_private.h"
+
 #include <monitoring/monitoring.h>
 
 HttpConnection HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<HttpClient> &client,
@@ -42,12 +43,12 @@ HttpConnection HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<Htt
 	std::shared_ptr<info::Stream> stream_info;
 
 	std::find_if(_observers.begin(), _observers.end(),
-						[&client, &app_name, &stream_name, &file_name, &play_list, &stream_info](auto &observer) -> bool {
-							auto publisher = std::static_pointer_cast<SegmentPublisher>(observer);
-							auto stream = publisher->GetStream(app_name, stream_name);
-							stream_info = std::static_pointer_cast<info::Stream>(stream);
-							return observer->OnPlayListRequest(client, app_name, stream_name, file_name, play_list);
-						});
+				 [&client, &app_name, &stream_name, &file_name, &play_list, &stream_info](auto &observer) -> bool {
+					 auto publisher = std::static_pointer_cast<SegmentPublisher>(observer);
+					 auto stream = publisher->GetStream(app_name, stream_name);
+					 stream_info = std::static_pointer_cast<info::Stream>(stream);
+					 return observer->OnPlayListRequest(client, app_name, stream_name, file_name, play_list);
+				 });
 
 	if (play_list.IsEmpty())
 	{
@@ -63,10 +64,10 @@ HttpConnection HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<Htt
 	response->AppendString(play_list);
 	auto sent_bytes = response->Response();
 
-	if(stream_info != nullptr)
+	if (stream_info != nullptr)
 	{
 		auto stream_metric = StreamMetrics(*stream_info);
-		if(stream_metric != nullptr)
+		if (stream_metric != nullptr)
 		{
 			stream_metric->IncreaseBytesOut(PublisherType::Hls, sent_bytes);
 		}
@@ -86,12 +87,12 @@ HttpConnection HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<Http
 	std::shared_ptr<info::Stream> stream_info;
 
 	auto item = std::find_if(_observers.begin(), _observers.end(),
-						[&client, &app_name, &stream_name, &file_name, &segment, &stream_info](auto &observer) -> bool {
-							auto publisher = std::static_pointer_cast<SegmentPublisher>(observer);
-							auto stream = publisher->GetStream(app_name, stream_name);
-							stream_info = std::static_pointer_cast<info::Stream>(stream);
-							return observer->OnSegmentRequest(client, app_name, stream_name, file_name, segment);
-						});
+							 [&client, &app_name, &stream_name, &file_name, &segment, &stream_info](auto &observer) -> bool {
+								 auto publisher = std::static_pointer_cast<SegmentPublisher>(observer);
+								 auto stream = publisher->GetStream(app_name, stream_name);
+								 stream_info = std::static_pointer_cast<info::Stream>(stream);
+								 return observer->OnSegmentRequest(client, app_name, stream_name, file_name, segment);
+							 });
 
 	if (item == _observers.end())
 	{
@@ -107,10 +108,10 @@ HttpConnection HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<Http
 	response->AppendData(segment->data);
 	auto sent_bytes = response->Response();
 
-	if(stream_info != nullptr)
+	if (stream_info != nullptr)
 	{
 		auto stream_metric = StreamMetrics(*stream_info);
-		if(stream_metric != nullptr)
+		if (stream_metric != nullptr)
 		{
 			stream_metric->IncreaseBytesOut(PublisherType::Hls, sent_bytes);
 		}

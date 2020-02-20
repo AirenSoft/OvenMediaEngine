@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <publishers/segment/segment_stream/segment_stream_server.h>
+#include "../segment_stream/segment_stream_server.h"
 #include "hls_interceptor.h"
 
 class HlsStreamServer : public SegmentStreamServer
