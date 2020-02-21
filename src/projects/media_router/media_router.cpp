@@ -64,7 +64,11 @@ bool MediaRouter::Stop()
 	logti("Terminated media route modules.");
 
 	_kill_flag = true;
-	_thread.join();
+
+	if(_thread.joinable())
+	{
+		_thread.join();
+	}
 
 	for(auto const &_route_app : _route_apps)
 	{

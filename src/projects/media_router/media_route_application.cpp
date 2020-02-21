@@ -57,7 +57,10 @@ bool MediaRouteApplication::Stop()
 {
 	_kill_flag = true;
 	_indicator.abort();
-	_thread.join();
+	if(_thread.joinable())
+	{
+		_thread.join();
+	}
 
 	return true;
 }

@@ -36,7 +36,10 @@ namespace pub
 		_stop_thread_flag = true;
 		// Generate Event
 		_queue_event.Notify();
-		_worker_thread.join();
+		if(_worker_thread.joinable())
+		{
+			_worker_thread.join();
+		}
 
 		for (auto const &x : _sessions)
 		{

@@ -48,7 +48,10 @@ bool SegmentWorker::Stop()
 	_stop_thread_flag = true;
 	// Generate Event
 	_queue_event.Notify();
-	_worker_thread.join();
+	if(_worker_thread.joinable())
+	{
+		_worker_thread.join();
+	}
 
 	return true;
 }
@@ -141,7 +144,9 @@ bool SegmentWorkerManager::Start(int worker_count, const SegmentProcessHandler &
 bool SegmentWorkerManager::Stop()
 {
 	for (const auto &worker : _workers)
+	{
 		worker->Stop();
+	}
 
 	return true;
 }

@@ -77,7 +77,10 @@ namespace ov
 		}
 
 		_stop = true;
-		_thread.join();
+		if(_thread.joinable())
+		{
+			_thread.join();
+		}
 
 		return true;
 	}
