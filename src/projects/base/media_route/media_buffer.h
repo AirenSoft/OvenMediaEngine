@@ -102,6 +102,11 @@ public:
 		return _duration;
 	}
 
+	void SetDuration(int64_t duration)
+	{
+		_duration = duration;
+	}
+
 	int32_t GetTrackId() const noexcept
 	{
 		return _track_id;
