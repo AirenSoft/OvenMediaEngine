@@ -40,11 +40,11 @@ BitstreamToADTS::AacProfile BitstreamToADTS::codec_aac_rtmp2ts(AacObjectType obj
 	}
 }
 
-void BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
+uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 {
 	if(data->GetLength() == 0)
 	{
-		return;
+		return 0;
 	}
 
 	uint8_t *pbuf = data->GetWritableDataAs<uint8_t>();
@@ -53,7 +53,7 @@ void BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 	if(pbuf[0] == 0xff)
 	{
 		logtd("already ADTS type");
-		return;
+		return data->GetLength();
 	}
 
 	uint8_t sound_format = pbuf[0];
@@ -95,13 +95,13 @@ void BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 
 		data->Clear();
 
-		return;
+		return 0;
 	}
 	else if(aac_packet_type == CodecAudioTypeRawData)
 	{
 		if(_has_sequence_header == false)
 		{
-			return;
+			return 0;
 		}
 
 		int16_t aac_fixed_header_length = 2;
@@ -157,7 +157,11 @@ void BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 		}
 
 		data->Insert(aac_fixed_header, 0, sizeof(aac_fixed_header));
+
+		return data->GetLength();
 	}
+
+	return 0;
 }
 
 //====================================================================================================

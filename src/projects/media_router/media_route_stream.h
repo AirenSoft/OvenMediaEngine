@@ -45,6 +45,7 @@ private:
 	std::shared_ptr<info::Stream> _stream;
 	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
 
+	std::map<uint8_t, std::shared_ptr<MediaPacket>> _media_packet_stored;
 
 	// 2019/11/22 Getroot
 	// Change shared_ptr to shared_ptr
@@ -69,6 +70,7 @@ private:
 	time_t _last_recv_time;
 	time_t 	_stat_start_time;
 	std::map<uint8_t, int64_t> _stat_recv_pkt_lpts;
+	std::map<uint8_t, int64_t> _stat_recv_pkt_ldts;
 	std::map<uint8_t, int64_t> _stat_recv_pkt_size;
 	std::map<uint8_t, int64_t> _stat_recv_pkt_count;
 	

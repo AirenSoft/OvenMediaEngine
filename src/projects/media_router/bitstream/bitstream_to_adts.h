@@ -56,7 +56,7 @@ public:
     BitstreamToADTS();
     ~BitstreamToADTS();
 
- 	void convert_to(const std::shared_ptr<ov::Data> &data);
+ 	uint32_t convert_to(const std::shared_ptr<ov::Data> &data);
 
  	static bool SequenceHeaderParsing(const uint8_t *data,
 									  int data_size,

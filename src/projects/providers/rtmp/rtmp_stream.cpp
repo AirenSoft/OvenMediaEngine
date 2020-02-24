@@ -32,10 +32,9 @@ bool RtmpStream::ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64
 }
 
 
-bool RtmpStream::ConvertToAudioData(const std::shared_ptr<ov::Data> &data)
+uint32_t RtmpStream::ConvertToAudioData(const std::shared_ptr<ov::Data> &data)
 {
-	_bsfa.convert_to(data);
-	return true;
+	return _bsfa.convert_to(data);
 }
 
 

@@ -27,7 +27,7 @@ public:
 	~RtmpStream() final;
 
 	bool ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts);
-	bool ConvertToAudioData(const std::shared_ptr<ov::Data> &data);
+	uint32_t ConvertToAudioData(const std::shared_ptr<ov::Data> &data);
 
 	void SetAudioTimestampScale(double scale);
 	double GetAudioTimestampScale();
