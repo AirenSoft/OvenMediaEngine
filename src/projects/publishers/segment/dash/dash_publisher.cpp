@@ -64,7 +64,7 @@ std::shared_ptr<pub::Application> DashPublisher::OnCreatePublisherApplication(co
 	if(!application_info.CheckCodecAvailability({"h264"}, {"aac"}))
 	{
 		logtw("There is no suitable encoding setting for %s (Encoding setting must contains h264 and aac)", GetPublisherName());
-		return nullptr;
+		// return nullptr;
 	}
 
 	return DashApplication::Create(application_info);

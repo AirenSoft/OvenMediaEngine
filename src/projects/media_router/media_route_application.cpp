@@ -360,9 +360,6 @@ void MediaRouteApplication::GarbageCollector()
 		{
 			double diff_time = difftime(curr_time, stream->getLastReceivedTime());
 
-			// TODO(soulk) 삭제 Treshold 값은 설정서 읽어오도록 수정해야함.
-			// Observer 에게 삭제 메세지를 전달하는 구조도 비효율적임. 레이스컨디션 발생 가능성 있음.
-
 			// Streams that do not receive data are automatically deleted after 30 seconds.
 			if (diff_time > TIMEOUT_STREAM_ALIVE)
 			{
