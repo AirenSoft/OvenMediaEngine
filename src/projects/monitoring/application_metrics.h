@@ -31,6 +31,12 @@ namespace mon
 
 		std::shared_ptr<StreamMetrics> GetStreamMetrics(const info::Stream &stream);
 
+		// Overriding from CommonMetrics 
+		void IncreaseBytesIn(uint64_t value) override;
+		void IncreaseBytesOut(PublisherType type, uint64_t value) override;
+		void OnSessionConnected(PublisherType type) override;
+		void OnSessionDisconnected(PublisherType type) override;
+
 	private:
 		std::shared_ptr<HostMetrics> _host_metrics;
 		std::mutex _map_guard;

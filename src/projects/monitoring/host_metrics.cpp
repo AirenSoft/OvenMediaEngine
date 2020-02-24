@@ -14,6 +14,9 @@ namespace mon
 														GetId(), GetName().CStr(),
 														ov::Converter::ToString(_created_time).CStr());
 		logti("%s", out_str.CStr());
+
+		CommonMetrics::ShowInfo();
+
 		if(show_children)
 		{
 			for(auto const &t : _applications)

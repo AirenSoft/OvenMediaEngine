@@ -5,9 +5,10 @@
 
 #include "signed_url.h"
 
-// key = tivew_hlskey
-// encrypted : fk2Wr7ZIPsT9TL/b/OtvekRHlskLoAf78M0gEr0jMX3T2hLrIqQVm6b2isFdVmS4rYombNEN7GiE1xsdctncRaHTmKtGUtgV1d2hyzDSyf+SSz7EAiye9GiExQsUk3yj1QEMdKMu+BaVp6l0omsNNIcwgjmfFx4Us6g6/Abdk4E=
-// plain : https://tview-com/rtsp_live/12345/playlist.m3u8?rtspURI=rtsp://233.39.121.89:10906/69498/0,0.0.0.0,1581942526350,1581942526350
+// key = tview_hlskey
+// encrypted : jRX42gO70TLBf8qXh4QBneZ9GfnZFe0yYNxd7loksesu6nsbLFsYfvTnT7TRGPx5mKiZyDR1Km7YP2W4d8l4x9qEozsboPupEwsvFNPplqwka8oTXYhphuFzEBrid84R7Pd+5gkUxgRb5KDvtD/QMQ==
+// url encode : jRX42gO70TLBf8qXh4QBneZ9GfnZFe0yYNxd7loksesu6nsbLFsYfvTnT7TRGPx5mKiZyDR1Km7YP2W4d8l4x9qEozsboPupEwsvFNPplqwka8oTXYhphuFzEBrid84R7Pd%2B5gkUxgRb5KDvtD%2FQMQ%3D%3D
+// plain : http://127.0.0.1:8090/rtsp_live/stream/playlist.m3u8?rtspURI=rtsp%3A%2F%2F203.67.18.25%3A554%2F0%2F&authtoken=jRX42gO70TLBf8qXh4QBneZ9GfnZFe0yYNxd7loksesu6nsbLFsYfvTnT7TRGPx5mKiZyDR1Km7YP2W4d8l4x9qEozsboPupEwsvFNPplqwka8oTXYhphuFzEBrid84R7Pd%2B5gkUxgRb5KDvtD%2FQMQ%3D%3D
 std::shared_ptr<const SignedUrl> SignedUrl::Load(SignedUrlType type, const ov::String &key, const ov::String &data)
 {
     auto signed_url = std::make_shared<SignedUrl>();

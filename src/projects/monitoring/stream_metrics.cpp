@@ -11,34 +11,15 @@ namespace mon
 	void StreamMetrics::ShowInfo()
 	{
 		info::Stream::ShowInfo();
+		
+		ov::String out_str;
+		out_str.AppendFormat("\tElapsed time to connect to origin server : %f ms\n"
+								"\tElapsed time to request from origin server : %f ms\n",
+								GetOriginRequestTimeMSec(), GetOriginResponseTimeMSec());
 
-		ov::String out_str = ov::String::FormatString("\n------------ Statistics ------------\n");
-		out_str.AppendFormat(
-			"\tLast update time : %s\n"
-			"\tLast sent time : %s\n"
-			"\tElapsed time to connect to origin server : %f ms\n"
-			"\tElapsed time to request from origin server : %f ms\n",
-			ov::Converter::ToString(GetLastUpdatedTime()).CStr(),
-			ov::Converter::ToString(GetLastSentTime()).CStr(),
-			GetOriginRequestTimeMSec(), GetOriginResponseTimeMSec());
+		logti("%s", out_str.CStr());
 
-		out_str.AppendFormat(
-			"\tTotal bytes in : %u\n"
-			"\tTotal bytes out : %u\n"
-			"\tConcurrent connections : %u\n"
-			"\tMax total connections : %u\n",
-			GetTotalBytesIn(), GetTotalBytesOut(), GetTotalConnections(), GetMaxTotalConnections());
-
-		out_str.AppendFormat("\n\t\t[Publisher Info]\n");
-		for (int i = 0; i < static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
-		{
-			out_str.AppendFormat("\t\t >> %s : Bytes out(%u) Concurrent connections (%u)\n",
-								 ov::Converter::ToString(static_cast<PublisherType>(i)).CStr(),
-								 GetBytesOut(static_cast<PublisherType>(i)),
-								 GetConnections(static_cast<PublisherType>(i)));
-		}
-
-        logti("%s", out_str.CStr());
+		CommonMetrics::ShowInfo();
 	}
 
 	// Getter
@@ -49,42 +30,6 @@ namespace mon
 	double StreamMetrics::GetOriginResponseTimeMSec()
 	{
 		return _response_time_from_origin_msec;
-	}
-
-	uint64_t StreamMetrics::GetTotalBytesIn()
-	{
-		return _total_bytes_in.load();
-	}
-	uint64_t StreamMetrics::GetTotalBytesOut()
-	{
-		return _total_bytes_out;
-	}
-	uint32_t StreamMetrics::GetTotalConnections()
-	{
-		return _total_connections;
-	}
-
-	uint32_t StreamMetrics::GetMaxTotalConnections()
-	{
-		return _max_total_connections;
-	}
-	std::chrono::system_clock::time_point StreamMetrics::GetMaxTotalConnectionsTime()
-	{
-		return _max_total_connection_time;
-	}
-
-	std::chrono::system_clock::time_point StreamMetrics::GetLastSentTime()
-	{
-		return _last_sent_time;
-	}
-
-	uint64_t StreamMetrics::GetBytesOut(PublisherType type)
-	{
-		return _publisher_metrics[static_cast<int8_t>(type)]._bytes_out;
-	}
-	uint64_t StreamMetrics::GetConnections(PublisherType type)
-	{
-		return _publisher_metrics[static_cast<int8_t>(type)]._connections;
 	}
 
 	// Setter
@@ -101,32 +46,20 @@ namespace mon
 
 	void StreamMetrics::IncreaseBytesIn(uint64_t value)
 	{
-		_total_bytes_in += value;
-		UpdateDate();
+		// Forward value to AppMetrics to sum
+		GetApplicationMetrics()->IncreaseBytesIn(value);
+		CommonMetrics::IncreaseBytesIn(value);
 	}
-	void StreamMetrics::IncreaseBytesOut(PublisherType type, uint64_t value)
+
+	void StreamMetrics::IncreaseBytesOut(PublisherType type, uint64_t value) 
 	{
-		if(value == 0)
-		{
-			return;
-		}
-		
-		_publisher_metrics[static_cast<int8_t>(type)]._bytes_out += value;
-		_total_bytes_out += value;
-		_last_sent_time = std::chrono::system_clock::now();
-		UpdateDate();
+		// Forward value to AppMetrics to sum
+		GetApplicationMetrics()->IncreaseBytesOut(type, value);
+		CommonMetrics::IncreaseBytesOut(type, value);
 	}
 
 	void StreamMetrics::OnSessionConnected(PublisherType type)
 	{
-		_publisher_metrics[static_cast<int8_t>(type)]._connections++;
-		_total_connections++;
-		if (_total_connections > _max_total_connections)
-		{
-			_max_total_connections.exchange(_total_connections);
-			_max_total_connection_time = std::chrono::system_clock::now();
-		}
-
 		// If this stream is child then send event to parent
 		auto origin_stream_info = GetOriginStream();
 		if(origin_stream_info != nullptr)
@@ -137,17 +70,17 @@ namespace mon
 				origin_stream_metric->OnSessionConnected(type);
 			}
 		}
-
-		UpdateDate();
-	}
-	void StreamMetrics::OnSessionDisconnected(PublisherType type)
-	{
-		if(_publisher_metrics[static_cast<int8_t>(type)]._connections > 0)
+		else
 		{
-			_publisher_metrics[static_cast<int8_t>(type)]._connections--;
-			_total_connections--;
+			// Sending a connection event to application only if it hasn't origin stream to prevent double sum. 
+			GetApplicationMetrics()->OnSessionConnected(type);
 		}
 
+		CommonMetrics::OnSessionConnected(type);
+	}
+	
+	void StreamMetrics::OnSessionDisconnected(PublisherType type)
+	{
 		// If this stream is child then send event to parent
 		auto origin_stream_info = GetOriginStream();
 		if(origin_stream_info != nullptr)
@@ -158,6 +91,13 @@ namespace mon
 				origin_stream_metric->OnSessionDisconnected(type);
 			}
 		}
-		UpdateDate();
+		else
+		{
+			// Sending a connection event to application only if it hasn't origin stream to prevent double sum. 
+			GetApplicationMetrics()->OnSessionConnected(type);
+		}
+
+		CommonMetrics::OnSessionDisconnected(type);
 	}
+
 }  // namespace mon

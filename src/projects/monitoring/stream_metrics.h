@@ -22,79 +22,30 @@ namespace mon
 		{
 			_request_time_to_origin_msec = 0;
 			_response_time_from_origin_msec = 0;
-			_total_bytes_in = 0;
-			_total_bytes_out = 0;
-			_total_connections = 0;
-
-			_max_total_connection_time = std::chrono::system_clock::now();
-			_last_sent_time = std::chrono::system_clock::now();
-
-			for(int i=0; i<static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
-			{
-				_publisher_metrics[i]._bytes_out = 0;
-				_publisher_metrics[i]._connections = 0;
-			}
 		}
+
 		std::shared_ptr<ApplicationMetrics> GetApplicationMetrics()
 		{
 			return _app_metrics;
 		}
 
-		void ShowInfo();
+		void ShowInfo() override;
 
-		// Getter
 		double GetOriginRequestTimeMSec();
 		double GetOriginResponseTimeMSec();
-
-		uint64_t GetTotalBytesIn();
-		uint64_t GetTotalBytesOut();
-		uint32_t GetTotalConnections();
-		uint32_t GetMaxTotalConnections();
-		std::chrono::system_clock::time_point GetMaxTotalConnectionsTime();
-		std::chrono::system_clock::time_point GetLastSentTime();
-
-		uint64_t GetBytesOut(PublisherType type);
-		uint64_t GetConnections(PublisherType type);
-
-		// From Providers
 		void SetOriginRequestTimeMSec(double value);
 		void SetOriginResponseTimeMSet(double value);
-		void IncreaseBytesIn(uint64_t value);
 
-		// From Publishers
-		void IncreaseBytesOut(PublisherType type, uint64_t value);
-		void OnSessionConnected(PublisherType type);
-		void OnSessionDisconnected(PublisherType type);
-
+		// Overriding from CommonMetrics 
+		void IncreaseBytesIn(uint64_t value) override;
+		void IncreaseBytesOut(PublisherType type, uint64_t value) override;
+		void OnSessionConnected(PublisherType type) override;
+		void OnSessionDisconnected(PublisherType type) override;
 	private:
 		// Related to origin, From Provider
 		std::atomic<double> _request_time_to_origin_msec;
 		std::atomic<double> _response_time_from_origin_msec;
 
-		// TODO: If the source type is LIVE_TRANSCODER, what can we provide some more metrics
-
-		// From Provider
-		std::atomic<uint64_t> _total_bytes_in;
-
-		// From Publishers
-		std::atomic<uint64_t> _total_bytes_out;
-		std::atomic<uint32_t> _total_connections;
-		
-		std::atomic<uint32_t> _max_total_connections;
-		// Time to reach maximum number of connections. 
-		// TODO(Getroot): Does it need mutex? Check!
-		std::chrono::system_clock::time_point	_max_total_connection_time;
-		std::chrono::system_clock::time_point	_last_sent_time;
-
-		// From Publishers
-		class PublisherMetrics
-		{
-		public:
-			std::atomic<uint64_t> _bytes_out;
-			std::atomic<uint32_t> _connections;
-		};
-
 		std::shared_ptr<ApplicationMetrics>	_app_metrics;
-		PublisherMetrics _publisher_metrics[static_cast<int8_t>(PublisherType::NumberOfPublishers)];
 	};
 }

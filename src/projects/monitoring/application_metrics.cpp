@@ -14,8 +14,9 @@ namespace mon
         ov::String out_str = ov::String::FormatString("\n[Application Info]\nid(%u), name(%s)\nCreated Time (%s)\n", 														
 														GetId(), GetName().CStr(),
 														ov::Converter::ToString(_created_time).CStr());
-
         logti("%s", out_str.CStr());
+
+        CommonMetrics::ShowInfo();
 
         if(show_children)
         {
@@ -72,5 +73,33 @@ namespace mon
         }
         
         return _streams[stream.GetId()];
+    }
+
+    void ApplicationMetrics::IncreaseBytesIn(uint64_t value)
+    {
+        // Forward value to HostMetrics to sum
+		GetHostMetrics()->IncreaseBytesIn(value);
+		CommonMetrics::IncreaseBytesIn(value);
+    }
+
+    void ApplicationMetrics::IncreaseBytesOut(PublisherType type, uint64_t value)
+    {
+        // Forward value to HostMetrics to sum
+		GetHostMetrics()->IncreaseBytesOut(type, value);
+		CommonMetrics::IncreaseBytesOut(type, value);
+    }
+
+    void ApplicationMetrics::OnSessionConnected(PublisherType type)
+    {
+         // Forward value to HostMetrics to sum
+		GetHostMetrics()->OnSessionConnected(type);
+		CommonMetrics::OnSessionConnected(type);
+    }
+
+    void ApplicationMetrics::OnSessionDisconnected(PublisherType type)
+    {
+        // Forward value to HostMetrics to sum
+		GetHostMetrics()->OnSessionDisconnected(type);
+		CommonMetrics::OnSessionDisconnected(type);
     }
 }
