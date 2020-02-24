@@ -19,6 +19,7 @@ public:
     uint64_t	            GetNowMS() const;
     const ov::String&       GetUrl() const;
     const ov::String&       GetClientIP() const;
+    const ov::String&       GetSessionID() const;
     uint64_t                GetTokenExpiredTime() const;
     uint64_t                GetStreamExpiredTime() const;
     bool                    IsAllowedClient(const ov::SocketAddress &address) const;
@@ -35,6 +36,7 @@ private:
 
     ov::String  _url;
     ov::String  _client_ip;
+    ov::String  _session_id;
     uint64_t    _token_expired_time;
     uint64_t    _stream_expired_time;
 };

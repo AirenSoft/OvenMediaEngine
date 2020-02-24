@@ -43,6 +43,11 @@ const ov::String& SignedUrl::GetClientIP() const
     return _client_ip;
 }
 
+const ov::String& SignedUrl::GetSessionID() const
+{
+    return _session_id;
+}
+
 uint64_t SignedUrl::GetTokenExpiredTime() const 
 {
     return _token_expired_time;
@@ -97,7 +102,7 @@ bool SignedUrl::Parse(const ov::String &plain_string)
 {
     auto items = plain_string.Split(",");
 
-    if(items.size() != 4)
+    if(items.size() != 5)
     {
         return false;
     }
@@ -105,8 +110,9 @@ bool SignedUrl::Parse(const ov::String &plain_string)
     _full_string = plain_string;
     _url = items[0];
     _client_ip = items[1];
-    _token_expired_time = ov::Converter::ToInt64(items[2]);
-    _stream_expired_time = ov::Converter::ToInt64(items[3]);
+    _session_id = items[2];
+    _token_expired_time = ov::Converter::ToInt64(items[3]);
+    _stream_expired_time = ov::Converter::ToInt64(items[4]);
 
     return true;
 }
