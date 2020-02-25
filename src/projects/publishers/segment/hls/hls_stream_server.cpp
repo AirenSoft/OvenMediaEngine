@@ -50,10 +50,18 @@ HttpConnection HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<Htt
 					 return observer->OnPlayListRequest(client, app_name, stream_name, file_name, play_list);
 				 });
 
-	if (play_list.IsEmpty())
+	if (stream_info == nullptr)
 	{
 		logtd("Could not find HLS playlist: %s/%s, %s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
 		response->SetStatusCode(HttpStatusCode::NotFound);
+		response->Response();
+
+		return HttpConnection::Closed;
+	}
+	else if (play_list.IsEmpty())
+	{
+		logtd("Could not find HLS playlist: %s/%s, %s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		response->SetStatusCode(HttpStatusCode::Accepted);
 		response->Response();
 
 		return HttpConnection::Closed;
