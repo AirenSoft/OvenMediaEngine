@@ -40,6 +40,18 @@ public:
 		_last_requested_time = info._last_requested_time;
 	}
 
+	bool IsTooOld()
+	{
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - _last_requested_time).count();
+		// TODO(Getroot): It should be related with segment duration.
+		if(elapsed > 30) 
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	bool IsRequestFromSameUser(const PlaylistRequestInfo &info)
 	{
 		if(_publisher_type == info._publisher_type &&
@@ -57,6 +69,8 @@ public:
 	const PublisherType& GetPublisherType() const { return _publisher_type; }
 	const ov::String& GetIpAddress() const { return _ip_address; }
 	const ov::String& GetSessionId() const { return _session_id; }
+	const ov::String& GetAppName() const { return _app_name; }
+	const ov::String& GetStreamName() const { return _stream_name; }
 
 private:
 	PublisherType	_publisher_type;
@@ -208,7 +222,8 @@ private:
 	void		UpdateSegmentRequestInfo(const SegmentRequestInfo &info);
 
 	bool					_run_thread = false;
-	std::recursive_mutex 	_session_table_lock;
+	std::recursive_mutex 	_playlist_request_table_lock;
+	std::recursive_mutex 	_segment_request_table_lock;
 	std::thread 			_worker_thread;
 
 	// key: session id, Probabliy, the session_id will be the least duplicated info in the _playlist_request_table.

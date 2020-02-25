@@ -5,10 +5,36 @@
 
 #include "signed_url.h"
 
-// key = tview_hlskey
-// encrypted : jRX42gO70TLBf8qXh4QBneZ9GfnZFe0yYNxd7loksesu6nsbLFsYfvTnT7TRGPx5mKiZyDR1Km7YP2W4d8l4x9qEozsboPupEwsvFNPplqwka8oTXYhphuFzEBrid84R7Pd+5gkUxgRb5KDvtD/QMQ==
-// url encode : jRX42gO70TLBf8qXh4QBneZ9GfnZFe0yYNxd7loksesu6nsbLFsYfvTnT7TRGPx5mKiZyDR1Km7YP2W4d8l4x9qEozsboPupEwsvFNPplqwka8oTXYhphuFzEBrid84R7Pd%2B5gkUxgRb5KDvtD%2FQMQ%3D%3D
-// plain : http://127.0.0.1:8090/rtsp_live/stream/playlist.m3u8?rtspURI=rtsp%3A%2F%2F203.67.18.25%3A554%2F0%2F&authtoken=jRX42gO70TLBf8qXh4QBneZ9GfnZFe0yYNxd7loksesu6nsbLFsYfvTnT7TRGPx5mKiZyDR1Km7YP2W4d8l4x9qEozsboPupEwsvFNPplqwka8oTXYhphuFzEBrid84R7Pd%2B5gkUxgRb5KDvtD%2FQMQ%3D%3D
+/* 
+    [Test Code]
+
+	SignedUrl sign;
+	ov::String plain_token;
+	ov::Data encrypted_data;
+
+	auto mseconds = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	plain_token.AppendFormat("%s,%s,%s,%llu,%llu", 
+					"http://127.0.0.1:8090/rtsp_live/stream/playlist.m3u8?rtspURI=rtsp%3A%2F%2F203.67.18.25%3A554%2F0%2F", // url
+					"0",	// ip
+					"fdjksafj19283913921cdfjfas",	// session id
+					mseconds + 10000,	// token expired ms
+					0);	// stream expired ms
+
+	sign.Encrypt_DES_ECB_PKCS5("tview_hlskey", *plain_token.ToData(false), encrypted_data);
+	ov::String auth_token = ov::Base64::Encode(encrypted_data);
+	
+	logti("authtoken : %s", auth_token.CStr());
+
+	auto urlencoded_authtoken = ov::Url::Encode(auth_token);
+
+	logti("url encoded authtoken : %s", urlencoded_authtoken.CStr());
+
+	ov::String url;
+	url.AppendFormat("%s%s", "http://127.0.0.1:8090/rtsp_live/stream/playlist.m3u8?rtspURI=rtsp%3A%2F%2F203.67.18.25%3A554%2F0%2F&authtoken=", urlencoded_authtoken.CStr());
+
+	logti("url : %s", url.CStr());
+*/
+
 std::shared_ptr<const SignedUrl> SignedUrl::Load(SignedUrlType type, const ov::String &key, const ov::String &data)
 {
     auto signed_url = std::make_shared<SignedUrl>();
@@ -98,10 +124,28 @@ bool SignedUrl::IsStreamExpired() const
 	return false;
 }
 
-bool SignedUrl::Parse(const ov::String &plain_string)
+// Type0 : BASE64(DES/ECB/PKCS5 Padding)
+// Struct : <URL - https://~~?rtspURI=~>,<Client IP>,<Session ID>,<Token Expired>,<Stream Expired>
+//      Client IP : empty, 0 or 0.0.0.0 will accept all addresses
+//      Session ID : UUID
+//      Token Expired Time : milliseconds from epoch, empty or 0 won't be expired
+//      Stream Expired Time : milliseconds from epoch, empty or 0 won't be expired
+bool SignedUrl::ProcessType0(const ov::String &key, const ov::String &data)
 {
-    auto items = plain_string.Split(",");
+    ov::Data final_data;
+    auto const decoded_data = ov::Base64::Decode(data);
+    if(decoded_data == nullptr)
+    {
+        return false;
+    }
 
+    if(!Decrypt_DES_ECB_PKCS5(key, *decoded_data, final_data))
+    {
+        return false;
+    }
+
+    auto plain_string = final_data.ToString();
+    auto items = plain_string.Split(",");
     if(items.size() != 5)
     {
         return false;
@@ -117,11 +161,64 @@ bool SignedUrl::Parse(const ov::String &plain_string)
     return true;
 }
 
-// Type0 : BASE64(DES/ECB/PKCS5 Padding)
-bool SignedUrl::ProcessType0(const ov::String &key, const ov::String &data)
+bool SignedUrl::Encrypt_DES_ECB_PKCS5(const ov::String &key, ov::Data &plain_in, ov::Data &encrypted_out) const
 {
-    auto const decoded_data = ov::Base64::Decode(data);
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if(ctx == nullptr)
+    {
+        return false;
+    }
 
+    int ret; 
+
+    ret = EVP_CIPHER_CTX_init(ctx);
+    if(ret != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    ret = EVP_EncryptInit_ex(ctx, EVP_des_ecb(), NULL, (uint8_t *)key.CStr(), NULL);
+    if(ret != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    uint32_t plain_data_len = plain_in.GetLength();
+    uint32_t encrypted_data_len = plain_in.GetLength() + (8 - (plain_in.GetLength() % 8 == 0 ? 0 : plain_in.GetLength() % 8));
+    encrypted_out.SetLength(encrypted_data_len);
+
+    auto in = plain_in.GetWritableDataAs<uint8_t>();
+    auto out = encrypted_out.GetWritableDataAs<uint8_t>();
+    memset(out, 0, encrypted_out.GetLength());
+
+    uint32_t total_out_length = 0;
+    int num_bytes_out = 0;
+
+    ret = EVP_EncryptUpdate(ctx, out, &num_bytes_out, in, plain_data_len);
+    if(ret != 1)
+    {    
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+    total_out_length += num_bytes_out;
+
+    ret = EVP_EncryptFinal_ex(ctx, out + total_out_length, &num_bytes_out);
+    if(ret != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return false;
+    }
+
+    total_out_length += num_bytes_out;
+    EVP_CIPHER_CTX_free(ctx);
+
+    return true;
+}
+
+bool SignedUrl::Decrypt_DES_ECB_PKCS5(const ov::String &key, ov::Data &encrypted_in, ov::Data &plain_out) const
+{
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if(ctx == nullptr)
     {
@@ -152,13 +249,13 @@ bool SignedUrl::ProcessType0(const ov::String &key, const ov::String &data)
     }
 
     ov::Data decrypted_data;
-    decrypted_data.SetLength(decoded_data->GetLength()+1);
+    decrypted_data.SetLength(encrypted_in.GetLength()+1);
     int num_bytes_out = decrypted_data.GetLength();
     auto out = decrypted_data.GetWritableDataAs<uint8_t>();
     memset(out, 0, num_bytes_out);
     
     int total_out_length = 0;
-    ret = EVP_DecryptUpdate(ctx, out, &num_bytes_out, (uint8_t *)decoded_data->GetWritableDataAs<uint8_t>(), decoded_data->GetLength());
+    ret = EVP_DecryptUpdate(ctx, out, &num_bytes_out, (uint8_t *)encrypted_in.GetWritableDataAs<uint8_t>(), encrypted_in.GetLength());
     if(ret != 1)
     {
         EVP_CIPHER_CTX_free(ctx);
@@ -180,13 +277,12 @@ bool SignedUrl::ProcessType0(const ov::String &key, const ov::String &data)
     if(out[total_out_length-1] >= 1 && out[total_out_length-1] <= 8)
     {
         int padding_count = out[total_out_length-1];
-        final_data = decrypted_data.Subdata(0, decrypted_data.GetLength() - padding_count - 1);
+        plain_out = *decrypted_data.Subdata(0, decrypted_data.GetLength() - padding_count - 1);
     }
     else
     {
-        final_data = decrypted_data.Clone();
+        plain_out = decrypted_data;
     }
 
-    return Parse(final_data->ToString());
+    return true;
 }
-

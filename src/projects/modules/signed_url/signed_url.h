@@ -26,10 +26,13 @@ public:
     bool                    IsTokenExpired() const;
     bool                    IsStreamExpired() const;
 
-private:
 
     bool ProcessType0(const ov::String &key, const ov::String &data);
-    bool Parse(const ov::String &plain_string);
+
+    bool Encrypt_DES_ECB_PKCS5(const ov::String &key, ov::Data &plain_in, ov::Data &encrypted_out) const;
+    bool Decrypt_DES_ECB_PKCS5(const ov::String &key, ov::Data &encrypted_in, ov::Data &plain_out) const;
+    
+private:
 
     ov::String  _key;
     ov::String  _full_string;
