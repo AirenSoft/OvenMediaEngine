@@ -62,57 +62,82 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		return false;
 	}
 
-
+	////////////////////////////////////////////////////////////////////////////////////
 	// PTS Correction for Abnormal increase
-
-	int64_t scaled_pts_new = media_packet->GetPts() * 1000 / media_track->GetTimeBase().GetDen();
+	////////////////////////////////////////////////////////////////////////////////////
 	
-	int64_t scaled_pts_lastest = _stat_recv_pkt_lpts[track_id] * 1000 / media_track->GetTimeBase().GetDen();
+	int64_t timestamp_delta = media_packet->GetPts()  - _stat_recv_pkt_lpts[track_id];
 	
-	int64_t scaled_delta = scaled_pts_new - scaled_pts_lastest;
+	int64_t scaled_timestamp_delta = timestamp_delta * 1000 /  media_track->GetTimeBase().GetDen();
 
-	if(abs( scaled_delta ) > PTS_CORRECT_THRESHOLD_US )
+	if (abs( scaled_timestamp_delta ) > PTS_CORRECT_THRESHOLD_US )
 	{
 		_pts_correct[track_id] = media_packet->GetPts() - _stat_recv_pkt_lpts[track_id] - _pts_avg_inc[track_id];
-		logtw("Detected abnormal increased pts. track_id : %d, pts : %lld, avginc : %lld, corrected pts : %lld", track_id,  scaled_pts_new, _pts_avg_inc[track_id], _pts_correct[track_id]);
+
+		logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld"
+			, track_id
+			, _stat_recv_pkt_lpts[track_id]
+			, media_packet->GetPts()
+			, _pts_correct[track_id]
+			, _pts_avg_inc[track_id]
+		);
 	}
-	else 
+	else
 	{
-		// average incresement of unscaled pts
-		_pts_avg_inc[track_id] = media_packet->GetPts() - _stat_recv_pkt_lpts[track_id];
+		// Originally it should be an average value, Use the difference of the last packet.
+		// Use DTS because the PTS value does not increase uniformly.
+		_pts_avg_inc[track_id] = media_packet->GetDts() - _stat_recv_pkt_ldts[track_id];
 	}
 	
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// Statistics
+	////////////////////////////////////////////////////////////////////////////////////
 	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
+
+	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();
+	
 	_stat_recv_pkt_size[track_id] += media_packet->GetData()->GetLength();
-	_stat_recv_pkt_count[track_id] ++;
+	
+	_stat_recv_pkt_count[track_id]++;
 
-	// Set the corrected PTS.
-	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
-	media_packet->SetDts( media_packet->GetDts() - _pts_correct[track_id] );
 
-	// for statistics...s
 	time_t curr_time;
 	time(&curr_time);
 
-	if(difftime(curr_time, _last_recv_time) >= 5)
+	if(difftime(curr_time, _last_recv_time) >= 10)
 	{
-		ov::String temp_str = "\n";
+		ov::String temp_str = "Statistics of media stream\n";
 
 		time_t uptime = curr_time-_stat_start_time;
-		temp_str.AppendFormat("stats of stream[%s] uptime : %llds , queue : %d\n" ,_stream->GetName().CStr(), uptime, _media_packets.size());
+		temp_str.AppendFormat(" name : %s, uptime : %llds , queue : %d" ,_stream->GetName().CStr(), uptime, _media_packets.size());
 		for(const auto &iter : _stream->GetTracks())
 		{
 			auto track_id = iter.first;
 			auto track = iter.second;
 
-			temp_str.AppendFormat("\t[%d] media : %s, crt : %lld, last_ts : %lldms->%lldms(%lld->%lld), rcv_cnt : %lld, rcv_siz : %lldb\n"
+			ov::String pts_str = "";
+			if(_pts_correct[track_id] != 0)
+			{
+				pts_str.AppendFormat("last_pts : %lldms->%lldms(%lld->%lld), crt_pts : %lld"
+					, _stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen()
+					, (_stat_recv_pkt_lpts[track_id] - _pts_correct[track_id])  * 1000 / track->GetTimeBase().GetDen()
+					, _stat_recv_pkt_lpts[track_id]
+					, _stat_recv_pkt_lpts[track_id] - _pts_correct[track_id]
+					, _pts_correct[track_id] );
+			}
+			else
+			{
+				pts_str.AppendFormat("last_pts : %lldms(%lld)"
+					, _stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen()
+					, _stat_recv_pkt_lpts[track_id] );
+			}
+
+			temp_str.AppendFormat("\n\t[%d] media : %s(%d), %s, rcv_pkt_cnt : %lld, rcv_pkt_siz : %lldb"
 				, track_id
 				, track->GetMediaType()==MediaType::Video?"video":"audio"
-				, _pts_correct[track_id]
-				, _stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen()
-				, (_stat_recv_pkt_lpts[track_id] - _pts_correct[track_id])  * 1000 / track->GetTimeBase().GetDen()
-				, _stat_recv_pkt_lpts[track_id]
-				, _stat_recv_pkt_lpts[track_id] - _pts_correct[track_id]
+				, track->GetCodecId()
+				, pts_str.CStr()
 				, _stat_recv_pkt_count[track_id]
 				, _stat_recv_pkt_size[track_id]);
 		}
@@ -123,6 +148,11 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	}
 
 
+	////////////////////////////////////////////////////////////////////////////////////
+	// Processing
+	////////////////////////////////////////////////////////////////////////////////////
+
+	// Bitstream Converting or Generate Fragmentation Header 
 
 	if (media_type == MediaType::Video)
 	{
@@ -166,13 +196,46 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		return false;
 	}
 
-	_media_packets.push(std::move(media_packet));
+	// Set the corrected PTS.
+	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
+	media_packet->SetDts( media_packet->GetDts() - _pts_correct[track_id] );
 
 
-	// time(&_last_rb_time);
-	// logtd("last time : %s", asctime(gmtime(&_last_rb_time)) );
+	// Get packet duplication
 
-	return true;
+	//	- 1) If packets stored in temporary storage exist, calculate Duration compared to the current packet's timestamp.
+	//	- 2) If the current packet does not have a Duration value, keep it in a temporary store.
+	//	- 3) If there is a packet Duration value, insert it into the packet queue.
+	bool is_inserted_queue = false;
+
+	auto iter = _media_packet_stored.find(track_id);
+	if( iter != _media_packet_stored.end() )
+	{
+		auto sotred_media_packet = std::move(iter->second);
+
+		_media_packet_stored.erase(iter);
+
+		int64_t duration = media_packet->GetDts() - sotred_media_packet->GetDts();
+
+		sotred_media_packet->SetDuration(duration);
+
+		_media_packets.push(std::move(sotred_media_packet));
+
+		is_inserted_queue = true;
+	}
+
+	if(media_packet->GetDuration() == -1LL)
+	{
+		_media_packet_stored[track_id] = std::move(media_packet);	
+	}
+	else
+	{
+		_media_packets.push(media_packet);
+
+		is_inserted_queue = true;
+	}
+
+	return is_inserted_queue;
 }
 
 std::shared_ptr<MediaPacket> MediaRouteStream::Pop()

@@ -325,13 +325,15 @@ bool MediaRouteApplication::OnReceiveBuffer(
 		return false;
 	}
 
-	bool ret = stream->Push(std::move(packet));
-
 	// TODO(SOULK) : Connector(Provider, Transcoder)에서 수신된 데이터에 대한 정보를 바로 처리하기 위해 버퍼의 Indicator 정보를
 	// MainTask에 전달한다. 패킷이 수신되어 처리(재분배)되는 속도가 0.001초 이하의 초저지연으로 동작하나, 효율적인 구조는
 	// 아닌것으로 판단되므로, 향후에 개선이 필요하다
-	_indicator.push(std::make_shared<BufferIndicator>(stream_info->GetId()));
-
+	bool ret = stream->Push(std::move(packet));
+	if(ret == true)
+	{
+		_indicator.push(std::make_shared<BufferIndicator>(stream_info->GetId()));
+	}
+	
 	return ret;
 }
 
@@ -357,9 +359,6 @@ void MediaRouteApplication::GarbageCollector()
 		if (connector_type == MediaRouteApplicationConnector::ConnectorType::Provider)
 		{
 			double diff_time = difftime(curr_time, stream->getLastReceivedTime());
-
-			// TODO(soulk) 삭제 Treshold 값은 설정서 읽어오도록 수정해야함.
-			// Observer 에게 삭제 메세지를 전달하는 구조도 비효율적임. 레이스컨디션 발생 가능성 있음.
 
 			// Streams that do not receive data are automatically deleted after 30 seconds.
 			if (diff_time > TIMEOUT_STREAM_ALIVE)
@@ -424,9 +423,7 @@ void MediaRouteApplication::MainTask()
 			continue;
 		}
 
-		// cur_buf : std::shared_ptr<MediaPacket>
-		auto media_packet = stream->Pop();
-		if (media_packet)
+		while(auto media_packet = stream->Pop())
 		{
 			MediaRouteApplicationConnector::ConnectorType connector_type = stream->GetConnectorType();
 
@@ -435,25 +432,13 @@ void MediaRouteApplication::MainTask()
 			// Find Media Track
 			auto media_track = stream_info->GetTrack(media_packet->GetTrackId());
 
-			/*
-			// Transcoder -> MediaRouter -> RelayClient
-			// or
-			// RelayServer -> MediaRouter -> RelayClient
-			if (
-				(connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) ||
-				(connector_type == MediaRouteApplicationConnector::ConnectorType::Relay))
-			{
-				_relay_server->SendMediaPacket(stream, cur_buf.get());
-			}
-			*/
-
 			// Observer(Publisher or Transcoder)에게 MediaBuffer를 전달함.
 			for (const auto &observer : _observers)
 			{
 				// Provider -> MediaRouter -> Transcoder
 				if (
-					(connector_type == MediaRouteApplicationConnector::ConnectorType::Provider) &&
-					(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder))
+				    (connector_type == MediaRouteApplicationConnector::ConnectorType::Provider) &&
+				    (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder))
 				{
 					// TODO(soulk): Application Observer의 타입에 따라서 호출하는 함수를 다르게 한다
 					auto media_buffer_clone = media_packet->ClonePacket();
@@ -464,8 +449,8 @@ void MediaRouteApplication::MainTask()
 				// or
 				// RelayClient -> MediaRouter -> Publisher
 				else if (((connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) ||
-						(connector_type == MediaRouteApplicationConnector::ConnectorType::Relay)) &&
-					(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
+				          (connector_type == MediaRouteApplicationConnector::ConnectorType::Relay)) &&
+				         (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
 				{
 					if (media_packet->GetMediaType() == MediaType::Video)
 					{

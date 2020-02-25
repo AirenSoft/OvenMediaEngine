@@ -243,6 +243,7 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 		return false;
 	}
 
+
 	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
 	if(stream_metrics != nullptr)
 	{
@@ -261,9 +262,10 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 
 	// TODO: It is currently fixed to h264.
 	// Depending on the codec, the bitstream conversion must be processed.
+
+
 	int64_t cts = 0;
 	stream->ConvertToVideoData( new_data, cts);
-
 	if(new_data->GetLength() <= 0)
 	{
 		return true;
@@ -272,8 +274,8 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 	int64_t dts = timestamp;
 	int64_t pts = dts + cts;
 
-	//logte("video.pts=%10lld", pts);
-
+	// logte("timestamp = %lld, video.pts=%10lld, scale=%f, size : %d", timestamp, pts, stream->GetVideoTimestampScale(), data->GetLength());
+	// logte("Video timestamp = %lld, pts = %lld, dts = %lld, size : %d, duration : %lld", timestamp, pts, dts, data->GetLength(), duration);
 	// Change the timebase specification: 1/1000 -> 1/90000
 	dts *= stream->GetVideoTimestampScale();
 	pts *= stream->GetVideoTimestampScale();
@@ -286,6 +288,7 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 											  dts, // DTS
 											  // RTMP doesn't know frame's duration
 											  -1LL,
+											  // duration,
 											  frame_type == RtmpFrameType::VideoIFrame ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
 
 	application->SendFrame(stream, std::move(pbuf));
@@ -314,6 +317,7 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 		return false;
 	}
 
+
 	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
 	if(stream_metrics != nullptr)
 	{
@@ -326,19 +330,18 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 
 	// TODO: It is currently fixed to AAC.
 	// Depending on the codec, the bitstream conversion must be processed.
-	stream->ConvertToAudioData(new_data);
-
-	if(new_data->GetLength() <= 0)
+	if(stream->ConvertToAudioData(new_data) == 0)
 	{
 		return true;
 	}
 
 	// Change the timebase specification: 1/1000 -> 1/Samplerate
-	int64_t dts = timestamp;
 	int64_t pts = timestamp;
-	// logte("audio.pts=%10lld, scale=%f", pts, stream->GetAudioTimestampScale());
-	dts *= stream->GetAudioTimestampScale();
+	int64_t dts = timestamp;
+	// logte("timestamp = %lld, audio.pts=%10lld, scale=%f, size : %d", timestamp, dts, stream->GetAudioTimestampScale(), data->GetLength());
+	// logte("Audio timestamp = %lld, pts = %lld, dts = %lld, size : %d, duration : %lld", timestamp, pts, dts, data->GetLength(), duration);
 	pts *= stream->GetAudioTimestampScale();
+	dts *= stream->GetAudioTimestampScale();
 
 	auto pbuf = std::make_shared<MediaPacket>(MediaType::Audio,
 											  1,

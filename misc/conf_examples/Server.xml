@@ -92,6 +92,16 @@
 								<Framerate>30</Framerate>
 							</Video>
 						</Encode>
+						<Encode>
+							<Name>BYPASS</Name>
+							<!-- If you want to use bypass. For browser compatibility, the h264.bframe option must be fixed to 0.-->
+							<Video>
+								<Bypass>true</Bypass>
+							</Video>							
+							<Audio>
+								<Bypass>true</Bypass>
+							</Audio>
+						</Encode>						
 					</Encodes>
 					<Streams>
 						<Stream>
