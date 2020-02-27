@@ -94,7 +94,7 @@ namespace mon
 		else
 		{
 			// Sending a connection event to application only if it hasn't origin stream to prevent double sum. 
-			GetApplicationMetrics()->OnSessionConnected(type);
+			GetApplicationMetrics()->OnSessionDisconnected(type);
 		}
 
 		CommonMetrics::OnSessionDisconnected(type);

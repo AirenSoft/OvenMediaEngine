@@ -195,7 +195,9 @@ protected:
 	~SegmentPublisher() override;
 
 	virtual bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager) = 0;
-	bool HandleSignedUrl(const ov::String &app_name, const ov::String &stream_name, const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url);
+	bool HandleSignedUrl(const ov::String &app_name, const ov::String &stream_name, 
+						const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
+						std::shared_ptr<PlaylistRequestInfo> &request_info);
 
 	//--------------------------------------------------------------------
 	// Implementation of SegmentStreamObserver
@@ -216,7 +218,8 @@ private:
 	bool		StartSessionTableManager();
 	void 		RequestTableUpdateThread();
 
-	void		UpdatePlaylistRequestInfo(const PlaylistRequestInfo &info);
+	void		UpdatePlaylistRequestInfo(const std::shared_ptr<PlaylistRequestInfo> &info);
+	const std::shared_ptr<PlaylistRequestInfo>	GetSessionRequestInfoBySegmentRequestInfo(const SegmentRequestInfo &info);
 	bool		IsAuthorizedSession(const PlaylistRequestInfo &info);
 
 	void		UpdateSegmentRequestInfo(const SegmentRequestInfo &info);

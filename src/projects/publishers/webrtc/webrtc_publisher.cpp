@@ -167,8 +167,7 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 		log.AppendFormat("\t-\t-\t-");
 	}
 
-	stat_log("%s", log.CStr());
-	logti("%s", log.CStr());
+	stat_log(STAT_LOG_WEBRTC_EDGE, "%s", log.CStr());
 }
 
 //====================================================================================================

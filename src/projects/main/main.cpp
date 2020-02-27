@@ -50,9 +50,35 @@
 static void PrintBanner();
 static bool Initialize(int argc, char *argv[], ParseOption *parse_option);
 static bool Uninitialize();
-
+#include <modules/signed_url/signed_url.h>
 int main(int argc, char *argv[])
 {
+	SignedUrl sign;
+	ov::String plain_token;
+	ov::Data encrypted_data;
+
+	auto mseconds = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	plain_token.AppendFormat("%s,%s,%s,%llu,%llu", 
+					"http://127.0.0.1:8090/rtsp_live/stream/playlist.m3u8?rtspURI=rtsp%3A%2F%2F203.67.18.25%3A554%2F0%2F", // url
+					"0",	// ip
+					"fdjksafj19283913921cdfjfas",	// session id
+					mseconds + 30000,	// token expired ms
+					0);	// stream expired ms
+
+	sign.Encrypt_DES_ECB_PKCS5("tview_hlskey", *plain_token.ToData(false), encrypted_data);
+	ov::String auth_token = ov::Base64::Encode(encrypted_data);
+	
+	logti("authtoken : %s", auth_token.CStr());
+
+	auto urlencoded_authtoken = ov::Url::Encode(auth_token);
+
+	logti("url encoded authtoken : %s", urlencoded_authtoken.CStr());
+
+	ov::String url;
+	url.AppendFormat("%s%s", "http://127.0.0.1:8090/rtsp_live/stream/playlist.m3u8?rtspURI=rtsp%3A%2F%2F203.67.18.25%3A554%2F0%2F&authtoken=", urlencoded_authtoken.CStr());
+
+	logti("url : %s", url.CStr());
+
 	ParseOption parse_option;
 
 	if (Initialize(argc, argv, &parse_option) == false)

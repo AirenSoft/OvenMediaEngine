@@ -136,7 +136,13 @@ namespace cfg
 
 		auto log_path = logger_loader->GetLogPath();
 		ov_log_set_path(log_path.c_str());
-		ov_stat_log_set_path(log_path.c_str());
+
+		// Init stat log
+		//TODO(Getroot): This is temporary code for testing. This will change to more elegant code in the future.
+		ov_stat_log_set_path(STAT_LOG_WEBRTC_EDGE, log_path.c_str());
+		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_SESSION, log_path.c_str());
+		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_REQUEST, log_path.c_str());
+		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_VIEWERS, log_path.c_str());
 
 		logti("Trying to set logfile in directory... (%s)", log_path.c_str());
 

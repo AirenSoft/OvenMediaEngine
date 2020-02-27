@@ -9,7 +9,7 @@
 #include "host_metrics.h"
 
 #define HostMetrics(info)			mon::Monitoring::GetInstance()->GetHostMetrics(info);
-#define ApplicationMetrics(info)	mon::Monitoring::GetInstance()->GetAplicationMetrics(info);
+#define ApplicationMetrics(info)	mon::Monitoring::GetInstance()->GetApplicationMetrics(info);
 #define StreamMetrics(info)			mon::Monitoring::GetInstance()->GetStreamMetrics(info);
 
 namespace mon

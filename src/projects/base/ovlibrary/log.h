@@ -51,6 +51,14 @@ typedef enum OVLogLevel
 		OVLogLevelCritical
 } OVLogLevel;
 
+typedef enum StatLogType
+{
+	STAT_LOG_WEBRTC_EDGE,
+	STAT_LOG_HLS_EDGE_SESSION,
+	STAT_LOG_HLS_EDGE_REQUEST,
+	STAT_LOG_HLS_EDGE_VIEWERS
+} StatLogType;
+
 #if DEBUG
 #   define logd(tag, format, ...)                     ov_log_internal(OVLogLevelDebug,          tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
 #else
@@ -74,7 +82,7 @@ constexpr void ov_log_dummy(...)
 #define logte(format, ...)                            loge(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
 #define logtc(format, ...)                            logc(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
 
-#define stat_log(format, ...)                    ov_stat_log_internal(OVLogLevelInformation,    "STAT", __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
+#define stat_log(type, format, ...)                         ov_stat_log_internal(type, OVLogLevelInformation,    "STAT", __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
 
 /// 모든 log에 1차적으로 적용되는 filter 규칙
 ///
@@ -100,8 +108,8 @@ void ov_log_set_enable(const char *tag_regex, OVLogLevel level, bool is_enabled)
 void ov_log_internal(OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, ...);
 void ov_log_set_path(const char *log_path);
 
-void ov_stat_log_internal(OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, ...);
-void ov_stat_log_set_path(const char *log_path);
+void ov_stat_log_internal(StatLogType type, OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, ...);
+void ov_stat_log_set_path(StatLogType type, const char *log_path);
 
 
 #ifdef __cplusplus

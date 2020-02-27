@@ -73,7 +73,9 @@ namespace ov
         std::tm localTime {};
         ::localtime_r(&time, &localTime);
 
-        if (_last_day != localTime.tm_mday)
+        // At the end of the day, change file name to back it up 
+        // ovenmediaengine.log.YYmmDD
+        if (_last_day != localTime.tm_mday + 1)
         {
             if (_last_day)
             {
