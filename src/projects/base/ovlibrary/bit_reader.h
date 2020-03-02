@@ -27,7 +27,7 @@ public:
         }
         value = 0;
         if (bits == 0) return 0;
-        if ((bits + 7) / 8 > capacity_ - (position_ - buffer_)) return false;
+        if (static_cast<size_t>((bits + 7) / 8) > static_cast<size_t>(capacity_ - (position_ - buffer_))) return false;
         while (bits)
         {
             const uint8_t bits_from_this_byte = std::min(bits > 8 ? 8 : bits % 8, 8 - bit_offset_);

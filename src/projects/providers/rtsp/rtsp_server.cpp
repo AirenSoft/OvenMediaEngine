@@ -420,7 +420,6 @@ bool RtspServer::OnAudioData(uint32_t stream_id,
 int32_t operator-(const struct timeval &first, const struct timeval &second)
 {
     auto seconds = first.tv_sec - second.tv_sec;
-    decltype(timeval::tv_usec) milliseconds = 0;
     uint32_t first_usec = first.tv_usec;
     if (first_usec < second.tv_usec)
     {
