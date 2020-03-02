@@ -40,4 +40,5 @@ services:
     - OME_DASH_STREAM_PORT=80
     - OME_SIGNALLING_PORT=3333
     - OME_ICE_CANDIDATES=*:10000-10005/udp
+    - SIGNED_URL_CRYPTO_KEY=signed_url_key
     command: /opt/ovenmediaengine/bin/OvenMediaEngine -c edge_conf

@@ -54,6 +54,11 @@
 				-->
 			</Domain>
 
+			<SignedURL>
+                <CryptoKey>${env:SIGNED_URL_CRYPTO_KEY:}</CryptoKey>
+                <QueryStringKey>${env:SIGNED_URL_QUERY_KEY:authtoken}</QueryStringKey>
+            </SignedURL>
+
 			<!-- Settings for ProxyPass (It can specify origin for each path) -->
 			<Origins>
                 <!--

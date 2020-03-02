@@ -459,7 +459,7 @@ bool SegmentPublisher::HandleSignedUrl(const ov::String &app_name, const ov::Str
 
 		// Handle Signed URL if needed
 		auto &signed_url_config = vhost_item.GetSignedUrl();
-		if (!signed_url_config.IsParsed())
+		if (!signed_url_config.IsParsed() || signed_url_config.GetCryptoKey().IsEmpty())
 		{
 			// The vhost doesn't use the signed url feature.
 			return true;
