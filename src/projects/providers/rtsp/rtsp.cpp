@@ -23,7 +23,7 @@ bool ExtractPath(const std::string_view &rtsp_uri, std::string_view &rtsp_path)
 {
     // With a properly formatted uri we should skip 3 / to get to the application name
     size_t skips = 3;
-    auto delimiter_position = 0;
+    size_t delimiter_position = 0;
     while (skips > 0)
     {
         delimiter_position = rtsp_uri.find('/', delimiter_position + 1);

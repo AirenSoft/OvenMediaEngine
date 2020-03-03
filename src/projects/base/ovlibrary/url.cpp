@@ -63,7 +63,7 @@ namespace ov
 		auto result = result_string.GetBuffer();
 		size_t result_index = 0;
 		char place_holder[3];
-		place_holder[3] = '\0';
+		place_holder[2] = '\0';
 
 		for (size_t index = 0; index < length;)
 		{
