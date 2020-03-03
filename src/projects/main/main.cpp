@@ -48,17 +48,29 @@
 	}
 
 static void PrintBanner();
-static bool Initialize(int argc, char *argv[], ParseOption *parse_option);
+static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_option);
 static bool Uninitialize();
 
 int main(int argc, char *argv[])
 {
 	ParseOption parse_option;
 
-	if (Initialize(argc, argv, &parse_option) == false)
+	auto result = Initialize(argc, argv, &parse_option);
+
+	if (result == ov::Daemon::State::PARENT_SUCCESS)
 	{
+		return 0;
+	}
+	else if (result == ov::Daemon::State::CHILD_SUCCESS)
+	{
+		// continue
+	}
+	else
+	{
+		// false
 		return 1;
 	}
+	
 
 	PrintBanner();
 
@@ -222,24 +234,24 @@ static void PrintBanner()
 	logti("    Configuration: %s", GetOpenSslConfiguration());
 }
 
-static bool Initialize(int argc, char *argv[], ParseOption *parse_option)
+static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_option)
 {
 	if (TryParseOption(argc, argv, parse_option) == false)
 	{
-		return false;
+		return ov::Daemon::State::PARENT_FAIL;
 	}
 
 	if (parse_option->help)
 	{
 		::printf("Usage: %s [OPTION]...\n", argv[0]);
 		::printf("    -c <path>             Specify a path of config files\n");
-		return false;
+		return ov::Daemon::State::PARENT_FAIL;
 	}
 
 	if (parse_option->version)
 	{
 		::printf("OvenMediaEngine v%s\n", OME_VERSION);
-		return false;
+		return ov::Daemon::State::PARENT_FAIL;
 	}
 
 	// Daemonize OME with start_service argument
@@ -249,7 +261,7 @@ static bool Initialize(int argc, char *argv[], ParseOption *parse_option)
 
 		if (state == ov::Daemon::State::PARENT_SUCCESS)
 		{
-			return false;
+			return state;
 		}
 		else if (state == ov::Daemon::State::CHILD_SUCCESS)
 		{
@@ -258,14 +270,14 @@ static bool Initialize(int argc, char *argv[], ParseOption *parse_option)
 		else
 		{
 			logte("An error occurred while creating daemon");
-			return false;
+			return state;
 		}
 	}
 
 	if (InitializeSignals() == false)
 	{
 		logte("Could not initialize signals");
-		return false;
+		return ov::Daemon::State::CHILD_FAIL;
 	}
 
 	ov::LogWrite::Initialize(parse_option->start_service);
@@ -273,10 +285,10 @@ static bool Initialize(int argc, char *argv[], ParseOption *parse_option)
 	if (cfg::ConfigManager::Instance()->LoadConfigs(parse_option->config_path) == false)
 	{
 		logte("An error occurred while load config");
-		return false;
+		return ov::Daemon::State::CHILD_FAIL;
 	}
 
-	return true;
+	return ov::Daemon::State::CHILD_SUCCESS;
 }
 
 static bool Uninitialize()
