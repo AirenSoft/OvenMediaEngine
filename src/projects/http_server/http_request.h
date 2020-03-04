@@ -21,16 +21,6 @@ public:
 	HttpRequest(std::shared_ptr<HttpClient> client, std::shared_ptr<HttpRequestInterceptor> interceptor);
 	~HttpRequest() override = default;
 
-	std::shared_ptr<const HttpClient> GetHttpClient() const
-	{
-		return _client;
-	}
-
-	const std::shared_ptr<HttpClient> &GetHttpClient()
-	{
-		return _client;
-	}
-
 	/// HttpRequest 객체 초기화를 위해, client에서 보낸 데이터를 처리함
 	///
 	/// @param data 수신한 데이터

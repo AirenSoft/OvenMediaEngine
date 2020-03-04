@@ -281,6 +281,8 @@ void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 			logtw("Interceptor does not exists for HTTP client %p", client.get());
 		}
 
+		client->Reset();
+
 		_client_list.erase(client_iterator);
 	}
 	else

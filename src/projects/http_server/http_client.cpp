@@ -127,3 +127,11 @@ bool HttpClient::Close()
 
 	return _remote->Close();
 }
+
+bool HttpClient::Reset()
+{
+	_request = nullptr;
+	_response = nullptr;
+
+	return true;
+}

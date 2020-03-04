@@ -21,16 +21,6 @@ public:
 	HttpResponse(std::shared_ptr<HttpClient> client);
 	~HttpResponse() override = default;
 
-	std::shared_ptr<const HttpClient> GetHttpClient() const
-	{
-		return _http_client;
-	}
-
-	const std::shared_ptr<HttpClient> &GetHttpClient()
-	{
-		return _http_client;
-	}
-
 	HttpStatusCode GetStatusCode() const
 	{
 		return _status_code;

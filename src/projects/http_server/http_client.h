@@ -49,6 +49,8 @@ public:
 
 protected:
 	bool Prepare(const std::shared_ptr<HttpClient> &http_client, const std::shared_ptr<ov::ClientSocket> &socket, std::shared_ptr<HttpRequestInterceptor> interceptor);
+	
+	bool Reset();
 
 	std::shared_ptr<HttpServer> _server = nullptr;
 
