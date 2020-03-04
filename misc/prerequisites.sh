@@ -168,7 +168,7 @@ install_base_ubuntu()
 
 install_base_fedora()
 {
-    sudo yum install -y gcc-c++ make nasm autoconf libtool zlib-devel tcl cmake
+    sudo yum install -y gcc-c++ make nasm autoconf libtool zlib-devel tcl cmake bc
 }
 
 install_base_centos()
@@ -178,7 +178,7 @@ install_base_centos()
     # centos-release-scl should be installed before installing devtoolset-7
     sudo yum install -y centos-release-scl
     sudo yum install -y bc gcc-c++ cmake nasm autoconf libtool glibc-static tcl bzip2 zlib-devel devtoolset-7
-    scl enable devtoolset-7 bash
+    source scl_source enable devtoolset-7
 }
 
 install_base_macos()
