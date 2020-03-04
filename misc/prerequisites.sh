@@ -19,8 +19,16 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     OSVERSION=$(sw_vers -productVersion)
 else
     NCPU=$(nproc)
-    OSNAME=$(cat /etc/*-release | grep "^NAME" | tr -d "\"" | cut -d"=" -f2)
-    OSVERSION=$(cat /etc/*-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f1 | awk '{print  $1}')
+
+    # CentOS, Fedora
+    if [ -f /etc/redhat-release ]; then
+        OSNAME=$(cat /etc/redhat-release |awk '{print $1}')
+        OSVERSION=$(cat /etc/redhat-release |sed s/.*release\ // |sed s/\ .*// | cut -d"." -f1)
+    # Ubuntu
+    elif [ -f /etc/os-release ]; then
+        OSNAME=$(cat /etc/os-release | grep "^NAME" | tr -d "\"" | cut -d"=" -f2)
+        OSVERSION=$(cat /etc/os-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f1 | awk '{print  $1}')
+    fi
 fi
 MAKEFLAGS="${MAKEFLAGS} -j${NCPU}"
 CURRENT=$(pwd)
@@ -169,8 +177,8 @@ install_base_centos()
     sudo curl -so /etc/yum.repos.d/nasm.repo https://www.nasm.us/nasm.repo
     # centos-release-scl should be installed before installing devtoolset-7
     sudo yum install -y centos-release-scl
-    sudo yum install -y bc gcc-c++ cmake nasm autoconf libtool glibc-static tcl bzip2 zlib-devel devtoolset-7
-    source scl_source enable devtoolset-7
+    sudo yum install -y bc gcc-c++ cmake nasm autoconf libtool glibc-static tcl bzip2 zlib-devel devtoolset-8
+    source scl_source enable devtoolset-8
 }
 
 install_base_macos()
@@ -208,15 +216,15 @@ fail_exit()
 
 check_version()
 {
-    if [[ "x${OSNAME}" == "xUbuntu" && "x${OSVERSION}" != "x18" ]]; then
+    if [[ "${OSNAME}" == "Ubuntu" && "${OSVERSION}" != "18" ]]; then
         proceed_yn
     fi
 
-    if [[ "x${OSNAME}" == "xCentOS Linux" && "x${OSVERSION}" != "x7" ]]; then
+    if [[ "${OSNAME}" == "CentOS" && "${OSVERSION}" != "7" ]]; then
         proceed_yn
     fi
 
-    if [[ "x${OSNAME}" == "xFedora" && "x${OSVERSION}" != "x28" ]]; then
+    if [[ "${OSNAME}" == "Fedora" && "${OSVERSION}" != "28" ]]; then
         proceed_yn
     fi
 }
@@ -225,23 +233,42 @@ proceed_yn()
 {
     read -p "This program [$0] is tested on [Ubuntu 18, CentOS 7, Fedora 28]
 Do you want to continue [y/N] ? " ANS
-    if [[ "x${ANS}" != "xy" && "x$ANS" != "xyes" ]]; then
+    if [[ "${ANS}" != "y" && "$ANS" != "yes" ]]; then
         cd ${CURRENT}
         exit 1
     fi
 }
 
-if [ "x${OSNAME}" == "xUbuntu" ]; then
+for i in "$@"
+do
+case $i in
+    -o=*|--os=*)
+    OSNAME="${i#*=}"
+    OSVERSION=""
+    shift
+    ;;
+    -a|--all)
+    WITH_OME="true"
+    shift
+    ;;
+    *)
+            # unknown option
+    ;;
+esac
+done
+
+if [ "${OSNAME}" == "Ubuntu" ]; then
     check_version
     install_base_ubuntu
-elif  [ "x${OSNAME}" == "xCentOS Linux" ]; then
+elif  [ "${OSNAME}" == "CentOS" ]; then
     check_version
     install_base_centos
-elif  [ "x${OSNAME}" == "xFedora" ]; then
+elif  [ "${OSNAME}" == "Fedora" ]; then
     check_version
     install_base_fedora
-elif  [ "x${OSNAME}" == "xMac OS X" ]; then
+elif  [ "${OSNAME}" == "Mac OS X" ]; then
     install_base_macos
+    echo "mac"
 else
     echo "This program [$0] does not support your operating system [${OSNAME}]"
     echo "Please refer to manual installation page"
@@ -256,6 +283,8 @@ install_libvpx
 install_fdk_aac
 install_ffmpeg
 
-if [ "with_ome" == "$1" ]; then
+echo ${OSNAME} ${OSVERSION}
+
+if [ "${WITH_OME}" == "true" ]; then
     install_ovenmediaengine
 fi
