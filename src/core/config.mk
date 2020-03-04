@@ -38,7 +38,7 @@ CONFIG_PKG_PATHS := /opt/ovenmediaengine/lib/pkgconfig:/opt/ovenmediaengine/lib6
 ifeq (${OS_VERSION},darwin)
     CONFIG_CORE_COUNT := $(shell sysctl -n hw.ncpu)
 else
-	CONFIG_CORE_COUNT := $(shell nproc)
+    CONFIG_CORE_COUNT := $(shell nproc)
 endif
 
 CONFIG_TARGET_COLOR := $(ANSI_GREEN)
