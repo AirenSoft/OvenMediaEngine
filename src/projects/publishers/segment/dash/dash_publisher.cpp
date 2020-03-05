@@ -56,6 +56,8 @@ bool DashPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
 
 	_stream_server = stream_server;
 
+	logti("DASH Publisher is listening on %s", address.ToString().CStr());
+
 	return Publisher::Start();
 }
 

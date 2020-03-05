@@ -19,8 +19,8 @@
 #include <config/config_manager.h>
 
 #include <media_router/media_router.h>
+#include <monitoring/monitoring.h>
 #include <orchestrator/orchestrator.h>
-#include <monitoring/monitoring.h>	
 #include <providers/providers.h>
 #include <publishers/publishers.h>
 #include <transcode/transcoder.h>
@@ -28,12 +28,16 @@
 
 #define INIT_MODULE(variable, name, create)                                         \
 	logti("Trying to create a module " name " for host [%s]...", host_name.CStr()); \
+                                                                                    \
 	auto variable = create;                                                         \
+                                                                                    \
 	if (variable == nullptr)                                                        \
 	{                                                                               \
 		initialized = false;                                                        \
 		break;                                                                      \
-	}
+	}                                                                               \
+                                                                                    \
+	initialized = initialized && orchestrator->RegisterModule(variable)
 
 #define INIT_EXTERNAL_MODULE(name, func)                                          \
 	{                                                                             \
@@ -70,7 +74,6 @@ int main(int argc, char *argv[])
 		// false
 		return 1;
 	}
-	
 
 	PrintBanner();
 
@@ -140,37 +143,24 @@ int main(int argc, char *argv[])
 					//--------------------------------------------------------------------
 					// Create the modules
 					//--------------------------------------------------------------------
+					// Initialize MediaRouter (MediaRouter must be registered first)
 					INIT_MODULE(media_router, "MediaRouter", MediaRouter::Create());
-					INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
+
+					// Initialize Providers
 					INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
 					INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
 					INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 					INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
+
+					// Initialize Transcoder
+					INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
+
+					// Initialize Publishers
 					INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
 					INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(http_server_manager, *server_config, host_info, media_router));
 					INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(http_server_manager, *server_config, host_info, media_router));
 					INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(http_server_manager, *server_config, host_info, media_router));
 					INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, host_info, media_router));
-
-					//--------------------------------------------------------------------
-					// Register modules to Orchestrator
-					//--------------------------------------------------------------------
-					// Currently, MediaRouter must be registered first
-					// Register media router
-					initialized = initialized && orchestrator->RegisterModule(media_router);
-					// Register providers
-					initialized = initialized && orchestrator->RegisterModule(rtmp_provider);
-					initialized = initialized && orchestrator->RegisterModule(ovt_provider);
-					initialized = initialized && orchestrator->RegisterModule(rtspc_provider);
-					initialized = initialized && orchestrator->RegisterModule(rtsp_provider);
-					// Register transcoder
-					initialized = initialized && orchestrator->RegisterModule(transcoder);
-					// Register publishers
-					initialized = initialized && orchestrator->RegisterModule(webrtc_publisher);
-					initialized = initialized && orchestrator->RegisterModule(hls_publisher);
-					initialized = initialized && orchestrator->RegisterModule(dash_publisher);
-					initialized = initialized && orchestrator->RegisterModule(lldash_publisher);
-					initialized = initialized && orchestrator->RegisterModule(ovt_publisher);
 				} while (false);
 
 				if (initialized)

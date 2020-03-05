@@ -12,7 +12,7 @@ namespace pub
 
 	bool Publisher::Start()
 	{
-		logti("Trying to start publisher %d", GetPublisherType());
+		logtd("Trying to start %s publisher (%d)", GetPublisherName(), GetPublisherType());
 
 		return true;
 	}
