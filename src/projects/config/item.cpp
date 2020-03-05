@@ -455,6 +455,9 @@ namespace cfg
 										return ParseResult::Error;
 									}
 
+									// Sort by name
+									std::sort(file_list.begin(), file_list.end());
+
 									auto base_path = ov::PathManager::ExtractPath(base_file_name);
 
 									for (auto file : file_list)
