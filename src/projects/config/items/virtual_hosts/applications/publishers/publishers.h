@@ -24,7 +24,7 @@ namespace cfg
 				&_rtmp_publisher,
 				&_hls_publisher,
 				&_dash_publisher,
-				&_cmaf_publisher,
+				&_ll_dash_publisher,
 				&_webrtc_publisher};
 		}
 
@@ -32,7 +32,7 @@ namespace cfg
 		CFG_DECLARE_REF_GETTER_OF(GetRtmpPublisher, _rtmp_publisher)
 		CFG_DECLARE_REF_GETTER_OF(GetHlsPublisher, _hls_publisher)
 		CFG_DECLARE_REF_GETTER_OF(GetDashPublisher, _dash_publisher)
-		CFG_DECLARE_REF_GETTER_OF(GetCmafPublisher, _cmaf_publisher)
+		CFG_DECLARE_REF_GETTER_OF(GetLlDashPublisher, _ll_dash_publisher)
 		CFG_DECLARE_REF_GETTER_OF(GetWebrtcPublisher, _webrtc_publisher)
 
 	protected:
@@ -43,7 +43,7 @@ namespace cfg
 			RegisterValue<Optional>("RTMP", &_rtmp_publisher);
 			RegisterValue<Optional>("HLS", &_hls_publisher);
 			RegisterValue<Optional>("DASH", &_dash_publisher);
-			RegisterValue<Optional>("CMAF", &_cmaf_publisher);
+			RegisterValue<Optional>("LLDASH", &_ll_dash_publisher);
 			RegisterValue<Optional>("WebRTC", &_webrtc_publisher);
 		}
 
@@ -52,7 +52,7 @@ namespace cfg
 		RtmpPublisher _rtmp_publisher;
 		HlsPublisher _hls_publisher;
 		DashPublisher _dash_publisher;
-		CmafPublisher _cmaf_publisher;
+		LlDashPublisher _ll_dash_publisher;
 		WebrtcPublisher _webrtc_publisher;
 	};
 }  // namespace cfg

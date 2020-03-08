@@ -116,15 +116,15 @@ namespace ov
 			switch(type)
 			{
 				case PublisherType::Webrtc:
-					return "Webrtc";
+					return "WebRTC";
 				case PublisherType::Rtmp:
-					return "Rtmp";
+					return "RTMP";
 				case PublisherType::Hls:
-					return "Hls";
+					return "HLS";
 				case PublisherType::Dash:
-					return "Dash";
-				case PublisherType::Cmaf:
-					return "Cmaf";
+					return "DASH";
+				case PublisherType::LlDash:
+					return "LL-DASH";
 				case PublisherType::Ovt:
 					return "Ovt";
 				case PublisherType::Unknown:

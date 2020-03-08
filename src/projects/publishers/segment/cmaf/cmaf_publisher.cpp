@@ -56,7 +56,7 @@ bool CmafPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_serve
 
 	_stream_server = stream_server;
 
-	logti("CMAF Publisher is listening on %s", address.ToString().CStr());
+	logti("%s Publisher is listening on %s", GetPublisherName(), address.ToString().CStr());
 
 	return Publisher::Start();
 }

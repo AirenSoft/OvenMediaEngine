@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 	const bool is_service = parse_option.start_service;
 
 	std::shared_ptr<cfg::Server> server_config = cfg::ConfigManager::Instance()->GetServer();
-	std::vector<cfg::VirtualHost> hosts = server_config->GetVirtualHostList();
+	auto &hosts = server_config->GetVirtualHostList();
 
 	bool initialized = false;
 	std::vector<std::shared_ptr<WebConsoleServer>> web_console_servers;
