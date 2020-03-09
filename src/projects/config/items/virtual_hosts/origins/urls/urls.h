@@ -3,28 +3,23 @@
 //  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
-//  Copyright (c) 2019 AirenSoft. All rights reserved.
+//  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
-#include "urls/urls.h"
-
 namespace cfg
 {
-	struct Pass : public Item
+	struct Urls : public Item
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetScheme, _scheme)
-		CFG_DECLARE_REF_GETTER_OF(GetUrlList, _urls.GetUrlList())
+		CFG_DECLARE_REF_GETTER_OF(GetUrlList, _url_list)
 
 	protected:
 		void MakeParseList() override
 		{
-			RegisterValue("Scheme", &_scheme);
-			RegisterValue("Urls", &_urls);
+			RegisterValue("Url", &_url_list);
 		}
 
-		ov::String _scheme;
-		Urls _urls;
+		std::vector<Url> _url_list;
 	};
 }  // namespace cfg

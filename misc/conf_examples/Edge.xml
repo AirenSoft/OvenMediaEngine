@@ -66,14 +66,18 @@
 					<Location>/app/stream</Location>
 					<Pass>
 						<Scheme>ovt</Scheme>
-						<Url>origin.com:9000/app/stream_720p</Url>
+						<Urls>
+							<Url>origin.com:9000/app/stream_720p</Url>
+						</Urls>
 					</Pass>
 				</Origin>
 				<Origin>
 					<Location>/app/</Location>
 					<Pass>
 						<Scheme>ovt</Scheme>
-						<Url>origin.com:9000/app/</Url>
+						<Urls>
+							<Url>origin.com:9000/app/</Url>
+						</Urls>
 					</Pass>
 				</Origin>
 				-->
@@ -81,7 +85,9 @@
 					<Location>/</Location>
 					<Pass>
 						<Scheme>ovt</Scheme>
-						<Url>${env:DEFAULT_ORIGIN_SERVER:}:${env:DEFAULT_ORIGIN_PORT:9000}/</Url>
+						<Urls>
+							<Url>${env:DEFAULT_ORIGIN_SERVER:}:${env:DEFAULT_ORIGIN_PORT:9000}/</Url>
+						</Urls>
 					</Pass>
 				</Origin>
 			</Origins>
