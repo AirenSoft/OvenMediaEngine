@@ -24,6 +24,8 @@ public:
 
 	virtual ~Packetizer() = default;
 
+	virtual const char *GetPacketizerName() const = 0;
+
 	virtual bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame) = 0;
 	virtual bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame) = 0;
 

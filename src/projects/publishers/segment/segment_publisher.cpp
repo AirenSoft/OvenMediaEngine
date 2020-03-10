@@ -35,7 +35,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 										 const ov::String &file_name,
 										 ov::String &play_list)
 {
-	auto &request = client->GetRequest();
+	auto request = client->GetRequest();
 	auto uri = request->GetUri();
 	auto parsed_url = ov::Url::Parse(uri.CStr(), true);
 
@@ -44,6 +44,12 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 		logte("Could not parse the url: %s", uri.CStr());
 		return false;
 	}
+
+	// TODO(dimiden): This temporary code. Fix me later
+    if (request == nullptr)
+    {
+        return false;
+    }
 
 	// These names are used for testing purposes
 	// TODO(dimiden): Need to delete this code after testing

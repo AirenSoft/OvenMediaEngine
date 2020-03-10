@@ -31,6 +31,11 @@ public:
 				   uint32_t segment_count, uint32_t segment_duration,
 				   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track);
 
+	virtual const char *GetPacketizerName() const
+	{
+		return "DASH";
+	}
+
 	static DashFileType GetFileType(const ov::String &file_name);
 
 	//--------------------------------------------------------------------

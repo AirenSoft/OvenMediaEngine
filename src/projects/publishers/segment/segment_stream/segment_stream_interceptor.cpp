@@ -33,8 +33,14 @@ void SegmentStreamInterceptor::Start(int thread_count, const SegmentProcessHandl
 //====================================================================================================
 HttpInterceptorResult SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
 {
-	auto &request = client->GetRequest();
-	auto &response = client->GetResponse();
+	auto request = client->GetRequest();
+	auto response = client->GetResponse();
+
+	// TODO(dimiden): This temporary code. Fix me later
+    if ((request == nullptr) || (response == nullptr))
+    {
+        return HttpInterceptorResult::Disconnect;
+    }
 	
 	OV_ASSERT2(request->GetContentLength() >= 0);
 

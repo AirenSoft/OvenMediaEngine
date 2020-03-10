@@ -13,7 +13,15 @@
 
 std::shared_ptr<RtcPeerInfo> RtcP2PManager::CreatePeerInfo(peer_id_t id, const std::shared_ptr<WebSocketClient> &ws_client)
 {
-	auto user_agent = ws_client->GetClient()->GetRequest()->GetHeader("USER-AGENT");
+	auto request = ws_client->GetClient()->GetRequest();
+
+	// TODO(dimiden): This temporary code. Fix me later
+	if (request == nullptr)
+	{
+		return nullptr;
+	}
+
+	auto user_agent = request->GetHeader("USER-AGENT");
 	auto peer_info = RtcPeerInfo::FromUserAgent(id, user_agent, ws_client);
 
 	if ((peer_info != nullptr) && IsEnabled())

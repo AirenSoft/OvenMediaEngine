@@ -76,6 +76,15 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 							  const std::shared_ptr<RtcSession> &session,
 							  const RequestStreamResult &result)
 {
+	auto remote = ws_client->GetClient()->GetRemote();
+	auto request = ws_client->GetClient()->GetRequest();
+
+	// TODO(dimiden): This temporary code. Fix me later
+	if ((remote == nullptr) || (request == nullptr))
+	{
+		return;
+	}
+
 	// logging for statistics
 	// server domain yyyy-mm-dd tt:MM:ss url sent_bytes request_time upstream_cache_status http_status client_ip http_user_agent http_referer origin_addr origin_http_status geoip geoip_org http_encoding content_length upstream_connect_time upstream_header_time upstream_response_time
 	// OvenMediaEngine 127.0.0.1       02-2020-08      01:18:21        /app/stream_o   -       -       -       200     127.0.0.1:57233 Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36                -       -       -       -       -       -       -       -
@@ -84,7 +93,7 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 	// Server Name
 	log.AppendFormat("%s", _server_config.GetName().CStr());
 	// Domain
-	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("HOST").Split(":")[0].CStr());
+	log.AppendFormat("\t%s", request->GetHeader("HOST").Split(":")[0].CStr());
 	// Current Time
 	std::time_t t = std::time(nullptr);
 	char mbstr[100];
@@ -97,7 +106,7 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 	std::strftime(mbstr, sizeof(mbstr), "%H:%M:%S", std::localtime(&t));
 	log.AppendFormat("\t%s", mbstr);
 	// Url
-	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetRequestTarget().CStr());
+	log.AppendFormat("\t%s", request->GetRequestTarget().CStr());
 	
 	if(result == RequestStreamResult::transfer_completed && session != nullptr)
 	{
@@ -127,11 +136,11 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 	// http_status : 200 or 404
 	log.AppendFormat("\t%s", stream != nullptr ? "200" : "404");
 	// client_ip
-	log.AppendFormat("\t%s", ws_client->GetClient()->GetRemote()->GetRemoteAddress()->ToString().CStr());
+	log.AppendFormat("\t%s", remote->GetRemoteAddress()->ToString().CStr());
 	// http user agent
-	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("User-Agent").CStr());
+	log.AppendFormat("\t%s", request->GetHeader("User-Agent").CStr());
 	// http referrer
-	log.AppendFormat("\t%s", ws_client->GetClient()->GetRequest()->GetHeader("Referer").CStr());
+	log.AppendFormat("\t%s", request->GetHeader("Referer").CStr());
 	// origin addr
 	// orchestrator->GetUrlListForLocation()
 	

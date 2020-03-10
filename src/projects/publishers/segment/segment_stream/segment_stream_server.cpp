@@ -201,8 +201,15 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 										 const ov::String &request_target,
 										 const ov::String &origin_url)
 {
-	auto &response = client->GetResponse();
+	auto response = client->GetResponse();
+	auto request = client->GetRequest();
 	HttpConnection connetion = HttpConnection::Closed;
+
+	// TODO(dimiden): This temporary code. Fix me later
+    if ((request == nullptr) || (response == nullptr))
+    {
+        return false;
+    }
 
 	do
 	{
@@ -238,7 +245,7 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 		}
 
 
-		auto host_name = client->GetRequest()->GetHeader("HOST").Split(":")[0];
+		auto host_name = request->GetHeader("HOST").Split(":")[0];
 		ov::String internal_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
 
 		connetion = ProcessStreamRequest(client, internal_app_name, stream_name, file_name, file_ext);
