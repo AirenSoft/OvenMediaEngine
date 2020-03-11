@@ -37,7 +37,6 @@
 				<Names>
 					<!--
 						Domain names
-
 						<Name>stream1.airensoft.com</Name>
 						<Name>stream2.airensoft.com</Name>
 						<Name>*.sub.airensoft.com</Name>
@@ -52,7 +51,32 @@
 				</TLS>
 				-->
 			</Domain>
-
+			<!--
+			<Origins>
+			
+				<Origin>
+					<Location>/app/stream</Location>
+					<Pass>
+						<Scheme>ovt</Scheme>
+						<Url>origin.com:9000/app/stream_720p</Url>
+					</Pass>
+				</Origin>
+				<Origin>
+					<Location>/app/</Location>
+					<Pass>
+						<Scheme>ovt</Scheme>
+						<Url>origin.com:9000/app/</Url>
+					</Pass>
+				</Origin>
+				<Origin>
+					<Location>/edge/</Location>
+					<Pass>
+						<Scheme>ovt</Scheme>
+						<Url>origin.com:9000/app/</Url>
+					</Pass>
+				</Origin>
+			</Origins>
+			-->
 			<!-- Settings for applications -->
 			<Applications>
 				<Application>
@@ -131,6 +155,12 @@
 								<Url>*</Url>
 							</CrossDomain>
 						</DASH>
+						<LLDASH>
+							<SegmentDuration>5</SegmentDuration>
+							<CrossDomain>
+								<Url>*</Url>
+							</CrossDomain>
+						</LLDASH>
 						<WebRTC>
 							<Timeout>30000</Timeout>
 						</WebRTC>
