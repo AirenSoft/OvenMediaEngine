@@ -58,21 +58,21 @@
 					<Location>/app/stream</Location>
 					<Pass>
 						<Scheme>ovt</Scheme>
-						<Url>origin.com:9000/app/stream_720p</Url>
+						<Urls><Url>origin.com:9000/app/stream_720p</Url></Urls>
 					</Pass>
 				</Origin>
 				<Origin>
 					<Location>/app/</Location>
 					<Pass>
 						<Scheme>ovt</Scheme>
-						<Url>origin.com:9000/app/</Url>
+						<Urls><Url>origin.com:9000/app/</Url></Urls>
 					</Pass>
 				</Origin>
 				<Origin>
 					<Location>/edge/</Location>
 					<Pass>
 						<Scheme>ovt</Scheme>
-						<Url>origin.com:9000/app/</Url>
+						<Urls><Url>origin.com:9000/app/</Url></Urls>
 					</Pass>
 				</Origin>
 			</Origins>
