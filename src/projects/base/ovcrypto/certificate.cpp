@@ -16,7 +16,7 @@ Certificate::~Certificate()
 	OV_SAFE_FUNC(_pkey, nullptr, EVP_PKEY_free,);
 }
 
-std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String cert_filename, ov::String private_key_filename)
+std::shared_ptr<ov::Error> Certificate::GenerateFromPem(const char *cert_filename, const char *private_key_filename)
 {
 	OV_ASSERT2(_X509 == nullptr);
 	OV_ASSERT2(_pkey == nullptr);
@@ -31,7 +31,7 @@ std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String cert_filename
 	BIO *cert_bio = nullptr;
 	cert_bio = BIO_new(BIO_s_file());
 
-	if(BIO_read_filename(cert_bio, cert_filename.CStr()) <= 0)
+	if(BIO_read_filename(cert_bio, cert_filename) <= 0)
 	{
 		BIO_free(cert_bio);
 		return ov::Error::CreateErrorFromOpenSsl();
@@ -49,7 +49,7 @@ std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String cert_filename
 	BIO *pk_bio = nullptr;
 	pk_bio = BIO_new(BIO_s_file());
 
-	if(BIO_read_filename(pk_bio, private_key_filename.CStr()) <= 0)
+	if(BIO_read_filename(pk_bio, private_key_filename) <= 0)
 	{
 		return ov::Error::CreateErrorFromOpenSsl();
 	}
@@ -66,7 +66,7 @@ std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String cert_filename
 	return nullptr;
 }
 
-std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String filename, bool aux)
+std::shared_ptr<ov::Error> Certificate::GenerateFromPem(const char *filename, bool aux)
 {
 	if(_X509 != nullptr)
 	{
@@ -76,7 +76,7 @@ std::shared_ptr<ov::Error> Certificate::GenerateFromPem(ov::String filename, boo
 	BIO *cert_bio = nullptr;
 	cert_bio = BIO_new(BIO_s_file());
 
-	if(BIO_read_filename(cert_bio, filename.CStr()) <= 0)
+	if(BIO_read_filename(cert_bio, filename) <= 0)
 	{
 		return ov::Error::CreateErrorFromOpenSsl();
 	}
