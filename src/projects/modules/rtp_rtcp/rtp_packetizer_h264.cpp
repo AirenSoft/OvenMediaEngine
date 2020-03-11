@@ -37,13 +37,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "rtp_packetizer_h264.h"
 #include "base/ovlibrary/byte_io.h"
 
-RtpPacketizerH264::RtpPacketizerH264(size_t max_payload_len,
-                                     size_t last_packet_reduction_len,
-                                     H264PacketizationMode packetization_mode)
-	: max_payload_len_(max_payload_len),
-	  last_packet_reduction_len_(last_packet_reduction_len),
-	  num_packets_left_(0),
-	  packetization_mode_(packetization_mode)
+RtpPacketizerH264::RtpPacketizerH264()
+	: num_packets_left_(0)
 {
 }
 
@@ -56,20 +51,24 @@ RtpPacketizerH264::Fragment::Fragment(const uint8_t* buffer, size_t length)
 RtpPacketizerH264::Fragment::Fragment(const Fragment& fragment)
 	: buffer(fragment.buffer), length(fragment.length) {}
 
-size_t RtpPacketizerH264::SetPayloadData(
-	const uint8_t* payload_data,
-	size_t payload_size,
-	const FragmentationHeader* fragmentation) {
-	for (size_t i = 0; i < fragmentation->GetCount(); ++i) {
-		const uint8_t* buffer =
-			&payload_data[fragmentation->fragmentation_offset[i]];
-		size_t length = fragmentation->fragmentation_length[i];
+size_t RtpPacketizerH264::SetPayloadData(size_t max_payload_len, size_t last_packet_reduction_len, const RTPVideoTypeHeader *rtp_type_header, FrameType frame_type,
+										const uint8_t* payload_data, size_t payload_size, const FragmentationHeader* fragmentation) 
+{
+	max_payload_len_ = max_payload_len;
+	last_packet_reduction_len_ = last_packet_reduction_len;
+	packetization_mode_ = rtp_type_header->h264.packetization_mode;
 
+	for (size_t i = 0; i < fragmentation->GetCount(); ++i) 
+	{
+		const uint8_t* buffer = &payload_data[fragmentation->fragmentation_offset[i]];
+		size_t length = fragmentation->fragmentation_length[i];
 		input_fragments_.push_back(Fragment(buffer, length));
 	}
-	if (!GeneratePackets()) {
+	if (!GeneratePackets()) 
+	{
 		num_packets_left_ = 0;
-		while (!packets_.empty()) {
+		while (!packets_.empty()) 
+		{
 			packets_.pop();
 		}
 		return 0;

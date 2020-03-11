@@ -30,9 +30,13 @@ bool RtpRtcp::SendOutgoingData(std::shared_ptr<ov::Data> packet)
 		return false;
 	}
 
-	if(_first_receiver_report_time != 0)
+#if 0
+    static uint32_t packet_count = 0;
+
+	//if(_first_receiver_report_time != 0)
     {
         auto byte_buffer = packet->GetDataAs<uint8_t>();
+        uint32_t timestamp = ByteReader<uint32_t>::ReadBigEndian(&byte_buffer[4]);
         uint32_t ssrc = ByteReader<uint32_t>::ReadBigEndian(&byte_buffer[8]);
 
         // rtcp aa packet send ( per 1000)
@@ -42,25 +46,27 @@ bool RtpRtcp::SendOutgoingData(std::shared_ptr<ov::Data> packet)
             {
                 if (rtcp_info->sequence_number == 0)
                 {
+                    logti("ssrc(%u) timestamp(%u)", ssrc, timestamp);
                     logtd("Send rtcp sr packet - ssrc(%u)", ssrc);
 
-                    if (!dynamic_cast<SrtpTransport *>(node.get())->SendRtcpData(GetNodeType(),
-                            RtcpPacket::MakeSrPacket(ssrc)))
+                    if (!dynamic_cast<SrtpTransport *>(node.get())->SendRtcpData(GetNodeType(), RtcpPacket::MakeSrPacket(ssrc, timestamp, packet_count++, 0)))
                     {
                         logtw("Rtcp sr packet send fail - ssrc(%u)", ssrc);
                     }
                 }
 
+/*
                 rtcp_info->sequence_number++;
 
                 if(rtcp_info->sequence_number >= RTCP_AA_SEND_SEQUENCE)
                     rtcp_info->sequence_number = 0;
+                    */
 
                 break;
             }
         }
     }
-
+#endif
 	//logtd("RtpRtcp Send next node : %d", packet->GetData()->GetLength());
 	return node->SendData(GetNodeType(), packet);
 }

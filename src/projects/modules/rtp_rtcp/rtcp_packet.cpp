@@ -222,7 +222,7 @@ block  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #define DEFAULT_MAX_PACKET_SIZE		1472
 #define DEFAULT_SR_LENGTH 6 // byte/4
 
-std::shared_ptr<ov::Data> RtcpPacket::MakeSrPacket(uint32_t ssrc)
+std::shared_ptr<ov::Data> RtcpPacket::MakeSrPacket(uint32_t ssrc, uint32_t rtp_timestamp, uint32_t packet_count, uint32_t octet_count)
 {
     uint32_t msw = 0;
     uint32_t lsw = 0;
@@ -254,13 +254,13 @@ std::shared_ptr<ov::Data> RtcpPacket::MakeSrPacket(uint32_t ssrc)
     stream.WriteBE32(lsw);
 
     // RTP timestamp
-    stream.WriteBE32(0);
+    stream.WriteBE32(rtp_timestamp);
 
     // sender's packet count
-    stream.WriteBE32(0);
+    stream.WriteBE32(packet_count);
 
     // sender's octet count
-    stream.WriteBE32(0);
+    stream.WriteBE32(octet_count);
 
     return sr_packet;
 }
@@ -274,6 +274,15 @@ void RtcpPacket::GetNtpTime(uint32_t &msw, uint32_t &lsw)
 
 //    struct timeval now;
 //    gettimeofday(&now, nullptr); // get current time
+
+    static timespec last;
+    static bool init = false;
+    
+    if(init == false)
+    {
+        init = true;
+        last = now;
+    }
 
     msw = (uint32_t)(now.tv_sec) + GETTIMEOFDAY_TO_NTP_OFFSET;
     lsw = (uint32_t)((double)(now.tv_nsec/1000)*(double)(((uint64_t)1)<<32)*1.0e-6);

@@ -9,9 +9,11 @@
 class RtpPacketizer
 {
 public:
-	RtpPacketizer(bool audio, std::shared_ptr<RtpRtcpPacketizerInterface> session);
+	RtpPacketizer(std::shared_ptr<RtpRtcpPacketizerInterface> session);
 	~RtpPacketizer();
 
+	void SetVideoCodec(RtpVideoCodecType codec_type);
+	void SetAudioCodec(RtpAudioCodecType codec_type);
 	void SetUlpfec(uint8_t _red_payload_type, uint8_t _ulpfec_payload_type);
 	void SetPayloadType(uint8_t payload_type);
 	void SetSSRC(uint32_t ssrc);
@@ -66,6 +68,10 @@ private:
 	uint8_t _ulpfec_payload_type;
 
 	UlpfecGenerator _ulpfec_generator;
+
+	RtpVideoCodecType		_video_codec_type;
+	RtpAudioCodecType		_audio_codec_type;
+	std::shared_ptr<RtpPacketizingManager> _packetizer = nullptr;
 
 	// Session Descriptor
 	std::shared_ptr<RtpRtcpPacketizerInterface> _stream;

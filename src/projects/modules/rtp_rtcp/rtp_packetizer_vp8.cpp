@@ -37,15 +37,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "rtp_packetizer_vp8.h"
 
-RtpPacketizerVp8::RtpPacketizerVp8(const RTPVideoHeaderVP8 &hdr_info,
-                                   size_t max_payload_len,
-                                   size_t last_packet_reduction_len)
+RtpPacketizerVp8::RtpPacketizerVp8()
 	: payload_data_(NULL),
 	  payload_size_(0),
-	  vp8_fixed_payload_descriptor_bytes_(1),
-	  hdr_info_(hdr_info),
-	  max_payload_len_(max_payload_len),
-	  last_packet_reduction_len_(last_packet_reduction_len)
+	  vp8_fixed_payload_descriptor_bytes_(1)
 {
 }
 
@@ -54,8 +49,12 @@ RtpPacketizerVp8::~RtpPacketizerVp8()
 
 }
 
-size_t RtpPacketizerVp8::SetPayloadData(const uint8_t *payload_data, size_t payload_size, const FragmentationHeader * /* fragmentation */)
+size_t RtpPacketizerVp8::SetPayloadData(size_t max_payload_len, size_t last_packet_reduction_len, const RTPVideoTypeHeader *rtp_type_header, FrameType frame_type, 
+										const uint8_t *payload_data, size_t payload_size, const FragmentationHeader * /* fragmentation */)
 {
+	hdr_info_ = rtp_type_header->vp8;
+	max_payload_len_ = max_payload_len;
+	last_packet_reduction_len_ = last_packet_reduction_len;
 	payload_data_ = payload_data;
 	payload_size_ = payload_size;
 	if(GeneratePackets() < 0)

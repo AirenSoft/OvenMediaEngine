@@ -8,11 +8,11 @@
 
 #define OV_LOG_TAG "RtpRtcp"
 
-RtpPacketizer::RtpPacketizer(bool audio, std::shared_ptr<RtpRtcpPacketizerInterface> session)
+RtpPacketizer::RtpPacketizer(std::shared_ptr<RtpRtcpPacketizerInterface> session)
 {
 	_stream = session;
 
-	_audio_configured = audio;
+	_audio_configured = false;
 	_timestamp_offset = (uint32_t)rand();
 	_sequence_number = (uint16_t)rand();
 	_red_sequence_number = (uint16_t)rand();
@@ -22,6 +22,19 @@ RtpPacketizer::RtpPacketizer(bool audio, std::shared_ptr<RtpRtcpPacketizerInterf
 RtpPacketizer::~RtpPacketizer()
 {
 
+}
+
+void RtpPacketizer::SetVideoCodec(RtpVideoCodecType codec_type)
+{
+	_audio_configured = false;
+	_video_codec_type = codec_type;
+	_packetizer = RtpPacketizingManager::Create(codec_type);
+}
+
+void RtpPacketizer::SetAudioCodec(RtpAudioCodecType codec_type)
+{
+	_audio_codec_type = codec_type;
+	_audio_configured = true;
 }
 
 void RtpPacketizer::SetPayloadType(uint8_t payload_type)
@@ -95,21 +108,16 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 	// -20 is for FEC
 	size_t max_data_payload_length = DEFAULT_MAX_PACKET_SIZE - rtp_header_template->HeadersSize() - 100;
 	size_t last_packet_reduction_len = last_rtp_header->HeadersSize() - rtp_header_template->HeadersSize();
-
-	// Packetizer 생성
-	std::shared_ptr<RtpPacketizingManager> packetizer(RtpPacketizingManager::Create(video_type,
-	                                                                max_data_payload_length,
-	                                                                last_packet_reduction_len,
-	                                                                video_header ? &(video_header->codec_header) : nullptr, frame_type));
-	if(!packetizer)
+														
+	if(_packetizer == nullptr)
 	{
-		// 지원하지 못하는 Frame이 들어옴, critical error
 		logte("Cannot create _packetizers");
 		return false;
 	}
 
 	// Paketizer에 Payload를 셋팅
-	size_t num_packets = packetizer->SetPayloadData(payload_data, payload_size, fragmentation);
+	size_t num_packets = _packetizer->SetPayloadData(max_data_payload_length, last_packet_reduction_len, video_header ? &(video_header->codec_header) : nullptr, frame_type, 
+													payload_data, payload_size, fragmentation);
 	if(num_packets == 0)
 	{
 		//logte("Packetizer returns 0 packet");
@@ -123,7 +131,7 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 		bool last = (i + 1) == num_packets;
 		auto packet = last ? std::move(last_rtp_header) : std::make_shared<RtpPacket>(*rtp_header_template);
 
-		if(!packetizer->NextPacket(packet.get()))
+		if(!_packetizer->NextPacket(packet.get()))
 		{
 			return false;
 		}

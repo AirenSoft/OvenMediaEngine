@@ -50,17 +50,14 @@ const size_t kLengthFieldSize = 2;
 enum NalDefs : uint8_t { kFBit = 0x80, kNriMask = 0x60, kTypeMask = 0x1F };
 enum FuDefs : uint8_t { kSBit = 0x80, kEBit = 0x40, kRBit = 0x20 };
 
-class RtpPacketizerH264 : public RtpPacketizingManager {
+class RtpPacketizerH264 : public RtpPacketizingManager 
+{
 public:
-	RtpPacketizerH264(size_t max_payload_len,
-	                  size_t last_packet_reduction_len,
-	                  H264PacketizationMode packetization_mode);
-
+	RtpPacketizerH264();
 	~RtpPacketizerH264() override;
 
-	size_t SetPayloadData(const uint8_t* payload_data,
-	                      size_t payload_size,
-	                      const FragmentationHeader* fragmentation) override;
+	size_t SetPayloadData(size_t max_payload_len, size_t last_packet_reduction_len, const RTPVideoTypeHeader *rtp_type_header, FrameType frame_type,
+							const uint8_t* payload_data, size_t payload_size, const FragmentationHeader* fragmentation) override;
 
 	bool NextPacket(RtpPacket* rtp_packet) override;
 
@@ -99,10 +96,10 @@ private:
 	void NextAggregatePacket(RtpPacket* rtp_packet, bool last);
 	void NextFragmentPacket(RtpPacket* rtp_packet);
 
-	const size_t max_payload_len_;
-	const size_t last_packet_reduction_len_;
+	size_t max_payload_len_;
+	size_t last_packet_reduction_len_;
 	size_t num_packets_left_;
-	const H264PacketizationMode packetization_mode_;
+	H264PacketizationMode packetization_mode_;
 	std::deque<Fragment> input_fragments_;
 	std::queue<PacketUnit> packets_;
 };

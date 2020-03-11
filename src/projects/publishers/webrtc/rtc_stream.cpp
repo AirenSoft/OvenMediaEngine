@@ -142,7 +142,7 @@ bool RtcStream::Start(uint32_t worker_count)
 				video_media_desc->AddPayload(payload);
 
 				// RTP Packetizer를 추가한다.
-				AddPacketizer(false, track->GetId(), payload->GetId(), video_media_desc->GetSsrc());
+				AddPacketizer(track->GetCodecId(), track->GetId(), payload->GetId(), video_media_desc->GetSsrc());
 
 				break;
 			}
@@ -191,7 +191,7 @@ bool RtcStream::Start(uint32_t worker_count)
 				audio_media_desc->AddPayload(payload);
 
 				// RTP Packetizer를 추가한다.
-				AddPacketizer(true, track->GetId(), payload->GetId(), audio_media_desc->GetSsrc());
+				AddPacketizer(track->GetCodecId(), track->GetId(), payload->GetId(), audio_media_desc->GetSsrc());
 
 				break;
 			}
@@ -394,15 +394,28 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 	}
 }
 
-void RtcStream::AddPacketizer(bool audio, uint32_t id, uint8_t payload_type, uint32_t ssrc)
+void RtcStream::AddPacketizer(common::MediaCodecId codec_id, uint32_t id, uint8_t payload_type, uint32_t ssrc)
 {
-	auto packetizer = std::make_shared<RtpPacketizer>(audio, RtpRtcpPacketizerInterface::GetSharedPtr());
+	auto packetizer = std::make_shared<RtpPacketizer>(RtpRtcpPacketizerInterface::GetSharedPtr());
 	packetizer->SetPayloadType(payload_type);
 	packetizer->SetSSRC(ssrc);
 
-	if(!audio)
+	switch(codec_id)
 	{
-		packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
+		case MediaCodecId::Vp8:
+			packetizer->SetVideoCodec(RtpVideoCodecType::Vp8);
+			packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
+			break;
+		case MediaCodecId::H264:
+			packetizer->SetVideoCodec(RtpVideoCodecType::H264);
+			packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
+			break;
+		case MediaCodecId::Opus:
+			packetizer->SetAudioCodec(RtpAudioCodecType::Opus);
+			break;
+		default:
+			// No support codecs
+			return;
 	}
 
 	_packetizers[id] = packetizer;

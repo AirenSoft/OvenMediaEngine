@@ -47,11 +47,12 @@ class RtpPacketizerVp8 : public RtpPacketizingManager
 public:
 	// Initialize with Payload from encoder.
 	// The payload_data must be exactly one encoded VP8 frame.
-	RtpPacketizerVp8(const RTPVideoHeaderVP8& hdr_info, size_t max_payload_len, size_t last_packet_reduction_len);
+	RtpPacketizerVp8();
 
 	virtual ~RtpPacketizerVp8();
 
-	size_t SetPayloadData(const uint8_t* payload_data, size_t payload_size, const FragmentationHeader* fragmentation) override;
+	size_t SetPayloadData(size_t max_payload_len, size_t last_packet_reduction_len, const RTPVideoTypeHeader *rtp_type_header, FrameType frame_type, 
+							const uint8_t* payload_data, size_t payload_size, const FragmentationHeader* fragmentation) override;
 
 	// Get the next Payload with VP8 payload header.
 	// Write Payload and set marker bit of the |packet|.
@@ -137,8 +138,8 @@ private:
 	size_t payload_size_;
 	const size_t vp8_fixed_payload_descriptor_bytes_;  // Length of VP8 Payload
 	// descriptors' fixed part.
-	const RTPVideoHeaderVP8 hdr_info_;
-	const size_t max_payload_len_;
-	const size_t last_packet_reduction_len_;
+	RTPVideoHeaderVP8 hdr_info_;
+	size_t max_payload_len_;
+	size_t last_packet_reduction_len_;
 	InfoQueue packets_;
 };

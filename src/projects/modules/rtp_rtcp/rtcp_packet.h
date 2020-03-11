@@ -65,7 +65,7 @@ public :
                             const std::shared_ptr<const ov::Data> &data,
                             std::vector<std::shared_ptr<RtcpReceiverReport>> &receiver_reports);
 
-    static std::shared_ptr<ov::Data> MakeSrPacket(uint32_t ssrc);
+    static std::shared_ptr<ov::Data> MakeSrPacket(uint32_t ssrc, uint32_t rtp_timestamp, uint32_t packet_count, uint32_t octet_count);
 
     static double DelayCalculation(uint32_t lsr, uint32_t dlsr);
 private :

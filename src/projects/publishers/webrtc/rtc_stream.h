@@ -13,6 +13,7 @@
 #define PAYLOAD_TYPE_OFFSET		100
 #define RED_PAYLOAD_TYPE		123
 #define	ULPFEC_PAYLOAD_TYPE		124
+#define RTCP_PACKET_TYPE		125 // For internal use
 
 class RtcStream : public pub::Stream, public RtpRtcpPacketizerInterface
 {
@@ -31,7 +32,7 @@ public:
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
 	// RTP Packetizer를 생성하여 추가한다.
-	void AddPacketizer(bool audio, uint32_t id, uint8_t payload_type, uint32_t ssrc);
+	void AddPacketizer(common::MediaCodecId codec_id, uint32_t id, uint8_t payload_type, uint32_t ssrc);
 	std::shared_ptr<RtpPacketizer> GetPacketizer(uint32_t id);
 
 	// RtpRtcpPacketizerInterface Implementation
