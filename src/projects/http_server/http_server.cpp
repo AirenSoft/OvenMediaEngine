@@ -50,7 +50,7 @@ bool HttpServer::Stop()
 
 	for (auto &client : client_list)
 	{
-		client.second->Close();
+		client.second->GetResponse()->Close();
 	}
 
 	_physical_port->RemoveObserver(this);
@@ -96,11 +96,6 @@ ssize_t HttpServer::TryParseHeader(const std::shared_ptr<HttpClient> &client, co
 	return processed_length;
 }
 
-std::shared_ptr<HttpClient> HttpServer::CreateClient(const std::shared_ptr<ov::ClientSocket> &remote)
-{
-	return std::make_shared<HttpClient>(GetSharedPtr(), remote);
-}
-
 std::shared_ptr<HttpClient> HttpServer::FindClient(const std::shared_ptr<ov::Socket> &remote)
 {
 	std::lock_guard<std::mutex> guard(_client_list_mutex);
@@ -113,40 +108,6 @@ std::shared_ptr<HttpClient> HttpServer::FindClient(const std::shared_ptr<ov::Soc
 	}
 
 	return nullptr;
-}
-
-void HttpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
-{
-	logti("Client(%s) is connected on %s", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
-
-	std::lock_guard<std::mutex> guard(_client_list_mutex);
-
-	auto client_socket = std::dynamic_pointer_cast<ov::ClientSocket>(remote);
-	auto http_client = CreateClient(client_socket);
-
-	OV_ASSERT2(client_socket != nullptr);
-
-	if (http_client->Prepare(http_client, client_socket, _default_interceptor))
-	{
-		_client_list[remote.get()] = std::move(http_client);
-	}
-	else
-	{
-		logte("Could not prepare for HTTP client: %s", remote->GetRemoteAddress()->ToString().CStr());
-	}
-}
-
-void HttpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
-{
-	auto client = FindClient(remote);
-
-	if (client == nullptr)
-	{
-		// This can be called in situations where the client closes the connection from the server at the same time as the data is sent
-		return;
-	}
-
-	ProcessData(client, data);
 }
 
 void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
@@ -229,7 +190,7 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 							OV_ASSERT2(false);
 						}
 
-						auto remote = client->GetRemote();
+						auto remote = request->GetRemote();
 
 						if (remote != nullptr)
 						{
@@ -265,9 +226,58 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 		if (need_to_disconnect)
 		{
 			// 연결을 종료해야 함
-			client->Close();
+			client->GetResponse()->Close();
 		}
 	}
+}
+
+std::shared_ptr<HttpClient> HttpServer::ProcessConnect(const std::shared_ptr<ov::Socket> &remote)
+{
+	logti("Client(%s) is connected on %s", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
+
+	auto client_socket = std::dynamic_pointer_cast<ov::ClientSocket>(remote);
+
+	if (client_socket == nullptr)
+	{
+		OV_ASSERT2(false);
+		return nullptr;
+	}
+
+	auto request = std::make_shared<HttpRequest>(client_socket, _default_interceptor);
+	auto response = std::make_shared<HttpResponse>(client_socket);
+
+	if (response != nullptr)
+	{
+		// Set default headers
+		response->SetHeader("Server", "OvenMediaEngine");
+		response->SetHeader("Content-Type", "text/html");
+	}
+
+	std::lock_guard<std::mutex> guard(_client_list_mutex);
+
+	auto http_client = std::make_shared<HttpClient>(GetSharedPtr(), request, response);
+
+	_client_list[remote.get()] = http_client;
+
+	return std::move(http_client);
+}
+
+void HttpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
+{
+	ProcessConnect(remote);
+}
+
+void HttpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
+{
+	auto client = FindClient(remote);
+
+	if (client == nullptr)
+	{
+		// This can be called in situations where the client closes the connection from the server at the same time as the data is sent
+		return;
+	}
+
+	ProcessData(client, data);
 }
 
 void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
@@ -301,8 +311,6 @@ void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 		{
 			logtw("Interceptor does not exists for HTTP client %p", client.get());
 		}
-
-		client->Reset();
 
 		_client_list.erase(client_iterator);
 	}
@@ -388,7 +396,7 @@ bool HttpServer::DisconnectIf(ClientIterator iterator)
 
 	for (auto client_iterator : temp_list)
 	{
-		client_iterator->Close();
+		client_iterator->GetResponse()->Close();
 	}
 
 	return true;

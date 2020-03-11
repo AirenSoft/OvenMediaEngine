@@ -154,7 +154,7 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &clien
 	// To manage sessions
 	UpdateSegmentRequestInfo(SegmentRequestInfo(GetPublisherType(),
 												*std::static_pointer_cast<info::Stream>(stream),
-												client->GetRemote()->GetRemoteAddress()->GetIpAddress(),
+												client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
 												segment->sequence_number,
 												segment->duration));
 
@@ -471,7 +471,8 @@ bool SegmentPublisher::HandleSignedUrl(const ov::String &app_name, const ov::Str
 			return true;
 		}
 
-		auto remote_address = client->GetRemote()->GetRemoteAddress();
+		auto request = client->GetRequest();
+		auto remote_address = request->GetRemote()->GetRemoteAddress();
 		if (remote_address == nullptr)
 		{
 			OV_ASSERT2(false);
@@ -555,7 +556,7 @@ bool SegmentPublisher::HandleSignedUrl(const ov::String &app_name, const ov::Str
 		if (result == false)
 		{
 			logtw("Failed to authenticate client %s\nReason:\n    - %s",
-				  client->GetRemote()->ToString().CStr(),
+				  request->GetRemote()->ToString().CStr(),
 				  ov::String::Join(messages, "\n    - ").CStr());
 
 			return false;

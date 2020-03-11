@@ -11,8 +11,8 @@
 
 #include "socket_private.h"
 
+// If no packet is sent during this time, the connection is disconnected
 #define CLIENT_SOCKET_SEND_TIMEOUT (60 * 1000)
-#define CLIENT_SOCKET_SEND_QUEUE_TIMEOUT (100)
 
 namespace ov
 {
@@ -25,7 +25,7 @@ namespace ov
 
 		_local_address = (server_socket != nullptr) ? server_socket->GetLocalAddress() : nullptr;
 
-		StartSendThread();
+		StartDispatchThread();
 	}
 
 	ClientSocket::ClientSocket(ServerSocket *server_socket, SocketWrapper socket, const SocketAddress &remote_address)
@@ -39,168 +39,163 @@ namespace ov
 
 		MakeNonBlocking();
 
-		StartSendThread();
+		StartDispatchThread();
 	}
 
 	ClientSocket::~ClientSocket()
 	{
-		OV_ASSERT(_stop_send_thread, "The thread must not be running");
+		OV_ASSERT(_is_thread_running, "The thread must not be running");
 
-		if (_stop_send_thread == false)
+		if (_is_thread_running)
 		{
-			StopSendThread(false);
+			StopDispatchThread(true);
+		}
+	}
+
+	bool ClientSocket::StartDispatchThread()
+	{
+		if (_is_thread_running)
+		{
+			// Thread is already running
+			OV_ASSERT2(_is_thread_running == false);
+			return false;
 		}
 
+		_is_thread_running = true;
+		_force_stop = false;
+
+		_send_thread = std::thread(std::bind(&ClientSocket::DispatchThread, this));
+
+		return true;
+	}
+
+	bool ClientSocket::StopDispatchThread(bool stop_immediately)
+	{
+		if (_is_thread_running == false)
+		{
+			// Thread is not running
+			OV_ASSERT2(_is_thread_running);
+			return false;
+		}
+
+		// Enqueue close command
+		_dispatch_queue.Enqueue(DispatchCommand::Type::Close);
+
+		if (stop_immediately)
+		{
+			// Signal stop command
+			_force_stop = true;
+			_dispatch_queue.Stop();
+		}
+
+		// Indicates that the thread should be stopped
 		if (_send_thread.joinable())
 		{
 			_send_thread.join();
 		}
-	}
-
-	bool ClientSocket::StartSendThread()
-	{
-		if (_stop_send_thread == false)
-		{
-			// Thread is already running
-			OV_ASSERT2(_stop_send_thread);
-			return false;
-		}
-
-		_stop_send_thread = false;
-		_send_thread = std::thread(std::bind(&ClientSocket::SendThread, this));
 
 		return true;
 	}
 
-	bool ClientSocket::StopSendThread(bool send_remained_data)
+	bool ClientSocket::SendAsync(const ClientSocket::DispatchCommand &send_item)
 	{
-		if (_stop_send_thread)
+		// An item is dequeued successfully
+		auto data = send_item.data->GetDataAs<uint8_t>();
+		auto remained = send_item.data->GetLength();
+		size_t total_sent_bytes = 0ULL;
+
+		while (_force_stop == false)
 		{
-			// Thread is not running
-			OV_ASSERT2(_stop_send_thread == false);
-			return false;
+			// Wait for transmission up to CLIENT_SOCKET_SEND_TIMEOUT
+			if (send_item.IsExpired(CLIENT_SOCKET_SEND_TIMEOUT))
+			{
+				logtw("[%p] [#%d] Expired (%zu bytes sent)", this, _socket.GetSocket(), total_sent_bytes);
+				return false;
+			}
+
+			auto sent_bytes = SendInternal(data, remained);
+
+			if (sent_bytes < 0)
+			{
+				// An error occurred
+				logtw("[%p] [#%d] Could not send data (%zu bytes sent)", this, _socket.GetSocket(), total_sent_bytes);
+				return false;
+			}
+
+			OV_ASSERT2(static_cast<ssize_t>(remained) >= sent_bytes);
+
+			remained -= sent_bytes;
+			data += sent_bytes;
+			total_sent_bytes += sent_bytes;
+
+			if (remained == 0)
+			{
+				// All data are sent
+				break;
+			}
 		}
-
-		_send_remained_data = send_remained_data;
-
-		if (send_remained_data == false)
-		{
-			_send_queue.Clear();
-		}
-
-		// Indicates that the thread should be stopped
-		_stop_send_thread = true;
 
 		return true;
 	}
 
-	void ClientSocket::SendThread()
+	void ClientSocket::DispatchThread()
 	{
-		SendItem send_item;
+		bool stop = false;
 
-		while (true)
+		while (stop == false)
 		{
-			logtd("[%p] [#%d] Trying to dequeue (%d)...", this, _socket.GetSocket(), _stop_send_thread);
+			auto item = _dispatch_queue.Dequeue();
 
-			if (_send_queue.Dequeue(&send_item, CLIENT_SOCKET_SEND_QUEUE_TIMEOUT) == false)
+			if (item.has_value() == false)
 			{
-				// There is no item to dequeue
-
-				if (_stop_send_thread)
+				if (_force_stop)
 				{
-					// StopSendThread() is called and there is no data to send
-					break;
-				}
-				else
-				{
-					// Timed out - StopSendThread() is not called
-					continue;
-				}
-			}
-			else
-			{
-				if (_stop_send_thread)
-				{
-					// StopSendThread() is called, but there are data to send
-					OV_ASSERT2(_send_remained_data);
-				}
-				else
-				{
-					// StopSendThread() is not called
-				}
-			}
-
-			// An item is dequeued successfully
-			bool succeeded = false;
-			bool is_expired = false;
-			auto data = send_item.data->GetDataAs<uint8_t>();
-			auto remained = send_item.data->GetLength();
-			size_t total_sent_bytes = 0ULL;
-
-			while ((_stop_send_thread == false) || _send_remained_data)
-			{
-				// Wait for transmission up to CLIENT_SOCKET_SEND_TIMEOUT
-				is_expired = send_item.IsExpired(CLIENT_SOCKET_SEND_TIMEOUT);
-
-				if (is_expired)
-				{
-					logtw("[%p] [#%d] Expired (%zu bytes sent)", this, _socket.GetSocket(), total_sent_bytes);
 					break;
 				}
 
-				auto sent_bytes = SendInternal(data, remained);
-
-				if (sent_bytes < 0)
-				{
-					// An error occurred
-					break;
-				}
-
-				OV_ASSERT2(static_cast<ssize_t>(remained) >= sent_bytes);
-
-				remained -= sent_bytes;
-				data += sent_bytes;
-				total_sent_bytes += sent_bytes;
-
-				if (remained == 0)
-				{
-					// All data are sent
-					succeeded = true;
-					break;
-				}
+				// Timed out
+				continue;
 			}
 
-			if (is_expired)
-			{
-				logtd("[%p] [#%d] Could not send data (timed out)", this, _socket.GetSocket());
-				break;
-			}
+			auto &send_item = item.value();
 
-			if (succeeded == false)
+			switch (send_item.type)
 			{
-				// If there was a error, stop the thread
-				logtd("[%p] [#%d] Some error is occurred", this, _socket.GetSocket());
-				break;
+				case DispatchCommand::Type::Unknown:
+					OV_ASSERT2(false);
+					break;
+
+				case DispatchCommand::Type::SendData:
+					if (SendAsync(send_item) == false)
+					{
+						// Item is expired / Could not send data
+
+						// Disconnect the client
+						stop = true;
+					}
+
+					break;
+
+				case DispatchCommand::Type::Close:
+					logtd("[%p] [#%d] Trying to close the socket", this, _socket.GetSocket());
+					stop = true;
+					break;
 			}
 		}
 
-		_stop_send_thread = true;
+		auto sock = _socket.GetSocket();
 
 		Socket::CloseInternal();
+
+		logtd("[%p] [#%d] Thread is stopped, queue: %zu", this, sock, _dispatch_queue.Size());
 	}
 
 	ssize_t ClientSocket::Send(const std::shared_ptr<const Data> &data)
 	{
-		if (_stop_send_thread == false)
-		{
-			logtd("[%p] [#%d] Trying to enqueue data: %zu...", this, _socket.GetSocket(), data->GetLength());
-			_send_queue.Enqueue(data);
-			logtd("[%p] [#%d] Enqueued", this, _socket.GetSocket());
-			return data->GetLength();
-		}
-
-		// Send thread is stopped
-		return -1LL;
+		logtd("[%p] [#%d] Trying to enqueue data: %zu...", this, _socket.GetSocket(), data->GetLength());
+		_dispatch_queue.Enqueue(data);
+		logtd("[%p] [#%d] Enqueued", this, _socket.GetSocket());
+		return data->GetLength();
 	}
 
 	ssize_t ClientSocket::Send(const void *data, size_t length)
@@ -214,12 +209,12 @@ namespace ov
 		return Send(string.ToData(include_null_char));
 	}
 
-	bool ClientSocket::Close(bool wait_for_send)
+	bool ClientSocket::Close()
 	{
 		if (GetState() != SocketState::Closed)
 		{
-			// 1) ServerSocket::DisconnectClient()
-			// 2) ClientSocket::CloseInternal()
+			// 1) ServerSocket::DisconnectClient();
+			// 2) ClientSocket::CloseInternal();
 			// 3) ClientSocket::StopSendThread();
 			return _server_socket->DisconnectClient(this->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected);
 		}
@@ -230,7 +225,7 @@ namespace ov
 	bool ClientSocket::CloseInternal()
 	{
 		// Socket::CloseInternal() will be called in SendThread() later
-		return StopSendThread(true);
+		return StopDispatchThread(false);
 	}
 
 	String ClientSocket::ToString() const

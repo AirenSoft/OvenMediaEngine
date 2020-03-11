@@ -27,9 +27,9 @@ public:
 	~Certificate();
 
 	std::shared_ptr<ov::Error> Generate();
-	std::shared_ptr<ov::Error> GenerateFromPem(ov::String cert_filename, ov::String private_key_filename);
+	std::shared_ptr<ov::Error> GenerateFromPem(const char *cert_filename, const char *private_key_filename);
 	// If aux flag is enabled, it will process a trusted X509 certificate using an X509 structure
-	std::shared_ptr<ov::Error> GenerateFromPem(ov::String filename, bool aux);
+	std::shared_ptr<ov::Error> GenerateFromPem(const char *filename, bool aux);
 	X509 *GetX509();
 	EVP_PKEY *GetPkey();
 	ov::String GetFingerprint(const ov::String &algorithm);

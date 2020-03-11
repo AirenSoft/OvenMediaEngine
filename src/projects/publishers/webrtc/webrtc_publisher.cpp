@@ -76,8 +76,8 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 							  const std::shared_ptr<RtcSession> &session,
 							  const RequestStreamResult &result)
 {
-	auto remote = ws_client->GetClient()->GetRemote();
 	auto request = ws_client->GetClient()->GetRequest();
+	auto remote = request->GetRemote();
 
 	// TODO(dimiden): This temporary code. Fix me later
 	if ((remote == nullptr) || (request == nullptr))

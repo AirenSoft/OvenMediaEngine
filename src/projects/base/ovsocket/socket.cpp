@@ -22,7 +22,7 @@
 
 /// 임시 코드
 #if !defined(__APPLE__)
-#include <linux/sockios.h>
+#	include <linux/sockios.h>
 #endif
 #include <sys/ioctl.h>
 
@@ -30,8 +30,8 @@
 #define USE_FILE_DUMP 0
 
 #if defined(__APPLE__)
-#include <unordered_map>
-#include <mutex>
+#	include <mutex>
+#	include <unordered_map>
 
 /*
 	This is an experimental wrapper class for epoll functionality on macOS
@@ -40,13 +40,14 @@ class Epoll
 {
 	struct epoll_data_t
 	{
-		uint32_t	_events; /* original event mask from epoll_event */
-		void*		_ptr; /* original ptr from epoll_event */
-		int			_filter; /* computed filter */
+		uint32_t _events; /* original event mask from epoll_event */
+		void *_ptr;		  /* original ptr from epoll_event */
+		int _filter;	  /* computed filter */
 
-		epoll_data_t(uint32_t events, void* ptr, int filter) : _events(events),
-			_ptr(ptr),
-			_filter(filter)
+		epoll_data_t(uint32_t events, void *ptr, int filter)
+			: _events(events),
+			  _ptr(ptr),
+			  _filter(filter)
 		{
 		}
 	};
@@ -56,89 +57,89 @@ public:
 	{
 		// EV_DELETE needs the filter flags upon deletion so store them locally, since epoll does not
 		// need this thus the original event will not be passed in with EPOLL_CTL_DEL
-			epoll_data_t* epoll_data = nullptr;
-			struct kevent ke{};
+		epoll_data_t *epoll_data = nullptr;
+		struct kevent ke
+		{
+		};
 		switch (op)
 		{
-		case EPOLL_CTL_ADD:
-			if (event == nullptr)
-			{
-					return EINVAL;
-			}
-			if ((event->events & (EPOLLIN | EPOLLOUT)) == (EPOLLIN | EPOLLOUT))
-			{
-				// This wrapper currently does not support EPOLLIN | EPOLLOUT, but there is no such use case so far,
-				// this is not trivial since two explicit kevent structures need to be added in this case and when epoll_wait
-				// needs to know how to combine the flags back together
-				logte("epoll_ctl() currently does not support EPOLLIN | EPOLLOUT");
-				return EINVAL;
-			}
-			{
-				const auto events = event->events;
-				ke.flags = EV_ADD;
-				if (event->events & EPOLLIN)
+			case EPOLL_CTL_ADD:
+				if (event == nullptr)
 				{
+					return EINVAL;
+				}
+				if ((event->events & (EPOLLIN | EPOLLOUT)) == (EPOLLIN | EPOLLOUT))
+				{
+					// This wrapper currently does not support EPOLLIN | EPOLLOUT, but there is no such use case so far,
+					// this is not trivial since two explicit kevent structures need to be added in this case and when epoll_wait
+					// needs to know how to combine the flags back together
+					logte("epoll_ctl() currently does not support EPOLLIN | EPOLLOUT");
+					return EINVAL;
+				}
+				{
+					const auto events = event->events;
+					ke.flags = EV_ADD;
+					if (event->events & EPOLLIN)
+					{
+						if (event->events & EPOLLET)
+						{
+							ke.flags |= EV_CLEAR;
+						}
+						ke.filter = EVFILT_READ;
+						event->events &= ~EPOLLIN;
+					}
+					else if (event->events & EPOLLOUT)
+					{
+						if (event->events & EPOLLET)
+						{
+							ke.flags |= EV_CLEAR;
+						}
+						ke.filter = EVFILT_WRITE;
+						event->events &= ~EPOLLOUT;
+					}
 					if (event->events & EPOLLET)
 					{
-						ke.flags |= EV_CLEAR;	
+						event->events &= ~EPOLLET;
 					}
-					ke.filter = EVFILT_READ;
-					event->events &= ~EPOLLIN;
-				}
-				else if (event->events & EPOLLOUT)
-				{
-					if (event->events & EPOLLET)
+					if (event->events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
 					{
-						ke.flags |= EV_CLEAR;	
+						event->events &= ~(EPOLLERR | EPOLLHUP | EPOLLRDHUP);
 					}
-					ke.filter = EVFILT_WRITE;
-					event->events &= ~EPOLLOUT;
+					if (event->events != 0)
+					{
+						// Unhandled epoll flags provided
+						logte("unhandled flags %u passed to epoll_ctl", event->events);
+						return EINVAL;
+					}
+					std::unique_lock<decltype(_mutex)> lock(_mutex);
+					auto &epoll_fd_data = _epoll_data[epfd];
+					if (epoll_fd_data.find(fd) != epoll_fd_data.end())
+					{
+						lock.unlock();
+						logte("socket %d has already been added to epoll %d", fd, epfd);
+						return EINVAL;
+					}
+					epoll_data = &_epoll_data[epfd].emplace(std::piecewise_construct, std::forward_as_tuple(fd), std::forward_as_tuple(events, event->data.ptr, ke.filter)).first->second;
 				}
-				if (event->events & EPOLLET)
+				break;
+			case EPOLL_CTL_DEL:
+				ke.flags = EV_DELETE;
 				{
-					event->events &= ~EPOLLET;
+					std::lock_guard<decltype(_mutex)> lock(_mutex);
+					auto &epoll_fd_data = _epoll_data[epfd];
+					const auto it = epoll_fd_data.find(fd);
+					if (it != epoll_fd_data.end())
+					{
+						ke.filter = it->second._filter;
+						epoll_fd_data.erase(fd);
+					}
+					else
+					{
+						logte("socket %d has not been added to epoll %d", fd, epfd);
+						return EINVAL;
+					}
 				}
-				if (event->events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
-				{
-					event->events &= ~(EPOLLERR | EPOLLHUP | EPOLLRDHUP);
-				}
-				if (event->events != 0)
-				{
-					// Unhandled epoll flags provided
-					logte("unhandled flags %u passed to epoll_ctl", event->events);
-					return EINVAL;
-				}
-				std::unique_lock<decltype(_mutex)> lock(_mutex);
-				auto& epoll_fd_data = _epoll_data[epfd];
-				if (epoll_fd_data.find(fd) != epoll_fd_data.end())
-				{
-
-					lock.unlock();
-					logte("socket %d has already been added to epoll %d", fd, epfd);
-					return EINVAL;
-				}
-				epoll_data = &_epoll_data[epfd].emplace(std::piecewise_construct, std::forward_as_tuple(fd), std::forward_as_tuple(events, event->data.ptr, ke.filter)).first->second;
-			}		
-			break;
-		case EPOLL_CTL_DEL:
-			ke.flags = EV_DELETE;
-			{
-				std::lock_guard<decltype(_mutex)> lock(_mutex);
-				auto& epoll_fd_data = _epoll_data[epfd];
-				const auto it = epoll_fd_data.find(fd);
-				if (it != epoll_fd_data.end())
-				{
-					ke.filter = it->second._filter;
-					epoll_fd_data.erase(fd);
-				}
-				else
-				{
-					logte("socket %d has not been added to epoll %d", fd, epfd);
-					return EINVAL;
-				}
-				
-			}
-			break;
+				break;
 		}
 		EV_SET(&ke, fd, ke.filter, ke.flags, 0, 0, epoll_data);
 		int result = kevent(epfd, &ke, 1, nullptr, 0, nullptr);
@@ -149,17 +150,15 @@ public:
 	{
 		struct kevent ke[maxevents];
 		memset(&ke, 0, sizeof(ke));
-		const timespec t 
-		{
+		const timespec t{
 			.tv_sec = timeout / 1000,
-			.tv_nsec = (timeout % 1000) * 1000 * 1000
-		};
-		int result = kevent(epfd, nullptr, 0, ke, maxevents, timeout == -1 ? nullptr : & t);
+			.tv_nsec = (timeout % 1000) * 1000 * 1000};
+		int result = kevent(epfd, nullptr, 0, ke, maxevents, timeout == -1 ? nullptr : &t);
 		if (result > 0)
 		{
 			for (int event_index = 0; event_index < result; ++event_index)
 			{
-				const auto* epoll_data = static_cast<epoll_data_t*>(ke[event_index].udata);
+				const auto *epoll_data = static_cast<epoll_data_t *>(ke[event_index].udata);
 				if (epoll_data == nullptr)
 				{
 					// This should never happen, but must be at least gracefully handled
@@ -179,7 +178,7 @@ public:
 					}
 					else
 					{
-						events[event_index].events = EPOLLIN; 
+						events[event_index].events = EPOLLIN;
 					}
 				}
 				else if (ke[event_index].filter == EVFILT_WRITE)
@@ -193,7 +192,7 @@ public:
 					}
 					else
 					{
-						events[event_index].events = EPOLLOUT; 
+						events[event_index].events = EPOLLOUT;
 					}
 				}
 				else
@@ -725,7 +724,7 @@ namespace ov
 		{
 			case SocketType::Tcp:
 			case SocketType::Udp:
-				setsockopt(_socket.GetSocket(), SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(timeval));
+				setsockopt(_socket.GetSocket(), SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(timeval));
 				break;
 
 			case SocketType::Srt:
@@ -1163,7 +1162,7 @@ namespace ov
 	ssize_t Socket::SendInternal(const void *data, size_t length)
 	{
 		logtd("[%p] [#%d] Trying to send data %zu bytes...", this, _socket.GetSocket(), length);
-		logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, length, 64).CStr());
+		// logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, length, length).CStr());
 
 		auto data_to_send = static_cast<const uint8_t *>(data);
 		size_t remained = length;
@@ -1193,7 +1192,7 @@ namespace ov
 					int sock = _socket.GetSocket();
 					ssize_t sent = ::send(sock, data_to_send, remained, MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0));
 
-					if (sent == -1L)
+					if (sent < 0L)
 					{
 						if (errno == EAGAIN)
 						{
@@ -1247,7 +1246,7 @@ namespace ov
 							logtw("[%p] [#%d] Could not send data: %zd (%s)", this, sock, sent, ov::Error::CreateErrorFromErrno()->ToString().CStr());
 						}
 
-						break;
+						return sent;
 					}
 
 					OV_ASSERT2(static_cast<ssize_t>(remained) >= sent);
@@ -1439,11 +1438,20 @@ namespace ov
 
 		if (read_bytes == 0L)
 		{
-			logtd("[%p] [#%d] Client is disconnected (errno: %d)", this, _socket.GetSocket(), errno);
+			auto err = errno;
+
+			logtd("[%p] [#%d] Client is disconnected (errno: %d)", this, _socket.GetSocket(), err);
 
 			*received_length = 0UL;
 
-			return Error::CreateErrorFromErrno();
+			if (err == 0)
+			{
+				return nullptr;
+			}
+			else
+			{
+				return Error::CreateErrorFromErrno();
+			}
 		}
 		else if (read_bytes < 0L)
 		{
@@ -1514,6 +1522,7 @@ namespace ov
 		else
 		{
 			logtd("[%p] [#%d] %zd bytes read", this, _socket.GetSocket(), read_bytes);
+			// logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, read_bytes, read_bytes).CStr());
 
 			*received_length = static_cast<size_t>(read_bytes);
 		}
@@ -1615,64 +1624,52 @@ namespace ov
 
 			CHECK_STATE(!= SocketState::Closed, false);
 
-			// socket 관련
 			switch (GetType())
 			{
 				case SocketType::Tcp:
-					if (_socket.IsValid())
+					if (_state == SocketState::Connected)
 					{
-						if(_state == SocketState::Connected)
+						// Send FIN
+						::shutdown(_socket.GetSocket(), SHUT_WR);
+
+						// Receive remained data from socket buffer
+						auto data = std::make_shared<ov::Data>();
+						data->Reserve(MAX_BUFFER_SIZE);
+
+						while (true)
 						{
-							// FIN 송신
-							::shutdown(_socket.GetSocket(), SHUT_WR);
+							auto error = Recv(data);
 
-							// Receive remained data
-							auto data = std::make_shared<ov::Data>();
-							data->Reserve(MAX_BUFFER_SIZE);
-
-							while (true)
+							if (error != nullptr)
 							{
-								auto error = Recv(data);
+								// Ignore the error
+								logtd("[%p] [#%d] An error received: %s", this, socket.GetSocket(), error->ToString().CStr());
+								break;
+							}
 
-								if (error != nullptr)
-								{
-									// ignore the error
-									logtd("[%p] [#%d] An error received: %s", this, socket.GetSocket(), error->ToString().CStr());
-									break;
-								}
-
-								if (data->GetLength() == 0LL)
-								{
-									break;
-								}
+							if (data->GetLength() == 0LL)
+							{
+								break;
 							}
 						}
-
-						::close(_socket.GetSocket());
-						_socket.SetSocket(_socket.GetType(), InvalidSocket);
 					}
+
+					::close(_socket.GetSocket());
 					break;
 
 				case SocketType::Udp:
-					if (_socket.IsValid())
-					{
-						::close(_socket.GetSocket());
-						_socket.SetSocket(_socket.GetType(), InvalidSocket);
-					}
+					::close(_socket.GetSocket());
 					break;
 
 				case SocketType::Srt:
-					if (_socket.IsValid())
-					{
-						::srt_close(_socket.GetSocket());
-						_socket.SetSocket(_socket.GetType(), SRT_INVALID_SOCK);
-					}
+					::srt_close(_socket.GetSocket());
 					break;
 
 				default:
 					break;
 			}
 
+			_socket.Invalidate();
 			_socket.SetValid(false);
 
 			// epoll 관련

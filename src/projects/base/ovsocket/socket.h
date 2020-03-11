@@ -189,6 +189,11 @@ namespace ov
 			_valid = valid;
 		}
 
+		void Invalidate()
+		{
+			SetSocket(_type, (_type == SocketType::Srt) ? SRT_INVALID_SOCK : InvalidSocket);
+		}
+
 		const bool IsValid() const noexcept
 		{
 			return _valid;
@@ -312,6 +317,7 @@ namespace ov
 		static String StringFromEpollEvent(const epoll_event &event);
 
 		ssize_t SendInternal(const void *data, size_t length);
+		std::shared_ptr<ov::Error> RecvInternal(void *data, size_t length, size_t *received_length);
 		
 		virtual String ToString(const char *class_name) const;
 

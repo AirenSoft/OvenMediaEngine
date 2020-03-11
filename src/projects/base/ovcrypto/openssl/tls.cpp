@@ -12,7 +12,7 @@
 
 #define OV_LOG_TAG "OpenSSL"
 
-#define MAX_TLS_WRITE_SIZE			(16 * 1024)
+#define MAX_TLS_WRITE_SIZE (16 * 1024)
 #define DO_CALLBACK_IF_AVAILBLE(return_type, default_value, object, callback_name, ...) \
 	Tls::DoCallback<return_type, default_value, decltype(&TlsCallback::callback_name), &TlsCallback::callback_name>(object, ##__VA_ARGS__)
 
@@ -20,14 +20,7 @@ namespace ov
 {
 	Tls::~Tls()
 	{
-		if (_ssl != nullptr)
-		{
-			::SSL_shutdown(_ssl);
-		}
-
-		_bio = nullptr;
-		_ssl = nullptr;
-		_ssl_ctx = nullptr;
+		Uninitialize();
 	}
 
 	BIO_METHOD *Tls::PrepareBioMethod()
@@ -79,6 +72,20 @@ namespace ov
 
 		return result;
 	};
+
+	bool Tls::Uninitialize()
+	{
+		if (_ssl != nullptr)
+		{
+			::SSL_shutdown(_ssl);
+		}
+
+		_bio = nullptr;
+		_ssl = nullptr;
+		_ssl_ctx = nullptr;
+
+		return true;
+	}
 
 	bool Tls::PrepareSslContext(const SSL_METHOD *method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list)
 	{
@@ -224,7 +231,7 @@ namespace ov
 		OV_ASSERT2(in != nullptr);
 		OV_ASSERT2(inl >= 0);
 
-		logtd("Trying to write %d bytes...\n%s", inl, ov::Dump(in, inl).CStr());
+		// logtp("Trying to write %d bytes...\n%s", inl, ov::Dump(in, inl).CStr());
 
 		auto written_bytes = DO_CALLBACK_IF_AVAILBLE(ssize_t, -1, BIO_get_data(b), write_callback, in, static_cast<size_t>(inl));
 

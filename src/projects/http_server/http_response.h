@@ -18,8 +18,18 @@ class HttpResponse : public ov::EnableSharedFromThis<HttpResponse>
 public:
 	friend class HttpClient;
 
-	HttpResponse(std::shared_ptr<HttpClient> client);
+	class IoCallback
+	{
+	};
+
+	HttpResponse(const std::shared_ptr<ov::ClientSocket> &client_socket);
 	~HttpResponse() override = default;
+
+	std::shared_ptr<ov::ClientSocket> GetRemote();
+	std::shared_ptr<const ov::ClientSocket> GetRemote() const;
+
+	void SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data);
+	std::shared_ptr<ov::TlsData> GetTlsData();
 
 	HttpStatusCode GetStatusCode() const
 	{
@@ -48,6 +58,19 @@ public:
 	bool AppendString(const ov::String &string);
 	bool AppendFile(const ov::String &filename);
 
+	// Send the data immediately
+	// Can be used for response without content-length
+	template <typename T>
+	bool Send(const T *data)
+	{
+		return Send(data, sizeof(T));
+	}
+	virtual bool Send(const void *data, size_t length);
+	virtual bool Send(const std::shared_ptr<const ov::Data> &data);
+
+	bool SendChunkedData(const void *data, size_t length);
+	bool SendChunkedData(const std::shared_ptr<const ov::Data> &data);
+
 	uint32_t Response();
 
 	bool Close();
@@ -72,7 +95,8 @@ protected:
 	uint32_t SendHeaderIfNeeded();
 	uint32_t SendResponse();
 
-	std::shared_ptr<HttpClient> _http_client = nullptr;
+	std::shared_ptr<ov::ClientSocket> _client_socket;
+	std::shared_ptr<ov::TlsData> _tls_data;
 
 	HttpStatusCode _status_code = HttpStatusCode::OK;
 	ov::String _reason = StringFromHttpStatusCode(HttpStatusCode::OK);

@@ -8,34 +8,53 @@
 //==============================================================================
 #include "http_request.h"
 #include "http_client.h"
-#include "https_client.h"
 #include "http_private.h"
 
 #include <algorithm>
 
-HttpRequest::HttpRequest(std::shared_ptr<HttpClient> client, std::shared_ptr<HttpRequestInterceptor> interceptor)
-	: _client(std::move(client)),
-	  _interceptor(std::move(interceptor))
+HttpRequest::HttpRequest(const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<HttpRequestInterceptor> &interceptor)
+	: _client_socket(client_socket),
+	  _interceptor(interceptor)
 {
-	OV_ASSERT2(_client != nullptr);
+	OV_ASSERT2(client_socket != nullptr);
+}
+
+std::shared_ptr<ov::ClientSocket> HttpRequest::GetRemote()
+{
+	return _client_socket;
+}
+
+std::shared_ptr<const ov::ClientSocket> HttpRequest::GetRemote() const
+{
+	return _client_socket;
+}
+
+void HttpRequest::SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data)
+{
+	_tls_data = tls_data;
+}
+
+std::shared_ptr<ov::TlsData> HttpRequest::GetTlsData()
+{
+	return _tls_data;
 }
 
 ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
 {
 	if (_is_header_found)
 	{
-		// 헤더를 찾은 상태에서는, 여기가 호출되면 안됨 (parse status가 이미 OK 이므로)
+		// Once the header is found, it should not be called here (since the parse status is already OK)
 		OV_ASSERT2(false);
 		return 0L;
 	}
 
 	const char NewLines[] = "\r\n\r\n";
-	// null문자 제외
+	// Exclude null character
 	const int NewLinesLength = OV_COUNTOF(NewLines) - 1;
 
 	ssize_t used_length = data->GetLength();
 
-	// 헤더가 아직 파싱되지 않았으므로, 매 번 데이터가 들어올 때마다 헤더 파싱 시도
+	// Since the header has not been parsed yet, try to parse the header every time data comes in
 	ssize_t previous_length = _request_string.GetLength();
 
 	// ov::String is binary-safe
@@ -44,10 +63,13 @@ ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
 
 	if (newline_position >= 0)
 	{
-		// \r\n\r\n를 찾았다면, 파싱 시작
+		// If the parser find "\r\n\r\n", start parsing
 		_request_string.SetLength(newline_position);
 
-		// data 에서 사용한 데이터 수 = [\r\n\r\n 찾은 후 문자열의 길이] - [찾기 전 문자열의 길이] + [\r\n\r\n 길이]
+		// Used length =
+		//             [Length of string after finding "\r\n\r\n"] -
+		//             [Length of string before finding] +
+		//             [Length of string "\r\n\r\n"]
 		used_length = _request_string.GetLength() - previous_length + NewLinesLength;
 
 		_is_header_found = true;
@@ -55,12 +77,12 @@ ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
 
 		if (_parse_status == HttpStatusCode::OK)
 		{
-			// Content length와 같은 정보 계산
+			// Calculate some informations such as Content length
 			PostProcess();
 		}
 		else
 		{
-			// 파싱 도중 오류 발생
+			// An error occurred during parsing
 			used_length = -1L;
 			_parse_status = HttpStatusCode::BadRequest;
 		}
@@ -73,14 +95,14 @@ ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
 		auto data_to_check = data->GetDataAs<char>();
 		auto remained = data->GetLength();
 
-		while(remained > 0)
+		while (remained > 0)
 		{
 			char character = *data_to_check;
 
 			// isprint(): 32 <= character <= 126
 			// isspace(): 9 <= character <= 13
 			// reference: https://en.cppreference.com/w/cpp/string/byte/isprint
-			if(::isprint(character) || ::isspace(character))
+			if (::isprint(character) || ::isspace(character))
 			{
 				continue;
 			}
@@ -94,7 +116,6 @@ ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
 		}
 	}
 
-	// 사용한 데이터 길이 반환
 	return used_length;
 }
 
@@ -109,7 +130,7 @@ HttpStatusCode HttpRequest::ParseMessage()
 	// RFC7230 - 3.1. Start Line
 	// start-line     = request-line / status-line
 
-	// 줄바꿈 문자를 기준으로 tokenize
+	// Tokenize by "\r\n"
 	std::vector<ov::String> tokens = _request_string.Split("\r\n");
 
 	HttpStatusCode status_code;
@@ -208,7 +229,8 @@ HttpStatusCode HttpRequest::ParseHeader(const ov::String &line)
 	//                ; obsolete line folding
 	//                ; see Section 3.2.4
 
-	// 다음과 같은 사유로, obs-fold에 대해 처리하지 않음
+	// Do not handle OBS-FOLD for the following reasons:
+	//
 	// RFC7230 - 3.2.4.  Field Parsing
 	// Historically, HTTP header field values could be extended over
 	// multiple lines by preceding each extra line with at least one space
@@ -223,14 +245,13 @@ HttpStatusCode HttpRequest::ParseHeader(const ov::String &line)
 
 	if (colon_index == -1)
 	{
-		// 잘못된 헤더
 		logtw("Invalid header (could not find colon): %s", line.CStr());
 		return HttpStatusCode::BadRequest;
 	}
 
-	// 모든 헤더 이름은 대문자로 처리
+	// Convert all header names to uppercase
 	ov::String field_name = line.Left(static_cast<size_t>(colon_index)).UpperCaseString();
-	// 처리를 용이하게 하기 위해 OWS(optional white space) 없앰
+	// Eliminate OWS(optional white space) to simplify processing
 	ov::String field_value = line.Substring(colon_index + 1).Trim();
 
 	_request_header[field_name] = field_value;
@@ -265,31 +286,29 @@ void HttpRequest::PostProcess()
 	switch (_method)
 	{
 		case HttpMethod::Get:
-			// http body가 없음
+			// GET has no HTTP body
 			_content_length = 0L;
 			break;
 
 		case HttpMethod::Post:
-			// http body가 있을 수도 있으므로 파싱 시도
+			// TODO(dimiden): Need to parse HTTP body if needed
 			_content_length = ov::Converter::ToInt64(GetHeader("CONTENT-LENGTH", "0"));
 			break;
 
 		default:
-			// 나머지 헤더
+			// Another method
 			_content_length = ov::Converter::ToInt64(GetHeader("CONTENT-LENGTH", "0"));
 			break;
 	}
 
 	auto host = GetHeader("Host");
 
-	if(host.IsEmpty())
+	if (host.IsEmpty())
 	{
-		host = _client->GetRemote()->GetLocalAddress()->GetIpAddress();
+		host = _client_socket->GetLocalAddress()->GetIpAddress();
 	}
 
-	auto temp_client = std::dynamic_pointer_cast<HttpsClient>(_client);
-
-	_request_uri.Format("http%s://%s%s", (temp_client == nullptr) ? "" : "s", host.CStr(), _request_target.CStr());
+	_request_uri.Format("http%s://%s%s", (_tls_data != nullptr) ? "s" : "", host.CStr(), _request_target.CStr());
 }
 
 ov::String HttpRequest::ToString() const

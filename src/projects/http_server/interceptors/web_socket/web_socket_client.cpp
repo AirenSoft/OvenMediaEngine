@@ -57,26 +57,28 @@ ssize_t WebSocketClient::Send(const std::shared_ptr<const ov::Data> &data, WebSo
 		header.payload_length = 127;
 	}
 
-	_client->Send(&header);
+	auto response = _client->GetResponse();
+
+	response->Send(&header);
 
 	if (header.payload_length == 126)
 	{
 		auto payload_length = ov::HostToNetwork16(static_cast<uint16_t>(length));
 
-		_client->Send(&payload_length);
+		response->Send(&payload_length);
 	}
 	else if (header.payload_length == 127)
 	{
 		auto payload_length = ov::HostToNetwork64(static_cast<uint64_t>(length));
 
-		_client->Send(&payload_length);
+		response->Send(&payload_length);
 	}
 
 	if (length > 0LL)
 	{
 		logtd("Trying to send data\n%s", data->Dump(32).CStr());
 
-		return _client->Send(data) ? length : -1LL;
+		return response->Send(data) ? length : -1LL;
 	}
 
 	return length;
@@ -99,10 +101,10 @@ ssize_t WebSocketClient::Send(const Json::Value &value)
 
 void WebSocketClient::Close()
 {
-	_client->Close();
+	_client->GetResponse()->Close();
 }
 
 ov::String WebSocketClient::ToString() const
 {
-	return ov::String::FormatString("<WebSocketClient: %p, %s>", this, _client->GetRemote()->ToString().CStr());
+	return ov::String::FormatString("<WebSocketClient: %p, %s>", this, _client->GetRequest()->GetRemote()->ToString().CStr());
 }

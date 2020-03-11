@@ -28,68 +28,24 @@ void HttpsServer::SetChainCertificate(const std::shared_ptr<Certificate> &certif
 	_chain_certificate = certificate;
 }
 
-std::shared_ptr<HttpsClient> HttpsServer::FindClient(const std::shared_ptr<ov::Socket> &remote)
-{
-	auto client = HttpServer::FindClient(remote);
-
-	return std::static_pointer_cast<HttpsClient>(client);
-}
-
-std::shared_ptr<HttpClient> HttpsServer::CreateClient(const std::shared_ptr<ov::ClientSocket> &remote)
-{
-	return std::make_shared<HttpsClient>(GetSharedPtr(), remote);
-}
-
 void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
-	HttpServer::OnConnected(remote);
+	auto client = ProcessConnect(remote);
 
-	auto client = FindClient(remote);
-
-	if (client == nullptr)
+	if (client != nullptr)
 	{
-		OV_ASSERT2(client != nullptr);
-		return;
+		auto tls_data = std::make_shared<ov::TlsData>(
+			ov::TlsData::Method::TlsServerMethod,
+			_local_certificate, _chain_certificate,
+			HTTP_INTERMEDIATE_COMPATIBILITY);
+
+		tls_data->SetWriteCallback([remote](const void *data, size_t length) -> ssize_t {
+			return remote->Send(data, length);
+		});
+
+		client->GetRequest()->SetTlsData(tls_data);
+		client->GetResponse()->SetTlsData(tls_data);
 	}
-
-	// Prepare TLS for client
-	ov::TlsCallback callback =
-		{
-			.create_callback = [](ov::Tls *tls, SSL_CTX *context) -> bool {
-				return true;
-			},
-
-			.read_callback = std::bind(&HttpsClient::TlsRead, client, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
-			.write_callback = std::bind(&HttpsClient::TlsWrite, client, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
-			.destroy_callback = nullptr,
-			.ctrl_callback = [](ov::Tls *tls, int cmd, long num, void *arg) -> long {
-				logtd("[TLS] Ctrl: %d, %ld, %p", cmd, num, arg);
-
-				switch (cmd)
-				{
-					case BIO_CTRL_RESET:
-					case BIO_CTRL_WPENDING:
-					case BIO_CTRL_PENDING:
-						return 0;
-
-					case BIO_CTRL_FLUSH:
-						return 1;
-
-					default:
-						return 0;
-				}
-			},
-			.verify_callback = nullptr};
-
-	auto tls = std::make_shared<ov::Tls>();
-
-	if (tls->Initialize(::TLS_server_method(), _local_certificate, _chain_certificate, HTTP_INTERMEDIATE_COMPATIBILITY, callback) == false)
-	{
-		logte("Could not initialize TLS: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
-		return;
-	}
-
-	client->SetTls(tls);
 }
 
 void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
@@ -102,15 +58,37 @@ void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, cons
 		return;
 	}
 
-	auto plain_data = client->DecryptData(data);
+	auto request = client->GetRequest();
+	auto tls_data = request->GetTlsData();
 
-	if ((plain_data != nullptr) && (plain_data->GetLength() > 0))
+	if (tls_data != nullptr)
 	{
-		// Use the decrypted data
-		HttpServer::ProcessData(client, plain_data);
+		std::shared_ptr<const ov::Data> plain_data;
+
+		if (tls_data->Decrypt(data, &plain_data))
+		{
+			if ((plain_data != nullptr) && (plain_data->GetLength() > 0))
+			{
+				// plain_data is HTTP data
+
+				// Use the decrypted data
+				HttpServer::ProcessData(client, plain_data);
+			}
+			else
+			{
+				// Need more data to decrypt the data
+			}
+
+			return;
+		}
+
+		// Error
+		logtd("Could not decrypt data");
 	}
 	else
 	{
-		// Need more data to decrypt the data
+		OV_ASSERT(false, "TlsData must not be null");
 	}
+
+	client->GetResponse()->Close();
 }

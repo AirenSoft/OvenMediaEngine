@@ -16,10 +16,30 @@
 
 #include <base/ovsocket/ovsocket.h>
 
-HttpResponse::HttpResponse(std::shared_ptr<HttpClient> client)
-	: _http_client(std::move(client))
+HttpResponse::HttpResponse(const std::shared_ptr<ov::ClientSocket> &client_socket)
+	: _client_socket(client_socket)
 {
-	OV_ASSERT2(_http_client != nullptr);
+	OV_ASSERT2(_client_socket != nullptr);
+}
+
+void HttpResponse::SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data)
+{
+	_tls_data = tls_data;
+}
+
+std::shared_ptr<ov::ClientSocket> HttpResponse::GetRemote()
+{
+	return _client_socket;
+}
+
+std::shared_ptr<const ov::ClientSocket> HttpResponse::GetRemote() const
+{
+	return _client_socket;
+}
+
+std::shared_ptr<ov::TlsData> HttpResponse::GetTlsData()
+{
+	return _tls_data;
 }
 
 bool HttpResponse::SetHeader(const ov::String &key, const ov::String &value)
@@ -54,7 +74,7 @@ bool HttpResponse::AppendData(const std::shared_ptr<const ov::Data> &data)
 		return false;
 	}
 
-	std::lock_guard<__decltype(_response_mutex)> lock(_response_mutex);
+	std::lock_guard<decltype(_response_mutex)> lock(_response_mutex);
 
 	_response_data_list.push_back(data);
 	_response_data_size += data->GetLength();
@@ -77,7 +97,7 @@ bool HttpResponse::AppendFile(const ov::String &filename)
 
 uint32_t HttpResponse::Response()
 {
-	std::lock_guard<__decltype(_response_mutex)> lock(_response_mutex);
+	std::lock_guard<decltype(_response_mutex)> lock(_response_mutex);
 
 	return SendHeaderIfNeeded() + SendResponse();
 }
@@ -114,7 +134,7 @@ uint32_t HttpResponse::SendHeaderIfNeeded()
 
 	stream.Append("\r\n", 2);
 
-	if (_http_client->Send(response))
+	if (Send(response))
 	{
 		logtd("Header is sent");
 
@@ -126,11 +146,71 @@ uint32_t HttpResponse::SendHeaderIfNeeded()
 	return 0;
 }
 
+bool HttpResponse::Send(const void *data, size_t length)
+{
+	return Send(std::make_shared<ov::Data>(data, length));
+}
+
+bool HttpResponse::Send(const std::shared_ptr<const ov::Data> &data)
+{
+	if (data == nullptr)
+	{
+		OV_ASSERT2(data != nullptr);
+		return false;
+	}
+
+	std::shared_ptr<const ov::Data> send_data;
+
+	if (_tls_data == nullptr)
+	{
+		send_data = data;
+	}
+	else
+	{
+		if (_tls_data->Encrypt(data, &send_data) == false)
+		{
+			return false;
+		}
+
+		if ((send_data == nullptr) || send_data->IsEmpty())
+		{
+			// There is no data to send
+			return true;
+		}
+	}
+
+	return (_client_socket->Send(send_data) == static_cast<ssize_t>(send_data->GetLength()));
+}
+
+bool HttpResponse::SendChunkedData(const void *data, size_t length)
+{
+	return SendChunkedData(std::make_shared<ov::Data>(data, length));
+}
+
+bool HttpResponse::SendChunkedData(const std::shared_ptr<const ov::Data> &data)
+{
+	if ((data == nullptr) || data->IsEmpty())
+	{
+		// Send a empty chunk
+		return Send("0\r\n\r\n", 5);
+	}
+
+	bool result =
+		// Send the chunk header
+		Send(ov::String::FormatString("%x\r\n", data->GetLength()).ToData(false)) &&
+		// Send the chunk payload
+		Send(data) &&
+		// Send a last data of chunk
+		Send("\r\n", 2);
+
+	return result;
+}
+
 uint32_t HttpResponse::SendResponse()
 {
 	bool sent = true;
 
-	std::lock_guard<__decltype(_response_mutex)> lock(_response_mutex);
+	std::lock_guard<decltype(_response_mutex)> lock(_response_mutex);
 
 	logtd("Trying to send datas...");
 
@@ -139,16 +219,16 @@ uint32_t HttpResponse::SendResponse()
 	{
 		if (_chunked_transfer)
 		{
-			sent &= _http_client->SendChunkedData(data);
-			if(sent == true)
+			sent &= SendChunkedData(data);
+			if (sent == true)
 			{
 				sent_bytes += data->GetLength();
 			}
 		}
 		else
 		{
-			sent &= _http_client->Send(data);
-			if(sent == true)
+			sent &= Send(data);
+			if (sent == true)
 			{
 				sent_bytes += data->GetLength();
 			}
@@ -165,5 +245,12 @@ uint32_t HttpResponse::SendResponse()
 
 bool HttpResponse::Close()
 {
-	return _http_client->Close();
+	OV_ASSERT2(_client_socket != nullptr);
+
+	if (_client_socket == nullptr)
+	{
+		return false;
+	}
+
+	return _client_socket->Close();
 }

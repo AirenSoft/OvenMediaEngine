@@ -45,9 +45,9 @@ protected:
 	// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨
 	ssize_t TryParseHeader(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data);
 
-	virtual std::shared_ptr<HttpClient> CreateClient(const std::shared_ptr<ov::ClientSocket> &remote);
 	std::shared_ptr<HttpClient> FindClient(const std::shared_ptr<ov::Socket> &remote);
 
+	std::shared_ptr<HttpClient> ProcessConnect(const std::shared_ptr<ov::Socket> &remote);
 	void ProcessData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data);
 
 	//--------------------------------------------------------------------
