@@ -83,9 +83,11 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 
 	for (auto client : chunk_item->second->client_list)
 	{
-		if (client->SendChunkedData(chunk_data) == false)
+		auto response = client->GetResponse();
+
+		if (response->SendChunkedData(chunk_data) == false)
 		{
-			logtd("Failed to send the chunked data for [%s/%s, %s] to %s (%zu bytes)", app_name.CStr(), stream_name.CStr(), file_name.CStr(), client->GetRemote()->ToString().CStr(), chunk_data->GetLength());
+			logtd("Failed to send the chunked data for [%s/%s, %s] to %s (%zu bytes)", app_name.CStr(), stream_name.CStr(), file_name.CStr(), response->GetRemote()->ToString().CStr(), chunk_data->GetLength());
 		}
 	}
 }
@@ -119,12 +121,14 @@ void CmafStreamServer::OnCmafChunkedComplete(const ov::String &app_name, const o
 
 	for (auto client : chunked_data->client_list)
 	{
-		if (client->SendChunkedData(nullptr) == false)
+		auto response = client->GetResponse();
+
+		if (response->SendChunkedData(nullptr) == false)
 		{
 			logtw("[%s] Could not response the CMAF chunk: [%s/%s, %s]",
-				  client->GetRemote()->ToString().CStr(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+				  response->GetRemote()->ToString().CStr(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
 		}
 
-		client->Close();
+		response->Close();
 	}
 }

@@ -67,9 +67,9 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 	web_socket->SetConnectionHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> HttpInterceptorResult {
 			auto &client = ws_client->GetClient();
-			auto remote = client->GetRemote();
 			auto request = client->GetRequest();
 			auto response = client->GetResponse();
+			auto remote = request->GetRemote();
 
 			if (remote == nullptr)
 			{
