@@ -480,6 +480,7 @@ namespace cfg
 									}
 
 									parse_item.is_parsed = (result == ParseResult::Parsed);
+									_parsed = true;
 								}
 								else
 								{
@@ -495,6 +496,7 @@ namespace cfg
 									}
 
 									parse_item.is_parsed = (result == ParseResult::Parsed);
+									_parsed = true;
 								}
 
 								logtd("%s<%s> [List<%s>] = %s",

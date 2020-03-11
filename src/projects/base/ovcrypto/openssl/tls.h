@@ -8,6 +8,11 @@
 //==============================================================================
 #pragma once
 
+#include "../crc_32.h"
+#include "../base_64.h"
+#include "../message_digest.h"
+#include "../certificate.h"
+
 #include <cstdint>
 #include <functional>
 
@@ -21,7 +26,6 @@
 #include <openssl/ssl.h>
 
 #include <base/ovlibrary/ovlibrary.h>
-#include <base/ovcrypto/ovcrypto.h>
 
 namespace ov
 {
@@ -47,7 +51,7 @@ namespace ov
 	};
 
 	// TlsUniquePtr is like the unique_ptr, it was created to support custom deleter which has return values
-	template<typename Ttype, typename Treturn, Treturn (*delete_function)(Ttype *argument)>
+	template <typename Ttype, typename Treturn, Treturn (*delete_function)(Ttype *argument)>
 	class TlsUniquePtr
 	{
 	public:
@@ -56,7 +60,7 @@ namespace ov
 		{
 		}
 
-		TlsUniquePtr(Ttype *pointer) // NOLINT
+		TlsUniquePtr(Ttype *pointer)  // NOLINT
 			: _ptr(pointer, Deleter)
 		{
 		}
@@ -67,38 +71,38 @@ namespace ov
 			std::swap(ptr._ptr, _ptr);
 		}
 
-		operator Ttype *() noexcept // NOLINT
+		operator Ttype *() noexcept  // NOLINT
 		{
 			return _ptr.get();
 		}
 
-		operator const Ttype *() const noexcept // NOLINT
+		operator const Ttype *() const noexcept  // NOLINT
 		{
 			return _ptr.get();
 		}
 
-		TlsUniquePtr &operator =(TlsUniquePtr &&instance) noexcept
+		TlsUniquePtr &operator=(TlsUniquePtr &&instance) noexcept
 		{
 			std::swap(_ptr, instance._ptr);
 
 			return *this;
 		}
 
-		TlsUniquePtr &operator =(Ttype *pointer)
+		TlsUniquePtr &operator=(Ttype *pointer)
 		{
 			_ptr = std::unique_ptr<Ttype, decltype(&Deleter)>(pointer, Deleter);
 
 			return *this;
 		}
 
-		bool operator ==(const Ttype *pointer) const
+		bool operator==(const Ttype *pointer) const
 		{
 			return _ptr.get() == pointer;
 		}
 
-		bool operator !=(const Ttype *pointer) const
+		bool operator!=(const Ttype *pointer) const
 		{
-			return !(operator ==(pointer));
+			return !(operator==(pointer));
 		}
 
 	private:
@@ -158,10 +162,10 @@ namespace ov
 
 		int GetError(int code);
 
-		template<typename Treturn, Treturn default_value, class Tmember, Tmember member, typename ... Targuments>
-		static Treturn DoCallback(void *obj, Targuments ... args)
+		template <typename Treturn, Treturn default_value, class Tmember, Tmember member, typename... Targuments>
+		static Treturn DoCallback(void *obj, Targuments... args)
 		{
-			if(obj == nullptr)
+			if (obj == nullptr)
 			{
 				OV_ASSERT2(false);
 				return default_value;
@@ -170,9 +174,9 @@ namespace ov
 			auto tls = static_cast<Tls *>(obj);
 			auto &target = tls->_callback.*member;
 
-			if(target != nullptr)
+			if (target != nullptr)
 			{
-				return target(tls, args ...);
+				return target(tls, args...);
 			}
 
 			return default_value;
@@ -194,4 +198,4 @@ namespace ov
 
 		TlsCallback _callback;
 	};
-}
+}  // namespace ov

@@ -44,41 +44,52 @@ namespace ov
 		using Socket::Recv;
 		using Socket::Send;
 
-		bool Close() override
-		{
-			return Close(true);
-		}
-
-		bool Close(bool wait_for_send);
+		bool Close() override;
 
 		using Socket::GetState;
 
 		String ToString() const override;
 
 	protected:
-		struct SendItem
+		struct DispatchCommand
 		{
-			SendItem() = default;
-			SendItem(const std::shared_ptr<const ov::Data> &data)
+			enum class Type
 			{
-				this->data = data;
-				this->enqueued_time = std::chrono::system_clock::now();
+				Unknown,
+				SendData,
+				Close
+			};
+
+			DispatchCommand(const std::shared_ptr<const ov::Data> &data)
+				: type(Type::SendData),
+				  data(data),
+				  enqueued_time(std::chrono::system_clock::now())
+			{
+			}
+
+			DispatchCommand(Type type)
+				: type(type),
+				  enqueued_time(std::chrono::system_clock::now())
+			{
 			}
 
 			bool IsExpired(int millisecond_time) const
 			{
 				auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - enqueued_time);
+
 				return (delta.count() >= millisecond_time);
 			}
 
+			Type type = Type::Unknown;
 			std::shared_ptr<const ov::Data> data;
 			std::chrono::time_point<std::chrono::system_clock> enqueued_time;
 		};
 
-		bool StartSendThread();
-		bool StopSendThread(bool send_remained_data);
+		bool StartDispatchThread();
+		bool StopDispatchThread(bool stop_immediately);
 
-		void SendThread();
+		bool SendAsync(const ClientSocket::DispatchCommand &send_item);
+		void DispatchThread();
 
 		bool CloseInternal() override;
 
@@ -88,8 +99,8 @@ namespace ov
 		//                At this time, it can be blocked, so it creates a thread and processes it.
 		//                I know it's inefficient to use one thread per Socket, and I'll create a send pool later.
 		std::thread _send_thread;
-		ov::Queue<SendItem> _send_queue;
-		bool _stop_send_thread = true;
-		bool _send_remained_data = false;
+		ov::Queue<DispatchCommand> _dispatch_queue;
+		bool _is_thread_running = false;
+		volatile bool _force_stop = false;
 	};
 }  // namespace ov

@@ -18,8 +18,14 @@ class HttpRequest : public ov::EnableSharedFromThis<HttpRequest>
 public:
 	friend class HttpRequestInterceptor;
 
-	HttpRequest(std::shared_ptr<HttpClient> client, std::shared_ptr<HttpRequestInterceptor> interceptor);
+	HttpRequest(const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<HttpRequestInterceptor> &interceptor);
 	~HttpRequest() override = default;
+
+	std::shared_ptr<ov::ClientSocket> GetRemote();
+	std::shared_ptr<const ov::ClientSocket> GetRemote() const;
+
+	void SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data);
+	std::shared_ptr<ov::TlsData> GetTlsData();
 
 	/// HttpRequest 객체 초기화를 위해, client에서 보낸 데이터를 처리함
 	///
@@ -156,9 +162,11 @@ protected:
 
 	void PostProcess();
 
+	std::shared_ptr<ov::ClientSocket> _client_socket;
+	std::shared_ptr<ov::TlsData> _tls_data;
+
 	// request 처리를 담당하는 객체
-	std::shared_ptr<HttpClient> _client = nullptr;
-	std::shared_ptr<HttpRequestInterceptor> _interceptor = nullptr;
+	std::shared_ptr<HttpRequestInterceptor> _interceptor;
 
 	HttpStatusCode _parse_status = HttpStatusCode::PartialContent;
 
@@ -178,7 +186,7 @@ protected:
 	ssize_t _content_length = 0L;
 
 	// HTTP body
-	std::shared_ptr<ov::Data> _request_body = nullptr;
+	std::shared_ptr<ov::Data> _request_body;
 
-	std::shared_ptr<void> _extra = nullptr;
+	std::shared_ptr<void> _extra;
 };
