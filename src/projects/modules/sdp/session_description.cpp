@@ -39,6 +39,15 @@ bool SessionDescription::UpdateData(ov::String &sdp)
 
 	sdp += "\r\n";
 
+	sdp += "a=group:LS";
+
+	for(auto &t : _media_list)
+	{
+		sdp.AppendFormat(" %s", t->GetMid().CStr());
+	}
+
+	sdp += "\r\n";
+
 	// msid-semantic
 	if(_msid_semantic.IsEmpty() == false)
 	{

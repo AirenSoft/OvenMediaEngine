@@ -106,7 +106,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 					 "INFO",
 					 app_name.CStr(),
 					 rtsp_uri.CStr(),
-					 playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : client->GetRemote()->GetRemoteAddress()->GetIpAddress().CStr());
+					 playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress().CStr());
 
 			logti("URL %s is requested", rtsp_uri.CStr());
 

@@ -320,16 +320,18 @@ namespace ov
 
 			// 맨 뒤에 <message> 추가
 			log.AppendVFormat(format, &(arg_list[0]));
-
-			if(level < OVLogLevelWarning)
+			if(show_format)
 			{
-                fprintf(stdout, "%s%s%s\n", color_prefix[level], log.CStr(), color_suffix[level]);
-				fflush(stdout);
-			}
-			else
-			{
-                fprintf(stderr, "%s%s%s\n", color_prefix[level], log.CStr(), color_suffix[level]);
-                fflush(stderr);
+				if(level < OVLogLevelWarning)
+				{
+					fprintf(stdout, "%s%s%s\n", color_prefix[level], log.CStr(), color_suffix[level]);
+					fflush(stdout);
+				}
+				else
+				{
+					fprintf(stderr, "%s%s%s\n", color_prefix[level], log.CStr(), color_suffix[level]);
+					fflush(stderr);
+				}
 			}
 
             _log_file.Write(log.CStr());
