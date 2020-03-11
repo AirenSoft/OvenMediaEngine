@@ -33,6 +33,7 @@ namespace ov
 		};
 
 		TlsData(Method method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list);
+		~TlsData();
 
 		State GetState() const
 		{

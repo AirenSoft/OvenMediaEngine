@@ -1162,7 +1162,7 @@ namespace ov
 	ssize_t Socket::SendInternal(const void *data, size_t length)
 	{
 		logtd("[%p] [#%d] Trying to send data %zu bytes...", this, _socket.GetSocket(), length);
-		logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, length, length).CStr());
+		// logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, length, length).CStr());
 
 		auto data_to_send = static_cast<const uint8_t *>(data);
 		size_t remained = length;
@@ -1192,7 +1192,7 @@ namespace ov
 					int sock = _socket.GetSocket();
 					ssize_t sent = ::send(sock, data_to_send, remained, MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0));
 
-					if (sent == -1L)
+					if (sent < 0L)
 					{
 						if (errno == EAGAIN)
 						{
@@ -1246,7 +1246,7 @@ namespace ov
 							logtw("[%p] [#%d] Could not send data: %zd (%s)", this, sock, sent, ov::Error::CreateErrorFromErrno()->ToString().CStr());
 						}
 
-						break;
+						return sent;
 					}
 
 					OV_ASSERT2(static_cast<ssize_t>(remained) >= sent);
@@ -1522,7 +1522,7 @@ namespace ov
 		else
 		{
 			logtd("[%p] [#%d] %zd bytes read", this, _socket.GetSocket(), read_bytes);
-			logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, read_bytes, read_bytes).CStr());
+			// logtp("[%p] [#%d] %s", this, _socket.GetSocket(), ov::Dump(data, read_bytes, read_bytes).CStr());
 
 			*received_length = static_cast<size_t>(read_bytes);
 		}

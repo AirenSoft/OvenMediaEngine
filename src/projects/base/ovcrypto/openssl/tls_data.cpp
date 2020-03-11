@@ -63,6 +63,11 @@ namespace ov
 		_state = State::WaitingForAccept;
 	}
 
+	TlsData::~TlsData()
+	{
+		_tls.Uninitialize();
+	}
+
 	bool TlsData::Decrypt(const std::shared_ptr<const ov::Data> &cipher_data, std::shared_ptr<const ov::Data> *plain_data)
 	{
 		if (_state == State::Invalid)
