@@ -73,6 +73,8 @@ private:
 	bool Start() override;
 	bool Stop() override;
 
+	session_id_t _last_issued_session_id = 100;
+
 	void StatLog(const std::shared_ptr<WebSocketClient> &ws_client, 
 				const std::shared_ptr<RtcStream> &stream, 
 				const std::shared_ptr<RtcSession> &session, 

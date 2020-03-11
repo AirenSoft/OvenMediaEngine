@@ -244,7 +244,7 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const std::s
 	ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
 	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
 	// Generate Unique Session Id
-	session_description->SetOrigin("OvenMediaEngine", stream->IssueUniqueSessionId(), 2, "IN", 4, "127.0.0.1");
+	session_description->SetOrigin("OvenMediaEngine", ++_last_issued_session_id, 2, "IN", 4, "127.0.0.1");
 	session_description->SetIceUfrag(_ice_port->GenerateUfrag());
 	session_description->Update();
 
