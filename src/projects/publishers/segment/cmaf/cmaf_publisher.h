@@ -34,11 +34,11 @@ private:
 
 	PublisherType GetPublisherType() const override
 	{
-		return PublisherType::Cmaf;
+		return PublisherType::LlDash;
 	}
 
 	const char *GetPublisherName() const override
 	{
-		return "CMAF";
+		return "LLDASH";
 	}
 };

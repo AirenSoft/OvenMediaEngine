@@ -49,8 +49,14 @@ ov::DelayQueueAction WebSocketInterceptor::DoPing(void *parameter)
 
 bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
 {
-	const auto &request = client->GetRequest();
-	const auto &response = client->GetResponse();
+	const auto request = client->GetRequest();
+	const auto response = client->GetResponse();
+
+	// TODO(dimiden): This temporary code. Fix me later
+	if ((request == nullptr) || (response == nullptr))
+	{
+		return false;
+	}
 
 	// 여기서 web socket request 인지 확인
 	// RFC6455 - 4.2.1.  Reading the Client's Opening Handshake
@@ -113,8 +119,14 @@ bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const H
 
 HttpInterceptorResult WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpClient> &client)
 {
-	auto &request = client->GetRequest();
-	auto &response = client->GetResponse();
+	auto request = client->GetRequest();
+	auto response = client->GetResponse();
+
+	// TODO(dimiden): This temporary code. Fix me later
+	if ((request == nullptr) || (response == nullptr))
+	{
+		return HttpInterceptorResult::Disconnect;
+	}
 
 	// RFC6455 - 4.2.2.  Sending the Server's Opening Handshake
 	response->SetStatusCode(HttpStatusCode::SwitchingProtocols);
@@ -159,7 +171,13 @@ HttpInterceptorResult WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<
 
 HttpInterceptorResult WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
 {
-	auto &request = client->GetRequest();
+	auto request = client->GetRequest();
+
+	// TODO(dimiden): This temporary code. Fix me later
+	if (request == nullptr)
+	{
+		return HttpInterceptorResult::Disconnect;
+	}
 
 	if (data->GetLength() == 0)
 	{
@@ -280,8 +298,14 @@ HttpInterceptorResult WebSocketInterceptor::OnHttpData(const std::shared_ptr<Htt
 
 void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client, HttpStatusCode status_code)
 {
-	auto &request = client->GetRequest();
-	auto &response = client->GetResponse();
+	auto request = client->GetRequest();
+	auto response = client->GetResponse();
+
+	// TODO(dimiden): This temporary code. Fix me later
+	if ((request == nullptr) || (response == nullptr))
+	{
+		return;
+	}
 
 	std::shared_ptr<WebSocketInfo> socket_info;
 
@@ -309,7 +333,13 @@ void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client
 
 void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client)
 {
-	auto &request = client->GetRequest();
+	auto request = client->GetRequest();
+
+	// TODO(dimiden): This temporary code. Fix me later
+	if (request == nullptr)
+	{
+		return;
+	}
 
 	std::shared_ptr<WebSocketInfo> socket_info;
 	{

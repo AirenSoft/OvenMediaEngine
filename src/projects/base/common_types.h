@@ -48,7 +48,7 @@ enum class PublisherType : int8_t
 	Rtmp,
 	Hls,
 	Dash,
-	Cmaf,
+	LlDash,
 	Ovt,
 	NumberOfPublishers,
 };

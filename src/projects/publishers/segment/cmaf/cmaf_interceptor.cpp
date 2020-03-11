@@ -12,7 +12,13 @@
 
 bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
 {
-	const auto &request = client->GetRequest();
+	const auto request = client->GetRequest();
+
+	// TODO(dimiden): This temporary code. Fix me later
+    if (request == nullptr)
+    {
+        return false;
+    }
 
 	// Temporary code to accept HTTP 1.0
 	if ((request->GetMethod() != HttpMethod::Get) || (request->GetHttpVersionAsNumber() < 1.0))

@@ -781,7 +781,9 @@ bool Orchestrator::GetUrlListForLocationInternal(const ov::String &vhost_app_nam
 				//      	<Location>/app/stream</Location>
 				//      	<Pass>
 				//              <Scheme>ovt</Scheme>
-				//      		<Url>origin.airensoft.com:9000/another_app/and_stream</Url>
+				//              <Urls>
+				//      		    <Url>origin.airensoft.com:9000/another_app/and_stream</Url>
+				//              </Urls>
 				//      	</Pass>
 				//      </Origin>
 				// And when the location is "/app/stream_o",

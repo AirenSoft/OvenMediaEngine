@@ -15,7 +15,13 @@ HttpConnection DashStreamServer::ProcessStreamRequest(const std::shared_ptr<Http
 													  const ov::String &app_name, const ov::String &stream_name,
 													  const ov::String &file_name, const ov::String &file_ext)
 {
-	auto &response = client->GetResponse();
+	auto response = client->GetResponse();
+
+	// TODO(dimiden): This temporary code. Fix me later
+    if (response == nullptr)
+    {
+        return HttpConnection::Closed;
+    }
 
 	if (file_ext == DASH_PLAYLIST_EXT)
 	{
@@ -37,7 +43,13 @@ HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<Ht
 												   const ov::String &file_name,
 												   PlayListType play_list_type)
 {
-	auto &response = client->GetResponse();
+	auto response = client->GetResponse();
+
+	// TODO(dimiden): This temporary code. Fix me later
+    if (response == nullptr)
+    {
+        return HttpConnection::Closed;
+    }
 
 	ov::String play_list;
 
@@ -68,7 +80,13 @@ HttpConnection DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 												  const ov::String &file_name,
 												  SegmentType segment_type)
 {
-	auto &response = client->GetResponse();
+	auto response = client->GetResponse();
+	
+	// TODO(dimiden): This temporary code. Fix me later
+    if (response == nullptr)
+    {
+        return HttpConnection::Closed;
+    }
 
 	std::shared_ptr<SegmentData> segment = nullptr;
 

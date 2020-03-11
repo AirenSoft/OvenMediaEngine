@@ -38,6 +38,7 @@ ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
 	// 헤더가 아직 파싱되지 않았으므로, 매 번 데이터가 들어올 때마다 헤더 파싱 시도
 	ssize_t previous_length = _request_string.GetLength();
 
+	// ov::String is binary-safe
 	_request_string.Append(data->GetDataAs<char>(), data->GetLength());
 	ssize_t newline_position = _request_string.IndexOf(&(NewLines[0]));
 
@@ -61,11 +62,36 @@ ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
 		{
 			// 파싱 도중 오류 발생
 			used_length = -1L;
+			_parse_status = HttpStatusCode::BadRequest;
 		}
 	}
 	else
 	{
-		// 아직 데이터가 덜 들어와서 헤더를 파싱 할 수 없음
+		// Need more data
+
+		// Check if data consists of non-binary data
+		auto data_to_check = data->GetDataAs<char>();
+		auto remained = data->GetLength();
+
+		while(remained > 0)
+		{
+			char character = *data_to_check;
+
+			// isprint(): 32 <= character <= 126
+			// isspace(): 9 <= character <= 13
+			// reference: https://en.cppreference.com/w/cpp/string/byte/isprint
+			if(::isprint(character) || ::isspace(character))
+			{
+				continue;
+			}
+			else
+			{
+				// Binary data found
+				used_length = -1;
+				_parse_status = HttpStatusCode::BadRequest;
+				break;
+			}
+		}
 	}
 
 	// 사용한 데이터 길이 반환

@@ -8,7 +8,7 @@
 //==============================================================================
 #include "cmaf_chunk_writer.h"
 
-#define OV_LOG_TAG "Cmaf.Writer"
+#define OV_LOG_TAG "CMAF.Writer"
 
 #define DEFAULT_CHUNK_HEADER_SIZE (256)
 

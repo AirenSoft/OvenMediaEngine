@@ -59,6 +59,8 @@ bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server
 		return false;
 	}
 
+	logti("HLS Publisher is listening on %s", address.ToString().CStr());
+
 	_stream_server = stream_server;
 
 	return Publisher::Start();

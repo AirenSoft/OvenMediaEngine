@@ -181,8 +181,9 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 	// Check parsing result
 	if ((sps_start_index == -1) || (sps_end_index < (sps_start_index + 4)))
 	{
-		logte("Could not parse SPS (SPS: %d-%d, PPS: %d-%d) from DASH frame for [%s/%s]",
+		logte("Could not parse SPS (SPS: %d-%d, PPS: %d-%d) from %s frame for [%s/%s]",
 			  sps_start_index, sps_end_index, pps_start_index, pps_end_index,
+			  GetPacketizerName(),
 			  _app_name.CStr(), _stream_name.CStr());
 
 		return false;
@@ -190,8 +191,9 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 
 	if ((pps_start_index <= sps_end_index) || (pps_start_index >= pps_end_index))
 	{
-		logte("Could not parse PPS (SPS: %d-%d, PPS: %d-%d) from DASH frame for [%s/%s]",
+		logte("Could not parse PPS (SPS: %d-%d, PPS: %d-%d) from %s frame for [%s/%s]",
 			  sps_start_index, sps_end_index, pps_start_index, pps_end_index,
+			  GetPacketizerName(),
 			  _app_name.CStr(), _stream_name.CStr());
 
 		return false;
@@ -199,9 +201,10 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 
 	if ((total_start_pattern_size < 9) || (total_start_pattern_size > 12))
 	{
-		logte("Invalid patterns (%d, SPS: %d-%d, PPS: %d-%d) in DASH frame for [%s/%s]",
+		logte("Invalid patterns (%d, SPS: %d-%d, PPS: %d-%d) in %s frame for [%s/%s]",
 			  total_start_pattern_size,
 			  sps_start_index, sps_end_index, pps_start_index, pps_end_index,
+			  GetPacketizerName(),
 			  _app_name.CStr(), _stream_name.CStr());
 
 		return false;
@@ -221,7 +224,7 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 
 	if (init_data == nullptr)
 	{
-		logte("Could not write DASH init file for video [%s/%s]", _app_name.CStr(), _stream_name.CStr());
+		logte("Could not write %s init file for video [%s/%s]", GetPacketizerName(), _app_name.CStr(), _stream_name.CStr());
 		return false;
 	}
 
@@ -230,7 +233,7 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 	// Store data for video stream
 	_video_init_file = std::make_shared<SegmentData>(common::MediaType::Video, 0, init_file_name, 0, 0, init_data);
 
-	logtd("DASH init file (%s) is written for video [%s/%s]", init_file_name.CStr(), _app_name.CStr(), _stream_name.CStr());
+	logtd("%s init file (%s) is written for video [%s/%s]", GetPacketizerName(), init_file_name.CStr(), _app_name.CStr(), _stream_name.CStr());
 
 	return true;
 }
@@ -244,7 +247,7 @@ bool DashPacketizer::WriteVideoSegment()
 {
 	if (_video_datas.empty())
 	{
-		logtd("There is no video data for DASH segment");
+		logtd("There is no video data for %s segment", GetPacketizerName());
 		return true;
 	}
 
@@ -403,14 +406,14 @@ bool DashPacketizer::WriteAudioInitInternal(const std::shared_ptr<ov::Data> &fra
 
 	if (init_data == nullptr)
 	{
-		logte("Could not write DASH init file for audio [%s/%s]", _app_name.CStr(), _stream_name.CStr());
+		logte("Could not write %s init file for audio [%s/%s]", GetPacketizerName(), _app_name.CStr(), _stream_name.CStr());
 		return false;
 	}
 
 	// Store data for audio stream
 	_audio_init_file = std::make_shared<SegmentData>(common::MediaType::Audio, 0, init_file_name, 0, 0, init_data);
 
-	logtd("DASH init file (%s) is written for audio [%s/%s]", init_file_name.CStr(), _app_name.CStr(), _stream_name.CStr());
+	logtd("%s init file (%s) is written for audio [%s/%s]", GetPacketizerName(), init_file_name.CStr(), _app_name.CStr(), _stream_name.CStr());
 
 	return true;
 }
@@ -424,7 +427,7 @@ bool DashPacketizer::WriteAudioSegment()
 {
 	if (_audio_datas.empty())
 	{
-		logtd("There is no audio data for DASH segment");
+		logtd("There is no audio data for %s segment", GetPacketizerName());
 		return true;
 	}
 
@@ -497,7 +500,7 @@ bool DashPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameDat
 		// Flush frames
 		if (WriteAudioSegment() == false)
 		{
-			logte("An error occurred while write the DASH audio segment");
+			logte("An error occurred while write the %s audio segment", GetPacketizerName());
 			return false;
 		}
 
@@ -660,7 +663,7 @@ bool DashPacketizer::UpdatePlayList()
 
 	ov::String publishTime = MakeUtcSecond(::time(nullptr));
 
-	logtd("Trying to update playlist for DASH with availabilityStartTime: %s, publishTime: %s", _start_time.CStr(), publishTime.CStr());
+	logtd("Trying to update playlist for %s with availabilityStartTime: %s, publishTime: %s", GetPacketizerName(), _start_time.CStr(), publishTime.CStr());
 
 	if (GetSegmentInfos(&video_urls, &audio_urls, &time_shift_buffer_depth, &minimumUpdatePeriod) == false)
 	{
@@ -811,8 +814,8 @@ bool DashPacketizer::SetSegmentData(ov::String file_name, uint64_t duration, int
 
 			_video_segment_count++;
 
-			logtd("DASH segment is added for video stream [%s/%s], file: %s, duration: %llu, size: %zu (scale: %llu/%.0f = %0.3f)",
-				  _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration, data->GetLength(), duration, _video_track->GetTimeBase().GetTimescale(), (double)duration / _video_track->GetTimeBase().GetTimescale());
+			logtd("%s segment is added for video stream [%s/%s], file: %s, duration: %llu, size: %zu (scale: %llu/%.0f = %0.3f)",
+				  GetPacketizerName(), _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration, data->GetLength(), duration, _video_track->GetTimeBase().GetTimescale(), (double)duration / _video_track->GetTimeBase().GetTimescale());
 
 			break;
 		}
@@ -831,8 +834,8 @@ bool DashPacketizer::SetSegmentData(ov::String file_name, uint64_t duration, int
 
 			_audio_segment_count++;
 
-			logtd("DASH segment is added for audio stream [%s/%s], file: %s, duration: %llu, size: %zu (scale: %llu/%.0f = %0.3f)",
-				  _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration, data->GetLength(), duration, _audio_track->GetTimeBase().GetTimescale(), (double)duration / _audio_track->GetTimeBase().GetTimescale());
+			logtd("%s segment is added for audio stream [%s/%s], file: %s, duration: %llu, size: %zu (scale: %llu/%.0f = %0.3f)",
+				  GetPacketizerName(), _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration, data->GetLength(), duration, _audio_track->GetTimeBase().GetTimescale(), (double)duration / _audio_track->GetTimeBase().GetTimescale());
 
 			break;
 		}
@@ -846,7 +849,7 @@ bool DashPacketizer::SetSegmentData(ov::String file_name, uint64_t duration, int
 	{
 		SetReadyForStreaming();
 
-		logti("[%p] DASH segment is ready for stream [%s/%s], segment duration: %fs, count: %u", this, _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);
+		logti("[%p] %s segment is ready for stream [%s/%s], segment duration: %fs, count: %u", this, GetPacketizerName(), _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);
 	}
 
 	return true;

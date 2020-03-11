@@ -35,6 +35,11 @@ public:
 				   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 				   const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
+	virtual const char *GetPacketizerName() const
+	{
+		return "LLDASH";
+	}
+
 	//--------------------------------------------------------------------
 	// Override DashPacketizer
 	//--------------------------------------------------------------------

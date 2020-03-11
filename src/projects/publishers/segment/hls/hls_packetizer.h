@@ -27,6 +27,11 @@ public:
                 std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track);
 
 	~HlsPacketizer() = default;
+
+    virtual const char *GetPacketizerName() const
+	{
+		return "HLS";
+	}
 	
 public :
     virtual bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame_data) override;

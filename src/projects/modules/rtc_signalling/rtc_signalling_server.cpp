@@ -67,7 +67,9 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 	web_socket->SetConnectionHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> HttpInterceptorResult {
 			auto &client = ws_client->GetClient();
-			auto &remote = client->GetRemote();
+			auto remote = client->GetRemote();
+			auto request = client->GetRequest();
+			auto response = client->GetResponse();
 
 			if (remote == nullptr)
 			{
@@ -75,11 +77,17 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 				return HttpInterceptorResult::Disconnect;
 			}
 
+			// TODO(dimiden): This temporary code. Fix me later
+			if ((request == nullptr) || (response == nullptr))
+			{
+				return HttpInterceptorResult::Disconnect;
+			}
+
 			ov::String description = remote->ToString();
 
 			logti("New client is connected: %s", description.CStr());
 
-			auto tokens = client->GetRequest()->GetRequestTarget().Split("/");
+			auto tokens = request->GetRequestTarget().Split("/");
 
 			// "/<app>/<pub::Stream>"
 			if (tokens.size() < 3)
@@ -89,7 +97,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			}
 
 			// Find the "Host" header
-			auto host_name = client->GetRequest()->GetHeader("HOST").Split(":")[0];
+			auto host_name = request->GetHeader("HOST").Split(":")[0];
 
 			ov::String internal_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
 
@@ -136,7 +144,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 				}
 			}
 
-			client->GetRequest()->SetExtra(info);
+			request->SetExtra(info);
 
 			return HttpInterceptorResult::Keep;
 		});
@@ -144,10 +152,17 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 	web_socket->SetMessageHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const WebSocketFrame> &message) -> HttpInterceptorResult {
 			auto &client = ws_client->GetClient();
+			auto request = client->GetRequest();
+
+			// TODO(dimiden): This temporary code. Fix me later
+			if (request == nullptr)
+			{
+				return HttpInterceptorResult::Disconnect;
+			}
 
 			logtp("The client sent a message:\n%s", message->GetPayload()->Dump().CStr());
 
-			auto info = client->GetRequest()->GetExtraAs<RtcSignallingInfo>();
+			auto info = request->GetExtraAs<RtcSignallingInfo>();
 
 			if (info == nullptr)
 			{
@@ -216,8 +231,15 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 	web_socket->SetCloseHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> void {
 			auto &client = ws_client->GetClient();
+			auto request = client->GetRequest();
 
-			auto info = client->GetRequest()->GetExtraAs<RtcSignallingInfo>();
+			// TODO(dimiden): This temporary code. Fix me later
+			if (request == nullptr)
+			{
+				return;
+			}
+
+			auto info = request->GetExtraAs<RtcSignallingInfo>();
 
 			if (info != nullptr)
 			{
@@ -284,7 +306,15 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 {
 	bool disconnected = _http_server->DisconnectIf(
 		[application_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool {
-			auto info = client->GetRequest()->GetExtraAs<RtcSignallingInfo>();
+			auto request = client->GetRequest();
+
+			// TODO(dimiden): This temporary code. Fix me later
+			if (request == nullptr)
+			{
+				return true;
+			}
+
+			auto info = request->GetExtraAs<RtcSignallingInfo>();
 
 			if (info == nullptr)
 			{
@@ -449,6 +479,13 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::share
 std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
 {
 	auto &client = ws_client->GetClient();
+	auto request = client->GetRequest();
+
+	// TODO(dimiden): This temporary code. Fix me later
+	if (request == nullptr)
+	{
+		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Invalid request");
+	}
 
 	ov::String application_name = info->internal_app_name;
 	ov::String stream_name = info->stream_name;
@@ -462,7 +499,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	peer_info = _p2p_manager.CreatePeerInfo(info->id, ws_client);
 	if (peer_info == nullptr)
 	{
-		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Cannot parse peer info from user agent: %s", client->GetRequest()->GetHeader("USER-AGENT").CStr());
+		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Cannot parse peer info from user agent: %s", request->GetHeader("USER-AGENT").CStr());
 	}
 
 	info->peer_info = peer_info;
@@ -645,7 +682,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 			for (auto &observer : _observers)
 			{
 				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->internal_app_name.CStr(), info->stream_name.CStr());
-				// TODO(Getroot): Add param "client->GetRequest()->GetRequestTarget()"
+				// TODO(Getroot): Add param "request->GetRequestTarget()"
 				observer->OnAddRemoteDescription(ws_client, info->internal_app_name, info->stream_name, info->offer_sdp, info->peer_sdp);
 			}
 		}

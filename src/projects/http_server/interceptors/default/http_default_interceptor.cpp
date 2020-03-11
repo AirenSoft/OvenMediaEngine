@@ -47,7 +47,13 @@ bool HttpDefaultInterceptor::IsInterceptorForRequest(const std::shared_ptr<const
 HttpInterceptorResult HttpDefaultInterceptor::OnHttpPrepare(const std::shared_ptr<HttpClient> &client)
 {
 	// request body를 처리하기 위해 메모리를 미리 할당해놓음
-	auto &request = client->GetRequest();
+	auto request = client->GetRequest();
+
+	// TODO(dimiden): This temporary code. Fix me later
+	if (request == nullptr)
+	{
+		return HttpInterceptorResult::Disconnect;
+	}
 
 	// TODO: content-length가 너무 크면 비정상 종료 될 수 있으므로, 파일 업로드 지원 & 너무 큰 요청은 차단하는 기능 만들어야 함
 	ssize_t content_length = request->GetContentLength();
@@ -73,8 +79,14 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpPrepare(const std::shared_pt
 
 HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
 {
-	auto &request = client->GetRequest();
-	auto &response = client->GetResponse();
+	auto request = client->GetRequest();
+	auto response = client->GetResponse();
+
+	// TODO(dimiden): This temporary code. Fix me later
+	if ((request == nullptr) || (response == nullptr))
+	{
+		return HttpInterceptorResult::Disconnect;
+	}
 
 	const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
 	ssize_t current_length = (request_body != nullptr) ? request_body->GetLength() : 0L;
@@ -191,7 +203,13 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 
 void HttpDefaultInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client, HttpStatusCode status_code)
 {
-	auto &response = client->GetResponse();
+	auto response = client->GetResponse();
+
+	// TODO(dimiden): This temporary code. Fix me later
+    if (response == nullptr)
+    {
+        return;
+    }
 
 	response->SetStatusCode(status_code);
 }

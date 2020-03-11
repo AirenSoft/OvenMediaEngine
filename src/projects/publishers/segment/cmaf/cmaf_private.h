@@ -8,4 +8,4 @@
 //==============================================================================
 #pragma once
 
-#define OV_LOG_TAG "CMAF"
+#define OV_LOG_TAG "LLDASH"

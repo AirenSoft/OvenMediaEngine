@@ -18,12 +18,12 @@ class CmafStreamServer : public DashStreamServer, public ICmafChunkedTransfer
 public:
 	PublisherType GetPublisherType() const noexcept override
 	{
-		return PublisherType::Cmaf;
+		return PublisherType::LlDash;
 	}
 
 	const char *GetPublisherName() const noexcept override
 	{
-		return "CMAF";
+		return "LLDASH";
 	}
 
 	std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() override
