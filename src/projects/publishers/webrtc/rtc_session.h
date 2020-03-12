@@ -81,6 +81,7 @@ private:
 	std::shared_ptr<IcePort>            _ice_port;
 	std::shared_ptr<WebSocketClient> 	_ws_client; // Signalling  
 
-	uint8_t 							_red_block_pt;
-	std::unordered_set<uint8_t>			_payload_types;
+	uint8_t 							_red_block_pt = 0;
+	uint8_t                             _video_payload_type = 0;
+	uint8_t                             _audio_payload_type = 0;
 };

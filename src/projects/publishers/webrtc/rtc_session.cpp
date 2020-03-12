@@ -78,15 +78,24 @@ bool RtcSession::Start()
 			return false;
 		}
 
-		_payload_types.emplace(first_payload->GetId());
-		// If there is a RED
-		if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Video && peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
+		if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
 		{
-			_red_block_pt = first_payload->GetId();
+			_audio_payload_type = first_payload->GetId();
 		}
+		else
+		{
+			// If there is a RED
+			if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
+			{
+				_video_payload_type = RED_PAYLOAD_TYPE;
+				_red_block_pt = first_payload->GetId();
 
-		// TODO(getroot): 향후 player에서 m= line을 선택하여 받는 기능이 만들어지면
-		// peer에서 받기 거부한 m= line이 있는지 체크하여 track에서 뺀다, 현재는 다 받기 때문에 모두 보낸다.
+			}
+			else
+			{
+				_video_payload_type = first_payload->GetId();
+			}
+		}
 	}
 
 	// SessionNode를 생성하고 연결한다.
@@ -192,7 +201,7 @@ bool RtcSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov
 	auto red_block_pt = static_cast<uint8_t>((packet_type & 0xFF00) >> 8);
 	auto origin_pt_of_fec = static_cast<uint8_t>((packet_type & 0xFF0000) >> 16);
 
-	if (_payload_types.find(rtp_payload_type) == _payload_types.end())
+	if(rtp_payload_type != _video_payload_type && rtp_payload_type != _audio_payload_type)
 	{
 		return false;
 	}
@@ -205,10 +214,7 @@ bool RtcSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov
 			return false;
 		}
 	}
-
-	//printf("pt:%d session v pt:%d red pt:%d session red pt : %d origin pt:%d  session a pt:%d\n",
-	//	   rtp_payload_type, _video_payload_type, red_block_pt, _red_block_pt, origin_pt_of_fec, _audio_payload_type);
-
+	
 	_sent_bytes += packet->GetLength();
 
 	return _rtp_rtcp->SendOutgoingData(packet);
