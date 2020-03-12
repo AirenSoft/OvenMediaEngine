@@ -37,23 +37,6 @@ MediaRouter::~MediaRouter()
 
 bool MediaRouter::Start()
 {
-	logti("Trying to start media router...");
-
-	// Deorecated Garbage collect thread
-	// try
-	// {
-	// 	_kill_flag = false;
-	// 	_thread = std::thread(&MediaRouter::MainTask, this);
-	// }
-	// catch(const std::system_error &e)
-	// {
-	// 	_kill_flag = true;
-
-	// 	logte("Failed to start media router thread.");
-
-	// 	return false;
-	// }
-
 	logti("Media router is started.");
 
 	return true;
@@ -62,13 +45,6 @@ bool MediaRouter::Start()
 bool MediaRouter::Stop()
 {
 	logti("Terminated media route modules.");
-
-	_kill_flag = true;
-
-	if(_thread.joinable())
-	{
-		_thread.join();
-	}
 
 	for(auto const &_route_app : _route_apps)
 	{
@@ -140,7 +116,7 @@ bool MediaRouter::RegisterConnectorApp(
 	return media_route_app->RegisterConnectorApp(app_conn);
 }
 
-// 어플리케이션의 스트림이 생성됨
+// Application stream created
 bool MediaRouter::UnregisterConnectorApp(
 	const info::Application &application_info,
 	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn)
@@ -199,20 +175,3 @@ bool MediaRouter::UnregisterObserverApp(
 	return media_route_app->UnregisterObserverApp(app_obsrv);
 }
 
-
-// Application -> Stream -> BufferQueue에 있는 Buffer를 Observer에 전달하는 목적으로 사용됨.
-void MediaRouter::MainTask()
-{
-	while(!_kill_flag)
-	{
-		// sleep(5);
-		// logtd("Perform a garbage collector");
-		for(auto it = _route_apps.begin(); it != _route_apps.end(); ++it)
-		{
-			auto application = it->second;
-
-			application->OnGarbageCollector();
-		}
-	}
-
-}

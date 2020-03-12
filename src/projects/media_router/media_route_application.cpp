@@ -76,7 +76,7 @@ bool MediaRouteApplication::RegisterConnectorApp(
 		return false;
 	}
 
-	logtd("Register application connector. application(%s/%p) connector_type(%d)", _application_info.GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
+	logtd("Register connector. app(%s/%p) type(%d)", _application_info.GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
 
 	app_conn->SetMediaRouterApplication(GetSharedPtr());
 
@@ -94,7 +94,7 @@ bool MediaRouteApplication::UnregisterConnectorApp(
 		return false;
 	}
 
-	logtd("Unregister application connector. application(%s/%p) connector_type(%d)", _application_info.GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
+	logtd("Unregister connector. app(%s/%p) type(%d)", _application_info.GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
 
 	// 삭제
 	auto position = std::find(_connectors.begin(), _connectors.end(), app_conn);
@@ -118,7 +118,7 @@ bool MediaRouteApplication::RegisterObserverApp(
 		return false;
 	}
 
-	logtd("Register application observer. application(%s/%p) observer_type(%d)", _application_info.GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
+	logtd("Register observer. app(%s/%p) type(%d)", _application_info.GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
 
 	std::unique_lock<std::mutex> lock(_mutex);
 	_observers.push_back(app_obsrv);
@@ -135,7 +135,7 @@ bool MediaRouteApplication::UnregisterObserverApp(
 		return false;
 	}
 
-	logtd("Unregister application observer. application(%s/%p) observer_type(%d)", _application_info.GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
+	logtd("Unregister observer. app(%s/%p) type(%d)", _application_info.GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
 
 	auto position = std::find(_observers.begin(), _observers.end(), app_obsrv);
 	if (position == _observers.end())
@@ -181,7 +181,7 @@ bool MediaRouteApplication::OnCreateStream(
 		}
 	}
 
-	logtd("Created stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+	logtd("Created stream. type(%d), app(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
 
 	auto new_stream_info = std::make_shared<info::Stream>(*stream);
 	auto new_stream = std::make_shared<MediaRouteStream>(new_stream_info);
@@ -246,7 +246,7 @@ bool MediaRouteApplication::OnDeleteStream(
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamDeleted(*stream);
 
-	logtd("Deleted stream from connector. connector_type(%d), application(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+	logtd("Deleted connector. type(%d), app(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
 	auto new_stream = std::make_shared<info::Stream>(*stream);
 
 	// 옵저버에 스트림 삭제를 알림
