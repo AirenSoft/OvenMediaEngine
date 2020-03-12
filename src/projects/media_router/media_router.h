@@ -76,13 +76,7 @@ public:
 		const std::shared_ptr<MediaRouteApplicationObserver> &application_observer) override;
 
 private:
-	void MainTask();
-
 	std::map<info::application_id_t, std::shared_ptr<MediaRouteApplication>> _route_apps;
-
-	volatile bool _kill_flag;
-	std::thread _thread;
-	std::mutex _mutex;
 
 };
 

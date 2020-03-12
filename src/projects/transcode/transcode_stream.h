@@ -167,6 +167,9 @@ private:
 
 	common::MediaCodecId GetCodecId(ov::String name);
 
+	bool IsVideoCodec(common::MediaCodecId codec_id);
+	bool IsAudioCodec(common::MediaCodecId codec_id);
+
 	int GetBitrate(ov::String bitrate);
 };
 
