@@ -699,7 +699,7 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 	}
 	auto decoder = decoder_item->second.get();
 
-	logtp("[#%d] Trying to decode a frame (PTS: %lld)", track_id, packet->GetPts());
+	// logtp("[#%d] Trying to decode a frame (PTS: %lld)", track_id, packet->GetPts());
 	decoder->SendBuffer(std::move(packet));
 
 	while (true)
@@ -725,7 +725,7 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 		case TranscodeResult::DataReady:
 			decoded_frame->SetTrackId(decoder_id);
 
-			logtp("[#%d] A packet is decoded (PTS: %lld)", decoder_id, decoded_frame->GetPts());
+			// logtp("[#%d] A packet is decoded (PTS: %lld)", decoder_id, decoded_frame->GetPts());
 
 			_stats_decoded_frame_count++;
 
@@ -761,7 +761,7 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 
 	auto filter = filter_item->second.get();
 
-	logtp("[#%d] Trying to apply a filter to the frame (PTS: %lld)", track_id, decoded_frame->GetPts());
+	// logtp("[#%d] Trying to apply a filter to the frame (PTS: %lld)", track_id, decoded_frame->GetPts());
 	filter->SendBuffer(std::move(decoded_frame));
 
 	while (true)
@@ -780,7 +780,7 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 		case TranscodeResult::DataReady:
 			filtered_frame->SetTrackId(track_id);
 
-			logtp("[#%d] A frame is filtered (PTS: %lld)", track_id, filtered_frame->GetPts());
+			// logtd("[#%d] A frame is filtered (PTS: %lld)", track_id, filtered_frame->GetPts());
 
 			// if (_queue_filterd_frames.size() > _max_queue_size)
 			// {
@@ -814,7 +814,7 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t filter_id, std::shared_ptr<
 
 	auto encoder = encoder_item->second.get();
 
-	logtp("[#%d] Trying to encode the frame (PTS: %lld)", encoder_id, frame->GetPts());
+	// logtd("[#%d] Trying to encode the frame (PTS: %lld)", encoder_id, frame->GetPts());
 
 	encoder->SendBuffer(std::move(frame));
 
@@ -848,9 +848,6 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t filter_id, std::shared_ptr<
 
 				auto clone_packet = encoded_packet->ClonePacket();
 				clone_packet->SetTrackId(output_track_id);
-
-				// if(encoder_id == 1 || encoder_id == 2)
-				// 	logtd("  [#%d -> %d] A packet is encoded (PTS: %lld)", encoder_id, output_track_id, clone_packet->GetPts());
 
 				// Send the packet to MediaRouter
 				SendFrame(output_stream, std::move(clone_packet));
