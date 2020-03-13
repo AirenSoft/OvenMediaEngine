@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<Server version="4">
+<Server version="5">
 	<Name>OvenMediaEngine</Name>
 	<!-- Host type (origin/edge) -->
 	<Type>origin</Type>
@@ -10,15 +10,31 @@
 	<!-- Settings for the ports to bind -->
 	<Bind>
 		<Providers>
-			<RTMP>1935</RTMP>
+			<RTMP>
+				<Port>1935</Port>
+			</RTMP>
 		</Providers>
 
 		<Publishers>
-			<OVT>9000</OVT>
-			<HLS>80</HLS>
-			<DASH>80</DASH>
+			<OVT>
+				<Port>9000</Port>
+			</OVT>
+			<HLS>
+				<Port>80</Port>
+				<!-- If you want to use TLS, specify the TLS port -->
+				<!-- <TlsPort>443</TlsPort> -->
+			</HLS>
+			<DASH>
+				<Port>80</Port>
+				<!-- If you want to use TLS, specify the TLS port -->
+				<!-- <TlsPort>443</TlsPort> -->
+			</DASH>
 			<WebRTC>
-				<Signalling>3333</Signalling>
+				<Signalling>
+					<Port>3333</Port>
+					<!-- If you want to use TLS, specify the TLS port -->
+					<!-- <TlsPort>3334</TlsPort> -->
+				</Signalling>
 				<IceCandidates>
 					<IceCandidate>*:10000-10005/udp</IceCandidate>
 				</IceCandidates>
