@@ -29,7 +29,7 @@ public:
 	RtcSignallingServer(const cfg::Server &server_config, const info::Host &host_info);
 	~RtcSignallingServer() override = default;
 
-	bool Start(const ov::SocketAddress &address);
+	bool Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address);
 	bool Stop();
 
 	bool AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer);
@@ -105,6 +105,8 @@ protected:
 	const info::Host _host_info;
 
 	std::shared_ptr<HttpServer> _http_server;
+	std::shared_ptr<HttpsServer> _https_server;
+
 	std::vector<std::shared_ptr<RtcSignallingObserver>> _observers;
 
 	std::map<peer_id_t, std::shared_ptr<RtcSignallingInfo>> _client_list;

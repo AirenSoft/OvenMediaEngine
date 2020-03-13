@@ -115,6 +115,7 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 	if (client != nullptr)
 	{
 		std::shared_ptr<HttpRequest> request = client->GetRequest();
+		std::shared_ptr<HttpResponse> response = client->GetResponse();
 
 		// TODO(dimiden): This temporary code. Fix me later
 		if (request == nullptr)
@@ -186,6 +187,8 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 
 						if (interceptor == nullptr)
 						{
+							response->SetStatusCode(HttpStatusCode::InternalServerError);
+
 							need_to_disconnect = true;
 							OV_ASSERT2(false);
 						}
@@ -226,7 +229,8 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 		if (need_to_disconnect)
 		{
 			// 연결을 종료해야 함
-			client->GetResponse()->Close();
+			response->Response();
+			response->Close();
 		}
 	}
 }

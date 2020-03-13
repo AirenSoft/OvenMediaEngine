@@ -52,12 +52,6 @@ bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const H
 	const auto request = client->GetRequest();
 	const auto response = client->GetResponse();
 
-	// TODO(dimiden): This temporary code. Fix me later
-	if ((request == nullptr) || (response == nullptr))
-	{
-		return false;
-	}
-
 	// 여기서 web socket request 인지 확인
 	// RFC6455 - 4.2.1.  Reading the Client's Opening Handshake
 	//

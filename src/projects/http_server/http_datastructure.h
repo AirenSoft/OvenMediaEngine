@@ -47,7 +47,9 @@ enum class HttpMethod : uint16_t
 	Delete = 0x0010,
 	Connect = 0x0020,
 	Options = 0x0040,
-	Trace = 0x0080
+	Trace = 0x0080,
+
+	All = Get | Head | Post | Put | Delete | Connect | Options | Trace
 };
 
 enum class HttpConnection : char

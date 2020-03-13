@@ -94,5 +94,5 @@ private:
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 
 	std::shared_ptr<IcePort> _ice_port;
-	std::shared_ptr<RtcSignallingServer> _signalling;
+	std::shared_ptr<RtcSignallingServer> _signalling_server;
 };

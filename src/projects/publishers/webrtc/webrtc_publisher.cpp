@@ -40,33 +40,69 @@ bool WebRtcPublisher::Start()
 	auto server_config = GetServerConfig();
 	auto webrtc_port_info = server_config.GetBind().GetPublishers().GetWebrtc();
 
+	if (webrtc_port_info.IsParsed() == false)
+	{
+		logtd("WebRTC Publisher is disabled");
+		return true;
+	}
+
+	auto port = static_cast<uint16_t>(webrtc_port_info.GetSignallingPort());
+	auto tls_port = static_cast<uint16_t>(webrtc_port_info.GetSignallingTlsPort());
+	bool has_port = (port != 0);
+	bool has_tls_port = (tls_port != 0);
+
+	if ((has_port == false) && (has_tls_port == false))
+	{
+		logte("Invalid WebRTC Port settings");
+		return false;
+	}
+
+	ov::SocketAddress signalling_address = ov::SocketAddress(server_config.GetIp(), port);
+	ov::SocketAddress signalling_tls_address = ov::SocketAddress(server_config.GetIp(), tls_port);
+
+	// Initialize RtcSignallingServer
+	_signalling_server = std::make_shared<RtcSignallingServer>(server_config, GetHostInfo());
+	_signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
+	if (_signalling_server->Start(has_port ? &signalling_address : nullptr, has_tls_port ? &signalling_tls_address : nullptr) == false)
+	{
+		return false;
+	}
+
+	bool result = true;
+
 	_ice_port = IcePortManager::Instance()->CreatePort(webrtc_port_info.GetIceCandidates(), IcePortObserver::GetSharedPtr());
 	if (_ice_port == nullptr)
 	{
 		logte("Cannot initialize ICE Port. Check your ICE configuration");
-		return false;
-	}
-
-	// Signalling에 Observer 연결
-	ov::SocketAddress signalling_address = ov::SocketAddress(server_config.GetIp(), static_cast<uint16_t>(webrtc_port_info.GetSignallingPort()));
-
-	logti("WebRTC Publisher is listening on %s...", signalling_address.ToString().CStr());
-
-	_signalling = std::make_shared<RtcSignallingServer>(server_config, GetHostInfo());
-	_signalling->AddObserver(RtcSignallingObserver::GetSharedPtr());
-	if (!_signalling->Start(signalling_address))
-	{
-		return false;
+		result = false;
 	}
 
 	// Publisher::Start()에서 Application을 생성한다.
-	return Publisher::Start();
+	result = result && Publisher::Start();
+
+	if (result)
+	{
+		logti("WebRTC Publisher is listening on %s%s%s%s...",
+			  has_port ? signalling_address.ToString().CStr() : "",
+			  (has_port && has_tls_port) ? ", " : "",
+			  has_tls_port ? "TLS: " : "",
+			  has_tls_port ? signalling_tls_address.ToString().CStr() : "");
+	}
+	else
+	{
+		// Rollback
+		logte("An error occurred while initialize WebRTC Publisher. Stopping RtcSignallingServer...");
+
+		_signalling_server->Stop();
+	}
+
+	return result;
 }
 
 bool WebRtcPublisher::Stop()
 {
 	_ice_port.reset();
-	_signalling.reset();
+	_signalling_server.reset();
 
 	return Publisher::Stop();
 }
@@ -107,8 +143,8 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 	log.AppendFormat("\t%s", mbstr);
 	// Url
 	log.AppendFormat("\t%s", request->GetRequestTarget().CStr());
-	
-	if(result == RequestStreamResult::transfer_completed && session != nullptr)
+
+	if (result == RequestStreamResult::transfer_completed && session != nullptr)
 	{
 		// Bytes sents
 		log.AppendFormat("\t%llu", session->GetSentBytes());
@@ -123,9 +159,9 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 		// request_time : -
 		log.AppendFormat("\t-\t-");
 	}
-	
+
 	// upstream_cache_status : -
-	if(result == RequestStreamResult::local_success)
+	if (result == RequestStreamResult::local_success)
 	{
 		log.AppendFormat("\t%s", "hit");
 	}
@@ -143,7 +179,7 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 	log.AppendFormat("\t%s", request->GetHeader("Referer").CStr());
 	// origin addr
 	// orchestrator->GetUrlListForLocation()
-	
+
 	if (result == RequestStreamResult::origin_success && stream != nullptr)
 	{
 		// origin http status : 200 or 404
@@ -156,7 +192,7 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 		// upstream_header_time : -
 		// upstream_response_time
 		auto stream_metric = mon::Monitoring::GetInstance()->GetStreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
-		if(stream_metric != nullptr)
+		if (stream_metric != nullptr)
 		{
 			log.AppendFormat("\t%f\t-\t%f", stream_metric->GetOriginRequestTimeMSec(), stream_metric->GetOriginResponseTimeMSec());
 		}
@@ -185,13 +221,13 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 //====================================================================================================
 bool WebRtcPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections)
 {
-	return _signalling->GetMonitoringCollectionData(collections);
+	return _signalling_server->GetMonitoringCollectionData(collections);
 }
 
 // Publisher에서 Application 생성 요청이 온다.
 std::shared_ptr<pub::Application> WebRtcPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	return RtcApplication::Create(application_info, _ice_port, _signalling);
+	return RtcApplication::Create(application_info, _ice_port, _signalling_server);
 }
 
 /*
@@ -381,7 +417,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 	auto session = std::static_pointer_cast<RtcSession>(session_info);
 	auto application = session->GetApplication();
 	auto stream = std::static_pointer_cast<RtcStream>(session->GetStream());
-	
+
 	// state를 보고 session을 처리한다.
 	switch (state)
 	{
@@ -405,7 +441,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 			}
 
 			// Signalling에 종료 명령을 내린다.
-			_signalling->Disconnect(application->GetName(), stream->GetName(), session->GetPeerSDP());
+			_signalling_server->Disconnect(application->GetName(), stream->GetName(), session->GetPeerSDP());
 			break;
 		}
 		default:

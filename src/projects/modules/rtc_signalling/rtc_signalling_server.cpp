@@ -22,28 +22,40 @@ RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config, const
 {
 }
 
-bool RtcSignallingServer::Start(const ov::SocketAddress &address)
+bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address)
 {
-	if (_http_server != nullptr)
+	if ((_http_server != nullptr) || (_https_server != nullptr))
 	{
-		OV_ASSERT(false, "Server is already running");
+		OV_ASSERT(false, "Server is already running (%p, %p)", _http_server.get(), _https_server.get());
 		return false;
 	}
 
-	auto certificate = _host_info.GetCertificate();
-
-	if (certificate != nullptr)
+	// Initialize HTTP server
+	if (address != nullptr)
 	{
-		auto https_server = std::make_shared<HttpsServer>();
+		_http_server = std::make_shared<HttpServer>();
+	}
 
-		https_server->SetLocalCertificate(certificate);
-		https_server->SetChainCertificate(_host_info.GetChainCertificate());
-
-		_http_server = https_server;
+	// Initialize HTTPS server
+	if (tls_address == nullptr)
+	{
+		// TLS is disabled
 	}
 	else
 	{
-		_http_server = std::make_shared<HttpServer>();
+		// TLS is enabled
+		auto certificate = _host_info.GetCertificate();
+
+		if (certificate == nullptr)
+		{
+			logte("TLS is enabled, but certificate is invalid");
+			return false;
+		}
+
+		_https_server = std::make_shared<HttpsServer>();
+
+		_https_server->SetLocalCertificate(certificate);
+		_https_server->SetChainCertificate(_host_info.GetChainCertificate());
 	}
 
 	if (_p2p_info.IsParsed())
@@ -57,7 +69,12 @@ bool RtcSignallingServer::Start(const ov::SocketAddress &address)
 		_p2p_manager.SetEnable(false);
 	}
 
-	return InitializeWebSocketServer() && _http_server->Start(address);
+	bool result = InitializeWebSocketServer();
+
+	result = result && ((_http_server == nullptr) || _http_server->Start(*address));
+	result = result && ((_https_server == nullptr) || _https_server->Start(*tls_address));
+
+	return result;
 }
 
 bool RtcSignallingServer::InitializeWebSocketServer()
@@ -263,7 +280,12 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			}
 		});
 
-	return _http_server->AddInterceptor(web_socket);
+	bool result = true;
+
+	result = result && ((_http_server == nullptr) || _http_server->AddInterceptor(web_socket));
+	result = result && ((_https_server == nullptr) || _https_server->AddInterceptor(web_socket));
+
+	return result;
 }
 
 bool RtcSignallingServer::AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer)
@@ -304,31 +326,51 @@ bool RtcSignallingServer::RemoveObserver(const std::shared_ptr<RtcSignallingObse
 
 bool RtcSignallingServer::Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<SessionDescription> &peer_sdp)
 {
-	bool disconnected = _http_server->DisconnectIf(
-		[application_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool {
-			auto request = client->GetRequest();
+	bool disconnected = false;
 
-			// TODO(dimiden): This temporary code. Fix me later
-			if (request == nullptr)
-			{
-				return true;
-			}
+	if ((disconnected == false) && (_http_server != nullptr))
+	{
+		disconnected = _http_server->DisconnectIf(
+			[application_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool {
+				auto request = client->GetRequest();
+				auto info = request->GetExtraAs<RtcSignallingInfo>();
 
-			auto info = request->GetExtraAs<RtcSignallingInfo>();
+				if (info == nullptr)
+				{
+					// Client disconnected while Connect() is being processed
+				}
+				else
+				{
+					return (info->internal_app_name == application_name) &&
+						   (info->stream_name == stream_name) &&
+						   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
+				}
 
-			if (info == nullptr)
-			{
-				// Client disconnected while Connect () is being processed
-			}
-			else
-			{
-				return (info->internal_app_name == application_name) &&
-					   (info->stream_name == stream_name) &&
-					   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
-			}
+				return false;
+			});
+	}
 
-			return false;
-		});
+	if ((disconnected == false) && (_https_server != nullptr))
+	{
+		disconnected = _https_server->DisconnectIf(
+			[application_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool {
+				auto request = client->GetRequest();
+				auto info = request->GetExtraAs<RtcSignallingInfo>();
+
+				if (info == nullptr)
+				{
+					// Client disconnected while Connect() is being processed
+				}
+				else
+				{
+					return (info->internal_app_name == application_name) &&
+						   (info->stream_name == stream_name) &&
+						   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
+				}
+
+				return false;
+			});
+	}
 
 	if (disconnected == false)
 	{
@@ -425,19 +467,10 @@ int RtcSignallingServer::GetClientPeerCount() const
 
 bool RtcSignallingServer::Stop()
 {
-	if (_http_server == nullptr)
-	{
-		return false;
-	}
+	auto http_result = (_http_server != nullptr) ? _http_server->Stop() : true;
+	auto https_result = (_https_server != nullptr) ? _https_server->Stop() : true;
 
-	if (_http_server->Stop())
-	{
-		_http_server = nullptr;
-
-		return true;
-	}
-
-	return false;
+	return http_result && https_result;
 }
 
 std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const WebSocketFrame> &message)

@@ -95,6 +95,8 @@ namespace cfg
 		std::swap(_tag_name, item._tag_name);
 		std::swap(_parse_list, item._parse_list);
 		std::swap(_parent, item._parent);
+		
+		_parsed = item._parsed;
 	}
 
 	const ov::String Item::GetTagName() const
@@ -304,7 +306,7 @@ namespace cfg
 
 			if (error != nullptr)
 			{
-				logte("%s<%s> Could not obtain file list: base_file: %s, include pattern: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), base_file_name.CStr(), inc.value());
+				logte("%s<%s> Could not obtain file list: base_file: %s, include pattern: %s (%s)", MakeIndentString(indent).CStr(), _tag_name.CStr(), base_file_name.CStr(), inc.value(), error->ToString().CStr());
 				return ParseResult::Error;
 			}
 
@@ -480,7 +482,6 @@ namespace cfg
 									}
 
 									parse_item.is_parsed = (result == ParseResult::Parsed);
-									_parsed = true;
 								}
 								else
 								{
@@ -496,7 +497,6 @@ namespace cfg
 									}
 
 									parse_item.is_parsed = (result == ParseResult::Parsed);
-									_parsed = true;
 								}
 
 								logtd("%s<%s> [List<%s>] = %s",
