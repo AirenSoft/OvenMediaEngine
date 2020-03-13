@@ -142,9 +142,9 @@ int32_t TranscodeStream::CreateOutputStream()
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Get [application->Streams] list of application configuration.
-	auto &cfg_streams = _application_info.GetConfig().GetStreamList();
+	auto &cfg_stream_list = _application_info.GetConfig().GetStreamList();
 
-	for (const auto &cfg_stream : cfg_streams)
+	for (const auto &cfg_stream : cfg_stream_list)
 	{
 		// Validation 
 		if (cfg_stream.GetName().GetLength() == 0)
@@ -765,13 +765,6 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 				filtered_frame->SetTrackId(track_id);
 
 				// logtd("[#%d] A frame is filtered (PTS: %lld)", track_id, filtered_frame->GetPts());
-
-				// if (_queue_filterd_frames.size() > _max_queue_size)
-				// {
-				// 	logti("Filtered frame queue is full, please decrease encoding options (resolution, bitrate, framerate)");
-
-				// 	return result;
-				// }
 
 				_queue_filterd_frames.push(std::move(filtered_frame));
 
