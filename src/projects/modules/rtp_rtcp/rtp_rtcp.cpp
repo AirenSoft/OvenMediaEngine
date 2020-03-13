@@ -52,7 +52,7 @@ bool RtpRtcp::SendOutgoingData(const std::shared_ptr<ov::Data> &packet)
         }
 		else
 		{
-			logte("Send RTCP succeed : ssrc(%u)", rtp_packet.Ssrc());
+			logtd("Send RTCP succeed : ssrc(%u)", rtp_packet.Ssrc());
 		}
     }  
 
