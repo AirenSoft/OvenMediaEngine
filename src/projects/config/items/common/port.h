@@ -26,7 +26,7 @@ namespace cfg
 	protected:
 		void MakeParseList() override
 		{
-			RegisterValue<ValueType::Text>(nullptr, &_port, nullptr, [this]() -> bool {
+			RegisterValue("Port", &_port, nullptr, [this]() -> bool {
 				_socket_type = ov::SocketType::Unknown;
 
 				_port_value = ov::Converter::ToInt32(_port);
@@ -66,6 +66,7 @@ namespace cfg
 		}
 
 		ov::String _port;
+
 		int _port_value = 0;
 		ov::SocketType _socket_type = ov::SocketType::Unknown;
 	};

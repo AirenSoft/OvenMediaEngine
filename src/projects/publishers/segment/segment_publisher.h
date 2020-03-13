@@ -194,7 +194,9 @@ protected:
 	SegmentPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
 	~SegmentPublisher() override;
 
+	bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager, const cfg::TlsPort &port_config, const std::shared_ptr<SegmentStreamServer> &stream_server);
 	virtual bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager) = 0;
+
 	bool HandleSignedUrl(const ov::String &app_name, const ov::String &stream_name, 
 						const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
 						std::shared_ptr<PlaylistRequestInfo> &request_info);

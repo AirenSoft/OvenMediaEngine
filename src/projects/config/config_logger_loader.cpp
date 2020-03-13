@@ -80,12 +80,12 @@ std::vector<std::shared_ptr<LoggerTagInfo>> ConfigLoggerLoader::GetTags() const 
     return _tags;
 }
 
-std::string ConfigLoggerLoader::GetLogPath() const noexcept
+ov::String ConfigLoggerLoader::GetLogPath() const noexcept
 {
     return _log_path;
 }
 
-std::string ConfigLoggerLoader::GetVersion() const noexcept
+ov::String ConfigLoggerLoader::GetVersion() const noexcept
 {
     return _version;
 }

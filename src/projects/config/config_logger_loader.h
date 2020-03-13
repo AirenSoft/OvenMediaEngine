@@ -23,11 +23,11 @@ public:
     void Reset();
 
     std::vector<std::shared_ptr<LoggerTagInfo>> GetTags() const noexcept;
-    std::string GetLogPath() const noexcept;
-    std::string GetVersion() const noexcept;
+    ov::String GetLogPath() const noexcept;
+    ov::String GetVersion() const noexcept;
 
 private:
     std::vector<std::shared_ptr<LoggerTagInfo>> _tags;
-    std::string _log_path;
-    std::string _version = "1.0";
+    ov::String _log_path;
+    ov::String _version = "1.0";
 };

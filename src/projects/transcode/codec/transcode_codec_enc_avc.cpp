@@ -254,9 +254,6 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 		auto packet = std::move(_output_buffer.front());
 		_output_buffer.pop_front();
 
-		if(_output_buffer.size() > 0)
-			logti("output buffer : %d", _output_buffer.size());
-
 		return std::move(packet);
 	}
 

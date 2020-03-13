@@ -31,34 +31,9 @@ CmafPublisher::CmafPublisher(PrivateToken token,
 
 bool CmafPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
 {
-	auto server_config = GetServerConfig();
-	auto host_info = GetHostInfo();
-	auto ip = server_config.GetIp();
-	auto port = server_config.GetBind().GetPublishers().GetDashPort();
-
-	ov::SocketAddress address(ip, port);
-
-	// Register as observer
-	auto stream_server = std::make_shared<CmafStreamServer>();
-	stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
-
-	// Apply CORS settings
-	// TODO(Dimiden): The Cross Domain configure must be at VHost Level.
-	//stream_server->SetCrossDomain(cross_domains);
-
-	// Start the HLS Server
-	if (!stream_server->Start(address, http_server_manager, DEFAULT_SEGMENT_WORKER_THREAD_COUNT,
-							  host_info.GetCertificate(), host_info.GetChainCertificate()))
-	{
-		logte("An error occurred while start %s Publisher", GetPublisherName());
-		return false;
-	}
-
-	_stream_server = stream_server;
-
-	logti("%s Publisher is listening on %s", GetPublisherName(), address.ToString().CStr());
-
-	return Publisher::Start();
+	return SegmentPublisher::Start(http_server_manager,
+								   GetServerConfig().GetBind().GetPublishers().GetDash(),
+								   std::make_shared<CmafStreamServer>());
 }
 
 std::shared_ptr<pub::Application> CmafPublisher::OnCreatePublisherApplication(const info::Application &application_info)

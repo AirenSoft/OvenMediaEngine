@@ -85,10 +85,10 @@ namespace ov
 
 		if (position >= 0)
 		{
-			path = path.Left(static_cast<size_t>(position + 1));
+			return path.Left(static_cast<size_t>(position + 1));
 		}
 
-		return path;
+		return "./";
 	}
 
 	bool PathManager::MakeDirectory(const char *path, int mask)

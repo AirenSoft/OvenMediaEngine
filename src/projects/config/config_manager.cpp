@@ -20,11 +20,8 @@ namespace cfg
 	ConfigManager::ConfigManager()
 	{
 		// Modify if supported xml version is added or changed
-		_supported_xml.insert(
-			std::make_pair("Server", std::vector<std::string>({"4", "4.0"})));
-
-		_supported_xml.insert(
-			std::make_pair("Logger", std::vector<std::string>({"2", "2.0"})));
+		_supported_xml["Server"] = 5;
+		_supported_xml["Logger"] = 2;
 	}
 
 	ConfigManager::~ConfigManager()
@@ -52,7 +49,7 @@ namespace cfg
 		_server = std::make_shared<cfg::Server>();
 		bool result = _server->Parse(server_config_path, "Server");
 
-		if (IsValidVersion("Server", _server->GetVersion().CStr()) == false)
+		if (IsValidVersion("Server", ov::Converter::ToInt32(_server->GetVersion())) == false)
 		{
 			return false;
 		}
@@ -81,12 +78,12 @@ namespace cfg
 
 	bool ConfigManager::LoadLoggerConfig(const ov::String &config_path) noexcept
 	{
-		struct stat value = { 0 };
+		struct stat value = {0};
 
 		ov::String logger_config_path = ov::PathManager::Combine(config_path, "Logger.xml");
 
 		::memset(&_last_modified, 0, sizeof(_last_modified));
-		if(::stat(logger_config_path, &value) == -1)
+		if (::stat(logger_config_path, &value) == -1)
 		{
 			// There is no file or to open file error
 			// OME will work with the default settings.
@@ -94,7 +91,7 @@ namespace cfg
 			return true;
 		}
 
-		if(
+		if (
 #if defined(__APPLE__)
 			(_last_modified.tv_sec == value.st_mtimespec.tv_sec) &&
 			(_last_modified.tv_nsec == value.st_mtimespec.tv_nsec)
@@ -102,7 +99,7 @@ namespace cfg
 			(_last_modified.tv_sec == value.st_mtim.tv_sec) &&
 			(_last_modified.tv_nsec == value.st_mtim.tv_nsec)
 #endif
-			)
+		)
 		{
 			// log.config가 변경되지 않음
 			return true;
@@ -129,22 +126,22 @@ namespace cfg
 			return false;
 		}
 
-		if (IsValidVersion("Logger", logger_loader->GetVersion().c_str()) == false)
+		if (IsValidVersion("Logger", ov::Converter::ToInt32(logger_loader->GetVersion())) == false)
 		{
 			return false;
 		}
 
 		auto log_path = logger_loader->GetLogPath();
-		ov_log_set_path(log_path.c_str());
+		ov_log_set_path(log_path.CStr());
 
 		// Init stat log
 		//TODO(Getroot): This is temporary code for testing. This will change to more elegant code in the future.
-		ov_stat_log_set_path(STAT_LOG_WEBRTC_EDGE, log_path.c_str());
-		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_SESSION, log_path.c_str());
-		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_REQUEST, log_path.c_str());
-		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_VIEWERS, log_path.c_str());
+		ov_stat_log_set_path(STAT_LOG_WEBRTC_EDGE, log_path.CStr());
+		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_SESSION, log_path.CStr());
+		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_REQUEST, log_path.CStr());
+		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_VIEWERS, log_path.CStr());
 
-		logti("Trying to set logfile in directory... (%s)", log_path.c_str());
+		logti("Trying to set logfile in directory... (%s)", log_path.CStr());
 
 		std::vector<std::shared_ptr<LoggerTagInfo>> tags = logger_loader->GetTags();
 		for (auto iterator = tags.begin(); iterator != tags.end(); ++iterator)
@@ -166,25 +163,28 @@ namespace cfg
 		return string;
 	}
 
-	bool ConfigManager::IsValidVersion(const std::string& name, const std::string& version)
+	bool ConfigManager::IsValidVersion(const ov::String &name, int version)
 	{
 		auto supported_xml = _supported_xml.find(name);
+
 		if (supported_xml == _supported_xml.end())
 		{
-			logte("Cannot find conf XML (%s.xml)", name.c_str());
+			logte("Cannot find conf XML (%s.xml)", name.CStr());
 			return false;
 		}
 
 		auto supported_version = supported_xml->second;
-		if (std::find(supported_version.begin(), supported_version.end(), version) != supported_version.end())
+
+		if (version != supported_version)
 		{
-			return true;
+			logte("The version of %s.xml is incorrect (Supported version: %d, XML version: %d). If you have upgraded OME, see misc/conf_examples/%s.xml",
+				  name.CStr(),
+				  supported_version, version,
+				  name.CStr());
+
+			return false;
 		}
 
-		logte("The version of %s.xml is incorrect. If you have upgraded OME, see misc/conf_examples/%s.xml",
-			  name.c_str(),
-			  name.c_str());
-
-		return false;
+		return true;
 	}
 }  // namespace cfg

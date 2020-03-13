@@ -49,53 +49,20 @@ bool OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> con
 	_context->sample_aspect_ratio = (AVRational){1, 1};
 	_context->time_base = TimebaseToAVRational(_output_context->GetTimeBase());
 	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
-	_context->gop_size = _output_context->GetFrameRate() * 1;  //_output_context->GetGOP();
+	_context->gop_size = _output_context->GetFrameRate() * 1;  // create keyframes every second
 	_context->max_b_frames = 0;
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
-	_context->thread_count = 6;
-	// _context->active_thread_type = FF_THREAD_FRAME;
+	// _context->thread_count = 6;
 
 	AVRational output_timebase = TimebaseToAVRational(_output_context->GetTimeBase());
 	_scale = ::av_q2d(::av_div_q(output_timebase, codec_timebase));
 	_scale_inv = ::av_q2d(::av_div_q(codec_timebase, output_timebase));
 
-#if 1
 	AVDictionary *opts = nullptr;
-	::av_dict_set_int(&opts, "cpu-used", _context->thread_count, 0);
-#else
-	_context->qmin = 0;
-	_context->qmax = 50;
-
-	_context->rc_initial_buffer_occupancy = static_cast<int>(_context->bit_rate * 8);
-	_context->rc_buffer_size = static_cast<int>(_context->bit_rate * 10);
-
-	AVDictionary *opts = nullptr;
-
-	::av_dict_set(&opts, "quality", "good", 0);
-	::av_dict_set_int(&opts, "cpu-used", 6, 0);
-	::av_dict_set(&opts, "end-usage", "cbr", 0);
-	// ::av_dict_set_int(&opts, "passes", 2, 0);
-	::av_dict_set_int(&opts, "maxsection-pct", 200, 0);
-	::av_dict_set_int(&opts, "minsection-pct", 20, 0);
-	// ::av_dict_set_int(&opts, "undershoot-pct", 95, 0);
-	::av_dict_set_int(&opts, "undershoot-pct", 5, 0);
-	::av_dict_set_int(&opts, "overshoot-pct", 5, 0);
-	// ::av_dict_set_int(&opts, "token-parts", 3, 0);
-	// ::av_dict_set_int(&opts, "auto-alt-ref", 0, 0);
-	// ::av_dict_set_int(&opts, "lag-in-frames", 25, 0);
-
-	::av_dict_set_int(&opts, "kf-max-dist", 120, 0);
-
-	_context->keyint_min = 120;
-	::av_dict_set_int(&opts, "max-intra-rate", _context->bit_rate, 0);
-
-	//  _context->qcompress = 0;
-//   _context->flags |= AV_CODEC_FLAG_PASS1;
-#endif
-	//   ::av_dict_set(&opts, "end-usage", "cbr", 0);
-	//   _context->flags |= AV_CODEC_FLAG_PASS1;
+	// ::av_dict_set_int(&opts, "cpu-used", _context->thread_count, 0);
+	::av_dict_set(&opts, "quality", "realtime", 0);
 
 	if (::avcodec_open2(_context, codec, &opts) < 0)
 	{
@@ -103,8 +70,6 @@ bool OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> con
 		return false;
 	}
 
-
-	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
 	try
 	{
 		_kill_flag = false;
@@ -144,7 +109,6 @@ void OvenCodecImplAvcodecEncVP8::ThreadEncode()
 
 		std::unique_lock<std::mutex> mlock(_mutex);
 
-		// 스레드 종료와 같이 큐에 데이터가 없는 경우에는 다시 대기를 한다
 		if (_input_buffer.empty())
 		{
 			continue;
@@ -249,8 +213,7 @@ void OvenCodecImplAvcodecEncVP8::ThreadEncode()
 
 std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeResult *result)
 {
-#if 1
-		std::unique_lock<std::mutex> mlock(_mutex);
+	std::unique_lock<std::mutex> mlock(_mutex);
 	if(!_output_buffer.empty())
 	{
 		*result = TranscodeResult::DataReady;
@@ -264,98 +227,6 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeRes
 	*result = TranscodeResult::NoData;
 
 	return nullptr;
-#else	
-	int ret;
-
-	///////////////////////////////////////////////////
-	// 디코딩 가능한 프레임이 존재하는지 확인한다.
-	///////////////////////////////////////////////////
-	ret = ::avcodec_receive_packet(_context, _packet);
-	if (ret == AVERROR(EAGAIN))
-	{
-		// 패킷을 넣음
-	}
-	else if (ret == AVERROR_EOF)
-	{
-		logte("Error receiving a packet for decoding : AVERROR_EOF");
-		*result = TranscodeResult::DataError;
-		return nullptr;
-	}
-	else if (ret < 0)
-	{
-		// copy
-		// frame->linesize[0] * frame->height
-		logte("Error receiving a packet for decoding : %d", ret);
-		*result = TranscodeResult::DataError;
-		return nullptr;
-	}
-	else
-	{
-		// Packet is ready
-		auto packet = MakePacket();
-		::av_packet_unref(_packet);
-
-		*result = TranscodeResult::DataReady;
-
-		return std::move(packet);
-	}
-
-	///////////////////////////////////////////////////
-	// 인코딩 요청
-	///////////////////////////////////////////////////
-	while (_input_buffer.size() > 0)
-	{
-		auto frame_buffer = std::move(_input_buffer.front());
-		_input_buffer.pop_front();
-
-		const MediaFrame *frame = frame_buffer.get();
-		OV_ASSERT2(frame != nullptr);
-
-		_frame->format = frame->GetFormat();
-		_frame->nb_samples = 1;
-		_frame->pts = frame->GetPts();
-		_frame->pkt_duration = frame->GetDuration();
-
-		_frame->width = frame->GetWidth();
-		_frame->height = frame->GetHeight();
-		_frame->linesize[0] = frame->GetStride(0);
-		_frame->linesize[1] = frame->GetStride(1);
-		_frame->linesize[2] = frame->GetStride(2);
-
-		if (::av_frame_get_buffer(_frame, 32) < 0)
-		{
-			logte("Could not allocate the video frame data");
-			*result = TranscodeResult::DataError;
-			return nullptr;
-		}
-
-		if (::av_frame_make_writable(_frame) < 0)
-		{
-			logte("Could not make sure the frame data is writable");
-			*result = TranscodeResult::DataError;
-			return nullptr;
-		}
-
-		// Copy packet data into frame
-		::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
-		::memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
-		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
-
-		int ret = ::avcodec_send_frame(_context, _frame);
-
-		if (ret < 0)
-		{
-			logte("Error sending a frame for encoding : %d", ret);
-			// TODO(soulk): 에러 처리 안해도 되는지?
-		}
-
-		::av_frame_unref(_frame);
-	}
-
-	*result = TranscodeResult::NoData;
-	return nullptr;
-#endif
-
 }
 
 std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::MakePacket() const

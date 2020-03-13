@@ -157,12 +157,6 @@ HttpNextHandler MonitoringServer::ProcessRequest(const std::shared_ptr<HttpClien
 {
     auto request = client->GetRequest();
 	auto response = client->GetResponse();
-
-    // TODO(dimiden): This temporary code. Fix me later
-    if ((request == nullptr) || (response == nullptr))
-    {
-        return HttpNextHandler::DoNotCall;
-    }
     
     ov::String request_url = request->GetRequestTarget();
     ov::String file_name;

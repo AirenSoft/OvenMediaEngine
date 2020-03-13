@@ -51,9 +51,9 @@ namespace cfg
 
 		void PrepareMacros();
 
-		bool LoadLoggerConfig(const ov::String& config_path) noexcept;
+		bool LoadLoggerConfig(const ov::String &config_path) noexcept;
 
-		bool IsValidVersion(const std::string& name, const std::string& version);
+		bool IsValidVersion(const ov::String &name, int version);
 
 		ov::String _config_path;
 
@@ -62,6 +62,8 @@ namespace cfg
 
 		timespec _last_modified;
 
-		std::map<std::string, std::vector<std::string>> _supported_xml;
+		// key: XML file name
+		// value: version number
+		std::map<ov::String, int> _supported_xml;
 	};
 }  // namespace cfg

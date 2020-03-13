@@ -35,7 +35,7 @@ namespace cfg
 		CFG_DECLARE_REF_GETTER_OF(GetVirtualHostList, _virtual_hosts.GetVirtualHostList())
 
 		// Deprecated - It has a bug
-		bool GetVirtualHostByName(ov::String name, cfg::VirtualHost& vhost) const
+		bool GetVirtualHostByName(ov::String name, cfg::VirtualHost &vhost) const
 		{
 			auto &vhost_list = GetVirtualHostList();
 			for (auto &item : vhost_list)

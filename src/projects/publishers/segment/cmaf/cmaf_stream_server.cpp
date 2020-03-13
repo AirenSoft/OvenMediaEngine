@@ -18,12 +18,6 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 {
 	auto response = client->GetResponse();
 
-	// TODO(dimiden): This temporary code. Fix me later
-    if (response == nullptr)
-    {
-        return HttpConnection::Closed;
-    }
-
 	auto type = DashPacketizer::GetFileType(file_name);
 
 	bool is_video = ((type == DashFileType::VideoSegment) || (type == DashFileType::VideoInit));
