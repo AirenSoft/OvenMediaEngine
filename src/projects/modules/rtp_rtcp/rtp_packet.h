@@ -82,17 +82,17 @@ public:
 	std::shared_ptr<ov::Data> GetData();
 
 protected:
-	size_t		_payload_offset;	// Header Start Point (Header size)
-	uint8_t		_cc;
-	bool		_marker;
-	uint8_t		_payload_type;
-	bool		_is_fec;
-	uint8_t 	_origin_payload_type;
-	uint8_t		_padding_size;
-	uint16_t	_sequence_number;
-	uint32_t	_timestamp;
-	uint32_t	_ssrc;
-	size_t		_payload_size;		// Payload Size
+	size_t		_payload_offset = 0;	// Header Start Point (Header size)
+	uint8_t		_cc = 0;
+	bool		_marker = false;
+	uint8_t		_payload_type = 0;
+	bool		_is_fec = false;
+	uint8_t 	_origin_payload_type = 0;
+	uint8_t		_padding_size = 0;
+	uint16_t	_sequence_number = 0;
+	uint32_t	_timestamp = 0;
+	uint32_t	_ssrc = 0;
+	size_t		_payload_size = 0;		// Payload Size
 
 	//TODO: Extension은 향후 확장
 	size_t		_extension_size;

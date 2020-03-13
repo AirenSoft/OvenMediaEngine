@@ -58,7 +58,6 @@ bool RtpRtcp::SendOutgoingData(const std::shared_ptr<ov::Data> &packet)
 
 	if(!node->SendData(pub::SessionNodeType::Rtp, packet))
     {
-        logtd("Send RTP failed : ssrc(%u)", rtp_packet.Ssrc());
 		return false;
     }
 

@@ -63,7 +63,7 @@ RtpPacket::RtpPacket(const std::shared_ptr<ov::Data> &data)
 	_timestamp = ByteReader<uint32_t>::ReadBigEndian(&buffer[4]);
 	// SSRC
 	_ssrc = ByteReader<uint32_t>::ReadBigEndian(&buffer[8]);
-	//_payload_offset = FIXED_HEADER_SIZE + _cc;
+	_payload_offset = FIXED_HEADER_SIZE + _cc;
 	_payload_size = data->GetLength() - _payload_offset;
 	
 	// Full data
