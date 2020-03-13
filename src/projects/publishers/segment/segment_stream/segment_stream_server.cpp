@@ -22,62 +22,136 @@ SegmentStreamServer::SegmentStreamServer()
 		"</cross-domain-policy>";
 }
 
-bool SegmentStreamServer::Start(const ov::SocketAddress &address,
+template <typename Thttp_server>
+static std::shared_ptr<Thttp_server> CreateHttpServerIfNeeded(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager, const ov::SocketAddress &address, bool *is_created)
+{
+	auto item = http_server_manager.find(address.Port());
+	std::shared_ptr<Thttp_server> http_server;
+
+	*is_created = false;
+
+	if (item != http_server_manager.end())
+	{
+		http_server = std::dynamic_pointer_cast<Thttp_server>(item->second);
+
+		if (http_server == nullptr)
+		{
+			logte("Invalid conversion: tried to use different HttpServer types");
+		}
+		else
+		{
+			// Found
+		}
+	}
+	else
+	{
+		// Create a new HTTP server
+		http_server = std::make_shared<Thttp_server>();
+
+		if (http_server != nullptr)
+		{
+			*is_created = true;
+
+			http_server_manager[address.Port()] = http_server;
+		}
+	}
+
+	return http_server;
+}
+
+bool SegmentStreamServer::Start(const ov::SocketAddress *address,
+								const ov::SocketAddress *tls_address,
 								std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
 								int thread_count,
 								const std::shared_ptr<Certificate> &certificate,
 								const std::shared_ptr<Certificate> &chain_certificate)
 {
-	if (_http_server != nullptr)
+	if ((_http_server != nullptr) || (_https_server != nullptr))
 	{
-		OV_ASSERT(false, "Server is already running");
+		OV_ASSERT(false, "Server is already running (%p, %p)", _http_server.get(), _https_server.get());
 		return false;
 	}
 
-	// Interceptor add
-	// - handler register
-	auto process_handler = std::bind(&SegmentStreamServer::ProcessRequest,
-									 this,
-									 std::placeholders::_1,
-									 std::placeholders::_2,
-									 std::placeholders::_3);
+	bool result = true;
+
+	auto process_handler = std::bind(&SegmentStreamServer::ProcessRequest, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 
 	auto segment_stream_interceptor = CreateInterceptor();
-	segment_stream_interceptor->Start(thread_count, process_handler);
+	segment_stream_interceptor->SetCrossdomainBlock();
 
-	//    segment_stream_interceptor->Register(HttpMethod::Get, "", process_func, false);
+	bool need_to_start_http_server = false;
+	bool need_to_start_https_server = false;
 
-	// same port http server check
-	if (http_server_manager.find(address.Port()) != http_server_manager.end())
+	// Initialize HTTP server
+	if (address != nullptr)
 	{
-		auto item = http_server_manager.find(address.Port());
-		auto http_server = item->second;
+		_http_server = CreateHttpServerIfNeeded<HttpServer>(http_server_manager, *address, &need_to_start_http_server);
 
-		segment_stream_interceptor->SetCrossdomainBlock();
-		http_server->AddInterceptor(segment_stream_interceptor);
-		_http_server = http_server;
-
-		return true;
+		if (_http_server != nullptr)
+		{
+			_http_server->AddInterceptor(segment_stream_interceptor);
+		}
+		else
+		{
+			result = false;
+		}
 	}
 
-	if (certificate != nullptr)
+	// Initialize HTTPS server
+	if (tls_address != nullptr)
 	{
-		auto https_server = std::make_shared<HttpsServer>();
+		// TLS is enabled
+		if (certificate != nullptr)
+		{
+			_https_server = CreateHttpServerIfNeeded<HttpsServer>(http_server_manager, *tls_address, &need_to_start_https_server);
 
-		https_server->SetLocalCertificate(certificate);
-		https_server->SetChainCertificate(chain_certificate);
-		_http_server = https_server;
+			if (_https_server != nullptr)
+			{
+				_https_server->SetLocalCertificate(certificate);
+				_https_server->SetChainCertificate(chain_certificate);
+
+				_https_server->AddInterceptor(segment_stream_interceptor);
+			}
+			else
+			{
+				result = false;
+			}
+		}
+		else
+		{
+			logte("TLS is enabled, but certificate is invalid");
+			result = false;
+		}
 	}
 	else
 	{
-		_http_server = std::make_shared<HttpServer>();
+		// TLS is disabled
 	}
 
-	http_server_manager[address.Port()] = _http_server;
+	result = result && ((need_to_start_http_server == false) || (_http_server == nullptr) || _http_server->Start(*address));
+	result = result && ((need_to_start_https_server == false) || (_https_server == nullptr) || _https_server->Start(*tls_address));
 
-	_http_server->AddInterceptor(segment_stream_interceptor);
+	if (result)
+	{
+		segment_stream_interceptor->Start(thread_count, process_handler);
+	}
+	else
+	{
+		// Rollback
+		if (_http_server != nullptr)
+		{
+			_http_server->Stop();
+			_http_server = nullptr;
+		}
 
-	return _http_server->Start(address);
+		if (_https_server != nullptr)
+		{
+			_https_server->Stop();
+			_https_server = nullptr;
+		}
+	}
+
+	return result;
 }
 
 bool SegmentStreamServer::Stop()
@@ -237,7 +311,6 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 		{
 			SetAllowOrigin(origin_url, response);
 		}
-
 
 		auto host_name = request->GetHeader("HOST").Split(":")[0];
 		ov::String internal_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);

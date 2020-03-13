@@ -25,6 +25,48 @@ SegmentPublisher::~SegmentPublisher()
 	logtd("Publisher has been destroyed");
 }
 
+bool SegmentPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager, const cfg::TlsPort &port_config, const std::shared_ptr<SegmentStreamServer> &stream_server)
+{
+	auto server_config = GetServerConfig();
+	auto host_info = GetHostInfo();
+	auto ip = server_config.GetIp();
+
+	auto port = port_config.GetPort();
+	auto tls_port = port_config.GetTlsPort();
+	bool has_port = (port != 0);
+	bool has_tls_port = (tls_port != 0);
+
+	ov::SocketAddress address(ip, port);
+	ov::SocketAddress tls_address(ip, tls_port);
+
+	// Register as observer
+	stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
+
+	// Apply CORS settings
+	// TODO(Dimiden): The Cross Domain configure must be at VHost Level.
+	//stream_server->SetCrossDomain(cross_domains);
+
+	// Start the DASH Server
+	if (stream_server->Start(has_port ? &address : nullptr, has_tls_port ? &tls_address : nullptr,
+							 http_server_manager, DEFAULT_SEGMENT_WORKER_THREAD_COUNT,
+							 host_info.GetCertificate(), host_info.GetChainCertificate()) == false)
+	{
+		logte("An error occurred while start %s Publisher", GetPublisherName());
+		return false;
+	}
+
+	_stream_server = stream_server;
+
+	logti("%s Publisher is listening on %s%s%s%s...",
+		  GetPublisherName(),
+		  has_port ? address.ToString().CStr() : "",
+		  (has_port && has_tls_port) ? ", " : "",
+		  has_tls_port ? "TLS: " : "",
+		  has_tls_port ? tls_address.ToString().CStr() : "");
+
+	return Publisher::Start();
+}
+
 bool SegmentPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections)
 {
 	return (_stream_server != nullptr) ? _stream_server->GetMonitoringCollectionData(collections) : false;

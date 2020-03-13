@@ -30,6 +30,8 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 		return false;
 	}
 
+	bool result = true;
+
 	// Initialize HTTP server
 	if (address != nullptr)
 	{
@@ -37,42 +39,63 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	}
 
 	// Initialize HTTPS server
-	if (tls_address == nullptr)
-	{
-		// TLS is disabled
-	}
-	else
+	if (tls_address != nullptr)
 	{
 		// TLS is enabled
 		auto certificate = _host_info.GetCertificate();
 
-		if (certificate == nullptr)
+		if (certificate != nullptr)
+		{
+			_https_server = std::make_shared<HttpsServer>();
+
+			_https_server->SetLocalCertificate(certificate);
+			_https_server->SetChainCertificate(_host_info.GetChainCertificate());
+		}
+		else
 		{
 			logte("TLS is enabled, but certificate is invalid");
-			return false;
+			result = false;
 		}
-
-		_https_server = std::make_shared<HttpsServer>();
-
-		_https_server->SetLocalCertificate(certificate);
-		_https_server->SetChainCertificate(_host_info.GetChainCertificate());
-	}
-
-	if (_p2p_info.IsParsed())
-	{
-		logti("P2P is enabled (Client peers per host peer: %d)", _p2p_info.GetClientPeersPerHostPeer());
-		_p2p_manager.SetEnable(true);
 	}
 	else
 	{
-		logti("P2P is disabled");
-		_p2p_manager.SetEnable(false);
+		// TLS is disabled
 	}
 
-	bool result = InitializeWebSocketServer();
+	if (result)
+	{
+		if (_p2p_info.IsParsed())
+		{
+			logti("P2P is enabled (Client peers per host peer: %d)", _p2p_info.GetClientPeersPerHostPeer());
+			_p2p_manager.SetEnable(true);
+		}
+		else
+		{
+			logti("P2P is disabled");
+			_p2p_manager.SetEnable(false);
+		}
+	}
+
+	result = result && InitializeWebSocketServer();
 
 	result = result && ((_http_server == nullptr) || _http_server->Start(*address));
 	result = result && ((_https_server == nullptr) || _https_server->Start(*tls_address));
+
+	if (result == false)
+	{
+		// Rollback
+		if (_http_server != nullptr)
+		{
+			_http_server->Stop();
+			_http_server = nullptr;
+		}
+
+		if (_https_server != nullptr)
+		{
+			_https_server->Stop();
+			_https_server = nullptr;
+		}
+	}
 
 	return result;
 }
