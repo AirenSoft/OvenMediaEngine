@@ -1042,13 +1042,13 @@ common::MediaCodecId TranscodeStream::GetCodecId(ov::String name)
 	{
 		return common::MediaCodecId::Vp9;
 	}
-
-	// Audio codecs
-	if (name == "FLV")
+	else if (name == "FLV")
 	{
 		return common::MediaCodecId::Flv;
 	}
-	else if (name == "AAC")
+
+	// Audio codecs
+	if (name == "AAC")
 	{
 		return common::MediaCodecId::Aac;
 	}
@@ -1066,7 +1066,7 @@ common::MediaCodecId TranscodeStream::GetCodecId(ov::String name)
 
 bool TranscodeStream::IsVideoCodec(common::MediaCodecId codec_id)
 {
-	if(codec_id == common::MediaCodecId::H264 || codec_id == common::MediaCodecId::Vp8 || codec_id == common::MediaCodecId::Vp9)
+	if(codec_id == common::MediaCodecId::Flv || codec_id == common::MediaCodecId::H264 || codec_id == common::MediaCodecId::Vp8 || codec_id == common::MediaCodecId::Vp9)
 	{
 		return true;
 	}
@@ -1076,7 +1076,7 @@ bool TranscodeStream::IsVideoCodec(common::MediaCodecId codec_id)
 
 bool TranscodeStream::IsAudioCodec(common::MediaCodecId codec_id)
 {
-	if(codec_id == common::MediaCodecId::Flv || codec_id == common::MediaCodecId::Mp3 || codec_id == common::MediaCodecId::Opus)
+	if( codec_id == common::MediaCodecId::Aac || codec_id == common::MediaCodecId::Mp3 || codec_id == common::MediaCodecId::Opus)
 	{
 		return true;
 	}
