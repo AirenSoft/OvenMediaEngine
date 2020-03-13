@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<Server version="4">
+<Server version="5">
 	<Name>OvenMediaEngine</Name>
 	<!-- Host type (origin/edge) -->
 	<Type>edge</Type>
@@ -11,15 +11,23 @@
 	<Bind>
 		<Providers>
 			<!-- Currently, OME doesn't support using the specified port for OVT Provider -->
-			<OVT>9001</OVT>
+			<OVT>
+				<Port>9001</Port>
+			</OVT>
 		</Providers>
 
 		<Publishers>
 			<!-- Default: 80 -->
-            <HLS>${env:OME_HLS_STREAM_PORT:8080}</HLS>
-            <DASH>${env:OME_DASH_STREAM_PORT:8080}</DASH>
+            <HLS>
+				<Port>${env:OME_HLS_STREAM_PORT:8080}</Port>
+			</HLS>
+            <DASH>
+				<Port>${env:OME_DASH_STREAM_PORT:8080}</Port>
+			</DASH>
 			<WebRTC>
-				<Signalling>${env:OME_SIGNALLING_PORT:5555}</Signalling>
+				<Signalling>
+					<Port>${env:OME_SIGNALLING_PORT:5555}</Port>
+				</Signalling>
 				<IceCandidates>
 					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006-10010/udp}</IceCandidate>
 				</IceCandidates>

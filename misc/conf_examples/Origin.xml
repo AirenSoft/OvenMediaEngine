@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<Server version="4">
+<Server version="5">
 	<Name>OvenMediaEngine</Name>
 	<!-- Host type (origin/edge) -->
 	<Type>origin</Type>
@@ -10,16 +10,26 @@
 	<!-- Settings for the ports to bind -->
 	<Bind>
 		<Providers>
-			<RTMP>${env:OME_RTMP_PROV_PORT:1935}</RTMP>
+			<RTMP>
+				<Port>${env:OME_RTMP_PROV_PORT:1935}</Port>
+			</RTMP>
 		</Providers>
 
 		<Publishers>
             <!-- The OVT is protocol for ORIGIN-EDGE -->
-			<OVT>${env:OME_ORIGIN_PORT:9000}</OVT>
-			<HLS>${env:OME_HLS_STREAM_PORT:80}</HLS>
-			<DASH>${env:OME_DASH_STREAM_PORT:80}</DASH>
+			<OVT>
+				<Port>${env:OME_ORIGIN_PORT:9000}</Port>
+			</OVT>
+			<HLS>
+				<Port>${env:OME_HLS_STREAM_PORT:80}</Port>
+			</HLS>
+			<DASH>
+				<Port>${env:OME_DASH_STREAM_PORT:80}</Port>
+			</DASH>
 			<WebRTC>
-				<Signalling>${env:OME_SIGNALLING_PORT:3333}</Signalling>
+				<Signalling>
+					<Port>${env:OME_SIGNALLING_PORT:3333}</Port>
+				</Signalling>
 				<IceCandidates>
 					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10000-10005/udp}</IceCandidate>
 				</IceCandidates>
