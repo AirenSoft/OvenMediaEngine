@@ -37,7 +37,7 @@ namespace cfg
 			RegisterValue<Optional>("IceCandidates", &_ice_candidates);
 		}
 
-		Port _signalling;
+		TlsPort _signalling;
 		IceCandidates _ice_candidates;
 	};
 }  // namespace cfg
