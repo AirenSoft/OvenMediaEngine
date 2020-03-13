@@ -45,12 +45,6 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 		return false;
 	}
 
-	// TODO(dimiden): This temporary code. Fix me later
-    if (request == nullptr)
-    {
-        return false;
-    }
-
 	// These names are used for testing purposes
 	// TODO(dimiden): Need to delete this code after testing
 	std::shared_ptr<PlaylistRequestInfo> playlist_request_info;

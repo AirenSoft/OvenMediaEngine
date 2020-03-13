@@ -27,12 +27,6 @@ bool HlsInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpCli
 {
     const auto request = client->GetRequest();
 
-    // TODO(dimiden): This temporary code. Fix me later
-    if (request == nullptr)
-    {
-        return false;
-    }
-    
 	// logtd("Request Target : %s", request->GetRequestTarget().CStr());
 
 	// Get Method 1.1 이상 체크

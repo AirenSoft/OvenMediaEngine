@@ -115,12 +115,6 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 	auto request = ws_client->GetClient()->GetRequest();
 	auto remote = request->GetRemote();
 
-	// TODO(dimiden): This temporary code. Fix me later
-	if ((remote == nullptr) || (request == nullptr))
-	{
-		return;
-	}
-
 	// logging for statistics
 	// server domain yyyy-mm-dd tt:MM:ss url sent_bytes request_time upstream_cache_status http_status client_ip http_user_agent http_referer origin_addr origin_http_status geoip geoip_org http_encoding content_length upstream_connect_time upstream_header_time upstream_response_time
 	// OvenMediaEngine 127.0.0.1       02-2020-08      01:18:21        /app/stream_o   -       -       -       200     127.0.0.1:57233 Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36                -       -       -       -       -       -       -       -

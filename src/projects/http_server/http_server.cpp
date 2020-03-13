@@ -64,13 +64,6 @@ ssize_t HttpServer::TryParseHeader(const std::shared_ptr<HttpClient> &client, co
 {
 	auto request = client->GetRequest();
 
-	// TODO(dimiden): This temporary code. Fix me later
-	if (request == nullptr)
-	{
-		// Disconnected
-		return -1L;
-	}
-
 	OV_ASSERT2(request->ParseStatus() == HttpStatusCode::PartialContent);
 
 	// 파싱이 필요한 상태 - ProcessData()를 호출하여 파싱 시도
@@ -116,13 +109,6 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 	{
 		std::shared_ptr<HttpRequest> request = client->GetRequest();
 		std::shared_ptr<HttpResponse> response = client->GetResponse();
-
-		// TODO(dimiden): This temporary code. Fix me later
-		if (request == nullptr)
-		{
-			// Disconnected
-			return;
-		}
 
 		bool need_to_disconnect = false;
 
@@ -295,13 +281,6 @@ void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 		auto &client = client_iterator->second;
 		auto request = client->GetRequest();
 		auto response = client->GetResponse();
-
-		// TODO(dimiden): This temporary code. Fix me later
-		if ((request == nullptr) || (response == nullptr))
-		{
-			// Disconnected
-			return;
-		}
 
 		logti("Client(%s) is disconnected from %s (%d)", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
 

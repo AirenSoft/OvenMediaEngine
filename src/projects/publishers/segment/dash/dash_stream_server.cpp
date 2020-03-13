@@ -17,12 +17,6 @@ HttpConnection DashStreamServer::ProcessStreamRequest(const std::shared_ptr<Http
 {
 	auto response = client->GetResponse();
 
-	// TODO(dimiden): This temporary code. Fix me later
-    if (response == nullptr)
-    {
-        return HttpConnection::Closed;
-    }
-
 	if (file_ext == DASH_PLAYLIST_EXT)
 	{
 		return ProcessPlayListRequest(client, app_name, stream_name, file_name, PlayListType::Mpd);
@@ -44,12 +38,6 @@ HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<Ht
 												   PlayListType play_list_type)
 {
 	auto response = client->GetResponse();
-
-	// TODO(dimiden): This temporary code. Fix me later
-    if (response == nullptr)
-    {
-        return HttpConnection::Closed;
-    }
 
 	ov::String play_list;
 
@@ -81,12 +69,6 @@ HttpConnection DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 												  SegmentType segment_type)
 {
 	auto response = client->GetResponse();
-	
-	// TODO(dimiden): This temporary code. Fix me later
-    if (response == nullptr)
-    {
-        return HttpConnection::Closed;
-    }
 
 	std::shared_ptr<SegmentData> segment = nullptr;
 

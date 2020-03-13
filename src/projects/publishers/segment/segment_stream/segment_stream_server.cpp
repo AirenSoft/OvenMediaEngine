@@ -205,12 +205,6 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 	auto request = client->GetRequest();
 	HttpConnection connetion = HttpConnection::Closed;
 
-	// TODO(dimiden): This temporary code. Fix me later
-    if ((request == nullptr) || (response == nullptr))
-    {
-        return false;
-    }
-
 	do
 	{
 		ov::String app_name;

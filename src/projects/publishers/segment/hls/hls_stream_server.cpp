@@ -18,12 +18,6 @@ HttpConnection HlsStreamServer::ProcessStreamRequest(const std::shared_ptr<HttpC
 {
 	auto response = client->GetResponse();
 
-	// TODO(dimiden): This temporary code. Fix me later
-    if (response == nullptr)
-    {
-        return HttpConnection::Closed;
-    }
-
 	if (file_name == HLS_PLAYLIST_FILE_NAME)
 	{
 		return ProcessPlayListRequest(client, app_name, stream_name, file_name, PlayListType::M3u8);
@@ -44,12 +38,6 @@ HttpConnection HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<Htt
 													   PlayListType play_list_type)
 {
 	auto response = client->GetResponse();
-
-	// TODO(dimiden): This temporary code. Fix me later
-    if (response == nullptr)
-    {
-        return HttpConnection::Closed;
-    }
 
 	ov::String play_list;
 	std::shared_ptr<info::Stream> stream_info;
@@ -102,12 +90,6 @@ HttpConnection HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<Http
 													  SegmentType segment_type)
 {
 	auto response = client->GetResponse();
-
-	// TODO(dimiden): This temporary code. Fix me later
-    if (response == nullptr)
-    {
-        return HttpConnection::Closed;
-    }
 
 	std::shared_ptr<SegmentData> segment = nullptr;
 	std::shared_ptr<info::Stream> stream_info;

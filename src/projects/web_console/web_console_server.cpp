@@ -120,12 +120,6 @@ bool WebConsoleServer::InitializeServer()
 		auto request = client->GetRequest();
 		auto response = client->GetResponse();
 
-		// TODO(dimiden): This temporary code. Fix me later
-		if ((request == nullptr) || (response == nullptr))
-		{
-			return HttpNextHandler::DoNotCall;
-		}
-
 		auto path = ov::PathManager::Combine(document_root, request->GetRequestTarget());
 		auto real_path = ov::PathManager::GetCanonicalPath(path);
 

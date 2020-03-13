@@ -15,12 +15,6 @@ std::shared_ptr<RtcPeerInfo> RtcP2PManager::CreatePeerInfo(peer_id_t id, const s
 {
 	auto request = ws_client->GetClient()->GetRequest();
 
-	// TODO(dimiden): This temporary code. Fix me later
-	if (request == nullptr)
-	{
-		return nullptr;
-	}
-
 	auto user_agent = request->GetHeader("USER-AGENT");
 	auto peer_info = RtcPeerInfo::FromUserAgent(id, user_agent, ws_client);
 

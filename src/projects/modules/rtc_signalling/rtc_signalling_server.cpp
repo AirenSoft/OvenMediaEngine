@@ -94,12 +94,6 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 				return HttpInterceptorResult::Disconnect;
 			}
 
-			// TODO(dimiden): This temporary code. Fix me later
-			if ((request == nullptr) || (response == nullptr))
-			{
-				return HttpInterceptorResult::Disconnect;
-			}
-
 			ov::String description = remote->ToString();
 
 			logti("New client is connected: %s", description.CStr());
@@ -170,12 +164,6 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 		[this](const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const WebSocketFrame> &message) -> HttpInterceptorResult {
 			auto &client = ws_client->GetClient();
 			auto request = client->GetRequest();
-
-			// TODO(dimiden): This temporary code. Fix me later
-			if (request == nullptr)
-			{
-				return HttpInterceptorResult::Disconnect;
-			}
 
 			logtp("The client sent a message:\n%s", message->GetPayload()->Dump().CStr());
 
@@ -249,12 +237,6 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> void {
 			auto &client = ws_client->GetClient();
 			auto request = client->GetRequest();
-
-			// TODO(dimiden): This temporary code. Fix me later
-			if (request == nullptr)
-			{
-				return;
-			}
 
 			auto info = request->GetExtraAs<RtcSignallingInfo>();
 
@@ -513,12 +495,6 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 {
 	auto &client = ws_client->GetClient();
 	auto request = client->GetRequest();
-
-	// TODO(dimiden): This temporary code. Fix me later
-	if (request == nullptr)
-	{
-		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Invalid request");
-	}
 
 	ov::String application_name = info->internal_app_name;
 	ov::String stream_name = info->stream_name;

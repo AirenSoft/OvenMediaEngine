@@ -36,12 +36,6 @@ HttpInterceptorResult SegmentStreamInterceptor::OnHttpData(const std::shared_ptr
 	auto request = client->GetRequest();
 	auto response = client->GetResponse();
 
-	// TODO(dimiden): This temporary code. Fix me later
-    if ((request == nullptr) || (response == nullptr))
-    {
-        return HttpInterceptorResult::Disconnect;
-    }
-	
 	OV_ASSERT2(request->GetContentLength() >= 0);
 
 	if (request->GetContentLength() == 0)
