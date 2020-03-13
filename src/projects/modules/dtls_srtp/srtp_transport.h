@@ -22,9 +22,6 @@ public:
 	// 데이터를 upper에서 받는다. lower node로 보낸다.
 	bool SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data) override;
 
-    // srtcp transfer
-    bool SendRtcpData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data);
-
 	// 데이터를 lower에서 받는다. upper node로 보낸다.
 	bool OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 

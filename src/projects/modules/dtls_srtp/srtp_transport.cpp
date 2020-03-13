@@ -35,8 +35,25 @@ bool SrtpTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 	{
 		return false;
 	}
-
-	_send_session->ProtectRtp(data);
+	
+	if(from_node == pub::SessionNodeType::Rtp)
+	{
+		if(!_send_session->ProtectRtp(data))
+		{
+			return false;
+		}
+	}
+	else if(from_node == pub::SessionNodeType::Rtcp)
+	{
+		 if(!_send_session->ProtectRtcp(data))
+		 {
+			return false;
+		 }
+	}
+	else
+	{
+		return false;
+	}
 
 	// DTLS로 보낸다.
 	auto node = GetLowerNode();
@@ -47,33 +64,6 @@ bool SrtpTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 	//logtd("SrtpTransport Send next node : %d", data->GetLength());
 	return node->SendData(GetNodeType(), data);
 }
-
-// srtcp transfer
-bool SrtpTransport::SendRtcpData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
-{
-    if(GetState() != SessionNode::NodeState::Started)
-    {
-        logtd("SessionNode has not started, so the received data has been canceled.");
-        return false;
-    }
-
-    if(!_send_session)
-    {
-        return false;
-    }
-
-    _send_session->ProtectRtcp(data);
-
-    // DTLS transfer
-    auto node = GetLowerNode();
-    if(!node)
-    {
-        return false;
-    }
-     
-    return node->SendData(GetNodeType(), data);
-}
-
 
 // 데이터를 lower(DTLS)에서 받는다. upper node(RTP_RTCP)로 보낸다.
 bool SrtpTransport::OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)

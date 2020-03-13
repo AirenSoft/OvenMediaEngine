@@ -73,6 +73,9 @@ private:
 	RtpAudioCodecType		_audio_codec_type;
 	std::shared_ptr<RtpPacketizingManager> _packetizer = nullptr;
 
+	uint64_t		_frame_count = 0;
+	uint64_t		_rtp_packet_count = 0;
+
 	// Session Descriptor
 	std::shared_ptr<RtpRtcpPacketizerInterface> _stream;
 };

@@ -265,11 +265,6 @@ bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 	return true;
 }
 
-bool RtcStream::OnRtcpPacketized(std::shared_ptr<RtcpPacket> packet)
-{
-	return true;
-}
-
 void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	auto media_track = GetTrack(media_packet->GetTrackId());
@@ -396,6 +391,8 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 
 void RtcStream::AddPacketizer(common::MediaCodecId codec_id, uint32_t id, uint8_t payload_type, uint32_t ssrc)
 {
+	logtd("Add Packetizer : codec(%u) id(%u) pt(%d) ssrc(%u)", codec_id, id, payload_type, ssrc);
+
 	auto packetizer = std::make_shared<RtpPacketizer>(RtpRtcpPacketizerInterface::GetSharedPtr());
 	packetizer->SetPayloadType(payload_type);
 	packetizer->SetSSRC(ssrc);

@@ -25,6 +25,52 @@ RtpPacket::RtpPacket()
 	_buffer[0] = RTP_VERSION << 6;
 }
 
+RtpPacket::RtpPacket(const std::shared_ptr<ov::Data> &data)
+{
+	if(data->GetLength() < FIXED_HEADER_SIZE)
+	{
+		// Wrong data
+		return;
+	}
+
+	auto buffer = data->GetDataAs<uint8_t>();
+	uint8_t version = buffer[0] >> 6;
+	if(version != RTP_VERSION)
+	{
+		// This data is not RTP packet
+		return;
+	}
+
+	// We don't use the Padding, Extension and CSRC yet. 
+	// If the P and the E are set, it can't be parsed but this class is used for a packet that generated from this class now,
+	// TODO(Getroot): RTP Packet parsing must be fully supported.
+	_padding_size = 0;
+	_extension_size = 0;
+
+	// It is specific values only for OME
+	_is_fec = false;
+	_origin_payload_type = 0;
+
+	// CC
+	//_cc = buffer[0] & 0xFF;
+	// Marker
+	_marker = (buffer[1] & (1 << 8));
+	// PT
+	_payload_type = buffer[1] & 0x7f;
+	// Sequence Number
+	_sequence_number = ByteReader<uint16_t>::ReadBigEndian(&buffer[2]);
+	// Timestamp
+	_timestamp = ByteReader<uint32_t>::ReadBigEndian(&buffer[4]);
+	// SSRC
+	_ssrc = ByteReader<uint32_t>::ReadBigEndian(&buffer[8]);
+	//_payload_offset = FIXED_HEADER_SIZE + _cc;
+	_payload_size = data->GetLength() - _payload_offset;
+	
+	// Full data
+	_data = data;
+	_buffer = _data->GetWritableDataAs<uint8_t>();
+}
+
 RtpPacket::RtpPacket(RtpPacket &src)
 {
 	_marker = src._marker;
@@ -54,39 +100,39 @@ std::shared_ptr<ov::Data> RtpPacket::GetData()
 }
 
 // Getter
-bool RtpPacket::Marker()
+bool RtpPacket::Marker() const
 {
 	return _marker;
 }
 
-bool RtpPacket::IsUlpfec()
+bool RtpPacket::IsUlpfec() const
 {
 	return _is_fec;
 }
 
-uint8_t RtpPacket::PayloadType()
+uint8_t RtpPacket::PayloadType() const
 {
 	return _payload_type;
 }
 
-uint8_t RtpPacket::OriginPayloadType()
+uint8_t RtpPacket::OriginPayloadType() const
 {
 	return _origin_payload_type;
 }
 
-uint16_t RtpPacket::SequenceNumber()
+uint16_t RtpPacket::SequenceNumber() const
 {
 	return _sequence_number;
 }
-uint32_t RtpPacket::Timestamp()
+uint32_t RtpPacket::Timestamp() const
 {
 	return _timestamp;
 }
-uint32_t RtpPacket::Ssrc()
+uint32_t RtpPacket::Ssrc() const
 {
 	return _ssrc;
 }
-std::vector<uint32_t> RtpPacket::Csrcs()
+std::vector<uint32_t> RtpPacket::Csrcs() const
 {
 	// 첫번째 바이트의 하위 4bit에 있는 값 추출
 	size_t num_csrc = _buffer[0] & 0x0F;
@@ -100,7 +146,7 @@ std::vector<uint32_t> RtpPacket::Csrcs()
 
 	return csrcs;
 }
-uint8_t* RtpPacket::Buffer()
+uint8_t* RtpPacket::Buffer() const
 {
 	return &_buffer[0];
 }
@@ -165,7 +211,8 @@ void RtpPacket::SetCsrcs(const std::vector<uint32_t>& csrcs)
 	_payload_offset = FIXED_HEADER_SIZE + 4 * csrcs.size();
 
 	// 첫 바이트 하위 4비트에 csrs size 입력
-	_buffer[0] = (_buffer[0] & 0xF0) | csrcs.size();
+	_cc = csrcs.size();
+	_buffer[0] = (_buffer[0] & 0xF0) | _cc;
 
 	// _buffer 사이즈 조정
 	_data->SetLength(_payload_offset);
@@ -180,22 +227,22 @@ void RtpPacket::SetCsrcs(const std::vector<uint32_t>& csrcs)
 	}
 }
 
-size_t RtpPacket::HeadersSize()
+size_t RtpPacket::HeadersSize() const
 {
 	return _payload_offset;
 }
 
-size_t RtpPacket::PayloadSize()
+size_t RtpPacket::PayloadSize() const
 {
 	return _payload_size;
 }
 
-size_t RtpPacket::PaddingSize()
+size_t RtpPacket::PaddingSize() const
 {
 	return _padding_size;
 }
 
-size_t RtpPacket::ExtensionSize()
+size_t RtpPacket::ExtensionSize() const
 {
 	return _extension_size;
 }
@@ -234,12 +281,12 @@ uint8_t* RtpPacket::AllocatePayload(size_t size_bytes)
 	return SetPayloadSize(size_bytes);
 }
 
-uint8_t* RtpPacket::Header()
+uint8_t* RtpPacket::Header() const
 {
 	return &_buffer[0];
 }
 
-uint8_t* RtpPacket::Payload()
+uint8_t* RtpPacket::Payload() const
 {
 	return &_buffer[_payload_offset];
 }

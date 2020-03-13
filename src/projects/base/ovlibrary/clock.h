@@ -31,5 +31,15 @@ namespace ov
 
 			return result;
 		}
+
+		#define GETTIMEOFDAY_TO_NTP_OFFSET 2208988800 //  Number of seconds between 1-Jan-1900 and 1-Jan-1970
+		static void	GetNtpTime(uint32_t &msw, uint32_t &lsw)
+		{
+			struct timespec now;
+			clock_gettime(CLOCK_REALTIME, &now);
+
+			msw = (uint32_t)(now.tv_sec) + GETTIMEOFDAY_TO_NTP_OFFSET;
+			lsw = (uint32_t)((double)(now.tv_nsec/1000)*(double)(((uint64_t)1)<<32)*1.0e-6);
+		}
 	};
 }

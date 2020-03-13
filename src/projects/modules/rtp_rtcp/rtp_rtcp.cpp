@@ -7,12 +7,12 @@
 #define RTCP_AA_SEND_SEQUENCE (30)
 
 RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<pub::Session> session, const std::vector<uint32_t> &ssrc_list)
-	        : SessionNode(id, pub::SessionNodeType::RtpRtcp, session)
+	        : SessionNode(id, pub::SessionNodeType::Rtp, session)
 {
     for(auto ssrc : ssrc_list)
     {
-        auto rtcp_info = std::make_shared<RtcpInfo>(ssrc);
-        _rtcp_infos.push_back(rtcp_info);
+        auto rtcp_generator = std::make_shared<RtcpSRGenerator>(ssrc);
+        _rtcp_sr_generators[ssrc] = rtcp_generator;
     }
 }
 
@@ -20,53 +20,49 @@ RtpRtcp::~RtpRtcp()
 {
 }
 
-bool RtpRtcp::SendOutgoingData(std::shared_ptr<ov::Data> packet)
+bool RtpRtcp::SendOutgoingData(const std::shared_ptr<ov::Data> &packet)
 {
 	// Lower Node is SRTP
 	auto node = GetLowerNode();
-
 	if(!node)
 	{
 		return false;
 	}
 
-#if 1
-    static uint32_t packet_count = 0;
-
-	//if(_first_receiver_report_time != 0)
+    RtpPacket rtp_packet(packet);
+    // Parsing error
+	if(rtp_packet.Buffer() == nullptr)
     {
-        auto byte_buffer = packet->GetDataAs<uint8_t>();
-        uint32_t timestamp = ByteReader<uint32_t>::ReadBigEndian(&byte_buffer[4]);
-        uint32_t ssrc = ByteReader<uint32_t>::ReadBigEndian(&byte_buffer[8]);
-
-        // rtcp aa packet send ( per 1000)
-        for(auto &rtcp_info : _rtcp_infos)
-        {
-            if(rtcp_info->ssrc == ssrc)
-            {
-                if (rtcp_info->sequence_number == 0)
-                {
-                    logtd("Send rtcp sr packet - ssrc(%u)", ssrc);
-
-                    if (!dynamic_cast<SrtpTransport *>(node.get())->SendRtcpData(GetNodeType(), RtcpPacket::MakeSrPacket(ssrc, timestamp, packet_count++, 0)))
-                    {
-                        // Not ready
-                        logtd("Rtcp sr packet send fail - ssrc(%u)", ssrc);
-                    }
-                }
-
-                rtcp_info->sequence_number++;
-
-                if(rtcp_info->sequence_number >= RTCP_AA_SEND_SEQUENCE)
-                    rtcp_info->sequence_number = 0;
-
-                break;
-            }
-        }
+        return false;
     }
-#endif
-	//logtd("RtpRtcp Send next node : %d", packet->GetData()->GetLength());
-	return node->SendData(GetNodeType(), packet);
+
+    if(_rtcp_sr_generators.find(rtp_packet.Ssrc()) == _rtcp_sr_generators.end())
+    {
+        return false;
+    }
+
+    auto rtcp_sr_generator = _rtcp_sr_generators[rtp_packet.Ssrc()];
+    rtcp_sr_generator->AddRTPPacketAndGenerateRtcpSR(rtp_packet);
+    if(rtcp_sr_generator->IsAvailableRtcpSRPacket())
+    {
+        auto rtcp_sr_packet = rtcp_sr_generator->PopRtcpSRPacket();
+        if(!node->SendData(pub::SessionNodeType::Rtcp, packet))
+        {
+            logtd("Send RTCP failed : ssrc(%u)", rtp_packet.Ssrc());
+        }
+		else
+		{
+			logte("Send RTCP succeed : ssrc(%u)", rtp_packet.Ssrc());
+		}
+    }  
+
+	if(!node->SendData(pub::SessionNodeType::Rtp, packet))
+    {
+        logtd("Send RTP failed : ssrc(%u)", rtp_packet.Ssrc());
+		return false;
+    }
+
+	return true;
 }
 
 bool RtpRtcp::SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
