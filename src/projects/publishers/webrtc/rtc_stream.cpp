@@ -53,6 +53,8 @@ bool RtcStream::Start(uint32_t worker_count)
 	std::shared_ptr<MediaDescription> video_media_desc = nullptr;
 	std::shared_ptr<MediaDescription> audio_media_desc = nullptr;
 
+	bool first_video_desc = true;
+	bool first_audio_desc = true;
 	uint8_t payload_type_num = PAYLOAD_TYPE_OFFSET;
 
 	for(auto &track_item : _tracks)
@@ -123,18 +125,21 @@ bool RtcStream::Start(uint32_t worker_count)
 						continue;
 				}
 
-				video_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
-				video_media_desc->SetConnection(4, "0.0.0.0");
-				// TODO(dimiden): Prevent duplication
-				video_media_desc->SetMid(ov::Random::GenerateString(6));
-				video_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
-				video_media_desc->UseDtls(true);
-				video_media_desc->UseRtcpMux(true);
-				video_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
-				video_media_desc->SetMediaType(MediaDescription::MediaType::Video);
-				video_media_desc->SetCname(ov::Random::GenerateUInt32(), ov::Random::GenerateString(16));
-
-				_offer_sdp->AddMedia(video_media_desc);
+				if(first_video_desc)
+				{
+					video_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
+					video_media_desc->SetConnection(4, "0.0.0.0");
+					// TODO(dimiden): Prevent duplication
+					video_media_desc->SetMid(ov::Random::GenerateString(6));
+					video_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
+					video_media_desc->UseDtls(true);
+					video_media_desc->UseRtcpMux(true);
+					video_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
+					video_media_desc->SetMediaType(MediaDescription::MediaType::Video);
+					video_media_desc->SetCname(ov::Random::GenerateUInt32(), ov::Random::GenerateString(16));
+					_offer_sdp->AddMedia(video_media_desc);
+					first_video_desc = false;
+				}
 
 				//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
 				payload->SetRtpmap(payload_type_num++, codec, 90000);
@@ -173,17 +178,21 @@ bool RtcStream::Start(uint32_t worker_count)
 						continue;
 				}
 
-				audio_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
-				audio_media_desc->SetConnection(4, "0.0.0.0");
-				// TODO(dimiden): Need to prevent duplication
-				audio_media_desc->SetMid(ov::Random::GenerateString(6));
-				audio_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
-				audio_media_desc->UseDtls(true);
-				audio_media_desc->UseRtcpMux(true);
-				audio_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
-				audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
-				audio_media_desc->SetCname(ov::Random::GenerateUInt32(), ov::Random::GenerateString(16));
-				_offer_sdp->AddMedia(audio_media_desc);
+				if(first_audio_desc)
+				{
+					audio_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
+					audio_media_desc->SetConnection(4, "0.0.0.0");
+					// TODO(dimiden): Need to prevent duplication
+					audio_media_desc->SetMid(ov::Random::GenerateString(6));
+					audio_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
+					audio_media_desc->UseDtls(true);
+					audio_media_desc->UseRtcpMux(true);
+					audio_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
+					audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
+					audio_media_desc->SetCname(ov::Random::GenerateUInt32(), ov::Random::GenerateString(16));
+					_offer_sdp->AddMedia(audio_media_desc);
+					first_audio_desc = false;
+				}
 
 				payload->SetRtpmap(payload_type_num++, codec, static_cast<uint32_t>(track->GetSample().GetRateNum()),
 								   std::to_string(track->GetChannel().GetCounts()).c_str());
