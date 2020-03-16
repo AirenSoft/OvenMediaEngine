@@ -9,6 +9,7 @@ RtcpSRGenerator::RtcpSRGenerator(uint32_t ssrc)
 
 void RtcpSRGenerator::AddRTPPacketAndGenerateRtcpSR(const RtpPacket &rtp_packet)
 {
+    //logc("DEBUG", ">>>> timestamp(%u) ssrc(%u)", rtp_packet.Timestamp(), rtp_packet.Ssrc());
     _packet_count ++;
     _octec_count += rtp_packet.PayloadSize();
 

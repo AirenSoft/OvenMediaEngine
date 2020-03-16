@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "rtcp_packet.h"
+#include "base/ovlibrary/byte_io.h"
 #include <sys/time.h>
 
 #define OV_LOG_TAG "Rtcp"
@@ -220,35 +221,25 @@ block  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 //====================================================================================================
 #define DEFAULT_MAX_PACKET_SIZE		1472
-#define DEFAULT_SR_LENGTH 6 // byte/4
+#define DEFAULT_SR_LENGTH           6 // byte/4
 
 std::shared_ptr<ov::Data> RtcpPacket::MakeSrPacket(uint32_t msw, uint32_t lsw, uint32_t ssrc, uint32_t rtp_timestamp, uint32_t packet_count, uint32_t octet_count)
 {
-    auto sr_packet = std::make_shared<ov::Data>(DEFAULT_MAX_PACKET_SIZE);
+    // Bigger size is needed for SRTCP, It is temporary codes. 
+    auto sr_packet = std::make_shared<ov::Data>(50);
 
-    ov::ByteStream stream(sr_packet.get());
+    sr_packet->SetLength(28);
+    auto buffer = sr_packet->GetWritableDataAs<uint8_t>();
 
-    uint8_t data = 0;
-    data += (RTCP_HEADER_VERSION) << 6; // version;
-    data += (0&RTCP_MAX_BLOCK_COUNT); // RC;
-    stream.Write8(data);
-
-    // payload type SR
-    stream.Write8(static_cast<uint8_t>(RtcpPacketType::SR));
-    // length
-    stream.WriteBE16(DEFAULT_SR_LENGTH); // SSRC(4) NTP(8) tm(4) pc(4) oc(4)
-    // SSRC of sender
-    stream.WriteBE32(ssrc);
-    // NTP timestamp, most significant word
-    stream.WriteBE32(msw);
-    // NTP timestamp, least significant word
-    stream.WriteBE32(lsw);
-    // RTP timestamp
-    stream.WriteBE32(rtp_timestamp);
-    // sender's packet count
-    stream.WriteBE32(packet_count);
-    // sender's octet count
-    stream.WriteBE32(octet_count);
+    buffer[0] = RTCP_HEADER_VERSION << 6;
+    buffer[1] = static_cast<uint8_t>(RtcpPacketType::SR);
+    ByteWriter<uint16_t>::WriteBigEndian(&buffer[2], DEFAULT_SR_LENGTH);
+    ByteWriter<uint32_t>::WriteBigEndian(&buffer[4], ssrc);
+    ByteWriter<uint32_t>::WriteBigEndian(&buffer[8], msw);
+    ByteWriter<uint32_t>::WriteBigEndian(&buffer[12], lsw);
+    ByteWriter<uint32_t>::WriteBigEndian(&buffer[16], rtp_timestamp);
+    ByteWriter<uint32_t>::WriteBigEndian(&buffer[20], packet_count);
+    ByteWriter<uint32_t>::WriteBigEndian(&buffer[24], octet_count);
 
     return sr_packet;
 }

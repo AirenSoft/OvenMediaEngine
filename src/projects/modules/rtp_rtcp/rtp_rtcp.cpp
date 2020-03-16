@@ -30,6 +30,7 @@ bool RtpRtcp::SendOutgoingData(const std::shared_ptr<ov::Data> &packet)
 	}
 
     RtpPacket rtp_packet(packet);
+
     // Parsing error
 	if(rtp_packet.Buffer() == nullptr)
     {
@@ -40,21 +41,22 @@ bool RtpRtcp::SendOutgoingData(const std::shared_ptr<ov::Data> &packet)
     {
         return false;
     }
-
+    
     auto rtcp_sr_generator = _rtcp_sr_generators[rtp_packet.Ssrc()];
+    
     rtcp_sr_generator->AddRTPPacketAndGenerateRtcpSR(rtp_packet);
     if(rtcp_sr_generator->IsAvailableRtcpSRPacket())
     {
         auto rtcp_sr_packet = rtcp_sr_generator->PopRtcpSRPacket();
-        if(!node->SendData(pub::SessionNodeType::Rtcp, packet))
+        if(!node->SendData(pub::SessionNodeType::Rtcp, rtcp_sr_packet))
         {
             logtd("Send RTCP failed : ssrc(%u)", rtp_packet.Ssrc());
         }
 		else
 		{
-			logtd("Send RTCP succeed : ssrc(%u)", rtp_packet.Ssrc());
+			logtd("Send RTCP succeed : ssrc(%u) length(%d)", rtp_packet.Ssrc(), rtcp_sr_packet->GetLength());
 		}
-    }  
+    }
 
 	if(!node->SendData(pub::SessionNodeType::Rtp, packet))
     {

@@ -102,7 +102,6 @@ bool RtcSession::Start()
 	for(auto media : _offer_sdp->GetMediaList())
     {
         ssrc_list.push_back(media->GetSsrc());
-		logtc("SSRC : %u", media->GetSsrc());
     }
 
     // RTP RTCP 생성
