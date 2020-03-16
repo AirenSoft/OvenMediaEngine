@@ -584,8 +584,7 @@ bool SegmentPublisher::HandleSignedUrl(const ov::String &app_name, const ov::Str
 		if (signed_url->GetUrl().UpperCaseString() != url_to_compare.UpperCaseString())
 		{
 			messages.push_back(ov::String::FormatString("Invalid URL: %s (Expected: %s)",
-														url_to_compare.CStr(),
-														signed_url->GetUrl().CStr()));
+														signed_url->GetUrl().CStr(), url_to_compare.CStr()));
 			result = false;
 		}
 
