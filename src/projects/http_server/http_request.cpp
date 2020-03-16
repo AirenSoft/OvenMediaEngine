@@ -104,6 +104,9 @@ ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
 			// reference: https://en.cppreference.com/w/cpp/string/byte/isprint
 			if (::isprint(character) || ::isspace(character))
 			{
+				character++;
+				remained--;
+
 				continue;
 			}
 			else
