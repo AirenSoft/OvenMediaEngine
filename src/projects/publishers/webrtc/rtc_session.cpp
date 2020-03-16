@@ -89,7 +89,6 @@ bool RtcSession::Start()
 			{
 				_video_payload_type = RED_PAYLOAD_TYPE;
 				_red_block_pt = first_payload->GetId();
-
 			}
 			else
 			{
@@ -103,10 +102,11 @@ bool RtcSession::Start()
 	for(auto media : _offer_sdp->GetMediaList())
     {
         ssrc_list.push_back(media->GetSsrc());
+		logtc("SSRC : %u", media->GetSsrc());
     }
 
     // RTP RTCP 생성
-	_rtp_rtcp = std::make_shared<RtpRtcp>((uint32_t)pub::SessionNodeType::RtpRtcp, session, ssrc_list);
+	_rtp_rtcp = std::make_shared<RtpRtcp>((uint32_t)pub::SessionNodeType::Rtp, session, ssrc_list);
 
 	// SRTP 생성
 	_srtp_transport = std::make_shared<SrtpTransport>((uint32_t)pub::SessionNodeType::Srtp, session);
@@ -214,7 +214,7 @@ bool RtcSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov
 			return false;
 		}
 	}
-	
+
 	_sent_bytes += packet->GetLength();
 
 	return _rtp_rtcp->SendOutgoingData(packet);

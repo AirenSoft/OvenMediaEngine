@@ -38,20 +38,21 @@ class RtpPacket
 {
 public:
 	RtpPacket();
+	RtpPacket(const std::shared_ptr<ov::Data> &data);
 	RtpPacket(RtpPacket &src);
 	virtual ~RtpPacket();
 
 	// Getter
-	bool		Marker();
-	uint8_t		PayloadType();
+	bool		Marker() const;
+	uint8_t		PayloadType() const;
 	// For FEC Payload
-	bool		IsUlpfec();
-	uint8_t 	OriginPayloadType();
-	uint16_t	SequenceNumber();
-	uint32_t	Timestamp();
-	uint32_t	Ssrc();
-	std::vector<uint32_t> Csrcs();
-	uint8_t*	Buffer();
+	bool		IsUlpfec() const;
+	uint8_t 	OriginPayloadType() const;
+	uint16_t	SequenceNumber() const;
+	uint32_t	Timestamp() const;
+	uint32_t	Ssrc() const;
+	std::vector<uint32_t> Csrcs() const;
+	uint8_t*	Buffer() const;
 
 	// Setter
 	void		SetMarker(bool marker_bit);
@@ -65,39 +66,40 @@ public:
 	// 버퍼에 남은 공간이 충분하고 extension, Payload, padding이 들어가기 전에 호출되어야 함
 	void		SetCsrcs(const std::vector<uint32_t>& csrcs);
 
-	size_t		HeadersSize();
-	size_t		PayloadSize();
-	size_t		PaddingSize();
-	size_t 		ExtensionSize();
+	size_t		HeadersSize() const;
+	size_t		PayloadSize() const;
+	size_t		PaddingSize() const;
+	size_t 		ExtensionSize() const;
 
 	// Payload
 	bool 		SetPayload(const uint8_t *payload, size_t payload_size);
 	uint8_t*	SetPayloadSize(size_t size_bytes);
 	uint8_t*	AllocatePayload(size_t size_bytes);
-	uint8_t*	Header();
-	uint8_t*	Payload();
+	uint8_t*	Header() const;
+	uint8_t*	Payload() const;
 
 	// Data
 	std::shared_ptr<ov::Data> GetData();
 
 protected:
-	size_t		_payload_offset;	// Header Start Point (Header size)
-	bool		_marker;
-	uint8_t		_payload_type;
-	bool		_is_fec;
-	uint8_t 	_origin_payload_type;
-	uint8_t		_padding_size;
-	uint16_t	_sequence_number;
-	uint32_t	_timestamp;
-	uint32_t	_ssrc;
-	size_t		_payload_size;		// Payload Size
+	size_t		_payload_offset = 0;	// Header Start Point (Header size)
+	uint8_t		_cc = 0;
+	bool		_marker = false;
+	uint8_t		_payload_type = 0;
+	bool		_is_fec = false;
+	uint8_t 	_origin_payload_type = 0;
+	uint8_t		_padding_size = 0;
+	uint16_t	_sequence_number = 0;
+	uint32_t	_timestamp = 0;
+	uint32_t	_ssrc = 0;
+	size_t		_payload_size = 0;		// Payload Size
 
 	//TODO: Extension은 향후 확장
 	size_t		_extension_size;
 
 	// BYTE로 변환된 헤더
 	// std::vector<uint8_t>	_buffer;
-	uint8_t *					_buffer;
-	std::shared_ptr<ov::Data>	_data;
+	uint8_t *					_buffer = nullptr;
+	std::shared_ptr<ov::Data>	_data = nullptr;
 };
 

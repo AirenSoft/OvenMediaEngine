@@ -142,9 +142,9 @@ int32_t TranscodeStream::CreateOutputStream()
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Get [application->Streams] list of application configuration.
-	auto &cfg_streams = _application_info.GetConfig().GetStreamList();
+	auto &cfg_stream_list = _application_info.GetConfig().GetStreamList();
 
-	for (const auto &cfg_stream : cfg_streams)
+	for (const auto &cfg_stream : cfg_stream_list)
 	{
 		// Validation 
 		if (cfg_stream.GetName().GetLength() == 0)
@@ -766,13 +766,6 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 
 				// logtd("[#%d] A frame is filtered (PTS: %lld)", track_id, filtered_frame->GetPts());
 
-				// if (_queue_filterd_frames.size() > _max_queue_size)
-				// {
-				// 	logti("Filtered frame queue is full, please decrease encoding options (resolution, bitrate, framerate)");
-
-				// 	return result;
-				// }
-
 				_queue_filterd_frames.push(std::move(filtered_frame));
 
 				_queue_event.Notify();
@@ -1049,13 +1042,13 @@ common::MediaCodecId TranscodeStream::GetCodecId(ov::String name)
 	{
 		return common::MediaCodecId::Vp9;
 	}
-
-	// Audio codecs
-	if (name == "FLV")
+	else if (name == "FLV")
 	{
 		return common::MediaCodecId::Flv;
 	}
-	else if (name == "AAC")
+
+	// Audio codecs
+	if (name == "AAC")
 	{
 		return common::MediaCodecId::Aac;
 	}
@@ -1073,7 +1066,7 @@ common::MediaCodecId TranscodeStream::GetCodecId(ov::String name)
 
 bool TranscodeStream::IsVideoCodec(common::MediaCodecId codec_id)
 {
-	if(codec_id == common::MediaCodecId::H264 || codec_id == common::MediaCodecId::Vp8 || codec_id == common::MediaCodecId::Vp9)
+	if(codec_id == common::MediaCodecId::Flv || codec_id == common::MediaCodecId::H264 || codec_id == common::MediaCodecId::Vp8 || codec_id == common::MediaCodecId::Vp9)
 	{
 		return true;
 	}
@@ -1083,7 +1076,7 @@ bool TranscodeStream::IsVideoCodec(common::MediaCodecId codec_id)
 
 bool TranscodeStream::IsAudioCodec(common::MediaCodecId codec_id)
 {
-	if(codec_id == common::MediaCodecId::Flv || codec_id == common::MediaCodecId::Mp3 || codec_id == common::MediaCodecId::Opus)
+	if( codec_id == common::MediaCodecId::Aac || codec_id == common::MediaCodecId::Mp3 || codec_id == common::MediaCodecId::Opus)
 	{
 		return true;
 	}

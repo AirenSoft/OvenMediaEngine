@@ -36,9 +36,7 @@ public:
 	std::shared_ptr<RtpPacketizer> GetPacketizer(uint32_t id);
 
 	// RtpRtcpPacketizerInterface Implementation
-	// RtpSender, RtcpSender 등에 RtpRtcpSession을 넘겨서 전송 이 함수를 통해 하도록 한다.
 	bool OnRtpPacketized(std::shared_ptr<RtpPacket> packet) override;
-	bool OnRtcpPacketized(std::shared_ptr<RtcpPacket> packet) override;
 
 private:
 	bool Start(uint32_t worker_count) override;

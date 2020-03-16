@@ -66,8 +66,7 @@ public :
                             std::vector<std::shared_ptr<RtcpReceiverReport>> &receiver_reports);
 
     static std::shared_ptr<ov::Data> MakeSrPacket(uint32_t ssrc, uint32_t rtp_timestamp, uint32_t packet_count, uint32_t octet_count);
+    static std::shared_ptr<ov::Data> MakeSrPacket(uint32_t lsr, uint32_t dlsr, uint32_t ssrc, uint32_t rtp_timestamp, uint32_t packet_count, uint32_t octet_count);
 
-    static double DelayCalculation(uint32_t lsr, uint32_t dlsr);
-private :
-    static void GetNtpTime(uint32_t &msw, uint32_t &lsw);
+    static double   DelayCalculation(uint32_t lsr, uint32_t dlsr);
 };

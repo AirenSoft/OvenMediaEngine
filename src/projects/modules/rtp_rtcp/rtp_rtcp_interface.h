@@ -9,6 +9,4 @@ class RtpRtcpPacketizerInterface : public ov::EnableSharedFromThis<RtpRtcpPacket
 public:
     // RTP Packet을 전송한다.
     virtual bool        OnRtpPacketized(std::shared_ptr<RtpPacket> packet) = 0;
-    // RTCP Packet을 전송한다.
-    virtual bool        OnRtcpPacketized(std::shared_ptr<RtcpPacket> packet) = 0;
 };

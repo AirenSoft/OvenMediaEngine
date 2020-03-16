@@ -66,16 +66,16 @@ bool RtpPacketizer::Packetize(FrameType frame_type,
                                    const FragmentationHeader *fragmentation,
                                    const RTPVideoHeader *rtp_header)
 {
-	uint32_t rtp_timestamp = timestamp;
+	_frame_count ++;
 
 	// Audio, Video 분기 한다.
 	if(_audio_configured)
 	{
-		return PacketizeAudio(frame_type, rtp_timestamp, payload_data, payload_size);
+		return PacketizeAudio(frame_type, timestamp, payload_data, payload_size);
 	}
 	else
 	{
-		return PacketizeVideo(rtp_header->codec, frame_type, rtp_timestamp, payload_data, payload_size, fragmentation, rtp_header);
+		return PacketizeVideo(rtp_header->codec, frame_type, timestamp, payload_data, payload_size, fragmentation, rtp_header);
 	}
 }
 
@@ -91,19 +91,17 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 	std::shared_ptr<RtpPacket> rtp_header_template, red_rtp_header_template;
 	std::shared_ptr<RtpPacket> last_rtp_header, last_red_rtp_header;
 
-	// 기본 패킷 헤더를 생성
 	rtp_header_template = AllocatePacket();
 	rtp_header_template->SetTimestamp(rtp_timestamp);
 
-	// 마지막 패킷 헤더를 생성, 마지막 패킷에 extension과 marker=1을 보낸다.
 	last_rtp_header = AllocatePacket();
 	last_rtp_header->SetTimestamp(rtp_timestamp);
 
 
-	// TODO: 향후 다음 Extension을 추가한다.
-	// Rotation Extension
-	// Video Content Type Extension
-	// Video Timing Extension
+	// TODO: Add following extentions
+	// - Rotation Extension
+	// - Video Content Type Extension
+	// - Video Timing Extension
 
 	// -20 is for FEC
 	size_t max_data_payload_length = DEFAULT_MAX_PACKET_SIZE - rtp_header_template->HeadersSize() - 100;
@@ -115,7 +113,6 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 		return false;
 	}
 
-	// Paketizer에 Payload를 셋팅
 	size_t num_packets = _packetizer->SetPayloadData(max_data_payload_length, last_packet_reduction_len, video_header ? &(video_header->codec_header) : nullptr, frame_type, 
 													payload_data, payload_size, fragmentation);
 	if(num_packets == 0)
@@ -124,8 +121,6 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 		return false;
 	}
 
-	// 생성된 Packet 만큼 전송한다.
-	// 마지막 패킷은 특수하게 처리한다. (Extension 포함, Marker=1)
 	for(size_t i = 0; i < num_packets; ++i)
 	{
 		bool last = (i + 1) == num_packets;
@@ -141,6 +136,7 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 			return false;
 		}
 
+		_rtp_packet_count ++;
 		_stream->OnRtpPacketized(packet);
 
 		// RED First
@@ -164,11 +160,7 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 
 	_ulpfec_generator.AddRtpPacketAndGenerateFec(red_packet);
 
-	// For recovery test
-	//if(red_packet->SequenceNumber() % 10 != 0)
-	{
-		_stream->OnRtpPacketized(red_packet);
-	}
+	_stream->OnRtpPacketized(red_packet);
 
 	while(_ulpfec_generator.IsAvailableFecPackets())
 	{
@@ -178,12 +170,12 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 		red_fec_packet->SetTimestamp(packet->Timestamp());
 
 		// Sequence Number
-		//red_fec_packet->SetSequenceNumber(red_packet->SequenceNumber());
 		AssignSequenceNumber(red_fec_packet.get(), true);
 
 		_ulpfec_generator.NextPacket(red_fec_packet.get());
 
 		// Send ULPFEC
+		_rtp_packet_count ++;
 		_stream->OnRtpPacketized(red_fec_packet);
 	}
 

@@ -22,7 +22,8 @@ namespace pub
 	enum class SessionNodeType : int16_t
 	{
 		None = 0,
-		RtpRtcp = 100,
+		Rtp = 100,
+		Rtcp = 101,
 		Srtp = 200,
 		Sctp = 300,
 		Dtls = 400,

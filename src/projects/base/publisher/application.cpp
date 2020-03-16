@@ -94,6 +94,7 @@ namespace pub
 		// Mutex (This function may be called by Router thread)
 		std::unique_lock<std::mutex> lock(_video_stream_queue_guard);
 		_video_stream_queue.push(std::move(data));
+		_last_video_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
 		lock.unlock();
 		_queue_event.Notify();
 
@@ -110,6 +111,7 @@ namespace pub
 		std::unique_lock<std::mutex> lock(_audio_stream_queue_guard);
 
 		_audio_stream_queue.push(std::move(data));
+		_last_audio_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
 		lock.unlock();
 		_queue_event.Notify();
 
@@ -214,11 +216,7 @@ namespace pub
 	{
 		while (!_stop_thread_flag)
 		{
-			// Queue에 이벤트가 들어올때까지 무한 대기 한다.
-			// TODO: 향후 App 재시작 등의 기능을 위해 WaitFor(time) 기능을 구현한다.
 			_queue_event.Wait();
-
-			// Queue에 입력된 데이터를 처리한다.
 
 			// Check video data is available
 			std::shared_ptr<Application::VideoStreamData> video_data = PopVideoStreamData();
@@ -242,9 +240,6 @@ namespace pub
 			{
 				OnPacketReceived(packet->_session_info, packet->_data);
 			}
-
-			//TODO: Queue에 입력된 Audio Sample을 처리한다.
-			//TODO: ApplicationModule을 호출한다.
 		}
 	}
 
