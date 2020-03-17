@@ -61,3 +61,14 @@ std::shared_ptr<MediaFrame> TranscodeFilter::RecvBuffer(TranscodeResult *result)
 {
 	return _impl->RecvBuffer(result);
 }
+
+
+uint32_t TranscodeFilter::GetInputBufferSize()
+{
+	return _impl->GetInputBufferSize();
+}
+
+uint32_t TranscodeFilter::GetOutputBufferSize()
+{
+	return _impl->GetOutputBufferSize();
+}

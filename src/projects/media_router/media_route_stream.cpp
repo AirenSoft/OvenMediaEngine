@@ -105,7 +105,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	time_t curr_time;
 	time(&curr_time);
 
-	if(difftime(curr_time, _last_recv_time) >= 5)
+	if(difftime(curr_time, _last_recv_time) >= 30)
 	{
 		ov::String temp_str = "Statistics of media stream\n";
 

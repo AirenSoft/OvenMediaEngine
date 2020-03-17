@@ -52,5 +52,36 @@ public:
 			.den = timebase.GetDen()
 		};
 	}
+
+	uint32_t GetInputBufferSize()
+	{
+		return _input_buffer.size();
+	}
+
+	uint32_t GetOutputBufferSize()
+	{
+		return _output_buffer.size();
+	}
+
+protected:
+	std::deque<std::shared_ptr<MediaFrame>> _input_buffer;
+	std::deque<std::shared_ptr<MediaFrame>> _output_buffer;
+
+	AVFrame *_frame = nullptr;
+	AVFilterContext *_buffersink_ctx = nullptr;
+	AVFilterContext *_buffersrc_ctx = nullptr;
+	AVFilterGraph *_filter_graph = nullptr;
+	AVFilterInOut *_inputs = nullptr;
+	AVFilterInOut *_outputs = nullptr;
+
+	double _scale = 0.0;
+
+	std::shared_ptr<TranscodeContext> _input_context;
+	std::shared_ptr<TranscodeContext> _output_context;
+
+	bool _kill_flag = false;
+	std::mutex _mutex;
+	std::thread _thread_work;
+	ov::Semaphore _queue_event;
 };
 

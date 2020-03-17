@@ -97,7 +97,7 @@ void OvenCodecImplAvcodecEncVP8::Stop()
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
-		logtd("AVC encoder thread has ended.");
+		logtd("VP8 encoder thread has ended.");
 	}
 }
 

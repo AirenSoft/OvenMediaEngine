@@ -23,6 +23,7 @@ public:
 	void SendBuffer(std::shared_ptr<const MediaPacket> packet) override;
 
 	std::shared_ptr<TranscodeContext>& GetContext();
+
 protected:
 	static void ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters);
 

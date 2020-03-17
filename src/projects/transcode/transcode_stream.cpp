@@ -86,11 +86,29 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 
 TranscodeStream::~TranscodeStream()
 {
+	logte("%s:%d", __FUNCTION__, __LINE__);
+
 	// The thread checked for non-termination and terminated
 	if (_kill_flag != true)
 	{
 		Stop();
 	}
+
+	_decoders.clear();
+	_filters.clear();
+	_encoders.clear();
+
+	_queue_input_packets.clear();
+	_queue_decoded_frames.clear();
+	_queue_filterd_frames.clear();
+
+	_stage_input_to_decoder.clear();
+	_stage_input_to_output.clear();
+	_stage_decoder_to_filter.clear();
+	_stage_filter_to_encoder.clear();
+	_stage_encoder_to_output.clear();
+
+	_stream_outputs.clear();
 }
 
 void TranscodeStream::Stop()
@@ -351,7 +369,7 @@ int32_t TranscodeStream::CreateStageMapping()
 	// InputTrack = ID of Input Track
 	// OutputTracks = ID of Output Tracks
 
-	ov::String temp_debug_msg = "\r\n======= Stage Map of Transcoder =======\n";
+	ov::String temp_debug_msg = "\r\nStage Map of Transcoder\n";
 	temp_debug_msg.AppendFormat(" - app(%s/%d), stream(%s/%d)\n", _application_info.GetName().CStr(), _application_info.GetId(), _stream_input->GetName().CStr(), _stream_input->GetId());
 
 	for (auto &iter : _map_stage_context)
@@ -851,12 +869,43 @@ void TranscodeStream::LoopTask()
 		time(&curr_time);
 
 		// for statistics
-		if (difftime(curr_time, base_time) >= 30)
+		if (difftime(curr_time, base_time) >= 10)
 		{
-			logti("stats of stream[%s/%s], decode.ready[%d], filter.ready[%d], encode.ready[%d]", _application_info.GetName().CStr(), _stream_input->GetName().CStr(), _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
-
 			base_time = curr_time;
+
+			ov::String dbg_str = ov::String::FormatString("\nStatistics of Transcode Stream [%s/%s]\n", _application_info.GetName().CStr(), _stream_input->GetName().CStr());
+
+			
+			dbg_str.AppendFormat(" - Pipeline Queue. decode.ready[%d], filter.ready[%d], encode.ready[%d]\n" , _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
+
+			dbg_str.AppendFormat(" - Decoders\n");
+			for (auto &iter : _decoders)
+			{
+				auto track_id =iter.first; 
+				auto object = iter.second;
+				dbg_str.AppendFormat("      track : [%d],  input.q : [%d], output.q : [%d]\n", track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
+			}
+
+			dbg_str.AppendFormat(" - Filters\n");
+			for (auto &iter : _filters)
+			{
+				auto track_id =iter.first; 
+				auto object = iter.second;
+				dbg_str.AppendFormat("      track : [%d],  input.q : [%d], output.q : [%d]\n", track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
+			}
+
+			dbg_str.AppendFormat(" - Encoders\n");
+			for (auto &iter : _decoders)
+			{
+				auto track_id =iter.first; 
+				auto object = iter.second;
+				dbg_str.AppendFormat("      track : [%d],  input.q : [%d], output.q : [%d]\n", track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
+			}
+
+			logtd("%s", dbg_str.CStr() );
 		}
+
+
 
 		if (_queue_input_packets.size() > 0)
 		{

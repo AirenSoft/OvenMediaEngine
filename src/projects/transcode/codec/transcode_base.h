@@ -67,6 +67,16 @@ public:
 		};
 	}
 
+	uint32_t GetInputBufferSize()
+	{
+		return _input_buffer.size();
+	}
+
+	uint32_t GetOutputBufferSize()
+	{
+		return _output_buffer.size();
+	}
+
 protected:
 	static bool IsPlanar(AVSampleFormat format)
 	{

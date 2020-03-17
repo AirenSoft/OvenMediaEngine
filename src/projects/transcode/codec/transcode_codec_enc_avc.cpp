@@ -89,7 +89,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	// 인코딩 딜레이
 	::av_opt_set(_context->priv_data, "tune", "zerolatency", 0);
 
-	// 인코딩 딜레이에서 sliced-thread 옵션 제거. MAC 환겨에서 브라우저 호환성
+	// 인코딩 딜레이에서 sliced-thread 옵션 제거. MAC 환경에서 브라우저 호환성
 	::av_opt_set(_context->priv_data, "x264opts", "bframes=0:sliced-threads=0:b-adapt=1:no-scenecut:keyint=30:min-keyint=30", 0);
 	// ::av_opt_set(_context->priv_data, "x264opts", "bframes=0:sliced-threads=0:b-adapt=1", 0);
 

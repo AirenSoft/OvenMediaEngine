@@ -30,6 +30,9 @@ public:
 	int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer);
 	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result);
 
+	uint32_t GetInputBufferSize();
+	uint32_t GetOutputBufferSize();
+
 private:
 	MediaFilterImpl *_impl;
 };

@@ -122,6 +122,16 @@ public:
 		return _abort;
 	}
 
+	void clear()
+	{
+		std::lock_guard<std::mutex> mlock(_mutex);
+
+		while (!_queue.empty())
+		{
+			_queue.pop();
+		}
+	}
+
 private:
 	std::queue<T> _queue;
 	std::mutex _mutex;

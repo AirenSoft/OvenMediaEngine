@@ -23,6 +23,8 @@ TranscodeDecoder::TranscodeDecoder()
 
 TranscodeDecoder::~TranscodeDecoder()
 {
+	logte("%s:%d", __FUNCTION__, __LINE__);
+	
 	::avcodec_free_context(&_context);
 	::avcodec_parameters_free(&_codec_par);
 
@@ -30,6 +32,9 @@ TranscodeDecoder::~TranscodeDecoder()
 	::av_packet_free(&_pkt);
 
 	::av_parser_close(_parser);
+
+	_input_buffer.clear();
+	_output_buffer.clear();
 }
 
 std::shared_ptr<TranscodeContext>& TranscodeDecoder::GetContext()

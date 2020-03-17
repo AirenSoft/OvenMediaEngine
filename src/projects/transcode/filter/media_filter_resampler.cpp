@@ -29,6 +29,8 @@ MediaFilterResampler::MediaFilterResampler()
 
 MediaFilterResampler::~MediaFilterResampler()
 {
+	logte("%s:%d", __FUNCTION__, __LINE__);
+	
 	Stop();
 
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
@@ -37,6 +39,9 @@ MediaFilterResampler::~MediaFilterResampler()
 	OV_SAFE_FUNC(_outputs, nullptr, ::avfilter_inout_free, &);
 
 	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
+
+	_input_buffer.clear();
+	_output_buffer.clear();
 }
 
 bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context)

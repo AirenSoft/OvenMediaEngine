@@ -29,12 +29,17 @@ TranscodeEncoder::TranscodeEncoder()
 
 TranscodeEncoder::~TranscodeEncoder()
 {
+	logte("%s:%d", __FUNCTION__, __LINE__);
+	
 	OV_SAFE_FUNC(_context, nullptr, ::avcodec_free_context, &);
 
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
 	OV_SAFE_FUNC(_packet, nullptr, ::av_packet_free, &);
 
 	OV_SAFE_FUNC(_codec_par, nullptr, ::avcodec_parameters_free, &);
+
+	_input_buffer.clear();
+	_output_buffer.clear();	
 }
 
 std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> output_context)

@@ -30,24 +30,6 @@ public:
 
 	void Stop();
 
-private:
-	AVFrame *_frame = nullptr;
-	AVFilterContext *_buffersink_ctx = nullptr;
-	AVFilterContext *_buffersrc_ctx = nullptr;
-	AVFilterGraph *_filter_graph = nullptr;
-	AVFilterInOut *_inputs = nullptr;
-	AVFilterInOut *_outputs = nullptr;
+protected:
 
-	double _scale = 0.0;
-
-	std::deque<std::shared_ptr<MediaFrame>> _input_buffer;
-	std::deque<std::shared_ptr<MediaFrame>> _output_buffer;
-
-	std::shared_ptr<TranscodeContext> _input_context;
-	std::shared_ptr<TranscodeContext> _output_context;
-
-	bool _kill_flag = false;
-	std::mutex _mutex;
-	std::thread _thread_work;
-	ov::Semaphore _queue_event;
 };
