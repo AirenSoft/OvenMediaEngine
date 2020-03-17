@@ -895,7 +895,7 @@ void TranscodeStream::LoopTask()
 			}
 
 			dbg_str.AppendFormat(" - Encoders\n");
-			for (auto &iter : _decoders)
+			for (auto &iter : _encoders)
 			{
 				auto track_id =iter.first; 
 				auto object = iter.second;
