@@ -105,7 +105,7 @@ namespace pvd
 
 	void OvtProvider::OnStreamNotInUse(const info::Stream &stream_info)
 	{
-		logti("%s stream will be deleted becase it is not used", stream_info.GetName().CStr());
+		logti("%s stream will be deleted because it is not used", stream_info.GetName().CStr());
 
 		// Find App
 		auto app_info = stream_info.GetApplicationInfo();

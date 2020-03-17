@@ -329,7 +329,7 @@ namespace pvd
 				{
 					// If EOF is not receiving packets anymore, end thread.
 					logtd("End of file");
-					_state = State::STOPPING;
+					_state = State::STOPPED;
 					is_eof = true;
 					break;
 				}
