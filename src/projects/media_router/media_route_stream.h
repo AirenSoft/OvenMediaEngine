@@ -73,7 +73,10 @@ private:
 	std::map<uint8_t, int64_t> _stat_recv_pkt_ldts;
 	std::map<uint8_t, int64_t> _stat_recv_pkt_size;
 	std::map<uint8_t, int64_t> _stat_recv_pkt_count;
+
+	std::map<uint8_t, int64_t> _stat_first_time_diff;
 	
+
 	// int64_t _last_video_pts = 0;
 	// int64_t _last_audio_pts = 0 ;
 	// int64_t _pkt_video_count = 0;

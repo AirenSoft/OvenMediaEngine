@@ -23,8 +23,8 @@ MediaRouteStream::MediaRouteStream(std::shared_ptr<info::Stream> &stream)
 	_stream = stream;
 	_stream->ShowInfo();
 
-	time(&_stat_start_time);
-	time(&_last_recv_time);
+	_stat_start_time = 0;
+	_last_recv_time = 0;		
 }
 
 MediaRouteStream::~MediaRouteStream()
@@ -91,7 +91,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	
 
 	////////////////////////////////////////////////////////////////////////////////////
-	// Statistics
+	// Statistics for log
 	////////////////////////////////////////////////////////////////////////////////////
 	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
 
@@ -101,39 +101,59 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	
 	_stat_recv_pkt_count[track_id]++;
 
+	// Starttime for received first packet
+	if(_stat_start_time == 0)
+	{
+		time(&_stat_start_time);
+		time(&_last_recv_time);
+	}
 
 	time_t curr_time;
 	time(&curr_time);
 
-	if(difftime(curr_time, _last_recv_time) >= 30)
+	if(difftime(curr_time, _last_recv_time) >= 5)
 	{
-		ov::String temp_str = "Statistics of media stream\n";
+		ov::String temp_str = "\nStatistics of Media Router Stream\n";
 
 		time_t uptime = curr_time-_stat_start_time;
-		temp_str.AppendFormat(" name : %s, uptime : %llds , queue : %d" ,_stream->GetName().CStr(), uptime, _media_packets.size());
+
+		temp_str.AppendFormat(" - name : %s, uptime : %llds , queue : %d" ,_stream->GetName().CStr(), uptime, _media_packets.size());
+
 		for(const auto &iter : _stream->GetTracks())
 		{
 			auto track_id = iter.first;
 			auto track = iter.second;
 
 			ov::String pts_str = "";
+
+			if(_stat_first_time_diff[track_id] == 0)
+			{
+				_stat_first_time_diff[track_id] = uptime * 1000 - (_stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen());
+			}
+
 			if(_pts_correct[track_id] != 0)
 			{
-				pts_str.AppendFormat("last_pts : %lldms->%lldms(%lld->%lld), crt_pts : %lld"
+				pts_str.AppendFormat("last_pts : %lldms->%lldms(%lld->%lld) fist.dly(%lld) cur.dly(%lld) diff(%lld), crt_pts : %lld"
 					, _stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen()
 					, (_stat_recv_pkt_lpts[track_id] - _pts_correct[track_id])  * 1000 / track->GetTimeBase().GetDen()
 					, _stat_recv_pkt_lpts[track_id]
 					, _stat_recv_pkt_lpts[track_id] - _pts_correct[track_id]
+					, _stat_first_time_diff[track_id]
+					, uptime * 1000 - (_stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen())
+					, (uptime * 1000 - (_stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen())) - (_stat_first_time_diff[track_id])
 					, _pts_correct[track_id] );
 			}
 			else
 			{
-				pts_str.AppendFormat("last_pts : %lldms(%lld)"
+				pts_str.AppendFormat("last_pts : %lldms(%lld) fist.dly(%lld) cur.dly(%lld) diff(%lld)"
 					, _stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen()
-					, _stat_recv_pkt_lpts[track_id] );
+					, _stat_recv_pkt_lpts[track_id]
+					, _stat_first_time_diff[track_id]
+					, uptime * 1000 - (_stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen())
+					, (uptime * 1000 - (_stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen())) - (_stat_first_time_diff[track_id]) );
 			}
 
-			temp_str.AppendFormat("\n\t[%d] media : %s(%d), %s, rcv_pkt_cnt : %lld, rcv_pkt_siz : %lldb"
+			temp_str.AppendFormat("\n\t[%d] track : %s (%d), %s, pkt_cnt : %lld, pkt_siz : %lldb"
 				, track_id
 				, track->GetMediaType()==MediaType::Video?"video":"audio"
 				, track->GetCodecId()

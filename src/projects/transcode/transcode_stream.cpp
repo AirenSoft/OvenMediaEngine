@@ -869,7 +869,7 @@ void TranscodeStream::LoopTask()
 		time(&curr_time);
 
 		// for statistics
-		if (difftime(curr_time, base_time) >= 10)
+		if (difftime(curr_time, base_time) >= 20)
 		{
 			base_time = curr_time;
 
@@ -883,7 +883,7 @@ void TranscodeStream::LoopTask()
 			{
 				auto track_id =iter.first; 
 				auto object = iter.second;
-				dbg_str.AppendFormat("      track : [%d],  input.q : [%d], output.q : [%d]\n", track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
+				dbg_str.AppendFormat("\t[%d] track : input.q [%d], output.q [%d]\n", track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
 			}
 
 			dbg_str.AppendFormat(" - Filters\n");
@@ -891,7 +891,7 @@ void TranscodeStream::LoopTask()
 			{
 				auto track_id =iter.first; 
 				auto object = iter.second;
-				dbg_str.AppendFormat("      track : [%d],  input.q : [%d], output.q : [%d]\n", track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
+				dbg_str.AppendFormat("\t[%d] track : input.q [%d], output.q [%d]\n", track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
 			}
 
 			dbg_str.AppendFormat(" - Encoders\n");
@@ -899,7 +899,7 @@ void TranscodeStream::LoopTask()
 			{
 				auto track_id =iter.first; 
 				auto object = iter.second;
-				dbg_str.AppendFormat("      track : [%d],  input.q : [%d], output.q : [%d]\n", track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
+				dbg_str.AppendFormat("\t[%d] track : input.q [%d], output.q [%d]\n", track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
 			}
 
 			logtd("%s", dbg_str.CStr() );
