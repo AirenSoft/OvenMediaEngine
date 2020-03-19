@@ -46,12 +46,18 @@ HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<Ht
 								 return observer->OnPlayListRequest(client, app_name, stream_name, file_name, play_list);
 							 });
 
-	if ((item == _observers.end()) || play_list.IsEmpty())
+	if ((item == _observers.end()))
 	{
 		logtd("Could not find a %s playlist for [%s/%s], %s", GetPublisherName(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
 		response->SetStatusCode(HttpStatusCode::NotFound);
 		response->Response();
 
+		return HttpConnection::Closed;
+	}
+
+	if(response->GetStatusCode() != HttpStatusCode::OK || play_list.IsEmpty())
+	{
+		response->Response();
 		return HttpConnection::Closed;
 	}
 

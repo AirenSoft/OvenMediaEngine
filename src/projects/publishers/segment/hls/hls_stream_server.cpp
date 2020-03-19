@@ -42,7 +42,7 @@ HttpConnection HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<Htt
 	ov::String play_list;
 	std::shared_ptr<info::Stream> stream_info;
 
-	std::find_if(_observers.begin(), _observers.end(),
+	auto item = std::find_if(_observers.begin(), _observers.end(),
 				 [&client, &app_name, &stream_name, &file_name, &play_list, &stream_info](auto &observer) -> bool {
 					 auto publisher = std::static_pointer_cast<SegmentPublisher>(observer);
 					 auto stream = publisher->GetStream(app_name, stream_name);
@@ -50,20 +50,19 @@ HttpConnection HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<Htt
 					 return observer->OnPlayListRequest(client, app_name, stream_name, file_name, play_list);
 				 });
 
-	if (stream_info == nullptr)
+	if (item == _observers.end())
 	{
-		logtd("Could not find HLS playlist: %s/%s, %s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		logtd("Could not find a %s playlist for [%s/%s], %s", GetPublisherName(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
 		response->SetStatusCode(HttpStatusCode::NotFound);
 		response->Response();
 
 		return HttpConnection::Closed;
 	}
-	else if (play_list.IsEmpty())
-	{
-		logtd("Could not find HLS playlist: %s/%s, %s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
-		response->SetStatusCode(HttpStatusCode::Accepted);
-		response->Response();
 
+	if(response->GetStatusCode() != HttpStatusCode::OK || play_list.IsEmpty())
+	{
+		logte("Could not find a %s playlist for [%s/%s], %s : %d", GetPublisherName(), app_name.CStr(), stream_name.CStr(), file_name.CStr(), response->GetStatusCode());
+		response->Response();
 		return HttpConnection::Closed;
 	}
 

@@ -284,7 +284,6 @@ namespace pvd
 		}
 
 		_state = State::STOPPING;
-
 		_stop_thread_flag = true;
 
 		return true;
@@ -329,7 +328,7 @@ namespace pvd
 				{
 					// If EOF is not receiving packets anymore, end thread.
 					logtd("End of file");
-					_state = State::STOPPED;
+					_state = State::STOPPING;
 					is_eof = true;
 					break;
 				}
@@ -345,6 +344,7 @@ namespace pvd
 				if(IsStopThread())
 				{
 					logtd("Interrupted by end flag");
+					_state = State::STOPPING;
 					break;
 				}
 

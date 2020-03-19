@@ -33,11 +33,10 @@ namespace pvd
 
 		~RtspcStream() final;
 
-		bool IsStopThread();
-
 	private:
 		bool Start() override;
 		bool Stop() override;
+		bool IsStopThread();
 		void WorkerThread();
 		bool ConnectTo();
 		bool RequestDescribe();

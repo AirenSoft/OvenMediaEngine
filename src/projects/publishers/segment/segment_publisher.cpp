@@ -84,7 +84,10 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	if (parsed_url == nullptr)
 	{
 		logte("Could not parse the url: %s", uri.CStr());
-		return false;
+		client->GetResponse()->SetStatusCode(HttpStatusCode::BadRequest);
+
+		// Returns true when the observer search can be ended.
+		return true;
 	}
 
 	// These names are used for testing purposes
@@ -94,12 +97,14 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	{
 		if (HandleSignedUrl(app_name, stream_name, client, parsed_url, playlist_request_info) == false)
 		{
-			return false;
+			client->GetResponse()->SetStatusCode(HttpStatusCode::Forbidden);
+
+			// Returns true when the observer search can be ended.
+			return true;
 		}
 	}
 
 	auto stream = GetStreamAs<SegmentStream>(app_name, stream_name);
-
 	if (stream == nullptr)
 	{
 		// These names are used for testing purposes
@@ -122,7 +127,11 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 				{
 					logtd("    %s = %s", query.first.CStr(), query.second.CStr());
 				}
-				return false;
+
+				client->GetResponse()->SetStatusCode(HttpStatusCode::BadRequest);
+
+				// Returns true when the observer search can be ended.
+				return true;
 			}
 
 			auto rtsp_uri = rtsp_uri_item->second;
@@ -130,7 +139,10 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 			if (orchestrator->RequestPullStream(app_name, stream_name, rtsp_uri) == false)
 			{
 				logte("Could not request pull stream for URL: %s", rtsp_uri.CStr());
-				return false;
+				client->GetResponse()->SetStatusCode(HttpStatusCode::NotAcceptable);
+
+				// Returns true when the observer search can be ended.
+				return true;
 			}
 
 			// Connection Request log
@@ -150,12 +162,23 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 		}
 	}
 
-	if ((stream == nullptr) || (stream->GetPlayList(play_list) == false))
+	if(stream == nullptr)
 	{
 		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		
+		// This means it need to query the next observer.
 		return false;
 	}
 
+	if(stream->GetPlayList(play_list) == false)
+	{
+		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		client->GetResponse()->SetStatusCode(HttpStatusCode::Accepted);
+		// Returns true when the observer search can be ended.
+		return true;
+	}
+
+	client->GetResponse()->SetStatusCode(HttpStatusCode::OK);
 	return true;
 }
 
