@@ -40,7 +40,6 @@ public:
 	std::shared_ptr<MediaPacket> Pop();
 	uint32_t Size();
 
-	time_t getLastReceivedTime();
 private:
 	std::shared_ptr<info::Stream> _stream;
 	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
@@ -67,8 +66,11 @@ private:
 	std::map<uint8_t, int64_t> _pts_avg_inc;
 
 	// statistics 
-	time_t _last_recv_time;
-	time_t 	_stat_start_time;
+	 ov::StopWatch _stop_watch;
+
+	std::chrono::time_point<std::chrono::system_clock> _last_recv_time;
+	std::chrono::time_point<std::chrono::system_clock> _stat_start_time;
+
 	std::map<uint8_t, int64_t> _stat_recv_pkt_lpts;
 	std::map<uint8_t, int64_t> _stat_recv_pkt_ldts;
 	std::map<uint8_t, int64_t> _stat_recv_pkt_size;
