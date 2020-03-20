@@ -876,7 +876,7 @@ void TranscodeStream::LoopTask()
 			ov::String dbg_str = ov::String::FormatString("\nStatistics of Transcode Stream [%s/%s]\n", _application_info.GetName().CStr(), _stream_input->GetName().CStr());
 
 			
-			dbg_str.AppendFormat(" - Pipeline Queue. decode.ready[%d], filter.ready[%d], encode.ready[%d]\n" , _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
+			dbg_str.AppendFormat(" - Pipeline\n\tdecode.ready[%d], filter.ready[%d], encode.ready[%d]\n" , _queue_input_packets.size(), _queue_decoded_frames.size(), _queue_filterd_frames.size());
 
 			dbg_str.AppendFormat(" - Decoders\n");
 			for (auto &iter : _decoders)
@@ -902,7 +902,7 @@ void TranscodeStream::LoopTask()
 				dbg_str.AppendFormat("\t[%d] track : input.q [%d], output.q [%d]\n", track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
 			}
 
-			logtd("%s", dbg_str.CStr() );
+			logts("%s", dbg_str.CStr() );
 		}
 
 
