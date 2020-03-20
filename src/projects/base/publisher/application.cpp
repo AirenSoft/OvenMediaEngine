@@ -1,7 +1,8 @@
 #include "application.h"
-#include "publisher_private.h"
 
 #include <algorithm>
+
+#include "publisher_private.h"
 
 namespace pub
 {
@@ -214,8 +215,20 @@ namespace pub
  */
 	void Application::WorkerThread()
 	{
+		ov::StopWatch stat_stop_watch;
+		stat_stop_watch.Start();
+
 		while (!_stop_thread_flag)
 		{
+			if (stat_stop_watch.IsElapsed(5000) && stat_stop_watch.Update())
+			{
+				logts("Stats for publisher queue [%s(%u)]: VQ: %zu, AQ: %zu, Incoming Q: %zu",
+					  _app_config.GetName().CStr(), _application_id,
+					  _video_stream_queue.size(),
+					  _audio_stream_queue.size(),
+					  _incoming_packet_queue.size());
+			}
+
 			_queue_event.Wait();
 
 			// Check video data is available

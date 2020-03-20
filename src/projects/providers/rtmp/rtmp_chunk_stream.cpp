@@ -83,6 +83,8 @@ RtmpChunkStream::RtmpChunkStream(ov::ClientSocket *remote, IRtmpChunkStream *str
 	_previous_key_frame_timestamp = 0;
 
 	_last_packet_time = time(nullptr);
+
+	_stat_stop_watch.Start();
 }
 
 //===============================================================================================
@@ -181,6 +183,13 @@ int32_t RtmpChunkStream::OnDataReceived(const std::shared_ptr<const ov::Data> &d
 	else
 	{
 		_remained_data->Append(data);
+	}
+
+	if (_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update())
+	{
+		logti("Stats for RtmpChunkStream: Message Q: %zu, Remained bytes: %zu",
+			  _import_chunk->GetMessageCount(),
+			  _remained_data->GetAllocatedDataSize());
 	}
 
 	if (_remained_data->GetLength() > RTMP_MAX_PACKET_SIZE)

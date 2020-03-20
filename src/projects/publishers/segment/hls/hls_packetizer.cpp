@@ -45,6 +45,8 @@ HlsPacketizer::HlsPacketizer(const ov::String &app_name,
 	_audio_enable = false;
 
 	_duration_margin = _segment_duration * 0.1;
+
+	_stat_stop_watch.Start();
 }
 
 bool HlsPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame_data)
@@ -159,9 +161,14 @@ bool HlsPacketizer::SegmentWrite(int64_t start_timestamp, uint64_t duration)
 	}
 	_frame_datas.clear();
 
-	if ((_video_track != nullptr) && (_audio_track != nullptr))
+	if(_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update())
 	{
-		logti("Time difference: A-V: %lld", (_first_audio_time_stamp - _first_video_time_stamp) / 90);
+		if ((_video_track != nullptr) && (_audio_track != nullptr))
+		{
+			logti("[%s/%s] HLS A-V Sync: %lld (A: %lld, V: %lld)",
+				_app_name.CStr(), _stream_name.CStr(),
+				(_first_audio_time_stamp - _first_video_time_stamp) / 90, _first_audio_time_stamp / 90, _first_video_time_stamp / 90);
+		}
 	}
 
 	auto ts_data = ts_writer->GetDataStream();

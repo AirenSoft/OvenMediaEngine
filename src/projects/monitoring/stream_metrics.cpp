@@ -38,7 +38,7 @@ namespace mon
 		_request_time_to_origin_msec = value;
 		UpdateDate();
 	}
-	void StreamMetrics::SetOriginResponseTimeMSet(double value)
+	void StreamMetrics::SetOriginResponseTimeMSec(double value)
 	{
 		_response_time_from_origin_msec = value;
 		UpdateDate();

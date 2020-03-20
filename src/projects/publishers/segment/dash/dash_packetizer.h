@@ -114,4 +114,6 @@ protected:
 	int64_t _last_audio_pts = -1LL;
 
 	double _duration_margin;
+
+	ov::StopWatch _stat_stop_watch;
 };

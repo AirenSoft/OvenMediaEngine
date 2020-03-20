@@ -34,7 +34,7 @@ namespace mon
 		double GetOriginRequestTimeMSec();
 		double GetOriginResponseTimeMSec();
 		void SetOriginRequestTimeMSec(double value);
-		void SetOriginResponseTimeMSet(double value);
+		void SetOriginResponseTimeMSec(double value);
 
 		// Overriding from CommonMetrics 
 		void IncreaseBytesIn(uint64_t value) override;

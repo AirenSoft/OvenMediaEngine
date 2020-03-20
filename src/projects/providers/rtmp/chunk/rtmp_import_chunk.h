@@ -26,6 +26,7 @@ public:
 	int Import(const std::shared_ptr<const ov::Data> &data, bool *is_completed);
 
 	std::shared_ptr<const RtmpMessage> GetMessage();
+	size_t GetMessageCount() const;
 
 	void SetChunkSize(size_t chunk_size)
 	{

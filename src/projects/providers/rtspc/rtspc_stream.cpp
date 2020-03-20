@@ -97,8 +97,6 @@ namespace pvd
 			return false;
 		}
 
-		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
-
 		auto begin = std::chrono::steady_clock::now();
 		if (!ConnectTo())
 		{
@@ -107,10 +105,7 @@ namespace pvd
 
 		auto end = std::chrono::steady_clock::now();
 		std::chrono::duration<double, std::milli> elapsed = end - begin;
-		if(_stream_metrics != nullptr)
-		{
-			_stream_metrics->SetOriginRequestTimeMSec(elapsed.count());
-		}
+		auto origin_request_time_msec = elapsed.count();
 
 		begin = std::chrono::steady_clock::now();
 		if (!RequestDescribe())
@@ -125,14 +120,18 @@ namespace pvd
 
 		end = std::chrono::steady_clock::now();
 		elapsed = end - begin;
-		if(_stream_metrics != nullptr)
-		{
-			_stream_metrics->SetOriginResponseTimeMSet(elapsed.count());
-		}
+		auto origin_response_time_msec = elapsed.count();
 
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&RtspcStream::WorkerThread, this);
 		_worker_thread.detach();
+
+		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
+		if(_stream_metrics != nullptr)
+		{
+			_stream_metrics->SetOriginRequestTimeMSec(origin_request_time_msec);
+			_stream_metrics->SetOriginResponseTimeMSec(origin_response_time_msec);
+		}
 
 		return pvd::Stream::Start();
 	}

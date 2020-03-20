@@ -1129,6 +1129,21 @@ namespace ov
 		return SetSockOpt(SOL_SOCKET, option, value, value_length);
 	}
 
+	bool Socket::GetSockOpt(int proto, int option, void *value, socklen_t value_length) const
+	{
+		CHECK_STATE(!= SocketState::Closed, false);
+
+		int result = ::getsockopt(_socket.GetSocket(), proto, option, value, &value_length);
+
+		if (result != 0)
+		{
+			logtw("[%p] [#%d] Could not get option: %d (result: %d)", this, _socket.GetSocket(), option, result);
+			return false;
+		}
+
+		return true;
+	}
+
 	bool Socket::SetSockOpt(SRT_SOCKOPT option, const void *value, int value_length)
 	{
 		CHECK_STATE(!= SocketState::Closed, false);
@@ -1735,6 +1750,113 @@ namespace ov
 			default:
 				return "Unknown";
 		}
+	}
+
+	String Socket::GetStat() const
+	{
+		ov::String stat;
+
+		int recv_buffer_size = 0;
+		int send_buffer_size = 0;
+		unsigned long unread_size = 0;
+		unsigned long unsent_size = 0;
+
+		switch (_socket.GetType())
+		{
+			case SocketType::Unknown:
+				stat = "(Invalid)";
+				break;
+
+			case SocketType::Udp:
+
+				if (::ioctl(GetSocket().GetSocket(), FIONREAD, &unread_size) != -1)
+				{
+					stat.AppendFormat("Unread: %lu, ", unread_size);
+				}
+				else
+				{
+					stat.Append("Unread: -, ", unread_size);
+				}
+
+				if (::ioctl(GetSocket().GetSocket(), SIOCOUTQ, &unread_size) != -1)
+				{
+					stat.AppendFormat("Unsent: %lu, ", unread_size);
+				}
+				else
+				{
+					stat.Append("Unsent: -, ", unread_size);
+				}
+
+				// Get Recv buffer size
+				if (GetSockOpt(SO_RCVBUF, &recv_buffer_size))
+				{
+					stat.AppendFormat("Recv buffer: %d, ", recv_buffer_size);
+				}
+				else
+				{
+					stat.Append("Recv buffer: -, ");
+				}
+
+				// Get Send buffer size
+				if (GetSockOpt(SO_SNDBUF, &send_buffer_size))
+				{
+					stat.AppendFormat("Send buffer: %d", send_buffer_size);
+				}
+				else
+				{
+					stat.Append("Send buffer: -");
+				}
+
+				break;
+
+			case SocketType::Tcp:
+
+				if (::ioctl(GetSocket().GetSocket(), SIOCINQ, &unread_size) != -1)
+				{
+					stat.AppendFormat("Unread: %lu, ", unread_size);
+				}
+				else
+				{
+					stat.Append("Unread: -, ", unread_size);
+				}
+
+				if (::ioctl(GetSocket().GetSocket(), SIOCOUTQ, &unsent_size) != -1)
+				{
+					stat.AppendFormat("Unsent: %lu, ", unsent_size);
+				}
+				else
+				{
+					stat.Append("Unsent: -, ", unsent_size);
+				}
+
+				// Get Recv buffer size
+				if (GetSockOpt(SO_RCVBUF, &recv_buffer_size))
+				{
+					stat.AppendFormat("Recv buffer: %d, ", recv_buffer_size);
+				}
+				else
+				{
+					stat.Append("Recv buffer: -, ");
+				}
+
+				// Get Send buffer size
+				if (GetSockOpt(SO_SNDBUF, &send_buffer_size))
+				{
+					stat.AppendFormat("Send buffer: %d", send_buffer_size);
+				}
+				else
+				{
+					stat.Append("Send buffer: -");
+				}
+
+				break;
+
+			case SocketType::Srt:
+				stat = "(Not supported)";
+				break;
+		}
+
+		return std::move(stat);
 	}
 
 	String Socket::ToString(const char *class_name) const
