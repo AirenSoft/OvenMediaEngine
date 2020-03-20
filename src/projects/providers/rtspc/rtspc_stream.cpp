@@ -251,9 +251,11 @@ namespace pvd
 			else if(media_type == common::MediaType::Audio)
 			{
 				new_track->SetSampleRate(stream->codecpar->sample_rate);
-				
-				// new_track->GetSample().SetFormat(static_cast<common::AudioSample::Format>(json_audio_track["sampleFormat"].asInt()));
-				// new_track->GetChannel().SetLayout(static_cast<common::AudioChannel::Layout>(json_audio_track["layout"].asUInt()));
+				new_track->GetSample().SetFormat(static_cast<common::AudioSample::Format>(common::AudioSample::Format::S16P));
+				new_track->GetChannel().SetLayout(static_cast<common::AudioChannel::Layout>(common::AudioChannel::Layout::LayoutStereo));
+
+				// Do not crate an audio track.
+				continue;
 			}
 
 			AddTrack(new_track);
@@ -381,6 +383,7 @@ namespace pvd
 			auto track = GetTrack(packet.stream_index);
 			if(track == nullptr)
 			{
+				::av_packet_unref(&packet);
 				continue;
 			}
 			
