@@ -262,6 +262,14 @@ namespace ov
 		virtual bool SetSockOpt(int proto, int option, const void *value, socklen_t value_length);
 		virtual bool SetSockOpt(int option, const void *value, socklen_t value_length);
 
+		template <class T>
+		bool GetSockOpt(int option, T *value) const
+		{
+			return GetSockOpt(SOL_SOCKET, option, value, (socklen_t)sizeof(T));
+		}
+
+		virtual bool GetSockOpt(int proto, int option, void *value, socklen_t value_length) const;
+
 		// for SRT
 		template <class T>
 		bool SetSockOpt(SRT_SOCKOPT option, const T &value)
@@ -309,6 +317,7 @@ namespace ov
 		// 소켓을 닫음
 		virtual bool Close();
 
+		virtual String GetStat() const;
 		virtual String ToString() const;
 
 	protected:

@@ -111,6 +111,12 @@ namespace ov
 			return _length;
 		}
 
+		// For debugging
+		inline size_t GetAllocatedDataSize() const
+		{
+			return (_allocated_data != nullptr) ? _allocated_data->size() : 0ULL;
+		}
+
 		inline bool SetLength(size_t length)
 		{
 			// Detach() will called in Reserve()
