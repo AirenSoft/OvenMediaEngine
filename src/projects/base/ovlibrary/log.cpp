@@ -28,9 +28,9 @@ void ov_log_reset_enable()
 }
 
 // tag는 정규식 사용 가능, 정규식에 대해서는 http://www.cplusplus.com/reference/regex/ECMAScript 참고
-void ov_log_set_enable(const char *tag_regex, OVLogLevel level, bool is_enabled)
+bool ov_log_set_enable(const char *tag_regex, OVLogLevel level, bool is_enabled)
 {
-	g_log_internal.SetEnable(tag_regex, level, is_enabled);
+	return g_log_internal.SetEnable(tag_regex, level, is_enabled);
 }
 
 void ov_log_internal(OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, ...)
