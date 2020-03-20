@@ -78,4 +78,6 @@ private:
 	std::map<ov::Socket *, std::shared_ptr<RtmpChunkStream>> _chunk_context_list;
 
 	ov::DelayQueue _garbage_check_timer;
+
+	ov::StopWatch _stat_stop_watch;
 };

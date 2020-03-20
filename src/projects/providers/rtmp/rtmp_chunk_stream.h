@@ -203,4 +203,6 @@ protected:
 	uint32_t _audio_frame_count = 0;
 
 	time_t _last_packet_time;
+
+	ov::StopWatch _stat_stop_watch;
 };
