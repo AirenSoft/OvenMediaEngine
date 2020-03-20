@@ -76,6 +76,7 @@ constexpr void ov_log_dummy(...)
 
 #define logtd(format, ...)                            logd(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
 #define logtp(format, ...)                            logd(OV_LOG_TAG ".Packet", format, ## __VA_ARGS__) // NOLINT
+#define logts(format, ...)                            logi(OV_LOG_TAG ".Stat", format, ## __VA_ARGS__) // NOLINT
 
 #define logti(format, ...)                            logi(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
 #define logtw(format, ...)                            logw(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
@@ -95,6 +96,8 @@ void ov_log_reset_enable();
 /// @param level level 이상의 로그에 대해서만 is_enable 적용. level을 벗어나는 로그는 !is_enable로 간주함
 /// @param is_enabled 활성화 여부
 ///
+/// @returns 성공적으로 적용되었는지 여부
+///
 /// @remarks 정규식 사용의 예: "App\..+" == "App.Hello", "App.World", "App.foo", "App.bar", ....
 ///          (정규식에 대해서는 http://www.cplusplus.com/reference/regex/ECMAScript 참고)
 ///          가장 먼저 입력된 tag_regex의 우선순위가 높음.
@@ -103,7 +106,7 @@ void ov_log_reset_enable();
 ///          예2) level이 warning 이면서 is_enabled가 false면, warning~critical 로그 출력 안함.
 ///          예3) level이 warning 이면서 is_enabled가 true면, debug~information 로그 출력 안함, warning~critical 로그 출력함.
 ///          예4) level이 info 이면서 is_enabled가 true, debug 로그 출력 안함, information~critical 로그 출력함.
-void ov_log_set_enable(const char *tag_regex, OVLogLevel level, bool is_enabled);
+bool ov_log_set_enable(const char *tag_regex, OVLogLevel level, bool is_enabled);
 
 void ov_log_internal(OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, ...);
 void ov_log_set_path(const char *log_path);

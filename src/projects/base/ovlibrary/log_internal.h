@@ -109,18 +109,28 @@ namespace ov
 		///          예2) level이 warning 이면서 is_enabled가 false면, warning~critical 로그 출력 안함.
 		///          예3) level이 warning 이면서 is_enabled가 true면, debug~information 로그 출력 안함, warning~critical 로그 출력함.
 		///          예4) level이 info 이면서 is_enabled가 true, debug 로그 출력 안함, information~critical 로그 출력함.
-		inline void SetEnable(const char *tag_regex, OVLogLevel level, bool is_enabled)
+		inline bool SetEnable(const char *tag_regex, OVLogLevel level, bool is_enabled)
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
 
 			// 캐시 모두 삭제
 			_enable_map.clear();
 
-			_enable_list.emplace_back((EnableItem){
-				.regex = std::make_shared<std::regex>(tag_regex),
-				.level = level,
-				.is_enabled = is_enabled
-			});
+			try
+			{
+				auto reg_ex = std::make_shared<std::regex>(tag_regex);
+
+				_enable_list.emplace_back((EnableItem){
+					.regex = std::move(reg_ex),
+					.level = level,
+					.is_enabled = is_enabled});
+
+				return true;
+			}
+			catch (const std::regex_error &e)
+			{
+				return false;
+			}
 		}
 
 		inline int64_t GetThreadId()

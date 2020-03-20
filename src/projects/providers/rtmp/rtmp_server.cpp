@@ -45,6 +45,8 @@ bool RtmpServer::Start(const ov::SocketAddress &address)
 	// Start the timer
 	_garbage_check_timer.Start();
 
+	_stat_stop_watch.Start();
+
 	return true;
 }
 
@@ -128,10 +130,15 @@ void RtmpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	std::unique_lock<std::recursive_mutex> lock(_chunk_context_list_mutex);
 
 	_chunk_context_list.emplace(remote.get(), std::make_shared<RtmpChunkStream>(dynamic_cast<ov::ClientSocket *>(remote.get()), this));
-}
+} 
 
 void RtmpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
+	if(_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update())
+	{
+		logts("Stats for RTMP socket %s: %s", remote->ToString().CStr(), remote->GetStat().CStr());
+	}
+
 	std::unique_lock<std::recursive_mutex> lock(_chunk_context_list_mutex);
 
 	auto item = _chunk_context_list.find(remote.get());
@@ -142,7 +149,7 @@ void RtmpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 
 		if (remote->GetState() != ov::SocketState::Connected)
 		{
-			logte("A data received from disconnected clinet: [%s/%s] %s", chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(), remote->ToString().CStr());
+			logte("A data received from disconnected client: [%s/%s] %s", chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(), remote->ToString().CStr());
 			return;
 		}
 

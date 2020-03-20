@@ -345,6 +345,7 @@ void MediaRouteApplication::OnGarbageCollector()
 // 스트림 객제중에 데이터가 수신되지 않은 스트림은 N초후에 자동 삭제를 진행함.
 void MediaRouteApplication::GarbageCollector()
 {
+#if 0	
 	time_t curr_time;
 	time(&curr_time);
 
@@ -384,6 +385,7 @@ void MediaRouteApplication::GarbageCollector()
 			}
 		}
 	}
+#endif	
 }
 
 // Stream 객체 에에 있는 패킷을 Application Observer에 전달한다

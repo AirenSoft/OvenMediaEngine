@@ -59,5 +59,6 @@ protected :
     bool _audio_enable;
     bool _video_enable;
 
+    ov::StopWatch _stat_stop_watch;
 };
 

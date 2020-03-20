@@ -400,6 +400,11 @@ std::shared_ptr<const RtmpMessage> RtmpImportChunk::GetMessage()
 	return message;
 }
 
+size_t RtmpImportChunk::GetMessageCount() const
+{
+	return _message_queue.size();
+}
+
 void RtmpImportChunk::Destroy()
 {
 	_chunk_map.clear();

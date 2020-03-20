@@ -146,7 +146,13 @@ namespace cfg
 		std::vector<std::shared_ptr<LoggerTagInfo>> tags = logger_loader->GetTags();
 		for (auto iterator = tags.begin(); iterator != tags.end(); ++iterator)
 		{
-			ov_log_set_enable((*iterator)->GetName().CStr(), (*iterator)->GetLevel(), true);
+			auto name = (*iterator)->GetName();
+			if(ov_log_set_enable(name.CStr(), (*iterator)->GetLevel(), true) == false)
+			{
+				logte("Could not set log level for tag: %s", name.CStr());
+				
+				return false;
+			}
 		}
 
 		logger_loader->Reset();
