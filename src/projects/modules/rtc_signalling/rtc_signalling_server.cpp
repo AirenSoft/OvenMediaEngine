@@ -66,7 +66,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	{
 		if (_p2p_info.IsParsed())
 		{
-			logti("P2P is enabled (Client peers per host peer: %d)", _p2p_info.GetClientPeersPerHostPeer());
+			logti("P2P is enabled (Client peers per host peer: %d)", _p2p_info.GetMaxClientPeersPerHostPeer());
 			_p2p_manager.SetEnable(true);
 		}
 		else
@@ -551,7 +551,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 			else
 			{
 				// Check if there is a host that can accept this client
-				host_peer = _p2p_manager.TryToRegisterAsClientPeer(peer_info, _p2p_info.GetClientPeersPerHostPeer());
+				host_peer = _p2p_manager.TryToRegisterAsClientPeer(peer_info, _p2p_info.GetMaxClientPeersPerHostPeer());
 			}
 		}
 		else
@@ -964,7 +964,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_p
 		{
 			logtd("Deleting peer %s from p2p manager...", peer_info->ToString().CStr());
 
-			_p2p_manager.RemovePeer(peer_info, _p2p_info.GetClientPeersPerHostPeer());
+			_p2p_manager.RemovePeer(peer_info, _p2p_info.GetMaxClientPeersPerHostPeer());
 
 			if (peer_info->IsHost())
 			{
@@ -986,7 +986,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_p
 					client_info->GetResponse()->Send(value);
 
 					// remove client from peer
-					_p2p_manager.RemovePeer(client_info, _p2p_info.GetClientPeersPerHostPeer());
+					_p2p_manager.RemovePeer(client_info, _p2p_info.GetMaxClientPeersPerHostPeer());
 				}
 			}
 			else
