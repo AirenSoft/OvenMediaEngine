@@ -22,13 +22,19 @@
 			</OVT>
 			<HLS>
 				<Port>${env:OME_HLS_STREAM_PORT:80}</Port>
+				<!-- If you want to use TLS, specify the TLS port -->
+				<!-- <TLSPort>443</TLSPort> -->
 			</HLS>
 			<DASH>
 				<Port>${env:OME_DASH_STREAM_PORT:80}</Port>
+				<!-- If you want to use TLS, specify the TLS port -->
+				<!-- <TLSPort>443</TLSPort> -->
 			</DASH>
 			<WebRTC>
 				<Signalling>
 					<Port>${env:OME_SIGNALLING_PORT:3333}</Port>
+					<!-- If you want to use TLS, specify the TLS port -->
+					<!-- <TLSPort>3334</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
 					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10000-10005/udp}</IceCandidate>
