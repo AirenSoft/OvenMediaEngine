@@ -211,13 +211,10 @@ bool HlsPacketizer::UpdatePlayList()
 		}
 	}
 
-	play_list_stream << "#EXTM3U"
-					 << "\r\n"
+	play_list_stream << "#EXTM3U\r\n"
+					 << "#EXT-X-VERSION:3\r\n"
 					 << "#EXT-X-MEDIA-SEQUENCE:" << (_sequence_number - 1) << "\r\n"
-					 << "#EXT-X-VERSION:3"
-					 << "\r\n"
-					 << "#EXT-X-ALLOW-CACHE:NO"
-					 << "\r\n"
+					 << "#EXT-X-ALLOW-CACHE:NO\r\n"
 					 << "#EXT-X-TARGETDURATION:" << std::fixed << std::setprecision(0) << (double)(max_duration) / PACKTYZER_DEFAULT_TIMESCALE << "\r\n"
 					 << m3u8_play_list.str();
 

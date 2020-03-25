@@ -67,7 +67,7 @@ HttpConnection HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<Htt
 	}
 
 	// Set HTTP header
-	response->SetHeader("Content-Type", "application/x-mpegURL");
+	response->SetHeader("Content-Type", "application/vnd.apple.mpegurl");
 	response->AppendString(play_list);
 	auto sent_bytes = response->Response();
 
