@@ -10,7 +10,7 @@
 
 #include "git_info.h"
 
-// Version format: [MAJOR].[MINOR].[RELEASE]
+// Version format: [MAJOR].[MINOR].[MICRO]
 // Major changes
 #define OME_VERSION_MAJOR               0
 // Minor changes
