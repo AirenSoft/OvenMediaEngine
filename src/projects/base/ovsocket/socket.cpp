@@ -1202,7 +1202,7 @@ namespace ov
 		{
 			case SocketType::Udp:
 			case SocketType::Tcp:
-				while (remained > 0L)
+				while ((remained > 0L) && (_force_stop == false))
 				{
 					int sock = _socket.GetSocket();
 					ssize_t sent = ::send(sock, data_to_send, remained, MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0));
@@ -1212,41 +1212,8 @@ namespace ov
 						if (errno == EAGAIN)
 						{
 							// Suppress 'Resource temporarily available' error
-
+							::usleep(100);
 							return total_sent;
-#if 0
-							// Wait for the send buffer
-							fd_set write_fds{};
-							FD_ZERO(&write_fds);
-							FD_SET(sock, &write_fds);
-
-							timeval tv{};
-							tv.tv_sec = 0;
-							tv.tv_usec = 200000;
-
-							int select_result = select(sock + 1, nullptr, &write_fds, nullptr, &tv);
-
-							if (select_result > 0)
-							{
-								// Send buffer is available
-							}
-							else if (select_result == 0)
-							{
-								// There is no space in the send buffer
-								// TODO(dimiden): To improve performance, change to use queue
-
-								int remainSize;
-								ioctl(sock, SIOCOUTQ, &remainSize);
-								logte("remain data size in buffer: %d (%zu / %zu)\n", remainSize, remained, length);
-							}
-							else
-							{
-								logtw("[%p] [#%d] An error occurred while select(): %d (%s)", this, sock, select_result, ov::Error::CreateErrorFromErrno()->ToString().CStr());
-								break;
-							}
-
-							continue;
-#endif
 						}
 						else if (errno == EBADF)
 						{

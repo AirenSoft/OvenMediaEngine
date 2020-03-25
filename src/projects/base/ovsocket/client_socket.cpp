@@ -24,8 +24,6 @@ namespace ov
 		OV_ASSERT2(_server_socket != nullptr);
 
 		_local_address = (server_socket != nullptr) ? server_socket->GetLocalAddress() : nullptr;
-
-		StartDispatchThread();
 	}
 
 	ClientSocket::ClientSocket(ServerSocket *server_socket, SocketWrapper socket, const SocketAddress &remote_address)
@@ -38,8 +36,6 @@ namespace ov
 		_local_address = (server_socket != nullptr) ? server_socket->GetLocalAddress() : nullptr;
 
 		MakeNonBlocking();
-
-		StartDispatchThread();
 	}
 
 	ClientSocket::~ClientSocket()
@@ -64,7 +60,8 @@ namespace ov
 		_is_thread_running = true;
 		_force_stop = false;
 
-		_send_thread = std::thread(std::bind(&ClientSocket::DispatchThread, this));
+		_send_thread = std::thread(std::bind(&ClientSocket::DispatchThreadStub, this, GetSharedPtrAs<ClientSocket>()));
+		_send_thread.detach();
 
 		return true;
 	}
@@ -86,12 +83,6 @@ namespace ov
 			// Signal stop command
 			_force_stop = true;
 			_dispatch_queue.Stop();
-		}
-
-		// Indicates that the thread should be stopped
-		if (_send_thread.joinable())
-		{
-			_send_thread.join();
 		}
 
 		return true;
@@ -136,6 +127,11 @@ namespace ov
 		}
 
 		return true;
+	}
+
+	void ClientSocket::DispatchThreadStub(std::shared_ptr<ClientSocket> client_socket)
+	{
+		client_socket->DispatchThread();
 	}
 
 	void ClientSocket::DispatchThread()

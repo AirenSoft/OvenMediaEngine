@@ -89,6 +89,7 @@ namespace ov
 		bool StopDispatchThread(bool stop_immediately);
 
 		bool SendAsync(const ClientSocket::DispatchCommand &send_item);
+		void DispatchThreadStub(std::shared_ptr<ClientSocket> client_socket);
 		void DispatchThread();
 
 		bool CloseInternal() override;
@@ -101,6 +102,7 @@ namespace ov
 		std::thread _send_thread;
 		ov::Queue<DispatchCommand> _dispatch_queue;
 		bool _is_thread_running = false;
-		volatile bool _force_stop = false;
+
+		std::shared_ptr<ClientSocket> _instance;
 	};
 }  // namespace ov

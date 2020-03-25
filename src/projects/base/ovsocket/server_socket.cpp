@@ -115,6 +115,8 @@ namespace ov
 		{
 			logtd("[%p] [#%d] New client is connected: %s", this, _socket.GetSocket(), client->ToString().CStr());
 
+			client->StartDispatchThread();
+
 			_client_list_mutex.lock();
 			_client_list[client.get()] = client;
 			_client_list_mutex.unlock();

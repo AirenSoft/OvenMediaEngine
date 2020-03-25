@@ -349,5 +349,7 @@ namespace ov
 		int _srt_epoll = SRT_INVALID_SOCK;
 		epoll_event *_epoll_events = nullptr;
 		int _last_epoll_event_count = 0;
+
+		volatile bool _force_stop = false;
 	};
 }  // namespace ov
