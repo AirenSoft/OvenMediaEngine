@@ -18,6 +18,9 @@ CMakeLists.txt
 *.code-workspace
 .vscode
 
+# For information data
+src/projects/main/git_info.h
+
 *.o
 *.d
 *.pc

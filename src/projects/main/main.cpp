@@ -207,7 +207,14 @@ static void PrintBanner()
 	utsname uts{};
 	::uname(&uts);
 
-	logti("OvenMediaEngine v%s is started on [%s] (%s %s - %s, %s)", OME_VERSION, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
+	ov::String extra_info;
+
+	if(OME_GIT_VERSION[0] != '\0')
+	{
+		extra_info.Format(" (%s)", OME_GIT_VERSION);
+	}
+
+	logti("OvenMediaEngine v%s%s is started on [%s] (%s %s - %s, %s)", OME_VERSION, extra_info.CStr(), uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
 
 	logti("With modules:");
 	logti("  FFmpeg %s", GetFFmpegVersion());
