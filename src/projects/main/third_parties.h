@@ -21,6 +21,7 @@ const char *GetFFmpegAvUtilVersion();
 const char *GetFFmpegAvFilterVersion();
 const char *GetFFmpegSwResampleVersion();
 const char *GetFFmpegSwScaleVersion();
+std::shared_ptr<ov::Error> InitializeFFmpeg();
 
 //--------------------------------------------------------------------
 // Related to SRTP

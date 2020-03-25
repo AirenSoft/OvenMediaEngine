@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
 
 	PrintBanner();
 
+	INIT_EXTERNAL_MODULE("FFmpeg", InitializeFFmpeg);
 	INIT_EXTERNAL_MODULE("SRT", InitializeSrt);
 	INIT_EXTERNAL_MODULE("OpenSSL", InitializeOpenSsl);
 	INIT_EXTERNAL_MODULE("SRTP", InitializeSrtp);

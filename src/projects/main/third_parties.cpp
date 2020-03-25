@@ -8,10 +8,10 @@
 //==============================================================================
 #include "./third_parties.h"
 
-#include <regex>
-
 #include <base/ovcrypto/ovcrypto.h>
 #include <srt/srt.h>
+
+#include <regex>
 
 //--------------------------------------------------------------------
 // Related to FFmpeg
@@ -65,6 +65,72 @@ const char *GetFFmpegSwResampleVersion()
 const char *GetFFmpegSwScaleVersion()
 {
 	return AV_STRINGIFY(LIBSWSCALE_VERSION);
+}
+
+static void OnFFmpegLog(void *avcl, int level, const char *fmt, va_list args)
+{
+	const char *FFMPEG_LOG_TAG = "FFmpeg";
+	AVClass *clazz = nullptr;
+	const char *class_name = "";
+	ov::String message;
+
+	if (avcl != nullptr)
+	{
+		clazz = *(static_cast<AVClass **>(avcl));
+
+		if (clazz != nullptr)
+		{
+			message.AppendFormat("[%s] ", clazz->class_name);
+		}
+	}
+
+	ov::String format(fmt);
+
+	if (format.HasSuffix("\n"))
+	{
+		// Remove new line character
+		format.SetLength(format.GetLength() - 1);
+	}
+
+	message.AppendVFormat(format, args);
+
+	switch (level)
+	{
+		case AV_LOG_QUIET:
+			break;
+
+		case AV_LOG_PANIC:
+		case AV_LOG_FATAL:
+			::ov_log_internal(OVLogLevelCritical, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s %s", class_name, message.CStr());
+			break;
+		case AV_LOG_ERROR:
+			::ov_log_internal(OVLogLevelError, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s %s", class_name, message.CStr());
+			break;
+
+		case AV_LOG_WARNING:
+			::ov_log_internal(OVLogLevelWarning, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s %s", class_name, message.CStr());
+			break;
+
+		case AV_LOG_INFO:
+			::ov_log_internal(OVLogLevelInformation, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s %s", class_name, message.CStr());
+			break;
+
+		case AV_LOG_VERBOSE:
+		case AV_LOG_DEBUG:
+		default:
+			::ov_log_internal(OVLogLevelDebug, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s %s", class_name, message.CStr());
+			break;
+	}
+}
+
+std::shared_ptr<ov::Error> InitializeFFmpeg()
+{
+	// TODO(soulk): Move ffmpeg-related codes to here such as avcodec_register_all(), etc
+
+	::av_log_set_callback(OnFFmpegLog);
+	::av_log_set_level(AV_LOG_DEBUG);
+
+	return nullptr;
 }
 
 //--------------------------------------------------------------------
@@ -127,27 +193,27 @@ static void SrtLogHandler(void *opaque, int level, const char *file, int line, c
 	switch (level)
 	{
 		case srt_logging::LogLevel::debug:
-			ov_log_internal(OVLogLevelDebug, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
+			::ov_log_internal(OVLogLevelDebug, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
 		case srt_logging::LogLevel::note:
-			ov_log_internal(OVLogLevelInformation, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
+			::ov_log_internal(OVLogLevelInformation, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
 		case srt_logging::LogLevel::warning:
-			ov_log_internal(OVLogLevelWarning, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
+			::ov_log_internal(OVLogLevelWarning, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
 		case srt_logging::LogLevel::error:
-			ov_log_internal(OVLogLevelError, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
+			::ov_log_internal(OVLogLevelError, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
 		case srt_logging::LogLevel::fatal:
-			ov_log_internal(OVLogLevelCritical, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
+			::ov_log_internal(OVLogLevelCritical, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
 			break;
 
 		default:
-			ov_log_internal(OVLogLevelError, SRT_LOG_TAG, file, line, area, "(Unknown level: %d) %s", level, mess.CStr());
+			::ov_log_internal(OVLogLevelError, SRT_LOG_TAG, file, line, area, "(Unknown level: %d) %s", level, mess.CStr());
 			break;
 	}
 }
