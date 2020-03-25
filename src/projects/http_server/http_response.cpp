@@ -122,7 +122,7 @@ uint32_t HttpResponse::SendHeaderIfNeeded()
 	// RFC7230 - 3.1.2.  Status Line
 	// status-line = HTTP-version SP status-code SP reason-phrase CRLF
 	// TODO(dimiden): Replace this HTTP version with the version that received from the request
-	stream.Append(ov::String::FormatString("HTTP/1.1 %d %s\r\n", _status_code, _reason.CStr()).ToData(false));
+	stream.Append(ov::String::FormatString("HTTP/%s %d %s\r\n", _http_version.CStr(), _status_code, _reason.CStr()).ToData(false));
 
 	// RFC7230 - 3.2.  Header Fields
 	std::for_each(_response_header.begin(), _response_header.end(), [&stream](const auto &pair) -> void {
@@ -136,7 +136,7 @@ uint32_t HttpResponse::SendHeaderIfNeeded()
 
 	if (Send(response))
 	{
-		logtd("Header is sent");
+		logtd("Header is sent:\n%s", response->Dump(response->GetLength()).CStr());
 
 		_is_header_sent = true;
 

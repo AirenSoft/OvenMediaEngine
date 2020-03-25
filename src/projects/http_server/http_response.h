@@ -36,6 +36,11 @@ public:
 		return _status_code;
 	}
 
+	void SetHttpVersion(const ov::String &http_version)
+	{
+		_http_version = http_version;
+	}
+
 	// reason = default
 	void SetStatusCode(HttpStatusCode status_code)
 	{
@@ -97,6 +102,8 @@ protected:
 
 	std::shared_ptr<ov::ClientSocket> _client_socket;
 	std::shared_ptr<ov::TlsData> _tls_data;
+
+	ov::String _http_version = "1.1";
 
 	HttpStatusCode _status_code = HttpStatusCode::OK;
 	ov::String _reason = StringFromHttpStatusCode(HttpStatusCode::OK);
