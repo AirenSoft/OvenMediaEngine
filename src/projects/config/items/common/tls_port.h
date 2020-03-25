@@ -34,7 +34,7 @@ namespace cfg
 		{
 			Port::MakeParseList();
 
-			RegisterValue<Optional>("TlsPort", &_tls_port, nullptr, [this]() -> bool {
+			RegisterValue<Optional>("TLSPort", &_tls_port, nullptr, [this]() -> bool {
 				_tls_socket_type = ov::SocketType::Unknown;
 
 				_tls_port_value = ov::Converter::ToInt32(_tls_port);
