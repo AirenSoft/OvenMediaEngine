@@ -456,12 +456,12 @@ void MediaRouteApplication::MainTask()
 				{
 					if (media_packet->GetMediaType() == MediaType::Video)
 					{
-						// logtd("send to publisher (1000k cr):%u, (90k cr):%u", cur_buf->GetPts(), encoded_frame->_timeStamp);
+						// logtd("send video packet to publisher %lld", media_packet->GetPts());
 						observer->OnSendVideoFrame(stream_info, media_packet);
 					}
 					else if (media_packet->GetMediaType() == MediaType::Audio)
 					{
-						// logtd("send to publisher (1000k cr):%u, (90k cr):%u", cur_buf->GetPts(), encoded_frame->_timeStamp);
+						// logtd("send audio packet to publisher %lld", media_packet->GetPts());
 						observer->OnSendAudioFrame(stream_info, media_packet);
 					}
 				}

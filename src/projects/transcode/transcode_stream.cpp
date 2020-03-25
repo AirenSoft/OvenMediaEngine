@@ -86,8 +86,6 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 
 TranscodeStream::~TranscodeStream()
 {
-	logte("%s:%d", __FUNCTION__, __LINE__);
-
 	// The thread checked for non-termination and terminated
 	if (_kill_flag != true)
 	{

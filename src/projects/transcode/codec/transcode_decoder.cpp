@@ -23,8 +23,6 @@ TranscodeDecoder::TranscodeDecoder()
 
 TranscodeDecoder::~TranscodeDecoder()
 {
-	logte("%s:%d", __FUNCTION__, __LINE__);
-	
 	::avcodec_free_context(&_context);
 	::avcodec_parameters_free(&_codec_par);
 

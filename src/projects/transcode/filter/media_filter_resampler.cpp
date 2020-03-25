@@ -29,8 +29,6 @@ MediaFilterResampler::MediaFilterResampler()
 
 MediaFilterResampler::~MediaFilterResampler()
 {
-	logte("%s:%d", __FUNCTION__, __LINE__);
-	
 	Stop();
 
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);

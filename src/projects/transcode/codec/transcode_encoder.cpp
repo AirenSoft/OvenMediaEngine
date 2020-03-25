@@ -29,8 +29,6 @@ TranscodeEncoder::TranscodeEncoder()
 
 TranscodeEncoder::~TranscodeEncoder()
 {
-	logte("%s:%d", __FUNCTION__, __LINE__);
-	
 	OV_SAFE_FUNC(_context, nullptr, ::avcodec_free_context, &);
 
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
