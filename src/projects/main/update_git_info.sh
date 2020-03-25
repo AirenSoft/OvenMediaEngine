@@ -26,12 +26,14 @@ then
 			GENERATE=1
 		else
 			# GIT_INFO_FILE is exists
-			PREV_GIT_VERSION=$(cat "${GIT_INFO_FILE}" 2>/dev/null | grep OME_GIT_VERSION | awk ' { print $3 } ')
+			PREV_GIT_VERSION=$(cat "${GIT_INFO_FILE}" 2>/dev/null | grep OME_GIT_VERSION | grep -v OME_GIT_VERSION_EXTRA | awk ' { print $3 } ')
 			PREV_GIT_VERSION=${PREV_GIT_VERSION#\"}
 			PREV_GIT_VERSION=${PREV_GIT_VERSION%\"}
 
 			[ "${PREV_GIT_VERSION}" != "${GIT_VERSION}" ] && echo "Information is changed (${PREV_GIT_VERSION} => ${GIT_VERSION})" && GENERATE=1
 		fi
+
+		GIT_VERSION_EXTRA=" (${GIT_VERSION})"
 	else
 		echo "This isn't a git repository"
 		GENERATE=1
@@ -50,4 +52,5 @@ then
 
 	sed -i "s/__SCRIPT_NAME__/${SCRIPT_NAME}/" "${GIT_INFO_FILE}"
 	sed -i "s/__GIT_VERSION__/\"${GIT_VERSION}\"/" "${GIT_INFO_FILE}"
+	sed -i "s/__GIT_VERSION_EXTRA__/\"${GIT_VERSION_EXTRA}\"/" "${GIT_INFO_FILE}"
 fi

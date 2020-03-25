@@ -102,7 +102,7 @@ static void AbortHandler(int signum, siginfo_t *si, void *unused)
 {
 	printf("%s %s\n", PLATFORM_NAME, GetSignalName(SIGSEGV));
 
-	ov::StackTrace::WriteStackTrace(OME_VERSION, signum, GetSignalName(signum));
+	ov::StackTrace::WriteStackTrace(OME_VERSION OME_GIT_VERSION_EXTRA, signum, GetSignalName(signum));
 	::exit(signum);
 }
 

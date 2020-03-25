@@ -5,3 +5,4 @@
 #pragma once
 
 #define OME_GIT_VERSION                    __GIT_VERSION__
+#define OME_GIT_VERSION_EXTRA              __GIT_VERSION_EXTRA__
