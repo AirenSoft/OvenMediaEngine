@@ -60,6 +60,8 @@ namespace mon
 
 	void StreamMetrics::OnSessionConnected(PublisherType type)
 	{
+		CommonMetrics::OnSessionConnected(type);
+
 		// If this stream is child then send event to parent
 		auto origin_stream_info = GetOriginStream();
 		if(origin_stream_info != nullptr)
@@ -72,15 +74,19 @@ namespace mon
 		}
 		else
 		{
+			logti("A new session has been started playing %s/%s on the %s publihser. %s(%u)/Total(%u)", 
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
+					ov::Converter::ToString(type).CStr(), ov::Converter::ToString(type).CStr(), GetConnections(type), GetTotalConnections());
+
 			// Sending a connection event to application only if it hasn't origin stream to prevent double sum. 
 			GetApplicationMetrics()->OnSessionConnected(type);
 		}
-
-		CommonMetrics::OnSessionConnected(type);
 	}
 	
 	void StreamMetrics::OnSessionDisconnected(PublisherType type)
 	{
+		CommonMetrics::OnSessionDisconnected(type);
+
 		// If this stream is child then send event to parent
 		auto origin_stream_info = GetOriginStream();
 		if(origin_stream_info != nullptr)
@@ -93,11 +99,13 @@ namespace mon
 		}
 		else
 		{
+			logti("A session has been stopped playing %s/%s on the %s publihser. Concurrent Viewers[%s(%u)/Total(%u)]", 
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
+					ov::Converter::ToString(type).CStr(), ov::Converter::ToString(type).CStr(), GetConnections(type), GetTotalConnections());
+
 			// Sending a connection event to application only if it hasn't origin stream to prevent double sum. 
 			GetApplicationMetrics()->OnSessionDisconnected(type);
 		}
-
-		CommonMetrics::OnSessionDisconnected(type);
 	}
 
 }  // namespace mon

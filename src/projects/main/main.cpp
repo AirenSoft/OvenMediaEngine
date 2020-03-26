@@ -193,8 +193,8 @@ int main(int argc, char *argv[])
 		while (true)
 		{
 			sleep(5);
-			// For Debug if monitoring is working
-			mon::Monitoring::GetInstance()->ShowInfo();
+			//Plan to start / stop with external signals
+			//mon::Monitoring::GetInstance()->ShowInfo();
 		}
 	}
 
