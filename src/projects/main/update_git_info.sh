@@ -4,7 +4,10 @@ GIT_COMMAND="git"
 GIT_INFO_FILE="git_info.h"
 GIT_INFO_TEMPLATE_FILE="git_info.template"
 
+SCRIPT_PATH=$(dirname $0)
 SCRIPT_NAME=$(basename $0)
+
+[ ! -z "${SCRIPT_PATH}" ] && cd "${SCRIPT_PATH}"
 
 # Test git command is available
 "${GIT_COMMAND}" --version >/dev/null 2>&1
