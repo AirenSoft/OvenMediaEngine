@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
 
 	PrintBanner();
 
+	INIT_EXTERNAL_MODULE("FFmpeg", InitializeFFmpeg);
 	INIT_EXTERNAL_MODULE("SRT", InitializeSrt);
 	INIT_EXTERNAL_MODULE("OpenSSL", InitializeOpenSsl);
 	INIT_EXTERNAL_MODULE("SRTP", InitializeSrtp);
@@ -207,7 +208,7 @@ static void PrintBanner()
 	utsname uts{};
 	::uname(&uts);
 
-	logti("OvenMediaEngine v%s is started on [%s] (%s %s - %s, %s)", OME_VERSION, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
+	logti("OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA " is started on [%s] (%s %s - %s, %s)", uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
 
 	logti("With modules:");
 	logti("  FFmpeg %s", GetFFmpegVersion());

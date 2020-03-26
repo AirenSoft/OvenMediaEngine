@@ -58,4 +58,10 @@ $(call add_pkg_config,libsrtp2)
 
 LOCAL_TARGET := OvenMediaEngine
 
+# Update git information
+PRIVATE_MAIN_PATH := $(LOCAL_PATH)
+$(shell "$(PRIVATE_MAIN_PATH)/update_git_info.sh" >/dev/null 2>&1)
+
+BUILD_FILES_TO_CLEAN += "$(PRIVATE_MAIN_PATH)/git_info.h"
+
 include $(BUILD_EXECUTABLE)

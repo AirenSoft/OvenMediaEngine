@@ -35,6 +35,8 @@ endif
 # Rules
 #===============================================================================
 BUILD_TARGET_LIST :=
+# File list to delete
+BUILD_FILES_TO_CLEAN :=
 
 .PHONY: all help release
 all: directories_to_prepare build_target_list
@@ -91,6 +93,11 @@ clean_internal:
 	@for target in $(BUILD_TARGET_LIST); \
 	do \
 		echo "    $(CONFIG_CLEAN_COLOR)Deleting target$(ANSI_RESET) $$target..."; \
+		rm -rf $$target; \
+	done
+	@for target in $(BUILD_FILES_TO_CLEAN); \
+	do \
+		echo "    $(CONFIG_CLEAN_COLOR)Deleting file$(ANSI_RESET) $$target..."; \
 		rm -rf $$target; \
 	done
 
