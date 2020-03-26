@@ -32,7 +32,7 @@ OvtStream::~OvtStream()
 
 bool OvtStream::Start(uint32_t worker_count)
 {
-	logtd("OvtStream(%d) has started", GetId());
+	logtd("OvtStream(%d) has been started", GetId());
 	_packetizer = std::make_shared<OvtPacketizer>(OvtPacketizerInterface::GetSharedPtr());
 
 	/*

@@ -13,7 +13,8 @@
 
 #define OV_LOG_TAG "TranscodeCodec"
 
-TranscodeDecoder::TranscodeDecoder()
+TranscodeDecoder::TranscodeDecoder(info::Stream stream_info)
+	: _stream_info(stream_info)
 {
 	::avcodec_register_all();
 
@@ -40,18 +41,18 @@ std::shared_ptr<TranscodeContext>& TranscodeDecoder::GetContext()
 	return _input_context;
 }
 
-std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
+std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::Stream &info, common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
 {
 	std::shared_ptr<TranscodeDecoder> decoder = nullptr;
 
 	switch (codec_id)
 	{
 		case common::MediaCodecId::H264:
-			decoder = std::make_shared<OvenCodecImplAvcodecDecAVC>();
+			decoder = std::make_shared<OvenCodecImplAvcodecDecAVC>(info);
 			break;
 
 		case common::MediaCodecId::Aac:
-			decoder = std::make_shared<OvenCodecImplAvcodecDecAAC>();
+			decoder = std::make_shared<OvenCodecImplAvcodecDecAAC>(info);
 			break;
 
 		default:
@@ -120,7 +121,7 @@ void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)
 	_input_buffer.push_back(std::move(packet));
 }
 
-void TranscodeDecoder::ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters)
+const ov::String TranscodeDecoder::ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters)
 {
 	ov::String message;
 
@@ -229,5 +230,5 @@ void TranscodeDecoder::ShowCodecParameters(const AVCodecContext *context, const 
 			break;
 	}
 
-	logti("Codec parameters: %s", message.CStr());
+	return message;
 }

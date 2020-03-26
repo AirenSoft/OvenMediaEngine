@@ -46,7 +46,7 @@ bool OvtPublisher::Start()
 			_server_port = PhysicalPortManager::Instance()->CreatePort(origin.GetSocketType(), address);
 			if (_server_port != nullptr)
 			{
-				logti("Trying to start relay server on %s", address.ToString().CStr());
+				logti("Ovt Publisher has started listening on %s", address.ToString().CStr());
 				_server_port->AddObserver(this);
 			}
 			else

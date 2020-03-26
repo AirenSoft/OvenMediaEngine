@@ -21,7 +21,8 @@ namespace pvd
 	class Provider : public OrchestratorProviderModuleInterface
 	{
 	public:
-		virtual ProviderType GetProviderType() = 0;
+		virtual ProviderType GetProviderType() const = 0;
+		virtual const char* GetProviderName() const= 0;
 
 		virtual bool Start();
 		virtual bool Stop();
@@ -41,7 +42,7 @@ namespace pvd
 
 		// For child class
 		virtual std::shared_ptr<Application> OnCreateProviderApplication(const info::Application &app_info) = 0;
-		virtual bool OnDeleteProviderApplication(const info::Application &app_info) = 0;
+		virtual bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) = 0;
 		virtual void OnStreamNotInUse(const info::Stream &stream_info){};
 		//--------------------------------------------------------------------
 		// Implementation of OrchestratorModuleInterface

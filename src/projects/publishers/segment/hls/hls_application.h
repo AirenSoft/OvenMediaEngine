@@ -17,6 +17,12 @@
 //====================================================================================================
 class HlsApplication : public pub::Application
 {
+protected:
+	const char* GetApplicationTypeName() const override
+	{
+		return "HLS Publisher";
+	}
+
 public:
 	static std::shared_ptr<HlsApplication> Create(const info::Application &application_info);
 

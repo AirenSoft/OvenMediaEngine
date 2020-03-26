@@ -121,7 +121,9 @@ bool RtcStream::Start(uint32_t worker_count)
 
 						break;
 					default:
-						logtw("Unsupported codec(%d) is being input from media track", track->GetCodecId());
+						logti("Unsupported codec(%s/%s) is being input from media track", 
+								ov::Converter::ToString(track->GetMediaType()).CStr(), 
+								ov::Converter::ToString(track->GetCodecId()).CStr());
 						continue;
 				}
 
@@ -174,7 +176,9 @@ bool RtcStream::Start(uint32_t worker_count)
 						break;
 
 					default:
-						logtw("Unsupported codec(%d) is being input from media track", track->GetCodecId());
+						logti("Unsupported codec(%s/%s) is being input from media track", 
+								ov::Converter::ToString(track->GetMediaType()).CStr(), 
+								ov::Converter::ToString(track->GetCodecId()).CStr());
 						continue;
 				}
 
@@ -224,7 +228,7 @@ bool RtcStream::Start(uint32_t worker_count)
         video_media_desc->AddPayload(ulpfec_payload);
     }
 
-	logti("Stream is created : %s/%u", GetName().CStr(), GetId());
+	logtd("Stream is created : %s/%u", GetName().CStr(), GetId());
 
 	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
 

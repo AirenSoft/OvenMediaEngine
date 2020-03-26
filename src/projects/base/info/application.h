@@ -25,6 +25,11 @@ namespace info
 	class Application
 	{
 	public:
+		virtual const char* GetApplicationTypeName() const
+		{
+			return "ApplicationInfo";
+		}
+
 		bool operator==(const Application &app_info) const
 		{
 			if(_application_id == app_info._application_id)

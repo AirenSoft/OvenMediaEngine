@@ -34,54 +34,6 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 
 	// for generating track ids
 	_last_transcode_id = 0;
-
-	// Create Output Stream and Tracks
-	if (CreateOutputStream() == 0)
-	{
-		logte("No output stream generated");
-		return;
-	}
-
-	if (CreateStageMapping() == 0)
-	{
-		logte("No stage generated");
-		return;
-	}
-
-	// Create Docoders
-	if (CreateDecoders() == 0)
-	{
-		logtw("No decoder generated");
-	}
-
-	// Create Encoders
-	if (CreateEncoders() == 0)
-	{
-		logtw("No encoder generated");
-	}
-
-	// I will make and apply a packet drop policy.
-	_max_queue_size = 256;
-
-	logti("Created codec status. decoder(%d) encoders(%d)", _decoders.size(), _encoders.size());
-
-	// Create Data Processing Loop Threads
-	try
-	{
-		_kill_flag = false;
-
-		_thread_looptask = std::thread(&TranscodeStream::LoopTask, this);
-	}
-	catch (const std::system_error &e)
-	{
-		_kill_flag = true;
-
-		logte("Failed to start transcode stream thread");
-		
-		return;
-	}
-
-	logtd("Started transcode stream thread");
 }
 
 TranscodeStream::~TranscodeStream()
@@ -109,7 +61,57 @@ TranscodeStream::~TranscodeStream()
 	_stream_outputs.clear();
 }
 
-void TranscodeStream::Stop()
+bool TranscodeStream::Start()
+{			
+	// Create Output Stream and Tracks
+	if (CreateOutputStream() == 0)
+	{
+		logte("No output stream generated");
+		return false;
+	}
+
+	if (CreateStageMapping() == 0)
+	{
+		logte("No stage generated");
+		return false;
+	}
+
+	// Create Docoders
+	if (CreateDecoders() == 0)
+	{
+		logtw("No decoder generated");
+	}
+
+	// Create Encoders
+	if (CreateEncoders() == 0)
+	{
+		logtw("No encoder generated");
+	}
+
+	// I will make and apply a packet drop policy.
+	_max_queue_size = 256;
+
+	// Create Data Processing Loop Threads
+	try
+	{
+		_kill_flag = false;
+		_thread_looptask = std::thread(&TranscodeStream::LoopTask, this);
+	}
+	catch (const std::system_error &e)
+	{
+		_kill_flag = true;
+		logte("Failed to start transcode stream thread");
+		return false;
+	}
+
+	logti("[%s/%s(%u)] Transcoder input stream has been started. Status : (%d) Decoders, (%d) Encoders", 
+						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(), _decoders.size(), _encoders.size());
+			
+
+	return true;
+}
+
+bool TranscodeStream::Stop()
 {
 	_kill_flag = true;
 
@@ -125,6 +127,11 @@ void TranscodeStream::Stop()
 	{
 		_thread_looptask.join();
 	}
+
+	logti("[%s/%s(%u)] Transcoder input stream has been stopped.", 
+						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId());
+
+	return true;
 }
 
 bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
@@ -341,6 +348,10 @@ int32_t TranscodeStream::CreateOutputStream()
 		// Add to Output Stream List. The key is the output stream name.
 		_stream_outputs.insert(std::make_pair(stream_name, stream_output));
 
+		logti("[%s/%s(%u)] -> [%s/%s(%u)] Transcoder output stream has been created.", 
+						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(),
+						_application_info.GetName().CStr(), stream_output->GetName().CStr(), stream_output->GetId());
+
 		// Number of generated output streams
 		created_stream_count++;
 	}
@@ -542,7 +553,7 @@ bool TranscodeStream::CreateDecoder(int32_t input_track_id, int32_t decoder_trac
 	}
 
 	// create decoder for codec id
-	auto decoder = std::move(TranscodeDecoder::CreateDecoder(track->GetCodecId(), input_context));
+	auto decoder = std::move(TranscodeDecoder::CreateDecoder(*_stream_input, track->GetCodecId(), input_context));
 	if (decoder == nullptr)
 	{
 		logte("Decoder allocation failed");
@@ -958,6 +969,11 @@ void TranscodeStream::DeleteStreams()
 {
 	for (auto &iter : _stream_outputs)
 	{
+		auto output = iter.second;
+		logti("[%s/%s(%u)] -> [%s/%s(%u)] Transcoder output stream has been deleted.", 
+						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(),
+						_application_info.GetName().CStr(), output->GetName().CStr(), output->GetId());
+
 		_parent->DeleteStream(iter.second);
 	}
 

@@ -187,7 +187,7 @@ int32_t RtmpChunkStream::OnDataReceived(const std::shared_ptr<const ov::Data> &d
 
 	if (_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update())
 	{
-		logti("Stats for RtmpChunkStream: Message Q: %zu, Remained bytes: %zu",
+		logts("Stats for RtmpChunkStream: Message Q: %zu, Remained bytes: %zu",
 			  _import_chunk->GetMessageCount(),
 			  _remained_data->GetAllocatedDataSize());
 	}
@@ -580,11 +580,12 @@ void RtmpChunkStream::ReceiveAmfCommandMessage(const std::shared_ptr<const RtmpM
 	}
 	else if (message_name == RTMP_CMD_NAME_DELETESTREAM)
 	{
-		OnAmfDeleteStream(message->header, document, transaction_id);
+		//TODO(Dimiden): Check this message, This causes the stream to be deleted twice.
+		//OnAmfDeleteStream(message->header, document, transaction_id);
 	}
 	else
 	{
-		logtw("Unknown Amf0CommandMessage - Message(%s:%.1f)", message_name.CStr(), transaction_id);
+		logtd("Unknown Amf0CommandMessage - Message(%s:%.1f)", message_name.CStr(), transaction_id);
 		return;
 	}
 }

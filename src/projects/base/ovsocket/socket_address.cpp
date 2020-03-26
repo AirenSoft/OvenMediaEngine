@@ -81,7 +81,7 @@ namespace ov
 
 		if(result == false)
 		{
-			logte("An error occured: %s:%d", hostname, port);
+			logtw("An error occured: %s:%d", hostname, port);
 			// OV_ASSERT2(result);
 		}
 	}
@@ -274,7 +274,7 @@ namespace ov
 
 				if(::getaddrinfo(hostname, nullptr, nullptr, &result) != 0)
 				{
-					logte("An error occurred while resolve DNS for host [%s]", hostname);
+					logtw("An error occurred while resolve DNS for host [%s]", hostname);
 					return false;
 				}
 

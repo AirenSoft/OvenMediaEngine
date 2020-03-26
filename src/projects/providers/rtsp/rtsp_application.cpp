@@ -9,6 +9,7 @@
 std::shared_ptr<RtspApplication> RtspApplication::Create(const info::Application &application_info)
 {
 	auto application = std::make_shared<RtspApplication>(application_info);
+	application->Start();
 	return application;
 }
 

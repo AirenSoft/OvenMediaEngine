@@ -12,8 +12,7 @@ namespace pub
 
 	bool Publisher::Start()
 	{
-		logtd("Trying to start %s publisher (%d)", GetPublisherName(), GetPublisherType());
-
+		logti("%s has been started.", GetPublisherName());
 		return true;
 	}
 
@@ -30,6 +29,7 @@ namespace pub
 			it = _applications.erase(it);
 		}
 
+		logti("%s has been stopped.", GetPublisherName());
 		return true;
 	}
 

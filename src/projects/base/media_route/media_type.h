@@ -21,7 +21,6 @@ namespace common
 		Data,
 		Subtitle,
 		Attachment,
-
 		Nb
 	};
 

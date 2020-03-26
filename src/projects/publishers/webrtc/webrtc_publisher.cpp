@@ -82,7 +82,7 @@ bool WebRtcPublisher::Start()
 
 	if (result)
 	{
-		logti("WebRTC Publisher is listening on %s%s%s%s...",
+		logti("WebRTC Publisher has started listening on %s%s%s%s...",
 			  has_port ? signalling_address.ToString().CStr() : "",
 			  (has_port && has_tls_port) ? ", " : "",
 			  has_tls_port ? "TLS: " : "",
@@ -94,9 +94,11 @@ bool WebRtcPublisher::Start()
 		logte("An error occurred while initialize WebRTC Publisher. Stopping RtcSignallingServer...");
 
 		_signalling_server->Stop();
+
+		return false;
 	}
 
-	return result;
+	return Publisher::Start();
 }
 
 bool WebRtcPublisher::Stop()

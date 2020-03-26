@@ -10,7 +10,7 @@
 #include "application.h"
 #include "stream.h"
 
-#define OV_LOG_TAG "Application"
+#define OV_LOG_TAG "Provider"
 
 namespace pvd
 {
@@ -27,12 +27,14 @@ namespace pvd
 
 	bool Application::Start()
 	{
+		logti("[%s] %s application has been started", GetName().CStr(), GetApplicationTypeName());
 		return true;
 	}
 
 	bool Application::Stop()
 	{
 		DeleteAllStreams();
+		logti("[%s] %s application has been stopped", GetName().CStr(), GetApplicationTypeName());
 		return true;
 	}
 
@@ -91,8 +93,7 @@ namespace pvd
 		{
 			return false;
 		}
-
-		logtd("CreateStream");
+		
 		MediaRouteApplicationConnector::CreateStream(stream);
 
 		_streams[stream->GetId()] = stream;

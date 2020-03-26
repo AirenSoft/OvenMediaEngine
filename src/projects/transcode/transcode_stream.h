@@ -47,7 +47,8 @@ public:
 	TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &orig_stream, TranscodeApplication *parent);
 	~TranscodeStream();
 
-	void Stop();
+	bool Start();
+	bool Stop();
 
 	bool Push(std::shared_ptr<MediaPacket> packet);
 

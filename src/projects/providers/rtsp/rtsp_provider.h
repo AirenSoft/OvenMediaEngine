@@ -23,7 +23,16 @@ namespace pvd
         explicit RtspProvider(const cfg::Server &server_config, std::shared_ptr<MediaRouteInterface> router);
         ~RtspProvider() override;
 
-        ProviderType GetProviderType() override;
+		ProviderType GetProviderType() const override
+		{
+			return ProviderType::Rtsp;
+		}
+
+        const char* GetProviderName() const override
+	    {
+		    return "RtspProvider";
+	    }
+
         bool Start() override;
 
         static std::shared_ptr<RtspProvider> Create(const cfg::Server &server_config, std::shared_ptr<MediaRouteInterface> router);
@@ -50,7 +59,7 @@ namespace pvd
 
     protected:
         std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &application_info) override;
-        bool OnDeleteProviderApplication(const info::Application &app_info) override;
+        bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
 
     private:
         std::shared_ptr<RtspServer> rtsp_server_;

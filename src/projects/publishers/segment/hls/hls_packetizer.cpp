@@ -165,7 +165,7 @@ bool HlsPacketizer::SegmentWrite(int64_t start_timestamp, uint64_t duration)
 	{
 		if ((_video_track != nullptr) && (_audio_track != nullptr))
 		{
-			logti("[%s/%s] HLS A-V Sync: %lld (A: %lld, V: %lld)",
+			logts("[%s/%s] HLS A-V Sync: %lld (A: %lld, V: %lld)",
 				_app_name.CStr(), _stream_name.CStr(),
 				(_first_audio_time_stamp - _first_video_time_stamp) / 90, _first_audio_time_stamp / 90, _first_video_time_stamp / 90);
 		}

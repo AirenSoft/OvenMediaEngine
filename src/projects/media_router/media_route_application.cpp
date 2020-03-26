@@ -181,7 +181,7 @@ bool MediaRouteApplication::OnCreateStream(
 		}
 	}
 
-	logtd("Created stream. type(%d), app(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+	logti("Trying to create a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
 
 	auto new_stream_info = std::make_shared<info::Stream>(*stream);
 	auto new_stream = std::make_shared<MediaRouteStream>(new_stream_info);

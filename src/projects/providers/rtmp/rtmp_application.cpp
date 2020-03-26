@@ -18,6 +18,7 @@
 std::shared_ptr<RtmpApplication> RtmpApplication::Create(const info::Application &application_info)
 {
 	auto application = std::make_shared<RtmpApplication>(application_info);
+	application->Start();
 	return application;
 }
 

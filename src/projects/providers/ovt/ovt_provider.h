@@ -37,9 +37,14 @@ namespace pvd
 
 		~OvtProvider() override;
 
-		ProviderType GetProviderType() override
+		ProviderType GetProviderType() const override
 		{
 			return ProviderType::Ovt;
+		}
+
+		const char* GetProviderName() const override
+		{
+			return "OvtProvider";
 		}
 
 		bool Start() override;
@@ -53,7 +58,7 @@ namespace pvd
 
 	protected:
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;
-		bool OnDeleteProviderApplication(const info::Application &app_info) override;
+		bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
 		void OnStreamNotInUse(const info::Stream &stream_info) override;
 	};
 }  // namespace pvd

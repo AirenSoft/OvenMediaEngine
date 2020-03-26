@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "transcode_codec_dec_avc.h"
+#include "base/info/application.h"
 
 #define OV_LOG_TAG "TranscodeCodec"
 
@@ -42,7 +43,9 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 
 			if (ret == 0)
 			{
-				ShowCodecParameters(_context, _codec_par);
+				auto codec_info = ShowCodecParameters(_context, _codec_par);
+				logti("[%s/%s(%u)] input stream information: %s", 
+					_stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
 
 				_change_format = true;
 

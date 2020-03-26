@@ -13,6 +13,13 @@
 class OvenCodecImplAvcodecDecAAC : public TranscodeDecoder
 {
 public:
+	OvenCodecImplAvcodecDecAAC(const info::Stream &stream_info)
+        : TranscodeDecoder(stream_info)
+    {
+
+    }
+
+
 	AVCodecID GetCodecID() const noexcept override
 	{
 		return AV_CODEC_ID_AAC;

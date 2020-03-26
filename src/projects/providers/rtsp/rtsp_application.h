@@ -9,6 +9,12 @@ using namespace pvd;
 
 class RtspApplication : public Application
 {
+protected:
+	const char* GetApplicationTypeName() const override
+	{
+		return "RTSP Provider";
+	}
+
 public:
 	static std::shared_ptr<RtspApplication> Create(const info::Application &application_info);
 

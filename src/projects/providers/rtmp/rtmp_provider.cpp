@@ -49,8 +49,6 @@ bool RtmpProvider::Start()
 
 	auto rtmp_address = ov::SocketAddress(server.GetIp(), static_cast<uint16_t>(server.GetBind().GetProviders().GetRtmpPort()));
 
-	logti("RTMP Provider is listening on %s...", rtmp_address.ToString().CStr());
-
 	// Create RtmpServer
 	_rtmp_server = std::make_shared<RtmpServer>();
 
@@ -61,6 +59,8 @@ bool RtmpProvider::Start()
 	{
 		return false;
 	}
+
+	logti("RTMP Server has started listening on %s...", rtmp_address.ToString().CStr());
 
 	return Provider::Start();
 }
@@ -75,10 +75,9 @@ std::shared_ptr<pvd::Application> RtmpProvider::OnCreateProviderApplication(cons
 	return RtmpApplication::Create(application_info);
 }
 
-//TODO(soulk): Implement this function
-bool RtmpProvider::OnDeleteProviderApplication(const info::Application &app_info)
+bool RtmpProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
 {
-	return true;
+	return application->Stop();;
 }
 
 bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
@@ -363,14 +362,14 @@ bool RtmpProvider::OnDeleteStream(info::application_id_t app_id, uint32_t stream
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationById(app_id));
 	if (application == nullptr)
 	{
-		logte("cannot find application");
+		logte("cannot find application %u/%u", app_id, stream_id);
 		return false;
 	}
 
 	auto stream = std::dynamic_pointer_cast<RtmpStream>(application->GetStreamById(stream_id));
 	if (stream == nullptr)
 	{
-		logte("cannot find stream");
+		logte("cannot find stream %u/%u", app_id, stream_id);
 		return false;
 	}
 

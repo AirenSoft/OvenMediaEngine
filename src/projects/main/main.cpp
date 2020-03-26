@@ -27,7 +27,7 @@
 #include <web_console/web_console.h>
 
 #define INIT_MODULE(variable, name, create)                                         \
-	logti("Trying to create a module " name " for host [%s]...", host_name.CStr()); \
+	logti("Trying to create a module " name " for [%s] host...", host_name.CStr()); \
                                                                                     \
 	auto variable = create;                                                         \
                                                                                     \

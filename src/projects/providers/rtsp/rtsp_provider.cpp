@@ -18,29 +18,29 @@ namespace pvd
         Stop();
     }
 
-    ProviderType RtspProvider::GetProviderType()
-    {
-        return ProviderType::Rtsp;
-    }
-
     std::shared_ptr<pvd::Application> RtspProvider::OnCreateProviderApplication(const info::Application &application_info)
     {
         return RtspApplication::Create(application_info);
     }
 
-    bool RtspProvider::OnDeleteProviderApplication(const info::Application &app_info)
+    bool RtspProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
     {
-        return true;
+        return application->Stop();
     }
 
     bool RtspProvider::Start()
     {
         // Get Server & Host configuration
         auto server = GetServerConfig();
+        auto rtsp_port = static_cast<uint16_t>(server.GetBind().GetProviders().GetRtspPort());
 
-        auto rtsp_address = ov::SocketAddress(server.GetIp(), static_cast<uint16_t>(server.GetBind().GetProviders().GetRtspPort()));
-
-        logti("RTSP Provider is listening on %s...", rtsp_address.ToString().CStr());
+        if(rtsp_port == 0)
+        {
+            // RTSP is not enabled
+            logti("RTSP is disabled in the configuration.");
+            return true;
+        }
+        auto rtsp_address = ov::SocketAddress(server.GetIp(), rtsp_port);
 
         rtsp_server_ = std::make_shared<RtspServer>();
 
@@ -49,6 +49,8 @@ namespace pvd
         {
             return false;
         }
+
+        logti("RTSP Server has started listening on %s...", rtsp_address.ToString().CStr());
 
         return Provider::Start();
     }

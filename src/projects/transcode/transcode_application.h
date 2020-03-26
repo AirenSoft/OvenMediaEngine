@@ -29,6 +29,9 @@ public:
 	explicit TranscodeApplication(const info::Application &application_info);
 	~TranscodeApplication() override;
 
+	bool Start();
+	bool Stop();
+
 	MediaRouteApplicationObserver::ObserverType GetObserverType() override
 	{
 		return MediaRouteApplicationObserver::ObserverType::Transcoder;
@@ -40,7 +43,7 @@ public:
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 트랜스코드 어플리케이션 관련 모듈
+	// MediaRouteApplicationObserver Implementation 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	bool OnCreateStream(const std::shared_ptr<info::Stream> &stream) override;
 	bool OnDeleteStream(const std::shared_ptr<info::Stream> &stream) override;

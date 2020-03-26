@@ -16,6 +16,12 @@
 //====================================================================================================
 class DashApplication : public pub::Application
 {
+protected:
+	const char* GetApplicationTypeName() const override
+	{
+		return "DASH Publisher";
+	}
+	
 public:
 	static std::shared_ptr<DashApplication> Create(const info::Application &application_info);
 

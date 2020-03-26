@@ -17,6 +17,11 @@ using namespace pvd;
 
 class RtmpApplication : public Application
 {
+protected:
+	const char* GetApplicationTypeName() const override
+	{
+		return "RTMP Provider";
+	}
 public:
 	static std::shared_ptr<RtmpApplication> Create(const info::Application &application_info);
 

@@ -6,7 +6,9 @@
 
 	<!-- Disable some SRT internal logs -->
 	<Tag name="SRT" level="critical" />
-	<Tag name="Monitor" level="critical" />
+	<Tag name="Monitor" level="warn" />
+	<Tag name="HttpServer" level="warn" />
+	<Tag name=".*\.Stat" level="warn" />
 
 	<!-- Log level: [debug, info, warn, error, critical] -->
 	<Tag name=".*" level="info" />

@@ -40,10 +40,11 @@ bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server
 
 std::shared_ptr<pub::Application> HlsPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
+	/* Deprecated
 	if (application_info.CheckCodecAvailability({"h264"}, {"aac"}) == false)
 	{
 		logtw("There is no suitable encoding setting for %s (Encoding setting must contains h264 and aac)", GetPublisherName());
 	}
-
+	*/
 	return HlsApplication::Create(application_info);
 }

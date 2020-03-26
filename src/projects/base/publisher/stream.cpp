@@ -189,6 +189,8 @@ namespace pub
 			}
 		}
 
+		logti("[%s(%u)] %s stream has been started", GetName().CStr(), GetId(), _application->GetApplicationTypeName());
+
 		_run_flag = true;
 		return true;
 	}
@@ -208,6 +210,8 @@ namespace pub
 		}
 
 		_sessions.clear();
+
+		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), _application->GetApplicationTypeName());
 
 		return true;
 	}

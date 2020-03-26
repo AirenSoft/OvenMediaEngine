@@ -48,6 +48,11 @@ namespace pvd
 		explicit Application(const info::Application &application_info);
 		~Application() override;
 
+		const char* GetApplicationTypeName() const override
+		{
+			return "Provider Base Application";
+		}
+
 		std::map<uint32_t, std::shared_ptr<Stream>> _streams;
 
 	private:

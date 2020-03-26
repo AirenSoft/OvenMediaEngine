@@ -17,19 +17,30 @@
 std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(const info::Application &application_info)
 {
 	auto instance = std::make_shared<TranscodeApplication>(application_info);
-
+	instance->Start();
 	return instance;
 }
 
 TranscodeApplication::TranscodeApplication(const info::Application &application_info)
 	: _application_info(application_info)
 {
-	logtd("Transcode application [%s] is created", _application_info.GetName().CStr());
 }
 
 TranscodeApplication::~TranscodeApplication()
 {
 	logtd("Destroyed transcode application.");
+}
+
+bool TranscodeApplication::Start()
+{
+	logti("[%s] Transcoder Application has been started", _application_info.GetName().CStr());
+	return true;
+}
+
+bool TranscodeApplication::Stop()
+{
+	logti("[%s] Transcoder Application has been stopped", _application_info.GetName().CStr());
+	return true;
 }
 
 bool TranscodeApplication::OnCreateStream(const std::shared_ptr<info::Stream> &stream_info)
@@ -40,6 +51,11 @@ bool TranscodeApplication::OnCreateStream(const std::shared_ptr<info::Stream> &s
 
 	auto stream = std::make_shared<TranscodeStream>(_application_info, stream_info, this);
 	if (stream == nullptr)
+	{
+		return false;
+	}
+
+	if(stream->Start() == false)
 	{
 		return false;
 	}

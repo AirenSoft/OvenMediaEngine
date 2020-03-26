@@ -26,8 +26,6 @@ bool RtmpServer::Start(const ov::SocketAddress &address)
 		return false;
 	}
 
-	logti("Trying to start RTMP server on %s...", address.ToString().CStr());
-
 	_physical_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Tcp, address);
 
 	if (_physical_port == nullptr)
@@ -125,7 +123,7 @@ bool RtmpServer::Disconnect(const ov::String &app_name, uint32_t stream_id)
 
 void RtmpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
-	logti("A RTMP client is connected from %s", remote->ToString().CStr());
+	logti("A RTMP client has connected from %s", remote->ToString().CStr());
 
 	std::unique_lock<std::recursive_mutex> lock(_chunk_context_list_mutex);
 
@@ -201,15 +199,15 @@ void RtmpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 		// Stream Delete
 		if (chunk_stream->GetAppId() != info::InvalidApplicationId && chunk_stream->GetStreamId() != info::InvalidStreamId)
 		{
+			logti("The RTMP client is disconnected: [%s/%s] (%u/%u), remote: %s",
+			  chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
+			  chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
+			  remote->ToString().CStr());
+
 			OnDeleteStream(chunk_stream->GetRemoteSocket(),
 						   chunk_stream->GetAppName(), chunk_stream->GetStreamName(),
 						   chunk_stream->GetAppId(), chunk_stream->GetStreamId());
 		}
-
-		logti("The RTMP client is disconnected: [%s/%s] (%u/%u), remote: %s",
-			  chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
-			  chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
-			  remote->ToString().CStr());
 
 		_chunk_context_list.erase(item);
 	}
@@ -221,6 +219,13 @@ bool RtmpServer::OnChunkStreamReady(ov::ClientSocket *remote,
 									info::application_id_t &application_id,
 									uint32_t &stream_id)
 {
+	logti("[%s/%s] RTMP Provider stream has been created: id(%u/%u) device(%s) remote(%s)",
+		  app_name.CStr(), stream_name.CStr(),
+		  application_id, stream_id,
+		  RtmpChunkStream::GetEncoderTypeString(media_info->encoder_type).CStr(),
+		  remote->ToString().CStr());
+
+
 	// Notify the ready stream event to the observers
 	for (auto &observer : _observers)
 	{
@@ -232,12 +237,6 @@ bool RtmpServer::OnChunkStreamReady(ov::ClientSocket *remote,
 			return false;
 		}
 	}
-
-	logti("RTMP input stream is created for [%s/%s], id(%u/%u) device(%s) remote(%s)",
-		  app_name.CStr(), stream_name.CStr(),
-		  application_id, stream_id,
-		  RtmpChunkStream::GetEncoderTypeString(media_info->encoder_type).CStr(),
-		  remote->ToString().CStr());
 
 	return true;
 }
@@ -303,7 +302,7 @@ bool RtmpServer::OnDeleteStream(ov::ClientSocket *remote,
 		}
 	}
 
-	logtd("The RTMP stream is deleted: [%s/%s] (%u/%u), remote: %s",
+	logti("[%s/%s] RTMP Provider stream has been deleted (%u/%u), remote: %s",
 		  app_name.CStr(), stream_name.CStr(),
 		  application_id, stream_id,
 		  remote->ToString().CStr());

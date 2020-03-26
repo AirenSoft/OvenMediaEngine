@@ -262,7 +262,7 @@ bool CmafPacketizer::UpdatePlayList()
 			int64_t video_pts = static_cast<int64_t>(_last_video_pts * _video_track->GetTimeBase().GetExpr() * 1000.0);
 			int64_t audio_pts = static_cast<int64_t>(_last_audio_pts * _audio_track->GetTimeBase().GetExpr() * 1000.0);
 
-			logti("[%s/%s] CMAF A-V Sync: %lld (A: %lld, V: %lld)",
+			logts("[%s/%s] LLDASH A-V Sync: %lld (A: %lld, V: %lld)",
 				_app_name.CStr(), _stream_name.CStr(),
 				audio_pts - video_pts, audio_pts, video_pts);
 		}

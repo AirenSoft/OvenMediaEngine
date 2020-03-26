@@ -13,6 +13,12 @@ namespace pvd
 {
 	class OvtApplication : public pvd::Application
 	{
+	protected:
+		const char* GetApplicationTypeName() const override
+		{
+			return "OVT Provider";
+		}
+
 	public:
 		static std::shared_ptr<OvtApplication> Create(const info::Application &application_info);
 
@@ -29,7 +35,6 @@ namespace pvd
 
 	private:
 		bool Start() override;
-
 		bool Stop() override;
 	};
 }

@@ -23,7 +23,7 @@ public:
 
 	const char *GetPublisherName() const noexcept override
 	{
-		return "LLDASH";
+		return "LLDASH Publisher";
 	}
 
 	std::shared_ptr<SegmentStreamInterceptor> CreateInterceptor() override

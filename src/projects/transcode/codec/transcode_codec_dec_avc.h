@@ -13,6 +13,12 @@
 class OvenCodecImplAvcodecDecAVC : public TranscodeDecoder
 {
 public:
+    OvenCodecImplAvcodecDecAVC(const info::Stream &stream_info)
+        : TranscodeDecoder(stream_info)
+    {
+
+    }
+
     AVCodecID GetCodecID() const noexcept override
     {
         return AV_CODEC_ID_H264;

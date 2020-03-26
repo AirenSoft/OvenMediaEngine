@@ -23,6 +23,11 @@ namespace pub
 	class Application : public info::Application, public MediaRouteApplicationObserver
 	{
 	public:
+		const char* GetApplicationTypeName() const override
+		{
+			return "Publisher Base Application";
+		}
+
 		// MediaRouteApplicationObserver Implementation
 		bool OnCreateStream(const std::shared_ptr<info::Stream> &info) override;
 		bool OnDeleteStream(const std::shared_ptr<info::Stream> &info) override;

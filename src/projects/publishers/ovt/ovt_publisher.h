@@ -32,7 +32,7 @@ private:
 	}
 	const char *GetPublisherName() const override
 	{
-		return "OVT";
+		return "OVTPublisher";
 	}
 
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;

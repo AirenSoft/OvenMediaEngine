@@ -37,14 +37,14 @@ MediaRouter::~MediaRouter()
 
 bool MediaRouter::Start()
 {
-	logti("Media router is started.");
+	logti("MediaRouter has been started.");
 
 	return true;
 }
 
 bool MediaRouter::Stop()
 {
-	logti("Terminated media route modules.");
+	logti("MediaRouter has been stopped.");
 
 	for(auto const &_route_app : _route_apps)
 	{

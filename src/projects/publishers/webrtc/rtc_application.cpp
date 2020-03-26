@@ -88,8 +88,6 @@ bool RtcApplication::Start()
 			logte("Cannot create certificate: %s", error->ToString().CStr());
 			return false;
 		}
-
-		logti("WebRTC Application [%s] Started", GetName().CStr());
 	}
 
 	return Application::Start();
@@ -97,8 +95,6 @@ bool RtcApplication::Start()
 
 bool RtcApplication::Stop()
 {
-	// TODO(dimiden): Application이 종료되는 경우는 향후 Application 단위의 재시작 기능이 개발되면 필요함
-	// 그 전에는 프로그램 종료까지 본 함수는 호출되지 않음
 	return Application::Stop();
 }
 

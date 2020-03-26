@@ -8,6 +8,12 @@
 
 class OvtApplication : public pub::Application
 {
+protected:
+	const char* GetApplicationTypeName() const override
+	{
+		return "OVT Publisher";
+	}
+
 public:
 	static std::shared_ptr<OvtApplication> Create(const info::Application &application_info);
 	OvtApplication(const info::Application &application_info);

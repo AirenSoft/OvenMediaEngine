@@ -36,6 +36,8 @@ namespace pvd
 		_run_thread = true;
 		_worker_thread = std::thread(&Provider::RegularTask, this);
 		_worker_thread.detach();
+		
+		logti("%s has been started.", GetProviderName());
 
 		return true;
 	}
@@ -56,6 +58,7 @@ namespace pvd
 			it = _applications.erase(it);
 		}
 
+		logti("%s has been stopped.", GetProviderName());
 		return true;
 	}
 
@@ -90,8 +93,6 @@ namespace pvd
 		// Store created application
 		_applications[application->GetId()] = application;
 
-		application->Start();
-
 		return true;
 	}
 
@@ -108,7 +109,7 @@ namespace pvd
 			return false;
 		}
 
-		bool result = OnDeleteProviderApplication(app_info);
+		bool result = OnDeleteProviderApplication(item->second);
 
 		if(result == false)
 		{
@@ -116,7 +117,6 @@ namespace pvd
 			return false;
 		}
 
-		_applications[app_info.GetId()]->Stop();
 		_applications.erase(app_info.GetId());
 
 		return true;

@@ -8,15 +8,16 @@
 //==============================================================================
 #pragma once
 
+#include "base/info/stream.h"
 #include "transcode_base.h"
 
 class TranscodeDecoder : public TranscodeBase<MediaPacket, MediaFrame>
 {
 public:
-	TranscodeDecoder();
+	TranscodeDecoder(info::Stream stream_info);
 	~TranscodeDecoder() override;
 
-	static std::shared_ptr<TranscodeDecoder> CreateDecoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context);
+	static std::shared_ptr<TranscodeDecoder> CreateDecoder(const info::Stream &info, common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context);
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
@@ -25,7 +26,7 @@ public:
 	std::shared_ptr<TranscodeContext>& GetContext();
 
 protected:
-	static void ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters);
+	static const ov::String ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters);
 
 	std::shared_ptr<TranscodeContext> _input_context;
 
@@ -39,4 +40,6 @@ protected:
 	AVPacket *_pkt;
 	AVFrame *_frame;
 	int _decoded_frame_num = 0;
+
+	info::Stream		_stream_info;
 };

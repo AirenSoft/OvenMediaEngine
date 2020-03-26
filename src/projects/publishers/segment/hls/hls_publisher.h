@@ -38,6 +38,6 @@ protected:
 
 	const char *GetPublisherName() const override
 	{
-		return "HLS";
+		return "HLS Publisher";
 	}
 };

@@ -71,7 +71,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 		}
 		else
 		{
-			logti("P2P is disabled");
+			logti("P2P is disabled in the configuration");
 			_p2p_manager.SetEnable(false);
 		}
 	}

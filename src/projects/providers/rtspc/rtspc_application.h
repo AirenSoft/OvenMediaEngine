@@ -13,6 +13,12 @@ namespace pvd
 {
 	class RtspcApplication : public pvd::Application
 	{
+	protected:
+		const char* GetApplicationTypeName() const override
+		{
+			return "RTSP Pull Provider";
+		}
+
 	public:
 		static std::shared_ptr<RtspcApplication> Create(const info::Application &application_info);
 

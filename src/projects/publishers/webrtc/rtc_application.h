@@ -11,6 +11,12 @@
 
 class RtcApplication : public pub::Application
 {
+protected:
+	const char* GetApplicationTypeName() const override
+	{
+		return "WebRTC Publisher";
+	}
+
 public:
 	static std::shared_ptr<RtcApplication> Create(const info::Application &application_info,
 	                                              const std::shared_ptr<IcePort> &ice_port,

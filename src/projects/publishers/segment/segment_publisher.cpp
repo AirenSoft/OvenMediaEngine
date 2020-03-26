@@ -57,7 +57,7 @@ bool SegmentPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_se
 
 	_stream_server = stream_server;
 
-	logti("%s Publisher is listening on %s%s%s%s...",
+	logti("%s has started listening on %s%s%s%s...",
 		  GetPublisherName(),
 		  has_port ? address.ToString().CStr() : "",
 		  (has_port && has_tls_port) ? ", " : "",

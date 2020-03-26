@@ -25,8 +25,6 @@ OvtApplication::~OvtApplication()
 
 bool OvtApplication::Start()
 {
-	logti("Ovt Application [%s] Started", GetName().CStr());
-
 	return Application::Start();
 }
 
@@ -64,7 +62,7 @@ bool OvtApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 		auto session = std::static_pointer_cast<OvtSession>(x.second);
 	}
 
-	logti("OvtApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
+	logtd("OvtApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
 
 	return true;
 }

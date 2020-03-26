@@ -39,6 +39,6 @@ private:
 
 	const char *GetPublisherName() const override
 	{
-		return "LLDASH";
+		return "LLDASH Publisher";
 	}
 };

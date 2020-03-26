@@ -88,7 +88,7 @@ private:
 	}
 	const char *GetPublisherName() const override
 	{
-		return "WebRTC";
+		return "WebRTC Publisher";
 	}
 
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;

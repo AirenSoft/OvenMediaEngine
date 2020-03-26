@@ -740,7 +740,7 @@ bool DashPacketizer::UpdatePlayList()
 			int64_t video_pts = static_cast<int64_t>(_last_video_pts * _video_track->GetTimeBase().GetExpr() * 1000.0);
 			int64_t audio_pts = static_cast<int64_t>(_last_audio_pts * _audio_track->GetTimeBase().GetExpr() * 1000.0);
 
-			logti("[%s/%s] DASH A-V Sync: %lld (A: %lld, V: %lld)",
+			logts("[%s/%s] DASH A-V Sync: %lld (A: %lld, V: %lld)",
 				_app_name.CStr(), _stream_name.CStr(),
 				audio_pts - video_pts, audio_pts, video_pts);
 		}
@@ -856,7 +856,7 @@ bool DashPacketizer::SetSegmentData(ov::String file_name, uint64_t duration, int
 	{
 		SetReadyForStreaming();
 
-		logti("[%p] %s segment is ready for stream [%s/%s], segment duration: %fs, count: %u", this, GetPacketizerName(), _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);
+		logti("[%p] %s segment is ready to stream [%s/%s], segment duration: %fs, count: %u", this, GetPacketizerName(), _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);
 	}
 
 	return true;

@@ -98,9 +98,9 @@ namespace pvd
 		return OvtApplication::Create(app_info);
 	}
 
-	bool OvtProvider::OnDeleteProviderApplication(const info::Application &app_info)
+	bool OvtProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
 	{
-		return true;
+		return application->Stop();
 	}
 
 	void OvtProvider::OnStreamNotInUse(const info::Stream &stream_info)

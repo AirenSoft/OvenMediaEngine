@@ -11,6 +11,7 @@
 #include "base/common_types.h"
 #include "./json.h"
 #include "./string.h"
+#include "base/media_route/media_type.h"
 
 #include <inttypes.h>
 #include <string>
@@ -128,6 +129,50 @@ namespace ov
 				case PublisherType::Ovt:
 					return "Ovt";
 				case PublisherType::Unknown:
+				default:
+					return "Unknown";
+			}
+		}
+
+		static ov::String ToString(const common::MediaCodecId &type)
+		{
+			switch(type)
+			{
+				case common::MediaCodecId::H264:
+					return "H264";
+				case common::MediaCodecId::Vp8:
+					return "VP8";
+				case common::MediaCodecId::Vp9:
+					return "VP9";
+				case common::MediaCodecId::Flv:
+					return "FLV";
+				case common::MediaCodecId::Aac:
+					return "AAC";
+				case common::MediaCodecId::Mp3:
+					return "MP3";
+				case common::MediaCodecId::Opus:
+					return "OPUS";
+				case common::MediaCodecId::None:
+				default:
+					return "Unknwon";
+			}
+		}
+
+		static ov::String ToString(const common::MediaType &type)
+		{
+			switch(type)
+			{
+				case common::MediaType::Video:
+					return "Video";		
+				case common::MediaType::Audio:
+					return "Audio";
+				case common::MediaType::Data:
+					return "Data";
+				case common::MediaType::Subtitle:
+					return "Subtitle";
+				case common::MediaType::Attachment:
+					return "Attachment";
+				case common::MediaType::Unknown:
 				default:
 					return "Unknown";
 			}

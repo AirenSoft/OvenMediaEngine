@@ -98,11 +98,9 @@ namespace pvd
 		return RtspcApplication::Create(app_info);
 	}
 
-	bool RtspcProvider::OnDeleteProviderApplication(const info::Application &app_info)
+	bool RtspcProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
 	{
-
-		// TODO(soulk) : application deletion function should be developed.
-		return true;
+		return application->Stop();
 	}
 
 	void RtspcProvider::OnStreamNotInUse(const info::Stream &stream_info)
