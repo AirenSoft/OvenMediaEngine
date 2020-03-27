@@ -29,6 +29,7 @@ namespace mon
 			return _app_metrics;
 		}
 
+		ov::String GetInfoString();
 		void ShowInfo() override;
 
 		double GetOriginRequestTimeMSec();

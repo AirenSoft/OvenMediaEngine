@@ -25,27 +25,33 @@ namespace mon
         UpdateDate();
     }
 
-	void CommonMetrics::ShowInfo()
+	ov::String CommonMetrics::GetInfoString()
 	{
 		ov::String out_str;
 
 		out_str.AppendFormat(
 			"\n\t[Statistics]\n"
 			"\tLast update time : %s, Last sent time : %s\n"
-			"\tBytes in : %u, Bytes out : %u, Concurrent connections : %u, Max connections : %u\n",
+			"\tBytes in : %s, Bytes out : %s, Concurrent connections : %u, Max connections : %u (%s)\n",
 			ov::Converter::ToString(GetLastUpdatedTime()).CStr(), ov::Converter::ToString(GetLastSentTime()).CStr(),
-			GetTotalBytesIn(), GetTotalBytesOut(), GetTotalConnections(), GetMaxTotalConnections());
+			ov::Converter::BytesToString(GetTotalBytesIn()).CStr(), ov::Converter::BytesToString(GetTotalBytesOut()).CStr(), GetTotalConnections(), 
+			GetMaxTotalConnections(), ov::Converter::ToString(GetMaxTotalConnectionsTime()).CStr());
 
 		out_str.AppendFormat("\n\t\t[By publisher]\n");
 		for (int i = 0; i < static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
 		{
-			out_str.AppendFormat("\t\t >> %s : Bytes out(%u) Concurrent connections (%u)\n",
+			out_str.AppendFormat("\t\t >> %s : Bytes out(%s) Concurrent connections (%u)\n",
 								 ov::Converter::ToString(static_cast<PublisherType>(i)).CStr(),
-								 GetBytesOut(static_cast<PublisherType>(i)),
+								 ov::Converter::BytesToString(GetBytesOut(static_cast<PublisherType>(i))).CStr(),
 								 GetConnections(static_cast<PublisherType>(i)));
 		}
 
-        logti("%s", out_str.CStr());
+		return out_str;
+	}
+
+	void CommonMetrics::ShowInfo()
+	{
+        logti("%s", GetInfoString().CStr());
 	}
 
     uint32_t CommonMetrics::GetUnusedTimeSec()

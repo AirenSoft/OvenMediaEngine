@@ -7,24 +7,29 @@
 
 namespace mon
 {
-	void HostMetrics::ShowInfo(bool show_children)
+	ov::String HostMetrics::GetInfoString(bool show_children)
 	{
-		//TODO(Getroot): Print detailed information of application
-        ov::String out_str = ov::String::FormatString("\n[Host Info]\nid(%u), name(%s)\nCreated Time (%s)\n", 														
+		 ov::String out_str = ov::String::FormatString("\n[Host Info]\nid(%u), name(%s)\nCreated Time (%s)\n", 														
 														GetId(), GetName().CStr(),
 														ov::Converter::ToString(_created_time).CStr());
-		logti("%s", out_str.CStr());
-
-		CommonMetrics::ShowInfo();
+		
+		out_str.Append(CommonMetrics::GetInfoString());
 
 		if(show_children)
 		{
 			for(auto const &t : _applications)
 			{
 				auto &app = t.second;
-				app->ShowInfo();
+				out_str.Append(app->GetInfoString());
 			}
 		}
+
+		return out_str;
+	}
+
+	void HostMetrics::ShowInfo(bool show_children)
+	{
+       logti("%s", GetInfoString(show_children).CStr());
 	}
 
 	bool HostMetrics::OnApplicationCreated(const info::Application &app_info)

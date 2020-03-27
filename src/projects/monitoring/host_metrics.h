@@ -18,6 +18,8 @@ namespace mon
 			: info::Host(host_info)
 		{
 		}
+
+		ov::String GetInfoString(bool show_children=true);
 		void ShowInfo(bool show_children=true);
 
 		bool OnApplicationCreated(const info::Application &app_info);

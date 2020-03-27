@@ -13,6 +13,7 @@ namespace mon
 	class CommonMetrics
 	{
 	public:
+		virtual ov::String GetInfoString();
 		virtual void ShowInfo();
 
 		uint32_t GetUnusedTimeSec();

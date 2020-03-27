@@ -91,7 +91,7 @@ namespace info
 		_origin_stream = stream;
 	}
 
-	const std::shared_ptr<Stream> Stream::GetOriginStream()
+	const std::shared_ptr<Stream> Stream::GetOriginStream() const
 	{
 		return _origin_stream;
 	}
@@ -134,7 +134,7 @@ namespace info
 		return _tracks;
 	}
 
-	void Stream::ShowInfo()
+	ov::String Stream::GetInfoString()
 	{
 		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), name(%s), SourceType(%s), Created Time (%s)\n", 														
 														GetId(), GetName().CStr(), ov::Converter::ToString(_source_type).CStr(),
@@ -195,13 +195,13 @@ namespace info
 					out_str.AppendFormat(
 						"\n\tVideo Track #%d: "
 						"Bypass(%s) "
-						"Bitrate(%d) "
+						"Bitrate(%s) "
 						"codec(%d, %s) "
 						"resolution(%dx%d) "
 						"framerate(%.2ffps) ",
 						track->GetId(),
 						track->IsBypass() ? "true" : "false",
-						track->GetBitrate(),
+						ov::Converter::BitToString(track->GetBitrate()).CStr(),
 						track->GetCodecId(), codec_name.CStr(),
 						track->GetWidth(), track->GetHeight(),
 						track->GetFrameRate());
@@ -211,16 +211,16 @@ namespace info
 					out_str.AppendFormat(
 						"\n\tAudio Track #%d: "
 						"Bypass(%s) "
-						"Bitrate(%d) "
+						"Bitrate(%s) "
 						"codec(%d, %s) "
-						"samplerate(%d) "
+						"samplerate(%s) "
 						"format(%s, %d) "
 						"channel(%s, %d) ",
 						track->GetId(),
 						track->IsBypass() ? "true" : "false",
-						track->GetBitrate(),
+						ov::Converter::BitToString(track->GetBitrate()).CStr(),
 						track->GetCodecId(), codec_name.CStr(),
-						track->GetSampleRate(),
+						ov::Converter::ToSiString(track->GetSampleRate(), 1).CStr(),
 						track->GetSample().GetName(), track->GetSample().GetSampleSize() * 8,
 						track->GetChannel().GetName(), track->GetChannel().GetCounts());
 					break;
@@ -232,6 +232,11 @@ namespace info
 			out_str.AppendFormat("timebase(%s)", track->GetTimeBase().ToString().CStr());
 		}
 
-		logi("Monitor", "%s", out_str.CStr());
+		return out_str;
+	}
+
+	void Stream::ShowInfo()
+	{
+		logi("Monitor", "%s", GetInfoString().CStr());
 	}
 }  // namespace info

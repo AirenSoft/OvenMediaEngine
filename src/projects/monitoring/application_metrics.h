@@ -29,6 +29,7 @@ namespace mon
 			return _host_metrics;
 		}
 
+		ov::String GetInfoString(bool show_children=true);
 		void ShowInfo(bool show_children=true);
 
 		bool OnStreamCreated(const info::Stream &stream);

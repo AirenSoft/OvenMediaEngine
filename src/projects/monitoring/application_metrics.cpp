@@ -8,24 +8,30 @@
 
 namespace mon
 {
-    void ApplicationMetrics::ShowInfo(bool show_children)
+    ov::String ApplicationMetrics::GetInfoString(bool show_children)
     {
-        //TODO(Getroot): Print detailed information of application
         ov::String out_str = ov::String::FormatString("\n[Application Info]\nid(%u), name(%s)\nCreated Time (%s)\n", 														
 														GetId(), GetName().CStr(),
 														ov::Converter::ToString(_created_time).CStr());
-        logti("%s", out_str.CStr());
+        
 
-        CommonMetrics::ShowInfo();
+        out_str.Append(CommonMetrics::GetInfoString());
 
         if(show_children)
         {
             for(auto &t : _streams)
             {
                 auto stream = t.second;
-                stream->ShowInfo();
+                out_str.Append(stream->GetInfoString());
             }
         }
+
+        return out_str;
+    }
+
+    void ApplicationMetrics::ShowInfo(bool show_children)
+    {
+        logti("%s", GetInfoString(show_children).CStr());
     }
 
     bool ApplicationMetrics::OnStreamCreated(const info::Stream &stream)

@@ -8,21 +8,27 @@
 
 namespace mon
 {
-	void StreamMetrics::ShowInfo()
+	ov::String StreamMetrics::GetInfoString()
 	{
-		info::Stream::ShowInfo();
-		
+		ov::String out_str;
+
+		out_str.Append(info::Stream::GetInfoString());
+
 		if(GetSourceType() == StreamSourceType::Ovt || GetSourceType() == StreamSourceType::RtspPull)
 		{
-			ov::String out_str;
 			out_str.AppendFormat("\n\tElapsed time to connect to origin server : %f ms\n"
 									"\tElapsed time in response from origin server : %f ms\n",
 									GetOriginRequestTimeMSec(), GetOriginResponseTimeMSec());
-
-			logti("%s", out_str.CStr());
 		}
 
-		CommonMetrics::ShowInfo();
+		out_str.Append(CommonMetrics::GetInfoString());
+
+		return out_str;
+	}
+
+	void StreamMetrics::ShowInfo()
+	{
+		logti("%s", GetInfoString().CStr());
 	}
 
 	// Getter

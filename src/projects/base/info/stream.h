@@ -30,7 +30,7 @@ namespace info
 		void SetName(ov::String name);
 
 		void SetOriginStream(const std::shared_ptr<Stream> &stream);
-		const std::shared_ptr<Stream> GetOriginStream();
+		const std::shared_ptr<Stream> GetOriginStream() const;
 
 		const std::chrono::system_clock::time_point &GetCreatedTime() const;
 		uint32_t GetUptimeSec();
@@ -40,6 +40,7 @@ namespace info
 		const std::shared_ptr<MediaTrack> GetTrack(int32_t id) const;
 		const std::map<int32_t, std::shared_ptr<MediaTrack>> &GetTracks() const;
 
+		ov::String GetInfoString();
 		void ShowInfo();
 
 		const Application &GetApplicationInfo() const

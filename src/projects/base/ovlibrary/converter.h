@@ -17,6 +17,7 @@
 #include <string>
 #include <ctime>
 #include <chrono>
+#include <cmath>
 
 namespace ov
 {
@@ -176,6 +177,40 @@ namespace ov
 				default:
 					return "Unknown";
 			}
+		}
+
+		static ov::String ToSiString(int64_t number, int precision)
+		{
+			ov::String suf[] = {"", "K", "M", "G", "T", "P", "E", "Z", "Y"};
+		
+			if(number == 0)
+			{
+				return "0";
+			}
+
+			int64_t abs_number = std::abs(number);
+			int8_t place = std::floor(std::log10(abs_number) / std::log10(1000));
+			if(place > 8)
+			{
+				place = 8;
+			}
+
+			double num = number / std::pow(1000, place);
+
+			ov::String si_number;
+			si_number.Format("%.*f%s", precision, num, suf[place].CStr());
+
+			return si_number;
+		}
+
+		static ov::String BitToString(int64_t bits)
+		{
+			return ToSiString(bits, 2) + "b";
+		}
+
+		static ov::String BytesToString(int64_t bytes)
+		{
+			return ToSiString(bytes, 2) + "B";
 		}
 
 		static int32_t ToInt32(const ov::String &str, int base = 10)
