@@ -37,10 +37,10 @@ namespace mon
 			ov::Converter::BytesToString(GetTotalBytesIn()).CStr(), ov::Converter::BytesToString(GetTotalBytesOut()).CStr(), GetTotalConnections(), 
 			GetMaxTotalConnections(), ov::Converter::ToString(GetMaxTotalConnectionsTime()).CStr());
 
-		out_str.AppendFormat("\n\t\t[By publisher]\n");
+		out_str.AppendFormat("\n\t\t>>>> By publisher\n");
 		for (int i = 0; i < static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
 		{
-			out_str.AppendFormat("\t\t >> %s : Bytes out(%s) Concurrent connections (%u)\n",
+			out_str.AppendFormat("\t\t- %s : Bytes out(%s) Concurrent Connections (%u)\n",
 								 ov::Converter::ToString(static_cast<PublisherType>(i)).CStr(),
 								 ov::Converter::BytesToString(GetBytesOut(static_cast<PublisherType>(i))).CStr(),
 								 GetConnections(static_cast<PublisherType>(i)));
