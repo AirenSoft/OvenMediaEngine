@@ -30,7 +30,7 @@ namespace mon
 		ov::String out_str;
 
 		out_str.AppendFormat(
-			"\n\t[Statistics]\n"
+			"\n\t>> Statistics\n"
 			"\tLast update time : %s, Last sent time : %s\n"
 			"\tBytes in : %s, Bytes out : %s, Concurrent connections : %u, Max connections : %u (%s)\n",
 			ov::Converter::ToString(GetLastUpdatedTime()).CStr(), ov::Converter::ToString(GetLastSentTime()).CStr(),

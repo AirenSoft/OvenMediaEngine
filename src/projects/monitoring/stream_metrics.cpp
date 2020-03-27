@@ -20,7 +20,7 @@ namespace mon
 									"\tElapsed time in response from origin server : %f ms\n",
 									GetOriginRequestTimeMSec(), GetOriginResponseTimeMSec());
 		}
-
+		out_str.Append("\n");
 		out_str.Append(CommonMetrics::GetInfoString());
 
 		return out_str;
