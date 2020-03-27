@@ -58,7 +58,7 @@ namespace ov
 
 		if(result == false)
 		{
-			logte("An error occured: %s", host_port.CStr());
+			logte("An error occurred: %s", host_port.CStr());
 			// OV_ASSERT2(result);
 		}
 	}
@@ -81,7 +81,7 @@ namespace ov
 
 		if(result == false)
 		{
-			logtw("An error occured: %s:%d", hostname, port);
+			logtw("An error occurred: %s:%d", hostname, port);
 			// OV_ASSERT2(result);
 		}
 	}

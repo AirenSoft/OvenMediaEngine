@@ -30,13 +30,10 @@ namespace mon
 		ov::String out_str;
 
 		out_str.AppendFormat(
-			"\tLast update time : %s, tLast sent time : %s\n",
-			ov::Converter::ToString(GetLastUpdatedTime()).CStr(),
-			ov::Converter::ToString(GetLastSentTime()).CStr());
-
-		out_str.AppendFormat(
-			"\t[Total stats]\n"
+			"\n\t[Statistics]\n"
+			"\tLast update time : %s, Last sent time : %s\n"
 			"\tBytes in : %u, Bytes out : %u, Concurrent connections : %u, Max connections : %u\n",
+			ov::Converter::ToString(GetLastUpdatedTime()).CStr(), ov::Converter::ToString(GetLastSentTime()).CStr(),
 			GetTotalBytesIn(), GetTotalBytesOut(), GetTotalConnections(), GetMaxTotalConnections());
 
 		out_str.AppendFormat("\n\t\t[By publisher]\n");

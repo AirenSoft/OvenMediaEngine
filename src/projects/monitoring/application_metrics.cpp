@@ -53,14 +53,22 @@ namespace mon
 
     bool ApplicationMetrics::OnStreamDeleted(const info::Stream &stream)
     {
-        std::unique_lock<std::mutex> lock(_map_guard);
-        if(_streams.find(stream.GetId()) == _streams.end())
+        auto stream_metric = GetStreamMetrics(stream); 
+        if(stream_metric == nullptr)
         {
             return false;
         }
-        _streams.erase(stream.GetId());
 
         logti("Delete StreamMetrics(%s) for monitoring", stream.GetName().CStr());
+
+        // logging StreamMetric
+        stream_metric->ShowInfo();
+
+        std::unique_lock<std::mutex> lock(_map_guard);
+        {
+            _streams.erase(stream.GetId());
+        }
+
         return true;
     }
 
