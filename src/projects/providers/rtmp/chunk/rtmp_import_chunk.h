@@ -36,7 +36,7 @@ public:
 	void Destroy();
 
 private:
-	int64_t CalculateRolledTimestamp(int64_t last_timestamp, int64_t new_timestamp);
+	int64_t CalculateRolledTimestamp(int64_t last_timestamp, int64_t parsed_timestamp);
 
 	bool ProcessChunkHeader(const std::shared_ptr<RtmpChunkHeader> &chunk_header, const std::shared_ptr<const RtmpChunkHeader> &last_chunk_header);
 	bool CalculateForType3Header(const std::shared_ptr<RtmpChunkHeader> &chunk_header);
