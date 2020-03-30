@@ -33,6 +33,11 @@ bool ov_log_set_enable(const char *tag_regex, OVLogLevel level, bool is_enabled)
 	return g_log_internal.SetEnable(tag_regex, level, is_enabled);
 }
 
+bool ov_log_get_enabled(const char *tag, OVLogLevel level)
+{
+	return g_log_internal.IsEnabled(tag, level);
+}
+
 void ov_log_internal(OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, ...)
 {
 	va_list arg_list;

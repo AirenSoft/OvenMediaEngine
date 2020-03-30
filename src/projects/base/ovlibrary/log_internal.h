@@ -118,12 +118,26 @@ namespace ov
 
 			try
 			{
-				auto reg_ex = std::make_shared<std::regex>(tag_regex);
+				// Find exists item
+				auto item = std::find_if(_enable_list.begin(), _enable_list.end(), [tag_regex](const EnableItem &item) -> bool {
+					return item.regex_string == tag_regex;
+				});
 
-				_enable_list.emplace_back((EnableItem){
-					.regex = std::move(reg_ex),
-					.level = level,
-					.is_enabled = is_enabled});
+				if (item == _enable_list.end())
+				{
+					auto reg_ex = std::make_shared<std::regex>(tag_regex);
+
+					_enable_list.emplace_back((EnableItem){
+						.regex = std::move(reg_ex),
+						.level = level,
+						.is_enabled = is_enabled,
+						.regex_string = tag_regex});
+				}
+				else
+				{
+					item->level = level;
+					item->is_enabled = is_enabled;
+				}
 
 				return true;
 			}
@@ -364,6 +378,7 @@ namespace ov
 			std::shared_ptr<std::regex> regex;
 			OVLogLevel level;
 			bool is_enabled;
+			ov::String regex_string;
 		};
 
 		std::vector<EnableItem> _enable_list;
