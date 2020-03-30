@@ -203,6 +203,8 @@ int32_t RtmpChunkStream::OnDataReceived(const std::shared_ptr<const ov::Data> &d
 		return -1;
 	}
 
+	logtp("Trying to parse data\n%s", _remained_data->Dump(_remained_data->GetLength()).CStr());
+
 	while(true)
 	{
 		int32_t process_size = 0;
@@ -229,6 +231,7 @@ int32_t RtmpChunkStream::OnDataReceived(const std::shared_ptr<const ov::Data> &d
 		else if(process_size == 0)
 		{
 			// Need more data
+			logtd("Not enough data");
 			break;
 		}
 
@@ -414,9 +417,13 @@ int32_t RtmpChunkStream::ReceiveChunkPacket(const std::shared_ptr<const ov::Data
 			if (ReceiveChunkMessage() == false)
 			{
 				logte("ReceiveChunkMessage Fail");
+				logtp("Failed to import packet\n%s", current_data->Dump(current_data->GetLength()).CStr());
+
 				return -1LL;
 			}
 		}
+
+		logtp("Imported\n%s", current_data->Dump(import_size).CStr());
 
 		process_size += import_size;
 		current_data = current_data->Subdata(import_size);
