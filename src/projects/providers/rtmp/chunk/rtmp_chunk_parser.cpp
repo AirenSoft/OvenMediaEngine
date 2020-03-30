@@ -72,7 +72,7 @@ off_t RtmpChunkParser::Parse(const std::map<uint32_t, std::shared_ptr<const Rtmp
 				switch (ParseExtendedTimestamp(last_chunk, stream, &parsed_bytes))
 				{
 					case ParseResult::NeedMoreData:
-						return 0LL;
+						return total_parsed_bytes;
 
 					case ParseResult::Completed:
 						_parse_status = ParseStatus::Completed;
