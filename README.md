@@ -4,31 +4,34 @@
 
 ## What is OvenMediaEngine?
 
-OvenMediaEngine \(OME\) is an Open Source, Ultra-Low Latency Streaming Server. OME receives video via RTMP from live encoders such as OBS, XSplit and transmits it on WebRTC. So, Ultra-Low Latency Streaming from OME can work seamlessly in your browser without plug-ins. Also, OME provides [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), the HTML5 standard web player.
+OvenMediaEngine \(OME\) is an open source, streaming server with sub-second latency. OME receives video via RTMP or other protocols from live encoders such as OBS, XSplit and transmits it on WebRTC and Low-Latency DASH. So, sub-second latency streaming from OME can work seamlessly in your browser without plug-ins. Also, OME provides [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), the HTML5 standard web player.
 
-Our goal is to make it easier for you to build a stable broadcasting/streaming service with Ultra-Low Latency.
+Our goal is to make it easier for you to build a stable broadcasting/streaming service with sub-second Latency.
 
 ## Features
 
 * RTMP Input
-* WebRTC/HLS/MPEG-DASH Streaming
-* Embedded Live Transcoder \(VP8, H.264, Opus, AAC\)
+* WebRTC sub-second streaming 
+  * ICE \(Interactive Connectivity Establishment\)
+  * DTLS \(Datagram Transport Layer Security\)
+  * SRTP \(Secure Real-time Transport Protocol\)
+  * ULPFEC \(Forward Error Correction\) with VP8, H.264
+  * In-band FEC \(Forward Error Correction\) with Opus
+* Low latency MPEG-DASH(Chunked CAMF) streaming
+* Legacy HLS/MPEG-DASH Streaming
+* Embedded Live Transcoder \(VP8, H.264, Opus, AAC, Bypass\)
 * Embedded WebRTC Signalling Server \(WebSocket based\)
-* ICE \(Interactive Connectivity Establishment\)
-* DTLS \(Datagram Transport Layer Security\)
-* SRTP \(Secure Real-time Transport Protocol\)
-* ULPFEC \(Forward Error Correction\) with VP8, H.264
-* In-band FEC \(Forward Error Correction\) with Opus
-* P2P Delivery \(Preview version\)
-* High Availability
-* Clustering
-  * Origin-Edge structure
+* Origin-Edge structure
+* Monitoring
+* Experiment
+  * P2P Traffic Distribution (Only WebRTC)
+  * RTSP Pull, MPEG-TS/udp Push Input
 
 ## Supported Platforms
 
 We have tested OME on the platforms listed below. However, we think it can work with other Linux packages as well:
 
-* Docker
+* Docker (https://hub.docker.com/r/airensoft/ovenmediaengine)
 * Ubuntu 18
 * CentOS 7
 * Fedora 28
@@ -38,7 +41,7 @@ We have tested OME on the platforms listed below. However, we think it can work 
 ```
 docker run -d \
 -e OME_VIDEO_BITRATE=2000000 -e OME_VIDEO_WIDTH=1280 -e OME_VIDEO_HEIGHT=720 \
--p 1935:1935 -p 3333:3333 -p 80:80 -p 9000:9000/udp -p 10000-10005:10000-10005/udp \
+-p 1935:1935 -p 3333:3333 -p 8080:8080 -p 9000:9000/udp -p 10000-10005:10000-10005/udp \
 airensoft/ovenmediaengine:latest
 ```
 Please read [Getting Started](https://airensoft.gitbook.io/ovenmediaengine/getting-started) chapter in tutorials.
