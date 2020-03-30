@@ -30,8 +30,6 @@ int RtmpImportChunk::Import(const std::shared_ptr<const ov::Data> &data, bool *i
 
 	ov::ByteStream stream(data.get());
 
-	// logtw("Trying to parse data\n%s", data->Dump(data->GetLength()).CStr());
-
 	if (_parser.IsParseCompleted() == false)
 	{
 		// TODO(dimiden): Need to refactor because referencing _chunk_map in _parser isn't a good idea
@@ -129,9 +127,11 @@ int RtmpImportChunk::Import(const std::shared_ptr<const ov::Data> &data, bool *i
 	return parsed_bytes + last_chunk_header->expected_payload_size;
 }
 
-int64_t RtmpImportChunk::CalculateRolledTimestamp(int64_t last_timestamp, int64_t new_timestamp)
+int64_t RtmpImportChunk::CalculateRolledTimestamp(int64_t last_timestamp, int64_t parsed_timestamp)
 {
-	if (last_timestamp > new_timestamp)
+	int64_t new_timestamp = parsed_timestamp;
+
+	if (last_timestamp > parsed_timestamp)
 	{
 		// RTMP specification
 		//
@@ -158,10 +158,15 @@ int64_t RtmpImportChunk::CalculateRolledTimestamp(int64_t last_timestamp, int64_
 		// integer arithmetic.
 
 		// Check if the timestamp is an adjacent timestamp
-		if (new_timestamp < ((1LL << 31) - 1))
+		if (parsed_timestamp < ((1LL << 31) - 1))
 		{
 			// Adjacent timestamp
-			return last_timestamp + (1LL << 31) - (last_timestamp % (1LL << 31)) + new_timestamp;
+			new_timestamp = last_timestamp + (1LL << 31) - (last_timestamp % (1LL << 31)) + parsed_timestamp;
+
+			logtd("Timestamp is rolled: last TS: %lld, parsed: %lld, new: %lld",
+				  last_timestamp,
+				  parsed_timestamp,
+				  new_timestamp);
 		}
 		else
 		{
