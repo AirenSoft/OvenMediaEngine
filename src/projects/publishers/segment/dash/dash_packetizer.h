@@ -80,6 +80,7 @@ protected:
 	int _avc_nal_header_size = 0;
 	// Date & Time (YYYY-MM-DDTHH:II:SS.sssZ)
 	ov::String _start_time;
+	int64_t _start_time_ms = -1LL;
 	std::string _pixel_aspect_ratio;
 	double _mpd_min_buffer_time;
 
@@ -105,12 +106,14 @@ protected:
 	uint32_t _audio_segment_count = 0U;
 
 	// Unit: milliseconds
-	time_t _video_start_time = 0;
-	time_t _audio_start_time = 0;
+	int64_t _video_start_time = -1LL;
+	int64_t _audio_start_time = -1LL;
 
 	std::vector<std::shared_ptr<const SampleData>> _video_datas;
+	int64_t _first_video_pts = -1LL;
 	int64_t _last_video_pts = -1LL;
 	std::vector<std::shared_ptr<const SampleData>> _audio_datas;
+	int64_t _first_audio_pts = -1LL;
 	int64_t _last_audio_pts = -1LL;
 
 	double _duration_margin;
