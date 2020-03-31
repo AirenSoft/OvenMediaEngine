@@ -68,6 +68,10 @@ HttpConnection HlsStreamServer::ProcessPlayListRequest(const std::shared_ptr<Htt
 
 	// Set HTTP header
 	response->SetHeader("Content-Type", "application/vnd.apple.mpegurl");
+	response->SetHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+	response->SetHeader("Pragma", "no-cache");
+	response->SetHeader("Expires", "0");
+
 	response->AppendString(play_list);
 	auto sent_bytes = response->Response();
 
