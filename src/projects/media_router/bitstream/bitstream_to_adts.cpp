@@ -65,10 +65,7 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 
 	uint8_t aac_packet_type = pbuf[1];
 
-#if 1
-	logtd("sound_type:%d, sound_size:%d, sound_rate:%d, audio_codec_id:%d, aac_packet_type:%d",
-	      sound_type, sound_size, sound_rate, audio_codec_id, aac_packet_type);
-#endif
+
 
 	if(audio_codec_id != AudioCodecIdAAC)
 	{
@@ -86,6 +83,11 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 
 		audioObjectType = (audioObjectType >> 3) & 0x1f;
 		aac_object = (AacObjectType)audioObjectType;
+
+#if 1
+		logtd("sound_type:%d, sound_size:%d, sound_rate:%d, audio_codec_id:%d, aac_packet_type:%d",
+	      sound_type, sound_size, sound_rate, audio_codec_id, aac_packet_type);
+#endif
 
 		logtd("audio object type = %d, aac_sample_rate = %d, aac_channels = %d", audioObjectType, aac_sample_rate, aac_channels);
 
