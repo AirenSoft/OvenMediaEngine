@@ -7,14 +7,19 @@
 //
 //==============================================================================
 #include "cmaf_packetizer.h"
+
 #include "cmaf_private.h"
 // TODO(dimiden): Merge DASH and CMAF module later
-#include "../dash/dash_define.h"
-
 #include <algorithm>
 #include <iomanip>
 #include <numeric>
 #include <sstream>
+
+#include "../dash/dash_define.h"
+
+// Unit: ms
+#define CMAF_JITTER_THRESHOLD 2000
+#define CMAF_JITTER_CORRECTION_PER_ONCE 1000
 
 CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &stream_name,
 							   PacketizerStreamType stream_type,
@@ -83,6 +88,11 @@ bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &fram
 		}
 
 		_last_video_pts = data->timestamp;
+
+		if (_first_video_pts == -1LL)
+		{
+			_first_video_pts = _last_video_pts;
+		}
 	});
 }
 
@@ -98,6 +108,11 @@ bool CmafPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &fram
 		}
 
 		_last_audio_pts = data->timestamp;
+
+		if (_first_audio_pts == -1LL)
+		{
+			_first_audio_pts = _last_audio_pts;
+		}
 	});
 }
 
@@ -169,7 +184,7 @@ bool CmafPacketizer::UpdatePlayList()
 {
 	std::ostringstream play_list_stream;
 	double time_shift_buffer_depth = 6;
-	double minimumUpdatePeriod = 30;
+	double minimumUpdatePeriod = _segment_duration;
 
 	if (IsReadyForStreaming() == false)
 	{
@@ -177,6 +192,68 @@ bool CmafPacketizer::UpdatePlayList()
 	}
 
 	ov::String publishTime = MakeUtcSecond(::time(nullptr));
+
+	// Total elapsed time since streaming started
+	int64_t current_time = GetTimestampInMs();
+	int64_t elapsed_time = current_time - _start_time_ms;
+
+	int64_t video_delta = (_last_video_pts >= 0LL) ? (static_cast<int64_t>((_last_video_pts - _first_video_pts) * _video_track->GetTimeBase().GetExpr() * 1000.0)) : -1LL;
+	int64_t audio_delta = (_last_audio_pts >= 0LL) ? (static_cast<int64_t>((_last_audio_pts - _first_audio_pts) * _audio_track->GetTimeBase().GetExpr() * 1000.0)) : -1LL;
+	int64_t stream_delta = std::min(video_delta, audio_delta);
+
+	int64_t jitter = elapsed_time - stream_delta - _jitter_correction;
+	int64_t new_jitter_correction = _jitter_correction;
+
+	if (jitter > CMAF_JITTER_THRESHOLD)
+	{
+		new_jitter_correction += CMAF_JITTER_CORRECTION_PER_ONCE;
+	}
+	else if ((jitter < (CMAF_JITTER_THRESHOLD - CMAF_JITTER_CORRECTION_PER_ONCE)) && (_jitter_correction > 0))
+	{
+		new_jitter_correction -= CMAF_JITTER_CORRECTION_PER_ONCE;
+	}
+
+	if (_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update())
+	{
+		logts(
+			"[%s/%s] Current jitter correction\n"
+			"  - Elapsed: %lldms (current: %lldms, start: %lldms)\n"
+			"  - Jitter: %lldms (with correction: %lldms), correction: %lldms => %lldms (%lldms)\n"
+			"  - Stream delta: %lldms\n"
+			"    - Video: last PTS: %lldms, start: %lldms, delta: %lldms\n"
+			"    - Audio: last PTS: %lldms, start: %lldms, delta: %lldms",
+			_app_name.CStr(), _stream_name.CStr(),
+			elapsed_time, current_time, _start_time_ms,
+			(elapsed_time - stream_delta), jitter, _jitter_correction, new_jitter_correction, (_jitter_correction - new_jitter_correction),
+			stream_delta,
+			_last_video_pts, _first_video_pts, video_delta,
+			_last_audio_pts, _first_audio_pts, audio_delta);
+
+		if ((_last_video_pts >= 0LL) && (_last_audio_pts >= 0LL))
+		{
+			logts("[%s/%s] LLDASH A-V Sync: %lld (A: %lld, V: %lld)",
+				  _app_name.CStr(), _stream_name.CStr(),
+				  audio_delta - video_delta, audio_delta, video_delta);
+		}
+	}
+
+	if (new_jitter_correction != _jitter_correction)
+	{
+		// Update start time
+		ov::String new_start_time = MakeUtcMillisecond(_start_time_ms + new_jitter_correction);
+
+		if (new_jitter_correction > _jitter_correction)
+		{
+			logte("Because the jitter is too high, playback may not be possible (%s => %s)", _start_time.CStr(), new_start_time.CStr());
+		}
+		else
+		{
+			logtw("Jitter has been reduced, but playback may not be possible (%s => %s)", _start_time.CStr(), new_start_time.CStr());
+		}
+
+		_jitter_correction = new_jitter_correction;
+		_start_time = std::move(new_start_time);
+	}
 
 	logtd("Trying to update playlist for CMAF with availabilityStartTime: %s, publishTime: %s", _start_time.CStr(), publishTime.CStr());
 
@@ -248,25 +325,12 @@ bool CmafPacketizer::UpdatePlayList()
 	}
 
 	play_list_stream << "\t</Period>\n"
-					//  << "\t<UTCTiming schemeIdUri=\"urn:mpeg:dash:utc:direct:2014\" value=\"%s\"/>\n"
+					 //  << "\t<UTCTiming schemeIdUri=\"urn:mpeg:dash:utc:direct:2014\" value=\"%s\"/>\n"
 					 << "</MPD>\n";
 
 	ov::String play_list = play_list_stream.str().c_str();
 
 	SetPlayList(play_list);
-
-	if(_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update())
-	{
-		if ((_last_video_pts >= 0LL) && (_last_audio_pts >= 0LL))
-		{
-			int64_t video_pts = static_cast<int64_t>(_last_video_pts * _video_track->GetTimeBase().GetExpr() * 1000.0);
-			int64_t audio_pts = static_cast<int64_t>(_last_audio_pts * _audio_track->GetTimeBase().GetExpr() * 1000.0);
-
-			logts("[%s/%s] LLDASH A-V Sync: %lld (A: %lld, V: %lld)",
-				_app_name.CStr(), _stream_name.CStr(),
-				audio_pts - video_pts, audio_pts, video_pts);
-		}
-	}
 
 	return true;
 }

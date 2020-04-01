@@ -9,6 +9,7 @@
 #pragma once
 
 #include <publishers/segment/segment_stream/packetizer/cmaf_chunk_writer.h>
+
 #include "../dash/dash_packetizer.h"
 
 class ICmafChunkedTransfer
@@ -56,6 +57,9 @@ public:
 	bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame) override;
 
 protected:
+	//--------------------------------------------------------------------
+	// Override DashPacketizer
+	//--------------------------------------------------------------------
 	ov::String GetFileName(int64_t start_timestamp, common::MediaType media_type) const override;
 
 	bool UpdatePlayList() override;
@@ -68,4 +72,6 @@ private:
 
 	bool _is_first_video_frame = true;
 	bool _is_first_audio_frame = true;
+
+	int64_t _jitter_correction = 0LL;
 };

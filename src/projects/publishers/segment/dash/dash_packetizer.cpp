@@ -348,7 +348,7 @@ bool DashPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 	// Check whether the incoming frame is a key frame
 	if (frame->type == PacketizerFrameType::VideoKeyFrame)
 	{
-		if (_video_start_time == 0LL)
+		if (_video_start_time == -1LL)
 		{
 			_video_start_time = GetCurrentMilliseconds() - (current_segment_duration * _video_track->GetTimeBase().GetExpr() * 1000.0);
 		}
@@ -376,7 +376,7 @@ bool DashPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 		// So append it to the current segment
 	}
 
-	if (_video_start_time > 0LL)
+	if (_video_start_time >= 0LL)
 	{
 		if (data_callback != nullptr)
 		{
@@ -395,6 +395,11 @@ bool DashPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &fram
 	return AppendVideoFrameInternal(frame, current_segment_duration, [frame, this](const std::shared_ptr<const SampleData> &data, bool new_segment_written) {
 		_video_datas.push_back(data);
 		_last_video_pts = frame->timestamp;
+
+		if(_first_video_pts == -1LL)
+		{
+			_first_video_pts = _last_video_pts;
+		}
 	});
 }
 
@@ -482,7 +487,7 @@ bool DashPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameDat
 		return false;
 	}
 
-	if (_audio_start_time == 0LL)
+	if (_audio_start_time == -1LL)
 	{
 		_audio_start_time = GetCurrentMilliseconds() - (current_segment_duration * _audio_track->GetTimeBase().GetExpr() * 1000.0);
 	}
@@ -511,7 +516,7 @@ bool DashPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameDat
 		UpdatePlayList();
 	}
 
-	if (_audio_start_time > 0LL)
+	if (_audio_start_time >= 0LL)
 	{
 		if (data_callback != nullptr)
 		{
@@ -530,6 +535,11 @@ bool DashPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &fram
 	return AppendAudioFrameInternal(frame, current_segment_duration, [frame, this](const std::shared_ptr<const SampleData> &data, bool new_segment_written) {
 		_audio_datas.push_back(data);
 		_last_audio_pts = frame->timestamp;
+
+		if (_first_audio_pts == -1LL)
+		{
+			_first_audio_pts = _last_audio_pts;
+		}
 	});
 }
 
@@ -864,7 +874,8 @@ bool DashPacketizer::SetSegmentData(ov::String file_name, uint64_t duration, int
 
 void DashPacketizer::SetReadyForStreaming() noexcept
 {
-	_start_time = MakeUtcMillisecond(std::max(_video_start_time, _audio_start_time));
+	_start_time_ms = std::max(_video_start_time, _audio_start_time);
+	_start_time = MakeUtcMillisecond(_start_time_ms);
 
 	Packetizer::SetReadyForStreaming();
 }

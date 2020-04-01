@@ -63,6 +63,10 @@ HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<Ht
 
 	// Set HTTP header
 	response->SetHeader("Content-Type", "application/dash+xml");
+	response->SetHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+	response->SetHeader("Pragma", "no-cache");
+	response->SetHeader("Expires", "0");
+		
 	response->AppendString(play_list);
 	response->Response();
 
