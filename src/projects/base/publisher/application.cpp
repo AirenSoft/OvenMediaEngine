@@ -23,7 +23,7 @@ namespace pub
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&Application::WorkerThread, this);
 
-		logti("[%s] %s application has been started", GetName().CStr(), GetApplicationTypeName());
+		logti("%s has started [%s] application", GetApplicationTypeName(), GetName().CStr());
 
 		return true;
 	}
@@ -38,7 +38,7 @@ namespace pub
 			_worker_thread.join();
 		}
 
-		logti("[%s] %s application has been stopped", GetName().CStr(), GetApplicationTypeName());
+		logti("%s has started [%s] application", GetApplicationTypeName(), GetName().CStr());
 
 		return true;
 	}

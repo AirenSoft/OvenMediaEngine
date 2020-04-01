@@ -72,6 +72,22 @@ namespace pvd
 			return false;
 		}
 
+		// Check configuration
+		auto cfg_provider_list = app_info.GetConfig().GetProviders().GetProviderList();
+		for(const auto &cfg_provider : cfg_provider_list)
+		{
+			if(cfg_provider->GetType() == GetProviderType())
+			{
+				if(!cfg_provider->IsParsed())
+				{
+					// This provider is diabled
+					logti("%s provider is disabled in %s application, so it was not created", 
+							ov::Converter::ToString(GetProviderType()).CStr(), app_info.GetName().CStr());
+					return true;
+				}
+			}
+		}
+
 		// Let child create application
 		auto application = OnCreateProviderApplication(app_info);
 		if(application == nullptr)

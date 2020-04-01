@@ -112,6 +112,23 @@ namespace ov
 			}
 		}
 
+		static ov::String ToString(const ProviderType &type)
+		{
+			switch(type)
+			{
+				case ProviderType::Rtmp:
+					return "RTMP";
+				case ProviderType::Rtsp:
+					return "RTSP";
+				case ProviderType::RtspPull:
+					return "RTSP Pull";
+				case ProviderType::Ovt:
+					return "OVT";
+				case ProviderType::Unknown:
+				default:
+					return "Unknown";
+			}
+		}
 
 		static ov::String ToString(const PublisherType &type)
 		{
@@ -126,7 +143,7 @@ namespace ov
 				case PublisherType::Dash:
 					return "DASH";
 				case PublisherType::LlDash:
-					return "LL-DASH";
+					return "LLDASH";
 				case PublisherType::Ovt:
 					return "Ovt";
 				case PublisherType::Unknown:

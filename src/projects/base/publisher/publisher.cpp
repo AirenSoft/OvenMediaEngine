@@ -40,6 +40,23 @@ namespace pub
 	// Create Application
 	bool Publisher::OnCreateApplication(const info::Application &app_info)
 	{
+		// Check configuration
+		auto cfg_publisher_list = app_info.GetConfig().GetPublishers().GetPublisherList();
+		for(const auto &cfg_publisher : cfg_publisher_list)
+		{
+			if(cfg_publisher->GetType() == GetPublisherType())
+			{
+				if(!cfg_publisher->IsParsed())
+				{
+					// This provider is diabled
+					logti("%s publisher is disabled in %s application, so it was not created", 
+							ov::Converter::ToString(GetPublisherType()).CStr(), app_info.GetName().CStr());
+					return true;
+				}
+			}
+		}
+
+
 		auto application = OnCreatePublisherApplication(app_info);
 		if (application == nullptr)
 		{
