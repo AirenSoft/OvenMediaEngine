@@ -3,9 +3,8 @@
 
 namespace pub
 {
-	Publisher::Publisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+	Publisher::Publisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 		: _server_config(server_config),
-		  _host_info(host_info),
 		  _router(router)
 	{
 	}
@@ -36,11 +35,6 @@ namespace pub
 	const cfg::Server &Publisher::GetServerConfig() const
 	{
 		return _server_config;
-	}
-
-	const info::Host &Publisher::GetHostInfo() const
-	{
-		return _host_info;
 	}
 
 	// Create Application

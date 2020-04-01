@@ -62,9 +62,7 @@ static std::shared_ptr<Thttp_server> CreateHttpServerIfNeeded(std::map<int, std:
 bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 								const ov::SocketAddress *tls_address,
 								std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-								int thread_count,
-								const std::shared_ptr<Certificate> &certificate,
-								const std::shared_ptr<Certificate> &chain_certificate)
+								int thread_count)
 {
 	if ((_http_server != nullptr) || (_https_server != nullptr))
 	{
@@ -100,26 +98,16 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 	// Initialize HTTPS server
 	if (tls_address != nullptr)
 	{
-		// TLS is enabled
-		if (certificate != nullptr)
+		_https_server = CreateHttpServerIfNeeded<HttpsServer>(http_server_manager, *tls_address, &need_to_start_https_server);
+
+		if (_https_server != nullptr)
 		{
-			_https_server = CreateHttpServerIfNeeded<HttpsServer>(http_server_manager, *tls_address, &need_to_start_https_server);
-
-			if (_https_server != nullptr)
-			{
-				_https_server->SetLocalCertificate(certificate);
-				_https_server->SetChainCertificate(chain_certificate);
-
-				_https_server->AddInterceptor(segment_stream_interceptor);
-			}
-			else
-			{
-				result = false;
-			}
+			auto vhost_list = Orchestrator::GetInstance()->GetVirtualHostList();
+			_https_server->SetVirtualHostList(vhost_list);
+			_https_server->AddInterceptor(segment_stream_interceptor);
 		}
 		else
 		{
-			logte("TLS is enabled, but certificate is invalid");
 			result = false;
 		}
 	}

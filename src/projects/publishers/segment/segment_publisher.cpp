@@ -14,8 +14,8 @@
 #include <orchestrator/orchestrator.h>
 #include <publishers/segment/segment_stream/segment_stream.h>
 
-SegmentPublisher::SegmentPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
-	: Publisher(server_config, host_info, router)
+SegmentPublisher::SegmentPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	: Publisher(server_config, router)
 {
 }
 
@@ -28,7 +28,6 @@ SegmentPublisher::~SegmentPublisher()
 bool SegmentPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager, const cfg::TlsPort &port_config, const std::shared_ptr<SegmentStreamServer> &stream_server)
 {
 	auto server_config = GetServerConfig();
-	auto host_info = GetHostInfo();
 	auto ip = server_config.GetIp();
 
 	auto port = port_config.GetPort();
@@ -48,8 +47,7 @@ bool SegmentPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_se
 
 	// Start the DASH Server
 	if (stream_server->Start(has_port ? &address : nullptr, has_tls_port ? &tls_address : nullptr,
-							 http_server_manager, DEFAULT_SEGMENT_WORKER_THREAD_COUNT,
-							 host_info.GetCertificate(), host_info.GetChainCertificate()) == false)
+							 http_server_manager, DEFAULT_SEGMENT_WORKER_THREAD_COUNT) == false)
 	{
 		logte("An error occurred while start %s Publisher", GetPublisherName());
 		return false;
@@ -254,25 +252,26 @@ void SegmentPublisher::RequestTableUpdateThread()
 
 				rtsp_live_app_metrics = nullptr;
 				rtsp_play_app_metrics = nullptr;
-
-				rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName(GetHostInfo().GetName(), "rtsp_live")));
+				
+				// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
+				rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
 				if (rtsp_live_app_info != nullptr)
 				{
 					rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
 				}
-				rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName(GetHostInfo().GetName(), "rtsp_playback")));
+				rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
 				if (rtsp_play_app_info != nullptr)
 				{
 					rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);
 				}
 
 				stat_log(STAT_LOG_HLS_EDGE_VIEWERS, "%s,%s,%s,%s,,,%u,%u",
-						 ov::Clock::Now().CStr(),
-						 "HLS.SS",
-						 "CONN_COUNT",
-						 "INFO",
-						 rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
-						 rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0);
+						ov::Clock::Now().CStr(),
+						"HLS.SS",
+						"CONN_COUNT",
+						"INFO",
+						rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
+						rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0);
 
 				_last_logging_time = std::chrono::system_clock::now();
 			}
@@ -311,28 +310,30 @@ void SegmentPublisher::RequestTableUpdateThread()
 					rtsp_live_app_metrics = nullptr;
 					rtsp_play_app_metrics = nullptr;
 
-					rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName(GetHostInfo().GetName(), "rtsp_live")));
+					// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
+					rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
 					if (rtsp_live_app_info != nullptr)
 					{
 						rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
 					}
-					rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName(GetHostInfo().GetName(), "rtsp_playback")));
+					rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
 					if (rtsp_play_app_info != nullptr)
 					{
 						rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);
 					}
 
 					stat_log(STAT_LOG_HLS_EDGE_SESSION, "%s,%s,%s,%s,,,%s:%d,%s:%d,%s,%s",
-							 ov::Clock::Now().CStr(),
-							 "HLS.SS",
-							 "SESSION",
-							 "INFO",
-							 "Live",
-							 rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
-							 "Playback",
-							 rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
-							 request_info->GetStreamInfo().GetName().CStr(),
-							 playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : request_info->GetIpAddress().CStr());
+							ov::Clock::Now().CStr(),
+							"HLS.SS",
+							"SESSION",
+							"INFO",
+							"Live",
+							rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
+							"Playback",
+							rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
+							request_info->GetStreamInfo().GetName().CStr(),
+							playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : request_info->GetIpAddress().CStr());
+					
 				}
 
 				item = _segment_request_table.erase(item);
@@ -469,28 +470,30 @@ void SegmentPublisher::UpdateSegmentRequestInfo(const SegmentRequestInfo &info)
 			rtsp_live_app_metrics = nullptr;
 			rtsp_play_app_metrics = nullptr;
 
-			rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName(GetHostInfo().GetName(), "rtsp_live")));
+			// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
+			rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
 			if (rtsp_live_app_info != nullptr)
 			{
 				rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
 			}
-			rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName(GetHostInfo().GetName(), "rtsp_playback")));
+			rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
 			if (rtsp_play_app_info != nullptr)
 			{
 				rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);
 			}
 
 			stat_log(STAT_LOG_HLS_EDGE_SESSION, "%s,%s,%s,%s,,,%s:%d,%s:%d,%s,%s",
-					 ov::Clock::Now().CStr(),
-					 "HLS.SS",
-					 "SESSION",
-					 "INFO",
-					 "Live",
-					 rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
-					 "Playback",
-					 rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
-					 info.GetStreamInfo().GetName().CStr(),
-					 playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : info.GetIpAddress().CStr());
+					ov::Clock::Now().CStr(),
+					"HLS.SS",
+					"SESSION",
+					"INFO",
+					"Live",
+					rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
+					"Playback",
+					rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
+					info.GetStreamInfo().GetName().CStr(),
+					playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : info.GetIpAddress().CStr());
+			
 		}
 	}
 

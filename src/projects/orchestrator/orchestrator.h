@@ -50,83 +50,23 @@ public:
 		NotExists
 	};
 
-	static Orchestrator *GetInstance()
+	enum class ItemState
 	{
-		static Orchestrator orchestrator;
+		Unknown,
+		// This item is applied to OriginMap
+		Applied,
+		// Need to check if this item has changed
+		NeedToCheck,
+		// This item is applied, and not changed
+		NotChanged,
+		// This item is not applied, and will be applied to OriginMap/OriginList
+		New,
+		// This item is applied, but need to change some values
+		Changed,
+		// This item is applied, and will be deleted from OriginMap/OriginList
+		Delete
+	};
 
-		return &orchestrator;
-	}
-
-	bool ApplyOriginMap(const std::vector<info::Host> &host_list);
-
-	/// Register the module
-	///
-	/// @param module Module to register
-	///
-	/// @return If the module is registered or passed a different type from the previously registered type, false is returned.
-	/// Otherwise, true is returned.
-	bool RegisterModule(const std::shared_ptr<OrchestratorModuleInterface> &module);
-
-	/// Unregister the module
-	///
-	/// @param module Module to unregister
-	///
-	/// @return If the module is not already registered, false is returned. Otherwise, true is returned.
-	bool UnregisterModule(const std::shared_ptr<OrchestratorModuleInterface> &module);
-
-	ov::String GetVhostNameFromDomain(const ov::String &domain_name);
-
-	/// Generate an application name for vhost/app
-	///
-	/// @param vhost_name A name of VirtualHost
-	/// @param app_name An application name
-	///
-	/// @return A new application name corresponding to vhost/app
-	ov::String ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name);
-
-	///  Generate an application name for domain/app
-	///
-	/// @param domain_name A name of the domain
-	/// @param app_name An application name
-	///
-	/// @return A new application name corresponding to domain/app
-	ov::String ResolveApplicationNameFromDomain(const ov::String &domain_name, const ov::String &app_name);
-
-	bool GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list);
-
-	/// Create an application and notify the modules
-	///
-	/// @param vhost_name A name of VirtualHost
-	/// @param app_config Application configuration to create
-	///
-	/// @return Creation result
-	///
-	/// @note Automatically DeleteApplication() when application creation fails
-	Result CreateApplication(const info::Host &vhost_info, const cfg::Application &app_config);
-	/// Delete the application and notify the modules
-	///
-	/// @param app_info Application information to delete
-	///
-	/// @return
-	///
-	/// @note If an error occurs during deletion, do not recreate the application
-	Result DeleteApplication(const info::Application &app_info);
-
-	const info::Application &GetApplication(const ov::String &vhost_app_name) const;
-
-	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, const ov::String &url, off_t offset);
-	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, const ov::String &url)
-	{
-		return RequestPullStream(vhost_app_name, stream_name, url, 0);
-	}
-
-	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset);
-	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name)
-	{
-		return RequestPullStream(vhost_app_name, stream_name, 0);
-	}
-
-protected:
 	struct Module
 	{
 		Module(OrchestratorModuleType type, const std::shared_ptr<OrchestratorModuleInterface> &module)
@@ -158,72 +98,6 @@ protected:
 		ov::String full_name;
 
 		bool is_valid = false;
-	};
-
-	struct Application : public MediaRouteApplicationObserver
-	{
-		Application(Orchestrator *orchestrator, const info::Application &app_info)
-			: orchestrator(orchestrator),
-			  app_info(app_info)
-		{
-		}
-
-		//--------------------------------------------------------------------
-		// Implementation of MediaRouteApplicationObserver
-		//--------------------------------------------------------------------
-		// Temporarily used until Orchestrator takes stream management
-		bool OnCreateStream(const std::shared_ptr<info::Stream> &info) override
-		{
-			return orchestrator->OnCreateStream(app_info, info);
-		}
-
-		bool OnDeleteStream(const std::shared_ptr<info::Stream> &info) override
-		{
-			return orchestrator->OnDeleteStream(app_info, info);
-		}
-
-		bool OnSendVideoFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
-		{
-			// Ignore packets
-			return true;
-		}
-
-		bool OnSendAudioFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
-		{
-			// Ignore packets
-			return true;
-		}
-
-		bool OnSendFrame(const std::shared_ptr<info::Stream> &info, const std::shared_ptr<MediaPacket> &packet) override
-		{
-			// Ignore packets
-			return true;
-		}
-
-		ObserverType GetObserverType() override
-		{
-			return ObserverType::Orchestrator;
-		}
-
-		Orchestrator *orchestrator = nullptr;
-		info::Application app_info;
-	};
-
-	enum class ItemState
-	{
-		Unknown,
-		// This item is applied to OriginMap
-		Applied,
-		// Need to check if this item has changed
-		NeedToCheck,
-		// This item is applied, and not changed
-		NotChanged,
-		// This item is not applied, and will be applied to OriginMap/OriginList
-		New,
-		// This item is applied, but need to change some values
-		Changed,
-		// This item is applied, and will be deleted from OriginMap/OriginList
-		Delete
 	};
 
 	struct Origin
@@ -320,6 +194,55 @@ protected:
 		ItemState state = ItemState::Unknown;
 	};
 
+	struct Application : public MediaRouteApplicationObserver
+	{
+		Application(Orchestrator *orchestrator, const info::Application &app_info)
+			: orchestrator(orchestrator),
+			  app_info(app_info)
+		{
+		}
+
+		//--------------------------------------------------------------------
+		// Implementation of MediaRouteApplicationObserver
+		//--------------------------------------------------------------------
+		// Temporarily used until Orchestrator takes stream management
+		bool OnCreateStream(const std::shared_ptr<info::Stream> &info) override
+		{
+			return orchestrator->OnCreateStream(app_info, info);
+		}
+
+		bool OnDeleteStream(const std::shared_ptr<info::Stream> &info) override
+		{
+			return orchestrator->OnDeleteStream(app_info, info);
+		}
+
+		bool OnSendVideoFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
+		{
+			// Ignore packets
+			return true;
+		}
+
+		bool OnSendAudioFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
+		{
+			// Ignore packets
+			return true;
+		}
+
+		bool OnSendFrame(const std::shared_ptr<info::Stream> &info, const std::shared_ptr<MediaPacket> &packet) override
+		{
+			// Ignore packets
+			return true;
+		}
+
+		ObserverType GetObserverType() override
+		{
+			return ObserverType::Orchestrator;
+		}
+
+		Orchestrator *orchestrator = nullptr;
+		info::Application app_info;
+	};
+
 	struct VirtualHost
 	{
 		VirtualHost(const info::Host &host_info)
@@ -394,6 +317,85 @@ protected:
 		ItemState state = ItemState::Unknown;
 	};
 
+	static Orchestrator *GetInstance()
+	{
+		static Orchestrator orchestrator;
+
+		return &orchestrator;
+	}
+
+	bool ApplyOriginMap(const std::vector<info::Host> &host_list);
+
+	const std::vector<std::shared_ptr<Orchestrator::VirtualHost>>& GetVirtualHostList();
+
+	/// Register the module
+	///
+	/// @param module Module to register
+	///
+	/// @return If the module is registered or passed a different type from the previously registered type, false is returned.
+	/// Otherwise, true is returned.
+	bool RegisterModule(const std::shared_ptr<OrchestratorModuleInterface> &module);
+
+	/// Unregister the module
+	///
+	/// @param module Module to unregister
+	///
+	/// @return If the module is not already registered, false is returned. Otherwise, true is returned.
+	bool UnregisterModule(const std::shared_ptr<OrchestratorModuleInterface> &module);
+
+	ov::String GetVhostNameFromDomain(const ov::String &domain_name);
+
+	/// Generate an application name for vhost/app
+	///
+	/// @param vhost_name A name of VirtualHost
+	/// @param app_name An application name
+	///
+	/// @return A new application name corresponding to vhost/app
+	ov::String ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name);
+
+	///  Generate an application name for domain/app
+	///
+	/// @param domain_name A name of the domain
+	/// @param app_name An application name
+	///
+	/// @return A new application name corresponding to domain/app
+	ov::String ResolveApplicationNameFromDomain(const ov::String &domain_name, const ov::String &app_name);
+
+	bool GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list);
+
+	/// Create an application and notify the modules
+	///
+	/// @param vhost_name A name of VirtualHost
+	/// @param app_config Application configuration to create
+	///
+	/// @return Creation result
+	///
+	/// @note Automatically DeleteApplication() when application creation fails
+	Result CreateApplication(const info::Host &vhost_info, const cfg::Application &app_config);
+	/// Delete the application and notify the modules
+	///
+	/// @param app_info Application information to delete
+	///
+	/// @return
+	///
+	/// @note If an error occurs during deletion, do not recreate the application
+	Result DeleteApplication(const info::Application &app_info);
+
+	const info::Application &GetApplication(const ov::String &vhost_app_name) const;
+
+	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, const ov::String &url, off_t offset);
+	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, const ov::String &url)
+	{
+		return RequestPullStream(vhost_app_name, stream_name, url, 0);
+	}
+
+	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset);
+	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name)
+	{
+		return RequestPullStream(vhost_app_name, stream_name, 0);
+	}
+
+protected:
 	Orchestrator() = default;
 
 	bool ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host);

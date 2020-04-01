@@ -17,17 +17,15 @@
 
 std::shared_ptr<HlsPublisher> HlsPublisher::Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
 												   const cfg::Server &server_config,
-												   const info::Host &host_info,
 												   const std::shared_ptr<MediaRouteInterface> &router)
 {
-	return SegmentPublisher::Create<HlsPublisher>(http_server_manager, server_config, host_info, router);
+	return SegmentPublisher::Create<HlsPublisher>(http_server_manager, server_config, router);
 }
 
 HlsPublisher::HlsPublisher(PrivateToken token,
 						   const cfg::Server &server_config,
-						   const info::Host &host_info,
 						   const std::shared_ptr<MediaRouteInterface> &router)
-	: SegmentPublisher(server_config, host_info, router)
+	: SegmentPublisher(server_config, router)
 {
 }
 

@@ -26,7 +26,7 @@
 class RtcSignallingServer : public ov::EnableSharedFromThis<RtcSignallingServer>
 {
 public:
-	RtcSignallingServer(const cfg::Server &server_config, const info::Host &host_info);
+	RtcSignallingServer(const cfg::Server &server_config);
 	~RtcSignallingServer() override = default;
 
 	bool Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address);
@@ -102,7 +102,6 @@ protected:
 	std::shared_ptr<ov::Error> DispatchStop(const std::shared_ptr<WebSocketClient> &ws_client, std::shared_ptr<RtcSignallingInfo> &info);
 
 	const cfg::Server _server_config;
-	const info::Host _host_info;
 
 	std::shared_ptr<HttpServer> _http_server;
 	std::shared_ptr<HttpsServer> _https_server;
