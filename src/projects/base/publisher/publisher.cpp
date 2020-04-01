@@ -46,7 +46,11 @@ namespace pub
 		{
 			if(cfg_publisher->GetType() == GetPublisherType())
 			{
-				if(!cfg_publisher->IsParsed())
+				if(cfg_publisher->IsParsed())
+				{
+					break;
+				}
+				else
 				{
 					// This provider is diabled
 					logti("%s publisher is disabled in %s application, so it was not created", 

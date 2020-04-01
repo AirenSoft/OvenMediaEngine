@@ -78,7 +78,11 @@ namespace pvd
 		{
 			if(cfg_provider->GetType() == GetProviderType())
 			{
-				if(!cfg_provider->IsParsed())
+				if(cfg_provider->IsParsed())
+				{
+					break;
+				}
+				else
 				{
 					// This provider is diabled
 					logti("%s provider is disabled in %s application, so it was not created", 
