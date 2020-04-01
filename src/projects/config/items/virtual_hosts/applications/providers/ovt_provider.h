@@ -3,7 +3,7 @@
 //  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
-//  Copyright (c) 2019 AirenSoft. All rights reserved.
+//  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
@@ -12,8 +12,8 @@
 
 namespace cfg
 {
-	struct RtspProvider : public Provider
+	struct OvtProvider : public Provider
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(ProviderType, GetType, ProviderType::Rtsp)
+		CFG_DECLARE_OVERRIDED_GETTER_OF(ProviderType, GetType, ProviderType::Ovt)
 	};
 }

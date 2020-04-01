@@ -13,6 +13,7 @@
 #include "hls_publisher.h"
 #include "rtmp_publisher.h"
 #include "webrtc_publisher.h"
+#include "ovt_publisher.h"
 
 namespace cfg
 {
@@ -25,7 +26,8 @@ namespace cfg
 				&_hls_publisher,
 				&_dash_publisher,
 				&_ll_dash_publisher,
-				&_webrtc_publisher};
+				&_webrtc_publisher,
+				&_ovt_publisher};
 		}
 
 		CFG_DECLARE_GETTER_OF(GetThreadCount, _thread_count)
@@ -34,6 +36,7 @@ namespace cfg
 		CFG_DECLARE_REF_GETTER_OF(GetDashPublisher, _dash_publisher)
 		CFG_DECLARE_REF_GETTER_OF(GetLlDashPublisher, _ll_dash_publisher)
 		CFG_DECLARE_REF_GETTER_OF(GetWebrtcPublisher, _webrtc_publisher)
+		CFG_DECLARE_REF_GETTER_OF(GetOvtPublisher, _ovt_publisher)
 
 	protected:
 		void MakeParseList() override
@@ -45,6 +48,7 @@ namespace cfg
 			RegisterValue<Optional>("DASH", &_dash_publisher);
 			RegisterValue<Optional>("LLDASH", &_ll_dash_publisher);
 			RegisterValue<Optional>("WebRTC", &_webrtc_publisher);
+			RegisterValue<Optional>("OVT", &_ovt_publisher);
 		}
 
 		int _thread_count = 4;
@@ -54,5 +58,6 @@ namespace cfg
 		DashPublisher _dash_publisher;
 		LlDashPublisher _ll_dash_publisher;
 		WebrtcPublisher _webrtc_publisher;
+		OvtPublisher _ovt_publisher;
 	};
 }  // namespace cfg
