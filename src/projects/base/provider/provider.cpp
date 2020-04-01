@@ -73,23 +73,30 @@ namespace pvd
 		}
 
 		// Check configuration
-		auto cfg_provider_list = app_info.GetConfig().GetProviders().GetProviderList();
-		for(const auto &cfg_provider : cfg_provider_list)
+		if(app_info.IsDynamicApp() == false)
 		{
-			if(cfg_provider->GetType() == GetProviderType())
+			auto cfg_provider_list = app_info.GetConfig().GetProviders().GetProviderList();
+			for(const auto &cfg_provider : cfg_provider_list)
 			{
-				if(cfg_provider->IsParsed())
+				if(cfg_provider->GetType() == GetProviderType())
 				{
-					break;
-				}
-				else
-				{
-					// This provider is diabled
-					logti("%s provider is disabled in %s application, so it was not created", 
-							ov::Converter::ToString(GetProviderType()).CStr(), app_info.GetName().CStr());
-					return true;
+					if(cfg_provider->IsParsed())
+					{
+						break;
+					}
+					else
+					{
+						// This provider is diabled
+						logti("%s provider is disabled in %s application, so it was not created", 
+								ov::Converter::ToString(GetProviderType()).CStr(), app_info.GetName().CStr());
+						return true;
+					}
 				}
 			}
+		}
+		else
+		{
+			// The dynamically created app activates all providers
 		}
 
 		// Let child create application
