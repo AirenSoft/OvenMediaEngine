@@ -8,14 +8,14 @@
 //==============================================================================
 #pragma once
 
+#include "base/info/host.h"
+#include "orchestrator/orchestrator.h"
 #include "http_server.h"
 
 class HttpsServer : public HttpServer
 {
 public:
-	// Set Local Certificate
-	void SetLocalCertificate(const std::shared_ptr<Certificate> &certificate);
-	void SetChainCertificate(const std::shared_ptr<Certificate> &certificate);
+	void SetVirtualHostList(std::vector<std::shared_ptr<Orchestrator::VirtualHost>>& vhost_list);
 
 protected:
 	//--------------------------------------------------------------------
@@ -25,6 +25,5 @@ protected:
 	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 
 protected:
-	std::shared_ptr<Certificate> _local_certificate = nullptr;
-	std::shared_ptr<Certificate> _chain_certificate = nullptr;
+	std::vector<std::shared_ptr<Orchestrator::VirtualHost>> 	_virtual_host_list;
 };

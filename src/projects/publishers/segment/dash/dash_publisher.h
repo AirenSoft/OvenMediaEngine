@@ -15,10 +15,9 @@ class DashPublisher : public SegmentPublisher
 public:
 	static std::shared_ptr<DashPublisher> Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
 												 const cfg::Server &server_config,
-												 const info::Host &host_info,
 												 const std::shared_ptr<MediaRouteInterface> &router);
 
-	DashPublisher(PrivateToken token, const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router);
+	DashPublisher(PrivateToken token, const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 
 protected:
 	//--------------------------------------------------------------------

@@ -279,6 +279,11 @@ bool Orchestrator::ApplyOriginMap(const std::vector<info::Host> &host_list)
 	return result;
 }
 
+const std::vector<std::shared_ptr<Orchestrator::VirtualHost>>& Orchestrator::GetVirtualHostList()
+{
+	return _virtual_host_list;
+}
+
 Orchestrator::ItemState Orchestrator::ProcessDomainList(std::vector<Domain> *domain_list, const cfg::Domain &domain_config) const
 {
 	bool is_changed = false;

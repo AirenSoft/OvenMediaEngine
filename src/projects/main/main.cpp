@@ -27,17 +27,21 @@
 #include <web_console/web_console.h>
 
 #define INIT_MODULE(variable, name, create)                                         \
-	logti("Trying to create a module " name " for [%s] host...", host_name.CStr()); \
+	logti("Trying to create a" name "module"); 										\
                                                                                     \
 	auto variable = create;                                                         \
                                                                                     \
 	if (variable == nullptr)                                                        \
 	{                                                                               \
-		initialized = false;                                                        \
-		break;                                                                      \
+		logte("Failed to initialize" name "module");								\
+		return 1;                                                                   \
 	}                                                                               \
                                                                                     \
-	initialized = initialized && orchestrator->RegisterModule(variable)
+	if(orchestrator->RegisterModule(variable) == false)								\
+	{																				\
+		logte("Failed to register" name "module");									\
+		return 1;																	\
+	}																				\
 
 #define INIT_EXTERNAL_MODULE(name, func)                                          \
 	{                                                                             \
@@ -86,8 +90,6 @@ int main(int argc, char *argv[])
 
 	std::shared_ptr<cfg::Server> server_config = cfg::ConfigManager::Instance()->GetServer();
 	auto &hosts = server_config->GetVirtualHostList();
-
-	bool initialized = false;
 	std::vector<std::shared_ptr<WebConsoleServer>> web_console_servers;
 
 	std::vector<info::Host> host_info_list;
@@ -95,7 +97,6 @@ int main(int argc, char *argv[])
 
 	auto orchestrator = Orchestrator::GetInstance();
 	auto monitor = mon::Monitoring::GetInstance();
-	bool succeeded = true;
 
 	// Create info::Host
 	for (const auto &host : hosts)
@@ -110,92 +111,62 @@ int main(int argc, char *argv[])
 		else
 		{
 			logte("Duplicated VirtualHost found: %s", host.GetName().CStr());
-			succeeded = false;
-
-			break;
+			return 1;
 		}
 	}
 
-	if (succeeded)
+	orchestrator->ApplyOriginMap(host_info_list);
+	// Create an HTTP Manager for Segment Publishers
+	std::map<int, std::shared_ptr<HttpServer>> http_server_manager;
+
+	//--------------------------------------------------------------------
+	// Create the modules
+	//--------------------------------------------------------------------
+	// Initialize MediaRouter (MediaRouter must be registered first)
+	INIT_MODULE(media_router, "MediaRouter", MediaRouter::Create());
+
+	// Initialize Providers
+	INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
+	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
+	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
+	INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
+
+	// Initialize Transcoder
+	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
+
+	// Initialize Publishers
+	INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, media_router));
+	INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(http_server_manager, *server_config, media_router));
+	INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(http_server_manager, *server_config, media_router));
+	INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(http_server_manager, *server_config, media_router));
+	INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, media_router));
+
+	logti("All modules are initialized successfully");
+
+	for (auto &host_info : host_info_list)
 	{
-		orchestrator->ApplyOriginMap(host_info_list);
+		auto host_name = host_info.GetName();
 
-		for (auto &host_info : host_info_list)
+		logtd("Trying to create host [%s]", host_name.CStr());
+		monitor->OnHostCreated(host_info);
+
+		// Create applications that defined by the configuration
+		for (auto &app_cfg : host_info.GetApplicationList())
 		{
-			auto host_name = host_info.GetName();
-
-			monitor->OnHostCreated(host_info);
-
-			//////////////////////////////
-			// Host Level Modules
-			//////////////////////////////
-
-			if (initialized == false)
-			{
-				logtd("Trying to create modules for host [%s]", host_name.CStr());
-
-				do
-				{
-					initialized = true;
-
-					// Create an HTTP Manager for Segment Publishers
-					std::map<int, std::shared_ptr<HttpServer>> http_server_manager;
-
-					//--------------------------------------------------------------------
-					// Create the modules
-					//--------------------------------------------------------------------
-					// Initialize MediaRouter (MediaRouter must be registered first)
-					INIT_MODULE(media_router, "MediaRouter", MediaRouter::Create());
-
-					// Initialize Providers
-					INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
-					INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
-					INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
-					INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
-
-					// Initialize Transcoder
-					INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
-
-					// Initialize Publishers
-					INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, host_info, media_router));
-					INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(http_server_manager, *server_config, host_info, media_router));
-					INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(http_server_manager, *server_config, host_info, media_router));
-					INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(http_server_manager, *server_config, host_info, media_router));
-					INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, host_info, media_router));
-				} while (false);
-
-				if (initialized)
-				{
-					logti("All modules are initialized successfully");
-				}
-				else
-				{
-					logte("Failed to initialize module");
-					succeeded = false;
-				}
-			}
-
-			// Create applications that defined by the configuration
-			for (auto &app_cfg : host_info.GetApplicationList())
-			{
-				orchestrator->CreateApplication(host_info, app_cfg);
-			}
+			orchestrator->CreateApplication(host_info, app_cfg);
 		}
 	}
 
-	if (succeeded)
+	if (is_service)
 	{
-		if (is_service)
-		{
-			ov::Daemon::SetEvent(succeeded);
-		}
+		ov::Daemon::SetEvent();
+	}
 
-		while (true)
-		{
-			sleep(5);
-			//Plan to start / stop with external signals
-			//mon::Monitoring::GetInstance()->ShowInfo();
-		}
+	while (true)
+	{
+		sleep(5);
+		//Plan to start / stop with external signals
+		//mon::Monitoring::GetInstance()->ShowInfo();
 	}
 
 	Uninitialize();

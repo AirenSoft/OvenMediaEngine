@@ -111,7 +111,7 @@ namespace mon
 		}
 		else
 		{
-			logti("A new session has been started playing %s/%s on the %s publihser. %s(%u)/Total(%u)", 
+			logti("A new session has started playing %s/%s on the %s publihser. %s(%u)/Total(%u)", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
 					ov::Converter::ToString(type).CStr(), ov::Converter::ToString(type).CStr(), GetConnections(type), GetTotalConnections());
 

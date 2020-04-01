@@ -3,9 +3,9 @@
 #include "ovt_publisher.h"
 #include "ovt_session.h"
 
-std::shared_ptr<OvtPublisher> OvtPublisher::Create(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<OvtPublisher> OvtPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
-	auto ovt = std::make_shared<OvtPublisher>(server_config, host_info, router);
+	auto ovt = std::make_shared<OvtPublisher>(server_config, router);
 
 	if (!ovt->Start())
 	{
@@ -16,8 +16,8 @@ std::shared_ptr<OvtPublisher> OvtPublisher::Create(const cfg::Server &server_con
 	return ovt;
 }
 
-OvtPublisher::OvtPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
-		: Publisher(server_config, host_info, router)
+OvtPublisher::OvtPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+		: Publisher(server_config, router)
 {
 
 }

@@ -189,7 +189,7 @@ namespace pub
 			}
 		}
 
-		logti("[%s(%u)] %s stream has been started", GetName().CStr(), GetId(), _application->GetApplicationTypeName());
+		logti("%s application has started [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
 
 		_run_flag = true;
 		return true;

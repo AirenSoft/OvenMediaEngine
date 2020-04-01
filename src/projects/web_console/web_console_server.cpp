@@ -59,8 +59,8 @@ bool WebConsoleServer::Start(const ov::SocketAddress &address)
 		return false;
 	}
 
+/* TODO(Dimiden): HttpsServer has changed to add certificate. 
 	auto certificate = _host_info.GetCertificate();
-
 	if (certificate != nullptr)
 	{
 		auto https_server = std::make_shared<HttpsServer>();
@@ -74,6 +74,8 @@ bool WebConsoleServer::Start(const ov::SocketAddress &address)
 	{
 		_http_server = std::make_shared<HttpServer>();
 	}
+*/
+	_http_server = std::make_shared<HttpServer>();
 
 	return InitializeServer() && _http_server->Start(address);
 }

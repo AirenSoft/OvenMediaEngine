@@ -15,17 +15,15 @@
 
 std::shared_ptr<CmafPublisher> CmafPublisher::Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
 													 const cfg::Server &server_config,
-													 const info::Host &host_info,
 													 const std::shared_ptr<MediaRouteInterface> &router)
 {
-	return SegmentPublisher::Create<CmafPublisher>(http_server_manager, server_config, host_info, router);
+	return SegmentPublisher::Create<CmafPublisher>(http_server_manager, server_config, router);
 }
 
 CmafPublisher::CmafPublisher(PrivateToken token,
 							const cfg::Server &server_config,
-							const info::Host &host_info,
 							const std::shared_ptr<MediaRouteInterface> &router)
-	: DashPublisher(token, server_config, host_info, router)
+	: DashPublisher(token, server_config, router)
 {
 }
 

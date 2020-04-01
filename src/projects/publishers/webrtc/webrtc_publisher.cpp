@@ -9,9 +9,9 @@
 
 #include <orchestrator/orchestrator.h>
 
-std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
-	auto webrtc = std::make_shared<WebRtcPublisher>(server_config, host_info, router);
+	auto webrtc = std::make_shared<WebRtcPublisher>(server_config, router);
 
 	if (!webrtc->Start())
 	{
@@ -21,8 +21,8 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Server &serv
 	return webrtc;
 }
 
-WebRtcPublisher::WebRtcPublisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
-	: Publisher(server_config, host_info, router)
+WebRtcPublisher::WebRtcPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
+	: Publisher(server_config, router)
 {
 }
 
@@ -61,7 +61,7 @@ bool WebRtcPublisher::Start()
 	ov::SocketAddress signalling_tls_address = ov::SocketAddress(server_config.GetIp(), tls_port);
 
 	// Initialize RtcSignallingServer
-	_signalling_server = std::make_shared<RtcSignallingServer>(server_config, GetHostInfo());
+	_signalling_server = std::make_shared<RtcSignallingServer>(server_config);
 	_signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
 	if (_signalling_server->Start(has_port ? &signalling_address : nullptr, has_tls_port ? &signalling_tls_address : nullptr) == false)
 	{

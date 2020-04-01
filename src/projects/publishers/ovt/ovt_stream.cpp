@@ -27,7 +27,6 @@ OvtStream::OvtStream(const std::shared_ptr<pub::Application> application,
 OvtStream::~OvtStream()
 {
 	logtd("OvtStream(%s/%s) has been terminated finally", GetApplication()->GetName().CStr() , GetName().CStr());
-	Stop();
 }
 
 bool OvtStream::Start(uint32_t worker_count)
@@ -114,8 +113,14 @@ bool OvtStream::Start(uint32_t worker_count)
 
 bool OvtStream::Stop()
 {
-	logtd("OvtStream(%d) has stopped", GetId());
-	_packetizer.reset();
+	logtd("OvtStream(%u) has been stopped", GetId());
+
+	std::unique_lock<std::mutex> mlock(_packetizer_lock);
+	if(_packetizer != nullptr)
+	{	
+		_packetizer.reset();
+		_packetizer = nullptr;
+	}
 
 	return Stream::Stop();
 }
@@ -123,13 +128,21 @@ bool OvtStream::Stop()
 void OvtStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	// Callback OnOvtPacketized()
-	_packetizer->Packetize(media_packet->GetPts(), media_packet);
+	std::unique_lock<std::mutex> mlock(_packetizer_lock);
+	if(_packetizer != nullptr)
+	{
+		_packetizer->Packetize(media_packet->GetPts(), media_packet);
+	}
 }
 
 void OvtStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	// Callback OnOvtPacketized()
-	_packetizer->Packetize(media_packet->GetPts(), media_packet);
+	std::unique_lock<std::mutex> mlock(_packetizer_lock);
+	if(_packetizer != nullptr)
+	{
+		_packetizer->Packetize(media_packet->GetPts(), media_packet);
+	}
 }
 
 bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)

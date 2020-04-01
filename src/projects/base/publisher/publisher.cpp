@@ -3,9 +3,8 @@
 
 namespace pub
 {
-	Publisher::Publisher(const cfg::Server &server_config, const info::Host &host_info, const std::shared_ptr<MediaRouteInterface> &router)
+	Publisher::Publisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 		: _server_config(server_config),
-		  _host_info(host_info),
 		  _router(router)
 	{
 	}
@@ -38,14 +37,30 @@ namespace pub
 		return _server_config;
 	}
 
-	const info::Host &Publisher::GetHostInfo() const
-	{
-		return _host_info;
-	}
-
 	// Create Application
 	bool Publisher::OnCreateApplication(const info::Application &app_info)
 	{
+		// Check configuration
+		auto cfg_publisher_list = app_info.GetConfig().GetPublishers().GetPublisherList();
+		for(const auto &cfg_publisher : cfg_publisher_list)
+		{
+			if(cfg_publisher->GetType() == GetPublisherType())
+			{
+				if(cfg_publisher->IsParsed())
+				{
+					break;
+				}
+				else
+				{
+					// This provider is diabled
+					logti("%s publisher is disabled in %s application, so it was not created", 
+							ov::Converter::ToString(GetPublisherType()).CStr(), app_info.GetName().CStr());
+					return true;
+				}
+			}
+		}
+
+
 		auto application = OnCreatePublisherApplication(app_info);
 		if (application == nullptr)
 		{

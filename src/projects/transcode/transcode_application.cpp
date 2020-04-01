@@ -33,13 +33,13 @@ TranscodeApplication::~TranscodeApplication()
 
 bool TranscodeApplication::Start()
 {
-	logti("[%s] Transcoder Application has been started", _application_info.GetName().CStr());
+	logti("Transcoder has started [%s] application", _application_info.GetName().CStr());
 	return true;
 }
 
 bool TranscodeApplication::Stop()
 {
-	logti("[%s] Transcoder Application has been stopped", _application_info.GetName().CStr());
+	logti("Transcoder has stopped [%s] application", _application_info.GetName().CStr());
 	return true;
 }
 

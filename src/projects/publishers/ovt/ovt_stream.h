@@ -28,5 +28,6 @@ private:
 	bool Stop() override;
 
 	Json::Value							_description;
+	std::mutex 							_packetizer_lock;
 	std::shared_ptr<OvtPacketizer>		_packetizer;
 };

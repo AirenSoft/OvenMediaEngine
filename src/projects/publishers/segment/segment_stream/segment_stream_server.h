@@ -29,11 +29,9 @@ public:
 		const ov::SocketAddress *address,
 		const ov::SocketAddress *tls_address,
 		std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-		int thread_count,
-		const std::shared_ptr<Certificate> &certificate = nullptr,
-		const std::shared_ptr<Certificate> &chain_certificate = nullptr);
+		int thread_count);
 	bool Stop();
-
+	
 	bool AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer);
 	bool RemoveObserver(const std::shared_ptr<SegmentStreamObserver> &observer);
 

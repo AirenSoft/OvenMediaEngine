@@ -16,9 +16,8 @@
 #include <modules/ice/ice.h>
 #include <publishers/webrtc/webrtc_publisher.h>
 
-RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config, const info::Host &host_info)
-	: _server_config(server_config),
-	  _host_info(host_info)
+RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config)
+	: _server_config(server_config)
 {
 }
 
@@ -42,20 +41,10 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	if (tls_address != nullptr)
 	{
 		// TLS is enabled
-		auto certificate = _host_info.GetCertificate();
+		_https_server = std::make_shared<HttpsServer>();
 
-		if (certificate != nullptr)
-		{
-			_https_server = std::make_shared<HttpsServer>();
-
-			_https_server->SetLocalCertificate(certificate);
-			_https_server->SetChainCertificate(_host_info.GetChainCertificate());
-		}
-		else
-		{
-			logte("TLS is enabled, but certificate is invalid");
-			result = false;
-		}
+		auto vhost_list = Orchestrator::GetInstance()->GetVirtualHostList();
+		_https_server->SetVirtualHostList(vhost_list);
 	}
 	else
 	{
