@@ -141,7 +141,20 @@
 							<Audio>
 								<Bypass>true</Bypass>
 							</Audio>
-						</Encode>						
+						</Encode>
+						<Encode>
+							<Name>WEBRTC_BYPASS</Name>
+							<!-- If you want to use bypass. For browser compatibility, the h264.bframe option must be fixed to 0.-->
+							<Video>
+								<Bypass>true</Bypass>
+							</Video>							
+							<Audio>
+								<Codec>opus</Codec>
+								<Bitrate>128000</Bitrate>
+								<Samplerate>48000</Samplerate>
+								<Channel>2</Channel>
+							</Audio>
+						</Encode>					
 					</Encodes>
 					<Streams>
 						<Stream>
@@ -151,12 +164,30 @@
 								<Profile>H264</Profile>
 							</Profiles>
 						</Stream>
+						<Stream>
+							<Name>${OriginStreamName}_bypass</Name>
+							<Profiles>
+								<Profile>BYPASS</Profile>
+							</Profiles>
+						</Stream>
+						<Stream>
+							<Name>${OriginStreamName}_webrtc</Name>
+							<Profiles>
+								<Profile>WEBRTC_BYPASS</Profile>
+							</Profiles>
+						</Stream>
 					</Streams>
 					<Providers>
+						<OVT />
 						<RTMP />
+						<RTSPPull />
 					</Providers>
 					<Publishers>
 						<ThreadCount>4</ThreadCount>
+						<OVT />
+						<WebRTC>
+							<Timeout>30000</Timeout>
+						</WebRTC>
 						<HLS>
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
@@ -177,9 +208,6 @@
 								<Url>*</Url>
 							</CrossDomain>
 						</LLDASH>
-						<WebRTC>
-							<Timeout>30000</Timeout>
-						</WebRTC>
 					</Publishers>
 				</Application>
 			</Applications>

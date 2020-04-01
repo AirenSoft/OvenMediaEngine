@@ -18,12 +18,12 @@
 
 		<Publishers>
             <HLS>
-				<Port>${env:OME_HLS_STREAM_PORT:8080}</Port>
+				<Port>${env:OME_HLS_STREAM_PORT:8088}</Port>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>8443</TLSPort> -->
 			</HLS>
             <DASH>
-				<Port>${env:OME_DASH_STREAM_PORT:8080}</Port>
+				<Port>${env:OME_DASH_STREAM_PORT:8088}</Port>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>8443</TLSPort> -->
 			</DASH>
