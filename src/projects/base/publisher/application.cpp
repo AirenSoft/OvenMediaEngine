@@ -83,9 +83,9 @@ namespace pub
 			return false;
 		}
 
-		stream->Stop();
-
 		_streams.erase(info->GetId());
+
+		stream->Stop();
 
 		return true;
 	}
