@@ -223,7 +223,8 @@ void IcePort::AddSession(const std::shared_ptr<info::Session> &session_info, std
 		std::lock_guard<std::mutex> lock_guard(_user_mapping_table_mutex);
 
 		auto item = _user_mapping_table.find(local_ufrag);
-		session_id_t session_id = session_info->GetId();
+
+		[[maybe_unused]] session_id_t session_id = session_info->GetId();
 
 		if (item != _user_mapping_table.end())
 		{

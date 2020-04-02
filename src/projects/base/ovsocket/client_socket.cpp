@@ -179,7 +179,7 @@ namespace ov
 			}
 		}
 
-		auto sock = _socket.GetSocket();
+		[[maybe_unused]] auto sock = _socket.GetSocket();
 
 		Socket::CloseInternal();
 

@@ -261,7 +261,7 @@ bool DtlsTransport::OnDataReceived(pub::SessionNodeType from_node, const std::sh
 
 					// SSL_read는 다음과 같이 동작한다.
 					// SSL -> Read() -> TakeDtlsPacket() -> Decrypt -> buffer
-					int ssl_error = _tls.Read(buffer, sizeof(buffer), nullptr);
+					[[maybe_unused]] int ssl_error = _tls.Read(buffer, sizeof(buffer), nullptr);
 
 					// 말이 안되는데 여기 들어오는지 보자.
 					int pending = _tls.Pending();

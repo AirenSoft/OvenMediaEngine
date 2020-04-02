@@ -120,8 +120,9 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 			if (rtsp_uri_item == query_map.end())
 			{
 				logte("There is no rtspURI parameter in the query string: %s", uri.CStr());
+
 				logtd("Query map:");
-				for (auto &query : query_map)
+				for ([[maybe_unused]] auto &query : query_map)
 				{
 					logtd("    %s = %s", query.first.CStr(), query.second.CStr());
 				}

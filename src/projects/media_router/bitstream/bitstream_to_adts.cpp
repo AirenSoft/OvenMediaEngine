@@ -58,9 +58,9 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 
 	uint8_t sound_format = pbuf[0];
 
-	uint8_t sound_type = sound_format & 0x01;
-	uint8_t sound_size = (sound_format >> 1) & 0x01;
-	uint8_t sound_rate = (sound_format >> 2) & 0x03;
+	[[maybe_unused]] uint8_t sound_type = sound_format & 0x01;
+	[[maybe_unused]] uint8_t sound_size = (sound_format >> 1) & 0x01;
+	[[maybe_unused]] uint8_t sound_rate = (sound_format >> 2) & 0x03;
 	uint8_t audio_codec_id = (sound_format >> 4) & 0x0f;
 
 	uint8_t aac_packet_type = pbuf[1];

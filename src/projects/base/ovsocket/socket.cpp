@@ -1584,7 +1584,7 @@ namespace ov
 
 	bool Socket::CloseInternal()
 	{
-		SocketWrapper socket = _socket;
+		[[maybe_unused]] SocketWrapper socket = _socket;
 
 #if USE_FILE_DUMP
 		{

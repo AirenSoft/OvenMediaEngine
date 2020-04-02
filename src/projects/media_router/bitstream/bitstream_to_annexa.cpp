@@ -125,7 +125,9 @@ BitstreamAnnexA::~BitstreamAnnexA()
 
 void BitstreamAnnexA::convert_to(const std::shared_ptr<ov::Data> &data)
 {
-	uint8_t *p = data->GetWritableDataAs<uint8_t>();
+   // TODO(soulk): Complete this function
+#if 0
+	const uint8_t *p = data->GetWritableDataAs<uint8_t>();
 
 	unsigned int frame_type;
 
@@ -168,4 +170,5 @@ void BitstreamAnnexA::convert_to(const std::shared_ptr<ov::Data> &data)
 		logtd("frame_type=%d, profile=%d, sync_code=%d, width=%d(%d), height=%d(%d), show_frame=%d",
 		  frame_type, profile, sync_code, width, horizontal_scale, height, vertical_scale, show_frame);
 	}
+#endif
 }
