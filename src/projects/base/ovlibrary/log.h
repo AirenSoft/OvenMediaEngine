@@ -68,9 +68,8 @@ typedef enum StatLogType
 			break;                                       \
 		}
 #else
-constexpr void ov_log_dummy(...) {}
-#	define logd                                       ov_log_dummy
-#	define logp                                       ov_log_dummy
+#	define logd(...)                                  do {} while(false)
+#	define logp                                       logd
 #endif // DEBUG
 #define logi(tag, format, ...)                        ov_log_internal(OVLogLevelInformation,    tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
 #define logw(tag, format, ...)                        ov_log_internal(OVLogLevelWarning,        tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
