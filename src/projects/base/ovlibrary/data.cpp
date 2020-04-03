@@ -323,7 +323,7 @@ namespace ov
 
 	bool Data::Insert(const Data *data, off_t offset)
 	{
-		return Insert(data->GetData(), offset, data->GetLength());
+		return (data != nullptr) ? Insert(data->GetData(), offset, data->GetLength()) : false;
 	}
 
 	bool Data::Append(const void *data, size_t length)
@@ -333,12 +333,7 @@ namespace ov
 
 	bool Data::Append(const Data *data)
 	{
-		if (data->GetData() != nullptr)
-		{
-			return Append(data->GetData(), data->GetLength());
-		}
-
-		return false;
+		return (data != nullptr) ? Append(data->GetData(), data->GetLength()) : false;
 	}
 
 	bool Data::Append(const std::shared_ptr<Data> &data)
