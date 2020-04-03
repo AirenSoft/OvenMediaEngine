@@ -7,8 +7,8 @@
 //
 //==============================================================================
 #include "rtmp_import_chunk.h"
+#include "../rtmp_provider_private.h"
 
-#include "providers/rtmp/rtmp_chunk_log_define.h"
 #include "rtmp_chunk_parser.h"
 
 RtmpImportChunk::RtmpImportChunk(int chunk_size)

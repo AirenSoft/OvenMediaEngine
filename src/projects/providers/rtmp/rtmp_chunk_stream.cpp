@@ -231,7 +231,7 @@ int32_t RtmpChunkStream::OnDataReceived(const std::shared_ptr<const ov::Data> &d
 		else if(process_size == 0)
 		{
 			// Need more data
-			logtd("Not enough data");
+			// logtd("Not enough data");
 			break;
 		}
 
