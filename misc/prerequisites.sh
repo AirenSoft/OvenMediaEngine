@@ -35,10 +35,13 @@ CURRENT=$(pwd)
 
 install_openssl()
 {
+    DOWNLOAD_NAME=${OPENSSL_VERSION//\./_}
+    DOWNLOAD_URL="https://codeload.github.com/openssl/openssl/tar.gz/OpenSSL_${DOWNLOAD_NAME}"
+
     (DIR=${TEMP_PATH}/openssl && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sLf "${DOWNLOAD_URL}" | tar -xz --strip-components=1 && \
     ./config --prefix="${PREFIX}" --openssldir="${PREFIX}" -Wl,-rpath,"${PREFIX}/lib" shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa no-async && \
     make && \
     sudo make install_sw && \
@@ -163,7 +166,7 @@ install_ffmpeg()
 
 install_base_ubuntu()
 {
-    sudo apt install -y build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config
+    sudo apt install -y build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc
 }
 
 install_base_fedora()
