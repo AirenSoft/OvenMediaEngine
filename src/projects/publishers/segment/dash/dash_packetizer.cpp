@@ -138,85 +138,162 @@ ov::String DashPacketizer::GetFileName(int64_t start_timestamp, common::MediaTyp
 
 bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &frame, const ov::String &init_file_name)
 {
-	uint32_t current_index = 0;
-	int sps_start_index = -1;
-	int sps_end_index = -1;
-	int pps_start_index = -1;
-	int pps_end_index = -1;
+    const uint8_t* srcData = frame->GetDataAs<uint8_t>();
+    size_t dataOffset = 0;
+    size_t dataSize = frame->GetLength();
+
+    std::vector<std::pair<size_t, size_t>> offset_list;
+
 	int total_start_pattern_size = 0;
 
-	auto buffer = frame->GetDataAs<uint8_t>();
 
-	// Parse SPS/PPS (0001/001 + SPS + 0001/001 + PPS)
-	while ((current_index + AVC_NAL_START_PATTERN_SIZE) < frame->GetLength())
-	{
-		int start_pattern_size = GetStartPatternSize(buffer + current_index);
+    // Stage 1 - Extract the Offset and Lengh value of the NAL Packet
 
-		if (start_pattern_size == 0)
-		{
-			current_index++;
-			continue;
-		}
+    while ( dataOffset < dataSize )
+    {
+        size_t remainDataSize = dataSize - dataOffset;
+        const uint8_t* data = srcData + dataOffset;
 
-		total_start_pattern_size += start_pattern_size;
+        if (remainDataSize >= 3 && 0x00 == data[0] && 0x00 == data[1] && 0x01 == data[2])
+        {
+        	total_start_pattern_size += 3;
+            offset_list.emplace_back(dataOffset, 3); // Offset, SIZEOF(START_CODE[3])
+            dataOffset += 3;
+        }
+        else if (remainDataSize >= 4 && 0x00 == data[0] &&  0x00 == data[1] && 0x00 == data[2] && 0x01 == data[3])
+        {
+        	total_start_pattern_size += 4;
+            offset_list.emplace_back(dataOffset, 4); // Offset, SIZEOF(START_CODE[4])
+            dataOffset += 4;
+        }
+        else
+        {
+            dataOffset += 1;
+        }
+    }
 
-		if (sps_start_index == -1)
-		{
-			sps_start_index = current_index + start_pattern_size;
-			current_index += start_pattern_size;
-			continue;
-		}
-		else if (sps_end_index == -1)
-		{
-			sps_end_index = current_index - 1;
-			pps_start_index = current_index + start_pattern_size;
-			current_index += start_pattern_size;
-			continue;
-		}
-		else
-		{
-			pps_end_index = current_index - 1;
-			break;
-		}
+
+    // Stage 2  : Get position for SPS and PPS type
+
+	int sps_start_index = -1;
+	int sps_length = -1;
+	int pps_start_index = -1;
+	int pps_length = -1;
+
+ 	for (size_t index = 0; index < offset_list.size(); ++index)
+    {
+        size_t nalu_offset = 0;
+        size_t nalu_data_len = 0;
+
+        if (index != offset_list.size() - 1)
+        {
+            nalu_offset = offset_list[index].first + offset_list[index].second;
+            nalu_data_len = offset_list[index + 1].first - nalu_offset;
+        }
+        else
+        {
+            nalu_offset = offset_list[index].first + offset_list[index].second;
+            nalu_data_len = dataSize - nalu_offset;
+        }
+
+
+   		// [Difinition of NAL_UNIT_TYPE]
+			
+		// - Coded slice of a non-IDR picture slice_layer_without_partitioning_rbsp( )
+		// NonIDR = 1,
+		// - Coded slice data partition A slice_data_partition_a_layer_rbsp( )
+		// DataPartitionA = 2,
+		// - Coded slice data partition B slice_data_partition_b_layer_rbsp( )
+		// DataPartitionB = 3,
+		// - Coded slice data partition C slice_data_partition_c_layer_rbsp( )
+		// DataPartitionC = 4,
+		// - Coded slice of an IDR picture slice_layer_without_partitioning_rbsp( )
+		// IDR = 5,
+		// - Supplemental enhancement information (SEI) sei_rbsp( )
+		// SEI = 6,
+		// - Sequence parameter set seq_parameter_set_rbsp( )
+		// SPS = 7,
+		// - Picture parameter set pic_parameter_set_rbsp( )
+		// PPS = 8,
+		// ...
+		
+        uint8_t nalu_header = *(srcData + nalu_offset);
+        // uint8_t forbidden_zero_bit = (nalu_header >> 7)  & 0x01;
+        // uint8_t nal_ref_idc = (nalu_header >> 5)  & 0x03;
+        uint8_t nal_unit_type = (nalu_header)  & 0x01F;
+
+
+#if 0	// for debug
+        if( (nal_unit_type == (uint8_t)5) || (nal_unit_type == (uint8_t)6) || (nal_unit_type == (uint8_t)7) || (nal_unit_type == (uint8_t)8)) 
+        {
+            logte("[%d] nal_ref_idc:%2d, nal_unit_type:%2d => offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d"
+            , index
+            , nal_ref_idc, nal_unit_type
+            , offset_list[index].first
+            , offset_list[index].second
+            , nalu_offset
+            , nalu_data_len
+			);
+        }
+#endif
+
+        // SPS type
+        if(nal_unit_type == 7)
+        {
+        	sps_start_index = nalu_offset;
+        	sps_length = nalu_data_len;
+        }    
+        // PPS type    
+        else if(nal_unit_type == 8)
+        {
+        	pps_start_index = nalu_offset;
+        	pps_length = nalu_data_len;
+        }
 	}
+
 
 	// Check parsing result
-	if ((sps_start_index == -1) || (sps_end_index < (sps_start_index + 4)))
+	if ((sps_start_index == -1) || (sps_length < -1))
 	{
 		logte("Could not parse SPS (SPS: %d-%d, PPS: %d-%d) from %s frame for [%s/%s]",
-			  sps_start_index, sps_end_index, pps_start_index, pps_end_index,
+			  sps_start_index, sps_length, pps_start_index, pps_length,
 			  GetPacketizerName(),
 			  _app_name.CStr(), _stream_name.CStr());
 
 		return false;
 	}
 
-	if ((pps_start_index <= sps_end_index) || (pps_start_index >= pps_end_index))
+	if ((pps_start_index == -1) || (pps_length < -1))
 	{
 		logte("Could not parse PPS (SPS: %d-%d, PPS: %d-%d) from %s frame for [%s/%s]",
-			  sps_start_index, sps_end_index, pps_start_index, pps_end_index,
+			  sps_start_index, sps_length, pps_start_index, pps_length,
 			  GetPacketizerName(),
 			  _app_name.CStr(), _stream_name.CStr());
 
 		return false;
 	}
 
-	if ((total_start_pattern_size < 9) || (total_start_pattern_size > 12))
+	// TODO : 만약에 NAL 패킷이 3개 초과로 포함되는 패킷에 대해서는 파싱 오류가 발생할 수 있다.
+	if ((total_start_pattern_size < 6) || (total_start_pattern_size > 12))
+	if ((total_start_pattern_size < 6))
 	{
 		logte("Invalid patterns (%d, SPS: %d-%d, PPS: %d-%d) in %s frame for [%s/%s]",
 			  total_start_pattern_size,
-			  sps_start_index, sps_end_index, pps_start_index, pps_end_index,
+			  sps_start_index, sps_length, pps_start_index, pps_length,
 			  GetPacketizerName(),
 			  _app_name.CStr(), _stream_name.CStr());
 
 		return false;
 	}
 
+
+	//Stage 3 : Extracts SPS/PPS data to create initialization packets.
+
 	// Extract SPS from frame
-	auto avc_sps = frame->Subdata(sps_start_index, sps_end_index - sps_start_index + 1);
+	auto avc_sps = frame->Subdata(sps_start_index, sps_length);
 
 	// Extract PPS from frame
-	auto avc_pps = frame->Subdata(pps_start_index, pps_end_index - pps_start_index + 1);
+	auto avc_pps = frame->Subdata(pps_start_index, pps_length);
 
 	// Create an init m4s for video stream
 	// init.m4s not have duration

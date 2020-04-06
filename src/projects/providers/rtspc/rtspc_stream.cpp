@@ -206,7 +206,7 @@ namespace pvd
 		{
 			AVStream *stream = _format_context->streams[track_id];
 
-			logtp("[%d] media_type[%d] codec_id[%d]", track_id, stream->codecpar->codec_type, stream->codecpar->codec_id);
+			logtd("[%d] media_type[%d] codec_id[%d], extradata_size[%d]", track_id, stream->codecpar->codec_type, stream->codecpar->codec_id, stream->codecpar->extradata_size);
 
 			auto new_track = std::make_shared<MediaTrack>();
 
@@ -320,6 +320,7 @@ namespace pvd
 		bool is_received_first_packet = false;
 
 
+
 		while (!IsStopThread())
 		{
 			int32_t ret = ::av_read_frame(_format_context, &packet);
@@ -372,8 +373,6 @@ namespace pvd
 				is_received_first_packet = true;
 			}
 			
-			logtp("track_id(%d), flags(%d), pts(%10lld), dts(%10lld), size(%d)", packet.stream_index, packet.flags, packet.pts, packet.dts, packet.size);
-
 			if(_stream_metrics != nullptr)
 			{
 				_stream_metrics->IncreaseBytesIn(packet.size);
@@ -385,11 +384,35 @@ namespace pvd
 				::av_packet_unref(&packet);
 				continue;
 			}
-			
+
+
+			auto media_type = track->GetMediaType();
+			auto codec_id = track->GetCodecId();
 			auto flag = (packet.flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
+
+			// Make MediaPacket from AVPacket
 			auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), track->GetId(), packet.data, packet.size, packet.pts, packet.dts, packet.duration, flag);
 
+			// SPS/PPS Insject from Extra Data
+			if(media_type == common::MediaType::Video && codec_id == common::MediaCodecId::H264)
+			{
+				AVStream *stream = _format_context->streams[packet.stream_index];
+
+				if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
+				{
+					if(flag == MediaPacketFlag::Key)
+					{
+						media_packet->GetData()->Insert(stream->codecpar->extradata, 0, stream->codecpar->extradata_size);
+						logtp("Injected SPS/PPS data. length:%d", stream->codecpar->extradata_size);
+					}
+				}
+			}
+
+			media_packet->GetData();
+
 			_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
+
+			// logtp("track_id(%d), flags(%d), pts(%10lld), dts(%10lld), size(%d)", packet.stream_index, packet.flags, packet.pts, packet.dts, packet.size);
 
 			::av_packet_unref(&packet);
 		}
