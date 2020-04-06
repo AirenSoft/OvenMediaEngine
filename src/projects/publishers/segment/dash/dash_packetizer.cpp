@@ -273,8 +273,8 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 		return false;
 	}
 
-	// TODO : 만약에 NAL 패킷이 3개 초과로 포함되는 패킷에 대해서는 파싱 오류가 발생할 수 있다.
-	if ((total_start_pattern_size < 6) || (total_start_pattern_size > 12))
+	// Notice: One packet may contain multiple NAL packets. so, Removed the maximum pattern size limit.
+	// if ((total_start_pattern_size < 6) || (total_start_pattern_size > 12))
 	if ((total_start_pattern_size < 6))
 	{
 		logte("Invalid patterns (%d, SPS: %d-%d, PPS: %d-%d) in %s frame for [%s/%s]",
