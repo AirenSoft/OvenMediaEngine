@@ -138,67 +138,67 @@ ov::String DashPacketizer::GetFileName(int64_t start_timestamp, common::MediaTyp
 
 bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &frame, const ov::String &init_file_name)
 {
-    const uint8_t* srcData = frame->GetDataAs<uint8_t>();
-    size_t dataOffset = 0;
-    size_t dataSize = frame->GetLength();
+	const uint8_t* srcData = frame->GetDataAs<uint8_t>();
+	size_t dataOffset = 0;
+	size_t dataSize = frame->GetLength();
 
-    std::vector<std::pair<size_t, size_t>> offset_list;
+	std::vector<std::pair<size_t, size_t>> offset_list;
 
-	int total_start_pattern_size = 0;
+	// int total_start_pattern_size = 0;
+	int nal_packet_header_length = 3;
+
+	// Stage 1 - Extract the Offset and Lengh value of the NAL Packet
+
+	while ( dataOffset < dataSize )
+	{
+		size_t remainDataSize = dataSize - dataOffset;
+		const uint8_t* data = srcData + dataOffset;
+
+		if (remainDataSize >= 3 && 0x00 == data[0] && 0x00 == data[1] && 0x01 == data[2])
+		{
+			nal_packet_header_length = 3;
+			offset_list.emplace_back(dataOffset, 3); // Offset, SIZEOF(START_CODE[3])
+			dataOffset += 3;
+		}
+		else if (remainDataSize >= 4 && 0x00 == data[0] &&  0x00 == data[1] && 0x00 == data[2] && 0x01 == data[3])
+		{
+			nal_packet_header_length = 4;
+			offset_list.emplace_back(dataOffset, 4); // Offset, SIZEOF(START_CODE[4])
+			dataOffset += 4;
+		}
+		else
+		{
+			dataOffset += 1;
+		}
+	}
 
 
-    // Stage 1 - Extract the Offset and Lengh value of the NAL Packet
-
-    while ( dataOffset < dataSize )
-    {
-        size_t remainDataSize = dataSize - dataOffset;
-        const uint8_t* data = srcData + dataOffset;
-
-        if (remainDataSize >= 3 && 0x00 == data[0] && 0x00 == data[1] && 0x01 == data[2])
-        {
-        	total_start_pattern_size += 3;
-            offset_list.emplace_back(dataOffset, 3); // Offset, SIZEOF(START_CODE[3])
-            dataOffset += 3;
-        }
-        else if (remainDataSize >= 4 && 0x00 == data[0] &&  0x00 == data[1] && 0x00 == data[2] && 0x01 == data[3])
-        {
-        	total_start_pattern_size += 4;
-            offset_list.emplace_back(dataOffset, 4); // Offset, SIZEOF(START_CODE[4])
-            dataOffset += 4;
-        }
-        else
-        {
-            dataOffset += 1;
-        }
-    }
-
-
-    // Stage 2  : Get position for SPS and PPS type
+	// Stage 2  : Get position for SPS and PPS type
 
 	int sps_start_index = -1;
 	int sps_length = -1;
 	int pps_start_index = -1;
 	int pps_length = -1;
 
- 	for (size_t index = 0; index < offset_list.size(); ++index)
-    {
-        size_t nalu_offset = 0;
-        size_t nalu_data_len = 0;
+	for (size_t index = 0; index < offset_list.size(); ++index)
+	{
+		size_t nalu_offset = 0;
+		size_t nalu_data_len = 0;
 
-        if (index != offset_list.size() - 1)
-        {
-            nalu_offset = offset_list[index].first + offset_list[index].second;
-            nalu_data_len = offset_list[index + 1].first - nalu_offset;
-        }
-        else
-        {
-            nalu_offset = offset_list[index].first + offset_list[index].second;
-            nalu_data_len = dataSize - nalu_offset;
-        }
+		if (index != offset_list.size() - 1)
+		{
+			nalu_offset = offset_list[index].first + offset_list[index].second;
+			nalu_data_len = offset_list[index + 1].first - nalu_offset - 1;
+		}
+		else
+		{
+			nalu_offset = offset_list[index].first + offset_list[index].second;
+			nalu_data_len = dataSize - nalu_offset - 1;
+		}
 
 
-   		// [Difinition of NAL_UNIT_TYPE]
-			
+		// [Difinition of NAL_UNIT_TYPE]
+
 		// - Coded slice of a non-IDR picture slice_layer_without_partitioning_rbsp( )
 		// NonIDR = 1,
 		// - Coded slice data partition A slice_data_partition_a_layer_rbsp( )
@@ -216,49 +216,49 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 		// - Picture parameter set pic_parameter_set_rbsp( )
 		// PPS = 8,
 		// ...
-		
-        uint8_t nalu_header = *(srcData + nalu_offset);
-        // uint8_t forbidden_zero_bit = (nalu_header >> 7)  & 0x01;
-        // uint8_t nal_ref_idc = (nalu_header >> 5)  & 0x03;
-        uint8_t nal_unit_type = (nalu_header)  & 0x01F;
+
+		uint8_t nalu_header = *(srcData + nalu_offset);
+		// uint8_t forbidden_zero_bit = (nalu_header >> 7)  & 0x01;
+		uint8_t nal_ref_idc = (nalu_header >> 5)  & 0x03;
+		uint8_t nal_unit_type = (nalu_header)  & 0x01F;
 
 
 #if 0	// for debug
-        if( (nal_unit_type == (uint8_t)5) || (nal_unit_type == (uint8_t)6) || (nal_unit_type == (uint8_t)7) || (nal_unit_type == (uint8_t)8)) 
-        {
-            logte("[%d] nal_ref_idc:%2d, nal_unit_type:%2d => offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d"
-            , index
-            , nal_ref_idc, nal_unit_type
-            , offset_list[index].first
-            , offset_list[index].second
-            , nalu_offset
-            , nalu_data_len
-			);
-        }
+		if ( (nal_unit_type == (uint8_t)5) || (nal_unit_type == (uint8_t)6) || (nal_unit_type == (uint8_t)7) || (nal_unit_type == (uint8_t)8))
+		{
+			logte("[%d] nal_ref_idc:%2d, nal_unit_type:%2d => offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d"
+				, index
+				, nal_ref_idc, nal_unit_type
+				, offset_list[index].first
+				, offset_list[index].second
+				, nalu_offset
+				, nalu_data_len);
+		}
 #endif
 
-        // SPS type
-        if(nal_unit_type == 7)
-        {
-        	sps_start_index = nalu_offset;
-        	sps_length = nalu_data_len;
-        }    
-        // PPS type    
-        else if(nal_unit_type == 8)
-        {
-        	pps_start_index = nalu_offset;
-        	pps_length = nalu_data_len;
-        }
+		// SPS type
+		if (nal_unit_type == 7)
+		{
+			sps_start_index = nalu_offset;
+			sps_length = nalu_data_len;
+		}
+		// PPS type
+		else if (nal_unit_type == 8)
+		{
+			pps_start_index = nalu_offset;
+			pps_length = nalu_data_len;
+		}
 	}
 
+	// logte("nal_packet_header_length : %d", nal_packet_header_length);
 
 	// Check parsing result
 	if ((sps_start_index == -1) || (sps_length < -1))
 	{
 		logte("Could not parse SPS (SPS: %d-%d, PPS: %d-%d) from %s frame for [%s/%s]",
-			  sps_start_index, sps_length, pps_start_index, pps_length,
-			  GetPacketizerName(),
-			  _app_name.CStr(), _stream_name.CStr());
+			sps_start_index, sps_length, pps_start_index, pps_length,
+			GetPacketizerName(),
+			_app_name.CStr(), _stream_name.CStr());
 
 		return false;
 	}
@@ -266,22 +266,23 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 	if ((pps_start_index == -1) || (pps_length < -1))
 	{
 		logte("Could not parse PPS (SPS: %d-%d, PPS: %d-%d) from %s frame for [%s/%s]",
-			  sps_start_index, sps_length, pps_start_index, pps_length,
-			  GetPacketizerName(),
-			  _app_name.CStr(), _stream_name.CStr());
+			sps_start_index, sps_length, pps_start_index, pps_length,
+			GetPacketizerName(),
+			_app_name.CStr(), _stream_name.CStr());
 
 		return false;
 	}
 
 	// Notice: One packet may contain multiple NAL packets. so, Removed the maximum pattern size limit.
 	// if ((total_start_pattern_size < 6) || (total_start_pattern_size > 12))
-	if ((total_start_pattern_size < 6))
+
+	if ( !(nal_packet_header_length == 3 || nal_packet_header_length == 4) )
 	{
-		logte("Invalid patterns (%d, SPS: %d-%d, PPS: %d-%d) in %s frame for [%s/%s]",
-			  total_start_pattern_size,
-			  sps_start_index, sps_length, pps_start_index, pps_length,
-			  GetPacketizerName(),
-			  _app_name.CStr(), _stream_name.CStr());
+		logte("Invalid patterns (start code length : %d, SPS: %d-%d, PPS: %d-%d) in %s frame for [%s/%s]",
+			nal_packet_header_length,
+			sps_start_index, sps_length, pps_start_index, pps_length,
+			GetPacketizerName(),
+			_app_name.CStr(), _stream_name.CStr());
 
 		return false;
 	}
@@ -307,7 +308,9 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 		return false;
 	}
 
-	_avc_nal_header_size = avc_sps->GetLength() + avc_pps->GetLength() + total_start_pattern_size;
+	// logte("sps_lengh : %d, pps_length : %d", avc_sps->GetLength(), avc_pps->GetLength());
+
+	_avc_nal_header_size = avc_sps->GetLength() + avc_pps->GetLength() + (nal_packet_header_length * 2);
 
 	// Store data for video stream
 	_video_init_file = std::make_shared<SegmentData>(common::MediaType::Video, 0, init_file_name, 0, 0, init_data);

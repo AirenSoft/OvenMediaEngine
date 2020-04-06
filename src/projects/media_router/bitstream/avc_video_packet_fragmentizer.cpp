@@ -107,12 +107,12 @@ bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &
         if (index != offset_list.size() - 1)
         {
             nalu_offset = offset_list[index].first + offset_list[index].second;
-            nalu_data_len = offset_list[index + 1].first - nalu_offset;
+            nalu_data_len = offset_list[index + 1].first - nalu_offset - 1;
         }
         else
         {
             nalu_offset = offset_list[index].first + offset_list[index].second;
-            nalu_data_len = dataSize - nalu_offset;
+            nalu_data_len = dataSize - nalu_offset - 1;
         }
 
 #if 0
@@ -121,7 +121,7 @@ bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &
         uint8_t nal_ref_idc = (nalu_header >> 5)  & 0x03;
         uint8_t nal_unit_type = (nalu_header)  & 0x01F;
 
-        if( (nal_unit_type == (uint8_t)AvcNaluType::IDR) || (nal_unit_type == (uint8_t)AvcNaluType::SEI) || (nal_unit_type == (uint8_t)AvcNaluType::SPS) || (nal_unit_type == (uint8_t)AvcNaluType::PPS))
+        // if( (nal_unit_type == (uint8_t)AvcNaluType::IDR) || (nal_unit_type == (uint8_t)AvcNaluType::SEI) || (nal_unit_type == (uint8_t)AvcNaluType::SPS) || (nal_unit_type == (uint8_t)AvcNaluType::PPS))
         {
             logtd("[%d] nal_ref_idc:%2d, nal_unit_type:%2d => offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d"
             , index
