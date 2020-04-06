@@ -188,12 +188,12 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 		if (index != offset_list.size() - 1)
 		{
 			nalu_offset = offset_list[index].first + offset_list[index].second;
-			nalu_data_len = offset_list[index + 1].first - nalu_offset - 1;
+			nalu_data_len = offset_list[index + 1].first - nalu_offset ;
 		}
 		else
 		{
 			nalu_offset = offset_list[index].first + offset_list[index].second;
-			nalu_data_len = dataSize - nalu_offset - 1;
+			nalu_data_len = dataSize - nalu_offset;
 		}
 
 
@@ -218,12 +218,11 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 		// ...
 
 		uint8_t nalu_header = *(srcData + nalu_offset);
-		// uint8_t forbidden_zero_bit = (nalu_header >> 7)  & 0x01;
-		uint8_t nal_ref_idc = (nalu_header >> 5)  & 0x03;
 		uint8_t nal_unit_type = (nalu_header)  & 0x01F;
 
-
 #if 0	// for debug
+		uint8_t forbidden_zero_bit = (nalu_header >> 7)  & 0x01;
+		uint8_t nal_ref_idc = (nalu_header >> 5)  & 0x03;
 		if ( (nal_unit_type == (uint8_t)5) || (nal_unit_type == (uint8_t)6) || (nal_unit_type == (uint8_t)7) || (nal_unit_type == (uint8_t)8))
 		{
 			logte("[%d] nal_ref_idc:%2d, nal_unit_type:%2d => offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d"
@@ -308,9 +307,8 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 		return false;
 	}
 
-	// logte("sps_lengh : %d, pps_length : %d", avc_sps->GetLength(), avc_pps->GetLength());
-
-	_avc_nal_header_size = avc_sps->GetLength() + avc_pps->GetLength() + (nal_packet_header_length * 2);
+	// logtd("sps_lengh : %d, pps_length : %d", avc_sps->GetLength(), avc_pps->GetLength());
+	_avc_nal_header_size = avc_sps->GetLength() + avc_pps->GetLength() + (nal_packet_header_length  * 2) - 2;
 
 	// Store data for video stream
 	_video_init_file = std::make_shared<SegmentData>(common::MediaType::Video, 0, init_file_name, 0, 0, init_data);

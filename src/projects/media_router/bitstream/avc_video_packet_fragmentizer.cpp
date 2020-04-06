@@ -99,6 +99,7 @@ bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &
 
     fragment_header->Clear();
 
+
     for (size_t index = 0; index < offset_list.size(); ++index)
     {
         size_t nalu_offset = 0;
@@ -107,12 +108,12 @@ bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &
         if (index != offset_list.size() - 1)
         {
             nalu_offset = offset_list[index].first + offset_list[index].second;
-            nalu_data_len = offset_list[index + 1].first - nalu_offset - 1;
+            nalu_data_len = offset_list[index + 1].first - nalu_offset;
         }
         else
         {
             nalu_offset = offset_list[index].first + offset_list[index].second;
-            nalu_data_len = dataSize - nalu_offset - 1;
+            nalu_data_len = dataSize - nalu_offset;
         }
 
 #if 0
@@ -123,8 +124,9 @@ bool AvcVideoPacketFragmentizer::MakeHeader(const std::shared_ptr<MediaPacket> &
 
         // if( (nal_unit_type == (uint8_t)AvcNaluType::IDR) || (nal_unit_type == (uint8_t)AvcNaluType::SEI) || (nal_unit_type == (uint8_t)AvcNaluType::SPS) || (nal_unit_type == (uint8_t)AvcNaluType::PPS))
         {
-            logtd("[%d] nal_ref_idc:%2d, nal_unit_type:%2d => offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d"
+            logtd("[%d][%d] nal_ref_idc:%2d, nal_unit_type:%2d => offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d"
             , index
+            , dataSize
             , nal_ref_idc, nal_unit_type
             , offset_list[index].first
             , offset_list[index].second
