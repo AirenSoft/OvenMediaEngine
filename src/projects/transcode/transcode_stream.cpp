@@ -653,7 +653,7 @@ bool TranscodeStream::CreateEncoder(int32_t encoder_track_id, std::shared_ptr<Me
 	auto encoder = std::move(TranscodeEncoder::CreateEncoder(media_track->GetCodecId(), output_context));
 	if (encoder == nullptr)
 	{
-		logte("Encoder allication failed");
+		logte("%d track encoder allication failed", encoder_track_id);
 		return false;
 	}
 
@@ -1034,6 +1034,12 @@ void TranscodeStream::CreateFilters(MediaFrame *buffer)
 	for (auto &filter_id : filter_item->second)
 	{
 		auto encoder_id = _stage_filter_to_encoder[filter_id];
+
+		if(_encoders.find(encoder_id) == _encoders.end())
+		{
+			logte("%d track encoder is not allocated", encoder_id);
+			continue;
+		}
 
 		auto output_transcode_context = _encoders[encoder_id]->GetContext();
 
