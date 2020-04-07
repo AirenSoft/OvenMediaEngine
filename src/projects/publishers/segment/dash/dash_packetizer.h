@@ -112,9 +112,11 @@ protected:
 	std::vector<std::shared_ptr<const SampleData>> _video_datas;
 	int64_t _first_video_pts = -1LL;
 	int64_t _last_video_pts = -1LL;
+	double _video_scale = 0.0;
 	std::vector<std::shared_ptr<const SampleData>> _audio_datas;
 	int64_t _first_audio_pts = -1LL;
 	int64_t _last_audio_pts = -1LL;
+	double _audio_scale = 0.0;
 
 	double _duration_margin;
 

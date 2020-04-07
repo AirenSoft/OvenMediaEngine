@@ -197,37 +197,39 @@ bool CmafPacketizer::UpdatePlayList()
 	int64_t current_time = GetTimestampInMs();
 	int64_t elapsed_time = current_time - _start_time_ms;
 
-	int64_t video_delta = (_last_video_pts >= 0LL) ? (static_cast<int64_t>((_last_video_pts - _first_video_pts) * _video_track->GetTimeBase().GetExpr() * 1000.0)) : -1LL;
-	int64_t audio_delta = (_last_audio_pts >= 0LL) ? (static_cast<int64_t>((_last_audio_pts - _first_audio_pts) * _audio_track->GetTimeBase().GetExpr() * 1000.0)) : -1LL;
+	int64_t video_delta = (_last_video_pts >= 0LL) ? (static_cast<int64_t>((_last_video_pts - _first_video_pts) * _video_scale)) : -1LL;
+	int64_t audio_delta = (_last_audio_pts >= 0LL) ? (static_cast<int64_t>((_last_audio_pts - _first_audio_pts) * _audio_scale)) : -1LL;
 	int64_t stream_delta = std::min(video_delta, audio_delta);
 
-	int64_t jitter = elapsed_time - stream_delta - _jitter_correction;
+	int64_t jitter = elapsed_time - stream_delta;
+	int64_t adjusted_jitter = jitter - _jitter_correction;
+
 	int64_t new_jitter_correction = _jitter_correction;
 
-	if (jitter > CMAF_JITTER_THRESHOLD)
+	if (adjusted_jitter > CMAF_JITTER_THRESHOLD)
 	{
 		new_jitter_correction += CMAF_JITTER_CORRECTION_PER_ONCE;
 	}
-	else if ((jitter < (CMAF_JITTER_THRESHOLD - CMAF_JITTER_CORRECTION_PER_ONCE)) && (_jitter_correction > 0))
+	else if ((adjusted_jitter < 0L) && (_jitter_correction > 0L))
 	{
 		new_jitter_correction -= CMAF_JITTER_CORRECTION_PER_ONCE;
 	}
 
-	if (_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update())
+	if ((_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update()) || (new_jitter_correction != _jitter_correction))
 	{
 		logts(
 			"[%s/%s] Current jitter correction\n"
 			"  - Elapsed: %lldms (current: %lldms, start: %lldms)\n"
-			"  - Jitter: %lldms (with correction: %lldms), correction: %lldms => %lldms (%lldms)\n"
+			"  - Jitter: %lldms (%lldms %c %lldms), correction: %lldms => %lldms (%lldms)\n"
 			"  - Stream delta: %lldms\n"
 			"    - Video: last PTS: %lldms, start: %lldms, delta: %lldms\n"
 			"    - Audio: last PTS: %lldms, start: %lldms, delta: %lldms",
 			_app_name.CStr(), _stream_name.CStr(),
 			elapsed_time, current_time, _start_time_ms,
-			(elapsed_time - stream_delta), jitter, _jitter_correction, new_jitter_correction, (_jitter_correction - new_jitter_correction),
+			adjusted_jitter, jitter, (_jitter_correction >= 0 ? '-' : '+'), std::abs(_jitter_correction), _jitter_correction, new_jitter_correction, (_jitter_correction - new_jitter_correction),
 			stream_delta,
-			_last_video_pts, _first_video_pts, video_delta,
-			_last_audio_pts, _first_audio_pts, audio_delta);
+			static_cast<int64_t>(_last_video_pts * _video_scale), static_cast<int64_t>(_first_video_pts * _video_scale), video_delta,
+			static_cast<int64_t>(_last_audio_pts * _audio_scale), static_cast<int64_t>(_first_audio_pts * _audio_scale), audio_delta);
 
 		if ((_last_video_pts >= 0LL) && (_last_audio_pts >= 0LL))
 		{
@@ -244,11 +246,11 @@ bool CmafPacketizer::UpdatePlayList()
 
 		if (new_jitter_correction > _jitter_correction)
 		{
-			logte("Because the jitter is too high, playback may not be possible (%s => %s)", _start_time.CStr(), new_start_time.CStr());
+			logte("[%s/%s] Because the jitter is too high, playback may not be possible (%s => %s, %lldms)", _app_name.CStr(), _stream_name.CStr(), _start_time.CStr(), new_start_time.CStr(), new_jitter_correction);
 		}
 		else
 		{
-			logtw("Jitter has been reduced, but playback may not be possible (%s => %s)", _start_time.CStr(), new_start_time.CStr());
+			logtw("[%s/%s] Jitter has been reduced, but playback may not be possible (%s => %s, %lldms)", _app_name.CStr(), _stream_name.CStr(), _start_time.CStr(), new_start_time.CStr(), new_jitter_correction);
 		}
 
 		_jitter_correction = new_jitter_correction;

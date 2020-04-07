@@ -65,6 +65,8 @@ DashPacketizer::DashPacketizer(const ov::String &app_name, const ov::String &str
 		{
 			_ideal_duration_for_video = 5.0;
 		}
+
+		_video_scale = _video_track->GetTimeBase().GetExpr() * 1000.0;
 	}
 
 	if (audio_track != nullptr)
@@ -75,6 +77,8 @@ DashPacketizer::DashPacketizer(const ov::String &app_name, const ov::String &str
 		{
 			_ideal_duration_for_audio = 5.0;
 		}
+
+		_audio_scale = _audio_track->GetTimeBase().GetExpr() * 1000.0;
 	}
 
 	_stat_stop_watch.Start();
@@ -308,7 +312,7 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 	}
 
 	// logtd("sps_lengh : %d, pps_length : %d", avc_sps->GetLength(), avc_pps->GetLength());
-	_avc_nal_header_size = (nal_packet_header_length + avc_sps->GetLength()) + (nal_packet_header_length + avc_pps->GetLength()) + nal_packet_header_length;
+	_avc_nal_header_size = (nal_packet_header_length + avc_sps->GetLength()) + (nal_packet_header_length + avc_pps->GetLength());
 
 	// Store data for video stream
 	_video_init_file = std::make_shared<SegmentData>(common::MediaType::Video, 0, init_file_name, 0, 0, init_data);
@@ -393,8 +397,13 @@ bool DashPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 	if (static_cast<int>(data->GetLength()) < offset)
 	{
 		// Not enough data
-		logtw("Invalid frame: frame is too short: %zu bytes", data->GetLength());
+		logtw("Invalid frame: frame is too short: expected: %d, but %zu bytes", offset, data->GetLength());
 		return false;
+	}
+
+	if(frame->type == PacketizerFrameType::VideoKeyFrame)
+	{
+		offset += GetStartPatternSize(data->GetDataAs<uint8_t>() + offset);
 	}
 
 	// Skip NAL header
@@ -428,7 +437,7 @@ bool DashPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 	{
 		if (_video_start_time == -1LL)
 		{
-			_video_start_time = GetCurrentMilliseconds() - (current_segment_duration * _video_track->GetTimeBase().GetExpr() * 1000.0);
+			_video_start_time = GetCurrentMilliseconds() - current_segment_duration;
 		}
 
 		// Check the timestamp to determine if a new segment is to be created
@@ -567,7 +576,7 @@ bool DashPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameDat
 
 	if (_audio_start_time == -1LL)
 	{
-		_audio_start_time = GetCurrentMilliseconds() - (current_segment_duration * _audio_track->GetTimeBase().GetExpr() * 1000.0);
+		_audio_start_time = GetCurrentMilliseconds() - current_segment_duration;
 	}
 
 	// Skip ADTS header
@@ -825,8 +834,8 @@ bool DashPacketizer::UpdatePlayList()
 	{
 		if ((_last_video_pts >= 0LL) && (_last_audio_pts >= 0LL))
 		{
-			int64_t video_pts = static_cast<int64_t>(_last_video_pts * _video_track->GetTimeBase().GetExpr() * 1000.0);
-			int64_t audio_pts = static_cast<int64_t>(_last_audio_pts * _audio_track->GetTimeBase().GetExpr() * 1000.0);
+			int64_t video_pts = static_cast<int64_t>(_last_video_pts * _video_scale);
+			int64_t audio_pts = static_cast<int64_t>(_last_audio_pts * _audio_scale);
 
 			logts("[%s/%s] DASH A-V Sync: %lld (A: %lld, V: %lld)",
 				_app_name.CStr(), _stream_name.CStr(),
