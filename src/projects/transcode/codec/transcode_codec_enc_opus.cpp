@@ -260,7 +260,7 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 
 void OvenCodecImplAvcodecEncOpus::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 {
-	logtp("[-> RAW DATA for OPUS]\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
+	// logtp("[-> RAW DATA for OPUS]\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
 
 	TranscodeEncoder::SendBuffer(std::move(frame));
 }
