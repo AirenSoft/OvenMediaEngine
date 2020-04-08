@@ -27,7 +27,7 @@
 #include <web_console/web_console.h>
 
 #define INIT_MODULE(variable, name, create)                                         \
-	logti("Trying to create a" name "module"); 										\
+	logti("Trying to create a " name " module"); 										\
                                                                                     \
 	auto variable = create;                                                         \
                                                                                     \

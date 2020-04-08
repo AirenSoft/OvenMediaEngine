@@ -82,6 +82,8 @@ private:
 };
 
 // It is used to calculate concurrent users.
+// When the client has received as many as SEGEMTN_COUNT_DETERMINE_PLAYBACK segments, it is determined that playback has started.
+#define SEGMENT_COUNT_DETERMINE_PLAYBACK		2
 class SegmentRequestInfo
 {
 public:
@@ -93,6 +95,7 @@ public:
 		_sequence_number = seq;
 		_duration = (double)duration / (double)(PACKTYZER_DEFAULT_TIMESCALE); // convert to second
 		_last_requested_time = std::chrono::system_clock::now();
+		_count = 0;
 	}
 
 	SegmentRequestInfo(const SegmentRequestInfo &info)
@@ -103,6 +106,7 @@ public:
 		_sequence_number = info._sequence_number;
 		_duration = info._duration;
 		_last_requested_time = info._last_requested_time;
+		_count = info._count;
 	}
 
 	bool IsNextRequest(const SegmentRequestInfo &next)
@@ -142,11 +146,17 @@ public:
 		return ov::Converter::ToString(_last_requested_time);
 	}
 
+	void SetCount(uint32_t count)
+	{
+		_count = count;
+	}
+
 	const PublisherType& GetPublisherType() const { return _publisher_type; }
 	const info::Stream& GetStreamInfo() const { return _stream_info; }
 	const ov::String& GetIpAddress() const { return _ip_address; }
 	int	GetSequenceNumber() const { return _sequence_number; }
 	int64_t GetDuration() const { return _duration; }
+	uint32_t GetCount() const { return _count; }
 
 private:
 	PublisherType		_publisher_type;
@@ -154,6 +164,7 @@ private:
 	ov::String			_ip_address;
 	int					_sequence_number;
 	int64_t				_duration;
+	uint32_t			_count = 0;
 	std::chrono::system_clock::time_point	_last_requested_time;
 };
 
@@ -223,7 +234,7 @@ private:
 	const std::shared_ptr<PlaylistRequestInfo>	GetSessionRequestInfoBySegmentRequestInfo(const SegmentRequestInfo &info);
 	bool		IsAuthorizedSession(const PlaylistRequestInfo &info);
 
-	void		UpdateSegmentRequestInfo(const SegmentRequestInfo &info);
+	void		UpdateSegmentRequestInfo(SegmentRequestInfo &info);
 
 	bool					_run_thread = false;
 	std::recursive_mutex 	_playlist_request_table_lock;

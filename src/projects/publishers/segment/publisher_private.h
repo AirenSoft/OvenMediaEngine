@@ -8,4 +8,4 @@
 //==============================================================================
 #pragma once
 
-#define OV_LOG_TAG						"Publisher"
+#define OV_LOG_TAG						"HTTPPublisher"
