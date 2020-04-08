@@ -25,10 +25,11 @@ RUN     apk add --no-cache --update curl perl make gcc musl-dev linux-headers tc
 
 ## Build OpenSSL
 RUN \
+        OPENSSL_DOWNLOAD_NAME=$(echo "${OPENSSL_VERSION}" | sed 's/\./_/g') && \
         DIR=/tmp/openssl && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sLf https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+        curl -sLf https://github.com/openssl/openssl/archive/OpenSSL_${OPENSSL_DOWNLOAD_NAME}.tar.gz | tar -xz --strip-components=1 && \
         ./config --prefix="${PREFIX}" --openssldir="${PREFIX}" -Wl,-rpath="${PREFIX}/lib" shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa no-async && \
         make && \
         make install_sw && \
