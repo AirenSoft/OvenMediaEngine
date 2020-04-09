@@ -140,7 +140,7 @@ RUN \
 
 ## Build OvenMediaEngine
 RUN \
-        DIR=/tmp/ome5 && \
+        DIR=/tmp/ome && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLf https://github.com/AirenSoft/OvenMediaEngine/archive/${OME_VERSION}.tar.gz | tar -xz --strip-components=1 && \
@@ -149,7 +149,7 @@ RUN \
 
 ## Make running environment
 RUN \
-        DIR=/tmp/ome5 && \
+        DIR=/tmp/ome && \
         cd ${DIR} && \
         cd src && \
         mkdir -p ${PREFIX}/bin/origin_conf && \
