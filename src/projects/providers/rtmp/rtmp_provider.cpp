@@ -38,8 +38,7 @@ RtmpProvider::RtmpProvider(const cfg::Server &server_config, const std::shared_p
 
 RtmpProvider::~RtmpProvider()
 {
-	Stop();
-	logtd("Terminated Rtmp Provider modules.");
+	logti("Terminated Rtmp Provider module.");
 }
 
 bool RtmpProvider::Start()
@@ -67,6 +66,8 @@ bool RtmpProvider::Start()
 
 bool RtmpProvider::Stop()
 {
+	_rtmp_server->RemoveObserver(RtmpObserver::GetSharedPtr());
+	_rtmp_server->Stop();
 	return Provider::Stop();
 }
 

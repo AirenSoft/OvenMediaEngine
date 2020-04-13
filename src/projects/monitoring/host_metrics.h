@@ -19,6 +19,20 @@ namespace mon
 		{
 		}
 
+		~HostMetrics()
+		{
+			_applications.clear();
+		}
+
+		void Release()
+		{
+			for(const auto &app : _applications)
+			{
+				app.second->Release();
+			}
+			_applications.clear();
+		}
+
 		ov::String GetInfoString(bool show_children=true);
 		void ShowInfo(bool show_children=true);
 

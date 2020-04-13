@@ -145,6 +145,19 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 bool SegmentStreamServer::Stop()
 {
 	// Remove Interceptor
+	
+	// Stop server
+	if (_http_server != nullptr)
+	{
+		_http_server->Stop();
+		_http_server = nullptr;
+	}
+
+	if (_https_server != nullptr)
+	{
+		_https_server->Stop();
+		_https_server = nullptr;
+	}
 
 	return false;
 }

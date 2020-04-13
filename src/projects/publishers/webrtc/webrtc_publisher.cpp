@@ -103,8 +103,10 @@ bool WebRtcPublisher::Start()
 
 bool WebRtcPublisher::Stop()
 {
-	_ice_port.reset();
-	_signalling_server.reset();
+	IcePortManager::Instance()->ReleasePort(_ice_port, IcePortObserver::GetSharedPtr());
+
+	_signalling_server->RemoveObserver(RtcSignallingObserver::GetSharedPtr());
+	_signalling_server->Stop();
 
 	return Publisher::Stop();
 }

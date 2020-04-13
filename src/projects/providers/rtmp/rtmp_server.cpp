@@ -61,6 +61,7 @@ bool RtmpServer::Stop()
 
 	_physical_port->RemoveObserver(this);
 	PhysicalPortManager::Instance()->DeletePort(_physical_port);
+
 	_physical_port = nullptr;
 
 	return true;

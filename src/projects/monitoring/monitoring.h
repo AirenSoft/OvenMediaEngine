@@ -23,6 +23,8 @@ namespace mon
             return &monitor;
 	    }
 
+		void Release();
+
 		void ShowInfo();
 
 		bool OnHostCreated(const info::Host &host_info);

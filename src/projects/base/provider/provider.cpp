@@ -12,8 +12,7 @@
 #include "provider.h"
 #include "application.h"
 #include "stream.h"
-
-#define OV_LOG_TAG "Provider"
+#include "provider_private.h"
 
 namespace pvd
 {
@@ -35,8 +34,7 @@ namespace pvd
 	{
 		_run_thread = true;
 		_worker_thread = std::thread(&Provider::RegularTask, this);
-		_worker_thread.detach();
-		
+
 		logti("%s has been started.", GetProviderName());
 
 		return true;
@@ -45,6 +43,10 @@ namespace pvd
 	bool Provider::Stop()
 	{
 		_run_thread = false;
+		if(_worker_thread.joinable())
+		{
+			_worker_thread.join();
+		}
 
 		auto it = _applications.begin();
 

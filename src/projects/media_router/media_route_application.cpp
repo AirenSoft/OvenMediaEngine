@@ -62,6 +62,9 @@ bool MediaRouteApplication::Stop()
 		_thread.join();
 	}
 
+	_connectors.clear();
+	_observers.clear();
+
 	return true;
 }
 

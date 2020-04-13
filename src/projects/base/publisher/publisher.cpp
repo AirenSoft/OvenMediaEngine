@@ -9,6 +9,10 @@ namespace pub
 	{
 	}
 
+	Publisher::~Publisher()
+	{
+	}
+
 	bool Publisher::Start()
 	{
 		logti("%s has been started.", GetPublisherName());

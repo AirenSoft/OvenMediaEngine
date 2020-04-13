@@ -18,6 +18,8 @@ public:
 	WebRtcPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 	~WebRtcPublisher() override;
 
+	bool Stop() override;
+
 	// IcePortObserver Implementation
 
 	// ICE 연결 상태가 바뀌면 통지해준다.
@@ -71,7 +73,7 @@ private:
 	};
 
 	bool Start() override;
-	bool Stop() override;
+	
 
 	session_id_t _last_issued_session_id = 100;
 

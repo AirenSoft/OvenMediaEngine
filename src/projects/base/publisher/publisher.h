@@ -121,7 +121,7 @@ namespace pub
 
 	protected:
 		explicit Publisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
-		virtual ~Publisher() = default;
+		virtual ~Publisher();
 
 		const cfg::Server &GetServerConfig() const;
 

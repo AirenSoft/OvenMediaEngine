@@ -11,6 +11,7 @@
 #include "stream.h"
 #include "application.h"
 #include "base/info/application.h"
+#include "provider_private.h"
 
 namespace pvd
 {
@@ -39,11 +40,13 @@ namespace pvd
 
 	bool Stream::Start() 
 	{
+		logti("%s application has started [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
 		return true;
 	}
 	
 	bool Stream::Stop() 
 	{
+		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), _application->GetApplicationTypeName());
 		return true;
 	}
 }

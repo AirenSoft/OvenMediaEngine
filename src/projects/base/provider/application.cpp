@@ -9,8 +9,7 @@
 
 #include "application.h"
 #include "stream.h"
-
-#define OV_LOG_TAG "Provider"
+#include "provider_private.h"
 
 namespace pvd
 {

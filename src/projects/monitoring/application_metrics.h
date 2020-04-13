@@ -24,6 +24,18 @@ namespace mon
 			  _host_metrics(host_metrics)
 		{
 		}
+
+		~ApplicationMetrics()
+		{
+			_host_metrics.reset();
+			_streams.clear();
+		}
+
+		void Release()
+		{
+			_streams.clear();
+		}
+
 		std::shared_ptr<HostMetrics> GetHostMetrics()
 		{
 			return _host_metrics;

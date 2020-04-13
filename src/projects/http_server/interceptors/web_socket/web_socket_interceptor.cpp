@@ -23,6 +23,7 @@ WebSocketInterceptor::WebSocketInterceptor()
 
 WebSocketInterceptor::~WebSocketInterceptor()
 {
+	_ping_timer.Stop();
 }
 
 ov::DelayQueueAction WebSocketInterceptor::DoPing(void *parameter)

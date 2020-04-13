@@ -143,12 +143,13 @@ bool IcePort::Close()
 
 		if (result == false)
 		{
-			logte("Cannot close ICE port");
+			logtd("Cannot close ICE port");
 			break;
 		}
 	}
 
 	_ice_candidate_list.clear();
+	_timer.Stop();
 
 	return result;
 }

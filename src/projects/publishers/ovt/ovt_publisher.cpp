@@ -73,6 +73,7 @@ bool OvtPublisher::Stop()
 	if (_server_port != nullptr)
 	{
 		_server_port->RemoveObserver(this);
+		_server_port->Close();
 	}
 
 	return Publisher::Stop();

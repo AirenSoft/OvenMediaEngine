@@ -24,6 +24,11 @@ namespace mon
 			_response_time_from_origin_msec = 0;
 		}
 
+		~StreamMetrics()
+		{
+			_app_metrics.reset();
+		}
+
 		std::shared_ptr<ApplicationMetrics> GetApplicationMetrics()
 		{
 			return _app_metrics;

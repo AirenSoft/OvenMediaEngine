@@ -71,6 +71,8 @@ bool IcePortManager::ReleasePort(std::shared_ptr<IcePort> ice_port, std::shared_
 		}
 	}
 
+	ice_port->Close();
+
 	return true;
 }
 

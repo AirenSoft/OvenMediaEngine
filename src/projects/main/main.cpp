@@ -27,20 +27,36 @@
 #include <web_console/web_console.h>
 
 #define INIT_MODULE(variable, name, create)                                         \
-	logti("Trying to create a " name " module"); 										\
+	logti("Trying to create a " name " module"); 									\
                                                                                     \
 	auto variable = create;                                                         \
                                                                                     \
 	if (variable == nullptr)                                                        \
 	{                                                                               \
-		logte("Failed to initialize" name "module");								\
+		logte("Failed to initialize" name " module");								\
 		return 1;                                                                   \
 	}                                                                               \
                                                                                     \
 	if(orchestrator->RegisterModule(variable) == false)								\
 	{																				\
-		logte("Failed to register" name "module");									\
+		logte("Failed to register" name " module");									\
 		return 1;																	\
+	}																				\
+
+
+#define RELEASE_MODULE(variable, name) 			                                   	\
+	logti("Trying to delete a " name " module");									\
+																					\
+	if( variable != nullptr)														\
+	{																				\
+		if(orchestrator->UnregisterModule(variable) != false)						\
+		{																			\
+			variable->Stop();														\
+		}																			\
+		else																		\
+		{																			\
+			logte("Failed to unregister" name " module");							\
+		}																			\
 	}																				\
 
 #define INIT_EXTERNAL_MODULE(name, func)                                          \
@@ -55,9 +71,17 @@
 		}                                                                         \
 	}
 
+bool		_running_server = true;
+
 static void PrintBanner();
 static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_option);
 static bool Uninitialize();
+
+void Terminate(int s)
+{
+	logti("Caught signal %d\n",s);
+	_running_server = false;
+}
 
 int main(int argc, char *argv[])
 {
@@ -126,10 +150,12 @@ int main(int argc, char *argv[])
 	INIT_MODULE(media_router, "MediaRouter", MediaRouter::Create());
 
 	// Initialize Providers
+
 	INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
 	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
 	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 	INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
+	
 
 	// Initialize Transcoder
 	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
@@ -162,27 +188,49 @@ int main(int argc, char *argv[])
 		ov::Daemon::SetEvent();
 	}
 
-	while (true)
+	struct sigaction sigIntHandler;
+
+	sigIntHandler.sa_handler = Terminate;
+	sigemptyset(&sigIntHandler.sa_mask);
+	sigIntHandler.sa_flags = 0;
+	sigaction(SIGINT, &sigIntHandler, NULL);
+
+	while (_running_server)
 	{
-		sleep(10);
-		//Plan to start / stop with external signals
-		//mon::Monitoring::GetInstance()->ShowInfo();
-#if 0
-		// Test to verify that the application is deleted successfully 
-		for (auto &host_info : host_info_list)
+		sleep(1);
+	}
+
+	// Delete applications correctrly.  
+	for (auto &host_info : host_info_list)
+	{
+		monitor->OnHostDeleted(host_info);
+
+		// Create applications that defined by the configuration
+		for (auto &app_cfg : host_info.GetApplicationList())
 		{
-			// Create applications that defined by the configuration
-			for (auto &app_cfg : host_info.GetApplicationList())
+			auto app_info = orchestrator->GetApplicationInfoByName(host_info.GetName(), app_cfg.GetName());
+			if(app_info.IsValid())
 			{
-				auto app_info = orchestrator->GetApplicationInfoByName(host_info.GetName(), app_cfg.GetName());
-				if(app_info.IsValid())
-				{
-					orchestrator->DeleteApplication(app_info);
-				}
+				orchestrator->DeleteApplication(app_info);
+				//orchestrator->CreateApplication(host_info, app_cfg);
 			}
 		}
-#endif
 	}
+
+	// Relase all modules
+	monitor->Release();
+
+	RELEASE_MODULE(media_router, "MediaRouter");
+	RELEASE_MODULE(rtmp_provider, "RTMP Provider");
+	RELEASE_MODULE(ovt_provider, "OVT Provider");
+	RELEASE_MODULE(rtspc_provider, "RTSPC Provider");
+	RELEASE_MODULE(rtsp_provider, "RTSP Provider");
+	RELEASE_MODULE(transcoder, "Transcoder");
+	RELEASE_MODULE(webrtc_publisher, "WebRTC Publisher");
+	RELEASE_MODULE(hls_publisher, "HLS Publisher");
+	RELEASE_MODULE(dash_publisher, "MPEG-DASH Publisher");
+	RELEASE_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher");
+	RELEASE_MODULE(ovt_publisher, "OVT Publisher");
 
 	Uninitialize();
 

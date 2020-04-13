@@ -21,7 +21,6 @@ SegmentPublisher::SegmentPublisher(const cfg::Server &server_config, const std::
 
 SegmentPublisher::~SegmentPublisher()
 {
-	_run_thread = false;
 	logtd("Publisher has been destroyed");
 }
 
@@ -63,6 +62,19 @@ bool SegmentPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_se
 		  has_tls_port ? tls_address.ToString().CStr() : "");
 
 	return Publisher::Start();
+}
+
+bool SegmentPublisher::Stop()
+{
+	_run_thread = false;
+	if(_worker_thread.joinable())
+	{
+		_worker_thread.join();
+	}
+
+	_stream_server->RemoveObserver(SegmentStreamObserver::GetSharedPtr());
+	_stream_server->Stop();
+	return Publisher::Stop();
 }
 
 bool SegmentPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections)
@@ -233,7 +245,6 @@ bool SegmentPublisher::StartSessionTableManager()
 {
 	_run_thread = true;
 	_worker_thread = std::thread(&SegmentPublisher::RequestTableUpdateThread, this);
-	_worker_thread.detach();
 
 	return true;
 }

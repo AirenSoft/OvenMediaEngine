@@ -15,6 +15,14 @@ namespace mon
 			host->ShowInfo();
 		}
 	}
+
+	void Monitoring::Release()
+	{
+		for(const auto &host : _hosts)
+		{
+			host.second->Release();
+		}
+	}
 	
 	bool Monitoring::OnHostCreated(const info::Host &host_info)
 	{
@@ -38,11 +46,16 @@ namespace mon
 	bool Monitoring::OnHostDeleted(const info::Host &host_info)
 	{
 		std::unique_lock<std::mutex> lock(_map_guard);
-		if (_hosts.find(host_info.GetId()) == _hosts.end())
+		auto it = _hosts.find(host_info.GetId());
+
+		if (it == _hosts.end())
 		{
 			return false;
 		}
-		_hosts.erase(host_info.GetId());
+
+		auto host = it->second;
+		_hosts.erase(it);
+		host->Release();
 
 		logti("Delete HostMetrics(%s) for monitoring", host_info.GetName().CStr());
 		return true;

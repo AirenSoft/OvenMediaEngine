@@ -18,10 +18,10 @@ public:
 
 	OvtPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 	~OvtPublisher() override;
+	bool Stop() override;
 
 private:
 	bool Start() override;
-	bool Stop() override;
 
 	//--------------------------------------------------------------------
 	// Implementation of Publisher

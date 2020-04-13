@@ -37,10 +37,12 @@ bool HttpServer::Start(const ov::SocketAddress &address)
 
 bool HttpServer::Stop()
 {
-	if (_physical_port == nullptr)
+	//TODO(Dimiden): Check possibility that _physical_port can be deleted from other http publisher.
+	if (_physical_port != nullptr)
 	{
-		OV_ASSERT2(false);
-		return false;
+		_physical_port->RemoveObserver(this);
+		PhysicalPortManager::Instance()->DeletePort(_physical_port);
+		_physical_port = nullptr;
 	}
 
 	// client들 정리
@@ -53,9 +55,7 @@ bool HttpServer::Stop()
 		client.second->GetResponse()->Close();
 	}
 
-	_physical_port->RemoveObserver(this);
-	PhysicalPortManager::Instance()->DeletePort(_physical_port);
-	_physical_port = nullptr;
+	_interceptor_list.clear();
 
 	return true;
 }
