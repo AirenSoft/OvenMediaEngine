@@ -558,7 +558,7 @@ ov::String Orchestrator::GetVhostNameFromDomain(const ov::String &domain_name)
 	return "";
 }
 
-ov::String Orchestrator::ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name)
+ov::String Orchestrator::ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name) const
 {
 	// Replace all # to _
 	return ov::String::FormatString("#%s#%s", vhost_name.Replace("#", "_").CStr(), app_name.Replace("#", "_").CStr());
@@ -965,7 +965,7 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(const ov::String &v
 	auto app = app_item->second;
 	auto &app_info = app->app_info;
 
-	logti("Trying to delete the application: [%s] (%u)", app_info.GetName().CStr(), app_info.GetId());
+	logti("Trying to delete an application: [%s] (%u)", app_info.GetName().CStr(), app_info.GetId());
 	app_map.erase(app_id);
 
 	if (_media_router != nullptr)
@@ -1011,26 +1011,20 @@ Orchestrator::Result Orchestrator::DeleteApplication(const info::Application &ap
 	return DeleteApplicationInternal(app_info);
 }
 
-const info::Application &Orchestrator::GetApplicationInternal(const ov::String &vhost_app_name) const
+const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::String &host_name, const ov::String &app_name) const
 {
-	ov::String vhost_name;
-
-	if (ParseVHostAppName(vhost_app_name, &vhost_name, nullptr))
+	auto vhost = GetVirtualHost(host_name);
+	if (vhost != nullptr)
 	{
-		auto vhost = GetVirtualHost(vhost_name);
+		auto &app_map = vhost->app_map;
 
-		if (vhost != nullptr)
+		for (auto app_item : app_map)
 		{
-			auto &app_map = vhost->app_map;
-
-			for (auto app_item : app_map)
+			auto &app_info = app_item.second->app_info;
+			auto vhost_app_name = ResolveApplicationName(host_name, app_name);
+			if (app_info.GetName() == vhost_app_name)
 			{
-				auto &app_info = app_item.second->app_info;
-
-				if (app_info.GetName() == vhost_app_name)
-				{
-					return app_info;
-				}
+				return app_info;
 			}
 		}
 	}
@@ -1038,14 +1032,32 @@ const info::Application &Orchestrator::GetApplicationInternal(const ov::String &
 	return info::Application::GetInvalidApplication();
 }
 
-const info::Application &Orchestrator::GetApplication(const ov::String &vhost_app_name) const
+const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::String &vhost_app_name) const
+{
+	ov::String vhost_name;
+	if (ParseVHostAppName(vhost_app_name, &vhost_name, nullptr))
+	{
+		return GetApplicationInfoInternal(vhost_name, vhost_app_name);
+	}
+
+	return info::Application::GetInvalidApplication();
+}
+
+const info::Application &Orchestrator::GetApplicationInfoByName(const ov::String &host_name, const ov::String &app_name) const
 {
 	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
 
-	return GetApplicationInternal(vhost_app_name);
+	return GetApplicationInfoInternal(host_name, app_name);
 }
 
-const info::Application &Orchestrator::GetApplicationInternal(const ov::String &vhost_name, info::application_id_t app_id) const
+const info::Application &Orchestrator::GetApplicationInfoByVHostAppName(const ov::String &vhost_app_name) const
+{
+	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
+
+	return GetApplicationInfoInternal(vhost_app_name);
+}
+
+const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::String &vhost_name, info::application_id_t app_id) const
 {
 	auto vhost = GetVirtualHost(vhost_name);
 
@@ -1075,7 +1087,7 @@ bool Orchestrator::RequestPullStreamForUrl(const ov::String &vhost_app_name, con
 	}
 
 	// Check if the application does exists
-	auto app_info = GetApplicationInternal(vhost_app_name);
+	auto app_info = GetApplicationInfoInternal(vhost_app_name);
 	Result result;
 
 	if (app_info.IsValid())
@@ -1183,7 +1195,7 @@ bool Orchestrator::RequestPullStreamForLocation(const ov::String &vhost_app_name
 	}
 
 	// Check if the application does exists
-	auto app_info = GetApplicationInternal(vhost_app_name);
+	auto app_info = GetApplicationInfoInternal(vhost_app_name);
 	Result result;
 
 	if (app_info.IsValid())

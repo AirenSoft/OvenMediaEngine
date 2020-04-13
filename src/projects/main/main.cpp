@@ -164,9 +164,29 @@ int main(int argc, char *argv[])
 
 	while (true)
 	{
-		sleep(5);
+		sleep(10);
 		//Plan to start / stop with external signals
 		//mon::Monitoring::GetInstance()->ShowInfo();
+#if 0
+		// Test to verify that the application is deleted successfully 
+		for (auto &host_info : host_info_list)
+		{
+			auto host_name = host_info.GetName();
+
+			logtd("Trying to create host [%s]", host_name.CStr());
+			monitor->OnHostCreated(host_info);
+
+			// Create applications that defined by the configuration
+			for (auto &app_cfg : host_info.GetApplicationList())
+			{
+				auto app_info = orchestrator->GetApplicationInfoByName(host_info.GetName(), app_cfg.GetName());
+				if(app_info.IsValid())
+				{
+					orchestrator->DeleteApplication(app_info);
+				}
+			}
+		}
+#endif
 	}
 
 	Uninitialize();

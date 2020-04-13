@@ -60,12 +60,16 @@ bool MediaRouter::OnCreateApplication(const info::Application &app_info)
 {
 	info::application_id_t application_id = app_info.GetId();
 	auto route_app = MediaRouteApplication::Create(app_info);
-
 	if(route_app == nullptr)
 	{
 		logte("failed to allocation route_app");
 		return false;
 	}
+	else
+	{
+		logti("MediaRouter has created [%s] application", app_info.GetName().CStr());
+	}
+	
 
 	_route_apps.insert(std::make_pair(application_id, route_app));
 
@@ -79,6 +83,8 @@ bool MediaRouter::OnDeleteApplication(const info::Application &app_info)
 	// Remove from the Route App Map
 	_route_apps[application_id]->Stop();
 	_route_apps.erase(application_id);
+
+	logti("MediaRouter has deleted [%s] application", app_info.GetName().CStr());
 
 	return true;
 }
@@ -140,12 +146,8 @@ bool MediaRouter::RegisterObserverApp(
 		return false;
 	}
 
-	// logtd("Register observer application. app_ptr(%p) name(%s)", app_obsrv.get(), app_name.CStr());
-
-
 	// 2. Media Route Application 모듈에 Connector를 등록함
 	auto media_route_app = GetRouteApplicationById(application_info.GetId());
-
 	if(media_route_app == nullptr)
 	{
 		logtw("cannot find application. name(%s)", application_info.GetName().CStr());

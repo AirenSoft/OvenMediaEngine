@@ -27,14 +27,14 @@ namespace pvd
 
 	bool Application::Start()
 	{
-		logti("%s has started [%s] application", GetApplicationTypeName(), GetName().CStr());
+		logti("%s has created [%s] application", GetApplicationTypeName(), GetName().CStr());
 		return true;
 	}
 
 	bool Application::Stop()
 	{
 		DeleteAllStreams();
-		logti("%s has stopped [%s] application", GetApplicationTypeName(), GetName().CStr());
+		logti("%s has deleted [%s] application", GetApplicationTypeName(), GetName().CStr());
 		return true;
 	}
 

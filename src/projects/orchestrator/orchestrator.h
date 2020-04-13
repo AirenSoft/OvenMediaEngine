@@ -351,7 +351,7 @@ public:
 	/// @param app_name An application name
 	///
 	/// @return A new application name corresponding to vhost/app
-	ov::String ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name);
+	ov::String ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name) const;
 
 	///  Generate an application name for domain/app
 	///
@@ -381,7 +381,8 @@ public:
 	/// @note If an error occurs during deletion, do not recreate the application
 	Result DeleteApplication(const info::Application &app_info);
 
-	const info::Application &GetApplication(const ov::String &vhost_app_name) const;
+	const info::Application &GetApplicationInfoByName(const ov::String &host_name, const ov::String &app_name) const;
+	const info::Application &GetApplicationInfoByVHostAppName(const ov::String &vhost_app_name) const;
 
 	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, const ov::String &url, off_t offset);
 	bool RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, const ov::String &url)
@@ -437,8 +438,9 @@ protected:
 	Result DeleteApplicationInternal(const ov::String &vhost_name, info::application_id_t app_id);
 	Result DeleteApplicationInternal(const info::Application &app_info);
 
-	const info::Application &GetApplicationInternal(const ov::String &vhost_app_name) const;
-	const info::Application &GetApplicationInternal(const ov::String &vhost_name, info::application_id_t app_id) const;
+	const info::Application &GetApplicationInfoInternal(const ov::String &vhost_app_name) const;
+	const info::Application &GetApplicationInfoInternal(const ov::String &host_name, const ov::String &app_name) const;
+	const info::Application &GetApplicationInfoInternal(const ov::String &vhost_name, info::application_id_t app_id) const;
 
 	bool RequestPullStreamForUrl(const ov::String &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<const ov::Url> &url, off_t offset);
 	bool RequestPullStreamForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset);

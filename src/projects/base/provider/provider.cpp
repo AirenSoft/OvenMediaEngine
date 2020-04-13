@@ -128,16 +128,31 @@ namespace pvd
 	{
 		auto item = _applications.find(app_info.GetId());
 
-		logti("Deleting the application: [%s]", app_info.GetName().CStr());
-
+		logtd("Delete the application: [%s]", app_info.GetName().CStr());
 		if(item == _applications.end())
 		{
-			logte("The application does not exists: [%s]", app_info.GetName().CStr());
+			// Check the reason the app is not created is because it is disabled in the configuration
+			if(app_info.IsDynamicApp() == false)
+			{
+				auto cfg_provider_list = app_info.GetConfig().GetProviders().GetProviderList();
+				for(const auto &cfg_provider : cfg_provider_list)
+				{
+					if(cfg_provider->GetType() == GetProviderType())
+					{
+						// this provider is disabled
+						if(!cfg_provider->IsParsed())
+						{
+							return true;
+						}
+					}
+				}
+			}
+
+			logte("%s provider hasn't the %s application.", ov::Converter::ToString(GetProviderType()).CStr(), app_info.GetName().CStr());
 			return false;
 		}
 
 		bool result = OnDeleteProviderApplication(item->second);
-
 		if(result == false)
 		{
 			logte("Could not delete the application: [%s]", app_info.GetName().CStr());

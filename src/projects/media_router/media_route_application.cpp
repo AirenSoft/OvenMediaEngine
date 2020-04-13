@@ -398,7 +398,7 @@ void MediaRouteApplication::MainTask()
 		auto indicator = _indicator.pop_unique();
 		if (indicator == nullptr)
 		{
-			logte("invalid indicator");
+			// It may be called due to a normal stop signal.
 			continue;
 		}
 

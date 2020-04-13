@@ -57,6 +57,8 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 	_router->RegisterObserverApp(app_info, trans_app);
 	_router->RegisterConnectorApp(app_info, trans_app);
 
+	logti("Transcoder has created [%s] application", app_info.GetName().CStr());
+
 	return true;
 }
 
@@ -74,6 +76,8 @@ bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 	application->Stop();
 	
 	_tracode_apps.erase(it);
+
+	logti("Transcoder has deleted [%s] application", app_info.GetName().CStr());
 
 	return true;
 }
