@@ -155,10 +155,11 @@ namespace pvd
 		bool result = OnDeleteProviderApplication(item->second);
 		if(result == false)
 		{
-			logte("Could not delete the application: [%s]", app_info.GetName().CStr());
+			logte("Could not delete [%s] the application of the %s provider", app_info.GetName().CStr(), ov::Converter::ToString(GetProviderType()).CStr());
 			return false;
 		}
-
+		
+		_applications[app_info.GetId()]->Stop();
 		_applications.erase(app_info.GetId());
 
 		return true;

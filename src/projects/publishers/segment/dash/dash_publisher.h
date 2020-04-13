@@ -29,6 +29,7 @@ protected:
 	// Implementation of Publisher
 	//--------------------------------------------------------------------
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
+	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
 
 	PublisherType GetPublisherType() const override
 	{

@@ -109,8 +109,8 @@ namespace pvd
 			return false;
 		}
 
+		stream->Stop();
 		MediaRouteApplicationConnector::DeleteStream(stream);
-
 		_streams.erase(stream->GetId());
 
 		return true;
@@ -119,7 +119,15 @@ namespace pvd
 	bool Application::DeleteAllStreams()
 	{
 		std::unique_lock<std::mutex> lock(_streams_map_guard);
-		_streams.clear();
+
+		for(auto it = _streams.cbegin(); it != _streams.cend(); )
+		{
+			auto stream = it->second;
+
+			stream->Stop();
+			MediaRouteApplicationConnector::DeleteStream(stream);
+			it = _streams.erase(it);
+		}
 
 		return true;
 	}
@@ -134,6 +142,7 @@ namespace pvd
 			if(stream->GetState() == Stream::State::STOPPED ||
 				stream->GetState() == Stream::State::ERROR)
 			{
+				stream->Stop();
 				MediaRouteApplicationConnector::DeleteStream(stream);
 				it = _streams.erase(it);
 			}

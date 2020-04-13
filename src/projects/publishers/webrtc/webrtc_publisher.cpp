@@ -226,6 +226,11 @@ std::shared_ptr<pub::Application> WebRtcPublisher::OnCreatePublisherApplication(
 	return RtcApplication::Create(application_info, _ice_port, _signalling_server);
 }
 
+bool WebRtcPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
+{
+	return true;
+}
+
 /*
  * Signalling Implementation
  */

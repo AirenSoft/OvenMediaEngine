@@ -103,6 +103,21 @@ bool RtmpServer::RemoveObserver(const std::shared_ptr<RtmpObserver> &observer)
 	return true;
 }
 
+bool RtmpServer::Disconnect(const ov::String &app_name)
+{
+	std::unique_lock<std::recursive_mutex> lock(_chunk_context_list_mutex);
+	for (auto item = _chunk_context_list.begin(); item != _chunk_context_list.end(); ++item)
+	{
+		auto &chunk_stream = item->second;
+		if (chunk_stream->GetAppName() == app_name)
+		{
+			_physical_port->DisconnectClient(dynamic_cast<ov::ClientSocket *>(item->first));
+		}
+	}
+
+	return true;
+}
+
 bool RtmpServer::Disconnect(const ov::String &app_name, uint32_t stream_id)
 {
 	std::unique_lock<std::recursive_mutex> lock(_chunk_context_list_mutex);
@@ -175,7 +190,7 @@ void RtmpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 
 		if (succeeded == false)
 		{
-			logti("An error occurred while process the RTMP packet: [%s/%s] (%u/%u), remote: %s, Disconnecting...",
+			logte("An error occurred while process the RTMP packet: [%s/%s] (%u/%u), remote: %s, Disconnecting...",
 				  chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
 				  chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
 				  remote->ToString().CStr());
@@ -231,7 +246,7 @@ bool RtmpServer::OnChunkStreamReady(ov::ClientSocket *remote,
 	{
 		if (observer->OnStreamReadyComplete(app_name, stream_name, media_info, application_id, stream_id) == false)
 		{
-			logte("An error occurred while notify RTMP ready event to observers for [%s/%s] remote(%s)",
+			logtd("An error occurred while notify RTMP ready event to observers for [%s/%s] remote(%s)",
 				  app_name.CStr(), stream_name.CStr(),
 				  remote->ToString().CStr());
 			return false;
@@ -293,7 +308,7 @@ bool RtmpServer::OnDeleteStream(ov::ClientSocket *remote,
 	{
 		if (observer->OnDeleteStream(application_id, stream_id) == false)
 		{
-			logte("Could not delete the RTMP stream from observer: [%s/%s] (%u/%u), remote: %s",
+			logtd("Could not delete the RTMP stream from observer: [%s/%s] (%u/%u), remote: %s",
 				  app_name.CStr(), stream_name.CStr(),
 				  application_id, stream_id,
 				  remote->ToString().CStr());

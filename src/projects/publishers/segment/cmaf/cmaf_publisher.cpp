@@ -46,3 +46,8 @@ std::shared_ptr<pub::Application> CmafPublisher::OnCreatePublisherApplication(co
 
 	return CmafApplication::Create(application_info, std::static_pointer_cast<CmafStreamServer>(_stream_server));
 }
+
+bool CmafPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
+{
+	return true;
+}

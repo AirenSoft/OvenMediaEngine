@@ -92,6 +92,7 @@ private:
 	}
 
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
+	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
 
 	std::shared_ptr<IcePort> _ice_port;
 	std::shared_ptr<RtcSignallingServer> _signalling_server;

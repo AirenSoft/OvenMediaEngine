@@ -26,6 +26,8 @@ public:
     bool Stop();
     bool AddObserver(const std::shared_ptr<RtmpObserver> &observer);
     bool RemoveObserver(const std::shared_ptr<RtmpObserver> &observer);
+
+	bool Disconnect(const ov::String &app_name);
     bool Disconnect(const ov::String &app_name, uint32_t stream_id);
 
 protected:

@@ -220,7 +220,7 @@ int32_t RtmpChunkStream::OnDataReceived(const std::shared_ptr<const ov::Data> &d
 
 		if (process_size < 0)
 		{
-			logte("Could not parse RTMP packet: [%s/%s] (%u/%u), size: %zu bytes, returns: %d",
+			logtd("Could not parse RTMP packet: [%s/%s] (%u/%u), size: %zu bytes, returns: %d",
 				_app_name.CStr(), _stream_name.CStr(),
 				_app_id, _stream_id,
 				_remained_data->GetLength(),
@@ -416,7 +416,7 @@ int32_t RtmpChunkStream::ReceiveChunkPacket(const std::shared_ptr<const ov::Data
 		{
 			if (ReceiveChunkMessage() == false)
 			{
-				logte("ReceiveChunkMessage Fail");
+				logtd("ReceiveChunkMessage Fail");
 				logtp("Failed to import packet\n%s", current_data->Dump(current_data->GetLength()).CStr());
 
 				return -1LL;
@@ -1132,7 +1132,7 @@ bool RtmpChunkStream::ReceiveVideoMessage(const std::shared_ptr<const RtmpMessag
 		{
 			if (!StreamCreate())
 			{
-				logte("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
+				logtd("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 				return false;
 			}
 		}

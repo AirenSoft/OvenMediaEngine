@@ -21,7 +21,6 @@ RtmpStream::RtmpStream(const std::shared_ptr<pvd::Application> &application)
 	
 }
 
-
 RtmpStream::~RtmpStream()
 {
 }

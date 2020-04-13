@@ -955,7 +955,6 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(const ov::String &v
 
 	auto &app_map = vhost->app_map;
 	auto app_item = app_map.find(app_id);
-
 	if (app_item == app_map.end())
 	{
 		logti("Application %d does not exists", app_id);
@@ -966,6 +965,9 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(const ov::String &v
 	auto &app_info = app->app_info;
 
 	logti("Trying to delete an application: [%s] (%u)", app_info.GetName().CStr(), app_info.GetId());
+
+	mon::Monitoring::GetInstance()->OnApplicationDeleted(app_info);
+
 	app_map.erase(app_id);
 
 	if (_media_router != nullptr)
@@ -1005,8 +1007,6 @@ Orchestrator::Result Orchestrator::DeleteApplication(const info::Application &ap
 {
 	std::lock_guard<decltype(_module_list_mutex)> lock_guard_for_modules(_module_list_mutex);
 	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
-
-	mon::Monitoring::GetInstance()->OnApplicationDeleted(app_info);
 
 	return DeleteApplicationInternal(app_info);
 }

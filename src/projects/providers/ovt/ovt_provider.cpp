@@ -100,7 +100,7 @@ namespace pvd
 
 	bool OvtProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
 	{
-		return application->Stop();
+		return true; 
 	}
 
 	void OvtProvider::OnStreamNotInUse(const info::Stream &stream_info)

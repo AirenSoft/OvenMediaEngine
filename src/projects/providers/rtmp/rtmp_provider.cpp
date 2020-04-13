@@ -77,7 +77,8 @@ std::shared_ptr<pvd::Application> RtmpProvider::OnCreateProviderApplication(cons
 
 bool RtmpProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
 {
-	return application->Stop();;
+	// Notify the RtmpServer that the application will be deleted
+	return _rtmp_server->Disconnect(application->GetName());
 }
 
 bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
@@ -362,14 +363,14 @@ bool RtmpProvider::OnDeleteStream(info::application_id_t app_id, uint32_t stream
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationById(app_id));
 	if (application == nullptr)
 	{
-		logte("cannot find application %u/%u", app_id, stream_id);
+		logtd("cannot find application %u/%u", app_id, stream_id);
 		return false;
 	}
 
 	auto stream = std::dynamic_pointer_cast<RtmpStream>(application->GetStreamById(stream_id));
 	if (stream == nullptr)
 	{
-		logte("cannot find stream %u/%u", app_id, stream_id);
+		logtd("cannot find stream %u/%u", app_id, stream_id);
 		return false;
 	}
 

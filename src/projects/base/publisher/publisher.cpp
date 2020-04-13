@@ -89,9 +89,37 @@ namespace pub
 	// Delete Application
 	bool Publisher::OnDeleteApplication(const info::Application &app_info)
 	{
-		if (_applications.find(app_info.GetId()) == _applications.end())
+		auto item = _applications.find(app_info.GetId());
+
+		logtd("Delete the application: [%s]", app_info.GetName().CStr());
+		if(item == _applications.end())
 		{
-			return true;
+			// Check the reason the app is not created is because it is disabled in the configuration
+			if(app_info.IsDynamicApp() == false)
+			{
+				auto cfg_publisher_list = app_info.GetConfig().GetPublishers().GetPublisherList();
+				for(const auto &cfg_publisher : cfg_publisher_list)
+				{
+					if(cfg_publisher->GetType() == GetPublisherType())
+					{
+						// this provider is disabled
+						if(!cfg_publisher->IsParsed())
+						{
+							return true;
+						}
+					}
+				}
+			}
+
+			logte("%s publihser hasn't the %s application.", ov::Converter::ToString(GetPublisherType()).CStr(), app_info.GetName().CStr());
+			return false;
+		}
+
+		bool result = OnDeletePublisherApplication(item->second);
+		if(result == false)
+		{
+			logte("Could not delete the %s application of the %s publisher", app_info.GetName().CStr(), ov::Converter::ToString(GetPublisherType()).CStr());
+			return false;
 		}
 
 		_applications[app_info.GetId()]->Stop();

@@ -83,6 +83,11 @@ std::shared_ptr<pub::Application> OvtPublisher::OnCreatePublisherApplication(con
 	return OvtApplication::Create(application_info);
 }
 
+bool OvtPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
+{
+	return true;
+}
+
 void OvtPublisher::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
 	// NOTHING

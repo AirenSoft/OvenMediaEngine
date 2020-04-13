@@ -46,3 +46,8 @@ std::shared_ptr<pub::Application> HlsPublisher::OnCreatePublisherApplication(con
 	*/
 	return HlsApplication::Create(application_info);
 }
+
+bool HlsPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
+{
+	return true;
+}

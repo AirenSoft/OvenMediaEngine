@@ -25,7 +25,7 @@ namespace pvd
 
     bool RtspProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
     {
-        return application->Stop();
+        return true; 
     }
 
     bool RtspProvider::Start()
