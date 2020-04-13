@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 		sleep(10);
 		//Plan to start / stop with external signals
 		//mon::Monitoring::GetInstance()->ShowInfo();
-#if 1
+#if 0
 		// Test to verify that the application is deleted successfully 
 		for (auto &host_info : host_info_list)
 		{

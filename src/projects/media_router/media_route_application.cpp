@@ -243,6 +243,8 @@ bool MediaRouteApplication::OnDeleteStream(
 		return false;
 	}
 
+	logti("Trying to delete a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamDeleted(*stream);
 
