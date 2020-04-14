@@ -7,12 +7,13 @@
 //
 //==============================================================================
 #include "orchestrator.h"
-#include "orchestrator_private.h"
 
 #include <base/media_route/media_route_interface.h>
 #include <base/provider/stream.h>
 #include <media_router/media_router.h>
 #include <monitoring/monitoring.h>
+
+#include "orchestrator_private.h"
 
 bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host)
 {
@@ -279,7 +280,7 @@ bool Orchestrator::ApplyOriginMap(const std::vector<info::Host> &host_list)
 	return result;
 }
 
-const std::vector<std::shared_ptr<Orchestrator::VirtualHost>>& Orchestrator::GetVirtualHostList()
+const std::vector<std::shared_ptr<Orchestrator::VirtualHost>> &Orchestrator::GetVirtualHostList()
 {
 	return _virtual_host_list;
 }
@@ -1011,20 +1012,26 @@ Orchestrator::Result Orchestrator::DeleteApplication(const info::Application &ap
 	return DeleteApplicationInternal(app_info);
 }
 
-const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::String &host_name, const ov::String &app_name) const
+const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::String &vhost_app_name) const
 {
-	auto vhost = GetVirtualHost(host_name);
-	if (vhost != nullptr)
-	{
-		auto &app_map = vhost->app_map;
+	ov::String vhost_name;
 
-		for (auto app_item : app_map)
+	if (ParseVHostAppName(vhost_app_name, &vhost_name, nullptr))
+	{
+		auto vhost = GetVirtualHost(vhost_name);
+
+		if (vhost != nullptr)
 		{
-			auto &app_info = app_item.second->app_info;
-			auto vhost_app_name = ResolveApplicationName(host_name, app_name);
-			if (app_info.GetName() == vhost_app_name)
+			auto &app_map = vhost->app_map;
+
+			for (auto app_item : app_map)
 			{
-				return app_info;
+				auto &app_info = app_item.second->app_info;
+
+				if (app_info.GetName() == vhost_app_name)
+				{
+					return app_info;
+				}
 			}
 		}
 	}
@@ -1032,29 +1039,9 @@ const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::Stri
 	return info::Application::GetInvalidApplication();
 }
 
-const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::String &vhost_app_name) const
+const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::String &vhost_name, const ov::String &app_name) const
 {
-	ov::String vhost_name;
-	if (ParseVHostAppName(vhost_app_name, &vhost_name, nullptr))
-	{
-		return GetApplicationInfoInternal(vhost_name, vhost_app_name);
-	}
-
-	return info::Application::GetInvalidApplication();
-}
-
-const info::Application &Orchestrator::GetApplicationInfoByName(const ov::String &host_name, const ov::String &app_name) const
-{
-	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
-
-	return GetApplicationInfoInternal(host_name, app_name);
-}
-
-const info::Application &Orchestrator::GetApplicationInfoByVHostAppName(const ov::String &vhost_app_name) const
-{
-	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
-
-	return GetApplicationInfoInternal(vhost_app_name);
+	return GetApplicationInfoInternal(ResolveApplicationName(vhost_name, app_name));
 }
 
 const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::String &vhost_name, info::application_id_t app_id) const
@@ -1073,6 +1060,20 @@ const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::Stri
 	}
 
 	return info::Application::GetInvalidApplication();
+}
+
+const info::Application &Orchestrator::GetApplicationInfoByName(const ov::String &vhost_name, const ov::String &app_name) const
+{
+	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
+
+	return GetApplicationInfoInternal(vhost_name, app_name);
+}
+
+const info::Application &Orchestrator::GetApplicationInfoByVHostAppName(const ov::String &vhost_app_name) const
+{
+	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
+
+	return GetApplicationInfoInternal(vhost_app_name);
 }
 
 bool Orchestrator::RequestPullStreamForUrl(const ov::String &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<const ov::Url> &url, off_t offset)
@@ -1105,6 +1106,7 @@ bool Orchestrator::RequestPullStreamForUrl(const ov::String &vhost_app_name, con
 			// result always must be Result::Succeeded
 			(result != Result::Succeeded))
 		{
+			logte("Could not create an application: %s, reason: %d", vhost_app_name.CStr(), static_cast<int>(result));
 			return false;
 		}
 	}
