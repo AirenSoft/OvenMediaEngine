@@ -52,7 +52,7 @@ namespace pvd
 
 		virtual ~Stream();
 
-		State 	_state;
+		State 	_state = State::IDLE;
 
 		std::shared_ptr<pvd::Application> _application;
 	};

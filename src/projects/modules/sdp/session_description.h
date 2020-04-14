@@ -50,7 +50,9 @@ class SessionDescription : public SdpBase,
 {
 public:
 	SessionDescription();
-	~SessionDescription() = default;
+	~SessionDescription();
+
+	void Release();
 
 	bool FromString(const ov::String &sdp) override;
 

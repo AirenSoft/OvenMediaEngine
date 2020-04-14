@@ -237,6 +237,7 @@ bool RtcStream::Start(uint32_t worker_count)
 
 bool RtcStream::Stop()
 {
+	_offer_sdp->Release();
 	_packetizers.clear();
 
 	return Stream::Stop();

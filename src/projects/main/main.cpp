@@ -212,7 +212,6 @@ int main(int argc, char *argv[])
 			if(app_info.IsValid())
 			{
 				orchestrator->DeleteApplication(app_info);
-				//orchestrator->CreateApplication(host_info, app_cfg);
 			}
 		}
 	}

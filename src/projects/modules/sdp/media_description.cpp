@@ -22,6 +22,7 @@ MediaDescription::MediaDescription(const std::shared_ptr<SessionDescription> &se
 
 MediaDescription::~MediaDescription()
 {
+	_session_description.reset();
 }
 
 bool MediaDescription::UpdateData(ov::String &sdp)

@@ -52,7 +52,7 @@ public:
 protected:
 	using DataCallback = std::function<void(const std::shared_ptr<const SampleData> &data, bool new_segment_written)>;
 
-	static int GetStartPatternSize(const uint8_t *buffer);
+	static int GetStartPatternSize(const uint8_t *buffer, const size_t buffer_len);
 
 	// start_timestamp: a timestamp of the first frame of the segment
 	virtual ov::String GetFileName(int64_t start_timestamp, common::MediaType media_type) const;

@@ -106,15 +106,15 @@ DashFileType DashPacketizer::GetFileType(const ov::String &file_name)
 	return DashFileType::Unknown;
 }
 
-int DashPacketizer::GetStartPatternSize(const uint8_t *buffer)
+int DashPacketizer::GetStartPatternSize(const uint8_t *buffer, const size_t buffer_len)
 {
 	// 0x00 0x00 0x00 0x01 pattern
-	if (buffer[0] == 0 && buffer[1] == 0 && buffer[2] == 0 && buffer[3] == 1)
+	if (buffer_len >= 4 && buffer[0] == 0 && buffer[1] == 0 && buffer[2] == 0 && buffer[3] == 1)
 	{
 		return 4;
 	}
 	// 0x00 0x00 0x01 pattern
-	else if (buffer[0] == 0 && buffer[1] == 0 && buffer[2] == 1)
+	else if (buffer_len >= 3 && buffer[0] == 0 && buffer[1] == 0 && buffer[2] == 1)
 	{
 		return 3;
 	}
@@ -392,7 +392,7 @@ bool DashPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 	auto &data = frame->data;
 
 	// Calculate offset to skip NAL header
-	int offset = (frame->type == PacketizerFrameType::VideoKeyFrame) ? _avc_nal_header_size : GetStartPatternSize(data->GetDataAs<uint8_t>());
+	int offset = (frame->type == PacketizerFrameType::VideoKeyFrame) ? _avc_nal_header_size : GetStartPatternSize(data->GetDataAs<uint8_t>(), data->GetLength());
 
 	if (static_cast<int>(data->GetLength()) < offset)
 	{
@@ -403,7 +403,7 @@ bool DashPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 
 	if(frame->type == PacketizerFrameType::VideoKeyFrame)
 	{
-		offset += GetStartPatternSize(data->GetDataAs<uint8_t>() + offset);
+		offset += GetStartPatternSize(data->GetDataAs<uint8_t>() + offset, data->GetLength() - offset);
 	}
 
 	// Skip NAL header

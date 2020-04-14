@@ -14,6 +14,16 @@ SessionDescription::SessionDescription()
 {
 }
 
+SessionDescription::~SessionDescription()
+{
+
+}
+
+void SessionDescription::Release()
+{
+	_media_list.clear();
+}
+
 bool SessionDescription::UpdateData(ov::String &sdp)
 {
 	// Session
