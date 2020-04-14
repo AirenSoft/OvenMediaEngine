@@ -18,6 +18,8 @@ class SrtpAdapter
 public:
 	SrtpAdapter();
 	virtual ~SrtpAdapter();
+	
+	bool	Release();
 
 	bool	SetKey(srtp_ssrc_type_t type, uint64_t crypto_suite, std::shared_ptr<ov::Data> key);
 

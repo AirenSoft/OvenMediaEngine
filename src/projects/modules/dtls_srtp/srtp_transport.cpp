@@ -21,6 +21,21 @@ SrtpTransport::~SrtpTransport()
 {
 }
 
+bool SrtpTransport::Stop()
+{
+	if(_send_session != nullptr)
+	{
+		_send_session->Release();
+	}
+
+	if(_recv_session != nullptr)
+	{
+		_recv_session->Release();
+	}
+
+	return SessionNode::Stop();
+}
+
 // 데이터를 upper(RTP_RTCP)에서 받는다. lower node(DTLS)로 보낸다.
 bool SrtpTransport::SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
 {

@@ -18,6 +18,7 @@ RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<pub::Session> session, const std::
 
 RtpRtcp::~RtpRtcp()
 {
+    _rtcp_sr_generators.clear();
 }
 
 bool RtpRtcp::SendOutgoingData(const std::shared_ptr<ov::Data> &packet)

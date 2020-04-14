@@ -369,6 +369,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 	}
 	// IcePort에서 Remove 한다.
 	_ice_port->RemoveSession(session);
+	session->Stop();
 
 	return true;
 }
@@ -437,6 +438,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 			StatLog(session->GetWSClient(), stream, session, RequestStreamResult::transfer_completed);
 			// Session을 Stream에서 정리한다.
 			stream->RemoveSession(session->GetId());
+			session->Stop();
 			auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
 			if (stream_metrics != nullptr)
 			{

@@ -426,7 +426,8 @@ void MediaRouteApplication::MainTask()
 
 		if (stream == nullptr)
 		{
-			logte("stream is nullptr - strem_id(%u)", indicator->_stream_id);
+			// TODO (Soulk): I changed logte to logtd because this can happen even under normal situation such as stream deleted. Check this.
+			logtd("stream is nullptr - strem_id(%u)", indicator->_stream_id);
 			continue;
 		}
 

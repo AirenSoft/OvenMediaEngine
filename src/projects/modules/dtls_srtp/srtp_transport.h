@@ -19,6 +19,8 @@ public:
 	SrtpTransport(uint32_t node_id, std::shared_ptr<pub::Session> session);
 	virtual ~SrtpTransport();
 
+	bool Stop() override;
+
 	// 데이터를 upper에서 받는다. lower node로 보낸다.
 	bool SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data) override;
 

@@ -24,6 +24,15 @@ SrtpAdapter::~SrtpAdapter()
 {
 }
 
+bool SrtpAdapter::Release()
+{
+	if(_session != nullptr)
+	{
+		srtp_dealloc(_session);
+	}
+	return true;
+}
+
 bool SrtpAdapter::SetKey(srtp_ssrc_type_t type, uint64_t crypto_suite, std::shared_ptr<ov::Data> key)
 {
 	srtp_policy_t policy;

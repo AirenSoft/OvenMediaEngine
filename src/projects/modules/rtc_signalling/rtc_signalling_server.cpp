@@ -372,6 +372,8 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 		// WebSocket 연결이 끊어져서 HttpServer::OnDisconnected() 이 처리되고 나면 실패 할 수 있음
 	}
 
+	peer_sdp->Release();
+
 	return disconnected;
 }
 
@@ -929,6 +931,8 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_p
 			{
 				result = false;
 			}
+
+			info->peer_sdp->Release();
 		}
 	}
 

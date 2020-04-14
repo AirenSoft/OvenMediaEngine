@@ -17,7 +17,7 @@ public:
 	// Send : Srtp -> this -> Ice
 	// Recv : Ice -> {[Queue] -> Application -> Session} -> this -> Srtp
 	explicit DtlsTransport(uint32_t id, std::shared_ptr<pub::Session> session);
-	virtual ~DtlsTransport() = default;
+	virtual ~DtlsTransport();
 
 	// Set Local Certificate
 	void SetLocalCertificate(const std::shared_ptr<Certificate> &certificate);
@@ -28,6 +28,7 @@ public:
 	// Start DTLS
 	bool StartDTLS();
 
+	bool Stop() override;
 	//--------------------------------------------------------------------
 	// Implementation of SessionNode
 	//--------------------------------------------------------------------

@@ -21,8 +21,7 @@ namespace pub
 
 	SessionNode::~SessionNode()
 	{
-		_upper_nodes.clear();
-		_lower_nodes.clear();
+		
 	}
 
 	std::shared_ptr<Session> SessionNode::GetSession()
@@ -51,6 +50,10 @@ namespace pub
 		_state = NodeState::Stopped;
 		// Because it is a cross-reference to the parent, it forces the removal to free memory.
 		_session.reset();
+
+		_upper_nodes.clear();
+		_lower_nodes.clear();
+		
 		return true;
 	}
 

@@ -12,6 +12,18 @@ DtlsTransport::DtlsTransport(uint32_t id, std::shared_ptr<pub::Session> session)
 	_peer_cerificate_verified = false;
 }
 
+DtlsTransport::~DtlsTransport()
+{
+	
+}
+
+bool DtlsTransport::Stop()
+{
+	_tls.Uninitialize();
+
+	return SessionNode::Stop();
+}
+
 // Set Local Certificate
 void DtlsTransport::SetLocalCertificate(const std::shared_ptr<Certificate> &certificate)
 {
