@@ -1012,6 +1012,38 @@ Orchestrator::Result Orchestrator::DeleteApplication(const info::Application &ap
 	return DeleteApplicationInternal(app_info);
 }
 
+Orchestrator::Result Orchestrator::Release()
+{
+	std::lock_guard<decltype(_module_list_mutex)> lock_guard_for_modules(_module_list_mutex);
+	std::lock_guard<decltype(_virtual_host_map_mutex)> lock_guard_for_app_map(_virtual_host_map_mutex);
+
+	// Mark all items as NeedToCheck
+	for (auto &vhost_item : _virtual_host_list)
+	{
+		mon::Monitoring::GetInstance()->OnHostDeleted(vhost_item->host_info);
+
+		auto app_map = vhost_item->app_map;
+		for (auto &app_item : app_map)
+		{
+			auto &app_info = app_item.second->app_info;
+
+			auto result = DeleteApplicationInternal(app_info);
+			if (result != Result::Succeeded)
+			{
+				logte("Could not delete application: %s", app_info.GetName().CStr());
+				continue;
+			}
+		}
+
+		app_map.clear();
+	}
+
+	_virtual_host_list.clear();
+	_virtual_host_map.clear();
+
+	return Result::Succeeded;
+}
+
 const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::String &vhost_app_name) const
 {
 	ov::String vhost_name;

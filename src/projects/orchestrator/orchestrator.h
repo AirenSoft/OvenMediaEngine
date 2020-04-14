@@ -381,6 +381,8 @@ public:
 	/// @note If an error occurs during deletion, do not recreate the application
 	Result DeleteApplication(const info::Application &app_info);
 
+	Result Release();
+
 	const info::Application &GetApplicationInfoByName(const ov::String &vhost_name, const ov::String &app_name) const;
 	const info::Application &GetApplicationInfoByVHostAppName(const ov::String &vhost_app_name) const;
 

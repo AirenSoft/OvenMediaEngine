@@ -200,22 +200,7 @@ int main(int argc, char *argv[])
 		sleep(1);
 	}
 
-	// Delete applications correctrly.  
-	for (auto &host_info : host_info_list)
-	{
-		monitor->OnHostDeleted(host_info);
-
-		// Create applications that defined by the configuration
-		for (auto &app_cfg : host_info.GetApplicationList())
-		{
-			auto app_info = orchestrator->GetApplicationInfoByName(host_info.GetName(), app_cfg.GetName());
-			if(app_info.IsValid())
-			{
-				orchestrator->DeleteApplication(app_info);
-			}
-		}
-	}
-
+	orchestrator->Release();
 	// Relase all modules
 	monitor->Release();
 
