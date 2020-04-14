@@ -240,7 +240,10 @@ namespace pvd
 						
 						if(elapsed_time > 30)
 						{
-							OnStreamNotInUse(*stream);
+							if(stream->GetState() != Stream::State::STOPPING)
+							{
+								OnStreamNotInUse(*stream);
+							}
 						}
 					}
 				}
