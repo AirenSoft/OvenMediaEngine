@@ -30,6 +30,10 @@ namespace pub
 
 	bool Application::Stop()
 	{
+		if(_stop_thread_flag == true)
+		{
+			return true;
+		}
 		_stop_thread_flag = true;
 		_queue_event.Notify();
 

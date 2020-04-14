@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
 	sigIntHandler.sa_flags = 0;
 	sigaction(SIGINT, &sigIntHandler, NULL);
 
-	while (_running_server)
+	//while (_running_server)
 	{
 		sleep(1);
 	}
