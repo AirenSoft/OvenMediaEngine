@@ -444,9 +444,6 @@ protected:
 	const info::Application &GetApplicationInfoInternal(const ov::String &vhost_name, const ov::String &app_name) const;
 	const info::Application &GetApplicationInfoInternal(const ov::String &vhost_name, info::application_id_t app_id) const;
 
-	bool RequestPullStreamForUrl(const ov::String &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<const ov::Url> &url, off_t offset);
-	bool RequestPullStreamForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset);
-
 	// Called from Application
 	bool OnCreateStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info);
 	bool OnDeleteStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info);
