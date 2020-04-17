@@ -71,7 +71,7 @@ namespace pvd
 
 		std::mutex 				_queue_guard;
 		std::condition_variable	_queue_cv;
-		uint32_t 				_last_issued_stream_id;
+		std::atomic<info::stream_id_t>	_last_issued_stream_id { 0 };
 		std::mutex 				_streams_map_guard;
 		ApplicationState		_state = ApplicationState::Idle;
 	};

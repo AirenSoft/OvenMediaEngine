@@ -147,7 +147,7 @@ bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtu
 bool Orchestrator::ApplyOriginMap(const std::vector<info::Host> &host_list)
 {
 	bool result = true;
-	auto lock_guard = std::lock_guard(_virtual_host_map_mutex);
+	auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 	// Mark all items as NeedToCheck
 	for (auto &vhost_item : _virtual_host_map)
@@ -469,7 +469,7 @@ bool Orchestrator::RegisterModule(const std::shared_ptr<OrchestratorModuleInterf
 	auto type = module->GetModuleType();
 
 	// Check if module exists
-	auto lock_guard = std::lock_guard(_module_list_mutex);
+	auto scoped_lock = std::scoped_lock(_module_list_mutex);
 
 	for (auto &info : _module_list)
 	{
@@ -515,7 +515,7 @@ bool Orchestrator::UnregisterModule(const std::shared_ptr<OrchestratorModuleInte
 		return false;
 	}
 
-	auto lock_guard = std::lock_guard(_module_list_mutex);
+	auto scoped_lock = std::scoped_lock(_module_list_mutex);
 
 	for (auto info = _module_list.begin(); info != _module_list.end(); ++info)
 	{
@@ -539,7 +539,7 @@ ov::String Orchestrator::GetVhostNameFromDomain(const ov::String &domain_name)
 
 	if (domain_name.IsEmpty() == false)
 	{
-		auto lock_guard = std::lock_guard(_virtual_host_map_mutex);
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 		// Search for the domain corresponding to domain_name
 
@@ -750,7 +750,7 @@ std::shared_ptr<const Orchestrator::VirtualHost> Orchestrator::GetVirtualHost(co
 
 bool Orchestrator::GetUrlListForLocation(const ov::String &vhost_app_name, const ov::String &stream_name, std::vector<ov::String> *url_list)
 {
-	auto lock_guard = std::lock_guard(_virtual_host_map_mutex);
+	auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 	return GetUrlListForLocationInternal(vhost_app_name, stream_name, url_list, nullptr, nullptr);
 }
@@ -994,8 +994,7 @@ Orchestrator::Result Orchestrator::DeleteApplicationInternal(const info::Applica
 
 Orchestrator::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::Application &app_config)
 {
-	auto lock_guard_for_modules = std::lock_guard(_module_list_mutex);
-	auto lock_guard_for_app_map = std::lock_guard(_virtual_host_map_mutex);
+	auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
 
 	auto vhost_name = host_info.GetName();
 
@@ -1006,16 +1005,14 @@ Orchestrator::Result Orchestrator::CreateApplication(const info::Host &host_info
 
 Orchestrator::Result Orchestrator::DeleteApplication(const info::Application &app_info)
 {
-	auto lock_guard_for_modules = std::lock_guard(_module_list_mutex);
-	auto lock_guard_for_app_map = std::lock_guard(_virtual_host_map_mutex);
+	auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
 
 	return DeleteApplicationInternal(app_info);
 }
 
 Orchestrator::Result Orchestrator::Release()
 {
-	auto lock_guard_for_modules = std::lock_guard(_module_list_mutex);
-	auto lock_guard_for_app_map = std::lock_guard(_virtual_host_map_mutex);
+	auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
 
 	// Mark all items as NeedToCheck
 	for (auto &vhost_item : _virtual_host_list)
@@ -1096,14 +1093,14 @@ const info::Application &Orchestrator::GetApplicationInfoInternal(const ov::Stri
 
 const info::Application &Orchestrator::GetApplicationInfoByName(const ov::String &vhost_name, const ov::String &app_name) const
 {
-	auto lock_guard_for_app_map = std::lock_guard(_virtual_host_map_mutex);
+	auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 	return GetApplicationInfoInternal(vhost_name, app_name);
 }
 
 const info::Application &Orchestrator::GetApplicationInfoByVHostAppName(const ov::String &vhost_app_name) const
 {
-	auto lock_guard_for_app_map = std::lock_guard(_virtual_host_map_mutex);
+	auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 	return GetApplicationInfoInternal(vhost_app_name);
 }
@@ -1122,10 +1119,10 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 		Result result = Result::Failed;
 
 		{
-			auto lock_guard = std::lock_guard(_virtual_host_map_mutex);
+			auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 			{
-				auto lock_guard = std::lock_guard(_module_list_mutex);
+				auto scoped_lock_for_module_list = std::scoped_lock(_module_list_mutex);
 				provider_module = GetProviderModuleForScheme(parsed_url->Scheme());
 			}
 
@@ -1187,7 +1184,7 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 				break;
 
 			case Result::Succeeded: {
-				auto lock_guard = std::lock_guard(_virtual_host_map_mutex);
+				auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 				// New application is created. Rollback is required
 				DeleteApplicationInternal(app_info);
@@ -1222,7 +1219,7 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 	Domain *used_domain = nullptr;
 
 	{
-		auto lock_guard = std::lock_guard(_virtual_host_map_mutex);
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 		if (GetUrlListForLocationInternal(vhost_app_name, stream_name, &url_list, &used_origin, &used_domain) == false)
 		{
@@ -1240,7 +1237,7 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 		}
 
 		{
-			auto lock_guard_for_module_list = std::lock_guard(_module_list_mutex);
+			auto scoped_lock_for_module_list = std::scoped_lock(_module_list_mutex);
 			provider_module = GetProviderModuleForScheme(used_origin->scheme);
 		}
 
@@ -1327,7 +1324,7 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 			break;
 
 		case Result::Succeeded: {
-			auto lock_guard = std::lock_guard(_virtual_host_map_mutex);
+			auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
 			// New application is created. Rollback is required
 			DeleteApplicationInternal(app_info);

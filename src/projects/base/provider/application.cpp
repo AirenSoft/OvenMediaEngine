@@ -43,23 +43,9 @@ namespace pvd
 		return true;
 	}
 
-	uint32_t Application::IssueUniqueStreamId()
+	info::stream_id_t Application::IssueUniqueStreamId()
 	{
-		auto new_stream_id = _last_issued_stream_id++;
-
-		while(true)
-		{
-			if (_streams.find(new_stream_id) == _streams.end())
-			{
-				// not found
-				break;
-			}
-
-			new_stream_id++;
-		}
-
-		_last_issued_stream_id = new_stream_id;
-		return new_stream_id;
+		return _last_issued_stream_id++;
 	}
 
 	const std::map<uint32_t, std::shared_ptr<Stream>>& Application::GetStreams() const
