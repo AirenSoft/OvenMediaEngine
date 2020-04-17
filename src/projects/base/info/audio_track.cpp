@@ -20,6 +20,16 @@ int32_t AudioTrack::GetSampleRate()
 	return (int32_t)_sample.GetRate();
 }
 
+void AudioTrack::SetAudioTimestampScale(double scale)
+{
+	_audio_timescale = scale;
+}
+
+double AudioTrack::GetAudioTimestampScale()
+{
+	return _audio_timescale;
+}
+
 AudioSample &AudioTrack::GetSample()
 {
 	return _sample;

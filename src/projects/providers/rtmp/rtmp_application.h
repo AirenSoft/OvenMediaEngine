@@ -22,13 +22,15 @@ protected:
 	{
 		return "RTMP Provider";
 	}
+	
+	std::shared_ptr<pvd::Stream> CreatePushStream(const uint32_t stream_id, const ov::String &stream_name) override;
+	std::shared_ptr<pvd::Stream> CreatePullStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<ov::String> &url_list) override {return nullptr;};
+
 public:
 	static std::shared_ptr<RtmpApplication> Create(const info::Application &application_info);
 
 	explicit RtmpApplication(const info::Application &info);
 	~RtmpApplication() override = default;
-
-	std::shared_ptr<pvd::Stream> CreateStream();
 
 private:
 };

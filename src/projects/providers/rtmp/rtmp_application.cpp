@@ -28,11 +28,7 @@ RtmpApplication::RtmpApplication(const info::Application &application_info)
 }
 
 // Create Stream
-std::shared_ptr<pvd::Stream> RtmpApplication::CreateStream()
+std::shared_ptr<pvd::Stream> RtmpApplication::CreatePushStream(const uint32_t stream_id, const ov::String &stream_name)
 {
-	logtd("OnCreateStream");
-
-	auto stream = RtmpStream::Create(GetSharedPtrAs<pvd::Application>());
-
-	return stream;
+	return RtmpStream::Create(GetSharedPtrAs<pvd::Application>(), stream_id, stream_name);
 }

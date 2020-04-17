@@ -20,8 +20,7 @@ namespace pvd
 	class OvtStream : public pvd::Stream
 	{
 	public:
-		static std::shared_ptr<OvtStream>
-		Create(const std::shared_ptr<pvd::Application> &application, const ov::String &stream_name,	const std::vector<ov::String> &url_list);
+		static std::shared_ptr<OvtStream> Create(const std::shared_ptr<pvd::Application> &application, const uint32_t stream_id, const ov::String &stream_name,	const std::vector<ov::String> &url_list);
 
 		OvtStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list);
 

@@ -91,22 +91,51 @@ namespace pvd
 		return nullptr;
 	}
 
-	bool Application::NotifyStreamCreated(std::shared_ptr<Stream> stream)
+	std::shared_ptr<pvd::Stream> Application::CreateStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<std::shared_ptr<MediaTrack>> &tracks)
 	{
-		std::unique_lock<std::mutex> lock(_streams_map_guard);
+		auto stream = CreatePushStream(stream_id, stream_name);
 		if(stream == nullptr)
 		{
-			return false;
+			return nullptr;
 		}
-		
-		MediaRouteApplicationConnector::CreateStream(stream);
 
+		for(const auto &track : tracks)
+		{
+			stream->AddTrack(track);
+		}
+	
+		std::unique_lock<std::mutex> lock(_streams_map_guard);
 		_streams[stream->GetId()] = stream;
+		lock.unlock();
 
-		return true;
+		NotifyStreamCreated(stream);
+
+		return stream;
 	}
 
-	bool Application::NotifyStreamDeleted(std::shared_ptr<Stream> stream)
+	std::shared_ptr<pvd::Stream> Application::CreateStream(const ov::String &stream_name, const std::vector<std::shared_ptr<MediaTrack>> &tracks)
+	{
+		return CreateStream(IssueUniqueStreamId(), stream_name, tracks);
+	}
+
+	std::shared_ptr<pvd::Stream> Application::CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list)
+	{
+		auto stream = CreatePullStream(IssueUniqueStreamId(), stream_name, url_list);
+		if(stream == nullptr)
+		{
+			return nullptr;
+		}
+
+		std::unique_lock<std::mutex> lock(_streams_map_guard);
+		_streams[stream->GetId()] = stream;
+		lock.unlock();
+
+		NotifyStreamCreated(stream);
+
+		return stream;
+	}
+
+	bool Application::DeleteStream(std::shared_ptr<Stream> stream)
 	{
 		std::unique_lock<std::mutex> lock(_streams_map_guard);
 		if(_streams.find(stream->GetId()) == _streams.end())
@@ -115,9 +144,23 @@ namespace pvd
 		}
 
 		stream->Stop();
-		MediaRouteApplicationConnector::DeleteStream(stream);
+
+		NotifyStreamDeleted(stream);
+
 		_streams.erase(stream->GetId());
 
+		return true;
+	}
+
+	bool Application::NotifyStreamCreated(std::shared_ptr<Stream> stream)
+	{
+		MediaRouteApplicationConnector::CreateStream(stream);
+		return true;
+	}
+
+	bool Application::NotifyStreamDeleted(std::shared_ptr<Stream> stream)
+	{
+		MediaRouteApplicationConnector::DeleteStream(stream);
 		return true;
 	}
 

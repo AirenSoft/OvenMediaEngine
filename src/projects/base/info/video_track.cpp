@@ -48,4 +48,13 @@ int32_t VideoTrack::GetFormat()
 	return _format;
 }
 
+void VideoTrack::SetVideoTimestampScale(double scale)
+{
+	_video_timescale = scale;
+}
+
+double VideoTrack::GetVideoTimestampScale()
+{
+	return _video_timescale;
+}
 

@@ -73,13 +73,9 @@ protected:
 
 private:
 	std::shared_ptr<PhysicalPort> _physical_port;
-
 	std::vector<std::shared_ptr<RtmpObserver>> _observers;
-
 	std::recursive_mutex _chunk_context_list_mutex;
 	std::map<ov::Socket *, std::shared_ptr<RtmpChunkStream>> _chunk_context_list;
-
 	ov::DelayQueue _garbage_check_timer;
-
 	ov::StopWatch _stat_stop_watch;
 };

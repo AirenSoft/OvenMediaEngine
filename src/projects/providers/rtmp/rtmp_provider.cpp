@@ -104,7 +104,8 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 	}
 
 	// Handle duplicated stream name
-	if (GetStreamByName(app_name, stream_name))
+	auto exist_stream = GetStreamByName(app_name, stream_name);
+	if (exist_stream != nullptr)
 	{
 		if (provider_info->IsBlockDuplicateStreamName())
 		{
@@ -113,30 +114,22 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 		}
 		else
 		{
-			uint32_t stream_id = GetStreamByName(app_name, stream_name)->GetId();
+			uint32_t old_stream_id = exist_stream->GetId();
 
 			logti("Duplicate Stream Input(change) - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
 
 			// session close
-			if (!_rtmp_server->Disconnect(app_name, stream_id))
+			if (!_rtmp_server->Disconnect(app_name, old_stream_id))
 			{
 				logte("Disconnect Fail - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
 			}
 
 			// delete new stream
-			application->NotifyStreamDeleted(application->GetStreamByName(stream_name));
+			application->DeleteStream(exist_stream);
 		}
 	}
 
-	// Application -> RtmpApplication: create rtmp stream -> Application 에 Stream 정보 저장
-	auto stream = application->CreateStream();
-	if (stream == nullptr)
-	{
-		logte("can not create stream - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
-		return false;
-	}
-
-	stream->SetName(stream_name.CStr());
+	std::vector<std::shared_ptr<MediaTrack>> tracks;
 
 	if (media_info->video_streaming)
 	{
@@ -163,15 +156,9 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 
 		// A value to change to 1/90000 from 1/1000
 		double video_scale = 90000.0 / 1000.0;
+		new_track->SetVideoTimestampScale(video_scale);
 		
-		auto rtmp_stream = std::dynamic_pointer_cast<RtmpStream>(stream);
-		if(rtmp_stream != nullptr)
-		{
-			rtmp_stream->SetVideoTimestampScale(video_scale);
-		}
-
-
-		stream->AddTrack(new_track);
+		tracks.push_back(new_track);
 	}
 
 	if (media_info->audio_streaming)
@@ -203,23 +190,22 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 
 		// A value to change to 1/sample_rate from 1/1000
 		double  audio_scale = (double)(media_info->audio_samplerate) / 1000.0;
-		
-		auto rtmp_stream = std::dynamic_pointer_cast<RtmpStream>(stream);
-		if(rtmp_stream != nullptr)
-		{
-			rtmp_stream->SetAudioTimestampScale(audio_scale);
-		}
+		new_track->SetAudioTimestampScale(audio_scale);
 
-		stream->AddTrack(new_track);
+		tracks.push_back(new_track);
 	}
 
-	// Notify MediaRouter that the stream has been created.
-	application->NotifyStreamCreated(stream);
+	auto stream = application->CreateStream(stream_name, tracks);
+	if (stream == nullptr)
+	{
+		logte("can not create stream - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());
+		return false;
+	}
 
-	application_id = application->GetId();
+	// Notify stream id to the Rtmp Server
 	stream_id = stream->GetId();
 
-	logtd("Strem ready complete - app(%s/%u) stream(%s/%u)", app_name.CStr(), application_id, stream_name.CStr(), stream_id);
+	logtd("Strem ready complete - app(%s/%u) stream(%s/%u)", app_name.CStr(), application->GetId(), stream_name.CStr(), stream->GetId());
 
 	return true;
 }
@@ -243,7 +229,6 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 		logte("cannot find stream");
 		return false;
 	}
-
 
 	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
 	if(stream_metrics != nullptr)
@@ -278,8 +263,17 @@ bool RtmpProvider::OnVideoData(info::application_id_t application_id,
 	// logte("timestamp = %lld, video.pts=%10lld, scale=%f, size : %d", timestamp, pts, stream->GetVideoTimestampScale(), data->GetLength());
 	// logte("Video timestamp = %lld, pts = %lld, dts = %lld, size : %d, duration : %lld", timestamp, pts, dts, data->GetLength(), duration);
 	// Change the timebase specification: 1/1000 -> 1/90000
-	dts *= stream->GetVideoTimestampScale();
-	pts *= stream->GetVideoTimestampScale();
+
+	// The video track is in track 0 always
+	auto video_track = stream->GetTrack(0);
+	if(video_track == nullptr)
+	{
+		logte("There is no video track information.");
+		return false;
+	}
+
+	dts *= video_track->GetVideoTimestampScale();
+	pts *= video_track->GetVideoTimestampScale();
 
 	auto pbuf = std::make_shared<MediaPacket>(MediaType::Video,
 											  0,
@@ -341,8 +335,17 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 	int64_t dts = timestamp;
 	// logte("timestamp = %lld, audio.pts=%10lld, scale=%f, size : %d", timestamp, dts, stream->GetAudioTimestampScale(), data->GetLength());
 	// logte("Audio timestamp = %lld, pts = %lld, dts = %lld, size : %d, duration : %lld", timestamp, pts, dts, data->GetLength(), duration);
-	pts *= stream->GetAudioTimestampScale();
-	dts *= stream->GetAudioTimestampScale();
+
+	// The audio track is in track 1 always
+	auto audio_track = stream->GetTrack(1);
+	if(audio_track == nullptr)
+	{
+		logte("There is no audio track information.");
+		return false;
+	}
+
+	pts *= audio_track->GetAudioTimestampScale();
+	dts *= audio_track->GetAudioTimestampScale();
 
 	auto pbuf = std::make_shared<MediaPacket>(MediaType::Audio,
 											  1,
@@ -359,6 +362,7 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 	return true;
 }
 
+// Called from RTMP Server
 bool RtmpProvider::OnDeleteStream(info::application_id_t app_id, uint32_t stream_id)
 {
 	auto application = std::dynamic_pointer_cast<RtmpApplication>(GetApplicationById(app_id));
@@ -376,5 +380,10 @@ bool RtmpProvider::OnDeleteStream(info::application_id_t app_id, uint32_t stream
 	}
 
 	// Notify MediaRouter that the stream has been deleted.
-	return application->NotifyStreamDeleted(stream);
+	return application->DeleteStream(stream);
+}
+
+void RtmpProvider::OnStreamNotInUse(const info::Stream &stream_info)
+{
+	// NOTHING 
 }

@@ -26,7 +26,8 @@ namespace pvd
 
 		~RtspcApplication() override;
 
-		std::shared_ptr<pvd::Stream> CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list);
+		std::shared_ptr<pvd::Stream> CreatePullStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<ov::String> &url_list) override;
+		std::shared_ptr<pvd::Stream> CreatePushStream(const uint32_t stream_id, const ov::String &stream_name) override {return nullptr;};
 
 		MediaRouteApplicationConnector::ConnectorType GetConnectorType() override
 		{

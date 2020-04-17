@@ -11,12 +11,13 @@
 
 namespace pvd
 {
-	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::Application> &application, const ov::String &stream_name,
+	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::Application> &application, 
+											const uint32_t stream_id, const ov::String &stream_name,
 					  						const std::vector<ov::String> &url_list)
 	{
 		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::RtspPull);
 
-		stream_info.SetId(application->IssueUniqueStreamId());
+		stream_info.SetId(stream_id);
 		stream_info.SetName(stream_name);
 
 		auto stream = std::make_shared<RtspcStream>(application, stream_info, url_list);
@@ -54,35 +55,6 @@ namespace pvd
 		{
 			_curr_url = _url_list[0];
 		}
-
-
-// For Test
-#if 0
-		// -------------------------------------------------------------------------------
-		// TODO(soulk): It is a temporary code. Import the RTSP URL from the bash script.
-		// -------------------------------------------------------------------------------
-		// Below is sample code for GET_URL.SH.
-		//	
-		// 		#!/bin/bash
-		// 		RTSP_URL=$(wget -qO- http://211.235.108.156:50202/rtsp/record1)
-		// 		echo $RTSP_URL
-
-		FILE* file_stream = popen( "/home/getroot/get_url.sh", "r" );
-
-		std::ostringstream output;
-
-		while ( !feof(file_stream) && !ferror(file_stream) )
-		{
-			char buf[128];
-			int32_t bytesRead = fread( buf, 1, 128, file_stream );
-			output.write( buf, bytesRead );
-		}
-
-		ov::String result = output.str().c_str();
-		result = result.Replace("\n", "");
-
-		_curr_url = ov::Url::Parse(result.CStr());
-#endif
 	}
 
 	RtspcStream::~RtspcStream()

@@ -217,6 +217,158 @@ namespace pvd
 		return nullptr;
 	}
 
+	ov::String Provider::GeneratePullingKey(const ov::String &app_name, const ov::String &stream_name)
+	{
+		ov::String key;
+
+		key.Format("%s#%s", app_name.CStr(), stream_name.CStr());
+
+		return key;
+	}
+
+	bool Provider::LockPullStreamIfNeeded(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
+	{
+		// It handles duplicate requests while the stream is being created.
+
+		// Table lock
+		std::unique_lock<std::mutex> table_lock(_pulling_table_mutex);
+		auto pulling_key = GeneratePullingKey(app_info.GetName(), stream_name);
+
+		auto it = _pulling_table.find(pulling_key);
+		if(it != _pulling_table.end())
+		{
+			auto item = it->second;
+	
+			table_lock.unlock();
+			// ??
+			// it will wait until the previous request is completed
+			item->Wait();
+			// ??
+			table_lock.lock();
+
+			if(item->State() == PullingItem::PullingItemState::PULLING) 
+			{
+				// Unexpected error
+			}
+			else if(item->State() == PullingItem::PullingItemState::PULLED)
+			{
+			}
+			else if(item->State() == PullingItem::PullingItemState::ERROR)
+			{
+			}
+			else if(item->State() == PullingItem::PullingItemState::REMOVED)
+			{
+			}
+		}
+		
+		auto item = std::make_shared<PullingItem>(app_info.GetName(), stream_name, url_list, offset);
+		item->SetState(PullingItem::PullingItemState::PULLING);
+		item->Lock();
+
+		_pulling_table[pulling_key] = item;
+
+		table_lock.unlock();
+	
+	
+		return true;
+	}
+
+	bool Provider::UnlockPullStreamIfNeeded(const info::Application &app_info, const ov::String &stream_name)
+	{
+		// Table lock
+		std::unique_lock<std::mutex> table_lock(_pulling_table_mutex);
+		auto pulling_key = GeneratePullingKey(app_info.GetName(), stream_name);
+
+		auto it = _pulling_table.find(pulling_key);
+		if(it == _pulling_table.end())
+		{
+			// Error
+			return false;
+		}
+
+		auto item = it->second;
+		item->Unlock();
+
+		_pulling_table.erase(it);
+		
+		return true;
+	}
+
+	std::shared_ptr<pvd::Stream> Provider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
+	{
+	//	LockPullStreamIfNeeded(app_info, stream_name, url_list, offset);
+
+		// Find App
+		auto app = GetApplicationById(app_info.GetId());
+		if (app == nullptr)
+		{
+			logte("There is no such app (%s)", app_info.GetName().CStr());
+			return nullptr;
+		}
+
+		// Find Stream (The stream must not exist)
+		auto stream = app->GetStreamByName(stream_name);
+		if (stream != nullptr)
+		{
+			// If stream is not running it can be deleted.
+			if(stream->GetState() == Stream::State::STOPPED || stream->GetState() == Stream::State::ERROR)
+			{
+				// remove immediately
+				app->DeleteStream(stream);
+			}
+			else
+			{
+				//UnlockPullStreamIfNeeded(app_info, stream_name);
+				return stream;
+			}
+		}
+
+		// Create Stream
+		stream = app->CreateStream(stream_name, url_list);
+		if (stream == nullptr)
+		{
+			logte("Cannot create %s stream.", stream_name.CStr());
+			//UnlockPullStreamIfNeeded(app_info, stream_name);
+			return nullptr;
+		}
+
+		//UnlockPullStreamIfNeeded(app_info, stream_name);
+
+		return stream;
+	}
+
+	bool Provider::StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream)
+	{
+		// 여기서 STOP한 STREAM에 Lock 건다. 
+		// 상태는 STOPPING
+
+		return stream->Stop();
+	}
+
+	void Provider::OnStreamNotInUse(const info::Stream &stream_info)
+	{
+		logti("%s stream will be deleted because it is not used", stream_info.GetName().CStr());
+
+		// Find App
+		auto app_info = stream_info.GetApplicationInfo();
+		auto app = GetApplicationById(app_info.GetId());
+		if (app == nullptr)
+		{
+			logte("There is no such app (%s)", app_info.GetName().CStr());
+			return;
+		}
+
+		// Find Stream (The stream must not exist)
+		auto stream = app->GetStreamById(stream_info.GetId());
+		if (stream == nullptr)
+		{
+			logte("There is no such stream (%s)", app_info.GetName().CStr());
+			return;
+		}
+
+		StopStream(app_info, stream);
+	}
+
 	void Provider::RegularTask()
 	{
 		while(_run_thread)
@@ -224,23 +376,27 @@ namespace pvd
 			for(auto const &x : _applications)
 			{
 				auto app = x.second;
-
-				// Check if there are terminated streams and delete it
-				app->DeleteTerminatedStreams();
-
-				// Check if there are streams have no any viewers
-				for(auto const &s : app->GetStreams())
+				auto streams = app->GetStreams();
+				for(auto const &s : streams)
 				{
 					auto stream = s.second;
-					auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
-					if(stream_metrics != nullptr)
+					if(stream->GetState() == Stream::State::STOPPED || stream->GetState() == Stream::State::ERROR)
 					{
-						auto current = std::chrono::high_resolution_clock::now();
-        				auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastSentTime()).count();
-						
-						if(elapsed_time > 30)
+						// Table lock
+						app->DeleteStream(stream);
+						// Remove stream from table
+						// Table unlock
+					}
+					else if(stream->GetState() != Stream::State::STOPPING)
+					{
+						// Check if there are streams have no any viewers
+						auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+						if(stream_metrics != nullptr)
 						{
-							if(stream->GetState() != Stream::State::STOPPING)
+							auto current = std::chrono::high_resolution_clock::now();
+							auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastSentTime()).count();
+							
+							if(elapsed_time > 30)
 							{
 								OnStreamNotInUse(*stream);
 							}
@@ -249,7 +405,7 @@ namespace pvd
 				}
 			}
 
-			sleep(1);
+			sleep(5);
 		}
 	}
 }

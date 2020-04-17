@@ -11,12 +11,13 @@
 
 namespace pvd
 {
-	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::Application> &application, const ov::String &stream_name,
+	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::Application> &application, 
+											const uint32_t stream_id, const ov::String &stream_name,
 					  						const std::vector<ov::String> &url_list)
 	{
 		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::Ovt);
 
-		stream_info.SetId(application->IssueUniqueStreamId());
+		stream_info.SetId(stream_id);
 		stream_info.SetName(stream_name);
 
 		auto stream = std::make_shared<OvtStream>(application, stream_info, url_list);

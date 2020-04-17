@@ -15,6 +15,9 @@ class AudioTrack
 public:
 	void SetSampleRate(int32_t samplerate);
 	int32_t GetSampleRate();
+	
+	void SetAudioTimestampScale(double scale);
+	double GetAudioTimestampScale();
 
 	common::AudioSample &GetSample();
 	common::AudioChannel &GetChannel();
@@ -26,5 +29,8 @@ protected:
 
 	// channel layout
 	common::AudioChannel _channel_layout;
+
+	// time_scale
+	double _audio_timescale;
 
 };

@@ -46,19 +46,9 @@ namespace pvd
 		{
 			return "OvtProvider";
 		}
-
-		bool Start() override;
-		bool Stop() override;
 		
-		//--------------------------------------------------------------------
-		// Implementation of OrchestratorProviderModuleInterface
-		//--------------------------------------------------------------------
-		std::shared_ptr<pvd::Stream> PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset) override;
-		bool StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream) override;
-
 	protected:
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;
 		bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
-		void OnStreamNotInUse(const info::Stream &stream_info) override;
 	};
 }  // namespace pvd

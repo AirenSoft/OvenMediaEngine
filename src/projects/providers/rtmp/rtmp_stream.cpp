@@ -8,15 +8,24 @@
 //==============================================================================
 
 #include "rtmp_stream.h"
+#include "base/info/application.h"
 
-std::shared_ptr<RtmpStream> RtmpStream::Create(const std::shared_ptr<pvd::Application> &application)
+std::shared_ptr<RtmpStream> RtmpStream::Create(const std::shared_ptr<pvd::Application> &application, const uint32_t stream_id, const ov::String &stream_name)
 {
-    auto stream = std::make_shared<RtmpStream>(application);
+	info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::Rtmp);
+	stream_info.SetId(stream_id);
+	stream_info.SetName(stream_name);
+
+    auto stream = std::make_shared<RtmpStream>(application, stream_info);
+	if(stream != nullptr)
+	{
+		stream->Start();
+	}
     return stream;
 }
 
-RtmpStream::RtmpStream(const std::shared_ptr<pvd::Application> &application)
-	: pvd::Stream(application, StreamSourceType::Rtmp)
+RtmpStream::RtmpStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info)
+	: pvd::Stream(application, stream_info)
 {
 	
 }
@@ -34,24 +43,4 @@ bool RtmpStream::ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64
 uint32_t RtmpStream::ConvertToAudioData(const std::shared_ptr<ov::Data> &data)
 {
 	return _bsfa.convert_to(data);
-}
-
-
-void RtmpStream::SetAudioTimestampScale(double scale){
-	_audio_timestamp_scale = scale;
-}
-
-double RtmpStream::GetAudioTimestampScale()
-{
-	return _audio_timestamp_scale;
-}
-
-
-void RtmpStream::SetVideoTimestampScale(double scale){
-	_video_timestamp_scale = scale;
-}
-
-double RtmpStream::GetVideoTimestampScale()
-{
-	return _video_timestamp_scale;
 }

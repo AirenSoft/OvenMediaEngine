@@ -51,6 +51,7 @@ public:
 protected:
 	std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &application_info) override;
 	bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
+	void OnStreamNotInUse(const info::Stream &stream_info) override;
 
 	//--------------------------------------------------------------------
 	// Implementation of RtmpObserver

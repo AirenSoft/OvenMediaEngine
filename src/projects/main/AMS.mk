@@ -7,7 +7,6 @@ LOCAL_STATIC_LIBRARIES := \
 	ovt_publisher \
 	ovt_provider \
 	rtmp_provider \
-	rtsp_provider \
 	rtspc_provider \
 	transcoder \
 	rtc_signalling \
@@ -33,6 +32,8 @@ LOCAL_STATIC_LIBRARIES := \
 	monitoring \
 	jsoncpp \
 	sqlite
+
+# rtsp_provider 
 
 LOCAL_PREBUILT_LIBRARIES := \
 	libpugixml.a

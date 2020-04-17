@@ -36,10 +36,16 @@ namespace pvd
 		const std::shared_ptr<Stream> GetStreamById(uint32_t stream_id) const;
 		const std::shared_ptr<Stream> GetStreamByName(ov::String stream_name) const;
 
-		bool NotifyStreamCreated(std::shared_ptr<Stream> stream);
-		bool NotifyStreamDeleted(std::shared_ptr<Stream> stream);
-
 		uint32_t 	IssueUniqueStreamId();
+
+		// For receiving the push 
+		std::shared_ptr<pvd::Stream> CreateStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<std::shared_ptr<MediaTrack>> &tracks);
+		std::shared_ptr<pvd::Stream> CreateStream(const ov::String &stream_name, const std::vector<std::shared_ptr<MediaTrack>> &tracks);
+		// For pulling
+		std::shared_ptr<pvd::Stream> CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list);
+
+		// Delete stream
+		virtual bool DeleteStream(std::shared_ptr<Stream> stream);
 
 		bool DeleteAllStreams();
 		bool DeleteTerminatedStreams();
@@ -52,9 +58,17 @@ namespace pvd
 	protected:
 		explicit Application(const info::Application &application_info);
 		~Application() override;
+
+		// For child
+		virtual std::shared_ptr<pvd::Stream> CreatePushStream(const uint32_t stream_id, const ov::String &stream_name) = 0;
+		virtual std::shared_ptr<pvd::Stream> CreatePullStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<ov::String> &url_list) = 0;
+
 		std::map<uint32_t, std::shared_ptr<Stream>> _streams;
 
 	private:
+		bool NotifyStreamCreated(std::shared_ptr<Stream> stream);
+		bool NotifyStreamDeleted(std::shared_ptr<Stream> stream);
+
 		std::mutex 				_queue_guard;
 		std::condition_variable	_queue_cv;
 		uint32_t 				_last_issued_stream_id;

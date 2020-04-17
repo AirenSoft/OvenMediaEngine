@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 	INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
 	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
 	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
-	INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
+	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
 	
 
 	// Initialize Transcoder
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 	RELEASE_MODULE(rtmp_provider, "RTMP Provider");
 	RELEASE_MODULE(ovt_provider, "OVT Provider");
 	RELEASE_MODULE(rtspc_provider, "RTSPC Provider");
-	RELEASE_MODULE(rtsp_provider, "RTSP Provider");
+	// PENDING : RELEASE_MODULE(rtsp_provider, "RTSP Provider");
 	RELEASE_MODULE(transcoder, "Transcoder");
 	RELEASE_MODULE(webrtc_publisher, "WebRTC Publisher");
 	RELEASE_MODULE(hls_publisher, "HLS Publisher");

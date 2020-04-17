@@ -37,62 +37,6 @@ namespace pvd
 		logtd("Terminated OvtProvider modules.");
 	}
 
-	bool OvtProvider::Start()
-	{
-		return pvd::Provider::Start();
-	}
-
-	bool OvtProvider::Stop()
-	{
-		return pvd::Provider::Stop();
-	}
-
-	// Pull Stream
-	std::shared_ptr<pvd::Stream> OvtProvider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
-	{
-		// Find App
-		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
-		if (app == nullptr)
-		{
-			logte("There is no such app (%s)", app_info.GetName().CStr());
-			return nullptr;
-		}
-
-		// Find Stream (The stream must not exist)
-		auto stream = app->GetStreamByName(stream_name);
-		if (stream != nullptr)
-		{
-			// If stream is not running it can be deleted.
-			if(stream->GetState() == Stream::State::STOPPED)
-			{
-				app->NotifyStreamDeleted(stream);
-			}
-			else
-			{
-				logte("%s stream already exists.", stream_name.CStr());
-				return nullptr;
-			}
-		}
-
-		// Create Stream
-		stream = app->CreateStream(stream_name, url_list);
-		if (stream == nullptr)
-		{
-			logte("Cannot create %s stream.", stream_name.CStr());
-			return nullptr;
-		}
-
-		// Notify stream has been created
-		app->NotifyStreamCreated(stream);
-
-		return stream;
-	}
-
-	bool OvtProvider::StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream)
-	{
-		return stream->Stop();
-	}
-
 	std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{
 		return OvtApplication::Create(app_info);
@@ -101,29 +45,5 @@ namespace pvd
 	bool OvtProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
 	{
 		return true; 
-	}
-
-	void OvtProvider::OnStreamNotInUse(const info::Stream &stream_info)
-	{
-		logti("%s stream will be deleted because it is not used", stream_info.GetName().CStr());
-
-		// Find App
-		auto app_info = stream_info.GetApplicationInfo();
-		auto app = std::dynamic_pointer_cast<OvtApplication>(GetApplicationById(app_info.GetId()));
-		if (app == nullptr)
-		{
-			logte("There is no such app (%s)", app_info.GetName().CStr());
-			return;
-		}
-
-		// Find Stream (The stream must not exist)
-		auto stream = app->GetStreamById(stream_info.GetId());
-		if (stream == nullptr)
-		{
-			logte("There is no such stream (%s)", app_info.GetName().CStr());
-			return;
-		}
-
-		StopStream(app_info, stream);
 	}
 }

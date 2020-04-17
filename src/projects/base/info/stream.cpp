@@ -120,7 +120,6 @@ namespace info
 	const std::shared_ptr<MediaTrack> Stream::GetTrack(int32_t id) const
 	{
 		auto item = _tracks.find(id);
-
 		if (item == _tracks.end())
 		{
 			return nullptr;
