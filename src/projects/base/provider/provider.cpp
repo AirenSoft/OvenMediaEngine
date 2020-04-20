@@ -245,9 +245,7 @@ namespace pvd
 
 			table_lock.unlock();
 			// it will wait until the previous request is completed
-			logtc("Wait item is completed : %s", pulling_key.CStr());
 			item->Wait();
-			logtc("Wait item has been completed : %s", pulling_key.CStr());
 
 			if(item->State() == PullingItem::PullingItemState::PULLING) 
 			{
@@ -300,8 +298,6 @@ namespace pvd
 
 	std::shared_ptr<pvd::Stream> Provider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
 	{
-		logtc("Pull Stream : %s/%s - %s", app_info.GetName().CStr(), stream_name.CStr(), url_list[0].CStr());
-
 		LockPullStreamIfNeeded(app_info, stream_name, url_list, offset);
 
 		// Find App
