@@ -7,15 +7,16 @@
 //
 //==============================================================================
 #include "./signals.h"
+
+#include <base/ovlibrary/ovlibrary.h>
+#include <config/config_manager.h>
+#include <orchestrator/orchestrator.h>
+#include <signal.h>
+
 #include "./main_private.h"
 #include "main.h"
 
-#include <signal.h>
-
-#include <base/ovlibrary/ovlibrary.h>
-
-#include <config/config_manager.h>
-#include <orchestrator/orchestrator.h>
+bool g_is_terminated;
 
 #define SIGNAL_CASE(x) \
 	case x:            \
@@ -98,6 +99,8 @@ static const char *GetSignalName(int signum)
 	}
 }
 
+typedef void (*OV_SIG_ACTION)(int signum, siginfo_t *si, void *unused);
+
 static void AbortHandler(int signum, siginfo_t *si, void *unused)
 {
 	printf("%s %s\n", PLATFORM_NAME, GetSignalName(SIGSEGV));
@@ -134,39 +137,42 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 	}
 }
 
-bool InitializeSignals()
+void TerminateHandler(int signum, siginfo_t *si, void *unused)
 {
-	//	 1) SIGHUP		 2) SIGINT		 3) SIGQUIT		 4) SIGILL		 5) SIGTRAP
-	//	 6) SIGABRT		 7) SIGBUS		 8) SIGFPE		 9) SIGKILL		10) SIGUSR1
-	//	11) SIGSEGV		12) SIGUSR2		13) SIGPIPE		14) SIGALRM		15) SIGTERM
-	//	16) SIGSTKFLT	17) SIGCHLD		18) SIGCONT		19) SIGSTOP		20) SIGTSTP
-	//	21) SIGTTIN		22) SIGTTOU		23) SIGURG		24) SIGXCPU		25) SIGXFSZ
-	//	26) SIGVTALRM	27) SIGPROF		28) SIGWINCH	29) SIGIO		30) SIGPWR
-	//	31) SIGSYS		34) SIGRTMIN	35) SIGRTMIN+1	36) SIGRTMIN+2	37) SIGRTMIN+3
-	//	38) SIGRTMIN+4	39) SIGRTMIN+5	40) SIGRTMIN+6	41) SIGRTMIN+7	42) SIGRTMIN+8
-	//	43) SIGRTMIN+9	44) SIGRTMIN+10	45) SIGRTMIN+11	46) SIGRTMIN+12	47) SIGRTMIN+13
-	//	48) SIGRTMIN+14	49) SIGRTMIN+15	50) SIGRTMAX-14	51) SIGRTMAX-13	52) SIGRTMAX-12
-	//	53) SIGRTMAX-11	54) SIGRTMAX-10	55) SIGRTMAX-9	56) SIGRTMAX-8	57) SIGRTMAX-7
-	//	58) SIGRTMAX-6	59) SIGRTMAX-5	60) SIGRTMAX-4	61) SIGRTMAX-3	62) SIGRTMAX-2
-	//	63) SIGRTMAX-1	64) SIGRTMAX
+	logtc("Caught terminate signal %d", signum);
 
-	bool result = true;
+	g_is_terminated = true;
+}
+
+struct sigaction GetSigAction(OV_SIG_ACTION action)
+{
 	struct sigaction sa
 	{
 	};
 
 	sa.sa_flags = SA_SIGINFO;
-	sa.sa_sigaction = AbortHandler;
-	// sigemptyset is a macro on macOS, so :: breaks compilation 
+
+	// sigemptyset is a macro on macOS, so :: breaks compilation
 #if defined(__APPLE__)
 	sigemptyset(&sa.sa_mask);
 #else
 	::sigemptyset(&sa.sa_mask);
 #endif
 
-	// Intentional signals (ignore)
-	//     SIGQUIT, SIGINT, SIGTERM, SIGTRAP, SIGHUP, SIGKILL
-	//     SIGVTALRM, SIGPROF, SIGALRM
+	sa.sa_sigaction = action;
+
+	return std::move(sa);
+}
+
+// Configure abort signal
+//
+// Intentional signals (ignore)
+//     SIGQUIT, SIGINT, SIGTERM, SIGTRAP, SIGHUP, SIGKILL
+//     SIGVTALRM, SIGPROF, SIGALRM
+bool InitializeAbortSignal()
+{
+	bool result = true;
+	auto sa = GetSigAction(AbortHandler);
 
 	// Core dumped signal
 	result = result && (::sigaction(SIGABRT, &sa, nullptr) == 0);  // assert()
@@ -184,10 +190,50 @@ bool InitializeSignals()
 	result = result && (::sigaction(SIGPOLL, &sa, nullptr) == 0);  // pollable event
 #endif															   // IS_LINUX
 
-	// Configuration reload signal
-	sa.sa_sigaction = ReloadHandler;
+	return result;
+}
+
+// Configure reload signal
+bool InitializeReloadSignal()
+{
+	auto sa = GetSigAction(ReloadHandler);
+	bool result = true;
 
 	result = result && (::sigaction(SIGHUP, &sa, nullptr) == 0);
 
 	return result;
+}
+
+// Configure terminate signal
+bool InitializeTerminateSignal()
+{
+	auto sa = GetSigAction(TerminateHandler);
+	bool result = true;
+
+	result = result && (::sigaction(SIGINT, &sa, nullptr) == 0);
+
+	g_is_terminated = false;
+
+	return result;
+}
+
+bool InitializeSignals()
+{
+	//	 1) SIGHUP		 2) SIGINT		 3) SIGQUIT		 4) SIGILL		 5) SIGTRAP
+	//	 6) SIGABRT		 7) SIGBUS		 8) SIGFPE		 9) SIGKILL		10) SIGUSR1
+	//	11) SIGSEGV		12) SIGUSR2		13) SIGPIPE		14) SIGALRM		15) SIGTERM
+	//	16) SIGSTKFLT	17) SIGCHLD		18) SIGCONT		19) SIGSTOP		20) SIGTSTP
+	//	21) SIGTTIN		22) SIGTTOU		23) SIGURG		24) SIGXCPU		25) SIGXFSZ
+	//	26) SIGVTALRM	27) SIGPROF		28) SIGWINCH	29) SIGIO		30) SIGPWR
+	//	31) SIGSYS		34) SIGRTMIN	35) SIGRTMIN+1	36) SIGRTMIN+2	37) SIGRTMIN+3
+	//	38) SIGRTMIN+4	39) SIGRTMIN+5	40) SIGRTMIN+6	41) SIGRTMIN+7	42) SIGRTMIN+8
+	//	43) SIGRTMIN+9	44) SIGRTMIN+10	45) SIGRTMIN+11	46) SIGRTMIN+12	47) SIGRTMIN+13
+	//	48) SIGRTMIN+14	49) SIGRTMIN+15	50) SIGRTMAX-14	51) SIGRTMAX-13	52) SIGRTMAX-12
+	//	53) SIGRTMAX-11	54) SIGRTMAX-10	55) SIGRTMAX-9	56) SIGRTMAX-8	57) SIGRTMAX-7
+	//	58) SIGRTMAX-6	59) SIGRTMAX-5	60) SIGRTMAX-4	61) SIGRTMAX-3	62) SIGRTMAX-2
+	//	63) SIGRTMAX-1	64) SIGRTMAX
+
+	return InitializeAbortSignal() &&
+		   InitializeReloadSignal() &&
+		   InitializeTerminateSignal();
 }
