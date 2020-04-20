@@ -132,6 +132,7 @@ namespace pub
 		virtual bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) = 0;
 
 		std::map<info::application_id_t, std::shared_ptr<Application>> 	_applications;
+		std::shared_mutex 		_application_map_mutex;
 
 		const cfg::Server _server_config;
 		std::shared_ptr<MediaRouteInterface> _router;

@@ -21,6 +21,7 @@ namespace pub
 
 	bool Publisher::Stop()
 	{
+		std::unique_lock<std::shared_mutex> lock(_application_map_mutex);
 		auto it = _applications.begin();
 
 		while (it != _applications.end())
@@ -85,6 +86,7 @@ namespace pub
 		_router->RegisterObserverApp(*application.get(), application);
 
 		// Application Map에 보관
+		std::lock_guard<std::shared_mutex> lock(_application_map_mutex);
 		_applications[application->GetId()] = application;
 
 		return true;
@@ -93,6 +95,7 @@ namespace pub
 	// Delete Application
 	bool Publisher::OnDeleteApplication(const info::Application &app_info)
 	{
+		std::lock_guard<std::shared_mutex> lock(_application_map_mutex);
 		auto item = _applications.find(app_info.GetId());
 
 		logtd("Delete the application: [%s]", app_info.GetName().CStr());
@@ -134,6 +137,7 @@ namespace pub
 
 	std::shared_ptr<Application> Publisher::GetApplicationByName(ov::String app_name)
 	{
+		std::lock_guard<std::shared_mutex> lock(_application_map_mutex);
 		for (auto const &x : _applications)
 		{
 			auto application = x.second;
@@ -160,6 +164,8 @@ namespace pub
 
 	std::shared_ptr<Application> Publisher::GetApplicationById(info::application_id_t application_id)
 	{
+		std::shared_lock<std::shared_mutex> lock(_application_map_mutex);
+
 		auto application = _applications.find(application_id);
 
 		if (application == _applications.end())

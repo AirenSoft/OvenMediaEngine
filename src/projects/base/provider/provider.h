@@ -117,7 +117,10 @@ namespace pvd
 		ov::String		GeneratePullingKey(const ov::String &app_name, const ov::String &stream_name);
 
 		const cfg::Server _server_config;
+		
 		std::map<info::application_id_t, std::shared_ptr<Application>> _applications;
+		std::shared_mutex  _application_map_mutex;
+
 		std::shared_ptr<MediaRouteInterface> _router;
 		std::map<ov::String, std::shared_ptr<PullingItem>>	_pulling_table;
 		std::mutex 											_pulling_table_mutex;

@@ -61,6 +61,7 @@ namespace pub
 			return false;
 		}
 
+		std::lock_guard<std::shared_mutex> lock(_stream_map_mutex);
 		_streams[info->GetId()] = stream;
 
 		return true;
@@ -68,18 +69,18 @@ namespace pub
 
 	bool Application::OnDeleteStream(const std::shared_ptr<info::Stream> &info)
 	{
-		if (_streams.count(info->GetId()) <= 0)
+		std::unique_lock<std::shared_mutex> lock(_stream_map_mutex);
+
+		auto stream_it = _streams.find(info->GetId());
+		if(stream_it == _streams.end())
 		{
 			logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
 			return false;
 		}
 
-		auto stream = std::static_pointer_cast<Stream>(GetStream(info->GetId()));
-		if (stream == nullptr)
-		{
-			logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
-			return false;
-		}
+		auto stream = stream_it->second;
+
+		lock.unlock();
 
 		// Stream이 삭제되었음을 자식에게 알려서 처리하게 함
 		if (DeleteStream(info) == false)
@@ -87,8 +88,8 @@ namespace pub
 			return false;
 		}
 
+		lock.lock();
 		_streams.erase(info->GetId());
-
 		stream->Stop();
 
 		return true;
@@ -144,16 +145,20 @@ namespace pub
 
 	std::shared_ptr<Stream> Application::GetStream(uint32_t stream_id)
 	{
-		if (_streams.count(stream_id) <= 0)
+		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
+
+		auto it = _streams.find(stream_id);
+		if (it == _streams.end())
 		{
 			return nullptr;
 		}
 
-		return _streams[stream_id];
+		return it->second;
 	}
 
 	std::shared_ptr<Stream> Application::GetStream(ov::String stream_name)
 	{
+		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
 		for (auto const &x : _streams)
 		{
 			auto stream = x.second;

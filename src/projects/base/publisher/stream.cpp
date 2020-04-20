@@ -41,6 +41,7 @@ namespace pub
 			_worker_thread.join();
 		}
 
+		std::lock_guard<std::shared_mutex> lock(_session_map_mutex);
 		for (auto const &x : _sessions)
 		{
 			auto session = std::static_pointer_cast<Session>(x.second);
@@ -53,7 +54,7 @@ namespace pub
 
 	bool StreamWorker::AddSession(std::shared_ptr<Session> session)
 	{
-		std::unique_lock<std::mutex> lock(_session_map_guard);
+		std::lock_guard<std::shared_mutex> lock(_session_map_mutex);
 		_sessions[session->GetId()] = session;
 
 		return true;
@@ -62,7 +63,7 @@ namespace pub
 	bool StreamWorker::RemoveSession(session_id_t id)
 	{
 		// 해당 Session ID를 가진 StreamWorker를 찾아서 삭제한다.
-		std::unique_lock<std::mutex> lock(_session_map_guard);
+		std::lock_guard<std::shared_mutex> lock(_session_map_mutex);
 		if (_sessions.count(id) <= 0)
 		{
 			logte("Cannot find session : %u", id);
@@ -81,6 +82,7 @@ namespace pub
 
 	std::shared_ptr<Session> StreamWorker::GetSession(session_id_t id)
 	{
+		std::shared_lock<std::shared_mutex> lock(_session_map_mutex);
 		if (_sessions.count(id) <= 0)
 		{
 			logte("Cannot find session : %u", id);
@@ -119,7 +121,7 @@ namespace pub
 
 	void StreamWorker::WorkerThread()
 	{
-		std::unique_lock<std::mutex> session_lock(_session_map_guard, std::defer_lock);
+		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex, std::defer_lock);
 		// Queue Event를 기다린다.
 		while (!_stop_thread_flag)
 		{
@@ -135,7 +137,6 @@ namespace pub
 			}
 
 			session_lock.lock();
-			
 			// 모든 Session에 전송한다.
 			for (auto const &x : _sessions)
 			{
@@ -209,6 +210,7 @@ namespace pub
 			_stream_workers[i].Stop();
 		}
 
+		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
 		_sessions.clear();
 
 		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), _application->GetApplicationTypeName());
@@ -228,6 +230,7 @@ namespace pub
 
 	bool Stream::AddSession(std::shared_ptr<Session> session)
 	{
+		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
 		// For getting session, all sessions
 		_sessions[session->GetId()] = session;
 		// 가장 적은 Session을 처리하는 Worker를 찾아서 Session을 넣는다.
@@ -237,8 +240,7 @@ namespace pub
 
 	bool Stream::RemoveSession(session_id_t id)
 	{
-		// TODO(Getroot): Mutex
-
+		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
 		if (_sessions.count(id) <= 0)
 		{
 			logte("Cannot find session : %u", id);
@@ -252,12 +254,20 @@ namespace pub
 
 	std::shared_ptr<Session> Stream::GetSession(session_id_t id)
 	{
+		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex);
 		return GetWorkerByStreamID(id).GetSession(id);
 	}
 
-	const std::map<session_id_t, std::shared_ptr<Session>> &Stream::GetAllSessions()
+	const std::map<session_id_t, std::shared_ptr<Session>> Stream::GetAllSessions()
 	{
+		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex);
 		return _sessions;
+	}
+
+	uint32_t Stream::GetSessionCount()
+	{
+		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex);
+		return _sessions.size();
 	}
 
 	bool Stream::BroadcastPacket(uint32_t packet_type, std::shared_ptr<ov::Data> packet)

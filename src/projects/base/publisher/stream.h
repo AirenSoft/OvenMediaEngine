@@ -1,5 +1,6 @@
 #pragma once
 
+#include <shared_mutex>
 #include "base/common_types.h"
 #include "base/info/stream.h"
 #include "base/media_route/media_buffer.h"
@@ -29,7 +30,7 @@ namespace pub
 		void WorkerThread();
 
 		std::map<session_id_t, std::shared_ptr<Session>> _sessions;
-		std::mutex _session_map_guard;
+		std::shared_mutex _session_map_mutex;
 		ov::Semaphore _queue_event;
 
 		class StreamPacket
@@ -64,7 +65,8 @@ namespace pub
 		bool AddSession(std::shared_ptr<Session> session);
 		bool RemoveSession(session_id_t id);
 		std::shared_ptr<Session> GetSession(session_id_t id);
-		const std::map<session_id_t, std::shared_ptr<Session>> &GetAllSessions();
+		const std::map<session_id_t, std::shared_ptr<Session>> GetAllSessions();
+		uint32_t GetSessionCount();
 
 		// A child call this function to delivery packet to all sessions
 		bool BroadcastPacket(uint32_t packet_type, std::shared_ptr<ov::Data> packet);
@@ -87,6 +89,7 @@ namespace pub
 	private:
 		StreamWorker &GetWorkerByStreamID(session_id_t session_id);
 		std::map<session_id_t, std::shared_ptr<Session>> _sessions;
+		std::shared_mutex _session_map_mutex;
 
 		uint32_t _worker_count;
 		bool _run_flag;

@@ -53,8 +53,10 @@ namespace pvd
 		return _streams;
 	}
 
-	const std::shared_ptr<Stream> Application::GetStreamById(uint32_t stream_id) const
+	const std::shared_ptr<Stream> Application::GetStreamById(uint32_t stream_id)
 	{
+		std::shared_lock<std::shared_mutex> lock(_streams_map_guard);
+
 		if(_streams.find(stream_id) == _streams.end())
 		{
 			return nullptr;
@@ -63,8 +65,10 @@ namespace pvd
 		return _streams.at(stream_id);
 	}
 
-	const std::shared_ptr<Stream> Application::GetStreamByName(ov::String stream_name) const
+	const std::shared_ptr<Stream> Application::GetStreamByName(ov::String stream_name)
 	{
+		std::shared_lock<std::shared_mutex> lock(_streams_map_guard);
+		
 		for(auto const &x : _streams)
 		{
 			auto& stream = x.second;
@@ -90,7 +94,7 @@ namespace pvd
 			stream->AddTrack(track);
 		}
 	
-		std::unique_lock<std::mutex> lock(_streams_map_guard);
+		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
 		_streams[stream->GetId()] = stream;
 		lock.unlock();
 
@@ -112,7 +116,7 @@ namespace pvd
 			return nullptr;
 		}
 
-		std::unique_lock<std::mutex> lock(_streams_map_guard);
+		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
 		_streams[stream->GetId()] = stream;
 		lock.unlock();
 
@@ -123,7 +127,7 @@ namespace pvd
 
 	bool Application::DeleteStream(std::shared_ptr<Stream> stream)
 	{
-		std::unique_lock<std::mutex> lock(_streams_map_guard);
+		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
 		if(_streams.find(stream->GetId()) == _streams.end())
 		{
 			return false;
@@ -152,7 +156,7 @@ namespace pvd
 
 	bool Application::DeleteAllStreams()
 	{
-		std::unique_lock<std::mutex> lock(_streams_map_guard);
+		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
 
 		for(auto it = _streams.cbegin(); it != _streams.cend(); )
 		{
@@ -168,7 +172,7 @@ namespace pvd
 
 	bool Application::DeleteTerminatedStreams()
 	{
-		std::unique_lock<std::mutex> lock(_streams_map_guard);
+		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
 
 		for(auto it = _streams.cbegin(); it != _streams.cend(); )
 		{

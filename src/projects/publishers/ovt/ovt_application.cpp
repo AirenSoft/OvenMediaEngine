@@ -55,13 +55,7 @@ bool OvtApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 		logte("OvtApplication::Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
 		return false;
 	}
-
-	auto sessions = stream->GetAllSessions();
-	for(auto const &x : sessions)
-	{
-		auto session = std::static_pointer_cast<OvtSession>(x.second);
-	}
-
+	
 	logtd("OvtApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
 
 	return true;

@@ -16,6 +16,8 @@
 #include "base/media_route/media_route_application_connector.h"
 #include "stream.h"
 
+#include <shared_mutex>
+
 namespace pvd
 {
 	class Application : public info::Application, public MediaRouteApplicationConnector
@@ -33,8 +35,8 @@ namespace pvd
 		virtual bool Stop();
 
 		const std::map<uint32_t, std::shared_ptr<Stream>>& GetStreams() const;
-		const std::shared_ptr<Stream> GetStreamById(uint32_t stream_id) const;
-		const std::shared_ptr<Stream> GetStreamByName(ov::String stream_name) const;
+		const std::shared_ptr<Stream> GetStreamById(uint32_t stream_id);
+		const std::shared_ptr<Stream> GetStreamByName(ov::String stream_name);
 
 		uint32_t 	IssueUniqueStreamId();
 
@@ -72,7 +74,7 @@ namespace pvd
 		std::mutex 				_queue_guard;
 		std::condition_variable	_queue_cv;
 		std::atomic<info::stream_id_t>	_last_issued_stream_id { 0 };
-		std::mutex 				_streams_map_guard;
+		std::shared_mutex 		_streams_map_guard;
 		ApplicationState		_state = ApplicationState::Idle;
 	};
 }

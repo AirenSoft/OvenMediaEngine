@@ -159,7 +159,7 @@ Json::Value& OvtStream::GetDescription()
 
 bool OvtStream::RemoveSessionByConnectorId(int connector_id)
 {
-	auto &sessions = GetAllSessions();
+	auto sessions = GetAllSessions();
 
 	logte("RemoveSessionByConnectorId : all(%d) connector(%d)", sessions.size(), connector_id);
 

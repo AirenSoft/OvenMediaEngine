@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include <shared_mutex>
 #include "base/common_types.h"
 #include "base/info/stream.h"
 #include "base/info/session.h"
@@ -122,6 +123,8 @@ namespace pub
 			std::shared_ptr<const ov::Data> _data;
 		};
 		std::shared_ptr<Application::IncomingPacket> PopIncomingPacket();
+
+		std::shared_mutex 		_stream_map_mutex;
 
 		bool _stop_thread_flag;
 		std::thread _worker_thread;

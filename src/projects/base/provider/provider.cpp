@@ -48,8 +48,9 @@ namespace pvd
 			_worker_thread.join();
 		}
 
-		auto it = _applications.begin();
+		std::unique_lock<std::shared_mutex> lock(_application_map_mutex);
 
+		auto it = _applications.begin();
 		while(it != _applications.end())
 		{
 			auto application = it->second;
@@ -119,6 +120,7 @@ namespace pvd
 			return false;
 		}
 
+		std::unique_lock<std::shared_mutex> lock(_application_map_mutex);
 		// Store created application
 		_applications[application->GetId()] = application;
 
@@ -128,6 +130,7 @@ namespace pvd
 	// Delete Application
 	bool Provider::OnDeleteApplication(const info::Application &app_info)
 	{
+		std::unique_lock<std::shared_mutex> lock(_application_map_mutex);
 		auto item = _applications.find(app_info.GetId());
 
 		logtd("Delete the application: [%s]", app_info.GetName().CStr());
@@ -169,6 +172,8 @@ namespace pvd
 
 	std::shared_ptr<Application> Provider::GetApplicationByName(ov::String app_name)
 	{
+		std::shared_lock<std::shared_mutex> lock(_application_map_mutex);
+
 		for(auto const &x : _applications)
 		{
 			auto application = x.second;
@@ -184,7 +189,6 @@ namespace pvd
 	std::shared_ptr<Stream> Provider::GetStreamByName(ov::String app_name, ov::String stream_name)
 	{
 		auto app = GetApplicationByName(app_name);
-
 		if(!app)
 		{
 			return nullptr;
@@ -195,8 +199,9 @@ namespace pvd
 
 	std::shared_ptr<Application> Provider::GetApplicationById(info::application_id_t application_id)
 	{
-		auto application = _applications.find(application_id);
+		std::shared_lock<std::shared_mutex> lock(_application_map_mutex);
 
+		auto application = _applications.find(application_id);
 		if(application != _applications.end())
 		{
 			return application->second;
@@ -208,7 +213,6 @@ namespace pvd
 	std::shared_ptr<Stream> Provider::GetStreamById(info::application_id_t application_id, uint32_t stream_id)
 	{
 		auto app = GetApplicationById(application_id);
-
 		if(app != nullptr)
 		{
 			return app->GetStreamById(stream_id);
@@ -238,13 +242,12 @@ namespace pvd
 		if(it != _pulling_table.end())
 		{
 			auto item = it->second;
-	
+
 			table_lock.unlock();
-			// ??
 			// it will wait until the previous request is completed
+			logtc("Wait item is completed : %s", pulling_key.CStr());
 			item->Wait();
-			// ??
-			table_lock.lock();
+			logtc("Wait item has been completed : %s", pulling_key.CStr());
 
 			if(item->State() == PullingItem::PullingItemState::PULLING) 
 			{
@@ -260,15 +263,16 @@ namespace pvd
 			{
 			}
 		}
-		
-		auto item = std::make_shared<PullingItem>(app_info.GetName(), stream_name, url_list, offset);
-		item->SetState(PullingItem::PullingItemState::PULLING);
-		item->Lock();
+		else
+		{
+			auto item = std::make_shared<PullingItem>(app_info.GetName(), stream_name, url_list, offset);
+			item->SetState(PullingItem::PullingItemState::PULLING);
+			item->Lock();
 
-		_pulling_table[pulling_key] = item;
+			_pulling_table[pulling_key] = item;
 
-		table_lock.unlock();
-	
+			table_lock.unlock();
+		}
 	
 		return true;
 	}
@@ -288,15 +292,17 @@ namespace pvd
 
 		auto item = it->second;
 		item->Unlock();
-
-		_pulling_table.erase(it);
 		
+		_pulling_table.erase(it);
+
 		return true;
 	}
 
 	std::shared_ptr<pvd::Stream> Provider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
 	{
-	//	LockPullStreamIfNeeded(app_info, stream_name, url_list, offset);
+		logtc("Pull Stream : %s/%s - %s", app_info.GetName().CStr(), stream_name.CStr(), url_list[0].CStr());
+
+		LockPullStreamIfNeeded(app_info, stream_name, url_list, offset);
 
 		// Find App
 		auto app = GetApplicationById(app_info.GetId());
@@ -318,7 +324,7 @@ namespace pvd
 			}
 			else
 			{
-				//UnlockPullStreamIfNeeded(app_info, stream_name);
+				UnlockPullStreamIfNeeded(app_info, stream_name);
 				return stream;
 			}
 		}
@@ -328,20 +334,17 @@ namespace pvd
 		if (stream == nullptr)
 		{
 			logte("Cannot create %s stream.", stream_name.CStr());
-			//UnlockPullStreamIfNeeded(app_info, stream_name);
+			UnlockPullStreamIfNeeded(app_info, stream_name);
 			return nullptr;
 		}
 
-		//UnlockPullStreamIfNeeded(app_info, stream_name);
+		UnlockPullStreamIfNeeded(app_info, stream_name);
 
 		return stream;
 	}
 
 	bool Provider::StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream)
 	{
-		// 여기서 STOP한 STREAM에 Lock 건다. 
-		// 상태는 STOPPING
-
 		return stream->Stop();
 	}
 
@@ -373,6 +376,8 @@ namespace pvd
 	{
 		while(_run_thread)
 		{
+			std::shared_lock<std::shared_mutex> lock(_application_map_mutex);
+
 			for(auto const &x : _applications)
 			{
 				auto app = x.second;
@@ -405,6 +410,7 @@ namespace pvd
 				}
 			}
 
+			lock.unlock();
 			sleep(5);
 		}
 	}
