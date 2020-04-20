@@ -110,6 +110,11 @@ namespace pvd
 
 	bool RtspcStream::Stop()
 	{
+		if(_state != State::PLAYING)
+		{
+			return false;
+		}
+
 		RequestStop();
 
 		return pvd::Stream::Stop();

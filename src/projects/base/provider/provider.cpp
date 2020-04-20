@@ -235,49 +235,61 @@ namespace pvd
 		// It handles duplicate requests while the stream is being created.
 
 		// Table lock
-		std::unique_lock<std::mutex> table_lock(_pulling_table_mutex);
+		std::unique_lock<std::mutex> table_lock(_pulling_table_mutex, std::defer_lock);
 		auto pulling_key = GeneratePullingKey(app_info.GetName(), stream_name);
 
-		auto it = _pulling_table.find(pulling_key);
-		if(it != _pulling_table.end())
+		while(true)
 		{
-			auto item = it->second;
+			table_lock.lock();
+
+			auto it = _pulling_table.find(pulling_key);
+			std::shared_ptr<PullingItem> item;
+			if(it != _pulling_table.end())
+			{
+				item = it->second;
+			}
+			else
+			{
+				// First item
+				auto item = std::make_shared<PullingItem>(app_info.GetName(), stream_name, url_list, offset);
+				item->SetState(PullingItem::PullingItemState::PULLING);
+				item->Lock();
+
+				_pulling_table[pulling_key] = item;
+
+				return true;
+			}
 
 			table_lock.unlock();
-			// it will wait until the previous request is completed
-			item->Wait();
 
-			if(item->State() == PullingItem::PullingItemState::PULLING) 
+			if(item != nullptr)
 			{
-				// Unexpected error
-			}
-			else if(item->State() == PullingItem::PullingItemState::PULLED)
-			{
-			}
-			else if(item->State() == PullingItem::PullingItemState::ERROR)
-			{
-			}
-			else if(item->State() == PullingItem::PullingItemState::REMOVED)
-			{
-			}
-		}
-		else
-		{
-			auto item = std::make_shared<PullingItem>(app_info.GetName(), stream_name, url_list, offset);
-			item->SetState(PullingItem::PullingItemState::PULLING);
-			item->Lock();
+				// it will wait until the previous request is completed
+				logti("Wait for the same stream that was previously requested to be created.: %s/%s", app_info.GetName().CStr(), stream_name.CStr());
+				item->Wait();
 
-			_pulling_table[pulling_key] = item;
-
-			table_lock.unlock();
+				if(item->State() == PullingItem::PullingItemState::PULLING) 
+				{
+					// Unexpected error
+					OV_ASSERT2(false);
+					return false;
+				}
+				else if(item->State() == PullingItem::PullingItemState::PULLED)
+				{
+					continue;
+				}
+				else if(item->State() == PullingItem::PullingItemState::ERROR)
+				{
+					continue;
+				}
+			}
 		}
 	
 		return true;
 	}
 
-	bool Provider::UnlockPullStreamIfNeeded(const info::Application &app_info, const ov::String &stream_name)
+	bool Provider::UnlockPullStreamIfNeeded(const info::Application &app_info, const ov::String &stream_name, PullingItem::PullingItemState state)
 	{
-		// Table lock
 		std::unique_lock<std::mutex> table_lock(_pulling_table_mutex);
 		auto pulling_key = GeneratePullingKey(app_info.GetName(), stream_name);
 
@@ -289,10 +301,10 @@ namespace pvd
 		}
 
 		auto item = it->second;
+		item->SetState(state);
+		_pulling_table.erase(it);
 		item->Unlock();
 		
-		_pulling_table.erase(it);
-
 		return true;
 	}
 
@@ -320,7 +332,7 @@ namespace pvd
 			}
 			else
 			{
-				UnlockPullStreamIfNeeded(app_info, stream_name);
+				UnlockPullStreamIfNeeded(app_info, stream_name, PullingItem::PullingItemState::PULLED);
 				return stream;
 			}
 		}
@@ -330,12 +342,11 @@ namespace pvd
 		if (stream == nullptr)
 		{
 			logte("Cannot create %s stream.", stream_name.CStr());
-			UnlockPullStreamIfNeeded(app_info, stream_name);
+			UnlockPullStreamIfNeeded(app_info, stream_name, PullingItem::PullingItemState::ERROR);
 			return nullptr;
 		}
 
-		UnlockPullStreamIfNeeded(app_info, stream_name);
-
+		UnlockPullStreamIfNeeded(app_info, stream_name, PullingItem::PullingItemState::PULLED);
 		return stream;
 	}
 
@@ -383,10 +394,7 @@ namespace pvd
 					auto stream = s.second;
 					if(stream->GetState() == Stream::State::STOPPED || stream->GetState() == Stream::State::ERROR)
 					{
-						// Table lock
 						app->DeleteStream(stream);
-						// Remove stream from table
-						// Table unlock
 					}
 					else if(stream->GetState() != Stream::State::STOPPING)
 					{

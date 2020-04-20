@@ -23,8 +23,7 @@ namespace pvd
 		{
 			PULLING,
 			PULLED,
-			ERROR,
-			REMOVED
+			ERROR
 		};
 
 		PullingItem(const ov::String &app_name, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
@@ -106,7 +105,7 @@ namespace pvd
 		bool OnDeleteApplication(const info::Application &app_info) override;
 
 		bool LockPullStreamIfNeeded(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset);
-		bool UnlockPullStreamIfNeeded(const info::Application &app_info, const ov::String &stream_name);
+		bool UnlockPullStreamIfNeeded(const info::Application &app_info, const ov::String &stream_name, PullingItem::PullingItemState state);
 
 		std::shared_ptr<pvd::Stream> PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset) override;
 		bool StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream) override;
