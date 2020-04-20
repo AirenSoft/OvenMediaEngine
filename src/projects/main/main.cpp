@@ -71,17 +71,11 @@
 		}                                                                         \
 	}
 
-bool		_running_server = true;
+extern bool g_is_terminated;
 
 static void PrintBanner();
 static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_option);
 static bool Uninitialize();
-
-void Terminate(int s)
-{
-	logti("Caught signal %d\n",s);
-	_running_server = false;
-}
 
 int main(int argc, char *argv[])
 {
@@ -188,14 +182,7 @@ int main(int argc, char *argv[])
 		ov::Daemon::SetEvent();
 	}
 
-	struct sigaction sigIntHandler;
-
-	sigIntHandler.sa_handler = Terminate;
-	sigemptyset(&sigIntHandler.sa_mask);
-	sigIntHandler.sa_flags = 0;
-	sigaction(SIGINT, &sigIntHandler, NULL);
-
-	while (_running_server)
+	while (g_is_terminated == false)
 	{
 		sleep(1);
 	}

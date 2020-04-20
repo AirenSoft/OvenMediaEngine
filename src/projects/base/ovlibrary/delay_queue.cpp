@@ -77,6 +77,8 @@ namespace ov
 		}
 
 		_stop = true;
+		_event.SetEvent();
+
 		if(_thread.joinable())
 		{
 			_thread.join();
