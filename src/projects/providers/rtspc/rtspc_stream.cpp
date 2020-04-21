@@ -69,6 +69,8 @@ namespace pvd
 			return false;
 		}
 
+		_stop_watch.Start();
+
 		auto begin = std::chrono::steady_clock::now();
 		if (!ConnectTo())
 		{
@@ -144,9 +146,9 @@ namespace pvd
 
 		AVDictionary *options = NULL;
 		::av_dict_set(&options, "rtsp_transport", "tcp", 0);
-
-
+		
 		int err = 0;
+		_stop_watch.Update();
     	if ( (err = ::avformat_open_input(&_format_context, _curr_url->Source().CStr(), NULL, &options))  < 0) 
 		{
         	_state = State::ERROR;
@@ -154,7 +156,14 @@ namespace pvd
 			char errbuf[256];
 			av_strerror(err, errbuf, sizeof(errbuf));
 
-			logte("Cannot open input file. error : %s", errbuf);
+			if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
+			{
+				logte("Failed to connect to RTSP server.(%s/%s) : Timed out", GetApplicationInfo().GetName().CStr(), GetName().CStr(), errbuf);
+			}
+			else
+			{
+				logte("Failed to connect to RTSP server.(%s/%s) : %s", GetApplicationInfo().GetName().CStr(), GetName().CStr(), errbuf);
+			}
 
         	return false;
     	}
@@ -282,6 +291,12 @@ namespace pvd
 			{
 				return true;
 			}
+
+			if(obj->_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
+			{
+				// timed out
+				return true;
+			}
 		}
 
 	    return false;
@@ -296,10 +311,9 @@ namespace pvd
 		bool is_eof = false;
 		bool is_received_first_packet = false;
 
-
-
 		while (!IsStopThread())
 		{
+			_stop_watch.Update();
 			int32_t ret = ::av_read_frame(_format_context, &packet);
 			if ( ret < 0 )
 			{
@@ -323,6 +337,13 @@ namespace pvd
 				if(IsStopThread())
 				{
 					logtd("Interrupted by end flag");
+					_state = State::STOPPING;
+					break;
+				}
+
+				if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
+				{
+					logte("Waiting for data from RTSP server has timed out.(%s/%s)", GetApplicationInfo().GetName().CStr(), GetName().CStr());
 					_state = State::STOPPING;
 					break;
 				}

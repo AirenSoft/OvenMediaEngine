@@ -133,7 +133,7 @@ public:
 	bool IsExpiredRequest()
 	{
 		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - _last_requested_time).count();
-		if(elapsed > _duration * 3)
+		if(elapsed > _duration * 10)
 		{
 			return true;
 		}

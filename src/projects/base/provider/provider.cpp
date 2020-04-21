@@ -407,7 +407,7 @@ namespace pvd
 							auto current = std::chrono::high_resolution_clock::now();
 							auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastSentTime()).count();
 							
-							if(elapsed_time > 30)
+							if(elapsed_time > 100)
 							{
 								OnStreamNotInUse(*stream);
 							}

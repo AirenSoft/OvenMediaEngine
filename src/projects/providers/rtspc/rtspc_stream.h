@@ -21,6 +21,9 @@ extern "C"
 #include <libavutil/opt.h>
 }
 
+//TODO(Dimiden): It needs to move to configuration
+#define RTSP_PULL_TIMEOUT_MSEC	3000
+
 namespace pvd
 {
 	class RtspcStream : public pvd::Stream
@@ -46,6 +49,7 @@ namespace pvd
 		std::shared_ptr<const ov::Url>				_curr_url;
 		bool _stop_thread_flag;
 		std::thread _worker_thread;
+		ov::StopWatch _stop_watch;
 
 		AVFormatContext *_format_context = NULL;
 		static int InterruptCallback(void *ctx);
