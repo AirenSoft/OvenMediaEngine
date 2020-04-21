@@ -383,8 +383,10 @@ namespace pvd
 	{
 		while(_run_thread)
 		{
-			std::shared_lock<std::shared_mutex> lock(_application_map_mutex);
-
+			std::shared_lock<std::shared_mutex> lock(_application_map_mutex, std::defer_lock);
+			
+			lock.lock();
+			
 			for(auto const &x : _applications)
 			{
 				auto app = x.second;
