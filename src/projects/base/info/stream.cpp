@@ -42,13 +42,12 @@ namespace info
 		_name = stream._name;
 		_source_type = stream._source_type;
 		_created_time = stream._created_time;
-		_app_info = std::make_shared<info::Application>(stream.GetApplicationInfo());
+		_app_info = stream._app_info;
 		_origin_stream = stream._origin_stream;
 
 		for (auto &track : stream._tracks)
 		{
-			auto new_track = std::make_shared<MediaTrack>(*(track.second.get()));
-			AddTrack(new_track);
+			AddTrack(track.second);
 		}
 	}
 
