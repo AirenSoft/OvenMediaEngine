@@ -7,6 +7,7 @@
 #include "base/info/host.h"
 #include "base/info/info.h"
 #include "host_metrics.h"
+#include <shared_mutex>
 
 #define HostMetrics(info)			mon::Monitoring::GetInstance()->GetHostMetrics(info);
 #define ApplicationMetrics(info)	mon::Monitoring::GetInstance()->GetApplicationMetrics(info);
@@ -39,7 +40,7 @@ namespace mon
         std::shared_ptr<StreamMetrics>  GetStreamMetrics(const info::Stream &stream_info);
 
 	private:
-		std::mutex _map_guard;
+		std::shared_mutex _map_guard;
 		std::map<uint32_t, std::shared_ptr<HostMetrics>> _hosts;
 	};
 }  // namespace mon

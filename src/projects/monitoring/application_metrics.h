@@ -7,6 +7,7 @@
 #include "base/info/info.h"
 #include "common_metrics.h"
 #include "stream_metrics.h"
+#include <shared_mutex>
 
 namespace mon
 {
@@ -57,7 +58,7 @@ namespace mon
 
 	private:
 		std::shared_ptr<HostMetrics> _host_metrics;
-		std::mutex _map_guard;
+		std::shared_mutex _map_guard;
 		std::map<uint32_t, std::shared_ptr<StreamMetrics>> _streams;
 	};
 }  // namespace mon

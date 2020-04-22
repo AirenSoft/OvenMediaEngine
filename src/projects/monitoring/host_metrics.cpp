@@ -34,7 +34,7 @@ namespace mon
 
 	bool HostMetrics::OnApplicationCreated(const info::Application &app_info)
 	{
-		std::unique_lock<std::mutex> lock(_map_guard);
+		std::unique_lock<std::shared_mutex> lock(_map_guard);
 		if(_applications.find(app_info.GetId()) != _applications.end())
 		{
 			return true;
@@ -54,7 +54,7 @@ namespace mon
 	}
 	bool HostMetrics::OnApplicationDeleted(const info::Application &app_info)
 	{
-        std::unique_lock<std::mutex> lock(_map_guard);
+        std::unique_lock<std::shared_mutex> lock(_map_guard);
         if(_applications.find(app_info.GetId()) == _applications.end())
         {
             return false;
@@ -67,7 +67,7 @@ namespace mon
 
 	std::shared_ptr<ApplicationMetrics> HostMetrics::GetApplicationMetrics(const info::Application &app_info)
 	{
-		std::unique_lock<std::mutex> lock(_map_guard);
+		std::shared_lock<std::shared_mutex> lock(_map_guard);
 		if (_applications.find(app_info.GetId()) == _applications.end())
 		{
 			return nullptr;

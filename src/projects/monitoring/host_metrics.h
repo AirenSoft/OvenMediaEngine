@@ -8,6 +8,7 @@
 #include "base/common_types.h"
 #include "base/info/host.h"
 #include "common_metrics.h"
+#include <shared_mutex>
 
 namespace mon
 {
@@ -42,7 +43,7 @@ namespace mon
 		std::shared_ptr<ApplicationMetrics> GetApplicationMetrics(const info::Application &app_info);
 
 	private:
-		std::mutex _map_guard;
+		std::shared_mutex _map_guard;
 		std::map<uint32_t, std::shared_ptr<ApplicationMetrics>> _applications;
 	};
 }  // namespace mon

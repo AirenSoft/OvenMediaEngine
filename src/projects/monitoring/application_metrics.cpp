@@ -36,7 +36,7 @@ namespace mon
 
     bool ApplicationMetrics::OnStreamCreated(const info::Stream &stream)
     {
-        std::unique_lock<std::mutex> lock(_map_guard);
+        std::unique_lock<std::shared_mutex> lock(_map_guard);
         
         // If already stream metrics is exist,
         if(_streams.find(stream.GetId()) != _streams.end())
@@ -70,7 +70,7 @@ namespace mon
         // logging StreamMetric
         stream_metric->ShowInfo();
 
-        std::unique_lock<std::mutex> lock(_map_guard);
+        std::unique_lock<std::shared_mutex> lock(_map_guard);
         {
             _streams.erase(stream.GetId());
         }
@@ -80,7 +80,7 @@ namespace mon
 
     std::shared_ptr<StreamMetrics> ApplicationMetrics::GetStreamMetrics(const info::Stream &stream)
     {
-        std::unique_lock<std::mutex> lock(_map_guard);
+        std::shared_lock<std::shared_mutex> lock(_map_guard);
         if(_streams.find(stream.GetId()) == _streams.end())
         {
             return nullptr;
