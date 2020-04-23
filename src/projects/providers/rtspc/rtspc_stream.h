@@ -55,5 +55,8 @@ namespace pvd
 		static int InterruptCallback(void *ctx);
 
 		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
+
+	private:
+		bool GenerateADTSHeader(int32_t profile, int32_t samplerate, int32_t channels);
 	};
 }
