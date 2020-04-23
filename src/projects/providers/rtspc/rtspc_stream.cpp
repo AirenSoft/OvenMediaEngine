@@ -454,7 +454,6 @@ namespace pvd
 					}
 				}
 			}
-
 			else if(media_type == common::MediaType::Audio && codec_id == common::MediaCodecId::Aac)
 			{
 				if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
