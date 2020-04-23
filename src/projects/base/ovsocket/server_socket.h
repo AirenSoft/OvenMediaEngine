@@ -11,6 +11,7 @@
 #include "socket.h"
 #include "socket_address.h"
 #include "socket_datastructure.h"
+#include <shared_mutex>
 
 namespace ov
 {
@@ -55,7 +56,7 @@ namespace ov
 		void DispatchAccept();
 		void DispatchEvents(const void *key, const epoll_event *event);
 
-		std::mutex _client_list_mutex;
+		std::shared_mutex _client_list_mutex;
 		std::map<const void *, std::shared_ptr<ClientSocket>> _client_list;
 		// To keep ClientSocket pointer while DispatchEvent() is running
 		// (In DispatchEvent(), the client_socket is not referenced as shared_ptr)

@@ -29,14 +29,6 @@ class Stream;
 class RelayServer;
 class RelayClient;
 
-// -어플리케이션(Application) 별 스트림(Stream)을 관리해야 한다
-// - Publisher를 관리해야한다
-// - Provider를 관리해야한다
-
-// 1. 어플리케이션 pool 을 미리 생성한다.
-
-// 1. Connect App에 접속되면 어플리케이션으로 할당함.
-
 // Stream timout for GarbageCollector
 # define TIMEOUT_STREAM_ALIVE   30
 
@@ -54,12 +46,7 @@ public:
 
 	volatile bool _kill_flag;
 	std::thread _thread;
-	std::mutex _mutex;
 
-	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 프로바이더(Provider) 관련 모듈
-	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 본 데이터 모듈에 넣어주는 놈들
 public:
 	bool RegisterConnectorApp(
 		std::shared_ptr<MediaRouteApplicationConnector> connector);
@@ -98,13 +85,16 @@ public:
 
 	// Information of Connector instance
 	std::vector<std::shared_ptr<MediaRouteApplicationConnector>> _connectors;
+	std::shared_mutex _connectors_lock;
 
 	// Information of Observer instance
 	std::vector<std::shared_ptr<MediaRouteApplicationObserver>> _observers;
+	std::shared_mutex _observers_lock;
 
 	// Information of MediaStream instance
 	// Key : Stream.id
 	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _streams;
+	std::shared_mutex _streams_lock;
 
 public:
 	void MainTask();
@@ -116,13 +106,6 @@ public:
 	{
 		return _streams;
 	}
-
-/*
-	std::shared_ptr<RelayClient> GetOriginConnector() override
-	{
-		return _relay_client;
-	}
-*/
 
 	enum
 	{
@@ -142,10 +125,6 @@ public:
 
 
 protected:
-	// 버퍼를 처리할 인디게이터
 	MediaQueue<std::shared_ptr<BufferIndicator>> _indicator;
-
-	//std::shared_ptr<RelayServer>    _relay_server;
-	//std::shared_ptr<RelayClient>    _relay_client;
-ov::DelayQueue                  	_retry_timer;
+	ov::DelayQueue                  	_retry_timer;
 };

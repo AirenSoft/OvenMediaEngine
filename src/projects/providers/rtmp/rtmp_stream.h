@@ -27,6 +27,9 @@ public:
 	explicit RtmpStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info);
 	~RtmpStream() final;
 
+	bool Start() override;
+	bool Stop() override;
+
 	bool ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts);
 	uint32_t ConvertToAudioData(const std::shared_ptr<ov::Data> &data);
 

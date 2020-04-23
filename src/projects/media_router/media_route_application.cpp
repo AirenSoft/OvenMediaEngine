@@ -68,12 +68,10 @@ bool MediaRouteApplication::Stop()
 	return true;
 }
 
-// 어플리케이션의 스트림이 생성됨
+// Called when an application is created
 bool MediaRouteApplication::RegisterConnectorApp(
 	std::shared_ptr<MediaRouteApplicationConnector> app_conn)
 {
-	std::unique_lock<std::mutex> lock(_mutex);
-
 	if (app_conn == nullptr)
 	{
 		return false;
@@ -81,14 +79,14 @@ bool MediaRouteApplication::RegisterConnectorApp(
 
 	logtd("Register connector. app(%s/%p) type(%d)", _application_info.GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
 
+	std::lock_guard<std::shared_mutex> lock(_connectors_lock);
 	app_conn->SetMediaRouterApplication(GetSharedPtr());
-
 	_connectors.push_back(app_conn);
 
 	return true;
 }
 
-// 어플리케이션의 스트림이 생성됨
+// Called when an application is remvoed
 bool MediaRouteApplication::UnregisterConnectorApp(
 	std::shared_ptr<MediaRouteApplicationConnector> app_conn)
 {
@@ -96,19 +94,18 @@ bool MediaRouteApplication::UnregisterConnectorApp(
 	{
 		return false;
 	}
-
+	
 	logtd("Unregister connector. app(%s/%p) type(%d)", _application_info.GetName().CStr(), app_conn.get(), app_conn->GetConnectorType());
+	
+	std::lock_guard<std::shared_mutex> lock(_connectors_lock);
 
-	// 삭제
 	auto position = std::find(_connectors.begin(), _connectors.end(), app_conn);
 	if (position == _connectors.end())
 	{
 		return true;
 	}
 
-	std::unique_lock<std::mutex> lock(_mutex);
 	_connectors.erase(position);
-	lock.unlock();
 
 	return true;
 }
@@ -123,9 +120,8 @@ bool MediaRouteApplication::RegisterObserverApp(
 
 	logtd("Register observer. app(%s/%p) type(%d)", _application_info.GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
 
-	std::unique_lock<std::mutex> lock(_mutex);
+	std::lock_guard<std::shared_mutex> lock(_observers_lock);
 	_observers.push_back(app_obsrv);
-	lock.unlock();
 
 	return true;
 }
@@ -140,6 +136,8 @@ bool MediaRouteApplication::UnregisterObserverApp(
 
 	logtd("Unregister observer. app(%s/%p) type(%d)", _application_info.GetName().CStr(), app_obsrv.get(), app_obsrv->GetObserverType());
 
+	std::lock_guard<std::shared_mutex> lock(_observers_lock);
+
 	auto position = std::find(_observers.begin(), _observers.end(), app_obsrv);
 	if (position == _observers.end())
 	{
@@ -152,84 +150,83 @@ bool MediaRouteApplication::UnregisterObserverApp(
 }
 
 
-// OnCreateStream 함수는 Provider, Trasncoder 타입의 Connector에서 호출된다
+// OnCreateStream is called from Provider and Transcoder
 bool MediaRouteApplication::OnCreateStream(
 	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-	const std::shared_ptr<info::Stream> &stream)
+	const std::shared_ptr<info::Stream> &stream_info)
 {
-	if (app_conn == nullptr || stream == nullptr)
+	if (app_conn == nullptr || stream_info == nullptr)
 	{
 		OV_ASSERT2(false);
 		return false;
 	}
 
-	// 동일한 스트림명 Reconnect 되는 경우 처리함.
-	// 기존에 사용하던 Stream의 ID를 재사용한다
+	// If there is same stream, reuse that
 	if (app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
-		std::lock_guard<decltype(_mutex)> lock_guard(_mutex);
+		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 
 		for (auto it = _streams.begin(); it != _streams.end(); ++it)
 		{
 			auto istream = it->second;
 
-			if (stream->GetName() == istream->GetStream()->GetName())
+			if (stream_info->GetName() == istream->GetStream()->GetName())
 			{
-				// 기존에 사용하던 ID를 재사용
-				stream->SetId(istream->GetStream()->GetId());
-				logtw("Reconnected same stream from provider(%s, %d)", stream->GetName().CStr(), stream->GetId());
+				// reuse stream
+				stream_info->SetId(istream->GetStream()->GetId());
+				logtw("Reconnected same stream from provider(%s, %d)", stream_info->GetName().CStr(), stream_info->GetId());
 
 				return true;
 			}
 		}
 	}
 
-	logti("Trying to create a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+	logti("Trying to create a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
-	auto new_stream_info = std::make_shared<info::Stream>(*stream);
-	auto new_stream = std::make_shared<MediaRouteStream>(new_stream_info);
+	auto new_stream = std::make_shared<MediaRouteStream>(stream_info);
+	new_stream->SetConnectorType(app_conn->GetConnectorType());
 
 	{
-		std::lock_guard<std::mutex> lock_guard(_mutex);
-
-		new_stream->SetConnectorType(app_conn->GetConnectorType());
-
-		_streams.insert(std::make_pair(new_stream_info->GetId(), new_stream));
+		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
+		_streams.insert(std::make_pair(stream_info->GetId(), new_stream));
 	}
 
 	// For Monitoring
-	mon::Monitoring::GetInstance()->OnStreamCreated(*stream);
+	mon::Monitoring::GetInstance()->OnStreamCreated(*stream_info);
 
-	// 옵저버에 스트림 생성을 알림
-	for (auto observer : _observers)
 	{
-		if (
-			// Provider -> MediaRoute -> Transcoder
-			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
-			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder))
+		std::shared_lock<std::shared_mutex> lock(_observers_lock);
+		// Notify all observers that a stream has been created
+		for (auto observer : _observers)
 		{
-			observer->OnCreateStream(new_stream->GetStream());
-		}
-		else if (
-			// Provider -> MediaRoute -> Relay
-			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
-			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay))
-		{
-			observer->OnCreateStream(new_stream->GetStream());
-		}
-		else if (
-			// Transcoder -> MediaRoute -> Publisher
-			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
-			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
-		{
-			observer->OnCreateStream(new_stream->GetStream());
-		}
-		else if (
-			// RelayClient -> MediaRoute -> Publisher
-			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Relay) &&
-			(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
-		{
-			observer->OnCreateStream(new_stream->GetStream());
+			if (
+				// Provider -> MediaRoute -> Transcoder
+				(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder))
+			{
+				observer->OnCreateStream(new_stream->GetStream());
+			}
+			else if (
+				// Provider -> MediaRoute -> Relay
+				(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay))
+			{
+				observer->OnCreateStream(new_stream->GetStream());
+			}
+			else if (
+				// Transcoder -> MediaRoute -> Publisher
+				(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
+			{
+				observer->OnCreateStream(new_stream->GetStream());
+			}
+			else if (
+				// RelayClient -> MediaRoute -> Publisher
+				(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Relay) &&
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher))
+			{
+				observer->OnCreateStream(new_stream->GetStream());
+			}
 		}
 	}
 
@@ -238,62 +235,63 @@ bool MediaRouteApplication::OnCreateStream(
 
 bool MediaRouteApplication::OnDeleteStream(
 	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
-	const std::shared_ptr<info::Stream> &stream)
+	const std::shared_ptr<info::Stream> &stream_info)
 {
-	if (app_conn == nullptr || stream == nullptr)
+	if (app_conn == nullptr || stream_info == nullptr)
 	{
-		logte("Invalid arguments: connector: %p, stream: %p", app_conn.get(), stream.get());
+		logte("Invalid arguments: connector: %p, stream: %p", app_conn.get(), stream_info.get());
 		return false;
 	}
 
-	logti("Trying to delete a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+	logti("Trying to delete a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	// For Monitoring
-	mon::Monitoring::GetInstance()->OnStreamDeleted(*stream);
+	mon::Monitoring::GetInstance()->OnStreamDeleted(*stream_info);
 
-	logtd("Deleted connector. type(%d), app(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
-	auto new_stream = std::make_shared<info::Stream>(*stream);
+	logtd("Deleted connector. type(%d), app(%s) stream(%s/%u)", app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
-	// 옵저버에 스트림 삭제를 알림
-	for (auto it = _observers.begin(); it != _observers.end(); ++it)
+	// Notify all observers that stream has been deleted
 	{
-		auto observer = *it;
+		std::shared_lock<std::shared_mutex> lock_guard(_observers_lock);
+		for (auto it = _observers.begin(); it != _observers.end(); ++it)
+		{
+			auto observer = *it;
 
-		if (
-			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
-			((observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
-			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay) ||
-			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator) ))
-		{
-			observer->OnDeleteStream(new_stream);
-		}
-		else if (
-			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
-			((observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher) ||
-			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay) ||
-			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator)))
-		{
-			observer->OnDeleteStream(new_stream);
-		}
-		else if (
-			(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Relay) &&
-			((observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
-			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher) ||
-			 (observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator)))
-		{
-			observer->OnDeleteStream(new_stream);
+			if (
+				(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider) &&
+				((observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay) ||
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator) ))
+			{
+				observer->OnDeleteStream(stream_info);
+			}
+			else if (
+				(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Transcoder) &&
+				((observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher) ||
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Relay) ||
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator)))
+			{
+				observer->OnDeleteStream(stream_info);
+			}
+			else if (
+				(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Relay) &&
+				((observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Transcoder) ||
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Publisher) ||
+				(observer->GetObserverType() == MediaRouteApplicationObserver::ObserverType::Orchestrator)))
+			{
+				observer->OnDeleteStream(stream_info);
+			}
 		}
 	}
 
 	{
-		std::lock_guard<std::mutex> lock_guard(_mutex);
-		_streams.erase(new_stream->GetId());
+		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
+		_streams.erase(stream_info->GetId());
 	}
 
 	return true;
 }
 
-// 프로바이더에서 인코딩된 데이터가 들어옴
 // @from RtmpProvider
 // @from TranscoderProvider
 bool MediaRouteApplication::OnReceiveBuffer(
@@ -310,7 +308,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 	std::shared_ptr<MediaRouteStream> stream = nullptr;
 
 	{
-		std::lock_guard<decltype(_mutex)> lock_guard(_mutex);
+		std::shared_lock<std::shared_mutex> lock_guard(_streams_lock);
 
 		auto stream_bucket = _streams.find(stream_info->GetId());
 		if (stream_bucket == _streams.end())
@@ -326,14 +324,10 @@ bool MediaRouteApplication::OnReceiveBuffer(
 	if (stream == nullptr)
 	{
 		logte("invalid stream bucket");
-
 		return false;
 	}
 
-	// TODO(SOULK) : Connector(Provider, Transcoder)에서 수신된 데이터에 대한 정보를 바로 처리하기 위해 버퍼의 Indicator 정보를
-	// MainTask에 전달한다. 패킷이 수신되어 처리(재분배)되는 속도가 0.001초 이하의 초저지연으로 동작하나, 효율적인 구조는
-	// 아닌것으로 판단되므로, 향후에 개선이 필요하다
-	bool ret = stream->Push(std::move(packet));
+	bool ret = stream->Push(packet);
 	if(ret == true)
 	{
 		_indicator.push(std::make_shared<BufferIndicator>(stream_info->GetId()));
@@ -347,7 +341,6 @@ void MediaRouteApplication::OnGarbageCollector()
 	// _indicator.push(std::make_shared<BufferIndicator>(BUFFFER_INDICATOR_UNIQUEID_GC));
 }
 
-// 스트림 객제중에 데이터가 수신되지 않은 스트림은 N초후에 자동 삭제를 진행함.
 void MediaRouteApplication::GarbageCollector()
 {
 #if 0	
@@ -393,9 +386,6 @@ void MediaRouteApplication::GarbageCollector()
 #endif	
 }
 
-// Stream 객체 에에 있는 패킷을 Application Observer에 전달한다
-// TODO: 이 구조에서 Segment Fault 문제가 발생함
-// TODO: 패킷을 지연없이 전달하기위해 Application당 스레드를 생성하였음.
 void MediaRouteApplication::MainTask()
 {
 	while (!_kill_flag)
@@ -414,13 +404,8 @@ void MediaRouteApplication::MainTask()
 			continue;
 		}
 
-		// logtd("indicator : %u", indicator->_stream_id);
-
-		// TODO: 동기화 처리가 필요 하지만 자주 호출 부분이라 성능 적으로 확인 필요
-		std::unique_lock<std::mutex> lock(_mutex);
+		std::shared_lock<std::shared_mutex> lock(_streams_lock);
 		auto it = _streams.find(indicator->_stream_id);
-
-		// stream : std::shared_ptr<MediaRouteStream>
 		auto stream = (it != _streams.end()) ? it->second : nullptr;
 		lock.unlock();
 
@@ -441,6 +426,7 @@ void MediaRouteApplication::MainTask()
 			auto media_track = stream_info->GetTrack(media_packet->GetTrackId());
 
 			// Observer(Publisher or Transcoder)에게 MediaBuffer를 전달함.
+			std::shared_lock<std::shared_mutex> lock(_observers_lock);
 			for (const auto &observer : _observers)
 			{
 				// Provider -> MediaRouter -> Transcoder
@@ -472,6 +458,7 @@ void MediaRouteApplication::MainTask()
 					}
 				}
 			}
+			lock.unlock();
 		}
 	}
 }

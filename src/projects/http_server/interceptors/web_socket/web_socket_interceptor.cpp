@@ -29,7 +29,7 @@ WebSocketInterceptor::~WebSocketInterceptor()
 ov::DelayQueueAction WebSocketInterceptor::DoPing(void *parameter)
 {
 	{
-		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);
+		std::shared_lock<std::shared_mutex> lock_guard(_websocket_client_list_mutex);
 
 		if (_websocket_client_list.size() > 0)
 		{
@@ -145,7 +145,7 @@ HttpInterceptorResult WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<
 	auto websocket_response = std::make_shared<WebSocketClient>(client);
 
 	{
-		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);
+		std::lock_guard<std::shared_mutex> lock_guard(_websocket_client_list_mutex);
 
 		_websocket_client_list.emplace(request, std::make_shared<WebSocketInfo>(websocket_response, nullptr));
 	}
@@ -171,7 +171,7 @@ HttpInterceptorResult WebSocketInterceptor::OnHttpData(const std::shared_ptr<Htt
 	std::shared_ptr<WebSocketInfo> info = nullptr;
 
 	{
-		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);
+		std::shared_lock<std::shared_mutex> lock_guard(_websocket_client_list_mutex);
 
 		auto item = _websocket_client_list.find(request);
 
@@ -287,7 +287,7 @@ void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client
 	std::shared_ptr<WebSocketInfo> socket_info;
 
 	{
-		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);
+		std::lock_guard<std::shared_mutex> lock_guard(_websocket_client_list_mutex);
 
 		auto item = _websocket_client_list.find(request);
 
@@ -314,7 +314,7 @@ void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &clien
 
 	std::shared_ptr<WebSocketInfo> socket_info;
 	{
-		std::lock_guard<std::mutex> lock_guard(_websocket_client_list_mutex);
+		std::lock_guard<std::shared_mutex> lock_guard(_websocket_client_list_mutex);
 
 		auto item = _websocket_client_list.find(request);
 

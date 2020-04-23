@@ -12,7 +12,7 @@
 #include "web_socket_frame.h"
 
 #include <http_server/http_server.h>
-
+#include <shared_mutex>
 class WebSocketInterceptor : public HttpRequestInterceptor
 {
 public:
@@ -54,7 +54,7 @@ protected:
 		std::shared_ptr<WebSocketFrame> frame;
 	};
 
-	std::mutex _websocket_client_list_mutex;
+	std::shared_mutex _websocket_client_list_mutex;
 	// key: request
 	// value: websocket info
 	std::map<const std::shared_ptr<HttpRequest>, std::shared_ptr<WebSocketInfo>> _websocket_client_list;

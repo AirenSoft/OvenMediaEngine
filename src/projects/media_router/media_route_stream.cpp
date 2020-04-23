@@ -16,7 +16,7 @@ using namespace common;
 
 #define PTS_CORRECT_THRESHOLD_US	5000	
 
-MediaRouteStream::MediaRouteStream(std::shared_ptr<info::Stream> &stream)
+MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 {
 	logtd("Trying to create media route stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 
@@ -51,6 +51,8 @@ MediaRouteApplicationConnector::ConnectorType MediaRouteStream::GetConnectorType
 // 비트스트림 컨버팅 기능을.. 어디에 넣는게 좋을까? Push? Pop?
 bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 {	
+	std::lock_guard<std::mutex> lock(_media_packet_queue_lock);
+
 	auto track_id = media_packet->GetTrackId();
 
 	// Accumulate Packet duplication
@@ -60,29 +62,25 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	bool is_inserted_queue = false;
 
 	auto iter = _media_packet_stored.find(track_id);
-	if( iter != _media_packet_stored.end() )
+	if(iter != _media_packet_stored.end())
 	{
-		auto sotred_media_packet = std::move(iter->second);
-
+		auto media_packet_cache = iter->second;
 		_media_packet_stored.erase(iter);
 
-		int64_t duration = media_packet->GetDts() - sotred_media_packet->GetDts();
+		int64_t duration = media_packet->GetDts() - media_packet_cache->GetDts();
+		media_packet_cache->SetDuration(duration);
 
-		sotred_media_packet->SetDuration(duration);
-
-		_media_packets.push(std::move(sotred_media_packet));
-
+		_media_packets.push(media_packet_cache);
 		is_inserted_queue = true;
 	}
 
 	if(media_packet->GetDuration() == -1LL)
 	{
-		_media_packet_stored[track_id] = std::move(media_packet);	
+		_media_packet_stored[track_id] = media_packet;	
 	}
 	else
 	{
 		_media_packets.push(media_packet);
-
 		is_inserted_queue = true;
 	}
 
@@ -92,18 +90,25 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 
 std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 {
+	std::unique_lock<std::mutex> lock(_media_packet_queue_lock);
+
 	if(_media_packets.empty())
 	{
 		return nullptr;
 	}
 
-	auto media_packet = std::move(_media_packets.front());
+	auto media_packet = _media_packets.front();
 	_media_packets.pop();
 
+	lock.unlock();
+
+	if(media_packet == nullptr)
+	{
+		return nullptr;
+	}
+
 	auto media_type = media_packet->GetMediaType();
-
 	auto track_id = media_packet->GetTrackId();
-
 	auto media_track = _stream->GetTrack(track_id);
 
 	if (media_track == nullptr)
@@ -112,13 +117,11 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		return nullptr;
 	}
 
-
 	////////////////////////////////////////////////////////////////////////////////////
 	// PTS Correction for Abnormal increase
 	////////////////////////////////////////////////////////////////////////////////////
 	
 	int64_t timestamp_delta = media_packet->GetPts()  - _stat_recv_pkt_lpts[track_id];
-	
 	int64_t scaled_timestamp_delta = timestamp_delta * 1000 /  media_track->GetTimeBase().GetDen();
 
 	if (abs( scaled_timestamp_delta ) > PTS_CORRECT_THRESHOLD_US )
@@ -287,10 +290,3 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	return media_packet;
 }
-
-uint32_t MediaRouteStream::Size()
-{
-	return _media_packets.size();
-}
-
-

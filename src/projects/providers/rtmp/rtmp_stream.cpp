@@ -34,6 +34,18 @@ RtmpStream::~RtmpStream()
 {
 }
 
+bool RtmpStream::Start()
+{
+	_state = Stream::State::PLAYING;
+	return true;
+}
+
+bool RtmpStream::Stop()
+{
+	_state = Stream::State::STOPPING;
+	return true;
+}
+
 bool RtmpStream::ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts)
 {
 	return _bsfv.Convert(data, cts);

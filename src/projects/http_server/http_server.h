@@ -14,7 +14,7 @@
 #include "interceptors/default/http_default_interceptor.h"
 
 #include <modules/physical_port/physical_port.h>
-
+#include <shared_mutex>
 // 참고 자료
 // RFC7230 - Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing (https://tools.ietf.org/html/rfc7230)
 // RFC7231 - Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content (https://tools.ietf.org/html/rfc7231)
@@ -60,10 +60,10 @@ protected:
 	// HttpServer와 연결된 physical port
 	std::shared_ptr<PhysicalPort> _physical_port = nullptr;
 
-	std::mutex _client_list_mutex;
+	std::shared_mutex _client_list_mutex;
 	ClientList _client_list;
 
-	std::mutex _interceptor_list_mutex;
+	std::shared_mutex _interceptor_list_mutex;
 	std::vector<std::shared_ptr<HttpRequestInterceptor>> _interceptor_list;
 	std::shared_ptr<HttpRequestInterceptor> _default_interceptor = std::make_shared<HttpDefaultInterceptor>();
 };

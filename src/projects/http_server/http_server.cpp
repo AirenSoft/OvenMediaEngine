@@ -91,7 +91,7 @@ ssize_t HttpServer::TryParseHeader(const std::shared_ptr<HttpClient> &client, co
 
 std::shared_ptr<HttpClient> HttpServer::FindClient(const std::shared_ptr<ov::Socket> &remote)
 {
-	std::lock_guard<std::mutex> guard(_client_list_mutex);
+	std::shared_lock<std::shared_mutex> guard(_client_list_mutex);
 
 	auto item = _client_list.find(remote.get());
 
@@ -157,7 +157,7 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 
 						// Find interceptor for the request
 						{
-							std::lock_guard<std::mutex> guard(_interceptor_list_mutex);
+							std::shared_lock<std::shared_mutex> guard(_interceptor_list_mutex);
 
 							for (auto &interceptor : _interceptor_list)
 							{
@@ -243,7 +243,7 @@ std::shared_ptr<HttpClient> HttpServer::ProcessConnect(const std::shared_ptr<ov:
 		response->SetHeader("Content-Type", "text/html");
 	}
 
-	std::lock_guard<std::mutex> guard(_client_list_mutex);
+	std::lock_guard<std::shared_mutex> guard(_client_list_mutex);
 
 	auto http_client = std::make_shared<HttpClient>(GetSharedPtr(), request, response);
 
@@ -272,7 +272,7 @@ void HttpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 
 void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 {
-	std::lock_guard<std::mutex> guard(_client_list_mutex);
+	std::lock_guard<std::shared_mutex> guard(_client_list_mutex);
 
 	auto client_iterator = _client_list.find(remote.get());
 
@@ -307,7 +307,7 @@ void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 bool HttpServer::AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor)
 {
 	// 기존에 등록된 processor가 있는지 확인
-	std::lock_guard<std::mutex> guard(_interceptor_list_mutex);
+	std::lock_guard<std::shared_mutex> guard(_interceptor_list_mutex);
 
 	auto item = std::find_if(_interceptor_list.begin(), _interceptor_list.end(), [&](std::shared_ptr<HttpRequestInterceptor> const &value) -> bool {
 		return value == interceptor;
@@ -326,7 +326,7 @@ bool HttpServer::AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &i
 
 bool HttpServer::RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor)
 {
-	std::lock_guard<std::mutex> guard(_interceptor_list_mutex);
+	std::lock_guard<std::shared_mutex> guard(_interceptor_list_mutex);
 
 	// Find interceptor in the list
 	auto item = std::find_if(_interceptor_list.begin(), _interceptor_list.end(), [&](std::shared_ptr<HttpRequestInterceptor> const &value) -> bool {
@@ -346,7 +346,7 @@ bool HttpServer::RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor>
 
 ov::Socket *HttpServer::FindClient(ClientIterator iterator)
 {
-	std::lock_guard<std::mutex> guard(_client_list_mutex);
+	std::shared_lock<std::shared_mutex> guard(_client_list_mutex);
 
 	for (auto &client : _client_list)
 	{
@@ -364,7 +364,7 @@ bool HttpServer::DisconnectIf(ClientIterator iterator)
 	std::vector<std::shared_ptr<HttpClient>> temp_list;
 
 	{
-		std::lock_guard<std::mutex> guard(_client_list_mutex);
+		std::shared_lock<std::shared_mutex> guard(_client_list_mutex);
 
 		for (auto client_iterator : _client_list)
 		{
