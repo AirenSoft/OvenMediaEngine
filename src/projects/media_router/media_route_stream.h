@@ -21,6 +21,7 @@
 #include "bitstream/bitstream_to_annexb.h"
 #include "bitstream/bitstream_to_adts.h"
 #include "bitstream/bitstream_to_annexa.h"
+#include "base/media_route/media_queue.h"
 
 #include "bitstream/avc_video_packet_fragmentizer.h"
 
@@ -44,8 +45,7 @@ private:
 	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
 
 	std::map<uint8_t, std::shared_ptr<MediaPacket>> _media_packet_stored;
-	std::queue<std::shared_ptr<MediaPacket>> _media_packets;
-	std::mutex _media_packet_queue_lock;
+	MediaQueue<std::shared_ptr<MediaPacket>> _media_packets;
 
 	////////////////////////////
 	// bitstream filters

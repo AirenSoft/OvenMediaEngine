@@ -48,11 +48,8 @@ MediaRouteApplicationConnector::ConnectorType MediaRouteStream::GetConnectorType
 	return _application_connector_type;
 }
 
-// 비트스트림 컨버팅 기능을.. 어디에 넣는게 좋을까? Push? Pop?
 bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 {	
-	std::lock_guard<std::mutex> lock(_media_packet_queue_lock);
-
 	auto track_id = media_packet->GetTrackId();
 
 	// Accumulate Packet duplication
@@ -90,18 +87,12 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 
 std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 {
-	std::unique_lock<std::mutex> lock(_media_packet_queue_lock);
-
 	if(_media_packets.empty())
 	{
 		return nullptr;
 	}
 
-	auto media_packet = _media_packets.front();
-	_media_packets.pop();
-
-	lock.unlock();
-
+	auto media_packet = std::move(_media_packets.pop());
 	if(media_packet == nullptr)
 	{
 		return nullptr;

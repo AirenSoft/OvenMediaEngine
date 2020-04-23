@@ -110,6 +110,15 @@ public:
 		return size;
 	}
 
+	bool empty()
+	{
+		std::lock_guard<std::mutex> mlock(_mutex);
+		if(_queue.size() == 0)
+			return true;
+		
+		return false;	
+	}
+
 	// TODO: Abort
 	void abort()
 	{
