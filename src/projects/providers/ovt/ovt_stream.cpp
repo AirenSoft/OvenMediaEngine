@@ -84,17 +84,9 @@ namespace pvd
 			return false;
 		}
 
-		if (!RequestPlay())
-		{
-			return false;
-		}
 		end = std::chrono::steady_clock::now();
 		elapsed = end - begin;
 		auto origin_response_time_msec = elapsed.count();
-		
-		_stop_thread_flag = false;
-		_worker_thread = std::thread(&OvtStream::WorkerThread, this);
-		_worker_thread.detach();
 
 		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
 		if(_stream_metrics != nullptr)
@@ -104,6 +96,20 @@ namespace pvd
 		}
 
 		return pvd::Stream::Start();
+	}
+	
+	bool OvtStream::Play()
+	{
+		if (!RequestPlay())
+		{
+			return false;
+		}
+		
+		_stop_thread_flag = false;
+		_worker_thread = std::thread(&OvtStream::WorkerThread, this);
+		_worker_thread.detach();
+
+		return pvd::Stream::Play();
 	}
 
 	bool OvtStream::Stop()

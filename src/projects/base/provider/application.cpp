@@ -122,6 +122,8 @@ namespace pvd
 
 		NotifyStreamCreated(stream);
 
+		stream->Play();
+
 		return stream;
 	}
 
