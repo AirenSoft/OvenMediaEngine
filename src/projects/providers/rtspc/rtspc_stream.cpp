@@ -151,7 +151,10 @@ namespace pvd
 
 		AVDictionary *options = NULL;
 		::av_dict_set(&options, "rtsp_transport", "tcp", 0);
+		::av_dict_set(&options, "genpts ", "tcp", 0);
 		
+		_format_context->flags |= AVFMT_FLAG_GENPTS;
+
 		int err = 0;
 		_stop_watch.Update();
     	if ( (err = ::avformat_open_input(&_format_context, _curr_url->Source().CStr(), NULL, &options))  < 0) 
@@ -197,7 +200,7 @@ namespace pvd
 		{
 			AVStream *stream = _format_context->streams[track_id];
 
-			logtd("[%d] media_type[%d] codec_id[%d], extradata_size[%d]", track_id, stream->codecpar->codec_type, stream->codecpar->codec_id, stream->codecpar->extradata_size);
+			logtd("[%d] media_type[%d] codec_id[%d], extradata_size[%d] tb[%d/%d]", track_id, stream->codecpar->codec_type, stream->codecpar->codec_id, stream->codecpar->extradata_size, stream->time_base.num, stream->time_base.den);
 
 			auto new_track = std::make_shared<MediaTrack>();
 
@@ -244,6 +247,19 @@ namespace pvd
 				new_track->GetSample().SetFormat(static_cast<common::AudioSample::Format>(common::AudioSample::Format::S16P));
 				new_track->GetChannel().SetLayout(static_cast<common::AudioChannel::Layout>(common::AudioChannel::Layout::LayoutStereo));
 
+#if 0
+				logtd("profileid: %d, channels: %d, sample_rate:: %d", stream->codecpar->profile, stream->codecpar->channels, stream->codecpar->sample_rate);
+				switch(stream->codecpar->profile)
+				{
+					case FF_PROFILE_AAC_MAIN:  logte("profile : %s", "MAIN"); break;
+					case FF_PROFILE_AAC_LOW: logte("profile : %s", "LC"); break;
+					case FF_PROFILE_AAC_SSR: logte("profile : %s", "SSR"); break;
+					case FF_PROFILE_AAC_HE: logte("profile : %s", "HE-AAC"); break;
+					case FF_PROFILE_AAC_HE_V2: logte("profile : %s", "HE-AACv2"); break;
+					default:
+						logte("profile : %s", "Unknown"); break;
+				}
+#endif
 				// Do not crate an audio track.
 				continue;
 			}
@@ -316,6 +332,19 @@ namespace pvd
 		bool is_eof = false;
 		bool is_received_first_packet = false;
 
+
+
+		// Sometimes the values of PTS/DTS are negative or incorrect(invalid pts) 
+		// Decided to calculate PTS/DTS as the cumulative value of the packet duration.
+		// 
+		//  It works normally in my environment.
+
+		int64_t cumulative_pts[_format_context->nb_streams];
+		memset(cumulative_pts, 0, sizeof(cumulative_pts));
+
+		int64_t cumulative_dts[_format_context->nb_streams];
+		memset(cumulative_dts, 0, sizeof(cumulative_dts));
+
 		while (!IsStopThread())
 		{
 			_stop_watch.Update();
@@ -376,6 +405,7 @@ namespace pvd
 				is_received_first_packet = true;
 			}
 			
+
 			if(_stream_metrics != nullptr)
 			{
 				_stream_metrics->IncreaseBytesIn(packet.size);
@@ -389,31 +419,48 @@ namespace pvd
 			}
 
 
+			// Accumulate PTS/DTS
+			cumulative_pts[packet.stream_index] += packet.duration;
+			cumulative_dts[packet.stream_index] += packet.duration;
+
+
+			AVStream *stream = _format_context->streams[packet.stream_index];
 			auto media_type = track->GetMediaType();
 			auto codec_id = track->GetCodecId();
 			auto flag = (packet.flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
 			
 			// Make MediaPacket from AVPacket
-			auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), track->GetId(), packet.data, packet.size, packet.pts, packet.dts, packet.duration, flag);
+			auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), track->GetId(), packet.data, packet.size, cumulative_pts[packet.stream_index], cumulative_dts[packet.stream_index], packet.duration, flag);
+
 
 			// SPS/PPS Insject from Extra Data
 			if(media_type == common::MediaType::Video && codec_id == common::MediaCodecId::H264)
 			{
-				AVStream *stream = _format_context->streams[packet.stream_index];
-
 				if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
 				{
 					if(flag == MediaPacketFlag::Key)
 					{
+						// Inject the SPS/PPS for each keframes.
 						media_packet->GetData()->Insert(stream->codecpar->extradata, 0, stream->codecpar->extradata_size);
-						logtp("Injected SPS/PPS data. length:%d", stream->codecpar->extradata_size);
 					}
 				}
 			}
 
-			_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
+			else if(media_type == common::MediaType::Audio && codec_id == common::MediaCodecId::Aac)
+			{
+				if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
+				{
+					if(flag == MediaPacketFlag::Key)
+					{
+						// TODO: Inject to ADTS header for AAC bitstream							
+					}
+				}
+			}			
 
-			// logtp("track_id(%d), flags(%d), pts(%10lld), dts(%10lld), size(%d)", packet.stream_index, packet.flags, packet.pts, packet.dts, packet.size);
+			// logtp("track_id(%d), flags(%d), pts(%10lld), dts(%10lld), size(%5d), duration(%4d)"
+			// 	, media_packet->GetTrackId(), media_packet->GetFlag(), media_packet->GetPts(), media_packet->GetDts(), media_packet->GetData()->GetLength(), media_packet->GetDuration());
+
+			_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
 
 			::av_packet_unref(&packet);
 		}
@@ -429,3 +476,104 @@ namespace pvd
 		logtd("terminated [%s] stream thread", GetName().CStr());
 	}
 }
+
+
+
+#if 0
+// enum AacObjectType
+// {
+//     AacObjectTypeReserved = 0,
+//     // Table 1.1 - Audio Object Type definition
+//     // @see @see aac-mp4a-format-ISO_IEC_14496-3+2001.pdf, page 23
+//     AacObjectTypeAacMain = 1,
+//     AacObjectTypeAacLC = 2,
+//     AacObjectTypeAacSSR = 3,
+//     // AAC HE = LC+SBR
+//     AacObjectTypeAacHE = 5,
+//     // AAC HEv2 = LC+SBR+PS
+//     AacObjectTypeAacHEV2 = 29,
+// };
+// static const AVProfile aac_profiles[] = {
+// 		    { FF_PROFILE_AAC_LOW,   "LC"       },
+// 		    { FF_PROFILE_AAC_HE,    "HE-AAC"   },
+// 		    { FF_PROFILE_AAC_HE_V2, "HE-AACv2" },
+// 		    { FF_PROFILE_AAC_LD,    "LD"       },
+// 		    { FF_PROFILE_AAC_ELD,   "ELD"      },
+// 		    { FF_PROFILE_UNKNOWN },
+// 		};
+
+// #define FF_PROFILE_UNKNOWN -99
+// #define FF_PROFILE_RESERVED -100
+// #define FF_PROFILE_AAC_MAIN 0
+// #define FF_PROFILE_AAC_LOW  1
+// #define FF_PROFILE_AAC_SSR  2
+// #define FF_PROFILE_AAC_LTP  3
+// #define FF_PROFILE_AAC_HE   4
+// #define FF_PROFILE_AAC_HE_V2 28
+// #define FF_PROFILE_AAC_LD   22
+// #define FF_PROFILE_AAC_ELD  38
+// #define FF_PROFILE_MPEG2_AAC_LOW 128
+// #define FF_PROFILE_MPEG2_AAC_HE  131
+
+// const AVProfile ff_aac_profiles[] = {
+//     { FF_PROFILE_AAC_LOW,   "LC"       },
+//     { FF_PROFILE_AAC_HE,    "HE-AAC"   },
+//     { FF_PROFILE_AAC_HE_V2, "HE-AACv2" },
+//     { FF_PROFILE_AAC_LD,    "LD"       },
+//     { FF_PROFILE_AAC_ELD,   "ELD"      },
+//     { FF_PROFILE_AAC_MAIN,  "Main" },
+//     { FF_PROFILE_AAC_SSR,   "SSR"  },
+//     { FF_PROFILE_AAC_LTP,   "LTP"  },
+//     { FF_PROFILE_UNKNOWN },
+// };			
+
+
+#endif
+
+// Make ADTS Header
+#if 0
+char aac_fixed_header[7];
+
+int8_t 						aac_profile = 1;
+int8_t 						aac_sample_rate =4;
+int8_t 						aac_channels = 2;
+if(true)
+{
+	char *pp = aac_fixed_header;
+	int16_t aac_frame_length = media_packet->GetData()->GetLength() + 7;
+
+	// Syncword 12 bslbf
+	*pp++ = 0xff;
+	// 4bits left.
+	// adts_fixed_header(), 1.A.2.2.1 Fixed Header of ADTS
+	// ID 1 bslbf
+	// Layer 2 uimsbf
+	// protection_absent 1 bslbf
+	*pp++ = 0xf1;
+
+	// profile 2 uimsbf
+	// sampling_frequency_index 4 uimsbf
+	// private_bit 1 bslbf
+	// channel_configuration 3 uimsbf
+	// original/copy 1 bslbf
+	// home 1 bslbf
+	*pp++ = ((aac_profile << 6) & 0xc0) | ((aac_sample_rate << 2) & 0x3c) | ((aac_channels >> 2) & 0x01);
+	// 4bits left.
+	// adts_variable_header(), 1.A.2.2.2 Variable Header of ADTS
+	// copyright_identification_bit 1 bslbf
+	// copyright_identification_start 1 bslbf
+	*pp++ = ((aac_channels << 6) & 0xc0) | ((aac_frame_length >> 11) & 0x03);
+
+	// aac_frame_length 13 bslbf: Length of the frame including headers and error_check in bytes.
+	// use the left 2bits as the 13 and 12 bit,
+	// the aac_frame_length is 13bits, so we move 13-2=11.
+	*pp++ = aac_frame_length >> 3;
+	// adts_buffer_fullness 11 bslbf
+	*pp++ = (aac_frame_length << 5) & 0xe0;
+
+	// no_raw_data_blocks_in_frame 2 uimsbf
+	*pp++ = 0xfc;
+}	
+
+media_packet->GetData()->Insert(aac_fixed_header, 0, sizeof(aac_fixed_header));
+#endif	
