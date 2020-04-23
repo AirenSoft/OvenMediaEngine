@@ -87,18 +87,9 @@ namespace pvd
 			return false;
 		}
 
-		if (!RequestPlay())
-		{
-			return false;
-		}
-
 		end = std::chrono::steady_clock::now();
 		elapsed = end - begin;
 		auto origin_response_time_msec = elapsed.count();
-
-		_stop_thread_flag = false;
-		_worker_thread = std::thread(&RtspcStream::WorkerThread, this);
-		_worker_thread.detach();
 
 		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
 		if(_stream_metrics != nullptr)
@@ -108,6 +99,20 @@ namespace pvd
 		}
 
 		return pvd::Stream::Start();
+	}
+
+	bool RtspcStream::Play()
+	{
+		if (!RequestPlay())
+		{
+			return false;
+		}
+
+		_stop_thread_flag = false;
+		_worker_thread = std::thread(&RtspcStream::WorkerThread, this);
+		_worker_thread.detach();
+		
+		return pvd::Stream::Play();
 	}
 
 	bool RtspcStream::Stop()
@@ -387,7 +392,7 @@ namespace pvd
 			auto media_type = track->GetMediaType();
 			auto codec_id = track->GetCodecId();
 			auto flag = (packet.flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
-
+			
 			// Make MediaPacket from AVPacket
 			auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), track->GetId(), packet.data, packet.size, packet.pts, packet.dts, packet.duration, flag);
 
@@ -405,8 +410,6 @@ namespace pvd
 					}
 				}
 			}
-
-			media_packet->GetData();
 
 			_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
 

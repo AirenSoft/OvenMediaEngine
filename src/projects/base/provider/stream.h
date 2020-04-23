@@ -43,6 +43,7 @@ namespace pvd
 		}
 
 		virtual bool Start();
+		virtual bool Play(); // For PullProvider only, It is called after all publishers create stream
 		virtual bool Stop();
 
 	protected:

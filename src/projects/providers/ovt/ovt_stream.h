@@ -28,6 +28,7 @@ namespace pvd
 
 	private:
 		bool Start() override;
+		bool Play() override;
 		bool Stop() override;
 		void WorkerThread();
 		bool ConnectOrigin();
