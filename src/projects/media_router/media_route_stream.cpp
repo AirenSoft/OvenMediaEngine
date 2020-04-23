@@ -97,8 +97,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		return nullptr;
 	}
 
-	auto media_packet = std::move(_media_packets.front());
-	_media_packets.pop();
+	auto media_packet = std::move(_media_packets.pop());
+	// _media_packets.pop();
 
 	auto media_type = media_packet->GetMediaType();
 

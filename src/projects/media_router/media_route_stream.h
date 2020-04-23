@@ -21,6 +21,7 @@
 #include "bitstream/bitstream_to_annexb.h"
 #include "bitstream/bitstream_to_adts.h"
 #include "bitstream/bitstream_to_annexa.h"
+#include "base/media_route/media_queue.h"
 
 #include "bitstream/avc_video_packet_fragmentizer.h"
 
@@ -48,7 +49,7 @@ private:
 
 	// 2019/11/22 Getroot
 	// Change shared_ptr to shared_ptr
-	std::queue<std::shared_ptr<MediaPacket>> _media_packets;
+	MediaQueue<std::shared_ptr<MediaPacket>> _media_packets;
 
 	////////////////////////////
 	// bitstream filters

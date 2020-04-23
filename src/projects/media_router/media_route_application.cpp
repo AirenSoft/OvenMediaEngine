@@ -187,7 +187,18 @@ bool MediaRouteApplication::OnCreateStream(
 	logti("Trying to create a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
 
 	auto new_stream_info = std::make_shared<info::Stream>(*stream);
+	if(!new_stream_info)
+	{
+		logte("Failed to create stream [%s/%s(%u)]", _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+		return false;
+	}
 	auto new_stream = std::make_shared<MediaRouteStream>(new_stream_info);
+	if(!new_stream)
+	{
+		logte("Failed to create media routee stream [%s/%s(%u)]", _application_info.GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+		return false;
+	}
+
 
 	{
 		std::lock_guard<std::mutex> lock_guard(_mutex);
