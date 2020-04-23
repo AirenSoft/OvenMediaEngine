@@ -122,7 +122,7 @@ public:
 			auto gap = std::chrono::duration_cast<std::chrono::seconds>(next._last_requested_time - _last_requested_time).count();
 			
 			// the next request comes in within a short time
-			if(gap < _duration * 2)
+			if(gap < _duration * 5)
 			{
 				return true;
 			}
