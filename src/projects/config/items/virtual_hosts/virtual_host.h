@@ -21,6 +21,7 @@ namespace cfg
 
 		CFG_DECLARE_REF_GETTER_OF(GetDomain, _domain)
 
+
 		CFG_DECLARE_REF_GETTER_OF(GetSignedUrl, _signed_url)
 
 		CFG_DECLARE_REF_GETTER_OF(GetOrigins, _origins)

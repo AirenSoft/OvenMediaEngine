@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<Server version="5">
+<Server version="6">
 	<Name>OvenMediaEngine</Name>
 	<!-- Host type (origin/edge) -->
 	<Type>edge</Type>

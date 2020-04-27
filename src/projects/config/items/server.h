@@ -9,8 +9,8 @@
 #pragma once
 
 #include "bind/bind.h"
+#include "p2p/p2p.h"
 #include "virtual_hosts/virtual_hosts.h"
-
 namespace cfg
 {
 	enum class ServerType
@@ -32,6 +32,8 @@ namespace cfg
 		CFG_DECLARE_REF_GETTER_OF(GetIp, _ip)
 		CFG_DECLARE_REF_GETTER_OF(GetBind, _bind)
 
+		CFG_DECLARE_REF_GETTER_OF(GetP2P, _p2p)
+
 		CFG_DECLARE_REF_GETTER_OF(GetVirtualHostList, _virtual_hosts.GetVirtualHostList())
 
 		// Deprecated - It has a bug
@@ -46,7 +48,7 @@ namespace cfg
 					return true;
 				}
 			}
-			
+
 			return false;
 		}
 
@@ -75,6 +77,8 @@ namespace cfg
 			RegisterValue("IP", &_ip);
 			RegisterValue("Bind", &_bind);
 
+			RegisterValue<Optional>("P2P", &_p2p);
+
 			RegisterValue<Optional>("VirtualHosts", &_virtual_hosts);
 		}
 
@@ -87,6 +91,8 @@ namespace cfg
 
 		ov::String _ip;
 		Bind _bind;
+
+		P2P _p2p;
 
 		VirtualHosts _virtual_hosts;
 	};
