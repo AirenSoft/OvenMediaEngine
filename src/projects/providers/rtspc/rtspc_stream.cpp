@@ -137,6 +137,11 @@ namespace pvd
 		// Already stopping
 		if(_state != State::PLAYING)
 		{
+			if(_worker_thread.joinable())
+			{
+				_worker_thread.join();
+			}	
+
 			return true;
 		}
 		
@@ -150,7 +155,7 @@ namespace pvd
 		if(_worker_thread.joinable())
 		{
 			_worker_thread.join();
-		}		
+		}
 	
 		return pvd::Stream::Stop();
 	}
