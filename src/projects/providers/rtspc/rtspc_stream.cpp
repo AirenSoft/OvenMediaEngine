@@ -151,7 +151,7 @@ namespace pvd
 
 		AVDictionary *options = NULL;
 		::av_dict_set(&options, "rtsp_transport", "tcp", 0);
-		::av_dict_set(&options, "genpts ", "tcp", 0);
+		::av_dict_set_int(&options, "reorder_queue_size ", 100, 0);
 		
 		_format_context->flags |= AVFMT_FLAG_GENPTS;
 
@@ -326,23 +326,27 @@ namespace pvd
 	void RtspcStream::WorkerThread()
 	{
 		AVPacket packet;
+		av_init_packet(&packet);
 		packet.size = 0;
 		packet.data = nullptr;
 
 		bool is_eof = false;
 		bool is_received_first_packet = false;
 
-
 		// Sometimes the values of PTS/DTS are negative or incorrect(invalid pts) 
 		// Decided to calculate PTS/DTS as the cumulative value of the packet duration.
 		// 
 		//  It works normally in my environment.
+		int64_t *cumulative_pts = new int64_t[_format_context->nb_streams];
+		int64_t *cumulative_dts = new int64_t[_format_context->nb_streams];
+		for(uint32_t i=0 ; i<_format_context->nb_streams ; ++i)
+		{
+			cumulative_pts[i] = 0;
+			cumulative_dts[i] = 0;
+		}
+		// memset(cumulative_pts, 0, sizeof(int64_t) * _format_context->nb_streams);
+		// memset(cumulative_dts, 0, sizeof(int64_t) * _format_context->nb_streams);
 
-		int64_t cumulative_pts[_format_context->nb_streams];
-		memset(cumulative_pts, 0, sizeof(cumulative_pts));
-
-		int64_t cumulative_dts[_format_context->nb_streams];
-		memset(cumulative_dts, 0, sizeof(cumulative_dts));
 
 		while (!IsStopThread())
 		{
@@ -481,6 +485,9 @@ namespace pvd
 
 		_state = State::STOPPED;
 
+		delete cumulative_pts;
+		delete cumulative_dts;
+
 		logtd("terminated [%s] stream thread", GetName().CStr());
 	}
 
@@ -488,7 +495,7 @@ namespace pvd
 	// Reference: https://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Sampling_Frequencies
 	bool RtspcStream::GenerateADTSHeader(int32_t profile, int32_t samplerate, int32_t channels)
 	{
-		char aac_fixed_header[7];
+		// char aac_fixed_header[7];
 
 		return true;
 	}
