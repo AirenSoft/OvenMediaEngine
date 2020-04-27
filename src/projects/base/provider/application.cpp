@@ -48,7 +48,7 @@ namespace pvd
 		return _last_issued_stream_id++;
 	}
 
-	const std::map<uint32_t, std::shared_ptr<Stream>>& Application::GetStreams() const
+	const std::map<uint32_t, std::shared_ptr<Stream>> Application::GetStreams() const
 	{
 		return _streams;
 	}
