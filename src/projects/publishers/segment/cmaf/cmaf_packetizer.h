@@ -62,6 +62,8 @@ protected:
 	//--------------------------------------------------------------------
 	ov::String GetFileName(int64_t start_timestamp, common::MediaType media_type) const override;
 
+	ov::String MakeJitterStatString(int64_t elapsed_time, int64_t current_time, int64_t jitter, int64_t adjusted_jitter, int64_t new_jitter_correction, int64_t video_delta, int64_t audio_delta, int64_t stream_delta) const;
+	void DoJitterCorrection();
 	bool UpdatePlayList() override;
 
 private:
