@@ -79,79 +79,30 @@
 					<Type>live</Type>
                     <Encodes>
                         <Encode>
-                            <Name>VP8</Name>
+                            <Name>bypass</Name>
+                            <Audio>
+                                <Bypass>true</Bypass>
+                            </Audio>
+                            <Video>
+                                <Bypass>true</Bypass>
+                            </Video>
+                        </Encode>
+                        <Encode>
+                            <Name>opus</Name>
                             <Audio>
                                 <Codec>opus</Codec>
                                 <Bitrate>${env:OME_AUDIO_BITRATE:128000}</Bitrate>
                                 <Samplerate>${env:OME_AUDIO_SAMPLERATE:48000}</Samplerate>
                                 <Channel>${env:OME_AUDIO_CHANNEL:2}</Channel>
                             </Audio>
-                            <Video>
-                                <Codec>vp8</Codec>
-                                <Width>${env:OME_VIDEO_WIDTH:640}</Width>
-                                <Height>${env:OME_VIDEO_HEIGHT:360}</Height>
-                                <Bitrate>${env:OME_VIDEO_BITRATE:500000}</Bitrate>
-                                <Framerate>${env:OME_VIDEO_FRAMERATE:30}</Framerate>
-                            </Video>
                         </Encode>
-                        <Encode>
-                            <Name>H264</Name>
-                            <Audio>
-                                <Codec>aac</Codec>
-                                <Bitrate>${env:OME_AUDIO_BITRATE:128000}</Bitrate>
-                                <Samplerate>${env:OME_AUDIO_SAMPLERATE:48000}</Samplerate>
-                                <Channel>${env:OME_AUDIO_CHANNEL:2}</Channel>
-                            </Audio>
-                            <Video>
-                                <Codec>h264</Codec>
-                                <Width>${env:OME_VIDEO_WIDTH:640}</Width>
-                                <Height>${env:OME_VIDEO_HEIGHT:360}</Height>
-                                <Bitrate>${env:OME_VIDEO_BITRATE:500000}</Bitrate>
-                                <Framerate>${env:OME_VIDEO_FRAMERATE:30}</Framerate>
-                            </Video>
-                        </Encode>
-						<Encode>
-							<Name>BYPASS</Name>
-							<!-- If you want to use bypass. For browser compatibility, the h264.bframe option must be fixed to 0.-->
-							<Video>
-								<Bypass>true</Bypass>
-							</Video>							
-							<Audio>
-								<Bypass>true</Bypass>
-							</Audio>
-						</Encode>
-						<Encode>
-							<Name>WEBRTC_BYPASS</Name>
-							<!-- If you want to use bypass. For browser compatibility, the h264.bframe option must be fixed to 0.-->
-							<Video>
-								<Bypass>true</Bypass>
-							</Video>							
-							<Audio>
-								<Codec>opus</Codec>
-								<Bitrate>128000</Bitrate>
-								<Samplerate>48000</Samplerate>
-								<Channel>2</Channel>
-							</Audio>
-						</Encode>
                     </Encodes>
 					<Streams>
 						<Stream>
 							<Name>${OriginStreamName}_o</Name>
 							<Profiles>
-								<Profile>VP8</Profile>
-								<Profile>H264</Profile>
-							</Profiles>
-						</Stream>
-						<Stream>
-							<Name>${OriginStreamName}_bypass</Name>
-							<Profiles>
-								<Profile>BYPASS</Profile>
-							</Profiles>
-						</Stream>
-						<Stream>
-							<Name>${OriginStreamName}_webrtc</Name>
-							<Profiles>
-								<Profile>WEBRTC_BYPASS</Profile>
+								<Profile>bypass</Profile>
+								<Profile>opus</Profile>
 							</Profiles>
 						</Stream>
 					</Streams>
