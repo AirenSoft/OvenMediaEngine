@@ -73,13 +73,13 @@ bool BitstreamToAnnexB::ConvertKeyFrame(AvcPacketType packet_type, ov::ByteStrea
 
 			[[maybe_unused]] auto configurationVersion = read_stream.Read8();
 			logtd("configurationVersion = %d", configurationVersion);
-			uint8_t AVCProfileIndication = read_stream.Read8();
+			[[maybe_unused]] uint8_t AVCProfileIndication = read_stream.Read8();
 			logtd("AVCProfileIndication = %d", AVCProfileIndication);
-			uint8_t profile_compatibility = read_stream.Read8();
+			[[maybe_unused]] uint8_t profile_compatibility = read_stream.Read8();
 			logtd("profile_compatibility = %d", profile_compatibility);
-			uint8_t AVCLevelIndication = read_stream.Read8();
+			[[maybe_unused]] uint8_t AVCLevelIndication = read_stream.Read8();
 			logtd("AVCLevelIndication = %d", AVCLevelIndication);
-			uint8_t lengthSizeMinusOne = read_stream.Read8() & 0x03;
+			[[maybe_unused]] uint8_t lengthSizeMinusOne = read_stream.Read8() & 0x03;
 			logtd("lengthSizeMinusOne = %d", lengthSizeMinusOne);
 
 			// Number of SPS
