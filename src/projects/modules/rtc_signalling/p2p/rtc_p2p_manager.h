@@ -13,26 +13,23 @@
 class RtcP2PManager
 {
 public:
+	RtcP2PManager(const cfg::Server &server_config);
+
 	// Create a PeerInfo from user-agent
 	std::shared_ptr<RtcPeerInfo> CreatePeerInfo(peer_id_t id, const std::shared_ptr<WebSocketClient> &ws_client);
 
 	// Add to _peer_list
 	std::shared_ptr<RtcPeerInfo> FindPeer(peer_id_t peer_id);
-	bool RemovePeer(const std::shared_ptr<RtcPeerInfo> &peer, size_t max_clients_per_host);
+	bool RemovePeer(const std::shared_ptr<RtcPeerInfo> &peer);
 
 	bool RegisterAsHostPeer(const std::shared_ptr<RtcPeerInfo> &peer);
-	std::shared_ptr<RtcPeerInfo> TryToRegisterAsClientPeer(const std::shared_ptr<RtcPeerInfo> &peer, size_t max_clients_per_host);
+	std::shared_ptr<RtcPeerInfo> TryToRegisterAsClientPeer(const std::shared_ptr<RtcPeerInfo> &peer);
 
 	std::shared_ptr<RtcPeerInfo> GetClientPeerOf(const std::shared_ptr<RtcPeerInfo> &host, peer_id_t client_id);
 	std::map<peer_id_t, std::shared_ptr<RtcPeerInfo>> GetClientPeerList(const std::shared_ptr<RtcPeerInfo> &host);
 
 	int GetPeerCount() const;
 	int GetClientPeerCount() const;
-
-	void SetEnable(bool is_enable)
-	{
-		_is_enabled = is_enable;
-	}
 
 	bool IsEnabled() const
 	{
@@ -41,6 +38,8 @@ public:
 
 protected:
 	bool _is_enabled = false;
+
+	int _max_client_peers_per_host_peer = -1;
 
 	std::recursive_mutex _list_mutex;
 

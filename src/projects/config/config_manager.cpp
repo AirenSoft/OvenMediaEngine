@@ -20,7 +20,7 @@ namespace cfg
 	ConfigManager::ConfigManager()
 	{
 		// Modify if supported xml version is added or changed
-		_supported_xml["Server"] = 5;
+		_supported_xml["Server"] = 6;
 		_supported_xml["Logger"] = 2;
 	}
 
