@@ -49,7 +49,6 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 
 	uint8_t *pbuf = data->GetWritableDataAs<uint8_t>();
 
-	// 만약, ADTS 타입이면  그냥 종료함.
 	if(pbuf[0] == 0xff)
 	{
 		logtd("already ADTS type");
@@ -66,13 +65,11 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 	uint8_t aac_packet_type = pbuf[1];
 
 
-
 	if(audio_codec_id != AudioCodecIdAAC)
 	{
 		logtw("aac reqired. format=%d", audio_codec_id);
 	}
 
-	// 시퀀스 헤더
 	if(aac_packet_type == CodecAudioTypeSequenceHeader)
 	{
 		uint8_t audioObjectType = pbuf[2];
@@ -116,7 +113,7 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 		int16_t aac_raw_length = data->GetLength();    // 2바이트 헤더를 제외함
 
 		////////////////////////////////////////////////////////////
-		// ADTS 헤더를 추가함
+		// Append ADTS Header
 		////////////////////////////////////////////////////////////
 		char aac_fixed_header[7];
 		if(true)
@@ -166,10 +163,8 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 	return 0;
 }
 
-//====================================================================================================
 // BitstreamSequenceInfoParsing
 // - Bitstream(Rtmp Input Low Data) Sequence Info Parsing
-//====================================================================================================
 bool BitstreamToADTS::SequenceHeaderParsing(const uint8_t *data,
 											 int data_size,
 											 int &sample_index,
@@ -191,3 +186,4 @@ bool BitstreamToADTS::SequenceHeaderParsing(const uint8_t *data,
 
 	return true;
 }
+

@@ -31,7 +31,8 @@ LOCAL_STATIC_LIBRARIES := \
 	ovlibrary \
 	monitoring \
 	jsoncpp \
-	sqlite
+	sqlite \
+	aac
 
 # rtsp_provider 
 

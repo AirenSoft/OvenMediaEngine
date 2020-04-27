@@ -107,21 +107,30 @@ namespace pvd
 		
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&OvtStream::WorkerThread, this);
-		_worker_thread.detach();
 
 		return pvd::Stream::Play();
 	}
 
 	bool OvtStream::Stop()
 	{
-		if(_state == State::STOPPING || _state == State::STOPPED || _state == State::IDLE)
+		// Already stopping
+		if(_state != State::PLAYING)
 		{
-			return false;
+			return true;
+		}
+		
+		if(!RequestStop())
+		{
+			// Force terminate 
+			_state = State::ERROR;
+			_stop_thread_flag = true;
 		}
 
-		_state = State::STOPPING;
-		RequestStop();
-
+		if(_worker_thread.joinable())
+		{
+			_worker_thread.join();
+		}
+	
 		return pvd::Stream::Stop();
 	}
 
@@ -675,30 +684,44 @@ namespace pvd
 
 	void OvtStream::WorkerThread()
 	{
-		while (!_stop_thread_flag)
+		while (true)
 		{
 			auto packet = ReceivePacket();
 			// Validation
 			if (packet == nullptr)
 			{
-				logte("The origin server may have problems. Try to terminate %s stream", GetName().CStr());
+				logte("The origin server may have problems. Try to terminate %s/%s(%u) stream thread", 
+						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 				_state = State::ERROR;
 				break;
 			}
-			else if(packet->SessionId() != _session_id)
-			{
-				logte("An error occurred while receive data: An unexpected packet was received. Delete stream : %s", GetName().CStr());
-				_state = State::ERROR;
-				break;
-			}
-			else if(packet->PayloadType() == OVT_PAYLOAD_TYPE_STOP)
+
+			if(packet->PayloadType() == OVT_PAYLOAD_TYPE_STOP)
 			{
 				ReceiveStop(_last_request_id, packet);
-				logti("%s OvtStream has finished gracefully", GetName().CStr());
+				logti(" %s/%s(%u) OvtStream thread has finished gracefully", 
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 				_state = State::STOPPED;
 				break;
 			}
-			else if(packet->PayloadType() == OVT_PAYLOAD_TYPE_MEDIA_PACKET)
+
+			if(_stop_thread_flag == true)
+			{
+				logti(" %s/%s(%u) OvtStream thread has finished forcibly", 
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+				_state = State::STOPPED;
+				break;
+			}
+
+			if(packet->SessionId() != _session_id)
+			{
+				logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
+						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+				_state = State::ERROR;
+				break;
+			}
+
+			if(packet->PayloadType() == OVT_PAYLOAD_TYPE_MEDIA_PACKET)
 			{
 				_depacketizer.AppendPacket(packet);
 
@@ -719,14 +742,11 @@ namespace pvd
 			}
 			else
 			{
-				logte("An error occurred while receive data: An unexpected packet was received. Delete stream : %s", GetName().CStr());
+				logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
+						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 				_state = State::ERROR;
 				break;
 			}
 		}
-
-		// It will be deleted later when the Provider tries to create a stream which is same name.
-		// Because it cannot delete it self.
-		_state = State::STOPPED;
 	}
 }

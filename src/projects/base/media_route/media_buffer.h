@@ -453,6 +453,12 @@ public:
 				_channel_layout = channel_layout;
 				_channels = 2;
 				break;
+			case common::AudioChannel::Layout::LayoutUnknown:
+			default:
+				_channel_layout = channel_layout;
+				_channels = 0;
+				break;
+
 		}
 	}
 

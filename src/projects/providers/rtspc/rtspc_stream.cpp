@@ -6,6 +6,7 @@
 #include "media_router/bitstream/avc_video_packet_fragmentizer.h"
 #include "base/info/application.h"
 #include "rtspc_stream.h"
+#include "modules/aac/aac.h"
 
 #define OV_LOG_TAG "RtspcStream"
 
@@ -60,6 +61,23 @@ namespace pvd
 	RtspcStream::~RtspcStream()
 	{
 		Stop();
+
+		Release();
+	}
+
+	void RtspcStream::Release()
+	{
+		if(_format_context != nullptr)
+		{
+			avformat_close_input(&_format_context);
+			_format_context = nullptr;
+		}
+
+		if(_format_options != nullptr)
+		{
+			av_dict_free(&_format_options);
+			_format_options = nullptr;
+		}	
 	}
 
 	bool RtspcStream::Start()
@@ -110,20 +128,30 @@ namespace pvd
 
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&RtspcStream::WorkerThread, this);
-		_worker_thread.detach();
-		
+
 		return pvd::Stream::Play();
 	}
 
 	bool RtspcStream::Stop()
 	{
+		// Already stopping
 		if(_state != State::PLAYING)
 		{
-			return false;
+			return true;
+		}
+		
+		if(!RequestStop())
+		{
+			// Force terminate 
+			_state = State::ERROR;
+			_stop_thread_flag = true;
 		}
 
-		RequestStop();
-
+		if(_worker_thread.joinable())
+		{
+			_worker_thread.join();
+		}		
+	
 		return pvd::Stream::Stop();
 	}
 
@@ -135,6 +163,9 @@ namespace pvd
 		}
 
 		logti("Requested url[%d] : %s", strlen(_curr_url->Source().CStr()), _curr_url->Source().CStr() );
+
+		// release allocated memory
+		Release();
 
 		_format_context = avformat_alloc_context(); 
 		if(_format_context == nullptr)
@@ -149,15 +180,13 @@ namespace pvd
 		_format_context->interrupt_callback.callback = InterruptCallback;
 		_format_context->interrupt_callback.opaque = this;
 
-		AVDictionary *options = NULL;
-		::av_dict_set(&options, "rtsp_transport", "tcp", 0);
-		::av_dict_set_int(&options, "reorder_queue_size ", 100, 0);
+		::av_dict_set(&_format_options, "rtsp_transport", "tcp", 0);
 		
 		_format_context->flags |= AVFMT_FLAG_GENPTS;
 
 		int err = 0;
 		_stop_watch.Update();
-		if ( (err = ::avformat_open_input(&_format_context, _curr_url->Source().CStr(), NULL, &options))  < 0) 
+		if ( (err = ::avformat_open_input(&_format_context, _curr_url->Source().CStr(), NULL, &_format_options))  < 0) 
 		{
 			_state = State::ERROR;
 			
@@ -204,19 +233,20 @@ namespace pvd
 
 			auto new_track = std::make_shared<MediaTrack>();
 
-			common::MediaType media_type = 	(stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)?common::MediaType::Video:
-			(stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)?common::MediaType::Audio:
-			common::MediaType::Unknown;
+			common::MediaType media_type = 
+				(stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)?common::MediaType::Video:
+				(stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)?common::MediaType::Audio:
+				common::MediaType::Unknown;
 
-			common::MediaCodecId media_codec = (stream->codecpar->codec_id == AV_CODEC_ID_H264)?common::MediaCodecId::H264:
-												(stream->codecpar->codec_id == AV_CODEC_ID_VP8)?common::MediaCodecId::Vp8:
-												(stream->codecpar->codec_id == AV_CODEC_ID_VP9)?common::MediaCodecId::Vp9:
-												(stream->codecpar->codec_id == AV_CODEC_ID_FLV1)?common::MediaCodecId::Flv:
-												(stream->codecpar->codec_id == AV_CODEC_ID_AAC)?common::MediaCodecId::Aac:
-												(stream->codecpar->codec_id == AV_CODEC_ID_MP3)?common::MediaCodecId::Mp3:
-												(stream->codecpar->codec_id == AV_CODEC_ID_OPUS)?common::MediaCodecId::Opus:
-												common::MediaCodecId::None;
-
+			common::MediaCodecId media_codec = 
+				(stream->codecpar->codec_id == AV_CODEC_ID_H264)?common::MediaCodecId::H264:
+				(stream->codecpar->codec_id == AV_CODEC_ID_VP8)?common::MediaCodecId::Vp8:
+				(stream->codecpar->codec_id == AV_CODEC_ID_VP9)?common::MediaCodecId::Vp9:
+				(stream->codecpar->codec_id == AV_CODEC_ID_FLV1)?common::MediaCodecId::Flv:
+				(stream->codecpar->codec_id == AV_CODEC_ID_AAC)?common::MediaCodecId::Aac:
+				(stream->codecpar->codec_id == AV_CODEC_ID_MP3)?common::MediaCodecId::Mp3:
+				(stream->codecpar->codec_id == AV_CODEC_ID_OPUS)?common::MediaCodecId::Opus:
+				common::MediaCodecId::None;
 
 			if (media_type == common::MediaType::Unknown || media_codec == common::MediaCodecId::None)
 			{
@@ -245,23 +275,10 @@ namespace pvd
 			{
 				new_track->SetSampleRate(stream->codecpar->sample_rate);
 				new_track->GetSample().SetFormat(static_cast<common::AudioSample::Format>(common::AudioSample::Format::S16P));
-				new_track->GetChannel().SetLayout(static_cast<common::AudioChannel::Layout>(common::AudioChannel::Layout::LayoutStereo));
-
-#if 0
-				logtd("profileid: %d, channels: %d, sample_rate:: %d", stream->codecpar->profile, stream->codecpar->channels, stream->codecpar->sample_rate);
-				switch(stream->codecpar->profile)
-				{
-					case FF_PROFILE_AAC_MAIN:  logte("profile : %s", "MAIN"); break;
-					case FF_PROFILE_AAC_LOW: logte("profile : %s", "LC"); break;
-					case FF_PROFILE_AAC_SSR: logte("profile : %s", "SSR"); break;
-					case FF_PROFILE_AAC_HE: logte("profile : %s", "HE-AAC"); break;
-					case FF_PROFILE_AAC_HE_V2: logte("profile : %s", "HE-AACv2"); break;
-					default:
-						logte("profile : %s", "Unknown"); break;
-				}
-#endif
-				// Do not crate an audio track.
-				continue;
+				new_track->GetChannel().SetLayout(static_cast<common::AudioChannel::Layout>(
+					(stream->codecpar->channels==1)?common::AudioChannel::Layout::LayoutMono:
+					(stream->codecpar->channels==2)?common::AudioChannel::Layout::LayoutStereo:
+													common::AudioChannel::Layout::LayoutUnknown));
 			}
 
 			AddTrack(new_track);
@@ -335,30 +352,42 @@ namespace pvd
 
 		// Sometimes the values of PTS/DTS are negative or incorrect(invalid pts) 
 		// Decided to calculate PTS/DTS as the cumulative value of the packet duration.
-		// 
-		//  It works normally in my environment.
 		int64_t *cumulative_pts = new int64_t[_format_context->nb_streams];
 		int64_t *cumulative_dts = new int64_t[_format_context->nb_streams];
+
 		for(uint32_t i=0 ; i<_format_context->nb_streams ; ++i)
 		{
 			cumulative_pts[i] = 0;
 			cumulative_dts[i] = 0;
 		}
-		// memset(cumulative_pts, 0, sizeof(int64_t) * _format_context->nb_streams);
-		// memset(cumulative_dts, 0, sizeof(int64_t) * _format_context->nb_streams);
 
-
-		while (!IsStopThread())
+		while (true)
 		{
 			_stop_watch.Update();
 			int32_t ret = ::av_read_frame(_format_context, &packet);
 			if ( ret < 0 )
 			{
+				if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
+				{
+					logte("%s/%s(%u) : RTSP server has timed out. The thread has been terminated.", 
+							GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+					_state = State::STOPPED;
+					break;
+				}
+
+				if(IsStopThread())
+				{
+					logti("%s/%s(%u) RtspcStream thread has finished by signal.", 
+							GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+					_state = State::STOPPED;
+					break;
+				}
+
 				if ( (ret == AVERROR_EOF || ::avio_feof(_format_context->pb)) && !is_eof)
 				{
 					// If EOF is not receiving packets anymore, end thread.
-					logtd("End of file");
-					_state = State::STOPPING;
+					logti("%s/%s(%u) RtspcStream thread has finished.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+					_state = State::STOPPED;
 					is_eof = true;
 					break;
 				}
@@ -366,27 +395,11 @@ namespace pvd
 				if (_format_context->pb && _format_context->pb->error)
 				{
 					// If the connection is broken, terminate the thread.
-					logte("Connection is broken");
+					logte("%s/%s(%u) RtspcStream's connection has broken. The thread has been terminated.", 
+						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 					_state = State::ERROR;
 					break;
 				}
-
-				if(IsStopThread())
-				{
-					logtd("Interrupted by end flag");
-					_state = State::STOPPING;
-					break;
-				}
-
-				if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
-				{
-					logte("Waiting for data from RTSP server has timed out.(%s/%s)", GetApplicationInfo().GetName().CStr(), GetName().CStr());
-					_state = State::STOPPING;
-					break;
-				}
-
-				logtw("Packet read timeout. retry");
-				continue;
 			}
 			else
 			{
@@ -421,7 +434,6 @@ namespace pvd
 				continue;
 			}
 
-
 			// Accumulate PTS/DTS
 			// TODO : Require Verification
 			if(packet.duration != 0)
@@ -443,8 +455,6 @@ namespace pvd
 			
 			// Make MediaPacket from AVPacket
 			auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), track->GetId(), packet.data, packet.size, cumulative_pts[packet.stream_index], cumulative_dts[packet.stream_index], packet.duration, flag);
-			// auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), track->GetId(), packet.data, packet.size, pkt.pts, pkt.dts, packet.duration, flag);
-
 
 			// SPS/PPS Insject from Extra Data
 			if(media_type == common::MediaType::Video && codec_id == common::MediaCodecId::H264)
@@ -453,7 +463,7 @@ namespace pvd
 				{
 					if(flag == MediaPacketFlag::Key)
 					{
-						// Inject the SPS/PPS for each keframes.
+						// Append SPS/PPS 
 						media_packet->GetData()->Insert(stream->codecpar->extradata, 0, stream->codecpar->extradata_size);
 					}
 				}
@@ -464,10 +474,15 @@ namespace pvd
 				{
 					if(flag == MediaPacketFlag::Key)
 					{
-						// TODO: Inject to ADTS header for AAC bitstream							
+						if(AACBitstreamAnalyzer::IsValidAdtsUnit(media_packet->GetData()->GetDataAs<uint8_t>()) == false)
+						{
+							// Append ADTS Header
+							AACAdts::AppendAdtsHeader(stream->codecpar->profile, stream->codecpar->sample_rate, stream->codecpar->channels, media_packet->GetData());
+						}
+
 					}
 				}
-			}			
+			}		
 
 			// logtp("track_id(%d), flags(%d), pts(%10lld), dts(%10lld), size(%5d), duration(%4d)"
 			// 	, media_packet->GetTrackId(), media_packet->GetFlag(), media_packet->GetPts(), media_packet->GetDts(), media_packet->GetData()->GetLength(), media_packet->GetDuration());
@@ -477,128 +492,10 @@ namespace pvd
 			::av_packet_unref(&packet);
 		}
 
-		if (_format_context)
-		{
-			avformat_close_input(&_format_context);
-			_format_context = nullptr;
-		}
-
-		_state = State::STOPPED;
-
-		delete cumulative_pts;
-		delete cumulative_dts;
-
-		logtd("terminated [%s] stream thread", GetName().CStr());
-	}
-
-	// Generates ADTS Header
-	// Reference: https://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Sampling_Frequencies
-	bool RtspcStream::GenerateADTSHeader(int32_t profile, int32_t samplerate, int32_t channels)
-	{
-		// char aac_fixed_header[7];
-
-		return true;
+		delete[] cumulative_pts;
+		delete[] cumulative_dts;
 	}
 }
 
 
 
-
-#if 0
-// enum AacObjectType
-// {
-//     AacObjectTypeReserved = 0,
-//     // Table 1.1 - Audio Object Type definition
-//     // @see @see aac-mp4a-format-ISO_IEC_14496-3+2001.pdf, page 23
-//     AacObjectTypeAacMain = 1,
-//     AacObjectTypeAacLC = 2,
-//     AacObjectTypeAacSSR = 3,
-//     // AAC HE = LC+SBR
-//     AacObjectTypeAacHE = 5,
-//     // AAC HEv2 = LC+SBR+PS
-//     AacObjectTypeAacHEV2 = 29,
-// };
-// static const AVProfile aac_profiles[] = {
-// 		    { FF_PROFILE_AAC_LOW,   "LC"       },
-// 		    { FF_PROFILE_AAC_HE,    "HE-AAC"   },
-// 		    { FF_PROFILE_AAC_HE_V2, "HE-AACv2" },
-// 		    { FF_PROFILE_AAC_LD,    "LD"       },
-// 		    { FF_PROFILE_AAC_ELD,   "ELD"      },
-// 		    { FF_PROFILE_UNKNOWN },
-// 		};
-
-// #define FF_PROFILE_UNKNOWN -99
-// #define FF_PROFILE_RESERVED -100
-// #define FF_PROFILE_AAC_MAIN 0
-// #define FF_PROFILE_AAC_LOW  1
-// #define FF_PROFILE_AAC_SSR  2
-// #define FF_PROFILE_AAC_LTP  3
-// #define FF_PROFILE_AAC_HE   4
-// #define FF_PROFILE_AAC_HE_V2 28
-// #define FF_PROFILE_AAC_LD   22
-// #define FF_PROFILE_AAC_ELD  38
-// #define FF_PROFILE_MPEG2_AAC_LOW 128
-// #define FF_PROFILE_MPEG2_AAC_HE  131
-
-// const AVProfile ff_aac_profiles[] = {
-//     { FF_PROFILE_AAC_LOW,   "LC"       },
-//     { FF_PROFILE_AAC_HE,    "HE-AAC"   },
-//     { FF_PROFILE_AAC_HE_V2, "HE-AACv2" },
-//     { FF_PROFILE_AAC_LD,    "LD"       },
-//     { FF_PROFILE_AAC_ELD,   "ELD"      },
-//     { FF_PROFILE_AAC_MAIN,  "Main" },
-//     { FF_PROFILE_AAC_SSR,   "SSR"  },
-//     { FF_PROFILE_AAC_LTP,   "LTP"  },
-//     { FF_PROFILE_UNKNOWN },
-// };			
-
-
-#endif
-
-// Make ADTS Header
-#if 0
-char aac_fixed_header[7];
-
-int8_t 						aac_profile = 1;
-int8_t 						aac_sample_rate =4;
-int8_t 						aac_channels = 2;
-if(true)
-{
-	char *pp = aac_fixed_header;
-	int16_t aac_frame_length = media_packet->GetData()->GetLength() + 7;
-
-	// Syncword 12 bslbf
-	*pp++ = 0xff;
-	// 4bits left.
-	// adts_fixed_header(), 1.A.2.2.1 Fixed Header of ADTS
-	// ID 1 bslbf
-	// Layer 2 uimsbf
-	// protection_absent 1 bslbf
-	*pp++ = 0xf1;
-
-	// profile 2 uimsbf
-	// sampling_frequency_index 4 uimsbf
-	// private_bit 1 bslbf
-	// channel_configuration 3 uimsbf
-	// original/copy 1 bslbf
-	// home 1 bslbf
-	*pp++ = ((aac_profile << 6) & 0xc0) | ((aac_sample_rate << 2) & 0x3c) | ((aac_channels >> 2) & 0x01);
-	// 4bits left.
-	// adts_variable_header(), 1.A.2.2.2 Variable Header of ADTS
-	// copyright_identification_bit 1 bslbf
-	// copyright_identification_start 1 bslbf
-	*pp++ = ((aac_channels << 6) & 0xc0) | ((aac_frame_length >> 11) & 0x03);
-
-	// aac_frame_length 13 bslbf: Length of the frame including headers and error_check in bytes.
-	// use the left 2bits as the 13 and 12 bit,
-	// the aac_frame_length is 13bits, so we move 13-2=11.
-	*pp++ = aac_frame_length >> 3;
-	// adts_buffer_fullness 11 bslbf
-	*pp++ = (aac_frame_length << 5) & 0xe0;
-
-	// no_raw_data_blocks_in_frame 2 uimsbf
-	*pp++ = 0xfc;
-}	
-
-media_packet->GetData()->Insert(aac_fixed_header, 0, sizeof(aac_fixed_header));
-#endif	

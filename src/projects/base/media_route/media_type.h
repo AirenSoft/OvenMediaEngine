@@ -300,6 +300,7 @@ namespace common
 	public:
 		enum class Layout : uint32_t
 		{
+			LayoutUnknown = 0x00000000U,				// AV_CH_LAYOUT_Unknown
 			LayoutMono = 0x00000004U,					// AV_CH_LAYOUT_MONO
 			LayoutStereo = (0x00000001U | 0x00000002U)  // AV_CH_FRONT_LEFT|AV_CH_FRONT_RIGHT
 
@@ -325,6 +326,7 @@ namespace common
 
 			switch (_layout)
 			{
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutUnknown, _count = 0, _name = "unknown");
 				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutStereo, _count = 2, _name = "stereo");
 				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutMono, _count = 1, _name = "mono");
 			}

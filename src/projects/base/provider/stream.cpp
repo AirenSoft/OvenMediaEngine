@@ -52,7 +52,7 @@ namespace pvd
 	
 	bool Stream::Stop() 
 	{
-		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), _application->GetApplicationTypeName());
+		logti("%s application has stopped playing [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
 		return true;
 	}
 }
