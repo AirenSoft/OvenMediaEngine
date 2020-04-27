@@ -44,6 +44,7 @@ namespace pvd
 		bool RequestDescribe();
 		bool RequestPlay();
 		bool RequestStop();
+		void Release();
 
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		std::shared_ptr<const ov::Url>				_curr_url;
@@ -51,12 +52,11 @@ namespace pvd
 		std::thread _worker_thread;
 		ov::StopWatch _stop_watch;
 
-		AVFormatContext *_format_context = NULL;
+		AVFormatContext *_format_context = nullptr;
+		AVDictionary *_format_options = nullptr;
+		
 		static int InterruptCallback(void *ctx);
 
 		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
-
-	private:
-		bool GenerateADTSHeader(int32_t profile, int32_t samplerate, int32_t channels);
 	};
 }
