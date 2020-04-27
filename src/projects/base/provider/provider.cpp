@@ -357,7 +357,7 @@ namespace pvd
 
 	void Provider::OnStreamNotInUse(const info::Stream &stream_info)
 	{
-		logti("%s stream will be deleted because it is not used", stream_info.GetName().CStr());
+		logti("%s(%u) stream will be deleted because it is not used", stream_info.GetName().CStr(), stream_info.GetId());
 
 		// Find App
 		auto app_info = stream_info.GetApplicationInfo();
@@ -398,7 +398,7 @@ namespace pvd
 					{
 						app->DeleteStream(stream);
 					}
-					else if(stream->GetState() != Stream::State::STOPPING)
+					else if(stream->GetState() != Stream::State::STOPPING && stream->GetState() != Stream::State::STOPPED && stream->GetState() != Stream::State::ERROR)
 					{
 						// Check if there are streams have no any viewers
 						auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
@@ -407,7 +407,7 @@ namespace pvd
 							auto current = std::chrono::high_resolution_clock::now();
 							auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastSentTime()).count();
 							
-							if(elapsed_time > 100)
+							if(elapsed_time > 30)
 							{
 								OnStreamNotInUse(*stream);
 							}
@@ -417,7 +417,7 @@ namespace pvd
 			}
 
 			lock.unlock();
-			sleep(5);
+			sleep(1);
 		}
 	}
 }

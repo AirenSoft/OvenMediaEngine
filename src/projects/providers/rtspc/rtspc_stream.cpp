@@ -110,20 +110,30 @@ namespace pvd
 
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&RtspcStream::WorkerThread, this);
-		_worker_thread.detach();
-		
+
 		return pvd::Stream::Play();
 	}
 
 	bool RtspcStream::Stop()
 	{
+		// Already stopping
 		if(_state != State::PLAYING)
 		{
-			return false;
+			return true;
+		}
+		
+		if(!RequestStop())
+		{
+			// Force terminate 
+			_state = State::ERROR;
+			_stop_thread_flag = true;
 		}
 
-		RequestStop();
-
+		if(_worker_thread.joinable())
+		{
+			_worker_thread.join();
+		}
+	
 		return pvd::Stream::Stop();
 	}
 
@@ -344,21 +354,34 @@ namespace pvd
 			cumulative_pts[i] = 0;
 			cumulative_dts[i] = 0;
 		}
-		// memset(cumulative_pts, 0, sizeof(int64_t) * _format_context->nb_streams);
-		// memset(cumulative_dts, 0, sizeof(int64_t) * _format_context->nb_streams);
 
-
-		while (!IsStopThread())
+		while (true)
 		{
 			_stop_watch.Update();
 			int32_t ret = ::av_read_frame(_format_context, &packet);
 			if ( ret < 0 )
 			{
+				if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
+				{
+					logte("%s/%s(%u) : RTSP server has timed out. The thread has been terminated.", 
+							GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+					_state = State::STOPPED;
+					break;
+				}
+
+				if(IsStopThread())
+				{
+					logti("%s/%s(%u) RtspcStream thread has finished by signal.", 
+							GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+					_state = State::STOPPED;
+					break;
+				}
+
 				if ( (ret == AVERROR_EOF || ::avio_feof(_format_context->pb)) && !is_eof)
 				{
 					// If EOF is not receiving packets anymore, end thread.
-					logtd("End of file");
-					_state = State::STOPPING;
+					logti("%s/%s(%u) RtspcStream thread has finished.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+					_state = State::STOPPED;
 					is_eof = true;
 					break;
 				}
@@ -366,27 +389,11 @@ namespace pvd
 				if (_format_context->pb && _format_context->pb->error)
 				{
 					// If the connection is broken, terminate the thread.
-					logte("Connection is broken");
+					logte("%s/%s(%u) RtspcStream's connection has broken. The thread has been terminated.", 
+						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 					_state = State::ERROR;
 					break;
 				}
-
-				if(IsStopThread())
-				{
-					logtd("Interrupted by end flag");
-					_state = State::STOPPING;
-					break;
-				}
-
-				if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
-				{
-					logte("Waiting for data from RTSP server has timed out.(%s/%s)", GetApplicationInfo().GetName().CStr(), GetName().CStr());
-					_state = State::STOPPING;
-					break;
-				}
-
-				logtw("Packet read timeout. retry");
-				continue;
 			}
 			else
 			{
@@ -483,12 +490,10 @@ namespace pvd
 			_format_context = nullptr;
 		}
 
-		_state = State::STOPPED;
-
 		delete cumulative_pts;
 		delete cumulative_dts;
 
-		logtd("terminated [%s] stream thread", GetName().CStr());
+
 	}
 
 	// Generates ADTS Header
