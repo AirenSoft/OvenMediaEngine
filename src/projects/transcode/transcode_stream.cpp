@@ -731,7 +731,7 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 				decoded_frame->SetTrackId(decoder_id);
 				ChangeOutputFormat(decoded_frame.get());
 
-				// It is intended that there is no "break;" statement here
+				[[fallthrough]];
 
 			case TranscodeResult::DataReady:
 				decoded_frame->SetTrackId(decoder_id);

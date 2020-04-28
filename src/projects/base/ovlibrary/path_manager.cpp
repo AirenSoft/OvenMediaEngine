@@ -189,8 +189,11 @@ namespace ov
 					break;
 
 				case DT_LNK:
-				{
 					// Make sure symbolic points to file
+					[[fallthrough]];
+
+				default:
+					// d_type isn't valid for filesystem like xfs
 					struct stat file_stat;
 
 					if (::stat(file_name, &file_stat) == 0)
@@ -208,11 +211,7 @@ namespace ov
 					{
 						// Could not obtain stat of the file
 					}
-
-					continue;
-				}
-
-				default:
+					
 					continue;
 			}
 

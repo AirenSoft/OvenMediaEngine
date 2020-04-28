@@ -140,13 +140,13 @@ namespace ov
 			default:
 			case 4:
 				object->_file = tokens[3];
-				// It is intended that there is no "break;" statement here
+				[[fallthrough]];
 			case 3:
 				object->_stream = tokens[2];
-				// It is intended that there is no "break;" statement here
+				[[fallthrough]];
 			case 2:
 				object->_app = tokens[1];
-				// It is intended that there is no "break;" statement here
+				[[fallthrough]];
 			case 1:
 			case 0:
 				// Nothing to do

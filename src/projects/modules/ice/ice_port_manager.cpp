@@ -194,7 +194,7 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 				return false;
 			}
 
-			// It is intended that there is no "break;" statement here
+			[[fallthrough]];
 		}
 
 		case 1:
