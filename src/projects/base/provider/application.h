@@ -62,7 +62,6 @@ namespace pvd
 		virtual bool Start();
 		virtual bool Stop();
 
-		const std::map<uint32_t, std::shared_ptr<Stream>> GetStreams();
 		const std::shared_ptr<Stream> GetStreamById(uint32_t stream_id);
 		const std::shared_ptr<Stream> GetStreamByName(ov::String stream_name);
 
