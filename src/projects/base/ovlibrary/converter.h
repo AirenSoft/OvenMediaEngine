@@ -13,6 +13,7 @@
 #include "./string.h"
 #include "base/media_route/media_type.h"
 
+#define __STDC_FORMAT_MACROS 1
 #include <inttypes.h>
 #include <string>
 #include <ctime>
