@@ -32,6 +32,12 @@ enum class StreamSourceType : int8_t
 	Transcoder,
 };
 
+enum class ProviderStreamDirection : int8_t
+{
+	Pull,
+	Push
+};
+
 enum class ProviderType : int8_t
 {
 	Unknown,

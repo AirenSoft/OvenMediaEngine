@@ -38,6 +38,11 @@ namespace pvd
 
 		~RtspcProvider() override;
 
+		ProviderStreamDirection GetProviderStreamDirection() const override
+		{
+			return ProviderStreamDirection::Pull;
+		}
+
 		ProviderType GetProviderType() const override
 		{
 			return ProviderType::RtspPull;
@@ -50,6 +55,5 @@ namespace pvd
 	protected:
 		std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &app_info) override;
 		bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
-		//void OnStreamNotInUse(const info::Stream &stream_info) override;
 	};
 }  // namespace pvd

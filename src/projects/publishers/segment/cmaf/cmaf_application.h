@@ -17,18 +17,13 @@
 //====================================================================================================
 class CmafApplication : public pub::Application
 {
-protected:
-	const char* GetApplicationTypeName() const override
-	{
-		return "LLDASH Publisher";
-	}
-
 public:
-	static std::shared_ptr<CmafApplication> Create(const info::Application &application_info,
+	static std::shared_ptr<CmafApplication> Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info,
 			const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
-    CmafApplication(const info::Application &application_info,
-    		const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
+    CmafApplication(const std::shared_ptr<pub::Publisher> &publisher, 
+					const info::Application &application_info,
+    				const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer);
 
 	virtual ~CmafApplication() final;
 

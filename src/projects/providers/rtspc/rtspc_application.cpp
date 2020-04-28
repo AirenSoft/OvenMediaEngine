@@ -9,17 +9,17 @@
 
 namespace pvd
 {
-	std::shared_ptr<RtspcApplication> RtspcApplication::Create(const info::Application &application_info)
+	std::shared_ptr<RtspcApplication> RtspcApplication::Create(const std::shared_ptr<Provider> &provider, const info::Application &application_info)
 	{
-		auto application = std::make_shared<RtspcApplication>(application_info);
+		auto application = std::make_shared<RtspcApplication>(provider, application_info);
 
 		application->Start();
 
 		return application;
 	}
 
-	RtspcApplication::RtspcApplication(const info::Application &info)
-			: Application(info)
+	RtspcApplication::RtspcApplication(const std::shared_ptr<Provider> &provider, const info::Application &info)
+			: Application(provider, info)
 	{
 
 	}

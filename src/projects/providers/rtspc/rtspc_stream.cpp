@@ -39,7 +39,6 @@ namespace pvd
 		avcodec_register_all(); 
 		avformat_network_init(); 
 
-		_stop_thread_flag = false;
 		_state = State::IDLE;
 		_format_context = 0;
 
@@ -82,7 +81,7 @@ namespace pvd
 
 	bool RtspcStream::Start()
 	{
-		if (_stop_thread_flag)
+		if(_state != State::IDLE)
 		{
 			return false;
 		}
@@ -126,9 +125,6 @@ namespace pvd
 			return false;
 		}
 
-		_stop_thread_flag = false;
-		_worker_thread = std::thread(&RtspcStream::WorkerThread, this);
-
 		return pvd::Stream::Play();
 	}
 
@@ -144,13 +140,7 @@ namespace pvd
 		{
 			// Force terminate 
 			_state = State::ERROR;
-			_stop_thread_flag = true;
 		}
-
-		if(_worker_thread.joinable())
-		{
-			_worker_thread.join();
-		}		
 	
 		return pvd::Stream::Stop();
 	}
@@ -284,6 +274,17 @@ namespace pvd
 			AddTrack(new_track);
 		}
 
+		// Sometimes the values of PTS/DTS are negative or incorrect(invalid pts) 
+		// Decided to calculate PTS/DTS as the cumulative value of the packet duration.
+		_cumulative_pts = new int64_t[_format_context->nb_streams];
+		_cumulative_dts = new int64_t[_format_context->nb_streams];
+
+		for(uint32_t i=0 ; i<_format_context->nb_streams ; ++i)
+		{
+			_cumulative_pts[i] = 0;
+			_cumulative_dts[i] = 0;
+		}
+
 		_state = State::DESCRIBED;
 
 		return true;
@@ -309,38 +310,14 @@ namespace pvd
 		}
 
 		_state = State::STOPPING;
-		_stop_thread_flag = true;
+		
+		delete[] _cumulative_pts;
+		delete[] _cumulative_dts;
 
 		return true;
 	}
 
-	bool RtspcStream::IsStopThread()
-	{
-		return _stop_thread_flag;
-	}
-
-	int RtspcStream::InterruptCallback(void *ctx)
-	{
-		if(ctx != nullptr)
-		{
-			auto obj = (RtspcStream*)ctx;
-
-			if(obj->IsStopThread() == true)				
-			{
-				return true;
-			}
-
-			if(obj->_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
-			{
-				// timed out
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	void RtspcStream::WorkerThread()
+	Stream::ProcessMediaResult RtspcStream::ProcessMediaPacket()
 	{
 		AVPacket packet;
 		av_init_packet(&packet);
@@ -350,150 +327,136 @@ namespace pvd
 		bool is_eof = false;
 		bool is_received_first_packet = false;
 
-		// Sometimes the values of PTS/DTS are negative or incorrect(invalid pts) 
-		// Decided to calculate PTS/DTS as the cumulative value of the packet duration.
-		int64_t *cumulative_pts = new int64_t[_format_context->nb_streams];
-		int64_t *cumulative_dts = new int64_t[_format_context->nb_streams];
-
-		for(uint32_t i=0 ; i<_format_context->nb_streams ; ++i)
+		_stop_watch.Update();
+		int32_t ret = ::av_read_frame(_format_context, &packet);
+		if ( ret < 0 )
 		{
-			cumulative_pts[i] = 0;
-			cumulative_dts[i] = 0;
+			if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
+			{
+				return ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN;
+			}
+
+			if ( (ret == AVERROR_EOF || ::avio_feof(_format_context->pb)) && !is_eof)
+			{
+				// If EOF is not receiving packets anymore, end thread.
+				logti("%s/%s(%u) RtspcStream thread has finished.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+				_state = State::STOPPED;
+				is_eof = true;
+				return ProcessMediaResult::PROCESS_MEDIA_FINISH;
+			}
+
+			if (_format_context->pb && _format_context->pb->error)
+			{
+				// If the connection is broken, terminate the thread.
+				logte("%s/%s(%u) RtspcStream's connection has broken. The thread has been terminated.", 
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+				_state = State::ERROR;
+				return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
+			}
+		}
+		else
+		{
+			is_eof = false;
 		}
 
-		while (true)
+		// If the first packet is received as NOPTS_VALUE, reset the PTS value to zero.
+		if (!is_received_first_packet)
 		{
-			_stop_watch.Update();
-			int32_t ret = ::av_read_frame(_format_context, &packet);
-			if ( ret < 0 )
+			if (packet.pts == AV_NOPTS_VALUE)
 			{
-				if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
-				{
-					logte("%s/%s(%u) : RTSP server has timed out. The thread has been terminated.", 
-							GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-					_state = State::STOPPED;
-					break;
-				}
-
-				if(IsStopThread())
-				{
-					logti("%s/%s(%u) RtspcStream thread has finished by signal.", 
-							GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-					_state = State::STOPPED;
-					break;
-				}
-
-				if ( (ret == AVERROR_EOF || ::avio_feof(_format_context->pb)) && !is_eof)
-				{
-					// If EOF is not receiving packets anymore, end thread.
-					logti("%s/%s(%u) RtspcStream thread has finished.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-					_state = State::STOPPED;
-					is_eof = true;
-					break;
-				}
-
-				if (_format_context->pb && _format_context->pb->error)
-				{
-					// If the connection is broken, terminate the thread.
-					logte("%s/%s(%u) RtspcStream's connection has broken. The thread has been terminated.", 
-						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-					_state = State::ERROR;
-					break;
-				}
+				packet.pts = 0;
 			}
-			else
-			{
-				is_eof = false;
+			if (packet.dts == AV_NOPTS_VALUE)
+			{	
+				packet.dts = 0;
 			}
 
-			// If the first packet is received as NOPTS_VALUE, reset the PTS value to zero.
-			if (!is_received_first_packet)
-			{
-				if (packet.pts == AV_NOPTS_VALUE)
-				{
-					packet.pts = 0;
-				}
-				if (packet.dts == AV_NOPTS_VALUE)
-				{	
-					packet.dts = 0;
-				}
+			is_received_first_packet = true;
+		}
+		
 
-				is_received_first_packet = true;
-			}
-			
+		if(_stream_metrics != nullptr)
+		{
+			_stream_metrics->IncreaseBytesIn(packet.size);
+		}
 
-			if(_stream_metrics != nullptr)
-			{
-				_stream_metrics->IncreaseBytesIn(packet.size);
-			}
-
-			auto track = GetTrack(packet.stream_index);
-			if(track == nullptr)
-			{
-				::av_packet_unref(&packet);
-				continue;
-			}
-
-			// Accumulate PTS/DTS
-			// TODO : Require Verification
-			if(packet.duration != 0)
-			{
-				cumulative_pts[packet.stream_index] += packet.duration;
-				cumulative_dts[packet.stream_index] += packet.duration;
-			}
-			else
-			{
-				cumulative_pts[packet.stream_index] = packet.pts;
-				cumulative_dts[packet.stream_index] = packet.dts;
-			}
-
-
-			AVStream *stream = _format_context->streams[packet.stream_index];
-			auto media_type = track->GetMediaType();
-			auto codec_id = track->GetCodecId();
-			auto flag = (packet.flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
-			
-			// Make MediaPacket from AVPacket
-			auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), track->GetId(), packet.data, packet.size, cumulative_pts[packet.stream_index], cumulative_dts[packet.stream_index], packet.duration, flag);
-
-			// SPS/PPS Insject from Extra Data
-			if(media_type == common::MediaType::Video && codec_id == common::MediaCodecId::H264)
-			{
-				if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
-				{
-					if(flag == MediaPacketFlag::Key)
-					{
-						// Append SPS/PPS 
-						media_packet->GetData()->Insert(stream->codecpar->extradata, 0, stream->codecpar->extradata_size);
-					}
-				}
-			}
-			else if(media_type == common::MediaType::Audio && codec_id == common::MediaCodecId::Aac)
-			{
-				if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
-				{
-					if(flag == MediaPacketFlag::Key)
-					{
-						if(AACBitstreamAnalyzer::IsValidAdtsUnit(media_packet->GetData()->GetDataAs<uint8_t>()) == false)
-						{
-							// Append ADTS Header
-							AACAdts::AppendAdtsHeader(stream->codecpar->profile, stream->codecpar->sample_rate, stream->codecpar->channels, media_packet->GetData());
-						}
-
-					}
-				}
-			}		
-
-			// logtp("track_id(%d), flags(%d), pts(%10lld), dts(%10lld), size(%5d), duration(%4d)"
-			// 	, media_packet->GetTrackId(), media_packet->GetFlag(), media_packet->GetPts(), media_packet->GetDts(), media_packet->GetData()->GetLength(), media_packet->GetDuration());
-
-			_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
-
+		auto track = GetTrack(packet.stream_index);
+		if(track == nullptr)
+		{
 			::av_packet_unref(&packet);
+			return ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN;
 		}
 
-		delete[] cumulative_pts;
-		delete[] cumulative_dts;
+		// Accumulate PTS/DTS
+		// TODO : Require Verification
+		if(packet.duration != 0)
+		{
+			_cumulative_pts[packet.stream_index] += packet.duration;
+			_cumulative_dts[packet.stream_index] += packet.duration;
+		}
+		else
+		{
+			_cumulative_pts[packet.stream_index] = packet.pts;
+			_cumulative_dts[packet.stream_index] = packet.dts;
+		}
+
+
+		AVStream *stream = _format_context->streams[packet.stream_index];
+		auto media_type = track->GetMediaType();
+		auto codec_id = track->GetCodecId();
+		auto flag = (packet.flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
+		
+		// Make MediaPacket from AVPacket
+		auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), track->GetId(), packet.data, packet.size, _cumulative_pts[packet.stream_index], _cumulative_dts[packet.stream_index], packet.duration, flag);
+
+		// SPS/PPS Insject from Extra Data
+		if(media_type == common::MediaType::Video && codec_id == common::MediaCodecId::H264)
+		{
+			if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
+			{
+				if(flag == MediaPacketFlag::Key)
+				{
+					// Append SPS/PPS 
+					media_packet->GetData()->Insert(stream->codecpar->extradata, 0, stream->codecpar->extradata_size);
+				}
+			}
+		}
+		else if(media_type == common::MediaType::Audio && codec_id == common::MediaCodecId::Aac)
+		{
+			if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
+			{
+				if(flag == MediaPacketFlag::Key)
+				{
+					if(AACBitstreamAnalyzer::IsValidAdtsUnit(media_packet->GetData()->GetDataAs<uint8_t>()) == false)
+					{
+						// Append ADTS Header
+						AACAdts::AppendAdtsHeader(stream->codecpar->profile, stream->codecpar->sample_rate, stream->codecpar->channels, media_packet->GetData());
+					}
+
+				}
+			}
+		}		
+
+		_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
+
+		::av_packet_unref(&packet);
+
+		return ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
+	}
+
+	int RtspcStream::InterruptCallback(void *ctx)
+	{
+		if(ctx != nullptr)
+		{
+			auto obj = (RtspcStream*)ctx;
+			if(obj->_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
+			{
+				// timed out
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
 

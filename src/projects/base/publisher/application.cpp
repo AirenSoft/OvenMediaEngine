@@ -1,20 +1,35 @@
+#include "publisher.h"
 #include "application.h"
-
-#include <algorithm>
-
 #include "publisher_private.h"
+#include <algorithm>
 
 namespace pub
 {
-	Application::Application(const info::Application &application_info)
+	Application::Application(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info)
 		: info::Application(application_info)
 	{
+		_publisher = publisher;
 		_stop_thread_flag = false;
 	}
 
 	Application::~Application()
 	{
 		Stop();
+	}
+
+	const char* Application::GetApplicationTypeName()
+	{
+		if(_publisher == nullptr)
+		{
+			return "";
+		}
+
+		if(_app_type_name.IsEmpty())
+		{
+			_app_type_name.Format("%s %s",  _publisher->GetPublisherName(), "Application");
+		}
+
+		return _app_type_name.CStr();
 	}
 
 	bool Application::Start()

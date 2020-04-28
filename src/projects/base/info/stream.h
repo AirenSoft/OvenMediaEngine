@@ -51,7 +51,7 @@ namespace info
 	protected:
 		info::stream_id_t _id = 0;
 		ov::String _name;
-
+		
 		// MediaTrack ID 값을 Key로 활용함
 		std::map<int32_t, std::shared_ptr<MediaTrack>> _tracks;
 

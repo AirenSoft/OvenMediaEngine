@@ -37,6 +37,11 @@ namespace pvd
 
 		~OvtProvider() override;
 
+		ProviderStreamDirection GetProviderStreamDirection() const override
+		{
+			return ProviderStreamDirection::Pull;
+		}
+
 		ProviderType GetProviderType() const override
 		{
 			return ProviderType::Ovt;

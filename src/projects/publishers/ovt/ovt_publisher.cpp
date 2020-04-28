@@ -81,7 +81,7 @@ bool OvtPublisher::Stop()
 
 std::shared_ptr<pub::Application> OvtPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	return OvtApplication::Create(application_info);
+	return OvtApplication::Create(OvtPublisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }
 
 bool OvtPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)

@@ -14,9 +14,9 @@
 //====================================================================================================
 // Create
 //====================================================================================================
-std::shared_ptr<DashApplication> DashApplication::Create(const info::Application &application_info)
+std::shared_ptr<DashApplication> DashApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 {
-	auto application = std::make_shared<DashApplication>(application_info);
+	auto application = std::make_shared<DashApplication>(publisher, application_info);
 	if(!application->Start())
 	{
 		return nullptr;
@@ -27,8 +27,8 @@ std::shared_ptr<DashApplication> DashApplication::Create(const info::Application
 //====================================================================================================
 // DashApplication
 //====================================================================================================
-DashApplication::DashApplication(const info::Application &application_info)
-	: Application(application_info)
+DashApplication::DashApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
+	: Application(publisher, application_info)
 {
     auto publisher_info = application_info.GetPublisher<cfg::DashPublisher>();
     _segment_count = publisher_info->GetSegmentCount();

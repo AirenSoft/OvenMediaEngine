@@ -18,8 +18,36 @@
 
 #include <shared_mutex>
 
+//TODO(Dimiden): It has to be moved to configuration
+#define MAX_STREAM_MOTOR_COUNT					100
+#define MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC	30
 namespace pvd
 {
+	// StreamMotor is a thread for pull provider stream that calls the stream's ProcessMedia function periodically
+	class StreamMotor
+	{
+	public:
+		StreamMotor(uint32_t id);
+
+		uint32_t GetId();
+
+		bool Start();
+		bool Stop();
+
+		bool AddStream(const std::shared_ptr<Stream> &stream);
+		bool DelStream(const std::shared_ptr<Stream> &stream);
+
+	private:
+		void WorkerThread();
+
+		uint32_t _id;
+		bool _stop_thread_flag;
+		std::thread _thread;
+		std::shared_mutex _streams_map_guard;
+		std::map<uint32_t, std::shared_ptr<Stream>> _streams;
+	};
+
+	class Provider;
 	class Application : public info::Application, public MediaRouteApplicationConnector
 	{
 		enum class ApplicationState : int8_t
@@ -47,34 +75,43 @@ namespace pvd
 		std::shared_ptr<pvd::Stream> CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list);
 
 		// Delete stream
-		virtual bool DeleteStream(std::shared_ptr<Stream> stream);
-
+		virtual bool DeleteStream(const std::shared_ptr<Stream> &stream);
 		bool DeleteAllStreams();
-		bool DeleteTerminatedStreams();
 
-		const char* GetApplicationTypeName() const override
-		{
-			return "Provider Base Application";
-		}
+		const char* GetApplicationTypeName() final;
 
 	protected:
-		explicit Application(const info::Application &application_info);
+		explicit Application(const std::shared_ptr<Provider> &provider, const info::Application &application_info);
 		~Application() override;
 
 		// For child
 		virtual std::shared_ptr<pvd::Stream> CreatePushStream(const uint32_t stream_id, const ov::String &stream_name) = 0;
 		virtual std::shared_ptr<pvd::Stream> CreatePullStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<ov::String> &url_list) = 0;
 
-		std::map<uint32_t, std::shared_ptr<Stream>> _streams;
-
 	private:
+
+		std::shared_ptr<StreamMotor> CreateStreamMotorInternal(const std::shared_ptr<Stream> &stream);
+		bool DeleteStreamInternal(const std::shared_ptr<Stream> &stream);
+		std::shared_ptr<StreamMotor> GetStreamMotorInternal(const std::shared_ptr<Stream> &stream);
+
 		bool NotifyStreamCreated(std::shared_ptr<Stream> stream);
 		bool NotifyStreamDeleted(std::shared_ptr<Stream> stream);
 
-		std::mutex 				_queue_guard;
-		std::condition_variable	_queue_cv;
-		std::atomic<info::stream_id_t>	_last_issued_stream_id { 0 };
-		std::shared_mutex 		_streams_map_guard;
+		uint32_t GetStreamMotorId(const std::shared_ptr<Stream> &stream);
+
+		// Remove unused streams
+		void WhiteElephantStreamCollector();
+		
+		bool _stop_collector_thread_flag;
+		std::thread _collector_thread;
+
+		std::shared_ptr<Provider>	_provider;
+		
+		std::shared_mutex 							_streams_guard;
+		std::map<uint32_t, std::shared_ptr<Stream>> _streams;
+		std::map<uint32_t, std::shared_ptr<StreamMotor>> _stream_motors;
+
 		ApplicationState		_state = ApplicationState::Idle;
+		std::atomic<info::stream_id_t>	_last_issued_stream_id { 0 };
 	};
 }

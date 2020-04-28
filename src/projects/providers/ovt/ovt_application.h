@@ -13,16 +13,10 @@ namespace pvd
 {
 	class OvtApplication : public pvd::Application
 	{
-	protected:
-		const char* GetApplicationTypeName() const override
-		{
-			return "OVT Provider";
-		}
-
 	public:
-		static std::shared_ptr<OvtApplication> Create(const info::Application &application_info);
+		static std::shared_ptr<OvtApplication> Create(const std::shared_ptr<Provider> &provider, const info::Application &application_info);
 
-		explicit OvtApplication(const info::Application &info);
+		explicit OvtApplication(const std::shared_ptr<Provider> &provider, const info::Application &info);
 
 		~OvtApplication() override;
 

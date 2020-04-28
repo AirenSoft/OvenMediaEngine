@@ -39,7 +39,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> RtspcProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{
-		return RtspcApplication::Create(app_info);
+		return RtspcApplication::Create(GetSharedPtrAs<pvd::Provider>(), app_info);
 	}
 
 	bool RtspcProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)

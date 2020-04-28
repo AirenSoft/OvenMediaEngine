@@ -35,7 +35,6 @@ namespace pvd
 			: pvd::Stream(application, stream_info)
 	{
 		_last_request_id = 0;
-		_stop_thread_flag = false;
 		_state = State::IDLE;
 
 		for(auto &url : url_list)
@@ -62,11 +61,6 @@ namespace pvd
 
 	bool OvtStream::Start()
 	{
-		if (_stop_thread_flag)
-		{
-			return false;
-		}
-		
 		// For statistics
 		auto begin = std::chrono::steady_clock::now();
 		if (!ConnectOrigin())
@@ -104,10 +98,7 @@ namespace pvd
 		{
 			return false;
 		}
-		
-		_stop_thread_flag = false;
-		_worker_thread = std::thread(&OvtStream::WorkerThread, this);
-
+	
 		return pvd::Stream::Play();
 	}
 
@@ -123,12 +114,6 @@ namespace pvd
 		{
 			// Force terminate 
 			_state = State::ERROR;
-			_stop_thread_flag = true;
-		}
-
-		if(_worker_thread.joinable())
-		{
-			_worker_thread.join();
 		}
 	
 		return pvd::Stream::Stop();
@@ -682,71 +667,63 @@ namespace pvd
 		return std::move(packet);
 	}
 
-	void OvtStream::WorkerThread()
+	Stream::ProcessMediaResult OvtStream::ProcessMediaPacket()
 	{
-		while (true)
+		//TODO(Getroot): Make ReceivePacket nonblock
+		auto packet = ReceivePacket();
+		// Validation
+		if (packet == nullptr)
 		{
-			auto packet = ReceivePacket();
-			// Validation
-			if (packet == nullptr)
-			{
-				logte("The origin server may have problems. Try to terminate %s/%s(%u) stream thread", 
-						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-				_state = State::ERROR;
-				break;
-			}
-
-			if(packet->PayloadType() == OVT_PAYLOAD_TYPE_STOP)
-			{
-				ReceiveStop(_last_request_id, packet);
-				logti(" %s/%s(%u) OvtStream thread has finished gracefully", 
+			logte("The origin server may have problems. Try to terminate %s/%s(%u) stream", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-				_state = State::STOPPED;
-				break;
-			}
+			_state = State::ERROR;
+			return Stream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
+		}
 
-			if(_stop_thread_flag == true)
-			{
-				logti(" %s/%s(%u) OvtStream thread has finished forcibly", 
+		if(packet->PayloadType() == OVT_PAYLOAD_TYPE_STOP)
+		{
+			ReceiveStop(_last_request_id, packet);
+			logti(" %s/%s(%u) OvtStream thread has finished gracefully", 
+				GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+			_state = State::STOPPED;
+			return Stream::ProcessMediaResult::PROCESS_MEDIA_FINISH;
+		}
+
+		if(packet->SessionId() != _session_id)
+		{
+			logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-				_state = State::STOPPED;
-				break;
-			}
+			_state = State::ERROR;
+			return Stream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
+		}
 
-			if(packet->SessionId() != _session_id)
+		if(packet->PayloadType() == OVT_PAYLOAD_TYPE_MEDIA_PACKET)
+		{
+			_depacketizer.AppendPacket(packet);
+
+			if (_depacketizer.IsAvaliableMediaPacket())
 			{
-				logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
-						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-				_state = State::ERROR;
-				break;
-			}
+				auto media_packet = _depacketizer.PopMediaPacket();
 
-			if(packet->PayloadType() == OVT_PAYLOAD_TYPE_MEDIA_PACKET)
-			{
-				_depacketizer.AppendPacket(packet);
-
-				if (_depacketizer.IsAvaliableMediaPacket())
+				// Make Header (Fragmentation) if it is H.264
+				auto track = GetTrack(media_packet->GetTrackId());
+				if(track->GetCodecId() == common::MediaCodecId::H264)
 				{
-					auto media_packet = _depacketizer.PopMediaPacket();
-
-					// Make Header (Fragmentation) if it is H.264
-					auto track = GetTrack(media_packet->GetTrackId());
-					if(track->GetCodecId() == common::MediaCodecId::H264)
-					{
-						AvcVideoPacketFragmentizer fragmentizer;
-						fragmentizer.MakeHeader(media_packet);
-					}
-
-					_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
+					AvcVideoPacketFragmentizer fragmentizer;
+					fragmentizer.MakeHeader(media_packet);
 				}
-			}
-			else
-			{
-				logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
-						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-				_state = State::ERROR;
-				break;
+
+				_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
 			}
 		}
+		else
+		{
+			logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+			_state = State::ERROR;
+			return Stream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
+		}
+
+		return Stream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
 	}
 }

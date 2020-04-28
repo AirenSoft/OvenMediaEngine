@@ -34,12 +34,15 @@ namespace pvd
 		RtspcStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list);
 		~RtspcStream() final;
 
+		// If this stream belongs to the Pull provider, 
+		// this function is called periodically by the StreamMotor of application. 
+		// Media data has to be processed here.
+		Stream::ProcessMediaResult ProcessMediaPacket() override;
+
 	private:
 		bool Start() override;
 		bool Play() override;
 		bool Stop() override;
-		bool IsStopThread();
-		void WorkerThread();
 		bool ConnectTo();
 		bool RequestDescribe();
 		bool RequestPlay();
@@ -47,15 +50,16 @@ namespace pvd
 		void Release();
 
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
-		std::shared_ptr<const ov::Url>				_curr_url;
-		bool _stop_thread_flag;
-		std::thread _worker_thread;
+		std::shared_ptr<const ov::Url> _curr_url;
 		ov::StopWatch _stop_watch;
 
 		AVFormatContext *_format_context = nullptr;
 		AVDictionary *_format_options = nullptr;
 		
 		static int InterruptCallback(void *ctx);
+
+		int64_t *_cumulative_pts = nullptr;
+		int64_t *_cumulative_dts = nullptr;
 
 		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 	};

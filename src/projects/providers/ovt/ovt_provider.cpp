@@ -39,7 +39,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{
-		return OvtApplication::Create(app_info);
+		return OvtApplication::Create(GetSharedPtrAs<pvd::Provider>(), app_info);
 	}
 
 	bool OvtProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)

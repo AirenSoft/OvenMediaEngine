@@ -30,6 +30,14 @@ namespace pvd
 			ERROR
 		};
 
+		enum class ProcessMediaResult
+		{
+			PROCESS_MEDIA_SUCCESS,
+			PROCESS_MEDIA_FAILURE,
+			PROCESS_MEDIA_FINISH,
+			PROCESS_MEDIA_TRY_AGAIN
+		};
+
 		State GetState(){return _state;};
 
 		const std::shared_ptr<pvd::Application> &GetApplication()
@@ -45,6 +53,15 @@ namespace pvd
 		virtual bool Start();
 		virtual bool Play(); // For PullProvider only, It is called after all publishers create stream
 		virtual bool Stop();
+
+		// If this stream belongs to the Pull provider, 
+		// this function is called periodically by the StreamMotor of application. 
+		// Media data has to be processed here.
+		virtual ProcessMediaResult ProcessMediaPacket()
+		{
+			usleep(100000 * 1);
+			return ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
+		}
 
 	protected:
 		Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type);

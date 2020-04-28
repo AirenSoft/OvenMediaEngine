@@ -14,10 +14,10 @@
 //====================================================================================================
 // Create
 //====================================================================================================
-std::shared_ptr<CmafApplication> CmafApplication::Create(const info::Application &application_info,
+std::shared_ptr<CmafApplication> CmafApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info,
 		const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
 {
-	auto application = std::make_shared<CmafApplication>(application_info, chunked_transfer);
+	auto application = std::make_shared<CmafApplication>(publisher, application_info, chunked_transfer);
 	if(!application->Start())
 	{
 		return nullptr;
@@ -28,9 +28,10 @@ std::shared_ptr<CmafApplication> CmafApplication::Create(const info::Application
 //====================================================================================================
 // CmafApplication
 //====================================================================================================
-CmafApplication::CmafApplication(const info::Application &application_info,
+CmafApplication::CmafApplication(const std::shared_ptr<pub::Publisher> &publisher, 
+								const info::Application &application_info,
 								const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
-									: Application(application_info)
+									: Application(publisher, application_info)
 {
     auto publisher_info = application_info.GetPublisher<cfg::LlDashPublisher>();
     _segment_count = publisher_info->GetSegmentCount();

@@ -25,7 +25,7 @@ namespace info
 	class Application
 	{
 	public:
-		virtual const char* GetApplicationTypeName() const
+		virtual const char* GetApplicationTypeName()
 		{
 			return "ApplicationInfo";
 		}
@@ -139,6 +139,7 @@ namespace info
 
 		application_id_t _application_id = InvalidApplicationId;
 		ov::String _name;
+		ov::String _app_type_name;
 
 		cfg::Application _app_config;
 

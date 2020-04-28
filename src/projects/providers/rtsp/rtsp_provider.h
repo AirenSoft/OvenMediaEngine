@@ -23,6 +23,11 @@ namespace pvd
         explicit RtspProvider(const cfg::Server &server_config, std::shared_ptr<MediaRouteInterface> router);
         ~RtspProvider() override;
 
+        ProviderStreamDirection GetProviderStreamDirection() const override
+		{
+			return ProviderStreamDirection::Push;
+		}
+
 		ProviderType GetProviderType() const override
 		{
 			return ProviderType::Rtsp;

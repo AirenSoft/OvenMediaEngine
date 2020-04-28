@@ -6,7 +6,7 @@
 
 #define OV_LOG_TAG "RtspApplication"
 
-std::shared_ptr<RtspApplication> RtspApplication::Create(const info::Application &application_info)
+std::shared_ptr<RtspApplication> RtspApplication::Create(const std::shared_ptr<Provider> &provider, const info::Application &application_info)
 {
 	auto application = std::make_shared<RtspApplication>(application_info);
 	application->Start();

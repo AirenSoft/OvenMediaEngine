@@ -23,14 +23,17 @@ namespace pvd
 		static std::shared_ptr<OvtStream> Create(const std::shared_ptr<pvd::Application> &application, const uint32_t stream_id, const ov::String &stream_name,	const std::vector<ov::String> &url_list);
 
 		OvtStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list);
-
 		~OvtStream() final;
+
+		// If this stream belongs to the Pull provider, 
+		// this function is called periodically by the StreamMotor of application. 
+		// Media data has to be processed here.
+		Stream::ProcessMediaResult ProcessMediaPacket() override;
 
 	private:
 		bool Start() override;
 		bool Play() override;
 		bool Stop() override;
-		void WorkerThread();
 		bool ConnectOrigin();
 		bool RequestDescribe();
 		bool ReceiveDescribe(uint32_t request_id);
@@ -44,8 +47,6 @@ namespace pvd
 
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		std::shared_ptr<const ov::Url>				_curr_url;
-		bool _stop_thread_flag;
-		std::thread _worker_thread;
 
 		ov::Socket _client_socket;
 

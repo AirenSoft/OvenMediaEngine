@@ -35,6 +35,11 @@ public:
 	explicit RtmpProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 	~RtmpProvider() override;
 
+	ProviderStreamDirection GetProviderStreamDirection() const override
+	{
+		return ProviderStreamDirection::Push;
+	}
+
 	ProviderType GetProviderType() const override
 	{
 		return ProviderType::Rtmp;
@@ -51,7 +56,6 @@ public:
 protected:
 	std::shared_ptr<pvd::Application> OnCreateProviderApplication(const info::Application &application_info) override;
 	bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
-	void OnStreamNotInUse(const info::Stream &stream_info) override;
 
 	//--------------------------------------------------------------------
 	// Implementation of RtmpObserver

@@ -32,9 +32,6 @@ namespace pvd
 
 	bool Provider::Start()
 	{
-		_run_thread = true;
-		_worker_thread = std::thread(&Provider::RegularTask, this);
-
 		logti("%s has been started.", GetProviderName());
 
 		return true;
@@ -42,12 +39,6 @@ namespace pvd
 
 	bool Provider::Stop()
 	{
-		_run_thread = false;
-		if(_worker_thread.joinable())
-		{
-			_worker_thread.join();
-		}
-
 		std::unique_lock<std::shared_mutex> lock(_application_map_mutex);
 
 		auto it = _applications.begin();
@@ -352,72 +343,14 @@ namespace pvd
 
 	bool Provider::StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream)
 	{
-		return stream->Stop();
-	}
-
-	void Provider::OnStreamNotInUse(const info::Stream &stream_info)
-	{
-		logti("%s(%u) stream will be deleted because it is not used", stream_info.GetName().CStr(), stream_info.GetId());
-
 		// Find App
-		auto app_info = stream_info.GetApplicationInfo();
-		auto app = GetApplicationById(app_info.GetId());
+		auto app = stream->GetApplication();
 		if (app == nullptr)
 		{
 			logte("There is no such app (%s)", app_info.GetName().CStr());
-			return;
+			return false;
 		}
 
-		// Find Stream (The stream must not exist)
-		auto stream = app->GetStreamById(stream_info.GetId());
-		if (stream == nullptr)
-		{
-			logte("There is no such stream (%s)", app_info.GetName().CStr());
-			return;
-		}
-
-		StopStream(app_info, stream);
-	}
-
-	void Provider::RegularTask()
-	{
-		while(_run_thread)
-		{
-			std::shared_lock<std::shared_mutex> lock(_application_map_mutex, std::defer_lock);
-			
-			lock.lock();
-			
-			for(auto const &x : _applications)
-			{
-				auto app = x.second;
-				auto streams = app->GetStreams();
-				for(auto const &s : streams)
-				{
-					auto stream = s.second;
-					if(stream->GetState() == Stream::State::STOPPED || stream->GetState() == Stream::State::ERROR)
-					{
-						app->DeleteStream(stream);
-					}
-					else if(stream->GetState() != Stream::State::STOPPING && stream->GetState() != Stream::State::STOPPED && stream->GetState() != Stream::State::ERROR)
-					{
-						// Check if there are streams have no any viewers
-						auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
-						if(stream_metrics != nullptr)
-						{
-							auto current = std::chrono::high_resolution_clock::now();
-							auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastSentTime()).count();
-							
-							if(elapsed_time > 30)
-							{
-								OnStreamNotInUse(*stream);
-							}
-						}
-					}
-				}
-			}
-
-			lock.unlock();
-			sleep(1);
-		}
+		return app->DeleteStream(stream);
 	}
 }

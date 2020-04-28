@@ -14,7 +14,7 @@ namespace mon
 	class HostMetrics;
 	class ApplicationMetrics : public info::Application, public CommonMetrics, public ov::EnableSharedFromThis<ApplicationMetrics>
 	{
-	const char* GetApplicationTypeName() const override
+	const char* GetApplicationTypeName() final
 	{
 		return "ApplicationMetrics";
 	}

@@ -73,7 +73,7 @@ bool RtmpProvider::Stop()
 
 std::shared_ptr<pvd::Application> RtmpProvider::OnCreateProviderApplication(const info::Application &application_info)
 {
-	return RtmpApplication::Create(application_info);
+	return RtmpApplication::Create(pvd::Provider::GetSharedPtrAs<pvd::Provider>(), application_info);
 }
 
 bool RtmpProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
@@ -381,9 +381,4 @@ bool RtmpProvider::OnDeleteStream(info::application_id_t app_id, uint32_t stream
 
 	// Notify MediaRouter that the stream has been deleted.
 	return application->DeleteStream(stream);
-}
-
-void RtmpProvider::OnStreamNotInUse(const info::Stream &stream_info)
-{
-	// NOTHING 
 }

@@ -14,9 +14,9 @@
 //====================================================================================================
 // Create
 //====================================================================================================
-std::shared_ptr<HlsApplication> HlsApplication::Create(const info::Application &application_info)
+std::shared_ptr<HlsApplication> HlsApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 {
-	auto application = std::make_shared<HlsApplication>(application_info);
+	auto application = std::make_shared<HlsApplication>(publisher, application_info);
 	if(!application->Start())
 	{
 		return nullptr;
@@ -27,8 +27,8 @@ std::shared_ptr<HlsApplication> HlsApplication::Create(const info::Application &
 //====================================================================================================
 // HlsApplication
 //====================================================================================================
-HlsApplication::HlsApplication(const info::Application &application_info)
-	: Application(application_info)
+HlsApplication::HlsApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
+	: Application(publisher, application_info)
 {
 }
 

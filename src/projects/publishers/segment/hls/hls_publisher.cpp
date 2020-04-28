@@ -44,7 +44,7 @@ std::shared_ptr<pub::Application> HlsPublisher::OnCreatePublisherApplication(con
 		logtw("There is no suitable encoding setting for %s (Encoding setting must contains h264 and aac)", GetPublisherName());
 	}
 	*/
-	return HlsApplication::Create(application_info);
+	return HlsApplication::Create(pub::Publisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }
 
 bool HlsPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)

@@ -75,6 +75,7 @@ namespace pvd
 	{
 	public:
 		virtual ProviderType GetProviderType() const = 0;
+		virtual ProviderStreamDirection GetProviderStreamDirection() const = 0;
 		virtual const char* GetProviderName() const= 0;
 
 		virtual bool Start();
@@ -96,7 +97,6 @@ namespace pvd
 		// For child class
 		virtual std::shared_ptr<Application> OnCreateProviderApplication(const info::Application &app_info) = 0;
 		virtual bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) = 0;
-		virtual void OnStreamNotInUse(const info::Stream &stream_info);
 
 		//--------------------------------------------------------------------
 		// Implementation of OrchestratorModuleInterface
@@ -111,8 +111,6 @@ namespace pvd
 		bool StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream) override;
 		
 	private:	
-		void 			RegularTask();
-
 		ov::String		GeneratePullingKey(const ov::String &app_name, const ov::String &stream_name);
 
 		const cfg::Server _server_config;
@@ -123,9 +121,6 @@ namespace pvd
 		std::shared_ptr<MediaRouteInterface> _router;
 		std::map<ov::String, std::shared_ptr<PullingItem>>	_pulling_table;
 		std::mutex 											_pulling_table_mutex;
-
-		bool			_run_thread = false;
-		std::thread 	_worker_thread;
 	};
 
 }  // namespace pvd

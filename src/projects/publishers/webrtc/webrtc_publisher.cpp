@@ -225,7 +225,7 @@ bool WebRtcPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pu
 // Publisher에서 Application 생성 요청이 온다.
 std::shared_ptr<pub::Application> WebRtcPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	return RtcApplication::Create(application_info, _ice_port, _signalling_server);
+	return RtcApplication::Create(pub::Publisher::GetSharedPtrAs<pub::Publisher>(), application_info, _ice_port, _signalling_server);
 }
 
 bool WebRtcPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)

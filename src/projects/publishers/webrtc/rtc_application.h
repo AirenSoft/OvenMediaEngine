@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/common_types.h>
+#include <base/publisher/publisher.h>
 #include <base/publisher/application.h>
 #include <base/info/session.h>
 #include <base/ovcrypto/certificate.h>
@@ -11,17 +12,14 @@
 
 class RtcApplication : public pub::Application
 {
-protected:
-	const char* GetApplicationTypeName() const override
-	{
-		return "WebRTC Publisher";
-	}
 
 public:
-	static std::shared_ptr<RtcApplication> Create(const info::Application &application_info,
+	static std::shared_ptr<RtcApplication> Create(const std::shared_ptr<pub::Publisher> &publisher, 
+												  const info::Application &application_info,
 	                                              const std::shared_ptr<IcePort> &ice_port,
 	                                              const std::shared_ptr<RtcSignallingServer> &rtc_signalling);
-	RtcApplication(const info::Application &application_info,
+	RtcApplication(const std::shared_ptr<pub::Publisher> &publisher,
+				   const info::Application &application_info,
 	               const std::shared_ptr<IcePort> &ice_port,
 	               const std::shared_ptr<RtcSignallingServer> &rtc_signalling);
 	~RtcApplication() final;

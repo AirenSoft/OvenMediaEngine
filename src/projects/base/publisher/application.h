@@ -21,13 +21,11 @@ namespace pub
 		Error
 	};
 
+	class Publisher;
 	class Application : public info::Application, public MediaRouteApplicationObserver
 	{
 	public:
-		const char* GetApplicationTypeName() const override
-		{
-			return "Publisher Base Application";
-		}
+		const char* GetApplicationTypeName() final;
 
 		// MediaRouteApplicationObserver Implementation
 		bool OnCreateStream(const std::shared_ptr<info::Stream> &info) override;
@@ -51,7 +49,7 @@ namespace pub
 		virtual bool Stop();
 
 	protected:
-		explicit Application(const info::Application &application_info);
+		explicit Application(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info);
 		virtual ~Application();
 
 		// Stream에 VideoFrame을 전송한다.
@@ -141,6 +139,8 @@ namespace pub
 
 		int64_t	_last_video_ts_ms = 0;
 		int64_t	_last_audio_ts_ms = 0;
+
+		std::shared_ptr<Publisher>		_publisher;
 
 		//std::queue<std::shared_ptr<AudioStreamData>>	_audio_stream_queue;
 	};

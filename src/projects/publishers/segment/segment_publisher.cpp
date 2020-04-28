@@ -468,6 +468,10 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 		}
 	}
 
+	_segment_request_table.insert(std::pair<std::string, std::shared_ptr<SegmentRequestInfo>>(info.GetIpAddress().CStr(), std::make_shared<SegmentRequestInfo>(info)));
+
+	table_lock.unlock();
+
 	// It is a new viewer!
 	if (new_session)
 	{
@@ -521,8 +525,6 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 			
 		}
 	}
-
-	_segment_request_table.insert(std::pair<std::string, std::shared_ptr<SegmentRequestInfo>>(info.GetIpAddress().CStr(), std::make_shared<SegmentRequestInfo>(info)));
 }
 
 bool SegmentPublisher::HandleSignedUrl(const ov::String &app_name, const ov::String &stream_name,

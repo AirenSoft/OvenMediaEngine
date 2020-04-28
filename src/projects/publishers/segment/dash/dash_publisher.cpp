@@ -44,7 +44,7 @@ std::shared_ptr<pub::Application> DashPublisher::OnCreatePublisherApplication(co
 	}
 	*/
 
-	return DashApplication::Create(application_info);
+	return DashApplication::Create(pub::Publisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }
 
 bool DashPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
