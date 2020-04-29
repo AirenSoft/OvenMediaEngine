@@ -15,6 +15,7 @@
 
 #include <monitoring/monitoring.h>
 
+#define OVT_TIMEOUT_MSEC		3000
 namespace pvd
 {
 	class OvtStream : public pvd::Stream
@@ -31,6 +32,17 @@ namespace pvd
 		Stream::ProcessMediaResult ProcessMediaPacket() override;
 
 	private:
+
+		enum class ReceivePacketResult : uint8_t
+		{
+			COMPLETE,
+			IMCOMPLETE,
+			DISCONNECTED,
+			ERROR, 
+			TIMEOUT,
+			ALREADY_COMPLETED,
+		};
+
 		bool Start() override;
 		bool Play() override;
 		bool Stop() override;
@@ -42,13 +54,21 @@ namespace pvd
 		bool RequestStop();
 		bool ReceiveStop(uint32_t request_id, const std::shared_ptr<OvtPacket> &packet);
 
-		std::shared_ptr<OvtPacket> ReceivePacket();
+		void ResetRecvBuffer();
+		ReceivePacketResult ProceedToReceivePacket(bool non_block = false);
+		std::shared_ptr<OvtPacket> GetPacket();
+
+		// Get fragmented packets and parse to get message
+		// it returns only payload
 		std::shared_ptr<ov::Data> ReceiveMessage();
 
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		std::shared_ptr<const ov::Url>				_curr_url;
 
 		ov::Socket _client_socket;
+		ov::Data _recv_buffer;
+		off_t _recv_buffer_offset;
+		std::shared_ptr<OvtPacket> _packet_mold;
 
 		uint32_t _last_request_id;
 		uint32_t _session_id;

@@ -28,6 +28,7 @@ namespace pvd
 	{
 		_stop_thread_flag = false;
 		_thread = std::thread(&StreamMotor::WorkerThread, this);
+
 		return true;
 	}
 
@@ -94,9 +95,13 @@ namespace pvd
 					if(stream->GetState() == Stream::State::PLAYING)
 					{
 						auto result = stream->ProcessMediaPacket();
-						if(result == Stream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS || result == Stream::ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN)
+						if(result == Stream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS)
 						{
-
+							
+						}
+						else if(result == Stream::ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN)
+						{
+							
 						}
 						else
 						{

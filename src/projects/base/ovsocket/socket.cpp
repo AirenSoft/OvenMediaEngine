@@ -1391,7 +1391,7 @@ namespace ov
 		return nullptr;
 	}
 
-	std::shared_ptr<ov::Error> Socket::Recv(void *data, size_t length, size_t *received_length)
+	std::shared_ptr<ov::Error> Socket::Recv(void *data, size_t length, size_t *received_length, bool non_block)
 	{
 		OV_ASSERT2(data != nullptr);
 		OV_ASSERT2(length > 0);
@@ -1407,7 +1407,7 @@ namespace ov
 		{
 			case SocketType::Udp:
 			case SocketType::Tcp:
-				read_bytes = ::recv(_socket.GetSocket(), data, length, (_is_nonblock ? MSG_DONTWAIT : 0));
+				read_bytes = ::recv(_socket.GetSocket(), data, length, (non_block ? MSG_DONTWAIT : 0));
 				break;
 
 			case SocketType::Srt:

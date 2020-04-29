@@ -183,7 +183,8 @@ public:
 	bool 		LoadHeader(const ov::Data &data);
 	bool 		Load(const ov::Data &data);
 
-	bool 		IsValid();
+	bool		IsHeaderAvailable();
+	bool 		IsPacketAvailable();
 
 	uint8_t 	Version();
 	bool 		Marker();
@@ -210,7 +211,7 @@ public:
 private:
 	void 		SetPayloadLength(size_t payload_length);
 
-	bool 		_is_valid;
+	bool 		_is_packet_available = false;
 
 	uint8_t		_version;
 	uint8_t 	_marker;

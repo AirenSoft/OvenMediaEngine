@@ -77,6 +77,16 @@ namespace pvd
 			av_dict_free(&_format_options);
 			_format_options = nullptr;
 		}	
+
+		if(_cumulative_pts != nullptr)
+		{
+			delete[] _cumulative_pts;
+		}
+		
+		if(_cumulative_dts != nullptr)
+		{
+			delete[] _cumulative_dts;
+		}
 	}
 
 	bool RtspcStream::Start()
@@ -310,9 +320,6 @@ namespace pvd
 		}
 
 		_state = State::STOPPING;
-		
-		delete[] _cumulative_pts;
-		delete[] _cumulative_dts;
 
 		return true;
 	}

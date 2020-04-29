@@ -17,13 +17,11 @@ OvtPacket::OvtPacket()
 	_buffer = _data->GetWritableDataAs<uint8_t>();
 
 	_buffer[0] = OVT_VERSION << 6;
-
-	_is_valid = true;
 }
 
 OvtPacket::OvtPacket(const ov::Data &data)
 {
-	_is_valid = Load(data);
+	Load(data);
 }
 
 OvtPacket::~OvtPacket()
@@ -34,6 +32,7 @@ bool OvtPacket::LoadHeader(const ov::Data &data)
 {
 	if(data.GetLength() < OVT_FIXED_HEADER_SIZE)
 	{
+		_is_packet_available = false;
 		return false;
 	}
 
@@ -43,6 +42,7 @@ bool OvtPacket::LoadHeader(const ov::Data &data)
 	if(version != OVT_VERSION)
 	{
 		loge("ERROR", "Version : %d, %d", buffer[0], version);
+		_is_packet_available = false;
 		return false;
 	}
 
@@ -62,6 +62,17 @@ bool OvtPacket::LoadHeader(const ov::Data &data)
 	SetTimestamp(ByteReader<uint64_t>::ReadBigEndian(&buffer[4]));
 	SetSessionId(ByteReader<uint32_t>::ReadBigEndian(&buffer[12]));
 	SetPayloadLength(ByteReader<uint16_t>::ReadBigEndian(&buffer[16]));
+
+	if(PayloadLength() == 0)
+	{
+		_is_packet_available = true;
+	}
+	else
+	{
+		// this packet is unavailable until setiing payload
+		_is_packet_available = false;
+	}
+	
 
 	return true;
 }
@@ -85,9 +96,14 @@ bool OvtPacket::Load(const ov::Data &data)
 	return true;
 }
 
-bool OvtPacket::IsValid()
+bool OvtPacket::IsHeaderAvailable()
 {
-	return _is_valid;
+	return _payload_type > 0;
+}
+
+bool OvtPacket::IsPacketAvailable()
+{
+	return IsHeaderAvailable() && _is_packet_available;
 }
 
 uint8_t OvtPacket::Version()
@@ -212,6 +228,8 @@ bool OvtPacket::SetPayload(const uint8_t *payload, size_t payload_length)
 	// OVT_DEFAULT_MAX_PACKET_SIZE
 	//_data->SetLength(_payload_length);
 	memcpy(&_buffer[OVT_FIXED_HEADER_SIZE], payload, payload_length);
+
+	_is_packet_available = true;
 
 	return true;
 }

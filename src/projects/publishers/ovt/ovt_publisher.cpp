@@ -100,7 +100,7 @@ void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 									const std::shared_ptr<const ov::Data> &data)
 {
 	auto packet = std::make_shared<OvtPacket>(*data);
-	if(!packet->IsValid())
+	if(!packet->IsPacketAvailable())
 	{
 		// If packet is not valid, it is not necessary to response
 		logte("Invalid packet received and ignored");

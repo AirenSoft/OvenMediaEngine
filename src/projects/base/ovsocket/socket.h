@@ -308,7 +308,7 @@ namespace ov
 		// 최대 ByteData의 capacity만큼 데이터를 기록
 		// false가 반환되면 error를 체크해야 함
 		virtual std::shared_ptr<ov::Error> Recv(std::shared_ptr<Data> &data);
-		virtual std::shared_ptr<ov::Error> Recv(void *data, size_t length, size_t *received_length);
+		virtual std::shared_ptr<ov::Error> Recv(void *data, size_t length, size_t *received_length, bool non_block=false);
 
 		// 최대 ByteData의 capacity만큼 데이터를 기록
 		// nullptr이 반환되면 errno를 체크해야 함
