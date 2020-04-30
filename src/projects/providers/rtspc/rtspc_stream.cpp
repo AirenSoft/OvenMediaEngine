@@ -184,6 +184,11 @@ namespace pvd
 		
 		_format_context->flags |= AVFMT_FLAG_GENPTS;
 
+// NONBLK Example 2) Support non_blocking av_read_frame 
+#if 0	
+		fmt_ctx->flags |= AVFMT_FLAG_NONBLOCK;
+#endif
+
 		int err = 0;
 		_stop_watch.Update();
 		if ( (err = ::avformat_open_input(&_format_context, _curr_url->Source().CStr(), NULL, &_format_options))  < 0) 
@@ -335,9 +340,44 @@ namespace pvd
 		bool is_received_first_packet = false;
 
 		_stop_watch.Update();
+
+// NONBLK Example 1)  Checking the received data exists.
+#if 0
+        int fd = av_get_iformat_file_descriptor(fmt_ctx);
+        if(fd != -1)
+        {
+            struct pollfd p = { .fd = fd, .events = POLLIN | POLLPRI, .revents = 0  };
+            int retval = poll(&p, 1, 0);
+            if (retval == -1)  {        
+                // Socket Broken
+                printf("error: %s\n", strerror(errno));
+                continue;
+            }  else if (retval == 0) { 
+                // No Data or timeout
+                continue;
+            }
+            else
+            { 
+                if(p.revents & (POLLIN | POLLPRI)) {
+                    // Ready to receive data
+                }
+            }
+
+        }
+#endif
+
 		int32_t ret = ::av_read_frame(_format_context, &packet);
 		if ( ret < 0 )
 		{
+// NONBLK Example 2) If AVFMT_FLAG_NONBLOCK is enabled, EAGAIN will be returned if there is no data to receive.
+#if 0	
+			if (ret == AVERROR(EAGAIN))
+			{
+				printf(".");
+				continue;
+			}
+#endif
+
 			if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
 			{
 				return ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN;
