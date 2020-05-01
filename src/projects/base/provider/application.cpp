@@ -40,6 +40,15 @@ namespace pvd
 			_thread.join();
 		}
 
+		//STOP AND REMOVE ALL STREAM (NEXT)
+		for(const auto &x : _streams)
+		{
+			auto stream = x.second;
+			stream->Stop();
+		}
+
+		_streams.clear();
+
 		return true;
 	}
 
@@ -408,11 +417,17 @@ namespace pvd
 		for(auto it = _streams.cbegin(); it != _streams.cend(); )
 		{
 			auto stream = it->second;
-
-			stream->Stop();
 			MediaRouteApplicationConnector::DeleteStream(stream);
 			it = _streams.erase(it);
 		}
+
+		for(const auto &x : _stream_motors)
+		{
+			auto motor = x.second;
+			motor->Stop();
+		}
+
+		_stream_motors.clear();
 
 		return true;
 	}
