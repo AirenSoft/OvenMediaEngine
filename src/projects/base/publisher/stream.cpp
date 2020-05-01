@@ -211,6 +211,11 @@ namespace pub
 		}
 
 		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
+		for(const auto &x : _sessions)
+		{
+			auto session = x.second;
+			session->Stop();
+		}
 		_sessions.clear();
 
 		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), _application->GetApplicationTypeName());

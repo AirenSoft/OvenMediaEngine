@@ -54,12 +54,20 @@ namespace pvd
 		virtual bool Play(); // For PullProvider only, It is called after all publishers create stream
 		virtual bool Stop();
 
+		// It is used to detect event by StreamMotor and then StreamMotor calls ProcessMediaPacket
+		// Internally it is used for epoll
+		virtual int GetFileDescriptorForDetectingEvent()
+		{
+			return -1;
+		}
+
 		// If this stream belongs to the Pull provider, 
 		// this function is called periodically by the StreamMotor of application. 
 		// Media data has to be processed here.
 		virtual ProcessMediaResult ProcessMediaPacket()
 		{
-			usleep(100000 * 1);
+			// 0.01 sec
+			usleep(10000 * 1);
 			return ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
 		}
 

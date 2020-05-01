@@ -669,6 +669,11 @@ namespace pvd
 		return std::move(_packet_mold);;
 	}
 
+	int OvtStream::GetFileDescriptorForDetectingEvent()
+	{
+		return _client_socket.GetSocket().GetSocket();
+	}
+
 	Stream::ProcessMediaResult OvtStream::ProcessMediaPacket()
 	{
 		// Non block

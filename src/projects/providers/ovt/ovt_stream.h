@@ -26,6 +26,7 @@ namespace pvd
 		OvtStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list);
 		~OvtStream() final;
 
+		int GetFileDescriptorForDetectingEvent() override;
 		// If this stream belongs to the Pull provider, 
 		// this function is called periodically by the StreamMotor of application. 
 		// Media data has to be processed here.

@@ -21,6 +21,8 @@
 //TODO(Dimiden): It has to be moved to configuration
 #define MAX_STREAM_MOTOR_COUNT					100
 #define MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC	30
+#define MAX_EPOLL_EVENTS						1024
+#define EPOLL_TIMEOUT_MSEC						100
 namespace pvd
 {
 	// StreamMotor is a thread for pull provider stream that calls the stream's ProcessMedia function periodically
@@ -30,6 +32,7 @@ namespace pvd
 		StreamMotor(uint32_t id);
 
 		uint32_t GetId();
+		uint32_t GetStreamCount();
 
 		bool Start();
 		bool Stop();
@@ -38,9 +41,15 @@ namespace pvd
 		bool DelStream(const std::shared_ptr<Stream> &stream);
 
 	private:
+		bool AddStreamToEpoll(const std::shared_ptr<Stream> &stream);
+		bool DelStreamFromEpoll(const std::shared_ptr<Stream> &stream);
+
 		void WorkerThread();
 
 		uint32_t _id;
+
+		int _epoll_fd;
+
 		bool _stop_thread_flag;
 		std::thread _thread;
 		std::shared_mutex _streams_map_guard;
@@ -90,6 +99,7 @@ namespace pvd
 	private:
 
 		std::shared_ptr<StreamMotor> CreateStreamMotorInternal(const std::shared_ptr<Stream> &stream);
+		bool DeleteStreamMotorInternal(const std::shared_ptr<Stream> &stream);
 		bool DeleteStreamInternal(const std::shared_ptr<Stream> &stream);
 		std::shared_ptr<StreamMotor> GetStreamMotorInternal(const std::shared_ptr<Stream> &stream);
 

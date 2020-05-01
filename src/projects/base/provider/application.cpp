@@ -24,8 +24,22 @@ namespace pvd
 		return _id;
 	}
 
+	uint32_t StreamMotor::GetStreamCount()
+	{
+		std::shared_lock<std::shared_mutex> lock(_streams_map_guard);
+		return _streams.size();
+	}
+
 	bool StreamMotor::Start()
 	{
+		// create epoll
+		_epoll_fd = epoll_create1(0);
+		if(_epoll_fd == -1)
+		{
+			logte("Cannot create EPOLL fd : %d", _id);
+			return false;
+		}
+
 		_stop_thread_flag = false;
 		_thread = std::thread(&StreamMotor::WorkerThread, this);
 
@@ -35,6 +49,7 @@ namespace pvd
 	bool StreamMotor::Stop()
 	{
 		_stop_thread_flag = true;
+		close(_epoll_fd);
 		if(_thread.joinable())
 		{
 			_thread.join();
@@ -52,15 +67,66 @@ namespace pvd
 		return true;
 	}
 
+	bool StreamMotor::AddStreamToEpoll(const std::shared_ptr<Stream> &stream)
+	{
+		int stream_fd = stream->GetFileDescriptorForDetectingEvent();
+		if(stream_fd == -1)
+		{
+			logte("Failed to add stream : %s/%s(%u) Stream failed to provide the file description for event detection", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+			return false;
+		}
+
+		struct epoll_event event;
+		event.events = EPOLLIN;
+		event.data.u32 = stream->GetId();
+
+		//TODO(Getroot): epoll_ctl and epoll_wait are thread-safe so it doesn't need to be protected. (right?, check carefully again!)
+		int result = epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, stream_fd, &event);
+		if(result == -1)
+		{
+			logte("%s/%s(%u) Stream could not be added to the epoll (err : %d)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), result);
+			return false;
+		}
+
+		return true;
+	}
+
+	bool StreamMotor::DelStreamFromEpoll(const std::shared_ptr<Stream> &stream)
+	{
+		int stream_fd = stream->GetFileDescriptorForDetectingEvent();
+		if(stream_fd == -1)
+		{
+			logte("Failed to delete stream : %s/%s(%u) Stream failed to provide the file description for event detection", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+			return false;
+		}
+
+		//TODO(Getroot): epoll_ctl and epoll_wait are thread-safe so it doesn't need to be protected. (right?, check carefully again!)
+		int result = epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, stream_fd, nullptr);
+		if(result == -1)
+		{
+
+			logte("%s/%s(%u) Stream could not be deleted to the epoll (err : %d)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), result);
+			return false;
+		}
+
+		return true;
+	}
+
 	bool StreamMotor::AddStream(const std::shared_ptr<Stream> &stream)
 	{
 		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
 		_streams[stream->GetId()] = stream;
 		lock.unlock();
 
-		logti("%s/%s(%u) stream has added to %u StreamMotor", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), GetId());
-
 		stream->Play();
+
+		if(!AddStreamToEpoll(stream))
+		{
+			DelStream(stream);
+			return false;
+		}
+
+		logti("%s/%s(%u) stream has added to %u StreamMotor", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), GetId());
 
 		return true;
 	}
@@ -70,6 +136,7 @@ namespace pvd
 		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
 		if(_streams.find(stream->GetId()) == _streams.end())
 		{
+			// may be already deleted
 			return false;
 		}
 		_streams.erase(stream->GetId());
@@ -77,6 +144,7 @@ namespace pvd
 
 		logti("%s/%s(%u) stream has deleted from %u StreamMotor", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), GetId());
 
+		DelStreamFromEpoll(stream);
 		stream->Stop();
 
 		return true;
@@ -87,20 +155,39 @@ namespace pvd
 		
 		while(true)
 		{
-			// TODO (Getroot): If there is no stream, use semaphore to wait until the stream is added.
+			struct epoll_event epoll_events[MAX_EPOLL_EVENTS];
+
+			int event_count = epoll_wait(_epoll_fd, epoll_events, MAX_EPOLL_EVENTS, EPOLL_TIMEOUT_MSEC);
 
 			if(_stop_thread_flag)
 			{
 				break;
 			}
 
+			if(event_count < 0)
 			{
-				std::shared_lock<std::shared_mutex> stream_lock(_streams_map_guard);
-				
-				for(auto &it : _streams)
-				{
-					auto stream = it.second;
+				// error
+				logtc("%d StreamMotor terminated : epoll_wait error (errno : %d)", _id, errno);
+				return ;
+			}
 
+			for(int i=0; i<event_count; i++)
+			{
+				auto stream_id = epoll_events[i].data.u32;
+				auto events = epoll_events[i].events;
+
+				std::shared_lock<std::shared_mutex> stream_lock(_streams_map_guard);
+				auto it = _streams.find(stream_id);
+				if(it == _streams.end())
+				{
+					continue;
+				}
+
+				auto stream = it->second;
+				stream_lock.unlock();
+
+				if(OV_CHECK_FLAG(events, EPOLLIN))
+				{
 					if(stream->GetState() == Stream::State::PLAYING)
 					{
 						auto result = stream->ProcessMediaPacket();
@@ -114,10 +201,21 @@ namespace pvd
 						}
 						else
 						{
-							// remove stream
+							DelStream(stream);
 						}
 					}
+					else
+					{
+						DelStream(stream);
+					}
+					
 				}
+				// All other events indicate errors.
+				else
+				{
+					DelStream(stream);
+				}
+				
 			}
 		}
 	}
@@ -298,15 +396,46 @@ namespace pvd
 
 	std::shared_ptr<StreamMotor> Application::CreateStreamMotorInternal(const std::shared_ptr<Stream> &stream)
 	{
-		auto motor_id = GetStreamMotorId(stream);
-		auto motor = std::make_shared<StreamMotor>(motor_id);
+		if(_provider->GetProviderStreamDirection() == ProviderStreamDirection::Pull)
+		{
+			auto motor_id = GetStreamMotorId(stream);
+			auto motor = std::make_shared<StreamMotor>(motor_id);
 
-		_stream_motors.emplace(motor_id, motor);
-		motor->Start();
+			_stream_motors.emplace(motor_id, motor);
+			motor->Start();
 
-		logti("%s application has created %u stream motor", stream->GetApplicationInfo().GetName().CStr(), motor_id);
+			logti("%s application has created %u stream motor", stream->GetApplicationInfo().GetName().CStr(), motor_id);
 
-		return motor;
+			return motor;
+		}
+
+		return nullptr;
+	}
+
+	bool Application::DeleteStreamMotorInternal(const std::shared_ptr<Stream> &stream)
+	{
+		if(_provider->GetProviderStreamDirection() == ProviderStreamDirection::Pull)
+		{
+			auto motor = GetStreamMotorInternal(stream);
+			if(motor == nullptr)
+			{
+				logtc("Could not find stream motor to remove stream : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+				return false;
+			}
+			
+			motor->DelStream(stream);
+
+			if(motor->GetStreamCount() == 0)
+			{
+				motor->Stop();
+				auto motor_id = GetStreamMotorId(stream);
+				_stream_motors.erase(motor_id);
+
+				logti("%s application has deleted %u stream motor", stream->GetApplicationInfo().GetName().CStr(), motor_id);
+			}
+		}
+
+		return true;
 	}
 
 	// For pull providers
@@ -348,6 +477,7 @@ namespace pvd
 		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
 
 		DeleteStreamInternal(stream);
+		DeleteStreamMotorInternal(stream);
 
 		streams_lock.unlock();
 		
@@ -364,17 +494,6 @@ namespace pvd
 			return false;
 		}
 		_streams.erase(stream->GetId());
-
-		auto motor = GetStreamMotorInternal(stream);
-		if(motor == nullptr)
-		{
-			logtc("Could not find stream motor to remove stream : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
-			return false;
-		}
-		
-		motor->DelStream(stream);
-
-		//TODO(Getroot): If there is no stream in the StreamMotor, delete StreamMotor to save system resource.
 
 		return true;
 	}
