@@ -137,7 +137,7 @@ namespace pub
 
 	std::shared_ptr<Application> Publisher::GetApplicationByName(ov::String app_name)
 	{
-		std::lock_guard<std::shared_mutex> lock(_application_map_mutex);
+		std::shared_lock<std::shared_mutex> lock(_application_map_mutex);
 		for (auto const &x : _applications)
 		{
 			auto application = x.second;
@@ -167,7 +167,6 @@ namespace pub
 		std::shared_lock<std::shared_mutex> lock(_application_map_mutex);
 
 		auto application = _applications.find(application_id);
-
 		if (application == _applications.end())
 		{
 			return nullptr;
@@ -179,7 +178,6 @@ namespace pub
 	std::shared_ptr<Stream> Publisher::GetStream(info::application_id_t application_id, uint32_t stream_id)
 	{
 		auto app = GetApplicationById(application_id);
-
 		if (app != nullptr)
 		{
 			return app->GetStream(stream_id);

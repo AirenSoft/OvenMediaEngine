@@ -161,7 +161,6 @@ namespace pub
 	std::shared_ptr<Stream> Application::GetStream(uint32_t stream_id)
 	{
 		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
-
 		auto it = _streams.find(stream_id);
 		if (it == _streams.end())
 		{
@@ -188,37 +187,35 @@ namespace pub
 
 	std::shared_ptr<Application::VideoStreamData> Application::PopVideoStreamData()
 	{
-		std::unique_lock<std::mutex> lock(_video_stream_queue_guard);
-
+		std::lock_guard<std::mutex> lock(_video_stream_queue_guard);
 		if (_video_stream_queue.empty())
 		{
 			return nullptr;
 		}
 
 		// 데이터를 하나 꺼낸다.
-		auto data = std::move(_video_stream_queue.front());
+		auto data = _video_stream_queue.front();
 		_video_stream_queue.pop();
 		return data;
 	}
 
 	std::shared_ptr<Application::AudioStreamData> Application::PopAudioStreamData()
 	{
-		std::unique_lock<std::mutex> lock(_audio_stream_queue_guard);
-
+		std::lock_guard<std::mutex> lock(_audio_stream_queue_guard);
 		if (_audio_stream_queue.empty())
 		{
 			return nullptr;
 		}
 
 		// 데이터를 하나 꺼낸다.
-		auto data = std::move(_audio_stream_queue.front());
+		auto data = _audio_stream_queue.front();
 		_audio_stream_queue.pop();
 		return data;
 	}
 
 	std::shared_ptr<Application::IncomingPacket> Application::PopIncomingPacket()
 	{
-		std::unique_lock<std::mutex> lock(this->_incoming_packet_queue_guard);
+		std::lock_guard<std::mutex> lock(this->_incoming_packet_queue_guard);
 
 		if (_incoming_packet_queue.empty())
 		{
@@ -226,7 +223,7 @@ namespace pub
 		}
 
 		// 데이터를 하나 꺼낸다.
-		auto packet = std::move(_incoming_packet_queue.front());
+		auto packet = _incoming_packet_queue.front();
 		_incoming_packet_queue.pop();
 		return packet;
 	}

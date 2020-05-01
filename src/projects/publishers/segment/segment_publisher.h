@@ -81,9 +81,6 @@ private:
 	std::chrono::system_clock::time_point	_last_requested_time;
 };
 
-// It is used to calculate concurrent users.
-// When the client has received as many as SEGEMTN_COUNT_DETERMINE_PLAYBACK segments, it is determined that playback has started.
-#define SEGMENT_COUNT_DETERMINE_PLAYBACK		2
 class SegmentRequestInfo
 {
 public:
