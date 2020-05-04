@@ -22,7 +22,7 @@ extern "C"
 }
 
 //TODO(Dimiden): It needs to move to configuration
-#define RTSP_PULL_TIMEOUT_MSEC	3000
+#define RTSP_PULL_TIMEOUT_MSEC	10000
 
 namespace pvd
 {

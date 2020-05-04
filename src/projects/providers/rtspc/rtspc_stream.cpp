@@ -219,6 +219,7 @@ namespace pvd
 			return false;
 		}
 
+		_stop_watch.Update();
 		if (::avformat_find_stream_info(_format_context, NULL) < 0) 
 		{
 			_state = State::ERROR;        	
@@ -343,7 +344,6 @@ namespace pvd
 		bool is_received_first_packet = false;
 
 		_stop_watch.Update();
-
 		int32_t ret = ::av_read_frame(_format_context, &packet);
 		if ( ret < 0 )
 		{
@@ -361,7 +361,7 @@ namespace pvd
 			if ( (ret == AVERROR_EOF || ::avio_feof(_format_context->pb)) && !is_eof)
 			{
 				// If EOF is not receiving packets anymore, end thread.
-				logti("%s/%s(%u) RtspcStream thread has finished.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+				logti("%s/%s(%u) RtspcStream has finished.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 				_state = State::STOPPED;
 				is_eof = true;
 				return ProcessMediaResult::PROCESS_MEDIA_FINISH;
@@ -370,7 +370,7 @@ namespace pvd
 			if (_format_context->pb && _format_context->pb->error)
 			{
 				// If the connection is broken, terminate the thread.
-				logte("%s/%s(%u) RtspcStream's connection has broken. The thread has been terminated.", 
+				logte("%s/%s(%u) RtspcStream's connection has broken.", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 				_state = State::ERROR;
 				return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
