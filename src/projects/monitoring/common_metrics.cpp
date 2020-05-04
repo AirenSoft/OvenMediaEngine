@@ -14,6 +14,7 @@ namespace mon
 		_max_total_connections = 0;
 
         _max_total_connection_time = std::chrono::system_clock::now();
+		_last_recv_time = std::chrono::system_clock::now();
         _last_sent_time = std::chrono::system_clock::now();
 
         for(int i=0; i<static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
@@ -87,6 +88,11 @@ namespace mon
 		return _max_total_connection_time;
 	}
 
+	std::chrono::system_clock::time_point CommonMetrics::GetLastRecvTime()
+	{
+		return _last_recv_time;
+	}
+
 	std::chrono::system_clock::time_point CommonMetrics::GetLastSentTime()
 	{
 		return _last_sent_time;
@@ -104,6 +110,7 @@ namespace mon
     void CommonMetrics::IncreaseBytesIn(uint64_t value)
 	{
 		_total_bytes_in += value;
+		_last_recv_time = std::chrono::system_clock::now();
 		UpdateDate();
 	}
 	void CommonMetrics::IncreaseBytesOut(PublisherType type, uint64_t value)

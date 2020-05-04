@@ -311,11 +311,18 @@ namespace pvd
 					if(stream_metrics != nullptr)
 					{
 						auto current = std::chrono::high_resolution_clock::now();
-						auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastSentTime()).count();
+						auto elapsed_time_from_last_sent = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastSentTime()).count();
+						auto elapsed_time_from_last_recv = std::chrono::duration_cast<std::chrono::seconds>(current - stream_metrics->GetLastRecvTime()).count();
 						
-						if(elapsed_time > MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC)
+						if(elapsed_time_from_last_recv > MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC/5)
 						{
-							logti("%s/%s(%u) stream will be deleted becasue it hasn't been used for %u seconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC);
+							logtw("%s/%s(%u) There are no imcoming packets. %d seconds have elapsed since the last packet was receivced.", 
+									stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
+						}
+
+						if(elapsed_time_from_last_sent > MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC)
+						{
+							logtw("%s/%s(%u) stream will be deleted becasue it hasn't been used for %u seconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC);
 							DeleteStream(stream);
 						}
 					}

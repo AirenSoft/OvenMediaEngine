@@ -24,6 +24,7 @@ namespace mon
 		virtual uint32_t GetTotalConnections();
 		virtual uint32_t GetMaxTotalConnections();
 		virtual std::chrono::system_clock::time_point GetMaxTotalConnectionsTime();
+		virtual std::chrono::system_clock::time_point GetLastRecvTime();
 		virtual std::chrono::system_clock::time_point GetLastSentTime();
 		virtual uint64_t GetBytesOut(PublisherType type);
 		virtual uint64_t GetConnections(PublisherType type);
@@ -54,6 +55,7 @@ namespace mon
 		// Time to reach maximum number of connections. 
 		// TODO(Getroot): Does it need mutex? Check!
 		std::chrono::system_clock::time_point	_max_total_connection_time;
+		std::chrono::system_clock::time_point	_last_recv_time;
 		std::chrono::system_clock::time_point	_last_sent_time;
 
 		// From Publishers
