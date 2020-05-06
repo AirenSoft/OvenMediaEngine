@@ -41,3 +41,8 @@ std::shared_ptr<ov::Error> InitializeSrt();
 const char *GetOpenSslConfiguration();
 const char *GetOpenSslVersion();
 std::shared_ptr<ov::Error> InitializeOpenSsl();
+
+//--------------------------------------------------------------------
+// Related to jemalloc
+//--------------------------------------------------------------------
+const char *GetJemallocVersion();

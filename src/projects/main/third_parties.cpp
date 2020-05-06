@@ -9,6 +9,7 @@
 #include "./third_parties.h"
 
 #include <base/ovcrypto/ovcrypto.h>
+#include <jemalloc/jemalloc.h>
 #include <srt/srt.h>
 
 #include <regex>
@@ -256,4 +257,9 @@ std::shared_ptr<ov::Error> InitializeOpenSsl()
 	}
 
 	return ov::Error::CreateErrorFromOpenSsl();
+}
+
+const char *GetJemallocVersion()
+{
+	return JEMALLOC_VERSION;
 }

@@ -228,6 +228,7 @@ static void PrintBanner()
 	logti("  SRTP: %s", GetSrtpVersion());
 	logti("  OpenSSL: %s", GetOpenSslVersion());
 	logti("    Configuration: %s", GetOpenSslConfiguration());
+	logti("  jemalloc: %s", GetJemallocVersion());
 }
 
 static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_option)
