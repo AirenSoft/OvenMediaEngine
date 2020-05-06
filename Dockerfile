@@ -18,7 +18,7 @@ ENV     OME_VERSION=dev \
         X264_VERSION=20190513-2245-stable \
         VPX_VERSION=1.7.0 \
         FDKAAC_VERSION=0.1.5 \
-        FFMPEG_VERSION=3.4.7
+        FFMPEG_VERSION=3.4
 
 ## Install build utils
 RUN     apk add --no-cache --update curl perl make gcc musl-dev linux-headers tcl cmake g++ coreutils git autoconf automake libtool diffutils yasm nasm pkgconfig binutils
@@ -112,7 +112,7 @@ RUN \
         DIR=/tmp/ffmpeg && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sLf https://github.com/AirenSoft/FFmpeg/archive/ov${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+        curl -sLf https://github.com/AirenSoft/FFmpeg/archive/ome/${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
         PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}" ./configure \
         --prefix="${PREFIX}" \
         --enable-gpl \
