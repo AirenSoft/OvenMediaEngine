@@ -18,7 +18,8 @@ ENV     OME_VERSION=dev \
         X264_VERSION=20190513-2245-stable \
         VPX_VERSION=1.7.0 \
         FDKAAC_VERSION=0.1.5 \
-        FFMPEG_VERSION=3.4
+        FFMPEG_VERSION=3.4 \
+        JEMALLOC_VERSION=5.2.1
 
 ## Install build utils
 RUN     apk add --no-cache --update curl perl make gcc musl-dev linux-headers tcl cmake g++ coreutils git autoconf automake libtool diffutils yasm nasm pkgconfig binutils
@@ -136,6 +137,17 @@ RUN \
         make && \
         make install && \
         rm -rf ${PREFIX}/share && \
+        rm -rf ${DIR}
+
+## Build jemalloc
+RUN \
+        DIR=/tmp/jemalloc && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        curl -sLf https://github.com/jemalloc/jemalloc/releases/download/${JEMALLOC_VERSION}/jemalloc-${JEMALLOC_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
+        ./configure --prefix="${PREFIX}" && \
+        make && \
+        make install_include install_lib && \
         rm -rf ${DIR}
 
 ## Build OvenMediaEngine
