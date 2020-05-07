@@ -104,7 +104,10 @@ namespace pvd
 		int result = epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, stream_fd, nullptr);
 		if(result == -1)
 		{
-
+			if(errno == ENOENT)
+			{
+				return true;
+			}
 			logte("%s/%s(%u) Stream could not be deleted to the epoll (err : %d)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), result);
 			return false;
 		}
@@ -152,7 +155,6 @@ namespace pvd
 
 	void StreamMotor::WorkerThread()
 	{
-		
 		while(true)
 		{
 			struct epoll_event epoll_events[MAX_EPOLL_EVENTS];
@@ -201,19 +203,22 @@ namespace pvd
 						}
 						else
 						{
-							DelStream(stream);
+							// it will be deleted from WhiteElephantCollector
+							DelStreamFromEpoll(stream);
 						}
 					}
 					else
 					{
-						DelStream(stream);
+						// it will be deleted from WhiteElephantCollector
+						DelStreamFromEpoll(stream);
 					}
 					
 				}
 				// All other events indicate errors.
 				else
 				{
-					DelStream(stream);
+					// it will be deleted from WhiteElephantCollector
+					DelStreamFromEpoll(stream);
 				}
 				
 			}
