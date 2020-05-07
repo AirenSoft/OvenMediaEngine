@@ -80,9 +80,9 @@ RtcPeerBrowser RtcPeerInfo::ParseBrowserInfo(const ov::String &user_agent)
 	{
 		browser.browser_type = RtcBrowserType::Safari;
 	}
-	else if((user_agent.IndexOf("FireFox") >= 0) && (user_agent.IndexOf("SeaMonkey") < 0))
+	else if((user_agent.IndexOf("Firefox") >= 0) && (user_agent.IndexOf("SeaMonkey") < 0))
 	{
-		browser.browser_type = RtcBrowserType::FireFox;
+		browser.browser_type = RtcBrowserType::Firefox;
 	}
 	else if(user_agent.IndexOf("Edge") >= 0)
 	{

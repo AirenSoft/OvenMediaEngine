@@ -37,7 +37,7 @@ enum class RtcOsType : char
 enum class RtcBrowserType : uint16_t
 {
 	Chrome,
-	FireFox,
+	Firefox,
 	Safari,
 	Edge,
 	Other
@@ -137,8 +137,8 @@ struct RtcPeerBrowser
 				description.Append("Chrome v");
 				break;
 
-			case RtcBrowserType::FireFox:
-				description.Append("FireFox v");
+			case RtcBrowserType::Firefox:
+				description.Append("Firefox v");
 				break;
 
 			case RtcBrowserType::Safari:
