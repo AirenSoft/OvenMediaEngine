@@ -62,7 +62,7 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 {
 	auto socket = std::make_shared<ov::ServerSocket>();
 
-	if (socket->Prepare(type, address, send_buffer_size, recv_buffer_size, 1024))
+	if (socket->Prepare(type, address, send_buffer_size, recv_buffer_size, 4096))
 	{
 		_type = type;
 		_server_socket = socket;
