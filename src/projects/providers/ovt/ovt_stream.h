@@ -74,6 +74,9 @@ namespace pvd
 		uint32_t _last_request_id;
 		uint32_t _session_id;
 
+		double _origin_request_time_msec = 0;
+		double _origin_response_time_msec = 0;
+
 		OvtDepacketizer _depacketizer;
 		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 	};

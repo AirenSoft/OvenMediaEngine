@@ -312,7 +312,6 @@ bool RtmpProvider::OnAudioData(info::application_id_t application_id,
 		return false;
 	}
 
-
 	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
 	if(stream_metrics != nullptr)
 	{

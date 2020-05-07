@@ -106,7 +106,7 @@ namespace pvd
 
 		auto end = std::chrono::steady_clock::now();
 		std::chrono::duration<double, std::milli> elapsed = end - begin;
-		auto origin_request_time_msec = elapsed.count();
+		_origin_request_time_msec = elapsed.count();
 
 		begin = std::chrono::steady_clock::now();
 		if (!RequestDescribe())
@@ -116,14 +116,7 @@ namespace pvd
 
 		end = std::chrono::steady_clock::now();
 		elapsed = end - begin;
-		auto origin_response_time_msec = elapsed.count();
-
-		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
-		if(_stream_metrics != nullptr)
-		{
-			_stream_metrics->SetOriginRequestTimeMSec(origin_request_time_msec);
-			_stream_metrics->SetOriginResponseTimeMSec(origin_response_time_msec);
-		}
+		_origin_response_time_msec = elapsed.count();
 
 		return pvd::Stream::Start();
 	}
@@ -133,6 +126,14 @@ namespace pvd
 		if (!RequestPlay())
 		{
 			return false;
+		}
+
+		// Stream was created completly 
+		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
+		if(_stream_metrics != nullptr)
+		{
+			_stream_metrics->SetOriginRequestTimeMSec(_origin_request_time_msec);
+			_stream_metrics->SetOriginResponseTimeMSec(_origin_response_time_msec);
 		}
 
 		return pvd::Stream::Play();

@@ -9,6 +9,7 @@
 #include "host_metrics.h"
 #include <shared_mutex>
 
+#define MonitorInstance				mon::Monitoring::GetInstance()
 #define HostMetrics(info)			mon::Monitoring::GetInstance()->GetHostMetrics(info);
 #define ApplicationMetrics(info)	mon::Monitoring::GetInstance()->GetApplicationMetrics(info);
 #define StreamMetrics(info)			mon::Monitoring::GetInstance()->GetStreamMetrics(info);

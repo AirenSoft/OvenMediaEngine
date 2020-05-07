@@ -114,15 +114,17 @@ public:
 			_ip_address == next._ip_address && 
 			_sequence_number + 1 == next._sequence_number)
 		{
+			// Not measuring the time interval between segment requests will give more accurate results when the network is bad.
 			return true;
 
+			/*TODO(Getroot): Check again how effective this function is
 			auto gap = std::chrono::duration_cast<std::chrono::seconds>(next._last_requested_time - _last_requested_time).count();
-			
 			// the next request comes in within a short time
 			if(gap < _duration * 5)
 			{
 				return true;
 			}
+			*/
 		}
 		return false;
 	}

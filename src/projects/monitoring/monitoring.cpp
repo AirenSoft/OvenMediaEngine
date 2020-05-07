@@ -140,11 +140,7 @@ namespace mon
 		auto stream_metric = app_metric->GetStreamMetrics(stream);
 		if (stream_metric == nullptr)
 		{
-			// If the stream metrics is not exist, then create!
-			if (!OnStreamCreated(stream))
-			{
-				return nullptr;
-			}
+			return nullptr;
 		}
 
 		stream_metric = app_metric->GetStreamMetrics(stream);
