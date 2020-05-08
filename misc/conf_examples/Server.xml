@@ -22,18 +22,18 @@
 			<HLS>
 				<Port>80</Port>
 				<!-- If you want to use TLS, specify the TLS port -->
-				<!-- <TlsPort>443</TlsPort> -->
+				<!-- <TLSPort>443</TLSPort> -->
 			</HLS>
 			<DASH>
 				<Port>80</Port>
 				<!-- If you want to use TLS, specify the TLS port -->
-				<!-- <TlsPort>443</TlsPort> -->
+				<!-- <TLSPort>443</TLSPort> -->
 			</DASH>
 			<WebRTC>
 				<Signalling>
 					<Port>3333</Port>
 					<!-- If you want to use TLS, specify the TLS port -->
-					<!-- <TlsPort>3334</TlsPort> -->
+					<!-- <TLSPort>3334</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
 					<IceCandidate>*:10000-10005/udp</IceCandidate>
