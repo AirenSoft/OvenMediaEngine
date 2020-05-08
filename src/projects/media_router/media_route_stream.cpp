@@ -172,7 +172,10 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		int64_t uptime =  std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - _stat_start_time).count();
 
 		ov::String temp_str = "\n";
-		temp_str.AppendFormat(" - Stream of MediaRouter | name : %s, uptime : %lldms , queue : %d" ,_stream->GetName().CStr(), (int64_t)uptime, _media_packets.size());
+		temp_str.AppendFormat(" - Stream of MediaRouter | name : %s/%s, uptime : %lldms , queue : %d" 
+			,_stream->GetApplicationInfo().GetName().CStr()
+			,_stream->GetName().CStr()
+			,(int64_t)uptime, _media_packets.size());
 
 		// 모든 트랙 상태를 출력
 		for(const auto &iter : _stream->GetTracks())
@@ -222,7 +225,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 				, _stat_recv_pkt_size[track_id]);
 		}
 
-		logts("%s", temp_str.CStr());
+		logtd("%s", temp_str.CStr());
 	}
 
 
