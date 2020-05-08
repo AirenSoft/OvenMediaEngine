@@ -51,7 +51,7 @@ namespace ov
 					T value = std::move(_queue.front());
 					_queue.pop();
 
-					return value;
+					return std::move(value);
 				}
 				else
 				{

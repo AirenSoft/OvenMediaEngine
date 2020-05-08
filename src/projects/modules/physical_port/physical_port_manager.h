@@ -8,10 +8,10 @@
 //==============================================================================
 #pragma once
 
+#include <memory>
+
 #include "physical_port.h"
 #include "physical_port_observer.h"
-
-#include <memory>
 
 class PhysicalPortManager : public ov::Singleton<PhysicalPortManager>
 {

@@ -8,26 +8,30 @@
 //==============================================================================
 #pragma once
 
-#include "physical_port_observer.h"
+#include <base/ovsocket/ovsocket.h>
 
-#include <memory>
 #include <functional>
+#include <memory>
 #include <thread>
 
-#include <base/ovsocket/ovsocket.h>
+#include "physical_port_observer.h"
+
+class PhysicalPortWorker;
 
 // PhysicalPort는 여러 곳에서 공유해서 사용할 수 있음
 // PhysicalPortObserver를 iteration 하면서 callback 할 수 있는 구조 필요
-class PhysicalPort
+class PhysicalPort : public ov::EnableSharedFromThis<PhysicalPort>
 {
 public:
+	friend class PhysicalPortWorker;
+
 	PhysicalPort();
 	virtual ~PhysicalPort();
 
 	bool Create(ov::SocketType type,
-                const ov::SocketAddress &address,
-                int send_buffer_size = 0,
-                int recv_buffer_size = 0);
+				const ov::SocketAddress &address,
+				int send_buffer_size = 0,
+				int recv_buffer_size = 0);
 
 	bool Close();
 
@@ -51,13 +55,11 @@ public:
 
 protected:
 	bool CreateServerSocket(ov::SocketType type,
-	                        const ov::SocketAddress &address,
-	                        int send_buffer_size,
-                            int recv_buffer_size);
+							const ov::SocketAddress &address,
+							int send_buffer_size,
+							int recv_buffer_size);
 
 	bool CreateDatagramSocket(ov::SocketType type, const ov::SocketAddress &address);
-
-	std::shared_ptr<PhysicalPort> _self;
 
 	ov::SocketType _type;
 	ov::SocketAddress _address;
@@ -69,4 +71,7 @@ protected:
 	std::thread _thread;
 
 	std::vector<PhysicalPortObserver *> _observer_list;
+
+	std::shared_mutex _worker_mutex;
+	std::vector<std::shared_ptr<PhysicalPortWorker>> _worker_list;
 };

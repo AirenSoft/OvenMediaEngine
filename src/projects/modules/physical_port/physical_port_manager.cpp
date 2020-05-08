@@ -8,6 +8,8 @@
 //==============================================================================
 #include "physical_port_manager.h"
 
+#include "physical_port_private.h"
+
 PhysicalPortManager::PhysicalPortManager()
 {
 }
@@ -22,11 +24,11 @@ std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(ov::SocketType typ
 	auto item = _port_list.find(key);
 	std::shared_ptr<PhysicalPort> port = nullptr;
 
-	if(item == _port_list.end())
+	if (item == _port_list.end())
 	{
 		port = std::make_shared<PhysicalPort>();
 
-		if(port->Create(type, address))
+		if (port->Create(type, address))
 		{
 			_port_list[key] = port;
 		}
@@ -48,13 +50,13 @@ bool PhysicalPortManager::DeletePort(std::shared_ptr<PhysicalPort> &port)
 	auto key = std::make_pair(port->GetType(), port->GetAddress());
 	auto item = _port_list.find(key);
 
-	if(item == _port_list.end())
+	if (item == _port_list.end())
 	{
 		OV_ASSERT2(false);
 		return false;
 	}
 
-	if(port.use_count() == 2)
+	if (port.use_count() == 2)
 	{
 		// last reference
 		_port_list.erase(item);

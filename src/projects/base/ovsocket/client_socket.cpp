@@ -35,7 +35,8 @@ namespace ov
 
 		_local_address = (server_socket != nullptr) ? server_socket->GetLocalAddress() : nullptr;
 
-		MakeNonBlocking();
+		// TODO(dimiden): (ClientSocketBlocking) Currently, 1 thread is created per socket, so blocking mode is used until implementing code that handles EAGAIN
+		// MakeNonBlocking();
 	}
 
 	ClientSocket::~ClientSocket()
@@ -98,11 +99,12 @@ namespace ov
 		while (_force_stop == false)
 		{
 			// Wait for transmission up to CLIENT_SOCKET_SEND_TIMEOUT
-			if (send_item.IsExpired(CLIENT_SOCKET_SEND_TIMEOUT))
-			{
-				logtw("[%p] [#%d] Expired (%zu bytes sent)", this, _socket.GetSocket(), total_sent_bytes);
-				return false;
-			}
+			// TODO(dimiden): (ClientSocketBlocking) Temporarily comment while processing as blocking
+			// if (send_item.IsExpired(CLIENT_SOCKET_SEND_TIMEOUT))
+			// {
+			// 	logtw("[%p] [#%d] Expired (%zu bytes sent)", this, _socket.GetSocket(), total_sent_bytes);
+			// 	return false;
+			// }
 
 			auto sent_bytes = SendInternal(data, remained);
 

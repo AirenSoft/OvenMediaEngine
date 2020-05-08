@@ -1618,22 +1618,23 @@ namespace ov
 						auto data = std::make_shared<ov::Data>();
 						data->Reserve(MAX_BUFFER_SIZE);
 
-						while (true)
-						{
-							auto error = Recv(data);
+						// TODO(dimiden): (ClientSocketBlocking) Temporarily comment while processing as blocking
+						// while (true)
+						// {
+						// 	auto error = Recv(data);
 
-							if (error != nullptr)
-							{
-								// Ignore the error
-								logtd("[%p] [#%d] An error received: %s", this, socket.GetSocket(), error->ToString().CStr());
-								break;
-							}
+						// 	if (error != nullptr)
+						// 	{
+						// 		// Ignore the error
+						// 		logtd("[%p] [#%d] An error received: %s", this, socket.GetSocket(), error->ToString().CStr());
+						// 		break;
+						// 	}
 
-							if (data->GetLength() == 0LL)
-							{
-								break;
-							}
-						}
+						// 	if (data->GetLength() == 0LL)
+						// 	{
+						// 		break;
+						// 	}
+						// }
 					}
 
 					::close(_socket.GetSocket());

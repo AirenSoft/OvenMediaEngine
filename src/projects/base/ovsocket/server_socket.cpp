@@ -261,9 +261,10 @@ namespace ov
 					break;
 				}
 
-				if (data->GetLength() == 0L)
+				// TODO(dimiden): (ClientSocketBlocking) Temporarily comment while processing as blocking
+				// if (data->GetLength() == 0L)
 				{
-					// 다음 데이터를 기다려야 함
+					// Waiting for next data
 					break;
 				}
 			}

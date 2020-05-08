@@ -8,10 +8,10 @@
 //==============================================================================
 #pragma once
 
-#include <memory>
-
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
+
+#include <memory>
 
 class PhysicalPort;
 
