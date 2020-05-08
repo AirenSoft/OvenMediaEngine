@@ -19,8 +19,8 @@
 #include <shared_mutex>
 
 //TODO(Dimiden): It has to be moved to configuration
-#define MAX_STREAM_MOTOR_COUNT					100
-#define MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC	30
+#define MAX_STREAM_MOTOR_COUNT					10
+#define MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC	60
 #define MAX_EPOLL_EVENTS						1024
 #define EPOLL_TIMEOUT_MSEC						100
 namespace pvd
