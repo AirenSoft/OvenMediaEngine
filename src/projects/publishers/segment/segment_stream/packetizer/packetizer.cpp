@@ -24,7 +24,7 @@ Packetizer::Packetizer(const ov::String &app_name, const ov::String &stream_name
 	  _stream_type(stream_type),
 
 	  _segment_count(segment_count),
-	  _segment_save_count(segment_count * 10),
+	  _segment_save_count(segment_count * 5),
 	  _segment_duration(segment_duration),
 
 	  _video_track(video_track),
