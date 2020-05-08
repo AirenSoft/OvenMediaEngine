@@ -1,7 +1,8 @@
-FROM    alpine:3.10 AS base
+FROM    ubuntu:18.04 AS base
 
 ## Install libraries by package
-RUN     apk add --no-cache --update libgcc libstdc++ zlib-dev libexecinfo-dev
+ENV     DEBIAN_FRONTEND=noninteractive
+RUN     apt-get update && apt-get install -y tzdata
 
 FROM    base AS build
 
@@ -22,7 +23,7 @@ ENV     OME_VERSION=dev \
         JEMALLOC_VERSION=5.2.1
 
 ## Install build utils
-RUN     apk add --no-cache --update curl perl make gcc musl-dev linux-headers tcl cmake g++ coreutils git autoconf automake libtool diffutils yasm nasm pkgconfig binutils
+RUN     apt-get -y install build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc
 
 ## Build OpenSSL
 RUN \
