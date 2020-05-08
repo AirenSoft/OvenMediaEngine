@@ -127,15 +127,24 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 			};
 
 			auto data_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data) -> ov::SocketConnectionState {
-				logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
+				auto sock = client->GetSocket();
 
-				auto shared_lock = std::shared_lock(_worker_mutex, std::defer_lock);
+				if(sock.IsValid())
+				{
+					logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
 
-				shared_lock.lock();
-				auto &worker = _worker_list.at(client->GetSocket().GetSocket() % PHYSICAL_PORT_WORKER_COUNT);
-				shared_lock.unlock();
+					auto shared_lock = std::shared_lock(_worker_mutex, std::defer_lock);
 
-				worker->AddTask(client, data);
+					shared_lock.lock();
+					auto &worker = _worker_list.at(sock.GetSocket() % PHYSICAL_PORT_WORKER_COUNT);
+					shared_lock.unlock();
+
+					worker->AddTask(client, data);
+				}
+				else
+				{
+					logtw("Received data %d bytes from disconnected client");
+				}
 
 				return ov::SocketConnectionState::Connected;
 			};
