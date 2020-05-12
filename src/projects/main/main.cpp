@@ -191,18 +191,20 @@ int main(int argc, char *argv[])
 	// Relase all modules
 	monitor->Release();
 
-	RELEASE_MODULE(media_router, "MediaRouter");
 	RELEASE_MODULE(rtmp_provider, "RTMP Provider");
 	RELEASE_MODULE(ovt_provider, "OVT Provider");
 	RELEASE_MODULE(rtspc_provider, "RTSPC Provider");
 	// PENDING : RELEASE_MODULE(rtsp_provider, "RTSP Provider");
-	RELEASE_MODULE(transcoder, "Transcoder");
+	
 	RELEASE_MODULE(webrtc_publisher, "WebRTC Publisher");
 	RELEASE_MODULE(hls_publisher, "HLS Publisher");
 	RELEASE_MODULE(dash_publisher, "MPEG-DASH Publisher");
 	RELEASE_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher");
 	RELEASE_MODULE(ovt_publisher, "OVT Publisher");
 
+	RELEASE_MODULE(transcoder, "Transcoder");
+	RELEASE_MODULE(media_router, "MediaRouter");
+	
 	Uninitialize();
 
 	return 0;

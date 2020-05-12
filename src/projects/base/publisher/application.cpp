@@ -57,7 +57,25 @@ namespace pub
 			_worker_thread.join();
 		}
 
+		// release remaining streams
+		DeleteAllStreams();
+
 		logti("%s has deleted [%s] application", GetApplicationTypeName(), GetName().CStr());
+
+		return true;
+	}
+
+	bool Application::DeleteAllStreams()
+	{
+		std::unique_lock<std::shared_mutex> lock(_stream_map_mutex);
+
+		for(const auto &x : _streams)
+		{
+			auto stream = x.second;
+			stream->Stop();
+		}
+
+		_streams.clear();
 
 		return true;
 	}

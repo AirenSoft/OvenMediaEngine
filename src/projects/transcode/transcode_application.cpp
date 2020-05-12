@@ -38,6 +38,16 @@ bool TranscodeApplication::Start()
 
 bool TranscodeApplication::Stop()
 {
+	std::unique_lock<std::mutex> lock(_mutex);
+
+	for(const auto &x : _streams)
+	{
+		auto stream = x.second;
+		stream->Stop();
+	}
+
+	_streams.clear();
+
 	return true;
 }
 

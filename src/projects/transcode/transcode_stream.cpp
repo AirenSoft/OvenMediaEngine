@@ -128,6 +128,8 @@ bool TranscodeStream::Stop()
 		_thread_looptask.join();
 	}
 
+	DeleteStreams();
+
 	logti("[%s/%s(%u)] Transcoder input stream has been stopped.", 
 						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId());
 
@@ -950,9 +952,6 @@ void TranscodeStream::LoopTask()
 		// TODO(soulk) Packet이 존재하는 경우에만 Loop를 처리할 수 있는 방법은 없나?
 		// usleep(1);
 	}
-
-	// 스트림 삭제 전송
-	DeleteStreams();
 
 	logtd("Terminated transcode stream decode thread");
 }

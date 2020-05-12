@@ -66,12 +66,12 @@ namespace pub
 
 	private:
 		void WorkerThread();
-		// For child, 실제 구현부는 자식에서 처리한다.
+		bool DeleteAllStreams();
 
 		// Stream을 자식을 통해 생성해서 받는다.
 		virtual std::shared_ptr<Stream> CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count) = 0;
 		virtual bool DeleteStream(const std::shared_ptr<info::Stream> &info) = 0;
-
+		
 		// Audio Stream 전달 Interface를 구현해야 함
 		//virtual void						OnAudioFrame(int32_t stream_id) = 0;
 
