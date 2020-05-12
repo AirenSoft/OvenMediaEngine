@@ -71,6 +71,8 @@ bool RtmpServer::AddObserver(const std::shared_ptr<RtmpObserver> &observer)
 {
 	logtd("Trying to add an observer %p with the RTMP Server", observer.get());
 
+	std::unique_lock<std::shared_mutex> lock(_observers_lock);
+
 	// Verify that the observer is already registered
 	auto item = std::find_if(_observers.begin(), _observers.end(), [&](std::shared_ptr<RtmpObserver> const &value) -> bool {
 		return value == observer;
@@ -89,6 +91,8 @@ bool RtmpServer::AddObserver(const std::shared_ptr<RtmpObserver> &observer)
 
 bool RtmpServer::RemoveObserver(const std::shared_ptr<RtmpObserver> &observer)
 {
+	std::unique_lock<std::shared_mutex> lock(_observers_lock);
+
 	auto item = std::find_if(_observers.begin(), _observers.end(), [&](std::shared_ptr<RtmpObserver> const &value) -> bool {
 		return value == observer;
 	});
@@ -243,6 +247,7 @@ bool RtmpServer::OnChunkStreamReady(ov::ClientSocket *remote,
 
 
 	// Notify the ready stream event to the observers
+	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 	for (auto &observer : _observers)
 	{
 		if (observer->OnStreamReadyComplete(app_name, stream_name, media_info, application_id, stream_id) == false)
@@ -264,6 +269,7 @@ bool RtmpServer::OnChunkStreamVideoData(ov::ClientSocket *remote,
 										const std::shared_ptr<const ov::Data> &data)
 {
 	// Notify the video data to the observers
+	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 	for (auto &observer : _observers)
 	{
 		if (observer->OnVideoData(application_id, stream_id, timestamp, frame_type, data) == false)
@@ -286,6 +292,7 @@ bool RtmpServer::OnChunkStreamAudioData(ov::ClientSocket *remote,
 										const std::shared_ptr<const ov::Data> &data)
 {
 	// Notify the audio data to the observers
+	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 	for (auto &observer : _observers)
 	{
 		if (!observer->OnAudioData(application_id, stream_id, timestamp, frame_type, data))
@@ -305,6 +312,7 @@ bool RtmpServer::OnDeleteStream(ov::ClientSocket *remote,
 								info::application_id_t application_id, uint32_t stream_id)
 {
 	// Notify the delete stream event to the observers
+	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 	for (auto &observer : _observers)
 	{
 		if (observer->OnDeleteStream(application_id, stream_id) == false)
