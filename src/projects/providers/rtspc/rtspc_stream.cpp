@@ -35,10 +35,6 @@ namespace pvd
 	RtspcStream::RtspcStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
 	: pvd::Stream(application, stream_info)
 	{
-		av_register_all(); 
-		avcodec_register_all(); 
-		avformat_network_init(); 
-
 		_state = State::IDLE;
 		_format_context = 0;
 
