@@ -63,7 +63,6 @@ TranscodeStream::~TranscodeStream()
 
 bool TranscodeStream::Start()
 {			
-	// Create Output Stream and Tracks
 	if (CreateOutputStream() == 0)
 	{
 		logte("No output stream generated");
@@ -76,13 +75,11 @@ bool TranscodeStream::Start()
 		return false;
 	}
 
-	// Create Docoders
 	if (CreateDecoders() == 0)
 	{
 		logtw("No decoder generated");
 	}
 
-	// Create Encoders
 	if (CreateEncoders() == 0)
 	{
 		logtw("No encoder generated");
@@ -161,6 +158,78 @@ bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
 int32_t TranscodeStream::CreateOutputStream()
 {
 	int32_t created_stream_count = 0;
+
+	// If the application is created by Dynamic, make it bypass in Default Stream.
+	if( _application_info.IsDynamicApp() == true )
+	{
+		auto stream_output = std::make_shared<info::Stream>(_application_info, StreamSourceType::Transcoder);
+
+		stream_output->SetName(_stream_input->GetName());
+		stream_output->SetOriginStream(_stream_input);
+
+		for (auto &input_track_item : _stream_input->GetTracks())
+		{
+			auto &input_track = input_track_item.second;
+			auto input_track_media_type = input_track->GetMediaType();
+
+			auto new_outupt_track = std::make_shared<MediaTrack>();
+
+			new_outupt_track->SetBypass(true);
+			new_outupt_track->SetId(NewTrackId(new_outupt_track->GetMediaType()));
+			new_outupt_track->SetBitrate(input_track->GetBitrate());
+			new_outupt_track->SetCodecId(input_track->GetCodecId());
+
+			if (input_track_media_type == common::MediaType::Video)
+			{
+				new_outupt_track->SetMediaType(common::MediaType::Video);
+				new_outupt_track->SetWidth(input_track->GetWidth());
+				new_outupt_track->SetHeight(input_track->GetHeight());
+				new_outupt_track->SetFrameRate(input_track->GetFrameRate());
+				new_outupt_track->SetTimeBase(input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen());
+
+				stream_output->AddTrack(new_outupt_track);
+				StoreStageContext("default", input_track_media_type, input_track, stream_output, new_outupt_track);
+			}
+			else if (input_track_media_type == common::MediaType::Audio)
+			{
+				new_outupt_track->SetMediaType(common::MediaType::Audio);
+				auto input_codec_id = input_track->GetCodecId();
+				auto input_samplerate = input_track->GetSampleRate();
+
+				if (input_codec_id == common::MediaCodecId::Opus)
+				{
+					if (input_samplerate != 48000)
+					{
+						logtw("OPUS codec only supports 48000Hz samplerate. Do not create bypass track. input smplereate(%d)", input_samplerate);
+						continue;
+					}
+				}
+
+				// Set output specification
+				new_outupt_track->SetSampleRate(input_samplerate);
+				new_outupt_track->GetChannel().SetLayout(input_track->GetChannel().GetLayout());
+				new_outupt_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
+				new_outupt_track->SetTimeBase(input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen());	
+
+				stream_output->AddTrack(new_outupt_track);
+				StoreStageContext("default", input_track_media_type, input_track, stream_output, new_outupt_track);
+			}
+		}
+
+
+		// Add to Output Stream List. The key is the output stream name.
+		_stream_outputs.insert(std::make_pair(stream_output->GetName(), stream_output));
+
+		logti("[%s/%s(%u)] -> [%s/%s(%u)] Transcoder output stream has been created.", 
+						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(),
+						_application_info.GetName().CStr(), stream_output->GetName().CStr(), stream_output->GetId());
+
+		// Number of generated output streams
+		created_stream_count++;		
+
+		return created_stream_count;
+	}
+
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 1. Create new stream and new track
@@ -566,7 +635,6 @@ bool TranscodeStream::CreateDecoder(int32_t input_track_id, int32_t decoder_trac
 	return true;
 }
 
-// 입력 트랙 존재 여부에 따라서 인코더를 생성해야 한다.
 int32_t TranscodeStream::CreateEncoders()
 {
 	int32_t created_encoder_count = 0;
@@ -676,7 +744,7 @@ void TranscodeStream::ChangeOutputFormat(MediaFrame *buffer)
 
 TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<MediaPacket> packet)
 {
-	// 바이패스 처리
+	// 1. bypass track processing
 	auto stage_item_to_output = _stage_input_to_output.find(track_id);
 	if (stage_item_to_output != _stage_input_to_output.end())
 	{
@@ -695,7 +763,8 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 		}
 	}
 
-	// 디코더 처리
+
+	// 2. decoding track processing
 	auto stage_item_decoder = _stage_input_to_decoder.find(track_id);
 	if (stage_item_decoder == _stage_input_to_decoder.end())
 	{
@@ -725,10 +794,6 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 				// It indicates output format is changed
 
 				// Re-create filter and encoder using the format
-
-				// TODO(soulk): Re-create the filter context
-				// TODO(soulk): Re-create the encoder context
-
 				decoded_frame->SetTrackId(decoder_id);
 				ChangeOutputFormat(decoded_frame.get());
 
@@ -808,7 +873,6 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 
 TranscodeResult TranscodeStream::EncodeFrame(int32_t filter_id, std::shared_ptr<const MediaFrame> frame)
 {
-	// 인코더 아이디 조회
 	auto encoder_id = _stage_filter_to_encoder[filter_id];
 
 	auto encoder_item = _encoders.find(encoder_id);
@@ -838,14 +902,14 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t filter_id, std::shared_ptr<
 		{
 			// logtd("[#%d] A packet is encoded (PTS: %lld)", encoder_id, encoded_packet->GetPts());
 
-			// 인코딩된 패킷을 전송할 출력 트랙이 존재하는지 탐색
+			// Explore if output tracks exist to send encoded packets
 			auto stage_item = _stage_encoder_to_output.find(encoder_id);
 			if (stage_item == _stage_encoder_to_output.end())
 			{
 				continue;
 			}
 
-			// 출력할 트랙이 존재한다면, 인코딩된 패킷을 복사하여 해당 트랙으로 전송한다.
+			// If a track exists to output, copy the encoded packet and send it to that track.
 			for (auto &iter : stage_item->second)
 			{
 				auto &output_stream = iter.first;
@@ -914,8 +978,6 @@ void TranscodeStream::LoopTask()
 
 			logts("%s", dbg_str.CStr() );
 		}
-
-
 
 		if (_queue_input_packets.size() > 0)
 		{

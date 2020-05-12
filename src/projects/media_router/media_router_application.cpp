@@ -191,13 +191,7 @@ bool MediaRouteApplication::OnCreateStream(
 	
 	auto new_stream = std::make_shared<MediaRouteStream>(stream_info);
 	new_stream->SetConnectorType(app_conn->GetConnectorType());
-#if 0
-	{
-		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
-		_streams.insert(std::make_pair(stream_info->GetId(), new_stream));
-	}
-#else
-	// 프로바이더에서 입력되는 데이터는 Incoming Stream으로 분류하고, Transcoder 및 Relay에서 전달되는 데이터는 Outgoing Stream에 생성한다
+
 	if(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
 		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
@@ -215,7 +209,6 @@ bool MediaRouteApplication::OnCreateStream(
 
 		return false;
 	}
-#endif
 
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamCreated(*stream_info);
@@ -312,7 +305,6 @@ bool MediaRouteApplication::OnDeleteStream(
 	}
 
 
-	// 프로바이더에서 입력되는 데이터는 Incoming Stream으로 분류하고, Transcoder 및 Relay에서 전달되는 데이터는 Outgoing Stream에서 삭제한다
 	if(app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
 		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
@@ -452,9 +444,9 @@ void MediaRouteApplication::MainTask()
 				{
 					if(observer_type == MediaRouteApplicationObserver::ObserverType::Transcoder)
 					{
-						// auto media_buffer_clone = media_packet->ClonePacket();
+						auto media_buffer_clone = media_packet->ClonePacket();
 
-						observer->OnSendFrame(stream_info, std::move(media_packet));
+						observer->OnSendFrame(stream_info, std::move(media_buffer_clone));
 					}
 				}
 
