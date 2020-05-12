@@ -177,8 +177,8 @@ HttpInterceptorResult WebSocketInterceptor::OnHttpData(const std::shared_ptr<Htt
 
 		if (item == _websocket_client_list.end())
 		{
-			// 반드시 _websocket_client_list 목록 안에 있어야 함
-			OV_ASSERT2(false);
+			// TODO(dimiden): Temporarily comment out assertions due to side-effect on socket side modification
+			// OV_ASSERT2(false);
 			return HttpInterceptorResult::Disconnect;
 		}
 
@@ -327,7 +327,8 @@ void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &clien
 		}
 		else
 		{
-			OV_ASSERT2(item != _websocket_client_list.end());
+			// TODO(dimiden): Temporarily comment out assertions due to side-effect on socket side modification
+			// OV_ASSERT2(item != _websocket_client_list.end());
 		}
 	}
 
