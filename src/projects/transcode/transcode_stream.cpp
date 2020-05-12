@@ -851,7 +851,6 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 			return result;
 		}
 
-		// 에러, 또는 디코딩된 패킷이 없다면 종료
 		switch (result)
 		{
 			case TranscodeResult::DataReady:
@@ -925,7 +924,6 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t filter_id, std::shared_ptr<
 	}
 }
 
-// 디코딩 & 인코딩 스레드
 void TranscodeStream::LoopTask()
 {
 	logtd("Started transcode stream decode thread");
