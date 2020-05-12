@@ -111,7 +111,10 @@ bool RtmpServer::RemoveObserver(const std::shared_ptr<RtmpObserver> &observer)
 bool RtmpServer::Disconnect(const ov::String &app_name)
 {
 	std::unique_lock<std::recursive_mutex> lock(_chunk_context_list_mutex);
-	for (auto item = _chunk_context_list.begin(); item != _chunk_context_list.end(); ++item)
+
+	//The item will be deleted in DisconnectClient()
+	auto context_list = _chunk_context_list;
+	for (auto item = context_list.begin(); item != context_list.end(); ++item)
 	{
 		auto &chunk_stream = item->second;
 		if (chunk_stream->GetAppName() == app_name)
@@ -298,6 +301,7 @@ bool RtmpServer::OnChunkStreamAudioData(ov::ClientSocket *remote,
 		if (!observer->OnAudioData(application_id, stream_id, timestamp, frame_type, data))
 		{
 			logte("Could not send audio data to observer %p: (%u/%u), remote: %s",
+				  observer.get(),
 				  application_id, stream_id,
 				  remote->ToString().CStr());
 			return false;
