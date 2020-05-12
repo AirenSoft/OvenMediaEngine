@@ -683,7 +683,20 @@ void RtmpChunkStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> 
 		if (url != nullptr)
 		{
 			_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), _app_name);
+
+			auto app_info = Orchestrator::GetInstance()->GetApplicationInfoByVHostAppName(_app_name);
+
+			if (app_info.IsValid())
+			{
+				_app_id = app_info.GetId();
+			}
+			else
+			{
+				logte("Could not obtain app information");
+				return;
+			}
 		}
+
 	}
 
 	if (!SendWindowAcknowledgementSize())

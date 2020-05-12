@@ -19,7 +19,7 @@
 #include "base/media_route/media_route_application_interface.h"
 #include "base/media_route/media_queue.h"
 
-#include "media_route_stream.h"
+#include "media_router_stream.h"
 
 #include <config/items/items.h>
 
@@ -91,21 +91,20 @@ public:
 	std::vector<std::shared_ptr<MediaRouteApplicationObserver>> _observers;
 	std::shared_mutex _observers_lock;
 
-	// Information of MediaStream instance
-	// Key : Stream.id
-	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _streams;
-	std::shared_mutex _streams_lock;
 
+
+	// Information of MediaStream instance
+	// Incoming Streams
+	// Key : Stream.id
+	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _streams_incoming;
+
+	// Outgoing Streams
+	// Key : Stream.id
+	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _streams_outgoing;
+	
+	std::shared_mutex _streams_lock;
 public:
 	void MainTask();
-
-	void OnGarbageCollector();
-	void GarbageCollector();
-
-	const std::map<uint32_t, std::shared_ptr<MediaRouteStream>> GetStreams() const override
-	{
-		return _streams;
-	}
 
 	enum
 	{
@@ -115,11 +114,19 @@ public:
 	class BufferIndicator
 	{
 	public:
-		explicit BufferIndicator(uint32_t stream_id)
+		enum {
+			BUFFER_INDICATOR_NONE_STREAM = 0,
+			BUFFER_INDICATOR_INCOMING_STREAM,
+			BUFFER_INDICATOR_OUTGOING_STREAM
+		};
+
+		explicit BufferIndicator(uint8_t inout, uint32_t stream_id)
 		{
+			_inout = inout;
 			_stream_id = stream_id;
 		}
 
+		uint8_t _inout;
 		uint32_t _stream_id;
 	};
 

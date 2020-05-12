@@ -14,11 +14,11 @@
 
 #define OV_LOG_TAG "TranscodeStream"
 
-#define ENABLE_SINGLE_THREAD 1
-
 TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent)
 	: _application_info(application_info)
 {
+	logtd("Trying to create transcode stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
+
 	// Statistical parameters
 	_stats_decoded_frame_count = 0;
 	_stats_queue_full_count = 0;
@@ -231,7 +231,6 @@ int32_t TranscodeStream::CreateOutputStream()
 						if (new_outupt_track->IsBypass() == true)
 						{
 							// Validation
-
 
 							// Set output specification
 							new_outupt_track->SetCodecId(input_track->GetCodecId());
@@ -948,9 +947,6 @@ void TranscodeStream::LoopTask()
 				EncodeFrame(filter_id, std::move(frame));
 			}
 		}
-
-		// TODO(soulk) Packet이 존재하는 경우에만 Loop를 처리할 수 있는 방법은 없나?
-		// usleep(1);
 	}
 
 	logtd("Terminated transcode stream decode thread");

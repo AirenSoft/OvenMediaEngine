@@ -53,7 +53,7 @@ bool TranscodeApplication::Stop()
 
 bool TranscodeApplication::OnCreateStream(const std::shared_ptr<info::Stream> &stream_info)
 {
-	logtd("OnCreateStream. name(%s), id(%d)", stream_info->GetName().CStr(), stream_info->GetId());
+	// logtd("OnCreateStream. name(%s), id(%d)", stream_info->GetName().CStr(), stream_info->GetId());
 
 	std::unique_lock<std::mutex> lock(_mutex);
 
@@ -75,7 +75,7 @@ bool TranscodeApplication::OnCreateStream(const std::shared_ptr<info::Stream> &s
 
 bool TranscodeApplication::OnDeleteStream(const std::shared_ptr<info::Stream> &stream_info)
 {
-	logtd("OnDeleteStream. name(%s), id(%d)", stream_info->GetName().CStr(), stream_info->GetId());
+	// logtd("OnDeleteStream. name(%s), id(%d)", stream_info->GetName().CStr(), stream_info->GetId());
 	
 	std::unique_lock<std::mutex> lock(_mutex);
 
