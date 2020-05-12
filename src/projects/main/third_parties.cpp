@@ -23,6 +23,7 @@ extern "C"
 {
 #include <libavcodec/version.h>
 #include <libavfilter/version.h>
+#include <libavformat/avformat.h>
 #include <libavformat/version.h>
 #include <libavutil/ffversion.h>
 #include <libavutil/version.h>
@@ -128,11 +129,18 @@ static void OnFFmpegLog(void *avcl, int level, const char *fmt, va_list args)
 
 std::shared_ptr<ov::Error> InitializeFFmpeg()
 {
-	// TODO(soulk): Move ffmpeg-related codes to here such as avcodec_register_all(), etc
-
 	::av_log_set_callback(OnFFmpegLog);
 	::av_log_set_level(AV_LOG_DEBUG);
 
+	::av_register_all();
+	::avcodec_register_all();
+	::avformat_network_init();
+
+	return nullptr;
+}
+
+std::shared_ptr<ov::Error> TerminateFFmpeg()
+{
 	return nullptr;
 }
 
@@ -153,6 +161,18 @@ std::shared_ptr<ov::Error> InitializeSrtp()
 	if (err != srtp_err_status_ok)
 	{
 		return ov::Error::CreateError("SRTP", "Could not initialize SRTP (err: %d)", err);
+	}
+
+	return nullptr;
+}
+
+std::shared_ptr<ov::Error> TerminateSrtp()
+{
+	int err = ::srtp_shutdown();
+
+	if (err != srtp_err_status_ok)
+	{
+		return ov::Error::CreateError("SRTP", "Could not uninitialize SRTP (err: %d)", err);
 	}
 
 	return nullptr;
@@ -238,6 +258,18 @@ std::shared_ptr<ov::Error> InitializeSrt()
 	return nullptr;
 }
 
+std::shared_ptr<ov::Error> TerminateSrt()
+{
+	// https://github.com/Haivision/srt/blob/master/docs/API-functions.md#srt_cleanup
+	// 0 (A possibility to return other values is reserved for future use)
+	if (::srt_cleanup() != 0)
+	{
+		return ov::Error::CreateErrorFromSrt();
+	}
+
+	return nullptr;
+}
+
 //--------------------------------------------------------------------
 // Related to OpenSSL
 //--------------------------------------------------------------------
@@ -261,11 +293,21 @@ std::shared_ptr<ov::Error> InitializeOpenSsl()
 	return ov::Error::CreateErrorFromOpenSsl();
 }
 
+std::shared_ptr<ov::Error> TerminateOpenSsl()
+{
+	if (ov::OpensslManager::ReleaseOpenSSL())
+	{
+		return nullptr;
+	}
+
+	return ov::Error::CreateErrorFromOpenSsl();
+}
+
 const char *GetJemallocVersion()
 {
 #if !DEBUG
 	return JEMALLOC_VERSION;
-#else // !DEBUG
+#else	// !DEBUG
 	return "(disabled)";
-#endif // !DEBUG
+#endif	// !DEBUG
 }

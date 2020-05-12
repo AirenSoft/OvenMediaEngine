@@ -22,18 +22,21 @@ const char *GetFFmpegAvFilterVersion();
 const char *GetFFmpegSwResampleVersion();
 const char *GetFFmpegSwScaleVersion();
 std::shared_ptr<ov::Error> InitializeFFmpeg();
+std::shared_ptr<ov::Error> TerminateFFmpeg();
 
 //--------------------------------------------------------------------
 // Related to SRTP
 //--------------------------------------------------------------------
 const char *GetSrtpVersion();
 std::shared_ptr<ov::Error> InitializeSrtp();
+std::shared_ptr<ov::Error> TerminateSrtp();
 
 //--------------------------------------------------------------------
 // Related to SRT
 //--------------------------------------------------------------------
 const char *GetSrtVersion();
 std::shared_ptr<ov::Error> InitializeSrt();
+std::shared_ptr<ov::Error> TerminateSrt();
 
 //--------------------------------------------------------------------
 // Related to OpenSSL
@@ -41,6 +44,7 @@ std::shared_ptr<ov::Error> InitializeSrt();
 const char *GetOpenSslConfiguration();
 const char *GetOpenSslVersion();
 std::shared_ptr<ov::Error> InitializeOpenSsl();
+std::shared_ptr<ov::Error> TerminateOpenSsl();
 
 //--------------------------------------------------------------------
 // Related to jemalloc
