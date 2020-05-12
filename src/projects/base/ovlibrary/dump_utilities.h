@@ -14,6 +14,8 @@ namespace ov
 {
 	// Dump utilities
 
+	String Demangle(const char *func);
+
 	// Convert data to hex string (like "0001020304A0")
 	String ToHexString(const void *data, size_t length);
 	// Convert data to hex string with delimeter (like "00:01:02:03:04:A0");
