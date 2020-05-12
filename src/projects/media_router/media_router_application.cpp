@@ -314,7 +314,7 @@ bool MediaRouteApplication::OnDeleteStream(
 			 (app_conn->GetConnectorType() == MediaRouteApplicationConnector::ConnectorType::Relay) )
 	{
 		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
-		_streams_incoming.erase(stream_info->GetId());	
+		_streams_outgoing.erase(stream_info->GetId());	
 	}
 	else
 	{
