@@ -17,7 +17,6 @@
 #include <queue>
 
 #include "base/media_route/media_buffer.h"
-#include "base/media_route/media_queue.h"
 #include "base/media_route/media_type.h"
 #include "base/info/stream.h"
 
@@ -93,7 +92,6 @@ private:
 	std::map <MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _stage_encoder_to_output;
 
 
-
 	// Decoder
 	// DECODR_ID, DECODER
 	std::map<MediaTrackId, std::shared_ptr<TranscodeDecoder>> _decoders;
@@ -107,16 +105,14 @@ private:
 	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
 
 
-
-
 	// Buffer for encoded(input) media packets
-	MediaQueue<std::shared_ptr<MediaPacket>> _queue_input_packets;
+	ov::Queue<std::shared_ptr<MediaPacket>> _queue_input_packets;
 
 	// Buffer for decoded frames
-	MediaQueue<std::shared_ptr<MediaFrame>> _queue_decoded_frames;
+	ov::Queue<std::shared_ptr<MediaFrame>> _queue_decoded_frames;
 
 	// Buffer for filtered frames
-	MediaQueue<std::shared_ptr<MediaFrame>> _queue_filterd_frames;
+	ov::Queue<std::shared_ptr<MediaFrame>> _queue_filterd_frames;
 
 	// last generated output track id.
 	uint8_t _last_track_index = 0;

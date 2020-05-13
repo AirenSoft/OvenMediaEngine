@@ -67,7 +67,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		int64_t duration = media_packet->GetDts() - media_packet_cache->GetDts();
 		media_packet_cache->SetDuration(duration);
 
-		_media_packets.push(media_packet_cache);
+		_media_packets.Enqueue(std::move(media_packet_cache));
 		is_inserted_queue = true;
 	}
 
@@ -77,7 +77,8 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	}
 	else
 	{
-		_media_packets.push(media_packet);
+		_media_packets.Enqueue(std::move(media_packet));
+
 		is_inserted_queue = true;
 	}
 
@@ -87,16 +88,18 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 
 std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 {
-	if(_media_packets.empty())
+	if(_media_packets.IsEmpty())
 	{
 		return nullptr;
 	}
 
-	auto media_packet = std::move(_media_packets.pop());
-	if(media_packet == nullptr)
+	auto media_packet_ref = _media_packets.Dequeue();
+	if(media_packet_ref.has_value() == false)
 	{
 		return nullptr;
-	}
+	}	
+
+	auto &media_packet = media_packet_ref.value();
 
 	auto media_type = media_packet->GetMediaType();
 	auto track_id = media_packet->GetTrackId();
@@ -175,7 +178,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		temp_str.AppendFormat(" - Stream of MediaRouter | name : %s/%s, uptime : %lldms , queue : %d" 
 			,_stream->GetApplicationInfo().GetName().CStr()
 			,_stream->GetName().CStr()
-			,(int64_t)uptime, _media_packets.size());
+			,(int64_t)uptime, _media_packets.Size());
 
 		// 모든 트랙 상태를 출력
 		for(const auto &iter : _stream->GetTracks())

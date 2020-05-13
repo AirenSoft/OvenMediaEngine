@@ -17,7 +17,6 @@
 #include "base/media_route/media_route_application_connector.h"
 #include "base/media_route/media_route_interface.h"
 #include "base/media_route/media_route_application_interface.h"
-#include "base/media_route/media_queue.h"
 
 #include "media_router_stream.h"
 
@@ -28,9 +27,6 @@ class Stream;
 
 class RelayServer;
 class RelayClient;
-
-// Stream timout for GarbageCollector
-# define TIMEOUT_STREAM_ALIVE   30
 
 class MediaRouteApplication : public MediaRouteApplicationInterface
 {
@@ -71,13 +67,11 @@ public:
 		const std::shared_ptr<MediaPacket> &packet) override;
 
 public:
-
 	bool RegisterObserverApp(
 		std::shared_ptr<MediaRouteApplicationObserver> observer);
 
 	bool UnregisterObserverApp(
 		std::shared_ptr<MediaRouteApplicationObserver> observer);
-
 
 public:
 	// Application information from configuration file
@@ -91,8 +85,6 @@ public:
 	std::vector<std::shared_ptr<MediaRouteApplicationObserver>> _observers;
 	std::shared_mutex _observers_lock;
 
-
-
 	// Information of MediaStream instance
 	// Incoming Streams
 	// Key : Stream.id
@@ -103,13 +95,9 @@ public:
 	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _streams_outgoing;
 	
 	std::shared_mutex _streams_lock;
+
 public:
 	void MainTask();
-
-	enum
-	{
-		BUFFFER_INDICATOR_UNIQUEID_GC = 0
-	};
 
 	class BufferIndicator
 	{
@@ -132,6 +120,5 @@ public:
 
 
 protected:
-	MediaQueue<std::shared_ptr<BufferIndicator>> _indicator;
-	ov::DelayQueue                  	_retry_timer;
+	ov::Queue<std::shared_ptr<BufferIndicator>> _indicator;
 };
