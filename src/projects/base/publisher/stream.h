@@ -79,12 +79,12 @@ namespace pub
 
 		uint32_t IssueUniqueSessionId();
 
+		std::shared_ptr<Application> GetApplication();
+
 	protected:
 		Stream(const std::shared_ptr<Application> application, const info::Stream &info);
 		virtual ~Stream();
-
-		std::shared_ptr<Application> GetApplication();
-
+		
 	private:
 		std::shared_ptr<StreamWorker> GetWorkerByStreamID(session_id_t session_id);
 		std::map<session_id_t, std::shared_ptr<Session>> _sessions;

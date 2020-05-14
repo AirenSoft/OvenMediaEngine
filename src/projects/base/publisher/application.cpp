@@ -6,7 +6,10 @@
 namespace pub
 {
 	Application::Application(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info)
-		: info::Application(application_info)
+		: info::Application(application_info),
+		_video_stream_queue(nullptr, 100),
+		_audio_stream_queue(nullptr, 100),
+		_incoming_packet_queue(nullptr, 100)
 	{
 		_publisher = publisher;
 		_stop_thread_flag = false;
@@ -37,6 +40,17 @@ namespace pub
 		// Thread 생성
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&Application::WorkerThread, this);
+
+		ov::String queue_name;
+
+		queue_name.Format("%s/%s - Video Queue", GetApplicationTypeName(), GetName().CStr());
+		_video_stream_queue.SetAlias(queue_name.CStr());
+
+		queue_name.Format("%s/%s - Audio Queue", GetApplicationTypeName(), GetName().CStr());
+		_audio_stream_queue.SetAlias(queue_name.CStr());
+
+		queue_name.Format("%s/%s - Incoming Queue", GetApplicationTypeName(), GetName().CStr());
+		_incoming_packet_queue.SetAlias(queue_name.CStr());
 
 		logti("%s has created [%s] application", GetApplicationTypeName(), GetName().CStr());
 

@@ -5,6 +5,7 @@
 namespace pub
 {
 	StreamWorker::StreamWorker(const std::shared_ptr<Stream> &parent_stream)
+		: _packet_queue(nullptr, 100)
 	{
 		_stop_thread_flag = true;
 		_parent = parent_stream;
@@ -21,6 +22,11 @@ namespace pub
 		{
 			return true;
 		}
+
+		ov::String queue_name;
+
+		queue_name.Format("%s/%s/%s StreamWorker Queue", _parent->GetApplication()->GetApplicationTypeName(), _parent->GetApplication()->GetName().CStr(), _parent->GetName().CStr());
+		_packet_queue.SetAlias(queue_name.CStr());
 		
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&StreamWorker::WorkerThread, this);
