@@ -285,7 +285,7 @@ const char *GetOpenSslVersion()
 
 std::shared_ptr<ov::Error> InitializeOpenSsl()
 {
-	if (ov::OpensslManager::InitializeOpenssl())
+	if (ov::OpensslManager::Instance()->InitializeOpenssl())
 	{
 		return nullptr;
 	}
@@ -295,7 +295,7 @@ std::shared_ptr<ov::Error> InitializeOpenSsl()
 
 std::shared_ptr<ov::Error> TerminateOpenSsl()
 {
-	if (ov::OpensslManager::ReleaseOpenSSL())
+	if (ov::OpensslManager::Instance()->ReleaseOpenSSL())
 	{
 		return nullptr;
 	}
