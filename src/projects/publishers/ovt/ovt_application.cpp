@@ -38,7 +38,7 @@ std::shared_ptr<pub::Stream> OvtApplication::CreateStream(const std::shared_ptr<
 	if(worker_count == 0)
 	{
 		// RtcStream should have worker threads.
-		worker_count = MIN_STREAM_THREAD_COUNT;
+		worker_count = MIN_STREAM_WORKER_THREAD_COUNT;
 	}
 
 	return OvtStream::Create(GetSharedPtrAs<pub::Application>(), *info, worker_count);

@@ -4,9 +4,10 @@
 
 namespace pub
 {
-	StreamWorker::StreamWorker()
+	StreamWorker::StreamWorker(const std::shared_ptr<Stream> &parent_stream)
 	{
 		_stop_thread_flag = true;
+		_parent = parent_stream;
 	}
 
 	StreamWorker::~StreamWorker()
@@ -20,7 +21,7 @@ namespace pub
 		{
 			return true;
 		}
-
+		
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&StreamWorker::WorkerThread, this);
 
@@ -168,23 +169,26 @@ namespace pub
 			return false;
 		}
 
-		if (worker_count > MAX_STREAM_THREAD_COUNT)
+		if (worker_count > MAX_STREAM_WORKER_THREAD_COUNT)
 		{
-			worker_count = MAX_STREAM_THREAD_COUNT;
+			worker_count = MAX_STREAM_WORKER_THREAD_COUNT;
 		}
 
 		_worker_count = worker_count;
 		// Create WorkerThread
 		for (uint32_t i = 0; i < _worker_count; i++)
 		{
-			if (!_stream_workers[i].Start())
+			auto stream_worker = std::make_shared<StreamWorker>(GetSharedPtr());
+						
+			if (stream_worker->Start() == false)
 			{
 				logte("Cannot create stream thread (%d)", i);
-
 				Stop();
 
 				return false;
 			}
+
+			_stream_workers[i] = stream_worker;
 		}
 
 		logti("%s application has started [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
@@ -204,7 +208,7 @@ namespace pub
 
 		for (uint32_t i = 0; i < _worker_count; i++)
 		{
-			_stream_workers[i].Stop();
+			_stream_workers[i]->Stop();
 		}
 
 		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
@@ -225,7 +229,7 @@ namespace pub
 		return _application;
 	}
 
-	StreamWorker &Stream::GetWorkerByStreamID(session_id_t session_id)
+	std::shared_ptr<StreamWorker> Stream::GetWorkerByStreamID(session_id_t session_id)
 	{
 		return _stream_workers[session_id % _worker_count];
 	}
@@ -237,7 +241,7 @@ namespace pub
 		_sessions[session->GetId()] = session;
 		// 가장 적은 Session을 처리하는 Worker를 찾아서 Session을 넣는다.
 		// session id로 hash를 만들어서 분배한다.
-		return GetWorkerByStreamID(session->GetId()).AddSession(session);
+		return GetWorkerByStreamID(session->GetId())->AddSession(session);
 	}
 
 	bool Stream::RemoveSession(session_id_t id)
@@ -251,13 +255,13 @@ namespace pub
 
 		_sessions.erase(id);
 
-		return GetWorkerByStreamID(id).RemoveSession(id);
+		return GetWorkerByStreamID(id)->RemoveSession(id);
 	}
 
 	std::shared_ptr<Session> Stream::GetSession(session_id_t id)
 	{
 		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex);
-		return GetWorkerByStreamID(id).GetSession(id);
+		return GetWorkerByStreamID(id)->GetSession(id);
 	}
 
 	const std::map<session_id_t, std::shared_ptr<Session>> Stream::GetAllSessions()
@@ -277,7 +281,7 @@ namespace pub
 		// 모든 StreamWorker에 나눠준다.
 		for (uint32_t i = 0; i < _worker_count; i++)
 		{
-			_stream_workers[i].SendPacket(packet_type, packet);
+			_stream_workers[i]->SendPacket(packet_type, packet);
 		}
 
 		return true;

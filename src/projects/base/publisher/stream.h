@@ -6,15 +6,15 @@
 #include "base/media_route/media_buffer.h"
 #include "session.h"
 
-#define MIN_STREAM_THREAD_COUNT 2
-#define MAX_STREAM_THREAD_COUNT 72
+#define MIN_STREAM_WORKER_THREAD_COUNT 2
+#define MAX_STREAM_WORKER_THREAD_COUNT 72
 
 namespace pub
 {
 	class StreamWorker
 	{
 	public:
-		StreamWorker();
+		StreamWorker(const std::shared_ptr<Stream> &parent_stream);
 		~StreamWorker();
 
 		bool Start();
@@ -86,13 +86,14 @@ namespace pub
 		std::shared_ptr<Application> GetApplication();
 
 	private:
-		StreamWorker &GetWorkerByStreamID(session_id_t session_id);
+		std::shared_ptr<StreamWorker> GetWorkerByStreamID(session_id_t session_id);
 		std::map<session_id_t, std::shared_ptr<Session>> _sessions;
 		std::shared_mutex _session_map_mutex;
 
 		uint32_t _worker_count;
 		bool _run_flag;
-		StreamWorker _stream_workers[MAX_STREAM_THREAD_COUNT];
+		
+		std::map<uint32_t, std::shared_ptr<StreamWorker>>	_stream_workers;
 		std::shared_ptr<Application> _application;
 
 		session_id_t _last_issued_session_id;
