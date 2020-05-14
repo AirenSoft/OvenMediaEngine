@@ -66,20 +66,24 @@ namespace ov
 			}
 		}
 
+		void Enqueue(const T &item)
+		{
+			auto lock_guard = std::lock_guard(_mutex);
+
+			_queue.push(item);
+
+			CheckThreshold();
+
+			_condition.notify_all();
+		}
+
 		void Enqueue(T &&item)
 		{
-			std::lock_guard<decltype(_mutex)> lock(_mutex);
+			auto lock_guard = std::lock_guard(_mutex);
 
 			_queue.push(std::move(item));
 
-			if ((_threshold > 0) && (_queue.size() >= _threshold))
-			{
-				if (_last_log_time.IsElapsed(_log_interval) && _last_log_time.Update())
-				{
-					auto shared_lock = std::shared_lock(_name_mutex);
-					logw("ov.Queue", "[%p] %s size has exceeded the threshold: queue: %zu, threshold: %zu", this, _queue_name.CStr(), _queue.size(), _threshold);
-				}
-			}
+			CheckThreshold();
 
 			_condition.notify_all();
 		}
@@ -87,35 +91,39 @@ namespace ov
 		// Timeout in milliseconds
 		std::optional<T> Dequeue(int timeout = Infinite)
 		{
-			std::unique_lock<decltype(_mutex)> lock(_mutex);
+			auto unique_lock = std::unique_lock(_mutex);
 
-			if (_stop)
+			if (_stop == false)
 			{
-				return {};
-			}
+				std::chrono::system_clock::time_point expire =
+					(timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
 
-			std::chrono::system_clock::time_point expire =
-				(timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
-
-			if (_condition.wait_until(lock, expire, [this]() -> bool {
+				auto result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
 					return ((_queue.empty() == false) || _stop);
-				}))
-			{
-				if (_stop == false)
-				{
-					T value = std::move(_queue.front());
-					_queue.pop();
+				});
 
-					return std::move(value);
+				if (result)
+				{
+					if (_stop == false)
+					{
+						T value = std::move(_queue.front());
+						_queue.pop();
+
+						return std::move(value);
+					}
+					else
+					{
+						// Stop is requested
+					}
 				}
 				else
 				{
-					// Stop is requested
+					// timed out
 				}
 			}
 			else
 			{
-				// timed out
+				// Stop is requested
 			}
 
 			return {};
@@ -123,14 +131,14 @@ namespace ov
 
 		bool IsEmpty() const
 		{
-			std::lock_guard<decltype(_mutex)> lock(_mutex);
+			auto lock_guard = std::lock_guard(_mutex);
 
 			return _queue.empty();
 		}
 
 		void Clear()
 		{
-			std::lock_guard<decltype(_mutex)> lock(_mutex);
+			auto lock_guard = std::lock_guard(_mutex);
 
 			// empty the queue
 			_queue = {};
@@ -138,7 +146,7 @@ namespace ov
 
 		size_t Size() const
 		{
-			std::lock_guard<decltype(_mutex)> lock(_mutex);
+			auto lock_guard = std::lock_guard(_mutex);
 
 			return _queue.size();
 		}
@@ -150,9 +158,23 @@ namespace ov
 
 		void Stop()
 		{
-			std::lock_guard<decltype(_mutex)> lock(_mutex);
+			auto lock_guard = std::lock_guard(_mutex);
+
 			_stop = true;
 			_condition.notify_all();
+		}
+
+	protected:
+		inline void CheckThreshold()
+		{
+			if ((_threshold > 0) && (_queue.size() >= _threshold))
+			{
+				if (_last_log_time.IsElapsed(_log_interval) && _last_log_time.Update())
+				{
+					auto shared_lock = std::shared_lock(_name_mutex);
+					logw("ov.Queue", "[%p] %s size has exceeded the threshold: queue: %zu, threshold: %zu", this, _queue_name.CStr(), _queue.size(), _threshold);
+				}
+			}
 		}
 
 	private:
