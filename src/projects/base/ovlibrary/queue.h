@@ -9,9 +9,9 @@
 #pragma once
 
 #include <condition_variable>
-#include <mutex>
 #include <optional>
 #include <queue>
+#include <shared_mutex>
 
 #include "./dump_utilities.h"
 #include "./log.h"
@@ -34,21 +34,36 @@ namespace ov
 			: _threshold(threshold),
 			  _log_interval(log_interval_in_msec)
 		{
+			SetAlias(alias);
+
+			_last_log_time.Start();
+
+			auto shared_lock = std::shared_lock(_name_mutex);
+			logd("ov.Queue", "[%p] %s is created with threshold: %zu, interval: %d", this, _queue_name.CStr(), threshold, log_interval_in_msec);
+		}
+
+		~Queue()
+		{
+			auto shared_lock = std::shared_lock(_name_mutex);
+			logd("ov.Queue", "[%p] %s is destroyed", this, _queue_name.CStr());
+		}
+
+		String GetAlias() const
+		{
+			auto shared_lock = std::shared_lock(_name_mutex);
+			return _queue_name;
+		}
+
+		void SetAlias(const char *alias)
+		{
+			auto lock_guard = std::lock_guard(_name_mutex);
+
 			_queue_name.Format("Queue<%s>", Demangle(typeid(T).name()).CStr());
 
 			if ((alias != nullptr) && (alias[0] == '\0'))
 			{
 				_queue_name.AppendFormat(" (%s)", alias);
 			}
-
-			_last_log_time.Start();
-
-			logd("ov.Queue", "[%p] %s is created with threshold: %zu, interval: %d", this, _queue_name.CStr(), threshold, log_interval_in_msec);
-		}
-
-		~Queue()
-		{
-			logd("ov.Queue", "[%p] %s is destroyed", this, _queue_name.CStr());
 		}
 
 		void Enqueue(T &&item)
@@ -61,6 +76,7 @@ namespace ov
 			{
 				if (_last_log_time.IsElapsed(_log_interval) && _last_log_time.Update())
 				{
+					auto shared_lock = std::shared_lock(_name_mutex);
 					logw("ov.Queue", "[%p] %s size has exceeded the threshold: queue: %zu, threshold: %zu", this, _queue_name.CStr(), _queue.size(), _threshold);
 				}
 			}
@@ -141,7 +157,10 @@ namespace ov
 
 	private:
 		StopWatch _last_log_time;
+
+		std::shared_mutex _name_mutex;
 		String _queue_name;
+
 		size_t _threshold = 0;
 		int _log_interval = 0;
 
