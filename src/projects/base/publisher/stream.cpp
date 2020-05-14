@@ -20,6 +20,7 @@ namespace pub
 		{
 			return true;
 		}
+
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&StreamWorker::WorkerThread, this);
 
@@ -94,29 +95,26 @@ namespace pub
 
 	void StreamWorker::SendPacket(uint32_t type, std::shared_ptr<ov::Data> packet)
 	{
-		// Queue에 패킷을 집어넣는다.
-		auto stream_packet = std::make_shared<StreamWorker::StreamPacket>(type, packet);
-
-		std::unique_lock<std::mutex> lock(_packet_queue_guard);
-		_packet_queue.push(stream_packet);
-		lock.unlock();
+		auto stream_packet = std::make_shared<pub::StreamWorker::StreamPacket>(type, packet);
+		_packet_queue.Enqueue(std::move(stream_packet));
 
 		_queue_event.Notify();
 	}
 
 	std::shared_ptr<StreamWorker::StreamPacket> StreamWorker::PopStreamPacket()
 	{
-		std::unique_lock<std::mutex> lock(_packet_queue_guard);
-
-		if (_packet_queue.empty())
+		if (_packet_queue.IsEmpty())
 		{
 			return nullptr;
 		}
 
-		auto data = _packet_queue.front();
-		_packet_queue.pop();
+		auto data = _packet_queue.Dequeue();
+		if(data.has_value())
+		{
+			return data.value();
+		}
 
-		return std::move(data);
+		return nullptr;
 	}
 
 	void StreamWorker::WorkerThread()
@@ -150,8 +148,7 @@ namespace pub
 		}
 	}
 
-	Stream::Stream(const std::shared_ptr<Application> application,
-				   const info::Stream &info)
+	Stream::Stream(const std::shared_ptr<Application> application, const info::Stream &info)
 		: info::Stream(info)
 	{
 		_application = application;

@@ -48,8 +48,7 @@ namespace pub
 
 		std::shared_ptr<StreamPacket> PopStreamPacket();
 
-		std::queue<std::shared_ptr<StreamPacket>> _packet_queue;
-		std::mutex _packet_queue_guard;
+		ov::Queue<std::shared_ptr<StreamPacket>> _packet_queue;
 
 		bool _stop_thread_flag;
 		std::thread _worker_thread;

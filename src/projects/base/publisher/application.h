@@ -128,20 +128,13 @@ namespace pub
 		std::thread _worker_thread;
 		ov::Semaphore _queue_event;
 
-		std::queue<std::shared_ptr<VideoStreamData>> _video_stream_queue;
-		std::mutex _video_stream_queue_guard;
-
-		std::queue<std::shared_ptr<AudioStreamData>> _audio_stream_queue;
-		std::mutex _audio_stream_queue_guard;
-
-		std::queue<std::shared_ptr<IncomingPacket>> _incoming_packet_queue;
-		std::mutex _incoming_packet_queue_guard;
+		ov::Queue<std::shared_ptr<VideoStreamData>> _video_stream_queue;
+		ov::Queue<std::shared_ptr<AudioStreamData>> _audio_stream_queue;
+		ov::Queue<std::shared_ptr<IncomingPacket>> _incoming_packet_queue;
 
 		int64_t	_last_video_ts_ms = 0;
 		int64_t	_last_audio_ts_ms = 0;
 
 		std::shared_ptr<Publisher>		_publisher;
-
-		//std::queue<std::shared_ptr<AudioStreamData>>	_audio_stream_queue;
 	};
 }  // namespace pub
