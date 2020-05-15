@@ -58,12 +58,16 @@ namespace ov
 		{
 			auto lock_guard = std::lock_guard(_name_mutex);
 
-			_queue_name.Format("Queue<%s>", Demangle(typeid(T).name()).CStr());
-
-			if ((alias != nullptr) && (alias[0] == '\0'))
+			if ((alias != nullptr) && (alias[0] != '\0'))
 			{
-				_queue_name.AppendFormat(" (%s)", alias);
+				_queue_name = alias;
 			}
+			else
+			{
+				_queue_name.Format("Queue<%s>", Demangle(typeid(T).name()).CStr());
+			}
+
+			logd("ov.Queue", "[%p] The alias is changed to %s", this, _queue_name.CStr());
 		}
 
 		void Enqueue(const T &item)

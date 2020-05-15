@@ -18,7 +18,6 @@ namespace ov
 	public:
 		friend class ServerSocket;
 
-		ClientSocket(ServerSocket *server_socket);
 		ClientSocket(ServerSocket *server_socket, SocketWrapper socket, const SocketAddress &remote_address);
 
 		~ClientSocket() override;
@@ -100,7 +99,7 @@ namespace ov
 		//                At this time, it can be blocked, so it creates a thread and processes it.
 		//                I know it's inefficient to use one thread per Socket, and I'll create a send pool later.
 		std::thread _send_thread;
-		ov::Queue<DispatchCommand> _dispatch_queue;
+		ov::Queue<DispatchCommand> _dispatch_queue{nullptr, 100};
 		bool _is_thread_running = false;
 
 		std::shared_ptr<ClientSocket> _instance;
