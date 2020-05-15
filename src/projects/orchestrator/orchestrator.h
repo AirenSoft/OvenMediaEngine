@@ -455,7 +455,6 @@ protected:
 	// Modules
 	std::recursive_mutex _module_list_mutex;
 	std::vector<Module> _module_list;
-	std::map<OrchestratorModuleType, std::vector<std::shared_ptr<OrchestratorModuleInterface>>> _module_map;
 
 	mutable std::recursive_mutex _virtual_host_map_mutex;
 	// key: vhost_name

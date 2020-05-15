@@ -8,22 +8,31 @@
 //==============================================================================
 #include "data_structure.h"
 
-#define GET_TYPE_NAME(enum_type, value) \
-	case enum_type::value:              \
-		return #value
+#define GET_TYPE_NAME(enum_type, name, value)      \
+	do                                             \
+	{                                              \
+		if (OV_CHECK_FLAG(value, enum_type::name)) \
+		{                                          \
+			list.push_back(#name);                 \
+		}                                          \
+	} while (false)
 
-const char *GetOrchestratorModuleTypeName(OrchestratorModuleType type)
+ov::String GetOrchestratorModuleTypeName(OrchestratorModuleType type)
 {
-	switch (type)
+	std::vector<ov::String> list;
+
+	GET_TYPE_NAME(OrchestratorModuleType, Unknown, type);
+	GET_TYPE_NAME(OrchestratorModuleType, Provider, type);
+	GET_TYPE_NAME(OrchestratorModuleType, MediaRouter, type);
+	GET_TYPE_NAME(OrchestratorModuleType, Transcoder, type);
+	GET_TYPE_NAME(OrchestratorModuleType, Publisher, type);
+
+	if (list.size() == 0)
 	{
-		GET_TYPE_NAME(OrchestratorModuleType, Unknown);
-		GET_TYPE_NAME(OrchestratorModuleType, Provider);
-		GET_TYPE_NAME(OrchestratorModuleType, MediaRouter);
-		GET_TYPE_NAME(OrchestratorModuleType, Transcoder);
-		GET_TYPE_NAME(OrchestratorModuleType, Publisher);
+		// Unknown type name (not handled)
+		OV_ASSERT2(false);
+		return "N/A";
 	}
 
-	// Not handled type
-	OV_ASSERT2(false);
-	return "N/A";
+	return ov::String::Join(list, " | ");
 }
