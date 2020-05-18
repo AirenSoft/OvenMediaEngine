@@ -27,6 +27,10 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 	_stat_start_time = std::chrono::system_clock::now();
 
 	_stop_watch.Start();
+
+
+	// set alias
+	_media_packets.SetAlias(ov::String::FormatString("%s/%s - Mediarouter stream a/v queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetName().CStr()));
 }
 
 MediaRouteStream::~MediaRouteStream()

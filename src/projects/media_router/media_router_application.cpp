@@ -29,6 +29,8 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 {
 	logti("Created media route application. application id(%u), (%s)"
 		, _application_info.GetId(), _application_info.GetName().CStr());
+
+	_indicator.SetAlias(ov::String::FormatString("%s - Mediarouter Application Indicator", _application_info.GetName().CStr()));
 }
 
 MediaRouteApplication::~MediaRouteApplication()

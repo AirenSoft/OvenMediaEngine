@@ -30,6 +30,17 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 
 	// for generating track ids
 	_last_transcode_id = 0;
+
+	// set alias
+	_queue_input_packets.SetAlias(ov::String::FormatString("%s/%s - Transcode Stream input queue"
+		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetName().CStr()));
+
+	_queue_decoded_frames.SetAlias(ov::String::FormatString("%s/%s - Transcode Stream decoded queue"
+		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetName().CStr()));
+
+	_queue_filterd_frames.SetAlias(ov::String::FormatString("%s/%s - Transcode Stream filtered queue"
+		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetName().CStr()));
+
 }
 
 TranscodeStream::~TranscodeStream()
