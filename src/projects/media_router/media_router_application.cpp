@@ -43,7 +43,7 @@ bool MediaRouteApplication::Start()
 	{
 		_kill_flag = false;
 
-		_thread = std::thread(&MediaRouteApplication::MainTask, this);
+		_thread = std::thread(&MediaRouteApplication::MessageLooper, this);
 	}
 	catch (const std::system_error &e)
 	{
@@ -60,11 +60,14 @@ bool MediaRouteApplication::Stop()
 	_kill_flag = true;
 	
 	_indicator.Stop();
-	
+	_indicator.Clear();
+
 	if(_thread.joinable())
 	{
 		_thread.join();
 	}
+
+	// TODO: Delete All Stream
 
 	_connectors.clear();
 	_observers.clear();
@@ -204,7 +207,7 @@ bool MediaRouteApplication::OnCreateStream(
 	if(connector_type == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
 		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
-
+		new_stream->SetInoutType(false);
 		_streams_incoming.insert(std::make_pair(stream_info->GetId(), new_stream));		
 	}
 	else if( (connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) || 
@@ -212,6 +215,7 @@ bool MediaRouteApplication::OnCreateStream(
 	{
 		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 
+		new_stream->SetInoutType(true);
 		_streams_outgoing.insert(std::make_pair(stream_info->GetId(), new_stream));			
 	}
 	else
@@ -416,11 +420,11 @@ bool MediaRouteApplication::OnReceiveBuffer(
 }
 
 
-void MediaRouteApplication::MainTask()
+void MediaRouteApplication::MessageLooper()
 {
 	while (!_kill_flag)
 	{
-		auto msg = _indicator.Dequeue(100);
+		auto msg = _indicator.Dequeue(10);
 		if (msg.has_value() == false)
 		{
 			// It may be called due to a normal stop signal.
@@ -489,7 +493,6 @@ void MediaRouteApplication::MainTask()
 						}
 					}
 				}
-
 			}
 
 			lock.unlock();

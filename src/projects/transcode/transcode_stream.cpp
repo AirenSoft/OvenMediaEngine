@@ -19,12 +19,8 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 {
 	logtd("Trying to create transcode stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 
-	// Statistical parameters
-	_stats_decoded_frame_count = 0;
-	_stats_queue_full_count = 0;
-
 	// Determine maximum queue size
-	_max_queue_size = 0;
+	_max_queue_threshold = 0;
 
 	//store Parent information
 	_parent = parent;
@@ -44,14 +40,17 @@ TranscodeStream::~TranscodeStream()
 		Stop();
 	}
 
-	_decoders.clear();
-	_filters.clear();
+	// Delete all encoders, filters, decodres
 	_encoders.clear();
+	_filters.clear();
+	_decoders.clear();
 
+	// Delete all data in the queue
 	_queue_input_packets.Clear();
 	_queue_decoded_frames.Clear();
 	_queue_filterd_frames.Clear();
 
+	// Delete all map of stage
 	_stage_input_to_decoder.clear();
 	_stage_input_to_output.clear();
 	_stage_decoder_to_filter.clear();
@@ -59,6 +58,11 @@ TranscodeStream::~TranscodeStream()
 	_stage_encoder_to_output.clear();
 
 	_stream_outputs.clear();
+}
+
+TranscodeApplication* TranscodeStream::GetParent()
+{
+	return _parent;
 }
 
 bool TranscodeStream::Start()
@@ -77,29 +81,21 @@ bool TranscodeStream::Start()
 
 	if (CreateDecoders() == 0)
 	{
-		logtw("No decoder generated");
+		logti("No decoder generated");
 	}
 
 	if (CreateEncoders() == 0)
 	{
-		logtw("No encoder generated");
+		logti("No encoder generated");
 	}
 
 	// I will make and apply a packet drop policy.
-	_max_queue_size = 256;
+	_max_queue_threshold = 256;
 
-	// Create Data Processing Loop Threads
-	try
-	{
-		_kill_flag = false;
-		_thread_looptask = std::thread(&TranscodeStream::LoopTask, this);
-	}
-	catch (const std::system_error &e)
-	{
-		_kill_flag = true;
-		logte("Failed to start transcode stream thread");
-		return false;
-	}
+	_kill_flag = false;
+
+	// Notify to create a new stream on the media router.
+	CreateStreams();
 
 	logti("[%s/%s(%u)] Transcoder input stream has been started. Status : (%d) Decoders, (%d) Encoders", 
 						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(), _decoders.size(), _encoders.size());
@@ -113,17 +109,39 @@ bool TranscodeStream::Stop()
 
 	logtd("Wait for terminated trancode stream thread. kill_flag(%s)", _kill_flag ? "true" : "false");
 
+
+	// Stop all queues
 	_queue_input_packets.Stop();
 	_queue_decoded_frames.Stop();
 	_queue_filterd_frames.Stop();
 
-	_queue_event.Notify();
-
-	if (_thread_looptask.joinable())
+	// Stop all encoders
+	for (auto &iter : _encoders)
 	{
-		_thread_looptask.join();
+		auto object = iter.second;
+		object->Stop();
+		object.reset();
 	}
 
+	// Stop all filters
+	for (auto &iter : _filters)
+	{
+		auto object = iter.second;
+
+		object.reset();
+	}
+
+	// Stop all decoder
+	for (auto &iter : _decoders)
+	{
+		auto object = iter.second;
+
+		object.reset();
+	}
+
+
+
+	// Notify to delete the stream created on the MediaRouter
 	DeleteStreams();
 
 	logti("[%s/%s(%u)] Transcoder input stream has been stopped."
@@ -134,21 +152,22 @@ bool TranscodeStream::Stop()
 
 bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
 {
-	if (_max_queue_size == 0)
+	if (_max_queue_threshold == 0)
 	{
 		// Drop packets because the transcoding information has not been generated.
 		return true;
 	}
 
-	if (_queue_input_packets.Size() > _max_queue_size)
+	if (_queue_input_packets.Size() > _max_queue_threshold)
 	{
-		logti("Queue(stream) is full, please check your system: (queue: %zu > limit: %llu)", _queue_input_packets.Size(), _max_queue_size);
+		logti("Queue(stream) is full, please check your system: (queue: %zu > limit: %llu)", _queue_input_packets.Size(), _max_queue_threshold);
 		return false;
 	}
 
 	_queue_input_packets.Enqueue(std::move(packet));
 
-	_queue_event.Notify();
+	if(GetParent() != nullptr)
+		GetParent()->AppendIndicator(this->GetSharedPtr(), TranscodeApplication::IndicatorQueueType::BUFFER_INDICATOR_INPUT_PACKETS);
 
 	return true;
 }
@@ -802,10 +821,7 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 				decoded_frame->SetTrackId(decoder_id);
 
 				// logtp("[#%d] A packet is decoded (PTS: %lld)", decoder_id, decoded_frame->GetPts());
-
-				_stats_decoded_frame_count++;
-
-				if (_queue_decoded_frames.Size() > _max_queue_size)
+				if (_queue_decoded_frames.Size() > _max_queue_threshold)
 				{
 					logti("Decoded frame queue is full, please check your system");
 					return result;
@@ -813,7 +829,8 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 
 				_queue_decoded_frames.Enqueue(std::move(decoded_frame));
 
-				_queue_event.Notify();
+				if(GetParent() != nullptr)
+					GetParent()->AppendIndicator(this->GetSharedPtr(), TranscodeApplication::IndicatorQueueType::BUFFER_INDICATOR_DECODED_FRAMES);
 
 				break;
 
@@ -859,7 +876,8 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 
 				_queue_filterd_frames.Enqueue(std::move(filtered_frame));
 
-				_queue_event.Notify();
+				if(GetParent() != nullptr)
+					GetParent()->AppendIndicator(this->GetSharedPtr(), TranscodeApplication::IndicatorQueueType::BUFFER_INDICATOR_FILTERED_FRAMES);
 
 				break;
 
@@ -923,6 +941,7 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t filter_id, std::shared_ptr<
 	}
 }
 
+#if 0
 void TranscodeStream::LoopTask()
 {
 	logtd("Started transcode stream message loop thread");
@@ -1014,6 +1033,39 @@ void TranscodeStream::LoopTask()
 	}
 
 	logtd("Terminated transcode message loop thread");
+}
+#endif
+
+void TranscodeStream::DoInputPackets()
+{
+	auto packet = _queue_input_packets.Dequeue();
+	if (packet.has_value())
+	{
+		int32_t track_id = packet.value()->GetTrackId();
+
+		DecodePacket(track_id, std::move(packet.value()));
+	}
+}
+
+
+void TranscodeStream::DoDecodedFrames()
+{
+	auto frame = _queue_decoded_frames.Dequeue();
+	if (frame.has_value())
+	{
+		DoFilters(std::move(frame.value()));
+	}
+}
+
+void TranscodeStream::DoFilteredFrames()
+{
+	auto frame = _queue_filterd_frames.Dequeue();
+	if (frame.has_value())
+	{
+		int32_t filter_id = frame.value()->GetTrackId();
+
+		EncodeFrame(filter_id, std::move(frame.value()));
+	}
 }
 
 void TranscodeStream::CreateStreams()

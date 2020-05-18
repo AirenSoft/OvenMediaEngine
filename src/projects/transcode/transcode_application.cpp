@@ -33,11 +33,31 @@ TranscodeApplication::~TranscodeApplication()
 
 bool TranscodeApplication::Start()
 {
+
+	try
+	{
+		_kill_flag = false;
+		_thread_looptask = std::thread(&TranscodeApplication::MessageLooper, this);
+	}
+	catch (const std::system_error &e)
+	{
+		_kill_flag = true;
+		logte("Failed to start transcode stream thread");
+		return false;
+	}
+
 	return true;
 }
 
 bool TranscodeApplication::Stop()
 {
+	_kill_flag = true;
+	
+	if (_thread_looptask.joinable())
+	{
+		_thread_looptask.join();
+	}
+
 	std::unique_lock<std::mutex> lock(_mutex);
 
 	for(const auto &x : _streams)
@@ -105,5 +125,47 @@ bool TranscodeApplication::OnSendFrame(const std::shared_ptr<info::Stream> &stre
 
 	auto stream = stream_bucket->second;
 
-	return stream->Push(std::move(packet));
+	return stream->Push(packet);
+}
+
+
+bool TranscodeApplication::AppendIndicator(std::shared_ptr<TranscodeStream> stream, IndicatorQueueType queue_type)
+{
+	_indicator.Enqueue( std::make_shared<BufferIndicator>(stream,queue_type) );
+
+	return true;
+}
+
+void TranscodeApplication::MessageLooper()
+{
+	while (!_kill_flag)
+	{
+		auto indicator_ref = _indicator.Dequeue(10);
+		if (indicator_ref.has_value() == false)
+		{
+			// logti("There is no indicator"); 
+			continue;
+		}
+
+		auto indicator = indicator_ref.value();
+
+		switch(indicator->_queue_type)
+		{
+			case BUFFER_INDICATOR_INPUT_PACKETS:
+				indicator->_stream->DoInputPackets();
+				break;
+
+			case BUFFER_INDICATOR_DECODED_FRAMES:
+				indicator->_stream->DoDecodedFrames();
+				break;
+
+			case BUFFER_INDICATOR_FILTERED_FRAMES:
+				indicator->_stream->DoFilteredFrames();
+				break;
+			default:
+				break;
+		}
+
+		// logti("Append Indicator %p %d %d", indicator->_stream, indicator->_queue_type, _indicator.Size());
+	}
 }

@@ -166,7 +166,7 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&MediaFilterRescaler::ThreadEncode, this);
+		_thread_work = std::thread(&MediaFilterRescaler::TrheadFilter, this);
 	}
 	catch (const std::system_error &e)
 	{
@@ -206,7 +206,7 @@ void MediaFilterRescaler::Stop()
 	}
 }
 
-void MediaFilterRescaler::ThreadEncode()
+void MediaFilterRescaler::TrheadFilter()
 {
 	logtd("Start transcode rescaler filter thread.");
 

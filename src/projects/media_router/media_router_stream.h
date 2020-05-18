@@ -30,6 +30,8 @@ public:
 	MediaRouteStream(const std::shared_ptr<info::Stream> &stream);
 	~MediaRouteStream();
 
+	void SetInoutType(bool inout_type);
+
 	// Query original stream information
 	std::shared_ptr<info::Stream> GetStream();
 	void SetConnectorType(MediaRouteApplicationConnector::ConnectorType type);
@@ -40,6 +42,10 @@ public:
 	std::shared_ptr<MediaPacket> Pop();
 
 private:
+	// false = incoming stream
+	// true = outgoing stream
+	bool	_inout_type;
+
 	std::shared_ptr<info::Stream> _stream;
 	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
 
@@ -62,7 +68,7 @@ private:
 	std::map<uint8_t, int64_t> _pts_avg_inc;
 
 	// statistics 
-	 ov::StopWatch _stop_watch;
+	ov::StopWatch _stop_watch;
 
 	std::chrono::time_point<std::chrono::system_clock> _last_recv_time;
 	std::chrono::time_point<std::chrono::system_clock> _stat_start_time;
@@ -73,13 +79,5 @@ private:
 	std::map<uint8_t, int64_t> _stat_recv_pkt_count;
 
 	std::map<uint8_t, int64_t> _stat_first_time_diff;
-	
-
-	// int64_t _last_video_pts = 0;
-	// int64_t _last_audio_pts = 0 ;
-	// int64_t _pkt_video_count = 0;
-	// int64_t _pkt_aaudio_count = 0;
-	// // time of last packet received
-	// time_t _last_rb_time;
 };
 
