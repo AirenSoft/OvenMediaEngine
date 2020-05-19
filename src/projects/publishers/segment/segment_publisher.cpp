@@ -117,14 +117,14 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	auto stream = GetStreamAs<SegmentStream>(app_name, stream_name);
 	if (stream == nullptr)
 	{
+		auto orchestrator = Orchestrator::GetInstance();
+
 		// These names are used for testing purposes
 		// TODO(dimiden): Need to delete this code after testing
 		if (
 			app_name.HasSuffix("#rtsp_live") || app_name.HasSuffix("#rtsp_playback") ||
 			app_name.HasSuffix("#rtsp_live_insecure") || app_name.HasSuffix("#rtsp_playback_insecure"))
 		{
-			auto orchestrator = Orchestrator::GetInstance();
-
 			auto &query_map = parsed_url->QueryMap();
 
 			auto rtsp_uri_item = query_map.find("rtspURI");
@@ -171,27 +171,39 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 
 			stream = GetStreamAs<SegmentStream>(app_name, stream_name);
 		}
+		else
+		{
+			// If the stream does not exists, request to the provider
+			if (orchestrator->RequestPullStream(app_name, stream_name) == false)
+			{
+				logte("Could not request pull stream for URL : %s/%s/%s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+				client->GetResponse()->SetStatusCode(HttpStatusCode::NotAcceptable);
+
+				// Returns true when the observer search can be ended.
+				return true;
+			}
+			else
+			{
+				stream = GetStreamAs<SegmentStream>(app_name, stream_name);
+			}
+		}
 	}
 
-	if(stream == nullptr)
+	if (stream == nullptr)
 	{
 		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
-		
+
 		// This means it need to query the next observer.
 		return false;
 	}
 
-	if(stream->GetPlayList(play_list) == false)
+	if (stream->GetPlayList(play_list) == false)
 	{
 		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
 		client->GetResponse()->SetStatusCode(HttpStatusCode::Accepted);
 		// Returns true when the observer search can be ended.
 		return true;
 	}
-
-	logti("Playlist requested (%s/%s/%s) from %s", 
-						app_name.CStr(), stream_name.CStr(), file_name.CStr(), 
-						client->GetRequest()->GetRemote()->GetRemoteAddress()->ToString().CStr());
 
 	client->GetResponse()->SetStatusCode(HttpStatusCode::OK);
 	return true;
