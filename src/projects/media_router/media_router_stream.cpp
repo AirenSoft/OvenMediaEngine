@@ -6,7 +6,7 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "media_route_stream.h"
+#include "media_router_stream.h"
 
 #include <base/ovlibrary/ovlibrary.h>
 
@@ -20,17 +20,35 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 {
 	logtd("Trying to create media route stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 
+	_inout_type = false;
 	_stream = stream;
 	_stream->ShowInfo();
 
 	_stat_start_time = std::chrono::system_clock::now();
 
 	_stop_watch.Start();
+
+
+	// set alias
+	_media_packets.SetAlias(ov::String::FormatString("%s/%s - Mediarouter stream a/v queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetName().CStr()));
 }
 
 MediaRouteStream::~MediaRouteStream()
 {
 	logtd("Delete media route stream name(%s) id(%u)", _stream->GetName().CStr(), _stream->GetId());
+
+	_media_packet_stored.clear();
+
+	_media_packets.Clear();
+
+	_stat_recv_pkt_lpts.clear();
+	_stat_recv_pkt_ldts.clear();
+	_stat_recv_pkt_size.clear();
+	_stat_recv_pkt_count.clear();
+	_stat_first_time_diff.clear();
+
+	_pts_correct.clear();
+	_pts_avg_inc.clear();
 }
 
 std::shared_ptr<info::Stream> MediaRouteStream::GetStream()
@@ -42,6 +60,12 @@ void MediaRouteStream::SetConnectorType(MediaRouteApplicationConnector::Connecto
 {
 	_application_connector_type = type;
 }
+
+void MediaRouteStream::SetInoutType(bool inout_type)
+{
+	_inout_type = inout_type;
+}
+
 
 MediaRouteApplicationConnector::ConnectorType MediaRouteStream::GetConnectorType()
 {
@@ -67,7 +91,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		int64_t duration = media_packet->GetDts() - media_packet_cache->GetDts();
 		media_packet_cache->SetDuration(duration);
 
-		_media_packets.push(media_packet_cache);
+		_media_packets.Enqueue(std::move(media_packet_cache));
 		is_inserted_queue = true;
 	}
 
@@ -77,7 +101,8 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	}
 	else
 	{
-		_media_packets.push(media_packet);
+		_media_packets.Enqueue(std::move(media_packet));
+
 		is_inserted_queue = true;
 	}
 
@@ -87,16 +112,18 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 
 std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 {
-	if(_media_packets.empty())
+	if(_media_packets.IsEmpty())
 	{
 		return nullptr;
 	}
 
-	auto media_packet = std::move(_media_packets.pop());
-	if(media_packet == nullptr)
+	auto media_packet_ref = _media_packets.Dequeue();
+	if(media_packet_ref.has_value() == false)
 	{
 		return nullptr;
-	}
+	}	
+
+	auto &media_packet = media_packet_ref.value();
 
 	auto media_type = media_packet->GetMediaType();
 	auto track_id = media_packet->GetTrackId();
@@ -149,7 +176,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	_stat_recv_pkt_count[track_id]++;
 
 
-	// 최초 딜레이 (현재 시간과 최초 PTS의 차이 값을 최초 딜레이라고 가정한다)
 	// 	Diffrence time of received first packet with uptime.
 	if(_stat_first_time_diff[track_id] == 0)
 	{
@@ -161,7 +187,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		_stat_first_time_diff[track_id] = uptime - rescaled_last_pts;
 	}
 
-	// 주기적으로 상태를 출력함
 	if (_stop_watch.IsElapsed(5000))
 	{
 		_stop_watch.Update();
@@ -172,9 +197,12 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		int64_t uptime =  std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - _stat_start_time).count();
 
 		ov::String temp_str = "\n";
-		temp_str.AppendFormat(" - Stream of MediaRouter | name : %s, uptime : %lldms , queue : %d" ,_stream->GetName().CStr(), (int64_t)uptime, _media_packets.size());
+		temp_str.AppendFormat(" - Stream of MediaRouter| type: %s, name: %s/%s, uptime: %lldms , queue: %d" 
+			, _inout_type?"Outgoing":"Incoming"
+			,_stream->GetApplicationInfo().GetName().CStr()
+			,_stream->GetName().CStr()
+			,(int64_t)uptime, _media_packets.Size());
 
-		// 모든 트랙 상태를 출력
 		for(const auto &iter : _stream->GetTracks())
 		{
 			auto track_id = iter.first;
@@ -192,10 +220,9 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 			if(_pts_correct[track_id] != 0)
 			{
-				// 보정용 시간
 				int64_t corrected_pts = _pts_correct[track_id] * 1000 / track->GetTimeBase().GetDen();
 
-				pts_str.AppendFormat("last_pts : %lldms->%lldms, fist_diff(%5lldms), last_diff(%5lldms), delay(%5lldms), crt_pts : %lld"
+				pts_str.AppendFormat("last_pts(%lldms->%lldms), fist_diff(%5lldms), last_diff(%5lldms), delay(%5lldms), crt_pts : %lld"
 					, rescaled_last_pts
 					, rescaled_last_pts - corrected_pts
 					, first_delay
@@ -205,7 +232,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			}
 			else
 			{
-				pts_str.AppendFormat("last_pts : %lldms, fist_diff(%5lldms), last_diff(%5lldms), delay(%5lldms)"
+				pts_str.AppendFormat("last_pts(%lldms), fist_diff(%5lldms), last_diff(%5lldms), delay(%5lldms)"
 					, rescaled_last_pts
 					, first_delay
 					, last_delay
@@ -213,7 +240,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 				);
 			}
 
-			temp_str.AppendFormat("\n\t[%d] track : %s(%d), %s, pkt_cnt : %lld, pkt_siz : %lldB"
+			temp_str.AppendFormat("\n\t[%d] track: %s(%d), %s, pkt_cnt: %lld, pkt_siz: %lldB"
 				, track_id
 				, track->GetMediaType()==MediaType::Video?"video":"audio"
 				, track->GetCodecId()
@@ -222,12 +249,12 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 				, _stat_recv_pkt_size[track_id]);
 		}
 
-		logts("%s", temp_str.CStr());
+		logtd("%s", temp_str.CStr());
 	}
 
 
 	////////////////////////////////////////////////////////////////////////////////////
-	// Processing
+	// Bitstream Processing
 	////////////////////////////////////////////////////////////////////////////////////
 
 	// Bitstream Converting or Generate Fragmentation Header 
@@ -243,7 +270,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		}
 		else if (media_track->GetCodecId() == MediaCodecId::Vp8)
 		{
-			// TODO: Vp8 코덱과 같은 경우에는 Provider로 나중에 옮겨야 겠음.
 			_bsf_vp8.convert_to(media_packet->GetData());
 		}
 		else

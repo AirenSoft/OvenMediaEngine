@@ -15,7 +15,8 @@
 #include "physical_port_private.h"
 
 PhysicalPortWorker::PhysicalPortWorker(const std::shared_ptr<PhysicalPort> &physical_port)
-	: _observer_list(physical_port->_observer_list)
+	: _observer_list(physical_port->_observer_list),
+	  _physical_port(physical_port)
 {
 }
 
@@ -30,6 +31,19 @@ bool PhysicalPortWorker::Start()
 		// Thread is already running
 		return false;
 	}
+
+	auto socket = _physical_port->GetSocket();
+
+	if (socket == nullptr)
+	{
+		// Because PhyiscalPort is released before start worker, so don't need to start worker
+		return false;
+	}
+
+	ov::String queue_name;
+	queue_name.Format("[%p] PhyPortWorker for #%d (%s)", this, socket->GetSocket().GetSocket(), socket->GetLocalAddress()->ToString().CStr());
+
+	_task_list.SetAlias(queue_name);
 
 	_stop = false;
 	_thread = std::thread(&PhysicalPortWorker::ThreadProc, this);
@@ -57,10 +71,17 @@ bool PhysicalPortWorker::Stop()
 	return true;
 }
 
-void PhysicalPortWorker::AddTask(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data)
+bool PhysicalPortWorker::AddTask(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data)
 {
+	if (_stop)
+	{
+		return false;
+	}
+
 	Task task(client, data);
 	_task_list.Enqueue(std::move(task));
+
+	return true;
 }
 
 void PhysicalPortWorker::ThreadProc()

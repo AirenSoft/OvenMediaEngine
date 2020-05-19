@@ -7,57 +7,55 @@
 //
 //==============================================================================
 #include "main.h"
-#include "./signals.h"
-#include "./third_parties.h"
-#include "./utilities.h"
-#include "main_private.h"
-
-#include <sys/utsname.h>
 
 #include <base/ovlibrary/daemon.h>
 #include <base/ovlibrary/log_write.h>
 #include <config/config_manager.h>
-
 #include <media_router/media_router.h>
 #include <monitoring/monitoring.h>
 #include <orchestrator/orchestrator.h>
 #include <providers/providers.h>
 #include <publishers/publishers.h>
+#include <sys/utsname.h>
 #include <transcode/transcoder.h>
 #include <web_console/web_console.h>
 
-#define INIT_MODULE(variable, name, create)                                         \
-	logti("Trying to create a " name " module"); 									\
-                                                                                    \
-	auto variable = create;                                                         \
-                                                                                    \
-	if (variable == nullptr)                                                        \
-	{                                                                               \
-		logte("Failed to initialize" name " module");								\
-		return 1;                                                                   \
-	}                                                                               \
-                                                                                    \
-	if(orchestrator->RegisterModule(variable) == false)								\
-	{																				\
-		logte("Failed to register" name " module");									\
-		return 1;																	\
-	}																				\
+#include "./signals.h"
+#include "./third_parties.h"
+#include "./utilities.h"
+#include "main_private.h"
 
+#define INIT_MODULE(variable, name, create)              \
+	logti("Trying to create a " name " module");         \
+                                                         \
+	auto variable = create;                              \
+                                                         \
+	if (variable == nullptr)                             \
+	{                                                    \
+		logte("Failed to initialize" name " module");    \
+		return 1;                                        \
+	}                                                    \
+                                                         \
+	if (orchestrator->RegisterModule(variable) == false) \
+	{                                                    \
+		logte("Failed to register" name " module");      \
+		return 1;                                        \
+	}
 
-#define RELEASE_MODULE(variable, name) 			                                   	\
-	logti("Trying to delete a " name " module");									\
-																					\
-	if( variable != nullptr)														\
-	{																				\
-		if(orchestrator->UnregisterModule(variable) != false)						\
-		{																			\
-			variable->Stop();														\
-		}																			\
-		else																		\
-		{																			\
-			logte("Failed to unregister" name " module");							\
-		}																			\
-	}																				\
+#define RELEASE_MODULE(variable, name)                         \
+	logti("Trying to delete a " name " module");               \
+                                                               \
+	if (variable != nullptr)                                   \
+	{                                                          \
+		if (orchestrator->UnregisterModule(variable) != false) \
+		{                                                      \
+			variable->Stop();                                  \
+		}                                                      \
+		else                                                   \
+		{                                                      \
+			logte("Failed to unregister" name " module");      \
+		}                                                      \
+	}
 
 #define INIT_EXTERNAL_MODULE(name, func)                                          \
 	{                                                                             \
@@ -69,6 +67,18 @@
 			logte("Could not initialize " name ": %s", error->ToString().CStr()); \
 			return 1;                                                             \
 		}                                                                         \
+	}
+
+#define TERMINATE_EXTERNAL_MODULE(name, func)                                    \
+	{                                                                            \
+		logtd("Trying to terminate " name "...");                                \
+		auto error = func();                                                     \
+                                                                                 \
+		if (error != nullptr)                                                    \
+		{                                                                        \
+			logte("Could not terminate " name ": %s", error->ToString().CStr()); \
+			return 1;                                                            \
+		}                                                                        \
 	}
 
 extern bool g_is_terminated;
@@ -140,19 +150,12 @@ int main(int argc, char *argv[])
 	//--------------------------------------------------------------------
 	// Create the modules
 	//--------------------------------------------------------------------
+	//
+	// NOTE: THE ORDER OF MODULES IS IMPORTANT
+	//
+	//
 	// Initialize MediaRouter (MediaRouter must be registered first)
 	INIT_MODULE(media_router, "MediaRouter", MediaRouter::Create());
-
-	// Initialize Providers
-
-	INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
-	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
-	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
-	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
-	
-
-	// Initialize Transcoder
-	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
 
 	// Initialize Publishers
 	INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, media_router));
@@ -160,6 +163,15 @@ int main(int argc, char *argv[])
 	INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(http_server_manager, *server_config, media_router));
 	INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(http_server_manager, *server_config, media_router));
 	INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, media_router));
+
+	// Initialize Transcoder
+	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
+
+	// Initialize Providers
+	INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
+	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
+	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
+	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
 
 	logti("All modules are initialized successfully");
 
@@ -191,17 +203,25 @@ int main(int argc, char *argv[])
 	// Relase all modules
 	monitor->Release();
 
-	RELEASE_MODULE(media_router, "MediaRouter");
 	RELEASE_MODULE(rtmp_provider, "RTMP Provider");
 	RELEASE_MODULE(ovt_provider, "OVT Provider");
 	RELEASE_MODULE(rtspc_provider, "RTSPC Provider");
 	// PENDING : RELEASE_MODULE(rtsp_provider, "RTSP Provider");
+
 	RELEASE_MODULE(transcoder, "Transcoder");
+
 	RELEASE_MODULE(webrtc_publisher, "WebRTC Publisher");
 	RELEASE_MODULE(hls_publisher, "HLS Publisher");
 	RELEASE_MODULE(dash_publisher, "MPEG-DASH Publisher");
 	RELEASE_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher");
 	RELEASE_MODULE(ovt_publisher, "OVT Publisher");
+
+	RELEASE_MODULE(media_router, "MediaRouter");
+
+	TERMINATE_EXTERNAL_MODULE("SRTP", TerminateSrtp);
+	TERMINATE_EXTERNAL_MODULE("OpenSSL", TerminateOpenSsl);
+	TERMINATE_EXTERNAL_MODULE("SRT", TerminateSrt);
+	TERMINATE_EXTERNAL_MODULE("FFmpeg", TerminateFFmpeg);
 
 	Uninitialize();
 
@@ -290,11 +310,6 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 
 static bool Uninitialize()
 {
-	logtd("Trying to uninitialize OpenSSL...");
-	ov::OpensslManager::ReleaseOpenSSL();
-
-	::srt_cleanup();
-
 	logti("OvenMediaEngine will be terminated");
 
 	return true;

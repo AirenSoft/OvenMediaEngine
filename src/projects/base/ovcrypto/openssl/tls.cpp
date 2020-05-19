@@ -10,7 +10,10 @@
 
 #include <utility>
 
+#include "./openssl_manager.h"
+
 #define OV_LOG_TAG "OpenSSL"
+#define OV_TLS_BIO_METHOD_NAME "ov::Tls"
 
 #define MAX_TLS_WRITE_SIZE (16 * 1024)
 #define DO_CALLBACK_IF_AVAILBLE(return_type, default_value, object, callback_name, ...) \
@@ -25,31 +28,42 @@ namespace ov
 
 	BIO_METHOD *Tls::PrepareBioMethod()
 	{
-		static BIO_METHOD *bio_methods = nullptr;
+		static std::mutex bio_mutex;
+		static BIO_METHOD *bio_method = nullptr;
 
-		if (bio_methods == nullptr)
+		if (bio_method == nullptr)
 		{
-			bio_methods = ::BIO_meth_new(BIO_TYPE_MEM, "ov::Tls");
+			auto lock_guard = std::lock_guard(bio_mutex);
 
-			int result = 1;
-
-			result = result && ::BIO_meth_set_create(bio_methods, TlsCreate);
-			result = result && ::BIO_meth_set_ctrl(bio_methods, TlsCtrl);
-			result = result && ::BIO_meth_set_read(bio_methods, TlsRead);
-			result = result && ::BIO_meth_set_write(bio_methods, TlsWrite);
-			result = result && ::BIO_meth_set_puts(bio_methods, TlsPuts);
-			result = result && ::BIO_meth_set_destroy(bio_methods, TlsDestroy);
-
-			if (result == false)
+			if (bio_method == nullptr)
 			{
-				::BIO_meth_free(bio_methods);
-				bio_methods = nullptr;
+				bio_method = OpensslManager::Instance()->GetBioMethod(OV_TLS_BIO_METHOD_NAME);
+
+				if (bio_method != nullptr)
+				{
+					int result = 1;
+
+					result = result && ::BIO_meth_set_create(bio_method, TlsCreate);
+					result = result && ::BIO_meth_set_ctrl(bio_method, TlsCtrl);
+					result = result && ::BIO_meth_set_read(bio_method, TlsRead);
+					result = result && ::BIO_meth_set_write(bio_method, TlsWrite);
+					result = result && ::BIO_meth_set_puts(bio_method, TlsPuts);
+					result = result && ::BIO_meth_set_destroy(bio_method, TlsDestroy);
+
+					if (result == false)
+					{
+						OpensslManager::Instance()->FreeBioMethod(OV_TLS_BIO_METHOD_NAME);
+						::BIO_meth_free(bio_method);
+
+						bio_method = nullptr;
+					}
+				}
 			}
 		}
 
-		OV_ASSERT2(bio_methods != nullptr);
+		OV_ASSERT2(bio_method != nullptr);
 
-		return bio_methods;
+		return bio_method;
 	}
 
 	bool Tls::Initialize(const SSL_METHOD *method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback)
@@ -608,4 +622,4 @@ namespace ov
 
 		return true;
 	}
-};  // namespace ov
+};	// namespace ov

@@ -95,7 +95,7 @@ namespace pub
 	// Delete Application
 	bool Publisher::OnDeleteApplication(const info::Application &app_info)
 	{
-		std::lock_guard<std::shared_mutex> lock(_application_map_mutex);
+		std::unique_lock<std::shared_mutex> lock(_application_map_mutex);
 		auto item = _applications.find(app_info.GetId());
 
 		logtd("Delete the application: [%s]", app_info.GetName().CStr());
@@ -122,15 +122,20 @@ namespace pub
 			return false;
 		}
 
-		bool result = OnDeletePublisherApplication(item->second);
+		auto application = item->second;
+		_applications[app_info.GetId()]->Stop();
+		_applications.erase(item);
+
+		lock.unlock();
+
+		_router->UnregisterObserverApp(*application.get(), application);
+		
+		bool result = OnDeletePublisherApplication(application);
 		if(result == false)
 		{
 			logte("Could not delete the %s application of the %s publisher", app_info.GetName().CStr(), ov::Converter::ToString(GetPublisherType()).CStr());
 			return false;
 		}
-
-		_applications[app_info.GetId()]->Stop();
-		_applications.erase(app_info.GetId());
 
 		return true;
 	}

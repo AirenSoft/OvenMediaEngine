@@ -101,7 +101,7 @@ namespace ov
 			switch (result)
 			{
 				case SSL_ERROR_NONE:
-					logti("Accepted");
+					logtd("Accepted");
 					_state = State::Accepted;
 					break;
 

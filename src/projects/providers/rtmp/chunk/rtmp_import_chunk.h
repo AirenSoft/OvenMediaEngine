@@ -33,6 +33,9 @@ public:
 		_chunk_size = chunk_size;
 	}
 
+	void SetAppName(const ov::String &app_name);
+	void SetStreamName(const ov::String &stream_name);
+
 	void Destroy();
 
 private:
@@ -43,8 +46,11 @@ private:
 	std::shared_ptr<const RtmpMessage> FinalizeMessage(const std::shared_ptr<const RtmpChunkHeader> &chunk_header, ov::ByteStream &stream);
 
 	std::map<uint32_t, std::shared_ptr<const RtmpChunkHeader>> _chunk_map;
-	std::deque<std::shared_ptr<const RtmpMessage>> _message_queue;
+	ov::Queue<std::shared_ptr<const RtmpMessage>> _message_queue { nullptr, 500 };
 	size_t _chunk_size;
 
 	RtmpChunkParser _parser;
+
+	ov::String _app_name;
+	ov::String _stream_name;
 };

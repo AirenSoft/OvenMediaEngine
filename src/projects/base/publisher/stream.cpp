@@ -4,9 +4,11 @@
 
 namespace pub
 {
-	StreamWorker::StreamWorker()
+	StreamWorker::StreamWorker(const std::shared_ptr<Stream> &parent_stream)
+		: _packet_queue(nullptr, 100)
 	{
 		_stop_thread_flag = true;
+		_parent = parent_stream;
 	}
 
 	StreamWorker::~StreamWorker()
@@ -20,6 +22,12 @@ namespace pub
 		{
 			return true;
 		}
+
+		ov::String queue_name;
+
+		queue_name.Format("%s/%s/%s StreamWorker Queue", _parent->GetApplication()->GetApplicationTypeName(), _parent->GetApplication()->GetName().CStr(), _parent->GetName().CStr());
+		_packet_queue.SetAlias(queue_name.CStr());
+		
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&StreamWorker::WorkerThread, this);
 
@@ -94,29 +102,26 @@ namespace pub
 
 	void StreamWorker::SendPacket(uint32_t type, std::shared_ptr<ov::Data> packet)
 	{
-		// Queue에 패킷을 집어넣는다.
-		auto stream_packet = std::make_shared<StreamWorker::StreamPacket>(type, packet);
-
-		std::unique_lock<std::mutex> lock(_packet_queue_guard);
-		_packet_queue.push(stream_packet);
-		lock.unlock();
+		auto stream_packet = std::make_shared<pub::StreamWorker::StreamPacket>(type, packet);
+		_packet_queue.Enqueue(std::move(stream_packet));
 
 		_queue_event.Notify();
 	}
 
 	std::shared_ptr<StreamWorker::StreamPacket> StreamWorker::PopStreamPacket()
 	{
-		std::unique_lock<std::mutex> lock(_packet_queue_guard);
-
-		if (_packet_queue.empty())
+		if (_packet_queue.IsEmpty())
 		{
 			return nullptr;
 		}
 
-		auto data = _packet_queue.front();
-		_packet_queue.pop();
+		auto data = _packet_queue.Dequeue();
+		if(data.has_value())
+		{
+			return data.value();
+		}
 
-		return std::move(data);
+		return nullptr;
 	}
 
 	void StreamWorker::WorkerThread()
@@ -150,8 +155,7 @@ namespace pub
 		}
 	}
 
-	Stream::Stream(const std::shared_ptr<Application> application,
-				   const info::Stream &info)
+	Stream::Stream(const std::shared_ptr<Application> application, const info::Stream &info)
 		: info::Stream(info)
 	{
 		_application = application;
@@ -171,23 +175,26 @@ namespace pub
 			return false;
 		}
 
-		if (worker_count > MAX_STREAM_THREAD_COUNT)
+		if (worker_count > MAX_STREAM_WORKER_THREAD_COUNT)
 		{
-			worker_count = MAX_STREAM_THREAD_COUNT;
+			worker_count = MAX_STREAM_WORKER_THREAD_COUNT;
 		}
 
 		_worker_count = worker_count;
 		// Create WorkerThread
 		for (uint32_t i = 0; i < _worker_count; i++)
 		{
-			if (!_stream_workers[i].Start())
+			auto stream_worker = std::make_shared<StreamWorker>(GetSharedPtr());
+						
+			if (stream_worker->Start() == false)
 			{
 				logte("Cannot create stream thread (%d)", i);
-
 				Stop();
 
 				return false;
 			}
+
+			_stream_workers[i] = stream_worker;
 		}
 
 		logti("%s application has started [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
@@ -207,7 +214,7 @@ namespace pub
 
 		for (uint32_t i = 0; i < _worker_count; i++)
 		{
-			_stream_workers[i].Stop();
+			_stream_workers[i]->Stop();
 		}
 
 		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
@@ -228,7 +235,7 @@ namespace pub
 		return _application;
 	}
 
-	StreamWorker &Stream::GetWorkerByStreamID(session_id_t session_id)
+	std::shared_ptr<StreamWorker> Stream::GetWorkerByStreamID(session_id_t session_id)
 	{
 		return _stream_workers[session_id % _worker_count];
 	}
@@ -240,7 +247,7 @@ namespace pub
 		_sessions[session->GetId()] = session;
 		// 가장 적은 Session을 처리하는 Worker를 찾아서 Session을 넣는다.
 		// session id로 hash를 만들어서 분배한다.
-		return GetWorkerByStreamID(session->GetId()).AddSession(session);
+		return GetWorkerByStreamID(session->GetId())->AddSession(session);
 	}
 
 	bool Stream::RemoveSession(session_id_t id)
@@ -254,13 +261,13 @@ namespace pub
 
 		_sessions.erase(id);
 
-		return GetWorkerByStreamID(id).RemoveSession(id);
+		return GetWorkerByStreamID(id)->RemoveSession(id);
 	}
 
 	std::shared_ptr<Session> Stream::GetSession(session_id_t id)
 	{
 		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex);
-		return GetWorkerByStreamID(id).GetSession(id);
+		return GetWorkerByStreamID(id)->GetSession(id);
 	}
 
 	const std::map<session_id_t, std::shared_ptr<Session>> Stream::GetAllSessions()
@@ -280,7 +287,7 @@ namespace pub
 		// 모든 StreamWorker에 나눠준다.
 		for (uint32_t i = 0; i < _worker_count; i++)
 		{
-			_stream_workers[i].SendPacket(packet_type, packet);
+			_stream_workers[i]->SendPacket(packet_type, packet);
 		}
 
 		return true;

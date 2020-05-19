@@ -66,12 +66,12 @@ namespace pub
 
 	private:
 		void WorkerThread();
-		// For child, 실제 구현부는 자식에서 처리한다.
+		bool DeleteAllStreams();
 
 		// Stream을 자식을 통해 생성해서 받는다.
 		virtual std::shared_ptr<Stream> CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count) = 0;
 		virtual bool DeleteStream(const std::shared_ptr<info::Stream> &info) = 0;
-
+		
 		// Audio Stream 전달 Interface를 구현해야 함
 		//virtual void						OnAudioFrame(int32_t stream_id) = 0;
 
@@ -128,20 +128,13 @@ namespace pub
 		std::thread _worker_thread;
 		ov::Semaphore _queue_event;
 
-		std::queue<std::shared_ptr<VideoStreamData>> _video_stream_queue;
-		std::mutex _video_stream_queue_guard;
-
-		std::queue<std::shared_ptr<AudioStreamData>> _audio_stream_queue;
-		std::mutex _audio_stream_queue_guard;
-
-		std::queue<std::shared_ptr<IncomingPacket>> _incoming_packet_queue;
-		std::mutex _incoming_packet_queue_guard;
+		ov::Queue<std::shared_ptr<VideoStreamData>> _video_stream_queue;
+		ov::Queue<std::shared_ptr<AudioStreamData>> _audio_stream_queue;
+		ov::Queue<std::shared_ptr<IncomingPacket>> _incoming_packet_queue;
 
 		int64_t	_last_video_ts_ms = 0;
 		int64_t	_last_audio_ts_ms = 0;
 
 		std::shared_ptr<Publisher>		_publisher;
-
-		//std::queue<std::shared_ptr<AudioStreamData>>	_audio_stream_queue;
 	};
 }  // namespace pub

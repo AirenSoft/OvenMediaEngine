@@ -54,10 +54,13 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 
 	_tracode_apps[application_id] = trans_app;
 
+	// Register to MediaRouter
 	_router->RegisterObserverApp(app_info, trans_app);
+	
+	// Register to MediaRouter
 	_router->RegisterConnectorApp(app_info, trans_app);
 
-	logti("Transcoder has created [%s] application", app_info.GetName().CStr());
+	logti("Transcoder has created [%s][%s] application", app_info.IsDynamicApp()?"dynamic":"config", app_info.GetName().CStr());
 
 	return true;
 }
@@ -77,7 +80,7 @@ bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 	
 	_tracode_apps.erase(it);
 
-	logti("Transcoder has deleted [%s] application", app_info.GetName().CStr());
+	logti("Transcoder has deleted [%s][%s] application", app_info.IsDynamicApp()?"dynamic":"config", app_info.GetName().CStr());
 
 	return true;
 }

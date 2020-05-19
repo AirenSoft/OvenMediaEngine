@@ -17,7 +17,11 @@ class PhysicalPort;
 
 enum class PhysicalPortDisconnectReason
 {
+	/// An error occurred
 	Error,
+	/// Disconnected by server
+	Disconnect,
+	/// Disconnected from client
 	Disconnected,
 };
 

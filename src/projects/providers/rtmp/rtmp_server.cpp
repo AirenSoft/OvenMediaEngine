@@ -71,6 +71,8 @@ bool RtmpServer::AddObserver(const std::shared_ptr<RtmpObserver> &observer)
 {
 	logtd("Trying to add an observer %p with the RTMP Server", observer.get());
 
+	std::unique_lock<std::shared_mutex> lock(_observers_lock);
+
 	// Verify that the observer is already registered
 	auto item = std::find_if(_observers.begin(), _observers.end(), [&](std::shared_ptr<RtmpObserver> const &value) -> bool {
 		return value == observer;
@@ -89,6 +91,8 @@ bool RtmpServer::AddObserver(const std::shared_ptr<RtmpObserver> &observer)
 
 bool RtmpServer::RemoveObserver(const std::shared_ptr<RtmpObserver> &observer)
 {
+	std::unique_lock<std::shared_mutex> lock(_observers_lock);
+
 	auto item = std::find_if(_observers.begin(), _observers.end(), [&](std::shared_ptr<RtmpObserver> const &value) -> bool {
 		return value == observer;
 	});
@@ -107,7 +111,10 @@ bool RtmpServer::RemoveObserver(const std::shared_ptr<RtmpObserver> &observer)
 bool RtmpServer::Disconnect(const ov::String &app_name)
 {
 	std::unique_lock<std::recursive_mutex> lock(_chunk_context_list_mutex);
-	for (auto item = _chunk_context_list.begin(); item != _chunk_context_list.end(); ++item)
+
+	//The item will be deleted in DisconnectClient()
+	auto context_list = _chunk_context_list;
+	for (auto item = context_list.begin(); item != context_list.end(); ++item)
 	{
 		auto &chunk_stream = item->second;
 		if (chunk_stream->GetAppName() == app_name)
@@ -144,11 +151,11 @@ void RtmpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	std::unique_lock<std::recursive_mutex> lock(_chunk_context_list_mutex);
 
 	_chunk_context_list.emplace(remote.get(), std::make_shared<RtmpChunkStream>(dynamic_cast<ov::ClientSocket *>(remote.get()), this));
-} 
+}
 
 void RtmpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
-	if(_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update())
+	if (_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update())
 	{
 		logts("Stats for RTMP socket %s: %s", remote->ToString().CStr(), remote->GetStat().CStr());
 	}
@@ -215,10 +222,20 @@ void RtmpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 		// Stream Delete
 		if (chunk_stream->GetAppId() != info::InvalidApplicationId && chunk_stream->GetStreamId() != info::InvalidStreamId)
 		{
-			logti("The RTMP client is disconnected: [%s/%s] (%u/%u), remote: %s",
-			  chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
-			  chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
-			  remote->ToString().CStr());
+			if (reason == PhysicalPortDisconnectReason::Disconnect)
+			{
+				logti("The RTMP client is disconnected: [%s/%s] (%u/%u), remote: %s",
+					chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
+					chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
+					remote->ToString().CStr());
+			}
+			else
+			{
+				logti("The RTMP client is disconnected: [%s/%s] (%u/%u), remote: %s",
+					chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
+					chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
+					remote->ToString().CStr());
+			}
 
 			OnDeleteStream(chunk_stream->GetRemoteSocket(),
 						   chunk_stream->GetAppName(), chunk_stream->GetStreamName(),
@@ -241,8 +258,8 @@ bool RtmpServer::OnChunkStreamReady(ov::ClientSocket *remote,
 		  RtmpChunkStream::GetEncoderTypeString(media_info->encoder_type).CStr(),
 		  remote->ToString().CStr());
 
-
 	// Notify the ready stream event to the observers
+	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 	for (auto &observer : _observers)
 	{
 		if (observer->OnStreamReadyComplete(app_name, stream_name, media_info, application_id, stream_id) == false)
@@ -264,6 +281,7 @@ bool RtmpServer::OnChunkStreamVideoData(ov::ClientSocket *remote,
 										const std::shared_ptr<const ov::Data> &data)
 {
 	// Notify the video data to the observers
+	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 	for (auto &observer : _observers)
 	{
 		if (observer->OnVideoData(application_id, stream_id, timestamp, frame_type, data) == false)
@@ -286,11 +304,13 @@ bool RtmpServer::OnChunkStreamAudioData(ov::ClientSocket *remote,
 										const std::shared_ptr<const ov::Data> &data)
 {
 	// Notify the audio data to the observers
+	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 	for (auto &observer : _observers)
 	{
 		if (!observer->OnAudioData(application_id, stream_id, timestamp, frame_type, data))
 		{
 			logte("Could not send audio data to observer %p: (%u/%u), remote: %s",
+				  observer.get(),
 				  application_id, stream_id,
 				  remote->ToString().CStr());
 			return false;
@@ -305,6 +325,7 @@ bool RtmpServer::OnDeleteStream(ov::ClientSocket *remote,
 								info::application_id_t application_id, uint32_t stream_id)
 {
 	// Notify the delete stream event to the observers
+	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 	for (auto &observer : _observers)
 	{
 		if (observer->OnDeleteStream(application_id, stream_id) == false)
@@ -357,7 +378,7 @@ ov::DelayQueueAction RtmpServer::OnGarbageCheck(void *parameter)
 	{
 		auto &chunk_stream = garbage.second;
 
-		if(chunk_stream->GetRemoteSocket() != nullptr)
+		if (chunk_stream->GetRemoteSocket() != nullptr)
 		{
 			logtw("RTMP stream %s is timed out. Disconnecting...", chunk_stream->GetRemoteSocket()->ToString().CStr());
 		}

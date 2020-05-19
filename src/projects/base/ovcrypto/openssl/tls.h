@@ -16,7 +16,6 @@
 #include <cstdint>
 #include <functional>
 
-#include <openssl/bio.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>

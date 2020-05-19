@@ -86,7 +86,7 @@ bool IcePort::Create(std::vector<RtcIceCandidate> ice_candidate_list)
 			break;
 		}
 
-		logti("ICE port is bound to %s/%s", address.ToString().CStr(), transport.CStr());
+		logti("ICE port is bound to %s/%s (%p)", address.ToString().CStr(), transport.CStr(), physical_port.get());
 		_physical_port_list.push_back(physical_port);
 	}
 

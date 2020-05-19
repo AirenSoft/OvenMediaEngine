@@ -667,6 +667,7 @@ void RtmpChunkStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> 
 		if ((index = object->FindName("app")) >= 0 && object->GetType(index) == AmfDataType::String)
 		{
 			_app_name = object->GetString(index);
+			_import_chunk->SetAppName(_app_name);
 		}
 
 		// app 설정
@@ -683,7 +684,21 @@ void RtmpChunkStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> 
 		if (url != nullptr)
 		{
 			_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), _app_name);
+			_import_chunk->SetAppName(_app_name);
+
+			auto app_info = Orchestrator::GetInstance()->GetApplicationInfoByVHostAppName(_app_name);
+
+			if (app_info.IsValid())
+			{
+				_app_id = app_info.GetId();
+			}
+			else
+			{
+				logte("Could not obtain app information");
+				return;
+			}
 		}
+
 	}
 
 	if (!SendWindowAcknowledgementSize())
@@ -737,6 +752,7 @@ void RtmpChunkStream::OnAmfFCPublish(const std::shared_ptr<const RtmpChunkHeader
 			return;
 		}
 		_stream_name = document.GetProperty(3)->GetString();
+		_import_chunk->SetStreamName(_stream_name);
 	}
 }
 
@@ -750,6 +766,7 @@ void RtmpChunkStream::OnAmfPublish(const std::shared_ptr<const RtmpChunkHeader> 
 		if (document.GetProperty(3) != nullptr && document.GetProperty(3)->GetType() == AmfDataType::String)
 		{
 			_stream_name = document.GetProperty(3)->GetString();
+			_import_chunk->SetStreamName(_stream_name);
 		}
 		else
 		{

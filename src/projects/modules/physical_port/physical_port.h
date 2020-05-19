@@ -35,7 +35,7 @@ public:
 
 	bool Close();
 
-	ov::SocketState GetState();
+	ov::SocketState GetState() const;
 
 	ov::SocketType GetType() const
 	{
@@ -46,6 +46,9 @@ public:
 	{
 		return _address;
 	}
+
+	std::shared_ptr<const ov::Socket> GetSocket() const;
+	std::shared_ptr<ov::Socket> GetSocket();
 
 	bool AddObserver(PhysicalPortObserver *observer);
 

@@ -255,7 +255,7 @@ namespace pvd
 
 	bool Application::Start()
 	{
-		logti("%s has created [%s] application", GetApplicationTypeName(), GetName().CStr());
+		logti("%s has created [%s] application", _provider->GetProviderName(), GetName().CStr());
 
 		// Start to the white elephant streams colletor, it only works with pull provider
 		if(_provider->GetProviderStreamDirection() == ProviderStreamDirection::Pull)
@@ -284,7 +284,7 @@ namespace pvd
 		}
 
 		DeleteAllStreams();
-		logti("%s has deleted [%s] application", GetApplicationTypeName(), GetName().CStr());
+		logti("%s has deleted [%s] application", _provider->GetProviderName(), GetName().CStr());
 		_state = ApplicationState::Stopped;
 		return true;
 	}

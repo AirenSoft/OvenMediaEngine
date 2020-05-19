@@ -119,7 +119,7 @@ int RtmpImportChunk::Import(const std::shared_ptr<const ov::Data> &data, bool *i
 
 	logtd("Finalized message: %s", message->header->ToString().CStr());
 
-	_message_queue.push_back(message);
+	_message_queue.Enqueue(message);
 
 	*is_completed = true;
 	_parser.Reset();
@@ -394,26 +394,46 @@ std::shared_ptr<const RtmpMessage> RtmpImportChunk::FinalizeMessage(const std::s
 
 std::shared_ptr<const RtmpMessage> RtmpImportChunk::GetMessage()
 {
-	if (_message_queue.empty())
+	if (_message_queue.IsEmpty())
 	{
 		return nullptr;
 	}
 
-	auto message = _message_queue.front();
-	_message_queue.pop_front();
+	auto item = _message_queue.Dequeue();
 
-	return message;
+	if(item.has_value())
+	{
+		return item.value();
+	}
+
+	return nullptr;
 }
 
 size_t RtmpImportChunk::GetMessageCount() const
 {
-	return _message_queue.size();
+	return _message_queue.Size();
+}
+
+void RtmpImportChunk::SetAppName(const ov::String &app_name)
+{
+	_app_name = app_name;
+
+	_message_queue.SetAlias(ov::String::FormatString("RTMP queue for %s/%s", _app_name.CStr(), _stream_name.CStr()));
+}
+
+void RtmpImportChunk::SetStreamName(const ov::String &stream_name)
+{
+	_stream_name = stream_name;
+
+	_message_queue.SetAlias(ov::String::FormatString("RTMP queue for %s/%s", _app_name.CStr(), _stream_name.CStr()));
 }
 
 void RtmpImportChunk::Destroy()
 {
 	_chunk_map.clear();
-	_message_queue.clear();
+	
+	_message_queue.Stop();
+	_message_queue.Clear();
 
 	_parser.Reset();
 }

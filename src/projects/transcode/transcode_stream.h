@@ -17,7 +17,6 @@
 #include <queue>
 
 #include "base/media_route/media_buffer.h"
-#include "base/media_route/media_queue.h"
 #include "base/media_route/media_type.h"
 #include "base/info/stream.h"
 
@@ -41,7 +40,7 @@ public:
 	std::vector< std::pair<std::shared_ptr<info::Stream>, std::shared_ptr<MediaTrack>> > _output_tracks;
 };
 
-class TranscodeStream
+class TranscodeStream : public ov::EnableSharedFromThis<TranscodeStream>
 {
 public:
 	TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &orig_stream, TranscodeApplication *parent);
@@ -52,15 +51,16 @@ public:
 
 	bool Push(std::shared_ptr<MediaPacket> packet);
 
-	// std::set<ov::String> _stream_list;
-
 	// For statistics
-	uint32_t _stats_decoded_frame_count;
-	uint8_t _stats_queue_full_count;
-	uint64_t _max_queue_size;
+	uint64_t 	_max_queue_threshold;
 
+
+	void DoInputPackets();
+	void DoDecodedFrames();
+	void DoFilteredFrames();
+	
 private:
-	ov::Semaphore _queue_event;
+	// ov::Semaphore _queue_event;
 
 	const info::Application _application_info;
 
@@ -80,6 +80,7 @@ private:
 	// Input Track -> Decoder or Router(bypasS)
 	// [INPUT_TRACK, DECODER_ID]
 	std::map <MediaTrackId, MediaTrackId> _stage_input_to_decoder;
+	
 	// [INPUT_TRACK, Output Stream + Track Id]
 	std::map <MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>> > _stage_input_to_output;
 
@@ -91,7 +92,6 @@ private:
 
 	// [ENCODER_ID(trasncode_id), OUTPUT_TRACKS]
 	std::map <MediaTrackId, std::vector<std::pair<std::shared_ptr<info::Stream>, MediaTrackId>>> _stage_encoder_to_output;
-
 
 
 	// Decoder
@@ -107,26 +107,26 @@ private:
 	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
 
 
-
-
 	// Buffer for encoded(input) media packets
-	MediaQueue<std::shared_ptr<MediaPacket>> _queue_input_packets;
+	ov::Queue<std::shared_ptr<MediaPacket>> _queue_input_packets;
 
 	// Buffer for decoded frames
-	MediaQueue<std::shared_ptr<MediaFrame>> _queue_decoded_frames;
+	ov::Queue<std::shared_ptr<MediaFrame>> _queue_decoded_frames;
 
 	// Buffer for filtered frames
-	MediaQueue<std::shared_ptr<MediaFrame>> _queue_filterd_frames;
+	ov::Queue<std::shared_ptr<MediaFrame>> _queue_filterd_frames;
+
 
 	// last generated output track id.
 	uint8_t _last_track_index = 0;
 
 	volatile bool _kill_flag;
 
-	void LoopTask();
-	std::thread _thread_looptask;
+	// void LoopTask();
+	// std::thread _thread_looptask;
 
-	TranscodeApplication *_parent;
+	TranscodeApplication* GetParent();
+	TranscodeApplication* _parent;
 
 	int32_t CreateOutputStream();
 

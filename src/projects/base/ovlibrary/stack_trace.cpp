@@ -101,6 +101,7 @@ namespace ov
 		parse_result->module_name = nullptr;
 		parse_result->address = nullptr;
 		parse_result->function_name = nullptr;
+		parse_result->demangled_function_name = nullptr;
 		parse_result->offset = nullptr;
 
 		if ((begin_name != nullptr) && (end_offset != nullptr))
@@ -125,7 +126,9 @@ namespace ov
 
 			// Demangle the name
 			int status = 0;
-			parse_result->function_name = abi::__cxa_demangle(begin_name, nullptr, nullptr, &status);
+			parse_result->function_name = begin_name;
+			parse_result->demangled_function_name = abi::__cxa_demangle(begin_name, nullptr, nullptr, &status);
+
 			parse_result->offset = begin_offset;
 		}
 
@@ -263,7 +266,8 @@ namespace ov
 		parse_result->address = begin_address;
 		// Demangle the name
 		int status = 0;
-		parse_result->function_name = abi::__cxa_demangle(begin_name, nullptr, nullptr, &status);
+		parse_result->function_name = begin_name;
+		parse_result->demangled_function_name = abi::__cxa_demangle(begin_name, nullptr, nullptr, &status);
 		parse_result->offset = begin_offset;
 
 		return true;
@@ -315,7 +319,7 @@ namespace ov
 								 (i - offset),
 								 parse_result.module_name,
 								 parse_result.address,
-								 (parse_result.function_name == nullptr) ? "?" : parse_result.function_name,
+								 (parse_result.demangled_function_name == nullptr) ? parse_result.function_name : parse_result.demangled_function_name,
 								 (parse_result.offset == nullptr) ? "0x0" : parse_result.offset);
 			}
 			else
@@ -323,46 +327,19 @@ namespace ov
 				log.AppendFormat("#%-3d || %s\n", (i - offset), line);
 			}
 
-			if (parse_result.function_name != nullptr)
+			if (parse_result.demangled_function_name != nullptr)
 			{
-				free(parse_result.function_name);
+				::free(parse_result.demangled_function_name);
 			}
 		}
 
-		free(symbol_list);
+		::free(symbol_list);
 
 		return std::move(log);
 	}
 
-	void StackTrace::WriteStackTrace(const char *version, int signum, const char *sig_name)
+	void StackTrace::WriteStackTrace(std::ofstream &stream)
 	{
-		char time_buffer[30];
-
-		char file_name[32];
-
-		String log;
-
-		time_t t = ::time(nullptr);
-		::strftime(time_buffer, sizeof(time_buffer) / sizeof(time_buffer[0]), "%Y-%m-%dT%H:%M:%S%z", localtime(&t));
-
-		::strftime(file_name, 32, "crash_%Y%m%d.dump", localtime(&t));
-		std::ofstream dump_file(file_name, std::ofstream::app);
-
-		log.AppendFormat(
-			"***** Crash dump *****\n"
-			"OvenMediaEngine v%s "
-			"(pid: %llu, tid: %llu)\n"
-			"Signal %d (%s) %s\n",
-			version,
-			Platform::GetProcessId(), Platform::GetThreadId(),
-			signum, sig_name, time_buffer);
-
-		dump_file << log;
-
-		log = GetStackTraceInternal(3);
-
-		dump_file << log;
-
-		// need not call fstream::close() explicitly to close the file
+		stream << GetStackTraceInternal(3);
 	}
 }  // namespace ov

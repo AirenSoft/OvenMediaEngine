@@ -6,7 +6,10 @@
 namespace pub
 {
 	Application::Application(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info)
-		: info::Application(application_info)
+		: info::Application(application_info),
+		_video_stream_queue(nullptr, 100),
+		_audio_stream_queue(nullptr, 100),
+		_incoming_packet_queue(nullptr, 100)
 	{
 		_publisher = publisher;
 		_stop_thread_flag = false;
@@ -38,6 +41,17 @@ namespace pub
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&Application::WorkerThread, this);
 
+		ov::String queue_name;
+
+		queue_name.Format("%s/%s - Video Queue", GetApplicationTypeName(), GetName().CStr());
+		_video_stream_queue.SetAlias(queue_name.CStr());
+
+		queue_name.Format("%s/%s - Audio Queue", GetApplicationTypeName(), GetName().CStr());
+		_audio_stream_queue.SetAlias(queue_name.CStr());
+
+		queue_name.Format("%s/%s - Incoming Queue", GetApplicationTypeName(), GetName().CStr());
+		_incoming_packet_queue.SetAlias(queue_name.CStr());
+
 		logti("%s has created [%s] application", GetApplicationTypeName(), GetName().CStr());
 
 		return true;
@@ -57,7 +71,25 @@ namespace pub
 			_worker_thread.join();
 		}
 
+		// release remaining streams
+		DeleteAllStreams();
+
 		logti("%s has deleted [%s] application", GetApplicationTypeName(), GetName().CStr());
+
+		return true;
+	}
+
+	bool Application::DeleteAllStreams()
+	{
+		std::unique_lock<std::shared_mutex> lock(_stream_map_mutex);
+
+		for(const auto &x : _streams)
+		{
+			auto stream = x.second;
+			stream->Stop();
+		}
+
+		_streams.clear();
 
 		return true;
 	}
@@ -113,14 +145,10 @@ namespace pub
 	bool Application::OnSendVideoFrame(const std::shared_ptr<info::Stream> &stream,
 									   const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		auto data = std::make_shared<Application::VideoStreamData>(stream,
-																   media_packet);
-
-		// Mutex (This function may be called by Router thread)
-		std::unique_lock<std::mutex> lock(_video_stream_queue_guard);
-		_video_stream_queue.push(std::move(data));
+		auto data = std::make_shared<Application::VideoStreamData>(stream, media_packet);
+		_video_stream_queue.Enqueue(std::move(data));
 		_last_video_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
-		lock.unlock();
+
 		_queue_event.Notify();
 
 		return true;
@@ -129,15 +157,11 @@ namespace pub
 	bool Application::OnSendAudioFrame(const std::shared_ptr<info::Stream> &stream,
 									   const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		auto data = std::make_shared<Application::AudioStreamData>(stream,
-																   media_packet);
+		auto data = std::make_shared<Application::AudioStreamData>(stream, media_packet);
 
-		// Mutex (This function may be called by Router thread)
-		std::unique_lock<std::mutex> lock(_audio_stream_queue_guard);
-
-		_audio_stream_queue.push(std::move(data));
+		_audio_stream_queue.Enqueue(std::move(data));
 		_last_audio_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
-		lock.unlock();
+
 		_queue_event.Notify();
 
 		return true;
@@ -147,11 +171,7 @@ namespace pub
 										 const std::shared_ptr<const ov::Data> &data)
 	{
 		auto packet = std::make_shared<Application::IncomingPacket>(session_info, data);
-
-		// Mutex (This function may be called by IcePort thread)
-		std::unique_lock<std::mutex> lock(this->_incoming_packet_queue_guard);
-		_incoming_packet_queue.push(std::move(packet));
-		lock.unlock();
+		_incoming_packet_queue.Enqueue(std::move(packet));
 
 		_queue_event.Notify();
 
@@ -187,57 +207,52 @@ namespace pub
 
 	std::shared_ptr<Application::VideoStreamData> Application::PopVideoStreamData()
 	{
-		std::lock_guard<std::mutex> lock(_video_stream_queue_guard);
-		if (_video_stream_queue.empty())
+		if (_video_stream_queue.IsEmpty())
 		{
 			return nullptr;
 		}
 
-		// 데이터를 하나 꺼낸다.
-		auto data = _video_stream_queue.front();
-		_video_stream_queue.pop();
-		return data;
+		auto data = _video_stream_queue.Dequeue();
+		if(data.has_value())
+		{
+			return data.value();
+		}
+		
+		return nullptr;
 	}
 
 	std::shared_ptr<Application::AudioStreamData> Application::PopAudioStreamData()
 	{
-		std::lock_guard<std::mutex> lock(_audio_stream_queue_guard);
-		if (_audio_stream_queue.empty())
+		if (_audio_stream_queue.IsEmpty())
 		{
 			return nullptr;
 		}
 
-		// 데이터를 하나 꺼낸다.
-		auto data = _audio_stream_queue.front();
-		_audio_stream_queue.pop();
-		return data;
+		auto data = _audio_stream_queue.Dequeue();
+		if(data.has_value())
+		{
+			return data.value();
+		}
+		
+		return nullptr;
 	}
 
 	std::shared_ptr<Application::IncomingPacket> Application::PopIncomingPacket()
 	{
-		std::lock_guard<std::mutex> lock(this->_incoming_packet_queue_guard);
-
-		if (_incoming_packet_queue.empty())
+		if (_incoming_packet_queue.IsEmpty())
 		{
 			return nullptr;
 		}
 
-		// 데이터를 하나 꺼낸다.
-		auto packet = _incoming_packet_queue.front();
-		_incoming_packet_queue.pop();
-		return packet;
+		auto data = _incoming_packet_queue.Dequeue();
+		if(data.has_value())
+		{
+			return data.value();
+		}
+		
+		return nullptr;
 	}
 
-	/*
- * Application WorkerThread는 Publisher의 Application 마다 하나씩 존재이며, 유일한 Thread이다.
- *
- * 다음과 같은 동작을 수행한다.
- *
- * 1. Router로부터 전달받은 Video/Audio를 Stream에 전달
- * 2. Client로부터 전달받은 Packet을 Stream에 전달
- * 3. 모든 Stream과 Session이 상속받은 Module->Process()를 주기적으로 호출
- *
- */
 	void Application::WorkerThread()
 	{
 		ov::StopWatch stat_stop_watch;
@@ -249,9 +264,9 @@ namespace pub
 			{
 				logts("Stats for publisher queue [%s(%u)]: VQ: %zu, AQ: %zu, Incoming Q: %zu",
 					  _app_config.GetName().CStr(), _application_id,
-					  _video_stream_queue.size(),
-					  _audio_stream_queue.size(),
-					  _incoming_packet_queue.size());
+					  _video_stream_queue.Size(),
+					  _audio_stream_queue.Size(),
+					  _incoming_packet_queue.Size());
 			}
 
 			_queue_event.Wait();

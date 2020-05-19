@@ -161,7 +161,7 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&MediaFilterResampler::ThreadEncode, this);
+		_thread_work = std::thread(&MediaFilterResampler::TrheadFilter, this);
 	}
 	catch (const std::system_error &e)
 	{
@@ -188,7 +188,7 @@ void MediaFilterResampler::Stop()
 }
 
 
-void MediaFilterResampler::ThreadEncode()
+void MediaFilterResampler::TrheadFilter()
 {
 	logtd("Start transcode resampler filter thread.");
 

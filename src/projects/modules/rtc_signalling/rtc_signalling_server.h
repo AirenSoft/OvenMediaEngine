@@ -14,7 +14,7 @@
 #include <http_server/http_server.h>
 #include <http_server/https_server.h>
 #include <http_server/interceptors/http_request_interceptors.h>
-#include <media_router/media_route_application.h>
+#include <media_router/media_router_application.h>
 #include <modules/ice/ice.h>
 
 #include <memory>
