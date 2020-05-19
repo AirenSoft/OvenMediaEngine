@@ -21,7 +21,7 @@ namespace ov
 		StackTrace() = delete;
 
 		static String GetStackTrace(int line_count = -1);
-		static void WriteStackTrace(const char *version, int signum, const char *sig_name);
+		static void WriteStackTrace(std::ofstream &stream);
 
 	private:
 		struct ParseResult
@@ -29,6 +29,7 @@ namespace ov
 			char *module_name = nullptr;
 			char *address = nullptr;
 			char *function_name = nullptr;
+			char *demangled_function_name = nullptr;
 			char *offset = nullptr;
 		};
 

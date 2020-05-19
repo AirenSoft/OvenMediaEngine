@@ -13,6 +13,9 @@
 #include <orchestrator/orchestrator.h>
 #include <signal.h>
 
+#include <fstream>
+#include <iostream>
+
 #include "./main_private.h"
 #include "main.h"
 
@@ -103,9 +106,48 @@ typedef void (*OV_SIG_ACTION)(int signum, siginfo_t *si, void *unused);
 
 static void AbortHandler(int signum, siginfo_t *si, void *unused)
 {
-	printf("%s %s\n", PLATFORM_NAME, GetSignalName(SIGSEGV));
+	char time_buffer[30]{};
+	char file_name[32]{};
+	time_t t = ::time(nullptr);
 
-	ov::StackTrace::WriteStackTrace(OME_VERSION OME_GIT_VERSION_EXTRA, signum, GetSignalName(signum));
+	logtc("OME received signal %d (%s), interrupt.", signum, GetSignalName(signum));
+
+	::strftime(time_buffer, sizeof(time_buffer) / sizeof(time_buffer[0]), "%Y-%m-%dT%H:%M:%S%z", ::localtime(&t));
+	::strftime(file_name, 32, "crash_%Y%m%d.dump", ::localtime(&t));
+
+	std::ofstream ostream(file_name, std::ofstream::app);
+
+	if (ostream.is_open())
+	{
+		auto pid = ov::Platform::GetProcessId();
+		auto tid = ov::Platform::GetThreadId();
+
+		ostream << "***** Crash dump *****" << std::endl;
+		ostream << "OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA << " received signal " << signum << " (" << GetSignalName(signum) << ")" << std::endl;
+		ostream << "- Time: " << time_buffer << ", pid: " << pid << ", tid: " << tid << std::endl;
+		ostream << "- Stack trace" << std::endl;
+
+		ov::StackTrace::WriteStackTrace(ostream);
+
+		std::ifstream istream("/proc/self/maps", std::ifstream::in);
+
+		if (istream.is_open())
+		{
+			ostream << "- Module maps" << std::endl;
+			ostream << istream.rdbuf();
+		}
+		else
+		{
+			ostream << "(Could not read module maps)" << std::endl;
+		}
+
+		// need not call fstream::close() explicitly to close the file
+	}
+	else
+	{
+		logte("Could not open dump file to write");
+	}
+
 	::exit(signum);
 }
 
