@@ -215,7 +215,7 @@ namespace ov
 			// 1) ServerSocket::DisconnectClient();
 			// 2) ClientSocket::CloseInternal();
 			// 3) ClientSocket::StopSendThread();
-			return _server_socket->DisconnectClient(this->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected);
+			return _server_socket->DisconnectClient(this->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnect);
 		}
 
 		return true;

@@ -151,11 +151,11 @@ void RtmpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	std::unique_lock<std::recursive_mutex> lock(_chunk_context_list_mutex);
 
 	_chunk_context_list.emplace(remote.get(), std::make_shared<RtmpChunkStream>(dynamic_cast<ov::ClientSocket *>(remote.get()), this));
-} 
+}
 
 void RtmpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
-	if(_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update())
+	if (_stat_stop_watch.IsElapsed(5000) && _stat_stop_watch.Update())
 	{
 		logts("Stats for RTMP socket %s: %s", remote->ToString().CStr(), remote->GetStat().CStr());
 	}
@@ -222,10 +222,20 @@ void RtmpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 		// Stream Delete
 		if (chunk_stream->GetAppId() != info::InvalidApplicationId && chunk_stream->GetStreamId() != info::InvalidStreamId)
 		{
-			logti("The RTMP client is disconnected: [%s/%s] (%u/%u), remote: %s",
-			  chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
-			  chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
-			  remote->ToString().CStr());
+			if (reason == PhysicalPortDisconnectReason::Disconnect)
+			{
+				logti("The RTMP client is disconnected: [%s/%s] (%u/%u), remote: %s",
+					chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
+					chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
+					remote->ToString().CStr());
+			}
+			else
+			{
+				logti("The RTMP client is disconnected: [%s/%s] (%u/%u), remote: %s",
+					chunk_stream->GetAppName().CStr(), chunk_stream->GetStreamName().CStr(),
+					chunk_stream->GetAppId(), chunk_stream->GetStreamId(),
+					remote->ToString().CStr());
+			}
 
 			OnDeleteStream(chunk_stream->GetRemoteSocket(),
 						   chunk_stream->GetAppName(), chunk_stream->GetStreamName(),
@@ -247,7 +257,6 @@ bool RtmpServer::OnChunkStreamReady(ov::ClientSocket *remote,
 		  application_id, stream_id,
 		  RtmpChunkStream::GetEncoderTypeString(media_info->encoder_type).CStr(),
 		  remote->ToString().CStr());
-
 
 	// Notify the ready stream event to the observers
 	std::shared_lock<std::shared_mutex> lock(_observers_lock);
@@ -369,7 +378,7 @@ ov::DelayQueueAction RtmpServer::OnGarbageCheck(void *parameter)
 	{
 		auto &chunk_stream = garbage.second;
 
-		if(chunk_stream->GetRemoteSocket() != nullptr)
+		if (chunk_stream->GetRemoteSocket() != nullptr)
 		{
 			logtw("RTMP stream %s is timed out. Disconnecting...", chunk_stream->GetRemoteSocket()->ToString().CStr());
 		}

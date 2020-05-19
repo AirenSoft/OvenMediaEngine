@@ -7,9 +7,10 @@
 //
 //==============================================================================
 #include "http_server.h"
-#include "http_private.h"
 
 #include <modules/physical_port/physical_port_manager.h>
+
+#include "http_private.h"
 
 HttpServer::~HttpServer()
 {
@@ -126,8 +127,7 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 
 		switch (request->ParseStatus())
 		{
-			case HttpStatusCode::OK:
-			{
+			case HttpStatusCode::OK: {
 				auto &interceptor = request->GetRequestInterceptor();
 
 				if (interceptor != nullptr)
@@ -144,8 +144,7 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 				break;
 			}
 
-			case HttpStatusCode::PartialContent:
-			{
+			case HttpStatusCode::PartialContent: {
 				// Need to parse HTTP header
 				ssize_t processed_length = TryParseHeader(client, data);
 
@@ -282,7 +281,16 @@ void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 		auto request = client->GetRequest();
 		auto response = client->GetResponse();
 
-		logti("Client(%s) is disconnected from %s (%d)", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
+		if (reason == PhysicalPortDisconnectReason::Disconnect)
+		{
+			logti("The HTTP client(%s) has been disconnected from %s (%d)",
+				  remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
+		}
+		else
+		{
+			logti("The HTTP client(%s) is disconnected from %s (%d)",
+				  remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
+		}
 
 		auto interceptor = request->GetRequestInterceptor();
 

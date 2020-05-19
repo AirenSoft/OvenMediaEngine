@@ -94,6 +94,16 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 						break;
 					}
 
+					case ov::SocketConnectionState::Disconnect: {
+						logtd("Disconnected by server: %s", client->ToString().CStr());
+
+						// Notify observers
+						auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), PhysicalPortDisconnectReason::Disconnect, nullptr);
+						for_each(_observer_list.begin(), _observer_list.end(), func);
+
+						break;
+					}
+
 					case ov::SocketConnectionState::Disconnected: {
 						logtd("Client is disconnected: %s", client->ToString().CStr());
 
@@ -323,5 +333,5 @@ bool PhysicalPort::RemoveObserver(PhysicalPortObserver *observer)
 
 bool PhysicalPort::DisconnectClient(ov::ClientSocket *client_socket)
 {
-	return _server_socket->DisconnectClient(client_socket, ov::SocketConnectionState::Disconnected);
+	return _server_socket->DisconnectClient(client_socket, ov::SocketConnectionState::Disconnect);
 }

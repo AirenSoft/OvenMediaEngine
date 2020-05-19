@@ -9,18 +9,22 @@
 #pragma once
 
 #include <arpa/inet.h>
+#include <base/ovlibrary/ovlibrary.h>
 
 #include <functional>
-
-#include <base/ovlibrary/ovlibrary.h>
 
 namespace ov
 {
 	enum class SocketConnectionState : int8_t
 	{
+		/// Socket is connected
 		Connected,
-		Disconnected,  // 연결이 끊어짐
-		Error		   // 오류가 발생해서 연결이 끊어짐
+		/// Disconnected by server
+		Disconnect,
+		/// Disconnected from client
+		Disconnected,
+		/// An error occurred
+		Error
 	};
 
 	enum class SocketFamily : sa_family_t
