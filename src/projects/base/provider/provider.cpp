@@ -150,6 +150,13 @@ namespace pvd
 
 		auto application = item->second;
 
+		// Disconnect deleted application to router
+		if(_router->UnregisterConnectorApp(*application.get(), application) == false)
+		{
+			logte("Could not unregister the application: %p", application.get());
+			return false;
+		}
+
 		_applications[app_info.GetId()]->Stop();
 		_applications.erase(item);
 

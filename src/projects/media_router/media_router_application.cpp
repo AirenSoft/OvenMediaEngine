@@ -227,8 +227,10 @@ bool MediaRouteApplication::OnCreateStream(
 		return false;
 	}
 
+
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamCreated(*stream_info);
+
 
 	// Notify all observers that a stream has been created
 	{
@@ -289,7 +291,7 @@ bool MediaRouteApplication::OnDeleteStream(
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamDeleted(*stream_info);
 
-	logtd("Deleted connector. type(%d), app(%s) stream(%s/%u)"
+	logtd("Notify connectors that stream has been deleted. type(%d), app(%s) stream(%s/%u)"
 		, app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	auto connector_type = app_conn->GetConnectorType();
@@ -500,4 +502,6 @@ void MediaRouteApplication::MessageLooper()
 			lock.unlock();
 		}
 	}
+
+	logtd("MessageLooper thread has been stopped");
 }

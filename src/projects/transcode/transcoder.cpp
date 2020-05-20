@@ -50,20 +50,31 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 {
 	auto application_id = app_info.GetId();
 
-	auto trans_app = TranscodeApplication::Create(app_info);
+	auto application = TranscodeApplication::Create(app_info);
 
-	_tracode_apps[application_id] = trans_app;
+	_tracode_apps[application_id] = application;
 
 	// Register to MediaRouter
-	_router->RegisterObserverApp(app_info, trans_app);
+	if(_router->RegisterObserverApp(app_info, application) == false)
+	{
+		logte("Could not register the application: %p", application.get());
+
+		return false;
+	}
 	
 	// Register to MediaRouter
-	_router->RegisterConnectorApp(app_info, trans_app);
+	if(_router->RegisterConnectorApp(app_info, application) == false)
+	{
+		logte("Could not register the application: %p", application.get());
+
+		return false;
+	}
 
 	logti("Transcoder has created [%s][%s] application", app_info.IsDynamicApp()?"dynamic":"config", app_info.GetName().CStr());
 
 	return true;
 }
+
 
 // Delete Application
 bool Transcoder::OnDeleteApplication(const info::Application &app_info)
@@ -78,6 +89,18 @@ bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 	auto application = it->second;
 	application->Stop();
 	
+	// Unregister to MediaRouter
+	if(_router->UnregisterObserverApp(app_info, application) == false)
+	{
+		logte("Could not unregister the application: %p", application.get());
+	}
+	
+	// Unregister to MediaRouter
+	if(_router->UnregisterConnectorApp(app_info, application) == false)
+	{
+		logte("Could not unregister the application: %p", application.get());
+	}
+
 	_tracode_apps.erase(it);
 
 	logti("Transcoder has deleted [%s][%s] application", app_info.IsDynamicApp()?"dynamic":"config", app_info.GetName().CStr());
