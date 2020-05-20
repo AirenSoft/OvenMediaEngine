@@ -217,6 +217,8 @@ namespace pub
 			_stream_workers[i]->Stop();
 		}
 
+		_stream_workers.clear();
+
 		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
 		for(const auto &x : _sessions)
 		{
