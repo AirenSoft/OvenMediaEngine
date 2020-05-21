@@ -233,7 +233,13 @@ static void PrintBanner()
 	utsname uts{};
 	::uname(&uts);
 
-	logti("OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA " is started on [%s] (%s %s - %s, %s)", uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
+#if DEBUG
+	static constexpr const char *BUILD_MODE = " [debug]";
+#else // DEBUG
+	static constexpr const char *BUILD_MODE = "";
+#endif // DEBUG
+
+	logti("OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA "%s is started on [%s] (%s %s - %s, %s)", BUILD_MODE, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
 
 	logti("With modules:");
 	logti("  FFmpeg %s", GetFFmpegVersion());
