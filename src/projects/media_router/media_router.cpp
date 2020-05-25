@@ -82,6 +82,7 @@ bool MediaRouter::OnDeleteApplication(const info::Application &app_info)
 
 	// Remove from the Route App Map
 	_route_apps[application_id]->Stop();
+	
 	_route_apps.erase(application_id);
 
 	logti("MediaRouter has deleted [%s] application", app_info.GetName().CStr());

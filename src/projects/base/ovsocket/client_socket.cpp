@@ -16,16 +16,6 @@
 
 namespace ov
 {
-	ClientSocket::ClientSocket(ServerSocket *server_socket)
-		: Socket(),
-
-		  _server_socket(server_socket)
-	{
-		OV_ASSERT2(_server_socket != nullptr);
-
-		_local_address = (server_socket != nullptr) ? server_socket->GetLocalAddress() : nullptr;
-	}
-
 	ClientSocket::ClientSocket(ServerSocket *server_socket, SocketWrapper socket, const SocketAddress &remote_address)
 		: Socket(socket, remote_address),
 
@@ -37,6 +27,17 @@ namespace ov
 
 		// TODO(dimiden): (ClientSocketBlocking) Currently, 1 thread is created per socket, so blocking mode is used until implementing code that handles EAGAIN
 		// MakeNonBlocking();
+
+		ov::String queue_name;
+
+		queue_name.Format("ClientSocket #%d %s", socket.GetSocket(), remote_address.ToString().CStr());
+
+		if (server_socket != nullptr)
+		{
+			queue_name.AppendFormat(" (of #%d)", server_socket->GetSocket().GetSocket());
+		}
+
+		_dispatch_queue.SetAlias(queue_name);
 	}
 
 	ClientSocket::~ClientSocket()
@@ -214,7 +215,7 @@ namespace ov
 			// 1) ServerSocket::DisconnectClient();
 			// 2) ClientSocket::CloseInternal();
 			// 3) ClientSocket::StopSendThread();
-			return _server_socket->DisconnectClient(this->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected);
+			return _server_socket->DisconnectClient(this->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnect);
 		}
 
 		return true;

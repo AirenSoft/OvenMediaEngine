@@ -24,7 +24,7 @@ public:
 	bool Start();
 	bool Stop();
 
-	void AddTask(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data);
+	bool AddTask(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data);
 
 protected:
 	struct Task
@@ -42,9 +42,10 @@ protected:
 	void ThreadProc();
 
 	std::vector<PhysicalPortObserver *> &_observer_list;
+	std::shared_ptr<PhysicalPort> _physical_port;
 
 	std::thread _thread;
 	volatile bool _stop = true;
 
-	ov::Queue<Task> _task_list;
+	ov::Queue<Task> _task_list { nullptr, 500 };
 };

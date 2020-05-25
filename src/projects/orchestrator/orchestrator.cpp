@@ -80,7 +80,7 @@ bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtu
 
 							if (stream->provider->StopStream(stream->app_info, stream->provider_stream) == false)
 							{
-								logte("Failed to stop stream [%s] in provider: %s", stream->full_name.CStr(), GetOrchestratorModuleTypeName(stream->provider->GetModuleType()));
+								logte("Failed to stop stream [%s] in provider: %s", stream->full_name.CStr(), GetOrchestratorModuleTypeName(stream->provider->GetModuleType()).CStr());
 							}
 
 							stream->is_valid = false;
@@ -128,7 +128,7 @@ bool Orchestrator::ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtu
 
 							if (stream->provider->StopStream(stream->app_info, stream->provider_stream) == false)
 							{
-								logte("Failed to stop stream [%s] in provider: %s", stream->full_name.CStr(), GetOrchestratorModuleTypeName(stream->provider->GetModuleType()));
+								logte("Failed to stop stream [%s] in provider: %s", stream->full_name.CStr(), GetOrchestratorModuleTypeName(stream->provider->GetModuleType()).CStr());
 							}
 
 							stream->is_valid = false;
@@ -477,11 +477,11 @@ bool Orchestrator::RegisterModule(const std::shared_ptr<OrchestratorModuleInterf
 		{
 			if (info.type == type)
 			{
-				logtw("%s module (%p) is already registered", GetOrchestratorModuleTypeName(type), module.get());
+				logtw("%s module (%p) is already registered", GetOrchestratorModuleTypeName(type).CStr(), module.get());
 			}
 			else
 			{
-				logtw("The module type was %s (%p), but now %s", GetOrchestratorModuleTypeName(info.type), module.get(), GetOrchestratorModuleTypeName(type));
+				logtw("The module type was %s (%p), but now %s", GetOrchestratorModuleTypeName(info.type).CStr(), module.get(), GetOrchestratorModuleTypeName(type).CStr());
 			}
 
 			OV_ASSERT2(false);
@@ -490,8 +490,6 @@ bool Orchestrator::RegisterModule(const std::shared_ptr<OrchestratorModuleInterf
 	}
 
 	_module_list.emplace_back(type, module);
-	auto &list = _module_map[type];
-	list.push_back(module);
 
 	if (module->GetModuleType() == OrchestratorModuleType::MediaRouter)
 	{
@@ -502,7 +500,7 @@ bool Orchestrator::RegisterModule(const std::shared_ptr<OrchestratorModuleInterf
 		_media_router = media_router;
 	}
 
-	logtd("%s module (%p) is registered", GetOrchestratorModuleTypeName(type), module.get());
+	logtd("%s module (%p) is registered", GetOrchestratorModuleTypeName(type).CStr(), module.get());
 
 	return true;
 }
@@ -522,12 +520,12 @@ bool Orchestrator::UnregisterModule(const std::shared_ptr<OrchestratorModuleInte
 		if (info->module == module)
 		{
 			_module_list.erase(info);
-			logtd("%s module (%p) is unregistered", GetOrchestratorModuleTypeName(info->type), module.get());
+			logtd("%s module (%p) is unregistered", GetOrchestratorModuleTypeName(info->type).CStr(), module.get());
 			return true;
 		}
 	}
 
-	logtw("%s module (%p) not found", GetOrchestratorModuleTypeName(module->GetModuleType()), module.get());
+	logtw("%s module (%p) not found", GetOrchestratorModuleTypeName(module->GetModuleType()).CStr(), module.get());
 	OV_ASSERT2(false);
 
 	return false;
@@ -844,6 +842,7 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &v
 
 	if (vhost == nullptr)
 	{
+		logtw("Host not found for vhost: %s", vhost_name.CStr());
 		return Result::Failed;
 	}
 
@@ -855,6 +854,7 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &v
 		if (app.second->app_info.GetName() == app_name)
 		{
 			// The application does exists
+			logtd("The application does exists: %s %s", vhost_name.CStr(), app_name.CStr());
 			return Result::Exists;
 		}
 	}
@@ -872,18 +872,20 @@ Orchestrator::Result Orchestrator::CreateApplicationInternal(const ov::String &v
 
 	for (auto &module : _module_list)
 	{
-		logtd("Notifying %p (%s) for the create event (%s)", module.module.get(), GetOrchestratorModuleTypeName(module.module->GetModuleType()), app_info.GetName().CStr());
+		auto &module_interface = module.module;
 
-		if (module.module->OnCreateApplication(app_info))
+		logtd("Notifying %p (%s) for the create event (%s)", module_interface.get(), GetOrchestratorModuleTypeName(module_interface->GetModuleType()).CStr(), app_info.GetName().CStr());
+
+		if (module_interface->OnCreateApplication(app_info))
 		{
-			logtd("The module %p (%s) returns true", module.module.get(), GetOrchestratorModuleTypeName(module.module->GetModuleType()));
+			logtd("The module %p (%s) returns true", module_interface.get(), GetOrchestratorModuleTypeName(module_interface->GetModuleType()).CStr());
 
-			created_list.push_back(module.module);
+			created_list.push_back(module_interface);
 		}
 		else
 		{
 			logte("The module %p (%s) returns error while creating the application [%s]",
-				  module.module.get(), GetOrchestratorModuleTypeName(module.module->GetModuleType()), app_name.CStr());
+					module_interface.get(), GetOrchestratorModuleTypeName(module_interface->GetModuleType()).CStr(), app_name.CStr());
 			succeeded = false;
 			break;
 		}
@@ -924,21 +926,23 @@ Orchestrator::Result Orchestrator::NotifyModulesForDeleteEvent(const std::vector
 	Result result = Result::Succeeded;
 
 	// Notify modules of deletion events
-	for (auto &module : modules)
+	for (auto module = modules.rbegin(); module != modules.rend(); ++module)
 	{
-		logtd("Notifying %p (%s) for the delete event (%s)", module.module.get(), GetOrchestratorModuleTypeName(module.module->GetModuleType()), app_info.GetName().CStr());
+		auto &module_interface = module->module;
 
-		if (module.module->OnDeleteApplication(app_info) == false)
+		logtd("Notifying %p (%s) for the delete event (%s)", module_interface.get(), GetOrchestratorModuleTypeName(module_interface->GetModuleType()).CStr(), app_info.GetName().CStr());
+
+		if (module_interface->OnDeleteApplication(app_info) == false)
 		{
 			logte("The module %p (%s) returns error while deleting the application %s",
-				  module.module.get(), GetOrchestratorModuleTypeName(module.module->GetModuleType()), app_info.GetName().CStr());
+					module_interface.get(), GetOrchestratorModuleTypeName(module_interface->GetModuleType()).CStr(), app_info.GetName().CStr());
 
 			// Ignore this error
 			result = Result::Failed;
 		}
 		else
 		{
-			logtd("The module %p (%s) returns true", module.module.get(), GetOrchestratorModuleTypeName(module.module->GetModuleType()));
+			logtd("The module %p (%s) returns true", module_interface.get(), GetOrchestratorModuleTypeName(module_interface->GetModuleType()).CStr());
 		}
 	}
 
@@ -1158,7 +1162,7 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 
 		logti("Trying to pull stream [%s/%s] from provider using URL: %s",
 			  vhost_app_name.CStr(), stream_name.CStr(),
-			  GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
+			  GetOrchestratorModuleTypeName(provider_module->GetModuleType()).CStr());
 
 		auto stream = provider_module->PullStream(app_info, stream_name, {source}, offset);
 
@@ -1172,7 +1176,7 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 
 		logte("Could not pull stream [%s/%s] from provider: %s",
 			  vhost_app_name.CStr(), stream_name.CStr(),
-			  GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
+			  GetOrchestratorModuleTypeName(provider_module->GetModuleType()).CStr());
 
 		// Rollback if needed
 		switch (result)
@@ -1273,7 +1277,7 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 
 	logti("Trying to pull stream [%s/%s] from provider using origin map: %s",
 		  vhost_app_name.CStr(), stream_name.CStr(),
-		  GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
+		  GetOrchestratorModuleTypeName(provider_module->GetModuleType()).CStr());
 
 	auto stream = provider_module->PullStream(app_info, stream_name, url_list, offset);
 
@@ -1312,7 +1316,7 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 
 	logte("Could not pull stream [%s/%s] from provider: %s",
 		  vhost_app_name.CStr(), stream_name.CStr(),
-		  GetOrchestratorModuleTypeName(provider_module->GetModuleType()));
+		  GetOrchestratorModuleTypeName(provider_module->GetModuleType()).CStr());
 
 	// Rollback if needed
 	switch (result)

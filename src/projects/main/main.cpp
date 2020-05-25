@@ -150,18 +150,12 @@ int main(int argc, char *argv[])
 	//--------------------------------------------------------------------
 	// Create the modules
 	//--------------------------------------------------------------------
+	//
+	// NOTE: THE ORDER OF MODULES IS IMPORTANT
+	//
+	//
 	// Initialize MediaRouter (MediaRouter must be registered first)
 	INIT_MODULE(media_router, "MediaRouter", MediaRouter::Create());
-
-	// Initialize Providers
-
-	INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
-	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
-	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
-	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
-
-	// Initialize Transcoder
-	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
 
 	// Initialize Publishers
 	INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, media_router));
@@ -169,6 +163,15 @@ int main(int argc, char *argv[])
 	INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(http_server_manager, *server_config, media_router));
 	INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(http_server_manager, *server_config, media_router));
 	INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, media_router));
+
+	// Initialize Transcoder
+	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
+
+	// Initialize Providers
+	INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
+	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
+	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
+	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
 
 	logti("All modules are initialized successfully");
 
@@ -205,13 +208,14 @@ int main(int argc, char *argv[])
 	RELEASE_MODULE(rtspc_provider, "RTSPC Provider");
 	// PENDING : RELEASE_MODULE(rtsp_provider, "RTSP Provider");
 
+	RELEASE_MODULE(transcoder, "Transcoder");
+
 	RELEASE_MODULE(webrtc_publisher, "WebRTC Publisher");
 	RELEASE_MODULE(hls_publisher, "HLS Publisher");
 	RELEASE_MODULE(dash_publisher, "MPEG-DASH Publisher");
 	RELEASE_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher");
 	RELEASE_MODULE(ovt_publisher, "OVT Publisher");
 
-	RELEASE_MODULE(transcoder, "Transcoder");
 	RELEASE_MODULE(media_router, "MediaRouter");
 
 	TERMINATE_EXTERNAL_MODULE("SRTP", TerminateSrtp);
@@ -229,7 +233,13 @@ static void PrintBanner()
 	utsname uts{};
 	::uname(&uts);
 
-	logti("OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA " is started on [%s] (%s %s - %s, %s)", uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
+#if DEBUG
+	static constexpr const char *BUILD_MODE = " [debug]";
+#else // DEBUG
+	static constexpr const char *BUILD_MODE = "";
+#endif // DEBUG
+
+	logti("OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA "%s is started on [%s] (%s %s - %s, %s)", BUILD_MODE, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
 
 	logti("With modules:");
 	logti("  FFmpeg %s", GetFFmpegVersion());

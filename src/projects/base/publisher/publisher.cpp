@@ -129,7 +129,7 @@ namespace pub
 		lock.unlock();
 
 		_router->UnregisterObserverApp(*application.get(), application);
-
+		
 		bool result = OnDeletePublisherApplication(application);
 		if(result == false)
 		{

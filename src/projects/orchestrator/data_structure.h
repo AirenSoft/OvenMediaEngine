@@ -13,12 +13,26 @@
 
 enum class OrchestratorModuleType
 {
-	Unknown,
-	Provider,
-	MediaRouter,
-	Transcoder,
-	Publisher
+	Unknown = 0x10000000,
+	Provider = 0x00000001,
+	MediaRouter = 0x00000010,
+	Transcoder = 0x00000100,
+	Publisher = 0x00001000
 };
+
+inline OrchestratorModuleType operator|(OrchestratorModuleType type1, OrchestratorModuleType type2)
+{
+	return static_cast<OrchestratorModuleType>(
+		static_cast<std::underlying_type<OrchestratorModuleType>::type>(type1) |
+		static_cast<std::underlying_type<OrchestratorModuleType>::type>(type2));
+}
+
+inline OrchestratorModuleType operator&(OrchestratorModuleType type1, OrchestratorModuleType type2)
+{
+	return static_cast<OrchestratorModuleType>(
+		static_cast<std::underlying_type<OrchestratorModuleType>::type>(type1) &
+		static_cast<std::underlying_type<OrchestratorModuleType>::type>(type2));
+}
 
 // Forward declaration
 namespace pvd
@@ -26,7 +40,7 @@ namespace pvd
 	class Stream;
 }
 
-const char *GetOrchestratorModuleTypeName(OrchestratorModuleType type);
+ov::String GetOrchestratorModuleTypeName(OrchestratorModuleType type);
 
 class OrchestratorModuleInterface : public ov::EnableSharedFromThis<OrchestratorModuleInterface>
 {

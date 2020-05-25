@@ -97,7 +97,13 @@ public:
 	std::shared_mutex _streams_lock;
 
 public:
-	void MainTask();
+	void MessageLooper();
+
+	// enum StreamBufferIndicator {
+	// 	BUFFER_INDICATOR_NONE_STREAM = 0,
+	// 	BUFFER_INDICATOR_INCOMING_STREAM,
+	// 	BUFFER_INDICATOR_OUTGOING_STREAM
+	// };
 
 	class BufferIndicator
 	{

@@ -71,14 +71,6 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 		}
 	}
 
-	{
-		auto shared_lock = std::shared_lock(_worker_mutex);
-		for (auto &worker : _worker_list)
-		{
-			worker->Start();
-		}
-	}
-
 	auto socket = std::make_shared<ov::ServerSocket>();
 
 	if (socket->Prepare(type, address, send_buffer_size, recv_buffer_size, 4096))
@@ -97,6 +89,16 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 
 						// Notify observers
 						auto func = std::bind(&PhysicalPortObserver::OnConnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client));
+						for_each(_observer_list.begin(), _observer_list.end(), func);
+
+						break;
+					}
+
+					case ov::SocketConnectionState::Disconnect: {
+						logtd("Disconnected by server: %s", client->ToString().CStr());
+
+						// Notify observers
+						auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), PhysicalPortDisconnectReason::Disconnect, nullptr);
 						for_each(_observer_list.begin(), _observer_list.end(), func);
 
 						break;
@@ -129,7 +131,7 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 			auto data_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data) -> ov::SocketConnectionState {
 				auto sock = client->GetSocket();
 
-				if(sock.IsValid())
+				if (sock.IsValid())
 				{
 					logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
 
@@ -139,7 +141,10 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 					auto &worker = _worker_list.at(sock.GetSocket() % PHYSICAL_PORT_WORKER_COUNT);
 					shared_lock.unlock();
 
-					worker->AddTask(client, data);
+					if (worker->AddTask(client, data) == false)
+					{
+						logte("Could not add task");
+					}
 				}
 				else
 				{
@@ -157,6 +162,14 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 
 			logtd("Server is stopped");
 		};
+
+		{
+			auto shared_lock = std::shared_lock(_worker_mutex);
+			for (auto &worker : _worker_list)
+			{
+				worker->Start();
+			}
+		}
 
 		_thread = std::thread(proc);
 
@@ -233,52 +246,67 @@ bool PhysicalPort::Close()
 
 	_thread = std::thread();
 
-	switch (_type)
+	auto socket = GetSocket();
+
+	if (socket != nullptr)
 	{
-		case ov::SocketType::Tcp:
-			if (_server_socket != nullptr)
-			{
-				if ((_server_socket->GetState() == ov::SocketState::Closed) || (_server_socket->Close()))
-				{
-					_server_socket = nullptr;
-					_observer_list.clear();
-					return true;
-				}
-			}
-			break;
+		if ((socket->GetState() == ov::SocketState::Closed) || (socket->Close()))
+		{
+			_server_socket = nullptr;
+			_datagram_socket = nullptr;
 
-		case ov::SocketType::Udp:
-			if ((_datagram_socket->GetState() == ov::SocketState::Closed) || (_datagram_socket->Close()))
-			{
-				_datagram_socket = nullptr;
-				_observer_list.clear();
-				return true;
-			}
-			break;
+			_observer_list.clear();
 
-		default:
-			break;
+			return true;
+		}
 	}
 
 	return false;
 }
 
-ov::SocketState PhysicalPort::GetState()
+ov::SocketState PhysicalPort::GetState() const
+{
+	auto socket = GetSocket();
+
+	if (socket != nullptr)
+	{
+		return socket->GetState();
+	}
+
+	return ov::SocketState::Closed;
+}
+
+std::shared_ptr<const ov::Socket> PhysicalPort::GetSocket() const
 {
 	switch (_type)
 	{
 		case ov::SocketType::Tcp:
 			OV_ASSERT2(_server_socket != nullptr);
-
-			return _server_socket->GetState();
+			return _server_socket;
 
 		case ov::SocketType::Udp:
 			OV_ASSERT2(_datagram_socket != nullptr);
-
-			return _datagram_socket->GetState();
+			return _datagram_socket;
 
 		default:
-			return ov::SocketState::Closed;
+			return nullptr;
+	}
+}
+
+std::shared_ptr<ov::Socket> PhysicalPort::GetSocket()
+{
+	switch (_type)
+	{
+		case ov::SocketType::Tcp:
+			OV_ASSERT2(_server_socket != nullptr);
+			return _server_socket;
+
+		case ov::SocketType::Udp:
+			OV_ASSERT2(_datagram_socket != nullptr);
+			return _datagram_socket;
+
+		default:
+			return nullptr;
 	}
 }
 
@@ -305,5 +333,5 @@ bool PhysicalPort::RemoveObserver(PhysicalPortObserver *observer)
 
 bool PhysicalPort::DisconnectClient(ov::ClientSocket *client_socket)
 {
-	return _server_socket->DisconnectClient(client_socket, ov::SocketConnectionState::Disconnected);
+	return _server_socket->DisconnectClient(client_socket, ov::SocketConnectionState::Disconnect);
 }

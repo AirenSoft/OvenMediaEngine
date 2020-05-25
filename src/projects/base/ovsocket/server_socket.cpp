@@ -7,10 +7,11 @@
 //
 //==============================================================================
 #include "server_socket.h"
-#include "client_socket.h"
-#include "socket_private.h"
 
 #include <netinet/tcp.h>
+
+#include "client_socket.h"
+#include "socket_private.h"
 
 namespace ov
 {
@@ -151,18 +152,24 @@ namespace ov
 				case SocketConnectionState::Connected:
 					break;
 
-				case SocketConnectionState::Disconnected:
+				case SocketConnectionState::Disconnect:
 					logtd("[%p] [#%d] The connection callback requested to disconnect the client #%d",
 						  this, _socket.GetSocket(), client->GetSocket().GetSocket());
-					DisconnectClient(client, SocketConnectionState::Disconnected);
+					DisconnectClient(client, new_state);
 					break;
 
-				case SocketConnectionState::Error:
-				{
+				case SocketConnectionState::Disconnected:
+					logtd("[%p] [#%d] Invalid socket state for client #%d",
+						  this, _socket.GetSocket(), client->GetSocket().GetSocket());
+					OV_ASSERT2(false);
+					DisconnectClient(client, new_state);
+					break;
+
+				case SocketConnectionState::Error: {
 					auto error = Error::CreateError("Connection", "The connection callback requested to disconnect the client #%d",
 													_socket.GetSocket(), client->GetSocket().GetSocket());
 					logtd("[%p] [#%d] %s", this, _socket.GetSocket(), error->ToString().CStr());
-					DisconnectClient(client, SocketConnectionState::Error, error);
+					DisconnectClient(client, new_state, error);
 					break;
 				}
 			}
@@ -230,18 +237,24 @@ namespace ov
 						case SocketConnectionState::Connected:
 							break;
 
-						case SocketConnectionState::Disconnected:
+						case SocketConnectionState::Disconnect:
 							logtd("[%p] [#%d] The data callback requested to disconnect the client #%d",
 								  this, _socket.GetSocket(), client->GetSocket().GetSocket());
-							DisconnectClient(client, SocketConnectionState::Disconnected);
+							DisconnectClient(client, new_state);
 							break;
 
-						case SocketConnectionState::Error:
-						{
+						case SocketConnectionState::Disconnected:
+							logtd("[%p] [#%d] Invalid socket state for client #%d",
+								  this, _socket.GetSocket(), client->GetSocket().GetSocket());
+							OV_ASSERT2(false);
+							DisconnectClient(client, new_state);
+							break;
+
+						case SocketConnectionState::Error: {
 							auto error = Error::CreateError("Connection", "The connection callback requested to disconnect the client #%d",
 															_socket.GetSocket(), client->GetSocket().GetSocket());
 							logtd("[%p] [#%d] %s", this, _socket.GetSocket(), error->ToString().CStr());
-							DisconnectClient(client, SocketConnectionState::Error, error);
+							DisconnectClient(client, new_state, error);
 							break;
 						}
 					}

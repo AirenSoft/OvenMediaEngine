@@ -29,6 +29,8 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 {
 	logti("Created media route application. application id(%u), (%s)"
 		, _application_info.GetId(), _application_info.GetName().CStr());
+
+	_indicator.SetAlias(ov::String::FormatString("%s - Mediarouter Application Indicator", _application_info.GetName().CStr()));
 }
 
 MediaRouteApplication::~MediaRouteApplication()
@@ -43,7 +45,7 @@ bool MediaRouteApplication::Start()
 	{
 		_kill_flag = false;
 
-		_thread = std::thread(&MediaRouteApplication::MainTask, this);
+		_thread = std::thread(&MediaRouteApplication::MessageLooper, this);
 	}
 	catch (const std::system_error &e)
 	{
@@ -60,11 +62,14 @@ bool MediaRouteApplication::Stop()
 	_kill_flag = true;
 	
 	_indicator.Stop();
-	
+	_indicator.Clear();
+
 	if(_thread.joinable())
 	{
 		_thread.join();
 	}
+
+	// TODO: Delete All Stream
 
 	_connectors.clear();
 	_observers.clear();
@@ -204,7 +209,7 @@ bool MediaRouteApplication::OnCreateStream(
 	if(connector_type == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
 		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
-
+		new_stream->SetInoutType(false);
 		_streams_incoming.insert(std::make_pair(stream_info->GetId(), new_stream));		
 	}
 	else if( (connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) || 
@@ -212,6 +217,7 @@ bool MediaRouteApplication::OnCreateStream(
 	{
 		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 
+		new_stream->SetInoutType(true);
 		_streams_outgoing.insert(std::make_pair(stream_info->GetId(), new_stream));			
 	}
 	else
@@ -221,8 +227,10 @@ bool MediaRouteApplication::OnCreateStream(
 		return false;
 	}
 
+
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamCreated(*stream_info);
+
 
 	// Notify all observers that a stream has been created
 	{
@@ -283,7 +291,7 @@ bool MediaRouteApplication::OnDeleteStream(
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamDeleted(*stream_info);
 
-	logtd("Deleted connector. type(%d), app(%s) stream(%s/%u)"
+	logtd("Notify connectors that stream has been deleted. type(%d), app(%s) stream(%s/%u)"
 		, app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	auto connector_type = app_conn->GetConnectorType();
@@ -416,11 +424,11 @@ bool MediaRouteApplication::OnReceiveBuffer(
 }
 
 
-void MediaRouteApplication::MainTask()
+void MediaRouteApplication::MessageLooper()
 {
 	while (!_kill_flag)
 	{
-		auto msg = _indicator.Dequeue(100);
+		auto msg = _indicator.Dequeue(10);
 		if (msg.has_value() == false)
 		{
 			// It may be called due to a normal stop signal.
@@ -489,10 +497,11 @@ void MediaRouteApplication::MainTask()
 						}
 					}
 				}
-
 			}
 
 			lock.unlock();
 		}
 	}
+
+	logtd("MessageLooper thread has been stopped");
 }
