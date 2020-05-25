@@ -51,6 +51,11 @@ namespace info
 		}
 	}
 
+	Stream::Stream(StreamSourceType source)
+	{
+		_source_type = source;
+	}
+
 	Stream::~Stream()
 	{
 	}

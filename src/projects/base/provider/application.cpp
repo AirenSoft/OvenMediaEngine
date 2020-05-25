@@ -14,218 +14,6 @@
 
 namespace pvd
 {
-	StreamMotor::StreamMotor(uint32_t id)
-	{
-		_id = id;
-	}
-
-	uint32_t StreamMotor::GetId()
-	{
-		return _id;
-	}
-
-	uint32_t StreamMotor::GetStreamCount()
-	{
-		std::shared_lock<std::shared_mutex> lock(_streams_map_guard);
-		return _streams.size();
-	}
-
-	bool StreamMotor::Start()
-	{
-		// create epoll
-		_epoll_fd = epoll_create1(0);
-		if(_epoll_fd == -1)
-		{
-			logte("Cannot create EPOLL fd : %d", _id);
-			return false;
-		}
-
-		_stop_thread_flag = false;
-		_thread = std::thread(&StreamMotor::WorkerThread, this);
-
-		return true;
-	}
-
-	bool StreamMotor::Stop()
-	{
-		_stop_thread_flag = true;
-		close(_epoll_fd);
-		if(_thread.joinable())
-		{
-			_thread.join();
-		}
-
-		//STOP AND REMOVE ALL STREAM (NEXT)
-		for(const auto &x : _streams)
-		{
-			auto stream = x.second;
-			stream->Stop();
-		}
-
-		_streams.clear();
-
-		return true;
-	}
-
-	bool StreamMotor::AddStreamToEpoll(const std::shared_ptr<Stream> &stream)
-	{
-		int stream_fd = stream->GetFileDescriptorForDetectingEvent();
-		if(stream_fd == -1)
-		{
-			logte("Failed to add stream : %s/%s(%u) Stream failed to provide the file description for event detection", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
-			return false;
-		}
-
-		struct epoll_event event;
-		event.events = EPOLLIN;
-		event.data.u32 = stream->GetId();
-
-		//TODO(Getroot): epoll_ctl and epoll_wait are thread-safe so it doesn't need to be protected. (right?, check carefully again!)
-		int result = epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, stream_fd, &event);
-		if(result == -1)
-		{
-			logte("%s/%s(%u) Stream could not be added to the epoll (err : %d)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), result);
-			return false;
-		}
-
-		return true;
-	}
-
-	bool StreamMotor::DelStreamFromEpoll(const std::shared_ptr<Stream> &stream)
-	{
-		int stream_fd = stream->GetFileDescriptorForDetectingEvent();
-		if(stream_fd == -1)
-		{
-			logte("Failed to delete stream : %s/%s(%u) Stream failed to provide the file description for event detection", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
-			return false;
-		}
-
-		//TODO(Getroot): epoll_ctl and epoll_wait are thread-safe so it doesn't need to be protected. (right?, check carefully again!)
-		int result = epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, stream_fd, nullptr);
-		if(result == -1)
-		{
-			if(errno == ENOENT)
-			{
-				return true;
-			}
-			logte("%s/%s(%u) Stream could not be deleted to the epoll (err : %d)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), result);
-			return false;
-		}
-
-		return true;
-	}
-
-	bool StreamMotor::AddStream(const std::shared_ptr<Stream> &stream)
-	{
-		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
-		_streams[stream->GetId()] = stream;
-		lock.unlock();
-
-		stream->Play();
-
-		if(!AddStreamToEpoll(stream))
-		{
-			DelStream(stream);
-			return false;
-		}
-
-		logti("%s/%s(%u) stream has added to %u StreamMotor", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), GetId());
-
-		return true;
-	}
-
-	bool StreamMotor::DelStream(const std::shared_ptr<Stream> &stream)
-	{
-		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
-		if(_streams.find(stream->GetId()) == _streams.end())
-		{
-			// may be already deleted
-			return false;
-		}
-		_streams.erase(stream->GetId());
-		lock.unlock();
-
-		logti("%s/%s(%u) stream has deleted from %u StreamMotor", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), GetId());
-
-		DelStreamFromEpoll(stream);
-		stream->Stop();
-
-		return true;
-	}
-
-	void StreamMotor::WorkerThread()
-	{
-		while(true)
-		{
-			struct epoll_event epoll_events[MAX_EPOLL_EVENTS];
-
-			int event_count = epoll_wait(_epoll_fd, epoll_events, MAX_EPOLL_EVENTS, EPOLL_TIMEOUT_MSEC);
-
-			if(_stop_thread_flag)
-			{
-				break;
-			}
-
-			if(event_count < 0)
-			{
-				// error
-				logtc("%d StreamMotor terminated : epoll_wait error (errno : %d)", _id, errno);
-				return ;
-			}
-
-			for(int i=0; i<event_count; i++)
-			{
-				auto stream_id = epoll_events[i].data.u32;
-				auto events = epoll_events[i].events;
-
-				std::shared_lock<std::shared_mutex> stream_lock(_streams_map_guard);
-				auto it = _streams.find(stream_id);
-				if(it == _streams.end())
-				{
-					continue;
-				}
-
-				auto stream = it->second;
-				stream_lock.unlock();
-
-				if(OV_CHECK_FLAG(events, EPOLLIN))
-				{
-					if(stream->GetState() == Stream::State::PLAYING)
-					{
-						auto result = stream->ProcessMediaPacket();
-						if(result == Stream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS)
-						{
-							
-						}
-						else if(result == Stream::ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN)
-						{
-							
-						}
-						else
-						{
-							// it will be deleted from WhiteElephantCollector
-							DelStreamFromEpoll(stream);
-						}
-					}
-					else
-					{
-						// it will be deleted from WhiteElephantCollector
-						DelStreamFromEpoll(stream);
-					}
-					
-				}
-				// All other events indicate errors.
-				else
-				{
-					// it will be deleted from WhiteElephantCollector
-					DelStreamFromEpoll(stream);
-				}
-				
-			}
-		}
-	}
-
-
 	Application::Application(const std::shared_ptr<Provider> &provider, const info::Application &application_info)
 		: info::Application(application_info)
 	{
@@ -374,7 +162,7 @@ namespace pvd
 
 	uint32_t Application::GetStreamMotorId(const std::shared_ptr<Stream> &stream)
 	{
-		uint32_t hash = stream->GetId() % MAX_STREAM_MOTOR_COUNT;
+		uint32_t hash = stream->GetId() % MAX_APPLICATION_STREAM_MOTOR_COUNT;
 
 		return hash;
 	}
@@ -530,13 +318,13 @@ namespace pvd
 		return motor;
 	}
 
-	bool Application::NotifyStreamCreated(std::shared_ptr<Stream> stream)
+	bool Application::NotifyStreamCreated(const std::shared_ptr<Stream> &stream)
 	{
 		MediaRouteApplicationConnector::CreateStream(stream);
 		return true;
 	}
 
-	bool Application::NotifyStreamDeleted(std::shared_ptr<Stream> stream)
+	bool Application::NotifyStreamDeleted(const std::shared_ptr<Stream> &stream)
 	{
 		MediaRouteApplicationConnector::DeleteStream(stream);
 		return true;

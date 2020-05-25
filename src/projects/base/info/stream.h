@@ -16,6 +16,7 @@ namespace info
 	class Stream
 	{
 	public:
+		Stream(StreamSourceType source);
 		Stream(const info::Application &app_info, StreamSourceType source);
 		Stream(const info::Application &app_info, info::stream_id_t stream_id, StreamSourceType source);
 		Stream(const Stream &stream);

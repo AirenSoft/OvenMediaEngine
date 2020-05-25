@@ -22,7 +22,7 @@
 #include "base/media_route/media_buffer.h"
 #include "base/media_route/media_type.h"
 #include "base/provider/application.h"
-#include "base/provider/provider.h"
+#include "base/provider/push_provider/push_provider.h"
 
 #include "rtmp_observer.h"
 #include "rtmp_server.h"

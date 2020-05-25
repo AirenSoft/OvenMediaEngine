@@ -40,6 +40,11 @@ namespace pvd
 
 		State GetState(){return _state;};
 
+		void SetApplication(const std::shared_ptr<pvd::Application> &application)
+		{
+			_application = application;
+		}
+
 		const std::shared_ptr<pvd::Application> &GetApplication()
 		{
 			return _application;
@@ -75,11 +80,12 @@ namespace pvd
 		Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type);
 		Stream(const std::shared_ptr<pvd::Application> &application, info::stream_id_t stream_id, StreamSourceType source_type);
 		Stream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info);
+		Stream(StreamSourceType source_type);
 
 		virtual ~Stream();
 
 		State 	_state = State::IDLE;
 
-		std::shared_ptr<pvd::Application> _application;
+		std::shared_ptr<pvd::Application> _application = nullptr;
 	};
 }

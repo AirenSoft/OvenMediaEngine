@@ -15,6 +15,12 @@
 
 namespace pvd
 {
+	Stream::Stream(StreamSourceType source_type)
+		:info::Stream(source_type),
+		_application(nullptr)
+	{
+	}
+
 	Stream::Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type)
 		:info::Stream(*(std::static_pointer_cast<info::Application>(application)), source_type),
 		_application(application)
