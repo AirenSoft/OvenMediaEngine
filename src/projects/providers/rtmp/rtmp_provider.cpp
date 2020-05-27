@@ -31,7 +31,7 @@ std::shared_ptr<RtmpProvider> RtmpProvider::Create(const cfg::Server &server_con
 }
 
 RtmpProvider::RtmpProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
-	: Provider(server_config, router)
+	: PushProvider(server_config, router)
 {
 	logtd("Created Rtmp Provider module.");
 }
@@ -73,7 +73,7 @@ bool RtmpProvider::Stop()
 
 std::shared_ptr<pvd::Application> RtmpProvider::OnCreateProviderApplication(const info::Application &application_info)
 {
-	return RtmpApplication::Create(pvd::Provider::GetSharedPtrAs<pvd::Provider>(), application_info);
+	return RtmpApplication::Create(pvd::Provider::GetSharedPtrAs<pvd::PushProvider>(), application_info);
 }
 
 bool RtmpProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
@@ -195,7 +195,7 @@ bool RtmpProvider::OnStreamReadyComplete(const ov::String &app_name,
 		tracks.push_back(new_track);
 	}
 
-	auto stream = application->CreateStream(stream_name, tracks);
+	auto stream = application->PushApplication::CreateStream(application->IssueUniqueStreamId(), stream_name, tracks);
 	if (stream == nullptr)
 	{
 		logte("can not create stream - app(%s) stream(%s)", app_name.CStr(), stream_name.CStr());

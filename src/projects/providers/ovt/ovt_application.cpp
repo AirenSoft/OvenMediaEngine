@@ -9,7 +9,7 @@
 
 namespace pvd
 {
-	std::shared_ptr<OvtApplication> OvtApplication::Create(const std::shared_ptr<Provider> &provider, const info::Application &application_info)
+	std::shared_ptr<OvtApplication> OvtApplication::Create(const std::shared_ptr<PullProvider> &provider, const info::Application &application_info)
 	{
 		auto application = std::make_shared<OvtApplication>(provider, application_info);
 
@@ -18,8 +18,8 @@ namespace pvd
 		return application;
 	}
 
-	OvtApplication::OvtApplication(const std::shared_ptr<Provider> &provider, const info::Application &info)
-			: Application(provider, info)
+	OvtApplication::OvtApplication(const std::shared_ptr<PullProvider> &provider, const info::Application &info)
+			: PullApplication(provider, info)
 	{
 
 	}
@@ -29,18 +29,18 @@ namespace pvd
 
 	}
 
-	std::shared_ptr<pvd::Stream> OvtApplication::CreatePullStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<ov::String> &url_list)
+	std::shared_ptr<pvd::PullStream> OvtApplication::CreateStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<ov::String> &url_list)
 	{
-		return OvtStream::Create(GetSharedPtrAs<pvd::Application>(), stream_id, stream_name, url_list);
+		return OvtStream::Create(GetSharedPtrAs<pvd::PullApplication>(), stream_id, stream_name, url_list);
 	}
 
 	bool OvtApplication::Start()
 	{
-		return pvd::Application::Start();
+		return pvd::PullApplication::Start();
 	}
 
 	bool OvtApplication::Stop()
 	{
-		return pvd::Application::Stop();
+		return pvd::PullApplication::Stop();
 	}
 }

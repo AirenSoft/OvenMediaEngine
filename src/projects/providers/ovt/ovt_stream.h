@@ -6,31 +6,30 @@
 
 #include <base/common_types.h>
 #include <base/ovlibrary/url.h>
-
-#include <base/provider/stream.h>
 #include <base/ovlibrary/semaphore.h>
-#include <base/provider/application.h>
 #include <modules/ovt_packetizer/ovt_packet.h>
 #include <modules/ovt_packetizer/ovt_depacketizer.h>
-
 #include <monitoring/monitoring.h>
+
+#include <base/provider/pull_provider/application.h>
+#include <base/provider/pull_provider/stream.h>
 
 #define OVT_TIMEOUT_MSEC		3000
 namespace pvd
 {
-	class OvtStream : public pvd::Stream
+	class OvtStream : public pvd::PullStream
 	{
 	public:
-		static std::shared_ptr<OvtStream> Create(const std::shared_ptr<pvd::Application> &application, const uint32_t stream_id, const ov::String &stream_name,	const std::vector<ov::String> &url_list);
+		static std::shared_ptr<OvtStream> Create(const std::shared_ptr<pvd::PullApplication> &application, const uint32_t stream_id, const ov::String &stream_name,	const std::vector<ov::String> &url_list);
 
-		OvtStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list);
+		OvtStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list);
 		~OvtStream() final;
 
 		int GetFileDescriptorForDetectingEvent() override;
 		// If this stream belongs to the Pull provider, 
 		// this function is called periodically by the StreamMotor of application. 
 		// Media data has to be processed here.
-		Stream::ProcessMediaResult ProcessMediaPacket() override;
+		PullStream::ProcessMediaResult ProcessMediaPacket() override;
 
 	private:
 

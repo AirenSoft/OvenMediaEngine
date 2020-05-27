@@ -22,7 +22,8 @@ ov::String GetOrchestratorModuleTypeName(OrchestratorModuleType type)
 	std::vector<ov::String> list;
 
 	GET_TYPE_NAME(OrchestratorModuleType, Unknown, type);
-	GET_TYPE_NAME(OrchestratorModuleType, Provider, type);
+	GET_TYPE_NAME(OrchestratorModuleType, PullProvider, type);
+	GET_TYPE_NAME(OrchestratorModuleType, PushProvider, type);
 	GET_TYPE_NAME(OrchestratorModuleType, MediaRouter, type);
 	GET_TYPE_NAME(OrchestratorModuleType, Transcoder, type);
 	GET_TYPE_NAME(OrchestratorModuleType, Publisher, type);

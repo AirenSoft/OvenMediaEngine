@@ -12,7 +12,7 @@
 
 namespace pvd
 {
-	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::Application> &application, 
+	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::PullApplication> &application, 
 		const uint32_t stream_id, const ov::String &stream_name,
 		const std::vector<ov::String> &url_list)
 	{
@@ -32,8 +32,8 @@ namespace pvd
 		return stream;
 	}
 
-	RtspcStream::RtspcStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
-	: pvd::Stream(application, stream_info)
+	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
+	: pvd::PullStream(application, stream_info)
 	{
 		_state = State::IDLE;
 		_format_context = 0;
@@ -114,7 +114,7 @@ namespace pvd
 		elapsed = end - begin;
 		_origin_response_time_msec = elapsed.count();
 
-		return pvd::Stream::Start();
+		return pvd::PullStream::Start();
 	}
 
 	bool RtspcStream::Play()
@@ -132,7 +132,7 @@ namespace pvd
 			_stream_metrics->SetOriginResponseTimeMSec(_origin_response_time_msec);
 		}
 
-		return pvd::Stream::Play();
+		return pvd::PullStream::Play();
 	}
 
 	bool RtspcStream::Stop()
@@ -149,7 +149,7 @@ namespace pvd
 			_state = State::ERROR;
 		}
 	
-		return pvd::Stream::Stop();
+		return pvd::PullStream::Stop();
 	}
 
 	bool RtspcStream::ConnectTo()
@@ -330,7 +330,7 @@ namespace pvd
 		return av_get_iformat_file_descriptor(_format_context);
 	}
 
-	Stream::ProcessMediaResult RtspcStream::ProcessMediaPacket()
+	PullStream::ProcessMediaResult RtspcStream::ProcessMediaPacket()
 	{
 		AVPacket packet;
 		av_init_packet(&packet);

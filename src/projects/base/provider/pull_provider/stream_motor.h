@@ -34,12 +34,12 @@ namespace pvd
 		bool Start();
 		bool Stop();
 
-		bool AddStream(const std::shared_ptr<Stream> &stream);
-		bool DelStream(const std::shared_ptr<Stream> &stream);
+		bool AddStream(const std::shared_ptr<PullStream> &stream);
+		bool DelStream(const std::shared_ptr<PullStream> &stream);
 
 	private:
-		bool AddStreamToEpoll(const std::shared_ptr<Stream> &stream);
-		bool DelStreamFromEpoll(const std::shared_ptr<Stream> &stream);
+		bool AddStreamToEpoll(const std::shared_ptr<PullStream> &stream);
+		bool DelStreamFromEpoll(const std::shared_ptr<PullStream> &stream);
 
 		void WorkerThread();
 
@@ -50,6 +50,6 @@ namespace pvd
 		bool _stop_thread_flag;
 		std::thread _thread;
 		std::shared_mutex _streams_map_guard;
-		std::map<uint32_t, std::shared_ptr<Stream>> _streams;
+		std::map<uint32_t, std::shared_ptr<PullStream>> _streams;
 	};
 }

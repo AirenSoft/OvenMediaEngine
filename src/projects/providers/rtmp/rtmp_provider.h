@@ -21,13 +21,13 @@
 
 #include "base/media_route/media_buffer.h"
 #include "base/media_route/media_type.h"
-#include "base/provider/application.h"
-#include "base/provider/push_provider/push_provider.h"
+#include "base/provider/push_provider/application.h"
+#include "base/provider/push_provider/provider.h"
 
 #include "rtmp_observer.h"
 #include "rtmp_server.h"
 
-class RtmpProvider : public pvd::Provider, public RtmpObserver
+class RtmpProvider : public pvd::PushProvider, public RtmpObserver
 {
 public:
 	static std::shared_ptr<RtmpProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
@@ -79,6 +79,12 @@ protected:
 					 const std::shared_ptr<const ov::Data> &data) override;
 
 	bool OnDeleteStream(info::application_id_t application_id, uint32_t stream_id) override;
+
+	// It's a new feature
+	std::shared_ptr<pvd::PushStream> CreateStreamMold() override
+	{
+		return nullptr;
+	}
 
 private:
 	std::shared_ptr<RtmpServer> _rtmp_server;

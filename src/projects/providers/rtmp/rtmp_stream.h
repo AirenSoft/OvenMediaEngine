@@ -10,21 +10,21 @@
 #pragma once
 
 #include "base/common_types.h"
-#include "base/provider/application.h"
-#include "base/provider/stream.h"
+#include "base/provider/push_provider/application.h"
+#include "base/provider/push_provider/stream.h"
 
 #include "media_router/bitstream/bitstream_to_annexb.h"
 #include "media_router/bitstream/bitstream_to_adts.h"
 
 using namespace pvd;
 
-class RtmpStream : public pvd::Stream
+class RtmpStream : public pvd::PushStream
 {
 public:
-	static std::shared_ptr<RtmpStream> Create(const std::shared_ptr<pvd::Application> &application, const uint32_t stream_id, const ov::String &stream_name);
+	static std::shared_ptr<RtmpStream> Create(const std::shared_ptr<pvd::PushApplication> &application, const uint32_t stream_id, const ov::String &stream_name);
 
 public:
-	explicit RtmpStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info);
+	explicit RtmpStream(const std::shared_ptr<pvd::PushApplication> &application, const info::Stream &stream_info);
 	~RtmpStream() final;
 
 	bool Start() override;

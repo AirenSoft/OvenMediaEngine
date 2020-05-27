@@ -65,7 +65,7 @@ namespace pvd
 		return true;
 	}
 
-	bool StreamMotor::AddStreamToEpoll(const std::shared_ptr<Stream> &stream)
+	bool StreamMotor::AddStreamToEpoll(const std::shared_ptr<PullStream> &stream)
 	{
 		int stream_fd = stream->GetFileDescriptorForDetectingEvent();
 		if(stream_fd == -1)
@@ -89,7 +89,7 @@ namespace pvd
 		return true;
 	}
 
-	bool StreamMotor::DelStreamFromEpoll(const std::shared_ptr<Stream> &stream)
+	bool StreamMotor::DelStreamFromEpoll(const std::shared_ptr<PullStream> &stream)
 	{
 		int stream_fd = stream->GetFileDescriptorForDetectingEvent();
 		if(stream_fd == -1)
@@ -113,7 +113,7 @@ namespace pvd
 		return true;
 	}
 
-	bool StreamMotor::AddStream(const std::shared_ptr<Stream> &stream)
+	bool StreamMotor::AddStream(const std::shared_ptr<PullStream> &stream)
 	{
 		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
 		_streams[stream->GetId()] = stream;
@@ -132,7 +132,7 @@ namespace pvd
 		return true;
 	}
 
-	bool StreamMotor::DelStream(const std::shared_ptr<Stream> &stream)
+	bool StreamMotor::DelStream(const std::shared_ptr<PullStream> &stream)
 	{
 		std::unique_lock<std::shared_mutex> lock(_streams_map_guard);
 		if(_streams.find(stream->GetId()) == _streams.end())
@@ -191,11 +191,11 @@ namespace pvd
 					if(stream->GetState() == Stream::State::PLAYING)
 					{
 						auto result = stream->ProcessMediaPacket();
-						if(result == Stream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS)
+						if(result == PullStream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS)
 						{
 							
 						}
-						else if(result == Stream::ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN)
+						else if(result == PullStream::ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN)
 						{
 							
 						}

@@ -15,20 +15,20 @@
 
 #define OV_LOG_TAG "RtmpApplication"
 
-std::shared_ptr<RtmpApplication> RtmpApplication::Create(const std::shared_ptr<Provider> &provider, const info::Application &application_info)
+std::shared_ptr<RtmpApplication> RtmpApplication::Create(const std::shared_ptr<PushProvider> &provider, const info::Application &application_info)
 {
 	auto application = std::make_shared<RtmpApplication>(provider, application_info);
 	application->Start();
 	return application;
 }
 
-RtmpApplication::RtmpApplication(const std::shared_ptr<Provider> &provider, const info::Application &application_info)
-	: Application(provider, application_info)
+RtmpApplication::RtmpApplication(const std::shared_ptr<PushProvider> &provider, const info::Application &application_info)
+	: PushApplication(provider, application_info)
 {
 }
 
 // Create Stream
-std::shared_ptr<pvd::Stream> RtmpApplication::CreatePushStream(const uint32_t stream_id, const ov::String &stream_name)
+std::shared_ptr<pvd::PushStream> RtmpApplication::CreateStream(const uint32_t stream_id, const ov::String &stream_name)
 {
-	return RtmpStream::Create(GetSharedPtrAs<pvd::Application>(), stream_id, stream_name);
+	return RtmpStream::Create(GetSharedPtrAs<pvd::PushApplication>(), stream_id, stream_name);
 }

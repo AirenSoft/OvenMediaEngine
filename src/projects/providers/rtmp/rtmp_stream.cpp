@@ -10,7 +10,7 @@
 #include "rtmp_stream.h"
 #include "base/info/application.h"
 
-std::shared_ptr<RtmpStream> RtmpStream::Create(const std::shared_ptr<pvd::Application> &application, const uint32_t stream_id, const ov::String &stream_name)
+std::shared_ptr<RtmpStream> RtmpStream::Create(const std::shared_ptr<pvd::PushApplication> &application, const uint32_t stream_id, const ov::String &stream_name)
 {
 	info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::Rtmp);
 	stream_info.SetId(stream_id);
@@ -24,8 +24,8 @@ std::shared_ptr<RtmpStream> RtmpStream::Create(const std::shared_ptr<pvd::Applic
     return stream;
 }
 
-RtmpStream::RtmpStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info)
-	: pvd::Stream(application, stream_info)
+RtmpStream::RtmpStream(const std::shared_ptr<pvd::PushApplication> &application, const info::Stream &stream_info)
+	: pvd::PushStream(application, stream_info)
 {
 	
 }

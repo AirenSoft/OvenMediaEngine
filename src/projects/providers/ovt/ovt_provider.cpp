@@ -26,7 +26,7 @@ namespace pvd
 	}
 
 	OvtProvider::OvtProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
-			: Provider(server_config, router)
+			: PullProvider(server_config, router)
 	{
 
 	}
@@ -39,7 +39,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{
-		return OvtApplication::Create(GetSharedPtrAs<pvd::Provider>(), app_info);
+		return OvtApplication::Create(GetSharedPtrAs<pvd::PullProvider>(), app_info);
 	}
 
 	bool OvtProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)

@@ -6,8 +6,8 @@
 #include <base/media_route/media_buffer.h>
 #include <base/media_route/media_type.h>
 #include <base/ovlibrary/ovlibrary.h>
-#include <base/provider/application.h>
-#include <base/provider/provider.h>
+#include <base/provider/pull_provider/application.h>
+#include <base/provider/pull_provider/provider.h>
 #include <orchestrator/orchestrator.h>
 
 /*
@@ -28,13 +28,12 @@
 
 namespace pvd
 {
-	class OvtProvider : public pvd::Provider
+	class OvtProvider : public pvd::PullProvider
 	{
 	public:
 		static std::shared_ptr<OvtProvider> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 
 		explicit OvtProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
-
 		~OvtProvider() override;
 
 		ProviderStreamDirection GetProviderStreamDirection() const override

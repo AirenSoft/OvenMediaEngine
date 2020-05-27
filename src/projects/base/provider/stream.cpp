@@ -49,12 +49,6 @@ namespace pvd
 		logti("%s has started [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
 		return true;
 	}
-
-	bool Stream::Play()
-	{
-		logti("%s has started to play [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
-		return true;
-	}
 	
 	bool Stream::Stop() 
 	{
