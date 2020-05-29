@@ -30,20 +30,9 @@ public:
 	virtual bool OnCreateStream(const std::shared_ptr<info::Stream> &info) = 0;
 	virtual bool OnDeleteStream(const std::shared_ptr<info::Stream> &info) = 0;
 
-	// Delivery encoded video frame
-	virtual bool OnSendVideoFrame(const std::shared_ptr<info::Stream> &stream,
-									const std::shared_ptr<MediaPacket> &media_packet) = 0;
-
-	// Delivery encoded audio frame
-	virtual bool OnSendAudioFrame(const std::shared_ptr<info::Stream> &stream,
-									const std::shared_ptr<MediaPacket> &media_packet) = 0;
-
-	// Provider 등에서 전달 받은 비디오/오디오 프레임 전달
+	// Delivery encoded video/audio frame
 	virtual bool OnSendFrame(const std::shared_ptr<info::Stream> &info,
-								const std::shared_ptr<MediaPacket> &packet)
-	{
-		return false;
-	}
+								const std::shared_ptr<MediaPacket> &packet) = 0;
 
 	virtual ObserverType GetObserverType()
 	{

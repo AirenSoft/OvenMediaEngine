@@ -48,16 +48,6 @@ public:
 	bool OnCreateStream(const std::shared_ptr<info::Stream> &stream) override;
 	bool OnDeleteStream(const std::shared_ptr<info::Stream> &stream) override;
 
-	bool OnSendVideoFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
-	{
-		return true;
-	}
-
-	bool OnSendAudioFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
-	{
-		return true;
-	}
-
 	bool OnSendFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &packet) override;
 
 private:

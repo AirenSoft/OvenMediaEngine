@@ -216,18 +216,6 @@ public:
 			return orchestrator->OnDeleteStream(app_info, info);
 		}
 
-		bool OnSendVideoFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
-		{
-			// Ignore packets
-			return true;
-		}
-
-		bool OnSendAudioFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
-		{
-			// Ignore packets
-			return true;
-		}
-
 		bool OnSendFrame(const std::shared_ptr<info::Stream> &info, const std::shared_ptr<MediaPacket> &packet) override
 		{
 			// Ignore packets
