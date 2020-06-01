@@ -53,28 +53,29 @@ public:
 	// m=video 9 UDP/TLS/RTP/SAVPF 97
 	void SetMediaType(MediaType type);
 	bool SetMediaType(const ov::String &type);
-	const MediaType GetMediaType();
+	const MediaType GetMediaType() const;
 	void SetPort(uint16_t port);
-	uint16_t GetPort();
+	uint16_t GetPort() const;
 	void UseDtls(bool flag);
-	bool IsUseDtls();
+	bool IsUseDtls() const;
 
 	void AddPayload(const std::shared_ptr<PayloadAttr> &payload);
-	const std::shared_ptr<PayloadAttr> GetPayload(uint8_t id);
-	const std::shared_ptr<PayloadAttr> GetFirstPayload();
+	std::shared_ptr<const PayloadAttr> GetPayload(uint8_t id) const;
+	std::shared_ptr<PayloadAttr> GetPayload(uint8_t id);
+	std::shared_ptr<const PayloadAttr> GetFirstPayload() const;
 
 	// a=rtcp-mux
 	void UseRtcpMux(bool flag = true);
-	bool IsUseRtcpMux();
+	bool IsUseRtcpMux() const;
 
 	// a=sendonly
 	void SetDirection(Direction dir);
 	bool SetDirection(const ov::String &dir);
-	const Direction GetDirection();
+	const Direction GetDirection() const;
 
 	// a=mid:video
 	void SetMid(const ov::String &mid);
-	const ov::String &GetMid();
+	const ov::String &GetMid() const;
 
 	// a=setup:actpass
 	void SetSetup(SetupType type);
@@ -85,7 +86,7 @@ public:
 
 	// a=framerate:29.97
 	void SetFramerate(float framerate);
-	const float GetFramerate();
+	const float GetFramerate() const;
 
 	// a=rtpmap:96 VP8/50000
 	bool AddRtpmap(uint8_t payload_type, const ov::String &codec, uint32_t rate,
@@ -98,8 +99,8 @@ public:
 	// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
 	void SetCname(uint32_t ssrc, const ov::String &cname);
 
-	uint32_t GetSsrc();
-	const ov::String GetCname();
+	uint32_t GetSsrc() const;
+	ov::String GetCname() const;
 
 private:
 	bool UpdateData(ov::String &sdp) override;

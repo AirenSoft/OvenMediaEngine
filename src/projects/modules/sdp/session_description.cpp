@@ -16,7 +16,6 @@ SessionDescription::SessionDescription()
 
 SessionDescription::~SessionDescription()
 {
-
 }
 
 void SessionDescription::Release()
@@ -75,15 +74,7 @@ bool SessionDescription::UpdateData(ov::String &sdp)
 	// Media
 	for(auto &media_description : _media_list)
 	{
-		if(media_description->Update() == false)
-		{
-			return false;
-		}
-
-		ov::String media_desc_text;
-		media_description->ToString(media_desc_text);
-
-		sdp += media_desc_text;
+		sdp += media_description->ToString();
 	}
 
 	return true;
@@ -156,6 +147,8 @@ bool SessionDescription::FromString(const ov::String &sdp)
 			}
 		}
 	}
+
+	Update();
 
 	return true;
 }
@@ -289,7 +282,7 @@ void SessionDescription::SetVersion(uint8_t version)
 	_version = version;
 }
 
-uint8_t SessionDescription::GetVersion()
+uint8_t SessionDescription::GetVersion() const
 {
 	return _version;
 }
@@ -306,32 +299,32 @@ void SessionDescription::SetOrigin(ov::String user_name, uint32_t session_id, ui
 	_address = address;
 }
 
-ov::String SessionDescription::GetUserName()
+ov::String SessionDescription::GetUserName() const
 {
 	return _user_name;
 }
 
-uint32_t SessionDescription::GetSessionId()
+uint32_t SessionDescription::GetSessionId() const
 {
 	return _session_id;
 }
 
-uint32_t SessionDescription::GetSessionVersion()
+uint32_t SessionDescription::GetSessionVersion() const
 {
 	return _session_version;
 }
 
-ov::String SessionDescription::GetNetType()
+ov::String SessionDescription::GetNetType() const
 {
 	return _net_type;
 }
 
-uint8_t SessionDescription::GetIpVersion()
+uint8_t SessionDescription::GetIpVersion() const
 {
 	return _ip_version;
 }
 
-ov::String SessionDescription::GetAddress()
+ov::String SessionDescription::GetAddress() const
 {
 	return _address;
 }
@@ -342,7 +335,7 @@ void SessionDescription::SetSessionName(ov::String session_name)
 	_session_name = session_name;
 }
 
-ov::String SessionDescription::GetSessionName()
+ov::String SessionDescription::GetSessionName() const
 {
 	return _session_name;
 }
@@ -354,12 +347,12 @@ void SessionDescription::SetTiming(uint32_t start, uint32_t stop)
 	_stop_time = stop;
 }
 
-uint32_t SessionDescription::GetStartTime()
+uint32_t SessionDescription::GetStartTime() const
 {
 	return _start_time;
 }
 
-uint32_t SessionDescription::GetStopTime()
+uint32_t SessionDescription::GetStopTime() const
 {
 	return _stop_time;
 }
@@ -382,7 +375,7 @@ ov::String SessionDescription::GetMsidToken() const
 }
 
 // m=video 9 UDP/TLS/RTP/SAVPF 97
-void SessionDescription::AddMedia(std::shared_ptr<MediaDescription> media)
+void SessionDescription::AddMedia(const std::shared_ptr<const MediaDescription> &media)
 {
 	if(media != nullptr)
 	{
@@ -391,7 +384,7 @@ void SessionDescription::AddMedia(std::shared_ptr<MediaDescription> media)
 	}
 }
 
-const std::shared_ptr<MediaDescription> SessionDescription::GetMediaByMid(const ov::String &mid)
+const std::shared_ptr<const MediaDescription> SessionDescription::GetMediaByMid(const ov::String &mid) const
 {
 	for(auto &media : _media_list)
 	{
@@ -404,31 +397,31 @@ const std::shared_ptr<MediaDescription> SessionDescription::GetMediaByMid(const 
 	return nullptr;
 }
 
-const std::vector<std::shared_ptr<MediaDescription>> &SessionDescription::GetMediaList()
+const std::vector<std::shared_ptr<const MediaDescription>> &SessionDescription::GetMediaList() const
 {
 	return _media_list;
 }
 
 
-const std::shared_ptr<MediaDescription> SessionDescription::GetFirstMedia()
+const std::shared_ptr<const MediaDescription> SessionDescription::GetFirstMedia() const
 {
-	if(_media_list.empty())
+	if(_media_list.empty() == false)
 	{
-		return nullptr;
+		return _media_list.front();
 	}
 
-	return _media_list[0];
+	return nullptr;
 }
 
 // 아래 값은 Session Level에 없으면 첫번째 m= line에서 값을 가져와야 한다.
-ov::String SessionDescription::GetFingerprintAlgorithm()
+ov::String SessionDescription::GetFingerprintAlgorithm() const
 {
 	ov::String value = CommonAttr::GetFingerprintAlgorithm();
 
 	if(value.IsEmpty())
 	{
 		auto media = GetFirstMedia();
-		if(media)
+		if(media != nullptr)
 		{
 			value = media->GetFingerprintAlgorithm();
 		}
@@ -437,14 +430,14 @@ ov::String SessionDescription::GetFingerprintAlgorithm()
 	return value;
 }
 
-ov::String SessionDescription::GetFingerprintValue()
+ov::String SessionDescription::GetFingerprintValue() const
 {
 	ov::String value = CommonAttr::GetFingerprintValue();
 
 	if(value.IsEmpty())
 	{
 		auto media = GetFirstMedia();
-		if(media)
+		if(media != nullptr)
 		{
 			value = media->GetFingerprintValue();
 		}
@@ -453,14 +446,14 @@ ov::String SessionDescription::GetFingerprintValue()
 	return value;
 }
 
-ov::String SessionDescription::GetIceOption()
+ov::String SessionDescription::GetIceOption() const
 {
 	ov::String value = CommonAttr::GetIceOption();
 
 	if(value.IsEmpty())
 	{
 		auto media = GetFirstMedia();
-		if(media)
+		if(media != nullptr)
 		{
 			value = media->GetIceOption();
 		}
@@ -469,14 +462,14 @@ ov::String SessionDescription::GetIceOption()
 	return value;
 }
 
-ov::String SessionDescription::GetIceUfrag()
+ov::String SessionDescription::GetIceUfrag() const
 {
 	ov::String value = CommonAttr::GetIceUfrag();
 
 	if(value.IsEmpty())
 	{
 		auto media = GetFirstMedia();
-		if(media)
+		if(media != nullptr)
 		{
 			value = media->GetIceUfrag();
 		}
@@ -485,14 +478,14 @@ ov::String SessionDescription::GetIceUfrag()
 	return value;
 }
 
-ov::String SessionDescription::GetIcePwd()
+ov::String SessionDescription::GetIcePwd() const
 {
 	ov::String value = CommonAttr::GetIcePwd();
 
 	if(value.IsEmpty())
 	{
 		auto media = GetFirstMedia();
-		if(media)
+		if(media != nullptr)
 		{
 			value = media->GetIcePwd();
 		}

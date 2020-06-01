@@ -114,12 +114,12 @@ void CommonAttr::SetFingerprint(const ov::String &algorithm, const ov::String &v
 	_fingerprint_value = value;
 }
 
-ov::String CommonAttr::GetFingerprintAlgorithm()
+ov::String CommonAttr::GetFingerprintAlgorithm() const
 {
 	return _fingerprint_algorithm;
 }
 
-ov::String CommonAttr::GetFingerprintValue()
+ov::String CommonAttr::GetFingerprintValue() const
 {
 	return _fingerprint_value;
 }
@@ -131,7 +131,7 @@ void CommonAttr::SetIceOption(const ov::String &option)
 	_ice_option = option;
 }
 
-ov::String CommonAttr::GetIceOption()
+ov::String CommonAttr::GetIceOption() const
 {
 	return _ice_option;
 }
@@ -142,7 +142,7 @@ void CommonAttr::SetIceUfrag(const ov::String &ufrag)
 	_ice_ufrag = ufrag;
 }
 
-ov::String CommonAttr::GetIceUfrag()
+ov::String CommonAttr::GetIceUfrag() const
 {
 	return _ice_ufrag;
 }
@@ -153,7 +153,7 @@ void CommonAttr::SetIcePwd(const ov::String &pwd)
 	_ice_pwd = pwd;
 }
 
-ov::String CommonAttr::GetIcePwd()
+ov::String CommonAttr::GetIcePwd() const
 {
 	return _ice_pwd;
 }
