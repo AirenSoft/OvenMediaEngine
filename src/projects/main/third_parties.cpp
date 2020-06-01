@@ -303,6 +303,11 @@ std::shared_ptr<ov::Error> TerminateOpenSsl()
 	return ov::Error::CreateErrorFromOpenSsl();
 }
 
+const char *GetJsonCppVersion()
+{
+	return JSONCPP_VERSION_STRING;
+}
+
 const char *GetJemallocVersion()
 {
 #if !DEBUG

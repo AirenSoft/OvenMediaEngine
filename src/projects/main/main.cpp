@@ -254,6 +254,7 @@ static void PrintBanner()
 	logti("  SRTP: %s", GetSrtpVersion());
 	logti("  OpenSSL: %s", GetOpenSslVersion());
 	logti("    Configuration: %s", GetOpenSslConfiguration());
+	logti("  JsonCpp: %s", GetJsonCppVersion());
 	logti("  jemalloc: %s", GetJemallocVersion());
 }
 

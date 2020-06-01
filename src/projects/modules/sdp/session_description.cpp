@@ -38,22 +38,20 @@ bool SessionDescription::UpdateData(ov::String &sdp)
 		_start_time, _stop_time
 	);
 
-	// a=group:BUNDLE 에 모든 Media를 추가한다.
-	// OME는 현재 BUNDLE-ONLY만 지원하기 때문이다. (2018.05.01)
+	// Append all media lines to a=group:BUNDLE (Currently, OME only supports BUNDLE only)
 	sdp += "a=group:BUNDLE";
 
-	for(auto &t : _media_list)
+	for(auto &media_description : _media_list)
 	{
-		sdp.AppendFormat(" %s", t->GetMid().CStr());
+		sdp.AppendFormat(" %s", media_description->GetMid().CStr());
 	}
 
 	sdp += "\r\n";
-
 	sdp += "a=group:LS";
 
-	for(auto &t : _media_list)
+	for(auto &media_description : _media_list)
 	{
-		sdp.AppendFormat(" %s", t->GetMid().CStr());
+		sdp.AppendFormat(" %s", media_description->GetMid().CStr());
 	}
 
 	sdp += "\r\n";
@@ -67,7 +65,7 @@ bool SessionDescription::UpdateData(ov::String &sdp)
 	// Common Attributes
 	ov::String common_attr_text;
 
-	if(!SerializeCommonAttr(common_attr_text))
+	if(SerializeCommonAttr(common_attr_text) == false)
 	{
 		return false;
 	}
@@ -75,15 +73,15 @@ bool SessionDescription::UpdateData(ov::String &sdp)
 	sdp += common_attr_text;
 
 	// Media
-	for(auto &t : _media_list)
+	for(auto &media_description : _media_list)
 	{
-		if(!t->Update())
+		if(media_description->Update() == false)
 		{
 			return false;
 		}
 
 		ov::String media_desc_text;
-		t->ToString(media_desc_text);
+		media_description->ToString(media_desc_text);
 
 		sdp += media_desc_text;
 	}

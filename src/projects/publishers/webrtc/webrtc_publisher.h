@@ -75,7 +75,7 @@ private:
 	bool Start() override;
 	
 
-	session_id_t _last_issued_session_id = 100;
+	std::atomic<session_id_t> _last_issued_session_id { 100 };
 
 	void StatLog(const std::shared_ptr<WebSocketClient> &ws_client, 
 				const std::shared_ptr<RtcStream> &stream, 
@@ -98,4 +98,7 @@ private:
 
 	std::shared_ptr<IcePort> _ice_port;
 	std::shared_ptr<RtcSignallingServer> _signalling_server;
+
+	// TODO(dimiden): This is a temporary code to prevent race condition in OnRequestOffer()
+	std::mutex _session_description_mutex;
 };

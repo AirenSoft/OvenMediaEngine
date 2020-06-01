@@ -128,7 +128,7 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 		switch (request->ParseStatus())
 		{
 			case HttpStatusCode::OK: {
-				auto &interceptor = request->GetRequestInterceptor();
+				auto interceptor = request->GetRequestInterceptor();
 
 				if (interceptor != nullptr)
 				{
