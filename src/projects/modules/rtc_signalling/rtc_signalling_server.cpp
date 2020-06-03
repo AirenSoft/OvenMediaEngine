@@ -286,7 +286,7 @@ bool RtcSignallingServer::RemoveObserver(const std::shared_ptr<RtcSignallingObse
 	return true;
 }
 
-bool RtcSignallingServer::Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<SessionDescription> &peer_sdp)
+bool RtcSignallingServer::Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
 	bool disconnected = false;
 
@@ -339,8 +339,6 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 		// ICE 연결이 끊어져 Disconnect()이 호출 된 직후, _http_server->Disconnect()이 실행되기 전 타이밍에
 		// WebSocket 연결이 끊어져서 HttpServer::OnDisconnected() 이 처리되고 나면 실패 할 수 있음
 	}
-
-	peer_sdp->Release();
 
 	return disconnected;
 }
@@ -481,7 +479,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	ov::String application_name = info->internal_app_name;
 	ov::String stream_name = info->stream_name;
 
-	std::shared_ptr<SessionDescription> sdp = nullptr;
+	std::shared_ptr<const SessionDescription> sdp = nullptr;
 	std::shared_ptr<ov::Error> error = nullptr;
 
 	std::shared_ptr<RtcPeerInfo> host_peer = nullptr;
@@ -564,8 +562,8 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 			Json::Value &sdp_value = value["sdp"];
 
 			// Generate offer_sdp string from SessionDescription
-			ov::String offer_sdp;
-			if (sdp->ToString(offer_sdp))
+			ov::String offer_sdp = sdp->ToString();
+			if (offer_sdp.IsEmpty() == false)
 			{
 				value["command"] = "offer";
 				value["id"] = info->id;
@@ -675,10 +673,12 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 	{
 		logtd("[Host -> OME] The host peer sents a answer: %s", object.ToString().CStr());
 
-		info->peer_sdp = std::make_shared<SessionDescription>();
+		auto peer_sdp = std::make_shared<SessionDescription>();
 
-		if (info->peer_sdp->FromString(sdp_value["sdp"].asCString()))
+		if (peer_sdp->FromString(sdp_value["sdp"].asCString()))
 		{
+			info->peer_sdp = peer_sdp;
+
 			for (auto &observer : _observers)
 			{
 				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->internal_app_name.CStr(), info->stream_name.CStr());
@@ -909,8 +909,6 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_p
 			{
 				result = false;
 			}
-
-			info->peer_sdp->Release();
 		}
 	}
 

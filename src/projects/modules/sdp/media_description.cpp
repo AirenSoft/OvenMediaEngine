@@ -39,14 +39,14 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 	sdp = ov::String::FormatString("m=%s %d %s", _media_type_str.CStr(), _port, _protocol.CStr());
 
 	// Append Payload id
-	for(auto &t : _payload_list)
+	for(auto &payload : _payload_list)
 	{
-		if(t->GetId() == 0)
+		if(payload->GetId() == 0)
 		{
 			return false;
 		}
 
-		sdp.AppendFormat(" %d", t->GetId());
+		sdp.AppendFormat(" %d", payload->GetId());
 	}
 
 	sdp.AppendFormat(
@@ -459,7 +459,7 @@ void MediaDescription::SetMediaType(const MediaType type)
 	}
 }
 
-const MediaDescription::MediaType MediaDescription::GetMediaType()
+const MediaDescription::MediaType MediaDescription::GetMediaType() const
 {
 	return _media_type;
 }
@@ -469,7 +469,7 @@ void MediaDescription::SetPort(uint16_t port)
 	_port = port;
 }
 
-uint16_t MediaDescription::GetPort()
+uint16_t MediaDescription::GetPort() const
 {
 	return _port;
 }
@@ -488,7 +488,7 @@ void MediaDescription::UseDtls(bool flag)
 	}
 }
 
-bool MediaDescription::IsUseDtls()
+bool MediaDescription::IsUseDtls() const
 {
 	return _use_dtls_flag;
 }
@@ -498,7 +498,7 @@ void MediaDescription::AddPayload(const std::shared_ptr<PayloadAttr> &payload)
 	_payload_list.push_back(payload);
 }
 
-const std::shared_ptr<PayloadAttr> MediaDescription::GetPayload(uint8_t id)
+std::shared_ptr<const PayloadAttr> MediaDescription::GetPayload(uint8_t id) const
 {
 	for(auto &payload : _payload_list)
 	{
@@ -511,9 +511,27 @@ const std::shared_ptr<PayloadAttr> MediaDescription::GetPayload(uint8_t id)
 	return nullptr;
 }
 
-const std::shared_ptr<PayloadAttr> MediaDescription::GetFirstPayload()
+std::shared_ptr<PayloadAttr> MediaDescription::GetPayload(uint8_t id)
 {
-	return _payload_list[0];
+	for(auto &payload : _payload_list)
+	{
+		if(payload->GetId() == id)
+		{
+			return payload;
+		}
+	}
+
+	return nullptr;
+}
+
+std::shared_ptr<const PayloadAttr> MediaDescription::GetFirstPayload() const
+{
+	if(_payload_list.empty() == false)
+	{
+		return _payload_list.front();
+	}
+
+	return nullptr;
 }
 
 // a=rtcp-mux
@@ -522,7 +540,7 @@ void MediaDescription::UseRtcpMux(bool flag)
 	_use_rtcpmux_flag = flag;
 }
 
-bool MediaDescription::IsUseRtcpMux()
+bool MediaDescription::IsUseRtcpMux() const
 {
 	return _use_rtcpmux_flag;
 }
@@ -551,7 +569,7 @@ void MediaDescription::SetDirection(const Direction dir)
 	}
 }
 
-const MediaDescription::Direction MediaDescription::GetDirection()
+const MediaDescription::Direction MediaDescription::GetDirection() const
 {
 	return _direction;
 }
@@ -562,7 +580,7 @@ void MediaDescription::SetMid(const ov::String &mid)
 	_mid = mid;
 }
 
-const ov::String &MediaDescription::GetMid()
+const ov::String &MediaDescription::GetMid() const
 {
 	return _mid;
 }
@@ -622,7 +640,7 @@ void MediaDescription::SetFramerate(const float framerate)
 	_framerate = framerate;
 }
 
-const float MediaDescription::GetFramerate()
+const float MediaDescription::GetFramerate() const
 {
 	return _framerate;
 }
@@ -634,12 +652,12 @@ void MediaDescription::SetCname(uint32_t ssrc, const ov::String &cname)
 	_cname = cname;
 }
 
-uint32_t MediaDescription::GetSsrc()
+uint32_t MediaDescription::GetSsrc() const
 {
 	return _ssrc;
 }
 
-const ov::String MediaDescription::GetCname()
+ov::String MediaDescription::GetCname() const
 {
 	return _cname;
 }
@@ -648,7 +666,7 @@ const ov::String MediaDescription::GetCname()
 bool MediaDescription::AddRtpmap(uint8_t payload_type, const ov::String &codec,
                                  uint32_t rate, const ov::String &parameters)
 {
-	std::shared_ptr<PayloadAttr> payload = GetPayload(payload_type);
+	auto payload = GetPayload(payload_type);
 
 	if(payload == nullptr)
 	{

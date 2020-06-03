@@ -35,7 +35,7 @@ public:
 	bool AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer);
 	bool RemoveObserver(const std::shared_ptr<RtcSignallingObserver> &observer);
 
-	bool Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<SessionDescription> &peer_sdp);
+	bool Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<const SessionDescription> &peer_sdp);
 
 	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &stream_collections);
 
@@ -48,7 +48,7 @@ protected:
 		RtcSignallingInfo(ov::String host_name, ov::String app_name, ov::String stream_name,
 						  ov::String internal_app_name,
 						  peer_id_t id, std::shared_ptr<RtcPeerInfo> peer_info,
-						  std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp,
+						  std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp,
 						  std::vector<RtcIceCandidate> local_candidates, std::vector<RtcIceCandidate> remote_candidates)
 			: host_name(host_name),
 			  app_name(std::move(app_name)),
@@ -86,9 +86,9 @@ protected:
 		std::shared_ptr<RtcPeerInfo> peer_info;
 
 		// Offer SDP (SDP of OME/host peer)
-		std::shared_ptr<SessionDescription> offer_sdp;
+		std::shared_ptr<const SessionDescription> offer_sdp;
 		// Peer SDP (SDP of host/client peer)
-		std::shared_ptr<SessionDescription> peer_sdp;
+		std::shared_ptr<const SessionDescription> peer_sdp;
 
 		// candidates of OME/host peer
 		std::vector<RtcIceCandidate> local_candidates;

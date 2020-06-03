@@ -37,18 +37,18 @@ public:
 	};
 
 	void SetId(uint8_t id);
-	uint8_t GetId();
+	uint8_t GetId() const;
 
 	void SetRtpmap(const uint8_t payload_type, const ov::String &codec, uint32_t rate, const ov::String &parameters = "");
-	const SupportCodec GetCodec();
-	const ov::String GetCodecStr();
-	const uint32_t GetCodecRate();
-	const ov::String GetCodecParams();
+	SupportCodec GetCodec() const;
+	ov::String GetCodecStr() const;
+	uint32_t GetCodecRate() const;
+	ov::String GetCodecParams() const;
 
 	// a=rtcp-fb:96 nack pli
 	bool EnableRtcpFb(const ov::String &type, bool on);
 	void EnableRtcpFb(const RtcpFbType &type, bool on);
-	bool IsRtcpFbEnabled(const RtcpFbType &type);
+	bool IsRtcpFbEnabled(const RtcpFbType &type) const;
 
 	// a=fmtp:111 maxplaybackrate=16000; useinbandfec=1; maxaveragebitrate=20000
 	void SetFmtp(const ov::String &fmtp);

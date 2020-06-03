@@ -47,6 +47,11 @@ std::shared_ptr<ov::Error> InitializeOpenSsl();
 std::shared_ptr<ov::Error> TerminateOpenSsl();
 
 //--------------------------------------------------------------------
+// Related to JsonCpp
+//--------------------------------------------------------------------
+const char *GetJsonCppVersion();
+
+//--------------------------------------------------------------------
 // Related to jemalloc
 //--------------------------------------------------------------------
 const char *GetJemallocVersion();

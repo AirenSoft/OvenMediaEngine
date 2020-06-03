@@ -8,8 +8,8 @@
 
 std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Application> &application,
                                                const std::shared_ptr<pub::Stream> &stream,
-                                               const std::shared_ptr<SessionDescription> &offer_sdp,
-                                               const std::shared_ptr<SessionDescription> &peer_sdp,
+                                               const std::shared_ptr<const SessionDescription> &offer_sdp,
+                                               const std::shared_ptr<const SessionDescription> &peer_sdp,
                                                const std::shared_ptr<IcePort> &ice_port,
 											   const std::shared_ptr<WebSocketClient> &ws_client)
 {
@@ -26,8 +26,8 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Applic
 RtcSession::RtcSession(const info::Session &session_info,
 					   const std::shared_ptr<pub::Application> &application,
 					   const std::shared_ptr<pub::Stream> &stream,
-					   const std::shared_ptr<SessionDescription> &offer_sdp,
-					   const std::shared_ptr<SessionDescription> &peer_sdp,
+					   const std::shared_ptr<const SessionDescription> &offer_sdp,
+					   const std::shared_ptr<const SessionDescription> &peer_sdp,
 					   const std::shared_ptr<IcePort> &ice_port,
 					   const std::shared_ptr<WebSocketClient> &ws_client)
 	: Session(session_info, application, stream)
@@ -169,12 +169,12 @@ bool RtcSession::Stop()
 	return Session::Stop();
 }
 
-const std::shared_ptr<SessionDescription>& RtcSession::GetOfferSDP()
+const std::shared_ptr<const SessionDescription>& RtcSession::GetOfferSDP() const
 {
 	return _offer_sdp;
 }
 
-const std::shared_ptr<SessionDescription>& RtcSession::GetPeerSDP()
+const std::shared_ptr<const SessionDescription>& RtcSession::GetPeerSDP() const
 {
 	return _peer_sdp;
 }

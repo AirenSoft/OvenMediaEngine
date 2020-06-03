@@ -28,7 +28,7 @@ public:
 
 	// SignallingObserver Implementation
 	// 클라이언트가 Request Offer를 하면 다음 함수를 통해 SDP를 받아서 넘겨준다.
-	std::shared_ptr<SessionDescription> OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,
+	std::shared_ptr<const SessionDescription> OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,
 													   const ov::String &application_name,
 	                                                   const ov::String &stream_name,
 	                                                   std::vector<RtcIceCandidate> *ice_candidates) override;
@@ -36,8 +36,8 @@ public:
 	bool OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
 								const ov::String &application_name,
 	                            const ov::String &stream_name,
-	                            const std::shared_ptr<SessionDescription> &offer_sdp,
-	                            const std::shared_ptr<SessionDescription> &peer_sdp) override;
+	                            const std::shared_ptr<const SessionDescription> &offer_sdp,
+	                            const std::shared_ptr<const SessionDescription> &peer_sdp) override;
 	// 클라이언트가 자신의 Ice Candidate를 보내면 다음 함수를 호출한다.
 	// 이 함수를 통해 IcePortObserver에 Session ID와 candidates를 등록한다.
 	// 향후 IcePort는 패킷을 받으면 해당 Session ID와 함께 Publisher에 전달하여 추적할 수 있게 한다.
@@ -54,8 +54,8 @@ public:
 
 	bool OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_client,
 					   const ov::String &application_name, const ov::String &stream_name,
-	                   const std::shared_ptr<SessionDescription> &offer_sdp,
-	                   const std::shared_ptr<SessionDescription> &peer_sdp) override;
+	                   const std::shared_ptr<const SessionDescription> &offer_sdp,
+	                   const std::shared_ptr<const SessionDescription> &peer_sdp) override;
 
     uint32_t OnGetBitrate(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &application_name, const ov::String &stream_name) override;
 
@@ -75,7 +75,7 @@ private:
 	bool Start() override;
 	
 
-	session_id_t _last_issued_session_id = 100;
+	std::atomic<session_id_t> _last_issued_session_id { 100 };
 
 	void StatLog(const std::shared_ptr<WebSocketClient> &ws_client, 
 				const std::shared_ptr<RtcStream> &stream, 

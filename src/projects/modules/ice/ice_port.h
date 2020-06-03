@@ -30,8 +30,8 @@ protected:
 		// Session information that connected with the client
 		std::shared_ptr<info::Session> session_info;
 
-		std::shared_ptr<SessionDescription> offer_sdp;
-		std::shared_ptr<SessionDescription> peer_sdp;
+		std::shared_ptr<const SessionDescription> offer_sdp;
+		std::shared_ptr<const SessionDescription> peer_sdp;
 
 		std::shared_ptr<ov::Socket> remote;
 		ov::SocketAddress address;
@@ -87,7 +87,7 @@ public:
 		return (_observers.empty() == false);
 	}
 
-	void AddSession(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp);
+	void AddSession(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp);
 	bool RemoveSession(session_id_t session_id);
 	bool RemoveSession(const std::shared_ptr<info::Session> &session_info);
 

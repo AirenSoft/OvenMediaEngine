@@ -487,14 +487,7 @@ void MediaRouteApplication::MessageLooper()
 				{
 					if(observer_type == MediaRouteApplicationObserver::ObserverType::Publisher)
 					{
-						if (media_packet->GetMediaType() == MediaType::Video)
-						{
-							observer->OnSendVideoFrame(stream_info, media_packet);
-						}
-						else if (media_packet->GetMediaType() == MediaType::Audio)
-						{
-							observer->OnSendAudioFrame(stream_info, media_packet);
-						}
+						observer->OnSendFrame(stream_info, media_packet);
 					}
 				}
 			}

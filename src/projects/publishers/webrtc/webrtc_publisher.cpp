@@ -238,7 +238,7 @@ bool WebRtcPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Ap
  */
 
 // Called when receives request offer sdp from client
-std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &application_name, const ov::String &stream_name, std::vector<RtcIceCandidate> *ice_candidates)
+std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &application_name, const ov::String &stream_name, std::vector<RtcIceCandidate> *ice_candidates)
 {
 	// Application -> Stream에서 SDP를 얻어서 반환한다.
 	auto orchestrator = Orchestrator::GetInstance();
@@ -282,7 +282,6 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const std::s
 	auto &candidates = _ice_port->GetIceCandidateList();
 	ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
 	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
-	// Generate Unique Session Id
 	session_description->SetOrigin("OvenMediaEngine", ++_last_issued_session_id, 2, "IN", 4, "127.0.0.1");
 	session_description->SetIceUfrag(_ice_port->GenerateUfrag());
 	session_description->Update();
@@ -294,8 +293,8 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const std::s
 bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
 											 const ov::String &application_name,
 											 const ov::String &stream_name,
-											 const std::shared_ptr<SessionDescription> &offer_sdp,
-											 const std::shared_ptr<SessionDescription> &peer_sdp)
+											 const std::shared_ptr<const SessionDescription> &offer_sdp,
+											 const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
 	auto application = GetApplicationByName(application_name);
 	auto stream = GetStream(application_name, stream_name);
@@ -306,8 +305,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		return false;
 	}
 
-	ov::String remote_sdp_text;
-	peer_sdp->ToString(remote_sdp_text);
+	ov::String remote_sdp_text = peer_sdp->ToString();
 	logtd("OnAddRemoteDescription: %s", remote_sdp_text.CStr());
 
 	// Stream에 Session을 생성한다.
@@ -337,8 +335,8 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 
 bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_client,
 									const ov::String &application_name, const ov::String &stream_name,
-									const std::shared_ptr<SessionDescription> &offer_sdp,
-									const std::shared_ptr<SessionDescription> &peer_sdp)
+									const std::shared_ptr<const SessionDescription> &offer_sdp,
+									const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
 	// 플레이어에서 stop 이벤트가 수신 된 경우 처리
 	logtd("Stop commnad received : %s/%s/%u", application_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());

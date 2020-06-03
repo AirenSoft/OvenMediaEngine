@@ -26,20 +26,20 @@ protected:
 public:
 	// a=fingerprint:sha-256 D7:81:CF:01:46:FB:2D
 	void 			SetFingerprint(const ov::String& algorithm, const ov::String& value);
-	virtual ov::String		GetFingerprintAlgorithm();
-	virtual ov::String		GetFingerprintValue();
+	virtual ov::String		GetFingerprintAlgorithm() const;
+	virtual ov::String		GetFingerprintValue() const;
 
 	// a=ice-options:trickle
 	void 			SetIceOption(const ov::String& option);
-	virtual ov::String		GetIceOption();
+	virtual ov::String		GetIceOption() const;
 
 	// a=ice-pwd:c32d4070c67e9782bea90a9ab46ea838
 	void 			SetIceUfrag(const ov::String& ufrag);
-	virtual ov::String		GetIceUfrag();
+	virtual ov::String		GetIceUfrag() const;
 
 	// a=ice-ufrag:0dfa46c9
 	void 			SetIcePwd(const ov::String& pwd);
-	virtual ov::String		GetIcePwd();
+	virtual ov::String		GetIcePwd() const;
 
 private:
 	// ice
