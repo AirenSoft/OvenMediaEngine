@@ -55,4 +55,14 @@ namespace pvd
 		logti("%s has stopped playing [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
 		return true;
 	}
+
+	bool Stream::SendFrame(const std::shared_ptr<MediaPacket> &packet)
+	{
+		if(_application == nullptr)
+		{
+			return false;
+		}
+
+		return _application->SendFrame(GetSharedPtr(), packet);
+	}
 }

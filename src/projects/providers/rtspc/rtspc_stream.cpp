@@ -456,7 +456,7 @@ namespace pvd
 			}
 		}		
 
-		_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
+		SendFrame(media_packet);
 
 		::av_packet_unref(&packet);
 

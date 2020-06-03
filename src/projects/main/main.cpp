@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
 	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
 
 	// Initialize Providers
-	INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
+	INIT_MODULE(rtmp_provider, "RTMP Provider", pvd::RtmpProvider::Create(*server_config, media_router));
 	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
 	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));

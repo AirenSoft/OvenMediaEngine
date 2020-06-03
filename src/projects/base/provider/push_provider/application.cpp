@@ -19,26 +19,23 @@ namespace pvd
 	{
 	}
 
-	std::shared_ptr<pvd::PushStream> PushApplication::CreateStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<std::shared_ptr<MediaTrack>> &tracks)
+	bool PushApplication::JoinStream(const std::shared_ptr<PushStream> &stream)
 	{
-		// Get stream from child
-		auto stream = CreateStream(stream_id, stream_name);
-		if(stream == nullptr)
-		{
-			return nullptr;
-		}
-
-		for(const auto &track : tracks)
-		{
-			stream->AddTrack(track);
-		}
-	
+		stream->SetApplication(GetSharedPtrAs<Application>());
+		stream->SetApplicationInfo(GetSharedPtrAs<Application>());
+		
 		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
 		_streams[stream->GetId()] = stream;
 		streams_lock.unlock();
+		
+		if(stream->IsReadyToReceiveStreamData() == false)
+		{
+			logte("The stream(%s/%s) is not yet ready to be published.", GetName().CStr(), stream->GetName().CStr());
+			return false;
+		}
 
 		NotifyStreamCreated(stream);
 
-		return stream;
+		return true;
 	}
 }

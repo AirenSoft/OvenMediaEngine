@@ -123,7 +123,7 @@ BitstreamAnnexA::~BitstreamAnnexA()
 {
 }
 
-void BitstreamAnnexA::convert_to(const std::shared_ptr<ov::Data> &data)
+void BitstreamAnnexA::Convert(const std::shared_ptr<ov::Data> &data)
 {
    // TODO(soulk): Complete this function
 #if 0

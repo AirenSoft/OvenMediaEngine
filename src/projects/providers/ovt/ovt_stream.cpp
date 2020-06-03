@@ -736,7 +736,7 @@ namespace pvd
 					fragmentizer.MakeHeader(media_packet);
 				}
 
-				_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
+				SendFrame(media_packet);
 			}
 		}
 		else

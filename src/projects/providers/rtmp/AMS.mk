@@ -13,7 +13,7 @@ LOCAL_LDFLAGS := \
     -ldl \
     -lz
  
-LOCAL_TARGET := rtmp_provider
+LOCAL_TARGET := new_rtmp_provider
 
 LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES) $(call get_sub_source_list,chunk)
 LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES) $(call get_sub_source_list,chunk)

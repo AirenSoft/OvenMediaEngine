@@ -270,7 +270,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		}
 		else if (media_track->GetCodecId() == MediaCodecId::Vp8)
 		{
-			_bsf_vp8.convert_to(media_packet->GetData());
+			_bsf_vp8.Convert(media_packet->GetData());
 		}
 		else
 		{
@@ -282,7 +282,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	{
 		if (media_track->GetCodecId() == MediaCodecId::Aac)
 		{
-			// _bsfa.convert_to(media_packet->GetData());
+			// _bsfa.Convert(media_packet->GetData());
 			// logtd("%s", media_packet->GetData()->Dump(32).CStr());
 		}
 		else if (media_track->GetCodecId() == MediaCodecId::Opus)

@@ -18,19 +18,39 @@ namespace pvd
 	class PushStream : public Stream
 	{
 	public:
-		
+		enum class PushStreamType : uint8_t
+		{
+			UNKNOWN,
+			SIGNALLING, 
+			DATA,
+			INTERLEAVED
+		};
+
+		virtual bool OnDataReceived(const std::shared_ptr<const ov::Data> &data) = 0;
+		uint32_t GetChannelId();
+		bool DoesBelongApplication();
+		virtual PushStreamType GetPushStreamType() = 0;
+
+		uint32_t GetRelatedChannelId();
+		void SetRelatedChannelId(uint32_t related_channel_id);
+
+		bool IsReadyToReceiveStreamData();
 
 	protected:
 		PushStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info);
-		PushStream(StreamSourceType source_type, const std::shared_ptr<PushProvider> &provider);
-
+		PushStream(StreamSourceType source_type, uint32_t channel_id, const std::shared_ptr<PushProvider> &provider);
 
 		// app name, stream name, tracks 가 모두 준비되면 호출한다. 
 		// provider->AssignStream (app)
 		// app-> NotifyStreamReady(this)
-		bool NotifyStreamReady();
-
+		bool PublishInterleavedChannel(ov::String app_name);
+		bool PublishDataChannel(ov::String app_name, const std::shared_ptr<PushStream> &data_channel);
+		
 	private:
-
+		uint32_t 		_channel_id = 0;
+		// If it's type is DATA, related channel is Signalling, or vice versa. 
+		uint32_t		_related_channel_id = 0; 
+		// Push Provider
+		std::shared_ptr<PushProvider>	_provider;
 	};
 }

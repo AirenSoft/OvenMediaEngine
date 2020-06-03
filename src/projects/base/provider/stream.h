@@ -12,6 +12,8 @@
 #include "base/info/stream.h"
 #include "monitoring/monitoring.h"
 
+#include <base/media_route/media_buffer.h>
+
 namespace pvd
 {
 	class Application;
@@ -57,6 +59,8 @@ namespace pvd
 		Stream(StreamSourceType source_type);
 
 		virtual ~Stream();
+
+		bool SendFrame(const std::shared_ptr<MediaPacket> &packet);
 
 		State 	_state = State::IDLE;
 

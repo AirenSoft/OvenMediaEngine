@@ -92,7 +92,7 @@ bool MediaRouteApplication::RegisterConnectorApp(
 	
 	_connectors.push_back(app_conn);
 
-	logti("Registered connector. %p app(%s) type(%d)"
+	logtd("Registered connector. %p app(%s) type(%d)"
 		, app_conn.get(), _application_info.GetName().CStr(),  app_conn->GetConnectorType());
 
 	return true;
@@ -135,7 +135,7 @@ bool MediaRouteApplication::RegisterObserverApp(
 
 	_observers.push_back(app_obsrv);
 
-	logti("Registered observer. %p app(%s) type(%d)"
+	logtd("Registered observer. %p app(%s) type(%d)"
 		, app_obsrv.get(), _application_info.GetName().CStr(), app_obsrv->GetObserverType());
 
 	return true;
