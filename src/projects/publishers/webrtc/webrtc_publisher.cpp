@@ -77,9 +77,6 @@ bool WebRtcPublisher::Start()
 		result = false;
 	}
 
-	// Publisher::Start()에서 Application을 생성한다.
-	result = result && Publisher::Start();
-
 	if (result)
 	{
 		logti("WebRTC Publisher has started listening on %s%s%s%s...",

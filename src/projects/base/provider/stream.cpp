@@ -46,14 +46,24 @@ namespace pvd
 
 	bool Stream::Start() 
 	{
-		logti("%s has started [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s has started [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
 		return true;
 	}
 	
 	bool Stream::Stop() 
 	{
-		logti("%s has stopped playing [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s has stopped playing [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
 		return true;
+	}
+
+	const char* Stream::GetApplicationTypeName()
+	{
+		if(GetApplication() == nullptr)
+		{
+			return "Unknown";
+		}
+
+		return GetApplication()->GetApplicationTypeName();
 	}
 
 	bool Stream::SendFrame(const std::shared_ptr<MediaPacket> &packet)
@@ -61,6 +71,13 @@ namespace pvd
 		if(_application == nullptr)
 		{
 			return false;
+		}
+
+		// Statistics
+		auto stream_metrics = StreamMetrics(*GetSharedPtrAs<info::Stream>());
+		if(stream_metrics != nullptr)
+		{
+			stream_metrics->IncreaseBytesIn(packet->GetData()->GetLength());
 		}
 
 		return _application->SendFrame(GetSharedPtr(), packet);

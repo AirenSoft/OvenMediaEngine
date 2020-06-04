@@ -83,15 +83,15 @@ namespace pvd
 
 	bool RtmpProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
 	{
-		// delete all client of streams from the physical port
-
-		return true;
+		return PushProvider::OnDeleteProviderApplication(application);
 	}
 
 	void RtmpProvider::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	{
 		auto channel_id = remote->GetId();
 		auto stream = RtmpStream::Create(StreamSourceType::Rtmp, channel_id, remote, GetSharedPtrAs<pvd::PushProvider>());
+
+		logti("A RTMP client has connected from %s", remote->ToString().CStr());
 
 		PushProvider::OnSignallingChannelCreated(remote->GetId(), stream);
 	}
@@ -107,6 +107,17 @@ namespace pvd
 						PhysicalPortDisconnectReason reason,
 						const std::shared_ptr<const ov::Error> &error)
 	{
+		auto channel = GetChannel(remote->GetId());
+		if(channel == nullptr)
+		{
+			logte("Failed to find channel to delete stream (remote : %s)", remote->ToString().CStr());
+			return;
+		}
+
+		logti("The RTMP client has disconnected: [%s/%s], remote: %s",
+					channel->GetApplicationName(), channel->GetName().CStr(),
+					remote->ToString().CStr());
+
 		PushProvider::OnChannelDeleted(remote->GetId(), error);
 	}
 }

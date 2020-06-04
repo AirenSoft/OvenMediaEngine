@@ -40,6 +40,8 @@ namespace pvd
 		PushProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 		virtual ~PushProvider();
 
+		virtual bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
+
 		// [Interleaved protocols such as RTSP/TCP, RTMP]
 		// - OnSignallingChannelCreated() -> [Collect app/stream name and track informaiton] -> PublishInterleavedChannel() -> OnChannelDeleted(Signalling)
 
@@ -52,6 +54,8 @@ namespace pvd
 		bool OnSignallingChannelCreated(uint32_t channel_id, const std::shared_ptr<pvd::PushStream> &channel);
 		bool OnDataReceived(uint32_t channel_id, const std::shared_ptr<const ov::Data> &data);
 		bool OnChannelDeleted(uint32_t channel_id, const std::shared_ptr<const ov::Error> &error);
+
+		std::shared_ptr<PushStream> GetChannel(uint32_t channel_id);
 
     private:
 		// All streams (signalling streams + data streams)

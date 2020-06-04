@@ -54,6 +54,8 @@ namespace info
 			return *_app_info;
 		}
 
+		const char* GetApplicationName();
+
 	protected:
 		info::stream_id_t _id = 0;
 		ov::String _name;

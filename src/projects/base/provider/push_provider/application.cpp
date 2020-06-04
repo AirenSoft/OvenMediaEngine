@@ -24,6 +24,14 @@ namespace pvd
 		stream->SetApplication(GetSharedPtrAs<Application>());
 		stream->SetApplicationInfo(GetSharedPtrAs<Application>());
 		
+		if(GetStreamByName(stream->GetName()) != nullptr)
+		{
+			logti("Duplicate Stream Input(reject) - %s/%s", GetName().CStr(), stream->GetName().CStr());
+
+			// TODO(Getroot): Write codes for block duplicate stream name configuration.
+			return false;
+		}
+
 		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
 		_streams[stream->GetId()] = stream;
 		streams_lock.unlock();
@@ -37,5 +45,10 @@ namespace pvd
 		NotifyStreamCreated(stream);
 
 		return true;
+	}
+
+	bool PushApplication::DeleteAllStreams()
+	{
+		return Application::DeleteAllStreams();
 	}
 }

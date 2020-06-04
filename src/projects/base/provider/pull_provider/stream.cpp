@@ -33,7 +33,7 @@ namespace pvd
 
 	bool PullStream::Play()
 	{
-		logti("%s has started to play [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s has started to play [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
 		return true;
 	}
 }

@@ -39,6 +39,8 @@ namespace pvd
 			_application = application;
 		}
 
+		const char* GetApplicationTypeName();
+
 		const std::shared_ptr<pvd::Application> &GetApplication()
 		{
 			return _application;

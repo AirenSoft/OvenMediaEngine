@@ -68,6 +68,10 @@ namespace pvd
 		_import_chunk = std::make_shared<RtmpImportChunk>(RTMP_DEFAULT_CHUNK_SIZE);
 		_export_chunk = std::make_shared<RtmpExportChunk>(false, RTMP_DEFAULT_CHUNK_SIZE);
 		_media_info = std::make_shared<RtmpMediaInfo>();
+
+		// For debug statistics
+		_stream_check_time = time(nullptr);
+		_last_packet_time = time(nullptr);
 	}
 
 	RtmpStream::~RtmpStream()
@@ -77,17 +81,28 @@ namespace pvd
 	bool RtmpStream::Start()
 	{
 		_state = Stream::State::PLAYING;
-		return true;
+		return PushStream::Start();
 	}
 
 	bool RtmpStream::Stop()
 	{
-		_state = Stream::State::STOPPING;
-		return true;
+		_state = Stream::State::STOPPED;
+
+		if(_remote->GetState() == ov::SocketState::Connected)
+		{
+			_remote->Close();
+		}
+
+		return PushStream::Stop();
 	}
 
 	bool RtmpStream::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 	{
+		if(GetState() == Stream::State::ERROR || GetState() == Stream::State::STOPPED || GetState() == Stream::State::STOPPING)
+		{
+			return false;
+		}
+
 		if ((_remained_data == nullptr) || _remained_data->IsEmpty())
 		{
 			_remained_data = data->Clone();
@@ -519,8 +534,8 @@ namespace pvd
 		_media_info->video_streaming = false;
 		_media_info->audio_streaming = false;
 
-		// TODO(Getroot): On delete stream 
-		//_stream_interface->OnDeleteStream(_remote, _app_name, _stream_name, _app_id, _stream_id);
+		// it will call PhysicalPort::OnDisconnected
+		_remote->Close();
 	}
 
 
@@ -996,7 +1011,6 @@ namespace pvd
 
 			SendFrame(video_frame);
 
-			// Statistics
 			if (frame_type == RtmpFrameType::VideoIFrame)
 			{
 				_key_frame_interval = message->header->completed.timestamp - _previous_key_frame_timestamp;

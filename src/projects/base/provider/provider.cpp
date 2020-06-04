@@ -157,7 +157,6 @@ namespace pvd
 			return false;
 		}
 
-		_applications[app_info.GetId()]->Stop();
 		_applications.erase(item);
 
 		lock.unlock();
@@ -168,6 +167,8 @@ namespace pvd
 			logte("Could not delete [%s] the application of the %s provider", app_info.GetName().CStr(), ov::Converter::ToString(GetProviderType()).CStr());
 			return false;
 		}
+
+		application->Stop();
 
 		return true;
 	}

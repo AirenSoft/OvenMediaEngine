@@ -57,6 +57,19 @@ namespace pvd
 		return false;
 	}
 
+	std::shared_ptr<PushStream> PushProvider::GetChannel(uint32_t channel_id)
+	{
+		std::shared_lock<std::shared_mutex> lock(_channels_lock);
+		// find stream by client_id
+		auto it = _channels.find(channel_id);
+		if(it == _channels.end())
+		{
+			return nullptr;
+		}
+
+		return it->second;
+	}
+
 	bool PushProvider::OnSignallingChannelCreated(uint32_t channel_id, const std::shared_ptr<pvd::PushStream> &channel)
 	{
 		std::lock_guard<std::shared_mutex> lock(_channels_lock);
@@ -73,6 +86,7 @@ namespace pvd
 		auto it = _channels.find(channel_id);
 		if(it == _channels.end())
 		{
+			// the channel probabliy has been removed
 			return false;
 		}
 
@@ -90,37 +104,66 @@ namespace pvd
 	{
 		// Delete from stream_mold
 		std::unique_lock<std::shared_mutex> lock(_channels_lock);
+		
+		std::shared_ptr<PushStream> stream = nullptr;
 
 		auto it = _channels.find(channel_id);
 		if(it != _channels.end())
 		{
+			stream = it->second;
 			_channels.erase(it);
 		}
 		else
 		{
 			// Something wrong
 			logte("%d channel to be deleted cannot be found", channel_id);
+			return false;
 		}
 
 		lock.unlock();
 
 		// Delete from Application
-		auto stream = it->second;
-
-		// get stream type
 		if(stream->DoesBelongApplication())
 		{
 			auto application = stream->GetApplication();
 			if(application == nullptr)
 			{
 				// Something wrong
-				logte("%d stream mold to be deleted cannot be found", channel_id);
+				logte("Cannot find application to delete stream (%s)", stream->GetName().CStr());
 				return false;
 			}
 
 			application->DeleteStream(stream);
 		}
 
+		return true;
+	}
+
+	bool PushProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
+	{
+		std::unique_lock<std::shared_mutex> lock(_channels_lock);
+
+		auto it = _channels.begin();
+		while(it != _channels.end())
+		{
+			auto channel = it->second;
+
+			if(channel->GetApplication() == nullptr)
+			{
+				it ++;
+				continue;
+			}
+
+			if(channel->GetApplication()->GetId() == application->GetId())
+			{
+				it = _channels.erase(it);
+			}
+			else
+			{
+				it ++;
+			}
+			
+		}
 		return true;
 	}
 }

@@ -25,7 +25,7 @@ namespace pub
 
 		ov::String queue_name;
 
-		queue_name.Format("%s/%s/%s StreamWorker Queue", _parent->GetApplication()->GetApplicationTypeName(), _parent->GetApplication()->GetName().CStr(), _parent->GetName().CStr());
+		queue_name.Format("%s/%s/%s StreamWorker Queue", _parent->GetApplicationTypeName(), _parent->GetApplicationName(), _parent->GetName().CStr());
 		_packet_queue.SetAlias(queue_name.CStr());
 		
 		_stop_thread_flag = false;
@@ -198,7 +198,7 @@ namespace pub
 			_stream_workers[i] = stream_worker;
 		}
 
-		logti("%s application has started [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s application has started [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
 
 		_run_flag = true;
 		return true;
@@ -228,7 +228,7 @@ namespace pub
 		}
 		_sessions.clear();
 
-		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), _application->GetApplicationTypeName());
+		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), GetApplicationTypeName());
 
 		return true;
 	}
@@ -236,6 +236,16 @@ namespace pub
 	std::shared_ptr<Application> Stream::GetApplication()
 	{
 		return _application;
+	}
+
+	const char * Stream::GetApplicationTypeName()
+	{
+		if(GetApplication() == nullptr)
+		{
+			return "Unknown";
+		}
+
+		return GetApplication()->GetApplicationTypeName();
 	}
 
 	std::shared_ptr<StreamWorker> Stream::GetWorkerByStreamID(session_id_t session_id)

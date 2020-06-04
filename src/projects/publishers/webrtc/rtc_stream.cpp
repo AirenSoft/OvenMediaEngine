@@ -143,7 +143,6 @@ bool RtcStream::Start(uint32_t worker_count)
 					first_video_desc = false;
 				}
 
-				//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
 				payload->SetRtpmap(payload_type_num++, codec, 90000);
 
 				video_media_desc->AddPayload(payload);

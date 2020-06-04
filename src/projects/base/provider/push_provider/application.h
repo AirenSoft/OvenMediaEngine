@@ -23,8 +23,7 @@ namespace pvd
 	protected:
 		PushApplication(const std::shared_ptr<PushProvider> &provider, const info::Application &application_info);
 
-		// Deprecated
-		virtual std::shared_ptr<pvd::PushStream> CreateStream(const uint32_t stream_id, const ov::String &stream_name){return nullptr;}
+		virtual bool DeleteAllStreams() override;		
 	private:
 
 	};

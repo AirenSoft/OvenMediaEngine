@@ -137,6 +137,17 @@ namespace info
 		return _tracks;
 	}
 
+	const char* Stream::GetApplicationName()
+	{
+		if(_app_info == nullptr)
+		{
+			return "Unknown";
+		}
+
+		return _app_info->GetName();
+	}
+
+
 	ov::String Stream::GetInfoString()
 	{
 		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), name(%s), SourceType(%s), Created Time (%s)\n", 														
