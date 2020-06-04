@@ -1411,9 +1411,9 @@ namespace pvd
 		return _bsfv.Convert(data, cts);
 	}
 
-	uint32_t RtmpStream::ConvertToAudioData(const std::shared_ptr<ov::Data> &data)
+	bool RtmpStream::ConvertToAudioData(const std::shared_ptr<ov::Data> &data)
 	{
-		return _bsfa.Convert(data);
+		return _bsfa.Convert(data) > 0;
 	}
 
 	bool RtmpStream::SendData(int data_size, uint8_t *data)

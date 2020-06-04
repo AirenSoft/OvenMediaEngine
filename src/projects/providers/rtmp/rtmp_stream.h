@@ -45,7 +45,7 @@ namespace pvd
 		bool Stop() override;
 
 		bool ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts);
-		uint32_t ConvertToAudioData(const std::shared_ptr<ov::Data> &data);
+		bool ConvertToAudioData(const std::shared_ptr<ov::Data> &data);
 
 		// ------------------------------------------
 		// Implementation of PushStream
