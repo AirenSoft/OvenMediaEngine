@@ -24,5 +24,7 @@ namespace pvd
 
 		explicit RtmpApplication(const std::shared_ptr<PushProvider> &provider, const info::Application &info);
 		~RtmpApplication() override = default;
+
+		bool JoinStream(const std::shared_ptr<PushStream> &stream) override;
 	};
 }

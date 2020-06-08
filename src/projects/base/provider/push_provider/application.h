@@ -18,7 +18,7 @@ namespace pvd
 	class PushApplication : public Application
 	{
 	public:
-		bool JoinStream(const std::shared_ptr<PushStream> &stream);
+		virtual bool JoinStream(const std::shared_ptr<PushStream> &stream);
 
 	protected:
 		PushApplication(const std::shared_ptr<PushProvider> &provider, const info::Application &application_info);

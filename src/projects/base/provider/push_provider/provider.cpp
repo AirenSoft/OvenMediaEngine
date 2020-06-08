@@ -35,9 +35,7 @@ namespace pvd
 			return false;
 		}
 
-		application->JoinStream(signal_channel);
-
-		return false;
+		return application->JoinStream(signal_channel);
 	}
 
 	// A data channel must have applicaiton/stream and track informaiton
@@ -92,6 +90,8 @@ namespace pvd
 
 		// send data 
 		auto channel = it->second;
+		
+		lock.unlock();
 
 		// In the future, 
 		// it may be necessary to send data to an application rather than sending it directly to a stream.

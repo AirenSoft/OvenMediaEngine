@@ -28,4 +28,28 @@ namespace pvd
 		: PushApplication(provider, application_info)
 	{
 	}
+
+	bool RtmpApplication::JoinStream(const std::shared_ptr<PushStream> &stream)
+	{
+		// Check duplicatied stream name
+		// If there is a same stream name 
+		auto exist_stream = GetStreamByName(stream->GetName());
+		if(exist_stream != nullptr)
+		{
+			// Block
+			if(GetConfig().GetProviders().GetRtmpProvider().IsBlockDuplicateStreamName())
+			{
+				logti("Reject %s/%s stream it is a stream with a duplicate name.", GetName().CStr(), stream->GetName().CStr());		
+				return false;
+			}
+			else
+			{
+				// Disconnect exist stream
+				logti("Remvoe exist %s/%s stream because the stream with the same name is connected.", GetName().CStr(), stream->GetName().CStr());		
+				DeleteStream(exist_stream);
+			}
+		}
+
+		return PushApplication::JoinStream(stream);
+	}
 }

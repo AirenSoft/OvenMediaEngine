@@ -26,9 +26,7 @@ namespace pvd
 		
 		if(GetStreamByName(stream->GetName()) != nullptr)
 		{
-			logti("Duplicate Stream Input(reject) - %s/%s", GetName().CStr(), stream->GetName().CStr());
-
-			// TODO(Getroot): Write codes for block duplicate stream name configuration.
+			logti("Reject %s/%s stream it is a stream with a duplicate name.", GetName().CStr(), stream->GetName().CStr());		
 			return false;
 		}
 

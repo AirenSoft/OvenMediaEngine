@@ -86,6 +86,11 @@ namespace pvd
 
 	bool RtmpStream::Stop()
 	{
+		if(GetState() == Stream::State::STOPPED)
+		{
+			return true;
+		}
+
 		_state = Stream::State::STOPPED;
 
 		if(_remote->GetState() == ov::SocketState::Connected)
@@ -1320,7 +1325,11 @@ namespace pvd
 		SetTrackInfo(_media_info);
 
 		// Publish
-		PublishInterleavedChannel(_app_name);
+		if(PublishInterleavedChannel(_app_name) == false)
+		{
+			Stop();
+			return false;
+		}
 
 		// Send stored messages
 		for(auto message : _stream_messages)

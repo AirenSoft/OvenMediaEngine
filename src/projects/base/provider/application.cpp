@@ -117,6 +117,7 @@ namespace pvd
 			return false;
 		}
 		_streams.erase(stream->GetId());
+		stream->Stop();
 
 		return true;
 	}
@@ -140,8 +141,10 @@ namespace pvd
 		for(auto it = _streams.cbegin(); it != _streams.cend(); )
 		{
 			auto stream = it->second;
-			MediaRouteApplicationConnector::DeleteStream(stream);
 			it = _streams.erase(it);
+			stream->Stop();
+
+			NotifyStreamDeleted(stream);
 		}
 
 		return true;
