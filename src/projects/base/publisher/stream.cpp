@@ -63,6 +63,12 @@ namespace pub
 
 	bool StreamWorker::AddSession(std::shared_ptr<Session> session)
 	{
+		// Cannot add session after StreamWorker is stopped
+		if (_stop_thread_flag)
+		{
+			return true;
+		}
+
 		std::lock_guard<std::shared_mutex> lock(_session_map_mutex);
 		_sessions[session->GetId()] = session;
 
@@ -71,8 +77,13 @@ namespace pub
 
 	bool StreamWorker::RemoveSession(session_id_t id)
 	{
-		// 해당 Session ID를 가진 StreamWorker를 찾아서 삭제한다.
-		std::lock_guard<std::shared_mutex> lock(_session_map_mutex);
+		// Cannot remove session after StreamWorker is stopped
+		if (_stop_thread_flag)
+		{
+			return true;
+		}
+
+		std::unique_lock<std::shared_mutex> lock(_session_map_mutex);
 		if (_sessions.count(id) <= 0)
 		{
 			logte("Cannot find session : %u", id);
@@ -80,10 +91,9 @@ namespace pub
 		}
 
 		auto session = _sessions[id];
-		// Session에 더이상 패킷을 전달하지 않는 것이 먼저다.
 		_sessions.erase(id);
+		lock.unlock();
 
-		// Session 동작을 중지한다.
 		session->Stop();
 
 		return true;
@@ -265,14 +275,14 @@ namespace pub
 
 	bool Stream::RemoveSession(session_id_t id)
 	{
-		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
+		std::unique_lock<std::shared_mutex> session_lock(_session_map_mutex);
 		if (_sessions.count(id) <= 0)
 		{
 			logte("Cannot find session : %u", id);
 			return false;
 		}
-
 		_sessions.erase(id);
+		session_lock.unlock();
 
 		return GetWorkerByStreamID(id)->RemoveSession(id);
 	}

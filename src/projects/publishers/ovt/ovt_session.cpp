@@ -43,6 +43,8 @@ bool OvtSession::Start()
 bool OvtSession::Stop()
 {
 	logtd("OvtSession(%d) has stopped", GetId());
+	_connector->Close();
+	
 	return Session::Stop();
 }
 

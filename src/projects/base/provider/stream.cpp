@@ -82,4 +82,10 @@ namespace pvd
 
 		return _application->SendFrame(GetSharedPtr(), packet);
 	}
+
+	bool Stream::SetState(State state)
+	{
+		_state = state;
+		return true;
+	}
 }

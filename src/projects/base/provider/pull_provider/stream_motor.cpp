@@ -75,7 +75,7 @@ namespace pvd
 		}
 
 		struct epoll_event event;
-		event.events = EPOLLIN;
+		event.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
 		event.data.u32 = stream->GetId();
 
 		//TODO(Getroot): epoll_ctl and epoll_wait are thread-safe so it doesn't need to be protected. (right?, check carefully again!)
@@ -186,7 +186,12 @@ namespace pvd
 				auto stream = it->second;
 				stream_lock.unlock();
 
-				if(OV_CHECK_FLAG(events, EPOLLIN))
+				if (OV_CHECK_FLAG(events, EPOLLHUP) || OV_CHECK_FLAG(events, EPOLLRDHUP))
+				{
+					DelStreamFromEpoll(stream);
+					stream->Stop();
+				}
+				else if(OV_CHECK_FLAG(events, EPOLLIN))
 				{
 					if(stream->GetState() == Stream::State::PLAYING)
 					{
@@ -203,22 +208,23 @@ namespace pvd
 						{
 							// it will be deleted from WhiteElephantCollector
 							DelStreamFromEpoll(stream);
+							stream->Stop();
 						}
 					}
 					else
 					{
 						// it will be deleted from WhiteElephantCollector
 						DelStreamFromEpoll(stream);
+						stream->Stop();
 					}
 					
 				}
-				// All other events indicate errors.
 				else
 				{
 					// it will be deleted from WhiteElephantCollector
 					DelStreamFromEpoll(stream);
+					stream->Stop();
 				}
-				
 			}
 		}
 	}
