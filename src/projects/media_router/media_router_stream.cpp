@@ -16,7 +16,8 @@ using namespace common;
 
 #define PTS_CORRECT_THRESHOLD_US	5000	
 
-MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
+MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream) :
+	_media_packets(nullptr, 100)
 {
 	logtd("Trying to create media route stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 
@@ -30,7 +31,7 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 
 
 	// set alias
-	_media_packets.SetAlias(ov::String::FormatString("%s/%s - Mediarouter stream a/v queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetName().CStr()));
+	_media_packets.SetAlias(ov::String::FormatString("%s/%s - MediaRouterStream packets Queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetName().CStr()));
 }
 
 MediaRouteStream::~MediaRouteStream()

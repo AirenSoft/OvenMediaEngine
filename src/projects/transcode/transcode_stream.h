@@ -122,9 +122,6 @@ private:
 
 	volatile bool _kill_flag;
 
-	// void LoopTask();
-	// std::thread _thread_looptask;
-
 	TranscodeApplication* GetParent();
 	TranscodeApplication* _parent;
 

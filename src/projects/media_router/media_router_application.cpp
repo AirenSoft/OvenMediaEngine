@@ -25,12 +25,13 @@ std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info:
 }
 
 MediaRouteApplication::MediaRouteApplication(const info::Application &application_info)
-	: _application_info(application_info)
+	: _application_info(application_info),
+	_indicator(nullptr, 100)
 {
 	logti("Created media route application. application id(%u), (%s)"
 		, _application_info.GetId(), _application_info.GetName().CStr());
 
-	_indicator.SetAlias(ov::String::FormatString("%s - Mediarouter Application Indicator", _application_info.GetName().CStr()));
+	_indicator.SetAlias(ov::String::FormatString("%s - MediaRouter Indicator Queue", _application_info.GetName().CStr()));
 }
 
 MediaRouteApplication::~MediaRouteApplication()

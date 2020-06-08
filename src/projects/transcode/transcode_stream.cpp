@@ -15,7 +15,10 @@
 #define OV_LOG_TAG "TranscodeStream"
 
 TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent)
-	: _application_info(application_info)
+	: _application_info(application_info),
+	_queue_input_packets(nullptr, 100),
+	_queue_decoded_frames(nullptr, 100),
+	_queue_filterd_frames(nullptr, 100)
 {
 	logtd("Trying to create transcode stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 
@@ -32,13 +35,13 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 	_last_transcode_id = 0;
 
 	// set alias
-	_queue_input_packets.SetAlias(ov::String::FormatString("%s/%s - Transcode Stream input queue"
+	_queue_input_packets.SetAlias(ov::String::FormatString("%s/%s - TranscodeStream input Queue"
 		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetName().CStr()));
 
-	_queue_decoded_frames.SetAlias(ov::String::FormatString("%s/%s - Transcode Stream decoded queue"
+	_queue_decoded_frames.SetAlias(ov::String::FormatString("%s/%s - TranscodeStream decoded Queue"
 		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetName().CStr()));
 
-	_queue_filterd_frames.SetAlias(ov::String::FormatString("%s/%s - Transcode Stream filtered queue"
+	_queue_filterd_frames.SetAlias(ov::String::FormatString("%s/%s - TranscodeStream filtered Queue"
 		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetName().CStr()));
 
 }
@@ -952,100 +955,6 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t filter_id, std::shared_ptr<
 	}
 }
 
-#if 0
-void TranscodeStream::LoopTask()
-{
-	logtd("Started transcode stream message loop thread");
-
-	CreateStreams();
-
-	time_t base_time;
-	time(&base_time);
-
-	while (!_kill_flag)
-	{
-		_queue_event.Wait();
-
-		time_t curr_time;
-		time(&curr_time);
-
-		// for statistics
-		if (difftime(curr_time, base_time) >= 20)
-		{
-			base_time = curr_time;
-
-			ov::String dbg_str = ov::String::FormatString("\nStatistics of Transcode Stream [%s/%s]\n"
-				, _application_info.GetName().CStr(), _stream_input->GetName().CStr());
-
-			
-			dbg_str.AppendFormat(" - Pipeline\n\tdecode.ready[%d], filter.ready[%d], encode.ready[%d]\n"
-				, _queue_input_packets.Size(), _queue_decoded_frames.Size(), _queue_filterd_frames.Size());
-
-			dbg_str.AppendFormat(" - Decoders\n");
-			for (auto &iter : _decoders)
-			{
-				auto track_id =iter.first; 
-				auto object = iter.second;
-				dbg_str.AppendFormat("\t[%d] track : input.q [%d], output.q [%d]\n"
-					, track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
-			}
-
-			dbg_str.AppendFormat(" - Filters\n");
-			for (auto &iter : _filters)
-			{
-				auto track_id =iter.first; 
-				auto object = iter.second;
-				dbg_str.AppendFormat("\t[%d] track : input.q [%d], output.q [%d]\n"
-					, track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
-			}
-
-			dbg_str.AppendFormat(" - Encoders\n");
-			for (auto &iter : _encoders)
-			{
-				auto track_id =iter.first; 
-				auto object = iter.second;
-				dbg_str.AppendFormat("\t[%d] track : input.q [%d], output.q [%d]\n"
-					, track_id, object->GetInputBufferSize(), object->GetOutputBufferSize());
-			}
-
-			logts("%s", dbg_str.CStr() );
-		}
-
-		if (_queue_input_packets.Size() > 0)
-		{
-			auto packet = _queue_input_packets.Dequeue();
-			if (packet.has_value())
-			{
-				int32_t track_id = packet.value()->GetTrackId();
-
-				DecodePacket(track_id, std::move(packet.value()));
-			}
-		}
-
-		if (_queue_decoded_frames.Size() > 0)
-		{
-			auto frame = _queue_decoded_frames.Dequeue();
-			if (frame.has_value())
-			{
-				DoFilters(std::move(frame.value()));
-			}
-		}
-
-		while (_queue_filterd_frames.Size() > 0)
-		{
-			auto frame = _queue_filterd_frames.Dequeue();
-			if (frame.has_value())
-			{
-				int32_t filter_id = frame.value()->GetTrackId();
-
-				EncodeFrame(filter_id, std::move(frame.value()));
-			}
-		}
-	}
-
-	logtd("Terminated transcode message loop thread");
-}
-#endif
 
 void TranscodeStream::DoInputPackets()
 {
