@@ -116,7 +116,11 @@ namespace pvd
 		if(!RequestStop())
 		{
 			// Force terminate 
-			_state = State::ERROR;
+			SetState(State::ERROR);
+		}
+		else
+		{
+			SetState(State::STOPPED);
 		}
 	
 		return pvd::PullStream::Stop();

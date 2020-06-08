@@ -43,8 +43,6 @@ namespace pub
 
 	bool Session::Stop()
 	{
-		// Virtual Function으로 자식 class는 이미 모든 정리를 마무리 했다.
-		// 상태를 변경한다.
 		_state = SessionState::Stopped;
 
 		return true;

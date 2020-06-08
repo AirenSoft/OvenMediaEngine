@@ -62,6 +62,7 @@ namespace pvd
 
 		virtual ~Stream();
 
+		bool SetState(State state);
 		bool SendFrame(const std::shared_ptr<MediaPacket> &packet);
 
 		State 	_state = State::IDLE;
