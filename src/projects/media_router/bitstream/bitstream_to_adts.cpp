@@ -21,6 +21,7 @@ BitstreamToADTS::BitstreamToADTS()
 
 BitstreamToADTS::~BitstreamToADTS()
 {
+	
 }
 
 BitstreamToADTS::AacProfile BitstreamToADTS::codec_aac_rtmp2ts(AacObjectType object_type)
@@ -40,7 +41,7 @@ BitstreamToADTS::AacProfile BitstreamToADTS::codec_aac_rtmp2ts(AacObjectType obj
 	}
 }
 
-uint32_t BitstreamToADTS::Convert(const std::shared_ptr<ov::Data> &data)
+int32_t BitstreamToADTS::Convert(const std::shared_ptr<ov::Data> &data)
 {
 	if(data->GetLength() == 0)
 	{
@@ -81,12 +82,11 @@ uint32_t BitstreamToADTS::Convert(const std::shared_ptr<ov::Data> &data)
 		audioObjectType = (audioObjectType >> 3) & 0x1f;
 		aac_object = (AacObjectType)audioObjectType;
 
-#if 1
-		logtd("sound_type:%d, sound_size:%d, sound_rate:%d, audio_codec_id:%d, aac_packet_type:%d",
-	      sound_type, sound_size, sound_rate, audio_codec_id, aac_packet_type);
-#endif
+		logtd("sound_type:%d, sound_size:%d, sound_rate:%d, audio_codec_id:%d, aac_packet_type:%d"
+			,sound_type, sound_size, sound_rate, audio_codec_id, aac_packet_type);
 
-		logtd("audio object type = %d, aac_sample_rate = %d, aac_channels = %d", audioObjectType, aac_sample_rate, aac_channels);
+		logtd("audio object type = %d, aac_sample_rate = %d, aac_channels = %d"
+			, audioObjectType, aac_sample_rate, aac_channels);
 
 		_has_sequence_header = true;
 
@@ -110,7 +110,7 @@ uint32_t BitstreamToADTS::Convert(const std::shared_ptr<ov::Data> &data)
 		data->Erase(0, aac_fixed_header_length);
 		// pkt->_buf.erase(pkt->_buf.begin(), pkt->_buf.begin()+aac_fixed_header_length);
 
-		int16_t aac_raw_length = data->GetLength();    // 2바이트 헤더를 제외함
+		int16_t aac_raw_length = data->GetLength();    
 
 		////////////////////////////////////////////////////////////
 		// Append ADTS Header

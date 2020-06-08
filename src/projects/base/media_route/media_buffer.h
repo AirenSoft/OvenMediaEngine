@@ -482,12 +482,12 @@ public:
 		return _flags;
 	}
 
-	// This function should only be called before filtering (_track_id 0, 1)
+	// This function should only be called before filtering 
 	std::shared_ptr<MediaFrame> CloneFrame()
 	{
 		auto frame = std::make_shared<MediaFrame>();
 
-		if (_track_id == (int32_t)common::MediaType::Video)
+		if (_media_type == common::MediaType::Video)
 		{
 			frame->SetWidth(_width);
 			frame->SetHeight(_height);
@@ -501,7 +501,7 @@ public:
 				frame->SetPlainData(GetPlainData(i)->Clone(), i);
 			}
 		}
-		else if (_track_id == (int32_t)common::MediaType::Audio)
+		else if (_media_type == common::MediaType::Audio)
 		{
 			frame->SetFormat(_format);
 			frame->SetBytesPerSample(_bytes_per_sample);

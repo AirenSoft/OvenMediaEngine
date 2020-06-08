@@ -57,7 +57,7 @@ private:
 	////////////////////////////
 	BitstreamToAnnexB _bsfv;
 	BitstreamToADTS _bsfa;
-	BitstreamAnnexA _bsf_vp8;
+	BitstreamToAnnexA _bsf_vp8;
 
 	AvcVideoPacketFragmentizer _avc_video_fragmentizer;
 
