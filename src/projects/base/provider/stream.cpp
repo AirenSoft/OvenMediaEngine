@@ -46,13 +46,13 @@ namespace pvd
 
 	bool Stream::Start() 
 	{
-		logti("%s has started [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s/%s(%u) has been started stream", GetApplicationName(), GetName().CStr(), GetId());
 		return true;
 	}
 	
 	bool Stream::Stop() 
 	{
-		logti("%s has stopped playing [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s/%s(%u) has been stopped playing stream", GetApplicationName(), GetName().CStr(), GetId());
 		return true;
 	}
 

@@ -45,7 +45,7 @@ namespace pvd
 			else
 			{
 				// Disconnect exist stream
-				logti("Remvoe exist %s/%s stream because the stream with the same name is connected.", GetName().CStr(), stream->GetName().CStr());		
+				logti("Remove exist %s/%s stream because the stream with the same name is connected.", GetName().CStr(), stream->GetName().CStr());		
 				DeleteStream(exist_stream);
 			}
 		}

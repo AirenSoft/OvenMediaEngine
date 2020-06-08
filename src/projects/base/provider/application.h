@@ -67,8 +67,6 @@ namespace pvd
 		std::map<uint32_t, std::shared_ptr<Stream>> _streams;
 
 	private:
-		bool DeleteStreamInternal(const std::shared_ptr<Stream> &stream);
-
 		std::shared_ptr<Provider> _provider;
 		ApplicationState		_state = ApplicationState::Idle;
 		std::atomic<info::stream_id_t>	_last_issued_stream_id { 0 };

@@ -100,24 +100,19 @@ namespace pvd
 	{
 		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
 
-		DeleteStreamInternal(stream);
-
-		streams_lock.unlock();
-		
-		NotifyStreamDeleted(stream);
-
-		return true;
-	}
-
-	bool Application::DeleteStreamInternal(const std::shared_ptr<Stream> &stream)
-	{
 		if(_streams.find(stream->GetId()) == _streams.end())
 		{
 			logtc("Could not find stream to be removed : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
 			return false;
 		}
 		_streams.erase(stream->GetId());
+		stream->SetApplication(nullptr);
+
+		streams_lock.unlock();
+		
 		stream->Stop();
+
+		NotifyStreamDeleted(stream);
 
 		return true;
 	}
