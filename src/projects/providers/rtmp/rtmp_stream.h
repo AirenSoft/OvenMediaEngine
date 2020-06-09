@@ -36,8 +36,6 @@ namespace pvd
 	public:
 		static std::shared_ptr<RtmpStream> Create(StreamSourceType source_type, uint32_t channel_id, const std::shared_ptr<ov::Socket> &client_socket, const std::shared_ptr<PushProvider> &provider);
 
-
-
 		explicit RtmpStream(StreamSourceType source_type, uint32_t channel_id, std::shared_ptr<ov::Socket> client_socket, const std::shared_ptr<PushProvider> &provider);
 		~RtmpStream() final;
 
@@ -111,6 +109,7 @@ namespace pvd
 		ov::String GetCodecString(RtmpCodecType codec_type);
 		ov::String GetEncoderTypeString(RtmpEncoderType encoder_type);
 
+		bool CheckReadyToPublish();
 		bool PublishStream();		
 		bool SetTrackInfo(const std::shared_ptr<RtmpMediaInfo> &media_info);
 
@@ -120,7 +119,9 @@ namespace pvd
 		std::shared_ptr<RtmpImportChunk> _import_chunk;
 		std::shared_ptr<RtmpExportChunk> _export_chunk;
 		std::shared_ptr<RtmpMediaInfo> _media_info;
-		std::vector<std::shared_ptr<const RtmpMessage>> _stream_messages;
+		std::vector<std::shared_ptr<const RtmpMessage>> _stream_message_cache;
+		uint32_t _stream_message_cache_video_count = 0;
+		uint32_t _stream_message_cache_audio_count = 0;
 
 		uint32_t _acknowledgement_size = RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE / 2;
 		uint32_t _acknowledgement_traffic = 0;

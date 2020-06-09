@@ -505,10 +505,13 @@ namespace pvd
 			audio_samplesize = object->GetNumber(index);
 		}  // Audio Sample Size
 
-		// support codec check (H264/AAC 지원)
-		if (!(video_codec_type == RtmpCodecType::H264) && !(audio_codec_type == RtmpCodecType::AAC))
+		if(video_codec_type == RtmpCodecType::H264 && audio_codec_type == RtmpCodecType::AAC)
 		{
-			logtw("codec type fail - stream(%s/%s) id(%u/%u) video(%s) audio(%s)",
+			
+		}
+		else
+		{
+			logtw("AmfMeta has incompatible codec information. - stream(%s/%s) id(%u/%u) video(%s) audio(%s)",
 				_app_name.CStr(),
 				_stream_name.CStr(),
 				_app_id,
@@ -847,7 +850,6 @@ namespace pvd
 		ov::String message_name;
 		ov::String data_name;
 
-		// 응답 디코딩
 		decode_lehgth = document.Decode(message->payload->GetData(), message->header->payload_size);
 		if (decode_lehgth == 0)
 		{
@@ -881,6 +883,24 @@ namespace pvd
 			logtw("Unknown Amf0DataMessage - Message(%s)", message_name.CStr());
 			return;
 		}
+	}
+
+	bool RtmpStream::CheckReadyToPublish()
+	{
+		if(_media_info->video_streaming == true && _media_info->audio_streaming == true)
+		{
+			return true;
+		}
+		else if(_media_info->video_streaming == true && _stream_message_cache_video_count > MAX_STREAM_MESSAGE_COUNT/2)
+		{
+			return true;
+		}
+		else if(_media_info->audio_streaming == true && _stream_message_cache_audio_count > MAX_STREAM_MESSAGE_COUNT/2)
+		{
+			return true;
+		}
+
+		return false;
 	}
 
 	//====================================================================================================
@@ -919,24 +939,6 @@ namespace pvd
 
 		const std::shared_ptr<const ov::Data> &payload = message->payload;
 
-		// Check frame Type (I/P(B) Frame)
-		if (payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_I_FRAME_TYPE)
-		{
-			frame_type = RtmpFrameType::VideoIFrame; //I-Frame
-		}
-		else if (payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_P_FRAME_TYPE)
-		{
-			frame_type = RtmpFrameType::VideoPFrame; //P-Frame
-		}
-		else
-		{
-			logte("Frame type fail - stream(%s/%s) type(0x%x)",
-				_app_name.CStr(),
-				_stream_name.CStr(),
-				payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX));
-			return false;
-		}
-
 		// Seqence Data 
 		if (!_video_sequence_info_process && payload->At(RTMP_VIDEO_SEQUENCE_HEADER_INDEX) == RTMP_SEQUENCE_INFO_TYPE)
 		{
@@ -947,32 +949,34 @@ namespace pvd
 			{
 				logtw("Video sequence info process fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 			}
+		}
 
-			// Create stream
-			if (_video_sequence_info_process && _audio_sequence_info_process)
+		if (!IsPublished())
+		{
+			if(CheckReadyToPublish() == true)
 			{
-				if (!PublishStream())
+				if(PublishStream() == false)
 				{
-					logtd("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
+					logte("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 					return false;
 				}
 			}
-		}
-
-		if (!_video_sequence_info_process || !_audio_sequence_info_process)
-		{
-			_stream_messages.push_back(message);
-
-			if (_stream_messages.size() > MAX_STREAM_MESSAGE_COUNT)
+			else
 			{
-				logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
-					_app_name.CStr(),
-					_stream_name.CStr(),
-					_stream_messages.size(),
-					MAX_STREAM_MESSAGE_COUNT);
-			}
+				// Store stream data until stream is published
+				_stream_message_cache.push_back(message);
+				_stream_message_cache_video_count ++;
+				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
+				{
+					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
+						_app_name.CStr(),
+						_stream_name.CStr(),
+						_stream_message_cache.size(),
+						MAX_STREAM_MESSAGE_COUNT);
+				}
 
-			return true;
+				return true;
+			}
 		}
 
 		// setting packet time
@@ -983,6 +987,24 @@ namespace pvd
 		{
 			int64_t cts = 0;
 			auto data = message->payload;
+
+			// Check frame Type (I/P(B) Frame)
+			if (payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_I_FRAME_TYPE)
+			{
+				frame_type = RtmpFrameType::VideoIFrame; //I-Frame
+			}
+			else if (payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_P_FRAME_TYPE)
+			{
+				frame_type = RtmpFrameType::VideoPFrame; //P-Frame
+			}
+			else
+			{
+				logte("Frame type fail - stream(%s/%s) type(0x%x)",
+					_app_name.CStr(),
+					_stream_name.CStr(),
+					payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX));
+				return false;
+			}
 
 			if(ConvertToVideoData(data, cts) == false)
 			{
@@ -1071,8 +1093,7 @@ namespace pvd
 	bool RtmpStream::ReceiveAudioMessage(const std::shared_ptr<const RtmpMessage> &message)
 	{
 		// size check
-		if (
-			(message->header->payload_size < RTMP_AAC_AUDIO_DATA_MIN_SIZE) ||
+		if ((message->header->payload_size < RTMP_AAC_AUDIO_DATA_MIN_SIZE) ||
 			(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
 		{
 			logte("Size Fail - stream(%s/%s) size(%d)",
@@ -1093,31 +1114,34 @@ namespace pvd
 			{
 				logtw("Audio Sequence Info Process Fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 			}
+		}
 
-			// 스트림 생성
-			if (_video_sequence_info_process && _audio_sequence_info_process)
+		if (!IsPublished())
+		{
+			if(CheckReadyToPublish() == true)
 			{
-				if (!PublishStream())
+				if(PublishStream() == false)
 				{
-					logte("Input create fail - stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
+					logte("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
 					return false;
 				}
 			}
-		}
+			else
+			{
+				// Store stream data until stream is published
+				_stream_message_cache.push_back(message);
+				_stream_message_cache_audio_count ++;
+				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
+				{
+					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
+						_app_name.CStr(),
+						_stream_name.CStr(),
+						_stream_message_cache.size(),
+						MAX_STREAM_MESSAGE_COUNT);
+				}
 
-		// video/audio sequence header 모두 처리 전에 임시 저장
-		if (!_video_sequence_info_process || !_audio_sequence_info_process)
-		{
-			_stream_messages.push_back(message);
-
-			if (_stream_messages.size() > MAX_STREAM_MESSAGE_COUNT)
-				logtw("Stream Message Count Over - stream(%s/%s) size(%d:%d)",
-					_app_name.CStr(),
-					_stream_name.CStr(),
-					_stream_messages.size(),
-					MAX_STREAM_MESSAGE_COUNT);
-
-			return true;
+				return true;
+			}
 		}
 
 		// setting packet time
@@ -1332,7 +1356,7 @@ namespace pvd
 		}
 
 		// Send stored messages
-		for(auto message : _stream_messages)
+		for(auto message : _stream_message_cache)
 		{
 			if(message->header->completed.type_id == RTMP_MSGID_VIDEO_MESSAGE && _media_info->video_streaming)
 			{
@@ -1343,7 +1367,7 @@ namespace pvd
 				ReceiveAudioMessage(message);
 			}
 		}
-		_stream_messages.clear();
+		_stream_message_cache.clear();
 
 		return true;
 	}

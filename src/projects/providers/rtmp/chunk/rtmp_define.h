@@ -224,9 +224,11 @@ enum class RtmpHandshakeState {
 //===============================================================================================
 // 스트림 정보 
 //===============================================================================================
-struct RtmpMediaInfo {
+struct RtmpMediaInfo 
+{
 public :
-    RtmpMediaInfo() {
+    RtmpMediaInfo() 
+	{
         video_streaming = false;
         audio_streaming = false;
 
@@ -257,14 +259,12 @@ public :
     bool video_streaming;
     bool audio_streaming;
 
-    // 비디오 정보
     RtmpCodecType video_codec_type;
     int video_width;
     int video_height;
     float video_framerate;
     int video_bitrate;
 
-    // 오디오 정보
     RtmpCodecType audio_codec_type;
     int audio_channels;
     int audio_bits;

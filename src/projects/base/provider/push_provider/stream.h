@@ -35,6 +35,7 @@ namespace pvd
 		void SetRelatedChannelId(uint32_t related_channel_id);
 
 		bool IsReadyToReceiveStreamData();
+		bool IsPublished();
 
 	protected:
 		PushStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info);
@@ -50,6 +51,8 @@ namespace pvd
 		uint32_t 		_channel_id = 0;
 		// If it's type is DATA, related channel is Signalling, or vice versa. 
 		uint32_t		_related_channel_id = 0; 
+		// Published?
+		bool			_is_published = false;
 		// Push Provider
 		std::shared_ptr<PushProvider>	_provider;
 	};

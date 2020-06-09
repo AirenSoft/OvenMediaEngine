@@ -48,7 +48,9 @@ namespace pvd
 			return false;
 		}
 
-		return _provider->PublishInterleavedChannel(GetChannelId(), app_name, GetSharedPtrAs<PushStream>());
+		_is_published = _provider->PublishInterleavedChannel(GetChannelId(), app_name, GetSharedPtrAs<PushStream>());
+
+		return _is_published;
 	}
 
 	bool PushStream::PublishDataChannel(ov::String app_name, const std::shared_ptr<PushStream> &data_channel)
@@ -64,6 +66,11 @@ namespace pvd
 	bool PushStream::DoesBelongApplication()
 	{
 		return GetApplication() != nullptr;
+	}
+
+	bool PushStream::IsPublished()
+	{
+		return _is_published;
 	}
 
 	bool PushStream::IsReadyToReceiveStreamData()
