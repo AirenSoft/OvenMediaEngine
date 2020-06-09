@@ -891,6 +891,8 @@ namespace pvd
 		{
 			return true;
 		}
+		// TODO(Getroot): If this algorithm causes latency, it may be better to use meta data from AmfMeta. 
+		// But AmfMeta is not always correct so we need more consideration
 		else if(_media_info->video_streaming == true && _stream_message_cache_video_count > MAX_STREAM_MESSAGE_COUNT/2)
 		{
 			return true;
@@ -1026,7 +1028,7 @@ namespace pvd
 			pts *= video_track->GetVideoTimestampScale();
 
 			auto video_frame = std::make_shared<MediaPacket>(common::MediaType::Video,
-											  0,
+											  RTMP_VIDEO_TRACK_ID,
 											  data,
 											  // The timestamp used by RTMP is DTS. PTS will be recalculated later
 											  pts, // PTS
@@ -1173,7 +1175,7 @@ namespace pvd
 			dts *= audio_track->GetAudioTimestampScale();
 
 			auto frame = std::make_shared<MediaPacket>(common::MediaType::Audio,
-											  1,
+											  RTMP_VIDEO_TRACK_ID,
 											  data,
 											  // The timestamp used by RTMP is DTS. PTS will be recalculated later
 											  pts,  // PTS
