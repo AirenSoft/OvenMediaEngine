@@ -1008,10 +1008,16 @@ namespace pvd
 				return false;
 			}
 
-			if(ConvertToVideoData(data, cts) == false)
+			// Converting to Adts
+			auto result = _bitstream_conv_video.Convert(BitstreamConv::ConvAnnexB, data, cts);
+			if(result == BitstreamConv::INVALID_DATA)
 			{
 				logte("Cannot convert video frame (%s/%s)", _app_name.CStr(), GetName().CStr());
 				return false;
+			}
+			else if(result == BitstreamConv::SUCCESS_NODATA)
+			{
+				return true;
 			}
 
 			int64_t dts = message->header->completed.timestamp;
@@ -1149,15 +1155,22 @@ namespace pvd
 		// setting packet time
 		_last_packet_time = time(nullptr);
 
-		// audio stream callback 호출
+		// audio stream callback 
 		if (_media_info->audio_streaming)
 		{
 			auto data = message->payload;
 
-			if(ConvertToAudioData(data) == false)
+			// converting to adts 
+			auto result = _bitstream_conv_audio.Convert(BitstreamConv::ConvADTS, data);
+			if(result == BitstreamConv::INVALID_DATA)
 			{
 				logte("Cannot convert audio frame (%s/%s)", _app_name.CStr(), GetName().CStr());
 				return false;
+			}
+			else if(result == BitstreamConv::SUCCESS_NODATA)
+			{
+				// No data after converting
+				return true;
 			}
 
 			int64_t pts = message->header->completed.timestamp;
@@ -1243,7 +1256,7 @@ namespace pvd
 		uint8_t avc_level;
 
 		// Parsing
-		if (!BitstreamToAnnexB::ParseSequenceHeader(data->GetDataAs<uint8_t>(),
+		if (!BitstreamConv::ParseSequenceHeaderAVC(data->GetDataAs<uint8_t>(),
 													data->GetLength(),
 													sps,
 													pps,
@@ -1439,16 +1452,6 @@ namespace pvd
 		}
 
 		return true;
-	}
-
-	bool RtmpStream::ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts)
-	{
-		return _bsfv.Convert(data, cts);
-	}
-
-	bool RtmpStream::ConvertToAudioData(const std::shared_ptr<ov::Data> &data)
-	{
-		return _bsfa.Convert(data) > 0;
 	}
 
 	bool RtmpStream::SendData(int data_size, uint8_t *data)
