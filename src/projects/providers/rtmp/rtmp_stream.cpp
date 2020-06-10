@@ -1175,7 +1175,7 @@ namespace pvd
 			dts *= audio_track->GetAudioTimestampScale();
 
 			auto frame = std::make_shared<MediaPacket>(common::MediaType::Audio,
-											  RTMP_VIDEO_TRACK_ID,
+											  RTMP_AUDIO_TRACK_ID,
 											  data,
 											  // The timestamp used by RTMP is DTS. PTS will be recalculated later
 											  pts,  // PTS
