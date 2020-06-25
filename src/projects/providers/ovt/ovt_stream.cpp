@@ -3,7 +3,7 @@
 //
 
 
-#include "media_router/bitstream/avc_video_packet_fragmentizer.h"
+#include "media_router/bitstream/bitstream_conv.h"
 #include "base/info/application.h"
 #include "ovt_stream.h"
 
@@ -736,8 +736,7 @@ namespace pvd
 				auto track = GetTrack(media_packet->GetTrackId());
 				if(track->GetCodecId() == common::MediaCodecId::H264)
 				{
-					AvcVideoPacketFragmentizer fragmentizer;
-					fragmentizer.MakeHeader(media_packet);
+					BitstreamConv::MakeAVCFragmentHeader(media_packet);
 				}
 
 				SendFrame(media_packet);

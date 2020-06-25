@@ -12,8 +12,7 @@
 #include "base/common_types.h"
 #include "base/provider/push_provider/stream.h"
 
-#include "media_router/bitstream/bitstream_to_annexb.h"
-#include "media_router/bitstream/bitstream_to_adts.h"
+#include "media_router/bitstream/bitstream_conv.h"
 
 #include "chunk/amf_document.h"
 #include "chunk/rtmp_chunk_parser.h"
@@ -40,6 +39,9 @@ namespace pvd
 		~RtmpStream() final;
 
 		bool Stop() override;
+
+		// bool ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts);
+		// bool ConvertToAudioData(const std::shared_ptr<ov::Data> &data);
 
 		// ------------------------------------------
 		// Implementation of PushStream
@@ -132,8 +134,8 @@ namespace pvd
 		int32_t _chunk_stream_id = 0;
 
 		// bitstream filters
-		BitstreamToAnnexB _bsfv;
-		BitstreamToADTS _bsfa;
+		BitstreamConv _bitstream_conv_video;
+		BitstreamConv _bitstream_conv_audio;
 
 		// parsed from packet
 		ov::String _domain_name;

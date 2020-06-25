@@ -45,14 +45,15 @@ int32_t BitstreamToADTS::Convert(const std::shared_ptr<ov::Data> &data)
 {
 	if(data->GetLength() == 0)
 	{
-		return 0;
+		// No Data
+		return -1;
 	}
 
 	uint8_t *pbuf = data->GetWritableDataAs<uint8_t>();
 
 	if(pbuf[0] == 0xff)
 	{
-		logtd("already ADTS type");
+		// Already ADTS Type
 		return data->GetLength();
 	}
 
@@ -61,14 +62,16 @@ int32_t BitstreamToADTS::Convert(const std::shared_ptr<ov::Data> &data)
 	[[maybe_unused]] uint8_t sound_type = sound_format & 0x01;
 	[[maybe_unused]] uint8_t sound_size = (sound_format >> 1) & 0x01;
 	[[maybe_unused]] uint8_t sound_rate = (sound_format >> 2) & 0x03;
+
 	uint8_t audio_codec_id = (sound_format >> 4) & 0x0f;
-
 	uint8_t aac_packet_type = pbuf[1];
-
 
 	if(audio_codec_id != AudioCodecIdAAC)
 	{
 		logtw("aac reqired. format=%d", audio_codec_id);
+
+		// Invalid data. 
+		return -1;
 	}
 
 	if(aac_packet_type == CodecAudioTypeSequenceHeader)
@@ -94,13 +97,16 @@ int32_t BitstreamToADTS::Convert(const std::shared_ptr<ov::Data> &data)
 
 		data->Clear();
 
-		return 0;
+		return data->GetLength();
 	}
 	else if(aac_packet_type == CodecAudioTypeRawData)
 	{
 		if(_has_sequence_header == false)
 		{
-			return 0;
+			data->Clear();
+			
+			// return zero
+			return data->GetLength();	
 		}
 
 		int16_t aac_fixed_header_length = 2;
@@ -160,7 +166,9 @@ int32_t BitstreamToADTS::Convert(const std::shared_ptr<ov::Data> &data)
 		return data->GetLength();
 	}
 
-	return 0;
+	// Unknown aac_packet_type
+
+	return -1;
 }
 
 // BitstreamSequenceInfoParsing

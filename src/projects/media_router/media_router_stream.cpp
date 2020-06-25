@@ -29,7 +29,6 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream) 
 
 	_stop_watch.Start();
 
-
 	// set alias
 	_media_packets.SetAlias(ov::String::FormatString("%s/%s - MediaRouterStream packets Queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetName().CStr()));
 }
@@ -259,49 +258,55 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	////////////////////////////////////////////////////////////////////////////////////
 
 	// Bitstream Converting or Generate Fragmentation Header 
-	if (media_type == MediaType::Video)
+	if (media_track->GetCodecId() == MediaCodecId::H264)
 	{
-		if (media_track->GetCodecId() == MediaCodecId::H264)
+		auto result = _bitstream_conv.Convert(BitstreamConv::ConvAnnexB, media_packet->GetData());
+		if(result == BitstreamConv::INVALID_DATA)
 		{
-			// If there is no RTP fragmentation, Create!
-			if(media_packet->GetFragHeader()->GetCount() == 0)
-			{
-				_avc_video_fragmentizer.MakeHeader(media_packet);
-			}
-		}
-		else if (media_track->GetCodecId() == MediaCodecId::Vp8)
-		{
-			_bsf_vp8.Convert(media_packet->GetData());
-		}
-		else
-		{
-			logte("Unsupported video codec. codec_id(%d)", media_track->GetCodecId());
+			logte("Cannot convert frame (%s/%s)", _stream->GetApplicationInfo().GetName().CStr(),_stream->GetName().CStr());
 			return nullptr;
+		}
+		else if(result == BitstreamConv::SUCCESS_NODATA)
+		{
+			// No data after converting
+			return nullptr;
+		}
+
+		// If there is no RTP fragmentation, Create!
+		if(media_packet->GetFragHeader()->GetCount() == 0)
+		{
+			BitstreamConv::MakeAVCFragmentHeader(media_packet);
 		}
 	}
-	else if (media_type == MediaType::Audio)
-	{
-		if (media_track->GetCodecId() == MediaCodecId::Aac)
-		{
-			// _bsfa.Convert(media_packet->GetData());
-			// logtd("%s", media_packet->GetData()->Dump(32).CStr());
-		}
-		else if (media_track->GetCodecId() == MediaCodecId::Opus)
-		{
 
-		}
-		else
+	else if (media_track->GetCodecId() == MediaCodecId::Aac)
+	{
+		auto result = _bitstream_conv.Convert(BitstreamConv::ConvADTS, media_packet->GetData());
+		if(result == BitstreamConv::INVALID_DATA)
 		{
-			logte("Unsupported audio codec. codec_id(%d)", media_track->GetCodecId());
+			logte("Cannot convert frame (%s/%s)", _stream->GetApplicationInfo().GetName().CStr(),_stream->GetName().CStr());
 			return nullptr;
 		}
+		else if(result == BitstreamConv::SUCCESS_NODATA)
+		{
+			// No data after converting
+			return nullptr;
+		}	
+	}
+	else if (media_track->GetCodecId() == MediaCodecId::Vp8)
+	{
+		// VP8 does not require converting.
+	}	
+	else if (media_track->GetCodecId() == MediaCodecId::Opus)
+	{
+		// OPUS does not require converting.
 	}
 	else
 	{
-		logte("Unsupported media typec. media_type(%d)", media_type);
+		logte("Unsupported audio codec. codec_id(%d)", media_track->GetCodecId());
 		return nullptr;
 	}
-
+		
 	// Set the corrected PTS.
 	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
 	media_packet->SetDts( media_packet->GetDts() - _pts_correct[track_id] );

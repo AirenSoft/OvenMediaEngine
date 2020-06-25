@@ -482,7 +482,7 @@ public:
 		return _flags;
 	}
 
-	// This function should only be called before filtering 
+	// This function should only be called before filtering (_track_id 0, 1)
 	std::shared_ptr<MediaFrame> CloneFrame()
 	{
 		auto frame = std::make_shared<MediaFrame>();

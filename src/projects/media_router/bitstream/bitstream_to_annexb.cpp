@@ -261,6 +261,7 @@ bool BitstreamToAnnexB::Convert(const std::shared_ptr<ov::Data> &data, int64_t &
 
 		return false;
 	}
+	
 	//   8bit : AVCPacketType
 	auto packet_type = static_cast<AvcPacketType>(video_data[1]);
 	//   24bit - composition time
