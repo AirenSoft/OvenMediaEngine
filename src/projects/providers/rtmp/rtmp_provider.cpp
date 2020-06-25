@@ -13,11 +13,10 @@
 #include "rtmp_provider.h"
 #include "rtmp_application.h"
 #include "rtmp_stream.h"
+#include "rtmp_provider_private.h"
 
 #include <modules/physical_port/physical_port_manager.h>
 #include <base/info/media_extradata.h>
-
-#define OV_LOG_TAG "RtmpProvider"
 
 namespace pvd
 {
@@ -107,16 +106,6 @@ namespace pvd
 						PhysicalPortDisconnectReason reason,
 						const std::shared_ptr<const ov::Error> &error)
 	{
-		/* TODO(Getroot): 2020-06-05
-		다음과 같은 상황을 테스트하고 코드를 보완해야 한다. 
-		
-		- Client에서 종료한 경우
-		- Stream에서 오류가 발생하여 remote->Close를 한 경우
-		- 중복 Stream이 입력되어 기존의 Strema을 종료한 경우
-		*/
-
-		// 중복 스트림이 들어오면 무한 루프에 빠짐
-
 		auto channel = GetChannel(remote->GetId());
 		if(channel == nullptr)
 		{
@@ -128,6 +117,6 @@ namespace pvd
 					channel->GetApplicationName(), channel->GetName().CStr(),
 					remote->ToString().CStr());
 
-		PushProvider::OnChannelDeleted(remote->GetId(), error);
+		PushProvider::OnChannelDeleted(remote->GetId());
 	}
 }

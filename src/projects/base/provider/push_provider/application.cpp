@@ -29,16 +29,16 @@ namespace pvd
 			logti("Reject %s/%s stream it is a stream with a duplicate name.", GetName().CStr(), stream->GetName().CStr());		
 			return false;
 		}
-
-		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
-		_streams[stream->GetId()] = stream;
-		streams_lock.unlock();
-		
+	
 		if(stream->IsReadyToReceiveStreamData() == false)
 		{
 			logte("The stream(%s/%s) is not yet ready to be published.", GetName().CStr(), stream->GetName().CStr());
 			return false;
 		}
+
+		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
+		_streams[stream->GetId()] = stream;
+		streams_lock.unlock();
 
 		NotifyStreamCreated(stream);
 

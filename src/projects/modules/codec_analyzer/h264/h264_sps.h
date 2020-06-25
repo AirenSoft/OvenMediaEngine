@@ -8,8 +8,8 @@ class H264Sps
 {
     struct ASPECT_RATIO
     {
-        uint16_t width_;
-        uint16_t height_;
+        uint16_t _width;
+        uint16_t _height;
     };
 
 public:
@@ -24,12 +24,12 @@ public:
     unsigned int GetMaxNrOfReferenceFrames() const;
 
 private:
-    uint8_t profile_ = 0;
-    uint8_t codec_level_ = 0;
-    unsigned int width_ = 0;
-    unsigned int height_ = 0;
-    unsigned int fps_ = 0;
-    unsigned int id_ = 0;
-    unsigned int max_nr_of_reference_frames_ = 0;
-    ASPECT_RATIO aspect_ratio_ = { 0, 0 };
+    uint8_t _profile = 0;
+    uint8_t _codec_level = 0;
+    unsigned int _width = 0;
+    unsigned int _height = 0;
+    unsigned int _fps = 0;
+    unsigned int _id = 0;
+    unsigned int _max_nr_of_reference_frames = 0;
+    ASPECT_RATIO _aspect_ratio = { 0, 0 };
 };

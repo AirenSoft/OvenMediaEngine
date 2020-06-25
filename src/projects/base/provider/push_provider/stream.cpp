@@ -15,10 +15,6 @@
 
 namespace pvd
 {
-	PushStream::PushStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info)
-		: Stream(application, stream_info)
-	{	
-	}
 	PushStream::PushStream(StreamSourceType source_type, uint32_t channel_id, const std::shared_ptr<PushProvider> &provider)
 		: Stream(source_type)
 	{
@@ -39,6 +35,32 @@ namespace pvd
 	void PushStream::SetRelatedChannelId(uint32_t related_channel_id)
 	{
 		_related_channel_id = related_channel_id;
+	}
+
+	void PushStream::UpdateLastReceivedTime()
+	{
+		_stop_watch.Update();
+	}
+
+	void PushStream::SetTimeoutSec(time_t seconds)
+	{
+		_stop_watch.Start();
+		_timeout_sec = seconds;
+	}
+	
+	bool PushStream::IsTimedOut()
+	{
+		if(_timeout_sec == 0)
+		{
+			return false;
+		}
+
+		return _stop_watch.IsElapsed(_timeout_sec * 1000);
+	}
+
+	time_t PushStream::GetElapsedSecSinceLastReceived()
+	{
+		return _stop_watch.Elapsed() / 1000;
 	}
 
 	bool PushStream::PublishInterleavedChannel(ov::String app_name)

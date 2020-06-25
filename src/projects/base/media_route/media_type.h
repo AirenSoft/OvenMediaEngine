@@ -12,7 +12,6 @@
 
 namespace common
 {
-	// 미디어 타입
 	enum class MediaType : int8_t
 	{
 		Unknown = -1,
@@ -24,7 +23,6 @@ namespace common
 		Nb
 	};
 
-	// 디코딩된 비디오 프레임의 타입
 	enum class PictureType : uint8_t
 	{
 		None = 0,  ///< Undefined
@@ -37,7 +35,6 @@ namespace common
 		BI,		   ///< BI type
 	};
 
-	// 미디어 코덱 아이디
 	enum class MediaCodecId : uint8_t
 	{
 		None = 0,
@@ -51,7 +48,7 @@ namespace common
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
-	// 타입베이스
+	// Timebase
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 
 	class Timebase
@@ -148,10 +145,10 @@ namespace common
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
-	// 오디오 샘플 포맷
+	// Audio sample format
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 
-	// FFMEPG SampleFotmat과 호환성 있도록 값을 정의함
+	// Defines values for compatibility with FFMPEG SampleFormat
 	class AudioSample
 	{
 	public:
@@ -175,7 +172,7 @@ namespace common
 			Nb
 		};
 
-		// 샘플 레이트
+		// Samplerates
 		enum class Rate : int32_t
 		{
 			None = 0,
@@ -293,7 +290,7 @@ namespace common
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
-	// 오디오 레이아웃
+	// Audio layout
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	class AudioChannel
 	{
@@ -304,7 +301,7 @@ namespace common
 			LayoutMono = 0x00000004U,					// AV_CH_LAYOUT_MONO
 			LayoutStereo = (0x00000001U | 0x00000002U)  // AV_CH_FRONT_LEFT|AV_CH_FRONT_RIGHT
 
-			// TODO(SOULK) : 추가적인 레이아웃을 지원해야함
+			// TODO(SOULK) : Need to support additional layout
 		};
 
 	public:
@@ -332,19 +329,19 @@ namespace common
 			}
 		}
 
-		// 채널 레이아웃 반환
+		// channel layout
 		AudioChannel::Layout GetLayout() const
 		{
 			return _layout;
 		}
 
-		// 채널 개수 반환
+		// channel count
 		uint32_t GetCounts() const
 		{
 			return _count;
 		}
 
-		// 채널 레이아웃 명
+		// the name of channel layout
 		const char *GetName() const
 		{
 			return _name.c_str();

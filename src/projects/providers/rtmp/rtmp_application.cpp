@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  RtmpProvider
+//  RtmpApplication
 //
 //  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
@@ -9,11 +9,11 @@
 
 #include "rtmp_application.h"
 #include "rtmp_stream.h"
+#include "rtmp_provider_private.h"
 
 #include "base/provider/push_provider/application.h"
 #include "base/info/stream.h"
 
-#define OV_LOG_TAG "RtmpApplication"
 
 namespace pvd
 {

@@ -8,4 +8,4 @@
 //==============================================================================
 #pragma once
 
-#define OV_LOG_TAG "NewRtmpProvider"
+#define OV_LOG_TAG "RtmpProvider"

@@ -6,7 +6,7 @@
 #include "media_router/bitstream/avc_video_packet_fragmentizer.h"
 #include "base/info/application.h"
 #include "rtspc_stream.h"
-#include "modules/aac/aac.h"
+#include "modules/codec_analyzer/aac/aac.h"
 
 #define OV_LOG_TAG "RtspcStream"
 

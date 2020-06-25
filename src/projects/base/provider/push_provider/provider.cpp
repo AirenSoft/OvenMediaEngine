@@ -79,64 +79,61 @@ namespace pvd
 
 	bool PushProvider::OnDataReceived(uint32_t channel_id, const std::shared_ptr<const ov::Data> &data)
 	{
-		std::shared_lock<std::shared_mutex> lock(_channels_lock);
-		// find stream by client_id
-		auto it = _channels.find(channel_id);
-		if(it == _channels.end())
+		auto channel = GetChannel(channel_id);
+		if(channel == nullptr)
 		{
-			// the channel probabliy has been removed
 			return false;
 		}
-
-		// send data 
-		auto channel = it->second;
-		
-		lock.unlock();
 
 		// In the future, 
 		// it may be necessary to send data to an application rather than sending it directly to a stream.
 		channel->OnDataReceived(data);
+		channel->UpdateLastReceivedTime();
 
 		return true;
 	}
 
-	bool PushProvider::OnChannelDeleted(uint32_t channel_id, const std::shared_ptr<const ov::Error> &error)
+	bool PushProvider::OnChannelDeleted(const std::shared_ptr<pvd::PushStream> &channel)
 	{
+		if(channel == nullptr)
+		{
+			return false;
+		}
+
+		SetChannelTimeout(channel, 0);
+
 		// Delete from stream_mold
 		std::unique_lock<std::shared_mutex> lock(_channels_lock);
 		
-		std::shared_ptr<PushStream> stream = nullptr;
-
-		auto it = _channels.find(channel_id);
-		if(it != _channels.end())
-		{
-			stream = it->second;
-			_channels.erase(it);
-		}
-		else
+		if(_channels.erase(channel->GetChannelId()) == 0)
 		{
 			// Something wrong
-			logte("%d channel to be deleted cannot be found", channel_id);
+			logte("%d channel to be deleted cannot be found", channel->GetChannelId());
 			return false;
 		}
 
 		lock.unlock();
 
 		// Delete from Application
-		if(stream->DoesBelongApplication())
+		if(channel->DoesBelongApplication())
 		{
-			auto application = stream->GetApplication();
+			auto application = channel->GetApplication();
 			if(application == nullptr)
 			{
 				// Something wrong
-				logte("Cannot find application to delete stream (%s)", stream->GetName().CStr());
+				logte("Cannot find application to delete stream (%s)", channel->GetName().CStr());
 				return false;
 			}
 
-			application->DeleteStream(stream);
+			application->DeleteStream(channel);
 		}
 
 		return true;
+	}
+
+	bool PushProvider::OnChannelDeleted(uint32_t channel_id)
+	{
+		return OnChannelDeleted(GetChannel(channel_id));
 	}
 
 	bool PushProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
@@ -165,5 +162,57 @@ namespace pvd
 			
 		}
 		return true;
+	}
+
+	bool PushProvider::StartTimer()
+	{
+		_stop_timer_thread_flag = false;
+		_timer_thread = std::thread(&PushProvider::TimerThread, this);
+
+		return true;
+	}
+
+	bool PushProvider::StopTimer()
+	{
+		_stop_timer_thread_flag = true;
+		if(_timer_thread.joinable())
+		{
+			_timer_thread.join();
+		}
+
+		return true;
+	}
+
+	void PushProvider::OnTimer(const std::shared_ptr<PushStream> &channel)
+	{
+		// For child function
+	}
+
+	void PushProvider::SetChannelTimeout(const std::shared_ptr<PushStream> &channel, time_t seconds)
+	{
+		channel->SetTimeoutSec(seconds);
+	}
+
+	void PushProvider::TimerThread()
+	{
+		std::shared_lock<std::shared_mutex> lock(_channels_lock, std::defer_lock);
+
+		while(_stop_timer_thread_flag == false)
+		{
+			lock.lock();
+			auto channels = _channels;
+			lock.unlock();
+
+			for(const auto &x : _channels)
+			{
+				auto channel = x.second;
+				if(channel->IsTimedOut())
+				{
+					OnTimer(channel);
+				}
+			}
+
+			sleep(1);
+		}
 	}
 }

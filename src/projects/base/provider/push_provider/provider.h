@@ -53,11 +53,24 @@ namespace pvd
 
 		bool OnSignallingChannelCreated(uint32_t channel_id, const std::shared_ptr<pvd::PushStream> &channel);
 		bool OnDataReceived(uint32_t channel_id, const std::shared_ptr<const ov::Data> &data);
-		bool OnChannelDeleted(uint32_t channel_id, const std::shared_ptr<const ov::Error> &error);
-
+		bool OnChannelDeleted(uint32_t channel_id);
+		bool OnChannelDeleted(const std::shared_ptr<pvd::PushStream> &channel);
 		std::shared_ptr<PushStream> GetChannel(uint32_t channel_id);
 
+		bool StartTimer();
+		bool StopTimer();
+		virtual void OnTimer(const std::shared_ptr<PushStream> &channel);
+
+		// Timer is updated when OnDataReceived is called
+		// Setting seconds to 0 disables timer
+		void SetChannelTimeout(const std::shared_ptr<PushStream> &channel, time_t seconds);
+
     private:
+		void TimerThread();
+
+		bool _stop_timer_thread_flag;
+		std::thread _timer_thread;
+
 		// All streams (signalling streams + data streams)
 		std::shared_mutex _channels_lock;
 		// channel_id : stream

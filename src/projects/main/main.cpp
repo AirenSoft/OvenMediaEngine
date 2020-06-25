@@ -168,6 +168,7 @@ int main(int argc, char *argv[])
 	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
 
 	// Initialize Providers
+	INIT_MODULE(mpegts_provider, "MPEG-TS Provider", pvd::MpegTsProvider::Create(*server_config, media_router));
 	INIT_MODULE(rtmp_provider, "RTMP Provider", pvd::RtmpProvider::Create(*server_config, media_router));
 	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
 	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
@@ -203,6 +204,7 @@ int main(int argc, char *argv[])
 	// Relase all modules
 	monitor->Release();
 
+	RELEASE_MODULE(mpegts_provider, "MPEG-TS Provider");
 	RELEASE_MODULE(rtmp_provider, "RTMP Provider");
 	RELEASE_MODULE(ovt_provider, "OVT Provider");
 	RELEASE_MODULE(rtspc_provider, "RTSPC Provider");

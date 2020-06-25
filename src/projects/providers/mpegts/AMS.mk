@@ -4,7 +4,8 @@ include $(DEFAULT_VARIABLES)
 LOCAL_STATIC_LIBRARIES := \
 	application \
 	ovlibrary \
-	provider 
+	provider \
+	mpegts_module
 	
 LOCAL_PREBUILT_LIBRARIES := \
 
@@ -13,7 +14,7 @@ LOCAL_LDFLAGS := \
     -ldl \
     -lz
  
-LOCAL_TARGET := rtmp_provider
+LOCAL_TARGET := mpegts_provider
 
 LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES) $(call get_sub_source_list,chunk)
 LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES) $(call get_sub_source_list,chunk)

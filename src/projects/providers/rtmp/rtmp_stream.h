@@ -35,15 +35,11 @@ namespace pvd
 	{
 	public:
 		static std::shared_ptr<RtmpStream> Create(StreamSourceType source_type, uint32_t channel_id, const std::shared_ptr<ov::Socket> &client_socket, const std::shared_ptr<PushProvider> &provider);
-
+		
 		explicit RtmpStream(StreamSourceType source_type, uint32_t channel_id, std::shared_ptr<ov::Socket> client_socket, const std::shared_ptr<PushProvider> &provider);
 		~RtmpStream() final;
 
-		bool Start() override;
 		bool Stop() override;
-
-		bool ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts);
-		bool ConvertToAudioData(const std::shared_ptr<ov::Data> &data);
 
 		// ------------------------------------------
 		// Implementation of PushStream
@@ -55,6 +51,10 @@ namespace pvd
 		bool OnDataReceived(const std::shared_ptr<const ov::Data> &data) override;
 
 	protected:
+		bool Start() override;
+
+		bool ConvertToVideoData(const std::shared_ptr<ov::Data> &data, int64_t &cts);
+		bool ConvertToAudioData(const std::shared_ptr<ov::Data> &data);
 		
 	private:
 		// AMF Event
