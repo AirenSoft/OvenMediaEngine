@@ -29,7 +29,7 @@ enum class StreamSourceType : int8_t
 	Rtmp,
 	Rtsp,
 	RtspPull,
-	MpegTS,
+	Mpegts,
 	Transcoder,
 };
 
@@ -46,7 +46,7 @@ enum class ProviderType : int8_t
 	Rtsp,
 	RtspPull,
 	Ovt,
-	MpegTS,
+	Mpegts,
 };
 
 enum class PublisherType : int8_t

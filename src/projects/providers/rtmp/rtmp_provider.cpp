@@ -51,7 +51,7 @@ namespace pvd
 		}
 
 		auto server = GetServerConfig();
-		auto rtmp_address = ov::SocketAddress(server.GetIp(), static_cast<uint16_t>(server.GetBind().GetProviders().GetRtmpPort()));
+		auto rtmp_address = ov::SocketAddress(server.GetIp(), static_cast<uint16_t>(server.GetBind().GetProviders().GetRtmp().GetPort().GetPort()));
 
 		_physical_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Tcp, rtmp_address);
 		if (_physical_port == nullptr)

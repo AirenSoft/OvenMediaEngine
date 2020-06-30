@@ -8,26 +8,37 @@
 //==============================================================================
 #pragma once
 
-#include "ice_candidate.h"
-
 namespace cfg
 {
 	namespace bind
 	{
 		namespace pub
 		{
-			struct IceCandidates : public Item
+			struct Signalling : public Item
 			{
-				CFG_DECLARE_REF_GETTER_OF(GetIceCandidateList, _ice_candidate_list);
+				explicit Signalling(const char *port)
+					: _port(port)
+				{
+				}
+
+				Signalling(const char *port, const char *tls_port)
+					: _port(port),
+					  _tls_port(tls_port)
+				{
+				}
+
+				CFG_DECLARE_REF_GETTER_OF(GetPort, _port);
+				CFG_DECLARE_REF_GETTER_OF(GetTlsPort, _tls_port);
 
 			protected:
 				void MakeParseList() override
 				{
-					RegisterValue<Optional>("IceCandidate", &_ice_candidate_list);
+					RegisterValue<Optional>("Port", &_port);
+					RegisterValue<Optional>("TlsPort", &_tls_port);
 				}
 
-				std::vector<IceCandidate> _ice_candidate_list{
-					IceCandidate("*:10000-10005/udp")};
+				SingularPort _port;
+				SingularPort _tls_port;
 			};
 		}  // namespace pub
 	}	   // namespace bind

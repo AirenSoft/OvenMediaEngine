@@ -8,12 +8,23 @@
 //==============================================================================
 #pragma once
 
-#include "publisher.h"
+#include "./stream.h"
 
 namespace cfg
 {
-	struct OvtPublisher : public Publisher
+	namespace mpegts
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Ovt)
-	};
+		struct StreamMap : public Item
+		{
+			CFG_DECLARE_REF_GETTER_OF(GetStreamList, _stream_list)
+
+		protected:
+			void MakeParseList() override
+			{
+				RegisterValue("Stream", &_stream_list);
+			}
+
+			std::vector<Stream> _stream_list;
+		};
+	}  // namespace mpegts
 }  // namespace cfg

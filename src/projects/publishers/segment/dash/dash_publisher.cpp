@@ -29,8 +29,10 @@ DashPublisher::DashPublisher(PrivateToken token,
 
 bool DashPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
 {
+	auto &dash = GetServerConfig().GetBind().GetPublishers().GetDash();
+
 	return SegmentPublisher::Start(http_server_manager,
-								   GetServerConfig().GetBind().GetPublishers().GetDash(),
+								   dash.GetPort(), dash.GetTlsPort(),
 								   std::make_shared<DashStreamServer>());
 }
 

@@ -14,6 +14,6 @@ namespace cfg
 {
 	struct RtspProvider : public Provider
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(ProviderType, GetType, ProviderType::Rtsp)
+		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Rtsp)
 	};
 }

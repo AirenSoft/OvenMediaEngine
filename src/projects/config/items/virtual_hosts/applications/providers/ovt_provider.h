@@ -14,6 +14,6 @@ namespace cfg
 {
 	struct OvtProvider : public Provider
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(ProviderType, GetType, ProviderType::Ovt)
+		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Ovt)
 	};
 }

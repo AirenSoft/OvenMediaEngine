@@ -36,17 +36,18 @@ bool OvtPublisher::Start()
 
 	if (origin.IsParsed())
 	{
-		int port = origin.GetPort();
+		auto &port_config = origin.GetPort();
+		int port = port_config.GetPort();
 
 		if (port > 0)
 		{
 			const ov::String &ip = server_config.GetIp();
 			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
 
-			_server_port = PhysicalPortManager::Instance()->CreatePort(origin.GetSocketType(), address);
+			_server_port = PhysicalPortManager::Instance()->CreatePort(port_config.GetSocketType(), address);
 			if (_server_port != nullptr)
 			{
-				logti("Ovt Publisher has started listening on %s", address.ToString().CStr());
+				logti("%s is listening on %s", GetPublisherName(), address.ToString().CStr());
 				_server_port->AddObserver(this);
 			}
 			else

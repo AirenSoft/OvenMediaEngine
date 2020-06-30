@@ -46,8 +46,12 @@ bool WebRtcPublisher::Start()
 		return true;
 	}
 
-	auto port = static_cast<uint16_t>(webrtc_port_info.GetSignallingPort());
-	auto tls_port = static_cast<uint16_t>(webrtc_port_info.GetSignallingTlsPort());
+	auto &signalling_config = webrtc_port_info.GetSignalling();
+	auto &port_config = signalling_config.GetPort();
+	auto &tls_port_config = signalling_config.GetTlsPort();
+
+	auto port = static_cast<uint16_t>(port_config.GetPort());
+	auto tls_port = static_cast<uint16_t>(tls_port_config.GetPort());
 	bool has_port = (port != 0);
 	bool has_tls_port = (tls_port != 0);
 
@@ -79,7 +83,8 @@ bool WebRtcPublisher::Start()
 
 	if (result)
 	{
-		logti("WebRTC Publisher has started listening on %s%s%s%s...",
+		logti("%s is listening on %s%s%s%s...",
+			  GetPublisherName(),
 			  has_port ? signalling_address.ToString().CStr() : "",
 			  (has_port && has_tls_port) ? ", " : "",
 			  has_tls_port ? "TLS: " : "",

@@ -11,7 +11,7 @@
 
 #include <modules/rtc_signalling/rtc_ice_candidate.h>
 
-std::shared_ptr<IcePort> IcePortManager::CreatePort(const cfg::IceCandidates &ice_candidates, std::shared_ptr<IcePortObserver> observer)
+std::shared_ptr<IcePort> IcePortManager::CreatePort(const cfg::bind::pub::IceCandidates &ice_candidates, std::shared_ptr<IcePortObserver> observer)
 {
 	std::shared_ptr<IcePort> ice_port = nullptr;
 
@@ -76,7 +76,7 @@ bool IcePortManager::ReleasePort(std::shared_ptr<IcePort> ice_port, std::shared_
 	return true;
 }
 
-bool IcePortManager::GenerateIceCandidates(const cfg::IceCandidates &ice_candidates, std::vector<RtcIceCandidate> *parsed_ice_candidate_list)
+bool IcePortManager::GenerateIceCandidates(const cfg::bind::pub::IceCandidates &ice_candidates, std::vector<RtcIceCandidate> *parsed_ice_candidate_list)
 {
 	auto &list = ice_candidates.GetIceCandidateList();
 

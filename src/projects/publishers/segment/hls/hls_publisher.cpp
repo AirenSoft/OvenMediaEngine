@@ -31,8 +31,10 @@ HlsPublisher::HlsPublisher(PrivateToken token,
 
 bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
 {
+	auto &hls_config = GetServerConfig().GetBind().GetPublishers().GetHls();
+
 	return SegmentPublisher::Start(http_server_manager,
-								   GetServerConfig().GetBind().GetPublishers().GetHls(),
+								   hls_config.GetPort(), hls_config.GetTlsPort(),
 								   std::make_shared<HlsStreamServer>());
 }
 

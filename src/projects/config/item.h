@@ -8,36 +8,43 @@
 //==============================================================================
 #pragma once
 
-#include "value.h"
-
 #include <utility>
 
-// virtual int GetInt() const { ... }
-#define CFG_DECLARE_VIRTUAL_GETTER_OF(type, function_name, variable_name) \
-	virtual type function_name() const                                    \
-	{                                                                     \
-		return variable_name;                                             \
+#include "value.h"
+
+// virtual decltype(int_value) GetInt() const { return int_value; }
+#define CFG_DECLARE_VIRTUAL_REF_GETTER_OF(function_name, variable_name) \
+	virtual const decltype(variable_name) &function_name() const        \
+	{                                                                   \
+		return variable_name;                                           \
 	}
 
-// int GetInt() const { ... }
+// auto GetInt() const { return int_value; }
 #define CFG_DECLARE_GETTER_OF(function_name, variable_name) \
 	auto function_name() const                              \
 	{                                                       \
 		return variable_name;                               \
 	}
 
-// const Object &GetObject() const { ... }
+// const auto &GetInt() const { return int_value; }
 #define CFG_DECLARE_REF_GETTER_OF(function_name, variable_name) \
 	const auto &function_name() const                           \
 	{                                                           \
 		return variable_name;                                   \
 	}
 
-// int GetInt() const override { ... }
-#define CFG_DECLARE_OVERRIDED_GETTER_OF(type, function_name, variable_name) \
-	type function_name() const override                                     \
-	{                                                                       \
-		return variable_name;                                               \
+// decltype(int_value) GetInt() const override { return int_value; }
+#define CFG_DECLARE_OVERRIDED_GETTER_OF(function_name, variable_name) \
+	decltype(variable_name) function_name() const override            \
+	{                                                                 \
+		return variable_name;                                         \
+	}
+
+// const decltype(int_value) &GetInt() const override { return int_value; }
+#define CFG_DECLARE_OVERRIDED_REF_GETTER_OF(function_name, variable_name) \
+	const decltype(variable_name) &function_name() const override         \
+	{                                                                     \
+		return variable_name;                                             \
 	}
 
 namespace cfg
@@ -271,4 +278,4 @@ namespace cfg
 
 		Item *_parent = nullptr;
 	};
-};  // namespace cfg
+};	// namespace cfg

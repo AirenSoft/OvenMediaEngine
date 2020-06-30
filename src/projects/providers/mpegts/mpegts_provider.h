@@ -26,10 +26,10 @@ namespace pvd
 	class MpegTsStreamPortItem
 	{
 	public:
-		MpegTsStreamPortItem(uint16_t port, const ov::String &app_name, const ov::String &stream_name, const std::shared_ptr<PhysicalPort> &physical_port)
+		MpegTsStreamPortItem(uint16_t port, const ov::String &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<PhysicalPort> &physical_port)
 		{
 			_port = port;
-			_app_name = app_name;
+			_vhost_app_name = vhost_app_name;
 			_stream_name = stream_name;
 			_physical_port = physical_port;
 		}
@@ -39,9 +39,9 @@ namespace pvd
 			return _port;
 		}
 
-		const ov::String& GetAppName()
+		const ov::String& GetVhostAppName()
 		{
-			return _app_name;
+			return _vhost_app_name;
 		}
 
 		const ov::String& GetStreamName()
@@ -77,7 +77,7 @@ namespace pvd
 
 	private:
 		uint16_t _port = 0;
-		ov::String _app_name;
+		ov::String _vhost_app_name;
 		ov::String	_stream_name;
 		std::shared_ptr<PhysicalPort> _physical_port = nullptr;
 
@@ -106,15 +106,19 @@ namespace pvd
 
 		ProviderType GetProviderType() const override
 		{
-			return ProviderType::MpegTS;
+			return ProviderType::Mpegts;
 		}
 
 		const char* GetProviderName() const override
 		{
-			return "MpegTSProvider";
+			return "MpegtsProvider";
 		}
 	
 	protected:
+		// stream_map->key: <port, type>
+		// stream_map->value: <vhost_app_name, stream_name>
+		bool PrepareStreamList(const cfg::Server &server_config, std::map<std::tuple<int, ov::SocketType>, std::tuple<ov::String, ov::String>> *stream_map);
+
 		//--------------------------------------------------------------------
 		// Implementation of Provider's pure virtual functions
 		//--------------------------------------------------------------------

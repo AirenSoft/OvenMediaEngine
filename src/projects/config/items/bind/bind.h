@@ -8,24 +8,27 @@
 //==============================================================================
 #pragma once
 
-#include "providers/providers.h"
-#include "publishers/publishers.h"
+#include "./providers/providers.h"
+#include "./publishers/publishers.h"
 
 namespace cfg
 {
-	struct Bind : public Item
+	namespace bind
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
-		CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
-
-	protected:
-		void MakeParseList() override
+		struct Bind : public Item
 		{
-			RegisterValue("Providers", &_providers);
-			RegisterValue("Publishers", &_publishers);
-		}
+			CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
+			CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
 
-		BindProviders _providers;
-		BindPublishers _publishers;
-	};
+		protected:
+			void MakeParseList() override
+			{
+				RegisterValue("Providers", &_providers);
+				RegisterValue("Publishers", &_publishers);
+			}
+
+			pvd::Providers _providers;
+			pub::Publishers _publishers;
+		};
+	}  // namespace bind
 }  // namespace cfg

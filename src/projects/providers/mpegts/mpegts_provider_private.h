@@ -8,4 +8,4 @@
 //==============================================================================
 #pragma once
 
-#define OV_LOG_TAG "MpegTSProvider"
+#define OV_LOG_TAG "MpegtsProvider"

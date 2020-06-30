@@ -10,22 +10,28 @@
 
 namespace cfg
 {
-	struct IceCandidate : public Item
+	namespace bind
 	{
-		IceCandidate() = default;
-		explicit IceCandidate(const char *candidate)
-			: _candidate(candidate)
+		namespace pub
 		{
-		}
+			struct IceCandidate : public Item
+			{
+				IceCandidate() = default;
+				explicit IceCandidate(const char *candidate)
+					: _candidate(candidate)
+				{
+				}
 
-		CFG_DECLARE_REF_GETTER_OF(GetCandidate, _candidate);
+				CFG_DECLARE_REF_GETTER_OF(GetCandidate, _candidate);
 
-	protected:
-		void MakeParseList() override
-		{
-			RegisterValue<ValueType::Text>(nullptr, &_candidate);
-		}
+			protected:
+				void MakeParseList() override
+				{
+					RegisterValue<ValueType::Text>(nullptr, &_candidate);
+				}
 
-		ov::String _candidate;
-	};
+				ov::String _candidate;
+			};
+		}  // namespace pub
+	}	   // namespace bind
 }  // namespace cfg

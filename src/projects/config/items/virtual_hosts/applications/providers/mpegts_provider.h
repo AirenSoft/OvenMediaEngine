@@ -8,26 +8,25 @@
 //==============================================================================
 #pragma once
 
+#include "mpegts/stream_map/stream_map.h"
 #include "provider.h"
 
 namespace cfg
 {
-	struct RtspPullProvider : public Provider
+	struct MpegtsProvider : public Provider
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::RtspPull)
+		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Mpegts)
 
-		CFG_DECLARE_GETTER_OF(IsBlockDuplicateStreamName, _is_block_duplicate_stream_name)
+		CFG_DECLARE_REF_GETTER_OF(GetStreamMap, _stream_map)
 
 	protected:
 		void MakeParseList() override
 		{
 			Provider::MakeParseList();
 
-			RegisterValue<Optional>("BlockDuplicateStreamName", &_is_block_duplicate_stream_name);
+			RegisterValue<Optional>("StreamMap", &_stream_map);
 		}
 
-		// true: block(disconnect) new incoming stream
-		// false: don't block new incoming stream
-		bool _is_block_duplicate_stream_name = true;
+		mpegts::StreamMap _stream_map;
 	};
 }  // namespace cfg
