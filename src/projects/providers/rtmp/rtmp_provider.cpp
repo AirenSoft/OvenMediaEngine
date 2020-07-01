@@ -90,7 +90,7 @@ namespace pvd
 		auto channel_id = remote->GetId();
 		auto stream = RtmpStream::Create(StreamSourceType::Rtmp, channel_id, remote, GetSharedPtrAs<pvd::PushProvider>());
 
-		logti("A RTMP client has connected from %s", remote->ToString().CStr());
+		logti("A RTMP client has connected from %d - %s", remote->GetId(), remote->ToString().CStr());
 
 		PushProvider::OnSignallingChannelCreated(remote->GetId(), stream);
 	}

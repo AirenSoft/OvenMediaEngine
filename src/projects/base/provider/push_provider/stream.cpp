@@ -18,6 +18,7 @@ namespace pvd
 	PushStream::PushStream(StreamSourceType source_type, uint32_t channel_id, const std::shared_ptr<PushProvider> &provider)
 		: Stream(source_type)
 	{
+		SetId(channel_id);
 		_channel_id = channel_id;
 		_provider = provider;
 	}
