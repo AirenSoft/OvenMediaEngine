@@ -44,7 +44,7 @@
 					<!-- <TLSPort>3334</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
-					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10000-10005/udp}</IceCandidate>
+					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006-10010/udp}</IceCandidate>
 				</IceCandidates>
 			</WebRTC>
 		</Publishers>
@@ -117,6 +117,22 @@
 						<OVT />
 						<RTMP />
 						<RTSPPull />
+						<MPEGTS>
+							<StreamMap>
+								<!--
+									Set the stream name of the client connected to the port to "stream_${Port}"
+									For example, if a client connets to port 4000, OME creates a "stream_4000" stream
+								-->
+								<Stream>
+									<Name>stream_${Port}</Name>
+									<Port>4000-4001,4004</Port>
+								</Stream>
+								<Stream>
+									<Name>stream_4005</Name>
+									<Port>4005</Port>
+								</Stream>
+							</StreamMap>
+						</MPEGTS>
 					</Providers>
 					<Publishers>
 						<ThreadCount>8</ThreadCount>
