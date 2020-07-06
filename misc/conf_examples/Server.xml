@@ -16,7 +16,6 @@
 			<MPEGTS>
 				<!--
 					Listen on port 4000,4001,4004,4005
-
 					This is just a demonstration to show that you can configure the port in several ways
 				-->
 				<Port>4000-4001,4004,4005/udp</Port>
@@ -136,7 +135,7 @@
 					</Encodes>
 					<Streams>
 						<Stream>
-							<Name>${OriginStreamName}_o</Name>
+							<Name>${OriginStreamName}</Name>
 							<Profiles>
 								<Profile>bypass</Profile>
 								<Profile>opus</Profile>
@@ -150,7 +149,6 @@
 							<StreamMap>
 								<!--
 									Set the stream name of the client connected to the port to "stream_${Port}"
-									
 									For example, if a client connets to port 4000, OME creates a "stream_4000" stream
 								-->
 								<Stream>
@@ -158,7 +156,7 @@
 									<Port>4000-4001,4004</Port>
 								</Stream>
 								<Stream>
-									<Name>stream_name_for_4005_port</Name>
+									<Name>stream_4005</Name>
 									<Port>4005</Port>
 								</Stream>
 							</StreamMap>
