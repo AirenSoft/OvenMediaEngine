@@ -153,7 +153,7 @@
 								-->
 								<Stream>
 									<Name>stream_${Port}</Name>
-									<Port>4000-4001,4004</Port>
+									<Port>4000,4001-4004</Port>
 								</Stream>
 								<Stream>
 									<Name>stream_4005</Name>
