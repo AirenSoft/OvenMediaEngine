@@ -12,6 +12,7 @@
 #include <base/provider/pull_provider/application.h>
 #include <modules/ovt_packetizer/ovt_packet.h>
 #include <modules/ovt_packetizer/ovt_depacketizer.h>
+#include "modules/codec_analyzer/aac/aac.h"
 
 extern "C"
 {
@@ -67,5 +68,9 @@ namespace pvd
 		double _origin_response_time_msec = 0;
 
 		std::shared_ptr<mon::StreamMetrics> _stream_metrics;
+
+	private:
+		AacObjectType GetAacObjectType(int32_t ff_profile);
+		SamplingFrequencies GetAacSamplingFrequencies(int32_t ff_samplerate);
 	};
 }
