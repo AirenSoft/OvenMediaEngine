@@ -72,3 +72,13 @@ uint32_t TranscodeFilter::GetOutputBufferSize()
 {
 	return _impl->GetOutputBufferSize();
 }
+
+common::Timebase TranscodeFilter::GetInputTimebase() const
+{
+	return _impl->GetInputTimebase();
+}
+
+common::Timebase TranscodeFilter::GetOutputTimebase() const
+{
+	return _impl->GetOutputTimebase();
+}

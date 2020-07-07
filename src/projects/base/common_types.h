@@ -17,6 +17,7 @@
 #include <tuple>
 #include <vector>
 #include <iostream>
+#include <functional>
 
 #include "ovlibrary/ovlibrary.h"
 #include "media_route/media_type.h"

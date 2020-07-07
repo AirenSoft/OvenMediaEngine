@@ -249,20 +249,11 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 		// logte("opus pts : %lld, queue:%d, buffer:%d", _current_pts, _input_buffer.size(), _buffer->GetLength());
 		// *result = TranscodeResult::DataReady;
 		
-		std::unique_lock<std::mutex> mlock2(_mutex);
-
-		_output_buffer.push_back(std::move(packet_buffer));	
-
+		SendOutputBuffer(std::move(packet_buffer));
+	
 		duration = 0L;		
 	}
 
-}
-
-void OvenCodecImplAvcodecEncOpus::SendBuffer(std::shared_ptr<const MediaFrame> frame)
-{
-	// logtp("[-> RAW DATA for OPUS]\n%s", ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
-
-	TranscodeEncoder::SendBuffer(std::move(frame));
 }
 
 std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)

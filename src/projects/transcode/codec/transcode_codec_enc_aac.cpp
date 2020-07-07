@@ -189,13 +189,10 @@ void OvenCodecImplAvcodecEncAAC::ThreadEncode()
 				auto packet_buffer = std::make_shared<MediaPacket>(common::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts / 1000, _packet->dts / 1000, _packet->duration, MediaPacketFlag::Key);
 
 				// logte("ENCODED:: %lld, %lld", packet_buffer->GetPts(), _packet->pts);
+				
 				::av_packet_unref(_packet);
 
-				std::unique_lock<std::mutex> mlock(_mutex);
-
-				_output_buffer.push_back(std::move(packet_buffer));
-
-				mlock.unlock();
+				SendOutputBuffer(std::move(packet_buffer));
 			}
 		}
 

@@ -37,12 +37,11 @@ enum class TranscodeResult : int32_t
 	ParseError = -3,
 	// There is no data to process
 	NoData = -2,
-	// 파일의 끝
+	// End of file
 	EndOfFile = -1,
-
-	// 프레임 디코딩 완료, 아직 디코딩할 데이터가 있음
+	// Decode/Encoder Complete and Reamin more data
 	DataReady = 0,
-	// 포맷이 변경됨
+	// Change Output Format
 	FormatChanged = 1,
 };
 

@@ -25,6 +25,14 @@ public:
 		return AV_CODEC_ID_AAC;
 	}
 
+	std::shared_ptr<MediaFrame> Dequeue(TranscodeResult *result);
+	void Enqueue(TranscodeResult *result);
+
+	const MediaPacket *cur_pkt = nullptr;
+	size_t _pkt_offset = 0;
+	std::shared_ptr<const ov::Data> cur_data = nullptr;
+
+	int64_t _last_pkt_pts = 0;
 	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
 
 protected:

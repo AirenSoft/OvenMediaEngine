@@ -41,6 +41,11 @@ std::shared_ptr<TranscodeContext>& TranscodeDecoder::GetContext()
 	return _input_context;
 }
 
+common::Timebase TranscodeDecoder::GetTimebase() const
+{
+	return _input_context->GetTimeBase();
+}
+
 std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::Stream &info, common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
 {
 	std::shared_ptr<TranscodeDecoder> decoder = nullptr;

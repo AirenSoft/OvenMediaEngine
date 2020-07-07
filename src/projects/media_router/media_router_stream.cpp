@@ -14,7 +14,8 @@
 
 using namespace common;
 
-#define PTS_CORRECT_THRESHOLD_US	5000	
+// #define PTS_CORRECT_THRESHOLD_US	5000	
+#define PTS_CORRECT_THRESHOLD_US	5000
 
 MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream) :
 	_media_packets(nullptr, 100)
@@ -39,7 +40,7 @@ MediaRouteStream::~MediaRouteStream()
 
 	_media_packet_stored.clear();
 
-	_media_packets.Clear();
+	// _media_packets.Clear();
 
 	_stat_recv_pkt_lpts.clear();
 	_stat_recv_pkt_ldts.clear();
@@ -49,6 +50,8 @@ MediaRouteStream::~MediaRouteStream()
 
 	_pts_correct.clear();
 	_pts_avg_inc.clear();
+
+	logtd("Delete media route stream name(%s) id(%u) Completed", _stream->GetName().CStr(), _stream->GetId());	
 }
 
 std::shared_ptr<info::Stream> MediaRouteStream::GetStream()
@@ -144,6 +147,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	if (abs( scaled_timestamp_delta ) > PTS_CORRECT_THRESHOLD_US )
 	{
+		// TODO(soulk): I think all tracks should calibrate the PTS with the same value.
 		_pts_correct[track_id] = media_packet->GetPts() - _stat_recv_pkt_lpts[track_id] - _pts_avg_inc[track_id];
 
 #if 0
@@ -222,31 +226,29 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			{
 				int64_t corrected_pts = _pts_correct[track_id] * 1000 / track->GetTimeBase().GetDen();
 
-				pts_str.AppendFormat("last_pts(%lldms->%lldms), fist_diff(%5lldms), last_diff(%5lldms), delay(%5lldms), crt_pts : %lld"
+				pts_str.AppendFormat("last_pts: %lldms -> %lldms, crt_pts: %lld, delay: %5lldms"
 					, rescaled_last_pts
 					, rescaled_last_pts - corrected_pts
-					, first_delay
-					, last_delay
+					, corrected_pts
 					, first_delay - last_delay
-					, corrected_pts );
+					 );
 			}
 			else
 			{
-				pts_str.AppendFormat("last_pts(%lldms), fist_diff(%5lldms), last_diff(%5lldms), delay(%5lldms)"
+				pts_str.AppendFormat("last_pts: %lldms, delay: %5lldms"
 					, rescaled_last_pts
-					, first_delay
-					, last_delay
 					, first_delay - last_delay
 				);
 			}
 
-			temp_str.AppendFormat("\n\t[%d] track: %s(%d), %s, pkt_cnt: %lld, pkt_siz: %lldB"
+			temp_str.AppendFormat("\n\t[%d] track: %s(%d), %s, pkt_cnt: %6lld, pkt_siz: %sB"
 				, track_id
 				, track->GetMediaType()==MediaType::Video?"video":"audio"
 				, track->GetCodecId()
 				, pts_str.CStr()
 				, _stat_recv_pkt_count[track_id]
-				, _stat_recv_pkt_size[track_id]);
+				, ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr()
+			);
 		}
 
 		logtd("%s", temp_str.CStr());

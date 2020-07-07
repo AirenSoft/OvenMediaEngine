@@ -33,6 +33,9 @@ public:
 	uint32_t GetInputBufferSize();
 	uint32_t GetOutputBufferSize();
 
+	common::Timebase GetInputTimebase() const;
+	common::Timebase GetOutputTimebase() const;	
+
 private:
 	MediaFilterImpl *_impl;
 };
