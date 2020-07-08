@@ -226,6 +226,7 @@ bool BitstreamToAnnexB::Convert(const std::shared_ptr<ov::Data> &data, int64_t &
 	if(read_stream.Read(video_data, OV_COUNTOF(video_data)) != OV_COUNTOF(video_data))
 	{
 		logtw("Could not determine bit stream type");
+		
 		return false;
 	}
 
@@ -240,6 +241,7 @@ bool BitstreamToAnnexB::Convert(const std::shared_ptr<ov::Data> &data, int64_t &
 	if(read_stream.Read(&last_composition_byte) == 0)
 	{
 		logtw("Could not obtain composition time");
+
 		return false;
 	}
 
@@ -256,8 +258,10 @@ bool BitstreamToAnnexB::Convert(const std::shared_ptr<ov::Data> &data, int64_t &
 	if(codec_id != AvcCodecId::AVC)
 	{
 		logte("Not supported codec: %d", codec_id);
+
 		return false;
 	}
+	
 	//   8bit : AVCPacketType
 	auto packet_type = static_cast<AvcPacketType>(video_data[1]);
 	//   24bit - composition time
@@ -287,6 +291,7 @@ bool BitstreamToAnnexB::Convert(const std::shared_ptr<ov::Data> &data, int64_t &
 		case AvcFrameType::VideoInfo:
 			break;
 	}
+
 	return false;
 }
 

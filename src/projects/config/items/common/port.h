@@ -8,66 +8,56 @@
 //==============================================================================
 #pragma once
 
-#include <base/ovsocket/socket.h>
 #include <base/ovlibrary/converter.h>
+#include <base/ovsocket/socket.h>
+
+#include "../../item.h"
 
 namespace cfg
 {
+	template<typename Tport = int>
 	struct Port : public Item
 	{
+	protected:
+		ov::String _port;
+
+		Tport _port_value {};
+		ov::SocketType _socket_type = ov::SocketType::Unknown;
+
+	public:
+		Port() = default;
 		explicit Port(const char *port)
 			: _port(port)
 		{
 		}
 
-		CFG_DECLARE_VIRTUAL_GETTER_OF(int, GetPort, _port_value)
-		CFG_DECLARE_VIRTUAL_GETTER_OF(ov::SocketType, GetSocketType, _socket_type)
+		CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetPort, _port_value)
+		CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetSocketType, _socket_type)
 
 	protected:
-		void MakeParseList() override
+		static ov::SocketType GetSocketType(const ov::String &type)
 		{
-			RegisterValue<Optional>("Port", &_port, nullptr, [this]() -> bool {
-				_socket_type = ov::SocketType::Unknown;
+			ov::String uppercase_type = type.Trim().UpperCaseString();
 
-				_port_value = ov::Converter::ToInt32(_port);
+			if (uppercase_type == "TCP")
+			{
+				return ov::SocketType::Tcp;
+			}
+			else if (uppercase_type == "UDP")
+			{
+				return ov::SocketType::Udp;
+			}
+			else if (uppercase_type == "SRT")
+			{
+				return ov::SocketType::Srt;
+			}
 
-				if ((_port_value <= 0) || (_port_value >= 65536))
-				{
-					return false;
-				}
-
-				auto tokens = _port.Split("/");
-
-				if (tokens.size() != 2)
-				{
-					// Default: TCP
-					_socket_type = ov::SocketType::Tcp;
-				}
-				else
-				{
-					auto type = tokens[1].UpperCaseString();
-
-					if (type == "TCP")
-					{
-						_socket_type = ov::SocketType::Tcp;
-					}
-					else if (type == "UDP")
-					{
-						_socket_type = ov::SocketType::Udp;
-					}
-					else if (type == "SRT")
-					{
-						_socket_type = ov::SocketType::Srt;
-					}
-				}
-
-				return _socket_type != ov::SocketType::Unknown;
-			});
+			return ov::SocketType::Unknown;
 		}
 
-		ov::String _port;
-
-		int _port_value = 0;
-		ov::SocketType _socket_type = ov::SocketType::Unknown;
+		static bool IsValidPort(int port)
+		{
+			return (port > 0) && (port <= 65535);
+		}
 	};
 }  // namespace cfg

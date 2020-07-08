@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  RtmpProvider
+//  RtmpApplication
 //
 //  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
@@ -9,26 +9,47 @@
 
 #include "rtmp_application.h"
 #include "rtmp_stream.h"
+#include "rtmp_provider_private.h"
 
-#include "base/provider/application.h"
+#include "base/provider/push_provider/application.h"
 #include "base/info/stream.h"
 
-#define OV_LOG_TAG "RtmpApplication"
 
-std::shared_ptr<RtmpApplication> RtmpApplication::Create(const std::shared_ptr<Provider> &provider, const info::Application &application_info)
+namespace pvd
 {
-	auto application = std::make_shared<RtmpApplication>(provider, application_info);
-	application->Start();
-	return application;
-}
+	std::shared_ptr<RtmpApplication> RtmpApplication::Create(const std::shared_ptr<PushProvider> &provider, const info::Application &application_info)
+	{
+		auto application = std::make_shared<RtmpApplication>(provider, application_info);
+		application->Start();
+		return application;
+	}
 
-RtmpApplication::RtmpApplication(const std::shared_ptr<Provider> &provider, const info::Application &application_info)
-	: Application(provider, application_info)
-{
-}
+	RtmpApplication::RtmpApplication(const std::shared_ptr<PushProvider> &provider, const info::Application &application_info)
+		: PushApplication(provider, application_info)
+	{
+	}
 
-// Create Stream
-std::shared_ptr<pvd::Stream> RtmpApplication::CreatePushStream(const uint32_t stream_id, const ov::String &stream_name)
-{
-	return RtmpStream::Create(GetSharedPtrAs<pvd::Application>(), stream_id, stream_name);
+	bool RtmpApplication::JoinStream(const std::shared_ptr<PushStream> &stream)
+	{
+		// Check duplicatied stream name
+		// If there is a same stream name 
+		auto exist_stream = GetStreamByName(stream->GetName());
+		if(exist_stream != nullptr)
+		{
+			// Block
+			if(GetConfig().GetProviders().GetRtmpProvider().IsBlockDuplicateStreamName())
+			{
+				logti("Reject %s/%s stream it is a stream with a duplicate name.", GetName().CStr(), stream->GetName().CStr());		
+				return false;
+			}
+			else
+			{
+				// Disconnect exist stream
+				logti("Remove exist %s/%s stream because the stream with the same name is connected.", GetName().CStr(), stream->GetName().CStr());		
+				DeleteStream(exist_stream);
+			}
+		}
+
+		return PushApplication::JoinStream(stream);
+	}
 }

@@ -26,7 +26,7 @@ OvtStream::OvtStream(const std::shared_ptr<pub::Application> application,
 
 OvtStream::~OvtStream()
 {
-	logtd("OvtStream(%s/%s) has been terminated finally", GetApplication()->GetName().CStr() , GetName().CStr());
+	logtd("OvtStream(%s/%s) has been terminated finally", GetApplicationName() , GetName().CStr());
 }
 
 bool OvtStream::Start(uint32_t worker_count)
@@ -70,7 +70,7 @@ bool OvtStream::Start(uint32_t worker_count)
 	Json::Value 	json_root;
 	Json::Value		json_tracks;
 
-	json_root["appName"] = GetApplication()->GetName().CStr();
+	json_root["appName"] = GetApplicationName();
 	json_root["streamName"] = GetName().CStr();
 
 	for(auto &track_item : _tracks)

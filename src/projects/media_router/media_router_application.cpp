@@ -25,12 +25,13 @@ std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info:
 }
 
 MediaRouteApplication::MediaRouteApplication(const info::Application &application_info)
-	: _application_info(application_info)
+	: _application_info(application_info),
+	_indicator(nullptr, 100)
 {
 	logti("Created media route application. application id(%u), (%s)"
 		, _application_info.GetId(), _application_info.GetName().CStr());
 
-	_indicator.SetAlias(ov::String::FormatString("%s - Mediarouter Application Indicator", _application_info.GetName().CStr()));
+	_indicator.SetAlias(ov::String::FormatString("%s - MediaRouter Indicator Queue", _application_info.GetName().CStr()));
 }
 
 MediaRouteApplication::~MediaRouteApplication()
@@ -92,7 +93,7 @@ bool MediaRouteApplication::RegisterConnectorApp(
 	
 	_connectors.push_back(app_conn);
 
-	logti("Registered connector. %p app(%s) type(%d)"
+	logtd("Registered connector. %p app(%s) type(%d)"
 		, app_conn.get(), _application_info.GetName().CStr(),  app_conn->GetConnectorType());
 
 	return true;
@@ -135,7 +136,7 @@ bool MediaRouteApplication::RegisterObserverApp(
 
 	_observers.push_back(app_obsrv);
 
-	logti("Registered observer. %p app(%s) type(%d)"
+	logtd("Registered observer. %p app(%s) type(%d)"
 		, app_obsrv.get(), _application_info.GetName().CStr(), app_obsrv->GetObserverType());
 
 	return true;
@@ -227,8 +228,10 @@ bool MediaRouteApplication::OnCreateStream(
 		return false;
 	}
 
+
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamCreated(*stream_info);
+
 
 	// Notify all observers that a stream has been created
 	{
@@ -289,7 +292,7 @@ bool MediaRouteApplication::OnDeleteStream(
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamDeleted(*stream_info);
 
-	logtd("Deleted connector. type(%d), app(%s) stream(%s/%u)"
+	logtd("Notify connectors that stream has been deleted. type(%d), app(%s) stream(%s/%u)"
 		, app_conn->GetConnectorType(), _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 
 	auto connector_type = app_conn->GetConnectorType();
@@ -485,14 +488,7 @@ void MediaRouteApplication::MessageLooper()
 				{
 					if(observer_type == MediaRouteApplicationObserver::ObserverType::Publisher)
 					{
-						if (media_packet->GetMediaType() == MediaType::Video)
-						{
-							observer->OnSendVideoFrame(stream_info, media_packet);
-						}
-						else if (media_packet->GetMediaType() == MediaType::Audio)
-						{
-							observer->OnSendAudioFrame(stream_info, media_packet);
-						}
+						observer->OnSendFrame(stream_info, media_packet);
 					}
 				}
 			}
@@ -500,4 +496,6 @@ void MediaRouteApplication::MessageLooper()
 			lock.unlock();
 		}
 	}
+
+	logtd("MessageLooper thread has been stopped");
 }

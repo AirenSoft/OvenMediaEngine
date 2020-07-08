@@ -32,10 +32,7 @@ namespace pub
 		bool OnDeleteStream(const std::shared_ptr<info::Stream> &info) override;
 
 		// Queue에 데이터를 넣는다.
-		bool OnSendVideoFrame(const std::shared_ptr<info::Stream> &stream,
-							  const std::shared_ptr<MediaPacket> &media_packet) override;
-
-		bool OnSendAudioFrame(const std::shared_ptr<info::Stream> &stream,
+		bool OnSendFrame(const std::shared_ptr<info::Stream> &stream,
 							  const std::shared_ptr<MediaPacket> &media_packet) override;
 
 		// 수신된 Network Packet을 Application에 넣고 처리를 기다린다.

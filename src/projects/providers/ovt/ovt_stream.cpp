@@ -3,7 +3,7 @@
 //
 
 
-#include "media_router/bitstream/avc_video_packet_fragmentizer.h"
+#include "media_router/bitstream/bitstream_conv.h"
 #include "base/info/application.h"
 #include "ovt_stream.h"
 
@@ -11,7 +11,7 @@
 
 namespace pvd
 {
-	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::Application> &application, 
+	std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pvd::PullApplication> &application, 
 											const uint32_t stream_id, const ov::String &stream_name,
 					  						const std::vector<ov::String> &url_list)
 	{
@@ -31,8 +31,8 @@ namespace pvd
 		return stream;
 	}
 
-	OvtStream::OvtStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
-			: pvd::Stream(application, stream_info)
+	OvtStream::OvtStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
+			: pvd::PullStream(application, stream_info)
 	{
 		_last_request_id = 0;
 		_state = State::IDLE;
@@ -85,7 +85,7 @@ namespace pvd
 		elapsed = end - begin;
 		_origin_response_time_msec = elapsed.count();
 
-		return pvd::Stream::Start();
+		return pvd::PullStream::Start();
 	}
 	
 	bool OvtStream::Play()
@@ -102,7 +102,7 @@ namespace pvd
 			_stream_metrics->SetOriginResponseTimeMSec(_origin_response_time_msec);
 		}
 
-		return pvd::Stream::Play();
+		return pvd::PullStream::Play();
 	}
 
 	bool OvtStream::Stop()
@@ -116,10 +116,14 @@ namespace pvd
 		if(!RequestStop())
 		{
 			// Force terminate 
-			_state = State::ERROR;
+			SetState(State::ERROR);
+		}
+		else
+		{
+			SetState(State::STOPPED);
 		}
 	
-		return pvd::Stream::Stop();
+		return pvd::PullStream::Stop();
 	}
 
 	bool OvtStream::ConnectOrigin()
@@ -674,7 +678,7 @@ namespace pvd
 		return _client_socket.GetSocket().GetSocket();
 	}
 
-	Stream::ProcessMediaResult OvtStream::ProcessMediaPacket()
+	PullStream::ProcessMediaResult OvtStream::ProcessMediaPacket()
 	{
 		// Non block
 		auto result = ProceedToReceivePacket(true);
@@ -700,7 +704,7 @@ namespace pvd
 			logte("The origin server may have problems. Try to terminate %s/%s(%u) stream", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			_state = State::ERROR;
-			return Stream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
+			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
 
 		if(packet->PayloadType() == OVT_PAYLOAD_TYPE_STOP)
@@ -709,7 +713,7 @@ namespace pvd
 			logti(" %s/%s(%u) OvtStream thread has finished gracefully", 
 				GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			_state = State::STOPPED;
-			return Stream::ProcessMediaResult::PROCESS_MEDIA_FINISH;
+			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FINISH;
 		}
 
 		if(packet->SessionId() != _session_id)
@@ -717,7 +721,7 @@ namespace pvd
 			logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			_state = State::ERROR;
-			return Stream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
+			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
 
 		if(packet->PayloadType() == OVT_PAYLOAD_TYPE_MEDIA_PACKET)
@@ -732,11 +736,10 @@ namespace pvd
 				auto track = GetTrack(media_packet->GetTrackId());
 				if(track->GetCodecId() == common::MediaCodecId::H264)
 				{
-					AvcVideoPacketFragmentizer fragmentizer;
-					fragmentizer.MakeHeader(media_packet);
+					BitstreamConv::MakeAVCFragmentHeader(media_packet);
 				}
 
-				_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
+				SendFrame(media_packet);
 			}
 		}
 		else
@@ -744,9 +747,9 @@ namespace pvd
 			logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			_state = State::ERROR;
-			return Stream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
+			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
 
-		return Stream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
+		return PullStream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
 	}
 }

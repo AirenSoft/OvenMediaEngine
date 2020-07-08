@@ -14,7 +14,7 @@ namespace cfg
 {
 	struct RtmpProvider : public Provider
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(ProviderType, GetType, ProviderType::Rtmp)
+		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Rtmp)
 
 		CFG_DECLARE_GETTER_OF(IsBlockDuplicateStreamName, _is_block_duplicate_stream_name)
 

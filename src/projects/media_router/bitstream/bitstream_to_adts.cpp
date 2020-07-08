@@ -21,6 +21,7 @@ BitstreamToADTS::BitstreamToADTS()
 
 BitstreamToADTS::~BitstreamToADTS()
 {
+	
 }
 
 BitstreamToADTS::AacProfile BitstreamToADTS::codec_aac_rtmp2ts(AacObjectType object_type)
@@ -40,18 +41,19 @@ BitstreamToADTS::AacProfile BitstreamToADTS::codec_aac_rtmp2ts(AacObjectType obj
 	}
 }
 
-uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
+int32_t BitstreamToADTS::Convert(const std::shared_ptr<ov::Data> &data)
 {
 	if(data->GetLength() == 0)
 	{
-		return 0;
+		// No Data
+		return -1;
 	}
 
 	uint8_t *pbuf = data->GetWritableDataAs<uint8_t>();
 
 	if(pbuf[0] == 0xff)
 	{
-		logtd("already ADTS type");
+		// Already ADTS Type
 		return data->GetLength();
 	}
 
@@ -60,14 +62,16 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 	[[maybe_unused]] uint8_t sound_type = sound_format & 0x01;
 	[[maybe_unused]] uint8_t sound_size = (sound_format >> 1) & 0x01;
 	[[maybe_unused]] uint8_t sound_rate = (sound_format >> 2) & 0x03;
+
 	uint8_t audio_codec_id = (sound_format >> 4) & 0x0f;
-
 	uint8_t aac_packet_type = pbuf[1];
-
 
 	if(audio_codec_id != AudioCodecIdAAC)
 	{
 		logtw("aac reqired. format=%d", audio_codec_id);
+
+		// Invalid data. 
+		return -1;
 	}
 
 	if(aac_packet_type == CodecAudioTypeSequenceHeader)
@@ -81,12 +85,11 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 		audioObjectType = (audioObjectType >> 3) & 0x1f;
 		aac_object = (AacObjectType)audioObjectType;
 
-#if 1
-		logtd("sound_type:%d, sound_size:%d, sound_rate:%d, audio_codec_id:%d, aac_packet_type:%d",
-	      sound_type, sound_size, sound_rate, audio_codec_id, aac_packet_type);
-#endif
+		logtd("sound_type:%d, sound_size:%d, sound_rate:%d, audio_codec_id:%d, aac_packet_type:%d"
+			,sound_type, sound_size, sound_rate, audio_codec_id, aac_packet_type);
 
-		logtd("audio object type = %d, aac_sample_rate = %d, aac_channels = %d", audioObjectType, aac_sample_rate, aac_channels);
+		logtd("audio object type = %d, aac_sample_rate = %d, aac_channels = %d"
+			, audioObjectType, aac_sample_rate, aac_channels);
 
 		_has_sequence_header = true;
 
@@ -94,13 +97,16 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 
 		data->Clear();
 
-		return 0;
+		return data->GetLength();
 	}
 	else if(aac_packet_type == CodecAudioTypeRawData)
 	{
 		if(_has_sequence_header == false)
 		{
-			return 0;
+			data->Clear();
+			
+			// return zero
+			return data->GetLength();	
 		}
 
 		int16_t aac_fixed_header_length = 2;
@@ -110,7 +116,7 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 		data->Erase(0, aac_fixed_header_length);
 		// pkt->_buf.erase(pkt->_buf.begin(), pkt->_buf.begin()+aac_fixed_header_length);
 
-		int16_t aac_raw_length = data->GetLength();    // 2바이트 헤더를 제외함
+		int16_t aac_raw_length = data->GetLength();    
 
 		////////////////////////////////////////////////////////////
 		// Append ADTS Header
@@ -160,7 +166,9 @@ uint32_t BitstreamToADTS::convert_to(const std::shared_ptr<ov::Data> &data)
 		return data->GetLength();
 	}
 
-	return 0;
+	// Unknown aac_packet_type
+
+	return -1;
 }
 
 // BitstreamSequenceInfoParsing

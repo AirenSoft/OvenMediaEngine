@@ -25,7 +25,7 @@ namespace pub
 
 		ov::String queue_name;
 
-		queue_name.Format("%s/%s/%s StreamWorker Queue", _parent->GetApplication()->GetApplicationTypeName(), _parent->GetApplication()->GetName().CStr(), _parent->GetName().CStr());
+		queue_name.Format("%s/%s/%s StreamWorker Queue", _parent->GetApplicationTypeName(), _parent->GetApplicationName(), _parent->GetName().CStr());
 		_packet_queue.SetAlias(queue_name.CStr());
 		
 		_stop_thread_flag = false;
@@ -43,6 +43,7 @@ namespace pub
 
 		_stop_thread_flag = true;
 		// Generate Event
+		_packet_queue.Stop();
 		_queue_event.Notify();
 		if(_worker_thread.joinable())
 		{
@@ -62,6 +63,12 @@ namespace pub
 
 	bool StreamWorker::AddSession(std::shared_ptr<Session> session)
 	{
+		// Cannot add session after StreamWorker is stopped
+		if (_stop_thread_flag)
+		{
+			return true;
+		}
+
 		std::lock_guard<std::shared_mutex> lock(_session_map_mutex);
 		_sessions[session->GetId()] = session;
 
@@ -70,8 +77,13 @@ namespace pub
 
 	bool StreamWorker::RemoveSession(session_id_t id)
 	{
-		// 해당 Session ID를 가진 StreamWorker를 찾아서 삭제한다.
-		std::lock_guard<std::shared_mutex> lock(_session_map_mutex);
+		// Cannot remove session after StreamWorker is stopped
+		if (_stop_thread_flag)
+		{
+			return true;
+		}
+
+		std::unique_lock<std::shared_mutex> lock(_session_map_mutex);
 		if (_sessions.count(id) <= 0)
 		{
 			logte("Cannot find session : %u", id);
@@ -79,10 +91,9 @@ namespace pub
 		}
 
 		auto session = _sessions[id];
-		// Session에 더이상 패킷을 전달하지 않는 것이 먼저다.
 		_sessions.erase(id);
+		lock.unlock();
 
-		// Session 동작을 중지한다.
 		session->Stop();
 
 		return true;
@@ -197,7 +208,7 @@ namespace pub
 			_stream_workers[i] = stream_worker;
 		}
 
-		logti("%s application has started [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s application has started [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
 
 		_run_flag = true;
 		return true;
@@ -217,6 +228,8 @@ namespace pub
 			_stream_workers[i]->Stop();
 		}
 
+		_stream_workers.clear();
+
 		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
 		for(const auto &x : _sessions)
 		{
@@ -225,7 +238,7 @@ namespace pub
 		}
 		_sessions.clear();
 
-		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), _application->GetApplicationTypeName());
+		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), GetApplicationTypeName());
 
 		return true;
 	}
@@ -233,6 +246,16 @@ namespace pub
 	std::shared_ptr<Application> Stream::GetApplication()
 	{
 		return _application;
+	}
+
+	const char * Stream::GetApplicationTypeName()
+	{
+		if(GetApplication() == nullptr)
+		{
+			return "Unknown";
+		}
+
+		return GetApplication()->GetApplicationTypeName();
 	}
 
 	std::shared_ptr<StreamWorker> Stream::GetWorkerByStreamID(session_id_t session_id)
@@ -252,14 +275,14 @@ namespace pub
 
 	bool Stream::RemoveSession(session_id_t id)
 	{
-		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
+		std::unique_lock<std::shared_mutex> session_lock(_session_map_mutex);
 		if (_sessions.count(id) <= 0)
 		{
 			logte("Cannot find session : %u", id);
 			return false;
 		}
-
 		_sessions.erase(id);
+		session_lock.unlock();
 
 		return GetWorkerByStreamID(id)->RemoveSession(id);
 	}

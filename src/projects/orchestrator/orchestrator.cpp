@@ -615,13 +615,13 @@ std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForScheme(const ov::Stri
 	}
 
 	// Find the provider
-	std::shared_ptr<OrchestratorProviderModuleInterface> module = nullptr;
+	std::shared_ptr<OrchestratorPullProviderModuleInterface> module = nullptr;
 
 	for (auto info = _module_list.begin(); info != _module_list.end(); ++info)
 	{
-		if (info->type == OrchestratorModuleType::Provider)
+		if (info->type == OrchestratorModuleType::PullProvider)
 		{
-			auto module = std::dynamic_pointer_cast<OrchestratorProviderModuleInterface>(info->module);
+			auto module = std::dynamic_pointer_cast<OrchestratorPullProviderModuleInterface>(info->module);
 			auto provider = std::dynamic_pointer_cast<pvd::Provider>(module);
 
 			if (provider == nullptr)
@@ -641,10 +641,10 @@ std::shared_ptr<pvd::Provider> Orchestrator::GetProviderForScheme(const ov::Stri
 	return nullptr;
 }
 
-std::shared_ptr<OrchestratorProviderModuleInterface> Orchestrator::GetProviderModuleForScheme(const ov::String &scheme)
+std::shared_ptr<OrchestratorPullProviderModuleInterface> Orchestrator::GetProviderModuleForScheme(const ov::String &scheme)
 {
 	auto provider = GetProviderForScheme(scheme);
-	auto provider_module = std::dynamic_pointer_cast<OrchestratorProviderModuleInterface>(provider);
+	auto provider_module = std::dynamic_pointer_cast<OrchestratorPullProviderModuleInterface>(provider);
 
 	OV_ASSERT((provider == nullptr) || (provider_module != nullptr),
 			  "Provider (%d) shouldmust inherit from OrchestratorProviderModuleInterface",
@@ -1118,7 +1118,7 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 		// The URL has a scheme
 		auto source = parsed_url->Source();
 
-		std::shared_ptr<OrchestratorProviderModuleInterface> provider_module;
+		std::shared_ptr<OrchestratorPullProviderModuleInterface> provider_module;
 		auto app_info = info::Application::GetInvalidApplication();
 		Result result = Result::Failed;
 
@@ -1213,7 +1213,7 @@ bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov:
 
 bool Orchestrator::RequestPullStream(const ov::String &vhost_app_name, const ov::String &stream_name, off_t offset)
 {
-	std::shared_ptr<OrchestratorProviderModuleInterface> provider_module;
+	std::shared_ptr<OrchestratorPullProviderModuleInterface> provider_module;
 	auto app_info = info::Application::GetInvalidApplication();
 	Result result = Result::Failed;
 

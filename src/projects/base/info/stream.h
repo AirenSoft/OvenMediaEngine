@@ -16,6 +16,7 @@ namespace info
 	class Stream
 	{
 	public:
+		Stream(StreamSourceType source);
 		Stream(const info::Application &app_info, StreamSourceType source);
 		Stream(const info::Application &app_info, info::stream_id_t stream_id, StreamSourceType source);
 		Stream(const Stream &stream);
@@ -43,10 +44,17 @@ namespace info
 		ov::String GetInfoString();
 		void ShowInfo();
 
+
+		void SetApplicationInfo(const std::shared_ptr<Application> &app_info)
+		{
+			_app_info = app_info;
+		}
 		const Application &GetApplicationInfo() const
 		{
 			return *_app_info;
 		}
+
+		const char* GetApplicationName();
 
 	protected:
 		info::stream_id_t _id = 0;

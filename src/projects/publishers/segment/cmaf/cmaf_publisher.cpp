@@ -29,8 +29,10 @@ CmafPublisher::CmafPublisher(PrivateToken token,
 
 bool CmafPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
 {
+	auto dash_config = GetServerConfig().GetBind().GetPublishers().GetDash();
+
 	return SegmentPublisher::Start(http_server_manager,
-								   GetServerConfig().GetBind().GetPublishers().GetDash(),
+								   dash_config.GetPort(), dash_config.GetTlsPort(),
 								   std::make_shared<CmafStreamServer>());
 }
 

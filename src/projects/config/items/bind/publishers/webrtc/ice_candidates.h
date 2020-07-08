@@ -12,17 +12,23 @@
 
 namespace cfg
 {
-	struct IceCandidates : public Item
+	namespace bind
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetIceCandidateList, _ice_candidate_list);
-
-	protected:
-		void MakeParseList() override
+		namespace pub
 		{
-			RegisterValue<Optional>("IceCandidate", &_ice_candidate_list);
-		}
+			struct IceCandidates : public Item
+			{
+				CFG_DECLARE_REF_GETTER_OF(GetIceCandidateList, _ice_candidate_list);
 
-		std::vector<IceCandidate> _ice_candidate_list{
-			IceCandidate("*:10000-10005/udp")};
-	};
+			protected:
+				void MakeParseList() override
+				{
+					RegisterValue<Optional>("IceCandidate", &_ice_candidate_list);
+				}
+
+				std::vector<IceCandidate> _ice_candidate_list{
+					IceCandidate("*:10000-10005/udp")};
+			};
+		}  // namespace pub
+	}	   // namespace bind
 }  // namespace cfg

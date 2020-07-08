@@ -18,11 +18,7 @@
 #include "base/media_route/media_type.h"
 #include "base/info/stream.h"
 
-#include "bitstream/bitstream_to_annexb.h"
-#include "bitstream/bitstream_to_adts.h"
-#include "bitstream/bitstream_to_annexa.h"
-
-#include "bitstream/avc_video_packet_fragmentizer.h"
+#include "bitstream/bitstream_conv.h"
 
 class MediaRouteStream
 {
@@ -55,11 +51,7 @@ private:
 	////////////////////////////
 	// bitstream filters
 	////////////////////////////
-	BitstreamToAnnexB _bsfv;
-	BitstreamToADTS _bsfa;
-	BitstreamAnnexA _bsf_vp8;
-
-	AvcVideoPacketFragmentizer _avc_video_fragmentizer;
+	BitstreamConv 	_bitstream_conv;
 
 	// Store the correction values in case of sudden change in PTS.
 	// If the PTS suddenly increases, the filter behaves incorrectly.

@@ -63,6 +63,18 @@ public:
 		return _output_buffer.size();
 	}
 
+	common::Timebase GetInputTimebase() const
+	{
+		return _input_context->GetTimeBase();
+	}
+
+	common::Timebase GetOutputTimebase() const
+	{
+		return _output_context->GetTimeBase();
+	}
+
+
+
 protected:
 	std::deque<std::shared_ptr<MediaFrame>> _input_buffer;
 	std::deque<std::shared_ptr<MediaFrame>> _output_buffer;

@@ -13,8 +13,7 @@ using namespace common;
 
 namespace pvd
 {
-	std::shared_ptr<RtspcProvider> RtspcProvider::Create(const cfg::Server &server_config,
-													 const std::shared_ptr<MediaRouteInterface> &router)
+	std::shared_ptr<RtspcProvider> RtspcProvider::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 	{
 		auto provider = std::make_shared<RtspcProvider>(server_config, router);
 		if (!provider->Start())
@@ -26,7 +25,7 @@ namespace pvd
 	}
 
 	RtspcProvider::RtspcProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
-			: Provider(server_config, router)
+			: PullProvider(server_config, router)
 	{
 		logtd("Created Rtspc Provider module.");
 	}
@@ -39,7 +38,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> RtspcProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{
-		return RtspcApplication::Create(GetSharedPtrAs<pvd::Provider>(), app_info);
+		return RtspcApplication::Create(GetSharedPtrAs<pvd::PullProvider>(), app_info);
 	}
 
 	bool RtspcProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)

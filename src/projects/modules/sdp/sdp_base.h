@@ -21,19 +21,9 @@ public:
 		return UpdateData(_sdp_text);
 	}
 
-	bool ToString(ov::String &sdp)
+	ov::String ToString() const
 	{
-		if(_sdp_text.IsEmpty())
-		{
-			if(Update() == false)
-			{
-				return false;
-			}
-		}
-
-		sdp = _sdp_text;
-
-		return true;
+		return _sdp_text;
 	}
 
 protected:

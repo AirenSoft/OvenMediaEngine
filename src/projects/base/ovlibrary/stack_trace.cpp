@@ -6,17 +6,16 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
+#include "stack_trace.h"
+
 #include <cxxabi.h>
 #include <errno.h>
 #include <execinfo.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <fstream>
 #include <iostream>
-
-#include <unistd.h>
-
-#include "stack_trace.h"
 
 #include "platform.h"
 
@@ -128,7 +127,6 @@ namespace ov
 			int status = 0;
 			parse_result->function_name = begin_name;
 			parse_result->demangled_function_name = abi::__cxa_demangle(begin_name, nullptr, nullptr, &status);
-
 			parse_result->offset = begin_offset;
 		}
 
@@ -315,11 +313,19 @@ namespace ov
 
 			if (result)
 			{
+				const char *module_name = ((parse_result.module_name == nullptr) || (parse_result.module_name[0] == '\0')) ? "?" : parse_result.module_name;
+				const char *name = (parse_result.demangled_function_name == nullptr) ? parse_result.function_name : parse_result.demangled_function_name;
+
+				if ((name == nullptr) || (name[0] == '\0'))
+				{
+					name = "?";
+				}
+
 				log.AppendFormat("#%-3d %-35s %s %s + %s\n",
 								 (i - offset),
-								 parse_result.module_name,
-								 parse_result.address,
-								 (parse_result.demangled_function_name == nullptr) ? parse_result.function_name : parse_result.demangled_function_name,
+								 module_name,
+								 (parse_result.address == nullptr) ? "?" : parse_result.address,
+								 name,
 								 (parse_result.offset == nullptr) ? "0x0" : parse_result.offset);
 			}
 			else

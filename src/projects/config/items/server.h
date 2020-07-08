@@ -90,7 +90,7 @@ namespace cfg
 		ServerType _type;
 
 		ov::String _ip;
-		Bind _bind;
+		bind::Bind _bind;
 
 		P2P _p2p;
 

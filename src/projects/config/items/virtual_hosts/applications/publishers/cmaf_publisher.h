@@ -14,7 +14,7 @@ namespace cfg
 {
 	struct LlDashPublisher : public Publisher
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(PublisherType, GetType, PublisherType::LlDash)
+		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::LlDash)
 
 		CFG_DECLARE_GETTER_OF(GetSegmentCount, _segment_count)
 		CFG_DECLARE_GETTER_OF(GetSegmentDuration, _segment_duration)

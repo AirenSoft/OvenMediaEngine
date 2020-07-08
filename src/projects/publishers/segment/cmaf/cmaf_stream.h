@@ -38,7 +38,7 @@ public:
 												PacketizerStreamType stream_type,
 												std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track) override
     {
-        auto stream_packetizer = std::make_shared<CmafStreamPacketizer>(GetApplication()->GetName(),
+        auto stream_packetizer = std::make_shared<CmafStreamPacketizer>(GetApplicationName(),
                                                                         GetName(),
                                                                         segment_count,
                                                                         segment_duration,

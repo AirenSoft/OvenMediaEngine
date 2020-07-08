@@ -10,22 +10,21 @@
 #pragma once
 
 #include "base/common_types.h"
-#include "base/provider/application.h"
-#include "base/provider/stream.h"
+#include "base/provider/push_provider/application.h"
+#include "base/provider/push_provider/stream.h"
 
-using namespace pvd;
 
-class RtmpApplication : public Application
+namespace pvd
 {
-protected:
-	std::shared_ptr<pvd::Stream> CreatePushStream(const uint32_t stream_id, const ov::String &stream_name) override;
-	std::shared_ptr<pvd::Stream> CreatePullStream(const uint32_t stream_id, const ov::String &stream_name, const std::vector<ov::String> &url_list) override {return nullptr;};
+	class RtmpApplication : public PushApplication
+	{
+	
+	public:
+		static std::shared_ptr<RtmpApplication> Create(const std::shared_ptr<PushProvider> &provider, const info::Application &application_info);
 
-public:
-	static std::shared_ptr<RtmpApplication> Create(const std::shared_ptr<Provider> &provider, const info::Application &application_info);
+		explicit RtmpApplication(const std::shared_ptr<PushProvider> &provider, const info::Application &info);
+		~RtmpApplication() override = default;
 
-	explicit RtmpApplication(const std::shared_ptr<Provider> &provider, const info::Application &info);
-	~RtmpApplication() override = default;
-
-private:
-};
+		bool JoinStream(const std::shared_ptr<PushStream> &stream) override;
+	};
+}

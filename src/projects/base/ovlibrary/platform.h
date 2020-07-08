@@ -6,6 +6,8 @@
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
+#pragma once
+
 #include <string>
 
 #define IS_WINDOWS                              0

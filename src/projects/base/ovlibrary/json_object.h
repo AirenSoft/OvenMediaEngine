@@ -12,7 +12,7 @@
 #include "./error.h"
 #include "./data.h"
 
-#include <jsoncpp-1.8.4/json/json.h>
+#include <jsoncpp-1.9.3/json/json.h>
 
 namespace ov
 {
@@ -25,12 +25,11 @@ namespace ov
 		~JsonObject();
 
 		JsonObject(JsonObject &&object)
-			: _value(object._value)
 		{
-			object._value = Json::Value(Json::ValueType::nullValue);
+			std::swap(_value, object._value);
 		}
 
-		JsonObject(::Json::Value &value)
+		JsonObject(const ::Json::Value &value)
 		{
 			_value = value;
 		}
@@ -113,6 +112,5 @@ namespace ov
 		std::shared_ptr<Error> Parse(const void *data, ssize_t length);
 
 		::Json::Value _value;
-		std::map<ov::String, JsonObject &> _properties;
 	};
 }

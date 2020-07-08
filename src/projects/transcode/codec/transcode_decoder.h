@@ -25,6 +25,8 @@ public:
 
 	std::shared_ptr<TranscodeContext>& GetContext();
 
+	common::Timebase GetTimebase() const;
+
 protected:
 	static const ov::String ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters);
 

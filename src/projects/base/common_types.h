@@ -17,6 +17,7 @@
 #include <tuple>
 #include <vector>
 #include <iostream>
+#include <functional>
 
 #include "ovlibrary/ovlibrary.h"
 #include "media_route/media_type.h"
@@ -29,6 +30,7 @@ enum class StreamSourceType : int8_t
 	Rtmp,
 	Rtsp,
 	RtspPull,
+	Mpegts,
 	Transcoder,
 };
 
@@ -45,6 +47,7 @@ enum class ProviderType : int8_t
 	Rtsp,
 	RtspPull,
 	Ovt,
+	Mpegts,
 };
 
 enum class PublisherType : int8_t

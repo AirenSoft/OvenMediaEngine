@@ -14,7 +14,7 @@ namespace cfg
 {
 	struct RtmpPublisher : public Publisher
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(PublisherType, GetType, PublisherType::Rtmp)
+		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Rtmp)
 
 		CFG_DECLARE_REF_GETTER_OF(GetCrossDomains, _cross_domain.GetUrls())
 

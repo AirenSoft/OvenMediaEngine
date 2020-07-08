@@ -103,7 +103,7 @@
 #include "bitstream_to_annexa.h"
 #include <base/ovlibrary/ovlibrary.h>
 
-#define OV_LOG_TAG "BitstreamAnnexA"
+#define OV_LOG_TAG "BitstreamToAnnexA"
 
 #   define AV_RL24(x)                           \
     ((((const uint8_t*)(x))[2] << 16) |         \
@@ -115,15 +115,15 @@
       ((const uint8_t*)(x))[0])
 
 
-BitstreamAnnexA::BitstreamAnnexA()
+BitstreamToAnnexA::BitstreamToAnnexA()
 {
 }
 
-BitstreamAnnexA::~BitstreamAnnexA()
+BitstreamToAnnexA::~BitstreamToAnnexA()
 {
 }
 
-void BitstreamAnnexA::convert_to(const std::shared_ptr<ov::Data> &data)
+int32_t BitstreamToAnnexA::Convert(const std::shared_ptr<ov::Data> &data)
 {
    // TODO(soulk): Complete this function
 #if 0
@@ -171,4 +171,6 @@ void BitstreamAnnexA::convert_to(const std::shared_ptr<ov::Data> &data)
 		  frame_type, profile, sync_code, width, horizontal_scale, height, vertical_scale, show_frame);
 	}
 #endif
+
+   return 0;
 }

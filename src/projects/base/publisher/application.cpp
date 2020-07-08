@@ -142,30 +142,28 @@ namespace pub
 		return true;
 	}
 
-	bool Application::OnSendVideoFrame(const std::shared_ptr<info::Stream> &stream,
+	bool Application::OnSendFrame(const std::shared_ptr<info::Stream> &stream,
 									   const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		auto data = std::make_shared<Application::VideoStreamData>(stream, media_packet);
-		_video_stream_queue.Enqueue(std::move(data));
-		_last_video_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
+		if (media_packet->GetMediaType() == common::MediaType::Video)
+		{
+			auto data = std::make_shared<Application::VideoStreamData>(stream, media_packet);
+			_video_stream_queue.Enqueue(std::move(data));
+			_last_video_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
+		}
+		else if (media_packet->GetMediaType() == common::MediaType::Audio)
+		{
+			auto data = std::make_shared<Application::AudioStreamData>(stream, media_packet);
 
+			_audio_stream_queue.Enqueue(std::move(data));
+			_last_audio_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
+		}
+		
 		_queue_event.Notify();
 
 		return true;
 	}
-
-	bool Application::OnSendAudioFrame(const std::shared_ptr<info::Stream> &stream,
-									   const std::shared_ptr<MediaPacket> &media_packet)
-	{
-		auto data = std::make_shared<Application::AudioStreamData>(stream, media_packet);
-
-		_audio_stream_queue.Enqueue(std::move(data));
-		_last_audio_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
-
-		_queue_event.Notify();
-
-		return true;
-	}
+	
 
 	bool Application::PushIncomingPacket(const std::shared_ptr<info::Session> &session_info,
 										 const std::shared_ptr<const ov::Data> &data)

@@ -3,16 +3,15 @@
 //
 
 
-#include "media_router/bitstream/avc_video_packet_fragmentizer.h"
 #include "base/info/application.h"
 #include "rtspc_stream.h"
-#include "modules/aac/aac.h"
+#include "modules/codec_analyzer/aac/aac.h"
 
 #define OV_LOG_TAG "RtspcStream"
 
 namespace pvd
 {
-	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::Application> &application, 
+	std::shared_ptr<RtspcStream> RtspcStream::Create(const std::shared_ptr<pvd::PullApplication> &application, 
 		const uint32_t stream_id, const ov::String &stream_name,
 		const std::vector<ov::String> &url_list)
 	{
@@ -32,8 +31,8 @@ namespace pvd
 		return stream;
 	}
 
-	RtspcStream::RtspcStream(const std::shared_ptr<pvd::Application> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
-	: pvd::Stream(application, stream_info)
+	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
+	: pvd::PullStream(application, stream_info)
 	{
 		_state = State::IDLE;
 		_format_context = 0;
@@ -114,7 +113,7 @@ namespace pvd
 		elapsed = end - begin;
 		_origin_response_time_msec = elapsed.count();
 
-		return pvd::Stream::Start();
+		return pvd::PullStream::Start();
 	}
 
 	bool RtspcStream::Play()
@@ -132,7 +131,7 @@ namespace pvd
 			_stream_metrics->SetOriginResponseTimeMSec(_origin_response_time_msec);
 		}
 
-		return pvd::Stream::Play();
+		return pvd::PullStream::Play();
 	}
 
 	bool RtspcStream::Stop()
@@ -149,7 +148,7 @@ namespace pvd
 			_state = State::ERROR;
 		}
 	
-		return pvd::Stream::Stop();
+		return pvd::PullStream::Stop();
 	}
 
 	bool RtspcStream::ConnectTo()
@@ -330,7 +329,7 @@ namespace pvd
 		return av_get_iformat_file_descriptor(_format_context);
 	}
 
-	Stream::ProcessMediaResult RtspcStream::ProcessMediaPacket()
+	PullStream::ProcessMediaResult RtspcStream::ProcessMediaPacket()
 	{
 		AVPacket packet;
 		av_init_packet(&packet);
@@ -449,18 +448,61 @@ namespace pvd
 					if(AACBitstreamAnalyzer::IsValidAdtsUnit(media_packet->GetData()->GetDataAs<uint8_t>()) == false)
 					{
 						// Append ADTS Header
-						AACAdts::AppendAdtsHeader(stream->codecpar->profile, stream->codecpar->sample_rate, stream->codecpar->channels, media_packet->GetData());
+						AACAdts::AppendAdtsHeader(GetAacObjectType(stream->codecpar->profile), GetAacSamplingFrequencies(stream->codecpar->sample_rate), stream->codecpar->channels, media_packet->GetData());
 					}
 
 				}
 			}
 		}		
 
-		_application->SendFrame(GetSharedPtrAs<info::Stream>(), media_packet);
+		SendFrame(media_packet);
 
 		::av_packet_unref(&packet);
 
 		return ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
+	}
+
+	AacObjectType RtspcStream::GetAacObjectType(int32_t ff_profile)
+	{
+		AacObjectType aac_profile = AacObjectTypeAacMain;
+		switch(ff_profile)
+		{
+			case FF_PROFILE_AAC_MAIN:
+				aac_profile = AacObjectTypeAacMain;
+				break;
+			case FF_PROFILE_AAC_LOW:
+				aac_profile = AacObjectTypeAacLC;
+				break;
+			case FF_PROFILE_AAC_SSR:
+				aac_profile = AacObjectTypeAacSSR;
+				break;
+			case FF_PROFILE_AAC_LTP:
+				aac_profile = AacObjecttypeAacLTP;
+				break;
+			default:
+				break;
+		}
+
+		return aac_profile;
+	}
+
+	SamplingFrequencies RtspcStream::GetAacSamplingFrequencies(int32_t ff_samplerate)
+	{
+		SamplingFrequencies aac_sample_rate = 
+			(ff_samplerate == 96000)?Samplerate_96000:
+			(ff_samplerate == 88200)?Samplerate_88200:
+			(ff_samplerate == 64000)?Samplerate_64000:
+			(ff_samplerate == 48000)?Samplerate_48000:
+			(ff_samplerate == 44100)?Samplerate_44100:
+			(ff_samplerate == 32000)?Samplerate_32000:
+			(ff_samplerate == 24000)?Samplerate_24000:
+			(ff_samplerate == 22050)?Samplerate_22050:
+			(ff_samplerate == 16000)?Samplerate_16000:
+			(ff_samplerate == 12000)?Samplerate_12000:
+			(ff_samplerate == 11025)?Samplerate_11025:
+			(ff_samplerate == 7350)?Samplerate_7350:Samplerate_Unknown;
+
+		return aac_sample_rate;
 	}
 
 	int RtspcStream::InterruptCallback(void *ctx)

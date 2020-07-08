@@ -205,7 +205,7 @@ protected:
 	SegmentPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 	~SegmentPublisher() override;
 
-	bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager, const cfg::TlsPort &port_config, const std::shared_ptr<SegmentStreamServer> &stream_server);
+	bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager, const cfg::SingularPort &port_config, const cfg::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server);
 	virtual bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager) = 0;
 	
 

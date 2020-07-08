@@ -15,6 +15,12 @@
 
 namespace pvd
 {
+	Stream::Stream(StreamSourceType source_type)
+		:info::Stream(source_type),
+		_application(nullptr)
+	{
+	}
+
 	Stream::Stream(const std::shared_ptr<pvd::Application> &application, StreamSourceType source_type)
 		:info::Stream(*(std::static_pointer_cast<info::Application>(application)), source_type),
 		_application(application)
@@ -40,19 +46,46 @@ namespace pvd
 
 	bool Stream::Start() 
 	{
-		logti("%s has started [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
-		return true;
-	}
-
-	bool Stream::Play()
-	{
-		logti("%s has started to play [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s/%s(%u) has been started stream", GetApplicationName(), GetName().CStr(), GetId());
 		return true;
 	}
 	
 	bool Stream::Stop() 
 	{
-		logti("%s has stopped playing [%s(%u)] stream", _application->GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s/%s(%u) has been stopped playing stream", GetApplicationName(), GetName().CStr(), GetId());
+		return true;
+	}
+
+	const char* Stream::GetApplicationTypeName()
+	{
+		if(GetApplication() == nullptr)
+		{
+			return "Unknown";
+		}
+
+		return GetApplication()->GetApplicationTypeName();
+	}
+
+	bool Stream::SendFrame(const std::shared_ptr<MediaPacket> &packet)
+	{
+		if(_application == nullptr)
+		{
+			return false;
+		}
+
+		// Statistics
+		auto stream_metrics = StreamMetrics(*GetSharedPtrAs<info::Stream>());
+		if(stream_metrics != nullptr)
+		{
+			stream_metrics->IncreaseBytesIn(packet->GetData()->GetLength());
+		}
+
+		return _application->SendFrame(GetSharedPtr(), packet);
+	}
+
+	bool Stream::SetState(State state)
+	{
+		_state = state;
 		return true;
 	}
 }

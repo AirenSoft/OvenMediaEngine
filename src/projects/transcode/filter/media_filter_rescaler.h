@@ -26,7 +26,7 @@ public:
 	int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) override;
 	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult * result) override;
 
-	void TrheadFilter();
+	void ThreadFilter();
 
 	void Stop();
 

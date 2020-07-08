@@ -58,26 +58,26 @@ public:
 
 	// v=0
 	void SetVersion(uint8_t version);
-	uint8_t GetVersion();
+	uint8_t GetVersion() const;
 
 	// o=OvenMediaEngine 1882243660 2 IN IP4 127.0.0.1
 	void SetOrigin(ov::String user_name, uint32_t session_id, uint32_t session_version,
 	               ov::String net_type, uint8_t ip_version, ov::String address);
-	ov::String GetUserName();
-	uint32_t GetSessionId();
-	uint32_t GetSessionVersion();
-	ov::String GetNetType();
-	uint8_t GetIpVersion();
-	ov::String GetAddress();
+	ov::String GetUserName() const;
+	uint32_t GetSessionId() const;
+	uint32_t GetSessionVersion() const;
+	ov::String GetNetType() const;
+	uint8_t GetIpVersion() const;
+	ov::String GetAddress() const;
 
 	// s=-
 	void SetSessionName(ov::String session_name);
-	ov::String GetSessionName();
+	ov::String GetSessionName() const;
 
 	// t=0 0
 	void SetTiming(uint32_t start, uint32_t stop);
-	uint32_t GetStartTime();
-	uint32_t GetStopTime();
+	uint32_t GetStartTime() const;
+	uint32_t GetStopTime() const;
 
 	// a=msid-semantic:WMS *
 	void SetMsidSemantic(const ov::String &semantic, const ov::String &token);
@@ -86,17 +86,17 @@ public:
 
 	// m=video 9 UDP/TLS/RTP/SAVPF 97
 	// a=group:BUNDLE 에 AddMedia의 mid를 추가한다. OME는 BUNDLE-ONLY만 지원한다. (2018.05.01)
-	void AddMedia(std::shared_ptr<MediaDescription> media);
-	const std::shared_ptr<MediaDescription> GetFirstMedia();
-	const std::shared_ptr<MediaDescription> GetMediaByMid(const ov::String &mid);
-	const std::vector<std::shared_ptr<MediaDescription>> &GetMediaList();
+	void AddMedia(const std::shared_ptr<const MediaDescription> &media);
+	const std::shared_ptr<const MediaDescription> GetFirstMedia() const;
+	const std::shared_ptr<const MediaDescription> GetMediaByMid(const ov::String &mid) const;
+	const std::vector<std::shared_ptr<const MediaDescription>> &GetMediaList() const;
 
 	// Common attr
-	ov::String GetFingerprintAlgorithm() override;
-	ov::String GetFingerprintValue() override;
-	ov::String GetIceOption() override;
-	ov::String GetIceUfrag() override;
-	ov::String GetIcePwd() override;
+	ov::String GetFingerprintAlgorithm() const override;
+	ov::String GetFingerprintValue() const override;
+	ov::String GetIceOption() const override;
+	ov::String GetIceUfrag() const override;
+	ov::String GetIcePwd() const override;
 
 	bool operator ==(const SessionDescription &description) const
 	{
@@ -134,5 +134,5 @@ private:
 	std::vector<ov::String> _bundles;
 
 	// Media
-	std::vector<std::shared_ptr<MediaDescription>> _media_list;
+	std::vector<std::shared_ptr<const MediaDescription>> _media_list;
 };

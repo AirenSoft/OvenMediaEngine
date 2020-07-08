@@ -46,8 +46,12 @@ bool WebRtcPublisher::Start()
 		return true;
 	}
 
-	auto port = static_cast<uint16_t>(webrtc_port_info.GetSignallingPort());
-	auto tls_port = static_cast<uint16_t>(webrtc_port_info.GetSignallingTlsPort());
+	auto &signalling_config = webrtc_port_info.GetSignalling();
+	auto &port_config = signalling_config.GetPort();
+	auto &tls_port_config = signalling_config.GetTlsPort();
+
+	auto port = static_cast<uint16_t>(port_config.GetPort());
+	auto tls_port = static_cast<uint16_t>(tls_port_config.GetPort());
 	bool has_port = (port != 0);
 	bool has_tls_port = (tls_port != 0);
 
@@ -77,12 +81,10 @@ bool WebRtcPublisher::Start()
 		result = false;
 	}
 
-	// Publisher::Start()에서 Application을 생성한다.
-	result = result && Publisher::Start();
-
 	if (result)
 	{
-		logti("WebRTC Publisher has started listening on %s%s%s%s...",
+		logti("%s is listening on %s%s%s%s...",
+			  GetPublisherName(),
 			  has_port ? signalling_address.ToString().CStr() : "",
 			  (has_port && has_tls_port) ? ", " : "",
 			  has_tls_port ? "TLS: " : "",
@@ -238,7 +240,7 @@ bool WebRtcPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Ap
  */
 
 // Called when receives request offer sdp from client
-std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &application_name, const ov::String &stream_name, std::vector<RtcIceCandidate> *ice_candidates)
+std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &application_name, const ov::String &stream_name, std::vector<RtcIceCandidate> *ice_candidates)
 {
 	// Application -> Stream에서 SDP를 얻어서 반환한다.
 	auto orchestrator = Orchestrator::GetInstance();
@@ -279,26 +281,22 @@ std::shared_ptr<SessionDescription> WebRtcPublisher::OnRequestOffer(const std::s
 		return nullptr;
 	}
 
-	{
-		// TODO(dimiden): This is a temporary code to prevent race condition
-		auto lock_guard = std::lock_guard(_session_description_mutex);
-		auto &candidates = _ice_port->GetIceCandidateList();
-		ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
-		auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
-		session_description->SetOrigin("OvenMediaEngine", ++_last_issued_session_id, 2, "IN", 4, "127.0.0.1");
-		session_description->SetIceUfrag(_ice_port->GenerateUfrag());
-		session_description->Update();
+	auto &candidates = _ice_port->GetIceCandidateList();
+	ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
+	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
+	session_description->SetOrigin("OvenMediaEngine", ++_last_issued_session_id, 2, "IN", 4, "127.0.0.1");
+	session_description->SetIceUfrag(_ice_port->GenerateUfrag());
+	session_description->Update();
 
-		return session_description;
-	}
+	return session_description;
 }
 
 // Called when receives an answer sdp from client
 bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
 											 const ov::String &application_name,
 											 const ov::String &stream_name,
-											 const std::shared_ptr<SessionDescription> &offer_sdp,
-											 const std::shared_ptr<SessionDescription> &peer_sdp)
+											 const std::shared_ptr<const SessionDescription> &offer_sdp,
+											 const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
 	auto application = GetApplicationByName(application_name);
 	auto stream = GetStream(application_name, stream_name);
@@ -309,8 +307,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		return false;
 	}
 
-	ov::String remote_sdp_text;
-	peer_sdp->ToString(remote_sdp_text);
+	ov::String remote_sdp_text = peer_sdp->ToString();
 	logtd("OnAddRemoteDescription: %s", remote_sdp_text.CStr());
 
 	// Stream에 Session을 생성한다.
@@ -340,8 +337,8 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 
 bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_client,
 									const ov::String &application_name, const ov::String &stream_name,
-									const std::shared_ptr<SessionDescription> &offer_sdp,
-									const std::shared_ptr<SessionDescription> &peer_sdp)
+									const std::shared_ptr<const SessionDescription> &offer_sdp,
+									const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
 	// 플레이어에서 stop 이벤트가 수신 된 경우 처리
 	logtd("Stop commnad received : %s/%s/%u", application_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());

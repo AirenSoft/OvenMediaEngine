@@ -11,8 +11,10 @@
 #include "./ovdata_structure.h"
 
 #include "./assert.h"
+#include "./bps_calculator.h"
 #include "./byte_ordering.h"
 #include "./byte_stream.h"
+#include "./clock.h"
 #include "./data.h"
 #include "./delay_queue.h"
 #include "./dump_utilities.h"
@@ -32,4 +34,3 @@
 #include "./stop_watch.h"
 #include "./string.h"
 #include "./url.h"
-#include "./clock.h"

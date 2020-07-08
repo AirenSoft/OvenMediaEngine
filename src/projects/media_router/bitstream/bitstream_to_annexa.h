@@ -13,13 +13,13 @@
 #include "base/media_route/media_type.h"
 #include <stdint.h>
 
-class BitstreamAnnexA
+class BitstreamToAnnexA
 {
 public:
-    BitstreamAnnexA();
-    ~BitstreamAnnexA();
+    BitstreamToAnnexA();
+    ~BitstreamToAnnexA();
 
- 	void convert_to(const std::shared_ptr<ov::Data> &data);
+ 	int32_t Convert(const std::shared_ptr<ov::Data> &data);
 private:
 
 	std::vector<uint8_t> 	_sps;

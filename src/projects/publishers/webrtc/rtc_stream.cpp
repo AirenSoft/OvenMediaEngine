@@ -143,10 +143,10 @@ bool RtcStream::Start(uint32_t worker_count)
 					first_video_desc = false;
 				}
 
-				//TODO(getroot): WEBRTC에서는 TIMEBASE를 무조건 90000을 쓰는 것으로 보임, 정확히 알아볼것
 				payload->SetRtpmap(payload_type_num++, codec, 90000);
 
 				video_media_desc->AddPayload(payload);
+				video_media_desc->Update();
 
 				// RTP Packetizer를 추가한다.
 				AddPacketizer(track->GetCodecId(), track->GetId(), payload->GetId(), video_media_desc->GetSsrc());
@@ -202,6 +202,7 @@ bool RtcStream::Start(uint32_t worker_count)
 								   std::to_string(track->GetChannel().GetCounts()).c_str());
 
 				audio_media_desc->AddPayload(payload);
+				audio_media_desc->Update();
 
 				// RTP Packetizer를 추가한다.
 				AddPacketizer(track->GetCodecId(), track->GetId(), payload->GetId(), audio_media_desc->GetSsrc());
@@ -226,11 +227,14 @@ bool RtcStream::Start(uint32_t worker_count)
 
         video_media_desc->AddPayload(red_payload);
         video_media_desc->AddPayload(ulpfec_payload);
+		video_media_desc->Update();
     }
 
 	logtd("Stream is created : %s/%u", GetName().CStr(), GetId());
 
 	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
+
+	_offer_sdp->Update();
 
 	return Stream::Start(worker_count);
 }

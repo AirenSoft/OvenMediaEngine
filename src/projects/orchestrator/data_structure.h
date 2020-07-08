@@ -14,7 +14,8 @@
 enum class OrchestratorModuleType
 {
 	Unknown = 0x10000000,
-	Provider = 0x00000001,
+	PushProvider = 0x00000001,
+	PullProvider = 0x00000002,
 	MediaRouter = 0x00000010,
 	Transcoder = 0x00000100,
 	Publisher = 0x00001000
@@ -61,12 +62,12 @@ public:
 	virtual bool OnDeleteApplication(const info::Application &app_info) = 0;
 };
 
-class OrchestratorProviderModuleInterface : public OrchestratorModuleInterface
+class OrchestratorPullProviderModuleInterface
 {
 public:
-	OrchestratorModuleType GetModuleType() const override
+	OrchestratorModuleType GetModuleType() const
 	{
-		return OrchestratorModuleType::Provider;
+		return OrchestratorModuleType::PullProvider;
 	}
 
 	/// Called when another module is requested to pull stream list

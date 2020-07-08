@@ -51,6 +51,11 @@ namespace info
 		}
 	}
 
+	Stream::Stream(StreamSourceType source)
+	{
+		_source_type = source;
+	}
+
 	Stream::~Stream()
 	{
 	}
@@ -131,6 +136,17 @@ namespace info
 	{
 		return _tracks;
 	}
+
+	const char* Stream::GetApplicationName()
+	{
+		if(_app_info == nullptr)
+		{
+			return "Unknown";
+		}
+
+		return _app_info->GetName();
+	}
+
 
 	ov::String Stream::GetInfoString()
 	{

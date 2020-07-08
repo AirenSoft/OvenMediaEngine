@@ -22,10 +22,11 @@ std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(const info::A
 }
 
 TranscodeApplication::TranscodeApplication(const info::Application &application_info)
-	: _application_info(application_info)
+	: _application_info(application_info),
+	_indicator(nullptr, 100)
 {
 	// set alias
-	_indicator.SetAlias(ov::String::FormatString("%s - Transcode Application Indicator", _application_info.GetName().CStr()));
+	_indicator.SetAlias(ov::String::FormatString("%s - TranscodeApplication Indicator Queue", _application_info.GetName().CStr()));
 }
 
 TranscodeApplication::~TranscodeApplication()

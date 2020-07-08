@@ -80,6 +80,7 @@ namespace pub
 		uint32_t IssueUniqueSessionId();
 
 		std::shared_ptr<Application> GetApplication();
+		const char * GetApplicationTypeName();
 
 	protected:
 		Stream(const std::shared_ptr<Application> application, const info::Stream &info);

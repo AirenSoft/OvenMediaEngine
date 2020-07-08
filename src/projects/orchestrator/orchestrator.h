@@ -81,7 +81,7 @@ public:
 
 	struct Stream
 	{
-		Stream(const info::Application &app_info, const std::shared_ptr<OrchestratorProviderModuleInterface> &provider, const std::shared_ptr<pvd::Stream> &provider_stream, const ov::String &full_name)
+		Stream(const info::Application &app_info, const std::shared_ptr<OrchestratorPullProviderModuleInterface> &provider, const std::shared_ptr<pvd::Stream> &provider_stream, const ov::String &full_name)
 			: app_info(app_info),
 			  provider(provider),
 			  provider_stream(provider_stream),
@@ -92,7 +92,7 @@ public:
 
 		info::Application app_info;
 
-		std::shared_ptr<OrchestratorProviderModuleInterface> provider;
+		std::shared_ptr<OrchestratorPullProviderModuleInterface> provider;
 		std::shared_ptr<pvd::Stream> provider_stream;
 
 		ov::String full_name;
@@ -214,18 +214,6 @@ public:
 		bool OnDeleteStream(const std::shared_ptr<info::Stream> &info) override
 		{
 			return orchestrator->OnDeleteStream(app_info, info);
-		}
-
-		bool OnSendVideoFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
-		{
-			// Ignore packets
-			return true;
-		}
-
-		bool OnSendAudioFrame(const std::shared_ptr<info::Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet) override
-		{
-			// Ignore packets
-			return true;
 		}
 
 		bool OnSendFrame(const std::shared_ptr<info::Stream> &info, const std::shared_ptr<MediaPacket> &packet) override
@@ -421,7 +409,7 @@ protected:
 	info::application_id_t GetNextAppId();
 
 	std::shared_ptr<pvd::Provider> GetProviderForScheme(const ov::String &scheme);
-	std::shared_ptr<OrchestratorProviderModuleInterface> GetProviderModuleForScheme(const ov::String &scheme);
+	std::shared_ptr<OrchestratorPullProviderModuleInterface> GetProviderModuleForScheme(const ov::String &scheme);
 	std::shared_ptr<pvd::Provider> GetProviderForUrl(const ov::String &url);
 
 	bool ParseVHostAppName(const ov::String &vhost_app_name, ov::String *vhost_name, ov::String *real_app_name) const;

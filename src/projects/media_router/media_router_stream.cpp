@@ -14,9 +14,11 @@
 
 using namespace common;
 
-#define PTS_CORRECT_THRESHOLD_US	5000	
+// #define PTS_CORRECT_THRESHOLD_US	5000	
+#define PTS_CORRECT_THRESHOLD_US	5000
 
-MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
+MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream) :
+	_media_packets(nullptr, 100)
 {
 	logtd("Trying to create media route stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 
@@ -28,9 +30,8 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 
 	_stop_watch.Start();
 
-
 	// set alias
-	_media_packets.SetAlias(ov::String::FormatString("%s/%s - Mediarouter stream a/v queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetName().CStr()));
+	_media_packets.SetAlias(ov::String::FormatString("%s/%s - MediaRouterStream packets Queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetName().CStr()));
 }
 
 MediaRouteStream::~MediaRouteStream()
@@ -39,7 +40,7 @@ MediaRouteStream::~MediaRouteStream()
 
 	_media_packet_stored.clear();
 
-	_media_packets.Clear();
+	// _media_packets.Clear();
 
 	_stat_recv_pkt_lpts.clear();
 	_stat_recv_pkt_ldts.clear();
@@ -49,6 +50,8 @@ MediaRouteStream::~MediaRouteStream()
 
 	_pts_correct.clear();
 	_pts_avg_inc.clear();
+
+	logtd("Delete media route stream name(%s) id(%u) Completed", _stream->GetName().CStr(), _stream->GetId());	
 }
 
 std::shared_ptr<info::Stream> MediaRouteStream::GetStream()
@@ -144,6 +147,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	if (abs( scaled_timestamp_delta ) > PTS_CORRECT_THRESHOLD_US )
 	{
+		// TODO(soulk): I think all tracks should calibrate the PTS with the same value.
 		_pts_correct[track_id] = media_packet->GetPts() - _stat_recv_pkt_lpts[track_id] - _pts_avg_inc[track_id];
 
 #if 0
@@ -222,31 +226,29 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			{
 				int64_t corrected_pts = _pts_correct[track_id] * 1000 / track->GetTimeBase().GetDen();
 
-				pts_str.AppendFormat("last_pts(%lldms->%lldms), fist_diff(%5lldms), last_diff(%5lldms), delay(%5lldms), crt_pts : %lld"
+				pts_str.AppendFormat("last_pts: %lldms -> %lldms, crt_pts: %lld, delay: %5lldms"
 					, rescaled_last_pts
 					, rescaled_last_pts - corrected_pts
-					, first_delay
-					, last_delay
+					, corrected_pts
 					, first_delay - last_delay
-					, corrected_pts );
+					 );
 			}
 			else
 			{
-				pts_str.AppendFormat("last_pts(%lldms), fist_diff(%5lldms), last_diff(%5lldms), delay(%5lldms)"
+				pts_str.AppendFormat("last_pts: %lldms, delay: %5lldms"
 					, rescaled_last_pts
-					, first_delay
-					, last_delay
 					, first_delay - last_delay
 				);
 			}
 
-			temp_str.AppendFormat("\n\t[%d] track: %s(%d), %s, pkt_cnt: %lld, pkt_siz: %lldB"
+			temp_str.AppendFormat("\n\t[%d] track: %s(%d), %s, pkt_cnt: %6lld, pkt_siz: %sB"
 				, track_id
 				, track->GetMediaType()==MediaType::Video?"video":"audio"
 				, track->GetCodecId()
 				, pts_str.CStr()
 				, _stat_recv_pkt_count[track_id]
-				, _stat_recv_pkt_size[track_id]);
+				, ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr()
+			);
 		}
 
 		logtd("%s", temp_str.CStr());
@@ -258,49 +260,55 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	////////////////////////////////////////////////////////////////////////////////////
 
 	// Bitstream Converting or Generate Fragmentation Header 
-	if (media_type == MediaType::Video)
+	if (media_track->GetCodecId() == MediaCodecId::H264)
 	{
-		if (media_track->GetCodecId() == MediaCodecId::H264)
+		auto result = _bitstream_conv.Convert(BitstreamConv::ConvAnnexB, media_packet->GetData());
+		if(result == BitstreamConv::INVALID_DATA)
 		{
-			// If there is no RTP fragmentation, Create!
-			if(media_packet->GetFragHeader()->GetCount() == 0)
-			{
-				_avc_video_fragmentizer.MakeHeader(media_packet);
-			}
-		}
-		else if (media_track->GetCodecId() == MediaCodecId::Vp8)
-		{
-			_bsf_vp8.convert_to(media_packet->GetData());
-		}
-		else
-		{
-			logte("Unsupported video codec. codec_id(%d)", media_track->GetCodecId());
+			logte("Cannot convert frame (%s/%s)", _stream->GetApplicationInfo().GetName().CStr(),_stream->GetName().CStr());
 			return nullptr;
+		}
+		else if(result == BitstreamConv::SUCCESS_NODATA)
+		{
+			// No data after converting
+			return nullptr;
+		}
+
+		// If there is no RTP fragmentation, Create!
+		if(media_packet->GetFragHeader()->GetCount() == 0)
+		{
+			BitstreamConv::MakeAVCFragmentHeader(media_packet);
 		}
 	}
-	else if (media_type == MediaType::Audio)
-	{
-		if (media_track->GetCodecId() == MediaCodecId::Aac)
-		{
-			// _bsfa.convert_to(media_packet->GetData());
-			// logtd("%s", media_packet->GetData()->Dump(32).CStr());
-		}
-		else if (media_track->GetCodecId() == MediaCodecId::Opus)
-		{
 
-		}
-		else
+	else if (media_track->GetCodecId() == MediaCodecId::Aac)
+	{
+		auto result = _bitstream_conv.Convert(BitstreamConv::ConvADTS, media_packet->GetData());
+		if(result == BitstreamConv::INVALID_DATA)
 		{
-			logte("Unsupported audio codec. codec_id(%d)", media_track->GetCodecId());
+			logte("Cannot convert frame (%s/%s)", _stream->GetApplicationInfo().GetName().CStr(),_stream->GetName().CStr());
 			return nullptr;
 		}
+		else if(result == BitstreamConv::SUCCESS_NODATA)
+		{
+			// No data after converting
+			return nullptr;
+		}	
+	}
+	else if (media_track->GetCodecId() == MediaCodecId::Vp8)
+	{
+		// VP8 does not require converting.
+	}	
+	else if (media_track->GetCodecId() == MediaCodecId::Opus)
+	{
+		// OPUS does not require converting.
 	}
 	else
 	{
-		logte("Unsupported media typec. media_type(%d)", media_type);
+		logte("Unsupported audio codec. codec_id(%d)", media_track->GetCodecId());
 		return nullptr;
 	}
-
+		
 	// Set the corrected PTS.
 	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
 	media_packet->SetDts( media_packet->GetDts() - _pts_correct[track_id] );

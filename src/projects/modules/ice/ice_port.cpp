@@ -215,7 +215,7 @@ bool IcePort::RemoveObservers()
 	return true;
 }
 
-void IcePort::AddSession(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<SessionDescription> offer_sdp, std::shared_ptr<SessionDescription> peer_sdp)
+void IcePort::AddSession(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp)
 {
 	const ov::String &local_ufrag = offer_sdp->GetIceUfrag();
 	const ov::String &remote_ufrag = peer_sdp->GetIceUfrag();

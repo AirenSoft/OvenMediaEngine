@@ -106,6 +106,12 @@ typedef void (*OV_SIG_ACTION)(int signum, siginfo_t *si, void *unused);
 
 static void AbortHandler(int signum, siginfo_t *si, void *unused)
 {
+#if DEBUG
+	static constexpr const char *BUILD_MODE = " [debug]";
+#else	// DEBUG
+	static constexpr const char *BUILD_MODE = "";
+#endif	// DEBUG
+
 	char time_buffer[30]{};
 	char file_name[32]{};
 	time_t t = ::time(nullptr);
@@ -123,7 +129,7 @@ static void AbortHandler(int signum, siginfo_t *si, void *unused)
 		auto tid = ov::Platform::GetThreadId();
 
 		ostream << "***** Crash dump *****" << std::endl;
-		ostream << "OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA << " received signal " << signum << " (" << GetSignalName(signum) << ")" << std::endl;
+		ostream << "OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA << BUILD_MODE << " received signal " << signum << " (" << GetSignalName(signum) << ")" << std::endl;
 		ostream << "- Time: " << time_buffer << ", pid: " << pid << ", tid: " << tid << std::endl;
 		ostream << "- Stack trace" << std::endl;
 
@@ -181,7 +187,20 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 
 void TerminateHandler(int signum, siginfo_t *si, void *unused)
 {
-	logtc("Caught terminate signal %d", signum);
+	static constexpr int TERMINATE_COUNT = 3;
+	static int signal_count = 0;
+
+	signal_count++;
+
+	if (signal_count == TERMINATE_COUNT)
+	{
+		logtc("The termination request has been made %d times. OME is forcibly terminated.", TERMINATE_COUNT, signum);
+		exit(1);
+	}
+	else
+	{
+		logtc("Caught terminate signal %d. Trying to terminating... (Repeat %d more times to forcibly terminate)", signum, (TERMINATE_COUNT - signal_count));
+	}
 
 	g_is_terminated = true;
 }

@@ -14,7 +14,7 @@ namespace cfg
 {
 	struct WebrtcPublisher : public Publisher
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(PublisherType, GetType, PublisherType::Webrtc)
+		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Webrtc)
 
 	protected:
 		void MakeParseList() override

@@ -28,7 +28,7 @@ void PayloadAttr::SetId(uint8_t id)
 	_id = id;
 }
 
-uint8_t PayloadAttr::GetId()
+uint8_t PayloadAttr::GetId() const
 {
 	return _id;
 }
@@ -47,22 +47,22 @@ void PayloadAttr::EnableRtcpFb(const RtcpFbType &type, const bool on)
 	_rtcpfb_support_flag[(int)type] = on;
 }
 
-const PayloadAttr::SupportCodec PayloadAttr::GetCodec()
+PayloadAttr::SupportCodec PayloadAttr::GetCodec() const
 {
 	return _codec;
 }
 
-const ov::String PayloadAttr::GetCodecStr()
+ov::String PayloadAttr::GetCodecStr() const
 {
 	return _codec_str;
 }
 
-const uint32_t PayloadAttr::GetCodecRate()
+uint32_t PayloadAttr::GetCodecRate() const
 {
 	return _rate;
 }
 
-const ov::String PayloadAttr::GetCodecParams()
+ov::String PayloadAttr::GetCodecParams() const
 {
 	return _codec_param;
 }
@@ -99,7 +99,7 @@ bool PayloadAttr::EnableRtcpFb(const ov::String &type, const bool on)
 	return true;
 }
 
-bool PayloadAttr::IsRtcpFbEnabled(const PayloadAttr::RtcpFbType &type)
+bool PayloadAttr::IsRtcpFbEnabled(const PayloadAttr::RtcpFbType &type) const
 {
 	return _rtcpfb_support_flag[(int)type];
 }

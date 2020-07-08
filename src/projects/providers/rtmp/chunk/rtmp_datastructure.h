@@ -221,12 +221,14 @@ struct RtmpChunkHeader
 struct RtmpMessage
 {
 public:
-	RtmpMessage(const std::shared_ptr<const RtmpChunkHeader> &header, const std::shared_ptr<const ov::Data> &payload)
+	RtmpMessage(const std::shared_ptr<const RtmpChunkHeader> &header, const std::shared_ptr<ov::Data> &payload)
 		: header(header),
 		  payload(payload)
 	{
 	}
 
 	std::shared_ptr<const RtmpChunkHeader> header;
-	std::shared_ptr<const ov::Data> payload;
+
+	// Remove const from <const ov::Data> because it should be converted AnnexB or ADTS
+	std::shared_ptr<ov::Data> payload;
 };

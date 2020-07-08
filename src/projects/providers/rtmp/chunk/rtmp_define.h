@@ -157,29 +157,23 @@ const int g_rtmp_sample_rate_table[] = {96000, 88200, 64000, 48000, 44100, 32000
 #define RTMP_DEFAULT_CLIENT_VERSION            ("rtmp client 1.0")//"afcCli 11,0,100,1 (compatible; FMSc/1.0)"
 #define RTMP_DEFULT_PORT                        (1935)
 
-//===============================================================================================
-// Rtmp Encoder Type
-//===============================================================================================
-enum class RtmpEncoderType : int32_t {
+enum class RtmpEncoderType : int32_t 
+{
     Custom = 0, // 일반 Rtmp 클라이언트(기타 구분 불가능 Client 포함)
     Xsplit,        // XSplit
     OBS,        // OBS
     Lavf,        // Libavformat (lavf)
 };
 
-//===============================================================================================
-//프레임 타입 
-//===============================================================================================
-enum class RtmpFrameType : int32_t {
+enum class RtmpFrameType : int32_t 
+{
     VideoIFrame = 'I', // VIDEO I Frame
     VideoPFrame = 'P', // VIDEO P Frame
     AudioFrame = 'A', // AUDIO Frame
 };
 
-//===============================================================================================
-//지원 코덱 타입 
-//===============================================================================================
-enum class RtmpCodecType : int32_t {
+enum class RtmpCodecType : int32_t 
+{
     Unknown,
     H264,    //	H264/X264 avc1(7)
     AAC,    //	AAC          mp4a(10)
@@ -187,13 +181,11 @@ enum class RtmpCodecType : int32_t {
     SPEEX,//	SPEEX(11)
 };
 
-//===============================================================================================
-// 프레임 정보 
-//===============================================================================================
-struct RtmpFrameInfo {
+struct RtmpFrameInfo 
+{
 public :
-    RtmpFrameInfo(uint32_t timestamp_, int composition_time_offset_, RtmpFrameType frame_type_, int frame_size,
-                  uint8_t *frame) {
+    RtmpFrameInfo(uint32_t timestamp_, int composition_time_offset_, RtmpFrameType frame_type_, int frame_size, uint8_t *frame) 
+	{
         timestamp = timestamp_;
         composition_time_offset = composition_time_offset_;
         frame_type = frame_type_;
@@ -221,63 +213,31 @@ enum class RtmpHandshakeState {
     Complete = C2,
 };
 
-//===============================================================================================
-// 스트림 정보 
-//===============================================================================================
-struct RtmpMediaInfo {
+struct RtmpMediaInfo 
+{
 public :
-    RtmpMediaInfo() {
-        video_streaming = false;
-        audio_streaming = false;
+    bool video_streaming = false;
+    bool audio_streaming = false;
 
-        // 비디오 정보
-        video_codec_type = RtmpCodecType::Unknown;
-        video_width = 0;
-        video_height = 0;
-        video_framerate = 0;
-        video_bitrate = 0;
+    RtmpCodecType video_codec_type = RtmpCodecType::Unknown;
+    int video_width = 0;
+    int video_height = 0;
+    float video_framerate = 0;
+    int video_bitrate = 0;
 
-        // 오디오 정보
-        audio_codec_type = RtmpCodecType::Unknown;
-        audio_channels = 0;
-        audio_bits = 0;
-        audio_samplerate = 0;
-        audio_sampleindex = 0;
-        audio_bitrate = 0;
+    RtmpCodecType audio_codec_type = RtmpCodecType::Unknown;
+    int audio_channels = 0;
+    int audio_bits = 0;
+    int audio_samplerate = 0;
+    int audio_sampleindex = 0;
+    int audio_bitrate = 0;
 
-        timestamp_scale = RTMP_TIME_SCALE;
-        encoder_type = RtmpEncoderType::Custom;
-
-        //h.264 AVC 헤더 관련 설정 정보
-        avc_sps = std::make_shared<std::vector<uint8_t>>();
-        avc_pps = std::make_shared<std::vector<uint8_t>>();
-    }
-
-public :
-    bool video_streaming;
-    bool audio_streaming;
-
-    // 비디오 정보
-    RtmpCodecType video_codec_type;
-    int video_width;
-    int video_height;
-    float video_framerate;
-    int video_bitrate;
-
-    // 오디오 정보
-    RtmpCodecType audio_codec_type;
-    int audio_channels;
-    int audio_bits;
-    int audio_samplerate;
-    int audio_sampleindex;
-    int audio_bitrate;
-
-    uint32_t timestamp_scale;
-    RtmpEncoderType encoder_type;
+    uint32_t timestamp_scale = RTMP_TIME_SCALE;
+    RtmpEncoderType encoder_type = RtmpEncoderType::Custom;;
 
     //h.264 AVC 헤더 관련 설정 정보
-    std::shared_ptr<std::vector<uint8_t>> avc_sps;
-    std::shared_ptr<std::vector<uint8_t>> avc_pps;
+    std::shared_ptr<std::vector<uint8_t>> avc_sps = std::make_shared<std::vector<uint8_t>>();;
+    std::shared_ptr<std::vector<uint8_t>> avc_pps = std::make_shared<std::vector<uint8_t>>();;
 };
 
 #pragma pack()

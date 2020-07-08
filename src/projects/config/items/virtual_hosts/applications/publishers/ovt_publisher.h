@@ -14,6 +14,6 @@ namespace cfg
 {
 	struct OvtPublisher : public Publisher
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(PublisherType, GetType, PublisherType::Ovt)
+		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Ovt)
 	};
 }  // namespace cfg

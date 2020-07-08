@@ -14,7 +14,7 @@ namespace cfg
 {
 	struct RtspPullProvider : public Provider
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(ProviderType, GetType, ProviderType::RtspPull)
+		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::RtspPull)
 
 		CFG_DECLARE_GETTER_OF(IsBlockDuplicateStreamName, _is_block_duplicate_stream_name)
 

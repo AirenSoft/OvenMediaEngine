@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<Server version="6">
+<Server version="7">
 	<Name>OvenMediaEngine</Name>
 	<!-- Host type (origin/edge) -->
 	<Type>origin</Type>
@@ -13,6 +13,13 @@
 			<RTMP>
 				<Port>${env:OME_RTMP_PROV_PORT:1935}</Port>
 			</RTMP>
+			<MPEGTS>
+				<!--
+					Listen on port 4000,4001,4004,4005
+					This is just a demonstration to show that you can configure the port in several ways
+				-->
+				<Port>${env:OME_MPEGTS_PROV_PORT:4000-4003,4004,4005/udp}</Port>
+			</MPEGTS>
 		</Providers>
 
 		<Publishers>
@@ -37,7 +44,7 @@
 					<!-- <TLSPort>3334</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
-					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10000-10005/udp}</IceCandidate>
+					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006-10010/udp}</IceCandidate>
 				</IceCandidates>
 			</WebRTC>
 		</Publishers>
@@ -91,15 +98,15 @@
                             <Name>opus</Name>
                             <Audio>
                                 <Codec>opus</Codec>
-                                <Bitrate>${env:OME_AUDIO_BITRATE:128000}</Bitrate>
-                                <Samplerate>${env:OME_AUDIO_SAMPLERATE:48000}</Samplerate>
-                                <Channel>${env:OME_AUDIO_CHANNEL:2}</Channel>
+                                <Bitrate>128000</Bitrate>
+                                <Samplerate>48000</Samplerate>
+                                <Channel>2</Channel>
                             </Audio>
                         </Encode>
                     </Encodes>
 					<Streams>
 						<Stream>
-							<Name>${OriginStreamName}_o</Name>
+							<Name>${OriginStreamName}</Name>
 							<Profiles>
 								<Profile>bypass</Profile>
 								<Profile>opus</Profile>
@@ -110,9 +117,25 @@
 						<OVT />
 						<RTMP />
 						<RTSPPull />
+						<MPEGTS>
+							<StreamMap>
+								<!--
+									Set the stream name of the client connected to the port to "stream_${Port}"
+									For example, if a client connets to port 4000, OME creates a "stream_4000" stream
+								-->
+								<Stream>
+									<Name>stream_${Port}</Name>
+									<Port>4000,4001-4004</Port>
+								</Stream>
+								<Stream>
+									<Name>stream_4005</Name>
+									<Port>4005</Port>
+								</Stream>
+							</StreamMap>
+						</MPEGTS>
 					</Providers>
 					<Publishers>
-						<ThreadCount>4</ThreadCount>
+						<ThreadCount>8</ThreadCount>
 						<OVT />
 						<WebRTC>
 							<Timeout>30000</Timeout>

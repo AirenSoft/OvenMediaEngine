@@ -198,14 +198,10 @@ void OvenCodecImplAvcodecEncVP8::ThreadEncode()
 			else
 			{
 				// Encoded packet is ready
-				auto packet = MakePacket();
+				auto packet_buffer = MakePacket();
 				::av_packet_unref(_packet);
 
-				std::unique_lock<std::mutex> mlock(_mutex);
-
-				_output_buffer.push_back(std::move(packet));			
-
-				mlock.unlock();
+				SendOutputBuffer(std::move(packet_buffer));
 			}			
 		}
 	}

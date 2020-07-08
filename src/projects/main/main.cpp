@@ -168,7 +168,8 @@ int main(int argc, char *argv[])
 	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
 
 	// Initialize Providers
-	INIT_MODULE(rtmp_provider, "RTMP Provider", RtmpProvider::Create(*server_config, media_router));
+	INIT_MODULE(mpegts_provider, "MPEG-TS Provider", pvd::MpegTsProvider::Create(*server_config, media_router));
+	INIT_MODULE(rtmp_provider, "RTMP Provider", pvd::RtmpProvider::Create(*server_config, media_router));
 	INIT_MODULE(ovt_provider, "OVT Provider", pvd::OvtProvider::Create(*server_config, media_router));
 	INIT_MODULE(rtspc_provider, "RTSPC Provider", pvd::RtspcProvider::Create(*server_config, media_router));
 	// PENDING : INIT_MODULE(rtsp_provider, "RTSP Provider", pvd::RtspProvider::Create(*server_config, media_router));
@@ -203,6 +204,7 @@ int main(int argc, char *argv[])
 	// Relase all modules
 	monitor->Release();
 
+	RELEASE_MODULE(mpegts_provider, "MPEG-TS Provider");
 	RELEASE_MODULE(rtmp_provider, "RTMP Provider");
 	RELEASE_MODULE(ovt_provider, "OVT Provider");
 	RELEASE_MODULE(rtspc_provider, "RTSPC Provider");
@@ -233,7 +235,13 @@ static void PrintBanner()
 	utsname uts{};
 	::uname(&uts);
 
-	logti("OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA " is started on [%s] (%s %s - %s, %s)", uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
+#if DEBUG
+	static constexpr const char *BUILD_MODE = " [debug]";
+#else // DEBUG
+	static constexpr const char *BUILD_MODE = "";
+#endif // DEBUG
+
+	logti("OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA "%s is started on [%s] (%s %s - %s, %s)", BUILD_MODE, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
 
 	logti("With modules:");
 	logti("  FFmpeg %s", GetFFmpegVersion());
@@ -248,6 +256,7 @@ static void PrintBanner()
 	logti("  SRTP: %s", GetSrtpVersion());
 	logti("  OpenSSL: %s", GetOpenSslVersion());
 	logti("    Configuration: %s", GetOpenSslConfiguration());
+	logti("  JsonCpp: %s", GetJsonCppVersion());
 	logti("  jemalloc: %s", GetJemallocVersion());
 }
 

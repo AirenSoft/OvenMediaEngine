@@ -122,9 +122,6 @@ private:
 
 	volatile bool _kill_flag;
 
-	// void LoopTask();
-	// std::thread _thread_looptask;
-
 	TranscodeApplication* GetParent();
 	TranscodeApplication* _parent;
 
@@ -151,6 +148,7 @@ private:
 	TranscodeResult FilterFrame(int32_t track_id, std::shared_ptr<MediaFrame> frame);
 	// Step 3: Encode (Encode the filtered frame to packets)
 	TranscodeResult EncodeFrame(int32_t track_id, std::shared_ptr<const MediaFrame> frame);
+	TranscodeResult EncodedPacket(int32_t encoder_id);
 
 	// Transcoding information
 	uint8_t NewTrackId(common::MediaType media_type);
