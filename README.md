@@ -10,7 +10,7 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 
 ## Features
 
-* RTMP Push, MPEG-2 TS Push, RTSP Pull Input
+* RTMP Push, MPEG-2 TS Push(Beta), RTSP Pull(Beta) Input
 * WebRTC sub-second streaming 
   * ICE \(Interactive Connectivity Establishment\)
   * DTLS \(Datagram Transport Layer Security\)
@@ -25,7 +25,6 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 * Monitoring
 * Experiment
   * P2P Traffic Distribution (Only WebRTC)
-  * RTSP Pull, MPEG-TS/udp Push Input
 
 ## Supported Platforms
 
