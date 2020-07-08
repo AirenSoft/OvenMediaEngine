@@ -203,7 +203,7 @@ namespace pvd
 			auto channels = _channels;
 			lock.unlock();
 
-			for(const auto &x : _channels)
+			for(const auto &x : channels)
 			{
 				auto channel = x.second;
 				if(channel->IsTimedOut())
