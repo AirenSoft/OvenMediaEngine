@@ -11,7 +11,7 @@
 
 #define OV_LOG_TAG "TranscodeCodec"
 
-std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::Dequeue(TranscodeResult *result)
 {
 	// Check the decoded frame is available
 	int ret = ::avcodec_receive_frame(_context, _frame);
@@ -69,11 +69,16 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 		output_frame->SetChannels(_frame->channels);
 		output_frame->SetSampleRate(_frame->sample_rate);
 		output_frame->SetFormat(_frame->format);
-		output_frame->SetPts(static_cast<int64_t>((_frame->pts == AV_NOPTS_VALUE) ? -1LL : _frame->pts));
+
 		// Calculate duration of frame in time_base
 		float frame_duration_in_second = _frame->nb_samples * (1.0f / _frame->sample_rate);
 		int frame_duration_in_timebase = static_cast<int>(frame_duration_in_second * _context->time_base.den);
 		output_frame->SetDuration(frame_duration_in_timebase);
+
+		// If the decoded audio frame does not have a PTS, Increase frame duration time in PTS of previous frame
+		output_frame->SetPts(static_cast<int64_t>((_frame->pts == AV_NOPTS_VALUE) ? _last_pkt_pts+frame_duration_in_timebase : _frame->pts));
+		_last_pkt_pts = output_frame->GetPts();
+
 
 		auto data_length = static_cast<uint32_t>(output_frame->GetBytesPerSample() * output_frame->GetNbSamples());
 
@@ -101,94 +106,131 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResu
 		return std::move(output_frame);
 	}
 
-	///////////////////////////////////////////////////
-	// 인코딩 요청
-	///////////////////////////////////////////////////
-	off_t offset = 0;
+	*result = TranscodeResult::NoData;
+	return nullptr;
+}
 
-	while (_input_buffer.empty() == false)
+void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
+{
+	if(cur_pkt == nullptr && _input_buffer.empty() == false)
 	{
 		auto packet = std::move(_input_buffer.front());
 		_input_buffer.pop_front();
 
-		const MediaPacket *cur_pkt = packet.get();
-
-		std::shared_ptr<const ov::Data> cur_data = nullptr;
+		cur_pkt = packet.get();
 
 		if (cur_pkt != nullptr)
 		{
 			cur_data = cur_pkt->GetData();
+			_pkt_offset = 0;
 		}
 
 		if ((cur_data == nullptr) || (cur_data->GetLength() == 0))
 		{
-			continue;
-		}
-
-		// logtp("Decoding AAC packet\n%s", cur_data->Dump(32).CStr());
-
-		int parsed_size = ::av_parser_parse2(
-			_parser,
-			_context,
-			&_pkt->data, &_pkt->size,
-			cur_data->GetDataAs<uint8_t>() + offset,
-			static_cast<int>(cur_data->GetLength() - offset),
-			cur_pkt->GetPts(), cur_pkt->GetPts(),
-			0);
-
-		if (parsed_size < 0)
-		{
-			logte("Error while parsing\n");
-			*result = TranscodeResult::ParseError;
-			return nullptr;
-		}
-
-		if (_pkt->size > 0)
-		{
-			_pkt->pts = _parser->pts;
-			_pkt->dts = _parser->dts;
-
-			ret = ::avcodec_send_packet(_context, _pkt);
-
-			if (ret == AVERROR(EAGAIN))
-			{
-				// Need more data
-			}
-			else if (ret == AVERROR_EOF)
-			{
-				logte("Error sending a packet for decoding : AVERROR_EOF");
-			}
-			else if (ret == AVERROR(EINVAL))
-			{
-				logte("Error sending a packet for decoding : AVERROR(EINVAL)");
-				*result = TranscodeResult::DataError;
-				return nullptr;
-			}
-			else if (ret == AVERROR(ENOMEM))
-			{
-				logte("Error sending a packet for decoding : AVERROR(ENOMEM)");
-			}
-			else if (ret < 0)
-			{
-				logte("Error sending a packet for decoding : ERROR(Unknown %d)", ret);
-				*result = TranscodeResult::DataError;
-				return nullptr;
-			}
-		}
-
-		if (parsed_size > 0)
-		{
-			OV_ASSERT(cur_data->GetLength() >= (unsigned int)parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", cur_data->GetLength(), parsed_size);
-
-			offset += parsed_size;
-
-			if (cur_data->GetLength() <= (unsigned int)parsed_size)
-			{
-				offset = 0;
-			}
+			logte("there is no packets");
+			*result = TranscodeResult::NoData;
+			return;
 		}
 	}
 
-	*result = TranscodeResult::NoData;
-	return nullptr;
+	if (cur_data != nullptr)
+	{
+		if(cur_data->GetLength() > _pkt_offset)
+		{
+			int32_t parsed_size = ::av_parser_parse2(
+				_parser,
+				_context,
+				&_pkt->data, &_pkt->size,
+				cur_data->GetDataAs<uint8_t>() + _pkt_offset,
+				static_cast<int32_t>(cur_data->GetLength() - _pkt_offset),
+				cur_pkt->GetPts(), cur_pkt->GetPts(),
+				0);
+
+			// Failed to parsing
+			if (parsed_size < 0)
+			{
+				logte("Error while parsing\n");
+				cur_pkt = nullptr;
+				cur_data = nullptr;
+				_pkt_offset = 0;
+				
+				*result = TranscodeResult::ParseError;
+				return;
+			}	
+
+			if (_pkt->size > 0)
+			{
+				// logte("cur_data.length(%d), parsed_size(%d) %lld/%lld", cur_data->GetLength(), parsed_size, _parser->pts, _parser->dts);
+				
+				_pkt->pts = _parser->pts;
+				_pkt->dts = _parser->dts;
+
+				int ret = ::avcodec_send_packet(_context, _pkt);
+
+				if (ret == AVERROR(EAGAIN))
+				{
+					// Need more data
+					logte("Error sending a packet for decoding : EAGAIN");
+					*result = TranscodeResult::DataReady;
+					return ;
+				}
+				else if (ret == AVERROR_EOF)
+				{
+					logte("Error sending a packet for decoding : AVERROR_EOF");
+					*result = TranscodeResult::EndOfFile;
+				}
+				else if (ret == AVERROR(EINVAL))
+				{
+					logte("Error sending a packet for decoding : AVERROR(EINVAL)");
+					*result = TranscodeResult::DataError;
+					return;
+				}
+				else if (ret == AVERROR(ENOMEM))
+				{
+					logte("Error sending a packet for decoding : AVERROR(ENOMEM)");
+					*result = TranscodeResult::DataError;
+				}
+				else if (ret < 0)
+				{
+					logte("Error sending a packet for decoding : ERROR(Unknown %d)", ret);
+					*result = TranscodeResult::DataError;
+					return;
+				}
+			}
+
+			if (parsed_size > 0)
+			{
+				OV_ASSERT(cur_data->GetLength() >= (size_t)parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", cur_data->GetLength(), parsed_size);
+
+				_pkt_offset += parsed_size;
+			}
+
+
+			*result = TranscodeResult::DataReady;
+			return;
+		}
+
+		if(cur_data->GetLength() <= _pkt_offset)
+		{
+			cur_pkt = nullptr;
+			cur_data = nullptr;
+			_pkt_offset = 0;
+		}
+	}
+
+	if(_input_buffer.size() > 0)
+		*result = TranscodeResult::DataReady;
+	else
+		*result = TranscodeResult::NoData;
+}
+
+std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResult *result)
+{
+	Enqueue(result);
+	if((int)(*result) < 0)
+	{
+		return nullptr;
+	}
+
+	return Dequeue(result);
 }

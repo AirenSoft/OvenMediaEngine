@@ -37,7 +37,7 @@ enum SamplingFrequencies
 class AACAdts
 {
 public:
-	static bool AppendAdtsHeader(int32_t ff_profile, int32_t ff_samplerate, int32_t ff_channels, std::shared_ptr<ov::Data> &media_packet_data);
+	static bool AppendAdtsHeader(AacObjectType profile, SamplingFrequencies samplerate, int32_t channels, std::shared_ptr<ov::Data> &media_packet_data);
 
 	static bool ParseAdtsHeader(const uint8_t *data, size_t data_length, AACAdts &atds);
 

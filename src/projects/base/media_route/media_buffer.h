@@ -77,6 +77,11 @@ public:
 		return _data;
 	}
 
+	size_t GetDataLength()  noexcept
+	{
+		return _data->GetLength();
+	}
+
 	int64_t GetPts() const noexcept
 	{
 		return _pts;
@@ -477,7 +482,7 @@ public:
 		_flags = flags;
 	}
 
-	int32_t GetFlags()
+	int32_t GetFlags() const
 	{
 		return _flags;
 	}

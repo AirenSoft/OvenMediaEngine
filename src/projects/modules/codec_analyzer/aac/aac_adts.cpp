@@ -140,43 +140,11 @@ uint16_t AACAdts::AacFrameLength()
 // TODO(Soulk): The parameters ff_profile and ff_samplerate parameters should be changed to AacObjectType and SamplingFrequencies
 // Member variables in the member function must force the members of this class to use.
 // Externally defined values should not be used (for modulation).
-bool AACAdts::AppendAdtsHeader(int32_t ff_profile, int32_t ff_samplerate, int32_t ff_channels, std::shared_ptr<ov::Data> &media_packet_data)
+bool AACAdts::AppendAdtsHeader(AacObjectType profile, SamplingFrequencies samplerate, int32_t channels, std::shared_ptr<ov::Data> &media_packet_data)
 {
-	uint8_t aac_profile = AacObjectTypeAacMain;
-	switch(ff_profile)
-	{
-		case FF_PROFILE_AAC_MAIN:
-			aac_profile = AacObjectTypeAacMain;
-			break;
-		case FF_PROFILE_AAC_LOW:
-			aac_profile = AacObjectTypeAacLC;
-			break;
-		case FF_PROFILE_AAC_SSR:
-			aac_profile = AacObjectTypeAacSSR;
-			break;
-		case FF_PROFILE_AAC_LTP:
-			aac_profile = AacObjecttypeAacLTP;
-			break;
-		default:
-			break;
-	}
-
-	int8_t aac_sample_rate = 
-		(ff_samplerate == 96000)?Samplerate_96000:
-		(ff_samplerate == 88200)?Samplerate_88200:
-		(ff_samplerate == 64000)?Samplerate_64000:
-		(ff_samplerate == 48000)?Samplerate_48000:
-		(ff_samplerate == 44100)?Samplerate_44100:
-		(ff_samplerate == 32000)?Samplerate_32000:
-		(ff_samplerate == 24000)?Samplerate_24000:
-		(ff_samplerate == 22050)?Samplerate_22050:
-		(ff_samplerate == 16000)?Samplerate_16000:
-		(ff_samplerate == 12000)?Samplerate_12000:
-		(ff_samplerate == 11025)?Samplerate_11025:
-		(ff_samplerate == 7350)?Samplerate_7350:Samplerate_Unknown;
-
-	int8_t aac_channels = ff_channels;
-
+	uint8_t aac_profile = (uint8_t)profile;
+	int8_t aac_sample_rate = (int8_t)samplerate;
+	int8_t aac_channels = (int8_t)channels;
    
 	uint8_t aac_header[7];
 

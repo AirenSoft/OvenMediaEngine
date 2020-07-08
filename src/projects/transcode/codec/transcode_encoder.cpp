@@ -78,6 +78,16 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaC
 	return std::move(encoder);
 }
 
+common::Timebase TranscodeEncoder::GetTimebase() const
+{
+	return _output_context->GetTimeBase();
+}
+
+void TranscodeEncoder::SetTrackId(int32_t track_id)
+{
+	_track_id = track_id;
+}
+
 bool TranscodeEncoder::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	_output_context = context;
@@ -94,6 +104,19 @@ void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 	mlock.unlock();
 	
 	_queue_event.Notify();;
+}
+
+void TranscodeEncoder::SendOutputBuffer(std::shared_ptr<MediaPacket> packet)
+{
+	std::unique_lock<std::mutex> mlock(_mutex);
+
+	_output_buffer.push_back(std::move(packet));
+
+	mlock.unlock();	
+
+	// Invoke callback function when encoding/decoding is completed.
+	if(OnCompleteHandler)
+		OnCompleteHandler(_track_id);
 }
 
 std::shared_ptr<TranscodeContext>& TranscodeEncoder::GetContext()

@@ -448,7 +448,7 @@ namespace pvd
 					if(AACBitstreamAnalyzer::IsValidAdtsUnit(media_packet->GetData()->GetDataAs<uint8_t>()) == false)
 					{
 						// Append ADTS Header
-						AACAdts::AppendAdtsHeader(stream->codecpar->profile, stream->codecpar->sample_rate, stream->codecpar->channels, media_packet->GetData());
+						AACAdts::AppendAdtsHeader(GetAacObjectType(stream->codecpar->profile), GetAacSamplingFrequencies(stream->codecpar->sample_rate), stream->codecpar->channels, media_packet->GetData());
 					}
 
 				}
@@ -460,6 +460,49 @@ namespace pvd
 		::av_packet_unref(&packet);
 
 		return ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
+	}
+
+	AacObjectType RtspcStream::GetAacObjectType(int32_t ff_profile)
+	{
+		AacObjectType aac_profile = AacObjectTypeAacMain;
+		switch(ff_profile)
+		{
+			case FF_PROFILE_AAC_MAIN:
+				aac_profile = AacObjectTypeAacMain;
+				break;
+			case FF_PROFILE_AAC_LOW:
+				aac_profile = AacObjectTypeAacLC;
+				break;
+			case FF_PROFILE_AAC_SSR:
+				aac_profile = AacObjectTypeAacSSR;
+				break;
+			case FF_PROFILE_AAC_LTP:
+				aac_profile = AacObjecttypeAacLTP;
+				break;
+			default:
+				break;
+		}
+
+		return aac_profile;
+	}
+
+	SamplingFrequencies RtspcStream::GetAacSamplingFrequencies(int32_t ff_samplerate)
+	{
+		SamplingFrequencies aac_sample_rate = 
+			(ff_samplerate == 96000)?Samplerate_96000:
+			(ff_samplerate == 88200)?Samplerate_88200:
+			(ff_samplerate == 64000)?Samplerate_64000:
+			(ff_samplerate == 48000)?Samplerate_48000:
+			(ff_samplerate == 44100)?Samplerate_44100:
+			(ff_samplerate == 32000)?Samplerate_32000:
+			(ff_samplerate == 24000)?Samplerate_24000:
+			(ff_samplerate == 22050)?Samplerate_22050:
+			(ff_samplerate == 16000)?Samplerate_16000:
+			(ff_samplerate == 12000)?Samplerate_12000:
+			(ff_samplerate == 11025)?Samplerate_11025:
+			(ff_samplerate == 7350)?Samplerate_7350:Samplerate_Unknown;
+
+		return aac_sample_rate;
 	}
 
 	int RtspcStream::InterruptCallback(void *ctx)

@@ -758,6 +758,9 @@ bool TranscodeStream::CreateEncoder(int32_t encoder_track_id, std::shared_ptr<Me
 		return false;
 	}
 
+	encoder->SetTrackId(encoder_track_id);
+	encoder->SetOnCompleteHandler(bind(&TranscodeStream::EncodedPacket, this, std::placeholders::_1));
+
 	_encoders[encoder_track_id] = std::move(encoder);
 
 	return true;
@@ -791,6 +794,9 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 
 			clone_packet->SetTrackId(output_track_id);
 
+			// if(output_track_id == 1)
+			// logtd("[#%d] Passthrought to MediaRouter (PTS: %lld)(SIZE: %lld)", output_track_id, clone_packet->GetPts(), clone_packet->GetDataLength());
+
 			SendFrame(output_stream, std::move(clone_packet));
 		}
 	}
@@ -812,7 +818,11 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 	}
 	auto decoder = decoder_item->second.get();
 
-	// logtp("[#%d] Trying to decode a frame (PTS: %lld)", track_id, packet->GetPts());
+	logtp("[#%3d] Decode In.  PTS: %lld, SIZE: %lld", 
+		track_id, 
+		(int64_t)(packet->GetPts() * decoder->GetTimebase().GetExpr()*1000), 
+		packet->GetDataLength());
+
 	decoder->SendBuffer(std::move(packet));
 
 	while (true)
@@ -834,7 +844,11 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 			case TranscodeResult::DataReady:
 				decoded_frame->SetTrackId(decoder_id);
 
-				// logtp("[#%d] A packet is decoded (PTS: %lld)", decoder_id, decoded_frame->GetPts());
+				logtp("[#%3d] Decode Out. PTS: %lld, SIZE: %lld", 
+					decoder_id, 
+					(int64_t)(decoded_frame->GetPts() * decoder->GetTimebase().GetExpr()*1000), 
+					decoded_frame->GetBufferSize() );
+
 				if (_queue_decoded_frames.Size() > _max_queue_threshold)
 				{
 					logti("Decoded frame queue is full, please check your system");
@@ -846,7 +860,7 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 				if(GetParent() != nullptr)
 					GetParent()->AppendIndicator(this->GetSharedPtr(), TranscodeApplication::IndicatorQueueType::BUFFER_INDICATOR_DECODED_FRAMES);
 
-				break;
+				continue;
 
 			default:
 				// An error occurred
@@ -868,7 +882,11 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 
 	auto filter = filter_item->second.get();
 
-	// logtp("[#%d] Trying to apply a filter to the frame (PTS: %lld)", track_id, decoded_frame->GetPts());
+	logtp("[#%3d] Filter In.  PTS: %lld, SIZE: %lld", 
+			track_id, 
+			(int64_t)(decoded_frame->GetPts() * filter->GetInputTimebase().GetExpr()*1000), 
+			decoded_frame->GetBufferSize());
+
 	filter->SendBuffer(std::move(decoded_frame));
 
 	while (true)
@@ -886,7 +904,10 @@ TranscodeResult TranscodeStream::FilterFrame(int32_t track_id, std::shared_ptr<M
 			case TranscodeResult::DataReady:
 				filtered_frame->SetTrackId(track_id);
 
-				// logtd("[#%d] A frame is filtered (PTS: %lld)", track_id, filtered_frame->GetPts());
+				logtp("[#%3d] Filter Out. PTS: %lld, SIZE: %lld", 
+					track_id, 
+					(int64_t)(filtered_frame->GetPts()* filter->GetOutputTimebase().GetExpr()*1000), 
+					filtered_frame->GetBufferSize());
 
 				_queue_filterd_frames.Enqueue(std::move(filtered_frame));
 
@@ -913,9 +934,28 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t filter_id, std::shared_ptr<
 
 	auto encoder = encoder_item->second.get();
 
-	// logtd("[#%d] Trying to encode the frame (PTS: %lld)", encoder_id, frame->GetPts());
+	logtp("[#%3d] Encode In.  PTS: %lld, FLAGS: %d, SIZE: %d", 
+		encoder_id, 
+		(int64_t)(frame->GetPts() * encoder->GetTimebase().GetExpr()*1000), 
+		frame->GetFlags(),
+		frame->GetBufferSize());
 
 	encoder->SendBuffer(std::move(frame));
+
+	return TranscodeResult::NoData;	
+}
+
+// Callback is called from the encoder for packets that have been encoded.
+// @setEncodedHandler
+TranscodeResult TranscodeStream::EncodedPacket(int32_t encoder_id)
+{
+	auto encoder_item = _encoders.find(encoder_id);
+	if (encoder_item == _encoders.end())
+	{
+		return TranscodeResult::NoData;
+	}
+
+	auto encoder = encoder_item->second.get();	
 
 	while (true)
 	{
@@ -930,7 +970,11 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t filter_id, std::shared_ptr<
 
 		if (result == TranscodeResult::DataReady)
 		{
-			// logtd("[#%d] A packet is encoded (PTS: %lld)", encoder_id, encoded_packet->GetPts());
+			logtp("[#%3d] Encode Out. PTS: %lld, FLAGS: %d, SIZE: %d", 
+				encoder_id, 
+				(int64_t)(encoded_packet->GetPts() * encoder->GetTimebase().GetExpr()*1000), 
+				encoded_packet->GetFlag(),
+				encoded_packet->GetDataLength());
 
 			// Explore if output tracks exist to send encoded packets
 			auto stage_item = _stage_encoder_to_output.find(encoder_id);
@@ -952,9 +996,10 @@ TranscodeResult TranscodeStream::EncodeFrame(int32_t filter_id, std::shared_ptr<
 				SendFrame(output_stream, std::move(clone_packet));
 			}
 		}
-	}
-}
+	}	
 
+	return TranscodeResult::NoData;
+}
 
 void TranscodeStream::DoInputPackets()
 {
