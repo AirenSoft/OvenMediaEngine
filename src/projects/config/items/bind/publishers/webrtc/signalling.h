@@ -34,7 +34,7 @@ namespace cfg
 				void MakeParseList() override
 				{
 					RegisterValue<Optional>("Port", &_port);
-					RegisterValue<Optional>("TlsPort", &_tls_port);
+					RegisterValue<Optional>("TLSPort", &_tls_port);
 				}
 
 				SingularPort _port;
