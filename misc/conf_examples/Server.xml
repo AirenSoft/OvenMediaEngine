@@ -15,10 +15,10 @@
 			</RTMP>
 			<MPEGTS>
 				<!--
-					Listen on port 4000,4001,4004,4005
+					Listen on port 4000~4005
 					This is just a demonstration to show that you can configure the port in several ways
 				-->
-				<Port>4000-4001,4004,4005/udp</Port>
+				<Port>4000-4004,4005/udp</Port>
 			</MPEGTS>
 		</Providers>
 
