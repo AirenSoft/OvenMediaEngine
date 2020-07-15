@@ -11,6 +11,7 @@ OPUS_VERSION=1.1.3
 X264_VERSION=20190513-2245-stable
 VPX_VERSION=1.7.0
 FDKAAC_VERSION=0.1.5
+NASM_VERSION=2.15.02
 FFMPEG_VERSION=3.4
 JEMALLOC_VERSION=5.2.1
 
@@ -95,7 +96,7 @@ install_libx264()
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLf https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
-    ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
+	./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
     make && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "x264"
@@ -131,6 +132,19 @@ install_fdk_aac()
     make && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "fdk_aac"
+}
+
+install_nasm()
+{
+	# NASM is binary, so don't install it in the prefix. If this conflicts with the NASM installed on your system, you must install it yourself to avoid crashing.
+	(DIR=${TEMP_PATH}/nasm && \
+    mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    curl -sLf http://www.nasm.us/pub/nasm/releasebuilds/${NASM_VERSION}/nasm-${NASM_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    ./configure && \
+    make && \
+    sudo make install && \
+    rm -rf ${DIR}) || fail_exit "nasm"
 }
 
 install_ffmpeg()
@@ -179,21 +193,19 @@ install_jemalloc()
 
 install_base_ubuntu()
 {
-    sudo apt install -y build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc
+    sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc
 }
 
 install_base_fedora()
 {
-    sudo yum install -y gcc-c++ make nasm autoconf libtool zlib-devel tcl cmake bc
+    sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc
 }
 
 install_base_centos()
 {
-    # for downloading latest version of nasm (x264 needs nasm 2.13+ but centos provides 2.10 )
-    sudo curl -so /etc/yum.repos.d/nasm.repo https://www.nasm.us/nasm.repo
     # centos-release-scl should be installed before installing devtoolset-7
     sudo yum install -y centos-release-scl
-    sudo yum install -y bc gcc-c++ cmake nasm autoconf libtool glibc-static tcl bzip2 zlib-devel devtoolset-7
+    sudo yum install -y bc gcc-c++ cmake autoconf libtool glibc-static tcl bzip2 zlib-devel devtoolset-7
     source scl_source enable devtoolset-7
 }
 
@@ -290,6 +302,7 @@ else
     echo "Please refer to manual installation page"
 fi
 
+install_nasm
 install_openssl
 install_libsrtp
 install_libsrt
