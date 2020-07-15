@@ -178,14 +178,31 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 
 void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, const uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
+	auto orchestrator = Orchestrator::GetInstance();
 	auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), url->App());
-	auto stream = std::static_pointer_cast<OvtStream>(GetStream(vhost_app_name, url->Stream()));
-	if(stream == nullptr)
+	auto stream_name = url->Stream();
+	ov::String msg;
+
+	auto stream = std::static_pointer_cast<OvtStream>(GetStream(vhost_app_name, stream_name));
+	if (stream == nullptr)
 	{
-		ov::String msg;
-		msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
-		ResponseResult(remote, OVT_PAYLOAD_TYPE_DESCRIBE, 0, request_id, 404, msg);
-		return;
+		// If the stream does not exists, request to the provider
+		if (orchestrator->RequestPullStream(vhost_app_name, stream_name) == false)
+		{
+			msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
+			ResponseResult(remote, OVT_PAYLOAD_TYPE_DESCRIBE, 0, request_id, 404, msg);
+			return;
+		}
+		else
+		{
+			stream = std::static_pointer_cast<OvtStream>(GetStream(vhost_app_name, stream_name));
+			if (stream == nullptr)
+			{
+				msg.Format("Could not pull the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
+				ResponseResult(remote, OVT_PAYLOAD_TYPE_DESCRIBE, 0, request_id, 404, msg);
+				return;
+			}
+		}
 	}
 
 	Json::Value description = stream->GetDescription();
