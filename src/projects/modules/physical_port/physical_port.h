@@ -35,6 +35,21 @@ public:
 
 	bool Close();
 
+	void IncreaseRefCount()
+	{
+		_ref_count++;
+	}
+
+	void DecreaseRefCount()
+	{
+		_ref_count--;
+	}
+
+	int GetRefCount() const
+	{
+		return _ref_count;
+	}
+
 	ov::SocketState GetState() const;
 
 	ov::SocketType GetType() const
@@ -72,6 +87,8 @@ protected:
 
 	volatile bool _need_to_stop;
 	std::thread _thread;
+
+	std::atomic<int> _ref_count { 0 };
 
 	std::vector<PhysicalPortObserver *> _observer_list;
 
