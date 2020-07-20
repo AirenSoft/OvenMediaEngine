@@ -4,6 +4,8 @@
 #include <base/publisher/stream.h>
 #include <modules/ovt_packetizer/ovt_packetizer.h>
 
+#include "monitoring/monitoring.h"
+
 class OvtStream : public pub::Stream, public OvtPacketizerInterface
 {
 public:
@@ -30,4 +32,6 @@ private:
 	Json::Value							_description;
 	std::mutex 							_packetizer_lock;
 	std::shared_ptr<OvtPacketizer>		_packetizer;
+
+	std::shared_ptr<mon::StreamMetrics>		_stream_metrics;
 };
