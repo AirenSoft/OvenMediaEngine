@@ -201,14 +201,7 @@ namespace ov
 			auto error = Error::CreateError("Epoll", "%s", StringFromEpollEvent(event).CStr());
 			logte("[%p] [#%d] %s", this, _socket.GetSocket(), error->ToString().CStr());
 
-			if (OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP))
-			{
-				DisconnectClient(client, SocketConnectionState::Error, error);
-			}
-			else
-			{
-				OV_ASSERT2(false);
-			}
+			DisconnectClient(client, SocketConnectionState::Error, error);
 		}
 		else if (OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP))
 		{

@@ -47,6 +47,8 @@ namespace ov
 
 				if (retry == 10)
 				{
+					logte("Tried to write data %d times but failed", retry);
+
 					OV_ASSERT2(false);
 					break;
 				}
