@@ -5,7 +5,7 @@
 namespace pub
 {
 	StreamWorker::StreamWorker(const std::shared_ptr<Stream> &parent_stream)
-		: _packet_queue(nullptr, 100)
+		: _packet_queue(nullptr, 500)
 	{
 		_stop_thread_flag = true;
 		_parent = parent_stream;

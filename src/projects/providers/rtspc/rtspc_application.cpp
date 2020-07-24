@@ -36,11 +36,11 @@ namespace pvd
 
 	bool RtspcApplication::Start()
 	{
-		return pvd::Application::Start();
+		return pvd::PullApplication::Start();
 	}
 
 	bool RtspcApplication::Stop()
 	{
-		return pvd::Application::Stop();
+		return pvd::PullApplication::Stop();
 	}
 }

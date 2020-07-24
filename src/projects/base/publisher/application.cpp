@@ -7,9 +7,9 @@ namespace pub
 {
 	Application::Application(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info)
 		: info::Application(application_info),
-		_video_stream_queue(nullptr, 100),
-		_audio_stream_queue(nullptr, 100),
-		_incoming_packet_queue(nullptr, 100)
+		_video_stream_queue(nullptr, 500),
+		_audio_stream_queue(nullptr, 500),
+		_incoming_packet_queue(nullptr, 500)
 	{
 		_publisher = publisher;
 		_stop_thread_flag = false;

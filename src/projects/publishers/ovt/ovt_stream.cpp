@@ -108,6 +108,8 @@ bool OvtStream::Start(uint32_t worker_count)
 
 	_description = json_root;
 
+	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
+
 	return Stream::Start(worker_count);
 }
 
@@ -149,6 +151,11 @@ bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 {
 	// Broadcasting
 	BroadcastPacket(packet->Marker(), packet->GetData());
+	if(_stream_metrics != nullptr)
+	{
+		_stream_metrics->IncreaseBytesOut(PublisherType::Ovt, packet->GetData()->GetLength() * GetSessionCount());
+	}
+
 	return true;
 }
 

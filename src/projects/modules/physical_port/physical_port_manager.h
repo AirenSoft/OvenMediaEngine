@@ -28,4 +28,6 @@ protected:
 	PhysicalPortManager();
 
 	std::map<std::pair<ov::SocketType, ov::SocketAddress>, std::shared_ptr<PhysicalPort>> _port_list;
+
+	std::mutex _port_list_mutex;
 };
