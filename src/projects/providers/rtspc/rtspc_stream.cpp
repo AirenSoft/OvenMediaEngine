@@ -147,6 +147,8 @@ namespace pvd
 			// Force terminate 
 			_state = State::ERROR;
 		}
+
+		_state = State::STOPPED;
 	
 		return pvd::PullStream::Stop();
 	}
