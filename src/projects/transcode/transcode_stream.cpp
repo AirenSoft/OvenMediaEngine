@@ -1088,22 +1088,25 @@ void TranscodeStream::CreateFilters(MediaFrame *buffer)
 		input_media_track->GetChannel().SetLayout(buffer->GetChannelLayout());
 	}
 
-	// 2. due to structural problems I've already made the encoder's context... I checked and corrected it.
+
+	// 2. due to structural problems I've already made the transcode's context... so, update changed data.
 	auto input_transcode_context = _decoders[decoder_id]->GetContext();
 	if (buffer->GetMediaType() == common::MediaType::Video)
 	{
+
 	}
 	else if (buffer->GetMediaType() == common::MediaType::Audio)
 	{
-		input_transcode_context->SetAudioSampleFormat(buffer->GetFormat<common::AudioSample::Format>());
-		input_transcode_context->GetAudioChannel().SetLayout(buffer->GetChannelLayout());
+		input_transcode_context->SetAudioSampleRate(input_media_track->GetSampleRate());
+		input_transcode_context->SetAudioSampleFormat(input_media_track->GetSample().GetFormat());
+		input_transcode_context->GetAudioChannel().SetLayout(input_media_track->GetChannel().GetLayout());
 	}
 
 	// 3. Get Output Track List. Creates a filter by looking up the encoding context information of the output track.
 	auto filter_item = _stage_decoder_to_filter.find(decoder_id);
 	if (filter_item == _stage_decoder_to_filter.end())
 	{
-		logtw("No filter list found");
+		logtw("Filter not found");
 		return;
 	}
 
