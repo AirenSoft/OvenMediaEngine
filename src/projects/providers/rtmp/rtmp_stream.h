@@ -89,9 +89,6 @@ namespace pvd
 							char *description,
 							double client_id);
 
-		bool VideoSequenceHeaderProcess(const std::shared_ptr<const ov::Data> &data, uint8_t control_byte);
-		bool AudioSequenceHeaderProcess(const std::shared_ptr<const ov::Data> &data, uint8_t control_byte);
-
 		// Parsing handshake messages
 		off_t ReceiveHandshakePacket(const std::shared_ptr<const ov::Data> &data);
 		bool SendHandshake(const std::shared_ptr<const ov::Data> &data);
@@ -111,7 +108,6 @@ namespace pvd
 		ov::String GetCodecString(RtmpCodecType codec_type);
 		ov::String GetEncoderTypeString(RtmpEncoderType encoder_type);
 
-		bool CheckReadyToPublish();
 		bool PublishStream();		
 		bool SetTrackInfo(const std::shared_ptr<RtmpMediaInfo> &media_info);
 
@@ -121,7 +117,7 @@ namespace pvd
 		std::shared_ptr<RtmpImportChunk> _import_chunk;
 		std::shared_ptr<RtmpExportChunk> _export_chunk;
 		std::shared_ptr<RtmpMediaInfo> _media_info;
-		std::vector<std::shared_ptr<const RtmpMessage>> _stream_message_cache;
+
 		uint32_t _stream_message_cache_video_count = 0;
 		uint32_t _stream_message_cache_audio_count = 0;
 
@@ -142,9 +138,6 @@ namespace pvd
 		ov::String _app_name;
 		ov::String _stream_name;
 		ov::String _device_string;
-
-		bool _video_sequence_info_process = false;
-		bool _audio_sequence_info_process = false;
 
 		// Cache (GetApplicationInfo()->GetId())
 		info::application_id_t _app_id = 0;

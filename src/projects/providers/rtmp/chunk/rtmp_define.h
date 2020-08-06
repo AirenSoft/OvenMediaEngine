@@ -215,17 +215,17 @@ enum class RtmpHandshakeState {
 
 struct RtmpMediaInfo 
 {
-public :
-    bool video_streaming = false;
-    bool audio_streaming = false;
+public:
+    bool video_streaming = true;
+    bool audio_streaming = true;
 
-    RtmpCodecType video_codec_type = RtmpCodecType::Unknown;
+    RtmpCodecType video_codec_type = RtmpCodecType::H264;
     int video_width = 0;
     int video_height = 0;
     float video_framerate = 0;
     int video_bitrate = 0;
 
-    RtmpCodecType audio_codec_type = RtmpCodecType::Unknown;
+    RtmpCodecType audio_codec_type = RtmpCodecType::AAC;
     int audio_channels = 0;
     int audio_bits = 0;
     int audio_samplerate = 0;
@@ -233,11 +233,7 @@ public :
     int audio_bitrate = 0;
 
     uint32_t timestamp_scale = RTMP_TIME_SCALE;
-    RtmpEncoderType encoder_type = RtmpEncoderType::Custom;;
-
-    //h.264 AVC 헤더 관련 설정 정보
-    std::shared_ptr<std::vector<uint8_t>> avc_sps = std::make_shared<std::vector<uint8_t>>();;
-    std::shared_ptr<std::vector<uint8_t>> avc_pps = std::make_shared<std::vector<uint8_t>>();;
+    RtmpEncoderType encoder_type = RtmpEncoderType::Custom;
 };
 
 #pragma pack()
