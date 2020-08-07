@@ -39,7 +39,7 @@ We have tested OME on the platforms listed below. However, we think it can work 
 
 ```
 docker run -d \
--p 1935:1935 -p 3333:3333 -p 8080:8080 -p 9000:9000 -p 4000-4005:4000-4005/udp -p 10000-10005:10000-10005/udp \
+-p 1935:1935 -p 3333:3333 -p 8080:8080 -p 9000:9000 -p 4000-4005:4000-4005/udp -p 10006-10010:10006-10010/udp \
 airensoft/ovenmediaengine:latest
 ```
 Please read [Getting Started](https://airensoft.gitbook.io/ovenmediaengine/getting-started) chapter in tutorials.

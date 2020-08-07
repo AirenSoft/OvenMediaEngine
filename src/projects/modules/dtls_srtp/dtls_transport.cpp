@@ -19,6 +19,8 @@ DtlsTransport::~DtlsTransport()
 
 bool DtlsTransport::Stop()
 {
+	std::lock_guard<std::mutex> lock(_tls_lock);
+
 	_tls.Uninitialize();
 
 	return SessionNode::Stop();
@@ -40,6 +42,8 @@ void DtlsTransport::SetPeerFingerprint(ov::String algorithm, ov::String fingerpr
 // Start DTLS
 bool DtlsTransport::StartDTLS()
 {
+	std::lock_guard<std::mutex> lock(_tls_lock);
+
 	// Ice 상태가 Completed 일 경우에만 시작한다.
 	// Polling 방식이 아니므로 밖에서 이벤트를 확실하게 받고 진입해야 한다.
 	/*
@@ -109,7 +113,6 @@ bool DtlsTransport::StartDTLS()
 bool DtlsTransport::ContinueSSL()
 {
 	logtd("Continue DTLS...");
-
 	int error = _tls.Accept();
 
 	if(error == SSL_ERROR_NONE)
@@ -179,6 +182,8 @@ bool DtlsTransport::VerifyPeerCertificate()
 // Session -> Makes SRTP Packet -> DtlsTransport -> Ice로 전송
 bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
+	std::lock_guard<std::mutex> lock(_tls_lock);
+
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
 	{
@@ -236,6 +241,8 @@ bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 // IcePort -> Publisher ->[queue] Application {thread}-> Session -> DtlsTransport -> SRTP || SCTP
 bool DtlsTransport::OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
+	std::lock_guard<std::mutex> lock(_tls_lock);
+
 	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
 	{

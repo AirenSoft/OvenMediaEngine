@@ -89,5 +89,7 @@ private:
 	// SSL *_ssl;
 	// SSL_CTX *_ssl_ctx;
 
+	std::mutex _tls_lock;
+
 	ov::Tls _tls;
 };
