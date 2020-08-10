@@ -15,12 +15,34 @@ namespace common
 	enum class MediaType : int8_t
 	{
 		Unknown = -1,
-		Video,
+		Video = 0,
 		Audio,
 		Data,
 		Subtitle,
 		Attachment,
 		Nb
+	};
+
+	enum class BitstreamFormat : int8_t
+	{
+		Unknwon = -1,
+		H264_AVCC = 0,
+		H264_ANNEXB,
+		VP8,
+		AAC_LATM,
+		AAC_ADTS,
+		OPUS
+	};
+
+	enum class PacketType : int8_t
+	{
+		Unknwon = -1,
+		COMMON = 0,
+		// H.264
+		SEQUENCE_HEADER, // For H.264 AVCC
+		NALU, // For H.264 AVCC, ANNEXB
+		// AAC
+		
 	};
 
 	enum class PictureType : uint8_t

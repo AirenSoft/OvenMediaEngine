@@ -532,7 +532,7 @@ namespace pvd
 		_media_info->audio_samplerate = (int32_t)audio_samplerate;
 		_media_info->encoder_type = encoder_type;
 
-		return true;
+		return PublishStream();
 	}
 
 	void RtmpStream::OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
@@ -938,24 +938,13 @@ namespace pvd
 			int64_t cts = 0;
 			auto data = message->payload;
 
-			// Check frame Type (I/P(B) Frame)
-			if (payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_I_FRAME_TYPE)
-			{
-				frame_type = RtmpFrameType::VideoIFrame; //I-Frame
-			}
-			else if (payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX) == RTMP_H264_P_FRAME_TYPE)
-			{
-				frame_type = RtmpFrameType::VideoPFrame; //P-Frame
-			}
-			else
-			{
-				logte("Frame type fail - stream(%s/%s) type(0x%x)",
-					_app_name.CStr(),
-					_stream_name.CStr(),
-					payload->At(RTMP_VIDEO_CONTROL_HEADER_INDEX));
-				return false;
-			}
+			// Parsing FLV
 
+				// FrameType : 4bit (1:Keyframe 2:Interfarme)
+				// CodecId : 4bit (7 : AVC)
+				// AVCPacketType : 8bit (0: Sequence Header, 1: NALU 2: EndOfSequence)
+				// Data : Sequence Header or NALU
+					
 			// Converting to AnnexB
 			auto result = _bitstream_conv_video.Convert(BitstreamConv::ConvAnnexB, data, cts);
 			if(result == BitstreamConv::INVALID_DATA)

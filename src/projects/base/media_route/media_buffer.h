@@ -7,8 +7,6 @@
 //
 //==============================================================================
 
-// 인코딩 패킷, 비디오/오디오 프레임을 저장하는 공통 버퍼
-
 #pragma once
 
 #include <cstdint>
@@ -19,13 +17,35 @@
 
 enum class MediaPacketFlag : uint8_t
 {
-	NoFlag,
-	Key
+	Unknwon, // Unknown
+	NoFlag, // Raw Data (may PFrame, BFrame...)
+	Key // Key Frame
 };
 
 class MediaPacket
 {
 public:
+	// Provider must inform the bitstream format so that MediaRouter can handle it.
+	// This constructor is usually used by the Provider to send media packets to the MediaRouter.
+	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, common::BitstreamFormat bitstream_format, common::PacketType packet_type)
+		: MediaPacket(media_type, track_id, data, pts, dts, duration, MediaPacketFlag::Unknwon)
+	{
+		_bitstream_format = bitstream_format;
+		_packet_type = packet_type;
+	}
+
+	// This constructor is usually used by the MediaRouter to send media packets to the publihsers.
+	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
+		: _media_type(media_type),
+		  _track_id(track_id),
+		  _data(data),
+		  _pts(pts),
+		  _dts(dts),
+		  _duration(duration),
+		  _flag(flag)
+	{
+	}
+
 	MediaPacket(common::MediaType media_type, int32_t track_id, const ov::Data *data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
 		: _media_type(media_type),
 		  _track_id(track_id),
@@ -42,11 +62,6 @@ public:
 		{
 			_data = std::make_shared<ov::Data>();
 		}
-	}
-
-	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<const ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
-		: MediaPacket(media_type, track_id, data.get(), pts, dts, duration, flag)
-	{
 	}
 
 	MediaPacket(common::MediaType media_type, int32_t track_id, const void *data, int32_t data_size, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
@@ -127,6 +142,11 @@ public:
 		return _flag;
 	}
 
+	common::BitstreamFormat GetBitstreamFormat() const noexcept
+	{
+		return _bitstream_format;
+	}
+
 	void SetFragHeader(const FragmentationHeader *header)
 	{
 		_frag_hdr = *header;
@@ -168,7 +188,8 @@ protected:
 	int64_t _dts = -1LL;
 	int64_t _duration = -1LL;
 	MediaPacketFlag _flag = MediaPacketFlag::NoFlag;
-
+	common::BitstreamFormat _bitstream_format = common::BitstreamFormat::Unknwon;
+	common::PacketType _packet_type = common::PacketType::Unknwon;
 	FragmentationHeader _frag_hdr;
 };
 
@@ -566,27 +587,17 @@ private:
 
 	// Data plane, Data
 	std::map<int32_t, std::shared_ptr<ov::Data>> _data_buffer;
-
-	// 미디어 타입
 	common::MediaType _media_type = common::MediaType::Unknown;
-
-	// 트랙 아이디
 	int32_t _track_id = 0;
-
-	// 공통 시간 정보
 	int64_t _pts = 0LL;
 	int64_t _duration = 0LL;
-
 	size_t _offset = 0;
-
 	std::map<int32_t, int32_t> _stride;
 
-	// 디코딩된 비디오 프레임 정보
 	int32_t _width = 0;
 	int32_t _height = 0;
 	int32_t _format = 0;
 
-	// 디코딩된 오디오 프레임 정보
 	int32_t _bytes_per_sample = 0;
 	int32_t _nb_samples = 0;
 	int32_t _channels = 0;
