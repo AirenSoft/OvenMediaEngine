@@ -100,6 +100,7 @@ bool H264NalUnitBitstreamParser::ReadUEV(uint32_t &value)
         {
             return false;
         }
+		
         if (bit == 0)
         {
             zero_bit_count++;

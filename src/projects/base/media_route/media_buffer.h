@@ -27,8 +27,8 @@ class MediaPacket
 public:
 	// Provider must inform the bitstream format so that MediaRouter can handle it.
 	// This constructor is usually used by the Provider to send media packets to the MediaRouter.
-	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, common::BitstreamFormat bitstream_format, common::PacketType packet_type)
-		: MediaPacket(media_type, track_id, data, pts, dts, duration, MediaPacketFlag::Unknwon)
+	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, common::BitstreamFormat bitstream_format, common::PacketType packet_type)
+		: MediaPacket(media_type, track_id, data, pts, dts, -1LL, MediaPacketFlag::Unknwon)
 	{
 		_bitstream_format = bitstream_format;
 		_packet_type = packet_type;
