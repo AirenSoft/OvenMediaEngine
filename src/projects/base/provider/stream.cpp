@@ -73,15 +73,16 @@ namespace pvd
 			return false;
 		}
 
-		if(packet->GetBitstreamFormat() == common::BitstreamFormat::Unknwon)
-		{
-			logte("The bitstream format must be specified. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());
-			return false;
-		}
-
 		if(packet->GetPacketType() == common::PacketType::Unknwon)
 		{
 			logte("The packet type must be specified. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());
+			return false;
+		}
+
+		if(packet->GetPacketType() != common::PacketType::OVT && 
+			packet->GetBitstreamFormat() == common::BitstreamFormat::Unknwon)
+		{
+			logte("The bitstream format must be specified. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());
 			return false;
 		}
 

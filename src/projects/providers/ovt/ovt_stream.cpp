@@ -731,6 +731,7 @@ namespace pvd
 			if (_depacketizer.IsAvaliableMediaPacket())
 			{
 				auto media_packet = _depacketizer.PopMediaPacket();
+				media_packet->SetPacketType(common::PacketType::OVT);
 
 				// Make Header (Fragmentation) if it is H.264
 				auto track = GetTrack(media_packet->GetTrackId());

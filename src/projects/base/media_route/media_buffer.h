@@ -152,6 +152,16 @@ public:
 		return _packet_type;
 	}
 
+	void SetBitstreamFormat(common::BitstreamFormat format)
+	{
+		_bitstream_format = format;
+	}
+
+	void SetPacketType(common::PacketType type)
+	{
+		_packet_type = type;
+	}
+
 	void SetFragHeader(const FragmentationHeader *header)
 	{
 		_frag_hdr = *header;

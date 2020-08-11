@@ -37,7 +37,11 @@ namespace common
 	enum class PacketType : int8_t
 	{
 		Unknwon = -1,
-		RAW = 0, // AAC LATM
+		// This is a special purpose packet type, used by the ovt provider, 
+		// and the "media router" delivers this type of packet to the publisher as it is without parsing.
+		OVT = 0,	
+
+		RAW, // AAC LATM
 		// H.264
 		SEQUENCE_HEADER, // For H.264 AVCC, AAC LATM
 		NALU, // For H.264 AVCC, ANNEXB	
