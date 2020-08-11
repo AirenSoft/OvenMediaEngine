@@ -98,64 +98,30 @@ namespace pvd
 				
 				if(es->IsVideoStream())
 				{	
-
 					auto data = std::make_shared<ov::Data>(es->Payload(), es->PayloadLength());
 					auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Video,
 												es->PID(),
 												data,
-												es->Pts(), // PTS
-												es->Dts(), // DTS
-												-1LL, // duration,
-												es->IsKeyframe()?MediaPacketFlag::Key:MediaPacketFlag::NoFlag);
+												es->Pts(),
+												es->Dts(),
+												common::BitstreamFormat::H264_ANNEXB,
+												common::PacketType::NALU);
 					SendFrame(media_packet);
 				}
 				else if(es->IsAudioStream())
 				{
 					auto payload = es->Payload();
 					auto payload_length = es->PayloadLength();
-#if 1
+
 					auto data = std::make_shared<ov::Data>(payload, payload_length);
 					auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Audio,
 												es->PID(),
 												data,
-												es->Pts(), // PTS
-												es->Dts(), // DTS
-												-1LL, // duration,
-												MediaPacketFlag::Key);
+												es->Pts(),
+												es->Dts(),
+												common::BitstreamFormat::AAC_ADTS,
+												common::PacketType::RAW);
 					SendFrame(media_packet);
-#endif
-
-#if 0
-					uint32_t adts_start = 0;
-					int i=0;
-					while(adts_start < payload_length)
-					{
-						AACAdts adts;
-
-						if(AACAdts::ParseAdtsHeader(payload + adts_start, payload_length - adts_start, adts) == false)
-						{
-							return false;
-						}
-
-						auto frame_length = adts.AacFrameLength();
-
-						auto data = std::make_shared<ov::Data>(payload + adts_start, frame_length);
-						auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Audio,
-													es->PID(),
-													data,
-													es->Pts() + (i*2000), // PTS
-													es->Dts(), // DTS
-													-1LL, // duration,
-													MediaPacketFlag::Key);
-
-						logtc("PTS : %lld | CPTS : %lld", es->Pts(), es->Pts() + (i*2000));
-						
-						SendFrame(media_packet);
-
-						adts_start += frame_length;
-						i++;
-					}
-#endif
 				}
 			}
 		}

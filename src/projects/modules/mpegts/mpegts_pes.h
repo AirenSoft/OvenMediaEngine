@@ -75,16 +75,6 @@ namespace mpegts
 		const uint8_t* Payload();
 		uint32_t PayloadLength();
 
-		void SetKeyframe(bool keyframe)
-		{
-			_keyframe = keyframe;
-		}
-
-		bool IsKeyframe()
-		{
-			return _keyframe;
-		}
-
 		inline bool IsAudioStream() const
 		{
 			// Audio stream: 0b110xxxxx
@@ -110,8 +100,6 @@ namespace mpegts
 		bool _pes_optional_data_parsed = false;
 
 		bool _completed = false;
-
-		bool _keyframe = false;
 
 		uint16_t _pid; // from MPEGTS Header
 
