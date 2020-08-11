@@ -420,42 +420,31 @@ namespace pvd
 			_cumulative_dts[packet.stream_index] = packet.dts;
 		}
 
-
-		AVStream *stream = _format_context->streams[packet.stream_index];
 		auto media_type = track->GetMediaType();
 		auto codec_id = track->GetCodecId();
-		auto flag = (packet.flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
-		
-		// Make MediaPacket from AVPacket
-		auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), track->GetId(), packet.data, packet.size, _cumulative_pts[packet.stream_index], _cumulative_dts[packet.stream_index], packet.duration, flag);
+		common::BitstreamFormat bitstream_format;
+		common::PacketType packet_type;
 
-		// SPS/PPS Insject from Extra Data
-		if(media_type == common::MediaType::Video && codec_id == common::MediaCodecId::H264)
+		if(codec_id == common::MediaCodecId::H264)
 		{
-			if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
-			{
-				if(flag == MediaPacketFlag::Key)
-				{
-					// Append SPS/PPS 
-					media_packet->GetData()->Insert(stream->codecpar->extradata, 0, stream->codecpar->extradata_size);
-				}
-			}
+			bitstream_format = common::BitstreamFormat::H264_ANNEXB;
+			packet_type = common::PacketType::NALU;
 		}
-		else if(media_type == common::MediaType::Audio && codec_id == common::MediaCodecId::Aac)
+		else if(codec_id == common::MediaCodecId::Aac)
 		{
-			if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
-			{
-				if(flag == MediaPacketFlag::Key)
-				{
-					if(AACBitstreamAnalyzer::IsValidAdtsUnit(media_packet->GetData()->GetDataAs<uint8_t>()) == false)
-					{
-						// Append ADTS Header
-						AACAdts::AppendAdtsHeader(GetAacObjectType(stream->codecpar->profile), GetAacSamplingFrequencies(stream->codecpar->sample_rate), stream->codecpar->channels, media_packet->GetData());
-					}
+			bitstream_format = common::BitstreamFormat::AAC_ADTS;
+			packet_type = common::PacketType::RAW;
+		}
 
-				}
-			}
-		}		
+		// Make MediaPacket from AVPacket
+		auto data = std::make_shared<ov::Data>(packet.data, packet.size);
+		auto media_packet = std::make_shared<MediaPacket>(media_type, 
+														track->GetId(), 
+														data,
+														_cumulative_pts[packet.stream_index], 
+														_cumulative_dts[packet.stream_index], 
+														bitstream_format, 
+														packet_type);
 
 		SendFrame(media_packet);
 
