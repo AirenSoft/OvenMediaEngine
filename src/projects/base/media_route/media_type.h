@@ -37,12 +37,10 @@ namespace common
 	enum class PacketType : int8_t
 	{
 		Unknwon = -1,
-		COMMON = 0,
+		RAW = 0, // AAC LATM
 		// H.264
-		SEQUENCE_HEADER, // For H.264 AVCC
-		NALU, // For H.264 AVCC, ANNEXB
-		// AAC
-		
+		SEQUENCE_HEADER, // For H.264 AVCC, AAC LATM
+		NALU, // For H.264 AVCC, ANNEXB	
 	};
 
 	enum class PictureType : uint8_t

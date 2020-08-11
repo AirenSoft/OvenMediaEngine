@@ -216,8 +216,8 @@ enum class RtmpHandshakeState {
 struct RtmpMediaInfo 
 {
 public:
-    bool video_streaming = true;
-    bool audio_streaming = true;
+    bool video_stream_coming = false;
+    bool audio_stream_coming = false;
 
     RtmpCodecType video_codec_type = RtmpCodecType::H264;
     int video_width = 0;

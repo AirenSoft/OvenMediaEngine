@@ -104,7 +104,7 @@ FlvSoundType FlvAudioData::Channel()
 	return _channel;
 }
 
-FlvAACPacketType FlvAudioData::AACPacketType()
+FlvAACPacketType FlvAudioData::PacketType()
 {
 	return _packet_type;
 }

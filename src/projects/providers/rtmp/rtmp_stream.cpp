@@ -16,6 +16,8 @@
 #include <base/media_route/media_type.h>
 #include <base/info/media_extradata.h>
 
+#include <modules/containers/flv/flv_parser.h>
+
 /*
 Process of publishing 
 
@@ -71,7 +73,6 @@ namespace pvd
 
 		// For debug statistics
 		_stream_check_time = time(nullptr);
-		_last_packet_time = time(nullptr);
 	}
 
 	RtmpStream::~RtmpStream()
@@ -314,9 +315,6 @@ namespace pvd
 
 	bool RtmpStream::OnAmfMetaData(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, int32_t object_index)
 	{
-		// setting packet time
-		_last_packet_time = time(nullptr);
-
 		RtmpCodecType video_codec_type = RtmpCodecType::Unknown;
 		RtmpCodecType audio_codec_type = RtmpCodecType::Unknown;
 		double frame_rate = 30.0;
@@ -532,15 +530,15 @@ namespace pvd
 		_media_info->audio_samplerate = (int32_t)audio_samplerate;
 		_media_info->encoder_type = encoder_type;
 
-		return PublishStream();
+		return true;
 	}
 
 	void RtmpStream::OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		logtd("Delete Stream - stream(%s/%s) id(%u/%u)", _app_name.CStr(), _stream_name.CStr(), _app_id, GetId());
 
-		_media_info->video_streaming = false;
-		_media_info->audio_streaming = false;
+		_media_info->video_stream_coming = false;
+		_media_info->audio_stream_coming = false;
 
 		// it will call PhysicalPort::OnDisconnected
 		_remote->Close();
@@ -740,7 +738,6 @@ namespace pvd
 					break;
 			}
 
-			// 실패로 종료 처리 필요
 			if (!bSuccess)
 			{
 				return false;
@@ -885,6 +882,28 @@ namespace pvd
 		}
 	}
 
+	bool RtmpStream::CheckReadyToPublish()
+	{
+		if(_media_info->video_stream_coming == true && _media_info->audio_stream_coming == true)
+		{
+			return true;
+		}
+		// If this algorithm causes latency, it may be better to use meta data from AmfMeta. 
+		// But AmfMeta is not always correct so we need more consideration
+		
+		// It makes this stream video only
+		else if(_media_info->video_stream_coming == true && _stream_message_cache_video_count > MAX_STREAM_MESSAGE_COUNT/2)
+		{
+			return true;
+		}
+		// It makes this stream audio only
+		else if(_media_info->audio_stream_coming == true && _stream_message_cache_audio_count > MAX_STREAM_MESSAGE_COUNT/2)
+		{
+			return true;
+		}
+
+		return false;
+	}
 
 	//====================================================================================================
 	// Chunk Message - Video Message
@@ -908,8 +927,6 @@ namespace pvd
 	//====================================================================================================
 	bool RtmpStream::ReceiveVideoMessage(const std::shared_ptr<const RtmpMessage> &message)
 	{
-		RtmpFrameType frame_type = RtmpFrameType::VideoPFrame;
-
 		// size check
 		if ((message->header->payload_size < RTMP_VIDEO_DATA_MIN_SIZE) ||
 			(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
@@ -924,41 +941,47 @@ namespace pvd
 
 		if (!IsPublished())
 		{
-			// Video and audio packets must come after publish.
-			logte("Video messages must come after onMetaData");
-			return false;
+			_media_info->video_stream_coming = true;
+
+			if(CheckReadyToPublish() == true)
+			{
+				if(PublishStream() == false)
+				{
+					logte("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
+					return false;
+				}
+			}
+			else
+			{
+				// Store stream data until stream is published
+				_stream_message_cache.push_back(message);
+				_stream_message_cache_video_count ++;
+				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
+				{
+					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
+						_app_name.CStr(),
+						_stream_name.CStr(),
+						_stream_message_cache.size(),
+						MAX_STREAM_MESSAGE_COUNT);
+				}
+
+				return true;
+			}
 		}
 
-		// setting packet time
-		_last_packet_time = time(nullptr);
-
 		// video stream callback 
-		if (_media_info->video_streaming)
+		if (_media_info->video_stream_coming)
 		{
-			int64_t cts = 0;
-			auto data = message->payload;
-
 			// Parsing FLV
-
-				// FrameType : 4bit (1:Keyframe 2:Interfarme)
-				// CodecId : 4bit (7 : AVC)
-				// AVCPacketType : 8bit (0: Sequence Header, 1: NALU 2: EndOfSequence)
-				// Data : Sequence Header or NALU
-					
-			// Converting to AnnexB
-			auto result = _bitstream_conv_video.Convert(BitstreamConv::ConvAnnexB, data, cts);
-			if(result == BitstreamConv::INVALID_DATA)
+			FlvVideoData flv_video;
+			if(FlvVideoData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_video) == false)
 			{
-				logte("Cannot convert video frame (%s/%s)", _app_name.CStr(), GetName().CStr());
+				logte("Could not parse flv video (%s/%s)", _app_name.CStr(), GetName().CStr());
 				return false;
-			}
-			else if(result == BitstreamConv::SUCCESS_NODATA)
-			{
-				return true;
 			}
 
 			int64_t dts = message->header->completed.timestamp;
-			int64_t pts = dts + cts;
+			int64_t pts = dts + flv_video.CompositionTime();
 
 			auto video_track = GetTrack(RTMP_VIDEO_TRACK_ID);
 			if(video_track == nullptr)
@@ -970,20 +993,34 @@ namespace pvd
 			dts *= video_track->GetVideoTimestampScale();
 			pts *= video_track->GetVideoTimestampScale();
 
+			common::PacketType	packet_type;
+			if(flv_video.PacketType() == FlvAvcPacketType::AVC_SEQUENCE_HEADER)
+			{
+				packet_type = common::PacketType::SEQUENCE_HEADER;
+			}
+			else if(flv_video.PacketType() == FlvAvcPacketType::AVC_NALU)
+			{
+				packet_type = common::PacketType::NALU;
+			}
+			else if(flv_video.PacketType() == FlvAvcPacketType::AVC_END_SEQUENCE)
+			{
+				// what can I do?
+				return true;
+			}
+
+			auto data = std::make_shared<ov::Data>(flv_video.Payload(), flv_video.PayloadLength());
 			auto video_frame = std::make_shared<MediaPacket>(common::MediaType::Video,
 											  RTMP_VIDEO_TRACK_ID,
 											  data,
-											  // The timestamp used by RTMP is DTS. PTS will be recalculated later
-											  pts, // PTS
-											  dts, // DTS
-											  // RTMP doesn't know frame's duration
-											  -1LL,
-											  // duration,
-											  frame_type == RtmpFrameType::VideoIFrame ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+											  pts,
+											  dts, 
+											  common::BitstreamFormat::H264_AVCC, // RTMP's packet type is AVCC 
+											 packet_type);
 
 			SendFrame(video_frame);
 
-			if (frame_type == RtmpFrameType::VideoIFrame)
+			// Statistics for debugging
+			if (flv_video.FrameType() == FlvVideoFrameTypes::KEY_FRAME)
 			{
 				_key_frame_interval = message->header->completed.timestamp - _previous_key_frame_timestamp;
 				_previous_key_frame_timestamp = message->header->completed.timestamp;
@@ -1049,33 +1086,45 @@ namespace pvd
 			return false;
 		}
 
-		auto &payload = message->payload;
-
 		if (!IsPublished())
 		{
-			logte("Audio messages must come after onMetaData"); 
-			return false;
+			_media_info->audio_stream_coming = true;
+
+			if(CheckReadyToPublish() == true)
+			{
+				if(PublishStream() == false)
+				{
+					logte("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
+					return false;
+				}
+			}
+			else
+			{
+				// Store stream data until stream is published
+				_stream_message_cache.push_back(message);
+				_stream_message_cache_video_count ++;
+				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
+				{
+					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
+						_app_name.CStr(),
+						_stream_name.CStr(),
+						_stream_message_cache.size(),
+						MAX_STREAM_MESSAGE_COUNT);
+				}
+
+				return true;
+			}
 		}
-		
-		// setting packet time
-		_last_packet_time = time(nullptr);
 
 		// audio stream callback 
-		if (_media_info->audio_streaming)
+		if (_media_info->audio_stream_coming)
 		{
-			auto data = message->payload;
-
-			// converting to adts 
-			auto result = _bitstream_conv_audio.Convert(BitstreamConv::ConvADTS, data);
-			if(result == BitstreamConv::INVALID_DATA)
+			// Parsing FLV
+			FlvAudioData flv_audio;
+			if(FlvAudioData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_audio) == false)
 			{
-				logte("Cannot convert audio frame (%s/%s)", _app_name.CStr(), GetName().CStr());
+				logte("Could not parse flv audio (%s/%s)", _app_name.CStr(), GetName().CStr());
 				return false;
-			}
-			else if(result == BitstreamConv::SUCCESS_NODATA)
-			{
-				// No data after converting
-				return true;
 			}
 
 			int64_t pts = message->header->completed.timestamp;
@@ -1092,15 +1141,24 @@ namespace pvd
 			pts *= audio_track->GetAudioTimestampScale();
 			dts *= audio_track->GetAudioTimestampScale();
 
+			common::PacketType	packet_type;
+			if(flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
+			{
+				packet_type = common::PacketType::SEQUENCE_HEADER;
+			}
+			else if(flv_audio.PacketType() == FlvAACPacketType::RAW)
+			{
+				packet_type = common::PacketType::RAW;
+			}
+
+			auto data = std::make_shared<ov::Data>(flv_audio.Payload(), flv_audio.PayloadLength());
 			auto frame = std::make_shared<MediaPacket>(common::MediaType::Audio,
 											  RTMP_AUDIO_TRACK_ID,
 											  data,
-											  // The timestamp used by RTMP is DTS. PTS will be recalculated later
-											  pts,  // PTS
-											  dts,  // DTS
-											  // RTMP doesn't know frame's duration
-											 -1LL,
-											  MediaPacketFlag::Key);
+											  pts,
+											  dts,
+											  common::BitstreamFormat::AAC_LATM,
+											  packet_type);
 
 			SendFrame(frame);											
 
@@ -1131,24 +1189,33 @@ namespace pvd
 			return false;
 		}
 
+		// Send stored messages
+		for(auto message : _stream_message_cache)
+		{
+			if(message->header->completed.type_id == RTMP_MSGID_VIDEO_MESSAGE && _media_info->video_stream_coming)
+			{
+				ReceiveVideoMessage(message);
+			}
+			else if(message->header->completed.type_id == RTMP_MSGID_AUDIO_MESSAGE && _media_info->audio_stream_coming)
+			{
+				ReceiveAudioMessage(message);
+			}
+		}
+		_stream_message_cache.clear();
+
 		return true;
 	}
 
 	bool RtmpStream::SetTrackInfo(const std::shared_ptr<RtmpMediaInfo> &media_info)
 	{
-		if (media_info->video_streaming)
+		if (media_info->video_stream_coming)
 		{
 			auto new_track = std::make_shared<MediaTrack>();
 
 			new_track->SetId(RTMP_VIDEO_TRACK_ID);
 			new_track->SetMediaType(common::MediaType::Video);
 			new_track->SetCodecId(common::MediaCodecId::H264);
-			new_track->SetWidth((uint32_t)media_info->video_width);
-			new_track->SetHeight((uint32_t)media_info->video_height);
-			new_track->SetFrameRate(media_info->video_framerate);
-			// Kbps -> bps
-			new_track->SetBitrate(media_info->video_bitrate * 1000);
-		
+
 			// I know RTMP uses 1/1000 timebase, however, this timebase was used due to low precision.
 			// new_track->SetTimeBase(1, 1000);
 			new_track->SetTimeBase(1, 90000);
@@ -1156,17 +1223,37 @@ namespace pvd
 			// A value to change to 1/90000 from 1/1000
 			double video_scale = 90000.0 / 1000.0;
 			new_track->SetVideoTimestampScale(video_scale);
+
+			// Below items are not mandatory, it will be parsed again from SPS parser
+			new_track->SetWidth((uint32_t)media_info->video_width);
+			new_track->SetHeight((uint32_t)media_info->video_height);
+			new_track->SetFrameRate(media_info->video_framerate);
+
+			// Kbps -> bps, it is just metadata
+			new_track->SetBitrate(media_info->video_bitrate * 1000);
 			
 			AddTrack(new_track);
 		}
 
-		if (media_info->audio_streaming)
+		if (media_info->audio_stream_coming)
 		{
 			auto new_track = std::make_shared<MediaTrack>();
 
 			new_track->SetId(RTMP_AUDIO_TRACK_ID);
 			new_track->SetMediaType(common::MediaType::Audio);
 			new_track->SetCodecId(common::MediaCodecId::Aac);
+
+			// I know RTMP uses 1/1000 timebase, however, this timebase was used due to low precision.
+			// new_track->SetTimeBase(1, 1000);
+			new_track->SetTimeBase(1, media_info->audio_samplerate);
+
+			// A value to change to 1/sample_rate from 1/1000
+			double  audio_scale = (double)(media_info->audio_samplerate) / 1000.0;
+			new_track->SetAudioTimestampScale(audio_scale);
+
+			//////////////////
+			// Below items are not mandatory, it will be parsed again from ADTS parser
+			//////////////////
 			new_track->SetSampleRate(media_info->audio_samplerate);
 			new_track->GetSample().SetFormat(common::AudioSample::Format::S16);
 			// Kbps -> bps
@@ -1181,14 +1268,6 @@ namespace pvd
 			{
 				new_track->GetChannel().SetLayout(common::AudioChannel::Layout::LayoutStereo);
 			}
-
-			// I know RTMP uses 1/1000 timebase, however, this timebase was used due to low precision.
-			// new_track->SetTimeBase(1, 1000);
-			new_track->SetTimeBase(1, media_info->audio_samplerate);
-
-			// A value to change to 1/sample_rate from 1/1000
-			double  audio_scale = (double)(media_info->audio_samplerate) / 1000.0;
-			new_track->SetAudioTimestampScale(audio_scale);
 
 			AddTrack(new_track);
 		}

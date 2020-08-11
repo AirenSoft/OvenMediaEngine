@@ -118,7 +118,7 @@ public:
 	FlvSoundRate SampleRate();
 	FlvSoundSize SampleSize();
 	FlvSoundType Channel();
-	FlvAACPacketType AACPacketType();
+	FlvAACPacketType PacketType();
 
 	const uint8_t*	Payload();
 	size_t PayloadLength();

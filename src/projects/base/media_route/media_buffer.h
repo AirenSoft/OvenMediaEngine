@@ -147,6 +147,11 @@ public:
 		return _bitstream_format;
 	}
 
+	common::PacketType GetPacketType() const noexcept
+	{
+		return _packet_type;
+	}
+
 	void SetFragHeader(const FragmentationHeader *header)
 	{
 		_frag_hdr = *header;
@@ -187,7 +192,7 @@ protected:
 	int64_t _pts = -1LL;
 	int64_t _dts = -1LL;
 	int64_t _duration = -1LL;
-	MediaPacketFlag _flag = MediaPacketFlag::NoFlag;
+	MediaPacketFlag _flag = MediaPacketFlag::Unknwon;
 	common::BitstreamFormat _bitstream_format = common::BitstreamFormat::Unknwon;
 	common::PacketType _packet_type = common::PacketType::Unknwon;
 	FragmentationHeader _frag_hdr;

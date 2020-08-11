@@ -108,7 +108,8 @@ namespace pvd
 		ov::String GetCodecString(RtmpCodecType codec_type);
 		ov::String GetEncoderTypeString(RtmpEncoderType encoder_type);
 
-		bool PublishStream();		
+		bool CheckReadyToPublish();
+		bool PublishStream();
 		bool SetTrackInfo(const std::shared_ptr<RtmpMediaInfo> &media_info);
 
 		// RTMP related
@@ -118,6 +119,7 @@ namespace pvd
 		std::shared_ptr<RtmpExportChunk> _export_chunk;
 		std::shared_ptr<RtmpMediaInfo> _media_info;
 
+		std::vector<std::shared_ptr<const RtmpMessage>> _stream_message_cache;
 		uint32_t _stream_message_cache_video_count = 0;
 		uint32_t _stream_message_cache_audio_count = 0;
 
@@ -150,7 +152,6 @@ namespace pvd
 
 		// For statistics 
 		time_t _stream_check_time = 0;
-		time_t _last_packet_time = 0;
 
 		uint32_t _key_frame_interval = 0;
 		uint32_t _previous_key_frame_timestamp = 0;
