@@ -59,10 +59,11 @@ $(call add_pkg_config,vpx)
 $(call add_pkg_config,opus)
 $(call add_pkg_config,libsrtp2)
 
-ifeq ($(MAKECMDGOALS),release)
+# Temporarily stop using JEMALLOC. We will test it more and use it again.
+#ifeq ($(MAKECMDGOALS),release)
 	# Enable jemalloc 
-    $(call add_pkg_config,jemalloc)
-endif
+	# $(call add_pkg_config,jemalloc)
+#endif
 
 LOCAL_TARGET := OvenMediaEngine
 

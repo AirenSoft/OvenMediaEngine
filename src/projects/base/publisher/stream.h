@@ -94,7 +94,8 @@ namespace pub
 		uint32_t _worker_count;
 		bool _run_flag;
 		
-		std::map<uint32_t, std::shared_ptr<StreamWorker>>	_stream_workers;
+		std::shared_mutex _stream_worker_lock;
+		std::vector<std::shared_ptr<StreamWorker>>	_stream_workers;
 		std::shared_ptr<Application> _application;
 
 		session_id_t _last_issued_session_id;

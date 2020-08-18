@@ -13,7 +13,7 @@
 class RtcIceCandidate : public IceCandidate
 {
 public:
-	RtcIceCandidate(ov::String transport, ov::SocketAddress address, uint16_t sdp_m_line_index, ov::String sdp_mid);
+	RtcIceCandidate(ov::String transport, ov::String ip_address, int port, uint16_t sdp_m_line_index, ov::String sdp_mid);
 	RtcIceCandidate(uint16_t sdp_m_line_index, ov::String sdp_mid);
 	~RtcIceCandidate() override;
 
