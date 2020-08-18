@@ -228,7 +228,6 @@ namespace pub
 
 		_run_flag = false;
 
-		for (uint32_t i = 0; i < _worker_count; i++)
 		for(const auto &worker : _stream_workers)
 		{
 			worker->Stop();
