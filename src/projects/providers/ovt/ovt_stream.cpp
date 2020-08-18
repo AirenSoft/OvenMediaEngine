@@ -2,9 +2,9 @@
 // Created by getroot on 19. 12. 9.
 //
 
-
-#include "media_router/bitstream/bitstream_conv.h"
 #include "base/info/application.h"
+#include "modules/codec_analyzer/h264/h264_fragment_header.h"
+
 #include "ovt_stream.h"
 
 #define OV_LOG_TAG "OvtStream"
@@ -737,7 +737,7 @@ namespace pvd
 				auto track = GetTrack(media_packet->GetTrackId());
 				if(track->GetCodecId() == common::MediaCodecId::H264)
 				{
-					BitstreamConv::MakeAVCFragmentHeader(media_packet);
+					H264FragmentHeader::Parse(media_packet);
 				}
 
 				SendFrame(media_packet);

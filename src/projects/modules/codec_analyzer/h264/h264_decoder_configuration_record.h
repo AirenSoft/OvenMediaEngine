@@ -59,6 +59,11 @@ public:
 	uint8_t ChromaFormat();
 	uint8_t BitDepthLumaMinus8();
 
+	std::vector<uint8_t> Serialize() const;
+	bool Deserialize(const std::vector<uint8_t> &stream);
+
+	ov::String GetInfoString();
+	
 private:
 	uint8_t		_version = 0;
 	uint8_t		_profile_indication = 0;

@@ -18,7 +18,7 @@
 #include "base/media_route/media_route_interface.h"
 #include "base/media_route/media_route_application_interface.h"
 
-#include "media_router_stream.h"
+#include "mediarouter_stream.h"
 
 #include <config/items/items.h>
 

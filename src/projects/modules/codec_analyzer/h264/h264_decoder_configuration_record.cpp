@@ -164,3 +164,47 @@ uint8_t AVCDecoderConfigurationRecord::BitDepthLumaMinus8()
 	return _bit_depth_luma_minus8;
 }
 
+std::vector<uint8_t> AVCDecoderConfigurationRecord::Serialize() const
+{
+	
+	size_t size = 3;
+	std::vector<uint8_t> stream(size);
+#if 0	
+    MemoryView memory_view(stream.data(), size);
+
+	memory_view << (uint8_t)_object_type << (uint8_t)_sampling_frequency_index << (uint8_t)_channel;
+
+	OV_ASSERT2(memory_view.good());
+#endif
+	return stream;
+}
+
+bool AVCDecoderConfigurationRecord::Deserialize(const std::vector<uint8_t> &stream)
+{
+#if 0	
+    MemoryView memory_view(const_cast<uint8_t*>(stream.data()), stream.size(), stream.size());
+    memory_view >> _object_type >> _sampling_frequency_index >> _channel;
+    const bool result = memory_view.good() && memory_view.eof();
+    OV_ASSERT2(result);
+    return result;	
+#endif
+	return true;    
+}
+
+ov::String AVCDecoderConfigurationRecord::GetInfoString()
+{
+	ov::String out_str = ov::String::FormatString("\n[AVCDecoderConfigurationRecord]\n");
+
+	out_str.AppendFormat("\tVersion(%d)\n", Version());
+	out_str.AppendFormat("\tProfileIndication(%d)\n", ProfileIndication());
+	out_str.AppendFormat("\tCompatibility(%d)\n", Compatibility());
+	out_str.AppendFormat("\tLevelIndication(%d)\n", LevelIndication());
+	out_str.AppendFormat("\tLengthOfNALUnit(%d)\n", LengthOfNALUnit());
+	out_str.AppendFormat("\tNumOfSPS(%d)\n", NumOfSPS());
+	out_str.AppendFormat("\tNumOfPPS(%d)\n", NumOfPPS());
+	out_str.AppendFormat("\tNumofSPSExt(%d)\n", NumofSPSExt());
+	out_str.AppendFormat("\tChromaFormat(%d)\n", ChromaFormat());
+	out_str.AppendFormat("\tBitDepthLumaMinus8(%d)\n", BitDepthLumaMinus8());
+
+	return out_str;
+}

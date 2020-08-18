@@ -12,8 +12,6 @@
 #include "base/common_types.h"
 #include "base/provider/push_provider/stream.h"
 
-#include "media_router/bitstream/bitstream_conv.h"
-
 #include "chunk/amf_document.h"
 #include "chunk/rtmp_chunk_parser.h"
 #include "chunk/rtmp_export_chunk.h"
@@ -130,10 +128,6 @@ namespace pvd
 		double _client_id = 12345.0;
 		// Set from OnAmfPublish
 		int32_t _chunk_stream_id = 0;
-
-		// bitstream filters
-		BitstreamConv _bitstream_conv_video;
-		BitstreamConv _bitstream_conv_audio;
 
 		// parsed from packet
 		ov::String _domain_name;

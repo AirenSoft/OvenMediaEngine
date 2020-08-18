@@ -18,7 +18,13 @@
 #include "base/media_route/media_type.h"
 #include "base/info/stream.h"
 
-#include "bitstream/bitstream_conv.h"
+
+enum class MRStreamInoutType : int8_t
+{
+	Unknown = -1,
+	Incoming,
+	Outgoing
+};
 
 class MediaRouteStream
 {
@@ -26,32 +32,36 @@ public:
 	MediaRouteStream(const std::shared_ptr<info::Stream> &stream);
 	~MediaRouteStream();
 
-	void SetInoutType(bool inout_type);
-
-	// Query original stream information
-	std::shared_ptr<info::Stream> GetStream();
-	void SetConnectorType(MediaRouteApplicationConnector::ConnectorType type);
-	MediaRouteApplicationConnector::ConnectorType GetConnectorType();
+	// Inout Stream Type
+	void SetInoutType(MRStreamInoutType inout_type);
+	MRStreamInoutType GetInoutType();
 
 	// Queue interfaces
 	bool Push(std::shared_ptr<MediaPacket> media_packet);
+	bool PushIncomingStream(std::shared_ptr<MediaPacket> &media_packet);
+	bool PushOutgoungStream(std::shared_ptr<MediaPacket> &media_packet);
+
 	std::shared_ptr<MediaPacket> Pop();
+
+	// Query original stream information
+	std::shared_ptr<info::Stream> GetStream();
 
 private:
 	// false = incoming stream
 	// true = outgoing stream
-	bool	_inout_type;
+	MRStreamInoutType _inout_type;
+	
+	// Connector Type
+	MediaRouteApplicationConnector::ConnectorType _application_connector_type2;
 
 	std::shared_ptr<info::Stream> _stream;
-	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
 
+
+	// temporary packet store. for calculating packet duration
 	std::map<uint8_t, std::shared_ptr<MediaPacket>> _media_packet_stored;
-	ov::Queue<std::shared_ptr<MediaPacket>> _media_packets;
 
-	////////////////////////////
-	// bitstream filters
-	////////////////////////////
-	BitstreamConv 	_bitstream_conv;
+	// Incoming/Outgoing packets queue
+	ov::Queue<std::shared_ptr<MediaPacket>> _packets_queue;
 
 	// Store the correction values in case of sudden change in PTS.
 	// If the PTS suddenly increases, the filter behaves incorrectly.

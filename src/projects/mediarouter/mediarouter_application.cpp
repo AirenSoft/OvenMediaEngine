@@ -7,7 +7,7 @@
 //
 //==============================================================================
 #include <base/info/stream.h>
-#include "media_router_application.h"
+#include "mediarouter_application.h"
 #include "monitoring/monitoring.h"
 
 #define OV_LOG_TAG "MediaRouter.App"
@@ -203,22 +203,27 @@ bool MediaRouteApplication::OnCreateStream(
 
 	logti("Trying to create a stream: [%s/%s(%u)]"
 		, _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+	logti("%s", stream_info->GetInfoString().CStr());
+	
 
 	auto new_stream = std::make_shared<MediaRouteStream>(stream_info);
-	new_stream->SetConnectorType(connector_type);
 
 	if(connector_type == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
 		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
-		new_stream->SetInoutType(false);
+
+		new_stream->SetInoutType(MRStreamInoutType::Incoming);
+
 		_streams_incoming.insert(std::make_pair(stream_info->GetId(), new_stream));		
 	}
+	
 	else if( (connector_type == MediaRouteApplicationConnector::ConnectorType::Transcoder) || 
 			 (connector_type == MediaRouteApplicationConnector::ConnectorType::Relay) )
 	{
 		std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 
-		new_stream->SetInoutType(true);
+		new_stream->SetInoutType(MRStreamInoutType::Outgoing);
+
 		_streams_outgoing.insert(std::make_pair(stream_info->GetId(), new_stream));			
 	}
 	else
@@ -228,11 +233,10 @@ bool MediaRouteApplication::OnCreateStream(
 		return false;
 	}
 
-
 	// For Monitoring
 	mon::Monitoring::GetInstance()->OnStreamCreated(*stream_info);
 
-
+#if 0	
 	// Notify all observers that a stream has been created
 	{
 		std::shared_lock<std::shared_mutex> lock(_observers_lock);
@@ -272,7 +276,7 @@ bool MediaRouteApplication::OnCreateStream(
 			}
 		}
 	}
-
+#endif
 	return true;
 }
 
@@ -357,7 +361,7 @@ bool MediaRouteApplication::OnDeleteStream(
 	return true;
 }
 
-// @from RtmpProvider
+// @from Provider
 // @from TranscoderProvider
 bool MediaRouteApplication::OnReceiveBuffer(
 	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
@@ -438,6 +442,7 @@ void MediaRouteApplication::MessageLooper()
 
 		auto &indicator = msg.value();
 
+		// Get MediaRouter Stream
 		std::shared_ptr<MediaRouteStream> stream = nullptr;
 
 		std::shared_lock<std::shared_mutex> lock(_streams_lock);
@@ -459,8 +464,10 @@ void MediaRouteApplication::MessageLooper()
 			continue;
 		}
 
+		// Get Stream Info
 		auto stream_info = stream->GetStream();
 
+		// 
 		while(auto media_packet = stream->Pop())
 		{
 			// Find Media Track

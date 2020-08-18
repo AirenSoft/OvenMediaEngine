@@ -6,41 +6,48 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "media_router_stream.h"
+#include "mediarouter_stream.h"
 
 #include <base/ovlibrary/ovlibrary.h>
+
+#include <modules/codec_analyzer/h264/h264_decoder_configuration_record.h>
+#include <modules/codec_analyzer/h264/h264_sps.h>
+#include <modules/codec_analyzer/h264/h264_fragment_header.h>
+#include <modules/codec_analyzer/h264/h264_avcc_to_annexb.h>
+
+#include <modules/codec_analyzer/aac/aac_specific_config.h>
+#include <modules/codec_analyzer/aac/aac_adts.h>
+#include <modules/codec_analyzer/aac/aac_latm_to_adts.h>
 
 #define OV_LOG_TAG "MediaRouter.Stream"
 
 using namespace common;
 
-// #define PTS_CORRECT_THRESHOLD_US	5000	
 #define PTS_CORRECT_THRESHOLD_US	5000
 
 MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream) :
-	_media_packets(nullptr, 100)
+	_packets_queue(nullptr, 100)
 {
-	logtd("Trying to create media route stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
+	logti("Trying to create media route stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 
-	_inout_type = false;
 	_stream = stream;
-	_stream->ShowInfo();
+	_inout_type = MRStreamInoutType::Unknown;
 
 	_stat_start_time = std::chrono::system_clock::now();
 
 	_stop_watch.Start();
 
 	// set alias
-	_media_packets.SetAlias(ov::String::FormatString("%s/%s - MediaRouterStream packets Queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetName().CStr()));
+	_packets_queue.SetAlias(ov::String::FormatString("%s/%s - MediaRouterStream packets Queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetName().CStr()));
+
+	logti("%s", _stream->GetInfoString().CStr());
 }
 
 MediaRouteStream::~MediaRouteStream()
 {
-	logtd("Delete media route stream name(%s) id(%u)", _stream->GetName().CStr(), _stream->GetId());
+	logti("Delete media route stream name(%s) id(%u)", _stream->GetName().CStr(), _stream->GetId());
 
 	_media_packet_stored.clear();
-
-	// _media_packets.Clear();
 
 	_stat_recv_pkt_lpts.clear();
 	_stat_recv_pkt_ldts.clear();
@@ -50,8 +57,6 @@ MediaRouteStream::~MediaRouteStream()
 
 	_pts_correct.clear();
 	_pts_avg_inc.clear();
-
-	logtd("Delete media route stream name(%s) id(%u) Completed", _stream->GetName().CStr(), _stream->GetId());	
 }
 
 std::shared_ptr<info::Stream> MediaRouteStream::GetStream()
@@ -59,25 +64,185 @@ std::shared_ptr<info::Stream> MediaRouteStream::GetStream()
 	return _stream;
 }
 
-void MediaRouteStream::SetConnectorType(MediaRouteApplicationConnector::ConnectorType type)
-{
-	_application_connector_type = type;
-}
-
-void MediaRouteStream::SetInoutType(bool inout_type)
+void MediaRouteStream::SetInoutType(MRStreamInoutType inout_type)
 {
 	_inout_type = inout_type;
 }
 
-
-MediaRouteApplicationConnector::ConnectorType MediaRouteStream::GetConnectorType()
+MRStreamInoutType MediaRouteStream::GetInoutType()
 {
-	return _application_connector_type;
+	return _inout_type;
+}
+
+
+bool MediaRouteStream::PushIncomingStream(std::shared_ptr<MediaPacket> &media_packet)
+{
+	auto media_track = _stream->GetTrack(media_packet->GetTrackId());
+	if (media_track == nullptr)
+	{
+		logte("Not found mediatrack. id(%d)", media_packet->GetTrackId());
+		return false;
+	}	
+
+	////////////////////////////////////////////////////
+	// Bitstream converting to standard format
+	// 
+	// Standard format by codec
+	// 	 - h264 : H264_ANNEXB
+	// 	 - aac  : AAC_ADTS
+	// 	 - vp8  : VP8
+	// 	 - opus : OPUS   <CELT | SILK>
+	//////////////////////////////////////////////////////
+	switch(media_track->GetCodecId())
+	{
+		case MediaCodecId::H264:
+			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H264_AVCC)
+			{
+				std::vector<uint8_t> extradata; 
+				if( H264AvccToAnnexB::GetExtradata(media_packet->GetPacketType(), media_packet->GetData(), extradata) == true)
+				{
+					media_track->SetCodecExtradata(extradata);
+					return true;
+				}
+
+				if(H264AvccToAnnexB::Convert(media_packet) == false)
+				{
+					logte("Bitstream format change failed");
+					return false;
+				}
+			}
+			break;	
+
+		case MediaCodecId::Aac:
+			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::AAC_LATM)
+			{
+				std::vector<uint8_t> extradata; 
+				if( AACLatmToAdts::GetExtradata(media_packet->GetPacketType(), media_packet->GetData(), extradata) == true)
+				{
+					media_track->SetCodecExtradata(extradata);
+					return true;
+				}
+				
+				if(AACLatmToAdts::Convert(media_packet, media_track->GetCodecExtradata()) == false)
+				{
+					logte("Bitstream format change failed");
+					return false;
+				}
+
+				#if 0
+				if(AACLatmToAdts::Convert(media_packet->GetPacketType(), media_packet->GetData(), media_track->GetCodecExtradata()) == false)
+				{
+					logte("Bitstream format change failed");
+					return false;
+				}
+				#endif
+			}
+			break;
+		
+		// The incoming stream does not support this codec.
+		case MediaCodecId::Vp8: 
+		case MediaCodecId::Vp9:
+		case MediaCodecId::Flv:
+		case MediaCodecId::Opus:
+		case MediaCodecId::Mp3:
+			logte("Not support codec in incoming stream");
+			return false;
+
+		default:
+			logte("Unknown codec");
+			return false;
+	}
+
+
+
+	////////////////////////////////////////////////////
+	// Codec Analyzer
+	// 
+	// Extract codec information from a bit stream.
+	////////////////////////////////////////////////////
+	switch(media_track->GetCodecId())
+	{
+		case MediaCodecId::H264:
+			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H264_ANNEXB)
+			{
+				// NALU 패킷을 분석해서 SPS/PPS 타입에 대해서 트랙 정보를 추출한다.		
+				if(H264FragmentHeader::Parse(media_packet) == false)
+				{
+					logte("failed make fragment header");
+				}
+
+				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();
+				auto fragmentation = media_packet->GetFragHeader();
+
+				for (size_t i = 0; i < fragmentation->GetCount(); ++i) 
+				{
+					const uint8_t* buffer = &payload_data[fragmentation->fragmentation_offset[i]];
+					size_t length = fragmentation->fragmentation_length[i];
+
+					uint16_t nal_unit_type = *(buffer) & 0x1F;
+
+					// sps
+					if(nal_unit_type == 7)
+					{
+						H264Sps sps;
+						H264Sps::Parse(buffer, length, sps);
+						
+						logtd("%s", sps.GetInfoString().CStr());
+					}
+				}
+			}
+			break;
+
+		case MediaCodecId::Aac:
+			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::AAC_ADTS)
+			{
+				if(AACAdts::IsValid(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength()) == true)
+				{
+					AACAdts adts;
+					AACAdts::Parse(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength(), adts);
+					
+					//logtd("%s", adts.GetInfoString().CStr());
+				}
+			}		
+			break;
+
+		// The incoming stream does not support this codec.
+		case MediaCodecId::Vp8: 
+		case MediaCodecId::Opus:
+		case MediaCodecId::Vp9:
+		case MediaCodecId::Flv:
+		case MediaCodecId::Mp3:
+			logte("Not support codec in incoming stream");
+			break;
+
+		default:
+			logte("Unknown codec");
+			break;		
+	}
+
+	return true;	
+}
+
+
+bool MediaRouteStream::PushOutgoungStream(std::shared_ptr<MediaPacket> &media_packet)
+{
+	return true;
 }
 
 bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 {	
-	auto track_id = media_packet->GetTrackId();
+	// logtd("track_id(%d), type(%d), bsfmt(%d), flags(%d)", media_packet->GetTrackId(), media_packet->GetPacketType(), media_packet->GetBitstreamFormat(), media_packet->GetFlag());
+	// logtd("%s", media_packet->GetData()->Dump(128).CStr());		
+	if(GetInoutType() == MRStreamInoutType::Incoming)
+	{
+		PushIncomingStream(media_packet);
+	}
+	else if(GetInoutType() == MRStreamInoutType::Outgoing)
+	{
+		PushOutgoungStream(media_packet);
+	}
+
+	return true;
 
 	// Accumulate Packet duplication
 	//	- 1) If packets stored in temporary storage exist, calculate Duration compared to the current packet's timestamp.
@@ -85,7 +250,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	//	- 3) If there is a packet Duration value, insert it into the packet queue.
 	bool is_inserted_queue = false;
 
-	auto iter = _media_packet_stored.find(track_id);
+	auto iter = _media_packet_stored.find(media_packet->GetTrackId());
 	if(iter != _media_packet_stored.end())
 	{
 		auto media_packet_cache = iter->second;
@@ -94,20 +259,23 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		int64_t duration = media_packet->GetDts() - media_packet_cache->GetDts();
 		media_packet_cache->SetDuration(duration);
 
-		_media_packets.Enqueue(std::move(media_packet_cache));
+		_packets_queue.Enqueue(std::move(media_packet_cache));
+
 		is_inserted_queue = true;
 	}
 
 	if(media_packet->GetDuration() == -1LL)
 	{
-		_media_packet_stored[track_id] = media_packet;	
+		_media_packet_stored[media_packet->GetTrackId()] = media_packet;	
 	}
 	else
 	{
-		_media_packets.Enqueue(std::move(media_packet));
+		_packets_queue.Enqueue(std::move(media_packet));
 
 		is_inserted_queue = true;
 	}
+
+
 
 	return is_inserted_queue;
 }
@@ -115,12 +283,12 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 
 std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 {
-	if(_media_packets.IsEmpty())
+	if(_packets_queue.IsEmpty())
 	{
 		return nullptr;
 	}
 
-	auto media_packet_ref = _media_packets.Dequeue();
+	auto media_packet_ref = _packets_queue.Dequeue();
 	if(media_packet_ref.has_value() == false)
 	{
 		return nullptr;
@@ -159,14 +327,17 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			, _pts_avg_inc[track_id]
 		);
 #endif
+
 	}
 	else
 	{
+
 		// Originally it should be an average value, Use the difference of the last packet.
 		// Use DTS because the PTS value does not increase uniformly.
 		_pts_avg_inc[track_id] = media_packet->GetDts() - _stat_recv_pkt_ldts[track_id];
+
 	}
-	
+
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Statistics for log
@@ -176,7 +347,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();
 	
 	_stat_recv_pkt_size[track_id] += media_packet->GetData()->GetLength();
-	
+
 	_stat_recv_pkt_count[track_id]++;
 
 
@@ -191,6 +362,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		_stat_first_time_diff[track_id] = uptime - rescaled_last_pts;
 	}
 
+
 	if (_stop_watch.IsElapsed(5000))
 	{
 		_stop_watch.Update();
@@ -202,10 +374,10 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 		ov::String temp_str = "\n";
 		temp_str.AppendFormat(" - Stream of MediaRouter| type: %s, name: %s/%s, uptime: %lldms , queue: %d" 
-			, _inout_type?"Outgoing":"Incoming"
+			, _inout_type==MRStreamInoutType::Incoming?"Incoming":"Incoming"
 			,_stream->GetApplicationInfo().GetName().CStr()
 			,_stream->GetName().CStr()
-			,(int64_t)uptime, _media_packets.Size());
+			,(int64_t)uptime, _packets_queue.Size());
 
 		for(const auto &iter : _stream->GetTracks())
 		{
@@ -258,7 +430,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	////////////////////////////////////////////////////////////////////////////////////
 	// Bitstream Processing
 	////////////////////////////////////////////////////////////////////////////////////
-
+#if 0
 	// Bitstream Converting or Generate Fragmentation Header 
 	if (media_track->GetCodecId() == MediaCodecId::H264)
 	{
@@ -308,7 +480,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		logte("Unsupported audio codec. codec_id(%d)", media_track->GetCodecId());
 		return nullptr;
 	}
-		
+#endif
+
 	// Set the corrected PTS.
 	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
 	media_packet->SetDts( media_packet->GetDts() - _pts_correct[track_id] );

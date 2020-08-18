@@ -10,7 +10,7 @@
 #include <iostream>
 #include <unistd.h>
 
-#include "media_router.h"
+#include "mediarouter.h"
 #include "config/config_manager.h"
 
 #define OV_LOG_TAG "MediaRouter"

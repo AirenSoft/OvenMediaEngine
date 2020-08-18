@@ -1,56 +1,35 @@
 #pragma once
 
+#include "aac_specific_config.h"
 #include <base/ovlibrary/ovlibrary.h>
 
-// MPEG-4 Audio Object Types:
-enum AacObjectType
-{
-	// Table 1.1 - Audio Object Type definition
-	// @see @see aac-mp4a-format-ISO_IEC_14496-3+2001.pdf, page 23
-	AacObjectTypeAacMain = 1,
-	AacObjectTypeAacLC = 2,
-	AacObjectTypeAacSSR = 3,
-	AacObjecttypeAacLTP = 4
-};
+#include <cstdint>
 
-// Sampling Frequencies
-enum SamplingFrequencies
-{
-	Samplerate_96000 = 0,
-	Samplerate_88200 = 1,
-	Samplerate_64000 = 2,
-	Samplerate_48000 = 3,
-	Samplerate_44100 = 4,
-	Samplerate_32000 = 5,
-	Samplerate_24000 = 6,
-	Samplerate_22050 = 7,
-	Samplerate_16000 = 8,
-	Samplerate_12000 = 9,
-	Samplerate_11025 = 10,
-	Samplerate_8000 = 11,
-	Samplerate_7350 = 12,
-	Samplerate_Unknown = 13
-};
+
 
 #define ADTS_MIN_SIZE	7
 
 class AACAdts
 {
-public:
-	static bool AppendAdtsHeader(AacObjectType profile, SamplingFrequencies samplerate, int32_t channels, std::shared_ptr<ov::Data> &media_packet_data);
 
-	static bool ParseAdtsHeader(const uint8_t *data, size_t data_length, AACAdts &atds);
+public:
+	// static bool AppendAdtsHeader(AacObjectType profile, SamplingFrequencies samplerate, int32_t channels, std::shared_ptr<ov::Data> &media_packet_data);
+	static bool IsValid(const uint8_t *data, size_t data_length);
+	static bool Parse(const uint8_t *data, size_t data_length, AACAdts &atds);
 
 	uint8_t Id();
 	uint8_t Layer();
 	bool ProtectionAbsent();
 	AacObjectType Profile();
+	ov::String ProfileString();
 	SamplingFrequencies Samplerate();
 	uint32_t SamplerateNum();
 	uint8_t ChannelConfiguration();
 	bool Originality();
 	bool Home();
 	uint16_t AacFrameLength();
+
+	ov::String GetInfoString();
 
 private:
 	uint16_t _syncword; // 12 bits (0xFFF)

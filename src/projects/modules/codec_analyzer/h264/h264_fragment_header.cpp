@@ -1,83 +1,17 @@
-#include "bitstream_conv.h"
+#include "h264_fragment_header.h"
 
 
-BitstreamConv::BitstreamConv() :
-	_type(ConvUnknown)
+H264FragmentHeader::H264FragmentHeader()
 {
 
 }
 
-BitstreamConv::~BitstreamConv()
+H264FragmentHeader::~H264FragmentHeader()
 {
 
 }
 
-void BitstreamConv::SetType(ConvType type)
-{
-	_type = type;
-}
-
-BitstreamConv::ResultType BitstreamConv::Convert(const std::shared_ptr<ov::Data> &data)
-{
-	int64_t cts = 0;
-
-	return Convert(_type, data, cts);
-}
-
-BitstreamConv::ResultType BitstreamConv::Convert(const std::shared_ptr<ov::Data> &data, int64_t &cts)
-{
-	return Convert(_type, data, cts);
-}
-
-BitstreamConv::ResultType BitstreamConv::Convert(ConvType type, const std::shared_ptr<ov::Data> &data)
-{
-	int64_t cts = 0;
-
-	return Convert(type, data, cts);
-}
-
-BitstreamConv::ResultType BitstreamConv::Convert(ConvType type, const std::shared_ptr<ov::Data> &data, int64_t &cts)
-{
-	switch(type)
-	{
-		case ConvADTS:
-		{
-			int32_t data_len = _adts.Convert(data);
-			return (data_len>0)?SUCCESS_DATA:(data_len==0)?SUCCESS_NODATA:INVALID_DATA;
-		}
-		break;
-		case ConvAnnexA:
-		{
-			int32_t data_len = _annexa.Convert(data);
-			return (data_len>0)?SUCCESS_DATA:(data_len==0)?SUCCESS_NODATA:INVALID_DATA;
-		} 
-		break;
-		case ConvAnnexB:
-		{
-			bool ret = _annexb.Convert(data, cts);
-			return (ret==true)?SUCCESS_DATA:SUCCESS_NODATA;
-		}
-		break;
-		case ConvUnknown:
-		default:
-			break;
-	}
-
-	return ResultType::INVALID_DATA;	
-}
-
-bool BitstreamConv::ParseSequenceHeaderAVC(const uint8_t *data,
-	int data_size,
-	std::vector<uint8_t> &_sps,
-	std::vector<uint8_t> &_pps,
-	uint8_t &avc_profile,
-	uint8_t &avc_profile_compatibility,
-	uint8_t &avc_level)
-{
-	return BitstreamToAnnexB::ParseSequenceHeader(data, data_size, _sps, _pps, avc_profile, avc_profile_compatibility, avc_level);
-}
-
-bool BitstreamConv::MakeAVCFragmentHeader(const std::shared_ptr<MediaPacket> &packet)
+bool H264FragmentHeader::Parse(const std::shared_ptr<MediaPacket> &packet)
 {
    auto fragment_header = packet->GetFragHeader();
 

@@ -10,7 +10,7 @@
 
 #include <base/media_route/media_route_interface.h>
 #include <base/provider/stream.h>
-#include <media_router/media_router.h>
+#include <mediarouter/mediarouter.h>
 #include <monitoring/monitoring.h>
 
 #include "orchestrator_private.h"

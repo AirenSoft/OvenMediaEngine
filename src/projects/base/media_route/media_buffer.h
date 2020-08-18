@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  MediaRouteApplication
+//  Media Buffer
 //
 //  Created by Kwon Keuk Han
 //  Copyright (c) 2018 AirenSoft. All rights reserved.

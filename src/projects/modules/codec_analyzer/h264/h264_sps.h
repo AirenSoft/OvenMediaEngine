@@ -2,6 +2,8 @@
 
 #include "h264_nal_unit_bitstream_parser.h"
 
+#include <base/ovlibrary/ovlibrary.h>
+
 #include <cstdint>
 
 class H264Sps
@@ -22,6 +24,8 @@ public:
     unsigned int GetFps() const;
     unsigned int GetId() const;
     unsigned int GetMaxNrOfReferenceFrames() const;
+
+    ov::String GetInfoString();
 
 private:
     uint8_t _profile = 0;

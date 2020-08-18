@@ -41,7 +41,7 @@ namespace common
 		// and the "media router" delivers this type of packet to the publisher as it is without parsing.
 		OVT = 0,	
 
-		RAW, // AAC LATM
+		RAW, // AAC LATM, AAC ADTS
 		// H.264
 		SEQUENCE_HEADER, // For H.264 AVCC, AAC LATM
 		NALU, // For H.264 AVCC, ANNEXB	
