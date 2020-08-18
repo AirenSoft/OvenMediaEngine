@@ -181,6 +181,7 @@ namespace pub
 
 	bool Stream::Start(uint32_t worker_count)
 	{
+		std::unique_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
 		if (_run_flag == true)
 		{
 			return false;
@@ -208,6 +209,8 @@ namespace pub
 			_stream_workers[i] = stream_worker;
 		}
 
+		worker_lock.unlock();
+
 		logti("%s application has started [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
 
 		_run_flag = true;
@@ -216,6 +219,8 @@ namespace pub
 
 	bool Stream::Stop()
 	{
+		std::unique_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
+
 		if (_run_flag == false)
 		{
 			return false;
@@ -229,6 +234,8 @@ namespace pub
 		}
 
 		_stream_workers.clear();
+
+		worker_lock.unlock();
 
 		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
 		for(const auto &x : _sessions)
@@ -260,6 +267,7 @@ namespace pub
 
 	std::shared_ptr<StreamWorker> Stream::GetWorkerByStreamID(session_id_t session_id)
 	{
+		std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
 		return _stream_workers[session_id % _worker_count];
 	}
 
@@ -307,6 +315,7 @@ namespace pub
 
 	bool Stream::BroadcastPacket(uint32_t packet_type, std::shared_ptr<ov::Data> packet)
 	{
+		std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
 		// 모든 StreamWorker에 나눠준다.
 		for (uint32_t i = 0; i < _worker_count; i++)
 		{
