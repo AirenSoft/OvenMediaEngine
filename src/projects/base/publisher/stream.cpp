@@ -206,7 +206,7 @@ namespace pub
 				return false;
 			}
 
-			_stream_workers[i] = stream_worker;
+			_stream_workers.push_back(stream_worker);
 		}
 
 		worker_lock.unlock();
@@ -229,8 +229,9 @@ namespace pub
 		_run_flag = false;
 
 		for (uint32_t i = 0; i < _worker_count; i++)
+		for(const auto &worker : _stream_workers)
 		{
-			_stream_workers[i]->Stop();
+			worker->Stop();
 		}
 
 		_stream_workers.clear();
@@ -268,7 +269,7 @@ namespace pub
 	std::shared_ptr<StreamWorker> Stream::GetWorkerByStreamID(session_id_t session_id)
 	{
 		std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
-		return _stream_workers[session_id % _worker_count];
+		return _stream_workers[session_id % _stream_workers.size()];
 	}
 
 	bool Stream::AddSession(std::shared_ptr<Session> session)
@@ -317,7 +318,7 @@ namespace pub
 	{
 		std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
 		// 모든 StreamWorker에 나눠준다.
-		for (uint32_t i = 0; i < _worker_count; i++)
+		for (uint32_t i = 0; i < _stream_workers.size(); i++)
 		{
 			_stream_workers[i]->SendPacket(packet_type, packet);
 		}
