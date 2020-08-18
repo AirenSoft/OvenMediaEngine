@@ -262,12 +262,7 @@ void MediaFilterResampler::ThreadFilter()
 		// Copy packet data into frame
 		if (::av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0)
 		{
-			logte("An error occurred while feeding the audio filtergraph: format: %d, pts: %lld, linesize: %d, size: %d", _frame->format, _frame->pts, _frame->linesize[0], _input_buffer.size());
-
-			std::unique_lock<std::mutex> mlock(_mutex);
-			_input_buffer.push_front(std::move(frame));
-			mlock.unlock();
-			_queue_event.Notify();
+			logte("An error occurred while feeding the audio filtergraph: pts: %lld, linesize: %d, srate: %d, layout: %d, channels: %d, format: %d, rq: %d",  _frame->pts, _frame->linesize[0], _frame->sample_rate, _frame->channel_layout, _frame->channels, _frame->format, _input_buffer.size());
 		}
 
 		::av_frame_unref(_frame);

@@ -100,10 +100,9 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::pub::IceCandidates &
 			for(int port_num = start_port; port_num <= end_port; port_num++)
 			{
 				// Create an ICE candidate using local_ip & port_num
-				auto address = ov::SocketAddress(local_ip, static_cast<uint16_t>(port_num));
 				ov::String protocol = (socket_type == ov::SocketType::Tcp) ? "TCP" : "UDP";
 
-				parsed_ice_candidate_list->emplace_back(protocol, address, 0, "");
+				parsed_ice_candidate_list->emplace_back(protocol, local_ip, static_cast<uint16_t>(port_num), 0, "");
 			}
 		}
 	}

@@ -10,8 +10,8 @@
 
 #include <utility>
 
-RtcIceCandidate::RtcIceCandidate(ov::String transport, ov::SocketAddress address, uint16_t sdp_m_line_index, ov::String sdp_mid)
-	: IceCandidate(std::move(transport), std::move(address)),
+RtcIceCandidate::RtcIceCandidate(ov::String transport, ov::String ip_address, int port, uint16_t sdp_m_line_index, ov::String sdp_mid)
+	: IceCandidate(std::move(transport), ip_address, port),
 
 	  _sdp_m_line_index(sdp_m_line_index),
 	  _sdp_mid(std::move(sdp_mid))
