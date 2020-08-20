@@ -11,9 +11,9 @@ LOCAL_STATIC_LIBRARIES := \
 	rtspc_provider \
 	transcoder \
 	rtc_signalling \
-	bitstream \
 	ice \
-	jsoncpp \
+	bitstream \
+	containers \
 	http_server \
 	signed_url \
 	dtls_srtp \
