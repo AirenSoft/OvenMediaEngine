@@ -321,8 +321,6 @@ bool MediaRouteApplication::NotifyCreateStream(
 			{
 				if(oberver_type == MediaRouteApplicationObserver::ObserverType::Publisher)
 				{
-					logte("OnCreateStream");
-					logte("%s", stream_info->GetInfoString().CStr());
 					observer->OnCreateStream(stream_info);
 				}
 			} break;
@@ -489,7 +487,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 	// Notify the Observer that the stream is created.
 	if(stream->GetInoutType() == MRStreamInoutType::Incoming)
 	{
-		if(stream->IsCreatedSteam() == false && stream->IsValidStream() == true)
+		if(stream->IsCreatedSteam() == false && stream->IsParseTrackAll() == true)
 		{
 			logtw("NotifyCreateStream(stream->GetStream(),app_conn->GetConnectorType())");
 			NotifyCreateStream(stream->GetStream(),app_conn->GetConnectorType());

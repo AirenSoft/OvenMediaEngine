@@ -14,6 +14,7 @@
 #include <modules/bitstream/h264/h264_sps.h>
 #include <modules/bitstream/h264/h264_fragment_header.h>
 #include <modules/bitstream/h264/h264_avcc_to_annexb.h>
+#include <modules/bitstream/h264/h264_nal_unit_types.h>
 
 #include <modules/bitstream/aac/aac_specific_config.h>
 #include <modules/bitstream/aac/aac_adts.h>
@@ -24,6 +25,11 @@
 
 using namespace common;
 
+// 미디어 라우터의 목적
+// - 비트스트림 포맷을 표쥰 규격으로 변경한다.
+// - 미디어 트랙의 정보를 추출한다.
+// - 큐 역할을 해준다.
+// - 
 MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream) :
 	_created_stream(false),
 	_stream(stream),
@@ -37,6 +43,8 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream) 
 	_stop_watch.Start();
 
 	_packets_queue.SetAlias(ov::String::FormatString("%s/%s - MediaRouterStream packets Queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetName().CStr()));
+
+	InitParseTrackInfo();
 }
 
 MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MRStreamInoutType inout_type) :
@@ -76,11 +84,14 @@ MRStreamInoutType MediaRouteStream::GetInoutType()
 	return _inout_type;
 }
 
-bool MediaRouteStream::IsValidStream()
+// Check whether the information extraction for all tracks has been completed.
+bool MediaRouteStream::IsParseTrackAll()
 {
+
 	return true;
 }
 
+// Check if an external stream has been generated for the current stream.
 bool MediaRouteStream::IsCreatedSteam()
 {
 	return _created_stream;
@@ -90,26 +101,178 @@ void MediaRouteStream::SetCreatedSteam(bool created)
 {
 	_created_stream = created;
 }
-	
 
-bool MediaRouteStream::PushIncomingStream(std::shared_ptr<MediaPacket> &media_packet)
+bool MediaRouteStream::PushIncomingStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
 {
-	auto media_track = _stream->GetTrack(media_packet->GetTrackId());
-	if (media_track == nullptr)
+	// Convert to default bitstream format
+	if(!ConvertToDefaultBitstream(media_track, media_packet))
 	{
-		logte("Not found mediatrack. id(%d)", media_packet->GetTrackId());
 		return false;
-	}	
+	}
 
-	////////////////////////////////////////////////////
-	// Bitstream converting to standard format
-	// 
-	// Standard format by codec
-	// 	 - h264 : H264_ANNEXB
-	// 	 - aac  : AAC_ADTS
-	// 	 - vp8  : VP8
-	// 	 - opus : OPUS   <CELT | SILK>
-	//////////////////////////////////////////////////////
+	if(!ParseAdditionalData(media_track, media_packet))
+	{
+		return false;
+	}
+
+	// Extract media track information
+	if(!ParseTrackInfo(media_track, media_packet))
+	{
+		return false;
+	}
+
+	return true;	
+}
+
+bool MediaRouteStream::PushOutgoungStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+{
+	if(!ParseAdditionalData(media_track, media_packet))
+	{
+		return false;
+	}
+	
+	return true;
+}
+
+void MediaRouteStream::InitParseTrackInfo()
+{
+	for(const auto &iter : _stream->GetTracks())
+	{
+		auto track_id = iter.first;
+
+		_parsed_track_info[track_id] = false;
+	}
+}
+
+void MediaRouteStream::SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, bool parsed)
+{
+	_parsed_track_info[media_track->GetId()] = parsed;
+}
+
+bool MediaRouteStream::GetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track)
+{
+	auto iter = _parsed_track_info.find(media_track->GetId());
+	if(iter != _parsed_track_info.end())
+	{
+		return iter->second;
+	}
+
+	return false;
+}
+
+// Extract codec information from a media packet
+bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+{
+	// Check if parsing is already finished.
+	if(GetParseTrackInfo(media_track) == true)
+	{
+		return true;
+	}
+
+	// Parse media track information by codec. 
+	switch(media_track->GetCodecId())
+	{
+		case MediaCodecId::H264:
+			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H264_ANNEXB)
+			{
+				// Analyzes NALU packets and extracts track information for SPS/PPS types.
+				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();
+				auto frag_hdr = media_packet->GetFragHeader();
+				if(frag_hdr != nullptr)
+				{
+					for (size_t i = 0; i < frag_hdr->GetCount(); ++i) 
+					{
+						const uint8_t* buffer = &payload_data[frag_hdr->fragmentation_offset[i]];
+						size_t length = frag_hdr->fragmentation_length[i];
+
+						uint16_t nal_unit_type = *(buffer) & 0x1F;
+
+						if(nal_unit_type == H264NalUnitType::Sps)
+						{
+							H264Sps sps;
+							if(H264Sps::Parse(buffer, length, sps))
+							{
+								media_track->SetWidth(sps.GetWidth());
+								media_track->SetHeight(sps.GetHeight());
+
+								SetParseTrackInfo(media_track, true);
+							}
+							logtd("%s", sps.GetInfoString().CStr());						
+						}
+					}
+				}
+			}
+			break;
+
+		case MediaCodecId::Aac:
+			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::AAC_ADTS)
+			{
+				if(AACAdts::IsValid(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength()) == true)
+				{
+					AACAdts adts;
+					if(AACAdts::Parse(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength(), adts) == true)
+					{					
+						media_track->SetSampleRate(adts.SamplerateNum());
+						media_track->GetChannel().SetLayout( (adts.SamplerateNum()==1)?(AudioChannel::Layout::LayoutMono):(AudioChannel::Layout::LayoutStereo) );
+						SetParseTrackInfo(media_track, true);
+					}
+					logtd("%s", adts.GetInfoString().CStr());					
+				}
+			}		
+			break;
+
+		// The incoming stream does not support this codec.
+		case MediaCodecId::Vp8: 
+		case MediaCodecId::Opus:
+		case MediaCodecId::Vp9:
+		case MediaCodecId::Flv:
+		case MediaCodecId::Mp3:
+			logte("Not support codec in incoming stream");
+			break;
+
+		default:
+			logte("Unknown codec");
+			break;		
+	}
+
+	return true;
+}
+
+// Parse fragment header, flags etc...
+bool MediaRouteStream::ParseAdditionalData(
+	std::shared_ptr<MediaTrack> &media_track, 
+	std::shared_ptr<MediaPacket> &media_packet)
+{
+	switch(media_track->GetCodecId())
+	{
+		case MediaCodecId::H264:
+			if(media_packet->GetFragHeader()->GetCount() == 0)
+			{
+				if(H264FragmentHeader::Parse(media_packet) == false)
+				{
+					logte("failed make fragment header");
+				}
+			}
+		break;		
+		default:
+		break;
+	}
+
+	media_packet->SetFlag(MediaPacketFlag::Key);
+
+	return true;
+}
+
+// Bitstream converting to standard format
+// 
+// Standard format by codec
+// 	 - h264 : H264_ANNEXB
+// 	 - aac  : AAC_ADTS
+// 	 - vp8  : VP8
+// 	 - opus : OPUS   <CELT | SILK>
+bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+{
+
 	switch(media_track->GetCodecId())
 	{
 		case MediaCodecId::H264:
@@ -163,92 +326,30 @@ bool MediaRouteStream::PushIncomingStream(std::shared_ptr<MediaPacket> &media_pa
 			return false;
 	}
 
-	////////////////////////////////////////////////////
-	// Codec Analyzer
-	// 
-	// Extract codec information from a bit stream.
-	////////////////////////////////////////////////////
-	switch(media_track->GetCodecId())
-	{
-		case MediaCodecId::H264:
-			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H264_ANNEXB)
-			{
-				// NALU 패킷을 분석해서 SPS/PPS 타입에 대해서 트랙 정보를 추출한다.		
-				if(H264FragmentHeader::Parse(media_packet) == false)
-				{
-					logte("failed make fragment header");
-				}
-
-				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();
-				auto fragmentation = media_packet->GetFragHeader();
-
-				for (size_t i = 0; i < fragmentation->GetCount(); ++i) 
-				{
-					const uint8_t* buffer = &payload_data[fragmentation->fragmentation_offset[i]];
-					size_t length = fragmentation->fragmentation_length[i];
-
-					uint16_t nal_unit_type = *(buffer) & 0x1F;
-
-					if(nal_unit_type == 7)
-					{
-						H264Sps sps;
-						H264Sps::Parse(buffer, length, sps);
-//						logtd("%s", sps.GetInfoString().CStr());
-					}
-				}
-			}
-			break;
-
-		case MediaCodecId::Aac:
-			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::AAC_ADTS)
-			{
-				if(AACAdts::IsValid(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength()) == true)
-				{
-					AACAdts adts;
-					AACAdts::Parse(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength(), adts);
-					
-					// logtd("%s", adts.GetInfoString().CStr());
-				}
-			}		
-			break;
-
-		// The incoming stream does not support this codec.
-		case MediaCodecId::Vp8: 
-		case MediaCodecId::Opus:
-		case MediaCodecId::Vp9:
-		case MediaCodecId::Flv:
-		case MediaCodecId::Mp3:
-			logte("Not support codec in incoming stream");
-			break;
-
-		default:
-			logte("Unknown codec");
-			break;		
-	}
-
 	return true;	
-}
-
-bool MediaRouteStream::PushOutgoungStream(std::shared_ptr<MediaPacket> &media_packet)
-{
-
-	return true;
 }
 
 bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 {	
+	auto media_track = _stream->GetTrack(media_packet->GetTrackId());
+	if (media_track == nullptr)
+	{
+		logte("Not found mediatrack. id(%d)", media_packet->GetTrackId());
+		return false;
+	}	
+
 	// logtd("track_id(%d), type(%d), bsfmt(%d), flags(%d)", media_packet->GetTrackId(), media_packet->GetPacketType(), media_packet->GetBitstreamFormat(), media_packet->GetFlag());
 	// logtd("%s", media_packet->GetData()->Dump(128).CStr());		
 
 	// Bitstream format converting to stand format. and, parsing track informaion
 	if(GetInoutType() == MRStreamInoutType::Incoming)
 	{
-		if(!PushIncomingStream(media_packet))
+		if(!PushIncomingStream(media_track, media_packet))
 			return false;
 	}
 	else if(GetInoutType() == MRStreamInoutType::Outgoing)
 	{
-		if(!PushOutgoungStream(media_packet))
+		if(!PushOutgoungStream(media_track, media_packet))
 			return false;
 	}
 
@@ -431,18 +532,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		logtd("%s", temp_str.CStr());
 	}
 
-	switch(media_track->GetCodecId())
-	{
-		case MediaCodecId::H264:
-			// NALU 패킷을 분석해서 SPS/PPS 타입에 대해서 트랙 정보를 추출한다.		
-			if(H264FragmentHeader::Parse(media_packet) == false)
-			{
-				logte("failed make fragment header");
-			}
-		break;		
-		default:
-		break;
-	}
 	// Set the corrected PTS.
 	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
 	media_packet->SetDts( media_packet->GetDts() - _pts_correct[track_id] );

@@ -26,8 +26,6 @@ enum class MRStreamInoutType : int8_t
 	Outgoing
 };
 
-class MediaRouteApplication;
-
 class MediaRouteStream
 {
 public:
@@ -41,30 +39,58 @@ public:
 
 	// Queue interfaces
 	bool Push(std::shared_ptr<MediaPacket> media_packet);
-	bool PushIncomingStream(std::shared_ptr<MediaPacket> &media_packet);
-	bool PushOutgoungStream(std::shared_ptr<MediaPacket> &media_packet);
+	bool PushIncomingStream(
+		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaPacket> &media_packet);
+	bool PushOutgoungStream(
+		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaPacket> &media_packet);
 
 	std::shared_ptr<MediaPacket> Pop();
 
 	// Query original stream information
 	std::shared_ptr<info::Stream> GetStream();
 
-	bool IsValidStream();
 	bool IsCreatedSteam();
 	void SetCreatedSteam(bool created);
+
+	bool IsParseTrackAll();
+
+private:
+	void InitParseTrackInfo();
+	void SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, bool parsed);
+	bool GetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track);
+
+
+	// Parse media track information
+	bool ParseTrackInfo(
+		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaPacket> &media_packet);
+
+	// Set whether parsing media track is complete
+	std::map<uint8_t, bool> _parsed_track_info;
+
+private:
+	// Convert to default bitstream format
+	bool ConvertToDefaultBitstream(
+		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaPacket> &media_packet);
+
+	// Parse fragment header, flags
+	bool ParseAdditionalData(
+		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaPacket> &media_packet);
 
 private:
 	
 	// Whether to generate output streams corresponding to the current mr stream.
 	bool _created_stream;
 
-	std::shared_ptr<MediaRouteApplication> _parent;
-
 	// Incoming/Outgoing Stream
 	MRStreamInoutType _inout_type;
 	
 	// Connector Type
-	MediaRouteApplicationConnector::ConnectorType _application_connector_type2;
+	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
 
 	// Stream Information
 	std::shared_ptr<info::Stream> _stream;
@@ -82,10 +108,6 @@ private:
 	// Average Pts Incresement
 	std::map<uint8_t, int64_t> _pts_avg_inc;
 
-	// Time for statistics
-	ov::StopWatch _stop_watch;
-	std::chrono::time_point<std::chrono::system_clock> _last_recv_time;
-	std::chrono::time_point<std::chrono::system_clock> _stat_start_time;
 
 	// Statistics
 	// <TrackId, Values>
@@ -94,5 +116,10 @@ private:
 	std::map<uint8_t, int64_t> _stat_recv_pkt_size;
 	std::map<uint8_t, int64_t> _stat_recv_pkt_count;
 	std::map<uint8_t, int64_t> _stat_first_time_diff;
+
+	// Time for statistics
+	ov::StopWatch _stop_watch;
+	std::chrono::time_point<std::chrono::system_clock> _last_recv_time;
+	std::chrono::time_point<std::chrono::system_clock> _stat_start_time;
 };
 

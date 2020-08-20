@@ -141,7 +141,11 @@ public:
 	{
 		return _flag;
 	}
-
+	void SetFlag(MediaPacketFlag flag)
+	{
+		_flag = flag;
+	}
+	
 	common::BitstreamFormat GetBitstreamFormat() const noexcept
 	{
 		return _bitstream_format;
