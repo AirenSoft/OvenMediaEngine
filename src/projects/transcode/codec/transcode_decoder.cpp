@@ -115,6 +115,8 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 		logte("Parser not found");
 		return false;
 	}
+	
+	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
 
 	_context->time_base = TimebaseToAVRational(_input_context->GetTimeBase());
 

@@ -13,7 +13,7 @@
 #include <string>
 #include <base/common_types.h>
 #include <base/ovlibrary/ovlibrary.h>
-#include <base/media_route/media_buffer.h>
+#include <base/mediarouter/media_buffer.h>
 #include <publishers/segment/segment_stream/packetizer/packetizer.h>
 
 #define DEFAULT_SEGMENT_COUNT (3)

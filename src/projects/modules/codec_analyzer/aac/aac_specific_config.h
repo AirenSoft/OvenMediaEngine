@@ -84,39 +84,6 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
-// Sampling Frequencies
-enum SamplingFrequencies : uint8_t
-{
-	Samplerate_96000 = 0,
-	Samplerate_88200 = 1,
-	Samplerate_64000 = 2,
-	Samplerate_48000 = 3,
-	Samplerate_44100 = 4,
-	Samplerate_32000 = 5,
-	Samplerate_24000 = 6,
-	Samplerate_22050 = 7,
-	Samplerate_16000 = 8,
-	Samplerate_12000 = 9,
-	Samplerate_11025 = 10,
-	Samplerate_8000 = 11,
-	Samplerate_7350 = 12,
-	Samplerate_Unknown = 13
-};
-
-enum class WellKnownAACObjectTypes : uint8_t
-{
-	NULLL = 0,
-	AAC_MAIN = 1,
-	AAC_LC = 2,
-	AAC_SSR = 3,
-	AAC_LTP = 4,
-	SBR = 5,
-	AAC_SCALABLE = 6,
-	// ...
-	ESCAPE_VALUE = 31
-};
-
-
 
 // MPEG-4 Audio Object Types:
 enum AacObjectType : uint8_t
@@ -131,7 +98,17 @@ enum AacObjectType : uint8_t
 	AacObjectTypeAacHEV2 = 29 // AAC HEv2 = LC+SBR+PS
 };
 
-enum class AACSamplingFrequencies : uint8_t
+enum AacProfile : uint8_t
+{
+	AacProfileReserved = 3,
+	
+	// @see 7.1 Profiles, aac-iso-13818-7.pdf, page 40
+	AacProfileMain = 0,
+	AacProfileLC = 1,
+	AacProfileSSR = 2
+};
+
+enum AacSamplingFrequencies : uint8_t
 {
 	RATES_96000HZ = 0,
 	RATES_88200HZ = 1,
@@ -146,17 +123,7 @@ enum class AACSamplingFrequencies : uint8_t
 	RATES_11025HZ = 10,
 	RATES_8000HZ = 11,
 	RATES_7350HZ = 12,
-	EXPLICIT_RATE = 15,
-};
-
-enum AacProfile
-{
-    AacProfileReserved = 3,
-    
-    // @see 7.1 Profiles, aac-iso-13818-7.pdf, page 40
-    AacProfileMain = 0,
-    AacProfileLC = 1,
-    AacProfileSSR = 2,
+	EXPLICIT_RATE = 15
 };
 
 #define MIN_AAC_SPECIFIC_CONFIG_SIZE		2
@@ -166,8 +133,9 @@ class AACSpecificConfig
 public:
 	static bool Parse(const uint8_t *data, size_t data_length, AACSpecificConfig &config);
 
-	WellKnownAACObjectTypes		ObjectType();
-	AACSamplingFrequencies		SamplingFrequency();
+	AacObjectType				ObjectType();
+	AacProfile 					GetAacProfile();
+	AacSamplingFrequencies		SamplingFrequency();
 	uint8_t						Channel();
 	ov::String 					GetInfoString();
 
@@ -176,8 +144,8 @@ public:
 
 
 private:
-	WellKnownAACObjectTypes		_object_type;					// 5 bits
-	AACSamplingFrequencies		_sampling_frequency_index;		// 4 bits
+	AacObjectType				 _object_type;					// 5 bits
+	AacSamplingFrequencies		_sampling_frequency_index;		// 4 bits
 	uint8_t						_channel;						// 4 bits
 
 	// GASpecificConfig (General Audio Coding, if object_type == AAC | tWINvq | BSAC)

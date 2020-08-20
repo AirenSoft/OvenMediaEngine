@@ -20,7 +20,7 @@
 #include <functional>
 
 #include "ovlibrary/ovlibrary.h"
-#include "media_route/media_type.h"
+#include "mediarouter/media_type.h"
 
 #define MAX_FRAG_COUNT 20
 

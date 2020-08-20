@@ -2,7 +2,7 @@
 
 #include "base/common_types.h"
 #include "base/publisher/publisher.h"
-#include "base/media_route/media_route_application_interface.h"
+#include "base/mediarouter/media_route_application_interface.h"
 #include "rtc_application.h"
 
 #include <orchestrator/orchestrator.h>

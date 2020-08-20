@@ -17,7 +17,7 @@
 #include "modules/codec_analyzer/aac/aac_adts.h"
 
 #include <orchestrator/orchestrator.h>
-#include <base/media_route/media_type.h>
+#include <base/mediarouter/media_type.h>
 #include <base/info/media_extradata.h>
 
 #include <modules/mpegts/mpegts_packet.h>

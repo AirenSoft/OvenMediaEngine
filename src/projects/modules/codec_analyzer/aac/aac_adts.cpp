@@ -5,16 +5,6 @@
 #include <base/ovlibrary/log.h>
 #include <base/ovlibrary/bit_reader.h>
 
-#if 0
-extern "C"
-{
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libavutil/pixdesc.h>
-#include <libavutil/opt.h>
-}
-#endif
-
 #define OV_LOG_TAG "AACAdts"
 
 bool AACAdts::IsValid(const uint8_t *data, size_t data_length)
@@ -118,42 +108,42 @@ ov::String AACAdts::ProfileString()
 	return "Unkwnon";
 }
 
-SamplingFrequencies AACAdts::Samplerate()
+AacSamplingFrequencies AACAdts::Samplerate()
 {
-	return static_cast<SamplingFrequencies>(_sampling_frequency_index);
+	return static_cast<AacSamplingFrequencies>(_sampling_frequency_index);
 }
 
 uint32_t AACAdts::SamplerateNum()
 {
 	switch(Samplerate())
 	{
-		case Samplerate_96000:
+		case RATES_96000HZ:
 			return 96000;
-		case Samplerate_88200:
+		case RATES_88200HZ:
 			return 88200;
-		case Samplerate_64000:
+		case RATES_64000HZ:
 			return 64000;
-		case Samplerate_48000:
+		case RATES_48000HZ:
 			return 48000;
-		case Samplerate_44100:
+		case RATES_44100HZ:
 			return 44100;
-		case Samplerate_32000:
+		case RATES_32000HZ:
 			return 32000;
-		case Samplerate_24000:
+		case RATES_24000HZ:
 			return 24000;
-		case Samplerate_22050:
+		case RATES_22050HZ:
 			return 22050;
-		case Samplerate_16000:
+		case RATES_16000HZ:
 			return 16000;
-		case Samplerate_12000:
+		case RATES_12000HZ:
 			return 12000;
-		case Samplerate_11025:
+		case RATES_11025HZ:
 			return 11025;
-		case Samplerate_8000:
+		case RATES_8000HZ:
 			return 8000;
-		case Samplerate_7350:
+		case RATES_7350HZ:
 			return 7350;
-		case Samplerate_Unknown:
+		case EXPLICIT_RATE:
 			return 0;
 	}
 
@@ -195,92 +185,3 @@ ov::String AACAdts::GetInfoString()
 
 	return out_str;
 }
-
-
-/*
-	ADTS
-	Unlike the ADIF header, ADTS (Audio Data Transport Stream) headers are present before each AAC raw_data_block or block of 2 to 4 raw_data_blocks. Until the MPEG revision from Dec 2002 for MPEG-4 AAC ADTS headers, this was basically the same as a MP3 header, except that the emphasis field was not present for MPEG-2 AAC, only for MPEG-4 AAC.
-	Now the emphasis field (2 bits) has been abandoned completely, and thus MPEG-4 and MPEG-2 AAC ADTS headers are exactly the same except for the Object Type ID flag (MPEG-2 or MPEG-4). See also the Wiki page about MP4, because this is important when extracting MPEG-2 AAC files from a MP4 container with mp4creator or creating MP4 files from PsyTEL AAC encodings with this tool.
-
-	The ADTS header has the following fields:
-	Field name   Field size in bits   Comment
-	ADTS Fixed header: these don't change from frame to frame
-	syncword   12   always: '111111111111'
-	ID   1   0: MPEG-4, 1: MPEG-2
-	layer   2   always: '00'
-	protection_absent   1   
-	profile   2   
-	sampling_frequency_index   4   
-	private_bit   1   
-	channel_configuration   3   
-	original/copy   1   
-	home   1   
-	ADTS Variable header: these can change from frame to frame
-	copyright_identification_bit   1   
-	copyright_identification_start   1   
-	aac_frame_length   13   length of the frame including header (in bytes)
-	adts_buffer_fullness   11   0x7FF indicates VBR
-	no_raw_data_blocks_in_frame   2   
-	ADTS Error check
-	crc_check   16   only if protection_absent == 0
-	After that come (no_raw_data_blocks_in_frame+1) raw_data_blocks.
-	Some elaborations:
-	profile
-	bits   ID == 1 (MPEG-2 profile)   ID == 0 (MPEG-4 Object type)
-	00 (0)   Main profile   AAC MAIN
-	01 (1)   Low Complexity profile (LC)   AAC LC
-	10 (2)   Scalable Sample Rate profile (SSR)   AAC SSR
-	11 (3)   (reserved)   AAC LTP
-*/
-/*
-bool AACAdts::AppendAdtsHeader(AacObjectType profile, SamplingFrequencies samplerate, int32_t channels, std::shared_ptr<ov::Data> &media_packet_data)
-{
-	uint8_t aac_profile = (uint8_t)profile;
-	int8_t aac_sample_rate = (int8_t)samplerate;
-	int8_t aac_channels = (int8_t)channels;
-   
-	uint8_t aac_header[7];
-
-	uint8_t *pos = aac_header;
-	int16_t aac_frame_length = media_packet_data->GetLength() + 7;
-
-	// Syncword 12 bslbf
-	*pos++ = 0xff;
-	
-	// 4bits left.
-	// adts_fixed_header(), 1.A.2.2.1 Fixed Header of ADTS
-	// ID 1 bslbf
-	// Layer 2 uimsbf
-	// protection_absent 1 bslbf
-	*pos++ = 0xf1;
-
-	// profile 2 uimsbf
-	// sampling_frequency_index 4 uimsbf
-	// private_bit 1 bslbf
-	// channel_configuration 3 uimsbf
-	// original/copy 1 bslbf
-	// home 1 bslbf
-	*pos++ = ((aac_profile << 6) & 0xc0) | ((aac_sample_rate << 2) & 0x3c) | ((aac_channels >> 2) & 0x01);
-
-	// 4bits left.
-	// adts_variable_header(), 1.A.2.2.2 Variable Header of ADTS
-	// copyright_identification_bit 1 bslbf
-	// copyright_identification_start 1 bslbf
-	*pos++ = ((aac_channels << 6) & 0xc0) | ((aac_frame_length >> 11) & 0x03);
-
-	// aac_frame_length 13 bslbf: Length of the frame including headers and error_check in bytes.
-	// use the left 2bits as the 13 and 12 bit,
-	// the aac_frame_length is 13bits, so we move 13-2=11.
-	*pos++ = aac_frame_length >> 3;
-	
-	// adts_buffer_fullness 11 bslbf
-	*pos++ = (aac_frame_length << 5) & 0xe0;
-
-	// no_raw_data_blocks_in_frame 2 uimsbf
-	*pos++ = 0xfc;
-
-	media_packet_data->Insert(aac_header, 0, sizeof(aac_header));
-
-	return true;
-}
-*/

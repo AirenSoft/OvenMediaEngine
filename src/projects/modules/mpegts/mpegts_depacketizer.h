@@ -9,7 +9,7 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
-#include <base/media_route/media_type.h>
+#include <base/mediarouter/media_type.h>
 #include <base/info/media_track.h>
 
 #include "mpegts_packet.h"

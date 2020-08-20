@@ -9,7 +9,7 @@
 #include "m4s_init_writer.h"
 #include "bit_writer.h"
 
-#include <base/media_route/media_type.h>
+#include <base/mediarouter/media_type.h>
 
 #define SAMPLERATE_TABLE_SIZE (16)
 

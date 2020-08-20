@@ -10,104 +10,123 @@ static uint8_t START_CODE[4] = { 0x00, 0x00, 0x00, 0x01 };
 
 bool H264AvccToAnnexB::GetExtradata(const common::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
 {
-    if(type == common::PacketType::SEQUENCE_HEADER)
-    {
-        AVCDecoderConfigurationRecord config;
-        if(!AVCDecoderConfigurationRecord::Parse(data->GetDataAs<uint8_t>(), data->GetLength(), config))
-        {
-            logte("sequence heaer paring error"); 
-            return false;
-        }
-        
-        extradata = config.Serialize();
+	if(type == common::PacketType::SEQUENCE_HEADER)
+	{
+		AVCDecoderConfigurationRecord config;
+		if(!AVCDecoderConfigurationRecord::Parse(data->GetDataAs<uint8_t>(), data->GetLength(), config))
+		{
+			logte("sequence heaer paring error"); 
+			return false;
+		}
+		logtd("%s", config.GetInfoString().CStr());;
 
-        logtd("%s\r\n%d", config.GetInfoString().CStr(), extradata.size());;
+		// Structure of Extradata
+		//  START_CODE + SPS + START_CODE + PPS ... 
+		auto tmp = std::make_shared<ov::Data>();
 
-        return true;   
-    }
+		for(int i=0 ; i<config.NumOfSPS() ; i++)
+		{
+			tmp->Append(START_CODE, sizeof(START_CODE));    
+			tmp->Append(config.GetSPS(i));
+		}
+		for(int i=0 ; i<config.NumOfPPS() ; i++)
+		{
+			tmp->Append(START_CODE, sizeof(START_CODE));    
+			tmp->Append(config.GetPPS(i));
+		}
 
-    return false;
+		extradata.reserve(tmp->GetLength());
+		std::copy(tmp->GetDataAs<uint8_t>(), tmp->GetDataAs<uint8_t>()+tmp->GetLength(), std::back_inserter(extradata));
+
+		return true;   
+	}
+
+	return false;
 }
 
-bool H264AvccToAnnexB::Convert(const std::shared_ptr<MediaPacket> &packet)
+bool H264AvccToAnnexB::Convert(const std::shared_ptr<MediaPacket> &packet, const std::vector<uint8_t> &extradata)
 {
-    common::BitstreamFormat bitstream_format = packet->GetBitstreamFormat();
-    common::PacketType pkt_type = packet->GetPacketType();
+	common::BitstreamFormat bitstream_format = packet->GetBitstreamFormat();
+	common::PacketType pkt_type = packet->GetPacketType();
 
-    if(bitstream_format == common::BitstreamFormat::H264_ANNEXB)
-    {
-        return true;
-    }
+	if(bitstream_format == common::BitstreamFormat::H264_ANNEXB)
+	{
+		return true;
+	}
 
-    if(H264AvccToAnnexB::Convert(pkt_type, packet->GetData()) == false)
-    {
-        return false;
-    }
+	if(H264AvccToAnnexB::Convert(pkt_type, packet->GetData(), extradata) == false)
+	{
+		return false;
+	}
 
-    packet->SetBitstreamFormat(common::BitstreamFormat::H264_ANNEXB);
-    packet->SetPacketType(common::PacketType::NALU);
+	packet->SetBitstreamFormat(common::BitstreamFormat::H264_ANNEXB);
+	packet->SetPacketType(common::PacketType::NALU);
 
-    return true;
+	return true;
 }
 
-bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov::Data> &data)
+bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov::Data> &data, const std::vector<uint8_t> &extradata)
 {
-    auto annexb_data = std::make_shared<ov::Data>();
+	auto annexb_data = std::make_shared<ov::Data>();
 
-    annexb_data->Clear();
-    if(type == common::PacketType::SEQUENCE_HEADER)
-    {
-        AVCDecoderConfigurationRecord config;
-        if(!AVCDecoderConfigurationRecord::Parse(data->GetDataAs<uint8_t>(), data->GetLength(), config))
-        {
-            logte("sequence heaer paring error"); 
-            return false;
-        }
-        logtd("%s", config.GetInfoString().CStr());
+	annexb_data->Clear();
 
-        for(int i=0 ; i<config.NumOfSPS() ; i++)
-        {
-            annexb_data->Append(START_CODE, sizeof(START_CODE));
-            annexb_data->Append(config.GetSPS(i));
-        }
-        
-        for(int i=0 ; i<config.NumOfPPS() ; i++)
-        {
-            annexb_data->Append(START_CODE, sizeof(START_CODE));
-            annexb_data->Append(config.GetPPS(i));
-        }
-    }
-    else if(type == common::PacketType::NALU)
-    {
-        ov::ByteStream read_stream(data.get());
+	if(type == common::PacketType::SEQUENCE_HEADER)
+	{
+		AVCDecoderConfigurationRecord config;
+		if(!AVCDecoderConfigurationRecord::Parse(data->GetDataAs<uint8_t>(), data->GetLength(), config))
+		{
+			logte("sequence heaer paring error"); 
+			return false;
+		}
+		logtd("%s", config.GetInfoString().CStr());
 
-        while(read_stream.Remained() > 0)
-        {
-            if(read_stream.IsRemained(4) == false)
-            {
-                logte("Not enough data to parse NAL");
-                return false;
-            }
+		for(int i=0 ; i<config.NumOfSPS() ; i++)
+		{
+			annexb_data->Append(START_CODE, sizeof(START_CODE));
+			annexb_data->Append(config.GetSPS(i));
+		}
+		
+		for(int i=0 ; i<config.NumOfPPS() ; i++)
+		{
+			annexb_data->Append(START_CODE, sizeof(START_CODE));
+			annexb_data->Append(config.GetPPS(i));
+		}
+	}
+	else if(type == common::PacketType::NALU)
+	{
+		ov::ByteStream read_stream(data.get());
 
-            size_t nal_length = read_stream.ReadBE32();
+		// Append SPS/PPS Nalunit
+		annexb_data->Append(extradata.data(), (size_t)extradata.size());
 
-            if(read_stream.IsRemained(nal_length) == false)
-            {
-                logte("NAL length (%d) is greater than buffer length (%d)", nal_length, read_stream.Remained());
-                return false;
-            }
+		while(read_stream.Remained() > 0)
+		{
+			if(read_stream.IsRemained(4) == false)
+			{
+				logte("Not enough data to parse NAL");
+				return false;
+			}
 
-            auto nal_data = read_stream.GetRemainData()->Subdata(0LL, nal_length);
-            [[maybe_unused]] auto skipped = read_stream.Skip(nal_length);
-            OV_ASSERT2(skipped == nal_length);
+			size_t nal_length = read_stream.ReadBE32();
 
-            annexb_data->Append(START_CODE, sizeof(START_CODE));
-            annexb_data->Append(nal_data);
-        }               
-    }
+			if(read_stream.IsRemained(nal_length) == false)
+			{
+				logte("NAL length (%d) is greater than buffer length (%d)", nal_length, read_stream.Remained());
+				return false;
+			}
 
-    data->Clear();
-    data->Append(annexb_data);
+			auto nal_data = read_stream.GetRemainData()->Subdata(0LL, nal_length);
+			[[maybe_unused]] auto skipped = read_stream.Skip(nal_length);
+			OV_ASSERT2(skipped == nal_length);
 
-    return true;
+			annexb_data->Append(START_CODE, sizeof(START_CODE));
+			annexb_data->Append(nal_data);
+		}               
+	}
+
+	data->Clear();
+	data->Append(annexb_data);
+
+	return true;
 }

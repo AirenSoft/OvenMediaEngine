@@ -477,21 +477,21 @@ namespace pvd
 		return aac_profile;
 	}
 
-	SamplingFrequencies RtspcStream::GetAacSamplingFrequencies(int32_t ff_samplerate)
+	AacSamplingFrequencies RtspcStream::GetAacSamplingFrequencies(int32_t ff_samplerate)
 	{
-		SamplingFrequencies aac_sample_rate = 
-			(ff_samplerate == 96000)?Samplerate_96000:
-			(ff_samplerate == 88200)?Samplerate_88200:
-			(ff_samplerate == 64000)?Samplerate_64000:
-			(ff_samplerate == 48000)?Samplerate_48000:
-			(ff_samplerate == 44100)?Samplerate_44100:
-			(ff_samplerate == 32000)?Samplerate_32000:
-			(ff_samplerate == 24000)?Samplerate_24000:
-			(ff_samplerate == 22050)?Samplerate_22050:
-			(ff_samplerate == 16000)?Samplerate_16000:
-			(ff_samplerate == 12000)?Samplerate_12000:
-			(ff_samplerate == 11025)?Samplerate_11025:
-			(ff_samplerate == 7350)?Samplerate_7350:Samplerate_Unknown;
+		AacSamplingFrequencies aac_sample_rate = 
+			(ff_samplerate == 96000)?RATES_96000HZ:
+			(ff_samplerate == 88200)?RATES_88200HZ:
+			(ff_samplerate == 64000)?RATES_64000HZ:
+			(ff_samplerate == 48000)?RATES_48000HZ:
+			(ff_samplerate == 44100)?RATES_44100HZ:
+			(ff_samplerate == 32000)?RATES_32000HZ:
+			(ff_samplerate == 24000)?RATES_24000HZ:
+			(ff_samplerate == 22050)?RATES_22050HZ:
+			(ff_samplerate == 16000)?RATES_16000HZ:
+			(ff_samplerate == 12000)?RATES_12000HZ:
+			(ff_samplerate == 11025)?RATES_11025HZ:
+			(ff_samplerate == 7350)?RATES_8000HZ:EXPLICIT_RATE;
 
 		return aac_sample_rate;
 	}

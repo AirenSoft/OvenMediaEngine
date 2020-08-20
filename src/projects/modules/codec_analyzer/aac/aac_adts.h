@@ -22,7 +22,7 @@ public:
 	bool ProtectionAbsent();
 	AacObjectType Profile();
 	ov::String ProfileString();
-	SamplingFrequencies Samplerate();
+	AacSamplingFrequencies Samplerate();
 	uint32_t SamplerateNum();
 	uint8_t ChannelConfiguration();
 	bool Originality();

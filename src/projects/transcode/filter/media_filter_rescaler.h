@@ -10,8 +10,8 @@
 #pragma once
 
 #include "media_filter_impl.h"
-#include "base/media_route/media_buffer.h"
-#include "base/media_route/media_type.h"
+#include "base/mediarouter/media_buffer.h"
+#include "base/mediarouter/media_type.h"
 
 #include "../transcode_context.h"
 

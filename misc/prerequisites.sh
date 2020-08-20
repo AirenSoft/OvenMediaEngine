@@ -302,16 +302,16 @@ else
     echo "Please refer to manual installation page"
 fi
 
-install_nasm
-install_openssl
-install_libsrtp
-install_libsrt
-install_libopus
-install_libx264
-install_libvpx
-install_fdk_aac
+#install_nasm
+#install_openssl
+#install_libsrtp
+#install_libsrt
+#install_libopus
+#install_libx264
+#install_libvpx
+#install_fdk_aac
 install_ffmpeg
-install_jemalloc
+#install_jemalloc
 
 echo ${OSNAME} ${OSVERSION}
 

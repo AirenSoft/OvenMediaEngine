@@ -71,6 +71,6 @@ namespace pvd
 
 	private:
 		AacObjectType GetAacObjectType(int32_t ff_profile);
-		SamplingFrequencies GetAacSamplingFrequencies(int32_t ff_samplerate);
+		AacSamplingFrequencies GetAacSamplingFrequencies(int32_t ff_samplerate);
 	};
 }

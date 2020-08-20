@@ -56,6 +56,7 @@ bool MediaRouter::Stop()
 	return true;
 }
 
+// Application created by the orchestrator
 bool MediaRouter::OnCreateApplication(const info::Application &app_info)
 {
 	info::application_id_t application_id = app_info.GetId();
@@ -76,6 +77,7 @@ bool MediaRouter::OnCreateApplication(const info::Application &app_info)
 	return true;
 }
 
+// Application deleted by the orchestrator
 bool MediaRouter::OnDeleteApplication(const info::Application &app_info)
 {
 	info::application_id_t application_id = app_info.GetId();
@@ -90,7 +92,7 @@ bool MediaRouter::OnDeleteApplication(const info::Application &app_info)
 	return true;
 }
 
-//  Application Name으로 RouteApplication을 찾음
+//  Search by application id
 std::shared_ptr<MediaRouteApplication> MediaRouter::GetRouteApplicationById(info::application_id_t application_id)
 {
 	auto obj = _route_apps.find(application_id);
@@ -103,17 +105,11 @@ std::shared_ptr<MediaRouteApplication> MediaRouter::GetRouteApplicationById(info
 	return obj->second;
 }
 
-// Connector의 Application이 생성되면 라우터에 등록함
+// Registers the requested Connector application
 bool MediaRouter::RegisterConnectorApp(
 	const info::Application &application_info,
 	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn)
 {
-	// logtd("Register connector application. app_ptr(%p) name(%s)", app_conn.get(), app_name.CStr());
-
-	// 1. 미디어 라우터 포인터 설정
-	// app_conn->SetMediaRouter(this->GetSharedPtr());
-
-	// 2. Media Route Application 모듈에 Connector를 등록함
 	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if(media_route_app == nullptr)
 	{
@@ -123,13 +119,11 @@ bool MediaRouter::RegisterConnectorApp(
 	return media_route_app->RegisterConnectorApp(app_conn);
 }
 
-// Application stream created
+// Unregisters the requested Connector application
 bool MediaRouter::UnregisterConnectorApp(
 	const info::Application &application_info,
 	const std::shared_ptr<MediaRouteApplicationConnector> &app_conn)
 {
-	// logtd("Unregistred connector application. app_ptr(%p) name(%s)", app_conn.get(), app_name.CStr());
-
 	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if(media_route_app == nullptr)
 	{
@@ -139,6 +133,7 @@ bool MediaRouter::UnregisterConnectorApp(
 	return media_route_app->UnregisterConnectorApp(app_conn);
 }
 
+// Register requested Observer application
 bool MediaRouter::RegisterObserverApp(
 	const info::Application &application_info, const std::shared_ptr<MediaRouteApplicationObserver> &app_obsrv)
 {
@@ -147,7 +142,6 @@ bool MediaRouter::RegisterObserverApp(
 		return false;
 	}
 
-	// 2. Media Route Application 모듈에 Connector를 등록함
 	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if(media_route_app == nullptr)
 	{
@@ -158,6 +152,7 @@ bool MediaRouter::RegisterObserverApp(
 	return media_route_app->RegisterObserverApp(app_obsrv);
 }
 
+// Unregister requested Observer application
 bool MediaRouter::UnregisterObserverApp(
 	const info::Application &application_info, const std::shared_ptr<MediaRouteApplicationObserver> &app_obsrv)
 {

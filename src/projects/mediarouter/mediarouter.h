@@ -16,13 +16,14 @@
 #include <thread>
 
 // Media Router base class
-#include "base/media_route/media_route_application_observer.h"
-#include "base/media_route/media_route_application_connector.h"
-#include "base/media_route/media_route_interface.h"
-#include "base/media_route/media_buffer.h"
+#include "base/mediarouter/media_route_application_observer.h"
+#include "base/mediarouter/media_route_application_connector.h"
+#include "base/mediarouter/media_route_interface.h"
+#include "base/mediarouter/media_buffer.h"
 
 #include "base/info/stream.h"
 #include "mediarouter_application.h"
+#include "mediarouter_stream.h"
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <config/config.h>

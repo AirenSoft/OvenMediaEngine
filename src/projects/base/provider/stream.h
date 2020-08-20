@@ -12,7 +12,7 @@
 #include "base/info/stream.h"
 #include "monitoring/monitoring.h"
 
-#include <base/media_route/media_buffer.h>
+#include <base/mediarouter/media_buffer.h>
 
 namespace pvd
 {

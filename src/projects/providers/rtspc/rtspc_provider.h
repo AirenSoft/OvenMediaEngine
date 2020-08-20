@@ -3,8 +3,8 @@
 //
 #pragma once
 
-#include <base/media_route/media_buffer.h>
-#include <base/media_route/media_type.h>
+#include <base/mediarouter/media_buffer.h>
+#include <base/mediarouter/media_type.h>
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/provider/pull_provider/application.h>
 #include <base/provider/pull_provider/provider.h>
