@@ -439,7 +439,9 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			{
 				logte("failed make fragment header");
 			}
-		break;			
+		break;		
+		default:
+		break;
 	}
 	// Set the corrected PTS.
 	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
