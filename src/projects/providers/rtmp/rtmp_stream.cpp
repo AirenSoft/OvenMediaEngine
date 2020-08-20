@@ -17,8 +17,8 @@
 #include <base/info/media_extradata.h>
 
 #include <modules/containers/flv/flv_parser.h>
-#include <modules/codec_analyzer/h264/h264_decoder_configuration_record.h>
-#include <modules/codec_analyzer/aac/aac_specific_config.h>
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+#include <modules/bitstream/aac/aac_specific_config.h>
 
 /*
 Process of publishing 

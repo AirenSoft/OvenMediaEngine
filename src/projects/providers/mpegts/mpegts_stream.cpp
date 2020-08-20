@@ -14,7 +14,7 @@
 #include "modules/mpegts/mpegts_packet.h"
 #include "mpegts_provider_private.h"
 
-#include "modules/codec_analyzer/aac/aac_adts.h"
+#include "modules/bitstream/aac/aac_adts.h"
 
 #include <orchestrator/orchestrator.h>
 #include <base/mediarouter/media_type.h>

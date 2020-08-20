@@ -5,7 +5,7 @@
 
 #include "base/info/application.h"
 #include "rtspc_stream.h"
-#include "modules/codec_analyzer/aac/aac.h"
+#include "modules/bitstream/aac/aac.h"
 
 #define OV_LOG_TAG "RtspcStream"
 

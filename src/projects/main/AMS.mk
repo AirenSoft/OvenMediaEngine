@@ -11,6 +11,7 @@ LOCAL_STATIC_LIBRARIES := \
 	rtspc_provider \
 	transcoder \
 	rtc_signalling \
+	bitstream \
 	ice \
 	jsoncpp \
 	http_server \
@@ -18,7 +19,6 @@ LOCAL_STATIC_LIBRARIES := \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \
-	h264 \
 	web_console \
 	mediarouter \
 	ovt_packetizer \
@@ -33,7 +33,6 @@ LOCAL_STATIC_LIBRARIES := \
 	monitoring \
 	jsoncpp \
 	sqlite \
-	aac
 
 # rtsp_provider 
 

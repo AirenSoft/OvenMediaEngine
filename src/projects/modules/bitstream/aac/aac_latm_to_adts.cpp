@@ -1,6 +1,6 @@
 
 #include "aac_latm_to_adts.h"
-#include <modules/codec_analyzer/aac/aac_specific_config.h>
+#include <modules/bitstream/aac/aac_specific_config.h>
 
 
 #define OV_LOG_TAG "AACLatmToAdts"

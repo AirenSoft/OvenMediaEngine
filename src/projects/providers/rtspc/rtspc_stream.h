@@ -12,7 +12,7 @@
 #include <base/provider/pull_provider/application.h>
 #include <modules/ovt_packetizer/ovt_packet.h>
 #include <modules/ovt_packetizer/ovt_depacketizer.h>
-#include "modules/codec_analyzer/aac/aac.h"
+#include "modules/bitstream/aac/aac.h"
 
 extern "C"
 {

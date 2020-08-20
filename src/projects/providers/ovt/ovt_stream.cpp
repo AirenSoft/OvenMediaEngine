@@ -3,7 +3,7 @@
 //
 
 #include "base/info/application.h"
-#include "modules/codec_analyzer/h264/h264_fragment_header.h"
+#include "modules/bitstream/h264/h264_fragment_header.h"
 
 #include "ovt_stream.h"
 

@@ -8,8 +8,8 @@
 //==============================================================================
 #include <base/ovlibrary/bit_reader.h>
 
-#include "modules/codec_analyzer/h264/h264_sps.h"
-#include "modules/codec_analyzer/aac/aac_adts.h"
+#include "modules/bitstream/h264/h264_sps.h"
+#include "modules/bitstream/aac/aac_adts.h"
 
 #include "mpegts_depacketizer.h"
 

@@ -10,14 +10,14 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
-#include <modules/codec_analyzer/h264/h264_decoder_configuration_record.h>
-#include <modules/codec_analyzer/h264/h264_sps.h>
-#include <modules/codec_analyzer/h264/h264_fragment_header.h>
-#include <modules/codec_analyzer/h264/h264_avcc_to_annexb.h>
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+#include <modules/bitstream/h264/h264_sps.h>
+#include <modules/bitstream/h264/h264_fragment_header.h>
+#include <modules/bitstream/h264/h264_avcc_to_annexb.h>
 
-#include <modules/codec_analyzer/aac/aac_specific_config.h>
-#include <modules/codec_analyzer/aac/aac_adts.h>
-#include <modules/codec_analyzer/aac/aac_latm_to_adts.h>
+#include <modules/bitstream/aac/aac_specific_config.h>
+#include <modules/bitstream/aac/aac_adts.h>
+#include <modules/bitstream/aac/aac_latm_to_adts.h>
 
 #define OV_LOG_TAG "MediaRouter.Stream"
 #define PTS_CORRECT_THRESHOLD_US	5000
