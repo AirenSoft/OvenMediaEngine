@@ -25,11 +25,6 @@
 
 using namespace common;
 
-// 미디어 라우터의 목적
-// - 비트스트림 포맷을 표쥰 규격으로 변경한다.
-// - 미디어 트랙의 정보를 추출한다.
-// - 큐 역할을 해준다.
-// - 
 MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream) :
 	_created_stream(false),
 	_stream(stream),
