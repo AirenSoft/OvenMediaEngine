@@ -49,7 +49,9 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaC
 		case common::MediaCodecId::H264:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncAVC>();
 			break;
-
+		case common::MediaCodecId::H265:
+			// Do something
+			break;
 		case common::MediaCodecId::Aac:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncAAC>();
 			break;

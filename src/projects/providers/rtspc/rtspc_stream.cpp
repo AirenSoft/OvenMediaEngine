@@ -241,9 +241,9 @@ namespace pvd
 
 			common::MediaCodecId media_codec = 
 				(stream->codecpar->codec_id == AV_CODEC_ID_H264)?common::MediaCodecId::H264:
+				(stream->codecpar->codec_id == AV_CODEC_ID_H265)?common::MediaCodecId::H265:
 				(stream->codecpar->codec_id == AV_CODEC_ID_VP8)?common::MediaCodecId::Vp8:
 				(stream->codecpar->codec_id == AV_CODEC_ID_VP9)?common::MediaCodecId::Vp9:
-				(stream->codecpar->codec_id == AV_CODEC_ID_FLV1)?common::MediaCodecId::Flv:
 				(stream->codecpar->codec_id == AV_CODEC_ID_AAC)?common::MediaCodecId::Aac:
 				(stream->codecpar->codec_id == AV_CODEC_ID_MP3)?common::MediaCodecId::Mp3:
 				(stream->codecpar->codec_id == AV_CODEC_ID_OPUS)?common::MediaCodecId::Opus:
@@ -428,6 +428,11 @@ namespace pvd
 		if(codec_id == common::MediaCodecId::H264)
 		{
 			bitstream_format = common::BitstreamFormat::H264_ANNEXB;
+			packet_type = common::PacketType::NALU;
+		}
+		else if(codec_id == common::MediaCodecId::H265)
+		{
+			bitstream_format = common::BitstreamFormat::H265_ANNEXB;
 			packet_type = common::PacketType::NALU;
 		}
 		else if(codec_id == common::MediaCodecId::Aac)

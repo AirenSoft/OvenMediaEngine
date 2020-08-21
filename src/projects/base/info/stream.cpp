@@ -164,45 +164,6 @@ namespace info
 		{
 			auto track = it->second;
 
-			// TODO. CODEC_ID를 문자열로 변환하는 공통 함수를 만들어야함.
-			ov::String codec_name;
-
-			switch (track->GetCodecId())
-			{
-				case MediaCodecId::H264:
-					codec_name = "avc";
-					break;
-
-				case MediaCodecId::Vp8:
-					codec_name = "vp8";
-					break;
-
-				case MediaCodecId::Vp9:
-					codec_name = "vp0";
-					break;
-
-				case MediaCodecId::Flv:
-					codec_name = "flv";
-					break;
-
-				case MediaCodecId::Aac:
-					codec_name = "aac";
-					break;
-
-				case MediaCodecId::Mp3:
-					codec_name = "mp3";
-					break;
-
-				case MediaCodecId::Opus:
-					codec_name = "opus";
-					break;
-
-				case MediaCodecId::None:
-				default:
-					codec_name = "unknown";
-					break;
-			}
-
 			switch (track->GetMediaType())
 			{
 				case MediaType::Video:
@@ -216,7 +177,7 @@ namespace info
 						track->GetId(),
 						track->IsBypass() ? "true" : "false",
 						ov::Converter::BitToString(track->GetBitrate()).CStr(),
-						track->GetCodecId(), codec_name.CStr(),
+						track->GetCodecId(), ov::Converter::ToString(track->GetCodecId()).CStr(),
 						track->GetWidth(), track->GetHeight(),
 						track->GetFrameRate());
 					break;
@@ -233,7 +194,7 @@ namespace info
 						track->GetId(),
 						track->IsBypass() ? "true" : "false",
 						ov::Converter::BitToString(track->GetBitrate()).CStr(),
-						track->GetCodecId(), codec_name.CStr(),
+						track->GetCodecId(), ov::Converter::ToString(track->GetCodecId()).CStr(),
 						ov::Converter::ToSiString(track->GetSampleRate(), 1).CStr(),
 						track->GetSample().GetName(), track->GetSample().GetSampleSize() * 8,
 						track->GetChannel().GetName(), track->GetChannel().GetCounts());

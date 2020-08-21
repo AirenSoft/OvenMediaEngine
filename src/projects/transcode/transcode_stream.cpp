@@ -1182,6 +1182,10 @@ common::MediaCodecId TranscodeStream::GetCodecId(ov::String name)
 	{
 		return common::MediaCodecId::H264;
 	}
+	else if (name == "H265")
+	{
+		return common::MediaCodecId::H265;
+	}
 	else if (name == "VP8")
 	{
 		return common::MediaCodecId::Vp8;
@@ -1189,10 +1193,6 @@ common::MediaCodecId TranscodeStream::GetCodecId(ov::String name)
 	else if (name == "VP9")
 	{
 		return common::MediaCodecId::Vp9;
-	}
-	else if (name == "FLV")
-	{
-		return common::MediaCodecId::Flv;
 	}
 
 	// Audio codecs
@@ -1214,7 +1214,7 @@ common::MediaCodecId TranscodeStream::GetCodecId(ov::String name)
 
 bool TranscodeStream::IsVideoCodec(common::MediaCodecId codec_id)
 {
-	if(codec_id == common::MediaCodecId::Flv || codec_id == common::MediaCodecId::H264 || codec_id == common::MediaCodecId::Vp8 || codec_id == common::MediaCodecId::Vp9)
+	if(codec_id == common::MediaCodecId::H264 || codec_id == common::MediaCodecId::H265 || codec_id == common::MediaCodecId::Vp8 || codec_id == common::MediaCodecId::Vp9)
 	{
 		return true;
 	}
