@@ -99,25 +99,13 @@ bool AACLatmToAdts::Convert(const common::PacketType type, const std::shared_ptr
 		AACSpecificConfig aac_specific_config;
 		aac_specific_config.Deserialize(extradata);
 
+		uint8_t ADTS_HEADER_LENGTH = 7;
 		uint8_t aac_profile = (uint8_t)aac_specific_config.GetAacProfile();
 		uint8_t aac_sample_rate = (uint8_t)aac_specific_config.SamplingFrequency();
 		uint8_t aac_channels = (uint8_t)aac_specific_config.Channel();
-		int16_t aac_frame_length = aac_raw_length + 7;
-		uint8_t aac_fixed_header[7];
-		uint8_t *pp = aac_fixed_header;
+		int16_t aac_frame_length = aac_raw_length + ADTS_HEADER_LENGTH;
 
-#if 0
-		*pp++ = 0xff;
-		*pp++ = 0xf1;
-		*pp++ = ((aac_profile << 6) & 0xc0) | ((aac_sample_rate << 2) & 0x3c) | ((aac_channels >> 2) & 0x01);
-		*pp++ = ((aac_channels << 6) & 0xc0) | ((aac_frame_length >> 11) & 0x03);
-		*pp++ = aac_frame_length >> 3;
-		*pp++ = (aac_frame_length << 5) & 0xe0;
-		*pp++ = 0xfc;
-
-		annexb_data->Append(aac_fixed_header, sizeof(aac_fixed_header));
-#else
-		ov::BitWriter adts_bit(7);
+		ov::BitWriter adts_bit(ADTS_HEADER_LENGTH);
 		adts_bit.Write(12, 0x0FFF);		 		// syncword [12b]
 		adts_bit.Write(1, 0);		 			// ID - 0=MPEG-4, 1=MPEG-2 [1b]
 		adts_bit.Write(2, 0);		 			// layer - Always 0 [2b]
@@ -135,8 +123,6 @@ bool AACLatmToAdts::Convert(const common::PacketType type, const std::shared_ptr
 		adts_bit.Write(2, 0);					// no_raw_data_blocks_inframe[2b]
 
 		annexb_data->Append(adts_bit.GetData(), adts_bit.GetDataSize());
-#endif	
-
 		annexb_data->Append(data->Subdata(0, aac_raw_length));
 	}
 
