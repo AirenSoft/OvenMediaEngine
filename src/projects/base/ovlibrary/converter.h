@@ -164,6 +164,8 @@ namespace ov
 			{
 				case common::MediaCodecId::H264:
 					return "H264";
+				case common::MediaCodecId::H265:
+					return "H265";
 				case common::MediaCodecId::Vp8:
 					return "VP8";
 				case common::MediaCodecId::Vp9:

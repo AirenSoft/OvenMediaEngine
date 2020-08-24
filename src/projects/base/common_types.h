@@ -184,6 +184,7 @@ enum class CodecType : int32_t
 	Vp8 = kCodecTypeVideo + 1,
 	Vp9,
 	H264,
+	H265,
 	I420,
 	Red,
 	Ulpfec,

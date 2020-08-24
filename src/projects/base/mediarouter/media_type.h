@@ -28,6 +28,7 @@ namespace common
 		Unknwon = -1,
 		H264_AVCC = 0,
 		H264_ANNEXB,
+		H265_ANNEXB,
 		VP8,
 		AAC_LATM,
 		AAC_ADTS,
@@ -63,6 +64,7 @@ namespace common
 	{
 		None = 0,
 		H264,
+		H265,
 		Vp8,
 		Vp9,
 		Flv,

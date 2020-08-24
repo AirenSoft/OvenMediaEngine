@@ -44,7 +44,9 @@ namespace mpegts
 	enum class WellKnownStreamTypes : uint8_t
 	{
 		H264 = 0x1B,
-		AAC = 0x0F
+		H265 = 0x24,
+		AAC = 0x0F, // AAC ADTS
+		AAC_LATM = 0x11 // AAC LATM
 	};
 
 	struct ESInfo

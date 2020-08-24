@@ -217,10 +217,12 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 			break;
 
 		// The incoming stream does not support this codec.
+		case MediaCodecId::H265:
+			// Do something!
+
 		case MediaCodecId::Vp8: 
 		case MediaCodecId::Opus:
 		case MediaCodecId::Vp9:
-		case MediaCodecId::Flv:
 		case MediaCodecId::Mp3:
 			logte("Not support codec in incoming stream");
 			break;
@@ -248,7 +250,10 @@ bool MediaRouteStream::ParseAdditionalData(
 					logte("failed make fragment header");
 				}
 			}
-		break;		
+		break;
+
+		case MediaCodecId::H265:
+			// Do something
 		default:
 		break;
 	}
@@ -308,9 +313,10 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 			break;
 		
 		// The incoming stream does not support this codec.
+		case MediaCodecId::H265:
+			// Do something 
 		case MediaCodecId::Vp8: 
 		case MediaCodecId::Vp9:
-		case MediaCodecId::Flv:
 		case MediaCodecId::Opus:
 		case MediaCodecId::Mp3:
 			logte("Not support codec in incoming stream");

@@ -12,7 +12,8 @@ enum class RtpVideoCodecType
 {
 	None,
 	Vp8,
-	H264
+	H264,
+	H265
 	// In the future
 	// kRtpVideoVp9
 };

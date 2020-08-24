@@ -36,7 +36,7 @@ bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t work
 		switch (track->GetMediaType())
 		{
 			case MediaType::Video:
-				if (track->GetCodecId() == MediaCodecId::H264)
+				if (track->GetCodecId() == MediaCodecId::H264 || track->GetCodecId() == MediaCodecId::H265)
 				{
 					video_track = track;
 				}
@@ -54,7 +54,7 @@ bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t work
 		}
 	}
 
-	if ((video_track != nullptr) && (video_track->GetCodecId() == MediaCodecId::H264))
+	if ((video_track != nullptr) && (video_track->GetCodecId() == MediaCodecId::H264 || video_track->GetCodecId() == MediaCodecId::H265))
 	{
 		_media_tracks[video_track->GetId()] = video_track;
 		_video_track = video_track;

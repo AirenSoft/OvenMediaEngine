@@ -534,6 +534,14 @@ namespace mpegts
 				track->SetVideoTimestampScale(90000.0 / 1000.0);
 
 				break;
+
+			case static_cast<uint8_t>(WellKnownStreamTypes::H265):
+				track->SetId(pes->PID());
+				track->SetMediaType(common::MediaType::Video);
+				track->SetCodecId(common::MediaCodecId::H265);
+				track->SetTimeBase(1, 90000);
+				track->SetVideoTimestampScale(90000.0 / 1000.0);
+			
 			case static_cast<uint8_t>(WellKnownStreamTypes::AAC):
 				track->SetId(pes->PID());
 				track->SetMediaType(common::MediaType::Audio);

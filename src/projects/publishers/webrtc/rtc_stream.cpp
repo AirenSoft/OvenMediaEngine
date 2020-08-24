@@ -73,6 +73,10 @@ bool RtcStream::Start(uint32_t worker_count)
 					case MediaCodecId::Vp8:
 						codec = "VP8";
 						break;
+					case MediaCodecId::H265:
+						codec = "H265";
+						// TODO(Getroot): Go!
+						break;
 					case MediaCodecId::H264:
 						codec = "H264";
 
@@ -305,6 +309,11 @@ void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 		codec_info.codec_type = CodecType::H264;
 		codec_info.codec_specific.h264 = CodecSpecificInfoH264();
 	}
+	else if(codec_id == MediaCodecId::H265)
+	{
+		codec_info.codec_type = CodecType::H265;
+		//codec_info.codec_specific.h264 = CodecSpecificInfoH264();
+	}
 
 	memset(&rtp_video_header, 0, sizeof(RTPVideoHeader));
 
@@ -423,6 +432,10 @@ void RtcStream::AddPacketizer(common::MediaCodecId codec_id, uint32_t id, uint8_
 			break;
 		case MediaCodecId::H264:
 			packetizer->SetVideoCodec(RtpVideoCodecType::H264);
+			packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
+			break;
+		case MediaCodecId::H265:
+			packetizer->SetVideoCodec(RtpVideoCodecType::H265);
 			packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
 			break;
 		case MediaCodecId::Opus:
