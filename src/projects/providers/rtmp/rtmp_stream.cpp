@@ -1407,8 +1407,13 @@ namespace pvd
 				new_track->SetCodecExtradata(std::move(H264Extradata().AddSps(*media_info->avc_sps).AddPps(*media_info->avc_pps).Serialize()));
 			}
 		
-			new_track->SetTimeBase(1, 1000);
-			new_track->SetVideoTimestampScale(1.0);
+			// I know RTMP uses 1/1000 timebase, however, this timebase was used due to low precision.
+			// new_track->SetTimeBase(1, 1000);
+			new_track->SetTimeBase(1, 90000);
+
+			// A value to change to 1/90000 from 1/1000
+			double video_scale = 90000.0 / 1000.0;
+			new_track->SetVideoTimestampScale(video_scale);
 			
 			AddTrack(new_track);
 		}
@@ -1436,8 +1441,12 @@ namespace pvd
 			}
 
 			// I know RTMP uses 1/1000 timebase, however, this timebase was used due to low precision.
-			new_track->SetTimeBase(1, 1000);
-			new_track->SetAudioTimestampScale(1.0);
+			// new_track->SetTimeBase(1, 1000);
+			new_track->SetTimeBase(1, media_info->audio_samplerate);
+
+			// A value to change to 1/sample_rate from 1/1000
+			double  audio_scale = (double)(media_info->audio_samplerate) / 1000.0;
+			new_track->SetAudioTimestampScale(audio_scale);
 
 			AddTrack(new_track);
 		}
