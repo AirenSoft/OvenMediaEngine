@@ -368,7 +368,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		is_inserted_queue = true;
 	}
 
-	if(media_packet->GetDuration() == -1LL)
+	if(media_packet->GetDuration() <= 0)
 	{
 		_media_packet_stored[media_packet->GetTrackId()] = media_packet;	
 	}
@@ -531,5 +531,13 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
 	media_packet->SetDts( media_packet->GetDts() - _pts_correct[track_id] );
 
+#if 0
+	// if(media_packet->GetDuration() <= 0)
+	if(_inout_type == MRStreamInoutType::Outgoing)
+	{
+		logtw("Id : %d, Duration : %d, pts : %lld, dts : %lld", media_packet->GetTrackId(), media_packet->GetDuration(), media_packet->GetPts(), media_packet->GetDts());
+	}
+#endif
+	
 	return media_packet;
 }

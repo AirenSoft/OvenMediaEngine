@@ -8,8 +8,6 @@
 //==============================================================================
 #pragma once
 
-#include "bit_writer.h"
-
 #include <base/mediarouter/media_type.h>
 #include <base/ovlibrary/ovlibrary.h>
 

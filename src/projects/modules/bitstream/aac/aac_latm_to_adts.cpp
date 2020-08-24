@@ -1,7 +1,7 @@
 
 #include "aac_latm_to_adts.h"
 #include <modules/bitstream/aac/aac_specific_config.h>
-
+#include <base/ovlibrary/ovlibrary.h>
 
 #define OV_LOG_TAG "AACLatmToAdts"
 
@@ -106,6 +106,7 @@ bool AACLatmToAdts::Convert(const common::PacketType type, const std::shared_ptr
 		uint8_t aac_fixed_header[7];
 		uint8_t *pp = aac_fixed_header;
 
+#if 0
 		*pp++ = 0xff;
 		*pp++ = 0xf1;
 		*pp++ = ((aac_profile << 6) & 0xc0) | ((aac_sample_rate << 2) & 0x3c) | ((aac_channels >> 2) & 0x01);
@@ -115,6 +116,27 @@ bool AACLatmToAdts::Convert(const common::PacketType type, const std::shared_ptr
 		*pp++ = 0xfc;
 
 		annexb_data->Append(aac_fixed_header, sizeof(aac_fixed_header));
+#else
+		ov::BitWriter adts_bit(7);
+		adts_bit.Write(12, 0x0FFF);		 		// syncword [12b]
+		adts_bit.Write(1, 0);		 			// ID - 0=MPEG-4, 1=MPEG-2 [1b]
+		adts_bit.Write(2, 0);		 			// layer - Always 0 [2b]
+		adts_bit.Write(1, 1);		 			// protection_absent  [1b]
+		adts_bit.Write(2, aac_profile);  		// profile [2b]
+		adts_bit.Write(4, aac_sample_rate);		// sampling_frequency_index[[4b]
+		adts_bit.Write(1, 0);					// private_bit[1b]
+		adts_bit.Write(3, aac_channels);		// channel_configuration[3b]
+		adts_bit.Write(1, 0);					// Original/copy[1b]
+		adts_bit.Write(1, 0);					// Home[1b]
+		adts_bit.Write(1, 0);					// copyright_identification_bit[1b]
+		adts_bit.Write(1, 0);					// copyright_identification_start[1b]
+		adts_bit.Write(13, aac_frame_length);	// aac_frame_length[13b]
+		adts_bit.Write(11, 0x3F);				// adts_buffer_fullness[11b]
+		adts_bit.Write(2, 0);					// no_raw_data_blocks_inframe[2b]
+
+		annexb_data->Append(adts_bit.GetData(), adts_bit.GetDataSize());
+#endif	
+
 		annexb_data->Append(data->Subdata(0, aac_raw_length));
 	}
 

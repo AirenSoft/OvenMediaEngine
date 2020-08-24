@@ -34,3 +34,4 @@
 #include "./stop_watch.h"
 #include "./string.h"
 #include "./url.h"
+#include "./bit_writer.h"
