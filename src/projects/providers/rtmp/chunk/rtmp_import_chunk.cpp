@@ -129,49 +129,48 @@ int RtmpImportChunk::Import(const std::shared_ptr<const ov::Data> &data, bool *i
 
 int64_t RtmpImportChunk::CalculateRolledTimestamp(int64_t last_timestamp, int64_t parsed_timestamp)
 {
+	const static int64_t SERIAL_BITS = 31;
 	int64_t new_timestamp = parsed_timestamp;
+	int64_t delta = ::llabs(last_timestamp - parsed_timestamp);
 
-	if (last_timestamp > parsed_timestamp)
+	// RTMP specification
+	//
+	// Because timestamps are 32 bits long, they roll over every 49 days, 17
+	// hours, 2 minutes and 47.296 seconds. Because streams are allowed to
+	// run continuously, potentially for years on end, an RTMP application
+	// SHOULD use serial number arithmetic [RFC1982] when processing
+	// timestamps, and SHOULD be capable of handling wraparound. For
+	// example, an application assumes that all adjacent timestamps are
+	// within 2^31 - 1 milliseconds of each other, so 10000 comes after
+	// 4000000000, and 3000000000 comes before 4000000000.
+
+	// completed.timestamp calculated from this formula (https://tools.ietf.org/html/rfc1982#section-3.1):
+	//
+	// Serial numbers may be incremented by the addition of a positive
+	// integer n, where n is taken from the range of integers
+	// [0 .. (2^(SERIAL_BITS - 1) - 1)].  For a sequence number s, the
+	// result of such an addition, s', is defined as
+	//
+	//                 s' = (s + n) modulo (2 ^ SERIAL_BITS)
+	//
+	// where the addition and modulus operations here act upon values that
+	// are non-negative values of unbounded size in the usual ways of
+	// integer arithmetic.
+
+	// Check if the timestamp is an adjacent timestamp
+	if (delta <= ((1LL << (SERIAL_BITS - 1)) - 1))
 	{
-		// RTMP specification
-		//
-		// Because timestamps are 32 bits long, they roll over every 49 days, 17
-		// hours, 2 minutes and 47.296 seconds. Because streams are allowed to
-		// run continuously, potentially for years on end, an RTMP application
-		// SHOULD use serial number arithmetic [RFC1982] when processing
-		// timestamps, and SHOULD be capable of handling wraparound. For
-		// example, an application assumes that all adjacent timestamps are
-		// within 2^31 - 1 milliseconds of each other, so 10000 comes after
-		// 4000000000, and 3000000000 comes before 4000000000.
+		// Adjacent timestamp - No need to roll timestamp
+	}
+	else
+	{
+		// Non-adjacent timestamp - Need to roll timestamp
+		new_timestamp = last_timestamp + (1LL << SERIAL_BITS) - (last_timestamp % (1LL << SERIAL_BITS)) + parsed_timestamp;
 
-		// completed.timestamp calculated from this formula (https://tools.ietf.org/html/rfc1982#section-3.1):
-		//
-		// Serial numbers may be incremented by the addition of a positive
-		// integer n, where n is taken from the range of integers
-		// [0 .. (2^(SERIAL_BITS - 1) - 1)].  For a sequence number s, the
-		// result of such an addition, s', is defined as
-		//
-		//                 s' = (s + n) modulo (2 ^ SERIAL_BITS)
-		//
-		// where the addition and modulus operations here act upon values that
-		// are non-negative values of unbounded size in the usual ways of
-		// integer arithmetic.
-
-		// Check if the timestamp is an adjacent timestamp
-		if (parsed_timestamp < ((1LL << 31) - 1))
-		{
-			// Adjacent timestamp
-			new_timestamp = last_timestamp + (1LL << 31) - (last_timestamp % (1LL << 31)) + parsed_timestamp;
-
-			logtd("Timestamp is rolled: last TS: %lld, parsed: %lld, new: %lld",
-				  last_timestamp,
-				  parsed_timestamp,
-				  new_timestamp);
-		}
-		else
-		{
-			// Non-adjacent timestamp
-		}
+		logtd("Timestamp is rolled: last TS: %lld, parsed: %lld, new: %lld",
+			  last_timestamp,
+			  parsed_timestamp,
+			  new_timestamp);
 	}
 
 	return new_timestamp;
