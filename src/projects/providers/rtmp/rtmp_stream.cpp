@@ -11,10 +11,12 @@
 #include "base/info/application.h"
 #include "base/provider/push_provider/application.h"
 #include "rtmp_provider_private.h"
+#include "modules/codec_analyzer/h264/h264_sps.h"
 
 #include <orchestrator/orchestrator.h>
 #include <base/media_route/media_type.h>
 #include <base/info/media_extradata.h>
+
 
 /*
 Process of publishing 
@@ -1275,6 +1277,14 @@ namespace pvd
 
 		_media_info->avc_sps->assign(sps.begin(), sps.end());  // SPS
 		_media_info->avc_pps->assign(pps.begin(), pps.end());  // PPS
+
+		// Get width/height values from PPS
+		H264Sps parser_sps;
+		if(H264Sps::Parse(&(*_media_info->avc_sps)[0], _media_info->avc_sps->size(), parser_sps))
+		{
+			_media_info->video_width = parser_sps.GetWidth();
+			_media_info->video_height = parser_sps.GetHeight();
+		}
 
 		_media_info->video_streaming = true;
 
