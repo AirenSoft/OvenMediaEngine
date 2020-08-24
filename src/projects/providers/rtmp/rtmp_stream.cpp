@@ -1224,14 +1224,8 @@ namespace pvd
 			new_track->SetId(RTMP_VIDEO_TRACK_ID);
 			new_track->SetMediaType(common::MediaType::Video);
 			new_track->SetCodecId(common::MediaCodecId::H264);
-
-			// I know RTMP uses 1/1000 timebase, however, this timebase was used due to low precision.
-			// new_track->SetTimeBase(1, 1000);
-			new_track->SetTimeBase(1, 90000);
-
-			// A value to change to 1/90000 from 1/1000
-			double video_scale = 90000.0 / 1000.0;
-			new_track->SetVideoTimestampScale(video_scale);
+			new_track->SetTimeBase(1, 1000);
+			new_track->SetVideoTimestampScale(1.0);
 
 			// Below items are not mandatory, it will be parsed again from SPS parser
 			new_track->SetWidth((uint32_t)media_info->video_width);
@@ -1251,14 +1245,8 @@ namespace pvd
 			new_track->SetId(RTMP_AUDIO_TRACK_ID);
 			new_track->SetMediaType(common::MediaType::Audio);
 			new_track->SetCodecId(common::MediaCodecId::Aac);
-
-			// I know RTMP uses 1/1000 timebase, however, this timebase was used due to low precision.
-			// new_track->SetTimeBase(1, 1000);
-			new_track->SetTimeBase(1, media_info->audio_samplerate);
-
-			// A value to change to 1/sample_rate from 1/1000
-			double  audio_scale = (double)(media_info->audio_samplerate) / 1000.0;
-			new_track->SetAudioTimestampScale(audio_scale);
+			new_track->SetTimeBase(1, 1000);
+			new_track->SetAudioTimestampScale(1.0);
 
 			//////////////////
 			// Below items are not mandatory, it will be parsed again from ADTS parser
