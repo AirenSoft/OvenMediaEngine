@@ -24,14 +24,14 @@ RtpPacketizer::~RtpPacketizer()
 
 }
 
-void RtpPacketizer::SetVideoCodec(RtpVideoCodecType codec_type)
+void RtpPacketizer::SetVideoCodec(common::MediaCodecId codec_type)
 {
 	_audio_configured = false;
 	_video_codec_type = codec_type;
 	_packetizer = RtpPacketizingManager::Create(codec_type);
 }
 
-void RtpPacketizer::SetAudioCodec(RtpAudioCodecType codec_type)
+void RtpPacketizer::SetAudioCodec(common::MediaCodecId codec_type)
 {
 	_audio_codec_type = codec_type;
 	_audio_configured = true;
@@ -68,7 +68,6 @@ bool RtpPacketizer::Packetize(FrameType frame_type,
 {
 	_frame_count ++;
 
-	// Audio, Video 분기 한다.
 	if(_audio_configured)
 	{
 		return PacketizeAudio(frame_type, timestamp, payload_data, payload_size);
@@ -79,7 +78,7 @@ bool RtpPacketizer::Packetize(FrameType frame_type,
 	}
 }
 
-bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
+bool RtpPacketizer::PacketizeVideo(common::MediaCodecId video_type,
                                    FrameType frame_type,
                                    uint32_t rtp_timestamp,
                                    const uint8_t *payload_data,

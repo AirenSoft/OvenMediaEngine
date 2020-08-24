@@ -44,12 +44,6 @@ bool RtcStream::Start(uint32_t worker_count)
 	_offer_sdp->SetMsidSemantic("WMS", "*");
 	_offer_sdp->SetFingerprint("sha-256", _certificate->GetFingerprint("sha-256"));
 
-	// TODO(soulk): 현재는 Content가 Video 1개, Audio 1개라고 가정하고 개발되어 있다.
-	// 현재의 Track은 Media Type과 Codec 정보만을 나타내며, Content를 구분할 수 없기 때문에
-	// Multi Audio Channel 과 같은 내용을 표현할 수 없다.
-	// GetContentCount() -> Content -> GetTrackCount로 확장해야 한다.
-	// 다음은 위와 같은 제약사항으로 인해 개발된 임시 코드이다. by Getroot
-
 	std::shared_ptr<MediaDescription> video_media_desc = nullptr;
 	std::shared_ptr<MediaDescription> audio_media_desc = nullptr;
 
@@ -295,23 +289,20 @@ void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	CodecSpecificInfo codec_info;
 	RTPVideoHeader rtp_video_header;
 
-	auto codec_id = media_track->GetCodecId();
-	if(codec_id == MediaCodecId::Vp8)
-	{
-		codec_info.codec_type = CodecType::Vp8;
+	codec_info.codec_type = media_track->GetCodecId();
 
+	if(codec_info.codec_type == MediaCodecId::Vp8)
+	{
 		// Structure for future expansion.
 		// In the future, when OME uses codec-specific features, certain information is obtained from media_packet.
 		codec_info.codec_specific.vp8 = CodecSpecificInfoVp8();
 	}
-	else if(codec_id == MediaCodecId::H264)
+	else if(codec_info.codec_type == MediaCodecId::H264)
 	{
-		codec_info.codec_type = CodecType::H264;
 		codec_info.codec_specific.h264 = CodecSpecificInfoH264();
 	}
-	else if(codec_id == MediaCodecId::H265)
+	else if(codec_info.codec_type == MediaCodecId::H265)
 	{
-		codec_info.codec_type = CodecType::H265;
 		//codec_info.codec_specific.h264 = CodecSpecificInfoH264();
 	}
 
@@ -325,8 +316,6 @@ void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	{
 		return;
 	}
-
-	// RTP_SENDER에 등록된 RtpRtcpSession에 의해서 Packetizing이 완료되면 OnRtpPacketized 함수가 호출된다.
 
 	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
 	auto timestamp = media_packet->GetPts();
@@ -384,8 +373,8 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 {
 	switch(info->codec_type)
 	{
-		case CodecType::Vp8:
-			rtp_video_header->codec = RtpVideoCodecType::Vp8;
+		case common::MediaCodecId::Vp8:
+			rtp_video_header->codec = common::MediaCodecId::Vp8;
 			rtp_video_header->codec_header.vp8.InitRTPVideoHeaderVP8();
 			// With Ulpfec, picture id is needed.
 			rtp_video_header->codec_header.vp8.picture_id = AllocateVP8PictureID();
@@ -396,21 +385,12 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 			rtp_video_header->codec_header.vp8.key_idx = info->codec_specific.vp8.key_idx;
 			rtp_video_header->simulcast_idx = info->codec_specific.vp8.simulcast_idx;
 			return;
-		case CodecType::H264:
-			rtp_video_header->codec = RtpVideoCodecType::H264;
+		case common::MediaCodecId::H264:
+			rtp_video_header->codec = common::MediaCodecId::H264;
 			rtp_video_header->codec_header.h264.packetization_mode = info->codec_specific.h264.packetization_mode;
 			rtp_video_header->simulcast_idx = info->codec_specific.h264.simulcast_idx;
 			return;
 
-		case CodecType::Opus:
-		case CodecType::Vp9:
-		case CodecType::I420:
-		case CodecType::Red:
-		case CodecType::Ulpfec:
-		case CodecType::Flexfec:
-		case CodecType::Generic:
-		case CodecType::Stereo:
-		case CodecType::Unknown:
 		default:
 			break;
 	}
@@ -423,23 +403,17 @@ void RtcStream::AddPacketizer(common::MediaCodecId codec_id, uint32_t id, uint8_
 	auto packetizer = std::make_shared<RtpPacketizer>(RtpRtcpPacketizerInterface::GetSharedPtr());
 	packetizer->SetPayloadType(payload_type);
 	packetizer->SetSSRC(ssrc);
-
+	
 	switch(codec_id)
 	{
 		case MediaCodecId::Vp8:
-			packetizer->SetVideoCodec(RtpVideoCodecType::Vp8);
-			packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
-			break;
 		case MediaCodecId::H264:
-			packetizer->SetVideoCodec(RtpVideoCodecType::H264);
-			packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
-			break;
 		case MediaCodecId::H265:
-			packetizer->SetVideoCodec(RtpVideoCodecType::H265);
+			packetizer->SetVideoCodec(codec_id);
 			packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
 			break;
 		case MediaCodecId::Opus:
-			packetizer->SetAudioCodec(RtpAudioCodecType::Opus);
+			packetizer->SetAudioCodec(codec_id);
 			break;
 		default:
 			// No support codecs

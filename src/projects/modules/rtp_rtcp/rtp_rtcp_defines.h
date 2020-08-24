@@ -8,22 +8,6 @@
 #include "rtp_rtcp_interface.h"
 #include "base/common_types.h"
 
-enum class RtpVideoCodecType
-{
-	None,
-	Vp8,
-	H264,
-	H265
-	// In the future
-	// kRtpVideoVp9
-};
-
-enum class RtpAudioCodecType
-{
-	None,
-	Opus
-};
-
 const int16_t kNoPictureId = -1;
 const int16_t kNoTl0PicIdx = -1;
 const uint8_t kNoTemporalIdx = 0xFF;
@@ -109,6 +93,6 @@ struct RTPVideoHeader
 	uint8_t simulcast_idx; // Extension, 0이면 사용하지 않음
 	bool is_first_packet_in_frame;
 
-	RtpVideoCodecType codec;
+	common::MediaCodecId codec;
 	RTPVideoTypeHeader codec_header;
 };
