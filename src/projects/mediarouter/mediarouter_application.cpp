@@ -489,7 +489,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 	{
 		if(stream->IsCreatedSteam() == false && stream->IsParseTrackAll() == true)
 		{
-			logtw("NotifyCreateStream(stream->GetStream(),app_conn->GetConnectorType())");
+			//logtw("NotifyCreateStream(stream->GetStream(),app_conn->GetConnectorType())");
 			NotifyCreateStream(stream->GetStream(),app_conn->GetConnectorType());
 			stream->SetCreatedSteam(true);
 		}

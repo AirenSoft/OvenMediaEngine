@@ -18,7 +18,6 @@ bool H264AvccToAnnexB::GetExtradata(const common::PacketType type, const std::sh
 			logte("sequence heaer paring error"); 
 			return false;
 		}
-		logtd("%s", config.GetInfoString().CStr());;
 
 		// Structure of Extradata
 		//  START_CODE + SPS + START_CODE + PPS ... 

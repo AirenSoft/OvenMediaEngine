@@ -80,10 +80,18 @@ MRStreamInoutType MediaRouteStream::GetInoutType()
 }
 
 // Check whether the information extraction for all tracks has been completed.
+// TODO(soulk) : Need to performance tuning
 bool MediaRouteStream::IsParseTrackAll()
 {
+	bool is_parse_completed = true;
 
-	return true;
+	for(const auto &iter : _parse_completed_track_info)
+	{
+		if(iter.second == false)
+			return false;
+	}
+
+	return is_parse_completed;
 }
 
 // Check if an external stream has been generated for the current stream.
@@ -134,20 +142,22 @@ void MediaRouteStream::InitParseTrackInfo()
 	for(const auto &iter : _stream->GetTracks())
 	{
 		auto track_id = iter.first;
+		auto track = iter.second;
 
-		_parsed_track_info[track_id] = false;
+		_parse_completed_track_info[track_id] = false;
+		_incoming_tiembase[track_id] = track->GetTimeBase();
 	}
 }
 
 void MediaRouteStream::SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, bool parsed)
 {
-	_parsed_track_info[media_track->GetId()] = parsed;
+	_parse_completed_track_info[media_track->GetId()] = parsed;
 }
 
 bool MediaRouteStream::GetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track)
 {
-	auto iter = _parsed_track_info.find(media_track->GetId());
-	if(iter != _parsed_track_info.end())
+	auto iter = _parse_completed_track_info.find(media_track->GetId());
+	if(iter != _parse_completed_track_info.end())
 	{
 		return iter->second;
 	}
@@ -189,6 +199,12 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 							{
 								media_track->SetWidth(sps.GetWidth());
 								media_track->SetHeight(sps.GetHeight());
+								media_track->SetTimeBase(1, 90000);
+
+								logtd("[%d] timebase(%d/%d) -> timebase(%d/%d)"
+									, media_track->GetId()
+									, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
+									, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
 
 								SetParseTrackInfo(media_track, true);
 							}
@@ -209,9 +225,17 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 					{					
 						media_track->SetSampleRate(adts.SamplerateNum());
 						media_track->GetChannel().SetLayout( (adts.SamplerateNum()==1)?(AudioChannel::Layout::LayoutMono):(AudioChannel::Layout::LayoutStereo) );
+
+						media_track->SetTimeBase(1, media_track->GetSampleRate());
+
+						logtd("[%d] timebase(%d/%d) -> timebase(%d/%d)"
+							, media_track->GetId()
+							, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
+							, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
+
 						SetParseTrackInfo(media_track, true);
 					}
-					logtd("%s", adts.GetInfoString().CStr());					
+					logtd("%s", adts.GetInfoString().CStr());
 				}
 			}		
 			break;
@@ -330,6 +354,34 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 	return true;	
 }
 
+bool MediaRouteStream::ConvertToDefaultTimestamp(
+	std::shared_ptr<MediaTrack> &media_track,
+	std::shared_ptr<MediaPacket> &media_packet)
+{
+
+	if(_incoming_tiembase[media_track->GetId()] == media_track->GetTimeBase())
+	{
+		// If the timebase is the same, there is no need to change the timestamp.
+		return true;
+	}
+
+	// TODO(soulk) : Need to performacne tuning
+	// 				 Reduce calculating
+	
+	//logtw("%f, %f, %f"
+	//	, _incoming_tiembase[media_track->GetId()].GetExpr()
+	//	, media_track->GetTimeBase().GetExpr()
+	//	, _incoming_tiembase[media_track->GetId()].GetExpr() / media_track->GetTimeBase().GetExpr());
+
+	double scale = _incoming_tiembase[media_track->GetId()].GetExpr() / media_track->GetTimeBase().GetExpr();
+
+	media_packet->SetPts( media_packet->GetPts() * scale );
+	media_packet->SetDts( media_packet->GetDts() * scale );
+	media_packet->SetDuration( media_packet->GetDuration() * scale );
+
+	return true;
+}
+
 bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 {	
 	auto media_track = _stream->GetTrack(media_packet->GetTrackId());
@@ -339,12 +391,14 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		return false;
 	}	
 
-	// logtd("track_id(%d), type(%d), bsfmt(%d), flags(%d)", media_packet->GetTrackId(), media_packet->GetPacketType(), media_packet->GetBitstreamFormat(), media_packet->GetFlag());
+	//logtd("track_id(%d), type(%d), bsfmt(%d), flags(%d), pts(%lld)", media_packet->GetTrackId(), media_packet->GetPacketType(), media_packet->GetBitstreamFormat(), media_packet->GetFlag(), media_packet->GetPts());
 	// logtd("%s", media_packet->GetData()->Dump(128).CStr());		
 
 	// Bitstream format converting to stand format. and, parsing track informaion
 	if(GetInoutType() == MRStreamInoutType::Incoming)
 	{
+//		logtd("track_id(%d), type(%d), bsfmt(%d), flags(%d), pts(%lld)", media_packet->GetTrackId(), media_packet->GetPacketType(), media_packet->GetBitstreamFormat(), media_packet->GetFlag(), media_packet->GetPts());
+
 		if(!PushIncomingStream(media_track, media_packet))
 			return false;
 	}
@@ -407,12 +461,21 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	auto media_type = media_packet->GetMediaType();
 	auto track_id = media_packet->GetTrackId();
 	auto media_track = _stream->GetTrack(track_id);
-
 	if (media_track == nullptr)
 	{
 		logte("Cannot find media track. media_type(%s), track_id(%d)", (media_type == MediaType::Video) ? "video" : "audio", media_packet->GetTrackId());
 		return nullptr;
 	}
+
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// Timestamp change by timebase
+	////////////////////////////////////////////////////////////////////////////////////
+	ConvertToDefaultTimestamp(media_track, media_packet);
+
+
+
+
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// PTS Correction for Abnormal increase

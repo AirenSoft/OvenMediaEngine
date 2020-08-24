@@ -61,14 +61,13 @@ private:
 	void SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, bool parsed);
 	bool GetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track);
 
-
 	// Parse media track information
 	bool ParseTrackInfo(
 		std::shared_ptr<MediaTrack> &media_track, 
 		std::shared_ptr<MediaPacket> &media_packet);
 
 	// Set whether parsing media track is complete
-	std::map<uint8_t, bool> _parsed_track_info;
+	std::map<uint8_t, bool> _parse_completed_track_info;
 
 private:
 	// Convert to default bitstream format
@@ -76,10 +75,20 @@ private:
 		std::shared_ptr<MediaTrack> &media_track, 
 		std::shared_ptr<MediaPacket> &media_packet);
 
+
 	// Parse fragment header, flags
 	bool ParseAdditionalData(
 		std::shared_ptr<MediaTrack> &media_track, 
 		std::shared_ptr<MediaPacket> &media_packet);
+
+	// Convert PTS/DTS to default timebase
+	//  Each provider has a different timebase.
+	//  This function converts timebase, which is commonly used by codecs, and also converts PTS.
+	bool ConvertToDefaultTimestamp(
+		std::shared_ptr<MediaTrack> &media_track,
+		std::shared_ptr<MediaPacket> &media_packet);
+
+	std::map<uint8_t, common::Timebase> _incoming_tiembase;
 
 private:
 	
