@@ -147,7 +147,7 @@ int M4sSegmentWriter::WriteTrunBox(std::shared_ptr<ov::Data> &data_stream, const
 		{
 			WriteUint32(sample_data->data->GetLength() + 4, data);	// size + sample
 			WriteUint32(sample_data->flag, data);					  // flag
-			WriteUint32(sample_data->composition_time_offset, data);  // compoistion timeoffset
+			WriteUint32(sample_data->GetCts(), data);  // compoistion timeoffset
 		}
 		else if (_media_type == M4sMediaType::Audio)
 		{

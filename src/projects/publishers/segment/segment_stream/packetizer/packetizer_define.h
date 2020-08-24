@@ -97,38 +97,38 @@ enum class PacketizerFrameType
 struct PacketizerFrameData
 {
 	PacketizerFrameData(PacketizerFrameType type,
-						int64_t timestamp,
+						int64_t pts,
+						int64_t dts,
 						uint64_t duration,
-						uint64_t time_offset,
 						const common::Timebase &timebase,
 						std::shared_ptr<ov::Data> &data)
 		: type(type),
-		  timestamp(timestamp),
+		  pts(pts),
+		  dts(dts),
 		  duration(duration),
-		  time_offset(time_offset),
 		  timebase(timebase),
 		  data(data)
 	{
 	}
 
 	PacketizerFrameData(PacketizerFrameType type,
-						int64_t timestamp,
+						int64_t pts,
+						int64_t dts,
 						uint64_t duration,
-						uint64_t time_offset,
 						const common::Timebase &timebase)
 		: type(type),
-		  timestamp(timestamp),
+		  pts(pts),
+		  dts(dts),
 		  duration(duration),
-		  time_offset(time_offset),
 		  timebase(timebase),
 		  data(std::make_shared<ov::Data>())
 	{
 	}
 
 	PacketizerFrameType type = PacketizerFrameType::Unknown;
-	int64_t timestamp = 0LL;
+	int64_t pts = 0LL;
+	int64_t dts = 0LL;
 	uint64_t duration = 0ULL;
-	uint64_t time_offset = 0ULL;
 	common::Timebase timebase;
 	std::shared_ptr<ov::Data> data;
 };

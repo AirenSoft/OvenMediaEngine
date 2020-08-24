@@ -32,30 +32,37 @@ struct SampleData
 public:
 	SampleData(uint64_t duration,
 			   uint32_t flag,
-			   int64_t timestamp,
-			   uint32_t composition_time_offset,
+			   int64_t pts,
+			   int64_t dts,
 			   std::shared_ptr<ov::Data> &data)
 		: duration(duration),
 		  flag(flag),
-		  timestamp(timestamp),
-		  composition_time_offset(composition_time_offset),
+		  pts(pts),
+		  dts(dts),
 		  data(data)
 	{
 	}
 
 	SampleData(uint64_t duration,
-			   int64_t timestamp,
+			   int64_t pts,
+			   int64_t dts,
 			   std::shared_ptr<ov::Data> &data)
 		: duration(duration),
-		  timestamp(timestamp),
+		  pts(pts),
+		  dts(dts),
 		  data(data)
 	{
 	}
 
+	int64_t GetCts() const
+	{
+		return pts - dts;
+	}
+
 	uint64_t duration = 0ULL;
 	uint32_t flag = 0U;
-	int64_t timestamp = 0LL;
-	uint32_t composition_time_offset = 0U;
+	int64_t pts = 0LL;
+	int64_t dts = 0LL;
 	std::shared_ptr<ov::Data> data;
 };
 

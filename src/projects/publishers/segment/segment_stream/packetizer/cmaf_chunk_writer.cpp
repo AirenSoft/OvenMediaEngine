@@ -41,14 +41,14 @@ const std::shared_ptr<ov::Data> CmafChunkWriter::AppendSample(const std::shared_
 {
 	if (_write_started == false)
 	{
-		if (sample_data->timestamp < 0)
+		if (sample_data->pts < 0)
 		{
 			// OV_ASSERT2(false);
 			return nullptr;
 		}
 
 		_write_started = true;
-		_start_timestamp = sample_data->timestamp;
+		_start_timestamp = sample_data->pts;
 
 		if (_chunked_data == nullptr)
 		{
@@ -80,17 +80,17 @@ uint64_t CmafChunkWriter::GetSegmentDuration() const
 		return 0ULL;
 	}
 
-	int64_t duration = (_last_sample->timestamp + _last_sample->duration) - _start_timestamp;
-
-	OV_ASSERT((_last_sample->timestamp + static_cast<int64_t>(_last_sample->duration)) >= _start_timestamp, "%lld + %lld < %lld (duration: %lld)",
-			  _last_sample->timestamp, _last_sample->duration,
-			  _start_timestamp, duration);
+	int64_t duration = (_last_sample->pts + _last_sample->duration) - _start_timestamp;
 
 	if (duration < 0LL)
 	{
 		logtw("Segment duration is negative (%lld + %lld < %lld, duration: %lld)",
-			  _last_sample->timestamp, _last_sample->duration,
+			  _last_sample->pts, _last_sample->duration,
 			  _start_timestamp, duration);
+
+		OV_ASSERT(duration >= 0LL, "Segment duration is negative (%lld + %lld < %lld, duration: %lld)",
+				  _last_sample->pts, _last_sample->duration,
+				  _start_timestamp, duration);
 
 		duration = 0LL;
 	}
@@ -135,7 +135,7 @@ int CmafChunkWriter::WriteTrafBox(std::shared_ptr<ov::Data> &data_stream,
 	auto data = std::make_shared<ov::Data>();
 
 	WriteTfhdBox(data);
-	WriteTfdtBox(data, sample_data->timestamp);
+	WriteTfdtBox(data, sample_data->pts);
 	WriteTrunBox(data, sample_data);
 
 	return WriteBoxData("traf", data, data_stream);
@@ -192,19 +192,19 @@ int CmafChunkWriter::WriteTrunBox(std::shared_ptr<ov::Data> &data_stream,
 	}
 
 	WriteUint32(1, data);			// Sample Item Count;
-	WriteUint32(0x11111111, data);  // Data offset - temp 0 setting
+	WriteUint32(0x11111111, data);	// Data offset - temp 0 setting
 
 	WriteUint32(sample_data->duration, data);  // duration
 
 	if (_media_type == M4sMediaType::Video)
 	{
 		WriteUint32(sample_data->data->GetLength() + 4, data);	// size + sample
-		WriteUint32(sample_data->flag, data);					  // flag
-		WriteUint32(sample_data->composition_time_offset, data);  // cts
+		WriteUint32(sample_data->flag, data);					// flag
+		WriteUint32(sample_data->GetCts(), data);				// cts
 	}
 	else if (_media_type == M4sMediaType::Audio)
 	{
-		WriteUint32(sample_data->data->GetLength(), data);  // sample
+		WriteUint32(sample_data->data->GetLength(), data);	// sample
 	}
 
 	return WriteBoxData("trun", 0, flag, data, data_stream);

@@ -276,8 +276,8 @@ bool TsWriter::WritePMT()
 //====================================================================================================
 bool TsWriter::WriteSample(bool is_video,
 						   bool is_keyframe,
-						   int64_t timestamp,
-						   uint64_t time_offset,
+						   int64_t pts,
+						   int64_t dts,
 						   std::shared_ptr<ov::Data> &data)
 {
 	uint8_t pes_header[PES_HEADER_WIDTH_DTS_SIZE] = {
@@ -298,7 +298,7 @@ bool TsWriter::WriteSample(bool is_video,
 	data_pos = data->GetDataAs<uint8_t>();
 
 	// PES Header 생성
-	MakePesHeader(data->GetLength(), is_video, timestamp, time_offset, pes_header, pes_header_size);
+	MakePesHeader(data->GetLength(), is_video, pts, dts, pes_header, pes_header_size);
 
 	// TS Header + Payload 설정
 	rest_data_size = pes_header_size + data->GetLength();
@@ -326,7 +326,7 @@ bool TsWriter::WriteSample(bool is_video,
 							 true,
 							 payload_size,
 							 true,
-							 timestamp * 300,
+							 pts * 300,
 							 is_keyframe);
 			else
 				MakeTsHeader(TS_DEFAULT_AUDIO_PID,
@@ -334,7 +334,7 @@ bool TsWriter::WriteSample(bool is_video,
 							 true,
 							 payload_size,
 							 (!_video_enable && _audio_enable),
-							 timestamp * 300,
+							 pts * 300,
 							 is_keyframe);
 
 			// PES헤더 설정
@@ -369,22 +369,14 @@ bool TsWriter::WriteSample(bool is_video,
 //====================================================================================================
 bool TsWriter::MakePesHeader(int data_size,
 							 bool is_video,
-							 int64_t timestamp,
-							 uint64_t time_offset,
+							 int64_t pts,
+							 int64_t dts,
 							 uint8_t *header,
 							 uint32_t &header_size)
 {
 	uint32_t stream_id = 0;
 	uint32_t pes_packet_size = 0;
 	bool is_dts = false;
-	uint64_t pts = 0;
-	uint64_t dts = 0;
-
-	// DTS
-	dts = timestamp;
-
-	// PTS
-	pts = timestamp + time_offset;
 
 	if (is_video)
 	{
