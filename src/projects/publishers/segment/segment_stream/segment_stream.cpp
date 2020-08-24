@@ -118,7 +118,7 @@ void SegmentStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_pac
 		//            logtd("null header size - %d", nul_header_size);
 		//        }
 
-		_stream_packetizer->AppendVideoData(media_packet, _video_track->GetTimeBase().GetTimescale(), 0);
+		_stream_packetizer->AppendVideoData(media_packet, _video_track->GetTimeBase().GetTimescale());
 	}
 }
 

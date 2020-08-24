@@ -73,18 +73,18 @@ bool HlsPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame
 
 	if (frame_data->timebase != DEFAULT_TIMEBASE)
 	{
-		frame_data->timestamp = ConvertTimeScale(frame_data->timestamp, frame_data->timebase, DEFAULT_TIMEBASE);
-		frame_data->time_offset = ConvertTimeScale(frame_data->time_offset, frame_data->timebase, DEFAULT_TIMEBASE);
+		frame_data->pts = ConvertTimeScale(frame_data->pts, frame_data->timebase, DEFAULT_TIMEBASE);
+		frame_data->dts = ConvertTimeScale(frame_data->dts, frame_data->timebase, DEFAULT_TIMEBASE);
 		frame_data->timebase = DEFAULT_TIMEBASE;
 	}
 
 	if ((frame_data->type == PacketizerFrameType::VideoKeyFrame) && (_frame_datas.empty() == false))
 	{
-		if ((frame_data->timestamp - _frame_datas[0]->timestamp) >=
+		if ((frame_data->pts - _frame_datas[0]->pts) >=
 			((_segment_duration - _duration_margin) * DEFAULT_TIMEBASE.GetTimescale()))
 		{
 			// Segment Write
-			SegmentWrite(_frame_datas[0]->timestamp, frame_data->timestamp - _frame_datas[0]->timestamp);
+			SegmentWrite(_frame_datas[0]->pts, frame_data->pts - _frame_datas[0]->pts);
 		}
 	}
 
@@ -108,7 +108,8 @@ bool HlsPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame
 
 	if (frame_data->timebase != DEFAULT_TIMEBASE)
 	{
-		frame_data->timestamp = ConvertTimeScale(frame_data->timestamp, frame_data->timebase, DEFAULT_TIMEBASE);
+		frame_data->pts = ConvertTimeScale(frame_data->pts, frame_data->timebase, DEFAULT_TIMEBASE);
+		frame_data->dts = ConvertTimeScale(frame_data->dts, frame_data->timebase, DEFAULT_TIMEBASE);
 		frame_data->timebase = DEFAULT_TIMEBASE;
 	}
 
@@ -116,10 +117,10 @@ bool HlsPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame
 		((time(nullptr) - _last_video_append_time) >= static_cast<uint32_t>(_segment_duration)) &&
 		(_frame_datas.empty() == false))
 	{
-		if ((frame_data->timestamp - _frame_datas[0]->timestamp) >=
+		if ((frame_data->pts - _frame_datas[0]->pts) >=
 			((_segment_duration - _duration_margin) * DEFAULT_TIMEBASE.GetTimescale()))
 		{
-			SegmentWrite(_frame_datas[0]->timestamp, frame_data->timestamp - _frame_datas[0]->timestamp);
+			SegmentWrite(_frame_datas[0]->pts, frame_data->pts - _frame_datas[0]->pts);
 		}
 	}
 
@@ -146,17 +147,16 @@ bool HlsPacketizer::SegmentWrite(int64_t start_timestamp, uint64_t duration)
 		// Write TS(PES)
 		ts_writer->WriteSample(frame_data->type != PacketizerFrameType::AudioFrame,
 							   (frame_data->type == PacketizerFrameType::AudioFrame) || (frame_data->type == PacketizerFrameType::VideoKeyFrame),
-							   frame_data->timestamp,
-							   frame_data->time_offset,
+							   frame_data->pts, frame_data->dts,
 							   frame_data->data);
 
 		if ((_first_audio_time_stamp == 0) && (frame_data->type == PacketizerFrameType::AudioFrame))
 		{
-			_first_audio_time_stamp = frame_data->timestamp;
+			_first_audio_time_stamp = frame_data->pts;
 		}
 		else if ((_first_video_time_stamp == 0) && (frame_data->type != PacketizerFrameType::AudioFrame))
 		{
-			_first_video_time_stamp = frame_data->timestamp;
+			_first_video_time_stamp = frame_data->pts;
 		}
 	}
 	_frame_datas.clear();

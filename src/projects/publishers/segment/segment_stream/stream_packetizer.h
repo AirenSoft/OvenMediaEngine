@@ -40,7 +40,7 @@ public:
 	virtual ~StreamPacketizer() = default;
 
 public:
-	bool AppendVideoData(const std::shared_ptr<MediaPacket> &media_packet, uint32_t timescale, uint64_t time_offset);
+	bool AppendVideoData(const std::shared_ptr<MediaPacket> &media_packet, uint32_t timescale);
 	bool AppendAudioData(const std::shared_ptr<MediaPacket> &media_packet, uint32_t timescale);
 
 	// Child must implement this functions
