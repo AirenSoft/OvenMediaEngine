@@ -10,6 +10,7 @@
 
 #include "transcode_codec_dec_aac.h"
 #include "transcode_codec_dec_avc.h"
+#include "transcode_codec_dec_hevc.h"
 
 #define OV_LOG_TAG "TranscodeCodec"
 
@@ -56,7 +57,7 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::St
 			decoder = std::make_shared<OvenCodecImplAvcodecDecAVC>(info);
 			break;
 		case common::MediaCodecId::H265:
-			// Do something
+			decoder = std::make_shared<OvenCodecImplAvcodecDecHEVC>(info);
 			break;
 		case common::MediaCodecId::Aac:
 			decoder = std::make_shared<OvenCodecImplAvcodecDecAAC>(info);

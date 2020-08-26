@@ -203,7 +203,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 								media_track->SetHeight(sps.GetHeight());
 								media_track->SetTimeBase(1, 90000);
 
-								logtd("[%d] timebase(%d/%d) -> timebase(%d/%d)"
+								logtd("[%d] need to convert timebase(%d/%d) -> timebase(%d/%d)"
 									, media_track->GetId()
 									, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
 									, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
@@ -230,7 +230,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 
 						media_track->SetTimeBase(1, media_track->GetSampleRate());
 
-						logtd("[%d] timebase(%d/%d) -> timebase(%d/%d)"
+						logtd("[%d] need to convert timebase(%d/%d) -> timebase(%d/%d)"
 							, media_track->GetId()
 							, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
 							, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
@@ -387,6 +387,9 @@ bool MediaRouteStream::ConvertToDefaultTimestamp(
 
 bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 {	
+	////////////////////////////////////////////////////////////////////////////////////
+	// Bitstream format converting to stand format. and, parsing track informaion
+	////////////////////////////////////////////////////////////////////////////////////
 	auto media_track = _stream->GetTrack(media_packet->GetTrackId());
 	if (media_track == nullptr)
 	{
@@ -394,27 +397,23 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		return false;
 	}	
 
-	//logtd("track_id(%d), type(%d), bsfmt(%d), flags(%d), pts(%lld)", media_packet->GetTrackId(), media_packet->GetPacketType(), media_packet->GetBitstreamFormat(), media_packet->GetFlag(), media_packet->GetPts());
-	// logtd("%s", media_packet->GetData()->Dump(128).CStr());		
-
-	// Bitstream format converting to stand format. and, parsing track informaion
 	if(GetInoutType() == MRStreamInoutType::Incoming)
 	{
-//		logtd("track_id(%d), type(%d), bsfmt(%d), flags(%d), pts(%lld)", media_packet->GetTrackId(), media_packet->GetPacketType(), media_packet->GetBitstreamFormat(), media_packet->GetFlag(), media_packet->GetPts());
-
 		if(!PushIncomingStream(media_track, media_packet))
 			return false;
 	}
 	else if(GetInoutType() == MRStreamInoutType::Outgoing)
 	{
 		if(!PushOutgoungStream(media_track, media_packet))
-			return false;
+			return false;			
 	}
 
+	////////////////////////////////////////////////////////////////////////////////////
 	// Accumulate Packet duplication
 	//	- 1) If packets stored in temporary storage exist, calculate Duration compared to the current packet's timestamp.
 	//	- 2) If the current packet does not have a Duration value, keep it in a temporary store.
 	//	- 3) If there is a packet Duration value, insert it into the packet queue.
+	////////////////////////////////////////////////////////////////////////////////////
 	bool is_inserted_queue = false;
 
 	auto iter = _media_packet_stored.find(media_packet->GetTrackId());
@@ -448,6 +447,9 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 
 std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 {
+	////////////////////////////////////////////////////////////////////////////////////
+	// Peek MediaPacket from queue
+	////////////////////////////////////////////////////////////////////////////////////
 	if(_packets_queue.IsEmpty())
 	{
 		return nullptr;
@@ -477,13 +479,9 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	ConvertToDefaultTimestamp(media_track, media_packet);
 
 
-
-
-
 	////////////////////////////////////////////////////////////////////////////////////
 	// PTS Correction for Abnormal increase
 	////////////////////////////////////////////////////////////////////////////////////
-	
 	int64_t timestamp_delta = media_packet->GetPts()  - _stat_recv_pkt_lpts[track_id];
 	int64_t scaled_timestamp_delta = timestamp_delta * 1000 /  media_track->GetTimeBase().GetDen();
 
@@ -492,7 +490,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		// TODO(soulk): I think all tracks should calibrate the PTS with the same value.
 		_pts_correct[track_id] = media_packet->GetPts() - _stat_recv_pkt_lpts[track_id] - _pts_avg_inc[track_id];
 
-#if 0
+
 		logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld"
 			, track_id
 			, _stat_recv_pkt_lpts[track_id]
@@ -500,7 +498,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			, _pts_correct[track_id]
 			, _pts_avg_inc[track_id]
 		);
-#endif
 
 	}
 	else
@@ -511,10 +508,25 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	}
 
+	// Set the corrected PTS.
+	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
+	media_packet->SetDts( media_packet->GetDts() - _pts_correct[track_id] );
+
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Statistics for log
 	////////////////////////////////////////////////////////////////////////////////////
+	UpdateStatistics(media_track, media_packet);
+
+	
+	return media_packet;
+}
+
+
+void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+{
+	auto track_id = media_track->GetId();
+
 	_stat_recv_pkt_lpts[track_id] = media_packet->GetPts();
 
 	_stat_recv_pkt_ldts[track_id] = media_packet->GetDts();
@@ -522,7 +534,6 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	_stat_recv_pkt_size[track_id] += media_packet->GetData()->GetLength();
 
 	_stat_recv_pkt_count[track_id]++;
-
 
 	// 	Diffrence time of received first packet with uptime.
 	if(_stat_first_time_diff[track_id] == 0)
@@ -586,10 +597,11 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 				);
 			}
 
-			temp_str.AppendFormat("\n\t[%d] track: %s(%d), %s, pkt_cnt: %6lld, pkt_siz: %sB"
+			temp_str.AppendFormat("\n\t[%3d] type: %5s(%2d/%4s), %s, pkt_cnt: %6lld, pkt_siz: %sB"
 				, track_id
 				, track->GetMediaType()==MediaType::Video?"video":"audio"
 				, track->GetCodecId()
+				, ov::Converter::ToString(track->GetCodecId()).CStr()
 				, pts_str.CStr()
 				, _stat_recv_pkt_count[track_id]
 				, ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr()
@@ -599,17 +611,23 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		logtd("%s", temp_str.CStr());
 	}
 
-	// Set the corrected PTS.
-	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
-	media_packet->SetDts( media_packet->GetDts() - _pts_correct[track_id] );
 
-#if 0
-	// if(media_packet->GetDuration() <= 0)
-	if(_inout_type == MRStreamInoutType::Outgoing)
+}
+void MediaRouteStream::DumpPacket(
+	std::shared_ptr<MediaTrack> &media_track,
+	std::shared_ptr<MediaPacket> &media_packet,
+	bool dump)
+{
+	logtd("track_id(%d), type(%d), fmt(%d), flags(%d), pts(%lld) dts(%lld)"
+		, media_packet->GetTrackId()
+		, media_packet->GetPacketType()
+		, media_packet->GetBitstreamFormat()
+		, media_packet->GetFlag()
+		, media_packet->GetPts() 
+		, media_packet->GetDts());		
+
+	if(dump == true)
 	{
-		logtw("Id : %d, Duration : %d, pts : %lld, dts : %lld", media_packet->GetTrackId(), media_packet->GetDuration(), media_packet->GetPts(), media_packet->GetDts());
+		logtd("%s", media_packet->GetData()->Dump(128).CStr());	
 	}
-#endif
-	
-	return media_packet;
 }

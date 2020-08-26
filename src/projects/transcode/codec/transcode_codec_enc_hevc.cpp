@@ -6,14 +6,14 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "transcode_codec_enc_avc.h"
+#include "transcode_codec_enc_hevc.h"
 
 #include <unistd.h>
 
 #define OV_LOG_TAG "TranscodeCodec"
 
 
-OvenCodecImplAvcodecEncAVC::~OvenCodecImplAvcodecEncAVC()
+OvenCodecImplAvcodecEncHEVC::~OvenCodecImplAvcodecEncHEVC()
 {
 	Stop();
 }
@@ -22,7 +22,7 @@ OvenCodecImplAvcodecEncAVC::~OvenCodecImplAvcodecEncAVC()
 //
 // - B-frame must be disabled. because, WEBRTC does not support B-Frame.
 //
-bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> context)
+bool OvenCodecImplAvcodecEncHEVC::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	if (TranscodeEncoder::Configure(context) == false)
 	{
@@ -81,8 +81,8 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	// 인코딩 품질 및 브라우저 호환성
 	// For browser compatibility
 	// _context->profile = FF_PROFILE_H264_MAIN;
-	_context->profile = FF_PROFILE_H264_BASELINE;
-
+	_context->profile = FF_PROFILE_HEVC_MAIN;
+/*
 	// 인코딩 성능
 	::av_opt_set(_context->priv_data, "preset", "ultrafast", 0);
 
@@ -95,7 +95,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 
 	// CBR 옵션 / bitrate는 kbps 단위 / *문제는 MAC 크롬에서 재생이 안된다. 그래서 maxrate 값만 지정해줌.
 	// x264opts.AppendFormat(":nal-hrd=cbr:force-cfr=1:bitrate=%d:vbv-maxrate=%d:vbv-bufsize=%d:", _context->bit_rate/1000,  _context->bit_rate/1000,  _context->bit_rate/1000);
-
+*/
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
@@ -107,7 +107,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	{
 		_kill_flag = false;
 
-		_thread_work = std::thread(&OvenCodecImplAvcodecEncAVC::ThreadEncode, this);
+		_thread_work = std::thread(&OvenCodecImplAvcodecEncHEVC::ThreadEncode, this);
 	}
 	catch (const std::system_error &e)
 	{
@@ -119,7 +119,7 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 	return true;
 }
 
-void OvenCodecImplAvcodecEncAVC::Stop()
+void OvenCodecImplAvcodecEncHEVC::Stop()
 {
 	_kill_flag = true;
 
@@ -132,7 +132,7 @@ void OvenCodecImplAvcodecEncAVC::Stop()
 	}
 }
 
-void OvenCodecImplAvcodecEncAVC::ThreadEncode()
+void OvenCodecImplAvcodecEncHEVC::ThreadEncode()
 {
 	while(!_kill_flag)
 	{
@@ -154,8 +154,6 @@ void OvenCodecImplAvcodecEncAVC::ThreadEncode()
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-
-
 		_frame->format = frame->GetFormat();
 		_frame->nb_samples = 1;
 		_frame->pts = frame->GetPts() * _scale;
@@ -240,7 +238,7 @@ void OvenCodecImplAvcodecEncAVC::ThreadEncode()
 }
 
 
-std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeResult *result)
+std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncHEVC::RecvBuffer(TranscodeResult *result)
 {
 	std::unique_lock<std::mutex> mlock(_mutex);
 	if(!_output_buffer.empty())
@@ -259,13 +257,13 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 
 }
 
-std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
+std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncHEVC::MakePacket() const
 {
 	auto flag = (_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
 	// This is workaround: avcodec_receive_packet() does not give the duration that sent to avcodec_send_frame()
 	int den = _output_context->GetTimeBase().GetDen();
 	int64_t duration = (den == 0) ? 0LL : (float)den / _output_context->GetFrameRate();
 	auto packet = std::make_shared<MediaPacket>(common::MediaType::Video, 0, _packet->data, _packet->size, _packet->pts * _scale_inv, _packet->dts * _scale_inv, duration, flag);
-
+	
 	return std::move(packet);
 }

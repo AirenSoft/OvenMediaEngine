@@ -90,6 +90,8 @@ private:
 
 	std::map<uint8_t, common::Timebase> _incoming_tiembase;
 
+	void UpdateStatistics(std::shared_ptr<MediaTrack> &media_track,
+		std::shared_ptr<MediaPacket> &media_packet);
 private:
 	
 	// Whether to generate output streams corresponding to the current mr stream.
@@ -130,5 +132,11 @@ private:
 	ov::StopWatch _stop_watch;
 	std::chrono::time_point<std::chrono::system_clock> _last_recv_time;
 	std::chrono::time_point<std::chrono::system_clock> _stat_start_time;
+
+private:
+	void DumpPacket(
+		std::shared_ptr<MediaTrack> &media_track,
+		std::shared_ptr<MediaPacket> &media_packet,
+		bool dump = false);
 };
 
