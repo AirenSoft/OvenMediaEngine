@@ -21,50 +21,50 @@ H264NalUnitBitstreamParser::H264NalUnitBitstreamParser(const uint8_t *bitstream,
     {
         if (original_bitstream_offset < length + 2 && bitstream[original_bitstream_offset] == 0x00 && bitstream[original_bitstream_offset + 1] == 0x00 && bitstream[original_bitstream_offset + 2] == 0x03)
         {
-            bitstream_.emplace_back(bitstream[original_bitstream_offset++]);
-            bitstream_.emplace_back(bitstream[original_bitstream_offset++]);
+            _bitstream.emplace_back(bitstream[original_bitstream_offset++]);
+            _bitstream.emplace_back(bitstream[original_bitstream_offset++]);
             original_bitstream_offset++;
         }
         else
         {
-            bitstream_.emplace_back(bitstream[original_bitstream_offset++]);
+            _bitstream.emplace_back(bitstream[original_bitstream_offset++]);
         }
     }
-    total_bits_ = bitstream_.size() * 8;
+    _total_bits = _bitstream.size() * 8;
 }
 
 bool H264NalUnitBitstreamParser::ReadBit(uint8_t &value)
 {
-    if (bit_offset_ >= total_bits_)
+    if (_bit_offset >= _total_bits)
     {
         return false;
     }
-    value = bitstream_[bit_offset_ / 8] & (0x80 >> (bit_offset_ % 8)) ? 1 : 0;
-    bit_offset_ += 1;
+    value = _bitstream[_bit_offset / 8] & (0x80 >> (_bit_offset % 8)) ? 1 : 0;
+    _bit_offset += 1;
     return true;
 }
 
 bool H264NalUnitBitstreamParser::ReadU8(uint8_t &value)
 {
-    if(bit_offset_ + 7 >= total_bits_)
+    if(_bit_offset + 7 >= _total_bits)
     {
         return false;
     }
-    size_t first_byte = bit_offset_ / 8;
-    unsigned char bits_from_first_byte = 8 - bit_offset_ % 8;
+    size_t first_byte = _bit_offset / 8;
+    unsigned char bits_from_first_byte = 8 - _bit_offset % 8;
     value = 0;
     if (bits_from_first_byte == 8)
     {
-        value = bitstream_[first_byte];
+        value = _bitstream[first_byte];
     }
     else
     {
         unsigned char bits_from_second_byte = 8 - bits_from_first_byte;
         unsigned char first_bit_mask = 2 * bits_from_first_byte - 1;
-        value |= (bitstream_[first_byte] & first_bit_mask) << (8 - bits_from_first_byte);
-        value |= (bitstream_[first_byte + 1] & ~first_bit_mask) >> (8 - bits_from_second_byte);
+        value |= (_bitstream[first_byte] & first_bit_mask) << (8 - bits_from_first_byte);
+        value |= (_bitstream[first_byte + 1] & ~first_bit_mask) >> (8 - bits_from_second_byte);
     }
-    bit_offset_ += 8;
+    _bit_offset += 8;
     return true;
 }
 
@@ -147,10 +147,10 @@ bool H264NalUnitBitstreamParser::ReadSEV(int32_t &value)
 
 bool H264NalUnitBitstreamParser::Skip(uint32_t count)
 {
-    if (bit_offset_ + count >= total_bits_)
+    if (_bit_offset + count >= _total_bits)
     {
         return false;
     }
-    bit_offset_ += count;
+    _bit_offset += count;
     return true;
 }

@@ -18,7 +18,7 @@ public:
 	bool Skip(uint32_t count);
 
 private:
-	std::vector<uint8_t> bitstream_;
-	size_t total_bits_;
-	size_t bit_offset_ = 0;
+	std::vector<uint8_t> _bitstream;
+	size_t _total_bits;
+	size_t _bit_offset = 0;
 };
