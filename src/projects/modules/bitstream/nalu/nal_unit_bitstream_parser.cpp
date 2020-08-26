@@ -1,6 +1,7 @@
-#include "h264_nal_unit_bitstream_parser.h"
+#include "nal_unit_bitstream_parser.h"
 
-H264NalUnitBitstreamParser::H264NalUnitBitstreamParser(const uint8_t *bitstream, size_t length)
+NalUnitBitstreamParser::NalUnitBitstreamParser(const uint8_t *bitstream, size_t length)
+	: BitReader(nullptr, 0)
 {
     /*
         Parse the bitstream and skip emulation_prevention_three_byte instances along the way
@@ -30,67 +31,28 @@ H264NalUnitBitstreamParser::H264NalUnitBitstreamParser(const uint8_t *bitstream,
             _bitstream.emplace_back(bitstream[original_bitstream_offset++]);
         }
     }
-    _total_bits = _bitstream.size() * 8;
+    
+	_buffer = _bitstream.data();
+	_capacity = _bitstream.size();
+	_position = _buffer;
 }
 
-bool H264NalUnitBitstreamParser::ReadBit(uint8_t &value)
+bool NalUnitBitstreamParser::ReadU8(uint8_t &value)
 {
-    if (_bit_offset >= _total_bits)
-    {
-        return false;
-    }
-    value = _bitstream[_bit_offset / 8] & (0x80 >> (_bit_offset % 8)) ? 1 : 0;
-    _bit_offset += 1;
-    return true;
+    return ReadBits(8, value);
 }
 
-bool H264NalUnitBitstreamParser::ReadU8(uint8_t &value)
+bool NalUnitBitstreamParser::ReadU16(uint16_t &value)
 {
-    if(_bit_offset + 7 >= _total_bits)
-    {
-        return false;
-    }
-    size_t first_byte = _bit_offset / 8;
-    unsigned char bits_from_first_byte = 8 - _bit_offset % 8;
-    value = 0;
-    if (bits_from_first_byte == 8)
-    {
-        value = _bitstream[first_byte];
-    }
-    else
-    {
-        unsigned char bits_from_second_byte = 8 - bits_from_first_byte;
-        unsigned char first_bit_mask = 2 * bits_from_first_byte - 1;
-        value |= (_bitstream[first_byte] & first_bit_mask) << (8 - bits_from_first_byte);
-        value |= (_bitstream[first_byte + 1] & ~first_bit_mask) >> (8 - bits_from_second_byte);
-    }
-    _bit_offset += 8;
-    return true;
+    return ReadBits(16, value);
 }
 
-bool H264NalUnitBitstreamParser::ReadU16(uint16_t &value)
+bool NalUnitBitstreamParser::ReadU32(uint32_t &value)
 {
-    uint8_t high_byte, low_byte;
-    if (ReadU8(high_byte) && ReadU8(low_byte))
-    {
-        value = static_cast<uint16_t>(high_byte) << 8 | low_byte;
-        return true;
-    }
-    return false;
+	return ReadBits(32, value);
 }
 
-bool H264NalUnitBitstreamParser::ReadU32(uint32_t &value)
-{
-    uint16_t high_part, low_part;
-    if (ReadU16(high_part) && ReadU16(low_part))
-    {
-        value = static_cast<uint32_t>(high_part) << 16 | low_part;
-        return true;
-    }
-    return false;
-}
-
-bool H264NalUnitBitstreamParser::ReadUEV(uint32_t &value)
+bool NalUnitBitstreamParser::ReadUEV(uint32_t &value)
 {
     int zero_bit_count = 0;
     uint8_t bit;
@@ -127,7 +89,7 @@ bool H264NalUnitBitstreamParser::ReadUEV(uint32_t &value)
     return true;
 }
 
-bool H264NalUnitBitstreamParser::ReadSEV(int32_t &value)
+bool NalUnitBitstreamParser::ReadSEV(int32_t &value)
 {
     uint32_t uev_value;
     if (ReadUEV(uev_value) == false)
@@ -145,12 +107,8 @@ bool H264NalUnitBitstreamParser::ReadSEV(int32_t &value)
     return true;
 }
 
-bool H264NalUnitBitstreamParser::Skip(uint32_t count)
+bool NalUnitBitstreamParser::Skip(uint32_t count)
 {
-    if (_bit_offset + count >= _total_bits)
-    {
-        return false;
-    }
-    _bit_offset += count;
-    return true;
+    uint64_t dummy;
+	return ReadBits(count, dummy);
 }
