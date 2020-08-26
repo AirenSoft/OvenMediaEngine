@@ -95,17 +95,37 @@ namespace pvd
 			while(_depacketizer.IsESAvailable())
 			{
 				auto es = _depacketizer.PopES();
+				auto track = GetTrack(es->PID());
+
+				if(track == nullptr)
+				{
+					logte("%s/%s(%d) received stream data, but track information could not be found.", GetApplicationName(), GetName().CStr(), GetId());
+					return false;
+				}
 				
 				if(es->IsVideoStream())
 				{	
+					auto bitstream = common::BitstreamFormat::Unknwon;
+					auto packet_type = common::PacketType::NALU;
+
+					switch(track->GetCodecId())
+					{
+						case common::MediaCodecId::H264:
+							bitstream = common::BitstreamFormat::H264_ANNEXB;
+							break;
+						case common::MediaCodecId::H265:
+							bitstream = common::BitstreamFormat::H265_ANNEXB;
+							break;
+					}
+
 					auto data = std::make_shared<ov::Data>(es->Payload(), es->PayloadLength());
 					auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Video,
 												es->PID(),
 												data,
 												es->Pts(),
 												es->Dts(),
-												common::BitstreamFormat::H264_ANNEXB,
-												common::PacketType::NALU);
+												bitstream,
+												packet_type);
 					SendFrame(media_packet);
 				}
 				else if(es->IsAudioStream())
