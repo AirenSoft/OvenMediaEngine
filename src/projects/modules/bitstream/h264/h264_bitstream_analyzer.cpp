@@ -29,7 +29,7 @@ void H264BitstreamAnalyzer::ValidateNalUnit(const uint8_t *nal_unit_payload, siz
 			logte("Invalid nal_ref_idc value for unit type %u", nal_unit_type);
 			return;
 		}
-		H264NalUnitBitstreamParser parser(nal_unit_payload, length);
+		NalUnitBitstreamParser parser(nal_unit_payload, length);
 		if (nal_unit_type == H264NalUnitType::Sps)
 		{
 			// Skip profile_idc, constraint bits, reserved bits and level_idc
@@ -75,7 +75,7 @@ void H264BitstreamAnalyzer::ValidateNalUnit(const uint8_t *nal_unit_payload, siz
 				rbsp_slice_trailing_bits()
 			}
 		*/
-		H264NalUnitBitstreamParser parser(nal_unit_payload, length);
+		NalUnitBitstreamParser parser(nal_unit_payload, length);
 		uint32_t first_mb_in_slice, slice_type, pps_id;
 		if (parser.ReadUEV(first_mb_in_slice) && parser.ReadUEV(slice_type) && parser.ReadUEV(pps_id))
 		{

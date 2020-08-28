@@ -7,7 +7,7 @@ bool H264Sps::Parse(const uint8_t *sps_bitstream, size_t length, H264Sps &sps)
 	// all the variables here are scoped to minimum needed visibility (the c++17 if initializer kicks in nicely
 	// for this use case) to avoid logic errors
 
-	H264NalUnitBitstreamParser sps_bitstream_parser(sps_bitstream, length);
+	NalUnitBitstreamParser sps_bitstream_parser(sps_bitstream, length);
 	uint8_t nal_type;
 
 	if(sps_bitstream_parser.ReadU8(nal_type) == false)

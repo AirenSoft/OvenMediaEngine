@@ -1,15 +1,15 @@
 #pragma once
 
+#include <base/ovlibrary/bit_reader.h>
 #include <cstdint>
 #include <vector>
 
 // Parses the payload of the NAL unit without the starting byte
-class H264NalUnitBitstreamParser
+class NalUnitBitstreamParser : public BitReader
 {
 public:
-	H264NalUnitBitstreamParser(const uint8_t *bitstream, size_t length);
+	NalUnitBitstreamParser(const uint8_t *bitstream, size_t length);
 
-	bool ReadBit(uint8_t &value);
 	bool ReadU8(uint8_t &value);
 	bool ReadU16(uint16_t &value);
 	bool ReadU32(uint32_t &value);
@@ -19,6 +19,4 @@ public:
 
 private:
 	std::vector<uint8_t> _bitstream;
-	size_t _total_bits;
-	size_t _bit_offset = 0;
 };

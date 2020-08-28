@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <modules/bitstream/nalu/nal_unit_bitstream_parser.h>
 #include <cstdint>
 
 class H265Sps

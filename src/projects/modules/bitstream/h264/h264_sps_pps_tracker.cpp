@@ -16,7 +16,7 @@ bool H264SpsPpsTracker::AddSps(const uint8_t *sps, size_t length)
         --bytes_remaining;
         if (nal_unit_type == H264NalUnitType::Sps && bytes_remaining)
         {
-            H264NalUnitBitstreamParser parser(sps + 1, bytes_remaining);
+            NalUnitBitstreamParser parser(sps + 1, bytes_remaining);
             uint32_t sps_id = 0;
             // Skip profile_idc, constraint bits, reserved bits and level_idc
             if (parser.Skip(24) && parser.ReadUEV(sps_id) )
@@ -46,7 +46,7 @@ bool H264SpsPpsTracker::AddPps(const uint8_t *pps, size_t length)
         --bytes_remaining;
         if (nal_unit_type == H264NalUnitType::Pps && bytes_remaining)
         {
-            H264NalUnitBitstreamParser parser(pps + 1, bytes_remaining);
+            NalUnitBitstreamParser parser(pps + 1, bytes_remaining);
             uint32_t pps_id = 0;
             // Skip profile_idc, constraint bits, reserved bits and level_idc
             if (parser.ReadUEV(pps_id))

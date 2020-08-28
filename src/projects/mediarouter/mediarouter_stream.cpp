@@ -16,6 +16,8 @@
 #include <modules/bitstream/h264/h264_avcc_to_annexb.h>
 #include <modules/bitstream/h264/h264_nal_unit_types.h>
 
+#include <modules/bitstream/h265/h265_sps.h>
+
 #include <modules/bitstream/aac/aac_specific_config.h>
 #include <modules/bitstream/aac/aac_adts.h>
 #include <modules/bitstream/aac/aac_latm_to_adts.h>
