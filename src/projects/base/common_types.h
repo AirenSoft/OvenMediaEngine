@@ -60,6 +60,7 @@ enum class PublisherType : int8_t
 	Dash,
 	LlDash,
 	Ovt,
+	File,
 	NumberOfPublishers,
 };
 
