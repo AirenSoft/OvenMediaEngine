@@ -116,6 +116,9 @@ namespace pvd
 						case common::MediaCodecId::H265:
 							bitstream = common::BitstreamFormat::H265_ANNEXB;
 							break;
+						default:
+							bitstream = common::BitstreamFormat::Unknwon;
+							break;
 					}
 
 					auto data = std::make_shared<ov::Data>(es->Payload(), es->PayloadLength());
