@@ -1,7 +1,13 @@
+// I developed the code of this file by referring to the source code of virinext's hevcsbrowser (https://github.com/virinext/hevcesbrowser). 
+// Thanks to virinext.
+// - Getroot
+#pragma once
+
 #include <base/ovlibrary/ovlibrary.h>
 
-enum class H265NALUnitType : uint8_t
+enum class H265NALUnitType : int8_t
 {
+	UNKNOWN	   = -1,
 	TRAIL_N    = 0,
 	TRAIL_R    = 1,
 	TSA_N      = 2,

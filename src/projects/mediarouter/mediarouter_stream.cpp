@@ -15,7 +15,7 @@
 #include <modules/bitstream/h264/h264_avcc_to_annexb.h>
 #include <modules/bitstream/h264/h264_nal_unit_types.h>
 
-#include <modules/bitstream/h265/h265_sps.h>
+#include <modules/bitstream/h265/h265_parser.h>
 #include <modules/bitstream/h265/h265_types.h>
 
 #include <modules/bitstream/aac/aac_specific_config.h>
@@ -239,8 +239,8 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 
 						if(nal_unit_type == (uint8_t)H265NALUnitType::SPS)
 						{
-							H265Sps sps;
-							if(H265Sps::Parse(buffer, length, sps))
+							H265SPS sps;
+							if(H265Parser::ParseSPS(buffer, length, sps))
 							{
 								media_track->SetWidth(sps.GetWidth());
 								media_track->SetHeight(sps.GetHeight());

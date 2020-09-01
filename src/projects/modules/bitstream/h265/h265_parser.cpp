@@ -2,17 +2,23 @@
 // Thanks to virinext.
 // - Getroot
 
-#include "h265_sps.h"
+#include "h265_parser.h"
 #include "h265_types.h"
 
-bool H265Sps::Parse(const uint8_t *sps_bitstream, size_t length, H265Sps &sps)
+bool H265Parser::ParseNalUnitHeader(const uint8_t *nalu, size_t length, H265NalUnitHeader &header)
 {
-	NalUnitBitstreamParser parser(sps_bitstream, length);
+	NalUnitBitstreamParser parser(nalu, length);
 
-	///////////////
-	// Header
-	///////////////
+	if(length < 2)
+	{
+		return false;
+	}
 
+	return ParseNalUnitHeader(parser, header);
+}
+
+bool H265Parser::ParseNalUnitHeader(NalUnitBitstreamParser &parser, H265NalUnitHeader &header)
+{
 	// forbidden_zero_bit
 	parser.Skip(1);
 
@@ -22,11 +28,8 @@ bool H265Sps::Parse(const uint8_t *sps_bitstream, size_t length, H265Sps &sps)
 	{
 		return false;
 	}
-	
-	if(nal_type != static_cast<uint8_t>(H265NALUnitType::SPS))
-	{
-		return false;
-	}
+
+	header._type = static_cast<H265NALUnitType>(nal_type);
 
 	uint8_t layer_id;
 	if(parser.ReadBits(6, layer_id) == false)
@@ -34,8 +37,26 @@ bool H265Sps::Parse(const uint8_t *sps_bitstream, size_t length, H265Sps &sps)
 		return false;
 	}
 
+	header._layer_id = layer_id;
+
 	uint8_t temporal_id_plus1;
 	if(parser.ReadBits(3, temporal_id_plus1) == false)
+	{
+		return false;
+	}
+
+	header._temporal_id_plus1 = temporal_id_plus1;
+	return true;
+}
+
+bool H265Parser::ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps)
+{
+	NalUnitBitstreamParser parser(nalu, length);
+
+	H265NalUnitHeader header;
+	ParseNalUnitHeader(parser, header);
+
+	if(header.GetNalUnitType() != H265NALUnitType::SPS)
 	{
 		return false;
 	}
@@ -60,141 +81,13 @@ bool H265Sps::Parse(const uint8_t *sps_bitstream, size_t length, H265Sps &sps)
 	{
 		return false;
 	}
+
+	ProfileTierLevel profile;
+	if(ProcessProfileTierLevel(max_sub_layers_minus1, parser, profile) == false)
+	{
+		return false;
+	}
 	
-	//////////////////////////////////////
-	// profile tier level
-	//////////////////////////////////////
-	uint8_t general_profile_space;
-	if(parser.ReadBits(2, general_profile_space) == false)
-	{
-		return false;
-	}
-
-	uint8_t general_tier_flag;
-	if(parser.ReadBits(1, general_tier_flag ) == false)
-	{
-		return false;
-	}
-
-	uint8_t general_profile_idc;
-	if(parser.ReadBits(5, general_profile_idc) == false)
-	{
-		return false;
-	}
-
-	// general_profile_compatibility_flag
-	if(parser.Skip(32) == false)
-	{
-		return false;
-	}
-
-	uint8_t general_progressive_source_flag;
-	if(parser.ReadBits(1, general_progressive_source_flag) == false)
-	{
-		return false;
-	}
-
-	uint8_t general_interlaced_source_flag;
-	if(parser.ReadBits(1, general_interlaced_source_flag) == false)
-	{
-		return false;
-	}
-
-	uint8_t general_non_packed_constraint_flag;
-	if(parser.ReadBits(1, general_non_packed_constraint_flag) == false)
-	{
-		return false;
-	}
-
-	uint8_t general_frame_only_constraint_flag;
-	if(parser.ReadBits(1, general_frame_only_constraint_flag) == false)
-	{
-		return false;
-	}
-
-	if(parser.Skip(32) == false)
-	{
-		return false;
-	}
-
-	if(parser.Skip(12) == false)
-	{
-		return false;
-	}
-
-	uint8_t general_level_idc;
-	if(parser.ReadBits(8, general_level_idc) == false)
-	{
-		return false;
-	}
-
-	
-	std::vector<uint8_t> sub_layer_profile_present_flag_list;
-	std::vector<uint8_t> sub_layer_level_present_flag_list;
-	for(int i=0; i<max_sub_layers_minus1; i++)
-	{
-		uint8_t sub_layer_profile_present_flag;
-		if(parser.ReadBits(1, sub_layer_profile_present_flag) == false)
-		{
-			return false;
-		}
-		sub_layer_profile_present_flag_list.push_back(sub_layer_profile_present_flag);
-
-		uint8_t sub_layer_level_present_flag;
-		if(parser.ReadBits(1, sub_layer_level_present_flag) == false)
-		{
-			return false;
-		}
-		sub_layer_level_present_flag_list.push_back(sub_layer_level_present_flag);
-	}
-
-	if(max_sub_layers_minus1 > 0)
-	{
-		for(int i=max_sub_layers_minus1; i<8; i++)
-		{
-			if(parser.Skip(2) == false)
-			{
-				return false;
-			}
-		}
-	}
-
-	for(int i=0; i<max_sub_layers_minus1; i++)
-	{
-		if(sub_layer_profile_present_flag_list[i])
-		{
-			// sub_layer_profile_space - 2bits
-			// sub_layer_tier_flag - 1 bit
-			// sub_layer_profile_idc - 5 bits
-			
-			// sub_layer_profile_compatibility_flag - 32 bits
-
-			// sub_layer_progressive_source_flag - 1 bit
-			// sub_layer_interlaced_source_flag - 1 bit
-			// sub_layer_non_packed_constraint_flag - 1 bit
-			// sub_layer_frame_only_constraint_flag - 1 bit
-
-			// 32 bits
-			// 12 bits
-			if(parser.Skip(88) == false)
-			{
-				return false;
-			} 
-		}
-
-		if(sub_layer_level_present_flag_list[i])
-		{
-			// sub_layer_level_idc
-			if(parser.Skip(8) == false)
-			{
-				return false;
-			}
-		}
-	}
-
-	///////////////////////
-	// SPS
-	///////////////////////
 	uint32_t sps_seq_parameter_set_id;
 	if(parser.ReadUEV(sps_seq_parameter_set_id) == false)
 	{
@@ -466,7 +359,7 @@ bool H265Sps::Parse(const uint8_t *sps_bitstream, size_t length, H265Sps &sps)
 	std::vector<ShortTermRefPicSet> rpset_list(num_short_term_ref_pic_sets);
 	for(uint32_t i=0; i<num_short_term_ref_pic_sets; i++)
 	{
-		if(ProcessShortTermRefPicSet(i, num_short_term_ref_pic_sets, rpset_list[i], rpset_list, parser, sps) == false)
+		if(ProcessShortTermRefPicSet(i, num_short_term_ref_pic_sets, rpset_list, parser, rpset_list[i]) == false)
 		{
 			return false;
 		}
@@ -526,7 +419,141 @@ bool H265Sps::Parse(const uint8_t *sps_bitstream, size_t length, H265Sps &sps)
 	return true;
 }
 
-bool H265Sps::ProcessVuiParameters(uint32_t sps_max_sub_layers_minus1, NalUnitBitstreamParser &parser, H265Sps &sps)
+bool H265Parser::ProcessProfileTierLevel(uint32_t max_sub_layers_minus1, NalUnitBitstreamParser &parser, ProfileTierLevel &profile)
+{
+	uint8_t general_profile_space;
+	if(parser.ReadBits(2, general_profile_space) == false)
+	{
+		return false;
+	}
+
+	uint8_t general_tier_flag;
+	if(parser.ReadBits(1, general_tier_flag ) == false)
+	{
+		return false;
+	}
+
+	uint8_t general_profile_idc;
+	if(parser.ReadBits(5, general_profile_idc) == false)
+	{
+		return false;
+	}
+
+	// general_profile_compatibility_flag
+	if(parser.Skip(32) == false)
+	{
+		return false;
+	}
+
+	uint8_t general_progressive_source_flag;
+	if(parser.ReadBits(1, general_progressive_source_flag) == false)
+	{
+		return false;
+	}
+
+	uint8_t general_interlaced_source_flag;
+	if(parser.ReadBits(1, general_interlaced_source_flag) == false)
+	{
+		return false;
+	}
+
+	uint8_t general_non_packed_constraint_flag;
+	if(parser.ReadBits(1, general_non_packed_constraint_flag) == false)
+	{
+		return false;
+	}
+
+	uint8_t general_frame_only_constraint_flag;
+	if(parser.ReadBits(1, general_frame_only_constraint_flag) == false)
+	{
+		return false;
+	}
+
+	if(parser.Skip(32) == false)
+	{
+		return false;
+	}
+
+	if(parser.Skip(12) == false)
+	{
+		return false;
+	}
+
+	uint8_t general_level_idc;
+	if(parser.ReadBits(8, general_level_idc) == false)
+	{
+		return false;
+	}
+
+	
+	std::vector<uint8_t> sub_layer_profile_present_flag_list;
+	std::vector<uint8_t> sub_layer_level_present_flag_list;
+	for(uint32_t i=0; i<max_sub_layers_minus1; i++)
+	{
+		uint8_t sub_layer_profile_present_flag;
+		if(parser.ReadBits(1, sub_layer_profile_present_flag) == false)
+		{
+			return false;
+		}
+		sub_layer_profile_present_flag_list.push_back(sub_layer_profile_present_flag);
+
+		uint8_t sub_layer_level_present_flag;
+		if(parser.ReadBits(1, sub_layer_level_present_flag) == false)
+		{
+			return false;
+		}
+		sub_layer_level_present_flag_list.push_back(sub_layer_level_present_flag);
+	}
+
+	if(max_sub_layers_minus1 > 0)
+	{
+		for(int i=max_sub_layers_minus1; i<8; i++)
+		{
+			if(parser.Skip(2) == false)
+			{
+				return false;
+			}
+		}
+	}
+
+	for(int i=0; i<max_sub_layers_minus1; i++)
+	{
+		if(sub_layer_profile_present_flag_list[i])
+		{
+			// sub_layer_profile_space - 2bits
+			// sub_layer_tier_flag - 1 bit
+			// sub_layer_profile_idc - 5 bits
+			
+			// sub_layer_profile_compatibility_flag - 32 bits
+
+			// sub_layer_progressive_source_flag - 1 bit
+			// sub_layer_interlaced_source_flag - 1 bit
+			// sub_layer_non_packed_constraint_flag - 1 bit
+			// sub_layer_frame_only_constraint_flag - 1 bit
+
+			// 32 bits
+			// 12 bits
+			if(parser.Skip(88) == false)
+			{
+				return false;
+			} 
+		}
+
+		if(sub_layer_level_present_flag_list[i])
+		{
+			// sub_layer_level_idc
+			if(parser.Skip(8) == false)
+			{
+				return false;
+			}
+		}
+	}
+	
+	return true;
+}
+
+
+bool H265Parser::ProcessVuiParameters(uint32_t sps_max_sub_layers_minus1, NalUnitBitstreamParser &parser, VuiParameters &params)
 {
 	uint8_t aspect_ratio_info_present_flag;
 	if(parser.ReadBits(1, aspect_ratio_info_present_flag) == false)
@@ -556,8 +583,8 @@ bool H265Sps::ProcessVuiParameters(uint32_t sps_max_sub_layers_minus1, NalUnitBi
 				return false;
 			}
 
-			sps._aspect_ratio._width = sar_width;
-			sps._aspect_ratio._width = sar_height;
+			params._aspect_ratio._width = sar_width;
+			params._aspect_ratio._height = sar_height;
 		}
 	}
 
@@ -734,7 +761,8 @@ bool H265Sps::ProcessVuiParameters(uint32_t sps_max_sub_layers_minus1, NalUnitBi
 
 		if(vui_hrd_parameters_present_flag == 1)
 		{
-			if(ProcessHrdParameters(1, sps_max_sub_layers_minus1, parser, sps) == false)
+			HrdParameters params;
+			if(ProcessHrdParameters(1, sps_max_sub_layers_minus1, parser, params) == false)
 			{
 				return false;
 			}
@@ -801,7 +829,7 @@ bool H265Sps::ProcessVuiParameters(uint32_t sps_max_sub_layers_minus1, NalUnitBi
 	return true;
 }
 
-bool H265Sps::ProcessHrdParameters(uint8_t common_inf_present_flag, uint32_t max_sub_layers_minus1, NalUnitBitstreamParser &parser, H265Sps &sps)
+bool H265Parser::ProcessHrdParameters(uint8_t common_inf_present_flag, uint32_t max_sub_layers_minus1, NalUnitBitstreamParser &parser, HrdParameters &params)
 {
 	uint8_t nal_hrd_parameters_present_flag = 0;
 	uint8_t vcl_hrd_parameters_present_flag = 0;
@@ -936,19 +964,21 @@ bool H265Sps::ProcessHrdParameters(uint8_t common_inf_present_flag, uint32_t max
 
 		if(nal_hrd_parameters_present_flag == 1)
 		{
-			ProcessSubLayerHrdParameters(sub_pic_hrd_params_present_flag, cpb_cnt_minus1, parser, sps);
+			SubLayerHrdParameters params;
+			ProcessSubLayerHrdParameters(sub_pic_hrd_params_present_flag, cpb_cnt_minus1, parser, params);
 		}
 
 		if(vcl_hrd_parameters_present_flag == 1)
 		{
-			ProcessSubLayerHrdParameters(sub_pic_hrd_params_present_flag, cpb_cnt_minus1, parser, sps);
+			SubLayerHrdParameters params;
+			ProcessSubLayerHrdParameters(sub_pic_hrd_params_present_flag, cpb_cnt_minus1, parser, params);
 		}
 	}
 
 	return true;
 }
 
-bool H265Sps::ProcessSubLayerHrdParameters(uint8_t sub_pic_hrd_params_present_flag, uint32_t cpb_cnt, NalUnitBitstreamParser &parser, H265Sps &sps)
+bool H265Parser::ProcessSubLayerHrdParameters(uint8_t sub_pic_hrd_params_present_flag, uint32_t cpb_cnt, NalUnitBitstreamParser &parser, SubLayerHrdParameters &params)
 {
 	for(uint32_t i=0; i<=cpb_cnt; i++)
 	{
@@ -989,7 +1019,7 @@ bool H265Sps::ProcessSubLayerHrdParameters(uint8_t sub_pic_hrd_params_present_fl
 	return true;
 }
 
-bool H265Sps::ProcessShortTermRefPicSet(uint32_t idx, uint32_t num_short_term_ref_pic_sets, ShortTermRefPicSet &rpset, const std::vector<ShortTermRefPicSet> &rpset_list, NalUnitBitstreamParser &parser, H265Sps &sps)
+bool H265Parser::ProcessShortTermRefPicSet(uint32_t idx, uint32_t num_short_term_ref_pic_sets, const std::vector<ShortTermRefPicSet> &rpset_list, NalUnitBitstreamParser &parser, ShortTermRefPicSet &rpset)
 {
 	rpset.inter_ref_pic_set_prediction_flag = 0;
 	rpset.delta_idx_minus1 = 0;
@@ -1097,38 +1127,38 @@ bool H265Sps::ProcessShortTermRefPicSet(uint32_t idx, uint32_t num_short_term_re
 	return true;
 }
 
-unsigned int H265Sps::GetWidth() const
+unsigned int H265SPS::GetWidth() const
 {
 	return _width;
 }
-unsigned int H265Sps::GetHeight() const
+unsigned int H265SPS::GetHeight() const
 {
 	return _height;
 }
-uint8_t H265Sps::GetProfile() const
+uint8_t H265SPS::GetProfile() const
 {
 	return _profile;
 }
-uint8_t H265Sps::GetCodecLevel() const
+uint8_t H265SPS::GetCodecLevel() const
 {
 	return _codec_level;
 }
-unsigned int H265Sps::GetFps() const
+unsigned int H265SPS::GetFps() const
 {
 	return _fps;
 }
-unsigned int H265Sps::GetId() const
+unsigned int H265SPS::GetId() const
 {
 	return _id;
 }
-unsigned int H265Sps::GetMaxNrOfReferenceFrames() const
+unsigned int H265SPS::GetMaxNrOfReferenceFrames() const
 {
 	return _max_nr_of_reference_frames;
 }
 
-ov::String H265Sps::GetInfoString()
+ov::String H265SPS::GetInfoString()
 {
-	ov::String out_str = ov::String::FormatString("\n[H265Sps]\n");
+	ov::String out_str = ov::String::FormatString("\n[H264Sps]\n");
 
 	out_str.AppendFormat("\tProfile(%d)\n", GetProfile());
 	out_str.AppendFormat("\tCodecLevel(%d)\n", GetCodecLevel());
@@ -1137,7 +1167,7 @@ ov::String H265Sps::GetInfoString()
 	out_str.AppendFormat("\tFps(%d)\n", GetFps());
 	out_str.AppendFormat("\tId(%d)\n", GetId());
 	out_str.AppendFormat("\tMaxNrOfReferenceFrames(%d)\n", GetMaxNrOfReferenceFrames());
-	out_str.AppendFormat("\tAspectRatio(%d:%d)\n", _aspect_ratio._width, _aspect_ratio._height);
+	out_str.AppendFormat("\tAspectRatio(%d:%d)\n", _vui_parameters._aspect_ratio._width, _vui_parameters._aspect_ratio._height);
 
 	return out_str;
 }
