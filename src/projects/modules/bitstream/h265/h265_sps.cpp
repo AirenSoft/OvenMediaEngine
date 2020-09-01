@@ -1128,7 +1128,7 @@ unsigned int H265Sps::GetMaxNrOfReferenceFrames() const
 
 ov::String H265Sps::GetInfoString()
 {
-	ov::String out_str = ov::String::FormatString("\n[H264Sps]\n");
+	ov::String out_str = ov::String::FormatString("\n[H265Sps]\n");
 
 	out_str.AppendFormat("\tProfile(%d)\n", GetProfile());
 	out_str.AppendFormat("\tCodecLevel(%d)\n", GetCodecLevel());

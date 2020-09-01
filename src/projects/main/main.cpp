@@ -163,6 +163,8 @@ int main(int argc, char *argv[])
 	INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(http_server_manager, *server_config, media_router));
 	INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(http_server_manager, *server_config, media_router));
 	INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, media_router));
+	INIT_MODULE(file_publisher, "File Publisher", FilePublisher::Create(*server_config, media_router));
+
 
 	// Initialize Transcoder
 	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));

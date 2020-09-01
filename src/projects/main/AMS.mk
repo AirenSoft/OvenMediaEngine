@@ -5,6 +5,7 @@ LOCAL_STATIC_LIBRARIES := \
 	webrtc_publisher \
 	segment_publishers \
 	ovt_publisher \
+	file_publisher \
 	ovt_provider \
 	rtmp_provider \
 	mpegts_provider \

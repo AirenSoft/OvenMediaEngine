@@ -12,15 +12,17 @@
 
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/bitstream/h264/h264_sps.h>
-#include <modules/bitstream/h264/h264_fragment_header.h>
 #include <modules/bitstream/h264/h264_avcc_to_annexb.h>
 #include <modules/bitstream/h264/h264_nal_unit_types.h>
 
 #include <modules/bitstream/h265/h265_sps.h>
+#include <modules/bitstream/h265/h265_types.h>
 
 #include <modules/bitstream/aac/aac_specific_config.h>
 #include <modules/bitstream/aac/aac_adts.h>
 #include <modules/bitstream/aac/aac_latm_to_adts.h>
+
+#include <modules/bitstream/nalu/nal_unit_fragment_header.h>
 
 #define OV_LOG_TAG "MediaRouter.Stream"
 #define PTS_CORRECT_THRESHOLD_US	5000
@@ -219,6 +221,46 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 			}
 			break;
 
+		case MediaCodecId::H265:
+			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H265_ANNEXB)
+			{
+				// Analyzes NALU packets and extracts track information for SPS/PPS types.
+				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();
+				auto frag_hdr = media_packet->GetFragHeader();
+				if(frag_hdr != nullptr)
+				{
+					for (size_t i = 0; i < frag_hdr->GetCount(); ++i) 
+					{
+						const uint8_t* buffer = &payload_data[frag_hdr->fragmentation_offset[i]];
+						size_t length = frag_hdr->fragmentation_length[i];
+
+						uint8_t nal_unit_type = ( (*(buffer) & 0x7E) >> 1);
+						logte(" [%d] nal_unit_type : %d", frag_hdr->fragmentation_offset[i], nal_unit_type);
+
+						if(nal_unit_type == (uint8_t)H265NALUnitType::SPS)
+						{
+							H265Sps sps;
+							if(H265Sps::Parse(buffer, length, sps))
+							{
+								media_track->SetWidth(sps.GetWidth());
+								media_track->SetHeight(sps.GetHeight());
+								media_track->SetTimeBase(1, 90000);
+
+								logtd("[%d] need to convert timebase(%d/%d) -> timebase(%d/%d)"
+									, media_track->GetId()
+									, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
+									, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
+
+								SetParseTrackInfo(media_track, true);
+							}
+							logtd("%s", sps.GetInfoString().CStr());					
+						}
+					}
+
+					//DumpPacket(media_track, media_packet, true);
+				}
+			} break;
+		
 		case MediaCodecId::Aac:
 			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::AAC_ADTS)
 			{
@@ -244,11 +286,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 			}		
 			break;
 
-		case MediaCodecId::H265:
-			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H265_ANNEXB)
-			{
 
-			} break;
 
 		// The incoming stream does not support this codec.
 		case MediaCodecId::Vp8: 
@@ -278,7 +316,7 @@ bool MediaRouteStream::ParseAdditionalData(
 		{
 			if(media_packet->GetFragHeader()->GetCount() == 0)
 			{
-				if(H264FragmentHeader::Parse(media_packet) == false)
+				if(NalUnitFragmentHeader::Parse(media_packet) == false)
 				{
 					logte("failed make fragment header");
 				}
@@ -288,7 +326,13 @@ bool MediaRouteStream::ParseAdditionalData(
 
 		case MediaCodecId::H265:
 		{
-			// Do something
+			if(media_packet->GetFragHeader()->GetCount() == 0)
+			{
+				if(NalUnitFragmentHeader::Parse(media_packet) == false)
+				{
+					logte("failed make fragment header");
+				}
+			}
 			media_packet->SetFlag(MediaPacketFlag::Key);
 		} break;
 
@@ -587,7 +631,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	{
 		// TODO(soulk): I think all tracks should calibrate the PTS with the same value.
 		_pts_correct[track_id] = media_packet->GetPts() - _stat_recv_pkt_lpts[track_id] - _pts_avg_inc[track_id];
-
+/*
 		logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld"
 			, track_id
 			, _stat_recv_pkt_lpts[track_id]
@@ -595,6 +639,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			, _pts_correct[track_id]
 			, _pts_avg_inc[track_id]
 		);
+*/		
 	}
 	else
 	{
