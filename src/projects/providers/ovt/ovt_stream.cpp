@@ -3,7 +3,6 @@
 //
 
 #include "base/info/application.h"
-#include "modules/bitstream/h264/h264_fragment_header.h"
 
 #include "ovt_stream.h"
 
@@ -733,6 +732,8 @@ namespace pvd
 				auto media_packet = _depacketizer.PopMediaPacket();
 				media_packet->SetPacketType(common::PacketType::OVT);
 
+// Deprecated. The Generate fragment header roll is changed to MediaRouter.
+#if 0
 				// Make Header (Fragmentation) if it is H.264
 				auto track = GetTrack(media_packet->GetTrackId());
 				if(track->GetCodecId() == common::MediaCodecId::H264)
@@ -743,7 +744,7 @@ namespace pvd
 				{
 					
 				}
-
+#endif
 				SendFrame(media_packet);
 			}
 		}

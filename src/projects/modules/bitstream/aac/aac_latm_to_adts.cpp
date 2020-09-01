@@ -26,26 +26,6 @@ bool AACLatmToAdts::GetExtradata(const common::PacketType type, const std::share
 	return false;
 }
 
-bool AACLatmToAdts::Convert(const std::shared_ptr<MediaPacket> &packet, const std::vector<uint8_t> &extradata)
-{
-	common::BitstreamFormat bitstream_format = packet->GetBitstreamFormat();
-	common::PacketType pkt_type = packet->GetPacketType();
-	if(bitstream_format == common::BitstreamFormat::AAC_ADTS)
-	{
-		return true;
-	}
-
-	if(AACLatmToAdts::Convert(pkt_type, packet->GetData(), extradata) == false)
-	{
-		return false;
-	}
-
-	packet->SetBitstreamFormat(common::BitstreamFormat::AAC_ADTS);
-	packet->SetPacketType(common::PacketType::RAW);
-
-	return true;
-}
-
 /*
 	ADTS
 	Unlike the ADIF header, ADTS (Audio Data Transport Stream) headers are present before each AAC raw_data_block or block of 2 to 4 raw_data_blocks. Until the MPEG revision from Dec 2002 for MPEG-4 AAC ADTS headers, this was basically the same as a MP3 header, except that the emphasis field was not present for MPEG-2 AAC, only for MPEG-4 AAC.

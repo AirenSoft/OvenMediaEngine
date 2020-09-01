@@ -43,27 +43,6 @@ bool H264AvccToAnnexB::GetExtradata(const common::PacketType type, const std::sh
 	return false;
 }
 
-bool H264AvccToAnnexB::Convert(const std::shared_ptr<MediaPacket> &packet, const std::vector<uint8_t> &extradata)
-{
-	common::BitstreamFormat bitstream_format = packet->GetBitstreamFormat();
-	common::PacketType pkt_type = packet->GetPacketType();
-
-	if(bitstream_format == common::BitstreamFormat::H264_ANNEXB)
-	{
-		return true;
-	}
-
-	if(H264AvccToAnnexB::Convert(pkt_type, packet->GetData(), extradata) == false)
-	{
-		return false;
-	}
-
-	packet->SetBitstreamFormat(common::BitstreamFormat::H264_ANNEXB);
-	packet->SetPacketType(common::PacketType::NALU);
-
-	return true;
-}
-
 bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov::Data> &data, const std::vector<uint8_t> &extradata)
 {
 	auto annexb_data = std::make_shared<ov::Data>();

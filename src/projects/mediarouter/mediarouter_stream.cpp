@@ -234,8 +234,73 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 						const uint8_t* buffer = &payload_data[frag_hdr->fragmentation_offset[i]];
 						size_t length = frag_hdr->fragmentation_length[i];
 
+						/*
+						1.1.4.  NAL Unit Header
+
+						   HEVC maintains the NAL unit concept of H.264 with modifications.
+						   HEVC uses a two-byte NAL unit header, as shown in Figure 1.  The
+						   payload of a NAL unit refers to the NAL unit excluding the NAL unit
+						   header.
+
+						            +---------------+---------------+
+						            |0|1|2|3|4|5|6|7|0|1|2|3|4|5|6|7|
+						            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+						            |F|   Type    |  LayerId  | TID |
+						            +-------------+-----------------+
+
+						   Figure 1: The Structure of the HEVC NAL Unit Header
+
+						   The semantics of the fields in the NAL unit header are as specified
+						   in [HEVC] and described briefly below for convenience.  In addition
+						   to the name and size of each field, the corresponding syntax element
+						   name in [HEVC] is also provided.
+
+						   F: 1 bit
+						      forbidden_zero_bit.  Required to be zero in [HEVC].  Note that the
+						      inclusion of this bit in the NAL unit header was to enable
+						      transport of HEVC video over MPEG-2 transport systems (avoidance
+						      of start code emulations) [MPEG2S].  In the context of this memo,
+
+
+
+						Wang, et al.                 Standards Track                   [Page 13]
+						 
+						RFC 7798               RTP Payload Format for HEVC            March 2016
+
+
+						      the value 1 may be used to indicate a syntax violation, e.g., for
+						      a NAL unit resulted from aggregating a number of fragmented units
+						      of a NAL unit but missing the last fragment, as described in
+						      Section 4.4.3.
+
+						   Type: 6 bits
+						      nal_unit_type.  This field specifies the NAL unit type as defined
+						      in Table 7-1 of [HEVC].  If the most significant bit of this field
+						      of a NAL unit is equal to 0 (i.e., the value of this field is less
+						      than 32), the NAL unit is a VCL NAL unit.  Otherwise, the NAL unit
+						      is a non-VCL NAL unit.  For a reference of all currently defined
+						      NAL unit types and their semantics, please refer to Section 7.4.2
+						      in [HEVC].
+
+						   LayerId: 6 bits
+						      nuh_layer_id.  Required to be equal to zero in [HEVC].  It is
+						      anticipated that in future scalable or 3D video coding extensions
+						      of this specification, this syntax element will be used to
+						      identify additional layers that may be present in the CVS, wherein
+						      a layer may be, e.g., a spatial scalable layer, a quality scalable
+						      layer, a texture view, or a depth view.
+
+						   TID: 3 bits
+						      nuh_temporal_id_plus1.  This field specifies the temporal
+						      identifier of the NAL unit plus 1.  The value of TemporalId is
+						      equal to TID minus 1.  A TID value of 0 is illegal to ensure that
+						      there is at least one bit in the NAL unit header equal to 1, so to
+						      enable independent considerations of start code emulations in the
+						      NAL unit header and in the NAL unit payload data.
+
+						*/
 						uint8_t nal_unit_type = ( (*(buffer) & 0x7E) >> 1);
-						logte(" [%d] nal_unit_type : %d", frag_hdr->fragmentation_offset[i], nal_unit_type);
+						logtd(" [%d] nal_unit_type : %d", frag_hdr->fragmentation_offset[i], nal_unit_type);
 
 						if(nal_unit_type == (uint8_t)H265NALUnitType::SPS)
 						{
@@ -286,8 +351,6 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 			}		
 			break;
 
-
-
 		// The incoming stream does not support this codec.
 		case MediaCodecId::Vp8: 
 		case MediaCodecId::Opus:
@@ -313,36 +376,30 @@ bool MediaRouteStream::ParseAdditionalData(
 	switch(media_track->GetCodecId())
 	{
 		case MediaCodecId::H264:
-		{
-			if(media_packet->GetFragHeader()->GetCount() == 0)
-			{
-				if(NalUnitFragmentHeader::Parse(media_packet) == false)
-				{
-					logte("failed make fragment header");
-				}
-			}
-			media_packet->SetFlag(MediaPacketFlag::Key);
-		} break;
-
 		case MediaCodecId::H265:
 		{
 			if(media_packet->GetFragHeader()->GetCount() == 0)
 			{
-				if(NalUnitFragmentHeader::Parse(media_packet) == false)
+				NalUnitFragmentHeader nal_parser;
+
+				if(NalUnitFragmentHeader::Parse(media_packet->GetData(), nal_parser) == false)
 				{
-					logte("failed make fragment header");
+					logte("failed to parse fragment header");
+					return false;
 				}
+
+				media_packet->SetFragHeader(nal_parser.GetFragmentHeader());
 			}
-			media_packet->SetFlag(MediaPacketFlag::Key);
+
 		} break;
 
 		default:
-			media_packet->SetFlag(MediaPacketFlag::Key);
 		break;
 	}
 
 	// KeyFrame
-	
+	media_packet->SetFlag(MediaPacketFlag::Key);
+
 	return true;
 }
 
@@ -368,11 +425,14 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 					return false;
 				}
 
-				if(H264AvccToAnnexB::Convert(media_packet, media_track->GetCodecExtradata()) == false)
+				if(H264AvccToAnnexB::Convert(media_packet->GetPacketType(), media_packet->GetData(), media_track->GetCodecExtradata()) == false)
 				{
 					logte("Bitstream format change failed");
 					return false;
 				}
+				media_packet->SetBitstreamFormat(common::BitstreamFormat::H264_ANNEXB);
+				media_packet->SetPacketType(common::PacketType::NALU);
+
 			}
 			break;	
 
@@ -387,11 +447,14 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 					return false;
 				}
 				
-				if(AACLatmToAdts::Convert(media_packet, media_track->GetCodecExtradata()) == false)
+				if(AACLatmToAdts::Convert(media_packet->GetPacketType(), media_packet->GetData(), media_track->GetCodecExtradata()) == false)
 				{
 					logte("Bitstream format change failed");
 					return false;
 				}
+			
+				media_packet->SetBitstreamFormat(common::BitstreamFormat::AAC_ADTS);
+				media_packet->SetPacketType(common::PacketType::RAW);
 			}
 			break;
 		
