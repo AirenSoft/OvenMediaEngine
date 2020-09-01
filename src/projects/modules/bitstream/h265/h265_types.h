@@ -5,9 +5,8 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
-enum class H265NALUnitType : int8_t
+enum class H265NALUnitType : uint8_t
 {
-	UNKNOWN	   = -1,
 	TRAIL_N    = 0,
 	TRAIL_R    = 1,
 	TSA_N      = 2,

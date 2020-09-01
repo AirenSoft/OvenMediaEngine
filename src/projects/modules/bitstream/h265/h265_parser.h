@@ -72,7 +72,7 @@ public:
         return _temporal_id_plus1;
     }
 private:
-    H265NALUnitType _type = H265NALUnitType::UNKNOWN;
+    H265NALUnitType _type;
     uint8_t _layer_id = 0;
     uint8_t _temporal_id_plus1 = 0;
 

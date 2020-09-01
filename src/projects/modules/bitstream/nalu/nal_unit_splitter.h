@@ -33,6 +33,6 @@ private:
 class NalUnitSplitter
 {
 public:
-    static std::shared_ptr<NalUnitList> Parse(uint8_t* bitstream, size_t bitstream_length);
+    static std::shared_ptr<NalUnitList> Parse(const uint8_t* bitstream, size_t bitstream_length);
 private:
 };

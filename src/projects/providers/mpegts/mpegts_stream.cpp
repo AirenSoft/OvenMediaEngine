@@ -22,6 +22,9 @@
 
 #include <modules/mpegts/mpegts_packet.h>
 
+#include "modules/bitstream/nalu/nal_unit_splitter.h"
+#include "modules/bitstream/h265/h265_parser.h"
+
 namespace pvd
 {
 	std::shared_ptr<MpegTsStream> MpegTsStream::Create(StreamSourceType source_type, uint32_t client_id, const ov::String app_name, const ov::String stream_name, const std::shared_ptr<ov::Socket> &client_socket, const std::shared_ptr<PushProvider> &provider)
@@ -114,8 +117,48 @@ namespace pvd
 							bitstream = common::BitstreamFormat::H264_ANNEXB;
 							break;
 						case common::MediaCodecId::H265:
+						{
 							bitstream = common::BitstreamFormat::H265_ANNEXB;
+
+							// H265 Bitstream Parser Test
+							auto nal_unit_list = NalUnitSplitter::Parse(es->Payload(), es->PayloadLength());
+							if(nal_unit_list == nullptr)
+							{
+								logte("Could not parse bitstream into nal units");
+							}
+							else
+							{	
+								for(uint32_t i=0; i<nal_unit_list->GetCount(); i++)
+								{
+									auto nalu = nal_unit_list->GetNalUnit(i);
+
+									H265NalUnitHeader header;
+									if(H265Parser::ParseNalUnitHeader(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), header) == false)
+									{
+										logte("Could not parse nal unit header");
+									}
+									else
+									{
+										//logti("H265 Nal Unit Header Parsed : id:%d len:%d", static_cast<int>(header.GetNalUnitType()), nalu->GetLength());
+									}
+
+									if(header.GetNalUnitType() == H265NALUnitType::SPS)
+									{
+										H265SPS sps;
+										if(H265Parser::ParseSPS(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), sps) == false)
+										{
+											logte("Could not parse sps");
+										}
+										else
+										{
+											//logti("SPS Parsed : %s", sps.GetInfoString().CStr());
+										}
+									}
+								}	
+							}
+							
 							break;
+						}
 						default:
 							bitstream = common::BitstreamFormat::Unknwon;
 							break;

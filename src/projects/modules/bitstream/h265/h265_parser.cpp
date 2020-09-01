@@ -413,7 +413,19 @@ bool H265Parser::ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps)
 
 	if(vui_parameters_present_flag == 1)
 	{
+		VuiParameters params;
+		if(ProcessVuiParameters(max_sub_layers_minus1, parser, params) == false)
+		{
+			return false;
+		}
 
+		sps._vui_parameters = params;
+	}
+
+	uint8_t sps_extension_flag;
+	if(parser.ReadBits(1, sps_extension_flag) == false)
+	{
+		return false;
 	}
 
 	return true;
@@ -516,7 +528,7 @@ bool H265Parser::ProcessProfileTierLevel(uint32_t max_sub_layers_minus1, NalUnit
 		}
 	}
 
-	for(int i=0; i<max_sub_layers_minus1; i++)
+	for(uint32_t i=0; i<max_sub_layers_minus1; i++)
 	{
 		if(sub_layer_profile_present_flag_list[i])
 		{

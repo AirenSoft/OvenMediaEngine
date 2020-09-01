@@ -5,7 +5,8 @@ LOCAL_STATIC_LIBRARIES := \
 	application \
 	ovlibrary \
 	provider \
-	mpegts_module
+	mpegts_module \
+	bitstream
 	
 LOCAL_PREBUILT_LIBRARIES := \
 
