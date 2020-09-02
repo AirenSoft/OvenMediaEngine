@@ -297,13 +297,10 @@ void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 		// In the future, when OME uses codec-specific features, certain information is obtained from media_packet.
 		codec_info.codec_specific.vp8 = CodecSpecificInfoVp8();
 	}
-	else if(codec_info.codec_type == MediaCodecId::H264)
+	else if(codec_info.codec_type == MediaCodecId::H264 || 
+			codec_info.codec_type == MediaCodecId::H265)
 	{
-		codec_info.codec_specific.h264 = CodecSpecificInfoH264();
-	}
-	else if(codec_info.codec_type == MediaCodecId::H265)
-	{
-		//codec_info.codec_specific.h264 = CodecSpecificInfoH264();
+		codec_info.codec_specific.h26X = CodecSpecificInfoH26X();
 	}
 
 	memset(&rtp_video_header, 0, sizeof(RTPVideoHeader));
@@ -387,10 +384,15 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 			return;
 		case common::MediaCodecId::H264:
 			rtp_video_header->codec = common::MediaCodecId::H264;
-			rtp_video_header->codec_header.h264.packetization_mode = info->codec_specific.h264.packetization_mode;
-			rtp_video_header->simulcast_idx = info->codec_specific.h264.simulcast_idx;
+			rtp_video_header->codec_header.h26X.packetization_mode = info->codec_specific.h26X.packetization_mode;
+			rtp_video_header->simulcast_idx = info->codec_specific.h26X.simulcast_idx;
 			return;
 
+		case common::MediaCodecId::H265:
+			rtp_video_header->codec = common::MediaCodecId::H265;
+			rtp_video_header->codec_header.h26X.packetization_mode = info->codec_specific.h26X.packetization_mode;
+			rtp_video_header->simulcast_idx = info->codec_specific.h26X.simulcast_idx;
+			return;
 		default:
 			break;
 	}

@@ -1,6 +1,7 @@
 #include "rtp_packetizing_manager.h"
 #include "rtp_packetizer_vp8.h"
 #include "rtp_packetizer_h264.h"
+#include "rtp_packetizer_h265.h"
 
 #include <base/ovlibrary/converter.h>
 
@@ -15,6 +16,8 @@ std::shared_ptr<RtpPacketizingManager> RtpPacketizingManager::Create(common::Med
 			return std::move(std::make_shared<RtpPacketizerH264>());
 
 		case common::MediaCodecId::H265:
+			return std::move(std::make_shared<RtpPacketizerH265>());
+
 		default:
 			// Not supported
 			break;

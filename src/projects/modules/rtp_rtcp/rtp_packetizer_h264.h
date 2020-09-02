@@ -62,15 +62,24 @@ public:
 	bool NextPacket(RtpPacket* rtp_packet) override;
 
 private:
-	struct Fragment {
-		Fragment(const uint8_t* buffer, size_t length);
-		Fragment(const Fragment& fragment);
-		~Fragment();
+	struct Fragment 
+	{
+		Fragment(const uint8_t* buffer, size_t length)
+			: buffer(buffer), length(length) 
+		{
+		}
+		Fragment(const Fragment& fragment)
+			: buffer(fragment.buffer), length(fragment.length) 
+		{
+		}
+		~Fragment() = default;
+
 		const uint8_t* buffer = nullptr;
 		size_t length = 0;
 	};
 
-	struct PacketUnit {
+	struct PacketUnit 
+	{
 		PacketUnit(const Fragment& source_fragment,
 		           bool first_fragment,
 		           bool last_fragment,
@@ -96,10 +105,10 @@ private:
 	void NextAggregatePacket(RtpPacket* rtp_packet, bool last);
 	void NextFragmentPacket(RtpPacket* rtp_packet);
 
-	size_t max_payload_len_;
-	size_t last_packet_reduction_len_;
-	size_t num_packets_left_;
-	H264PacketizationMode packetization_mode_;
-	std::deque<Fragment> input_fragments_;
-	std::queue<PacketUnit> packets_;
+	size_t _max_payload_len;
+	size_t _last_packet_reduction_len;
+	size_t _num_packets_left;
+	H26XPacketizationMode _packetization_mode;
+	std::deque<Fragment> _input_fragments;
+	std::queue<PacketUnit> _packets;
 };

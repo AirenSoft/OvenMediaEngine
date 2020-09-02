@@ -175,15 +175,15 @@ struct CodecSpecificInfoGeneric
 	uint8_t simulcast_idx = 0; 
 };
 
-enum class H264PacketizationMode
+enum class H26XPacketizationMode
 {
 	NonInterleaved = 0,  // Mode 1 - STAP-A, FU-A is allowed
 	SingleNalUnit		 // Mode 0 - only single NALU allowed
 };
 
-struct CodecSpecificInfoH264
+struct CodecSpecificInfoH26X
 {
-	H264PacketizationMode packetization_mode = H264PacketizationMode::NonInterleaved;
+	H26XPacketizationMode packetization_mode = H26XPacketizationMode::NonInterleaved;
 	uint8_t simulcast_idx = 0;
 };
 
@@ -211,7 +211,7 @@ union CodecSpecificInfoUnion
 {
 	CodecSpecificInfoGeneric generic;
 	CodecSpecificInfoVp8 vp8;
-	CodecSpecificInfoH264 h264;
+	CodecSpecificInfoH26X h26X;
 	// In the future
 	// RTPVideoHeaderVP9 vp9;
 	CodecSpecificInfoOpus opus;

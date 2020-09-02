@@ -1,6 +1,6 @@
 #include "sdp.h"
 
-#include <modules/h264/h264_sps.h>
+#include <modules/bitstream/h264/h264_parser.h>
 #include <base/ovlibrary/stl.h>
 #include <base/ovcrypto/base_64.h>
 
@@ -8,6 +8,7 @@ enum class RtpCodec
 {
     Unknown,
     H264,
+    H265,
     Opus,
     Mpeg4GenericAudio,
     Mpeg4GenericVideo,
@@ -56,6 +57,11 @@ bool ParseSdp(const std::vector<uint8_t> &sdp, RtspMediaInfo &rtsp_media_info)
                                 {
                                     payload_codecs[payload_type] = RtpCodec::H264;
                                     payload.SetCodecId(common::MediaCodecId::H264);
+                                }
+                                else if (codec[0] == "H265")
+                                {
+                                    payload_codecs[payload_type] = RtpCodec::H265;
+                                    payload.SetCodecId(common::MediaCodecId::H265);
                                 }
                                 else if (codec[0] == "opus")
                                 {
@@ -178,8 +184,8 @@ bool ParseSdp(const std::vector<uint8_t> &sdp, RtspMediaInfo &rtsp_media_info)
                                                     payload.SetCodecExtradata(h264_extradata.Serialize());
                                                 }
                                                 // Attempt to parse SPS to propely set width/height/frame rate
-                                                H264Sps sps;
-                                                if (H264Sps::Parse(sps_bytes->GetDataAs<uint8_t>(), sps_bytes->GetLength(), sps))
+                                                H264SPS sps;
+                                                if (H264Parser::ParseSPS(sps_bytes->GetDataAs<uint8_t>(), sps_bytes->GetLength(), sps))
                                                 {
                                                     payload.SetWidth(sps.GetWidth());
                                                     payload.SetHeight(sps.GetHeight());

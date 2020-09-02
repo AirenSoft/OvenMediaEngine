@@ -35,18 +35,18 @@ enum NaluType : uint8_t {
 	kFuA = 28
 };
 
-enum H264PacketizationTypes {
+enum H26XPacketizationTypes {
 	kH264SingleNalu,
 	kH264StapA,
 	kH264FuA,
 };
 
-struct RTPVideoHeaderH264 {
+struct RTPVideoHeaderH26X {
 	uint8_t nalu_type;
-	H264PacketizationTypes packetization_type;
+	H26XPacketizationTypes packetization_type;
 	NaluInfo nalus[kMaxNalusPerPacket];
 	size_t nalus_length;
-	H264PacketizationMode packetization_mode;
+	H26XPacketizationMode packetization_mode;
 };
 
 struct RTPVideoHeaderVP8
@@ -80,7 +80,7 @@ struct RTPVideoHeaderVP8
 union RTPVideoTypeHeader
 {
 	RTPVideoHeaderVP8 vp8;
-	RTPVideoHeaderH264 h264;
+	RTPVideoHeaderH26X h26X;
 	// In the future
 	// RTPVideoHeaderVP9 VP9;
 };
