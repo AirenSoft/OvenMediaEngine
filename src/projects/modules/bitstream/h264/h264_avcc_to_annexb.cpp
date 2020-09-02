@@ -1,7 +1,7 @@
 
 #include "h264_avcc_to_annexb.h"
 #include "h264_decoder_configuration_record.h"
-#include "h264_sps.h"
+#include "h264_parser.h"
 
 
 #define OV_LOG_TAG "H264AvccToAnnexB"

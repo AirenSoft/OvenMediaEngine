@@ -17,11 +17,19 @@ bool IsKnownH264NalUnitType(uint8_t nal_unit_type)
     switch (nal_unit_type)
     {
     case static_cast<uint8_t>(H264NalUnitType::NonIdrSlice):
+    case static_cast<uint8_t>(H264NalUnitType::DPA):
+    case static_cast<uint8_t>(H264NalUnitType::DPB):
+    case static_cast<uint8_t>(H264NalUnitType::DPC):
     case static_cast<uint8_t>(H264NalUnitType::IdrSlice):
     case static_cast<uint8_t>(H264NalUnitType::Sei):
     case static_cast<uint8_t>(H264NalUnitType::Sps):
     case static_cast<uint8_t>(H264NalUnitType::Pps):
     case static_cast<uint8_t>(H264NalUnitType::Aud):
+    case static_cast<uint8_t>(H264NalUnitType::EndOfSequence):
+    case static_cast<uint8_t>(H264NalUnitType::EndOfStream):
+    case static_cast<uint8_t>(H264NalUnitType::FillerData):
+    case static_cast<uint8_t>(H264NalUnitType::SpsExt):
+    case static_cast<uint8_t>(H264NalUnitType::AuxiliarySlice):
         return true;
     default:
         logtw("Unsupported NAL unit type %u", nal_unit_type);

@@ -11,7 +11,7 @@
 #include "h265_types.h"
 
 
-#define NAL_UNIT_HEADER_SIZE    2
+#define H265_NAL_UNIT_HEADER_SIZE    2
 struct ProfileTierLevel
 {
     uint8_t _profile_idc;

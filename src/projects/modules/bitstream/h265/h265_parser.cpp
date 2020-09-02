@@ -25,10 +25,10 @@ bool H265Parser::CheckKeyframe(const uint8_t *bitstream, size_t length)
                 offset += 4;
             }
 
-			if(length - offset > NAL_UNIT_HEADER_SIZE)
+			if(length - offset > H265_NAL_UNIT_HEADER_SIZE)
 			{
 				H265NalUnitHeader header;
-				ParseNalUnitHeader(bitstream+offset, NAL_UNIT_HEADER_SIZE, header);
+				ParseNalUnitHeader(bitstream+offset, H265_NAL_UNIT_HEADER_SIZE, header);
 
 				if(header.GetNalUnitType() == H265NALUnitType::IDR_W_RADL ||
 				header.GetNalUnitType() == H265NALUnitType::CRA_NUT ||
@@ -50,7 +50,7 @@ bool H265Parser::ParseNalUnitHeader(const uint8_t *nalu, size_t length, H265NalU
 {
 	NalUnitBitstreamParser parser(nalu, length);
 
-	if(length < 2)
+	if(length < H265_NAL_UNIT_HEADER_SIZE)
 	{
 		return false;
 	}
@@ -61,7 +61,16 @@ bool H265Parser::ParseNalUnitHeader(const uint8_t *nalu, size_t length, H265NalU
 bool H265Parser::ParseNalUnitHeader(NalUnitBitstreamParser &parser, H265NalUnitHeader &header)
 {
 	// forbidden_zero_bit
-	parser.Skip(1);
+    uint8_t forbidden_zero_bit;
+	if(parser.ReadBits(1, forbidden_zero_bit) == false)
+    {
+        return false;
+    }
+
+    if(forbidden_zero_bit != 0)
+    {
+        return false;
+    }
 
 	// type
 	uint8_t nal_type;
@@ -96,7 +105,10 @@ bool H265Parser::ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps)
 
 	H265NalUnitHeader header;
 
-	ParseNalUnitHeader(parser, header);
+	if(ParseNalUnitHeader(parser, header) == false)
+	{
+		return false;
+	}
 
 	if(header.GetNalUnitType() != H265NALUnitType::SPS)
 	{
