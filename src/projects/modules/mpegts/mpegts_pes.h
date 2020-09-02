@@ -128,7 +128,7 @@ namespace mpegts
 		uint8_t _header_data_length = 0U;		// 8 bits
 
 		int64_t _pts = -1LL;
-		int64_t _dts = 1LL;
+		int64_t _dts = -1LL;
 
 		ov::Data _data;
 		uint8_t* _payload = nullptr;
