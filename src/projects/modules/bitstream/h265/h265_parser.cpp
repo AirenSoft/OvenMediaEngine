@@ -30,7 +30,9 @@ bool H265Parser::CheckKeyframe(const uint8_t *bitstream, size_t length)
 				H265NalUnitHeader header;
 				ParseNalUnitHeader(bitstream+offset, NAL_UNIT_HEADER_SIZE, header);
 
-				if(header.GetNalUnitType() == H265NALUnitType::IDR_W_RADL)
+				if(header.GetNalUnitType() == H265NALUnitType::IDR_W_RADL ||
+				header.GetNalUnitType() == H265NALUnitType::CRA_NUT ||
+				header.GetNalUnitType() == H265NALUnitType::BLA_W_RADL) 
 				{
 					return true;
 				}
@@ -93,6 +95,7 @@ bool H265Parser::ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps)
 	NalUnitBitstreamParser parser(nalu, length);
 
 	H265NalUnitHeader header;
+
 	ParseNalUnitHeader(parser, header);
 
 	if(header.GetNalUnitType() != H265NALUnitType::SPS)
@@ -294,7 +297,7 @@ bool H265Parser::ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps)
 			// Scaling List Data
 			for(int i=0; i<4; i++)
 			{
-				for(int j=0; i<(i == 3?2:6); j++)
+				for(int j=0; j<(i == 3?2:6); j++)
 				{
 					uint8_t scaling_list_pred_mode_flag;
 					if(parser.ReadBits(1, scaling_list_pred_mode_flag) == false)
