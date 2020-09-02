@@ -129,6 +129,8 @@ bool H265Parser::ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps)
 	{
 		return false;
 	}
+
+	sps._profile_tier_level = profile;
 	
 	uint32_t sps_seq_parameter_set_id;
 	if(parser.ReadUEV(sps_seq_parameter_set_id) == false)
@@ -492,6 +494,7 @@ bool H265Parser::ProcessProfileTierLevel(uint32_t max_sub_layers_minus1, NalUnit
 	{
 		return false;
 	}
+	profile._profile_idc = general_profile_idc;
 
 	// general_profile_compatibility_flag
 	if(parser.Skip(32) == false)
@@ -538,7 +541,7 @@ bool H265Parser::ProcessProfileTierLevel(uint32_t max_sub_layers_minus1, NalUnit
 	{
 		return false;
 	}
-
+	profile._level_idc = general_level_idc;
 	
 	std::vector<uint8_t> sub_layer_profile_present_flag_list;
 	std::vector<uint8_t> sub_layer_level_present_flag_list;
@@ -622,6 +625,7 @@ bool H265Parser::ProcessVuiParameters(uint32_t sps_max_sub_layers_minus1, NalUni
 		{
 			return false;
 		}
+		params._aspect_ratio_idc = aspect_ratio_idc;
 
 		// Extended SAR
 		if(aspect_ratio_idc == 255)
@@ -787,11 +791,15 @@ bool H265Parser::ProcessVuiParameters(uint32_t sps_max_sub_layers_minus1, NalUni
 		{
 			return false;
 		}
+		params._num_units_in_tick = vui_num_units_in_tick;
+
 		uint32_t vui_time_scale;
 		if(parser.ReadBits(32, vui_time_scale) == false)
 		{
 			return false;
 		}
+		params._time_scale = vui_time_scale;
+		
 		uint8_t vui_poc_proportional_to_timing_flag;
 		if(parser.ReadBits(1, vui_poc_proportional_to_timing_flag) == false)
 		{

@@ -14,7 +14,8 @@
 #define NAL_UNIT_HEADER_SIZE    2
 struct ProfileTierLevel
 {
-
+    uint8_t _profile_idc;
+    uint8_t _level_idc;
 };
 
 struct HrdParameters
@@ -37,6 +38,9 @@ public:
     };
 
     ASPECT_RATIO _aspect_ratio = { 0, 0 };
+    uint8_t _aspect_ratio_idc = 0;
+    uint32_t _num_units_in_tick = 0;
+    uint32_t _time_scale = 0;
 };
 
 struct ShortTermRefPicSet
@@ -94,37 +98,32 @@ public:
     }
     uint8_t GetProfile() const
     {
-        return _profile;
+        return _profile_tier_level._profile_idc;
     }
     uint8_t GetCodecLevel() const
     {
-        return _codec_level;
+        return _profile_tier_level._level_idc;
     }
-    uint32_t GetFps() const
+    float GetFps() const
     {
-        return _fps;
+        return _vui_parameters._time_scale / _vui_parameters._num_units_in_tick;
     }
     uint32_t GetId() const
     {
         return _id;
     }
-    uint32_t GetMaxNrOfReferenceFrames() const
-    {
-        return _max_nr_of_reference_frames;
-    }
 
     ov::String GetInfoString()
     {
-        ov::String out_str = ov::String::FormatString("\n[H264Sps]\n");
+        ov::String out_str = ov::String::FormatString("\n[H265Sps]\n");
 
         out_str.AppendFormat("\tProfile(%d)\n", GetProfile());
         out_str.AppendFormat("\tCodecLevel(%d)\n", GetCodecLevel());
         out_str.AppendFormat("\tWidth(%d)\n", GetWidth());
         out_str.AppendFormat("\tHeight(%d)\n", GetHeight());
-        out_str.AppendFormat("\tFps(%d)\n", GetFps());
+        out_str.AppendFormat("\tFps(%.2f)\n", GetFps());
         out_str.AppendFormat("\tId(%d)\n", GetId());
-        out_str.AppendFormat("\tMaxNrOfReferenceFrames(%d)\n", GetMaxNrOfReferenceFrames());
-        out_str.AppendFormat("\tAspectRatio(%d:%d)\n", _vui_parameters._aspect_ratio._width, _vui_parameters._aspect_ratio._height);
+        out_str.AppendFormat("\tAspectRatio(IDC: %d, Extented : %d:%d)\n", _vui_parameters._aspect_ratio_idc, _vui_parameters._aspect_ratio._width, _vui_parameters._aspect_ratio._height);
 
         return out_str;
     }
@@ -136,8 +135,8 @@ private:
     unsigned int _height = 0;
     unsigned int _fps = 0;
     unsigned int _id = 0;
-    unsigned int _max_nr_of_reference_frames = 0;
 
+    ProfileTierLevel _profile_tier_level;
     VuiParameters   _vui_parameters;
 
     friend class H265Parser;

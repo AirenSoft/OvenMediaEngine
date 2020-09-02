@@ -124,7 +124,7 @@ namespace pvd
 							bool keyframe_flag = H265Parser::CheckKeyframe(es->Payload(), es->PayloadLength());
 							if(keyframe_flag == true)
 							{
-								logti("A Keyframe has been arrived");
+								logtd("A Keyframe has been arrived");
 							}
 
 							// H265 Bitstream Parser Test
@@ -146,7 +146,7 @@ namespace pvd
 									}
 									else
 									{
-										//logti("H265 Nal Unit Header Parsed : id:%d len:%d", static_cast<int>(header.GetNalUnitType()), nalu->GetLength());
+										logtd("H265 Nal Unit Header Parsed : id:%d len:%d", static_cast<int>(header.GetNalUnitType()), nalu->GetLength());
 									}
 
 									if(header.GetNalUnitType() == H265NALUnitType::SPS)
@@ -158,7 +158,7 @@ namespace pvd
 										}
 										else
 										{
-											//logti("SPS Parsed : %s", sps.GetInfoString().CStr());
+											logti("SPS Parsed : %s", sps.GetInfoString().CStr());
 										}
 									}
 								}	
