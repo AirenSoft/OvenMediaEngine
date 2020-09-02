@@ -114,6 +114,8 @@ private:
 
 	// Store the correction values in case of sudden change in PTS.
 	// If the PTS suddenly increases, the filter behaves incorrectly.
+	std::map<uint8_t, int64_t> _pts_last;
+	std::map<uint8_t, int64_t> _dts_last;
 	// <TrackId, Pts>
 	std::map<uint8_t, int64_t> _pts_correct;
 	// Average Pts Incresement

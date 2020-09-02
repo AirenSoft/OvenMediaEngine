@@ -862,6 +862,8 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 
 				continue;
 
+			case TranscodeResult::DataError:
+			case TranscodeResult::NoData:
 			default:
 				// An error occurred
 				// There is no frame to process

@@ -67,6 +67,9 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecHEVC::RecvBuffer(TranscodeRes
 		decoded_frame->SetHeight(_frame->height);
 		decoded_frame->SetFormat(_frame->format);
 		decoded_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1LL : _frame->pts);
+
+		// logte("%s out %lld", (need_to_change_notify==true)?"notify":"ready", decoded_frame->GetPts());
+				
 		// Calculate duration using framerate in timebase
 		int den = _input_context->GetTimeBase().GetDen();
 		int64_t duration = (den == 0) ? 0LL : (float)den / _input_context->GetFrameRate();
@@ -97,8 +100,8 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecHEVC::RecvBuffer(TranscodeRes
 
 		int64_t remained = packet_data->GetLength();
 		off_t offset = 0LL;
-		int64_t pts = buffer->GetPts();
-		int64_t dts = buffer->GetDts();
+		int64_t pts = (buffer->GetPts()==-1LL)?AV_NOPTS_VALUE:buffer->GetPts();
+		int64_t dts = (buffer->GetDts()==-1LL)?AV_NOPTS_VALUE:buffer->GetDts();
 		auto data = packet_data->GetDataAs<uint8_t>();
 
 		while (remained > 0)
@@ -119,7 +122,6 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecHEVC::RecvBuffer(TranscodeRes
 			{
 				_pkt->pts = _parser->pts;
 				_pkt->dts = _parser->dts;
-
 				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
 
 				ret = ::avcodec_send_packet(_context, _pkt);

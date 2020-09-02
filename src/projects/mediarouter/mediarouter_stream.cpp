@@ -63,6 +63,8 @@ MediaRouteStream::~MediaRouteStream()
 	_stat_recv_pkt_count.clear();
 	_stat_first_time_diff.clear();
 
+	_pts_last.clear();
+	_dts_last.clear();
 	_pts_correct.clear();
 	_pts_avg_inc.clear();
 }
@@ -122,6 +124,10 @@ bool MediaRouteStream::PushIncomingStream(std::shared_ptr<MediaTrack> &media_tra
 		return false;
 	}
 
+	//  If there is no dts value, do the same as pts value.
+	if(media_packet->GetDts() == -1LL)
+		media_packet->SetDts(media_packet->GetPts());
+
 	// Extract media track information
 	if(!ParseTrackInfo(media_track, media_packet))
 	{
@@ -159,6 +165,7 @@ void MediaRouteStream::SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_trac
 	_parse_completed_track_info[media_track->GetId()] = parsed;
 }
 
+
 bool MediaRouteStream::GetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track)
 {
 	auto iter = _parse_completed_track_info.find(media_track->GetId());
@@ -188,40 +195,48 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 				// Analyzes NALU packets and extracts track information for SPS/PPS types.
 				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();
 				auto frag_hdr = media_packet->GetFragHeader();
-				if(frag_hdr != nullptr)
+				if(frag_hdr == nullptr)
 				{
-					for (size_t i = 0; i < frag_hdr->GetCount(); ++i) 
+					logte("Could not find fragment header");
+					return false;
+				}
+
+				for (size_t i = 0; i < frag_hdr->GetCount(); ++i) 
+				{
+					const uint8_t* buffer = &payload_data[frag_hdr->fragmentation_offset[i]];
+					size_t length = frag_hdr->fragmentation_length[i];
+
+					H264NalUnitHeader header;
+					if(H264Parser::ParseNalUnitHeader(buffer, length, header) == false)
 					{
-						const uint8_t* buffer = &payload_data[frag_hdr->fragmentation_offset[i]];
-						size_t length = frag_hdr->fragmentation_length[i];
-
-						H264NalUnitHeader header;
-						if(H264Parser::ParseNalUnitHeader(buffer, length, header) == false)
+						logte("Could not parse H264 Nal unit header");
+						return false;
+					}
+					
+					if(header.GetNalUnitType() == H264NalUnitType::Sps)
+					{
+						H264SPS sps;
+						if(H264Parser::ParseSPS(buffer, length, sps) == false)
 						{
-							logte("Could not parse H264 Nal unit header");
+							logte("Could not parse H264 SPS unit");
 							return false;
-						}
-						
-						if(header.GetNalUnitType() == H264NalUnitType::Sps)
-						{
-							H264SPS sps;
-							if(H264Parser::ParseSPS(buffer, length, sps))
-							{
-								media_track->SetWidth(sps.GetWidth());
-								media_track->SetHeight(sps.GetHeight());
-								media_track->SetTimeBase(1, 90000);
 
-								logtd("[%d] need to convert timebase(%d/%d) -> timebase(%d/%d)"
-									, media_track->GetId()
-									, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
-									, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
-
-								SetParseTrackInfo(media_track, true);
-							}
-							logtd("%s", sps.GetInfoString().CStr());					
 						}
+						logtd("%s", sps.GetInfoString().CStr());
+
+						media_track->SetWidth(sps.GetWidth());
+						media_track->SetHeight(sps.GetHeight());
+						media_track->SetTimeBase(1, 90000);
+
+						logtd("[%d] Convert timebase(%d/%d) -> timebase(%d/%d)"
+							, media_track->GetId()
+							, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
+							, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
+
+						SetParseTrackInfo(media_track, true);
 					}
 				}
+			
 			}
 			break;
 
@@ -231,67 +246,75 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 				// Analyzes NALU packets and extracts track information for SPS/PPS types.
 				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();
 				auto frag_hdr = media_packet->GetFragHeader();
-				if(frag_hdr != nullptr)
+				if(frag_hdr == nullptr)
 				{
-					for (size_t i = 0; i < frag_hdr->GetCount(); ++i) 
-					{
-						const uint8_t* buffer = &payload_data[frag_hdr->fragmentation_offset[i]];
-						size_t length = frag_hdr->fragmentation_length[i];
+					logte("Could not find fragment header");
+					return false;
+				}
+				
+				for (size_t i = 0; i < frag_hdr->GetCount(); ++i) 
+				{
+					const uint8_t* buffer = &payload_data[frag_hdr->fragmentation_offset[i]];
+					size_t length = frag_hdr->fragmentation_length[i];
 
-						H265NalUnitHeader header;
-						if(H265Parser::ParseNalUnitHeader(buffer, length, header) == false)
+					H265NalUnitHeader header;
+					if(H265Parser::ParseNalUnitHeader(buffer, length, header) == false)
+					{
+						logte("Could not parse H265 Nal unit header");
+						return false;
+					}
+
+					if(header.GetNalUnitType() == H265NALUnitType::SPS)
+					{
+						H265SPS sps;
+						if(H265Parser::ParseSPS(buffer, length, sps) == false)
 						{
-							logte("Could not parse H265 Nal unit header");
+							logte("Could not parse H265 SPS Unit");
 							return false;
 						}
 
-						logtd(" [%d] nal_unit_type : %d", frag_hdr->fragmentation_offset[i], static_cast<uint8_t>(header.GetNalUnitType()));
-						if(header.GetNalUnitType() == H265NALUnitType::SPS)
-						{
-							H265SPS sps;
-							if(H265Parser::ParseSPS(buffer, length, sps))
-							{
-								media_track->SetWidth(sps.GetWidth());
-								media_track->SetHeight(sps.GetHeight());
-								media_track->SetTimeBase(1, 90000);
+						logtd("%s", sps.GetInfoString().CStr());					
 
-								logtd("[%d] need to convert timebase(%d/%d) -> timebase(%d/%d)"
-									, media_track->GetId()
-									, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
-									, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
+						media_track->SetWidth(sps.GetWidth());
+						media_track->SetHeight(sps.GetHeight());
+						media_track->SetTimeBase(1, 90000);
 
-								SetParseTrackInfo(media_track, true);
-							}
-							logtd("%s", sps.GetInfoString().CStr());					
-						}
-					}
-
-					//DumpPacket(media_track, media_packet, true);
-				}
-			} break;
-		
-		case MediaCodecId::Aac:
-			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::AAC_ADTS)
-			{
-				if(AACAdts::IsValid(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength()) == true)
-				{
-					AACAdts adts;
-					if(AACAdts::Parse(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength(), adts) == true)
-					{					
-						media_track->SetSampleRate(adts.SamplerateNum());
-						media_track->GetChannel().SetLayout( (adts.SamplerateNum()==1)?(AudioChannel::Layout::LayoutMono):(AudioChannel::Layout::LayoutStereo) );
-
-						media_track->SetTimeBase(1, media_track->GetSampleRate());
-
-						logtd("[%d] need to convert timebase(%d/%d) -> timebase(%d/%d)"
+						logtd("[%d] Convert timebase(%d/%d) -> timebase(%d/%d)"
 							, media_track->GetId()
 							, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
 							, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
 
 						SetParseTrackInfo(media_track, true);
 					}
-					logtd("%s", adts.GetInfoString().CStr());
 				}
+
+			} break;
+		
+		case MediaCodecId::Aac:
+			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::AAC_ADTS)
+			{
+				if(AACAdts::IsValid(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength()) == false)
+				{
+					logte("Could not parse AAC ADTS header");
+					return false;
+				}
+
+				AACAdts adts;
+				if(AACAdts::Parse(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength(), adts) == true)
+				{					
+					media_track->SetSampleRate(adts.SamplerateNum());
+					media_track->GetChannel().SetLayout( (adts.SamplerateNum()==1)?(AudioChannel::Layout::LayoutMono):(AudioChannel::Layout::LayoutStereo) );
+
+					media_track->SetTimeBase(1, media_track->GetSampleRate());
+
+					logtd("[%d] need to convert timebase(%d/%d) -> timebase(%d/%d)"
+						, media_track->GetId()
+						, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
+						, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
+
+					SetParseTrackInfo(media_track, true);
+				}
+				//	logtd("%s", adts.GetInfoString().CStr());
 			}		
 			break;
 
@@ -320,12 +343,10 @@ bool MediaRouteStream::ParseAdditionalData(
 	switch(media_track->GetCodecId())
 	{
 		case MediaCodecId::H264:
-		case MediaCodecId::H265:
 		{
 			if(media_packet->GetFragHeader()->GetCount() == 0)
 			{
 				NalUnitFragmentHeader nal_parser;
-
 				if(NalUnitFragmentHeader::Parse(media_packet->GetData(), nal_parser) == false)
 				{
 					logte("failed to parse fragment header");
@@ -335,14 +356,38 @@ bool MediaRouteStream::ParseAdditionalData(
 				media_packet->SetFragHeader(nal_parser.GetFragmentHeader());
 			}
 
+			if(H264Parser::CheckKeyframe(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetData()->GetLength()) == true)
+			{
+				media_packet->SetFlag(MediaPacketFlag::Key);
+			}
+
+		} break;		
+		case MediaCodecId::H265:
+		{
+			if(media_packet->GetFragHeader()->GetCount() == 0)
+			{
+				NalUnitFragmentHeader nal_parser;
+				if(NalUnitFragmentHeader::Parse(media_packet->GetData(), nal_parser) == false)
+				{
+					logte("failed to parse fragment header");
+					return false;
+				}
+
+				media_packet->SetFragHeader(nal_parser.GetFragmentHeader());
+			}
+
+			if(H265Parser::CheckKeyframe(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetData()->GetLength()) == true)
+			{
+				media_packet->SetFlag(MediaPacketFlag::Key);
+			}
+			
 		} break;
 
 		default:
+			media_packet->SetFlag(MediaPacketFlag::Key);
 		break;
 	}
 
-	// KeyFrame
-	media_packet->SetFlag(MediaPacketFlag::Key);
 
 	return true;
 }
@@ -403,7 +448,11 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 		
 		// The incoming stream does not support this codec.
 		case MediaCodecId::H265:
-			// TODO(Soulk) : Implement this
+			if(media_packet->GetBitstreamFormat() != common::BitstreamFormat::H265_ANNEXB)
+			{
+				logte("Invalid H265 bitstream format");
+				return false;
+			}
 			return true;
 		case MediaCodecId::Vp8: 
 		case MediaCodecId::Vp9:
@@ -425,9 +474,9 @@ bool MediaRouteStream::ConvertToDefaultTimestamp(
 	std::shared_ptr<MediaPacket> &media_packet)
 {
 
+	// If the timebase is the same, there is no need to change the timestamp.
 	if(_incoming_tiembase[media_track->GetId()] == media_track->GetTimeBase())
 	{
-		// If the timebase is the same, there is no need to change the timestamp.
 		return true;
 	}
 
@@ -458,8 +507,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 	// 	Diffrence time of received first packet with uptime.
 	if(_stat_first_time_diff[track_id] == 0)
 	{
-		auto curr_time = std::chrono::system_clock::now();
-		int64_t uptime =  std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - _stat_start_time).count();
+		int64_t uptime =  std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _stat_start_time).count();
 
 		int64_t rescaled_last_pts = _stat_recv_pkt_lpts[track_id] * 1000 /_stream-> GetTrack(track_id)->GetTimeBase().GetDen();
 
@@ -471,17 +519,13 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 	{
 		_stop_watch.Update();
 
-		auto curr_time = std::chrono::system_clock::now();
-
 		// Uptime
-		int64_t uptime =  std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - _stat_start_time).count();
+		int64_t uptime =  std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _stat_start_time).count();
 
-		ov::String temp_str = "\n";
-		temp_str.AppendFormat(" - Stream of MediaRouter| type: %s, name: %s/%s, uptime: %lldms , queue: %d" 
-			, _inout_type==MRStreamInoutType::Incoming?"Incoming":"Outgoing"
-			,_stream->GetApplicationInfo().GetName().CStr()
-			,_stream->GetName().CStr()
-			,(int64_t)uptime, _packets_queue.Size());
+		int64_t min_pts = -1LL;
+		int64_t max_pts = -1LL;
+
+		ov::String stat_track_str = "";
 
 		for(const auto &iter : _stream->GetTracks())
 		{
@@ -490,10 +534,8 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 			ov::String pts_str = "";
 
-			// 1/1000 초 단위로 PTS 값을 변환
 			int64_t rescaled_last_pts = _stat_recv_pkt_lpts[track_id] * 1000 / track->GetTimeBase().GetDen();
 
-			// 최소 패킷이 들어오는 시간
 			int64_t first_delay = _stat_first_time_diff[track_id];
 
 			int64_t last_delay = uptime-rescaled_last_pts;
@@ -502,22 +544,30 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			{
 				int64_t corrected_pts = _pts_correct[track_id] * 1000 / track->GetTimeBase().GetDen();
 
-				pts_str.AppendFormat("last_pts: %lldms -> %lldms, crt_pts: %lld, delay: %5lldms"
+				pts_str.AppendFormat("pts: %lldms, crt: %lld, delay: %5lldms"
 					, rescaled_last_pts
-					, rescaled_last_pts - corrected_pts
 					, corrected_pts
 					, first_delay - last_delay
 					 );
 			}
 			else
 			{
-				pts_str.AppendFormat("last_pts: %lldms, delay: %5lldms"
+				pts_str.AppendFormat("pts: %lldms, delay: %5lldms"
 					, rescaled_last_pts
 					, first_delay - last_delay
 				);
 			}
 
-			temp_str.AppendFormat("\n\t[%3d] type: %5s(%2d/%4s), %s, pkt_cnt: %6lld, pkt_siz: %sB"
+			// calc min/max pts
+			if(min_pts == -1LL)
+				min_pts = rescaled_last_pts;
+			if(max_pts == -1LL)
+				max_pts = rescaled_last_pts;
+			
+			min_pts = std::min(min_pts, rescaled_last_pts);
+			max_pts = std::max(max_pts, rescaled_last_pts);
+
+			stat_track_str.AppendFormat("\n\t[%3d] type: %5s(%2d/%4s), %s, pkt_cnt: %6lld, pkt_siz: %sB"
 				, track_id
 				, track->GetMediaType()==MediaType::Video?"video":"audio"
 				, track->GetCodecId()
@@ -528,7 +578,19 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			);
 		}
 
-		logtd("%s", temp_str.CStr());
+		ov::String stat_stream_str = "";
+
+		stat_stream_str.AppendFormat("\n - MediaRouter Stream | type: %s, name: %s/%s, uptime: %lldms, queue: %d, A-V(%lld)" 
+			, _inout_type==MRStreamInoutType::Incoming?"Incoming":"Outgoing"
+			,_stream->GetApplicationInfo().GetName().CStr()
+			,_stream->GetName().CStr()
+			,(int64_t)uptime
+			, _packets_queue.Size()
+			, max_pts - min_pts);
+
+		stat_track_str = stat_stream_str + stat_track_str;
+
+		logtd("%s", stat_track_str.CStr());
 	}
 }
 
@@ -554,6 +616,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	{
 		if(!PushOutgoungStream(media_track, media_packet))
 			return false;			
+
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
@@ -630,31 +693,36 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	////////////////////////////////////////////////////////////////////////////////////
 	// PTS Correction for Abnormal increase
 	////////////////////////////////////////////////////////////////////////////////////
-	int64_t timestamp_delta = media_packet->GetPts()  - _stat_recv_pkt_lpts[track_id];
-	int64_t scaled_timestamp_delta = timestamp_delta * 1000 /  media_track->GetTimeBase().GetDen();
+	int64_t ts_inc = media_packet->GetPts()  - _pts_last[track_id];
+	int64_t ts_inc_ms = ts_inc * 1000 /  media_track->GetTimeBase().GetDen();
 
-	if (abs( scaled_timestamp_delta ) > PTS_CORRECT_THRESHOLD_US )
+	if ( std::abs(ts_inc_ms) > PTS_CORRECT_THRESHOLD_US )
 	{
 		// TODO(soulk): I think all tracks should calibrate the PTS with the same value.
-		_pts_correct[track_id] = media_packet->GetPts() - _stat_recv_pkt_lpts[track_id] - _pts_avg_inc[track_id];
-/*
+		_pts_correct[track_id] = media_packet->GetPts() - _pts_last[track_id] - _pts_avg_inc[track_id];
+
 		logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld"
 			, track_id
-			, _stat_recv_pkt_lpts[track_id]
+			, _pts_last[track_id]
 			, media_packet->GetPts()
 			, _pts_correct[track_id]
 			, _pts_avg_inc[track_id]
 		);
-*/		
+
 	}
 	else
 	{
 		// Originally it should be an average value, Use the difference of the last packet.
 		// Use DTS because the PTS value does not increase uniformly.
-		_pts_avg_inc[track_id] = media_packet->GetDts() - _stat_recv_pkt_ldts[track_id];
+		_pts_avg_inc[track_id] = media_packet->GetDts() - _dts_last[track_id];
 	}
+	_pts_last[track_id] = media_packet->GetPts();
+	_dts_last[track_id] = media_packet->GetDts();
 
+
+	////////////////////////////////////////////////////////////////////////////////////
 	// Set the corrected PTS.
+	////////////////////////////////////////////////////////////////////////////////////
 	media_packet->SetPts( media_packet->GetPts() - _pts_correct[track_id] );
 	media_packet->SetDts( media_packet->GetDts() - _pts_correct[track_id] );
 

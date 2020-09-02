@@ -97,8 +97,8 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 
 		int64_t remained = packet_data->GetLength();
 		off_t offset = 0LL;
-		int64_t pts = buffer->GetPts();
-		int64_t dts = buffer->GetDts();
+		int64_t pts = (buffer->GetPts()==-1LL)?AV_NOPTS_VALUE:buffer->GetPts();
+		int64_t dts = (buffer->GetDts()==-1LL)?AV_NOPTS_VALUE:buffer->GetDts();
 		auto data = packet_data->GetDataAs<uint8_t>();
 
 		while (remained > 0)
