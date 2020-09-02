@@ -10,6 +10,8 @@
 
 #include "h265_types.h"
 
+
+#define NAL_UNIT_HEADER_SIZE    2
 struct ProfileTierLevel
 {
 
@@ -82,15 +84,51 @@ private:
 class H265SPS
 {
 public:
-    unsigned int GetWidth() const;
-    unsigned int GetHeight() const;
-    uint8_t GetProfile() const;
-    uint8_t GetCodecLevel() const;
-    unsigned int GetFps() const;
-    unsigned int GetId() const;
-    unsigned int GetMaxNrOfReferenceFrames() const;
+    uint32_t GetWidth() const
+    {
+        return _width;
+    }
+    uint32_t GetHeight() const
+    {
+        return _height;
+    }
+    uint8_t GetProfile() const
+    {
+        return _profile;
+    }
+    uint8_t GetCodecLevel() const
+    {
+        return _codec_level;
+    }
+    uint32_t GetFps() const
+    {
+        return _fps;
+    }
+    uint32_t GetId() const
+    {
+        return _id;
+    }
+    uint32_t GetMaxNrOfReferenceFrames() const
+    {
+        return _max_nr_of_reference_frames;
+    }
 
-    ov::String GetInfoString();
+    ov::String GetInfoString()
+    {
+        ov::String out_str = ov::String::FormatString("\n[H264Sps]\n");
+
+        out_str.AppendFormat("\tProfile(%d)\n", GetProfile());
+        out_str.AppendFormat("\tCodecLevel(%d)\n", GetCodecLevel());
+        out_str.AppendFormat("\tWidth(%d)\n", GetWidth());
+        out_str.AppendFormat("\tHeight(%d)\n", GetHeight());
+        out_str.AppendFormat("\tFps(%d)\n", GetFps());
+        out_str.AppendFormat("\tId(%d)\n", GetId());
+        out_str.AppendFormat("\tMaxNrOfReferenceFrames(%d)\n", GetMaxNrOfReferenceFrames());
+        out_str.AppendFormat("\tAspectRatio(%d:%d)\n", _vui_parameters._aspect_ratio._width, _vui_parameters._aspect_ratio._height);
+
+        return out_str;
+    }
+
 private:
     uint8_t _profile = 0;
     uint8_t _codec_level = 0;
@@ -108,6 +146,7 @@ private:
 class H265Parser
 {
 public:
+    static bool CheckKeyframe(const uint8_t *bitstream, size_t length);
     static bool ParseNalUnitHeader(const uint8_t *nalu, size_t length, H265NalUnitHeader &header);
     static bool ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps);
 

@@ -5,6 +5,45 @@
 #include "h265_parser.h"
 #include "h265_types.h"
 
+bool H265Parser::CheckKeyframe(const uint8_t *bitstream, size_t length)
+{
+	size_t offset = 0;
+    while(offset < length)
+    {
+        size_t remaining = length - offset;
+        const uint8_t* data = bitstream + offset;
+
+        if((remaining >= 3 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x01) || 
+            (remaining >= 4 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x01))
+        {
+            if(data[2] == 0x01)
+            {
+                offset += 3;
+            }
+            else
+            {
+                offset += 4;
+            }
+
+			if(length - offset > NAL_UNIT_HEADER_SIZE)
+			{
+				H265NalUnitHeader header;
+				ParseNalUnitHeader(bitstream+offset, NAL_UNIT_HEADER_SIZE, header);
+
+				if(header.GetNalUnitType() == H265NALUnitType::IDR_W_RADL)
+				{
+					return true;
+				}
+			}
+		}
+		else
+		{
+			offset ++;
+		}
+	}
+	return false;
+}
+
 bool H265Parser::ParseNalUnitHeader(const uint8_t *nalu, size_t length, H265NalUnitHeader &header)
 {
 	NalUnitBitstreamParser parser(nalu, length);
@@ -1137,49 +1176,4 @@ bool H265Parser::ProcessShortTermRefPicSet(uint32_t idx, uint32_t num_short_term
 		}
 	}
 	return true;
-}
-
-unsigned int H265SPS::GetWidth() const
-{
-	return _width;
-}
-unsigned int H265SPS::GetHeight() const
-{
-	return _height;
-}
-uint8_t H265SPS::GetProfile() const
-{
-	return _profile;
-}
-uint8_t H265SPS::GetCodecLevel() const
-{
-	return _codec_level;
-}
-unsigned int H265SPS::GetFps() const
-{
-	return _fps;
-}
-unsigned int H265SPS::GetId() const
-{
-	return _id;
-}
-unsigned int H265SPS::GetMaxNrOfReferenceFrames() const
-{
-	return _max_nr_of_reference_frames;
-}
-
-ov::String H265SPS::GetInfoString()
-{
-	ov::String out_str = ov::String::FormatString("\n[H264Sps]\n");
-
-	out_str.AppendFormat("\tProfile(%d)\n", GetProfile());
-	out_str.AppendFormat("\tCodecLevel(%d)\n", GetCodecLevel());
-	out_str.AppendFormat("\tWidth(%d)\n", GetWidth());
-	out_str.AppendFormat("\tHeight(%d)\n", GetHeight());
-	out_str.AppendFormat("\tFps(%d)\n", GetFps());
-	out_str.AppendFormat("\tId(%d)\n", GetId());
-	out_str.AppendFormat("\tMaxNrOfReferenceFrames(%d)\n", GetMaxNrOfReferenceFrames());
-	out_str.AppendFormat("\tAspectRatio(%d:%d)\n", _vui_parameters._aspect_ratio._width, _vui_parameters._aspect_ratio._height);
-
-	return out_str;
 }

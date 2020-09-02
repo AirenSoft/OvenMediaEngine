@@ -120,6 +120,13 @@ namespace pvd
 						{
 							bitstream = common::BitstreamFormat::H265_ANNEXB;
 
+							// Check if bitstream is keyframe
+							bool keyframe_flag = H265Parser::CheckKeyframe(es->Payload(), es->PayloadLength());
+							if(keyframe_flag == true)
+							{
+								logti("A Keyframe has been arrived");
+							}
+
 							// H265 Bitstream Parser Test
 							auto nal_unit_list = NalUnitSplitter::Parse(es->Payload(), es->PayloadLength());
 							if(nal_unit_list == nullptr)
