@@ -14,7 +14,7 @@ std::shared_ptr<NalUnitList> NalUnitSplitter::Parse(const uint8_t* bitstream, si
         if((remaining >= 3 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x01) || 
             (remaining >= 4 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x01))
         {
-            end_pos = offset - 1;
+            end_pos = offset;
 
             if(data[2] == 0x01)
             {
