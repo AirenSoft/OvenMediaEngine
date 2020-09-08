@@ -74,7 +74,7 @@ private:
 		           bool first_fragment,
 		           bool last_fragment,
 		           bool aggregated,
-		           uint8_t header)
+		           uint16_t header)
 			: source_fragment(source_fragment),
 			  first_fragment(first_fragment),
 			  last_fragment(last_fragment),
@@ -85,7 +85,7 @@ private:
 		bool first_fragment;
 		bool last_fragment;
 		bool aggregated;
-		uint8_t header;
+		uint16_t header;
 	};
 
 	bool GeneratePackets();

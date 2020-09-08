@@ -64,7 +64,8 @@ bool RtpPacketizerH265::GeneratePackets()
 				} 
 				else 
 				{
-					i = PacketizeStapA(i);
+					PacketizeSingleNalu(i);
+					++i;
 				}
 				break;
 		}
@@ -79,7 +80,7 @@ void RtpPacketizerH265::PacketizeFuA(size_t fragment_index)
 	bool is_last_fragment = fragment_index + 1 == _input_fragments.size();
 	size_t payload_left = fragment.length - H265_NAL_HEADER_SIZE;
 	size_t offset = H265_NAL_HEADER_SIZE;
-	size_t per_packet_capacity = _max_payload_len - H265_FU_HEADER_SIZE;
+	size_t per_packet_capacity = _max_payload_len - (H265_FU_HEADER_SIZE + H265_NAL_HEADER_SIZE);
 
 	size_t extra_len = is_last_fragment ? _last_packet_reduction_len : 0;
 
@@ -103,10 +104,13 @@ void RtpPacketizerH265::PacketizeFuA(size_t fragment_index)
 				--packet_length;
 			}
 		}
+
+		// NAL Header
+		uint16_t header = (fragment.buffer[0] << 8) | fragment.buffer[1];
 		_packets.push(PacketUnit(Fragment(fragment.buffer + offset, packet_length),
 		                         offset - H265_NAL_HEADER_SIZE == 0,
-		                         payload_left == packet_length, false,
-		                         fragment.buffer[0]));
+		                         payload_left == packet_length, 
+								 false, header));
 		offset += packet_length;
 		payload_left -= packet_length;
 		--num_packets;
