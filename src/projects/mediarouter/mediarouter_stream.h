@@ -26,6 +26,8 @@ enum class MRStreamInoutType : int8_t
 	Outgoing
 };
 
+typedef int32_t MediaTrackId;
+
 class MediaRouteStream
 {
 public:
@@ -67,7 +69,11 @@ private:
 		std::shared_ptr<MediaPacket> &media_packet);
 
 	// Set whether parsing media track is complete
-	std::map<uint8_t, bool> _parse_completed_track_info;
+	std::map<MediaTrackId, bool> _parse_completed_track_info;
+	bool _is_parsed_all_track;
+
+private:
+	void DropNonDecodingPackets();
 
 private:
 	// Convert to default bitstream format
@@ -88,14 +94,14 @@ private:
 		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
 
-	std::map<uint8_t, common::Timebase> _incoming_tiembase;
+	std::map<MediaTrackId, common::Timebase> _incoming_tiembase;
 
 	void UpdateStatistics(std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
 private:
 	
 	// Whether to generate output streams corresponding to the current mr stream.
-	bool _created_stream;
+	bool _is_created_stream;
 
 	// Incoming/Outgoing Stream
 	MRStreamInoutType _inout_type;
@@ -107,28 +113,28 @@ private:
 	std::shared_ptr<info::Stream> _stream;
 
 	// Temporary packet store. for calculating packet duration
-	std::map<uint8_t, std::shared_ptr<MediaPacket>> _media_packet_stored;
+	std::map<MediaTrackId, std::shared_ptr<MediaPacket>> _media_packet_stash;
 
 	// Packets queue
 	ov::Queue<std::shared_ptr<MediaPacket>> _packets_queue;
 
 	// Store the correction values in case of sudden change in PTS.
 	// If the PTS suddenly increases, the filter behaves incorrectly.
-	std::map<uint8_t, int64_t> _pts_last;
-	std::map<uint8_t, int64_t> _dts_last;
+	std::map<MediaTrackId, int64_t> _pts_last;
+	std::map<MediaTrackId, int64_t> _dts_last;
 	// <TrackId, Pts>
-	std::map<uint8_t, int64_t> _pts_correct;
+	std::map<MediaTrackId, int64_t> _pts_correct;
 	// Average Pts Incresement
-	std::map<uint8_t, int64_t> _pts_avg_inc;
+	std::map<MediaTrackId, int64_t> _pts_avg_inc;
 
 
 	// Statistics
 	// <TrackId, Values>
-	std::map<uint8_t, int64_t> _stat_recv_pkt_lpts;
-	std::map<uint8_t, int64_t> _stat_recv_pkt_ldts;
-	std::map<uint8_t, int64_t> _stat_recv_pkt_size;
-	std::map<uint8_t, int64_t> _stat_recv_pkt_count;
-	std::map<uint8_t, int64_t> _stat_first_time_diff;
+	std::map<MediaTrackId, int64_t> _stat_recv_pkt_lpts;
+	std::map<MediaTrackId, int64_t> _stat_recv_pkt_ldts;
+	std::map<MediaTrackId, int64_t> _stat_recv_pkt_size;
+	std::map<MediaTrackId, int64_t> _stat_recv_pkt_count;
+	std::map<MediaTrackId, int64_t> _stat_first_time_diff;
 
 	// Time for statistics
 	ov::StopWatch _stop_watch;
@@ -137,7 +143,6 @@ private:
 
 private:
 	void DumpPacket(
-		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet,
 		bool dump = false);
 };
