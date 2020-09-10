@@ -15,7 +15,7 @@ bool H264AvccToAnnexB::GetExtradata(const common::PacketType type, const std::sh
 		AVCDecoderConfigurationRecord config;
 		if(!AVCDecoderConfigurationRecord::Parse(data->GetDataAs<uint8_t>(), data->GetLength(), config))
 		{
-			logte("sequence heaer paring error"); 
+			logte("Could not parse sequence header"); 
 			return false;
 		}
 
@@ -54,7 +54,7 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 		AVCDecoderConfigurationRecord config;
 		if(!AVCDecoderConfigurationRecord::Parse(data->GetDataAs<uint8_t>(), data->GetLength(), config))
 		{
-			logte("sequence heaer paring error"); 
+			logte("Could not parse sequence header"); 
 			return false;
 		}
 		logtd("%s", config.GetInfoString().CStr());
@@ -76,7 +76,8 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 		ov::ByteStream read_stream(data.get());
 
 		// Append SPS/PPS Nalunit
-		annexb_data->Append(extradata.data(), (size_t)extradata.size());
+		if(extradata.size() > 0)
+			annexb_data->Append(extradata.data(), (size_t)extradata.size());
 
 		while(read_stream.Remained() > 0)
 		{
@@ -104,7 +105,9 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 	}
 
 	data->Clear();
-	data->Append(annexb_data);
+	
+	if(annexb_data->GetLength() > 0)
+		data->Append(annexb_data);
 
 	return true;
 }
