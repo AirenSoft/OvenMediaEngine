@@ -77,7 +77,9 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 
 		// Append SPS/PPS Nalunit
 		if(extradata.size() > 0)
+		{
 			annexb_data->Append(extradata.data(), (size_t)extradata.size());
+		}
 
 		while(read_stream.Remained() > 0)
 		{
@@ -107,7 +109,9 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 	data->Clear();
 	
 	if(annexb_data->GetLength() > 0)
+	{
 		data->Append(annexb_data);
+	}
 
 	return true;
 }

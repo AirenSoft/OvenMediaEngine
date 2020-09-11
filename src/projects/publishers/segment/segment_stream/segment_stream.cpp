@@ -36,7 +36,7 @@ bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t work
 		switch (track->GetMediaType())
 		{
 			case MediaType::Video:
-				if (track->GetCodecId() == MediaCodecId::H264 || track->GetCodecId() == MediaCodecId::H265)
+				if (track->GetCodecId() == MediaCodecId::H264) // TODO(Dimiden): Need to support HEVC
 				{
 					video_track = track;
 				}
@@ -54,28 +54,33 @@ bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t work
 		}
 	}
 
-	if ((video_track != nullptr) && (video_track->GetCodecId() == MediaCodecId::H264 || video_track->GetCodecId() == MediaCodecId::H265))
+	bool video_enabled = false;
+	bool audio_enabled = false;
+
+	if ((video_track != nullptr) && (video_track->GetCodecId() == MediaCodecId::H264)) // // TODO(Dimiden): Need to support HEVC
 	{
 		_media_tracks[video_track->GetId()] = video_track;
 		_video_track = video_track;
+		video_enabled = true;
 	}
 
 	if ((audio_track != nullptr) && (audio_track->GetCodecId() == MediaCodecId::Aac))
 	{
 		_media_tracks[audio_track->GetId()] = audio_track;
 		_audio_track = audio_track;
+		audio_enabled = true;
 	}
 
-	if ((video_track != nullptr) || (audio_track != nullptr))
+	if (video_enabled || audio_enabled)
 	{
 		PacketizerStreamType stream_type = PacketizerStreamType::Common;
 
-		if (video_track == nullptr)
+		if (video_enabled == false)
 		{
 			stream_type = PacketizerStreamType::AudioOnly;
 		}
 
-		if (audio_track == nullptr)
+		if (audio_enabled == false)
 		{
 			stream_type = PacketizerStreamType::VideoOnly;
 		}

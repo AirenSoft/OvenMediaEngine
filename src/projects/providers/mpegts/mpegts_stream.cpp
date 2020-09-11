@@ -158,7 +158,7 @@ namespace pvd
 										}
 										else
 										{
-											logti("SPS Parsed : %s", sps.GetInfoString().CStr());
+											logtd("SPS Parsed : %s", sps.GetInfoString().CStr());
 										}
 									}
 								}	

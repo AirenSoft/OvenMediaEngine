@@ -22,6 +22,27 @@ std::shared_ptr<CmafStream> CmafStream::Create(int segment_count,
                                               uint32_t worker_count,
                                               const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
 {
+	// Check codec compatibility
+	bool supported_codec_available = false;
+	auto tracks = info.GetTracks();
+	for(const auto &track : tracks)
+	{
+		if(track.second->GetCodecId() == common::MediaCodecId::H264 ||
+			// If H.265 is supported in the future, this comment should be removed.
+			// track.second->GetCodecId() == common::MediaCodecId::H265 || 
+			track.second->GetCodecId() == common::MediaCodecId::Aac)
+		{
+			supported_codec_available = true;
+			break;
+		}
+	}
+
+	if(supported_codec_available == false)
+	{
+		logtw("The %s/%s stream has not created because there is no codec that can support it.", info.GetApplicationInfo().GetName().CStr(), info.GetName().CStr());
+		return nullptr;
+	}
+
     auto stream = std::make_shared<CmafStream>(application, info, chunked_transfer);
 
     if (!stream->Start(segment_count, segment_duration, 0))

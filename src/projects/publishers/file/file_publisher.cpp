@@ -19,7 +19,7 @@ std::shared_ptr<FilePublisher> FilePublisher::Create(const cfg::Server &server_c
 FilePublisher::FilePublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 		: Publisher(server_config, router)
 {
-	logte("FilePublisher has been create");
+	logtd("FilePublisher has been create");
 }
 
 FilePublisher::~FilePublisher()
@@ -29,7 +29,7 @@ FilePublisher::~FilePublisher()
 
 bool FilePublisher::Start()
 {
-	logte("FilePublisher::Start");
+	logtd("FilePublisher::Start");
 
 	// Listen to localhost:<relay_port>
 	auto server_config = GetServerConfig();
@@ -46,7 +46,7 @@ bool FilePublisher::Stop()
 
 std::shared_ptr<pub::Application> FilePublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	logte("OnCreatePublisherApplication: %s", application_info.GetName().CStr());
+	logtd("OnCreatePublisherApplication: %s", application_info.GetName().CStr());
 
 	return FileApplication::Create(FilePublisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }
