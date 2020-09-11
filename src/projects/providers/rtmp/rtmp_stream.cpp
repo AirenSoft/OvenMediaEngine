@@ -212,7 +212,8 @@ namespace pvd
 				}
 				else
 				{
-					logte("Could not obtain app information");
+					logte("%s application does not exist", _app_name.CStr());
+					Stop();
 					return;
 				}
 			}
