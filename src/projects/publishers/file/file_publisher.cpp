@@ -32,9 +32,9 @@ bool FilePublisher::Start()
 	logtd("FilePublisher::Start");
 
 	// Listen to localhost:<relay_port>
-	auto server_config = GetServerConfig();
+	//auto server_config = GetServerConfig();
 
-	const auto &origin = server_config.GetBind().GetPublishers().GetOvt();
+	//const auto &origin = server_config.GetBind().GetPublishers().GetOvt();
 
 	return Publisher::Start();
 }
