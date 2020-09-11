@@ -9,6 +9,7 @@
 #include "transcode_encoder.h"
 
 #include "transcode_codec_enc_avc.h"
+#include "transcode_codec_enc_hevc.h"
 #include "transcode_codec_enc_aac.h"
 #include "transcode_codec_enc_vp8.h"
 #include "transcode_codec_enc_opus.h"
@@ -49,7 +50,9 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaC
 		case common::MediaCodecId::H264:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncAVC>();
 			break;
-
+		case common::MediaCodecId::H265:
+			encoder = std::make_shared<OvenCodecImplAvcodecEncHEVC>();
+			break;
 		case common::MediaCodecId::Aac:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncAAC>();
 			break;

@@ -14,13 +14,16 @@
 #include "modules/mpegts/mpegts_packet.h"
 #include "mpegts_provider_private.h"
 
-#include "modules/codec_analyzer/aac/aac_adts.h"
+#include "modules/bitstream/aac/aac_adts.h"
 
 #include <orchestrator/orchestrator.h>
-#include <base/media_route/media_type.h>
+#include <base/mediarouter/media_type.h>
 #include <base/info/media_extradata.h>
 
 #include <modules/mpegts/mpegts_packet.h>
+
+#include "modules/bitstream/nalu/nal_unit_splitter.h"
+#include "modules/bitstream/h265/h265_parser.h"
 
 namespace pvd
 {
@@ -95,67 +98,103 @@ namespace pvd
 			while(_depacketizer.IsESAvailable())
 			{
 				auto es = _depacketizer.PopES();
+				auto track = GetTrack(es->PID());
+
+				if(track == nullptr)
+				{
+					logte("%s/%s(%d) received stream data, but track information could not be found.", GetApplicationName(), GetName().CStr(), GetId());
+					return false;
+				}
 				
 				if(es->IsVideoStream())
 				{	
+					auto bitstream = common::BitstreamFormat::Unknwon;
+					auto packet_type = common::PacketType::NALU;
+
+					switch(track->GetCodecId())
+					{
+						case common::MediaCodecId::H264:
+							bitstream = common::BitstreamFormat::H264_ANNEXB;
+							break;
+						case common::MediaCodecId::H265:
+						{
+							bitstream = common::BitstreamFormat::H265_ANNEXB;
+
+							// Check if bitstream is keyframe
+							bool keyframe_flag = H265Parser::CheckKeyframe(es->Payload(), es->PayloadLength());
+							if(keyframe_flag == true)
+							{
+								logtd("A Keyframe has been arrived");
+							}
+
+							// H265 Bitstream Parser Test
+							auto nal_unit_list = NalUnitSplitter::Parse(es->Payload(), es->PayloadLength());
+							if(nal_unit_list == nullptr)
+							{
+								logte("Could not parse bitstream into nal units");
+							}
+							else
+							{	
+								for(uint32_t i=0; i<nal_unit_list->GetCount(); i++)
+								{
+									auto nalu = nal_unit_list->GetNalUnit(i);
+
+									H265NalUnitHeader header;
+									if(H265Parser::ParseNalUnitHeader(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), header) == false)
+									{
+										logte("Could not parse nal unit header");
+									}
+									else
+									{
+										logtd("H265 Nal Unit Header Parsed : id:%d len:%d", static_cast<int>(header.GetNalUnitType()), nalu->GetLength());
+									}
+
+									if(header.GetNalUnitType() == H265NALUnitType::SPS)
+									{
+										H265SPS sps;
+										if(H265Parser::ParseSPS(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), sps) == false)
+										{
+											logte("Could not parse sps");
+										}
+										else
+										{
+											logtd("SPS Parsed : %s", sps.GetInfoString().CStr());
+										}
+									}
+								}	
+							}
+							
+							break;
+						}
+						default:
+							bitstream = common::BitstreamFormat::Unknwon;
+							break;
+					}
 
 					auto data = std::make_shared<ov::Data>(es->Payload(), es->PayloadLength());
 					auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Video,
 												es->PID(),
 												data,
-												es->Pts(), // PTS
-												es->Dts(), // DTS
-												-1LL, // duration,
-												es->IsKeyframe()?MediaPacketFlag::Key:MediaPacketFlag::NoFlag);
+												es->Pts(),
+												es->Dts(),
+												bitstream,
+												packet_type);
 					SendFrame(media_packet);
 				}
 				else if(es->IsAudioStream())
 				{
 					auto payload = es->Payload();
 					auto payload_length = es->PayloadLength();
-#if 1
+
 					auto data = std::make_shared<ov::Data>(payload, payload_length);
 					auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Audio,
 												es->PID(),
 												data,
-												es->Pts(), // PTS
-												es->Dts(), // DTS
-												-1LL, // duration,
-												MediaPacketFlag::Key);
+												es->Pts(),
+												es->Dts(),
+												common::BitstreamFormat::AAC_ADTS,
+												common::PacketType::RAW);
 					SendFrame(media_packet);
-#endif
-
-#if 0
-					uint32_t adts_start = 0;
-					int i=0;
-					while(adts_start < payload_length)
-					{
-						AACAdts adts;
-
-						if(AACAdts::ParseAdtsHeader(payload + adts_start, payload_length - adts_start, adts) == false)
-						{
-							return false;
-						}
-
-						auto frame_length = adts.AacFrameLength();
-
-						auto data = std::make_shared<ov::Data>(payload + adts_start, frame_length);
-						auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Audio,
-													es->PID(),
-													data,
-													es->Pts() + (i*2000), // PTS
-													es->Dts(), // DTS
-													-1LL, // duration,
-													MediaPacketFlag::Key);
-
-						logtc("PTS : %lld | CPTS : %lld", es->Pts(), es->Pts() + (i*2000));
-						
-						SendFrame(media_packet);
-
-						adts_start += frame_length;
-						i++;
-					}
-#endif
 				}
 			}
 		}

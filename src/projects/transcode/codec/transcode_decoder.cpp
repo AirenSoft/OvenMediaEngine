@@ -10,6 +10,7 @@
 
 #include "transcode_codec_dec_aac.h"
 #include "transcode_codec_dec_avc.h"
+#include "transcode_codec_dec_hevc.h"
 
 #define OV_LOG_TAG "TranscodeCodec"
 
@@ -55,7 +56,9 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::St
 		case common::MediaCodecId::H264:
 			decoder = std::make_shared<OvenCodecImplAvcodecDecAVC>(info);
 			break;
-
+		case common::MediaCodecId::H265:
+			decoder = std::make_shared<OvenCodecImplAvcodecDecHEVC>(info);
+			break;
 		case common::MediaCodecId::Aac:
 			decoder = std::make_shared<OvenCodecImplAvcodecDecAAC>(info);
 			break;
@@ -115,6 +118,8 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 		logte("Parser not found");
 		return false;
 	}
+	
+	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
 
 	_context->time_base = TimebaseToAVRational(_input_context->GetTimeBase());
 

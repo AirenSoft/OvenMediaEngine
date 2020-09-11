@@ -44,7 +44,10 @@ std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(ov::SocketType typ
 		port = item->second;
 	}
 
-	port->IncreaseRefCount();
+	if(port != nullptr)
+	{
+		port->IncreaseRefCount();
+	}
 
 	return port;
 }

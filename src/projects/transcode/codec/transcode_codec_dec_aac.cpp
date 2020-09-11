@@ -118,7 +118,7 @@ void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 		_input_buffer.pop_front();
 
 		cur_pkt = packet.get();
-
+	
 		if (cur_pkt != nullptr)
 		{
 			cur_data = cur_pkt->GetData();
@@ -158,10 +158,10 @@ void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 				return;
 			}	
 
+	
+
 			if (_pkt->size > 0)
-			{
-				// logte("cur_data.length(%d), parsed_size(%d) %lld/%lld", cur_data->GetLength(), parsed_size, _parser->pts, _parser->dts);
-				
+			{			
 				_pkt->pts = _parser->pts;
 				_pkt->dts = _parser->dts;
 

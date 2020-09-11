@@ -3,7 +3,7 @@
 #include <shared_mutex>
 #include "base/common_types.h"
 #include "base/info/stream.h"
-#include "base/media_route/media_buffer.h"
+#include "base/mediarouter/media_buffer.h"
 #include "session.h"
 
 #define MIN_STREAM_WORKER_THREAD_COUNT 2

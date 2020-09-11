@@ -7,9 +7,8 @@
 //
 //==============================================================================
 #include "m4s_init_writer.h"
-#include "bit_writer.h"
 
-#include <base/media_route/media_type.h>
+#include <base/mediarouter/media_type.h>
 
 #define SAMPLERATE_TABLE_SIZE (16)
 
@@ -459,7 +458,7 @@ int M4sInitWriter::EsdsBoxWrite(std::shared_ptr<ov::Data> &data_stream)
 		3: AAC SSR (Scalable Sample Rate)
 		4: ...
    */
-	BitWriter bit_writer(2);
+	ov::BitWriter bit_writer(2);
 	bit_writer.Write(5, 2);										  // object type - 2: AAC LC (Low Complexity)
 	bit_writer.Write(4, _audio_sample_index);					  // frequency index
 	bit_writer.Write(4, _audio_track->GetChannel().GetCounts());  // channel configuration

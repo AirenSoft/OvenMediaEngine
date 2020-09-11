@@ -7,8 +7,8 @@
 //
 //==============================================================================
 #include "rtmp_import_chunk.h"
-#include "../rtmp_provider_private.h"
 
+#include "../rtmp_provider_private.h"
 #include "rtmp_chunk_parser.h"
 
 RtmpImportChunk::RtmpImportChunk(int chunk_size)
@@ -400,7 +400,7 @@ std::shared_ptr<const RtmpMessage> RtmpImportChunk::GetMessage()
 
 	auto item = _message_queue.Dequeue();
 
-	if(item.has_value())
+	if (item.has_value())
 	{
 		return item.value();
 	}
@@ -430,7 +430,7 @@ void RtmpImportChunk::SetStreamName(const ov::String &stream_name)
 void RtmpImportChunk::Destroy()
 {
 	_chunk_map.clear();
-	
+
 	_message_queue.Stop();
 	_message_queue.Clear();
 

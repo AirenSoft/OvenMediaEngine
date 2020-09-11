@@ -8,21 +8,6 @@
 #include "rtp_rtcp_interface.h"
 #include "base/common_types.h"
 
-enum class RtpVideoCodecType
-{
-	None,
-	Vp8,
-	H264
-	// In the future
-	// kRtpVideoVp9
-};
-
-enum class RtpAudioCodecType
-{
-	None,
-	Opus
-};
-
 const int16_t kNoPictureId = -1;
 const int16_t kNoTl0PicIdx = -1;
 const uint8_t kNoTemporalIdx = 0xFF;
@@ -50,18 +35,18 @@ enum NaluType : uint8_t {
 	kFuA = 28
 };
 
-enum H264PacketizationTypes {
+enum H26XPacketizationTypes {
 	kH264SingleNalu,
 	kH264StapA,
 	kH264FuA,
 };
 
-struct RTPVideoHeaderH264 {
+struct RTPVideoHeaderH26X {
 	uint8_t nalu_type;
-	H264PacketizationTypes packetization_type;
+	H26XPacketizationTypes packetization_type;
 	NaluInfo nalus[kMaxNalusPerPacket];
 	size_t nalus_length;
-	H264PacketizationMode packetization_mode;
+	H26XPacketizationMode packetization_mode;
 };
 
 struct RTPVideoHeaderVP8
@@ -95,7 +80,7 @@ struct RTPVideoHeaderVP8
 union RTPVideoTypeHeader
 {
 	RTPVideoHeaderVP8 vp8;
-	RTPVideoHeaderH264 h264;
+	RTPVideoHeaderH26X h26X;
 	// In the future
 	// RTPVideoHeaderVP9 VP9;
 };
@@ -108,6 +93,6 @@ struct RTPVideoHeader
 	uint8_t simulcast_idx; // Extension, 0이면 사용하지 않음
 	bool is_first_packet_in_frame;
 
-	RtpVideoCodecType codec;
+	common::MediaCodecId codec;
 	RTPVideoTypeHeader codec_header;
 };

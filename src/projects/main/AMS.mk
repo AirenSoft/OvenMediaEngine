@@ -5,6 +5,7 @@ LOCAL_STATIC_LIBRARIES := \
 	webrtc_publisher \
 	segment_publishers \
 	ovt_publisher \
+	file_publisher \
 	ovt_provider \
 	rtmp_provider \
 	mpegts_provider \
@@ -12,13 +13,13 @@ LOCAL_STATIC_LIBRARIES := \
 	transcoder \
 	rtc_signalling \
 	ice \
-	jsoncpp \
+	bitstream \
+	containers \
 	http_server \
 	signed_url \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \
-	h264 \
 	web_console \
 	mediarouter \
 	ovt_packetizer \
@@ -33,7 +34,6 @@ LOCAL_STATIC_LIBRARIES := \
 	monitoring \
 	jsoncpp \
 	sqlite \
-	aac
 
 # rtsp_provider 
 

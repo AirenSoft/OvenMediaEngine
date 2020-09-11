@@ -9,7 +9,7 @@
 #pragma once
 
 #include <base/common_types.h>
-#include <base/media_route/media_route_interface.h>
+#include <base/mediarouter/media_route_interface.h>
 #include <orchestrator/data_structure.h>
 
 #include <shared_mutex>
