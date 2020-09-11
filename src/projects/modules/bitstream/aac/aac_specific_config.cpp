@@ -31,8 +31,6 @@ std::vector<uint8_t> AACSpecificConfig::Serialize() const
 	bits.Write(4, _sampling_frequency_index);
 	bits.Write(4, _channel);
 
-	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
-
 	std::vector<uint8_t> dest(bits.GetDataSize());
 	std::copy(bits.GetData(), bits.GetData()+bits.GetDataSize(), dest.begin());
 
@@ -104,5 +102,3 @@ ov::String AACSpecificConfig::GetInfoString()
 
 	return out_str;
 }
-
-
