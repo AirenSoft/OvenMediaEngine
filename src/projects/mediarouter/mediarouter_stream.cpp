@@ -688,7 +688,9 @@ void MediaRouteStream::DropNonDecodingPackets()
 		_packets_queue.Enqueue(std::move(media_packet));
 	}
 	tmp_packets_queue.clear();
-	logtw("Number of dropped packets : %d", dropeed_packets);
+	
+	if(dropeed_packets > 0)
+		logtw("Number of dropped packets : %d", dropeed_packets);
 }
 
 

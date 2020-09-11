@@ -18,13 +18,12 @@ bool AACLatmToAdts::GetExtradata(const common::PacketType type, const std::share
 		
 		extradata = config.Serialize();
 
-//		logtd("%s\r\n%d", config.GetInfoString().CStr(), extradata.size());;
-
 		return true;   
 	}
 
 	return false;
 }
+
 
 /*
 	ADTS
@@ -77,33 +76,16 @@ bool AACLatmToAdts::Convert(const common::PacketType type, const std::shared_ptr
 
 		//Get the AACSecificConfig value from extradata;
 		AACSpecificConfig aac_specific_config;
-		aac_specific_config.Deserialize(extradata);
+		AACSpecificConfig::Parse(&extradata.front(), extradata.size(), aac_specific_config);
 
-		uint8_t ADTS_HEADER_LENGTH = 7;
 		uint8_t aac_profile = (uint8_t)aac_specific_config.GetAacProfile();
 		uint8_t aac_sample_rate = (uint8_t)aac_specific_config.SamplingFrequency();
 		uint8_t aac_channels = (uint8_t)aac_specific_config.Channel();
-		int16_t aac_frame_length = aac_raw_length + ADTS_HEADER_LENGTH;
 
-		ov::BitWriter adts_bit(ADTS_HEADER_LENGTH);
-		adts_bit.Write(12, 0x0FFF);		 		// syncword [12b]
-		adts_bit.Write(1, 0);		 			// ID - 0=MPEG-4, 1=MPEG-2 [1b]
-		adts_bit.Write(2, 0);		 			// layer - Always 0 [2b]
-		adts_bit.Write(1, 1);		 			// protection_absent  [1b]
-		adts_bit.Write(2, aac_profile);  		// profile [2b]
-		adts_bit.Write(4, aac_sample_rate);		// sampling_frequency_index[[4b]
-		adts_bit.Write(1, 0);					// private_bit[1b]
-		adts_bit.Write(3, aac_channels);		// channel_configuration[3b]
-		adts_bit.Write(1, 0);					// Original/copy[1b]
-		adts_bit.Write(1, 0);					// Home[1b]
-		adts_bit.Write(1, 0);					// copyright_identification_bit[1b]
-		adts_bit.Write(1, 0);					// copyright_identification_start[1b]
-		adts_bit.Write(13, aac_frame_length);	// aac_frame_length[13b]
-		adts_bit.Write(11, 0x3F);				// adts_buffer_fullness[11b]
-		adts_bit.Write(2, 0);					// no_raw_data_blocks_inframe[2b]
+		auto adts_header = MakeHeader(aac_profile, aac_sample_rate, aac_channels, aac_raw_length);
 
-		annexb_data->Append(adts_bit.GetData(), adts_bit.GetDataSize());
-		annexb_data->Append(data->Subdata(0, aac_raw_length));
+		annexb_data->Append(adts_header);
+		annexb_data->Append(data);
 	}
 
 	data->Clear();
@@ -114,4 +96,32 @@ bool AACLatmToAdts::Convert(const common::PacketType type, const std::shared_ptr
 	}
 
 	return true;
+}
+
+std::shared_ptr<ov::Data> AACLatmToAdts::MakeHeader(uint8_t aac_profile, uint8_t aac_sample_rate, uint8_t aac_channels, int16_t data_length)
+{
+	uint8_t ADTS_HEADER_LENGTH = 7;
+	int16_t aac_frame_length = data_length + 7;
+
+	ov::BitWriter bits(ADTS_HEADER_LENGTH);
+
+	bits.Write(12, 0x0FFF);				// syncword [12b]
+	bits.Write(1, 0);					// ID - 0=MPEG-4, 1=MPEG-2 [1b]
+	bits.Write(2, 0);					// layer - Always 0 [2b]
+	bits.Write(1, 1);					// protection_absent  [1b]
+	bits.Write(2, aac_profile);			// profile [2b]
+	bits.Write(4, aac_sample_rate);		// sampling_frequency_index[[4b]
+	bits.Write(1, 0);					// private_bit[1b]
+	bits.Write(3, aac_channels);		// channel_configuration[3b]
+	bits.Write(1, 0);					// Original/copy[1b]
+	bits.Write(1, 0);					// Home[1b]
+	bits.Write(1, 0);					// copyright_identification_bit[1b]
+	bits.Write(1, 0);					// copyright_identification_start[1b]
+	bits.Write(13, aac_frame_length);	// aac_frame_length[13b]
+	bits.Write(11, 0x3F);				// adts_buffer_fullness[11b]
+	bits.Write(2, 0);					// no_raw_data_blocks_inframe[2b]
+
+	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
+
+	return data;
 }

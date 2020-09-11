@@ -290,10 +290,10 @@ namespace pvd
 		_cumulative_pts = new int64_t[_format_context->nb_streams];
 		_cumulative_dts = new int64_t[_format_context->nb_streams];
 
-		for(uint32_t i=0 ; i<_format_context->nb_streams ; ++i)
+		for(uint32_t track_id=0 ; track_id<_format_context->nb_streams ; ++track_id)
 		{
-			_cumulative_pts[i] = 0;
-			_cumulative_dts[i] = 0;
+			_cumulative_pts[track_id] = 0;
+			_cumulative_dts[track_id] = 0;
 		}
 
 		_state = State::DESCRIBED;
@@ -307,6 +307,8 @@ namespace pvd
 		{
 			return false;
 		}
+
+		SendSequenceHeader();
 
 		_state = State::PLAYING;
 
@@ -437,7 +439,7 @@ namespace pvd
 		}
 		else if(codec_id == common::MediaCodecId::Aac)
 		{
-			bitstream_format = common::BitstreamFormat::AAC_ADTS;
+			bitstream_format = common::BitstreamFormat::AAC_LATM;
 			packet_type = common::PacketType::RAW;
 		}
 
@@ -456,6 +458,51 @@ namespace pvd
 		::av_packet_unref(&packet);
 
 		return ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
+	}
+
+
+	void RtspcStream::SendSequenceHeader()
+	{
+		for(uint32_t track_id=0 ; track_id<_format_context->nb_streams ; ++track_id)
+		{
+			AVStream *stream = _format_context->streams[track_id];
+
+			auto track = GetTrack(stream->index);
+			if(track == nullptr)
+			{
+				continue;
+			}
+
+			auto media_type = track->GetMediaType();
+			auto codec_id = track->GetCodecId();
+
+			if(codec_id == common::MediaCodecId::H264)
+			{
+				// Nothing to do here
+			}
+			else if(codec_id == common::MediaCodecId::H265)
+			{
+				// Nothing to do here
+			}			
+			else if(codec_id == common::MediaCodecId::Aac)
+			{
+				AACSpecificConfig aac_config;
+				aac_config.SetOjbectType(GetAacObjectType(stream->codecpar->profile));
+				aac_config.SetSamplingFrequency(GetSamplingFrequency(stream->codecpar->sample_rate));
+				aac_config.SetChannel(stream->codecpar->channels);
+
+				auto sequence_header = aac_config.Serialize();
+				auto media_packet = std::make_shared<MediaPacket>(media_type, 
+					track->GetId(), 
+					std::make_shared<ov::Data>(&sequence_header[0], sequence_header.size()),
+					0, 
+					0, 
+					common::BitstreamFormat::AAC_LATM, 
+					common::PacketType::SEQUENCE_HEADER);
+
+				SendFrame(media_packet);
+			}
+		}
 	}
 
 	AacObjectType RtspcStream::GetAacObjectType(int32_t ff_profile)
@@ -482,7 +529,7 @@ namespace pvd
 		return aac_profile;
 	}
 
-	AacSamplingFrequencies RtspcStream::GetAacSamplingFrequencies(int32_t ff_samplerate)
+	AacSamplingFrequencies RtspcStream::GetSamplingFrequency(int32_t ff_samplerate)
 	{
 		AacSamplingFrequencies aac_sample_rate = 
 			(ff_samplerate == 96000)?RATES_96000HZ:

@@ -1,86 +1,87 @@
 #pragma once
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Psuedo Code
+//////////////////////////////////////////////////////////////////////////////////////////
 // AudioSpecificConfig ()
 // {
-// audioObjectType; 5 bslbf
-// samplingFrequencyIndex; 4 bslbf
-// if ( samplingFrequencyIndex==0xf )
-// samplingFrequency; 24 uimsbf
-// channelConfiguration; 4 bslbf
-// if ( audioObjectType == 1 || audioObjectType == 2 ||
-// audioObjectType == 3 || audioObjectType == 4 ||
-// audioObjectType == 6 || audioObjectType == 7 )
-// GASpecificConfig();
-// if ( audioObjectType == 8 )
-// CelpSpecificConfig();
-// if ( audioObjectType == 9 )
-// HvxcSpecificConfig();
-// if ( audioObjectType == 12 )
-// TTSSpecificConfig();
-// if ( audioObjectType == 13 || audioObjectType == 14 ||
-// audioObjectType == 15 || audioObjectType==16)
-// StructuredAudioSpecificConfig();
-// if ( audioObjectType == 17 || audioObjectType == 19 ||
-// audioObjectType == 20 || audioObjectType == 21 ||
-// audioObjectType == 22 || audioObjectType == 23 )
-// GASpecificConfig();
-// if ( audioObjectType == 24)
-// ErrorResilientCelpSpecificConfig();
-// if ( audioObjectType == 25)
-// ErrorResilientHvxcSpecificConfig();
-// if ( audioObjectType == 26 || audioObjectType == 27)
-// ParametricSpecificConfig();
-// if ( audioObjectType == 17 || audioObjectType == 19 ||
-// audioObjectType == 20 || audioObjectType == 21 ||
-// audioObjectType == 22 || audioObjectType == 23 ||
-// audioObjectType == 24 || audioObjectType == 25 ||
-// audioObjectType == 26 || audioObjectType == 27 ) {
-// epConfig; 2 bslbf
-// if ( epConfig == 2 || epConfig == 3 ) {
-// ErrorProtectionSpecificConfig();
+// 	audioObjectType; 5 bslbf
+// 	samplingFrequencyIndex; 4 bslbf
+// 	if ( samplingFrequencyIndex==0xf )
+// 	samplingFrequency; 24 uimsbf
+// 	channelConfiguration; 4 bslbf
+// 	if ( audioObjectType == 1 || audioObjectType == 2 || audioObjectType == 3 || audioObjectType == 4 || audioObjectType == 6 || audioObjectType == 7 )
+// 		GASpecificConfig();
+// 	if ( audioObjectType == 8 )
+// 		CelpSpecificConfig();
+// 	if ( audioObjectType == 9 )
+// 		HvxcSpecificConfig();
+// 	if ( audioObjectType == 12 )
+// 		TTSSpecificConfig();
+// 	if ( audioObjectType == 13 || audioObjectType == 14 || audioObjectType == 15 || audioObjectType==16)
+// 		StructuredAudioSpecificConfig();
+// 	if ( audioObjectType == 17 || audioObjectType == 19 || audioObjectType == 20 || audioObjectType == 21 || audioObjectType == 22 || 
+// 		 audioObjectType == 23 )
+// 		GASpecificConfig();
+// 	if ( audioObjectType == 24)
+// 		ErrorResilientCelpSpecificConfig();
+// 	if ( audioObjectType == 25)
+// 		ErrorResilientHvxcSpecificConfig();
+// 	if ( audioObjectType == 26 || audioObjectType == 27)
+// 		ParametricSpecificConfig();
+// 	if ( audioObjectType == 17 || audioObjectType == 19 || audioObjectType == 20 || audioObjectType == 21 || audioObjectType == 22 || 
+// 		 audioObjectType == 23 || audioObjectType == 24 || audioObjectType == 25 ||	audioObjectType == 26 || audioObjectType == 27 ) 
+// 	{
+// 		epConfig; 2 bslbf
+// 		if ( epConfig == 2 || epConfig == 3 ) 
+// 		{
+// 			ErrorProtectionSpecificConfig();
+// 		}
+		
+// 		//ISO/IEC 14496-3:2001(E)	22 © ISO/IEC 2001— All rights reserved
+// 		if ( epConfig == 3 ) {
+// 			directMapping; 1 bslbf
+// 			if ( ! directMapping ) {
+// 				/* tbd */
+// 			}
+// 		}
+// 	}
 // }
-// ISO/IEC 14496-3:2001(E)
-// 22 © ISO/IEC 2001— All rights reserved
-// if ( epConfig == 3 ) {
-// directMapping; 1 bslbf
-// if ( ! directMapping ) {
-// /* tbd */
-// }
-// }
-// }
-// }
-
-// GASpecificConfig ( samplingFrequencyIndex,
-// channelConfiguration,
-// audioObjectType )
+// GASpecificConfig ( samplingFrequencyIndex, channelConfiguration, audioObjectType )
 // {
-// FrameLength; 1 bslbf
-// DependsOnCoreCoder; 1 bslbf
-// if ( dependsOnCoreCoder ) {
-// coreCoderDelay; 14 uimsbf
+// 	FrameLength; 1 bslbf
+// 	DependsOnCoreCoder; 1 bslbf
+// 	if ( dependsOnCoreCoder ) 
+//	{
+// 		coreCoderDelay; 14 uimsbf
+// 	}
+// 	ExtensionFlag 1 bslbf
+// 	if ( ! ChannelConfiguration ) 
+//	{
+// 		program_config_element ();
+// 	}
+// 	if ( extensionFlag ) 
+//	{
+// 		if ( AudioObjectType==22 ) 
+//		{
+// 			numOfSubFrame 5 bslbf
+// 			layer_length 11 bslbf
+// 		}
+// 		If(AudioObjectType==17 || AudioObjectType == 18 || AudioObjectType == 19 || AudioObjectType == 20 || AudioObjectType == 21 || 
+// 		   AudioObjectType == 23)
+//		{
+// 			AacSectionDataResilienceFlag; 1 bslbf
+// 			AacScalefactorDataResilienceFlag; 1 bslbf
+// 			AacSpectralDataResilienceFlag; 1 bslbf
+// 		}
+// 		extensionFlag3; 1 bslbf
+// 		if ( extensionFlag3 ) {
+// 			/* tbd in version 3 */
+// 		}
+// 	}
 // }
-// ExtensionFlag 1 bslbf
-// if ( ! ChannelConfiguration ) {
-// program_config_element ();
-// }
-// if ( extensionFlag ) {
-// if ( AudioObjectType==22 ) {
-// numOfSubFrame 5 bslbf
-// layer_length 11 bslbf
-// }
-// If(AudioObjectType==17 || AudioObjectType == 18 ||
-// AudioObjectType == 19 || AudioObjectType == 20 ||
-// AudioObjectType == 21 || AudioObjectType == 23){
-// AacSectionDataResilienceFlag; 1 bslbf
-// AacScalefactorDataResilienceFlag; 1 bslbf
-// AacSpectralDataResilienceFlag; 1 bslbf
-// }
-// extensionFlag3; 1 bslbf
-// if ( extensionFlag3 ) {
-// /* tbd in version 3 */
-// }
-// }
-// }
+//
+//////////////////////////////////////////////////////////////////////////////////////////
 
 #include <base/ovlibrary/ovlibrary.h>
 
@@ -134,20 +135,21 @@ public:
 	static bool Parse(const uint8_t *data, size_t data_length, AACSpecificConfig &config);
 
 	AacObjectType				ObjectType();
-	AacProfile 					GetAacProfile();
 	AacSamplingFrequencies		SamplingFrequency();
 	uint8_t						Channel();
+
+	void 						SetOjbectType(AacObjectType object_type);
+	void 						SetSamplingFrequency(AacSamplingFrequencies sampling_frequency_index);
+	void 						SetChannel(uint8_t channel);
+
+	AacProfile 					GetAacProfile();
+
 	ov::String 					GetInfoString();
 
-	std::vector<uint8_t> Serialize() const;
-	bool Deserialize(const std::vector<uint8_t> &stream);
-
+	std::vector<uint8_t> 		Serialize() const;
 
 private:
-	AacObjectType				 _object_type;					// 5 bits
+	AacObjectType				_object_type;					// 5 bits
 	AacSamplingFrequencies		_sampling_frequency_index;		// 4 bits
 	uint8_t						_channel;						// 4 bits
-
-	// GASpecificConfig (General Audio Coding, if object_type == AAC | tWINvq | BSAC)
-	// we don't need this information
 };

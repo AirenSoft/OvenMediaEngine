@@ -22,20 +22,59 @@ bool AACSpecificConfig::Parse(const uint8_t *data, size_t data_length, AACSpecif
 	return true;
 }
 
+
+std::vector<uint8_t> AACSpecificConfig::Serialize() const
+{
+	ov::BitWriter bits(2);
+
+	bits.Write(5, _object_type);
+	bits.Write(4, _sampling_frequency_index);
+	bits.Write(4, _channel);
+
+	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>(bits.GetData(), bits.GetDataSize());
+
+	std::vector<uint8_t> dest(bits.GetDataSize());
+	std::copy(bits.GetData(), bits.GetData()+bits.GetDataSize(), dest.begin());
+
+	return dest;
+}
+
+
 AacObjectType AACSpecificConfig::ObjectType()
 {
 	return _object_type;
 }
+
+
+void AACSpecificConfig::SetOjbectType(AacObjectType object_type)
+{
+	_object_type = object_type;
+}
+
 
 AacSamplingFrequencies AACSpecificConfig::SamplingFrequency()
 {
 	return _sampling_frequency_index;
 }
 
+
+void AACSpecificConfig::SetSamplingFrequency(AacSamplingFrequencies sampling_frequency_index)
+{
+	_sampling_frequency_index= sampling_frequency_index;
+}
+
+
 uint8_t	AACSpecificConfig::Channel()
 {
 	return _channel;
 }
+
+
+void AACSpecificConfig::SetChannel(uint8_t channel)
+{
+	_channel = channel;
+}
+
 
 AacProfile AACSpecificConfig::GetAacProfile()
 {
@@ -52,28 +91,6 @@ AacProfile AACSpecificConfig::GetAacProfile()
 		default:
 			return AacProfileReserved;
 	}	
-}
-
-std::vector<uint8_t> AACSpecificConfig::Serialize() const
-{
-	size_t size = 3;
-	std::vector<uint8_t> stream(size);
-	MemoryView memory_view(stream.data(), size);
-
-	memory_view << (uint8_t)_object_type << (uint8_t)_sampling_frequency_index << (uint8_t)_channel;
-
-	OV_ASSERT2(memory_view.good());
-
-	return stream;
-}
-
-bool AACSpecificConfig::Deserialize(const std::vector<uint8_t> &stream)
-{
-	MemoryView memory_view(const_cast<uint8_t*>(stream.data()), stream.size(), stream.size());
-	memory_view >> _object_type >> _sampling_frequency_index >> _channel;
-	const bool result = memory_view.good() && memory_view.eof();
-	OV_ASSERT2(result);
-	return result;	
 }
 
 
