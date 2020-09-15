@@ -99,9 +99,13 @@ bool H264Parser::ParseSPS(const uint8_t *nalu, size_t length, H264SPS &sps)
 		return false;
 	}
 
-    // Skip constraint set (5 bits) and 3 reserved zero bits
-	uint8_t dummy; 
-	if(!parser.ReadU8(dummy))
+	if(!parser.ReadU8(sps._profile))
+	{
+		return false;
+	}
+
+	// Contraint set (5bits) and 3 reserved zero bits
+	if(parser.SkipBytes(1) == false)
 	{
 		return false;
 	}
