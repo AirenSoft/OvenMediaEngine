@@ -4,5 +4,6 @@ include $(DEFAULT_VARIABLES)
 LOCAL_TARGET := dtls_srtp
 
 $(call add_pkg_config,openssl)
+$(call add_pkg_config,srt)
 
 include $(BUILD_STATIC_LIBRARY)
