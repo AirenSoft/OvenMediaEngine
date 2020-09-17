@@ -189,7 +189,6 @@ void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_
 								const std::shared_ptr<const ov::Data> &data)
 {
 	_received_bytes += data->GetLength();
-	// NETWORK에서 받은 Packet은 DTLS로 넘긴다.
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
 	_dtls_ice_transport->OnDataReceived(pub::SessionNodeType::None, data);
 }

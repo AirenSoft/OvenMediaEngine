@@ -26,11 +26,6 @@ public:
 
 	std::shared_ptr<Certificate> GetCertificate();
 
-    void OnReceiverReport(uint32_t stream_id,
-                        uint32_t session_id,
-                        time_t first_receiver_report_time,
-                        const std::shared_ptr<RtcpReceiverReport> &receiver_report);
-
 private:
 	bool Start() override;
 	bool Stop() override;

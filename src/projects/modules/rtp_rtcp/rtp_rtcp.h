@@ -3,7 +3,7 @@
 #include "rtp_rtcp_defines.h"
 #include "rtp_packetizer.h"
 #include "base/publisher/session_node.h"
-#include "modules/rtp_rtcp/rtcp_sr_generator.h"
+#include "rtcp_info/rtcp_sr_generator.h"
 
 class RtpRtcp : public pub::SessionNode
 {
@@ -19,11 +19,7 @@ public:
 	bool SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data) override;
 	// Lower Node(SRTP)로부터 데이터를 받는다.
 	bool OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
-
-	bool RtcpPacketProcess(RtcpPacketType packet_type,
-                            uint32_t payload_size,
-                            int report_count,
-                            const std::shared_ptr<const ov::Data> &data);
+	
 private:
     time_t _first_receiver_report_time = 0; // 0 - not received RR packet
     time_t _last_sender_report_time = 0;

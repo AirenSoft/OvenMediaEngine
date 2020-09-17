@@ -1,8 +1,8 @@
 #pragma once
 
 #include "base/common_types.h"
-#include "rtp_packet.h"
-#include "rtcp_packet.h"
+#include "../rtp_packet.h"
+#include "../rtcp_packet.h"
 
 class RtcpSRGenerator
 {

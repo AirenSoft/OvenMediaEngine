@@ -99,22 +99,3 @@ bool RtcApplication::Stop()
 {
 	return Application::Stop();
 }
-
-// RTCP RR packet info
-// call from stream -> session -> RtpRtcp
-// packetizer checkr check ssrc_1(video/audio)
-void RtcApplication::OnReceiverReport(uint32_t stream_id,
-                                      uint32_t session_id,
-                                      time_t first_receiver_report_time,
-                                      const std::shared_ptr<RtcpReceiverReport> &receiver_report)
-{
-    logtd("Rtcp Report: app(%u) stream(%u) session(%u) ssrc(%u) fraction(%u/256) packet_lost(%d) jitter(%u) delay(%.6f)",
-          GetId(),
-          stream_id,
-          session_id,
-          receiver_report->ssrc_1,
-          receiver_report->fraction_lost,
-          receiver_report->packet_lost,
-          receiver_report->jitter,
-          receiver_report->rtt);
-}

@@ -1,28 +1,9 @@
-//==============================================================================
-//
-//  OvenMediaEngine
-//
-//  Created by Jaejong Bong
-//  Copyright (c) 2019 AirenSoft. All rights reserved.
-//
-//==============================================================================
 #pragma once
 #include "base/ovlibrary/ovlibrary.h"
-
-#define RTCP_HEADER_VERSION         (2)
-#define RTCP_HEADER_SIZE            (4)
-#define RTCP_REPORT_BLOCK_LENGTH    (24)
-#define RTCP_MAX_BLOCK_COUNT        (0x1F)
-
-// packet type
-enum class RtcpPacketType
-{
-    SR = 200,   // Sender Report
-    RR = 201,   // Receiver Report
-    SDES = 202, // Source Description message
-    BYE = 203,  // Bye message
-    APP = 204,  // Application specfic RTCP
-};
+#include "rtcp_info/rtcp_info.h"
+#include "rtcp_info/receiver_report.h"
+#include "rtcp_info/sender_report.h"
+#include "rtcp_info/nack.h"
 
 struct RtcpReceiverReport
 {
@@ -42,31 +23,21 @@ struct RtcpReceiverReport
     double rtt = 0; // (Round Trip Time) calculation form rr packet
 };
 
-//====================================================================================================
-// RtcpPacket
-//====================================================================================================
 class RtcpPacket
 {
 public:
-    RtcpPacket();
-    virtual ~RtcpPacket();
+	RtcpPacket(const std::shared_ptr<RtcpInfo> &info);
 
-public :
-    std::shared_ptr<ov::Data> GetData(){ return nullptr; }
+	std::shared_ptr<RtcpInfo> GetInfo();
 
-    static ov::String GetPacketTypeString(RtcpPacketType type);
+	// Return raw data
+	std::shared_ptr<ov::Data> GetData(){return nullptr;}
 
-    static bool IsRtcpPacket(const std::shared_ptr<const ov::Data> &data,
-                             RtcpPacketType &packet_type,
-                             uint32_t &payload_size,
-                             int &report_count);
-
-    static bool RrParseing(int report_count,
-                            const std::shared_ptr<const ov::Data> &data,
-                            std::vector<std::shared_ptr<RtcpReceiverReport>> &receiver_reports);
-
+	// Old school
     static std::shared_ptr<ov::Data> MakeSrPacket(uint32_t ssrc, uint32_t rtp_timestamp, uint32_t packet_count, uint32_t octet_count);
     static std::shared_ptr<ov::Data> MakeSrPacket(uint32_t lsr, uint32_t dlsr, uint32_t ssrc, uint32_t rtp_timestamp, uint32_t packet_count, uint32_t octet_count);
 
-    static double   DelayCalculation(uint32_t lsr, uint32_t dlsr);
+private:
+	RtcpHeader _header;
+	std::shared_ptr<RtcpInfo> _info = nullptr;
 };

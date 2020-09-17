@@ -142,6 +142,7 @@ bool RtcStream::Start(uint32_t worker_count)
 				}
 
 				payload->SetRtpmap(payload_type_num++, codec, 90000);
+				payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
 
 				video_media_desc->AddPayload(payload);
 				video_media_desc->Update();
