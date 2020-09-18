@@ -103,7 +103,7 @@ bool RtpPacketizer::PacketizeVideo(common::MediaCodecId video_type,
 	// - Video Timing Extension
 
 	// -20 is for FEC
-	size_t max_data_payload_length = DEFAULT_MAX_PACKET_SIZE - rtp_header_template->HeadersSize() - 100;
+	size_t max_data_payload_length = RTP_DEFAULT_MAX_PACKET_SIZE - rtp_header_template->HeadersSize() - 100;
 	size_t last_packet_reduction_len = last_rtp_header->HeadersSize() - rtp_header_template->HeadersSize();
 														
 	if(_packetizer == nullptr)

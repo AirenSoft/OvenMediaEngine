@@ -1,43 +1,76 @@
 #pragma once
 #include "base/ovlibrary/ovlibrary.h"
 #include "rtcp_info/rtcp_info.h"
-#include "rtcp_info/receiver_report.h"
-#include "rtcp_info/sender_report.h"
-#include "rtcp_info/nack.h"
 
-struct RtcpReceiverReport
+class RtcpPacket;
+
+// RtcpInfo base class
+class RtcpInfo
 {
-    time_t create_time = time(nullptr);
+public:
+	virtual bool Parse(const RtcpPacket &packet) = 0;
 
-    uint32_t ssrc = 0;                      // Synchronization source
-    uint32_t ssrc_1 = 0;                    //
-    uint8_t fraction_lost = 0;              // 1/256
-    int32_t packet_lost = 0;                // strema start~current total
-    uint16_t sequence_number_cycle = 0;     // sequence number loop cycle count(increase per 65536)
-    uint16_t highest_sequence_number = 0;   // the highest sequest number
-    uint32_t jitter = 0;                    // jitter
-    uint32_t lsr = 0;                       // last SR(NTP timestamp)
-    uint32_t dlsr = 0;                      // delay since last SR(1/65536 second)
+	// RtcpInfo must provide packet type
+	virtual RtcpPacketType GetPacketType() const = 0;
 
+	virtual uint8_t GetCount() const
+	{
+		return _count_or_fmt;
+	}
+	// If the packet type is one of the feedback messages (205, 206) child must override this function
+	virtual uint8_t GetFmt() const 
+	{
+		return _count_or_fmt;
+	}
+	
+	// RtcpInfo must provide raw data
+	virtual std::shared_ptr<ov::Data> GetData() const = 0;
 
-    double rtt = 0; // (Round Trip Time) calculation form rr packet
+	virtual void DebugPrint() = 0;
+
+protected:
+	void SetCount(uint8_t count) {_count_or_fmt = count;}
+	void SetFmt(uint8_t fmt) {_count_or_fmt = fmt;}
+
+private:
+	uint8_t		_count_or_fmt = 0;
 };
+
+#define RTCP_DEFAULT_MAX_PACKET_SIZE	1472
 
 class RtcpPacket
 {
 public:
-	RtcpPacket(const std::shared_ptr<RtcpInfo> &info);
-
-	std::shared_ptr<RtcpInfo> GetInfo();
+	// Build RTCP Packet
+	bool Build(const std::shared_ptr<RtcpInfo> &info);
+	bool Build(const RtcpInfo &info);
+	// block_size : returns used bytes
+	bool Parse(const uint8_t* buffer, const size_t buffer_size, size_t &block_size);
+	
+	RtcpPacketType GetType() const {return _type;}
+	uint8_t GetReportCount() const {return _count_or_format;}
+	uint8_t GetFMT() const {return _count_or_format;}
+	// From Header
+	uint16_t GetLengthField() const {return _length;}
+	const uint8_t* GetPayload() const {return _payload;}
+	size_t GetPayloadSize() const {return _payload_size;}
 
 	// Return raw data
-	std::shared_ptr<ov::Data> GetData(){return nullptr;}
-
-	// Old school
-    static std::shared_ptr<ov::Data> MakeSrPacket(uint32_t ssrc, uint32_t rtp_timestamp, uint32_t packet_count, uint32_t octet_count);
-    static std::shared_ptr<ov::Data> MakeSrPacket(uint32_t lsr, uint32_t dlsr, uint32_t ssrc, uint32_t rtp_timestamp, uint32_t packet_count, uint32_t octet_count);
-
+	const std::shared_ptr<ov::Data> GetData() const {return _data;}
+	
 private:
-	RtcpHeader _header;
-	std::shared_ptr<RtcpInfo> _info = nullptr;
+	void SetType(RtcpPacketType type) {_type = type;}
+	void SetReportCount(uint8_t count) {_count_or_format = count;}
+	void SetFMT(uint8_t fmt) {_count_or_format = fmt;}
+
+	uint8_t				_version = 2; // always 2
+	bool				_has_padding = false;
+	size_t				_padding_size = 0;
+	uint8_t				_count_or_format = 0; // depends on packet type (if the packet type is fb then this valuable will be used as format)
+	RtcpPacketType		_type;
+	uint16_t			_length = 0;
+	uint8_t*			_payload = nullptr;
+	size_t				_payload_size = 0;
+
+	std::shared_ptr<ov::Data> _data = nullptr;
 };

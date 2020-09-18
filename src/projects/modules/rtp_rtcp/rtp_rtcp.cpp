@@ -5,7 +5,6 @@
 #include <base/ovlibrary/byte_io.h>
 
 #define OV_LOG_TAG "RtpRtcp"
-#define RTCP_AA_SEND_SEQUENCE (30)
 
 RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<pub::Session> session, const std::vector<uint32_t> &ssrc_list)
 	        : SessionNode(id, pub::SessionNodeType::Rtp, session)
@@ -50,13 +49,13 @@ bool RtpRtcp::SendOutgoingData(const std::shared_ptr<ov::Data> &packet)
     if(rtcp_sr_generator->IsAvailableRtcpSRPacket())
     {
         auto rtcp_sr_packet = rtcp_sr_generator->PopRtcpSRPacket();
-        if(!node->SendData(pub::SessionNodeType::Rtcp, rtcp_sr_packet))
+        if(!node->SendData(pub::SessionNodeType::Rtcp, rtcp_sr_packet->GetData()))
         {
-            logtd("Send RTCP failed : ssrc(%u)", rtp_packet.Ssrc());
+            logd("RTCP","Send RTCP failed : ssrc(%u)", rtp_packet.Ssrc());
         }
 		else
 		{
-			logtd("Send RTCP succeed : ssrc(%u) length(%d)", rtp_packet.Ssrc(), rtcp_sr_packet->GetLength());
+			logd("RTCP", "Send RTCP succeed : ssrc(%u) length(%d)", rtp_packet.Ssrc(), rtcp_sr_packet->GetData()->GetLength());
 		}
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "base/ovlibrary/ovlibrary.h"
 #include "rtcp_info.h"
+#include "../rtcp_packet.h"
 
 class NACK : public RtcpInfo
 {
@@ -8,19 +9,19 @@ public:
 	///////////////////////////////////////////
 	// Implement RtcpInfo virtual functions
 	///////////////////////////////////////////
-	bool Parse(const RtcpHeader &header) override;
+	bool Parse(const RtcpPacket &header) override;
 	// RtcpInfo must provide raw data
-	std::shared_ptr<ov::Data> GetData();
+	std::shared_ptr<ov::Data> GetData() const override;
 	void DebugPrint() override;
 
 	// RtcpInfo must provide packet type
-	RtcpPacketType GetPacketType() override
+	RtcpPacketType GetPacketType() const override
 	{
 		return RtcpPacketType::RTPFB;
 	}
 
 	// If the packet type is one of the feedback messages (205, 206) child must provide fmt(format)
-	uint8_t GetFmt() override
+	uint8_t GetFmt() const override
 	{
 		return static_cast<uint8_t>(RTPFBFMT::NACK);
 	}

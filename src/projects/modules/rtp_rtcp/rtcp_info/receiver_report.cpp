@@ -1,6 +1,5 @@
 #include "receiver_report.h"
 #include "rtcp_private.h"
-
 #include <base/ovlibrary/byte_io.h>
 
 // RTCP receiver report (RFC 3550).
@@ -15,23 +14,22 @@
 //  |                         report block(s)                       |
 //  |                            ....                               |
 
-bool ReceiverReport::Parse(const RtcpHeader &packet)
+bool ReceiverReport::Parse(const RtcpPacket &packet)
 {
-	SetCount(packet.GetReportCount());
 	const uint8_t *payload = packet.GetPayload();
 	size_t payload_size = packet.GetPayloadSize();
 
-	if(payload_size < static_cast<size_t>(4 /*sender ssrc size*/ + (GetCount() * RTCP_REPORT_BLOCK_SIZE)))
+	if(payload_size < static_cast<size_t>(4 /*sender ssrc size*/ + (packet.GetReportCount() * RTCP_REPORT_BLOCK_SIZE)))
 	{
 		logtd("Payload is too small to parse receiver report");
 		return false;
 	}
 
-	SetSenderSsrc(ByteReader<uint32_t>::ReadBigEndian(packet.GetPayload()));
+	SetSenderSsrc(ByteReader<uint32_t>::ReadBigEndian(&payload[0]));
 
 	// Report blocks
 	size_t offset = 4; // sender ssrc size
-	for(int i=0; i<GetCount(); i++)
+	for(int i=0; i<packet.GetReportCount(); i++)
 	{
 		auto report_block = std::make_shared<ReportBlock>();
 		if(report_block->Parse(payload + offset, RTCP_REPORT_BLOCK_SIZE) == false)
@@ -48,7 +46,7 @@ bool ReceiverReport::Parse(const RtcpHeader &packet)
 }
 
 // RtcpInfo must provide raw data
-std::shared_ptr<ov::Data> ReceiverReport::GetData()
+std::shared_ptr<ov::Data> ReceiverReport::GetData() const
 {
 	return nullptr;
 }

@@ -1,4 +1,8 @@
 #include "rtcp_receiver.h"
+#include "rtcp_info/sender_report.h"
+#include "rtcp_info/receiver_report.h"
+#include "rtcp_info/nack.h"
+
 #include "rtcp_info/rtcp_private.h"
 
 bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data> &packet)
@@ -9,9 +13,9 @@ bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data> &pa
 	
 	while(offset < buffer_size)
 	{
-		RtcpHeader header;
+		RtcpPacket rtcp_packet;
 		size_t block_size;
-		if(header.Parse(buffer + offset, buffer_size - offset, block_size) == false)
+		if(rtcp_packet.Parse(buffer + offset, buffer_size - offset, block_size) == false)
 		{
 			logte("Could not parse RTCP header");
 			return false;
@@ -20,7 +24,7 @@ bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data> &pa
 		offset += block_size;
 
 		std::shared_ptr<RtcpInfo> info;
-		switch(header.GetType())
+		switch(rtcp_packet.GetType())
 		{
 			case RtcpPacketType::SR:
 			{
@@ -34,26 +38,29 @@ bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data> &pa
 			}
 			case RtcpPacketType::RTPFB:
 			{
-				if(header.GetFMT() == static_cast<uint8_t>(RTPFBFMT::NACK))
+				if(rtcp_packet.GetFMT() == static_cast<uint8_t>(RTPFBFMT::NACK))
 				{
 					info = std::make_shared<NACK>();
 				}
 				else
 				{
-					logtd("Does not support RTPFB format : %d", header.GetFMT());
+					logtd("Does not support RTPFB format : %d", rtcp_packet.GetFMT());
 					continue;
 				}
 				
 				break;
 			}
 
+			// It will be implemented soon
+			case RtcpPacketType::PSFB:
+				continue;
+
 			case RtcpPacketType::SDES:
 			case RtcpPacketType::BYE:
 			case RtcpPacketType::APP:
-			case RtcpPacketType::PSFB:
 			case RtcpPacketType::XR:
 			default:
-				logtd("Does not support RTCP type : %d", static_cast<uint8_t>(header.GetType()));
+				logtd("Does not support RTCP type : %d", static_cast<uint8_t>(rtcp_packet.GetType()));
 				continue;
 		}
 
@@ -62,7 +69,7 @@ bool RtcpReceiver::ParseCompoundPacket(const std::shared_ptr<const ov::Data> &pa
 			continue;
 		}
 
-		if(info->Parse(header) == false)
+		if(info->Parse(rtcp_packet) == false)
 		{
 			return false;
 		}

@@ -1,4 +1,5 @@
 #include "rtcp_sr_generator.h"
+#include "sender_report.h"
 
 RtcpSRGenerator::RtcpSRGenerator(uint32_t ssrc)
 {
@@ -9,7 +10,6 @@ RtcpSRGenerator::RtcpSRGenerator(uint32_t ssrc)
 
 void RtcpSRGenerator::AddRTPPacketAndGenerateRtcpSR(const RtpPacket &rtp_packet)
 {
-    //logc("DEBUG", ">>>> timestamp(%u) ssrc(%u)", rtp_packet.Timestamp(), rtp_packet.Ssrc());
     _packet_count ++;
     _octec_count += rtp_packet.PayloadSize();
 
@@ -19,7 +19,22 @@ void RtcpSRGenerator::AddRTPPacketAndGenerateRtcpSR(const RtpPacket &rtp_packet)
     if((GetElapsedTimeMSFromCreated() < 10000 && GetElapsedTimeMSFromRtcpSRGenerated() > 500) ||
         GetElapsedTimeMSFromRtcpSRGenerated() > 4999)
     {
-        _rtcp_sr_packet = RtcpPacket::MakeSrPacket(_ssrc, rtp_packet.Timestamp(), _packet_count, _octec_count);
+		SenderReport report;
+		
+		uint32_t msw = 0;
+    	uint32_t lsw = 0;
+
+    	ov::Clock::GetNtpTime(msw, lsw);
+
+		report.SetSenderSsrc(_ssrc);
+		report.SetMsw(msw);
+		report.SetLsw(lsw);
+		report.SetTimestamp(rtp_packet.Timestamp());
+		report.SetPacketCount(_packet_count);
+		report.SetOctetCount(_octec_count);
+
+		_rtcp_packet = std::make_shared<RtcpPacket>();
+		_rtcp_packet->Build(report);
 
         // Reset RTCP information
         _packet_count = 0;
@@ -31,17 +46,17 @@ void RtcpSRGenerator::AddRTPPacketAndGenerateRtcpSR(const RtpPacket &rtp_packet)
 
 bool RtcpSRGenerator::IsAvailableRtcpSRPacket() const
 {
-    return (_rtcp_sr_packet != nullptr);
+    return (_rtcp_packet != nullptr);
 }
 
-std::shared_ptr<ov::Data> RtcpSRGenerator::PopRtcpSRPacket()
+std::shared_ptr<RtcpPacket> RtcpSRGenerator::PopRtcpSRPacket()
 {
-    if(_rtcp_sr_packet == nullptr)
+    if(_rtcp_packet == nullptr)
     {
         return nullptr;
     }
 
-    return std::move(_rtcp_sr_packet);
+    return std::move(_rtcp_packet);
 }
 
 uint32_t RtcpSRGenerator::GetElapsedTimeMSFromCreated()

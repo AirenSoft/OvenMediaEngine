@@ -1,6 +1,5 @@
 #include "nack.h"
 #include "rtcp_private.h"
-
 #include <base/ovlibrary/byte_io.h>
 
 // RFC 4585: Feedback format.
@@ -28,7 +27,7 @@
 //   |            PID                |             BLP               |
 //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-bool NACK::Parse(const RtcpHeader &packet)
+bool NACK::Parse(const RtcpPacket &packet)
 {
 	const uint8_t *payload = packet.GetPayload();
 	size_t payload_size = packet.GetPayloadSize();
@@ -68,7 +67,7 @@ bool NACK::Parse(const RtcpHeader &packet)
 }
 
 // RtcpInfo must provide raw data
-std::shared_ptr<ov::Data> NACK::GetData()
+std::shared_ptr<ov::Data> NACK::GetData() const 
 {
 	return nullptr;
 }

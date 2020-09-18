@@ -11,7 +11,7 @@ public:
 
 	void AddRTPPacketAndGenerateRtcpSR(const RtpPacket &rtp_packet);
 	bool IsAvailableRtcpSRPacket() const;
-	std::shared_ptr<ov::Data>   PopRtcpSRPacket();
+	std::shared_ptr<RtcpPacket>   PopRtcpSRPacket();
 	
 private:
 	uint32_t GetElapsedTimeMSFromCreated();
@@ -26,6 +26,5 @@ private:
 	std::chrono::system_clock::time_point _created_time;
     std::chrono::system_clock::time_point _last_generated_time;
 
-	// It will be changed to RtcpSRPacket class, ov::Data is used temporarily because RtcpSRPacket is not available now. 
-	std::shared_ptr<ov::Data>	_rtcp_sr_packet = nullptr;
+	std::shared_ptr<RtcpPacket>	_rtcp_packet = nullptr;
 };

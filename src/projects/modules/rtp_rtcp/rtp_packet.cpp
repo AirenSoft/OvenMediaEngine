@@ -16,8 +16,7 @@ RtpPacket::RtpPacket()
 	_extension_size = 0;
 
 	_data = std::make_shared<ov::Data>();
-	// 패킷 최대 크기만큼 넉넉하게 메모리 예약
-	_data->Reserve(DEFAULT_MAX_PACKET_SIZE);
+	_data->Reserve(RTP_DEFAULT_MAX_PACKET_SIZE);
 	_data->SetLength(FIXED_HEADER_SIZE);
 	_buffer = _data->GetWritableDataAs<uint8_t>();
 
