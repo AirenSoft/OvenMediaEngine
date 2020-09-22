@@ -234,12 +234,12 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 							return false;
 
 						}
-						logtd("%s", sps.GetInfoString().CStr());
 
 						media_track->SetWidth(sps.GetWidth());
 						media_track->SetHeight(sps.GetHeight());
 						media_track->SetTimeBase(1, 90000);
 
+						logtd("%s", sps.GetInfoString().CStr());
 						logtd("[%d] Convert timebase (%d/%d) to (%d/%d)"
 							, media_track->GetId()
 							, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
@@ -284,12 +284,11 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 							return false;
 						}
 
-						logtd("%s", sps.GetInfoString().CStr());					
-
 						media_track->SetWidth(sps.GetWidth());
 						media_track->SetHeight(sps.GetHeight());
 						media_track->SetTimeBase(1, 90000);
 
+						logtd("%s", sps.GetInfoString().CStr());					
 						logtd("[%d] Convert timebase (%d/%d) to (%d/%d)"
 							, media_track->GetId()
 							, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
@@ -318,14 +317,19 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 
 					media_track->SetTimeBase(1, media_track->GetSampleRate());
 
-					logtd("[%d] need to convert timebase(%d/%d) -> timebase(%d/%d)"
+
+					logtd("%s", adts.GetInfoString().CStr());
+					logtd("[%d] Convert timebase(%d/%d) -> timebase(%d/%d)"
 						, media_track->GetId()
 						, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
 						, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
 
+					if(media_packet->GetDataLength() - adts.AacFrameLength() != 0)
+						logte("Invalid frame length. adts length : %d != packet length : %d", adts.AacFrameLength(), media_packet->GetDataLength());
+
 					SetParseTrackInfo(media_track, true);
 				}
-				//	logtd("%s", adts.GetInfoString().CStr());
+
 			}		
 			break;
 
@@ -436,8 +440,8 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 				media_packet->SetPacketType(common::PacketType::NALU);
 			}
 			break;	
-
 		case MediaCodecId::Aac:
+
 			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::AAC_LATM)
 			{
 				std::vector<uint8_t> extradata; 
@@ -457,7 +461,6 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 				media_packet->SetPacketType(common::PacketType::RAW);
 			}
 			break;
-		
 		// The incoming stream does not support this codec.
 		case MediaCodecId::H265:
 			if(media_packet->GetBitstreamFormat() != common::BitstreamFormat::H265_ANNEXB)
@@ -719,10 +722,10 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		return false;
 	}
 
-	auto prev_media_packet = std::move(it->second);
+	auto pop_media_packet = std::move(it->second);
 
-	int64_t duration = media_packet->GetDts() - prev_media_packet->GetDts();
-	prev_media_packet->SetDuration(duration);
+	int64_t duration = media_packet->GetDts() - pop_media_packet->GetDts();
+	pop_media_packet->SetDuration(duration);
 
 	_media_packet_stash[media_packet->GetTrackId()] = std::move(media_packet);
 
@@ -730,10 +733,10 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	////////////////////////////////////////////////////////////////////////////////////
 	// Bitstream format converting to stand format. and, parsing track informaion
 	
-	auto media_track = _stream->GetTrack(prev_media_packet->GetTrackId());
+	auto media_track = _stream->GetTrack(pop_media_packet->GetTrackId());
 	if (media_track == nullptr)
 	{
-		logte("Not found mediatrack. id(%d)", prev_media_packet->GetTrackId());
+		logte("Not found mediatrack. id(%d)", pop_media_packet->GetTrackId());
 		return false;
 	}	
 
@@ -744,7 +747,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 			bool need_drop_nondecoding_packets = false;
 			bool is_parsed_all_track = IsParseTrackAll();
 
-			if(!PushIncomingStream(media_track, prev_media_packet))
+			if(!PushIncomingStream(media_track, pop_media_packet))
 			{
 				return false;
 			}
@@ -757,7 +760,7 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 				}
 			}
 			
-			_packets_queue.Enqueue(std::move(prev_media_packet));
+			_packets_queue.Enqueue(std::move(pop_media_packet));
 
 			// Store packets until all track information is parsed.
 			if(IsParseTrackAll()==false)
@@ -770,14 +773,15 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 			{
 				DropNonDecodingPackets();
 			}
+
 		} break;
 
 		case MRStreamInoutType::Outgoing:
 		{
-			if(!PushOutgoungStream(media_track, prev_media_packet))
+			if(!PushOutgoungStream(media_track, pop_media_packet))
 				return false;		
 
-			_packets_queue.Enqueue(std::move(prev_media_packet));
+			_packets_queue.Enqueue(std::move(pop_media_packet));
 		} break;
 		
 		default:
@@ -867,14 +871,15 @@ void MediaRouteStream::DumpPacket(
 	std::shared_ptr<MediaPacket> &media_packet,
 	bool dump)
 {
-	logtd("track_id(%d), type(%d), fmt(%d), flags(%d), pts(%lld) dts(%lld) dur(%d)"
+	logtd("track_id(%d), type(%d), fmt(%d), flags(%d), pts(%lld) dts(%lld) dur(%d), size(%d)"
 		, media_packet->GetTrackId()
 		, media_packet->GetPacketType()
 		, media_packet->GetBitstreamFormat()
 		, media_packet->GetFlag()
 		, media_packet->GetPts() 
 		, media_packet->GetDts()
-		, media_packet->GetDuration());		
+		, media_packet->GetDuration()
+		, media_packet->GetDataLength());		
 
 	if(dump == true)
 	{

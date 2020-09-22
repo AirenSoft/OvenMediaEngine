@@ -439,7 +439,11 @@ namespace pvd
 		}
 		else if(codec_id == common::MediaCodecId::Aac)
 		{
-			bitstream_format = common::BitstreamFormat::AAC_LATM;
+			if(AACAdts::IsValid(packet.data, packet.size) == true)
+				bitstream_format = common::BitstreamFormat::AAC_ADTS;
+			else
+				bitstream_format = common::BitstreamFormat::AAC_LATM;
+	
 			packet_type = common::PacketType::RAW;
 		}
 

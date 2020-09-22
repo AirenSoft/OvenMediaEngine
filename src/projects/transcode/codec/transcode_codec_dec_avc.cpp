@@ -131,6 +131,8 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 				else if (ret == AVERROR_EOF)
 				{
 					logte("An error occurred while sending a packet for decoding: End of file (%d)", ret);
+					*result = TranscodeResult::EndOfFile;
+					return nullptr;
 				}
 				else if (ret == AVERROR(EINVAL))
 				{
@@ -141,6 +143,9 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 				else if (ret == AVERROR(ENOMEM))
 				{
 					logte("An error occurred while sending a packet for decoding: No memory (%d)", ret);
+					*result = TranscodeResult::DataError;
+					return nullptr;
+
 				}
 				else if (ret < 0)
 				{

@@ -9,6 +9,7 @@
 #include "media_track.h"
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <base/ovlibrary/converter.h>
 
 #define OV_LOG_TAG "MediaTrack"
 
@@ -152,4 +153,53 @@ const std::vector<uint8_t> &MediaTrack::GetCodecExtradata() const
 std::vector<uint8_t> &MediaTrack::GetCodecExtradata()
 {
 	return _codec_extradata;
+}
+
+ov::String MediaTrack::GetInfoString()
+{
+	ov::String out_str = "";
+
+	switch (GetMediaType())
+	{
+		case MediaType::Video:
+			out_str.AppendFormat(
+				"Video Track #%d: "
+				"Bypass(%s) "
+				"Bitrate(%s) "
+				"codec(%d, %s) "
+				"resolution(%dx%d) "
+				"framerate(%.2ffps) ",
+				GetId(),
+				IsBypass() ? "true" : "false",
+				ov::Converter::BitToString(GetBitrate()).CStr(),
+				GetCodecId(), ov::Converter::ToString(GetCodecId()).CStr(),
+				GetWidth(), GetHeight(),
+				GetFrameRate());
+			break;
+
+		case MediaType::Audio:
+			out_str.AppendFormat(
+				"Audio Track #%d: "
+				"Bypass(%s) "
+				"Bitrate(%s) "
+				"codec(%d, %s) "
+				"samplerate(%s) "
+				"format(%s, %d) "
+				"channel(%s, %d) ",
+				GetId(),
+				IsBypass() ? "true" : "false",
+				ov::Converter::BitToString(GetBitrate()).CStr(),
+				GetCodecId(), ov::Converter::ToString(GetCodecId()).CStr(),
+				ov::Converter::ToSiString(GetSampleRate(), 1).CStr(),
+				GetSample().GetName(), GetSample().GetSampleSize() * 8,
+				GetChannel().GetName(), GetChannel().GetCounts());
+			break;
+
+		default:
+			break;
+	}
+
+	out_str.AppendFormat("timebase(%s)", GetTimeBase().ToString().CStr());
+
+	return out_str;
 }

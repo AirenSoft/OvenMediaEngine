@@ -53,6 +53,8 @@ public:
 	const std::vector<uint8_t> &GetCodecExtradata() const;
 	std::vector<uint8_t> &GetCodecExtradata();
 
+	ov::String GetInfoString();
+
 private:
 	uint32_t _id;
 

@@ -417,7 +417,7 @@ int32_t TranscodeStream::CreateOutputStream()
 							{
 								if (output_samplerate != 48000)
 								{
-									logtw("OPUS codec only supports 48000Hz samplerate. chagee the samplerate to 48000Hz");
+									logtw("OPUS codec only supports 48000Hz samplerate. change the samplerate to 48000Hz");
 									output_samplerate = 48000;
 								}
 							}
