@@ -7,8 +7,8 @@
 //
 //==============================================================================
 #include "client_socket.h"
-#include "server_socket.h"
 
+#include "server_socket.h"
 #include "socket_private.h"
 
 // If no packet is sent during this time, the connection is disconnected
@@ -50,6 +50,19 @@ namespace ov
 		}
 	}
 
+	bool ClientSocket::PrepareSocketOptions()
+	{
+		return
+			// Enable TCP keep-alive
+			SetSockOpt<int>(SOL_SOCKET, SO_KEEPALIVE, 1) &&
+			// Wait XX seconds before starting to determine that the connection is alive
+			SetSockOpt<int>(SOL_TCP, TCP_KEEPIDLE, 30) &&
+			// Period of sending probe packet to determine keep alive
+			SetSockOpt<int>(SOL_TCP, TCP_KEEPINTVL, 10) &&
+			// Number of times to probe
+			SetSockOpt<int>(SOL_TCP, TCP_KEEPCNT, 3);
+	}
+
 	bool ClientSocket::StartDispatchThread()
 	{
 		if (_is_thread_running)
@@ -62,7 +75,9 @@ namespace ov
 		_is_thread_running = true;
 		_force_stop = false;
 
-		_send_thread = std::thread(std::bind(&ClientSocket::DispatchThreadStub, this, GetSharedPtrAs<ClientSocket>()));
+		// To keep the shared_ptr from being released while DispatchThread() is called
+		auto that = GetSharedPtrAs<ClientSocket>();
+		_send_thread = std::thread(std::bind(&ClientSocket::DispatchThread, that));
 		_send_thread.detach();
 
 		return true;
@@ -130,11 +145,6 @@ namespace ov
 		}
 
 		return true;
-	}
-
-	void ClientSocket::DispatchThreadStub(std::shared_ptr<ClientSocket> client_socket)
-	{
-		client_socket->DispatchThread();
 	}
 
 	void ClientSocket::DispatchThread()

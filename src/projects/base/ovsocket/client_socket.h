@@ -22,6 +22,8 @@ namespace ov
 
 		~ClientSocket() override;
 
+		bool PrepareSocketOptions();
+
 		// 데이터 송신
 		ssize_t Send(const std::shared_ptr<const Data> &data) override;
 		ssize_t Send(const void *data, size_t length) override;
@@ -88,7 +90,6 @@ namespace ov
 		bool StopDispatchThread(bool stop_immediately);
 
 		bool SendAsync(const ClientSocket::DispatchCommand &send_item);
-		void DispatchThreadStub(std::shared_ptr<ClientSocket> client_socket);
 		void DispatchThread();
 
 		bool CloseInternal() override;
