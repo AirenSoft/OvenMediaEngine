@@ -1394,7 +1394,6 @@ namespace ov
 	std::shared_ptr<ov::Error> Socket::Recv(void *data, size_t length, size_t *received_length, bool non_block)
 	{
 		OV_ASSERT2(data != nullptr);
-		OV_ASSERT2(length > 0);
 		OV_ASSERT2(received_length != nullptr);
 
 		logtd("[%p] [#%d] Trying to read from the socket...", this, _socket.GetSocket());

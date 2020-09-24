@@ -116,15 +116,22 @@ namespace ov
 		{
 			logtd("[%p] [#%d] New client is connected: %s", this, _socket.GetSocket(), client->ToString().CStr());
 
-			client->StartDispatchThread();
+			if (client->PrepareSocketOptions())
+			{
+				client->StartDispatchThread();
 
-			_client_list_mutex.lock();
-			_client_list[client.get()] = client;
-			_client_list_mutex.unlock();
+				_client_list_mutex.lock();
+				_client_list[client.get()] = client;
+				_client_list_mutex.unlock();
 
-			AddToEpoll(client.get(), static_cast<void *>(client.get()));
+				AddToEpoll(client.get(), static_cast<void *>(client.get()));
 
-			return client;
+				return client;
+			}
+			else
+			{
+				logte("[%p] [#%d] Could not prepare socket options: %s", this, _socket.GetSocket(), client->ToString().CStr());
+			}
 		}
 
 		return nullptr;
@@ -132,8 +139,6 @@ namespace ov
 
 	void ServerSocket::DispatchAccept()
 	{
-		std::shared_ptr<ClientSocket> client = nullptr;
-
 		while (true)
 		{
 			std::shared_ptr<ClientSocket> client = Accept();
