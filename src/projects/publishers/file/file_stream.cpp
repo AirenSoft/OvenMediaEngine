@@ -80,12 +80,14 @@ void FileStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet
 
 bool FileStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 {
+	/*
 	// Broadcasting
 	BroadcastPacket(packet->Marker(), packet->GetData());
 	if(_stream_metrics != nullptr)
 	{
 		_stream_metrics->IncreaseBytesOut(PublisherType::Ovt, packet->GetData()->GetLength() * GetSessionCount());
 	}
+	*/
 
 	return true;
 }

@@ -48,8 +48,9 @@ bool FileSession::Stop()
 	return Session::Stop();
 }
 
-bool FileSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet)
+bool FileSession::SendOutgoingData(const std::any &packet)
 {
+	/*
 	// packet_type in FileSession means marker of OVT Packet
 	// FileSession should send full packet so it will start to send from next packet of marker packet.
 	if(_sent_ready == false)
@@ -68,7 +69,7 @@ bool FileSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<o
 	ByteWriter<uint32_t>::WriteBigEndian(&buffer[12], GetId());
 
 	_connector->Send(packet->GetData(), packet->GetLength());
-
+	*/
 	return true;
 }
 

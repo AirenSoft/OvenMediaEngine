@@ -12,7 +12,7 @@ public:
 	~RtpRtcp() override;
 
 	// 패킷을 전송한다. 성능을 위해 상위에서 Packetizing을 하는 경우 사용한다.
-	bool SendOutgoingData(const std::shared_ptr<ov::Data> &packet);
+	bool SendOutgoingData(const std::shared_ptr<RtpPacket> &packet);
 
 	// Implement SessionNode Interface
 	// RtpRtcp는 최상위 노드로 SendData를 사용하지 않는다. SendOutgoingData를 사용한다.

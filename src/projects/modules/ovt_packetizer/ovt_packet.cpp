@@ -24,6 +24,22 @@ OvtPacket::OvtPacket(const ov::Data &data)
 	Load(data);
 }
 
+OvtPacket::OvtPacket(OvtPacket &src)
+{
+	_version = OVT_VERSION;
+	_marker = src._marker;
+	_payload_type = src._payload_type;
+	_timestamp = src._timestamp;
+	_sequence_number = src._sequence_number;
+	_session_id = src._session_id;
+	_payload_length = src._payload_length;
+	_is_packet_available = src._is_packet_available;
+	
+	_data = src._data->Clone();
+	_data->SetLength(src._data->GetLength());
+	_buffer = _data->GetWritableDataAs<uint8_t>();
+}
+
 OvtPacket::~OvtPacket()
 {
 }

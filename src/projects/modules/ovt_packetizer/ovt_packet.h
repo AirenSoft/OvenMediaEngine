@@ -177,6 +177,7 @@ class OvtPacket
 {
 public:
 	OvtPacket();
+	OvtPacket(OvtPacket &src);
 	OvtPacket(const ov::Data &data);
 	virtual ~OvtPacket();
 

@@ -24,7 +24,7 @@ namespace pub
 		bool RemoveSession(session_id_t id);
 		std::shared_ptr<Session> GetSession(session_id_t id);
 
-		void SendPacket(uint32_t type, std::shared_ptr<ov::Data> packet);
+		void SendPacket(const std::any &packet);
 
 	private:
 		void WorkerThread();
@@ -33,22 +33,8 @@ namespace pub
 		std::shared_mutex _session_map_mutex;
 		ov::Semaphore _queue_event;
 
-		class StreamPacket
-		{
-		public:
-			StreamPacket(uint32_t type, std::shared_ptr<ov::Data> data)
-			{
-				_type = type;
-				_data = data->Clone();
-			}
-
-			uint32_t _type;
-			std::shared_ptr<ov::Data> _data;
-		};
-
-		std::shared_ptr<StreamPacket> PopStreamPacket();
-
-		ov::Queue<std::shared_ptr<StreamPacket>> _packet_queue;
+		std::any PopStreamPacket();
+		ov::Queue<std::any> _packet_queue;
 
 		bool _stop_thread_flag;
 		std::thread _worker_thread;
@@ -68,7 +54,7 @@ namespace pub
 		uint32_t GetSessionCount();
 
 		// A child call this function to delivery packet to all sessions
-		bool BroadcastPacket(uint32_t packet_type, std::shared_ptr<ov::Data> packet);
+		bool BroadcastPacket(const std::any &packet);
 
 		// Child must implement this function for packetizing and call BroadcastPacket to delivery to all sessions.
 		virtual void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) = 0;

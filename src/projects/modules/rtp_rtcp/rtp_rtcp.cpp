@@ -21,7 +21,7 @@ RtpRtcp::~RtpRtcp()
     _rtcp_sr_generators.clear();
 }
 
-bool RtpRtcp::SendOutgoingData(const std::shared_ptr<ov::Data> &packet)
+bool RtpRtcp::SendOutgoingData(const std::shared_ptr<RtpPacket> &rtp_packet)
 {
 	// Lower Node is SRTP
 	auto node = GetLowerNode();
@@ -30,36 +30,28 @@ bool RtpRtcp::SendOutgoingData(const std::shared_ptr<ov::Data> &packet)
 		return false;
 	}
 
-    RtpPacket rtp_packet(packet);
-
-    // Parsing error
-	if(rtp_packet.Buffer() == nullptr)
-    {
-        return false;
-    }
-
-    if(_rtcp_sr_generators.find(rtp_packet.Ssrc()) == _rtcp_sr_generators.end())
+    if(_rtcp_sr_generators.find(rtp_packet->Ssrc()) == _rtcp_sr_generators.end())
     {
         return false;
     }
     
-    auto rtcp_sr_generator = _rtcp_sr_generators[rtp_packet.Ssrc()];
+    auto rtcp_sr_generator = _rtcp_sr_generators[rtp_packet->Ssrc()];
     
-    rtcp_sr_generator->AddRTPPacketAndGenerateRtcpSR(rtp_packet);
+    rtcp_sr_generator->AddRTPPacketAndGenerateRtcpSR(*rtp_packet);
     if(rtcp_sr_generator->IsAvailableRtcpSRPacket())
     {
         auto rtcp_sr_packet = rtcp_sr_generator->PopRtcpSRPacket();
         if(!node->SendData(pub::SessionNodeType::Rtcp, rtcp_sr_packet->GetData()))
         {
-            logd("RTCP","Send RTCP failed : ssrc(%u)", rtp_packet.Ssrc());
+            logd("RTCP","Send RTCP failed : ssrc(%u)", rtp_packet->Ssrc());
         }
 		else
 		{
-			logd("RTCP", "Send RTCP succeed : ssrc(%u) length(%d)", rtp_packet.Ssrc(), rtcp_sr_packet->GetData()->GetLength());
+			logd("RTCP", "Send RTCP succeed : ssrc(%u) length(%d)", rtp_packet->Ssrc(), rtcp_sr_packet->GetData()->GetLength());
 		}
     }
 
-	if(!node->SendData(pub::SessionNodeType::Rtp, packet))
+	if(!node->SendData(pub::SessionNodeType::Rtp, rtp_packet->GetData()))
     {
 		return false;
     }

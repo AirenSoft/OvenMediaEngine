@@ -13,8 +13,6 @@
 
 /*
  *
- * RtcSession은 RtpRtcp를 이용하여 VideoFrame/AudioSample을 Packetize를 하고
- * IcePort를 통해 전송하는 역할을 수행한다.
  *
  *   - Send -						  - Recv -
  * [MediaRouter]					[  ICEPort  ]
@@ -29,12 +27,6 @@
  * [SRTP] [SCTP]					[    DTLS	]
  * [    DTLS   ]					[SRTP] [SCTP]
  * [  ICE/STUN ]					[  RTP_RTCP	]
- *
- * Application당 하나의 Thread를 돌리고, 외부 데이터 입력을 받은 Queue를 처리한다.
- * ICE/STUN 역할을 하는 IcePort는 하나만 존재한다.
- *
- * DtlsTransport는 다음과 같은 Layer에서 동작한다.
- * SRTP에서의 역할은 Key, Salt를 협상하여 전달하는 역할만 수행하고, SCTP에서는 암호화/복호화까지 담당한다.
  *
  */
 
@@ -67,7 +59,7 @@ public:
 	const std::shared_ptr<const SessionDescription>& GetOfferSDP() const;
 	const std::shared_ptr<WebSocketClient>& GetWSClient();
 
-	bool SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet) override;
+	bool SendOutgoingData(const std::any &packet) override;
 	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data) override;
 
 private:

@@ -156,7 +156,9 @@ void OvtStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 {
 	// Broadcasting
-	BroadcastPacket(packet->Marker(), packet->GetData());
+	auto stream_packet = std::make_any<std::shared_ptr<OvtPacket>>(packet);
+	BroadcastPacket(stream_packet);
+	
 	if(_stream_metrics != nullptr)
 	{
 		_stream_metrics->IncreaseBytesOut(PublisherType::Ovt, packet->GetData()->GetLength() * GetSessionCount());

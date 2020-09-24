@@ -111,15 +111,13 @@ namespace pub
 		return _sessions[id];
 	}
 
-	void StreamWorker::SendPacket(uint32_t type, std::shared_ptr<ov::Data> packet)
+	void StreamWorker::SendPacket(const std::any &packet)
 	{
-		auto stream_packet = std::make_shared<pub::StreamWorker::StreamPacket>(type, packet);
-		_packet_queue.Enqueue(std::move(stream_packet));
-
+		_packet_queue.Enqueue(packet);
 		_queue_event.Notify();
 	}
 
-	std::shared_ptr<StreamWorker::StreamPacket> StreamWorker::PopStreamPacket()
+	std::any StreamWorker::PopStreamPacket()
 	{
 		if (_packet_queue.IsEmpty())
 		{
@@ -143,8 +141,8 @@ namespace pub
 		{
 			_queue_event.Wait();
 
-			std::shared_ptr<StreamWorker::StreamPacket> packet = PopStreamPacket();
-			if (packet == nullptr)
+			auto packet = PopStreamPacket();
+			if (!packet.has_value())
 			{
 				continue;
 			}
@@ -155,8 +153,7 @@ namespace pub
 				auto session = std::static_pointer_cast<Session>(x.second);
 
 				// Session will change data
-				std::shared_ptr<ov::Data> session_data = packet->_data->Clone();
-				session->SendOutgoingData(packet->_type, session_data);
+				session->SendOutgoingData(packet);
 			}
 			session_lock.unlock();
 		}
@@ -314,15 +311,14 @@ namespace pub
 		return _sessions.size();
 	}
 
-	bool Stream::BroadcastPacket(uint32_t packet_type, std::shared_ptr<ov::Data> packet)
+	bool Stream::BroadcastPacket(const std::any &packet)
 	{
 		std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
-		// 모든 StreamWorker에 나눠준다.
 		for (uint32_t i = 0; i < _stream_workers.size(); i++)
 		{
-			_stream_workers[i]->SendPacket(packet_type, packet);
+			_stream_workers[i]->SendPacket(packet);
 		}
-
+	
 		return true;
 	}
 

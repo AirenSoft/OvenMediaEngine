@@ -255,34 +255,16 @@ std::shared_ptr<SessionDescription> RtcStream::GetSessionDescription()
 
 bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 {
-	uint32_t rtp_payload_type = packet->PayloadType();
-	uint32_t red_block_pt = 0;
-	uint32_t origin_pt_of_fec = 0;
+	auto stream_packet = std::make_any<std::shared_ptr<RtpPacket>>(packet);
+	BroadcastPacket(stream_packet);
 
-	if(rtp_payload_type == RED_PAYLOAD_TYPE)
-	{
-		red_block_pt = packet->Header()[packet->HeadersSize()-1];
-
-		// RED includes FEC packet or Media packet.
-		if(packet->IsUlpfec())
-		{
-			origin_pt_of_fec = packet->OriginPayloadType();
-		}
-	}
-
-	// We make payload_type with the following structure:
-	// 0               8                 16             24                 32
-	//                 | origin_pt_of_fec | red block_pt | rtp_payload_type |
-	uint32_t payload_type = rtp_payload_type | (red_block_pt << 8) | (origin_pt_of_fec << 16);
-
-	BroadcastPacket(payload_type, packet->GetData());
 	if(_stream_metrics != nullptr)
 	{
 		_stream_metrics->IncreaseBytesOut(PublisherType::Webrtc, packet->GetData()->GetLength() * GetSessionCount());
 	}
 
 	// Store for retransmission
-
+	
 
 	return true;
 }
