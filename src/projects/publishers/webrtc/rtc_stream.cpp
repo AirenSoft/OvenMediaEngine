@@ -11,7 +11,12 @@ std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<pub::Applicat
                                              uint32_t worker_count)
 {
 	auto stream = std::make_shared<RtcStream>(application, info);
-	if(!stream->Start(worker_count))
+	if(!stream->Start())
+	{
+		return nullptr;
+	}
+
+	if(!stream->CreateStreamWorker(worker_count))
 	{
 		return nullptr;
 	}
@@ -32,9 +37,8 @@ RtcStream::~RtcStream()
 	Stop();
 }
 
-bool RtcStream::Start(uint32_t worker_count)
+bool RtcStream::Start()
 {
-	// OFFER SDP 생성
 	_offer_sdp = std::make_shared<SessionDescription>();
 	_offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
 	_offer_sdp->SetTiming(0, 0);
@@ -147,7 +151,6 @@ bool RtcStream::Start(uint32_t worker_count)
 				video_media_desc->AddPayload(payload);
 				video_media_desc->Update();
 
-				// RTP Packetizer를 추가한다.
 				AddPacketizer(track->GetCodecId(), track->GetId(), payload->GetId(), video_media_desc->GetSsrc());
 
 				break;
@@ -203,7 +206,6 @@ bool RtcStream::Start(uint32_t worker_count)
 				audio_media_desc->AddPayload(payload);
 				audio_media_desc->Update();
 
-				// RTP Packetizer를 추가한다.
 				AddPacketizer(track->GetCodecId(), track->GetId(), payload->GetId(), audio_media_desc->GetSsrc());
 
 				break;
@@ -235,7 +237,7 @@ bool RtcStream::Start(uint32_t worker_count)
 
 	_offer_sdp->Update();
 
-	return Stream::Start(worker_count);
+	return Stream::Start();
 }
 
 bool RtcStream::Stop()
@@ -278,6 +280,9 @@ bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 	{
 		_stream_metrics->IncreaseBytesOut(PublisherType::Webrtc, packet->GetData()->GetLength() * GetSessionCount());
 	}
+
+	// Store for retransmission
+
 
 	return true;
 }

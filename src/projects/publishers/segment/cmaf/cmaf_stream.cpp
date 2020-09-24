@@ -45,7 +45,7 @@ std::shared_ptr<CmafStream> CmafStream::Create(int segment_count,
 
     auto stream = std::make_shared<CmafStream>(application, info, chunked_transfer);
 
-    if (!stream->Start(segment_count, segment_duration, 0))
+    if (!stream->Start(segment_count, segment_duration))
     {
         return nullptr;
     }

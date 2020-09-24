@@ -11,10 +11,16 @@ std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pub::Applicat
 											 uint32_t worker_count)
 {
 	auto stream = std::make_shared<OvtStream>(application, info);
-	if(!stream->Start(worker_count))
+	if(!stream->Start())
 	{
 		return nullptr;
 	}
+
+	if(!stream->CreateStreamWorker(worker_count))
+	{
+		return nullptr;
+	}
+	
 	return stream;
 }
 
@@ -29,7 +35,7 @@ OvtStream::~OvtStream()
 	logtd("OvtStream(%s/%s) has been terminated finally", GetApplicationName() , GetName().CStr());
 }
 
-bool OvtStream::Start(uint32_t worker_count)
+bool OvtStream::Start()
 {
 	logtd("OvtStream(%d) has been started", GetId());
 	_packetizer = std::make_shared<OvtPacketizer>(OvtPacketizerInterface::GetSharedPtr());
@@ -110,7 +116,7 @@ bool OvtStream::Start(uint32_t worker_count)
 
 	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
 
-	return Stream::Start(worker_count);
+	return Stream::Start();
 }
 
 bool OvtStream::Stop()

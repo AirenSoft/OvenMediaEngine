@@ -42,7 +42,7 @@ std::shared_ptr<DashStream> DashStream::Create(int segment_count,
 
     auto stream = std::make_shared<DashStream>(application, info);
 
-    if (!stream->Start(segment_count, segment_duration, 0))
+    if (!stream->Start(segment_count, segment_duration))
     {
         return nullptr;
     }

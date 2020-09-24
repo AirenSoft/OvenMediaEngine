@@ -138,14 +138,11 @@ namespace pub
 	void StreamWorker::WorkerThread()
 	{
 		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex, std::defer_lock);
-		// Queue Event를 기다린다.
+
 		while (!_stop_thread_flag)
 		{
-			// Queue에 이벤트가 들어올때까지 무한 대기 한다.
-			// TODO: 향후 App 재시작 등의 기능을 위해 WaitFor(time) 기능을 구현한다.
 			_queue_event.Wait();
 
-			// Queue에서 패킷을 꺼낸다.
 			std::shared_ptr<StreamWorker::StreamPacket> packet = PopStreamPacket();
 			if (packet == nullptr)
 			{
@@ -153,7 +150,6 @@ namespace pub
 			}
 
 			session_lock.lock();
-			// 모든 Session에 전송한다.
 			for (auto const &x : _sessions)
 			{
 				auto session = std::static_pointer_cast<Session>(x.second);
@@ -179,14 +175,22 @@ namespace pub
 		Stop();
 	}
 
-	bool Stream::Start(uint32_t worker_count)
+	bool Stream::Start()
 	{
-		std::unique_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
 		if (_run_flag == true)
 		{
 			return false;
 		}
 
+		logti("%s application has started [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
+		_run_flag = true;
+		return true;
+	}
+
+	bool Stream::CreateStreamWorker(uint32_t worker_count)
+	{
+		std::unique_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
+		
 		if (worker_count > MAX_STREAM_WORKER_THREAD_COUNT)
 		{
 			worker_count = MAX_STREAM_WORKER_THREAD_COUNT;
@@ -211,9 +215,6 @@ namespace pub
 
 		worker_lock.unlock();
 
-		logti("%s application has started [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
-
-		_run_flag = true;
 		return true;
 	}
 

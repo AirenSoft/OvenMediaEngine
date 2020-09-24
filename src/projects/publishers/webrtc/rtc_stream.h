@@ -36,15 +36,18 @@ public:
 	std::shared_ptr<RtpPacketizer> GetPacketizer(uint32_t id);
 
 	// RtpRtcpPacketizerInterface Implementation
+
 	bool OnRtpPacketized(std::shared_ptr<RtpPacket> packet) override;
 
 private:
-	bool Start(uint32_t worker_count) override;
+	bool Start() override;
 	bool Stop() override;
 
 	// WebRTC의 RTP 에서 사용하는 형태로 변환한다.
 	void MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader *rtp_video_header);
 	uint16_t AllocateVP8PictureID();
+
+	bool StorePacketForRTX(std::shared_ptr<RtpPacket> &packet);
 
 	// VP8 Picture ID
 	uint16_t _vp8_picture_id;

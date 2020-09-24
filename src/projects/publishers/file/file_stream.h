@@ -10,8 +10,7 @@ class FileStream : public pub::Stream, public OvtPacketizerInterface
 {
 public:
 	static std::shared_ptr<FileStream> Create(const std::shared_ptr<pub::Application> application,
-											 const info::Stream &info,
-											 uint32_t worker_count);
+											 const info::Stream &info);
 	explicit FileStream(const std::shared_ptr<pub::Application> application,
 					   const info::Stream &info);
 	~FileStream() final;
@@ -26,7 +25,7 @@ public:
 	Json::Value&		GetDescription();
 
 private:
-	bool Start(uint32_t worker_count) override;
+	bool Start() override;
 	bool Stop() override;
 
 	std::mutex 							_packetizer_lock;

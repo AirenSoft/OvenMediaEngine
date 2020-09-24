@@ -41,7 +41,7 @@ std::shared_ptr<HlsStream> HlsStream::Create(int segment_count,
 	}
 
     auto stream = std::make_shared<HlsStream>(application, info);
-    if (!stream->Start(segment_count, segment_duration, 0))
+    if (!stream->Start(segment_count, segment_duration))
     {
         return nullptr;
     }

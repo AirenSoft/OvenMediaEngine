@@ -74,8 +74,10 @@ namespace pub
 		virtual void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) = 0;
 		virtual void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) = 0;
 
-		virtual bool Start(uint32_t worker_count);
+		virtual bool Start();
 		virtual bool Stop();
+
+		bool CreateStreamWorker(uint32_t worker_count);
 
 		uint32_t IssueUniqueSessionId();
 

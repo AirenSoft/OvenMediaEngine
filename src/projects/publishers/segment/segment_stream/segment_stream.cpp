@@ -24,7 +24,7 @@ SegmentStream::~SegmentStream()
 	Stop();
 }
 
-bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t worker_count)
+bool SegmentStream::Start(int segment_count, int segment_duration)
 {
 	std::shared_ptr<MediaTrack> video_track = nullptr;
 	std::shared_ptr<MediaTrack> audio_track = nullptr;
@@ -97,7 +97,7 @@ bool SegmentStream::Start(int segment_count, int segment_duration, uint32_t work
 		//logtw("For output DASH/HLS, one of H264(video) or AAC(audio) codecs must be encoded.");
 	}
 
-	return Stream::Start(worker_count);
+	return Stream::Start();
 }
 
 bool SegmentStream::Stop()

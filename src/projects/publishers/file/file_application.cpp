@@ -35,13 +35,7 @@ bool FileApplication::Stop()
 std::shared_ptr<pub::Stream> FileApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count)
 {
 	logtd("FileApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
-	if(worker_count == 0)
-	{
-		// RtcStream should have worker threads.
-		worker_count = MIN_STREAM_WORKER_THREAD_COUNT;
-	}
-
-	return FileStream::Create(GetSharedPtrAs<pub::Application>(), *info, worker_count);
+	return FileStream::Create(GetSharedPtrAs<pub::Application>(), *info);
 }
 
 bool FileApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)

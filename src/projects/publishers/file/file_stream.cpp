@@ -7,11 +7,10 @@
 #include "base/publisher/stream.h"
 
 std::shared_ptr<FileStream> FileStream::Create(const std::shared_ptr<pub::Application> application,
-											 const info::Stream &info,
-											 uint32_t worker_count)
+											 const info::Stream &info)
 {
 	auto stream = std::make_shared<FileStream>(application, info);
-	if(!stream->Start(worker_count))
+	if(!stream->Start())
 	{
 		return nullptr;
 	}
@@ -29,7 +28,7 @@ FileStream::~FileStream()
 	logtd("FileStream(%s/%s) has been terminated finally", GetApplicationName() , GetName().CStr());
 }
 
-bool FileStream::Start(uint32_t worker_count)
+bool FileStream::Start()
 {
 	logtd("FileStream(%ld) has been started", GetId());
 	_packetizer = std::make_shared<OvtPacketizer>(OvtPacketizerInterface::GetSharedPtr());
@@ -38,7 +37,7 @@ bool FileStream::Start(uint32_t worker_count)
 
 	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
 
-	return Stream::Start(worker_count);
+	return Stream::Start();
 }
 
 bool FileStream::Stop()
