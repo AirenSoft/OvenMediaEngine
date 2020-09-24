@@ -166,13 +166,16 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 									PhysicalPortDisconnectReason reason,
 									const std::shared_ptr<const ov::Error> &error)
 {
-	auto streams = _remote_stream_map.equal_range(remote->GetId());
-	for(auto it = streams.first; it != streams.second; ++it)
+	// disconnect means when the stream disconnects itself.
+	if(reason != PhysicalPortDisconnectReason::Disconnect)
 	{
-		auto stream = it->second;
-		stream->RemoveSessionByConnectorId(remote->GetId());
+		auto streams = _remote_stream_map.equal_range(remote->GetId());
+		for(auto it = streams.first; it != streams.second; ++it)
+		{
+			auto stream = it->second;
+			stream->RemoveSessionByConnectorId(remote->GetId());
+		}
 	}
-
 	UnlinkRemoteFromStream(remote->GetId());
 }
 
