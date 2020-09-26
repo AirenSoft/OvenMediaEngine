@@ -40,5 +40,10 @@ private:
 	
 	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
 
-	//--------------------------------------------------------------------
+
+public:
+	std::shared_ptr<ov::Error> CommandRecordStart(ov::String app_name, ov::String stream_name);
+	std::shared_ptr<ov::Error> CommandRecordStop(ov::String app_name, ov::String stream_name);
+	std::shared_ptr<ov::Error> CommandGetStats(ov::String app_name, ov::String stream_name);
+
 };

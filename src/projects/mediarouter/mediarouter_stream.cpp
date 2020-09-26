@@ -314,7 +314,6 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 				{					
 					media_track->SetSampleRate(adts.SamplerateNum());
 					media_track->GetChannel().SetLayout( (adts.SamplerateNum()==1)?(AudioChannel::Layout::LayoutMono):(AudioChannel::Layout::LayoutStereo) );
-
 					media_track->SetTimeBase(1, media_track->GetSampleRate());
 
 

@@ -34,6 +34,7 @@ LOCAL_STATIC_LIBRARIES := \
 	monitoring \
 	jsoncpp \
 	sqlite \
+	file \
 
 # rtsp_provider 
 
