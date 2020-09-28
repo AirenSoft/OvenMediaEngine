@@ -59,10 +59,17 @@ public:
 	uint8_t ChromaFormat();
 	uint8_t BitDepthLumaMinus8();
 
-	std::vector<uint8_t> Serialize() const;
-	bool Deserialize(const std::vector<uint8_t> &stream);
+	void Serialize(std::vector<uint8_t>& serialze);
 
 	ov::String GetInfoString();
+	
+	void SetVersion(uint8_t version);
+	void SetProfileIndication(uint8_t profile_indiciation);
+	void SetCompatibility(uint8_t profile_compatibility);
+	void SetlevelIndication(uint8_t level_indication);
+	void SetLengthOfNalUnit(uint8_t lengthMinusOne);
+	void AddSPS(std::shared_ptr<ov::Data> sps);
+	void AddPPS(std::shared_ptr<ov::Data> pps);
 	
 private:
 	uint8_t		_version = 0;

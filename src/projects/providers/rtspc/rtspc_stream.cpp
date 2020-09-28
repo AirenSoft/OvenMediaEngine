@@ -495,7 +495,9 @@ namespace pvd
 				aac_config.SetSamplingFrequency(GetSamplingFrequency(stream->codecpar->sample_rate));
 				aac_config.SetChannel(stream->codecpar->channels);
 
-				auto sequence_header = aac_config.Serialize();
+				std::vector<uint8_t> sequence_header;
+				aac_config.Serialize(sequence_header);
+				
 				auto media_packet = std::make_shared<MediaPacket>(media_type, 
 					track->GetId(), 
 					std::make_shared<ov::Data>(&sequence_header[0], sequence_header.size()),

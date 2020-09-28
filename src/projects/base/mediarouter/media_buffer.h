@@ -35,6 +35,21 @@ public:
 	}
 
 	// This constructor is usually used by the MediaRouter to send media packets to the publihsers.
+	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag, common::BitstreamFormat bitstream_format, common::PacketType packet_type)
+		: _media_type(media_type),
+		  _track_id(track_id),
+		  _data(data),
+		  _pts(pts),
+		  _dts(dts),
+		  _duration(duration),
+		  _flag(flag),
+		  _bitstream_format(bitstream_format),
+		  _packet_type(packet_type)
+
+	{
+	}
+
+	// This constructor is usually used by the MediaRouter to send media packets to the publihsers.
 	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
 		: _media_type(media_type),
 		  _track_id(track_id),
@@ -190,7 +205,9 @@ public:
 			GetPts(),
 			GetDts(),
 			GetDuration(),
-			GetFlag());
+			GetFlag(),
+			GetBitstreamFormat(),
+			GetPacketType());
 
 		packet->_frag_hdr = _frag_hdr;
 

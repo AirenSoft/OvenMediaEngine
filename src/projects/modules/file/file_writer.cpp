@@ -1,6 +1,5 @@
-#include <base/ovlibrary/converter.h>
-
 #include "file_writer.h"
+
 #include "private.h"
 
 /* 
@@ -16,7 +15,7 @@
 		if( track->GetCodecId() == common::MediaCodecId::Opus )
 			continue;
 
-		auto quality = FileTrackQuality::Create();
+		auto quality = FileTrackInfo::Create();
 
 		quality->SetCodecId( track->GetCodecId() );
 		quality->SetBitrate( track->GetBitrate() );
@@ -56,15 +55,14 @@ FileWriter::FileWriter() :
 	_format_context(nullptr)
 {
 	av_register_all();
-	// av_log_set_callback(FileWriter::FFmpegLog);
-	// av_log_set_level(AV_LOG_TRACE);
+	av_log_set_callback(FileWriter::FFmpegLog);
+	av_log_set_level(AV_LOG_TRACE);
 }
 
 FileWriter::~FileWriter()
 {
 	Stop();
 }
-
 
 bool FileWriter::SetPath(const ov::String path, const ov::String format)
 {
@@ -176,7 +174,7 @@ bool FileWriter::Stop()
 	return true;
 }
 
-bool FileWriter::AddTrack(common::MediaType media_type, int32_t track_id, std::shared_ptr<FileTrackQuality> quality)
+bool FileWriter::AddTrack(common::MediaType media_type, int32_t track_id, std::shared_ptr<FileTrackInfo> track_info)
 {
 	std::unique_lock<std::mutex> mlock(_lock);
 
@@ -191,25 +189,32 @@ bool FileWriter::AddTrack(common::MediaType media_type, int32_t track_id, std::s
 
 			codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
 			codecpar->codec_id = 
-				(quality->GetCodecId() == common::MediaCodecId::H264)?AV_CODEC_ID_H264:
-				(quality->GetCodecId() == common::MediaCodecId::H265)?AV_CODEC_ID_H265:
-				(quality->GetCodecId() == common::MediaCodecId::Vp8)?AV_CODEC_ID_VP8:
-				(quality->GetCodecId() == common::MediaCodecId::Vp9)?AV_CODEC_ID_VP9:
+				(track_info->GetCodecId() == common::MediaCodecId::H264)?AV_CODEC_ID_H264:
+				(track_info->GetCodecId() == common::MediaCodecId::H265)?AV_CODEC_ID_H265:
+				(track_info->GetCodecId() == common::MediaCodecId::Vp8)?AV_CODEC_ID_VP8:
+				(track_info->GetCodecId() == common::MediaCodecId::Vp9)?AV_CODEC_ID_VP9:
 				AV_CODEC_ID_NONE;		
 				
-			codecpar->bit_rate = quality->GetBitrate();
-			codecpar->width = quality->GetWidth();
-			codecpar->height = quality->GetHeight();
+			codecpar->bit_rate = track_info->GetBitrate();
+			codecpar->width = track_info->GetWidth();
+			codecpar->height = track_info->GetHeight();
 			codecpar->sample_aspect_ratio = AVRational{1, 1};
 			codecpar->codec_tag = 0;
-			
-			stream->display_aspect_ratio = AVRational{1, 1};
-			stream->time_base = AVRational{quality->GetTimeBase().GetNum(), quality->GetTimeBase().GetDen()};	
 
-			// Reserved					
-			// codecpar->profile = FF_PROFILE_H264_BASELINE;
-			// codecpar->level = 31;
+			// set extradata for avc_decoder_configuration_record			
+			if( track_info->GetExtradata().size() > 0)
+			{
+				codecpar->extradata_size = track_info->GetExtradata().size();
+				codecpar->extradata = (uint8_t*)av_malloc(codecpar->extradata_size  + AV_INPUT_BUFFER_PADDING_SIZE) ;
+				memset(codecpar->extradata, 0, codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
+				memcpy(codecpar->extradata, &track_info->GetExtradata()[0], codecpar->extradata_size);
+			}
+
+			stream->display_aspect_ratio = AVRational{1, 1};
+			stream->time_base = AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()};	
+
 			_track_map[track_id] = stream->index;
+			_trackinfo_map[track_id] = track_info;
 		}
 		break;
 
@@ -220,24 +225,32 @@ bool FileWriter::AddTrack(common::MediaType media_type, int32_t track_id, std::s
 
 			codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
 			codecpar->codec_id = 
-				(quality->GetCodecId() == common::MediaCodecId::Aac)?AV_CODEC_ID_AAC:
-				(quality->GetCodecId() == common::MediaCodecId::Mp3)?AV_CODEC_ID_MP3:
-				(quality->GetCodecId() == common::MediaCodecId::Opus)?AV_CODEC_ID_OPUS:
+				(track_info->GetCodecId() == common::MediaCodecId::Aac)?AV_CODEC_ID_AAC:
+				(track_info->GetCodecId() == common::MediaCodecId::Mp3)?AV_CODEC_ID_MP3:
+				(track_info->GetCodecId() == common::MediaCodecId::Opus)?AV_CODEC_ID_OPUS:
 				AV_CODEC_ID_NONE;		
-			codecpar->bit_rate = quality->GetBitrate();
-			codecpar->channels = static_cast<int>(quality->GetChannel().GetCounts());
-			codecpar->channel_layout = (quality->GetChannel().GetLayout() == common::AudioChannel::Layout::LayoutMono)?AV_CH_LAYOUT_MONO:
-									   (quality->GetChannel().GetLayout() == common::AudioChannel::Layout::LayoutStereo)?AV_CH_LAYOUT_STEREO:
+			codecpar->bit_rate = track_info->GetBitrate();
+			codecpar->channels = static_cast<int>(track_info->GetChannel().GetCounts());
+			codecpar->channel_layout = (track_info->GetChannel().GetLayout() == common::AudioChannel::Layout::LayoutMono)?AV_CH_LAYOUT_MONO:
+									   (track_info->GetChannel().GetLayout() == common::AudioChannel::Layout::LayoutStereo)?AV_CH_LAYOUT_STEREO:
 									   0; // <- Unknown
-			codecpar->sample_rate = quality->GetSample().GetRateNum();
+			codecpar->sample_rate = track_info->GetSample().GetRateNum();
 			codecpar->frame_size = 1024;	// TODO: Need to Frame Size
 			codecpar->codec_tag = 0;
 
-			stream->time_base = AVRational{quality->GetTimeBase().GetNum(), quality->GetTimeBase().GetDen()};	
+			// set extradata for aac_specific_config
+			if( track_info->GetExtradata().size() > 0)
+			{
+				codecpar->extradata_size = track_info->GetExtradata().size();
+				codecpar->extradata = (uint8_t*)av_malloc(codecpar->extradata_size  + AV_INPUT_BUFFER_PADDING_SIZE) ;
+				memset(codecpar->extradata, 0, codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
+				memcpy(codecpar->extradata, &track_info->GetExtradata()[0], codecpar->extradata_size);
+			}
 
-			// Reserved					
-			// codecpar->profile = FF_PROFILE_AAC_LOW;	
+			stream->time_base = AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()};	
+
 			_track_map[track_id] = stream->index;
+			_trackinfo_map[track_id] = track_info;
 		}
 		break;	
 
@@ -260,33 +273,69 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 {
 	std::unique_lock<std::mutex> mlock(_lock);
 
+	// Find AVStream and Index;
 	int stream_index = 0;
 
 	auto iter = _track_map.find(track_id);
 	if(iter == _track_map.end())
 	{
 		logtw("There is no track id %d", track_id);
+
+		// Without a track, it's not an error. Ignore.
 		return true;
 	}
+	stream_index = iter->second;
 
-	stream_index = iter->second;	
 
+	AVStream *stream = _format_context->streams[stream_index];
+	if(stream == nullptr)
+	{
+		logtw("There is no stream");
+		return false;
+	}
+
+
+	// Find Ouput Track Info
+	auto track_info = _trackinfo_map[track_id];
+	
+
+	// Make avpacket
 	AVPacket pkt = { 0 };
 	av_init_packet(&pkt);
 
 	pkt.stream_index = stream_index;
 	pkt.flags = (flag==MediaPacketFlag::Key)?AV_PKT_FLAG_KEY:0;
-	pkt.pts = pts;
-	pkt.dts = dts;
+	pkt.pts = av_rescale_q(pts, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
+	pkt.dts = av_rescale_q(dts, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
 	pkt.size = data->GetLength();
 	pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
 
 	// TODO: Depending on the extension, the bitstream format should be changed.
-	// if(_format_context->streams[stream_index]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
-	// {
-	// 	pkt.size = data->GetLength() - 7;
-	// 	pkt.data = (uint8_t *)data->GetDataAs<uint8_t>() + 7;
-	// }
+	// format(mpegts)
+	// 	- H264 : Passthrough(AnnexB)
+	//  - H265 : Passthrough(AnnexB)
+	//  - AAC : Passthrough(ADTS)
+	//  - OPUS : Passthrough (?)
+	//  - VP8 : Passthrough (unknown name)
+	// format(flv)
+	//	- H264 : Passthrough
+	//	- AAC : to LATM
+	// format(mp4)
+	//	- H264 : Passthrough
+	//	- AAC : to LATM
+
+	if( (stream->codecpar->codec_id == AV_CODEC_ID_AAC) &&
+		(strcmp(_format_context->oformat->name, "flv") == 0 && strcmp(_format_context->oformat->name, "mp4")))
+	{
+		// delete adts header
+		pkt.size = data->GetLength() - 7;
+		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>() + 7;		
+	}
+	else
+	{
+		pkt.size = data->GetLength();
+		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();		
+	}
 
 	int ret = av_interleaved_write_frame(_format_context, &pkt);	
 	if(ret != 0)

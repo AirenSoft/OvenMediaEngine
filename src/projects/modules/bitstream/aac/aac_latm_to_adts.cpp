@@ -16,7 +16,7 @@ bool AACLatmToAdts::GetExtradata(const common::PacketType type, const std::share
 			return false;
 		}
 		
-		extradata = config.Serialize();
+		 config.Serialize(extradata);
 
 		return true;   
 	}
@@ -75,16 +75,20 @@ bool AACLatmToAdts::Convert(const common::PacketType type, const std::shared_ptr
 		int16_t aac_raw_length = data->GetLength();
 
 		//Get the AACSecificConfig value from extradata;
-		AACSpecificConfig aac_specific_config;
-		AACSpecificConfig::Parse(&extradata.front(), extradata.size(), aac_specific_config);
+		if(extradata.size() > 0)
+		{
+			AACSpecificConfig aac_specific_config;
+			AACSpecificConfig::Parse(&extradata.front(), extradata.size(), aac_specific_config);
 
-		uint8_t aac_profile = (uint8_t)aac_specific_config.GetAacProfile();
-		uint8_t aac_sample_rate = (uint8_t)aac_specific_config.SamplingFrequency();
-		uint8_t aac_channels = (uint8_t)aac_specific_config.Channel();
+			uint8_t aac_profile = (uint8_t)aac_specific_config.GetAacProfile();
+			uint8_t aac_sample_rate = (uint8_t)aac_specific_config.SamplingFrequency();
+			uint8_t aac_channels = (uint8_t)aac_specific_config.Channel();
 
-		auto adts_header = MakeHeader(aac_profile, aac_sample_rate, aac_channels, aac_raw_length);
+			auto adts_header = MakeHeader(aac_profile, aac_sample_rate, aac_channels, aac_raw_length);
 
-		annexb_data->Append(adts_header);
+			annexb_data->Append(adts_header);
+		}
+		
 		annexb_data->Append(data);
 	}
 

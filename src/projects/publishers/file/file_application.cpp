@@ -1,7 +1,6 @@
 #include "file_private.h"
 #include "file_application.h"
 #include "file_stream.h"
-#include "file_session.h"
 
 std::shared_ptr<FileApplication> FileApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 {

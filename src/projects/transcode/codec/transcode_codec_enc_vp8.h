@@ -29,8 +29,6 @@ public:
 	void Stop() override;
 
 private:
-	std::shared_ptr<MediaPacket> MakePacket() const;
-
 	// Used to convert output timebase -> codec timebase
 	double _scale;
 	// Used to convert codec timebase -> output timebase

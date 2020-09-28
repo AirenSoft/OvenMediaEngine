@@ -146,7 +146,8 @@ public:
 
 	ov::String 					GetInfoString();
 
-	std::vector<uint8_t> 		Serialize() const;
+	// std::vector<uint8_t> 		Serialize() const;
+	void 						Serialize(std::vector<uint8_t>& serialze);
 
 private:
 	AacObjectType				_object_type;					// 5 bits

@@ -23,7 +23,21 @@ bool AACSpecificConfig::Parse(const uint8_t *data, size_t data_length, AACSpecif
 }
 
 
-std::vector<uint8_t> AACSpecificConfig::Serialize() const
+// std::vector<uint8_t> AACSpecificConfig::Serialize() const
+// {
+// 	ov::BitWriter bits(2);
+
+// 	bits.Write(5, _object_type);
+// 	bits.Write(4, _sampling_frequency_index);
+// 	bits.Write(4, _channel);
+
+// 	std::vector<uint8_t> dest(bits.GetDataSize());
+// 	std::copy(bits.GetData(), bits.GetData()+bits.GetDataSize(), dest.begin());
+
+// 	return dest;
+// }
+
+void AACSpecificConfig::Serialize(std::vector<uint8_t>& serialze)
 {
 	ov::BitWriter bits(2);
 
@@ -31,12 +45,9 @@ std::vector<uint8_t> AACSpecificConfig::Serialize() const
 	bits.Write(4, _sampling_frequency_index);
 	bits.Write(4, _channel);
 
-	std::vector<uint8_t> dest(bits.GetDataSize());
-	std::copy(bits.GetData(), bits.GetData()+bits.GetDataSize(), dest.begin());
-
-	return dest;
+	serialze.resize(bits.GetDataSize());
+	std::copy(bits.GetData(), bits.GetData()+bits.GetDataSize(), serialze.begin());
 }
-
 
 AacObjectType AACSpecificConfig::ObjectType()
 {

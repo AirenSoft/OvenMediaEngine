@@ -230,7 +230,18 @@ void OvenCodecImplAvcodecEncAVC::ThreadEncode()
 			else
 			{
 				// Encoded packet is ready
-				auto packet_buffer = MakePacket();
+				auto packet_buffer = std::make_shared<MediaPacket>(
+										common::MediaType::Video, 
+										0, 
+										_packet->data, 
+										_packet->size, 
+										_packet->pts * _scale_inv, 
+										_packet->dts * _scale_inv, 
+										-1L, 
+										(_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+				packet_buffer->SetBitstreamFormat(common::BitstreamFormat::H264_ANNEXB);
+				packet_buffer->SetPacketType(common::PacketType::NALU);
+
 				::av_packet_unref(_packet);
 
 				SendOutputBuffer(std::move(packet_buffer));
@@ -259,13 +270,9 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 
 }
 
-std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
-{
-	auto flag = (_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
-	// This is workaround: avcodec_receive_packet() does not give the duration that sent to avcodec_send_frame()
-	int den = _output_context->GetTimeBase().GetDen();
-	int64_t duration = (den == 0) ? 0LL : (float)den / _output_context->GetFrameRate();
-	auto packet = std::make_shared<MediaPacket>(common::MediaType::Video, 0, _packet->data, _packet->size, _packet->pts * _scale_inv, _packet->dts * _scale_inv, duration, flag);
+// std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
+// {
+// 	auto packet = s
 
-	return std::move(packet);
-}
+// 	return std::move(packet);
+// }

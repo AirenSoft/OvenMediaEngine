@@ -132,6 +132,12 @@ bool MediaRouteStream::PushOutgoungStream(std::shared_ptr<MediaTrack> &media_tra
 		return false;
 	}
 	
+	// Extract media track information
+	if(!ParseTrackInfo(media_track, media_packet))
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -204,8 +210,12 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 		case MediaCodecId::H264:
 			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H264_ANNEXB)
 			{
+				// for extradata
+				AVCDecoderConfigurationRecord avc_decoder_configuration_record;
+
 				// Analyzes NALU packets and extracts track information for SPS/PPS types.
 				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();
+
 				auto frag_hdr = media_packet->GetFragHeader();
 				if(frag_hdr == nullptr)
 				{
@@ -244,10 +254,32 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 							, media_track->GetId()
 							, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
 							, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
+		
+						// for Mediatrack.extradata
+						avc_decoder_configuration_record.AddSPS(std::make_shared<ov::Data>(buffer, length));
+						avc_decoder_configuration_record.SetProfileIndication(sps.GetProfile());
+						avc_decoder_configuration_record.SetlevelIndication(sps.GetCodecLevel());
 
-						SetParseTrackInfo(media_track, true);
+						SetParseTrackInfo(media_track, true);						
+					}
+					else if(header.GetNalUnitType() == H264NalUnitType::Pps)
+					{
+						avc_decoder_configuration_record.AddPPS(std::make_shared<ov::Data>(buffer, length));
 					}
 				}
+
+				// Set extradata for AVC
+				if(media_track->GetCodecExtradata().size() == 0)
+				{
+					avc_decoder_configuration_record.SetVersion(1);
+					avc_decoder_configuration_record.SetLengthOfNalUnit(3);
+
+					std::vector<uint8_t> extradata;
+					avc_decoder_configuration_record.Serialize(extradata);
+
+					media_track->SetCodecExtradata(extradata);
+				}
+
 			}
 			break;
 
@@ -303,6 +335,9 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 		case MediaCodecId::Aac:
 			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::AAC_ADTS)
 			{
+				// for extradata
+				AACSpecificConfig aac_specific_config;
+
 				if(AACAdts::IsValid(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength()) == false)
 				{
 					logte("Could not parse AAC ADTS header");
@@ -313,9 +348,8 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 				if(AACAdts::Parse(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength(), adts) == true)
 				{					
 					media_track->SetSampleRate(adts.SamplerateNum());
-					media_track->GetChannel().SetLayout( (adts.SamplerateNum()==1)?(AudioChannel::Layout::LayoutMono):(AudioChannel::Layout::LayoutStereo) );
+					media_track->GetChannel().SetLayout( (adts.ChannelConfiguration()==1)?(AudioChannel::Layout::LayoutMono):(AudioChannel::Layout::LayoutStereo) );
 					media_track->SetTimeBase(1, media_track->GetSampleRate());
-
 
 					logtd("%s", adts.GetInfoString().CStr());
 					logtd("[%d] Convert timebase(%d/%d) -> timebase(%d/%d)"
@@ -325,6 +359,20 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 
 					if(media_packet->GetDataLength() - adts.AacFrameLength() != 0)
 						logte("Invalid frame length. adts length : %d != packet length : %d", adts.AacFrameLength(), media_packet->GetDataLength());
+
+
+					// Set extradata for AAC
+					if(media_track->GetCodecExtradata().size() == 0)
+					{
+						aac_specific_config.SetOjbectType(adts.Profile());
+						aac_specific_config.SetSamplingFrequency(adts.Samplerate());
+						aac_specific_config.SetChannel(adts.ChannelConfiguration());
+
+						std::vector<uint8_t> extradata;
+						aac_specific_config.Serialize(extradata);
+
+						media_track->SetCodecExtradata(extradata);
+					}
 
 					SetParseTrackInfo(media_track, true);
 				}

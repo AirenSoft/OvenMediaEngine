@@ -18,24 +18,9 @@ bool H264AvccToAnnexB::GetExtradata(const common::PacketType type, const std::sh
 			logte("Could not parse sequence header"); 
 			return false;
 		}
-
-		// Structure of Extradata
-		//  START_CODE + SPS + START_CODE + PPS ... 
-		auto tmp = std::make_shared<ov::Data>();
-
-		for(int i=0 ; i<config.NumOfSPS() ; i++)
-		{
-			tmp->Append(START_CODE, sizeof(START_CODE));    
-			tmp->Append(config.GetSPS(i));
-		}
-		for(int i=0 ; i<config.NumOfPPS() ; i++)
-		{
-			tmp->Append(START_CODE, sizeof(START_CODE));    
-			tmp->Append(config.GetPPS(i));
-		}
-
-		extradata.reserve(tmp->GetLength());
-		std::copy(tmp->GetDataAs<uint8_t>(), tmp->GetDataAs<uint8_t>()+tmp->GetLength(), std::back_inserter(extradata));
+		logtd("%s", config.GetInfoString().CStr());
+		// std::vector<uint8_t> serialzed;
+		config.Serialize(extradata);
 
 		return true;   
 	}
@@ -57,7 +42,6 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 			logte("Could not parse sequence header"); 
 			return false;
 		}
-		logtd("%s", config.GetInfoString().CStr());
 
 		for(int i=0 ; i<config.NumOfSPS() ; i++)
 		{
@@ -75,10 +59,27 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 	{
 		ov::ByteStream read_stream(data.get());
 
-		// Append SPS/PPS Nalunit
+		// TODO : Need to performance tuning. for example. append SPS/PPS before IDR frame. not every packet.
 		if(extradata.size() > 0)
 		{
-			annexb_data->Append(extradata.data(), (size_t)extradata.size());
+			AVCDecoderConfigurationRecord config;
+			if(!AVCDecoderConfigurationRecord::Parse(extradata.data(), extradata.size(), config))
+			{
+				logte("Could not parse sequence header"); 
+				return false;
+			}			
+
+			for(int i=0 ; i<config.NumOfSPS() ; i++)
+			{
+				annexb_data->Append(START_CODE, sizeof(START_CODE));
+				annexb_data->Append(config.GetSPS(i));
+			}
+			
+			for(int i=0 ; i<config.NumOfPPS() ; i++)
+			{
+				annexb_data->Append(START_CODE, sizeof(START_CODE));
+				annexb_data->Append(config.GetPPS(i));
+			}			
 		}
 
 		while(read_stream.Remained() > 0)
@@ -103,7 +104,9 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 
 			annexb_data->Append(START_CODE, sizeof(START_CODE));
 			annexb_data->Append(nal_data);
-		}               
+		}   
+
+		            
 	}
 
 	data->Clear();

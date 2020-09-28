@@ -1,9 +1,7 @@
 #include "file_private.h"
 #include "file_stream.h"
-#include "file_session.h"
 #include "base/publisher/application.h"
 #include "base/publisher/stream.h"
-
 #include <regex>
 
 std::shared_ptr<FileStream> FileStream::Create(const std::shared_ptr<pub::Application> application,
@@ -36,8 +34,8 @@ bool FileStream::Start()
 
 	//-----------------
 	// for TEST
-//	std::vector<int32_t> selected_tracks;
-//	RecordStart(selected_tracks);
+	// std::vector<int32_t> selected_tracks;
+	// RecordStart(selected_tracks);
 	//-----------------
 
 	return Stream::Start();
@@ -49,7 +47,7 @@ bool FileStream::Stop()
 
 	//-----------------
 	// for TEST
-//	RecordStop();
+	// RecordStop();
 	//-----------------
 
 	return Stream::Stop();
@@ -94,17 +92,18 @@ void FileStream::RecordStart(std::vector<int32_t> selected_tracks)
 			continue;
 		}
 
-		auto quality = FileTrackQuality::Create();
+		auto track_info = FileTrackInfo::Create();
 
-		quality->SetCodecId( track->GetCodecId() );
-		quality->SetBitrate( track->GetBitrate() );
-		quality->SetTimeBase( track->GetTimeBase() );
-		quality->SetWidth( track->GetWidth() );
-		quality->SetHeight( track->GetHeight() );
-		quality->SetSample( track->GetSample() );
-		quality->SetChannel( track->GetChannel() );
+		track_info->SetCodecId( track->GetCodecId() );
+		track_info->SetBitrate( track->GetBitrate() );
+		track_info->SetTimeBase( track->GetTimeBase() );
+		track_info->SetWidth( track->GetWidth() );
+		track_info->SetHeight( track->GetHeight() );
+		track_info->SetSample( track->GetSample() );
+		track_info->SetChannel( track->GetChannel() );
+		track_info->SetExtradata( track->GetCodecExtradata() );
 
-		bool ret = _writer->AddTrack(track->GetMediaType(), track->GetId(), quality);
+		bool ret = _writer->AddTrack(track->GetMediaType(), track->GetId(), track_info);
 		if(ret == false)
 		{
 			logte("Failed to add new track");
@@ -149,7 +148,7 @@ void FileStream::RecordStop()
 	// Moves temporary files to a user-defined path.
 	if(rename( tmp_output_path.CStr() , output_path.CStr() ) != 0)
 	{
-		logte("Failed to move fiel. %s -> %s", tmp_output_path.CStr() , output_path.CStr());
+		logte("Failed to move file. %s -> %s", tmp_output_path.CStr() , output_path.CStr());
 		return;
 	}
 
@@ -162,6 +161,13 @@ void FileStream::RecordStop()
 
 void FileStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	// for debug
+	// if(_writer == nullptr)
+	// {
+	// 	std::vector<int32_t> selected_tracks;
+	// 	RecordStart(selected_tracks);
+	// }
+
 	if(_writer == nullptr)
 		return;
 
@@ -203,7 +209,7 @@ ov::String FileStream::GetOutputTempFilePath()
 
 	ov::String tmp_path = ConvertMacro(file_config.GetFilePath()) + ".tmp";
 
-	logte("TempFilePath : %s", tmp_path.CStr());
+	logtd("TempFile Path : %s", tmp_path.CStr());
 
 	return tmp_path;
 }
@@ -212,7 +218,7 @@ ov::String FileStream::GetOutputFilePath()
 {
 	auto file_config = GetApplicationInfo().GetConfig().GetPublishers().GetFilePublisher();
 
-	logte("FilePath : %s", file_config.GetFilePath().CStr());
+	logtd("File Path : %s", file_config.GetFilePath().CStr());
 
 	return ConvertMacro(file_config.GetFilePath());
 }
@@ -221,7 +227,7 @@ ov::String FileStream::GetOutputFileInfoPath()
 {
 	auto file_config = GetApplicationInfo().GetConfig().GetPublishers().GetFilePublisher();
 
-	logte("FileInfoPath : %s", file_config.GetFileInfoPath().CStr());
+	logtd("FileInfo Path : %s", file_config.GetFileInfoPath().CStr());
 
 	return ConvertMacro(file_config.GetFileInfoPath());
 }

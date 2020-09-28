@@ -2,6 +2,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovlibrary/bit_reader.h>
+#include <base/ovlibrary/bit_writer.h>
 
 #define OV_LOG_TAG "AVCDecoderConfigurationRecord"
 
@@ -164,21 +165,117 @@ uint8_t AVCDecoderConfigurationRecord::BitDepthLumaMinus8()
 	return _bit_depth_luma_minus8;
 }
 
-std::vector<uint8_t> AVCDecoderConfigurationRecord::Serialize() const
+/* ISO 14496-15, 5.2.4.1
+aligned(8) class AVCDecoderConfigurationRecord {
+	unsigned int(8) configurationVersion = 1;
+	unsigned int(8) AVCProfileIndication;
+	unsigned int(8) profile_compatibility;
+	unsigned int(8) AVCLevelIndication;
+	bit(6) reserved = ‘111111’b;
+	unsigned int(2) lengthSizeMinusOne;
+	bit(3) reserved = ‘111’b;
+	unsigned int(5) numOfSequenceParameterSets;
+	for (i=0; i< numOfSequenceParameterSets;  i++) {
+		unsigned int(16) sequenceParameterSetLength ;
+		bit(8*sequenceParameterSetLength) sequenceParameterSetNALUnit;
+	}
+	unsigned int(8) numOfPictureParameterSets;
+	for (i=0; i< numOfPictureParameterSets;  i++) {
+		unsigned int(16) pictureParameterSetLength;
+		bit(8*pictureParameterSetLength) pictureParameterSetNALUnit;
+	}
+	if( profile_idc  ==  100  ||  profile_idc  ==  110  ||
+	    profile_idc  ==  122  ||  profile_idc  ==  144 )
+	{
+		bit(6) reserved = ‘111111’b;
+		unsigned int(2) chroma_format;
+		bit(5) reserved = ‘11111’b;
+		unsigned int(3) bit_depth_luma_minus8;
+		bit(5) reserved = ‘11111’b;
+		unsigned int(3) bit_depth_chroma_minus8;
+		unsigned int(8) numOfSequenceParameterSetExt;
+		for (i=0; i< numOfSequenceParameterSetExt; i++) {
+			unsigned int(16) sequenceParameterSetExtLength;
+			bit(8*sequenceParameterSetExtLength) sequenceParameterSetExtNALUnit;
+		}
+	}
+} */
+
+void AVCDecoderConfigurationRecord::Serialize(std::vector<uint8_t>& serialze)
 {
-	std::vector<uint8_t> stream;
+	ov::BitWriter bits(512);
 
-	// TODO
+	Version();
 
-	return stream;
+	bits.Write(8, Version());	
+	bits.Write(8, ProfileIndication());	
+	bits.Write(8, Compatibility());	
+	bits.Write(8, LevelIndication());	
+	bits.Write(6, 0x3F);	// 111111'b
+	bits.Write(2, LengthOfNALUnit());	
+	bits.Write(3, 0x07);	// 111b
+	bits.Write(5, NumOfSPS());	// num of SPS
+	for(auto i=0 ; i<NumOfSPS() ; i++)
+	{
+		auto sps = GetSPS(i);
+		bits.Write(16, sps->GetLength());	// sps length
+		for(size_t j=0 ; j<sps->GetLength() ; j++)
+		{
+			bits.Write(8, (uint32_t)sps->AtAs<uint8_t>(j));
+		}
+	}
+	bits.Write(8, NumOfPPS()); // num of PPS
+	for(auto i=0 ; i<NumOfPPS() ; i++)
+	{
+		auto pps = GetPPS(i);
+		bits.Write(16, pps->GetLength());	// pps length
+		for(size_t j=0 ; j<pps->GetLength() ; j++)
+		{
+			bits.Write(8, (uint32_t)pps->AtAs<uint8_t>(j));
+		}
+	}
+
+	int32_t capacity = (int32_t)ceil((double)bits.GetBitCount() / 8);
+	serialze.resize( capacity );
+
+	std::copy(bits.GetData(), bits.GetData() + capacity, serialze.begin());
 }
 
-bool AVCDecoderConfigurationRecord::Deserialize(const std::vector<uint8_t> &stream)
+void AVCDecoderConfigurationRecord::SetVersion(uint8_t version)
 {
-	
-	// TODO
+	_version = version;
+}
 
-	return true;    
+void AVCDecoderConfigurationRecord::SetProfileIndication(uint8_t profile_indiciation)
+{
+	_profile_indication = profile_indiciation;
+}
+
+void AVCDecoderConfigurationRecord::SetCompatibility(uint8_t profile_compatibility)
+{
+	_profile_compatibility = profile_compatibility;
+}
+
+void AVCDecoderConfigurationRecord::SetlevelIndication(uint8_t level_indication)
+{
+	_level_indication = level_indication;
+}
+
+void AVCDecoderConfigurationRecord::SetLengthOfNalUnit(uint8_t lengthMinusOne)
+{
+	_lengthMinusOne = lengthMinusOne;
+}
+
+void AVCDecoderConfigurationRecord::AddSPS(std::shared_ptr<ov::Data> sps)
+{
+	_sps_list.push_back(sps);
+	_num_of_sps++;
+}
+
+void AVCDecoderConfigurationRecord::AddPPS(std::shared_ptr<ov::Data> pps)
+{
+	_pps_list.push_back(pps);
+	_num_of_pps++;
 }
 
 ov::String AVCDecoderConfigurationRecord::GetInfoString()

@@ -1,7 +1,6 @@
 #include <base/ovlibrary/url.h>
 #include "file_private.h"
 #include "file_publisher.h"
-#include "file_session.h"
 
 std::shared_ptr<FilePublisher> FilePublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
@@ -110,12 +109,4 @@ std::shared_ptr<ov::Error> FilePublisher::CommandGetStats(const info::VHostAppNa
 
 	return ov::Error::CreateError(0, "Success");
 }
-
-
-
-
-
-
-
-
 

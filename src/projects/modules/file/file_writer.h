@@ -1,6 +1,5 @@
 #pragma once
 
-#include <base/ovsocket/socket_address.h>
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/mediarouter/media_buffer.h>
 
@@ -11,10 +10,10 @@ extern "C" {
 };
 
 
-class FileTrackQuality {
+class FileTrackInfo {
 public:    
-	static std::shared_ptr<FileTrackQuality> Create() {
-		auto object = std::make_shared<FileTrackQuality>();
+	static std::shared_ptr<FileTrackInfo> Create() {
+		auto object = std::make_shared<FileTrackInfo>();
 		return object;
 	}
 
@@ -39,6 +38,10 @@ public:
 	void SetChannel(common::AudioChannel channel) { _channel = channel; }
 	common::AudioChannel GetChannel() { return _channel; }
 
+	void SetExtradata(std::vector<uint8_t> &extradata) {
+		_extradata.assign(extradata.begin(), extradata.end());
+	}
+	std::vector<uint8_t>& GetExtradata() { return _extradata; }
 
 private:
 	common::MediaCodecId    _codec_id;
@@ -51,6 +54,8 @@ private:
 
 	common::AudioSample     _sample;
 	common::AudioChannel    _channel;
+
+	std::vector<uint8_t> 	_extradata;
 };
 
 class FileWriter
@@ -71,7 +76,7 @@ public:
 
 	bool Stop();
 
-	bool AddTrack(common::MediaType media_type, int32_t track_id, std::shared_ptr<FileTrackQuality> quality);
+	bool AddTrack(common::MediaType media_type, int32_t track_id, std::shared_ptr<FileTrackInfo> trackinfo);
 
 	bool PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, std::shared_ptr<ov::Data>& data);
 
@@ -82,6 +87,9 @@ private:
 	ov::String 					_format;
 
 	AVFormatContext* 			_format_context;
+
+	// <MediaTrack.id, std::hsared_ptr<FileTrackInfo>>
+	std::map<int32_t, std::shared_ptr<FileTrackInfo>> _trackinfo_map;
 
 	// Map of track
 	// <MediaTrack.id, AVStream.index>

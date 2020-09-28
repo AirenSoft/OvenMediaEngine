@@ -1039,7 +1039,9 @@ void TranscodeStream::CreateStreams()
 {
 	for (auto &iter : _stream_outputs)
 	{
-		_parent->CreateStream(iter.second);
+		auto stream_output = iter.second;
+
+		_parent->CreateStream(stream_output);
 	}
 }
 
@@ -1047,12 +1049,12 @@ void TranscodeStream::DeleteStreams()
 {
 	for (auto &iter : _stream_outputs)
 	{
-		auto output = iter.second;
+		auto stream_output = iter.second;
 		logti("[%s/%s(%u)] -> [%s/%s(%u)] Transcoder output stream has been deleted.", 
 						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(),
-						_application_info.GetName().CStr(), output->GetName().CStr(), output->GetId());
+						_application_info.GetName().CStr(), stream_output->GetName().CStr(), stream_output->GetId());
 
-		_parent->DeleteStream(iter.second);
+		_parent->DeleteStream(stream_output);
 	}
 
 	_stream_outputs.clear();
