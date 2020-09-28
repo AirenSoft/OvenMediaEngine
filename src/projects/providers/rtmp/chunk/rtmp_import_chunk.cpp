@@ -413,18 +413,18 @@ size_t RtmpImportChunk::GetMessageCount() const
 	return _message_queue.Size();
 }
 
-void RtmpImportChunk::SetAppName(const ov::String &app_name)
+void RtmpImportChunk::SetAppName(const info::VHostAppName &vhost_app_name)
 {
-	_app_name = app_name;
+	_vhost_app_name = vhost_app_name;
 
-	_message_queue.SetAlias(ov::String::FormatString("RTMP queue for %s/%s", _app_name.CStr(), _stream_name.CStr()));
+	_message_queue.SetAlias(ov::String::FormatString("RTMP queue for %s/%s", _vhost_app_name.CStr(), _stream_name.CStr()));
 }
 
 void RtmpImportChunk::SetStreamName(const ov::String &stream_name)
 {
 	_stream_name = stream_name;
 
-	_message_queue.SetAlias(ov::String::FormatString("RTMP queue for %s/%s", _app_name.CStr(), _stream_name.CStr()));
+	_message_queue.SetAlias(ov::String::FormatString("RTMP queue for %s/%s", _vhost_app_name.CStr(), _stream_name.CStr()));
 }
 
 void RtmpImportChunk::Destroy()

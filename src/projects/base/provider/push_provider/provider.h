@@ -32,9 +32,9 @@ namespace pvd
 		virtual bool Stop() override;
 
 		// To be interleaved mode, a channel must have applicaiton/stream and track informaiton
-		virtual bool PublishInterleavedChannel(uint32_t channel_id, ov::String app_name, const std::shared_ptr<PushStream> &signal_channel);
+		virtual bool PublishInterleavedChannel(uint32_t channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &signal_channel);
 		// A data channel must have applicaiton/stream and track informaiton
-		bool PublishDataChannel(uint32_t channel_id, uint32_t signalling_channel_id, ov::String app_name, const std::shared_ptr<pvd::PushStream> &channel);
+		bool PublishDataChannel(uint32_t channel_id, uint32_t signalling_channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<pvd::PushStream> &channel);
 
     protected:
 		PushProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);

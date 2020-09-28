@@ -170,6 +170,7 @@ namespace pvd
 	{
 		double object_encoding = 0.0;
 		ov::String tc_url;
+		ov::String app_name;
 
 		if (document.GetProperty(2) != nullptr && document.GetProperty(2)->GetType() == AmfDataType::Object)
 		{
@@ -185,8 +186,7 @@ namespace pvd
 			// app 설정
 			if ((index = object->FindName("app")) >= 0 && object->GetType(index) == AmfDataType::String)
 			{
-				_app_name = object->GetString(index);
-				_import_chunk->SetAppName(_app_name);
+				app_name = object->GetString(index);
 			}
 
 			// app 설정
@@ -202,7 +202,7 @@ namespace pvd
 
 			if (url != nullptr)
 			{
-				_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), _app_name);
+				_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), app_name);
 				_import_chunk->SetAppName(_app_name);
 
 				auto app_info = Orchestrator::GetInstance()->GetApplicationInfoByVHostAppName(_app_name);
@@ -217,7 +217,12 @@ namespace pvd
 					return;
 				}
 			}
-
+			else
+			{
+				logtw("Could not obtain tcUrl from the RTMP stream: [%s]", app_name);
+				_app_name = info::VHostAppName(app_name);
+				_import_chunk->SetAppName(_app_name);
+			}
 		}
 
 		if (!SendWindowAcknowledgementSize(RTMP_DEFAULT_ACKNOWNLEDGEMENT_SIZE))

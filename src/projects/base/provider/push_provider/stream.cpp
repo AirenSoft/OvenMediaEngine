@@ -64,26 +64,26 @@ namespace pvd
 		return _stop_watch.Elapsed() / 1000;
 	}
 
-	bool PushStream::PublishInterleavedChannel(ov::String app_name)
+	bool PushStream::PublishInterleavedChannel(const info::VHostAppName &vhost_app_name)
 	{
 		if(_provider == nullptr)
 		{
 			return false;
 		}
 
-		_is_published = _provider->PublishInterleavedChannel(GetChannelId(), app_name, GetSharedPtrAs<PushStream>());
+		_is_published = _provider->PublishInterleavedChannel(GetChannelId(), vhost_app_name, GetSharedPtrAs<PushStream>());
 
 		return _is_published;
 	}
 
-	bool PushStream::PublishDataChannel(ov::String app_name, const std::shared_ptr<PushStream> &data_channel)
+	bool PushStream::PublishDataChannel(const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &data_channel)
 	{
 		if(_provider == nullptr)
 		{
 			return false;
 		}
 
-		return _provider->PublishDataChannel(GetChannelId(), GetRelatedChannelId(), app_name, data_channel);
+		return _provider->PublishDataChannel(GetChannelId(), GetRelatedChannelId(), vhost_app_name, data_channel);
 	}
 
 	bool PushStream::DoesBelongApplication()

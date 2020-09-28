@@ -42,8 +42,8 @@ private:
 
 
 public:
-	std::shared_ptr<ov::Error> CommandRecordStart(ov::String app_name, ov::String stream_name);
-	std::shared_ptr<ov::Error> CommandRecordStop(ov::String app_name, ov::String stream_name);
-	std::shared_ptr<ov::Error> CommandGetStats(ov::String app_name, ov::String stream_name);
+	std::shared_ptr<ov::Error> CommandRecordStart(const info::VHostAppName &vhost_app_name, ov::String stream_name);
+	std::shared_ptr<ov::Error> CommandRecordStop(const info::VHostAppName &vhost_app_name, ov::String stream_name);
+	std::shared_ptr<ov::Error> CommandGetStats(const info::VHostAppName &vhost_app_name, ov::String stream_name);
 
 };

@@ -8,16 +8,16 @@
 //==============================================================================
 #pragma once
 
+#include <base/ovlibrary/ovlibrary.h>
+#include <base/ovsocket/ovsocket.h>
+#include <orchestrator/orchestrator.h>
 #include <stdint.h>
 #include <unistd.h>
+
 #include <algorithm>
 #include <memory>
 #include <thread>
 #include <vector>
-
-#include <base/ovlibrary/ovlibrary.h>
-#include <base/ovsocket/ovsocket.h>
-#include <orchestrator/orchestrator.h>
 
 #include "base/provider/push_provider/provider.h"
 
@@ -26,12 +26,12 @@ namespace pvd
 	class MpegTsStreamPortItem
 	{
 	public:
-		MpegTsStreamPortItem(uint16_t port, const ov::String &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<PhysicalPort> &physical_port)
+		MpegTsStreamPortItem(uint16_t port, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<PhysicalPort> &physical_port)
+			: _port(port),
+			  _vhost_app_name(vhost_app_name),
+			  _stream_name(stream_name),
+			  _physical_port(physical_port)
 		{
-			_port = port;
-			_vhost_app_name = vhost_app_name;
-			_stream_name = stream_name;
-			_physical_port = physical_port;
 		}
 
 		uint16_t GetPortNumber()
@@ -39,12 +39,12 @@ namespace pvd
 			return _port;
 		}
 
-		const ov::String& GetVhostAppName()
+		const info::VHostAppName &GetVhostAppName()
 		{
 			return _vhost_app_name;
 		}
 
-		const ov::String& GetStreamName()
+		const ov::String &GetStreamName()
 		{
 			return _stream_name;
 		}
@@ -77,8 +77,8 @@ namespace pvd
 
 	private:
 		uint16_t _port = 0;
-		ov::String _vhost_app_name;
-		ov::String	_stream_name;
+		info::VHostAppName _vhost_app_name;
+		ov::String _stream_name;
 		std::shared_ptr<PhysicalPort> _physical_port = nullptr;
 
 		std::atomic<bool> _client_connected = false;
@@ -109,15 +109,17 @@ namespace pvd
 			return ProviderType::Mpegts;
 		}
 
-		const char* GetProviderName() const override
+		const char *GetProviderName() const override
 		{
 			return "MpegtsProvider";
 		}
-	
+
 	protected:
 		// stream_map->key: <port, type>
 		// stream_map->value: <vhost_app_name, stream_name>
-		bool PrepareStreamList(const cfg::Server &server_config, std::map<std::tuple<int, ov::SocketType>, std::tuple<ov::String, ov::String>> *stream_map);
+		bool PrepareStreamList(const cfg::Server &server_config,
+							   std::map<std::tuple<int, ov::SocketType>,
+										std::tuple<info::VHostAppName, ov::String>> *stream_map);
 
 		//--------------------------------------------------------------------
 		// Implementation of Provider's pure virtual functions
@@ -144,9 +146,9 @@ namespace pvd
 							const std::shared_ptr<const ov::Error> &error) override;
 
 	private:
-		std::shared_ptr<MpegTsStreamPortItem>	GetStreamPortItem(uint16_t local_port);
+		std::shared_ptr<MpegTsStreamPortItem> GetStreamPortItem(uint16_t local_port);
 
 		std::shared_mutex _stream_port_map_lock;
-		std::map<uint16_t, std::shared_ptr<MpegTsStreamPortItem>>	_stream_port_map;
+		std::map<uint16_t, std::shared_ptr<MpegTsStreamPortItem>> _stream_port_map;
 	};
-}
+}  // namespace pvd

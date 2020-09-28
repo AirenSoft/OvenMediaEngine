@@ -8,16 +8,17 @@
 //==============================================================================
 #pragma once
 
-#include <memory>
-
-#include "segment_stream_interceptor.h"
-#include "segment_stream_observer.h"
-
 #include <base/publisher/publisher.h>
 #include <config/config_manager.h>
 #include <http_server/http_server.h>
 #include <http_server/https_server.h>
 #include <http_server/interceptors/http_request_interceptors.h>
+
+#include <memory>
+
+#include "segment_stream_interceptor.h"
+#include "segment_stream_observer.h"
+#include "segment_stream_request_info.h"
 
 class SegmentStreamServer
 {
@@ -31,7 +32,7 @@ public:
 		std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
 		int thread_count);
 	bool Stop();
-	
+
 	bool AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer);
 	bool RemoveObserver(const std::shared_ptr<SegmentStreamObserver> &observer);
 
@@ -61,17 +62,15 @@ protected:
 
 	// Interfaces
 	virtual HttpConnection ProcessStreamRequest(const std::shared_ptr<HttpClient> &client,
-												const ov::String &app_name, const ov::String &stream_name,
-												const ov::String &file_name, const ov::String &file_ext) = 0;
+												const SegmentStreamRequestInfo &request_info,
+												const ov::String &file_ext) = 0;
 
 	virtual HttpConnection ProcessPlayListRequest(const std::shared_ptr<HttpClient> &client,
-												  const ov::String &app_name, const ov::String &stream_name,
-												  const ov::String &file_name,
+												  const SegmentStreamRequestInfo &request_info,
 												  PlayListType play_list_type) = 0;
 
 	virtual HttpConnection ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
-												 const ov::String &app_name, const ov::String &stream_name,
-												 const ov::String &file_name,
+												 const SegmentStreamRequestInfo &request_info,
 												 SegmentType segment_type) = 0;
 
 	bool UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url);

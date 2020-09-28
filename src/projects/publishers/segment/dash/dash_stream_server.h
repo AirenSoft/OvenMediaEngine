@@ -8,10 +8,10 @@
 //==============================================================================
 #pragma once
 
+#include <publishers/segment/segment_stream/segment_stream_server.h>
+
 #include "dash_interceptor.h"
 #include "dash_packetizer.h"
-
-#include <publishers/segment/segment_stream/segment_stream_server.h>
 
 class DashStreamServer : public SegmentStreamServer
 {
@@ -33,14 +33,14 @@ public:
 
 protected:
 	HttpConnection ProcessStreamRequest(const std::shared_ptr<HttpClient> &client,
-										const ov::String &app_name, const ov::String &stream_name,
-										const ov::String &file_name, const ov::String &file_ext) override;
+										const SegmentStreamRequestInfo &request_info,
+										const ov::String &file_ext) override;
 
-	HttpConnection ProcessPlayListRequest(const std::shared_ptr<HttpClient> &client, const ov::String &app_name, const ov::String &stream_name,
-									 const ov::String &file_name,
-									 PlayListType play_list_type) override;
+	HttpConnection ProcessPlayListRequest(const std::shared_ptr<HttpClient> &client,
+										  const SegmentStreamRequestInfo &request_info,
+										  PlayListType play_list_type) override;
 
-	HttpConnection ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client, const ov::String &app_name, const ov::String &stream_name,
-									const ov::String &file_name,
-									SegmentType segment_type) override;
+	HttpConnection ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
+										 const SegmentStreamRequestInfo &request_info,
+										 SegmentType segment_type) override;
 };

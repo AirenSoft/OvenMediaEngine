@@ -122,6 +122,8 @@ namespace ov
 		{
 			switch(type)
 			{
+				case ProviderType::Unknown:
+					return "Unknown";
 				case ProviderType::Rtmp:
 					return "RTMP";
 				case ProviderType::Rtsp:
@@ -130,16 +132,20 @@ namespace ov
 					return "RTSP Pull";
 				case ProviderType::Ovt:
 					return "OVT";
-				case ProviderType::Unknown:
-				default:
-					return "Unknown";
+				case ProviderType::Mpegts:
+					return "MPEG-TS";
 			}
+
+			return "Unknown";
 		}
 
 		static ov::String ToString(const PublisherType &type)
 		{
 			switch(type)
 			{
+				case PublisherType::Unknown:
+				case PublisherType::NumberOfPublishers:
+					return "Unknown";
 				case PublisherType::Webrtc:
 					return "WebRTC";
 				case PublisherType::Rtmp:
@@ -152,10 +158,11 @@ namespace ov
 					return "LLDASH";
 				case PublisherType::Ovt:
 					return "Ovt";
-				case PublisherType::Unknown:
-				default:
-					return "Unknown";
+				case PublisherType::File:
+					return "File";
 			}
+
+			return "Unknown";
 		}
 
 		static ov::String ToString(const common::MediaCodecId &type)

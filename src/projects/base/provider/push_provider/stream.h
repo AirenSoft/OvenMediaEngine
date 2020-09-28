@@ -49,8 +49,8 @@ namespace pvd
 		// app name, stream name, tracks 가 모두 준비되면 호출한다. 
 		// provider->AssignStream (app)
 		// app-> NotifyStreamReady(this)
-		bool PublishInterleavedChannel(ov::String app_name);
-		bool PublishDataChannel(ov::String app_name, const std::shared_ptr<PushStream> &data_channel);
+		bool PublishInterleavedChannel(const info::VHostAppName &vhost_app_name);
+		bool PublishDataChannel(const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &data_channel);
 
 	private:
 		uint32_t 		_channel_id = 0;

@@ -140,13 +140,13 @@ namespace pub
 		return true;
 	}
 
-	std::shared_ptr<Application> Publisher::GetApplicationByName(ov::String app_name)
+	std::shared_ptr<Application> Publisher::GetApplicationByName(const info::VHostAppName &vhost_app_name)
 	{
 		std::shared_lock<std::shared_mutex> lock(_application_map_mutex);
 		for (auto const &x : _applications)
 		{
 			auto application = x.second;
-			if (application->GetName() == app_name)
+			if (application->GetName() == vhost_app_name)
 			{
 				return application;
 			}
@@ -155,13 +155,13 @@ namespace pub
 		return nullptr;
 	}
 
-	std::shared_ptr<Stream> Publisher::GetStream(ov::String app_name, ov::String stream_name)
+	std::shared_ptr<Stream> Publisher::GetStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
-		auto app = GetApplicationByName(std::move(app_name));
+		auto app = GetApplicationByName(vhost_app_name);
 
 		if (app != nullptr)
 		{
-			return app->GetStream(std::move(stream_name));
+			return app->GetStream(stream_name);
 		}
 
 		return nullptr;

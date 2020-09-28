@@ -68,13 +68,13 @@ bool FilePublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub:
 	return true;
 }
 
-std::shared_ptr<ov::Error> FilePublisher::CommandRecordStart(ov::String app_name, ov::String stream_name)
+std::shared_ptr<ov::Error> FilePublisher::CommandRecordStart(const info::VHostAppName &vhost_app_name, ov::String stream_name)
 {
 	// Find Stream
-	auto file_stream = GetStreamAs<FileStream>(app_name, stream_name);
+	auto file_stream = GetStreamAs<FileStream>(vhost_app_name, stream_name);
 	if(file_stream == nullptr)
 	{
-		logte("Could not found file stream. app:%s, stream:%s", app_name.CStr(), stream_name.CStr());
+		logte("Could not found file stream. app:%s, stream:%s", vhost_app_name.CStr(), stream_name.CStr());
 		return 	ov::Error::CreateError(0, "Failed");
 	}
 
@@ -84,12 +84,12 @@ std::shared_ptr<ov::Error> FilePublisher::CommandRecordStart(ov::String app_name
 	return ov::Error::CreateError(0, "Success");
 }
 
-std::shared_ptr<ov::Error> FilePublisher::CommandRecordStop(ov::String app_name, ov::String stream_name)
+std::shared_ptr<ov::Error> FilePublisher::CommandRecordStop(const info::VHostAppName &vhost_app_name, ov::String stream_name)
 {
-	auto file_stream = GetStreamAs<FileStream>(app_name, stream_name);
+	auto file_stream = GetStreamAs<FileStream>(vhost_app_name, stream_name);
 	if(file_stream == nullptr)
 	{
-		logte("Could not found file stream. app:%s, stream:%s", app_name.CStr(), stream_name.CStr());
+		logte("Could not found file stream. app:%s, stream:%s", vhost_app_name.CStr(), stream_name.CStr());
 		return 	ov::Error::CreateError(0, "Failed");
 	}
 
@@ -98,13 +98,13 @@ std::shared_ptr<ov::Error> FilePublisher::CommandRecordStop(ov::String app_name,
 	return ov::Error::CreateError(0, "Success");
 }
 
-std::shared_ptr<ov::Error> FilePublisher::CommandGetStats(ov::String app_name, ov::String stream_name)
+std::shared_ptr<ov::Error> FilePublisher::CommandGetStats(const info::VHostAppName &vhost_app_name, ov::String stream_name)
 {
 	// Find Application	
-	auto file_stream = GetStreamAs<FileStream>(app_name, stream_name);
+	auto file_stream = GetStreamAs<FileStream>(vhost_app_name, stream_name);
 	if(file_stream == nullptr)
 	{
-		logte("Could not found file stream. app:%s, stream:%s", app_name.CStr(), stream_name.CStr());
+		logte("Could not found file stream. app:%s, stream:%s", vhost_app_name.CStr(), stream_name.CStr());
 		return 	ov::Error::CreateError(0, "Failed");
 	}	
 

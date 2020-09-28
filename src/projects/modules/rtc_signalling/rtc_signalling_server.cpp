@@ -112,9 +112,9 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			auto &app_name = tokens[1];
 			auto &stream_name = tokens[2];
 
-			ov::String internal_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
+			info::VHostAppName vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
 
-			auto info = std::make_shared<RtcSignallingInfo>(host_name, app_name, stream_name, internal_app_name);
+			auto info = std::make_shared<RtcSignallingInfo>(vhost_app_name, host_name, app_name, stream_name);
 
 			{
 				auto lock_guard = std::lock_guard(_client_list_mutex);
@@ -187,11 +187,11 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			{
 				if (error->GetCode() == 404)
 				{
-					logte("Cannot find stream [%s/%s]", info->internal_app_name.CStr(), info->stream_name.CStr());
+					logte("Cannot find stream [%s/%s]", info->vhost_app_name.CStr(), info->stream_name.CStr());
 				}
 				else
 				{
-					logte("An error occurred while dispatch command %s for stream [%s/%s]: %s, disconnecting...", command.CStr(), info->internal_app_name.CStr(), info->stream_name.CStr(), error->ToString().CStr());
+					logte("An error occurred while dispatch command %s for stream [%s/%s]: %s, disconnecting...", command.CStr(), info->vhost_app_name.CStr(), info->stream_name.CStr(), error->ToString().CStr());
 				}
 
 				ov::JsonObject response_json;
@@ -232,7 +232,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 
 				logti("Client is disconnected: %s (%s / %s, ufrag: local: %s, remote: %s)",
 					  ws_client->ToString().CStr(),
-					  info->internal_app_name.CStr(), info->stream_name.CStr(),
+					  info->vhost_app_name.CStr(), info->stream_name.CStr(),
 					  (info->offer_sdp != nullptr) ? info->offer_sdp->GetIceUfrag().CStr() : "(N/A)",
 					  (info->peer_sdp != nullptr) ? info->peer_sdp->GetIceUfrag().CStr() : "(N/A)");
 			}
@@ -286,14 +286,14 @@ bool RtcSignallingServer::RemoveObserver(const std::shared_ptr<RtcSignallingObse
 	return true;
 }
 
-bool RtcSignallingServer::Disconnect(const ov::String &application_name, const ov::String &stream_name, const std::shared_ptr<const SessionDescription> &peer_sdp)
+bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
 	bool disconnected = false;
 
 	if ((disconnected == false) && (_http_server != nullptr))
 	{
 		disconnected = _http_server->DisconnectIf(
-			[application_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool {
+			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool {
 				auto request = client->GetRequest();
 				auto info = request->GetExtraAs<RtcSignallingInfo>();
 
@@ -303,7 +303,7 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 				}
 				else
 				{
-					return (info->internal_app_name == application_name) &&
+					return (info->vhost_app_name == vhost_app_name) &&
 						   (info->stream_name == stream_name) &&
 						   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
 				}
@@ -315,7 +315,7 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 	if ((disconnected == false) && (_https_server != nullptr))
 	{
 		disconnected = _https_server->DisconnectIf(
-			[application_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool {
+			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool {
 				auto request = client->GetRequest();
 				auto info = request->GetExtraAs<RtcSignallingInfo>();
 
@@ -325,7 +325,7 @@ bool RtcSignallingServer::Disconnect(const ov::String &application_name, const o
 				}
 				else
 				{
-					return (info->internal_app_name == application_name) &&
+					return (info->vhost_app_name == vhost_app_name) &&
 						   (info->stream_name == stream_name) &&
 						   ((info->peer_sdp != nullptr) && (*(info->peer_sdp) == *peer_sdp));
 				}
@@ -476,8 +476,8 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 	auto &client = ws_client->GetClient();
 	auto request = client->GetRequest();
 
-	ov::String application_name = info->internal_app_name;
-	ov::String stream_name = info->stream_name;
+	auto vhost_app_name = info->vhost_app_name;
+	auto stream_name = info->stream_name;
 
 	std::shared_ptr<const SessionDescription> sdp = nullptr;
 	std::shared_ptr<ov::Error> error = nullptr;
@@ -527,9 +527,9 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 		}
 
 		// None of the hosts can accept this client, so the peer will be connectioned to OME
-		std::find_if(_observers.begin(), _observers.end(), [ws_client, info, &sdp, application_name, stream_name](auto &observer) -> bool {
+		std::find_if(_observers.begin(), _observers.end(), [ws_client, info, &sdp, vhost_app_name, stream_name](auto &observer) -> bool {
 			// Ask observer to fill local_candidates
-			sdp = observer->OnRequestOffer(ws_client, application_name, stream_name, &(info->local_candidates));
+			sdp = observer->OnRequestOffer(ws_client, vhost_app_name, info->host_name, info->app_name, stream_name, &(info->local_candidates));
 			return sdp != nullptr;
 		});
 
@@ -681,9 +681,9 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 
 			for (auto &observer : _observers)
 			{
-				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->internal_app_name.CStr(), info->stream_name.CStr());
+				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->vhost_app_name.CStr(), info->stream_name.CStr());
 				// TODO(Getroot): Add param "request->GetRequestTarget()"
-				observer->OnAddRemoteDescription(ws_client, info->internal_app_name, info->stream_name, info->offer_sdp, info->peer_sdp);
+				observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->app_name, info->stream_name, info->offer_sdp, info->peer_sdp);
 			}
 		}
 		else
@@ -767,7 +767,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const std::sha
 
 			for (auto &observer : _observers)
 			{
-				observer->OnIceCandidate(ws_client, info->internal_app_name, info->stream_name, ice_candidate, username_fragment);
+				observer->OnIceCandidate(ws_client, info->vhost_app_name, info->host_name, info->app_name, info->stream_name, ice_candidate, username_fragment);
 			}
 		}
 	}
@@ -903,9 +903,9 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_p
 	{
 		for (auto &observer : _observers)
 		{
-			logtd("Trying to callback OnStopCommand to %p for client %d (%s / %s)...", observer.get(), info->id, info->internal_app_name.CStr(), info->stream_name.CStr());
+			logtd("Trying to callback OnStopCommand to %p for client %d (%s / %s)...", observer.get(), info->id, info->vhost_app_name.CStr(), info->stream_name.CStr());
 
-			if (observer->OnStopCommand(ws_client, info->internal_app_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+			if (observer->OnStopCommand(ws_client, info->vhost_app_name, info->host_name, info->app_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
 			{
 				result = false;
 			}

@@ -27,9 +27,9 @@ namespace pvd
 			ERROR
 		};
 
-		PullingItem(const ov::String &app_name, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
+		PullingItem(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
 		{
-			_app_name = app_name;
+			_vhost_app_name = vhost_app_name;
 			_stream_name = stream_name;
 			_url_list = url_list;
 			_offset = offset;
@@ -61,7 +61,7 @@ namespace pvd
 		}
 
 	private:
-		ov::String				_app_name;
+		info::VHostAppName		_vhost_app_name;
 		ov::String				_stream_name;
 		std::vector<ov::String> _url_list;
 		off_t 					_offset;
@@ -96,7 +96,7 @@ namespace pvd
 		//--------------------------------------------------------------------
 
 	private:	
-		ov::String		GeneratePullingKey(const ov::String &app_name, const ov::String &stream_name);
+		ov::String		GeneratePullingKey(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
 
 		std::map<ov::String, std::shared_ptr<PullingItem>>	_pulling_table;
 		std::mutex 											_pulling_table_mutex;

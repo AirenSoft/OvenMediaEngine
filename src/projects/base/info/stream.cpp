@@ -144,7 +144,7 @@ namespace info
 			return "Unknown";
 		}
 
-		return _app_info->GetName();
+		return _app_info->GetName().CStr();
 	}
 
 

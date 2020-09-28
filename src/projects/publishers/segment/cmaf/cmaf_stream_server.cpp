@@ -12,20 +12,19 @@
 #include "cmaf_private.h"
 
 HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
-												  const ov::String &app_name, const ov::String &stream_name,
-												  const ov::String &file_name,
-												  SegmentType segment_type)
+													   const SegmentStreamRequestInfo &request_info,
+													   SegmentType segment_type)
 {
 	auto response = client->GetResponse();
 
-	auto type = DashPacketizer::GetFileType(file_name);
+	auto type = DashPacketizer::GetFileType(request_info.file_name);
 
 	bool is_video = ((type == DashFileType::VideoSegment) || (type == DashFileType::VideoInit));
 	std::shared_ptr<SegmentData> segment = nullptr;
 
 	// Check if the requested file is being created
 	{
-		auto key = ov::String::FormatString("%s/%s/%s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		auto key = ov::String::FormatString("%s/%s/%s", request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), request_info.file_name.CStr());
 
 		std::unique_lock<std::mutex> lock(_http_chunk_guard);
 
@@ -52,7 +51,7 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 		}
 	}
 
-	return DashStreamServer::ProcessSegmentRequest(client, app_name, stream_name, file_name, segment_type);
+	return DashStreamServer::ProcessSegmentRequest(client, request_info, segment_type);
 }
 
 void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov::String &stream_name,

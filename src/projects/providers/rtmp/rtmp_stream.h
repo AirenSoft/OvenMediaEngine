@@ -131,7 +131,7 @@ namespace pvd
 
 		// parsed from packet
 		ov::String _domain_name;
-		ov::String _app_name;
+		info::VHostAppName _app_name;
 		ov::String _stream_name;
 		ov::String _device_string;
 

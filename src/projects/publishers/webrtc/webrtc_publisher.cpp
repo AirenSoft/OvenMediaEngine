@@ -240,27 +240,31 @@ bool WebRtcPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Ap
  */
 
 // Called when receives request offer sdp from client
-std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &application_name, const ov::String &stream_name, std::vector<RtcIceCandidate> *ice_candidates)
+std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,
+																		  const info::VHostAppName &vhost_app_name,
+																		  const ov::String &host_name,
+																		  const ov::String &app_name, const ov::String &stream_name,
+																		  std::vector<RtcIceCandidate> *ice_candidates)
 {
 	// Application -> Stream에서 SDP를 얻어서 반환한다.
 	auto orchestrator = Orchestrator::GetInstance();
 	RequestStreamResult result = RequestStreamResult::init;
 
-	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
+	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
 	if (stream == nullptr)
 	{
 		// If the stream does not exists, request to the provider
-		if (orchestrator->RequestPullStream(application_name, stream_name) == false)
+		if (orchestrator->RequestPullStream(vhost_app_name, host_name, app_name, stream_name) == false)
 		{
-			logtd("Could not pull the stream: [%s/%s]", application_name.CStr(), stream_name.CStr());
+			logtd("Could not pull the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 			result = RequestStreamResult::origin_failed;
 		}
 		else
 		{
-			stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
+			stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
 			if (stream == nullptr)
 			{
-				logtd("Could not pull the stream: [%s/%s]", application_name.CStr(), stream_name.CStr());
+				logtd("Could not pull the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 				result = RequestStreamResult::local_failed;
 			}
 			else
@@ -293,17 +297,18 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 
 // Called when receives an answer sdp from client
 bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
-											 const ov::String &application_name,
-											 const ov::String &stream_name,
+											 const info::VHostAppName &vhost_app_name,
+											 const ov::String &host_name,
+											 const ov::String &app_name, const ov::String &stream_name,
 											 const std::shared_ptr<const SessionDescription> &offer_sdp,
 											 const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
-	auto application = GetApplicationByName(application_name);
-	auto stream = GetStream(application_name, stream_name);
+	auto application = GetApplicationByName(vhost_app_name);
+	auto stream = GetStream(vhost_app_name, stream_name);
 
 	if (!stream)
 	{
-		logte("Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
+		logte("Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
@@ -336,17 +341,19 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 }
 
 bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_client,
-									const ov::String &application_name, const ov::String &stream_name,
+									const info::VHostAppName &vhost_app_name,
+									const ov::String &host_name,
+									const ov::String &app_name, const ov::String &stream_name,
 									const std::shared_ptr<const SessionDescription> &offer_sdp,
 									const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
 	// 플레이어에서 stop 이벤트가 수신 된 경우 처리
-	logtd("Stop commnad received : %s/%s/%u", application_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
+	logtd("Stop commnad received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 	// Find Stream
-	auto stream = std::static_pointer_cast<RtcStream>(GetStream(application_name, stream_name));
+	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
 	if (!stream)
 	{
-		logte("To stop session failed. Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
+		logte("To stop session failed. Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
@@ -375,14 +382,17 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 }
 
 // bitrate info(frome signalling)
-uint32_t WebRtcPublisher::OnGetBitrate(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &application_name, const ov::String &stream_name)
+uint32_t WebRtcPublisher::OnGetBitrate(const std::shared_ptr<WebSocketClient> &ws_client,
+									   const info::VHostAppName &vhost_app_name,
+									   const ov::String &host_name,
+									   const ov::String &app_name, const ov::String &stream_name)
 {
-	auto stream = GetStream(application_name, stream_name);
+	auto stream = GetStream(vhost_app_name, stream_name);
 	uint32_t bitrate = 0;
 
 	if (!stream)
 	{
-		logte("Cannot find stream (%s/%s)", application_name.CStr(), stream_name.CStr());
+		logte("Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
 		return 0;
 	}
 
@@ -401,8 +411,9 @@ uint32_t WebRtcPublisher::OnGetBitrate(const std::shared_ptr<WebSocketClient> &w
 }
 
 bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<WebSocketClient> &ws_client,
-									 const ov::String &application_name,
-									 const ov::String &stream_name,
+									 const info::VHostAppName &vhost_app_name,
+									 const ov::String &host_name,
+									 const ov::String &app_name, const ov::String &stream_name,
 									 const std::shared_ptr<RtcIceCandidate> &candidate,
 									 const ov::String &username_fragment)
 {

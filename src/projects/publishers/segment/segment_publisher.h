@@ -20,11 +20,11 @@
 class PlaylistRequestInfo
 {
 public:
-	PlaylistRequestInfo(const PublisherType &type, const ov::String &app_name, const ov::String &stream_name, const ov::String &ip, const ov::String &session_id)
+	PlaylistRequestInfo(const PublisherType &type, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const ov::String &ip, const ov::String &session_id)
 	{
 		_publisher_type = type;
 		_session_id = session_id;
-		_app_name = app_name;
+		_vhost_app_name = vhost_app_name;
 		_stream_name = stream_name;
 		_ip_address = ip;
 		_last_requested_time = std::chrono::system_clock::now();
@@ -34,7 +34,7 @@ public:
 	{
 		_publisher_type = info._publisher_type;
 		_session_id = info._session_id;
-		_app_name = info._app_name;
+		_vhost_app_name = info._vhost_app_name;
 		_stream_name = info._stream_name;
 		_ip_address = info._ip_address;
 		_last_requested_time = info._last_requested_time;
@@ -55,7 +55,7 @@ public:
 	bool IsRequestFromSameUser(const PlaylistRequestInfo &info)
 	{
 		if(_publisher_type == info._publisher_type &&
-			_app_name == info._app_name &&
+			_vhost_app_name == info._vhost_app_name &&
 			_stream_name == info._stream_name &&
 			_session_id == info._session_id &&
 			_ip_address == info._ip_address)
@@ -69,15 +69,15 @@ public:
 	const PublisherType& GetPublisherType() const { return _publisher_type; }
 	const ov::String& GetIpAddress() const { return _ip_address; }
 	const ov::String& GetSessionId() const { return _session_id; }
-	const ov::String& GetAppName() const { return _app_name; }
+	const info::VHostAppName& GetAppName() const { return _vhost_app_name; }
 	const ov::String& GetStreamName() const { return _stream_name; }
 
 private:
-	PublisherType	_publisher_type;
-	ov::String		_app_name;
-	ov::String		_stream_name;
-	ov::String		_ip_address;
-	ov::String		_session_id;
+	PublisherType		_publisher_type;
+	info::VHostAppName	_vhost_app_name;
+	ov::String			_stream_name;
+	ov::String			_ip_address;
+	ov::String			_session_id;
 	std::chrono::system_clock::time_point	_last_requested_time;
 };
 
@@ -209,7 +209,7 @@ protected:
 	virtual bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager) = 0;
 	
 
-	bool HandleSignedUrl(const ov::String &app_name, const ov::String &stream_name, 
+	bool HandleSignedUrl(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, 
 						const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
 						std::shared_ptr<PlaylistRequestInfo> &request_info);
 
@@ -217,13 +217,11 @@ protected:
 	// Implementation of SegmentStreamObserver
 	//--------------------------------------------------------------------
 	bool OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
-						   const ov::String &app_name, const ov::String &stream_name,
-						   const ov::String &file_name,
+						   const SegmentStreamRequestInfo &request_info,
 						   ov::String &play_list) override;
 
 	bool OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
-						  const ov::String &app_name, const ov::String &stream_name,
-						  const ov::String &file_name,
+						  const SegmentStreamRequestInfo &request_info,
 						  std::shared_ptr<SegmentData> &segment) override;
 
 	std::shared_ptr<SegmentStreamServer> _stream_server = nullptr;

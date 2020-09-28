@@ -26,11 +26,11 @@ namespace pvd
 
 	}
 
-	ov::String PullProvider::GeneratePullingKey(const ov::String &app_name, const ov::String &stream_name)
+	ov::String PullProvider::GeneratePullingKey(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
 		ov::String key;
 
-		key.Format("%s#%s", app_name.CStr(), stream_name.CStr());
+		key.Format("%s#%s", vhost_app_name.CStr(), stream_name.CStr());
 
 		return key;
 	}

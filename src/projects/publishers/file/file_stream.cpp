@@ -318,8 +318,8 @@ ov::String FileStream::ConvertMacro(ov::String src)
 		{
 			// Delete Prefix virtualhost name. ex) #[VirtualHost]#Application
 			ov::String prefix = ov::String::FormatString("#%s#", host_info.GetName().CStr());
-			ov::String application_name =  GetApplicationInfo().GetName();
-			application_name = application_name.Replace(prefix, "");
+			auto app_name =  GetApplicationInfo().GetName();
+			auto application_name = app_name.ToString().Replace(prefix, "");
 
 			replaced_string = replaced_string.Replace(full_match, application_name);
 		}

@@ -93,12 +93,12 @@ namespace pub
 		virtual bool Start();
 		virtual bool Stop();
 
-		std::shared_ptr<Application> GetApplicationByName(ov::String app_name);
-		std::shared_ptr<Stream> GetStream(ov::String app_name, ov::String stream_name);
+		std::shared_ptr<Application> GetApplicationByName(const info::VHostAppName &vhost_app_name);
+		std::shared_ptr<Stream> GetStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
 		template <typename T>
-		std::shared_ptr<T> GetStreamAs(ov::String app_name, ov::String stream_name)
+		std::shared_ptr<T> GetStreamAs(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 		{
-			return std::static_pointer_cast<T>(GetStream(app_name, stream_name));
+			return std::static_pointer_cast<T>(GetStream(vhost_app_name, stream_name));
 		}
 
 		std::shared_ptr<Application> GetApplicationById(info::application_id_t application_id);

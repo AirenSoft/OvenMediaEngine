@@ -17,6 +17,8 @@
 #include "rtmp_mux_util.h"
 #include "rtmp_datastructure.h"
 
+#include <base/info/info.h>
+
 class RtmpImportChunk : public RtmpMuxUtil
 {
 public:
@@ -33,7 +35,7 @@ public:
 		_chunk_size = chunk_size;
 	}
 
-	void SetAppName(const ov::String &app_name);
+	void SetAppName(const info::VHostAppName &app_name);
 	void SetStreamName(const ov::String &stream_name);
 
 	void Destroy();
@@ -51,6 +53,6 @@ private:
 
 	RtmpChunkParser _parser;
 
-	ov::String _app_name;
+	info::VHostAppName _vhost_app_name;
 	ov::String _stream_name;
 };
