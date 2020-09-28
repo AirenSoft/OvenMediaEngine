@@ -56,10 +56,15 @@ bool OvtSession::SendOutgoingData(const std::any &packet)
 	try 
 	{
         session_packet = std::any_cast<std::shared_ptr<OvtPacket>>(packet);
+		if(session_packet == nullptr)
+		{
+			return false;
+		}
     }
     catch(const std::bad_any_cast& e) 
 	{
-        logtc("An incorrect type of packet was input from the stream.");
+        logtd("An incorrect type of packet was input from the stream.");
+		return false;
     }
 
 	// OvtSession should send full packet so it will start to send from next packet of marker packet.

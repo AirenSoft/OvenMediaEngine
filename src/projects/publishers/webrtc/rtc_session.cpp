@@ -194,10 +194,15 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 	try 
 	{
         session_packet = std::any_cast<std::shared_ptr<RtpPacket>>(packet);
+		if(session_packet == nullptr)
+		{
+			return false;
+		}
     }
     catch(const std::bad_any_cast& e) 
 	{
-        logtc("An incorrect type of packet was input from the stream.");
+        logtd("An incorrect type of packet was input from the stream.");
+		return false;
     }
 
 	// Check if this session wants the packet
