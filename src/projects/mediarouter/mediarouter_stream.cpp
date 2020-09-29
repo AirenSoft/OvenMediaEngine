@@ -384,7 +384,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 		case MediaCodecId::Vp8: 
 		case MediaCodecId::Vp9:
 		case MediaCodecId::Opus:
-			logte("Not supported a codec for parsing");
+			SetParseTrackInfo(media_track, true);
 			break;
 		default:
 			logte("Unknown codec");

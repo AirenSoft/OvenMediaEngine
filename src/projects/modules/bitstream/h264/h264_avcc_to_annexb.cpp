@@ -94,7 +94,7 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 			annexb_data->Append(nal_data);
 		}   
 
-		// Append SPS/PPS before IDR frame. not every packet.
+		// Append SPS/PPS NalU before IdrSlice NalU. not every packet.
 		if(extradata.size() > 0 && has_idr_slice == true)
 		{
 			AVCDecoderConfigurationRecord config;
