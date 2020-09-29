@@ -260,14 +260,7 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 
 	// RTP Session must be copied and sent because data is altered due to SRTP.
 	auto copy_packet = std::make_shared<RtpPacket>(*session_packet);
-
-	static uint32_t skip = 1;
-	if(++skip % 50 != 0)
-	{
-		return _rtp_rtcp->SendOutgoingData(copy_packet);
-	}
-
-	return true;
+	return _rtp_rtcp->SendOutgoingData(copy_packet);
 }
 
 void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
