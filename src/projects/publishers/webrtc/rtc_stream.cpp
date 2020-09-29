@@ -331,7 +331,7 @@ bool RtcStream::Start()
 	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
 	_offer_sdp->Update();
 	
-	logtc("%s", _offer_sdp->ToString().CStr());
+	logtd("%s", _offer_sdp->ToString().CStr());
 
 	return Stream::Start();
 }
