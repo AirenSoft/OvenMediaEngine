@@ -62,7 +62,11 @@ public:
 	bool SendOutgoingData(const std::any &packet) override;
 	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data) override;
 
+	void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info);
+
 private:
+	bool ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info);
+
 	std::shared_ptr<RtpRtcp>            _rtp_rtcp;
 	std::shared_ptr<SrtpTransport>      _srtp_transport;
 	std::shared_ptr<DtlsTransport>      _dtls_transport;
@@ -75,5 +79,13 @@ private:
 
 	uint8_t 							_red_block_pt = 0;
 	uint8_t                             _video_payload_type = 0;
+	uint32_t							_video_ssrc = 0;
+	uint32_t							_video_rtx_ssrc = 0;
 	uint8_t                             _audio_payload_type = 0;
+	uint32_t							_audio_ssrc = 0;
+
+	bool								_use_rtx_flag = false;
+
+
+	uint16_t							_rtx_sequence_number = 1;
 };

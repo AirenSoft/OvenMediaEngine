@@ -174,8 +174,6 @@ bool DtlsTransport::VerifyPeerCertificate()
 
 bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
-	std::lock_guard<std::mutex> lock(_tls_lock);
-
 	if(GetState() != SessionNode::NodeState::Started)
 	{
 		logtd("SessionNode has not started, so the received data has been canceled.");
@@ -202,6 +200,7 @@ bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 			}
 			else
 			{
+				std::lock_guard<std::mutex> lock(_tls_lock);
 				// If it is not SRTP, it must be encrypted in DTLS.
 				// TODO: Currently, SCTP is not supported, so there is no need to encrypt, 
 				// and it will be developed if it supports data channels in the future.
@@ -228,8 +227,6 @@ bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 // IcePort -> Publisher ->[queue] Application {thread}-> Session -> DtlsTransport -> SRTP || SCTP
 bool DtlsTransport::OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
-	std::lock_guard<std::mutex> lock(_tls_lock);
-
 	if(GetState() != SessionNode::NodeState::Started)
 	{
 		logtd("SessionNode has not started, so the received data has been canceled.");
@@ -245,8 +242,10 @@ bool DtlsTransport::OnDataReceived(pub::SessionNodeType from_node, const std::sh
 			break;
 		case SSL_CONNECTING:
 		case SSL_CONNECTED:
+		{
 			if(IsDtlsPacket(data))
 			{
+				std::lock_guard<std::mutex> lock(_tls_lock);
 				logtd("Receive DTLS packet");
 				// Packet을 Queue에 쌓는다.
 				SaveDtlsPacket(data);
@@ -292,6 +291,7 @@ bool DtlsTransport::OnDataReceived(pub::SessionNodeType from_node, const std::sh
 				return true;
 			}
 			break;
+		}
 		case SSL_ERROR:
 		case SSL_CLOSED:
 			break;

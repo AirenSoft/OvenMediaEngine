@@ -63,7 +63,7 @@ bool OvtSession::SendOutgoingData(const std::any &packet)
     }
     catch(const std::bad_any_cast& e) 
 	{
-        logtd("An incorrect type of packet was input from the stream.");
+        logtd("An incorrect type of packet was input from the stream. (%s)", e.what());
 		return false;
     }
 

@@ -20,8 +20,9 @@ RtpPacket::RtpPacket()
 	_data->SetLength(FIXED_HEADER_SIZE);
 	_buffer = _data->GetWritableDataAs<uint8_t>();
 
-	// 버퍼에 RTP 버전 표기
 	_buffer[0] = RTP_VERSION << 6;
+
+	_created_time = std::chrono::system_clock::now();
 }
 
 RtpPacket::RtpPacket(const std::shared_ptr<ov::Data> &data)
@@ -68,6 +69,8 @@ RtpPacket::RtpPacket(const std::shared_ptr<ov::Data> &data)
 	// Full data
 	_data = data;
 	_buffer = _data->GetWritableDataAs<uint8_t>();
+
+	_created_time = std::chrono::system_clock::now();
 }
 
 RtpPacket::RtpPacket(RtpPacket &src)
@@ -86,6 +89,8 @@ RtpPacket::RtpPacket(RtpPacket &src)
 	_data = src._data->Clone();
 	_data->SetLength(src._data->GetLength());
 	_buffer = _data->GetWritableDataAs<uint8_t>();
+
+	_created_time = std::chrono::system_clock::now();
 }
 
 RtpPacket::~RtpPacket()
@@ -133,13 +138,12 @@ uint32_t RtpPacket::Ssrc() const
 }
 std::vector<uint32_t> RtpPacket::Csrcs() const
 {
-	// 첫번째 바이트의 하위 4bit에 있는 값 추출
+	// Extract the value in the lower 4 bits of the first byte
 	size_t num_csrc = _buffer[0] & 0x0F;
 	std::vector<uint32_t> csrcs(num_csrc);
 	for (size_t i = 0; i < num_csrc; ++i)
 	{
 		// 4 bytes char array => 4 bytes uint32_t
-		// BIG ENDIAN을 LITTEL ENDIAN으로 변환
 		csrcs[i] = ByteReader<uint32_t>::ReadBigEndian(&_buffer[FIXED_HEADER_SIZE + i * 4]);
 	}
 
@@ -157,12 +161,12 @@ void RtpPacket::SetMarker(bool marker_bit)
 
 	if (_marker)
 	{
-		// 맨 앞의 1bit를 1로 만든다.
+		// Make the first 1 bit 1
 		_buffer[1] = _buffer[1] | 0x80;
 	}
 	else
 	{
-		// 맨 앞의 1bit를 0으로 만든다.
+		// Make the first 1 bit 0.
 		_buffer[1] = _buffer[1] & 0x7F;
 	}
 }
@@ -199,25 +203,24 @@ void RtpPacket::SetSsrc(uint32_t ssrc)
 
 void RtpPacket::SetCsrcs(const std::vector<uint32_t>& csrcs)
 {
-	// TODO: Validation 체크
-	// 하위 데이터가 없을때만 넣을 수 있다.buffer 정리 때문에, 이거 하려면 다 뒤로 밀어야 함
-		// Extention이 없는지?
-		// Payload가 없는지?
-		// Padding이 없는지?
-	// csrcs가 15개를 넘지 않는지? (RFC)
-	// buffer reserve가 부족하진 않은지?
+	// TODO: Validation check
+	// can only be inserted when there is no sub-data. Because of buffer cleanup, you have to push it all back to do this
+	// Is there no Extention?
+	// Is there no payload?
+	// Is there no Padding?
+	// Is there no more than 15 csrcs? (RFC)
+	// Isn't there insufficient buffer reserve?
 
 	_payload_offset = FIXED_HEADER_SIZE + 4 * csrcs.size();
 
-	// 첫 바이트 하위 4비트에 csrs size 입력
+	// Enter csrs size in the lower 4 bits of the first byte
 	_cc = csrcs.size();
 	_buffer[0] = (_buffer[0] & 0xF0) | _cc;
 
-	// _buffer 사이즈 조정
+	// Adjust _buffer size
 	_data->SetLength(_payload_offset);
 	_buffer = _data->GetWritableDataAs<uint8_t>();
 
-	// 4 bytes 짜리 csrc를 buffer에 BIG ENDIAN으로 넣는다.
 	size_t offset = FIXED_HEADER_SIZE;
 	for (uint32_t csrc : csrcs)
 	{
@@ -288,4 +291,9 @@ uint8_t* RtpPacket::Header() const
 uint8_t* RtpPacket::Payload() const
 {
 	return &_buffer[_payload_offset];
+}
+
+std::chrono::system_clock::time_point RtpPacket::GetCreatedTime()
+{
+	return _created_time;
 }

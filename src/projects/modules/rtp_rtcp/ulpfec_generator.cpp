@@ -11,7 +11,7 @@ constexpr size_t	kFecLevelHeaderSizeLbitSet		= 2 + kMaskSizeLbitSet;
 constexpr size_t 	kUlpfecMaxMediaPacketsLbitClear	= 16;
 constexpr size_t 	kUlpfecMaxMediaPacketsLbitSet	= 48;
 
-constexpr size_t    kMediaPacketNumMakeFec          = 100 / 10; // 25% Rate, 1 fec packet per 4 media packets.
+constexpr size_t    kMediaPacketNumMakeFec          = 100 / 10; // 10% Rate, 1 fec packet per 10 media packets.
 
 UlpfecGenerator::UlpfecGenerator()
 {

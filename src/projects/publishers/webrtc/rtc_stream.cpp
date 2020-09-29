@@ -6,6 +6,61 @@
 
 using namespace common;
 
+/***************************
+ SDP Sample
+****************************
+v=0
+o=OvenMediaEngine 101 2 IN IP4 127.0.0.1
+s=-
+t=0 0
+a=group:BUNDLE jyJ5Pe 7LdTsW
+a=group:LS jyJ5Pe 7LdTsW
+a=msid-semantic:WMS 0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf
+a=fingerprint:sha-256 9A:F5:91:C4:C8:AD:9B:FB:95:5F:2E:30:49:E6:98:EC:63:BF:B0:15:26:DF:B7:E9:5F:9F:6C:C9:90:6F:0B:F4
+a=ice-options:trickle
+a=ice-ufrag:Xnh541
+a=ice-pwd:fR9dQgrLynGWq3iF07teYKu2STHJPIkM
+m=video 9 UDP/TLS/RTP/SAVPF 100 101 120 121 122
+c=IN IP4 0.0.0.0
+a=sendonly
+a=mid:jyJ5Pe
+a=setup:actpass
+a=rtcp-mux
+a=msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf 6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
+a=rtpmap:100 H264/90000
+a=fmtp:100 packetization-mode=1;profile-level-id=42e01f;level-asymmetry-allowed=1
+a=rtcp-fb:100 nack
+a=rtpmap:101 rtx/90000
+a=fmtp:101 apt=100
+a=rtpmap:120 red/90000
+a=rtpmap:121 rtx/90000
+a=fmtp:121 apt=120
+a=rtpmap:122 ulpfec/90000
+a=ssrc-group:FID 2808715097 1263422112
+a=ssrc:2808715097 cname:A9KW3tqkuJhs25BN
+a=ssrc:2808715097 msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf 6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
+a=ssrc:2808715097 mslabel:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf
+a=ssrc:2808715097 label:6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
+a=ssrc:1263422112 cname:A9KW3tqkuJhs25BN
+a=ssrc:1263422112 msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf 6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
+a=ssrc:1263422112 mslabel:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf
+a=ssrc:1263422112 label:6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
+m=audio 9 UDP/TLS/RTP/SAVPF 102
+c=IN IP4 0.0.0.0
+a=sendonly
+a=mid:7LdTsW
+a=setup:actpass
+a=rtcp-mux
+a=msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf X6EozKm0lj57uafc3JW2sOven1Sp9RMFY8kB
+a=rtpmap:102 OPUS/48000/2
+a=fmtp:102 stereo=1;useinbandfec=1;
+a=ssrc:1049140135 cname:A9KW3tqkuJhs25BN
+a=ssrc:1049140135 msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf X6EozKm0lj57uafc3JW2sOven1Sp9RMFY8kB
+a=ssrc:1049140135 mslabel:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf
+a=ssrc:1049140135 label:X6EozKm0lj57uafc3JW2sOven1Sp9RMFY8kB
+
+****************************/
+
 std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<pub::Application> application,
                                              const info::Stream &info,
                                              uint32_t worker_count)
@@ -45,7 +100,10 @@ bool RtcStream::Start()
 	_offer_sdp->SetIceOption("trickle");
 	_offer_sdp->SetIceUfrag(ov::Random::GenerateString(8));
 	_offer_sdp->SetIcePwd(ov::Random::GenerateString(32));
-	_offer_sdp->SetMsidSemantic("WMS", "*");
+
+	// MSID
+	auto msid = ov::Random::GenerateString(36);
+	_offer_sdp->SetMsidSemantic("WMS", msid);
 	_offer_sdp->SetFingerprint("sha-256", _certificate->GetFingerprint("sha-256"));
 
 	std::shared_ptr<MediaDescription> video_media_desc = nullptr;
@@ -54,6 +112,8 @@ bool RtcStream::Start()
 	bool first_video_desc = true;
 	bool first_audio_desc = true;
 	uint8_t payload_type_num = PAYLOAD_TYPE_OFFSET;
+
+	auto cname = ov::Random::GenerateString(16);
 
 	for(auto &track_item : _tracks)
 	{
@@ -73,7 +133,6 @@ bool RtcStream::Start()
 						break;
 					case MediaCodecId::H265:
 						codec = "H265";
-						// TODO(Getroot): Go!
 						break;
 					case MediaCodecId::H264:
 						codec = "H264";
@@ -135,24 +194,41 @@ bool RtcStream::Start()
 					video_media_desc->SetConnection(4, "0.0.0.0");
 					// TODO(dimiden): Prevent duplication
 					video_media_desc->SetMid(ov::Random::GenerateString(6));
+					video_media_desc->SetMsid(msid, ov::Random::GenerateString(36));
 					video_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
 					video_media_desc->UseDtls(true);
 					video_media_desc->UseRtcpMux(true);
 					video_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
 					video_media_desc->SetMediaType(MediaDescription::MediaType::Video);
-					video_media_desc->SetCname(ov::Random::GenerateUInt32(), ov::Random::GenerateString(16));
+					// Cname
+					video_media_desc->SetCname(cname);
+					// Media SSRC
+					video_media_desc->SetSsrc(ov::Random::GenerateUInt32());
+					// RTX SSRC
+					if(_support_rtx == true)
+					{
+						video_media_desc->SetRtxSsrc(ov::Random::GenerateUInt32());
+					}
 					_offer_sdp->AddMedia(video_media_desc);
 					first_video_desc = false;
 				}
 
 				payload->SetRtpmap(payload_type_num++, codec, 90000);
 				payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
-
 				video_media_desc->AddPayload(payload);
+
+				// For RTX
+				if(_support_rtx == true)
+				{
+					auto rtx_payload = std::make_shared<PayloadAttr>();
+					rtx_payload->SetRtpmap(payload_type_num++, "rtx", 90000);
+					rtx_payload->SetFmtp(ov::String::FormatString("apt=%d", payload->GetId()));
+					video_media_desc->AddPayload(rtx_payload);
+					AddRtpHistory(payload->GetId(), rtx_payload->GetId(), video_media_desc->GetRtxSsrc());
+				}
+
 				video_media_desc->Update();
-
 				AddPacketizer(track->GetCodecId(), track->GetId(), payload->GetId(), video_media_desc->GetSsrc());
-
 				break;
 			}
 
@@ -190,12 +266,16 @@ bool RtcStream::Start()
 					audio_media_desc->SetConnection(4, "0.0.0.0");
 					// TODO(dimiden): Need to prevent duplication
 					audio_media_desc->SetMid(ov::Random::GenerateString(6));
+					audio_media_desc->SetMsid(msid, ov::Random::GenerateString(36));
 					audio_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
 					audio_media_desc->UseDtls(true);
 					audio_media_desc->UseRtcpMux(true);
 					audio_media_desc->SetDirection(MediaDescription::Direction::SendOnly);
 					audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
-					audio_media_desc->SetCname(ov::Random::GenerateUInt32(), ov::Random::GenerateString(16));
+					// Cname
+					audio_media_desc->SetCname(cname);
+					// Media SSRC
+					audio_media_desc->SetSsrc(ov::Random::GenerateUInt32());
 					_offer_sdp->AddMedia(audio_media_desc);
 					first_audio_desc = false;
 				}
@@ -223,19 +303,35 @@ bool RtcStream::Start()
         // RED & ULPFEC
         auto red_payload = std::make_shared<PayloadAttr>();
         red_payload->SetRtpmap(RED_PAYLOAD_TYPE, "red", 90000);
+		red_payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
+		video_media_desc->AddPayload(red_payload);
+		
+		// For RTX
+		if(_support_rtx == true)
+		{
+			// RTX for RED
+			auto rtx_payload = std::make_shared<PayloadAttr>();
+			rtx_payload->SetRtpmap(RED_RTX_PAYLOAD_TYPE, "rtx", 90000);
+			rtx_payload->SetFmtp(ov::String::FormatString("apt=%d", RED_PAYLOAD_TYPE));
+
+			AddRtpHistory(red_payload->GetId(), rtx_payload->GetId(), video_media_desc->GetRtxSsrc());
+
+			video_media_desc->AddPayload(rtx_payload);
+		}
+
+		// ULPFEC
         auto ulpfec_payload = std::make_shared<PayloadAttr>();
         ulpfec_payload->SetRtpmap(ULPFEC_PAYLOAD_TYPE, "ulpfec", 90000);
-
-        video_media_desc->AddPayload(red_payload);
         video_media_desc->AddPayload(ulpfec_payload);
+
 		video_media_desc->Update();
     }
 
 	logtd("Stream is created : %s/%u", GetName().CStr(), GetId());
-
 	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
-
 	_offer_sdp->Update();
+	
+	logtc("%s", _offer_sdp->ToString().CStr());
 
 	return Stream::Start();
 }
@@ -264,7 +360,11 @@ bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 	}
 
 	// Store for retransmission
-	
+	auto history = GetHistory(packet->PayloadType());
+	if(history != nullptr)
+	{
+		history->StoreRtpPacket(packet);
+	}
 
 	return true;
 }
@@ -320,7 +420,6 @@ void RtcStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	auto media_track = GetTrack(media_packet->GetTrackId());
 
 	// RTP Packetizing
-	// Track의 GetId와 PayloadType은 같다. Track의 ID로 Payload Type을 만들기 때문이다.
 	auto packetizer = GetPacketizer(media_track->GetId());
 	if(packetizer == nullptr)
 	{
@@ -421,4 +520,31 @@ std::shared_ptr<RtpPacketizer> RtcStream::GetPacketizer(uint32_t id)
 	}
 
 	return _packetizers[id];
+}
+
+void RtcStream::AddRtpHistory(uint8_t origin_payload_type, uint8_t rtx_payload_type, uint32_t rtx_ssrc)
+{
+	auto history = std::make_shared<RtpHistory>(origin_payload_type, rtx_payload_type, rtx_ssrc);
+	_rtp_history_map[origin_payload_type] = history;
+}
+
+std::shared_ptr<RtpHistory> RtcStream::GetHistory(uint8_t origin_payload_type)
+{
+	if(!_rtp_history_map.count(origin_payload_type))
+	{
+		return nullptr;
+	}
+
+	return _rtp_history_map[origin_payload_type];
+}
+
+std::shared_ptr<RtxRtpPacket> RtcStream::GetRtxRtpPacket(uint8_t origin_payload_type, uint16_t origin_sequence_number)
+{
+	auto history = GetHistory(origin_payload_type);
+	if(history == nullptr)
+	{
+		return nullptr;
+	}
+
+	return history->GetRtxRtpPacket(origin_sequence_number);
 }

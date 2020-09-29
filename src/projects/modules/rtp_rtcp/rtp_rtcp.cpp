@@ -9,6 +9,8 @@
 RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<pub::Session> session, const std::vector<uint32_t> &ssrc_list)
 	        : SessionNode(id, pub::SessionNodeType::Rtp, session)
 {
+	_rtc_session = std::dynamic_pointer_cast<RtcSession>(session);
+
     for(auto ssrc : ssrc_list)
     {
         auto rtcp_generator = std::make_shared<RtcpSRGenerator>(ssrc);
@@ -30,26 +32,24 @@ bool RtpRtcp::SendOutgoingData(const std::shared_ptr<RtpPacket> &rtp_packet)
 		return false;
 	}
 
-    if(_rtcp_sr_generators.find(rtp_packet->Ssrc()) == _rtcp_sr_generators.end())
+    if(_rtcp_sr_generators.find(rtp_packet->Ssrc()) != _rtcp_sr_generators.end())
     {
-        return false;
-    }
-    
-    auto rtcp_sr_generator = _rtcp_sr_generators[rtp_packet->Ssrc()];
-    
-    rtcp_sr_generator->AddRTPPacketAndGenerateRtcpSR(*rtp_packet);
-    if(rtcp_sr_generator->IsAvailableRtcpSRPacket())
-    {
-        auto rtcp_sr_packet = rtcp_sr_generator->PopRtcpSRPacket();
-        if(!node->SendData(pub::SessionNodeType::Rtcp, rtcp_sr_packet->GetData()))
-        {
-            logd("RTCP","Send RTCP failed : ssrc(%u)", rtp_packet->Ssrc());
-        }
-		else
+		auto rtcp_sr_generator = _rtcp_sr_generators[rtp_packet->Ssrc()];
+		
+		rtcp_sr_generator->AddRTPPacketAndGenerateRtcpSR(*rtp_packet);
+		if(rtcp_sr_generator->IsAvailableRtcpSRPacket())
 		{
-			logd("RTCP", "Send RTCP succeed : ssrc(%u) length(%d)", rtp_packet->Ssrc(), rtcp_sr_packet->GetData()->GetLength());
+			auto rtcp_sr_packet = rtcp_sr_generator->PopRtcpSRPacket();
+			if(!node->SendData(pub::SessionNodeType::Rtcp, rtcp_sr_packet->GetData()))
+			{
+				logd("RTCP","Send RTCP failed : ssrc(%u)", rtp_packet->Ssrc());
+			}
+			else
+			{
+				logd("RTCP", "Send RTCP succeed : ssrc(%u) length(%d)", rtp_packet->Ssrc(), rtcp_sr_packet->GetData()->GetLength());
+			}
 		}
-    }
+	}
 
 	if(!node->SendData(pub::SessionNodeType::Rtp, rtp_packet->GetData()))
     {
@@ -86,20 +86,11 @@ bool RtpRtcp::OnDataReceived(pub::SessionNodeType from_node, const std::shared_p
 	while(receiver.HasAvailableRtcpInfo())
 	{
 		auto info = receiver.PopRtcpInfo();
-
-		if(info->GetPacketType() == RtcpPacketType::RR)
+		
+		if(_rtc_session != nullptr)
 		{
-			// Process
+			_rtc_session->OnRtcpReceived(info);
 		}
-		else if(info->GetPacketType() == RtcpPacketType::RTPFB)
-		{
-			if(info->GetFmt() == static_cast<uint8_t>(RTPFBFMT::NACK))
-			{
-				// Process
-			}
-		}
-
-		info->DebugPrint();
 	}
 
     return true;

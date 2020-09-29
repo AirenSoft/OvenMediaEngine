@@ -63,7 +63,7 @@ public:
 	void		SetTimestamp(uint32_t timestamp);
 	void		SetSsrc(uint32_t ssrc);
 	
-	// 버퍼에 남은 공간이 충분하고 extension, Payload, padding이 들어가기 전에 호출되어야 함
+	// must call before setting extentions, payload, padding
 	void		SetCsrcs(const std::vector<uint32_t>& csrcs);
 
 	size_t		HeadersSize() const;
@@ -81,8 +81,11 @@ public:
 	// Data
 	std::shared_ptr<ov::Data> GetData();
 
+	// Created time
+	std::chrono::system_clock::time_point GetCreatedTime();
+
 protected:
-	size_t		_payload_offset = 0;	// Header Start Point (Header size)
+	size_t		_payload_offset = 0;	// Payload Start Point (Header size)
 	uint8_t		_cc = 0;
 	bool		_marker = false;
 	uint8_t		_payload_type = 0;
@@ -94,12 +97,14 @@ protected:
 	uint32_t	_ssrc = 0;
 	size_t		_payload_size = 0;		// Payload Size
 
-	//TODO: Extension은 향후 확장
+	//TODO: Futur works : develop extensions
 	size_t		_extension_size;
 
-	// BYTE로 변환된 헤더
 	// std::vector<uint8_t>	_buffer;
 	uint8_t *					_buffer = nullptr;
 	std::shared_ptr<ov::Data>	_data = nullptr;
+
+	// created time
+	std::chrono::system_clock::time_point _created_time;
 };
 

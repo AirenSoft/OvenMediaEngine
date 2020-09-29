@@ -99,7 +99,9 @@ bool RtpPacketizerH264::GeneratePackets()
 				} 
 				else 
 				{
-					i = PacketizeStapA(i);
+					PacketizeSingleNalu(i);
+					++i;
+					//i = PacketizeStapA(i);
 				}
 				break;
 		}

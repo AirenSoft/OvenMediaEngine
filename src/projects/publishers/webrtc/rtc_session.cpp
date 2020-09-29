@@ -4,6 +4,8 @@
 #include "rtc_application.h"
 #include "rtc_stream.h"
 
+#include "modules/rtp_rtcp/rtcp_info/nack.h"
+
 #include <utility>
 
 std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Application> &application,
@@ -64,6 +66,7 @@ bool RtcSession::Start()
 
 	// RFC3264
 	// For each "m=" line in the offer, there MUST be a corresponding "m=" line in the answer.
+	std::vector<uint32_t> ssrc_list;
 	for(size_t i = 0; i < peer_media_desc_list.size(); i++)
 	{
 		auto peer_media_desc = peer_media_desc_list[i];
@@ -80,30 +83,51 @@ bool RtcSession::Start()
 		if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
 		{
 			_audio_payload_type = first_payload->GetId();
+			_audio_ssrc = offer_media_desc->GetSsrc();
+			ssrc_list.push_back(_audio_ssrc);
 		}
 		else
 		{
 			// If there is a RED
-			if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
+			// When the first payload codec is H.264, FEC is not used.
+			// if(first_payload->GetCodec() == PayloadAttr::SupportCodec::H264)
+			// {
+			// 	_video_payload_type = first_payload->GetId();
+			// }
+			// else if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
+			// {
+			// 	_video_payload_type = RED_PAYLOAD_TYPE;
+			// 	_red_block_pt = first_payload->GetId();
+			// }
+			// else
+			// {
+			// 	_video_payload_type = first_payload->GetId();
+			// }
+
+			// TODO(Getroot): Temporarily turn off ulpfec. 
+			// Using ULPFEC and RTX at the same time seems to cause problems, which needs to be resolved.
+			_video_payload_type = first_payload->GetId();
+
+			// Retransmission, We always define the RTX payload as payload + 1
+			auto payload = peer_media_desc->GetPayload(_video_payload_type+1);
+			if(payload != nullptr)
 			{
-				_video_payload_type = RED_PAYLOAD_TYPE;
-				_red_block_pt = first_payload->GetId();
+				if(payload->GetCodec() == PayloadAttr::SupportCodec::RTX)
+				{
+					_use_rtx_flag = true;
+					_video_rtx_ssrc = offer_media_desc->GetRtxSsrc();
+
+					// Now, no RTCP with RTX
+					// ssrc_list.push_back(_video_rtx_ssrc);
+				}
 			}
-			else
-			{
-				_video_payload_type = first_payload->GetId();
-			}
+
+			_video_ssrc = offer_media_desc->GetSsrc();
+			ssrc_list.push_back(_video_ssrc);
 		}
 	}
 
-	std::vector<uint32_t> ssrc_list;
-	for(auto media : _offer_sdp->GetMediaList())
-    {
-        ssrc_list.push_back(media->GetSsrc());
-    }
-
 	_rtp_rtcp = std::make_shared<RtpRtcp>((uint32_t)pub::SessionNodeType::Rtp, session, ssrc_list);
-
 
 	_srtp_transport = std::make_shared<SrtpTransport>((uint32_t)pub::SessionNodeType::Srtp, session);
 
@@ -140,7 +164,6 @@ bool RtcSession::Stop()
 		return true;
 	}
 
-	// 연결된 세션을 정리한다.
 	if(_rtp_rtcp != nullptr)
 	{
 		_rtp_rtcp->Stop();
@@ -212,7 +235,7 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 
 	if(rtp_payload_type == RED_PAYLOAD_TYPE)
 	{
-		red_block_pt = session_packet->Header()[session_packet->HeadersSize()-1];
+		red_block_pt = std::dynamic_pointer_cast<RedRtpPacket>(session_packet)->BlockPT();
 
 		// RED includes FEC packet or Media packet.
 		if(session_packet->IsUlpfec())
@@ -237,7 +260,62 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 
 	// RTP Session must be copied and sent because data is altered due to SRTP.
 	auto copy_packet = std::make_shared<RtpPacket>(*session_packet);
-	return _rtp_rtcp->SendOutgoingData(copy_packet);
+
+	static uint32_t skip = 1;
+	if(++skip % 50 != 0)
+	{
+		return _rtp_rtcp->SendOutgoingData(copy_packet);
+	}
+
+	return true;
+}
+
+void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
+{
+	if(rtcp_info->GetPacketType() == RtcpPacketType::RR)
+	{
+		// Process
+	}
+	else if(rtcp_info->GetPacketType() == RtcpPacketType::RTPFB)
+	{
+		if(rtcp_info->GetFmt() == static_cast<uint8_t>(RTPFBFMT::NACK))
+		{
+			// Process
+			ProcessNACK(rtcp_info);
+		}
+	}
+
+	rtcp_info->DebugPrint();
+}
+
+
+bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
+{
+	auto stream = std::dynamic_pointer_cast<RtcStream>(GetStream());
+	if(stream == nullptr)
+	{
+		return false;
+	}
+	
+	auto nack = std::dynamic_pointer_cast<NACK>(rtcp_info);
+	if(nack->GetMediaSsrc() != _video_ssrc)
+	{
+		return false;
+	}
+
+	// Retransmission
+	for(size_t i=0; i<nack->GetLostIdCount(); i++)
+	{
+		auto seq_no = nack->GetLostId(i);
+		auto packet = stream->GetRtxRtpPacket(_video_payload_type, seq_no);
+		if(packet != nullptr)
+		{
+			logtd("Send RTX packet : %u/%u", _video_payload_type, seq_no);
+			auto copy_packet = std::make_shared<RtpPacket>(*(std::dynamic_pointer_cast<RtpPacket>(packet)));
+			copy_packet->SetSequenceNumber(_rtx_sequence_number++);
+			return _rtp_rtcp->SendOutgoingData(copy_packet);
+		}
+	}
 
 	return true;
 }

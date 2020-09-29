@@ -20,9 +20,13 @@ public:
 	enum class SupportCodec
 	{
 		Unknown,
-		Vp8,
+		VP8,
+		VP9,
 		H264,
-		Opus
+		H265,
+		OPUS,
+		RED,
+		RTX
 	};
 
 	enum class RtcpFbType

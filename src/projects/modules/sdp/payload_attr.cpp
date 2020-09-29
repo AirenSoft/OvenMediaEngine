@@ -39,6 +39,39 @@ void PayloadAttr::SetRtpmap(const uint8_t payload_type, const ov::String &codec,
 	_codec_str = codec;
 	_rate = rate;
 	_codec_param = parameters;
+
+	if(codec.LowerCaseString() == "h264")
+	{
+		_codec = SupportCodec::H264;
+	}
+	else if(codec.LowerCaseString() == "h265")
+	{
+		_codec = SupportCodec::H265;
+	}
+	else if(codec.LowerCaseString() == "vp8")
+	{
+		_codec = SupportCodec::VP8;
+	}
+	else if(codec.LowerCaseString() == "vp9")
+	{
+		_codec = SupportCodec::VP9;
+	}
+	else if(codec.LowerCaseString() == "opus")
+	{
+		_codec = SupportCodec::OPUS;
+	}
+	else if(codec.LowerCaseString() == "red")
+	{
+		_codec = SupportCodec::RED;
+	}
+	else if(codec.LowerCaseString() == "rtx")
+	{
+		_codec = SupportCodec::RTX;
+	}
+	else
+	{
+		_codec = SupportCodec::Unknown;
+	}
 }
 
 // a=rtcp-fb:96 nack pli

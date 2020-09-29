@@ -5,6 +5,7 @@
 #include "base/publisher/session_node.h"
 #include "rtcp_info/rtcp_sr_generator.h"
 
+class RtcSession;
 class RtpRtcp : public pub::SessionNode
 {
 public:
@@ -24,6 +25,8 @@ private:
     time_t _first_receiver_report_time = 0; // 0 - not received RR packet
     time_t _last_sender_report_time = 0;
     uint64_t _send_packet_sequence_number = 0;
+
+	std::shared_ptr<RtcSession>	_rtc_session;
 
     std::map<uint32_t, std::shared_ptr<RtcpSRGenerator>> _rtcp_sr_generators;
 };

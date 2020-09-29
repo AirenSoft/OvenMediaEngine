@@ -151,8 +151,6 @@ namespace pub
 			for (auto const &x : _sessions)
 			{
 				auto session = std::static_pointer_cast<Session>(x.second);
-
-				// Session will change data
 				session->SendOutgoingData(packet);
 			}
 			session_lock.unlock();

@@ -77,6 +77,11 @@ public:
 	void SetMid(const ov::String &mid);
 	const ov::String &GetMid() const;
 
+	// a=msid:msid appdata
+	void SetMsid(const ov::String &msid, const ov::String &msid_appdata);
+	const ov::String &GetMsid();
+	const ov::String &GetMsidAppdata();
+
 	// a=setup:actpass
 	void SetSetup(SetupType type);
 	bool SetSetup(const ov::String &type);
@@ -97,9 +102,12 @@ public:
 	void EnableRtcpFb(uint8_t id, const PayloadAttr::RtcpFbType &type, bool on);
 
 	// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
-	void SetCname(uint32_t ssrc, const ov::String &cname);
+	void SetCname(const ov::String &cname);
+	void SetSsrc(uint32_t ssrc);
+	void SetRtxSsrc(uint32_t rtx_ssrc);
 
 	uint32_t GetSsrc() const;
+	uint32_t GetRtxSsrc() const;
 	ov::String GetCname() const;
 
 private:
@@ -120,6 +128,9 @@ private:
 
 	ov::String _mid;
 
+	ov::String _msid;
+	ov::String _msid_appdata;
+	
 	SetupType _setup = SetupType::Unknown;
 	ov::String _setup_str = "UNKNOWN";
 
@@ -129,6 +140,7 @@ private:
 	float _framerate = 0.0f;
 
 	uint32_t _ssrc = 0;
+	uint32_t _rtx_ssrc = 0;
 	ov::String _cname;
 
 

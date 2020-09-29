@@ -158,7 +158,7 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 	AssignSequenceNumber(red_packet.get(), true);
 
 	_ulpfec_generator.AddRtpPacketAndGenerateFec(red_packet);
-
+	red_packet->PackageAsRtp();
 	_stream->OnRtpPacketized(red_packet);
 
 	while(_ulpfec_generator.IsAvailableFecPackets())
@@ -172,6 +172,9 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 		AssignSequenceNumber(red_fec_packet.get(), true);
 
 		_ulpfec_generator.NextPacket(red_fec_packet.get());
+
+		// Adjust completed red packet's payload offset and size for RTX packet
+		std::dynamic_pointer_cast<RedRtpPacket>(red_fec_packet)->PackageAsRtp();
 
 		// Send ULPFEC
 		_rtp_packet_count ++;
