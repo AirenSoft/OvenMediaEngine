@@ -88,25 +88,23 @@ bool RtcSession::Start()
 		}
 		else
 		{
-			// If there is a RED
-			// When the first payload codec is H.264, FEC is not used.
-			// if(first_payload->GetCodec() == PayloadAttr::SupportCodec::H264)
-			// {
-			// 	_video_payload_type = first_payload->GetId();
-			// }
-			// else if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
-			// {
-			// 	_video_payload_type = RED_PAYLOAD_TYPE;
-			// 	_red_block_pt = first_payload->GetId();
-			// }
-			// else
-			// {
-			// 	_video_payload_type = first_payload->GetId();
-			// }
-
-			// TODO(Getroot): Temporarily turn off ulpfec. 
-			// Using ULPFEC and RTX at the same time seems to cause problems, which needs to be resolved.
-			_video_payload_type = first_payload->GetId();
+			// "H.264 + FEC" is of lower quality. 
+			// This is because VP8 solves this with PictureID, 
+			// but H.264 recognizes ULPFEC packets as also packets constituting a frame.
+			// So when the first payload codec is H.264, we don't use FEC.
+			if(first_payload->GetCodec() == PayloadAttr::SupportCodec::H264)
+			{
+				_video_payload_type = first_payload->GetId();
+			}
+			else if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
+			{
+				_video_payload_type = RED_PAYLOAD_TYPE;
+				_red_block_pt = first_payload->GetId();
+			}
+			else
+			{
+				_video_payload_type = first_payload->GetId();
+			}
 
 			// Retransmission, We always define the RTX payload as payload + 1
 			auto payload = peer_media_desc->GetPayload(_video_payload_type+1);
@@ -303,7 +301,7 @@ bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
 		auto packet = stream->GetRtxRtpPacket(_video_payload_type, seq_no);
 		if(packet != nullptr)
 		{
-			logtd("Send RTX packet : %u/%u", _video_payload_type, seq_no);
+			logd("RTCP", "Send RTX packet : %u/%u", _video_payload_type, seq_no);
 			auto copy_packet = std::make_shared<RtpPacket>(*(std::dynamic_pointer_cast<RtpPacket>(packet)));
 			copy_packet->SetSequenceNumber(_rtx_sequence_number++);
 			return _rtp_rtcp->SendOutgoingData(copy_packet);
