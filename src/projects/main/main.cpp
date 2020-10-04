@@ -164,6 +164,7 @@ int main(int argc, char *argv[])
 	INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(http_server_manager, *server_config, media_router));
 	INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, media_router));
 	INIT_MODULE(file_publisher, "File Publisher", FilePublisher::Create(*server_config, media_router));
+	INIT_MODULE(rtmppush_publisher, "RtmpPush Publisher", RtmpPushPublisher::Create(*server_config, media_router));
 
 
 	// Initialize Transcoder
@@ -219,6 +220,9 @@ int main(int argc, char *argv[])
 	RELEASE_MODULE(dash_publisher, "MPEG-DASH Publisher");
 	RELEASE_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher");
 	RELEASE_MODULE(ovt_publisher, "OVT Publisher");
+	RELEASE_MODULE(file_publisher, "File Publisher");
+	RELEASE_MODULE(rtmppush_publisher, "RtmpPush Publisher");
+
 
 	RELEASE_MODULE(media_router, "MediaRouter");
 

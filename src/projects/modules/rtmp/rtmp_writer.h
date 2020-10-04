@@ -1,0 +1,100 @@
+#pragma once
+
+#include <base/ovlibrary/ovlibrary.h>
+#include <base/mediarouter/media_buffer.h>
+
+extern "C" {
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libavutil/avutil.h>
+};
+
+
+class RtmpTrackInfo {
+public:    
+	static std::shared_ptr<RtmpTrackInfo> Create() {
+		auto object = std::make_shared<RtmpTrackInfo>();
+		return object;
+	}
+
+	void SetCodecId(common::MediaCodecId codec_id) { _codec_id = codec_id; }
+	common::MediaCodecId GetCodecId() { return _codec_id; }
+
+	void SetBitrate(int32_t bitrate) { _bitrate = bitrate; }
+	int32_t GetBitrate() { return _bitrate; }
+
+	void SetTimeBase(common::Timebase timebase) { _timebase = timebase; }
+	common::Timebase GetTimeBase() { return _timebase; }
+
+	void SetWidth(int32_t width) { _width = width; }
+	int32_t GetWidth() { return _width; }
+
+	void SetHeight(int32_t height) { _height = height; }
+	int32_t GetHeight() { return _height; }
+
+	void SetSample(common::AudioSample sample) { _sample = sample; }
+	common::AudioSample GetSample() { return _sample; }
+
+	void SetChannel(common::AudioChannel channel) { _channel = channel; }
+	common::AudioChannel GetChannel() { return _channel; }
+
+	void SetExtradata(std::vector<uint8_t> &extradata) {
+		_extradata.assign(extradata.begin(), extradata.end());
+	}
+	std::vector<uint8_t>& GetExtradata() { return _extradata; }
+
+private:
+	common::MediaCodecId    _codec_id;
+	int32_t                 _bitrate;
+	common::Timebase        _timebase;
+
+	int32_t                 _width;
+	int32_t                 _height;
+	double                  _framerate;
+
+	common::AudioSample     _sample;
+	common::AudioChannel    _channel;
+
+	std::vector<uint8_t> 	_extradata;
+};
+
+class RtmpWriter
+{
+public:
+	static std::shared_ptr<RtmpWriter> Create();
+
+	RtmpWriter();
+	~RtmpWriter();
+
+	// format is muxer(or container)
+	// 	- mpegts
+	//  - mp4
+	bool SetPath(const ov::String path, const ov::String format = nullptr);
+	ov::String GetPath();
+	
+	bool Start();
+
+	bool Stop();
+
+	bool AddTrack(common::MediaType media_type, int32_t track_id, std::shared_ptr<RtmpTrackInfo> trackinfo);
+
+	bool PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, std::shared_ptr<ov::Data>& data);
+
+	static void FFmpegLog(void *ptr, int level, const char *fmt, va_list vl);
+
+private:
+	ov::String 					_path;
+	ov::String 					_format;
+
+	AVFormatContext* 			_format_context;
+
+	// <MediaTrack.id, std::hsared_ptr<RtmpTrackInfo>>
+	std::map<int32_t, std::shared_ptr<RtmpTrackInfo>> _trackinfo_map;
+
+	// Map of track
+	// <MediaTrack.id, AVStream.index>
+	std::map<int32_t, int64_t> 	_track_map;
+
+	std::mutex 					_lock;
+
+};

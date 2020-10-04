@@ -150,6 +150,8 @@ namespace ov
 					return "WebRTC";
 				case PublisherType::Rtmp:
 					return "RTMP";
+				case PublisherType::RtmpPush:
+					return "RTMPPush";					
 				case PublisherType::Hls:
 					return "HLS";
 				case PublisherType::Dash:

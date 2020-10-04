@@ -57,6 +57,7 @@ enum class PublisherType : int8_t
 	Unknown,
 	Webrtc,
 	Rtmp,
+	RtmpPush,
 	Hls,
 	Dash,
 	LlDash,

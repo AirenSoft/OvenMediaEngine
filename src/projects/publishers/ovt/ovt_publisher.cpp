@@ -5,15 +5,15 @@
 
 std::shared_ptr<OvtPublisher> OvtPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
-	auto ovt = std::make_shared<OvtPublisher>(server_config, router);
+	auto obj = std::make_shared<OvtPublisher>(server_config, router);
 
-	if (!ovt->Start())
+	if (!obj->Start())
 	{
 		logte("An error occurred while creating OvtPublisher");
 		return nullptr;
 	}
 
-	return ovt;
+	return obj;
 }
 
 OvtPublisher::OvtPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)

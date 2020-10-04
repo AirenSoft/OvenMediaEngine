@@ -6,6 +6,7 @@ LOCAL_STATIC_LIBRARIES := \
 	segment_publishers \
 	ovt_publisher \
 	file_publisher \
+	rtmppush_publisher \
 	ovt_provider \
 	rtmp_provider \
 	mpegts_provider \
@@ -35,6 +36,7 @@ LOCAL_STATIC_LIBRARIES := \
 	jsoncpp \
 	sqlite \
 	file \
+	rtmp \
 
 # rtsp_provider 
 

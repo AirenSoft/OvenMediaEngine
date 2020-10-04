@@ -4,15 +4,15 @@
 
 std::shared_ptr<FilePublisher> FilePublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
-	auto ovt = std::make_shared<FilePublisher>(server_config, router);
+	auto file = std::make_shared<FilePublisher>(server_config, router);
 
-	if (!ovt->Start())
+	if (!file->Start())
 	{
 		logte("An error occurred while creating FilePublisher");
 		return nullptr;
 	}
 
-	return ovt;
+	return file;
 }
 
 FilePublisher::FilePublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
@@ -67,7 +67,7 @@ bool FilePublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub:
 	return true;
 }
 
-std::shared_ptr<ov::Error> FilePublisher::CommandRecordStart(const info::VHostAppName &vhost_app_name, ov::String stream_name)
+std::shared_ptr<ov::Error> FilePublisher::HandleRecordStart(const info::VHostAppName &vhost_app_name, ov::String stream_name)
 {
 	// Find Stream
 	auto file_stream = GetStreamAs<FileStream>(vhost_app_name, stream_name);
@@ -83,7 +83,7 @@ std::shared_ptr<ov::Error> FilePublisher::CommandRecordStart(const info::VHostAp
 	return ov::Error::CreateError(0, "Success");
 }
 
-std::shared_ptr<ov::Error> FilePublisher::CommandRecordStop(const info::VHostAppName &vhost_app_name, ov::String stream_name)
+std::shared_ptr<ov::Error> FilePublisher::HandleRecordStop(const info::VHostAppName &vhost_app_name, ov::String stream_name)
 {
 	auto file_stream = GetStreamAs<FileStream>(vhost_app_name, stream_name);
 	if(file_stream == nullptr)
@@ -97,7 +97,7 @@ std::shared_ptr<ov::Error> FilePublisher::CommandRecordStop(const info::VHostApp
 	return ov::Error::CreateError(0, "Success");
 }
 
-std::shared_ptr<ov::Error> FilePublisher::CommandGetStats(const info::VHostAppName &vhost_app_name, ov::String stream_name)
+std::shared_ptr<ov::Error> FilePublisher::HandleRecordStat(const info::VHostAppName &vhost_app_name, ov::String stream_name)
 {
 	// Find Application	
 	auto file_stream = GetStreamAs<FileStream>(vhost_app_name, stream_name);

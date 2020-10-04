@@ -33,7 +33,7 @@ bool FileStream::Start()
 	logtd("FileStream(%ld) has been started", GetId());
 
 	//-----------------
-	// for TEST
+	// for test
 	// std::vector<int32_t> selected_tracks;
 	// RecordStart(selected_tracks);
 	//-----------------
@@ -46,7 +46,7 @@ bool FileStream::Stop()
 	logtd("FileStream(%u) has been stopped", GetId());
 
 	//-----------------
-	// for TEST
+	// for test
 	// RecordStop();
 	//-----------------
 
@@ -155,19 +155,26 @@ void FileStream::RecordStop()
 	// Add information from the recored file.
 	// TODO:
 
-	logtd("File Recording Successful. path(%s)", output_path.CStr());
+	logtd("File Recording Successful.");
 }
 
+void FileStream::RecordStat()
+{
+	// TODO: Get Statistics
+	
+}
 
 void FileStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	// for debug
+	//-----------------
+	// for test
 	// if(_writer == nullptr)
 	// {
 	// 	std::vector<int32_t> selected_tracks;
 	// 	RecordStart(selected_tracks);
 	// }
-
+	//-----------------
+	
 	if(_writer == nullptr)
 		return;
 

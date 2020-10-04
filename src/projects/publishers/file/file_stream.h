@@ -23,7 +23,8 @@ public:
 
 	void RecordStart(std::vector<int32_t> selected_tracks);
 	void RecordStop();
-
+	void RecordStat();
+	
 private:
 	bool Start() override;
 	bool Stop() override;

@@ -12,3 +12,4 @@
 #include "./segment/publishers.h"
 #include "./webrtc/webrtc_publisher.h"
 #include "./file/file_publisher.h"
+#include "./rtmppush/rtmppush_publisher.h"
