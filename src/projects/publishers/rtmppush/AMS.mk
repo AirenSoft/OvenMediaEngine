@@ -3,4 +3,6 @@ include $(DEFAULT_VARIABLES)
 
 LOCAL_TARGET := rtmppush_publisher
 
+$(call add_pkg_config,srt)
+
 include $(BUILD_STATIC_LIBRARY)

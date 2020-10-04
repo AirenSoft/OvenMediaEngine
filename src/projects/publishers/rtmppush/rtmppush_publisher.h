@@ -1,9 +1,6 @@
 #pragma once
 
-#include "modules/ovt_packetizer/ovt_packet.h"
-
 #include "base/common_types.h"
-#include "base/ovlibrary/url.h"
 #include "base/publisher/publisher.h"
 #include "base/mediarouter/media_route_application_interface.h"
 

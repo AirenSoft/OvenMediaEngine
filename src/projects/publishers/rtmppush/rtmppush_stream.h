@@ -2,7 +2,6 @@
 
 #include <base/common_types.h>
 #include <base/publisher/stream.h>
-#include <modules/ovt_packetizer/ovt_packetizer.h>
 
 #include <modules/rtmp/rtmp_writer.h>
 
