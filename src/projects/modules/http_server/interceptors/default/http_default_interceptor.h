@@ -9,7 +9,7 @@
 #pragma once
 
 #include "../../http_datastructure.h"
-#include "http_server/interceptors/http_request_interceptor.h"
+#include "../http_request_interceptor.h"
 
 #include <regex>
 

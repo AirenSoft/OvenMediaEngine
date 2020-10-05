@@ -10,9 +10,9 @@
 
 #include <base/publisher/publisher.h>
 #include <config/config_manager.h>
-#include <http_server/http_server.h>
-#include <http_server/https_server.h>
-#include <http_server/interceptors/http_request_interceptors.h>
+#include <modules/http_server/http_server.h>
+#include <modules/http_server/https_server.h>
+#include <modules/http_server/interceptors/http_request_interceptors.h>
 
 #include <memory>
 

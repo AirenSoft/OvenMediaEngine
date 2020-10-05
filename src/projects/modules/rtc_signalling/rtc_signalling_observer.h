@@ -9,7 +9,7 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
-#include <http_server/http_server.h>
+#include <modules/http_server/http_server.h>
 #include <modules/ice/ice.h>
 #include <modules/sdp/session_description.h>
 

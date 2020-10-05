@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "../http_server/http_server.h"
+#include <modules/http_server/http_server.h>
 
 class MonitoringInterceptor : public HttpDefaultInterceptor
 {
