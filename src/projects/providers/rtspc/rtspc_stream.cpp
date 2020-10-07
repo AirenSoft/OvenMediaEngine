@@ -482,7 +482,16 @@ namespace pvd
 
 			if(codec_id == common::MediaCodecId::H264)
 			{
-				// Nothing to do here
+				// Send SPS/PPS Nalunit
+				auto media_packet = std::make_shared<MediaPacket>(media_type, 
+					track->GetId(), 
+					std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size),
+					0, 
+					0, 
+					common::BitstreamFormat::H264_ANNEXB, 
+					common::PacketType::NALU);
+
+				SendFrame(media_packet);
 			}
 			else if(codec_id == common::MediaCodecId::H265)
 			{

@@ -6,7 +6,7 @@
 
 #define OV_LOG_TAG "H264AvccToAnnexB"
 
-static uint8_t START_CODE[4] = { 0x00, 0x00, 0x00, 0x01 };
+static uint8_t START_CODE[3] = { 0x00, 0x00, 0x01 };
 
 bool H264AvccToAnnexB::GetExtradata(const common::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
 {
@@ -59,7 +59,8 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 	{
 		ov::ByteStream read_stream(data.get());
 
-		bool has_idr_slice = false;
+		// bool has_idr_slice = false;
+
 		while(read_stream.Remained() > 0)
 		{
 			if(read_stream.IsRemained(4) == false)
@@ -80,21 +81,13 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 			[[maybe_unused]] auto skipped = read_stream.Skip(nal_length);
 			OV_ASSERT2(skipped == nal_length);
 
-			H264NalUnitHeader header;
-			if(H264Parser::ParseNalUnitHeader(nal_data->GetDataAs<uint8_t>(), H264_NAL_UNIT_HEADER_SIZE, header) == true)
-			{
-				if(header.GetNalUnitType() == H264NalUnitType::IdrSlice)
-				{
-					// logtd("IdrSlice");
-					has_idr_slice = true;
-				}	
-			}
-
 			annexb_data->Append(START_CODE, sizeof(START_CODE));
 			annexb_data->Append(nal_data);
 		}   
 
-		// Append SPS/PPS NalU before IdrSlice NalU. not every packet.
+		// Deprecated. The same function is performed in Mediarouter.
+		/*	
+		// Append SPS/PPS NalU before IdrSlice NalU. not every packet.		
 		if(extradata.size() > 0 && has_idr_slice == true)
 		{
 			AVCDecoderConfigurationRecord config;
@@ -121,7 +114,7 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 			annexb_data->Insert(sps_pps->GetDataAs<uint8_t>(), 0, sps_pps->GetLength());
 			// logtd("Append sps/pps nal unit");
 		}
-		            
+		*/		            
 	}
 
 	data->Clear();

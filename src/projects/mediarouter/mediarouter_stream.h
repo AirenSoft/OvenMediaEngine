@@ -94,7 +94,15 @@ private:
 		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
 
-	std::map<MediaTrackId, common::Timebase> _incoming_tiembase;
+	// Periodically insert sps/pps so that the player's decoding starts quickly.
+	bool AppendDecoderParameterSets(
+		std::shared_ptr<MediaTrack> &media_track,
+		std::shared_ptr<MediaPacket> &media_packet);
+
+	// Update Fragmentation header 
+	bool UpdateFragmentationHeader(
+		std::shared_ptr<MediaPacket> &media_packet);
+
 
 	void UpdateStatistics(std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
@@ -127,6 +135,8 @@ private:
 	// Average Pts Incresement
 	std::map<MediaTrackId, int64_t> _pts_avg_inc;
 
+	// Timebase of incoming packets
+	std::map<MediaTrackId, common::Timebase> _incoming_tiembase;
 
 	// Statistics
 	// <TrackId, Values>
