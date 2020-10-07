@@ -8,5 +8,5 @@
 //==============================================================================
 #pragma once
 
-#include "http_server/interceptors/default/http_default_interceptor.h"
+#include "default/http_default_interceptor.h"
 #include "web_socket/web_socket_interceptor.h"

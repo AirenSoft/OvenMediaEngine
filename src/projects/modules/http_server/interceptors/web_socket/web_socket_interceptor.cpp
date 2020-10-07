@@ -12,7 +12,7 @@
 #include "./web_socket_frame.h"
 
 #include <base/ovcrypto/ovcrypto.h>
-#include <http_server/http_server.h>
+#include <modules/http_server/http_server.h>
 #include <utility>
 
 WebSocketInterceptor::WebSocketInterceptor()

@@ -11,7 +11,7 @@
 #include "web_socket_client.h"
 #include "web_socket_frame.h"
 
-#include <http_server/http_server.h>
+#include <modules/http_server/http_server.h>
 #include <shared_mutex>
 class WebSocketInterceptor : public HttpRequestInterceptor
 {

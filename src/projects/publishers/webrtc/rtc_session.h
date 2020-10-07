@@ -1,6 +1,6 @@
 #pragma once
 
-#include <http_server/interceptors/web_socket/web_socket_client.h>
+#include <modules/http_server/interceptors/web_socket/web_socket_client.h>
 #include "base/info/media_track.h"
 #include "base/publisher/session.h"
 #include "modules/sdp/session_description.h"

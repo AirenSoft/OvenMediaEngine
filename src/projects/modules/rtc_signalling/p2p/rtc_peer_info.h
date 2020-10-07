@@ -8,9 +8,9 @@
 //==============================================================================
 #pragma once
 
-#include <http_server/http_server.h>
-#include <http_server/https_server.h>
-#include <http_server/interceptors/http_request_interceptors.h>
+#include <modules/http_server/http_server.h>
+#include <modules/http_server/https_server.h>
+#include <modules/http_server/interceptors/http_request_interceptors.h>
 
 // Peer ID of OME
 #define P2P_OME_PEER_ID                             0

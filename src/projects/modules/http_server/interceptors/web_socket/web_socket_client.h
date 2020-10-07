@@ -14,7 +14,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
-#include <http_server/http_server.h>
+#include <modules/http_server/http_server.h>
 
 class WebSocketClient
 {
