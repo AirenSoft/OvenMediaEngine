@@ -18,7 +18,7 @@
 // 		Append Decoder PrameterSets -> 
 // 		Changing the timestamp based on the timebase
 
-// Outgoung Stream process
+// Outgoing Stream process
 //		Calculating packet duration ->
 // 		Parsing Track Information -> 
 // 		Parsing Fragmentation Header -> 
@@ -127,20 +127,26 @@ bool MediaRouteStream::PushIncomingStream(std::shared_ptr<MediaTrack> &media_tra
 		return false;
 	}
 
+	// Update fragment header
+	if(!UpdateFlagmentHeaders(media_track, media_packet))
+	{
+		return false;
+	}
+
 	// Extract media track information
 	if(!ParseTrackInfo(media_track, media_packet))
 	{
 		return false;
 	}
 
-	// Parse Addional Data. fragment header, keyframe etc... 
-	if(!ParseAdditionalData(media_track, media_packet))
+	// Periodically insert sps/pps so that the player's decoding starts quickly.
+	if(!UpdateDecoderParameterSets(media_track, media_packet))
 	{
 		return false;
 	}
 
-	// Periodically insert sps/pps so that the player's decoding starts quickly.
-	if(!AppendDecoderParameterSets(media_track, media_packet))
+	// Update Key Flags
+	if(!UpdateKeyFlags(media_track, media_packet))
 	{
 		return false;
 	}
@@ -150,20 +156,26 @@ bool MediaRouteStream::PushIncomingStream(std::shared_ptr<MediaTrack> &media_tra
 
 bool MediaRouteStream::PushOutgoungStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
 {
+	// Update fragment header
+	if(!UpdateFlagmentHeaders(media_track, media_packet))
+	{
+		return false;
+	}
+
 	// Extract media track information
 	if(!ParseTrackInfo(media_track, media_packet))
 	{
 		return false;
 	}
 
-	// Parse Addional Data. fragment header, keyframe etc... 
-	if(!ParseAdditionalData(media_track, media_packet))
+	// Periodically insert sps/pps so that the player's decoding starts quickly.
+	if(!UpdateDecoderParameterSets(media_track, media_packet))
 	{
 		return false;
 	}
 
-	// Periodically insert sps/pps so that the player's decoding starts quickly.
-	if(!AppendDecoderParameterSets(media_track, media_packet))
+	// Update key Flags
+	if(!UpdateKeyFlags(media_track, media_packet))
 	{
 		return false;
 	}
@@ -179,6 +191,7 @@ void MediaRouteStream::InitParseTrackInfo()
 		auto track = iter.second;
 
 		_parse_completed_track_info[track_id] = false;
+
 		_incoming_tiembase[track_id] = track->GetTimeBase();
 	}
 }
@@ -243,24 +256,10 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 				// for extradata
 				AVCDecoderConfigurationRecord avc_decoder_configuration_record;
 
-
-				NalUnitFragmentHeader nal_parser;
-				if(NalUnitFragmentHeader::Parse(media_packet->GetData(), nal_parser) == false)
-				{
-					logte("failed to parse fragment header");
-					return false;
-				}
-
-				auto frag_hdr = nal_parser.GetFragmentHeader();
-				if(frag_hdr == nullptr)
-				{
-					logte("Could not find fragment header");
-					return false;
-				}
-
 				// Analyzes NALU packets and extracts track information for SPS/PPS types.
 				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();
 
+				auto frag_hdr = media_packet->GetFragHeader();
 				for (size_t i = 0; i < frag_hdr->GetCount(); ++i) 
 				{
 					const uint8_t* buffer = &payload_data[frag_hdr->fragmentation_offset[i]];
@@ -270,6 +269,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 					if(H264Parser::ParseNalUnitHeader(buffer, length, header) == false)
 					{
 						logte("Could not parse H264 Nal unit header");
+
 						return false;
 					}
 					
@@ -279,8 +279,8 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 						if(H264Parser::ParseSPS(buffer, length, sps) == false)
 						{
 							logte("Could not parse H264 SPS unit");
-							return false;
 
+							return false;
 						}
 
 						media_track->SetWidth(sps.GetWidth());
@@ -288,11 +288,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 						media_track->SetTimeBase(1, 90000);
 
 						logtd("%s", sps.GetInfoString().CStr());
-						logtd("[%d] Convert timebase (%d/%d) to (%d/%d)"
-							, media_track->GetId()
-							, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
-							, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
-		
+
 						// for Mediatrack.extradata
 						avc_decoder_configuration_record.AddSPS(std::make_shared<ov::Data>(buffer, length));
 						avc_decoder_configuration_record.SetProfileIndication(sps.GetProfile());
@@ -324,23 +320,11 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 		case MediaCodecId::H265:
 			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H265_ANNEXB)
 			{
-				NalUnitFragmentHeader nal_parser;
-				if(NalUnitFragmentHeader::Parse(media_packet->GetData(), nal_parser) == false)
-				{
-					logte("failed to parse fragment header");
-					return false;
-				}
-
-				auto frag_hdr = nal_parser.GetFragmentHeader();
-				if(frag_hdr == nullptr)
-				{
-					logte("Could not find fragment header");
-					return false;
-				}
-
 				// Analyzes NALU packets and extracts track information for SPS/PPS types.
 				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();
 
+
+				auto frag_hdr = media_packet->GetFragHeader();
 				for (size_t i = 0; i < frag_hdr->GetCount(); ++i) 
 				{
 					const uint8_t* buffer = &payload_data[frag_hdr->fragmentation_offset[i]];
@@ -350,6 +334,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 					if(H265Parser::ParseNalUnitHeader(buffer, length, header) == false)
 					{
 						logte("Could not parse H265 Nal unit header");
+
 						return false;
 					}
 
@@ -359,6 +344,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 						if(H265Parser::ParseSPS(buffer, length, sps) == false)
 						{
 							logte("Could not parse H265 SPS Unit");
+
 							return false;
 						}
 
@@ -367,10 +353,6 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 						media_track->SetTimeBase(1, 90000);
 
 						logtd("%s", sps.GetInfoString().CStr());					
-						logtd("[%d] Convert timebase (%d/%d) to (%d/%d)"
-							, media_track->GetId()
-							, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
-							, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
 
 						SetParseTrackInfo(media_track, true);
 					}
@@ -389,6 +371,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 				if(AACAdts::IsValid(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetDataLength()) == false)
 				{
 					logte("Could not parse AAC ADTS header");
+
 					return false;
 				}
 
@@ -400,10 +383,6 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 					media_track->SetTimeBase(1, media_track->GetSampleRate());
 
 					logtd("%s", adts.GetInfoString().CStr());
-					logtd("[%d] Convert timebase(%d/%d) -> timebase(%d/%d)"
-						, media_track->GetId()
-						, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
-						, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
 
 					if(media_packet->GetDataLength() - adts.AacFrameLength() != 0)
 						logte("Invalid frame length. adts length : %d != packet length : %d", adts.AacFrameLength(), media_packet->GetDataLength());
@@ -424,8 +403,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 
 					SetParseTrackInfo(media_track, true);
 				}
-
-			}		
+			}
 			break;
 
 		// The incoming stream does not support this codec.
@@ -439,11 +417,48 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 			break;		
 	}
 
+	logtd("[%d] Convert timebase (%d/%d) to (%d/%d)"
+		, media_track->GetId()
+		, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
+		, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
+
 	return true;
 }
 
 // Parse fragment header, flags etc...
-bool MediaRouteStream::ParseAdditionalData(
+bool MediaRouteStream::UpdateFlagmentHeaders(
+	std::shared_ptr<MediaTrack> &media_track, 
+	std::shared_ptr<MediaPacket> &media_packet,
+	bool force)
+{
+	// Fragment Header
+	switch(media_track->GetCodecId())
+	{
+		case MediaCodecId::H264:
+		case MediaCodecId::H265:
+		{
+			// Create a Fragmentation header
+			if(media_packet->GetFragHeader()->GetCount() == 0 || force == true)
+			{
+				NalUnitFragmentHeader nal_parser;
+				if(NalUnitFragmentHeader::Parse(media_packet->GetData(), nal_parser) == false)
+				{
+					logte("failed to parse fragment header");
+					return false;
+				}
+
+				media_packet->SetFragHeader(nal_parser.GetFragmentHeader());
+			}
+		} break;		
+
+		default:
+		break;
+	}
+
+	return true;
+}
+
+bool MediaRouteStream::UpdateKeyFlags(
 	std::shared_ptr<MediaTrack> &media_track, 
 	std::shared_ptr<MediaPacket> &media_packet)
 {
@@ -457,29 +472,15 @@ bool MediaRouteStream::ParseAdditionalData(
 			{
 				media_packet->SetFlag(MediaPacketFlag::Key);
 			}
-
-			// Create a Fragmentation header
-			if(media_packet->GetFragHeader()->GetCount() == 0)
-			{
-				UpdateFragmentationHeader(media_packet);
-			}
-
 		} break;		
 		case MediaCodecId::H265:
 		{
-			if(H265Parser::CheckKeyframe(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetData()->GetLength()) == true)
+			// Key Frame
+			if(H264Parser::CheckKeyframe(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetData()->GetLength()) == true)
 			{
 				media_packet->SetFlag(MediaPacketFlag::Key);
 			}
-
-			// Create a Fragmentation header
-			if(media_packet->GetFragHeader()->GetCount() == 0)
-			{
-				UpdateFragmentationHeader(media_packet);
-			}
-
 		} break;
-
 		case MediaCodecId::Aac: 
 		case MediaCodecId::Vp8: 
 		case MediaCodecId::Vp9:
@@ -487,21 +488,7 @@ bool MediaRouteStream::ParseAdditionalData(
 		default:
 			media_packet->SetFlag(MediaPacketFlag::Key);
 		break;
-	}
-
-	return true;
-}
-
-bool MediaRouteStream::UpdateFragmentationHeader(std::shared_ptr<MediaPacket> &media_packet)
-{
-	NalUnitFragmentHeader nal_parser;
-	if(NalUnitFragmentHeader::Parse(media_packet->GetData(), nal_parser) == false)
-	{
-		logte("failed to parse fragment header");
-		return false;
-	}
-
-	media_packet->SetFragHeader(nal_parser.GetFragmentHeader());
+	}	
 
 	return true;
 }
@@ -523,12 +510,14 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 				if( H264AvccToAnnexB::GetExtradata(media_packet->GetPacketType(), media_packet->GetData(), extradata) == true)
 				{
 					media_track->SetCodecExtradata(extradata);
+
 					return false;
 				}
 
 				if(H264AvccToAnnexB::Convert(media_packet->GetPacketType(), media_packet->GetData(), media_track->GetCodecExtradata()) == false)
 				{
 					logte("Failed to change bitstream format ");
+
 					return false;
 				}
 				
@@ -581,7 +570,7 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 }
 
 // TODO(soulk) : Modular and Performance optimization is needed. 
-bool MediaRouteStream::AppendDecoderParameterSets(
+bool MediaRouteStream::UpdateDecoderParameterSets(
 	std::shared_ptr<MediaTrack> &media_track,
 	std::shared_ptr<MediaPacket> &media_packet)
 {
@@ -662,7 +651,7 @@ bool MediaRouteStream::AppendDecoderParameterSets(
 						media_packet->GetData()->Insert(nalu->GetDataAs<uint8_t>(), 0, nalu->GetLength());
 					}
 
-					if(UpdateFragmentationHeader(media_packet) == false)
+					if(UpdateFlagmentHeaders(media_track, media_packet, true) == false)
 						return false;
 				}
 			}
@@ -730,7 +719,7 @@ bool MediaRouteStream::AppendDecoderParameterSets(
 						// TODO
 					}
 
-					if(UpdateFragmentationHeader(media_packet) == false)
+					if(UpdateFlagmentHeaders(media_track, media_packet, true) == false)
 						return false;
 				}
 
@@ -900,12 +889,13 @@ void MediaRouteStream::DropNonDecodingPackets()
 			if(base_pts < media_packet->GetPts())
 			{
 				base_pts = media_packet->GetPts();
+				// logtw("Discovered base PTS value track_id:%d, flags:%d, size:%d,  pts:%lld", (int32_t)media_packet->GetTrackId(), media_packet->GetFlag(), media_packet->GetDataLength(), base_pts);				
 			}
 		}
 
 		tmp_packets_queue.push_back(std::move(media_packet));
 	}	
-	// logtw("Discovered base PTS value(%lld)", base_pts);
+	
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// 2. Obtain the PTS values for all tracks close to the reference PTS.
@@ -1011,7 +1001,10 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 	{
 		case MRStreamInoutType::Incoming:
 		{
+			// DumpPacket(pop_media_packet);
+
 			bool need_drop_nondecoding_packets = false;
+
 			bool is_parsed_all_track = IsParseTrackAll();
 
 			if(!PushIncomingStream(media_track, pop_media_packet))
@@ -1094,7 +1087,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// PTS Correction for Abnormal increase
-
+	
 	int64_t ts_inc = media_packet->GetPts()  - _pts_last[track_id];
 	int64_t ts_inc_ms = ts_inc * 1000 /  media_track->GetTimeBase().GetDen();
 

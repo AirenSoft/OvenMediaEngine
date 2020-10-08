@@ -16,7 +16,9 @@ bool AACLatmToAdts::GetExtradata(const common::PacketType type, const std::share
 			return false;
 		}
 		
-		 config.Serialize(extradata);
+		logtd("%s", config.GetInfoString().CStr());
+
+		config.Serialize(extradata);
 
 		return true;   
 	}

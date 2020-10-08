@@ -123,7 +123,6 @@ bool TranscodeStream::Stop()
 
 	logtd("Wait for terminated trancode stream thread. kill_flag(%s)", _kill_flag ? "true" : "false");
 
-
 	// Stop all queues
 	_queue_input_packets.Stop();
 	_queue_decoded_frames.Stop();
@@ -152,8 +151,6 @@ bool TranscodeStream::Stop()
 
 		object.reset();
 	}
-
-
 
 	// Notify to delete the stream created on the MediaRouter
 	DeleteStreams();
@@ -220,6 +217,7 @@ int32_t TranscodeStream::CreateOutputStream()
 				new_outupt_track->SetTimeBase(input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen());
 
 				stream_output->AddTrack(new_outupt_track);
+				
 				StoreStageContext("default", input_track_media_type, input_track, stream_output, new_outupt_track);
 			}
 			else if (input_track_media_type == common::MediaType::Audio)
@@ -244,6 +242,7 @@ int32_t TranscodeStream::CreateOutputStream()
 				new_outupt_track->SetTimeBase(input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen());	
 
 				stream_output->AddTrack(new_outupt_track);
+				
 				StoreStageContext("default", input_track_media_type, input_track, stream_output, new_outupt_track);
 			}
 		}
@@ -552,7 +551,14 @@ int32_t TranscodeStream::CreateStageMapping()
 		}
 
 		// for debug log
-		temp_debug_msg.AppendFormat(" - Encode Profile(%s:%s) / Flow InputTrack[%d] => Decoder[%d] => Filter[%d] => Encoder[%d] => OutputTraks%s\n", encode_profile_name.CStr(), (encode_media_type == common::MediaType::Video) ? "Video" : "Audio", flow_context->_input_track->GetId(), flow_context->_input_track->GetId(), flow_context->_transcoder_id, flow_context->_transcoder_id, temp_str.CStr());
+		temp_debug_msg.AppendFormat(" - Encode Profile(%s:%s) / Flow InputTrack[%d] => Decoder[%d] => Filter[%d] => Encoder[%d] => OutputTraks%s\n", 
+			encode_profile_name.CStr(), 
+			(encode_media_type == common::MediaType::Video) ? "Video" : "Audio", 
+			flow_context->_input_track->GetId(), 
+			flow_context->_input_track->GetId(), 
+			flow_context->_transcoder_id, 
+			flow_context->_transcoder_id, 
+			temp_str.CStr());
 
 		created_stage_map++;
 	}

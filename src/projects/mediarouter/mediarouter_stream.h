@@ -81,11 +81,10 @@ private:
 		std::shared_ptr<MediaTrack> &media_track, 
 		std::shared_ptr<MediaPacket> &media_packet);
 
-
 	// Parse fragment header, flags
-	bool ParseAdditionalData(
+	bool UpdateFlagmentHeaders(
 		std::shared_ptr<MediaTrack> &media_track, 
-		std::shared_ptr<MediaPacket> &media_packet);
+		std::shared_ptr<MediaPacket> &media_packet, bool force = false);
 
 	// Convert PTS/DTS to default timebase
 	//  Each provider has a different timebase.
@@ -95,14 +94,14 @@ private:
 		std::shared_ptr<MediaPacket> &media_packet);
 
 	// Periodically insert sps/pps so that the player's decoding starts quickly.
-	bool AppendDecoderParameterSets(
+	bool UpdateDecoderParameterSets(
 		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
 
-	// Update Fragmentation header 
-	bool UpdateFragmentationHeader(
-		std::shared_ptr<MediaPacket> &media_packet);
 
+	bool UpdateKeyFlags(
+		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaPacket> &media_packet);
 
 	void UpdateStatistics(std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);

@@ -148,9 +148,19 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecHEVC::RecvBuffer(TranscodeRes
 					*result = TranscodeResult::DataError;
 					return nullptr;
 				}
+				else if (ret == AVERROR_INVALIDDATA)
+				{
+					// If only SPS/PPS Nalunit is entered in the decoder, an invalid data error occurs.
+					// There is no particular problem.
+					logtd("Invalid data found when processing input (%d)", ret);
+					*result = TranscodeResult::DataError;
+					return nullptr;
+				}				
 				else if (ret < 0)
 				{
-					logte("An error occurred while sending a packet for decoding: Unhandled error (%d)", ret);
+					char err_msg[1024];
+					av_strerror(ret, err_msg, sizeof(err_msg));
+					logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
 					*result = TranscodeResult::DataError;
 					return nullptr;
 				}

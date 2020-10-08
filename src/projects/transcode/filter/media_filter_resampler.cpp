@@ -107,7 +107,7 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 		// "aformat" filter options
 		ov::String::FormatString("aformat=sample_fmts=%s:channel_layouts=%s", output_context->GetAudioSample().GetName(), output_context->GetAudioChannel().GetName()),
 		// "asetnsamples" filter options
-		ov::String::FormatString("asetnsamples=n=1024"),
+		ov::String::FormatString("asetnsamples=n=1024")
 	};
 
 	ov::String output_filters = ov::String::Join(filters, ",");
@@ -151,7 +151,7 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 		return false;
 	}
 
-	logtd("Resampler is enabled for track #%u using parameters: input: %s, outputs: %s", input_media_track->GetId(), input_args.CStr(), output_filters.CStr());
+	logtd("Resampler is enabled for track #%u using parameters. input: %s / outputs: %s", input_media_track->GetId(), input_args.CStr(), output_filters.CStr());
 
 	_input_context = input_context;
 	_output_context = output_context;

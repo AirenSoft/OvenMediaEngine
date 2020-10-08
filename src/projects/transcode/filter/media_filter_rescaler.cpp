@@ -156,7 +156,7 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		return false;
 	}
 
-	logtd("Rescaler is enabled for track #%u using parameters: input: %s, outputs: %s", input_media_track->GetId(), input_args.CStr(), output_filters.CStr());
+	logtd("Rescaler is enabled for track #%u using parameters. input: %s / outputs: %s", input_media_track->GetId(), input_args.CStr(), output_filters.CStr());
 
 	_input_context = input_context;
 	_output_context = output_context;
