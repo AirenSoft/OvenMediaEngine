@@ -67,6 +67,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 		decoded_frame->SetHeight(_frame->height);
 		decoded_frame->SetFormat(_frame->format);
 		decoded_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1LL : _frame->pts);
+		
 		// Calculate duration using framerate in timebase
 		int den = _input_context->GetTimeBase().GetDen();
 		int64_t duration = (den == 0) ? 0LL : (float)den / _input_context->GetFrameRate();

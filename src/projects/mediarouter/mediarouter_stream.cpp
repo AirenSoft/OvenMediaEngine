@@ -191,8 +191,6 @@ void MediaRouteStream::InitParseTrackInfo()
 		auto track = iter.second;
 
 		_parse_completed_track_info[track_id] = false;
-
-		_incoming_tiembase[track_id] = track->GetTimeBase();
 	}
 }
 
@@ -285,7 +283,6 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 
 						media_track->SetWidth(sps.GetWidth());
 						media_track->SetHeight(sps.GetHeight());
-						media_track->SetTimeBase(1, 90000);
 
 						logtd("%s", sps.GetInfoString().CStr());
 
@@ -350,7 +347,6 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 
 						media_track->SetWidth(sps.GetWidth());
 						media_track->SetHeight(sps.GetHeight());
-						media_track->SetTimeBase(1, 90000);
 
 						logtd("%s", sps.GetInfoString().CStr());					
 
@@ -380,13 +376,13 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 				{					
 					media_track->SetSampleRate(adts.SamplerateNum());
 					media_track->GetChannel().SetLayout( (adts.ChannelConfiguration()==1)?(AudioChannel::Layout::LayoutMono):(AudioChannel::Layout::LayoutStereo) );
-					media_track->SetTimeBase(1, media_track->GetSampleRate());
 
 					logtd("%s", adts.GetInfoString().CStr());
 
 					if(media_packet->GetDataLength() - adts.AacFrameLength() != 0)
+					{
 						logte("Invalid frame length. adts length : %d != packet length : %d", adts.AacFrameLength(), media_packet->GetDataLength());
-
+					}
 
 					// Set extradata for AAC
 					if(media_track->GetCodecExtradata().size() == 0)
@@ -416,11 +412,6 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 			logte("Unknown codec");
 			break;		
 	}
-
-	logtd("[%d] Convert timebase (%d/%d) to (%d/%d)"
-		, media_track->GetId()
-		, _incoming_tiembase[media_track->GetId()].GetNum(), _incoming_tiembase[media_track->GetId()].GetDen()
-		, media_track->GetTimeBase().GetNum(), media_track->GetTimeBase().GetDen());
 
 	return true;
 }
@@ -736,29 +727,6 @@ bool MediaRouteStream::UpdateDecoderParameterSets(
 	}
 
 	return true;		
-}
-
-
-bool MediaRouteStream::ConvertToDefaultTimestamp(
-	std::shared_ptr<MediaTrack> &media_track,
-	std::shared_ptr<MediaPacket> &media_packet)
-{
-
-	// If the timebase is the same, there is no need to change the timestamp.
-	if(_incoming_tiembase[media_track->GetId()] == media_track->GetTimeBase())
-	{
-		return true;
-	}
-
-	// TODO(soulk) : Need to performacne tuning
-	// 				 Reduce calculating
-	double scale = _incoming_tiembase[media_track->GetId()].GetExpr() / media_track->GetTimeBase().GetExpr();
-
-	media_packet->SetPts( media_packet->GetPts() * scale );
-	media_packet->SetDts( media_packet->GetDts() * scale );
-	media_packet->SetDuration( media_packet->GetDuration() * scale );
-
-	return true;
 }
 
 
@@ -1080,16 +1048,15 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 
 	////////////////////////////////////////////////////////////////////////////////////
-	// Timestamp change by timebase
-
-	ConvertToDefaultTimestamp(media_track, media_packet);
-
-
-	////////////////////////////////////////////////////////////////////////////////////
 	// PTS Correction for Abnormal increase
 	
 	int64_t ts_inc = media_packet->GetPts()  - _pts_last[track_id];
-	int64_t ts_inc_ms = ts_inc * 1000 /  media_track->GetTimeBase().GetDen();
+	
+	int den = media_track->GetTimeBase().GetDen();
+	if(den == 0)
+		den = 1;
+
+	int64_t ts_inc_ms = ts_inc * 1000 /  den;
 
 	if ( std::abs(ts_inc_ms) > PTS_CORRECT_THRESHOLD_US )
 	{

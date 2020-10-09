@@ -27,10 +27,4 @@ public:
 	void ThreadEncode() override;
 
 	void Stop() override;
-
-private:
-	// Used to convert output timebase -> codec timebase
-	double _scale;
-	// Used to convert codec timebase -> output timebase
-	double _scale_inv;
 };

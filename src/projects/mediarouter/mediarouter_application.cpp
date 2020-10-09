@@ -12,7 +12,7 @@
 
 #define OV_LOG_TAG "MediaRouter.App"
 
-#define ASYNC_CREATE_STREAM 1
+#define ASYNC_CSTREAM_ENABLE 0
 
 using namespace common;
 
@@ -224,7 +224,7 @@ bool MediaRouteApplication::OnCreateStream(
 	// - from Transcoder : Notify to Observer(Publisher)
 	// - from Relay : Notify to Observer(Publisher)
 
-#if ASYNC_CREATE_STREAM
+#if ASYNC_CSTREAM_ENABLE
 	if(connector == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
 		return true;
@@ -235,6 +235,7 @@ bool MediaRouteApplication::OnCreateStream(
 	{
 		return false;
 	}
+
 
 	return true;
 }
@@ -330,6 +331,7 @@ bool MediaRouteApplication::NotifyCreateStream(
 			} break;
 		}
 	}
+
 
 	return true;
 }
@@ -489,7 +491,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 
 	// When the incoming stream is finished parsing track information, 
 	// Notify the Observer that the stream is created.
-#if ASYNC_CREATE_STREAM
+#if ASYNC_CSTREAM_ENABLE
 	if(stream->GetInoutType() == MRStreamInoutType::Incoming)
 	{
 		if(stream->IsCreatedSteam() == false && stream->IsParseTrackAll() == true)

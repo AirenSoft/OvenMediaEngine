@@ -80,11 +80,23 @@ TranscodeApplication* TranscodeStream::GetParent()
 }
 
 bool TranscodeStream::Start()
-{			
-	if (CreateOutputStream() == 0)
+{		
+	// If the application is created by Dynamic, make it bypass in Default Stream.
+	if( _application_info.IsDynamicApp() == true )
 	{
-		logte("No output stream generated");
-		return false;
+		if(CreateOutputStreamDynamic() == 0)
+		{
+			logte("No output stream generated");
+			return false;
+		}
+	}
+	else 
+	{
+		if(CreateOutputStream() == 0)
+		{
+			logte("No output stream generated");
+			return false;
+		}		
 	}
 
 	if (CreateStageMapping() == 0)
@@ -183,84 +195,109 @@ bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
 	return true;
 }
 
+
+const common::Timebase TranscodeStream::GetDefaultTimebaseByCodecId(common::MediaCodecId codec_id)
+{
+	common::Timebase timebase(1, 1000);
+
+	switch(codec_id)
+	{
+		case common::MediaCodecId::H264:
+		case common::MediaCodecId::H265:
+		case common::MediaCodecId::Vp8:
+		case common::MediaCodecId::Vp9:
+		case common::MediaCodecId::Flv:
+			timebase.SetNum(1);
+			timebase.SetDen(90000);
+			break;
+		case common::MediaCodecId::Aac:
+		case common::MediaCodecId::Mp3:
+		case common::MediaCodecId::Opus:
+			timebase.SetNum(1);
+			timebase.SetDen(48000);
+			break;		
+		default:
+			break;
+	}
+
+	return timebase;
+}
+
+int32_t TranscodeStream::CreateOutputStreamDynamic()
+{
+	int32_t created_stream_count = 0;
+
+	auto stream_output = std::make_shared<info::Stream>(_application_info, StreamSourceType::Transcoder);
+
+	stream_output->SetName(_stream_input->GetName());
+	stream_output->SetOriginStream(_stream_input);
+
+	for (auto &input_track_item : _stream_input->GetTracks())
+	{
+		auto &input_track = input_track_item.second;
+		auto input_track_media_type = input_track->GetMediaType();
+
+		auto new_outupt_track = std::make_shared<MediaTrack>();
+
+		new_outupt_track->SetBypass(true);
+		new_outupt_track->SetId(NewTrackId(new_outupt_track->GetMediaType()));
+		new_outupt_track->SetBitrate(input_track->GetBitrate());
+		new_outupt_track->SetCodecId(input_track->GetCodecId());
+
+		if (input_track_media_type == common::MediaType::Video)
+		{
+			new_outupt_track->SetMediaType(common::MediaType::Video);
+			new_outupt_track->SetWidth(input_track->GetWidth());
+			new_outupt_track->SetHeight(input_track->GetHeight());
+			new_outupt_track->SetFrameRate(input_track->GetFrameRate());
+			auto timebase = GetDefaultTimebaseByCodecId(input_track->GetCodecId());
+			new_outupt_track->SetTimeBase(timebase.GetNum(), timebase.GetDen());
+
+			stream_output->AddTrack(new_outupt_track);
+			
+			StoreStageContext("default", input_track_media_type, input_track, stream_output, new_outupt_track);
+		}
+		else if (input_track_media_type == common::MediaType::Audio)
+		{
+			new_outupt_track->SetMediaType(common::MediaType::Audio);
+			auto input_codec_id = input_track->GetCodecId();
+			auto input_samplerate = input_track->GetSampleRate();
+
+			if (input_codec_id == common::MediaCodecId::Opus && input_samplerate != 48000)
+			{
+				logtw("OPUS codec only supports 48000Hz samplerate. Do not create bypass track. input smplereate(%d)", 
+					input_samplerate);
+				continue;
+			}
+
+			new_outupt_track->GetChannel().SetLayout(input_track->GetChannel().GetLayout());
+			new_outupt_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
+			auto timebase = GetDefaultTimebaseByCodecId(input_track->GetCodecId());
+			new_outupt_track->SetTimeBase(timebase.GetNum(), timebase.GetDen());
+			
+			stream_output->AddTrack(new_outupt_track);
+			
+			StoreStageContext("default", input_track_media_type, input_track, stream_output, new_outupt_track);
+		}
+	}
+
+	// Add to Output Stream List. The key is the output stream name.
+	_stream_outputs.insert(std::make_pair(stream_output->GetName(), stream_output));
+
+	logti("[%s/%s(%u)] -> [%s/%s(%u)] Output stream has been created.", 
+		_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(),
+		_application_info.GetName().CStr(), stream_output->GetName().CStr(), stream_output->GetId());
+
+	// Number of generated output streams
+	created_stream_count++;		
+
+	return created_stream_count;
+}
+
 // Create Output Stream and Encoding Transcode Context
 int32_t TranscodeStream::CreateOutputStream()
 {
 	int32_t created_stream_count = 0;
-
-	// If the application is created by Dynamic, make it bypass in Default Stream.
-	if( _application_info.IsDynamicApp() == true )
-	{
-		auto stream_output = std::make_shared<info::Stream>(_application_info, StreamSourceType::Transcoder);
-
-		stream_output->SetName(_stream_input->GetName());
-		stream_output->SetOriginStream(_stream_input);
-
-		for (auto &input_track_item : _stream_input->GetTracks())
-		{
-			auto &input_track = input_track_item.second;
-			auto input_track_media_type = input_track->GetMediaType();
-
-			auto new_outupt_track = std::make_shared<MediaTrack>();
-
-			new_outupt_track->SetBypass(true);
-			new_outupt_track->SetId(NewTrackId(new_outupt_track->GetMediaType()));
-			new_outupt_track->SetBitrate(input_track->GetBitrate());
-			new_outupt_track->SetCodecId(input_track->GetCodecId());
-
-			if (input_track_media_type == common::MediaType::Video)
-			{
-				new_outupt_track->SetMediaType(common::MediaType::Video);
-				new_outupt_track->SetWidth(input_track->GetWidth());
-				new_outupt_track->SetHeight(input_track->GetHeight());
-				new_outupt_track->SetFrameRate(input_track->GetFrameRate());
-				new_outupt_track->SetTimeBase(input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen());
-
-				stream_output->AddTrack(new_outupt_track);
-				
-				StoreStageContext("default", input_track_media_type, input_track, stream_output, new_outupt_track);
-			}
-			else if (input_track_media_type == common::MediaType::Audio)
-			{
-				new_outupt_track->SetMediaType(common::MediaType::Audio);
-				auto input_codec_id = input_track->GetCodecId();
-				auto input_samplerate = input_track->GetSampleRate();
-
-				if (input_codec_id == common::MediaCodecId::Opus)
-				{
-					if (input_samplerate != 48000)
-					{
-						logtw("OPUS codec only supports 48000Hz samplerate. Do not create bypass track. input smplereate(%d)", input_samplerate);
-						continue;
-					}
-				}
-
-				// Set output specification
-				new_outupt_track->SetSampleRate(input_samplerate);
-				new_outupt_track->GetChannel().SetLayout(input_track->GetChannel().GetLayout());
-				new_outupt_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
-				new_outupt_track->SetTimeBase(input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen());	
-
-				stream_output->AddTrack(new_outupt_track);
-				
-				StoreStageContext("default", input_track_media_type, input_track, stream_output, new_outupt_track);
-			}
-		}
-
-
-		// Add to Output Stream List. The key is the output stream name.
-		_stream_outputs.insert(std::make_pair(stream_output->GetName(), stream_output));
-
-		logti("[%s/%s(%u)] -> [%s/%s(%u)] Transcoder output stream has been created.", 
-						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(),
-						_application_info.GetName().CStr(), stream_output->GetName().CStr(), stream_output->GetId());
-
-		// Number of generated output streams
-		created_stream_count++;		
-
-		return created_stream_count;
-	}
-
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 1. Create new stream and new track
@@ -330,15 +367,12 @@ int32_t TranscodeStream::CreateOutputStream()
 						// When bypass is enabled, it gets information from tracks in the input stream.
 						if (new_outupt_track->IsBypass() == true)
 						{
-							// Validation
-
 							// Set output specification
 							new_outupt_track->SetCodecId(input_track->GetCodecId());
 							new_outupt_track->SetBitrate(input_track->GetBitrate());
 							new_outupt_track->SetWidth(input_track->GetWidth());
 							new_outupt_track->SetHeight(input_track->GetHeight());
 							new_outupt_track->SetFrameRate(input_track->GetFrameRate());
-							new_outupt_track->SetTimeBase(input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen());
 						}
 						else
 						{
@@ -348,7 +382,6 @@ int32_t TranscodeStream::CreateOutputStream()
 							auto output_height = cfg_encode_video->GetHeight();
 							auto output_framerate = cfg_encode_video->GetFramerate();
 
-							// Validation
 							if(IsVideoCodec(output_codec_id) == false)
 							{
 								logtw("Encoding codec set is not a video codec");
@@ -361,10 +394,11 @@ int32_t TranscodeStream::CreateOutputStream()
 							new_outupt_track->SetWidth(output_width);
 							new_outupt_track->SetHeight(output_height);
 							new_outupt_track->SetFrameRate(output_framerate);
-
-							// The timebase value will change by the decoder event.
-							new_outupt_track->SetTimeBase(input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen());
 						}
+
+						auto timebase = GetDefaultTimebaseByCodecId(new_outupt_track->GetCodecId());
+						new_outupt_track->SetTimeBase(timebase.GetNum(), timebase.GetDen());
+
 
 						stream_output->AddTrack(new_outupt_track);
 
@@ -399,10 +433,13 @@ int32_t TranscodeStream::CreateOutputStream()
 							// Set output specification
 							new_outupt_track->SetCodecId(input_codec_id);
 							new_outupt_track->SetBitrate(input_track->GetBitrate());
-							new_outupt_track->SetSampleRate(input_samplerate);
 							new_outupt_track->GetChannel().SetLayout(input_track->GetChannel().GetLayout());
 							new_outupt_track->GetSample().SetFormat(input_track->GetSample().GetFormat());
-							new_outupt_track->SetTimeBase(input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen());
+
+							// temporary
+							auto timebase = GetDefaultTimebaseByCodecId(new_outupt_track->GetCodecId());
+							new_outupt_track->SetTimeBase(timebase.GetNum(), timebase.GetDen());
+							new_outupt_track->SetSampleRate(timebase.GetDen());
 						}
 						else
 						{
@@ -449,7 +486,7 @@ int32_t TranscodeStream::CreateOutputStream()
 		// Add to Output Stream List. The key is the output stream name.
 		_stream_outputs.insert(std::make_pair(stream_name, stream_output));
 
-		logti("[%s/%s(%u)] -> [%s/%s(%u)] Transcoder output stream has been created.", 
+		logti("[%s/%s(%u)] -> [%s/%s(%u)] Output stream has been created.", 
 						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(),
 						_application_info.GetName().CStr(), stream_output->GetName().CStr(), stream_output->GetId());
 
@@ -518,6 +555,7 @@ int32_t TranscodeStream::CreateStageMapping()
 				{
 					auto filter_ids = _stage_decoder_to_filter[decoder_id];
 					bool found = false;
+					
 					for (auto it_filter_id : filter_ids)
 					{
 						if (it_filter_id == filter_id)
@@ -796,9 +834,37 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 			auto output_stream = iter.first;
 			auto output_track_id = iter.second;
 
-			auto clone_packet = packet->ClonePacket();
 
+			auto input_track = _stream_input->GetTrack(track_id);
+			if (input_track == nullptr)
+			{
+				logte("not found input track");
+				continue;
+			}
+
+			auto output_track = output_stream->GetTrack(output_track_id);
+			if (output_track == nullptr)
+			{
+				logte("not found output track");
+				continue;
+			}
+
+			auto clone_packet = packet->ClonePacket();
 			clone_packet->SetTrackId(output_track_id);
+
+			double scale = input_track->GetTimeBase().GetExpr() / output_track->GetTimeBase().GetExpr();
+			clone_packet->SetPts( (int64_t)((double)clone_packet->GetPts() * scale));
+			clone_packet->SetDts( (int64_t)((double)clone_packet->GetDts() * scale));
+			// logtd("[%d] %lld[%d/%d] -> %lld[%d/%d]", 
+			// 	track_id, 
+			// 	clone_packet->GetPts(), 
+			// 	input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen(), 
+			// 	(int64_t)((double)clone_packet->GetPts() * input_track->GetTimeBase().GetExpr() / output_track->GetTimeBase().GetExpr()),
+			// 	output_track->GetTimeBase().GetNum(), output_track->GetTimeBase().GetDen()
+			// 	);
+
+			// Convert to timebase
+
 
 			// if(output_track_id == 1)
 			// logtd("[#%d] Passthrought to MediaRouter (PTS: %lld)(SIZE: %lld)", output_track_id, clone_packet->GetPts(), clone_packet->GetDataLength());

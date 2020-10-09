@@ -86,13 +86,6 @@ private:
 		std::shared_ptr<MediaTrack> &media_track, 
 		std::shared_ptr<MediaPacket> &media_packet, bool force = false);
 
-	// Convert PTS/DTS to default timebase
-	//  Each provider has a different timebase.
-	//  This function converts timebase, which is commonly used by codecs, and also converts PTS.
-	bool ConvertToDefaultTimestamp(
-		std::shared_ptr<MediaTrack> &media_track,
-		std::shared_ptr<MediaPacket> &media_packet);
-
 	// Periodically insert sps/pps so that the player's decoding starts quickly.
 	bool UpdateDecoderParameterSets(
 		std::shared_ptr<MediaTrack> &media_track,

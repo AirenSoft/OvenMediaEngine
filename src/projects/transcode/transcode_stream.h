@@ -125,6 +125,8 @@ private:
 	TranscodeApplication* _parent;
 
 	int32_t CreateOutputStream();
+	// for dynamically generated applications
+	int32_t CreateOutputStreamDynamic();
 
 	int32_t CreateStageMapping();
 
@@ -169,5 +171,7 @@ private:
 	bool IsAudioCodec(common::MediaCodecId codec_id);
 
 	int GetBitrate(ov::String bitrate);
+
+	const common::Timebase GetDefaultTimebaseByCodecId(common::MediaCodecId codec_id);
 };
 

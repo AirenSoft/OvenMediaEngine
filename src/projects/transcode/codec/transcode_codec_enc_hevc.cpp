@@ -74,9 +74,6 @@ bool OvenCodecImplAvcodecEncHEVC::Configure(std::shared_ptr<TranscodeContext> co
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
 	_context->thread_count = 2;
-	AVRational output_timebase = TimebaseToAVRational(_output_context->GetTimeBase());
-	_scale = ::av_q2d(::av_div_q(output_timebase, codec_timebase));
-	_scale_inv = ::av_q2d(::av_div_q(codec_timebase, output_timebase));
 
 	// 인코딩 품질 및 브라우저 호환성
 	// For browser compatibility
@@ -156,7 +153,7 @@ void OvenCodecImplAvcodecEncHEVC::ThreadEncode()
 		///////////////////////////////////////////////////
 		_frame->format = frame->GetFormat();
 		_frame->nb_samples = 1;
-		_frame->pts = frame->GetPts() * _scale;
+		_frame->pts = frame->GetPts();
 		// The encoder will not pass this duration
 		_frame->pkt_duration = frame->GetDuration();
 
@@ -233,8 +230,8 @@ void OvenCodecImplAvcodecEncHEVC::ThreadEncode()
 										0, 
 										_packet->data, 
 										_packet->size, 
-										_packet->pts * _scale_inv, 
-										_packet->dts * _scale_inv, 
+										_packet->pts, 
+										_packet->dts, 
 										-1L, 
 										(_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
 				packet_buffer->SetBitstreamFormat(common::BitstreamFormat::H265_ANNEXB);

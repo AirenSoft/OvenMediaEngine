@@ -79,6 +79,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::Dequeue(TranscodeResult 
 		output_frame->SetPts(static_cast<int64_t>((_frame->pts == AV_NOPTS_VALUE) ? _last_pkt_pts+frame_duration_in_timebase : _frame->pts));
 		_last_pkt_pts = output_frame->GetPts();
 
+		// logte("frame.pts(%lld), oframe.pts(%lld),nb.samples(%d)", _frame->pts, output_frame->GetPts(), _frame->nb_samples);
 
 		auto data_length = static_cast<uint32_t>(output_frame->GetBytesPerSample() * output_frame->GetNbSamples());
 
@@ -132,7 +133,6 @@ void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 			return;
 		}
 	}
-
 
 	if (_cur_data != nullptr)
 	{

@@ -303,7 +303,7 @@ void MediaFilterResampler::ThreadFilter()
 				output_frame->SetSampleRate(_frame->sample_rate);
 				output_frame->SetChannelLayout((common::AudioChannel::Layout)_frame->channel_layout);
 				output_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1L : _frame->pts);
-				output_frame->SetDuration(_frame->pkt_duration * _scale);
+				output_frame->SetDuration(_frame->pkt_duration);
 
 				auto data_length = static_cast<uint32_t>(output_frame->GetBytesPerSample() * output_frame->GetNbSamples());
 
