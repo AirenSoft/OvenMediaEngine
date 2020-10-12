@@ -83,8 +83,7 @@ bool SegmentPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<p
 }
 
 bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
-										 const ov::String &app_name, const ov::String &stream_name,
-										 const ov::String &file_name,
+										 const SegmentStreamRequestInfo &request_info,
 										 ov::String &play_list)
 {
 	auto request = client->GetRequest();
@@ -100,12 +99,15 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 		return true;
 	}
 
+	auto &vhost_app_name = request_info.vhost_app_name;
+	auto &stream_name = request_info.stream_name;
+
 	// These names are used for testing purposes
 	// TODO(dimiden): Need to delete this code after testing
 	std::shared_ptr<PlaylistRequestInfo> playlist_request_info;
-	if (app_name.HasSuffix("_insecure") == false)
+	if (vhost_app_name.ToString().HasSuffix("_insecure") == false)
 	{
-		if (HandleSignedUrl(app_name, stream_name, client, parsed_url, playlist_request_info) == false)
+		if (HandleSignedUrl(vhost_app_name, stream_name, client, parsed_url, playlist_request_info) == false)
 		{
 			client->GetResponse()->SetStatusCode(HttpStatusCode::Forbidden);
 
@@ -114,16 +116,18 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 		}
 	}
 
-	auto stream = GetStreamAs<SegmentStream>(app_name, stream_name);
+	auto stream = GetStreamAs<SegmentStream>(vhost_app_name, stream_name);
 	if (stream == nullptr)
 	{
 		auto orchestrator = Orchestrator::GetInstance();
 
+		auto &vapp_name = vhost_app_name.ToString();
+
 		// These names are used for testing purposes
 		// TODO(dimiden): Need to delete this code after testing
 		if (
-			app_name.HasSuffix("#rtsp_live") || app_name.HasSuffix("#rtsp_playback") ||
-			app_name.HasSuffix("#rtsp_live_insecure") || app_name.HasSuffix("#rtsp_playback_insecure"))
+			vapp_name.HasSuffix("#rtsp_live") || vapp_name.HasSuffix("#rtsp_playback") ||
+			vapp_name.HasSuffix("#rtsp_live_insecure") || vapp_name.HasSuffix("#rtsp_playback_insecure"))
 		{
 			auto &query_map = parsed_url->QueryMap();
 
@@ -147,7 +151,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 
 			auto rtsp_uri = rtsp_uri_item->second;
 
-			if (orchestrator->RequestPullStream(app_name, stream_name, rtsp_uri) == false)
+			if (orchestrator->RequestPullStream(vhost_app_name, request_info.host_name, request_info.app_name, stream_name, rtsp_uri) == false)
 			{
 				logte("Could not request pull stream for URL: %s", rtsp_uri.CStr());
 				client->GetResponse()->SetStatusCode(HttpStatusCode::NotAcceptable);
@@ -163,20 +167,20 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 					 "HLS.SS",
 					 "REQUEST",
 					 "INFO",
-					 app_name.CStr(),
+					 vhost_app_name.CStr(),
 					 rtsp_uri.CStr(),
 					 playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress().CStr());
 
 			logti("URL %s is requested", rtsp_uri.CStr());
 
-			stream = GetStreamAs<SegmentStream>(app_name, stream_name);
+			stream = GetStreamAs<SegmentStream>(vhost_app_name, stream_name);
 		}
 		else
 		{
 			// If the stream does not exists, request to the provider
-			if (orchestrator->RequestPullStream(app_name, stream_name) == false)
+			if (orchestrator->RequestPullStream(vhost_app_name, request_info.host_name, request_info.app_name, stream_name) == false)
 			{
-				logte("Could not request pull stream for URL : %s/%s/%s", app_name.CStr(), stream_name.CStr(), file_name.CStr());
+				logte("Could not request pull stream for URL : %s/%s/%s", vhost_app_name.CStr(), stream_name.CStr(), request_info.file_name.CStr());
 				client->GetResponse()->SetStatusCode(HttpStatusCode::NotAcceptable);
 
 				// Returns true when the observer search can be ended.
@@ -184,14 +188,14 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 			}
 			else
 			{
-				stream = GetStreamAs<SegmentStream>(app_name, stream_name);
+				stream = GetStreamAs<SegmentStream>(vhost_app_name, stream_name);
 			}
 		}
 	}
 
 	if (stream == nullptr)
 	{
-		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), vhost_app_name.CStr(), stream_name.CStr(), request_info.file_name.CStr());
 
 		// This means it need to query the next observer.
 		return false;
@@ -199,7 +203,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 
 	if (stream->GetPlayList(play_list) == false)
 	{
-		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), vhost_app_name.CStr(), stream_name.CStr(), request_info.file_name.CStr());
 		client->GetResponse()->SetStatusCode(HttpStatusCode::Accepted);
 		// Returns true when the observer search can be ended.
 		return true;
@@ -210,11 +214,14 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 }
 
 bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
-										const ov::String &app_name, const ov::String &stream_name,
-										const ov::String &file_name,
+										const SegmentStreamRequestInfo &request_info,
 										std::shared_ptr<SegmentData> &segment)
 {
-	auto stream = GetStreamAs<SegmentStream>(app_name, stream_name);
+	auto &vhost_app_name = request_info.vhost_app_name;
+	auto &stream_name = request_info.stream_name;
+	auto &file_name = request_info.file_name;
+
+	auto stream = GetStreamAs<SegmentStream>(vhost_app_name, stream_name);
 
 	if (stream != nullptr)
 	{
@@ -222,33 +229,33 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &clien
 
 		if (segment == nullptr)
 		{
-			logtw("Could not find a segment for %s [%s/%s, %s]", GetPublisherName(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+			logtw("Could not find a segment for %s [%s/%s, %s]", GetPublisherName(), vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr());
 			return false;
 		}
 		else if (segment->data == nullptr)
 		{
-			logtw("Could not obtain segment data from %s for [%p, %s/%s, %s]", GetPublisherName(), segment.get(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+			logtw("Could not obtain segment data from %s for [%p, %s/%s, %s]", GetPublisherName(), segment.get(), vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr());
 			return false;
 		}
 	}
 	else
 	{
-		logtw("Could not find a stream for %s [%s/%s, %s]", GetPublisherName(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		logtw("Could not find a stream for %s [%s/%s, %s]", GetPublisherName(), vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr());
 		return false;
 	}
 
 	// To manage sessions
 	logti("Segment requested (%s/%s/%s) from %s : Segment number : %u Duration : %u", 
-						app_name.CStr(), stream_name.CStr(), file_name.CStr(), 
+						vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr(), 
 						client->GetRequest()->GetRemote()->GetRemoteAddress()->ToString().CStr(),
 						segment->sequence_number, segment->duration);
 
-	auto request_info = SegmentRequestInfo(GetPublisherType(),
-												*std::static_pointer_cast<info::Stream>(stream),
-												client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
-												segment->sequence_number,
-												segment->duration);
-	UpdateSegmentRequestInfo(request_info);
+	auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
+												   *std::static_pointer_cast<info::Stream>(stream),
+												   client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
+												   segment->sequence_number,
+												   segment->duration);
+	UpdateSegmentRequestInfo(segment_request_info);
 
 	return true;
 }
@@ -539,7 +546,7 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 	}
 }
 
-bool SegmentPublisher::HandleSignedUrl(const ov::String &app_name, const ov::String &stream_name,
+bool SegmentPublisher::HandleSignedUrl(const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
 									   const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
 									   std::shared_ptr<PlaylistRequestInfo> &request_info)
 {
@@ -618,7 +625,7 @@ bool SegmentPublisher::HandleSignedUrl(const ov::String &app_name, const ov::Str
 		bool result = true;
 		auto now = signed_url->GetNowMS();
 		request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
-															 app_name, stream_name,
+															 vhost_app_name, stream_name,
 															 remote_address->GetIpAddress(),
 															 signed_url->GetSessionID());
 

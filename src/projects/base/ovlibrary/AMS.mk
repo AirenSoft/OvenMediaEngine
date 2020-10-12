@@ -7,5 +7,6 @@ LOCAL_HEADER_FILES := $(LOCAL_HEADER_FILES)
 LOCAL_SOURCE_FILES := $(LOCAL_SOURCE_FILES)
 
 $(call add_pkg_config,openssl)
+$(call add_pkg_config,srt)
 
 include $(BUILD_STATIC_LIBRARY)

@@ -44,8 +44,6 @@ bool DtlsTransport::StartDTLS()
 {
 	std::lock_guard<std::mutex> lock(_tls_lock);
 
-	// Ice 상태가 Completed 일 경우에만 시작한다.
-	// Polling 방식이 아니므로 밖에서 이벤트를 확실하게 받고 진입해야 한다.
 	/*
 	if(_ice_port->GetState() != IcePortConnectionState::Completed)
 	{
@@ -104,7 +102,6 @@ bool DtlsTransport::StartDTLS()
 
 	_state = SSL_CONNECTING;
 
-	// 한번 accept를 시도해본다.
 	ContinueSSL();
 
 	return true;
@@ -128,7 +125,8 @@ bool DtlsTransport::ContinueSSL()
 
 		if(VerifyPeerCertificate() == false)
 		{
-			// Peer Certificate 검증 실패
+			logte("(%u) Session could not verify peer certificate", GetSession()->GetId());
+			return false;
 		}
 
 		_peer_certificate->Print();
@@ -156,14 +154,10 @@ bool DtlsTransport::MakeSrtpKey()
 
 	_tls.ExportKeyingMaterial(crypto_suite, label, server_key, client_key);
 
-	// Upper Node가 SRTP라면 값을 넘긴다.
-	// SRTP를 쓸때는 꼭 SRTP - DTLS 순서로 연결해야 한다.
 	auto node = GetUpperNode();
-
 	if(node->GetNodeType() == pub::SessionNodeType::Srtp)
 	{
 		auto srtp_transport = std::static_pointer_cast<SrtpTransport>(node);
-
 		srtp_transport->SetKeyMeterial(crypto_suite, server_key, client_key);
 	}
 
@@ -172,19 +166,14 @@ bool DtlsTransport::MakeSrtpKey()
 
 bool DtlsTransport::VerifyPeerCertificate()
 {
-	// TODO: PEER CERTIFICATE와 SDP에서 받은 Digest를 비교하여 검증한다.
+	// TODO(Getroot): Compare and verify the digest received from the PEER CERTIFICATE and SDP.
 	logtd("Accepted peer certificate");
 	_peer_cerificate_verified = true;
 	return true;
 }
 
-// 데이터를 upper에서 받는다. lower node로 보낸다.
-// Session -> Makes SRTP Packet -> DtlsTransport -> Ice로 전송
 bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
-	std::lock_guard<std::mutex> lock(_tls_lock);
-
-	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
 	{
 		logtd("SessionNode has not started, so the received data has been canceled.");
@@ -196,10 +185,9 @@ bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 		case SSL_NONE:
 		case SSL_WAIT:
 		case SSL_CONNECTING:
-			// 연결이 완료되기 전에는 아무것도 하지 않는다.
 			break;
 		case SSL_CONNECTED:
-			// SRTP는 이미 암호화가 되었으므로 ICE로 바로 전송한다.
+			// Since SRTP is already encrypted, it is sent directly to ICE.
 			if(from_node == pub::SessionNodeType::Srtp)
 			{
 				auto node = GetLowerNode(pub::SessionNodeType::Ice);
@@ -212,13 +200,12 @@ bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 			}
 			else
 			{
-				// 그 이외의 패킷은 암호화 하여 전송한다.
-				// TODO: 현재는 사용할 일이 없고 향후 데이터 채널을 붙이면 다시 검증한다. (현재는 검증 전)
-
+				std::lock_guard<std::mutex> lock(_tls_lock);
+				// If it is not SRTP, it must be encrypted in DTLS.
+				// TODO: Currently, SCTP is not supported, so there is no need to encrypt, 
+				// and it will be developed if it supports data channels in the future.
 				size_t written_bytes;
-
 				int ssl_error = _tls.Write(data->GetData(), data->GetLength(), &written_bytes);
-
 				if(ssl_error == SSL_ERROR_NONE)
 				{
 					return true;
@@ -237,13 +224,9 @@ bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 	return false;
 }
 
-// 데이터를 lower에서 받는다. upper node로 보낸다.
 // IcePort -> Publisher ->[queue] Application {thread}-> Session -> DtlsTransport -> SRTP || SCTP
 bool DtlsTransport::OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
-	std::lock_guard<std::mutex> lock(_tls_lock);
-
-	// Node 시작 전에는 아무것도 하지 않는다.
 	if(GetState() != SessionNode::NodeState::Started)
 	{
 		logtd("SessionNode has not started, so the received data has been canceled.");
@@ -256,72 +239,59 @@ bool DtlsTransport::OnDataReceived(pub::SessionNodeType from_node, const std::sh
 	{
 		case SSL_NONE:
 		case SSL_WAIT:
-			// SSL이 연결되기 전에는 아무것도 하지 않는다.
 			break;
 		case SSL_CONNECTING:
 		case SSL_CONNECTED:
-			// DTLS 패킷인지 검사한다.
+		{
 			if(IsDtlsPacket(data))
 			{
+				std::lock_guard<std::mutex> lock(_tls_lock);
 				logtd("Receive DTLS packet");
 				// Packet을 Queue에 쌓는다.
 				SaveDtlsPacket(data);
 
-				// SSL에 읽어가라고 명령을 내린다.
 				if(_state == SSL_CONNECTING)
 				{
-					// 연결중이면 SSL_accept를 해야 한다.
 					ContinueSSL();
 				}
 				else
 				{
-					// 연결이 완료된 상태면 암호화를 위해 읽어가야 한다.
 					char buffer[MAX_DTLS_PACKET_LEN];
 
-					// SSL_read는 다음과 같이 동작한다.
 					// SSL -> Read() -> TakeDtlsPacket() -> Decrypt -> buffer
 					[[maybe_unused]] int ssl_error = _tls.Read(buffer, sizeof(buffer), nullptr);
 
-					// 말이 안되는데 여기 들어오는지 보자.
 					int pending = _tls.Pending();
-
 					if(pending >= 0)
 					{
 						logtd("Short DTLS read. Flushing %d bytes", pending);
 						_tls.FlushInput();
 					}
 
-					// 읽은 패킷을 누군가에게 줘야 하는데... 줄 놈이 없다.
-					// TODO: 향후 SCTP 등을 연결하면 준다. 지금은 DTLS로 암호화 된 패킷을 받을 객체가 없다.
+					// TODO: Currently, SCTP is not supported, so there is no need to encrypt, 
+					// and it will be developed if it supports data channels in the future.
 					logtd("Unknown dtls packet received (%d)", ssl_error);
 				}
 
 				return true;
 			}
-				// SRTP, SRTCP,
+			// SRTP or SRTCP will be input here. However, since OME does not receive media, 
+			// SRTP cannot be input, only SRTCP can be input.
 			else
 			{
-				// 이 서버는 현재 RTP를 받지 않으므로, RTCP가 유일하다.
-				// DTLS, RTP(RTCP) 이외의 패킷은 비정상 패킷이다.
-				// rtcp에서 검증 처리 있어 주석 처리
-				// if(!IsRtpPacket(data))
-				// {
-				// 	break;
-				// }
+				auto node = GetUpperNode();
+                if(node == nullptr)
+                {
+                    return false;
+                }
 
-				// pass to srtp
-				// TODO(getroot): 나중에 RTCP 구현 할 것
-				// auto node = GetUpperNode();
-
-                // if(node == nullptr)
-                // {
-                //     return false;
-                // }
-                // node->OnDataReceived(GetNodeType(), data);
+				// To SRTP Transport
+                node->OnDataReceived(GetNodeType(), data);
 
 				return true;
 			}
 			break;
+		}
 		case SSL_ERROR:
 		case SSL_CLOSED:
 			break;

@@ -25,13 +25,13 @@ namespace pvd
     }
 
 	// To be interleaved mode, a channel must have applicaiton/stream and track informaiton
-	bool PushProvider::PublishInterleavedChannel(uint32_t channel_id, ov::String app_name, const std::shared_ptr<PushStream> &signal_channel)
+	bool PushProvider::PublishInterleavedChannel(uint32_t channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &signal_channel)
 	{
 		// Append the stream into the application
-		auto application = std::dynamic_pointer_cast<PushApplication>(GetApplicationByName(app_name));
+		auto application = std::dynamic_pointer_cast<PushApplication>(GetApplicationByName(vhost_app_name));
 		if(application == nullptr)
 		{
-			logte("Cannot find application(%s) to publish interleaved channel", app_name.CStr());
+			logte("Cannot find application(%s) to publish interleaved channel", vhost_app_name.CStr());
 			return false;
 		}
 
@@ -39,15 +39,15 @@ namespace pvd
 	}
 
 	// A data channel must have applicaiton/stream and track informaiton
-	bool PushProvider::PublishDataChannel(uint32_t channel_id, uint32_t signalling_channel_id, ov::String app_name, const std::shared_ptr<pvd::PushStream> &channel)
+	bool PushProvider::PublishDataChannel(uint32_t channel_id, uint32_t signalling_channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<pvd::PushStream> &channel)
 	{
 		// Create stream
 		channel->SetRelatedChannelId(signalling_channel_id);
 
-		auto application = GetApplicationByName(app_name);
+		auto application = GetApplicationByName(vhost_app_name);
 		if(application == nullptr)
 		{
-			logte("Cannot find %s application to create %s stream", app_name.CStr(), channel->GetName().CStr());
+			logte("Cannot find %s application to create %s stream", vhost_app_name.CStr(), channel->GetName().CStr());
 		}
 
 		// Notify stream created 

@@ -337,7 +337,7 @@ bool DashPacketizer::WriteVideoSegment()
 
 	auto sample_datas = std::move(_video_datas);
 	// Timestamp of the first frame
-	auto start_timestamp = sample_datas.front()->timestamp;
+	auto start_timestamp = sample_datas.front()->pts;
 
 	// Create a fragment
 	M4sSegmentWriter writer(M4sMediaType::Video, _video_segment_count, 1, start_timestamp);
@@ -352,7 +352,7 @@ bool DashPacketizer::WriteVideoSegment()
 
 	// Enqueue the segment
 	const auto &last_frame = sample_datas.back();
-	auto segment_duration = last_frame->timestamp + last_frame->duration - start_timestamp;
+	auto segment_duration = last_frame->pts + last_frame->duration - start_timestamp;
 
 	// Append the data to the m4s list
 	if (SetSegmentData(GetFileName(start_timestamp, common::MediaType::Video), segment_duration, start_timestamp, segment_data) == false)
@@ -428,7 +428,7 @@ bool DashPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 	// 0x02000000 = 00000010 00000000 00000000 00000000 (sample_depends_on == 2)
 	// 0x01010000 = 00000001 00000001 00000000 00000000 (sample_depends_on == 1, sample_is_non_sync_sample = 1)
 	uint32_t flag = (frame->type == PacketizerFrameType::VideoKeyFrame) ? 0X02000000 : 0X01010000;
-	auto sample_data = std::make_shared<SampleData>(frame->duration, flag, frame->timestamp, frame->time_offset, frame->data);
+	auto sample_data = std::make_shared<SampleData>(frame->duration, flag, frame->pts, frame->dts, frame->data);
 
 	bool new_segment_written = false;
 
@@ -476,12 +476,12 @@ bool DashPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 
 bool DashPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame)
 {
-	int64_t start_timestamp = (_video_datas.empty()) ? frame->timestamp : _video_datas.front()->timestamp;
-	int64_t current_segment_duration = frame->timestamp - start_timestamp;
+	int64_t start_timestamp = (_video_datas.empty()) ? frame->pts : _video_datas.front()->pts;
+	int64_t current_segment_duration = frame->pts - start_timestamp;
 
 	return AppendVideoFrameInternal(frame, current_segment_duration, [frame, this](const std::shared_ptr<const SampleData> &data, bool new_segment_written) {
 		_video_datas.push_back(data);
-		_last_video_pts = frame->timestamp;
+		_last_video_pts = frame->pts;
 
 		if(_first_video_pts == -1LL)
 		{
@@ -527,7 +527,7 @@ bool DashPacketizer::WriteAudioSegment()
 
 	auto sample_datas = std::move(_audio_datas);
 	// Timestamp of the first frame
-	auto start_timestamp = sample_datas.front()->timestamp;
+	auto start_timestamp = sample_datas.front()->pts;
 
 	// Create a fragment
 	M4sSegmentWriter writer(M4sMediaType::Audio, _audio_segment_count, 2, start_timestamp);
@@ -541,7 +541,7 @@ bool DashPacketizer::WriteAudioSegment()
 
 	// Enqueue the segment
 	const auto &last_frame = sample_datas.back();
-	auto segment_duration = last_frame->timestamp + last_frame->duration - start_timestamp;
+	auto segment_duration = last_frame->pts + last_frame->duration - start_timestamp;
 
 	if (SetSegmentData(GetFileName(start_timestamp, common::MediaType::Audio), segment_duration, start_timestamp, segment_data) == false)
 	{
@@ -607,7 +607,7 @@ bool DashPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameDat
 	{
 		if (data_callback != nullptr)
 		{
-			data_callback(std::make_shared<SampleData>(frame->duration, frame->timestamp, frame->data), new_segment_written);
+			data_callback(std::make_shared<SampleData>(frame->duration, frame->pts, frame->dts, frame->data), new_segment_written);
 		}
 	}
 
@@ -616,12 +616,12 @@ bool DashPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameDat
 
 bool DashPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame)
 {
-	int64_t start_timestamp = (_audio_datas.empty()) ? frame->timestamp : _audio_datas.front()->timestamp;
-	int64_t current_segment_duration = frame->timestamp - start_timestamp;
+	int64_t start_timestamp = (_audio_datas.empty()) ? frame->pts : _audio_datas.front()->pts;
+	int64_t current_segment_duration = frame->pts - start_timestamp;
 
 	return AppendAudioFrameInternal(frame, current_segment_duration, [frame, this](const std::shared_ptr<const SampleData> &data, bool new_segment_written) {
 		_audio_datas.push_back(data);
-		_last_audio_pts = frame->timestamp;
+		_last_audio_pts = frame->pts;
 
 		if (_first_audio_pts == -1LL)
 		{

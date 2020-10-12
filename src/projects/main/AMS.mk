@@ -5,6 +5,8 @@ LOCAL_STATIC_LIBRARIES := \
 	webrtc_publisher \
 	segment_publishers \
 	ovt_publisher \
+	file_publisher \
+	rtmppush_publisher \
 	ovt_provider \
 	rtmp_provider \
 	mpegts_provider \
@@ -12,13 +14,13 @@ LOCAL_STATIC_LIBRARIES := \
 	transcoder \
 	rtc_signalling \
 	ice \
-	jsoncpp \
+	bitstream \
+	containers \
 	http_server \
 	signed_url \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \
-	h264 \
 	web_console \
 	mediarouter \
 	ovt_packetizer \
@@ -33,7 +35,8 @@ LOCAL_STATIC_LIBRARIES := \
 	monitoring \
 	jsoncpp \
 	sqlite \
-	aac
+	file \
+	rtmp \
 
 # rtsp_provider 
 
@@ -59,10 +62,11 @@ $(call add_pkg_config,vpx)
 $(call add_pkg_config,opus)
 $(call add_pkg_config,libsrtp2)
 
-ifeq ($(MAKECMDGOALS),release)
+# Temporarily stop using JEMALLOC. We will test it more and use it again.
+#ifeq ($(MAKECMDGOALS),release)
 	# Enable jemalloc 
-    $(call add_pkg_config,jemalloc)
-endif
+	# $(call add_pkg_config,jemalloc)
+#endif
 
 LOCAL_TARGET := OvenMediaEngine
 

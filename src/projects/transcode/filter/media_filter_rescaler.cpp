@@ -75,22 +75,9 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 
 	// Prepare the input filter
 
-	// "buffer" filter
-/*	
-	AVRational framerate = ::av_d2q(input_context->GetFrameRate(), AV_TIME_BASE);
-	logte("framerate=%0.2f, num=%d, den=%d", input_context->GetFrameRate(), framerate.num, framerate.den);
-
+	// TODO: Removed framerate filter. because, Timestamp of frame is shifted. In case of not constant framerate as is VFR.
 	ov::String input_args = ov::String::FormatString(
-		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d:frame_rate=%d/%d:sws_param=flags=bicubic",
-		input_media_track->GetWidth(), input_media_track->GetHeight(),
-		input_media_track->GetFormat(),
-		input_media_track->GetTimeBase().GetNum(), input_media_track->GetTimeBase().GetDen(),
-		1, 1,
-		framerate.num, framerate.den);
-*/
-	// Removed framerate filter. because, Timestamp of frame is shifted. In case of not constant framerate as is VFR.
-	ov::String input_args = ov::String::FormatString(
-		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d:sws_param=flags=bicubic",
+		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
 		input_media_track->GetWidth(), input_media_track->GetHeight(),
 		input_media_track->GetFormat(),
 		input_media_track->GetTimeBase().GetNum(), input_media_track->GetTimeBase().GetDen(),
@@ -108,10 +95,10 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	// Prepare output filters
 	std::vector<ov::String> filters = {
 		// "fps" filter options
-		ov::String::FormatString("fps=fps=%.2f:0:round=near", output_context->GetFrameRate()),
+		ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()),
 		// "scale" filter options
 		ov::String::FormatString("scale=%dx%d:flags=bicubic", output_context->GetVideoWidth(), output_context->GetVideoHeight()),
-		// "settb" filter options
+		// "settb" filter options		
 		ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()),
 	};
 
@@ -156,7 +143,7 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		return false;
 	}
 
-	logtd("Rescaler is enabled for track #%u using parameters: input: %s, outputs: %s", input_media_track->GetId(), input_args.CStr(), output_filters.CStr());
+	logtd("Rescaler is enabled for track #%u using parameters. input: %s / outputs: %s", input_media_track->GetId(), input_args.CStr(), output_filters.CStr());
 
 	_input_context = input_context;
 	_output_context = output_context;
@@ -232,7 +219,7 @@ void MediaFilterRescaler::ThreadFilter()
 		_frame->format = frame->GetFormat();
 		_frame->width = frame->GetWidth();
 		_frame->height = frame->GetHeight();
-		_frame->pts = frame->GetPts() * _scale;
+		_frame->pts = frame->GetPts();;
 		_frame->pkt_duration = frame->GetDuration();
 
 		_frame->linesize[0] = frame->GetStride(0);
@@ -307,7 +294,7 @@ void MediaFilterRescaler::ThreadFilter()
 				output_frame->SetWidth(_frame->width);
 				output_frame->SetHeight(_frame->height);
 				output_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1LL : _frame->pts);
-				output_frame->SetDuration(_frame->pkt_duration * _scale);
+				output_frame->SetDuration(_frame->pkt_duration);
 
 				output_frame->SetStride(_frame->linesize[0], 0);
 				output_frame->SetStride(_frame->linesize[1], 1);

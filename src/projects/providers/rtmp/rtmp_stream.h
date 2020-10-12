@@ -12,8 +12,6 @@
 #include "base/common_types.h"
 #include "base/provider/push_provider/stream.h"
 
-#include "media_router/bitstream/bitstream_conv.h"
-
 #include "chunk/amf_document.h"
 #include "chunk/rtmp_chunk_parser.h"
 #include "chunk/rtmp_export_chunk.h"
@@ -89,9 +87,6 @@ namespace pvd
 							char *description,
 							double client_id);
 
-		bool VideoSequenceHeaderProcess(const std::shared_ptr<const ov::Data> &data, uint8_t control_byte);
-		bool AudioSequenceHeaderProcess(const std::shared_ptr<const ov::Data> &data, uint8_t control_byte);
-
 		// Parsing handshake messages
 		off_t ReceiveHandshakePacket(const std::shared_ptr<const ov::Data> &data);
 		bool SendHandshake(const std::shared_ptr<const ov::Data> &data);
@@ -112,7 +107,7 @@ namespace pvd
 		ov::String GetEncoderTypeString(RtmpEncoderType encoder_type);
 
 		bool CheckReadyToPublish();
-		bool PublishStream();		
+		bool PublishStream();
 		bool SetTrackInfo(const std::shared_ptr<RtmpMediaInfo> &media_info);
 
 		// RTMP related
@@ -121,6 +116,7 @@ namespace pvd
 		std::shared_ptr<RtmpImportChunk> _import_chunk;
 		std::shared_ptr<RtmpExportChunk> _export_chunk;
 		std::shared_ptr<RtmpMediaInfo> _media_info;
+
 		std::vector<std::shared_ptr<const RtmpMessage>> _stream_message_cache;
 		uint32_t _stream_message_cache_video_count = 0;
 		uint32_t _stream_message_cache_audio_count = 0;
@@ -133,18 +129,11 @@ namespace pvd
 		// Set from OnAmfPublish
 		int32_t _chunk_stream_id = 0;
 
-		// bitstream filters
-		BitstreamConv _bitstream_conv_video;
-		BitstreamConv _bitstream_conv_audio;
-
 		// parsed from packet
 		ov::String _domain_name;
-		ov::String _app_name;
+		info::VHostAppName _app_name;
 		ov::String _stream_name;
 		ov::String _device_string;
-
-		bool _video_sequence_info_process = false;
-		bool _audio_sequence_info_process = false;
 
 		// Cache (GetApplicationInfo()->GetId())
 		info::application_id_t _app_id = 0;
@@ -157,7 +146,6 @@ namespace pvd
 
 		// For statistics 
 		time_t _stream_check_time = 0;
-		time_t _last_packet_time = 0;
 
 		uint32_t _key_frame_interval = 0;
 		uint32_t _previous_key_frame_timestamp = 0;

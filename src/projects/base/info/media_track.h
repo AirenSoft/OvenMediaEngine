@@ -49,9 +49,17 @@ public:
 	void SetBypass(bool flag);
 	bool IsBypass();
 
+	// Define extradata by codec
+	//  H264 : AVCDecoderConfigurationRecord
+	//  H265 : HEVCDecoderConfiguratinRecord(TODO)
+	//  AAC : AACSpecificConfig
+	//  VP8 : No plan
+	//  OPUS : No plan
 	void SetCodecExtradata(std::vector<uint8_t> codec_extradata);
 	const std::vector<uint8_t> &GetCodecExtradata() const;
 	std::vector<uint8_t> &GetCodecExtradata();
+
+	ov::String GetInfoString();
 
 private:
 	uint32_t _id;

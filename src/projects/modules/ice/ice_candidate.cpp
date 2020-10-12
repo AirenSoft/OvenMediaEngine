@@ -15,16 +15,17 @@
 #define ICE_CANDIDATE_PREFIX                                "candidate:"
 
 IceCandidate::IceCandidate()
-	: IceCandidate("UDP", ov::SocketAddress(0))
+	: IceCandidate("UDP", "", 0)
 {
 }
 
-IceCandidate::IceCandidate(ov::String transport, ov::SocketAddress address)
+IceCandidate::IceCandidate(ov::String transport, ov::String ip_address, int port)
 	: _foundation("0"),
 	  _component_id(1),
 	  _transport(std::move(transport)),
 	  _priority(50),
-	  _address(std::move(address)),
+	  _ip_address(std::move(ip_address)),
+	  _port(port),
 	// candidate type은 host만 지원
 	  _candidate_types("host"),
 	  _rel_port(0)
@@ -47,7 +48,8 @@ void IceCandidate::Swap(IceCandidate &from) noexcept
 	std::swap(_component_id, from._component_id);
 	std::swap(_transport, from._transport);
 	std::swap(_priority, from._priority);
-	std::swap(_address, from._address);
+	std::swap(_ip_address, from._ip_address);
+	std::swap(_port, from._port);
 	std::swap(_candidate_types, from._candidate_types);
 	std::swap(_rel_addr, from._rel_addr);
 	std::swap(_rel_port, from._rel_port);
@@ -112,9 +114,8 @@ bool IceCandidate::ParseFromString(const ov::String &candidate_string)
 	temp_candidate._transport = *iterator++;
 	temp_candidate._priority = ov::Converter::ToUInt32(*iterator++);
 
-	ov::String ip = *iterator++;
-	ov::String port = *iterator++;
-	temp_candidate._address = ov::SocketAddress(ip, ov::Converter::ToUInt16(port));
+	temp_candidate._ip_address = *iterator++;
+	temp_candidate._port = ov::Converter::ToUInt16(*iterator++);
 	ov::String cand_type = *iterator++;
 
 	if(cand_type != "typ")
@@ -224,14 +225,29 @@ void IceCandidate::SetPriority(uint32_t priority)
 	_priority = priority;
 }
 
-const ov::SocketAddress &IceCandidate::GetAddress() const
+ov::SocketAddress IceCandidate::GetAddress() const
 {
-	return _address;
+	return ov::SocketAddress(_ip_address, _port);
 }
 
-void IceCandidate::SetAddress(const ov::SocketAddress &address)
+ov::String IceCandidate::GetIpAddress() const
 {
-	_address = address;
+	return _ip_address;
+}
+
+void IceCandidate::SetIpAddress(const ov::String &ip_address)
+{
+	_ip_address = ip_address;
+}
+
+int IceCandidate::GetPort() const
+{
+	return _port;
+}
+
+void IceCandidate::SetPort(int port)
+{
+	_port = port;
 }
 
 const ov::String &IceCandidate::GetCandidateTypes() const
@@ -314,8 +330,8 @@ ov::String IceCandidate::GetCandidateString() const noexcept
 		_foundation.CStr(), _component_id,
 		_transport.UpperCaseString().CStr(),
 		_priority,
-		_address.GetIpAddress().CStr(),
-		_address.Port(),
+		_ip_address.CStr(),
+		_port,
 		_candidate_types.CStr()
 	);
 

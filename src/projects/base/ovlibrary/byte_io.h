@@ -28,6 +28,49 @@ template<typename T,
 	bool is_signed = std::numeric_limits<T>::is_signed>
 class ByteWriter;
 
+template <typename T, unsigned int B>
+class ByteReader<T, B, false> {
+public:
+	static T ReadBigEndian(const uint8_t* data) 
+	{
+		if(B <= sizeof(T))
+		{
+			return 0;
+		}
+		return InternalReadBigEndian(data);
+	}
+
+	static T ReadLittleEndian(const uint8_t* data) 
+	{
+		if(B <= sizeof(T))
+		{
+			return 0;
+		}
+		return InternalReadLittleEndian(data);
+	}
+
+private:
+	static T InternalReadBigEndian(const uint8_t* data) 
+	{
+		T val(0);
+		for (unsigned int i = 0; i < B; ++i)
+		{
+			val |= static_cast<T>(data[i]) << ((B - 1 - i) * 8);
+		}
+		return val;
+	}
+
+	static T InternalReadLittleEndian(const uint8_t* data) 
+	{
+		T val(0);
+		for (unsigned int i = 0; i < B; ++i)
+		{
+			val |= static_cast<T>(data[i]) << (i * 8);
+		}
+		return val;
+	}
+};
+
 template<typename T>
 class ByteWriter<T, 1, false>
 {

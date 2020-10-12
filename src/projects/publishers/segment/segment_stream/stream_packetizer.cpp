@@ -10,8 +10,7 @@
 #include "segment_stream_private.h"
 
 bool StreamPacketizer::AppendVideoData(const std::shared_ptr<MediaPacket> &media_packet,
-									   uint32_t timescale,
-									   uint64_t time_offset)
+									   uint32_t timescale)
 {
 	if (_stream_type == PacketizerStreamType::AudioOnly)
 	{
@@ -26,7 +25,6 @@ bool StreamPacketizer::AppendVideoData(const std::shared_ptr<MediaPacket> &media
 	}
 
 	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
-	auto timestamp = media_packet->GetPts();
 	auto buffer = media_packet->GetData();
 	auto duration = media_packet->GetDuration();
 
@@ -40,7 +38,7 @@ bool StreamPacketizer::AppendVideoData(const std::shared_ptr<MediaPacket> &media
 
 	PacketizerFrameType packetizer_frame_type = (frame_type == FrameType::VideoFrameKey) ? PacketizerFrameType::VideoKeyFrame : PacketizerFrameType::VideoPFrame;
 
-	auto frame_data = std::make_shared<PacketizerFrameData>(packetizer_frame_type, timestamp, duration, time_offset, _video_track->GetTimeBase(), buffer);
+	auto frame_data = std::make_shared<PacketizerFrameData>(packetizer_frame_type, media_packet->GetPts(), media_packet->GetDts(), duration, _video_track->GetTimeBase(), buffer);
 
 	AppendVideoFrame(frame_data);
 
@@ -62,7 +60,6 @@ bool StreamPacketizer::AppendAudioData(const std::shared_ptr<MediaPacket> &media
 	}
 
 	//auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
-	auto timestamp = media_packet->GetPts();
 	auto buffer = media_packet->GetData();
 	auto duration = media_packet->GetDuration();
 
@@ -73,7 +70,7 @@ bool StreamPacketizer::AppendAudioData(const std::shared_ptr<MediaPacket> &media
 	// 	encoded_frame->_duration = Packetizer::ConvertTimeScale(encoded_frame->_duration, timescale, _audio_timescale);
 	// }
 
-	auto frame_data = std::make_shared<PacketizerFrameData>(PacketizerFrameType::AudioFrame, timestamp, duration, 0, _audio_track->GetTimeBase(), buffer);
+	auto frame_data = std::make_shared<PacketizerFrameData>(PacketizerFrameType::AudioFrame, media_packet->GetPts(), media_packet->GetDts(), duration, _audio_track->GetTimeBase(), buffer);
 
 	AppendAudioFrame(frame_data);
 

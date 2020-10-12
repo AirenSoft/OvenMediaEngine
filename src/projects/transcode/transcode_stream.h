@@ -16,8 +16,8 @@
 #include <vector>
 #include <queue>
 
-#include "base/media_route/media_buffer.h"
-#include "base/media_route/media_type.h"
+#include "base/mediarouter/media_buffer.h"
+#include "base/mediarouter/media_type.h"
 #include "base/info/stream.h"
 
 #include "transcode_context.h"
@@ -53,7 +53,6 @@ public:
 
 	// For statistics
 	uint64_t 	_max_queue_threshold;
-
 
 	void DoInputPackets();
 	void DoDecodedFrames();
@@ -126,6 +125,8 @@ private:
 	TranscodeApplication* _parent;
 
 	int32_t CreateOutputStream();
+	// for dynamically generated applications
+	int32_t CreateOutputStreamDynamic();
 
 	int32_t CreateStageMapping();
 
@@ -170,5 +171,7 @@ private:
 	bool IsAudioCodec(common::MediaCodecId codec_id);
 
 	int GetBitrate(ov::String bitrate);
+
+	const common::Timebase GetDefaultTimebaseByCodecId(common::MediaCodecId codec_id);
 };
 

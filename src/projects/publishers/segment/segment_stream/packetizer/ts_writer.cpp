@@ -159,7 +159,7 @@ bool TsWriter::WritePAT()
 	MakeTsHeader(0, 0, true, payload_size, false, 0, false);
 
 	//PAT Header 설정(13Byte)
-	BitWriter pat_bit(TS_PAT_SIZE);
+	ov::BitWriter pat_bit(TS_PAT_SIZE);
 	pat_bit.Write(8, 0);					// pointer
 	pat_bit.Write(8, 0);					// table_id
 	pat_bit.Write(1, 1);					// section_syntax_indicator
@@ -180,7 +180,7 @@ bool TsWriter::WritePAT()
 	crc = MakeCrc(pat_bit.GetData() + 1, (uint32_t)pat_bit.GetDataSize() - 1);  // table_id~program_map_PID
 
 	//CRC(4Byte)
-	BitWriter crc_bit(TS_CRC_SIZE);
+	ov::BitWriter crc_bit(TS_CRC_SIZE);
 	crc_bit.Write(32, crc);
 	WriteDataStream((int)crc_bit.GetDataSize(), crc_bit.GetData());
 
@@ -216,7 +216,7 @@ bool TsWriter::WritePMT()
 		pid = TS_DEFAULT_VIDEO_PID;
 	}
 
-	BitWriter pmt_bit(section_size);
+	ov::BitWriter pmt_bit(section_size);
 
 	pmt_bit.Write(8, 0);			  // pointer
 	pmt_bit.Write(8, 2);			  // table_id
@@ -258,7 +258,7 @@ bool TsWriter::WritePMT()
 	crc = MakeCrc(pmt_bit.GetData() + 1, (uint32_t)pmt_bit.GetDataSize() - 1);  // table_id~end
 
 	//CRC(4Byte)
-	BitWriter crc_bit(TS_CRC_SIZE);
+	ov::BitWriter crc_bit(TS_CRC_SIZE);
 	crc_bit.Write(32, crc);
 	WriteDataStream((int)crc_bit.GetDataSize(), crc_bit.GetData());
 
@@ -276,8 +276,8 @@ bool TsWriter::WritePMT()
 //====================================================================================================
 bool TsWriter::WriteSample(bool is_video,
 						   bool is_keyframe,
-						   int64_t timestamp,
-						   uint64_t time_offset,
+						   int64_t pts,
+						   int64_t dts,
 						   std::shared_ptr<ov::Data> &data)
 {
 	uint8_t pes_header[PES_HEADER_WIDTH_DTS_SIZE] = {
@@ -298,7 +298,7 @@ bool TsWriter::WriteSample(bool is_video,
 	data_pos = data->GetDataAs<uint8_t>();
 
 	// PES Header 생성
-	MakePesHeader(data->GetLength(), is_video, timestamp, time_offset, pes_header, pes_header_size);
+	MakePesHeader(data->GetLength(), is_video, pts, dts, pes_header, pes_header_size);
 
 	// TS Header + Payload 설정
 	rest_data_size = pes_header_size + data->GetLength();
@@ -326,7 +326,7 @@ bool TsWriter::WriteSample(bool is_video,
 							 true,
 							 payload_size,
 							 true,
-							 timestamp * 300,
+							 pts * 300,
 							 is_keyframe);
 			else
 				MakeTsHeader(TS_DEFAULT_AUDIO_PID,
@@ -334,7 +334,7 @@ bool TsWriter::WriteSample(bool is_video,
 							 true,
 							 payload_size,
 							 (!_video_enable && _audio_enable),
-							 timestamp * 300,
+							 pts * 300,
 							 is_keyframe);
 
 			// PES헤더 설정
@@ -369,22 +369,14 @@ bool TsWriter::WriteSample(bool is_video,
 //====================================================================================================
 bool TsWriter::MakePesHeader(int data_size,
 							 bool is_video,
-							 int64_t timestamp,
-							 uint64_t time_offset,
+							 int64_t pts,
+							 int64_t dts,
 							 uint8_t *header,
 							 uint32_t &header_size)
 {
 	uint32_t stream_id = 0;
 	uint32_t pes_packet_size = 0;
 	bool is_dts = false;
-	uint64_t pts = 0;
-	uint64_t dts = 0;
-
-	// DTS
-	dts = timestamp;
-
-	// PTS
-	pts = timestamp + time_offset;
 
 	if (is_video)
 	{
@@ -402,7 +394,7 @@ bool TsWriter::MakePesHeader(int data_size,
 	}
 
 	//PES Header 설정
-	BitWriter pes_bit(header_size);
+	ov::BitWriter pes_bit(header_size);
 	pes_bit.Write(24, 0x000001);		 // packet_start_code_prefix
 	pes_bit.Write(8, stream_id);		 // stream_id
 	pes_bit.Write(16, pes_packet_size);  // PES_packet_length
@@ -532,7 +524,7 @@ bool TsWriter::MakeTsHeader(int pid,
 
 	if (use_pcr)
 	{
-		BitWriter pcr_bit(TS_PCR_ADAPTATION_SIZE);
+		ov::BitWriter pcr_bit(TS_PCR_ADAPTATION_SIZE);
 		uint64_t pcr_base = pcr / 300;
 		uint32_t pcr_ext = (uint32_t)(pcr % 300);
 

@@ -26,7 +26,7 @@ public:
 	Json::Value&		GetDescription();
 
 private:
-	bool Start(uint32_t worker_count) override;
+	bool Start() override;
 	bool Stop() override;
 
 	Json::Value							_description;

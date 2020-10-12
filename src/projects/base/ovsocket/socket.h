@@ -11,6 +11,7 @@
 #include "socket_address.h"
 
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #if defined(__APPLE__)
 #include <sys/event.h>
 

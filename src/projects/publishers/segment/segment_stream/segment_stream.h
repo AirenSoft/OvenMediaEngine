@@ -28,7 +28,7 @@ public :
     void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
     void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
-    bool Start(int segment_count, int segment_duration, uint32_t worker_count);
+    bool Start(int segment_count, int segment_duration);
     bool Stop() override;
 
     bool GetPlayList(ov::String &play_list);

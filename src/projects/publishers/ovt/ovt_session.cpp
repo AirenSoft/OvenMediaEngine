@@ -1,6 +1,7 @@
-#include "base/info/stream.h"
-#include "base/ovlibrary/byte_io.h"
-#include "base/publisher/stream.h"
+#include <base/info/stream.h>
+#include <base/ovlibrary/byte_io.h>
+#include <base/publisher/stream.h>
+#include <modules/ovt_packetizer/ovt_packet.h>
 #include "ovt_session.h"
 #include "ovt_private.h"
 
@@ -48,13 +49,28 @@ bool OvtSession::Stop()
 	return Session::Stop();
 }
 
-bool OvtSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet)
+bool OvtSession::SendOutgoingData(const std::any &packet)
 {
-	// packet_type in OvtSession means marker of OVT Packet
+	std::shared_ptr<OvtPacket> session_packet;
+
+	try 
+	{
+        session_packet = std::any_cast<std::shared_ptr<OvtPacket>>(packet);
+		if(session_packet == nullptr)
+		{
+			return false;
+		}
+    }
+    catch(const std::bad_any_cast& e) 
+	{
+        logtd("An incorrect type of packet was input from the stream. (%s)", e.what());
+		return false;
+    }
+
 	// OvtSession should send full packet so it will start to send from next packet of marker packet.
 	if(_sent_ready == false)
 	{
-		if(packet_type == true) // Set marker
+		if(session_packet->Marker() == true) // Set marker
 		{
 			_sent_ready = true;
 		}
@@ -63,11 +79,9 @@ bool OvtSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov
 	}
 
 	// Set OVT Session ID into packet
-	// It is also possible to use OvtPacket::Load, but for performance, as follows.
-	auto buffer = packet->GetWritableDataAs<uint8_t>();
-	ByteWriter<uint32_t>::WriteBigEndian(&buffer[12], GetId());
-
-	_connector->Send(packet->GetData(), packet->GetLength());
+	auto copy_packet = std::make_shared<OvtPacket>(*session_packet);
+	copy_packet->SetSessionId(GetId());
+	_connector->Send(copy_packet->GetData());
 
 	return true;
 }

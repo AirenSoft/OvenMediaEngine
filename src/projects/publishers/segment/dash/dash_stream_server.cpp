@@ -7,23 +7,25 @@
 //
 //==============================================================================
 #include "dash_stream_server.h"
-#include "dash_define.h"
+
 #include <publishers/segment/segment_stream/packetizer/packetizer_define.h>
+
+#include "dash_define.h"
 #include "dash_private.h"
 
 HttpConnection DashStreamServer::ProcessStreamRequest(const std::shared_ptr<HttpClient> &client,
-													  const ov::String &app_name, const ov::String &stream_name,
-													  const ov::String &file_name, const ov::String &file_ext)
+													  const SegmentStreamRequestInfo &request_info,
+													  const ov::String &file_ext)
 {
 	auto response = client->GetResponse();
 
 	if (file_ext == DASH_PLAYLIST_EXT)
 	{
-		return ProcessPlayListRequest(client, app_name, stream_name, file_name, PlayListType::Mpd);
+		return ProcessPlayListRequest(client, request_info, PlayListType::Mpd);
 	}
 	else if (file_ext == DASH_SEGMENT_EXT)
 	{
-		return ProcessSegmentRequest(client, app_name, stream_name, file_name, SegmentType::M4S);
+		return ProcessSegmentRequest(client, request_info, SegmentType::M4S);
 	}
 
 	response->SetStatusCode(HttpStatusCode::NotFound);
@@ -33,29 +35,28 @@ HttpConnection DashStreamServer::ProcessStreamRequest(const std::shared_ptr<Http
 }
 
 HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<HttpClient> &client,
-												   const ov::String &app_name, const ov::String &stream_name,
-												   const ov::String &file_name,
-												   PlayListType play_list_type)
+														const SegmentStreamRequestInfo &request_info,
+														PlayListType play_list_type)
 {
 	auto response = client->GetResponse();
 
 	ov::String play_list;
 
 	auto item = std::find_if(_observers.begin(), _observers.end(),
-							 [&client, &app_name, &stream_name, &file_name, &play_list](auto &observer) -> bool {
-								 return observer->OnPlayListRequest(client, app_name, stream_name, file_name, play_list);
+							 [client, request_info, &play_list](std::shared_ptr<SegmentStreamObserver> &observer) -> bool {
+								 return observer->OnPlayListRequest(client, request_info, play_list);
 							 });
 
 	if ((item == _observers.end()))
 	{
-		logtd("Could not find a %s playlist for [%s/%s], %s", GetPublisherName(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		logtd("Could not find a %s playlist for [%s/%s], %s", GetPublisherName(), request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), request_info.file_name.CStr());
 		response->SetStatusCode(HttpStatusCode::NotFound);
 		response->Response();
 
 		return HttpConnection::Closed;
 	}
 
-	if(response->GetStatusCode() != HttpStatusCode::OK || play_list.IsEmpty())
+	if (response->GetStatusCode() != HttpStatusCode::OK || play_list.IsEmpty())
 	{
 		response->Response();
 		return HttpConnection::Closed;
@@ -66,7 +67,7 @@ HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<Ht
 	response->SetHeader("Cache-Control", "no-cache, no-store, must-revalidate");
 	response->SetHeader("Pragma", "no-cache");
 	response->SetHeader("Expires", "0");
-		
+
 	response->AppendString(play_list);
 	response->Response();
 
@@ -74,25 +75,24 @@ HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<Ht
 }
 
 HttpConnection DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
-												  const ov::String &app_name, const ov::String &stream_name,
-												  const ov::String &file_name,
-												  SegmentType segment_type)
+													   const SegmentStreamRequestInfo &request_info,
+													   SegmentType segment_type)
 {
 	auto response = client->GetResponse();
 
 	std::shared_ptr<SegmentData> segment = nullptr;
 
 	auto item = std::find_if(_observers.begin(), _observers.end(),
-							 [&client, &app_name, &stream_name, &file_name, &segment](auto &observer) -> bool {
-								 return observer->OnSegmentRequest(client, app_name, stream_name, file_name, segment);
+							 [client, request_info, &segment](auto &observer) -> bool {
+								 return observer->OnSegmentRequest(client, request_info, segment);
 							 });
 
 	if (item == _observers.end())
 	{
-		logtd("Could not find a %s segment for [%s/%s], %s", GetPublisherName(), app_name.CStr(), stream_name.CStr(), file_name.CStr());
+		logtd("Could not find a %s segment for [%s/%s], %s", GetPublisherName(), request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), request_info.file_name.CStr());
 		response->SetStatusCode(HttpStatusCode::NotFound);
 		response->Response();
-		
+
 		return HttpConnection::Closed;
 	}
 

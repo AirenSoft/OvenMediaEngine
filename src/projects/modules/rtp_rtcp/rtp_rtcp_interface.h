@@ -3,7 +3,6 @@
 #include "rtp_packet.h"
 #include "rtcp_packet.h"
 
-// 상위 클래스는 RtpRtcp에 Session(Transport)과 관련된 모든 정보와 기능을 제공한다.
 class RtpRtcpPacketizerInterface : public ov::EnableSharedFromThis<RtpRtcpPacketizerInterface>
 {
 public:

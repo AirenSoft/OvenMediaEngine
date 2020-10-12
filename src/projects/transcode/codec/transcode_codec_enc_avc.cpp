@@ -67,16 +67,12 @@ bool OvenCodecImplAvcodecEncAVC::Configure(std::shared_ptr<TranscodeContext> con
 
 	AVRational codec_timebase = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
 	_context->time_base = codec_timebase;
-
 	_context->gop_size = _context->framerate.num / _context->framerate.den;
 	_context->max_b_frames = 0;
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
 	_context->thread_count = 2;
-	AVRational output_timebase = TimebaseToAVRational(_output_context->GetTimeBase());
-	_scale = ::av_q2d(::av_div_q(output_timebase, codec_timebase));
-	_scale_inv = ::av_q2d(::av_div_q(codec_timebase, output_timebase));
 
 	// 인코딩 품질 및 브라우저 호환성
 	// For browser compatibility
@@ -158,7 +154,7 @@ void OvenCodecImplAvcodecEncAVC::ThreadEncode()
 
 		_frame->format = frame->GetFormat();
 		_frame->nb_samples = 1;
-		_frame->pts = frame->GetPts() * _scale;
+		_frame->pts = frame->GetPts();
 		// The encoder will not pass this duration
 		_frame->pkt_duration = frame->GetDuration();
 
@@ -230,7 +226,18 @@ void OvenCodecImplAvcodecEncAVC::ThreadEncode()
 			else
 			{
 				// Encoded packet is ready
-				auto packet_buffer = MakePacket();
+				auto packet_buffer = std::make_shared<MediaPacket>(
+										common::MediaType::Video, 
+										0, 
+										_packet->data, 
+										_packet->size, 
+										_packet->pts, 
+										_packet->dts, 										
+										-1L, 
+										(_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+				packet_buffer->SetBitstreamFormat(common::BitstreamFormat::H264_ANNEXB);
+				packet_buffer->SetPacketType(common::PacketType::NALU);
+
 				::av_packet_unref(_packet);
 
 				SendOutputBuffer(std::move(packet_buffer));
@@ -259,95 +266,9 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeRes
 
 }
 
-std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
-{
-	auto flag = (_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
-	// This is workaround: avcodec_receive_packet() does not give the duration that sent to avcodec_send_frame()
-	int den = _output_context->GetTimeBase().GetDen();
-	int64_t duration = (den == 0) ? 0LL : (float)den / _output_context->GetFrameRate();
-	auto packet = std::make_shared<MediaPacket>(common::MediaType::Video, 0, _packet->data, _packet->size, _packet->pts * _scale_inv, _packet->dts * _scale_inv, duration, flag);
-	FragmentationHeader fragment_header;
+// std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const
+// {
+// 	auto packet = s
 
-	int nal_pattern_size = 4;
-	int sps_start_index = -1;
-	int sps_end_index = -1;
-	int pps_start_index = -1;
-	int pps_end_index = -1;
-	int fragment_count = 0;
-	int current_index = 0;
-
-	while ((current_index + nal_pattern_size) < _packet->size)
-	{
-		if (_packet->data[current_index] == 0 && _packet->data[current_index + 1] == 0)
-		{
-			if (_packet->data[current_index + 2] == 0 && _packet->data[current_index + 3] == 1)
-			{
-				// Pattern 0x00 0x00 0x00 0x01
-				nal_pattern_size = 4;
-			}
-			else if (_packet->data[current_index + 2] == 1)
-			{
-				// Pattern 0x00 0x00 0x01
-				nal_pattern_size = 3;
-			}
-			else
-			{
-				current_index++;
-				continue;
-			}
-		}
-		else
-		{
-			current_index++;
-			continue;
-		}
-
-		fragment_count++;
-
-		if (sps_start_index == -1)
-		{
-			sps_start_index = current_index + nal_pattern_size;
-			current_index += nal_pattern_size;
-
-			if (_packet->flags != AV_PKT_FLAG_KEY)
-			{
-				break;
-			}
-		}
-		else if (sps_end_index == -1)
-		{
-			sps_end_index = current_index - 1;
-			pps_start_index = current_index + nal_pattern_size;
-			current_index += nal_pattern_size;
-		}
-		else  // (pps_end_index == -1)
-		{
-			pps_end_index = current_index - 1;
-			break;
-		}
-	}
-
-	fragment_header.Clear();
-
-	if (_packet->flags == AV_PKT_FLAG_KEY)  // KeyFrame
-	{
-		// SPS + PPS + IDR
-		fragment_header.fragmentation_offset.emplace_back(sps_start_index);
-		fragment_header.fragmentation_offset.emplace_back(pps_start_index);
-		fragment_header.fragmentation_offset.emplace_back((pps_end_index + 1) + nal_pattern_size);
-
-		fragment_header.fragmentation_length.emplace_back(sps_end_index - (sps_start_index - 1));
-		fragment_header.fragmentation_length.emplace_back(pps_end_index - (pps_start_index - 1));
-		fragment_header.fragmentation_length.emplace_back(_packet->size - (pps_end_index + nal_pattern_size));
-	}
-	else
-	{
-		// NON-IDR
-		fragment_header.fragmentation_offset.emplace_back(sps_start_index);
-		fragment_header.fragmentation_length.emplace_back(_packet->size - (sps_start_index - 1));
-	}
-
-	packet->SetFragHeader(&fragment_header);
-
-	return std::move(packet);
-}
+// 	return std::move(packet);
+// }

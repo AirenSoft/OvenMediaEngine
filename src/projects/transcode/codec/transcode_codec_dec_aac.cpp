@@ -79,6 +79,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::Dequeue(TranscodeResult 
 		output_frame->SetPts(static_cast<int64_t>((_frame->pts == AV_NOPTS_VALUE) ? _last_pkt_pts+frame_duration_in_timebase : _frame->pts));
 		_last_pkt_pts = output_frame->GetPts();
 
+		// logte("frame.pts(%lld), oframe.pts(%lld),nb.samples(%d)", _frame->pts, output_frame->GetPts(), _frame->nb_samples);
 
 		auto data_length = static_cast<uint32_t>(output_frame->GetBytesPerSample() * output_frame->GetNbSamples());
 
@@ -112,20 +113,20 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::Dequeue(TranscodeResult 
 
 void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 {
-	if(cur_pkt == nullptr && _input_buffer.empty() == false)
+	if(_cur_pkt == nullptr && _input_buffer.empty() == false)
 	{
 		auto packet = std::move(_input_buffer.front());
 		_input_buffer.pop_front();
 
-		cur_pkt = packet.get();
-
-		if (cur_pkt != nullptr)
+		_cur_pkt = packet.get();
+	
+		if (_cur_pkt != nullptr)
 		{
-			cur_data = cur_pkt->GetData();
+			_cur_data = _cur_pkt->GetData();
 			_pkt_offset = 0;
 		}
 
-		if ((cur_data == nullptr) || (cur_data->GetLength() == 0))
+		if ((_cur_data == nullptr) || (_cur_data->GetLength() == 0))
 		{
 			logte("there is no packets");
 			*result = TranscodeResult::NoData;
@@ -133,25 +134,27 @@ void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 		}
 	}
 
-	if (cur_data != nullptr)
+	if (_cur_data != nullptr)
 	{
-		if(cur_data->GetLength() > _pkt_offset)
+		*result = TranscodeResult::DataReady;
+
+		while(_cur_data->GetLength() > _pkt_offset)
 		{
 			int32_t parsed_size = ::av_parser_parse2(
 				_parser,
 				_context,
 				&_pkt->data, &_pkt->size,
-				cur_data->GetDataAs<uint8_t>() + _pkt_offset,
-				static_cast<int32_t>(cur_data->GetLength() - _pkt_offset),
-				cur_pkt->GetPts(), cur_pkt->GetPts(),
+				_cur_data->GetDataAs<uint8_t>() + _pkt_offset,
+				static_cast<int32_t>(_cur_data->GetLength() - _pkt_offset),
+				_cur_pkt->GetPts(), _cur_pkt->GetPts(),
 				0);
 
 			// Failed to parsing
-			if (parsed_size < 0)
+			if (parsed_size <= 0)
 			{
 				logte("Error while parsing\n");
-				cur_pkt = nullptr;
-				cur_data = nullptr;
+				_cur_pkt = nullptr;
+				_cur_data = nullptr;
 				_pkt_offset = 0;
 				
 				*result = TranscodeResult::ParseError;
@@ -159,9 +162,7 @@ void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 			}	
 
 			if (_pkt->size > 0)
-			{
-				// logte("cur_data.length(%d), parsed_size(%d) %lld/%lld", cur_data->GetLength(), parsed_size, _parser->pts, _parser->dts);
-				
+			{			
 				_pkt->pts = _parser->pts;
 				_pkt->dts = _parser->dts;
 
@@ -170,64 +171,55 @@ void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 				if (ret == AVERROR(EAGAIN))
 				{
 					// Need more data
-					logte("Error sending a packet for decoding : EAGAIN");
 					*result = TranscodeResult::DataReady;
-					return ;
 				}
 				else if (ret == AVERROR_EOF)
 				{
 					logte("Error sending a packet for decoding : AVERROR_EOF");
 					*result = TranscodeResult::EndOfFile;
+					break;
 				}
 				else if (ret == AVERROR(EINVAL))
 				{
 					logte("Error sending a packet for decoding : AVERROR(EINVAL)");
 					*result = TranscodeResult::DataError;
-					return;
+					break;
 				}
 				else if (ret == AVERROR(ENOMEM))
 				{
 					logte("Error sending a packet for decoding : AVERROR(ENOMEM)");
 					*result = TranscodeResult::DataError;
+					break;
 				}
 				else if (ret < 0)
 				{
 					logte("Error sending a packet for decoding : ERROR(Unknown %d)", ret);
 					*result = TranscodeResult::DataError;
-					return;
+					break;
 				}
 			}
 
 			if (parsed_size > 0)
 			{
-				OV_ASSERT(cur_data->GetLength() >= (size_t)parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", cur_data->GetLength(), parsed_size);
+				OV_ASSERT(_cur_data->GetLength() >= (size_t)parsed_size, "Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld", _cur_data->GetLength(), parsed_size);
 
 				_pkt_offset += parsed_size;
 			}
-
-
-			*result = TranscodeResult::DataReady;
-			return;
 		}
 
-		if(cur_data->GetLength() <= _pkt_offset)
+		if(_cur_data->GetLength() <= _pkt_offset || *result != TranscodeResult::DataReady)
 		{
-			cur_pkt = nullptr;
-			cur_data = nullptr;
+			_cur_pkt = nullptr;
+			_cur_data = nullptr;
 			_pkt_offset = 0;
 		}
 	}
-
-	if(_input_buffer.size() > 0)
-		*result = TranscodeResult::DataReady;
-	else
-		*result = TranscodeResult::NoData;
 }
 
 std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResult *result)
 {
 	Enqueue(result);
-	if((int)(*result) < 0)
+	if(*result < TranscodeResult::DataReady)
 	{
 		return nullptr;
 	}

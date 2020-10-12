@@ -121,7 +121,7 @@ void OvenCodecImplAvcodecEncAAC::ThreadEncode()
 
 		_frame->format = _context->sample_fmt;
 		_frame->nb_samples = _context->frame_size;
-		_frame->pts = frame->GetPts() * 1000;
+		_frame->pts = frame->GetPts();
 		_frame->pkt_duration = frame->GetDuration();
 
 		_frame->channel_layout = _context->channel_layout;
@@ -186,8 +186,10 @@ void OvenCodecImplAvcodecEncAAC::ThreadEncode()
 			else
 			{
 				// Packet is ready
-				auto packet_buffer = std::make_shared<MediaPacket>(common::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts / 1000, _packet->dts / 1000, _packet->duration, MediaPacketFlag::Key);
-
+				auto packet_buffer = std::make_shared<MediaPacket>(common::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts, _packet->dts, _packet->duration, MediaPacketFlag::Key);
+				packet_buffer->SetBitstreamFormat(common::BitstreamFormat::AAC_ADTS);
+				packet_buffer->SetPacketType(common::PacketType::RAW);
+				
 				// logte("ENCODED:: %lld, %lld", packet_buffer->GetPts(), _packet->pts);
 				
 				::av_packet_unref(_packet);

@@ -26,10 +26,8 @@ namespace pub
 
 		virtual bool Start();
 		virtual bool Stop();
-
-		// 패킷을 전송한다.
-		virtual bool SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet) = 0;
-		// 상위 Layer에서 Packet을 수신받는다.
+		
+		virtual bool SendOutgoingData(const std::any &packet) = 0;
 		virtual void OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data) = 0;
 
 		enum class SessionState : int8_t

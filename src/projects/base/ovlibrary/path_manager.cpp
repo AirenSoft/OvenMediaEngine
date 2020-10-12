@@ -142,12 +142,12 @@ namespace ov
 
 		// Extract path from the pattern
 		auto path = ov::PathManager::ExtractPath(path_pattern);
-		// Escape special characters
-		auto special_characters = std::regex(R"([[\\./+{}$^|])");
+		// Escape special characters: '[', '\', '.', '/', '+', '{', '}', '$', '^', '|' to \<char>
+		auto special_characters = std::regex(R"([[\\.\/+{}$^|])");
 		ov::String escaped = std::regex_replace(path_pattern.CStr(), special_characters, R"(\$&)").c_str();
-		// Change "*"/"?" to ".*"/".?"
-		escaped = escaped.Replace("*", ".*");
-		escaped = escaped.Replace("?", ".?");
+		// Change '*'/'?' to .<char>
+		escaped = escaped.Replace(R"(*)", R"(.*)");
+		escaped = escaped.Replace(R"(?)", R"(.?)");
 		escaped.Prepend("^");
 		escaped.Append("$");
 

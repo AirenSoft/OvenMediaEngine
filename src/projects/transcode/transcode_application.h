@@ -14,9 +14,9 @@
 #include <vector>
 #include <algorithm>
 #include <thread>
-#include "base/media_route/media_route_application_observer.h"
-#include "base/media_route/media_route_application_connector.h"
-#include "base/media_route/media_buffer.h"
+#include "base/mediarouter/media_route_application_observer.h"
+#include "base/mediarouter/media_route_application_connector.h"
+#include "base/mediarouter/media_buffer.h"
 #include "base/info/stream.h"
 #include "transcode_stream.h"
 #include <base/ovlibrary/ovlibrary.h>

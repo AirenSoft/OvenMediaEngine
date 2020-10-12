@@ -67,6 +67,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 		decoded_frame->SetHeight(_frame->height);
 		decoded_frame->SetFormat(_frame->format);
 		decoded_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1LL : _frame->pts);
+		
 		// Calculate duration using framerate in timebase
 		int den = _input_context->GetTimeBase().GetDen();
 		int64_t duration = (den == 0) ? 0LL : (float)den / _input_context->GetFrameRate();
@@ -97,8 +98,8 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 
 		int64_t remained = packet_data->GetLength();
 		off_t offset = 0LL;
-		int64_t pts = buffer->GetPts();
-		int64_t dts = buffer->GetDts();
+		int64_t pts = (buffer->GetPts()==-1LL)?AV_NOPTS_VALUE:buffer->GetPts();
+		int64_t dts = (buffer->GetDts()==-1LL)?AV_NOPTS_VALUE:buffer->GetDts();
 		auto data = packet_data->GetDataAs<uint8_t>();
 
 		while (remained > 0)
@@ -131,6 +132,8 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 				else if (ret == AVERROR_EOF)
 				{
 					logte("An error occurred while sending a packet for decoding: End of file (%d)", ret);
+					*result = TranscodeResult::EndOfFile;
+					return nullptr;
 				}
 				else if (ret == AVERROR(EINVAL))
 				{
@@ -141,10 +144,23 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 				else if (ret == AVERROR(ENOMEM))
 				{
 					logte("An error occurred while sending a packet for decoding: No memory (%d)", ret);
+					*result = TranscodeResult::DataError;
+					return nullptr;
+
+				}
+				else if (ret == AVERROR_INVALIDDATA)
+				{
+					// If only SPS/PPS Nalunit is entered in the decoder, an invalid data error occurs.
+					// There is no particular problem.
+					logtd("Invalid data found when processing input (%d)", ret);
+					*result = TranscodeResult::DataError;
+					return nullptr;
 				}
 				else if (ret < 0)
 				{
-					logte("An error occurred while sending a packet for decoding: Unhandled error (%d)", ret);
+					char err_msg[1024];
+					 av_strerror(ret, err_msg, sizeof(err_msg));
+					logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
 					*result = TranscodeResult::DataError;
 					return nullptr;
 				}

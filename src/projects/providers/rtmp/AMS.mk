@@ -4,7 +4,7 @@ include $(DEFAULT_VARIABLES)
 LOCAL_STATIC_LIBRARIES := \
 	application \
 	ovlibrary \
-	provider 
+	provider
 	
 LOCAL_PREBUILT_LIBRARIES := \
 

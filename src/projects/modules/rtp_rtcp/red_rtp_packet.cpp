@@ -4,7 +4,7 @@ RedRtpPacket::RedRtpPacket()
 {
 }
 
-RedRtpPacket::RedRtpPacket(uint8_t red_payload_type, RtpPacket &src)
+RedRtpPacket::RedRtpPacket(uint8_t red_payload_type, const RtpPacket &src)
 {
 	PackageAsRed(red_payload_type, src);
 }
@@ -20,7 +20,7 @@ RedRtpPacket::~RedRtpPacket()
 
 }
 
-void RedRtpPacket::PackageAsRed(uint8_t red_payload_type, RtpPacket &src)
+void RedRtpPacket::PackageAsRed(uint8_t red_payload_type, const RtpPacket &src)
 {
 	SetPayloadType(src.PayloadType());
 	SetUlpfec(src.IsUlpfec(), src.OriginPayloadType());
@@ -47,6 +47,7 @@ void RedRtpPacket::PackageAsRed(uint8_t red_payload_type)
 	// This function should be used after SetCsrcs, Extensions and before AllocatePayload.
 
 	_block_pt = PayloadType();
+
 	SetPayloadType(red_payload_type);
 
 	// Increase 1 bytes for RED
@@ -56,6 +57,12 @@ void RedRtpPacket::PackageAsRed(uint8_t red_payload_type)
 
 	// Write payload type at the end of the rtp header
 	_buffer[_payload_offset - RED_HEADER_SIZE] = _block_pt;
+}
+
+void RedRtpPacket::PackageAsRtp()
+{
+	_payload_offset = _payload_offset - RED_HEADER_SIZE;
+	_payload_size = _payload_size + RED_HEADER_SIZE;
 }
 
 uint8_t RedRtpPacket::BlockPT()

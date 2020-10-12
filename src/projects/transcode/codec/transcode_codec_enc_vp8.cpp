@@ -40,9 +40,6 @@ bool OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> con
 		return false;
 	}
 
-	// 인코딩 옵션 설정
-	AVRational codec_timebase = TimebaseToAVRational(_output_context->GetTimeBase());
-
 	_context->bit_rate = _output_context->GetBitrate();
 	_context->rc_max_rate = _context->bit_rate;
 	_context->rc_min_rate = _context->bit_rate;
@@ -55,10 +52,6 @@ bool OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> con
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
 	_context->thread_count = 2;
-
-	AVRational output_timebase = TimebaseToAVRational(_output_context->GetTimeBase());
-	_scale = ::av_q2d(::av_div_q(output_timebase, codec_timebase));
-	_scale_inv = ::av_q2d(::av_div_q(codec_timebase, output_timebase));
 
 	AVDictionary *opts = nullptr;
 	// ::av_dict_set_int(&opts, "cpu-used", _context->thread_count, 0);
@@ -126,7 +119,7 @@ void OvenCodecImplAvcodecEncVP8::ThreadEncode()
 
 		_frame->format = frame->GetFormat();
 		_frame->nb_samples = 1;
-		_frame->pts = frame->GetPts() * _scale;
+		_frame->pts = frame->GetPts();
 		// The encoder will not pass this duration
 		_frame->pkt_duration = frame->GetDuration();
 
@@ -198,9 +191,21 @@ void OvenCodecImplAvcodecEncVP8::ThreadEncode()
 			else
 			{
 				// Encoded packet is ready
-				auto packet_buffer = MakePacket();
+				auto packet_buffer = std::make_shared<MediaPacket>(
+										common::MediaType::Video, 
+										0, 
+										_packet->data, 
+										_packet->size, 
+										_packet->pts,
+										_packet->dts,
+										-1L, 
+										(_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+		
+				packet_buffer->SetBitstreamFormat(common::BitstreamFormat::VP8);
+				packet_buffer->SetPacketType(common::PacketType::RAW);
+		
 				::av_packet_unref(_packet);
-
+		
 				SendOutputBuffer(std::move(packet_buffer));
 			}			
 		}
@@ -225,13 +230,3 @@ std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::RecvBuffer(TranscodeRes
 	return nullptr;
 }
 
-std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncVP8::MakePacket() const
-{
-	auto flag = (_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
-	// This is workaround: avcodec_receive_packet() does not give the duration that sent to avcodec_send_frame()
-	int den = _output_context->GetTimeBase().GetDen();
-	int64_t duration = (den == 0) ? 0LL : (float)den / _output_context->GetFrameRate();
-	auto packet = std::make_shared<MediaPacket>(common::MediaType::Video, 0, _packet->data, _packet->size, _packet->pts, _packet->dts, duration, flag);
-
-	return std::move(packet);
-}

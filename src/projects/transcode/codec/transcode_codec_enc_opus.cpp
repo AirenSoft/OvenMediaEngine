@@ -245,6 +245,9 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 		_buffer->SetLength(_buffer->GetLength() - bytes_to_encode);
 
 		auto packet_buffer = std::make_shared<MediaPacket>(common::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
+		packet_buffer->SetBitstreamFormat(common::BitstreamFormat::OPUS);
+		packet_buffer->SetPacketType(common::PacketType::RAW);
+		
 		_current_pts += frame_count_to_encode;
 		// logte("opus pts : %lld, queue:%d, buffer:%d", _current_pts, _input_buffer.size(), _buffer->GetLength());
 		// *result = TranscodeResult::DataReady;

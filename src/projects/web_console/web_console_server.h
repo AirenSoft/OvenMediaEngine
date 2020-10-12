@@ -11,12 +11,11 @@
 #include <memory>
 
 #include <base/info/application.h>
-#include <base/media_route/media_route_interface.h>
+#include <base/mediarouter/media_route_interface.h>
 #include <modules/ice/ice.h>
-#include <http_server/http_server.h>
-#include <http_server/https_server.h>
-#include <http_server/interceptors/http_request_interceptors.h>
-#include <media_router/media_router_application.h>
+#include <modules/http_server/http_server.h>
+#include <modules/http_server/https_server.h>
+#include <modules/http_server/interceptors/http_request_interceptors.h>
 #include "../base/publisher/publisher.h"
 
 class WebConsoleServer : public ov::EnableSharedFromThis<WebConsoleServer>

@@ -8,10 +8,9 @@
 //==============================================================================
 #pragma once
 
+#include "../dash/dash_stream_server.h"
 #include "cmaf_interceptor.h"
 #include "cmaf_packetizer.h"
-
-#include "../dash/dash_stream_server.h"
 
 class CmafStreamServer : public DashStreamServer, public ICmafChunkedTransfer
 {
@@ -54,9 +53,7 @@ protected:
 	// Overriding functions of DashStreamServer
 	//--------------------------------------------------------------------
 	HttpConnection ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
-									const ov::String &app_name, const ov::String &stream_name,
-									const ov::String &file_name,
-									SegmentType segment_type) override;
+										 const SegmentStreamRequestInfo &request_info, SegmentType segment_type) override;
 
 	//--------------------------------------------------------------------
 	// Implementation of ICmafChunkedTransfer

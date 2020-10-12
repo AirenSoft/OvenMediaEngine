@@ -9,6 +9,7 @@ SRTP_VERSION=2.2.0
 SRT_VERSION=1.3.3
 OPUS_VERSION=1.1.3
 X264_VERSION=20190513-2245-stable
+X265_VERSION=3.2.1
 VPX_VERSION=1.7.0
 FDKAAC_VERSION=0.1.5
 NASM_VERSION=2.15.02
@@ -45,7 +46,7 @@ install_openssl()
     cd ${DIR} && \
     curl -sLf "${DOWNLOAD_URL}" | tar -xz --strip-components=1 && \
     ./config --prefix="${PREFIX}" --openssldir="${PREFIX}" -Wl,-rpath,"${PREFIX}/lib" shared no-idea no-mdc2 no-rc5 no-ec2m no-ecdh no-ecdsa no-async && \
-    make && \
+    make -j$(nproc) && \
     sudo make install_sw && \
     rm -rf ${DIR} && \
     sudo rm -rf ${PREFIX}/bin) || fail_exit "openssl"
@@ -58,7 +59,7 @@ install_libsrtp()
     cd ${DIR} && \
     curl -sLf https://github.com/cisco/libsrtp/archive/v${SRTP_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --enable-shared --disable-static --enable-openssl --with-openssl-dir="${PREFIX}" && \
-    make shared_library&& \
+    make -j$(nproc) shared_library&& \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "srtp"
 }
@@ -70,7 +71,7 @@ install_libsrt()
     cd ${DIR} && \
     curl -sLf https://github.com/Haivision/srt/archive/v${SRT_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure --prefix="${PREFIX}" --enable-shared --disable-static && \
-    make && \
+    make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR} && \
     sudo rm -rf ${PREFIX}/bin) || fail_exit "srt"
@@ -84,7 +85,7 @@ install_libopus()
     curl -sLf https://archive.mozilla.org/pub/opus/opus-${OPUS_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     autoreconf -fiv && \
     ./configure --prefix="${PREFIX}" --enable-shared --disable-static && \
-    make && \
+    make -j$(nproc) && \
     sudo make install && \
     sudo rm -rf ${PREFIX}/share && \
     rm -rf ${DIR}) || fail_exit "opus"
@@ -97,9 +98,22 @@ install_libx264()
     cd ${DIR} && \
     curl -sLf https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
 	./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
-    make && \
+    make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "x264"
+}
+
+install_libx265()
+{
+    (DIR=${TEMP_PATH}/x265 && \
+    mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    curl -sLf  https://get.videolan.org/x265/x265_${X265_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    cd ${DIR}/build/linux && \
+    cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="${PREFIX}" -DENABLE_SHARED:bool=on ../../source && \
+    make -j$(nproc) && \
+    sudo make install && \
+    rm -rf ${DIR}) || fail_exit "x265"
 }
 
 install_libvpx()
@@ -116,7 +130,7 @@ install_libvpx()
     cd ${DIR} && \
     curl -sLf https://codeload.github.com/webmproject/libvpx/tar.gz/v${VPX_VERSION} | tar -xz --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --enable-vp8 --enable-pic --enable-shared --disable-static --disable-vp9 --disable-debug --disable-examples --disable-docs --disable-install-bins ${ADDITIONAL_FLAGS} && \
-    make && \
+    make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "vpx"
 }
@@ -129,7 +143,7 @@ install_fdk_aac()
     curl -sLf https://github.com/mstorsjo/fdk-aac/archive/v${FDKAAC_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     autoreconf -fiv && \
     ./configure --prefix="${PREFIX}" --enable-shared --disable-static --datadir=/tmp/aac && \
-    make && \
+    make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "fdk_aac"
 }
@@ -142,7 +156,7 @@ install_nasm()
     cd ${DIR} && \
     curl -sLf http://www.nasm.us/pub/nasm/releasebuilds/${NASM_VERSION}/nasm-${NASM_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     ./configure && \
-    make && \
+    make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "nasm"
 }
@@ -167,13 +181,13 @@ install_ffmpeg()
     --disable-programs \
     --disable-avdevice --disable-dct --disable-dwt --disable-error-resilience --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils \
     --disable-everything \
-    --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 \
-    --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264 \
-    --enable-decoder=aac,aac_latm,aac_fixed,h264 \
-    --enable-parser=aac,aac_latm,aac_fixed,h264 \
-    --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp --enable-demuxer=rtsp \
+    --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 \
+    --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,libx265 \
+    --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc \
+    --enable-parser=aac,aac_latm,aac_fixed,h264,hevc \
+    --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
     --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && \
-    make && \
+    make -j$(nproc) && \
     sudo make install && \
     sudo rm -rf ${PREFIX}/share && \
     rm -rf ${DIR}) || fail_exit "ffmpeg"
@@ -186,7 +200,7 @@ install_jemalloc()
     cd ${DIR} && \
     curl -sLf https://github.com/jemalloc/jemalloc/releases/download/${JEMALLOC_VERSION}/jemalloc-${JEMALLOC_VERSION}.tar.bz2 | tar -jx --strip-components=1 && \
     ./configure --prefix="${PREFIX}" && \
-    make && \
+    make -j$(nproc) && \
     sudo make install_include install_lib && \
     rm -rf ${DIR}) || fail_exit "jemalloc"
 }
@@ -302,12 +316,14 @@ else
     echo "Please refer to manual installation page"
 fi
 
+
 install_nasm
 install_openssl
 install_libsrtp
 install_libsrt
 install_libopus
 install_libx264
+install_libx265
 install_libvpx
 install_fdk_aac
 install_ffmpeg

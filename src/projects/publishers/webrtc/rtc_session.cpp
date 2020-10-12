@@ -4,6 +4,8 @@
 #include "rtc_application.h"
 #include "rtc_stream.h"
 
+#include "modules/rtp_rtcp/rtcp_info/nack.h"
+
 #include <utility>
 
 std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Application> &application,
@@ -53,7 +55,6 @@ bool RtcSession::Start()
 
 	auto session = std::static_pointer_cast<pub::Session>(GetSharedPtr());
 
-	// Player가 준 SDP를 기준으로(플레이어가 받고자 하는 Track) RTP_RTCP를 생성한다.
 	auto offer_media_desc_list = _offer_sdp->GetMediaList();
 	auto peer_media_desc_list = _peer_sdp->GetMediaList();
 
@@ -65,12 +66,13 @@ bool RtcSession::Start()
 
 	// RFC3264
 	// For each "m=" line in the offer, there MUST be a corresponding "m=" line in the answer.
+	std::vector<uint32_t> ssrc_list;
 	for(size_t i = 0; i < peer_media_desc_list.size(); i++)
 	{
 		auto peer_media_desc = peer_media_desc_list[i];
 		auto offer_media_desc = offer_media_desc_list[i];
 
-		// 첫번째 Payload가 가장 우선순위가 높다. Server에서 제시한 Payload중 첫번째 이므로 이것으로 통신하면 됨
+		// The first payload has the highest priority.
 		auto first_payload = peer_media_desc->GetFirstPayload();
 		if(first_payload == nullptr)
 		{
@@ -81,11 +83,20 @@ bool RtcSession::Start()
 		if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
 		{
 			_audio_payload_type = first_payload->GetId();
+			_audio_ssrc = offer_media_desc->GetSsrc();
+			ssrc_list.push_back(_audio_ssrc);
 		}
 		else
 		{
-			// If there is a RED
-			if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
+			// "H.264 + FEC" is of lower quality. 
+			// This is because VP8 solves this with PictureID, 
+			// but H.264 recognizes ULPFEC packets as also packets constituting a frame.
+			// So when the first payload codec is H.264, we don't use FEC.
+			if(first_payload->GetCodec() == PayloadAttr::SupportCodec::H264)
+			{
+				_video_payload_type = first_payload->GetId();
+			}
+			else if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
 			{
 				_video_payload_type = RED_PAYLOAD_TYPE;
 				_red_block_pt = first_payload->GetId();
@@ -94,32 +105,38 @@ bool RtcSession::Start()
 			{
 				_video_payload_type = first_payload->GetId();
 			}
+
+			// Retransmission, We always define the RTX payload as payload + 1
+			auto payload = peer_media_desc->GetPayload(_video_payload_type+1);
+			if(payload != nullptr)
+			{
+				if(payload->GetCodec() == PayloadAttr::SupportCodec::RTX)
+				{
+					_use_rtx_flag = true;
+					_video_rtx_ssrc = offer_media_desc->GetRtxSsrc();
+
+					// Now, no RTCP with RTX
+					// ssrc_list.push_back(_video_rtx_ssrc);
+				}
+			}
+
+			_video_ssrc = offer_media_desc->GetSsrc();
+			ssrc_list.push_back(_video_ssrc);
 		}
 	}
 
-	// SessionNode를 생성하고 연결한다.
-	std::vector<uint32_t> ssrc_list;
-	for(auto media : _offer_sdp->GetMediaList())
-    {
-        ssrc_list.push_back(media->GetSsrc());
-    }
-
-    // RTP RTCP 생성
 	_rtp_rtcp = std::make_shared<RtpRtcp>((uint32_t)pub::SessionNodeType::Rtp, session, ssrc_list);
 
-	// SRTP 생성
 	_srtp_transport = std::make_shared<SrtpTransport>((uint32_t)pub::SessionNodeType::Srtp, session);
 
-	// DTLS 생성
 	_dtls_transport = std::make_shared<DtlsTransport>((uint32_t)pub::SessionNodeType::Dtls, session);
 	std::shared_ptr<RtcApplication> application = std::static_pointer_cast<RtcApplication>(GetApplication());
 	_dtls_transport->SetLocalCertificate(application->GetCertificate());
 	_dtls_transport->StartDTLS();
 
-	// ICE-DTLS 생성
 	_dtls_ice_transport = std::make_shared<DtlsIceTransport>((uint32_t)pub::SessionNodeType::Ice, session, _ice_port);
 
-	// 노드를 연결한다.
+	// Connect nodes
 	_rtp_rtcp->RegisterUpperNode(nullptr);
 	_rtp_rtcp->RegisterLowerNode(_srtp_transport);
 	_rtp_rtcp->Start();
@@ -145,7 +162,6 @@ bool RtcSession::Stop()
 		return true;
 	}
 
-	// 연결된 세션을 정리한다.
 	if(_rtp_rtcp != nullptr)
 	{
 		_rtp_rtcp->Stop();
@@ -184,21 +200,47 @@ const std::shared_ptr<WebSocketClient>& RtcSession::GetWSClient()
 	return _ws_client;
 }
 
-// Application에서 바로 Session의 다음 함수를 호출해준다.
 void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
 								const std::shared_ptr<const ov::Data> &data)
 {
 	_received_bytes += data->GetLength();
-	// NETWORK에서 받은 Packet은 DTLS로 넘긴다.
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
 	_dtls_ice_transport->OnDataReceived(pub::SessionNodeType::None, data);
 }
 
-bool RtcSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov::Data> &packet)
+bool RtcSession::SendOutgoingData(const std::any &packet)
 {
-	auto rtp_payload_type = static_cast<uint8_t>(packet_type & 0xFF);
-	auto red_block_pt = static_cast<uint8_t>((packet_type & 0xFF00) >> 8);
-	auto origin_pt_of_fec = static_cast<uint8_t>((packet_type & 0xFF0000) >> 16);
+	std::shared_ptr<RtpPacket> session_packet;
+
+	try 
+	{
+        session_packet = std::any_cast<std::shared_ptr<RtpPacket>>(packet);
+		if(session_packet == nullptr)
+		{
+			return false;
+		}
+    }
+    catch(const std::bad_any_cast& e) 
+	{
+        logtd("An incorrect type of packet was input from the stream.");
+		return false;
+    }
+
+	// Check if this session wants the packet
+	uint32_t rtp_payload_type = session_packet->PayloadType();
+	uint32_t red_block_pt = 0;
+	uint32_t origin_pt_of_fec = 0;
+
+	if(rtp_payload_type == RED_PAYLOAD_TYPE)
+	{
+		red_block_pt = std::dynamic_pointer_cast<RedRtpPacket>(session_packet)->BlockPT();
+
+		// RED includes FEC packet or Media packet.
+		if(session_packet->IsUlpfec())
+		{
+			origin_pt_of_fec = session_packet->OriginPayloadType();
+		}
+	}
 
 	if(rtp_payload_type != _video_payload_type && rtp_payload_type != _audio_payload_type)
 	{
@@ -214,7 +256,57 @@ bool RtcSession::SendOutgoingData(uint32_t packet_type, const std::shared_ptr<ov
 		}
 	}
 
-	_sent_bytes += packet->GetLength();
+	// RTP Session must be copied and sent because data is altered due to SRTP.
+	auto copy_packet = std::make_shared<RtpPacket>(*session_packet);
+	return _rtp_rtcp->SendOutgoingData(copy_packet);
+}
 
-	return _rtp_rtcp->SendOutgoingData(packet);
+void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
+{
+	if(rtcp_info->GetPacketType() == RtcpPacketType::RR)
+	{
+		// Process
+	}
+	else if(rtcp_info->GetPacketType() == RtcpPacketType::RTPFB)
+	{
+		if(rtcp_info->GetFmt() == static_cast<uint8_t>(RTPFBFMT::NACK))
+		{
+			// Process
+			ProcessNACK(rtcp_info);
+		}
+	}
+
+	rtcp_info->DebugPrint();
+}
+
+
+bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
+{
+	auto stream = std::dynamic_pointer_cast<RtcStream>(GetStream());
+	if(stream == nullptr)
+	{
+		return false;
+	}
+	
+	auto nack = std::dynamic_pointer_cast<NACK>(rtcp_info);
+	if(nack->GetMediaSsrc() != _video_ssrc)
+	{
+		return false;
+	}
+
+	// Retransmission
+	for(size_t i=0; i<nack->GetLostIdCount(); i++)
+	{
+		auto seq_no = nack->GetLostId(i);
+		auto packet = stream->GetRtxRtpPacket(_video_payload_type, seq_no);
+		if(packet != nullptr)
+		{
+			logd("RTCP", "Send RTX packet : %u/%u", _video_payload_type, seq_no);
+			auto copy_packet = std::make_shared<RtpPacket>(*(std::dynamic_pointer_cast<RtpPacket>(packet)));
+			copy_packet->SetSequenceNumber(_rtx_sequence_number++);
+			return _rtp_rtcp->SendOutgoingData(copy_packet);
+		}
+	}
+
+	return true;
 }

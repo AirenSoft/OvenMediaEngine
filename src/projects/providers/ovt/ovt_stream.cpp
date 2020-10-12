@@ -2,9 +2,8 @@
 // Created by getroot on 19. 12. 9.
 //
 
-
-#include "media_router/bitstream/bitstream_conv.h"
 #include "base/info/application.h"
+
 #include "ovt_stream.h"
 
 #define OV_LOG_TAG "OvtStream"
@@ -731,14 +730,21 @@ namespace pvd
 			if (_depacketizer.IsAvaliableMediaPacket())
 			{
 				auto media_packet = _depacketizer.PopMediaPacket();
+				media_packet->SetPacketType(common::PacketType::OVT);
 
+// Deprecated. The Generate fragment header roll is changed to MediaRouter.
+#if 0
 				// Make Header (Fragmentation) if it is H.264
 				auto track = GetTrack(media_packet->GetTrackId());
 				if(track->GetCodecId() == common::MediaCodecId::H264)
 				{
-					BitstreamConv::MakeAVCFragmentHeader(media_packet);
+					H264FragmentHeader::Parse(media_packet);
 				}
-
+				else if(track->GetCodecId() == common::MediaCodecId::H265)
+				{
+					
+				}
+#endif
 				SendFrame(media_packet);
 			}
 		}

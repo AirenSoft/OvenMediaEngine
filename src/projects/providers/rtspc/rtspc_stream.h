@@ -12,7 +12,7 @@
 #include <base/provider/pull_provider/application.h>
 #include <modules/ovt_packetizer/ovt_packet.h>
 #include <modules/ovt_packetizer/ovt_depacketizer.h>
-#include "modules/codec_analyzer/aac/aac.h"
+#include "modules/bitstream/aac/aac.h"
 
 extern "C"
 {
@@ -52,6 +52,8 @@ namespace pvd
 		bool RequestStop();
 		void Release();
 
+		void SendSequenceHeader();
+		
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		std::shared_ptr<const ov::Url> _curr_url;
 		ov::StopWatch _stop_watch;
@@ -71,6 +73,6 @@ namespace pvd
 
 	private:
 		AacObjectType GetAacObjectType(int32_t ff_profile);
-		SamplingFrequencies GetAacSamplingFrequencies(int32_t ff_samplerate);
+		AacSamplingFrequencies GetSamplingFrequency(int32_t ff_samplerate);
 	};
 }

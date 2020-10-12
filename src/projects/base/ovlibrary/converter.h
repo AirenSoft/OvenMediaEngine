@@ -11,7 +11,7 @@
 #include "base/common_types.h"
 #include "./json.h"
 #include "./string.h"
-#include "base/media_route/media_type.h"
+#include "base/mediarouter/media_type.h"
 
 #define __STDC_FORMAT_MACROS 1
 #include <inttypes.h>
@@ -122,6 +122,8 @@ namespace ov
 		{
 			switch(type)
 			{
+				case ProviderType::Unknown:
+					return "Unknown";
 				case ProviderType::Rtmp:
 					return "RTMP";
 				case ProviderType::Rtsp:
@@ -130,20 +132,26 @@ namespace ov
 					return "RTSP Pull";
 				case ProviderType::Ovt:
 					return "OVT";
-				case ProviderType::Unknown:
-				default:
-					return "Unknown";
+				case ProviderType::Mpegts:
+					return "MPEG-TS";
 			}
+
+			return "Unknown";
 		}
 
 		static ov::String ToString(const PublisherType &type)
 		{
 			switch(type)
 			{
+				case PublisherType::Unknown:
+				case PublisherType::NumberOfPublishers:
+					return "Unknown";
 				case PublisherType::Webrtc:
 					return "WebRTC";
 				case PublisherType::Rtmp:
 					return "RTMP";
+				case PublisherType::RtmpPush:
+					return "RTMPPush";					
 				case PublisherType::Hls:
 					return "HLS";
 				case PublisherType::Dash:
@@ -152,10 +160,11 @@ namespace ov
 					return "LLDASH";
 				case PublisherType::Ovt:
 					return "Ovt";
-				case PublisherType::Unknown:
-				default:
-					return "Unknown";
+				case PublisherType::File:
+					return "File";
 			}
+
+			return "Unknown";
 		}
 
 		static ov::String ToString(const common::MediaCodecId &type)
@@ -164,6 +173,8 @@ namespace ov
 			{
 				case common::MediaCodecId::H264:
 					return "H264";
+				case common::MediaCodecId::H265:
+					return "H265";
 				case common::MediaCodecId::Vp8:
 					return "VP8";
 				case common::MediaCodecId::Vp9:

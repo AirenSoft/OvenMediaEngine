@@ -36,7 +36,6 @@ TranscodeApplication::~TranscodeApplication()
 
 bool TranscodeApplication::Start()
 {
-
 	try
 	{
 		_kill_flag = false;

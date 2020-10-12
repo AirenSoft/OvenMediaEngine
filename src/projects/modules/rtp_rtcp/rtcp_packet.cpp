@@ -1,277 +1,122 @@
-//==============================================================================
-//
-//  OvenMediaEngine
-//
-//  Created by Jaejong Bong
-//  Copyright (c) 2019 AirenSoft. All rights reserved.
-//
-//==============================================================================
 #include "rtcp_packet.h"
-#include "base/ovlibrary/byte_io.h"
+
+#include "rtcp_info/rtcp_private.h"
+#include <base/ovlibrary/byte_io.h>
 #include <sys/time.h>
 
-#define OV_LOG_TAG "Rtcp"
-
-/*
- **********  RR: Receiver report RTCP packet **********
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|V=2|P|    RC   |   PT=RR=201   |             length            | header
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                     SSRC of packet sender                     |
-+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-|                 SSRC_1 (SSRC of first source)                 | report
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ block
-| fraction lost |       cumulative number of packets lost       |   1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|           extended highest sequence number received           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                      interarrival jitter                      |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                         last SR (LSR)                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                   delay since last SR (DLSR)                  |
-+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-|                 SSRC_2 (SSRC of second source)                | report
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ block
-:                               ...                             :   2
-+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-|                  profile-specific extensions                  |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-
-Receiver Estimated Max Bitrate (REMB)
-0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|V=2|P| FMT=15  |   PT=206      |             length            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                  SSRC of packet sender                        |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                  SSRC of media source                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|  Unique identifier 'R' 'E' 'M' 'B'                            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|  Num SSRC     | BR Exp    |  BR Mantissa                      |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|   SSRC feedback                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|  ...                                                          |
-
-
- jitter
- - Si is the RTP timestamp from packet i
- - Ri is the time of arrival in RTP timestamp units for packet i
- - D(i,j)=(Rj-Ri)-(Sj-Si)=(Rj-Sj)-(Ri-Si)
- - J=J+(|D(i-1,i)|-J)/16
-
-*/
-
-
-RtcpPacket::RtcpPacket()
+bool RtcpPacket::Build(const RtcpInfo &info)
 {
+	auto info_data = info.GetData();
+	if(info_data == nullptr)
+	{
+		return false;
+	}
 
+	SetReportCount(info.GetCount());
+	SetType(info.GetPacketType());
+
+	_payload_size = info_data->GetLength();
+	_data = std::make_shared<ov::Data>(RTCP_DEFAULT_MAX_PACKET_SIZE);
+	_data->SetLength(RTCP_HEADER_SIZE + _payload_size);
+	uint8_t* buffer = _data->GetWritableDataAs<uint8_t>();
+
+	// Build header
+
+	// Version:2 | padding:0 | count_or_fmt
+	uint8_t version = 2 << 6;
+	uint8_t padding = false ? 1 << 5 : 0; // We don't use padding bit
+	
+	buffer[0] = version | padding | info.GetCount();
+	buffer[1] = static_cast<uint8_t>(info.GetPacketType());
+
+	// Payload length must be divided zero
+	if(_payload_size % 4 != 0)
+	{
+		logte("Payload size of RTCP packet must be divided by 4");
+		return false;
+	}
+
+	_length = _payload_size/4;
+	ByteWriter<uint16_t>::WriteBigEndian(&buffer[2], _length);
+	
+	_payload = buffer + RTCP_HEADER_SIZE;
+	
+	memcpy(_payload, info_data->GetDataAs<uint8_t>(), info_data->GetLength());
+
+	return true;
 }
 
-RtcpPacket::~RtcpPacket()
+bool RtcpPacket::Build(const std::shared_ptr<RtcpInfo> &info)
 {
+	return Build(*info);
 }
 
-//====================================================================================================
-// Rtcp Packet Vaild Check
-//====================================================================================================
-ov::String  RtcpPacket::GetPacketTypeString(RtcpPacketType type)
+bool RtcpPacket::Parse(const uint8_t* buffer, const size_t buffer_size, size_t &block_size)
 {
-    ov::String result = "unknown";
+	if(buffer_size < RTCP_HEADER_SIZE)
+	{
+		logtd("RTCP block size is too small(%d bytes), block size must be bigger than 4 bytes", RTCP_HEADER_SIZE);
+		return false;
+	}
 
-    switch(type)
-    {
-        case RtcpPacketType::SR :
-            result = "SR";
-            break;
-        case RtcpPacketType::RR :
-            result = "RR";
-            break;
-        case RtcpPacketType::SDES :
-            result = "SDES";
-            break;
-        case RtcpPacketType::BYE :
-            result = "BYE";
-            break;
-        case RtcpPacketType::APP :
-            result = "APP";
-            break;
-    }
+	_version = buffer[0] >> 6;
+	if(_version != RTCP_VERSION)
+	{
+		logtd("Invalid RTCP header : version must be 2");
+		return false;
+	}
 
-    return result;
-}
+	_has_padding = (buffer[0] & 0x20) != 0;
+	_count_or_format = buffer[0] & 0x1F;
+	_type = static_cast<RtcpPacketType>(buffer[1]);
 
-//====================================================================================================
-// Rtcp Packet Vaild Check
-//====================================================================================================
-bool RtcpPacket::IsRtcpPacket(const std::shared_ptr<const ov::Data> &data,
-                               RtcpPacketType &packet_type,
-                               uint32_t &payload_size,
-                               int &report_count)
-{
-    if(data->GetLength() < RTCP_HEADER_SIZE)
-        return false;
+	// RFC3550
+	// The length of this RTCP packet in 32-bit words minus one,      
+	// including the header and any padding.  (The offset of one makes
+	// zero a valid length and avoids a possible infinite loop in      
+	// scanning a compound RTCP packet, while counting 32-bit words      
+	// avoids a validity check for a multiple of 4.)
 
-    ov::ByteStream stream(data.get());
+	// (length + 1) * 4 ==> RTCP block size	
+	// == 4*length + 4*1 ==> RTCP block size
+	// RTCP Header size = 4
+	// RTCP block size - RTCP Header size(4) = payload size
+	block_size = (ByteReader<uint16_t>::ReadBigEndian(&buffer[2]) + 1) * 4;
+	if(buffer_size < block_size)
+	{
+		logtd("The rtcp block size is too small : block size(%d) must be bigger than (headers size + payload size : %d)", 
+				buffer_size, RTCP_HEADER_SIZE + _payload_size);
+		return false;
+	}
 
+	_payload_size = block_size - RTCP_HEADER_SIZE;
+	if(_has_padding)
+	{
+		if(block_size == 0)
+		{
+			logtd("Invalid RTCP header : the header has padding but length is 0");
+			return false;
+		}
 
-    const uint8_t check_data =  stream.Read8();
-    int version = (check_data >> 6);
+		_padding_size = buffer[block_size - 1];
+		if(_padding_size == 0)
+		{	
+			logtd("Invalid RTCP header : the header has padding but padding size is 0");
+			return false;
+		}
 
-    report_count = (check_data & RTCP_MAX_BLOCK_COUNT);
-    int type = stream.Read8();
-    payload_size = stream.ReadBE16()*4;
+		if(_padding_size > _payload_size)
+		{
+			logtd("Invalid RTCP header : too many padding bytes(%d), it must be less than payload size (%d)", 
+				_padding_size, _payload_size);
+			return false;
+		}
 
-    // rtcp rr packet check
-    if(version != RTCP_HEADER_VERSION ||
-       type < (int)RtcpPacketType::SR ||
-       type > (int)RtcpPacketType::APP ||
-       data->GetLength() < RTCP_HEADER_SIZE + payload_size)
-    {
-        return false;
-    }
+		_payload_size -= _padding_size;
+	}
 
-    packet_type = (RtcpPacketType)type;
+	_data = std::make_shared<ov::Data>(buffer, RTCP_HEADER_SIZE + _payload_size);
+	_payload = _data->GetWritableDataAs<uint8_t>() + RTCP_HEADER_SIZE;
 
-    return true;
-}
-
-//====================================================================================================
-// RR type packet Parsing
-//====================================================================================================
-bool RtcpPacket::RrParseing(int report_count,
-                            const std::shared_ptr<const ov::Data> &data,
-                            std::vector<std::shared_ptr<RtcpReceiverReport>> &receiver_reports)
-{
-    ov::ByteStream stream(data.get());
-    stream.Skip(RTCP_HEADER_SIZE);
-    uint32_t sender_ssrc = stream.ReadBE32();
-
-    for(int index = 0; index < report_count; index++)
-    {
-        auto receiver_report = std::make_shared<RtcpReceiverReport >();
-        receiver_report->ssrc = sender_ssrc;
-        receiver_report->ssrc_1 = stream.ReadBE32();
-        receiver_report->fraction_lost = stream.Read8();
-
-        receiver_report->packet_lost += stream.Read8() << 16;
-        receiver_report->packet_lost += stream.Read8() << 8;
-        receiver_report->packet_lost += stream.Read8();
-
-        receiver_report->sequence_number_cycle = stream.ReadBE16();
-        receiver_report->highest_sequence_number = stream.ReadBE16();
-        receiver_report->jitter = stream.ReadBE32();
-        receiver_report->lsr = stream.ReadBE32();
-        receiver_report->dlsr = stream.ReadBE32();
-
-        // delay calculation
-        receiver_report->rtt = DelayCalculation(receiver_report->lsr, receiver_report->dlsr);
-
-        receiver_reports.push_back(receiver_report);
-    }
-
-    return true;
-}
-
-//====================================================================================================
-// SR type packet Make
-/*
- *  **********  SR: Sender report RTCP packet **********
-         0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-header |V=2|P|    RC   |   PT=SR=200   |             length            |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                         SSRC of sender                        |
-       +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-sender |              NTP timestamp, most significant word             |
-info   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |             NTP timestamp, least significant word             |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                         RTP timestamp                         |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                     sender's packet count                     |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                      sender's octet count                     |
-       +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-report |                 SSRC_1 (SSRC of first source)                 |
-block  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  1    | fraction lost |       cumulative number of packets lost       |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |           extended highest sequence number received           |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                      interarrival jitter                      |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                         last SR (LSR)                         |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                   delay since last SR (DLSR)                  |
-       +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-report |                 SSRC_2 (SSRC of second source)                |
-block  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  2    :                               ...                             :
-       +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-       |                  profile-specific extensions                  |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- */
-//====================================================================================================
-#define DEFAULT_MAX_PACKET_SIZE		1472
-#define DEFAULT_SR_LENGTH           6 // byte/4
-
-std::shared_ptr<ov::Data> RtcpPacket::MakeSrPacket(uint32_t msw, uint32_t lsw, uint32_t ssrc, uint32_t rtp_timestamp, uint32_t packet_count, uint32_t octet_count)
-{
-    // Bigger size is needed for SRTCP, It is temporary codes. 
-    auto sr_packet = std::make_shared<ov::Data>(50);
-
-    sr_packet->SetLength(28);
-    auto buffer = sr_packet->GetWritableDataAs<uint8_t>();
-
-    buffer[0] = RTCP_HEADER_VERSION << 6;
-    buffer[1] = static_cast<uint8_t>(RtcpPacketType::SR);
-    ByteWriter<uint16_t>::WriteBigEndian(&buffer[2], DEFAULT_SR_LENGTH);
-    ByteWriter<uint32_t>::WriteBigEndian(&buffer[4], ssrc);
-    ByteWriter<uint32_t>::WriteBigEndian(&buffer[8], msw);
-    ByteWriter<uint32_t>::WriteBigEndian(&buffer[12], lsw);
-    ByteWriter<uint32_t>::WriteBigEndian(&buffer[16], rtp_timestamp);
-    ByteWriter<uint32_t>::WriteBigEndian(&buffer[20], packet_count);
-    ByteWriter<uint32_t>::WriteBigEndian(&buffer[24], octet_count);
-
-    return sr_packet;
-}
-
-std::shared_ptr<ov::Data> RtcpPacket::MakeSrPacket(uint32_t ssrc, uint32_t rtp_timestamp, uint32_t packet_count, uint32_t octet_count)
-{
-    uint32_t msw = 0;
-    uint32_t lsw = 0;
-
-    ov::Clock::GetNtpTime(msw, lsw);
-    return MakeSrPacket(msw, lsw, ssrc, rtp_timestamp, packet_count, octet_count);
-}
-
-//====================================================================================================
-// Delay Calculation
-// - calculation form rr packet
-// - 0 is pass
-//====================================================================================================
-double RtcpPacket::DelayCalculation(uint32_t lsr, uint32_t dlsr)
-{
-    if(lsr == 0 || dlsr == 0)
-        return 0;
-
-    uint32_t msw = 0;
-    uint32_t lsw = 0;
-
-    ov::Clock::GetNtpTime(msw, lsw);
-
-    uint32_t tr = ((msw & 0xFFFF) << 16) | (lsw >> 16);
-
-    if((tr - lsr) <= dlsr)
-        return 0;
-
-    return static_cast<double>(tr - lsr - dlsr)/65536.0;
+	return true;
 }

@@ -9,7 +9,6 @@
 
 #pragma once
 #include "packetizer.h"
-#include "bit_writer.h"
 #include <base/common_types.h>
 
 //====================================================================================================
@@ -25,8 +24,8 @@ public:
 public :
 	bool WriteSample(bool is_video,
                    bool is_keyframe,
-                   int64_t timestamp,
-                   uint64_t time_offset,
+                   int64_t pts,
+                   int64_t dts,
                    std::shared_ptr<ov::Data> &frame_data);
 
 	std::shared_ptr<ov::Data> GetDataStream()
@@ -40,8 +39,8 @@ protected :
 	bool WritePMT();
 	bool MakePesHeader(int data_size,
                         bool is_video,
-                        int64_t timestamp,
-                        uint64_t time_offset,
+                        int64_t pts,
+                        int64_t dts,
                         uint8_t * header,
                         uint32_t & header_size);
 

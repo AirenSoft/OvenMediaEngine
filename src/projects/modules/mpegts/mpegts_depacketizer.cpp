@@ -8,9 +8,6 @@
 //==============================================================================
 #include <base/ovlibrary/bit_reader.h>
 
-#include "modules/codec_analyzer/h264/h264_sps.h"
-#include "modules/codec_analyzer/aac/aac_adts.h"
-
 #include "mpegts_depacketizer.h"
 
 #define OV_LOG_TAG "MPEGTS_DEPACKETIZER"
@@ -495,13 +492,7 @@ namespace mpegts
 		// there is no media track, extracts it
 		if(_media_tracks.find(pes->PID()) == _media_tracks.end())
 		{
-			ExtractTrackInfo(pes);
-		}
-
-		// if pes's type is video, check if pes contains keyframe
-		if(pes->IsVideoStream())
-		{
-			ExtrackVideoFrameType(pes);
+			CreateTrackInfo(pes);
 		}
 
 		std::unique_lock<std::shared_mutex> lock(_es_list_lock);
@@ -516,7 +507,7 @@ namespace mpegts
 		return true;
 	}
 
-	bool MpegTsDepacketizer::ExtrackVideoFrameType(const std::shared_ptr<Pes> &pes)
+	bool MpegTsDepacketizer::CreateTrackInfo(const std::shared_ptr<Pes> &pes)
 	{
 		auto it = _es_info_map.find(pes->PID());
 		// Unknown PID
@@ -527,74 +518,33 @@ namespace mpegts
 		}
 
 		auto es_info = it->second;
+		auto track = std::make_shared<MediaTrack>();
 
 		// Codec
 		switch(es_info->_stream_type)
 		{
-			case static_cast<uint8_t>(WellKnownStreamTypes::H264):
-				ExtrackH264FrameType(pes);
+			case static_cast<uint8_t>(WellKnownStreamTypes::H264):		
+				track->SetId(pes->PID());
+				track->SetMediaType(common::MediaType::Video);
+				track->SetCodecId(common::MediaCodecId::H264);
+				track->SetTimeBase(1, 90000);
+				track->SetVideoTimestampScale(90000.0 / 1000.0);
 				break;
 
-			default:
-				// Doesn't support
-				logte("Unsupported codec has been received. (pid : %d stream_type : %d)", pes->PID(), es_info->_stream_type);
-				return false;
-		}
-
-		return true;
-	}
-
-	bool MpegTsDepacketizer::ExtrackH264FrameType(const std::shared_ptr<Pes> &pes)
-	{
-		auto payload = pes->Payload();
-		auto payload_length = pes->PayloadLength();
-		
-		// Start code 00 00 01 or 00 00 00 01
-		for(uint32_t i=0; i<payload_length - 4; i++)
-		{
-			if(*(payload + i) == 0 && *(payload + i + 1) == 0 && *(payload + i + 2) == 1)
-			{
-				uint16_t nal_unit_type = *(payload + i + 3) & 0x1F;
-				if(nal_unit_type == 0x05) // SPS
-				{
-					pes->SetKeyframe(true);
-					return true;
-				}
-			}
-			else if(*(payload + i) == 0 && *(payload + i + 1) == 0 && *(payload + i + 2) == 0 && *(payload + i + 3) == 1)
-			{
-				uint16_t nal_unit_type = *(payload + i + 4) & 0x1F;
-				if(nal_unit_type == 0x05) // SPS
-				{
-					pes->SetKeyframe(true);
-					return true;
-				}
-			}
-		}
-
-		return true;
-	}
-
-	bool MpegTsDepacketizer::ExtractTrackInfo(const std::shared_ptr<Pes> &pes)
-	{
-		auto it = _es_info_map.find(pes->PID());
-		// Unknown PID
-		if(it == _es_info_map.end())
-		{
-			logtw("Unknown PID was inputted.(PID : %d)", pes->PID());
-			return false;
-		}
-
-		auto es_info = it->second;
-
-		// Codec
-		switch(es_info->_stream_type)
-		{
-			case static_cast<uint8_t>(WellKnownStreamTypes::H264):
-				ExtractH264TrackInfo(pes);
+			case static_cast<uint8_t>(WellKnownStreamTypes::H265):
+				track->SetId(pes->PID());
+				track->SetMediaType(common::MediaType::Video);
+				track->SetCodecId(common::MediaCodecId::H265);
+				track->SetTimeBase(1, 90000);
+				track->SetVideoTimestampScale(90000.0 / 1000.0);
 				break;
+			
 			case static_cast<uint8_t>(WellKnownStreamTypes::AAC):
-				ExtractAACTrackInfo(pes);
+				track->SetId(pes->PID());
+				track->SetMediaType(common::MediaType::Audio);
+				track->SetCodecId(common::MediaCodecId::Aac);
+				track->SetTimeBase(1, 90000);
+				track->SetAudioTimestampScale(90000/1000);
 				break;
 
 			default:
@@ -602,105 +552,13 @@ namespace mpegts
 				logte("Unsupported codec has been received. (pid : %d stream_type : %d)", pes->PID(), es_info->_stream_type);
 				return false;
 		}
+
+		_media_tracks.emplace(track->GetId(), track);
 
 		if(_media_tracks.size() == _es_info_map.size())
 		{
 			_track_list_completed = true;
 		}
-
-		return true;
-	}
-
-	bool MpegTsDepacketizer::ExtractH264TrackInfo(const std::shared_ptr<Pes> &pes)
-	{
-		auto payload = pes->Payload();
-		auto payload_length = pes->PayloadLength();
-		uint32_t sps_start_pos = 0;
-		
-		// Start code 00 00 01 or 00 00 00 01
-		for(uint32_t i=0; i<payload_length - 4; i++)
-		{
-			if(*(payload + i) == 0 && *(payload + i + 1) == 0 && *(payload + i + 2) == 1)
-			{
-				uint16_t nal_unit_type = *(payload + i + 3) & 0x1F;
-				if(nal_unit_type == 0x07) // SPS
-				{
-					sps_start_pos = i + 3;
-					break;
-				}
-			}
-			else if(*(payload + i) == 0 && *(payload + i + 1) == 0 && *(payload + i + 2) == 0 && *(payload + i + 3) == 1)
-			{
-				uint16_t nal_unit_type = *(payload + i + 4) & 0x1F;
-				if(nal_unit_type == 0x07) // SPS
-				{
-					sps_start_pos = i + 4;
-					break;
-				}
-			}
-		}
-
-		// could not find sps nal
-		if(sps_start_pos == 0)
-		{
-			return false;
-		}
-
-		H264Sps sps;
-		if(H264Sps::Parse(payload + sps_start_pos, payload_length - sps_start_pos, sps) == false)
-		{
-			return false;
-		}
-
-		auto track = std::make_shared<MediaTrack>();
-
-		track->SetId(pes->PID());
-		track->SetMediaType(common::MediaType::Video);
-		track->SetCodecId(common::MediaCodecId::H264);
-		track->SetWidth(sps.GetWidth());
-		track->SetHeight(sps.GetHeight());
-		track->SetFrameRate(sps.GetFps());
-		track->SetTimeBase(1, 90000);
-		track->SetVideoTimestampScale(90000.0 / 1000.0);
-		
-		_media_tracks.emplace(track->GetId(), track);
-		
-		return true;
-	}
-
-	bool MpegTsDepacketizer::ExtractAACTrackInfo(const std::shared_ptr<Pes> &pes)
-	{
-		auto payload = pes->Payload();
-		auto payload_length = pes->PayloadLength();
-
-		AACAdts adts;
-		if(AACAdts::ParseAdtsHeader(payload, payload_length, adts) == false)
-		{
-			return false;
-		}
-
-		auto track = std::make_shared<MediaTrack>();
-
-		track->SetId(pes->PID());
-		track->SetMediaType(common::MediaType::Audio);
-		track->SetCodecId(common::MediaCodecId::Aac);
-		track->SetSampleRate(adts.SamplerateNum());
-		track->SetTimeBase(1, 90000);//adts.SamplerateNum());
-		track->SetAudioTimestampScale(90000/1000); //adts.SamplerateNum() / 1000.0);
-
-		if(adts.ChannelConfiguration() == 1)
-		{
-			track->GetChannel().SetLayout(common::AudioChannel::Layout::LayoutMono);
-		}
-		else if(adts.ChannelConfiguration() >= 2)
-		{
-			track->GetChannel().SetLayout(common::AudioChannel::Layout::LayoutStereo);
-		}
-
-		// Unknown
-		track->GetSample().SetFormat(common::AudioSample::Format::FltP);
-
-		_media_tracks.emplace(track->GetId(), track);
 
 		return true;
 	}

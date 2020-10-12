@@ -24,14 +24,14 @@ RtpPacketizer::~RtpPacketizer()
 
 }
 
-void RtpPacketizer::SetVideoCodec(RtpVideoCodecType codec_type)
+void RtpPacketizer::SetVideoCodec(common::MediaCodecId codec_type)
 {
 	_audio_configured = false;
 	_video_codec_type = codec_type;
 	_packetizer = RtpPacketizingManager::Create(codec_type);
 }
 
-void RtpPacketizer::SetAudioCodec(RtpAudioCodecType codec_type)
+void RtpPacketizer::SetAudioCodec(common::MediaCodecId codec_type)
 {
 	_audio_codec_type = codec_type;
 	_audio_configured = true;
@@ -68,7 +68,6 @@ bool RtpPacketizer::Packetize(FrameType frame_type,
 {
 	_frame_count ++;
 
-	// Audio, Video 분기 한다.
 	if(_audio_configured)
 	{
 		return PacketizeAudio(frame_type, timestamp, payload_data, payload_size);
@@ -79,7 +78,7 @@ bool RtpPacketizer::Packetize(FrameType frame_type,
 	}
 }
 
-bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
+bool RtpPacketizer::PacketizeVideo(common::MediaCodecId video_type,
                                    FrameType frame_type,
                                    uint32_t rtp_timestamp,
                                    const uint8_t *payload_data,
@@ -104,7 +103,7 @@ bool RtpPacketizer::PacketizeVideo(RtpVideoCodecType video_type,
 	// - Video Timing Extension
 
 	// -20 is for FEC
-	size_t max_data_payload_length = DEFAULT_MAX_PACKET_SIZE - rtp_header_template->HeadersSize() - 100;
+	size_t max_data_payload_length = RTP_DEFAULT_MAX_PACKET_SIZE - rtp_header_template->HeadersSize() - 100;
 	size_t last_packet_reduction_len = last_rtp_header->HeadersSize() - rtp_header_template->HeadersSize();
 														
 	if(_packetizer == nullptr)
@@ -159,7 +158,7 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 	AssignSequenceNumber(red_packet.get(), true);
 
 	_ulpfec_generator.AddRtpPacketAndGenerateFec(red_packet);
-
+	red_packet->PackageAsRtp();
 	_stream->OnRtpPacketized(red_packet);
 
 	while(_ulpfec_generator.IsAvailableFecPackets())
@@ -173,6 +172,9 @@ bool RtpPacketizer::GenerateRedAndFecPackets(std::shared_ptr<RtpPacket> packet)
 		AssignSequenceNumber(red_fec_packet.get(), true);
 
 		_ulpfec_generator.NextPacket(red_fec_packet.get());
+
+		// Adjust completed red packet's payload offset and size for RTX packet
+		std::dynamic_pointer_cast<RedRtpPacket>(red_fec_packet)->PackageAsRtp();
 
 		// Send ULPFEC
 		_rtp_packet_count ++;
@@ -221,7 +223,7 @@ bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
 
 	// logd("RtpSender.Packet", "Trying to send packet:\n%s", packet->GetData()->Dump().CStr());
 
-	_stream->OnRtpPacketized(std::move(packet));
+	_stream->OnRtpPacketized(packet);
 
 	return true;
 }

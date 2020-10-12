@@ -88,7 +88,7 @@ bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &fram
 			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(-1LL, common::MediaType::Video), true, chunk_data);
 		}
 
-		_last_video_pts = data->timestamp;
+		_last_video_pts = data->pts;
 
 		if (_first_video_pts == -1LL)
 		{
@@ -108,7 +108,7 @@ bool CmafPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &fram
 			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(-1LL, common::MediaType::Audio), false, chunk_data);
 		}
 
-		_last_audio_pts = data->timestamp;
+		_last_audio_pts = data->pts;
 
 		if (_first_audio_pts == -1LL)
 		{

@@ -5,7 +5,7 @@
 
 #include "base/info/application.h"
 #include "rtspc_stream.h"
-#include "modules/codec_analyzer/aac/aac.h"
+#include "modules/bitstream/aac/aac.h"
 
 #define OV_LOG_TAG "RtspcStream"
 
@@ -241,9 +241,9 @@ namespace pvd
 
 			common::MediaCodecId media_codec = 
 				(stream->codecpar->codec_id == AV_CODEC_ID_H264)?common::MediaCodecId::H264:
+				(stream->codecpar->codec_id == AV_CODEC_ID_H265)?common::MediaCodecId::H265:
 				(stream->codecpar->codec_id == AV_CODEC_ID_VP8)?common::MediaCodecId::Vp8:
 				(stream->codecpar->codec_id == AV_CODEC_ID_VP9)?common::MediaCodecId::Vp9:
-				(stream->codecpar->codec_id == AV_CODEC_ID_FLV1)?common::MediaCodecId::Flv:
 				(stream->codecpar->codec_id == AV_CODEC_ID_AAC)?common::MediaCodecId::Aac:
 				(stream->codecpar->codec_id == AV_CODEC_ID_MP3)?common::MediaCodecId::Mp3:
 				(stream->codecpar->codec_id == AV_CODEC_ID_OPUS)?common::MediaCodecId::Opus:
@@ -290,10 +290,10 @@ namespace pvd
 		_cumulative_pts = new int64_t[_format_context->nb_streams];
 		_cumulative_dts = new int64_t[_format_context->nb_streams];
 
-		for(uint32_t i=0 ; i<_format_context->nb_streams ; ++i)
+		for(uint32_t track_id=0 ; track_id<_format_context->nb_streams ; ++track_id)
 		{
-			_cumulative_pts[i] = 0;
-			_cumulative_dts[i] = 0;
+			_cumulative_pts[track_id] = 0;
+			_cumulative_dts[track_id] = 0;
 		}
 
 		_state = State::DESCRIBED;
@@ -307,6 +307,8 @@ namespace pvd
 		{
 			return false;
 		}
+
+		SendSequenceHeader();
 
 		_state = State::PLAYING;
 
@@ -420,48 +422,102 @@ namespace pvd
 			_cumulative_dts[packet.stream_index] = packet.dts;
 		}
 
-
-		AVStream *stream = _format_context->streams[packet.stream_index];
 		auto media_type = track->GetMediaType();
 		auto codec_id = track->GetCodecId();
-		auto flag = (packet.flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag;
-		
-		// Make MediaPacket from AVPacket
-		auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), track->GetId(), packet.data, packet.size, _cumulative_pts[packet.stream_index], _cumulative_dts[packet.stream_index], packet.duration, flag);
+		common::BitstreamFormat bitstream_format;
+		common::PacketType packet_type;
 
-		// SPS/PPS Insject from Extra Data
-		if(media_type == common::MediaType::Video && codec_id == common::MediaCodecId::H264)
+		if(codec_id == common::MediaCodecId::H264)
 		{
-			if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
-			{
-				if(flag == MediaPacketFlag::Key)
-				{
-					// Append SPS/PPS 
-					media_packet->GetData()->Insert(stream->codecpar->extradata, 0, stream->codecpar->extradata_size);
-				}
-			}
+			bitstream_format = common::BitstreamFormat::H264_ANNEXB;
+			packet_type = common::PacketType::NALU;
 		}
-		else if(media_type == common::MediaType::Audio && codec_id == common::MediaCodecId::Aac)
+		else if(codec_id == common::MediaCodecId::H265)
 		{
-			if(stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
-			{
-				if(flag == MediaPacketFlag::Key)
-				{
-					if(AACBitstreamAnalyzer::IsValidAdtsUnit(media_packet->GetData()->GetDataAs<uint8_t>()) == false)
-					{
-						// Append ADTS Header
-						AACAdts::AppendAdtsHeader(GetAacObjectType(stream->codecpar->profile), GetAacSamplingFrequencies(stream->codecpar->sample_rate), stream->codecpar->channels, media_packet->GetData());
-					}
+			bitstream_format = common::BitstreamFormat::H265_ANNEXB;
+			packet_type = common::PacketType::NALU;
+		}
+		else if(codec_id == common::MediaCodecId::Aac)
+		{
+			if(AACAdts::IsValid(packet.data, packet.size) == true)
+				bitstream_format = common::BitstreamFormat::AAC_ADTS;
+			else
+				bitstream_format = common::BitstreamFormat::AAC_LATM;
+	
+			packet_type = common::PacketType::RAW;
+		}
 
-				}
-			}
-		}		
+		// Make MediaPacket from AVPacket
+		auto data = std::make_shared<ov::Data>(packet.data, packet.size);
+		auto media_packet = std::make_shared<MediaPacket>(media_type, 
+														track->GetId(), 
+														data,
+														_cumulative_pts[packet.stream_index], 
+														_cumulative_dts[packet.stream_index], 
+														bitstream_format, 
+														packet_type);
 
 		SendFrame(media_packet);
 
 		::av_packet_unref(&packet);
 
 		return ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
+	}
+
+
+	void RtspcStream::SendSequenceHeader()
+	{
+		for(uint32_t track_id=0 ; track_id<_format_context->nb_streams ; ++track_id)
+		{
+			AVStream *stream = _format_context->streams[track_id];
+
+			auto track = GetTrack(stream->index);
+			if(track == nullptr)
+			{
+				continue;
+			}
+
+			auto media_type = track->GetMediaType();
+			auto codec_id = track->GetCodecId();
+
+			if(codec_id == common::MediaCodecId::H264)
+			{
+				// Send SPS/PPS Nalunit
+				auto media_packet = std::make_shared<MediaPacket>(media_type, 
+					track->GetId(), 
+					std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size),
+					0, 
+					0, 
+					common::BitstreamFormat::H264_ANNEXB, 
+					common::PacketType::NALU);
+
+				SendFrame(media_packet);
+			}
+			else if(codec_id == common::MediaCodecId::H265)
+			{
+				// Nothing to do here
+			}			
+			else if(codec_id == common::MediaCodecId::Aac)
+			{
+				AACSpecificConfig aac_config;
+				aac_config.SetOjbectType(GetAacObjectType(stream->codecpar->profile));
+				aac_config.SetSamplingFrequency(GetSamplingFrequency(stream->codecpar->sample_rate));
+				aac_config.SetChannel(stream->codecpar->channels);
+
+				std::vector<uint8_t> sequence_header;
+				aac_config.Serialize(sequence_header);
+				
+				auto media_packet = std::make_shared<MediaPacket>(media_type, 
+					track->GetId(), 
+					std::make_shared<ov::Data>(&sequence_header[0], sequence_header.size()),
+					0, 
+					0, 
+					common::BitstreamFormat::AAC_LATM, 
+					common::PacketType::SEQUENCE_HEADER);
+
+				SendFrame(media_packet);
+			}
+		}
 	}
 
 	AacObjectType RtspcStream::GetAacObjectType(int32_t ff_profile)
@@ -488,21 +544,21 @@ namespace pvd
 		return aac_profile;
 	}
 
-	SamplingFrequencies RtspcStream::GetAacSamplingFrequencies(int32_t ff_samplerate)
+	AacSamplingFrequencies RtspcStream::GetSamplingFrequency(int32_t ff_samplerate)
 	{
-		SamplingFrequencies aac_sample_rate = 
-			(ff_samplerate == 96000)?Samplerate_96000:
-			(ff_samplerate == 88200)?Samplerate_88200:
-			(ff_samplerate == 64000)?Samplerate_64000:
-			(ff_samplerate == 48000)?Samplerate_48000:
-			(ff_samplerate == 44100)?Samplerate_44100:
-			(ff_samplerate == 32000)?Samplerate_32000:
-			(ff_samplerate == 24000)?Samplerate_24000:
-			(ff_samplerate == 22050)?Samplerate_22050:
-			(ff_samplerate == 16000)?Samplerate_16000:
-			(ff_samplerate == 12000)?Samplerate_12000:
-			(ff_samplerate == 11025)?Samplerate_11025:
-			(ff_samplerate == 7350)?Samplerate_7350:Samplerate_Unknown;
+		AacSamplingFrequencies aac_sample_rate = 
+			(ff_samplerate == 96000)?RATES_96000HZ:
+			(ff_samplerate == 88200)?RATES_88200HZ:
+			(ff_samplerate == 64000)?RATES_64000HZ:
+			(ff_samplerate == 48000)?RATES_48000HZ:
+			(ff_samplerate == 44100)?RATES_44100HZ:
+			(ff_samplerate == 32000)?RATES_32000HZ:
+			(ff_samplerate == 24000)?RATES_24000HZ:
+			(ff_samplerate == 22050)?RATES_22050HZ:
+			(ff_samplerate == 16000)?RATES_16000HZ:
+			(ff_samplerate == 12000)?RATES_12000HZ:
+			(ff_samplerate == 11025)?RATES_11025HZ:
+			(ff_samplerate == 7350)?RATES_8000HZ:EXPLICIT_RATE;
 
 		return aac_sample_rate;
 	}

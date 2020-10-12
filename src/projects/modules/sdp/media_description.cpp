@@ -80,6 +80,11 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 		sdp.AppendFormat("a=rtcp-mux\r\n");
 	}
 
+	if(_msid_appdata.IsEmpty() == false)
+	{
+		sdp.AppendFormat("a=msid:%s %s\r\n", _msid.CStr(), _msid_appdata.CStr());
+	}
+
 	// Payloads
 	for(auto &payload : _payload_list)
 	{
@@ -131,7 +136,22 @@ bool MediaDescription::UpdateData(ov::String &sdp)
 	// SSRCs
 	if(_cname.IsEmpty() == false)
 	{
+		if(_rtx_ssrc != 0)
+		{
+			sdp.AppendFormat("a=ssrc-group:FID %u %u\r\n", _ssrc, _rtx_ssrc);
+		}
 		sdp.AppendFormat("a=ssrc:%u cname:%s\r\n", _ssrc, _cname.CStr());
+		sdp.AppendFormat("a=ssrc:%u msid:%s %s\r\n", _ssrc, _msid.CStr(), _msid_appdata.CStr());
+		sdp.AppendFormat("a=ssrc:%u mslabel:%s\r\n", _ssrc, _msid.CStr());
+		sdp.AppendFormat("a=ssrc:%u label:%s\r\n", _ssrc, _msid_appdata.CStr());
+
+		if(_rtx_ssrc != 0)
+		{
+			sdp.AppendFormat("a=ssrc:%u cname:%s\r\n", _rtx_ssrc, _cname.CStr());
+			sdp.AppendFormat("a=ssrc:%u msid:%s %s\r\n", _rtx_ssrc, _msid.CStr(), _msid_appdata.CStr());
+			sdp.AppendFormat("a=ssrc:%u mslabel:%s\r\n", _rtx_ssrc, _msid.CStr());
+			sdp.AppendFormat("a=ssrc:%u label:%s\r\n", _rtx_ssrc, _msid_appdata.CStr());
+		}
 	}
 
 	return true;
@@ -350,6 +370,20 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 					SetMid(std::string(matches[1]).c_str());
 				}
 			}
+			else if(content.compare(0, OV_COUNTOF("msid") - 1, "msid") == 0)
+			{
+				// a=msid:0nm3jPz5YtRJ1NF26G9IKrUCBlWavuwbeiSf 6jHsvxRPcpiEVZbA5QegGowmCtOlh8kTaXJ4
+				if(std::regex_search(content, matches, std::regex("^msid:(.*) (.*)")))
+				{
+					if(matches.size() != 2 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
+
+					SetMsid(std::string(matches[1]).c_str(), std::string(matches[2]).c_str());
+				}
+			}
 			else if(content.compare(0, OV_COUNTOF("set") - 1, "set") == 0)
 			{
 				// a=setup:actpass
@@ -367,7 +401,17 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 			else if(content.compare(0, OV_COUNTOF("ss") - 1, "ss") == 0)
 			{
 				// a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
-				if(std::regex_search(content, matches, std::regex("ssrc:(\\d*) cname(?::(.*))?")))
+				if(std::regex_search(content, matches, std::regex("^ssrc:(\\d*) cname(?::(.*))?")))
+				{
+					if(matches.size() != 2 + 1)
+					{
+						parsing_error = true;
+						break;
+					}
+					SetSsrc(stoul(matches[1]));
+					SetCname(std::string(matches[2]).c_str());
+				}
+				else if(std::regex_search(content, matches, std::regex("^ssrc-group:FID ([0-9]*) ([0-9]*)")))
 				{
 					if(matches.size() != 2 + 1)
 					{
@@ -375,7 +419,8 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 						break;
 					}
 
-					SetCname(stoul(matches[1]), std::string(matches[2]).c_str());
+					SetSsrc(stoul(matches[1]));
+					SetRtxSsrc(stoul(matches[2]));
 				}
 			}
 			else if(content.compare(0, OV_COUNTOF("fra") - 1, "fra") == 0)
@@ -585,6 +630,23 @@ const ov::String &MediaDescription::GetMid() const
 	return _mid;
 }
 
+// a=msid:msid appdata
+void MediaDescription::SetMsid(const ov::String &msid, const ov::String &msid_appdata)
+{
+	_msid = msid;
+	_msid_appdata = msid_appdata;
+}
+
+const ov::String &MediaDescription::GetMsid()
+{
+	return _msid;
+}
+
+const ov::String &MediaDescription::GetMsidAppdata()
+{
+	return _msid_appdata;
+}
+
 // a=setup:actpass
 void MediaDescription::SetSetup(const SetupType type)
 {
@@ -646,16 +708,31 @@ const float MediaDescription::GetFramerate() const
 }
 
 // a=ssrc:2064629418 cname:{b2266c86-259f-4853-8662-ea94cf0835a3}
-void MediaDescription::SetCname(uint32_t ssrc, const ov::String &cname)
+void MediaDescription::SetCname(const ov::String &cname)
+{
+	_cname = cname;
+}
+
+void MediaDescription::SetSsrc(uint32_t ssrc)
 {
 	_ssrc = ssrc;
-	_cname = cname;
+}
+
+void MediaDescription::SetRtxSsrc(uint32_t rtx_ssrc)
+{
+	_rtx_ssrc = rtx_ssrc;
 }
 
 uint32_t MediaDescription::GetSsrc() const
 {
 	return _ssrc;
 }
+
+uint32_t MediaDescription::GetRtxSsrc() const
+{
+	return _rtx_ssrc;
+}
+
 
 ov::String MediaDescription::GetCname() const
 {

@@ -18,9 +18,11 @@
 #include <vector>
 #include <iostream>
 #include <functional>
+#include <any>
 
-#include "ovlibrary/ovlibrary.h"
-#include "media_route/media_type.h"
+#include "base/mediarouter/media_type.h"
+#include "base/ovlibrary/ovlibrary.h"
+
 
 #define MAX_FRAG_COUNT 20
 
@@ -55,10 +57,12 @@ enum class PublisherType : int8_t
 	Unknown,
 	Webrtc,
 	Rtmp,
+	RtmpPush,
 	Hls,
 	Dash,
 	LlDash,
 	Ovt,
+	File,
 	NumberOfPublishers,
 };
 
@@ -170,38 +174,18 @@ public:
 
 struct CodecSpecificInfoGeneric
 {
-	uint8_t simulcast_idx = 0;  // TODO: 향후 확장 구현에서 사용
+	uint8_t simulcast_idx = 0; 
 };
 
-static const int32_t kCodecTypeAudio = 0x10000000;
-static const int32_t kCodecTypeVideo = 0x20000000;
-
-enum class CodecType : int32_t
-{
-	// Audio Codecs
-	Opus = kCodecTypeAudio + 1,
-	// Video Codecs
-	Vp8 = kCodecTypeVideo + 1,
-	Vp9,
-	H264,
-	I420,
-	Red,
-	Ulpfec,
-	Flexfec,
-	Generic,
-	Stereo,
-	Unknown
-};
-
-enum class H264PacketizationMode
+enum class H26XPacketizationMode
 {
 	NonInterleaved = 0,  // Mode 1 - STAP-A, FU-A is allowed
 	SingleNalUnit		 // Mode 0 - only single NALU allowed
 };
 
-struct CodecSpecificInfoH264
+struct CodecSpecificInfoH26X
 {
-	H264PacketizationMode packetization_mode = H264PacketizationMode::NonInterleaved;
+	H26XPacketizationMode packetization_mode = H26XPacketizationMode::NonInterleaved;
 	uint8_t simulcast_idx = 0;
 };
 
@@ -228,19 +212,16 @@ struct CodecSpecificInfoOpus
 union CodecSpecificInfoUnion
 {
 	CodecSpecificInfoGeneric generic;
-
 	CodecSpecificInfoVp8 vp8;
-
-	CodecSpecificInfoH264 h264;
+	CodecSpecificInfoH26X h26X;
 	// In the future
 	// RTPVideoHeaderVP9 vp9;
-
 	CodecSpecificInfoOpus opus;
 };
 
 struct CodecSpecificInfo
 {
-	CodecType codec_type = CodecType::Unknown;
+	common::MediaCodecId codec_type = common::MediaCodecId::None;
 	const char* codec_name = nullptr;
 	CodecSpecificInfoUnion codec_specific = {0};
 };

@@ -6,8 +6,8 @@
 
 #include <cstdint>
 
-#include <base/media_route/media_buffer.h>
-#include <base/media_route/media_type.h>
+#include <base/mediarouter/media_buffer.h>
+#include <base/mediarouter/media_type.h>
 
 enum class TranscodeFilterType : int8_t
 {

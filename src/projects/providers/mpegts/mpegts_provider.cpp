@@ -40,7 +40,9 @@ namespace pvd
 		logti("Terminated Mpegts Provider module.");
 	}
 
-	bool MpegTsProvider::PrepareStreamList(const cfg::Server &server_config, std::map<std::tuple<int, ov::SocketType>, std::tuple<ov::String, ov::String>> *stream_map)
+	bool MpegTsProvider::PrepareStreamList(const cfg::Server &server_config,
+										   std::map<std::tuple<int, ov::SocketType>,
+													std::tuple<info::VHostAppName, ov::String>> *stream_map)
 	{
 		// Build a port-stream map from the configuration
 		//
@@ -129,7 +131,7 @@ namespace pvd
 	{
 		auto &server_config = GetServerConfig();
 
-		std::map<std::tuple<int, ov::SocketType>, std::tuple<ov::String, ov::String>> stream_map;
+		std::map<std::tuple<int, ov::SocketType>, std::tuple<info::VHostAppName, ov::String>> stream_map;
 
 		if (PrepareStreamList(server_config, &stream_map) == false)
 		{

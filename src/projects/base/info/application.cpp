@@ -12,7 +12,7 @@
 
 namespace info
 {
-	Application::Application(const info::Host &host_info, application_id_t app_id, const ov::String &name, cfg::Application app_config, bool is_dynamic_app)
+	Application::Application(const info::Host &host_info, application_id_t app_id, const VHostAppName &name, cfg::Application app_config, bool is_dynamic_app)
 		: _application_id(app_id),
 		  _name(name),
 		  _app_config(std::move(app_config)),
@@ -21,7 +21,7 @@ namespace info
 		_host_info = std::make_shared<info::Host>(host_info);
 	}
 
-	Application::Application(const info::Host &host_info, application_id_t app_id, const ov::String &name, bool is_dynamic_app)
+	Application::Application(const info::Host &host_info, application_id_t app_id, const VHostAppName &name, bool is_dynamic_app)
 		: _application_id(app_id),
 		  _name(name),
 		  _is_dynamic_app(is_dynamic_app)
@@ -32,7 +32,7 @@ namespace info
 
 	const Application &Application::GetInvalidApplication()
 	{
-		static Application application(Host(cfg::VirtualHost()), InvalidApplicationId, "?InvalidApp?", false);
+		static Application application(Host(cfg::VirtualHost()), InvalidApplicationId, VHostAppName::InvalidAppName(), false);
 		return application;
 	}
 }  // namespace info
