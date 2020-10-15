@@ -340,16 +340,16 @@ namespace pub
 				url_to_compare.AppendFormat("%s=%s", key.CStr(), ov::Url::Encode(value).CStr());
 			}
 
-			/* Temp
 			if(url_to_compare.UpperCaseString() != signed_url->GetUrl().UpperCaseString())
 			{
 				err_message.Format("Invalid URL: %s (Expected: %s)",	signed_url->GetUrl().CStr(), url_to_compare.CStr());
 				return SignedUrlErrCode::WrongUrl;
 			}
-			*/
 
 			return SignedUrlErrCode::Success;
 		}
+
+		return SignedUrlErrCode::Unexpected;
 	}
 
 }  // namespace pub

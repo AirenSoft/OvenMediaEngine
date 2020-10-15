@@ -14,12 +14,19 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
-class HttpRequest;
+enum class HttpRequestConnectionType
+{
+	HTTP = 0,
+	WebSocket
+};
 
+class HttpRequest;
 class HttpRequestInterceptor
 {
 public:
 	virtual ~HttpRequestInterceptor() {}
+
+	virtual HttpRequestConnectionType GetConnectionType() = 0;
 
 	// request를 처리할 수 있는 interceptor인지 여부 반환
 	// 만약, true를 반환하면 앞으로 이 interceptor만 호출됨

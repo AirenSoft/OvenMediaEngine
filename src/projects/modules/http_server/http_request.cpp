@@ -32,11 +32,23 @@ std::shared_ptr<const ov::ClientSocket> HttpRequest::GetRemote() const
 void HttpRequest::SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data)
 {
 	_tls_data = tls_data;
+	UpdateUri();
 }
 
 std::shared_ptr<ov::TlsData> HttpRequest::GetTlsData()
 {
 	return _tls_data;
+}
+
+void HttpRequest::SetConnectionType(HttpRequestConnectionType type)
+{
+	_connection_type = type;
+	UpdateUri();
+}
+
+HttpRequestConnectionType HttpRequest::GetConnectionType() const
+{
+	return _connection_type;
 }
 
 ssize_t HttpRequest::ProcessData(const std::shared_ptr<const ov::Data> &data)
@@ -304,14 +316,28 @@ void HttpRequest::PostProcess()
 			break;
 	}
 
-	auto host = GetHeader("Host");
+	UpdateUri();
+}
 
+void HttpRequest::UpdateUri()
+{
+	auto host = GetHeader("Host");
 	if (host.IsEmpty())
 	{
 		host = _client_socket->GetLocalAddress()->GetIpAddress();
 	}
 
-	_request_uri.Format("http%s://%s%s", (_tls_data != nullptr) ? "s" : "", host.CStr(), _request_target.CStr());
+	ov::String scheme;
+	if(GetConnectionType() == HttpRequestConnectionType::HTTP)
+	{
+		scheme = "http";
+	}
+	else if(GetConnectionType() == HttpRequestConnectionType::WebSocket)
+	{
+		scheme = "ws";
+	}
+
+	_request_uri = ov::String::FormatString("%s%s://%s%s", scheme.CStr(), (_tls_data != nullptr) ? "s" : "", host.CStr(), _request_target.CStr());
 }
 
 ov::String HttpRequest::ToString() const

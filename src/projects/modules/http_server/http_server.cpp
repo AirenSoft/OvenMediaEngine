@@ -163,6 +163,7 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 								if (interceptor->IsInterceptorForRequest(client))
 								{
 									request->SetRequestInterceptor(interceptor);
+									request->SetConnectionType(interceptor->GetConnectionType());
 									break;
 								}
 							}

@@ -24,6 +24,8 @@ public:
 	//--------------------------------------------------------------------
 	// Implementation of HttpRequestInterceptorInterface
 	//--------------------------------------------------------------------
+	HttpRequestConnectionType GetConnectionType() override {return HttpRequestConnectionType::HTTP;}
+	
 	bool IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client) override;
 	HttpInterceptorResult OnHttpPrepare(const std::shared_ptr<HttpClient> &client) override;
 	HttpInterceptorResult OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data) override;

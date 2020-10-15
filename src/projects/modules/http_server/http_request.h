@@ -27,6 +27,9 @@ public:
 	void SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data);
 	std::shared_ptr<ov::TlsData> GetTlsData();
 
+	void SetConnectionType(HttpRequestConnectionType type);
+	HttpRequestConnectionType GetConnectionType() const;
+
 	/// HttpRequest 객체 초기화를 위해, client에서 보낸 데이터를 처리함
 	///
 	/// @param data 수신한 데이터
@@ -161,8 +164,10 @@ protected:
 	HttpStatusCode ParseHeader(const ov::String &line);
 
 	void PostProcess();
+	void UpdateUri();
 
 	std::shared_ptr<ov::ClientSocket> _client_socket;
+	HttpRequestConnectionType _connection_type;
 	std::shared_ptr<ov::TlsData> _tls_data;
 
 	// request 처리를 담당하는 객체

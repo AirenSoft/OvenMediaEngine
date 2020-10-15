@@ -34,6 +34,7 @@ protected:
 	//--------------------------------------------------------------------
 	// Implementation of HttpRequestInterceptorInterface
 	//--------------------------------------------------------------------
+	HttpRequestConnectionType GetConnectionType() override {return HttpRequestConnectionType::WebSocket;}
 	bool IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client) override;
 
 	// If these handler return false, the connection will be disconnected
