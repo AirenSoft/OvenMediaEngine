@@ -117,88 +117,29 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	}
 
 	auto stream = GetStreamAs<SegmentStream>(vhost_app_name, stream_name);
-	if (stream == nullptr)
+	if(stream == nullptr)
 	{
-		auto orchestrator = Orchestrator::GetInstance();
-
-		auto &vapp_name = vhost_app_name.ToString();
-
-		// These names are used for testing purposes
-		// TODO(dimiden): Need to delete this code after testing
-		if (
-			vapp_name.HasSuffix("#rtsp_live") || vapp_name.HasSuffix("#rtsp_playback") ||
-			vapp_name.HasSuffix("#rtsp_live_insecure") || vapp_name.HasSuffix("#rtsp_playback_insecure"))
+		stream = std::dynamic_pointer_cast<SegmentStream>(PullStream(vhost_app_name, request_info.host_name, request_info.app_name, stream_name, parsed_url));
+		if (stream == nullptr)
 		{
-			auto &query_map = parsed_url->QueryMap();
-
-			auto rtsp_uri_item = query_map.find("rtspURI");
-
-			if (rtsp_uri_item == query_map.end())
-			{
-				logte("There is no rtspURI parameter in the query string: %s", uri.CStr());
-
-				logtd("Query map:");
-				for ([[maybe_unused]] auto &query : query_map)
-				{
-					logtd("    %s = %s", query.first.CStr(), query.second.CStr());
-				}
-
-				client->GetResponse()->SetStatusCode(HttpStatusCode::BadRequest);
-
-				// Returns true when the observer search can be ended.
-				return true;
-			}
-
-			auto rtsp_uri = rtsp_uri_item->second;
-
-			if (orchestrator->RequestPullStream(vhost_app_name, request_info.host_name, request_info.app_name, stream_name, rtsp_uri) == false)
-			{
-				logte("Could not request pull stream for URL: %s", rtsp_uri.CStr());
-				client->GetResponse()->SetStatusCode(HttpStatusCode::NotAcceptable);
-
-				// Returns true when the observer search can be ended.
-				return true;
-			}
-
-			// Connection Request log
-			// 2019-11-06 09:46:45.390 , RTSP.SS ,REQUEST,INFO,,,Live,rtsp://50.1.111.154:10915/1135/1/,220.103.225.254_44757_1573001205_389304_128855562
-			stat_log(STAT_LOG_HLS_EDGE_REQUEST, "%s,%s,%s,%s,,,%s,%s,%s",
-					 ov::Clock::Now().CStr(),
-					 "HLS.SS",
-					 "REQUEST",
-					 "INFO",
-					 vhost_app_name.CStr(),
-					 rtsp_uri.CStr(),
-					 playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress().CStr());
-
-			logti("URL %s is requested", rtsp_uri.CStr());
-
-			stream = GetStreamAs<SegmentStream>(vhost_app_name, stream_name);
+			client->GetResponse()->SetStatusCode(HttpStatusCode::NotAcceptable);
+			return true;
 		}
 		else
 		{
-			// If the stream does not exists, request to the provider
-			if (orchestrator->RequestPullStream(vhost_app_name, request_info.host_name, request_info.app_name, stream_name) == false)
-			{
-				logte("Could not request pull stream for URL : %s/%s/%s", vhost_app_name.CStr(), stream_name.CStr(), request_info.file_name.CStr());
-				client->GetResponse()->SetStatusCode(HttpStatusCode::NotAcceptable);
+			// Connection Request log
+			// 2019-11-06 09:46:45.390 , RTSP.SS ,REQUEST,INFO,,,Live,rtsp://50.1.111.154:10915/1135/1/,220.103.225.254_44757_1573001205_389304_128855562
+			stat_log(STAT_LOG_HLS_EDGE_REQUEST, "%s,%s,%s,%s,,,%s,%s,%s",
+						ov::Clock::Now().CStr(),
+						"HLS.SS",
+						"REQUEST",
+						"INFO",
+						vhost_app_name.CStr(),
+						stream->GetMediaSource().CStr(),
+						playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress().CStr());
 
-				// Returns true when the observer search can be ended.
-				return true;
-			}
-			else
-			{
-				stream = GetStreamAs<SegmentStream>(vhost_app_name, stream_name);
-			}
+			logti("URL %s is requested", stream->GetMediaSource().CStr());
 		}
-	}
-
-	if (stream == nullptr)
-	{
-		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), vhost_app_name.CStr(), stream_name.CStr(), request_info.file_name.CStr());
-
-		// This means it need to query the next observer.
-		return false;
 	}
 
 	if (stream->GetPlayList(play_list) == false)
@@ -550,130 +491,54 @@ bool SegmentPublisher::HandleSignedUrl(const info::VHostAppName &vhost_app_name,
 									   const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
 									   std::shared_ptr<PlaylistRequestInfo> &request_info)
 {
-	auto orchestrator = Orchestrator::GetInstance();
-	auto &server_config = GetServerConfig();
-	auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Domain());
-
-	if (vhost_name.IsEmpty())
+	auto request = client->GetRequest();
+	auto remote_address = request->GetRemote()->GetRemoteAddress();
+	if (remote_address == nullptr)
 	{
-		logtw("Could not resolve the domain: %s", request_url->Domain().CStr());
+		OV_ASSERT2(false);
+		logtc("Invalid remote address found");
 		return false;
 	}
 
-	// TODO(Dimiden) : Modify blow codes
-	// GetVirtualHostByName is deprecated so blow codes are insane, later it will be modified.
-	auto vhost_list = server_config.GetVirtualHostList();
-	for (const auto &vhost_item : vhost_list)
+	std::shared_ptr<const SignedUrl> signed_url;
+	ov::String message;
+	auto result = Publisher::HandleSignedUrl(request_url, remote_address, signed_url, message);
+	if(result == pub::SignedUrlErrCode::Pass)
 	{
-		if (vhost_item.GetName() != vhost_name)
-		{
-			continue;
-		}
-		// Found
-
-		// Handle Signed URL if needed
-		auto &signed_url_config = vhost_item.GetSignedUrl();
-		if (!signed_url_config.IsParsed() || signed_url_config.GetCryptoKey().IsEmpty())
-		{
-			// The vhost doesn't use the signed url feature.
-			return true;
-		}
-
-		auto request = client->GetRequest();
-		auto remote_address = request->GetRemote()->GetRemoteAddress();
-		if (remote_address == nullptr)
-		{
-			OV_ASSERT2(false);
-			logtc("Invalid remote address found");
-			return false;
-		}
-
-		auto &query_map = request_url->QueryMap();
-
-		// Load config (crypto key, query string key)
-		auto crypto_key = signed_url_config.GetCryptoKey();
-		auto query_string_key = signed_url_config.GetQueryStringKey();
-
-		// Find a encoded string in query string
-		auto item = query_map.find(query_string_key);
-		if (item == query_map.end())
-		{
-			logtw("Could not find key %s in query string in URL: %s", query_string_key.CStr(), request_url->Source().CStr());
-			return false;
-		}
-
-		// Find a rtspURI in query string
-		auto rtsp_item = query_map.find("rtspURI");
-		if (rtsp_item == query_map.end())
-		{
-			logte("Could not find rtspURI in query string");
-			return false;
-		}
-
-		// Decoding and parsing
-		auto signed_url = SignedUrl::Load(SignedUrlType::Type0, crypto_key, item->second);
-		if (signed_url == nullptr)
-		{
-			logte("Could not obtain decrypted information of the signed url: %s, key: %s, value: %s", request_url->Source().CStr(), query_string_key.CStr(), item->second.CStr());
-			return false;
-		}
-
-		auto url_to_compare = request_url->ToUrlString(false);
-		url_to_compare.AppendFormat("?rtspURI=%s", ov::Url::Encode(rtsp_item->second).CStr());
-
-		std::vector<ov::String> messages;
-		bool result = true;
-		auto now = signed_url->GetNowMS();
-		request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
-															 vhost_app_name, stream_name,
-															 remote_address->GetIpAddress(),
-															 signed_url->GetSessionID());
-
-		if (signed_url->IsTokenExpired())
-		{
-			// Even if the token has expired, it can still be passed if the session ID had been approved.
-			if (!IsAuthorizedSession(*request_info))
-			{
-				messages.push_back(ov::String::FormatString("Token is expired: %lld (Now: %lld)", signed_url->GetTokenExpiredTime(), now));
-				result = false;
-			}
-		}
-
-		if (signed_url->IsStreamExpired())
-		{
-			messages.push_back(ov::String::FormatString("Stream is expired: %lld (Now: %lld)", signed_url->GetStreamExpiredTime(), now));
-			result = false;
-		}
-
-		if (signed_url->IsAllowedClient(*remote_address) == false)
-		{
-			messages.push_back(ov::String::FormatString("Not allowed: %s (Expected: %s)",
-														remote_address->ToString().CStr(),
-														signed_url->GetClientIP().CStr()));
-			result = false;
-		}
-
-		if (signed_url->GetUrl().UpperCaseString() != url_to_compare.UpperCaseString())
-		{
-			messages.push_back(ov::String::FormatString("Invalid URL: %s (Expected: %s)",
-														signed_url->GetUrl().CStr(), url_to_compare.CStr()));
-			result = false;
-		}
-
-		if (result == false)
-		{
-			logtw("Failed to authenticate client %s\nReason:\n    - %s",
-				  request->GetRemote()->ToString().CStr(),
-				  ov::String::Join(messages, "\n    - ").CStr());
-
-			return false;
-		}
-
-		// Update the authorized session info
-		UpdatePlaylistRequestInfo(request_info);
-
 		return true;
 	}
 
-	return false;
+	// might not be decyrpted
+	if(signed_url == nullptr)
+	{
+		return false;
+	}
+
+	request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
+														 vhost_app_name, stream_name,
+														 remote_address->GetIpAddress(),
+														 signed_url->GetSessionID());
+
+	if(result != pub::SignedUrlErrCode::Success)
+	{
+		if(result == pub::SignedUrlErrCode::TokenExpired)
+		{
+			// Because this is chunked streaming publisher, 
+			// players will continue to request playlists after token expiration while playing. 
+			// Therefore, once authorized session must be maintained.
+			if(IsAuthorizedSession(*request_info))
+			{
+				// Update the authorized session info
+				UpdatePlaylistRequestInfo(request_info);
+				return true;
+			}
+		}
+
+		logtw("%s", message.CStr());
+		return false;
+	}
+
+	// Update the authorized session info
+	UpdatePlaylistRequestInfo(request_info);
+	return true;
 }

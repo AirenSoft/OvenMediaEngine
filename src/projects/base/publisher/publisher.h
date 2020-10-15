@@ -19,6 +19,9 @@
 #include <modules/physical_port/physical_port.h>
 #include <orchestrator/orchestrator.h>
 
+#include <modules/signed_url/signed_url.h>
+
+
 #include <chrono>
 
 namespace pub
@@ -86,6 +89,20 @@ namespace pub
 		std::chrono::system_clock::time_point check_time;  // (chrono)
 	};
 
+	enum class SignedUrlErrCode
+	{
+		Pass = 0, // Turned SignedURL off 
+		Success,
+		Unexpected,
+		NoSingedKey,
+		DecryptFailed,
+		TokenExpired,
+		StreamExpired,
+		UnauthorizedClient,
+		WrongUrl
+	};
+
+
 	// All publishers such as WebRTC, HLS and MPEG-DASH has to inherit the Publisher class and implement that interfaces
 	class Publisher : public OrchestratorPublisherModuleInterface
 	{
@@ -94,6 +111,10 @@ namespace pub
 		virtual bool Stop();
 
 		std::shared_ptr<Application> GetApplicationByName(const info::VHostAppName &vhost_app_name);
+
+		// First GetStream(vhost_app_name, stream_name) and if it fails pull stream by the orchetrator
+		// If an url is set, the url is higher priority than OriginMap
+		std::shared_ptr<Stream> PullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const std::shared_ptr<const ov::Url> &request);
 		std::shared_ptr<Stream> GetStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
 		template <typename T>
 		std::shared_ptr<T> GetStreamAs(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
@@ -131,6 +152,9 @@ namespace pub
 
 		virtual std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) = 0;
 		virtual bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) = 0;
+
+		// return true if all conditions are passed
+		SignedUrlErrCode HandleSignedUrl(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedUrl> &signed_url, ov::String &err_message);
 
 		std::map<info::application_id_t, std::shared_ptr<Application>> 	_applications;
 		std::shared_mutex 		_application_map_mutex;

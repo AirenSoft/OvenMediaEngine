@@ -38,7 +38,8 @@
 std::shared_ptr<const SignedUrl> SignedUrl::Load(SignedUrlType type, const ov::String &key, const ov::String &data)
 {
     auto signed_url = std::make_shared<SignedUrl>();
-
+	signed_url->_signed_type = type;
+	
     if(type == SignedUrlType::Type0)
     {
         if(signed_url->ProcessType0(key, data) == false)
@@ -52,11 +53,6 @@ std::shared_ptr<const SignedUrl> SignedUrl::Load(SignedUrlType type, const ov::S
     }
 
     return signed_url;
-}
-
-uint64_t SignedUrl::GetNowMS() const
-{
-	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 const ov::String& SignedUrl::GetUrl() const
@@ -101,7 +97,7 @@ bool SignedUrl::IsTokenExpired() const
         return false;
     }
 
-	if(GetNowMS() > _token_expired_time)
+	if(ov::Clock::NowMS() > _token_expired_time)
 	{
 		return true;
 	}
@@ -116,7 +112,7 @@ bool SignedUrl::IsStreamExpired() const
         return false;
     }
 
-    if(GetNowMS() > _stream_expired_time)
+    if(ov::Clock::NowMS() > _stream_expired_time)
 	{
 		return true;
 	}

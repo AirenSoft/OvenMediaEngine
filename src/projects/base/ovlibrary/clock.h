@@ -11,6 +11,11 @@ namespace ov
 		Clock() = delete;
 		~Clock() = delete;
 
+		static uint64_t NowMS()
+		{
+			return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		}
+
 		// yy:mm:dd HH:MM:SS.ms
 		static ov::String Now()
 		{

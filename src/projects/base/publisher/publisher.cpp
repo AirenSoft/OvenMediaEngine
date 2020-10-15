@@ -155,10 +155,68 @@ namespace pub
 		return nullptr;
 	}
 
+	std::shared_ptr<Stream> Publisher::PullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const std::shared_ptr<const ov::Url> &request)
+	{
+		auto stream = GetStream(vhost_app_name, stream_name);
+		if(stream != nullptr)
+		{
+			return stream;
+		}
+
+		auto orchestrator = Orchestrator::GetInstance();
+		auto &vapp_name = vhost_app_name.ToString();
+		
+		ov::String pull_url;
+
+		// TODO(dimiden): This is temporalily codes, needs to be removed in the future
+		// Orchestrator::RequestPullStream should receive ov::Url instead of rtsp_uri in the future and 
+		// extract rtsp_uri by itself according to the configuration.
+		if(	vapp_name.HasSuffix("#rtsp_live") || vapp_name.HasSuffix("#rtsp_playback") ||
+			vapp_name.HasSuffix("#rtsp_live_insecure") || vapp_name.HasSuffix("#rtsp_playback_insecure"))
+		{
+			if(request != nullptr)
+			{
+				auto &query_map = request->QueryMap();
+				auto rtsp_uri_item = query_map.find("rtspURI");
+				if (rtsp_uri_item == query_map.end())
+				{
+					logte("There is no rtspURI parameter in the query string: %s", request->ToString().CStr());
+
+					logtd("Query map:");
+					for ([[maybe_unused]] auto &query : query_map)
+					{
+						logtd("    %s = %s", query.first.CStr(), query.second.CStr());
+					}
+				}
+				else
+				{
+					pull_url = rtsp_uri_item->second;
+				}
+			}
+		}
+		
+		if(pull_url.IsEmpty())
+		{
+			if(orchestrator->RequestPullStream(vhost_app_name, host_name, app_name, stream_name) == false)
+			{
+				return nullptr;
+			}
+		}
+		else
+		{
+			if(orchestrator->RequestPullStream(vhost_app_name, host_name, app_name, stream_name, pull_url) == false)
+			{
+				return nullptr;
+			}
+		}
+
+		// try one more after pulling stream
+		return GetStream(vhost_app_name, stream_name);
+	}
+
 	std::shared_ptr<Stream> Publisher::GetStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 	{
 		auto app = GetApplicationByName(vhost_app_name);
-
 		if (app != nullptr)
 		{
 			return app->GetStream(stream_name);
@@ -189,6 +247,109 @@ namespace pub
 		}
 
 		return nullptr;
+	}
+
+	SignedUrlErrCode Publisher::HandleSignedUrl(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedUrl> &signed_url, ov::String &err_message)
+	{
+		auto orchestrator = Orchestrator::GetInstance();
+		auto &server_config = GetServerConfig();
+		auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Domain());
+
+		if (vhost_name.IsEmpty())
+		{
+			err_message.Format("Could not resolve the domain: %s", request_url->Domain().CStr());
+			return SignedUrlErrCode::Unexpected;
+		}
+
+		// TODO(Dimiden) : Modify below codes
+		// GetVirtualHostByName is deprecated so blow codes are insane, later it will be modified.
+		auto vhost_list = server_config.GetVirtualHostList();
+		for (const auto &vhost_item : vhost_list)
+		{
+			if (vhost_item.GetName() != vhost_name)
+			{
+				continue;
+			}
+
+			// Handle Signed URL if needed
+			auto &signed_url_config = vhost_item.GetSignedUrl();
+			if (!signed_url_config.IsParsed() || signed_url_config.GetCryptoKey().IsEmpty())
+			{
+				// The vhost doesn't use the signed url feature.
+				return SignedUrlErrCode::Pass;
+			}
+
+			// Load config (crypto key, query string key)
+			// TODO(Getroot): load signed url type from config and apply them
+			auto signed_type = SignedUrlType::Type0;
+			auto crypto_key = signed_url_config.GetCryptoKey();
+			auto query_string_key = signed_url_config.GetQueryStringKey();
+
+			// Find a signed key in the query string
+			auto &query_map = request_url->QueryMap();
+			auto item = query_map.find(query_string_key);
+			if (item == query_map.end())
+			{
+				return SignedUrlErrCode::NoSingedKey;
+			}
+
+			// Decoding and parsing
+			signed_url = SignedUrl::Load(signed_type, crypto_key, item->second);
+			if (signed_url == nullptr)
+			{
+				err_message.Format("Could not obtain decrypted information of the signed url: %s, key: %s, value: %s", request_url->Source().CStr(), query_string_key.CStr(), item->second.CStr());
+				return SignedUrlErrCode::DecryptFailed;
+			}
+
+			// Check conditions
+
+			if(signed_url->IsTokenExpired())
+			{
+				err_message.Format("Token is expired: %lld (Now: %lld)", signed_url->GetTokenExpiredTime(), ov::Clock::NowMS());
+				return SignedUrlErrCode::TokenExpired;
+			}
+
+			if(signed_url->IsStreamExpired())
+			{
+				err_message.Format("Stream is expired: %lld (Now: %lld)", signed_url->GetStreamExpiredTime(), ov::Clock::NowMS());
+				return SignedUrlErrCode::StreamExpired;
+			}
+
+			// Check client ip
+			if(signed_url->IsAllowedClient(*client_address) == false)
+			{
+				err_message.Format("Not allowed: %s (Expected: %s)", client_address->ToString().CStr(), signed_url->GetClientIP().CStr());
+				return SignedUrlErrCode::UnauthorizedClient;
+			}
+
+			// Check URL is same
+			// remake url except for signed key
+			auto url_to_compare = request_url->ToUrlString(false);
+			url_to_compare.Append("?");
+			for(const auto &query : query_map)
+			{
+				auto key = query.first;
+				auto value = query.second;
+
+				// signed key is excluded
+				if(key.UpperCaseString() == query_string_key.UpperCaseString())
+				{
+					continue;
+				}
+
+				url_to_compare.AppendFormat("%s=%s", key.CStr(), ov::Url::Encode(value).CStr());
+			}
+
+			/* Temp
+			if(url_to_compare.UpperCaseString() != signed_url->GetUrl().UpperCaseString())
+			{
+				err_message.Format("Invalid URL: %s (Expected: %s)",	signed_url->GetUrl().CStr(), url_to_compare.CStr());
+				return SignedUrlErrCode::WrongUrl;
+			}
+			*/
+
+			return SignedUrlErrCode::Success;
+		}
 	}
 
 }  // namespace pub

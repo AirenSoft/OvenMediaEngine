@@ -90,6 +90,15 @@ namespace info
 		_name = name;
 	}
 
+	ov::String Stream::GetMediaSource() const
+	{
+		return _source_url;
+	}
+	void Stream::SetMediaSource(ov::String url)
+	{
+		_source_url = url;
+	}
+
 	void Stream::SetOriginStream(const std::shared_ptr<Stream> &stream)
 	{
 		_origin_stream = stream;

@@ -246,31 +246,18 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 																		  const ov::String &app_name, const ov::String &stream_name,
 																		  std::vector<RtcIceCandidate> *ice_candidates)
 {
-	// Application -> Stream에서 SDP를 얻어서 반환한다.
-	auto orchestrator = Orchestrator::GetInstance();
 	RequestStreamResult result = RequestStreamResult::init;
+	auto request = ws_client->GetClient()->GetRequest();
+	auto uri = request->GetUri();
+	auto parsed_url = ov::Url::Parse(uri.CStr(), true);
 
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
-	if (stream == nullptr)
+	if(stream == nullptr)
 	{
-		// If the stream does not exists, request to the provider
-		if (orchestrator->RequestPullStream(vhost_app_name, host_name, app_name, stream_name) == false)
+		stream = std::dynamic_pointer_cast<RtcStream>(PullStream(vhost_app_name, host_name, app_name, stream_name, parsed_url));
+		if(stream == nullptr)
 		{
-			logtd("Could not pull the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 			result = RequestStreamResult::origin_failed;
-		}
-		else
-		{
-			stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
-			if (stream == nullptr)
-			{
-				logtd("Could not pull the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
-				result = RequestStreamResult::local_failed;
-			}
-			else
-			{
-				result = RequestStreamResult::origin_success;
-			}
 		}
 	}
 	else
@@ -305,21 +292,46 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 {
 	auto application = GetApplicationByName(vhost_app_name);
 	auto stream = GetStream(vhost_app_name, stream_name);
-
 	if (!stream)
 	{
 		logte("Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
 		return false;
 	}
 
+	// Signed URL
+	auto request = ws_client->GetClient()->GetRequest();
+	auto remote_address = request->GetRemote()->GetRemoteAddress();
+	auto uri = request->GetUri();
+	auto parsed_url = ov::Url::Parse(uri.CStr(), true);
+
+	if (parsed_url == nullptr)
+	{
+		logte("Could not parse the url: %s", uri.CStr());
+		return false;
+	}
+
+	std::shared_ptr<const SignedUrl> signed_url;
+	// These names are used for testing purposes
+	if (vhost_app_name.ToString().HasSuffix("_insecure") == false)
+	{	
+		ov::String message;
+		auto result = Publisher::HandleSignedUrl(parsed_url, remote_address, signed_url, message);
+		if(result != pub::SignedUrlErrCode::Success && result != pub::SignedUrlErrCode::Pass)
+		{
+			logtw("%s", message.CStr());
+			return false;
+		}
+	}
+
+	//TODO(Getroot): pass "StreamExpiredTime" parameter to session to control the playing time 
+	// signed_url->GetStreamExpiredTime();
+
 	ov::String remote_sdp_text = peer_sdp->ToString();
 	logtd("OnAddRemoteDescription: %s", remote_sdp_text.CStr());
 
-	// Stream에 Session을 생성한다.
 	auto session = RtcSession::Create(application, stream, offer_sdp, peer_sdp, _ice_port, ws_client);
 	if (session != nullptr)
 	{
-		// Stream에 Session을 등록한다.
 		stream->AddSession(session);
 		auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
 		if (stream_metrics != nullptr)
@@ -327,13 +339,10 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 			stream_metrics->OnSessionConnected(PublisherType::Webrtc);
 		}
 
-		// ice_port에 SessionInfo을 전달한다.
-		// 향후 해당 session에서 Ice를 통해 패킷이 들어오면 SessionInfo와 함께 Callback을 준다.
 		_ice_port->AddSession(session, offer_sdp, peer_sdp);
 	}
 	else
 	{
-		// peer_sdp가 잘못되거나, 다른 이유로 인해 session을 생성하지 못함
 		logte("Cannot create session");
 	}
 
@@ -347,7 +356,6 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 									const std::shared_ptr<const SessionDescription> &offer_sdp,
 									const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
-	// 플레이어에서 stop 이벤트가 수신 된 경우 처리
 	logtd("Stop commnad received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 	// Find Stream
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
@@ -357,7 +365,6 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 		return false;
 	}
 
-	// Offer SDP의 Session ID로 세션을 찾는다.
 	auto session = std::static_pointer_cast<RtcSession>(stream->GetSession(offer_sdp->GetSessionId()));
 	if (session == nullptr)
 	{

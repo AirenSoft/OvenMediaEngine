@@ -16,7 +16,7 @@ class SignedUrl
 public:
 	static std::shared_ptr<const SignedUrl> Load(SignedUrlType type, const ov::String &key, const ov::String &data);
 
-    uint64_t	            GetNowMS() const;
+	SignedUrlType			GetType() const;
     const ov::String&       GetUrl() const;
     const ov::String&       GetClientIP() const;
     const ov::String&       GetSessionID() const;
@@ -26,13 +26,13 @@ public:
     bool                    IsTokenExpired() const;
     bool                    IsStreamExpired() const;
 
-
     bool ProcessType0(const ov::String &key, const ov::String &data);
 
     bool Encrypt_DES_ECB_PKCS5(const ov::String &key, ov::Data &plain_in, ov::Data &encrypted_out) const;
     bool Decrypt_DES_ECB_PKCS5(const ov::String &key, ov::Data &encrypted_in, ov::Data &plain_out) const;
     
 private:
+	SignedUrlType		_signed_type;
 
     ov::String  _key;
     ov::String  _full_string;

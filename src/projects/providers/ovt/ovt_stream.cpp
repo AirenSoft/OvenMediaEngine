@@ -48,6 +48,7 @@ namespace pvd
 		if(!_url_list.empty())
 		{
 			_curr_url = _url_list[0];
+			SetMediaSource(_curr_url->ToUrlString(true));
 		}
 	}
 
