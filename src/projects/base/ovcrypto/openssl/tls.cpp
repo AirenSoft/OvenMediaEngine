@@ -37,7 +37,7 @@ namespace ov
 
 			if (bio_method == nullptr)
 			{
-				bio_method = OpensslManager::Instance()->GetBioMethod(OV_TLS_BIO_METHOD_NAME);
+				bio_method = OpensslManager::GetInstance()->GetBioMethod(OV_TLS_BIO_METHOD_NAME);
 
 				if (bio_method != nullptr)
 				{
@@ -52,7 +52,7 @@ namespace ov
 
 					if (result == false)
 					{
-						OpensslManager::Instance()->FreeBioMethod(OV_TLS_BIO_METHOD_NAME);
+						OpensslManager::GetInstance()->FreeBioMethod(OV_TLS_BIO_METHOD_NAME);
 						::BIO_meth_free(bio_method);
 
 						bio_method = nullptr;

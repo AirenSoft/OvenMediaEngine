@@ -45,7 +45,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 		// TLS is enabled
 		_https_server = std::make_shared<HttpsServer>();
 
-		auto vhost_list = Orchestrator::GetInstance()->GetVirtualHostList();
+		auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 		_https_server->SetVirtualHostList(vhost_list);
 	}
 	else
@@ -112,7 +112,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			auto &app_name = tokens[1];
 			auto &stream_name = tokens[2];
 
-			info::VHostAppName vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
+			info::VHostAppName vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
 
 			auto info = std::make_shared<RtcSignallingInfo>(vhost_app_name, host_name, app_name, stream_name);
 

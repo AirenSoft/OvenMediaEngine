@@ -6,7 +6,7 @@
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "data_structure.h"
+#include "enums.h"
 
 #define GET_TYPE_NAME(enum_type, name, value)      \
 	do                                             \
@@ -17,23 +17,26 @@
 		}                                          \
 	} while (false)
 
-ov::String GetOrchestratorModuleTypeName(OrchestratorModuleType type)
+namespace ocst
 {
-	std::vector<ov::String> list;
-
-	GET_TYPE_NAME(OrchestratorModuleType, Unknown, type);
-	GET_TYPE_NAME(OrchestratorModuleType, PullProvider, type);
-	GET_TYPE_NAME(OrchestratorModuleType, PushProvider, type);
-	GET_TYPE_NAME(OrchestratorModuleType, MediaRouter, type);
-	GET_TYPE_NAME(OrchestratorModuleType, Transcoder, type);
-	GET_TYPE_NAME(OrchestratorModuleType, Publisher, type);
-
-	if (list.size() == 0)
+	ov::String GetModuleTypeName(ModuleType type)
 	{
-		// Unknown type name (not handled)
-		OV_ASSERT2(false);
-		return "N/A";
-	}
+		std::vector<ov::String> list;
 
-	return ov::String::Join(list, " | ");
-}
+		GET_TYPE_NAME(ModuleType, Unknown, type);
+		GET_TYPE_NAME(ModuleType, PullProvider, type);
+		GET_TYPE_NAME(ModuleType, PushProvider, type);
+		GET_TYPE_NAME(ModuleType, MediaRouter, type);
+		GET_TYPE_NAME(ModuleType, Transcoder, type);
+		GET_TYPE_NAME(ModuleType, Publisher, type);
+
+		if (list.size() == 0)
+		{
+			// Unknown type name (not handled)
+			OV_ASSERT2(false);
+			return "N/A";
+		}
+
+		return ov::String::Join(list, " | ");
+	}
+}  // namespace ocst

@@ -109,7 +109,7 @@ const std::vector<RtcIceCandidate> &IcePort::GetIceCandidateList() const
 
 std::shared_ptr<PhysicalPort> IcePort::CreatePhysicalPort(const ov::SocketAddress &address, ov::SocketType type)
 {
-	auto physical_port = PhysicalPortManager::Instance()->CreatePort(type, address);
+	auto physical_port = PhysicalPortManager::GetInstance()->CreatePort(type, address);
 
 	if (physical_port != nullptr)
 	{
@@ -120,7 +120,7 @@ std::shared_ptr<PhysicalPort> IcePort::CreatePhysicalPort(const ov::SocketAddres
 
 		logte("Cannot add a observer %p to %p", this, physical_port.get());
 
-		PhysicalPortManager::Instance()->DeletePort(physical_port);
+		PhysicalPortManager::GetInstance()->DeletePort(physical_port);
 	}
 	else
 	{
@@ -139,7 +139,7 @@ bool IcePort::Close()
 	for (auto &physical_port : _physical_port_list)
 	{
 		result = result && physical_port->RemoveObserver(this);
-		result = result && PhysicalPortManager::Instance()->DeletePort(physical_port);
+		result = result && PhysicalPortManager::GetInstance()->DeletePort(physical_port);
 
 		if (result == false)
 		{

@@ -44,7 +44,7 @@ bool OvtPublisher::Start()
 			const ov::String &ip = server_config.GetIp();
 			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
 
-			_server_port = PhysicalPortManager::Instance()->CreatePort(port_config.GetSocketType(), address);
+			_server_port = PhysicalPortManager::GetInstance()->CreatePort(port_config.GetSocketType(), address);
 			if (_server_port != nullptr)
 			{
 				logti("%s is listening on %s", GetPublisherName(), address.ToString().CStr());
@@ -181,10 +181,10 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 
 void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, const uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
-	auto orchestrator = Orchestrator::GetInstance();
+	auto orchestrator = ocst::Orchestrator::GetInstance();
 	auto host_name = url->Domain();
 	auto app_name = url->App();
-	auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
+	auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
 	auto stream_name = url->Stream();
 	ov::String msg;
 
@@ -216,7 +216,7 @@ void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remo
 
 void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
-	auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), url->App());
+	auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), url->App());
 	
 	auto app = std::static_pointer_cast<OvtApplication>(GetApplicationByName(vhost_app_name));
 	if(app == nullptr)
@@ -254,7 +254,7 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 
 void OvtPublisher::HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
-	auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), url->App());
+	auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), url->App());
 	auto stream = std::static_pointer_cast<OvtStream>(GetStream(vhost_app_name, url->Stream()));
 
 	if(stream == nullptr)

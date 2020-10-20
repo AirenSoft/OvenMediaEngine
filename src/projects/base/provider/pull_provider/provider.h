@@ -11,7 +11,7 @@
 #include <base/common_types.h>
 #include <base/provider/provider.h>
 #include <base/mediarouter/media_route_interface.h>
-#include <orchestrator/data_structure.h>
+#include <orchestrator/data_structures/data_structure.h>
 
 #include <shared_mutex>
 
@@ -72,13 +72,13 @@ namespace pvd
 	class PullApplication;
 	class PullStream;
 	// RTMP Server와 같은 모든 Provider는 다음 Interface를 구현하여 MediaRouterInterface에 자신을 등록한다.
-	class PullProvider : public Provider, public OrchestratorPullProviderModuleInterface
+	class PullProvider : public Provider, public ocst::PullProviderModuleInterface
 	{
 	public:
-		// Implementation OrchestratorModuleInterface
-		OrchestratorModuleType GetModuleType() const override
+		// Implementation ModuleInterface
+		ocst::ModuleType GetModuleType() const override
 		{
-			return OrchestratorModuleType::PullProvider;
+			return ocst::ModuleType::PullProvider;
 		}
 
 	protected:
@@ -89,7 +89,7 @@ namespace pvd
 		bool UnlockPullStreamIfNeeded(const info::Application &app_info, const ov::String &stream_name, PullingItem::PullingItemState state);
 
 		//--------------------------------------------------------------------
-		// Implementation of OrchestratorPullProviderModuleInterface
+		// Implementation of PullProviderModuleInterface
 		//--------------------------------------------------------------------
 		std::shared_ptr<pvd::Stream> PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset) override;
 		bool StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream) override;

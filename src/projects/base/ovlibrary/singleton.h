@@ -16,7 +16,7 @@ namespace ov
 	public:
 		virtual ~Singleton() = default;
 
-		static T *Instance()
+		static T *GetInstance()
 		{
 			static T instance;
 

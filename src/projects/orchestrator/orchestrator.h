@@ -8,13 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <base/mediarouter/media_route_application_observer.h>
-#include <base/provider/provider.h>
-
-#include <regex>
-
-#include "base/info/host.h"
-#include "data_structure.h"
+#include "orchestrator_internal.h"
 
 //
 // Orchestrator is responsible for passing commands to registered modules, such as Provider/MediaRouter/Transcoder/Publisher.
@@ -29,430 +23,93 @@
 //
 // TODO(dimiden): Modification is required so that the module can be managed per Host
 
-class MediaRouter;
-
-class Orchestrator
+namespace ocst
 {
-protected:
-	struct PrivateToken
+	class Orchestrator : public ov::Singleton<Orchestrator>,
+						 protected OrchestratorInternal
 	{
-	};
+	public:
+		bool ApplyOriginMap(const std::vector<info::Host> &host_list);
 
-public:
-	enum class Result
-	{
-		// An error occurred
-		Failed,
-		// Created successfully
-		Succeeded,
-		// The item does exists
-		Exists,
-		// The item does not exists
-		NotExists
-	};
+		const std::vector<std::shared_ptr<ocst::VirtualHost>> &GetVirtualHostList();
 
-	enum class ItemState
-	{
-		Unknown,
-		// This item is applied to OriginMap
-		Applied,
-		// Need to check if this item has changed
-		NeedToCheck,
-		// This item is applied, and not changed
-		NotChanged,
-		// This item is not applied, and will be applied to OriginMap/OriginList
-		New,
-		// This item is applied, but need to change some values
-		Changed,
-		// This item is applied, and will be deleted from OriginMap/OriginList
-		Delete
-	};
+		/// Register the module
+		///
+		/// @param module Module to register
+		///
+		/// @return If the module is registered or passed a different type from the previously registered type, false is returned.
+		/// Otherwise, true is returned.
+		bool RegisterModule(const std::shared_ptr<ModuleInterface> &module);
 
-	struct Module
-	{
-		Module(OrchestratorModuleType type, const std::shared_ptr<OrchestratorModuleInterface> &module)
-			: type(type),
-			  module(module)
+		/// Unregister the module
+		///
+		/// @param module Module to unregister
+		///
+		/// @return If the module is not already registered, false is returned. Otherwise, true is returned.
+		bool UnregisterModule(const std::shared_ptr<ModuleInterface> &module);
+
+		ov::String GetVhostNameFromDomain(const ov::String &domain_name) const;
+
+		/// Generate an application name for vhost/app
+		///
+		/// @param vhost_name A name of VirtualHost
+		/// @param app_name An application name
+		///
+		/// @return A new application name corresponding to vhost/app
+		info::VHostAppName ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name) const override
 		{
+			return OrchestratorInternal::ResolveApplicationName(vhost_name, app_name);
 		}
 
-		OrchestratorModuleType type = OrchestratorModuleType::Unknown;
-		std::shared_ptr<OrchestratorModuleInterface> module = nullptr;
-	};
+		///  Generate an application name for domain/app
+		///
+		/// @param domain_name A name of the domain
+		/// @param app_name An application name
+		///
+		/// @return A new application name corresponding to domain/app
+		info::VHostAppName ResolveApplicationNameFromDomain(const ov::String &domain_name, const ov::String &app_name) const;
 
-	struct Stream
-	{
-		Stream(const info::Application &app_info, const std::shared_ptr<OrchestratorPullProviderModuleInterface> &provider, const std::shared_ptr<pvd::Stream> &provider_stream, const ov::String &full_name)
-			: app_info(app_info),
-			  provider(provider),
-			  provider_stream(provider_stream),
-			  full_name(full_name)
+		bool GetUrlListForLocation(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name, std::vector<ov::String> *url_list);
+
+		/// Create an application and notify the modules
+		///
+		/// @param vhost_name A name of VirtualHost
+		/// @param app_config Application configuration to create
+		///
+		/// @return Creation result
+		///
+		/// @note Automatically DeleteApplication() when application creation fails
+		Result CreateApplication(const info::Host &vhost_info, const cfg::Application &app_config);
+		/// Delete the application and notify the modules
+		///
+		/// @param app_info Application information to delete
+		///
+		/// @return
+		///
+		/// @note If an error occurs during deletion, do not recreate the application
+		Result DeleteApplication(const info::Application &app_info);
+
+		Result Release();
+
+		const info::Application &GetApplicationInfo(const ov::String &vhost_name, const ov::String &app_name) const;
+		const info::Application &GetApplicationInfo(const info::VHostAppName &vhost_app_name) const;
+
+		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const ov::String &url, off_t offset);
+		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const ov::String &url)
 		{
-			is_valid = true;
+			return RequestPullStream(vhost_app_name, host_name, app_name, stream_name, url, 0);
 		}
 
-		info::Application app_info;
-
-		std::shared_ptr<OrchestratorPullProviderModuleInterface> provider;
-		std::shared_ptr<pvd::Stream> provider_stream;
-
-		ov::String full_name;
-
-		bool is_valid = false;
-	};
-
-	struct Origin
-	{
-		Origin(const cfg::OriginsOrigin &origin_config)
-			: scheme(origin_config.GetPass().GetScheme()),
-			  location(origin_config.GetLocation()),
-			  state(ItemState::New)
-
+		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, off_t offset);
+		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name)
 		{
-			for (auto &item : origin_config.GetPass().GetUrlList())
-			{
-				auto url = item.GetUrl();
-
-				// Prepend "<scheme>://"
-				url.Prepend("://");
-				url.Prepend(scheme);
-
-				url_list.push_back(item.GetUrl());
-			}
-
-			this->origin_config = origin_config;
-		}
-
-		bool IsValid() const
-		{
-			return state != ItemState::Unknown;
-		}
-
-		info::application_id_t app_id = 0U;
-
-		ov::String scheme;
-
-		// Origin/Location
-		ov::String location;
-		// Generated URL list from <Origin>.<Pass>.<URL>
-		std::vector<ov::String> url_list;
-
-		// Original configuration
-		cfg::OriginsOrigin origin_config;
-
-		// A list of streams generated by this origin rule
-		std::map<info::stream_id_t, std::shared_ptr<Stream>> stream_map;
-
-		// A flag used to determine if an item has changed
-		ItemState state = ItemState::Unknown;
-	};
-
-	struct Host
-	{
-		Host(const ov::String &name)
-			: name(name),
-			  state(ItemState::New)
-		{
-			UpdateRegex();
-		}
-
-		bool IsValid() const
-		{
-			return state != ItemState::Unknown;
-		}
-
-		bool UpdateRegex()
-		{
-			// Escape special characters: '[', '\', '.', '/', '+', '{', '}', '$', '^', '|' to \<char>
-			auto special_characters = std::regex(R"([[\\.\/+{}$^|])");
-			ov::String escaped = std::regex_replace(name.CStr(), special_characters, R"(\$&)").c_str();
-			// Change '*'/'?' to .<char>
-			escaped = escaped.Replace(R"(*)", R"(.*)");
-			escaped = escaped.Replace(R"(?)", R"(.?)");
-			escaped.Prepend("^");
-			escaped.Append("$");
-
-			std::regex expression;
-
-			try
-			{
-				regex_for_domain = std::regex(escaped);
-			}
-			catch (std::exception &e)
-			{
-				return false;
-			}
-
-			return true;
-		}
-
-		// The name of Host in the configuraiton (eg: *, *.airensoft.com)
-		ov::String name;
-		std::regex regex_for_domain;
-
-		typedef std::map<info::stream_id_t, std::shared_ptr<Stream>> stream_map_t;
-
-		// Key: A host name actually used. Wildcard cannot be used
-		// Value: A list of streams generated by this host rule
-		std::map<ov::String, stream_map_t> stream_map;
-
-		// A flag used to determine if an item has changed
-		ItemState state = ItemState::Unknown;
-	};
-
-	struct Application : public MediaRouteApplicationObserver
-	{
-		Application(Orchestrator *orchestrator, const info::Application &app_info)
-			: orchestrator(orchestrator),
-			  app_info(app_info)
-		{
+			return RequestPullStream(vhost_app_name, host_name, app_name, stream_name, 0);
 		}
 
 		//--------------------------------------------------------------------
-		// Implementation of MediaRouteApplicationObserver
+		// Implementation of ocst::Application::CallbackInterface
 		//--------------------------------------------------------------------
-		// Temporarily used until Orchestrator takes stream management
-		bool OnCreateStream(const std::shared_ptr<info::Stream> &info) override
-		{
-			return orchestrator->OnCreateStream(app_info, info);
-		}
-
-		bool OnDeleteStream(const std::shared_ptr<info::Stream> &info) override
-		{
-			return orchestrator->OnDeleteStream(app_info, info);
-		}
-
-		bool OnSendFrame(const std::shared_ptr<info::Stream> &info, const std::shared_ptr<MediaPacket> &packet) override
-		{
-			// Ignore packets
-			return true;
-		}
-
-		ObserverType GetObserverType() override
-		{
-			return ObserverType::Orchestrator;
-		}
-
-		Orchestrator *orchestrator = nullptr;
-		info::Application app_info;
+		bool OnCreateStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
+		bool OnDeleteStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
 	};
-
-	struct VirtualHost
-	{
-		VirtualHost(const info::Host &host_info)
-			: host_info(host_info), state(ItemState::New)
-
-		{
-		}
-
-		void MarkAllAs(ItemState state)
-		{
-			this->state = state;
-
-			for (auto &host : host_list)
-			{
-				host.state = state;
-			}
-
-			for (auto &origin : origin_list)
-			{
-				origin.state = state;
-			}
-		}
-
-		bool MarkAllAs(ItemState expected_old_state, ItemState state)
-		{
-			if (this->state != expected_old_state)
-			{
-				return false;
-			}
-
-			this->state = state;
-
-			for (auto &host : host_list)
-			{
-				if (host.state != expected_old_state)
-				{
-					return false;
-				}
-
-				host.state = state;
-			}
-
-			for (auto &origin : origin_list)
-			{
-				if (origin.state != expected_old_state)
-				{
-					return false;
-				}
-
-				origin.state = state;
-			}
-
-			return true;
-		}
-
-		// Origin Host Info
-		info::Host host_info;
-
-		// The name of VirtualHost (eg: AirenSoft-VHost)
-		ov::String name;
-
-		// Host list
-		std::vector<Host> host_list;
-
-		// Origin list
-		std::vector<Origin> origin_list;
-
-		// Application list
-		std::map<info::application_id_t, std::shared_ptr<Application>> app_map;
-
-		// A flag used to determine if an item has changed
-		ItemState state = ItemState::Unknown;
-	};
-
-	static Orchestrator *GetInstance()
-	{
-		static Orchestrator orchestrator;
-
-		return &orchestrator;
-	}
-
-	bool ApplyOriginMap(const std::vector<info::Host> &host_list);
-
-	const std::vector<std::shared_ptr<Orchestrator::VirtualHost>> &GetVirtualHostList();
-
-	/// Register the module
-	///
-	/// @param module Module to register
-	///
-	/// @return If the module is registered or passed a different type from the previously registered type, false is returned.
-	/// Otherwise, true is returned.
-	bool RegisterModule(const std::shared_ptr<OrchestratorModuleInterface> &module);
-
-	/// Unregister the module
-	///
-	/// @param module Module to unregister
-	///
-	/// @return If the module is not already registered, false is returned. Otherwise, true is returned.
-	bool UnregisterModule(const std::shared_ptr<OrchestratorModuleInterface> &module);
-
-	ov::String GetVhostNameFromDomain(const ov::String &domain_name);
-
-	/// Generate an application name for vhost/app
-	///
-	/// @param vhost_name A name of VirtualHost
-	/// @param app_name An application name
-	///
-	/// @return A new application name corresponding to vhost/app
-	info::VHostAppName ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name) const;
-
-	///  Generate an application name for domain/app
-	///
-	/// @param domain_name A name of the domain
-	/// @param app_name An application name
-	///
-	/// @return A new application name corresponding to domain/app
-	info::VHostAppName ResolveApplicationNameFromDomain(const ov::String &domain_name, const ov::String &app_name);
-
-	bool GetUrlListForLocation(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name, std::vector<ov::String> *url_list);
-
-	/// Create an application and notify the modules
-	///
-	/// @param vhost_name A name of VirtualHost
-	/// @param app_config Application configuration to create
-	///
-	/// @return Creation result
-	///
-	/// @note Automatically DeleteApplication() when application creation fails
-	Result CreateApplication(const info::Host &vhost_info, const cfg::Application &app_config);
-	/// Delete the application and notify the modules
-	///
-	/// @param app_info Application information to delete
-	///
-	/// @return
-	///
-	/// @note If an error occurs during deletion, do not recreate the application
-	Result DeleteApplication(const info::Application &app_info);
-
-	Result Release();
-
-	const info::Application &GetApplicationInfoByName(const ov::String &vhost_name, const ov::String &app_name) const;
-	const info::Application &GetApplicationInfoByVHostAppName(const info::VHostAppName &vhost_app_name) const;
-
-	bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const ov::String &url, off_t offset);
-	bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const ov::String &url)
-	{
-		return RequestPullStream(vhost_app_name, host_name, app_name, stream_name, url, 0);
-	}
-
-	bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, off_t offset);
-	bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name)
-	{
-		return RequestPullStream(vhost_app_name, host_name, app_name, stream_name, 0);
-	}
-
-protected:
-	Orchestrator() = default;
-
-	bool ApplyForVirtualHost(const std::shared_ptr<VirtualHost> &virtual_host);
-
-	/// Compares a list of hosts and adds them to added_host_list if a new entry is found
-	///
-	/// @param host_list The host list
-	/// @param vhost VirtualHost configuration to compare
-	///
-	/// @return Whether it has changed
-	ItemState ProcessHostList(std::vector<Host> *host_list, const cfg::Domain &domain_config) const;
-	/// Compares a list of origin and adds them to added_origin_list if a new entry is found
-	///
-	/// @param origin_list The origin list
-	/// @param new_origin_list Origin configuration to compare
-	///
-	/// @return Whether it has changed
-	ItemState ProcessOriginList(std::vector<Origin> *origin_list, const cfg::Origins &origins_config) const;
-
-	info::application_id_t GetNextAppId();
-
-	std::shared_ptr<pvd::Provider> GetProviderForScheme(const ov::String &scheme);
-	std::shared_ptr<OrchestratorPullProviderModuleInterface> GetProviderModuleForScheme(const ov::String &scheme);
-	std::shared_ptr<pvd::Provider> GetProviderForUrl(const ov::String &url);
-
-	bool ParseVHostAppName(const info::VHostAppName &vhost_app_name, ov::String *vhost_name, ov::String *real_app_name) const;
-
-	std::shared_ptr<VirtualHost> GetVirtualHost(const ov::String &vhost_name);
-	std::shared_ptr<const VirtualHost> GetVirtualHost(const ov::String &vhost_name) const;
-	std::shared_ptr<VirtualHost> GetVirtualHost(const info::VHostAppName &vhost_app_name, ov::String *real_app_name);
-	std::shared_ptr<const VirtualHost> GetVirtualHost(const info::VHostAppName &vhost_app_name, ov::String *real_app_name) const;
-
-	bool GetUrlListForLocationInternal(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **matched_origin, Host **matched_host);
-
-	Result CreateApplicationInternal(const ov::String &vhost_name, const info::Application &app_info);
-	Result CreateApplicationInternal(const info::VHostAppName &vhost_app_name, info::Application *app_info);
-
-	Result NotifyModulesForDeleteEvent(const std::vector<Module> &modules, const info::Application &app_info);
-	Result DeleteApplicationInternal(const ov::String &vhost_name, info::application_id_t app_id);
-	Result DeleteApplicationInternal(const info::Application &app_info);
-
-	const info::Application &GetApplicationInfoInternal(const info::VHostAppName &vhost_app_name) const;
-	const info::Application &GetApplicationInfoInternal(const ov::String &vhost_name, const ov::String &app_name) const;
-	const info::Application &GetApplicationInfoInternal(const ov::String &vhost_name, info::application_id_t app_id) const;
-
-	// Called from Application
-	bool OnCreateStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info);
-	bool OnDeleteStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info);
-
-	std::shared_ptr<MediaRouter> _media_router;
-
-	std::atomic<info::application_id_t> _last_application_id{info::MinApplicationId};
-
-	// Modules
-	std::recursive_mutex _module_list_mutex;
-	std::vector<Module> _module_list;
-
-	mutable std::recursive_mutex _virtual_host_map_mutex;
-	// key: vhost_name
-	std::map<ov::String, std::shared_ptr<VirtualHost>> _virtual_host_map;
-	// ordered vhost list
-	std::vector<std::shared_ptr<VirtualHost>> _virtual_host_list;
-};
+}  // namespace ocst

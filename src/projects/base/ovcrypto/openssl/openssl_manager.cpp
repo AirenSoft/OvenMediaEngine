@@ -166,11 +166,11 @@ namespace ov
 	{
 		if (mode & CRYPTO_LOCK)
 		{
-			OpensslManager::Instance()->MutexLock(n, file, line);
+			OpensslManager::GetInstance()->MutexLock(n, file, line);
 		}
 		else
 		{
-			OpensslManager::Instance()->MutexUnlock(n, file, line);
+			OpensslManager::GetInstance()->MutexUnlock(n, file, line);
 		}
 	}
 }  // namespace ov

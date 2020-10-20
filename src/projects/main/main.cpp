@@ -116,14 +116,14 @@ int main(int argc, char *argv[])
 
 	const bool is_service = parse_option.start_service;
 
-	std::shared_ptr<cfg::Server> server_config = cfg::ConfigManager::Instance()->GetServer();
+	std::shared_ptr<cfg::Server> server_config = cfg::ConfigManager::GetInstance()->GetServer();
 	auto &hosts = server_config->GetVirtualHostList();
 	std::vector<std::shared_ptr<WebConsoleServer>> web_console_servers;
 
 	std::vector<info::Host> host_info_list;
 	std::map<ov::String, bool> vhost_map;
 
-	auto orchestrator = Orchestrator::GetInstance();
+	auto orchestrator = ocst::Orchestrator::GetInstance();
 	auto monitor = mon::Monitoring::GetInstance();
 
 	// Create info::Host
@@ -314,7 +314,7 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 
 	ov::LogWrite::Initialize(parse_option->start_service);
 
-	if (cfg::ConfigManager::Instance()->LoadConfigs(parse_option->config_path) == false)
+	if (cfg::ConfigManager::GetInstance()->LoadConfigs(parse_option->config_path) == false)
 	{
 		logte("An error occurred while load config");
 		return ov::Daemon::State::CHILD_FAIL;

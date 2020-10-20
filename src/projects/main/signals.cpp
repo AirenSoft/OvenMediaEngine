@@ -161,7 +161,7 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 {
 	logti("Trying to reload configuration...");
 
-	auto config_manager = cfg::ConfigManager::Instance();
+	auto config_manager = cfg::ConfigManager::GetInstance();
 
 	if (config_manager->ReloadConfigs() == false)
 	{
@@ -179,7 +179,7 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 		host_info_list.emplace_back(host);
 	}
 
-	if (Orchestrator::GetInstance()->ApplyOriginMap(host_info_list) == false)
+	if (ocst::Orchestrator::GetInstance()->ApplyOriginMap(host_info_list) == false)
 	{
 		logte("Could not reload OriginMap");
 	}

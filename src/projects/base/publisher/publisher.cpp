@@ -163,7 +163,7 @@ namespace pub
 			return stream;
 		}
 
-		auto orchestrator = Orchestrator::GetInstance();
+		auto orchestrator = ocst::Orchestrator::GetInstance();
 		auto &vapp_name = vhost_app_name.ToString();
 		
 		ov::String pull_url;
@@ -251,7 +251,7 @@ namespace pub
 
 	SignedUrlErrCode Publisher::HandleSignedUrl(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedUrl> &signed_url, ov::String &err_message)
 	{
-		auto orchestrator = Orchestrator::GetInstance();
+		auto orchestrator = ocst::Orchestrator::GetInstance();
 		auto &server_config = GetServerConfig();
 		auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Domain());
 

@@ -29,7 +29,7 @@
 #include <config/config.h>
 #include <orchestrator/orchestrator.h>
 
-class MediaRouter : public MediaRouteInterface, public OrchestratorMediaRouterModuleInterface
+class MediaRouter : public MediaRouteInterface, public ocst::MediaRouterModuleInterface
 {
 public:
 	static std::shared_ptr<MediaRouter> Create();
@@ -41,7 +41,7 @@ public:
 	bool Stop();
 
 	//--------------------------------------------------------------------
-	// Implementation of OrchestratorModuleInterface
+	// Implementation of ModuleInterface
 	//--------------------------------------------------------------------
 	bool OnCreateApplication(const info::Application &app_info) override;
 	bool OnDeleteApplication(const info::Application &app_info) override;

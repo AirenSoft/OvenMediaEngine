@@ -102,7 +102,7 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 
 		if (_https_server != nullptr)
 		{
-			auto vhost_list = Orchestrator::GetInstance()->GetVirtualHostList();
+			auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 			_https_server->SetVirtualHostList(vhost_list);
 			_https_server->AddInterceptor(segment_stream_interceptor);
 		}
@@ -314,7 +314,7 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 		}
 
 		auto host_name = request->GetHeader("HOST").Split(":")[0];
-		auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
 		SegmentStreamRequestInfo request_info(
 			vhost_app_name,
 			host_name, app_name, stream_name, file_name);

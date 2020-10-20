@@ -111,7 +111,7 @@ namespace pvd
 
 						auto stream_name = stream_config.GetName().Replace("${Port}", ov::Converter::ToString(port));
 
-						auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationName(vhost_config.GetName(), app_config.GetName());
+						auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationName(vhost_config.GetName(), app_config.GetName());
 
 						stream_map->emplace(
 							std::move(key),
@@ -152,7 +152,7 @@ namespace pvd
 
 			auto address = ov::SocketAddress(server_config.GetIp(), port);
 
-			auto physical_port = PhysicalPortManager::Instance()->CreatePort(socket_type, address);
+			auto physical_port = PhysicalPortManager::GetInstance()->CreatePort(socket_type, address);
 			if (physical_port == nullptr)
 			{
 				logte("Could not initialize phyiscal port for MPEG-TS server: %s", address.ToString().CStr());
@@ -183,7 +183,7 @@ namespace pvd
 			auto stream_port_item = x.second;
 			auto physical_port = stream_port_item->GetPhysicalPort();
 			physical_port->RemoveObserver(this);
-			PhysicalPortManager::Instance()->DeletePort(physical_port);
+			PhysicalPortManager::GetInstance()->DeletePort(physical_port);
 		}
 		_stream_port_map.clear();
 

@@ -23,7 +23,7 @@
 #include <orchestrator/orchestrator.h>
 
 
-class Transcoder : public OrchestratorTranscoderModuleInterface
+class Transcoder : public ocst::TranscoderModuleInterface
 {
 	// class TranscodeApplication;
 public:
@@ -36,7 +36,7 @@ public:
 	bool Stop();
 
 	//--------------------------------------------------------------------
-	// Implementation of OrchestratorModuleInterface
+	// Implementation of ModuleInterface
 	//--------------------------------------------------------------------
 	bool OnCreateApplication(const info::Application &app_info) override;
 	bool OnDeleteApplication(const info::Application &app_info) override;

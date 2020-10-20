@@ -10,7 +10,7 @@
 
 #include <base/common_types.h>
 #include <base/mediarouter/media_route_interface.h>
-#include <orchestrator/data_structure.h>
+#include <orchestrator/data_structures/data_structure.h>
 
 #include <shared_mutex>
 
@@ -19,7 +19,7 @@ namespace pvd
 	class Application;
 	class Stream;
 	// RTMP Server와 같은 모든 Provider는 다음 Interface를 구현하여 MediaRouterInterface에 자신을 등록한다.
-	class Provider : public OrchestratorModuleInterface
+	class Provider : public ocst::ModuleInterface
 	{
 	public:
 		virtual ProviderType GetProviderType() const = 0;
@@ -47,7 +47,7 @@ namespace pvd
 		virtual bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) = 0;
 
 		//--------------------------------------------------------------------
-		// Implementation of OrchestratorModuleInterface
+		// Implementation of ModuleInterface
 		//--------------------------------------------------------------------
 		bool OnCreateApplication(const info::Application &app_info) override;
 		bool OnDeleteApplication(const info::Application &app_info) override;

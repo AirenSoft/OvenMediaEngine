@@ -104,7 +104,7 @@ namespace pub
 
 
 	// All publishers such as WebRTC, HLS and MPEG-DASH has to inherit the Publisher class and implement that interfaces
-	class Publisher : public OrchestratorPublisherModuleInterface
+	class Publisher : public ocst::PublisherModuleInterface
 	{
 	public:
 		virtual bool Start();
@@ -135,7 +135,7 @@ namespace pub
 		virtual bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) = 0;
 
 		//--------------------------------------------------------------------
-		// Implementation of OrchestratorModuleInterface
+		// Implementation of ModuleInterface
 		//--------------------------------------------------------------------
 		bool OnCreateApplication(const info::Application &app_info) override;
 		bool OnDeleteApplication(const info::Application &app_info) override;

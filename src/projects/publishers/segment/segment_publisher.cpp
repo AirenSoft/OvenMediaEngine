@@ -236,12 +236,12 @@ void SegmentPublisher::RequestTableUpdateThread()
 				rtsp_play_app_metrics = nullptr;
 				
 				// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
-				rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
+				rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
 				if (rtsp_live_app_info != nullptr)
 				{
 					rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
 				}
-				rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
+				rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
 				if (rtsp_play_app_info != nullptr)
 				{
 					rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);
@@ -293,12 +293,12 @@ void SegmentPublisher::RequestTableUpdateThread()
 					rtsp_play_app_metrics = nullptr;
 
 					// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
-					rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
+					rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
 					if (rtsp_live_app_info != nullptr)
 					{
 						rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
 					}
-					rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
+					rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
 					if (rtsp_play_app_info != nullptr)
 					{
 						rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);
@@ -460,12 +460,12 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 			rtsp_play_app_metrics = nullptr;
 
 			// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
-			rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
+			rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
 			if (rtsp_live_app_info != nullptr)
 			{
 				rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
 			}
-			rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
+			rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
 			if (rtsp_play_app_info != nullptr)
 			{
 				rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);

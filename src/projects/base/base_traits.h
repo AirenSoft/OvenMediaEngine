@@ -54,7 +54,7 @@ public:
             return false;
         }
 
-        _physical_port = PhysicalPortManager::Instance()->CreatePort(socket_type, address);
+        _physical_port = PhysicalPortManager::GetInstance()->CreatePort(socket_type, address);
 
         if(_physical_port != nullptr)
         {
@@ -72,7 +72,7 @@ public:
         }
 
         _physical_port->RemoveObserver(this);
-        PhysicalPortManager::Instance()->DeletePort(_physical_port);
+        PhysicalPortManager::GetInstance()->DeletePort(_physical_port);
         _physical_port = nullptr;
 
         return true;

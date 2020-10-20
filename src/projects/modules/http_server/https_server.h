@@ -15,7 +15,7 @@
 class HttpsServer : public HttpServer
 {
 public:
-	void SetVirtualHostList(std::vector<std::shared_ptr<Orchestrator::VirtualHost>>& vhost_list);
+	void SetVirtualHostList(std::vector<std::shared_ptr<ocst::VirtualHost>>& vhost_list);
 
 protected:
 	//--------------------------------------------------------------------
@@ -25,5 +25,5 @@ protected:
 	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 
 protected:
-	std::vector<std::shared_ptr<Orchestrator::VirtualHost>> 	_virtual_host_list;
+	std::vector<std::shared_ptr<ocst::VirtualHost>> 	_virtual_host_list;
 };

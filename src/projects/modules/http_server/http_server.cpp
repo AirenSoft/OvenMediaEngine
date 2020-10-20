@@ -26,7 +26,7 @@ bool HttpServer::Start(const ov::SocketAddress &address)
 		return false;
 	}
 
-	_physical_port = PhysicalPortManager::Instance()->CreatePort(ov::SocketType::Tcp, address);
+	_physical_port = PhysicalPortManager::GetInstance()->CreatePort(ov::SocketType::Tcp, address);
 
 	if (_physical_port != nullptr)
 	{
@@ -42,7 +42,7 @@ bool HttpServer::Stop()
 	if (_physical_port != nullptr)
 	{
 		_physical_port->RemoveObserver(this);
-		PhysicalPortManager::Instance()->DeletePort(_physical_port);
+		PhysicalPortManager::GetInstance()->DeletePort(_physical_port);
 		_physical_port = nullptr;
 	}
 

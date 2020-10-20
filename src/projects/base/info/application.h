@@ -13,7 +13,12 @@
 
 #include "stream.h"
 
-class Orchestrator;
+// Forward declaration
+namespace ocst
+{
+	class Orchestrator;
+	class OrchestratorInternal;
+}  // namespace ocst
 
 namespace info
 {
@@ -163,7 +168,9 @@ namespace info
 
 	protected:
 		// These constructors will be called from Orchestrator
-		friend class ::Orchestrator;
+		friend class ocst::Orchestrator;
+		friend class ocst::OrchestratorInternal;
+
 		Application(const info::Host &host_info, application_id_t app_id, const VHostAppName &name, cfg::Application app_config, bool is_dynamic_app);
 		Application(const info::Host &host_info, application_id_t app_id, const VHostAppName &name, bool is_dynamic_app);
 

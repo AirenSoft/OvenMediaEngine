@@ -202,10 +202,10 @@ namespace pvd
 
 			if (url != nullptr)
 			{
-				_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), app_name);
+				_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), app_name);
 				_import_chunk->SetAppName(_app_name);
 
-				auto app_info = Orchestrator::GetInstance()->GetApplicationInfoByVHostAppName(_app_name);
+				auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(_app_name);
 				if (app_info.IsValid())
 				{
 					_app_id = app_info.GetId();
