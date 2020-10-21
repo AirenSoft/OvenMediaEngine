@@ -13,6 +13,7 @@
 #include <memory>
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <modules/physical_port/physical_port_observer.h>
 
 enum class HttpRequestConnectionType
 {
@@ -65,7 +66,7 @@ public:
 	///
 	/// @remark 연결이 이미 해제 된 상태이기 때문에, 이 상태에서는 더 이상 클라이언트로 응답을 보낼 수 없음.
 	/// Closed는 Error가 발생해도 항상 호출되는 것을 보장함
-	virtual void OnHttpClosed(const std::shared_ptr<HttpClient> &client) = 0;
+	virtual void OnHttpClosed(const std::shared_ptr<HttpClient> &client, PhysicalPortDisconnectReason reason) = 0;
 
 protected:
 	static const std::shared_ptr<ov::Data> &GetRequestBody(const std::shared_ptr<HttpRequest> &request);

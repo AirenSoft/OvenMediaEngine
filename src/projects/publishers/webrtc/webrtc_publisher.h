@@ -3,14 +3,15 @@
 #include "base/common_types.h"
 #include "base/publisher/publisher.h"
 #include "base/mediarouter/media_route_application_interface.h"
+#include "base/ovlibrary/message_thread.h"
 #include "rtc_application.h"
 
 #include <orchestrator/orchestrator.h>
 
-
 class WebRtcPublisher : public pub::Publisher,
                         public IcePortObserver,
-                        public RtcSignallingObserver
+                        public RtcSignallingObserver,
+						public ov::MessageThreadObserver<std::shared_ptr<ov::CommonMessage>>
 {
 public:
 	static std::shared_ptr<WebRtcPublisher> Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
@@ -19,6 +20,10 @@ public:
 	~WebRtcPublisher() override;
 
 	bool Stop() override;
+	bool DisconnectSession(const std::shared_ptr<RtcSession> &session);
+
+	// MessageThread Implementation
+	void OnMessage(const std::shared_ptr<ov::CommonMessage> &message) override;
 
 	// IcePortObserver Implementation
 
@@ -70,6 +75,11 @@ public:
     bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
 
 private:
+	enum class MessageCode : uint32_t
+	{
+		DISCONNECT_SESSION = 1,
+	};
+
 	enum class RequestStreamResult : int8_t
 	{
 		init = 0,
@@ -81,7 +91,7 @@ private:
 	};
 
 	bool Start() override;
-	
+	bool DisconnectSessionInternal(const std::shared_ptr<RtcSession> &session);
 
 	std::atomic<session_id_t> _last_issued_session_id { 100 };
 
@@ -106,4 +116,5 @@ private:
 
 	std::shared_ptr<IcePort> _ice_port;
 	std::shared_ptr<RtcSignallingServer> _signalling_server;
+	ov::MessageThread<std::shared_ptr<ov::CommonMessage>>	_message_thread;
 };

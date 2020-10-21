@@ -214,7 +214,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 		});
 
 	web_socket->SetCloseHandler(
-		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> void {
+		[this](const std::shared_ptr<WebSocketClient> &ws_client, PhysicalPortDisconnectReason reason) -> void {
 			auto &client = ws_client->GetClient();
 			auto request = client->GetRequest();
 

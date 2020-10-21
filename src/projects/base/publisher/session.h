@@ -34,11 +34,13 @@ namespace pub
 		{
 			Ready,
 			Started,
+			Stopping,
 			Stopped,
 			Error
 		};
 
 		SessionState GetState();
+		void SetState(SessionState state);
 		virtual void Terminate(ov::String reason);
 
 	private:

@@ -53,6 +53,11 @@ namespace pub
 		return _state;
 	}
 
+	void Session::SetState(SessionState state)
+	{
+		_state = state;
+	}
+
 	void Session::Terminate(ov::String reason)
 	{
 		_state = SessionState::Error;

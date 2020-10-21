@@ -196,7 +196,7 @@ void HttpDefaultInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &clie
 	response->SetStatusCode(status_code);
 }
 
-void HttpDefaultInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client)
+void HttpDefaultInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client, PhysicalPortDisconnectReason reason)
 {
 	// 아무 처리 하지 않아도 됨
 }

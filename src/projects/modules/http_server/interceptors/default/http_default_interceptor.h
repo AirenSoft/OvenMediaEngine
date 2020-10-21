@@ -30,7 +30,7 @@ public:
 	HttpInterceptorResult OnHttpPrepare(const std::shared_ptr<HttpClient> &client) override;
 	HttpInterceptorResult OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data) override;
 	void OnHttpError(const std::shared_ptr<HttpClient> &client, HttpStatusCode status_code) override;
-	void OnHttpClosed(const std::shared_ptr<HttpClient> &client) override;
+	void OnHttpClosed(const std::shared_ptr<HttpClient> &client, PhysicalPortDisconnectReason reason) override;
 
 protected:
 	struct RequestInfo

@@ -100,6 +100,8 @@ bool WebRtcPublisher::Start()
 		return false;
 	}
 
+	_message_thread.Start(ov::MessageThreadObserver<std::shared_ptr<ov::CommonMessage>>::GetSharedPtr());
+
 	return Publisher::Start();
 }
 
@@ -110,7 +112,62 @@ bool WebRtcPublisher::Stop()
 	_signalling_server->RemoveObserver(RtcSignallingObserver::GetSharedPtr());
 	_signalling_server->Stop();
 
+	_message_thread.Stop();
+
 	return Publisher::Stop();
+}
+
+bool WebRtcPublisher::DisconnectSession(const std::shared_ptr<RtcSession> &session)
+{
+	auto message = std::make_shared<ov::CommonMessage>();
+	message->_code = static_cast<uint32_t>(MessageCode::DISCONNECT_SESSION);
+	message->_message = std::make_any<std::shared_ptr<RtcSession>>(session);
+
+	_message_thread.PostMessage(message);
+
+	return true;
+}
+
+bool WebRtcPublisher::DisconnectSessionInternal(const std::shared_ptr<RtcSession> &session)
+{
+	auto stream = std::dynamic_pointer_cast<RtcStream>(session->GetStream());
+
+	stream->RemoveSession(session->GetId());
+	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+	if (stream_metrics != nullptr)
+	{
+		stream_metrics->OnSessionDisconnected(PublisherType::Webrtc);
+	}
+
+	_ice_port->RemoveSession(session);
+	session->Stop();
+
+	StatLog(session->GetWSClient(), stream, session, RequestStreamResult::transfer_completed);
+
+	return true;
+}
+
+void WebRtcPublisher::OnMessage(const std::shared_ptr<ov::CommonMessage> &message)
+{
+	auto code = static_cast<MessageCode>(message->_code);
+	if(code == MessageCode::DISCONNECT_SESSION)
+	{
+		try 
+		{
+			auto session = std::any_cast<std::shared_ptr<RtcSession>>(message->_message);
+			if(session == nullptr)
+			{
+				return;
+			}
+
+			DisconnectSessionInternal(session);
+		}
+		catch(const std::bad_any_cast& e) 
+		{
+			logtc("Wrong message!");
+			return;
+		}
+	}
 }
 
 void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
@@ -215,6 +272,7 @@ void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
 	stat_log(STAT_LOG_WEBRTC_EDGE, "%s", log.CStr());
 }
 
+
 //====================================================================================================
 // monitoring data pure virtual function
 // - collections vector must be insert processed
@@ -310,10 +368,11 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		return false;
 	}
 
-	std::shared_ptr<const SignedUrl> signed_url;
 	// These names are used for testing purposes
+	uint64_t session_expired_time = 0;
 	if (vhost_app_name.ToString().HasSuffix("_insecure") == false)
 	{	
+		std::shared_ptr<const SignedUrl> signed_url;
 		ov::String message;
 		auto result = Publisher::HandleSignedUrl(parsed_url, remote_address, signed_url, message);
 		if(result != pub::SignedUrlErrCode::Success && result != pub::SignedUrlErrCode::Pass)
@@ -321,17 +380,21 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 			logtw("%s", message.CStr());
 			return false;
 		}
-	}
 
-	//TODO(Getroot): pass "StreamExpiredTime" parameter to session to control the playing time 
-	// signed_url->GetStreamExpiredTime();
+		session_expired_time = signed_url->GetStreamExpiredTime();
+	}
 
 	ov::String remote_sdp_text = peer_sdp->ToString();
 	logtd("OnAddRemoteDescription: %s", remote_sdp_text.CStr());
 
-	auto session = RtcSession::Create(application, stream, offer_sdp, peer_sdp, _ice_port, ws_client);
+	auto session = RtcSession::Create(Publisher::GetSharedPtrAs<WebRtcPublisher>(), application, stream, offer_sdp, peer_sdp, _ice_port, ws_client);
 	if (session != nullptr)
 	{
+		if(session_expired_time != 0)
+		{
+			session->SetSessionExpiredTime(session_expired_time);
+		}
+
 		stream->AddSession(session);
 		auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
 		if (stream_metrics != nullptr)
@@ -372,23 +435,12 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 		return false;
 	}
 
-	StatLog(session->GetWSClient(), stream, session, RequestStreamResult::transfer_completed);
-
-	// Session을 Stream에서 정리한다.
-	stream->RemoveSession(session->GetId());
-	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
-	if (stream_metrics != nullptr)
-	{
-		stream_metrics->OnSessionDisconnected(PublisherType::Webrtc);
-	}
-	// IcePort에서 Remove 한다.
-	_ice_port->RemoveSession(session);
-	session->Stop();
+	DisconnectSessionInternal(session);
 
 	return true;
 }
 
-// bitrate info(frome signalling)
+// bitrate info(from signalling)
 uint32_t WebRtcPublisher::OnGetBitrate(const std::shared_ptr<WebSocketClient> &ws_client,
 									   const info::VHostAppName &vhost_app_name,
 									   const ov::String &host_name,
@@ -453,18 +505,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 		case IcePortConnectionState::Disconnected:
 		case IcePortConnectionState::Closed:
 		{
-			StatLog(session->GetWSClient(), stream, session, RequestStreamResult::transfer_completed);
-			// Session을 Stream에서 정리한다.
-			stream->RemoveSession(session->GetId());
-			session->Stop();
-			auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
-			if (stream_metrics != nullptr)
-			{
-				stream_metrics->OnSessionDisconnected(PublisherType::Webrtc);
-			}
-
-			// Signalling에 종료 명령을 내린다.
-			_signalling_server->Disconnect(application->GetName(), stream->GetName(), session->GetPeerSDP());
+			DisconnectSessionInternal(session);
 			break;
 		}
 		default:

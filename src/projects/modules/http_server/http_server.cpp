@@ -297,7 +297,7 @@ void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 
 		if (interceptor != nullptr)
 		{
-			interceptor->OnHttpClosed(client);
+			interceptor->OnHttpClosed(client, reason);
 		}
 		else
 		{
