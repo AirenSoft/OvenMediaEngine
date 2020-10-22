@@ -38,9 +38,10 @@ namespace pvd
 	}
 
 	MpegTsStream::MpegTsStream(StreamSourceType source_type, uint32_t client_id, const info::VHostAppName &vhost_app_name, const ov::String stream_name, std::shared_ptr<ov::Socket> client_socket, const std::shared_ptr<PushProvider> &provider)
-		: PushStream(source_type, client_id, provider)
+		: PushStream(source_type, client_id, provider),
+
+		_vhost_app_name(vhost_app_name)
 	{
-		_vhost_app_name = vhost_app_name;
 		SetName(stream_name);
 		_remote = client_socket;
 	}

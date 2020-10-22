@@ -66,7 +66,9 @@ namespace pvd
 	}
 
 	RtmpStream::RtmpStream(StreamSourceType source_type, uint32_t client_id, std::shared_ptr<ov::Socket> client_socket, const std::shared_ptr<PushProvider> &provider)
-		: PushStream(source_type, client_id, provider)
+		: PushStream(source_type, client_id, provider),
+
+		_vhost_app_name(info::VHostAppName::InvalidVHostAppName())
 	{
 		_remote = client_socket;
 		_import_chunk = std::make_shared<RtmpImportChunk>(RTMP_DEFAULT_CHUNK_SIZE);
@@ -146,7 +148,7 @@ namespace pvd
 			if (process_size < 0)
 			{
 				logtd("Could not parse RTMP packet: [%s/%s] (%u/%u), size: %zu bytes, returns: %d",
-					_app_name.CStr(), _stream_name.CStr(),
+					_vhost_app_name.CStr(), _stream_name.CStr(),
 					_app_id, GetId(),
 					_remained_data->GetLength(),
 					process_size);
@@ -202,17 +204,17 @@ namespace pvd
 
 			if (url != nullptr)
 			{
-				_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), app_name);
-				_import_chunk->SetAppName(_app_name);
+				_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), app_name);
+				_import_chunk->SetAppName(_vhost_app_name);
 
-				auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(_app_name);
+				auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(_vhost_app_name);
 				if (app_info.IsValid())
 				{
 					_app_id = app_info.GetId();
 				}
 				else
 				{
-					logte("%s application does not exist", _app_name.CStr());
+					logte("%s application does not exist", _vhost_app_name.CStr());
 					Stop();
 					return;
 				}
@@ -220,8 +222,12 @@ namespace pvd
 			else
 			{
 				logtw("Could not obtain tcUrl from the RTMP stream: [%s]", app_name);
-				_app_name = info::VHostAppName(app_name);
-				_import_chunk->SetAppName(_app_name);
+
+				// TODO(dimiden): If tcUrl is not provided, it's not possible to determine which VHost the request was received,
+				// so it does not work properly.
+				// So, if there is currently one VHost associated with the RTMP Provider, we need to modifiy it to work without tcUrl.
+				_vhost_app_name = info::VHostAppName("", app_name);
+				_import_chunk->SetAppName(_vhost_app_name);
 			}
 		}
 
@@ -520,7 +526,7 @@ namespace pvd
 		else
 		{
 			logtw("AmfMeta has incompatible codec information. - stream(%s/%s) id(%u/%u) video(%s) audio(%s)",
-				_app_name.CStr(),
+				_vhost_app_name.CStr(),
 				_stream_name.CStr(),
 				_app_id,
 				GetId(),
@@ -545,7 +551,7 @@ namespace pvd
 
 	void RtmpStream::OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
-		logtd("Delete Stream - stream(%s/%s) id(%u/%u)", _app_name.CStr(), _stream_name.CStr(), _app_id, GetId());
+		logtd("Delete Stream - stream(%s/%s) id(%u/%u)", _vhost_app_name.CStr(), _stream_name.CStr(), _app_id, GetId());
 
 		_media_info->video_stream_coming = false;
 		_media_info->audio_stream_coming = false;
@@ -942,7 +948,7 @@ namespace pvd
 			(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
 		{
 			logte("Size Fail - stream(%s/%s) size(%d)",
-				_app_name.CStr(), _stream_name.CStr(),
+				_vhost_app_name.CStr(), _stream_name.CStr(),
 				message->header->payload_size);
 			return false;
 		}
@@ -957,7 +963,7 @@ namespace pvd
 			{
 				if(PublishStream() == false)
 				{
-					logte("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
+					logte("Input create fail -  stream(%s/%s)", _vhost_app_name.CStr(), _stream_name.CStr());
 					return false;
 				}
 			}
@@ -969,7 +975,7 @@ namespace pvd
 				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
 				{
 					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
-						_app_name.CStr(),
+						_vhost_app_name.CStr(),
 						_stream_name.CStr(),
 						_stream_message_cache.size(),
 						MAX_STREAM_MESSAGE_COUNT);
@@ -986,7 +992,7 @@ namespace pvd
 			FlvVideoData flv_video;
 			if(FlvVideoData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_video) == false)
 			{
-				logte("Could not parse flv video (%s/%s)", _app_name.CStr(), GetName().CStr());
+				logte("Could not parse flv video (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
 			}
 
@@ -996,7 +1002,7 @@ namespace pvd
 			auto video_track = GetTrack(RTMP_VIDEO_TRACK_ID);
 			if(video_track == nullptr)
 			{
-				logte("Cannot get video track (%s/%s)", _app_name.CStr(), GetName().CStr());
+				logte("Cannot get video track (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
 			}
 
@@ -1049,7 +1055,7 @@ namespace pvd
 			if (check_gap >= 60)
 			{
 				logtd("Rtmp Provider Info - stream(%s/%s) key(%ums) timestamp(v:%ums/a:%ums/g:%dms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
-					_app_name.CStr(),
+					_vhost_app_name.CStr(),
 					_stream_name.CStr(),
 					_key_frame_interval,
 					_last_video_timestamp,
@@ -1093,7 +1099,7 @@ namespace pvd
 			(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
 		{
 			logte("Size Fail - stream(%s/%s) size(%d)",
-				_app_name.CStr(),
+				_vhost_app_name.CStr(),
 				_stream_name.CStr(),
 				message->header->payload_size);
 
@@ -1108,7 +1114,7 @@ namespace pvd
 			{
 				if(PublishStream() == false)
 				{
-					logte("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
+					logte("Input create fail -  stream(%s/%s)", _vhost_app_name.CStr(), _stream_name.CStr());
 					return false;
 				}
 			}
@@ -1120,7 +1126,7 @@ namespace pvd
 				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
 				{
 					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
-						_app_name.CStr(),
+						_vhost_app_name.CStr(),
 						_stream_name.CStr(),
 						_stream_message_cache.size(),
 						MAX_STREAM_MESSAGE_COUNT);
@@ -1137,7 +1143,7 @@ namespace pvd
 			FlvAudioData flv_audio;
 			if(FlvAudioData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_audio) == false)
 			{
-				logte("Could not parse flv audio (%s/%s)", _app_name.CStr(), GetName().CStr());
+				logte("Could not parse flv audio (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
 			}
 
@@ -1148,7 +1154,7 @@ namespace pvd
 			auto audio_track = GetTrack(RTMP_AUDIO_TRACK_ID);
 			if(audio_track == nullptr)
 			{
-				logte("Cannot get video track (%s/%s)", _app_name.CStr(), GetName().CStr());
+				logte("Cannot get video track (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
 			}
 
@@ -1200,7 +1206,7 @@ namespace pvd
 		SetTrackInfo(_media_info);
 
 		// Publish
-		if(PublishInterleavedChannel(_app_name) == false)
+		if(PublishInterleavedChannel(_vhost_app_name) == false)
 		{
 			Stop();
 			return false;

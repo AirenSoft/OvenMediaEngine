@@ -27,26 +27,32 @@ namespace info
 	constexpr application_id_t MinApplicationId = std::numeric_limits<application_id_t>::min();
 	constexpr application_id_t MaxApplicationId = (InvalidApplicationId - static_cast<application_id_t>(1));
 
+	/// VHostAppName is a name that consists of the same form as "#vhost#app_name"
+	/// This is a combination of the VHost name and app_name.
 	class VHostAppName : protected ov::String
 	{
+		friend class Application;
+
 	public:
-		VHostAppName() = default;
-		explicit VHostAppName(const ov::String &string)
-			: ov::String(string)
+		VHostAppName(const ov::String &vhost_name, const ov::String &app_name);
+
+		static VHostAppName InvalidVHostAppName()
 		{
+			static VHostAppName vhost_app_name;
+			return vhost_app_name;
 		}
 
-		static const VHostAppName &InvalidAppName()
+		bool IsInvalid() const
 		{
-			static VHostAppName invalid_app_name("?InvalidApp?");
-
-			return invalid_app_name;
+			return (_is_valid == false);
 		}
 
-		bool operator==(const VHostAppName &str) const
+		bool operator==(const VHostAppName &another) const
 		{
-			return ov::String::operator==(str);
+			return (_is_valid == another._is_valid) && ov::String::operator==(another);
 		}
+
+		bool Parse(ov::String *vhost_name, ov::String *app_name) const;
 
 		const ov::String &ToString() const
 		{
@@ -57,6 +63,11 @@ namespace info
 		{
 			return ov::String::CStr();
 		}
+
+	protected:
+		VHostAppName();
+
+		bool _is_valid = false;
 	};
 
 	class Host;	 // For storing parent

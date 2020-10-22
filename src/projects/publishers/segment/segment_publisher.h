@@ -21,23 +21,23 @@ class PlaylistRequestInfo
 {
 public:
 	PlaylistRequestInfo(const PublisherType &type, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const ov::String &ip, const ov::String &session_id)
+		: _publisher_type(type),
+		_vhost_app_name(vhost_app_name),
+		_stream_name(stream_name),
+		_ip_address(ip),
+		_session_id(session_id)
 	{
-		_publisher_type = type;
-		_session_id = session_id;
-		_vhost_app_name = vhost_app_name;
-		_stream_name = stream_name;
-		_ip_address = ip;
 		_last_requested_time = std::chrono::system_clock::now();
 	}
 
 	PlaylistRequestInfo(const PlaylistRequestInfo &info)
+		: _publisher_type(info._publisher_type),
+		_vhost_app_name(info._vhost_app_name),
+		_stream_name(info._stream_name),
+		_ip_address(info._ip_address),
+		_session_id(info._session_id),
+		_last_requested_time(info._last_requested_time)
 	{
-		_publisher_type = info._publisher_type;
-		_session_id = info._session_id;
-		_vhost_app_name = info._vhost_app_name;
-		_stream_name = info._stream_name;
-		_ip_address = info._ip_address;
-		_last_requested_time = info._last_requested_time;
 	}
 
 	bool IsTooOld()

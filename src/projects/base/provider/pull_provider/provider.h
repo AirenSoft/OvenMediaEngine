@@ -28,11 +28,11 @@ namespace pvd
 		};
 
 		PullingItem(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
+			: _vhost_app_name(vhost_app_name),
+			_stream_name(stream_name),
+			_url_list(url_list),
+			_offset(offset)
 		{
-			_vhost_app_name = vhost_app_name;
-			_stream_name = stream_name;
-			_url_list = url_list;
-			_offset = offset;
 		}
 
 		void SetState(PullingItemState state)

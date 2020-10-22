@@ -412,35 +412,10 @@ namespace ocst
 		return GetProviderForScheme(parsed_url->Scheme());
 	}
 
-	bool OrchestratorInternal::ParseVHostAppName(const info::VHostAppName &vhost_app_name, ov::String *vhost_name, ov::String *real_app_name) const
-	{
-		auto tokens = vhost_app_name.ToString().Split("#");
-
-		if (tokens.size() == 3)
-		{
-			// #<vhost_name>#<app_name>
-			OV_ASSERT2(tokens[0] == "");
-
-			if (vhost_name != nullptr)
-			{
-				*vhost_name = tokens[1];
-			}
-
-			if (real_app_name != nullptr)
-			{
-				*real_app_name = tokens[2];
-			}
-			return true;
-		}
-
-		OV_ASSERT2(false);
-		return false;
-	}
-
 	info::VHostAppName OrchestratorInternal::ResolveApplicationName(const ov::String &vhost_name, const ov::String &app_name) const
 	{
 		// Replace all # to _
-		return info::VHostAppName(ov::String::FormatString("#%s#%s", vhost_name.Replace("#", "_").CStr(), app_name.Replace("#", "_").CStr()));
+		return info::VHostAppName(vhost_name, app_name);
 	}
 
 	std::shared_ptr<ocst::VirtualHost> OrchestratorInternal::GetVirtualHost(const ov::String &vhost_name)
@@ -471,7 +446,7 @@ namespace ocst
 	{
 		ov::String vhost_name;
 
-		if (ParseVHostAppName(vhost_app_name, &vhost_name, real_app_name))
+		if (vhost_app_name.Parse(&vhost_name, real_app_name))
 		{
 			return GetVirtualHost(vhost_name);
 		}
@@ -485,7 +460,7 @@ namespace ocst
 	{
 		ov::String vhost_name;
 
-		if (ParseVHostAppName(vhost_app_name, &vhost_name, real_app_name))
+		if (vhost_app_name.Parse(&vhost_name, real_app_name))
 		{
 			return GetVirtualHost(vhost_name);
 		}
@@ -676,7 +651,7 @@ namespace ocst
 
 		ov::String vhost_name;
 
-		if (ParseVHostAppName(vhost_app_name, &vhost_name, nullptr))
+		if (vhost_app_name.Parse(&vhost_name, nullptr))
 		{
 			auto vhost = GetVirtualHost(vhost_name);
 			*app_info = info::Application(vhost->host_info, GetNextAppId(), vhost_app_name, true);
@@ -753,7 +728,7 @@ namespace ocst
 	{
 		ov::String vhost_name;
 
-		if (ParseVHostAppName(app_info.GetName(), &vhost_name, nullptr) == false)
+		if (app_info.GetName().Parse(&vhost_name, nullptr) == false)
 		{
 			return Result::Failed;
 		}
@@ -765,7 +740,7 @@ namespace ocst
 	{
 		ov::String vhost_name;
 
-		if (ParseVHostAppName(vhost_app_name, &vhost_name, nullptr))
+		if (vhost_app_name.Parse(&vhost_name, nullptr))
 		{
 			auto vhost = GetVirtualHost(vhost_name);
 

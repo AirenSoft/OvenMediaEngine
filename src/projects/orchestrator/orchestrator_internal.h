@@ -46,8 +46,6 @@ namespace ocst
 		std::shared_ptr<PullProviderModuleInterface> GetProviderModuleForScheme(const ov::String &scheme);
 		std::shared_ptr<pvd::Provider> GetProviderForUrl(const ov::String &url);
 
-		bool ParseVHostAppName(const info::VHostAppName &vhost_app_name, ov::String *vhost_name, ov::String *real_app_name) const;
-
 		/// Generate an application name for vhost/app
 		///
 		/// @param vhost_name A name of VirtualHost
