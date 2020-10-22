@@ -10,21 +10,20 @@
 
 #include "orchestrator_internal.h"
 
-//
-// Orchestrator is responsible for passing commands to registered modules, such as Provider/MediaRouter/Transcoder/Publisher.
-//
-// Orchestrator will upgrade to perform the following roles:
-//
-// 1. The publisher can request the provider to create a stream.
-// 2. Other modules may request Provider/Publisher traffic information. (Especially, it will be used by the RESTful API server)
-// 3. Create or manage new applications.
-//    For example, if some module calls Orchestrator::CreateApplication(), the Orchestrator will create a new app
-//    using the APIs of Providers, MediaRouter, and Publishers as appropriate.
-//
-// TODO(dimiden): Modification is required so that the module can be managed per Host
-
 namespace ocst
 {
+	//
+	// Orchestrator is responsible for passing commands to registered modules, such as Provider/MediaRouter/Transcoder/Publisher.
+	//
+	// Orchestrator will upgrade to perform the following roles:
+	//
+	// 1. The publisher can request the provider to create a stream.
+	// 2. Other modules may request Provider/Publisher traffic information. (Especially, it will be used by the RESTful API server)
+	// 3. Create or manage new applications.
+	//    For example, if some module calls Orchestrator::CreateApplication(), the Orchestrator will create a new app
+	//    using the APIs of Providers, MediaRouter, and Publishers as appropriate.
+	//
+	// TODO(dimiden): Modification is required so that the module can be managed per Host
 	class Orchestrator : public ov::Singleton<Orchestrator>,
 						 protected OrchestratorInternal
 	{
@@ -113,5 +112,9 @@ namespace ocst
 		//--------------------------------------------------------------------
 		bool OnCreateStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
 		bool OnDeleteStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
+
+	protected:
+		std::recursive_mutex _module_list_mutex;
+		mutable std::recursive_mutex _virtual_host_map_mutex;
 	};
 }  // namespace ocst

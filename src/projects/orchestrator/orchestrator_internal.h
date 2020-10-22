@@ -16,6 +16,8 @@
 
 namespace ocst
 {
+	/// OrchestratorInternal contains the internal implementation in which Orchestrator operates and excludes locking.
+	/// Therefore, OrchestratorInternal should not be used directly; it must be used with Orchestrator.
 	class OrchestratorInternal : public Application::CallbackInterface
 	{
 	protected:
@@ -77,10 +79,8 @@ namespace ocst
 		std::atomic<info::application_id_t> _last_application_id{info::MinApplicationId};
 
 		// Modules
-		std::recursive_mutex _module_list_mutex;
 		std::vector<Module> _module_list;
 
-		mutable std::recursive_mutex _virtual_host_map_mutex;
 		// key: vhost_name
 		std::map<ov::String, std::shared_ptr<VirtualHost>> _virtual_host_map;
 		// ordered vhost list
