@@ -381,7 +381,10 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 			return false;
 		}
 
-		session_expired_time = signed_url->GetStreamExpiredTime();
+		if(signed_url != nullptr)
+		{
+			session_expired_time = signed_url->GetStreamExpiredTime();
+		}
 	}
 
 	ov::String remote_sdp_text = peer_sdp->ToString();
