@@ -38,7 +38,7 @@ namespace pvd
 
 		for(auto &url : url_list)
 		{
-			auto parsed_url = ov::Url::Parse(url.CStr());
+			auto parsed_url = ov::Url::Parse(url);
 			if(parsed_url)
 			{
 				_url_list.push_back(parsed_url);

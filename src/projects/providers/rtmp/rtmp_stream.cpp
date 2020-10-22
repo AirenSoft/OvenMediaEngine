@@ -200,7 +200,7 @@ namespace pvd
 
 		// Parse the URL to obtain the domain name
 		{
-			auto url = ov::Url::Parse(tc_url.CStr());
+			auto url = ov::Url::Parse(tc_url);
 
 			if (url != nullptr)
 			{

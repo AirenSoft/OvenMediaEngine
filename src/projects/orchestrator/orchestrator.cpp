@@ -347,7 +347,7 @@ namespace ocst
 		const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
 		const ov::String &url, off_t offset)
 	{
-		auto parsed_url = ov::Url::Parse(url.CStr());
+		auto parsed_url = ov::Url::Parse(url);
 
 		if (parsed_url != nullptr)
 		{
@@ -470,7 +470,9 @@ namespace ocst
 		{
 			auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 
-			if (OrchestratorInternal::GetUrlListForLocation(vhost_app_name, host_name, stream_name, &url_list, &matched_origin, &matched_host) == false)
+			std::vector<ov::String> url_list_in_map;
+
+			if (OrchestratorInternal::GetUrlListForLocation(vhost_app_name, host_name, stream_name, &url_list_in_map, &matched_origin, &matched_host) == false)
 			{
 				logte("Could not find Origin for the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
 				return false;
@@ -517,6 +519,24 @@ namespace ocst
 					logte("Could not create an application: %s, reason: %d", vhost_app_name.CStr(), static_cast<int>(result));
 					return false;
 				}
+			}
+
+			if (request_from->HasQueryString())
+			{
+				// Combine query string with the URL
+				for (auto url : url_list_in_map)
+				{
+					auto parsed_url = ov::Url::Parse(url);
+
+					url.Append(parsed_url->HasQueryString() ? '&' : '?');
+					url.Append(request_from->Query());
+
+					url_list.push_back(url);
+				}
+			}
+			else
+			{
+				url_list = std::move(url_list_in_map);
 			}
 		}
 

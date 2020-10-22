@@ -107,12 +107,13 @@ namespace ov
 		return result_string;
 	}
 
-	std::shared_ptr<const Url> Url::Parse(const std::string &url)
+	std::shared_ptr<const Url> Url::Parse(const ov::String &url)
 	{
 		auto object = std::make_shared<Url>();
 		std::smatch matches;
+		std::string url_string = url.CStr();
 
-		object->_source = url.c_str();
+		object->_source = url;
 
 		// <scheme>://<host>[:<port>][/<path/to/resource>][?<query string>]
 		// Group 1: <scheme>
@@ -123,7 +124,7 @@ namespace ov
 		// Group 6: <path>
 		// Group 7: ?<query string>
 		// Group 8: <query string>
-		if (std::regex_search(url, matches, std::regex(R"((.+?)://([^:/]+)(:([0-9]+))?(/([^\?]+)?)?(\?([^\?]+)?(.+)?)?)")) == false)
+		if (std::regex_search(url_string, matches, std::regex(R"((.+?)://([^:/]+)(:([0-9]+))?(/([^\?]+)?)?(\?([^\?]+)?(.+)?)?)")) == false)
 		{
 			return nullptr;
 		}
@@ -132,7 +133,11 @@ namespace ov
 		object->_host = std::string(matches[2]).c_str();
 		object->_port = ov::Converter::ToUInt32(std::string(matches[4]).c_str());
 		object->_path = std::string(matches[5]).c_str();
-		object->_query_string = std::string(matches[8]).c_str();
+		object->_has_query_string = matches[7].matched;
+		if(object->_has_query_string)
+		{
+			object->_query_string = std::string(matches[8]).c_str();
+		}
 
 		// split <path> to /<app>/<stream>/<file> (4 tokens)
 		auto tokens = object->_path.Split("/");
@@ -160,39 +165,41 @@ namespace ov
 
 	void Url::ParseQueryIfNeeded() const
 	{
+		if ((_has_query_string == false) || _query_parsed)
+		{
+			return;
+		}
+
+		auto lock_guard = std::lock_guard(_query_map_mutex);
+
+		// DCL
 		if (_query_parsed == false)
 		{
-			auto lock_guard = std::lock_guard(_query_map_mutex);
+			_query_parsed = true;
 
-			// DCL
-			if (_query_parsed == false)
+			// Split the query string into the map
+			if (_query_string.IsEmpty() == false)
 			{
-				_query_parsed = true;
+				const auto &query_list = _query_string.Split("&");
 
-				// Split the query string into the map
-				if (_query_string.IsEmpty() == false)
+				for (auto &query : query_list)
 				{
-					const auto &query_list = _query_string.Split("&");
+					auto tokens = query.Split("=", 2);
 
-					for (auto &query : query_list)
+					if (tokens.size() == 2)
 					{
-						auto tokens = query.Split("=", 2);
-
-						if (tokens.size() == 2)
-						{
-							_query_map[tokens[0]] = Decode(tokens[1]);
-						}
-						else
-						{
-							_query_map[query] = "";
-						}
+						_query_map[tokens[0]] = Decode(tokens[1]);
+					}
+					else
+					{
+						_query_map[query] = "";
 					}
 				}
 			}
-			else
-			{
-				// The query is parsed in another thread
-			}
+		}
+		else
+		{
+			// The query is parsed in another thread
 		}
 	}
 

@@ -88,7 +88,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 {
 	auto request = client->GetRequest();
 	auto uri = request->GetUri();
-	auto parsed_url = ov::Url::Parse(uri.CStr());
+	auto parsed_url = ov::Url::Parse(uri);
 
 	if (parsed_url == nullptr)
 	{

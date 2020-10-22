@@ -128,7 +128,7 @@ void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 	}
 
 	uint32_t request_id = json_request_id.asUInt();
-	auto url = ov::Url::Parse(json_request_url.asString());
+	auto url = ov::Url::Parse(json_request_url.asString().c_str());
 	if(url == nullptr)
 	{
 		ResponseResult(remote, OVT_PAYLOAD_TYPE_ERROR, packet->SessionId(), json_request_id.asUInt(), 404, "An invalid request : Url is not valid");

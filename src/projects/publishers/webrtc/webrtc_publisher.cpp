@@ -305,7 +305,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	RequestStreamResult result = RequestStreamResult::init;
 	auto request = ws_client->GetClient()->GetRequest();
 	auto uri = request->GetUri();
-	auto parsed_url = ov::Url::Parse(uri.CStr());
+	auto parsed_url = ov::Url::Parse(uri);
 
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
 	if(stream == nullptr)
@@ -356,7 +356,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 	auto request = ws_client->GetClient()->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
 	auto uri = request->GetUri();
-	auto parsed_url = ov::Url::Parse(uri.CStr());
+	auto parsed_url = ov::Url::Parse(uri);
 
 	if (parsed_url == nullptr)
 	{

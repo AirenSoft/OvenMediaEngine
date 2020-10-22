@@ -399,7 +399,7 @@ namespace ocst
 	std::shared_ptr<pvd::Provider> OrchestratorInternal::GetProviderForUrl(const ov::String &url)
 	{
 		// Find a provider type using the scheme
-		auto parsed_url = ov::Url::Parse(url.CStr());
+		auto parsed_url = ov::Url::Parse(url);
 
 		if (url == nullptr)
 		{
@@ -442,7 +442,7 @@ namespace ocst
 		return vhost_item->second;
 	}
 
-	std::shared_ptr<ocst::VirtualHost> OrchestratorInternal::GetVirtualHost(const info::VHostAppName &vhost_app_name, ov::String *real_app_name)
+	std::shared_ptr<ocst::VirtualHost> OrchestratorInternal::GetVirtualHost(const info::VHostAppName &vhost_app_name)
 	{
 		if (vhost_app_name.IsValid())
 		{
@@ -454,7 +454,7 @@ namespace ocst
 		return nullptr;
 	}
 
-	std::shared_ptr<const ocst::VirtualHost> OrchestratorInternal::GetVirtualHost(const info::VHostAppName &vhost_app_name, ov::String *real_app_name) const
+	std::shared_ptr<const ocst::VirtualHost> OrchestratorInternal::GetVirtualHost(const info::VHostAppName &vhost_app_name) const
 	{
 		if (vhost_app_name.IsValid())
 		{
@@ -468,8 +468,7 @@ namespace ocst
 
 	bool OrchestratorInternal::GetUrlListForLocation(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **matched_origin, Host **matched_host)
 	{
-		ov::String real_app_name;
-		auto vhost = GetVirtualHost(vhost_app_name, &real_app_name);
+		auto vhost = GetVirtualHost(vhost_app_name);
 
 		if (vhost == nullptr)
 		{
@@ -483,7 +482,7 @@ namespace ocst
 		auto &host_list = vhost->host_list;
 		auto &origin_list = vhost->origin_list;
 
-		ov::String location = ov::String::FormatString("/%s/%s", real_app_name.CStr(), stream_name.CStr());
+		ov::String location = ov::String::FormatString("/%s/%s", vhost_app_name.GetAppName().CStr(), stream_name.CStr());
 
 		// Find the host using the location
 		for (auto &host : host_list)
@@ -529,7 +528,7 @@ namespace ocst
 				//                        ~~ <= remaining part
 				auto remaining_part = location.Substring(origin.location.GetLength());
 
-				logtd("Found: location: %s (app: %s, stream: %s), remaining_part: %s", origin.location.CStr(), real_app_name.CStr(), stream_name.CStr(), remaining_part.CStr());
+				logtd("Found: location: %s (app: %s, stream: %s), remaining_part: %s", origin.location.CStr(), vhost_app_name.GetAppName().CStr(), stream_name.CStr(), remaining_part.CStr());
 
 				for (auto url : origin.url_list)
 				{
@@ -544,10 +543,21 @@ namespace ocst
 					url.Prepend("://");
 					url.Prepend(origin.scheme);
 
-					// Append remaining_part
-					url.Append(remaining_part);
+					// Exclude query string from url
+					auto index = url.IndexOf('?');
+					auto url_part = url.Substring(0, index);
+					auto another_part = url.Substring(index + 1);
 
-					url_list->push_back(url);
+					// Append remaining_part
+					url_part.Append(remaining_part);
+
+					if(index >= 0)
+					{
+						url_part.Append('?');
+						url_part.Append(another_part);
+					}
+
+					url_list->push_back(url_part);
 				}
 
 				found_matched_origin = (url_list->size() > 0) ? &origin : nullptr;

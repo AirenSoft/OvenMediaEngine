@@ -56,8 +56,8 @@ namespace ocst
 
 		std::shared_ptr<VirtualHost> GetVirtualHost(const ov::String &vhost_name);
 		std::shared_ptr<const VirtualHost> GetVirtualHost(const ov::String &vhost_name) const;
-		std::shared_ptr<VirtualHost> GetVirtualHost(const info::VHostAppName &vhost_app_name, ov::String *real_app_name);
-		std::shared_ptr<const VirtualHost> GetVirtualHost(const info::VHostAppName &vhost_app_name, ov::String *real_app_name) const;
+		std::shared_ptr<VirtualHost> GetVirtualHost(const info::VHostAppName &vhost_app_name);
+		std::shared_ptr<const VirtualHost> GetVirtualHost(const info::VHostAppName &vhost_app_name) const;
 
 		bool GetUrlListForLocation(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name, std::vector<ov::String> *url_list, Origin **matched_origin, Host **matched_host);
 
