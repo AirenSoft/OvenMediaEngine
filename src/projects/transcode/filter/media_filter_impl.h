@@ -9,27 +9,28 @@
 
 #pragma once
 
-#include "../transcode_context.h"
-#include "../codec/transcode_base.h"
-
-#include <cstdint>
-#include <vector>
-#include <memory>
 #include <algorithm>
+#include <cstdint>
+#include <memory>
 #include <thread>
+#include <vector>
+
+#include "../codec/transcode_base.h"
+#include "../transcode_context.h"
 
 extern "C"
 {
 #include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
+#include <libavformat/avformat.h>
 #include <libavutil/opt.h>
 }
 
+#include <base/info/application.h>
+#include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
 #include <base/mediarouter/media_type.h>
-#include <base/info/application.h>
 
 class MediaFilterImpl
 {

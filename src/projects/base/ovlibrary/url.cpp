@@ -7,7 +7,9 @@
 //
 //==============================================================================
 #include "url.h"
+
 #include <base/ovlibrary/converter.h>
+
 #include <regex>
 
 namespace ov
@@ -105,16 +107,16 @@ namespace ov
 		return result_string;
 	}
 
-	std::shared_ptr<const Url> Url::Parse(const std::string &url, bool make_query_map)
+	std::shared_ptr<const Url> Url::Parse(const std::string &url)
 	{
 		auto object = std::make_shared<Url>();
 		std::smatch matches;
 
 		object->_source = url.c_str();
 
-		// <scheme>://<domain>[:<port>][/<path/to/resource>][?<query string>]
+		// <scheme>://<host>[:<port>][/<path/to/resource>][?<query string>]
 		// Group 1: <scheme>
-		// Group 2: <domain>
+		// Group 2: <host>
 		// Group 3: :<port>
 		// Group 4: <port>
 		// Group 5: /<path>
@@ -127,7 +129,7 @@ namespace ov
 		}
 
 		object->_scheme = std::string(matches[1]).c_str();
-		object->_domain = std::string(matches[2]).c_str();
+		object->_host = std::string(matches[2]).c_str();
 		object->_port = ov::Converter::ToUInt32(std::string(matches[4]).c_str());
 		object->_path = std::string(matches[5]).c_str();
 		object->_query_string = std::string(matches[8]).c_str();
@@ -153,34 +155,51 @@ namespace ov
 				break;
 		}
 
-		// Split the query string into the map
-		if (make_query_map && (object->_query_string.IsEmpty() == false))
+		return std::move(object);
+	}
+
+	void Url::ParseQueryIfNeeded() const
+	{
+		if (_query_parsed == false)
 		{
-			auto &query_map = object->_query_map;
-			const auto &query_list = object->_query_string.Split("&");
+			auto lock_guard = std::lock_guard(_query_map_mutex);
 
-			for (auto &query : query_list)
+			// DCL
+			if (_query_parsed == false)
 			{
-				auto tokens = query.Split("=", 2);
+				_query_parsed = true;
 
-				if (tokens.size() == 2)
+				// Split the query string into the map
+				if (_query_string.IsEmpty() == false)
 				{
-					query_map[tokens[0]] = Decode(tokens[1]);
-				}
-				else
-				{
-					query_map[query] = "";
+					const auto &query_list = _query_string.Split("&");
+
+					for (auto &query : query_list)
+					{
+						auto tokens = query.Split("=", 2);
+
+						if (tokens.size() == 2)
+						{
+							_query_map[tokens[0]] = Decode(tokens[1]);
+						}
+						else
+						{
+							_query_map[query] = "";
+						}
+					}
 				}
 			}
+			else
+			{
+				// The query is parsed in another thread
+			}
 		}
-
-		return std::move(object);
 	}
 
 	void Url::Print() const
 	{
 		logi("URL Parser", "%s %s %d %s %s %s %s",
-			 _scheme.CStr(), _domain.CStr(), _port,
+			 _scheme.CStr(), _host.CStr(), _port,
 			 _app.CStr(), _stream.CStr(), _file.CStr(), _query_string.CStr());
 	}
 
@@ -189,7 +208,7 @@ namespace ov
 		return ov::String::FormatString(
 			"%s://%s%s%s%s%s",
 			_scheme.CStr(),
-			_domain.CStr(), (_port > 0) ? ov::String::FormatString(":%d", _port).CStr() : "",
+			_host.CStr(), (_port > 0) ? ov::String::FormatString(":%d", _port).CStr() : "",
 			_path.CStr(), ((include_query_string == false) || _query_string.IsEmpty()) ? "" : "?", include_query_string ? _query_string.CStr() : "");
 	}
 
@@ -200,7 +219,7 @@ namespace ov
 		description.AppendFormat(
 			"%s://%s%s%s%s%s (app: %s, stream: %s, file: %s)",
 			_scheme.CStr(),
-			_domain.CStr(), (_port > 0) ? ov::String::FormatString(":%d", _port).CStr() : "",
+			_host.CStr(), (_port > 0) ? ov::String::FormatString(":%d", _port).CStr() : "",
 			_path.CStr(), _query_string.IsEmpty() ? "" : "?", _query_string.CStr(),
 			_app.CStr(), _stream.CStr(), _file.CStr());
 

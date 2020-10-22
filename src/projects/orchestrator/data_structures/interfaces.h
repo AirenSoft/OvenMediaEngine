@@ -52,13 +52,17 @@ namespace ocst
 
 		/// Called when another module is requested to pull stream list
 		///
+		/// @param request_from Source from which PullStream() invoked (Mainly provided when requested by Publisher)
 		/// @param app_info An information of the application
 		/// @param stream_name A stream name to create
 		/// @param url_list The streaming URLs to pull
 		/// @param offset Specifies the starting point of the streaming URL (unit: milliseconds)
 		///
 		/// @return Newly created stream instance
-		virtual std::shared_ptr<pvd::Stream> PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset) = 0;
+		virtual std::shared_ptr<pvd::Stream> PullStream(
+			const std::shared_ptr<const ov::Url> &request_from,
+			const info::Application &app_info, const ov::String &stream_name,
+			const std::vector<ov::String> &url_list, off_t offset) = 0;
 
 		virtual bool StopStream(const info::Application &app_info, const std::shared_ptr<pvd::Stream> &stream) = 0;
 	};

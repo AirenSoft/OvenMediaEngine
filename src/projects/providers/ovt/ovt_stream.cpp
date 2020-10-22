@@ -155,13 +155,13 @@ namespace pvd
 			return false;
 		}
 
-		ov::SocketAddress socket_address(_curr_url->Domain(), _curr_url->Port());
+		ov::SocketAddress socket_address(_curr_url->Host(), _curr_url->Port());
 
 		auto error = _client_socket.Connect(socket_address, 1000);
 		if (error != nullptr)
 		{
 			_state = State::ERROR;
-			logte("Cannot connect to origin server (%s) : %s:%d", error->GetMessage().CStr(), _curr_url->Domain().CStr(), _curr_url->Port());
+			logte("Cannot connect to origin server (%s) : %s:%d", error->GetMessage().CStr(), _curr_url->Host().CStr(), _curr_url->Port());
 			return false;
 		}
 

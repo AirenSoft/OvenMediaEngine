@@ -342,7 +342,10 @@ namespace ocst
 		return OrchestratorInternal::GetApplicationInfo(vhost_app_name);
 	}
 
-	bool Orchestrator::RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const ov::String &url, off_t offset)
+	bool Orchestrator::RequestPullStream(
+		const std::shared_ptr<const ov::Url> &request_from,
+		const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
+		const ov::String &url, off_t offset)
 	{
 		auto parsed_url = ov::Url::Parse(url.CStr());
 
@@ -399,7 +402,7 @@ namespace ocst
 				  vhost_app_name.CStr(), stream_name.CStr(),
 				  GetModuleTypeName(provider_module->GetModuleType()).CStr());
 
-			auto stream = provider_module->PullStream(app_info, stream_name, {source}, offset);
+			auto stream = provider_module->PullStream(request_from, app_info, stream_name, {source}, offset);
 
 			if (stream != nullptr)
 			{
@@ -447,7 +450,11 @@ namespace ocst
 		return false;
 	}
 
-	bool Orchestrator::RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, off_t offset)
+	// Pull a stream using Origin map
+	bool Orchestrator::RequestPullStream(
+		const std::shared_ptr<const ov::Url> &request_from,
+		const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
+		off_t offset)
 	{
 		std::shared_ptr<PullProviderModuleInterface> provider_module;
 		auto app_info = info::Application::GetInvalidApplication();
@@ -457,6 +464,8 @@ namespace ocst
 
 		Origin *matched_origin = nullptr;
 		Host *matched_host = nullptr;
+
+		auto &host_name = request_from->Host();
 
 		{
 			auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
@@ -515,7 +524,7 @@ namespace ocst
 			  vhost_app_name.CStr(), stream_name.CStr(),
 			  GetModuleTypeName(provider_module->GetModuleType()).CStr());
 
-		auto stream = provider_module->PullStream(app_info, stream_name, url_list, offset);
+		auto stream = provider_module->PullStream(request_from, app_info, stream_name, url_list, offset);
 
 		if (stream != nullptr)
 		{
@@ -526,7 +535,7 @@ namespace ocst
 			auto &origin_stream_map = matched_origin->stream_map;
 			auto exists_in_origin = (origin_stream_map.find(stream_id) != origin_stream_map.end());
 
-			auto key_pair = std::pair(host_name, app_name);
+			auto key_pair = std::pair(host_name, vhost_app_name.GetAppName());
 
 			auto &host_stream_map = matched_host->stream_map[key_pair];
 			bool exists_in_domain = (host_stream_map.find(stream_id) != host_stream_map.end());

@@ -204,7 +204,7 @@ namespace pvd
 
 			if (url != nullptr)
 			{
-				_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), app_name);
+				_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Host(), app_name);
 				_import_chunk->SetAppName(_vhost_app_name);
 
 				auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(_vhost_app_name);

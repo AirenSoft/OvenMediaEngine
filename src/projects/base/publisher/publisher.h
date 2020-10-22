@@ -114,7 +114,7 @@ namespace pub
 
 		// First GetStream(vhost_app_name, stream_name) and if it fails pull stream by the orchetrator
 		// If an url is set, the url is higher priority than OriginMap
-		std::shared_ptr<Stream> PullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const std::shared_ptr<const ov::Url> &request);
+		std::shared_ptr<Stream> PullStream(const std::shared_ptr<const ov::Url> &request_from, const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name);
 		std::shared_ptr<Stream> GetStream(const info::VHostAppName &vhost_app_name, const ov::String &stream_name);
 		template <typename T>
 		std::shared_ptr<T> GetStreamAs(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)

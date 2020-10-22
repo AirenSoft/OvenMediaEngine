@@ -93,18 +93,53 @@ namespace ocst
 		const info::Application &GetApplicationInfo(const ov::String &vhost_name, const ov::String &app_name) const;
 		const info::Application &GetApplicationInfo(const info::VHostAppName &vhost_app_name) const;
 
-		// Pull a stream using specified URL
-		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const ov::String &url, off_t offset);
-		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const ov::String &url)
+		/// Pull a stream using specified URL with offset
+		///
+		/// @param request_from Source from which RequestPullStream() invoked (Mainly provided when requested by Publisher)
+		/// @param vhost_app_name When the URL is pulled, its stream is created in this vhost_name and app_name
+		/// @param stream_name When the URL is pulled, its stream is created in this stream_name
+		/// @param url URL to pull
+		/// @param offset Parameters to be used when you want to pull from a certain point (available only when the provider supports that)
+		bool RequestPullStream(
+			const std::shared_ptr<const ov::Url> &request_from,
+			const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
+			const ov::String &url, off_t offset);
+
+		/// Pull a stream using specified URL
+		///
+		/// @param request_from Source from which RequestPullStream() invoked (Mainly provided when requested by Publisher)
+		/// @param vhost_app_name When the URL is pulled, its stream is created in this vhost_name and app_name
+		/// @param stream_name When the URL is pulled, its stream is created in this stream_name
+		/// @param url URL to pull
+		bool RequestPullStream(
+			const std::shared_ptr<const ov::Url> &request_from,
+			const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
+			const ov::String &url)
 		{
-			return RequestPullStream(vhost_app_name, host_name, app_name, stream_name, url, 0);
+			return RequestPullStream(request_from, vhost_app_name, stream_name, url, 0);
 		}
 
-		// Pull a stream using Origin map
-		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, off_t offset);
-		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name)
+		/// Pull a stream using Origin map with offset
+		///
+		/// @param request_from Source from which RequestPullStream() invoked (Mainly provided when requested by Publisher)
+		/// @param vhost_app_name When the URL is pulled, its stream is created in this vhost_name and app_name
+		/// @param stream_name When the URL is pulled, its stream is created in this stream_name
+		/// @param offset Parameters to be used when you want to pull from a certain point (available only when the provider supports that)
+		bool RequestPullStream(
+			const std::shared_ptr<const ov::Url> &request_from,
+			const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
+			off_t offset);
+
+		/// Pull a stream using Origin map with offset
+		///
+		/// @param request_from Source from which RequestPullStream() invoked (Mainly provided when requested by Publisher)
+		/// @param vhost_app_name When the URL is pulled, its stream is created in this vhost_name and app_name
+		/// @param stream_name When the URL is pulled, its stream is created in this stream_name
+		bool RequestPullStream(
+			const std::shared_ptr<const ov::Url> &request_from,
+			const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
 		{
-			return RequestPullStream(vhost_app_name, host_name, app_name, stream_name, 0);
+			return RequestPullStream(request_from, vhost_app_name, stream_name, 0);
 		}
 
 		//--------------------------------------------------------------------

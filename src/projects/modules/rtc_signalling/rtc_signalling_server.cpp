@@ -529,7 +529,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 		// None of the hosts can accept this client, so the peer will be connectioned to OME
 		std::find_if(_observers.begin(), _observers.end(), [ws_client, info, &sdp, vhost_app_name, stream_name](auto &observer) -> bool {
 			// Ask observer to fill local_candidates
-			sdp = observer->OnRequestOffer(ws_client, vhost_app_name, info->host_name, info->app_name, stream_name, &(info->local_candidates));
+			sdp = observer->OnRequestOffer(ws_client, vhost_app_name, info->host_name, stream_name, &(info->local_candidates));
 			return sdp != nullptr;
 		});
 
@@ -683,7 +683,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 			{
 				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->vhost_app_name.CStr(), info->stream_name.CStr());
 				// TODO(Getroot): Add param "request->GetRequestTarget()"
-				observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->app_name, info->stream_name, info->offer_sdp, info->peer_sdp);
+				observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp);
 			}
 		}
 		else
@@ -767,7 +767,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const std::sha
 
 			for (auto &observer : _observers)
 			{
-				observer->OnIceCandidate(ws_client, info->vhost_app_name, info->host_name, info->app_name, info->stream_name, ice_candidate, username_fragment);
+				observer->OnIceCandidate(ws_client, info->vhost_app_name, info->host_name, info->stream_name, ice_candidate, username_fragment);
 			}
 		}
 	}
@@ -905,7 +905,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_p
 		{
 			logtd("Trying to callback OnStopCommand to %p for client %d (%s / %s)...", observer.get(), info->id, info->vhost_app_name.CStr(), info->stream_name.CStr());
 
-			if (observer->OnStopCommand(ws_client, info->vhost_app_name, info->host_name, info->app_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+			if (observer->OnStopCommand(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
 			{
 				result = false;
 			}

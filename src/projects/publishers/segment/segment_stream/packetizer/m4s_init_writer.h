@@ -8,6 +8,8 @@
 //==============================================================================
 #pragma once
 
+#include <base/info/media_track.h>
+
 #include "m4s_writer.h"
 
 class M4sInitWriter : public M4sWriter

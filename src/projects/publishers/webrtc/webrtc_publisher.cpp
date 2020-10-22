@@ -299,20 +299,18 @@ bool WebRtcPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Ap
 
 // Called when receives request offer sdp from client
 std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,
-																		  const info::VHostAppName &vhost_app_name,
-																		  const ov::String &host_name,
-																		  const ov::String &app_name, const ov::String &stream_name,
+																		  const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 																		  std::vector<RtcIceCandidate> *ice_candidates)
 {
 	RequestStreamResult result = RequestStreamResult::init;
 	auto request = ws_client->GetClient()->GetRequest();
 	auto uri = request->GetUri();
-	auto parsed_url = ov::Url::Parse(uri.CStr(), true);
+	auto parsed_url = ov::Url::Parse(uri.CStr());
 
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
 	if(stream == nullptr)
 	{
-		stream = std::dynamic_pointer_cast<RtcStream>(PullStream(vhost_app_name, host_name, app_name, stream_name, parsed_url));
+		stream = std::dynamic_pointer_cast<RtcStream>(PullStream(parsed_url, vhost_app_name, host_name, stream_name));
 		if(stream == nullptr)
 		{
 			result = RequestStreamResult::origin_failed;
@@ -342,9 +340,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 
 // Called when receives an answer sdp from client
 bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
-											 const info::VHostAppName &vhost_app_name,
-											 const ov::String &host_name,
-											 const ov::String &app_name, const ov::String &stream_name,
+											 const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 											 const std::shared_ptr<const SessionDescription> &offer_sdp,
 											 const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
@@ -360,7 +356,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 	auto request = ws_client->GetClient()->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
 	auto uri = request->GetUri();
-	auto parsed_url = ov::Url::Parse(uri.CStr(), true);
+	auto parsed_url = ov::Url::Parse(uri.CStr());
 
 	if (parsed_url == nullptr)
 	{
@@ -416,9 +412,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 }
 
 bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_client,
-									const info::VHostAppName &vhost_app_name,
-									const ov::String &host_name,
-									const ov::String &app_name, const ov::String &stream_name,
+									const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 									const std::shared_ptr<const SessionDescription> &offer_sdp,
 									const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
@@ -445,9 +439,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 
 // bitrate info(from signalling)
 uint32_t WebRtcPublisher::OnGetBitrate(const std::shared_ptr<WebSocketClient> &ws_client,
-									   const info::VHostAppName &vhost_app_name,
-									   const ov::String &host_name,
-									   const ov::String &app_name, const ov::String &stream_name)
+									   const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name)
 {
 	auto stream = GetStream(vhost_app_name, stream_name);
 	uint32_t bitrate = 0;
@@ -473,9 +465,7 @@ uint32_t WebRtcPublisher::OnGetBitrate(const std::shared_ptr<WebSocketClient> &w
 }
 
 bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<WebSocketClient> &ws_client,
-									 const info::VHostAppName &vhost_app_name,
-									 const ov::String &host_name,
-									 const ov::String &app_name, const ov::String &stream_name,
+									 const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 									 const std::shared_ptr<RtcIceCandidate> &candidate,
 									 const ov::String &username_fragment)
 {

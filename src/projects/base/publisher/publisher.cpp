@@ -155,7 +155,7 @@ namespace pub
 		return nullptr;
 	}
 
-	std::shared_ptr<Stream> Publisher::PullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const std::shared_ptr<const ov::Url> &request)
+	std::shared_ptr<Stream> Publisher::PullStream(const std::shared_ptr<const ov::Url> &request_from, const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name)
 	{
 		auto stream = GetStream(vhost_app_name, stream_name);
 		if(stream != nullptr)
@@ -174,13 +174,13 @@ namespace pub
 		if(	vapp_name.HasSuffix("#rtsp_live") || vapp_name.HasSuffix("#rtsp_playback") ||
 			vapp_name.HasSuffix("#rtsp_live_insecure") || vapp_name.HasSuffix("#rtsp_playback_insecure"))
 		{
-			if(request != nullptr)
+			if(request_from != nullptr)
 			{
-				auto &query_map = request->QueryMap();
+				auto &query_map = request_from->QueryMap();
 				auto rtsp_uri_item = query_map.find("rtspURI");
 				if (rtsp_uri_item == query_map.end())
 				{
-					logte("There is no rtspURI parameter in the query string: %s", request->ToString().CStr());
+					logte("There is no rtspURI parameter in the query string: %s", request_from->ToString().CStr());
 
 					logtd("Query map:");
 					for ([[maybe_unused]] auto &query : query_map)
@@ -197,14 +197,14 @@ namespace pub
 		
 		if(pull_url.IsEmpty())
 		{
-			if(orchestrator->RequestPullStream(vhost_app_name, host_name, app_name, stream_name) == false)
+			if(orchestrator->RequestPullStream(request_from, vhost_app_name, stream_name) == false)
 			{
 				return nullptr;
 			}
 		}
 		else
 		{
-			if(orchestrator->RequestPullStream(vhost_app_name, host_name, app_name, stream_name, pull_url) == false)
+			if(orchestrator->RequestPullStream(request_from, vhost_app_name, stream_name, pull_url) == false)
 			{
 				return nullptr;
 			}
@@ -253,11 +253,11 @@ namespace pub
 	{
 		auto orchestrator = ocst::Orchestrator::GetInstance();
 		auto &server_config = GetServerConfig();
-		auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Domain());
+		auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Host());
 
 		if (vhost_name.IsEmpty())
 		{
-			err_message.Format("Could not resolve the domain: %s", request_url->Domain().CStr());
+			err_message.Format("Could not resolve the domain: %s", request_url->Host().CStr());
 			return SignedUrlErrCode::Unexpected;
 		}
 

@@ -317,7 +317,7 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
 		SegmentStreamRequestInfo request_info(
 			vhost_app_name,
-			host_name, app_name, stream_name, file_name);
+			host_name, stream_name, file_name);
 
 		connetion = ProcessStreamRequest(client, request_info, file_ext);
 	} while (false);

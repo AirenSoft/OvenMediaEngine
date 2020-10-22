@@ -88,7 +88,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 {
 	auto request = client->GetRequest();
 	auto uri = request->GetUri();
-	auto parsed_url = ov::Url::Parse(uri.CStr(), true);
+	auto parsed_url = ov::Url::Parse(uri.CStr());
 
 	if (parsed_url == nullptr)
 	{
@@ -119,7 +119,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	auto stream = GetStreamAs<SegmentStream>(vhost_app_name, stream_name);
 	if(stream == nullptr)
 	{
-		stream = std::dynamic_pointer_cast<SegmentStream>(PullStream(vhost_app_name, request_info.host_name, request_info.app_name, stream_name, parsed_url));
+		stream = std::dynamic_pointer_cast<SegmentStream>(PullStream(parsed_url, vhost_app_name, request_info.host_name, stream_name));
 		if (stream == nullptr)
 		{
 			client->GetResponse()->SetStatusCode(HttpStatusCode::NotAcceptable);

@@ -444,28 +444,24 @@ namespace ocst
 
 	std::shared_ptr<ocst::VirtualHost> OrchestratorInternal::GetVirtualHost(const info::VHostAppName &vhost_app_name, ov::String *real_app_name)
 	{
-		ov::String vhost_name;
-
-		if (vhost_app_name.Parse(&vhost_name, real_app_name))
+		if (vhost_app_name.IsValid())
 		{
-			return GetVirtualHost(vhost_name);
+			return GetVirtualHost(vhost_app_name.GetVHostName());
 		}
 
-		// Invalid format
+		// vhost_app_name must be valid
 		OV_ASSERT2(false);
 		return nullptr;
 	}
 
 	std::shared_ptr<const ocst::VirtualHost> OrchestratorInternal::GetVirtualHost(const info::VHostAppName &vhost_app_name, ov::String *real_app_name) const
 	{
-		ov::String vhost_name;
-
-		if (vhost_app_name.Parse(&vhost_name, real_app_name))
+		if (vhost_app_name.IsValid())
 		{
-			return GetVirtualHost(vhost_name);
+			return GetVirtualHost(vhost_app_name.GetVHostName());
 		}
 
-		// Invalid format
+		// vhost_app_name must be valid
 		OV_ASSERT2(false);
 		return nullptr;
 	}
@@ -649,12 +645,13 @@ namespace ocst
 	{
 		OV_ASSERT2(app_info != nullptr);
 
-		ov::String vhost_name;
-
-		if (vhost_app_name.Parse(&vhost_name, nullptr))
+		if (vhost_app_name.IsValid())
 		{
+			auto &vhost_name = vhost_app_name.GetVHostName();
 			auto vhost = GetVirtualHost(vhost_name);
+
 			*app_info = info::Application(vhost->host_info, GetNextAppId(), vhost_app_name, true);
+
 			return CreateApplication(vhost_name, *app_info);
 		}
 
@@ -726,22 +723,21 @@ namespace ocst
 
 	ocst::Result OrchestratorInternal::DeleteApplication(const info::Application &app_info)
 	{
-		ov::String vhost_name;
+		auto &vhost_app_name = app_info.GetName();
 
-		if (app_info.GetName().Parse(&vhost_name, nullptr) == false)
+		if(vhost_app_name.IsValid() == false)
 		{
 			return Result::Failed;
 		}
 
-		return DeleteApplication(vhost_name, app_info.GetId());
+		return DeleteApplication(vhost_app_name.GetVHostName(), app_info.GetId());
 	}
 
 	const info::Application &OrchestratorInternal::GetApplicationInfo(const info::VHostAppName &vhost_app_name) const
 	{
-		ov::String vhost_name;
-
-		if (vhost_app_name.Parse(&vhost_name, nullptr))
+		if(vhost_app_name.IsValid())
 		{
+			auto &vhost_name = vhost_app_name.GetVHostName();
 			auto vhost = GetVirtualHost(vhost_name);
 
 			if (vhost != nullptr)

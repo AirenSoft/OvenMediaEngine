@@ -113,7 +113,10 @@ namespace pvd
 		return true;
 	}
 
-	std::shared_ptr<pvd::Stream> PullProvider::PullStream(const info::Application &app_info, const ov::String &stream_name, const std::vector<ov::String> &url_list, off_t offset)
+	std::shared_ptr<pvd::Stream> PullProvider::PullStream(
+		const std::shared_ptr<const ov::Url> &request_from,
+		const info::Application &app_info, const ov::String &stream_name,
+		const std::vector<ov::String> &url_list, off_t offset)
 	{
 		LockPullStreamIfNeeded(app_info, stream_name, url_list, offset);
 
