@@ -184,7 +184,7 @@ void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remo
 	auto orchestrator = ocst::Orchestrator::GetInstance();
 	auto host_name = url->Domain();
 	auto app_name = url->App();
-	auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
+	auto vhost_app_name = orchestrator->ResolveApplicationNameFromDomain(host_name, app_name);
 	auto stream_name = url->Stream();
 	ov::String msg;
 

@@ -94,12 +94,14 @@ namespace ocst
 		const info::Application &GetApplicationInfo(const ov::String &vhost_name, const ov::String &app_name) const;
 		const info::Application &GetApplicationInfo(const info::VHostAppName &vhost_app_name) const;
 
+		// Pull a stream using specified URL
 		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const ov::String &url, off_t offset);
 		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, const ov::String &url)
 		{
 			return RequestPullStream(vhost_app_name, host_name, app_name, stream_name, url, 0);
 		}
 
+		// Pull a stream using Origin map
 		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name, off_t offset);
 		bool RequestPullStream(const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &app_name, const ov::String &stream_name)
 		{

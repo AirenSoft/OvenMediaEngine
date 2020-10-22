@@ -351,6 +351,8 @@ namespace ocst
 			// The URL has a scheme
 			auto source = parsed_url->Source();
 
+			OV_ASSERT(url == source, "url and source must be the same, but url: %s, source: %s", url.CStr(), source.CStr());
+
 			std::shared_ptr<PullProviderModuleInterface> provider_module;
 			auto app_info = info::Application::GetInvalidApplication();
 			Result result = Result::Failed;
@@ -564,6 +566,7 @@ namespace ocst
 			case Result::Failed:
 			case Result::NotExists:
 				// This is a bug - Must be handled above
+				logtc("Result is not expected: %d (This is a bug)", result);
 				OV_ASSERT2(false);
 				break;
 
