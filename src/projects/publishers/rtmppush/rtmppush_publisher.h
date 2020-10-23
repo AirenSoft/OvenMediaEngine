@@ -5,6 +5,7 @@
 #include "base/mediarouter/media_route_application_interface.h"
 
 #include "rtmppush_application.h"
+#include "rtmppush_userdata.h"
 
 #include <orchestrator/orchestrator.h>
 
@@ -36,6 +37,16 @@ private:
 	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
 	
 	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
+
+private:
+	void SessionController();
+
+	void WorkerThread();
+	bool _stop_thread_flag;
+	std::thread _worker_thread;
+
+	std::shared_mutex 		_userdata_sets_mutex;;
+	RtmpPushUserdataSets 	_userdata_sets;
 
 public:
 	std::shared_ptr<ov::Error> HandlePushCreate(const info::VHostAppName &vhost_app_name, ov::String stream_name);

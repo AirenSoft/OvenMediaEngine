@@ -55,8 +55,8 @@ RtmpWriter::RtmpWriter() :
 	_format_context(nullptr)
 {
 	av_register_all();
-	av_log_set_callback(RtmpWriter::FFmpegLog);
-	av_log_set_level(AV_LOG_TRACE);
+	// av_log_set_callback(RtmpWriter::FFmpegLog);
+	// av_log_set_level(AV_LOG_TRACE);
 }
 
 RtmpWriter::~RtmpWriter()
@@ -100,7 +100,10 @@ bool RtmpWriter::SetPath(const ov::String path, const ov::String format)
 	int error = avformat_alloc_output_context2(&_format_context, output_format, nullptr, path.CStr());
 	if(error < 0)
 	{
-		logte("Could not create output context. error(%d), path(%s)", error, path.CStr());	
+		char errbuf[256];
+		av_strerror(error, errbuf, sizeof(errbuf));
+
+		logte("Could not create output context. error(%d:%s), path(%s)", error, errbuf, path.CStr());	
 
 		return false;
 	}	
@@ -129,7 +132,11 @@ bool RtmpWriter::Start()
 		int error = avio_open2(&_format_context->pb, _format_context->filename, AVIO_FLAG_WRITE, nullptr, &options);
 		if (error < 0)
 		{
-			logte("Error opening file. error(%d), %s", error, _format_context->filename);
+			char errbuf[256];
+			av_strerror(error, errbuf, sizeof(errbuf));
+
+			logte("Error opening file. error(%d:%s), filename(%s)", error, errbuf, _format_context->filename);
+
 			return false;
 		}
 	}
@@ -150,7 +157,6 @@ bool RtmpWriter::Start()
 		logtd("mime_type : %s", oformat->mime_type);
 		logtd("audio_codec : %d", oformat->audio_codec);
 		logtd("video_codec : %d", oformat->video_codec);
-		logtd("subtitle_codec : %d", oformat->subtitle_codec);
 	}
 
 	return true;
@@ -162,7 +168,10 @@ bool RtmpWriter::Stop()
 
 	if(_format_context != nullptr)
 	{
-		av_write_trailer(_format_context);
+		if(_format_context->pb != nullptr)
+		{
+			av_write_trailer(_format_context);
+		}
 
 		avformat_close_input(&_format_context);
 
@@ -279,7 +288,7 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	auto iter = _track_map.find(track_id);
 	if(iter == _track_map.end())
 	{
-		logtw("There is no track id %d", track_id);
+		// logtw("There is no track id %d", track_id);
 
 		// Without a track, it's not an error. Ignore.
 		return true;
@@ -294,10 +303,8 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 		return false;
 	}
 
-
 	// Find Ouput Track Info
 	auto track_info = _trackinfo_map[track_id];
-	
 
 	// Make avpacket
 	AVPacket pkt = { 0 };
@@ -323,24 +330,25 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	// format(mp4)
 	//	- H264 : Passthrough
 	//	- AAC : to LATM
-
 	if( (stream->codecpar->codec_id == AV_CODEC_ID_AAC) &&
-		(strcmp(_format_context->oformat->name, "flv") == 0 && strcmp(_format_context->oformat->name, "mp4")))
+		(strcmp(_format_context->oformat->name, "flv") == 0 || strcmp(_format_context->oformat->name, "mp4")))
 	{
-		// delete adts header
 		pkt.size = data->GetLength() - 7;
 		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>() + 7;		
 	}
 	else
 	{
-		pkt.size = data->GetLength();
-		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();		
+		pkt.size = data->GetLength() ;
+		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
 	}
 
-	int ret = av_interleaved_write_frame(_format_context, &pkt);	
-	if(ret != 0)
+	int error = av_interleaved_write_frame(_format_context, &pkt);	
+	if(error != 0)
 	{
-		logte("error = %d", ret);
+		char errbuf[256];
+		av_strerror(error, errbuf, sizeof(errbuf));
+
+		logte("Send packet error(%d:%s)", error, errbuf);
 		return false;
 	}
 

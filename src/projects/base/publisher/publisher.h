@@ -122,6 +122,9 @@ namespace pub
 			return std::static_pointer_cast<T>(GetStream(vhost_app_name, stream_name));
 		}
 
+		uint32_t GetApplicationCount();
+		std::shared_ptr<Application> GetApplicationAt(uint32_t index);
+
 		std::shared_ptr<Application> GetApplicationById(info::application_id_t application_id);
 		std::shared_ptr<Stream> GetStream(info::application_id_t application_id, uint32_t stream_id);
 		template <typename T>

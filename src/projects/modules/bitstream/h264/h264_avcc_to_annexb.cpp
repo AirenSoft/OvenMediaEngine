@@ -6,7 +6,7 @@
 
 #define OV_LOG_TAG "H264AvccToAnnexB"
 
-static uint8_t START_CODE[3] = { 0x00, 0x00, 0x01 };
+static uint8_t START_CODE[4] = { 0x00, 0x00, 0x00, 0x01 };
 
 bool H264AvccToAnnexB::GetExtradata(const common::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
 {

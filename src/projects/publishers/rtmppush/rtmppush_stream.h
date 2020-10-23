@@ -3,9 +3,10 @@
 #include <base/common_types.h>
 #include <base/publisher/stream.h>
 
-#include <modules/rtmp/rtmp_writer.h>
-
 #include "monitoring/monitoring.h"
+
+#include "rtmppush_session.h"
+#include <modules/rtmp/rtmp_writer.h>
 
 class RtmpPushStream : public pub::Stream
 {
@@ -20,15 +21,16 @@ public:
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
-	void PushStart();
-	void PushStop();
-	void PushStat();
+	std::shared_ptr<RtmpPushSession> CreateSession(ov::String url, ov::String stream_key);
+	void DeleteSession(uint32_t session_id);
+
 private:
 	bool Start() override;
 	bool Stop() override;
 
-	std::shared_ptr<RtmpWriter>				_writer;
 
 	std::shared_ptr<mon::StreamMetrics>		_stream_metrics;	
+
+	std::shared_ptr<RtmpWriter>				_writer;
 
 };

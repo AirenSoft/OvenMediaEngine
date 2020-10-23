@@ -214,7 +214,6 @@ bool MediaRouteStream::GetParseTrackInfo(std::shared_ptr<MediaTrack> &media_trac
 // Check whether the information extraction for all tracks has been completed.
 bool MediaRouteStream::IsParseTrackAll()
 {
-	// If the parsing is already done...
 	if(_is_parsed_all_track)
 	{
 		return true;
@@ -616,7 +615,7 @@ bool MediaRouteStream::UpdateDecoderParameterSets(
 						return false;
 					}			
 
-					uint8_t START_CODE[3] = { 0x00, 0x00, 0x01 };
+					uint8_t START_CODE[4] = { 0x00, 0x00, 0x00, 0x01 };
 
 					if(has_pps == false)
 					{

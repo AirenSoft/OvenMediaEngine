@@ -325,7 +325,7 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	//	- AAC : to LATM
 
 	if( (stream->codecpar->codec_id == AV_CODEC_ID_AAC) &&
-		(strcmp(_format_context->oformat->name, "flv") == 0 && strcmp(_format_context->oformat->name, "mp4")))
+		(strcmp(_format_context->oformat->name, "flv") == 0 || strcmp(_format_context->oformat->name, "mp4")))
 	{
 		// delete adts header
 		pkt.size = data->GetLength() - 7;
