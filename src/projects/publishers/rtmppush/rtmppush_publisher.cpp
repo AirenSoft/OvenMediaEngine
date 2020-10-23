@@ -69,7 +69,7 @@ bool RtmpPushPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::
 		return false;
 	}
 
-	// File applications and child streams must be terminated.
+	// Applications and child streams must be terminated.
 
 	return true;
 }
