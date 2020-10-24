@@ -55,8 +55,8 @@ FileWriter::FileWriter() :
 	_format_context(nullptr)
 {
 	av_register_all();
-	av_log_set_callback(FileWriter::FFmpegLog);
-	av_log_set_level(AV_LOG_TRACE);
+	// av_log_set_callback(FileWriter::FFmpegLog);
+	// av_log_set_level(AV_LOG_TRACE);
 }
 
 FileWriter::~FileWriter()
@@ -119,11 +119,6 @@ bool FileWriter::Start()
 
 	AVDictionary *options = nullptr;
 
-	// Examples
-	// av_dict_set(&out_options, "timeout", "1000000", 0);
-	// av_dict_set(&out_options, "tcp_nodelay", "1", 0);
-	// _format_context->flags = AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_FLUSH_PACKETS;
-
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
 		int error = avio_open2(&_format_context->pb, _format_context->filename, AVIO_FLAG_WRITE, nullptr, &options);
@@ -162,7 +157,10 @@ bool FileWriter::Stop()
 
 	if(_format_context != nullptr)
 	{
-		av_write_trailer(_format_context);
+		if(_format_context->pb != nullptr)
+		{
+			av_write_trailer(_format_context);
+		}
 
 		avformat_close_input(&_format_context);
 

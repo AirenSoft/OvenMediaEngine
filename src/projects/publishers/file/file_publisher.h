@@ -8,6 +8,7 @@
 #include "base/mediarouter/media_route_application_interface.h"
 
 #include "file_application.h"
+#include "file_userdata.h"
 
 #include <orchestrator/orchestrator.h>
 
@@ -40,8 +41,18 @@ private:
 	
 	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
 
+private:
+	void SessionController();
+
+	void WorkerThread();
+	bool _stop_thread_flag;
+	std::thread _worker_thread;
+
+	std::shared_mutex _userdata_sets_mutex;;
+	FileUserdataSets _userdata_sets;
 
 public:
+	// Dummy Interface
 	std::shared_ptr<ov::Error> HandleRecordStart(const info::VHostAppName &vhost_app_name, ov::String stream_name);
 	std::shared_ptr<ov::Error> HandleRecordStop(const info::VHostAppName &vhost_app_name, ov::String stream_name);
 	std::shared_ptr<ov::Error> HandleRecordStat(const info::VHostAppName &vhost_app_name, ov::String stream_name);
