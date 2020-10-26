@@ -304,8 +304,28 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 {
 	RequestStreamResult result = RequestStreamResult::init;
 	auto request = ws_client->GetClient()->GetRequest();
+	auto remote_address = request->GetRemote()->GetRemoteAddress();
 	auto uri = request->GetUri();
 	auto parsed_url = ov::Url::Parse(uri);
+
+	if (parsed_url == nullptr)
+	{
+		logte("Could not parse the url: %s", uri.CStr());
+		return nullptr;
+	}
+
+	// These names are used for testing purposes
+	if (vhost_app_name.ToString().HasSuffix("_insecure") == false)
+	{	
+		std::shared_ptr<const SignedUrl> signed_url;
+		ov::String message;
+		auto result = Publisher::HandleSignedUrl(parsed_url, remote_address, signed_url, message);
+		if(result != pub::SignedUrlErrCode::Success && result != pub::SignedUrlErrCode::Pass)
+		{
+			logtw("%s", message.CStr());
+			return nullptr;
+		}
+	}
 
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
 	if(stream == nullptr)
