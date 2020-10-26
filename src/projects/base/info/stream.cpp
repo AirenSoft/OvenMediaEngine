@@ -54,6 +54,7 @@ namespace info
 	Stream::Stream(StreamSourceType source)
 	{
 		_source_type = source;
+		_created_time = std::chrono::system_clock::now();
 	}
 
 	Stream::~Stream()
