@@ -9,6 +9,7 @@
 #include "api_server.h"
 
 #include "api_private.h"
+#include "controllers/root_controller.h"
 
 #define API_VERSION "1"
 
@@ -98,13 +99,14 @@ namespace api
 		return false;
 	}
 
-	std::shared_ptr<HttpRequestInterceptor> Server::CreateInterceptor() const
+	std::shared_ptr<HttpRequestInterceptor> Server::CreateInterceptor()
 	{
-		auto http_interceptor = std::make_shared<HttpDefaultInterceptor>("/v" API_VERSION);
+		auto http_interceptor = std::make_shared<HttpDefaultInterceptor>();
 
-		http_interceptor->RegisterPost("/", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
-			return HttpNextHandler::DoNotCall;
-		});
+		// Request Handlers will be added to http_interceptor
+		_root_controller = std::make_shared<RootController>();
+		_root_controller->SetInterceptor(http_interceptor);
+		_root_controller->PrepareHandlers();
 
 		return http_interceptor;
 	}
@@ -120,5 +122,10 @@ namespace api
 		bool https_result = (https_server != nullptr) ? manager->ReleaseServer(_https_server) : false;
 
 		return http_result && https_result;
+	}
+
+	void Server::RegisterHandlers()
+	{
+		// _handler_list.push_back();
 	}
 }  // namespace api

@@ -27,11 +27,11 @@ bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &patte
 	{
 		ov::String whole_pattern;
 		
-		whole_pattern.Format("%s%s", _pattern_prefix, pattern);
+		whole_pattern.Format("%s%s", _pattern_prefix.CStr(), pattern.CStr());
 
 		_request_handler_list.push_back((RequestInfo) {
 #if DEBUG
-			.pattern_string = pattern,
+			.pattern_string = whole_pattern,
 #endif	// DEBUG
 			.pattern = std::regex(whole_pattern),
 			.method = method,
@@ -144,6 +144,10 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 
 				if (std::regex_match(request->GetRequestTarget().CStr(), request_info.pattern))
 				{
+#if DEBUG
+					logtd("Matches: url [%s], pattern: [%s]", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr());
+#endif	// DEBUG
+
 					// 일단 패턴에 일치하는 handler 찾음
 					regex_found = true;
 
@@ -161,6 +165,12 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 							// Call the next handler
 						}
 					}
+				}
+				else
+				{
+#if DEBUG
+				logtd("Not matched: url [%s], pattern: [%s]", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr());
+#endif	// DEBUG
 				}
 			}
 

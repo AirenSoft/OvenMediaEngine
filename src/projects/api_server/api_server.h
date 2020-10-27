@@ -14,6 +14,8 @@
 #include <config/config.h>
 #include <modules/http_server/http_server_manager.h>
 
+#include "controllers/root_controller.h"
+
 namespace api
 {
 	class Server : public ov::Singleton<Server>
@@ -23,10 +25,13 @@ namespace api
 		bool Stop();
 
 	protected:
-		std::shared_ptr<HttpRequestInterceptor> CreateInterceptor() const;
+		std::shared_ptr<HttpRequestInterceptor> CreateInterceptor();
+		void RegisterHandlers();
 
 		std::shared_ptr<HttpServer> _http_server;
 		std::shared_ptr<HttpsServer> _https_server;
+
+		std::shared_ptr<RootController> _root_controller;
 
 		ov::String _access_token;
 	};
