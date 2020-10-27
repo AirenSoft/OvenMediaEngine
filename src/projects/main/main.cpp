@@ -8,6 +8,7 @@
 //==============================================================================
 #include "main.h"
 
+#include <api_server/api_server.h>
 #include <base/ovlibrary/daemon.h>
 #include <base/ovlibrary/log_write.h>
 #include <config/config_manager.h>
@@ -16,74 +17,18 @@
 #include <orchestrator/orchestrator.h>
 #include <providers/providers.h>
 #include <publishers/publishers.h>
-#include <sys/utsname.h>
 #include <transcode/transcoder.h>
 #include <web_console/web_console.h>
 
-#include "./signals.h"
-#include "./third_parties.h"
-#include "./utilities.h"
+#include "banner.h"
+#include "init_utilities.h"
 #include "main_private.h"
-
-#define INIT_MODULE(variable, name, create)              \
-	logti("Trying to create a " name " module");         \
-                                                         \
-	auto variable = create;                              \
-                                                         \
-	if (variable == nullptr)                             \
-	{                                                    \
-		logte("Failed to initialize" name " module");    \
-		return 1;                                        \
-	}                                                    \
-                                                         \
-	if (orchestrator->RegisterModule(variable) == false) \
-	{                                                    \
-		logte("Failed to register" name " module");      \
-		return 1;                                        \
-	}
-
-#define RELEASE_MODULE(variable, name)                         \
-	logti("Trying to delete a " name " module");               \
-                                                               \
-	if (variable != nullptr)                                   \
-	{                                                          \
-		if (orchestrator->UnregisterModule(variable) != false) \
-		{                                                      \
-			variable->Stop();                                  \
-		}                                                      \
-		else                                                   \
-		{                                                      \
-			logte("Failed to unregister" name " module");      \
-		}                                                      \
-	}
-
-#define INIT_EXTERNAL_MODULE(name, func)                                          \
-	{                                                                             \
-		logtd("Trying to initialize " name "...");                                \
-		auto error = func();                                                      \
-                                                                                  \
-		if (error != nullptr)                                                     \
-		{                                                                         \
-			logte("Could not initialize " name ": %s", error->ToString().CStr()); \
-			return 1;                                                             \
-		}                                                                         \
-	}
-
-#define TERMINATE_EXTERNAL_MODULE(name, func)                                    \
-	{                                                                            \
-		logtd("Trying to terminate " name "...");                                \
-		auto error = func();                                                     \
-                                                                                 \
-		if (error != nullptr)                                                    \
-		{                                                                        \
-			logte("Could not terminate " name ": %s", error->ToString().CStr()); \
-			return 1;                                                            \
-		}                                                                        \
-	}
+#include "signals.h"
+#include "third_parties.h"
+#include "utilities.h"
 
 extern bool g_is_terminated;
 
-static void PrintBanner();
 static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_option);
 static bool Uninitialize();
 
@@ -108,13 +53,6 @@ int main(int argc, char *argv[])
 	}
 
 	PrintBanner();
-
-	INIT_EXTERNAL_MODULE("FFmpeg", InitializeFFmpeg);
-	INIT_EXTERNAL_MODULE("SRT", InitializeSrt);
-	INIT_EXTERNAL_MODULE("OpenSSL", InitializeOpenSsl);
-	INIT_EXTERNAL_MODULE("SRTP", InitializeSrtp);
-
-	const bool is_service = parse_option.start_service;
 
 	std::shared_ptr<cfg::Server> server_config = cfg::ConfigManager::GetInstance()->GetServer();
 	auto &hosts = server_config->GetVirtualHostList();
@@ -144,8 +82,15 @@ int main(int argc, char *argv[])
 	}
 
 	orchestrator->ApplyOriginMap(host_info_list);
-	// Create an HTTP Manager for Segment Publishers
-	std::map<int, std::shared_ptr<HttpServer>> http_server_manager;
+
+	auto api_server = api::Server::GetInstance();
+
+	api_server->Start(server_config);
+
+	INIT_EXTERNAL_MODULE("FFmpeg", InitializeFFmpeg);
+	INIT_EXTERNAL_MODULE("SRT", InitializeSrt);
+	INIT_EXTERNAL_MODULE("OpenSSL", InitializeOpenSsl);
+	INIT_EXTERNAL_MODULE("SRTP", InitializeSrtp);
 
 	//--------------------------------------------------------------------
 	// Create the modules
@@ -159,13 +104,12 @@ int main(int argc, char *argv[])
 
 	// Initialize Publishers
 	INIT_MODULE(webrtc_publisher, "WebRTC Publisher", WebRtcPublisher::Create(*server_config, media_router));
-	INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(http_server_manager, *server_config, media_router));
-	INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(http_server_manager, *server_config, media_router));
-	INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(http_server_manager, *server_config, media_router));
+	INIT_MODULE(hls_publisher, "HLS Publisher", HlsPublisher::Create(*server_config, media_router));
+	INIT_MODULE(dash_publisher, "MPEG-DASH Publisher", DashPublisher::Create(*server_config, media_router));
+	INIT_MODULE(lldash_publisher, "Low-Latency MPEG-DASH Publisher", CmafPublisher::Create(*server_config, media_router));
 	INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, media_router));
 	INIT_MODULE(file_publisher, "File Publisher", FilePublisher::Create(*server_config, media_router));
 	INIT_MODULE(rtmppush_publisher, "RtmpPush Publisher", RtmpPushPublisher::Create(*server_config, media_router));
-
 
 	// Initialize Transcoder
 	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
@@ -193,7 +137,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (is_service)
+	if (parse_option.start_service)
 	{
 		ov::Daemon::SetEvent();
 	}
@@ -206,6 +150,7 @@ int main(int argc, char *argv[])
 	orchestrator->Release();
 	// Relase all modules
 	monitor->Release();
+	api_server->Stop();
 
 	RELEASE_MODULE(mpegts_provider, "MPEG-TS Provider");
 	RELEASE_MODULE(rtmp_provider, "RTMP Provider");
@@ -223,7 +168,6 @@ int main(int argc, char *argv[])
 	RELEASE_MODULE(file_publisher, "File Publisher");
 	RELEASE_MODULE(rtmppush_publisher, "RtmpPush Publisher");
 
-
 	RELEASE_MODULE(media_router, "MediaRouter");
 
 	TERMINATE_EXTERNAL_MODULE("SRTP", TerminateSrtp);
@@ -234,36 +178,6 @@ int main(int argc, char *argv[])
 	Uninitialize();
 
 	return 0;
-}
-
-static void PrintBanner()
-{
-	utsname uts{};
-	::uname(&uts);
-
-#if DEBUG
-	static constexpr const char *BUILD_MODE = " [debug]";
-#else // DEBUG
-	static constexpr const char *BUILD_MODE = "";
-#endif // DEBUG
-
-	logti("OvenMediaEngine v" OME_VERSION OME_GIT_VERSION_EXTRA "%s is started on [%s] (%s %s - %s, %s)", BUILD_MODE, uts.nodename, uts.sysname, uts.machine, uts.release, uts.version);
-
-	logti("With modules:");
-	logti("  FFmpeg %s", GetFFmpegVersion());
-	logti("    Configuration: %s", GetFFmpegConfiguration());
-	logti("    libavformat: %s", GetFFmpegAvFormatVersion());
-	logti("    libavcodec: %s", GetFFmpegAvCodecVersion());
-	logti("    libavutil: %s", GetFFmpegAvUtilVersion());
-	logti("    libavfilter: %s", GetFFmpegAvFilterVersion());
-	logti("    libswresample: %s", GetFFmpegSwResampleVersion());
-	logti("    libswscale: %s", GetFFmpegSwScaleVersion());
-	logti("  SRT: %s", GetSrtVersion());
-	logti("  SRTP: %s", GetSrtpVersion());
-	logti("  OpenSSL: %s", GetOpenSslVersion());
-	logti("    Configuration: %s", GetOpenSslConfiguration());
-	logti("  JsonCpp: %s", GetJsonCppVersion());
-	logti("  jemalloc: %s", GetJemallocVersion());
 }
 
 static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_option)

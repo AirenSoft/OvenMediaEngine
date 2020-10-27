@@ -12,7 +12,7 @@
 
 #include "value.h"
 
-// virtual decltype(int_value) GetInt() const { return int_value; }
+// virtual const decltype(int_value) GetInt() const { return int_value; }
 #define CFG_DECLARE_VIRTUAL_REF_GETTER_OF(function_name, variable_name) \
 	virtual const decltype(variable_name) &function_name() const        \
 	{                                                                   \

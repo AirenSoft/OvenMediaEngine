@@ -335,3 +335,20 @@ bool PhysicalPort::DisconnectClient(ov::ClientSocket *client_socket)
 {
 	return _server_socket->DisconnectClient(client_socket, ov::SocketConnectionState::Disconnect);
 }
+
+ov::String PhysicalPort::ToString() const
+{
+	ov::String description;
+
+	description.Format("<PhysicalPort: %p, type: %d, address: %s, ref_count: %d",
+					   this, _type, _address.ToString().CStr(), static_cast<int>(_ref_count));
+
+	if (_server_socket != nullptr)
+	{
+		description.AppendFormat(", socket: %s", _server_socket->ToString().CStr());
+	}
+
+	description.Append('>');
+
+	return description;
+}

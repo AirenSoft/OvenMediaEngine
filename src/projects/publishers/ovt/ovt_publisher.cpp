@@ -32,39 +32,37 @@ bool OvtPublisher::Start()
 	// Listen to localhost:<relay_port>
 	auto server_config = GetServerConfig();
 
-	const auto &origin = server_config.GetBind().GetPublishers().GetOvt();
+	const auto &ovt_config = server_config.GetBind().GetPublishers().GetOvt();
 
-	if (origin.IsParsed())
+	if (ovt_config.IsParsed() == false)
 	{
-		auto &port_config = origin.GetPort();
-		int port = port_config.GetPort();
+		logtw("%s is disabled by configuration", GetPublisherName());
+		return true;
+	}
 
-		if (port > 0)
+	auto &port_config = ovt_config.GetPort();
+	int port = port_config.GetPort();
+
+	if (port > 0)
+	{
+		const ov::String &ip = server_config.GetIp();
+		ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
+
+		_server_port = PhysicalPortManager::GetInstance()->CreatePort(port_config.GetSocketType(), address);
+		if (_server_port != nullptr)
 		{
-			const ov::String &ip = server_config.GetIp();
-			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
-
-			_server_port = PhysicalPortManager::GetInstance()->CreatePort(port_config.GetSocketType(), address);
-			if (_server_port != nullptr)
-			{
-				logti("%s is listening on %s", GetPublisherName(), address.ToString().CStr());
-				_server_port->AddObserver(this);
-			}
-			else
-			{
-				logte("Could not create relay port. Origin features will not work.");
-			}
+			logti("%s is listening on %s", GetPublisherName(), address.ToString().CStr());
+			_server_port->AddObserver(this);
 		}
 		else
 		{
-			logte("Invalid ovt port: %d", port);
+			logte("Could not create relay port. Origin features will not work.");
 		}
 	}
 	else
 	{
-		// Relay feature is disabled
+		logte("Invalid ovt port: %d", port);
 	}
-
 
 	return Publisher::Start();
 }

@@ -133,6 +133,12 @@ namespace pvd
 
 		std::map<std::tuple<int, ov::SocketType>, std::tuple<info::VHostAppName, ov::String>> stream_map;
 
+		if(server_config.GetBind().GetProviders().GetMpegts().IsParsed() == false)
+		{
+			logtw("%s is disabled by configuration", GetProviderName());
+			return true;
+		}
+
 		if (PrepareStreamList(server_config, &stream_map) == false)
 		{
 			return false;

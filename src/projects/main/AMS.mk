@@ -14,6 +14,7 @@ LOCAL_STATIC_LIBRARIES := \
 	transcoder \
 	rtc_signalling \
 	ice \
+	api_server \
 	bitstream \
 	containers \
 	http_server \

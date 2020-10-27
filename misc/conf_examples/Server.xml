@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<Server version="7">
+<Server version="8">
 	<Name>OvenMediaEngine</Name>
 	<!-- Host type (origin/edge) -->
 	<Type>origin</Type>
@@ -62,17 +62,17 @@
 		<VirtualHost>
 			<Name>default</Name>
 
-			<!-- Settings for multi domain and TLS -->
-			<Domain>
-				<Names>
-					<!--
-						Domain names
+			<!-- Settings for multi ip/domain and TLS -->
+			<Host>
+                <Names>
+					<!-- Host names
 						<Name>stream1.airensoft.com</Name>
 						<Name>stream2.airensoft.com</Name>
 						<Name>*.sub.airensoft.com</Name>
+						<Name>192.168.0.1</Name>
 					-->
-					<Name>*</Name>
-				</Names>
+                    <Name>*</Name>
+                </Names>
 				<!--
 				<TLS>
 					<CertPath>path/to/file.crt</CertPath>
@@ -80,7 +80,7 @@
 					<ChainCertPath>path/to/file.crt</ChainCertPath>
 				</TLS>
 				-->
-			</Domain>
+			</Host>
 			<!--
 			<Origins>
 			

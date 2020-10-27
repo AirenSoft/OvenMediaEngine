@@ -9,6 +9,7 @@
 
 #include "rtc_signalling_server.h"
 
+#include <config/config_manager.h>
 #include <modules/ice/ice.h>
 #include <publishers/webrtc/webrtc_publisher.h>
 
@@ -32,56 +33,37 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	}
 
 	bool result = true;
+	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 
-	// Initialize HTTP server
-	if (address != nullptr)
+	auto manager = HttpServerManager::GetInstance();
+	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer(*address) : nullptr;
+	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer(*tls_address, vhost_list) : nullptr;
+
+	auto web_socket_interceptor = result ? CreateWebSocketInterceptor() : nullptr;
+
+	result = result && ((http_server == nullptr) || http_server->AddInterceptor(web_socket_interceptor));
+	result = result && ((https_server == nullptr) || https_server->AddInterceptor(web_socket_interceptor));
+
+	if (result)
 	{
-		_http_server = std::make_shared<HttpServer>();
-	}
-
-	// Initialize HTTPS server
-	if (tls_address != nullptr)
-	{
-		// TLS is enabled
-		_https_server = std::make_shared<HttpsServer>();
-
-		auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
-		_https_server->SetVirtualHostList(vhost_list);
+		_http_server = http_server;
+		_https_server = https_server;
 	}
 	else
 	{
-		// TLS is disabled
-	}
-
-	result = result && InitializeWebSocketServer();
-
-	result = result && ((_http_server == nullptr) || _http_server->Start(*address));
-	result = result && ((_https_server == nullptr) || _https_server->Start(*tls_address));
-
-	if (result == false)
-	{
 		// Rollback
-		if (_http_server != nullptr)
-		{
-			_http_server->Stop();
-			_http_server = nullptr;
-		}
-
-		if (_https_server != nullptr)
-		{
-			_https_server->Stop();
-			_https_server = nullptr;
-		}
+		manager->ReleaseServer(http_server);
+		manager->ReleaseServer(https_server);
 	}
 
 	return result;
 }
 
-bool RtcSignallingServer::InitializeWebSocketServer()
+std::shared_ptr<WebSocketInterceptor> RtcSignallingServer::CreateWebSocketInterceptor()
 {
-	auto web_socket = std::make_shared<WebSocketInterceptor>();
+	auto interceptor = std::make_shared<WebSocketInterceptor>();
 
-	web_socket->SetConnectionHandler(
+	interceptor->SetConnectionHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> HttpInterceptorResult {
 			auto &client = ws_client->GetClient();
 			auto request = client->GetRequest();
@@ -140,7 +122,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			return HttpInterceptorResult::Keep;
 		});
 
-	web_socket->SetMessageHandler(
+	interceptor->SetMessageHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const WebSocketFrame> &message) -> HttpInterceptorResult {
 			auto &client = ws_client->GetClient();
 			auto request = client->GetRequest();
@@ -208,12 +190,12 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			return HttpInterceptorResult::Keep;
 		});
 
-	web_socket->SetErrorHandler(
+	interceptor->SetErrorHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const ov::Error> &error) -> void {
 			logtw("An error occurred: %s", error->ToString().CStr());
 		});
 
-	web_socket->SetCloseHandler(
+	interceptor->SetCloseHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client, PhysicalPortDisconnectReason reason) -> void {
 			auto &client = ws_client->GetClient();
 			auto request = client->GetRequest();
@@ -242,12 +224,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			}
 		});
 
-	bool result = true;
-
-	result = result && ((_http_server == nullptr) || _http_server->AddInterceptor(web_socket));
-	result = result && ((_https_server == nullptr) || _https_server->AddInterceptor(web_socket));
-
-	return result;
+	return interceptor;
 }
 
 bool RtcSignallingServer::AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer)

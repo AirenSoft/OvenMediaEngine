@@ -14,8 +14,7 @@
 class CmafPublisher : public DashPublisher
 {
 public:
-	static std::shared_ptr<CmafPublisher> Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-												 const cfg::Server &server_config,
+	static std::shared_ptr<CmafPublisher> Create(const cfg::Server &server_config,
 												 const std::shared_ptr<MediaRouteInterface> &router);
 
 	CmafPublisher(PrivateToken token, const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
@@ -24,7 +23,7 @@ private:
 	//--------------------------------------------------------------------
 	// Implementation of SegmentPublisher
 	//--------------------------------------------------------------------
-	bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager) override;
+	bool Start() override;
 
 	//--------------------------------------------------------------------
 	// Implementation of Publisher

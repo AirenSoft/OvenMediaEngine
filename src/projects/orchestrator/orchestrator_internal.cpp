@@ -148,23 +148,23 @@ namespace ocst
 		return succeeded;
 	}
 
-	ocst::ItemState OrchestratorInternal::ProcessHostList(std::vector<Host> *domain_list, const cfg::Domain &domain_config) const
+	ocst::ItemState OrchestratorInternal::ProcessHostList(std::vector<Host> *host_list, const cfg::Host &host_config) const
 	{
 		bool is_changed = false;
 
 		// TODO(dimiden): Is there a way to reduce the cost of O(n^2)?
-		for (auto &domain_name : domain_config.GetNameList())
+		for (auto &host_name : host_config.GetNameList())
 		{
-			auto name = domain_name.GetName();
+			auto name = host_name.GetName();
 			bool found = false;
 
-			for (auto &domain : *domain_list)
+			for (auto &host : *host_list)
 			{
-				if (domain.state == ItemState::NeedToCheck)
+				if (host.state == ItemState::NeedToCheck)
 				{
-					if (domain.name == name)
+					if (host.name == name)
 					{
-						domain.state = ItemState::NotChanged;
+						host.state = ItemState::NotChanged;
 						found = true;
 						break;
 					}
@@ -173,10 +173,10 @@ namespace ocst
 
 			if (found == false)
 			{
-				logtd("      - %s: New", domain_name.GetName().CStr());
+				logtd("      - %s: New", host_name.GetName().CStr());
 				// Adding items here causes unnecessary iteration in the for statement above
 				// To avoid this, we need to create a separate list for each added item
-				domain_list->push_back(name);
+				host_list->push_back(name);
 				is_changed = true;
 			}
 		}
@@ -186,20 +186,20 @@ namespace ocst
 			// There was no new item
 
 			// Check for deleted items
-			for (auto &domain : *domain_list)
+			for (auto &host : *host_list)
 			{
-				switch (domain.state)
+				switch (host.state)
 				{
 					case ItemState::NeedToCheck:
 						// This item was deleted because it was never processed in the above process
-						logtd("      - %s: Deleted", domain.name.CStr());
-						domain.state = ItemState::Delete;
+						logtd("      - %s: Deleted", host.name.CStr());
+						host.state = ItemState::Delete;
 						is_changed = true;
 						break;
 
 					case ItemState::NotChanged:
 						// Nothing to do
-						logtd("      - %s: Not changed", domain.name.CStr());
+						logtd("      - %s: Not changed", host.name.CStr());
 						break;
 
 					case ItemState::Unknown:

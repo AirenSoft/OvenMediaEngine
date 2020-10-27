@@ -51,13 +51,25 @@ namespace pvd
 		}
 
 		auto server = GetServerConfig();
-		auto rtmp_address = ov::SocketAddress(server.GetIp(), static_cast<uint16_t>(server.GetBind().GetProviders().GetRtmp().GetPort().GetPort()));
+		const auto &rtmp_config = server.GetBind().GetProviders().GetRtmp();
+
+		if(rtmp_config.IsParsed() == false)
+		{
+			logtw("%s is disabled by configuration", GetProviderName());
+			return true;
+		}
+
+		auto rtmp_address = ov::SocketAddress(server.GetIp(), static_cast<uint16_t>(rtmp_config.GetPort().GetPort()));
 
 		_physical_port = PhysicalPortManager::GetInstance()->CreatePort(ov::SocketType::Tcp, rtmp_address);
 		if (_physical_port == nullptr)
 		{
 			logte("Could not initialize phyiscal port for RTMP server: %s", rtmp_address.ToString().CStr());
 			return false;
+		}
+		else
+		{
+			logti("%s is listening on %s", GetProviderName(), rtmp_address.ToString().CStr());
 		}
 
 		_physical_port->AddObserver(this);

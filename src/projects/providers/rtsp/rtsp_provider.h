@@ -35,7 +35,7 @@ namespace pvd
 
         const char* GetProviderName() const override
 	    {
-		    return "RtspProvider";
+		    return "RTSPProvider";
 	    }
 
         bool Start() override;

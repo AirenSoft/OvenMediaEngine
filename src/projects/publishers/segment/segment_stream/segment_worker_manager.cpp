@@ -125,15 +125,15 @@ bool SegmentWorkerManager::Start(int worker_count, const SegmentProcessHandler &
 	if (worker_count <= 0)
 		return false;
 
-	_worker_count = worker_count;
-
 	// Create WorkerThread
-	for (int index = 0; index < _worker_count; index++)
+	for (int index = 0; index < worker_count; index++)
 	{
 		auto worker = std::make_shared<SegmentWorker>();
 		worker->Start(process_handler);
 		_workers.push_back(worker);
 	}
+
+	_worker_count = worker_count;
 
 	return true;
 }

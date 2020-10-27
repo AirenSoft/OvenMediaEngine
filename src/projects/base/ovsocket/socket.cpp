@@ -1839,7 +1839,7 @@ namespace ov
 				class_name, this,
 				_socket.GetSocket(), _state,
 				StringFromSocketType(GetType()),
-				_remote_address->ToString().CStr());
+				(_remote_address != nullptr) ? _remote_address->ToString().CStr() : "N/A");
 		}
 	}
 

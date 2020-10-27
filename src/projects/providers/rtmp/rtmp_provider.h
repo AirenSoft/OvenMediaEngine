@@ -48,7 +48,7 @@ namespace pvd
 
 		const char* GetProviderName() const override
 		{
-			return "RtmpProvider";
+			return "RTMPProvider";
 		}
 
 	protected:

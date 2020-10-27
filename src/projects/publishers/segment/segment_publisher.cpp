@@ -24,7 +24,7 @@ SegmentPublisher::~SegmentPublisher()
 	logtd("Publisher has been destroyed");
 }
 
-bool SegmentPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager, const cfg::SingularPort &port_config, const cfg::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server)
+bool SegmentPublisher::Start(const cfg::SingularPort &port_config, const cfg::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server)
 {
 	auto server_config = GetServerConfig();
 	auto ip = server_config.GetIp();
@@ -46,7 +46,7 @@ bool SegmentPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_se
 
 	// Start the DASH Server
 	if (stream_server->Start(has_port ? &address : nullptr, has_tls_port ? &tls_address : nullptr,
-							 http_server_manager, DEFAULT_SEGMENT_WORKER_THREAD_COUNT) == false)
+							 DEFAULT_SEGMENT_WORKER_THREAD_COUNT) == false)
 	{
 		logte("An error occurred while start %s Publisher", GetPublisherName());
 		return false;

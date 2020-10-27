@@ -3,9 +3,9 @@
 //  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
-//  Copyright (c) 2019 AirenSoft. All rights reserved.
+//  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
-#define OV_LOG_TAG "RTMPProvider"
+#define OV_LOG_TAG "APIServer"

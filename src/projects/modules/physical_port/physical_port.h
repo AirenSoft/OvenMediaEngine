@@ -71,6 +71,8 @@ public:
 
 	bool DisconnectClient(ov::ClientSocket *client_socket);
 
+	ov::String ToString() const;
+
 protected:
 	bool CreateServerSocket(ov::SocketType type,
 							const ov::SocketAddress &address,
@@ -90,6 +92,7 @@ protected:
 
 	std::atomic<int> _ref_count { 0 };
 
+	// TODO(dimiden): Must use a mutex to prevent race condition
 	std::vector<PhysicalPortObserver *> _observer_list;
 
 	std::shared_mutex _worker_mutex;

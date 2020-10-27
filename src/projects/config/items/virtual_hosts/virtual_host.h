@@ -8,8 +8,8 @@
 //==============================================================================
 #pragma once
 
+#include "../common/host/host.h"
 #include "applications/applications.h"
-#include "domain/domain.h"
 #include "origins/origins.h"
 #include "signed_url/signed_url.h"
 
@@ -19,8 +19,7 @@ namespace cfg
 	{
 		CFG_DECLARE_REF_GETTER_OF(GetName, _name)
 
-		CFG_DECLARE_REF_GETTER_OF(GetDomain, _domain)
-
+		CFG_DECLARE_REF_GETTER_OF(GetHost, _host)
 
 		CFG_DECLARE_REF_GETTER_OF(GetSignedUrl, _signed_url)
 
@@ -33,7 +32,7 @@ namespace cfg
 		{
 			RegisterValue("Name", &_name);
 
-			RegisterValue<Optional>("Domain", &_domain);
+			RegisterValue<Optional>("Host", &_host);
 
 			RegisterValue<Optional>("SignedURL", &_signed_url);
 
@@ -51,7 +50,7 @@ namespace cfg
 
 		ov::String _name;
 
-		Domain _domain;
+		Host _host;
 		SignedUrl _signed_url;
 		Origins _origins;
 		Applications _applications;

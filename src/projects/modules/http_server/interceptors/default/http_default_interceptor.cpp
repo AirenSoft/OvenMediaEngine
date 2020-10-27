@@ -11,6 +11,11 @@
 #include "../../http_client.h"
 #include "../../http_private.h"
 
+HttpDefaultInterceptor::HttpDefaultInterceptor(const ov::String &pattern_prefix)
+	: _pattern_prefix(pattern_prefix)
+{
+}
+
 bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &pattern, const HttpRequestHandler &handler)
 {
 	if (handler == nullptr)
@@ -20,11 +25,15 @@ bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &patte
 
 	try
 	{
+		ov::String whole_pattern;
+		
+		whole_pattern.Format("%s%s", _pattern_prefix, pattern);
+
 		_request_handler_list.push_back((RequestInfo) {
 #if DEBUG
 			.pattern_string = pattern,
-#endif  // DEBUG
-			.pattern = std::regex(pattern),
+#endif	// DEBUG
+			.pattern = std::regex(whole_pattern),
 			.method = method,
 			.handler = handler
 		});
@@ -129,7 +138,7 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 			{
 #if DEBUG
 				logtd("Check if url [%s] is matches [%s]", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr());
-#endif  // DEBUG
+#endif	// DEBUG
 
 				response->SetStatusCode(HttpStatusCode::OK);
 

@@ -3,7 +3,7 @@
 //  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
-//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
@@ -20,6 +20,11 @@
 // RFC7231 - Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content (https://tools.ietf.org/html/rfc7231)
 // RFC7232 - Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests (https://tools.ietf.org/html/rfc7232)
 
+namespace ocst
+{
+	struct VirtualHost;
+}
+
 class HttpServer : protected PhysicalPortObserver, public ov::EnableSharedFromThis<HttpServer>
 {
 public:
@@ -31,6 +36,8 @@ public:
 
 	virtual bool Start(const ov::SocketAddress &address);
 	virtual bool Stop();
+
+	bool IsRunning() const;
 
 	bool AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor);
 	bool RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor);
@@ -58,6 +65,7 @@ protected:
 	void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 
 	// HttpServer와 연결된 physical port
+	mutable std::mutex _physical_port_mutex;
 	std::shared_ptr<PhysicalPort> _physical_port = nullptr;
 
 	std::shared_mutex _client_list_mutex;
@@ -66,4 +74,6 @@ protected:
 	std::shared_mutex _interceptor_list_mutex;
 	std::vector<std::shared_ptr<HttpRequestInterceptor>> _interceptor_list;
 	std::shared_ptr<HttpRequestInterceptor> _default_interceptor = std::make_shared<HttpDefaultInterceptor>();
+
+	std::vector<std::shared_ptr<ocst::VirtualHost>> _virtual_host_list;
 };

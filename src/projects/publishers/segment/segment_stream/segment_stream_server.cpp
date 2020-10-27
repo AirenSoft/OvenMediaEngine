@@ -7,8 +7,12 @@
 //
 //==============================================================================
 #include "segment_stream_server.h"
+
+#include <modules/http_server/http_server_manager.h>
+
 #include <regex>
 #include <sstream>
+
 #include "segment_stream_private.h"
 
 SegmentStreamServer::SegmentStreamServer()
@@ -22,46 +26,8 @@ SegmentStreamServer::SegmentStreamServer()
 		"</cross-domain-policy>";
 }
 
-template <typename Thttp_server>
-static std::shared_ptr<Thttp_server> CreateHttpServerIfNeeded(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager, const ov::SocketAddress &address, bool *is_created)
-{
-	auto item = http_server_manager.find(address.Port());
-	std::shared_ptr<Thttp_server> http_server;
-
-	*is_created = false;
-
-	if (item != http_server_manager.end())
-	{
-		http_server = std::dynamic_pointer_cast<Thttp_server>(item->second);
-
-		if (http_server == nullptr)
-		{
-			logte("Invalid conversion: tried to use different HttpServer types");
-		}
-		else
-		{
-			// Found
-		}
-	}
-	else
-	{
-		// Create a new HTTP server
-		http_server = std::make_shared<Thttp_server>();
-
-		if (http_server != nullptr)
-		{
-			*is_created = true;
-
-			http_server_manager[address.Port()] = http_server;
-		}
-	}
-
-	return http_server;
-}
-
 bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 								const ov::SocketAddress *tls_address,
-								std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
 								int thread_count)
 {
 	if ((_http_server != nullptr) || (_https_server != nullptr))
@@ -70,73 +36,37 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 		return false;
 	}
 
-	bool result = true;
-
 	auto process_handler = std::bind(&SegmentStreamServer::ProcessRequest, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 
-	auto segment_stream_interceptor = CreateInterceptor();
-	segment_stream_interceptor->SetCrossdomainBlock();
+	bool result = true;
+	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 
-	bool need_to_start_http_server = false;
-	bool need_to_start_https_server = false;
+	auto manager = HttpServerManager::GetInstance();
+	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer(*address) : nullptr;
+	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer(*tls_address, vhost_list) : nullptr;
 
-	// Initialize HTTP server
-	if (address != nullptr)
-	{
-		_http_server = CreateHttpServerIfNeeded<HttpServer>(http_server_manager, *address, &need_to_start_http_server);
-
-		if (_http_server != nullptr)
-		{
-			_http_server->AddInterceptor(segment_stream_interceptor);
-		}
-		else
-		{
-			result = false;
-		}
-	}
-
-	// Initialize HTTPS server
-	if (tls_address != nullptr)
-	{
-		_https_server = CreateHttpServerIfNeeded<HttpsServer>(http_server_manager, *tls_address, &need_to_start_https_server);
-
-		if (_https_server != nullptr)
-		{
-			auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
-			_https_server->SetVirtualHostList(vhost_list);
-			_https_server->AddInterceptor(segment_stream_interceptor);
-		}
-		else
-		{
-			result = false;
-		}
-	}
-	else
-	{
-		// TLS is disabled
-	}
-
-	result = result && ((need_to_start_http_server == false) || (_http_server == nullptr) || _http_server->Start(*address));
-	result = result && ((need_to_start_https_server == false) || (_https_server == nullptr) || _https_server->Start(*tls_address));
+	auto segment_stream_interceptor = result ? CreateInterceptor() : nullptr;
 
 	if (result)
 	{
-		segment_stream_interceptor->Start(thread_count, process_handler);
+		segment_stream_interceptor->SetCrossdomainBlock();
+	}
+
+	result = result && ((http_server == nullptr) || http_server->AddInterceptor(segment_stream_interceptor));
+	result = result && ((https_server == nullptr) || https_server->AddInterceptor(segment_stream_interceptor));
+
+	result = result && segment_stream_interceptor->Start(thread_count, process_handler);
+
+	if (result)
+	{
+		_http_server = http_server;
+		_https_server = https_server;
 	}
 	else
 	{
 		// Rollback
-		if (_http_server != nullptr)
-		{
-			_http_server->Stop();
-			_http_server = nullptr;
-		}
-
-		if (_https_server != nullptr)
-		{
-			_https_server->Stop();
-			_https_server = nullptr;
-		}
+		manager->ReleaseServer(http_server);
+		manager->ReleaseServer(https_server);
 	}
 
 	return result;
@@ -145,7 +75,7 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 bool SegmentStreamServer::Stop()
 {
 	// Remove Interceptor
-	
+
 	// Stop server
 	if (_http_server != nullptr)
 	{

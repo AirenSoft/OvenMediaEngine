@@ -75,9 +75,11 @@ bool WebConsoleServer::Start(const ov::SocketAddress &address)
 		_http_server = std::make_shared<HttpServer>();
 	}
 */
-	_http_server = std::make_shared<HttpServer>();
+	//_http_server = std::make_shared<HttpServer>();
+//
+	//return InitializeServer() && _http_server->Start(address);
 
-	return InitializeServer() && _http_server->Start(address);
+	return false;
 }
 
 bool WebConsoleServer::Stop()

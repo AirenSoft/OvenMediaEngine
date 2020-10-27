@@ -13,11 +13,10 @@
 
 #include <config/config_manager.h>
 
-std::shared_ptr<CmafPublisher> CmafPublisher::Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-													 const cfg::Server &server_config,
+std::shared_ptr<CmafPublisher> CmafPublisher::Create(const cfg::Server &server_config,
 													 const std::shared_ptr<MediaRouteInterface> &router)
 {
-	return SegmentPublisher::Create<CmafPublisher>(http_server_manager, server_config, router);
+	return SegmentPublisher::Create<CmafPublisher>(server_config, router);
 }
 
 CmafPublisher::CmafPublisher(PrivateToken token,
@@ -27,12 +26,17 @@ CmafPublisher::CmafPublisher(PrivateToken token,
 {
 }
 
-bool CmafPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
+bool CmafPublisher::Start()
 {
 	auto dash_config = GetServerConfig().GetBind().GetPublishers().GetDash();
 
-	return SegmentPublisher::Start(http_server_manager,
-								   dash_config.GetPort(), dash_config.GetTlsPort(),
+	if (dash_config.IsParsed() == false)
+	{
+		logtw("%s is disabled by configuration", GetPublisherName());
+		return true;
+	}
+
+	return SegmentPublisher::Start(dash_config.GetPort(), dash_config.GetTlsPort(),
 								   std::make_shared<CmafStreamServer>());
 }
 

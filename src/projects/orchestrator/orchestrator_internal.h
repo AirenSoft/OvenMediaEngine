@@ -31,7 +31,7 @@ namespace ocst
 		/// @param vhost VirtualHost configuration to compare
 		///
 		/// @return Whether it has changed
-		ItemState ProcessHostList(std::vector<Host> *host_list, const cfg::Domain &domain_config) const;
+		ItemState ProcessHostList(std::vector<Host> *host_list, const cfg::Host &host_config) const;
 		/// Compares a list of origin and adds them to added_origin_list if a new entry is found
 		///
 		/// @param origin_list The origin list

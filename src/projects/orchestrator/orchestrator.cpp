@@ -47,9 +47,9 @@ namespace ocst
 
 				vhost->name = host_info.GetName();
 
-				logtd("    - Processing for domains: %d items", host_info.GetDomain().GetNameList().size());
+				logtd("    - Processing for hosts: %d items", host_info.GetHost().GetNameList().size());
 
-				for (auto &domain_name : host_info.GetDomain().GetNameList())
+				for (auto &domain_name : host_info.GetHost().GetNameList())
 				{
 					logtd("      - %s: New", domain_name.GetName().CStr());
 					vhost->host_list.emplace_back(domain_name.GetName());
@@ -78,11 +78,11 @@ namespace ocst
 			auto &vhost = previous_vhost_item->second;
 
 			logtd("    - Processing for hosts");
-			auto new_state_for_domain = ProcessHostList(&(vhost->host_list), host_info.GetDomain());
+			auto new_state_for_host = ProcessHostList(&(vhost->host_list), host_info.GetHost());
 			logtd("    - Processing for origins");
 			auto new_state_for_origin = ProcessOriginList(&(vhost->origin_list), host_info.GetOrigins());
 
-			if ((new_state_for_domain == ItemState::NotChanged) && (new_state_for_origin == ItemState::NotChanged))
+			if ((new_state_for_host == ItemState::NotChanged) && (new_state_for_origin == ItemState::NotChanged))
 			{
 				vhost->state = ItemState::NotChanged;
 			}

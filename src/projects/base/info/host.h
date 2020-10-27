@@ -8,10 +8,10 @@
 //==============================================================================
 #pragma once
 
-#include <base/ovcrypto/ovcrypto.h>
 #include <config/config.h>
 
 #include "application.h"
+#include "certificate.h"
 
 namespace info
 {
@@ -27,22 +27,14 @@ namespace info
 			return _host_id;
 		}
 
-		std::shared_ptr<Certificate> GetCertificate() const
+		const std::shared_ptr<Certificate> &GetCertificate() const
 		{
 			return _certificate;
 		}
 
-		std::shared_ptr<Certificate> GetChainCertificate() const
-		{
-			return _chain_certificate;
-		}
-
 	protected:
-		std::shared_ptr<ov::Error> PrepareCertificates();
-
 		host_id_t _host_id = 0;
 		std::shared_ptr<Certificate> _certificate;
-		std::shared_ptr<Certificate> _chain_certificate;
 	};
 
 }  // namespace info

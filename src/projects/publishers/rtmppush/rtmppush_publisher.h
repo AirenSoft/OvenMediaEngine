@@ -30,7 +30,7 @@ private:
 	}
 	const char *GetPublisherName() const override
 	{
-		return "RtmpPushPublisher";
+		return "RTMPPushPublisher";
 	}
 
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;

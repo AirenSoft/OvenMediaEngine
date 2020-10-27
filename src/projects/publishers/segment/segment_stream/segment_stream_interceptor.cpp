@@ -20,9 +20,9 @@ SegmentStreamInterceptor::~SegmentStreamInterceptor()
 	_worker_manager.Stop();
 }
 
-void SegmentStreamInterceptor::Start(int thread_count, const SegmentProcessHandler &process_handler)
+bool SegmentStreamInterceptor::Start(int thread_count, const SegmentProcessHandler &process_handler)
 {
-	_worker_manager.Start(thread_count, process_handler);
+	return _worker_manager.Start(thread_count, process_handler);
 }
 
 //====================================================================================================

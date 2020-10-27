@@ -3,7 +3,7 @@
 //  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
-//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #include "http_server.h"
@@ -15,11 +15,13 @@
 HttpServer::~HttpServer()
 {
 	// PhysicalPort should be stopped before release HttpServer
-	OV_ASSERT2(_physical_port == nullptr);
+	OV_ASSERT(_physical_port == nullptr, "Physical port: %s", _physical_port->ToString().CStr());
 }
 
 bool HttpServer::Start(const ov::SocketAddress &address)
 {
+	auto lock_guard = std::lock_guard(_physical_port_mutex);
+
 	if (_physical_port != nullptr)
 	{
 		logtw("Server is running");
@@ -38,18 +40,30 @@ bool HttpServer::Start(const ov::SocketAddress &address)
 
 bool HttpServer::Stop()
 {
-	//TODO(Dimiden): Check possibility that _physical_port can be deleted from other http publisher.
-	if (_physical_port != nullptr)
+	std::shared_ptr<PhysicalPort> physical_port;
+
 	{
-		_physical_port->RemoveObserver(this);
-		PhysicalPortManager::GetInstance()->DeletePort(_physical_port);
-		_physical_port = nullptr;
+		auto lock_guard = std::lock_guard(_physical_port_mutex);
+		physical_port = std::move(_physical_port);
 	}
 
-	// client들 정리
-	_client_list_mutex.lock();
-	auto client_list = std::move(_client_list);
-	_client_list_mutex.unlock();
+	if (physical_port == nullptr)
+	{
+		// Server is not running
+		return false;
+	}
+
+	physical_port->RemoveObserver(this);
+	PhysicalPortManager::GetInstance()->DeletePort(physical_port);
+	physical_port = nullptr;
+
+	// Clean up the client list
+	ClientList client_list;
+
+	{
+		auto lock_guard = std::lock_guard(_client_list_mutex);
+		client_list = std::move(_client_list);
+	}
 
 	for (auto &client : client_list)
 	{
@@ -59,6 +73,13 @@ bool HttpServer::Stop()
 	_interceptor_list.clear();
 
 	return true;
+}
+
+bool HttpServer::IsRunning() const
+{
+	auto lock_guard = std::lock_guard(_physical_port_mutex);
+
+	return (_physical_port != nullptr);
 }
 
 ssize_t HttpServer::TryParseHeader(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
@@ -315,17 +336,17 @@ void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 
 bool HttpServer::AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor)
 {
-	// 기존에 등록된 processor가 있는지 확인
 	std::lock_guard<std::shared_mutex> guard(_interceptor_list_mutex);
 
+	// Find interceptor in the list
 	auto item = std::find_if(_interceptor_list.begin(), _interceptor_list.end(), [&](std::shared_ptr<HttpRequestInterceptor> const &value) -> bool {
 		return value == interceptor;
 	});
 
 	if (item != _interceptor_list.end())
 	{
-		// 기존에 등록되어 있음
-		logtw("%p is already observer", interceptor.get());
+		// interceptor exists in the list
+		logtw("%p is already registered", interceptor.get());
 		return false;
 	}
 

@@ -38,15 +38,15 @@ WebRtcPublisher::~WebRtcPublisher()
 bool WebRtcPublisher::Start()
 {
 	auto server_config = GetServerConfig();
-	auto webrtc_port_info = server_config.GetBind().GetPublishers().GetWebrtc();
+	auto webrtc_config = server_config.GetBind().GetPublishers().GetWebrtc();
 
-	if (webrtc_port_info.IsParsed() == false)
+	if (webrtc_config.IsParsed() == false)
 	{
-		logtd("WebRTC Publisher is disabled");
+		logtw("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
-	auto &signalling_config = webrtc_port_info.GetSignalling();
+	auto &signalling_config = webrtc_config.GetSignalling();
 	auto &port_config = signalling_config.GetPort();
 	auto &tls_port_config = signalling_config.GetTlsPort();
 
@@ -74,7 +74,7 @@ bool WebRtcPublisher::Start()
 
 	bool result = true;
 
-	_ice_port = IcePortManager::GetInstance()->CreatePort(webrtc_port_info.GetIceCandidates(), IcePortObserver::GetSharedPtr());
+	_ice_port = IcePortManager::GetInstance()->CreatePort(webrtc_config.GetIceCandidates(), IcePortObserver::GetSharedPtr());
 	if (_ice_port == nullptr)
 	{
 		logte("Cannot initialize ICE Port. Check your ICE configuration");

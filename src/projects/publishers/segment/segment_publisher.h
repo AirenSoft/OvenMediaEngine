@@ -177,14 +177,13 @@ protected:
 
 public:
 	template <typename Tpublisher>
-	static std::shared_ptr<Tpublisher> Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-											  const cfg::Server &server_config,
+	static std::shared_ptr<Tpublisher> Create(const cfg::Server &server_config,
 											  const std::shared_ptr<MediaRouteInterface> &router)
 	{
 		auto publisher = std::make_shared<Tpublisher>((PrivateToken){}, server_config, router);
 
 		auto instance = std::static_pointer_cast<SegmentPublisher>(publisher);
-		if (instance->Start(http_server_manager) == false)
+		if (instance->Start() == false)
 		{
 			return nullptr;
 		}
@@ -205,8 +204,8 @@ protected:
 	SegmentPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 	~SegmentPublisher() override;
 
-	bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager, const cfg::SingularPort &port_config, const cfg::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server);
-	virtual bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager) = 0;
+	bool Start(const cfg::SingularPort &port_config, const cfg::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server);
+	virtual bool Start() = 0;
 	
 
 	bool HandleSignedUrl(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, 

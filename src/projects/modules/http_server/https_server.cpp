@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "https_server.h"
+
 #include "http_private.h"
 
 // Reference: https://wiki.mozilla.org/Security/Server_Side_TLS
@@ -18,9 +19,17 @@
 // Backward compatibility
 #define HTTP_BACKWARD_COMPATIBILITY "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:ECDHE-RSA-DES-CBC3-SHA:ECDHE-ECDSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:DES-CBC3-SHA:HIGH:SEED:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!RSAPSK:!aDH:!aECDH:!EDH-DSS-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!SRP"
 
-void HttpsServer::SetVirtualHostList(std::vector<std::shared_ptr<ocst::VirtualHost>>& vhost_list)
+bool HttpsServer::SetCertificate(const std::shared_ptr<info::Certificate> &certificate)
 {
-	_virtual_host_list = vhost_list;
+	if ((_certificate != nullptr) && (_certificate != certificate))
+	{
+		// TODO(dimiden): Cannot change certificate - Currently, it's a limitation of HttpServer
+		return false;
+	}
+
+	_certificate = certificate;
+
+	return true;
 }
 
 void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
@@ -29,22 +38,14 @@ void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 
 	if (client != nullptr)
 	{
-		// TODO(Dimiden): OME doesn't support SNI yet, so we will use the first certificate for all requests until SNI development is complete.
-		// When SNI works, you need to put a certificate by domain to TlsData
-		if(_virtual_host_list.size() == 0)
-		{
-			return;
-		}
-
-		auto vhost_info = _virtual_host_list[0];
-		if(vhost_info->host_info.GetCertificate() == nullptr)
+		if (_certificate == nullptr)
 		{
 			return;
 		}
 
 		auto tls_data = std::make_shared<ov::TlsData>(
 			ov::TlsData::Method::TlsServerMethod,
-			vhost_info->host_info.GetCertificate(), vhost_info->host_info.GetChainCertificate(),
+			_certificate->GetCertificate(), _certificate->GetChainCertificate(),
 			HTTP_INTERMEDIATE_COMPATIBILITY);
 
 		tls_data->SetWriteCallback([remote](const void *data, size_t length) -> ssize_t {

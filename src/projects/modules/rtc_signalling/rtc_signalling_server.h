@@ -11,8 +11,7 @@
 #include <base/info/host.h>
 #include <base/mediarouter/media_route_interface.h>
 #include <base/publisher/publisher.h>
-#include <modules/http_server/http_server.h>
-#include <modules/http_server/https_server.h>
+#include <modules/http_server/http_server_manager.h>
 #include <modules/http_server/interceptors/http_request_interceptors.h>
 #include <modules/ice/ice.h>
 
@@ -102,7 +101,7 @@ protected:
 
 	using SdpCallback = std::function<void(std::shared_ptr<SessionDescription> sdp, std::shared_ptr<ov::Error> error)>;
 
-	bool InitializeWebSocketServer();
+	std::shared_ptr<WebSocketInterceptor> CreateWebSocketInterceptor();
 
 	std::shared_ptr<ov::Error> DispatchCommand(const std::shared_ptr<WebSocketClient> &ws_client, const ov::String &command, const ov::JsonObject &object, std::shared_ptr<RtcSignallingInfo> &info, const std::shared_ptr<const WebSocketFrame> &message);
 	std::shared_ptr<ov::Error> DispatchRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, std::shared_ptr<RtcSignallingInfo> &info);

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "bind/bind.h"
+#include "managers/managers.h"
 #include "p2p/p2p.h"
 #include "virtual_hosts/virtual_hosts.h"
 namespace cfg
@@ -31,6 +32,8 @@ namespace cfg
 
 		CFG_DECLARE_REF_GETTER_OF(GetIp, _ip)
 		CFG_DECLARE_REF_GETTER_OF(GetBind, _bind)
+
+		CFG_DECLARE_REF_GETTER_OF(GetManagers, _managers)
 
 		CFG_DECLARE_REF_GETTER_OF(GetP2P, _p2p)
 
@@ -77,6 +80,8 @@ namespace cfg
 			RegisterValue("IP", &_ip);
 			RegisterValue("Bind", &_bind);
 
+			RegisterValue<Optional>("Managers", &_managers);
+
 			RegisterValue<Optional>("P2P", &_p2p);
 
 			RegisterValue<Optional>("VirtualHosts", &_virtual_hosts);
@@ -91,6 +96,8 @@ namespace cfg
 
 		ov::String _ip;
 		bind::Bind _bind;
+
+		mgr::Managers _managers;
 
 		P2P _p2p;
 
