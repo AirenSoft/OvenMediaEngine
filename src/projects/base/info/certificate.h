@@ -17,7 +17,7 @@ namespace info
 	{
 	public:
 		///
-		/// @param certificate_name A name/identifier of certificate
+		/// @param certificate_name A name/identifier of certificate (Used for debugging purposes)
 		/// @param host_name_list A host name list
 		/// @param tls A information of certificate
 		///
