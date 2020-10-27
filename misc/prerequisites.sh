@@ -178,15 +178,15 @@ install_ffmpeg()
     --disable-static \
     --disable-debug \
     --disable-doc \
-    --disable-programs \
-    --disable-avdevice --disable-dct --disable-dwt --disable-error-resilience --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils \
-    --disable-everything \
+    --disable-programs  \
+    --disable-avdevice --disable-dct --disable-dwt --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils\
     --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 \
-    --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,libx265 \
+    --disable-everything \
+    --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,libx265,mjpeg,png \
     --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc \
     --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
-    --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && \
+    --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb # && \
     make -j$(nproc) && \
     sudo make install && \
     sudo rm -rf ${PREFIX}/share && \
