@@ -56,6 +56,25 @@
 	</P2P>
 	-->
 
+	<!-- Enable this configuration if you want to use API Server -->
+	<!--
+	<Managers>
+		<Host>
+			<Names>
+				<Name>*</Name>
+			</Names>
+			<TLS>
+				<CertPath>path/to/file.crt</CertPath>
+				<KeyPath>path/to/file.key</KeyPath>
+				<ChainCertPath>path/to/file.crt</ChainCertPath>
+			</TLS>
+		</Host>
+		<API>
+			<AccessToken>ome-access-token</AccessToken>
+		</API>
+	</Managers>
+	-->
+
 	<VirtualHosts>
 		<!-- You can use wildcard like this to include multiple XMLs -->
 		<VirtualHost include="VHost*.xml" />
