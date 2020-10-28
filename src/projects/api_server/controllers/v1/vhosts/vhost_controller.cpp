@@ -24,7 +24,7 @@ namespace api
 			CreateSubController<v1::AppsController>();
 
 			GetHandler("", &VHostController::OnGetVhostList);
-			GetHandler("/[^/]+", &VHostController::OnGetVhost);
+			GetHandler("/(?<vhost>[^/]+)", &VHostController::OnGetVhost);
 		}
 
 		HttpNextHandler VHostController::OnGetVhostList(const std::shared_ptr<HttpClient> &client)
