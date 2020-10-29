@@ -23,11 +23,11 @@ namespace api
 
 			CreateSubController<v1::AppsController>();
 
-			GetHandler("", &VHostController::OnGetVhostList);
-			GetHandler("/(?<vhost>[^/]+)", &VHostController::OnGetVhost);
+			RegisterGet("", &VHostController::OnGetVhostList);
+			RegisterGet("/(?<vhost>[^/]*)", &VHostController::OnGetVhost);
 		}
 
-		HttpNextHandler VHostController::OnGetVhostList(const std::shared_ptr<HttpClient> &client)
+		ApiResponse VHostController::OnGetVhostList(const std::shared_ptr<HttpClient> &client)
 		{
 			auto vhost_list_config = cfg::ConfigManager::GetInstance()->GetServer()->GetVirtualHostList();
 			Json::Value response(Json::ValueType::arrayValue);
@@ -37,67 +37,29 @@ namespace api
 				response.append(vhost.GetName().CStr());
 			}
 
-#if DEBUG
-			auto response_string = ov::Json::Stringify(response, true);
-			response_string.Append('\n');
-#else	// DEBUG
-			auto response_string = ov::Json::Stringify(response);
-#endif	// DEBUG
-
-			client->GetResponse()->AppendString(response_string);
-
-			return HttpNextHandler::DoNotCall;
+			return response;
 		}
 
-		HttpNextHandler VHostController::OnGetVhost(const std::shared_ptr<HttpClient> &client)
+		ApiResponse VHostController::OnGetVhost(const std::shared_ptr<HttpClient> &client)
 		{
+			// Get resources from URI
+			auto &match_result = client->GetRequest()->GetMatchResult();
+			auto vhost_name = match_result.GetNamedGroup("vhost");
+
 			auto vhost_list_config = cfg::ConfigManager::GetInstance()->GetServer()->GetVirtualHostList();
-			auto &uri = client->GetRequest()->GetRequestTarget();
-			auto tokens = uri.Split("/");
-
-			// tokens[0] = ""
-			// tokens[1] = "v1"
-			// tokens[2] = "vhosts"
-			// tokens[3] = "<vhost_name>"
-			auto vhost_name = tokens[3];
-			Json::Value response(Json::ValueType::objectValue);
-
-			logti("Get the virtual host information for %s", vhost_name.CStr());
-
-			bool found = false;
 
 			for (const auto &vhost : vhost_list_config)
 			{
-				if (vhost_name == vhost.GetName())
+				if (vhost_name == vhost.GetName().CStr())
 				{
-					found = true;
-					break;
+					// TODO(dimiden): Fill this information
+					Json::Value response(Json::ValueType::objectValue);
+					response["name"] = vhost.GetName().CStr();
+					return response;
 				}
 			}
 
-			if (found)
-			{
-				// TODO(dimiden): Fill this information
-				response["name"] = vhost_name.CStr();
-			}
-			else
-			{
-				auto message = ov::String::FormatString("Could not find virtual host: %s", vhost_name.CStr());
-
-				client->GetResponse()->SetStatusCode(HttpStatusCode::NotFound);
-				response["message"] = message.CStr();
-			}
-
-#if DEBUG
-			auto response_string = ov::Json::Stringify(response, true);
-			response_string.Append('\n');
-#else	// DEBUG
-			auto response_string = ov::Json::Stringify(response);
-#endif	// DEBUG
-
-			client->GetResponse()->AppendString(response_string);
-
-			return HttpNextHandler::DoNotCall;
+			return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]", vhost_name.length(), vhost_name.data());
 		}
 
 	}  // namespace v1

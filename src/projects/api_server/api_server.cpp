@@ -89,6 +89,7 @@ namespace api
 		if (http_server_result && https_server_result)
 		{
 			// Everything is OK
+			logti("API Server is listening on %s", address.ToString().CStr());
 			return true;
 		}
 

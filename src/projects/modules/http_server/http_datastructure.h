@@ -168,55 +168,105 @@ enum class HttpStatusCode : uint16_t
 	HTTPVersionNotSupported = 505
 };
 
-#define HTTP_GET_STATUS_TEXT(condition, text) \
+#define HTTP_STATUS_RETURN(condition, value) \
 	case condition:                           \
-		return text
+		return value
+
+inline constexpr bool IsValidHttpStatusCode(HttpStatusCode status_code)
+{
+	switch (status_code)
+	{
+		HTTP_STATUS_RETURN(HttpStatusCode::Continue, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::SwitchingProtocols, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::OK, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::Created, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::Accepted, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::NonAuthoritativeInformation, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::NoContent, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::ResetContent, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::PartialContent, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::MultipleChoices, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::MovedPermanently, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::Found, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::SeeOther, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::NotModified, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::UseProxy, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::TemporaryRedirect, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::BadRequest, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::Unauthorized, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::PaymentRequired, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::Forbidden, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::NotFound, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::MethodNotAllowed, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::NotAcceptable, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::ProxyAuthenticationRequired, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::RequestTimeout, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::Conflict, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::Gone, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::LengthRequired, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::PreconditionFailed, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::PayloadTooLarge, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::URITooLong, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::UnsupportedMediaType, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::RangeNotSatisfiable, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::ExpectationFailed, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::UpgradeRequired, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::InternalServerError, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::NotImplemented, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::BadGateway, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::ServiceUnavailable, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::GatewayTimeout, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::HTTPVersionNotSupported, true);
+	}
+
+	return false;
+}
 
 inline constexpr const char *StringFromHttpStatusCode(HttpStatusCode status_code)
 {
 	switch (status_code)
 	{
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::Continue, "Continue");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::SwitchingProtocols, "Switching Protocols");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::OK, "OK");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::Created, "Created");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::Accepted, "Accepted");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::NonAuthoritativeInformation, "Non-Authoritative Information");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::NoContent, "No Content");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::ResetContent, "Reset Content");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::PartialContent, "Partial Content");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::MultipleChoices, "Multiple Choices");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::MovedPermanently, "Moved Permanently");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::Found, "Found");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::SeeOther, "See Other");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::NotModified, "Not Modified");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::UseProxy, "Use Proxy");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::TemporaryRedirect, "Temporary Redirect");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::BadRequest, "Bad Request");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::Unauthorized, "Unauthorized");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::PaymentRequired, "Payment Required");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::Forbidden, "Forbidden");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::NotFound, "Not Found");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::MethodNotAllowed, "Method Not Allowed");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::NotAcceptable, "Not Acceptable");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::ProxyAuthenticationRequired, "Proxy Authentication Required");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::RequestTimeout, "Request Timeout");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::Conflict, "Conflict");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::Gone, "Gone");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::LengthRequired, "Length Required");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::PreconditionFailed, "Precondition Failed");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::PayloadTooLarge, "Payload Too Large");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::URITooLong, "URI Too Long");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::UnsupportedMediaType, "Unsupported Media Type");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::RangeNotSatisfiable, "Range Not Satisfiable");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::ExpectationFailed, "Expectation Failed");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::UpgradeRequired, "Upgrade Required");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::InternalServerError, "Internal Server Error");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::NotImplemented, "Not Implemented");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::BadGateway, "Bad Gateway");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::ServiceUnavailable, "Service Unavailable");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::GatewayTimeout, "Gateway Timeout");
-		HTTP_GET_STATUS_TEXT(HttpStatusCode::HTTPVersionNotSupported, "HTTP Version Not Supported");
+		HTTP_STATUS_RETURN(HttpStatusCode::Continue, "Continue");
+		HTTP_STATUS_RETURN(HttpStatusCode::SwitchingProtocols, "Switching Protocols");
+		HTTP_STATUS_RETURN(HttpStatusCode::OK, "OK");
+		HTTP_STATUS_RETURN(HttpStatusCode::Created, "Created");
+		HTTP_STATUS_RETURN(HttpStatusCode::Accepted, "Accepted");
+		HTTP_STATUS_RETURN(HttpStatusCode::NonAuthoritativeInformation, "Non-Authoritative Information");
+		HTTP_STATUS_RETURN(HttpStatusCode::NoContent, "No Content");
+		HTTP_STATUS_RETURN(HttpStatusCode::ResetContent, "Reset Content");
+		HTTP_STATUS_RETURN(HttpStatusCode::PartialContent, "Partial Content");
+		HTTP_STATUS_RETURN(HttpStatusCode::MultipleChoices, "Multiple Choices");
+		HTTP_STATUS_RETURN(HttpStatusCode::MovedPermanently, "Moved Permanently");
+		HTTP_STATUS_RETURN(HttpStatusCode::Found, "Found");
+		HTTP_STATUS_RETURN(HttpStatusCode::SeeOther, "See Other");
+		HTTP_STATUS_RETURN(HttpStatusCode::NotModified, "Not Modified");
+		HTTP_STATUS_RETURN(HttpStatusCode::UseProxy, "Use Proxy");
+		HTTP_STATUS_RETURN(HttpStatusCode::TemporaryRedirect, "Temporary Redirect");
+		HTTP_STATUS_RETURN(HttpStatusCode::BadRequest, "Bad Request");
+		HTTP_STATUS_RETURN(HttpStatusCode::Unauthorized, "Unauthorized");
+		HTTP_STATUS_RETURN(HttpStatusCode::PaymentRequired, "Payment Required");
+		HTTP_STATUS_RETURN(HttpStatusCode::Forbidden, "Forbidden");
+		HTTP_STATUS_RETURN(HttpStatusCode::NotFound, "Not Found");
+		HTTP_STATUS_RETURN(HttpStatusCode::MethodNotAllowed, "Method Not Allowed");
+		HTTP_STATUS_RETURN(HttpStatusCode::NotAcceptable, "Not Acceptable");
+		HTTP_STATUS_RETURN(HttpStatusCode::ProxyAuthenticationRequired, "Proxy Authentication Required");
+		HTTP_STATUS_RETURN(HttpStatusCode::RequestTimeout, "Request Timeout");
+		HTTP_STATUS_RETURN(HttpStatusCode::Conflict, "Conflict");
+		HTTP_STATUS_RETURN(HttpStatusCode::Gone, "Gone");
+		HTTP_STATUS_RETURN(HttpStatusCode::LengthRequired, "Length Required");
+		HTTP_STATUS_RETURN(HttpStatusCode::PreconditionFailed, "Precondition Failed");
+		HTTP_STATUS_RETURN(HttpStatusCode::PayloadTooLarge, "Payload Too Large");
+		HTTP_STATUS_RETURN(HttpStatusCode::URITooLong, "URI Too Long");
+		HTTP_STATUS_RETURN(HttpStatusCode::UnsupportedMediaType, "Unsupported Media Type");
+		HTTP_STATUS_RETURN(HttpStatusCode::RangeNotSatisfiable, "Range Not Satisfiable");
+		HTTP_STATUS_RETURN(HttpStatusCode::ExpectationFailed, "Expectation Failed");
+		HTTP_STATUS_RETURN(HttpStatusCode::UpgradeRequired, "Upgrade Required");
+		HTTP_STATUS_RETURN(HttpStatusCode::InternalServerError, "Internal Server Error");
+		HTTP_STATUS_RETURN(HttpStatusCode::NotImplemented, "Not Implemented");
+		HTTP_STATUS_RETURN(HttpStatusCode::BadGateway, "Bad Gateway");
+		HTTP_STATUS_RETURN(HttpStatusCode::ServiceUnavailable, "Service Unavailable");
+		HTTP_STATUS_RETURN(HttpStatusCode::GatewayTimeout, "Gateway Timeout");
+		HTTP_STATUS_RETURN(HttpStatusCode::HTTPVersionNotSupported, "HTTP Version Not Supported");
 	}
 
 	return "Unknown";

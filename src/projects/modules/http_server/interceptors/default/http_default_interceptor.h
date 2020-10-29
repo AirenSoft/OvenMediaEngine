@@ -64,7 +64,7 @@ protected:
 #if DEBUG
 		ov::String pattern_string;
 #endif	// DEBUG
-		std::regex pattern;
+		ov::Regex pattern;
 		HttpMethod method;
 		HttpRequestHandler handler;
 	};

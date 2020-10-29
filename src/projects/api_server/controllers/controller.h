@@ -14,6 +14,27 @@
 
 namespace api
 {
+	class ApiResponse
+	{
+	public:
+		// Empty response (no response body with 200 OK)
+		ApiResponse() = default;
+		// Empty response (no response body with the status code)
+		ApiResponse(HttpStatusCode status_code);
+		// Used to send a JSON object with status code
+		ApiResponse(HttpStatusCode status_code, const Json::Value &json);
+		// Used to send a JSON object
+		ApiResponse(const Json::Value &json);
+		// Used to send an error
+		ApiResponse(const std::shared_ptr<ov::Error> &error);
+
+		bool SendToClient(const std::shared_ptr<HttpClient> &client);
+
+	protected:
+		HttpStatusCode _status_code = HttpStatusCode::OK;
+		Json::Value _json = Json::Value::null;
+	};
+
 	template <typename Tclass>
 	class Controller
 	{
@@ -45,31 +66,47 @@ namespace api
 		virtual void PrepareHandlers() = 0;
 
 	protected:
-		using ApiHandler = HttpNextHandler (Tclass::*)(const std::shared_ptr<HttpClient> &client);
+		using ApiHandler = ApiResponse (Tclass::*)(const std::shared_ptr<HttpClient> &client);
+
+		void Register(HttpMethod method, const ov::String &pattern, const ApiHandler &handler)
+		{
+			auto new_pattern = ov::String::FormatString("^%s%s$", _prefix.CStr(), pattern.CStr());
+			auto that = dynamic_cast<Tclass *>(this);
+
+			_interceptor->Register(method, new_pattern, [that, handler](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+				if (that != nullptr)
+				{
+					auto result = (that->*handler)(client);
+					result.SendToClient(client);
+				}
+				else
+				{
+					OV_ASSERT2(false);
+				}
+
+				return HttpNextHandler::DoNotCall;
+			});
+		}
 
 		// Register handlers
-		void PostHandler(const ov::String &pattern, const ApiHandler &handler)
+		void RegisterPost(const ov::String &pattern, const ApiHandler &handler)
 		{
-			auto function = std::bind(handler, dynamic_cast<Tclass *>(this), std::placeholders::_1);
-			_interceptor->RegisterPost(ov::String::FormatString("%s%s", _prefix.CStr(), pattern.CStr()), function);
+			Register(HttpMethod::Post, pattern, handler);
 		}
 
-		void GetHandler(const ov::String &pattern, const ApiHandler &handler)
+		void RegisterGet(const ov::String &pattern, const ApiHandler &handler)
 		{
-			auto function = std::bind(handler, dynamic_cast<Tclass *>(this), std::placeholders::_1);
-			_interceptor->RegisterGet(ov::String::FormatString("%s%s", _prefix.CStr(), pattern.CStr()), function);
+			Register(HttpMethod::Get, pattern, handler);
 		}
 
-		void PutHandler(const ov::String &pattern, const ApiHandler &handler)
+		void RegisterPut(const ov::String &pattern, const ApiHandler &handler)
 		{
-			auto function = std::bind(handler, dynamic_cast<Tclass *>(this), std::placeholders::_1);
-			_interceptor->RegisterPut(ov::String::FormatString("%s%s", _prefix.CStr(), pattern.CStr()), function);
+			Register(HttpMethod::Put, pattern, handler);
 		}
 
-		void DeleteHandler(const ov::String &pattern, const ApiHandler &handler)
+		void RegisterDelete(const ov::String &pattern, const ApiHandler &handler)
 		{
-			auto function = std::bind(handler, dynamic_cast<Tclass *>(this), std::placeholders::_1);
-			_interceptor->RegisterDelete(ov::String::FormatString("%s%s", _prefix.CStr(), pattern.CStr()), function);
+			Register(HttpMethod::Delete, pattern, handler);
 		}
 
 		ov::String _prefix;

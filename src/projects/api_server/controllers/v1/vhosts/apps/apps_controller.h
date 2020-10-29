@@ -21,7 +21,8 @@ namespace api
 			void PrepareHandlers() override;
 
 		protected:
-			HttpNextHandler OnVhostsApps(const std::shared_ptr<HttpClient> &client);
+			ApiResponse OnGetAppList(const std::shared_ptr<HttpClient> &client);
+			ApiResponse OnGetApp(const std::shared_ptr<HttpClient> &client);
 		};
 	}  // namespace v1
 }  // namespace api

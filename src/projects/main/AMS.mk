@@ -62,6 +62,7 @@ $(call add_pkg_config,openssl)
 $(call add_pkg_config,vpx)
 $(call add_pkg_config,opus)
 $(call add_pkg_config,libsrtp2)
+$(call add_pkg_config,libpcre2-8)
 
 # Temporarily stop using JEMALLOC. We will test it more and use it again.
 #ifeq ($(MAKECMDGOALS),release)

@@ -23,24 +23,26 @@ bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &patte
 		return false;
 	}
 
-	try
-	{
-		ov::String whole_pattern;
-		
-		whole_pattern.Format("%s%s", _pattern_prefix.CStr(), pattern.CStr());
+	ov::String whole_pattern;
+	whole_pattern.Format("%s%s", _pattern_prefix.CStr(), pattern.CStr());
 
+	auto regex = ov::Regex(whole_pattern);
+	auto error = regex.Compile();
+
+	if (error == nullptr)
+	{
 		_request_handler_list.push_back((RequestInfo) {
 #if DEBUG
 			.pattern_string = whole_pattern,
 #endif	// DEBUG
-			.pattern = std::regex(whole_pattern),
+			.pattern = std::move(regex),
 			.method = method,
 			.handler = handler
 		});
 	}
-	catch (std::regex_error &e)
+	else
 	{
-		logte("Invalid regex pattern: %s", pattern.CStr());
+		logte("Invalid regex pattern: %s (Error: %s)", pattern.CStr(), error->ToString().CStr());
 		return false;
 	}
 
@@ -142,7 +144,10 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 
 				response->SetStatusCode(HttpStatusCode::OK);
 
-				if (std::regex_match(request->GetRequestTarget().CStr(), request_info.pattern))
+				auto matches = request_info.pattern.Matches(request->GetRequestTarget());
+				auto &error = matches.GetError();
+
+				if (error == nullptr)
 				{
 #if DEBUG
 					logtd("Matches: url [%s], pattern: [%s]", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr());
@@ -155,6 +160,8 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 					if (HTTP_CHECK_METHOD(request_info.method, request->GetMethod()))
 					{
 						handler_count++;
+
+						request->SetMatchResult(matches);
 
 						if (request_info.handler(client) == HttpNextHandler::DoNotCall)
 						{
@@ -169,7 +176,7 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 				else
 				{
 #if DEBUG
-				logtd("Not matched: url [%s], pattern: [%s]", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr());
+					logtd("Not matched: url [%s], pattern: [%s] (with error: %s)", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr(), error->ToString().CStr());
 #endif	// DEBUG
 				}
 			}

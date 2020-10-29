@@ -38,6 +38,11 @@ inline size_t FromPcreSize(PCRE2_SIZE pcre_size)
 
 namespace ov
 {
+	MatchResult::MatchResult()
+		: MatchResult(Error::CreateError("Regex", "Not initialized"))
+	{
+	}
+
 	static std::vector<std::string_view> CreateMatchGroup(const char *base_address, const pcre2_match_data *match_data, int group_count, const size_t *output_vectors)
 	{
 		std::vector<std::string_view> result;
@@ -81,6 +86,11 @@ namespace ov
 	{
 	}
 
+	const std::shared_ptr<ov::Error> &MatchResult::GetError() const
+	{
+		return _error;
+	}
+
 	const std::string &MatchResult::GetSubject() const
 	{
 		return *_subject;
@@ -111,9 +121,16 @@ namespace ov
 		return _named_group;
 	}
 
-	std::string_view MatchResult::GetNamedGroupList(const char *name) const
+	std::string_view MatchResult::GetNamedGroup(const char *name) const
 	{
-		return {};
+		auto item = _named_group.find(name);
+
+		if(item == _named_group.end())
+		{
+			return {};
+		}
+
+		return item->second;
 	}
 
 	Regex::Regex(const char *pattern, Option options)
@@ -125,6 +142,20 @@ namespace ov
 	Regex::Regex(const char *pattern)
 		: Regex(pattern, Option::None)
 	{
+	}
+
+	Regex::Regex(const Regex &regex)
+	{
+		_pattern = regex._pattern;
+		_options = regex._options;
+		_code = ::pcre2_code_copy_with_tables(static_cast<pcre2_code_8 *>(regex._code));
+	}
+
+	Regex::Regex(Regex &&regex)
+	{
+		std::swap(_pattern, regex._pattern);
+		std::swap(_options, regex._options);
+		std::swap(_code, regex._code);
 	}
 
 	Regex::~Regex()
@@ -196,6 +227,11 @@ namespace ov
 
 	MatchResult Regex::Matches(const char *subject)
 	{
+		if(_code == nullptr)
+		{
+			return {ov::Error::CreateError("Regex", "Not compiled")};
+		}
+
 		std::shared_ptr<Error> error;
 
 		// Allocate group information

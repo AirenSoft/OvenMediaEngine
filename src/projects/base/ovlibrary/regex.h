@@ -60,6 +60,8 @@ namespace ov
 	class MatchResult
 	{
 	public:
+		MatchResult();
+
 		// MatchResult with error
 		MatchResult(const std::shared_ptr<ov::Error> &error);
 
@@ -77,8 +79,8 @@ namespace ov
 		const std::vector<std::string_view> &GetGroupList() const;
 
 		size_t GetNamedGroupCount() const;
+		std::string_view GetNamedGroup(const char *name) const;
 		const std::map<std::string, std::string_view> &GetNamedGroupList() const;
-		std::string_view GetNamedGroupList(const char *name) const;
 
 	protected:
 		std::shared_ptr<Error> _error;
@@ -96,7 +98,7 @@ namespace ov
 		enum class Option
 		{
 			None,
-			
+
 			// PCRE2_CASELESS
 			CaseInsensitive,
 			// PCRE2_MULTILINE
@@ -110,6 +112,8 @@ namespace ov
 		// TODO(dimiden): Implement a feature to support multiple options
 		Regex(const char *pattern, Option options);
 		Regex(const char *pattern);
+		Regex(const Regex &regex);
+		Regex(Regex &&regex);
 		~Regex();
 
 		// TODO(dimiden): Copy/Move Ctor is needed for _code using pcre2_code_copy
