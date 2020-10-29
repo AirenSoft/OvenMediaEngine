@@ -18,8 +18,8 @@ namespace api
 	{
 		void AppsController::PrepareHandlers()
 		{
-			RegisterGet("", &AppsController::OnGetAppList);
-			RegisterGet("/(?<app>[^/]*)", &AppsController::OnGetApp);
+			RegisterGet(R"()", &AppsController::OnGetAppList);
+			RegisterGet(R"(\/(?<app>[^\/]*))", &AppsController::OnGetApp);
 		};
 
 		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<HttpClient> &client)

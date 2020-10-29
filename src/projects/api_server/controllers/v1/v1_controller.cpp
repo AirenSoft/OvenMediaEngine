@@ -17,8 +17,8 @@ namespace api
 	{
 		void V1Controller::PrepareHandlers()
 		{
-			CreateSubController<VHostsController>("/vhosts");
-			CreateSubController<StatsController>("/stats");
+			CreateSubController<VHostsController>(R"(\/vhosts)");
+			CreateSubController<StatsController>(R"(\/stats)");
 		};
 	}  // namespace v1
 }  // namespace api
