@@ -20,7 +20,8 @@ ENV     OME_VERSION=master \
         VPX_VERSION=1.7.0 \
         FDKAAC_VERSION=0.1.5 \
         FFMPEG_VERSION=3.4 \
-        JEMALLOC_VERSION=5.2.1
+        JEMALLOC_VERSION=5.2.1 \
+        PCRE2_VERSION=10.35
 
 ## Install build utils
 RUN     apt-get -y install build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc
@@ -150,6 +151,20 @@ RUN \
         make && \
         make install_include install_lib && \
         rm -rf ${DIR}
+
+## Build pcre2
+RUN \
+        DIR=/tmp/libpcre2 && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        curl -sLf https://ftp.pcre.org/pub/pcre/pcre2-${PCRE2_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+        ./configure --prefix="${PREFIX}" \
+        --disable-static \
+        --enable-jit=auto && \
+        make && \
+        make install && \
+        rm -rf ${DIR} && \
+        rm -rf ${PREFIX}/bin
 
 ## Build OvenMediaEngine
 RUN \

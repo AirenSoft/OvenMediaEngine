@@ -15,6 +15,7 @@ FDKAAC_VERSION=0.1.5
 NASM_VERSION=2.15.02
 FFMPEG_VERSION=3.4
 JEMALLOC_VERSION=5.2.1
+PCRE2_VERSION=10.35
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     NCPU=$(sysctl -n hw.ncpu)
@@ -205,6 +206,21 @@ install_jemalloc()
     rm -rf ${DIR}) || fail_exit "jemalloc"
 }
 
+install_libpcre2()
+{
+    (DIR=${TEMP_PATH}/libpcre2 && \
+    mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    curl -sLf https://ftp.pcre.org/pub/pcre/pcre2-${PCRE2_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    ./configure --prefix="${PREFIX}" \
+    --disable-static \
+	--enable-jit=auto && \
+    make -j$(nproc) && \
+    sudo make install && \
+    rm -rf ${DIR} && \
+    sudo rm -rf ${PREFIX}/bin) || fail_exit "libpcre2"
+}
+
 install_base_ubuntu()
 {
     sudo apt install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc
@@ -328,6 +344,7 @@ install_libvpx
 install_fdk_aac
 install_ffmpeg
 install_jemalloc
+install_libpcre2
 
 echo ${OSNAME} ${OSVERSION}
 

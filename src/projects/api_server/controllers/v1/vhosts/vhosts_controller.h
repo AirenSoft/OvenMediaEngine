@@ -14,16 +14,16 @@ namespace api
 {
 	namespace v1
 	{
-		class VHostController : public Controller<VHostController>
+		class VHostsController : public Controller<VHostsController>
 		{
 		public:
 			void PrepareHandlers() override;
 
 			// GET /v1/vhosts
-			HttpNextHandler OnGetVhostList(const std::shared_ptr<HttpClient> &client);
+			ApiResponse OnGetVhostList(const std::shared_ptr<HttpClient> &client);
 
 			// GET /v1/vhosts/<vhost_name>
-			HttpNextHandler OnGetVhost(const std::shared_ptr<HttpClient> &client);
+			ApiResponse OnGetVhost(const std::shared_ptr<HttpClient> &client);
 		};
 	}  // namespace v1
 }  // namespace api

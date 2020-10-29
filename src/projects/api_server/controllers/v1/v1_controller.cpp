@@ -9,7 +9,7 @@
 #include "v1_controller.h"
 
 #include "stats/stats_controller.h"
-#include "vhosts/vhost_controller.h"
+#include "vhosts/vhosts_controller.h"
 
 namespace api
 {
@@ -17,10 +17,8 @@ namespace api
 	{
 		void V1Controller::PrepareHandlers()
 		{
-			AppendPrefix("/v1");
-
-			CreateSubController<VHostController>();
-			CreateSubController<StatsController>();
+			CreateSubController<VHostsController>(R"(\/vhosts)");
+			CreateSubController<StatsController>(R"(\/stats)");
 		};
 	}  // namespace v1
 }  // namespace api

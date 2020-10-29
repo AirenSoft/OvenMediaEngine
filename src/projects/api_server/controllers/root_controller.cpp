@@ -15,6 +15,6 @@ namespace api
 	void RootController::PrepareHandlers()
 	{
 		// Currently only v1 is supported
-		CreateSubController<v1::V1Controller>();
+		CreateSubController<v1::V1Controller>(R"(\/v1)");
 	};
 }  // namespace api

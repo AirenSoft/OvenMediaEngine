@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 #include <base/ovlibrary/converter.h>
+
 #include "http_datastructure.h"
 #include "interceptors/http_request_interceptor.h"
 
@@ -111,6 +112,16 @@ public:
 		return true;
 	}
 
+	void SetMatchResult(ov::MatchResult match_result)
+	{
+		_match_result = std::move(match_result);
+	}
+
+	const ov::MatchResult &GetMatchResult() const
+	{
+		return _match_result;
+	}
+
 	const std::shared_ptr<HttpRequestInterceptor> &GetRequestInterceptor()
 	{
 		return _interceptor;
@@ -180,6 +191,8 @@ protected:
 	ov::String _request_uri;
 	ov::String _request_target;
 	ov::String _http_version;
+
+	ov::MatchResult _match_result;
 
 	// request 헤더
 	bool _is_header_found = false;
