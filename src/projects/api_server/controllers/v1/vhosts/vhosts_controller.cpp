@@ -6,7 +6,7 @@
 //  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "vhost_controller.h"
+#include "vhosts_controller.h"
 
 #include <config/config.h>
 
@@ -17,17 +17,17 @@ namespace api
 {
 	namespace v1
 	{
-		void VHostController::PrepareHandlers()
+		void VHostsController::PrepareHandlers()
 		{
 			AppendPrefix("/vhosts");
 
-			RegisterGet("", &VHostController::OnGetVhostList);
-			RegisterGet("/(?<vhost>[^/]*)", &VHostController::OnGetVhost);
+			RegisterGet("", &VHostsController::OnGetVhostList);
+			RegisterGet("/(?<vhost>[^/]*)", &VHostsController::OnGetVhost);
 
 			CreateSubController<v1::AppsController>();
 		}
 
-		ApiResponse VHostController::OnGetVhostList(const std::shared_ptr<HttpClient> &client)
+		ApiResponse VHostsController::OnGetVhostList(const std::shared_ptr<HttpClient> &client)
 		{
 			auto vhost_list_config = cfg::ConfigManager::GetInstance()->GetServer()->GetVirtualHostList();
 			Json::Value response(Json::ValueType::arrayValue);
@@ -40,7 +40,7 @@ namespace api
 			return response;
 		}
 
-		ApiResponse VHostController::OnGetVhost(const std::shared_ptr<HttpClient> &client)
+		ApiResponse VHostsController::OnGetVhost(const std::shared_ptr<HttpClient> &client)
 		{
 			// Get resources from URI
 			auto &match_result = client->GetRequest()->GetMatchResult();

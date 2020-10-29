@@ -9,7 +9,7 @@
 #include "v1_controller.h"
 
 #include "stats/stats_controller.h"
-#include "vhosts/vhost_controller.h"
+#include "vhosts/vhosts_controller.h"
 
 namespace api
 {
@@ -19,7 +19,7 @@ namespace api
 		{
 			AppendPrefix("/v1");
 
-			CreateSubController<VHostController>();
+			CreateSubController<VHostsController>();
 			CreateSubController<StatsController>();
 		};
 	}  // namespace v1

@@ -14,7 +14,7 @@ namespace api
 {
 	namespace v1
 	{
-		class VHostController : public Controller<VHostController>
+		class VHostsController : public Controller<VHostsController>
 		{
 		public:
 			void PrepareHandlers() override;
