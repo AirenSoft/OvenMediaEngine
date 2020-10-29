@@ -8,14 +8,14 @@
 //==============================================================================
 #pragma once
 
-#include "cmaf_publisher.h"
 #include "dash_publisher.h"
-#include "hls_publisher.h"
-#include "rtmp_publisher.h"
-#include "webrtc_publisher.h"
-#include "ovt_publisher.h"
 #include "file_publisher.h"
+#include "hls_publisher.h"
+#include "ll_dash_publisher.h"
+#include "ovt_publisher.h"
+#include "rtmp_publisher.h"
 #include "rtmppush_publisher.h"
+#include "webrtc_publisher.h"
 
 namespace cfg
 {
@@ -24,7 +24,7 @@ namespace cfg
 		std::vector<const Publisher *> GetPublisherList() const
 		{
 			return {
-				&_rtmp_publisher,
+				// &_rtmp_publisher,
 				&_hls_publisher,
 				&_dash_publisher,
 				&_ll_dash_publisher,
@@ -34,7 +34,7 @@ namespace cfg
 		}
 
 		CFG_DECLARE_GETTER_OF(GetThreadCount, _thread_count)
-		CFG_DECLARE_REF_GETTER_OF(GetRtmpPublisher, _rtmp_publisher)
+		// CFG_DECLARE_REF_GETTER_OF(GetRtmpPublisher, _rtmp_publisher)
 		CFG_DECLARE_REF_GETTER_OF(GetHlsPublisher, _hls_publisher)
 		CFG_DECLARE_REF_GETTER_OF(GetDashPublisher, _dash_publisher)
 		CFG_DECLARE_REF_GETTER_OF(GetLlDashPublisher, _ll_dash_publisher)
@@ -43,13 +43,12 @@ namespace cfg
 		CFG_DECLARE_REF_GETTER_OF(GetFilePublisher, _file_publisher)
 		CFG_DECLARE_REF_GETTER_OF(GetRtmpPushPublisher, _rtmppush_publisher)
 
-
 	protected:
 		void MakeParseList() override
 		{
 			RegisterValue<Optional>("ThreadCount", &_thread_count);
 
-			RegisterValue<Optional>("RTMP", &_rtmp_publisher);
+			// RegisterValue<Optional>("RTMP", &_rtmp_publisher);
 			RegisterValue<Optional>("HLS", &_hls_publisher);
 			RegisterValue<Optional>("DASH", &_dash_publisher);
 			RegisterValue<Optional>("LLDASH", &_ll_dash_publisher);
@@ -61,7 +60,7 @@ namespace cfg
 
 		int _thread_count = 4;
 
-		RtmpPublisher _rtmp_publisher;
+		// RtmpPublisher _rtmp_publisher;
 		RtmpPushPublisher _rtmppush_publisher;
 		HlsPublisher _hls_publisher;
 		DashPublisher _dash_publisher;

@@ -30,7 +30,6 @@ namespace cfg
 		CFG_DECLARE_REF_GETTER_OF(GetName, _name)
 		CFG_DECLARE_REF_GETTER_OF(GetType, _type_value)
 
-		CFG_DECLARE_REF_GETTER_OF(GetOrigin, _origin)
 		CFG_DECLARE_REF_GETTER_OF(GetDecode, _decode)
 		CFG_DECLARE_REF_GETTER_OF(GetEncodeList, _encodes.GetEncodeList())
 		CFG_DECLARE_REF_GETTER_OF(GetStreamList, _streams.GetStreamList())
@@ -89,7 +88,6 @@ namespace cfg
 				return true;
 			});
 
-			RegisterValue<Optional>("Origin", &_origin);
 			RegisterValue<Optional>("Decode", &_decode);
 			RegisterValue<Optional>("Encodes", &_encodes);
 			RegisterValue<Optional>("Streams", &_streams);
@@ -101,7 +99,6 @@ namespace cfg
 		ov::String _type;
 		ApplicationType _type_value;
 
-		Origin _origin;
 		Decode _decode;
 		Encodes _encodes;
 		Streams _streams;
