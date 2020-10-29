@@ -125,7 +125,7 @@ namespace ov
 	{
 		auto item = _named_group.find(name);
 
-		if(item == _named_group.end())
+		if (item == _named_group.end())
 		{
 			return {};
 		}
@@ -214,7 +214,18 @@ namespace ov
 
 		// https://www.pcre.org/current/doc/html/pcre2_jit_compile.html
 		// If the regex pattern is large/complicated, then we need to control the jit stack (https://www.pcre.org/current/doc/html/pcre2jit.html#stackcontrol)
-		::pcre2_jit_compile(GET_CODE(), PCRE2_JIT_COMPLETE);
+
+		// IMPORTANT!: I disabled pcre2_jit_compile() code, because I need to study more about PCRE2 JIT
+		//
+		// http://pcre.org/current/doc/html/pcre2api.html - The compiled pattern
+		//
+		//     ...
+		//     However, if the just-in-time (JIT) optimization feature is being used,
+		//     it needs separate memory stack areas for each thread. See the pcre2jit documentation for more details.
+		//     ...
+
+		// TODO(dimiden): A lock is needed for the _code
+		// ::pcre2_jit_compile(GET_CODE(), PCRE2_JIT_COMPLETE);
 
 		return nullptr;
 	}
@@ -227,7 +238,7 @@ namespace ov
 
 	MatchResult Regex::Matches(const char *subject)
 	{
-		if(_code == nullptr)
+		if (_code == nullptr)
 		{
 			return {ov::Error::CreateError("Regex", "Not compiled")};
 		}
