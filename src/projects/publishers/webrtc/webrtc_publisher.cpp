@@ -308,15 +308,11 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	auto uri = request->GetUri();
 	auto parsed_url = ov::Url::Parse(uri);
 
-	logtc("uri : %s", uri.CStr());
-	logtc("parsed : %s", parsed_url->ToUrlString().CStr());
-
 	if (parsed_url == nullptr)
 	{
 		logte("Could not parse the url: %s", uri.CStr());
 		return nullptr;
 	}
-
 
 	std::shared_ptr<const SignedToken> signed_token;
 	auto signed_token_result = Publisher::HandleSignedToken(parsed_url, remote_address, signed_token);
