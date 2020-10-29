@@ -2,7 +2,7 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Hyunjun Jang
+//  Created by Getroot
 //  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -10,7 +10,8 @@
 
 namespace cfg
 {
-	struct SignedUrl : public Item
+	// SignedToken is for special purposes only. This is a private feature.
+	struct SignedToken : public Item
 	{
 		CFG_DECLARE_REF_GETTER_OF(GetCryptoKey, _crypto_key)
 		CFG_DECLARE_REF_GETTER_OF(GetQueryStringKey, _query_string_key)

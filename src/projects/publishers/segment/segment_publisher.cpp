@@ -9,7 +9,7 @@
 #include "segment_publisher.h"
 #include "publisher_private.h"
 
-#include <modules/signed_url/signed_url.h>
+#include <modules/signature/signed_token.h>
 #include <monitoring/monitoring.h>
 #include <orchestrator/orchestrator.h>
 #include <publishers/segment/segment_stream/segment_stream.h>
@@ -94,7 +94,6 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	{
 		logte("Could not parse the url: %s", uri.CStr());
 		client->GetResponse()->SetStatusCode(HttpStatusCode::BadRequest);
-
 		// Returns true when the observer search can be ended.
 		return true;
 	}
@@ -102,18 +101,11 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	auto &vhost_app_name = request_info.vhost_app_name;
 	auto &stream_name = request_info.stream_name;
 
-	// These names are used for testing purposes
-	// TODO(dimiden): Need to delete this code after testing
 	std::shared_ptr<PlaylistRequestInfo> playlist_request_info;
-	if (vhost_app_name.ToString().HasSuffix("_insecure") == false)
+	if (HandleSignedToken(vhost_app_name, stream_name, client, parsed_url, playlist_request_info) == false)
 	{
-		if (HandleSignedUrl(vhost_app_name, stream_name, client, parsed_url, playlist_request_info) == false)
-		{
-			client->GetResponse()->SetStatusCode(HttpStatusCode::Forbidden);
-
-			// Returns true when the observer search can be ended.
-			return true;
-		}
+		client->GetResponse()->SetStatusCode(HttpStatusCode::Forbidden);
+		return true;
 	}
 
 	auto stream = GetStreamAs<SegmentStream>(vhost_app_name, stream_name);
@@ -487,7 +479,7 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 	}
 }
 
-bool SegmentPublisher::HandleSignedUrl(const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
+bool SegmentPublisher::HandleSignedToken(const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
 									   const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
 									   std::shared_ptr<PlaylistRequestInfo> &request_info)
 {
@@ -500,16 +492,19 @@ bool SegmentPublisher::HandleSignedUrl(const info::VHostAppName &vhost_app_name,
 		return false;
 	}
 
-	std::shared_ptr<const SignedUrl> signed_url;
-	ov::String message;
-	auto result = Publisher::HandleSignedUrl(request_url, remote_address, signed_url, message);
-	if(result == pub::SignedUrlErrCode::Pass)
+	std::shared_ptr<const SignedToken> signed_token;
+	auto result = Publisher::HandleSignedToken(request_url, remote_address, signed_token);
+	if(result == CheckSignatureResult::Off)
 	{
 		return true;
 	}
+	else if(result == CheckSignatureResult::Error)
+	{
+		return false;
+	}
 
 	// might not be decyrpted
-	if(signed_url == nullptr)
+	if(signed_token == nullptr)
 	{
 		return false;
 	}
@@ -517,11 +512,11 @@ bool SegmentPublisher::HandleSignedUrl(const info::VHostAppName &vhost_app_name,
 	request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
 														 vhost_app_name, stream_name,
 														 remote_address->GetIpAddress(),
-														 signed_url->GetSessionID());
+														 signed_token->GetSessionID());
 
-	if(result != pub::SignedUrlErrCode::Success)
+	if(signed_token->GetErrCode() != SignedToken::ErrCode::PASSED)
 	{
-		if(result == pub::SignedUrlErrCode::TokenExpired)
+		if(signed_token->GetErrCode() == SignedToken::ErrCode::TOKEN_EXPIRED)
 		{
 			// Because this is chunked streaming publisher, 
 			// players will continue to request playlists after token expiration while playing. 
@@ -534,7 +529,7 @@ bool SegmentPublisher::HandleSignedUrl(const info::VHostAppName &vhost_app_name,
 			}
 		}
 
-		logtw("%s", message.CStr());
+		logtw("%s", signed_token->GetErrMessage().CStr());
 		return false;
 	}
 

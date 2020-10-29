@@ -11,7 +11,7 @@ namespace ov
 		Clock() = delete;
 		~Clock() = delete;
 
-		static uint64_t NowMS()
+		static uint64_t NowMSec()
 		{
 			return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		}

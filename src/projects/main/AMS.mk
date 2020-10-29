@@ -18,7 +18,7 @@ LOCAL_STATIC_LIBRARIES := \
 	bitstream \
 	containers \
 	http_server \
-	signed_url \
+	signature \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \

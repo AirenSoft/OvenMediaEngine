@@ -3,12 +3,12 @@
 #include <base/ovcrypto/base_64.h>
 #include <base/ovlibrary/converter.h>
 
-#include "signed_url.h"
+#include "signed_token.h"
 
 /* 
     [Test Code]
 
-	SignedUrl sign;
+	SignedToken sign;
 	ov::String plain_token;
 	ov::Data encrypted_data;
 
@@ -35,54 +35,41 @@
 	logti("url : %s", url.CStr());
 */
 
-std::shared_ptr<const SignedUrl> SignedUrl::Load(SignedUrlType type, const ov::String &key, const ov::String &data)
+std::shared_ptr<const SignedToken> SignedToken::Load(const ov::String &client_address, const ov::String &request_url, const ov::String &token_query_key, const ov::String &secret_key)
 {
-    auto signed_url = std::make_shared<SignedUrl>();
-	signed_url->_signed_type = type;
-	
-    if(type == SignedUrlType::Type0)
-    {
-        if(signed_url->ProcessType0(key, data) == false)
-        {
-            return nullptr;
-        }
-    }
-    else
-    {
-        return nullptr;
-    }
-
-    return signed_url;
+	auto signed_token = std::make_shared<SignedToken>();
+	signed_token->Process(client_address, request_url, token_query_key, secret_key);
+    return signed_token;
 }
 
-const ov::String& SignedUrl::GetUrl() const
+const ov::String& SignedToken::GetUrl() const
 {
     return _url;
 }
 
-const ov::String& SignedUrl::GetClientIP() const
+const ov::String& SignedToken::GetClientIP() const
 {
     return _client_ip;
 }
 
-const ov::String& SignedUrl::GetSessionID() const
+const ov::String& SignedToken::GetSessionID() const
 {
     return _session_id;
 }
 
-uint64_t SignedUrl::GetTokenExpiredTime() const 
+uint64_t SignedToken::GetTokenExpiredTime() const 
 {
     return _token_expired_time;
 }
 
-uint64_t SignedUrl::GetStreamExpiredTime() const
+uint64_t SignedToken::GetStreamExpiredTime() const
 {
     return _stream_expired_time;
 }
 
-bool SignedUrl::IsAllowedClient(const ov::SocketAddress &address) const
+bool SignedToken::IsAllowedClient(const ov::String &address) const
 {
-    if(_client_ip.IsEmpty() || _client_ip == "0.0.0.0" || _client_ip == "0" || _client_ip == address.GetIpAddress())
+    if(_client_ip.IsEmpty() || _client_ip == "0.0.0.0" || _client_ip == "0" || _client_ip == address)
     {
         return true;
     }
@@ -90,14 +77,14 @@ bool SignedUrl::IsAllowedClient(const ov::SocketAddress &address) const
     return false;
 }
 
-bool SignedUrl::IsTokenExpired() const
+bool SignedToken::IsTokenExpired() const
 {
     if(_token_expired_time == 0)
     {
         return false;
     }
 
-	if(ov::Clock::NowMS() > _token_expired_time)
+	if(ov::Clock::NowMSec() > _token_expired_time)
 	{
 		return true;
 	}
@@ -105,14 +92,14 @@ bool SignedUrl::IsTokenExpired() const
 	return false;
 }
 
-bool SignedUrl::IsStreamExpired() const
+bool SignedToken::IsStreamExpired() const
 {
     if(_stream_expired_time == 0)
     {
         return false;
     }
 
-    if(ov::Clock::NowMS() > _stream_expired_time)
+    if(ov::Clock::NowMSec() > _stream_expired_time)
 	{
 		return true;
 	}
@@ -126,17 +113,34 @@ bool SignedUrl::IsStreamExpired() const
 //      Session ID : UUID
 //      Token Expired Time : milliseconds from epoch, empty or 0 won't be expired
 //      Stream Expired Time : milliseconds from epoch, empty or 0 won't be expired
-bool SignedUrl::ProcessType0(const ov::String &key, const ov::String &data)
+bool SignedToken::Process(const ov::String &client_address, const ov::String &request_url, const ov::String &token_query_key, const ov::String &secret_key)
 {
+	auto url = ov::Url::Parse(request_url);
+
+	if(url->HasQueryKey(token_query_key) == false)
+	{
+		SetError(ErrCode::NO_TOKEN_KEY_IN_URL, ov::String::FormatString("There is no token query key(%s) in url(%s).", token_query_key.CStr(), request_url.CStr()));
+		return false;
+	}
+
+	auto token_query_value = url->GetQueryValue(token_query_key);
+	if(token_query_value.IsEmpty())
+	{
+		SetError(ErrCode::NO_TOKEN_VALUE_IN_URL, ov::String::FormatString("Token value is empty in url(%s).", request_url.CStr()));
+		return false;
+	}
+
     ov::Data final_data;
-    auto const decoded_data = ov::Base64::Decode(data);
+    auto const decoded_data = ov::Base64::Decode(token_query_value);
     if(decoded_data == nullptr)
     {
+		SetError(ErrCode::DECRYPT_FAILED, ov::String::FormatString("Failed to base64 decode the token (%s).", token_query_value.CStr()));
         return false;
     }
 
-    if(!Decrypt_DES_ECB_PKCS5(key, *decoded_data, final_data))
+    if(!Decrypt_DES_ECB_PKCS5(secret_key, *decoded_data, final_data))
     {
+		SetError(ErrCode::DECRYPT_FAILED, ov::String::FormatString("Failed to DES decypt the token (%s).", token_query_value.CStr()));
         return false;
     }
 
@@ -144,6 +148,7 @@ bool SignedUrl::ProcessType0(const ov::String &key, const ov::String &data)
     auto items = plain_string.Split(",");
     if(items.size() != 5)
     {
+		SetError(ErrCode::INVALID_TOKEN_FORMAT, ov::String::FormatString("Token format is invalid (%s).", plain_string.CStr()));
         return false;
     }
 
@@ -154,10 +159,39 @@ bool SignedUrl::ProcessType0(const ov::String &key, const ov::String &data)
     _token_expired_time = ov::Converter::ToInt64(items[3]);
     _stream_expired_time = ov::Converter::ToInt64(items[4]);
 
+	if(IsTokenExpired())
+	{
+		SetError(ErrCode::TOKEN_EXPIRED, ov::String::FormatString("Token is expired: %lld (Now: %lld).", GetTokenExpiredTime(), ov::Clock::NowMSec()));
+        return false;
+	}
+
+	if(IsStreamExpired())
+	{
+		SetError(ErrCode::STREAM_EXPIRED, ov::String::FormatString("Stream is expired: %lld (Now: %lld).", GetStreamExpiredTime(), ov::Clock::NowMSec()));
+        return false;
+	}
+
+	if(IsAllowedClient(client_address) == false)
+	{
+		SetError(ErrCode::UNAUTHORIZED_CLIENT, ov::String::FormatString("Not allowed: %s (Expected: %s)", client_address.CStr(), _client_ip.CStr()));
+        return false;
+	}
+
+	url->RemoveQueryKey(token_query_key);
+	auto url_for_compare = url->ToUrlString(true);
+
+	if(url_for_compare.UpperCaseString() != GetUrl().UpperCaseString())
+	{
+		SetError(ErrCode::UNAUTHORIZED_CLIENT, ov::String::FormatString("Invalid URL: %s (Expected: %s)", GetUrl().CStr(), url_for_compare.CStr()));
+        return false;
+	}
+
+	SetError(ErrCode::PASSED, "Authorized");
+
     return true;
 }
 
-bool SignedUrl::Encrypt_DES_ECB_PKCS5(const ov::String &key, ov::Data &plain_in, ov::Data &encrypted_out) const
+bool SignedToken::Encrypt_DES_ECB_PKCS5(const ov::String &key, ov::Data &plain_in, ov::Data &encrypted_out) const
 {
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if(ctx == nullptr)
@@ -213,7 +247,7 @@ bool SignedUrl::Encrypt_DES_ECB_PKCS5(const ov::String &key, ov::Data &plain_in,
     return true;
 }
 
-bool SignedUrl::Decrypt_DES_ECB_PKCS5(const ov::String &key, ov::Data &encrypted_in, ov::Data &plain_out) const
+bool SignedToken::Decrypt_DES_ECB_PKCS5(const ov::String &key, ov::Data &encrypted_in, ov::Data &plain_out) const
 {
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if(ctx == nullptr)

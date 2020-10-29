@@ -73,10 +73,11 @@
 				-->
 			</Host>
 
-			<SignedURL>
-                <CryptoKey>${env:SIGNED_URL_CRYPTO_KEY:}</CryptoKey>
-                <QueryStringKey>${env:SIGNED_URL_QUERY_KEY:authtoken}</QueryStringKey>
-            </SignedURL>
+			<SignedPolicy>
+				<PolicyQueryKey>${env:SIGNED_POLICY_POLICY_QUERY_KEY:policy}</PolicyQueryKey>
+				<SignatureQueryKey>${env:SIGNED_POLICY_SIGNATURE_QUERY_KEY:signature}</SignatureQueryKey>
+				<SecretKey>${env:SIGNED_URL_CRYPTO_KEY:aKq#1kj}</SecretKey>
+			</SignedPolicy>
 
 			<!-- Settings for ProxyPass (It can specify origin for each path) -->
 			<Origins>

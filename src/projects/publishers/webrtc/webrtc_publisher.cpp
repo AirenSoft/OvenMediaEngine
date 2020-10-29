@@ -308,23 +308,26 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	auto uri = request->GetUri();
 	auto parsed_url = ov::Url::Parse(uri);
 
+	logtc("uri : %s", uri.CStr());
+	logtc("parsed : %s", parsed_url->ToUrlString().CStr());
+
 	if (parsed_url == nullptr)
 	{
 		logte("Could not parse the url: %s", uri.CStr());
 		return nullptr;
 	}
 
-	// These names are used for testing purposes
-	if (vhost_app_name.ToString().HasSuffix("_insecure") == false)
-	{	
-		std::shared_ptr<const SignedUrl> signed_url;
-		ov::String message;
-		auto result = Publisher::HandleSignedUrl(parsed_url, remote_address, signed_url, message);
-		if(result != pub::SignedUrlErrCode::Success && result != pub::SignedUrlErrCode::Pass)
-		{
-			logtw("%s", message.CStr());
-			return nullptr;
-		}
+
+	std::shared_ptr<const SignedToken> signed_token;
+	auto signed_token_result = Publisher::HandleSignedToken(parsed_url, remote_address, signed_token);
+	if(signed_token_result == Publisher::CheckSignatureResult::Error)
+	{
+		return nullptr;
+	}
+	else if(signed_token_result == Publisher::CheckSignatureResult::Fail)
+	{
+		logtw("%s", signed_token->GetErrMessage().CStr());
+		return nullptr;
 	}
 
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
@@ -386,21 +389,20 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 
 	// These names are used for testing purposes
 	uint64_t session_expired_time = 0;
-	if (vhost_app_name.ToString().HasSuffix("_insecure") == false)
-	{	
-		std::shared_ptr<const SignedUrl> signed_url;
-		ov::String message;
-		auto result = Publisher::HandleSignedUrl(parsed_url, remote_address, signed_url, message);
-		if(result != pub::SignedUrlErrCode::Success && result != pub::SignedUrlErrCode::Pass)
-		{
-			logtw("%s", message.CStr());
-			return false;
-		}
-
-		if(signed_url != nullptr)
-		{
-			session_expired_time = signed_url->GetStreamExpiredTime();
-		}
+	std::shared_ptr<const SignedToken> signed_token;
+	auto signed_token_result = Publisher::HandleSignedToken(parsed_url, remote_address, signed_token);
+	if(signed_token_result == Publisher::CheckSignatureResult::Error)
+	{
+		return false;
+	}
+	else if(signed_token_result == Publisher::CheckSignatureResult::Fail)
+	{
+		logtw("%s", signed_token->GetErrMessage().CStr());
+		return false;
+	}
+	else if(signed_token_result == Publisher::CheckSignatureResult::Pass)
+	{
+		session_expired_time = signed_token->GetStreamExpiredTime();
 	}
 
 	ov::String remote_sdp_text = peer_sdp->ToString();

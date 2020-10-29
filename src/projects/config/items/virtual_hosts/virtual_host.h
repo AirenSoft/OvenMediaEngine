@@ -11,7 +11,8 @@
 #include "../common/host/host.h"
 #include "applications/applications.h"
 #include "origins/origins.h"
-#include "signed_url/signed_url.h"
+#include "signature/signed_policy.h"
+#include "signature/signed_token.h"
 
 namespace cfg
 {
@@ -21,7 +22,8 @@ namespace cfg
 
 		CFG_DECLARE_REF_GETTER_OF(GetHost, _host)
 
-		CFG_DECLARE_REF_GETTER_OF(GetSignedUrl, _signed_url)
+		CFG_DECLARE_REF_GETTER_OF(GetSignedPolicy, _signed_policy)
+		CFG_DECLARE_REF_GETTER_OF(GetSignedToken, _signed_token)
 
 		CFG_DECLARE_REF_GETTER_OF(GetOrigins, _origins)
 		CFG_DECLARE_REF_GETTER_OF(GetOriginList, _origins.GetOriginList())
@@ -34,7 +36,8 @@ namespace cfg
 
 			RegisterValue<Optional>("Host", &_host);
 
-			RegisterValue<Optional>("SignedURL", &_signed_url);
+			RegisterValue<Optional>("SignedPolicy", &_signed_policy);
+			RegisterValue<Optional>("SignedToken", &_signed_token);
 
 			RegisterValue<CondOptional>("Origins", &_origins, [this]() -> bool {
 				// <Origins> is not optional when the host type is edge
@@ -51,7 +54,8 @@ namespace cfg
 		ov::String _name;
 
 		Host _host;
-		SignedUrl _signed_url;
+		SignedPolicy _signed_policy;
+		SignedToken _signed_token;
 		Origins _origins;
 		Applications _applications;
 	};

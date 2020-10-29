@@ -267,7 +267,7 @@ namespace pub
 		return nullptr;
 	}
 
-	SignedUrlErrCode Publisher::HandleSignedUrl(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedUrl> &signed_url, ov::String &err_message)
+	Publisher::CheckSignatureResult Publisher::HandleSignedToken(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedToken> &signed_token)
 	{
 		auto orchestrator = ocst::Orchestrator::GetInstance();
 		auto &server_config = GetServerConfig();
@@ -275,8 +275,8 @@ namespace pub
 
 		if (vhost_name.IsEmpty())
 		{
-			err_message.Format("Could not resolve the domain: %s", request_url->Host().CStr());
-			return SignedUrlErrCode::Unexpected;
+			logte("Could not resolve the domain: %s", request_url->Host().CStr());
+			return CheckSignatureResult::Error;
 		}
 
 		// TODO(Dimiden) : Modify below codes
@@ -290,84 +290,35 @@ namespace pub
 			}
 
 			// Handle Signed URL if needed
-			auto &signed_url_config = vhost_item.GetSignedUrl();
-			if (!signed_url_config.IsParsed() || signed_url_config.GetCryptoKey().IsEmpty())
+			auto &signed_token_config = vhost_item.GetSignedToken();
+			if (!signed_token_config.IsParsed() || signed_token_config.GetCryptoKey().IsEmpty())
 			{
 				// The vhost doesn't use the signed url feature.
-				return SignedUrlErrCode::Pass;
+				return CheckSignatureResult::Off;
 			}
 
-			// Load config (crypto key, query string key)
-			// TODO(Getroot): load signed url type from config and apply them
-			auto signed_type = SignedUrlType::Type0;
-			auto crypto_key = signed_url_config.GetCryptoKey();
-			auto query_string_key = signed_url_config.GetQueryStringKey();
+			auto crypto_key = signed_token_config.GetCryptoKey();
+			auto query_string_key = signed_token_config.GetQueryStringKey();
 
-			// Find a signed key in the query string
-			auto &query_map = request_url->QueryMap();
-			auto item = query_map.find(query_string_key);
-			if (item == query_map.end())
+			signed_token = SignedToken::Load(client_address->ToString(), request_url->ToUrlString(), query_string_key, crypto_key);
+			if (signed_token == nullptr)
 			{
-				return SignedUrlErrCode::NoSingedKey;
+				// Probably this doesn't happen
+				logte("Could not load SingedToken");
+				return CheckSignatureResult::Error;
 			}
 
-			// Decoding and parsing
-			signed_url = SignedUrl::Load(signed_type, crypto_key, item->second);
-			if (signed_url == nullptr)
+			if(signed_token->GetErrCode() != SignedToken::ErrCode::PASSED)
 			{
-				err_message.Format("Could not obtain decrypted information of the signed url: %s, key: %s, value: %s", request_url->Source().CStr(), query_string_key.CStr(), item->second.CStr());
-				return SignedUrlErrCode::DecryptFailed;
+				return CheckSignatureResult::Fail;
 			}
 
-			// Check conditions
-
-			if(signed_url->IsTokenExpired())
-			{
-				err_message.Format("Token is expired: %lld (Now: %lld)", signed_url->GetTokenExpiredTime(), ov::Clock::NowMS());
-				return SignedUrlErrCode::TokenExpired;
-			}
-
-			if(signed_url->IsStreamExpired())
-			{
-				err_message.Format("Stream is expired: %lld (Now: %lld)", signed_url->GetStreamExpiredTime(), ov::Clock::NowMS());
-				return SignedUrlErrCode::StreamExpired;
-			}
-
-			// Check client ip
-			if(signed_url->IsAllowedClient(*client_address) == false)
-			{
-				err_message.Format("Not allowed: %s (Expected: %s)", client_address->ToString().CStr(), signed_url->GetClientIP().CStr());
-				return SignedUrlErrCode::UnauthorizedClient;
-			}
-
-			// Check URL is same
-			// remake url except for signed key
-			auto url_to_compare = request_url->ToUrlString(false);
-			url_to_compare.Append("?");
-			for(const auto &query : query_map)
-			{
-				auto key = query.first;
-				auto value = query.second;
-
-				// signed key is excluded
-				if(key.UpperCaseString() == query_string_key.UpperCaseString())
-				{
-					continue;
-				}
-
-				url_to_compare.AppendFormat("%s=%s", key.CStr(), ov::Url::Encode(value).CStr());
-			}
-
-			if(url_to_compare.UpperCaseString() != signed_url->GetUrl().UpperCaseString())
-			{
-				err_message.Format("Invalid URL: %s (Expected: %s)",	signed_url->GetUrl().CStr(), url_to_compare.CStr());
-				return SignedUrlErrCode::WrongUrl;
-			}
-
-			return SignedUrlErrCode::Success;
+			return CheckSignatureResult::Pass;
 		}
 
-		return SignedUrlErrCode::Unexpected;
+		// Probably this doesn't happen
+		logte("Could not find VirtualHost (%s)", vhost_name);
+		return CheckSignatureResult::Error;
 	}
 
 }  // namespace pub

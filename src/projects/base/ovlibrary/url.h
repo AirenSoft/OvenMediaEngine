@@ -21,7 +21,7 @@ namespace ov
 		static ov::String Decode(const ov::String &value);
 
 		// <scheme>://<host>[:<port>][/<path/to/resource>][?<query string>]
-		static std::shared_ptr<const Url> Parse(const ov::String &url);
+		static std::shared_ptr<Url> Parse(const ov::String &url);
 
 		const ov::String &Source() const
 		{
@@ -74,11 +74,36 @@ namespace ov
 			return _query_string;
 		}
 
+		const bool HasQueryKey(ov::String key) const
+		{
+			ParseQueryIfNeeded();
+			if(_query_map.find(key) == _query_map.end())
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		const ov::String GetQueryValue(ov::String key) const
+		{
+			if(HasQueryKey(key) == false)
+			{
+				return "";
+			}
+
+			return Decode(_query_map[key]);
+		}
+
 		const std::map<ov::String, ov::String> &QueryMap() const
 		{
 			ParseQueryIfNeeded();
 			return _query_map;
 		}
+
+		bool PushBackQueryKey(const ov::String &key, const ov::String &value);
+		bool PushBackQueryKey(const ov::String &key);
+		bool RemoveQueryKey(const ov::String &key);
 
 		void Print() const;
 		ov::String ToUrlString(bool include_query_string = true) const;

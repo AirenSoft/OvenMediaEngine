@@ -12,7 +12,7 @@
 #include "hls_stream_server.h"
 
 #include <config/config_manager.h>
-#include <modules/signed_url/signed_url.h>
+#include <modules/signature/signed_token.h>
 #include <orchestrator/orchestrator.h>
 
 std::shared_ptr<HlsPublisher> HlsPublisher::Create(const cfg::Server &server_config,

@@ -56,21 +56,22 @@ namespace ov
 
 	ov::String Url::Decode(const ov::String &value)
 	{
-		ov::String result_string;
-		result_string.SetCapacity(value.GetLength() + 1);
+		if(value.IsEmpty())
+		{
+			return "";
+		}
 
+		ov::String result_string;
 		auto val = value.CStr();
 		auto length = value.GetLength();
-
+		result_string.SetLength(length);
 		auto result = result_string.GetBuffer();
 		size_t result_index = 0;
 		char place_holder[3];
 		place_holder[2] = '\0';
-
 		for (size_t index = 0; index < length;)
 		{
 			char character = val[index];
-
 			if (character == '%')
 			{
 				// Change '%??' to ascii character
@@ -78,16 +79,13 @@ namespace ov
 				{
 					auto val1 = val[index + 1];
 					auto val2 = val[index + 2];
-
 					if (::isxdigit(val1) && ::isxdigit(val2))
 					{
 						place_holder[0] = val1;
 						place_holder[1] = val2;
 						result[result_index] = static_cast<char>(static_cast<int>(::strtol(place_holder, nullptr, 16)));
-
 						index += 3;
 						result_index++;
-
 						continue;
 					}
 				}
@@ -97,17 +95,15 @@ namespace ov
 				// Change '+' to ' '
 				character = ' ';
 			}
-
 			result[result_index] = val[index];
-
 			index++;
 			result_index++;
 		}
-
+		result_string.SetLength(result_index);
 		return result_string;
 	}
 
-	std::shared_ptr<const Url> Url::Parse(const ov::String &url)
+	std::shared_ptr<Url> Url::Parse(const ov::String &url)
 	{
 		auto object = std::make_shared<Url>();
 		std::smatch matches;
@@ -161,6 +157,83 @@ namespace ov
 		}
 
 		return std::move(object);
+	}
+
+	bool Url::PushBackQueryKey(const ov::String &key)
+	{
+		if(_has_query_string == true)
+		{
+			_query_string.Append("&");
+		}
+
+		_query_string.Append(key);
+		_has_query_string = true;
+		_query_parsed = false;
+
+		return true;
+	}
+
+	bool Url::PushBackQueryKey(const ov::String &key, const ov::String &value)
+	{
+		if(_has_query_string == true)
+		{
+			_query_string.Append("&");
+		}
+
+		_query_string.AppendFormat("%s=%s", key.CStr(), Encode(value).CStr());
+		_has_query_string = true;
+		_query_parsed = false;
+
+		return true;
+	}
+
+	// Keep the order of queries.
+	bool Url::RemoveQueryKey(const ov::String &remove_key)
+	{
+		if ((_has_query_string == false))
+		{
+			return false;
+		}
+
+		ov::String new_query_string;
+		bool first_query = true;
+		// Split the query string into the map
+		if (_query_string.IsEmpty() == false)
+		{
+			const auto &query_list = _query_string.Split("&");
+			for (auto &query : query_list)
+			{
+				auto tokens = query.Split("=", 2);
+				ov::String key;
+				if (tokens.size() == 2)
+				{
+					key = tokens[0];	
+				}
+				else
+				{
+					key = query;
+				}
+
+				if(key.UpperCaseString() != remove_key.UpperCaseString())
+				{
+					if(first_query == true)
+					{
+						first_query = false;
+					}
+					else
+					{
+						new_query_string.Append("&");
+					}
+					
+					new_query_string.Append(query);
+				}
+			}
+		}
+
+		_query_string = new_query_string;
+		_query_parsed = false;
+
+		return true;
 	}
 
 	void Url::ParseQueryIfNeeded() const

@@ -19,8 +19,8 @@
 #include <modules/physical_port/physical_port.h>
 #include <orchestrator/orchestrator.h>
 
-#include <modules/signed_url/signed_url.h>
-
+#include <modules/signature/signed_policy.h>
+#include <modules/signature/signed_token.h>
 
 #include <chrono>
 
@@ -89,20 +89,6 @@ namespace pub
 		std::chrono::system_clock::time_point check_time;  // (chrono)
 	};
 
-	enum class SignedUrlErrCode
-	{
-		Pass = 0, // Turned SignedURL off 
-		Success,
-		Unexpected,
-		NoSingedKey,
-		DecryptFailed,
-		TokenExpired,
-		StreamExpired,
-		UnauthorizedClient,
-		WrongUrl
-	};
-
-
 	// All publishers such as WebRTC, HLS and MPEG-DASH has to inherit the Publisher class and implement that interfaces
 	class Publisher : public ocst::PublisherModuleInterface
 	{
@@ -147,6 +133,14 @@ namespace pub
 		virtual PublisherType GetPublisherType() const = 0;
 		virtual const char *GetPublisherName() const = 0;
 
+		enum class CheckSignatureResult
+		{
+			Error = -2,		// Unexpected error
+			Fail = -1,		// Check signature but fail
+			Off = 0,		// Signature configuration is off
+			Pass = 1		// Check signature and pass
+		};
+
 	protected:
 		explicit Publisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 		virtual ~Publisher();
@@ -156,8 +150,10 @@ namespace pub
 		virtual std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) = 0;
 		virtual bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) = 0;
 
-		// return true if all conditions are passed
-		SignedUrlErrCode HandleSignedUrl(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedUrl> &signed_url, ov::String &err_message);
+
+		CheckSignatureResult HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy);
+
+		CheckSignatureResult HandleSignedToken(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedToken> &signed_token);
 
 		std::map<info::application_id_t, std::shared_ptr<Application>> 	_applications;
 		std::shared_mutex 		_application_map_mutex;

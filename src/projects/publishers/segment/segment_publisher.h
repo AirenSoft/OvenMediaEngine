@@ -208,7 +208,7 @@ protected:
 	virtual bool Start() = 0;
 	
 
-	bool HandleSignedUrl(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, 
+	bool HandleSignedToken(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, 
 						const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
 						std::shared_ptr<PlaylistRequestInfo> &request_info);
 
