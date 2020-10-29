@@ -39,23 +39,17 @@ namespace api
 	class Controller
 	{
 	public:
-		// For all Handler registrations, prefix before pattern
-		void AppendPrefix(const ov::String &prefix)
-		{
-			_prefix.Append(prefix);
-		}
-
 		void SetInterceptor(const std::shared_ptr<HttpDefaultInterceptor> &interceptor)
 		{
 			_interceptor = interceptor;
 		}
 
 		template <typename Tcontroller>
-		std::shared_ptr<Controller<Tcontroller>> CreateSubController()
+		std::shared_ptr<Controller<Tcontroller>> CreateSubController(const ov::String &prefix_of_sub_controller)
 		{
 			auto instance = std::make_shared<Tcontroller>();
 
-			instance->AppendPrefix(_prefix);
+			instance->_prefix = _prefix + prefix_of_sub_controller;
 			instance->SetInterceptor(_interceptor);
 
 			instance->PrepareHandlers();
@@ -109,6 +103,7 @@ namespace api
 			Register(HttpMethod::Delete, pattern, handler);
 		}
 
+		// For all Handler registrations, prefix before pattern
 		ov::String _prefix;
 		std::shared_ptr<HttpDefaultInterceptor> _interceptor;
 	};

@@ -18,8 +18,6 @@ namespace api
 	{
 		void AppsController::PrepareHandlers()
 		{
-			AppendPrefix("/apps");
-
 			RegisterGet("", &AppsController::OnGetAppList);
 			RegisterGet("/(?<app>[^/]*)", &AppsController::OnGetApp);
 		};

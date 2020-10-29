@@ -19,12 +19,10 @@ namespace api
 	{
 		void VHostsController::PrepareHandlers()
 		{
-			AppendPrefix("/vhosts");
-
 			RegisterGet("", &VHostsController::OnGetVhostList);
 			RegisterGet("/(?<vhost>[^/]*)", &VHostsController::OnGetVhost);
 
-			CreateSubController<v1::AppsController>();
+			CreateSubController<v1::AppsController>("/(?<vhost>[^/]*)/apps");
 		}
 
 		ApiResponse VHostsController::OnGetVhostList(const std::shared_ptr<HttpClient> &client)
