@@ -20,9 +20,9 @@ namespace api
 		void VHostsController::PrepareHandlers()
 		{
 			RegisterGet("", &VHostsController::OnGetVhostList);
-			RegisterGet("/(?<vhost>[^/]*)", &VHostsController::OnGetVhost);
+			RegisterGet("/(?<vhost_name>[^/]*)", &VHostsController::OnGetVhost);
 
-			CreateSubController<v1::AppsController>("/(?<vhost>[^/]*)/apps");
+			CreateSubController<v1::AppsController>("/(?<vhost_name>[^/]*)/apps");
 		}
 
 		ApiResponse VHostsController::OnGetVhostList(const std::shared_ptr<HttpClient> &client)
@@ -42,7 +42,7 @@ namespace api
 		{
 			// Get resources from URI
 			auto &match_result = client->GetRequest()->GetMatchResult();
-			auto vhost_name = match_result.GetNamedGroup("vhost");
+			auto vhost_name = match_result.GetNamedGroup("vhost_name");
 
 			auto vhost_list_config = cfg::ConfigManager::GetInstance()->GetServer()->GetVirtualHostList();
 

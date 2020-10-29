@@ -39,6 +39,11 @@ namespace api
 	class Controller
 	{
 	public:
+		void SetPrefix(const ov::String &prefix)
+		{
+			_prefix = prefix;
+		}
+
 		void SetInterceptor(const std::shared_ptr<HttpDefaultInterceptor> &interceptor)
 		{
 			_interceptor = interceptor;
@@ -49,7 +54,7 @@ namespace api
 		{
 			auto instance = std::make_shared<Tcontroller>();
 
-			instance->_prefix = _prefix + prefix_of_sub_controller;
+			instance->SetPrefix(_prefix + prefix_of_sub_controller);
 			instance->SetInterceptor(_interceptor);
 
 			instance->PrepareHandlers();
