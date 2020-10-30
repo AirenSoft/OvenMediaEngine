@@ -187,6 +187,10 @@ namespace ov
 					return "MP3";
 				case common::MediaCodecId::Opus:
 					return "OPUS";
+				case common::MediaCodecId::Jpeg:
+					return "JPEG";				
+				case common::MediaCodecId::Png:
+					return "PNG";											
 				case common::MediaCodecId::None:
 				default:
 					return "Unknwon";

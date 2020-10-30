@@ -32,7 +32,9 @@ namespace common
 		VP8,
 		AAC_LATM,
 		AAC_ADTS,
-		OPUS
+		OPUS,
+		JPEG,
+		PNG
 	};
 
 	enum class PacketType : int8_t
@@ -42,7 +44,7 @@ namespace common
 		// and the "media router" delivers this type of packet to the publisher as it is without parsing.
 		OVT = 0,	
 
-		RAW, // AAC LATM, AAC ADTS
+		RAW, // AAC LATM, AAC ADTS, JPEG
 		// H.264
 		SEQUENCE_HEADER, // For H.264 AVCC, AAC LATM
 		NALU, // For H.264 AVCC, ANNEXB	
@@ -70,7 +72,9 @@ namespace common
 		Flv,
 		Aac,
 		Mp3,
-		Opus
+		Opus,
+		Jpeg,
+		Png
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////

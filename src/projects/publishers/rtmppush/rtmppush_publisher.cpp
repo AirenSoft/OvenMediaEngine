@@ -145,9 +145,9 @@ void RtmpPushPublisher::SessionController()
 				// Disconnecting
 			break;
 			case pub::Session::SessionState::Stopped:
-				// State of disabled
+				// Disconnected 
 				if(userdata->GetEnable() == true)
-					session->Stop();
+					session->Start();			
 			break;
 			case pub::Session::SessionState::Error:
 			 	// retry to connect
@@ -208,7 +208,7 @@ void RtmpPushPublisher::WorkerThread()
 
 	while (!_stop_thread_flag)
 	{
-		if (stat_stop_watch.IsElapsed(1000) && stat_stop_watch.Update())
+		if (stat_stop_watch.IsElapsed(500) && stat_stop_watch.Update())
 		{
 			SessionController();
 		}

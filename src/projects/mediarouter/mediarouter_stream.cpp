@@ -405,8 +405,11 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 		case MediaCodecId::Vp8: 
 		case MediaCodecId::Vp9:
 		case MediaCodecId::Opus:
+		case MediaCodecId::Jpeg:			
+		case MediaCodecId::Png:			
 			SetParseTrackInfo(media_track, true);
 			break;
+
 		default:
 			logte("Unknown codec");
 			break;		
@@ -719,6 +722,8 @@ bool MediaRouteStream::UpdateDecoderParameterSets(
 		case MediaCodecId::Vp8: 
 		case MediaCodecId::Vp9:
 		case MediaCodecId::Opus:
+		case MediaCodecId::Jpeg:
+		case MediaCodecId::Png:
 			break;
 		default:
 			logte("Unknown codec");

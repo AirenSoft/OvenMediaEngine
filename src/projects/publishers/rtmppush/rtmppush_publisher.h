@@ -45,8 +45,8 @@ private:
 	bool _stop_thread_flag;
 	std::thread _worker_thread;
 
-	std::shared_mutex 		_userdata_sets_mutex;;
-	RtmpPushUserdataSets 	_userdata_sets;
+	std::shared_mutex _userdata_sets_mutex;;
+	RtmpPushUserdataSets _userdata_sets;
 
 public:
 	std::shared_ptr<ov::Error> HandlePushCreate(const info::VHostAppName &vhost_app_name, ov::String stream_name);

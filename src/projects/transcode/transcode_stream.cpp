@@ -384,7 +384,7 @@ int32_t TranscodeStream::CreateOutputStream()
 
 							if(IsVideoCodec(output_codec_id) == false)
 							{
-								logtw("Encoding codec set is not a video codec");
+								logtw("Encoding codec set is not a video codec. codec_id(%d)", output_codec_id);
 								continue;
 							}
 
@@ -1270,6 +1270,15 @@ common::MediaCodecId TranscodeStream::GetCodecId(ov::String name)
 	{
 		return common::MediaCodecId::Vp9;
 	}
+	else if (name == "JPEG")
+	{
+		return common::MediaCodecId::Jpeg;
+	}
+	else if (name == "PNG")
+	{
+		return common::MediaCodecId::Png;
+	}
+
 
 	// Audio codecs
 	if (name == "AAC")
@@ -1290,7 +1299,12 @@ common::MediaCodecId TranscodeStream::GetCodecId(ov::String name)
 
 bool TranscodeStream::IsVideoCodec(common::MediaCodecId codec_id)
 {
-	if(codec_id == common::MediaCodecId::H264 || codec_id == common::MediaCodecId::H265 || codec_id == common::MediaCodecId::Vp8 || codec_id == common::MediaCodecId::Vp9)
+	if(codec_id == common::MediaCodecId::H264 || 
+	   codec_id == common::MediaCodecId::H265 || 
+	   codec_id == common::MediaCodecId::Vp8 || 
+	   codec_id == common::MediaCodecId::Vp9 || 
+	   codec_id == common::MediaCodecId::Jpeg || 
+	   codec_id == common::MediaCodecId::Png)
 	{
 		return true;
 	}
@@ -1300,7 +1314,9 @@ bool TranscodeStream::IsVideoCodec(common::MediaCodecId codec_id)
 
 bool TranscodeStream::IsAudioCodec(common::MediaCodecId codec_id)
 {
-	if( codec_id == common::MediaCodecId::Aac || codec_id == common::MediaCodecId::Mp3 || codec_id == common::MediaCodecId::Opus)
+	if( codec_id == common::MediaCodecId::Aac || 
+		codec_id == common::MediaCodecId::Mp3 || 
+		codec_id == common::MediaCodecId::Opus)
 	{
 		return true;
 	}
