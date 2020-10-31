@@ -17,6 +17,8 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <config/config.h>
 #include <modules/rtc_signalling/rtc_ice_candidate.h>
+#include <base/info/stream.h>
+#include <base/info/application.h>
 
 IcePort::IcePort()
 {
@@ -235,7 +237,9 @@ void IcePort::AddSession(const std::shared_ptr<info::Session> &session_info, std
 		logtd("Trying to add session: %d (ufrag: %s:%s)...", session_id, local_ufrag.CStr(), remote_ufrag.CStr());
 
 		// 나중에 STUN Binding request를 대비하여 관련 정보들을 넣어놓음
-		std::shared_ptr<IcePortInfo> info = std::make_shared<IcePortInfo>();
+		auto expire_after_ms = session_info->GetStream().GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().GetTimeout();
+
+		std::shared_ptr<IcePortInfo> info = std::make_shared<IcePortInfo>(expire_after_ms);
 
 		info->session_info = session_info;
 		info->offer_sdp = offer_sdp;

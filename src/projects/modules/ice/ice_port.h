@@ -40,15 +40,23 @@ protected:
 
 		std::chrono::time_point<std::chrono::system_clock> expire_time;
 
+		IcePortInfo(int expire_after_ms)
+			: _expire_after_ms(expire_after_ms)
+		{
+		}
+
 		void UpdateBindingTime()
 		{
-			expire_time = std::chrono::system_clock::now() + std::chrono::milliseconds(30 * 1000);
+			expire_time = std::chrono::system_clock::now() + std::chrono::milliseconds(_expire_after_ms);
 		}
 
 		bool IsExpired() const
 		{
 			return (std::chrono::system_clock::now() > expire_time);
 		}
+
+	protected:
+		const int _expire_after_ms;
 	};
 
 public:

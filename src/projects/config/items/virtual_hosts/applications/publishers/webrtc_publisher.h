@@ -16,6 +16,8 @@ namespace cfg
 	{
 		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Webrtc)
 
+		CFG_DECLARE_GETTER_OF(GetTimeout, _timeout)
+
 	protected:
 		void MakeParseList() override
 		{
@@ -24,6 +26,6 @@ namespace cfg
 			RegisterValue<Optional>("Timeout", &_timeout);
 		}
 
-		int _timeout = 0;
+		int _timeout = 30000;
 	};
 }  // namespace cfg

@@ -18,7 +18,8 @@ namespace cfg
 
 		// CFG_DECLARE_GETTER_OF(GetSegmentCount, _segment_count)
 		CFG_DECLARE_GETTER_OF(GetSegmentDuration, _segment_duration)
-		CFG_DECLARE_GETTER_OF(GetCrossDomains, _cross_domain.GetUrls())
+		CFG_DECLARE_GETTER_OF(GetCrossDomainList, _cross_domain.GetUrls())
+		CFG_DECLARE_GETTER_OF(GetCrossDomain, _cross_domain)
 
 	protected:
 		void MakeParseList() override
