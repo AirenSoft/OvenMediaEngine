@@ -82,12 +82,12 @@ namespace pvd
 						if(elapsed_time_from_last_recv > 5)
 						{
 							logtw("%s/%s(%u) There are no imcoming packets. %d seconds have elapsed since the last packet was receivced.", 
-									stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
+									stream->GetApplicationInfo().GetName().CStr(), stream->GetOutputStreamName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
 						}
 
 						if(elapsed_time_from_last_sent > MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC)
 						{
-							logtw("%s/%s(%u) stream will be deleted becasue it hasn't been used for %u seconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC);
+							logtw("%s/%s(%u) stream will be deleted becasue it hasn't been used for %u seconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetOutputStreamName().CStr(), stream->GetId(), MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC);
 							DeleteStream(stream);
 						}
 					}
@@ -126,7 +126,7 @@ namespace pvd
 		auto it = _stream_motors.find(motor_id);
 		if(it == _stream_motors.end())
 		{
-			logtd("Could not find stream motor : %s/%s(%u)", GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+			logtd("Could not find stream motor : %s/%s(%u)", GetName().CStr(), stream->GetOutputStreamName().CStr(), stream->GetId());
 			return nullptr;
 		}
 
@@ -140,7 +140,7 @@ namespace pvd
 		auto motor = GetStreamMotorInternal(stream);
 		if(motor == nullptr)
 		{
-			logtc("Could not find stream motor to remove stream : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+			logtc("Could not find stream motor to remove stream : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetOutputStreamName().CStr(), stream->GetId());
 			return false;
 		}
 		
@@ -175,7 +175,7 @@ namespace pvd
 			motor = CreateStreamMotorInternal(stream);
 			if(motor == nullptr)
 			{
-				logtc("Cannot create StreamMotor : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
+				logtc("Cannot create StreamMotor : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetOutputStreamName().CStr(), stream->GetId());
 				return nullptr;
 			}
 		}

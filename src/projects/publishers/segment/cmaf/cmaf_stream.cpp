@@ -39,7 +39,7 @@ std::shared_ptr<CmafStream> CmafStream::Create(int segment_count,
 
 	if(supported_codec_available == false)
 	{
-		logtw("The %s/%s stream has not created because there is no codec that can support it.", info.GetApplicationInfo().GetName().CStr(), info.GetName().CStr());
+		logtw("The %s/%s stream has not created because there is no codec that can support it.", info.GetApplicationInfo().GetName().CStr(), info.GetOutputStreamName().CStr());
 		return nullptr;
 	}
 

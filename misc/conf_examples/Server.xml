@@ -154,7 +154,8 @@
 					</Encodes>
 					<Streams>
 						<Stream>
-							<Name>${OriginStreamName}</Name>
+							<Name>bypass_stream</Name>
+							<OutputStreamName>${OriginStreamName}</OutputStreamName>
 							<Profiles>
 								<Profile>bypass</Profile>
 								<Profile>opus</Profile>

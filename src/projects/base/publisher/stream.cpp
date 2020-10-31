@@ -25,7 +25,7 @@ namespace pub
 
 		ov::String queue_name;
 
-		queue_name.Format("%s/%s/%s StreamWorker Queue", _parent->GetApplicationTypeName(), _parent->GetApplicationName(), _parent->GetName().CStr());
+		queue_name.Format("%s/%s/%s StreamWorker Queue", _parent->GetApplicationTypeName(), _parent->GetApplicationName(), _parent->GetOutputStreamName().CStr());
 		_packet_queue.SetAlias(queue_name.CStr());
 		
 		_stop_thread_flag = false;
@@ -177,7 +177,7 @@ namespace pub
 			return false;
 		}
 
-		logti("%s application has started [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
+		logti("%s application has started [%s(%u)] stream", GetApplicationTypeName(), GetOutputStreamName().CStr(), GetId());
 		_run_flag = true;
 		return true;
 	}
@@ -241,7 +241,7 @@ namespace pub
 		}
 		_sessions.clear();
 
-		logti("[%s(%u)] %s stream has been stopped", GetName().CStr(), GetId(), GetApplicationTypeName());
+		logti("[%s(%u)] %s stream has been stopped", GetOutputStreamName().CStr(), GetId(), GetApplicationTypeName());
 
 		return true;
 	}

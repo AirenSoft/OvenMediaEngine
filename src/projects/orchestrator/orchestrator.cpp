@@ -617,13 +617,13 @@ namespace ocst
 
 	bool Orchestrator::OnCreateStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s stream is created", info->GetName().CStr());
+		logtd("%s stream is created", info->GetOutputStreamName().CStr());
 		return true;
 	}
 
 	bool Orchestrator::OnDeleteStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s stream is deleted", info->GetName().CStr());
+		logtd("%s stream is deleted", info->GetOutputStreamName().CStr());
 		return true;
 	}
 }  // namespace ocst

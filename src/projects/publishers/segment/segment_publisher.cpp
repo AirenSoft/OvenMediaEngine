@@ -273,7 +273,7 @@ void SegmentPublisher::RequestTableUpdateThread()
 							 "SESSION",
 							 "INFO",
 							 "deleteClientSession",
-							 request_info->GetStreamInfo().GetName().CStr(),
+							 request_info->GetStreamInfo().GetOutputStreamName().CStr(),
 							 playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : request_info->GetIpAddress().CStr());
 
 					std::shared_ptr<info::Application> rtsp_live_app_info;
@@ -305,7 +305,7 @@ void SegmentPublisher::RequestTableUpdateThread()
 							rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
 							"Playback",
 							rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
-							request_info->GetStreamInfo().GetName().CStr(),
+							request_info->GetStreamInfo().GetOutputStreamName().CStr(),
 							playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : request_info->GetIpAddress().CStr());
 					
 				}
@@ -352,7 +352,7 @@ const std::shared_ptr<PlaylistRequestInfo> SegmentPublisher::GetSessionRequestIn
 		auto &request_info = item.second;
 		if (request_info->GetPublisherType() == info.GetPublisherType() &&
 			request_info->GetIpAddress() == info.GetIpAddress() &&
-			request_info->GetStreamName() == info.GetStreamInfo().GetName() &&
+			request_info->GetStreamName() == info.GetStreamInfo().GetOutputStreamName() &&
 			request_info->GetAppName() == info.GetStreamInfo().GetApplicationInfo().GetName())
 		{
 			return request_info;
@@ -440,7 +440,7 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 					 "SESSION",
 					 "INFO",
 					 "createClientSession",
-					 info.GetStreamInfo().GetName().CStr(),
+					 info.GetStreamInfo().GetOutputStreamName().CStr(),
 					 playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : info.GetIpAddress().CStr());
 
 			std::shared_ptr<info::Application> rtsp_live_app_info;
@@ -472,7 +472,7 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 					rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
 					"Playback",
 					rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
-					info.GetStreamInfo().GetName().CStr(),
+					info.GetStreamInfo().GetOutputStreamName().CStr(),
 					playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : info.GetIpAddress().CStr());
 			
 		}

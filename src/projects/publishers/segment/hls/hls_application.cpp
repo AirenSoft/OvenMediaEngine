@@ -68,7 +68,7 @@ bool HlsApplication::Stop()
 //====================================================================================================
 std::shared_ptr<pub::Stream> HlsApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count)
 {
-	logtd("Hls CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
+	logtd("Hls CreateStream : %s/%u", info->GetOutputStreamName().CStr(), info->GetId());
 
 	return HlsStream::Create(_segment_count,
                              _segment_duration,

@@ -108,7 +108,7 @@ namespace pvd
             return false;
         }
 
-        stream->SetName(stream_name.CStr());
+        stream->SetOutputStreamName(stream_name.CStr());
 
         for (const auto &track : media_info.tracks_)
         {

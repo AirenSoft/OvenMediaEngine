@@ -47,7 +47,7 @@ namespace pvd
 		auto application = GetApplicationByName(vhost_app_name);
 		if(application == nullptr)
 		{
-			logte("Cannot find %s application to create %s stream", vhost_app_name.CStr(), channel->GetName().CStr());
+			logte("Cannot find %s application to create %s stream", vhost_app_name.CStr(), channel->GetOutputStreamName().CStr());
 		}
 
 		// Notify stream created 
@@ -121,7 +121,7 @@ namespace pvd
 			if(application == nullptr)
 			{
 				// Something wrong
-				logte("Cannot find application to delete stream (%s)", channel->GetName().CStr());
+				logte("Cannot find application to delete stream (%s)", channel->GetOutputStreamName().CStr());
 				return false;
 			}
 

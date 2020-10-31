@@ -16,6 +16,7 @@ namespace cfg
 	{
 		CFG_DECLARE_REF_GETTER_OF(GetScheme, _scheme)
 		CFG_DECLARE_REF_GETTER_OF(GetUrlList, _urls.GetUrlList())
+		CFG_DECLARE_REF_GETTER_OF(GetUrls, _urls)
 
 	protected:
 		void MakeParseList() override

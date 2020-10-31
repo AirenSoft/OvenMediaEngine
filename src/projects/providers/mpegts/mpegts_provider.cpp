@@ -273,7 +273,7 @@ namespace pvd
 
 		logti("The client has not sent data for %d seconds. Stream has been deleted: [%s/%s], remote: ",  //%s",
 			  mpegts_stream->GetElapsedSecSinceLastReceived(),
-			  mpegts_stream->GetApplicationName(), mpegts_stream->GetName().CStr());
+			  mpegts_stream->GetApplicationName(), mpegts_stream->GetOutputStreamName().CStr());
 		//mpegts_stream->GetClientSock()->ToString().CStr());
 
 		auto stream_port_item = GetStreamPortItem(mpegts_stream->GetClientSock()->GetLocalAddress()->Port());
@@ -301,7 +301,7 @@ namespace pvd
 		}
 
 		logti("The MPEGTS client has disconnected: [%s/%s], remote: ",	//%s",
-			  channel->GetApplicationName(), channel->GetName().CStr());
+			  channel->GetApplicationName(), channel->GetOutputStreamName().CStr());
 		//remote->ToString().CStr());
 
 		PushProvider::OnChannelDeleted(remote->GetId());

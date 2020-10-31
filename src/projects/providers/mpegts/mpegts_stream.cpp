@@ -42,7 +42,7 @@ namespace pvd
 
 		_vhost_app_name(vhost_app_name)
 	{
-		SetName(stream_name);
+		SetOutputStreamName(stream_name);
 		_remote = client_socket;
 	}
 
@@ -103,7 +103,7 @@ namespace pvd
 
 				if(track == nullptr)
 				{
-					logte("%s/%s(%d) received stream data, but track information could not be found.", GetApplicationName(), GetName().CStr(), GetId());
+					logte("%s/%s(%d) received stream data, but track information could not be found.", GetApplicationName(), GetOutputStreamName().CStr(), GetId());
 					return false;
 				}
 				

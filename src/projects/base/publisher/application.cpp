@@ -121,7 +121,7 @@ namespace pub
 		auto stream_it = _streams.find(info->GetId());
 		if(stream_it == _streams.end())
 		{
-			logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
+			logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetOutputStreamName().CStr(), info->GetId());
 			return false;
 		}
 
@@ -214,7 +214,7 @@ namespace pub
 		for (auto const &x : _streams)
 		{
 			auto stream = x.second;
-			if (stream->GetName() == stream_name)
+			if (stream->GetOutputStreamName() == stream_name)
 			{
 				return stream;
 			}

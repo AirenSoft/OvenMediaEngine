@@ -337,7 +337,7 @@ ov::String FileSession::ConvertMacro(ov::String src)
 		}
 		if(group.IndexOf("Stream") != -1L)
 		{
-			replaced_string = replaced_string.Replace(full_match, stream->GetName());
+			replaced_string = replaced_string.Replace(full_match, stream->GetOutputStreamName());
 		}
 		if(group.IndexOf("Sequence") != -1L)
 		{

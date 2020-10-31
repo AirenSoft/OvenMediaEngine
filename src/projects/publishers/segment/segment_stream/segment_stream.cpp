@@ -87,7 +87,7 @@ bool SegmentStream::Start(int segment_count, int segment_duration)
 
 		_stream_packetizer = CreateStreamPacketizer(segment_count > 0 ? segment_count : DEFAULT_SEGMENT_COUNT,
 													segment_duration > 0 ? segment_duration : DEFAULT_SEGMENT_DURATION,
-													GetName(),  // stream name --> prefix
+													GetOutputStreamName(),  // stream name --> prefix
 													stream_type,
 													std::move(video_track), std::move(audio_track));
 	}

@@ -32,6 +32,7 @@ namespace cfg
 		}
 
 		CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetPort, _port_value)
+		CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetPortString, _port)
 		CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetSocketType, _socket_type)
 
 	protected:

@@ -29,10 +29,13 @@ namespace cfg
 	{
 		CFG_DECLARE_REF_GETTER_OF(GetName, _name)
 		CFG_DECLARE_REF_GETTER_OF(GetType, _type_value)
+		CFG_DECLARE_REF_GETTER_OF(GetTypeString, _type)
 
 		CFG_DECLARE_REF_GETTER_OF(GetDecode, _decode)
 		CFG_DECLARE_REF_GETTER_OF(GetEncodeList, _encodes.GetEncodeList())
+		CFG_DECLARE_REF_GETTER_OF(GetEncodes, _encodes)
 		CFG_DECLARE_REF_GETTER_OF(GetStreamList, _streams.GetStreamList())
+		CFG_DECLARE_REF_GETTER_OF(GetStreams, _streams)
 		CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
 		CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
 		CFG_DECLARE_GETTER_OF(GetThreadCount, _publishers.GetThreadCount())

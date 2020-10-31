@@ -327,7 +327,7 @@ bool RtcStream::Start()
 		video_media_desc->Update();
     }
 
-	logtd("Stream is created : %s/%u", GetName().CStr(), GetId());
+	logtd("Stream is created : %s/%u", GetOutputStreamName().CStr(), GetId());
 	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
 	_offer_sdp->Update();
 	

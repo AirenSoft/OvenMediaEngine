@@ -126,7 +126,7 @@ namespace pvd
 		}
 
 		logti("The RTMP client has disconnected: [%s/%s], remote: %s",
-					channel->GetApplicationName(), channel->GetName().CStr(),
+					channel->GetApplicationName(), channel->GetOutputStreamName().CStr(),
 					remote->ToString().CStr());
 
 		PushProvider::OnChannelDeleted(remote->GetId());

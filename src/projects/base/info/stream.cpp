@@ -81,12 +81,12 @@ namespace info
 		return _id;
 	}
 
-	ov::String Stream::GetName() const 
+	ov::String Stream::GetOutputStreamName() const 
 	{
 		return _name;
 	}
 
-	void Stream::SetName(ov::String name)
+	void Stream::SetOutputStreamName(ov::String name)
 	{
 		_name = name;
 	}
@@ -161,12 +161,12 @@ namespace info
 	ov::String Stream::GetInfoString()
 	{
 		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), name(%s), SourceType(%s), Created Time (%s)\n", 														
-														GetId(), GetName().CStr(), ov::Converter::ToString(_source_type).CStr(),
+														GetId(), GetOutputStreamName().CStr(), ov::Converter::ToString(_source_type).CStr(),
 														ov::Converter::ToString(_created_time).CStr());
 		if(GetOriginStream() != nullptr)
 		{
 			out_str.AppendFormat("\t>> Origin Stream Info\n\tid(%u), name(%s), SourceType(%s), Created Time (%s)\n",
-				GetOriginStream()->GetId(), GetOriginStream()->GetName().CStr(), ov::Converter::ToString(GetOriginStream()->GetSourceType()).CStr(),
+				GetOriginStream()->GetId(), GetOriginStream()->GetOutputStreamName().CStr(), ov::Converter::ToString(GetOriginStream()->GetSourceType()).CStr(),
 														ov::Converter::ToString(GetOriginStream()->GetCreatedTime()).CStr());
 		}
 

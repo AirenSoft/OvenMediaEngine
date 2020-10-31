@@ -34,7 +34,7 @@ bool OvtApplication::Stop()
 
 std::shared_ptr<pub::Stream> OvtApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count)
 {
-	logtd("OvtApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
+	logtd("OvtApplication::CreateStream : %s/%u", info->GetOutputStreamName().CStr(), info->GetId());
 	if(worker_count == 0)
 	{
 		// RtcStream should have worker threads.
@@ -46,16 +46,16 @@ std::shared_ptr<pub::Stream> OvtApplication::CreateStream(const std::shared_ptr<
 
 bool OvtApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
-	logtd("OvtApplication::DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
+	logtd("OvtApplication::DeleteStream : %s/%u", info->GetOutputStreamName().CStr(), info->GetId());
 
 	auto stream = std::static_pointer_cast<OvtStream>(GetStream(info->GetId()));
 	if(stream == nullptr)
 	{
-		logte("OvtApplication::Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
+		logte("OvtApplication::Delete stream failed. Cannot find stream (%s)", info->GetOutputStreamName().CStr());
 		return false;
 	}
 	
-	logtd("OvtApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
+	logtd("OvtApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetOutputStreamName().CStr());
 
 	return true;
 }

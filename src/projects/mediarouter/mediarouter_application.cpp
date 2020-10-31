@@ -179,7 +179,7 @@ bool MediaRouteApplication::OnCreateStream(
 		return false;
 	}
 	logti("Trying to create a stream: [%s/%s(%u)]"
-		, _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+		, _application_info.GetName().CStr(), stream_info->GetOutputStreamName().CStr(), stream_info->GetId());
 	logti("%s", stream_info->GetInfoString().CStr());
 	
 
@@ -250,12 +250,12 @@ bool MediaRouteApplication::ReuseIncomingStream(
 	{
 		auto istream = it->second;
 
-		if (stream_info->GetName() == istream->GetStream()->GetName())
+		if (stream_info->GetOutputStreamName() == istream->GetStream()->GetOutputStreamName())
 		{
 			// reuse stream
 			stream_info->SetId(istream->GetStream()->GetId());
 			logtw("Reconnected same stream from provider(%s, %d)", 
-				stream_info->GetName().CStr(), stream_info->GetId());
+				stream_info->GetOutputStreamName().CStr(), stream_info->GetId());
 
 			return true;
 		}
@@ -342,7 +342,7 @@ bool MediaRouteApplication::OnDeleteStream(
 	const std::shared_ptr<info::Stream> &stream_info)
 {
 	logti("Trying to delete a stream: [%s/%s(%u)]"
-		, _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
+		, _application_info.GetName().CStr(), stream_info->GetOutputStreamName().CStr(), stream_info->GetId());
 
 	if (!app_conn  || !stream_info)
 	{
@@ -479,7 +479,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 	if(!stream)
 	{
 		logte("cannot find stream from router. appication(%s), stream(%s)"
-				, _application_info.GetName().CStr(), stream_info->GetName().CStr());
+				, _application_info.GetName().CStr(), stream_info->GetOutputStreamName().CStr());
 		return false;
 	}
 

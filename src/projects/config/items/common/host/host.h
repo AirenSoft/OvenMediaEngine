@@ -16,6 +16,7 @@ namespace cfg
 	struct Host : public Item
 	{
 		CFG_DECLARE_REF_GETTER_OF(GetNameList, _names.GetNameList())
+		CFG_DECLARE_REF_GETTER_OF(GetNames, _names)
 		CFG_DECLARE_REF_GETTER_OF(GetTls, _tls)
 
 	protected:
