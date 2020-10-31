@@ -36,6 +36,8 @@ namespace mon
 		bool OnStreamCreated(const info::Stream &stream_info);
 		bool OnStreamDeleted(const info::Stream &stream_info);
 
+		std::map<uint32_t, std::shared_ptr<HostMetrics>> GetHostMetricsList();
+		
         std::shared_ptr<HostMetrics> GetHostMetrics(const info::Host &host_info);
         std::shared_ptr<ApplicationMetrics> GetApplicationMetrics(const info::Application &app_info);
         std::shared_ptr<StreamMetrics>  GetStreamMetrics(const info::Stream &stream_info);

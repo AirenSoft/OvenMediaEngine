@@ -30,7 +30,7 @@ FileStream::FileStream(const std::shared_ptr<pub::Application> application,
 FileStream::~FileStream()
 {
 	logtd("FileStream(%s/%s) has been terminated finally", 
-		GetApplicationName() , GetOutputStreamName().CStr());
+		GetApplicationName() , GetName().CStr());
 }
 
 bool FileStream::Start()

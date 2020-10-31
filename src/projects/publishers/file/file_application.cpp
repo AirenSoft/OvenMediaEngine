@@ -33,22 +33,22 @@ bool FileApplication::Stop()
 
 std::shared_ptr<pub::Stream> FileApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count)
 {
-	logtd("FileApplication::CreateStream : %s/%u", info->GetOutputStreamName().CStr(), info->GetId());
+	logtd("FileApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 	return FileStream::Create(GetSharedPtrAs<pub::Application>(), *info);
 }
 
 bool FileApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
-	logtd("FileApplication::DeleteStream : %s/%u", info->GetOutputStreamName().CStr(), info->GetId());
+	logtd("FileApplication::DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
 
 	auto stream = std::static_pointer_cast<FileStream>(GetStream(info->GetId()));
 	if(stream == nullptr)
 	{
-		logte("FileApplication::Delete stream failed. Cannot find stream (%s)", info->GetOutputStreamName().CStr());
+		logte("FileApplication::Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
 		return false;
 	}
 	
-	logtd("FileApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetOutputStreamName().CStr());
+	logtd("FileApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
 
 	return true;
 }

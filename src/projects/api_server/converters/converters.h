@@ -10,3 +10,4 @@
 
 #include "./vhost.h"
 #include "./application.h"
+#include "./stream.h"

@@ -46,7 +46,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::Dequeue(TranscodeResult 
 				auto codec_info = ShowCodecParameters(_context, _codec_par);
 
 				logti("[%s/%s(%u)] input stream information: %s", 
-					_stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetOutputStreamName().CStr(), _stream_info.GetId(), codec_info.CStr());
+					_stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
 
 				_change_format = true;
 

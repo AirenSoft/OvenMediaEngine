@@ -215,18 +215,15 @@ namespace api
 			//	 }
 		}
 
-		Json::Value ConvertFromApplication(const std::shared_ptr<const ocst::Application> &application)
+		Json::Value ConvertFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application)
 		{
-			Json::Value response;
+			Json::Value response = Json::objectValue;
 
-			const auto &app_info = application->app_info;
-			const auto &app_config = app_info.GetConfig();
-
-			SetString(response, "name", app_info.GetName().GetAppName(), Optional::False);
-			SetBool(response, "dynamic", app_info.IsDynamicApp());
-			SetString(response, "type", app_config.GetTypeString(), Optional::False);
-			SetProviders(response, "providers", app_config.GetProviders(), Optional::True);
-			SetPublishers(response, "publishers", app_config.GetPublishers(), Optional::True);
+			SetString(response, "name", application->GetName().GetAppName(), Optional::False);
+			SetBool(response, "dynamic", application->IsDynamicApp());
+			SetString(response, "type", application->GetConfig().GetTypeString(), Optional::False);
+			SetProviders(response, "providers", application->GetConfig().GetProviders(), Optional::True);
+			SetPublishers(response, "publishers", application->GetConfig().GetPublishers(), Optional::True);
 
 			return response;
 		}

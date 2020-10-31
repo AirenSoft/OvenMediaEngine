@@ -32,7 +32,7 @@ RtmpPushStream::RtmpPushStream(const std::shared_ptr<pub::Application> applicati
 RtmpPushStream::~RtmpPushStream()
 {
 	logtd("RtmpPushStream(%s/%s) has been terminated finally", 
-		GetApplicationName() , GetOutputStreamName().CStr());
+		GetApplicationName() , GetName().CStr());
 }
 
 bool RtmpPushStream::Start()

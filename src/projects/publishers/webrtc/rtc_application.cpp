@@ -38,7 +38,7 @@ std::shared_ptr<Certificate> RtcApplication::GetCertificate()
 std::shared_ptr<pub::Stream> RtcApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count)
 {
 	// Stream Class 생성할때는 복사를 사용한다.
-	logtd("RtcApplication::CreateStream : %s/%u", info->GetOutputStreamName().CStr(), info->GetId());
+	logtd("RtcApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 	if(worker_count == 0)
 	{
 		// RtcStream should have worker threads.
@@ -49,12 +49,12 @@ std::shared_ptr<pub::Stream> RtcApplication::CreateStream(const std::shared_ptr<
 
 bool RtcApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
-	logtd("DeleteStream : %s/%u", info->GetOutputStreamName().CStr(), info->GetId());
+	logtd("DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
 
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(info->GetId()));
 	if(stream == nullptr)
 	{
-		logte("RtcApplication::Delete stream failed. Cannot find stream (%s)", info->GetOutputStreamName().CStr());
+		logte("RtcApplication::Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
 		return false;
 	}
 
@@ -69,10 +69,10 @@ bool RtcApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 		_ice_port->RemoveSession(session);
 
 		// Signalling에 모든 Session 삭제
-		_rtc_signalling->Disconnect(GetName(), stream->GetOutputStreamName(), session->GetPeerSDP());
+		_rtc_signalling->Disconnect(GetName(), stream->GetName(), session->GetPeerSDP());
 	}
 
-	logtd("RtcApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetOutputStreamName().CStr());
+	logtd("RtcApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
 
 	return true;
 }

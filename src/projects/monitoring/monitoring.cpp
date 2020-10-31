@@ -101,6 +101,12 @@ namespace mon
 		return app_metrics->OnStreamDeleted(stream);
 	}
 
+	std::map<uint32_t, std::shared_ptr<HostMetrics>> Monitoring::GetHostMetricsList()
+	{
+		std::shared_lock<std::shared_mutex> lock(_map_guard);
+		return _hosts;
+	}
+
 	std::shared_ptr<HostMetrics> Monitoring::GetHostMetrics(const info::Host &host_info)
 	{
 		std::shared_lock<std::shared_mutex> lock(_map_guard);

@@ -111,7 +111,7 @@ namespace pvd
 		}
 
 		// Check if it has stream name
-		if(GetOutputStreamName().GetLength() == 0)
+		if(GetName().GetLength() == 0)
 		{
 			return false;
 		}

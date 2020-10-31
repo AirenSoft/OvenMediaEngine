@@ -91,17 +91,15 @@ namespace api
 			}
 		}
 
-		Json::Value ConvertFromVHost(const std::shared_ptr<const ocst::VirtualHost> &vhost)
+		Json::Value ConvertFromVHost(const std::shared_ptr<const mon::HostMetrics> &vhost)
 		{
-			Json::Value response;
+			Json::Value response = Json::objectValue;
 
-			const auto &host_info = vhost->host_info;
-
-			SetString(response, "name", host_info.GetName().CStr(), Optional::False);
-			SetHost(response, "host", host_info.GetHost(), Optional::True);
-			SetSignedPolicy(response, "signedPolicy", host_info.GetSignedPolicy(), Optional::True);
-			SetSignedToken(response, "signedToken", host_info.GetSignedToken(), Optional::True);
-			SetOriginMaps(response, "originMaps", host_info.GetOrigins(), Optional::True);
+			SetString(response, "name", vhost->GetName().CStr(), Optional::False);
+			SetHost(response, "host", vhost->GetHost(), Optional::True);
+			SetSignedPolicy(response, "signedPolicy", vhost->GetSignedPolicy(), Optional::True);
+			SetSignedToken(response, "signedToken", vhost->GetSignedToken(), Optional::True);
+			SetOriginMaps(response, "originMaps", vhost->GetOrigins(), Optional::True);
 
 			return response;
 		}

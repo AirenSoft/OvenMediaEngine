@@ -24,15 +24,15 @@ namespace pvd
 		stream->SetApplication(GetSharedPtrAs<Application>());
 		stream->SetApplicationInfo(GetSharedPtrAs<Application>());
 		
-		if(GetStreamByName(stream->GetOutputStreamName()) != nullptr)
+		if(GetStreamByName(stream->GetName()) != nullptr)
 		{
-			logti("Reject %s/%s stream it is a stream with a duplicate name.", GetName().CStr(), stream->GetOutputStreamName().CStr());		
+			logti("Reject %s/%s stream it is a stream with a duplicate name.", GetName().CStr(), stream->GetName().CStr());		
 			return false;
 		}
 	
 		if(stream->IsReadyToReceiveStreamData() == false)
 		{
-			logte("The stream(%s/%s) is not yet ready to be published.", GetName().CStr(), stream->GetOutputStreamName().CStr());
+			logte("The stream(%s/%s) is not yet ready to be published.", GetName().CStr(), stream->GetName().CStr());
 			return false;
 		}
 

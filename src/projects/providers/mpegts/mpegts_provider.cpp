@@ -40,9 +40,7 @@ namespace pvd
 		logti("Terminated Mpegts Provider module.");
 	}
 
-	bool MpegTsProvider::PrepareStreamList(const cfg::Server &server_config,
-										   std::map<std::tuple<int, ov::SocketType>,
-													std::tuple<info::VHostAppName, ov::String>> *stream_map)
+	bool MpegTsProvider::PrepareStreamList(const cfg::Server &server_config, std::map<std::tuple<int, ov::SocketType>, StreamInfo> *stream_map)
 	{
 		// Build a port-stream map from the configuration
 		//
@@ -54,7 +52,8 @@ namespace pvd
 		// 				<MPEGTS>
 		// 					<StreamMap>
 		// 						<Stream>
-		// 							<Name>stream_${Port}</Name>
+		//							<Name>mpegts_test_stream</Name>
+		// 							<OutputStreamName>stream_${Port}</OutputStreamName>
 		// 							<Port>40000-40001,40004,40005/udp</Port>
 		// 						</Stream>
 		// 					</StreamMap>
@@ -101,21 +100,16 @@ namespace pvd
 							if (found != stream_map->end())
 							{
 								auto value = found->second;
-								auto vhost_app_name = std::get<0>(value);
-								auto stream_name = std::get<1>(value);
 
-								logte("%d port is already in use: %s/%s", port, vhost_app_name.CStr(), stream_name.CStr());
+								logte("%d port is already in use: %s/%s", port, value.vhost_app_name.CStr(), value.stream_name.CStr());
 								return false;
 							}
 						}
 
+						auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationName(vhost_config.GetName(), app_config.GetName());
 						auto stream_name = stream_config.GetName().Replace("${Port}", ov::Converter::ToString(port));
 
-						auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationName(vhost_config.GetName(), app_config.GetName());
-
-						stream_map->emplace(
-							std::move(key),
-							std::make_tuple(vhost_app_name, stream_name));
+						stream_map->emplace(std::move(key), StreamInfo(vhost_app_name, stream_name));
 					}
 				}
 			}
@@ -131,9 +125,9 @@ namespace pvd
 	{
 		auto &server_config = GetServerConfig();
 
-		std::map<std::tuple<int, ov::SocketType>, std::tuple<info::VHostAppName, ov::String>> stream_map;
+		std::map<std::tuple<int, ov::SocketType>, StreamInfo> stream_map;
 
-		if(server_config.GetBind().GetProviders().GetMpegts().IsParsed() == false)
+		if (server_config.GetBind().GetProviders().GetMpegts().IsParsed() == false)
 		{
 			logtw("%s is disabled by configuration", GetProviderName());
 			return true;
@@ -153,9 +147,6 @@ namespace pvd
 			auto port = std::get<0>(key);
 			auto socket_type = std::get<1>(key);
 
-			auto vhost_app_name = std::get<0>(value);
-			auto stream_name = std::get<1>(value);
-
 			auto address = ov::SocketAddress(server_config.GetIp(), port);
 
 			auto physical_port = PhysicalPortManager::GetInstance()->CreatePort(socket_type, address);
@@ -166,12 +157,12 @@ namespace pvd
 			}
 			else
 			{
-				logti("%s is listening on %s for [%s/%s]", GetProviderName(), address.ToString().CStr(), vhost_app_name.CStr(), stream_name.CStr());
+				logti("%s is listening on %s for [%s/%s]", GetProviderName(), address.ToString().CStr(), value.vhost_app_name.CStr(), value.stream_name.CStr());
 			}
 
 			physical_port->AddObserver(this);
 
-			auto stream_map = std::make_shared<MpegTsStreamPortItem>(port, vhost_app_name, stream_name, physical_port);
+			auto stream_map = std::make_shared<MpegTsStreamPortItem>(port, value.vhost_app_name, value.stream_name, physical_port);
 
 			// TODO(getroot): If udp and tcp are specified as the same port, they will not function normally
 			_stream_port_map.emplace(port, stream_map);
@@ -234,7 +225,7 @@ namespace pvd
 			return;
 		}
 
-		auto stream = MpegTsStream::Create(StreamSourceType::Mpegts, channel_id, stream_port_item->GetVhostAppName(), stream_port_item->GetStreamName(), remote, GetSharedPtrAs<pvd::PushProvider>());
+		auto stream = MpegTsStream::Create(StreamSourceType::Mpegts, channel_id, stream_port_item->GetVhostAppName(), stream_port_item->GetOutputStreamName(), remote, GetSharedPtrAs<pvd::PushProvider>());
 		if (PushProvider::OnSignallingChannelCreated(remote->GetId(), stream) == true)
 		{
 			logti("A MPEG-TS client has connected from");  // %s", remote->ToString().CStr());
@@ -273,7 +264,7 @@ namespace pvd
 
 		logti("The client has not sent data for %d seconds. Stream has been deleted: [%s/%s], remote: ",  //%s",
 			  mpegts_stream->GetElapsedSecSinceLastReceived(),
-			  mpegts_stream->GetApplicationName(), mpegts_stream->GetOutputStreamName().CStr());
+			  mpegts_stream->GetApplicationName(), mpegts_stream->GetName().CStr());
 		//mpegts_stream->GetClientSock()->ToString().CStr());
 
 		auto stream_port_item = GetStreamPortItem(mpegts_stream->GetClientSock()->GetLocalAddress()->Port());
@@ -301,7 +292,7 @@ namespace pvd
 		}
 
 		logti("The MPEGTS client has disconnected: [%s/%s], remote: ",	//%s",
-			  channel->GetApplicationName(), channel->GetOutputStreamName().CStr());
+			  channel->GetApplicationName(), channel->GetName().CStr());
 		//remote->ToString().CStr());
 
 		PushProvider::OnChannelDeleted(remote->GetId());

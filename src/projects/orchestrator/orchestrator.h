@@ -30,7 +30,7 @@ namespace ocst
 	public:
 		bool ApplyOriginMap(const std::vector<info::Host> &host_list);
 
-		const std::vector<std::shared_ptr<ocst::VirtualHost>> &GetVirtualHostList();
+		std::vector<std::shared_ptr<ocst::VirtualHost>> GetVirtualHostList();
 
 		/// Register the module
 		///

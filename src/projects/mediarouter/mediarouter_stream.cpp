@@ -56,14 +56,14 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream) 
 	_stream(stream),
 	_packets_queue(nullptr, 100)
 {
-	logti("Trying to create media route stream: name(%s) id(%u)", stream->GetOutputStreamName().CStr(), stream->GetId());
+	logti("Trying to create media route stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 	_inout_type = MRStreamInoutType::Unknown; 
 
 	_stat_start_time = std::chrono::system_clock::now();
 
 	_stop_watch.Start();
 
-	_packets_queue.SetAlias(ov::String::FormatString("%s/%s - MediaRouterStream packets Queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetOutputStreamName().CStr()));
+	_packets_queue.SetAlias(ov::String::FormatString("%s/%s - MediaRouterStream packets Queue", _stream->GetApplicationInfo().GetName().CStr() ,_stream->GetName().CStr()));
 
 	InitParseTrackInfo();
 }
@@ -76,7 +76,7 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream, 
 
 MediaRouteStream::~MediaRouteStream()
 {
-	logti("Delete media route stream name(%s) id(%u)", _stream->GetOutputStreamName().CStr(), _stream->GetId());
+	logti("Delete media route stream name(%s) id(%u)", _stream->GetName().CStr(), _stream->GetId());
 
 	_media_packet_stash.clear();
 
@@ -824,7 +824,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		stat_stream_str.AppendFormat("\n - MediaRouter Stream | type: %s, name: %s/%s, uptime: %lldms, queue: %d, A-V(%lld)" 
 			, _inout_type==MRStreamInoutType::Incoming?"Incoming":"Outgoing"
 			,_stream->GetApplicationInfo().GetName().CStr()
-			,_stream->GetOutputStreamName().CStr()
+			,_stream->GetName().CStr()
 			,(int64_t)uptime
 			, _packets_queue.Size()
 			, max_pts - min_pts);

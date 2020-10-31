@@ -20,7 +20,7 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 	_queue_decoded_frames(nullptr, 100),
 	_queue_filterd_frames(nullptr, 100)
 {
-	logtd("Trying to create transcode stream: name(%s) id(%u)", stream->GetOutputStreamName().CStr(), stream->GetId());
+	logtd("Trying to create transcode stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 
 	// Determine maximum queue size
 	_max_queue_threshold = 0;
@@ -36,13 +36,13 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 
 	// set alias
 	_queue_input_packets.SetAlias(ov::String::FormatString("%s/%s - TranscodeStream input Queue"
-		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetOutputStreamName().CStr()));
+		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetName().CStr()));
 
 	_queue_decoded_frames.SetAlias(ov::String::FormatString("%s/%s - TranscodeStream decoded Queue"
-		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetOutputStreamName().CStr()));
+		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetName().CStr()));
 
 	_queue_filterd_frames.SetAlias(ov::String::FormatString("%s/%s - TranscodeStream filtered Queue"
-		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetOutputStreamName().CStr()));
+		, _stream_input->GetApplicationInfo().GetName().CStr() ,_stream_input->GetName().CStr()));
 
 }
 
@@ -124,7 +124,7 @@ bool TranscodeStream::Start()
 	CreateStreams();
 
 	logti("[%s/%s(%u)] Transcoder input stream has been started. Status : (%d) Decoders, (%d) Encoders", 
-						_application_info.GetName().CStr(), _stream_input->GetOutputStreamName().CStr(), _stream_input->GetId(), _decoders.size(), _encoders.size());
+						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(), _decoders.size(), _encoders.size());
 			
 	return true;
 }
@@ -168,7 +168,7 @@ bool TranscodeStream::Stop()
 	DeleteStreams();
 
 	logti("[%s/%s(%u)] Transcoder input stream has been stopped."
-		,_application_info.GetName().CStr(), _stream_input->GetOutputStreamName().CStr(), _stream_input->GetId());
+		,_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId());
 
 	return true;
 }
@@ -229,7 +229,7 @@ int32_t TranscodeStream::CreateOutputStreamDynamic()
 
 	auto stream_output = std::make_shared<info::Stream>(_application_info, StreamSourceType::Transcoder);
 
-	stream_output->SetOutputStreamName(_stream_input->GetOutputStreamName());
+	stream_output->SetName(_stream_input->GetName());
 	stream_output->SetOriginStream(_stream_input);
 
 	for (auto &input_track_item : _stream_input->GetTracks())
@@ -282,11 +282,11 @@ int32_t TranscodeStream::CreateOutputStreamDynamic()
 	}
 
 	// Add to Output Stream List. The key is the output stream name.
-	_stream_outputs.insert(std::make_pair(stream_output->GetOutputStreamName(), stream_output));
+	_stream_outputs.insert(std::make_pair(stream_output->GetName(), stream_output));
 
 	logti("[%s/%s(%u)] -> [%s/%s(%u)] Output stream has been created.", 
-		_application_info.GetName().CStr(), _stream_input->GetOutputStreamName().CStr(), _stream_input->GetId(),
-		_application_info.GetName().CStr(), stream_output->GetOutputStreamName().CStr(), stream_output->GetId());
+		_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(),
+		_application_info.GetName().CStr(), stream_output->GetName().CStr(), stream_output->GetId());
 
 	// Number of generated output streams
 	created_stream_count++;		
@@ -321,9 +321,9 @@ int32_t TranscodeStream::CreateOutputStream()
 		auto stream_name = cfg_stream.GetOutputStreamName();
 		if (::strstr(stream_name.CStr(), "${OriginStreamName}") != nullptr)
 		{
-			stream_name = stream_name.Replace("${OriginStreamName}", _stream_input->GetOutputStreamName());
+			stream_name = stream_name.Replace("${OriginStreamName}", _stream_input->GetName());
 		}
-		stream_output->SetOutputStreamName(stream_name);
+		stream_output->SetName(stream_name);
 
 		// It helps modules to reconize origin stream from provider
 		stream_output->SetOriginStream(_stream_input);
@@ -487,8 +487,8 @@ int32_t TranscodeStream::CreateOutputStream()
 		_stream_outputs.insert(std::make_pair(stream_name, stream_output));
 
 		logti("[%s/%s(%u)] -> [%s/%s(%u)] Output stream has been created.", 
-						_application_info.GetName().CStr(), _stream_input->GetOutputStreamName().CStr(), _stream_input->GetId(),
-						_application_info.GetName().CStr(), stream_output->GetOutputStreamName().CStr(), stream_output->GetId());
+						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(),
+						_application_info.GetName().CStr(), stream_output->GetName().CStr(), stream_output->GetId());
 
 		// Number of generated output streams
 		created_stream_count++;
@@ -517,7 +517,7 @@ int32_t TranscodeStream::CreateStageMapping()
 	// OutputTracks = ID of Output Tracks
 
 	ov::String temp_debug_msg = "\r\nStage Map of Transcoder\n";
-	temp_debug_msg.AppendFormat(" - app(%s/%d), stream(%s/%d)\n", _application_info.GetName().CStr(), _application_info.GetId(), _stream_input->GetOutputStreamName().CStr(), _stream_input->GetId());
+	temp_debug_msg.AppendFormat(" - app(%s/%d), stream(%s/%d)\n", _application_info.GetName().CStr(), _application_info.GetId(), _stream_input->GetName().CStr(), _stream_input->GetId());
 
 	for (auto &iter : _map_stage_context)
 	{
@@ -1123,8 +1123,8 @@ void TranscodeStream::DeleteStreams()
 	{
 		auto stream_output = iter.second;
 		logti("[%s/%s(%u)] -> [%s/%s(%u)] Transcoder output stream has been deleted.", 
-						_application_info.GetName().CStr(), _stream_input->GetOutputStreamName().CStr(), _stream_input->GetId(),
-						_application_info.GetName().CStr(), stream_output->GetOutputStreamName().CStr(), stream_output->GetId());
+						_application_info.GetName().CStr(), _stream_input->GetName().CStr(), _stream_input->GetId(),
+						_application_info.GetName().CStr(), stream_output->GetName().CStr(), stream_output->GetId());
 
 		_parent->DeleteStream(stream_output);
 	}

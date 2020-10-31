@@ -40,6 +40,8 @@ namespace mon
 		bool OnApplicationCreated(const info::Application &app_info);
 		bool OnApplicationDeleted(const info::Application &app_info);
 
+		std::map<uint32_t, std::shared_ptr<ApplicationMetrics>> GetApplicationMetricsList();
+
 		std::shared_ptr<ApplicationMetrics> GetApplicationMetrics(const info::Application &app_info);
 
 	private:

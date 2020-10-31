@@ -36,7 +36,7 @@ public:
 															 std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track) override
 	{
 		auto stream_packetizer = std::make_shared<HlsStreamPacketizer>(GetApplicationName(),
-																	   GetOutputStreamName(),
+																	   GetName(),
 																	   segment_count,
 																	   segment_duration,
 																	   segment_prefix,

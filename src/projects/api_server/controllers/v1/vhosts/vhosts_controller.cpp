@@ -29,12 +29,12 @@ namespace api
 
 		ApiResponse VHostsController::OnGetVhostList(const std::shared_ptr<HttpClient> &client)
 		{
-			const auto &vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
-			Json::Value response;
+			auto vhost_list = GetVirtualHostList();
+			Json::Value response = Json::arrayValue;
 
-			for (const auto &vhost : vhost_list)
+			for (const auto &item : vhost_list)
 			{
-				response.append(vhost->name.CStr());
+				response.append(item.second->GetName().CStr());
 			}
 
 			return response;
@@ -44,12 +44,13 @@ namespace api
 		{
 			// Get resources from URI
 			auto &match_result = client->GetRequest()->GetMatchResult();
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
 
+			auto vhost_name = match_result.GetNamedGroup("vhost_name");
 			auto vhost = GetVirtualHost(vhost_name);
 			if (vhost == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]", vhost_name.length(), vhost_name.data());
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
+											  vhost_name.length(), vhost_name.data());
 			}
 
 			return api::conv::ConvertFromVHost(vhost);

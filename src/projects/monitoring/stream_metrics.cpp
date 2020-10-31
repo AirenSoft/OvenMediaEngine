@@ -115,7 +115,7 @@ namespace mon
 			GetApplicationMetrics()->OnSessionConnected(type);
 
 			logti("A new session has started playing %s/%s on the %s publihser. %s(%u)/Stream total(%u)/App total(%u)", 
-					GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), 
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
 					ov::Converter::ToString(type).CStr(), ov::Converter::ToString(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}
 	}
@@ -140,7 +140,7 @@ namespace mon
 			GetApplicationMetrics()->OnSessionDisconnected(type);
 
 			logti("A session has been stopped playing %s/%s on the %s publihser. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]", 
-					GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), 
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
 					ov::Converter::ToString(type).CStr(), ov::Converter::ToString(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}
 	}

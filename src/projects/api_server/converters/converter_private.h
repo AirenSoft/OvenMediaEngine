@@ -49,6 +49,11 @@ namespace api
 			parent_object[key] = value;
 		}
 
+		inline void SetTimestamp(Json::Value &parent_object, const char *key, const std::chrono::system_clock::time_point &time_point)
+		{
+			parent_object[key] = "2020-10-31T00:00:00.000Z";
+		}
+
 		inline void SetBool(Json::Value &parent_object, const char *key, bool value)
 		{
 			parent_object[key] = value;

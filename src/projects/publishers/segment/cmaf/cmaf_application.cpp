@@ -75,7 +75,7 @@ bool CmafApplication::Stop()
 //====================================================================================================
 std::shared_ptr<pub::Stream> CmafApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count)
 {
-	logtd("Cmaf CreateStream : %s/%u", info->GetOutputStreamName().CStr(), info->GetId());
+	logtd("Cmaf CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 
 	return CmafStream::Create(_segment_count,
                             _segment_duration,

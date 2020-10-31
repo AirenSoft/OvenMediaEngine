@@ -15,6 +15,7 @@
 #include "../../../../api_private.h"
 #include "../../../../converters/converters.h"
 #include "../../../../helpers/helpers.h"
+#include "streams/streams_controller.h"
 
 namespace api
 {
@@ -24,26 +25,31 @@ namespace api
 		{
 			RegisterGet(R"()", &AppsController::OnGetAppList);
 			RegisterGet(R"(\/(?<app_name>[^\/]*))", &AppsController::OnGetApp);
+
+			CreateSubController<v1::StreamsController>(R"(\/(?<app_name>[^\/]*)\/streams)");
 		};
 
 		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<HttpClient> &client)
 		{
 			auto &match_result = client->GetRequest()->GetMatchResult();
+
 			auto vhost_name = match_result.GetNamedGroup("vhost_name");
 			auto vhost = GetVirtualHost(vhost_name);
-
 			if (vhost == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]", vhost_name.length(), vhost_name.data());
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
+											  vhost_name.length(), vhost_name.data());
 			}
 
-			Json::Value response;
+			Json::Value response = Json::arrayValue;
 
-			for (auto &item : vhost->app_map)
+			auto app_list = GetApplicationList(vhost);
+
+			for (auto &item : app_list)
 			{
 				auto &app = item.second;
 
-				response.append(app->app_info.GetName().GetAppName().CStr());
+				response.append(app->GetName().GetAppName().CStr());
 			}
 
 			return response;
@@ -52,19 +58,22 @@ namespace api
 		ApiResponse AppsController::OnGetApp(const std::shared_ptr<HttpClient> &client)
 		{
 			auto &match_result = client->GetRequest()->GetMatchResult();
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto app_name = match_result.GetNamedGroup("app_name");
 
+			auto vhost_name = match_result.GetNamedGroup("vhost_name");
 			auto vhost = GetVirtualHost(vhost_name);
 			if (vhost == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]", vhost_name.length(), vhost_name.data());
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
+											  vhost_name.length(), vhost_name.data());
 			}
 
+			auto app_name = match_result.GetNamedGroup("app_name");
 			auto app = GetApplication(vhost, app_name);
 			if (app == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find app: [%.*s]", app_name.length(), app_name.data());
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
+											  vhost_name.length(), vhost_name.data(),
+											  app_name.length(), app_name.data());
 			}
 
 			return api::conv::ConvertFromApplication(app);

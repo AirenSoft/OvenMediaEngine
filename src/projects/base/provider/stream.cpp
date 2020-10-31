@@ -46,13 +46,13 @@ namespace pvd
 
 	bool Stream::Start() 
 	{
-		logti("%s/%s(%u) has been started stream", GetApplicationName(), GetOutputStreamName().CStr(), GetId());
+		logti("%s/%s(%u) has been started stream", GetApplicationName(), GetName().CStr(), GetId());
 		return true;
 	}
 	
 	bool Stream::Stop() 
 	{
-		logti("%s/%s(%u) has been stopped playing stream", GetApplicationName(), GetOutputStreamName().CStr(), GetId());
+		logti("%s/%s(%u) has been stopped playing stream", GetApplicationName(), GetName().CStr(), GetId());
 		return true;
 	}
 
@@ -75,14 +75,14 @@ namespace pvd
 
 		if(packet->GetPacketType() == common::PacketType::Unknwon)
 		{
-			logte("The packet type must be specified. %s/%s(%u)", GetApplicationName(), GetOutputStreamName().CStr(), GetId());
+			logte("The packet type must be specified. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());
 			return false;
 		}
 
 		if(packet->GetPacketType() != common::PacketType::OVT && 
 			packet->GetBitstreamFormat() == common::BitstreamFormat::Unknwon)
 		{
-			logte("The bitstream format must be specified. %s/%s(%u)", GetApplicationName(), GetOutputStreamName().CStr(), GetId());
+			logte("The bitstream format must be specified. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());
 			return false;
 		}
 

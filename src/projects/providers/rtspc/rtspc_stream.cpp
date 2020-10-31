@@ -18,7 +18,7 @@ namespace pvd
 		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::RtspPull);
 
 		stream_info.SetId(stream_id);
-		stream_info.SetOutputStreamName(stream_name);
+		stream_info.SetName(stream_name);
 
 		auto stream = std::make_shared<RtspcStream>(application, stream_info, url_list);
 		if (!stream->Start())
@@ -196,11 +196,11 @@ namespace pvd
 
 			if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
 			{
-				logte("Failed to connect to RTSP server.(%s/%s) : Timed out", GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), errbuf);
+				logte("Failed to connect to RTSP server.(%s/%s) : Timed out", GetApplicationInfo().GetName().CStr(), GetName().CStr(), errbuf);
 			}
 			else
 			{
-				logte("Failed to connect to RTSP server.(%s/%s) : %s", GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), errbuf);
+				logte("Failed to connect to RTSP server.(%s/%s) : %s", GetApplicationInfo().GetName().CStr(), GetName().CStr(), errbuf);
 			}
 
 			return false;
@@ -362,7 +362,7 @@ namespace pvd
 			if ( (ret == AVERROR_EOF || ::avio_feof(_format_context->pb)) && !is_eof)
 			{
 				// If EOF is not receiving packets anymore, end thread.
-				logti("%s/%s(%u) RtspcStream has finished.", GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), GetId());
+				logti("%s/%s(%u) RtspcStream has finished.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 				_state = State::STOPPED;
 				is_eof = true;
 				return ProcessMediaResult::PROCESS_MEDIA_FINISH;
@@ -372,7 +372,7 @@ namespace pvd
 			{
 				// If the connection is broken, terminate the thread.
 				logte("%s/%s(%u) RtspcStream's connection has broken.", 
-					GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), GetId());
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 				_state = State::ERROR;
 				return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 			}

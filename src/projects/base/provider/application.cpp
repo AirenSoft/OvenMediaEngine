@@ -87,7 +87,7 @@ namespace pvd
 		for(auto const &x : _streams)
 		{
 			auto& stream = x.second;
-			if(stream->GetOutputStreamName() == stream_name)
+			if(stream->GetName() == stream_name)
 			{
 				return stream;
 			}
@@ -102,7 +102,7 @@ namespace pvd
 
 		if(_streams.find(stream->GetId()) == _streams.end())
 		{
-			logtc("Could not find stream to be removed : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetOutputStreamName().CStr(), stream->GetId());
+			logtc("Could not find stream to be removed : %s/%s(%u)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId());
 			return false;
 		}
 		_streams.erase(stream->GetId());

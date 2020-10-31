@@ -153,8 +153,9 @@ namespace ocst
 		return result;
 	}
 
-	const std::vector<std::shared_ptr<ocst::VirtualHost>> &Orchestrator::GetVirtualHostList()
+	std::vector<std::shared_ptr<ocst::VirtualHost>> Orchestrator::GetVirtualHostList()
 	{
+		auto scoped_lock = std::scoped_lock(_virtual_host_map_mutex);
 		return _virtual_host_list;
 	}
 
@@ -617,13 +618,13 @@ namespace ocst
 
 	bool Orchestrator::OnCreateStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s stream is created", info->GetOutputStreamName().CStr());
+		logtd("%s stream is created", info->GetName().CStr());
 		return true;
 	}
 
 	bool Orchestrator::OnDeleteStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
-		logtd("%s stream is deleted", info->GetOutputStreamName().CStr());
+		logtd("%s stream is deleted", info->GetName().CStr());
 		return true;
 	}
 }  // namespace ocst

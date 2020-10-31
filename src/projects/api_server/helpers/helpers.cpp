@@ -10,28 +10,39 @@
 
 namespace api
 {
-	std::shared_ptr<ocst::VirtualHost> GetVirtualHost(const std::string_view &vhost_name)
+	std::map<uint32_t, std::shared_ptr<mon::HostMetrics>> GetVirtualHostList()
 	{
-		const auto &vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
+		return std::move(mon::Monitoring::GetInstance()->GetHostMetricsList());
+	}
+
+	std::shared_ptr<mon::HostMetrics> GetVirtualHost(const std::string_view &vhost_name)
+	{
+		auto vhost_list = GetVirtualHostList();
 
 		for (const auto &vhost : vhost_list)
 		{
-			if (vhost_name == vhost->name.CStr())
+			if (vhost_name == vhost.second->GetName().CStr())
 			{
-				return vhost;
+				return vhost.second;
 			}
 		}
 
 		return nullptr;
 	}
 
-	std::shared_ptr<ocst::Application> GetApplication(const std::shared_ptr<ocst::VirtualHost> &vhost, const std::string_view &app_name)
+	std::map<uint32_t, std::shared_ptr<mon::ApplicationMetrics>> GetApplicationList(const std::shared_ptr<mon::HostMetrics> &vhost)
+	{
+		return std::move(vhost->GetApplicationMetricsList());
+	}
+
+	std::shared_ptr<mon::ApplicationMetrics> GetApplication(const std::shared_ptr<mon::HostMetrics> &vhost, const std::string_view &app_name)
 	{
 		if (vhost != nullptr)
 		{
-			for (auto &item : vhost->app_map)
+			auto app_list = GetApplicationList(vhost);
+			for (auto &item : app_list)
 			{
-				if (app_name == item.second->app_info.GetName().GetAppName().CStr())
+				if (app_name == item.second->GetName().GetAppName().CStr())
 				{
 					return item.second;
 				}
@@ -41,4 +52,46 @@ namespace api
 		return nullptr;
 	}
 
+	std::map<uint32_t, std::shared_ptr<mon::StreamMetrics>> GetStreamList(const std::shared_ptr<mon::ApplicationMetrics> &application)
+	{
+		return std::move(application->GetStreamMetricsList());
+	}
+
+	std::shared_ptr<mon::StreamMetrics> GetStream(const std::shared_ptr<mon::ApplicationMetrics> &application, const std::string_view &stream_name, std::vector<std::shared_ptr<mon::StreamMetrics>> *output_streams)
+	{
+		if (application != nullptr)
+		{
+			auto stream_list = GetStreamList(application);
+
+			std::shared_ptr<mon::StreamMetrics> input_stream;
+
+			for (auto &item : stream_list)
+			{
+				if (input_stream == nullptr)
+				{
+					if (stream_name == item.second->GetName().CStr())
+					{
+						input_stream = item.second;
+
+						if (output_streams == nullptr)
+						{
+							break;
+						}
+						else
+						{
+							// Continue to find the stream associated with input_stream
+						}
+					}
+				}
+				else if (item.second->GetOriginStream() == input_stream)
+				{
+					output_streams->push_back(item.second);
+				}
+			}
+
+			return input_stream;
+		}
+
+		return nullptr;
+	}
 }  // namespace api

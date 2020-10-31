@@ -47,13 +47,13 @@ namespace mon
         auto stream_metrics = std::make_shared<StreamMetrics>(GetSharedPtr(), stream);
         if(stream_metrics == nullptr)
         {
-            logte("Cannot create StreamMetrics (%s/%s)", GetName().CStr(), stream.GetOutputStreamName().CStr());
+            logte("Cannot create StreamMetrics (%s/%s)", GetName().CStr(), stream.GetName().CStr());
             return false;
         }
 
         _streams[stream.GetId()] = stream_metrics;
 
-        logti("Create StreamMetrics(%s) for monitoring", stream.GetOutputStreamName().CStr());
+        logti("Create StreamMetrics(%s) for monitoring", stream.GetName().CStr());
         return true;
     }
 
@@ -65,7 +65,7 @@ namespace mon
             return false;
         }
 
-        logti("Delete StreamMetrics(%s) for monitoring", stream.GetOutputStreamName().CStr());
+        logti("Delete StreamMetrics(%s) for monitoring", stream.GetName().CStr());
 
         // logging StreamMetric
         stream_metric->ShowInfo();
@@ -76,6 +76,12 @@ namespace mon
         }
 
         return true;
+    }
+
+    std::map<uint32_t, std::shared_ptr<StreamMetrics>> ApplicationMetrics::GetStreamMetricsList()
+    {
+        std::shared_lock<std::shared_mutex> lock(_map_guard);
+        return _streams;
     }
 
     std::shared_ptr<StreamMetrics> ApplicationMetrics::GetStreamMetrics(const info::Stream &stream)

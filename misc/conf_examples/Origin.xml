@@ -23,7 +23,7 @@
 		</Providers>
 
 		<Publishers>
-            <!-- The OVT is protocol for ORIGIN-EDGE -->
+			<!-- The OVT is protocol for ORIGIN-EDGE -->
 			<OVT>
 				<Port>${env:OME_ORIGIN_PORT:9000}</Port>
 			</OVT>
@@ -61,15 +61,15 @@
 
 			<!-- Settings for multi ip/domain and TLS -->
 			<Host>
-                <Names>
+				<Names>
 					<!-- Host names
 						<Name>stream1.airensoft.com</Name>
 						<Name>stream2.airensoft.com</Name>
 						<Name>*.sub.airensoft.com</Name>
 						<Name>192.168.0.1</Name>
 					-->
-                    <Name>*</Name>
-                </Names>
+					<Name>*</Name>
+				</Names>
 				<!--
 				<TLS>
 					<CertPath>path/to/file.crt</CertPath>
@@ -85,26 +85,26 @@
 					<Name>app</Name>
 					<!-- Application type (live/vod) -->
 					<Type>live</Type>
-                    <Encodes>
-                        <Encode>
-                            <Name>bypass</Name>
-                            <Audio>
-                                <Bypass>true</Bypass>
-                            </Audio>
-                            <Video>
-                                <Bypass>true</Bypass>
-                            </Video>
-                        </Encode>
-                        <Encode>
-                            <Name>opus</Name>
-                            <Audio>
-                                <Codec>opus</Codec>
-                                <Bitrate>128000</Bitrate>
-                                <Samplerate>48000</Samplerate>
-                                <Channel>2</Channel>
-                            </Audio>
-                        </Encode>
-                    </Encodes>
+					<Encodes>
+						<Encode>
+							<Name>bypass</Name>
+							<Audio>
+								<Bypass>true</Bypass>
+							</Audio>
+							<Video>
+								<Bypass>true</Bypass>
+							</Video>
+						</Encode>
+						<Encode>
+							<Name>opus</Name>
+							<Audio>
+								<Codec>opus</Codec>
+								<Bitrate>128000</Bitrate>
+								<Samplerate>48000</Samplerate>
+								<Channel>2</Channel>
+							</Audio>
+						</Encode>
+					</Encodes>
 					<Streams>
 						<Stream>
 							<Name>bypass_stream</Name>

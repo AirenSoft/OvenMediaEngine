@@ -21,9 +21,6 @@ namespace cfg
 		// Modify if supported xml version is added or changed
 
 		// Version 7 -> 8
-		// - Changed <Server>.<VirtualHosts>.<VirtualHost>.<Domain> to <Host>
-		// - Added <Server>.<Bind>.<Managers>.<API>
-		// - Added <Server>.<API>
 		_supported_xml["Server"] = 8;
 		_supported_xml["Logger"] = 2;
 	}
@@ -208,8 +205,8 @@ namespace cfg
 				logtc(" - Changed <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Streams>.<Stream>.<Name> to <OutputStreamName>");
 				logtc(" - Added <Server>.<Bind>.<Managers>.<API> for setting API binding port");
 				logtc(" - Added <Server>.<API> for setting API server");
-				logtc(" - Added <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Streams>.<Stream>.<Name> to distinguish streams");
-
+				logtc(" - Added <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Streams>.<Stream>.<Name> to distinguish OutputProfile");
+			
 				return false;
 			}
 		}

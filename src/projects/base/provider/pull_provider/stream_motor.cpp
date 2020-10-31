@@ -70,7 +70,7 @@ namespace pvd
 		int stream_fd = stream->GetFileDescriptorForDetectingEvent();
 		if(stream_fd == -1)
 		{
-			logte("Failed to add stream : %s/%s(%u) Stream failed to provide the file description for event detection", stream->GetApplicationName(), stream->GetOutputStreamName().CStr(), stream->GetId());
+			logte("Failed to add stream : %s/%s(%u) Stream failed to provide the file description for event detection", stream->GetApplicationName(), stream->GetName().CStr(), stream->GetId());
 			return false;
 		}
 
@@ -82,7 +82,7 @@ namespace pvd
 		int result = epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, stream_fd, &event);
 		if(result == -1)
 		{
-			logte("%s/%s(%u) Stream could not be added to the epoll (err : %d)", stream->GetApplicationName(), stream->GetOutputStreamName().CStr(), stream->GetId(), result);
+			logte("%s/%s(%u) Stream could not be added to the epoll (err : %d)", stream->GetApplicationName(), stream->GetName().CStr(), stream->GetId(), result);
 			return false;
 		}
 
@@ -94,7 +94,7 @@ namespace pvd
 		int stream_fd = stream->GetFileDescriptorForDetectingEvent();
 		if(stream_fd == -1)
 		{
-			logte("Failed to delete stream : %s/%s(%u) Stream failed to provide the file description for event detection", stream->GetApplicationName(), stream->GetOutputStreamName().CStr(), stream->GetId());
+			logte("Failed to delete stream : %s/%s(%u) Stream failed to provide the file description for event detection", stream->GetApplicationName(), stream->GetName().CStr(), stream->GetId());
 			return false;
 		}
 
@@ -106,7 +106,7 @@ namespace pvd
 			{
 				return true;
 			}
-			logte("%s/%s(%u) Stream could not be deleted to the epoll (err : %d)", stream->GetApplicationName(), stream->GetOutputStreamName().CStr(), stream->GetId(), result);
+			logte("%s/%s(%u) Stream could not be deleted to the epoll (err : %d)", stream->GetApplicationName(), stream->GetName().CStr(), stream->GetId(), result);
 			return false;
 		}
 
@@ -127,7 +127,7 @@ namespace pvd
 			return false;
 		}
 
-		logti("%s/%s(%u) stream has added to %u StreamMotor", stream->GetApplicationName(), stream->GetOutputStreamName().CStr(), stream->GetId(), GetId());
+		logti("%s/%s(%u) stream has added to %u StreamMotor", stream->GetApplicationName(), stream->GetName().CStr(), stream->GetId(), GetId());
 
 		return true;
 	}
@@ -143,7 +143,7 @@ namespace pvd
 		_streams.erase(stream->GetId());
 		lock.unlock();
 
-		logti("%s/%s(%u) stream has deleted from %u StreamMotor", stream->GetApplicationName(), stream->GetOutputStreamName().CStr(), stream->GetId(), GetId());
+		logti("%s/%s(%u) stream has deleted from %u StreamMotor", stream->GetApplicationName(), stream->GetName().CStr(), stream->GetId(), GetId());
 
 		DelStreamFromEpoll(stream);
 		stream->Stop();

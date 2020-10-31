@@ -83,15 +83,15 @@
 
 			<!-- Settings for multi ip/domain and TLS -->
 			<Host>
-                <Names>
+				<Names>
 					<!-- Host names
 						<Name>stream1.airensoft.com</Name>
 						<Name>stream2.airensoft.com</Name>
 						<Name>*.sub.airensoft.com</Name>
 						<Name>192.168.0.1</Name>
 					-->
-                    <Name>*</Name>
-                </Names>
+					<Name>*</Name>
+				</Names>
 				<!--
 				<TLS>
 					<CertPath>path/to/file.crt</CertPath>

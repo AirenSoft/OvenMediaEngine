@@ -27,8 +27,8 @@ namespace info
 		void SetId(info::stream_id_t id);
 		info::stream_id_t GetId() const;
 
-		ov::String GetOutputStreamName() const;
-		void SetOutputStreamName(ov::String name);
+		ov::String GetName() const;
+		void SetName(ov::String name);
 
 		ov::String GetMediaSource() const;
 		void SetMediaSource(ov::String url);

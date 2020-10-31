@@ -17,7 +17,7 @@ namespace pvd
 		info::Stream stream_info(*std::static_pointer_cast<info::Application>(application), StreamSourceType::Ovt);
 
 		stream_info.SetId(stream_id);
-		stream_info.SetOutputStreamName(stream_name);
+		stream_info.SetName(stream_name);
 
 		auto stream = std::make_shared<OvtStream>(application, stream_info, url_list);
 		if (!stream->Start())
@@ -386,7 +386,7 @@ namespace pvd
 		}
 		else
 		{
-			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), GetId(), static_cast<uint8_t>(result));
+			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
 			_state = State::ERROR;
 			return false;
 		}
@@ -535,7 +535,7 @@ namespace pvd
 			}
 			else
 			{
-				logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), GetId(), static_cast<uint8_t>(result));
+				logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
 				_state = State::ERROR;
 				return nullptr;
 			}
@@ -693,7 +693,7 @@ namespace pvd
 		}
 		else
 		{
-			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), GetId(), static_cast<uint8_t>(result));
+			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
 			_state = State::ERROR;
 			return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
@@ -702,7 +702,7 @@ namespace pvd
 		if (packet == nullptr)
 		{
 			logte("The origin server may have problems. Try to terminate %s/%s(%u) stream", 
-					GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), GetId());
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			_state = State::ERROR;
 			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
@@ -711,7 +711,7 @@ namespace pvd
 		{
 			ReceiveStop(_last_request_id, packet);
 			logti(" %s/%s(%u) OvtStream thread has finished gracefully", 
-				GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), GetId());
+				GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			_state = State::STOPPED;
 			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FINISH;
 		}
@@ -719,7 +719,7 @@ namespace pvd
 		if(packet->SessionId() != _session_id)
 		{
 			logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
-					GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), GetId());
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			_state = State::ERROR;
 			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
@@ -752,7 +752,7 @@ namespace pvd
 		else
 		{
 			logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
-					GetApplicationInfo().GetName().CStr(), GetOutputStreamName().CStr(), GetId());
+					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			_state = State::ERROR;
 			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
