@@ -39,6 +39,16 @@ namespace api
 			object = value.CStr();
 		}
 
+		inline void SetInt(Json::Value &parent_object, const char *key, int32_t value)
+		{
+			parent_object[key] = value;
+		}
+
+		inline void SetTimeInterval(Json::Value &parent_object, const char *key, int64_t value)
+		{
+			parent_object[key] = value;
+		}
+
 		inline void SetBool(Json::Value &parent_object, const char *key, bool value)
 		{
 			parent_object[key] = value;
