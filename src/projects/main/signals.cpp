@@ -118,8 +118,11 @@ static void AbortHandler(int signum, siginfo_t *si, void *unused)
 
 	logtc("OME received signal %d (%s), interrupt.", signum, GetSignalName(signum));
 
-	::strftime(time_buffer, sizeof(time_buffer) / sizeof(time_buffer[0]), "%Y-%m-%dT%H:%M:%S%z", ::localtime(&t));
-	::strftime(file_name, 32, "crash_%Y%m%d.dump", ::localtime(&t));
+	std::tm local_time{};
+	::localtime_r(&t, &local_time);
+
+	::strftime(time_buffer, sizeof(time_buffer) / sizeof(time_buffer[0]), "%Y-%m-%dT%H:%M:%S%z", &local_time);
+	::strftime(file_name, 32, "crash_%Y%m%d.dump", &local_time);
 
 	std::ofstream ostream(file_name, std::ofstream::app);
 
