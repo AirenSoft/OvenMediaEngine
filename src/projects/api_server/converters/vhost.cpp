@@ -8,7 +8,7 @@
 //==============================================================================
 #include "vhost.h"
 
-#include "converter_private.h"
+#include "common.h"
 
 namespace api
 {

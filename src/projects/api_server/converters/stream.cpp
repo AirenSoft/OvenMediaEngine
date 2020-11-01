@@ -7,7 +7,8 @@
 //
 //==============================================================================
 #include "application.h"
-#include "converter_private.h"
+
+#include "common.h"
 
 namespace api
 {
@@ -34,10 +35,10 @@ namespace api
 		{
 			CONVERTER_RETURN_IF(stream == nullptr);
 
-			SetString(object, "sourceType", ov::Converter::ToString(stream->GetSourceType()), Optional::False);
+			SetString(object, "sourceType", ::StringFromStreamSourceType(stream->GetSourceType()), Optional::False);
 			SetString(object, "sourceUrl", stream->GetMediaSource(), Optional::True);
 			// TODO(dimiden): Complete this function
-			SetConnection(object, "connection", stream.get(), Optional::False);
+			SetConnection(object, "connection", stream.get(), Optional::True);
 			SetTracks(object, "tracks", stream->GetTracks(), Optional::False);
 			SetTimestamp(object, "createdTime", stream->GetCreatedTime());
 		}
