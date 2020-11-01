@@ -65,7 +65,10 @@ namespace api
 		virtual void PrepareHandlers() = 0;
 
 	protected:
+		// API Handler without request body
 		using ApiHandler = ApiResponse (Tclass::*)(const std::shared_ptr<HttpClient> &client);
+		// API Handler with request body
+		using ApiHandlerWithBody = ApiResponse (Tclass::*)(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body);
 
 		void Register(HttpMethod method, const ov::String &pattern, const ApiHandler &handler)
 		{
@@ -87,8 +90,29 @@ namespace api
 			});
 		}
 
+		void Register(HttpMethod method, const ov::String &pattern, const ApiHandlerWithBody &handler)
+		{
+			auto new_pattern = ov::String::FormatString("^%s%s$", _prefix.CStr(), pattern.CStr());
+			auto that = dynamic_cast<Tclass *>(this);
+
+			_interceptor->Register(method, new_pattern, [that, handler](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+				if (that != nullptr)
+				{
+					auto request_body = ov::Json::Parse(client->GetRequest()->GetRequestBody());
+					auto result = (that->*handler)(client, request_body.GetJsonValue());
+					result.SendToClient(client);
+				}
+				else
+				{
+					OV_ASSERT2(false);
+				}
+
+				return HttpNextHandler::DoNotCall;
+			});
+		}
+
 		// Register handlers
-		void RegisterPost(const ov::String &pattern, const ApiHandler &handler)
+		void RegisterPost(const ov::String &pattern, const ApiHandlerWithBody &handler)
 		{
 			Register(HttpMethod::Post, pattern, handler);
 		}
@@ -98,7 +122,7 @@ namespace api
 			Register(HttpMethod::Get, pattern, handler);
 		}
 
-		void RegisterPut(const ov::String &pattern, const ApiHandler &handler)
+		void RegisterPut(const ov::String &pattern, const ApiHandlerWithBody &handler)
 		{
 			Register(HttpMethod::Put, pattern, handler);
 		}

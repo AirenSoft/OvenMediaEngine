@@ -8,11 +8,11 @@
 //==============================================================================
 #pragma once
 
-#include "./string.h"
-#include "./error.h"
-#include "./data.h"
-
 #include <jsoncpp-1.9.3/json/json.h>
+
+#include "./data.h"
+#include "./error.h"
+#include "./string.h"
 
 namespace ov
 {
@@ -71,7 +71,7 @@ namespace ov
 		{
 			auto &value = _value[key];
 
-			if(value.isIntegral())
+			if (value.isIntegral())
 			{
 				return value.asInt();
 			}
@@ -83,7 +83,7 @@ namespace ov
 		{
 			auto &value = _value[key];
 
-			if(value.isIntegral())
+			if (value.isIntegral())
 			{
 				return value.asInt64();
 			}
@@ -105,6 +105,12 @@ namespace ov
 
 		std::shared_ptr<Error> Parse(const std::shared_ptr<const Data> &data)
 		{
+			if ((data == nullptr) || (data->GetData() == nullptr))
+			{
+				_value = ::Json::nullValue;
+				return nullptr;
+			}
+
 			return Parse(data->GetData(), data->GetLength());
 		}
 
@@ -113,4 +119,4 @@ namespace ov
 
 		::Json::Value _value;
 	};
-}
+}  // namespace ov

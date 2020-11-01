@@ -20,11 +20,20 @@ namespace api
 			void PrepareHandlers() override;
 
 		protected:
+			// POST /v1/vhosts/<vhost_name>/apps
+			ApiResponse OnPostApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body);
+
 			// GET /v1/vhosts/<vhost_name>/apps
 			ApiResponse OnGetAppList(const std::shared_ptr<HttpClient> &client);
 
 			// GET /v1/vhosts/<vhost_name>/apps/<app_name>
 			ApiResponse OnGetApp(const std::shared_ptr<HttpClient> &client);
+
+			// PUT /v1/vhosts/<vhost_name>/apps/<app_name>
+			ApiResponse OnPutApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body);
+
+			// DELETE /v1/vhosts/<vhost_name>/apps/<app_name>
+			ApiResponse OnDeleteApp(const std::shared_ptr<HttpClient> &client);
 		};
 	}  // namespace v1
 }  // namespace api
