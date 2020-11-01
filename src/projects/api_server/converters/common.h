@@ -46,6 +46,11 @@ namespace api
 			parent_object[key] = value;
 		}
 
+		inline void SetFloat(Json::Value &parent_object, const char *key, float value)
+		{
+			parent_object[key] = value;
+		}
+
 		inline void SetTimeInterval(Json::Value &parent_object, const char *key, int64_t value)
 		{
 			parent_object[key] = value;

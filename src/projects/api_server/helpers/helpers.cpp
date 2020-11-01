@@ -67,9 +67,14 @@ namespace api
 
 			for (auto &item : stream_list)
 			{
+				auto &stream = item.second;
+
 				if (input_stream == nullptr)
 				{
-					if (stream_name == item.second->GetName().CStr())
+					if (
+						// Stream is an input stream
+						(stream->GetOriginStream() == nullptr) &&
+						(stream_name == stream->GetName().CStr()))
 					{
 						input_stream = item.second;
 
@@ -83,9 +88,14 @@ namespace api
 						}
 					}
 				}
-				else if (item.second->GetOriginStream() == input_stream)
+				else
 				{
-					output_streams->push_back(item.second);
+					auto &origin_stream = stream->GetOriginStream();
+
+					if ((origin_stream != nullptr) && (origin_stream->GetId() == input_stream->GetId()))
+					{
+						output_streams->push_back(item.second);
+					}
 				}
 			}
 

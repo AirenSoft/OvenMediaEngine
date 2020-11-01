@@ -374,7 +374,19 @@ namespace common
 		// the name of channel layout
 		const char *GetName() const
 		{
-			return _name.c_str();
+			switch (_layout)
+			{
+				case Layout::LayoutUnknown:
+					[[fallthrough]];
+				default:
+					return "unknown";
+
+				case Layout::LayoutStereo:
+					return "stereo";
+
+				case Layout::LayoutMono:
+					return "mono";
+			}
 		}
 
 	private:

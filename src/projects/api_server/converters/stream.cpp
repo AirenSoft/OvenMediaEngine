@@ -7,7 +7,6 @@
 //
 //==============================================================================
 #include "application.h"
-
 #include "common.h"
 
 namespace api
@@ -18,6 +17,55 @@ namespace api
 		{
 		}
 
+		static void SetTimebase(Json::Value &parent_object, const char *key, const common::Timebase &timebase, Optional optional)
+		{
+			CONVERTER_RETURN_IF(timebase.GetDen() > 0);
+
+			SetInt(object, "num", timebase.GetNum());
+			SetInt(object, "den", timebase.GetDen());
+		}
+
+		static void SetVideoTrack(Json::Value &parent_object, const char *key, const std::shared_ptr<MediaTrack> &track, Optional optional)
+		{
+			CONVERTER_RETURN_IF(track == nullptr);
+
+			SetBool(object, "bypass", track->IsBypass());
+
+			if (track->IsBypass() == false)
+			{
+				SetString(object, "codec", ::StringFromMediaCodecId(track->GetCodecId()), Optional::False);
+				SetInt(object, "width", track->GetWidth());
+				SetInt(object, "height", track->GetHeight());
+				SetInt(object, "bitrate", track->GetBitrate());
+				SetFloat(object, "framerate", track->GetFrameRate());
+				SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
+			}
+		}
+
+		static void SetAudioChannel(Json::Value &parent_object, const char *key, const common::AudioChannel &channel, Optional optional)
+		{
+			CONVERTER_RETURN_IF(channel.GetLayout() == common::AudioChannel::Layout::LayoutUnknown);
+
+			SetString(object, "layout", channel.GetName(), Optional::False);
+			SetInt(object, "count", channel.GetCounts());
+		}
+
+		static void SetAudioTrack(Json::Value &parent_object, const char *key, const std::shared_ptr<MediaTrack> &track, Optional optional)
+		{
+			CONVERTER_RETURN_IF(track == nullptr);
+
+			SetBool(object, "bypass", track->IsBypass());
+
+			if (track->IsBypass() == false)
+			{
+				SetString(object, "codec", ::StringFromMediaCodecId(track->GetCodecId()), Optional::False);
+				SetInt(object, "samplerate", track->GetSampleRate());
+				SetAudioChannel(object, "channel", track->GetChannel(), Optional::False);
+				SetInt(object, "bitrate", track->GetBitrate());
+				SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
+			}
+		}
+
 		static void SetTracks(Json::Value &parent_object, const char *key, const std::map<int32_t, std::shared_ptr<MediaTrack>> &tracks, Optional optional)
 		{
 			CONVERTER_RETURN_IF(false);
@@ -26,8 +74,32 @@ namespace api
 			{
 				auto &track = item.second;
 
-				// temp
-				object.append(track->GetInfoString().CStr());
+				Json::Value track_value;
+
+				SetString(track_value, "type", ::StringFromMediaType(track->GetMediaType()), Optional::False);
+
+				switch (track->GetMediaType())
+				{
+					case common::MediaType::Video:
+						SetVideoTrack(track_value, "video", track, Optional::False);
+						break;
+					case common::MediaType::Audio:
+						SetAudioTrack(track_value, "audio", track, Optional::False);
+						break;
+
+					case common::MediaType::Unknown:
+						[[fallthrough]];
+					case common::MediaType::Data:
+						[[fallthrough]];
+					case common::MediaType::Subtitle:
+						[[fallthrough]];
+					case common::MediaType::Attachment:
+						[[fallthrough]];
+					case common::MediaType::Nb:
+						break;
+				}
+
+				object.append(track_value);
 			}
 		}
 
@@ -43,12 +115,28 @@ namespace api
 			SetTimestamp(object, "createdTime", stream->GetCreatedTime());
 		}
 
-		Json::Value ConvertFromStream(const std::shared_ptr<const mon::StreamMetrics> &stream, std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams)
+		static void SetOutputStreams(Json::Value &parent_object, const char *key, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams, Optional optional)
+		{
+			CONVERTER_RETURN_IF(false);
+
+			for (auto &output_stream : output_streams)
+			{
+				Json::Value output_value;
+
+				SetString(output_value, "name", output_stream->GetName(), Optional::False);
+				SetTracks(output_value, "tracks", output_stream->GetTracks(), Optional::False);
+
+				object.append(output_value);
+			}
+		}
+
+		Json::Value ConvertFromStream(const std::shared_ptr<const mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			Json::Value response = Json::objectValue;
 
 			SetString(response, "name", stream->GetName(), Optional::False);
 			SetInputStream(response, "input", stream, Optional::False);
+			SetOutputStreams(response, "outputs", output_streams, Optional::False);
 
 			return response;
 		}
