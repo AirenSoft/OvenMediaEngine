@@ -812,7 +812,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 				, track_id
 				, track->GetMediaType()==MediaType::Video?"video":"audio"
 				, track->GetCodecId()
-				, ov::Converter::ToString(track->GetCodecId()).CStr()
+				, ::StringFromMediaCodecId(track->GetCodecId()).CStr()
 				, pts_str.CStr()
 				, _stat_recv_pkt_count[track_id]
 				, ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr()

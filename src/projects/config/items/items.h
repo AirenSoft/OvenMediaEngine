@@ -8,6 +8,8 @@
 //==============================================================================
 #pragma once
 
+#include <base/common_types.h>
+
 #include "../item.h"
 
 // Common Items

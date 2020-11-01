@@ -183,8 +183,8 @@ bool RtcStream::Start()
 						break;
 					default:
 						logti("Unsupported codec(%s/%s) is being input from media track", 
-								ov::Converter::ToString(track->GetMediaType()).CStr(), 
-								ov::Converter::ToString(track->GetCodecId()).CStr());
+								::StringFromMediaType(track->GetMediaType()).CStr(), 
+								::StringFromMediaCodecId(track->GetCodecId()).CStr());
 						continue;
 				}
 
@@ -255,8 +255,8 @@ bool RtcStream::Start()
 
 					default:
 						logti("Unsupported codec(%s/%s) is being input from media track", 
-								ov::Converter::ToString(track->GetMediaType()).CStr(), 
-								ov::Converter::ToString(track->GetCodecId()).CStr());
+								::StringFromMediaType(track->GetMediaType()).CStr(), 
+								::StringFromMediaCodecId(track->GetCodecId()).CStr());
 						continue;
 				}
 

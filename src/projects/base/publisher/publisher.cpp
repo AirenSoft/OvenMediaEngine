@@ -61,7 +61,7 @@ namespace pub
 					{
 						// This provider is diabled
 						logti("%s publisher is disabled in %s application, so it was not created", 
-								ov::Converter::ToString(GetPublisherType()).CStr(), app_info.GetName().CStr());
+								::StringFromPublisherType(GetPublisherType()).CStr(), app_info.GetName().CStr());
 						return true;
 					}
 				}
@@ -118,7 +118,7 @@ namespace pub
 				}
 			}
 
-			logte("%s publihser hasn't the %s application.", ov::Converter::ToString(GetPublisherType()).CStr(), app_info.GetName().CStr());
+			logte("%s publihser hasn't the %s application.", ::StringFromPublisherType(GetPublisherType()).CStr(), app_info.GetName().CStr());
 			return false;
 		}
 
@@ -133,7 +133,7 @@ namespace pub
 		bool result = OnDeletePublisherApplication(application);
 		if(result == false)
 		{
-			logte("Could not delete the %s application of the %s publisher", app_info.GetName().CStr(), ov::Converter::ToString(GetPublisherType()).CStr());
+			logte("Could not delete the %s application of the %s publisher", app_info.GetName().CStr(), ::StringFromPublisherType(GetPublisherType()).CStr());
 			return false;
 		}
 

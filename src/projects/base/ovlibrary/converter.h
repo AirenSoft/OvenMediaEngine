@@ -8,7 +8,6 @@
 //==============================================================================
 #pragma once
 
-#include "base/common_types.h"
 #include "./json.h"
 #include "./string.h"
 #include "base/mediarouter/media_type.h"
@@ -19,6 +18,7 @@
 #include <ctime>
 #include <chrono>
 #include <cmath>
+#include <iomanip>
 
 namespace ov
 {
@@ -98,125 +98,20 @@ namespace ov
 
 			return time_string.Trim();
 		}
+
+		static ov::String ToISO8601String(const std::chrono::system_clock::time_point &tp)
+		{
+			auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count() % 1000;
+			auto time = std::chrono::system_clock::to_time_t(tp);
+			std::tm local_time{};
+			::localtime_r(&time, &local_time);
+
+			std::ostringstream oss;
+			oss << std::put_time(&local_time, "%Y-%m-%dT%I:%M:%S") << "." << std::setfill('0') << std::setw(3) << milliseconds << std::put_time(&local_time, "%z");
+
+			return oss.str().c_str();
+		}
 		
-		static ov::String ToString(const StreamSourceType &type)
-		{
-			switch(type)
-			{
-				case StreamSourceType::Ovt:
-					return "Ovt";
-				case StreamSourceType::Rtmp:
-					return "Rtmp";
-				case StreamSourceType::Rtsp:
-					return "Rtsp";
-				case StreamSourceType::RtspPull:
-					return "RtspPull";
-				case StreamSourceType::Transcoder:
-					return "Transcoder";
-				default:
-					return "Unknown";
-			}
-		}
-
-		static ov::String ToString(const ProviderType &type)
-		{
-			switch(type)
-			{
-				case ProviderType::Unknown:
-					return "Unknown";
-				case ProviderType::Rtmp:
-					return "RTMP";
-				case ProviderType::Rtsp:
-					return "RTSP";
-				case ProviderType::RtspPull:
-					return "RTSP Pull";
-				case ProviderType::Ovt:
-					return "OVT";
-				case ProviderType::Mpegts:
-					return "MPEG-TS";
-			}
-
-			return "Unknown";
-		}
-
-		static ov::String ToString(const PublisherType &type)
-		{
-			switch(type)
-			{
-				case PublisherType::Unknown:
-				case PublisherType::NumberOfPublishers:
-					return "Unknown";
-				case PublisherType::Webrtc:
-					return "WebRTC";
-				case PublisherType::Rtmp:
-					return "RTMP";
-				case PublisherType::RtmpPush:
-					return "RTMPPush";					
-				case PublisherType::Hls:
-					return "HLS";
-				case PublisherType::Dash:
-					return "DASH";
-				case PublisherType::LlDash:
-					return "LLDASH";
-				case PublisherType::Ovt:
-					return "Ovt";
-				case PublisherType::File:
-					return "File";
-			}
-
-			return "Unknown";
-		}
-
-		static ov::String ToString(const common::MediaCodecId &type)
-		{
-			switch(type)
-			{
-				case common::MediaCodecId::H264:
-					return "H264";
-				case common::MediaCodecId::H265:
-					return "H265";
-				case common::MediaCodecId::Vp8:
-					return "VP8";
-				case common::MediaCodecId::Vp9:
-					return "VP9";
-				case common::MediaCodecId::Flv:
-					return "FLV";
-				case common::MediaCodecId::Aac:
-					return "AAC";
-				case common::MediaCodecId::Mp3:
-					return "MP3";
-				case common::MediaCodecId::Opus:
-					return "OPUS";
-				case common::MediaCodecId::Jpeg:
-					return "JPEG";				
-				case common::MediaCodecId::Png:
-					return "PNG";											
-				case common::MediaCodecId::None:
-				default:
-					return "Unknwon";
-			}
-		}
-
-		static ov::String ToString(const common::MediaType &type)
-		{
-			switch(type)
-			{
-				case common::MediaType::Video:
-					return "Video";		
-				case common::MediaType::Audio:
-					return "Audio";
-				case common::MediaType::Data:
-					return "Data";
-				case common::MediaType::Subtitle:
-					return "Subtitle";
-				case common::MediaType::Attachment:
-					return "Attachment";
-				case common::MediaType::Unknown:
-				default:
-					return "Unknown";
-			}
-		}
-
 		static ov::String ToSiString(int64_t number, int precision)
 		{
 			ov::String suf[] = {"", "K", "M", "G", "T", "P", "E", "Z", "Y"};

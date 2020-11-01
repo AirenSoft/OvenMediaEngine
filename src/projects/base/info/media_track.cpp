@@ -172,7 +172,7 @@ ov::String MediaTrack::GetInfoString()
 				GetId(),
 				IsBypass() ? "true" : "false",
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ov::Converter::ToString(GetCodecId()).CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(),
 				GetWidth(), GetHeight(),
 				GetFrameRate());
 			break;
@@ -189,7 +189,7 @@ ov::String MediaTrack::GetInfoString()
 				GetId(),
 				IsBypass() ? "true" : "false",
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ov::Converter::ToString(GetCodecId()).CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(),
 				ov::Converter::ToSiString(GetSampleRate(), 1).CStr(),
 				GetSample().GetName(), GetSample().GetSampleSize() * 8,
 				GetChannel().GetName(), GetChannel().GetCounts());

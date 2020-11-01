@@ -8,7 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include <base/common_types.h>
+#include <mutex>
+#include <condition_variable>
 
 namespace ov
 {

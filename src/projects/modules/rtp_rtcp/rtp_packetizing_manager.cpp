@@ -23,7 +23,7 @@ std::shared_ptr<RtpPacketizingManager> RtpPacketizingManager::Create(common::Med
 			break;
 	}
 
-	loge("rtp_rtcp", "Cannot create %s RTP packetizer", ov::Converter::ToString(type).CStr());
+	loge("rtp_rtcp", "Cannot create %s RTP packetizer", ::StringFromMediaCodecId(type).CStr());
 
 	return nullptr;
 }

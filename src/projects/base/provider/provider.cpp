@@ -82,7 +82,7 @@ namespace pvd
 					{
 						// This provider is diabled
 						logti("%s provider is disabled in %s application, so it was not created", 
-								ov::Converter::ToString(GetProviderType()).CStr(), app_info.GetName().CStr());
+								::StringFromProviderType(GetProviderType()).CStr(), app_info.GetName().CStr());
 						return true;
 					}
 				}
@@ -144,7 +144,7 @@ namespace pvd
 				}
 			}
 
-			logte("%s provider hasn't the %s application.", ov::Converter::ToString(GetProviderType()).CStr(), app_info.GetName().CStr());
+			logte("%s provider hasn't the %s application.", ::StringFromProviderType(GetProviderType()).CStr(), app_info.GetName().CStr());
 			return false;
 		}
 
@@ -164,7 +164,7 @@ namespace pvd
 		bool result = OnDeleteProviderApplication(application);
 		if(result == false)
 		{
-			logte("Could not delete [%s] the application of the %s provider", app_info.GetName().CStr(), ov::Converter::ToString(GetProviderType()).CStr());
+			logte("Could not delete [%s] the application of the %s provider", app_info.GetName().CStr(), ::StringFromProviderType(GetProviderType()).CStr());
 			return false;
 		}
 

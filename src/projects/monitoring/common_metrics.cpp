@@ -42,7 +42,7 @@ namespace mon
 		for (int i = 0; i < static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
 		{
 			out_str.AppendFormat("\t\t- %s : Bytes out(%s) Concurrent Connections (%u)\n",
-								 ov::Converter::ToString(static_cast<PublisherType>(i)).CStr(),
+								 ::StringFromPublisherType(static_cast<PublisherType>(i)).CStr(),
 								 ov::Converter::BytesToString(GetBytesOut(static_cast<PublisherType>(i))).CStr(),
 								 GetConnections(static_cast<PublisherType>(i)));
 		}

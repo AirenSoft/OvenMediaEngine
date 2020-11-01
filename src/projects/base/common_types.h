@@ -8,21 +8,20 @@
 //==============================================================================
 #pragma once
 
+#include <any>
 #include <condition_variable>
 #include <cstdint>
+#include <functional>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <queue>
 #include <thread>
 #include <tuple>
 #include <vector>
-#include <iostream>
-#include <functional>
-#include <any>
 
+#include "base/ovlibrary/string.h"
 #include "base/mediarouter/media_type.h"
-#include "base/ovlibrary/ovlibrary.h"
-
 
 #define MAX_FRAG_COUNT 20
 
@@ -97,7 +96,7 @@ public:
 	size_t GetCount() const
 	{
 		OV_ASSERT2(fragmentation_offset.size() == fragmentation_length.size());
-		
+
 		return std::min(fragmentation_offset.size(), fragmentation_length.size());
 	}
 
@@ -174,12 +173,12 @@ public:
 
 struct CodecSpecificInfoGeneric
 {
-	uint8_t simulcast_idx = 0; 
+	uint8_t simulcast_idx = 0;
 };
 
 enum class H26XPacketizationMode
 {
-	NonInterleaved = 0,  // Mode 1 - STAP-A, FU-A is allowed
+	NonInterleaved = 0,	 // Mode 1 - STAP-A, FU-A is allowed
 	SingleNalUnit		 // Mode 0 - only single NALU allowed
 };
 
@@ -222,6 +221,124 @@ union CodecSpecificInfoUnion
 struct CodecSpecificInfo
 {
 	common::MediaCodecId codec_type = common::MediaCodecId::None;
-	const char* codec_name = nullptr;
+	const char *codec_name = nullptr;
 	CodecSpecificInfoUnion codec_specific = {0};
 };
+
+static ov::String StringFromStreamSourceType(const StreamSourceType &type)
+{
+	switch (type)
+	{
+		case StreamSourceType::Ovt:
+			return "Ovt";
+		case StreamSourceType::Rtmp:
+			return "Rtmp";
+		case StreamSourceType::Rtsp:
+			return "Rtsp";
+		case StreamSourceType::RtspPull:
+			return "RtspPull";
+		case StreamSourceType::Transcoder:
+			return "Transcoder";
+		default:
+			return "Unknown";
+	}
+}
+
+static ov::String StringFromProviderType(const ProviderType &type)
+{
+	switch (type)
+	{
+		case ProviderType::Unknown:
+			return "Unknown";
+		case ProviderType::Rtmp:
+			return "RTMP";
+		case ProviderType::Rtsp:
+			return "RTSP";
+		case ProviderType::RtspPull:
+			return "RTSP Pull";
+		case ProviderType::Ovt:
+			return "OVT";
+		case ProviderType::Mpegts:
+			return "MPEG-TS";
+	}
+
+	return "Unknown";
+}
+
+static ov::String StringFromPublisherType(const PublisherType &type)
+{
+	switch (type)
+	{
+		case PublisherType::Unknown:
+		case PublisherType::NumberOfPublishers:
+			return "Unknown";
+		case PublisherType::Webrtc:
+			return "WebRTC";
+		case PublisherType::Rtmp:
+			return "RTMP";
+		case PublisherType::RtmpPush:
+			return "RTMPPush";
+		case PublisherType::Hls:
+			return "HLS";
+		case PublisherType::Dash:
+			return "DASH";
+		case PublisherType::LlDash:
+			return "LLDASH";
+		case PublisherType::Ovt:
+			return "Ovt";
+		case PublisherType::File:
+			return "File";
+	}
+
+	return "Unknown";
+}
+
+static ov::String StringFromMediaCodecId(const common::MediaCodecId &type)
+{
+	switch (type)
+	{
+		case common::MediaCodecId::H264:
+			return "H264";
+		case common::MediaCodecId::H265:
+			return "H265";
+		case common::MediaCodecId::Vp8:
+			return "VP8";
+		case common::MediaCodecId::Vp9:
+			return "VP9";
+		case common::MediaCodecId::Flv:
+			return "FLV";
+		case common::MediaCodecId::Aac:
+			return "AAC";
+		case common::MediaCodecId::Mp3:
+			return "MP3";
+		case common::MediaCodecId::Opus:
+			return "OPUS";
+		case common::MediaCodecId::Jpeg:
+			return "JPEG";
+		case common::MediaCodecId::Png:
+			return "PNG";
+		case common::MediaCodecId::None:
+		default:
+			return "Unknwon";
+	}
+}
+
+static ov::String StringFromMediaType(const common::MediaType &type)
+{
+	switch (type)
+	{
+		case common::MediaType::Video:
+			return "Video";
+		case common::MediaType::Audio:
+			return "Audio";
+		case common::MediaType::Data:
+			return "Data";
+		case common::MediaType::Subtitle:
+			return "Subtitle";
+		case common::MediaType::Attachment:
+			return "Attachment";
+		case common::MediaType::Unknown:
+		default:
+			return "Unknown";
+	}
+}
