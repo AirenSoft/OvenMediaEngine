@@ -80,10 +80,9 @@ std::shared_ptr<WebSocketInterceptor> RtcSignallingServer::CreateWebSocketInterc
 
 			logti("New client is connected: %s", description.CStr());
 
-			auto tokens = request->GetRequestTarget().Split("/");
+			auto uri = ov::Url::Parse(request->GetUri());
 
-			// "/<app>/<pub::Stream>"
-			if (tokens.size() < 3)
+			if (uri == nullptr)
 			{
 				logtw("Invalid request from %s. Disconnecting...", description.CStr());
 				return HttpInterceptorResult::Disconnect;
@@ -91,10 +90,10 @@ std::shared_ptr<WebSocketInterceptor> RtcSignallingServer::CreateWebSocketInterc
 
 			// Find the "Host" header
 			auto host_name = request->GetHeader("HOST").Split(":")[0];
-			auto &app_name = tokens[1];
-			auto &stream_name = tokens[2];
+			auto &app_name = uri->App();
+			auto &stream_name = uri->Stream();
 
-			info::VHostAppName vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
+			info::VHostAppName vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
 
 			auto info = std::make_shared<RtcSignallingInfo>(vhost_app_name, host_name, app_name, stream_name);
 
