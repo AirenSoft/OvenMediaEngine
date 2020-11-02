@@ -35,8 +35,6 @@ public:
 
 	bool Disconnect(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<const SessionDescription> &peer_sdp);
 
-	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &stream_collections);
-
 	int GetTotalPeerCount() const;
 	int GetClientPeerCount() const;
 

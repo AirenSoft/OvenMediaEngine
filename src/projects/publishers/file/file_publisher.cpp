@@ -72,11 +72,6 @@ bool FilePublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Appl
 	return true;
 }
 
-bool FilePublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections)
-{
-	return true;
-}
-
 void FilePublisher::SessionController()
 {
 	std::shared_lock<std::shared_mutex> lock(_userdata_sets_mutex);

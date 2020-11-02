@@ -196,8 +196,6 @@ public:
 		return publisher;
 	}
 
-	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
-
 	bool Stop() override;
 
 protected:

@@ -77,11 +77,6 @@ bool SegmentPublisher::Stop()
 	return Publisher::Stop();
 }
 
-bool SegmentPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections)
-{
-	return (_stream_server != nullptr) ? _stream_server->GetMonitoringCollectionData(collections) : false;
-}
-
 bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
 										 const SegmentStreamRequestInfo &request_info,
 										 ov::String &play_list)

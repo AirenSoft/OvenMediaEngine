@@ -74,12 +74,6 @@ bool RtmpPushPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::
 	return true;
 }
 
-
-bool RtmpPushPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections)
-{
-	return true;
-}
-
 void RtmpPushPublisher::SessionController()
 {
 	std::shared_lock<std::shared_mutex> lock(_userdata_sets_mutex);

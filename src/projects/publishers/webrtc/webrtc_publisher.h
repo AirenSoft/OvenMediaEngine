@@ -62,8 +62,6 @@ public:
     uint32_t OnGetBitrate(const std::shared_ptr<WebSocketClient> &ws_client,
 						  const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name) override;
 
-    bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
-
 private:
 	enum class MessageCode : uint32_t
 	{

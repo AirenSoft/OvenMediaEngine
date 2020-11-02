@@ -348,14 +348,6 @@ bool OvtPublisher::UnlinkRemoteFromStream(int remote_id)
 	return true;
 }
 
-bool OvtPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections)
-{
-	return true;
-}
-
-
-
-
 
 
 

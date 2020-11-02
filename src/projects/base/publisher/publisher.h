@@ -119,10 +119,6 @@ namespace pub
 			return std::static_pointer_cast<T>(GetStream(application_id, stream_id));
 		}
 
-		// monitoring data pure virtual function
-		// - collected_datas vector must be insert processed
-		virtual bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) = 0;
-
 		//--------------------------------------------------------------------
 		// Implementation of ModuleInterface
 		//--------------------------------------------------------------------

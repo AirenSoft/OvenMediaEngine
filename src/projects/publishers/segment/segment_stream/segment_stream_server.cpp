@@ -92,11 +92,6 @@ bool SegmentStreamServer::Stop()
 	return false;
 }
 
-bool SegmentStreamServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &stream_collections)
-{
-	return true;
-}
-
 bool SegmentStreamServer::AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer)
 {
 	// 기존에 등록된 observer가 있는지 확인
