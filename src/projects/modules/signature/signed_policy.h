@@ -15,8 +15,8 @@ public:
 		NO_SIGNATURE_VALUE_IN_URL,
 		INVALID_SIGNATURE,
 		INVALID_POLICY,
-		BEFORE_POLICY_ACTIATION,
-		POLICY_EXPIRED,
+		BEFORE_URL_ACTIATION,
+		URL_EXPIRED,
 		STREAM_EXPIRED,
 		UNAUTHORIZED_CLIENT
 	};
@@ -73,8 +73,8 @@ private:
 	ov::String  _base_url;
 	
 	// Policy
-	uint64_t	_policy_expire_epoch_msec = 0;
-	uint64_t	_policy_activate_epoch_msec = 0;
+	uint64_t	_url_expire_epoch_msec = 0;
+	uint64_t	_url_activate_epoch_msec = 0;
 
 	uint64_t	_stream_expire_epoch_msec = 0;
 	ov::String	_allow_ip_cidr;

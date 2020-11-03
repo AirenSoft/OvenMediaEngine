@@ -537,7 +537,7 @@ bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, c
 
 		if(signed_policy->GetErrCode() != SignedPolicy::ErrCode::PASSED)
 		{
-			if(signed_policy->GetErrCode() == SignedPolicy::ErrCode::POLICY_EXPIRED)
+			if(signed_policy->GetErrCode() == SignedPolicy::ErrCode::URL_EXPIRED)
 			{
 				// Because this is chunked streaming publisher, 
 				// players will continue to request playlists after token expiration while playing. 

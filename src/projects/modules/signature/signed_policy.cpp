@@ -86,8 +86,8 @@ bool SignedPolicy::MakeSignature(const ov::String &base_url, const ov::String &s
 
 /*	Policy format
 {
-	"activate":1399721576,									
-	"policy_expire":1399721581,									
+	"url_activate":1399721576,									
+	"url_expire":1399721581,									
 	"stream_expire":1399731576,									
 	"allow_ip": "192.168.100.5/32"
 }
@@ -101,36 +101,36 @@ bool SignedPolicy::ProcessPolicyJson(const ov::String &policy_json)
 		return false;
 	}
 
-	Json::Value &jv_activate = object.GetJsonValue()["activate"];
-	Json::Value &jv_policy_expire = object.GetJsonValue()["policy_expire"];
+	Json::Value &jv_url_activate = object.GetJsonValue()["url_activate"];
+	Json::Value &jv_url_expire = object.GetJsonValue()["url_expire"];
 	Json::Value &jv_stream_expire = object.GetJsonValue()["stream_expire"];
 	Json::Value &jv_allow_ip = object.GetJsonValue()["allow_ip"];
 
-	if(jv_policy_expire.isNull() || !jv_policy_expire.isUInt64())
+	if(jv_url_expire.isNull() || !jv_url_expire.isUInt64())
 	{
-		SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("policy_expire must be uint32_t and is a required value.", policy_json.CStr()));
+		SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("url_expire must be uint32_t and is a required value.", policy_json.CStr()));
 		return false;
 	}
 	else
 	{
-		_policy_expire_epoch_msec = jv_policy_expire.asUInt64();
+		_url_expire_epoch_msec = jv_url_expire.asUInt64();
 
 		// Policy expired
-		if(_policy_expire_epoch_msec < ov::Clock::NowMSec())
+		if(_url_expire_epoch_msec < ov::Clock::NowMSec())
 		{
-			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("Policy has expired.(now:%u policy_expire:%u) ", ov::Clock::NowMSec(), _policy_expire_epoch_msec));
+			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("URL has expired.(now:%u policy_expire:%u) ", ov::Clock::NowMSec(), _url_expire_epoch_msec));
 			return false;
 		}
 	}
 	
-	if(!jv_activate.isNull() && jv_activate.isUInt64())
+	if(!jv_url_activate.isNull() && jv_url_activate.isUInt64())
 	{
-		_policy_activate_epoch_msec = jv_activate.asUInt64();
+		_url_activate_epoch_msec = jv_url_activate.asUInt64();
 
 		// Policy is not activated yet
-		if(_policy_activate_epoch_msec > ov::Clock::NowMSec())
+		if(_url_activate_epoch_msec > ov::Clock::NowMSec())
 		{
-			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("The policy has not yet been activated.(now:%u policy_activate:%u) ", ov::Clock::NowMSec(), _policy_activate_epoch_msec));
+			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("The URL has not yet been activated.(now:%u policy_activate:%u) ", ov::Clock::NowMSec(), _url_activate_epoch_msec));
 			return false;
 		}
 	}
@@ -143,6 +143,8 @@ bool SignedPolicy::ProcessPolicyJson(const ov::String &policy_json)
 	if(!jv_allow_ip.isNull() && jv_allow_ip.isString())
 	{
 		_allow_ip_cidr = jv_stream_expire.asCString();
+
+		//TODO(Getroot) : Check if client address is allowed
 	}
 
 	return true;
@@ -182,12 +184,12 @@ const ov::String& SignedPolicy::GetSignatureValue() const
 // Policy
 uint64_t SignedPolicy::GetPolicyExpireEpochSec() const
 {
-	return _policy_expire_epoch_msec;
+	return _url_expire_epoch_msec;
 }
 
 uint64_t SignedPolicy::GetPolicyActivateEpochSec() const
 {
-	return _policy_activate_epoch_msec;
+	return _url_activate_epoch_msec;
 }
 
 uint64_t SignedPolicy::GetStreamExpireEpochSec() const
