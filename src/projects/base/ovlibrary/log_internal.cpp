@@ -289,7 +289,7 @@ namespace ov
 #if DEBUG
 				local_time.tm_mon + 1, local_time.tm_mday,
 #else	// DEBUG
-				1900 + localTime.tm_year, localTime.tm_mon + 1, localTime.tm_mday,
+				1900 + local_time.tm_year, local_time.tm_mon + 1, local_time.tm_mday,
 #endif	// DEBUG
 				local_time.tm_hour, local_time.tm_min, local_time.tm_sec, mseconds,
 				log_level[level],
