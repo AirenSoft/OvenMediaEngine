@@ -18,7 +18,6 @@ LOCAL_STATIC_LIBRARIES := \
 	bitstream \
 	containers \
 	http_server \
-	signature \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \
@@ -28,6 +27,7 @@ LOCAL_STATIC_LIBRARIES := \
 	orchestrator \
 	publisher \
 	application \
+	signature \
 	physical_port \
 	socket \
 	ovcrypto \

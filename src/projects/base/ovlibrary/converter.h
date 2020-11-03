@@ -11,6 +11,7 @@
 #include "./json.h"
 #include "./string.h"
 #include "base/mediarouter/media_type.h"
+#include "base/common_types.h"
 
 #define __STDC_FORMAT_MACROS 1
 #include <inttypes.h>
@@ -84,6 +85,54 @@ namespace ov
 			}
 
 			return ov::Json::Stringify(value);
+		}
+
+		static ov::String ToString(ProviderType provider_type)
+		{
+			switch(provider_type)
+			{
+				case ProviderType::Rtmp:
+					return "RTMP";
+				case ProviderType::Rtsp:
+					return "RTSP";
+				case ProviderType::RtspPull:
+					return "RTSPPull";
+				case ProviderType::Ovt:
+					return "OVT";
+				case ProviderType::Mpegts:
+					return "MPEGTS";
+
+				case ProviderType::Unknown:	
+				default:
+					return "UNKNOWN";
+			}
+		}
+
+		static ov::String ToString(PublisherType publisher_type)
+		{
+			switch(publisher_type)
+			{
+				case PublisherType::Webrtc:
+					return "WEBRTC";
+				case PublisherType::Rtmp:
+					return "RTMP";
+				case PublisherType::RtmpPush:
+					return "RTMPPush";
+				case PublisherType::Hls:
+					return "HLS";
+				case PublisherType::Dash:
+					return "DASH";
+				case PublisherType::LlDash:
+					return "LLDASH";
+				case PublisherType::Ovt:
+					return "OVT";
+				case PublisherType::File:
+					return "FILE";
+					
+				case PublisherType::Unknown:	
+				default:
+					return "UNKNOWN";
+			}
 		}
 
 		static ov::String ToString(const std::chrono::system_clock::time_point &tp)

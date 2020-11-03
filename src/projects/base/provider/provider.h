@@ -12,6 +12,9 @@
 #include <base/mediarouter/media_route_interface.h>
 #include <orchestrator/data_structures/data_structure.h>
 
+#include <modules/signature/signature_common_type.h>
+#include <modules/signature/signed_policy.h>
+
 #include <shared_mutex>
 
 namespace pvd
@@ -35,6 +38,8 @@ namespace pvd
 
 		std::shared_ptr<Application> GetApplicationById(info::application_id_t app_id);
 		std::shared_ptr<Stream> GetStreamById(info::application_id_t app_id, uint32_t stream_id);
+
+		CheckSignatureResult HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy);
 
 	protected:
 		Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);

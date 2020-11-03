@@ -38,6 +38,11 @@ namespace ov
 			return _host;
 		}
 
+		void SetPort(uint32_t port)
+		{
+			_port = port;
+		}
+
 		const uint32_t &Port() const
 		{
 			return _port;

@@ -41,6 +41,7 @@ enum class ProviderStreamDirection : int8_t
 	Push
 };
 
+// Note : If you update ProviderType, you have to update /base/ovlibrary/converter.h:ToString(ProviderType type)
 enum class ProviderType : int8_t
 {
 	Unknown,
@@ -51,6 +52,7 @@ enum class ProviderType : int8_t
 	Mpegts,
 };
 
+// Note : If you update PublisherType, you have to update /base/ovlibrary/converter.h:ToString(PublisherType type)
 enum class PublisherType : int8_t
 {
 	Unknown,

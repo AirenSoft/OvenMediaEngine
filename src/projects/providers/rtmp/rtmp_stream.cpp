@@ -171,9 +171,7 @@ namespace pvd
 	void RtmpStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		double object_encoding = 0.0;
-		ov::String tc_url;
-		ov::String app_name;
-
+		
 		if (document.GetProperty(2) != nullptr && document.GetProperty(2)->GetType() == AmfDataType::Object)
 		{
 			AmfObject *object = document.GetProperty(2)->GetObject();
@@ -188,23 +186,22 @@ namespace pvd
 			// app 설정
 			if ((index = object->FindName("app")) >= 0 && object->GetType(index) == AmfDataType::String)
 			{
-				app_name = object->GetString(index);
+				_app_name = object->GetString(index);
 			}
 
 			// app 설정
 			if ((index = object->FindName("tcUrl")) >= 0 && object->GetType(index) == AmfDataType::String)
 			{
-				tc_url = object->GetString(index);
+				_tc_url = object->GetString(index);
 			}
 		}
 
 		// Parse the URL to obtain the domain name
 		{
-			auto url = ov::Url::Parse(tc_url);
-
-			if (url != nullptr)
+			_url = ov::Url::Parse(_tc_url);
+			if (_url != nullptr)
 			{
-				_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Host(), app_name);
+				_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_url->Host(), _app_name);
 				_import_chunk->SetAppName(_vhost_app_name);
 
 				auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(_vhost_app_name);
@@ -221,12 +218,12 @@ namespace pvd
 			}
 			else
 			{
-				logtw("Could not obtain tcUrl from the RTMP stream: [%s]", app_name);
+				logtw("Could not obtain tcUrl from the RTMP stream: [%s]", _app_name);
 
 				// TODO(dimiden): If tcUrl is not provided, it's not possible to determine which VHost the request was received,
 				// so it does not work properly.
 				// So, if there is currently one VHost associated with the RTMP Provider, we need to modifiy it to work without tcUrl.
-				_vhost_app_name = info::VHostAppName("", app_name);
+				_vhost_app_name = info::VHostAppName("", _app_name);
 				_import_chunk->SetAppName(_vhost_app_name);
 			}
 		}
@@ -265,6 +262,35 @@ namespace pvd
 		}
 	}
 
+	bool RtmpStream::CheckSignedPolicy()
+	{
+		// Check SignedPolicy
+		
+		auto result = HandleSignedPolicy(_url, _remote->GetLocalAddress(), _signed_policy);
+		if(result == CheckSignatureResult::Off)
+		{
+			return true;
+		}
+		else if(result == CheckSignatureResult::Pass)
+		{
+			return true;
+		}
+		else if(result == CheckSignatureResult::Error)
+		{
+			logtw("SingedPolicy error : %s", _url->ToUrlString().CStr());
+			Stop();
+			return false;
+		}
+		else if(result == CheckSignatureResult::Fail)
+		{
+			logtw("%s", _signed_policy->GetErrMessage().CStr());
+			Stop();
+			return false;
+		}
+
+		return false;
+	}
+
 	void RtmpStream::OnAmfFCPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		if (_stream_name.IsEmpty() && document.GetProperty(3) != nullptr &&
@@ -276,8 +302,20 @@ namespace pvd
 				logte("SendAmfOnFCPublish Fail");
 				return;
 			}
-			_stream_name = document.GetProperty(3)->GetString();
+			
+			_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
+			
+			_url = ov::Url::Parse(_full_url);
+			// PORT can be omitted if port is rtmp default port(1935), but SignedPolicy requires this information.
+			if(_url->Port() == 0)
+			{
+				_url->SetPort(_remote->GetLocalAddress()->Port());
+			}
+
+			_stream_name = _url->Stream();
 			_import_chunk->SetStreamName(_stream_name);
+
+			CheckSignedPolicy();
 		}
 	}
 
@@ -287,8 +325,19 @@ namespace pvd
 		{
 			if (document.GetProperty(3) != nullptr && document.GetProperty(3)->GetType() == AmfDataType::String)
 			{
-				_stream_name = document.GetProperty(3)->GetString();
+				_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
+			
+				_url = ov::Url::Parse(_full_url);
+				// PORT can be omitted (1935), but SignedPolicy requires this information.
+				if(_url->Port() == 0)
+				{
+					_url->SetPort(_remote->GetLocalAddress()->Port());
+				}
+
+				_stream_name = _url->Stream();
 				_import_chunk->SetStreamName(_stream_name);
+
+				CheckSignedPolicy();
 			}
 			else
 			{

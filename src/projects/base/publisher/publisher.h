@@ -19,6 +19,7 @@
 #include <modules/physical_port/physical_port.h>
 #include <orchestrator/orchestrator.h>
 
+#include <modules/signature/signature_common_type.h>
 #include <modules/signature/signed_policy.h>
 #include <modules/signature/signed_token.h>
 
@@ -129,14 +130,6 @@ namespace pub
 		virtual PublisherType GetPublisherType() const = 0;
 		virtual const char *GetPublisherName() const = 0;
 
-		enum class CheckSignatureResult
-		{
-			Error = -2,		// Unexpected error
-			Fail = -1,		// Check signature but fail
-			Off = 0,		// Signature configuration is off
-			Pass = 1		// Check signature and pass
-		};
-
 	protected:
 		explicit Publisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 		virtual ~Publisher();
@@ -146,9 +139,9 @@ namespace pub
 		virtual std::shared_ptr<Application> OnCreatePublisherApplication(const info::Application &application_info) = 0;
 		virtual bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) = 0;
 
-
+		// SignedPolicy is an official feature
 		CheckSignatureResult HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy);
-
+		// SingedToken is used only special purposes
 		CheckSignatureResult HandleSignedToken(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedToken> &signed_token);
 
 		std::map<info::application_id_t, std::shared_ptr<Application>> 	_applications;

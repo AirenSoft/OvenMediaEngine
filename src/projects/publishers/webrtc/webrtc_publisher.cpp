@@ -209,16 +209,31 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		return nullptr;
 	}
 
+	std::shared_ptr<const SignedPolicy> signed_policy;
 	std::shared_ptr<const SignedToken> signed_token;
-	auto signed_token_result = Publisher::HandleSignedToken(parsed_url, remote_address, signed_token);
-	if(signed_token_result == Publisher::CheckSignatureResult::Error)
+	auto signed_policy_result = Publisher::HandleSignedPolicy(parsed_url, remote_address, signed_policy);
+	if(signed_policy_result == CheckSignatureResult::Error)
 	{
 		return nullptr;
 	}
-	else if(signed_token_result == Publisher::CheckSignatureResult::Fail)
+	else if(signed_policy_result == CheckSignatureResult::Fail)
 	{
-		logtw("%s", signed_token->GetErrMessage().CStr());
+		logtw("%s", signed_policy->GetErrMessage().CStr());
 		return nullptr;
+	}
+	else if(signed_policy_result == CheckSignatureResult::Off)
+	{
+		// SingedToken
+		auto signed_token_result = Publisher::HandleSignedToken(parsed_url, remote_address, signed_token);
+		if(signed_token_result == CheckSignatureResult::Error)
+		{
+			return nullptr;
+		}
+		else if(signed_token_result == CheckSignatureResult::Fail)
+		{
+			logtw("%s", signed_token->GetErrMessage().CStr());
+			return nullptr;
+		}
 	}
 
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
@@ -266,7 +281,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		return false;
 	}
 
-	// Signed URL
+	// SignedPolicy and SignedToken
 	auto request = ws_client->GetClient()->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
 	auto uri = request->GetUri();
@@ -278,22 +293,40 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		return false;
 	}
 
-	// These names are used for testing purposes
 	uint64_t session_expired_time = 0;
+	std::shared_ptr<const SignedPolicy> signed_policy;
 	std::shared_ptr<const SignedToken> signed_token;
-	auto signed_token_result = Publisher::HandleSignedToken(parsed_url, remote_address, signed_token);
-	if(signed_token_result == Publisher::CheckSignatureResult::Error)
+	auto signed_policy_result = Publisher::HandleSignedPolicy(parsed_url, remote_address, signed_policy);
+	if(signed_policy_result == CheckSignatureResult::Error)
 	{
 		return false;
 	}
-	else if(signed_token_result == Publisher::CheckSignatureResult::Fail)
+	else if(signed_policy_result == CheckSignatureResult::Fail)
 	{
-		logtw("%s", signed_token->GetErrMessage().CStr());
+		logtw("%s", signed_policy->GetErrMessage().CStr());
 		return false;
 	}
-	else if(signed_token_result == Publisher::CheckSignatureResult::Pass)
+	else if(signed_policy_result == CheckSignatureResult::Pass)
 	{
-		session_expired_time = signed_token->GetStreamExpiredTime();
+		session_expired_time = signed_policy->GetPolicyExpireEpochSec();
+	}
+	else if(signed_policy_result == CheckSignatureResult::Off)
+	{
+		// SingedToken
+		auto signed_token_result = Publisher::HandleSignedToken(parsed_url, remote_address, signed_token);
+		if(signed_token_result == CheckSignatureResult::Error)
+		{
+			return false;
+		}
+		else if(signed_token_result == CheckSignatureResult::Fail)
+		{
+			logtw("%s", signed_token->GetErrMessage().CStr());
+			return false;
+		}
+		else if(signed_token_result == CheckSignatureResult::Pass)
+		{
+			session_expired_time = signed_token->GetStreamExpiredTime();
+		}
 	}
 
 	ov::String remote_sdp_text = peer_sdp->ToString();

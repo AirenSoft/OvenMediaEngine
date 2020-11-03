@@ -6,7 +6,7 @@
 class SignedPolicy
 {
 public:
-	enum class SignedPolicyErrCode : int8_t
+	enum class ErrCode : int8_t
 	{
 		INIT = 0,
 		PASSED = 1,
@@ -22,10 +22,17 @@ public:
 	};
 
 	// requested_url ==> scheme://domain:port/app/stream[/file]?[query1=value&query2=value&]policy=value&signature=value
-	static std::shared_ptr<const SignedPolicy> Load(const ov::String &requested_url, const ov::String &policy_query_key, const ov::String &signature_query_key, const ov::String &secret_key);
+	static std::shared_ptr<const SignedPolicy> Load(const ov::String &client_address, const ov::String &requested_url, const ov::String &policy_query_key, const ov::String &signature_query_key, const ov::String &secret_key);
 
-	SignedPolicyErrCode GetState();
-	const ov::String& GetLastErrorMessage() const;
+	ErrCode GetErrCode() const
+	{
+		return _error_code;
+	}
+
+	const ov::String& GetErrMessage() const
+	{
+		return _error_message;
+	}
 
 	const ov::String& GetRequestedUrl() const;
     const ov::String& GetSecretKey() const;
@@ -35,25 +42,25 @@ public:
 	const ov::String& GetSignatureValue() const;
 	
 	// Policy
-	uint32_t GetPolicyExpireEpochSec();
-	uint32_t GetPolicyActivateEpochSec();
-	uint32_t GetStreamExpireEpochSec();
+	uint64_t GetPolicyExpireEpochSec() const;
+	uint64_t GetPolicyActivateEpochSec() const;
+	uint64_t GetStreamExpireEpochSec() const;
 	const ov::String& GetAllowIpCidr() const;
 
 private:
-    bool Process(const ov::String &requested_url, const ov::String &policy_query_key, const ov::String &signature_query_key, const ov::String &secret_key);
+    bool Process(const ov::String &client_address, const ov::String &requested_url, const ov::String &policy_query_key, const ov::String &signature_query_key, const ov::String &secret_key);
 	bool ProcessPolicyJson(const ov::String &policy_json);
 
 	bool MakeSignature(const ov::String &base_url, const ov::String &secret_key, ov::String &signature_base64);
 
-	void SetError(SignedPolicyErrCode state, ov::String message)
+	void SetError(ErrCode state, ov::String message)
 	{
-		_err_code = state;
+		_error_code = state;
 		_error_message = message;
 	}
 
 private:
-	SignedPolicyErrCode	_err_code = SignedPolicyErrCode::INIT;
+	ErrCode	_error_code = ErrCode::INIT;
 	ov::String _error_message;
 
 	ov::String	_requested_url;

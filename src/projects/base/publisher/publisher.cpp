@@ -267,7 +267,7 @@ namespace pub
 		return nullptr;
 	}
 
-	Publisher::CheckSignatureResult Publisher::HandleSignedToken(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedToken> &signed_token)
+	CheckSignatureResult Publisher::HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy)
 	{
 		auto orchestrator = ocst::Orchestrator::GetInstance();
 		auto &server_config = GetServerConfig();
@@ -289,7 +289,68 @@ namespace pub
 				continue;
 			}
 
-			// Handle Signed URL if needed
+			// Handle SignedPolicy if needed
+			auto &signed_policy_config = vhost_item.GetSignedPolicy();
+			if (!signed_policy_config.IsParsed())
+			{
+				// The vhost doesn't use the SignedPolicy  feature.
+				return CheckSignatureResult::Off;
+			}
+
+			if(signed_policy_config.IsEnabledPublsiher(GetPublisherType()) == false)
+			{
+				// This publisher turned off the SignedPolicy function
+				return CheckSignatureResult::Off;
+			}
+
+			auto policy_query_key = signed_policy_config.GetPolicyQueryKey();
+			auto signature_query_key = signed_policy_config.GetSignatureQueryKey();
+			auto secret_key = signed_policy_config.GetSecretKey();
+
+			signed_policy = SignedPolicy::Load(client_address->ToString(), request_url->ToUrlString(), policy_query_key, signature_query_key, secret_key);
+			if(signed_policy == nullptr)
+			{
+				// Probably this doesn't happen
+				logte("Could not load SingedToken");
+				return CheckSignatureResult::Error;
+			}
+
+			if(signed_policy->GetErrCode() != SignedPolicy::ErrCode::PASSED)
+			{
+				return CheckSignatureResult::Fail;
+			}
+
+			return CheckSignatureResult::Pass;
+		}
+
+		// Probably this doesn't happen
+		logte("Could not find VirtualHost (%s)", vhost_name);
+		return CheckSignatureResult::Error;
+	}
+
+	CheckSignatureResult Publisher::HandleSignedToken(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedToken> &signed_token)
+	{
+		auto orchestrator = ocst::Orchestrator::GetInstance();
+		auto &server_config = GetServerConfig();
+		auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Host());
+
+		if (vhost_name.IsEmpty())
+		{
+			logte("Could not resolve the domain: %s", request_url->Host().CStr());
+			return CheckSignatureResult::Error;
+		}
+
+		// TODO(Dimiden) : Modify below codes
+		// GetVirtualHostByName is deprecated so blow codes are insane, later it will be modified.
+		auto vhost_list = server_config.GetVirtualHostList();
+		for (const auto &vhost_item : vhost_list)
+		{
+			if (vhost_item.GetName() != vhost_name)
+			{
+				continue;
+			}
+
+			// Handle SignedToken if needed
 			auto &signed_token_config = vhost_item.GetSignedToken();
 			if (!signed_token_config.IsParsed() || signed_token_config.GetCryptoKey().IsEmpty())
 			{

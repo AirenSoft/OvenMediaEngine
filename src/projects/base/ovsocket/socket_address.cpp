@@ -379,8 +379,12 @@ namespace ov
 		switch(_address_storage.ss_family)
 		{
 			case AF_INET:
-				return NetworkToHost16(_address_ipv4->sin_port);
+			{
+				auto test1 = NetworkToHost16(_address_ipv4->sin_port);
+				auto test2 = HostToNetwork16(_address_ipv4->sin_port);
 
+				return NetworkToHost16(_address_ipv4->sin_port);
+			}
 			case AF_INET6:
 				return NetworkToHost16(_address_ipv6->sin6_port);
 

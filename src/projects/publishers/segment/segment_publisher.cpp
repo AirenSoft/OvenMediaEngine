@@ -97,7 +97,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	auto &stream_name = request_info.stream_name;
 
 	std::shared_ptr<PlaylistRequestInfo> playlist_request_info;
-	if (HandleSignedToken(vhost_app_name, stream_name, client, parsed_url, playlist_request_info) == false)
+	if (HandleSignedX(vhost_app_name, stream_name, client, parsed_url, playlist_request_info) == false)
 	{
 		client->GetResponse()->SetStatusCode(HttpStatusCode::Forbidden);
 		return true;
@@ -474,7 +474,7 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 	}
 }
 
-bool SegmentPublisher::HandleSignedToken(const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
+bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
 									   const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
 									   std::shared_ptr<PlaylistRequestInfo> &request_info)
 {
@@ -487,48 +487,115 @@ bool SegmentPublisher::HandleSignedToken(const info::VHostAppName &vhost_app_nam
 		return false;
 	}
 
+	std::shared_ptr<const SignedPolicy> signed_policy;
 	std::shared_ptr<const SignedToken> signed_token;
-	auto result = Publisher::HandleSignedToken(request_url, remote_address, signed_token);
-	if(result == CheckSignatureResult::Off)
+	
+	// SingedPolicy is first
+	auto signed_policy_result = Publisher::HandleSignedPolicy(request_url, remote_address, signed_policy);
+	if(signed_policy_result == CheckSignatureResult::Off)
 	{
 		return true;
 	}
-	else if(result == CheckSignatureResult::Error)
+	else if(signed_policy_result == CheckSignatureResult::Error)
 	{
 		return false;
 	}
-
-	// might not be decyrpted
-	if(signed_token == nullptr)
+	else if(signed_policy_result == CheckSignatureResult::Fail)
 	{
+		logtw("%s", signed_policy->GetErrMessage().CStr());
 		return false;
 	}
+	else if(signed_policy_result == CheckSignatureResult::Off)
+	{
+		// SingedToken
+		auto signed_token_result = Publisher::HandleSignedToken(request_url, remote_address, signed_token);
+		
+		if(signed_token_result == CheckSignatureResult::Off)
+		{
+			return true;
+		}
+		else if(signed_token_result == CheckSignatureResult::Error)
+		{
+			return false;
+		}
+		else if(signed_token_result == CheckSignatureResult::Fail)
+		{
+			logtw("%s", signed_token->GetErrMessage().CStr());
+			return false;
+		}
+	}
 
-	request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
+	ov::String session_id;
+	if(signed_policy != nullptr)
+	{
+		// There is no session id in SignedPolicy so use IP address instead of session ID
+		session_id = remote_address->GetIpAddress();
+		request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
 														 vhost_app_name, stream_name,
 														 remote_address->GetIpAddress(),
-														 signed_token->GetSessionID());
+														 session_id);
 
-	if(signed_token->GetErrCode() != SignedToken::ErrCode::PASSED)
-	{
-		if(signed_token->GetErrCode() == SignedToken::ErrCode::TOKEN_EXPIRED)
+		if(signed_policy->GetErrCode() != SignedPolicy::ErrCode::PASSED)
 		{
-			// Because this is chunked streaming publisher, 
-			// players will continue to request playlists after token expiration while playing. 
-			// Therefore, once authorized session must be maintained.
-			if(IsAuthorizedSession(*request_info))
+			if(signed_policy->GetErrCode() == SignedPolicy::ErrCode::POLICY_EXPIRED)
 			{
-				// Update the authorized session info
-				UpdatePlaylistRequestInfo(request_info);
-				return true;
+				// Because this is chunked streaming publisher, 
+				// players will continue to request playlists after token expiration while playing. 
+				// Therefore, once authorized session must be maintained.
+				if(IsAuthorizedSession(*request_info))
+				{
+					// Update the authorized session info
+					UpdatePlaylistRequestInfo(request_info);
+					return true;
+				}
 			}
-		}
 
-		logtw("%s", signed_token->GetErrMessage().CStr());
+			logtw("%s", signed_policy->GetErrMessage().CStr());
+			return false;
+		}
+		else
+		{
+			UpdatePlaylistRequestInfo(request_info);
+			return true;
+		}
+	}
+	else if(signed_token != nullptr)
+	{
+		session_id = signed_token->GetSessionID();
+		request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
+														 vhost_app_name, stream_name,
+														 remote_address->GetIpAddress(),
+														 session_id);
+
+		if(signed_token->GetErrCode() != SignedToken::ErrCode::PASSED)
+		{
+			if(signed_token->GetErrCode() == SignedToken::ErrCode::TOKEN_EXPIRED)
+			{
+				// Because this is chunked streaming publisher, 
+				// players will continue to request playlists after token expiration while playing. 
+				// Therefore, once authorized session must be maintained.
+				if(IsAuthorizedSession(*request_info))
+				{
+					// Update the authorized session info
+					UpdatePlaylistRequestInfo(request_info);
+					return true;
+				}
+			}
+
+			logtw("%s", signed_token->GetErrMessage().CStr());
+			return false;
+		}
+		else
+		{
+			UpdatePlaylistRequestInfo(request_info);
+			return true;
+		}
+	}
+	else
+	{
+		// something wrong
 		return false;
 	}
-
-	// Update the authorized session info
-	UpdatePlaylistRequestInfo(request_info);
+	
 	return true;
 }
