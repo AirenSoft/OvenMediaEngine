@@ -287,7 +287,7 @@ static ov::String StringFromPublisherType(const PublisherType &type)
 		case PublisherType::LlDash:
 			return "LLDASH";
 		case PublisherType::Ovt:
-			return "Ovt";
+			return "OVT";
 		case PublisherType::File:
 			return "File";
 	}

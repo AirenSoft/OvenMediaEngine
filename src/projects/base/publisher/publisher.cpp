@@ -297,7 +297,7 @@ namespace pub
 				return CheckSignatureResult::Off;
 			}
 
-			if(signed_policy_config.IsEnabledPublsiher(GetPublisherType()) == false)
+			if(signed_policy_config.IsEnabledPublisher(GetPublisherType()) == false)
 			{
 				// This publisher turned off the SignedPolicy function
 				return CheckSignatureResult::Off;

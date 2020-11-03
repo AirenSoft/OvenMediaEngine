@@ -23,13 +23,13 @@ namespace cfg
 
 		bool IsEnabledProvider(ProviderType type) const 
 		{
-			auto type_str = ov::Converter::ToString(type);
+			auto type_str = StringFromProviderType(type);
 			return _enables.GetProviders().IsExist(type_str);
 		}
 
-		bool IsEnabledPublsiher(PublisherType type) const
+		bool IsEnabledPublisher(PublisherType type) const
 		{
-			auto type_str = ov::Converter::ToString(type);
+			auto type_str = StringFromPublisherType(type);
 			return _enables.GetPublishers().IsExist(type_str);
 		}
 

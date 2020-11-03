@@ -8,8 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "enables/providers.h"
-#include "enables/publishers.h"
+#include "signed_policy_enabled_modules.h"
 
 namespace cfg
 {
@@ -25,7 +24,7 @@ namespace cfg
 			RegisterValue<Optional>("Publishers", &_publishers);
 		}
 
-		SignedPolicyEnabledProviders _providers;
-		SignedPolicyEnabledProviders _publishers;
+		SignedPolicyEnabledModules _providers;
+		SignedPolicyEnabledModules _publishers;
 	};
 }  // namespace cfg

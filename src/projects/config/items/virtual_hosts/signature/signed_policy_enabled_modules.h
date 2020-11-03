@@ -10,15 +10,18 @@
 
 namespace cfg
 {
-	struct SignedPolicyEnabledProviders : public Item
+	struct SignedPolicyEnabledModules : public Item
 	{
 		CFG_DECLARE_REF_GETTER_OF(GetValue, _value)
 		CFG_DECLARE_REF_GETTER_OF(GetValueList, _value_list)
+		
 		bool IsExist(ov::String value) const
 		{
+			value = value.UpperCaseString();
+			
 			for(const auto &item : _value_list)
 			{
-				if(item.UpperCaseString() == value.UpperCaseString())
+				if(item == value)
 				{
 					return true;
 				}
@@ -31,8 +34,8 @@ namespace cfg
 		void MakeParseList() override
 		{
 			RegisterValue<ValueType::Text>(nullptr, &_value, nullptr, [this]() -> bool {
-			_value_list = _value.Trim().Split(",");
-			return true;
+				_value_list = _value.UpperCaseString().Trim().Split(",");
+				return true;
 			});
 
 		}
