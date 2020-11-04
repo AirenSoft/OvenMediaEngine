@@ -45,8 +45,8 @@ namespace api
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
-			SetString(object, "policyQueryKey", config.GetPolicyQueryKey(), Optional::False);
-			SetString(object, "signatureQueryKey", config.GetSignatureQueryKey(), Optional::False);
+			SetString(object, "policyQueryKey", config.GetPolicyQueryKeyName(), Optional::False);
+			SetString(object, "signatureQueryKey", config.GetSignatureQueryKeyName(), Optional::False);
 			SetString(object, "secretKey", config.GetSecretKey(), Optional::False);
 		}
 

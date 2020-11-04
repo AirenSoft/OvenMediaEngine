@@ -160,9 +160,9 @@ const ov::String& SignedPolicy::GetSecretKey() const
 	return _secret_key;
 }
 
-const ov::String& SignedPolicy::GetPolicyQueryKey() const
+const ov::String& SignedPolicy::GetPolicyQueryKeyName() const
 {
-	return _policy_query_key;
+	return _policy_query_key_name;
 }
 
 const ov::String& SignedPolicy::GetPolicyValue() const
@@ -170,9 +170,9 @@ const ov::String& SignedPolicy::GetPolicyValue() const
 	return _policy_text;
 }
 
-const ov::String& SignedPolicy::GetSignatureQueryKey() const
+const ov::String& SignedPolicy::GetSignatureQueryKeyName() const
 {
-	return _signature_query_key;
+	return _signature_query_key_name;
 }
 
 const ov::String& SignedPolicy::GetSignatureValue() const

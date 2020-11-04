@@ -262,11 +262,11 @@ namespace pvd
 				return CheckSignatureResult::Off;
 			}
 
-			auto policy_query_key = signed_policy_config.GetPolicyQueryKey();
-			auto signature_query_key = signed_policy_config.GetSignatureQueryKey();
+			auto policy_query_key_name = signed_policy_config.GetPolicyQueryKeyName();
+			auto signature_query_key_name = signed_policy_config.GetSignatureQueryKeyName();
 			auto secret_key = signed_policy_config.GetSecretKey();
 
-			signed_policy = SignedPolicy::Load(client_address->ToString(), request_url->ToUrlString(), policy_query_key, signature_query_key, secret_key);
+			signed_policy = SignedPolicy::Load(client_address->ToString(), request_url->ToUrlString(), policy_query_key_name, signature_query_key_name, secret_key);
 			if(signed_policy == nullptr)
 			{
 				// Probably this doesn't happen

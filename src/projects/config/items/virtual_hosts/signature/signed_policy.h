@@ -15,8 +15,8 @@ namespace cfg
 {
 	struct SignedPolicy : public Item
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetPolicyQueryKey, _policy_query_key)
-		CFG_DECLARE_REF_GETTER_OF(GetSignatureQueryKey, _signature_query_key)
+		CFG_DECLARE_REF_GETTER_OF(GetPolicyQueryKeyName, _policy_query_key_name)
+		CFG_DECLARE_REF_GETTER_OF(GetSignatureQueryKeyName, _signature_query_key_name)
 		CFG_DECLARE_REF_GETTER_OF(GetSecretKey, _secret_key)
 		CFG_DECLARE_REF_GETTER_OF(GetEnabledProviders, _enables.GetProviders().GetValue())
 		CFG_DECLARE_REF_GETTER_OF(GetEnabledPublishers, _enables.GetPublishers().GetValue())
@@ -36,14 +36,14 @@ namespace cfg
 	protected:
 		void MakeParseList() override
 		{
-			RegisterValue("PolicyQueryKey", &_policy_query_key);
-			RegisterValue("SignatureQueryKey", &_signature_query_key);
+			RegisterValue("PolicyQueryKeyName", &_policy_query_key_name);
+			RegisterValue("SignatureQueryKeyName", &_signature_query_key_name);
 			RegisterValue("SecretKey", &_secret_key);
 			RegisterValue("Enables", &_enables);
 		}
 
-		ov::String _policy_query_key;
-		ov::String _signature_query_key;
+		ov::String _policy_query_key_name;
+		ov::String _signature_query_key_name;
 		ov::String _secret_key;
 
 		Enables	_enables;

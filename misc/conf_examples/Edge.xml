@@ -76,8 +76,8 @@
 			<!-- Refer https://airensoft.gitbook.io/ovenmediaengine/signedpolicy
 
 			<SignedPolicy>
-				<PolicyQueryKey>${env:SIGNED_POLICY_POLICY_QUERY_KEY:policy}</PolicyQueryKey>
-				<SignatureQueryKey>${env:SIGNED_POLICY_SIGNATURE_QUERY_KEY:signature}</SignatureQueryKey>
+				<PolicyQueryKeyName>${env:SIGNED_POLICY_POLICY_QUERY_KEY:policy}</PolicyQueryKeyName>
+				<SignatureQueryKeyName>${env:SIGNED_POLICY_SIGNATURE_QUERY_KEY:signature}</SignatureQueryKeyName>
 				<SecretKey>${env:SIGNED_URL_CRYPTO_KEY:aKq#1kj}</SecretKey>
 
 				<Enables>

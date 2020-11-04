@@ -104,9 +104,9 @@
 			<!-- Refer https://airensoft.gitbook.io/ovenmediaengine/signedpolicy
 
 			<SignedPolicy>
-				<PolicyQueryKey>${env:SIGNED_POLICY_POLICY_QUERY_KEY:policy}</PolicyQueryKey>
-				<SignatureQueryKey>${env:SIGNED_POLICY_SIGNATURE_QUERY_KEY:signature}</SignatureQueryKey>
-				<SecretKey>${env:SIGNED_URL_CRYPTO_KEY:aKq#1kj}</SecretKey>
+				<PolicyQueryKeyName>policy</PolicyQueryKeyName>
+				<SignatureQueryKeyName>signature</SignatureQueryKeyName>
+				<SecretKey>aKq#1kj</SecretKey>
 
 				<Enables>
 					<Providers>rtmp</Providers>

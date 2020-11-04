@@ -36,9 +36,9 @@ public:
 
 	const ov::String& GetRequestedUrl() const;
     const ov::String& GetSecretKey() const;
-	const ov::String& GetPolicyQueryKey() const;
+	const ov::String& GetPolicyQueryKeyName() const;
 	const ov::String& GetPolicyValue() const;
-	const ov::String& GetSignatureQueryKey() const;
+	const ov::String& GetSignatureQueryKeyName() const;
 	const ov::String& GetSignatureValue() const;
 	
 	// Policy
@@ -65,9 +65,9 @@ private:
 
 	ov::String	_requested_url;
     ov::String  _secret_key;
-	ov::String	_policy_query_key;
+	ov::String	_policy_query_key_name;
 	ov::String	_policy_text; // Decoded value
-	ov::String	_signature_query_key;
+	ov::String	_signature_query_key_name;
 	ov::String	_signature_value;
 
 	ov::String  _base_url;
