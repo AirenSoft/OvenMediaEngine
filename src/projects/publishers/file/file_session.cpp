@@ -352,15 +352,22 @@ ov::String FileSession::ConvertMacro(ov::String src)
 		if(group.IndexOf("StartTime") != -1L)
 		{
 			time_t now = time(NULL);
+			struct tm timeinfo;
+			if(localtime_r(&now, &timeinfo) == nullptr)
+			{
+				logtw("Could not get localtime");
+				continue;
+			}
+
 			char buff[80];
 			ov::String YYYY, MM, DD, hh, mm, ss;
 
-			strftime(buff, sizeof(buff), "%Y", localtime(&now)); YYYY = buff;
-			strftime(buff, sizeof(buff), "%m", localtime(&now)); MM = buff;
-			strftime(buff, sizeof(buff), "%d", localtime(&now)); DD = buff;
-			strftime(buff, sizeof(buff), "%H", localtime(&now)); hh = buff;
-			strftime(buff, sizeof(buff), "%M", localtime(&now)); mm = buff;
-			strftime(buff, sizeof(buff), "%S", localtime(&now)); ss = buff;			
+			strftime(buff, sizeof(buff), "%Y", &timeinfo); YYYY = buff;
+			strftime(buff, sizeof(buff), "%m", &timeinfo); MM = buff;
+			strftime(buff, sizeof(buff), "%d", &timeinfo); DD = buff;
+			strftime(buff, sizeof(buff), "%H", &timeinfo); hh = buff;
+			strftime(buff, sizeof(buff), "%M", &timeinfo); mm = buff;
+			strftime(buff, sizeof(buff), "%S", &timeinfo); ss = buff;			
 
 			ov::String str_time = group;
 			str_time = str_time.Replace("StartTime:", "");
@@ -371,20 +378,27 @@ ov::String FileSession::ConvertMacro(ov::String src)
 			str_time = str_time.Replace("mm", mm);
 			str_time = str_time.Replace("ss", ss);
 
-			replaced_string = replaced_string.Replace(full_match, str_time);			
+			replaced_string = replaced_string.Replace(full_match, str_time);
 		}
 		if(group.IndexOf("EndTime") != -1L)
 		{
 			time_t now = time(NULL);
+			struct tm timeinfo;
+			if(localtime_r(&now, &timeinfo) == nullptr)
+			{
+				logtw("Could not get localtime");
+				continue;
+			}
+
 			char buff[80];
 			ov::String YYYY, MM, DD, hh, mm, ss;
 
-			strftime(buff, sizeof(buff), "%Y", localtime(&now)); YYYY = buff;
-			strftime(buff, sizeof(buff), "%m", localtime(&now)); MM = buff;
-			strftime(buff, sizeof(buff), "%d", localtime(&now)); DD = buff;
-			strftime(buff, sizeof(buff), "%H", localtime(&now)); hh = buff;
-			strftime(buff, sizeof(buff), "%M", localtime(&now)); mm = buff;
-			strftime(buff, sizeof(buff), "%S", localtime(&now)); ss = buff;			
+			strftime(buff, sizeof(buff), "%Y", &timeinfo); YYYY = buff;
+			strftime(buff, sizeof(buff), "%m", &timeinfo); MM = buff;
+			strftime(buff, sizeof(buff), "%d", &timeinfo); DD = buff;
+			strftime(buff, sizeof(buff), "%H", &timeinfo); hh = buff;
+			strftime(buff, sizeof(buff), "%M", &timeinfo); mm = buff;
+			strftime(buff, sizeof(buff), "%S", &timeinfo); ss = buff;			
 
 			ov::String str_time = group;
 			str_time = str_time.Replace("EndTime:", "");
