@@ -8,43 +8,40 @@
 //==============================================================================
 #pragma once
 
-#include <vector>
-#include <string>
-#include <memory>
-
 #include <base/ovlibrary/ovlibrary.h>
+
+#include <memory>
 #include <pugixml-1.9/src/pugixml.hpp>
+#include <string>
+#include <vector>
 
 namespace cfg
 {
-	//region ValueType
-
+	// #region ========== ValueType ==========
 	enum class ValueType
 	{
 		// Unknown type
-			Unknown = 'U',
+		Unknown = 'U',
 		// A text of the child element
-			String = 'S',
+		String = 'S',
 		// An integer value of the child element
-			Integer = 'I',
+		Integer = 'I',
 		// A boolean value of the child element
-			Boolean = 'B',
+		Boolean = 'B',
 		// A float value of the child element
-			Float = 'F',
+		Float = 'F',
 		// A text of the element
-			Text = 'T',
+		Text = 'T',
 		// An attribute of the element
-			Attribute = 'A',
+		Attribute = 'A',
 		// An element of the child element
-			Element = 'E',
+		Element = 'E',
 		// An element list of the child element
-			List = 'L',
+		List = 'L',
 	};
+	// #endregion
 
-	//endregion
-
-	//region ValueBase
-
+	// #region ========== ValueBase ==========
 	class ValueBase
 	{
 	public:
@@ -80,6 +77,5 @@ namespace cfg
 		size_t _value_size = 0;
 		void *_target = nullptr;
 	};
-
-	//endregion
-}
+	// #endregion
+}  // namespace cfg
