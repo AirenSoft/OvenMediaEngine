@@ -14,6 +14,6 @@ namespace api
 {
 	namespace conv
 	{
-		Json::Value ConvertFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application);
+		Json::Value JsonFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application);
 	}  // namespace conv
 };	   // namespace api

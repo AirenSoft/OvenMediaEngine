@@ -96,7 +96,7 @@ namespace api
 											  stream_name.length(), stream_name.data());
 			}
 
-			return api::conv::ConvertFromStream(stream, std::move(output_streams));
+			return api::conv::JsonFromStream(stream, std::move(output_streams));
 		}
 	}  // namespace v1
 }  // namespace api

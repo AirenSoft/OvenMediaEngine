@@ -130,7 +130,7 @@ namespace api
 			}
 		}
 
-		Json::Value ConvertFromStream(const std::shared_ptr<const mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+		Json::Value JsonFromStream(const std::shared_ptr<const mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			Json::Value response = Json::objectValue;
 
@@ -138,7 +138,7 @@ namespace api
 			SetInputStream(response, "input", stream, Optional::False);
 			SetOutputStreams(response, "outputs", output_streams, Optional::False);
 
-			return response;
+			return std::move(response);
 		}
 	}  // namespace conv
 }  // namespace api

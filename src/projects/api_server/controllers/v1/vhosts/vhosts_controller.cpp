@@ -53,7 +53,7 @@ namespace api
 											  vhost_name.length(), vhost_name.data());
 			}
 
-			return api::conv::ConvertFromVHost(vhost);
+			return api::conv::JsonFromVHost(vhost);
 		}
 
 	}  // namespace v1

@@ -215,7 +215,7 @@ namespace api
 			//	 }
 		}
 
-		Json::Value ConvertFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application)
+		Json::Value JsonFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application)
 		{
 			Json::Value response = Json::objectValue;
 
@@ -225,7 +225,7 @@ namespace api
 			SetProviders(response, "providers", application->GetConfig().GetProviders(), Optional::True);
 			SetPublishers(response, "publishers", application->GetConfig().GetPublishers(), Optional::True);
 
-			return response;
+			return std::move(response);
 		}
 	}  // namespace conv
 }  // namespace api

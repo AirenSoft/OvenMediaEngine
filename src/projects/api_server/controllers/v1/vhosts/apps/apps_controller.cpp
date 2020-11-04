@@ -35,6 +35,12 @@ namespace api
 		ApiResponse AppsController::OnPostApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body)
 		{
 			logtd(">> %s", ov::Json::Stringify(request_body, true).CStr());
+
+			// auto orchestrator = ocst::Orchestrator::GetInstance();
+
+			cfg::Application app;
+
+			// orchestrator->CreateApplication(
 			
 			return HttpStatusCode::NotImplemented;
 		}
@@ -86,7 +92,7 @@ namespace api
 											  app_name.length(), app_name.data());
 			}
 
-			return api::conv::ConvertFromApplication(app);
+			return api::conv::JsonFromApplication(app);
 		}
 
 		ApiResponse AppsController::OnPutApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body)

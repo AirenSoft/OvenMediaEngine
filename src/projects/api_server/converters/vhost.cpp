@@ -91,7 +91,7 @@ namespace api
 			}
 		}
 
-		Json::Value ConvertFromVHost(const std::shared_ptr<const mon::HostMetrics> &vhost)
+		Json::Value JsonFromVHost(const std::shared_ptr<const mon::HostMetrics> &vhost)
 		{
 			Json::Value response = Json::objectValue;
 
@@ -101,7 +101,7 @@ namespace api
 			SetSignedToken(response, "signedToken", vhost->GetSignedToken(), Optional::True);
 			SetOriginMaps(response, "originMaps", vhost->GetOrigins(), Optional::True);
 
-			return response;
+			return std::move(response);
 		}
 
 	}  // namespace conv

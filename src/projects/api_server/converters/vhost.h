@@ -16,6 +16,6 @@ namespace api
 {
 	namespace conv
 	{
-		Json::Value ConvertFromVHost(const std::shared_ptr<const mon::HostMetrics> &vhost);
+		Json::Value JsonFromVHost(const std::shared_ptr<const mon::HostMetrics> &vhost);
 	}  // namespace conv
 };	   // namespace api
