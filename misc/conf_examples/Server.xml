@@ -9,6 +9,15 @@
 
 	<!-- Settings for the ports to bind -->
 	<Bind>
+		<!-- Enable this configuration if you want to use API Server -->
+		<!--
+		<Managers>
+			<API>
+				<Port>48081</Port>
+			</API>
+		</Managers>
+		-->
+
 		<Providers>
 			<RTMP>
 				<Port>1935</Port>
