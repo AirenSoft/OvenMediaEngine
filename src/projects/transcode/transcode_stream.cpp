@@ -377,7 +377,7 @@ int32_t TranscodeStream::CreateOutputStream()
 						else
 						{
 							auto output_codec_id = GetCodecId(cfg_encode_video->GetCodec());
-							auto output_bitrate = GetBitrate(cfg_encode_video->GetBitrate());
+							auto output_bitrate = cfg_encode_video->GetBitrate();
 							auto output_width = cfg_encode_video->GetWidth();
 							auto output_height = cfg_encode_video->GetHeight();
 							auto output_framerate = cfg_encode_video->GetFramerate();
@@ -446,7 +446,7 @@ int32_t TranscodeStream::CreateOutputStream()
 							// Validation
 							auto output_codec_id = GetCodecId(cfg_encode_audio->GetCodec());
 							auto output_samplerate = cfg_encode_audio->GetSamplerate();
-							auto output_bitrate = GetBitrate(cfg_encode_audio->GetBitrate());
+							auto output_bitrate = cfg_encode_audio->GetBitrate();
 							auto output_channel_layout = cfg_encode_audio->GetChannel() == 1 ? common::AudioChannel::Layout::LayoutMono : common::AudioChannel::Layout::LayoutStereo;
 
 							if (output_codec_id == common::MediaCodecId::Opus)
@@ -1322,24 +1322,6 @@ bool TranscodeStream::IsAudioCodec(common::MediaCodecId codec_id)
 	}
 
 	return false;
-}
-
-int TranscodeStream::GetBitrate(ov::String bitrate)
-{
-	bitrate.MakeUpper();
-
-	int multiplier = 1;
-
-	if (bitrate.HasSuffix("K"))
-	{
-		multiplier = 1024;
-	}
-	else if (bitrate.HasSuffix("M"))
-	{
-		multiplier = 1024 * 1024;
-	}
-
-	return static_cast<int>(ov::Converter::ToFloat(bitrate) * multiplier);
 }
 
 // Look up the Encode settings by name in the application configuration.

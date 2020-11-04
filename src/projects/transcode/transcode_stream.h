@@ -170,8 +170,6 @@ private:
 	bool IsVideoCodec(common::MediaCodecId codec_id);
 	bool IsAudioCodec(common::MediaCodecId codec_id);
 
-	int GetBitrate(ov::String bitrate);
-
 	const common::Timebase GetDefaultTimebaseByCodecId(common::MediaCodecId codec_id);
 };
 
