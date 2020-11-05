@@ -16,6 +16,7 @@
 #include "../../../../converters/converters.h"
 #include "../../../../helpers/helpers.h"
 #include "streams/streams_controller.h"
+#include "apps_action_controller.h"
 
 namespace api
 {
@@ -23,13 +24,19 @@ namespace api
 	{
 		void AppsController::PrepareHandlers()
 		{
+			
+
 			RegisterPost(R"()", &AppsController::OnPostApp);
 			RegisterGet(R"()", &AppsController::OnGetAppList);
-			RegisterGet(R"(\/(?<app_name>[^\/]*))", &AppsController::OnGetApp);
-			RegisterPut(R"(\/(?<app_name>[^\/]*))", &AppsController::OnPutApp);
-			RegisterDelete(R"(\/(?<app_name>[^\/]*))", &AppsController::OnDeleteApp);
+			RegisterGet(R"(\/(?<app_name>[^\/:]*))", &AppsController::OnGetApp);
+			RegisterPut(R"(\/(?<app_name>[^\/:]*))", &AppsController::OnPutApp);
+			RegisterDelete(R"(\/(?<app_name>[^\/:]*))", &AppsController::OnDeleteApp);
 
-			CreateSubController<v1::StreamsController>(R"(\/(?<app_name>[^\/]*)\/streams)");
+			// Branch into action controller
+			CreateSubController<v1::AppsActionController>(R"(\/(?<app_name>[^\/:]*):)");
+
+			// Branch into stream controller
+			CreateSubController<v1::StreamsController>(R"(\/(?<app_name>[^\/:]*)\/streams)");
 		};
 
 		ApiResponse AppsController::OnPostApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body)
@@ -87,7 +94,7 @@ namespace api
 			auto app = GetApplication(vhost, app_name);
 			if (app == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application : [%.*s/%.*s]",
 											  vhost_name.length(), vhost_name.data(),
 											  app_name.length(), app_name.data());
 			}
