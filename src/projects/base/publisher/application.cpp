@@ -121,15 +121,15 @@ namespace pub
 		auto stream_it = _streams.find(info->GetId());
 		if(stream_it == _streams.end())
 		{
-			logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
-			return false;
+			// Sometimes stream rejects stream creation if the input codec is not supported. So this is a normal situation.
+			logtd("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
+			return true;
 		}
 
 		auto stream = stream_it->second;
 
 		lock.unlock();
 
-		// Stream이 삭제되었음을 자식에게 알려서 처리하게 함
 		if (DeleteStream(info) == false)
 		{
 			return false;
