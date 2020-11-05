@@ -6,7 +6,7 @@
 //  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "apps_action_controller.h"
+#include "app_actions_controller.h"
 
 #include <orchestrator/orchestrator.h>
 
@@ -20,22 +20,22 @@ namespace api
 {
 	namespace v1
 	{
-		void AppsActionController::PrepareHandlers()
+		void AppActionsController::PrepareHandlers()
 		{
-			RegisterGet(R"()", &AppsActionController::OnGetDummyAction);
+			RegisterGet(R"()", &AppActionsController::OnGetDummyAction);
 			
 			// Record related actions
-			RegisterGet(R"((records))", &AppsActionController::OnGetDummyAction);
-			RegisterPost(R"((startRecord))", &AppsActionController::OnPostDummyAction);
-			RegisterPost(R"((stopRecord))", &AppsActionController::OnPostDummyAction);
+			RegisterGet(R"((records))", &AppActionsController::OnGetDummyAction);
+			RegisterPost(R"((startRecord))", &AppActionsController::OnPostDummyAction);
+			RegisterPost(R"((stopRecord))", &AppActionsController::OnPostDummyAction);
 
 			// Push related actions
-			RegisterGet(R"((pushes))", &AppsActionController::OnGetDummyAction);
-			RegisterPost(R"((startPush))", &AppsActionController::OnPostDummyAction);
-			RegisterPost(R"((stopPush))", &AppsActionController::OnPostDummyAction);			
+			RegisterGet(R"((pushes))", &AppActionsController::OnGetDummyAction);
+			RegisterPost(R"((startPush))", &AppActionsController::OnPostDummyAction);
+			RegisterPost(R"((stopPush))", &AppActionsController::OnPostDummyAction);			
 		};
 
-		ApiResponse AppsActionController::OnGetDummyAction(const std::shared_ptr<HttpClient> &client)
+		ApiResponse AppActionsController::OnGetDummyAction(const std::shared_ptr<HttpClient> &client)
 		{
 			auto &match_result = client->GetRequest()->GetMatchResult();
 
@@ -64,7 +64,7 @@ namespace api
 			return api::conv::JsonFromApplication(app);
 		}
 
-		ApiResponse AppsActionController::OnPostDummyAction(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body)
+		ApiResponse AppActionsController::OnPostDummyAction(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body)
 		{
 			auto &match_result = client->GetRequest()->GetMatchResult();
 

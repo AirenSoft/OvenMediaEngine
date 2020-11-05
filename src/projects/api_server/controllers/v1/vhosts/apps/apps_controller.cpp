@@ -16,7 +16,7 @@
 #include "../../../../converters/converters.h"
 #include "../../../../helpers/helpers.h"
 #include "streams/streams_controller.h"
-#include "apps_action_controller.h"
+#include "app_actions_controller.h"
 
 namespace api
 {
@@ -33,7 +33,7 @@ namespace api
 			RegisterDelete(R"(\/(?<app_name>[^\/:]*))", &AppsController::OnDeleteApp);
 
 			// Branch into action controller
-			CreateSubController<v1::AppsActionController>(R"(\/(?<app_name>[^\/:]*):)");
+			CreateSubController<v1::AppActionsController>(R"(\/(?<app_name>[^\/:]*):)");
 
 			// Branch into stream controller
 			CreateSubController<v1::StreamsController>(R"(\/(?<app_name>[^\/:]*)\/streams)");

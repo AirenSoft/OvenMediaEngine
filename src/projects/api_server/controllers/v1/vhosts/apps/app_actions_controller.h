@@ -14,7 +14,7 @@ namespace api
 {
 	namespace v1
 	{
-		class AppsActionController : public Controller<AppsActionController>
+		class AppActionsController : public Controller<AppActionsController>
 		{
 		public:
 			void PrepareHandlers() override;
