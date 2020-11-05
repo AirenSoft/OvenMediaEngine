@@ -128,7 +128,7 @@ private:
 	std::map<MediaTrackId, int64_t> _pts_avg_inc;
 
 	// Timebase of incoming packets
-	std::map<MediaTrackId, common::Timebase> _incoming_tiembase;
+	std::map<MediaTrackId, cmn::Timebase> _incoming_tiembase;
 
 	// Statistics
 	// <TrackId, Values>

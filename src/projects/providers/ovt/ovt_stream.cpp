@@ -291,15 +291,15 @@ namespace pvd
 			}
 
 			new_track->SetId(json_track["id"].asUInt());
-			new_track->SetCodecId(static_cast<common::MediaCodecId>(json_track["codecId"].asUInt()));
-			new_track->SetMediaType(static_cast<common::MediaType>(json_track["mediaType"].asUInt()));
+			new_track->SetCodecId(static_cast<cmn::MediaCodecId>(json_track["codecId"].asUInt()));
+			new_track->SetMediaType(static_cast<cmn::MediaType>(json_track["mediaType"].asUInt()));
 			new_track->SetTimeBase(json_track["timebase_num"].asUInt(), json_track["timebase_den"].asUInt());
 			new_track->SetBitrate(json_track["bitrate"].asUInt());
 			new_track->SetStartFrameTime(json_track["startFrameTime"].asUInt64());
 			new_track->SetLastFrameTime(json_track["lastFrameTime"].asUInt64());
 
 			// video or audio
-			if (new_track->GetMediaType() == common::MediaType::Video)
+			if (new_track->GetMediaType() == cmn::MediaType::Video)
 			{
 				auto json_video_track = json_track["videoTrack"];
 				if (json_video_track.isNull())
@@ -313,7 +313,7 @@ namespace pvd
 				new_track->SetWidth(json_video_track["width"].asUInt());
 				new_track->SetHeight(json_video_track["height"].asUInt());
 			}
-			else if (new_track->GetMediaType() == common::MediaType::Audio)
+			else if (new_track->GetMediaType() == cmn::MediaType::Audio)
 			{
 				auto json_audio_track = json_track["audioTrack"];
 				if (json_audio_track.isNull())
@@ -325,9 +325,9 @@ namespace pvd
 
 				new_track->SetSampleRate(json_audio_track["samplerate"].asUInt());
 				new_track->GetSample().SetFormat(
-						static_cast<common::AudioSample::Format>(json_audio_track["sampleFormat"].asInt()));
+						static_cast<cmn::AudioSample::Format>(json_audio_track["sampleFormat"].asInt()));
 				new_track->GetChannel().SetLayout(
-						static_cast<common::AudioChannel::Layout>(json_audio_track["layout"].asUInt()));
+						static_cast<cmn::AudioChannel::Layout>(json_audio_track["layout"].asUInt()));
 			}
 
 			AddTrack(new_track);
@@ -731,17 +731,17 @@ namespace pvd
 			if (_depacketizer.IsAvaliableMediaPacket())
 			{
 				auto media_packet = _depacketizer.PopMediaPacket();
-				media_packet->SetPacketType(common::PacketType::OVT);
+				media_packet->SetPacketType(cmn::PacketType::OVT);
 
 // Deprecated. The Generate fragment header roll is changed to MediaRouter.
 #if 0
 				// Make Header (Fragmentation) if it is H.264
 				auto track = GetTrack(media_packet->GetTrackId());
-				if(track->GetCodecId() == common::MediaCodecId::H264)
+				if(track->GetCodecId() == cmn::MediaCodecId::H264)
 				{
 					H264FragmentHeader::Parse(media_packet);
 				}
-				else if(track->GetCodecId() == common::MediaCodecId::H265)
+				else if(track->GetCodecId() == cmn::MediaCodecId::H265)
 				{
 					
 				}

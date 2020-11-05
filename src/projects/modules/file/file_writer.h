@@ -17,14 +17,14 @@ public:
 		return object;
 	}
 
-	void SetCodecId(common::MediaCodecId codec_id) { _codec_id = codec_id; }
-	common::MediaCodecId GetCodecId() { return _codec_id; }
+	void SetCodecId(cmn::MediaCodecId codec_id) { _codec_id = codec_id; }
+	cmn::MediaCodecId GetCodecId() { return _codec_id; }
 
 	void SetBitrate(int32_t bitrate) { _bitrate = bitrate; }
 	int32_t GetBitrate() { return _bitrate; }
 
-	void SetTimeBase(common::Timebase timebase) { _timebase = timebase; }
-	common::Timebase GetTimeBase() { return _timebase; }
+	void SetTimeBase(cmn::Timebase timebase) { _timebase = timebase; }
+	cmn::Timebase GetTimeBase() { return _timebase; }
 
 	void SetWidth(int32_t width) { _width = width; }
 	int32_t GetWidth() { return _width; }
@@ -32,11 +32,11 @@ public:
 	void SetHeight(int32_t height) { _height = height; }
 	int32_t GetHeight() { return _height; }
 
-	void SetSample(common::AudioSample sample) { _sample = sample; }
-	common::AudioSample GetSample() { return _sample; }
+	void SetSample(cmn::AudioSample sample) { _sample = sample; }
+	cmn::AudioSample GetSample() { return _sample; }
 
-	void SetChannel(common::AudioChannel channel) { _channel = channel; }
-	common::AudioChannel GetChannel() { return _channel; }
+	void SetChannel(cmn::AudioChannel channel) { _channel = channel; }
+	cmn::AudioChannel GetChannel() { return _channel; }
 
 	void SetExtradata(std::vector<uint8_t> &extradata) {
 		_extradata.assign(extradata.begin(), extradata.end());
@@ -44,16 +44,16 @@ public:
 	std::vector<uint8_t>& GetExtradata() { return _extradata; }
 
 private:
-	common::MediaCodecId    _codec_id;
+	cmn::MediaCodecId    _codec_id;
 	int32_t                 _bitrate;
-	common::Timebase        _timebase;
+	cmn::Timebase        _timebase;
 
 	int32_t                 _width;
 	int32_t                 _height;
 	double                  _framerate;
 
-	common::AudioSample     _sample;
-	common::AudioChannel    _channel;
+	cmn::AudioSample     _sample;
+	cmn::AudioChannel    _channel;
 
 	std::vector<uint8_t> 	_extradata;
 };
@@ -76,7 +76,7 @@ public:
 
 	bool Stop();
 
-	bool AddTrack(common::MediaType media_type, int32_t track_id, std::shared_ptr<FileTrackInfo> trackinfo);
+	bool AddTrack(cmn::MediaType media_type, int32_t track_id, std::shared_ptr<FileTrackInfo> trackinfo);
 
 	bool PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, std::shared_ptr<ov::Data>& data);
 

@@ -12,28 +12,37 @@
 
 namespace cfg
 {
-	struct LlDashPublisher : public Publisher
+	namespace vhost
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::LlDash)
-
-		// CFG_DECLARE_GETTER_OF(GetSegmentCount, _segment_count)
-		CFG_DECLARE_GETTER_OF(GetSegmentDuration, _segment_duration)
-		CFG_DECLARE_GETTER_OF(GetCrossDomainList, _cross_domain.GetUrls())
-		CFG_DECLARE_GETTER_OF(GetCrossDomain, _cross_domain)
-
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			Publisher::MakeParseList();
+			namespace pub
+			{
+				struct LlDashPublisher : public Publisher
+				{
+					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::LlDash)
 
-			// RegisterValue<Optional>("SegmentCount", &_segment_count);
-			RegisterValue<Optional>("SegmentDuration", &_segment_duration);
-			RegisterValue<Optional>("CrossDomain", &_cross_domain);
-		}
+					// CFG_DECLARE_GETTER_OF(GetSegmentCount, _segment_count)
+					CFG_DECLARE_GETTER_OF(GetSegmentDuration, _segment_duration)
+					CFG_DECLARE_GETTER_OF(GetCrossDomainList, _cross_domain.GetUrls())
+					CFG_DECLARE_GETTER_OF(GetCrossDomain, _cross_domain)
 
-		// LL-DASH uses time-based segment
-		// int _segment_count = 3;
-		int _segment_duration = 5;
-		CrossDomain _cross_domain;
-	};
+				protected:
+					void MakeParseList() override
+					{
+						Publisher::MakeParseList();
+
+						// RegisterValue<Optional>("SegmentCount", &_segment_count);
+						RegisterValue<Optional>("SegmentDuration", &_segment_duration);
+						RegisterValue<Optional>("CrossDomain", &_cross_domain);
+					}
+
+					// LL-DASH uses time-based segment
+					// int _segment_count = 3;
+					int _segment_duration = 5;
+					cmn::CrossDomain _cross_domain;
+				};
+			}  // namespace pub
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg

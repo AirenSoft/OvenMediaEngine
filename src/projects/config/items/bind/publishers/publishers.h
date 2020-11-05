@@ -35,10 +35,10 @@ namespace cfg
 					RegisterValue<Optional>("WebRTC", &_webrtc);
 				};
 
-				Publisher<SingularPort> _ovt{"9000/tcp"};
-				Publisher<SingularPort> _rtmp{"1935/tcp"};
-				Publisher<SingularPort> _hls{"80/tcp", "443/tcp"};
-				Publisher<SingularPort> _dash{"80/tcp", "443/tcp"};
+				Publisher<cmn::SingularPort> _ovt{"9000/tcp"};
+				Publisher<cmn::SingularPort> _rtmp{"1935/tcp"};
+				Publisher<cmn::SingularPort> _hls{"80/tcp", "443/tcp"};
+				Publisher<cmn::SingularPort> _dash{"80/tcp", "443/tcp"};
 				Webrtc _webrtc{"3333/tcp", "3334/tcp"};
 			};
 		}  // namespace pub

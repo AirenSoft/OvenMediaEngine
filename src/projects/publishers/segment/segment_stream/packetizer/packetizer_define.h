@@ -59,7 +59,7 @@ struct SegmentData
 {
 public:
 	SegmentData(
-		common::MediaType media_type,
+		cmn::MediaType media_type,
 		int sequence_number,
 		ov::String file_name,
 		int64_t timestamp,
@@ -76,7 +76,7 @@ public:
 	}
 
 public:
-	common::MediaType media_type = common::MediaType ::Unknown;
+	cmn::MediaType media_type = cmn::MediaType ::Unknown;
 	int sequence_number = 0;
 	ov::String file_name;
 	time_t create_time = 0;
@@ -100,7 +100,7 @@ struct PacketizerFrameData
 						int64_t pts,
 						int64_t dts,
 						uint64_t duration,
-						const common::Timebase &timebase,
+						const cmn::Timebase &timebase,
 						std::shared_ptr<ov::Data> &data)
 		: type(type),
 		  pts(pts),
@@ -115,7 +115,7 @@ struct PacketizerFrameData
 						int64_t pts,
 						int64_t dts,
 						uint64_t duration,
-						const common::Timebase &timebase)
+						const cmn::Timebase &timebase)
 		: type(type),
 		  pts(pts),
 		  dts(dts),
@@ -129,7 +129,7 @@ struct PacketizerFrameData
 	int64_t pts = 0LL;
 	int64_t dts = 0LL;
 	uint64_t duration = 0ULL;
-	common::Timebase timebase;
+	cmn::Timebase timebase;
 	std::shared_ptr<ov::Data> data;
 };
 

@@ -12,16 +12,25 @@
 
 namespace cfg
 {
-	struct Streams : public Item
+	namespace vhost
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetStreamList, _stream_list)
-
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			RegisterValue<Optional>("Stream", &_stream_list);
-		}
+			namespace stream
+			{
+				struct Streams : public Item
+				{
+					CFG_DECLARE_REF_GETTER_OF(GetStreamList, _stream_list)
 
-		std::vector<Stream> _stream_list;
-	};
+				protected:
+					void MakeParseList() override
+					{
+						RegisterValue<Optional>("Stream", &_stream_list);
+					}
+
+					std::vector<Stream> _stream_list;
+				};
+			}  // namespace stream
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg

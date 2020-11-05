@@ -19,16 +19,16 @@ public:
 	void SetAudioTimestampScale(double scale);
 	double GetAudioTimestampScale();
 
-	common::AudioSample &GetSample();
-	common::AudioChannel &GetChannel();
-	const common::AudioChannel &GetChannel() const;
+	cmn::AudioSample &GetSample();
+	cmn::AudioChannel &GetChannel();
+	const cmn::AudioChannel &GetChannel() const;
 
 protected:
 	// sample format, sample rate
-	common::AudioSample _sample;
+	cmn::AudioSample _sample;
 
 	// channel layout
-	common::AudioChannel _channel_layout;
+	cmn::AudioChannel _channel_layout;
 
 	// time_scale
 	double _audio_timescale;

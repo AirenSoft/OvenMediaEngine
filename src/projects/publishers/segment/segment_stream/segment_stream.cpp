@@ -12,7 +12,7 @@
 #include "segment_stream_private.h"
 #include "stream_packetizer.h"
 
-using namespace common;
+using namespace cmn;
 
 SegmentStream::SegmentStream(const std::shared_ptr<pub::Application> application, const info::Stream &info)
 	: Stream(application, info)

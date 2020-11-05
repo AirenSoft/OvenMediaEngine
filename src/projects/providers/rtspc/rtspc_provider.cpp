@@ -9,7 +9,7 @@
 
 #define OV_LOG_TAG "RtspcProvider"
 
-using namespace common;
+using namespace cmn;
 
 namespace pvd
 {

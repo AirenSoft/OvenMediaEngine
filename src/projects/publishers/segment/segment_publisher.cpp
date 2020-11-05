@@ -24,7 +24,7 @@ SegmentPublisher::~SegmentPublisher()
 	logtd("Publisher has been destroyed");
 }
 
-bool SegmentPublisher::Start(const cfg::SingularPort &port_config, const cfg::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server)
+bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server)
 {
 	auto server_config = GetServerConfig();
 	auto ip = server_config.GetIp();

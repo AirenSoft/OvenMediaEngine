@@ -145,13 +145,13 @@ namespace pub
 	bool Application::OnSendFrame(const std::shared_ptr<info::Stream> &stream,
 									   const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		if (media_packet->GetMediaType() == common::MediaType::Video)
+		if (media_packet->GetMediaType() == cmn::MediaType::Video)
 		{
 			auto data = std::make_shared<Application::VideoStreamData>(stream, media_packet);
 			_video_stream_queue.Enqueue(std::move(data));
 			_last_video_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
 		}
-		else if (media_packet->GetMediaType() == common::MediaType::Audio)
+		else if (media_packet->GetMediaType() == cmn::MediaType::Audio)
 		{
 			auto data = std::make_shared<Application::AudioStreamData>(stream, media_packet);
 

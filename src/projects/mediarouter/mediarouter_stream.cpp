@@ -48,7 +48,7 @@
 
 #define PTS_CORRECT_THRESHOLD_US	5000
 
-using namespace common;
+using namespace cmn;
 
 MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream) :
 	_is_parsed_all_track(false),
@@ -248,7 +248,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 	switch(media_track->GetCodecId())
 	{
 		case MediaCodecId::H264:
-			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H264_ANNEXB)
+			if(media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H264_ANNEXB)
 			{
 				// for extradata
 				AVCDecoderConfigurationRecord avc_decoder_configuration_record;
@@ -314,7 +314,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 			break;
 
 		case MediaCodecId::H265:
-			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H265_ANNEXB)
+			if(media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H265_ANNEXB)
 			{
 				// Analyzes NALU packets and extracts track information for SPS/PPS types.
 				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();
@@ -358,7 +358,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 			} break;
 		
 		case MediaCodecId::Aac:
-			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::AAC_ADTS)
+			if(media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_ADTS)
 			{
 				// for extradata
 				AACSpecificConfig aac_specific_config;
@@ -497,7 +497,7 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 	switch(media_track->GetCodecId())
 	{
 		case MediaCodecId::H264:
-			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H264_AVCC)
+			if(media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H264_AVCC)
 			{
 				std::vector<uint8_t> extradata; 
 				if( H264AvccToAnnexB::GetExtradata(media_packet->GetPacketType(), media_packet->GetData(), extradata) == true)
@@ -514,14 +514,14 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 					return false;
 				}
 				
-				media_packet->SetBitstreamFormat(common::BitstreamFormat::H264_ANNEXB);
-				media_packet->SetPacketType(common::PacketType::NALU);
+				media_packet->SetBitstreamFormat(cmn::BitstreamFormat::H264_ANNEXB);
+				media_packet->SetPacketType(cmn::PacketType::NALU);
 			}
 
 			break;	
 		case MediaCodecId::Aac:
 
-			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::AAC_LATM)
+			if(media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_LATM)
 			{
 				std::vector<uint8_t> extradata; 
 				if( AACLatmToAdts::GetExtradata(media_packet->GetPacketType(), media_packet->GetData(), extradata) == true)
@@ -536,13 +536,13 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 					return false;
 				}
 			
-				media_packet->SetBitstreamFormat(common::BitstreamFormat::AAC_ADTS);
-				media_packet->SetPacketType(common::PacketType::RAW);
+				media_packet->SetBitstreamFormat(cmn::BitstreamFormat::AAC_ADTS);
+				media_packet->SetPacketType(cmn::PacketType::RAW);
 			}
 			break;
 
 		case MediaCodecId::H265:
-			if(media_packet->GetBitstreamFormat() != common::BitstreamFormat::H265_ANNEXB)
+			if(media_packet->GetBitstreamFormat() != cmn::BitstreamFormat::H265_ANNEXB)
 			{
 				logte("Invalid H265 bitstream format");
 				return false;
@@ -570,7 +570,7 @@ bool MediaRouteStream::UpdateDecoderParameterSets(
 	switch(media_track->GetCodecId())
 	{
 		case MediaCodecId::H264:
-			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H264_ANNEXB)
+			if(media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H264_ANNEXB)
 			{
 				// Analyzes NALU packets and extracts track information for SPS/PPS types.
 				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();
@@ -651,7 +651,7 @@ bool MediaRouteStream::UpdateDecoderParameterSets(
 			break;
 
 		case MediaCodecId::H265:
-			if(media_packet->GetBitstreamFormat() == common::BitstreamFormat::H265_ANNEXB)
+			if(media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H265_ANNEXB)
 			{
 				// Analyzes NALU packets and extracts track information for SPS/PPS types.
 				auto payload_data = media_packet->GetData()->GetDataAs<uint8_t>();

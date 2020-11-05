@@ -45,7 +45,7 @@ namespace api
 
 			// auto orchestrator = ocst::Orchestrator::GetInstance();
 
-			cfg::Application app;
+			cfg::vhost::app::Application app;
 
 			// orchestrator->CreateApplication(
 			

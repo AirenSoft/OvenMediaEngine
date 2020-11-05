@@ -1058,10 +1058,10 @@ namespace pvd
 			dts *= video_track->GetVideoTimestampScale();
 			pts *= video_track->GetVideoTimestampScale();
 
-			common::PacketType	packet_type;
+			cmn::PacketType	packet_type;
 			if(flv_video.PacketType() == FlvAvcPacketType::AVC_SEQUENCE_HEADER)
 			{
-				packet_type = common::PacketType::SEQUENCE_HEADER;
+				packet_type = cmn::PacketType::SEQUENCE_HEADER;
 
 				// AVCDecoderConfigurationRecord Unit Test
 				AVCDecoderConfigurationRecord record;
@@ -1069,7 +1069,7 @@ namespace pvd
 			}
 			else if(flv_video.PacketType() == FlvAvcPacketType::AVC_NALU)
 			{
-				packet_type = common::PacketType::NALU;
+				packet_type = cmn::PacketType::NALU;
 			}
 			else if(flv_video.PacketType() == FlvAvcPacketType::AVC_END_SEQUENCE)
 			{
@@ -1078,12 +1078,12 @@ namespace pvd
 			}
 
 			auto data = std::make_shared<ov::Data>(flv_video.Payload(), flv_video.PayloadLength());
-			auto video_frame = std::make_shared<MediaPacket>(common::MediaType::Video,
+			auto video_frame = std::make_shared<MediaPacket>(cmn::MediaType::Video,
 											  RTMP_VIDEO_TRACK_ID,
 											  data,
 											  pts,
 											  dts, 
-											  common::BitstreamFormat::H264_AVCC, // RTMP's packet type is AVCC 
+											  cmn::BitstreamFormat::H264_AVCC, // RTMP's packet type is AVCC 
 											 packet_type);
 
 			SendFrame(video_frame);
@@ -1210,26 +1210,26 @@ namespace pvd
 			pts *= audio_track->GetAudioTimestampScale();
 			dts *= audio_track->GetAudioTimestampScale();
 
-			common::PacketType	packet_type;
+			cmn::PacketType	packet_type;
 			if(flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
 			{
-				packet_type = common::PacketType::SEQUENCE_HEADER;
+				packet_type = cmn::PacketType::SEQUENCE_HEADER;
 				// AACSpecificConfig Unit Test
 				AACSpecificConfig config;
 				AACSpecificConfig::Parse(flv_audio.Payload(), flv_audio.PayloadLength(), config);
 			}
 			else if(flv_audio.PacketType() == FlvAACPacketType::RAW)
 			{
-				packet_type = common::PacketType::RAW;
+				packet_type = cmn::PacketType::RAW;
 			}
 
 			auto data = std::make_shared<ov::Data>(flv_audio.Payload(), flv_audio.PayloadLength());
-			auto frame = std::make_shared<MediaPacket>(common::MediaType::Audio,
+			auto frame = std::make_shared<MediaPacket>(cmn::MediaType::Audio,
 											  RTMP_AUDIO_TRACK_ID,
 											  data,
 											  pts,
 											  dts,
-											  common::BitstreamFormat::AAC_LATM,
+											  cmn::BitstreamFormat::AAC_LATM,
 											  packet_type);
 
 			SendFrame(frame);											
@@ -1284,8 +1284,8 @@ namespace pvd
 			auto new_track = std::make_shared<MediaTrack>();
 
 			new_track->SetId(RTMP_VIDEO_TRACK_ID);
-			new_track->SetMediaType(common::MediaType::Video);
-			new_track->SetCodecId(common::MediaCodecId::H264);
+			new_track->SetMediaType(cmn::MediaType::Video);
+			new_track->SetCodecId(cmn::MediaCodecId::H264);
 			new_track->SetTimeBase(1, 1000);
 			new_track->SetVideoTimestampScale(1.0);
 
@@ -1305,8 +1305,8 @@ namespace pvd
 			auto new_track = std::make_shared<MediaTrack>();
 
 			new_track->SetId(RTMP_AUDIO_TRACK_ID);
-			new_track->SetMediaType(common::MediaType::Audio);
-			new_track->SetCodecId(common::MediaCodecId::Aac);
+			new_track->SetMediaType(cmn::MediaType::Audio);
+			new_track->SetCodecId(cmn::MediaCodecId::Aac);
 			new_track->SetTimeBase(1, 1000);
 			new_track->SetAudioTimestampScale(1.0);
 
@@ -1314,18 +1314,18 @@ namespace pvd
 			// Below items are not mandatory, it will be parsed again from ADTS parser
 			//////////////////
 			new_track->SetSampleRate(media_info->audio_samplerate);
-			new_track->GetSample().SetFormat(common::AudioSample::Format::S16);
+			new_track->GetSample().SetFormat(cmn::AudioSample::Format::S16);
 			// Kbps -> bps
 			new_track->SetBitrate(media_info->audio_bitrate * 1000);
 			// new_track->SetSampleSize(conn->_audio_samplesize);
 
 			if (media_info->audio_channels == 1)
 			{
-				new_track->GetChannel().SetLayout(common::AudioChannel::Layout::LayoutMono);
+				new_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutMono);
 			}
 			else if (media_info->audio_channels == 2)
 			{
-				new_track->GetChannel().SetLayout(common::AudioChannel::Layout::LayoutStereo);
+				new_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
 			}
 
 			AddTrack(new_track);

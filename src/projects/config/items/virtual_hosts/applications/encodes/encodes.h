@@ -12,16 +12,25 @@
 
 namespace cfg
 {
-	struct Encodes : public Item
+	namespace vhost
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetEncodeList, _encode_list);
-
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			RegisterValue<Optional>("Encode", &_encode_list);
-		}
+			namespace enc
+			{
+				struct Encodes : public Item
+				{
+					CFG_DECLARE_REF_GETTER_OF(GetEncodeList, _encode_list);
 
-		std::vector<Encode> _encode_list;
-	};
+				protected:
+					void MakeParseList() override
+					{
+						RegisterValue<Optional>("Encode", &_encode_list);
+					}
+
+					std::vector<Encode> _encode_list;
+				};
+			}  // namespace enc
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg

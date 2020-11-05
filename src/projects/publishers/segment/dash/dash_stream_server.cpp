@@ -97,7 +97,7 @@ HttpConnection DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 	}
 
 	// Set HTTP header
-	response->SetHeader("Content-Type", (segment->media_type == common::MediaType::Video) ? "video/mp4" : "audio/mp4");
+	response->SetHeader("Content-Type", (segment->media_type == cmn::MediaType::Video) ? "video/mp4" : "audio/mp4");
 	response->AppendData(segment->data);
 	response->Response();
 

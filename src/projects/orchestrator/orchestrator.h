@@ -78,7 +78,7 @@ namespace ocst
 		/// @return Creation result
 		///
 		/// @note Automatically DeleteApplication() when application creation fails
-		Result CreateApplication(const info::Host &vhost_info, const cfg::Application &app_config);
+		Result CreateApplication(const info::Host &vhost_info, const cfg::vhost::app::Application &app_config);
 		/// Delete the application and notify the modules
 		///
 		/// @param app_info Application information to delete

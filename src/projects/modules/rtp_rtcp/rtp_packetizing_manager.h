@@ -6,7 +6,7 @@
 class RtpPacketizingManager
 {
 public:
-	static std::shared_ptr<RtpPacketizingManager> Create(common::MediaCodecId type);
+	static std::shared_ptr<RtpPacketizingManager> Create(cmn::MediaCodecId type);
 
 	virtual ~RtpPacketizingManager()
 	{

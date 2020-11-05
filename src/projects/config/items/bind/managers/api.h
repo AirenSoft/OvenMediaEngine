@@ -17,8 +17,8 @@ namespace cfg
 			struct API : public Item
 			{
 			protected:
-				SingularPort _port;
-				SingularPort _tls_port;
+				cmn::SingularPort _port;
+				cmn::SingularPort _tls_port;
 
 			public:
 				explicit API(const char *port)

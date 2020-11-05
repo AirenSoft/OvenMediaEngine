@@ -36,7 +36,7 @@ bool OvtDepacketizer::AppendPacket(const std::shared_ptr<OvtPacket> &packet)
 		auto pts = ByteReader<uint64_t>::ReadBigEndian(&buffer[4]);
 		auto dts = ByteReader<uint64_t>::ReadBigEndian(&buffer[12]);
 		auto duration = ByteReader<uint64_t>::ReadBigEndian(&buffer[20]);
-		auto media_type = static_cast<common::MediaType>(ByteReader<uint8_t>::ReadBigEndian(&buffer[28]));
+		auto media_type = static_cast<cmn::MediaType>(ByteReader<uint8_t>::ReadBigEndian(&buffer[28]));
 		auto media_flag = static_cast<MediaPacketFlag>(ByteReader<uint8_t>::ReadBigEndian(&buffer[29]));
 		auto data_size = ByteReader<uint32_t>::ReadBigEndian(&buffer[30]);
 

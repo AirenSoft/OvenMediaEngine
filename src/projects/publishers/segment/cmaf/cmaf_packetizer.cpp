@@ -47,17 +47,17 @@ CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &str
 	_chunked_transfer = chunked_transfer;
 }
 
-ov::String CmafPacketizer::GetFileName(int64_t start_timestamp, common::MediaType media_type) const
+ov::String CmafPacketizer::GetFileName(int64_t start_timestamp, cmn::MediaType media_type) const
 {
 	// start_timestamp must be -1 because it is an unused parameter
 	OV_ASSERT2(start_timestamp == -1LL);
 
 	switch (media_type)
 	{
-		case common::MediaType::Video:
+		case cmn::MediaType::Video:
 			return ov::String::FormatString("%s_%u%s", _segment_prefix.CStr(), _video_chunk_writer->GetSequenceNumber(), CMAF_MPD_VIDEO_FULL_SUFFIX);
 
-		case common::MediaType::Audio:
+		case cmn::MediaType::Audio:
 			return ov::String::FormatString("%s_%u%s", _segment_prefix.CStr(), _audio_chunk_writer->GetSequenceNumber(), CMAF_MPD_AUDIO_FULL_SUFFIX);
 
 		default:
@@ -85,7 +85,7 @@ bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &fram
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
 		{
 			// Response chunk data to HTTP client
-			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(-1LL, common::MediaType::Video), true, chunk_data);
+			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(-1LL, cmn::MediaType::Video), true, chunk_data);
 		}
 
 		_last_video_pts = data->pts;
@@ -105,7 +105,7 @@ bool CmafPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &fram
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
 		{
 			// Response chunk data to HTTP client
-			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(-1LL, common::MediaType::Audio), false, chunk_data);
+			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(-1LL, cmn::MediaType::Audio), false, chunk_data);
 		}
 
 		_last_audio_pts = data->pts;
@@ -125,7 +125,7 @@ bool CmafPacketizer::WriteVideoSegment()
 		return true;
 	}
 
-	auto file_name = GetFileName(-1LL, common::MediaType::Video);
+	auto file_name = GetFileName(-1LL, cmn::MediaType::Video);
 	auto start_timestamp = _video_chunk_writer->GetStartTimestamp();
 	auto segment_duration = _video_chunk_writer->GetSegmentDuration();
 
@@ -157,7 +157,7 @@ bool CmafPacketizer::WriteAudioSegment()
 		return true;
 	}
 
-	auto file_name = GetFileName(-1LL, common::MediaType::Audio);
+	auto file_name = GetFileName(-1LL, cmn::MediaType::Audio);
 	auto start_timestamp = _audio_chunk_writer->GetStartTimestamp();
 	auto segment_duration = _audio_chunk_writer->GetSegmentDuration();
 

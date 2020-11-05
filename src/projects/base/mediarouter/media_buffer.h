@@ -27,7 +27,7 @@ class MediaPacket
 public:
 	// Provider must inform the bitstream format so that MediaRouter can handle it.
 	// This constructor is usually used by the Provider to send media packets to the MediaRouter.
-	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, common::BitstreamFormat bitstream_format, common::PacketType packet_type)
+	MediaPacket(cmn::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
 		: MediaPacket(media_type, track_id, data, pts, dts, -1LL, MediaPacketFlag::Unknwon)
 	{
 		_bitstream_format = bitstream_format;
@@ -35,7 +35,7 @@ public:
 	}
 
 	// This constructor is usually used by the MediaRouter to send media packets to the publihsers.
-	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag, common::BitstreamFormat bitstream_format, common::PacketType packet_type)
+	MediaPacket(cmn::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
 		: _media_type(media_type),
 		  _track_id(track_id),
 		  _data(data),
@@ -50,7 +50,7 @@ public:
 	}
 
 	// This constructor is usually used by the MediaRouter to send media packets to the publihsers.
-	MediaPacket(common::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
+	MediaPacket(cmn::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
 		: _media_type(media_type),
 		  _track_id(track_id),
 		  _data(data),
@@ -61,7 +61,7 @@ public:
 	{
 	}
 
-	MediaPacket(common::MediaType media_type, int32_t track_id, const ov::Data *data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
+	MediaPacket(cmn::MediaType media_type, int32_t track_id, const ov::Data *data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
 		: _media_type(media_type),
 		  _track_id(track_id),
 		  _pts(pts),
@@ -79,7 +79,7 @@ public:
 		}
 	}
 
-	MediaPacket(common::MediaType media_type, int32_t track_id, const void *data, int32_t data_size, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
+	MediaPacket(cmn::MediaType media_type, int32_t track_id, const void *data, int32_t data_size, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
 		: MediaPacket(media_type, track_id, nullptr, pts, dts, duration, flag)
 	{
 		if (data != nullptr)
@@ -92,7 +92,7 @@ public:
 		}
 	}
 
-	common::MediaType GetMediaType() const noexcept
+	cmn::MediaType GetMediaType() const noexcept
 	{
 		return _media_type;
 	}
@@ -161,22 +161,22 @@ public:
 		_flag = flag;
 	}
 	
-	common::BitstreamFormat GetBitstreamFormat() const noexcept
+	cmn::BitstreamFormat GetBitstreamFormat() const noexcept
 	{
 		return _bitstream_format;
 	}
 
-	common::PacketType GetPacketType() const noexcept
+	cmn::PacketType GetPacketType() const noexcept
 	{
 		return _packet_type;
 	}
 
-	void SetBitstreamFormat(common::BitstreamFormat format)
+	void SetBitstreamFormat(cmn::BitstreamFormat format)
 	{
 		_bitstream_format = format;
 	}
 
-	void SetPacketType(common::PacketType type)
+	void SetPacketType(cmn::PacketType type)
 	{
 		_packet_type = type;
 	}
@@ -215,7 +215,7 @@ public:
 	}
 
 protected:
-	common::MediaType _media_type = common::MediaType::Unknown;
+	cmn::MediaType _media_type = cmn::MediaType::Unknown;
 	int32_t _track_id = -1;
 
 	std::shared_ptr<ov::Data> _data = nullptr;
@@ -224,8 +224,8 @@ protected:
 	int64_t _dts = -1LL;
 	int64_t _duration = -1LL;
 	MediaPacketFlag _flag = MediaPacketFlag::Unknwon;
-	common::BitstreamFormat _bitstream_format = common::BitstreamFormat::Unknwon;
-	common::PacketType _packet_type = common::PacketType::Unknwon;
+	cmn::BitstreamFormat _bitstream_format = cmn::BitstreamFormat::Unknwon;
+	cmn::PacketType _packet_type = cmn::PacketType::Unknwon;
 	FragmentationHeader _frag_hdr;
 };
 
@@ -234,7 +234,7 @@ class MediaFrame
 public:
 	MediaFrame() = default;
 
-	MediaFrame(common::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts, int64_t duration, int32_t flags)
+	MediaFrame(cmn::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts, int64_t duration, int32_t flags)
 		: _media_type(media_type),
 		  _track_id(track_id),
 		  _pts(pts),
@@ -244,13 +244,13 @@ public:
 		SetBuffer(data, data_size);
 	}
 
-	MediaFrame(common::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts, int64_t duration)
+	MediaFrame(cmn::MediaType media_type, int32_t track_id, const uint8_t *data, int32_t data_size, int64_t pts, int64_t duration)
 		: MediaFrame(media_type, track_id, data, data_size, pts, duration, 0)
 	{
 	}
 
 	MediaFrame(const uint8_t *data, int32_t data_size, int64_t pts, int64_t duration)
-		: MediaFrame(common::MediaType::Unknown, 0, data, data_size, pts, duration, 0)
+		: MediaFrame(cmn::MediaType::Unknown, 0, data, data_size, pts, duration, 0)
 	{
 	}
 
@@ -346,12 +346,12 @@ public:
 		}
 	}
 
-	void SetMediaType(common::MediaType media_type)
+	void SetMediaType(cmn::MediaType media_type)
 	{
 		_media_type = media_type;
 	}
 
-	common::MediaType GetMediaType() const
+	cmn::MediaType GetMediaType() const
 	{
 		return _media_type;
 	}
@@ -487,35 +487,35 @@ public:
 		{
 			case 1:
 				_channels = channels;
-				_channel_layout = common::AudioChannel::Layout::LayoutMono;
+				_channel_layout = cmn::AudioChannel::Layout::LayoutMono;
 				break;
 
 			case 2:
 				_channels = channels;
-				_channel_layout = common::AudioChannel::Layout::LayoutStereo;
+				_channel_layout = cmn::AudioChannel::Layout::LayoutStereo;
 				break;
 		}
 	}
 
-	common::AudioChannel::Layout GetChannelLayout() const
+	cmn::AudioChannel::Layout GetChannelLayout() const
 	{
 		return _channel_layout;
 	}
 
-	void SetChannelLayout(common::AudioChannel::Layout channel_layout)
+	void SetChannelLayout(cmn::AudioChannel::Layout channel_layout)
 	{
 		switch (channel_layout)
 		{
-			case common::AudioChannel::Layout::LayoutMono:
+			case cmn::AudioChannel::Layout::LayoutMono:
 				_channel_layout = channel_layout;
 				_channels = 1;
 				break;
 
-			case common::AudioChannel::Layout::LayoutStereo:
+			case cmn::AudioChannel::Layout::LayoutStereo:
 				_channel_layout = channel_layout;
 				_channels = 2;
 				break;
-			case common::AudioChannel::Layout::LayoutUnknown:
+			case cmn::AudioChannel::Layout::LayoutUnknown:
 			default:
 				_channel_layout = channel_layout;
 				_channels = 0;
@@ -549,7 +549,7 @@ public:
 	{
 		auto frame = std::make_shared<MediaFrame>();
 
-		if (_media_type == common::MediaType::Video)
+		if (_media_type == cmn::MediaType::Video)
 		{
 			frame->SetWidth(_width);
 			frame->SetHeight(_height);
@@ -563,7 +563,7 @@ public:
 				frame->SetPlainData(GetPlainData(i)->Clone(), i);
 			}
 		}
-		else if (_media_type == common::MediaType::Audio)
+		else if (_media_type == cmn::MediaType::Audio)
 		{
 			frame->SetFormat(_format);
 			frame->SetBytesPerSample(_bytes_per_sample);
@@ -623,7 +623,7 @@ private:
 
 	// Data plane, Data
 	std::map<int32_t, std::shared_ptr<ov::Data>> _data_buffer;
-	common::MediaType _media_type = common::MediaType::Unknown;
+	cmn::MediaType _media_type = cmn::MediaType::Unknown;
 	int32_t _track_id = 0;
 	int64_t _pts = 0LL;
 	int64_t _duration = 0LL;
@@ -637,7 +637,7 @@ private:
 	int32_t _bytes_per_sample = 0;
 	int32_t _nb_samples = 0;
 	int32_t _channels = 0;
-	common::AudioChannel::Layout _channel_layout = common::AudioChannel::Layout::LayoutMono;
+	cmn::AudioChannel::Layout _channel_layout = cmn::AudioChannel::Layout::LayoutMono;
 	int32_t _sample_rate = 0;
 
 	int32_t _flags = 0;  // Key, non-Key

@@ -13,20 +13,29 @@
 
 namespace cfg
 {
-	struct MpegtsProvider : public Provider
+	namespace vhost
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Mpegts)
-
-		CFG_DECLARE_REF_GETTER_OF(GetStreamMap, _stream_map)
-
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			Provider::MakeParseList();
+			namespace pvd
+			{
+				struct MpegtsProvider : public Provider
+				{
+					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Mpegts)
 
-			RegisterValue<Optional>("StreamMap", &_stream_map);
-		}
+					CFG_DECLARE_REF_GETTER_OF(GetStreamMap, _stream_map)
 
-		mpegts::StreamMap _stream_map;
-	};
+				protected:
+					void MakeParseList() override
+					{
+						Provider::MakeParseList();
+
+						RegisterValue<Optional>("StreamMap", &_stream_map);
+					}
+
+					mpegts::StreamMap _stream_map;
+				};
+			}  // namespace pvd
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg

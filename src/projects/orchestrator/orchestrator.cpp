@@ -280,7 +280,7 @@ namespace ocst
 		return OrchestratorInternal::GetUrlListForLocation(vhost_app_name, host_name, stream_name, url_list, nullptr, nullptr);
 	}
 
-	ocst::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::Application &app_config)
+	ocst::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::vhost::app::Application &app_config)
 	{
 		auto scoped_lock = std::scoped_lock(_module_list_mutex, _virtual_host_map_mutex);
 

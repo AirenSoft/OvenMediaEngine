@@ -12,7 +12,7 @@
 
 #define OV_LOG_TAG "Stream"
 
-using namespace common;
+using namespace cmn;
 
 namespace info
 {

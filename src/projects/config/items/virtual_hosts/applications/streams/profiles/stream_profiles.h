@@ -12,16 +12,28 @@
 
 namespace cfg
 {
-	struct StreamProfiles : public Item
+	namespace vhost
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetProfileList, _profile_list)
-
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			RegisterValue("Profile", &_profile_list);
-		}
+			namespace stream
+			{
+				namespace prf
+				{
+					struct Profiles : public Item
+					{
+						CFG_DECLARE_REF_GETTER_OF(GetProfileList, _profile_list)
 
-		std::vector<StreamProfile> _profile_list;
-	};
+					protected:
+						void MakeParseList() override
+						{
+							RegisterValue("Profile", &_profile_list);
+						}
+
+						std::vector<Profile> _profile_list;
+					};
+				}  // namespace prf
+			}	   // namespace stream
+		}		   // namespace app
+	}			   // namespace vhost
 }  // namespace cfg

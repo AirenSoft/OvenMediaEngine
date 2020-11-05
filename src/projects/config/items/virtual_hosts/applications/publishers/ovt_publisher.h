@@ -12,8 +12,17 @@
 
 namespace cfg
 {
-	struct OvtPublisher : public Publisher
+	namespace vhost
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Ovt)
-	};
+		namespace app
+		{
+			namespace pub
+			{
+				struct OvtPublisher : public Publisher
+				{
+					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Ovt)
+				};
+			}  // namespace pub
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg

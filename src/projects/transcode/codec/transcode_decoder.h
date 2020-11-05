@@ -17,7 +17,7 @@ public:
 	TranscodeDecoder(info::Stream stream_info);
 	~TranscodeDecoder() override;
 
-	static std::shared_ptr<TranscodeDecoder> CreateDecoder(const info::Stream &info, common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context);
+	static std::shared_ptr<TranscodeDecoder> CreateDecoder(const info::Stream &info, cmn::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context);
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
 
@@ -25,7 +25,7 @@ public:
 
 	std::shared_ptr<TranscodeContext>& GetContext();
 
-	common::Timebase GetTimebase() const;
+	cmn::Timebase GetTimebase() const;
 
 protected:
 	static const ov::String ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters);

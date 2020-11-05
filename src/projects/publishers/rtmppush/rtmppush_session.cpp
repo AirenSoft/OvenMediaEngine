@@ -59,7 +59,7 @@ bool RtmpPushSession::Start()
 		auto track_info = RtmpTrackInfo::Create();
 
 		// It does not transmit unless it is H264 and AAC codec.
-		if( !(track->GetCodecId() == common::MediaCodecId::H264 || track->GetCodecId() == common::MediaCodecId::Aac))
+		if( !(track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::Aac))
 		{
 			logtw("Could not supported codec. codec_id(%d)", track->GetCodecId());
 			continue;

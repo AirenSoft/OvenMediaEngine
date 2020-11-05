@@ -50,8 +50,8 @@ class RtpUdpTrack : public RtpTrack
 
 public:
     RtpUdpTrack(RtspServer &rtsp_server,
-        common::MediaType media_type,
-        common::MediaCodecId media_codec_id,
+        cmn::MediaType media_type,
+        cmn::MediaCodecId media_codec_id,
         uint32_t stream_id,
         uint8_t track_id,
         uint32_t clock_frequency,
@@ -64,8 +64,8 @@ public:
 
     template< typename U, ov::SocketType socket_type>
     static std::unique_ptr<U> Create(RtspServer &rtsp_server,
-        common::MediaType media_type,
-        common::MediaCodecId media_codec_id,
+        cmn::MediaType media_type,
+        cmn::MediaCodecId media_codec_id,
         uint32_t stream_id,
         uint8_t track_id,
         uint32_t clock_frequency,

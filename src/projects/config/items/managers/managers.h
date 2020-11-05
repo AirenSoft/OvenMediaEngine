@@ -18,7 +18,7 @@ namespace cfg
 		struct Managers : public Item
 		{
 		protected:
-			Host _host;
+			cmn::Host _host;
 			API _api;
 
 		public:

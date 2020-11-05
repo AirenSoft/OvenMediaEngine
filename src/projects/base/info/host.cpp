@@ -12,8 +12,8 @@
 
 namespace info
 {
-	Host::Host(const cfg::VirtualHost &host_info)
-		: cfg::VirtualHost(host_info)
+	Host::Host(const cfg::vhost::VirtualHost &host_info)
+		: cfg::vhost::VirtualHost(host_info)
 	{
 		_host_id = ov::Random::GenerateUInt32();
 
@@ -24,7 +24,7 @@ namespace info
 			name_list.push_back(name.GetName());
 		}
 
-		const cfg::Tls &tls = GetHost().GetTls();
+		const cfg::cmn::Tls &tls = GetHost().GetTls();
 		std::shared_ptr<ov::Error> error = nullptr;
 
 		_certificate = Certificate::CreateCertificate(host_info.GetName(), name_list, tls);

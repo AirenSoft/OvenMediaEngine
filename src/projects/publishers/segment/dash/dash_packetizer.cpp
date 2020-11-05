@@ -123,14 +123,14 @@ int DashPacketizer::GetStartPatternSize(const uint8_t *buffer, const size_t buff
 	return 0;
 }
 
-ov::String DashPacketizer::GetFileName(int64_t start_timestamp, common::MediaType media_type) const
+ov::String DashPacketizer::GetFileName(int64_t start_timestamp, cmn::MediaType media_type) const
 {
 	switch (media_type)
 	{
-		case common::MediaType::Video:
+		case cmn::MediaType::Video:
 			return ov::String::FormatString("%s_%lld%s", _segment_prefix.CStr(), start_timestamp, DASH_MPD_VIDEO_FULL_SUFFIX);
 
-		case common::MediaType::Audio:
+		case cmn::MediaType::Audio:
 			return ov::String::FormatString("%s_%lld%s", _segment_prefix.CStr(), start_timestamp, DASH_MPD_AUDIO_FULL_SUFFIX);
 
 		default:
@@ -315,7 +315,7 @@ bool DashPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 	_avc_nal_header_size = (nal_packet_header_length + avc_sps->GetLength()) + (nal_packet_header_length + avc_pps->GetLength());
 
 	// Store data for video stream
-	_video_init_file = std::make_shared<SegmentData>(common::MediaType::Video, 0, init_file_name, 0, 0, init_data);
+	_video_init_file = std::make_shared<SegmentData>(cmn::MediaType::Video, 0, init_file_name, 0, 0, init_data);
 
 	logtd("%s init file (%s) is written for video [%s/%s]", GetPacketizerName(), init_file_name.CStr(), _app_name.CStr(), _stream_name.CStr());
 
@@ -355,7 +355,7 @@ bool DashPacketizer::WriteVideoSegment()
 	auto segment_duration = last_frame->pts + last_frame->duration - start_timestamp;
 
 	// Append the data to the m4s list
-	if (SetSegmentData(GetFileName(start_timestamp, common::MediaType::Video), segment_duration, start_timestamp, segment_data) == false)
+	if (SetSegmentData(GetFileName(start_timestamp, cmn::MediaType::Video), segment_duration, start_timestamp, segment_data) == false)
 	{
 		return false;
 	}
@@ -505,7 +505,7 @@ bool DashPacketizer::WriteAudioInitInternal(const std::shared_ptr<ov::Data> &fra
 	}
 
 	// Store data for audio stream
-	_audio_init_file = std::make_shared<SegmentData>(common::MediaType::Audio, 0, init_file_name, 0, 0, init_data);
+	_audio_init_file = std::make_shared<SegmentData>(cmn::MediaType::Audio, 0, init_file_name, 0, 0, init_data);
 
 	logtd("%s init file (%s) is written for audio [%s/%s]", GetPacketizerName(), init_file_name.CStr(), _app_name.CStr(), _stream_name.CStr());
 
@@ -543,7 +543,7 @@ bool DashPacketizer::WriteAudioSegment()
 	const auto &last_frame = sample_datas.back();
 	auto segment_duration = last_frame->pts + last_frame->duration - start_timestamp;
 
-	if (SetSegmentData(GetFileName(start_timestamp, common::MediaType::Audio), segment_duration, start_timestamp, segment_data) == false)
+	if (SetSegmentData(GetFileName(start_timestamp, cmn::MediaType::Audio), segment_duration, start_timestamp, segment_data) == false)
 	{
 		return false;
 	}
@@ -909,7 +909,7 @@ bool DashPacketizer::SetSegmentData(ov::String file_name, uint64_t duration, int
 			// video segment mutex
 			std::unique_lock<std::mutex> lock(_video_segment_guard);
 
-			_video_segment_datas[_current_video_index++] = std::make_shared<SegmentData>(common::MediaType::Video, _sequence_number++, file_name, timestamp, duration, data);
+			_video_segment_datas[_current_video_index++] = std::make_shared<SegmentData>(cmn::MediaType::Video, _sequence_number++, file_name, timestamp, duration, data);
 
 			if (_segment_save_count <= _current_video_index)
 			{
@@ -929,7 +929,7 @@ bool DashPacketizer::SetSegmentData(ov::String file_name, uint64_t duration, int
 			// audio segment mutex
 			std::unique_lock<std::mutex> lock(_audio_segment_guard);
 
-			_audio_segment_datas[_current_audio_index++] = std::make_shared<SegmentData>(common::MediaType::Audio, _sequence_number++, file_name, timestamp, duration, data);
+			_audio_segment_datas[_current_audio_index++] = std::make_shared<SegmentData>(cmn::MediaType::Audio, _sequence_number++, file_name, timestamp, duration, data);
 
 			if (_segment_save_count <= _current_audio_index)
 			{

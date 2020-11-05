@@ -12,16 +12,19 @@
 
 namespace cfg
 {
-	struct CrossDomain : public Item
+	namespace cmn
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetUrls, _url_list)
-
-	protected:
-		void MakeParseList() override
+		struct CrossDomain : public Item
 		{
-			RegisterValue("Url", &_url_list);
-		}
+			CFG_DECLARE_REF_GETTER_OF(GetUrls, _url_list)
 
-		std::vector<Url> _url_list;
-	};
+		protected:
+			void MakeParseList() override
+			{
+				RegisterValue("Url", &_url_list);
+			}
+
+			std::vector<Url> _url_list;
+		};
+	}  // namespace cmn
 }  // namespace cfg

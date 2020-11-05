@@ -55,7 +55,7 @@ protected:
 	static int GetStartPatternSize(const uint8_t *buffer, const size_t buffer_len);
 
 	// start_timestamp: a timestamp of the first frame of the segment
-	virtual ov::String GetFileName(int64_t start_timestamp, common::MediaType media_type) const;
+	virtual ov::String GetFileName(int64_t start_timestamp, cmn::MediaType media_type) const;
 
 	bool WriteVideoInitInternal(const std::shared_ptr<ov::Data> &frame, const ov::String &init_file_name);
 	virtual bool WriteVideoInit(const std::shared_ptr<ov::Data> &frame);

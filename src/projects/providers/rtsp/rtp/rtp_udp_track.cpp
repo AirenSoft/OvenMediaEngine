@@ -39,8 +39,8 @@ void RtpUdpTrack::GetServerPorts(uint16_t &rtp_port, uint16_t &rtcp_port)
 }
 
 RtpUdpTrack::RtpUdpTrack(RtspServer &rtsp_server,
-    common::MediaType media_type,
-    common::MediaCodecId media_codec_id,
+    cmn::MediaType media_type,
+    cmn::MediaCodecId media_codec_id,
     uint32_t stream_id,
     uint8_t track_id,
     uint32_t clock_frequency,

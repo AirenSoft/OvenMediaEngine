@@ -14,7 +14,7 @@
 
 #define ASYNC_CSTREAM_ENABLE 0
 
-using namespace common;
+using namespace cmn;
 
 std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info::Application &application_info)
 {

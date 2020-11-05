@@ -10,20 +10,26 @@
 
 namespace cfg
 {
-	// SignedToken is for special purposes only. This is a private feature.
-	struct SignedToken : public Item
+	namespace vhost
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetCryptoKey, _crypto_key)
-		CFG_DECLARE_REF_GETTER_OF(GetQueryStringKey, _query_string_key)
-
-	protected:
-		void MakeParseList() override
+		namespace sig
 		{
-			RegisterValue("CryptoKey", &_crypto_key);
-			RegisterValue("QueryStringKey", &_query_string_key);
-		}
+			// SignedToken is for special purposes only. This is a private feature.
+			struct SignedToken : public Item
+			{
+				CFG_DECLARE_REF_GETTER_OF(GetCryptoKey, _crypto_key)
+				CFG_DECLARE_REF_GETTER_OF(GetQueryStringKey, _query_string_key)
 
-		ov::String _crypto_key;
-		ov::String _query_string_key;
-	};
+			protected:
+				void MakeParseList() override
+				{
+					RegisterValue("CryptoKey", &_crypto_key);
+					RegisterValue("QueryStringKey", &_query_string_key);
+				}
+
+				ov::String _crypto_key;
+				ov::String _query_string_key;
+			};
+		}  // namespace sig
+	}	   // namespace vhost
 }  // namespace cfg

@@ -196,7 +196,7 @@ void OvenCodecImplAvcodecEncPng::ThreadEncode()
 #endif
 				// Encoded packet is ready
 				auto packet_buffer = std::make_shared<MediaPacket>(
-										common::MediaType::Video, 
+										cmn::MediaType::Video, 
 										0, 
 										_packet->data, 
 										_packet->size, 
@@ -204,8 +204,8 @@ void OvenCodecImplAvcodecEncPng::ThreadEncode()
 										_packet->dts, 										
 										-1L, 
 										(_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
-				packet_buffer->SetBitstreamFormat(common::BitstreamFormat::PNG);
-				packet_buffer->SetPacketType(common::PacketType::RAW);
+				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::PNG);
+				packet_buffer->SetPacketType(cmn::PacketType::RAW);
 
 				::av_packet_unref(_packet);
 

@@ -46,7 +46,7 @@ public:
 	virtual int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) = 0;
 	virtual std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) = 0;
 
-	static AVRational TimebaseToAVRational(const common::Timebase &timebase)
+	static AVRational TimebaseToAVRational(const cmn::Timebase &timebase)
 	{
 		return (AVRational){
 			.num = timebase.GetNum(),
@@ -64,12 +64,12 @@ public:
 		return _output_buffer.size();
 	}
 
-	common::Timebase GetInputTimebase() const
+	cmn::Timebase GetInputTimebase() const
 	{
 		return _input_context->GetTimeBase();
 	}
 
-	common::Timebase GetOutputTimebase() const
+	cmn::Timebase GetOutputTimebase() const
 	{
 		return _output_context->GetTimeBase();
 	}

@@ -59,7 +59,7 @@ public:
 	virtual void SendBuffer(std::shared_ptr<const InputType> buf) = 0;
 	virtual std::shared_ptr<OutputType> RecvBuffer(TranscodeResult *result) = 0;
 
-	static AVRational TimebaseToAVRational(const common::Timebase &timebase)
+	static AVRational TimebaseToAVRational(const cmn::Timebase &timebase)
 	{
 		return (AVRational){
 			.num = timebase.GetNum(),

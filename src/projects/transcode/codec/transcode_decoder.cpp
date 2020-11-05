@@ -42,24 +42,24 @@ std::shared_ptr<TranscodeContext>& TranscodeDecoder::GetContext()
 	return _input_context;
 }
 
-common::Timebase TranscodeDecoder::GetTimebase() const
+cmn::Timebase TranscodeDecoder::GetTimebase() const
 {
 	return _input_context->GetTimeBase();
 }
 
-std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::Stream &info, common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
+std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::Stream &info, cmn::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
 {
 	std::shared_ptr<TranscodeDecoder> decoder = nullptr;
 
 	switch (codec_id)
 	{
-		case common::MediaCodecId::H264:
+		case cmn::MediaCodecId::H264:
 			decoder = std::make_shared<OvenCodecImplAvcodecDecAVC>(info);
 			break;
-		case common::MediaCodecId::H265:
+		case cmn::MediaCodecId::H265:
 			decoder = std::make_shared<OvenCodecImplAvcodecDecHEVC>(info);
 			break;
-		case common::MediaCodecId::Aac:
+		case cmn::MediaCodecId::Aac:
 			decoder = std::make_shared<OvenCodecImplAvcodecDecAAC>(info);
 			break;
 

@@ -1,4 +1,4 @@
-//==============================================================================
+//=============================================================================
 //
 //  OvenMediaEngine
 //
@@ -14,22 +14,22 @@ namespace cfg
 	{
 		namespace app
 		{
-			namespace pub
+			namespace oprf
 			{
-				struct Publisher : public Item
+				struct OutputProfile : public Item
 				{
-					virtual PublisherType GetType() const = 0;
-					CFG_DECLARE_GETTER_OF(GetMaxConnection, _max_connection)
+				protected:
+					ov::String _name;
+					ov::String _output_stream_name;
+					std::vector<enc::Encode> _encodes;
 
+				public:
 				protected:
 					void MakeParseList() override
 					{
-						RegisterValue<Optional>("MaxConnection", &_max_connection);
 					}
-
-					int _max_connection = 0;
 				};
-			}  // namespace pub
+			}  // namespace oprf
 		}	   // namespace app
 	}		   // namespace vhost
 }  // namespace cfg

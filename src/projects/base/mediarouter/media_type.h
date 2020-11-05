@@ -10,7 +10,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
-namespace common
+namespace cmn
 {
 	enum class MediaType : int8_t
 	{
@@ -395,4 +395,4 @@ namespace common
 		std::string _name = "stereo";
 	};
 
-}  // namespace common
+}  // namespace cmn

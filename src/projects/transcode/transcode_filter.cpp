@@ -3,7 +3,7 @@
 #include "filter/media_filter_resampler.h"
 #include "filter/media_filter_rescaler.h"
 
-using namespace common;
+using namespace cmn;
 
 
 #define OV_LOG_TAG "TranscodeFilter"
@@ -73,12 +73,12 @@ uint32_t TranscodeFilter::GetOutputBufferSize()
 	return _impl->GetOutputBufferSize();
 }
 
-common::Timebase TranscodeFilter::GetInputTimebase() const
+cmn::Timebase TranscodeFilter::GetInputTimebase() const
 {
 	return _impl->GetInputTimebase();
 }
 
-common::Timebase TranscodeFilter::GetOutputTimebase() const
+cmn::Timebase TranscodeFilter::GetOutputTimebase() const
 {
 	return _impl->GetOutputTimebase();
 }

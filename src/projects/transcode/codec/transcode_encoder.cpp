@@ -43,31 +43,31 @@ TranscodeEncoder::~TranscodeEncoder()
 	_output_buffer.clear();	
 }
 
-std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> output_context)
+std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(cmn::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> output_context)
 {
 	std::shared_ptr<TranscodeEncoder> encoder = nullptr;
 
 	switch(codec_id)
 	{
-		case common::MediaCodecId::H264:
+		case cmn::MediaCodecId::H264:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncAVC>();
 			break;
-		case common::MediaCodecId::H265:
+		case cmn::MediaCodecId::H265:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncHEVC>();
 			break;
-		case common::MediaCodecId::Vp8:
+		case cmn::MediaCodecId::Vp8:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncVP8>();
 			break;
-		case common::MediaCodecId::Jpeg:
+		case cmn::MediaCodecId::Jpeg:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncJpeg>();
 			break;
-		case common::MediaCodecId::Png:
+		case cmn::MediaCodecId::Png:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncPng>();
 			break;			
-		case common::MediaCodecId::Aac:
+		case cmn::MediaCodecId::Aac:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncAAC>();
 			break;
-		case common::MediaCodecId::Opus:
+		case cmn::MediaCodecId::Opus:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncOpus>();
 			break;
 		default:
@@ -86,7 +86,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(common::MediaC
 	return std::move(encoder);
 }
 
-common::Timebase TranscodeEncoder::GetTimebase() const
+cmn::Timebase TranscodeEncoder::GetTimebase() const
 {
 	return _output_context->GetTimeBase();
 }

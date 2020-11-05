@@ -148,7 +148,7 @@ namespace ocst
 		return succeeded;
 	}
 
-	ocst::ItemState OrchestratorInternal::ProcessHostList(std::vector<Host> *host_list, const cfg::Host &host_config) const
+	ocst::ItemState OrchestratorInternal::ProcessHostList(std::vector<Host> *host_list, const cfg::cmn::Host &host_config) const
 	{
 		bool is_changed = false;
 
@@ -219,7 +219,7 @@ namespace ocst
 		return is_changed ? ItemState::Changed : ItemState::NotChanged;
 	}
 
-	ocst::ItemState OrchestratorInternal::ProcessOriginList(std::vector<Origin> *origin_list, const cfg::Origins &origins_config) const
+	ocst::ItemState OrchestratorInternal::ProcessOriginList(std::vector<Origin> *origin_list, const cfg::vhost::orgn::Origins &origins_config) const
 	{
 		bool is_changed = false;
 
@@ -249,7 +249,7 @@ namespace ocst
 
 							bool is_equal = std::equal(
 								first_url_list.begin(), first_url_list.end(), second_url_list.begin(),
-								[&origin](const cfg::Url &url1, const cfg::Url &url2) -> bool {
+								[&origin](const cfg::cmn::Url &url1, const cfg::cmn::Url &url2) -> bool {
 									bool result = url1.GetUrl() == url2.GetUrl();
 
 									if (result == false)

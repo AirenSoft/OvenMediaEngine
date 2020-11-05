@@ -8,25 +8,28 @@
 //==============================================================================
 #pragma once
 
-#include "names/names.h"
+#include "names.h"
 #include "tls.h"
 
 namespace cfg
 {
-	struct Host : public Item
+	namespace cmn
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetNameList, _names.GetNameList())
-		CFG_DECLARE_REF_GETTER_OF(GetNames, _names)
-		CFG_DECLARE_REF_GETTER_OF(GetTls, _tls)
-
-	protected:
-		void MakeParseList() override
+		struct Host : public Item
 		{
-			RegisterValue("Names", &_names);
-			RegisterValue<Optional>("TLS", &_tls);
-		}
+			CFG_DECLARE_REF_GETTER_OF(GetNameList, _names.GetNameList())
+			CFG_DECLARE_REF_GETTER_OF(GetNames, _names)
+			CFG_DECLARE_REF_GETTER_OF(GetTls, _tls)
 
-		Names _names;
-		Tls _tls;
-	};
+		protected:
+			void MakeParseList() override
+			{
+				RegisterValue("Names", &_names);
+				RegisterValue<Optional>("TLS", &_tls);
+			}
+
+			Names _names;
+			Tls _tls;
+		};
+	}  // namespace cmn
 }  // namespace cfg

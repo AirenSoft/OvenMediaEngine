@@ -34,7 +34,7 @@ namespace ocst
 	//--------------------------------------------------------------------
 	// ocst::Origin
 	//--------------------------------------------------------------------
-	Origin::Origin(const cfg::OriginsOrigin &origin_config)
+	Origin::Origin(const cfg::vhost::orgn::Origin &origin_config)
 		: scheme(origin_config.GetPass().GetScheme()),
 		  location(origin_config.GetLocation()),
 		  state(ItemState::New)

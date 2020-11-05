@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "decode_video.h"
+#include "./output_profile.h"
 
 namespace cfg
 {
@@ -16,19 +16,23 @@ namespace cfg
 	{
 		namespace app
 		{
-			namespace dec
+			namespace oprf
 			{
-				struct Decode : public Item
+				struct OutputProfiles : public Item
 				{
+				protected:
+					std::vector<OutputProfile> _output_profiles;
+
+				public:
+					CFG_DECLARE_REF_GETTER_OF(GetOutputProfileList, _output_profiles)
+
 				protected:
 					void MakeParseList() override
 					{
-						RegisterValue("Video", &_video);
+						RegisterValue<Optional>("OutputProfiles", &_output_profiles);
 					}
-
-					DecodeVideo _video;
 				};
-			}  // namespace dec
+			}  // namespace oprf
 		}	   // namespace app
 	}		   // namespace vhost
 }  // namespace cfg

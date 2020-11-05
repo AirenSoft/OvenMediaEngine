@@ -226,7 +226,7 @@ void OvenCodecImplAvcodecEncHEVC::ThreadEncode()
 			{
 				// Encoded packet is ready
 				auto packet_buffer = std::make_shared<MediaPacket>(
-										common::MediaType::Video, 
+										cmn::MediaType::Video, 
 										0, 
 										_packet->data, 
 										_packet->size, 
@@ -234,8 +234,8 @@ void OvenCodecImplAvcodecEncHEVC::ThreadEncode()
 										_packet->dts, 
 										-1L, 
 										(_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
-				packet_buffer->SetBitstreamFormat(common::BitstreamFormat::H265_ANNEXB);
-				packet_buffer->SetPacketType(common::PacketType::NALU);
+				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::H265_ANNEXB);
+				packet_buffer->SetPacketType(cmn::PacketType::NALU);
 
 				SendOutputBuffer(std::move(packet_buffer));
 			}

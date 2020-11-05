@@ -8,23 +8,29 @@
 //==============================================================================
 #pragma once
 
-#include "signed_policy_enabled_modules.h"
+#include "enabled_modules.h"
 
 namespace cfg
 {
-	struct Enables : public Item
+	namespace vhost
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
-		CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
-
-	protected:
-		void MakeParseList() override
+		namespace sig
 		{
-			RegisterValue<Optional>("Providers", &_providers);
-			RegisterValue<Optional>("Publishers", &_publishers);
-		}
+			struct Enables : public Item
+			{
+				CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
+				CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
 
-		SignedPolicyEnabledModules _providers;
-		SignedPolicyEnabledModules _publishers;
-	};
+			protected:
+				void MakeParseList() override
+				{
+					RegisterValue<Optional>("Providers", &_providers);
+					RegisterValue<Optional>("Publishers", &_publishers);
+				}
+
+				EnabledModules _providers;
+				EnabledModules _publishers;
+			};
+		}  // namespace sig
+	}	   // namespace vhost
 }  // namespace cfg

@@ -8,7 +8,7 @@
 //==============================================================================
 #include "audio_track.h"
 
-using namespace common;
+using namespace cmn;
 
 void AudioTrack::SetSampleRate(int32_t sample_rate)
 {

@@ -21,7 +21,7 @@ namespace info
 		/// @param host_name_list A host name list
 		/// @param tls A information of certificate
 		///
-		static std::shared_ptr<Certificate> CreateCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::Tls &tls);
+		static std::shared_ptr<Certificate> CreateCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::cmn::Tls &tls);
 
 		std::shared_ptr<::Certificate> GetCertificate() const
 		{
@@ -34,7 +34,7 @@ namespace info
 		}
 
 	protected:
-		std::shared_ptr<ov::Error> PrepareCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::Tls &tls);
+		std::shared_ptr<ov::Error> PrepareCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::cmn::Tls &tls);
 
 		ov::String _certificate_name;
 		std::vector<ov::String> _host_name_list;

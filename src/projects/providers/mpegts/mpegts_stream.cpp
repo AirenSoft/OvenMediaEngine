@@ -109,17 +109,17 @@ namespace pvd
 				
 				if(es->IsVideoStream())
 				{	
-					auto bitstream = common::BitstreamFormat::Unknwon;
-					auto packet_type = common::PacketType::NALU;
+					auto bitstream = cmn::BitstreamFormat::Unknwon;
+					auto packet_type = cmn::PacketType::NALU;
 
 					switch(track->GetCodecId())
 					{
-						case common::MediaCodecId::H264:
-							bitstream = common::BitstreamFormat::H264_ANNEXB;
+						case cmn::MediaCodecId::H264:
+							bitstream = cmn::BitstreamFormat::H264_ANNEXB;
 							break;
-						case common::MediaCodecId::H265:
+						case cmn::MediaCodecId::H265:
 						{
-							bitstream = common::BitstreamFormat::H265_ANNEXB;
+							bitstream = cmn::BitstreamFormat::H265_ANNEXB;
 
 							// Check if bitstream is keyframe
 							bool keyframe_flag = H265Parser::CheckKeyframe(es->Payload(), es->PayloadLength());
@@ -168,12 +168,12 @@ namespace pvd
 							break;
 						}
 						default:
-							bitstream = common::BitstreamFormat::Unknwon;
+							bitstream = cmn::BitstreamFormat::Unknwon;
 							break;
 					}
 
 					auto data = std::make_shared<ov::Data>(es->Payload(), es->PayloadLength());
-					auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Video,
+					auto media_packet = std::make_shared<MediaPacket>(cmn::MediaType::Video,
 												es->PID(),
 												data,
 												es->Pts(),
@@ -188,13 +188,13 @@ namespace pvd
 					auto payload_length = es->PayloadLength();
 
 					auto data = std::make_shared<ov::Data>(payload, payload_length);
-					auto media_packet = std::make_shared<MediaPacket>(common::MediaType::Audio,
+					auto media_packet = std::make_shared<MediaPacket>(cmn::MediaType::Audio,
 												es->PID(),
 												data,
 												es->Pts(),
 												es->Dts(),
-												common::BitstreamFormat::AAC_ADTS,
-												common::PacketType::RAW);
+												cmn::BitstreamFormat::AAC_ADTS,
+												cmn::PacketType::RAW);
 					SendFrame(media_packet);
 				}
 			}

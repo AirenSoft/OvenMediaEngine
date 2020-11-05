@@ -5,7 +5,7 @@
 
 #include <orchestrator/orchestrator.h>
 
-using namespace common;
+using namespace cmn;
 
 namespace pvd
 {
@@ -76,8 +76,8 @@ namespace pvd
         ov::String domain_name = "dummy.com";
         auto internal_app_name = Orchestrator::ResolveApplicationNameFromDomain(domain_name, app);
 
-        // Make an internal app name by cfg::VirtualHost
-        cfg::VirtualHost vhost_config;
+        // Make an internal app name by cfg::vhost::VirtualHost
+        cfg::vhost::VirtualHost vhost_config;
         Orchestrator::ResolveApplicationName(vhost_config.GetName(), app);
     #endif
 

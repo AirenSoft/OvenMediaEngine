@@ -14,7 +14,7 @@ namespace api
 {
 	namespace conv
 	{
-		static void SetNames(Json::Value &parent_object, const char *key, const cfg::Names &config, Optional optional)
+		static void SetNames(Json::Value &parent_object, const char *key, const cfg::cmn::Names &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(false);
 
@@ -24,7 +24,7 @@ namespace api
 			}
 		}
 
-		static void SetTls(Json::Value &parent_object, const char *key, const cfg::Tls &config, Optional optional)
+		static void SetTls(Json::Value &parent_object, const char *key, const cfg::cmn::Tls &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -33,7 +33,7 @@ namespace api
 			SetString(object, "chainCertPath", config.GetChainCertPath(), Optional::True);
 		}
 
-		static void SetHost(Json::Value &parent_object, const char *key, const cfg::Host &config, Optional optional)
+		static void SetHost(Json::Value &parent_object, const char *key, const cfg::cmn::Host &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -41,7 +41,7 @@ namespace api
 			SetTls(object, "tls", config.GetTls(), Optional::True);
 		}
 
-		static void SetSignedPolicy(Json::Value &parent_object, const char *key, const cfg::SignedPolicy &config, Optional optional)
+		static void SetSignedPolicy(Json::Value &parent_object, const char *key, const cfg::vhost::sig::SignedPolicy &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -50,7 +50,7 @@ namespace api
 			SetString(object, "secretKey", config.GetSecretKey(), Optional::False);
 		}
 
-		static void SetSignedToken(Json::Value &parent_object, const char *key, const cfg::SignedToken &config, Optional optional)
+		static void SetSignedToken(Json::Value &parent_object, const char *key, const cfg::vhost::sig::SignedToken &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -58,7 +58,7 @@ namespace api
 			SetString(object, "queryStringKey", config.GetQueryStringKey(), Optional::False);
 		}
 
-		static void SetUrls(Json::Value &parent_object, const char *key, const cfg::Urls &config, Optional optional)
+		static void SetUrls(Json::Value &parent_object, const char *key, const cfg::cmn::Urls &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -68,7 +68,7 @@ namespace api
 			}
 		}
 
-		static void SetPass(Json::Value &parent_object, const char *key, const cfg::Pass &config, Optional optional)
+		static void SetPass(Json::Value &parent_object, const char *key, const cfg::vhost::orgn::Pass &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -76,7 +76,7 @@ namespace api
 			SetUrls(object, "urls", config.GetUrls(), Optional::False);
 		}
 
-		static void SetOriginMaps(Json::Value &parent_object, const char *key, const cfg::Origins &config, Optional optional)
+		static void SetOriginMaps(Json::Value &parent_object, const char *key, const cfg::vhost::orgn::Origins &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 

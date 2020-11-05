@@ -31,14 +31,14 @@ namespace ocst
 		/// @param vhost VirtualHost configuration to compare
 		///
 		/// @return Whether it has changed
-		ItemState ProcessHostList(std::vector<Host> *host_list, const cfg::Host &host_config) const;
+		ItemState ProcessHostList(std::vector<Host> *host_list, const cfg::cmn::Host &host_config) const;
 		/// Compares a list of origin and adds them to added_origin_list if a new entry is found
 		///
 		/// @param origin_list The origin list
 		/// @param new_origin_list Origin configuration to compare
 		///
 		/// @return Whether it has changed
-		ItemState ProcessOriginList(std::vector<Origin> *origin_list, const cfg::Origins &origins_config) const;
+		ItemState ProcessOriginList(std::vector<Origin> *origin_list, const cfg::vhost::orgn::Origins &origins_config) const;
 
 		info::application_id_t GetNextAppId();
 

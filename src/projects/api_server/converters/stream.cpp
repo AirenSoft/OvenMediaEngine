@@ -17,7 +17,7 @@ namespace api
 		{
 		}
 
-		static void SetTimebase(Json::Value &parent_object, const char *key, const common::Timebase &timebase, Optional optional)
+		static void SetTimebase(Json::Value &parent_object, const char *key, const cmn::Timebase &timebase, Optional optional)
 		{
 			CONVERTER_RETURN_IF(timebase.GetDen() > 0);
 
@@ -42,9 +42,9 @@ namespace api
 			}
 		}
 
-		static void SetAudioChannel(Json::Value &parent_object, const char *key, const common::AudioChannel &channel, Optional optional)
+		static void SetAudioChannel(Json::Value &parent_object, const char *key, const cmn::AudioChannel &channel, Optional optional)
 		{
-			CONVERTER_RETURN_IF(channel.GetLayout() == common::AudioChannel::Layout::LayoutUnknown);
+			CONVERTER_RETURN_IF(channel.GetLayout() == cmn::AudioChannel::Layout::LayoutUnknown);
 
 			SetString(object, "layout", channel.GetName(), Optional::False);
 			SetInt(object, "count", channel.GetCounts());
@@ -80,22 +80,22 @@ namespace api
 
 				switch (track->GetMediaType())
 				{
-					case common::MediaType::Video:
+					case cmn::MediaType::Video:
 						SetVideoTrack(track_value, "video", track, Optional::False);
 						break;
-					case common::MediaType::Audio:
+					case cmn::MediaType::Audio:
 						SetAudioTrack(track_value, "audio", track, Optional::False);
 						break;
 
-					case common::MediaType::Unknown:
+					case cmn::MediaType::Unknown:
 						[[fallthrough]];
-					case common::MediaType::Data:
+					case cmn::MediaType::Data:
 						[[fallthrough]];
-					case common::MediaType::Subtitle:
+					case cmn::MediaType::Subtitle:
 						[[fallthrough]];
-					case common::MediaType::Attachment:
+					case cmn::MediaType::Attachment:
 						[[fallthrough]];
-					case common::MediaType::Nb:
+					case cmn::MediaType::Nb:
 						break;
 				}
 

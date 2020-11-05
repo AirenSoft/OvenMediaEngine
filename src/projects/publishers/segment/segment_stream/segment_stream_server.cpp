@@ -304,7 +304,7 @@ bool SegmentStreamServer::SetAllowOrigin(const ov::String &origin_url, const std
 // <Url>https://demo.ovenplayer.com</Url>
 // <Url>http://*.ovenplayer.com</Url>
 //====================================================================================================
-void SegmentStreamServer::SetCrossDomain(const std::vector<cfg::Url> &url_list)
+void SegmentStreamServer::SetCrossDomain(const std::vector<cfg::cmn::Url> &url_list)
 {
 	std::vector<ov::String> crossdmain_urls;
 	ov::String http_prefix = "http://";

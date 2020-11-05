@@ -33,7 +33,7 @@ CmafApplication::CmafApplication(const std::shared_ptr<pub::Publisher> &publishe
 								const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
 									: Application(publisher, application_info)
 {
-    auto publisher_info = application_info.GetPublisher<cfg::LlDashPublisher>();
+    auto publisher_info = application_info.GetPublisher<cfg::vhost::app::pub::LlDashPublisher>();
     _segment_count = 1;
     _segment_duration = publisher_info->GetSegmentDuration();
 	_chunked_transfer = chunked_transfer;
@@ -53,7 +53,7 @@ CmafApplication::~CmafApplication()
 //====================================================================================================
 bool CmafApplication::Start()
 {
-	auto publisher_info = GetPublisher<cfg::LlDashPublisher>();
+	auto publisher_info = GetPublisher<cfg::vhost::app::pub::LlDashPublisher>();
 	
 	_segment_count = 1;
 	_segment_duration = publisher_info->GetSegmentDuration();

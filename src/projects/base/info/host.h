@@ -17,10 +17,10 @@ namespace info
 {
 	typedef uint32_t host_id_t;
 
-	class Host : public cfg::VirtualHost
+	class Host : public cfg::vhost::VirtualHost
 	{
 	public:
-		explicit Host(const cfg::VirtualHost &host_info);
+		explicit Host(const cfg::vhost::VirtualHost &host_info);
 
 		host_id_t GetId() const
 		{

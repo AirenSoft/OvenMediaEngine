@@ -40,7 +40,7 @@ namespace cfg
 		CFG_DECLARE_REF_GETTER_OF(GetVirtualHostList, _virtual_hosts.GetVirtualHostList())
 
 		// Deprecated - It has a bug
-		bool GetVirtualHostByName(ov::String name, cfg::VirtualHost &vhost) const
+		bool GetVirtualHostByName(ov::String name, cfg::vhost::VirtualHost &vhost) const
 		{
 			auto &vhost_list = GetVirtualHostList();
 			for (auto &item : vhost_list)
@@ -99,8 +99,8 @@ namespace cfg
 
 		mgr::Managers _managers;
 
-		P2P _p2p;
+		p2p::P2P _p2p;
 
-		VirtualHosts _virtual_hosts;
+		vhost::VirtualHosts _virtual_hosts;
 	};
 }  // namespace cfg

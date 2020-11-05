@@ -14,35 +14,35 @@ namespace api
 {
 	namespace conv
 	{
-		static void SetRtmpProvider(Json::Value &parent_object, const char *key, const cfg::RtmpProvider &config, Optional optional)
+		static void SetRtmpProvider(Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::RtmpProvider &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
 			object = Json::objectValue;
 		}
 
-		static void SetRtspPullProvider(Json::Value &parent_object, const char *key, const cfg::RtspPullProvider &config, Optional optional)
+		static void SetRtspPullProvider(Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::RtspPullProvider &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
 			object = Json::objectValue;
 		}
 
-		static void SetRtspProvider(Json::Value &parent_object, const char *key, const cfg::RtspProvider &config, Optional optional)
+		static void SetRtspProvider(Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::RtspProvider &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
 			object = Json::objectValue;
 		}
 
-		static void SetOvtProvider(Json::Value &parent_object, const char *key, const cfg::OvtProvider &config, Optional optional)
+		static void SetOvtProvider(Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::OvtProvider &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
 			object = Json::objectValue;
 		}
 
-		static void SetMpegtsStreams(Json::Value &parent_object, const char *key, const cfg::mpegts::StreamMap &config, Optional optional)
+		static void SetMpegtsStreams(Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::mpegts::StreamMap &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -59,7 +59,7 @@ namespace api
 			}
 		}
 
-		static void SetMpegtsProvider(Json::Value &parent_object, const char *key, const cfg::MpegtsProvider &config, Optional optional)
+		static void SetMpegtsProvider(Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::MpegtsProvider &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -68,7 +68,7 @@ namespace api
 			SetMpegtsStreams(object, "streams", config.GetStreamMap(), Optional::True);
 		}
 
-		static void SetProviders(Json::Value &parent_object, const char *key, const cfg::Providers &config, Optional optional)
+		static void SetProviders(Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::Providers &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -79,14 +79,14 @@ namespace api
 			SetMpegtsProvider(object, "mpegts", config.GetMpegtsProvider(), Optional::True);
 		}
 
-		static void SetRtmpPushPublisher(Json::Value &parent_object, const char *key, const cfg::RtmpPushPublisher &config, Optional optional)
+		static void SetRtmpPushPublisher(Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::RtmpPushPublisher &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
 			object = Json::objectValue;
 		}
 
-		static void SetCrossDomains(Json::Value &parent_object, const char *key, const cfg::CrossDomain &config, Optional optional)
+		static void SetCrossDomains(Json::Value &parent_object, const char *key, const cfg::cmn::CrossDomain &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -96,7 +96,7 @@ namespace api
 			}
 		}
 
-		static void SetHlsPublisher(Json::Value &parent_object, const char *key, const cfg::HlsPublisher &config, Optional optional)
+		static void SetHlsPublisher(Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::HlsPublisher &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -105,7 +105,7 @@ namespace api
 			SetCrossDomains(object, "crossDomains", config.GetCrossDomain(), Optional::True);
 		}
 
-		static void SetDashPublisher(Json::Value &parent_object, const char *key, const cfg::DashPublisher &config, Optional optional)
+		static void SetDashPublisher(Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::DashPublisher &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -114,7 +114,7 @@ namespace api
 			SetCrossDomains(object, "crossDomains", config.GetCrossDomain(), Optional::True);
 		}
 
-		static void SetLlDashPublisher(Json::Value &parent_object, const char *key, const cfg::LlDashPublisher &config, Optional optional)
+		static void SetLlDashPublisher(Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::LlDashPublisher &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -122,21 +122,21 @@ namespace api
 			SetCrossDomains(object, "crossDomains", config.GetCrossDomain(), Optional::True);
 		}
 
-		static void SetWebrtcPublisher(Json::Value &parent_object, const char *key, const cfg::WebrtcPublisher &config, Optional optional)
+		static void SetWebrtcPublisher(Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::WebrtcPublisher &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
 			SetTimeInterval(object, "timeout", config.GetTimeout());
 		}
 
-		static void SetOvtPublisher(Json::Value &parent_object, const char *key, const cfg::OvtPublisher &config, Optional optional)
+		static void SetOvtPublisher(Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::OvtPublisher &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
 			object = Json::objectValue;
 		}
 
-		static void SetFilePublisher(Json::Value &parent_object, const char *key, const cfg::FilePublisher &config, Optional optional)
+		static void SetFilePublisher(Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::FilePublisher &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -152,7 +152,7 @@ namespace api
 		// 	SetString(object, "filePath", config.GetFilePath(), Optional::True);
 		// }
 
-		static void SetPublishers(Json::Value &parent_object, const char *key, const cfg::Publishers &config, Optional optional)
+		static void SetPublishers(Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::Publishers &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -169,7 +169,7 @@ namespace api
 		}
 
 		// OutputProfile is made by combining Encodes and Streams
-		static void SetOutputProfiles(Json::Value &parent_object, const char *key, const cfg::Encodes &encodes_config, const cfg::Streams &streams_config, Optional optional)
+		static void SetOutputProfiles(Json::Value &parent_object, const char *key, const cfg::vhost::app::enc::Encodes &encodes_config, const cfg::vhost::app::stream::Streams &streams_config, Optional optional)
 		{
 			CONVERTER_RETURN_IF((encodes_config.IsParsed() == false) || (streams_config.IsParsed() == false));
 

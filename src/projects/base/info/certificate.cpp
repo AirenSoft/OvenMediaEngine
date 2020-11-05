@@ -12,7 +12,7 @@
 
 namespace info
 {
-	std::shared_ptr<Certificate> Certificate::CreateCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::Tls &tls)
+	std::shared_ptr<Certificate> Certificate::CreateCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::cmn::Tls &tls)
 	{
 		auto certificate = std::make_shared<Certificate>();
 
@@ -30,7 +30,7 @@ namespace info
 		return certificate;
 	}
 
-	std::shared_ptr<ov::Error> Certificate::PrepareCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::Tls &tls)
+	std::shared_ptr<ov::Error> Certificate::PrepareCertificate(const ov::String &certificate_name, const std::vector<ov::String> &host_name_list, const cfg::cmn::Tls &tls)
 	{
 		if (tls.IsParsed() == false)
 		{

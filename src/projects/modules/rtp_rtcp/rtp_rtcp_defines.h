@@ -93,6 +93,6 @@ struct RTPVideoHeader
 	uint8_t simulcast_idx; // Extension, 0이면 사용하지 않음
 	bool is_first_packet_in_frame;
 
-	common::MediaCodecId codec;
+	cmn::MediaCodecId codec;
 	RTPVideoTypeHeader codec_header;
 };

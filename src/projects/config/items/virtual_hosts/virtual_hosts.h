@@ -12,16 +12,19 @@
 
 namespace cfg
 {
-	struct VirtualHosts : public Item
+	namespace vhost
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetVirtualHostList, _virtual_host_list)
-
-	protected:
-		void MakeParseList() override
+		struct VirtualHosts : public Item
 		{
-			RegisterValue("VirtualHost", &_virtual_host_list);
-		}
+			CFG_DECLARE_REF_GETTER_OF(GetVirtualHostList, _virtual_host_list)
 
-		std::vector<VirtualHost> _virtual_host_list;
-	};
+		protected:
+			void MakeParseList() override
+			{
+				RegisterValue("VirtualHost", &_virtual_host_list);
+			}
+
+			std::vector<VirtualHost> _virtual_host_list;
+		};
+	}  // namespace vhost
 }  // namespace cfg

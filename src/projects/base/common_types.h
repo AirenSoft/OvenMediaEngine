@@ -222,7 +222,7 @@ union CodecSpecificInfoUnion
 
 struct CodecSpecificInfo
 {
-	common::MediaCodecId codec_type = common::MediaCodecId::None;
+	cmn::MediaCodecId codec_type = cmn::MediaCodecId::None;
 	const char *codec_name = nullptr;
 	CodecSpecificInfoUnion codec_specific = {0};
 };
@@ -295,51 +295,51 @@ static ov::String StringFromPublisherType(const PublisherType &type)
 	return "Unknown";
 }
 
-static ov::String StringFromMediaCodecId(const common::MediaCodecId &type)
+static ov::String StringFromMediaCodecId(const cmn::MediaCodecId &type)
 {
 	switch (type)
 	{
-		case common::MediaCodecId::H264:
+		case cmn::MediaCodecId::H264:
 			return "H264";
-		case common::MediaCodecId::H265:
+		case cmn::MediaCodecId::H265:
 			return "H265";
-		case common::MediaCodecId::Vp8:
+		case cmn::MediaCodecId::Vp8:
 			return "VP8";
-		case common::MediaCodecId::Vp9:
+		case cmn::MediaCodecId::Vp9:
 			return "VP9";
-		case common::MediaCodecId::Flv:
+		case cmn::MediaCodecId::Flv:
 			return "FLV";
-		case common::MediaCodecId::Aac:
+		case cmn::MediaCodecId::Aac:
 			return "AAC";
-		case common::MediaCodecId::Mp3:
+		case cmn::MediaCodecId::Mp3:
 			return "MP3";
-		case common::MediaCodecId::Opus:
+		case cmn::MediaCodecId::Opus:
 			return "OPUS";
-		case common::MediaCodecId::Jpeg:
+		case cmn::MediaCodecId::Jpeg:
 			return "JPEG";
-		case common::MediaCodecId::Png:
+		case cmn::MediaCodecId::Png:
 			return "PNG";
-		case common::MediaCodecId::None:
+		case cmn::MediaCodecId::None:
 		default:
 			return "Unknwon";
 	}
 }
 
-static ov::String StringFromMediaType(const common::MediaType &type)
+static ov::String StringFromMediaType(const cmn::MediaType &type)
 {
 	switch (type)
 	{
-		case common::MediaType::Video:
+		case cmn::MediaType::Video:
 			return "Video";
-		case common::MediaType::Audio:
+		case cmn::MediaType::Audio:
 			return "Audio";
-		case common::MediaType::Data:
+		case cmn::MediaType::Data:
 			return "Data";
-		case common::MediaType::Subtitle:
+		case cmn::MediaType::Subtitle:
 			return "Subtitle";
-		case common::MediaType::Attachment:
+		case cmn::MediaType::Attachment:
 			return "Attachment";
-		case common::MediaType::Unknown:
+		case cmn::MediaType::Unknown:
 		default:
 			return "Unknown";
 	}

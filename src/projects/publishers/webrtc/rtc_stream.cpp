@@ -4,7 +4,7 @@
 #include "rtc_session.h"
 #include <base/info/media_extradata.h>
 
-using namespace common;
+using namespace cmn;
 
 /***************************
  SDP Sample
@@ -243,7 +243,7 @@ bool RtcStream::Start()
 
 						// Enable inband-fec
 						// a=fmtp:111 maxplaybackrate=16000; useinbandfec=1; maxaveragebitrate=20000
-						if (track->GetChannel().GetLayout() == common::AudioChannel::Layout::LayoutStereo)
+						if (track->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutStereo)
 						{
 							payload->SetFmtp("stereo=1;useinbandfec=1;");
 						}
@@ -457,8 +457,8 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 {
 	switch(info->codec_type)
 	{
-		case common::MediaCodecId::Vp8:
-			rtp_video_header->codec = common::MediaCodecId::Vp8;
+		case cmn::MediaCodecId::Vp8:
+			rtp_video_header->codec = cmn::MediaCodecId::Vp8;
 			rtp_video_header->codec_header.vp8.InitRTPVideoHeaderVP8();
 			// With Ulpfec, picture id is needed.
 			rtp_video_header->codec_header.vp8.picture_id = AllocateVP8PictureID();
@@ -469,14 +469,14 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 			rtp_video_header->codec_header.vp8.key_idx = info->codec_specific.vp8.key_idx;
 			rtp_video_header->simulcast_idx = info->codec_specific.vp8.simulcast_idx;
 			return;
-		case common::MediaCodecId::H264:
-			rtp_video_header->codec = common::MediaCodecId::H264;
+		case cmn::MediaCodecId::H264:
+			rtp_video_header->codec = cmn::MediaCodecId::H264;
 			rtp_video_header->codec_header.h26X.packetization_mode = info->codec_specific.h26X.packetization_mode;
 			rtp_video_header->simulcast_idx = info->codec_specific.h26X.simulcast_idx;
 			return;
 
-		case common::MediaCodecId::H265:
-			rtp_video_header->codec = common::MediaCodecId::H265;
+		case cmn::MediaCodecId::H265:
+			rtp_video_header->codec = cmn::MediaCodecId::H265;
 			rtp_video_header->codec_header.h26X.packetization_mode = info->codec_specific.h26X.packetization_mode;
 			rtp_video_header->simulcast_idx = info->codec_specific.h26X.simulcast_idx;
 			return;
@@ -485,7 +485,7 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 	}
 }
 
-void RtcStream::AddPacketizer(common::MediaCodecId codec_id, uint32_t id, uint8_t payload_type, uint32_t ssrc)
+void RtcStream::AddPacketizer(cmn::MediaCodecId codec_id, uint32_t id, uint8_t payload_type, uint32_t ssrc)
 {
 	logtd("Add Packetizer : codec(%u) id(%u) pt(%d) ssrc(%u)", codec_id, id, payload_type, ssrc);
 

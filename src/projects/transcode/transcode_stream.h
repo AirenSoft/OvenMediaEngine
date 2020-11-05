@@ -72,8 +72,8 @@ private:
 
 
 	// Store information for track mapping by stage
-	void StoreStageContext(ov::String encode_profile_name, common::MediaType media_type,  std::shared_ptr<MediaTrack> input_track, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
-	std::map< std::pair<ov::String, common::MediaType>, std::shared_ptr<TranscodeStageContext> > _map_stage_context;
+	void StoreStageContext(ov::String encode_profile_name, cmn::MediaType media_type,  std::shared_ptr<MediaTrack> input_track, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
+	std::map< std::pair<ov::String, cmn::MediaType>, std::shared_ptr<TranscodeStageContext> > _map_stage_context;
 	MediaTrackId _last_transcode_id;
 
 	// Input Track -> Decoder or Router(bypasS)
@@ -152,7 +152,7 @@ private:
 	TranscodeResult EncodedPacket(int32_t encoder_id);
 
 	// Transcoding information
-	uint8_t NewTrackId(common::MediaType media_type);
+	uint8_t NewTrackId(cmn::MediaType media_type);
 
 	// Create output streams
 	void CreateStreams();
@@ -163,13 +163,13 @@ private:
 	// Send frame with output stream's information
 	void SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet);
 
-	const cfg::Encode* GetEncodeByProfileName(const info::Application &application_info, ov::String encode_name);
+	const cfg::vhost::app::enc::Encode *GetEncodeByProfileName(const info::Application &application_info, ov::String encode_name);
 
-	common::MediaCodecId GetCodecId(ov::String name);
+	cmn::MediaCodecId GetCodecId(ov::String name);
 
-	bool IsVideoCodec(common::MediaCodecId codec_id);
-	bool IsAudioCodec(common::MediaCodecId codec_id);
+	bool IsVideoCodec(cmn::MediaCodecId codec_id);
+	bool IsAudioCodec(cmn::MediaCodecId codec_id);
 
-	const common::Timebase GetDefaultTimebaseByCodecId(common::MediaCodecId codec_id);
+	const cmn::Timebase GetDefaultTimebaseByCodecId(cmn::MediaCodecId codec_id);
 };
 

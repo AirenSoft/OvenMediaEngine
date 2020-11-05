@@ -8,18 +8,23 @@
 //==============================================================================
 #pragma once
 
+#include "./url.h"
+
 namespace cfg
 {
-	struct Urls : public Item
+	namespace cmn
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetUrlList, _url_list)
-
-	protected:
-		void MakeParseList() override
+		struct Urls : public Item
 		{
-			RegisterValue("Url", &_url_list);
-		}
+			CFG_DECLARE_REF_GETTER_OF(GetUrlList, _url_list)
 
-		std::vector<Url> _url_list;
-	};
+		protected:
+			void MakeParseList() override
+			{
+				RegisterValue("Url", &_url_list);
+			}
+
+			std::vector<Url> _url_list;
+		};
+	}  // namespace cmn
 }  // namespace cfg

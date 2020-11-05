@@ -12,7 +12,7 @@
 	{
 		auto &track = track_item.second;
 
-		if( track->GetCodecId() == common::MediaCodecId::Opus )
+		if( track->GetCodecId() == cmn::MediaCodecId::Opus )
 			continue;
 
 		auto quality = FileTrackInfo::Create();
@@ -172,7 +172,7 @@ bool FileWriter::Stop()
 	return true;
 }
 
-bool FileWriter::AddTrack(common::MediaType media_type, int32_t track_id, std::shared_ptr<FileTrackInfo> track_info)
+bool FileWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shared_ptr<FileTrackInfo> track_info)
 {
 	std::unique_lock<std::mutex> mlock(_lock);
 
@@ -180,17 +180,17 @@ bool FileWriter::AddTrack(common::MediaType media_type, int32_t track_id, std::s
 
 	switch(media_type)
 	{
-		case common::MediaType::Video:
+		case cmn::MediaType::Video:
 		{
 			stream = avformat_new_stream(_format_context, nullptr);
 			AVCodecParameters *codecpar = stream->codecpar;
 
 			codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
 			codecpar->codec_id = 
-				(track_info->GetCodecId() == common::MediaCodecId::H264)?AV_CODEC_ID_H264:
-				(track_info->GetCodecId() == common::MediaCodecId::H265)?AV_CODEC_ID_H265:
-				(track_info->GetCodecId() == common::MediaCodecId::Vp8)?AV_CODEC_ID_VP8:
-				(track_info->GetCodecId() == common::MediaCodecId::Vp9)?AV_CODEC_ID_VP9:
+				(track_info->GetCodecId() == cmn::MediaCodecId::H264)?AV_CODEC_ID_H264:
+				(track_info->GetCodecId() == cmn::MediaCodecId::H265)?AV_CODEC_ID_H265:
+				(track_info->GetCodecId() == cmn::MediaCodecId::Vp8)?AV_CODEC_ID_VP8:
+				(track_info->GetCodecId() == cmn::MediaCodecId::Vp9)?AV_CODEC_ID_VP9:
 				AV_CODEC_ID_NONE;		
 				
 			codecpar->bit_rate = track_info->GetBitrate();
@@ -216,21 +216,21 @@ bool FileWriter::AddTrack(common::MediaType media_type, int32_t track_id, std::s
 		}
 		break;
 
-		case common::MediaType::Audio:
+		case cmn::MediaType::Audio:
 		{
 			stream = avformat_new_stream(_format_context, nullptr);
 			AVCodecParameters *codecpar = stream->codecpar;
 
 			codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
 			codecpar->codec_id = 
-				(track_info->GetCodecId() == common::MediaCodecId::Aac)?AV_CODEC_ID_AAC:
-				(track_info->GetCodecId() == common::MediaCodecId::Mp3)?AV_CODEC_ID_MP3:
-				(track_info->GetCodecId() == common::MediaCodecId::Opus)?AV_CODEC_ID_OPUS:
+				(track_info->GetCodecId() == cmn::MediaCodecId::Aac)?AV_CODEC_ID_AAC:
+				(track_info->GetCodecId() == cmn::MediaCodecId::Mp3)?AV_CODEC_ID_MP3:
+				(track_info->GetCodecId() == cmn::MediaCodecId::Opus)?AV_CODEC_ID_OPUS:
 				AV_CODEC_ID_NONE;		
 			codecpar->bit_rate = track_info->GetBitrate();
 			codecpar->channels = static_cast<int>(track_info->GetChannel().GetCounts());
-			codecpar->channel_layout = (track_info->GetChannel().GetLayout() == common::AudioChannel::Layout::LayoutMono)?AV_CH_LAYOUT_MONO:
-									   (track_info->GetChannel().GetLayout() == common::AudioChannel::Layout::LayoutStereo)?AV_CH_LAYOUT_STEREO:
+			codecpar->channel_layout = (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutMono)?AV_CH_LAYOUT_MONO:
+									   (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutStereo)?AV_CH_LAYOUT_STEREO:
 									   0; // <- Unknown
 			codecpar->sample_rate = track_info->GetSample().GetRateNum();
 			codecpar->frame_size = 1024;	// TODO: Need to Frame Size

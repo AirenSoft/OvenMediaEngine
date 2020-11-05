@@ -401,7 +401,7 @@ uint32_t WebRtcPublisher::OnGetBitrate(const std::shared_ptr<WebSocketClient> &w
 	{
 		MediaTrack *track = track_iter.second.get();
 
-		if (track->GetCodecId() == common::MediaCodecId::Vp8 || track->GetCodecId() == common::MediaCodecId::Opus)
+		if (track->GetCodecId() == cmn::MediaCodecId::Vp8 || track->GetCodecId() == cmn::MediaCodecId::Opus)
 		{
 			bitrate += track->GetBitrate();
 		}

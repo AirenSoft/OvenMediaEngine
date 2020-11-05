@@ -3,8 +3,8 @@
 #include "../rtsp_server.h"
 
 RtpTrack::RtpTrack(RtspServer &rtsp_server,
-    common::MediaType media_type,
-    common::MediaCodecId media_codec_id,
+    cmn::MediaType media_type,
+    cmn::MediaCodecId media_codec_id,
     uint32_t stream_id,
     uint8_t track_id,
     uint32_t clock_frequency) : rtsp_server_(rtsp_server),

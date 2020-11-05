@@ -10,14 +10,23 @@
 
 namespace cfg
 {
-	struct DecodeVideo : public Item
+	namespace vhost
 	{
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			RegisterValue("HWAcceleration", &_hw_acceleration);
-		}
+			namespace dec
+			{
+				struct DecodeVideo : public Item
+				{
+				protected:
+					void MakeParseList() override
+					{
+						RegisterValue("HWAcceleration", &_hw_acceleration);
+					}
 
-		ov::String _hw_acceleration;
-	};
+					ov::String _hw_acceleration;
+				};
+			}  // namespace dec
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg
