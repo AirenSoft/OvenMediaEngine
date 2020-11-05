@@ -203,6 +203,8 @@ bool MediaDescription::FromString(const ov::String &desc)
 		}
 	}
 
+	Update();
+
 	return true;
 }
 
