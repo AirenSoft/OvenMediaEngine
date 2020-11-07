@@ -17,7 +17,8 @@
 
 #include <modules/ice/ice_port_manager.h>
 #include <modules/physical_port/physical_port.h>
-#include <orchestrator/orchestrator.h>
+
+#include <orchestrator/data_structures/data_structure.h>
 
 #include <modules/signature/signature_common_type.h>
 #include <modules/signature/signed_policy.h>

@@ -627,4 +627,31 @@ namespace ocst
 		logtd("%s stream is deleted", info->GetName().CStr());
 		return true;
 	}
+
+	std::shared_ptr<pub::Publisher> Orchestrator::GetPublisherFromType(const PublisherType type)
+	{
+		// Find the publisehr
+		for (auto info = _module_list.begin(); info != _module_list.end(); ++info)
+		{
+			if (info->type == ModuleType::Publisher)
+			{
+				auto publisher = std::dynamic_pointer_cast<pub::Publisher>(info->module);
+
+				if (publisher == nullptr)
+				{
+					OV_ASSERT(publisher != nullptr, "Provider must inherit from pub::Publisehr");
+					continue;
+				}
+
+				if (publisher->GetPublisherType() == type)
+				{
+					return publisher;
+				}
+			}
+		}
+
+		logtw("Publisher (%d) is not found from type");
+
+		return nullptr;
+	}	
 }  // namespace ocst

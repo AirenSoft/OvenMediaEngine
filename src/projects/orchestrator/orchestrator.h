@@ -142,6 +142,10 @@ namespace ocst
 			return RequestPullStream(request_from, vhost_app_name, stream_name, 0);
 		}
 
+		/// Find Publisher from PublisehrType
+		std::shared_ptr<pub::Publisher> GetPublisherFromType(const PublisherType type);
+
+
 		//--------------------------------------------------------------------
 		// Implementation of ocst::Application::CallbackInterface
 		//--------------------------------------------------------------------

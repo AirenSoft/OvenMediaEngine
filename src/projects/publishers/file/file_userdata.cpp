@@ -57,7 +57,6 @@ std::shared_ptr<FileUserdata> FileUserdataSets::GetByKey(ov::String key)
 	return iter->second;
 }
 
-
 std::shared_ptr<FileUserdata> FileUserdataSets::GetBySessionId(session_id_t session_id)
 {
 	for ( auto &item : _userdata_sets )

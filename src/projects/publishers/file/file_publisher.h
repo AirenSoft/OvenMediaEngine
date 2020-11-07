@@ -7,6 +7,8 @@
 #include "base/publisher/publisher.h"
 #include "base/mediarouter/media_route_application_interface.h"
 
+#include "base/info/record.h"
+
 #include "file_application.h"
 #include "file_userdata.h"
 
@@ -50,9 +52,8 @@ private:
 	FileUserdataSets _userdata_sets;
 
 public:
-	// Dummy Interface
-	std::shared_ptr<ov::Error> HandleRecordStart(const info::VHostAppName &vhost_app_name, ov::String stream_name);
-	std::shared_ptr<ov::Error> HandleRecordStop(const info::VHostAppName &vhost_app_name, ov::String stream_name);
-	std::shared_ptr<ov::Error> HandleRecordStat(const info::VHostAppName &vhost_app_name, ov::String stream_name);
+	std::shared_ptr<ov::Error> RecordStart(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Record> &record);
+	std::shared_ptr<ov::Error> RecordStop(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Record> &record);
+	std::shared_ptr<ov::Error> GetRecords(const info::VHostAppName &vhost_app_name, std::vector<std::shared_ptr<info::Record>> &record_list);
 
 };

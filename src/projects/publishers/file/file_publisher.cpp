@@ -28,15 +28,6 @@ FilePublisher::~FilePublisher()
 
 bool FilePublisher::Start()
 {
-#if 0
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Create Dummy Userdata
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	std::vector<int32_t> dummy_tracks;
-	_userdata_sets.Set("id_001", FileUserdata::Create(true, "default", "app", "stream", dummy_tracks));
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#endif
-
 	_stop_thread_flag = false;
 	_worker_thread = std::thread(&FilePublisher::WorkerThread, this);
 
@@ -204,33 +195,41 @@ void FilePublisher::WorkerThread()
 	}
 }
 
-
-// Dummy Interface
-std::shared_ptr<ov::Error> FilePublisher::HandleRecordStart(const info::VHostAppName &vhost_app_name, ov::String stream_name)
+std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Record> &record)
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
 
-	// TODO(soulk) - Insert Userdata
-	
+	std::vector<int32_t> dummy_tracks;
+	_userdata_sets.Set(record->GetId(), FileUserdata::Create(
+		true, 
+		vhost_app_name.GetVHostName(), 
+		vhost_app_name.GetAppName(), 
+		record->GetStream().GetName(), 
+		dummy_tracks)
+	);
+
 	return ov::Error::CreateError(0, "Success");
 }
 
-// Dummy Interface
-std::shared_ptr<ov::Error> FilePublisher::HandleRecordStop(const info::VHostAppName &vhost_app_name, ov::String stream_name)
+std::shared_ptr<ov::Error> FilePublisher::RecordStop(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Record> &record)
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
 
-	// TODO(soulk) - Delete Userdata
-	
+	auto user_data = _userdata_sets.GetByKey(record->GetId());
+	if(user_data == nullptr)
+	{
+		return ov::Error::CreateError(1, "Could not find record");	
+	}
+
+	user_data->SetRemove(true);
+
 	return ov::Error::CreateError(0, "Success");
 }
 
-// Dummy Interface
-std::shared_ptr<ov::Error> FilePublisher::HandleRecordStat(const info::VHostAppName &vhost_app_name, ov::String stream_name)
+std::shared_ptr<ov::Error> FilePublisher::GetRecords(const info::VHostAppName &vhost_app_name, std::vector<std::shared_ptr<info::Record>> &record_list)
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
 
-	// TODO(soulk) - Get Userdata
 
 	return ov::Error::CreateError(0, "Success");
 }

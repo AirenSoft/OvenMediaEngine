@@ -56,6 +56,11 @@ namespace ov
 			return _value.isArray();
 		}
 
+		bool IsString() const noexcept
+		{
+			return _value.isString();
+		}
+
 		bool IsObject() const noexcept
 		{
 			return _value.isObject();
@@ -89,6 +94,18 @@ namespace ov
 			}
 
 			return 0;
+		}
+
+		String GetStringValue(const ov::String &key) const
+		{
+			auto &value = _value[key];
+
+			if (value.isString())
+			{
+				return ov::String( value.asString().c_str() );
+			}
+
+			return nullptr;			
 		}
 
 		const ::Json::Value &GetJsonValue(const ov::String &key) const

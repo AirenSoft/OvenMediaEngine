@@ -1,5 +1,6 @@
 #include "publisher.h"
 #include "publisher_private.h"
+#include <orchestrator/orchestrator.h>
 
 namespace pub
 {

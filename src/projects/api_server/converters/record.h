@@ -8,7 +8,14 @@
 //==============================================================================
 #pragma once
 
-#include "./vhost.h"
-#include "./application.h"
-#include "./stream.h"
-#include "./record.h"
+#include <monitoring/monitoring.h>
+#include "base/info/record.h"
+
+namespace api
+{
+	namespace conv
+	{
+		std::shared_ptr<info::Record>  RecordFromJson(const Json::Value &json_body);
+	
+	}  // namespace conv
+};	   // namespace api

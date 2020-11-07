@@ -21,11 +21,19 @@ namespace api
 
 		protected:
 
+			ApiResponse OnGetRecords(const std::shared_ptr<HttpClient> &clnt);
+			ApiResponse OnPostStartRecord(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body);
+			ApiResponse OnPostStopRecord(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body);
+
+			ApiResponse OnGetPushes(const std::shared_ptr<HttpClient> &clnt);
+			ApiResponse OnPostStartPush(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body);
+			ApiResponse OnPostStopPush(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body);
+
 			// POST /v1/vhosts/<vhost_name>/apps/<app_name>:<action>
-			ApiResponse OnPostDummyAction(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body);
+			ApiResponse OnPostDummyAction(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body);
 
 			// GET /v1/vhosts/<vhost_name>/apps/<app_name>:<action>
-			ApiResponse OnGetDummyAction(const std::shared_ptr<HttpClient> &client);
+			ApiResponse OnGetDummyAction(const std::shared_ptr<HttpClient> &clnt);
 		};
 	}  // namespace v1
 }  // namespace api
