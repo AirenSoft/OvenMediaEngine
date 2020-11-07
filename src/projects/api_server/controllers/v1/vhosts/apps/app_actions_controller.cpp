@@ -61,7 +61,8 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if(publisher == nullptr)			
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%.*s]", vhost_name.length(), vhost_name.data());	
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%.*s]", 
+											  vhost_name.length(), vhost_name.data());	
 			}
 
 			info::VHostAppName vhost_app(vhost_name.data(), app_name.data());
@@ -100,13 +101,15 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if(publisher == nullptr)			
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%.*s]", vhost_name.length(), vhost_name.data());	
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%.*s]", 
+											  vhost_name.length(), vhost_name.data());	
 			}
 
 			auto record = api::conv::RecordFromJson(request_body);
 			if(record == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not parse json context: [%.*s]", vhost_name.length(), vhost_name.data());
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not parse json context: [%.*s]", 
+											  vhost_name.length(), vhost_name.data());
 			}
 
 			info::VHostAppName vhost_app(vhost_name.data(), app_name.data());
@@ -142,13 +145,15 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if(publisher == nullptr)			
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%.*s]", vhost_name.length(), vhost_name.data());	
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%.*s]", 
+											  vhost_name.length(), vhost_name.data());	
 			}
 
 			auto record = api::conv::RecordFromJson(request_body);
 			if(record == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not parse json context: [%.*s]", vhost_name.length(), vhost_name.data());
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not parse json context: [%.*s]", 
+											  vhost_name.length(), vhost_name.data());
 			}
 
 			info::VHostAppName vhost_app(vhost_name.data(), app_name.data());

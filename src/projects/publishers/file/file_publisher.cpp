@@ -190,10 +190,12 @@ void FilePublisher::WorkerThread()
 			SessionController();
 		}
 
-		// To prevent zombies that eat up system resources. :)
 		usleep(1000);
 	}
 }
+
+// TODO(soulk) : Error codes should be defined.
+
 
 std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Record> &record)
 {
