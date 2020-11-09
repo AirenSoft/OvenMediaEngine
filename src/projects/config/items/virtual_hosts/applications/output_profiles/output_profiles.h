@@ -29,7 +29,7 @@ namespace cfg
 				protected:
 					void MakeParseList() override
 					{
-						RegisterValue<Optional>("OutputProfiles", &_output_profiles);
+						RegisterValue<Optional>("OutputProfile", &_output_profiles);
 					}
 				};
 			}  // namespace oprf

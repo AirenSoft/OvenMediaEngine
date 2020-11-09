@@ -27,6 +27,9 @@ namespace cfg
 				protected:
 					void MakeParseList() override
 					{
+						RegisterValue("Name", &_name);
+						RegisterValue("OutputStreamName", &_output_stream_name);
+						RegisterValue<Optional>("Encodes", &_encodes);
 					}
 				};
 			}  // namespace oprf
