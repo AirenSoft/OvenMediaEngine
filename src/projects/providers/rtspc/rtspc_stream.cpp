@@ -425,8 +425,8 @@ namespace pvd
 
 		auto media_type = track->GetMediaType();
 		auto codec_id = track->GetCodecId();
-		cmn::BitstreamFormat bitstream_format;
-		cmn::PacketType packet_type;
+		cmn::BitstreamFormat bitstream_format = cmn::BitstreamFormat::Unknwon;
+		cmn::PacketType packet_type = cmn::PacketType::Unknwon;
 
 		if(codec_id == cmn::MediaCodecId::H264)
 		{

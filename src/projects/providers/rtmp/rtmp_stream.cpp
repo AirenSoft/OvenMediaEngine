@@ -1210,7 +1210,7 @@ namespace pvd
 			pts *= audio_track->GetAudioTimestampScale();
 			dts *= audio_track->GetAudioTimestampScale();
 
-			cmn::PacketType	packet_type;
+			cmn::PacketType	packet_type = cmn::PacketType::Unknwon;
 			if(flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
 			{
 				packet_type = cmn::PacketType::SEQUENCE_HEADER;
