@@ -93,8 +93,8 @@ namespace api
 
 		Json::Value JsonFromVHost(const std::shared_ptr<const mon::HostMetrics> &vhost)
 		{
-			Json::Value response = Json::objectValue;
-
+			Json::Value response(Json::ValueType::objectValue);
+			
 			SetString(response, "name", vhost->GetName().CStr(), Optional::False);
 			SetHost(response, "host", vhost->GetHost(), Optional::True);
 			SetSignedPolicy(response, "signedPolicy", vhost->GetSignedPolicy(), Optional::True);

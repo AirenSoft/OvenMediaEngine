@@ -6,12 +6,11 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include <errno.h>
+#include "error.h"
 
+#include <errno.h>
 #include <openssl/err.h>
 #include <srt/srt.h>
-
-#include "error.h"
 
 #include "log.h"
 #include "memory_utilities.h"
@@ -21,14 +20,13 @@ namespace ov
 	Error::Error(const ov::String &domain, int code)
 		: _domain(domain),
 
-		  _code(code)
+		  _code(code),
+		  _code_set(true)
 	{
 	}
 
 	Error::Error(const ov::String &domain, const char *format, ...)
-		: _domain(domain),
-
-		  _code(-1)
+		: _domain(domain)
 	{
 		va_list list;
 		va_start(list, format);
@@ -39,7 +37,8 @@ namespace ov
 	Error::Error(const ov::String &domain, int code, const char *format, ...)
 		: _domain(domain),
 
-		  _code(code)
+		  _code(code),
+		  _code_set(true)
 	{
 		va_list list;
 		va_start(list, format);
@@ -48,12 +47,14 @@ namespace ov
 	}
 
 	Error::Error(int code)
-		: _code(code)
+		: _code(code),
+		  _code_set(true)
 	{
 	}
 
 	Error::Error(int code, const char *format, ...)
-		: _code(code)
+		: _code(code),
+		  _code_set(true)
 	{
 		va_list list;
 		va_start(list, format);
@@ -139,20 +140,25 @@ namespace ov
 	{
 		String description;
 
-		if(_domain.IsEmpty() == false)
+		if (_domain.IsEmpty() == false)
 		{
 			description.AppendFormat("[%s] ", _domain.CStr());
 		}
 
-		if(_message.IsEmpty() == false)
+		if (_message.IsEmpty() == false)
 		{
-			description.AppendFormat("%s (%d)", _message.CStr(), _code);
+			description.AppendFormat("%s", _message.CStr());
 		}
 		else
 		{
-			description.AppendFormat("(No error message) (%d)", _code);
+			description.AppendFormat("(No error message)");
+		}
+
+		if (_code_set)
+		{
+			description.AppendFormat(" (%d)", _code);
 		}
 
 		return description;
 	}
-}
+}  // namespace ov

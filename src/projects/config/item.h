@@ -64,8 +64,8 @@ namespace cfg
 
 		Item &operator=(const Item &item);
 
-		bool Parse(const ov::String &file_name, const ov::String &tag_name);
-		bool Parse(const ov::String &base_file_name, const Json::Value &json, const ov::String &tag_name);
+		std::shared_ptr<ov::Error> Parse(const ov::String &file_name, const ov::String &tag_name);
+		std::shared_ptr<ov::Error> Parse(const ov::String &base_file_name, const Json::Value &json, const ov::String &tag_name);
 		bool IsParsed() const;
 
 		bool IsDefault(const void *target) const;
@@ -251,10 +251,10 @@ namespace cfg
 		// target은 하위 항목
 		bool IsParsed(const void *target) const;
 
-		Item::ParseResult ParseFromFile(const ov::String &base_file_name, ov::String file_name, const ov::String &tag_name, int indent);
+		Item::ParseResult ParseFromFile(const ov::String &base_file_name, ov::String file_name, const ov::String &tag_name, int indent, std::shared_ptr<ov::Error> *error);
 		// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
-		Item::ParseResult ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent);
-		Item::ParseResult ParseFromJson(const ov::String &base_file_name, const Json::Value &json, const ov::String &tag_name, int indent, ov::String path);
+		Item::ParseResult ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent, std::shared_ptr<ov::Error> *error);
+		Item::ParseResult ParseFromJson(const ov::String &base_file_name, const Json::Value &json, const ov::String &tag_name, int indent, ov::String path, std::shared_ptr<ov::Error> *error);
 
 		static ov::String GetEnv(const char *key, const char *default_value, bool *is_default_value);
 		ov::String Preprocess(const ov::String &xml_path, const ValueBase *value_base, const char *value, const ov::String &tag_name, int indent);

@@ -24,8 +24,8 @@ namespace cfg
 
 					// CFG_DECLARE_GETTER_OF(GetSegmentCount, _segment_count)
 					CFG_DECLARE_GETTER_OF(GetSegmentDuration, _segment_duration)
-					CFG_DECLARE_GETTER_OF(GetCrossDomainList, _cross_domain.GetUrls())
-					CFG_DECLARE_GETTER_OF(GetCrossDomain, _cross_domain)
+					CFG_DECLARE_GETTER_OF(GetCrossDomainList, _cross_domains.GetUrls())
+					CFG_DECLARE_GETTER_OF(GetCrossDomains, _cross_domains)
 
 				protected:
 					void MakeParseList() override
@@ -34,13 +34,13 @@ namespace cfg
 
 						// RegisterValue<Optional>("SegmentCount", &_segment_count);
 						RegisterValue<Optional>("SegmentDuration", &_segment_duration);
-						RegisterValue<Optional>("CrossDomain", &_cross_domain);
+						RegisterValue<Optional>("CrossDomains", &_cross_domains);
 					}
 
 					// LL-DASH uses time-based segment
 					// int _segment_count = 3;
-					int _segment_duration = 5;
-					cmn::CrossDomain _cross_domain;
+					int _segment_duration = 3;
+					cmn::CrossDomains _cross_domains;
 				};
 			}  // namespace pub
 		}	   // namespace app

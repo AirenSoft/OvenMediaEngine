@@ -28,6 +28,11 @@ namespace api
 
 	ApiResponse::ApiResponse(const std::shared_ptr<ov::Error> &error)
 	{
+		if (error == nullptr)
+		{
+			return;
+		}
+
 		_status_code = static_cast<HttpStatusCode>(error->GetCode());
 
 		if (IsValidHttpStatusCode(_status_code) == false)
@@ -38,12 +43,32 @@ namespace api
 		_json["message"] = error->ToString().CStr();
 	}
 
+	ApiResponse::ApiResponse(const ApiResponse &response)
+	{
+		_status_code = response._status_code;
+		_json = response._json;
+	}
+
+	ApiResponse::ApiResponse(ApiResponse &&response)
+	{
+		_status_code = std::move(response._status_code);
+		_json = std::move(response._json);
+	}
+
 	bool ApiResponse::SendToClient(const std::shared_ptr<HttpClient> &client)
 	{
 		const auto &response = client->GetResponse();
 
 		response->SetStatusCode(_status_code);
+		response->SetHeader("Content-Type", "application/json;charset=UTF-8");
 
 		return (_json.isNull() == false) ? response->AppendString(ov::Json::Stringify(_json)) : true;
 	}
+
+#if 0
+	std::shared_ptr<mon::HostMetrics> ApiResponse::GetVirtualHost(const std::shared_ptr<HttpClient> &client)
+	{
+		return nullptr;
+	}
+#endif
 }  // namespace api

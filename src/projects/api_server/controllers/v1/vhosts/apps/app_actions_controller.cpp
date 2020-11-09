@@ -24,7 +24,7 @@ namespace api
 		void AppActionsController::PrepareHandlers()
 		{
 			RegisterGet(R"()", &AppActionsController::OnGetDummyAction);
-			
+
 			// Record related actions
 			RegisterGet(R"((records))", &AppActionsController::OnGetRecords);
 			RegisterPost(R"((startRecord))", &AppActionsController::OnPostStartRecord);
@@ -33,213 +33,114 @@ namespace api
 			// Push related actions
 			RegisterGet(R"((pushes))", &AppActionsController::OnGetPushes);
 			RegisterPost(R"((startPush))", &AppActionsController::OnPostStartPush);
-			RegisterPost(R"((stopPush))", &AppActionsController::OnPostStopPush);			
+			RegisterPost(R"((stopPush))", &AppActionsController::OnPostStopPush);
 		};
 
-		ApiResponse AppActionsController::OnGetRecords(const std::shared_ptr<HttpClient> &clnt)
+		ApiResponse AppActionsController::OnGetRecords(const std::shared_ptr<HttpClient> &client,
+													   const std::shared_ptr<mon::HostMetrics> &vhost,
+													   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			auto &match_result = clnt->GetRequest()->GetMatchResult();
-
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto vhost = GetVirtualHost(vhost_name);
-			if (vhost == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
-											  vhost_name.length(), vhost_name.data());
-			}
-
-			auto app_name = match_result.GetNamedGroup("app_name");
-			auto app = GetApplication(vhost, app_name);
-			if (app == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
-			}
-
-
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
-			if(publisher == nullptr)			
+			if (publisher == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%.*s]", 
-											  vhost_name.length(), vhost_name.data());	
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
-			info::VHostAppName vhost_app(vhost_name.data(), app_name.data());
 			std::vector<std::shared_ptr<info::Record>> record_list;
 
-			auto error = publisher->GetRecords(vhost_app, record_list);
-			
-			return error;
-		}
-
-		ApiResponse AppActionsController::OnPostStartRecord(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body)
-		{
-			// logte("JsonContext : %s", ov::Json::Stringify(request_body).CStr());
-
-			auto &match_result = clnt->GetRequest()->GetMatchResult();
-
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto vhost = GetVirtualHost(vhost_name);
-			if (vhost == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
-											  vhost_name.length(), vhost_name.data());
-			}
-
-			auto app_name = match_result.GetNamedGroup("app_name");
-			auto app = GetApplication(vhost, app_name);
-			if (app == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
-			}
-
-
-
-			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
-			if(publisher == nullptr)			
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%.*s]", 
-											  vhost_name.length(), vhost_name.data());	
-			}
-
-			auto record = api::conv::RecordFromJson(request_body);
-			if(record == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not parse json context: [%.*s]", 
-											  vhost_name.length(), vhost_name.data());
-			}
-
-			info::VHostAppName vhost_app(vhost_name.data(), app_name.data());
-
-			auto error = publisher->RecordStart(vhost_app, record);
+			auto error = publisher->GetRecords(app->GetName(), record_list);
 
 			return error;
 		}
 
-		ApiResponse AppActionsController::OnPostStopRecord(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body)
+		ApiResponse AppActionsController::OnPostStartRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+															const std::shared_ptr<mon::HostMetrics> &vhost,
+															const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			// logte("JsonContext : %s", ov::Json::Stringify(request_body).CStr());
 
-			auto &match_result = clnt->GetRequest()->GetMatchResult();
-
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto vhost = GetVirtualHost(vhost_name);
-			if (vhost == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
-											  vhost_name.length(), vhost_name.data());
-			}
-
-			auto app_name = match_result.GetNamedGroup("app_name");
-			auto app = GetApplication(vhost, app_name);
-			if (app == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
-			}
-
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
-			if(publisher == nullptr)			
+			if (publisher == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%.*s]", 
-											  vhost_name.length(), vhost_name.data());	
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
 			auto record = api::conv::RecordFromJson(request_body);
-			if(record == nullptr)
+			if (record == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not parse json context: [%.*s]", 
-											  vhost_name.length(), vhost_name.data());
+				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
+											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
-			info::VHostAppName vhost_app(vhost_name.data(), app_name.data());
+			auto error = publisher->RecordStart(app->GetName(), record);
 
-			auto error = publisher->RecordStop(vhost_app, record);
-
-			return error;	
+			return error;
 		}
 
-
-		ApiResponse AppActionsController::OnGetPushes(const std::shared_ptr<HttpClient> &clnt)
+		ApiResponse AppActionsController::OnPostStopRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+														   const std::shared_ptr<mon::HostMetrics> &vhost,
+														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			Json::Value response = Json::objectValue;
-			return std::move(response);			
-		}
+			// logte("JsonContext : %s", ov::Json::Stringify(request_body).CStr());
 
-		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body)
-		{
-			Json::Value response = Json::objectValue;
-			return std::move(response);			
-		}
-
-		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body)
-		{
-			Json::Value response = Json::objectValue;
-			return std::move(response);			
-		}
-
-
-		ApiResponse AppActionsController::OnGetDummyAction(const std::shared_ptr<HttpClient> &clnt)
-		{
-			auto &match_result = clnt->GetRequest()->GetMatchResult();
-
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto vhost = GetVirtualHost(vhost_name);
-			if (vhost == nullptr)
+			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
+			if (publisher == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
-											  vhost_name.length(), vhost_name.data());
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
-			auto app_name = match_result.GetNamedGroup("app_name");
-			auto app = GetApplication(vhost, app_name);
-			if (app == nullptr)
+			auto record = api::conv::RecordFromJson(request_body);
+			if (record == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
+				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
+											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
-			logte("Called OnGetDummyAction. invoke [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
+			auto error = publisher->RecordStop(app->GetName(), record);
 
+			return error;
+		}
+
+		ApiResponse AppActionsController::OnGetPushes(const std::shared_ptr<HttpClient> &client)
+		{
+			Json::Value response(Json::ValueType::objectValue);
+			return std::move(response);
+		}
+
+		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body)
+		{
+			Json::Value response(Json::ValueType::objectValue);
+			return std::move(response);
+		}
+
+		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body)
+		{
+			Json::Value response(Json::ValueType::objectValue);
+			return std::move(response);
+		}
+
+		ApiResponse AppActionsController::OnGetDummyAction(const std::shared_ptr<HttpClient> &client,
+														   const std::shared_ptr<mon::HostMetrics> &vhost,
+														   const std::shared_ptr<mon::ApplicationMetrics> &app)
+		{
+			logte("Called OnGetDummyAction. invoke [%s/%s]",
+				  vhost->GetName().CStr(), app->GetName().GetAppName());
 
 			return api::conv::JsonFromApplication(app);
 		}
 
-		ApiResponse AppActionsController::OnPostDummyAction(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body)
+		ApiResponse AppActionsController::OnPostDummyAction(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+															const std::shared_ptr<mon::HostMetrics> &vhost,
+															const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			auto &match_result = clnt->GetRequest()->GetMatchResult();
-
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto vhost = GetVirtualHost(vhost_name);
-			if (vhost == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
-											  vhost_name.length(), vhost_name.data());
-			}
-
-			auto app_name = match_result.GetNamedGroup("app_name");
-			auto app = GetApplication(vhost, app_name);
-			if (app == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
-			}
-
-			logte("Called OnPostDummyAction. invoke [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
-
+			logte("Called OnPostDummyAction. invoke [%s/%s]",
+				  vhost->GetName().CStr(), app->GetName().GetAppName());
 
 			return api::conv::JsonFromApplication(app);
 		}
-		
+
 	}  // namespace v1
 }  // namespace api
