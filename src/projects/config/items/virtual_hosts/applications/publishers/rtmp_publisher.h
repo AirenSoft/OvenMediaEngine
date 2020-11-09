@@ -22,17 +22,17 @@ namespace cfg
 				{
 					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Rtmp)
 
-					CFG_DECLARE_REF_GETTER_OF(GetCrossDomains, _cross_domain.GetUrls())
+					CFG_DECLARE_REF_GETTER_OF(GetCrossDomains, _cross_domains.GetUrls())
 
 				protected:
 					void MakeParseList() override
 					{
 						Publisher::MakeParseList();
 
-						RegisterValue<Optional>("CrossDomain", &_cross_domain);
+						RegisterValue<Optional>("CrossDomains", &_cross_domains);
 					}
 
-					cmn::CrossDomain _cross_domain;
+					cmn::CrossDomains _cross_domains;
 				};
 			}  // namespace pub
 		}	   // namespace app

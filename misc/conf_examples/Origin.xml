@@ -145,22 +145,22 @@
 						<HLS>
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
-							<CrossDomain>
+							<CrossDomains>
 								<Url>*</Url>
-							</CrossDomain>
+							</CrossDomains>
 						</HLS>
 						<DASH>
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
-							<CrossDomain>
+							<CrossDomains>
 								<Url>*</Url>
-							</CrossDomain>
+							</CrossDomains>
 						</DASH>
 						<LLDASH>
 							<SegmentDuration>5</SegmentDuration>
-							<CrossDomain>
+							<CrossDomains>
 								<Url>*</Url>
-							</CrossDomain>
+							</CrossDomains>
 						</LLDASH>
 					</Publishers>
 				</Application>

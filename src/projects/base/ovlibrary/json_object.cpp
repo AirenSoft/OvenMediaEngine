@@ -35,7 +35,7 @@ namespace ov
 		if(result == false)
 		{
 			logtw("An error occurred while parsing json: %s\n %s", error.c_str(), ov::Dump(data, length).CStr());
-			return Error::CreateError(-1, "%s", error.c_str());
+			return Error::CreateError("JSON", "%s", error.c_str());
 		}
 
 		_value = root;

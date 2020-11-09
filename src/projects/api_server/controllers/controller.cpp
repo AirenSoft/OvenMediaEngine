@@ -28,6 +28,11 @@ namespace api
 
 	ApiResponse::ApiResponse(const std::shared_ptr<ov::Error> &error)
 	{
+		if (error == nullptr)
+		{
+			return;
+		}
+
 		_status_code = static_cast<HttpStatusCode>(error->GetCode());
 
 		if (IsValidHttpStatusCode(_status_code) == false)

@@ -135,51 +135,102 @@ namespace api
 			return api::conv::JsonFromApplication(app);
 		}
 
+		void OverwriteJson(const Json::Value &from, Json::Value *to)
+		{
+			for (auto item = from.begin(); item != from.end(); ++item)
+			{
+				switch (item->type())
+				{
+					case Json::ValueType::nullValue:
+						[[fallthrough]];
+					case Json::ValueType::intValue:
+						[[fallthrough]];
+					case Json::ValueType::uintValue:
+						[[fallthrough]];
+					case Json::ValueType::realValue:
+						[[fallthrough]];
+					case Json::ValueType::stringValue:
+						[[fallthrough]];
+					case Json::ValueType::booleanValue:
+						[[fallthrough]];
+					case Json::ValueType::arrayValue:
+						to->operator[](item.name()) = *item;
+						break;
+
+					case Json::ValueType::objectValue: {
+						auto &target = to->operator[](item.name());
+						OverwriteJson(*item, &target);
+					}
+				}
+			}
+		}
+
 		ApiResponse AppsController::OnPutApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			if (request_body.isObject() == false)
+			{
+				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Request body must be an object");
+			}
+
 			// TODO(dimiden): Caution - Race condition may occur
 			// If an application is deleted immediately after the GetApplication(),
 			// the app information can no longer be obtained from Orchestrator
 
 			auto orchestrator = ocst::Orchestrator::GetInstance();
-			Json::Value requested_config = request_body;
 
-			for (auto &item : requested_config)
+			auto app_json = conv::JsonFromApplication(app);
+
+			// Delete GET-only fields
+			app_json.removeMember("dynamic");
+
+			for (auto item = request_body.begin(); item != request_body.end(); ++item)
 			{
-				cfg::vhost::app::Application app_config = app->GetConfig();
-				auto error = conv::ApplicationFromJson(item, &app_config);
+				ov::String name = item.name().c_str();
+				auto lower_name = name.LowerCaseString();
 
-				if (error == nullptr)
+				// Prevent to change the name
+				if (lower_name == "name")
 				{
-					if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
-					{
-						return ov::Error::CreateError(HttpStatusCode::Forbidden, "Could not delete the application: [%s/%s]",
-													  vhost->GetName().CStr(), app->GetName().CStr());
-					}
+					return ov::Error::CreateError(HttpStatusCode::BadRequest, "The name entry cannot be specified in the app modification");
+				}
 
-					auto result = orchestrator->CreateApplication(*vhost, app_config);
+				// Copy request_body into app_json
+				OverwriteJson(request_body, &app_json);
+			}
 
-					switch (result)
-					{
-						case ocst::Result::Failed:
-							error = ov::Error::CreateError(HttpStatusCode::BadRequest, "Failed to create the application");
-							break;
+			cfg::vhost::app::Application app_config;
+			auto error = conv::ApplicationFromJson(app_json, &app_config);
 
-						case ocst::Result::Succeeded:
-							break;
+			if (error == nullptr)
+			{
+				if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
+				{
+					return ov::Error::CreateError(HttpStatusCode::Forbidden, "Could not delete the application: [%s/%s]",
+												  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
+				}
 
-						case ocst::Result::Exists:
-							error = ov::Error::CreateError(HttpStatusCode::BadRequest, "The application already exists");
-							break;
+				auto result = orchestrator->CreateApplication(*vhost, app_config);
 
-						case ocst::Result::NotExists:
-							// CreateApplication() never returns NotExists
-							error = ov::Error::CreateError(HttpStatusCode::InternalServerError, "Unknown error occurred");
-							OV_ASSERT2(false);
-							break;
-					}
+				switch (result)
+				{
+					case ocst::Result::Failed:
+						error = ov::Error::CreateError(HttpStatusCode::BadRequest, "Failed to create the application");
+						break;
+
+					case ocst::Result::Succeeded:
+						break;
+
+					case ocst::Result::Exists:
+						error = ov::Error::CreateError(HttpStatusCode::BadRequest, "The application already exists");
+						break;
+
+					case ocst::Result::NotExists:
+						// CreateApplication() never returns NotExists
+						error = ov::Error::CreateError(HttpStatusCode::InternalServerError, "Unknown error occurred");
+						OV_ASSERT2(false);
+						break;
 				}
 
 				if (error != nullptr)
@@ -191,12 +242,12 @@ namespace api
 				else
 				{
 					auto app = GetApplication(vhost, app_config.GetName().CStr());
-					// response_value.append(conv::JsonFromApplication(app));
+
+					return api::conv::JsonFromApplication(app);
 				}
 			}
 
-			// return response_value;
-			return {};
+			return error;
 		}
 
 		ApiResponse AppsController::OnDeleteApp(const std::shared_ptr<HttpClient> &client,
@@ -206,7 +257,7 @@ namespace api
 			if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
 			{
 				return ov::Error::CreateError(HttpStatusCode::Forbidden, "Could not delete the application: [%s/%s]",
-											  vhost->GetName().CStr(), app->GetName().CStr());
+											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
 			return Json::Value(Json::ValueType::objectValue);

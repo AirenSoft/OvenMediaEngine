@@ -96,8 +96,14 @@ namespace api
 	[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult(); \
 	[[maybe_unused]] std::shared_ptr<ov::Error> error;
 
-#define API_CONTROLLER_GET_REQUEST_BODY() \
-	auto request_body = ov::Json::Parse(client->GetRequest()->GetRequestBody()).GetJsonValue();
+#define API_CONTROLLER_GET_REQUEST_BODY()                              \
+	ov::JsonObject json_object;                                        \
+	error = json_object.Parse(client->GetRequest()->GetRequestBody()); \
+	Json::Value request_body;                                          \
+	if (error == nullptr)                                              \
+	{                                                                  \
+		request_body = json_object.GetJsonValue();                     \
+	}
 
 #define API_CONTROLLER_GET_VHOST()                             \
 	std::shared_ptr<mon::HostMetrics> vhost;                   \

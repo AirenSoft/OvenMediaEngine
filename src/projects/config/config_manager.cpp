@@ -208,6 +208,7 @@ namespace cfg
 				logtc("Major Changes (v7 -> v8):");
 				logtc(" - Changed <Server>.<VirtualHosts>.<VirtualHost>.<Domain> to <Host>");
 				logtc(" - Changed <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Streams>.<Stream>.<Name> to <OutputStreamName>");
+				logtc(" - Changed <CrossDomain> to <CrossDomains>");
 				logtc(" - Added <Server>.<Bind>.<Managers>.<API> for setting API binding port");
 				logtc(" - Added <Server>.<API> for setting API server");
 				logtc(" - Added <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Streams>.<Stream>.<Name> to distinguish OutputProfile");
