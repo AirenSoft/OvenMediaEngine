@@ -70,6 +70,12 @@ std::shared_ptr<FileUserdata> FileUserdataSets::GetBySessionId(session_id_t sess
 	return nullptr;
 }
 
+void FileUserdataSets::DeleteByKey(ov::String key)
+{
+	_userdata_sets.erase(key);
+}
+
+
 uint32_t FileUserdataSets::GetCount()
 {
 	return _userdata_sets.size();	

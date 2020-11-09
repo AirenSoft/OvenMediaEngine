@@ -63,102 +63,131 @@ bool FilePublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Appl
 	return true;
 }
 
+void FilePublisher::StartSession(std::shared_ptr<FileSession> session)
+{
+	// Check the status of the session.
+	auto session_state = session->GetState();
+
+	switch(session_state)
+	{
+		// State of disconnected and ready to connect
+		case pub::Session::SessionState::Ready:
+			session->Start();
+		break;
+		case pub::Session::SessionState::Stopped:
+			session->Start();
+		break;
+		// State of Recording
+		case pub::Session::SessionState::Started:
+			[[fallthrough]];
+		// State of Stopping
+		case pub::Session::SessionState::Stopping:
+			[[fallthrough]];
+		// State of Record failed
+		case pub::Session::SessionState::Error:
+			[[fallthrough]];
+	}
+
+	auto new_sesion_state = session->GetState();
+	if(session_state != new_sesion_state)
+	{
+		logtd("Changed State. State(%d - %d)", session_state, new_sesion_state);		
+	}	
+}
+
+void FilePublisher::StopSession(std::shared_ptr<FileSession> session)
+{
+	auto session_state = session->GetState();
+
+	switch(session_state)
+	{
+		case pub::Session::SessionState::Started:
+			session->Stop();
+			break;
+		case pub::Session::SessionState::Ready:
+			[[fallthrough]];
+		case pub::Session::SessionState::Stopping:
+			[[fallthrough]];
+		case pub::Session::SessionState::Stopped:
+			[[fallthrough]];
+		case pub::Session::SessionState::Error:
+			[[fallthrough]];
+	}
+
+	auto new_sesion_state = session->GetState();
+	if(session_state != new_sesion_state)
+	{
+		logtd("Changed State. State(%d - %d)", session_state, new_sesion_state);		
+	}	
+}
+
+
 void FilePublisher::SessionController()
 {
 	std::shared_lock<std::shared_mutex> lock(_userdata_sets_mutex);
 
-	// Session management by Userdata
-	for(uint32_t i=0 ; i<_userdata_sets.GetCount() ; i++)
+	for(uint32_t userdata_idx=0 ; userdata_idx<_userdata_sets.GetCount() ; userdata_idx++)
 	{
-		auto userdata = _userdata_sets.GetAt(i);
+		auto userdata = _userdata_sets.GetAt(userdata_idx);
 		if(userdata == nullptr)
 			continue;
 
-		// logtd("index(%d) info(%s)", i, userdata->GetInfoString().CStr());
-
+		// Find a session related to Userdata.
 		auto vhost_app_name = info::VHostAppName(userdata->GetVhost(), userdata->GetApplication());
-		auto stream_name = userdata->GetStream();
+		auto stream = std::static_pointer_cast<FileStream>(GetStream(vhost_app_name, userdata->GetStreamName()));
+		if(stream != nullptr)
+		{
+			// If there is no session, create a new file(record) session.
+			auto session = std::static_pointer_cast<FileSession>(stream->GetSession(userdata->GetSessionId()));
+			if (session == nullptr)
+			{
+				session = stream->CreateSession();
+				if(session == nullptr)
+				{
+					logte("Could not create session");
+					continue;
+				}
+				userdata->SetSessionId(session->GetId());
+
+				session->SetRecord(userdata->GetRecord());
+			}
+
+
+			if(userdata->GetEnable() == true && userdata->GetRemove() == false)
+			{
+				StartSession(session);
+			}		
+
+			if(userdata->GetEnable() == false || userdata->GetRemove() == true)
+			{
+				StopSession(session);
+			}
+		}
 
 		if(userdata->GetRemove() == true)
 		{
-			continue;
-		}
-
-		// Find a session related to Userdata.
-		auto stream = std::static_pointer_cast<FileStream>(GetStream(vhost_app_name, stream_name));
-		if(stream == nullptr)
-		{
-			logtw("There is no such stream. (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
-			continue;
-		}
-
-		// If there is no session, create a new session.
-		auto session = std::static_pointer_cast<FileSession>(stream->GetSession(userdata->GetSessionId()));
-		if (session == nullptr)
-		{
-			session = stream->CreateSession();
-			if(session == nullptr)
-			{
-				logte("Could not create session");
-				continue;
-			}
-
-			session->SetSelectTracks(userdata->GetSelectTrack());
-
-			userdata->SetSessionId(session->GetId());
-		}
-
-		// Check the status of the session.
-		auto session_state = session->GetState();
-		
-		switch(session_state)
-		{
-			case pub::Session::SessionState::Ready:
-				// State of disconnected and ready to connect
-				if(userdata->GetEnable() == true)
-					session->Start();
-			break;
-			case pub::Session::SessionState::Started:
-				// Recording
-				if(userdata->GetEnable() == false)
-					session->Stop();
-			break;
-			case pub::Session::SessionState::Stopping:
-				// stopping
-			break;
-			case pub::Session::SessionState::Stopped:
-				// completed
-			break;
-			case pub::Session::SessionState::Error:
-				// failure
-			break;
-		}
-
-		auto new_sesion_state = session->GetState();
-		if(session_state != new_sesion_state)
-		{
-			logtd("Changed State. SessionId(%d),  State(%d - %d)", i, session_state, new_sesion_state);		
-		}
+			logte("Delete userdata of file publiser. id(%s)", userdata->GetId().CStr());
+			_userdata_sets.DeleteByKey(userdata->GetId());
+			userdata_idx--;
+		}		
 	}
 
-	// Garbage Collection : Delete sessions that are not in Userdata.
-	//  - Look up all sessions. Delete sessions that are not in the UserdataSet.
-	for(uint32_t i=0; i<GetApplicationCount() ; i++)
+	// Garbage Collection : Delete sessions that are not in userdata list.
+	for(uint32_t app_idx=0; app_idx<GetApplicationCount() ; app_idx++)
 	{
-		auto application = std::static_pointer_cast<FileApplication>(GetApplicationAt(i));
+		auto application = std::static_pointer_cast<FileApplication>(GetApplicationAt(app_idx));
 		if(application == nullptr)
 			continue;
 
-		for(uint32_t j=0; j<application->GetStreamCount() ; j++)
+		for(uint32_t stream_idx=0; stream_idx<application->GetStreamCount() ; stream_idx++)
 		{
-			auto stream = std::static_pointer_cast<FileStream>(application->GetStreamAt(j));
+			auto stream = std::static_pointer_cast<FileStream>(application->GetStreamAt(stream_idx));
 			if(stream == nullptr)
 				continue;
 
-
-			for(uint32_t k=0; k<stream->GetSessionCount() ; k++)	
+			for(uint32_t session_idx=0; session_idx<stream->GetSessionCount() ; session_idx++)	
 			{
-				auto session = std::static_pointer_cast<FileSession>(stream->GetSessionAt(k));
+				auto session = std::static_pointer_cast<FileSession>(stream->GetSessionAt(session_idx));
 				if(session == nullptr)
 					continue;
 
@@ -166,17 +195,18 @@ void FilePublisher::SessionController()
 				if(userdata == nullptr)
 				{
 					// Userdata does not have this session. This session needs to be deleted.
-					logtw("Userdata does not have this session. This session needs to be deleted. session_id(%d)", session->GetId());
+					logtw("Userdata does not have this session. This session needs to be deleted. session_id(%d)", 
+						session->GetId());
+					
 					stream->DeleteSession(session->GetId());
 
 					// If the session is deleted, check again from the beginning.
-					k=0;
+					session_idx=0;
 				}
 			}
 		}
 	}	
 }
-
 
 void FilePublisher::WorkerThread()
 {
@@ -194,44 +224,59 @@ void FilePublisher::WorkerThread()
 	}
 }
 
-// TODO(soulk) : Error codes should be defined.
-
-
-std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Record> &record)
+std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &vhost_app_name, 
+													  const std::shared_ptr<info::Record> &record)
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
 
-	std::vector<int32_t> dummy_tracks;
-	_userdata_sets.Set(record->GetId(), FileUserdata::Create(
-		true, 
+	auto userdata = FileUserdata::Create(
+		record->GetId(),
 		vhost_app_name.GetVHostName(), 
 		vhost_app_name.GetAppName(), 
-		record->GetStream().GetName(), 
-		dummy_tracks)
-	);
+		record);
+	
+	userdata->SetEnable(true);
+	userdata->SetRemove(false);
+
+	_userdata_sets.Set(record->GetId(), userdata);
 
 	return ov::Error::CreateError(0, "Success");
 }
 
-std::shared_ptr<ov::Error> FilePublisher::RecordStop(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Record> &record)
+std::shared_ptr<ov::Error> FilePublisher::RecordStop(const info::VHostAppName &vhost_app_name, 
+												     const std::shared_ptr<info::Record> &record)
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
 
-	auto user_data = _userdata_sets.GetByKey(record->GetId());
-	if(user_data == nullptr)
+	auto userdata = _userdata_sets.GetByKey(record->GetId());
+	if(userdata == nullptr)
 	{
 		return ov::Error::CreateError(1, "Could not find record");	
 	}
 
-	user_data->SetRemove(true);
+	userdata->SetEnable(false);
+	userdata->SetRemove(true);
 
 	return ov::Error::CreateError(0, "Success");
 }
 
-std::shared_ptr<ov::Error> FilePublisher::GetRecords(const info::VHostAppName &vhost_app_name, std::vector<std::shared_ptr<info::Record>> &record_list)
+std::shared_ptr<ov::Error> FilePublisher::GetRecords(const info::VHostAppName &vhost_app_name, 
+											         std::vector<std::shared_ptr<info::Record>> &record_list)
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
 
+	for(uint32_t i=0 ; i<_userdata_sets.GetCount() ; i++)
+	{
+		auto userdata = _userdata_sets.GetAt(i);
+		if(userdata == nullptr)
+			continue;
+
+		// logtd("=[%d]=", i);
+		// logtd("%s", userdata->GetInfoString().CStr());
+		// logtd("%s", userdata->GetRecord()->GetInfoString().CStr());
+
+		record_list.push_back(userdata->GetRecord());
+	}
 
 	return ov::Error::CreateError(0, "Success");
 }

@@ -1,27 +1,39 @@
 #pragma once
 
 #include "base/ovlibrary/ovlibrary.h"
+#include "base/info/record.h"
 
 class FileUserdata
 {
 public:
-	static std::shared_ptr<FileUserdata> Create(bool eanble, ov::String vhost, ov::String app, ov::String stream, std::vector<int32_t>& tracks)
+	static std::shared_ptr<FileUserdata> Create(ov::String id, ov::String vhost, ov::String app, const std::shared_ptr<info::Record> &record)
 	{
 		auto userdata = std::make_shared<FileUserdata>();
 
-		userdata->SetEnable(eanble);
+		userdata->SetId(id);
 		userdata->SetVhost(vhost);
 		userdata->SetApplication(app);
-		userdata->SetStream(stream);
-		userdata->SetSelectTrack(tracks);
+		userdata->SetEnable(false);
 		userdata->SetRemove(false);
 		userdata->SetSessionId(0);
+
+		userdata->SetRecord(record);
 
 		return userdata;
 	}
 
 	FileUserdata() {}
 	~FileUserdata() {}
+
+	void SetId(ov::String value)
+	{
+		_id = value;
+	}
+
+	ov::String GetId() 
+	{
+		return _id;
+	}
 
 	void SetEnable(bool eanble) 
 	{ 
@@ -45,29 +57,15 @@ public:
 	{
 		_aplication_name = value;
 	}
+
 	ov::String GetApplication()
 	{
 		return _aplication_name;
 	}
 
-	void SetStream(ov::String value)
+	ov::String GetStreamName()
 	{
-		_stream_name = value;
-	}
-	ov::String GetStream()
-	{
-		return _stream_name;
-	}
-
-	void SetSelectTrack(std::vector<int32_t>& tracks)
-	{
-		_selected_tracks.clear();
-		_selected_tracks.assign( tracks.begin(), tracks.end() );
-	}
-
-	std::vector<int32_t>& GetSelectTrack()
-	{
-		return _selected_tracks;
+		return _record->GetStream().GetName();
 	}
 
 	void SetRemove(bool value)
@@ -89,35 +87,50 @@ public:
 		return _session_id;
 	}
 
+	void SetRecord(const std::shared_ptr<info::Record> &record)
+	{
+		_record = record;
+	}
+
+	std::shared_ptr<info::Record>& GetRecord()
+	{
+		return _record;
+	}
+
 	ov::String GetInfoString() {
 		ov::String info = "";
 
-		info.AppendFormat("remove=%s ", GetRemove()?"true":"false");
-		info.AppendFormat("enable=%s ", GetEnable()?"true":"false");
-		info.AppendFormat("vhost=%s ", GetVhost().CStr());
-		info.AppendFormat("app=%s ", GetApplication().CStr());
-		info.AppendFormat("stream=%s / ", GetStream().CStr());
-		// info.AppendFormat("url=%s ", GetTargetUrl().CStr());
-		// info.AppendFormat("stream_key=%s / ", GetTargetStreamKey().CStr());
-		info.AppendFormat("session_id=%d ", GetSessionId());
+		info.AppendFormat("_id=%s\n", GetId().CStr());
+		info.AppendFormat("_remove=%s\n", GetRemove()?"true":"false");
+		info.AppendFormat("_enable=%s\n", GetEnable()?"true":"false");
+		info.AppendFormat("_vhost=%s\n", GetVhost().CStr());
+		info.AppendFormat("_app=%s\b", GetApplication().CStr());
+		info.AppendFormat("_stream=%s\b", GetStreamName().CStr());
+		info.AppendFormat("_session_id=%d", GetSessionId());
 
 		return info;
 	}
 
 private:
+	// User Defined Id
+	ov::String _id;
 
+	// Enabled/Disabled Flag
 	bool _enable;
 
-	// Source stream
-	ov::String _vhost_name;
-	ov::String _aplication_name;
-	ov::String _stream_name;
-
-	std::vector<int32_t> _selected_tracks;
-
+	// Remove Flag
 	bool _remove;
 
-	// Session Id
+	// Virtual Host
+	ov::String _vhost_name;
+
+	// Application
+	ov::String _aplication_name;
+
+	// Record Info
+	std::shared_ptr<info::Record> _record;
+
+	// File Session Id
 	session_id_t _session_id;
 };
 
@@ -136,6 +149,8 @@ public:
 	std::shared_ptr<FileUserdata> GetAt(uint32_t index);
 	std::shared_ptr<FileUserdata> GetByKey(ov::String key);
 	std::shared_ptr<FileUserdata> GetBySessionId(session_id_t session_id);
+	
+	void DeleteByKey(ov::String key);
 
 private:
 	// <userdata_id, userdata>

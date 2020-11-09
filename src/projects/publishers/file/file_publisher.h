@@ -43,7 +43,9 @@ private:
 
 private:
 	void SessionController();
-
+	void StartSession(std::shared_ptr<FileSession> session);
+	void StopSession(std::shared_ptr<FileSession> session);
+	
 	void WorkerThread();
 	bool _stop_thread_flag;
 	std::thread _worker_thread;

@@ -51,6 +51,11 @@ namespace api
 
 			auto error = publisher->GetRecords(app->GetName(), record_list);
 
+			// for ( auto &item : record_list )
+			// {
+			// 	logtd("\n%s", item->GetInfoString().CStr());
+			// }
+
 			return error;
 		}
 

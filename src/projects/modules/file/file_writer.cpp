@@ -271,6 +271,9 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 {
 	std::unique_lock<std::mutex> mlock(_lock);
 
+	if(_format_context == nullptr)
+		return false;
+
 	// Find AVStream and Index;
 	int stream_index = 0;
 

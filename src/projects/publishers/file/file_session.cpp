@@ -26,7 +26,6 @@ FileSession::FileSession(const info::Session &session_info,
    : pub::Session(session_info, application, stream),
    _writer(nullptr)
 {
-	_sent_ready = false;
 
 }
 
@@ -40,10 +39,13 @@ FileSession::~FileSession()
 bool FileSession::Start()
 {
 	logtd("FileSession(%d) has started.", GetId());
-	
-	ov::String tmp_output_fullpath = GetOutputTempFilePath();
-	logtd("Temporary output path : %s", tmp_output_fullpath.CStr());
 
+	GetRecord()->UpdateRecordStartTime();
+	GetRecord()->UpdateRecordStopTime();
+	GetRecord()->SetFilePath(GetOutputFilePath());
+	GetRecord()->SetTmpPath(GetOutputTempFilePath());
+	GetRecord()->SetFileInfoPath(GetOutputFileInfoPath());
+	
 	// ov::String tmp_output_directory = ov::PathManager::ExtractPath(tmp_output_fullpath).CStr();
 	// logtd("Temporary output directory : %s", tmp_output_directory.CStr());
 
@@ -55,7 +57,7 @@ bool FileSession::Start()
 		return false;
 	}
 
-	if(_writer->SetPath(tmp_output_fullpath, "mpegts") == false)
+	if(_writer->SetPath(GetRecord()->GetTmpPath(), "mpegts") == false)
 	{
 		SetState(SessionState::Error);
 		_writer = nullptr;
@@ -100,23 +102,27 @@ bool FileSession::Start()
 		return false;
 	}
 
+
 	return Session::Start();
 }
 
 bool FileSession::Stop()
 {
-	logtd("FileSession(%d) has stopped", GetId());
-
-	SetState(SessionState::Stopping);			
-
 	if(_writer != nullptr)
 	{
+		SetState(SessionState::Stopping);			
+
+		GetRecord()->UpdateRecordStopTime();
+		GetRecord()->SetFilePath(GetOutputFilePath());
+		GetRecord()->SetFileInfoPath(GetOutputFileInfoPath());
+		GetRecord()->IncreaseSequence();
+
 		_writer->Stop();
 
 		ov::String tmp_output_path = _writer->GetPath();
 
 		// Create directory
-		ov::String output_path = GetOutputFilePath();
+		ov::String output_path = GetRecord()->GetFilePath();
 		ov::String output_direcotry = ov::PathManager::ExtractPath(output_path);
 
 		if (MakeDirectoryRecursive(output_direcotry.CStr()) == false)
@@ -126,7 +132,7 @@ bool FileSession::Stop()
 			return false;
 		}
 
-		ov::String info_path = GetOutputFileInfoPath();
+		ov::String info_path = GetRecord()->GetFileInfoPath();
 		ov::String info_directory = ov::PathManager::ExtractPath(info_path);
 
 		if (MakeDirectoryRecursive(info_directory.CStr()) == false)
@@ -146,6 +152,8 @@ bool FileSession::Stop()
 		}
 
 		_writer = nullptr;
+
+		logtd("FileSession(%d) has stoped", GetId());
 	}
 
 	return Session::Stop();
@@ -188,6 +196,8 @@ bool FileSession::SendOutgoingData(const std::any &packet)
 
 			return false;
 		} 
+
+		GetRecord()->IncreaseRecordBytes(session_packet->GetData()->GetLength());
     }    
 
 	return true;
@@ -199,23 +209,24 @@ void FileSession::OnPacketReceived(const std::shared_ptr<info::Session> &session
 	// Not used
 }
 
-void FileSession::SetSelectTracks(std::vector<int32_t> &tracks)
+void FileSession::SetRecord(std::shared_ptr<info::Record> &record)
 {
-
+	_record = record;
 }
 
+std::shared_ptr<info::Record>& FileSession::GetRecord()
+{
+	return _record;
+}
 
 ov::String FileSession::GetOutputTempFilePath()
 {
 	auto app_config = std::static_pointer_cast<info::Application>(GetApplication())->GetConfig();
 	auto file_config = app_config.GetPublishers().GetFilePublisher();
 
+	auto path = ConvertMacro(file_config.GetFilePath()) + ".tmp";
 
-	ov::String tmp_path = ConvertMacro(file_config.GetFilePath()) + ".tmp";
-
-	// logtd("TempFile Path : %s", tmp_path.CStr());
-
-	return tmp_path;
+	return path;
 }
 
 ov::String FileSession::GetOutputFilePath()
@@ -223,9 +234,9 @@ ov::String FileSession::GetOutputFilePath()
 	auto app_config = std::static_pointer_cast<info::Application>(GetApplication())->GetConfig();
 	auto file_config = app_config.GetPublishers().GetFilePublisher();
 
-	// logtd("File Path : %s", file_config.GetFilePath().CStr());
-
-	return ConvertMacro(file_config.GetFilePath());
+	auto path = ConvertMacro(file_config.GetFilePath());
+	
+	return path;
 }
 
 ov::String FileSession::GetOutputFileInfoPath()
@@ -233,9 +244,9 @@ ov::String FileSession::GetOutputFileInfoPath()
 	auto app_config = std::static_pointer_cast<info::Application>(GetApplication())->GetConfig();
 	auto file_config = app_config.GetPublishers().GetFilePublisher();
 
-	// logtd("FileInfo Path : %s", file_config.GetFileInfoPath().CStr());
+	auto path = ConvertMacro(file_config.GetFileInfoPath());
 
-	return ConvertMacro(file_config.GetFileInfoPath());
+	return path;
 }
 
 bool FileSession::MakeDirectoryRecursive(std::string s, mode_t mode)
@@ -341,17 +352,19 @@ ov::String FileSession::ConvertMacro(ov::String src)
 		}
 		if(group.IndexOf("Sequence") != -1L)
 		{
-			replaced_string = replaced_string.Replace(full_match, "0");
+			ov::String buff = ov::String::FormatString("%d", GetRecord()->GetSequence());
+
+			replaced_string = replaced_string.Replace(full_match, buff);
 		}		
-		if(group.IndexOf("SessionId") != -1L)
+		if(group.IndexOf("Id") != -1L)
 		{
-			ov::String buff = ov::String::FormatString("%u", GetId());
+			ov::String buff = ov::String::FormatString("%s", GetRecord()->GetId().CStr());
 
 			replaced_string = replaced_string.Replace(full_match, buff);
 		}				
 		if(group.IndexOf("StartTime") != -1L)
 		{
-			time_t now = time(NULL);
+			time_t now = std::chrono::system_clock::to_time_t(GetRecord()->GetRecordStartTime());
 			struct tm timeinfo;
 			if(localtime_r(&now, &timeinfo) == nullptr)
 			{
@@ -382,7 +395,7 @@ ov::String FileSession::ConvertMacro(ov::String src)
 		}
 		if(group.IndexOf("EndTime") != -1L)
 		{
-			time_t now = time(NULL);
+			time_t now = std::chrono::system_clock::to_time_t(GetRecord()->GetRecordStopTime());
 			struct tm timeinfo;
 			if(localtime_r(&now, &timeinfo) == nullptr)
 			{
