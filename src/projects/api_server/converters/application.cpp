@@ -217,7 +217,7 @@ namespace api
 
 		Json::Value JsonFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application)
 		{
-			Json::Value response = Json::objectValue;
+			Json::Value response(Json::ValueType::objectValue);
 
 			SetString(response, "name", application->GetName().GetAppName(), Optional::False);
 			SetBool(response, "dynamic", application->IsDynamicApp());
@@ -226,6 +226,74 @@ namespace api
 			SetPublishers(response, "publishers", application->GetConfig().GetPublishers(), Optional::True);
 
 			return std::move(response);
+		}
+
+		void MakeUpperCase(const ov::String &path, const Json::Value &input, Json::Value *output)
+		{
+			switch (input.type())
+			{
+				case Json::ValueType::nullValue:
+				case Json::ValueType::intValue:
+				case Json::ValueType::uintValue:
+				case Json::ValueType::realValue:
+				case Json::ValueType::stringValue:
+				case Json::ValueType::booleanValue:
+				case Json::ValueType::arrayValue:
+					*output = input;
+					break;
+
+				case Json::ValueType::objectValue:
+					if (input.size() == 0)
+					{
+						*output = Json::objectValue;
+					}
+					else
+					{
+						for (auto item = input.begin(); item != input.end(); ++item)
+						{
+							const auto &input_name = item.name();
+							ov::String name = input_name.c_str();
+
+							if ((path == "application.providers") || (path == "application.publishers"))
+							{
+								// All settings names in providers or publishers are in capital letters except WebRTC
+								if (name == "webrtc")
+								{
+									name = "WebRTC";
+								}
+								else
+								{
+									name.MakeUpper();
+								}
+							}
+							else
+							{
+								// Change the first letter to uppercase
+								if (name.GetLength() > 0)
+								{
+									auto buffer = name.GetBuffer();
+									buffer[0] = ::toupper(buffer[0]);
+								}
+							}
+
+							ov::String name_with_path;
+							name_with_path.Format("%s.%s", path.CStr(), input_name.c_str());
+
+							MakeUpperCase(name_with_path, *item, &(output->operator[](name)));
+						}
+					}
+
+					break;
+			}
+		}
+
+		std::shared_ptr<ov::Error> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)
+		{
+			Json::Value value;
+
+			MakeUpperCase("application", json_value, &value);
+
+			return application->Parse("", value, "Application");
 		}
 	}  // namespace conv
 }  // namespace api

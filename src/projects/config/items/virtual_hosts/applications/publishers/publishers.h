@@ -64,7 +64,7 @@ namespace cfg
 						RegisterValue<Optional>("RTMPPush", &_rtmppush_publisher);
 					}
 
-					int _thread_count = 4;
+					int _thread_count = 8;
 
 					// RtmpPublisher _rtmp_publisher;
 					RtmpPushPublisher _rtmppush_publisher;

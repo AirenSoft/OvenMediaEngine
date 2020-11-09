@@ -38,7 +38,7 @@ namespace cfg
 					}
 
 					int _segment_count = 3;
-					int _segment_duration = 4;
+					int _segment_duration = 5;
 					cmn::CrossDomain _cross_domain;
 					int _send_buffer_size = 1024 * 1024 * 20;  // 20M
 					int _recv_buffer_size = 0;

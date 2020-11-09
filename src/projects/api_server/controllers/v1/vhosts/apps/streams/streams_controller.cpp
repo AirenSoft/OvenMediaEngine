@@ -26,27 +26,10 @@ namespace api
 			RegisterGet(R"(\/(?<stream_name>[^\/]*))", &StreamsController::OnGetStream);
 		};
 
-		ApiResponse StreamsController::OnGetStreamList(const std::shared_ptr<HttpClient> &client)
+		ApiResponse StreamsController::OnGetStreamList(const std::shared_ptr<HttpClient> &client,
+													   const std::shared_ptr<mon::HostMetrics> &vhost,
+													   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			auto &match_result = client->GetRequest()->GetMatchResult();
-
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto vhost = GetVirtualHost(vhost_name);
-			if (vhost == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
-											  vhost_name.length(), vhost_name.data());
-			}
-
-			auto app_name = match_result.GetNamedGroup("app_name");
-			auto app = GetApplication(vhost, app_name);
-			if (app == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
-			}
-
 			Json::Value response = Json::arrayValue;
 
 			auto stream_list = app->GetStreamMetricsList();
@@ -64,38 +47,11 @@ namespace api
 			return response;
 		}
 
-		ApiResponse StreamsController::OnGetStream(const std::shared_ptr<HttpClient> &client)
+		ApiResponse StreamsController::OnGetStream(const std::shared_ptr<HttpClient> &client,
+												   const std::shared_ptr<mon::HostMetrics> &vhost,
+												   const std::shared_ptr<mon::ApplicationMetrics> &app,
+												   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			auto &match_result = client->GetRequest()->GetMatchResult();
-
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto vhost = GetVirtualHost(vhost_name);
-			if (vhost == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
-											  vhost_name.length(), vhost_name.data());
-			}
-
-			auto app_name = match_result.GetNamedGroup("app_name");
-			auto app = GetApplication(vhost, app_name);
-			if (app == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
-			}
-
-			auto stream_name = match_result.GetNamedGroup("stream_name");
-			std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
-			auto stream = GetStream(app, stream_name, &output_streams);
-			if (stream == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find stream: [%.*s/%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data(),
-											  stream_name.length(), stream_name.data());
-			}
-
 			return api::conv::JsonFromStream(stream, std::move(output_streams));
 		}
 	}  // namespace v1

@@ -30,7 +30,7 @@ namespace api
 		ApiResponse VHostsController::OnGetVhostList(const std::shared_ptr<HttpClient> &client)
 		{
 			auto vhost_list = GetVirtualHostList();
-			Json::Value response = Json::arrayValue;
+			Json::Value response(Json::ValueType::arrayValue);
 
 			for (const auto &item : vhost_list)
 			{
@@ -49,7 +49,7 @@ namespace api
 			auto vhost = GetVirtualHost(vhost_name);
 			if (vhost == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the virtual host: [%.*s]",
 											  vhost_name.length(), vhost_name.data());
 			}
 

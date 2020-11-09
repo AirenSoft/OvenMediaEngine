@@ -39,7 +39,7 @@ namespace cfg
 
 					// LL-DASH uses time-based segment
 					// int _segment_count = 3;
-					int _segment_duration = 5;
+					int _segment_duration = 3;
 					cmn::CrossDomain _cross_domain;
 				};
 			}  // namespace pub

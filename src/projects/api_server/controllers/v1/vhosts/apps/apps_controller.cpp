@@ -15,8 +15,8 @@
 #include "../../../../api_private.h"
 #include "../../../../converters/converters.h"
 #include "../../../../helpers/helpers.h"
-#include "streams/streams_controller.h"
 #include "app_actions_controller.h"
+#include "streams/streams_controller.h"
 
 namespace api
 {
@@ -24,8 +24,6 @@ namespace api
 	{
 		void AppsController::PrepareHandlers()
 		{
-			
-
 			RegisterPost(R"()", &AppsController::OnPostApp);
 			RegisterGet(R"()", &AppsController::OnGetAppList);
 			RegisterGet(R"(\/(?<app_name>[^\/:]*))", &AppsController::OnGetApp);
@@ -39,32 +37,84 @@ namespace api
 			CreateSubController<v1::StreamsController>(R"(\/(?<app_name>[^\/:]*)\/streams)");
 		};
 
-		ApiResponse AppsController::OnPostApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body)
+		ApiResponse AppsController::OnPostApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+											  const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
-			logtd(">> %s", ov::Json::Stringify(request_body, true).CStr());
-
-			// auto orchestrator = ocst::Orchestrator::GetInstance();
-
-			cfg::vhost::app::Application app;
-
-			// orchestrator->CreateApplication(
-			
-			return HttpStatusCode::NotImplemented;
-		}
-
-		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<HttpClient> &client)
-		{
-			auto &match_result = client->GetRequest()->GetMatchResult();
-
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto vhost = GetVirtualHost(vhost_name);
-			if (vhost == nullptr)
+			if (request_body.isArray() == false)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
-											  vhost_name.length(), vhost_name.data());
+				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Request body must be an array");
 			}
 
-			Json::Value response = Json::arrayValue;
+			auto orchestrator = ocst::Orchestrator::GetInstance();
+			Json::Value response_value(Json::ValueType::arrayValue);
+			Json::Value requested_config = request_body;
+
+			for (auto &item : requested_config)
+			{
+				cfg::vhost::app::Application app_config;
+
+				// Setting up the default values
+				if (item["providers"].isNull())
+				{
+					item["providers"]["rtmp"] = Json::objectValue;
+					item["providers"]["mpegts"] = Json::objectValue;
+				}
+
+				if (item["publishers"].isNull())
+				{
+					item["publishers"]["hls"] = Json::objectValue;
+					item["publishers"]["dash"] = Json::objectValue;
+					item["publishers"]["lldash"] = Json::objectValue;
+					item["publishers"]["webrtc"] = Json::objectValue;
+				}
+
+				auto error = conv::ApplicationFromJson(item, &app_config);
+
+				if (error == nullptr)
+				{
+					auto result = orchestrator->CreateApplication(*vhost, app_config);
+
+					switch (result)
+					{
+						case ocst::Result::Failed:
+							error = ov::Error::CreateError(HttpStatusCode::BadRequest, "Failed to create the application");
+							break;
+
+						case ocst::Result::Succeeded:
+							break;
+
+						case ocst::Result::Exists:
+							error = ov::Error::CreateError(HttpStatusCode::BadRequest, "The application already exists");
+							break;
+
+						case ocst::Result::NotExists:
+							// CreateApplication() never returns NotExists
+							error = ov::Error::CreateError(HttpStatusCode::InternalServerError, "Unknown error occurred");
+							OV_ASSERT2(false);
+							break;
+					}
+				}
+
+				if (error != nullptr)
+				{
+					Json::Value error_value;
+					error_value["message"] = error->ToString().CStr();
+					response_value.append(error_value);
+				}
+				else
+				{
+					auto app = GetApplication(vhost, app_config.GetName().CStr());
+					response_value.append(conv::JsonFromApplication(app));
+				}
+			}
+
+			return response_value;
+		}
+
+		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<HttpClient> &client,
+												 const std::shared_ptr<mon::HostMetrics> &vhost)
+		{
+			Json::Value response(Json::ValueType::arrayValue);
 
 			auto app_list = GetApplicationList(vhost);
 
@@ -78,66 +128,88 @@ namespace api
 			return response;
 		}
 
-		ApiResponse AppsController::OnGetApp(const std::shared_ptr<HttpClient> &client)
+		ApiResponse AppsController::OnGetApp(const std::shared_ptr<HttpClient> &client,
+											 const std::shared_ptr<mon::HostMetrics> &vhost,
+											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			auto &match_result = client->GetRequest()->GetMatchResult();
-
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto vhost = GetVirtualHost(vhost_name);
-			if (vhost == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
-											  vhost_name.length(), vhost_name.data());
-			}
-
-			auto app_name = match_result.GetNamedGroup("app_name");
-			auto app = GetApplication(vhost, app_name);
-			if (app == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application : [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
-			}
-
 			return api::conv::JsonFromApplication(app);
 		}
 
-		ApiResponse AppsController::OnPutApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body)
+		ApiResponse AppsController::OnPutApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+											 const std::shared_ptr<mon::HostMetrics> &vhost,
+											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			logtd(">> %s", ov::Json::Stringify(request_body, true).CStr());
+			// TODO(dimiden): Caution - Race condition may occur
+			// If an application is deleted immediately after the GetApplication(),
+			// the app information can no longer be obtained from Orchestrator
 
-			return HttpStatusCode::NotImplemented;
+			auto orchestrator = ocst::Orchestrator::GetInstance();
+			Json::Value requested_config = request_body;
+
+			for (auto &item : requested_config)
+			{
+				cfg::vhost::app::Application app_config = app->GetConfig();
+				auto error = conv::ApplicationFromJson(item, &app_config);
+
+				if (error == nullptr)
+				{
+					if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
+					{
+						return ov::Error::CreateError(HttpStatusCode::Forbidden, "Could not delete the application: [%s/%s]",
+													  vhost->GetName().CStr(), app->GetName().CStr());
+					}
+
+					auto result = orchestrator->CreateApplication(*vhost, app_config);
+
+					switch (result)
+					{
+						case ocst::Result::Failed:
+							error = ov::Error::CreateError(HttpStatusCode::BadRequest, "Failed to create the application");
+							break;
+
+						case ocst::Result::Succeeded:
+							break;
+
+						case ocst::Result::Exists:
+							error = ov::Error::CreateError(HttpStatusCode::BadRequest, "The application already exists");
+							break;
+
+						case ocst::Result::NotExists:
+							// CreateApplication() never returns NotExists
+							error = ov::Error::CreateError(HttpStatusCode::InternalServerError, "Unknown error occurred");
+							OV_ASSERT2(false);
+							break;
+					}
+				}
+
+				if (error != nullptr)
+				{
+					Json::Value error_value;
+					error_value["message"] = error->ToString().CStr();
+					// response_value.append(error_value);
+				}
+				else
+				{
+					auto app = GetApplication(vhost, app_config.GetName().CStr());
+					// response_value.append(conv::JsonFromApplication(app));
+				}
+			}
+
+			// return response_value;
+			return {};
 		}
 
-		ApiResponse AppsController::OnDeleteApp(const std::shared_ptr<HttpClient> &client)
+		ApiResponse AppsController::OnDeleteApp(const std::shared_ptr<HttpClient> &client,
+												const std::shared_ptr<mon::HostMetrics> &vhost,
+												const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			auto &match_result = client->GetRequest()->GetMatchResult();
-
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto vhost = GetVirtualHost(vhost_name);
-			if (vhost == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
-											  vhost_name.length(), vhost_name.data());
-			}
-
-			auto app_name = match_result.GetNamedGroup("app_name");
-			auto app = GetApplication(vhost, app_name);
-			if (app == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
-			}
-
 			if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
 			{
-				return ov::Error::CreateError(HttpStatusCode::Forbidden, "Could not delete application: [%.*s/%.*s]",
-											  vhost_name.length(), vhost_name.data(),
-											  app_name.length(), app_name.data());
+				return ov::Error::CreateError(HttpStatusCode::Forbidden, "Could not delete the application: [%s/%s]",
+											  vhost->GetName().CStr(), app->GetName().CStr());
 			}
 
-			return {};
+			return Json::Value(Json::ValueType::objectValue);
 		}
 	}  // namespace v1
 }  // namespace api

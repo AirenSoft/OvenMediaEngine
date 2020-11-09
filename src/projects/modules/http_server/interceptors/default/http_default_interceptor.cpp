@@ -136,21 +136,31 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 			// 403 Method not allowed 처리 하기 위한 수단
 			bool regex_found = false;
 
+			auto uri = ov::Url::Parse(request->GetUri());
+
+			if(uri == nullptr)
+			{
+				logte("Could not parse uri: %s", request->GetUri().CStr());
+				return HttpInterceptorResult::Disconnect;
+			}
+
+			auto uri_target = uri->Path();
+
 			for (auto &request_info : _request_handler_list)
 			{
 #if DEBUG
-				logtd("Check if url [%s] is matches [%s]", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr());
+				logtd("Check if url [%s] is matches [%s]", uri_target.CStr(), request_info.pattern_string.CStr());
 #endif	// DEBUG
 
 				response->SetStatusCode(HttpStatusCode::OK);
 
-				auto matches = request_info.pattern.Matches(request->GetRequestTarget());
+				auto matches = request_info.pattern.Matches(uri_target);
 				auto &error = matches.GetError();
 
 				if (error == nullptr)
 				{
 #if DEBUG
-					logtd("Matches: url [%s], pattern: [%s]", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr());
+					logtd("Matches: url [%s], pattern: [%s]", uri_target.CStr(), request_info.pattern_string.CStr());
 #endif	// DEBUG
 
 					// 일단 패턴에 일치하는 handler 찾음
@@ -176,7 +186,7 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 				else
 				{
 #if DEBUG
-					logtd("Not matched: url [%s], pattern: [%s] (with error: %s)", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr(), error->ToString().CStr());
+					logtd("Not matched: url [%s], pattern: [%s] (with error: %s)", uri_target.CStr(), request_info.pattern_string.CStr(), error->ToString().CStr());
 #endif	// DEBUG
 				}
 			}

@@ -44,7 +44,7 @@ namespace api
 			auto vhost = GetVirtualHost(vhost_name);
 			if (vhost == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the virtual host: [%.*s]",
 											  vhost_name.length(), vhost_name.data());
 			}
 
@@ -52,7 +52,7 @@ namespace api
 			auto app = GetApplication(vhost, app_name);
 			if (app == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the application: [%.*s/%.*s]",
 											  vhost_name.length(), vhost_name.data(),
 											  app_name.length(), app_name.data());
 			}
@@ -83,7 +83,7 @@ namespace api
 			auto vhost = GetVirtualHost(vhost_name);
 			if (vhost == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the virtual host: [%.*s]",
 											  vhost_name.length(), vhost_name.data());
 			}
 
@@ -91,7 +91,7 @@ namespace api
 			auto app = GetApplication(vhost, app_name);
 			if (app == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the application: [%.*s/%.*s]",
 											  vhost_name.length(), vhost_name.data(),
 											  app_name.length(), app_name.data());
 			}
@@ -129,7 +129,7 @@ namespace api
 			auto vhost = GetVirtualHost(vhost_name);
 			if (vhost == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the virtual host: [%.*s]",
 											  vhost_name.length(), vhost_name.data());
 			}
 
@@ -137,7 +137,7 @@ namespace api
 			auto app = GetApplication(vhost, app_name);
 			if (app == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the application: [%.*s/%.*s]",
 											  vhost_name.length(), vhost_name.data(),
 											  app_name.length(), app_name.data());
 			}
@@ -166,19 +166,19 @@ namespace api
 
 		ApiResponse AppActionsController::OnGetPushes(const std::shared_ptr<HttpClient> &clnt)
 		{
-			Json::Value response = Json::objectValue;
+			Json::Value response(Json::ValueType::objectValue);
 			return std::move(response);			
 		}
 
 		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body)
 		{
-			Json::Value response = Json::objectValue;
+			Json::Value response(Json::ValueType::objectValue);
 			return std::move(response);			
 		}
 
 		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpClient> &clnt, const Json::Value &request_body)
 		{
-			Json::Value response = Json::objectValue;
+			Json::Value response(Json::ValueType::objectValue);
 			return std::move(response);			
 		}
 
@@ -191,7 +191,7 @@ namespace api
 			auto vhost = GetVirtualHost(vhost_name);
 			if (vhost == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the virtual host: [%.*s]",
 											  vhost_name.length(), vhost_name.data());
 			}
 
@@ -199,7 +199,7 @@ namespace api
 			auto app = GetApplication(vhost, app_name);
 			if (app == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the application: [%.*s/%.*s]",
 											  vhost_name.length(), vhost_name.data(),
 											  app_name.length(), app_name.data());
 			}
@@ -220,7 +220,7 @@ namespace api
 			auto vhost = GetVirtualHost(vhost_name);
 			if (vhost == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find virtual host: [%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the virtual host: [%.*s]",
 											  vhost_name.length(), vhost_name.data());
 			}
 
@@ -228,7 +228,7 @@ namespace api
 			auto app = GetApplication(vhost, app_name);
 			if (app == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find application: [%.*s/%.*s]",
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the application: [%.*s/%.*s]",
 											  vhost_name.length(), vhost_name.data(),
 											  app_name.length(), app_name.data());
 			}
