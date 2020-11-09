@@ -14,7 +14,7 @@ namespace cfg
 {
 	namespace cmn
 	{
-		struct CrossDomain : public Item
+		struct CrossDomains : public Item
 		{
 			CFG_DECLARE_REF_GETTER_OF(GetUrls, _url_list)
 

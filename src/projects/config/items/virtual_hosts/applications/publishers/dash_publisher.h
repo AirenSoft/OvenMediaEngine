@@ -24,8 +24,8 @@ namespace cfg
 
 					CFG_DECLARE_GETTER_OF(GetSegmentCount, _segment_count)
 					CFG_DECLARE_GETTER_OF(GetSegmentDuration, _segment_duration)
-					CFG_DECLARE_GETTER_OF(GetCrossDomainList, _cross_domain.GetUrls())
-					CFG_DECLARE_GETTER_OF(GetCrossDomain, _cross_domain)
+					CFG_DECLARE_GETTER_OF(GetCrossDomainList, _cross_domains.GetUrls())
+					CFG_DECLARE_GETTER_OF(GetCrossDomains, _cross_domains)
 
 				protected:
 					void MakeParseList() override
@@ -34,12 +34,12 @@ namespace cfg
 
 						RegisterValue<Optional>("SegmentCount", &_segment_count);
 						RegisterValue<Optional>("SegmentDuration", &_segment_duration);
-						RegisterValue<Optional>("CrossDomain", &_cross_domain);
+						RegisterValue<Optional>("CrossDomains", &_cross_domains);
 					}
 
 					int _segment_count = 3;
 					int _segment_duration = 5;
-					cmn::CrossDomain _cross_domain;
+					cmn::CrossDomains _cross_domains;
 					int _send_buffer_size = 1024 * 1024 * 20;  // 20M
 					int _recv_buffer_size = 0;
 				};

@@ -46,7 +46,7 @@ namespace api
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
-			object = Json::objectValue;
+			object = Json::arrayValue;
 
 			for (auto &stream : config.GetStreamList())
 			{
@@ -86,7 +86,7 @@ namespace api
 			object = Json::objectValue;
 		}
 
-		static void SetCrossDomains(Json::Value &parent_object, const char *key, const cfg::cmn::CrossDomain &config, Optional optional)
+		static void SetCrossDomains(Json::Value &parent_object, const char *key, const cfg::cmn::CrossDomains &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
@@ -102,7 +102,7 @@ namespace api
 
 			SetInt(object, "segmentCount", config.GetSegmentCount());
 			SetInt(object, "segmentDuration", config.GetSegmentDuration());
-			SetCrossDomains(object, "crossDomains", config.GetCrossDomain(), Optional::True);
+			SetCrossDomains(object, "crossDomains", config.GetCrossDomains(), Optional::True);
 		}
 
 		static void SetDashPublisher(Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::DashPublisher &config, Optional optional)
@@ -111,7 +111,7 @@ namespace api
 
 			SetInt(object, "segmentCount", config.GetSegmentCount());
 			SetInt(object, "segmentDuration", config.GetSegmentDuration());
-			SetCrossDomains(object, "crossDomains", config.GetCrossDomain(), Optional::True);
+			SetCrossDomains(object, "crossDomains", config.GetCrossDomains(), Optional::True);
 		}
 
 		static void SetLlDashPublisher(Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::LlDashPublisher &config, Optional optional)
@@ -119,7 +119,7 @@ namespace api
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
 			SetInt(object, "segmentDuration", config.GetSegmentDuration());
-			SetCrossDomains(object, "crossDomains", config.GetCrossDomain(), Optional::True);
+			SetCrossDomains(object, "crossDomains", config.GetCrossDomains(), Optional::True);
 		}
 
 		static void SetWebrtcPublisher(Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::WebrtcPublisher &config, Optional optional)
@@ -233,54 +233,89 @@ namespace api
 			switch (input.type())
 			{
 				case Json::ValueType::nullValue:
+					[[fallthrough]];
 				case Json::ValueType::intValue:
+					[[fallthrough]];
 				case Json::ValueType::uintValue:
+					[[fallthrough]];
 				case Json::ValueType::realValue:
+					[[fallthrough]];
 				case Json::ValueType::stringValue:
+					[[fallthrough]];
 				case Json::ValueType::booleanValue:
-				case Json::ValueType::arrayValue:
 					*output = input;
 					break;
 
-				case Json::ValueType::objectValue:
-					if (input.size() == 0)
-					{
-						*output = Json::objectValue;
-					}
-					else
-					{
-						for (auto item = input.begin(); item != input.end(); ++item)
-						{
-							const auto &input_name = item.name();
-							ov::String name = input_name.c_str();
+				case Json::ValueType::arrayValue:
+					*output = Json::arrayValue;
 
-							if ((path == "application.providers") || (path == "application.publishers"))
+					for (auto item : input)
+					{
+						Json::Value converted;
+
+						MakeUpperCase(path, item, &converted);
+
+						output->append(converted);
+					}
+					break;
+
+				case Json::ValueType::objectValue:
+					*output = Json::objectValue;
+
+					for (auto item = input.begin(); item != input.end(); ++item)
+					{
+						const auto &input_name = item.name();
+						ov::String name = input_name.c_str();
+
+						bool converted = false;
+
+						if ((path == "application.providers") || (path == "application.publishers"))
+						{
+							// Some settings names in providers or publishers are in capital letters
+							if (name == "webrtc")
 							{
-								// All settings names in providers or publishers are in capital letters except WebRTC
-								if (name == "webrtc")
-								{
-									name = "WebRTC";
-								}
-								else
-								{
-									name.MakeUpper();
-								}
+								name = "WebRTC";
+								converted = true;
+							}
+							else if (name == "threadCount")
+							{
+								name = "ThreadCount";
+								converted = true;
+							}
+							else if (name == "rtspPull")
+							{
+								name = "RTSPPull";
+								converted = true;
 							}
 							else
 							{
-								// Change the first letter to uppercase
-								if (name.GetLength() > 0)
-								{
-									auto buffer = name.GetBuffer();
-									buffer[0] = ::toupper(buffer[0]);
-								}
+								name.MakeUpper();
+								converted = true;
 							}
-
-							ov::String name_with_path;
-							name_with_path.Format("%s.%s", path.CStr(), input_name.c_str());
-
-							MakeUpperCase(name_with_path, *item, &(output->operator[](name)));
 						}
+						else if ((path == "application.providers.mpegts"))
+						{
+							if (name == "streams")
+							{
+								name = "StreamMap";
+								converted = true;
+							}
+						}
+
+						if (converted == false)
+						{
+							// Change the first letter to uppercase
+							if (name.GetLength() > 0)
+							{
+								auto buffer = name.GetBuffer();
+								buffer[0] = ::toupper(buffer[0]);
+							}
+						}
+
+						ov::String name_with_path;
+						name_with_path.Format("%s.%s", path.CStr(), input_name.c_str());
+
+						MakeUpperCase(name_with_path, *item, &(output->operator[](name)));
 					}
 
 					break;

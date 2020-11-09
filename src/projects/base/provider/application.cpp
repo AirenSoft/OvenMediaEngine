@@ -106,7 +106,6 @@ namespace pvd
 			return false;
 		}
 		_streams.erase(stream->GetId());
-		stream->SetApplication(nullptr);
 
 		streams_lock.unlock();
 		
