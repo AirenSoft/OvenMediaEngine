@@ -245,11 +245,11 @@ bool RtcStream::Start()
 						// a=fmtp:111 maxplaybackrate=16000; useinbandfec=1; maxaveragebitrate=20000
 						if (track->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutStereo)
 						{
-							payload->SetFmtp("stereo=1;useinbandfec=1;");
+							payload->SetFmtp("sprop-stereo=1;stereo=1;minptime=10;useinbandfec=1");
 						}
 						else
 						{
-							payload->SetFmtp("useinbandfec=1;");
+							payload->SetFmtp("minptime=10;useinbandfec=1");
 						}
 						break;
 
