@@ -12,17 +12,14 @@
 
 #include <regex>
 
-MediaDescription::MediaDescription(const std::shared_ptr<SessionDescription> &session_desc)
+MediaDescription::MediaDescription()
 {
-	_session_description = session_desc;
-
 	UseDtls(true);
 	UseRtcpMux(false);
 }
 
 MediaDescription::~MediaDescription()
 {
-	_session_description.reset();
 }
 
 bool MediaDescription::UpdateData(ov::String &sdp)

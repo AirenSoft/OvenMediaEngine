@@ -190,7 +190,7 @@ bool RtcStream::Start()
 
 				if(first_video_desc)
 				{
-					video_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
+					video_media_desc = std::make_shared<MediaDescription>();
 					video_media_desc->SetConnection(4, "0.0.0.0");
 					// TODO(dimiden): Prevent duplication
 					video_media_desc->SetMid(ov::Random::GenerateString(6));
@@ -262,7 +262,7 @@ bool RtcStream::Start()
 
 				if(first_audio_desc)
 				{
-					audio_media_desc = std::make_shared<MediaDescription>(_offer_sdp);
+					audio_media_desc = std::make_shared<MediaDescription>();
 					audio_media_desc->SetConnection(4, "0.0.0.0");
 					// TODO(dimiden): Need to prevent duplication
 					audio_media_desc->SetMid(ov::Random::GenerateString(6));

@@ -109,7 +109,7 @@ bool SessionDescription::FromString(const ov::String &sdp)
 			// 새로운 m을 만나면 기존 m level을 파싱
 			if(media_level == true)
 			{
-				auto media_desc = std::make_shared<MediaDescription>(GetSharedPtr());
+				auto media_desc = std::make_shared<MediaDescription>();
 				if(media_desc->FromString(media_desc_sdp) == false)
 				{
 					return false;
@@ -130,7 +130,7 @@ bool SessionDescription::FromString(const ov::String &sdp)
 			// 만약 sdp의 끝이면 생성
 			if(sdpstream.rdbuf()->in_avail() == 0)
 			{
-				auto media_desc = std::make_shared<MediaDescription>(GetSharedPtr());
+				auto media_desc = std::make_shared<MediaDescription>();
 				if(media_desc->FromString(media_desc_sdp) == false)
 				{
 					return false;
