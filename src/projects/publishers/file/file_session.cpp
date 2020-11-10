@@ -7,6 +7,7 @@
 
 #include "file_session.h"
 #include "file_private.h"
+#include "file_export.h"
 
 #include <regex>
 
@@ -117,7 +118,6 @@ bool FileSession::Stop()
 		GetRecord()->UpdateRecordStopTime();
 		GetRecord()->SetFilePath(GetOutputFilePath());
 		GetRecord()->SetFileInfoPath(GetOutputFileInfoPath());
-		GetRecord()->IncreaseSequence();
 
 		_writer->Stop();
 
@@ -161,7 +161,14 @@ bool FileSession::Stop()
 			return false;
 		}
 
+		if( FileExport::GetInstance()->ExportRecordToXml(GetRecord()->GetFileInfoPath(), GetRecord()) == false )
+		{
+			logte("Failed to export xml file. path(%s)", GetRecord()->GetFileInfoPath().CStr());
+		}
+
+
 		GetRecord()->SetState(info::Record::RecordState::Stopped);
+		GetRecord()->IncreaseSequence();
 
 		_writer = nullptr;
 

@@ -115,10 +115,7 @@ namespace api
 			SetInt64(response, "totalRecordTime", record->GetRecordTotalTime());			
 			SetInt(response, "sequence", record->GetSequence());
 			SetTimestamp(response, "startTime", record->GetRecordStartTime());
-			if(record->GetRecordStopTime() == std::chrono::system_clock::time_point::min())
-				SetString(response, "finishTime", "-", Optional::False);	
-			else
-				SetTimestamp(response, "finishTime", record->GetRecordStopTime());
+			SetTimestamp(response, "finishTime", record->GetRecordStopTime());
 			SetTimestamp(response, "createdTime", record->GetCreatedTime());
 
 			return std::move(response);
