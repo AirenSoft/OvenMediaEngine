@@ -63,6 +63,8 @@ bool OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> con
 		return false;
 	}
 
+	av_dict_free(&opts);
+
 	try
 	{
 		_kill_flag = false;
