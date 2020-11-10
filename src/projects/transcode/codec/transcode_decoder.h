@@ -32,10 +32,9 @@ protected:
 
 	std::shared_ptr<TranscodeContext> _input_context;
 
-	AVCodec *_codec = nullptr;
 	AVCodecContext *_context = nullptr;
 	AVCodecParserContext *_parser = nullptr;
-	AVCodecParameters *_codec_par = avcodec_parameters_alloc();
+	AVCodecParameters *_codec_par = nullptr;
 
 	bool _change_format = false;
 

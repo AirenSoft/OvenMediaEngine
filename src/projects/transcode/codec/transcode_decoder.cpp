@@ -21,10 +21,14 @@ TranscodeDecoder::TranscodeDecoder(info::Stream stream_info)
 
 	_pkt = ::av_packet_alloc();
 	_frame = ::av_frame_alloc();
+	_codec_par = avcodec_parameters_alloc();
 }
 
 TranscodeDecoder::~TranscodeDecoder()
 {
+	if(_context != nullptr)
+		::avcodec_flush_buffers(_context);
+	
 	::avcodec_free_context(&_context);
 	::avcodec_parameters_free(&_codec_par);
 
@@ -87,8 +91,7 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 
 	_input_context = context;
-
-	_codec = ::avcodec_find_decoder(GetCodecID());
+	AVCodec *_codec =  ::avcodec_find_decoder(GetCodecID());
 
 	if (_codec == nullptr)
 	{
