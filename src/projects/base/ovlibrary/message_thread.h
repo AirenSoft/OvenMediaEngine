@@ -42,7 +42,6 @@ namespace ov
 
 		bool Stop()
 		{
-			_message_queue.Clear();
 			_run_thread = false;
 			_event.Notify();
 			if(_thread.joinable())
@@ -74,7 +73,7 @@ namespace ov
 			while(_run_thread)
 			{
 				_event.Wait();	
-				auto item = _message_queue.Dequeue();
+				auto item = _message_queue.Dequeue(0);
 				if(item.has_value() == false)
 				{
 					continue;
