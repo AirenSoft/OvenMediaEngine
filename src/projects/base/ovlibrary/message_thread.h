@@ -42,12 +42,15 @@ namespace ov
 
 		bool Stop()
 		{
+			_message_queue.Clear();
 			_run_thread = false;
 			_event.Notify();
 			if(_thread.joinable())
 			{
 				_thread.join();
 			}
+
+			_observer.reset();
 
 			return true;
 		}
