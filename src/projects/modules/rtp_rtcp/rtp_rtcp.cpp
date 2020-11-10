@@ -20,7 +20,15 @@ RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<pub::Session> session, const std::
 
 RtpRtcp::~RtpRtcp()
 {
-    _rtcp_sr_generators.clear();
+    
+}
+
+bool RtpRtcp::Stop()
+{
+	_rtc_session.reset();
+	_rtcp_sr_generators.clear();
+
+	return SessionNode::Stop();
 }
 
 bool RtpRtcp::SendOutgoingData(const std::shared_ptr<RtpPacket> &rtp_packet)
