@@ -6,7 +6,7 @@
 
 namespace info
 {
-	Record::Record() : _stream(nullptr)
+	Record::Record()
 	{
 		_created_time = std::chrono::system_clock::now();
 		_id = "";
@@ -22,6 +22,8 @@ namespace info
 		_record_total_bytes = 0;
 		_record_total_time = 0;
 		_sequence = 0;
+
+		_state = RecordState::Ready;
 	}
 
 	void Record::SetId(ov::String record_id)
@@ -32,6 +34,58 @@ namespace info
 	ov::String Record::GetId() const
 	{
 		return _id;
+	}
+		
+	void Record::SetEnable(bool eanble) 
+	{ 
+		_enable = eanble; 
+	}
+	bool Record::GetEnable() 
+	{ 
+		return _enable; 
+	}
+
+	void Record::SetVhost(ov::String value)
+	{
+		_vhost_name = value;
+	}
+	ov::String Record::GetVhost()
+	{
+		return _vhost_name;
+	}
+
+	void Record::SetApplication(ov::String value)
+	{
+		_aplication_name = value;
+	}
+
+	ov::String Record::GetApplication()
+	{
+		return _aplication_name;
+	}
+
+	void Record::SetRemove(bool value)
+	{
+		_remove = value;
+	}
+
+	bool Record::GetRemove()
+	{
+		return _remove;
+	}
+
+	ov::String Record::GetStreamName()
+	{
+		return _stream->GetName();
+	}
+
+	void Record::SetSessionId(session_id_t id)
+	{
+		_session_id = id;
+	}
+
+	session_id_t Record::GetSessionId() {
+		return _session_id;
 	}
 
 	void Record::SetStream(const info::Stream &stream)
@@ -60,16 +114,18 @@ namespace info
 	void Record::IncreaseRecordBytes(uint64_t bytes)
 	{
 		_record_bytes += bytes;
-		_record_total_bytes += bytes;
 	}
-	void Record::IncreaseRecordTime(uint64_t time)
+	void Record::UpdateRecordTime()
 	{
-		_record_time += time;
-		_record_total_time += time;		
+		_record_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _record_start_time).count();
 	}
 	void Record::IncreaseSequence()
 	{
 		_sequence++;
+		_record_total_bytes += _record_bytes;
+		_record_bytes = 0;
+		_record_total_time += _record_time;
+		_record_time = 0;
 	}
 	void Record::UpdateRecordStartTime()
 	{
@@ -102,23 +158,70 @@ namespace info
 	}
 	uint64_t Record::GetRecordTotalBytes()
 	{
-		return _record_total_bytes;
+		return _record_total_bytes + _record_bytes;
 	}
 	uint64_t Record::GetRecordTotalTime()
 	{
-		return _record_total_time;
+		return _record_total_time + _record_time;
 	}
 	uint64_t Record::GetSequence()
 	{
 		return _sequence;
 	}
-	std::chrono::system_clock::time_point Record::GetRecordStartTime()
+	const std::chrono::system_clock::time_point Record::GetRecordStartTime() const
 	{
 		return _record_start_time;
 	}
-	std::chrono::system_clock::time_point Record::GetRecordStopTime()
+	const std::chrono::system_clock::time_point Record::GetRecordStopTime() const
 	{
 		return _record_stop_time;
 	}
+	Record::RecordState Record::GetState()
+	{
+		return _state;
+	}
+	void Record::SetState(Record::RecordState state)
+	{
+		_state = state;
+	}
+	ov::String Record::GetStateString()
+	{
+		switch(GetState())
+		{
+			case RecordState::Ready:
+				return "ready";
+			case RecordState::Recording:
+				return "recording";				
+			case RecordState::Stopping:
+				return "stopping";					
+			case RecordState::Stopped:
+				return "stopped";	
+			case RecordState::Error:
+				return "error";									
+		}
+
+		return "Unknown";
+	}
+
+	const ov::String Record::GetInfoString() 
+	{
+		ov::String info = "";
+
+		info.AppendFormat(" id=%s\n", _id.CStr());
+		info.AppendFormat(" stream=%s\n", _stream->GetName().CStr());
+		info.AppendFormat(" file_path=%s\n", _file_path.CStr());
+		info.AppendFormat(" tmp_path=%s\n", _tmp_path.CStr());
+		info.AppendFormat(" fileinfo_path=%s\n", _fileinfo_path.CStr());
+		info.AppendFormat(" record_bytes=%lld\n", _record_bytes);
+		info.AppendFormat(" record_bytes=%lld\n", _record_bytes);
+		info.AppendFormat(" record_total_bytes=%lld\n", _record_total_bytes);
+		info.AppendFormat(" record_total_time=%lld\n", _record_total_time);
+		info.AppendFormat(" sequence=%d\n", _sequence);
+		info.AppendFormat(" created_time=%s\n", ov::Converter::ToString(_created_time).CStr());
+		info.AppendFormat(" record_start_time=%s\n", ov::Converter::ToString(_record_start_time).CStr());
+		info.AppendFormat(" record_stop_time=%s", ov::Converter::ToString(_record_stop_time).CStr());
+
+		return info;
+	}	
 
 }  // namespace info

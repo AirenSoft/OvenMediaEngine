@@ -41,18 +41,16 @@ bool FileSession::Start()
 	logtd("FileSession(%d) has started.", GetId());
 
 	GetRecord()->UpdateRecordStartTime();
-	GetRecord()->UpdateRecordStopTime();
 	GetRecord()->SetFilePath(GetOutputFilePath());
 	GetRecord()->SetTmpPath(GetOutputTempFilePath());
 	GetRecord()->SetFileInfoPath(GetOutputFileInfoPath());
-	
-	// ov::String tmp_output_directory = ov::PathManager::ExtractPath(tmp_output_fullpath).CStr();
-	// logtd("Temporary output directory : %s", tmp_output_directory.CStr());
+	GetRecord()->SetState(info::Record::RecordState::Recording);
 
 	_writer = FileWriter::Create();
 	if(_writer == nullptr)
 	{
 		SetState(SessionState::Error);	
+		GetRecord()->SetState(info::Record::RecordState::Error);		
 
 		return false;
 	}
@@ -60,6 +58,8 @@ bool FileSession::Start()
 	if(_writer->SetPath(GetRecord()->GetTmpPath(), "mpegts") == false)
 	{
 		SetState(SessionState::Error);
+		GetRecord()->SetState(info::Record::RecordState::Error);		
+
 		_writer = nullptr;
 
 		return false;
@@ -91,7 +91,7 @@ bool FileSession::Start()
 		bool ret = _writer->AddTrack(track->GetMediaType(), track->GetId(), track_info);
 		if(ret == false)
 		{
-			logte("Failed to add new track");
+			logtw("Failed to add media track");
 		}
 	}
 
@@ -99,9 +99,10 @@ bool FileSession::Start()
 	{
 		_writer = nullptr;
 		SetState(SessionState::Error);
+		GetRecord()->SetState(info::Record::RecordState::Error);		
+
 		return false;
 	}
-
 
 	return Session::Start();
 }
@@ -111,6 +112,7 @@ bool FileSession::Stop()
 	if(_writer != nullptr)
 	{
 		SetState(SessionState::Stopping);			
+		GetRecord()->SetState(info::Record::RecordState::Stopping);
 
 		GetRecord()->UpdateRecordStopTime();
 		GetRecord()->SetFilePath(GetOutputFilePath());
@@ -128,7 +130,10 @@ bool FileSession::Stop()
 		if (MakeDirectoryRecursive(output_direcotry.CStr()) == false)
 		{
 			logte("Could not create directory. path(%s)", output_direcotry.CStr());
-			SetState(SessionState::Error);			
+
+			SetState(SessionState::Error);	
+			GetRecord()->SetState(info::Record::RecordState::Error);		
+
 			return false;
 		}
 
@@ -138,7 +143,10 @@ bool FileSession::Stop()
 		if (MakeDirectoryRecursive(info_directory.CStr()) == false)
 		{
 			logte("Could not create directory. path(%s)", info_directory.CStr());
+
 			SetState(SessionState::Error);			
+			GetRecord()->SetState(info::Record::RecordState::Error);		
+
 			return false;
 		}
 
@@ -146,10 +154,14 @@ bool FileSession::Stop()
 		if (rename( tmp_output_path.CStr() , output_path.CStr() ) != 0)
 		{
 			logte("Failed to move file. %s -> %s", tmp_output_path.CStr() , output_path.CStr());
+
 			SetState(SessionState::Error);
+			GetRecord()->SetState(info::Record::RecordState::Error);		
 
 			return false;
 		}
+
+		GetRecord()->SetState(info::Record::RecordState::Stopped);
 
 		_writer = nullptr;
 
@@ -191,14 +203,17 @@ bool FileSession::SendOutgoingData(const std::any &packet)
 		{
 			logte("Failed to add packet");
 			SetState(SessionState::Error);
+			GetRecord()->SetState(info::Record::RecordState::Error);
+
 			_writer->Stop();
 			_writer = nullptr;
 
 			return false;
 		} 
 
+		GetRecord()->UpdateRecordTime();
 		GetRecord()->IncreaseRecordBytes(session_packet->GetData()->GetLength());
-    }    
+    }
 
 	return true;
 }
@@ -317,6 +332,7 @@ ov::String FileSession::ConvertMacro(ov::String src)
 	// ${Application} : Application Name
 	// ${Stream} : Stream name
 	// ${Sequence} : Sequence number
+	// ${Id} : Idenficiation Code
 
 	std::regex reg_exp("\\$\\{([a-zA-Z0-9:]+)\\}");
 	const std::sregex_iterator it_end;
@@ -331,7 +347,7 @@ ov::String FileSession::ConvertMacro(ov::String src)
 		tmp = matches[1];
 		ov::String group = ov::String(tmp.c_str());
 
-		logtd("Full Match(%s) => Group(%s)", full_match.CStr(), group.CStr());
+		// logtd("Full Match(%s) => Group(%s)", full_match.CStr(), group.CStr());
 
 		if(group.IndexOf("VirtualHost") != -1L)
 		{
@@ -424,7 +440,7 @@ ov::String FileSession::ConvertMacro(ov::String src)
 
 			replaced_string = replaced_string.Replace(full_match, str_time);			
 		}		
-	}	
+	}
 
 	// logtd("Regular Expreesion Result : %s", replaced_string.CStr());
 

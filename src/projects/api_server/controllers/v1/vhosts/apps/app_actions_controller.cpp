@@ -46,17 +46,21 @@ namespace api
 				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
+			Json::Value response;
+			std::vector<std::shared_ptr<info::Record>> records;
+			
+			auto error = publisher->GetRecords(app->GetName(), records);
+			if(error->GetCode() != FilePublisher::FilePublisherStatusCode::Success)
+			{
+				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+			}
 
-			std::vector<std::shared_ptr<info::Record>> record_list;
+			for ( auto &item : records )
+			{
+				response.append(api::conv::JsonFromRecord(item));
+			}
 
-			auto error = publisher->GetRecords(app->GetName(), record_list);
-
-			// for ( auto &item : record_list )
-			// {
-			// 	logtd("\n%s", item->GetInfoString().CStr());
-			// }
-
-			return error;
+			return response;
 		}
 
 		ApiResponse AppActionsController::OnPostStartRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
@@ -78,10 +82,17 @@ namespace api
 				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
+			record->SetVhost(vhost->GetName().CStr());
+			record->SetApplication(app->GetName().GetAppName());
+
 
 			auto error = publisher->RecordStart(app->GetName(), record);
+			if(error->GetCode() != FilePublisher::FilePublisherStatusCode::Success)
+			{
+				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+			}
 
-			return error;
+			return ov::Error::CreateError(HttpStatusCode::OK, error->GetMessage());
 		}
 
 		ApiResponse AppActionsController::OnPostStopRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
@@ -103,25 +114,38 @@ namespace api
 				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
+			record->SetVhost(vhost->GetName().CStr());
+			record->SetApplication(app->GetName().GetAppName());
+
 
 			auto error = publisher->RecordStop(app->GetName(), record);
+			if(error->GetCode() != FilePublisher::FilePublisherStatusCode::Success)
+			{
+				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+			}
 
-			return error;
+			return ov::Error::CreateError(HttpStatusCode::OK, error->GetMessage());
 		}
 
-		ApiResponse AppActionsController::OnGetPushes(const std::shared_ptr<HttpClient> &client)
+		ApiResponse AppActionsController::OnGetPushes(const std::shared_ptr<HttpClient> &client,
+													 const std::shared_ptr<mon::HostMetrics> &vhost,
+													 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			Json::Value response(Json::ValueType::objectValue);
 			return std::move(response);
 		}
 
-		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body)
+		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+														  const std::shared_ptr<mon::HostMetrics> &vhost,
+														  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			Json::Value response(Json::ValueType::objectValue);
 			return std::move(response);
 		}
 
-		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body)
+		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+														 const std::shared_ptr<mon::HostMetrics> &vhost,
+														 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			Json::Value response(Json::ValueType::objectValue);
 			return std::move(response);
@@ -132,16 +156,6 @@ namespace api
 														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			logte("Called OnGetDummyAction. invoke [%s/%s]",
-				  vhost->GetName().CStr(), app->GetName().GetAppName());
-
-			return api::conv::JsonFromApplication(app);
-		}
-
-		ApiResponse AppActionsController::OnPostDummyAction(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
-															const std::shared_ptr<mon::HostMetrics> &vhost,
-															const std::shared_ptr<mon::ApplicationMetrics> &app)
-		{
-			logte("Called OnPostDummyAction. invoke [%s/%s]",
 				  vhost->GetName().CStr(), app->GetName().GetAppName());
 
 			return api::conv::JsonFromApplication(app);

@@ -13,14 +13,14 @@ FileUserdataSets::~FileUserdataSets()
 
 }
 
-bool FileUserdataSets::Set(ov::String userdata_id, std::shared_ptr<FileUserdata> userdata)
+bool FileUserdataSets::Set(ov::String userdata_id, std::shared_ptr<info::Record> userdata)
 {
 	_userdata_sets[userdata_id] = userdata;
 
 	return true;
 }
 
-std::shared_ptr<FileUserdata> FileUserdataSets::GetAt(uint32_t index)
+std::shared_ptr<info::Record> FileUserdataSets::GetAt(uint32_t index)
 {
 	auto iter( _userdata_sets.begin() );
     std::advance( iter, index );
@@ -46,7 +46,7 @@ ov::String FileUserdataSets::GetKeyAt(uint32_t index)
 	return iter->first;	
 }
 
-std::shared_ptr<FileUserdata> FileUserdataSets::GetByKey(ov::String key)
+std::shared_ptr<info::Record> FileUserdataSets::GetByKey(ov::String key)
 {
 	auto iter = _userdata_sets.find(key);
 	if(iter == _userdata_sets.end())
@@ -57,7 +57,7 @@ std::shared_ptr<FileUserdata> FileUserdataSets::GetByKey(ov::String key)
 	return iter->second;
 }
 
-std::shared_ptr<FileUserdata> FileUserdataSets::GetBySessionId(session_id_t session_id)
+std::shared_ptr<info::Record> FileUserdataSets::GetBySessionId(session_id_t session_id)
 {
 	for ( auto &item : _userdata_sets )
 	{

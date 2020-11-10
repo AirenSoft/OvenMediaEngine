@@ -26,6 +26,7 @@ FilePublisher::~FilePublisher()
 	logtd("FilePublisher has been terminated finally");
 }
 
+
 bool FilePublisher::Start()
 {
 	_stop_thread_flag = false;
@@ -46,6 +47,22 @@ bool FilePublisher::Stop()
 	return Publisher::Stop();
 }
 
+void FilePublisher::WorkerThread()
+{
+	ov::StopWatch stat_stop_watch;
+	stat_stop_watch.Start();
+
+	while (!_stop_thread_flag)
+	{
+		if (stat_stop_watch.IsElapsed(500) && stat_stop_watch.Update())
+		{
+			SessionController();
+		}
+
+		usleep(1000);
+	}
+}
+
 std::shared_ptr<pub::Application> FilePublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
 	return FileApplication::Create(FilePublisher::GetSharedPtrAs<pub::Publisher>(), application_info);
@@ -62,6 +79,7 @@ bool FilePublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Appl
 
 	return true;
 }
+
 
 void FilePublisher::StartSession(std::shared_ptr<FileSession> session)
 {
@@ -88,10 +106,10 @@ void FilePublisher::StartSession(std::shared_ptr<FileSession> session)
 			[[fallthrough]];
 	}
 
-	auto new_sesion_state = session->GetState();
-	if(session_state != new_sesion_state)
+	auto next_session_state = session->GetState();
+	if(session_state != next_session_state)
 	{
-		logtd("Changed State. State(%d - %d)", session_state, new_sesion_state);		
+		logtd("Changed State. State(%d - %d)", session_state, next_session_state);		
 	}	
 }
 
@@ -114,13 +132,12 @@ void FilePublisher::StopSession(std::shared_ptr<FileSession> session)
 			[[fallthrough]];
 	}
 
-	auto new_sesion_state = session->GetState();
-	if(session_state != new_sesion_state)
+	auto next_session_state = session->GetState();
+	if(session_state != next_session_state)
 	{
-		logtd("Changed State. State(%d - %d)", session_state, new_sesion_state);		
+		logtd("Changed State. State(%d - %d)", session_state, next_session_state);		
 	}	
 }
-
 
 void FilePublisher::SessionController()
 {
@@ -149,9 +166,8 @@ void FilePublisher::SessionController()
 				}
 				userdata->SetSessionId(session->GetId());
 
-				session->SetRecord(userdata->GetRecord());
+				session->SetRecord(userdata);
 			}
-
 
 			if(userdata->GetEnable() == true && userdata->GetRemove() == false)
 			{
@@ -162,6 +178,10 @@ void FilePublisher::SessionController()
 			{
 				StopSession(session);
 			}
+		}
+		else
+		{
+			userdata->SetState(info::Record::RecordState::Ready);
 		}
 
 		if(userdata->GetRemove() == true)
@@ -195,8 +215,7 @@ void FilePublisher::SessionController()
 				if(userdata == nullptr)
 				{
 					// Userdata does not have this session. This session needs to be deleted.
-					logtw("Userdata does not have this session. This session needs to be deleted. session_id(%d)", 
-						session->GetId());
+					logtw("Userdata does not have this session. This session needs to be deleted. session_id(%d)", session->GetId());
 					
 					stream->DeleteSession(session->GetId());
 
@@ -208,39 +227,25 @@ void FilePublisher::SessionController()
 	}	
 }
 
-void FilePublisher::WorkerThread()
-{
-	ov::StopWatch stat_stop_watch;
-	stat_stop_watch.Start();
-
-	while (!_stop_thread_flag)
-	{
-		if (stat_stop_watch.IsElapsed(500) && stat_stop_watch.Update())
-		{
-			SessionController();
-		}
-
-		usleep(1000);
-	}
-}
 
 std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &vhost_app_name, 
 													  const std::shared_ptr<info::Record> &record)
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
 
-	auto userdata = FileUserdata::Create(
-		record->GetId(),
-		vhost_app_name.GetVHostName(), 
-		vhost_app_name.GetAppName(), 
-		record);
-	
-	userdata->SetEnable(true);
-	userdata->SetRemove(false);
+	if(_userdata_sets.GetByKey(record->GetId()) != nullptr)
+	{
+		return ov::Error::CreateError(FilePublisherStatusCode::Failure, 
+			"Duplicate identification Code");		
+	}
 
-	_userdata_sets.Set(record->GetId(), userdata);
+	record->SetEnable(true);
+	record->SetRemove(false);
 
-	return ov::Error::CreateError(0, "Success");
+	_userdata_sets.Set(record->GetId(), record);
+
+	return ov::Error::CreateError(FilePublisherStatusCode::Success, 
+		"Record request completed");
 }
 
 std::shared_ptr<ov::Error> FilePublisher::RecordStop(const info::VHostAppName &vhost_app_name, 
@@ -251,13 +256,15 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStop(const info::VHostAppName &v
 	auto userdata = _userdata_sets.GetByKey(record->GetId());
 	if(userdata == nullptr)
 	{
-		return ov::Error::CreateError(1, "Could not find record");	
+		return ov::Error::CreateError(FilePublisherStatusCode::Failure, 
+			"identification code does not exist");	
 	}
 
 	userdata->SetEnable(false);
 	userdata->SetRemove(true);
 
-	return ov::Error::CreateError(0, "Success");
+	return ov::Error::CreateError(FilePublisherStatusCode::Success, 
+		"Recording stop request complted");
 }
 
 std::shared_ptr<ov::Error> FilePublisher::GetRecords(const info::VHostAppName &vhost_app_name, 
@@ -271,13 +278,10 @@ std::shared_ptr<ov::Error> FilePublisher::GetRecords(const info::VHostAppName &v
 		if(userdata == nullptr)
 			continue;
 
-		// logtd("=[%d]=", i);
-		// logtd("%s", userdata->GetInfoString().CStr());
-		// logtd("%s", userdata->GetRecord()->GetInfoString().CStr());
-
-		record_list.push_back(userdata->GetRecord());
+		record_list.push_back(userdata);
 	}
 
-	return ov::Error::CreateError(0, "Success");
+	return ov::Error::CreateError(FilePublisherStatusCode::Success, 
+		"Look up the recording list");
 }
 

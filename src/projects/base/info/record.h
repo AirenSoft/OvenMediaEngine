@@ -4,6 +4,8 @@
 #include "base/common_types.h"
 #include "base/ovlibrary/enable_shared_from_this.h"
 #include "stream.h"
+#include "vhost_app_name.h"
+#include "session.h"
 
 namespace info
 {
@@ -23,68 +25,104 @@ namespace info
 		{
 			return *_stream;
 		}
+		
+		void SetEnable(bool eanble) ;
+		bool GetEnable();
 
-		const std::chrono::system_clock::time_point &GetCreatedTime() const;
+		void SetVhost(ov::String value);
+		ov::String GetVhost();
 
+		void SetApplication(ov::String value);
+		ov::String GetApplication();
+
+		void SetRemove(bool value);
+		bool GetRemove();
+
+		ov::String GetStreamName();
+
+		void SetSessionId(session_id_t id);
+		session_id_t GetSessionId();
+		
 		void SetFilePath(ov::String file_path);
+		ov::String GetFilePath();
+
 		void SetTmpPath(ov::String tmp_path);
+		ov::String GetTmpPath();
+
 		void SetFileInfoPath(ov::String fileinfo_path);
+		ov::String GetFileInfoPath();
+
 		void IncreaseRecordBytes(uint64_t bytes);
-		void IncreaseRecordTime(uint64_t time);
+		uint64_t GetRecordBytes();
+		uint64_t GetRecordTotalBytes();
+
+		void UpdateRecordTime();
+		uint64_t GetRecordTime();
+		uint64_t GetRecordTotalTime();
+
 		void IncreaseSequence();
+
 		void UpdateRecordStartTime();
 		void UpdateRecordStopTime();
 
-		ov::String GetFilePath();
-		ov::String GetTmpPath();
-		ov::String GetFileInfoPath();
-		uint64_t GetRecordBytes();
-		uint64_t GetRecordTime();
-		uint64_t GetRecordTotalBytes();
-		uint64_t GetRecordTotalTime();
 		uint64_t GetSequence();
-		std::chrono::system_clock::time_point GetRecordStartTime();
-		std::chrono::system_clock::time_point GetRecordStopTime();
 
-		inline ov::String GetInfoString() {
-			ov::String info = "";
+		const std::chrono::system_clock::time_point &GetCreatedTime() const;
+		const std::chrono::system_clock::time_point GetRecordStartTime() const;
+		const std::chrono::system_clock::time_point GetRecordStopTime() const;
 
-			info.AppendFormat("_id=%s\n", _id.CStr());
-			info.AppendFormat("_stream=%s\n", _stream->GetName().CStr());
-			info.AppendFormat("_file_path=%s\n", _file_path.CStr());
-			info.AppendFormat("_tmp_path=%s\n", _tmp_path.CStr());
-			info.AppendFormat("_fileinfo_path=%s\n", _fileinfo_path.CStr());
-			info.AppendFormat("_record_bytes=%lld\n", _record_bytes);
-			info.AppendFormat("_record_bytes=%lld\n", _record_bytes);
-			info.AppendFormat("_record_total_bytes=%lld\n", _record_total_bytes);
-			info.AppendFormat("_record_total_time=%lld\n", _record_total_time);
-			info.AppendFormat("_sequence=%d\n", _sequence);
-			info.AppendFormat("_created_time=%s\n", ov::Converter::ToString(_created_time).CStr());
-			info.AppendFormat("_record_start_time=%s\n", ov::Converter::ToString(_record_start_time).CStr());
-			info.AppendFormat("_record_stop_time=%s", ov::Converter::ToString(_record_stop_time).CStr());
+		enum class RecordState : int8_t
+		{
+			Ready,
+			Recording,
+			Stopping,
+			Stopped,
+			Error
+		};
 
-			return info;
-		}
+		RecordState GetState();
+		void SetState(RecordState state);
+		ov::String GetStateString();
+
+		const ov::String GetInfoString();
 
 	private:
-		ov::String 								_id;
-		std::shared_ptr<info::Stream>			_stream;
+		ov::String _id;
+	
+		// Enabled/Disabled Flag
+		bool _enable;
 
-		ov::String 								_file_path;
-		ov::String  							_tmp_path;
-		ov::String 								_fileinfo_path;
+		// Remove Flag
+		bool _remove;
 
-		uint64_t								_record_bytes;
-		uint64_t								_record_time;
+		// Virtual Host
+		ov::String _vhost_name;
 
-		uint64_t 								_record_total_bytes;
-		uint64_t 								_record_total_time;
+		// Application
+		ov::String _aplication_name;
 
-		uint32_t 								_sequence;
+		std::shared_ptr<info::Stream> _stream;
 
-		std::chrono::system_clock::time_point	_created_time;
+		ov::String _file_path;
+		ov::String _tmp_path;
+		ov::String _fileinfo_path;
 
-		std::chrono::system_clock::time_point	_record_start_time;		
-		std::chrono::system_clock::time_point	_record_stop_time;
+		uint64_t _record_bytes;
+		uint64_t _record_time;
+
+		uint64_t _record_total_bytes;
+		uint64_t _record_total_time;
+
+		uint32_t _sequence;
+
+		std::chrono::system_clock::time_point _created_time;
+
+		std::chrono::system_clock::time_point _record_start_time;		
+		std::chrono::system_clock::time_point _record_stop_time;	
+
+		RecordState _state;
+
+		// File Session Id
+		session_id_t _session_id;		
 	};
 }  // namespace info
