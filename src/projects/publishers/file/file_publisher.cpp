@@ -186,7 +186,7 @@ void FilePublisher::SessionController()
 
 		if(userdata->GetRemove() == true)
 		{
-			logte("Delete userdata of file publiser. id(%s)", userdata->GetId().CStr());
+			logtd("Remove userdata of file publiser. id(%s)", userdata->GetId().CStr());
 			_userdata_sets.DeleteByKey(userdata->GetId());
 			userdata_idx--;
 		}		
@@ -215,7 +215,7 @@ void FilePublisher::SessionController()
 				if(userdata == nullptr)
 				{
 					// Userdata does not have this session. This session needs to be deleted.
-					logtw("Userdata does not have this session. This session needs to be deleted. session_id(%d)", session->GetId());
+					logtd("Userdata does not have this session. This session should be delete. session_id(%d)", session->GetId());
 					
 					stream->DeleteSession(session->GetId());
 
