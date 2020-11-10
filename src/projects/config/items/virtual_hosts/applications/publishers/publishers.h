@@ -36,7 +36,8 @@ namespace cfg
 							&_ll_dash_publisher,
 							&_webrtc_publisher,
 							&_ovt_publisher,
-							&_file_publisher};
+							&_file_publisher,
+							&_rtmppush_publisher};
 					}
 
 					CFG_DECLARE_GETTER_OF(GetThreadCount, _thread_count)
