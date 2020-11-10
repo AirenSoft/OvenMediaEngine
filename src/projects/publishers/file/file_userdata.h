@@ -2,7 +2,7 @@
 
 #include "base/ovlibrary/ovlibrary.h"
 #include "base/info/record.h"
-
+/*
 class FileUserdata
 {
 public:
@@ -63,6 +63,7 @@ public:
 		return _aplication_name;
 	}
 
+
 	ov::String GetStreamName()
 	{
 		return _record->GetStream().GetName();
@@ -113,7 +114,7 @@ public:
 
 private:
 	// User Defined Id
-	ov::String _id;
+	ov::String 	_id;
 
 	// Enabled/Disabled Flag
 	bool _enable;
@@ -155,4 +156,27 @@ public:
 private:
 	// <userdata_id, userdata>
 	std::map<ov::String, std::shared_ptr<FileUserdata>> _userdata_sets;
+};
+*/
+
+class FileUserdataSets 
+{
+public:
+	FileUserdataSets();
+	~FileUserdataSets();
+
+	bool Set(ov::String userdata_id, std::shared_ptr<info::Record> userdata);
+	
+	uint32_t GetCount();
+
+	ov::String GetKeyAt(uint32_t index);
+	std::shared_ptr<info::Record> GetAt(uint32_t index);
+	std::shared_ptr<info::Record> GetByKey(ov::String key);
+	std::shared_ptr<info::Record> GetBySessionId(session_id_t session_id);
+	
+	void DeleteByKey(ov::String key);
+
+private:
+	// <userdata_id, userdata>
+	std::map<ov::String, std::shared_ptr<info::Record>> _userdata_sets;
 };

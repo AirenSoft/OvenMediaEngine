@@ -32,6 +32,9 @@ TranscodeEncoder::TranscodeEncoder()
 
 TranscodeEncoder::~TranscodeEncoder()
 {
+	if(_context != nullptr)
+		::avcodec_flush_buffers(_context);
+
 	OV_SAFE_FUNC(_context, nullptr, ::avcodec_free_context, &);
 
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);

@@ -855,20 +855,7 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 			double scale = input_track->GetTimeBase().GetExpr() / output_track->GetTimeBase().GetExpr();
 			clone_packet->SetPts( (int64_t)((double)clone_packet->GetPts() * scale));
 			clone_packet->SetDts( (int64_t)((double)clone_packet->GetDts() * scale));
-			// logtd("[%d] %lld[%d/%d] -> %lld[%d/%d]", 
-			// 	track_id, 
-			// 	clone_packet->GetPts(), 
-			// 	input_track->GetTimeBase().GetNum(), input_track->GetTimeBase().GetDen(), 
-			// 	(int64_t)((double)clone_packet->GetPts() * input_track->GetTimeBase().GetExpr() / output_track->GetTimeBase().GetExpr()),
-			// 	output_track->GetTimeBase().GetNum(), output_track->GetTimeBase().GetDen()
-			// 	);
-
-			// Convert to timebase
-
-
-			// if(output_track_id == 1)
-			// logtd("[#%d] Passthrought to MediaRouter (PTS: %lld)(SIZE: %lld)", output_track_id, clone_packet->GetPts(), clone_packet->GetDataLength());
-
+			
 			SendFrame(output_stream, std::move(clone_packet));
 		}
 	}

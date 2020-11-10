@@ -16,6 +16,6 @@ namespace api
 	namespace conv
 	{
 		std::shared_ptr<info::Record>  RecordFromJson(const Json::Value &json_body);
-	
+		Json::Value JsonFromRecord(const std::shared_ptr<info::Record> &record);
 	}  // namespace conv
 };	   // namespace api
