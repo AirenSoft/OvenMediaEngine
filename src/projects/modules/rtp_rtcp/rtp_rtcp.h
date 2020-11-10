@@ -12,6 +12,8 @@ public:
 	RtpRtcp(uint32_t id, std::shared_ptr<pub::Session> session, const std::vector<uint32_t> &ssrc_list);
 	~RtpRtcp() override;
 
+	bool Stop() override;
+
 	// 패킷을 전송한다. 성능을 위해 상위에서 Packetizing을 하는 경우 사용한다.
 	bool SendOutgoingData(const std::shared_ptr<RtpPacket> &packet);
 

@@ -139,7 +139,7 @@ bool FileWriter::Start()
 
 	if(_format_context->oformat != nullptr)
 	{
-		auto oformat = _format_context->oformat;
+		[[maybe_unused]] auto oformat = _format_context->oformat;
 		logtd("name : %s", oformat->name);	
 		logtd("long_name : %s", oformat->long_name);
 		logtd("mime_type : %s", oformat->mime_type);
