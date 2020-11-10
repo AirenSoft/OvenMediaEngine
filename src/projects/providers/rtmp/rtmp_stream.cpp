@@ -1058,7 +1058,7 @@ namespace pvd
 			dts *= video_track->GetVideoTimestampScale();
 			pts *= video_track->GetVideoTimestampScale();
 
-			cmn::PacketType	packet_type;
+			cmn::PacketType	packet_type = cmn::PacketType::Unknwon;
 			if(flv_video.PacketType() == FlvAvcPacketType::AVC_SEQUENCE_HEADER)
 			{
 				packet_type = cmn::PacketType::SEQUENCE_HEADER;
