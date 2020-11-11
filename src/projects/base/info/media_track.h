@@ -33,6 +33,7 @@ public:
 	// Timebase Settings
 	const cmn::Timebase &GetTimeBase() const;
 	void SetTimeBase(int32_t num, int32_t den);
+	void SetTimeBase(const cmn::Timebase &time_base);
 
 	// Bitrate Settings
 	void SetBitrate(int32_t bitrate);

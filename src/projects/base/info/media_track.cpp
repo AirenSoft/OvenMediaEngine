@@ -101,6 +101,12 @@ void MediaTrack::SetTimeBase(int32_t num, int32_t den)
 	_time_base.Set(num, den);
 }
 
+void MediaTrack::SetTimeBase(const cmn::Timebase &time_base)
+{
+	_time_base = time_base;
+}
+
+
 void MediaTrack::SetBitrate(int32_t bitrate)
 {
 	_bitrate = bitrate;
