@@ -190,10 +190,12 @@ namespace api
 				ov::String name = item.name().c_str();
 				auto lower_name = name.LowerCaseString();
 
-				// Prevent to change the name
-				if (lower_name == "name")
+				// Prevent to change the name/outputProfiles using this API
+				if (
+					(lower_name == "name") ||
+					(lower_name == "outputprofiles"))
 				{
-					return ov::Error::CreateError(HttpStatusCode::BadRequest, "The name entry cannot be specified in the app modification");
+					return ov::Error::CreateError(HttpStatusCode::BadRequest, "The %s entry cannot be specified in the app modification", lower_name.CStr());
 				}
 
 				// Copy request_body into app_json

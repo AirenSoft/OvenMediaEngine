@@ -52,8 +52,8 @@ namespace api
 			{
 				Json::Value item;
 
-				item["name"] = stream.GetName().CStr();
-				item["port"] = stream.GetPort().GetPortString().CStr();
+				SetString(item, "name", stream.GetName(), Optional::False);
+				SetString(item, "port", stream.GetPort().GetPortString(), Optional::False);
 
 				object.append(item);
 			}
@@ -168,62 +168,87 @@ namespace api
 			// SetThumbnailPublisher(object, "thumbnail", config.GetThumbnailPublisher(), Optional::True);
 		}
 
-		// OutputProfile is made by combining Encodes and Streams
-		static void SetOutputProfiles(Json::Value &parent_object, const char *key, const cfg::vhost::app::enc::Encodes &encodes_config, const cfg::vhost::app::stream::Streams &streams_config, Optional optional)
+		static void SetEncodes(Json::Value &parent_object, const char *key, const cfg::vhost::app::oprf::Encodes &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF((encodes_config.IsParsed() == false) || (streams_config.IsParsed() == false));
+			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
-			// to Encodes and Streams:
-			//
-			// 	<Encodes>
-			// 		<Encode>
-			// 			<Name>bypass</Name>
-			// 			<Audio>
-			// 				<Bypass>true</Bypass>
-			// 			</Audio>
-			// 			<Video>
-			// 				<Bypass>true</Bypass>
-			// 			</Video>
-			// 		</Encode>
-			// 	</Encodes>
-			// 	<Streams>
-			// 		<Stream>
-			// 			<Name>bypass_stream</Name>
-			// 			<OutputStreamName>${OriginStreamName}</OutputStreamName>
-			// 			<Profiles>
-			// 				<Profile>bypass</Profile>
-			// 				<Profile>opus</Profile>
-			// 			</Profiles>
-			// 		</Stream>
-			// 	</Streams>
-			//
-			// from OutputProfile:
-			//	 {
-			//	 	"name": "bypass_stream",
-			//	 	"outputStreamName": "${OriginStreamName}",
-			//	 	"encodes": [
-			//	 		{
-			//	 			"name": "bypass",
-			//	 			"audio": {
-			//	 				"bypass": true
-			//	 			},
-			//	 			"video": {
-			//	 				"bypass": true
-			//	 			}
-			//	 		}
-			//	 	]
-			//	 }
+			Json::Value audios(Json::ValueType::arrayValue);
+			Json::Value videos(Json::ValueType::arrayValue);
+
+			for (auto &profile : config.GetAudioProfileList())
+			{
+				Json::Value audio;
+
+				if (profile.IsBypass())
+				{
+					SetBool(audio, "bypass", profile.IsBypass());
+				}
+				else
+				{
+					SetBool(audio, "active", profile.IsActive());
+					SetString(audio, "codec", profile.GetCodec(), Optional::False);
+					SetString(audio, "bitrate", profile.GetBitrateString(), Optional::False);
+					SetInt(audio, "samplerate", profile.GetSamplerate());
+					SetInt(audio, "channel", profile.GetChannel());
+				}
+
+				audios.append(audio);
+			}
+
+			for (auto &profile : config.GetVideoProfileList())
+			{
+				Json::Value video;
+
+				if (profile.IsBypass())
+				{
+					SetBool(video, "bypass", profile.IsBypass());
+				}
+				else
+				{
+					SetBool(video, "active", profile.IsActive());
+					SetString(video, "codec", profile.GetCodec(), Optional::False);
+					SetString(video, "scale", profile.GetScale(), Optional::False);
+					SetInt(video, "width", profile.GetWidth());
+					SetInt(video, "height", profile.GetHeight());
+					SetString(video, "bitrate", profile.GetBitrateString(), Optional::False);
+					SetFloat(video, "framerate", profile.GetFramerate());
+				}
+
+				videos.append(video);
+			}
+
+			object["audios"] = audios;
+			object["videos"] = videos;
+		}
+
+		static void SetOutputProfiles(Json::Value &parent_object, const char *key, const cfg::vhost::app::oprf::OutputProfiles &config, Optional optional)
+		{
+			CONVERTER_RETURN_IF(config.IsParsed() == false);
+
+			for (auto &output_profile : config.GetOutputProfileList())
+			{
+				Json::Value item;
+
+				SetString(item, "name", output_profile.GetName(), Optional::False);
+				SetString(item, "outputStreamName", output_profile.GetOutputStreamName(), Optional::False);
+				SetEncodes(item, "encodes", output_profile.GetEncodes(), Optional::True);
+
+				object.append(item);
+			}
 		}
 
 		Json::Value JsonFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application)
 		{
 			Json::Value response(Json::ValueType::objectValue);
 
+			auto &config = application->GetConfig();
+
 			SetString(response, "name", application->GetName().GetAppName(), Optional::False);
 			SetBool(response, "dynamic", application->IsDynamicApp());
-			SetString(response, "type", application->GetConfig().GetTypeString(), Optional::False);
-			SetProviders(response, "providers", application->GetConfig().GetProviders(), Optional::True);
-			SetPublishers(response, "publishers", application->GetConfig().GetPublishers(), Optional::True);
+			SetString(response, "type", config.GetTypeString(), Optional::False);
+			SetOutputProfiles(response, "outputProfiles", config.GetOutputProfiles(), Optional::True);
+			SetProviders(response, "providers", config.GetProviders(), Optional::True);
+			SetPublishers(response, "publishers", config.GetPublishers(), Optional::True);
 
 			return std::move(response);
 		}
@@ -298,6 +323,19 @@ namespace api
 							if (name == "streams")
 							{
 								name = "StreamMap";
+								converted = true;
+							}
+						}
+						else if ((path == "application.outputProfiles.encodes"))
+						{
+							if (name == "audios")
+							{
+								name = "Audio";
+								converted = true;
+							}
+							else if (name == "videos")
+							{
+								name = "Video";
 								converted = true;
 							}
 						}

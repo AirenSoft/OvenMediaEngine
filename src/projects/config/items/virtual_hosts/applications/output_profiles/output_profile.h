@@ -3,10 +3,12 @@
 //  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
-//  Copyright (c) 2019 AirenSoft. All rights reserved.
+//  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
+
+#include "encodes/encodes.h"
 
 namespace cfg
 {
@@ -21,9 +23,13 @@ namespace cfg
 				protected:
 					ov::String _name;
 					ov::String _output_stream_name;
-					std::vector<enc::Encode> _encodes;
+					Encodes _encodes;
 
 				public:
+					CFG_DECLARE_REF_GETTER_OF(GetName, _name)
+					CFG_DECLARE_REF_GETTER_OF(GetOutputStreamName, _output_stream_name)
+					CFG_DECLARE_REF_GETTER_OF(GetEncodes, _encodes)
+
 				protected:
 					void MakeParseList() override
 					{
