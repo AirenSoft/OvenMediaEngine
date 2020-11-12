@@ -118,7 +118,7 @@ void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 		auto packet = std::move(_input_buffer.front());
 		_input_buffer.pop_front();
 
-		_cur_pkt = packet.get();
+		_cur_pkt = std::move(packet);
 	
 		if (_cur_pkt != nullptr)
 		{
