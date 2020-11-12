@@ -139,7 +139,6 @@ bool WebRtcPublisher::DisconnectSessionInternal(const std::shared_ptr<RtcSession
 		stream_metrics->OnSessionDisconnected(PublisherType::Webrtc);
 	}
 
-	_ice_port->RemoveSession(session);
 	session->Stop();
 
 	StatLog(session->GetWSClient(), stream, session, RequestStreamResult::transfer_completed);
@@ -160,6 +159,7 @@ void WebRtcPublisher::OnMessage(const std::shared_ptr<ov::CommonMessage> &messag
 				return;
 			}
 
+			_ice_port->RemoveSession(session);
 			DisconnectSessionInternal(session);
 		}
 		catch(const std::bad_any_cast& e) 
@@ -379,6 +379,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 	}
 
 	DisconnectSessionInternal(session);
+	_ice_port->RemoveSession(session);
 
 	return true;
 }
