@@ -113,26 +113,6 @@ namespace info
 			return _is_dynamic_app;
 		}
 
-		bool CheckCodecAvailability(const std::vector<ov::String> &video_codecs, const std::vector<ov::String> &audio_codecs) const
-		{
-			for (const auto &stream : GetConfig().GetStreamList())
-			{
-				const auto &profiles = stream.GetProfileList();
-				for (const auto &profile : profiles)
-				{
-					cfg::vhost::app::stream::prf::Use use = profile.GetUse();
-					ov::String profile_name = profile.GetName();
-
-					if (GetConfig().HasEncodeWithCodec(profile_name, use, video_codecs, audio_codecs))
-					{
-						return true;
-					}
-				}
-			}
-
-			return false;
-		}
-
 	protected:
 		// These constructors will be called from Orchestrator
 		friend class ocst::Orchestrator;

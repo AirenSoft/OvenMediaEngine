@@ -9,12 +9,10 @@
 #pragma once
 
 #include "decode/decode.h"
-#include "encodes/encodes.h"
 #include "origin.h"
 #include "output_profiles/output_profiles.h"
 #include "providers/providers.h"
 #include "publishers/publishers.h"
-#include "streams/streams.h"
 #include "web_console/web_console.h"
 
 namespace cfg
@@ -37,45 +35,11 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetTypeString, _type)
 
 				CFG_DECLARE_REF_GETTER_OF(GetDecode, _decode)
-				CFG_DECLARE_REF_GETTER_OF(GetEncodeList, _encodes.GetEncodeList())
-				CFG_DECLARE_REF_GETTER_OF(GetEncodes, _encodes)
-				CFG_DECLARE_REF_GETTER_OF(GetStreamList, _streams.GetStreamList())
-				CFG_DECLARE_REF_GETTER_OF(GetStreams, _streams)
 				CFG_DECLARE_REF_GETTER_OF(GetOutputProfileList, _output_profiles.GetOutputProfileList())
 				CFG_DECLARE_REF_GETTER_OF(GetOutputProfiles, _output_profiles)
 				CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
 				CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
 				CFG_DECLARE_GETTER_OF(GetThreadCount, _publishers.GetThreadCount())
-
-				bool HasEncodeWithCodec(const ov::String &profile_name,
-										cfg::vhost::app::stream::prf::Use use,
-										const std::vector<ov::String> &video_codecs, const std::vector<ov::String> &audio_codecs) const
-				{
-					for (const auto &encode : GetEncodeList())
-					{
-						if (encode.IsActive() && encode.GetName() == profile_name)
-						{
-							// video codec
-							if ((video_codecs.empty() == false) && (use == cfg::vhost::app::stream::prf::Use::Both || use == cfg::vhost::app::stream::prf::Use::VideoOnly))
-							{
-								const auto &video_profiles = encode.GetVideoProfileList();
-								return std::find_if(video_profiles.begin(), video_profiles.end(), [video_codecs](const auto &video_profile) {
-										   return std::find(video_codecs.begin(), video_codecs.end(), video_profile.GetCodec()) != video_codecs.end();
-									   }) != video_profiles.end();
-							}
-
-							// audio codec
-							if ((audio_codecs.empty() == false) && (use == cfg::vhost::app::stream::prf::Use::Both || use == cfg::vhost::app::stream::prf::Use::AudioOnly))
-							{
-								const auto &audio_profiles = encode.GetAudioProfileList();
-								return std::find_if(audio_profiles.begin(), audio_profiles.end(), [audio_codecs](const auto &audio_profile) {
-										   return std::find(audio_codecs.begin(), audio_codecs.end(), audio_profile.GetCodec()) != audio_codecs.end();
-									   }) != audio_profiles.end();
-							}
-						}
-					}
-					return false;
-				}
 
 			protected:
 				void MakeParseList() override
@@ -99,8 +63,6 @@ namespace cfg
 					});
 
 					RegisterValue<Optional>("Decode", &_decode);
-					RegisterValue<Optional>("Encodes", &_encodes);
-					RegisterValue<Optional>("Streams", &_streams);
 					RegisterValue<Optional>("OutputProfiles", &_output_profiles);
 					RegisterValue<Optional>("Providers", &_providers);
 					RegisterValue<Optional>("Publishers", &_publishers);
@@ -111,8 +73,6 @@ namespace cfg
 				ApplicationType _type_value;
 
 				dec::Decode _decode;
-				enc::Encodes _encodes;
-				stream::Streams _streams;
 				oprf::OutputProfiles _output_profiles;
 				pvd::Providers _providers;
 				pub::Publishers _publishers;

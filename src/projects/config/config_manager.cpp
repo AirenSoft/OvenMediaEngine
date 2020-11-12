@@ -206,12 +206,13 @@ namespace cfg
 			if ((version == 7) && (supported_version == 8))
 			{
 				logtc("Major Changes (v7 -> v8):");
-				logtc(" - Changed <Server>.<VirtualHosts>.<VirtualHost>.<Domain> to <Host>");
-				logtc(" - Changed <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Streams>.<Stream>.<Name> to <OutputStreamName>");
-				logtc(" - Changed <CrossDomain> to <CrossDomains>");
 				logtc(" - Added <Server>.<Bind>.<Managers>.<API> for setting API binding port");
 				logtc(" - Added <Server>.<API> for setting API server");
-				logtc(" - Added <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Streams>.<Stream>.<Name> to distinguish OutputProfile");
+				logtc(" - Added <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<OutputProfiles>");
+				logtc(" - Changed <Server>.<VirtualHosts>.<VirtualHost>.<Domain> to <Host>");
+				logtc(" - Changed <CrossDomain> to <CrossDomains>");
+				logtc(" - Deleted <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Streams>");
+				logtc(" - Deleted <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Encodes>");
 
 				return false;
 			}
