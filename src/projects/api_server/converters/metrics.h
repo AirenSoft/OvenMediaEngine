@@ -8,19 +8,13 @@
 //==============================================================================
 #pragma once
 
-#include "../../controller.h"
+#include <monitoring/monitoring.h>
 
 namespace api
 {
-	namespace v1
+	namespace conv
 	{
-		namespace stats
-		{
-			class StatsController : public Controller<StatsController>
-			{
-			public:
-				void PrepareHandlers() override;
-			};
-		}  // namespace stats
-	}	   // namespace v1
-}  // namespace api
+		Json::Value JsonFromMetrics(const std::shared_ptr<const mon::CommonMetrics> &metrics);
+		Json::Value JsonFromStreamMetrics(const std::shared_ptr<const mon::StreamMetrics> &metrics);
+	}  // namespace conv
+};	   // namespace api

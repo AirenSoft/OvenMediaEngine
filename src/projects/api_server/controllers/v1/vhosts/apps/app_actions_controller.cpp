@@ -13,8 +13,6 @@
 #include <functional>
 
 #include "../../../../api_private.h"
-#include "../../../../converters/converters.h"
-#include "../../../../helpers/helpers.h"
 #include "publishers/publishers.h"
 
 namespace api
@@ -57,7 +55,7 @@ namespace api
 
 			for ( auto &item : records )
 			{
-				response.append(api::conv::JsonFromRecord(item));
+				response.append(conv::JsonFromRecord(item));
 			}
 
 			return response;
@@ -76,7 +74,7 @@ namespace api
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
-			auto record = api::conv::RecordFromJson(request_body);
+			auto record = conv::RecordFromJson(request_body);
 			if (record == nullptr)
 			{
 				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
@@ -108,7 +106,7 @@ namespace api
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
-			auto record = api::conv::RecordFromJson(request_body);
+			auto record = conv::RecordFromJson(request_body);
 			if (record == nullptr)
 			{
 				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
@@ -158,7 +156,7 @@ namespace api
 			logte("Called OnGetDummyAction. invoke [%s/%s]",
 				  vhost->GetName().CStr(), app->GetName().GetAppName());
 
-			return api::conv::JsonFromApplication(app);
+			return conv::JsonFromApplication(app);
 		}
 
 	}  // namespace v1

@@ -105,14 +105,16 @@ namespace api
 
 		static void SetInputStream(Json::Value &parent_object, const char *key, const std::shared_ptr<const mon::StreamMetrics> &stream, Optional optional)
 		{
-			CONVERTER_RETURN_IF(stream == nullptr);
+			auto common_metrics = std::static_pointer_cast<const mon::CommonMetrics>(stream);
+
+			CONVERTER_RETURN_IF(common_metrics == nullptr);
 
 			SetString(object, "sourceType", ::StringFromStreamSourceType(stream->GetSourceType()), Optional::False);
 			SetString(object, "sourceUrl", stream->GetMediaSource(), Optional::True);
 			// TODO(dimiden): Complete this function
 			SetConnection(object, "connection", stream.get(), Optional::True);
 			SetTracks(object, "tracks", stream->GetTracks(), Optional::False);
-			SetTimestamp(object, "createdTime", stream->GetCreatedTime());
+			SetTimestamp(object, "createdTime", common_metrics->GetCreatedTime());
 		}
 
 		static void SetOutputStreams(Json::Value &parent_object, const char *key, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams, Optional optional)
@@ -133,7 +135,7 @@ namespace api
 		Json::Value JsonFromStream(const std::shared_ptr<const mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			Json::Value response(Json::ValueType::objectValue);
-			
+
 			SetString(response, "name", stream->GetName(), Optional::False);
 			SetInputStream(response, "input", stream, Optional::False);
 			SetOutputStreams(response, "outputs", output_streams, Optional::False);

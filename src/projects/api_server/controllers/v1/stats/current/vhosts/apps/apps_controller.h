@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "../../controller.h"
+#include "../../../../../controller.h"
 
 namespace api
 {
@@ -16,10 +16,15 @@ namespace api
 	{
 		namespace stats
 		{
-			class StatsController : public Controller<StatsController>
+			class AppsController : public Controller<AppsController>
 			{
 			public:
 				void PrepareHandlers() override;
+
+			protected:
+				ApiResponse OnGetApp(const std::shared_ptr<HttpClient> &client,
+									 const std::shared_ptr<mon::HostMetrics> &vhost,
+									 const std::shared_ptr<mon::ApplicationMetrics> &app);
 			};
 		}  // namespace stats
 	}	   // namespace v1

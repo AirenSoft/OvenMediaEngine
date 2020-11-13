@@ -11,8 +11,6 @@
 #include <config/config.h>
 
 #include "../../../api_private.h"
-#include "../../../converters/converters.h"
-#include "../../../helpers/helpers.h"
 #include "apps/apps_controller.h"
 
 namespace api
@@ -24,7 +22,7 @@ namespace api
 			RegisterGet(R"()", &VHostsController::OnGetVhostList);
 			RegisterGet(R"(\/(?<vhost_name>[^\/]*))", &VHostsController::OnGetVhost);
 
-			CreateSubController<v1::AppsController>(R"(\/(?<vhost_name>[^\/]*)\/apps)");
+			CreateSubController<AppsController>(R"(\/(?<vhost_name>[^\/]*)\/apps)");
 		}
 
 		ApiResponse VHostsController::OnGetVhostList(const std::shared_ptr<HttpClient> &client)
@@ -40,21 +38,10 @@ namespace api
 			return response;
 		}
 
-		ApiResponse VHostsController::OnGetVhost(const std::shared_ptr<HttpClient> &client)
+		ApiResponse VHostsController::OnGetVhost(const std::shared_ptr<HttpClient> &client,
+												 const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
-			// Get resources from URI
-			auto &match_result = client->GetRequest()->GetMatchResult();
-
-			auto vhost_name = match_result.GetNamedGroup("vhost_name");
-			auto vhost = GetVirtualHost(vhost_name);
-			if (vhost == nullptr)
-			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find the virtual host: [%.*s]",
-											  vhost_name.length(), vhost_name.data());
-			}
-
-			return api::conv::JsonFromVHost(vhost);
+			return conv::JsonFromVHost(vhost);
 		}
-
 	}  // namespace v1
 }  // namespace api

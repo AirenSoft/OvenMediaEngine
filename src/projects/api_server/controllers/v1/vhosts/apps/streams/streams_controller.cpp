@@ -13,8 +13,6 @@
 #include <functional>
 
 #include "../../../../../api_private.h"
-#include "../../../../../converters/converters.h"
-#include "../../../../../helpers/helpers.h"
 
 namespace api
 {
@@ -59,7 +57,7 @@ namespace api
 						std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
 						stream = GetStream(app, stream_name, &output_streams);
 
-						response_value.append(api::conv::JsonFromStream(stream, std::move(output_streams)));
+						response_value.append(conv::JsonFromStream(stream, std::move(output_streams)));
 					}
 					else
 					{
@@ -105,7 +103,7 @@ namespace api
 												   const std::shared_ptr<mon::ApplicationMetrics> &app,
 												   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			return api::conv::JsonFromStream(stream, std::move(output_streams));
+			return conv::JsonFromStream(stream, std::move(output_streams));
 		}
 
 		ApiResponse StreamsController::OnDeleteStream(const std::shared_ptr<HttpClient> &client,

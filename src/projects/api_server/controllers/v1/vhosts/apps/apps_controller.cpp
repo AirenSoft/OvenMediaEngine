@@ -13,8 +13,6 @@
 #include <functional>
 
 #include "../../../../api_private.h"
-#include "../../../../converters/converters.h"
-#include "../../../../helpers/helpers.h"
 #include "app_actions_controller.h"
 #include "output_profiles/output_profiles_controller.h"
 #include "streams/streams_controller.h"
@@ -32,13 +30,13 @@ namespace api
 			RegisterDelete(R"(\/(?<app_name>[^\/:]*))", &AppsController::OnDeleteApp);
 
 			// Branch into action controller
-			CreateSubController<v1::AppActionsController>(R"(\/(?<app_name>[^\/:]*):)");
+			CreateSubController<AppActionsController>(R"(\/(?<app_name>[^\/:]*):)");
 
 			// Branch into stream controller
-			CreateSubController<v1::StreamsController>(R"(\/(?<app_name>[^\/:]*)\/streams)");
+			CreateSubController<StreamsController>(R"(\/(?<app_name>[^\/:]*)\/streams)");
 
 			// Branch into output profile controller
-			CreateSubController<v1::OutputProfilesController>(R"(\/(?<app_name>[^\/:]*)\/outputProfiles)");
+			CreateSubController<OutputProfilesController>(R"(\/(?<app_name>[^\/:]*)\/outputProfiles)");
 		};
 
 		ApiResponse AppsController::OnPostApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
@@ -159,7 +157,7 @@ namespace api
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			return api::conv::JsonFromApplication(app);
+			return conv::JsonFromApplication(app);
 		}
 
 		void OverwriteJson(const Json::Value &from, Json::Value *to)
@@ -266,7 +264,7 @@ namespace api
 				{
 					auto app = GetApplication(vhost, app_config.GetName().CStr());
 
-					return api::conv::JsonFromApplication(app);
+					return conv::JsonFromApplication(app);
 				}
 			}
 

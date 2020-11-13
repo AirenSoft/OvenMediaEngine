@@ -73,7 +73,7 @@ namespace pvd
 
 		auto end = std::chrono::steady_clock::now();
 		std::chrono::duration<double, std::milli> elapsed = end - begin;
-		_origin_request_time_msec = elapsed.count();
+		_origin_request_time_msec = static_cast<int64_t>(elapsed.count());
 
 		begin = std::chrono::steady_clock::now();
 		if (!RequestDescribe())
@@ -83,7 +83,7 @@ namespace pvd
 
 		end = std::chrono::steady_clock::now();
 		elapsed = end - begin;
-		_origin_response_time_msec = elapsed.count();
+		_origin_response_time_msec = static_cast<int64_t>(elapsed.count());
 
 		return pvd::PullStream::Start();
 	}

@@ -23,7 +23,8 @@ namespace api
 			ApiResponse OnGetVhostList(const std::shared_ptr<HttpClient> &client);
 
 			// GET /v1/vhosts/<vhost_name>
-			ApiResponse OnGetVhost(const std::shared_ptr<HttpClient> &client);
+			ApiResponse OnGetVhost(const std::shared_ptr<HttpClient> &client,
+								   const std::shared_ptr<mon::HostMetrics> &vhost);
 		};
 	}  // namespace v1
 }  // namespace api

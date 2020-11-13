@@ -8,12 +8,18 @@
 //==============================================================================
 #include "stats_controller.h"
 
+#include "current/current_controller.h"
+
 namespace api
 {
 	namespace v1
 	{
-		void StatsController::PrepareHandlers()
+		namespace stats
 		{
-		};
-	}  // namespace v1
+			void StatsController::PrepareHandlers()
+			{
+				CreateSubController<CurrentController>(R"(\/current)");
+			};
+		}  // namespace stats
+	}	   // namespace v1
 }  // namespace api

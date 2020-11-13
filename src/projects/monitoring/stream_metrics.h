@@ -37,10 +37,10 @@ namespace mon
 		ov::String GetInfoString();
 		void ShowInfo() override;
 
-		double GetOriginRequestTimeMSec();
-		double GetOriginResponseTimeMSec();
-		void SetOriginRequestTimeMSec(double value);
-		void SetOriginResponseTimeMSec(double value);
+		int64_t GetOriginRequestTimeMSec() const;
+		int64_t GetOriginResponseTimeMSec() const;
+		void SetOriginRequestTimeMSec(int64_t value);
+		void SetOriginResponseTimeMSec(int64_t value);
 
 		// Overriding from CommonMetrics 
 		void IncreaseBytesIn(uint64_t value) override;
@@ -49,8 +49,8 @@ namespace mon
 		void OnSessionDisconnected(PublisherType type) override;
 	private:
 		// Related to origin, From Provider
-		std::atomic<double> _request_time_to_origin_msec;
-		std::atomic<double> _response_time_from_origin_msec;
+		std::atomic<int64_t> _request_time_to_origin_msec;
+		std::atomic<int64_t> _response_time_from_origin_msec;
 
 		std::shared_ptr<ApplicationMetrics>	_app_metrics;
 	};

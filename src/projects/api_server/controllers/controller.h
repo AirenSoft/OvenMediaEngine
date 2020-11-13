@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "../helpers/helpers.h"
+#include "../converters/converters.h"
 
 namespace api
 {
