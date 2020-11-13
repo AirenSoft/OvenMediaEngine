@@ -58,6 +58,8 @@ void FilePublisher::WorkerThread()
 		{
 			SessionController();
 		}
+
+		usleep(1000);
 	}
 }
 
