@@ -60,7 +60,8 @@ namespace api
 			{
 				SetString(object, "codec", ::StringFromMediaCodecId(track->GetCodecId()), Optional::False);
 				SetInt(object, "samplerate", track->GetSampleRate());
-				SetAudioChannel(object, "channel", track->GetChannel(), Optional::False);
+				// SetAudioChannel(object, "channel", track->GetChannel(), Optional::False);
+				SetInt(object, "channel", track->GetChannel().GetCounts());
 				SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
 				SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 			}
