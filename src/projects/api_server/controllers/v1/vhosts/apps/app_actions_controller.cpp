@@ -44,6 +44,7 @@ namespace api
 				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
+
 			Json::Value response;
 			std::vector<std::shared_ptr<info::Record>> records;
 			
@@ -129,24 +130,90 @@ namespace api
 													 const std::shared_ptr<mon::HostMetrics> &vhost,
 													 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			Json::Value response(Json::ValueType::objectValue);
-			return std::move(response);
+			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
+			if (publisher == nullptr)
+			{
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+											  vhost->GetName().CStr(), app->GetName().GetAppName());
+			}
+
+			Json::Value response;
+			std::vector<std::shared_ptr<info::Push>> pushes;
+			
+			auto error = publisher->GetPushes(app->GetName(), pushes);
+			if(error->GetCode() != RtmpPushPublisher::PushPublisherErrorCode::Success)
+			{
+				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+			}
+
+			for ( auto &item : pushes )
+			{
+				response.append(conv::JsonFromPush(item));
+			}
+
+			return response;
 		}
 
 		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
 														  const std::shared_ptr<mon::HostMetrics> &vhost,
 														  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			Json::Value response(Json::ValueType::objectValue);
-			return std::move(response);
+			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
+			if (publisher == nullptr)
+			{
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+											  vhost->GetName().CStr(), app->GetName().GetAppName());
+			}
+
+			auto push = conv::PushFromJson(request_body);
+			if (push == nullptr)
+			{
+				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
+											  vhost->GetName().CStr(), app->GetName().GetAppName());
+			}
+			push->SetVhost(vhost->GetName().CStr());
+			push->SetApplication(app->GetName().GetAppName());
+
+			// logtd("%s", push->GetInfoString().CStr());
+
+			auto error = publisher->PushStart(app->GetName(), push);
+			if(error->GetCode() != RtmpPushPublisher::PushPublisherErrorCode::Success)
+			{
+				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+			}
+			return ov::Error::CreateError(HttpStatusCode::OK, error->GetMessage());
 		}
 
 		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
 														 const std::shared_ptr<mon::HostMetrics> &vhost,
 														 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			Json::Value response(Json::ValueType::objectValue);
-			return std::move(response);
+			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
+			if (publisher == nullptr)
+			{
+				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+											  vhost->GetName().CStr(), app->GetName().GetAppName());
+			}
+
+			auto push = conv::PushFromJson(request_body);
+			if (push == nullptr)
+			{
+				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
+											  vhost->GetName().CStr(), app->GetName().GetAppName());
+			}
+			push->SetVhost(vhost->GetName().CStr());
+			push->SetApplication(app->GetName().GetAppName());
+
+			// logte("%s", push->GetInfoString().CStr());
+
+			auto error = publisher->PushStop(app->GetName(), push);
+			if(error->GetCode() != RtmpPushPublisher::PushPublisherErrorCode::Success)
+			{
+				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+			}
+
+			return ov::Error::CreateError(HttpStatusCode::OK, error->GetMessage());;
+
 		}
 
 		ApiResponse AppActionsController::OnGetDummyAction(const std::shared_ptr<HttpClient> &client,

@@ -1,9 +1,11 @@
 #pragma once
 
 #include "base/common_types.h"
+#include "base/ovlibrary/url.h"
 #include "base/publisher/publisher.h"
 #include "base/mediarouter/media_route_application_interface.h"
 
+#include "base/info/push.h"
 #include "rtmppush_application.h"
 #include "rtmppush_userdata.h"
 
@@ -38,7 +40,9 @@ private:
 
 private:
 	void SessionController();
-
+	void StartSession(std::shared_ptr<RtmpPushSession> session);
+	void StopSession(std::shared_ptr<RtmpPushSession> session);
+	
 	void WorkerThread();
 	bool _stop_thread_flag;
 	std::thread _worker_thread;
@@ -47,9 +51,12 @@ private:
 	RtmpPushUserdataSets _userdata_sets;
 
 public:
-	std::shared_ptr<ov::Error> HandlePushCreate(const info::VHostAppName &vhost_app_name, ov::String stream_name);
-	std::shared_ptr<ov::Error> HandlePushUpdate(const info::VHostAppName &vhost_app_name, ov::String stream_name);
-	std::shared_ptr<ov::Error> HandlePushRead(const info::VHostAppName &vhost_app_name, ov::String stream_name);
-	std::shared_ptr<ov::Error> HandlePushDelete(const info::VHostAppName &vhost_app_name, ov::String stream_name);
-
+	enum PushPublisherErrorCode {
+		Success,
+		Failure
+	};
+	
+	std::shared_ptr<ov::Error> PushStart(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Push> &record);
+	std::shared_ptr<ov::Error> PushStop(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Push> &record);
+	std::shared_ptr<ov::Error> GetPushes(const info::VHostAppName &vhost_app_name, std::vector<std::shared_ptr<info::Push>> &record_list);
 };

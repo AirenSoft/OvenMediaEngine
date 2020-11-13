@@ -63,7 +63,12 @@ void RtmpPushStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_pa
 	BroadcastPacket(stream_packet);
 }
 
-std::shared_ptr<RtmpPushSession> RtmpPushStream::CreateSession(ov::String url, ov::String stream_key)
+void RtmpPushStream::DeleteSession(uint32_t session_id)
+{
+	RemoveSession(session_id);
+}
+
+std::shared_ptr<RtmpPushSession> RtmpPushStream::CreateSession()
 {
 	auto session = RtmpPushSession::Create(GetApplication(), GetSharedPtrAs<pub::Stream>(), this->IssueUniqueSessionId());
 	if(session == nullptr)
@@ -77,9 +82,4 @@ std::shared_ptr<RtmpPushSession> RtmpPushStream::CreateSession(ov::String url, o
 	AddSession(session);
 
 	return session;
-}
-
-void RtmpPushStream::DeleteSession(uint32_t session_id)
-{
-	RemoveSession(session_id);
 }

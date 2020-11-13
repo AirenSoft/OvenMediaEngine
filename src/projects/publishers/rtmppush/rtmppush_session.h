@@ -3,6 +3,7 @@
 #include <base/info/media_track.h>
 #include <base/publisher/session.h>
 #include <modules/rtmp/rtmp_writer.h>
+#include "base/info/push.h"
 
 class RtmpPushSession : public pub::Session
 {
@@ -23,24 +24,12 @@ public:
 	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
 						const std::shared_ptr<const ov::Data> &data) override;
 
-
-public:
-	// Destination RTMP Url and Stream Key/
-	void SetUrl(ov::String url);
-	void SetStreamKey(ov::String stream_key);
-
-
-private:
-	bool _sent_ready;
-
-	ov::String _url;
-	ov::String _stream_key;
-
-	std::shared_ptr<RtmpWriter>				_writer;
-
-	// statistics
-	int64_t _stats_sent_bytes;
-	int64_t _stats_sent_packets;
-	int32_t _stats_recoonect;
 	
+	void SetPush(std::shared_ptr<info::Push> &record);
+	std::shared_ptr<info::Push>& GetPush();
+	
+private:
+	std::shared_ptr<info::Push> _push;
+	
+	std::shared_ptr<RtmpWriter> _writer;
 };

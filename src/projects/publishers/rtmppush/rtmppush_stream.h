@@ -21,7 +21,7 @@ public:
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
-	std::shared_ptr<RtmpPushSession> CreateSession(ov::String url, ov::String stream_key);
+	std::shared_ptr<RtmpPushSession> CreateSession();
 	void DeleteSession(uint32_t session_id);
 
 private:

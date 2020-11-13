@@ -205,10 +205,10 @@ namespace info
 
 	const ov::String Record::GetInfoString() 
 	{
-		ov::String info = "";
+		ov::String info = "\n";
 
 		info.AppendFormat(" id=%s\n", _id.CStr());
-		info.AppendFormat(" stream=%s\n", _stream->GetName().CStr());
+		info.AppendFormat(" stream=%s\n", (_stream != nullptr)?_stream->GetName().CStr():"");
 		info.AppendFormat(" file_path=%s\n", _file_path.CStr());
 		info.AppendFormat(" tmp_path=%s\n", _tmp_path.CStr());
 		info.AppendFormat(" fileinfo_path=%s\n", _fileinfo_path.CStr());

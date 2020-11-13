@@ -11,5 +11,6 @@
 #include "./application.h"
 #include "./metrics.h"
 #include "./record.h"
+#include "./push.h"
 #include "./stream.h"
 #include "./vhost.h"

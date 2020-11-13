@@ -1,5 +1,6 @@
 #include <base/info/stream.h>
 #include <base/publisher/stream.h>
+
 #include "rtmppush_session.h"
 #include "rtmppush_private.h"
 
@@ -19,7 +20,6 @@ RtmpPushSession::RtmpPushSession(const info::Session &session_info,
    : pub::Session(session_info, application, stream),
    _writer(nullptr)
 {
-	_sent_ready = false;
 
 }
 
@@ -32,14 +32,18 @@ RtmpPushSession::~RtmpPushSession()
 
 bool RtmpPushSession::Start()
 {
-	logtd("RtmpPushSession(%d) has started. Destination url(%s), stream_key(%s)", GetId(), _url.CStr(), _stream_key.CStr());
+	logtd("RtmpPushSession(%d) has started.", GetId());
+
+	GetPush()->UpdatePushStartTime();
+	GetPush()->SetState(info::Push::PushState::Pushing);
 	
-	ov::String rtmp_url = ov::String::FormatString("%s/%s", _url.CStr(), _stream_key.CStr());
+	ov::String rtmp_url = ov::String::FormatString("%s/%s", GetPush()->GetUrl().CStr(), GetPush()->GetStreamKey().CStr());
 
 	_writer = RtmpWriter::Create();
 	if(_writer == nullptr)
 	{
 		SetState(SessionState::Error);	
+		GetPush()->SetState(info::Push::PushState::Error);		
 
 		return false;
 	}
@@ -47,6 +51,8 @@ bool RtmpPushSession::Start()
 	if(_writer->SetPath(rtmp_url, "flv") == false)
 	{
 		SetState(SessionState::Error);
+		GetPush()->SetState(info::Push::PushState::Error);		
+
 		_writer = nullptr;
 
 		return false;
@@ -77,7 +83,7 @@ bool RtmpPushSession::Start()
 		bool ret = _writer->AddTrack(track->GetMediaType(), track->GetId(), track_info);
 		if(ret == false)
 		{
-			logte("Failed to add new track");
+			logtw("Failed to add new track");
 		}
 	}
 
@@ -85,6 +91,8 @@ bool RtmpPushSession::Start()
 	{
 		_writer = nullptr;
 		SetState(SessionState::Error);
+		GetPush()->SetState(info::Push::PushState::Error);		
+
 		return false;
 	}
 
@@ -93,12 +101,19 @@ bool RtmpPushSession::Start()
 
 bool RtmpPushSession::Stop()
 {
-	logtd("RtmpPushSession(%d) has stopped", GetId());
 	
 	if(_writer != nullptr)
 	{
+		GetPush()->SetState(info::Push::PushState::Stopping);
+		GetPush()->UpdatePushStartTime();
+
 		_writer->Stop();
 		_writer = nullptr;
+
+		GetPush()->SetState(info::Push::PushState::Stopped);
+		GetPush()->IncreaseSequence();	
+		
+		logtd("RtmpPushSession(%d) has stopped", GetId());
 	}
 
 	return Session::Stop();
@@ -141,6 +156,9 @@ bool RtmpPushSession::SendOutgoingData(const std::any &packet)
 
 			return false;
 		} 
+
+		GetPush()->UpdatePushTime();
+		GetPush()->IncreasePushBytes(session_packet->GetData()->GetLength());		
     }    
 
 	return true;
@@ -152,13 +170,12 @@ void RtmpPushSession::OnPacketReceived(const std::shared_ptr<info::Session> &ses
 	// Not used
 }
 
-
-void RtmpPushSession::SetUrl(ov::String url)
+void RtmpPushSession::SetPush(std::shared_ptr<info::Push> &push)
 {
-	_url = url;
+	_push = push;
 }
 
-void RtmpPushSession::SetStreamKey(ov::String stream_key)
+std::shared_ptr<info::Push>& RtmpPushSession::GetPush()
 {
-	_stream_key = stream_key;
+	return _push;
 }
