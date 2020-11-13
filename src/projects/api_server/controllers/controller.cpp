@@ -13,6 +13,17 @@ namespace api
 	ApiResponse::ApiResponse(HttpStatusCode status_code)
 	{
 		_status_code = status_code;
+		int code = static_cast<int>(status_code);
+
+		if ((code / 100) != 2)
+		{
+			_json["code"] = code;
+			_json["message"] = StringFromHttpStatusCode(status_code);
+		}
+		else
+		{
+			_json = Json::objectValue;
+		}
 	}
 
 	ApiResponse::ApiResponse(HttpStatusCode status_code, const Json::Value &json)
@@ -30,6 +41,7 @@ namespace api
 	{
 		if (error == nullptr)
 		{
+			_json = Json::objectValue;
 			return;
 		}
 
@@ -40,6 +52,7 @@ namespace api
 			_status_code = HttpStatusCode::InternalServerError;
 		}
 
+		_json["code"] = error->GetCode();
 		_json["message"] = error->ToString().CStr();
 	}
 
@@ -64,11 +77,4 @@ namespace api
 
 		return (_json.isNull() == false) ? response->AppendString(ov::Json::Stringify(_json)) : true;
 	}
-
-#if 0
-	std::shared_ptr<mon::HostMetrics> ApiResponse::GetVirtualHost(const std::shared_ptr<HttpClient> &client)
-	{
-		return nullptr;
-	}
-#endif
 }  // namespace api

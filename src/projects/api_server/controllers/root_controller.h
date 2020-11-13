@@ -16,5 +16,8 @@ namespace api
 	{
 	public:
 		void PrepareHandlers() override;
+
+	protected:
+		ApiResponse OnNotFound(const std::shared_ptr<HttpClient> &client);
 	};
 }  // namespace api

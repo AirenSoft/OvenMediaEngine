@@ -37,6 +37,8 @@ namespace api
 				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Request body must be an array");
 			}
 
+			std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
+
 			auto orchestrator = ocst::Orchestrator::GetInstance();
 			Json::Value response_value(Json::ValueType::arrayValue);
 			auto url = ov::Url::Parse(client->GetRequest()->GetUri());
@@ -44,21 +46,32 @@ namespace api
 			for (auto &item : request_body)
 			{
 				auto stream_name = item["name"].asCString();
-				auto result = orchestrator->RequestPullStream(
-					url, app->GetName(),
-					stream_name, item["url"].asCString());
+				auto stream = GetStream(app, stream_name, nullptr);
 
-				if (result)
+				if (stream == nullptr)
 				{
-					std::shared_ptr<mon::StreamMetrics> stream;
-					std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
+					auto result = orchestrator->RequestPullStream(
+						url, app->GetName(),
+						stream_name, item["url"].asCString());
 
-					GetStream(app, stream_name, &output_streams);
+					if (result)
+					{
+						std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
+						stream = GetStream(app, stream_name, &output_streams);
+
+						response_value.append(api::conv::JsonFromStream(stream, std::move(output_streams)));
+					}
+					else
+					{
+						Json::Value error_value;
+						error_value["message"] = "Could not pull the stream";
+						response_value.append(error_value);
+					}
 				}
 				else
 				{
 					Json::Value error_value;
-					error_value["message"] = "Could not pull the stream";
+					error_value["message"] = "Stream already exists";
 					response_value.append(error_value);
 				}
 			}

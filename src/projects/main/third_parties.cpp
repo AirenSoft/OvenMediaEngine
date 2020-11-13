@@ -75,7 +75,6 @@ static void OnFFmpegLog(void *avcl, int level, const char *fmt, va_list args)
 {
 	const char *FFMPEG_LOG_TAG = "FFmpeg";
 	AVClass *clazz = nullptr;
-	const char *class_name = "";
 	ov::String message;
 
 	if (avcl != nullptr)
@@ -105,24 +104,24 @@ static void OnFFmpegLog(void *avcl, int level, const char *fmt, va_list args)
 
 		case AV_LOG_PANIC:
 		case AV_LOG_FATAL:
-			::ov_log_internal(OVLogLevelCritical, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s %s", class_name, message.CStr());
+			::ov_log_internal(OVLogLevelCritical, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
 			break;
 		case AV_LOG_ERROR:
-			::ov_log_internal(OVLogLevelError, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s %s", class_name, message.CStr());
+			::ov_log_internal(OVLogLevelError, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
 			break;
 
 		case AV_LOG_WARNING:
-			::ov_log_internal(OVLogLevelWarning, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s %s", class_name, message.CStr());
+			::ov_log_internal(OVLogLevelWarning, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
 			break;
 
 		case AV_LOG_INFO:
-			::ov_log_internal(OVLogLevelInformation, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s %s", class_name, message.CStr());
+			::ov_log_internal(OVLogLevelInformation, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
 			break;
 
 		case AV_LOG_VERBOSE:
 		case AV_LOG_DEBUG:
 		default:
-			::ov_log_internal(OVLogLevelDebug, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s %s", class_name, message.CStr());
+			::ov_log_internal(OVLogLevelDebug, FFMPEG_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
 			break;
 	}
 }

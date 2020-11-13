@@ -16,5 +16,13 @@ namespace api
 	{
 		// Currently only v1 is supported
 		CreateSubController<v1::V1Controller>(R"(\/v1)");
+
+		// This handler is called if it does not match all other registered handlers
+		Register(HttpMethod::All, R"(.+)", &RootController::OnNotFound);
 	};
+
+	ApiResponse RootController::OnNotFound(const std::shared_ptr<HttpClient> &client)
+	{
+		return HttpStatusCode::NotFound;
+	}
 }  // namespace api

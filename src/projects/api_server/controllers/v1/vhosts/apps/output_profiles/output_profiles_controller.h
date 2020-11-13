@@ -20,27 +20,30 @@ namespace api
 			void PrepareHandlers() override;
 
 		protected:
-			// POST /v1/vhosts/<vhost_name>/apps/<app_name>
-			ApiResponse OnPostStream(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
-									 const std::shared_ptr<mon::HostMetrics> &vhost,
-									 const std::shared_ptr<mon::ApplicationMetrics> &app);
+			// POST /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles
+			ApiResponse OnPostOutputProfile(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+											const std::shared_ptr<mon::HostMetrics> &vhost,
+											const std::shared_ptr<mon::ApplicationMetrics> &app);
 
-			// GET /v1/vhosts/<vhost_name>/apps/<app_name>/streams
-			ApiResponse OnGetStreamList(const std::shared_ptr<HttpClient> &client,
-										const std::shared_ptr<mon::HostMetrics> &vhost,
-										const std::shared_ptr<mon::ApplicationMetrics> &app);
+			// GET /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles
+			ApiResponse OnGetOutputProfileList(const std::shared_ptr<HttpClient> &client,
+											   const std::shared_ptr<mon::HostMetrics> &vhost,
+											   const std::shared_ptr<mon::ApplicationMetrics> &app);
 
-			// GET /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>
-			ApiResponse OnGetStream(const std::shared_ptr<HttpClient> &client,
-									const std::shared_ptr<mon::HostMetrics> &vhost,
-									const std::shared_ptr<mon::ApplicationMetrics> &app,
-									const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
+			// GET /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles/<output_profile_name>
+			ApiResponse OnGetOutputProfile(const std::shared_ptr<HttpClient> &client,
+										   const std::shared_ptr<mon::HostMetrics> &vhost,
+										   const std::shared_ptr<mon::ApplicationMetrics> &app);
 
-			// DELETE /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>
-			ApiResponse OnDeleteStream(const std::shared_ptr<HttpClient> &client,
-									   const std::shared_ptr<mon::HostMetrics> &vhost,
-									   const std::shared_ptr<mon::ApplicationMetrics> &app,
-									   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
+			// PUT /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles/<output_profile_name>
+			ApiResponse OnPutOutputProfile(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+										   const std::shared_ptr<mon::HostMetrics> &vhost,
+										   const std::shared_ptr<mon::ApplicationMetrics> &app);
+
+			// DELETE /v1/vhosts/<vhost_name>/apps/<app_name>/outputProfiles/<output_profile_name>
+			ApiResponse OnDeleteOutputProfile(const std::shared_ptr<HttpClient> &client,
+											  const std::shared_ptr<mon::HostMetrics> &vhost,
+											  const std::shared_ptr<mon::ApplicationMetrics> &app);
 		};
 	}  // namespace v1
 }  // namespace api

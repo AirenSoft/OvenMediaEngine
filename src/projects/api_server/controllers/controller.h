@@ -20,9 +20,9 @@ namespace api
 	class ApiResponse
 	{
 	public:
-		// Empty response (no response body with 200 OK)
+		// Empty response body ({}) with 200 OK
 		ApiResponse() = default;
-		// Empty response (no response body with the status code)
+		// If status_code indicates 2xx then an empty response ({}), if not 2xx, sends an error message
 		ApiResponse(HttpStatusCode status_code);
 		// Used to send a JSON object with status code
 		ApiResponse(HttpStatusCode status_code, const Json::Value &json);

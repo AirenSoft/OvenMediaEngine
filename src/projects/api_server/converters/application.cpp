@@ -221,19 +221,24 @@ namespace api
 			object["videos"] = videos;
 		}
 
+		Json::Value JsonFromOutputProfile(const cfg::vhost::app::oprf::OutputProfile &output_profile)
+		{
+			Json::Value item;
+
+			SetString(item, "name", output_profile.GetName(), Optional::False);
+			SetString(item, "outputStreamName", output_profile.GetOutputStreamName(), Optional::False);
+			SetEncodes(item, "encodes", output_profile.GetEncodes(), Optional::True);
+
+			return std::move(item);
+		}
+
 		static void SetOutputProfiles(Json::Value &parent_object, const char *key, const cfg::vhost::app::oprf::OutputProfiles &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
 			for (auto &output_profile : config.GetOutputProfileList())
 			{
-				Json::Value item;
-
-				SetString(item, "name", output_profile.GetName(), Optional::False);
-				SetString(item, "outputStreamName", output_profile.GetOutputStreamName(), Optional::False);
-				SetEncodes(item, "encodes", output_profile.GetEncodes(), Optional::True);
-
-				object.append(item);
+				object.append(JsonFromOutputProfile(output_profile));
 			}
 		}
 

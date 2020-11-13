@@ -16,6 +16,7 @@
 #include "../../../../converters/converters.h"
 #include "../../../../helpers/helpers.h"
 #include "app_actions_controller.h"
+#include "output_profiles/output_profiles_controller.h"
 #include "streams/streams_controller.h"
 
 namespace api
@@ -35,6 +36,9 @@ namespace api
 
 			// Branch into stream controller
 			CreateSubController<v1::StreamsController>(R"(\/(?<app_name>[^\/:]*)\/streams)");
+
+			// Branch into output profile controller
+			CreateSubController<v1::OutputProfilesController>(R"(\/(?<app_name>[^\/:]*)\/outputProfiles)");
 		};
 
 		ApiResponse AppsController::OnPostApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
@@ -68,6 +72,29 @@ namespace api
 					item["publishers"]["webrtc"] = Json::objectValue;
 				}
 
+				if (item["outputProfiles"].isNull())
+				{
+					Json::Value output_profile;
+
+					output_profile["name"] = "bypass";
+					output_profile["outputStreamName"] = "${OriginStreamName}";
+
+					Json::Value codec;
+
+					codec["bypass"] = true;
+					output_profile["encodes"]["videos"].append(codec);
+					output_profile["encodes"]["audios"].append(codec);
+
+					codec = Json::objectValue;
+					codec["codec"] = "opus";
+					codec["bitrate"] = 128000;
+					codec["samplerate"] = 48000;
+					codec["channel"] = 2;
+					output_profile["encodes"]["audios"].append(codec);
+
+					item["outputProfiles"].append(output_profile);
+				}
+
 				auto error = conv::ApplicationFromJson(item, &app_config);
 
 				if (error == nullptr)
@@ -84,7 +111,7 @@ namespace api
 							break;
 
 						case ocst::Result::Exists:
-							error = ov::Error::CreateError(HttpStatusCode::BadRequest, "The application already exists");
+							error = ov::Error::CreateError(HttpStatusCode::Found, "The application already exists");
 							break;
 
 						case ocst::Result::NotExists:
@@ -195,12 +222,12 @@ namespace api
 					(lower_name == "name") ||
 					(lower_name == "outputprofiles"))
 				{
-					return ov::Error::CreateError(HttpStatusCode::BadRequest, "The %s entry cannot be specified in the app modification", lower_name.CStr());
+					return ov::Error::CreateError(HttpStatusCode::BadRequest, "The %s entry cannot be specified in the modification", name.CStr());
 				}
-
-				// Copy request_body into app_json
-				OverwriteJson(request_body, &app_json);
 			}
+
+			// Copy request_body into app_json
+			OverwriteJson(request_body, &app_json);
 
 			cfg::vhost::app::Application app_config;
 			auto error = conv::ApplicationFromJson(app_json, &app_config);
@@ -225,7 +252,7 @@ namespace api
 						break;
 
 					case ocst::Result::Exists:
-						error = ov::Error::CreateError(HttpStatusCode::BadRequest, "The application already exists");
+						error = ov::Error::CreateError(HttpStatusCode::Found, "The application already exists");
 						break;
 
 					case ocst::Result::NotExists:
@@ -235,13 +262,7 @@ namespace api
 						break;
 				}
 
-				if (error != nullptr)
-				{
-					Json::Value error_value;
-					error_value["message"] = error->ToString().CStr();
-					// response_value.append(error_value);
-				}
-				else
+				if (error == nullptr)
 				{
 					auto app = GetApplication(vhost, app_config.GetName().CStr());
 
