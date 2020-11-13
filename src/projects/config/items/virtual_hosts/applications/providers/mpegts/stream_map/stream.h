@@ -22,7 +22,7 @@ namespace cfg
 					{
 					protected:
 						ov::String _name{"stream"};
-						cmn::RangedPort _port{"4000"};
+						cmn::RangedPort _port{"4000/udp"};
 
 					public:
 						CFG_DECLARE_GETTER_OF(GetName, _name)
@@ -32,7 +32,7 @@ namespace cfg
 						void MakeParseList() override
 						{
 							RegisterValue("Name", &_name);
-							RegisterValue("Port", &_port);
+							RegisterValue<Optional>("Port", &_port);
 						}
 					};
 				}  // namespace mpegts
