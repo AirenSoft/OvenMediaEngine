@@ -36,7 +36,7 @@ namespace api
 				SetString(object, "codec", ::StringFromMediaCodecId(track->GetCodecId()), Optional::False);
 				SetInt(object, "width", track->GetWidth());
 				SetInt(object, "height", track->GetHeight());
-				SetInt(object, "bitrate", track->GetBitrate());
+				SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
 				SetFloat(object, "framerate", track->GetFrameRate());
 				SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 			}
@@ -61,7 +61,7 @@ namespace api
 				SetString(object, "codec", ::StringFromMediaCodecId(track->GetCodecId()), Optional::False);
 				SetInt(object, "samplerate", track->GetSampleRate());
 				SetAudioChannel(object, "channel", track->GetChannel(), Optional::False);
-				SetInt(object, "bitrate", track->GetBitrate());
+				SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
 				SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 			}
 		}
