@@ -380,7 +380,7 @@ namespace ov
 		{
 			case AF_INET:
 				return NetworkToHost16(_address_ipv4->sin_port);
-
+				
 			case AF_INET6:
 				return NetworkToHost16(_address_ipv6->sin6_port);
 

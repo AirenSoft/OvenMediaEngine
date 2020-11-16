@@ -34,7 +34,7 @@ public:
 protected:
 	std::shared_ptr<ov::Data> _buffer;
 
-	common::AudioSample::Format _format;
+	cmn::AudioSample::Format _format;
 	int64_t _current_pts;
 
 	OpusEncoder *_encoder;

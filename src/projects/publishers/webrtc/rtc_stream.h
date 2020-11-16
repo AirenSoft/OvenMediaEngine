@@ -31,7 +31,7 @@ public:
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
-	void AddPacketizer(common::MediaCodecId codec_id, uint32_t id, uint8_t payload_type, uint32_t ssrc);
+	void AddPacketizer(cmn::MediaCodecId codec_id, uint32_t id, uint8_t payload_type, uint32_t ssrc);
 	std::shared_ptr<RtpPacketizer> GetPacketizer(uint32_t id);
 
 	void AddRtpHistory(uint8_t origin_payload_type, uint8_t rtx_payload_type, uint32_t rtx_ssrc);

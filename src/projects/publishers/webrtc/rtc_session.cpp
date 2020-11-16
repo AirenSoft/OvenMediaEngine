@@ -1,6 +1,7 @@
 #include "base/info/stream.h"
 #include "rtc_private.h"
 #include "rtc_session.h"
+#include "webrtc_publisher.h"
 #include "rtc_application.h"
 #include "rtc_stream.h"
 
@@ -8,7 +9,8 @@
 
 #include <utility>
 
-std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Application> &application,
+std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<WebRtcPublisher> &publihser,
+											   const std::shared_ptr<pub::Application> &application,
                                                const std::shared_ptr<pub::Stream> &stream,
                                                const std::shared_ptr<const SessionDescription> &offer_sdp,
                                                const std::shared_ptr<const SessionDescription> &peer_sdp,
@@ -17,7 +19,7 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Applic
 {
 	// Session Id of the offer sdp is unique value
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), offer_sdp->GetSessionId());
-	auto session = std::make_shared<RtcSession>(session_info, application, stream, offer_sdp, peer_sdp, ice_port, ws_client);
+	auto session = std::make_shared<RtcSession>(session_info, publihser, application, stream, offer_sdp, peer_sdp, ice_port, ws_client);
 	if(!session->Start())
 	{
 		return nullptr;
@@ -26,6 +28,7 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<pub::Applic
 }
 
 RtcSession::RtcSession(const info::Session &session_info,
+					   const std::shared_ptr<WebRtcPublisher> &publihser,
 					   const std::shared_ptr<pub::Application> &application,
 					   const std::shared_ptr<pub::Stream> &stream,
 					   const std::shared_ptr<const SessionDescription> &offer_sdp,
@@ -34,6 +37,7 @@ RtcSession::RtcSession(const info::Session &session_info,
 					   const std::shared_ptr<WebSocketClient> &ws_client)
 	: Session(session_info, application, stream)
 {
+	_publisher = publihser;
 	_offer_sdp = offer_sdp;
 	_peer_sdp = peer_sdp;
 	_ice_port = ice_port;
@@ -157,7 +161,7 @@ bool RtcSession::Stop()
 {
 	logtd("Stop session. Peer sdp session id : %u", GetOfferSDP()->GetSessionId());
 
-	if(GetState() != SessionState::Started)
+	if(GetState() != SessionState::Started && GetState() != SessionState::Stopping)
 	{
 		return true;
 	}
@@ -182,7 +186,15 @@ bool RtcSession::Stop()
 		_srtp_transport->Stop();
 	}
 
+	// TODO(Getroot): Doesn't need this?
+	//_ws_client->Close();
+
 	return Session::Stop();
+}
+
+void RtcSession::SetSessionExpiredTime(uint64_t expired_time)
+{
+	_session_expired_time = expired_time;
 }
 
 const std::shared_ptr<const SessionDescription>& RtcSession::GetOfferSDP() const
@@ -210,6 +222,19 @@ void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_
 
 bool RtcSession::SendOutgoingData(const std::any &packet)
 {
+	if(GetState() != SessionState::Started)
+	{
+		return false;
+	}
+
+	// Check expired time
+	if(_session_expired_time != 0 && _session_expired_time < ov::Clock::NowMSec())
+	{
+		_publisher->DisconnectSession(GetSharedPtrAs<RtcSession>());
+		SetState(SessionState::Stopping);
+		return false;
+	}
+
 	std::shared_ptr<RtpPacket> session_packet;
 
 	try 

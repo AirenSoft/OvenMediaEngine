@@ -11,6 +11,11 @@
 #include "../../http_client.h"
 #include "../../http_private.h"
 
+HttpDefaultInterceptor::HttpDefaultInterceptor(const ov::String &pattern_prefix)
+	: _pattern_prefix(pattern_prefix)
+{
+}
+
 bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &pattern, const HttpRequestHandler &handler)
 {
 	if (handler == nullptr)
@@ -18,20 +23,26 @@ bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &patte
 		return false;
 	}
 
-	try
+	ov::String whole_pattern;
+	whole_pattern.Format("%s%s", _pattern_prefix.CStr(), pattern.CStr());
+
+	auto regex = ov::Regex(whole_pattern);
+	auto error = regex.Compile();
+
+	if (error == nullptr)
 	{
 		_request_handler_list.push_back((RequestInfo) {
 #if DEBUG
-			.pattern_string = pattern,
-#endif  // DEBUG
-			.pattern = std::regex(pattern),
+			.pattern_string = whole_pattern,
+#endif	// DEBUG
+			.pattern = std::move(regex),
 			.method = method,
 			.handler = handler
 		});
 	}
-	catch (std::regex_error &e)
+	else
 	{
-		logte("Invalid regex pattern: %s", pattern.CStr());
+		logte("Invalid regex pattern: %s (Error: %s)", pattern.CStr(), error->ToString().CStr());
 		return false;
 	}
 
@@ -125,16 +136,33 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 			// 403 Method not allowed 처리 하기 위한 수단
 			bool regex_found = false;
 
+			auto uri = ov::Url::Parse(request->GetUri());
+
+			if(uri == nullptr)
+			{
+				logte("Could not parse uri: %s", request->GetUri().CStr());
+				return HttpInterceptorResult::Disconnect;
+			}
+
+			auto uri_target = uri->Path();
+
 			for (auto &request_info : _request_handler_list)
 			{
 #if DEBUG
-				logtd("Check if url [%s] is matches [%s]", request->GetRequestTarget().CStr(), request_info.pattern_string.CStr());
-#endif  // DEBUG
+				logtd("Check if url [%s] is matches [%s]", uri_target.CStr(), request_info.pattern_string.CStr());
+#endif	// DEBUG
 
 				response->SetStatusCode(HttpStatusCode::OK);
 
-				if (std::regex_match(request->GetRequestTarget().CStr(), request_info.pattern))
+				auto matches = request_info.pattern.Matches(uri_target);
+				auto &error = matches.GetError();
+
+				if (error == nullptr)
 				{
+#if DEBUG
+					logtd("Matches: url [%s], pattern: [%s]", uri_target.CStr(), request_info.pattern_string.CStr());
+#endif	// DEBUG
+
 					// 일단 패턴에 일치하는 handler 찾음
 					regex_found = true;
 
@@ -142,6 +170,8 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 					if (HTTP_CHECK_METHOD(request_info.method, request->GetMethod()))
 					{
 						handler_count++;
+
+						request->SetMatchResult(matches);
 
 						if (request_info.handler(client) == HttpNextHandler::DoNotCall)
 						{
@@ -152,6 +182,12 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 							// Call the next handler
 						}
 					}
+				}
+				else
+				{
+#if DEBUG
+					logtd("Not matched: url [%s], pattern: [%s] (with error: %s)", uri_target.CStr(), request_info.pattern_string.CStr(), error->ToString().CStr());
+#endif	// DEBUG
 				}
 			}
 
@@ -196,7 +232,7 @@ void HttpDefaultInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &clie
 	response->SetStatusCode(status_code);
 }
 
-void HttpDefaultInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client)
+void HttpDefaultInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client, PhysicalPortDisconnectReason reason)
 {
 	// 아무 처리 하지 않아도 됨
 }

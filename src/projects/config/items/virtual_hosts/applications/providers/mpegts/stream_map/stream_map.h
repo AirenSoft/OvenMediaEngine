@@ -12,19 +12,28 @@
 
 namespace cfg
 {
-	namespace mpegts
+	namespace vhost
 	{
-		struct StreamMap : public Item
+		namespace app
 		{
-			CFG_DECLARE_REF_GETTER_OF(GetStreamList, _stream_list)
-
-		protected:
-			void MakeParseList() override
+			namespace pvd
 			{
-				RegisterValue("Stream", &_stream_list);
-			}
+				namespace mpegts
+				{
+					struct StreamMap : public Item
+					{
+						CFG_DECLARE_REF_GETTER_OF(GetStreamList, _stream_list)
 
-			std::vector<Stream> _stream_list;
-		};
-	}  // namespace mpegts
+					protected:
+						void MakeParseList() override
+						{
+							RegisterValue("Stream", &_stream_list);
+						}
+
+						std::vector<Stream> _stream_list;
+					};
+				}  // namespace mpegts
+			}	   // namespace pvd
+		}		   // namespace app
+	}			   // namespace vhost
 }  // namespace cfg

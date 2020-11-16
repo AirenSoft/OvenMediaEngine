@@ -8,23 +8,30 @@
 //==============================================================================
 #pragma once
 
-#include "urls/urls.h"
+#include "../../common/urls.h"
 
 namespace cfg
 {
-	struct Pass : public Item
+	namespace vhost
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetScheme, _scheme)
-		CFG_DECLARE_REF_GETTER_OF(GetUrlList, _urls.GetUrlList())
-
-	protected:
-		void MakeParseList() override
+		namespace orgn
 		{
-			RegisterValue("Scheme", &_scheme);
-			RegisterValue("Urls", &_urls);
-		}
+			struct Pass : public Item
+			{
+				CFG_DECLARE_REF_GETTER_OF(GetScheme, _scheme)
+				CFG_DECLARE_REF_GETTER_OF(GetUrlList, _urls.GetUrlList())
+				CFG_DECLARE_REF_GETTER_OF(GetUrls, _urls)
 
-		ov::String _scheme;
-		Urls _urls;
-	};
+			protected:
+				void MakeParseList() override
+				{
+					RegisterValue("Scheme", &_scheme);
+					RegisterValue("Urls", &_urls);
+				}
+
+				ov::String _scheme;
+				cmn::Urls _urls;
+			};
+		}  // namespace orgn
+	}	   // namespace vhost
 }  // namespace cfg

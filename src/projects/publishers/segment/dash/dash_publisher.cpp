@@ -13,11 +13,10 @@
 
 #include <config/config_manager.h>
 
-std::shared_ptr<DashPublisher> DashPublisher::Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-													 const cfg::Server &server_config,
+std::shared_ptr<DashPublisher> DashPublisher::Create(const cfg::Server &server_config,
 													 const std::shared_ptr<MediaRouteInterface> &router)
 {
-	return SegmentPublisher::Create<DashPublisher>(http_server_manager, server_config, router);
+	return SegmentPublisher::Create<DashPublisher>(server_config, router);
 }
 
 DashPublisher::DashPublisher(PrivateToken token,
@@ -27,12 +26,17 @@ DashPublisher::DashPublisher(PrivateToken token,
 {
 }
 
-bool DashPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
+bool DashPublisher::Start()
 {
-	auto &dash = GetServerConfig().GetBind().GetPublishers().GetDash();
+	auto &dash_config = GetServerConfig().GetBind().GetPublishers().GetDash();
 
-	return SegmentPublisher::Start(http_server_manager,
-								   dash.GetPort(), dash.GetTlsPort(),
+	if (dash_config.IsParsed() == false)
+	{
+		logtw("%s is disabled by configuration", GetPublisherName());
+		return true;
+	}
+
+	return SegmentPublisher::Start(dash_config.GetPort(), dash_config.GetTlsPort(),
 								   std::make_shared<DashStreamServer>());
 }
 

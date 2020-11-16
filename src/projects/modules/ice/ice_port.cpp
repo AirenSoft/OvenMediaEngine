@@ -17,6 +17,8 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <config/config.h>
 #include <modules/rtc_signalling/rtc_ice_candidate.h>
+#include <base/info/stream.h>
+#include <base/info/application.h>
 
 IcePort::IcePort()
 {
@@ -109,7 +111,7 @@ const std::vector<RtcIceCandidate> &IcePort::GetIceCandidateList() const
 
 std::shared_ptr<PhysicalPort> IcePort::CreatePhysicalPort(const ov::SocketAddress &address, ov::SocketType type)
 {
-	auto physical_port = PhysicalPortManager::Instance()->CreatePort(type, address);
+	auto physical_port = PhysicalPortManager::GetInstance()->CreatePort(type, address);
 
 	if (physical_port != nullptr)
 	{
@@ -120,7 +122,7 @@ std::shared_ptr<PhysicalPort> IcePort::CreatePhysicalPort(const ov::SocketAddres
 
 		logte("Cannot add a observer %p to %p", this, physical_port.get());
 
-		PhysicalPortManager::Instance()->DeletePort(physical_port);
+		PhysicalPortManager::GetInstance()->DeletePort(physical_port);
 	}
 	else
 	{
@@ -139,7 +141,7 @@ bool IcePort::Close()
 	for (auto &physical_port : _physical_port_list)
 	{
 		result = result && physical_port->RemoveObserver(this);
-		result = result && PhysicalPortManager::Instance()->DeletePort(physical_port);
+		result = result && PhysicalPortManager::GetInstance()->DeletePort(physical_port);
 
 		if (result == false)
 		{
@@ -235,7 +237,9 @@ void IcePort::AddSession(const std::shared_ptr<info::Session> &session_info, std
 		logtd("Trying to add session: %d (ufrag: %s:%s)...", session_id, local_ufrag.CStr(), remote_ufrag.CStr());
 
 		// 나중에 STUN Binding request를 대비하여 관련 정보들을 넣어놓음
-		std::shared_ptr<IcePortInfo> info = std::make_shared<IcePortInfo>();
+		auto expire_after_ms = session_info->GetStream().GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().GetTimeout();
+
+		std::shared_ptr<IcePortInfo> info = std::make_shared<IcePortInfo>(expire_after_ms);
 
 		info->session_info = session_info;
 		info->offer_sdp = offer_sdp;

@@ -16,7 +16,7 @@ public:
 	TranscodeEncoder();
 	~TranscodeEncoder() override;
 
-	static std::shared_ptr<TranscodeEncoder> CreateEncoder(common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> output_context);
+	static std::shared_ptr<TranscodeEncoder> CreateEncoder(cmn::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> output_context);
 	void SetTrackId(int32_t track_id);
 
 	bool Configure(std::shared_ptr<TranscodeContext> context) override;
@@ -30,7 +30,7 @@ public:
 
 	virtual void Stop();
 
-	common::Timebase GetTimebase() const;
+	cmn::Timebase GetTimebase() const;
 
 	// TODO(soulk): The encoder and decoder are also changed to the way callback is called 
 	// when the encoder and decoder are completed.

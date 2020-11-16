@@ -35,7 +35,7 @@ protected:
 	bool InitializeServer();
 
 	const info::Host &_host_info;
-	cfg::WebConsole _web_console;
+	cfg::vhost::app::wc::WebConsole _web_console;
 
 	std::shared_ptr<HttpServer> _http_server;
 };

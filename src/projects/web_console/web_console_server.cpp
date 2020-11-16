@@ -22,13 +22,13 @@ std::shared_ptr<WebConsoleServer> WebConsoleServer::Create(const info::Host &hos
 	if (instance != nullptr)
 	{
 		// const auto &web_console = host_info.GetListen().GetWebConsole();
-		cfg::WebConsole web_console;
+		cfg::vhost::app::wc::WebConsole web_console;
 
 		// TODO(dimiden): Implement web console
 		OV_ASSERT2(false);
 		// instance->_web_console = web_console;
 
-		// auto host = web_console.GetParentAs<cfg::VirtualHost>("VirtualHost");
+		// auto host = web_console.GetParentAs<cfg::vhost::VirtualHost>("VirtualHost");
 		// auto address = ov::SocketAddress(host->GetIp(), static_cast<uint16_t>(web_console.GetListenPort()));
 
 		// logti("Trying to start WebConsole on %s...", address.ToString().CStr());
@@ -75,9 +75,11 @@ bool WebConsoleServer::Start(const ov::SocketAddress &address)
 		_http_server = std::make_shared<HttpServer>();
 	}
 */
-	_http_server = std::make_shared<HttpServer>();
+	//_http_server = std::make_shared<HttpServer>();
+//
+	//return InitializeServer() && _http_server->Start(address);
 
-	return InitializeServer() && _http_server->Start(address);
+	return false;
 }
 
 bool WebConsoleServer::Stop()

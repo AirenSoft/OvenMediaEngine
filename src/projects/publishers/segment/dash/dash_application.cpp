@@ -30,7 +30,7 @@ std::shared_ptr<DashApplication> DashApplication::Create(const std::shared_ptr<p
 DashApplication::DashApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 	: Application(publisher, application_info)
 {
-    auto publisher_info = application_info.GetPublisher<cfg::DashPublisher>();
+    auto publisher_info = application_info.GetPublisher<cfg::vhost::app::pub::DashPublisher>();
     _segment_count = publisher_info->GetSegmentCount();
     _segment_duration = publisher_info->GetSegmentDuration();
 }
@@ -49,7 +49,7 @@ DashApplication::~DashApplication()
 //====================================================================================================
 bool DashApplication::Start()
 {
-	auto publisher_info = GetPublisher<cfg::DashPublisher>();
+	auto publisher_info = GetPublisher<cfg::vhost::app::pub::DashPublisher>();
 	
 	_segment_count = publisher_info->GetSegmentCount();
 	_segment_duration = publisher_info->GetSegmentDuration();

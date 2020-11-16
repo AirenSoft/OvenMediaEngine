@@ -24,14 +24,14 @@ RtpPacketizer::~RtpPacketizer()
 
 }
 
-void RtpPacketizer::SetVideoCodec(common::MediaCodecId codec_type)
+void RtpPacketizer::SetVideoCodec(cmn::MediaCodecId codec_type)
 {
 	_audio_configured = false;
 	_video_codec_type = codec_type;
 	_packetizer = RtpPacketizingManager::Create(codec_type);
 }
 
-void RtpPacketizer::SetAudioCodec(common::MediaCodecId codec_type)
+void RtpPacketizer::SetAudioCodec(cmn::MediaCodecId codec_type)
 {
 	_audio_codec_type = codec_type;
 	_audio_configured = true;
@@ -78,7 +78,7 @@ bool RtpPacketizer::Packetize(FrameType frame_type,
 	}
 }
 
-bool RtpPacketizer::PacketizeVideo(common::MediaCodecId video_type,
+bool RtpPacketizer::PacketizeVideo(cmn::MediaCodecId video_type,
                                    FrameType frame_type,
                                    uint32_t rtp_timestamp,
                                    const uint8_t *payload_data,

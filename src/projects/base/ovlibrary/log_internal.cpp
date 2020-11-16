@@ -210,8 +210,8 @@ namespace ov
 
 		// Obtain current hours/minutes/seconds
 		std::time_t time = std::time(nullptr);
-		std::tm localTime{};
-		::localtime_r(&time, &localTime);
+		std::tm local_time{};
+		::localtime_r(&time, &local_time);
 
 		ov::String log;
 
@@ -287,11 +287,11 @@ namespace ov
 				,
 				"",
 #if DEBUG
-				localTime.tm_mon + 1, localTime.tm_mday,
+				local_time.tm_mon + 1, local_time.tm_mday,
 #else	// DEBUG
-				1900 + localTime.tm_year, localTime.tm_mon + 1, localTime.tm_mday,
+				1900 + local_time.tm_year, local_time.tm_mon + 1, local_time.tm_mday,
 #endif	// DEBUG
-				localTime.tm_hour, localTime.tm_min, localTime.tm_sec, mseconds,
+				local_time.tm_hour, local_time.tm_min, local_time.tm_sec, mseconds,
 				log_level[level],
 				GetThreadId(),
 				(tag[0] == '\0') ? "" : " ", tag

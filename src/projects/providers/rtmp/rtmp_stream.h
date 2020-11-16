@@ -110,6 +110,8 @@ namespace pvd
 		bool PublishStream();
 		bool SetTrackInfo(const std::shared_ptr<RtmpMediaInfo> &media_info);
 
+		bool CheckSignedPolicy();
+
 		// RTMP related
 		RtmpHandshakeState _handshake_state = RtmpHandshakeState::Uninitialized;
 		
@@ -130,10 +132,17 @@ namespace pvd
 		int32_t _chunk_stream_id = 0;
 
 		// parsed from packet
+		std::shared_ptr<ov::Url> _url = nullptr;
+		std::shared_ptr<const SignedPolicy> _signed_policy = nullptr;
+
+		ov::String _full_url; // with stream_name
+		ov::String _tc_url;
+		ov::String _app_name;
 		ov::String _domain_name;
-		info::VHostAppName _app_name;
+		info::VHostAppName _vhost_app_name;
 		ov::String _stream_name;
 		ov::String _device_string;
+
 
 		// Cache (GetApplicationInfo()->GetId())
 		info::application_id_t _app_id = 0;

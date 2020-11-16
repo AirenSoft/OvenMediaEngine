@@ -21,10 +21,14 @@ TranscodeDecoder::TranscodeDecoder(info::Stream stream_info)
 
 	_pkt = ::av_packet_alloc();
 	_frame = ::av_frame_alloc();
+	_codec_par = avcodec_parameters_alloc();
 }
 
 TranscodeDecoder::~TranscodeDecoder()
 {
+	if(_context != nullptr)
+		::avcodec_flush_buffers(_context);
+	
 	::avcodec_free_context(&_context);
 	::avcodec_parameters_free(&_codec_par);
 
@@ -42,24 +46,24 @@ std::shared_ptr<TranscodeContext>& TranscodeDecoder::GetContext()
 	return _input_context;
 }
 
-common::Timebase TranscodeDecoder::GetTimebase() const
+cmn::Timebase TranscodeDecoder::GetTimebase() const
 {
 	return _input_context->GetTimeBase();
 }
 
-std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::Stream &info, common::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
+std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::Stream &info, cmn::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
 {
 	std::shared_ptr<TranscodeDecoder> decoder = nullptr;
 
 	switch (codec_id)
 	{
-		case common::MediaCodecId::H264:
+		case cmn::MediaCodecId::H264:
 			decoder = std::make_shared<OvenCodecImplAvcodecDecAVC>(info);
 			break;
-		case common::MediaCodecId::H265:
+		case cmn::MediaCodecId::H265:
 			decoder = std::make_shared<OvenCodecImplAvcodecDecHEVC>(info);
 			break;
-		case common::MediaCodecId::Aac:
+		case cmn::MediaCodecId::Aac:
 			decoder = std::make_shared<OvenCodecImplAvcodecDecAAC>(info);
 			break;
 
@@ -87,8 +91,7 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 
 	_input_context = context;
-
-	_codec = ::avcodec_find_decoder(GetCodecID());
+	AVCodec *_codec =  ::avcodec_find_decoder(GetCodecID());
 
 	if (_codec == nullptr)
 	{

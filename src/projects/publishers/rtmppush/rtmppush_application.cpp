@@ -33,14 +33,14 @@ bool RtmpPushApplication::Stop()
 
 std::shared_ptr<pub::Stream> RtmpPushApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count)
 {
-	logtd("RtmpPushApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
+	logtd("CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 	
 	return RtmpPushStream::Create(GetSharedPtrAs<pub::Application>(), *info);
 }
 
 bool RtmpPushApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
-	logtd("RtmpPushApplication::DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
+	logtd("DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
 
 	auto stream = std::static_pointer_cast<RtmpPushStream>(GetStream(info->GetId()));
 	if(stream == nullptr)
@@ -49,9 +49,7 @@ bool RtmpPushApplication::DeleteStream(const std::shared_ptr<info::Stream> &info
 		return false;
 	}
 	
-	logtd("RtmpPushApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
+	logtd("%s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
 
 	return true;
 }
-
-

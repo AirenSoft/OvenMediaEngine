@@ -122,7 +122,7 @@ ov::String Packetizer::MakeUtcMillisecond(int64_t value)
 	return "";
 }
 
-uint64_t Packetizer::ConvertTimeScale(uint64_t time, const common::Timebase &from_timebase, const common::Timebase &to_timebase)
+uint64_t Packetizer::ConvertTimeScale(uint64_t time, const cmn::Timebase &from_timebase, const cmn::Timebase &to_timebase)
 {
 	if (from_timebase.GetExpr() == 0.0)
 	{

@@ -42,7 +42,7 @@ namespace mon
 		for (int i = 0; i < static_cast<int8_t>(PublisherType::NumberOfPublishers); i++)
 		{
 			out_str.AppendFormat("\t\t- %s : Bytes out(%s) Concurrent Connections (%u)\n",
-								 ov::Converter::ToString(static_cast<PublisherType>(i)).CStr(),
+								 ::StringFromPublisherType(static_cast<PublisherType>(i)).CStr(),
 								 ov::Converter::BytesToString(GetBytesOut(static_cast<PublisherType>(i))).CStr(),
 								 GetConnections(static_cast<PublisherType>(i)));
 		}
@@ -55,54 +55,59 @@ namespace mon
         logti("%s", GetInfoString().CStr());
 	}
 
-    uint32_t CommonMetrics::GetUnusedTimeSec()
+    uint32_t CommonMetrics::GetUnusedTimeSec() const
     {
         auto current = std::chrono::high_resolution_clock::now();
         return std::chrono::duration_cast<std::chrono::seconds>(current - GetLastUpdatedTime()).count();
     }
 
-    const std::chrono::system_clock::time_point& CommonMetrics::GetLastUpdatedTime()
+	const std::chrono::system_clock::time_point& CommonMetrics::GetCreatedTime() const
+	{
+		return _created_time;
+	}
+
+    const std::chrono::system_clock::time_point& CommonMetrics::GetLastUpdatedTime() const
     {
         return _last_updated_time;
     }
 
-    uint64_t CommonMetrics::GetTotalBytesIn()
+    uint64_t CommonMetrics::GetTotalBytesIn() const
 	{
 		return _total_bytes_in.load();
 	}
-	uint64_t CommonMetrics::GetTotalBytesOut()
+	uint64_t CommonMetrics::GetTotalBytesOut() const
 	{
 		return _total_bytes_out;
 	}
-	uint32_t CommonMetrics::GetTotalConnections()
+	uint32_t CommonMetrics::GetTotalConnections() const
 	{
 		return _total_connections;
 	}
 
-	uint32_t CommonMetrics::GetMaxTotalConnections()
+	uint32_t CommonMetrics::GetMaxTotalConnections() const
 	{
 		return _max_total_connections;
 	}
-	std::chrono::system_clock::time_point CommonMetrics::GetMaxTotalConnectionsTime()
+	std::chrono::system_clock::time_point CommonMetrics::GetMaxTotalConnectionsTime() const
 	{
 		return _max_total_connection_time;
 	}
 
-	std::chrono::system_clock::time_point CommonMetrics::GetLastRecvTime()
+	std::chrono::system_clock::time_point CommonMetrics::GetLastRecvTime() const
 	{
 		return _last_recv_time;
 	}
 
-	std::chrono::system_clock::time_point CommonMetrics::GetLastSentTime()
+	std::chrono::system_clock::time_point CommonMetrics::GetLastSentTime() const
 	{
 		return _last_sent_time;
 	}
 
-	uint64_t CommonMetrics::GetBytesOut(PublisherType type)
+	uint64_t CommonMetrics::GetBytesOut(PublisherType type) const
 	{
 		return _publisher_metrics[static_cast<int8_t>(type)]._bytes_out;
 	}
-	uint64_t CommonMetrics::GetConnections(PublisherType type)
+	uint64_t CommonMetrics::GetConnections(PublisherType type) const
 	{
 		return _publisher_metrics[static_cast<int8_t>(type)]._connections;
 	}

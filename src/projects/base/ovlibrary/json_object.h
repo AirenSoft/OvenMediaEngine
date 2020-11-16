@@ -8,11 +8,11 @@
 //==============================================================================
 #pragma once
 
-#include "./string.h"
-#include "./error.h"
-#include "./data.h"
-
 #include <jsoncpp-1.9.3/json/json.h>
+
+#include "./data.h"
+#include "./error.h"
+#include "./string.h"
 
 namespace ov
 {
@@ -56,6 +56,11 @@ namespace ov
 			return _value.isArray();
 		}
 
+		bool IsString() const noexcept
+		{
+			return _value.isString();
+		}
+
 		bool IsObject() const noexcept
 		{
 			return _value.isObject();
@@ -71,7 +76,7 @@ namespace ov
 		{
 			auto &value = _value[key];
 
-			if(value.isIntegral())
+			if (value.isIntegral())
 			{
 				return value.asInt();
 			}
@@ -83,12 +88,24 @@ namespace ov
 		{
 			auto &value = _value[key];
 
-			if(value.isIntegral())
+			if (value.isIntegral())
 			{
 				return value.asInt64();
 			}
 
 			return 0;
+		}
+
+		String GetStringValue(const ov::String &key) const
+		{
+			auto &value = _value[key];
+
+			if (value.isString())
+			{
+				return ov::String( value.asString().c_str() );
+			}
+
+			return nullptr;			
 		}
 
 		const ::Json::Value &GetJsonValue(const ov::String &key) const
@@ -105,6 +122,12 @@ namespace ov
 
 		std::shared_ptr<Error> Parse(const std::shared_ptr<const Data> &data)
 		{
+			if ((data == nullptr) || (data->GetData() == nullptr))
+			{
+				_value = ::Json::nullValue;
+				return nullptr;
+			}
+
 			return Parse(data->GetData(), data->GetLength());
 		}
 
@@ -113,4 +136,4 @@ namespace ov
 
 		::Json::Value _value;
 	};
-}
+}  // namespace ov

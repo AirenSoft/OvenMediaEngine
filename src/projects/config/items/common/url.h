@@ -10,16 +10,19 @@
 
 namespace cfg
 {
-	struct Url : public Item
+	namespace cmn
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetUrl, _url)
-
-	protected:
-		void MakeParseList() override
+		struct Url : public Item
 		{
-			RegisterValue<ValueType::Text>(nullptr, &_url);
-		}
+			CFG_DECLARE_REF_GETTER_OF(GetUrl, _url)
 
-		ov::String _url;
-	};
+		protected:
+			void MakeParseList() override
+			{
+				RegisterValue<ValueType::Text>(nullptr, &_url);
+			}
+
+			ov::String _url;
+		};
+	}  // namespace cmn
 }  // namespace cfg

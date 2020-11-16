@@ -17,10 +17,12 @@ ENV     OME_VERSION=release \
         SRT_VERSION=1.3.3 \
         OPUS_VERSION=1.1.3 \
         X264_VERSION=20190513-2245-stable \
+        X265_VERSION=3.2.1 \
         VPX_VERSION=1.7.0 \
         FDKAAC_VERSION=0.1.5 \
         FFMPEG_VERSION=3.4 \
-        JEMALLOC_VERSION=5.2.1
+        JEMALLOC_VERSION=5.2.1 \
+        PCRE2_VERSION=10.35
 
 ## Install build utils
 RUN     apt-get -y install build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc
@@ -86,6 +88,18 @@ RUN \
         make install && \
         rm -rf ${DIR}
 
+## Build X265
+RUN \
+        DIR=/tmp/x265 && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        curl -sLf https://get.videolan.org/x265/x265_${X265_VERSION}.tar.gz | tar -zx --strip-components=1 && \
+        cd ${DIR}/build/linux && \
+        cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="${PREFIX}" -DENABLE_SHARED:bool=on ../../source && \
+        make && \
+        make install && \
+        rm -rf ${DIR}
+
 ## Build VPX
 RUN \
         DIR=/tmp/vpx && \
@@ -129,11 +143,11 @@ RUN \
         --disable-programs \
         --disable-avdevice --disable-dct --disable-dwt --disable-error-resilience --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils \
         --disable-everything \
-        --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 \
-        --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264 \
-        --enable-decoder=aac,aac_latm,aac_fixed,h264 \
-        --enable-parser=aac,aac_latm,aac_fixed,h264 \
-        --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp --enable-demuxer=rtsp \
+        --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 \
+        --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,libx265,mjpeg,png \
+        --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc \
+        --enable-parser=aac,aac_latm,aac_fixed,h264,hevc \
+        --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
         --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb && \
         make && \
         make install && \
@@ -150,6 +164,20 @@ RUN \
         make && \
         make install_include install_lib && \
         rm -rf ${DIR}
+
+## Build pcre2
+RUN \
+        DIR=/tmp/libpcre2 && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        curl -sLf https://ftp.pcre.org/pub/pcre/pcre2-${PCRE2_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+        ./configure --prefix="${PREFIX}" \
+        --disable-static \
+        --enable-jit=auto && \
+        make && \
+        make install && \
+        rm -rf ${DIR} && \
+        rm -rf ${PREFIX}/bin
 
 ## Build OvenMediaEngine
 RUN \

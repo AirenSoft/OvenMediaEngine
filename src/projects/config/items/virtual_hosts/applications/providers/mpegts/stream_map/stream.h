@@ -10,24 +10,33 @@
 
 namespace cfg
 {
-	namespace mpegts
+	namespace vhost
 	{
-		struct Stream : public Item
+		namespace app
 		{
-		protected:
-			ov::String _name{"stream"};
-			RangedPort _port{"4000"};
-
-		public:
-			CFG_DECLARE_GETTER_OF(GetName, _name)
-			CFG_DECLARE_GETTER_OF(GetPort, _port)
-
-		protected:
-			void MakeParseList() override
+			namespace pvd
 			{
-				RegisterValue("Name", &_name);
-				RegisterValue("Port", &_port);
-			}
-		};
-	}  // namespace mpegts
+				namespace mpegts
+				{
+					struct Stream : public Item
+					{
+					protected:
+						ov::String _name{"stream"};
+						cmn::RangedPort _port{"4000/udp"};
+
+					public:
+						CFG_DECLARE_GETTER_OF(GetName, _name)
+						CFG_DECLARE_GETTER_OF(GetPort, _port)
+
+					protected:
+						void MakeParseList() override
+						{
+							RegisterValue("Name", &_name);
+							RegisterValue<Optional>("Port", &_port);
+						}
+					};
+				}  // namespace mpegts
+			}	   // namespace pvd
+		}		   // namespace app
+	}			   // namespace vhost
 }  // namespace cfg

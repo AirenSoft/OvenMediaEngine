@@ -104,7 +104,7 @@ namespace pub
 		std::shared_lock<std::shared_mutex> lock(_session_map_mutex);
 		if (_sessions.count(id) <= 0)
 		{
-			logte("Cannot find session : %u", id);
+			// logte("Cannot find session : %u", id);
 			return nullptr;
 		}
 
@@ -295,6 +295,21 @@ namespace pub
 	{
 		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex);
 		return GetWorkerByStreamID(id)->GetSession(id);
+	}
+
+	std::shared_ptr<Session> Stream::GetSessionAt(uint32_t index)
+	{
+		std::shared_lock<std::shared_mutex> lock(_session_map_mutex);
+
+		auto it( _sessions.begin() );
+		std::advance( it, index );
+
+		if (it == _sessions.end())
+		{
+			return nullptr;
+		}
+
+		return it->second;
 	}
 
 	const std::map<session_id_t, std::shared_ptr<Session>> Stream::GetAllSessions()

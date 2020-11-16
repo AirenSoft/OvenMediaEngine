@@ -32,22 +32,22 @@ namespace mon
 	}
 
 	// Getter
-	double StreamMetrics::GetOriginRequestTimeMSec()
+	int64_t StreamMetrics::GetOriginRequestTimeMSec() const
 	{
 		return _request_time_to_origin_msec;
 	}
-	double StreamMetrics::GetOriginResponseTimeMSec()
+	int64_t StreamMetrics::GetOriginResponseTimeMSec() const
 	{
 		return _response_time_from_origin_msec;
 	}
 
 	// Setter
-	void StreamMetrics::SetOriginRequestTimeMSec(double value)
+	void StreamMetrics::SetOriginRequestTimeMSec(int64_t value)
 	{
 		_request_time_to_origin_msec = value;
 		UpdateDate();
 	}
-	void StreamMetrics::SetOriginResponseTimeMSec(double value)
+	void StreamMetrics::SetOriginResponseTimeMSec(int64_t value)
 	{
 		_response_time_from_origin_msec = value;
 		UpdateDate();
@@ -116,7 +116,7 @@ namespace mon
 
 			logti("A new session has started playing %s/%s on the %s publihser. %s(%u)/Stream total(%u)/App total(%u)", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
-					ov::Converter::ToString(type).CStr(), ov::Converter::ToString(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
+					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}
 	}
 	
@@ -141,7 +141,7 @@ namespace mon
 
 			logti("A session has been stopped playing %s/%s on the %s publihser. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
-					ov::Converter::ToString(type).CStr(), ov::Converter::ToString(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
+					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}
 	}
 

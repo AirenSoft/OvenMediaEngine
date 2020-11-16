@@ -166,9 +166,15 @@ namespace pvd
 
 			if(event_count < 0)
 			{
-				// error
-				logtc("%d StreamMotor terminated : epoll_wait error (errno : %d)", _id, errno);
-				return ;
+				if(errno == EINTR)
+				{
+					continue;
+				}
+				else
+				{
+					logtc("%d StreamMotor terminated : epoll_wait error (errno : %d)", _id, errno);
+					return ;
+				}
 			}
 
 			for(int i=0; i<event_count; i++)

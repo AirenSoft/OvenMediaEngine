@@ -8,21 +8,20 @@
 //==============================================================================
 #pragma once
 
+#include <any>
 #include <condition_variable>
 #include <cstdint>
+#include <functional>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <queue>
 #include <thread>
 #include <tuple>
 #include <vector>
-#include <iostream>
-#include <functional>
-#include <any>
 
+#include "base/ovlibrary/string.h"
 #include "base/mediarouter/media_type.h"
-#include "base/ovlibrary/ovlibrary.h"
-
 
 #define MAX_FRAG_COUNT 20
 
@@ -42,6 +41,7 @@ enum class ProviderStreamDirection : int8_t
 	Push
 };
 
+// Note : If you update ProviderType, you have to update /base/ovlibrary/converter.h:ToString(ProviderType type)
 enum class ProviderType : int8_t
 {
 	Unknown,
@@ -52,6 +52,7 @@ enum class ProviderType : int8_t
 	Mpegts,
 };
 
+// Note : If you update PublisherType, you have to update /base/ovlibrary/converter.h:ToString(PublisherType type)
 enum class PublisherType : int8_t
 {
 	Unknown,
@@ -97,7 +98,7 @@ public:
 	size_t GetCount() const
 	{
 		OV_ASSERT2(fragmentation_offset.size() == fragmentation_length.size());
-		
+
 		return std::min(fragmentation_offset.size(), fragmentation_length.size());
 	}
 
@@ -174,12 +175,12 @@ public:
 
 struct CodecSpecificInfoGeneric
 {
-	uint8_t simulcast_idx = 0; 
+	uint8_t simulcast_idx = 0;
 };
 
 enum class H26XPacketizationMode
 {
-	NonInterleaved = 0,  // Mode 1 - STAP-A, FU-A is allowed
+	NonInterleaved = 0,	 // Mode 1 - STAP-A, FU-A is allowed
 	SingleNalUnit		 // Mode 0 - only single NALU allowed
 };
 
@@ -221,7 +222,125 @@ union CodecSpecificInfoUnion
 
 struct CodecSpecificInfo
 {
-	common::MediaCodecId codec_type = common::MediaCodecId::None;
-	const char* codec_name = nullptr;
+	cmn::MediaCodecId codec_type = cmn::MediaCodecId::None;
+	const char *codec_name = nullptr;
 	CodecSpecificInfoUnion codec_specific = {0};
 };
+
+static ov::String StringFromStreamSourceType(const StreamSourceType &type)
+{
+	switch (type)
+	{
+		case StreamSourceType::Ovt:
+			return "Ovt";
+		case StreamSourceType::Rtmp:
+			return "Rtmp";
+		case StreamSourceType::Rtsp:
+			return "Rtsp";
+		case StreamSourceType::RtspPull:
+			return "RtspPull";
+		case StreamSourceType::Transcoder:
+			return "Transcoder";
+		default:
+			return "Unknown";
+	}
+}
+
+static ov::String StringFromProviderType(const ProviderType &type)
+{
+	switch (type)
+	{
+		case ProviderType::Unknown:
+			return "Unknown";
+		case ProviderType::Rtmp:
+			return "RTMP";
+		case ProviderType::Rtsp:
+			return "RTSP";
+		case ProviderType::RtspPull:
+			return "RTSP Pull";
+		case ProviderType::Ovt:
+			return "OVT";
+		case ProviderType::Mpegts:
+			return "MPEG-TS";
+	}
+
+	return "Unknown";
+}
+
+static ov::String StringFromPublisherType(const PublisherType &type)
+{
+	switch (type)
+	{
+		case PublisherType::Unknown:
+		case PublisherType::NumberOfPublishers:
+			return "Unknown";
+		case PublisherType::Webrtc:
+			return "WebRTC";
+		case PublisherType::Rtmp:
+			return "RTMP";
+		case PublisherType::RtmpPush:
+			return "RTMPPush";
+		case PublisherType::Hls:
+			return "HLS";
+		case PublisherType::Dash:
+			return "DASH";
+		case PublisherType::LlDash:
+			return "LLDASH";
+		case PublisherType::Ovt:
+			return "OVT";
+		case PublisherType::File:
+			return "File";
+	}
+
+	return "Unknown";
+}
+
+static ov::String StringFromMediaCodecId(const cmn::MediaCodecId &type)
+{
+	switch (type)
+	{
+		case cmn::MediaCodecId::H264:
+			return "H264";
+		case cmn::MediaCodecId::H265:
+			return "H265";
+		case cmn::MediaCodecId::Vp8:
+			return "VP8";
+		case cmn::MediaCodecId::Vp9:
+			return "VP9";
+		case cmn::MediaCodecId::Flv:
+			return "FLV";
+		case cmn::MediaCodecId::Aac:
+			return "AAC";
+		case cmn::MediaCodecId::Mp3:
+			return "MP3";
+		case cmn::MediaCodecId::Opus:
+			return "OPUS";
+		case cmn::MediaCodecId::Jpeg:
+			return "JPEG";
+		case cmn::MediaCodecId::Png:
+			return "PNG";
+		case cmn::MediaCodecId::None:
+		default:
+			return "Unknwon";
+	}
+}
+
+static ov::String StringFromMediaType(const cmn::MediaType &type)
+{
+	switch (type)
+	{
+		case cmn::MediaType::Video:
+			return "Video";
+		case cmn::MediaType::Audio:
+			return "Audio";
+		case cmn::MediaType::Data:
+			return "Data";
+		case cmn::MediaType::Subtitle:
+			return "Subtitle";
+		case cmn::MediaType::Attachment:
+			return "Attachment";
+		case cmn::MediaType::Unknown:
+		default:
+			return "Unknown";
+	}
+}

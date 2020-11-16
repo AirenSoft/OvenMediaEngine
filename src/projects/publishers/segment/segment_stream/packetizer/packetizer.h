@@ -8,10 +8,11 @@
 //==============================================================================
 #pragma once
 
-#include "packetizer_define.h"
-
 #include <base/info/application.h>
+#include <base/info/media_track.h>
 #include <base/ovlibrary/ovlibrary.h>
+
+#include "packetizer_define.h"
 
 class Packetizer
 {
@@ -42,7 +43,7 @@ public:
 	//   | 1000   | 5       | 10     | 2000      |
 	//   | 1000   | 10      | 2      | 200       |
 	//   +--------+---------+--------+-----------+
-	static uint64_t ConvertTimeScale(uint64_t time, const common::Timebase &from_timebase, const common::Timebase &to_timebase);
+	static uint64_t ConvertTimeScale(uint64_t time, const cmn::Timebase &from_timebase, const cmn::Timebase &to_timebase);
 
 	void SetPlayList(ov::String &play_list);
 

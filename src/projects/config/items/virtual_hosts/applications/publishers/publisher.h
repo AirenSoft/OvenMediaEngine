@@ -10,17 +10,26 @@
 
 namespace cfg
 {
-	struct Publisher : public Item
+	namespace vhost
 	{
-		virtual PublisherType GetType() const = 0;
-		CFG_DECLARE_GETTER_OF(GetMaxConnection, _max_connection)
-
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			RegisterValue<Optional>("MaxConnection", &_max_connection);
-		}
+			namespace pub
+			{
+				struct Publisher : public Item
+				{
+					virtual PublisherType GetType() const = 0;
+					CFG_DECLARE_GETTER_OF(GetMaxConnection, _max_connection)
 
-		int _max_connection = 0;
-	};
+				protected:
+					void MakeParseList() override
+					{
+						RegisterValue<Optional>("MaxConnection", &_max_connection);
+					}
+
+					int _max_connection = 0;
+				};
+			}  // namespace pub
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg

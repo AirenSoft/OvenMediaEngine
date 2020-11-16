@@ -308,7 +308,7 @@ void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client
 	response->SetStatusCode(status_code);
 }
 
-void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client)
+void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client, PhysicalPortDisconnectReason reason)
 {
 	auto request = client->GetRequest();
 
@@ -334,7 +334,7 @@ void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &clien
 
 	if ((_close_handler != nullptr) && (socket_info != nullptr))
 	{
-		_close_handler(socket_info->response);
+		_close_handler(socket_info->response, reason);
 	}
 }
 

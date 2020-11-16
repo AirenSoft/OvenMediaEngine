@@ -13,7 +13,7 @@
 
 #define OV_LOG_TAG "MediaTrack"
 
-using namespace common;
+using namespace cmn;
 
 MediaTrack::MediaTrack()
 	: _id(0),
@@ -101,6 +101,12 @@ void MediaTrack::SetTimeBase(int32_t num, int32_t den)
 	_time_base.Set(num, den);
 }
 
+void MediaTrack::SetTimeBase(const cmn::Timebase &time_base)
+{
+	_time_base = time_base;
+}
+
+
 void MediaTrack::SetBitrate(int32_t bitrate)
 {
 	_bitrate = bitrate;
@@ -172,7 +178,7 @@ ov::String MediaTrack::GetInfoString()
 				GetId(),
 				IsBypass() ? "true" : "false",
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ov::Converter::ToString(GetCodecId()).CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(),
 				GetWidth(), GetHeight(),
 				GetFrameRate());
 			break;
@@ -189,7 +195,7 @@ ov::String MediaTrack::GetInfoString()
 				GetId(),
 				IsBypass() ? "true" : "false",
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ov::Converter::ToString(GetCodecId()).CStr(),
+				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(),
 				ov::Converter::ToSiString(GetSampleRate(), 1).CStr(),
 				GetSample().GetName(), GetSample().GetSampleSize() * 8,
 				GetChannel().GetName(), GetChannel().GetCounts());

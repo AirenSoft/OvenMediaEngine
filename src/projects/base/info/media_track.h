@@ -23,16 +23,17 @@ public:
 	uint32_t GetId() const;
 
 	// Video Type Settings
-	void SetMediaType(common::MediaType type);
-	common::MediaType GetMediaType() const;
+	void SetMediaType(cmn::MediaType type);
+	cmn::MediaType GetMediaType() const;
 
 	// Codec Settings
-	void SetCodecId(common::MediaCodecId id);
-	common::MediaCodecId GetCodecId() const;
+	void SetCodecId(cmn::MediaCodecId id);
+	cmn::MediaCodecId GetCodecId() const;
 
 	// Timebase Settings
-	const common::Timebase &GetTimeBase() const;
+	const cmn::Timebase &GetTimeBase() const;
 	void SetTimeBase(int32_t num, int32_t den);
+	void SetTimeBase(const cmn::Timebase &time_base);
 
 	// Bitrate Settings
 	void SetBitrate(int32_t bitrate);
@@ -64,9 +65,9 @@ public:
 private:
 	uint32_t _id;
 
-	common::MediaCodecId _codec_id;
-	common::MediaType _media_type;
-	common::Timebase _time_base;
+	cmn::MediaCodecId _codec_id;
+	cmn::MediaType _media_type;
+	cmn::Timebase _time_base;
 	int32_t _bitrate;
 
 	bool	_byass;

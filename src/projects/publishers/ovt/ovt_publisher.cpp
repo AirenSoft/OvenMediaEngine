@@ -32,39 +32,37 @@ bool OvtPublisher::Start()
 	// Listen to localhost:<relay_port>
 	auto server_config = GetServerConfig();
 
-	const auto &origin = server_config.GetBind().GetPublishers().GetOvt();
+	const auto &ovt_config = server_config.GetBind().GetPublishers().GetOvt();
 
-	if (origin.IsParsed())
+	if (ovt_config.IsParsed() == false)
 	{
-		auto &port_config = origin.GetPort();
-		int port = port_config.GetPort();
+		logtw("%s is disabled by configuration", GetPublisherName());
+		return true;
+	}
 
-		if (port > 0)
+	auto &port_config = ovt_config.GetPort();
+	int port = port_config.GetPort();
+
+	if (port > 0)
+	{
+		const ov::String &ip = server_config.GetIp();
+		ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
+
+		_server_port = PhysicalPortManager::GetInstance()->CreatePort(port_config.GetSocketType(), address);
+		if (_server_port != nullptr)
 		{
-			const ov::String &ip = server_config.GetIp();
-			ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
-
-			_server_port = PhysicalPortManager::Instance()->CreatePort(port_config.GetSocketType(), address);
-			if (_server_port != nullptr)
-			{
-				logti("%s is listening on %s", GetPublisherName(), address.ToString().CStr());
-				_server_port->AddObserver(this);
-			}
-			else
-			{
-				logte("Could not create relay port. Origin features will not work.");
-			}
+			logti("%s is listening on %s", GetPublisherName(), address.ToString().CStr());
+			_server_port->AddObserver(this);
 		}
 		else
 		{
-			logte("Invalid ovt port: %d", port);
+			logte("Could not create relay port. Origin features will not work.");
 		}
 	}
 	else
 	{
-		// Relay feature is disabled
+		logte("Invalid ovt port: %d", port);
 	}
-
 
 	return Publisher::Start();
 }
@@ -128,7 +126,7 @@ void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 	}
 
 	uint32_t request_id = json_request_id.asUInt();
-	auto url = ov::Url::Parse(json_request_url.asString());
+	auto url = ov::Url::Parse(json_request_url.asString().c_str());
 	if(url == nullptr)
 	{
 		ResponseResult(remote, OVT_PAYLOAD_TYPE_ERROR, packet->SessionId(), json_request_id.asUInt(), 404, "An invalid request : Url is not valid");
@@ -181,10 +179,10 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 
 void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, const uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
-	auto orchestrator = Orchestrator::GetInstance();
-	auto host_name = url->Domain();
+	auto orchestrator = ocst::Orchestrator::GetInstance();
+	auto host_name = url->Host();
 	auto app_name = url->App();
-	auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
+	auto vhost_app_name = orchestrator->ResolveApplicationNameFromDomain(host_name, app_name);
 	auto stream_name = url->Stream();
 	ov::String msg;
 
@@ -192,7 +190,7 @@ void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remo
 	if (stream == nullptr)
 	{
 		// If the stream does not exists, request to the provider
-		if (orchestrator->RequestPullStream(vhost_app_name, host_name, app_name, stream_name) == false)
+		if (orchestrator->RequestPullStream(url, vhost_app_name, host_name, stream_name) == false)
 		{
 			msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
 			ResponseResult(remote, OVT_PAYLOAD_TYPE_DESCRIBE, 0, request_id, 404, msg);
@@ -216,7 +214,7 @@ void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remo
 
 void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
-	auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), url->App());
+	auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Host(), url->App());
 	
 	auto app = std::static_pointer_cast<OvtApplication>(GetApplicationByName(vhost_app_name));
 	if(app == nullptr)
@@ -254,7 +252,7 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 
 void OvtPublisher::HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
 {
-	auto vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), url->App());
+	auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Host(), url->App());
 	auto stream = std::static_pointer_cast<OvtStream>(GetStream(vhost_app_name, url->Stream()));
 
 	if(stream == nullptr)
@@ -349,14 +347,6 @@ bool OvtPublisher::UnlinkRemoteFromStream(int remote_id)
 
 	return true;
 }
-
-bool OvtPublisher::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections)
-{
-	return true;
-}
-
-
-
 
 
 

@@ -8,17 +8,17 @@
 //==============================================================================
 #pragma once
 
-#include "base/common_types.h"
 #include "./json.h"
 #include "./string.h"
-#include "base/mediarouter/media_type.h"
 
 #define __STDC_FORMAT_MACROS 1
 #include <inttypes.h>
-#include <string>
-#include <ctime>
+
 #include <chrono>
 #include <cmath>
+#include <ctime>
+#include <iomanip>
+#include <string>
 
 namespace ov
 {
@@ -33,7 +33,7 @@ namespace ov
 			return ov::String::FormatString("%d", number);
 		}
 
-		static ov::String ToString(const ov::String &str)
+		static ov::String ToString(const char *str)
 		{
 			return str;
 		}
@@ -59,7 +59,7 @@ namespace ov
 		{
 			return ov::String::FormatString("%zu", number);
 		}
-#endif  // defined(__APPLE__)
+#endif	// defined(__APPLE__)
 
 		static ov::String ToString(float number)
 		{
@@ -89,7 +89,7 @@ namespace ov
 		static ov::String ToString(const std::chrono::system_clock::time_point &tp)
 		{
 			std::time_t t = std::chrono::system_clock::to_time_t(tp);
-			char buffer[32] { 0 };
+			char buffer[32]{0};
 			::ctime_r(&t, buffer);
 			// Ensure null-terminated
 			buffer[OV_COUNTOF(buffer) - 1] = '\0';
@@ -98,133 +98,32 @@ namespace ov
 
 			return time_string.Trim();
 		}
-		
-		static ov::String ToString(const StreamSourceType &type)
+
+		static ov::String ToISO8601String(const std::chrono::system_clock::time_point &tp)
 		{
-			switch(type)
-			{
-				case StreamSourceType::Ovt:
-					return "Ovt";
-				case StreamSourceType::Rtmp:
-					return "Rtmp";
-				case StreamSourceType::Rtsp:
-					return "Rtsp";
-				case StreamSourceType::RtspPull:
-					return "RtspPull";
-				case StreamSourceType::Transcoder:
-					return "Transcoder";
-				default:
-					return "Unknown";
-			}
-		}
+			auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count() % 1000;
+			auto time = std::chrono::system_clock::to_time_t(tp);
+			std::tm local_time{};
+			::localtime_r(&time, &local_time);
 
-		static ov::String ToString(const ProviderType &type)
-		{
-			switch(type)
-			{
-				case ProviderType::Unknown:
-					return "Unknown";
-				case ProviderType::Rtmp:
-					return "RTMP";
-				case ProviderType::Rtsp:
-					return "RTSP";
-				case ProviderType::RtspPull:
-					return "RTSP Pull";
-				case ProviderType::Ovt:
-					return "OVT";
-				case ProviderType::Mpegts:
-					return "MPEG-TS";
-			}
+			std::ostringstream oss;
+			oss << std::put_time(&local_time, "%Y-%m-%dT%I:%M:%S") << "." << std::setfill('0') << std::setw(3) << milliseconds << std::put_time(&local_time, "%z");
 
-			return "Unknown";
-		}
-
-		static ov::String ToString(const PublisherType &type)
-		{
-			switch(type)
-			{
-				case PublisherType::Unknown:
-				case PublisherType::NumberOfPublishers:
-					return "Unknown";
-				case PublisherType::Webrtc:
-					return "WebRTC";
-				case PublisherType::Rtmp:
-					return "RTMP";
-				case PublisherType::RtmpPush:
-					return "RTMPPush";					
-				case PublisherType::Hls:
-					return "HLS";
-				case PublisherType::Dash:
-					return "DASH";
-				case PublisherType::LlDash:
-					return "LLDASH";
-				case PublisherType::Ovt:
-					return "Ovt";
-				case PublisherType::File:
-					return "File";
-			}
-
-			return "Unknown";
-		}
-
-		static ov::String ToString(const common::MediaCodecId &type)
-		{
-			switch(type)
-			{
-				case common::MediaCodecId::H264:
-					return "H264";
-				case common::MediaCodecId::H265:
-					return "H265";
-				case common::MediaCodecId::Vp8:
-					return "VP8";
-				case common::MediaCodecId::Vp9:
-					return "VP9";
-				case common::MediaCodecId::Flv:
-					return "FLV";
-				case common::MediaCodecId::Aac:
-					return "AAC";
-				case common::MediaCodecId::Mp3:
-					return "MP3";
-				case common::MediaCodecId::Opus:
-					return "OPUS";
-				case common::MediaCodecId::None:
-				default:
-					return "Unknwon";
-			}
-		}
-
-		static ov::String ToString(const common::MediaType &type)
-		{
-			switch(type)
-			{
-				case common::MediaType::Video:
-					return "Video";		
-				case common::MediaType::Audio:
-					return "Audio";
-				case common::MediaType::Data:
-					return "Data";
-				case common::MediaType::Subtitle:
-					return "Subtitle";
-				case common::MediaType::Attachment:
-					return "Attachment";
-				case common::MediaType::Unknown:
-				default:
-					return "Unknown";
-			}
+			return oss.str().c_str();
 		}
 
 		static ov::String ToSiString(int64_t number, int precision)
 		{
 			ov::String suf[] = {"", "K", "M", "G", "T", "P", "E", "Z", "Y"};
-		
-			if(number == 0)
+
+			if (number == 0)
 			{
 				return "0";
 			}
 
 			int64_t abs_number = std::abs(number);
 			int8_t place = std::floor(std::log10(abs_number) / std::log10(1000));
-			if(place > 8)
+			if (place > 8)
 			{
 				place = 8;
 			}
@@ -247,41 +146,59 @@ namespace ov
 			return ToSiString(bytes, 2) + "B";
 		}
 
-		static int32_t ToInt32(const ov::String &str, int base = 10)
+		static int32_t ToInt32(const char *str, int base = 10)
 		{
-			try
+			if (str != nullptr)
 			{
-				return std::stoi(str.CStr(), nullptr, base);
+				try
+				{
+					return std::stoi(str, nullptr, base);
+				}
+				catch (std::invalid_argument &e)
+				{
+				}
 			}
-			catch (std::invalid_argument &e)
-			{
-				return 0;
-			}
+
+			return 0;
 		}
 
-		static uint16_t ToUInt16(const ov::String &str, int base = 10)
+		static int32_t ToInt32(const ::Json::Value &value, int base = 10)
 		{
-			try
+			if (value.isIntegral())
 			{
-				return (uint16_t)std::stoi(str.CStr(), nullptr, base);
+				return value.asInt();
 			}
-			catch (std::invalid_argument &e)
+
+			return ToInt32(value.toStyledString(), base);
+		}
+
+		static uint16_t ToUInt16(const char *str, int base = 10)
+		{
+			if (str != nullptr)
 			{
-				return 0;
+				try
+				{
+					return static_cast<uint16_t>(std::stoi(str, nullptr, base));
+				}
+				catch (std::invalid_argument &e)
+				{
+				}
 			}
+
+			return 0;
 		}
 
 		static uint32_t ToUInt32(const char *str, int base = 10)
 		{
-			try
+			if (str != nullptr)
 			{
-				if (str != nullptr)
+				try
 				{
-					return (uint32_t)std::stoul(str, nullptr, base);
+					return static_cast<uint32_t>(std::stoul(str, nullptr, base));
 				}
-			}
-			catch (std::invalid_argument &e)
-			{
+				catch (std::invalid_argument &e)
+				{
+				}
 			}
 
 			return 0;
@@ -309,39 +226,53 @@ namespace ov
 			}
 		}
 
-		static int64_t ToInt64(const ov::String &str, int base = 10)
+		static int64_t ToInt64(const char *str, int base = 10)
 		{
-			try
+			if (str != nullptr)
 			{
-				return std::stoll(str.CStr(), nullptr, base);
+				try
+				{
+					return std::stoll(str, nullptr, base);
+				}
+				catch (std::invalid_argument &e)
+				{
+				}
 			}
-			catch (std::invalid_argument &e)
-			{
-				return 0L;
-			}
+
+			return 0L;
 		}
 
-		static uint64_t ToUInt64(const ov::String &str, int base = 10)
+		static uint64_t ToUInt64(const char *str, int base = 10)
 		{
-			try
+			if (str != nullptr)
 			{
-				return std::stoull(str.CStr(), nullptr, base);
+				try
+				{
+					return std::stoull(str, nullptr, base);
+				}
+				catch (std::invalid_argument &e)
+				{
+				}
 			}
-			catch (std::invalid_argument &e)
-			{
-				return 0UL;
-			}
+
+			return 0UL;
 		}
 
-		static bool ToBool(const ov::String &str)
+		static bool ToBool(const char *str)
 		{
-			ov::String value = str.LowerCaseString();
+			if (str == nullptr)
+			{
+				return false;
+			}
 
-			if (str == "true")
+			ov::String value = str;
+			value.MakeLower();
+
+			if (value == "true")
 			{
 				return true;
 			}
-			else if (str == "false")
+			else if (value == "false")
 			{
 				return false;
 			}
@@ -349,28 +280,56 @@ namespace ov
 			return (ToInt64(str) != 0);
 		}
 
-		static float ToFloat(const ov::String &str)
+		static bool ToBool(const ::Json::Value &value)
 		{
-			try
+			if (value.isBool())
 			{
-				return std::stof(str.CStr(), nullptr);
+				return value.asBool();
 			}
-			catch (std::invalid_argument &e)
-			{
-				return 0.0f;
-			}
+
+			return ToBool(value.toStyledString().c_str());
 		}
 
-		static double ToDouble(const ov::String &str)
+		static float ToFloat(const char *str)
 		{
-			try
+			if (str != nullptr)
 			{
-				return std::stod(str.CStr(), nullptr);
+				try
+				{
+					return std::stof(str, nullptr);
+				}
+				catch (std::invalid_argument &e)
+				{
+				}
 			}
-			catch (std::invalid_argument &e)
+
+			return 0.0f;
+		}
+
+		static float ToFloat(const ::Json::Value &value)
+		{
+			if (value.isDouble())
 			{
-				return 0.0;
+				return value.asDouble();
 			}
+
+			return ToFloat(value.toStyledString().c_str());
+		}
+
+		static double ToDouble(const char *str)
+		{
+			if (str != nullptr)
+			{
+				try
+				{
+					return std::stod(str, nullptr);
+				}
+				catch (std::invalid_argument &e)
+				{
+				}
+			}
+
+			return 0.0;
 		}
 	};
 }  // namespace ov

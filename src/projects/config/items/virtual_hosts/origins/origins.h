@@ -12,16 +12,22 @@
 
 namespace cfg
 {
-	struct Origins : public Item
+	namespace vhost
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetOriginList, _origin_list)
-
-	protected:
-		void MakeParseList() override
+		namespace orgn
 		{
-			RegisterValue<Optional>("Origin", &_origin_list);
-		}
+			struct Origins : public Item
+			{
+				CFG_DECLARE_REF_GETTER_OF(GetOriginList, _origin_list)
 
-		std::vector<OriginsOrigin> _origin_list;
-	};
+			protected:
+				void MakeParseList() override
+				{
+					RegisterValue<Optional>("Origin", &_origin_list);
+				}
+
+				std::vector<Origin> _origin_list;
+			};
+		}  // namespace orgn
+	}	   // namespace vhost
 }  // namespace cfg

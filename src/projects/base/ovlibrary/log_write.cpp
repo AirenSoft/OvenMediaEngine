@@ -70,20 +70,20 @@ namespace ov
     void LogWrite::Write(const char *log)
     {
         std::time_t time = std::time(nullptr);
-        std::tm localTime {};
-        ::localtime_r(&time, &localTime);
+        std::tm local_time {};
+        ::localtime_r(&time, &local_time);
 
         // At the end of the day, change file name to back it up 
         // ovenmediaengine.log.YYmmDD
-        if (_last_day != localTime.tm_mday)
+        if (_last_day != local_time.tm_mday)
         {
             if (_last_day)
             {
                 std::ostringstream logfile;
-                logfile << _log_file << "." << std::put_time(&localTime, "%Y%m%d");
+                logfile << _log_file << "." << std::put_time(&local_time, "%Y%m%d");
                 ::rename(_log_file.c_str(), logfile.str().c_str());
             }
-            _last_day = localTime.tm_mday;
+            _last_day = local_time.tm_mday;
         }
 
         struct stat file_stat {};

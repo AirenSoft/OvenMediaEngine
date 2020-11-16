@@ -28,7 +28,8 @@ public:
 	std::shared_ptr<MediaFrame> Dequeue(TranscodeResult *result);
 	void Enqueue(TranscodeResult *result);
 
-	const MediaPacket *_cur_pkt = nullptr;
+
+	std::shared_ptr<const MediaPacket> _cur_pkt = nullptr;
 	size_t _pkt_offset = 0;
 	std::shared_ptr<const ov::Data> _cur_data = nullptr;
 

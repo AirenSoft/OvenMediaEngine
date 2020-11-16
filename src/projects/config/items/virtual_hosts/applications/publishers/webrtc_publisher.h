@@ -12,18 +12,29 @@
 
 namespace cfg
 {
-	struct WebrtcPublisher : public Publisher
+	namespace vhost
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Webrtc)
-
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			Publisher::MakeParseList();
+			namespace pub
+			{
+				struct WebrtcPublisher : public Publisher
+				{
+					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Webrtc)
 
-			RegisterValue<Optional>("Timeout", &_timeout);
-		}
+					CFG_DECLARE_GETTER_OF(GetTimeout, _timeout)
 
-		int _timeout = 0;
-	};
+				protected:
+					void MakeParseList() override
+					{
+						Publisher::MakeParseList();
+
+						RegisterValue<Optional>("Timeout", &_timeout);
+					}
+
+					int _timeout = 30000;
+				};
+			}  // namespace pub
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg

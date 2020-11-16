@@ -12,7 +12,7 @@
 
 #define OV_LOG_TAG "Stream"
 
-using namespace common;
+using namespace cmn;
 
 namespace info
 {
@@ -54,6 +54,7 @@ namespace info
 	Stream::Stream(StreamSourceType source)
 	{
 		_source_type = source;
+		_created_time = std::chrono::system_clock::now();
 	}
 
 	Stream::~Stream()
@@ -87,7 +88,16 @@ namespace info
 
 	void Stream::SetName(ov::String name)
 	{
-		_name = name;
+		_name = std::move(name);
+	}
+
+	ov::String Stream::GetMediaSource() const
+	{
+		return _source_url;
+	}
+	void Stream::SetMediaSource(ov::String url)
+	{
+		_source_url = url;
 	}
 
 	void Stream::SetOriginStream(const std::shared_ptr<Stream> &stream)
@@ -150,13 +160,13 @@ namespace info
 
 	ov::String Stream::GetInfoString()
 	{
-		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), name(%s), SourceType(%s), Created Time (%s)\n", 														
-														GetId(), GetName().CStr(), ov::Converter::ToString(_source_type).CStr(),
+		ov::String out_str = ov::String::FormatString("\n[Stream Info]\nid(%u), output(%s), SourceType(%s), Created Time (%s)\n", 														
+														GetId(), GetName().CStr(),::StringFromStreamSourceType(_source_type).CStr(),
 														ov::Converter::ToString(_created_time).CStr());
 		if(GetOriginStream() != nullptr)
 		{
-			out_str.AppendFormat("\t>> Origin Stream Info\n\tid(%u), name(%s), SourceType(%s), Created Time (%s)\n",
-				GetOriginStream()->GetId(), GetOriginStream()->GetName().CStr(), ov::Converter::ToString(GetOriginStream()->GetSourceType()).CStr(),
+			out_str.AppendFormat("\t>> Origin Stream Info\n\tid(%u), output(%s), SourceType(%s), Created Time (%s)\n",
+				GetOriginStream()->GetId(), GetOriginStream()->GetName().CStr(), ::StringFromStreamSourceType(GetOriginStream()->GetSourceType()).CStr(),
 														ov::Converter::ToString(GetOriginStream()->GetCreatedTime()).CStr());
 		}
 
@@ -177,7 +187,7 @@ namespace info
 						track->GetId(),
 						track->IsBypass() ? "true" : "false",
 						ov::Converter::BitToString(track->GetBitrate()).CStr(),
-						track->GetCodecId(), ov::Converter::ToString(track->GetCodecId()).CStr(),
+						track->GetCodecId(), ::StringFromMediaCodecId(track->GetCodecId()).CStr(),
 						track->GetWidth(), track->GetHeight(),
 						track->GetFrameRate());
 					break;
@@ -194,7 +204,7 @@ namespace info
 						track->GetId(),
 						track->IsBypass() ? "true" : "false",
 						ov::Converter::BitToString(track->GetBitrate()).CStr(),
-						track->GetCodecId(), ov::Converter::ToString(track->GetCodecId()).CStr(),
+						track->GetCodecId(), ::StringFromMediaCodecId(track->GetCodecId()).CStr(),
 						ov::Converter::ToSiString(track->GetSampleRate(), 1).CStr(),
 						track->GetSample().GetName(), track->GetSample().GetSampleSize() * 8,
 						track->GetChannel().GetName(), track->GetChannel().GetCounts());

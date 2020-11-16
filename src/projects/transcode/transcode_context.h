@@ -23,7 +23,7 @@ public:
 	// Video
 	TranscodeContext(
 		bool is_encoding_context,
-		common::MediaCodecId codec_id,
+		cmn::MediaCodecId codec_id,
 		int32_t bitrate,
 		uint32_t width, uint32_t height,
 		float frame_rate)
@@ -33,7 +33,7 @@ public:
 		  _video_width(width), _video_height(height),
 		  _video_frame_rate(frame_rate)
 	{
-		_media_type = common::MediaType::Video;
+		_media_type = cmn::MediaType::Video;
 		_time_base.Set(1, 90000);
 		_video_gop = 30;
 	}
@@ -41,16 +41,16 @@ public:
 	// Audio
 	TranscodeContext(
 		bool is_encoding_context,
-		common::MediaCodecId codec_id,
+		cmn::MediaCodecId codec_id,
 		int32_t bitrate,
 		int32_t sample)
 		: _is_encoding_context(is_encoding_context), _codec_id(codec_id), _bitrate(bitrate)
 	{
-		_media_type = common::MediaType::Audio;
+		_media_type = cmn::MediaType::Audio;
 		_time_base.Set(1, sample);
-		_audio_sample.SetRate((common::AudioSample::Rate)sample);
-		_audio_sample.SetFormat(common::AudioSample::Format::S16);
-		_audio_channel.SetLayout(common::AudioChannel::Layout::LayoutStereo);
+		_audio_sample.SetRate((cmn::AudioSample::Rate)sample);
+		_audio_sample.SetFormat(cmn::AudioSample::Format::S16);
+		_audio_channel.SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
 	}
 
 	// To determine whether this transcode context contains encoding/decoding information
@@ -62,14 +62,14 @@ public:
 	//--------------------------------------------------------------------
 	// Video transcoding options
 	//--------------------------------------------------------------------
-	void SetCodecId(common::MediaCodecId val);
-	common::MediaCodecId GetCodecId() const;
+	void SetCodecId(cmn::MediaCodecId val);
+	cmn::MediaCodecId GetCodecId() const;
 
 	void SetBitrate(int32_t val);
 	int32_t GetBitrate();
 
-	const common::Timebase &GetTimeBase() const;
-	void SetTimeBase(const common::Timebase &timebase);
+	const cmn::Timebase &GetTimeBase() const;
+	void SetTimeBase(const cmn::Timebase &timebase);
 	void SetTimeBase(int32_t num, int32_t den);
 
 	void SetVideoWidth(uint32_t val);
@@ -84,18 +84,18 @@ public:
 	void SetFrameRate(float val);
 	float GetFrameRate();
 
-	void SetAudioSample(common::AudioSample sample);
-	common::AudioSample GetAudioSample() const;
+	void SetAudioSample(cmn::AudioSample sample);
+	cmn::AudioSample GetAudioSample() const;
 
 	void SetAudioSampleRate(int32_t val);
 	int32_t GetAudioSampleRate();
 
-	void SetAudioSampleFormat(common::AudioSample::Format val);
+	void SetAudioSampleFormat(cmn::AudioSample::Format val);
 
-	common::AudioChannel &GetAudioChannel();
-	const common::AudioChannel &GetAudioChannel() const;
+	cmn::AudioChannel &GetAudioChannel();
+	const cmn::AudioChannel &GetAudioChannel() const;
 
-	common::MediaType GetMediaType() const;
+	cmn::MediaType GetMediaType() const;
 
 private:
 	// Context type
@@ -106,13 +106,13 @@ private:
 	//--------------------------------------------------------------------
 	// Video transcoding options
 	//--------------------------------------------------------------------
-	common::MediaCodecId _codec_id;
+	cmn::MediaCodecId _codec_id;
 
 	// Bitrate
 	int32_t _bitrate;
 
 	// Video timebase
-	common::Timebase _time_base;
+	cmn::Timebase _time_base;
 
 	// Resolution
 	uint32_t _video_width;
@@ -124,11 +124,11 @@ private:
 	// GOP : Group Of Picture
 	int32_t _video_gop;
 
-	common::MediaType _media_type;
+	cmn::MediaType _media_type;
 
 	// Sample type
-	common::AudioSample _audio_sample;
+	cmn::AudioSample _audio_sample;
 
 	// Channel
-	common::AudioChannel _audio_channel;
+	cmn::AudioChannel _audio_channel;
 };

@@ -7,12 +7,13 @@
 //
 //==============================================================================
 #include "application.h"
+
 #include "application_private.h"
 #include "host.h"
 
 namespace info
 {
-	Application::Application(const info::Host &host_info, application_id_t app_id, const VHostAppName &name, cfg::Application app_config, bool is_dynamic_app)
+	Application::Application(const info::Host &host_info, application_id_t app_id, const VHostAppName &name, cfg::vhost::app::Application app_config, bool is_dynamic_app)
 		: _application_id(app_id),
 		  _name(name),
 		  _app_config(std::move(app_config)),
@@ -32,7 +33,8 @@ namespace info
 
 	const Application &Application::GetInvalidApplication()
 	{
-		static Application application(Host(cfg::VirtualHost()), InvalidApplicationId, VHostAppName::InvalidAppName(), false);
+		static Application application(Host(cfg::vhost::VirtualHost()), InvalidApplicationId, VHostAppName::InvalidVHostAppName(), false);
+
 		return application;
 	}
 }  // namespace info

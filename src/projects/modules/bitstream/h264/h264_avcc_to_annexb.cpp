@@ -6,11 +6,11 @@
 
 #define OV_LOG_TAG "H264AvccToAnnexB"
 
-static uint8_t START_CODE[3] = { 0x00, 0x00, 0x01 };
+static uint8_t START_CODE[4] = { 0x00, 0x00, 0x00, 0x01 };
 
-bool H264AvccToAnnexB::GetExtradata(const common::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
+bool H264AvccToAnnexB::GetExtradata(const cmn::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
 {
-	if(type == common::PacketType::SEQUENCE_HEADER)
+	if(type == cmn::PacketType::SEQUENCE_HEADER)
 	{
 		AVCDecoderConfigurationRecord config;
 		if(!AVCDecoderConfigurationRecord::Parse(data->GetDataAs<uint8_t>(), data->GetLength(), config))
@@ -28,13 +28,13 @@ bool H264AvccToAnnexB::GetExtradata(const common::PacketType type, const std::sh
 	return false;
 }
 
-bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov::Data> &data, const std::vector<uint8_t> &extradata)
+bool H264AvccToAnnexB::Convert(cmn::PacketType type, const std::shared_ptr<ov::Data> &data, const std::vector<uint8_t> &extradata)
 {
 	auto annexb_data = std::make_shared<ov::Data>();
 
 	annexb_data->Clear();
 
-	if(type == common::PacketType::SEQUENCE_HEADER)
+	if(type == cmn::PacketType::SEQUENCE_HEADER)
 	{
 		AVCDecoderConfigurationRecord config;
 		if(!AVCDecoderConfigurationRecord::Parse(data->GetDataAs<uint8_t>(), data->GetLength(), config))
@@ -55,7 +55,7 @@ bool H264AvccToAnnexB::Convert(common::PacketType type, const std::shared_ptr<ov
 			annexb_data->Append(config.GetPPS(i));
 		}
 	}
-	else if(type == common::PacketType::NALU)
+	else if(type == cmn::PacketType::NALU)
 	{
 		ov::ByteStream read_stream(data.get());
 

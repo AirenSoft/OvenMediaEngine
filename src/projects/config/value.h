@@ -14,9 +14,8 @@ namespace cfg
 {
 	class Item;
 
-	//region Value
-
-	// int, float, string 등 처리용
+	// #region ========== Value ==========
+	// A value class for int/float/string types
 	template <typename Ttype, typename Tdummy = void>
 	class Value : public ValueBase
 	{
@@ -38,7 +37,7 @@ namespace cfg
 		using ValueBase::_target;
 	};
 
-	// Item 처리용
+	// A value class for Item struct
 	class ValueForElementBase : public ValueBase
 	{
 	public:
@@ -79,7 +78,7 @@ namespace cfg
 		}
 	};
 
-	// vector 처리용
+	// A value class for vector
 	class ValueForListBase : public ValueBase
 	{
 	public:
@@ -142,6 +141,6 @@ namespace cfg
 			return true;
 		}
 	};
+	// #endregion
 
-	//endregion
 }  // namespace cfg

@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 #include <base/ovlibrary/converter.h>
+
 #include "http_datastructure.h"
 #include "interceptors/http_request_interceptor.h"
 
@@ -26,6 +27,9 @@ public:
 
 	void SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data);
 	std::shared_ptr<ov::TlsData> GetTlsData();
+
+	void SetConnectionType(HttpRequestConnectionType type);
+	HttpRequestConnectionType GetConnectionType() const;
 
 	/// HttpRequest 객체 초기화를 위해, client에서 보낸 데이터를 처리함
 	///
@@ -108,6 +112,16 @@ public:
 		return true;
 	}
 
+	void SetMatchResult(ov::MatchResult match_result)
+	{
+		_match_result = std::move(match_result);
+	}
+
+	const ov::MatchResult &GetMatchResult() const
+	{
+		return _match_result;
+	}
+
 	const std::shared_ptr<HttpRequestInterceptor> &GetRequestInterceptor()
 	{
 		return _interceptor;
@@ -161,8 +175,10 @@ protected:
 	HttpStatusCode ParseHeader(const ov::String &line);
 
 	void PostProcess();
+	void UpdateUri();
 
 	std::shared_ptr<ov::ClientSocket> _client_socket;
+	HttpRequestConnectionType _connection_type;
 	std::shared_ptr<ov::TlsData> _tls_data;
 
 	// request 처리를 담당하는 객체
@@ -175,6 +191,8 @@ protected:
 	ov::String _request_uri;
 	ov::String _request_target;
 	ov::String _http_version;
+
+	ov::MatchResult _match_result;
 
 	// request 헤더
 	bool _is_header_found = false;

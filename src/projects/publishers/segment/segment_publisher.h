@@ -21,23 +21,23 @@ class PlaylistRequestInfo
 {
 public:
 	PlaylistRequestInfo(const PublisherType &type, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const ov::String &ip, const ov::String &session_id)
+		: _publisher_type(type),
+		_vhost_app_name(vhost_app_name),
+		_stream_name(stream_name),
+		_ip_address(ip),
+		_session_id(session_id)
 	{
-		_publisher_type = type;
-		_session_id = session_id;
-		_vhost_app_name = vhost_app_name;
-		_stream_name = stream_name;
-		_ip_address = ip;
 		_last_requested_time = std::chrono::system_clock::now();
 	}
 
 	PlaylistRequestInfo(const PlaylistRequestInfo &info)
+		: _publisher_type(info._publisher_type),
+		_vhost_app_name(info._vhost_app_name),
+		_stream_name(info._stream_name),
+		_ip_address(info._ip_address),
+		_session_id(info._session_id),
+		_last_requested_time(info._last_requested_time)
 	{
-		_publisher_type = info._publisher_type;
-		_session_id = info._session_id;
-		_vhost_app_name = info._vhost_app_name;
-		_stream_name = info._stream_name;
-		_ip_address = info._ip_address;
-		_last_requested_time = info._last_requested_time;
 	}
 
 	bool IsTooOld()
@@ -177,14 +177,13 @@ protected:
 
 public:
 	template <typename Tpublisher>
-	static std::shared_ptr<Tpublisher> Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-											  const cfg::Server &server_config,
+	static std::shared_ptr<Tpublisher> Create(const cfg::Server &server_config,
 											  const std::shared_ptr<MediaRouteInterface> &router)
 	{
 		auto publisher = std::make_shared<Tpublisher>((PrivateToken){}, server_config, router);
 
 		auto instance = std::static_pointer_cast<SegmentPublisher>(publisher);
-		if (instance->Start(http_server_manager) == false)
+		if (instance->Start() == false)
 		{
 			return nullptr;
 		}
@@ -197,19 +196,17 @@ public:
 		return publisher;
 	}
 
-	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections) override;
-
 	bool Stop() override;
 
 protected:
 	SegmentPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 	~SegmentPublisher() override;
 
-	bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager, const cfg::SingularPort &port_config, const cfg::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server);
-	virtual bool Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager) = 0;
+	bool Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server);
+	virtual bool Start() = 0;
 	
 
-	bool HandleSignedUrl(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, 
+	bool HandleSignedX(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, 
 						const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
 						std::shared_ptr<PlaylistRequestInfo> &request_info);
 

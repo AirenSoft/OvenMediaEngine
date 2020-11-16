@@ -2,6 +2,8 @@
 
 #include <base/info/media_track.h>
 #include <base/publisher/session.h>
+#include <modules/rtmp/rtmp_writer.h>
+#include "base/info/push.h"
 
 class RtmpPushSession : public pub::Session
 {
@@ -22,7 +24,12 @@ public:
 	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
 						const std::shared_ptr<const ov::Data> &data) override;
 
-
+	
+	void SetPush(std::shared_ptr<info::Push> &record);
+	std::shared_ptr<info::Push>& GetPush();
+	
 private:
-	bool 							_sent_ready;
+	std::shared_ptr<info::Push> _push;
+	
+	std::shared_ptr<RtmpWriter> _writer;
 };

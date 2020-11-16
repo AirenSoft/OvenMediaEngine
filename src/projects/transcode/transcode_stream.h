@@ -64,7 +64,7 @@ private:
 	const info::Application _application_info;
 
 	// Input Stream Info
-	std::shared_ptr<info::Stream> _stream_input;
+	std::shared_ptr<info::Stream> _input_stream;
 
 	// Output Stream Info
 	// [OUTPUT_STREAM_NAME, OUTPUT_stream]
@@ -72,8 +72,8 @@ private:
 
 
 	// Store information for track mapping by stage
-	void StoreStageContext(ov::String encode_profile_name, common::MediaType media_type,  std::shared_ptr<MediaTrack> input_track, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
-	std::map< std::pair<ov::String, common::MediaType>, std::shared_ptr<TranscodeStageContext> > _map_stage_context;
+	void StoreStageContext(ov::String unique_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
+	std::map< std::pair<ov::String, cmn::MediaType>, std::shared_ptr<TranscodeStageContext> > _map_stage_context;
 	MediaTrackId _last_transcode_id;
 
 	// Input Track -> Decoder or Router(bypasS)
@@ -124,7 +124,12 @@ private:
 	TranscodeApplication* GetParent();
 	TranscodeApplication* _parent;
 
-	int32_t CreateOutputStream();
+	bool IsSupportedMediaType(const std::shared_ptr<MediaTrack> &media_track);
+	int32_t CreateOutputStreams();
+	std::shared_ptr<info::Stream> CreateOutputStream(const cfg::vhost::app::oprf::OutputProfile &cfg_output_profile);
+	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack>& input_track, const cfg::vhost::app::oprf::VideoProfile &profile);
+	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack>& input_track, const cfg::vhost::app::oprf::AudioProfile &profile);
+
 	// for dynamically generated applications
 	int32_t CreateOutputStreamDynamic();
 
@@ -152,7 +157,7 @@ private:
 	TranscodeResult EncodedPacket(int32_t encoder_id);
 
 	// Transcoding information
-	uint8_t NewTrackId(common::MediaType media_type);
+	uint8_t NewTrackId(cmn::MediaType media_type);
 
 	// Create output streams
 	void CreateStreams();
@@ -163,15 +168,16 @@ private:
 	// Send frame with output stream's information
 	void SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet);
 
-	const cfg::Encode* GetEncodeByProfileName(const info::Application &application_info, ov::String encode_name);
+	// const cfg::vhost::app::enc::Encode *GetEncodeByProfileName(const info::Application &application_info, ov::String encode_name);
 
-	common::MediaCodecId GetCodecId(ov::String name);
+	cmn::MediaCodecId GetCodecId(ov::String name);
 
-	bool IsVideoCodec(common::MediaCodecId codec_id);
-	bool IsAudioCodec(common::MediaCodecId codec_id);
+	bool IsVideoCodec(cmn::MediaCodecId codec_id);
+	bool IsAudioCodec(cmn::MediaCodecId codec_id);
 
-	int GetBitrate(ov::String bitrate);
+	ov::String GetIdentifiedForVideoProfile(const cfg::vhost::app::oprf::VideoProfile &profile);
+	ov::String GetIdentifiedForAudioProfile(const cfg::vhost::app::oprf::AudioProfile &profile);
 
-	const common::Timebase GetDefaultTimebaseByCodecId(common::MediaCodecId codec_id);
+	const cmn::Timebase GetDefaultTimebaseByCodecId(cmn::MediaCodecId codec_id);
 };
 

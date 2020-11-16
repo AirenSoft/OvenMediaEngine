@@ -29,7 +29,6 @@ public:
 	bool Start(
 		const ov::SocketAddress *address,
 		const ov::SocketAddress *tls_address,
-		std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
 		int thread_count);
 	bool Stop();
 
@@ -38,9 +37,7 @@ public:
 
 	bool Disconnect(const ov::String &app_name, const ov::String &stream_name);
 
-	void SetCrossDomain(const std::vector<cfg::Url> &url_list);
-
-	bool GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &collections);
+	void SetCrossDomain(const std::vector<cfg::cmn::Url> &url_list);
 
 	virtual PublisherType GetPublisherType() const noexcept = 0;
 	virtual const char *GetPublisherName() const noexcept = 0;
@@ -77,7 +74,7 @@ protected:
 
 protected:
 	std::shared_ptr<HttpServer> _http_server;
-	std::shared_ptr<HttpsServer> _https_server;
+	std::shared_ptr<HttpServer> _https_server;
 	std::vector<std::shared_ptr<SegmentStreamObserver>> _observers;
 	std::vector<ov::String> _cors_urls;
 	ov::String _cross_domain_xml;

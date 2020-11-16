@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<Server version="7">
+<Server version="8">
 	<Name>OvenMediaEngine</Name>
 	<!-- Host type (origin/edge) -->
 	<Type>origin</Type>
@@ -23,7 +23,7 @@
 		</Providers>
 
 		<Publishers>
-            <!-- The OVT is protocol for ORIGIN-EDGE -->
+			<!-- The OVT is protocol for ORIGIN-EDGE -->
 			<OVT>
 				<Port>${env:OME_ORIGIN_PORT:9000}</Port>
 			</OVT>
@@ -59,16 +59,17 @@
 		<VirtualHost>
 			<Name>default</Name>
 
-			<!-- Settings for multi domain and TLS -->
-			<Domain>
-                <Names>
-				<!-- Domain names
-					<Name>stream1.airensoft.com</Name>
-					<Name>stream2.airensoft.com</Name>
-					<Name>*.sub.airensoft.com</Name>
-				-->
-                    <Name>*</Name>
-                </Names>
+			<!-- Settings for multi ip/domain and TLS -->
+			<Host>
+				<Names>
+					<!-- Host names
+						<Name>stream1.airensoft.com</Name>
+						<Name>stream2.airensoft.com</Name>
+						<Name>*.sub.airensoft.com</Name>
+						<Name>192.168.0.1</Name>
+					-->
+					<Name>*</Name>
+				</Names>
 				<!--
 				<TLS>
 					<CertPath>path/to/file.crt</CertPath>
@@ -76,7 +77,7 @@
 					<ChainCertPath>path/to/file.crt</ChainCertPath>
 				</TLS>
 				-->
-			</Domain>
+			</Host>
 
 			<!-- Settings for applications -->
 			<Applications>
@@ -84,29 +85,30 @@
 					<Name>app</Name>
 					<!-- Application type (live/vod) -->
 					<Type>live</Type>
-                    <Encodes>
-                        <Encode>
-                            <Name>bypass</Name>
-                            <Audio>
-                                <Bypass>true</Bypass>
-                            </Audio>
-                            <Video>
-                                <Bypass>true</Bypass>
-                            </Video>
-                        </Encode>
-                        <Encode>
-                            <Name>opus</Name>
-                            <Audio>
-                                <Codec>opus</Codec>
-                                <Bitrate>128000</Bitrate>
-                                <Samplerate>48000</Samplerate>
-                                <Channel>2</Channel>
-                            </Audio>
-                        </Encode>
-                    </Encodes>
+					<Encodes>
+						<Encode>
+							<Name>bypass</Name>
+							<Audio>
+								<Bypass>true</Bypass>
+							</Audio>
+							<Video>
+								<Bypass>true</Bypass>
+							</Video>
+						</Encode>
+						<Encode>
+							<Name>opus</Name>
+							<Audio>
+								<Codec>opus</Codec>
+								<Bitrate>128000</Bitrate>
+								<Samplerate>48000</Samplerate>
+								<Channel>2</Channel>
+							</Audio>
+						</Encode>
+					</Encodes>
 					<Streams>
 						<Stream>
-							<Name>${OriginStreamName}</Name>
+							<Name>bypass_stream</Name>
+							<OutputStreamName>${OriginStreamName}</OutputStreamName>
 							<Profiles>
 								<Profile>bypass</Profile>
 								<Profile>opus</Profile>
@@ -143,22 +145,22 @@
 						<HLS>
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
-							<CrossDomain>
+							<CrossDomains>
 								<Url>*</Url>
-							</CrossDomain>
+							</CrossDomains>
 						</HLS>
 						<DASH>
 							<SegmentDuration>5</SegmentDuration>
 							<SegmentCount>3</SegmentCount>
-							<CrossDomain>
+							<CrossDomains>
 								<Url>*</Url>
-							</CrossDomain>
+							</CrossDomains>
 						</DASH>
 						<LLDASH>
 							<SegmentDuration>5</SegmentDuration>
-							<CrossDomain>
+							<CrossDomains>
 								<Url>*</Url>
-							</CrossDomain>
+							</CrossDomains>
 						</LLDASH>
 					</Publishers>
 				</Application>

@@ -13,14 +13,15 @@
 
 namespace ov
 {
+	// Url is immutable class
 	class Url
 	{
 	public:
 		static ov::String Encode(const ov::String &value);
 		static ov::String Decode(const ov::String &value);
 
-		// <scheme>://<domain>[:<port>][/<path/to/resource>][?<query string>]
-		static std::shared_ptr<const Url> Parse(const std::string &url, bool make_query_map = false);
+		// <scheme>://<host>[:<port>][/<path/to/resource>][?<query string>]
+		static std::shared_ptr<Url> Parse(const ov::String &url);
 
 		const ov::String &Source() const
 		{
@@ -32,9 +33,14 @@ namespace ov
 			return _scheme;
 		}
 
-		const ov::String &Domain() const
+		const ov::String &Host() const
 		{
-			return _domain;
+			return _host;
+		}
+
+		void SetPort(uint32_t port)
+		{
+			_port = port;
 		}
 
 		const uint32_t &Port() const
@@ -62,29 +68,67 @@ namespace ov
 			return _file;
 		}
 
+		bool HasQueryString() const
+		{
+			return _has_query_string;
+		}
+
 		const ov::String &Query() const
 		{
+			ParseQueryIfNeeded();
 			return _query_string;
+		}
+
+		const bool HasQueryKey(ov::String key) const
+		{
+			ParseQueryIfNeeded();
+			if(_query_map.find(key) == _query_map.end())
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		const ov::String GetQueryValue(ov::String key) const
+		{
+			if(HasQueryKey(key) == false)
+			{
+				return "";
+			}
+
+			return Decode(_query_map[key]);
 		}
 
 		const std::map<ov::String, ov::String> &QueryMap() const
 		{
+			ParseQueryIfNeeded();
 			return _query_map;
 		}
+
+		bool PushBackQueryKey(const ov::String &key, const ov::String &value);
+		bool PushBackQueryKey(const ov::String &key);
+		bool RemoveQueryKey(const ov::String &key);
 
 		void Print() const;
 		ov::String ToUrlString(bool include_query_string = true) const;
 		ov::String ToString() const;
 
 	private:
+		void ParseQueryIfNeeded() const;
+
 		// Full URL
 		ov::String _source;
 		ov::String _scheme;
-		ov::String _domain;
-		uint32_t _port;
+		ov::String _host;
+		uint32_t _port = 0;
 		ov::String _path;
+		bool _has_query_string = false;
 		ov::String _query_string;
-		std::map<ov::String, ov::String> _query_map;
+		// To reduce the cost of parsing the query map, parsing the query only when Query() or QueryMap() is called
+		mutable bool _query_parsed = false;
+		mutable std::mutex _query_map_mutex;
+		mutable std::map<ov::String, ov::String> _query_map;
 
 		// Valid for URLs of the form: <scheme>://<domain>[:<port>]/<app>/<stream>[<file>][?<query string>]
 		ov::String _app;

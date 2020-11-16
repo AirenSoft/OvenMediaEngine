@@ -12,22 +12,31 @@
 
 namespace cfg
 {
-	struct RtmpProvider : public Provider
+	namespace vhost
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Rtmp)
-
-		CFG_DECLARE_GETTER_OF(IsBlockDuplicateStreamName, _is_block_duplicate_stream_name)
-
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			Provider::MakeParseList();
+			namespace pvd
+			{
+				struct RtmpProvider : public Provider
+				{
+					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Rtmp)
 
-			RegisterValue<Optional>("BlockDuplicateStreamName", &_is_block_duplicate_stream_name);
-		}
+					CFG_DECLARE_GETTER_OF(IsBlockDuplicateStreamName, _is_block_duplicate_stream_name)
 
-		// true: block(disconnect) new incoming stream
-		// false: don't block new incoming stream
-		bool _is_block_duplicate_stream_name = true;
-	};
+				protected:
+					void MakeParseList() override
+					{
+						Provider::MakeParseList();
+
+						RegisterValue<Optional>("BlockDuplicateStreamName", &_is_block_duplicate_stream_name);
+					}
+
+					// true: block(disconnect) new incoming stream
+					// false: don't block new incoming stream
+					bool _is_block_duplicate_stream_name = true;
+				};
+			}  // namespace pvd
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg

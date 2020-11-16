@@ -14,6 +14,8 @@
 #include "stream.h"
 #include "provider_private.h"
 
+#include <orchestrator/orchestrator.h>
+
 namespace pvd
 {
 	Provider::Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
@@ -82,7 +84,7 @@ namespace pvd
 					{
 						// This provider is diabled
 						logti("%s provider is disabled in %s application, so it was not created", 
-								ov::Converter::ToString(GetProviderType()).CStr(), app_info.GetName().CStr());
+								::StringFromProviderType(GetProviderType()).CStr(), app_info.GetName().CStr());
 						return true;
 					}
 				}
@@ -144,7 +146,7 @@ namespace pvd
 				}
 			}
 
-			logte("%s provider hasn't the %s application.", ov::Converter::ToString(GetProviderType()).CStr(), app_info.GetName().CStr());
+			logte("%s provider hasn't the %s application.", ::StringFromProviderType(GetProviderType()).CStr(), app_info.GetName().CStr());
 			return false;
 		}
 
@@ -164,7 +166,7 @@ namespace pvd
 		bool result = OnDeleteProviderApplication(application);
 		if(result == false)
 		{
-			logte("Could not delete [%s] the application of the %s provider", app_info.GetName().CStr(), ov::Converter::ToString(GetProviderType()).CStr());
+			logte("Could not delete [%s] the application of the %s provider", app_info.GetName().CStr(), ::StringFromProviderType(GetProviderType()).CStr());
 			return false;
 		}
 
@@ -222,5 +224,66 @@ namespace pvd
 		}
 
 		return nullptr;
+	}
+
+	CheckSignatureResult Provider::HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy)
+	{
+		auto orchestrator = ocst::Orchestrator::GetInstance();
+		auto &server_config = GetServerConfig();
+		auto vhost_name = orchestrator->GetVhostNameFromDomain(request_url->Host());
+
+		if (vhost_name.IsEmpty())
+		{
+			logte("Could not resolve the domain: %s", request_url->Host().CStr());
+			return CheckSignatureResult::Error;
+		}
+
+		// TODO(Dimiden) : Modify below codes
+		// GetVirtualHostByName is deprecated so blow codes are insane, later it will be modified.
+		auto vhost_list = server_config.GetVirtualHostList();
+		for (const auto &vhost_item : vhost_list)
+		{
+			if (vhost_item.GetName() != vhost_name)
+			{
+				continue;
+			}
+
+			// Handle SignedPolicy if needed
+			auto &signed_policy_config = vhost_item.GetSignedPolicy();
+			if (!signed_policy_config.IsParsed())
+			{
+				// The vhost doesn't use the SignedPolicy  feature.
+				return CheckSignatureResult::Off;
+			}
+
+			if(signed_policy_config.IsEnabledProvider(GetProviderType()) == false)
+			{
+				// This publisher turned off the SignedPolicy function
+				return CheckSignatureResult::Off;
+			}
+
+			auto policy_query_key_name = signed_policy_config.GetPolicyQueryKeyName();
+			auto signature_query_key_name = signed_policy_config.GetSignatureQueryKeyName();
+			auto secret_key = signed_policy_config.GetSecretKey();
+
+			signed_policy = SignedPolicy::Load(client_address->ToString(), request_url->ToUrlString(), policy_query_key_name, signature_query_key_name, secret_key);
+			if(signed_policy == nullptr)
+			{
+				// Probably this doesn't happen
+				logte("Could not load SingedToken");
+				return CheckSignatureResult::Error;
+			}
+
+			if(signed_policy->GetErrCode() != SignedPolicy::ErrCode::PASSED)
+			{
+				return CheckSignatureResult::Fail;
+			}
+
+			return CheckSignatureResult::Pass;
+		}
+
+		// Probably this doesn't happen
+		logte("Could not find VirtualHost (%s)", vhost_name);
+		return CheckSignatureResult::Error;
 	}
 }

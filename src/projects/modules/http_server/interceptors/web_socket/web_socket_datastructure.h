@@ -11,6 +11,7 @@
 #include "../../http_datastructure.h"
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <modules/physical_port/physical_port_observer.h>
 
 #include <functional>
 
@@ -120,4 +121,4 @@ class WebSocketFrame;
 typedef std::function<HttpInterceptorResult(const std::shared_ptr<WebSocketClient> &ws_client)> WebSocketConnectionHandler;
 typedef std::function<HttpInterceptorResult(const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const WebSocketFrame> &message)> WebSocketMessageHandler;
 typedef std::function<void(const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const ov::Error> &error)> WebSocketErrorHandler;
-typedef std::function<void(const std::shared_ptr<WebSocketClient> &ws_client)> WebSocketCloseHandler;
+typedef std::function<void(const std::shared_ptr<WebSocketClient> &ws_client, PhysicalPortDisconnectReason reason)> WebSocketCloseHandler;

@@ -16,18 +16,19 @@ namespace mon
 		virtual ov::String GetInfoString();
 		virtual void ShowInfo();
 
-		uint32_t GetUnusedTimeSec();
-		const std::chrono::system_clock::time_point& GetLastUpdatedTime();
+		uint32_t GetUnusedTimeSec() const;
+		const std::chrono::system_clock::time_point& GetCreatedTime() const;
+		const std::chrono::system_clock::time_point& GetLastUpdatedTime() const;
 		
-		virtual uint64_t GetTotalBytesIn();
-		virtual uint64_t GetTotalBytesOut();
-		virtual uint32_t GetTotalConnections();
-		virtual uint32_t GetMaxTotalConnections();
-		virtual std::chrono::system_clock::time_point GetMaxTotalConnectionsTime();
-		virtual std::chrono::system_clock::time_point GetLastRecvTime();
-		virtual std::chrono::system_clock::time_point GetLastSentTime();
-		virtual uint64_t GetBytesOut(PublisherType type);
-		virtual uint64_t GetConnections(PublisherType type);
+		virtual uint64_t GetTotalBytesIn() const;
+		virtual uint64_t GetTotalBytesOut() const;
+		virtual uint32_t GetTotalConnections() const;
+		virtual uint32_t GetMaxTotalConnections() const;
+		virtual std::chrono::system_clock::time_point GetMaxTotalConnectionsTime() const;
+		virtual std::chrono::system_clock::time_point GetLastRecvTime() const;
+		virtual std::chrono::system_clock::time_point GetLastSentTime() const;
+		virtual uint64_t GetBytesOut(PublisherType type) const;
+		virtual uint64_t GetConnections(PublisherType type) const;
 		
 		virtual void IncreaseBytesIn(uint64_t value);
 		virtual void IncreaseBytesOut(PublisherType type, uint64_t value);

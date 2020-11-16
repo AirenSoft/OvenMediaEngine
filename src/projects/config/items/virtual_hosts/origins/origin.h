@@ -12,19 +12,25 @@
 
 namespace cfg
 {
-	struct OriginsOrigin : public Item
+	namespace vhost
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetLocation, _location)
-		CFG_DECLARE_REF_GETTER_OF(GetPass, _pass)
-
-	protected:
-		void MakeParseList() override
+		namespace orgn
 		{
-			RegisterValue("Location", &_location);
-			RegisterValue("Pass", &_pass);
-		}
+			struct Origin : public Item
+			{
+				CFG_DECLARE_REF_GETTER_OF(GetLocation, _location)
+				CFG_DECLARE_REF_GETTER_OF(GetPass, _pass)
 
-		ov::String _location;
-		Pass _pass;
-	};
+			protected:
+				void MakeParseList() override
+				{
+					RegisterValue("Location", &_location);
+					RegisterValue("Pass", &_pass);
+				}
+
+				ov::String _location;
+				Pass _pass;
+			};
+		}  // namespace orgn
+	}	   // namespace vhost
 }  // namespace cfg

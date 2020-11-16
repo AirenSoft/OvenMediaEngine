@@ -12,8 +12,17 @@
 
 namespace cfg
 {
-	struct RtspProvider : public Provider
+	namespace vhost
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Rtsp)
-	};
-}
+		namespace app
+		{
+			namespace pvd
+			{
+				struct RtspProvider : public Provider
+				{
+					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Rtsp)
+				};
+			}  // namespace pvd
+		}	   // namespace app
+	}		   // namespace vhost
+}  // namespace cfg

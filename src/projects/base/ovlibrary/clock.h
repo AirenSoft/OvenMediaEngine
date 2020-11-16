@@ -11,6 +11,11 @@ namespace ov
 		Clock() = delete;
 		~Clock() = delete;
 
+		static uint64_t NowMSec()
+		{
+			return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		}
+
 		// yy:mm:dd HH:MM:SS.ms
 		static ov::String Now()
 		{
@@ -19,11 +24,16 @@ namespace ov
 			auto tp_sec = std::chrono::system_clock::from_time_t(ttime_t);
 			auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - tp_sec);
 
-			std::tm * ttm = localtime(&ttime_t);
+			struct tm lt;
+			if(localtime_r(&ttime_t, &lt) == nullptr)
+			{
+				return "";
+			}
+
 			char date_time_format[] = "%Y.%m.%d-%H.%M.%S";
 			char time_str[] = "yyyy.mm.dd.HH-MM.SS.fff";
 
-			strftime(time_str, strlen(time_str), date_time_format, ttm);
+			strftime(time_str, strlen(time_str), date_time_format, &lt);
 
 			ov::String result;
 			result.AppendFormat("%s.%u", time_str, ms.count());

@@ -12,16 +12,22 @@
 
 namespace cfg
 {
-	struct Applications : public Item
+	namespace vhost
 	{
-		CFG_DECLARE_REF_GETTER_OF(GetApplicationList, _application_list)
-
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			RegisterValue<Optional>("Application", &_application_list);
-		}
+			struct Applications : public Item
+			{
+				CFG_DECLARE_REF_GETTER_OF(GetApplicationList, _application_list)
 
-		std::vector<Application> _application_list;
-	};
+			protected:
+				void MakeParseList() override
+				{
+					RegisterValue<Optional>("Application", &_application_list);
+				}
+
+				std::vector<Application> _application_list;
+			};
+		}  // namespace app
+	}	   // namespace vhost
 }  // namespace cfg

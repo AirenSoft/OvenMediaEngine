@@ -6,15 +6,17 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include <base/ovlibrary/converter.h>
 #include "item.h"
-#include "config_private.h"
 
+#include <base/ovlibrary/converter.h>
 #include <unistd.h>
+
 #include <regex>
 
+#include "config_private.h"
+
 #if defined(__APPLE__)
-#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+#	define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
 #endif
 
 namespace cfg
@@ -42,7 +44,39 @@ namespace cfg
 		return indent_string;
 	}
 
-	static ov::String GetValueTypeAsString(ValueType type)
+	static const char *StringFromJsonValueType(Json::ValueType type)
+	{
+		switch (type)
+		{
+			case Json::ValueType::nullValue:
+				return "null";
+
+			case Json::ValueType::intValue:
+				return "int";
+
+			case Json::ValueType::uintValue:
+				return "uint";
+
+			case Json::ValueType::realValue:
+				return "real";
+
+			case Json::ValueType::stringValue:
+				return "string";
+
+			case Json::ValueType::booleanValue:
+				return "boolean";
+
+			case Json::ValueType::arrayValue:
+				return "array";
+
+			case Json::ValueType::objectValue:
+				return "object";
+		}
+
+		return "unknown";
+	}
+
+	static const char *StringFromValueType(ValueType type)
 	{
 		switch (type)
 		{
@@ -95,7 +129,7 @@ namespace cfg
 		std::swap(_tag_name, item._tag_name);
 		std::swap(_parse_list, item._parse_list);
 		std::swap(_parent, item._parent);
-		
+
 		_parsed = item._parsed;
 	}
 
@@ -207,9 +241,36 @@ namespace cfg
 		return false;
 	}
 
-	bool Item::Parse(const ov::String &file_name, const ov::String &tag_name)
+	std::shared_ptr<ov::Error> Item::Parse(const ov::String &file_name, const ov::String &tag_name)
 	{
-		return ParseFromFile("", file_name, tag_name, 0) != ParseResult::Error;
+		std::shared_ptr<ov::Error> error;
+
+		if (ParseFromFile("", file_name, tag_name, 0, &error) != ParseResult::Error)
+		{
+			OV_ASSERT2(error == nullptr);
+		}
+		else
+		{
+			OV_ASSERT2(error != nullptr);
+		}
+
+		return error;
+	}
+
+	std::shared_ptr<ov::Error> Item::Parse(const ov::String &base_file_name, const Json::Value &json, const ov::String &tag_name)
+	{
+		std::shared_ptr<ov::Error> error;
+
+		if (ParseFromJson(base_file_name, json, tag_name, 0, tag_name, &error) != ParseResult::Error)
+		{
+			OV_ASSERT2(error == nullptr);
+		}
+		else
+		{
+			OV_ASSERT2(error != nullptr);
+		}
+
+		return error;
 	}
 
 	bool Item::IsParsed() const
@@ -234,7 +295,7 @@ namespace cfg
 		return false;
 	}
 
-	Item::ParseResult Item::ParseFromFile(const ov::String &base_file_name, ov::String file_name, const ov::String &tag_name, int indent)
+	Item::ParseResult Item::ParseFromFile(const ov::String &base_file_name, ov::String file_name, const ov::String &tag_name, int indent, std::shared_ptr<ov::Error> *error)
 	{
 		_tag_name = tag_name;
 
@@ -248,17 +309,19 @@ namespace cfg
 
 		if (result == false)
 		{
-			logte("Could not read the file: %s (reason: %s)", file_name.CStr(), result.description());
+			*error = ov::Error::CreateError(
+				"Config",
+				"Could not read the file: %s (reason: %s)", file_name.CStr(), result.description());
+
 			return ParseResult::Error;
 		}
 
-		return ParseFromNode(file_name, document.child(_tag_name), tag_name, indent);
+		return ParseFromNode(file_name, document.child(_tag_name), tag_name, indent, error);
 	}
 
-#define CONFIG_DECLARE_PROCESSOR(value_type, type, converter, process_value)                                                                                                 \
-	case value_type:                                                                                                                                                         \
-	{                                                                                                                                                                        \
-		auto target = dynamic_cast<Value<type> *>(parse_item.value.get());                                                                                                   \
+#define CONFIG_DECLARE_PROCESSOR(value_type, native_type, converter, process_value)                                                                                          \
+	case value_type: {                                                                                                                                                       \
+		auto target = dynamic_cast<Value<native_type> *>(parse_item.value.get());                                                                                            \
                                                                                                                                                                              \
 		if ((target != nullptr) && (target->GetTarget() != nullptr))                                                                                                         \
 		{                                                                                                                                                                    \
@@ -286,7 +349,7 @@ namespace cfg
 	}
 
 	// node는 this 레벨에 준하는 항목임. 즉, node.name() == _tag_name.CStr() 관계가 성립
-	Item::ParseResult Item::ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent)
+	Item::ParseResult Item::ParseFromNode(const ov::String &base_file_name, const pugi::xml_node &node, const ov::String &tag_name, int indent, std::shared_ptr<ov::Error> *error)
 	{
 		_tag_name = tag_name;
 		_parsed = false;
@@ -302,26 +365,32 @@ namespace cfg
 			logtd("%s<%s> Include file found: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), inc.value());
 
 			std::vector<ov::String> file_list;
-			auto error = ov::PathManager::GetFileList(base_file_name, inc.value(), &file_list);
+			auto path_error = ov::PathManager::GetFileList(base_file_name, inc.value(), &file_list);
 
-			if (error != nullptr)
+			if (path_error != nullptr)
 			{
-				logte("%s<%s> Could not obtain file list: base_file: %s, include pattern: %s (%s)", MakeIndentString(indent).CStr(), _tag_name.CStr(), base_file_name.CStr(), inc.value(), error->ToString().CStr());
+				*error = ov::Error::CreateError(
+					"Config",
+					"<%s> Could not obtain file list: base_file: %s, include pattern: %s (%s)", _tag_name.CStr(), base_file_name.CStr(), inc.value(), path_error->ToString().CStr());
 				return ParseResult::Error;
 			}
 
 			if (file_list.size() == 0)
 			{
-				logte("%s<%s> There is no file: base_file: %s, include pattern: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), base_file_name.CStr(), inc.value());
+				*error = ov::Error::CreateError(
+					"Config",
+					"<%s> There is no file: base_file: %s, include pattern: %s", _tag_name.CStr(), base_file_name.CStr(), inc.value());
 				return ParseResult::Error;
 			}
 			else if (file_list.size() > 1)
 			{
-				logte("%s<%s> Too many files found for single element: base_file: %s, include pattern: %s (%zu files found)", MakeIndentString(indent).CStr(), _tag_name.CStr(), base_file_name.CStr(), inc.value(), file_list.size());
+				*error = ov::Error::CreateError(
+					"Config",
+					"<%s> Too many files found for single element: base_file: %s, include pattern: %s (%zu files found)", _tag_name.CStr(), base_file_name.CStr(), inc.value(), file_list.size());
 				return ParseResult::Error;
 			}
 
-			auto result = ParseFromFile(base_file_name, inc.value(), tag_name, indent + 1);
+			auto result = ParseFromFile(base_file_name, inc.value(), tag_name, indent + 1, error);
 
 			if (result == ParseResult::Error)
 			{
@@ -343,7 +412,9 @@ namespace cfg
 
 				if (item == _parse_list.end())
 				{
-					logte("Unknown configuration found: %s", GetSelector(child).CStr());
+					*error = ov::Error::CreateError(
+						"Config",
+						"Unknown configuration found: %s", GetSelector(child).CStr());
 					return ParseResult::Error;
 				}
 			}
@@ -358,7 +429,9 @@ namespace cfg
 
 			if (value == nullptr)
 			{
-				logte("%s<%s> Cannot obtain value for <%s> (this is a bug)", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
+				*error = ov::Error::CreateError(
+					"Config",
+					"<%s> Cannot obtain value for <%s> (this is a bug)", _tag_name.CStr(), name.CStr());
 				return ParseResult::Error;
 			}
 
@@ -393,15 +466,14 @@ namespace cfg
 					CONFIG_DECLARE_PROCESSOR(ValueType::Text, ov::String, , child_node.child_value())
 					CONFIG_DECLARE_PROCESSOR(ValueType::Attribute, ov::String, , attribute.value())
 
-					case ValueType::Element:
-					{
+					case ValueType::Element: {
 						auto target = dynamic_cast<ValueForElementBase *>(value);
 
 						if ((target != nullptr) && (target->GetTarget() != nullptr))
 						{
 							target->GetTarget()->_parent = this;
 
-							result = (target->GetTarget())->ParseFromNode(base_file_name, child_node, name, indent + 1);
+							result = (target->GetTarget())->ParseFromNode(base_file_name, child_node, name, indent + 1, error);
 
 							if (result == ParseResult::Error)
 							{
@@ -421,8 +493,7 @@ namespace cfg
 						break;
 					}
 
-					case ValueType::List:
-					{
+					case ValueType::List: {
 						logtd("%s<%s> Trying to parse item list <%s>...", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
 
 						auto target = dynamic_cast<ValueForListBase *>(value);
@@ -446,13 +517,15 @@ namespace cfg
 									logtd("%s<%s> Include file pattern found: %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), inc.value());
 
 									std::vector<ov::String> file_list;
-									auto error = ov::PathManager::GetFileList(base_file_name, inc.value(), &file_list);
+									auto path_error = ov::PathManager::GetFileList(base_file_name, inc.value(), &file_list);
 
-									if (error != nullptr)
+									if (path_error != nullptr)
 									{
-										logte("%s<%s> Could not obtain file list: base_file: %s, include pattern: %s",
-											  MakeIndentString(indent).CStr(), _tag_name.CStr(),
-											  base_file_name.CStr(), inc.value());
+										*error = ov::Error::CreateError(
+											"Config",
+											"<%s> Could not obtain file list: base_file: %s, include pattern: %s",
+											_tag_name.CStr(),
+											base_file_name.CStr(), inc.value());
 
 										return ParseResult::Error;
 									}
@@ -473,7 +546,7 @@ namespace cfg
 										// strip "base_path" from "file"
 										auto file_name = file.Substring(base_path.GetLength());
 
-										result = i->ParseFromFile(base_file_name, file, name, indent + 1);
+										result = i->ParseFromFile(base_file_name, file, name, indent + 1, error);
 
 										if (result == ParseResult::Error)
 										{
@@ -489,7 +562,7 @@ namespace cfg
 
 									i->_parent = this;
 
-									result = i->ParseFromNode(base_file_name, child_node, name, indent + 1);
+									result = i->ParseFromNode(base_file_name, child_node, name, indent + 1, error);
 
 									if (result == ParseResult::Error)
 									{
@@ -525,7 +598,9 @@ namespace cfg
 			{
 				if (value->DoValidation() == false)
 				{
-					logte("Failed to validate %s.<%s>", GetSelector(node).CStr(), name.CStr());
+					*error = ov::Error::CreateError(
+						"Config",
+						"Failed to validate %s.<%s>", GetSelector(node).CStr(), name.CStr());
 					return ParseResult::Error;
 				}
 
@@ -540,7 +615,422 @@ namespace cfg
 				{
 					logtd("%s<%s> Could not parse node <%s>", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
 
-					logte("%s.<%s> is required. Please check your configuration.", GetSelector(node).CStr(), name.CStr());
+					*error = ov::Error::CreateError(
+						"Config",
+						"%s.<%s> is required. Please check your configuration.", GetSelector(node).CStr(), name.CStr());
+					return ParseResult::Error;
+				}
+			}
+		}
+
+		_parsed = true;
+		return ParseResult::Parsed;
+	}
+
+#define CONFIG_DECLARE_PROCESSOR_FOR_JSON_PREPROCESS(value_type, native_type, type_check, process_value)                              \
+	case value_type: {                                                                                                                \
+		auto target = dynamic_cast<Value<native_type> *>(parse_item.value.get());                                                     \
+                                                                                                                                      \
+		if ((target != nullptr) && (target->GetTarget() != nullptr))                                                                  \
+		{                                                                                                                             \
+			if (process_value.isNull() == false)                                                                                      \
+			{                                                                                                                         \
+				if (type_check)                                                                                                       \
+				{                                                                                                                     \
+					parse_item.is_parsed = true;                                                                                      \
+                                                                                                                                      \
+					*(target->GetTarget()) = Preprocess(base_file_name, value, ov::Converter::ToString(process_value), name, indent); \
+					logtd("%s%s.%s",                                                                                                  \
+						  MakeIndentString(indent).CStr(),                                                                            \
+						  path.CStr(), ToString(&parse_item, 0, true, false).CStr());                                                 \
+					parse_item.from_default = false;                                                                                  \
+				}                                                                                                                     \
+				else                                                                                                                  \
+				{                                                                                                                     \
+					*error = ov::Error::CreateError(                                                                                  \
+						"Config",                                                                                                     \
+						"Invalid type for %s.%s: %s, expected: %s",                                                                   \
+						path.CStr(), name.CStr(),                                                                                     \
+						StringFromJsonValueType(process_value.type()), StringFromValueType(value_type));                              \
+					return ParseResult::Error;                                                                                        \
+				}                                                                                                                     \
+			}                                                                                                                         \
+			else                                                                                                                      \
+			{                                                                                                                         \
+				logtd("%s%s.%s (use default value)",                                                                                  \
+					  MakeIndentString(indent).CStr(),                                                                                \
+					  path.CStr(), ToString(&parse_item, 0, true, false).CStr());                                                     \
+			}                                                                                                                         \
+                                                                                                                                      \
+			result = ParseResult::Parsed;                                                                                             \
+		}                                                                                                                             \
+		else                                                                                                                          \
+		{                                                                                                                             \
+			*error = ov::Error::CreateError("Config", "Internal server error");                                                       \
+			OV_ASSERT2(false);                                                                                                        \
+			return ParseResult::Error;                                                                                                \
+		}                                                                                                                             \
+                                                                                                                                      \
+		break;                                                                                                                        \
+	}
+
+#define CONFIG_DECLARE_PROCESSOR_FOR_JSON(value_type, native_type, type_check, converter, process_value) \
+	case value_type: {                                                                                   \
+		auto target = dynamic_cast<Value<native_type> *>(parse_item.value.get());                        \
+                                                                                                         \
+		if ((target != nullptr) && (target->GetTarget() != nullptr))                                     \
+		{                                                                                                \
+			if (process_value.isNull() == false)                                                         \
+			{                                                                                            \
+				if (type_check)                                                                          \
+				{                                                                                        \
+					parse_item.is_parsed = true;                                                         \
+                                                                                                         \
+					*(target->GetTarget()) = converter(process_value);                                   \
+					logtd("%s%s.%s",                                                                     \
+						  MakeIndentString(indent).CStr(),                                               \
+						  path.CStr(), ToString(&parse_item, 0, true, false).CStr());                    \
+					parse_item.from_default = false;                                                     \
+				}                                                                                        \
+				else                                                                                     \
+				{                                                                                        \
+					*error = ov::Error::CreateError(                                                     \
+						"Config",                                                                        \
+						"Invalid type for %s.%s: %s, expected: %s",                                      \
+						path.CStr(), name.CStr(),                                                        \
+						StringFromJsonValueType(process_value.type()), StringFromValueType(value_type)); \
+					return ParseResult::Error;                                                           \
+				}                                                                                        \
+			}                                                                                            \
+			else                                                                                         \
+			{                                                                                            \
+				logtd("%s%s.%s (use default value)",                                                     \
+					  MakeIndentString(indent).CStr(),                                                   \
+					  path.CStr(), ToString(&parse_item, 0, true, false).CStr());                        \
+			}                                                                                            \
+                                                                                                         \
+			result = ParseResult::Parsed;                                                                \
+		}                                                                                                \
+		else                                                                                             \
+		{                                                                                                \
+			*error = ov::Error::CreateError("Config", "Internal server error");                          \
+			OV_ASSERT2(false);                                                                           \
+			return ParseResult::Error;                                                                   \
+		}                                                                                                \
+                                                                                                         \
+		break;                                                                                           \
+	}
+
+	Item::ParseResult Item::ParseFromJson(const ov::String &base_file_name, const Json::Value &json, const ov::String &tag_name, int indent, ov::String path, std::shared_ptr<ov::Error> *error)
+	{
+		_tag_name = tag_name;
+		_parsed = false;
+
+		MakeParseList();
+
+		logtd("%s\"%s\" Trying to parse JSON (this = %p)...", MakeIndentString(indent).CStr(), _tag_name.CStr(), this);
+
+		// Check for invalid JSON values
+		{
+			if (json.isObject())
+			{
+				for (auto child = json.begin(); child != json.end(); ++child)
+				{
+					auto name = child.name();
+
+					if ((name.empty() == false) && (name[0] == '$'))
+					{
+						// This value is an attribute
+						continue;
+					}
+
+					auto item = std::find_if(_parse_list.begin(), _parse_list.end(), [&](const ParseItem &item) -> bool {
+						return item.name == name.c_str();
+					});
+
+					if (item == _parse_list.end())
+					{
+						*error = ov::Error::CreateError(
+							"Config",
+							"Unknown configuration found: %s.%s", path.CStr(), name.c_str());
+						return ParseResult::Error;
+					}
+				}
+			}
+		}
+
+		// Parse the items from JSON value
+		for (auto &parse_item : _parse_list)
+		{
+			auto name = parse_item.name;
+			ValueBase *value = parse_item.value.get();
+			auto result = ParseResult::NotParsed;
+
+			if (value == nullptr)
+			{
+				// If this happened, it's a bug
+				*error = ov::Error::CreateError(
+					"Config",
+					"\"%s\" Cannot obtain value for \"%s\"", _tag_name.CStr(), name.CStr());
+				OV_ASSERT2(false);
+				return ParseResult::Error;
+			}
+
+			Json::Value child_json;
+
+			switch (value->GetType())
+			{
+				case ValueType::Text:
+					child_json = json;
+					break;
+
+				case ValueType::Attribute:
+					name.Prepend("$");
+
+					if (json.isObject())
+					{
+						child_json = json.get(name, Json::nullValue);
+					}
+					else
+					{
+						if (value->IsOptional())
+						{
+							child_json = Json::nullValue;
+						}
+						else
+						{
+							*error = ov::Error::CreateError(
+								"Config",
+								"Invalid type for %s.%s: %s, expected: %s",
+								path.CStr(), name.CStr(),
+								StringFromJsonValueType(json.type()), StringFromValueType(value->GetType()));
+							return ParseResult::Error;
+						}
+					}
+					break;
+
+				case ValueType::List:
+					if (json.isArray())
+					{
+						// Child JSONs are directly referenced in array form
+						//
+						// For example,
+						//
+						// XML:
+						// <IceCandidates>
+						//    <IceCandidate>*:10006-10010/udp</IceCandidate>
+						// </IceCandidates>
+						// => Both of IceCandidates/IceCandidate are ValueType::Element
+						//
+						// JSON:
+						// {
+						//     "IceCandidates": [ "*:10006-10010/udp" ]
+						// }
+						child_json = json;
+					}
+					else if (json.isObject())
+					{
+						child_json = json.get(name.CStr(), Json::nullValue);
+					}
+					else
+					{
+						*error = ov::Error::CreateError(
+							"Config",
+							"Invalid type for %s.%s: %s, expected: %s",
+							path.CStr(), name.CStr(),
+							StringFromJsonValueType(json.type()), StringFromValueType(value->GetType()));
+						return ParseResult::Error;
+					}
+					break;
+
+				default:
+					
+					if (json.isObject() == false)
+					{
+						*error = ov::Error::CreateError(
+							"Config",
+							"Invalid type for %s.%s: %s, expected: %s",
+							path.CStr(), name.CStr(),
+							StringFromJsonValueType(json.type()), StringFromValueType(value->GetType()));
+						return ParseResult::Error;
+					}
+					child_json = json.get(name, Json::nullValue);
+					break;
+			}
+
+			if (child_json.isNull() == false)
+			{
+				switch (value->GetType())
+				{
+					CONFIG_DECLARE_PROCESSOR_FOR_JSON(ValueType::Integer, int, child_json.isIntegral(), ov::Converter::ToInt32, child_json)
+					CONFIG_DECLARE_PROCESSOR_FOR_JSON(ValueType::Boolean, bool, child_json.isBool(), ov::Converter::ToBool, child_json)
+					CONFIG_DECLARE_PROCESSOR_FOR_JSON(ValueType::Float, float, child_json.isDouble(), ov::Converter::ToFloat, child_json)
+					CONFIG_DECLARE_PROCESSOR_FOR_JSON_PREPROCESS(ValueType::String, ov::String, child_json.isString(), child_json)
+					CONFIG_DECLARE_PROCESSOR_FOR_JSON_PREPROCESS(ValueType::Text, ov::String, child_json.isString(), child_json)
+					CONFIG_DECLARE_PROCESSOR_FOR_JSON_PREPROCESS(ValueType::Attribute, ov::String, child_json.isString(), child_json)
+
+					case ValueType::Element: {
+						auto target = dynamic_cast<ValueForElementBase *>(value);
+						auto item_target = target->GetTarget();
+
+						if ((target != nullptr) && (item_target != nullptr))
+						{
+							item_target->_parent = this;
+
+							if (child_json.isObject() == false)
+							{
+								// Check if the child_json is a processable type
+								if (child_json.isString())
+								{
+									// Give a change to parse the child_json as ValueType::Text
+									//
+									// For example,
+									//
+									// XML:
+									// <RTMP>
+									//    <Port>80</Port>
+									// </RTMP>
+									// => Port is ValueType::Elemet
+									//
+									// JSON:
+									// { "RTMP": {"Port": "80"} }
+									// => This is the same configuration, but Port is a string
+								}
+								else if (child_json.isArray())
+								{
+									// Give a change to parse the child_json as ValueType::List
+									//
+									// For example,
+									//
+									// XML:
+									// <IceCandidates>
+									//    <IceCandidate>*:10006-10010/udp</IceCandidate>
+									// </IceCandidates>
+									// => Both of IceCandidates/IceCandidate are ValueType::Element
+									//
+									// JSON:
+									// {
+									//     "IceCandidates": [ "*:10006-10010/udp" ]
+									// }
+									// => This is the same configuration, but IceCandiates is a list of string
+								}
+								else
+								{
+									*error = ov::Error::CreateError(
+										"Config",
+										"Invalid type for %s.%s: %s, expected: %s",
+										path.CStr(), name.CStr(),
+										StringFromJsonValueType(child_json.type()), StringFromJsonValueType(Json::ValueType::objectValue));
+
+									return ParseResult::Error;
+								}
+							}
+
+							result = item_target->ParseFromJson(base_file_name, child_json, name, indent + 1, path + "." + name, error);
+
+							if (result == ParseResult::Error)
+							{
+								return result;
+							}
+
+							parse_item.is_parsed = (result == ParseResult::Parsed);
+						}
+						else
+						{
+							OV_ASSERT2(false);
+							return ParseResult::Error;
+						}
+
+						logtd("%s\"%s\" \"%s\" = %s", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(), "{ ... }");
+
+						break;
+					}
+
+					case ValueType::List: {
+						logtd("%s\"%s\" Trying to parse item list \"%s\"...", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
+
+						auto target = dynamic_cast<ValueForListBase *>(value);
+
+						if ((target != nullptr) && (target->GetTarget() != nullptr))
+						{
+							// clear the list
+							target->Clear();
+
+							if (child_json.isArray() == false)
+							{
+								*error = ov::Error::CreateError(
+									"Config",
+									"Invalid type for %s.%s: %s, expected: %s",
+									path.CStr(), name.CStr(),
+									StringFromJsonValueType(child_json.type()), StringFromJsonValueType(Json::ValueType::arrayValue));
+
+								return ParseResult::Error;
+							}
+							else
+							{
+								for (auto iterator = child_json.begin(); iterator != child_json.end(); ++iterator)
+								{
+									// child_item = value of iterator
+									auto &child_item = *iterator;
+
+									auto i = target->Create();
+
+									i->_parent = this;
+
+									result = i->ParseFromJson(base_file_name, child_item, name, indent + 1, path + "." + name, error);
+
+									if (result == ParseResult::Error)
+									{
+										return result;
+									}
+
+									parse_item.is_parsed = (result == ParseResult::Parsed);
+
+									logtd("%s<%s> [List<%s>] = %s",
+										  MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr(),
+										  ov::String::FormatString("{ %zu items }", target->GetList().size()).CStr());
+								}
+							}
+						}
+						else
+						{
+							OV_ASSERT2(false);
+							return ParseResult::Error;
+						}
+
+						break;
+					}
+
+					case ValueType::Unknown:
+						OV_ASSERT2(false);
+						return ParseResult::Error;
+				}
+			}
+
+			if (result == ParseResult::Parsed)
+			{
+				if (value->DoValidation() == false)
+				{
+					*error = ov::Error::CreateError(
+						"Config",
+						"Failed to validate %s.%s", path.CStr(), name.CStr());
+					return ParseResult::Error;
+				}
+
+				parse_item.from_default = false;
+			}
+
+			// Check parsed from include file
+			if (_parsed == false)
+			{
+				// It may parsed from XML, not include file
+				if ((value->IsOptional() == false) && (result != ParseResult::Parsed))
+				{
+					logtd("%s\"%s\" Could not parse JSON \"%s\"", MakeIndentString(indent).CStr(), _tag_name.CStr(), name.CStr());
+
+					*error = ov::Error::CreateError(
+						"Config",
+						"%s.%s is required. Please check your configuration.", path.CStr(), name.CStr());
 					return ParseResult::Error;
 				}
 			}
@@ -718,22 +1208,19 @@ namespace cfg
 
 		switch (value->GetType())
 		{
-			case ValueType::Integer:
-			{
+			case ValueType::Integer: {
 				auto target = dynamic_cast<Value<int> *>(value);
 				str = (target != nullptr) ? ov::String::FormatString("%d", *(target->GetTarget())) : "(null)";
 				break;
 			}
 
-			case ValueType::Boolean:
-			{
+			case ValueType::Boolean: {
 				auto target = dynamic_cast<Value<bool> *>(value);
 				str = (target != nullptr) ? (*(target->GetTarget()) ? "true" : "false") : "(null)";
 				break;
 			}
 
-			case ValueType::Float:
-			{
+			case ValueType::Float: {
 				auto target = dynamic_cast<Value<float> *>(value);
 				str = (target != nullptr) ? ov::String::FormatString("%f", *(target->GetTarget())) : "(null)";
 				break;
@@ -741,22 +1228,19 @@ namespace cfg
 
 			case ValueType::String:
 			case ValueType::Attribute:
-			case ValueType::Text:
-			{
+			case ValueType::Text: {
 				auto target = dynamic_cast<Value<ov::String> *>(value);
 				str = (target != nullptr) ? *(target->GetTarget()) : "(null)";
 				break;
 			}
 
-			case ValueType::Element:
-			{
+			case ValueType::Element: {
 				auto target = dynamic_cast<ValueForElementBase *>(value);
 				str = (target != nullptr) ? target->GetTarget()->ToString(indent, exclude_default) : "(null)";
 				break;
 			}
 
-			case ValueType::List:
-			{
+			case ValueType::List: {
 				auto target = dynamic_cast<ValueForListBase *>(value);
 
 				ov::String indent_string = MakeIndentString(indent + 1);
@@ -806,7 +1290,7 @@ namespace cfg
 			value->GetType() == ValueType::List ? "List<" : "",
 			parse_item->name.CStr(),
 			value->GetType() == ValueType::List ? ">" : "",
-			GetValueTypeAsString(value->GetType()).CStr(),
+			StringFromValueType(value->GetType()),
 			value->IsOptional() ? ", optional" : "",
 			value->IsNeedToResolvePath() ? ", path" : "",
 			parse_item->is_parsed ? ", parsed" : "",
@@ -814,4 +1298,4 @@ namespace cfg
 			exclude_default ? (parse_item->is_parsed ? str.CStr() : "N/A") : str.CStr(),
 			append_new_line ? "\n" : "");
 	}
-};  // namespace cfg
+};	// namespace cfg

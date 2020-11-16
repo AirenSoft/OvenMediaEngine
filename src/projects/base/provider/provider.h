@@ -10,7 +10,10 @@
 
 #include <base/common_types.h>
 #include <base/mediarouter/media_route_interface.h>
-#include <orchestrator/data_structure.h>
+#include <orchestrator/data_structures/data_structure.h>
+
+#include <modules/signature/signature_common_type.h>
+#include <modules/signature/signed_policy.h>
 
 #include <shared_mutex>
 
@@ -19,7 +22,7 @@ namespace pvd
 	class Application;
 	class Stream;
 	// RTMP Server와 같은 모든 Provider는 다음 Interface를 구현하여 MediaRouterInterface에 자신을 등록한다.
-	class Provider : public OrchestratorModuleInterface
+	class Provider : public ocst::ModuleInterface
 	{
 	public:
 		virtual ProviderType GetProviderType() const = 0;
@@ -36,6 +39,8 @@ namespace pvd
 		std::shared_ptr<Application> GetApplicationById(info::application_id_t app_id);
 		std::shared_ptr<Stream> GetStreamById(info::application_id_t app_id, uint32_t stream_id);
 
+		CheckSignatureResult HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy);
+
 	protected:
 		Provider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 		virtual ~Provider();
@@ -47,7 +52,7 @@ namespace pvd
 		virtual bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) = 0;
 
 		//--------------------------------------------------------------------
-		// Implementation of OrchestratorModuleInterface
+		// Implementation of ModuleInterface
 		//--------------------------------------------------------------------
 		bool OnCreateApplication(const info::Application &app_info) override;
 		bool OnDeleteApplication(const info::Application &app_info) override;

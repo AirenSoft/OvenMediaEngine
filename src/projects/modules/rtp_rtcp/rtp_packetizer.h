@@ -12,8 +12,8 @@ public:
 	RtpPacketizer(std::shared_ptr<RtpRtcpPacketizerInterface> session);
 	~RtpPacketizer();
 
-	void SetVideoCodec(common::MediaCodecId codec_type);
-	void SetAudioCodec(common::MediaCodecId codec_type);
+	void SetVideoCodec(cmn::MediaCodecId codec_type);
+	void SetAudioCodec(cmn::MediaCodecId codec_type);
 	void SetUlpfec(uint8_t _red_payload_type, uint8_t _ulpfec_payload_type);
 	void SetPayloadType(uint8_t payload_type);
 	void SetSSRC(uint32_t ssrc);
@@ -35,7 +35,7 @@ private:
 	bool MarkerBit(FrameType frame_type, int8_t payload_type);
 
 	// Video Packet Sender Interface
-	bool PacketizeVideo(common::MediaCodecId video_type,
+	bool PacketizeVideo(cmn::MediaCodecId video_type,
 	                    FrameType frame_type,
 	                    uint32_t rtp_timestamp,
 	                    const uint8_t *payload_data,
@@ -69,8 +69,8 @@ private:
 
 	UlpfecGenerator _ulpfec_generator;
 
-	common::MediaCodecId		_video_codec_type;
-	common::MediaCodecId		_audio_codec_type;
+	cmn::MediaCodecId		_video_codec_type;
+	cmn::MediaCodecId		_audio_codec_type;
 	std::shared_ptr<RtpPacketizingManager> _packetizer = nullptr;
 
 	uint64_t		_frame_count = 0;

@@ -21,6 +21,7 @@ namespace ov
 
 		static ov::String Stringify(const JsonObject &object);
 		static ov::String Stringify(const ::Json::Value &value);
+		static ov::String Stringify(const ::Json::Value &value, bool prettify);
 
 		static JsonObject Parse(const ov::String &str);
 		static JsonObject Parse(const std::shared_ptr<const Data> &data);

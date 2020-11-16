@@ -15,49 +15,53 @@
 
 namespace cfg
 {
-	template<typename Tport = int>
-	struct Port : public Item
+	namespace cmn
 	{
-	protected:
-		ov::String _port;
-
-		Tport _port_value {};
-		ov::SocketType _socket_type = ov::SocketType::Unknown;
-
-	public:
-		Port() = default;
-		explicit Port(const char *port)
-			: _port(port)
+		template <typename Tport = int>
+		struct Port : public Item
 		{
-		}
+		protected:
+			ov::String _port;
 
-		CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetPort, _port_value)
-		CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetSocketType, _socket_type)
+			Tport _port_value{};
+			ov::SocketType _socket_type = ov::SocketType::Unknown;
 
-	protected:
-		static ov::SocketType GetSocketType(const ov::String &type)
-		{
-			ov::String uppercase_type = type.Trim().UpperCaseString();
-
-			if (uppercase_type == "TCP")
+		public:
+			Port() = default;
+			explicit Port(const char *port)
+				: _port(port)
 			{
-				return ov::SocketType::Tcp;
-			}
-			else if (uppercase_type == "UDP")
-			{
-				return ov::SocketType::Udp;
-			}
-			else if (uppercase_type == "SRT")
-			{
-				return ov::SocketType::Srt;
 			}
 
-			return ov::SocketType::Unknown;
-		}
+			CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetPort, _port_value)
+			CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetPortString, _port)
+			CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetSocketType, _socket_type)
 
-		static bool IsValidPort(int port)
-		{
-			return (port > 0) && (port <= 65535);
-		}
-	};
+		protected:
+			static ov::SocketType GetSocketType(const ov::String &type)
+			{
+				ov::String uppercase_type = type.Trim().UpperCaseString();
+
+				if (uppercase_type == "TCP")
+				{
+					return ov::SocketType::Tcp;
+				}
+				else if (uppercase_type == "UDP")
+				{
+					return ov::SocketType::Udp;
+				}
+				else if (uppercase_type == "SRT")
+				{
+					return ov::SocketType::Srt;
+				}
+
+				return ov::SocketType::Unknown;
+			}
+
+			static bool IsValidPort(int port)
+			{
+				return (port > 0) && (port <= 65535);
+			}
+		};
+	}  // namespace cmn
 }  // namespace cfg

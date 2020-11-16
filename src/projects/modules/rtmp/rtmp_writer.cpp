@@ -12,7 +12,7 @@
 	{
 		auto &track = track_item.second;
 
-		if( track->GetCodecId() == common::MediaCodecId::Opus )
+		if( track->GetCodecId() == cmn::MediaCodecId::Opus )
 			continue;
 
 		auto quality = RtmpTrackInfo::Create();
@@ -55,8 +55,8 @@ RtmpWriter::RtmpWriter() :
 	_format_context(nullptr)
 {
 	av_register_all();
-	av_log_set_callback(RtmpWriter::FFmpegLog);
-	av_log_set_level(AV_LOG_TRACE);
+	// av_log_set_callback(RtmpWriter::FFmpegLog);
+	// av_log_set_level(AV_LOG_TRACE);
 }
 
 RtmpWriter::~RtmpWriter()
@@ -100,7 +100,10 @@ bool RtmpWriter::SetPath(const ov::String path, const ov::String format)
 	int error = avformat_alloc_output_context2(&_format_context, output_format, nullptr, path.CStr());
 	if(error < 0)
 	{
-		logte("Could not create output context. error(%d), path(%s)", error, path.CStr());	
+		char errbuf[256];
+		av_strerror(error, errbuf, sizeof(errbuf));
+
+		logte("Could not create output context. error(%d:%s), path(%s)", error, errbuf, path.CStr());	
 
 		return false;
 	}	
@@ -129,7 +132,11 @@ bool RtmpWriter::Start()
 		int error = avio_open2(&_format_context->pb, _format_context->filename, AVIO_FLAG_WRITE, nullptr, &options);
 		if (error < 0)
 		{
-			logte("Error opening file. error(%d), %s", error, _format_context->filename);
+			char errbuf[256];
+			av_strerror(error, errbuf, sizeof(errbuf));
+
+			logte("Error opening file. error(%d:%s), filename(%s)", error, errbuf, _format_context->filename);
+
 			return false;
 		}
 	}
@@ -144,13 +151,12 @@ bool RtmpWriter::Start()
 
 	if(_format_context->oformat != nullptr)
 	{
-		auto oformat = _format_context->oformat;
+		[[maybe_unused]] auto oformat = _format_context->oformat;
 		logtd("name : %s", oformat->name);	
 		logtd("long_name : %s", oformat->long_name);
 		logtd("mime_type : %s", oformat->mime_type);
 		logtd("audio_codec : %d", oformat->audio_codec);
 		logtd("video_codec : %d", oformat->video_codec);
-		logtd("subtitle_codec : %d", oformat->subtitle_codec);
 	}
 
 	return true;
@@ -162,7 +168,10 @@ bool RtmpWriter::Stop()
 
 	if(_format_context != nullptr)
 	{
-		av_write_trailer(_format_context);
+		if(_format_context->pb != nullptr)
+		{
+			av_write_trailer(_format_context);
+		}
 
 		avformat_close_input(&_format_context);
 
@@ -174,7 +183,7 @@ bool RtmpWriter::Stop()
 	return true;
 }
 
-bool RtmpWriter::AddTrack(common::MediaType media_type, int32_t track_id, std::shared_ptr<RtmpTrackInfo> track_info)
+bool RtmpWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shared_ptr<RtmpTrackInfo> track_info)
 {
 	std::unique_lock<std::mutex> mlock(_lock);
 
@@ -182,17 +191,17 @@ bool RtmpWriter::AddTrack(common::MediaType media_type, int32_t track_id, std::s
 
 	switch(media_type)
 	{
-		case common::MediaType::Video:
+		case cmn::MediaType::Video:
 		{
 			stream = avformat_new_stream(_format_context, nullptr);
 			AVCodecParameters *codecpar = stream->codecpar;
 
 			codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
 			codecpar->codec_id = 
-				(track_info->GetCodecId() == common::MediaCodecId::H264)?AV_CODEC_ID_H264:
-				(track_info->GetCodecId() == common::MediaCodecId::H265)?AV_CODEC_ID_H265:
-				(track_info->GetCodecId() == common::MediaCodecId::Vp8)?AV_CODEC_ID_VP8:
-				(track_info->GetCodecId() == common::MediaCodecId::Vp9)?AV_CODEC_ID_VP9:
+				(track_info->GetCodecId() == cmn::MediaCodecId::H264)?AV_CODEC_ID_H264:
+				(track_info->GetCodecId() == cmn::MediaCodecId::H265)?AV_CODEC_ID_H265:
+				(track_info->GetCodecId() == cmn::MediaCodecId::Vp8)?AV_CODEC_ID_VP8:
+				(track_info->GetCodecId() == cmn::MediaCodecId::Vp9)?AV_CODEC_ID_VP9:
 				AV_CODEC_ID_NONE;		
 				
 			codecpar->bit_rate = track_info->GetBitrate();
@@ -218,21 +227,21 @@ bool RtmpWriter::AddTrack(common::MediaType media_type, int32_t track_id, std::s
 		}
 		break;
 
-		case common::MediaType::Audio:
+		case cmn::MediaType::Audio:
 		{
 			stream = avformat_new_stream(_format_context, nullptr);
 			AVCodecParameters *codecpar = stream->codecpar;
 
 			codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
 			codecpar->codec_id = 
-				(track_info->GetCodecId() == common::MediaCodecId::Aac)?AV_CODEC_ID_AAC:
-				(track_info->GetCodecId() == common::MediaCodecId::Mp3)?AV_CODEC_ID_MP3:
-				(track_info->GetCodecId() == common::MediaCodecId::Opus)?AV_CODEC_ID_OPUS:
+				(track_info->GetCodecId() == cmn::MediaCodecId::Aac)?AV_CODEC_ID_AAC:
+				(track_info->GetCodecId() == cmn::MediaCodecId::Mp3)?AV_CODEC_ID_MP3:
+				(track_info->GetCodecId() == cmn::MediaCodecId::Opus)?AV_CODEC_ID_OPUS:
 				AV_CODEC_ID_NONE;		
 			codecpar->bit_rate = track_info->GetBitrate();
 			codecpar->channels = static_cast<int>(track_info->GetChannel().GetCounts());
-			codecpar->channel_layout = (track_info->GetChannel().GetLayout() == common::AudioChannel::Layout::LayoutMono)?AV_CH_LAYOUT_MONO:
-									   (track_info->GetChannel().GetLayout() == common::AudioChannel::Layout::LayoutStereo)?AV_CH_LAYOUT_STEREO:
+			codecpar->channel_layout = (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutMono)?AV_CH_LAYOUT_MONO:
+									   (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutStereo)?AV_CH_LAYOUT_STEREO:
 									   0; // <- Unknown
 			codecpar->sample_rate = track_info->GetSample().GetRateNum();
 			codecpar->frame_size = 1024;	// TODO: Need to Frame Size
@@ -273,13 +282,16 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 {
 	std::unique_lock<std::mutex> mlock(_lock);
 
+	if(_format_context == nullptr)
+		return false;
+	
 	// Find AVStream and Index;
 	int stream_index = 0;
 
 	auto iter = _track_map.find(track_id);
 	if(iter == _track_map.end())
 	{
-		logtw("There is no track id %d", track_id);
+		// logtw("There is no track id %d", track_id);
 
 		// Without a track, it's not an error. Ignore.
 		return true;
@@ -294,10 +306,8 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 		return false;
 	}
 
-
 	// Find Ouput Track Info
 	auto track_info = _trackinfo_map[track_id];
-	
 
 	// Make avpacket
 	AVPacket pkt = { 0 };
@@ -323,24 +333,25 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	// format(mp4)
 	//	- H264 : Passthrough
 	//	- AAC : to LATM
-
 	if( (stream->codecpar->codec_id == AV_CODEC_ID_AAC) &&
-		(strcmp(_format_context->oformat->name, "flv") == 0 && strcmp(_format_context->oformat->name, "mp4")))
+		(strcmp(_format_context->oformat->name, "flv") == 0 || strcmp(_format_context->oformat->name, "mp4")))
 	{
-		// delete adts header
 		pkt.size = data->GetLength() - 7;
 		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>() + 7;		
 	}
 	else
 	{
-		pkt.size = data->GetLength();
-		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();		
+		pkt.size = data->GetLength() ;
+		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
 	}
 
-	int ret = av_interleaved_write_frame(_format_context, &pkt);	
-	if(ret != 0)
+	int error = av_interleaved_write_frame(_format_context, &pkt);	
+	if(error != 0)
 	{
-		logte("error = %d", ret);
+		char errbuf[256];
+		av_strerror(error, errbuf, sizeof(errbuf));
+
+		logte("Send packet error(%d:%s)", error, errbuf);
 		return false;
 	}
 

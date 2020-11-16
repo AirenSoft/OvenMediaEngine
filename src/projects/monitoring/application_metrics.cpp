@@ -78,6 +78,12 @@ namespace mon
         return true;
     }
 
+    std::map<uint32_t, std::shared_ptr<StreamMetrics>> ApplicationMetrics::GetStreamMetricsList()
+    {
+        std::shared_lock<std::shared_mutex> lock(_map_guard);
+        return _streams;
+    }
+
     std::shared_ptr<StreamMetrics> ApplicationMetrics::GetStreamMetrics(const info::Stream &stream)
     {
         std::shared_lock<std::shared_mutex> lock(_map_guard);

@@ -45,7 +45,7 @@ public:
 		ActPass
 	};
 
-	explicit MediaDescription(const std::shared_ptr<SessionDescription> &session_description);
+	explicit MediaDescription();
 	virtual ~MediaDescription();
 
 	bool FromString(const ov::String &desc) override;
@@ -143,7 +143,5 @@ private:
 	uint32_t _rtx_ssrc = 0;
 	ov::String _cname;
 
-
-	std::shared_ptr<SessionDescription> _session_description;
 	std::vector<std::shared_ptr<PayloadAttr>> _payload_list;
 };

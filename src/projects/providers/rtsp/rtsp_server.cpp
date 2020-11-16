@@ -33,11 +33,11 @@ std::unique_ptr<T> CreateTrack(const RtspServer::StreamTrackInfo *stream_track, 
     }
     switch (media_type)
     {
-    case common::MediaType::Video:
-    case common::MediaType::Audio:
+    case cmn::MediaType::Video:
+    case cmn::MediaType::Audio:
         switch (media_codec)
         {
-        case common::MediaCodecId::H264:
+        case cmn::MediaCodecId::H264:
             {
                 using TrackType = RtpH264Track<T>;
                 auto rtp_h264_track = TrackType::template Create<TrackType>(rtsp_server,
@@ -80,7 +80,7 @@ std::unique_ptr<T> CreateTrack(const RtspServer::StreamTrackInfo *stream_track, 
                 rtp_track.reset(static_cast<T*>(rtp_h264_track.release()));
             }
             break;
-        case common::MediaCodecId::Opus:
+        case cmn::MediaCodecId::Opus:
             {
                 using TrackType = RtpOpusTrack<T>;
                 rtp_track = TrackType::template Create<TrackType>(rtsp_server,
@@ -92,7 +92,7 @@ std::unique_ptr<T> CreateTrack(const RtspServer::StreamTrackInfo *stream_track, 
                     std::forward<Args>(args) ...);
             }
             break;
-        case common::MediaCodecId::Aac:
+        case cmn::MediaCodecId::Aac:
             {
                 using TrackType = RtpAacTrack<T>;
                 auto rtp_aac_track = TrackType::template Create<TrackType>(rtsp_server,

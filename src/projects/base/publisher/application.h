@@ -39,6 +39,8 @@ namespace pub
 		bool PushIncomingPacket(const std::shared_ptr<info::Session> &session_info,
 								const std::shared_ptr<const ov::Data> &data);
 
+		uint32_t GetStreamCount();
+		std::shared_ptr<Stream> GetStreamAt(uint32_t index);
 		std::shared_ptr<Stream> GetStream(uint32_t stream_id);
 		std::shared_ptr<Stream> GetStream(ov::String stream_name);
 

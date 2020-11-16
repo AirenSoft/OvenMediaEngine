@@ -20,7 +20,7 @@
 
 #define HLS_MAX_TEMP_VIDEO_DATA_COUNT (500)
 
-const common::Timebase DEFAULT_TIMEBASE(1, PACKTYZER_DEFAULT_TIMESCALE);
+const cmn::Timebase DEFAULT_TIMEBASE(1, PACKTYZER_DEFAULT_TIMESCALE);
 
 HlsPacketizer::HlsPacketizer(const ov::String &app_name,
 							 const ov::String &stream_name,
@@ -267,7 +267,7 @@ bool HlsPacketizer::SetSegmentData(ov::String file_name,
 								   std::shared_ptr<ov::Data> &data)
 {
 	auto segment_data = std::make_shared<SegmentData>(
-		common::MediaType::Unknown,
+		cmn::MediaType::Unknown,
 		_sequence_number++,
 		file_name,
 		timestamp,

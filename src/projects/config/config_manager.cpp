@@ -8,19 +8,20 @@
 //==============================================================================
 #include "config_manager.h"
 
-#include "items/items.h"
+#include <iostream>
 
 #include "config_logger_loader.h"
 #include "config_private.h"
-
-#include <iostream>
+#include "items/items.h"
 
 namespace cfg
 {
 	ConfigManager::ConfigManager()
 	{
 		// Modify if supported xml version is added or changed
-		_supported_xml["Server"] = 7;
+
+		// Version 7 -> 8
+		_supported_xml["Server"] = 8;
 		_supported_xml["Logger"] = 2;
 	}
 
@@ -47,7 +48,7 @@ namespace cfg
 		logti("Trying to load configurations... (%s)", server_config_path.CStr());
 
 		_server = std::make_shared<cfg::Server>();
-		bool result = _server->Parse(server_config_path, "Server");
+		auto result = _server->Parse(server_config_path, "Server");
 
 		if (IsValidVersion("Server", ov::Converter::ToInt32(_server->GetVersion())) == false)
 		{
@@ -56,7 +57,12 @@ namespace cfg
 
 		_config_path = config_path;
 
-		return result;
+		if (result != nullptr)
+		{
+			logte("%s", result->ToString().CStr());
+		}
+
+		return (result == nullptr);
 	}
 
 	bool ConfigManager::LoadConfigs()
@@ -116,7 +122,7 @@ namespace cfg
 		auto logger_loader = std::make_shared<ConfigLoggerLoader>(logger_config_path);
 		if (logger_loader == nullptr)
 		{
-			logte("Failed to load config Logger.xml");
+			logtc("Failed to load config Logger.xml");
 			return false;
 		}
 
@@ -147,10 +153,10 @@ namespace cfg
 		for (auto iterator = tags.begin(); iterator != tags.end(); ++iterator)
 		{
 			auto name = (*iterator)->GetName();
-			if(ov_log_set_enable(name.CStr(), (*iterator)->GetLevel(), true) == false)
+			if (ov_log_set_enable(name.CStr(), (*iterator)->GetLevel(), true) == false)
 			{
-				logte("Could not set log level for tag: %s", name.CStr());
-				
+				logtc("Could not set log level for tag: %s", name.CStr());
+
 				return false;
 			}
 		}
@@ -175,20 +181,41 @@ namespace cfg
 
 		if (supported_xml == _supported_xml.end())
 		{
-			logte("Cannot find conf XML (%s.xml)", name.CStr());
+			logtc("Cannot find conf XML (%s.xml)", name.CStr());
 			return false;
 		}
 
 		auto supported_version = supported_xml->second;
 
-		if (version != supported_version)
+		if (version == 0)
 		{
-			logte("The version of %s.xml is incorrect (Supported version: %d, XML version: %d). If you have upgraded OME, see misc/conf_examples/%s.xml",
-				  name.CStr(),
-				  supported_version, version,
+			logtc("Unknown configuration found in your XML.",
+				  name.CStr(), version, supported_version);
+
+			logtc("If you have upgraded OME, see misc/conf_examples/%s.xml",
+				  name.CStr());
+		}
+		else if (version != supported_version)
+		{
+			logtc("The version of %s.xml is outdated (Your XML version: %d, Latest version: %d).",
+				  name.CStr(), version, supported_version);
+
+			logtc("If you have upgraded OME, see misc/conf_examples/%s.xml",
 				  name.CStr());
 
-			return false;
+			if ((version == 7) && (supported_version == 8))
+			{
+				logtc("Major Changes (v7 -> v8):");
+				logtc(" - Added <Server>.<Bind>.<Managers>.<API> for setting API binding port");
+				logtc(" - Added <Server>.<API> for setting API server");
+				logtc(" - Added <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<OutputProfiles>");
+				logtc(" - Changed <Server>.<VirtualHosts>.<VirtualHost>.<Domain> to <Host>");
+				logtc(" - Changed <CrossDomain> to <CrossDomains>");
+				logtc(" - Deleted <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Streams>");
+				logtc(" - Deleted <Server>.<VirtualHosts>.<VirtualHost>.<Applications>.<Application>.<Encodes>");
+
+				return false;
+			}
 		}
 
 		return true;

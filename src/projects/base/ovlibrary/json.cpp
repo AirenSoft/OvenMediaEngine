@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "./json.h"
+
 #include "./ovlibrary_private.h"
 
 namespace ov
@@ -18,12 +19,23 @@ namespace ov
 
 	ov::String Json::Stringify(const ::Json::Value &value)
 	{
+		return Stringify(value, false);
+	}
+
+	ov::String Json::Stringify(const ::Json::Value &value, bool prettify)
+	{
 		::Json::StreamWriterBuilder builder;
+
+		if (prettify == false)
+		{
+			builder["indentation"] = "";
+		}
+
 		std::unique_ptr<::Json::StreamWriter> const writer(builder.newStreamWriter());
 
 		std::ostringstream stream;
 
-		if(writer->write(value, &stream) == 0)
+		if (writer->write(value, &stream) == 0)
 		{
 			return String(stream.str().c_str());
 		}
@@ -37,7 +49,7 @@ namespace ov
 
 		auto error = object.Parse(str);
 
-		if(error == nullptr)
+		if (error == nullptr)
 		{
 			return object;
 		}
@@ -53,7 +65,7 @@ namespace ov
 
 		auto error = object.Parse(data);
 
-		if(error == nullptr)
+		if (error == nullptr)
 		{
 			return object;
 		}
@@ -62,4 +74,4 @@ namespace ov
 
 		return JsonObject::NullObject();
 	}
-}
+}  // namespace ov

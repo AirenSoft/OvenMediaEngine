@@ -1,0 +1,36 @@
+//==============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Getroot
+//  Copyright (c) 2020 AirenSoft. All rights reserved.
+//
+//==============================================================================
+#pragma once
+
+#include "enabled_modules.h"
+
+namespace cfg
+{
+	namespace vhost
+	{
+		namespace sig
+		{
+			struct Enables : public Item
+			{
+				CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
+				CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
+
+			protected:
+				void MakeParseList() override
+				{
+					RegisterValue<Optional>("Providers", &_providers);
+					RegisterValue<Optional>("Publishers", &_publishers);
+				}
+
+				EnabledModules _providers;
+				EnabledModules _publishers;
+			};
+		}  // namespace sig
+	}	   // namespace vhost
+}  // namespace cfg

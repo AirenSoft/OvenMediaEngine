@@ -9,6 +9,7 @@
 
 #include "rtc_signalling_server.h"
 
+#include <config/config_manager.h>
 #include <modules/ice/ice.h>
 #include <publishers/webrtc/webrtc_publisher.h>
 
@@ -32,56 +33,37 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	}
 
 	bool result = true;
+	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 
-	// Initialize HTTP server
-	if (address != nullptr)
+	auto manager = HttpServerManager::GetInstance();
+	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer(*address) : nullptr;
+	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer(*tls_address, vhost_list) : nullptr;
+
+	auto web_socket_interceptor = result ? CreateWebSocketInterceptor() : nullptr;
+
+	result = result && ((http_server == nullptr) || http_server->AddInterceptor(web_socket_interceptor));
+	result = result && ((https_server == nullptr) || https_server->AddInterceptor(web_socket_interceptor));
+
+	if (result)
 	{
-		_http_server = std::make_shared<HttpServer>();
-	}
-
-	// Initialize HTTPS server
-	if (tls_address != nullptr)
-	{
-		// TLS is enabled
-		_https_server = std::make_shared<HttpsServer>();
-
-		auto vhost_list = Orchestrator::GetInstance()->GetVirtualHostList();
-		_https_server->SetVirtualHostList(vhost_list);
+		_http_server = http_server;
+		_https_server = https_server;
 	}
 	else
 	{
-		// TLS is disabled
-	}
-
-	result = result && InitializeWebSocketServer();
-
-	result = result && ((_http_server == nullptr) || _http_server->Start(*address));
-	result = result && ((_https_server == nullptr) || _https_server->Start(*tls_address));
-
-	if (result == false)
-	{
 		// Rollback
-		if (_http_server != nullptr)
-		{
-			_http_server->Stop();
-			_http_server = nullptr;
-		}
-
-		if (_https_server != nullptr)
-		{
-			_https_server->Stop();
-			_https_server = nullptr;
-		}
+		manager->ReleaseServer(http_server);
+		manager->ReleaseServer(https_server);
 	}
 
 	return result;
 }
 
-bool RtcSignallingServer::InitializeWebSocketServer()
+std::shared_ptr<WebSocketInterceptor> RtcSignallingServer::CreateWebSocketInterceptor()
 {
-	auto web_socket = std::make_shared<WebSocketInterceptor>();
+	auto interceptor = std::make_shared<WebSocketInterceptor>();
 
-	web_socket->SetConnectionHandler(
+	interceptor->SetConnectionHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> HttpInterceptorResult {
 			auto &client = ws_client->GetClient();
 			auto request = client->GetRequest();
@@ -98,10 +80,9 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 
 			logti("New client is connected: %s", description.CStr());
 
-			auto tokens = request->GetRequestTarget().Split("/");
+			auto uri = ov::Url::Parse(request->GetUri());
 
-			// "/<app>/<pub::Stream>"
-			if (tokens.size() < 3)
+			if (uri == nullptr)
 			{
 				logtw("Invalid request from %s. Disconnecting...", description.CStr());
 				return HttpInterceptorResult::Disconnect;
@@ -109,10 +90,10 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 
 			// Find the "Host" header
 			auto host_name = request->GetHeader("HOST").Split(":")[0];
-			auto &app_name = tokens[1];
-			auto &stream_name = tokens[2];
+			auto &app_name = uri->App();
+			auto &stream_name = uri->Stream();
 
-			info::VHostAppName vhost_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, tokens[1]);
+			info::VHostAppName vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
 
 			auto info = std::make_shared<RtcSignallingInfo>(vhost_app_name, host_name, app_name, stream_name);
 
@@ -140,7 +121,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			return HttpInterceptorResult::Keep;
 		});
 
-	web_socket->SetMessageHandler(
+	interceptor->SetMessageHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const WebSocketFrame> &message) -> HttpInterceptorResult {
 			auto &client = ws_client->GetClient();
 			auto request = client->GetRequest();
@@ -208,13 +189,13 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			return HttpInterceptorResult::Keep;
 		});
 
-	web_socket->SetErrorHandler(
+	interceptor->SetErrorHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client, const std::shared_ptr<const ov::Error> &error) -> void {
 			logtw("An error occurred: %s", error->ToString().CStr());
 		});
 
-	web_socket->SetCloseHandler(
-		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> void {
+	interceptor->SetCloseHandler(
+		[this](const std::shared_ptr<WebSocketClient> &ws_client, PhysicalPortDisconnectReason reason) -> void {
 			auto &client = ws_client->GetClient();
 			auto request = client->GetRequest();
 
@@ -242,12 +223,7 @@ bool RtcSignallingServer::InitializeWebSocketServer()
 			}
 		});
 
-	bool result = true;
-
-	result = result && ((_http_server == nullptr) || _http_server->AddInterceptor(web_socket));
-	result = result && ((_https_server == nullptr) || _https_server->AddInterceptor(web_socket));
-
-	return result;
+	return interceptor;
 }
 
 bool RtcSignallingServer::AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer)
@@ -341,80 +317,6 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 	}
 
 	return disconnected;
-}
-
-//====================================================================================================
-// monitoring data pure virtual function
-// - collections vector must be insert processed
-//====================================================================================================
-bool RtcSignallingServer::GetMonitoringCollectionData(std::vector<std::shared_ptr<pub::MonitoringCollectionData>> &stream_collections)
-{
-	// TODO(Getroot): Need to refactoring
-	/*
-	std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now();
-
-	ov::String alias = _host_info.GetOrigin().GetAlias();
-	ov::String app_name = _application_info->GetName();
-	ov::String stream_name;
-	uint32_t bitrate = 0;
-
-	// TODO : 임시 코드 차후에 p2p manager에서 실제 정보 처리
-	// - 1개의 스트림명과 비트레이트  확인
-	std::lock_guard<std::mutex> lock_guard(_client_list_mutex);
-
-	for (const auto &client_item : _client_list)
-	{
-		stream_name = client_item.second->stream_name;
-
-		std::find_if(_observers.begin(), _observers.end(), [&bitrate, app_name, stream_name](auto &observer) -> bool {
-			// Ask observer to fill bitrate
-			bitrate = observer->OnGetBitrate(app_name, stream_name);
-			return bitrate != 0;
-		});
-
-		if (bitrate != 0)
-		{
-			break;
-		}
-	}
-
-	uint32_t p2p_connection_count = GetClientPeerCount();
-	uint32_t edeg_connection_count = GetTotalPeerCount() - p2p_connection_count;
-
-	// p2p
-	for (uint32_t index = 0; index < p2p_connection_count; index++)
-	{
-		auto collection = std::make_shared<pub::MonitoringCollectionData>(MonitroingCollectionType::Stream,
-																	 alias,
-																	 app_name,
-																	 stream_name);
-		collection->edge_connection = 0;
-		collection->edge_bitrate = 0;
-		collection->p2p_connection = 1;
-		collection->p2p_bitrate = bitrate;
-		collection->check_time = current_time;
-
-		stream_collections.push_back(collection);
-	}
-
-	// edge connection
-	for (uint32_t index = 0; index < edeg_connection_count; index++)
-	{
-		auto collection = std::make_shared<pub::MonitoringCollectionData>(MonitroingCollectionType::Stream,
-																	 alias,
-																	 app_name,
-																	 stream_name);
-		collection->edge_connection = 1;
-		collection->edge_bitrate = bitrate;
-		collection->p2p_connection = 0;
-		collection->p2p_bitrate = 0;
-		collection->check_time = current_time;
-
-		stream_collections.push_back(collection);
-	}
-	*/
-
-	return true;
 }
 
 int RtcSignallingServer::GetTotalPeerCount() const
@@ -529,7 +431,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 		// None of the hosts can accept this client, so the peer will be connectioned to OME
 		std::find_if(_observers.begin(), _observers.end(), [ws_client, info, &sdp, vhost_app_name, stream_name](auto &observer) -> bool {
 			// Ask observer to fill local_candidates
-			sdp = observer->OnRequestOffer(ws_client, vhost_app_name, info->host_name, info->app_name, stream_name, &(info->local_candidates));
+			sdp = observer->OnRequestOffer(ws_client, vhost_app_name, info->host_name, stream_name, &(info->local_candidates));
 			return sdp != nullptr;
 		});
 
@@ -683,7 +585,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 			{
 				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->vhost_app_name.CStr(), info->stream_name.CStr());
 				// TODO(Getroot): Add param "request->GetRequestTarget()"
-				observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->app_name, info->stream_name, info->offer_sdp, info->peer_sdp);
+				observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp);
 			}
 		}
 		else
@@ -767,7 +669,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const std::sha
 
 			for (auto &observer : _observers)
 			{
-				observer->OnIceCandidate(ws_client, info->vhost_app_name, info->host_name, info->app_name, info->stream_name, ice_candidate, username_fragment);
+				observer->OnIceCandidate(ws_client, info->vhost_app_name, info->host_name, info->stream_name, ice_candidate, username_fragment);
 			}
 		}
 	}
@@ -905,7 +807,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_p
 		{
 			logtd("Trying to callback OnStopCommand to %p for client %d (%s / %s)...", observer.get(), info->id, info->vhost_app_name.CStr(), info->stream_name.CStr());
 
-			if (observer->OnStopCommand(ws_client, info->vhost_app_name, info->host_name, info->app_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+			if (observer->OnStopCommand(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
 			{
 				result = false;
 			}

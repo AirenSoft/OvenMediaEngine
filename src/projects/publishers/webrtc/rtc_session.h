@@ -30,13 +30,15 @@
  *
  */
 
+class WebRtcPublisher;
 class RtcApplication;
 class RtcStream;
 
 class RtcSession : public pub::Session
 {
 public:
-	static std::shared_ptr<RtcSession> Create(const std::shared_ptr<pub::Application> &application,
+	static std::shared_ptr<RtcSession> Create(const std::shared_ptr<WebRtcPublisher> &publihser,
+											  const std::shared_ptr<pub::Application> &application,
 	                                          const std::shared_ptr<pub::Stream> &stream,
 	                                          const std::shared_ptr<const SessionDescription> &offer_sdp,
 	                                          const std::shared_ptr<const SessionDescription> &peer_sdp,
@@ -44,6 +46,7 @@ public:
 											  const std::shared_ptr<WebSocketClient> &ws_client);
 
 	RtcSession(const info::Session &session_info,
+			const std::shared_ptr<WebRtcPublisher> &publihser,
 			const std::shared_ptr<pub::Application> &application,
 	        const std::shared_ptr<pub::Stream> &stream,
 	        const std::shared_ptr<const SessionDescription> &offer_sdp,
@@ -54,6 +57,8 @@ public:
 
 	bool Start() override;
 	bool Stop() override;
+
+	void SetSessionExpiredTime(uint64_t expired_time);
 
 	const std::shared_ptr<const SessionDescription>& GetPeerSDP() const;
 	const std::shared_ptr<const SessionDescription>& GetOfferSDP() const;
@@ -66,6 +71,8 @@ public:
 
 private:
 	bool ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info);
+
+	std::shared_ptr<WebRtcPublisher>	_publisher;
 
 	std::shared_ptr<RtpRtcp>            _rtp_rtcp;
 	std::shared_ptr<SrtpTransport>      _srtp_transport;
@@ -86,6 +93,7 @@ private:
 
 	bool								_use_rtx_flag = false;
 
-
 	uint16_t							_rtx_sequence_number = 1;
+
+	uint64_t							_session_expired_time = 0;
 };

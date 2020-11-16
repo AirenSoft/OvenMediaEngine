@@ -86,6 +86,16 @@ namespace pvd
 		return _provider->PublishDataChannel(GetChannelId(), GetRelatedChannelId(), vhost_app_name, data_channel);
 	}
 
+	CheckSignatureResult PushStream::HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy)
+	{
+		if(_provider == nullptr)
+		{
+			return CheckSignatureResult::Error;
+		}
+
+		return _provider->HandleSignedPolicy(request_url, client_address, signed_policy);
+	}
+
 	bool PushStream::DoesBelongApplication()
 	{
 		return GetApplication() != nullptr;

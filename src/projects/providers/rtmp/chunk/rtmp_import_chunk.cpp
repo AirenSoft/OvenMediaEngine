@@ -12,6 +12,7 @@
 #include "rtmp_chunk_parser.h"
 
 RtmpImportChunk::RtmpImportChunk(int chunk_size)
+	: _vhost_app_name(info::VHostAppName::InvalidVHostAppName())
 {
 	_chunk_size = chunk_size;
 }

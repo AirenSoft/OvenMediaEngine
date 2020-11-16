@@ -62,7 +62,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecHEVC::RecvBuffer(TranscodeRes
 
 		auto decoded_frame = std::make_shared<MediaFrame>();
 
-		decoded_frame->SetMediaType(common::MediaType::Video);
+		decoded_frame->SetMediaType(cmn::MediaType::Video);
 		decoded_frame->SetWidth(_frame->width);
 		decoded_frame->SetHeight(_frame->height);
 		decoded_frame->SetFormat(_frame->format);

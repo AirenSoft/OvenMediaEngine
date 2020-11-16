@@ -56,31 +56,31 @@ bool ParseSdp(const std::vector<uint8_t> &sdp, RtspMediaInfo &rtsp_media_info)
                                 if (codec[0] == "H264")
                                 {
                                     payload_codecs[payload_type] = RtpCodec::H264;
-                                    payload.SetCodecId(common::MediaCodecId::H264);
+                                    payload.SetCodecId(cmn::MediaCodecId::H264);
                                 }
                                 else if (codec[0] == "H265")
                                 {
                                     payload_codecs[payload_type] = RtpCodec::H265;
-                                    payload.SetCodecId(common::MediaCodecId::H265);
+                                    payload.SetCodecId(cmn::MediaCodecId::H265);
                                 }
                                 else if (codec[0] == "opus")
                                 {
                                     payload_codecs[payload_type] = RtpCodec::Opus;
-                                    payload.SetCodecId(common::MediaCodecId::Opus);
+                                    payload.SetCodecId(cmn::MediaCodecId::Opus);
                                     // For Opus stereo should be detected from the sprop-stereo field
                                     auto &audio_channel = payload.GetChannel();
-                                    audio_channel.SetLayout(common::AudioChannel::Layout::LayoutMono);
+                                    audio_channel.SetLayout(cmn::AudioChannel::Layout::LayoutMono);
                                 }
                                 else if (CaseInsensitiveEqual(codec[0],"MPEG4-GENERIC"_str_v)) // The 
                                 {
                                     auto payload_iterator = rtsp_media_info.payloads_.find(payload_type);
                                     if (payload_iterator != rtsp_media_info.payloads_.end())
                                     {
-                                        if (payload_iterator->second.GetMediaType() == common::MediaType::Video)
+                                        if (payload_iterator->second.GetMediaType() == cmn::MediaType::Video)
                                         {
                                             payload_codecs[payload_type] = RtpCodec::Mpeg4GenericVideo;
                                         }
-                                        else if (payload_iterator->second.GetMediaType() == common::MediaType::Audio)
+                                        else if (payload_iterator->second.GetMediaType() == cmn::MediaType::Audio)
                                         {
                                             payload_codecs[payload_type] = RtpCodec::Mpeg4GenericAudio;
                                         }
@@ -97,13 +97,13 @@ bool ParseSdp(const std::vector<uint8_t> &sdp, RtspMediaInfo &rtsp_media_info)
                                         if (Stoi(std::string(codec[1].data(), codec[1].size()), clock_rate))
                                         {
                                             payload.SetTimeBase(1, clock_rate);
-                                            if (payload.GetMediaType() == common::MediaType::Audio)
+                                            if (payload.GetMediaType() == cmn::MediaType::Audio)
                                             {
                                                 payload.SetSampleRate(clock_rate);
                                             }
                                         }
                                     }
-                                    if (codec.size() > 2 && payload.GetMediaType() == common::MediaType::Audio)
+                                    if (codec.size() > 2 && payload.GetMediaType() == cmn::MediaType::Audio)
                                     {
                                         uint8_t channel_count;
                                         if (Stoi(std::string(codec[2].data(), codec[2].size()), channel_count))
@@ -112,10 +112,10 @@ bool ParseSdp(const std::vector<uint8_t> &sdp, RtspMediaInfo &rtsp_media_info)
                                             switch (channel_count)
                                             {
                                             case 1:
-                                                audio_channel.SetLayout(common::AudioChannel::Layout::LayoutMono);
+                                                audio_channel.SetLayout(cmn::AudioChannel::Layout::LayoutMono);
                                                 break;
                                             case 2:
-                                                audio_channel.SetLayout(common::AudioChannel::Layout::LayoutStereo);
+                                                audio_channel.SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
                                                 break;
                                             default:
                                                 // Currently nothing else except mono and stereo is supported
@@ -205,7 +205,7 @@ bool ParseSdp(const std::vector<uint8_t> &sdp, RtspMediaInfo &rtsp_media_info)
                                             if (format_component_value.size() && *format_component_value.data() == '1')
                                             {
                                                 auto &audio_channel = rtsp_media_info.payloads_[payload_type].GetChannel();
-                                                audio_channel.SetLayout(common::AudioChannel::Layout::LayoutStereo);
+                                                audio_channel.SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
                                             }
                                         }
                                         else if (rtp_codec == RtpCodec::Mpeg4GenericAudio)
@@ -217,7 +217,7 @@ bool ParseSdp(const std::vector<uint8_t> &sdp, RtspMediaInfo &rtsp_media_info)
                                                 if (CaseInsensitiveEqual(format_component_value, "AAC-hbr"_str_v) || CaseInsensitiveEqual(format_component_value, "AAC-lbr"_str_v))
                                                 {
                                                     auto &payload = rtsp_media_info.payloads_[payload_type];
-                                                    payload.SetCodecId(common::MediaCodecId::Aac);
+                                                    payload.SetCodecId(cmn::MediaCodecId::Aac);
                                                 }
                                             }
                                             else
@@ -296,11 +296,11 @@ bool ParseSdp(const std::vector<uint8_t> &sdp, RtspMediaInfo &rtsp_media_info)
                         rtsp_media_info.payloads_[payload_type].SetId(payload_type);
                         if (components[0] == "video")
                         {
-                            rtsp_media_info.payloads_[payload_type].SetMediaType(common::MediaType::Video);
+                            rtsp_media_info.payloads_[payload_type].SetMediaType(cmn::MediaType::Video);
                         }
                         else if (components[0] == "audio")
                         {
-                            rtsp_media_info.payloads_[payload_type].SetMediaType(common::MediaType::Audio);
+                            rtsp_media_info.payloads_[payload_type].SetMediaType(cmn::MediaType::Audio);
                         }
                     }
                 }

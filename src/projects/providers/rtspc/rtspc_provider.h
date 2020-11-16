@@ -49,7 +49,7 @@ namespace pvd
 		}
 		const char* GetProviderName() const override
 	    {
-		    return "RtspcProvider";
+		    return "RTSPCProvider";
 	    }
 
 	protected:

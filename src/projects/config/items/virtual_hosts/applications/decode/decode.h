@@ -12,14 +12,23 @@
 
 namespace cfg
 {
-	struct Decode : public Item
+	namespace vhost
 	{
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			RegisterValue("Video", &_video);
-		}
+			namespace dec
+			{
+				struct Decode : public Item
+				{
+				protected:
+					void MakeParseList() override
+					{
+						RegisterValue("Video", &_video);
+					}
 
-		DecodeVideo _video;
-	};
+					DecodeVideo _video;
+				};
+			}  // namespace dec
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg

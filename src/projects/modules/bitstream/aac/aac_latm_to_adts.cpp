@@ -5,9 +5,9 @@
 
 #define OV_LOG_TAG "AACLatmToAdts"
 
-bool AACLatmToAdts::GetExtradata(const common::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
+bool AACLatmToAdts::GetExtradata(const cmn::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
 {
-	if(type == common::PacketType::SEQUENCE_HEADER)
+	if(type == cmn::PacketType::SEQUENCE_HEADER)
 	{
 		AACSpecificConfig config;
 		if(!AACSpecificConfig::Parse((data->GetDataAs<uint8_t>()), data->GetLength(), config))
@@ -62,17 +62,17 @@ bool AACLatmToAdts::GetExtradata(const common::PacketType type, const std::share
 	10 (2)   Scalable Sample Rate profile (SSR)   AAC SSR
 	11 (3)   (reserved)   AAC LTP
 */
-bool AACLatmToAdts::Convert(const common::PacketType type, const std::shared_ptr<ov::Data> &data, const std::vector<uint8_t> &extradata)
+bool AACLatmToAdts::Convert(const cmn::PacketType type, const std::shared_ptr<ov::Data> &data, const std::vector<uint8_t> &extradata)
 {
 	auto annexb_data = std::make_shared<ov::Data>();
 	annexb_data->Clear();
 
-	if(type == common::PacketType::SEQUENCE_HEADER)
+	if(type == cmn::PacketType::SEQUENCE_HEADER)
 	{
 		// There is no need to convert.
 		return false;
 	}
-	else if(type == common::PacketType::RAW)
+	else if(type == cmn::PacketType::RAW)
 	{
 		int16_t aac_raw_length = data->GetLength();
 

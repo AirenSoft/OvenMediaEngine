@@ -70,7 +70,7 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> co
 	const int estimated_frame_size = std::max(sizeof(opus_int16), sizeof(float));
 
 	_buffer = std::make_shared<ov::Data>(max_opus_frame_count * estimated_channel_count * estimated_frame_size);
-	_format = common::AudioSample::Format::None;
+	_format = cmn::AudioSample::Format::None;
 	_current_pts = -1;
 
 	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
@@ -135,7 +135,7 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 			OV_ASSERT2(frame != nullptr);
 
 			// Store frame informations
-			_format = frame->GetFormat<common::AudioSample::Format>();
+			_format = frame->GetFormat<cmn::AudioSample::Format>();
 
 			if (_current_pts == -1)
 			{
@@ -156,8 +156,8 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 				// Currently, OME's OPUS encoder supports up to 2 channels
 				switch (_format)
 				{
-				case common::AudioSample::Format::S16P:
-				case common::AudioSample::Format::FltP:
+				case cmn::AudioSample::Format::S16P:
+				case cmn::AudioSample::Format::FltP:
 				{
 					// Need to interleave if sample type is planar
 
@@ -167,24 +167,24 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 					size_t total_bytes = frame->GetBufferSize(0) + frame->GetBufferSize(1);
 					_buffer->SetLength(current_offset + total_bytes);
 
-					if (_format == common::AudioSample::Format::S16P)
+					if (_format == cmn::AudioSample::Format::S16P)
 					{
 						// S16P
 						ov::Interleave<int16_t>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
-						_format = common::AudioSample::Format::S16;
+						_format = cmn::AudioSample::Format::S16;
 					}
 					else
 					{
 						// FltP
 						ov::Interleave<float>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
-						_format = common::AudioSample::Format::Flt;
+						_format = cmn::AudioSample::Format::Flt;
 					}
 
 					break;
 				}
 
-				case common::AudioSample::Format::S16:
-				case common::AudioSample::Format::Flt:
+				case cmn::AudioSample::Format::S16:
+				case cmn::AudioSample::Format::Flt:
 					// Do not need to interleave if sample type is non-planar
 					_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
 					break;
@@ -216,11 +216,11 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 		// Encode
 		switch (_format)
 		{
-		case common::AudioSample::Format::S16:
+		case cmn::AudioSample::Format::S16:
 			encoded_bytes = ::opus_encode(_encoder, _buffer->GetDataAs<const opus_int16>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
 			break;
 
-		case common::AudioSample::Format::Flt:
+		case cmn::AudioSample::Format::Flt:
 			encoded_bytes = ::opus_encode_float(_encoder, _buffer->GetDataAs<float>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
 			break;
 
@@ -244,9 +244,9 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 		::memmove(buffer, buffer + bytes_to_encode, _buffer->GetLength() - bytes_to_encode);
 		_buffer->SetLength(_buffer->GetLength() - bytes_to_encode);
 
-		auto packet_buffer = std::make_shared<MediaPacket>(common::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
-		packet_buffer->SetBitstreamFormat(common::BitstreamFormat::OPUS);
-		packet_buffer->SetPacketType(common::PacketType::RAW);
+		auto packet_buffer = std::make_shared<MediaPacket>(cmn::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
+		packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::OPUS);
+		packet_buffer->SetPacketType(cmn::PacketType::RAW);
 		
 		_current_pts += frame_count_to_encode;
 		// logte("opus pts : %lld, queue:%d, buffer:%d", _current_pts, _input_buffer.size(), _buffer->GetLength());

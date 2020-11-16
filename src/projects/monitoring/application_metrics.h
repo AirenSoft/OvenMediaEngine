@@ -48,6 +48,8 @@ namespace mon
 		bool OnStreamCreated(const info::Stream &stream);
 		bool OnStreamDeleted(const info::Stream &stream);
 
+		std::map<uint32_t, std::shared_ptr<StreamMetrics>> GetStreamMetricsList();
+
 		std::shared_ptr<StreamMetrics> GetStreamMetrics(const info::Stream &stream);
 
 		// Overriding from CommonMetrics 

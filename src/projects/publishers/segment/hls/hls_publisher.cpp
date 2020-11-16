@@ -12,14 +12,13 @@
 #include "hls_stream_server.h"
 
 #include <config/config_manager.h>
-#include <modules/signed_url/signed_url.h>
+#include <modules/signature/signed_token.h>
 #include <orchestrator/orchestrator.h>
 
-std::shared_ptr<HlsPublisher> HlsPublisher::Create(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager,
-												   const cfg::Server &server_config,
+std::shared_ptr<HlsPublisher> HlsPublisher::Create(const cfg::Server &server_config,
 												   const std::shared_ptr<MediaRouteInterface> &router)
 {
-	return SegmentPublisher::Create<HlsPublisher>(http_server_manager, server_config, router);
+	return SegmentPublisher::Create<HlsPublisher>(server_config, router);
 }
 
 HlsPublisher::HlsPublisher(PrivateToken token,
@@ -29,12 +28,17 @@ HlsPublisher::HlsPublisher(PrivateToken token,
 {
 }
 
-bool HlsPublisher::Start(std::map<int, std::shared_ptr<HttpServer>> &http_server_manager)
+bool HlsPublisher::Start()
 {
 	auto &hls_config = GetServerConfig().GetBind().GetPublishers().GetHls();
 
-	return SegmentPublisher::Start(http_server_manager,
-								   hls_config.GetPort(), hls_config.GetTlsPort(),
+	if (hls_config.IsParsed() == false)
+	{
+		logtw("%s is disabled by configuration", GetPublisherName());
+		return true;
+	}
+
+	return SegmentPublisher::Start(hls_config.GetPort(), hls_config.GetTlsPort(),
 								   std::make_shared<HlsStreamServer>());
 }
 

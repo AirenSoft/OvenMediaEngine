@@ -9,27 +9,28 @@
 
 #pragma once
 
-#include "../transcode_context.h"
-#include "../codec/transcode_base.h"
-
-#include <cstdint>
-#include <vector>
-#include <memory>
 #include <algorithm>
+#include <cstdint>
+#include <memory>
 #include <thread>
+#include <vector>
+
+#include "../codec/transcode_base.h"
+#include "../transcode_context.h"
 
 extern "C"
 {
 #include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
+#include <libavformat/avformat.h>
 #include <libavutil/opt.h>
 }
 
+#include <base/info/application.h>
+#include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
 #include <base/mediarouter/media_type.h>
-#include <base/info/application.h>
 
 class MediaFilterImpl
 {
@@ -45,7 +46,7 @@ public:
 	virtual int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) = 0;
 	virtual std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) = 0;
 
-	static AVRational TimebaseToAVRational(const common::Timebase &timebase)
+	static AVRational TimebaseToAVRational(const cmn::Timebase &timebase)
 	{
 		return (AVRational){
 			.num = timebase.GetNum(),
@@ -63,12 +64,12 @@ public:
 		return _output_buffer.size();
 	}
 
-	common::Timebase GetInputTimebase() const
+	cmn::Timebase GetInputTimebase() const
 	{
 		return _input_context->GetTimeBase();
 	}
 
-	common::Timebase GetOutputTimebase() const
+	cmn::Timebase GetOutputTimebase() const
 	{
 		return _output_context->GetTimeBase();
 	}

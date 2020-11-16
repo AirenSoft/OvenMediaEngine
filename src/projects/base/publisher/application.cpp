@@ -121,15 +121,15 @@ namespace pub
 		auto stream_it = _streams.find(info->GetId());
 		if(stream_it == _streams.end())
 		{
-			logte("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
-			return false;
+			// Sometimes stream rejects stream creation if the input codec is not supported. So this is a normal situation.
+			logtd("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
+			return true;
 		}
 
 		auto stream = stream_it->second;
 
 		lock.unlock();
 
-		// Stream이 삭제되었음을 자식에게 알려서 처리하게 함
 		if (DeleteStream(info) == false)
 		{
 			return false;
@@ -145,13 +145,13 @@ namespace pub
 	bool Application::OnSendFrame(const std::shared_ptr<info::Stream> &stream,
 									   const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		if (media_packet->GetMediaType() == common::MediaType::Video)
+		if (media_packet->GetMediaType() == cmn::MediaType::Video)
 		{
 			auto data = std::make_shared<Application::VideoStreamData>(stream, media_packet);
 			_video_stream_queue.Enqueue(std::move(data));
 			_last_video_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
 		}
-		else if (media_packet->GetMediaType() == common::MediaType::Audio)
+		else if (media_packet->GetMediaType() == cmn::MediaType::Audio)
 		{
 			auto data = std::make_shared<Application::AudioStreamData>(stream, media_packet);
 
@@ -174,6 +174,26 @@ namespace pub
 		_queue_event.Notify();
 
 		return true;
+	}
+
+	uint32_t Application::GetStreamCount()
+	{
+		return _streams.size();
+	}
+
+	std::shared_ptr<Stream> Application::GetStreamAt(uint32_t index)
+	{
+		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
+
+		auto it( _streams.begin() );
+	    std::advance( it, index );
+
+	    if(it == _streams.end())
+	    {
+	    	return nullptr;
+	    }
+
+		return it->second;
 	}
 
 	std::shared_ptr<Stream> Application::GetStream(uint32_t stream_id)

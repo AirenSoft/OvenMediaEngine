@@ -50,6 +50,8 @@ namespace ov
 		String _domain;
 
 		int _code = 0;
+		bool _code_set = false;
+		
 		String _message;
 	};
 }

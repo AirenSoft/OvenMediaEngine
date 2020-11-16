@@ -13,7 +13,7 @@ class RtspServer;
 class RtpTrack
 {
 public:
-    RtpTrack(RtspServer &rtsp_server_, common::MediaType media_type, common::MediaCodecId media_codec_id, uint32_t stream_id, uint8_t track_id, uint32_t clock_frequency);
+    RtpTrack(RtspServer &rtsp_server_, cmn::MediaType media_type, cmn::MediaCodecId media_codec_id, uint32_t stream_id, uint8_t track_id, uint32_t clock_frequency);
     RtpTrack(const RtpTrack&) = delete;
 
     virtual ~RtpTrack() = default;
@@ -30,8 +30,8 @@ protected:
 
 protected:
     RtspServer &rtsp_server_;
-    common::MediaType media_type_;
-    common::MediaCodecId media_codec_id_; 
+    cmn::MediaType media_type_;
+    cmn::MediaCodecId media_codec_id_; 
     uint32_t stream_id_;
     uint8_t track_id_;
     uint32_t clock_frequency_;

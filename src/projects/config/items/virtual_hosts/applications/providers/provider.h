@@ -10,17 +10,26 @@
 
 namespace cfg
 {
-	struct Provider : public Item
+	namespace vhost
 	{
-		virtual ProviderType GetType() const = 0;
-		CFG_DECLARE_GETTER_OF(GetMaxConnection, _max_connection)
-
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			RegisterValue<Optional>("MaxConnection", &_max_connection);
-		}
+			namespace pvd
+			{
+				struct Provider : public Item
+				{
+					virtual ProviderType GetType() const = 0;
+					CFG_DECLARE_GETTER_OF(GetMaxConnection, _max_connection)
 
-		int _max_connection = 0;
-	};
+				protected:
+					void MakeParseList() override
+					{
+						RegisterValue<Optional>("MaxConnection", &_max_connection);
+					}
+
+					int _max_connection = 0;
+				};
+			}  // namespace pvd
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg

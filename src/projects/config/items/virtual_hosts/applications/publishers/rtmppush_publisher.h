@@ -12,20 +12,29 @@
 
 namespace cfg
 {
-	struct RtmpPushPublisher : public Publisher
+	namespace vhost
 	{
-		CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::RtmpPush)
-
-		CFG_DECLARE_REF_GETTER_OF(GetCrossDomains, _cross_domain.GetUrls())
-
-	protected:
-		void MakeParseList() override
+		namespace app
 		{
-			Publisher::MakeParseList();
+			namespace pub
+			{
+				struct RtmpPushPublisher : public Publisher
+				{
+					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::RtmpPush)
 
-			RegisterValue<Optional>("CrossDomain", &_cross_domain);
-		}
+					CFG_DECLARE_REF_GETTER_OF(GetCrossDomains, _cross_domains.GetUrls())
 
-		CrossDomain _cross_domain;
-	};
+				protected:
+					void MakeParseList() override
+					{
+						Publisher::MakeParseList();
+
+						RegisterValue<Optional>("CrossDomains", &_cross_domains);
+					}
+
+					cmn::CrossDomains _cross_domains;
+				};
+			}  // namespace pub
+		}	   // namespace app
+	}		   // namespace vhost
 }  // namespace cfg

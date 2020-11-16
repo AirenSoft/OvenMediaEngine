@@ -15,7 +15,7 @@
 
 namespace ov
 {
-	ov::String Base64::Encode(const Data &data)
+	ov::String Base64::Encode(const Data &data, bool url)
 	{
 		if (data.GetLength() == 0L)
 		{
@@ -78,30 +78,71 @@ namespace ov
 
 		BIO_free_all(b64);
 
+		if(url == true && !base64.IsEmpty())
+		{
+			// TODO(Getroot): Need to optimize for performance
+			base64 = base64.Replace("+", "-");
+			base64 = base64.Replace("/", "_");
+
+			// Remove '=' characters
+			if(base64.GetBuffer()[base64.GetLength()-1] == '=')
+			{
+				if(base64.GetBuffer()[base64.GetLength()-2] == '=')
+				{
+					base64.SetLength(base64.GetLength() - 2);
+				}
+				else
+				{
+					base64.SetLength(base64.GetLength() - 1);
+				}
+			}
+		}
+
 		return base64;
 	}
 
-	ov::String Base64::Encode(const std::shared_ptr<const Data> &data)
+	ov::String Base64::Encode(const std::shared_ptr<const Data> &data, bool url)
 	{
-		return Encode(*data);
+		return Encode(*data, url);
 	}
 
-	std::shared_ptr<Data> Base64::Decode(const ov::String &text)
+	std::shared_ptr<Data> Base64::Decode(const ov::String &text, bool url)
 	{
 		if (text.IsEmpty())
 		{
 			return nullptr;
 		}
 
+		ov::String source = text;
+
+		// TODO(Getroot): Need to optimize for performance
+		if(url == true)
+		{
+			// replace any charaters
+			source = source.Replace("-", "+");
+			source = source.Replace("_", "/");
+
+			uint8_t pad_count = 4-(source.GetLength() % 4);
+			if(pad_count == 4)
+			{
+				pad_count = 0;
+			}
+
+			for(uint8_t i = 0; i<pad_count; i++)
+			{	
+				source.Append("=");
+			}
+		}
+
 		BIO *b64 = BIO_new(BIO_f_base64());
-		BIO *mem = BIO_new_mem_buf(text.CStr(), static_cast<int>(text.GetLength()));
+		BIO *mem = BIO_new_mem_buf(source.CStr(), static_cast<int>(source.GetLength()));
 
 		BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
 
 		mem = BIO_push(b64, mem);
 
 		// [base64 string length / 4 * 3] + [null character] = (length / 4 * 3) + 1
-		auto max_length = static_cast<int>((text.GetLength()) + 1);
+		auto max_length = static_cast<int>((source.GetLength()) + 1);
 
 		auto data = std::make_shared<ov::Data>(max_length);
 		data->SetLength(max_length);
@@ -134,8 +175,6 @@ namespace ov
 
 			break;
 		}
-
-		ov::String base64;
 
 		if (result <= 0)
 		{

@@ -45,7 +45,8 @@ std::shared_ptr<RtxRtpPacket> RtpHistory::GetRtxRtpPacket(uint16_t seq_no)
 		auto rtp_packet = rtp_item->second;
 		history_guard.unlock();
 
-		auto elapsed_ms = ov::Clock::GetElapsedMiliSecondsFromNow(rtp_packet->GetCreatedTime());
+		// now, I consider all requests are valid because webrtc player doesn't ask for too old packet anyway 
+		//auto elapsed_ms = ov::Clock::GetElapsedMiliSecondsFromNow(rtp_packet->GetCreatedTime());
 		//if(elapsed_ms < VALID_TIME_MS_STORED_RTP_PACKET)
 		{
 			// Create Rtx Packet and store it

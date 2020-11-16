@@ -66,7 +66,9 @@ namespace pvd
 	}
 
 	RtmpStream::RtmpStream(StreamSourceType source_type, uint32_t client_id, std::shared_ptr<ov::Socket> client_socket, const std::shared_ptr<PushProvider> &provider)
-		: PushStream(source_type, client_id, provider)
+		: PushStream(source_type, client_id, provider),
+
+		_vhost_app_name(info::VHostAppName::InvalidVHostAppName())
 	{
 		_remote = client_socket;
 		_import_chunk = std::make_shared<RtmpImportChunk>(RTMP_DEFAULT_CHUNK_SIZE);
@@ -146,7 +148,7 @@ namespace pvd
 			if (process_size < 0)
 			{
 				logtd("Could not parse RTMP packet: [%s/%s] (%u/%u), size: %zu bytes, returns: %d",
-					_app_name.CStr(), _stream_name.CStr(),
+					_vhost_app_name.CStr(), _stream_name.CStr(),
 					_app_id, GetId(),
 					_remained_data->GetLength(),
 					process_size);
@@ -169,9 +171,7 @@ namespace pvd
 	void RtmpStream::OnAmfConnect(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		double object_encoding = 0.0;
-		ov::String tc_url;
-		ov::String app_name;
-
+		
 		if (document.GetProperty(2) != nullptr && document.GetProperty(2)->GetType() == AmfDataType::Object)
 		{
 			AmfObject *object = document.GetProperty(2)->GetObject();
@@ -186,42 +186,45 @@ namespace pvd
 			// app 설정
 			if ((index = object->FindName("app")) >= 0 && object->GetType(index) == AmfDataType::String)
 			{
-				app_name = object->GetString(index);
+				_app_name = object->GetString(index);
 			}
 
 			// app 설정
 			if ((index = object->FindName("tcUrl")) >= 0 && object->GetType(index) == AmfDataType::String)
 			{
-				tc_url = object->GetString(index);
+				_tc_url = object->GetString(index);
 			}
 		}
 
 		// Parse the URL to obtain the domain name
 		{
-			auto url = ov::Url::Parse(tc_url.CStr());
-
-			if (url != nullptr)
+			_url = ov::Url::Parse(_tc_url);
+			if (_url != nullptr)
 			{
-				_app_name = Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Domain(), app_name);
-				_import_chunk->SetAppName(_app_name);
+				_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(_url->Host(), _app_name);
+				_import_chunk->SetAppName(_vhost_app_name);
 
-				auto app_info = Orchestrator::GetInstance()->GetApplicationInfoByVHostAppName(_app_name);
+				auto app_info = ocst::Orchestrator::GetInstance()->GetApplicationInfo(_vhost_app_name);
 				if (app_info.IsValid())
 				{
 					_app_id = app_info.GetId();
 				}
 				else
 				{
-					logte("%s application does not exist", _app_name.CStr());
+					logte("%s application does not exist", _vhost_app_name.CStr());
 					Stop();
 					return;
 				}
 			}
 			else
 			{
-				logtw("Could not obtain tcUrl from the RTMP stream: [%s]", app_name);
-				_app_name = info::VHostAppName(app_name);
-				_import_chunk->SetAppName(_app_name);
+				logtw("Could not obtain tcUrl from the RTMP stream: [%s]", _app_name);
+
+				// TODO(dimiden): If tcUrl is not provided, it's not possible to determine which VHost the request was received,
+				// so it does not work properly.
+				// So, if there is currently one VHost associated with the RTMP Provider, we need to modifiy it to work without tcUrl.
+				_vhost_app_name = info::VHostAppName("", _app_name);
+				_import_chunk->SetAppName(_vhost_app_name);
 			}
 		}
 
@@ -259,6 +262,35 @@ namespace pvd
 		}
 	}
 
+	bool RtmpStream::CheckSignedPolicy()
+	{
+		// Check SignedPolicy
+		
+		auto result = HandleSignedPolicy(_url, _remote->GetLocalAddress(), _signed_policy);
+		if(result == CheckSignatureResult::Off)
+		{
+			return true;
+		}
+		else if(result == CheckSignatureResult::Pass)
+		{
+			return true;
+		}
+		else if(result == CheckSignatureResult::Error)
+		{
+			logtw("SingedPolicy error : %s", _url->ToUrlString().CStr());
+			Stop();
+			return false;
+		}
+		else if(result == CheckSignatureResult::Fail)
+		{
+			logtw("%s", _signed_policy->GetErrMessage().CStr());
+			Stop();
+			return false;
+		}
+
+		return false;
+	}
+
 	void RtmpStream::OnAmfFCPublish(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
 		if (_stream_name.IsEmpty() && document.GetProperty(3) != nullptr &&
@@ -270,8 +302,20 @@ namespace pvd
 				logte("SendAmfOnFCPublish Fail");
 				return;
 			}
-			_stream_name = document.GetProperty(3)->GetString();
+			
+			_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
+			
+			_url = ov::Url::Parse(_full_url);
+			// PORT can be omitted if port is rtmp default port(1935), but SignedPolicy requires this information.
+			if(_url->Port() == 0)
+			{
+				_url->SetPort(_remote->GetLocalAddress()->Port());
+			}
+
+			_stream_name = _url->Stream();
 			_import_chunk->SetStreamName(_stream_name);
+
+			CheckSignedPolicy();
 		}
 	}
 
@@ -281,8 +325,19 @@ namespace pvd
 		{
 			if (document.GetProperty(3) != nullptr && document.GetProperty(3)->GetType() == AmfDataType::String)
 			{
-				_stream_name = document.GetProperty(3)->GetString();
+				_full_url.Format("%s/%s", _tc_url.CStr(), document.GetProperty(3)->GetString());
+			
+				_url = ov::Url::Parse(_full_url);
+				// PORT can be omitted (1935), but SignedPolicy requires this information.
+				if(_url->Port() == 0)
+				{
+					_url->SetPort(_remote->GetLocalAddress()->Port());
+				}
+
+				_stream_name = _url->Stream();
 				_import_chunk->SetStreamName(_stream_name);
+
+				CheckSignedPolicy();
 			}
 			else
 			{
@@ -520,7 +575,7 @@ namespace pvd
 		else
 		{
 			logtw("AmfMeta has incompatible codec information. - stream(%s/%s) id(%u/%u) video(%s) audio(%s)",
-				_app_name.CStr(),
+				_vhost_app_name.CStr(),
 				_stream_name.CStr(),
 				_app_id,
 				GetId(),
@@ -545,7 +600,7 @@ namespace pvd
 
 	void RtmpStream::OnAmfDeleteStream(const std::shared_ptr<const RtmpChunkHeader> &header, AmfDocument &document, double transaction_id)
 	{
-		logtd("Delete Stream - stream(%s/%s) id(%u/%u)", _app_name.CStr(), _stream_name.CStr(), _app_id, GetId());
+		logtd("Delete Stream - stream(%s/%s) id(%u/%u)", _vhost_app_name.CStr(), _stream_name.CStr(), _app_id, GetId());
 
 		_media_info->video_stream_coming = false;
 		_media_info->audio_stream_coming = false;
@@ -942,7 +997,7 @@ namespace pvd
 			(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
 		{
 			logte("Size Fail - stream(%s/%s) size(%d)",
-				_app_name.CStr(), _stream_name.CStr(),
+				_vhost_app_name.CStr(), _stream_name.CStr(),
 				message->header->payload_size);
 			return false;
 		}
@@ -957,7 +1012,7 @@ namespace pvd
 			{
 				if(PublishStream() == false)
 				{
-					logte("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
+					logte("Input create fail -  stream(%s/%s)", _vhost_app_name.CStr(), _stream_name.CStr());
 					return false;
 				}
 			}
@@ -969,7 +1024,7 @@ namespace pvd
 				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
 				{
 					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
-						_app_name.CStr(),
+						_vhost_app_name.CStr(),
 						_stream_name.CStr(),
 						_stream_message_cache.size(),
 						MAX_STREAM_MESSAGE_COUNT);
@@ -986,7 +1041,7 @@ namespace pvd
 			FlvVideoData flv_video;
 			if(FlvVideoData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_video) == false)
 			{
-				logte("Could not parse flv video (%s/%s)", _app_name.CStr(), GetName().CStr());
+				logte("Could not parse flv video (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
 			}
 
@@ -996,17 +1051,17 @@ namespace pvd
 			auto video_track = GetTrack(RTMP_VIDEO_TRACK_ID);
 			if(video_track == nullptr)
 			{
-				logte("Cannot get video track (%s/%s)", _app_name.CStr(), GetName().CStr());
+				logte("Cannot get video track (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
 			}
 
 			dts *= video_track->GetVideoTimestampScale();
 			pts *= video_track->GetVideoTimestampScale();
 
-			common::PacketType	packet_type;
+			cmn::PacketType	packet_type = cmn::PacketType::Unknwon;
 			if(flv_video.PacketType() == FlvAvcPacketType::AVC_SEQUENCE_HEADER)
 			{
-				packet_type = common::PacketType::SEQUENCE_HEADER;
+				packet_type = cmn::PacketType::SEQUENCE_HEADER;
 
 				// AVCDecoderConfigurationRecord Unit Test
 				AVCDecoderConfigurationRecord record;
@@ -1014,7 +1069,7 @@ namespace pvd
 			}
 			else if(flv_video.PacketType() == FlvAvcPacketType::AVC_NALU)
 			{
-				packet_type = common::PacketType::NALU;
+				packet_type = cmn::PacketType::NALU;
 			}
 			else if(flv_video.PacketType() == FlvAvcPacketType::AVC_END_SEQUENCE)
 			{
@@ -1023,12 +1078,12 @@ namespace pvd
 			}
 
 			auto data = std::make_shared<ov::Data>(flv_video.Payload(), flv_video.PayloadLength());
-			auto video_frame = std::make_shared<MediaPacket>(common::MediaType::Video,
+			auto video_frame = std::make_shared<MediaPacket>(cmn::MediaType::Video,
 											  RTMP_VIDEO_TRACK_ID,
 											  data,
 											  pts,
 											  dts, 
-											  common::BitstreamFormat::H264_AVCC, // RTMP's packet type is AVCC 
+											  cmn::BitstreamFormat::H264_AVCC, // RTMP's packet type is AVCC 
 											 packet_type);
 
 			SendFrame(video_frame);
@@ -1049,7 +1104,7 @@ namespace pvd
 			if (check_gap >= 60)
 			{
 				logtd("Rtmp Provider Info - stream(%s/%s) key(%ums) timestamp(v:%ums/a:%ums/g:%dms) fps(v:%u/a:%u) gap(v:%ums/a:%ums)",
-					_app_name.CStr(),
+					_vhost_app_name.CStr(),
 					_stream_name.CStr(),
 					_key_frame_interval,
 					_last_video_timestamp,
@@ -1093,7 +1148,7 @@ namespace pvd
 			(message->header->payload_size > RTMP_MAX_PACKET_SIZE))
 		{
 			logte("Size Fail - stream(%s/%s) size(%d)",
-				_app_name.CStr(),
+				_vhost_app_name.CStr(),
 				_stream_name.CStr(),
 				message->header->payload_size);
 
@@ -1108,7 +1163,7 @@ namespace pvd
 			{
 				if(PublishStream() == false)
 				{
-					logte("Input create fail -  stream(%s/%s)", _app_name.CStr(), _stream_name.CStr());
+					logte("Input create fail -  stream(%s/%s)", _vhost_app_name.CStr(), _stream_name.CStr());
 					return false;
 				}
 			}
@@ -1120,7 +1175,7 @@ namespace pvd
 				if (_stream_message_cache.size() > MAX_STREAM_MESSAGE_COUNT)
 				{
 					logtw("Rtmp input stream init meessage count over -  stream(%s/%s) size(%d:%d)",
-						_app_name.CStr(),
+						_vhost_app_name.CStr(),
 						_stream_name.CStr(),
 						_stream_message_cache.size(),
 						MAX_STREAM_MESSAGE_COUNT);
@@ -1137,7 +1192,7 @@ namespace pvd
 			FlvAudioData flv_audio;
 			if(FlvAudioData::Parse(message->payload->GetDataAs<uint8_t>(), message->payload->GetLength(), flv_audio) == false)
 			{
-				logte("Could not parse flv audio (%s/%s)", _app_name.CStr(), GetName().CStr());
+				logte("Could not parse flv audio (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
 			}
 
@@ -1148,33 +1203,33 @@ namespace pvd
 			auto audio_track = GetTrack(RTMP_AUDIO_TRACK_ID);
 			if(audio_track == nullptr)
 			{
-				logte("Cannot get video track (%s/%s)", _app_name.CStr(), GetName().CStr());
+				logte("Cannot get video track (%s/%s)", _vhost_app_name.CStr(), GetName().CStr());
 				return false;
 			}
 
 			pts *= audio_track->GetAudioTimestampScale();
 			dts *= audio_track->GetAudioTimestampScale();
 
-			common::PacketType	packet_type;
+			cmn::PacketType	packet_type = cmn::PacketType::Unknwon;
 			if(flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
 			{
-				packet_type = common::PacketType::SEQUENCE_HEADER;
+				packet_type = cmn::PacketType::SEQUENCE_HEADER;
 				// AACSpecificConfig Unit Test
 				AACSpecificConfig config;
 				AACSpecificConfig::Parse(flv_audio.Payload(), flv_audio.PayloadLength(), config);
 			}
 			else if(flv_audio.PacketType() == FlvAACPacketType::RAW)
 			{
-				packet_type = common::PacketType::RAW;
+				packet_type = cmn::PacketType::RAW;
 			}
 
 			auto data = std::make_shared<ov::Data>(flv_audio.Payload(), flv_audio.PayloadLength());
-			auto frame = std::make_shared<MediaPacket>(common::MediaType::Audio,
+			auto frame = std::make_shared<MediaPacket>(cmn::MediaType::Audio,
 											  RTMP_AUDIO_TRACK_ID,
 											  data,
 											  pts,
 											  dts,
-											  common::BitstreamFormat::AAC_LATM,
+											  cmn::BitstreamFormat::AAC_LATM,
 											  packet_type);
 
 			SendFrame(frame);											
@@ -1193,14 +1248,13 @@ namespace pvd
 			return false;
 		}
 
-		// Set Stream Name
 		SetName(_stream_name);
 
 		// Set Track Info
 		SetTrackInfo(_media_info);
 
 		// Publish
-		if(PublishInterleavedChannel(_app_name) == false)
+		if(PublishInterleavedChannel(_vhost_app_name) == false)
 		{
 			Stop();
 			return false;
@@ -1230,8 +1284,8 @@ namespace pvd
 			auto new_track = std::make_shared<MediaTrack>();
 
 			new_track->SetId(RTMP_VIDEO_TRACK_ID);
-			new_track->SetMediaType(common::MediaType::Video);
-			new_track->SetCodecId(common::MediaCodecId::H264);
+			new_track->SetMediaType(cmn::MediaType::Video);
+			new_track->SetCodecId(cmn::MediaCodecId::H264);
 			new_track->SetTimeBase(1, 1000);
 			new_track->SetVideoTimestampScale(1.0);
 
@@ -1251,8 +1305,8 @@ namespace pvd
 			auto new_track = std::make_shared<MediaTrack>();
 
 			new_track->SetId(RTMP_AUDIO_TRACK_ID);
-			new_track->SetMediaType(common::MediaType::Audio);
-			new_track->SetCodecId(common::MediaCodecId::Aac);
+			new_track->SetMediaType(cmn::MediaType::Audio);
+			new_track->SetCodecId(cmn::MediaCodecId::Aac);
 			new_track->SetTimeBase(1, 1000);
 			new_track->SetAudioTimestampScale(1.0);
 
@@ -1260,18 +1314,18 @@ namespace pvd
 			// Below items are not mandatory, it will be parsed again from ADTS parser
 			//////////////////
 			new_track->SetSampleRate(media_info->audio_samplerate);
-			new_track->GetSample().SetFormat(common::AudioSample::Format::S16);
+			new_track->GetSample().SetFormat(cmn::AudioSample::Format::S16);
 			// Kbps -> bps
 			new_track->SetBitrate(media_info->audio_bitrate * 1000);
 			// new_track->SetSampleSize(conn->_audio_samplesize);
 
 			if (media_info->audio_channels == 1)
 			{
-				new_track->GetChannel().SetLayout(common::AudioChannel::Layout::LayoutMono);
+				new_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutMono);
 			}
 			else if (media_info->audio_channels == 2)
 			{
-				new_track->GetChannel().SetLayout(common::AudioChannel::Layout::LayoutStereo);
+				new_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
 			}
 
 			AddTrack(new_track);

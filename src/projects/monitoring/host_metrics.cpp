@@ -65,6 +65,12 @@ namespace mon
         return true;
 	}
 
+	std::map<uint32_t, std::shared_ptr<ApplicationMetrics>> HostMetrics::GetApplicationMetricsList()
+	{
+		std::shared_lock<std::shared_mutex> lock(_map_guard);
+		return _applications;
+	}
+
 	std::shared_ptr<ApplicationMetrics> HostMetrics::GetApplicationMetrics(const info::Application &app_info)
 	{
 		std::shared_lock<std::shared_mutex> lock(_map_guard);

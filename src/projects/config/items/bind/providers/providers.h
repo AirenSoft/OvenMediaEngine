@@ -32,10 +32,10 @@ namespace cfg
 					RegisterValue<Optional>("MPEGTS", &_mpegts);
 				};
 
-				Provider<SingularPort> _ovt{"9000/tcp"};
-				Provider<SingularPort> _rtmp{"1935/tcp"};
-				Provider<SingularPort> _rtsp{"554/tcp"};
-				Provider<RangedPort> _mpegts{"4000/udp"};
+				Provider<cmn::SingularPort> _ovt{"9000/tcp"};
+				Provider<cmn::SingularPort> _rtmp{"1935/tcp"};
+				Provider<cmn::SingularPort> _rtsp{"554/tcp"};
+				Provider<cmn::RangedPort> _mpegts{"4000/udp"};
 			};
 		}  // namespace pvd
 	}	   // namespace bind

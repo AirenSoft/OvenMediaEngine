@@ -37,8 +37,8 @@ namespace cfg
 					RegisterValue<Optional>("TLSPort", &_tls_port);
 				}
 
-				SingularPort _port;
-				SingularPort _tls_port;
+				cmn::SingularPort _port;
+				cmn::SingularPort _tls_port;
 			};
 		}  // namespace pub
 	}	   // namespace bind

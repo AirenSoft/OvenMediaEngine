@@ -39,7 +39,7 @@ namespace pvd
 
 		for(auto &url : url_list)
 		{
-			auto parsed_url = ov::Url::Parse(url.CStr());
+			auto parsed_url = ov::Url::Parse(url);
 			if(parsed_url)
 			{
 				_url_list.push_back(parsed_url);
@@ -49,6 +49,7 @@ namespace pvd
 		if(!_url_list.empty())
 		{
 			_curr_url = _url_list[0];
+			SetMediaSource(_curr_url->ToUrlString(true));
 		}
 	}
 
@@ -101,7 +102,7 @@ namespace pvd
 
 		auto end = std::chrono::steady_clock::now();
 		std::chrono::duration<double, std::milli> elapsed = end - begin;
-		_origin_request_time_msec = elapsed.count();
+		_origin_request_time_msec = static_cast<int64_t>(elapsed.count());
 
 		begin = std::chrono::steady_clock::now();
 		if (!RequestDescribe())
@@ -111,7 +112,7 @@ namespace pvd
 
 		end = std::chrono::steady_clock::now();
 		elapsed = end - begin;
-		_origin_response_time_msec = elapsed.count();
+		_origin_response_time_msec = static_cast<int64_t>(elapsed.count());
 
 		return pvd::PullStream::Start();
 	}
@@ -234,22 +235,22 @@ namespace pvd
 
 			auto new_track = std::make_shared<MediaTrack>();
 
-			common::MediaType media_type = 
-				(stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)?common::MediaType::Video:
-				(stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)?common::MediaType::Audio:
-				common::MediaType::Unknown;
+			cmn::MediaType media_type = 
+				(stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)?cmn::MediaType::Video:
+				(stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)?cmn::MediaType::Audio:
+				cmn::MediaType::Unknown;
 
-			common::MediaCodecId media_codec = 
-				(stream->codecpar->codec_id == AV_CODEC_ID_H264)?common::MediaCodecId::H264:
-				(stream->codecpar->codec_id == AV_CODEC_ID_H265)?common::MediaCodecId::H265:
-				(stream->codecpar->codec_id == AV_CODEC_ID_VP8)?common::MediaCodecId::Vp8:
-				(stream->codecpar->codec_id == AV_CODEC_ID_VP9)?common::MediaCodecId::Vp9:
-				(stream->codecpar->codec_id == AV_CODEC_ID_AAC)?common::MediaCodecId::Aac:
-				(stream->codecpar->codec_id == AV_CODEC_ID_MP3)?common::MediaCodecId::Mp3:
-				(stream->codecpar->codec_id == AV_CODEC_ID_OPUS)?common::MediaCodecId::Opus:
-				common::MediaCodecId::None;
+			cmn::MediaCodecId media_codec = 
+				(stream->codecpar->codec_id == AV_CODEC_ID_H264)?cmn::MediaCodecId::H264:
+				(stream->codecpar->codec_id == AV_CODEC_ID_H265)?cmn::MediaCodecId::H265:
+				(stream->codecpar->codec_id == AV_CODEC_ID_VP8)?cmn::MediaCodecId::Vp8:
+				(stream->codecpar->codec_id == AV_CODEC_ID_VP9)?cmn::MediaCodecId::Vp9:
+				(stream->codecpar->codec_id == AV_CODEC_ID_AAC)?cmn::MediaCodecId::Aac:
+				(stream->codecpar->codec_id == AV_CODEC_ID_MP3)?cmn::MediaCodecId::Mp3:
+				(stream->codecpar->codec_id == AV_CODEC_ID_OPUS)?cmn::MediaCodecId::Opus:
+				cmn::MediaCodecId::None;
 
-			if (media_type == common::MediaType::Unknown || media_codec == common::MediaCodecId::None)
+			if (media_type == cmn::MediaType::Unknown || media_codec == cmn::MediaCodecId::None)
 			{
 				logtp("Unknown media type or codec_id. media_type(%d), media_codec(%d)", media_type, media_codec);
 
@@ -265,21 +266,21 @@ namespace pvd
 			new_track->SetLastFrameTime(0);
 
 			// Video Specific parameters
-			if (media_type == common::MediaType::Video)
+			if (media_type == cmn::MediaType::Video)
 			{
 				new_track->SetFrameRate(av_q2d(stream->r_frame_rate));
 				new_track->SetWidth(stream->codecpar->width);
 				new_track->SetHeight(stream->codecpar->height);
 			}
 			// Audio Specific parameters
-			else if(media_type == common::MediaType::Audio)
+			else if(media_type == cmn::MediaType::Audio)
 			{
 				new_track->SetSampleRate(stream->codecpar->sample_rate);
-				new_track->GetSample().SetFormat(static_cast<common::AudioSample::Format>(common::AudioSample::Format::S16P));
-				new_track->GetChannel().SetLayout(static_cast<common::AudioChannel::Layout>(
-					(stream->codecpar->channels==1)?common::AudioChannel::Layout::LayoutMono:
-					(stream->codecpar->channels==2)?common::AudioChannel::Layout::LayoutStereo:
-													common::AudioChannel::Layout::LayoutUnknown));
+				new_track->GetSample().SetFormat(static_cast<cmn::AudioSample::Format>(cmn::AudioSample::Format::S16P));
+				new_track->GetChannel().SetLayout(static_cast<cmn::AudioChannel::Layout>(
+					(stream->codecpar->channels==1)?cmn::AudioChannel::Layout::LayoutMono:
+					(stream->codecpar->channels==2)?cmn::AudioChannel::Layout::LayoutStereo:
+													cmn::AudioChannel::Layout::LayoutUnknown));
 			}
 
 			AddTrack(new_track);
@@ -424,27 +425,27 @@ namespace pvd
 
 		auto media_type = track->GetMediaType();
 		auto codec_id = track->GetCodecId();
-		common::BitstreamFormat bitstream_format;
-		common::PacketType packet_type;
+		cmn::BitstreamFormat bitstream_format = cmn::BitstreamFormat::Unknwon;
+		cmn::PacketType packet_type = cmn::PacketType::Unknwon;
 
-		if(codec_id == common::MediaCodecId::H264)
+		if(codec_id == cmn::MediaCodecId::H264)
 		{
-			bitstream_format = common::BitstreamFormat::H264_ANNEXB;
-			packet_type = common::PacketType::NALU;
+			bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
+			packet_type = cmn::PacketType::NALU;
 		}
-		else if(codec_id == common::MediaCodecId::H265)
+		else if(codec_id == cmn::MediaCodecId::H265)
 		{
-			bitstream_format = common::BitstreamFormat::H265_ANNEXB;
-			packet_type = common::PacketType::NALU;
+			bitstream_format = cmn::BitstreamFormat::H265_ANNEXB;
+			packet_type = cmn::PacketType::NALU;
 		}
-		else if(codec_id == common::MediaCodecId::Aac)
+		else if(codec_id == cmn::MediaCodecId::Aac)
 		{
 			if(AACAdts::IsValid(packet.data, packet.size) == true)
-				bitstream_format = common::BitstreamFormat::AAC_ADTS;
+				bitstream_format = cmn::BitstreamFormat::AAC_ADTS;
 			else
-				bitstream_format = common::BitstreamFormat::AAC_LATM;
+				bitstream_format = cmn::BitstreamFormat::AAC_LATM;
 	
-			packet_type = common::PacketType::RAW;
+			packet_type = cmn::PacketType::RAW;
 		}
 
 		// Make MediaPacket from AVPacket
@@ -480,7 +481,7 @@ namespace pvd
 			auto media_type = track->GetMediaType();
 			auto codec_id = track->GetCodecId();
 
-			if(codec_id == common::MediaCodecId::H264)
+			if(codec_id == cmn::MediaCodecId::H264)
 			{
 				// Send SPS/PPS Nalunit
 				auto media_packet = std::make_shared<MediaPacket>(media_type, 
@@ -488,16 +489,16 @@ namespace pvd
 					std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size),
 					0, 
 					0, 
-					common::BitstreamFormat::H264_ANNEXB, 
-					common::PacketType::NALU);
+					cmn::BitstreamFormat::H264_ANNEXB, 
+					cmn::PacketType::NALU);
 
 				SendFrame(media_packet);
 			}
-			else if(codec_id == common::MediaCodecId::H265)
+			else if(codec_id == cmn::MediaCodecId::H265)
 			{
 				// Nothing to do here
 			}			
-			else if(codec_id == common::MediaCodecId::Aac)
+			else if(codec_id == cmn::MediaCodecId::Aac)
 			{
 				AACSpecificConfig aac_config;
 				aac_config.SetOjbectType(GetAacObjectType(stream->codecpar->profile));
@@ -512,8 +513,8 @@ namespace pvd
 					std::make_shared<ov::Data>(&sequence_header[0], sequence_header.size()),
 					0, 
 					0, 
-					common::BitstreamFormat::AAC_LATM, 
-					common::PacketType::SEQUENCE_HEADER);
+					cmn::BitstreamFormat::AAC_LATM, 
+					cmn::PacketType::SEQUENCE_HEADER);
 
 				SendFrame(media_packet);
 			}

@@ -21,10 +21,10 @@ namespace pvd
     class PushProvider : public Provider
     {
     public:
-		// Implementation Provider -> OrchestratorModuleInterface
-		OrchestratorModuleType GetModuleType() const override
+		// Implementation Provider -> ModuleInterface
+		ocst::ModuleType GetModuleType() const override
 		{
-			return OrchestratorModuleType::PushProvider;
+			return ocst::ModuleType::PushProvider;
 		}
 
 		// Call CreateServer and store the server 

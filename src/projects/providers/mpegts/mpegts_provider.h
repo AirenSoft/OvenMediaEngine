@@ -44,7 +44,7 @@ namespace pvd
 			return _vhost_app_name;
 		}
 
-		const ov::String &GetStreamName()
+		const ov::String &GetOutputStreamName() const
 		{
 			return _stream_name;
 		}
@@ -111,15 +111,25 @@ namespace pvd
 
 		const char *GetProviderName() const override
 		{
-			return "MpegtsProvider";
+			return "MPEGTSProvider";
 		}
 
 	protected:
+		struct StreamInfo
+		{
+			StreamInfo(info::VHostAppName vhost_app_name, ov::String stream_name)
+				: vhost_app_name(std::move(vhost_app_name)),
+				  stream_name(std::move(stream_name))
+			{
+			}
+			
+			info::VHostAppName vhost_app_name;
+			ov::String stream_name;
+		};
+
 		// stream_map->key: <port, type>
 		// stream_map->value: <vhost_app_name, stream_name>
-		bool PrepareStreamList(const cfg::Server &server_config,
-							   std::map<std::tuple<int, ov::SocketType>,
-										std::tuple<info::VHostAppName, ov::String>> *stream_map);
+		bool PrepareStreamList(const cfg::Server &server_config, std::map<std::tuple<int, ov::SocketType>, StreamInfo> *stream_map);
 
 		//--------------------------------------------------------------------
 		// Implementation of Provider's pure virtual functions
