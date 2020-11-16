@@ -24,7 +24,7 @@ bool FileExport::ExportRecordToXml(const ov::String path, const std::shared_ptr<
 	{
 		auto declarationNode = doc.append_child(pugi::node_declaration);
 		declarationNode.append_attribute("version")    = "1.0";
-		declarationNode.append_attribute("producer") = "OvenMediaEngine";
+		declarationNode.append_attribute("encoding")   = "utf-8";
 
 		doc.append_child("files");
 	}
