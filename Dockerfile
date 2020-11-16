@@ -93,12 +93,12 @@ RUN \
         DIR=/tmp/x265 && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sLf https://get.videolan.org/x265/x265_${X265_VERSION}.tar.gz | tar -jx --strip-components=1 && \
+        curl -sLf https://get.videolan.org/x265/x265_${X265_VERSION}.tar.gz | tar -zx --strip-components=1 && \
         cd ${DIR}/build/linux && \
         cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="${PREFIX}" -DENABLE_SHARED:bool=on ../../source && \
-        make -j$(nproc) && \
-        sudo make install && \
-        rm -rf ${DIR})
+        make && \
+        make install && \
+        rm -rf ${DIR}
 
 ## Build VPX
 RUN \
