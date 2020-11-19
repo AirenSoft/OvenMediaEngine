@@ -261,14 +261,14 @@ namespace pub
 		return GetApplication()->GetApplicationTypeName();
 	}
 
-	std::shared_ptr<StreamWorker> Stream::GetWorkerByStreamID(session_id_t session_id)
+	std::shared_ptr<StreamWorker> Stream::GetWorkerBySessionID(session_id_t session_id)
 	{
 		if(_worker_count == 0)
 		{
 			return nullptr;
 		}
 		std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
-		return _stream_workers[session_id % _stream_workers.size()];
+		return _stream_workers[session_id % _worker_count];
 	}
 
 	bool Stream::AddSession(std::shared_ptr<Session> session)
@@ -279,7 +279,7 @@ namespace pub
 
 		if(_worker_count > 0)
 		{
-			return GetWorkerByStreamID(session->GetId())->AddSession(session);
+			return GetWorkerBySessionID(session->GetId())->AddSession(session);
 		}
 
 		return true;
@@ -298,7 +298,7 @@ namespace pub
 
 		if(_worker_count > 0)
 		{
-			return GetWorkerByStreamID(id)->RemoveSession(id);
+			return GetWorkerBySessionID(id)->RemoveSession(id);
 		}
 
 		return true;

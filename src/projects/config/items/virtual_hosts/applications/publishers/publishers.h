@@ -40,7 +40,8 @@ namespace cfg
 							&_rtmppush_publisher};
 					}
 
-					CFG_DECLARE_GETTER_OF(GetThreadCount, _thread_count)
+					CFG_DECLARE_GETTER_OF(GetStreamLoadBalancingThreadCount, _stream_load_balancing_thread_count)
+					CFG_DECLARE_GETTER_OF(GetSessionLoadBalancingThreadCount, _session_load_balancing_thread_count)
 					// CFG_DECLARE_REF_GETTER_OF(GetRtmpPublisher, _rtmp_publisher)
 					CFG_DECLARE_REF_GETTER_OF(GetHlsPublisher, _hls_publisher)
 					CFG_DECLARE_REF_GETTER_OF(GetDashPublisher, _dash_publisher)
@@ -52,8 +53,9 @@ namespace cfg
 
 				protected:
 					void MakeParseList() override
-					{
-						RegisterValue<Optional>("ThreadCount", &_thread_count);
+					{	
+						RegisterValue<Optional>("StreamLoadBalancingThreadCount", &_stream_load_balancing_thread_count);
+						RegisterValue<Optional>("SessionLoadBalancingThreadCount", &_session_load_balancing_thread_count);
 
 						// RegisterValue<Optional>("RTMP", &_rtmp_publisher);
 						RegisterValue<Optional>("HLS", &_hls_publisher);
@@ -65,7 +67,8 @@ namespace cfg
 						RegisterValue<Optional>("RTMPPush", &_rtmppush_publisher);
 					}
 
-					int _thread_count = 8;
+					int _stream_load_balancing_thread_count = 1;
+					int _session_load_balancing_thread_count = 8;
 
 					// RtmpPublisher _rtmp_publisher;
 					RtmpPushPublisher _rtmppush_publisher;

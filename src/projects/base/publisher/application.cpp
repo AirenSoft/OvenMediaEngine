@@ -5,14 +5,139 @@
 
 namespace pub
 {
-	Application::Application(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info)
-		: info::Application(application_info),
-		_video_stream_queue(nullptr, 500),
-		_audio_stream_queue(nullptr, 500),
+	ApplicationWorker::ApplicationWorker(uint32_t worker_id, ov::String worker_name)
+		: _stream_data_queue(nullptr, 500),
 		_incoming_packet_queue(nullptr, 500)
 	{
-		_publisher = publisher;
+		_worker_id = worker_id;
+		_worker_name = worker_name;
 		_stop_thread_flag = false;
+	}
+
+	bool ApplicationWorker::Start()
+	{
+		_stop_thread_flag = false;
+		_worker_thread = std::thread(&ApplicationWorker::WorkerThread, this);
+
+		ov::String queue_name;
+
+		queue_name.Format("%s - Stream Data Queue", _worker_name.CStr());
+		_stream_data_queue.SetAlias(queue_name.CStr());
+
+		queue_name.Format("%s - Incoming Packet Queue", _worker_name.CStr());
+		_incoming_packet_queue.SetAlias(queue_name.CStr());
+
+		logti("%s ApplicationWorker has been created", _worker_name.CStr());
+
+		return true;
+	}
+
+	bool ApplicationWorker::Stop()
+	{
+		if(_stop_thread_flag == true)
+		{
+			return true;
+		}
+		_stop_thread_flag = true;
+		_queue_event.Notify();
+
+		if (_worker_thread.joinable())
+		{
+			_worker_thread.join();
+		}
+
+		return true;
+	}
+
+	bool ApplicationWorker::PushMediaPacket(const std::shared_ptr<Stream> &stream, const std::shared_ptr<MediaPacket> &media_packet)
+	{
+		auto data = std::make_shared<ApplicationWorker::StreamData>(stream, media_packet);
+		_stream_data_queue.Enqueue(std::move(data));
+
+		_queue_event.Notify();
+
+		return true;
+	}
+
+	bool ApplicationWorker::PushNetworkPacket(const std::shared_ptr<Session> &session, const std::shared_ptr<const ov::Data> &data)
+	{
+		auto packet = std::make_shared<ApplicationWorker::IncomingPacket>(session, data);
+		_incoming_packet_queue.Enqueue(std::move(packet));
+
+		_queue_event.Notify();
+
+		return true;
+	}
+
+	std::shared_ptr<ApplicationWorker::StreamData> ApplicationWorker::PopStreamData()
+	{
+		if (_stream_data_queue.IsEmpty())
+		{
+			return nullptr;
+		}
+
+		auto data = _stream_data_queue.Dequeue(0);
+		if(data.has_value())
+		{
+			return data.value();
+		}
+
+		return nullptr;
+	}
+
+	std::shared_ptr<ApplicationWorker::IncomingPacket> ApplicationWorker::PopIncomingPacket()
+	{
+		if (_incoming_packet_queue.IsEmpty())
+		{
+			return nullptr;
+		}
+
+		auto data = _incoming_packet_queue.Dequeue(0);
+		if(data.has_value())
+		{
+			return data.value();
+		}
+		
+		return nullptr;
+	}
+
+	void ApplicationWorker::WorkerThread()
+	{
+		while (!_stop_thread_flag)
+		{
+			_queue_event.Wait();
+
+			// Check media data is available
+			auto stream_data = PopStreamData();
+			if ((stream_data != nullptr) && (stream_data->_stream != nullptr) && (stream_data->_media_packet != nullptr))
+			{
+				if(stream_data->_media_packet->GetMediaType() == cmn::MediaType::Video)
+				{
+					stream_data->_stream->SendVideoFrame(stream_data->_media_packet);
+				}
+				else if(stream_data->_media_packet->GetMediaType() == cmn::MediaType::Audio)
+				{
+					stream_data->_stream->SendAudioFrame(stream_data->_media_packet);
+				}
+				else
+				{
+					// Nothing can do
+				}
+			}
+
+			// Check incoming packet is available
+			std::shared_ptr<IncomingPacket> packet = PopIncomingPacket();
+			if (packet)
+			{
+				packet->_session->OnPacketReceived(packet->_session, packet->_data);
+			}
+		}
+	}
+
+	Application::Application(const std::shared_ptr<Publisher> &publisher, const info::Application &application_info)
+		: info::Application(application_info)
+	{
+		_publisher = publisher;
 	}
 
 	Application::~Application()
@@ -37,20 +162,32 @@ namespace pub
 
 	bool Application::Start()
 	{
-		// Thread 생성
-		_stop_thread_flag = false;
-		_worker_thread = std::thread(&Application::WorkerThread, this);
+		_application_worker_count = GetConfig().GetStreamLoadBalancingThreadCount();
+		if(_application_worker_count < MIN_APPLICATION_WORKER_COUNT)
+		{
+			_application_worker_count = MIN_APPLICATION_WORKER_COUNT;
+		}
+		if(_application_worker_count > MAX_APPLICATION_WORKER_COUNT)
+		{
+			_application_worker_count = MIN_APPLICATION_WORKER_COUNT;
+		}
+		
+		std::lock_guard<std::shared_mutex> worker_lock(_application_worker_lock);
 
-		ov::String queue_name;
+		for(uint32_t i = 0; i < _application_worker_count; i++)
+		{
+			auto worker_name = ov::String::FormatString("%s/%s/%d", GetApplicationTypeName(), GetName().CStr(), i);
+			auto app_worker = std::make_shared<ApplicationWorker>(i, worker_name.CStr());
+			if (app_worker->Start() == false)
+			{
+				logte("Cannot create ApplicationWorker (%s)", worker_name.CStr());
+				Stop();
 
-		queue_name.Format("%s/%s - Video Queue", GetApplicationTypeName(), GetName().CStr());
-		_video_stream_queue.SetAlias(queue_name.CStr());
+				return false;
+			}
 
-		queue_name.Format("%s/%s - Audio Queue", GetApplicationTypeName(), GetName().CStr());
-		_audio_stream_queue.SetAlias(queue_name.CStr());
-
-		queue_name.Format("%s/%s - Incoming Queue", GetApplicationTypeName(), GetName().CStr());
-		_incoming_packet_queue.SetAlias(queue_name.CStr());
+			_application_workers.push_back(app_worker);
+		}
 
 		logti("%s has created [%s] application", GetApplicationTypeName(), GetName().CStr());
 
@@ -59,17 +196,14 @@ namespace pub
 
 	bool Application::Stop()
 	{
-		if(_stop_thread_flag == true)
+		std::unique_lock<std::shared_mutex> worker_lock(_application_worker_lock);
+		for(const auto &worker : _application_workers)
 		{
-			return true;
+			worker->Stop();
 		}
-		_stop_thread_flag = true;
-		_queue_event.Notify();
 
-		if (_worker_thread.joinable())
-		{
-			_worker_thread.join();
-		}
+		_application_workers.clear();
+		worker_lock.unlock();
 
 		// release remaining streams
 		DeleteAllStreams();
@@ -94,17 +228,14 @@ namespace pub
 		return true;
 	}
 
-	// Call by MediaRouteApplicationObserver
-	// Stream이 생성되었을 때 호출된다.
+	// Called by MediaRouteApplicationObserver
 	bool Application::OnCreateStream(const std::shared_ptr<info::Stream> &info)
 	{
-		// Stream을 자식을 통해 생성해서 연결한다.
-		auto worker_count = GetConfig().GetThreadCount();
-		auto stream = CreateStream(info, worker_count);
+		auto stream_worker_count = GetConfig().GetSessionLoadBalancingThreadCount();
 
+		auto stream = CreateStream(info, stream_worker_count);
 		if (!stream)
 		{
-			// Stream 생성 실패
 			return false;
 		}
 
@@ -142,38 +273,41 @@ namespace pub
 		return true;
 	}
 
+	std::shared_ptr<ApplicationWorker> Application::GetWorkerByStreamID(info::stream_id_t stream_id)
+	{
+		if(_application_worker_count == 0)
+		{
+			return nullptr;
+		}
+
+		std::shared_lock<std::shared_mutex> worker_lock(_application_worker_lock);
+		return _application_workers[stream_id % _application_worker_count];
+	}
+
 	bool Application::OnSendFrame(const std::shared_ptr<info::Stream> &stream,
 									   const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		if (media_packet->GetMediaType() == cmn::MediaType::Video)
+		auto application_worker = GetWorkerByStreamID(stream->GetId());
+		if(application_worker == nullptr)
 		{
-			auto data = std::make_shared<Application::VideoStreamData>(stream, media_packet);
-			_video_stream_queue.Enqueue(std::move(data));
-			_last_video_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
+			return false;
 		}
-		else if (media_packet->GetMediaType() == cmn::MediaType::Audio)
-		{
-			auto data = std::make_shared<Application::AudioStreamData>(stream, media_packet);
 
-			_audio_stream_queue.Enqueue(std::move(data));
-			_last_audio_ts_ms = media_packet->GetPts() * stream->GetTrack(media_packet->GetTrackId())->GetTimeBase().GetExpr() * 1000;
-		}
-		
-		_queue_event.Notify();
-
-		return true;
+		return application_worker->PushMediaPacket(GetStream(stream->GetId()), media_packet);
 	}
 	
 
 	bool Application::PushIncomingPacket(const std::shared_ptr<info::Session> &session_info,
 										 const std::shared_ptr<const ov::Data> &data)
 	{
-		auto packet = std::make_shared<Application::IncomingPacket>(session_info, data);
-		_incoming_packet_queue.Enqueue(std::move(packet));
+		auto stream_id = session_info->GetStream().GetId();
+		auto application_worker = GetWorkerByStreamID(stream_id);
+		if(application_worker == nullptr)
+		{
+			return false;
+		}
 
-		_queue_event.Notify();
-
-		return true;
+		return application_worker->PushNetworkPacket(std::static_pointer_cast<Session>(session_info), data);
 	}
 
 	uint32_t Application::GetStreamCount()
@@ -221,130 +355,5 @@ namespace pub
 		}
 
 		return nullptr;
-	}
-
-	std::shared_ptr<Application::VideoStreamData> Application::PopVideoStreamData()
-	{
-		if (_video_stream_queue.IsEmpty())
-		{
-			return nullptr;
-		}
-
-		auto data = _video_stream_queue.Dequeue();
-		if(data.has_value())
-		{
-			return data.value();
-		}
-		
-		return nullptr;
-	}
-
-	std::shared_ptr<Application::AudioStreamData> Application::PopAudioStreamData()
-	{
-		if (_audio_stream_queue.IsEmpty())
-		{
-			return nullptr;
-		}
-
-		auto data = _audio_stream_queue.Dequeue();
-		if(data.has_value())
-		{
-			return data.value();
-		}
-		
-		return nullptr;
-	}
-
-	std::shared_ptr<Application::IncomingPacket> Application::PopIncomingPacket()
-	{
-		if (_incoming_packet_queue.IsEmpty())
-		{
-			return nullptr;
-		}
-
-		auto data = _incoming_packet_queue.Dequeue();
-		if(data.has_value())
-		{
-			return data.value();
-		}
-		
-		return nullptr;
-	}
-
-	void Application::WorkerThread()
-	{
-		ov::StopWatch stat_stop_watch;
-		stat_stop_watch.Start();
-
-		while (!_stop_thread_flag)
-		{
-			if (stat_stop_watch.IsElapsed(5000) && stat_stop_watch.Update())
-			{
-				logts("Stats for publisher queue [%s(%u)]: VQ: %zu, AQ: %zu, Incoming Q: %zu",
-					  _app_config.GetName().CStr(), _application_id,
-					  _video_stream_queue.Size(),
-					  _audio_stream_queue.Size(),
-					  _incoming_packet_queue.Size());
-			}
-
-			_queue_event.Wait();
-
-			// Check video data is available
-			std::shared_ptr<Application::VideoStreamData> video_data = PopVideoStreamData();
-
-			if ((video_data != nullptr) && (video_data->_stream != nullptr) && (video_data->_media_packet != nullptr))
-			{
-				SendVideoFrame(video_data->_stream, video_data->_media_packet);
-			}
-
-			// Check audio data is available
-			std::shared_ptr<Application::AudioStreamData> audio_data = PopAudioStreamData();
-
-			if ((audio_data != nullptr) && (audio_data->_stream != nullptr) && (audio_data->_media_packet != nullptr))
-			{
-				SendAudioFrame(audio_data->_stream, audio_data->_media_packet);
-			}
-
-			// Check incoming packet is available
-			std::shared_ptr<IncomingPacket> packet = PopIncomingPacket();
-			if (packet)
-			{
-				OnPacketReceived(packet->_session_info, packet->_data);
-			}
-		}
-	}
-
-	void Application::SendVideoFrame(const std::shared_ptr<info::Stream> &stream_info, const std::shared_ptr<MediaPacket> &media_packet)
-	{
-		// Stream에 Packet을 전송한다.
-		auto stream = GetStream(stream_info->GetId());
-		if (!stream)
-		{
-			// stream을 찾을 수 없다.
-			return;
-		}
-
-		stream->SendVideoFrame(media_packet);
-	}
-
-	void Application::SendAudioFrame(const std::shared_ptr<info::Stream> &stream_info, const std::shared_ptr<MediaPacket> &media_packet)
-	{
-		// Stream에 Packet을 전송한다.
-		auto stream = GetStream(stream_info->GetId());
-		if (!stream)
-		{
-			// stream을 찾을 수 없다.
-			return;
-		}
-
-		stream->SendAudioFrame(media_packet);
-	}
-
-	void Application::OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data)
-	{
-		// Stream으로 갈 필요없이 바로 Session으로 간다.
-		// Stream은 Broad하게 전송할때만 필요하다.
-		auto session = std::static_pointer_cast<Session>(session_info);
-		session->OnPacketReceived(session_info, data);
 	}
 }  // namespace pub

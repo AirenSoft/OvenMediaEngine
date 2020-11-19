@@ -455,10 +455,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 
 void WebRtcPublisher::OnDataReceived(IcePort &port, const std::shared_ptr<info::Session> &session_info, std::shared_ptr<const ov::Data> data)
 {
-	// ice_port를 통해 STUN을 제외한 모든 Packet이 들어온다.
 	auto session = std::static_pointer_cast<pub::Session>(session_info);
-
-	//받는 Data 형식을 협의해야 한다.
 	auto application = session->GetApplication();
 	application->PushIncomingPacket(session_info, data);
 }

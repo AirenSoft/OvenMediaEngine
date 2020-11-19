@@ -167,7 +167,7 @@ namespace api
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
 
-			SetInt(object, "threadCount", config.GetThreadCount());
+			SetInt(object, "sessionLoadBalancingThreadCount", config.GetSessionLoadBalancingThreadCount());
 			SetRtmpPushPublisher(app_info, object, "rtmpPush", config.GetRtmpPushPublisher(), Optional::True);
 			SetHlsPublisher(app_info, object, "hls", config.GetHlsPublisher(), Optional::True);
 			SetDashPublisher(app_info, object, "dash", config.GetDashPublisher(), Optional::True);
