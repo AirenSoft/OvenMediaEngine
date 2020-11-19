@@ -39,11 +39,6 @@ std::shared_ptr<pub::Stream> RtcApplication::CreateStream(const std::shared_ptr<
 {
 	// Stream Class 생성할때는 복사를 사용한다.
 	logtd("RtcApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
-	if(worker_count == 0)
-	{
-		// RtcStream should have worker threads.
-		worker_count = MIN_STREAM_WORKER_THREAD_COUNT;
-	}
 	return RtcStream::Create(GetSharedPtrAs<pub::Application>(), *info, worker_count);
 }
 

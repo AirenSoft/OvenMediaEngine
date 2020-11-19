@@ -263,6 +263,10 @@ namespace pub
 
 	std::shared_ptr<StreamWorker> Stream::GetWorkerByStreamID(session_id_t session_id)
 	{
+		if(_worker_count == 0)
+		{
+			return nullptr;
+		}
 		std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
 		return _stream_workers[session_id % _stream_workers.size()];
 	}
@@ -272,9 +276,13 @@ namespace pub
 		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
 		// For getting session, all sessions
 		_sessions[session->GetId()] = session;
-		// 가장 적은 Session을 처리하는 Worker를 찾아서 Session을 넣는다.
-		// session id로 hash를 만들어서 분배한다.
-		return GetWorkerByStreamID(session->GetId())->AddSession(session);
+
+		if(_worker_count > 0)
+		{
+			return GetWorkerByStreamID(session->GetId())->AddSession(session);
+		}
+
+		return true;
 	}
 
 	bool Stream::RemoveSession(session_id_t id)
@@ -288,13 +296,23 @@ namespace pub
 		_sessions.erase(id);
 		session_lock.unlock();
 
-		return GetWorkerByStreamID(id)->RemoveSession(id);
+		if(_worker_count > 0)
+		{
+			return GetWorkerByStreamID(id)->RemoveSession(id);
+		}
+
+		return true;
 	}
 
 	std::shared_ptr<Session> Stream::GetSession(session_id_t id)
 	{
 		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex);
-		return GetWorkerByStreamID(id)->GetSession(id);
+		if (_sessions.count(id) <= 0)
+		{
+			return nullptr;
+		}
+
+		return _sessions[id];
 	}
 
 	std::shared_ptr<Session> Stream::GetSessionAt(uint32_t index)
@@ -326,10 +344,22 @@ namespace pub
 
 	bool Stream::BroadcastPacket(const std::any &packet)
 	{
-		std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
-		for (uint32_t i = 0; i < _stream_workers.size(); i++)
+		if(_worker_count > 0)
 		{
-			_stream_workers[i]->SendPacket(packet);
+			std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
+			for (uint32_t i = 0; i < _stream_workers.size(); i++)
+			{
+				_stream_workers[i]->SendPacket(packet);
+			}
+		}
+		else
+		{
+			std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex);
+			for (auto const &x : _sessions)
+			{
+				auto session = std::static_pointer_cast<Session>(x.second);
+				session->SendOutgoingData(packet);
+			}
 		}
 	
 		return true;

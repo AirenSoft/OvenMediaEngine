@@ -6,7 +6,6 @@
 #include "base/mediarouter/media_buffer.h"
 #include "session.h"
 
-#define MIN_STREAM_WORKER_THREAD_COUNT 1
 #define MAX_STREAM_WORKER_THREAD_COUNT 72
 
 namespace pub
