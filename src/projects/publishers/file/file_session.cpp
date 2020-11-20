@@ -47,6 +47,18 @@ bool FileSession::Start()
 	GetRecord()->SetFileInfoPath(GetOutputFileInfoPath());
 	GetRecord()->SetState(info::Record::RecordState::Recording);
 
+	// Create directory for temporary file
+	ov::String tmp_directory = ov::PathManager::ExtractPath(GetOutputTempFilePath());
+	if (MakeDirectoryRecursive(tmp_directory.CStr()) == false)
+	{
+		logte("Could not create directory. path(%s)", tmp_directory.CStr());
+
+		SetState(SessionState::Error);	
+		GetRecord()->SetState(info::Record::RecordState::Error);		
+
+		return false;
+	}
+
 	_writer = FileWriter::Create();
 	if(_writer == nullptr)
 	{
