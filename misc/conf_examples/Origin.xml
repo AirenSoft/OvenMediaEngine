@@ -85,36 +85,26 @@
 					<Name>app</Name>
 					<!-- Application type (live/vod) -->
 					<Type>live</Type>
-					<Encodes>
-						<Encode>
-							<Name>bypass</Name>
-							<Audio>
-								<Bypass>true</Bypass>
-							</Audio>
-							<Video>
-								<Bypass>true</Bypass>
-							</Video>
-						</Encode>
-						<Encode>
-							<Name>opus</Name>
-							<Audio>
-								<Codec>opus</Codec>
-								<Bitrate>128000</Bitrate>
-								<Samplerate>48000</Samplerate>
-								<Channel>2</Channel>
-							</Audio>
-						</Encode>
-					</Encodes>
-					<Streams>
-						<Stream>
+					<OutputProfiles>
+						<OutputProfile>
 							<Name>bypass_stream</Name>
 							<OutputStreamName>${OriginStreamName}</OutputStreamName>
-							<Profiles>
-								<Profile>bypass</Profile>
-								<Profile>opus</Profile>
-							</Profiles>
-						</Stream>
-					</Streams>
+							<Encodes>
+								<Audio>
+									<Bypass>true</Bypass>
+								</Audio>
+								<Video>
+									<Bypass>true</Bypass>
+								</Video>
+								<Audio>
+									<Codec>opus</Codec>
+									<Bitrate>128000</Bitrate>
+									<Samplerate>48000</Samplerate>
+									<Channel>2</Channel>
+								</Audio>
+							</Encodes>
+						</OutputProfile>
+					</OutputProfiles>
 					<Providers>
 						<OVT />
 						<RTMP />
