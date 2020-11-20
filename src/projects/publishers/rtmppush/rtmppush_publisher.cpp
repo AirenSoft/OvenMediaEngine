@@ -1,6 +1,8 @@
 #include "rtmppush_private.h"
 #include "rtmppush_publisher.h"
 
+#define UNUSED(expr) do { (void)(expr); } while (0)
+
 std::shared_ptr<RtmpPushPublisher> RtmpPushPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
 	auto obj = std::make_shared<RtmpPushPublisher>(server_config, router);
@@ -127,12 +129,10 @@ void RtmpPushPublisher::SessionController()
 {
 	std::shared_lock<std::shared_mutex> lock(_userdata_sets_mutex);
 
-	// Session Management by Userdata
-	for(uint32_t userdata_idx=0 ; userdata_idx<_userdata_sets.GetCount() ; userdata_idx++)
+	auto userdata_sets = _userdata_sets.GetUserdataSets();
+	for ( auto& [ key, userdata ] : userdata_sets )
 	{
-		auto userdata = _userdata_sets.GetAt(userdata_idx);
-		if(userdata == nullptr)
-			continue;
+		UNUSED(key);
 
 		// Find a session related to Userdata.
 		auto vhost_app_name = info::VHostAppName(userdata->GetVhost(), userdata->GetApplication());
@@ -177,11 +177,10 @@ void RtmpPushPublisher::SessionController()
 				stream->DeleteSession(userdata->GetSessionId());
 
 			_userdata_sets.DeleteByKey(userdata->GetId());
-
-			userdata_idx--;
 		}			
+
 	}
-}
+}	
 
 void RtmpPushPublisher::WorkerThread()
 {
@@ -243,11 +242,10 @@ std::shared_ptr<ov::Error> RtmpPushPublisher::GetPushes(const info::VHostAppName
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
 
-	for(uint32_t i=0 ; i<_userdata_sets.GetCount() ; i++)
+	auto userdata_sets = _userdata_sets.GetUserdataSets();
+	for (  auto& [ key, userdata ] : userdata_sets )
 	{
-		auto userdata = _userdata_sets.GetAt(i);
-		if(userdata == nullptr)
-			continue;
+		UNUSED(key);
 
 		push_list.push_back(userdata);
 	}

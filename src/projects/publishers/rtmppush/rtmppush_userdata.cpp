@@ -34,19 +34,6 @@ std::shared_ptr<info::Push> RtmpPushUserdataSets::GetAt(uint32_t index)
 	return iter->second;
 }
 
-ov::String RtmpPushUserdataSets::GetKeyAt(uint32_t index)
-{
-	auto iter( _userdata_sets.begin() );
-    std::advance( iter, index );
-
-    if(iter == _userdata_sets.end())
-    {
-    	return nullptr;
-    }
-
-	return iter->first;	
-}
-
 std::shared_ptr<info::Push> RtmpPushUserdataSets::GetByKey(ov::String key)
 {
 	auto iter = _userdata_sets.find(key);

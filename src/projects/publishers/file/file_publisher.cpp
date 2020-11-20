@@ -2,6 +2,8 @@
 #include "file_private.h"
 #include "file_publisher.h"
 
+#define UNUSED(expr) do { (void)(expr); } while (0)
+
 std::shared_ptr<FilePublisher> FilePublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
 	auto file = std::make_shared<FilePublisher>(server_config, router);
@@ -143,11 +145,10 @@ void FilePublisher::SessionController()
 {
 	std::shared_lock<std::shared_mutex> lock(_userdata_sets_mutex);
 
-	for(uint32_t userdata_idx=0 ; userdata_idx<_userdata_sets.GetCount() ; userdata_idx++)
+	auto userdata_sets = _userdata_sets.GetUserdataSets();
+	for ( auto& [ key, userdata ] : userdata_sets )
 	{
-		auto userdata = _userdata_sets.GetAt(userdata_idx);
-		if(userdata == nullptr)
-			continue;
+		UNUSED(key);
 
 		// Find a session related to Userdata.
 		auto vhost_app_name = info::VHostAppName(userdata->GetVhost(), userdata->GetApplication());
@@ -192,8 +193,6 @@ void FilePublisher::SessionController()
 				stream->DeleteSession(userdata->GetSessionId());
 
 			_userdata_sets.DeleteByKey(userdata->GetId());
-
-			userdata_idx--;
 		}		
 	}
 }
@@ -243,11 +242,10 @@ std::shared_ptr<ov::Error> FilePublisher::GetRecords(const info::VHostAppName &v
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
 
-	for(uint32_t i=0 ; i<_userdata_sets.GetCount() ; i++)
+	auto userdata_sets = _userdata_sets.GetUserdataSets();
+	for ( auto& [ key, userdata ] : userdata_sets )
 	{
-		auto userdata = _userdata_sets.GetAt(i);
-		if(userdata == nullptr)
-			continue;
+		UNUSED(key);
 
 		record_list.push_back(userdata);
 	}

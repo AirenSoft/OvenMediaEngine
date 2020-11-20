@@ -20,31 +20,6 @@ bool FileUserdataSets::Set(ov::String userdata_id, std::shared_ptr<info::Record>
 	return true;
 }
 
-std::shared_ptr<info::Record> FileUserdataSets::GetAt(uint32_t index)
-{
-	auto iter( _userdata_sets.begin() );
-    std::advance( iter, index );
-
-    if(iter == _userdata_sets.end())
-    {
-    	return nullptr;
-    }
-
-	return iter->second;
-}
-
-ov::String FileUserdataSets::GetKeyAt(uint32_t index)
-{
-	auto iter( _userdata_sets.begin() );
-    std::advance( iter, index );
-
-    if(iter == _userdata_sets.end())
-    {
-    	return nullptr;
-    }
-
-	return iter->first;	
-}
 
 std::shared_ptr<info::Record> FileUserdataSets::GetByKey(ov::String key)
 {
