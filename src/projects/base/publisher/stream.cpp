@@ -315,21 +315,6 @@ namespace pub
 		return _sessions[id];
 	}
 
-	std::shared_ptr<Session> Stream::GetSessionAt(uint32_t index)
-	{
-		std::shared_lock<std::shared_mutex> lock(_session_map_mutex);
-
-		auto it( _sessions.begin() );
-		std::advance( it, index );
-
-		if (it == _sessions.end())
-		{
-			return nullptr;
-		}
-
-		return it->second;
-	}
-
 	const std::map<session_id_t, std::shared_ptr<Session>> Stream::GetAllSessions()
 	{
 		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex);

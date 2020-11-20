@@ -77,7 +77,7 @@ std::shared_ptr<FileSession> FileStream::CreateSession()
 	return session;
 }
 
-void FileStream::DeleteSession(uint32_t session_id)
+bool FileStream::DeleteSession(uint32_t session_id)
 {
-	RemoveSession(session_id);
+	return RemoveSession(session_id);
 }

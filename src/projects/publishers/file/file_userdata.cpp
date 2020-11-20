@@ -80,3 +80,8 @@ uint32_t FileUserdataSets::GetCount()
 {
 	return _userdata_sets.size();	
 }
+
+std::map<ov::String, std::shared_ptr<info::Record>>& FileUserdataSets::GetUserdataSets()
+{
+	return _userdata_sets;
+}

@@ -63,9 +63,9 @@ void RtmpPushStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_pa
 	BroadcastPacket(stream_packet);
 }
 
-void RtmpPushStream::DeleteSession(uint32_t session_id)
+bool RtmpPushStream::DeleteSession(uint32_t session_id)
 {
-	RemoveSession(session_id);
+	return RemoveSession(session_id);
 }
 
 std::shared_ptr<RtmpPushSession> RtmpPushStream::CreateSession()

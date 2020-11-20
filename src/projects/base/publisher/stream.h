@@ -49,7 +49,6 @@ namespace pub
 		bool AddSession(std::shared_ptr<Session> session);
 		bool RemoveSession(session_id_t id);
 		std::shared_ptr<Session> GetSession(session_id_t id);
-		std::shared_ptr<Session> GetSessionAt(uint32_t index);
 		const std::map<session_id_t, std::shared_ptr<Session>> GetAllSessions();
 		uint32_t GetSessionCount();
 

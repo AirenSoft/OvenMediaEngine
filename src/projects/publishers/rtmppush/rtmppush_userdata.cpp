@@ -81,3 +81,8 @@ uint32_t RtmpPushUserdataSets::GetCount()
 {
 	return _userdata_sets.size();	
 }
+
+std::map<ov::String, std::shared_ptr<info::Push>>& RtmpPushUserdataSets::GetUserdataSets()
+{
+	return _userdata_sets;
+}

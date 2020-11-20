@@ -315,21 +315,6 @@ namespace pub
 		return _streams.size();
 	}
 
-	std::shared_ptr<Stream> Application::GetStreamAt(uint32_t index)
-	{
-		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
-
-		auto it( _streams.begin() );
-	    std::advance( it, index );
-
-	    if(it == _streams.end())
-	    {
-	    	return nullptr;
-	    }
-
-		return it->second;
-	}
-
 	std::shared_ptr<Stream> Application::GetStream(uint32_t stream_id)
 	{
 		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);

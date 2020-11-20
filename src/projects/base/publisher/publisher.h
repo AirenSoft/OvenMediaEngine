@@ -111,8 +111,6 @@ namespace pub
 		}
 
 		uint32_t GetApplicationCount();
-		std::shared_ptr<Application> GetApplicationAt(uint32_t index);
-
 		std::shared_ptr<Application> GetApplicationById(info::application_id_t application_id);
 		std::shared_ptr<Stream> GetStream(info::application_id_t application_id, uint32_t stream_id);
 		template <typename T>

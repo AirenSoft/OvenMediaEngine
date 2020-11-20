@@ -187,44 +187,15 @@ void FilePublisher::SessionController()
 		if(userdata->GetRemove() == true)
 		{
 			logtd("Remove userdata of file publiser. id(%s)", userdata->GetId().CStr());
+
+			if(userdata->GetSessionId() != 0)
+				stream->DeleteSession(userdata->GetSessionId());
+
 			_userdata_sets.DeleteByKey(userdata->GetId());
+
 			userdata_idx--;
 		}		
 	}
-
-	// Garbage Collection : Delete sessions that are not in userdata list.
-	for(uint32_t app_idx=0; app_idx<GetApplicationCount() ; app_idx++)
-	{
-		auto application = std::static_pointer_cast<FileApplication>(GetApplicationAt(app_idx));
-		if(application == nullptr)
-			continue;
-
-		for(uint32_t stream_idx=0; stream_idx<application->GetStreamCount() ; stream_idx++)
-		{
-			auto stream = std::static_pointer_cast<FileStream>(application->GetStreamAt(stream_idx));
-			if(stream == nullptr)
-				continue;
-
-			for(uint32_t session_idx=0; session_idx<stream->GetSessionCount() ; session_idx++)	
-			{
-				auto session = std::static_pointer_cast<FileSession>(stream->GetSessionAt(session_idx));
-				if(session == nullptr)
-					continue;
-
-				auto userdata = _userdata_sets.GetBySessionId(session->GetId());
-				if(userdata == nullptr)
-				{
-					// Userdata does not have this session. This session needs to be deleted.
-					logtd("Userdata does not have this session. This session should be delete. session_id(%d)", session->GetId());
-					
-					stream->DeleteSession(session->GetId());
-
-					// If the session is deleted, check again from the beginning.
-					session_idx=0;
-				}
-			}
-		}
-	}	
 }
 
 
