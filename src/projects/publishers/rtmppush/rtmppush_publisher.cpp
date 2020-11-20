@@ -173,7 +173,7 @@ void RtmpPushPublisher::SessionController()
 		{
 			logtd("Remove userdata of file publiser. id(%s)", userdata->GetId().CStr());
 
-			if(userdata->GetSessionId() != 0)
+			if(stream != nullptr && userdata->GetSessionId() != 0)
 				stream->DeleteSession(userdata->GetSessionId());
 
 			_userdata_sets.DeleteByKey(userdata->GetId());
@@ -208,6 +208,8 @@ std::shared_ptr<ov::Error> RtmpPushPublisher::PushStart(const info::VHostAppName
 		return ov::Error::CreateError(PushPublisherErrorCode::Failure, 
 			"Duplicate identification Code");		
 	}
+
+
 
 	push->SetEnable(true);
 	push->SetRemove(false);
