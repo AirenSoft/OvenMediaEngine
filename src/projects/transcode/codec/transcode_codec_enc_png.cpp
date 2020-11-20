@@ -87,7 +87,7 @@ void OvenCodecImplAvcodecEncPng::Stop()
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
-		logtd("AVC encoder thread has ended.");
+		logtd("Png encoder thread has ended.");
 	}
 }
 
@@ -113,11 +113,14 @@ void OvenCodecImplAvcodecEncPng::ThreadEncode()
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
 
-		_frame->format = _context->pix_fmt;
+		_frame->format = frame->GetFormat();
 		_frame->pts = frame->GetPts();
 		_frame->pkt_duration = frame->GetDuration();
 		_frame->width = frame->GetWidth();
 		_frame->height = frame->GetHeight();
+		_frame->linesize[0] = frame->GetStride(0);
+		_frame->linesize[1] = frame->GetStride(1);
+		_frame->linesize[2] = frame->GetStride(2);
 
 		if (::av_frame_get_buffer(_frame, 32) < 0)
 		{
@@ -134,9 +137,9 @@ void OvenCodecImplAvcodecEncPng::ThreadEncode()
 		}
 
 		// Convert to Frame->Format -> Context->Format
-		// ::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
-		// ::memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
-		// ::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
+		::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
+		::memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
+		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
 
 		int ret = ::avcodec_send_frame(_context, _frame);
 

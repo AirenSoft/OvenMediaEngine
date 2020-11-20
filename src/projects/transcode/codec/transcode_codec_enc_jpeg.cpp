@@ -48,7 +48,7 @@ bool OvenCodecImplAvcodecEncJpeg::Configure(std::shared_ptr<TranscodeContext> co
 
 	AVRational codec_timebase = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
 	_context->time_base = codec_timebase;
-	_context->pix_fmt = AV_PIX_FMT_YUVJ444P;
+	_context->pix_fmt = AV_PIX_FMT_YUVJ420P;
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
 	_context->flags = CODEC_FLAG_QSCALE;
@@ -87,7 +87,7 @@ void OvenCodecImplAvcodecEncJpeg::Stop()
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
-		logtd("AVC encoder thread has ended.");
+		logtd("Jpeg encoder thread has ended.");
 	}
 }
 

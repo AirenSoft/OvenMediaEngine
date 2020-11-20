@@ -792,7 +792,7 @@ int32_t TranscodeStream::CreateEncoders()
 				// TODO(soulk): Addicational parameters should be set.
 				//	- Encoding profile level
 				//	- etc
-				auto new_output_transcode_context = std::make_shared<TranscodeContext>(
+				auto output_transcode_context = std::make_shared<TranscodeContext>(
 					true,
 					track->GetCodecId(),
 					track->GetBitrate(),
@@ -800,7 +800,8 @@ int32_t TranscodeStream::CreateEncoders()
 					track->GetHeight(),
 					track->GetFrameRate());
 
-				CreateEncoder(encoder_track_id, track, new_output_transcode_context);
+
+				CreateEncoder(encoder_track_id, track, output_transcode_context);
 				created_encoder_count++;
 			}
 			break;
@@ -809,13 +810,13 @@ int32_t TranscodeStream::CreateEncoders()
 				// TODO(soulk): Addicational parameters should be set.
 				//  - Channel Layout
 				//	- etc
-				auto new_output_transcode_context = std::make_shared<TranscodeContext>(
+				auto output_transcode_context = std::make_shared<TranscodeContext>(
 					true,
 					track->GetCodecId(),
 					track->GetBitrate(),
 					track->GetSampleRate());
 
-				CreateEncoder(encoder_track_id, track, new_output_transcode_context);
+				CreateEncoder(encoder_track_id, track, output_transcode_context);
 				created_encoder_count++;
 			}
 			break;
@@ -1200,7 +1201,7 @@ void TranscodeStream::CreateFilters(MediaFrame *buffer)
 	auto input_transcode_context = _decoders[decoder_id]->GetContext();
 	if (buffer->GetMediaType() == cmn::MediaType::Video)
 	{
-
+		
 	}
 	else if (buffer->GetMediaType() == cmn::MediaType::Audio)
 	{
@@ -1354,6 +1355,7 @@ bool TranscodeStream::IsAudioCodec(cmn::MediaCodecId codec_id)
 
 	return false;
 }
+
 
 // // Look up the Encode settings by name in the application configuration.
 // const cfg::vhost::app::enc::Encode *TranscodeStream::GetEncodeByProfileName(const info::Application &application_info, ov::String encode_name)

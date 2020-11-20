@@ -270,7 +270,7 @@ public:
 	{
 		auto plane_data = AllocPlainData(plane);
 
-		if (plane_data != nullptr)
+		if (plane_data != nullptr && data_size != 0)
 		{
 			plane_data->Clear();
 			plane_data->Append(data, data_size);
@@ -281,7 +281,7 @@ public:
 	{
 		auto plane_data = AllocPlainData(plane);
 
-		if (plane_data != nullptr)
+		if (plane_data != nullptr && data_size != 0)
 		{
 			plane_data->Append(data, data_size);
 		}

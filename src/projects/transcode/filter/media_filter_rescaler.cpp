@@ -74,15 +74,12 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	//     [buffer] -> [fps] -> [scale] -> [settb] -> [buffersink]
 
 	// Prepare the input filter
-
-	// TODO: Removed framerate filter. because, Timestamp of frame is shifted. In case of not constant framerate as is VFR.
 	ov::String input_args = ov::String::FormatString(
 		"video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
 		input_media_track->GetWidth(), input_media_track->GetHeight(),
 		input_media_track->GetFormat(),
 		input_media_track->GetTimeBase().GetNum(), input_media_track->GetTimeBase().GetDen(),
 		1, 1);
-
 
 
 	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, buffersrc, "in", input_args, nullptr, _filter_graph);
@@ -93,16 +90,6 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	}
 
 	// Prepare output filters
-	std::vector<ov::String> filters = {
-		// "fps" filter options
-		ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()),
-		// "scale" filter options
-		ov::String::FormatString("scale=%dx%d:flags=bicubic", output_context->GetVideoWidth(), output_context->GetVideoHeight()),
-		// "settb" filter options		
-		ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()),
-	};
-
-	ov::String output_filters = ov::String::Join(filters, ",");
 
 	ret = ::avfilter_graph_create_filter(&_buffersink_ctx, buffersink, "out", nullptr, nullptr, _filter_graph);
 	if (ret < 0)
@@ -111,10 +98,21 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		return false;
 	}
 
-	enum AVPixelFormat pix_fmts[] = {AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE};
+	if(output_context->GetCodecId() == cmn::MediaCodecId::Jpeg)
+	{
+		enum AVPixelFormat pix_fmts[] = {AV_PIX_FMT_YUVJ420P, AV_PIX_FMT_NONE};
+		ret = av_opt_set_int_list(_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
 
-	ret = av_opt_set_int_list(_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
-
+	}
+	if(output_context->GetCodecId() == cmn::MediaCodecId::Png)
+	{
+		enum AVPixelFormat pix_fmts[] = {AV_PIX_FMT_RGBA, AV_PIX_FMT_NONE};
+		ret = av_opt_set_int_list(_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
+	}
+	else {
+		enum AVPixelFormat pix_fmts[] = {AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE};
+		ret = av_opt_set_int_list(_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
+	}
 	if (ret < 0)
 	{
 		logte("Could not set output pixel format for rescaling: %d", ret);
@@ -131,6 +129,16 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 	_inputs->pad_idx = 0;
 	_inputs->next = nullptr;
 
+	std::vector<ov::String> filters = {
+		// "fps" filter options
+		ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()),
+		// "scale" filter options
+		ov::String::FormatString("scale=%dx%d:flags=bicubic", output_context->GetVideoWidth(), output_context->GetVideoHeight()),
+		// "settb" filter options		
+		ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()),
+	};
+
+	ov::String output_filters = ov::String::Join(filters, ",");
 	if ((ret = ::avfilter_graph_parse_ptr(_filter_graph, output_filters, &_inputs, &_outputs, nullptr)) < 0)
 	{
 		logte("Could not parse filter string for rescaling: %d (%s)", ret, output_filters.CStr());
