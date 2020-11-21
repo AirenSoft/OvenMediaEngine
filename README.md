@@ -3,7 +3,7 @@
 ## What is OvenMediaEngine?
 
 OvenMediaEngine (OME) is <b>Open-Source Streaming Server</b> with <b>Sub-Second Latency</b>.
-OME receives <b>RTMP</b>, <b>MPEG-TS</b> (Beta), <b>RTSP</b> (Beta) from encoders and cameras such as [OvenStreamEncoder](https://www.airensoft.com/olk), OBS, XSplit, and more. And, it transmits media source using <b>WebRTC</b>, <b>Low Latency HTTP</b> (DASH), <b>MPEG-DASH</b>, and <b>HLS</b>.
+OME receives <b>RTMP</b>, <b>MPEG-TS</b> (Beta), <b>RTSP</b> (Beta) from encoders and cameras such as [OvenStreamEncoder](https://www.airensoft.com/olk), OBS, XSplit, and more. And, it transmits media source using <b>WebRTC</b>, <b>Low Latency MPEG-DASH</b>, <b>MPEG-DASH</b>, and <b>HLS</b>.
 We also provides [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), Open-Source HTML5 Player.
 
 ![main](dist/01_OvenMediaEngine.png)
