@@ -3,7 +3,7 @@
 ## What is OvenMediaEngine?
 
 OvenMediaEngine (OME) is <b>Open-Source Streaming Server</b> with <b>Sub-Second Latency</b>.
-OME receives <b>RTMP</b>, <b>MPEG-TS</b> (Beta), and <b>RTSP</b> (Beta) from encoders and cameras such as [OvenStreamEncoder](https://www.airensoft.com/olk), OBS, XSplit, and more. And, it transmits media sources using <b>WebRTC</b>, <b>Low Latency MPEG-DASH</b>, <b>MPEG-DASH</b>, and <b>HLS</b>.
+OME receives <b>RTMP</b>, <b>MPEG-TS</b> (Beta), and <b>RTSP</b> (Beta) from encoders and cameras such as [OvenStreamEncoder](https://www.airensoft.com/olk), OBS, XSplit, and more. Then, it transmits media sources using <b>WebRTC</b>, <b>Low Latency MPEG-DASH</b>, <b>MPEG-DASH</b>, and <b>HLS</b>.
 We also provide [OvenPlayer](https://github.com/AirenSoft/OvenPlayer), Open-Source HTML5 Player.
 
 ![main](dist/01_OvenMediaEngine.png)
@@ -63,8 +63,7 @@ Please read [Getting Started](https://airensoft.gitbook.io/ovenmediaengine/getti
 
 Please see our [Guidelines ](CONTRIBUTING.md)and [Rules](CODE_OF_CONDUCT.md).
 
-And we are love to hear use cases. Please tell your story [to contact@airensoft.com](mailto:contact@airensoft.com)
-The voices of real-contributors are of great help to our project.
+And we are love to hear use cases. Please tell your story to [contact@airensoft.com](mailto:contact@airensoft.com). The voices of real-contributors are of great help to our project.
 
 [![Contribute](dist/05_UseCases.png)](mailto:contact@airensoft.com)
 
