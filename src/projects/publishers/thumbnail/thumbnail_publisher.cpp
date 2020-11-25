@@ -282,15 +282,15 @@ bool ThumbnailPublisher::ParseRequestUrl(const ov::String &request_url,
 
 	file_ext = tokens[1];
 
-	logtd(
-		"request : %s\n"
-		"request path : %s\n"
-		"request param : %s\n"
-		"app name : %s\n"
-		"stream name : %s\n"
-		"file name : %s\n"
-		"file ext : %s\n",
-		request_url.CStr(), request_path.CStr(), request_param.CStr(), app_name.CStr(), stream_name.CStr(), file_name.CStr(), file_ext.CStr());
+	// logtd(
+	// 	"request : %s\n"
+	// 	"request path : %s\n"
+	// 	"request param : %s\n"
+	// 	"app name : %s\n"
+	// 	"stream name : %s\n"
+	// 	"file name : %s\n"
+	// 	"file ext : %s\n",
+	// 	request_url.CStr(), request_path.CStr(), request_param.CStr(), app_name.CStr(), stream_name.CStr(), file_name.CStr(), file_ext.CStr());
 
 	return true;
 }

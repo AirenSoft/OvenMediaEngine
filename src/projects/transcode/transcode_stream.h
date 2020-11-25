@@ -129,6 +129,7 @@ private:
 	std::shared_ptr<info::Stream> CreateOutputStream(const cfg::vhost::app::oprf::OutputProfile &cfg_output_profile);
 	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack>& input_track, const cfg::vhost::app::oprf::VideoProfile &profile);
 	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack>& input_track, const cfg::vhost::app::oprf::AudioProfile &profile);
+	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack>& input_track, const cfg::vhost::app::oprf::ImageProfile &profile);
 
 	// for dynamically generated applications
 	int32_t CreateOutputStreamDynamic();
@@ -177,7 +178,8 @@ private:
 
 	ov::String GetIdentifiedForVideoProfile(const cfg::vhost::app::oprf::VideoProfile &profile);
 	ov::String GetIdentifiedForAudioProfile(const cfg::vhost::app::oprf::AudioProfile &profile);
-
+	ov::String GetIdentifiedForImageProfile(const cfg::vhost::app::oprf::ImageProfile &profile);
+	
 	const cmn::Timebase GetDefaultTimebaseByCodecId(cmn::MediaCodecId codec_id);
 };
 
