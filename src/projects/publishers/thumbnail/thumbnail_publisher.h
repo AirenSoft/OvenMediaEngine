@@ -41,6 +41,7 @@ private:
 						 ov::String &request_param,
 						 ov::String &app_name,
 						 ov::String &stream_name,
+						 ov::String &file_name,
 						 ov::String &file_ext);
 
 private:

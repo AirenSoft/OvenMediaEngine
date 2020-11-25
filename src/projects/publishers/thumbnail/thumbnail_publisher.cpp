@@ -144,15 +144,17 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 {
 	auto http_interceptor = std::make_shared<HttpDefaultInterceptor>();
 
-	http_interceptor->Register(HttpMethod::Get, R"(.+\.jpg$)", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+	http_interceptor->Register(HttpMethod::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
 		auto request = client->GetRequest();
 
 		ov::String reqeuset_param;
 		ov::String app_name;
 		ov::String stream_name;
+		ov::String file_name;
 		ov::String file_ext;
 
-		if (ParseRequestUrl(request->GetRequestTarget(), reqeuset_param, app_name, stream_name, file_ext) == false)
+		// Parse Url
+		if (ParseRequestUrl(request->GetRequestTarget(), reqeuset_param, app_name, stream_name, file_name, file_ext) == false)
 		{
 			logte("Failed to parse URL: %s", request->GetRequestTarget().CStr());
 			return HttpNextHandler::Call;
@@ -161,11 +163,9 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 		auto host_name = request->GetHeader("HOST").Split(":")[0];
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
 
-		// logtd("host: %s, vshot_app_name: %s", host_name.CStr(), vhost_app_name.CStr());
-
 		auto response = client->GetResponse();
 
-		// There is no stream
+		// Check Stream
 		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, stream_name));
 		if (stream == nullptr)
 		{
@@ -176,8 +176,43 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 			return HttpNextHandler::DoNotCall;
 		}
 
+		/*
+		// Check Filename
+		if (file_name.IndexOf("thumb") != 0)
+		{
+			// This part is not excute due to the regular expression.
+			response->AppendString("Thre is no file");
+			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->Response();
+
+			return HttpNextHandler::DoNotCall;
+		}
+		*/
+
+		// check Extentions
+		auto media_codec_id = cmn::MediaCodecId::None;
+		if (file_ext.IndexOf("jpg") == 0)
+		{
+			media_codec_id = cmn::MediaCodecId::Jpeg;
+		}
+		else if (file_ext.IndexOf("png") == 0)
+		{
+			media_codec_id = cmn::MediaCodecId::Png;
+		}
+		/*
+		else
+		{
+			// This part is not excute due to the regular expression.
+			response->AppendString("Thre is no file(invalid extention)");
+			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->Response();
+
+			return HttpNextHandler::DoNotCall;
+		}
+		*/
+	
 		// There is no endcoded thumbnail image
-		auto endcoded_video_frame = stream->GetVideoFrameByCodecId(cmn::MediaCodecId::Jpeg);
+		auto endcoded_video_frame = stream->GetVideoFrameByCodecId(media_codec_id);
 		if (endcoded_video_frame == nullptr)
 		{
 			response->AppendString("There is no encoded thumbnail image");
@@ -187,58 +222,7 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 			return HttpNextHandler::DoNotCall;
 		}
 
-		response->SetHeader("Content-Type", "image/jpeg");
-		response->SetStatusCode(HttpStatusCode::OK);
-		response->AppendData(endcoded_video_frame->GetData());
-		response->Response();
-
-		return HttpNextHandler::DoNotCall;
-	});
-
-	http_interceptor->Register(HttpMethod::Get, R"(.+\.png$)", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
-		auto request = client->GetRequest();
-
-		ov::String reqeuset_param;
-		ov::String app_name;
-		ov::String stream_name;
-		ov::String file_ext;
-
-		if (ParseRequestUrl(request->GetRequestTarget(), reqeuset_param, app_name, stream_name, file_ext) == false)
-		{
-			logte("Failed to parse URL: %s", request->GetRequestTarget().CStr());
-			return HttpNextHandler::Call;
-		}
-
-		auto host_name = request->GetHeader("HOST").Split(":")[0];
-		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
-
-		// logtd("host: %s, vshot_app_name: %s", host_name.CStr(), vhost_app_name.CStr());
-
-		auto response = client->GetResponse();
-
-		// There is no stream
-		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, stream_name));
-		if (stream == nullptr)
-		{
-			response->AppendString("There is no stream");
-			response->SetStatusCode(HttpStatusCode::NotFound);
-			response->Response();
-
-			return HttpNextHandler::DoNotCall;
-		}
-
-		// There is no endcoded thumbnail image
-		auto endcoded_video_frame = stream->GetVideoFrameByCodecId(cmn::MediaCodecId::Png);
-		if (endcoded_video_frame == nullptr)
-		{
-			response->AppendString("There is no encoded thumbnail image");
-			response->SetStatusCode(HttpStatusCode::NotFound);
-			response->Response();
-
-			return HttpNextHandler::DoNotCall;
-		}
-
-		response->SetHeader("Content-Type", "image/png");
+		response->SetHeader("Content-Type", (media_codec_id == cmn::MediaCodecId::Jpeg) ? "image/jpeg" : "image/png");
 		response->SetStatusCode(HttpStatusCode::OK);
 		response->AppendData(endcoded_video_frame->GetData());
 		response->Response();
@@ -258,6 +242,7 @@ bool ThumbnailPublisher::ParseRequestUrl(const ov::String &request_url,
 										 ov::String &request_param,
 										 ov::String &app_name,
 										 ov::String &stream_name,
+										 ov::String &file_name,
 										 ov::String &file_ext)
 {
 	ov::String request_path;
@@ -277,34 +262,35 @@ bool ThumbnailPublisher::ParseRequestUrl(const ov::String &request_url,
 	tokens.clear();
 	tokens = request_path.Split("/");
 
-	if (tokens.size() < 2)
+	if (tokens.size() < 3)
 	{
 		return false;
 	}
 
-	app_name = tokens[tokens.size() - 2];
-	auto stream_name_and_ext = tokens[tokens.size() - 1];
+	app_name = tokens[tokens.size() - 3];
+	stream_name = tokens[tokens.size() - 2];
+	file_name = tokens[tokens.size() - 1];
 
 	// file_name.ext_name 분리
 	tokens.clear();
-	tokens = stream_name_and_ext.Split(".");
+	tokens = file_name.Split(".");
 
 	if (tokens.size() != 2)
 	{
 		return false;
 	}
 
-	stream_name = tokens[0];
 	file_ext = tokens[1];
 
-	// logtd(
-	// 	"request : %s\n"
-	// 	"request path : %s\n"
-	// 	"request param : %s\n"
-	// 	"app name : %s\n"
-	// 	"stream name : %s\n"
-	// 	"file ext : %s\n",
-	// 	request_url.CStr(), request_path.CStr(), request_param.CStr(), app_name.CStr(), stream_name.CStr(), file_ext.CStr());
+	logtd(
+		"request : %s\n"
+		"request path : %s\n"
+		"request param : %s\n"
+		"app name : %s\n"
+		"stream name : %s\n"
+		"file name : %s\n"
+		"file ext : %s\n",
+		request_url.CStr(), request_path.CStr(), request_param.CStr(), app_name.CStr(), stream_name.CStr(), file_name.CStr(), file_ext.CStr());
 
 	return true;
 }
