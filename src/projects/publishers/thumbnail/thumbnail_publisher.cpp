@@ -1,8 +1,14 @@
-#include <base/ovlibrary/url.h>
-#include "thumbnail_private.h"
 #include "thumbnail_publisher.h"
 
-#define UNUSED(expr) do { (void)(expr); } while (0)
+#include <base/ovlibrary/url.h>
+
+#include "thumbnail_private.h"
+
+#define UNUSED(expr)  \
+	do                \
+	{                 \
+		(void)(expr); \
+	} while (0)
 
 std::shared_ptr<ThumbnailPublisher> ThumbnailPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
@@ -18,7 +24,7 @@ std::shared_ptr<ThumbnailPublisher> ThumbnailPublisher::Create(const cfg::Server
 }
 
 ThumbnailPublisher::ThumbnailPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
-		: Publisher(server_config, router)
+	: Publisher(server_config, router)
 {
 	logtd("ThumbnailPublisher has been create");
 }
@@ -28,41 +34,279 @@ ThumbnailPublisher::~ThumbnailPublisher()
 	logtd("ThumbnailPublisher has been terminated finally");
 }
 
-
 bool ThumbnailPublisher::Start()
 {
-	_stop_thread_flag = false;
-	_worker_thread = std::thread(&ThumbnailPublisher::WorkerThread, this);
+	auto manager = HttpServerManager::GetInstance();
+
+	auto server_config = GetServerConfig();
+
+	const auto &thumbnail_bind_config = server_config.GetBind().GetPublishers().GetThumbnail();
+	if (thumbnail_bind_config.IsParsed() == false)
+	{
+		logtw("%s is disabled by configuration", GetPublisherName());
+		return true;
+	}
+
+	auto http_interceptor = CreateInterceptor();
+
+	bool http_server_result = true;
+	ov::SocketAddress address;
+	auto &port = thumbnail_bind_config.GetPort();
+	if (port.IsParsed())
+	{
+		address = ov::SocketAddress(server_config.GetIp(), port.GetPort());
+
+		_http_server = manager->CreateHttpServer(address);
+
+		if (_http_server != nullptr)
+		{
+			_http_server->AddInterceptor(http_interceptor);
+		}
+		else
+		{
+			logte("Could not initialize http server");
+			http_server_result = false;
+		}
+	}
+
+	bool https_server_result = true;
+	auto &tls_port = thumbnail_bind_config.GetTlsPort();
+	ov::SocketAddress tls_address;
+
+	if (tls_port.IsParsed())
+	{
+		const auto &managers = server_config.GetManagers();
+
+		auto host_name_list = std::vector<ov::String>();
+		for (auto &name : managers.GetHost().GetNameList())
+		{
+			host_name_list.push_back(name.GetName());
+		}
+
+		tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
+		auto certificate = info::Certificate::CreateCertificate("api_server", host_name_list, managers.GetHost().GetTls());
+
+		if (certificate != nullptr)
+		{
+			_https_server = manager->CreateHttpsServer(address, certificate);
+
+			if (_https_server != nullptr)
+			{
+				_https_server->AddInterceptor(http_interceptor);
+			}
+			else
+			{
+				logte("Could not initialize thumbnail https server");
+				https_server_result = false;
+			}
+		}
+	}
+
+	if (http_server_result == false && _http_server != nullptr)
+	{
+		manager->ReleaseServer(_http_server);
+	}
+
+	if (https_server_result == false && _https_server != nullptr)
+	{
+		manager->ReleaseServer(_https_server);
+	}
+
+	if (http_server_result || https_server_result)
+	{
+		logti("Thumbnail publisher is listening on %s", address.ToString().CStr());
+	}
 
 	return Publisher::Start();
 }
 
 bool ThumbnailPublisher::Stop()
 {
-	_stop_thread_flag = true;
+	auto manager = HttpServerManager::GetInstance();
 
-	if (_worker_thread.joinable())
+	std::shared_ptr<HttpServer> http_server = std::move(_http_server);
+	std::shared_ptr<HttpsServer> https_server = std::move(_https_server);
+
+	if (http_server != nullptr)
 	{
-		_worker_thread.join();
+		manager->ReleaseServer(_http_server);
+	}
+
+	if (https_server != nullptr)
+	{
+		manager->ReleaseServer(https_server);
 	}
 
 	return Publisher::Stop();
 }
 
-void ThumbnailPublisher::WorkerThread()
+std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 {
-	ov::StopWatch stat_stop_watch;
-	stat_stop_watch.Start();
+	auto http_interceptor = std::make_shared<HttpDefaultInterceptor>();
 
-	while (!_stop_thread_flag)
-	{
-		if (stat_stop_watch.IsElapsed(500) && stat_stop_watch.Update())
+	http_interceptor->Register(HttpMethod::Get, R"(.+\.jpg$)", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+		auto request = client->GetRequest();
+
+		ov::String reqeuset_param;
+		ov::String app_name;
+		ov::String stream_name;
+		ov::String file_ext;
+
+		if (ParseRequestUrl(request->GetRequestTarget(), reqeuset_param, app_name, stream_name, file_ext) == false)
 		{
-			SessionController();
+			logte("Failed to parse URL: %s", request->GetRequestTarget().CStr());
+			return HttpNextHandler::Call;
 		}
 
-		usleep(1000);
+		auto host_name = request->GetHeader("HOST").Split(":")[0];
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
+
+		// logtd("host: %s, vshot_app_name: %s", host_name.CStr(), vhost_app_name.CStr());
+
+		auto response = client->GetResponse();
+
+		// There is no stream
+		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, stream_name));
+		if (stream == nullptr)
+		{
+			response->AppendString("There is no stream");
+			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->Response();
+
+			return HttpNextHandler::DoNotCall;
+		}
+
+		// There is no endcoded thumbnail image
+		auto endcoded_video_frame = stream->GetVideoFrameByCodecId(cmn::MediaCodecId::Jpeg);
+		if (endcoded_video_frame == nullptr)
+		{
+			response->AppendString("There is no encoded thumbnail image");
+			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->Response();
+
+			return HttpNextHandler::DoNotCall;
+		}
+
+		response->SetHeader("Content-Type", "image/jpeg");
+		response->SetStatusCode(HttpStatusCode::OK);
+		response->AppendData(endcoded_video_frame->GetData());
+		response->Response();
+
+		return HttpNextHandler::DoNotCall;
+	});
+
+	http_interceptor->Register(HttpMethod::Get, R"(.+\.png$)", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+		auto request = client->GetRequest();
+
+		ov::String reqeuset_param;
+		ov::String app_name;
+		ov::String stream_name;
+		ov::String file_ext;
+
+		if (ParseRequestUrl(request->GetRequestTarget(), reqeuset_param, app_name, stream_name, file_ext) == false)
+		{
+			logte("Failed to parse URL: %s", request->GetRequestTarget().CStr());
+			return HttpNextHandler::Call;
+		}
+
+		auto host_name = request->GetHeader("HOST").Split(":")[0];
+		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(host_name, app_name);
+
+		// logtd("host: %s, vshot_app_name: %s", host_name.CStr(), vhost_app_name.CStr());
+
+		auto response = client->GetResponse();
+
+		// There is no stream
+		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, stream_name));
+		if (stream == nullptr)
+		{
+			response->AppendString("There is no stream");
+			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->Response();
+
+			return HttpNextHandler::DoNotCall;
+		}
+
+		// There is no endcoded thumbnail image
+		auto endcoded_video_frame = stream->GetVideoFrameByCodecId(cmn::MediaCodecId::Png);
+		if (endcoded_video_frame == nullptr)
+		{
+			response->AppendString("There is no encoded thumbnail image");
+			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->Response();
+
+			return HttpNextHandler::DoNotCall;
+		}
+
+		response->SetHeader("Content-Type", "image/png");
+		response->SetStatusCode(HttpStatusCode::OK);
+		response->AppendData(endcoded_video_frame->GetData());
+		response->Response();
+
+		return HttpNextHandler::DoNotCall;
+	});
+
+	return http_interceptor;
+}
+
+//====================================================================================================
+// ParseRequestUrl
+// - URL 분리
+//  ex) ..../app_name/stream_name/file_name.file_ext?param=param_value
+//====================================================================================================
+bool ThumbnailPublisher::ParseRequestUrl(const ov::String &request_url,
+										 ov::String &request_param,
+										 ov::String &app_name,
+										 ov::String &stream_name,
+										 ov::String &file_ext)
+{
+	ov::String request_path;
+
+	// 확장자 확인
+	// 파라메터 분리  directory/file.ext?param=test
+	auto tokens = request_url.Split("?");
+	if (tokens.size() == 0)
+	{
+		return false;
 	}
+
+	request_path = tokens[0];
+	request_param = tokens.size() == 2 ? tokens[1] : "";
+
+	// ...../app_name/stream_name/file_name.ext_name 분리
+	tokens.clear();
+	tokens = request_path.Split("/");
+
+	if (tokens.size() < 2)
+	{
+		return false;
+	}
+
+	app_name = tokens[tokens.size() - 2];
+	auto stream_name_and_ext = tokens[tokens.size() - 1];
+
+	// file_name.ext_name 분리
+	tokens.clear();
+	tokens = stream_name_and_ext.Split(".");
+
+	if (tokens.size() != 2)
+	{
+		return false;
+	}
+
+	stream_name = tokens[0];
+	file_ext = tokens[1];
+
+	// logtd(
+	// 	"request : %s\n"
+	// 	"request path : %s\n"
+	// 	"request param : %s\n"
+	// 	"app name : %s\n"
+	// 	"stream name : %s\n"
+	// 	"file ext : %s\n",
+	// 	request_url.CStr(), request_path.CStr(), request_param.CStr(), app_name.CStr(), stream_name.CStr(), file_ext.CStr());
+
+	return true;
 }
 
 std::shared_ptr<pub::Application> ThumbnailPublisher::OnCreatePublisherApplication(const info::Application &application_info)
@@ -73,184 +317,11 @@ std::shared_ptr<pub::Application> ThumbnailPublisher::OnCreatePublisherApplicati
 bool ThumbnailPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
 {
 	auto file_application = std::static_pointer_cast<ThumbnailApplication>(application);
-	if(file_application == nullptr)
+	if (file_application == nullptr)
 	{
-		logte("Could not found file application. app:%s", file_application->GetName().CStr());
+		logte("Could not found thumbnail application. app:%s", file_application->GetName().CStr());
 		return false;
 	}
 
 	return true;
 }
-
-
-void ThumbnailPublisher::StartSession(std::shared_ptr<ThumbnailSession> session)
-{
-	// Check the status of the session.
-	auto session_state = session->GetState();
-
-	switch(session_state)
-	{
-		// State of disconnected and ready to connect
-		case pub::Session::SessionState::Ready:
-			session->Start();
-		break;
-		case pub::Session::SessionState::Stopped:
-			session->Start();
-		break;
-		// State of Recording
-		case pub::Session::SessionState::Started:
-			[[fallthrough]];
-		// State of Stopping
-		case pub::Session::SessionState::Stopping:
-			[[fallthrough]];
-		// State of Record failed
-		case pub::Session::SessionState::Error:
-			[[fallthrough]];
-	}
-
-	auto next_session_state = session->GetState();
-	if(session_state != next_session_state)
-	{
-		logtd("Changed State. State(%d - %d)", session_state, next_session_state);		
-	}	
-}
-
-void ThumbnailPublisher::StopSession(std::shared_ptr<ThumbnailSession> session)
-{
-	auto session_state = session->GetState();
-
-	switch(session_state)
-	{
-		case pub::Session::SessionState::Started:
-			session->Stop();
-			break;
-		case pub::Session::SessionState::Ready:
-			[[fallthrough]];
-		case pub::Session::SessionState::Stopping:
-			[[fallthrough]];
-		case pub::Session::SessionState::Stopped:
-			[[fallthrough]];
-		case pub::Session::SessionState::Error:
-			[[fallthrough]];
-	}
-
-	auto next_session_state = session->GetState();
-	if(session_state != next_session_state)
-	{
-		logtd("Changed State. State(%d - %d)", session_state, next_session_state);		
-	}	
-}
-
-void ThumbnailPublisher::SessionController()
-{
-	std::shared_lock<std::shared_mutex> lock(_userdata_sets_mutex);
-
-	auto userdata_sets = _userdata_sets.GetUserdataSets();
-	for ( auto& [ key, userdata ] : userdata_sets )
-	{
-		UNUSED(key);
-
-		// Find a session related to Userdata.
-		auto vhost_app_name = info::VHostAppName(userdata->GetVhost(), userdata->GetApplication());
-		auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(vhost_app_name, userdata->GetStreamName()));
-		if(stream != nullptr)
-		{
-			// If there is no session, create a new file(record) session.
-			auto session = std::static_pointer_cast<ThumbnailSession>(stream->GetSession(userdata->GetSessionId()));
-			if (session == nullptr)
-			{
-				session = stream->CreateSession();
-				if(session == nullptr)
-				{
-					logte("Could not create session");
-					continue;
-				}
-				userdata->SetSessionId(session->GetId());
-
-				session->SetRecord(userdata);
-			}
-
-			if(userdata->GetEnable() == true && userdata->GetRemove() == false)
-			{
-				StartSession(session);
-			}		
-
-			if(userdata->GetEnable() == false || userdata->GetRemove() == true)
-			{
-				StopSession(session);
-			}
-		}
-		else
-		{
-			userdata->SetState(info::Record::RecordState::Ready);
-		}
-
-		if(userdata->GetRemove() == true)
-		{
-			logtd("Remove userdata of file publiser. id(%s)", userdata->GetId().CStr());
-
-			if(stream != nullptr && userdata->GetSessionId() != 0)
-				stream->DeleteSession(userdata->GetSessionId());
-
-			_userdata_sets.DeleteByKey(userdata->GetId());
-		}		
-	}
-}
-
-
-std::shared_ptr<ov::Error> ThumbnailPublisher::RecordStart(const info::VHostAppName &vhost_app_name, 
-													  const std::shared_ptr<info::Record> &record)
-{
-	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
-
-	if(_userdata_sets.GetByKey(record->GetId()) != nullptr)
-	{
-		return ov::Error::CreateError(ThumbnailPublisherStatusCode::Failure, 
-			"Duplicate identification Code");		
-	}
-
-	record->SetEnable(true);
-	record->SetRemove(false);
-
-	_userdata_sets.Set(record->GetId(), record);
-
-	return ov::Error::CreateError(ThumbnailPublisherStatusCode::Success, 
-		"Record request completed");
-}
-
-std::shared_ptr<ov::Error> ThumbnailPublisher::RecordStop(const info::VHostAppName &vhost_app_name, 
-												     const std::shared_ptr<info::Record> &record)
-{
-	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
-
-	auto userdata = _userdata_sets.GetByKey(record->GetId());
-	if(userdata == nullptr)
-	{
-		return ov::Error::CreateError(ThumbnailPublisherStatusCode::Failure, 
-			"identification code does not exist");	
-	}
-
-	userdata->SetEnable(false);
-	userdata->SetRemove(true);
-
-	return ov::Error::CreateError(ThumbnailPublisherStatusCode::Success, 
-		"Recording stop request complted");
-}
-
-std::shared_ptr<ov::Error> ThumbnailPublisher::GetRecords(const info::VHostAppName &vhost_app_name, 
-											         std::vector<std::shared_ptr<info::Record>> &record_list)
-{
-	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
-
-	auto userdata_sets = _userdata_sets.GetUserdataSets();
-	for ( auto& [ key, userdata ] : userdata_sets )
-	{
-		UNUSED(key);
-
-		record_list.push_back(userdata);
-	}
-
-	return ov::Error::CreateError(ThumbnailPublisherStatusCode::Success, 
-		"Look up the recording list");
-}
-

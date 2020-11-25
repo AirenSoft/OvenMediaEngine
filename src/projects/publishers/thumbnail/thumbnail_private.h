@@ -1,3 +1,3 @@
 #pragma once
 
-#define OV_LOG_TAG                      "Thumbnaii"
+#define OV_LOG_TAG                      "Thumbnail"

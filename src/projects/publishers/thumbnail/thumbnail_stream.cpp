@@ -1,36 +1,38 @@
-#include "thumbnail_private.h"
 #include "thumbnail_stream.h"
-#include "base/publisher/application.h"
-#include "base/publisher/stream.h"
+
 #include <regex>
 
+#include "base/publisher/application.h"
+#include "base/publisher/stream.h"
+#include "thumbnail_private.h"
+
 std::shared_ptr<ThumbnailStream> ThumbnailStream::Create(const std::shared_ptr<pub::Application> application,
-											 const info::Stream &info)
+														 const info::Stream &info)
 {
 	auto stream = std::make_shared<ThumbnailStream>(application, info);
-	if(!stream->Start())
+	if (!stream->Start())
 	{
 		return nullptr;
 	}
 
-	if(!stream->CreateStreamWorker(2))
+	if (!stream->CreateStreamWorker(2))
 	{
 		return nullptr;
 	}
-		
+
 	return stream;
 }
 
 ThumbnailStream::ThumbnailStream(const std::shared_ptr<pub::Application> application,
-					 const info::Stream &info)
-		: Stream(application, info)
+								 const info::Stream &info)
+	: Stream(application, info)
 {
 }
 
 ThumbnailStream::~ThumbnailStream()
 {
-	logtd("ThumbnailStream(%s/%s) has been terminated finally", 
-		GetApplicationName() , GetName().CStr());
+	logtd("ThumbnailStream(%s/%s) has been terminated finally",
+		  GetApplicationName(), GetName().CStr());
 }
 
 bool ThumbnailStream::Start()
@@ -49,35 +51,40 @@ bool ThumbnailStream::Stop()
 
 void ThumbnailStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
+	auto track = GetTrack(media_packet->GetTrackId());
+	if (track == nullptr)
+	{
+		logtw("Could not find track. id: %d", media_packet->GetTrackId());
+		return;
+	}
 
-	BroadcastPacket(stream_packet);
+	if (!(track->GetCodecId() == cmn::MediaCodecId::Png || track->GetCodecId() == cmn::MediaCodecId::Jpeg))
+	{
+		// Could not support codec for image
+		return;
+	}
+
+	std::shared_lock<std::shared_mutex> lock(_encoded_frame_mutex);
+
+	_encoded_frames[track->GetCodecId()] = media_packet->ClonePacket();
+
+	logtw("track_id : %d / size : %d", media_packet->GetTrackId(), media_packet->GetDataLength());
 }
 
 void ThumbnailStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	auto stream_packet = std::make_any<std::shared_ptr<MediaPacket>>(media_packet);
-
-	BroadcastPacket(stream_packet);	
+	// Nothing..
 }
 
-std::shared_ptr<ThumbnailSession> ThumbnailStream::CreateSession()
+std::shared_ptr<MediaPacket> ThumbnailStream::GetVideoFrameByCodecId(cmn::MediaCodecId codec_id)
 {
-	auto session = ThumbnailSession::Create(GetApplication(), GetSharedPtrAs<pub::Stream>(), this->IssueUniqueSessionId());
-	if(session == nullptr)
+	std::shared_lock<std::shared_mutex> lock(_encoded_frame_mutex);
+
+	auto it = _encoded_frames.find(codec_id);
+	if(it == _encoded_frames.end())
 	{
-		logte("Internal Error : Cannot create session");
 		return nullptr;
 	}
-
-	logtd("created session");
-
-	AddSession(session);
-
-	return session;
-}
-
-bool ThumbnailStream::DeleteSession(uint32_t session_id)
-{
-	return RemoveSession(session_id);
+	
+	return it->second->ClonePacket();
 }

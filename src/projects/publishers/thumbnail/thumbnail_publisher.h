@@ -1,15 +1,14 @@
 #pragma once
 
+#include <modules/http_server/http_server_manager.h>
+#include <orchestrator/orchestrator.h>
+
 #include "base/common_types.h"
+#include "base/info/record.h"
+#include "base/mediarouter/media_route_application_interface.h"
 #include "base/ovlibrary/url.h"
 #include "base/publisher/publisher.h"
-#include "base/mediarouter/media_route_application_interface.h"
-
-#include "base/info/record.h"
 #include "thumbnail_application.h"
-#include "thumbnail_userdata.h"
-
-#include <orchestrator/orchestrator.h>
 
 class ThumbnailPublisher : public pub::Publisher
 {
@@ -28,7 +27,7 @@ private:
 	//--------------------------------------------------------------------
 	PublisherType GetPublisherType() const override
 	{
-		return PublisherType::File;
+		return PublisherType::Thumbnail;
 	}
 	const char *GetPublisherName() const override
 	{
@@ -38,26 +37,14 @@ private:
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
 
+	bool ParseRequestUrl(const ov::String &request_url,
+						 ov::String &request_param,
+						 ov::String &app_name,
+						 ov::String &stream_name,
+						 ov::String &file_ext);
+
 private:
-	void SessionController();
-	void StartSession(std::shared_ptr<ThumbnailSession> session);
-	void StopSession(std::shared_ptr<ThumbnailSession> session);
-	
-	void WorkerThread();
-	bool _stop_thread_flag;
-	std::thread _worker_thread;
-
-	std::shared_mutex _userdata_sets_mutex;;
-	ThumbnailUserdataSets _userdata_sets;
-
-public:
-	enum ThumbnailPublisherStatusCode {
-		Success,
-		Failure
-	};
-	
-	std::shared_ptr<ov::Error> RecordStart(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Record> &record);
-	std::shared_ptr<ov::Error> RecordStop(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Record> &record);
-	std::shared_ptr<ov::Error> GetRecords(const info::VHostAppName &vhost_app_name, std::vector<std::shared_ptr<info::Record>> &record_list);
-
+	std::shared_ptr<HttpRequestInterceptor> CreateInterceptor();
+	std::shared_ptr<HttpServer> _http_server;
+	std::shared_ptr<HttpsServer> _https_server;
 };
