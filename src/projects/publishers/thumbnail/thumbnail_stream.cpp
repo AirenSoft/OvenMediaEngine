@@ -68,7 +68,7 @@ void ThumbnailStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_p
 
 	_encoded_frames[track->GetCodecId()] = media_packet->ClonePacket();
 
-	logtw("track_id : %d / size : %d", media_packet->GetTrackId(), media_packet->GetDataLength());
+	// logtw("track_id : %d / size : %d", media_packet->GetTrackId(), media_packet->GetDataLength());
 }
 
 void ThumbnailStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
