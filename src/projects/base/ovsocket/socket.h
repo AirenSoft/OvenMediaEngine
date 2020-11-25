@@ -92,6 +92,25 @@ namespace ov
 		Srt
 	};
 
+	static const char *StringFromSocketType(SocketType type)
+	{
+		switch (type)
+		{
+			case SocketType::Udp:
+				return "UDP";
+
+			case SocketType::Tcp:
+				return "TCP";
+
+			case SocketType::Srt:
+				return "SRT";
+
+			case SocketType::Unknown:
+			default:
+				return "Unknown";
+		}
+	}
+
 	enum class SocketState : char
 	{
 		Closed,

@@ -83,7 +83,7 @@ namespace api
 		{
 			Json::Value response = Json::arrayValue;
 
-			auto stream_list = app->GetStreamMetricsList();
+			auto stream_list = app->GetStreamMetricsMap();
 
 			for (auto &item : stream_list)
 			{

@@ -54,7 +54,7 @@ namespace api
 
 	std::map<uint32_t, std::shared_ptr<mon::StreamMetrics>> GetStreamList(const std::shared_ptr<mon::ApplicationMetrics> &application)
 	{
-		return std::move(application->GetStreamMetricsList());
+		return std::move(application->GetStreamMetricsMap());
 	}
 
 	std::shared_ptr<mon::StreamMetrics> GetStream(const std::shared_ptr<mon::ApplicationMetrics> &application, const std::string_view &stream_name, std::vector<std::shared_ptr<mon::StreamMetrics>> *output_streams)
