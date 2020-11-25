@@ -110,6 +110,7 @@ int main(int argc, char *argv[])
 	INIT_MODULE(ovt_publisher, "OVT Publisher", OvtPublisher::Create(*server_config, media_router));
 	INIT_MODULE(file_publisher, "File Publisher", FilePublisher::Create(*server_config, media_router));
 	INIT_MODULE(rtmppush_publisher, "RtmpPush Publisher", RtmpPushPublisher::Create(*server_config, media_router));
+	INIT_MODULE(thumbnail_publisher, "Thumbnail Publisher", ThumbnailPublisher::Create(*server_config, media_router));
 
 	// Initialize Transcoder
 	INIT_MODULE(transcoder, "Transcoder", Transcoder::Create(media_router));
@@ -167,6 +168,7 @@ int main(int argc, char *argv[])
 	RELEASE_MODULE(ovt_publisher, "OVT Publisher");
 	RELEASE_MODULE(file_publisher, "File Publisher");
 	RELEASE_MODULE(rtmppush_publisher, "RtmpPush Publisher");
+	RELEASE_MODULE(thumbnail_publisher, "Thumbnail Publisher");
 
 	RELEASE_MODULE(media_router, "MediaRouter");
 

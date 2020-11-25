@@ -376,6 +376,32 @@ std::shared_ptr<MediaTrack> TranscodeStream::CreateOutputTrack(const std::shared
 	return output_track;
 }
 
+std::shared_ptr<MediaTrack> TranscodeStream::CreateOutputTrack(const std::shared_ptr<MediaTrack>& input_track, const cfg::vhost::app::oprf::ImageProfile &profile)
+{
+	auto output_track = std::make_shared<MediaTrack>();
+	if(output_track == nullptr)
+		return nullptr;
+
+	output_track->SetMediaType(cmn::MediaType::Video);
+	output_track->SetId(NewTrackId(output_track->GetMediaType()));		
+
+	output_track->SetBypass(false);
+	output_track->SetCodecId(GetCodecId(profile.GetCodec()));
+	output_track->SetBitrate(0);
+	output_track->SetWidth( (profile.GetWidth()==0)?input_track->GetWidth():profile.GetWidth() );
+	output_track->SetHeight( (profile.GetHeight()==0)?input_track->GetHeight():profile.GetHeight());
+	output_track->SetFrameRate( (profile.GetFramerate()==0)?input_track->GetFrameRate():profile.GetFramerate());
+	output_track->SetTimeBase(GetDefaultTimebaseByCodecId(output_track->GetCodecId()));
+
+	if(IsVideoCodec(output_track->GetCodecId()) == false)
+	{
+		return nullptr;
+	}					
+
+	return output_track;
+}
+
+
 std::shared_ptr<MediaTrack> TranscodeStream::CreateOutputTrack(const std::shared_ptr<MediaTrack>& input_track, const cfg::vhost::app::oprf::AudioProfile &profile)
 {
 	auto output_track = std::make_shared<MediaTrack>();
@@ -458,6 +484,7 @@ int32_t TranscodeStream::CreateOutputStreams()
 		{
 			if(input_track->GetMediaType() == cmn::MediaType::Video)
 			{
+				// Video Profile
 				for (auto &profile : cfg_output_profile.GetEncodes().GetVideoProfileList())
 				{
 					auto output_track = CreateOutputTrack(input_track, profile);
@@ -470,9 +497,24 @@ int32_t TranscodeStream::CreateOutputStreams()
 
 					StoreStageContext(GetIdentifiedForVideoProfile(profile), input_track, output_stream, output_track);
 				}
+
+				// Image Profile
+				for (auto &profile : cfg_output_profile.GetEncodes().GetImageProfileList())
+				{
+					auto output_track = CreateOutputTrack(input_track, profile);
+					if(output_track == nullptr)
+					{
+						logtw("Encoding codec set is not a video codec, track_id(%d)", input_track_id);
+						continue;
+					}
+					output_stream->AddTrack(output_track);
+
+					StoreStageContext(GetIdentifiedForImageProfile(profile), input_track, output_stream, output_track);
+				}
 			}
 			else if(input_track->GetMediaType() ==  cmn::MediaType::Audio)
 			{
+				// Audio Profile
 				for (auto &profile : cfg_output_profile.GetEncodes().GetAudioProfileList())
 				{
 					auto output_track = CreateOutputTrack(input_track, profile);
@@ -626,6 +668,16 @@ ov::String TranscodeStream::GetIdentifiedForVideoProfile(const cfg::vhost::app::
 	return ov::String::FormatString("%s-%d-%.02f-%d-%d",
 		profile.GetCodec().CStr(),
 		profile.GetBitrate(),
+		profile.GetFramerate(),
+		profile.GetWidth(),
+		profile.GetHeight());
+}
+
+
+ov::String TranscodeStream::GetIdentifiedForImageProfile(const cfg::vhost::app::oprf::ImageProfile &profile) 
+{
+	return ov::String::FormatString("%s-%.02f-%d-%d",
+		profile.GetCodec().CStr(),
 		profile.GetFramerate(),
 		profile.GetWidth(),
 		profile.GetHeight());

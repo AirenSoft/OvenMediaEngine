@@ -16,6 +16,7 @@
 #include "rtmp_publisher.h"
 #include "rtmppush_publisher.h"
 #include "webrtc_publisher.h"
+#include "thumbnail_publisher.h"
 
 namespace cfg
 {
@@ -37,7 +38,8 @@ namespace cfg
 							&_webrtc_publisher,
 							&_ovt_publisher,
 							&_file_publisher,
-							&_rtmppush_publisher};
+							&_rtmppush_publisher,
+							&_thumbnail_publisher};
 					}
 
 					CFG_DECLARE_GETTER_OF(GetStreamLoadBalancingThreadCount, _stream_load_balancing_thread_count)
@@ -50,6 +52,7 @@ namespace cfg
 					CFG_DECLARE_REF_GETTER_OF(GetOvtPublisher, _ovt_publisher)
 					CFG_DECLARE_REF_GETTER_OF(GetFilePublisher, _file_publisher)
 					CFG_DECLARE_REF_GETTER_OF(GetRtmpPushPublisher, _rtmppush_publisher)
+					CFG_DECLARE_REF_GETTER_OF(GetThumbnailPublisher, _thumbnail_publisher)
 
 				protected:
 					void MakeParseList() override
@@ -65,6 +68,7 @@ namespace cfg
 						RegisterValue<Optional>("OVT", &_ovt_publisher);
 						RegisterValue<Optional>("FILE", &_file_publisher);
 						RegisterValue<Optional>("RTMPPush", &_rtmppush_publisher);
+						RegisterValue<Optional>("Thumbnail", &_thumbnail_publisher);
 					}
 
 					int _stream_load_balancing_thread_count = 1;
@@ -78,6 +82,7 @@ namespace cfg
 					WebrtcPublisher _webrtc_publisher;
 					OvtPublisher _ovt_publisher;
 					FilePublisher _file_publisher;
+					ThumbnailPublisher _thumbnail_publisher;
 				};
 			}  // namespace pub
 		}	   // namespace app

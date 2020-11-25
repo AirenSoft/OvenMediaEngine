@@ -24,6 +24,7 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetHls, _hls)
 				CFG_DECLARE_REF_GETTER_OF(GetDash, _dash)
 				CFG_DECLARE_REF_GETTER_OF(GetWebrtc, _webrtc)
+				CFG_DECLARE_REF_GETTER_OF(GetThumbnail, _thumbnail)
 
 			protected:
 				void MakeParseList() override
@@ -33,12 +34,15 @@ namespace cfg
 					RegisterValue<Optional>("HLS", &_hls);
 					RegisterValue<Optional>("DASH", &_dash);
 					RegisterValue<Optional>("WebRTC", &_webrtc);
+					RegisterValue<Optional>("Thumbnail", &_thumbnail);
 				};
 
 				Publisher<cmn::SingularPort> _ovt{"9000/tcp"};
 				Publisher<cmn::SingularPort> _rtmp{"1935/tcp"};
 				Publisher<cmn::SingularPort> _hls{"80/tcp", "443/tcp"};
 				Publisher<cmn::SingularPort> _dash{"80/tcp", "443/tcp"};
+				Publisher<cmn::SingularPort> _thumbnail{"80/tcp", "443/tcp"};
+
 				Webrtc _webrtc{"3333/tcp", "3334/tcp"};
 			};
 		}  // namespace pub

@@ -1062,18 +1062,23 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	int64_t ts_inc_ms = ts_inc * 1000 /  den;
 
+
 	if ( std::abs(ts_inc_ms) > PTS_CORRECT_THRESHOLD_US )
 	{
-		// TODO(soulk): I think all tracks should calibrate the PTS with the same value.
-		_pts_correct[track_id] = media_packet->GetPts() - _pts_last[track_id] - _pts_avg_inc[track_id];
+		if( !(media_track->GetCodecId() == cmn::MediaCodecId::Png || media_track->GetCodecId() == cmn::MediaCodecId::Jpeg) )
+		{
+			// TODO(soulk): I think all tracks should calibrate the PTS with the same value.
+			_pts_correct[track_id] = media_packet->GetPts() - _pts_last[track_id] - _pts_avg_inc[track_id];
 
-		logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld"
-			, track_id
-			, _pts_last[track_id]
-			, media_packet->GetPts()
-			, _pts_correct[track_id]
-			, _pts_avg_inc[track_id]
-		);
+			logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld, inc : %lld"
+				, track_id
+				, _pts_last[track_id]
+				, media_packet->GetPts()
+				, _pts_correct[track_id]
+				, _pts_avg_inc[track_id]
+				, std::abs(ts_inc_ms)
+			);
+		}
 	}
 	else
 	{
