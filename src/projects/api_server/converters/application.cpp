@@ -185,6 +185,7 @@ namespace api
 
 			Json::Value audios(Json::ValueType::arrayValue);
 			Json::Value videos(Json::ValueType::arrayValue);
+			Json::Value images(Json::ValueType::arrayValue);
 
 			for (auto &profile : config.GetAudioProfileList())
 			{
@@ -228,8 +229,25 @@ namespace api
 				videos.append(video);
 			}
 
+			for (auto &profile : config.GetImageProfileList())
+			{
+				Json::Value image;
+
+				{
+					SetInt(image, "active", profile.IsActive());
+					SetString(image, "codec", profile.GetCodec(), Optional::True);
+					SetString(image, "scale", profile.GetScale(), Optional::True);
+					SetInt(image, "width", profile.GetWidth());
+					SetInt(image, "height", profile.GetHeight());
+					SetFloat(image, "framerate", profile.GetFramerate());
+				}
+
+				images.append(image);
+			}
+
 			object["audios"] = audios;
 			object["videos"] = videos;
+			object["images"] = images;
 		}
 
 		Json::Value JsonFromOutputProfile(const cfg::vhost::app::oprf::OutputProfile &output_profile)
@@ -329,6 +347,16 @@ namespace api
 								name = "RTSPPull";
 								converted = true;
 							}
+							else if (name == "rtspPull")
+							{
+								name = "RTSPPull";
+								converted = true;
+							}
+							else if (name == "thumbnail")
+							{
+								name = "Thumbnail";
+								converted = true;
+							}
 							else
 							{
 								name.MakeUpper();
@@ -353,6 +381,11 @@ namespace api
 							else if (name == "videos")
 							{
 								name = "Video";
+								converted = true;
+							}
+							else if (name == "images")
+							{
+								name = "Image";
 								converted = true;
 							}
 						}
