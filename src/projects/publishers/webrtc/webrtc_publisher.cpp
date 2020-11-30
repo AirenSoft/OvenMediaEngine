@@ -308,7 +308,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 	}
 	else if(signed_policy_result == CheckSignatureResult::Pass)
 	{
-		session_expired_time = signed_policy->GetPolicyExpireEpochSec();
+		session_expired_time = signed_policy->GetStreamExpireEpochSec();
 	}
 	else if(signed_policy_result == CheckSignatureResult::Off)
 	{
