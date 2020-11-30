@@ -234,7 +234,7 @@ namespace api
 				Json::Value image;
 
 				{
-					SetInt(image, "active", profile.IsActive());
+					SetBool(image, "active", profile.IsActive());
 					SetString(image, "codec", profile.GetCodec(), Optional::True);
 					SetString(image, "scale", profile.GetScale(), Optional::True);
 					SetInt(image, "width", profile.GetWidth());
