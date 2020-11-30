@@ -11,10 +11,12 @@
 
 //TODO(Getroot): This is temporary code for testing. This will change to more elegant code in the future.
 static ov::LogInternal g_log_internal(OV_LOG_FILE);
-static ov::LogInternal g_stat1_log_internal(OV_STAT1_LOG_FILE);
-static ov::LogInternal g_stat2_log_internal(OV_STAT2_LOG_FILE);
-static ov::LogInternal g_stat3_log_internal(OV_STAT3_LOG_FILE);
-static ov::LogInternal g_stat4_log_internal(OV_STAT4_LOG_FILE);
+static ov::LogInternal g_stat_wrs_log_internal(OV_STAT_WRS_LOG_FILE);
+static ov::LogInternal g_stat_wrr_log_internal(OV_STAT_WRR_LOG_FILE);
+static ov::LogInternal g_stat_wrv_log_internal(OV_STAT_WRV_LOG_FILE);
+static ov::LogInternal g_stat_hrs_log_internal(OV_STAT_HRS_LOG_FILE);
+static ov::LogInternal g_stat_hrr_log_internal(OV_STAT_HRR_LOG_FILE);
+static ov::LogInternal g_stat_hrv_log_internal(OV_STAT_HRV_LOG_FILE);
 
 // log level 지정
 void ov_log_set_level(OVLogLevel level)
@@ -60,17 +62,23 @@ void ov_stat_log_internal(StatLogType type, OVLogLevel level, const char *tag, c
 
 	switch(type)
 	{
-		case STAT_LOG_WEBRTC_EDGE:
-			g_stat1_log_internal.Log(false, level, tag, file, line, method, format, arg_list);
+		case STAT_LOG_WEBRTC_EDGE_SESSION:
+			g_stat_wrs_log_internal.Log(false, level, tag, file, line, method, format, arg_list);
+			break;
+		case STAT_LOG_WEBRTC_EDGE_REQUEST:
+			g_stat_wrr_log_internal.Log(false, level, tag, file, line, method, format, arg_list);
+			break;
+		case STAT_LOG_WEBRTC_EDGE_VIEWERS:
+			g_stat_wrv_log_internal.Log(false, level, tag, file, line, method, format, arg_list);
 			break;
 		case STAT_LOG_HLS_EDGE_SESSION:
-			g_stat2_log_internal.Log(false, level, tag, file, line, method, format, arg_list);
+			g_stat_hrs_log_internal.Log(false, level, tag, file, line, method, format, arg_list);
 			break;
 		case STAT_LOG_HLS_EDGE_REQUEST:
-			g_stat3_log_internal.Log(false, level, tag, file, line, method, format, arg_list);
+			g_stat_hrr_log_internal.Log(false, level, tag, file, line, method, format, arg_list);
 			break;
 		case STAT_LOG_HLS_EDGE_VIEWERS:
-			g_stat4_log_internal.Log(false, level, tag, file, line, method, format, arg_list);
+			g_stat_hrv_log_internal.Log(false, level, tag, file, line, method, format, arg_list);
 			break;
 	}
 
@@ -81,17 +89,23 @@ void ov_stat_log_set_path(StatLogType type, const char *log_path)
 {
 	switch(type)
 	{
-		case STAT_LOG_WEBRTC_EDGE:
-			g_stat1_log_internal.SetLogPath(log_path);
+		case STAT_LOG_WEBRTC_EDGE_SESSION:
+			g_stat_wrs_log_internal.SetLogPath(log_path);
+			break;
+		case STAT_LOG_WEBRTC_EDGE_REQUEST:
+			g_stat_wrr_log_internal.SetLogPath(log_path);
+			break;
+		case STAT_LOG_WEBRTC_EDGE_VIEWERS:
+			g_stat_wrv_log_internal.SetLogPath(log_path);
 			break;
 		case STAT_LOG_HLS_EDGE_SESSION:
-			g_stat2_log_internal.SetLogPath(log_path);
+			g_stat_hrs_log_internal.SetLogPath(log_path);
 			break;
 		case STAT_LOG_HLS_EDGE_REQUEST:
-			g_stat3_log_internal.SetLogPath(log_path);
+			g_stat_hrr_log_internal.SetLogPath(log_path);
 			break;
 		case STAT_LOG_HLS_EDGE_VIEWERS:
-			g_stat4_log_internal.SetLogPath(log_path);
+			g_stat_hrv_log_internal.SetLogPath(log_path);
 			break;
 	}
 }

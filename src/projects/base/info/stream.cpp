@@ -41,6 +41,7 @@ namespace info
 		_id = stream._id;
 		_name = stream._name;
 		_source_type = stream._source_type;
+		_source_url = stream._source_url;
 		_created_time = stream._created_time;
 		_app_info = stream._app_info;
 		_origin_stream = stream._origin_stream;

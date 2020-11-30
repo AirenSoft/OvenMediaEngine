@@ -16,10 +16,12 @@
 #define OV_LOG_FILE             "ovenmediaengine.log"
 
 //TODO(Getroot): This is temporary code for testing. This will change to more elegant code in the future.
-#define OV_STAT1_LOG_FILE       "ovenmediaengine_webrtc_stat.log"
-#define OV_STAT2_LOG_FILE       "hls_rtsp_session.log"
-#define OV_STAT3_LOG_FILE       "hls_rtsp_reqeuest.log"
-#define OV_STAT4_LOG_FILE       "hls_rtsp_viewers.log"
+#define OV_STAT_WRS_LOG_FILE       "webrtc_rtsp_session.log"
+#define OV_STAT_WRR_LOG_FILE       "webrtc_rtsp_request.log"
+#define OV_STAT_WRV_LOG_FILE       "webrtc_rtsp_viewers.log"
+#define OV_STAT_HRS_LOG_FILE       "hls_rtsp_session.log"
+#define OV_STAT_HRR_LOG_FILE       "hls_rtsp_reqeuest.log"
+#define OV_STAT_HRV_LOG_FILE       "hls_rtsp_viewers.log"
 
 namespace ov
 {
