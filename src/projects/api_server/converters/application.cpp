@@ -337,9 +337,9 @@ namespace api
 								name = "WebRTC";
 								converted = true;
 							}
-							else if (name == "threadCount")
+							else if (name == "sessionLoadBalancingThreadCount")
 							{
-								name = "ThreadCount";
+								name = "SessionLoadBalancingThreadCount";
 								converted = true;
 							}
 							else if (name == "rtspPull")
