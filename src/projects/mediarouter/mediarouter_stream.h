@@ -8,15 +8,15 @@
 //==============================================================================
 #pragma once
 
-
 #include <stdint.h>
+
 #include <memory>
-#include <vector>
 #include <queue>
+#include <vector>
 
 #include "base/info/stream.h"
-#include "base/mediarouter/media_route_application_connector.h"
 #include "base/mediarouter/media_buffer.h"
+#include "base/mediarouter/media_route_application_connector.h"
 #include "base/mediarouter/media_type.h"
 
 enum class MRStreamInoutType : int8_t
@@ -42,10 +42,10 @@ public:
 	// Queue interfaces
 	bool Push(std::shared_ptr<MediaPacket> media_packet);
 	bool PushIncomingStream(
-		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
 	bool PushOutgoungStream(
-		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
 
 	std::shared_ptr<MediaPacket> Pop();
@@ -65,7 +65,7 @@ private:
 
 	// Parse media track information
 	bool ParseTrackInfo(
-		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
 
 	// Set whether parsing media track is complete
@@ -78,12 +78,12 @@ private:
 private:
 	// Convert to default bitstream format
 	bool ConvertToDefaultBitstream(
-		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
 
 	// Parse fragment header, flags
 	bool UpdateFlagmentHeaders(
-		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet, bool force = false);
 
 	// Periodically insert sps/pps so that the player's decoding starts quickly.
@@ -91,21 +91,20 @@ private:
 		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
 
-
 	bool UpdateKeyFlags(
-		std::shared_ptr<MediaTrack> &media_track, 
+		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
 
 	void UpdateStatistics(std::shared_ptr<MediaTrack> &media_track,
-		std::shared_ptr<MediaPacket> &media_packet);
+						  std::shared_ptr<MediaPacket> &media_packet);
+
 private:
-	
 	// Whether to generate output streams corresponding to the current mr stream.
 	bool _is_created_stream;
 
 	// Incoming/Outgoing Stream
 	MRStreamInoutType _inout_type;
-	
+
 	// Connector Type
 	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
 
@@ -148,4 +147,3 @@ private:
 		std::shared_ptr<MediaPacket> &media_packet,
 		bool dump = false);
 };
-

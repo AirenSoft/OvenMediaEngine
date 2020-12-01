@@ -13,6 +13,8 @@
 class AudioTrack
 {
 public:
+	AudioTrack();
+	
 	void SetSampleRate(int32_t samplerate);
 	int32_t GetSampleRate();
 	

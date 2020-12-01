@@ -125,10 +125,16 @@ void TranscodeContext::SetAudioSampleFormat(cmn::AudioSample::Format val)
 	_audio_sample.SetFormat(val);
 }
 
+void TranscodeContext::SetAudioChannel(cmn::AudioChannel channel)
+{
+	_audio_channel = channel;
+}
+
 cmn::AudioChannel &TranscodeContext::GetAudioChannel()
 {
 	return _audio_channel;
 }
+
 
 const cmn::AudioChannel &TranscodeContext::GetAudioChannel() const
 {

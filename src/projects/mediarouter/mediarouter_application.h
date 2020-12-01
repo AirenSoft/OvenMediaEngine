@@ -8,20 +8,18 @@
 //==============================================================================
 #pragma once
 
+#include <config/items/items.h>
+
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <vector>
-#include <algorithm>
 
-#include "base/mediarouter/media_route_application_observer.h"
 #include "base/mediarouter/media_route_application_connector.h"
 #include "base/mediarouter/media_route_application_interface.h"
+#include "base/mediarouter/media_route_application_observer.h"
 #include "base/mediarouter/media_route_interface.h"
-
-
 #include "mediarouter_stream.h"
-
-#include <config/items/items.h>
 
 class ApplicationInfo;
 class Stream;
@@ -36,7 +34,7 @@ public:
 
 	explicit MediaRouteApplication(
 		const info::Application &application_info);
-	
+
 	~MediaRouteApplication() override;
 
 public:
@@ -62,21 +60,20 @@ public:
 		std::shared_ptr<MediaRouteApplicationObserver> observer);
 
 public:
-
 	bool OnCreateStream(
 		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
 		const std::shared_ptr<info::Stream> &stream) override;
 
 	bool NotifyCreateStream(
-		const std::shared_ptr<info::Stream> &stream_info, 
+		const std::shared_ptr<info::Stream> &stream_info,
 		MediaRouteApplicationConnector::ConnectorType connector_type);
 
 	bool OnDeleteStream(
-		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn, 
+		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
 		const std::shared_ptr<info::Stream> &stream) override;
 
 	bool NotifyDeleteStream(
-		const std::shared_ptr<info::Stream> &stream_info, 
+		const std::shared_ptr<info::Stream> &stream_info,
 		const MediaRouteApplicationConnector::ConnectorType connector_type);
 
 	bool OnReceiveBuffer(
@@ -114,9 +111,8 @@ public:
 	// Outgoing Streams
 	// Key : Stream.id
 	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _streams_outgoing;
-	
-	std::shared_mutex _streams_lock;
 
+	std::shared_mutex _streams_lock;
 
 public:
 	void MessageLooper();
@@ -124,7 +120,7 @@ public:
 	class BufferIndicator
 	{
 	public:
-		enum BufferIndicatorEnum : uint8_t 
+		enum BufferIndicatorEnum : uint8_t
 		{
 			BUFFER_INDICATOR_NONE_STREAM = 0,
 			BUFFER_INDICATOR_INCOMING_STREAM,

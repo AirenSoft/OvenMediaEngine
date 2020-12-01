@@ -10,24 +10,24 @@
 #pragma once
 
 #include <stdint.h>
-#include <memory>
-#include <vector>
+
 #include <algorithm>
+#include <memory>
 #include <thread>
+#include <vector>
 
 // Media Router base class
-#include "base/mediarouter/media_route_application_observer.h"
-#include "base/mediarouter/media_route_application_connector.h"
-#include "base/mediarouter/media_route_interface.h"
-#include "base/mediarouter/media_buffer.h"
-
-#include "base/info/stream.h"
-#include "mediarouter_application.h"
-#include "mediarouter_stream.h"
-
 #include <base/ovlibrary/ovlibrary.h>
 #include <config/config.h>
 #include <orchestrator/orchestrator.h>
+
+#include "base/info/stream.h"
+#include "base/mediarouter/media_buffer.h"
+#include "base/mediarouter/media_route_application_connector.h"
+#include "base/mediarouter/media_route_application_observer.h"
+#include "base/mediarouter/media_route_interface.h"
+#include "mediarouter_application.h"
+#include "mediarouter_stream.h"
 
 class MediaRouter : public MediaRouteInterface, public ocst::MediaRouterModuleInterface
 {
@@ -49,7 +49,6 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// For Applications
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	//  Application Name으로 RouteApplication을 찾음
 	std::shared_ptr<MediaRouteApplication> GetRouteApplicationById(info::application_id_t application_id);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
@@ -64,7 +63,6 @@ public:
 		const info::Application &application_info,
 		const std::shared_ptr<MediaRouteApplicationConnector> &application_connector) override;
 
-
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// For Publishers
 	////////////////////////////////////////////////////////////////////////////////////////////////
@@ -78,6 +76,4 @@ public:
 
 private:
 	std::map<info::application_id_t, std::shared_ptr<MediaRouteApplication>> _route_apps;
-
 };
-

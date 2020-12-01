@@ -8,8 +8,8 @@
 //==============================================================================
 #include "media_track.h"
 
-#include <base/ovlibrary/ovlibrary.h>
 #include <base/ovlibrary/converter.h>
+#include <base/ovlibrary/ovlibrary.h>
 
 #define OV_LOG_TAG "MediaTrack"
 
@@ -23,9 +23,7 @@ MediaTrack::MediaTrack()
 	  _byass(false),
 	  _start_frame_time(0),
 	  _last_frame_time(0)
-
 {
-
 }
 
 MediaTrack::MediaTrack(const MediaTrack &media_track)
@@ -34,13 +32,12 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 	_media_type = media_track._media_type;
 	_codec_id = media_track._codec_id;
 
-	// 비디오
+	// Video
 	_framerate = media_track._framerate;
 	_width = media_track._width;
 	_height = media_track._height;
 
-	// 오디오
-	// _sample_rate = T._sample_rate;
+	// Audio
 	_sample = media_track._sample;
 	_channel_layout = media_track._channel_layout;
 
@@ -58,7 +55,6 @@ MediaTrack::MediaTrack(const MediaTrack &media_track)
 
 MediaTrack::~MediaTrack()
 {
-
 }
 
 void MediaTrack::SetId(uint32_t id)
@@ -106,7 +102,6 @@ void MediaTrack::SetTimeBase(const cmn::Timebase &time_base)
 	_time_base = time_base;
 }
 
-
 void MediaTrack::SetBitrate(int32_t bitrate)
 {
 	_bitrate = bitrate;
@@ -137,7 +132,8 @@ int64_t MediaTrack::GetLastFrameTime() const
 	return _last_frame_time;
 }
 
-void MediaTrack::SetBypass(bool flag){
+void MediaTrack::SetBypass(bool flag)
+{
 	_byass = flag;
 }
 

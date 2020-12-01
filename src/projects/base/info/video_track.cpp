@@ -8,6 +8,15 @@
 //==============================================================================
 #include "video_track.h"
 
+VideoTrack::VideoTrack()
+	:_framerate(0),
+	_video_timescale(0),
+	_width(0),
+	_height(0),
+	_format(0)
+{
+}
+
 void VideoTrack::SetFrameRate(double framerate)
 {
 	_framerate = framerate;

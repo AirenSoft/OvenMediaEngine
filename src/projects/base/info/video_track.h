@@ -13,6 +13,8 @@
 class VideoTrack
 {
 public:
+	VideoTrack();
+
 	void SetFrameRate(double framerate);
 	double GetFrameRate();
 

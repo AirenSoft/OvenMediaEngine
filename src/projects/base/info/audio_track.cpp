@@ -10,6 +10,11 @@
 
 using namespace cmn;
 
+AudioTrack::AudioTrack()
+{
+
+}
+
 void AudioTrack::SetSampleRate(int32_t sample_rate)
 {
 	_sample.SetRate((AudioSample::Rate)sample_rate);
