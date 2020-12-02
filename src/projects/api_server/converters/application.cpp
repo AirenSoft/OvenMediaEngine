@@ -347,9 +347,9 @@ namespace api
 								name = "RTSPPull";
 								converted = true;
 							}
-							else if (name == "rtspPull")
+							else if (name == "rtmpPush")
 							{
-								name = "RTSPPull";
+								name = "RTMPPush";
 								converted = true;
 							}
 							else if (name == "thumbnail")
