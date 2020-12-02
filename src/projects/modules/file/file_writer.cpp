@@ -280,7 +280,7 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	auto iter = _track_map.find(track_id);
 	if(iter == _track_map.end())
 	{
-		logtw("There is no track id %d", track_id);
+		// logtw("There is no track id %d", track_id);
 
 		// Without a track, it's not an error. Ignore.
 		return true;

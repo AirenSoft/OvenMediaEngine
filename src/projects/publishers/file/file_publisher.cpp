@@ -1,8 +1,14 @@
-#include <base/ovlibrary/url.h>
-#include "file_private.h"
 #include "file_publisher.h"
 
-#define UNUSED(expr) do { (void)(expr); } while (0)
+#include <base/ovlibrary/url.h>
+
+#include "file_private.h"
+
+#define UNUSED(expr)  \
+	do                \
+	{                 \
+		(void)(expr); \
+	} while (0)
 
 std::shared_ptr<FilePublisher> FilePublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
@@ -18,7 +24,7 @@ std::shared_ptr<FilePublisher> FilePublisher::Create(const cfg::Server &server_c
 }
 
 FilePublisher::FilePublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
-		: Publisher(server_config, router)
+	: Publisher(server_config, router)
 {
 	logtd("FilePublisher has been create");
 }
@@ -27,7 +33,6 @@ FilePublisher::~FilePublisher()
 {
 	logtd("FilePublisher has been terminated finally");
 }
-
 
 bool FilePublisher::Start()
 {
@@ -73,7 +78,7 @@ std::shared_ptr<pub::Application> FilePublisher::OnCreatePublisherApplication(co
 bool FilePublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
 {
 	auto file_application = std::static_pointer_cast<FileApplication>(application);
-	if(file_application == nullptr)
+	if (file_application == nullptr)
 	{
 		logte("Could not found file application. app:%s", file_application->GetName().CStr());
 		return false;
@@ -82,21 +87,20 @@ bool FilePublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Appl
 	return true;
 }
 
-
 void FilePublisher::StartSession(std::shared_ptr<FileSession> session)
 {
 	// Check the status of the session.
 	auto session_state = session->GetState();
 
-	switch(session_state)
+	switch (session_state)
 	{
 		// State of disconnected and ready to connect
 		case pub::Session::SessionState::Ready:
 			session->Start();
-		break;
+			break;
 		case pub::Session::SessionState::Stopped:
 			session->Start();
-		break;
+			break;
 		// State of Recording
 		case pub::Session::SessionState::Started:
 			[[fallthrough]];
@@ -106,20 +110,22 @@ void FilePublisher::StartSession(std::shared_ptr<FileSession> session)
 		// State of Record failed
 		case pub::Session::SessionState::Error:
 			[[fallthrough]];
+		default:
+			break;			
 	}
 
 	auto next_session_state = session->GetState();
-	if(session_state != next_session_state)
+	if (session_state != next_session_state)
 	{
-		logtd("Changed State. State(%d - %d)", session_state, next_session_state);		
-	}	
+		logtd("Changed State. State(%d - %d)", session_state, next_session_state);
+	}
 }
 
 void FilePublisher::StopSession(std::shared_ptr<FileSession> session)
 {
 	auto session_state = session->GetState();
 
-	switch(session_state)
+	switch (session_state)
 	{
 		case pub::Session::SessionState::Started:
 			session->Stop();
@@ -132,13 +138,15 @@ void FilePublisher::StopSession(std::shared_ptr<FileSession> session)
 			[[fallthrough]];
 		case pub::Session::SessionState::Error:
 			[[fallthrough]];
+		default:
+			break;
 	}
 
 	auto next_session_state = session->GetState();
-	if(session_state != next_session_state)
+	if (session_state != next_session_state)
 	{
-		logtd("Changed State. State(%d - %d)", session_state, next_session_state);		
-	}	
+		logtd("Changed State. State(%d - %d)", session_state, next_session_state);
+	}
 }
 
 void FilePublisher::SessionController()
@@ -146,21 +154,21 @@ void FilePublisher::SessionController()
 	std::shared_lock<std::shared_mutex> lock(_userdata_sets_mutex);
 
 	auto userdata_sets = _userdata_sets.GetUserdataSets();
-	for ( auto& [ key, userdata ] : userdata_sets )
+	for (auto &[key, userdata] : userdata_sets)
 	{
 		UNUSED(key);
 
 		// Find a session related to Userdata.
 		auto vhost_app_name = info::VHostAppName(userdata->GetVhost(), userdata->GetApplication());
 		auto stream = std::static_pointer_cast<FileStream>(GetStream(vhost_app_name, userdata->GetStreamName()));
-		if(stream != nullptr)
+		if (stream != nullptr)
 		{
 			// If there is no session, create a new file(record) session.
 			auto session = std::static_pointer_cast<FileSession>(stream->GetSession(userdata->GetSessionId()));
 			if (session == nullptr)
 			{
 				session = stream->CreateSession();
-				if(session == nullptr)
+				if (session == nullptr)
 				{
 					logte("Could not create session");
 					continue;
@@ -170,12 +178,12 @@ void FilePublisher::SessionController()
 				session->SetRecord(userdata);
 			}
 
-			if(userdata->GetEnable() == true && userdata->GetRemove() == false)
+			if (userdata->GetEnable() == true && userdata->GetRemove() == false)
 			{
 				StartSession(session);
-			}		
+			}
 
-			if(userdata->GetEnable() == false || userdata->GetRemove() == true)
+			if (userdata->GetEnable() == false || userdata->GetRemove() == true)
 			{
 				StopSession(session);
 			}
@@ -185,28 +193,27 @@ void FilePublisher::SessionController()
 			userdata->SetState(info::Record::RecordState::Ready);
 		}
 
-		if(userdata->GetRemove() == true)
+		if (userdata->GetRemove() == true)
 		{
 			logtd("Remove userdata of file publiser. id(%s)", userdata->GetId().CStr());
 
-			if(stream != nullptr && userdata->GetSessionId() != 0)
+			if (stream != nullptr && userdata->GetSessionId() != 0)
 				stream->DeleteSession(userdata->GetSessionId());
 
 			_userdata_sets.DeleteByKey(userdata->GetId());
-		}		
+		}
 	}
 }
 
-
-std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &vhost_app_name, 
+std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &vhost_app_name,
 													  const std::shared_ptr<info::Record> &record)
 {
-	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
+	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
-	if(_userdata_sets.GetByKey(record->GetId()) != nullptr)
+	if (_userdata_sets.GetByKey(record->GetId()) != nullptr)
 	{
-		return ov::Error::CreateError(FilePublisherStatusCode::Failure, 
-			"Duplicate identification Code");		
+		return ov::Error::CreateError(FilePublisherStatusCode::Failure,
+									  "Duplicate identification Code");
 	}
 
 	record->SetEnable(true);
@@ -214,43 +221,42 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 
 	_userdata_sets.Set(record->GetId(), record);
 
-	return ov::Error::CreateError(FilePublisherStatusCode::Success, 
-		"Record request completed");
+	return ov::Error::CreateError(FilePublisherStatusCode::Success,
+								  "Record request completed");
 }
 
-std::shared_ptr<ov::Error> FilePublisher::RecordStop(const info::VHostAppName &vhost_app_name, 
-												     const std::shared_ptr<info::Record> &record)
+std::shared_ptr<ov::Error> FilePublisher::RecordStop(const info::VHostAppName &vhost_app_name,
+													 const std::shared_ptr<info::Record> &record)
 {
-	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
+	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
 	auto userdata = _userdata_sets.GetByKey(record->GetId());
-	if(userdata == nullptr)
+	if (userdata == nullptr)
 	{
-		return ov::Error::CreateError(FilePublisherStatusCode::Failure, 
-			"identification code does not exist");	
+		return ov::Error::CreateError(FilePublisherStatusCode::Failure,
+									  "identification code does not exist");
 	}
 
 	userdata->SetEnable(false);
 	userdata->SetRemove(true);
 
-	return ov::Error::CreateError(FilePublisherStatusCode::Success, 
-		"Recording stop request complted");
+	return ov::Error::CreateError(FilePublisherStatusCode::Success,
+								  "Recording stop request complted");
 }
 
-std::shared_ptr<ov::Error> FilePublisher::GetRecords(const info::VHostAppName &vhost_app_name, 
-											         std::vector<std::shared_ptr<info::Record>> &record_list)
+std::shared_ptr<ov::Error> FilePublisher::GetRecords(const info::VHostAppName &vhost_app_name,
+													 std::vector<std::shared_ptr<info::Record>> &record_list)
 {
-	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
+	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
 	auto userdata_sets = _userdata_sets.GetUserdataSets();
-	for ( auto& [ key, userdata ] : userdata_sets )
+	for (auto &[key, userdata] : userdata_sets)
 	{
 		UNUSED(key);
 
 		record_list.push_back(userdata);
 	}
 
-	return ov::Error::CreateError(FilePublisherStatusCode::Success, 
-		"Look up the recording list");
+	return ov::Error::CreateError(FilePublisherStatusCode::Success,
+								  "Look up the recording list");
 }
-
