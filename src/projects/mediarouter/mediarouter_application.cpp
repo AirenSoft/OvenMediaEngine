@@ -15,7 +15,8 @@
 #define OV_LOG_TAG "MediaRouter.App"
 
 #define ASYNC_CSTREAM_ENABLE 0
-
+#define MIN_APPLICATION_WORKER_COUNT 	1
+#define MAX_APPLICATION_WORKER_COUNT	72
 using namespace cmn;
 
 std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info::Application &application_info)
@@ -29,46 +30,70 @@ std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info:
 }
 
 MediaRouteApplication::MediaRouteApplication(const info::Application &application_info)
-	: _application_info(application_info),
-	  _inbound_stream_indicator(nullptr, 100),
-	  _outbound_stream_indicator(nullptr, 100)
+	: _application_info(application_info)
 {
-	logti("Created media route application. application id(%u), (%s)", _application_info.GetId(), _application_info.GetName().CStr());
+	_max_worker_thread_count = _application_info.GetConfig().GetPublishers().GetStreamLoadBalancingThreadCount();
+	if(_max_worker_thread_count < MIN_APPLICATION_WORKER_COUNT)
+	{
+		_max_worker_thread_count = MIN_APPLICATION_WORKER_COUNT;
+	}
+	if(_max_worker_thread_count > MAX_APPLICATION_WORKER_COUNT)
+	{
+		_max_worker_thread_count = MIN_APPLICATION_WORKER_COUNT;
+	}
 
-	_inbound_stream_indicator.SetAlias(ov::String::FormatString("%s - Mediarouter inbound indicator", _application_info.GetName().CStr()));
-	_outbound_stream_indicator.SetAlias(ov::String::FormatString("%s - Mediarouter outbound indicator", _application_info.GetName().CStr()));
+	logti("Created Mediarouter application. application id(%u), app(%s), worker(%d)", _application_info.GetId(), _application_info.GetName().CStr(), _max_worker_thread_count);
+
+	for (uint32_t worker_id = 0; worker_id < _max_worker_thread_count; worker_id++)
+	{
+		_inbound_stream_indicator.push_back(std::make_shared<ov::Queue<std::shared_ptr<MediaRouteStream>>>(
+			ov::String::FormatString("%s - Mediarouter inbound indicator (%d/%d)", _application_info.GetName().CStr(), worker_id, _max_worker_thread_count),
+			100));
+
+		_outbound_stream_indicator.push_back(std::make_shared<ov::Queue<std::shared_ptr<MediaRouteStream>>>(
+			ov::String::FormatString("%s - Mediarouter outbound indicator (%d/%d)", _application_info.GetName().CStr(), worker_id, _max_worker_thread_count),
+			100));
+	}
 }
 
 MediaRouteApplication::~MediaRouteApplication()
 {
-	logti("Destroyed media router application. application id(%u), (%s)", _application_info.GetId(), _application_info.GetName().CStr());
+	logti("Destroyed Mediarouter application. application id(%u), app(%s)", _application_info.GetId(), _application_info.GetName().CStr());
 }
 
 bool MediaRouteApplication::Start()
 {
 	_kill_flag = false;
 
-	try
+	for (uint32_t worker_id = 0; worker_id < _max_worker_thread_count; worker_id++)
 	{
-		_inbound_thread = std::thread(&MediaRouteApplication::InboundWorkerThread, this);
-	}
-	catch (const std::system_error &e)
-	{
-		_kill_flag = true;
-		logte("Failed to start media route application thread.");
-		return false;
+		try
+		{
+			_inbound_thread.push_back(std::thread(&MediaRouteApplication::InboundWorkerThread, this, worker_id));
+		}
+		catch (const std::system_error &e)
+		{
+			_kill_flag = true;
+			logte("Failed to start Mediarouter application thread.");
+			return false;
+		}
 	}
 
-	try
+	for (uint32_t worker_id = 0; worker_id < _max_worker_thread_count; worker_id++)
 	{
-		_outbound_thread = std::thread(&MediaRouteApplication::OutboundWorkerThread, this);
+		try
+		{
+			_outbound_thread.push_back(std::thread(&MediaRouteApplication::OutboundWorkerThread, this, worker_id));
+		}
+		catch (const std::system_error &e)
+		{
+			_kill_flag = true;
+			logte("Failed to start Mediarouter application thread.");
+			return false;
+		}
 	}
-	catch (const std::system_error &e)
-	{
-		_kill_flag = true;
-		logte("Failed to start media route application thread.");
-		return false;
-	}
+
+	logti("Started Mediarouter application. application id(%u), app(%s)", _application_info.GetId(), _application_info.GetName().CStr());
 
 	return true;
 }
@@ -77,25 +102,43 @@ bool MediaRouteApplication::Stop()
 {
 	_kill_flag = true;
 
-	_inbound_stream_indicator.Stop();
-	_inbound_stream_indicator.Clear();
-
-	_outbound_stream_indicator.Stop();
-	_outbound_stream_indicator.Clear();
-
-	if (_inbound_thread.joinable())
+	for (auto &indicator : _inbound_stream_indicator)
 	{
-		_inbound_thread.join();
+		indicator->Stop();
+		indicator->Clear();
 	}
+	_inbound_stream_indicator.clear();
 
-	if (_outbound_thread.joinable())
+	for (auto &indicator : _outbound_stream_indicator)
 	{
-		_outbound_thread.join();
+		indicator->Stop();
+		indicator->Clear();
 	}
+	_outbound_stream_indicator.clear();
+
+	for (auto &worker : _inbound_thread)
+	{
+		if (worker.joinable())
+		{
+			worker.join();
+		}
+	}
+	_inbound_thread.clear();
+
+	for (auto &worker : _outbound_thread)
+	{
+		if (worker.joinable())
+		{
+			worker.join();
+		}
+	}
+	_outbound_thread.clear();
 
 	// TODO: Delete All Stream
 	_connectors.clear();
 	_observers.clear();
+
+	logti("Mediarouter application. id(%u), app(%s) has been stopped", _application_info.GetId(), _application_info.GetName().CStr());
 
 	return true;
 }
@@ -469,7 +512,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 			{
 				return false;
 			}
-			_inbound_stream_indicator.Enqueue(stream);
+			_inbound_stream_indicator[stream_info->GetId() % _max_worker_thread_count]->Enqueue(stream);
 		}
 		break;
 
@@ -486,7 +529,7 @@ bool MediaRouteApplication::OnReceiveBuffer(
 			{
 				return false;
 			}
-			_outbound_stream_indicator.Enqueue(stream);
+			_outbound_stream_indicator[stream_info->GetId() % _max_worker_thread_count]->Enqueue(stream);
 		}
 		break;
 		default: {
@@ -538,11 +581,13 @@ std::shared_ptr<MediaRouteStream> MediaRouteApplication::GetOutboundStream(uint3
 	return bucket->second;
 }
 
-void MediaRouteApplication::InboundWorkerThread()
+void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 {
+	logtd("Created Inbound worker thread #%d", worker_id);
+
 	while (!_kill_flag)
 	{
-		auto msg = _inbound_stream_indicator.Dequeue(100);
+		auto msg = _inbound_stream_indicator[worker_id]->Dequeue(100);
 		if (msg.has_value() == false)
 		{
 			// It may be called due to a normal stop signal.
@@ -554,9 +599,6 @@ void MediaRouteApplication::InboundWorkerThread()
 			logtw("Not found stream info");
 			continue;
 		}
-
-		// Get Stream Info
-		auto stream_info = stream->GetStream();
 
 		// Processes all packets in the selected stream.
 		// StreamDeliver media packet to Publiser(observer) of Transcoder(observer)
@@ -569,22 +611,25 @@ void MediaRouteApplication::InboundWorkerThread()
 
 				if (observer_type == MediaRouteApplicationObserver::ObserverType::Transcoder)
 				{
-					auto media_buffer_clone = media_packet->ClonePacket();
+					// Get Stream Info
+					auto stream_info = stream->GetStream();
 
-					observer->OnSendFrame(stream_info, std::move(media_buffer_clone));
+					observer->OnSendFrame(stream_info, media_packet);
 				}
 			}
 		}
 	}
 
-	logtd("InboundWorkerThread thread has been stopped");
+	logtd("Inbound worker thread #%d has beed stopped", worker_id);
 }
 
-void MediaRouteApplication::OutboundWorkerThread()
+void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 {
+	logtd("Created outbound worker thread #%d", worker_id);
+
 	while (!_kill_flag)
 	{
-		auto msg = _outbound_stream_indicator.Dequeue(100);
+		auto msg = _outbound_stream_indicator[worker_id]->Dequeue(100);
 		if (msg.has_value() == false)
 		{
 			// It may be called due to a normal stop signal.
@@ -597,9 +642,6 @@ void MediaRouteApplication::OutboundWorkerThread()
 			continue;
 		}
 
-		// Get Stream Info
-		auto stream_info = stream->GetStream();
-
 		// Processes all packets in the selected stream.
 		// StreamDeliver media packet to Publiser(observer) of Transcoder(observer)
 		while (auto media_packet = stream->Pop())
@@ -611,11 +653,14 @@ void MediaRouteApplication::OutboundWorkerThread()
 
 				if (observer_type == MediaRouteApplicationObserver::ObserverType::Publisher)
 				{
+					// Get Stream Info
+					auto stream_info = stream->GetStream();
+
 					observer->OnSendFrame(stream_info, media_packet);
 				}
 			}
 		}
 	}
 
-	logtd("OutboundWorkerThread thread has been stopped");
+	logtd("Outbound worker thread #%d has beed stopped", worker_id);
 }

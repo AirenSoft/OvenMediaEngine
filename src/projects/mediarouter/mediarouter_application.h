@@ -41,10 +41,6 @@ public:
 	bool Start();
 	bool Stop();
 
-	volatile bool _kill_flag;
-	std::thread _inbound_thread;
-	std::thread _outbound_thread;
-
 public:
 	// Register/unregister connector from provider
 	bool RegisterConnectorApp(
@@ -117,10 +113,16 @@ private:
 	std::shared_mutex _streams_lock;
 
 private:
-	void InboundWorkerThread();
-	void OutboundWorkerThread();
+	void InboundWorkerThread(uint32_t worker_id);
+	void OutboundWorkerThread(uint32_t worker_id);
+
+	volatile bool _kill_flag;
+	std::vector<std::thread> _inbound_thread;
+	std::vector<std::thread> _outbound_thread;
+
+	uint32_t _max_worker_thread_count;
 
 private:
-	ov::Queue<std::shared_ptr<MediaRouteStream>> _inbound_stream_indicator;
-	ov::Queue<std::shared_ptr<MediaRouteStream>> _outbound_stream_indicator;
+	std::vector<std::shared_ptr<ov::Queue<std::shared_ptr<MediaRouteStream>>>> _inbound_stream_indicator;
+	std::vector<std::shared_ptr<ov::Queue<std::shared_ptr<MediaRouteStream>>>> _outbound_stream_indicator;
 };
