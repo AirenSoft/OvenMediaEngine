@@ -15,8 +15,8 @@
 #define OV_LOG_TAG "MediaRouter.App"
 
 #define ASYNC_CSTREAM_ENABLE 0
-#define MIN_APPLICATION_WORKER_COUNT 	1
-#define MAX_APPLICATION_WORKER_COUNT	72
+#define MIN_APPLICATION_WORKER_COUNT 1
+#define MAX_APPLICATION_WORKER_COUNT 72
 using namespace cmn;
 
 std::shared_ptr<MediaRouteApplication> MediaRouteApplication::Create(const info::Application &application_info)
@@ -33,13 +33,13 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 	: _application_info(application_info)
 {
 	_max_worker_thread_count = _application_info.GetConfig().GetPublishers().GetStreamLoadBalancingThreadCount();
-	if(_max_worker_thread_count < MIN_APPLICATION_WORKER_COUNT)
+	if (_max_worker_thread_count < MIN_APPLICATION_WORKER_COUNT)
 	{
 		_max_worker_thread_count = MIN_APPLICATION_WORKER_COUNT;
 	}
-	if(_max_worker_thread_count > MAX_APPLICATION_WORKER_COUNT)
+	if (_max_worker_thread_count > MAX_APPLICATION_WORKER_COUNT)
 	{
-		_max_worker_thread_count = MIN_APPLICATION_WORKER_COUNT;
+		_max_worker_thread_count = MAX_APPLICATION_WORKER_COUNT;
 	}
 
 	logti("Created Mediarouter application. application id(%u), app(%s), worker(%d)", _application_info.GetId(), _application_info.GetName().CStr(), _max_worker_thread_count);
@@ -58,6 +58,21 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 
 MediaRouteApplication::~MediaRouteApplication()
 {
+
+	for (auto &indicator : _inbound_stream_indicator)
+	{
+		indicator->Stop();
+		indicator->Clear();
+	}
+	_inbound_stream_indicator.clear();
+
+	for (auto &indicator : _outbound_stream_indicator)
+	{
+		indicator->Stop();
+		indicator->Clear();
+	}
+	_outbound_stream_indicator.clear();
+
 	logti("Destroyed Mediarouter application. application id(%u), app(%s)", _application_info.GetId(), _application_info.GetName().CStr());
 }
 
@@ -101,20 +116,6 @@ bool MediaRouteApplication::Start()
 bool MediaRouteApplication::Stop()
 {
 	_kill_flag = true;
-
-	for (auto &indicator : _inbound_stream_indicator)
-	{
-		indicator->Stop();
-		indicator->Clear();
-	}
-	_inbound_stream_indicator.clear();
-
-	for (auto &indicator : _outbound_stream_indicator)
-	{
-		indicator->Stop();
-		indicator->Clear();
-	}
-	_outbound_stream_indicator.clear();
 
 	for (auto &worker : _inbound_thread)
 	{

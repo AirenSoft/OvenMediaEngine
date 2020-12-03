@@ -7,12 +7,16 @@
 //
 //==============================================================================
 
-#include <iostream>
-#include <unistd.h>
-
 #include "transcode_application.h"
 
+#include <unistd.h>
+
+#include <iostream>
+
 #define OV_LOG_TAG "TranscodeApplication"
+
+#define MIN_APPLICATION_WORKER_COUNT 1
+#define MAX_APPLICATION_WORKER_COUNT 72
 
 std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(const info::Application &application_info)
 {
@@ -22,30 +26,61 @@ std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(const info::A
 }
 
 TranscodeApplication::TranscodeApplication(const info::Application &application_info)
-	: _application_info(application_info),
-	_indicator(nullptr, 100)
+	: _application_info(application_info)
 {
-	// set alias
-	_indicator.SetAlias(ov::String::FormatString("%s - TranscodeApplication Indicator Queue", _application_info.GetName().CStr()));
+	_max_worker_thread_count = _application_info.GetConfig().GetPublishers().GetStreamLoadBalancingThreadCount() / 2;
+
+	if (_max_worker_thread_count < MIN_APPLICATION_WORKER_COUNT)
+	{
+		_max_worker_thread_count = MIN_APPLICATION_WORKER_COUNT;
+	}
+	if (_max_worker_thread_count > MAX_APPLICATION_WORKER_COUNT)
+	{
+		_max_worker_thread_count = MAX_APPLICATION_WORKER_COUNT;
+	}
+
+	for (uint32_t worker_id = 0; worker_id < _max_worker_thread_count; worker_id++)
+	{
+		_indicators.push_back(std::make_shared<ov::Queue<std::shared_ptr<BufferIndicator>>>(
+			ov::String::FormatString("Transcoder application indicator. app(%s) (%d/%d)", application_info.GetName().CStr(), worker_id, _max_worker_thread_count),
+			100));
+	}
+
+	logtd("Created transcoder application. app(%s)", application_info.GetName().CStr());
 }
 
 TranscodeApplication::~TranscodeApplication()
 {
-	logtd("Destroyed transcode application.");
+	for (auto &indicator : _indicators)
+	{
+		indicator->Stop();
+		indicator->Clear();
+	}
+	_indicators.clear();
+
+	logtd("Transcoder application has been destroyed. app(%s)", _application_info.GetName().CStr());
 }
 
 bool TranscodeApplication::Start()
 {
-	try
+	_kill_flag = false;
+
+	std::unique_lock<std::mutex> lock(_mutex);
+
+	for (uint32_t worker_id = 0; worker_id < _max_worker_thread_count; worker_id++)
 	{
-		_kill_flag = false;
-		_thread_looptask = std::thread(&TranscodeApplication::MessageLooper, this);
-	}
-	catch (const std::system_error &e)
-	{
-		_kill_flag = true;
-		logte("Failed to start transcode stream thread");
-		return false;
+		try
+		{
+			_worker_thread.push_back(std::thread(&TranscodeApplication::WorkerThread, this, worker_id));
+		}
+		catch (const std::system_error &e)
+		{
+			_kill_flag = true;
+
+			logte("Failed to start transcoder application worker thread. app(%s)", _application_info.GetName().CStr());
+
+			return false;
+		}
 	}
 
 	return true;
@@ -54,21 +89,27 @@ bool TranscodeApplication::Start()
 bool TranscodeApplication::Stop()
 {
 	_kill_flag = true;
-	
-	if (_thread_looptask.joinable())
-	{
-		_thread_looptask.join();
-	}
 
 	std::unique_lock<std::mutex> lock(_mutex);
 
-	for(const auto &x : _streams)
+	for (auto &worker : _worker_thread)
 	{
-		auto stream = x.second;
+		if (worker.joinable())
+		{
+			worker.join();
+		}
+	}
+	_worker_thread.clear();
+
+	for (const auto &it : _streams)
+	{
+		auto stream = it.second;
 		stream->Stop();
 	}
 
 	_streams.clear();
+
+	logtd("Transcoder application has been stopped. app(%s)", _application_info.GetName().CStr());
 
 	return true;
 }
@@ -83,7 +124,7 @@ bool TranscodeApplication::OnCreateStream(const std::shared_ptr<info::Stream> &s
 		return false;
 	}
 
-	if(stream->Start() == false)
+	if (stream->Start() == false)
 	{
 		return false;
 	}
@@ -113,7 +154,6 @@ bool TranscodeApplication::OnDeleteStream(const std::shared_ptr<info::Stream> &s
 	return true;
 }
 
-
 bool TranscodeApplication::OnSendFrame(const std::shared_ptr<info::Stream> &stream_info, const std::shared_ptr<MediaPacket> &packet)
 {
 	std::unique_lock<std::mutex> lock(_mutex);
@@ -130,28 +170,27 @@ bool TranscodeApplication::OnSendFrame(const std::shared_ptr<info::Stream> &stre
 	return stream->Push(packet);
 }
 
-
 bool TranscodeApplication::AppendIndicator(std::shared_ptr<TranscodeStream> stream, IndicatorQueueType queue_type)
 {
-	_indicator.Enqueue( std::make_shared<BufferIndicator>(stream,queue_type) );
+	_indicators[stream->GetStreamId() % _max_worker_thread_count]->Enqueue(std::make_shared<BufferIndicator>(stream, queue_type));
 
 	return true;
 }
 
-void TranscodeApplication::MessageLooper()
+void TranscodeApplication::WorkerThread(uint32_t worker_id)
 {
 	while (!_kill_flag)
 	{
-		auto indicator_ref = _indicator.Dequeue(10);
+		auto indicator_ref = _indicators[worker_id]->Dequeue(100);
 		if (indicator_ref.has_value() == false)
 		{
-			// logti("There is no indicator"); 
+			// No indicator
 			continue;
 		}
 
 		auto indicator = indicator_ref.value();
 
-		switch(indicator->_queue_type)
+		switch (indicator->_queue_type)
 		{
 			case BUFFER_INDICATOR_INPUT_PACKETS:
 				indicator->_stream->DoInputPackets();
@@ -167,7 +206,5 @@ void TranscodeApplication::MessageLooper()
 			default:
 				break;
 		}
-
-		// logti("Append Indicator %p %d %d", indicator->_stream, indicator->_queue_type, _indicator.Size());
 	}
 }

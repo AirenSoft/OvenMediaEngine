@@ -16,11 +16,12 @@
 #define OV_LOG_TAG "TranscodeStream"
 
 #define MAX_QUEUE_SIZE 100
+
 TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent)
 	: _application_info(application_info),
-	  _queue_input_packets(nullptr, 100),
-	  _queue_decoded_frames(nullptr, 100),
-	  _queue_filterd_frames(nullptr, 100)
+	  _queue_input_packets(ov::String::FormatString("%s/%s - TranscodeStream input Queue", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr()), MAX_QUEUE_SIZE),
+	  _queue_decoded_frames(ov::String::FormatString("%s/%s - TranscodeStream decoded Queue", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr()), MAX_QUEUE_SIZE),
+	  _queue_filterd_frames(ov::String::FormatString("%s/%s - TranscodeStream filtered Queue", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr()), MAX_QUEUE_SIZE)
 {
 	logtd("Trying to create transcode stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 
@@ -35,13 +36,6 @@ TranscodeStream::TranscodeStream(const info::Application &application_info, cons
 
 	// for generating track ids
 	_last_map_id = 0;
-
-	// set alias
-	_queue_input_packets.SetAlias(ov::String::FormatString("%s/%s - TranscodeStream input Queue", _input_stream->GetApplicationInfo().GetName().CStr(), _input_stream->GetName().CStr()));
-
-	_queue_decoded_frames.SetAlias(ov::String::FormatString("%s/%s - TranscodeStream decoded Queue", _input_stream->GetApplicationInfo().GetName().CStr(), _input_stream->GetName().CStr()));
-
-	_queue_filterd_frames.SetAlias(ov::String::FormatString("%s/%s - TranscodeStream filtered Queue", _input_stream->GetApplicationInfo().GetName().CStr(), _input_stream->GetName().CStr()));
 }
 
 TranscodeStream::~TranscodeStream()
@@ -77,6 +71,14 @@ TranscodeApplication *TranscodeStream::GetParent()
 	return _parent;
 }
 
+info::stream_id_t TranscodeStream::GetStreamId()
+{
+	if(_input_stream != nullptr)
+		return _input_stream->GetId();
+
+	return 0;
+}
+
 bool TranscodeStream::Start()
 {
 	// If the application is created by Dynamic, make it bypass in Default Stream.
@@ -109,7 +111,7 @@ bool TranscodeStream::Start()
 	}
 
 	// I will make and apply a packet drop policy.
-	_max_queue_threshold = 256;
+	_max_queue_threshold = MAX_QUEUE_SIZE;
 
 	_kill_flag = false;
 

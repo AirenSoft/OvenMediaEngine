@@ -37,7 +37,7 @@ public:
 	std::shared_ptr<MediaTrack> _input_track;
 
 	// Output Tracks
-	std::vector<std::pair<std::shared_ptr<info::Stream>,std::shared_ptr<MediaTrack>>> _output_tracks;
+	std::vector<std::pair<std::shared_ptr<info::Stream>, std::shared_ptr<MediaTrack>>> _output_tracks;
 };
 
 class TranscodeStream : public ov::EnableSharedFromThis<TranscodeStream>
@@ -45,6 +45,8 @@ class TranscodeStream : public ov::EnableSharedFromThis<TranscodeStream>
 public:
 	TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &orig_stream, TranscodeApplication *parent);
 	~TranscodeStream();
+
+	info::stream_id_t GetStreamId();
 
 	bool Start();
 	bool Stop();

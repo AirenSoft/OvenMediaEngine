@@ -38,14 +38,14 @@ MediaRouter::~MediaRouter()
 
 bool MediaRouter::Start()
 {
-	logti("MediaRouter has been started.");
+	logti("Mediarouter has been started.");
 
 	return true;
 }
 
 bool MediaRouter::Stop()
 {
-	logti("MediaRouter has been stopped.");
+	logti("Mediarouter has been stopped.");
 
 	for (auto const &_route_app : _route_apps)
 	{
@@ -64,12 +64,12 @@ bool MediaRouter::OnCreateApplication(const info::Application &app_info)
 	auto route_app = MediaRouteApplication::Create(app_info);
 	if (route_app == nullptr)
 	{
-		logte("failed to allocation route_app");
+		logte("Failed to memory allcation. app(%s)", app_info.GetName().CStr());
 		return false;
 	}
 	else
 	{
-		logti("MediaRouter has created [%s] application", app_info.GetName().CStr());
+		logti("Created Mediarouter. app(%s)", app_info.GetName().CStr());
 	}
 
 	_route_apps.insert(std::make_pair(application_id, route_app));
@@ -87,7 +87,7 @@ bool MediaRouter::OnDeleteApplication(const info::Application &app_info)
 
 	_route_apps.erase(application_id);
 
-	logti("MediaRouter has deleted [%s] application", app_info.GetName().CStr());
+	logti("Mediarouter has been destroyed. app(%s)", app_info.GetName().CStr());
 
 	return true;
 }
@@ -145,7 +145,7 @@ bool MediaRouter::RegisterObserverApp(
 	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if (media_route_app == nullptr)
 	{
-		logtw("cannot find application. name(%s)", application_info.GetName().CStr());
+		logtw("Could not found application. app(%s)", application_info.GetName().CStr());
 		return false;
 	}
 
@@ -166,7 +166,7 @@ bool MediaRouter::UnregisterObserverApp(
 	auto media_route_app = GetRouteApplicationById(application_info.GetId());
 	if (media_route_app == nullptr)
 	{
-		logtw("cannot find application. name(%s)", application_info.GetName().CStr());
+		logtw("Could not found application. app(%s)", application_info.GetName().CStr());
 		return false;
 	}
 
