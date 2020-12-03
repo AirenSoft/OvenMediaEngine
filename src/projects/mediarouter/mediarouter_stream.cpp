@@ -39,7 +39,7 @@
 #include <modules/bitstream/h265/h265_parser.h>
 #include <modules/bitstream/nalu/nal_unit_fragment_header.h>
 
-#define OV_LOG_TAG "MediaRouter.Stream"
+#include "mediarouter_private.h"
 
 #define PTS_CORRECT_THRESHOLD_US 5000
 
@@ -917,7 +917,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	{
 		return nullptr;
 	}
-	
+
 	auto &media_packet = media_packet_ref.value();
 
 	////////////////////////////////////////////////////////////////////////////////////

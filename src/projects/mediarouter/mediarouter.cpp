@@ -14,8 +14,7 @@
 #include <iostream>
 
 #include "config/config_manager.h"
-
-#define OV_LOG_TAG "MediaRouter"
+#include "mediarouter_private.h"
 
 std::shared_ptr<MediaRouter> MediaRouter::Create()
 {

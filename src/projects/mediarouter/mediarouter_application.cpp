@@ -10,9 +10,8 @@
 
 #include <base/info/stream.h>
 
+#include "mediarouter_private.h"
 #include "monitoring/monitoring.h"
-
-#define OV_LOG_TAG "MediaRouter.App"
 
 #define ASYNC_CSTREAM_ENABLE 0
 #define MIN_APPLICATION_WORKER_COUNT 1
@@ -58,7 +57,6 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 
 MediaRouteApplication::~MediaRouteApplication()
 {
-
 	for (auto &indicator : _inbound_stream_indicator)
 	{
 		indicator->Stop();

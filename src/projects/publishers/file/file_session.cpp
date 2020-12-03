@@ -274,7 +274,7 @@ ov::String FileSession::GetOutputTempFilePath()
 	// If FILE->FilePath config is not set, save it as the default path.
 	if (file_path.GetLength() == 0 || file_path.IsEmpty() == true)
 	{
-		file_path.Format("%s${VirtualHost}_${Application}_${Stream}_${StartTime:YYYYMMDDhhmmss}_tmp.ts", ov::PathManager::GetAppPath("records").CStr());
+		file_path.Format("%s${TransactionId}_${VirtualHost}_${Application}_${Stream}_${StartTime:YYYYMMDDhhmmss}_tmp.ts", ov::PathManager::GetAppPath("records").CStr());
 	}
 
 	auto result = ConvertMacro(file_path);
@@ -292,7 +292,7 @@ ov::String FileSession::GetOutputFilePath()
 	// If FILE->FilePath config is not set, save it as the default path.
 	if (file_path.GetLength() == 0 || file_path.IsEmpty() == true)
 	{
-		file_path.Format("%s${VirtualHost}_${Application}_${Stream}_${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts", ov::PathManager::GetAppPath("records").CStr());
+		file_path.Format("%s${TransactionId}_${VirtualHost}_${Application}_${Stream}_${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts", ov::PathManager::GetAppPath("records").CStr());
 	}
 
 	auto result = ConvertMacro(file_path);
@@ -309,7 +309,7 @@ ov::String FileSession::GetOutputFileInfoPath()
 	auto fileinfo_path = file_config.GetFileInfoPath();
 	if (fileinfo_path.GetLength() == 0 || fileinfo_path.IsEmpty() == true)
 	{
-		fileinfo_path.Format("%s${VirtualHost}_${Application}_${Stream}_${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.xml", ov::PathManager::GetAppPath("records").CStr());
+		fileinfo_path.Format("%s${TransactionId}_${VirtualHost}_${Application}_${Stream}.xml", ov::PathManager::GetAppPath("records").CStr());
 	}
 
 	auto result = ConvertMacro(fileinfo_path);
@@ -398,7 +398,7 @@ ov::String FileSession::ConvertMacro(ov::String src)
 		tmp = matches[1];
 		ov::String group = ov::String(tmp.c_str());
 
-		// logtd("Full Match(%s) => Group(%s)", full_match.CStr(), group.CStr());
+		logtd("Full Match(%s) => Group(%s)", full_match.CStr(), group.CStr());
 
 		if (group.IndexOf("VirtualHost") != -1L)
 		{
@@ -423,12 +423,18 @@ ov::String FileSession::ConvertMacro(ov::String src)
 
 			replaced_string = replaced_string.Replace(full_match, buff);
 		}
-		if (group.IndexOf("Id") != -1L)
+		if (group.IndexOf("Id") == 0)
 		{
 			ov::String buff = ov::String::FormatString("%s", GetRecord()->GetId().CStr());
 
 			replaced_string = replaced_string.Replace(full_match, buff);
 		}
+		if (group.IndexOf("TransactionId") == 0)
+		{
+			ov::String buff = ov::String::FormatString("%s", GetRecord()->GetTransactionId().CStr());
+
+			replaced_string = replaced_string.Replace(full_match, buff);
+		}		
 		if (group.IndexOf("StartTime") != -1L)
 		{
 			time_t now = std::chrono::system_clock::to_time_t(GetRecord()->GetRecordStartTime());

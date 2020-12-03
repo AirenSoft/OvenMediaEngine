@@ -216,6 +216,7 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 									  "Duplicate identification Code");
 	}
 
+	record->SetTransactionId(ov::Random::GenerateString(16));
 	record->SetEnable(true);
 	record->SetRemove(false);
 

@@ -1,7 +1,9 @@
+#include "record.h"
+
 #include <base/ovlibrary/ovlibrary.h>
+
 #include <random>
 
-#include "record.h"
 #include "stream.h"
 
 namespace info
@@ -9,6 +11,7 @@ namespace info
 	Record::Record()
 	{
 		_created_time = std::chrono::system_clock::now();
+		_transaction_id = "";
 		_id = "";
 		_stream = nullptr;
 
@@ -26,6 +29,15 @@ namespace info
 		_state = RecordState::Ready;
 	}
 
+	void Record::SetTransactionId(ov::String transaction_id)
+	{
+		_transaction_id = transaction_id;
+	}
+	ov::String Record::GetTransactionId()
+	{
+		return _transaction_id;
+	}
+
 	void Record::SetId(ov::String record_id)
 	{
 		_id = record_id;
@@ -35,14 +47,14 @@ namespace info
 	{
 		return _id;
 	}
-		
-	void Record::SetEnable(bool eanble) 
-	{ 
-		_enable = eanble; 
+
+	void Record::SetEnable(bool eanble)
+	{
+		_enable = eanble;
 	}
-	bool Record::GetEnable() 
-	{ 
-		return _enable; 
+	bool Record::GetEnable()
+	{
+		return _enable;
 	}
 
 	void Record::SetVhost(ov::String value)
@@ -84,13 +96,14 @@ namespace info
 		_session_id = id;
 	}
 
-	session_id_t Record::GetSessionId() {
+	session_id_t Record::GetSessionId()
+	{
 		return _session_id;
 	}
 
 	void Record::SetStream(const info::Stream &stream)
 	{
-		_stream = std::make_shared<info::Stream>(stream);		
+		_stream = std::make_shared<info::Stream>(stream);
 	}
 
 	const std::chrono::system_clock::time_point &Record::GetCreatedTime() const
@@ -186,29 +199,29 @@ namespace info
 	}
 	ov::String Record::GetStateString()
 	{
-		switch(GetState())
+		switch (GetState())
 		{
 			case RecordState::Ready:
 				return "ready";
 			case RecordState::Recording:
-				return "recording";				
+				return "recording";
 			case RecordState::Stopping:
-				return "stopping";					
+				return "stopping";
 			case RecordState::Stopped:
-				return "stopped";	
+				return "stopped";
 			case RecordState::Error:
-				return "error";									
+				return "error";
 		}
 
 		return "Unknown";
 	}
 
-	const ov::String Record::GetInfoString() 
+	const ov::String Record::GetInfoString()
 	{
 		ov::String info = "\n";
 
 		info.AppendFormat(" id=%s\n", _id.CStr());
-		info.AppendFormat(" stream=%s\n", (_stream != nullptr)?_stream->GetName().CStr():"");
+		info.AppendFormat(" stream=%s\n", (_stream != nullptr) ? _stream->GetName().CStr() : "");
 		info.AppendFormat(" file_path=%s\n", _file_path.CStr());
 		info.AppendFormat(" tmp_path=%s\n", _tmp_path.CStr());
 		info.AppendFormat(" fileinfo_path=%s\n", _fileinfo_path.CStr());
@@ -222,6 +235,6 @@ namespace info
 		info.AppendFormat(" record_stop_time=%s", ov::Converter::ToString(_record_stop_time).CStr());
 
 		return info;
-	}	
+	}
 
 }  // namespace info
