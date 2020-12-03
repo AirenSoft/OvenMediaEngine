@@ -42,7 +42,8 @@ public:
 	bool Stop();
 
 	volatile bool _kill_flag;
-	std::thread _thread;
+	std::thread _inbound_thread;
+	std::thread _outbound_thread;
 
 public:
 	// Register/unregister connector from provider
@@ -82,16 +83,18 @@ public:
 		const std::shared_ptr<MediaPacket> &packet) override;
 
 private:
-	bool ReuseIncomingStream(const std::shared_ptr<info::Stream> &stream_info);
-	bool CreateIncomingStream(const std::shared_ptr<info::Stream> &stream_info);
-	bool CreateOutgoingStream(const std::shared_ptr<info::Stream> &stream_info);
+	bool ReuseInboundStream(const std::shared_ptr<info::Stream> &stream_info);
+	bool CreateInboundStream(const std::shared_ptr<info::Stream> &stream_info);
+	bool CreateOutboundStream(const std::shared_ptr<info::Stream> &stream_info);
 
-	bool DeleteIncomingStream(const std::shared_ptr<info::Stream> &stream_info);
-	bool DeleteOutgoingStream(const std::shared_ptr<info::Stream> &stream_info);
+	bool DeleteInboundStream(const std::shared_ptr<info::Stream> &stream_info);
+	bool DeleteOutboundStream(const std::shared_ptr<info::Stream> &stream_info);
 
-	std::shared_ptr<MediaRouteStream> GetStream(uint8_t indicator, uint32_t stream_id);
+	// std::shared_ptr<MediaRouteStream> GetStream(uint8_t indicator, uint32_t stream_id);
+	std::shared_ptr<MediaRouteStream> GetInboundStream(uint32_t stream_id);
+	std::shared_ptr<MediaRouteStream> GetOutboundStream(uint32_t stream_id);
 
-public:
+private:
 	// Application information from configuration file
 	const info::Application _application_info;
 
@@ -106,37 +109,18 @@ public:
 	// Information of MediaStream instance
 	// Incoming Streams
 	// Key : Stream.id
-	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _streams_incoming;
+	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _inbound_streams;
 
 	// Outgoing Streams
 	// Key : Stream.id
-	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _streams_outgoing;
-
+	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _outbound_streams;
 	std::shared_mutex _streams_lock;
 
-public:
-	void MessageLooper();
+private:
+	void InboundWorkerThread();
+	void OutboundWorkerThread();
 
-	class BufferIndicator
-	{
-	public:
-		enum BufferIndicatorEnum : uint8_t
-		{
-			BUFFER_INDICATOR_NONE_STREAM = 0,
-			BUFFER_INDICATOR_INCOMING_STREAM,
-			BUFFER_INDICATOR_OUTGOING_STREAM
-		};
-
-		explicit BufferIndicator(uint8_t inout, uint32_t stream_id)
-		{
-			_inout = inout;
-			_stream_id = stream_id;
-		}
-
-		uint8_t _inout;
-		uint32_t _stream_id;
-	};
-
-protected:
-	ov::Queue<std::shared_ptr<BufferIndicator>> _indicator;
+private:
+	ov::Queue<std::shared_ptr<MediaRouteStream>> _inbound_stream_indicator;
+	ov::Queue<std::shared_ptr<MediaRouteStream>> _outbound_stream_indicator;
 };

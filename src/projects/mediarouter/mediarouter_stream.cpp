@@ -52,7 +52,7 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 	  _packets_queue(nullptr, 100)
 {
 	logti("Trying to create media route stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
-	_inout_type = MRStreamInoutType::Unknown;
+	_inout_type = MediaRouterStreamType::UNKNOWN;
 
 	_stat_start_time = std::chrono::system_clock::now();
 
@@ -61,7 +61,7 @@ MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 	InitParseTrackInfo();
 }
 
-MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MRStreamInoutType inout_type)
+MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MediaRouterStreamType inout_type)
 	: MediaRouteStream(stream)
 {
 	SetInoutType(inout_type);
@@ -90,14 +90,14 @@ std::shared_ptr<info::Stream> MediaRouteStream::GetStream()
 	return _stream;
 }
 
-void MediaRouteStream::SetInoutType(MRStreamInoutType inout_type)
+void MediaRouteStream::SetInoutType(MediaRouterStreamType inout_type)
 {
 	_inout_type = inout_type;
 
-	_packets_queue.SetAlias(ov::String::FormatString("%s/%s - MediaRouterStream packets %s queue", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (_inout_type == MRStreamInoutType::Incoming) ? "Incoming" : "Outging"));
+	_packets_queue.SetAlias(ov::String::FormatString("%s/%s - Mediarouter stream packet %s", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (_inout_type == MediaRouterStreamType::INBOUND) ? "Incoming" : "Outging"));
 }
 
-MRStreamInoutType MediaRouteStream::GetInoutType()
+MediaRouterStreamType MediaRouteStream::GetInoutType()
 {
 	return _inout_type;
 }
@@ -796,7 +796,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 		ov::String stat_stream_str = "";
 
-		stat_stream_str.AppendFormat("\n - MediaRouter Stream | type: %s, name: %s/%s, uptime: %lldms, queue: %d, A-V(%lld)", _inout_type == MRStreamInoutType::Incoming ? "Incoming" : "Outgoing", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (int64_t)uptime, _packets_queue.Size(), max_pts - min_pts);
+		stat_stream_str.AppendFormat("\n - MediaRouter Stream | type: %s, name: %s/%s, uptime: %lldms, queue: %d, A-V(%lld)", _inout_type == MediaRouterStreamType::INBOUND ? "Incoming" : "Outgoing", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (int64_t)uptime, _packets_queue.Size(), max_pts - min_pts);
 
 		stat_track_str = stat_stream_str + stat_track_str;
 
@@ -804,6 +804,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 	}
 }
 
+// @deprecated
 void MediaRouteStream::DropNonDecodingPackets()
 {
 	std::map<MediaTrackId, int64_t> _pts_last;
@@ -830,7 +831,7 @@ void MediaRouteStream::DropNonDecodingPackets()
 			if (base_pts < media_packet->GetPts())
 			{
 				base_pts = media_packet->GetPts();
-				// logtw("Discovered base PTS value track_id:%d, flags:%d, size:%d,  pts:%lld", (int32_t)media_packet->GetTrackId(), media_packet->GetFlag(), media_packet->GetDataLength(), base_pts);
+				logtw("Discovered base PTS value track_id:%d, flags:%d, size:%d,  pts:%lld", (int32_t)media_packet->GetTrackId(), media_packet->GetFlag(), media_packet->GetDataLength(), base_pts);
 			}
 		}
 
@@ -891,11 +892,14 @@ void MediaRouteStream::DropNonDecodingPackets()
 	tmp_packets_queue.clear();
 
 	if (dropeed_packets > 0)
+	{
 		logtw("Number of dropped packets : %d", dropeed_packets);
+	}
 }
 
 bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 {
+#if 0	
 	////////////////////////////////////////////////////////////////////////////////////
 	// [ Calculating Packet Timestamp, Duration]
 
@@ -985,12 +989,169 @@ bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 		default:
 			break;
 	}
+#else
+		_packets_queue.Enqueue(std::move(media_packet));
+#endif
 
 	return (_packets_queue.Size() > 0) ? true : false;
 }
 
 std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 {
+	// Get Media Packet
+	if (_packets_queue.IsEmpty())
+	{
+		return nullptr;
+	}
+
+	auto media_packet_ref = _packets_queue.Dequeue();
+	if (media_packet_ref.has_value() == false)
+	{
+		return nullptr;
+	}
+	auto &media_packet = media_packet_ref.value();
+
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// [ Calculating Packet Timestamp, Duration]
+
+	// If there is no pts/dts value, do the same as pts/dts value.
+	if (media_packet->GetDts() == -1LL)
+		media_packet->SetDts(media_packet->GetPts());
+
+	if (media_packet->GetPts() == -1LL)
+		media_packet->SetPts(media_packet->GetDts());
+
+	// Accumulate Packet duplication
+	//	- 1) If the current packet does not have a Duration value then stashed.
+	//	- 1) If packets stashed, calculate duration compared to the current packet timestamp.
+	//	- 3) and then, the current packet stash.
+
+	auto it = _media_packet_stash.find(media_packet->GetTrackId());
+	if (it == _media_packet_stash.end())
+	{
+		_media_packet_stash[media_packet->GetTrackId()] = std::move(media_packet);
+
+		return nullptr;
+	}	
+
+	auto pop_media_packet = std::move(it->second);
+
+	int64_t duration = media_packet->GetDts() - pop_media_packet->GetDts();
+	pop_media_packet->SetDuration(duration);
+
+	_media_packet_stash[media_packet->GetTrackId()] = std::move(media_packet);
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// Bitstream format converting to stand format. and, parsing track informaion
+	auto media_type = pop_media_packet->GetMediaType();
+	auto track_id = pop_media_packet->GetTrackId();
+
+	auto media_track = _stream->GetTrack(track_id);
+	if (media_track == nullptr)
+	{
+			logte("Cannot find media track. media_type(%s), track_id(%d)", (media_type == MediaType::Video) ? "video" : "audio", track_id);
+		return nullptr;
+	}
+
+
+	switch (GetInoutType())
+	{
+		case MediaRouterStreamType::INBOUND: {
+			// DumpPacket(pop_media_packet);
+
+#if 0
+			bool need_drop_nondecoding_packets = false;
+
+			bool is_parsed_all_track = IsParseTrackAll();
+#endif
+			if (!PushIncomingStream(media_track, pop_media_packet))
+			{
+				return nullptr;
+			}
+
+			if(GetParseTrackInfo(media_track) == false)
+			{
+				return nullptr;
+			}
+
+#if 0
+			if (is_parsed_all_track == false)
+			{
+				if (IsParseTrackAll() == true)
+				{
+					need_drop_nondecoding_packets = true;
+				}
+			}
+
+			// Store packets until all track information is parsed.
+			if (IsParseTrackAll() == false)
+			{
+				logtw("parsed not completed");
+				return nullptr;
+			}
+
+			// Determine whether non-decoding packets are dropped at stream start
+			if (need_drop_nondecoding_packets == true)
+			{
+				DropNonDecodingPackets();
+			}
+#endif			
+		}
+		break;
+
+		case MediaRouterStreamType::OUTBOUND: {
+			if (!PushOutgoungStream(media_track, pop_media_packet))
+				return nullptr;
+
+		}
+		break;
+
+		default:
+			break;
+	}
+
+////////////////////////////////////////////////////////////////////////////////////
+	// PTS Correction for Abnormal increase
+
+	int64_t ts_inc = pop_media_packet->GetPts() - _pts_last[track_id];
+
+	int den = media_track->GetTimeBase().GetDen();
+	if (den == 0)
+		den = 1;
+
+	int64_t ts_inc_ms = ts_inc * 1000 / den;
+
+	if (std::abs(ts_inc_ms) > PTS_CORRECT_THRESHOLD_US)
+	{
+		if (!(media_track->GetCodecId() == cmn::MediaCodecId::Png || media_track->GetCodecId() == cmn::MediaCodecId::Jpeg))
+		{
+			// TODO(soulk): I think all tracks should calibrate the PTS with the same value.
+			_pts_correct[track_id] = pop_media_packet->GetPts() - _pts_last[track_id] - _pts_avg_inc[track_id];
+
+			logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld, inc : %lld", track_id, _pts_last[track_id], media_packet->GetPts(), _pts_correct[track_id], _pts_avg_inc[track_id], std::abs(ts_inc_ms));
+		}
+	}
+	else
+	{
+		// Originally it should be an average value, Use the difference of the last packet.
+		// Use DTS because the PTS value does not increase uniformly.
+		_pts_avg_inc[track_id] = pop_media_packet->GetDts() - _dts_last[track_id];
+	}
+
+	_pts_last[track_id] = pop_media_packet->GetPts();
+	_dts_last[track_id] = pop_media_packet->GetDts();
+
+	pop_media_packet->SetPts(pop_media_packet->GetPts() - _pts_correct[track_id]);
+	pop_media_packet->SetDts(pop_media_packet->GetDts() - _pts_correct[track_id]);
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// Statistics
+
+	UpdateStatistics(media_track, pop_media_packet);
+
+	return std::move(pop_media_packet);
+#if 0	
 	////////////////////////////////////////////////////////////////////////////////////
 	// Peek MediaPacket from queue
 
@@ -1055,6 +1216,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 	UpdateStatistics(media_track, media_packet);
 
 	return std::move(media_packet);
+#endif	
 }
 
 void MediaRouteStream::DumpPacket(

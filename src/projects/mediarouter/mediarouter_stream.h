@@ -19,11 +19,11 @@
 #include "base/mediarouter/media_route_application_connector.h"
 #include "base/mediarouter/media_type.h"
 
-enum class MRStreamInoutType : int8_t
+enum class MediaRouterStreamType : int8_t
 {
-	Unknown = -1,
-	Incoming,
-	Outgoing
+	UNKNOWN = -1,
+	INBOUND,
+	OUTBOUND
 };
 
 typedef int32_t MediaTrackId;
@@ -32,12 +32,12 @@ class MediaRouteStream
 {
 public:
 	MediaRouteStream(const std::shared_ptr<info::Stream> &stream);
-	MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MRStreamInoutType inout_type);
+	MediaRouteStream(const std::shared_ptr<info::Stream> &stream, MediaRouterStreamType inout_type);
 	~MediaRouteStream();
 
 	// Inout Stream Type
-	void SetInoutType(MRStreamInoutType inout_type);
-	MRStreamInoutType GetInoutType();
+	void SetInoutType(MediaRouterStreamType inout_type);
+	MediaRouterStreamType GetInoutType();
 
 	// Queue interfaces
 	bool Push(std::shared_ptr<MediaPacket> media_packet);
@@ -103,7 +103,7 @@ private:
 	bool _is_created_stream;
 
 	// Incoming/Outgoing Stream
-	MRStreamInoutType _inout_type;
+	MediaRouterStreamType _inout_type;
 
 	// Connector Type
 	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
