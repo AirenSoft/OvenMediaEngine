@@ -97,7 +97,7 @@ bool SignedPolicy::ProcessPolicyJson(const ov::String &policy_json)
 	ov::JsonObject object = ov::Json::Parse(policy_json);
 	if(object.IsNull())
 	{
-		SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("The policy is in worng format.", policy_json.CStr()));
+		SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("The policy is in wrong format.", policy_json.CStr()));
 		return false;
 	}
 
@@ -108,7 +108,7 @@ bool SignedPolicy::ProcessPolicyJson(const ov::String &policy_json)
 
 	if(jv_url_expire.isNull() || !jv_url_expire.isUInt64())
 	{
-		SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("url_expire must be uint32_t and is a required value.", policy_json.CStr()));
+		SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("url_expire must be epoch milliseconds as uint64_t and is a required value.", policy_json.CStr()));
 		return false;
 	}
 	else
@@ -118,7 +118,7 @@ bool SignedPolicy::ProcessPolicyJson(const ov::String &policy_json)
 		// Policy expired
 		if(_url_expire_epoch_msec < ov::Clock::NowMSec())
 		{
-			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("URL has expired.(now:%u policy_expire:%u) ", ov::Clock::NowMSec(), _url_expire_epoch_msec));
+			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("URL has expired.(now:%llu policy_expire:%llu) ", ov::Clock::NowMSec(), _url_expire_epoch_msec));
 			return false;
 		}
 	}
@@ -130,7 +130,7 @@ bool SignedPolicy::ProcessPolicyJson(const ov::String &policy_json)
 		// Policy is not activated yet
 		if(_url_activate_epoch_msec > ov::Clock::NowMSec())
 		{
-			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("The URL has not yet been activated.(now:%u policy_activate:%u) ", ov::Clock::NowMSec(), _url_activate_epoch_msec));
+			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("The URL has not yet been activated.(now:%llu policy_activate:%llu) ", ov::Clock::NowMSec(), _url_activate_epoch_msec));
 			return false;
 		}
 	}
