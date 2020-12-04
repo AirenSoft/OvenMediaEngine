@@ -1007,7 +1007,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			// TODO(soulk): I think all tracks should calibrate the PTS with the same value.
 			_pts_correct[track_id] = pop_media_packet->GetPts() - _pts_last[track_id] - _pts_avg_inc[track_id];
 
-			logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld, inc : %lld", track_id, _pts_last[track_id], media_packet->GetPts(), _pts_correct[track_id], _pts_avg_inc[track_id], std::abs(ts_inc_ms));
+			logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld, inc : %lld", track_id, _pts_last[track_id], pop_media_packet->GetPts(), _pts_correct[track_id], _pts_avg_inc[track_id], std::abs(ts_inc_ms));
 		}
 	}
 	else

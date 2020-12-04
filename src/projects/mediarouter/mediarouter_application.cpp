@@ -613,6 +613,7 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 					// Get Stream Info
 					auto stream_info = stream->GetStream();
 
+					// observer->OnSendFrame(stream_info, std::move(media_packet->ClonePacket()));
 					observer->OnSendFrame(stream_info, media_packet);
 				}
 			}
@@ -655,6 +656,7 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 					// Get Stream Info
 					auto stream_info = stream->GetStream();
 
+					// observer->OnSendFrame(stream_info, std::move(media_packet->ClonePacket()));
 					observer->OnSendFrame(stream_info, media_packet);
 				}
 			}
