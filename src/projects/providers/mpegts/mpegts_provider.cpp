@@ -214,7 +214,7 @@ namespace pvd
 		for(auto &stream_item : stream_list)
 		{
 			auto port_config = stream_item.GetPort();
-			auto port_list = port_config.GetPortList();
+			std::vector<int> port_list; 
 			
 			// If they want to use any available port 
 			if(port_config.IsParsed() == false)
@@ -230,22 +230,19 @@ namespace pvd
 
 				port_list.push_back(stream_port_item->GetPortNumber());
 			}
+			else
+			{
+				port_list = port_config.GetPortList();
+			}
 
 			for(auto port : port_list)
 			{
 				// Search for the port in bound mpegts ports map
 				auto stream_port_item = GetStreamPortItem(port);
-				if(stream_port_item == nullptr)
+				if(stream_port_item == nullptr || stream_port_item->IsAttached() == true)
 				{
 					logte("The %s application could not be created in %s provider because port %d requested to be assigned to mpegts is already in use.", 
 							application_info.GetName().CStr(), GetProviderName(), port);
-					return nullptr;
-				}
-
-				if(stream_port_item->IsAttached() == true)
-				{
-					logte("The %s application could not be created in %s provider because .", 
-							application_info.GetName().CStr(), GetProviderName());
 					return nullptr;
 				}
 
