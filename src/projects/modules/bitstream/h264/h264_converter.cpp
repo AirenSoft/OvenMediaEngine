@@ -260,7 +260,7 @@ static bool ExtractSpsPpsOffset(const std::shared_ptr<const ov::Data> &data, con
 
 std::shared_ptr<const ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::shared_ptr<const ov::Data> &data)
 {
-	size_t total_pattern_length = 0;
+	// size_t total_pattern_length = 0;
 
 	auto buffer = data->GetDataAs<uint8_t>();
 	size_t remained = data->GetLength();
