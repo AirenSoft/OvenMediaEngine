@@ -54,17 +54,18 @@ namespace api
 				return;
 			}
 
-			// auto &stream_map = app->GetStreamMap();
+			auto stream_map = app->GetReservedStreamMetricsMap();
 
 			object = Json::arrayValue;
 
-			for (auto &stream : config.GetStreamList())
+			for (auto &key : stream_map)
 			{
 				Json::Value item;
 
-				SetString(item, "name", stream.GetName(), Optional::False);
-				// TODO(dimiden): use stream_map
-				SetString(item, "port", stream.GetPort().GetPortString(), Optional::False);
+				auto &reserved_stream = key.second;
+				auto &uri = reserved_stream->GetStreamUri();
+				SetString(item, "name", reserved_stream->GetReservedStreamName(), Optional::False);
+				SetString(item, "port", ov::String::FormatString("%d/%s", uri.Port(), uri.Scheme().LowerCaseString().CStr()), Optional::False);
 
 				object.append(item);
 			}
