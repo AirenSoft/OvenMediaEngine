@@ -16,12 +16,14 @@ public:
 	AudioTrack();
 	
 	void SetSampleRate(int32_t samplerate);
-	int32_t GetSampleRate();
+	int32_t GetSampleRate() const;
 	
 	void SetAudioTimestampScale(double scale);
-	double GetAudioTimestampScale();
+	double GetAudioTimestampScale() const;
 
 	cmn::AudioSample &GetSample();
+	const cmn::AudioSample &GetSample() const;
+	
 	cmn::AudioChannel &GetChannel();
 	const cmn::AudioChannel &GetChannel() const;
 
