@@ -7,12 +7,13 @@
 //
 //==============================================================================
 #include "segment_publisher.h"
-#include "publisher_private.h"
 
 #include <modules/signature/signed_token.h>
 #include <monitoring/monitoring.h>
 #include <orchestrator/orchestrator.h>
 #include <publishers/segment/segment_stream/segment_stream.h>
+
+#include "publisher_private.h"
 
 SegmentPublisher::SegmentPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 	: Publisher(server_config, router)
@@ -41,10 +42,9 @@ bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cf
 	stream_server->AddObserver(SegmentStreamObserver::GetSharedPtr());
 
 	// Apply CORS settings
-	// TODO(Dimiden): The Cross Domain configure must be at VHost Level.
+	// TODO(Dimiden): Move this code to the HttpInterceptor
 	//stream_server->SetCrossDomain(cross_domains);
 
-	// Start the DASH Server
 	if (stream_server->Start(has_port ? &address : nullptr, has_tls_port ? &tls_address : nullptr,
 							 DEFAULT_SEGMENT_WORKER_THREAD_COUNT) == false)
 	{
@@ -67,7 +67,7 @@ bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cf
 bool SegmentPublisher::Stop()
 {
 	_run_thread = false;
-	if(_worker_thread.joinable())
+	if (_worker_thread.joinable())
 	{
 		_worker_thread.join();
 	}
@@ -104,7 +104,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	}
 
 	auto stream = GetStreamAs<SegmentStream>(vhost_app_name, stream_name);
-	if(stream == nullptr)
+	if (stream == nullptr)
 	{
 		stream = std::dynamic_pointer_cast<SegmentStream>(PullStream(parsed_url, vhost_app_name, request_info.host_name, stream_name));
 		if (stream == nullptr)
@@ -117,13 +117,13 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 			// Connection Request log
 			// 2019-11-06 09:46:45.390 , RTSP.SS ,REQUEST,INFO,,,Live,rtsp://50.1.111.154:10915/1135/1/,220.103.225.254_44757_1573001205_389304_128855562
 			stat_log(STAT_LOG_HLS_EDGE_REQUEST, "%s,%s,%s,%s,,,%s,%s,%s",
-						ov::Clock::Now().CStr(),
-						"HLS.SS",
-						"REQUEST",
-						"INFO",
-						vhost_app_name.CStr(),
-						stream->GetMediaSource().CStr(),
-						playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress().CStr());
+					 ov::Clock::Now().CStr(),
+					 "HLS.SS",
+					 "REQUEST",
+					 "INFO",
+					 vhost_app_name.CStr(),
+					 stream->GetMediaSource().CStr(),
+					 playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress().CStr());
 
 			logti("URL %s is requested", stream->GetMediaSource().CStr());
 		}
@@ -143,7 +143,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 
 bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
 										const SegmentStreamRequestInfo &request_info,
-										std::shared_ptr<SegmentData> &segment)
+										std::shared_ptr<const SegmentItem> &segment)
 {
 	auto &vhost_app_name = request_info.vhost_app_name;
 	auto &stream_name = request_info.stream_name;
@@ -173,16 +173,16 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &clien
 	}
 
 	// To manage sessions
-	logti("Segment requested (%s/%s/%s) from %s : Segment number : %u Duration : %u", 
-						vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr(), 
-						client->GetRequest()->GetRemote()->GetRemoteAddress()->ToString().CStr(),
-						segment->sequence_number, segment->duration);
+	logti("Segment requested (%s/%s/%s) from %s : Segment number : %u Duration : %u",
+		  vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr(),
+		  client->GetRequest()->GetRemote()->GetRemoteAddress()->ToString().CStr(),
+		  segment->sequence_number, segment->duration_in_ms);
 
 	auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
 												   *std::static_pointer_cast<info::Stream>(stream),
 												   client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
 												   segment->sequence_number,
-												   segment->duration);
+												   segment->duration_in_ms);
 	UpdateSegmentRequestInfo(segment_request_info);
 
 	return true;
@@ -222,8 +222,8 @@ void SegmentPublisher::RequestTableUpdateThread()
 
 				rtsp_live_app_metrics = nullptr;
 				rtsp_play_app_metrics = nullptr;
-				
-				// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
+
+				// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications
 				rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
 				if (rtsp_live_app_info != nullptr)
 				{
@@ -236,12 +236,12 @@ void SegmentPublisher::RequestTableUpdateThread()
 				}
 
 				stat_log(STAT_LOG_HLS_EDGE_VIEWERS, "%s,%s,%s,%s,,,%u,%u",
-						ov::Clock::Now().CStr(),
-						"HLS.SS",
-						"CONN_COUNT",
-						"INFO",
-						rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
-						rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0);
+						 ov::Clock::Now().CStr(),
+						 "HLS.SS",
+						 "CONN_COUNT",
+						 "INFO",
+						 rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
+						 rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0);
 
 				_last_logging_time = std::chrono::system_clock::now();
 			}
@@ -280,7 +280,7 @@ void SegmentPublisher::RequestTableUpdateThread()
 					rtsp_live_app_metrics = nullptr;
 					rtsp_play_app_metrics = nullptr;
 
-					// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
+					// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications
 					rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
 					if (rtsp_live_app_info != nullptr)
 					{
@@ -293,17 +293,16 @@ void SegmentPublisher::RequestTableUpdateThread()
 					}
 
 					stat_log(STAT_LOG_HLS_EDGE_SESSION, "%s,%s,%s,%s,,,%s:%d,%s:%d,%s,%s",
-							ov::Clock::Now().CStr(),
-							"HLS.SS",
-							"SESSION",
-							"INFO",
-							"Live",
-							rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
-							"Playback",
-							rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
-							request_info->GetStreamInfo().GetName().CStr(),
-							playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : request_info->GetIpAddress().CStr());
-					
+							 ov::Clock::Now().CStr(),
+							 "HLS.SS",
+							 "SESSION",
+							 "INFO",
+							 "Live",
+							 rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
+							 "Playback",
+							 rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
+							 request_info->GetStreamInfo().GetName().CStr(),
+							 playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : request_info->GetIpAddress().CStr());
 				}
 
 				item = _segment_request_table.erase(item);
@@ -390,7 +389,7 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 {
 	bool new_session = true;
 	std::unique_lock<std::recursive_mutex> table_lock(_segment_request_table_lock);
-	
+
 	auto select_count = _segment_request_table.count(info.GetIpAddress().CStr());
 	if (select_count > 0)
 	{
@@ -447,7 +446,7 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 			rtsp_live_app_metrics = nullptr;
 			rtsp_play_app_metrics = nullptr;
 
-			// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
+			// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications
 			rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
 			if (rtsp_live_app_info != nullptr)
 			{
@@ -460,24 +459,23 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 			}
 
 			stat_log(STAT_LOG_HLS_EDGE_SESSION, "%s,%s,%s,%s,,,%s:%d,%s:%d,%s,%s",
-					ov::Clock::Now().CStr(),
-					"HLS.SS",
-					"SESSION",
-					"INFO",
-					"Live",
-					rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
-					"Playback",
-					rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
-					info.GetStreamInfo().GetName().CStr(),
-					playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : info.GetIpAddress().CStr());
-			
+					 ov::Clock::Now().CStr(),
+					 "HLS.SS",
+					 "SESSION",
+					 "INFO",
+					 "Live",
+					 rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
+					 "Playback",
+					 rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
+					 info.GetStreamInfo().GetName().CStr(),
+					 playlist_request_info != nullptr ? playlist_request_info->GetSessionId().CStr() : info.GetIpAddress().CStr());
 		}
 	}
 }
 
 bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
-									   const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
-									   std::shared_ptr<PlaylistRequestInfo> &request_info)
+									 const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
+									 std::shared_ptr<PlaylistRequestInfo> &request_info)
 {
 	auto request = client->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
@@ -490,36 +488,36 @@ bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, c
 
 	std::shared_ptr<const SignedPolicy> signed_policy;
 	std::shared_ptr<const SignedToken> signed_token;
-	
+
 	// SingedPolicy is first
 	auto signed_policy_result = Publisher::HandleSignedPolicy(request_url, remote_address, signed_policy);
-	if(signed_policy_result == CheckSignatureResult::Off)
+	if (signed_policy_result == CheckSignatureResult::Off)
 	{
 		return true;
 	}
-	else if(signed_policy_result == CheckSignatureResult::Error)
+	else if (signed_policy_result == CheckSignatureResult::Error)
 	{
 		return false;
 	}
-	else if(signed_policy_result == CheckSignatureResult::Fail)
+	else if (signed_policy_result == CheckSignatureResult::Fail)
 	{
 		logtw("%s", signed_policy->GetErrMessage().CStr());
 		return false;
 	}
-	else if(signed_policy_result == CheckSignatureResult::Off)
+	else if (signed_policy_result == CheckSignatureResult::Off)
 	{
 		// SingedToken
 		auto signed_token_result = Publisher::HandleSignedToken(request_url, remote_address, signed_token);
-		
-		if(signed_token_result == CheckSignatureResult::Off)
+
+		if (signed_token_result == CheckSignatureResult::Off)
 		{
 			return true;
 		}
-		else if(signed_token_result == CheckSignatureResult::Error)
+		else if (signed_token_result == CheckSignatureResult::Error)
 		{
 			return false;
 		}
-		else if(signed_token_result == CheckSignatureResult::Fail)
+		else if (signed_token_result == CheckSignatureResult::Fail)
 		{
 			logtw("%s", signed_token->GetErrMessage().CStr());
 			return false;
@@ -527,23 +525,23 @@ bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, c
 	}
 
 	ov::String session_id;
-	if(signed_policy != nullptr)
+	if (signed_policy != nullptr)
 	{
 		// There is no session id in SignedPolicy so use IP address instead of session ID
 		session_id = remote_address->GetIpAddress();
 		request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
-														 vhost_app_name, stream_name,
-														 remote_address->GetIpAddress(),
-														 session_id);
+															 vhost_app_name, stream_name,
+															 remote_address->GetIpAddress(),
+															 session_id);
 
-		if(signed_policy->GetErrCode() != SignedPolicy::ErrCode::PASSED)
+		if (signed_policy->GetErrCode() != SignedPolicy::ErrCode::PASSED)
 		{
-			if(signed_policy->GetErrCode() == SignedPolicy::ErrCode::URL_EXPIRED)
+			if (signed_policy->GetErrCode() == SignedPolicy::ErrCode::URL_EXPIRED)
 			{
-				// Because this is chunked streaming publisher, 
-				// players will continue to request playlists after token expiration while playing. 
+				// Because this is chunked streaming publisher,
+				// players will continue to request playlists after token expiration while playing.
 				// Therefore, once authorized session must be maintained.
-				if(IsAuthorizedSession(*request_info))
+				if (IsAuthorizedSession(*request_info))
 				{
 					// Update the authorized session info
 					UpdatePlaylistRequestInfo(request_info);
@@ -560,22 +558,22 @@ bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, c
 			return true;
 		}
 	}
-	else if(signed_token != nullptr)
+	else if (signed_token != nullptr)
 	{
 		session_id = signed_token->GetSessionID();
 		request_info = std::make_shared<PlaylistRequestInfo>(GetPublisherType(),
-														 vhost_app_name, stream_name,
-														 remote_address->GetIpAddress(),
-														 session_id);
+															 vhost_app_name, stream_name,
+															 remote_address->GetIpAddress(),
+															 session_id);
 
-		if(signed_token->GetErrCode() != SignedToken::ErrCode::PASSED)
+		if (signed_token->GetErrCode() != SignedToken::ErrCode::PASSED)
 		{
-			if(signed_token->GetErrCode() == SignedToken::ErrCode::TOKEN_EXPIRED)
+			if (signed_token->GetErrCode() == SignedToken::ErrCode::TOKEN_EXPIRED)
 			{
-				// Because this is chunked streaming publisher, 
-				// players will continue to request playlists after token expiration while playing. 
+				// Because this is chunked streaming publisher,
+				// players will continue to request playlists after token expiration while playing.
 				// Therefore, once authorized session must be maintained.
-				if(IsAuthorizedSession(*request_info))
+				if (IsAuthorizedSession(*request_info))
 				{
 					// Update the authorized session info
 					UpdatePlaylistRequestInfo(request_info);
@@ -597,6 +595,6 @@ bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, c
 		// something wrong
 		return false;
 	}
-	
+
 	return true;
 }

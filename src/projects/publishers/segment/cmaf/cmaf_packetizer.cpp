@@ -23,17 +23,54 @@
 #define CMAF_JITTER_CORRECTION_INTERVAL 5000
 
 CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &stream_name,
-							   PacketizerStreamType stream_type,
 							   const ov::String &segment_prefix,
 							   uint32_t segment_count, uint32_t segment_duration,
 							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 							   const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
-	: DashPacketizer(app_name, stream_name,
-					 stream_type,
-					 segment_prefix,
-					 1, segment_duration,
-					 video_track, audio_track)
+	: Packetizer(app_name, stream_name,
+				 segment_prefix,
+				 1, segment_duration,
+				 video_track, audio_track)
 {
+	_mpd_min_buffer_time = 6;
+
+	if (video_track != nullptr)
+	{
+		uint32_t resolution_gcd = std::gcd(video_track->GetWidth(), video_track->GetHeight());
+
+		if (resolution_gcd != 0)
+		{
+			std::ostringstream pixel_aspect_ratio;
+			pixel_aspect_ratio << video_track->GetWidth() / resolution_gcd << ":"
+							   << video_track->GetHeight() / resolution_gcd;
+
+			_pixel_aspect_ratio = pixel_aspect_ratio.str().c_str();
+		}
+
+		_ideal_duration_for_video = _segment_duration * _video_track->GetTimeBase().GetTimescale();
+
+		if (_ideal_duration_for_video == 0.0)
+		{
+			_ideal_duration_for_video = 5.0;
+		}
+
+		_video_scale = _video_track->GetTimeBase().GetExpr() * 1000.0;
+	}
+
+	if (audio_track != nullptr)
+	{
+		_ideal_duration_for_audio = _segment_duration * _audio_track->GetTimeBase().GetTimescale();
+
+		if (_ideal_duration_for_audio == 0.0)
+		{
+			_ideal_duration_for_audio = 5.0;
+		}
+
+		_audio_scale = _audio_track->GetTimeBase().GetExpr() * 1000.0;
+	}
+
+	_stat_stop_watch.Start();
+
 	if (_video_track != nullptr)
 	{
 		_video_chunk_writer = std::make_shared<CmafChunkWriter>(M4sMediaType::Video, 1, _ideal_duration_for_video);
@@ -45,6 +82,45 @@ CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &str
 	}
 
 	_chunked_transfer = chunked_transfer;
+}
+
+DashFileType CmafPacketizer::GetFileType(const ov::String &file_name)
+{
+	if (file_name == DASH_MPD_VIDEO_INIT_FILE_NAME)
+	{
+		return DashFileType::VideoInit;
+	}
+	else if (file_name == DASH_MPD_AUDIO_INIT_FILE_NAME)
+	{
+		return DashFileType::AudioInit;
+	}
+	else if (file_name.HasSuffix(DASH_MPD_VIDEO_FULL_SUFFIX))
+	{
+		return DashFileType::VideoSegment;
+	}
+	else if (file_name.HasSuffix(DASH_MPD_AUDIO_FULL_SUFFIX))
+	{
+		return DashFileType::AudioSegment;
+	}
+
+	return DashFileType::Unknown;
+}
+
+int CmafPacketizer::GetStartPatternSize(const uint8_t *buffer, const size_t buffer_len)
+{
+	// 0x00 0x00 0x00 0x01 pattern
+	if (buffer_len >= 4 && buffer[0] == 0 && buffer[1] == 0 && buffer[2] == 0 && buffer[3] == 1)
+	{
+		return 4;
+	}
+	// 0x00 0x00 0x01 pattern
+	else if (buffer_len >= 3 && buffer[0] == 0 && buffer[1] == 0 && buffer[2] == 1)
+	{
+		return 3;
+	}
+
+	// Unknown pattern
+	return 0;
 }
 
 ov::String CmafPacketizer::GetFileName(int64_t start_timestamp, cmn::MediaType media_type) const
@@ -67,6 +143,185 @@ ov::String CmafPacketizer::GetFileName(int64_t start_timestamp, cmn::MediaType m
 	return "";
 }
 
+bool CmafPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &frame, const ov::String &init_file_name)
+{
+	const uint8_t *srcData = frame->GetDataAs<uint8_t>();
+	size_t dataOffset = 0;
+	size_t dataSize = frame->GetLength();
+
+	std::vector<std::pair<size_t, size_t>> offset_list;
+
+	// int total_start_pattern_size = 0;
+	int nal_packet_header_length = 3;
+
+	// Stage 1 - Extract the Offset and Lengh value of the NAL Packet
+
+	while (dataOffset < dataSize)
+	{
+		size_t remainDataSize = dataSize - dataOffset;
+		const uint8_t *data = srcData + dataOffset;
+
+		if (remainDataSize >= 3 && 0x00 == data[0] && 0x00 == data[1] && 0x01 == data[2])
+		{
+			nal_packet_header_length = 3;
+			offset_list.emplace_back(dataOffset, 3);  // Offset, SIZEOF(START_CODE[3])
+			dataOffset += 3;
+		}
+		else if (remainDataSize >= 4 && 0x00 == data[0] && 0x00 == data[1] && 0x00 == data[2] && 0x01 == data[3])
+		{
+			nal_packet_header_length = 4;
+			offset_list.emplace_back(dataOffset, 4);  // Offset, SIZEOF(START_CODE[4])
+			dataOffset += 4;
+		}
+		else
+		{
+			dataOffset += 1;
+		}
+	}
+
+	// Stage 2  : Get position for SPS and PPS type
+
+	int sps_start_index = -1;
+	int sps_length = -1;
+	int pps_start_index = -1;
+	int pps_length = -1;
+
+	for (size_t index = 0; index < offset_list.size(); ++index)
+	{
+		size_t nalu_offset = 0;
+		size_t nalu_data_len = 0;
+
+		if (index != offset_list.size() - 1)
+		{
+			nalu_offset = offset_list[index].first + offset_list[index].second;
+			nalu_data_len = offset_list[index + 1].first - nalu_offset;
+		}
+		else
+		{
+			nalu_offset = offset_list[index].first + offset_list[index].second;
+			nalu_data_len = dataSize - nalu_offset;
+		}
+
+		// [Difinition of NAL_UNIT_TYPE]
+
+		// - Coded slice of a non-IDR picture slice_layer_without_partitioning_rbsp( )
+		// NonIDR = 1,
+		// - Coded slice data partition A slice_data_partition_a_layer_rbsp( )
+		// DataPartitionA = 2,
+		// - Coded slice data partition B slice_data_partition_b_layer_rbsp( )
+		// DataPartitionB = 3,
+		// - Coded slice data partition C slice_data_partition_c_layer_rbsp( )
+		// DataPartitionC = 4,
+		// - Coded slice of an IDR picture slice_layer_without_partitioning_rbsp( )
+		// IDR = 5,
+		// - Supplemental enhancement information (SEI) sei_rbsp( )
+		// SEI = 6,
+		// - Sequence parameter set seq_parameter_set_rbsp( )
+		// SPS = 7,
+		// - Picture parameter set pic_parameter_set_rbsp( )
+		// PPS = 8,
+		// ...
+
+		uint8_t nalu_header = *(srcData + nalu_offset);
+		uint8_t nal_unit_type = (nalu_header)&0x01F;
+
+#if 0  // for debug
+		uint8_t forbidden_zero_bit = (nalu_header >> 7)  & 0x01;
+		uint8_t nal_ref_idc = (nalu_header >> 5)  & 0x03;
+		if ( (nal_unit_type == (uint8_t)5) || (nal_unit_type == (uint8_t)6) || (nal_unit_type == (uint8_t)7) || (nal_unit_type == (uint8_t)8))
+		{
+			logte("[%d] nal_ref_idc:%2d, nal_unit_type:%2d => offset:%d, nalu_size:%d, nalu_offset:%d, nalu_length:%d"
+				, index
+				, nal_ref_idc, nal_unit_type
+				, offset_list[index].first
+				, offset_list[index].second
+				, nalu_offset
+				, nalu_data_len);
+		}
+#endif
+
+		// SPS type
+		if (nal_unit_type == 7)
+		{
+			sps_start_index = nalu_offset;
+			sps_length = nalu_data_len;
+		}
+		// PPS type
+		else if (nal_unit_type == 8)
+		{
+			pps_start_index = nalu_offset;
+			pps_length = nalu_data_len;
+		}
+	}
+
+	// logte("nal_packet_header_length : %d", nal_packet_header_length);
+
+	// Check parsing result
+	if ((sps_start_index == -1) || (sps_length < -1))
+	{
+		logte("Could not parse SPS (SPS: %d-%d, PPS: %d-%d) from %s frame for [%s/%s]",
+			  sps_start_index, sps_length, pps_start_index, pps_length,
+			  GetPacketizerName(),
+			  _app_name.CStr(), _stream_name.CStr());
+
+		return false;
+	}
+
+	if ((pps_start_index == -1) || (pps_length < -1))
+	{
+		logte("Could not parse PPS (SPS: %d-%d, PPS: %d-%d) from %s frame for [%s/%s]",
+			  sps_start_index, sps_length, pps_start_index, pps_length,
+			  GetPacketizerName(),
+			  _app_name.CStr(), _stream_name.CStr());
+
+		return false;
+	}
+
+	// Notice: One packet may contain multiple NAL packets. so, Removed the maximum pattern size limit.
+	// if ((total_start_pattern_size < 6) || (total_start_pattern_size > 12))
+
+	if (!(nal_packet_header_length == 3 || nal_packet_header_length == 4))
+	{
+		logte("Invalid patterns (start code length : %d, SPS: %d-%d, PPS: %d-%d) in %s frame for [%s/%s]",
+			  nal_packet_header_length,
+			  sps_start_index, sps_length, pps_start_index, pps_length,
+			  GetPacketizerName(),
+			  _app_name.CStr(), _stream_name.CStr());
+
+		return false;
+	}
+
+	//Stage 3 : Extracts SPS/PPS data to create initialization packets.
+
+	// Extract SPS from frame
+	auto avc_sps = frame->Subdata(sps_start_index, sps_length);
+
+	// Extract PPS from frame
+	auto avc_pps = frame->Subdata(pps_start_index, pps_length);
+
+	// Create an init m4s for video stream
+	// init.m4s not have duration
+	M4sInitWriter writer(M4sMediaType::Video, 0, _video_track, _audio_track, avc_sps, avc_pps);
+
+	auto init_data = writer.CreateData();
+
+	if (init_data == nullptr)
+	{
+		logte("Could not write %s init file for video [%s/%s]", GetPacketizerName(), _app_name.CStr(), _stream_name.CStr());
+		return false;
+	}
+
+	// logtd("sps_lengh : %d, pps_length : %d", avc_sps->GetLength(), avc_pps->GetLength());
+	_avc_nal_header_size = (nal_packet_header_length + avc_sps->GetLength()) + (nal_packet_header_length + avc_pps->GetLength());
+
+	// Store data for video stream
+	_video_init_file = std::make_shared<SegmentItem>(SegmentDataType::Video, 0, init_file_name, 0, 0, 0, 0, init_data);
+
+	logtd("%s init file (%s) is written for video [%s/%s]", GetPacketizerName(), init_file_name.CStr(), _app_name.CStr(), _stream_name.CStr());
+
+	return true;
+}
+
 bool CmafPacketizer::WriteVideoInit(const std::shared_ptr<ov::Data> &frame_data)
 {
 	return WriteVideoInitInternal(frame_data, CMAF_MPD_VIDEO_FULL_INIT_FILE_NAME);
@@ -75,6 +330,145 @@ bool CmafPacketizer::WriteVideoInit(const std::shared_ptr<ov::Data> &frame_data)
 bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<ov::Data> &frame_data)
 {
 	return WriteAudioInitInternal(frame_data, CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME);
+}
+
+bool CmafPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback)
+{
+	if (WriteVideoInitIfNeeded(frame) == false)
+	{
+		return false;
+	}
+
+	auto &data = frame->data;
+
+	// Calculate offset to skip NAL header
+	int offset = (frame->type == PacketizerFrameType::VideoKeyFrame) ? _avc_nal_header_size : GetStartPatternSize(data->GetDataAs<uint8_t>(), data->GetLength());
+
+	if (static_cast<int>(data->GetLength()) < offset)
+	{
+		// Not enough data
+		logtw("Invalid frame: frame is too short: expected: %d, but %zu bytes", offset, data->GetLength());
+		return false;
+	}
+
+	if (frame->type == PacketizerFrameType::VideoKeyFrame)
+	{
+		offset += GetStartPatternSize(data->GetDataAs<uint8_t>() + offset, data->GetLength() - offset);
+	}
+
+	// Skip NAL header
+	data = data->Subdata(offset);
+
+	// 8.8.3 Track Extends Box
+	// The sample flags field in sample fragments (default_sample_flags here and in a Track Fragment Header Box,
+	// and sample_flags and first_sample_flags in a Track Fragment Run Box) is coded as a 32-bit value.
+	// It has the following structure:
+	//
+	// (R) bit(4)           reserved=0;
+	// (A) unsigned int(2)  is_leading;
+	// (B) unsigned int(2)  sample_depends_on;
+	// (C) unsigned int(2)  sample_is_depended_on;
+	// (D) unsigned int(2)  sample_has_redundancy;
+	// (E) bit(3)           sample_padding_value;
+	// (F) bit(1)           sample_is_non_sync_sample;
+	// (G) unsigned int(16) sample_degradation_priority;
+	//
+	//              01234567 01234567 01234567 01234567
+	//              RRRRAABB CCDDEEEF GGGGGGGG GGGGGGGG
+	// 0x02000000 = 00000010 00000000 00000000 00000000 (sample_depends_on == 2)
+	// 0x01010000 = 00000001 00000001 00000000 00000000 (sample_depends_on == 1, sample_is_non_sync_sample = 1)
+	uint32_t flag = (frame->type == PacketizerFrameType::VideoKeyFrame) ? 0X02000000 : 0X01010000;
+	auto sample_data = std::make_shared<SampleData>(frame->duration, flag, frame->pts, frame->dts, frame->data);
+
+	bool new_segment_written = false;
+
+	// Check whether the incoming frame is a key frame
+	if (frame->type == PacketizerFrameType::VideoKeyFrame)
+	{
+		if (_video_start_time == -1LL)
+		{
+			_video_start_time = GetCurrentMilliseconds() - current_segment_duration;
+		}
+
+		// Check the timestamp to determine if a new segment is to be created
+		if ((current_segment_duration >= (_ideal_duration_for_video + _duration_delta_for_video)))
+		{
+			// Need to create a new segment
+
+			// Flush frames
+			if (WriteVideoSegment() == false)
+			{
+				logte("An error occurred while write the DASH video segment");
+				return false;
+			}
+
+			new_segment_written = true;
+
+			UpdatePlayList();
+		}
+	}
+	else
+	{
+		// If the frame is not key frame, it cannot be the beginning of a new segment
+		// So append it to the current segment
+	}
+
+	if (_video_start_time >= 0LL)
+	{
+		if (data_callback != nullptr)
+		{
+			data_callback(sample_data, new_segment_written);
+		}
+	}
+
+	return true;
+}
+
+bool CmafPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback)
+{
+	if (WriteAudioInitIfNeeded(frame) == false)
+	{
+		return false;
+	}
+
+	if (_audio_start_time == -1LL)
+	{
+		_audio_start_time = GetCurrentMilliseconds() - current_segment_duration;
+	}
+
+	// Skip ADTS header
+	frame->data = frame->data->Subdata(ADTS_HEADER_SIZE);
+
+	bool new_segment_written = false;
+
+	// Since audio frame is always a key frame, don't need to check the frame type
+
+	// Check the timestamp to determine if a new segment is to be created
+	if ((current_segment_duration >= (_ideal_duration_for_audio + _duration_delta_for_audio)))
+	{
+		// Need to create a new segment
+
+		// Flush frames
+		if (WriteAudioSegment() == false)
+		{
+			logte("An error occurred while write the %s audio segment", GetPacketizerName());
+			return false;
+		}
+
+		new_segment_written = true;
+
+		UpdatePlayList();
+	}
+
+	if (_audio_start_time >= 0LL)
+	{
+		if (data_callback != nullptr)
+		{
+			data_callback(std::make_shared<SampleData>(frame->duration, frame->pts, frame->dts, frame->data), new_segment_written);
+		}
+	}
+
+	return true;
 }
 
 bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame)
@@ -95,6 +489,28 @@ bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &fram
 			_first_video_pts = _last_video_pts;
 		}
 	});
+}
+
+bool CmafPacketizer::WriteAudioInitInternal(const std::shared_ptr<ov::Data> &frame, const ov::String &init_file_name)
+{
+	// init.m4s does not have duration
+	M4sInitWriter writer(M4sMediaType::Audio, 0, _video_track, _audio_track, nullptr, nullptr);
+
+	// Create an init m4s for audio stream
+	auto init_data = writer.CreateData();
+
+	if (init_data == nullptr)
+	{
+		logte("Could not write %s init file for audio [%s/%s]", GetPacketizerName(), _app_name.CStr(), _stream_name.CStr());
+		return false;
+	}
+
+	// Store data for audio stream
+	_audio_init_file = std::make_shared<SegmentItem>(SegmentDataType::Audio, 0, init_file_name, 0, 0, 0, 0, init_data);
+
+	logtd("%s init file (%s) is written for audio [%s/%s]", GetPacketizerName(), init_file_name.CStr(), _app_name.CStr(), _stream_name.CStr());
+
+	return true;
 }
 
 bool CmafPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame)
@@ -134,7 +550,8 @@ bool CmafPacketizer::WriteVideoSegment()
 	_video_chunk_writer->Clear();
 
 	// Enqueue the segment
-	if (SetSegmentData(file_name, segment_duration, start_timestamp, segment_data) == false)
+	// TODO: need to change start_timestamp/segment_duration to start_timestamp_in_ms/segment_duration_in_ms
+	if (SetSegmentData(file_name, start_timestamp, start_timestamp, segment_duration, segment_duration, segment_data) == false)
 	{
 		return false;
 	}
@@ -166,7 +583,7 @@ bool CmafPacketizer::WriteAudioSegment()
 	_audio_chunk_writer->Clear();
 
 	// Enqueue the segment
-	if (SetSegmentData(file_name, segment_duration, start_timestamp, segment_data) == false)
+	if (SetSegmentData(file_name, start_timestamp, start_timestamp, segment_duration, segment_duration, segment_data) == false)
 	{
 		return false;
 	}
@@ -176,6 +593,142 @@ bool CmafPacketizer::WriteAudioSegment()
 	if (_chunked_transfer != nullptr)
 	{
 		_chunked_transfer->OnCmafChunkedComplete(_app_name, _stream_name, file_name, false);
+	}
+
+	return true;
+}
+
+bool CmafPacketizer::WriteVideoInitIfNeeded(std::shared_ptr<PacketizerFrameData> &frame)
+{
+	if (_video_key_frame_received)
+	{
+		return true;
+	}
+
+	if ((frame->type == PacketizerFrameType::VideoKeyFrame) && WriteVideoInit(frame->data))
+	{
+		_video_key_frame_received = true;
+	}
+
+	return _video_key_frame_received;
+}
+
+bool CmafPacketizer::WriteAudioInitIfNeeded(std::shared_ptr<PacketizerFrameData> &frame)
+{
+	if (_audio_key_frame_received)
+	{
+		return true;
+	}
+
+	_audio_key_frame_received = WriteAudioInit(frame->data);
+
+	return _audio_key_frame_received;
+}
+
+std::shared_ptr<const SegmentItem> CmafPacketizer::GetSegmentData(const ov::String &file_name) const
+{
+	if (IsReadyForStreaming() == false)
+	{
+		logtd("[%p] Could not obtain segment data for %s, stream is not started", this, file_name.CStr());
+
+		return nullptr;
+	}
+
+	auto file_type = GetFileType(file_name);
+
+	switch (file_type)
+	{
+		case DashFileType::VideoSegment: {
+			std::unique_lock<std::mutex> lock(_video_segment_mutex);
+
+			auto item = std::find_if(_video_segments.begin(), _video_segments.end(),
+									 [&](std::shared_ptr<SegmentItem> const &value) -> bool {
+										 return value != nullptr ? value->file_name == file_name : false;
+									 });
+
+			return (item != _video_segments.end()) ? (*item) : nullptr;
+		}
+
+		case DashFileType::AudioSegment: {
+			std::unique_lock<std::mutex> lock(_audio_segment_mutex);
+
+			auto item = std::find_if(_audio_segments.begin(), _audio_segments.end(),
+									 [&](std::shared_ptr<SegmentItem> const &value) -> bool {
+										 return value != nullptr ? value->file_name == file_name : false;
+									 });
+
+			return (item != _audio_segments.end()) ? (*item) : nullptr;
+		}
+
+		case DashFileType::VideoInit:
+			return _video_init_file;
+
+		case DashFileType::AudioInit:
+			return _audio_init_file;
+
+		default:
+			break;
+	}
+
+	logtd("Unknown type is requested: %s", file_name.CStr());
+
+	return nullptr;
+}
+
+bool CmafPacketizer::SetSegmentData(ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data)
+{
+	auto file_type = GetFileType(file_name);
+
+	switch (file_type)
+	{
+		case DashFileType::VideoSegment: {
+			// video segment mutex
+			std::unique_lock<std::mutex> lock(_video_segment_mutex);
+
+			_video_segments[_current_video_index++] = std::make_shared<SegmentItem>(SegmentDataType::Video, _sequence_number++, file_name, timestamp, timestamp_in_ms, duration, duration_in_ms, data);
+
+			if (_segment_save_count <= _current_video_index)
+			{
+				_current_video_index = 0;
+			}
+
+			_video_segment_count++;
+
+			logtd("%s segment is added for video stream [%s/%s], file: %s, duration: %llu, size: %zu (scale: %llu/%.0f = %0.3f)",
+				  GetPacketizerName(), _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration_in_ms, data->GetLength(), duration_in_ms, _video_track->GetTimeBase().GetTimescale(), (double)duration_in_ms / _video_track->GetTimeBase().GetTimescale());
+
+			break;
+		}
+
+		case DashFileType::AudioSegment: {
+			// audio segment mutex
+			std::unique_lock<std::mutex> lock(_audio_segment_mutex);
+
+			_audio_segments[_current_audio_index++] = std::make_shared<SegmentItem>(SegmentDataType::Audio, _sequence_number++, file_name, timestamp, timestamp_in_ms, duration, duration_in_ms, data);
+
+			if (_segment_save_count <= _current_audio_index)
+			{
+				_current_audio_index = 0;
+			}
+
+			_audio_segment_count++;
+
+			logtd("%s segment is added for audio stream [%s/%s], file: %s, duration: %llu, size: %zu (scale: %llu/%.0f = %0.3f)",
+				  GetPacketizerName(), _app_name.CStr(), _stream_name.CStr(), file_name.CStr(), duration_in_ms, data->GetLength(), duration_in_ms, _audio_track->GetTimeBase().GetTimescale(), (double)duration_in_ms / _audio_track->GetTimeBase().GetTimescale());
+
+			break;
+		}
+
+		default:
+			break;
+	}
+
+	if ((IsReadyForStreaming() == false) && (((_video_track == nullptr) || (_video_segment_count >= _segment_count)) &&
+											 ((_audio_track == nullptr) || (_audio_segment_count >= _segment_count))))
+	{
+		SetReadyForStreaming();
+
+		logti("[%p] %s segment is ready to stream [%s/%s], segment duration: %fs, count: %u", this, GetPacketizerName(), _app_name.CStr(), _stream_name.CStr(), _segment_duration, _segment_count);
 	}
 
 	return true;
@@ -333,7 +886,7 @@ bool CmafPacketizer::UpdatePlayList()
 		play_list_stream
 			<< "\t\t<AdaptationSet id=\"0\" group=\"1\" mimeType=\"video/mp4\" "
 			<< "width=\"" << _video_track->GetWidth() << "\" height=\"" << _video_track->GetHeight()
-			<< "\" par=\"" << _pixel_aspect_ratio << "\" frameRate=\"" << _video_track->GetFrameRate()
+			<< "\" par=\"" << _pixel_aspect_ratio.CStr() << "\" frameRate=\"" << _video_track->GetFrameRate()
 			<< "\" segmentAlignment=\"true\" startWithSAP=\"1\" subsegmentAlignment=\"true\" subsegmentStartsWithSAP=\"1\">\n"
 			<< "\t\t\t<SegmentTemplate presentationTimeOffset=\"0\" timescale=\"" << static_cast<uint32_t>(_video_track->GetTimeBase().GetTimescale())
 			<< "\" duration=\"" << static_cast<uint32_t>(_segment_duration * _video_track->GetTimeBase().GetTimescale())

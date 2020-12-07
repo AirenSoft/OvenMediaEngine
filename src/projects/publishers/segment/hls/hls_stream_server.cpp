@@ -97,7 +97,7 @@ HttpConnection HlsStreamServer::ProcessSegmentRequest(const std::shared_ptr<Http
 {
 	auto response = client->GetResponse();
 
-	std::shared_ptr<SegmentData> segment = nullptr;
+	std::shared_ptr<const SegmentItem> segment = nullptr;
 	std::shared_ptr<info::Stream> stream_info;
 
 	auto item = std::find_if(_observers.begin(), _observers.end(),

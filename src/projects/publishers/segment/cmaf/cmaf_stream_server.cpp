@@ -17,10 +17,10 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 {
 	auto response = client->GetResponse();
 
-	auto type = DashPacketizer::GetFileType(request_info.file_name);
+	auto type = CmafPacketizer::GetFileType(request_info.file_name);
 
 	bool is_video = ((type == DashFileType::VideoSegment) || (type == DashFileType::VideoInit));
-	std::shared_ptr<SegmentData> segment = nullptr;
+	std::shared_ptr<SegmentItem> segment = nullptr;
 
 	// Check if the requested file is being created
 	{

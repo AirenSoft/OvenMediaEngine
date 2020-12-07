@@ -14,15 +14,11 @@
 #include "stream_packetizer.h"
 #include <map>
 
-//====================================================================================================
-// SegmentStream
-//====================================================================================================
 class SegmentStream : public pub::Stream
 {
 public:
     explicit SegmentStream(const std::shared_ptr<pub::Application> application, const info::Stream &info);
-
-    ~SegmentStream();
+    ~SegmentStream() override;
 
 public :
     void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
@@ -32,11 +28,10 @@ public :
     bool Stop() override;
 
     bool GetPlayList(ov::String &play_list);
-	std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name);
+	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const;
     virtual std::shared_ptr<StreamPacketizer> CreateStreamPacketizer(int segment_count,
                                                                     int segment_duration,
                                                                     const  ov::String &segment_prefix,
-                                                                    PacketizerStreamType stream_type,
                                                                     std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track) = 0;
 
 private :

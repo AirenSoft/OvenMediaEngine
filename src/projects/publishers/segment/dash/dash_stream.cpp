@@ -24,9 +24,8 @@ std::shared_ptr<DashStream> DashStream::Create(int segment_count,
 	auto tracks = info.GetTracks();
 	for(const auto &track : tracks)
 	{
-		if(track.second->GetCodecId() == cmn::MediaCodecId::H264 ||
-			// If H.265 is supported in the future, this comment should be removed.
-			// track.second->GetCodecId() == cmn::MediaCodecId::H265 || 
+		if (track.second->GetCodecId() == cmn::MediaCodecId::H264 ||
+			track.second->GetCodecId() == cmn::MediaCodecId::H265 ||
 			track.second->GetCodecId() == cmn::MediaCodecId::Aac)
 		{
 			supported_codec_available = true;
