@@ -551,7 +551,7 @@ namespace ocst
 					// Append remaining_part
 					url_part.Append(remaining_part);
 
-					if(index >= 0)
+					if (index >= 0)
 					{
 						url_part.Append('?');
 						url_part.Append(another_part);
@@ -684,8 +684,7 @@ namespace ocst
 				logte("The module %p (%s) returns error while deleting the application %s",
 					  module_interface.get(), GetModuleTypeName(module_interface->GetModuleType()).CStr(), app_info.GetName().CStr());
 
-				// Ignore this error
-				result = Result::Failed;
+				// Ignore this error - some providers may not have generated the app
 			}
 			else
 			{
@@ -735,7 +734,7 @@ namespace ocst
 	{
 		auto &vhost_app_name = app_info.GetName();
 
-		if(vhost_app_name.IsValid() == false)
+		if (vhost_app_name.IsValid() == false)
 		{
 			return Result::Failed;
 		}
@@ -745,7 +744,7 @@ namespace ocst
 
 	const info::Application &OrchestratorInternal::GetApplicationInfo(const info::VHostAppName &vhost_app_name) const
 	{
-		if(vhost_app_name.IsValid())
+		if (vhost_app_name.IsValid())
 		{
 			auto &vhost_name = vhost_app_name.GetVHostName();
 			auto vhost = GetVirtualHost(vhost_name);
