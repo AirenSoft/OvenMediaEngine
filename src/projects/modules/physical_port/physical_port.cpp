@@ -246,9 +246,6 @@ bool PhysicalPort::Close()
 		_thread.join();
 	}
 
-	_thread = std::thread();
-	pthread_setname_np(_thread.native_handle(), "PhyPortClose");
-
 	auto socket = GetSocket();
 
 	if (socket != nullptr)
