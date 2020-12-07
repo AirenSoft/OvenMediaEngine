@@ -82,7 +82,9 @@ bool MediaRouteApplication::Start()
 	{
 		try
 		{
-			_inbound_thread.push_back(std::thread(&MediaRouteApplication::InboundWorkerThread, this, worker_id));
+			auto inbound_thread = std::thread(&MediaRouteApplication::InboundWorkerThread, this, worker_id);
+			pthread_setname_np(inbound_thread.native_handle(), "InboundWorker");
+			_inbound_threads.push_back(std::move(inbound_thread));
 		}
 		catch (const std::system_error &e)
 		{
@@ -96,7 +98,9 @@ bool MediaRouteApplication::Start()
 	{
 		try
 		{
-			_outbound_thread.push_back(std::thread(&MediaRouteApplication::OutboundWorkerThread, this, worker_id));
+			auto outbound_thread = std::thread(&MediaRouteApplication::OutboundWorkerThread, this, worker_id);
+			pthread_setname_np(outbound_thread.native_handle(), "OutboundWorker");
+			_outbound_threads.push_back(std::move(outbound_thread));
 		}
 		catch (const std::system_error &e)
 		{
@@ -115,23 +119,23 @@ bool MediaRouteApplication::Stop()
 {
 	_kill_flag = true;
 
-	for (auto &worker : _inbound_thread)
+	for (auto &worker : _inbound_threads)
 	{
 		if (worker.joinable())
 		{
 			worker.join();
 		}
 	}
-	_inbound_thread.clear();
+	_inbound_threads.clear();
 
-	for (auto &worker : _outbound_thread)
+	for (auto &worker : _outbound_threads)
 	{
 		if (worker.joinable())
 		{
 			worker.join();
 		}
 	}
-	_outbound_thread.clear();
+	_outbound_threads.clear();
 
 	// TODO: Delete All Stream
 	_connectors.clear();

@@ -172,6 +172,7 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 		}
 
 		_thread = std::thread(proc);
+		pthread_setname_np(_thread.native_handle(), "PhyPortSerSock");
 
 		_address = address;
 
@@ -213,6 +214,7 @@ bool PhysicalPort::CreateDatagramSocket(ov::SocketType type, const ov::SocketAdd
 		};
 
 		_thread = std::thread(proc);
+		pthread_setname_np(_thread.native_handle(), "PhyPortDgSock");
 
 		_address = address;
 
@@ -245,6 +247,7 @@ bool PhysicalPort::Close()
 	}
 
 	_thread = std::thread();
+	pthread_setname_np(_thread.native_handle(), "PhyPortClose");
 
 	auto socket = GetSocket();
 

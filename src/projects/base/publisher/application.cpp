@@ -18,6 +18,7 @@ namespace pub
 	{
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&ApplicationWorker::WorkerThread, this);
+		pthread_setname_np(_worker_thread.native_handle(), "AppWorker");
 
 		ov::String queue_name;
 

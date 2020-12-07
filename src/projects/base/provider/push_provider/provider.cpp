@@ -168,6 +168,7 @@ namespace pvd
 	{
 		_stop_timer_thread_flag = false;
 		_timer_thread = std::thread(&PushProvider::TimerThread, this);
+		pthread_setname_np(_timer_thread.native_handle(), "PProviderTimer");
 
 		return true;
 	}

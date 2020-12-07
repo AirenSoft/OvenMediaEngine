@@ -117,8 +117,8 @@ private:
 	void OutboundWorkerThread(uint32_t worker_id);
 
 	volatile bool _kill_flag;
-	std::vector<std::thread> _inbound_thread;
-	std::vector<std::thread> _outbound_thread;
+	std::vector<std::thread> _inbound_threads;
+	std::vector<std::thread> _outbound_threads;
 
 	uint32_t _max_worker_thread_count;
 

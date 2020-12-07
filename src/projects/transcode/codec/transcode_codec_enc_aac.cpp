@@ -67,6 +67,7 @@ bool OvenCodecImplAvcodecEncAAC::Configure(std::shared_ptr<TranscodeContext> out
 		_kill_flag = false;
 
 		_thread_work = std::thread(&OvenCodecImplAvcodecEncAAC::ThreadEncode, this);
+		pthread_setname_np(_thread_work.native_handle(), "EncAAC");
 	}
 	catch (const std::system_error &e)
 	{

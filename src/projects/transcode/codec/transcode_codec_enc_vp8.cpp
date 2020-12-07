@@ -70,6 +70,7 @@ bool OvenCodecImplAvcodecEncVP8::Configure(std::shared_ptr<TranscodeContext> con
 		_kill_flag = false;
 
 		_thread_work = std::thread(&OvenCodecImplAvcodecEncVP8::ThreadEncode, this);
+		pthread_setname_np(_thread_work.native_handle(), "EncVP8");
 	}
 	catch (const std::system_error &e)
 	{

@@ -71,7 +71,9 @@ bool TranscodeApplication::Start()
 	{
 		try
 		{
-			_worker_thread.push_back(std::thread(&TranscodeApplication::WorkerThread, this, worker_id));
+			auto worker_t = std::thread(&TranscodeApplication::WorkerThread, this, worker_id);
+			pthread_setname_np(worker_t.native_handle(), "TcAppWorker");
+			_worker_threads.push_back(std::move(worker_t));
 		}
 		catch (const std::system_error &e)
 		{
@@ -92,14 +94,14 @@ bool TranscodeApplication::Stop()
 
 	std::unique_lock<std::mutex> lock(_mutex);
 
-	for (auto &worker : _worker_thread)
+	for (auto &worker : _worker_threads)
 	{
 		if (worker.joinable())
 		{
 			worker.join();
 		}
 	}
-	_worker_thread.clear();
+	_worker_threads.clear();
 
 	for (const auto &it : _streams)
 	{

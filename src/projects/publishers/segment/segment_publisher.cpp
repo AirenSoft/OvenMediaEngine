@@ -192,6 +192,7 @@ bool SegmentPublisher::StartSessionTableManager()
 {
 	_run_thread = true;
 	_worker_thread = std::thread(&SegmentPublisher::RequestTableUpdateThread, this);
+	pthread_setname_np(_worker_thread.native_handle(), "SegPubReq");
 
 	return true;
 }

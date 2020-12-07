@@ -61,7 +61,7 @@ private:
 
 	volatile bool _kill_flag;
 	void WorkerThread(uint32_t worker_id);
-	std::vector<std::thread> _worker_thread;
+	std::vector<std::thread> _worker_threads;
 	uint32_t _max_worker_thread_count;
 
 public:

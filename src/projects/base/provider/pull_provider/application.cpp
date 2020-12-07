@@ -29,6 +29,7 @@ namespace pvd
 	{
 		_stop_collector_thread_flag = false;
 		_collector_thread = std::thread(&PullApplication::WhiteElephantStreamCollector, this);
+		pthread_setname_np(_collector_thread.native_handle(), "StreamCollector");
 		return Application::Start();
 	}
 

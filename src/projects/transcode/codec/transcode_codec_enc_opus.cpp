@@ -79,6 +79,7 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> co
 		_kill_flag = false;
 
 		_thread_work = std::thread(&OvenCodecImplAvcodecEncOpus::ThreadEncode, this);
+		pthread_setname_np(_thread_work.native_handle(), "EncOPUS");
 	}
 	catch (const std::system_error &e)
 	{

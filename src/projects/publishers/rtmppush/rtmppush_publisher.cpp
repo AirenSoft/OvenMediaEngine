@@ -31,6 +31,7 @@ bool RtmpPushPublisher::Start()
 {
 	_stop_thread_flag = false;
 	_worker_thread = std::thread(&RtmpPushPublisher::WorkerThread, this);
+	pthread_setname_np(_worker_thread.native_handle(), "RtmpPubWorker");
 
 	return Publisher::Start();
 }

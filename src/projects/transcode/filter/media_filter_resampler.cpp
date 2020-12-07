@@ -162,6 +162,7 @@ bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_me
 		_kill_flag = false;
 
 		_thread_work = std::thread(&MediaFilterResampler::ThreadFilter, this);
+		pthread_setname_np(_thread_work.native_handle(), "Filter");
 	}
 	catch (const std::system_error &e)
 	{
