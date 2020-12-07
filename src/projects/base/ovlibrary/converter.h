@@ -8,10 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include "./json.h"
-#include "./string.h"
-
 #define __STDC_FORMAT_MACROS 1
+
 #include <inttypes.h>
 
 #include <chrono>
@@ -19,6 +17,9 @@
 #include <ctime>
 #include <iomanip>
 #include <string>
+
+#include "./json.h"
+#include "./string.h"
 
 namespace ov
 {
