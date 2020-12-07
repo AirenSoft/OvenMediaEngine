@@ -241,7 +241,7 @@ namespace pvd
 				auto stream_port_item = GetStreamPortItem(port);
 				if(stream_port_item == nullptr || stream_port_item->IsAttached() == true)
 				{
-					logte("The %s application could not be created in %s provider because port %d requested to be assigned to mpegts is already in use.", 
+					logte("The %s application could not be created in %s provider because port %d requested to be assigned to mpegts is not available.", 
 							application_info.GetName().CStr(), GetProviderName(), port);
 					return nullptr;
 				}
