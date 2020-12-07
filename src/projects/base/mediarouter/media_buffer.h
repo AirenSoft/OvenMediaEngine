@@ -17,7 +17,7 @@
 
 enum class MediaPacketFlag : uint8_t
 {
-	Unknwon, // Unknown
+	Unknown, // Unknown
 	NoFlag, // Raw Data (may PFrame, BFrame...)
 	Key // Key Frame
 };
@@ -28,7 +28,7 @@ public:
 	// Provider must inform the bitstream format so that MediaRouter can handle it.
 	// This constructor is usually used by the Provider to send media packets to the MediaRouter.
 	MediaPacket(cmn::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
-		: MediaPacket(media_type, track_id, data, pts, dts, -1LL, MediaPacketFlag::Unknwon)
+		: MediaPacket(media_type, track_id, data, pts, dts, -1LL, MediaPacketFlag::Unknown)
 	{
 		_bitstream_format = bitstream_format;
 		_packet_type = packet_type;
@@ -223,9 +223,9 @@ protected:
 	int64_t _pts = -1LL;
 	int64_t _dts = -1LL;
 	int64_t _duration = -1LL;
-	MediaPacketFlag _flag = MediaPacketFlag::Unknwon;
-	cmn::BitstreamFormat _bitstream_format = cmn::BitstreamFormat::Unknwon;
-	cmn::PacketType _packet_type = cmn::PacketType::Unknwon;
+	MediaPacketFlag _flag = MediaPacketFlag::Unknown;
+	cmn::BitstreamFormat _bitstream_format = cmn::BitstreamFormat::Unknown;
+	cmn::PacketType _packet_type = cmn::PacketType::Unknown;
 	FragmentationHeader _frag_hdr;
 };
 
