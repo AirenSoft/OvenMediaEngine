@@ -371,7 +371,7 @@ void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov
 
 				case StunClass::Indication:
 					// indication은 언제/어떻게 사용하는지 spec을 더 봐야함
-					logtw("Indication - not implemented");
+					logtd("Indication - not implemented");
 					break;
 			}
 		}
