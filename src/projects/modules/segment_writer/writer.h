@@ -8,6 +8,8 @@
 //==============================================================================
 #pragma once
 
+#define __STDC_FORMAT_MACROS 1
+
 extern "C"
 {
 #include <libavformat/avformat.h>
