@@ -12,7 +12,7 @@
 #include "stream_motor.h"
 
 //TODO(Dimiden): It has to be moved to configuration
-#define MAX_APPLICATION_STREAM_MOTOR_COUNT		10
+#define MAX_APPLICATION_STREAM_MOTOR_COUNT		20
 #define MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC	60
 
 namespace pvd
