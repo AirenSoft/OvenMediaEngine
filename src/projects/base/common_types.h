@@ -324,7 +324,7 @@ static ov::String StringFromMediaCodecId(const cmn::MediaCodecId &type)
 			return "PNG";
 		case cmn::MediaCodecId::None:
 		default:
-			return "Unknwon";
+			return "Unknown";
 	}
 }
 
