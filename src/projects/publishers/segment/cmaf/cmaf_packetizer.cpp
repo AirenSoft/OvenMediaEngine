@@ -86,19 +86,19 @@ CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &str
 
 DashFileType CmafPacketizer::GetFileType(const ov::String &file_name)
 {
-	if (file_name == DASH_MPD_VIDEO_INIT_FILE_NAME)
+	if (file_name == CMAF_MPD_VIDEO_FULL_INIT_FILE_NAME)
 	{
 		return DashFileType::VideoInit;
 	}
-	else if (file_name == DASH_MPD_AUDIO_INIT_FILE_NAME)
+	else if (file_name == CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME)
 	{
 		return DashFileType::AudioInit;
 	}
-	else if (file_name.HasSuffix(DASH_MPD_VIDEO_FULL_SUFFIX))
+	else if (file_name.IndexOf(CMAF_MPD_VIDEO_FULL_SUFFIX) >= 0)
 	{
 		return DashFileType::VideoSegment;
 	}
-	else if (file_name.HasSuffix(DASH_MPD_AUDIO_FULL_SUFFIX))
+	else if (file_name.IndexOf(CMAF_MPD_AUDIO_FULL_SUFFIX) >= 0)
 	{
 		return DashFileType::AudioSegment;
 	}
@@ -732,6 +732,14 @@ bool CmafPacketizer::SetSegmentData(ov::String file_name, int64_t timestamp, int
 	}
 
 	return true;
+}
+
+void CmafPacketizer::SetReadyForStreaming() noexcept
+{
+	_start_time_ms = std::max(_video_start_time, _audio_start_time);
+	_start_time = MakeUtcMillisecond(_start_time_ms);
+
+	Packetizer::SetReadyForStreaming();
 }
 
 ov::String CmafPacketizer::MakeJitterStatString(int64_t elapsed_time, int64_t current_time, int64_t jitter, int64_t adjusted_jitter, int64_t new_jitter_correction, int64_t video_delta, int64_t audio_delta, int64_t stream_delta) const

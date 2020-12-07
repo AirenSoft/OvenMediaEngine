@@ -84,6 +84,8 @@ protected:
 	// Enqueues the audio frame, and call the data_callback if a new segment is created
 	bool AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback);
 
+	void SetReadyForStreaming() noexcept override;
+
 	ov::String MakeJitterStatString(int64_t elapsed_time, int64_t current_time, int64_t jitter, int64_t adjusted_jitter, int64_t new_jitter_correction, int64_t video_delta, int64_t audio_delta, int64_t stream_delta) const;
 	void DoJitterCorrection();
 	bool UpdatePlayList();
