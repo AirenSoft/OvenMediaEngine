@@ -80,7 +80,7 @@ HttpConnection DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 {
 	auto response = client->GetResponse();
 
-	std::shared_ptr<SegmentData> segment = nullptr;
+	std::shared_ptr<const SegmentItem> segment = nullptr;
 
 	auto item = std::find_if(_observers.begin(), _observers.end(),
 							 [client, request_info, &segment](auto &observer) -> bool {
@@ -97,7 +97,7 @@ HttpConnection DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 	}
 
 	// Set HTTP header
-	response->SetHeader("Content-Type", (segment->media_type == cmn::MediaType::Video) ? "video/mp4" : "audio/mp4");
+	response->SetHeader("Content-Type", (segment->type == SegmentDataType::Video) ? "video/mp4" : "audio/mp4");
 	response->AppendData(segment->data);
 	response->Response();
 

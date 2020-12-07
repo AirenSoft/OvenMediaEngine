@@ -8,13 +8,13 @@
 //==============================================================================
 #pragma once
 
-#include "assert.h"  // NOLINT
-#include "byte_ordering.h"
-#include "data.h"
-
 #include <memory>
 #include <string>
 #include <string_view>
+
+#include "assert.h"	 // NOLINT
+#include "byte_ordering.h"
+#include "data.h"
 
 #define OV_DECLARE_READ_FUNCTION(type, name, func) \
 	inline type name() noexcept                    \
@@ -25,7 +25,7 @@
 #define OV_DECLARE_WRITE_FUNCTION(type, name, func) \
 	inline bool name(type value) noexcept           \
 	{                                               \
-		return Write<type>(func(value));            \
+		return WriteInternal<type>(func(value));    \
 	}
 
 namespace ov
@@ -33,26 +33,28 @@ namespace ov
 	class ByteStream
 	{
 	public:
-		/// data에서 데이터를 읽거나 기록함
-		/// 만약, data가 reference 모드로 생성된 상태라면 읽기만 가능 (Write할 때 false가 반환됨)
+		/// Reads or writes data from ```data```
 		///
-		/// @param data 조작할 데이터
+		/// @param data Data to manipulate
+
+		/// @remarks If data is created in reference mode, only readable (false is returned when Write() is called)
 		explicit ByteStream(Data *data);
+		explicit ByteStream(const std::shared_ptr<Data> &data);
 
-		/// data에서 데이터를 읽거나 기록함
-		/// 만약, data가 reference 모드로 생성된 상태라면 읽기만 가능 (Write할 때 false가 반환됨)
+		/// Reads from ```data```
 		///
-		/// @param data 조작할 데이터
+		/// @param data Data to read
 		explicit ByteStream(const Data *data);
+		explicit ByteStream(const std::shared_ptr<const Data> &data);
 
-		/// 복사 생성자
+		/// Copy ctor
 		///
-		/// @param stream 다른 stream instance
+		/// @param stream Stream instance to copy
 		ByteStream(const ByteStream &stream);
 
-		/// 이동 생성자
+		/// Move ctor
 		///
-		/// @param stream 다른 stream instance
+		/// @param stream Stream instance to move
 		ByteStream(ByteStream &&stream) noexcept = default;
 
 		~ByteStream();
@@ -95,8 +97,8 @@ namespace ov
 		inline T Peek() const
 		{
 			T value;
-			
-			if(Peek<T>(&value) == sizeof(T))
+
+			if (Peek<T>(&value) == sizeof(T))
 			{
 				return std::move(value);
 			}
@@ -286,7 +288,7 @@ namespace ov
 		/// @remarks
 		/// 만약, _data가 is_reference 타입이라면 false가 반환될 수 있음.
 		/// 데이터를 기록할 공간이 부족할 경우 _data에 Append() 됨.
-		bool Write(const std::shared_ptr<Data> &data) noexcept
+		bool Write(const std::shared_ptr<const Data> &data) noexcept
 		{
 			return Write(data->GetData(), data->GetLength());
 		}
@@ -504,6 +506,10 @@ namespace ov
 		/// @return 저장된 데이터
 		Data *GetData() noexcept;
 
+		/// Returns the pointer if shared_ptr<Data> was provided when ByteStream was created.
+		// If Data * is provided, nullptr is returned
+		std::shared_ptr<const Data> GetDataPointer() const;
+
 		/// GetOffset() 부터 Remained() 크기가 고려된 데이터를 얻어옴
 		/// 여기서 얻어온 데이터는, 원본 데이터를 참조만 하기 때문에 ByteStream 객체가 해제되기 전 까지만 사용해야 함
 		///
@@ -548,6 +554,8 @@ namespace ov
 		bool PopOffset() noexcept;
 
 	protected:
+		ByteStream(Data *data, const Data *read_only_data, std::shared_ptr<const Data> data_pointer, off_t offset);
+
 		/// 현재 버퍼 위치를 T 타입으로 얻어옴
 		///
 		/// @tparam T 데이터 타입
@@ -570,28 +578,30 @@ namespace ov
 		/// 만약, _data가 is_reference 타입이라면 false가 반환될 수 있음.
 		/// 데이터를 기록할 공간이 부족할 경우 _data에 Append() 됨.
 		template <typename T>
-		bool Write(const T &buffer)
+		bool WriteInternal(const T &buffer)
 		{
 			return Write<T>(&buffer, 1);
 		}
 
-		Data *_data;
-		const Data *_read_only_data;
+		Data *_data = nullptr;
+		const Data *_read_only_data = nullptr;
+		// If the data were provided in std::shared_ptr, retains it
+		std::shared_ptr<const Data> _data_pointer;
 
 		// 데이터를 읽거나 기록할 때 사용될 offset
-		off_t _offset;
+		off_t _offset = 0L;
 
 		// offset push & pop 할 때 사용하는 history queue
 		std::vector<off_t> _offset_stack;
 	};
-} // namespace ov
+}  // namespace ov
 
-ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const char *string);
-ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string &string);
-ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string_view &string);
+ov::ByteStream &operator<<(ov::ByteStream &byte_stream, const char *string);
+ov::ByteStream &operator<<(ov::ByteStream &byte_stream, const std::string &string);
+ov::ByteStream &operator<<(ov::ByteStream &byte_stream, const std::string_view &string);
 
-template<size_t length>
-ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const char (&string)[length])
+template <size_t length>
+ov::ByteStream &operator<<(ov::ByteStream &byte_stream, const char (&string)[length])
 {
 	byte_stream.Write(string, length);
 	return byte_stream;

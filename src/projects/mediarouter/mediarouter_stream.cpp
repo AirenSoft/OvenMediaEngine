@@ -30,9 +30,9 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <modules/bitstream/aac/aac_adts.h>
-#include <modules/bitstream/aac/aac_latm_to_adts.h>
+#include <modules/bitstream/aac/aac_converter.h>
 #include <modules/bitstream/aac/aac_specific_config.h>
-#include <modules/bitstream/h264/h264_avcc_to_annexb.h>
+#include <modules/bitstream/h264/h264_converter.h>
 #include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/bitstream/h264/h264_nal_unit_types.h>
 #include <modules/bitstream/h264/h264_parser.h>
@@ -491,14 +491,14 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 			if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::H264_AVCC)
 			{
 				std::vector<uint8_t> extradata;
-				if (H264AvccToAnnexB::GetExtradata(media_packet->GetPacketType(), media_packet->GetData(), extradata) == true)
+				if (H264Converter::GetExtraDataFromAvcc(media_packet->GetPacketType(), media_packet->GetData(), extradata) == true)
 				{
 					media_track->SetCodecExtradata(extradata);
 
 					return false;
 				}
 
-				if (H264AvccToAnnexB::Convert(media_packet->GetPacketType(), media_packet->GetData(), media_track->GetCodecExtradata()) == false)
+				if (H264Converter::ConvertAvccToAnnexb(media_packet->GetPacketType(), media_packet->GetData(), media_track->GetCodecExtradata()) == false)
 				{
 					logte("Failed to change bitstream format ");
 
@@ -515,13 +515,13 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 			if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_LATM)
 			{
 				std::vector<uint8_t> extradata;
-				if (AACLatmToAdts::GetExtradata(media_packet->GetPacketType(), media_packet->GetData(), extradata) == true)
+				if (AacConverter::GetExtraDataFromLatm(media_packet->GetPacketType(), media_packet->GetData(), extradata) == true)
 				{
 					media_track->SetCodecExtradata(extradata);
 					return false;
 				}
 
-				if (AACLatmToAdts::Convert(media_packet->GetPacketType(), media_packet->GetData(), media_track->GetCodecExtradata()) == false)
+				if (AacConverter::ConvertLatmToAdts(media_packet->GetPacketType(), media_packet->GetData(), media_track->GetCodecExtradata()) == false)
 				{
 					logte("Failed to change bitstream format");
 					return false;

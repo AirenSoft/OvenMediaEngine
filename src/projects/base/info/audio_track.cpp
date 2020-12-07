@@ -20,7 +20,7 @@ void AudioTrack::SetSampleRate(int32_t sample_rate)
 	_sample.SetRate((AudioSample::Rate)sample_rate);
 }
 
-int32_t AudioTrack::GetSampleRate()
+int32_t AudioTrack::GetSampleRate() const
 {
 	return (int32_t)_sample.GetRate();
 }
@@ -30,12 +30,17 @@ void AudioTrack::SetAudioTimestampScale(double scale)
 	_audio_timescale = scale;
 }
 
-double AudioTrack::GetAudioTimestampScale()
+double AudioTrack::GetAudioTimestampScale() const
 {
 	return _audio_timescale;
 }
 
 AudioSample &AudioTrack::GetSample()
+{
+	return _sample;
+}
+
+const AudioSample &AudioTrack::GetSample() const
 {
 	return _sample;
 }

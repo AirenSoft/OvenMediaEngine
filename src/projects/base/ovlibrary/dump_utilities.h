@@ -27,5 +27,6 @@ namespace ov
 	String Dump(const void *data, size_t length, size_t max_bytes = 1024) noexcept;
 
 	// Write data to file
-	bool DumpToFile(FILE **file, const char *file_name, const void *data, size_t length, off_t offset = 0, bool append = false) noexcept;
+	std::shared_ptr<FILE> DumpToFile(const char *file_name, const void *data, size_t length, off_t offset = 0, bool append = false) noexcept;
+	std::shared_ptr<FILE> DumpToFile(const char *file_name, const std::shared_ptr<const Data> &data, off_t offset = 0, bool append = false) noexcept;
 }

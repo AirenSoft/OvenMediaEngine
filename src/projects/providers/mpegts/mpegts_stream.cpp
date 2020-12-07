@@ -109,7 +109,7 @@ namespace pvd
 				
 				if(es->IsVideoStream())
 				{	
-					auto bitstream = cmn::BitstreamFormat::Unknwon;
+					auto bitstream = cmn::BitstreamFormat::Unknown;
 					auto packet_type = cmn::PacketType::NALU;
 
 					switch(track->GetCodecId())
@@ -168,7 +168,7 @@ namespace pvd
 							break;
 						}
 						default:
-							bitstream = cmn::BitstreamFormat::Unknwon;
+							bitstream = cmn::BitstreamFormat::Unknown;
 							break;
 					}
 

@@ -30,5 +30,5 @@ public:
 	// Called when the client requests a segment (such as .ts, .m4s)
 	virtual bool OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
 								  const SegmentStreamRequestInfo &request_info,
-								  std::shared_ptr<SegmentData> &segment) = 0;
+								  std::shared_ptr<const SegmentItem> &segment) = 0;
 };

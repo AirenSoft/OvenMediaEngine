@@ -22,6 +22,7 @@ LOCAL_STATIC_LIBRARIES := \
 	dtls_srtp \
 	rtp_rtcp \
 	sdp \
+	segment_writer \
 	web_console \
 	mediarouter \
 	ovt_packetizer \

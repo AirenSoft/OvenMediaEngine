@@ -36,48 +36,57 @@ int main(int argc, char *argv[])
 {
 	ParseOption parse_option;
 
-	auto result = Initialize(argc, argv, &parse_option);
+	{
+		auto state = Initialize(argc, argv, &parse_option);
+		switch (state)
+		{
+			case ov::Daemon::State::PARENT_SUCCESS:
+				return 0;
 
-	if (result == ov::Daemon::State::PARENT_SUCCESS)
-	{
-		return 0;
-	}
-	else if (result == ov::Daemon::State::CHILD_SUCCESS)
-	{
-		// continue
-	}
-	else
-	{
-		// false
-		return 1;
+			case ov::Daemon::State::CHILD_SUCCESS:
+				// continue;
+				break;
+
+			case ov::Daemon::State::PIPE_FAIL:
+				[[fallthrough]];
+			case ov::Daemon::State::FORK_FAIL:
+				[[fallthrough]];
+			case ov::Daemon::State::PARENT_FAIL:
+				[[fallthrough]];
+			case ov::Daemon::State::CHILD_FAIL:
+				// Failed to launch
+				return 1;
+		}
 	}
 
 	PrintBanner();
 
-	std::shared_ptr<cfg::Server> server_config = cfg::ConfigManager::GetInstance()->GetServer();
-	auto &hosts = server_config->GetVirtualHostList();
-	std::vector<std::shared_ptr<WebConsoleServer>> web_console_servers;
-
-	std::vector<info::Host> host_info_list;
-	std::map<ov::String, bool> vhost_map;
+	auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
 
 	auto orchestrator = ocst::Orchestrator::GetInstance();
 	auto monitor = mon::Monitoring::GetInstance();
 
-	// Create info::Host
-	for (const auto &host : hosts)
+	// Create info::Host list
+	std::vector<info::Host> host_info_list;
 	{
-		auto item = vhost_map.find(host.GetName());
+		// Used to check duplicate names
+		std::map<ov::String, bool> vhost_map;
+		auto &hosts = server_config->GetVirtualHostList();
 
-		if (item == vhost_map.end())
+		for (const auto &host : hosts)
 		{
-			host_info_list.emplace_back(host);
-			vhost_map[host.GetName()] = true;
-		}
-		else
-		{
-			logte("Duplicated VirtualHost found: %s", host.GetName().CStr());
-			return 1;
+			auto item = vhost_map.find(host.GetName());
+
+			if (item == vhost_map.end())
+			{
+				host_info_list.emplace_back(host);
+				vhost_map[host.GetName()] = true;
+			}
+			else
+			{
+				logte("Duplicated VirtualHost found: %s", host.GetName().CStr());
+				return 1;
+			}
 		}
 	}
 
@@ -207,18 +216,25 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 	{
 		auto state = ov::Daemon::Initialize();
 
-		if (state == ov::Daemon::State::PARENT_SUCCESS)
+		switch (state)
 		{
-			return state;
-		}
-		else if (state == ov::Daemon::State::CHILD_SUCCESS)
-		{
-			// continue
-		}
-		else
-		{
-			logte("An error occurred while creating daemon");
-			return state;
+			case ov::Daemon::State::PARENT_SUCCESS:
+				// Forked
+				return state;
+
+			case ov::Daemon::State::CHILD_SUCCESS:
+				break;
+
+			case ov::Daemon::State::PIPE_FAIL:
+				[[fallthrough]];
+			case ov::Daemon::State::FORK_FAIL:
+				[[fallthrough]];
+			case ov::Daemon::State::PARENT_FAIL:
+				[[fallthrough]];
+			case ov::Daemon::State::CHILD_FAIL:
+				// Failed to launch
+				logte("An error occurred while creating daemon");
+				return state;
 		}
 	}
 

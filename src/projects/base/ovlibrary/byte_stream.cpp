@@ -10,27 +10,37 @@
 
 namespace ov
 {
-	ByteStream::ByteStream(Data *data)
+	ByteStream::ByteStream(Data *data, const Data *read_only_data, std::shared_ptr<const Data> data_pointer, off_t offset)
 		: _data(data),
-		  _read_only_data(_data),
+		  _read_only_data(read_only_data),
+		  _data_pointer(data_pointer),
 
-		  _offset(0L)
+		  _offset(offset)
+	{
+	}
+
+	ByteStream::ByteStream(Data *data)
+		: ByteStream(data, data, nullptr, 0L)
+	{
+	}
+
+	ByteStream::ByteStream(const std::shared_ptr<ov::Data> &data)
+		: ByteStream(data.get(), data.get(), data, 0L)
 	{
 	}
 
 	ByteStream::ByteStream(const Data *data)
-		: _data(nullptr),
-		  _read_only_data(data),
+		: ByteStream(nullptr, data, nullptr, 0L)
+	{
+	}
 
-		  _offset(0L)
+	ByteStream::ByteStream(const std::shared_ptr<const ov::Data> &data)
+		: ByteStream(nullptr, data.get(), data, 0L)
 	{
 	}
 
 	ByteStream::ByteStream(const ByteStream &stream)
-		: _data(stream._data),
-		  _read_only_data(stream._read_only_data),
-
-		  _offset(stream._offset)
+		: ByteStream(stream._data, stream._read_only_data, stream._data_pointer, stream._offset)
 	{
 	}
 
@@ -40,16 +50,16 @@ namespace ov
 
 	bool ByteStream::Write(const void *data, size_t bytes) noexcept
 	{
-		if(_data == nullptr)
+		if (_data == nullptr)
 		{
 			OV_ASSERT(false, "Cannot write to read-only data");
 			return false;
 		}
 
-		if((_offset + bytes) > _data->GetLength())
+		if ((_offset + bytes) > _data->GetLength())
 		{
 			// 데이터가 저장될 공간이 없으므로, 메모리를 확장한 뒤,
-			if(_data->SetLength(static_cast<size_t>(_offset + bytes)) == false)
+			if (_data->SetLength(static_cast<size_t>(_offset + bytes)) == false)
 			{
 				return false;
 			}
@@ -69,7 +79,7 @@ namespace ov
 
 	bool ByteStream::Append(const void *data, size_t bytes) noexcept
 	{
-		if(_data == nullptr)
+		if (_data == nullptr)
 		{
 			OV_ASSERT(false, "Cannot write to read-only data");
 			return false;
@@ -100,6 +110,11 @@ namespace ov
 		return _data;
 	}
 
+	std::shared_ptr<const Data> ByteStream::GetDataPointer() const
+	{
+		return _data_pointer;
+	}
+
 	std::shared_ptr<const Data> ByteStream::GetRemainData() const noexcept
 	{
 		return _read_only_data->Subdata(_offset);
@@ -114,12 +129,12 @@ namespace ov
 	{
 		OV_ASSERT(offset >= 0L, "offset must greater equal than 0: %ld", offset);
 
-		if(offset < 0)
+		if (offset < 0)
 		{
 			return false;
 		}
 
-		if(offset < static_cast<off_t>(_read_only_data->GetLength()))
+		if (offset < static_cast<off_t>(_read_only_data->GetLength()))
 		{
 			// 그냥 offset만 변경하면 됨
 		}
@@ -127,14 +142,14 @@ namespace ov
 		{
 			// _data에 새로운 데이터를 추가 한 뒤 offset을 변경해야 함
 
-			if(_data == nullptr)
+			if (_data == nullptr)
 			{
 				// read-only
 				OV_ASSERT(false, "Cannot set offset to read-only data");
 				return false;
 			}
 
-			if(_data->SetLength(static_cast<size_t>(offset)) == false)
+			if (_data->SetLength(static_cast<size_t>(offset)) == false)
 			{
 				return false;
 			}
@@ -154,7 +169,7 @@ namespace ov
 
 	bool ByteStream::PopOffset() noexcept
 	{
-		if(_offset_stack.empty() == false)
+		if (_offset_stack.empty() == false)
 		{
 			off_t offset = _offset_stack.back();
 
@@ -172,21 +187,21 @@ namespace ov
 	{
 		return _read_only_data->Dump(title, _offset, max_bytes);
 	}
-}
+}  // namespace ov
 
-ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const char *string)
+ov::ByteStream &operator<<(ov::ByteStream &byte_stream, const char *string)
 {
 	byte_stream.Write(string, strlen(string));
 	return byte_stream;
 }
 
-ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string &string)
+ov::ByteStream &operator<<(ov::ByteStream &byte_stream, const std::string &string)
 {
 	byte_stream.Write(string.c_str(), string.size());
 	return byte_stream;
 }
 
-ov::ByteStream& operator<<(ov::ByteStream &byte_stream, const std::string_view &string)
+ov::ByteStream &operator<<(ov::ByteStream &byte_stream, const std::string_view &string)
 {
 	byte_stream.Write(string.data(), string.size());
 	return byte_stream;

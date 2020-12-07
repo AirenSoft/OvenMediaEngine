@@ -8,33 +8,20 @@
 //==============================================================================
 #pragma once
 
-#include <base/ovlibrary/ovlibrary.h>
 #include <base/mediarouter/media_type.h>
-
+#include <base/ovlibrary/ovlibrary.h>
 #include <string.h>
+
 #include <deque>
 #include <map>
 #include <mutex>
 #include <vector>
 
-#define PACKTYZER_DEFAULT_TIMESCALE (90000)  // 90MHz
+#define PACKTYZER_DEFAULT_TIMESCALE (90000)	 // 90MHz
 #define AVC_NAL_START_PATTERN_SIZE (4)		 // 0x00000001
 #define ADTS_HEADER_SIZE (7)
 
 #pragma pack(push, 1)
-
-enum class PacketizerStreamType : int32_t
-{
-	Common,  // Video + Audio
-	VideoOnly,
-	AudioOnly,
-};
-
-enum class PacketizerType : int32_t
-{
-	Dash,
-	Hls,
-};
 
 enum class PlayListType : int32_t
 {
@@ -50,39 +37,47 @@ enum class SegmentType : int32_t
 
 enum class SegmentDataType : int32_t
 {
-	Ts,  // Video + Audio
-	Mp4Video,
-	Mp4Audio,
+	None,
+	Both,  // Audio + Video
+	Video,
+	Audio,
 };
 
-struct SegmentData
+struct SegmentItem
 {
 public:
-	SegmentData(
-		cmn::MediaType media_type,
+	SegmentItem(
+		SegmentDataType type,
 		int sequence_number,
 		ov::String file_name,
 		int64_t timestamp,
-		uint64_t duration,
-		std::shared_ptr<ov::Data> &data)
-		: media_type(media_type),
+		int64_t timestamp_in_ms,
+		int64_t duration,
+		int64_t duration_in_ms,
+		const std::shared_ptr<const ov::Data> &data)
+		: creation_time(::time(nullptr)),
+		  type(type),
 		  sequence_number(sequence_number),
 		  file_name(file_name),
-		  create_time(::time(nullptr)),
-		  duration(duration),
 		  timestamp(timestamp),
+		  timestamp_in_ms(timestamp_in_ms),
+		  duration(duration),
+		  duration_in_ms(duration_in_ms),
 		  data(data)
 	{
 	}
 
 public:
-	cmn::MediaType media_type = cmn::MediaType ::Unknown;
+	time_t creation_time = 0;
+
+	SegmentDataType type = SegmentDataType::None;
 	int sequence_number = 0;
 	ov::String file_name;
-	time_t create_time = 0;
-	uint64_t duration = 0ULL;
-	int64_t timestamp = 0LL;
-	std::shared_ptr<ov::Data> data;
+	int64_t timestamp = 0L;
+	int64_t timestamp_in_ms = 0L;
+	int64_t duration = 0L;
+	int64_t duration_in_ms = 0L;
+	std::shared_ptr<const ov::Data> data;
 };
 
 enum class PacketizerFrameType

@@ -10,6 +10,7 @@
 
 #include <base/info/application.h>
 #include <base/info/media_track.h>
+#include <base/mediarouter/media_buffer.h>
 #include <base/ovlibrary/ovlibrary.h>
 
 #include "packetizer_define.h"
@@ -18,20 +19,23 @@ class Packetizer
 {
 public:
 	Packetizer(const ov::String &app_name, const ov::String &stream_name,
-			   PacketizerType packetizer_type, PacketizerStreamType stream_type,
 			   const ov::String &segment_prefix,
 			   uint32_t segment_count, uint32_t segment_duration,
-			   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track);
+			   const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track);
 
 	virtual ~Packetizer() = default;
 
 	virtual const char *GetPacketizerName() const = 0;
 
+	virtual bool AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet) = 0;
+	virtual bool AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet) = 0;
+
+	// Deprecated API - Only used in CmafPacketizer
 	virtual bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame) = 0;
 	virtual bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame) = 0;
 
-	virtual const std::shared_ptr<SegmentData> GetSegmentData(const ov::String &file_name) = 0;
-	virtual bool SetSegmentData(ov::String file_name, uint64_t duration, int64_t timestamp, std::shared_ptr<ov::Data> &data) = 0;
+	virtual std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const = 0;
+	// virtual bool SetSegmentData(ov::String file_name, uint64_t duration_in_ms, int64_t timestamp_in_ms, const std::shared_ptr<const ov::Data> &data) = 0;
 
 	// Convert timescale of "time" to "to_timescale" from "from_timescale"
 	//
@@ -45,15 +49,14 @@ public:
 	//   +--------+---------+--------+-----------+
 	static uint64_t ConvertTimeScale(uint64_t time, const cmn::Timebase &from_timebase, const cmn::Timebase &to_timebase);
 
-	void SetPlayList(ov::String &play_list);
+	void SetPlayList(const ov::String &play_list);
 
 	virtual bool IsReadyForStreaming() const noexcept;
 	virtual bool GetPlayList(ov::String &play_list);
 
-	bool GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas);
-	bool GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas);
+	bool GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentItem>> &segment_datas);
+	bool GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentItem>> &segment_datas);
 
-	static uint32_t Gcd(uint32_t n1, uint32_t n2);
 	static int64_t GetTimestampInMs();
 	static ov::String MakeUtcSecond(time_t value);
 	static ov::String MakeUtcMillisecond(int64_t value = -1LL);
@@ -65,9 +68,7 @@ protected:
 
 	ov::String _app_name;
 	ov::String _stream_name;
-	PacketizerType _packetizer_type;
 	ov::String _segment_prefix;
-	PacketizerStreamType _stream_type;
 
 	uint32_t _segment_count = 0U;
 	uint32_t _segment_save_count = 0U;
@@ -79,18 +80,19 @@ protected:
 
 	uint32_t _sequence_number = 1U;
 	bool _streaming_start = false;
-	ov::String _play_list;
 
-	bool _video_init = false;
-	bool _audio_init = false;
+	bool _video_key_frame_received = false;
+	bool _audio_key_frame_received = false;
 
 	uint32_t _current_video_index = 0U;
 	uint32_t _current_audio_index = 0U;
 
-	std::vector<std::shared_ptr<SegmentData>> _video_segment_datas;  // m4s : video , ts : video+audio
-	std::vector<std::shared_ptr<SegmentData>> _audio_segment_datas;  // m4s : audio
+	ov::String _play_list;
+	std::vector<std::shared_ptr<SegmentItem>> _video_segments;
+	// HLS packetizer doesn't use _audio_segments
+	std::vector<std::shared_ptr<SegmentItem>> _audio_segments;
 
-	std::mutex _video_segment_guard;
-	std::mutex _audio_segment_guard;
-	std::mutex _play_list_guard;
+	mutable std::mutex _play_list_mutex;
+	mutable std::mutex _video_segment_mutex;
+	mutable std::mutex _audio_segment_mutex;
 };

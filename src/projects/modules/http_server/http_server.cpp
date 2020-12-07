@@ -134,18 +134,6 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 
 		bool need_to_disconnect = false;
 
-		// header parse (temp)
-		// - http1.0 Connection default : close
-		// - http1.1 Connection default : keep-alive
-		if (request->ParseStatus() == HttpStatusCode::OK && request->GetRequestInterceptor() != nullptr)
-		{
-			if ((request->GetHttpVersionAsNumber() > 1.0 && request->GetHeader("Connection", "keep-alive") == "keep-alive") ||
-				(request->GetHttpVersionAsNumber() <= 1.0 && request->GetHeader("Connection", "close") == "keep-alive"))
-			{
-				request->InitParseInfo();
-			}
-		}
-
 		switch (request->ParseStatus())
 		{
 			case HttpStatusCode::OK: {
