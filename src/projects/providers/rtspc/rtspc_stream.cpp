@@ -56,7 +56,6 @@ namespace pvd
 	RtspcStream::~RtspcStream()
 	{
 		Stop();
-
 		Release();
 	}
 
@@ -395,12 +394,6 @@ namespace pvd
 			}
 
 			is_received_first_packet = true;
-		}
-		
-
-		if(_stream_metrics != nullptr)
-		{
-			_stream_metrics->IncreaseBytesIn(packet.size);
 		}
 
 		auto track = GetTrack(packet.stream_index);
