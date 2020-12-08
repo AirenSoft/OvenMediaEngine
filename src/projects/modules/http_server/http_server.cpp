@@ -18,7 +18,7 @@ HttpServer::~HttpServer()
 	OV_ASSERT(_physical_port == nullptr, "Physical port: %s", _physical_port->ToString().CStr());
 }
 
-bool HttpServer::Start(const ov::SocketAddress &address)
+bool HttpServer::Start(const ov::SocketAddress &address, int worker_count)
 {
 	auto lock_guard = std::lock_guard(_physical_port_mutex);
 
@@ -28,7 +28,7 @@ bool HttpServer::Start(const ov::SocketAddress &address)
 		return false;
 	}
 
-	_physical_port = PhysicalPortManager::GetInstance()->CreatePort(ov::SocketType::Tcp, address);
+	_physical_port = PhysicalPortManager::GetInstance()->CreatePort(ov::SocketType::Tcp, address, 0, 0, worker_count);
 
 	if (_physical_port != nullptr)
 	{

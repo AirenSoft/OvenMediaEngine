@@ -13,8 +13,6 @@
 #include "physical_port_private.h"
 #include "physical_port_worker.h"
 
-#define PHYSICAL_PORT_WORKER_COUNT 16
-#define PHYSICAL_PORT_EPOLL_TIMEOUT_MSEC 500
 
 PhysicalPort::PhysicalPort()
 	: _type(ov::SocketType::Unknown),
@@ -33,7 +31,8 @@ PhysicalPort::~PhysicalPort()
 bool PhysicalPort::Create(ov::SocketType type,
 						  const ov::SocketAddress &address,
 						  int send_buffer_size,
-						  int recv_buffer_size)
+						  int recv_buffer_size,
+						  int worker_count)
 {
 	OV_ASSERT2((_server_socket == nullptr) && (_datagram_socket == nullptr));
 
@@ -43,7 +42,7 @@ bool PhysicalPort::Create(ov::SocketType type,
 	{
 		case ov::SocketType::Srt:
 		case ov::SocketType::Tcp: {
-			return CreateServerSocket(type, address, send_buffer_size, recv_buffer_size);
+			return CreateServerSocket(type, address, send_buffer_size, recv_buffer_size, worker_count);
 		}
 
 		case ov::SocketType::Udp: {
@@ -60,12 +59,13 @@ bool PhysicalPort::Create(ov::SocketType type,
 bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 									  const ov::SocketAddress &address,
 									  int send_buffer_size,
-									  int recv_buffer_size)
+									  int recv_buffer_size,
+									  int worker_count)
 {
 	// Prepare physical port workers
 	{
 		auto lock_guard = std::lock_guard(_worker_mutex);
-		for (int index = 0; index < PHYSICAL_PORT_WORKER_COUNT; index++)
+		for (int index = 0; index < worker_count; index++)
 		{
 			_worker_list.emplace_back(std::make_shared<PhysicalPortWorker>(GetSharedPtr()));
 		}
@@ -138,7 +138,7 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 					auto shared_lock = std::shared_lock(_worker_mutex, std::defer_lock);
 
 					shared_lock.lock();
-					auto &worker = _worker_list.at(sock.GetSocket() % PHYSICAL_PORT_WORKER_COUNT);
+					auto &worker = _worker_list.at(sock.GetSocket() % worker_count);
 					shared_lock.unlock();
 
 					if (worker->AddTask(client, data) == false)

@@ -27,7 +27,7 @@ public:
 	RtcSignallingServer(const cfg::Server &server_config);
 	~RtcSignallingServer() override = default;
 
-	bool Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address);
+	bool Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count);
 	bool Stop();
 
 	bool AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer);

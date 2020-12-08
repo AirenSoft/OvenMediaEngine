@@ -18,6 +18,8 @@
 
 class PhysicalPortWorker;
 
+#define PHYSICAL_PORT_EPOLL_TIMEOUT_MSEC 500
+
 // PhysicalPort는 여러 곳에서 공유해서 사용할 수 있음
 // PhysicalPortObserver를 iteration 하면서 callback 할 수 있는 구조 필요
 class PhysicalPort : public ov::EnableSharedFromThis<PhysicalPort>
@@ -30,8 +32,9 @@ public:
 
 	bool Create(ov::SocketType type,
 				const ov::SocketAddress &address,
-				int send_buffer_size = 0,
-				int recv_buffer_size = 0);
+				int send_buffer_size,
+				int recv_buffer_size,
+				int worker_count);
 
 	bool Close();
 
@@ -77,7 +80,8 @@ protected:
 	bool CreateServerSocket(ov::SocketType type,
 							const ov::SocketAddress &address,
 							int send_buffer_size,
-							int recv_buffer_size);
+							int recv_buffer_size,
+							int worker_count);
 
 	bool CreateDatagramSocket(ov::SocketType type, const ov::SocketAddress &address);
 

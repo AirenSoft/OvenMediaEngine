@@ -38,17 +38,18 @@ WebRtcPublisher::~WebRtcPublisher()
 bool WebRtcPublisher::Start()
 {
 	auto server_config = GetServerConfig();
-	auto webrtc_config = server_config.GetBind().GetPublishers().GetWebrtc();
+	auto webrtc_bind_config = server_config.GetBind().GetPublishers().GetWebrtc();
 
-	if (webrtc_config.IsParsed() == false)
+	if (webrtc_bind_config.IsParsed() == false)
 	{
 		logtw("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
-	auto &signalling_config = webrtc_config.GetSignalling();
+	auto &signalling_config = webrtc_bind_config.GetSignalling();
 	auto &port_config = signalling_config.GetPort();
 	auto &tls_port_config = signalling_config.GetTlsPort();
+	auto worker_count = signalling_config.GetWorker();
 
 	auto port = static_cast<uint16_t>(port_config.GetPort());
 	auto tls_port = static_cast<uint16_t>(tls_port_config.GetPort());
@@ -67,14 +68,14 @@ bool WebRtcPublisher::Start()
 	// Initialize RtcSignallingServer
 	_signalling_server = std::make_shared<RtcSignallingServer>(server_config);
 	_signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
-	if (_signalling_server->Start(has_port ? &signalling_address : nullptr, has_tls_port ? &signalling_tls_address : nullptr) == false)
+	if (_signalling_server->Start(has_port ? &signalling_address : nullptr, has_tls_port ? &signalling_tls_address : nullptr, worker_count) == false)
 	{
 		return false;
 	}
 
 	bool result = true;
 
-	_ice_port = IcePortManager::GetInstance()->CreatePort(webrtc_config.GetIceCandidates(), IcePortObserver::GetSharedPtr());
+	_ice_port = IcePortManager::GetInstance()->CreatePort(webrtc_bind_config.GetIceCandidates(), IcePortObserver::GetSharedPtr());
 	if (_ice_port == nullptr)
 	{
 		logte("Cannot initialize ICE Port. Check your ICE configuration");
