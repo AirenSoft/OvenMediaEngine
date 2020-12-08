@@ -128,7 +128,7 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 				return state;
 			};
 
-			auto data_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data) -> ov::SocketConnectionState {
+			auto data_callback = [&, worker_count](const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data) -> ov::SocketConnectionState {
 				auto sock = client->GetSocket();
 
 				if (sock.IsValid())
