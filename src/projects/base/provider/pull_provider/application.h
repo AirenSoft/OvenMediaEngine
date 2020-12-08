@@ -49,6 +49,8 @@ namespace pvd
 		
 		bool _stop_collector_thread_flag;
 		std::thread _collector_thread;
+
+		std::shared_mutex _stream_motors_guard;
 		std::map<uint32_t, std::shared_ptr<StreamMotor>> _stream_motors;
 	};
 }

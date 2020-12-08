@@ -110,10 +110,11 @@ namespace pvd
 	{
 		auto motor_id = GetStreamMotorId(stream);
 		auto motor = std::make_shared<StreamMotor>(motor_id);
-
-		_stream_motors.emplace(motor_id, motor);
 		motor->Start();
 
+		std::unique_lock<std::shared_mutex> lock(_stream_motors_guard);
+		_stream_motors.emplace(motor_id, motor);
+		
 		logti("%s application has created %u stream motor", stream->GetApplicationInfo().GetName().CStr(), motor_id);
 
 		return motor;
@@ -124,6 +125,8 @@ namespace pvd
 		std::shared_ptr<StreamMotor> motor = nullptr;
 
 		auto motor_id = GetStreamMotorId(stream);
+
+		std::shared_lock<std::shared_mutex> lock(_stream_motors_guard);
 		auto it = _stream_motors.find(motor_id);
 		if(it == _stream_motors.end())
 		{
@@ -151,6 +154,8 @@ namespace pvd
 		{
 			motor->Stop();
 			auto motor_id = GetStreamMotorId(stream);
+
+			std::unique_lock<std::shared_mutex> lock(_stream_motors_guard);
 			_stream_motors.erase(motor_id);
 
 			logti("%s application has deleted %u stream motor", stream->GetApplicationInfo().GetName().CStr(), motor_id);
