@@ -151,18 +151,21 @@ namespace api
 		static void SetFilePublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::FilePublisher &config, Optional optional)
 		{
 			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			
+			object = Json::objectValue;
 
 			SetString(object, "filePath", config.GetFilePath(), Optional::True);
 			SetString(object, "fileInfoPath", config.GetFileInfoPath(), Optional::True);
 		}
 
-		// TODO(soulk): Uncomment below function after implement cfg::ThumbnailPublisher
-		// static void SetThumbnailPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::ThumbnailPublisher &config, Optional optional)
-		// {
-		// 	CONVERTER_RETURN_IF(config.IsParsed() == false);
-		//
-		// 	SetString(object, "filePath", config.GetFilePath(), Optional::True);
-		// }
+		static void SetThumbnailPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::ThumbnailPublisher &config, Optional optional)
+		{
+			CONVERTER_RETURN_IF(config.IsParsed() == false);
+
+			object = Json::objectValue;
+
+			SetCrossDomains(app_info, object, "crossDomains", config.GetCrossDomains(), Optional::True);
+		}
 
 		static void SetPublishers(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::Publishers &config, Optional optional)
 		{
@@ -176,8 +179,7 @@ namespace api
 			SetWebrtcPublisher(app_info, object, "webrtc", config.GetWebrtcPublisher(), Optional::True);
 			SetOvtPublisher(app_info, object, "ovt", config.GetOvtPublisher(), Optional::True);
 			SetFilePublisher(app_info, object, "file", config.GetFilePublisher(), Optional::True);
-			// TODO(soulk): Uncomment this line after implement cfg::ThumbnailPublisher
-			// SetThumbnailPublisher(app_info, object, "thumbnail", config.GetThumbnailPublisher(), Optional::True);
+			SetThumbnailPublisher(app_info, object, "thumbnail", config.GetThumbnailPublisher(), Optional::True);
 		}
 
 		static void SetEncodes(Json::Value &parent_object, const char *key, const cfg::vhost::app::oprf::Encodes &config, Optional optional)
