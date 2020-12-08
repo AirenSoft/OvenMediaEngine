@@ -584,7 +584,11 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			break;
 
 		case cmn::BitstreamFormat::AAC_ADTS:
-			data = AacConverter::ConvertAdtsToLatm(packet->GetData());
+			data = packet->GetData();
+			if (_type == Type::M4s)
+			{
+				data = AacConverter::ConvertAdtsToLatm(data);
+			}
 			break;
 
 		case cmn::BitstreamFormat::Unknown:
