@@ -264,13 +264,14 @@ int32_t TranscodeStream::CreateOutputStreamDynamic()
 			continue;
 		}
 
+		output_stream->AddTrack(output_track);
 		AppendTrackMap("dynamic", _input_stream, input_track, output_stream, output_track);
 	}
 
 	// Add to Output Stream List. The key is the output stream name.
 	_output_streams.insert(std::make_pair(output_stream->GetName(), output_stream));
 
-	logti("[%s/%s(%u)] -> [%s/%s(%u)] Output stream has been created.",
+	logti("[%s/%s(%u)] -> [%s/%s(%u)] dynamic output stream has been created",
 		  _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(),
 		  _application_info.GetName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 
@@ -685,7 +686,7 @@ void TranscodeStream::AppendTrackMap(
 	std::shared_ptr<info::Stream> output_stream,
 	std::shared_ptr<MediaTrack> output_track)
 {
-	// logte("key.pair(%s, %d)", encode_profile_name.CStr(), input_track->GetMediaType());
+	// logte("key.pair(%s, %d)", unique_id.CStr(), input_track->GetMediaType());
 
 	auto key = std::make_pair(unique_id, input_track->GetMediaType());
 
@@ -1027,14 +1028,14 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 			auto input_track = _input_stream->GetTrack(track_id);
 			if (input_track == nullptr)
 			{
-				logte("not found input track");
+				logte("Could not found input track. track_id(%d)", track_id);
 				continue;
 			}
 
 			auto output_track = output_stream->GetTrack(output_track_id);
 			if (output_track == nullptr)
 			{
-				logte("not found output track");
+				logte("Could not found output track. track_id(%d)", output_track_id);
 				continue;
 			}
 
