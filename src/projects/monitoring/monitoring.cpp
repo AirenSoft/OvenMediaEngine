@@ -144,12 +144,6 @@ namespace mon
 		}
 
 		auto stream_metric = app_metric->GetStreamMetrics(stream);
-		if (stream_metric == nullptr)
-		{
-			return nullptr;
-		}
-
-		stream_metric = app_metric->GetStreamMetrics(stream);
 		return stream_metric;
 	}
 }  // namespace mon
