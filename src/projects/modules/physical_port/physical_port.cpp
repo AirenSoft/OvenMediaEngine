@@ -80,7 +80,7 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 
 		_need_to_stop = false;
 
-		auto proc = [&, socket]() -> void {
+		auto proc = [&, socket, worker_count]() -> void {
 			auto client_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error) -> ov::SocketConnectionState {
 				switch (state)
 				{
