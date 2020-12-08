@@ -16,35 +16,27 @@ namespace api
 	{
 		static void SetRtmpProvider(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::RtmpProvider &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetRtspPullProvider(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::RtspPullProvider &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetRtspProvider(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::RtspProvider &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetOvtProvider(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::OvtProvider &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetMpegtsStreams(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::mpegts::StreamMap &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::arrayValue);
 
 			auto app = mon::Monitoring::GetInstance()->GetApplicationMetrics(app_info);
 
@@ -55,8 +47,6 @@ namespace api
 			}
 
 			auto stream_map = app->GetReservedStreamMetricsMap();
-
-			object = Json::arrayValue;
 
 			for (auto &key : stream_map)
 			{
@@ -73,16 +63,14 @@ namespace api
 
 		static void SetMpegtsProvider(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::MpegtsProvider &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetMpegtsStreams(app_info, object, "streams", config.GetStreamMap(), Optional::True);
 		}
 
 		static void SetProviders(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::Providers &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetRtmpProvider(app_info, object, "rtmp", config.GetRtmpProvider(), Optional::True);
 			SetRtspPullProvider(app_info, object, "rtspPull", config.GetRtspPullProvider(), Optional::True);
@@ -93,14 +81,12 @@ namespace api
 
 		static void SetRtmpPushPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::RtmpPushPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetCrossDomains(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::cmn::CrossDomains &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::arrayValue);
 
 			for (auto &url : config.GetUrls())
 			{
@@ -110,7 +96,7 @@ namespace api
 
 		static void SetHlsPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::HlsPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetInt(object, "segmentCount", config.GetSegmentCount());
 			SetInt(object, "segmentDuration", config.GetSegmentDuration());
@@ -119,7 +105,7 @@ namespace api
 
 		static void SetDashPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::DashPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetInt(object, "segmentCount", config.GetSegmentCount());
 			SetInt(object, "segmentDuration", config.GetSegmentDuration());
@@ -128,7 +114,7 @@ namespace api
 
 		static void SetLlDashPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::LlDashPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetInt(object, "segmentDuration", config.GetSegmentDuration());
 			SetCrossDomains(app_info, object, "crossDomains", config.GetCrossDomains(), Optional::True);
@@ -136,23 +122,19 @@ namespace api
 
 		static void SetWebrtcPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::WebrtcPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetTimeInterval(object, "timeout", config.GetTimeout());
 		}
 
 		static void SetOvtPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::OvtPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetFilePublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::FilePublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-			
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetString(object, "filePath", config.GetFilePath(), Optional::True);
 			SetString(object, "fileInfoPath", config.GetFileInfoPath(), Optional::True);
@@ -160,16 +142,14 @@ namespace api
 
 		static void SetThumbnailPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::ThumbnailPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetCrossDomains(app_info, object, "crossDomains", config.GetCrossDomains(), Optional::True);
 		}
 
 		static void SetPublishers(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::Publishers &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetInt(object, "sessionLoadBalancingThreadCount", config.GetSessionLoadBalancingThreadCount());
 			SetRtmpPushPublisher(app_info, object, "rtmpPush", config.GetRtmpPushPublisher(), Optional::True);
@@ -184,7 +164,7 @@ namespace api
 
 		static void SetEncodes(Json::Value &parent_object, const char *key, const cfg::vhost::app::oprf::Encodes &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			Json::Value audios(Json::ValueType::arrayValue);
 			Json::Value videos(Json::ValueType::arrayValue);
@@ -266,7 +246,7 @@ namespace api
 
 		static void SetOutputProfiles(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::oprf::OutputProfiles &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::arrayValue);
 
 			for (auto &output_profile : config.GetOutputProfileList())
 			{
