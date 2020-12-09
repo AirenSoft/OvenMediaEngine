@@ -280,6 +280,7 @@ bool IcePort::RemoveSession(const session_id_t session_id)
 					if (ice_port_info->session_info->GetId() == session_id)
 					{
 						_user_mapping_table.erase(it++);
+						logtw("This is because the stun request was not received from this session.");
 						return true;
 					}
 					else
