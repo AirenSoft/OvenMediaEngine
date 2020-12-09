@@ -264,10 +264,30 @@ bool IcePort::RemoveSession(const session_id_t session_id)
 		std::lock_guard<std::mutex> lock_guard(_ice_port_info_mutex);
 
 		auto item = _session_table.find(session_id);
-
 		if (item == _session_table.end())
 		{
 			logtw("Could not find session: %d", session_id);
+
+			{
+				// If it exists only in _user_mapping_table, find it and remove it.
+				// TODO(Dimiden): In this case, apply a more efficient method of deletion.
+				std::lock_guard<std::mutex> lock_guard(_user_mapping_table_mutex);
+
+				auto it = _user_mapping_table.begin();
+				while(it != _user_mapping_table.end())
+				{
+					auto ice_port_info = it->second;
+					if (ice_port_info->session_info->GetId() == session_id)
+					{
+						_user_mapping_table.erase(it++);
+						return true;
+					}
+					else
+					{
+						it++;
+					}
+				}
+			}
 
 			return false;
 		}
