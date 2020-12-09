@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "transcode_codec_dec_avc.h"
+
 #include "base/info/application.h"
 
 #define OV_LOG_TAG "TranscodeCodec"
@@ -44,8 +45,8 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 			if (ret == 0)
 			{
 				auto codec_info = ShowCodecParameters(_context, _codec_par);
-				logti("[%s/%s(%u)] input stream information: %s", 
-					_stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
+				logti("[%s/%s(%u)] input stream information: %s",
+					  _stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
 
 				_change_format = true;
 
@@ -67,19 +68,34 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 		decoded_frame->SetHeight(_frame->height);
 		decoded_frame->SetFormat(_frame->format);
 		decoded_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1LL : _frame->pts);
-		
+
 		// Calculate duration using framerate in timebase
 		int den = _input_context->GetTimeBase().GetDen();
 		int64_t duration = (den == 0) ? 0LL : (float)den / _input_context->GetFrameRate();
 		decoded_frame->SetDuration(duration);
 
+		// logte("format : %d", _frame->format);
+		// for(int i=0 ; i<AV_NUM_DATA_POINTERS ; i++)
+		// {
+		// 	logte("linesize[%d] : %d", i, _frame->linesize[i]);
+		// }
+
 		decoded_frame->SetStride(_frame->linesize[0], 0);
 		decoded_frame->SetStride(_frame->linesize[1], 1);
 		decoded_frame->SetStride(_frame->linesize[2], 2);
 
-		decoded_frame->SetBuffer(_frame->data[0], decoded_frame->GetStride(0) * decoded_frame->GetHeight(), 0);		 // Y-Plane
-		decoded_frame->SetBuffer(_frame->data[1], decoded_frame->GetStride(1) * decoded_frame->GetHeight() / 2, 1);  // Cb Plane
-		decoded_frame->SetBuffer(_frame->data[2], decoded_frame->GetStride(2) * decoded_frame->GetHeight() / 2, 2);  // Cr Plane
+		if (_frame->format == AV_PIX_FMT_YUV444P)
+		{
+			decoded_frame->SetBuffer(_frame->data[0], decoded_frame->GetStride(0) * decoded_frame->GetHeight(), 0);	 // Y-Plane 4
+			decoded_frame->SetBuffer(_frame->data[1], decoded_frame->GetStride(1) * decoded_frame->GetHeight(), 1);	 // Cb Plane 4
+			decoded_frame->SetBuffer(_frame->data[2], decoded_frame->GetStride(2) * decoded_frame->GetHeight(), 2);	 // Cr Plane 4
+		}
+		else
+		{
+			decoded_frame->SetBuffer(_frame->data[0], decoded_frame->GetStride(0) * decoded_frame->GetHeight(), 0);		 // Y-Plane 4
+			decoded_frame->SetBuffer(_frame->data[1], decoded_frame->GetStride(1) * decoded_frame->GetHeight() / 2, 1);	 // Cb Plane 2
+			decoded_frame->SetBuffer(_frame->data[2], decoded_frame->GetStride(2) * decoded_frame->GetHeight() / 2, 2);	 // Cr Plane 2
+		}
 
 		::av_frame_unref(_frame);
 
@@ -98,8 +114,8 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 
 		int64_t remained = packet_data->GetLength();
 		off_t offset = 0LL;
-		int64_t pts = (buffer->GetPts()==-1LL)?AV_NOPTS_VALUE:buffer->GetPts();
-		int64_t dts = (buffer->GetDts()==-1LL)?AV_NOPTS_VALUE:buffer->GetDts();
+		int64_t pts = (buffer->GetPts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetPts();
+		int64_t dts = (buffer->GetDts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetDts();
 		auto data = packet_data->GetDataAs<uint8_t>();
 
 		while (remained > 0)
@@ -146,7 +162,6 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 					logte("An error occurred while sending a packet for decoding: No memory (%d)", ret);
 					*result = TranscodeResult::DataError;
 					return nullptr;
-
 				}
 				else if (ret == AVERROR_INVALIDDATA)
 				{
@@ -159,7 +174,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 				else if (ret < 0)
 				{
 					char err_msg[1024];
-					 av_strerror(ret, err_msg, sizeof(err_msg));
+					av_strerror(ret, err_msg, sizeof(err_msg));
 					logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
 					*result = TranscodeResult::DataError;
 					return nullptr;
