@@ -1092,10 +1092,11 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 			case TranscodeResult::DataReady:
 				decoded_frame->SetTrackId(decoder_id);
 
-				logtp("[#%3d] Decode Out. PTS: %lld, SIZE: %lld",
+				logtp("[#%3d] Decode Out. PTS: %lld, SIZE: %lld, DURATION: %lld",
 					  decoder_id,
 					  (int64_t)(decoded_frame->GetPts() * decoder->GetTimebase().GetExpr() * 1000),
-					  decoded_frame->GetBufferSize());
+					  (int64_t)decoded_frame->GetBufferSize(),
+					  (int64_t)((double)decoded_frame->GetDuration() * decoder->GetTimebase().GetExpr() * 1000));
 
 				if (_queue_decoded_frames.Size() > _max_queue_threshold)
 				{
@@ -1110,6 +1111,8 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 
 				continue;
 
+			case TranscodeResult::Again:
+				continue;
 			case TranscodeResult::DataError:
 			case TranscodeResult::NoData:
 			default:
