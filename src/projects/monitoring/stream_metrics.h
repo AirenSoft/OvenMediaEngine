@@ -49,8 +49,8 @@ namespace mon
 		void OnSessionDisconnected(PublisherType type) override;
 	private:
 		// Related to origin, From Provider
-		std::atomic<int64_t> _request_time_to_origin_msec;
-		std::atomic<int64_t> _response_time_from_origin_msec;
+		std::atomic<int64_t> _request_time_to_origin_msec = 0;
+		std::atomic<int64_t> _response_time_from_origin_msec = 0;
 
 		std::shared_ptr<ApplicationMetrics>	_app_metrics;
 	};

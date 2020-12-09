@@ -178,7 +178,7 @@ protected:
 	void UpdateUri();
 
 	std::shared_ptr<ov::ClientSocket> _client_socket;
-	HttpRequestConnectionType _connection_type;
+	HttpRequestConnectionType _connection_type = HttpRequestConnectionType::Unknown;
 	std::shared_ptr<ov::TlsData> _tls_data;
 
 	// request 처리를 담당하는 객체
