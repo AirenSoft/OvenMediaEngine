@@ -8,6 +8,8 @@
 //==============================================================================
 #include "log_internal.h"
 
+#include <thread>
+
 #define OV_LOG_COLOR_RESET "\x1B[0m"
 
 #define OV_LOG_COLOR_FG_BLACK "\x1B[30m"
@@ -250,6 +252,10 @@ namespace ov
 
 		if (show_format)
 		{
+			auto tid = GetThreadId();
+			char name[16]{};
+			::pthread_getname_np(::pthread_self(), name, 16);
+
 			// log format
 			//  [<date> <time>] <tag> <log level> <thread id> | <message>
 			log.Format(
@@ -271,7 +277,7 @@ namespace ov
 				// <log level>
 				" %s"
 				// <thread id>
-				" %ld"
+				" [%s:%ld]"
 				// tag
 				"%s%s"
 				// |
@@ -293,7 +299,8 @@ namespace ov
 #endif	// DEBUG
 				local_time.tm_hour, local_time.tm_min, local_time.tm_sec, mseconds,
 				log_level[level],
-				GetThreadId(),
+				name,
+				tid,
 				(tag[0] == '\0') ? "" : " ", tag
 
 #if OV_LOG_SHOW_FILE_NAME
