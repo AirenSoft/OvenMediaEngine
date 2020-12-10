@@ -87,8 +87,10 @@ namespace pvd
 
 		// In the future, 
 		// it may be necessary to send data to an application rather than sending it directly to a stream.
-		channel->OnDataReceived(data);
-		channel->UpdateLastReceivedTime();
+		if(channel->OnDataReceived(data) == true)
+		{
+			channel->UpdateLastReceivedTime();
+		}
 
 		return true;
 	}

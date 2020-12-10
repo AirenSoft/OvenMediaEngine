@@ -75,6 +75,7 @@ namespace pvd
 		bool SendWindowAcknowledgementSize(uint32_t size);
 		bool SendSetPeerBandwidth(uint32_t bandwidth);
 		bool SendStreamBegin();
+		bool SendStreamEnd();
 		bool SendAcknowledgementSize();
 		bool SendAmfCommand(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document);
 		bool SendAmfConnectResult(uint32_t chunk_stream_id, double transaction_id, double object_encoding);

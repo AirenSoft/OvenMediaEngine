@@ -118,14 +118,12 @@ namespace pvd
 
 	bool Application::NotifyStreamCreated(const std::shared_ptr<Stream> &stream)
 	{
-		MediaRouteApplicationConnector::CreateStream(stream);
-		return true;
+		return MediaRouteApplicationConnector::CreateStream(stream);
 	}
 
 	bool Application::NotifyStreamDeleted(const std::shared_ptr<Stream> &stream)
 	{
-		MediaRouteApplicationConnector::DeleteStream(stream);
-		return true;
+		return MediaRouteApplicationConnector::DeleteStream(stream);
 	}
 
 	bool Application::DeleteAllStreams()

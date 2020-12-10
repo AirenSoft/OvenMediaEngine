@@ -1483,6 +1483,15 @@ namespace pvd
 		return SendUserControlMessage(RTMP_UCMID_STREAMBEGIN, body);
 	}
 
+	bool RtmpStream::SendStreamEnd()
+	{
+		auto body = std::make_shared<std::vector<uint8_t>>(4);
+
+		RtmpMuxUtil::WriteInt32(body->data(), _rtmp_stream_id);
+
+		return SendUserControlMessage(RTMP_UCMID_STREAMEOF, body);
+	}
+
 	bool RtmpStream::SendAmfCommand(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document)
 	{
 		auto body = std::make_shared<std::vector<uint8_t>>(2048);

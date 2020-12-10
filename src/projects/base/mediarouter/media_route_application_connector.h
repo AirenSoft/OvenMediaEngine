@@ -23,7 +23,17 @@ public:
 		Relay
 	};
 
-	// MediaRouteApplication -> Stream 생성
+	inline bool IsExistingInboundStream(const ov::String &stream_name)
+	{
+		if(GetMediaRouteApplication() == nullptr)
+		{
+			return false;
+		}
+
+		return GetMediaRouteApplication()->IsExistingInboundStream(stream_name);
+	}
+
+	// MediaRouteApplication -> Stream creation
 	inline bool CreateStream(const std::shared_ptr<info::Stream> &stream)
 	{
 		if(GetMediaRouteApplication() == nullptr)
@@ -34,7 +44,7 @@ public:
 		return GetMediaRouteApplication()->OnCreateStream(this->GetSharedPtr(), stream);
 	}
 
-	// MediaRouteApplication -> Stream 삭제
+	// MediaRouteApplication -> Stream deletion
 	inline bool DeleteStream(const std::shared_ptr<info::Stream> &stream)
 	{
 		if(GetMediaRouteApplication() == nullptr)

@@ -78,8 +78,9 @@ public:
 		const std::shared_ptr<info::Stream> &stream,
 		const std::shared_ptr<MediaPacket> &packet) override;
 
+	bool IsExistingInboundStream(ov::String stream_name) override;
+
 private:
-	bool ReuseInboundStream(const std::shared_ptr<info::Stream> &stream_info);
 	bool CreateInboundStream(const std::shared_ptr<info::Stream> &stream_info);
 	bool CreateOutboundStream(const std::shared_ptr<info::Stream> &stream_info);
 
@@ -89,6 +90,7 @@ private:
 	// std::shared_ptr<MediaRouteStream> GetStream(uint8_t indicator, uint32_t stream_id);
 	std::shared_ptr<MediaRouteStream> GetInboundStream(uint32_t stream_id);
 	std::shared_ptr<MediaRouteStream> GetOutboundStream(uint32_t stream_id);
+
 
 private:
 	// Application information from configuration file

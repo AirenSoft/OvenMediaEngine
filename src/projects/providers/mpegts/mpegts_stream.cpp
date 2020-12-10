@@ -91,7 +91,10 @@ namespace pvd
 		// Publish
 		if(IsPublished() == false && _depacketizer.IsTrackInfoAvailable())
 		{
-			Publish();
+			if(Publish() == false)
+			{
+				return false;
+			}
 		}
 
 		if(IsPublished() == true)
@@ -220,7 +223,10 @@ namespace pvd
 		}
 
 		// Publish
-		PublishInterleavedChannel(_vhost_app_name);
+		if(PublishInterleavedChannel(_vhost_app_name) == false)
+		{
+			return false;
+		}
 
 		return true;
 	}

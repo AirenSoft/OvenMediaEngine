@@ -71,6 +71,8 @@ namespace pvd
 			return false;
 		}
 
+		_attemps_publish_count++;
+		
 		_is_published = _provider->PublishInterleavedChannel(GetChannelId(), vhost_app_name, GetSharedPtrAs<PushStream>());
 
 		return _is_published;

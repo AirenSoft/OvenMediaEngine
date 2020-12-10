@@ -240,6 +240,7 @@ bool MediaRouteApplication::OnCreateStream(
 		OV_ASSERT2(false);
 		return false;
 	}
+
 	logti("Trying to create a stream: [%s/%s(%u)]", _application_info.GetName().CStr(), stream_info->GetName().CStr(), stream_info->GetId());
 	logti("%s", stream_info->GetInfoString().CStr());
 
@@ -247,22 +248,31 @@ bool MediaRouteApplication::OnCreateStream(
 
 	if (connector == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
-		// If there is same stream, reuse that
-		if (ReuseInboundStream(stream_info))
-			return true;
-
-		if (!CreateInboundStream(stream_info))
+		// Check there is a duplicate inbound stream 
+		if(IsExistingInboundStream(stream_info->GetName()) == true)
+		{
+			logtw("Reject stream creation : there is already an incoming stream with the same name. (%s)", stream_info->GetName().CStr());
 			return false;
+		}
+		
+		if (!CreateInboundStream(stream_info))
+		{
+			return false;
+		}
 	}
 	else if (connector == MediaRouteApplicationConnector::ConnectorType::Transcoder)
 	{
 		if (!CreateOutboundStream(stream_info))
+		{
 			return false;
+		}
 	}
 	else if (connector == MediaRouteApplicationConnector::ConnectorType::Relay)
 	{
 		if (!CreateOutboundStream(stream_info))
+		{
 			return false;
+		}
 	}
 	else
 	{
@@ -294,29 +304,6 @@ bool MediaRouteApplication::OnCreateStream(
 	}
 
 	return true;
-}
-
-bool MediaRouteApplication::ReuseInboundStream(
-	const std::shared_ptr<info::Stream> &stream_info)
-{
-	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
-
-	for (auto it = _inbound_streams.begin(); it != _inbound_streams.end(); ++it)
-	{
-		auto istream = it->second;
-
-		if (stream_info->GetName() == istream->GetStream()->GetName())
-		{
-			// reuse stream
-			stream_info->SetId(istream->GetStream()->GetId());
-			logtw("Reconnected same stream from provider(%s, %d)",
-				  stream_info->GetName().CStr(), stream_info->GetId());
-
-			return true;
-		}
-	}
-
-	return false;
 }
 
 bool MediaRouteApplication::CreateInboundStream(
@@ -582,6 +569,22 @@ std::shared_ptr<MediaRouteStream> MediaRouteApplication::GetOutboundStream(uint3
 	}
 
 	return bucket->second;
+}
+
+bool MediaRouteApplication::IsExistingInboundStream(ov::String stream_name)
+{
+	std::shared_lock<std::shared_mutex> lock_guard(_streams_lock);
+
+	for(const auto &item : _inbound_streams)
+	{
+		auto stream = item.second;
+		if(stream->GetStream()->GetName() == stream_name)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)

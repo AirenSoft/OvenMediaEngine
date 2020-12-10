@@ -166,6 +166,13 @@ namespace pvd
 
 	std::shared_ptr<pvd::Stream> PullApplication::CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list)
 	{
+		// Check if same stream name is exist in MediaRouter(may be created by another provider)
+		if(IsExistingInboundStream(stream_name) == true)
+		{
+			logtw("Reject stream creation : there is already an incoming stream with the same name. (%s)", stream_name.CStr());
+			return nullptr;
+		}
+
 		auto stream = CreateStream(IssueUniqueStreamId(), stream_name, url_list);
 		if(stream == nullptr)
 		{
