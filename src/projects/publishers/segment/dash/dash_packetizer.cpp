@@ -175,6 +175,18 @@ ov::String DashPacketizer::GetFileName(int64_t timestamp, cmn::MediaType media_t
 	return "";
 }
 
+static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &segment_item)
+{
+#if DEBUG
+#	if 0
+	auto &file_name = segment_item->file_name;
+	auto &data = segment_item->data;
+
+	ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump"), file_name), data);
+#	endif
+#endif	// DEBUG
+}
+
 bool DashPacketizer::PrepareVideoInitIfNeeded()
 {
 	if (_video_init_file != nullptr)
@@ -209,9 +221,7 @@ bool DashPacketizer::PrepareVideoInitIfNeeded()
 		_pixel_aspect_ratio.Format("%d:%d", video_track->GetWidth() / resolution_gcd, video_track->GetHeight() / resolution_gcd);
 	}
 
-#if 0
-	ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump"), DASH_MPD_VIDEO_INIT_FILE_NAME), init_data);
-#endif
+	DumpSegmentToFile(_video_init_file);
 
 	logai("%s has created", DASH_MPD_VIDEO_INIT_FILE_NAME);
 
@@ -245,9 +255,7 @@ bool DashPacketizer::PrepareAudioInitIfNeeded()
 	auto audio_track = _audio_track;
 	_audio_init_file = std::make_shared<SegmentItem>(SegmentDataType::Audio, 0, DASH_MPD_AUDIO_INIT_FILE_NAME, 0, 0, 0, 0, init_data);
 
-#if 0
-	ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump"), DASH_MPD_AUDIO_INIT_FILE_NAME), init_data);
-#endif
+	DumpSegmentToFile(_audio_init_file);
 
 	logai("%s has created", DASH_MPD_AUDIO_INIT_FILE_NAME);
 
@@ -757,9 +765,7 @@ DashPacketizer::SetResult DashPacketizer::SetSegment(std::map<ov::String, std::s
 
 	map[file_name] = segment;
 
-#if 0
-	ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump"), file_name.CStr()), segment->data);
-#endif
+	DumpSegmentToFile(segment);
 
 	return result;
 }

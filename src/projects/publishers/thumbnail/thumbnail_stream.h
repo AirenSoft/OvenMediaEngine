@@ -19,12 +19,12 @@ public:
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
-	std::shared_ptr<MediaPacket> GetVideoFrameByCodecId(cmn::MediaCodecId codec_id);
+	std::shared_ptr<ov::Data> GetVideoFrameByCodecId(cmn::MediaCodecId codec_id);
 private:
 	bool Start() override;
 	bool Stop() override;
 
 	std::shared_mutex _encoded_frame_mutex;
-	std::map<cmn::MediaCodecId, std::shared_ptr<MediaPacket>> _encoded_frames;
+	std::map<cmn::MediaCodecId, std::shared_ptr<ov::Data>> _encoded_frames;
 	std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 };

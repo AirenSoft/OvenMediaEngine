@@ -1,11 +1,11 @@
 
 #include "aac_converter.h"
 
-#include "aac_adts.h"
-
 #include <base/ovlibrary/bit_reader.h>
 #include <base/ovlibrary/ovlibrary.h>
 #include <modules/bitstream/aac/aac_specific_config.h>
+
+#include "aac_adts.h"
 
 #define OV_LOG_TAG "AACConverter"
 
@@ -135,13 +135,94 @@ bool AacConverter::ConvertLatmToAdts(const cmn::PacketType type, const std::shar
 	return true;
 }
 
-std::shared_ptr<const ov::Data> AacConverter::ConvertAdtsToLatm(const std::shared_ptr<const ov::Data> &data)
+std::shared_ptr<const ov::Data> AacConverter::ConvertAdtsToLatm(const std::shared_ptr<const ov::Data> &data, std::vector<size_t> *length_list)
 {
-	if(AACAdts::IsValid(data->GetDataAs<uint8_t>(), data->GetLength()))
+	auto latm_data = std::make_shared<ov::Data>();
+	size_t remained = data->GetLength();
+	off_t offset = 0L;
+	auto buffer = data->GetDataAs<uint8_t>();
+
+	while (remained > 0)
 	{
-		// Strip ADTS header
-		return data->Subdata(ADTS_MIN_SIZE);
+		if (remained < ADTS_MIN_SIZE)
+		{
+			// data is not ADTS format
+			return nullptr;
+		}
+
+		// Reference: https://wiki.multimedia.cx/index.php/ADTS
+		// AAAAAAAA AAAA B CC D EE FFFF G HHH I J K L MMMMMMMMMMMMM OOOOOOOOOOO PP (QQQQQQQQ QQQQQQQQ)
+		// 76543210 7654 3 21 0 76 5432 1 076 5 4 3 2 1076543210765 43210765432 10  76543210 76543210
+		// |-  0 -| |-   1   -| |-   2   -||-    3    -||-  4 -||-  5  -||-  6  -|  |-  7 -| |-  8 -|
+		// Letter	Length (bits)
+		// A		12	syncword 0xFFF, all bits must be 1
+		// B		1	MPEG Version: 0 for MPEG-4, 1 for MPEG-2
+		// C		2	Layer: always 0
+		// D		1	protection absent, Warning, set to 1 if there is no CRC and 0 if there is CRC
+		// E		2	profile, the MPEG-4 Audio Object Type minus 1
+		// F		4	MPEG-4 Sampling Frequency Index (15 is forbidden)
+		// G		1	private bit, guaranteed never to be used by MPEG, set to 0 when encoding, ignore when decoding
+		// H		3	MPEG-4 Channel Configuration (in the case of 0, the channel configuration is sent via an inband PCE)
+		// I		1	originality, set to 0 when encoding, ignore when decoding
+		// J		1	home, set to 0 when encoding, ignore when decoding
+		// K		1	copyrighted id bit, the next bit of a centrally registered copyright identifier, set to 0 when encoding, ignore when decoding
+		// L		1	copyright id start, signals that this frame's copyright id bit is the first bit of the copyright id, set to 0 when encoding, ignore when decoding
+		// M		13	frame length, this value must include 7 or 9 bytes of header length: FrameLength = (ProtectionAbsent == 1 ? 7 : 9) + size(AACFrame)
+		// O		11	Buffer fullness
+		// P		2	Number of AAC frames (RDBs) in ADTS frame minus 1, for maximum compatibility always use 1 AAC frame per ADTS frame
+		// Q		16	CRC if protection absent is 0
+
+		auto second_byte = buffer[1];
+
+		// A - Check syncword
+		if ((buffer[0] != 0xFF) || ((second_byte & 0xF0) != 0xF0))
+		{
+			// data is not ADTS format
+			return nullptr;
+		}
+
+		// C - Layer
+		bool layer = OV_GET_BITS(uint8_t, second_byte, 1, 2);
+
+		if (layer != 0)
+		{
+			// Layer always 0
+			return nullptr;
+		}
+
+		// D - Protection absent
+		uint8_t protection_absent = OV_GET_BIT(second_byte, 0);
+
+		// M - Frame length
+		size_t frame_length =
+			OV_GET_BITS(uint8_t, buffer[3], 0, 2) << 11 |
+			(buffer[4] << 3) |
+			OV_GET_BITS(uint8_t, buffer[5], 5, 3);
+
+		size_t header_length = (protection_absent == 1) ? 7 : 9;
+
+		if ((frame_length < header_length) || (frame_length > remained))
+		{
+			// Invalid/Not enough data
+			return nullptr;
+		}
+
+		size_t payload_length = frame_length - header_length;
+
+		// Skip ADTS header
+		buffer += header_length;
+
+		latm_data->Append(buffer, payload_length);
+		if (length_list != nullptr)
+		{
+			length_list->push_back(payload_length);
+		}
+
+		buffer += payload_length;
+
+		remained -= frame_length;
+		offset += frame_length;
 	}
 
-	return nullptr;
+	return latm_data;
 }
