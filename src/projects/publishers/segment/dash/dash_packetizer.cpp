@@ -8,6 +8,8 @@
 //==============================================================================
 #include "dash_packetizer.h"
 
+#include <modules/bitstream/aac/aac_converter.h>
+
 #include <algorithm>
 #include <iomanip>
 #include <numeric>
@@ -281,17 +283,17 @@ bool DashPacketizer::WriteVideoSegment()
 	}
 
 	auto duration = _video_m4s_writer.GetDuration();
-	auto duration_in_ms = duration * _video_timebase_expr_ms;
+	auto duration_in_ms = static_cast<int64_t>(duration * _video_timebase_expr_ms);
 	auto pts = std::move(_first_video_pts);
-	auto pts_in_ms = pts * _video_timebase_expr_ms;
+	auto pts_in_ms = static_cast<int64_t>(pts * _video_timebase_expr_ms);
 	_video_m4s_writer.ResetData();
 
 	auto file_name = GetFileName(pts, cmn::MediaType::Video);
 
 	if (SetSegmentData(file_name, pts, pts_in_ms, duration, duration_in_ms, data))
 	{
-		_duration_delta_for_video_in_ms += (_ideal_duration_for_video_in_ms - duration_in_ms);
-		_first_video_pts = -1;
+		_duration_delta_for_video += (_ideal_duration_for_video - duration);
+		_first_video_pts += duration;
 
 		UpdatePlayList();
 
@@ -324,16 +326,16 @@ bool DashPacketizer::WriteAudioSegment()
 	}
 
 	auto duration = _audio_m4s_writer.GetDuration();
-	auto duration_in_ms = duration * _audio_timebase_expr_ms;
+	auto duration_in_ms = static_cast<int64_t>(duration * _audio_timebase_expr_ms);
 	auto pts = std::move(_first_audio_pts);
-	auto pts_in_ms = pts * _audio_timebase_expr_ms;
+	auto pts_in_ms = static_cast<int64_t>(pts * _audio_timebase_expr_ms);
 	_audio_m4s_writer.ResetData();
 
 	auto file_name = GetFileName(pts, cmn::MediaType::Audio);
 
 	if (SetSegmentData(file_name, pts, pts_in_ms, duration, duration_in_ms, data))
 	{
-		_duration_delta_for_audio_in_ms += (_ideal_duration_for_audio_in_ms - duration_in_ms);
+		_duration_delta_for_audio += (_ideal_duration_for_audio - duration);
 		_first_audio_pts = -1;
 
 		UpdatePlayList();
@@ -350,6 +352,10 @@ bool DashPacketizer::WriteAudioSegment()
 
 bool DashPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet)
 {
+	// logae("#%d [%s] Received a packet: %15ld, %15ld",
+	// 	  media_packet->GetTrackId(), (media_packet->GetMediaType() == cmn::MediaType::Video) ? "V" : "A",
+	// 	  media_packet->GetPts(), media_packet->GetDts());
+
 	auto video_track = _video_track;
 	if (video_track == nullptr)
 	{
@@ -386,13 +392,15 @@ bool DashPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &
 
 	bool result = true;
 
-	if ((media_packet->GetFlag() == MediaPacketFlag::Key) && (_first_video_pts >= 0L))
+	_first_video_pts = (_first_video_pts == -1L) ? media_packet->GetPts() : _first_video_pts;
+
+	if (media_packet->GetFlag() == MediaPacketFlag::Key) 
 	{
 		auto duration = std::max(
 			media_packet->GetPts() - _video_m4s_writer.GetFirstPts(),
 			_video_m4s_writer.GetDuration());
 
-		if (duration >= _ideal_duration_for_video)
+		if ((duration - _duration_delta_for_video) >= _ideal_duration_for_video)
 		{
 			result = WriteVideoSegment();
 		}
@@ -402,7 +410,6 @@ bool DashPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &
 
 	if (result)
 	{
-		_first_video_pts = (_first_video_pts == -1L) ? media_packet->GetPts() : _first_video_pts;
 		_last_video_pts = media_packet->GetPts();
 	}
 
@@ -427,19 +434,7 @@ bool DashPacketizer::AppendAudioFrame(const std::shared_ptr<const MediaPacket> &
 		return false;
 	}
 
-	if (_audio_key_frame_received == false)
-	{
-		// Currently, the audio packet is always a Keyframe, but it will treat it the same as the video later for other codecs
-
-		// Wait for first key frame
-		if (media_packet->GetFlag() != MediaPacketFlag::Key)
-		{
-			// Skip the frame
-			return true;
-		}
-
-		_audio_key_frame_received = true;
-	}
+	_audio_key_frame_received = true;
 
 	if (PrepareAudioInitIfNeeded() == false)
 	{
@@ -448,25 +443,92 @@ bool DashPacketizer::AppendAudioFrame(const std::shared_ptr<const MediaPacket> &
 		return false;
 	}
 
-	bool result = true;
+	auto data = media_packet->GetData();
+	std::vector<size_t> length_list;
 
-	if ((media_packet->GetFlag() == MediaPacketFlag::Key) && (_first_audio_pts >= 0L))
+	if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_ADTS)
 	{
-		auto duration = std::max(
-			media_packet->GetPts() - _audio_m4s_writer.GetFirstPts(),
-			_audio_m4s_writer.GetDuration());
-
-		if (duration >= _ideal_duration_for_audio)
-		{
-			result = WriteAudioSegment();
-		}
+		data = AacConverter::ConvertAdtsToLatm(data, &length_list);
+	}
+	else
+	{
+		length_list.push_back(data->GetLength());
 	}
 
-	result = result && _audio_m4s_writer.WritePacket(media_packet);
-
-	if (result)
+	if (length_list.size() == 0)
 	{
-		_first_audio_pts = (_first_audio_pts == -1L) ? media_packet->GetPts() : _first_audio_pts;
+		// Invalid data
+		logae("Length list must contains at least 1 item");
+		return false;
+	}
+
+	bool result = true;
+	_first_audio_pts = (_first_audio_pts >= 0L) ? _first_audio_pts : media_packet->GetPts();
+
+	// Multiple frames can come together in on media_packet, which must be split up
+	// TODO(dimiden): If media_packet->GetLength() is twice as long as _ideal_duration_for_audio, some problems can occur that can be packaged disproportionately
+
+	// Calculates the time remaining to reach _ideal_duration_for_audio
+	auto remained = _ideal_duration_for_audio - (_audio_m4s_writer.GetDuration() - _duration_delta_for_audio);
+
+	// logac("#%d [%s] Received a packet: %15ld, %15ld (%ld, %zu)",
+	// 	  media_packet->GetTrackId(), (media_packet->GetMediaType() == cmn::MediaType::Video) ? "V" : "A",
+	// 	  media_packet->GetPts(), media_packet->GetDts(),
+	// 	  _first_audio_pts, length_list.size());
+
+	if (media_packet->GetDuration() < remained)
+	{
+		result = result && _audio_m4s_writer.WritePacket(media_packet, data, length_list, 0, length_list.size());
+
+		if (result)
+		{
+			_last_audio_pts = media_packet->GetPts();
+		}
+	}
+	else
+	{
+		// Split and store data of media_packet to fit the remained time
+		int64_t frame_count = length_list.size();
+		int64_t duration_per_frame = media_packet->GetDuration() / frame_count;
+
+		if ((frame_count == 0) || (duration_per_frame == 0))
+		{
+			logae("Invalid media frame count (%ld) or packet duration (%ld, %ld)", frame_count, duration_per_frame, frame_count);
+			return false;
+		}
+
+		// Calculate a value that matches this formula: [duration_per_frame * position >= remained]
+		int64_t position = std::max(remained / duration_per_frame, 0L);
+		int64_t bytes_to_copy = 0L;
+
+		for (int64_t index = 0; index < position; index++)
+		{
+			bytes_to_copy += length_list[index];
+		}
+
+		// Split length_list
+		std::vector<size_t> remained_list;
+		remained_list.insert(remained_list.begin(), length_list.begin() + position, length_list.end());
+		length_list.resize(position);
+
+		int64_t writte_duration = 0;
+
+		if (position > 0)
+		{
+			result = result && _audio_m4s_writer.WritePacket(media_packet, data, length_list, 0, frame_count);
+		}
+
+		auto next_first_pts = _first_audio_pts + _audio_m4s_writer.GetDuration();
+		result = WriteAudioSegment();
+		_first_audio_pts = next_first_pts;
+
+		if (remained_list.empty() == false)
+		{
+			data = data->Subdata(bytes_to_copy);
+			result = result && _audio_m4s_writer.WritePacket(media_packet, data, remained_list, position, frame_count);
+		}
+
+		// TODO(dimiden): Need to set the PTS of last frame
 		_last_audio_pts = media_packet->GetPts();
 	}
 
@@ -592,6 +654,9 @@ bool DashPacketizer::UpdatePlayList()
 		logad("Could not obtain segment info for stream");
 		return false;
 	}
+
+	// Fixes minimum_update_period to 1
+	minimum_update_period = 1;
 
 	play_list_stream
 		<< std::fixed << std::setprecision(3)

@@ -120,8 +120,8 @@ protected:
 	double _mpd_min_buffer_time;
 
 	// Unit: Timebase of the track
-	double _ideal_duration_for_video = 0.0;
-	double _ideal_duration_for_audio = 0.0;
+	int64_t _ideal_duration_for_video = 0.0;
+	int64_t _ideal_duration_for_audio = 0.0;
 
 	// Unit: millisecond
 	int64_t _ideal_duration_for_video_in_ms = 0.0;
@@ -147,9 +147,9 @@ protected:
 	//   delta == 0 means <Ideal duration> == <Average of total segment duration>
 	//   delta > 0 means <Ideal duration> > <Average of total segment duration>
 	//   delta < 0 means <Ideal duration> < <Average of total segment duration>
-	// Unit: millisecond
-	double _duration_delta_for_video_in_ms = 0.0;
-	double _duration_delta_for_audio_in_ms = 0.0;
+	// Unit: Timebase of the track
+	int64_t _duration_delta_for_video = 0.0;
+	int64_t _duration_delta_for_audio = 0.0;
 
 	uint32_t _video_segment_count = 0U;
 	uint32_t _audio_segment_count = 0U;

@@ -78,6 +78,19 @@ protected:
 	std::map<ov::String, std::shared_ptr<SegmentItem>> _segment_map;
 	std::deque<std::shared_ptr<SegmentItem>> _segment_queue;
 
+	// Since the m4s segment cannot be split exactly to the desired duration, an error is inevitable.
+	// As this error results in an incorrect segment index, use the delta to correct the error.
+	//
+	// delta = <Ideal duration> - <Prev segment duration>
+	//
+	// So,
+	//   delta == 0 means <Ideal duration> == <Average of total segment duration>
+	//   delta > 0 means <Ideal duration> > <Average of total segment duration>
+	//   delta < 0 means <Ideal duration> < <Average of total segment duration>
+	// Unit: Timebase of the track
+	double _duration_delta_for_video = 0.0;
+	double _duration_delta_for_audio = 0.0;
+
 	// First packet PTS of the segment
 	// Unit: Timebase of the track
 	int64_t _first_video_pts = -1LL;

@@ -57,6 +57,7 @@ public:
 	// Unit: the timebase of the MediaTrack
 	int64_t GetDuration() const;
 
+	bool WritePacket(const std::shared_ptr<const MediaPacket> &packet, const std::shared_ptr<const ov::Data> &data, const std::vector<size_t> &length_list, size_t skip_count, size_t split_count);
 	bool WritePacket(const std::shared_ptr<const MediaPacket> &packet);
 	bool Flush();
 
@@ -84,6 +85,7 @@ protected:
 		AVRational rational;
 		std::shared_ptr<const MediaTrack> track;
 
+		// Unit: Timebase
 		int64_t duration = 0L;
 		int64_t first_pts = -1L;
 		bool first_packet_received = false;
