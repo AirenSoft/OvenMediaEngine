@@ -64,11 +64,9 @@ void ThumbnailStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_p
 		return;
 	}
 
-	std::shared_lock<std::shared_mutex> lock(_encoded_frame_mutex);
+	std::lock_guard<std::shared_mutex> lock(_encoded_frame_mutex);
 
-	_encoded_frames[track->GetCodecId()] = media_packet->ClonePacket();
-
-	// logtw("track_id : %d / size : %d", media_packet->GetTrackId(), media_packet->GetDataLength());
+	_encoded_frames[track->GetCodecId()] = std::move(media_packet->GetData()->Clone());
 }
 
 void ThumbnailStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
@@ -76,15 +74,15 @@ void ThumbnailStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_p
 	// Nothing..
 }
 
-std::shared_ptr<MediaPacket> ThumbnailStream::GetVideoFrameByCodecId(cmn::MediaCodecId codec_id)
+std::shared_ptr<ov::Data> ThumbnailStream::GetVideoFrameByCodecId(cmn::MediaCodecId codec_id)
 {
 	std::shared_lock<std::shared_mutex> lock(_encoded_frame_mutex);
 
 	auto it = _encoded_frames.find(codec_id);
-	if(it == _encoded_frames.end())
+	if (it == _encoded_frames.end())
 	{
 		return nullptr;
 	}
-	
-	return it->second->ClonePacket();
+
+	return it->second;
 }

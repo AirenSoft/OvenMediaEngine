@@ -210,7 +210,7 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 			return HttpNextHandler::DoNotCall;
 		}
 		*/
-	
+
 		// There is no endcoded thumbnail image
 		auto endcoded_video_frame = stream->GetVideoFrameByCodecId(media_codec_id);
 		if (endcoded_video_frame == nullptr)
@@ -224,7 +224,7 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 
 		response->SetHeader("Content-Type", (media_codec_id == cmn::MediaCodecId::Jpeg) ? "image/jpeg" : "image/png");
 		response->SetStatusCode(HttpStatusCode::OK);
-		response->AppendData(endcoded_video_frame->GetData());
+		response->AppendData(std::move(endcoded_video_frame->Clone()));
 		response->Response();
 
 		return HttpNextHandler::DoNotCall;
