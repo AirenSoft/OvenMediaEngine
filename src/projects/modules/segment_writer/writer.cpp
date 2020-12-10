@@ -560,11 +560,13 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 	}
 
 	std::shared_ptr<const ov::Data> data;
+	std::vector<size_t> length_list;
 
 	switch (packet->GetBitstreamFormat())
 	{
 		case cmn::BitstreamFormat::H264_AVCC:
 			data = packet->GetData();
+			length_list.push_back(data->GetLength());
 			break;
 
 		case cmn::BitstreamFormat::H264_ANNEXB:
@@ -573,21 +575,28 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			{
 				data = H264Converter::ConvertAnnexbToAvcc(data);
 			}
+			length_list.push_back(data->GetLength());
 			break;
 
 		case cmn::BitstreamFormat::H265_ANNEXB:
 			data = packet->GetData();
+			length_list.push_back(data->GetLength());
 			break;
 
 		case cmn::BitstreamFormat::AAC_LATM:
 			data = packet->GetData();
+			length_list.push_back(data->GetLength());
 			break;
 
 		case cmn::BitstreamFormat::AAC_ADTS:
-			data = packet->GetData();
-			if (_type == Type::M4s)
+			if (_type != Type::M4s)
 			{
-				data = AacConverter::ConvertAdtsToLatm(data);
+				data = packet->GetData();
+				length_list.push_back(data->GetLength());
+			}
+			else
+			{
+				data = AacConverter::ConvertAdtsToLatm(packet->GetData(), &length_list);
 			}
 			break;
 
@@ -622,42 +631,60 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 		return false;
 	}
 
-	AVPacket av_packet;
-	::av_init_packet(&av_packet);
+	if (length_list.size() == 0)
+	{
+		OV_ASSERT2(false);
+		logac("length_list must contains at least 1 item");
+		return false;
+	}
 
 	AVStream *stream = format_context->streams[stream_index];
-
-	av_packet.stream_index = stream_index;
-	av_packet.flags = (packet->GetFlag() == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
-	av_packet.pts = packet->GetPts();
-	av_packet.dts = packet->GetDts();
-	av_packet.size = data->GetLength();
-	av_packet.duration = packet->GetDuration();
+	auto pts = packet->GetPts();
+	auto dts = packet->GetDts();
+	auto duration_per_packet = packet->GetDuration() / length_list.size();
 	// It's muxing only, so we can change the constness temporary
-	av_packet.data = const_cast<uint8_t *>(data->GetDataAs<uint8_t>());
+	auto buffer = const_cast<uint8_t *>(data->GetDataAs<uint8_t>());
 
-	::av_packet_rescale_ts(&av_packet, track->rational, stream->time_base);
-
-	// LogPacket(&av_packet);
-
-	int result = ::av_interleaved_write_frame(format_context.get(), &av_packet);
-
-	if (result == 0)
+	for (auto length : length_list)
 	{
-		track->duration += packet->GetDuration();
+		AVPacket av_packet;
+		::av_init_packet(&av_packet);
 
-		if (track->first_packet_received == false)
+		av_packet.stream_index = stream_index;
+		av_packet.flags = (packet->GetFlag() == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
+		av_packet.pts = pts;
+		av_packet.dts = dts;
+		av_packet.size = length;
+		av_packet.duration = duration_per_packet;
+		av_packet.data = buffer;
+
+		::av_packet_rescale_ts(&av_packet, track->rational, stream->time_base);
+
+		// LogPacket(&av_packet);
+
+		int result = ::av_interleaved_write_frame(format_context.get(), &av_packet);
+
+		if (result != 0)
 		{
-			track->first_pts = packet->GetPts();
-			track->first_packet_received = true;
+			logae("Could not write the frame: %s", StringFromError(result).CStr());
+
+			return false;
 		}
-	}
-	else
-	{
-		logae("Could not write the frame: %s", StringFromError(result).CStr());
+
+		buffer += length;
+		pts += duration_per_packet;
+		dts += duration_per_packet;
 	}
 
-	return (result == 0) ? true : false;
+	track->duration += packet->GetDuration();
+
+	if (track->first_packet_received == false)
+	{
+		track->first_pts = packet->GetPts();
+		track->first_packet_received = true;
+	}
+
+	return true;
 }
 
 bool Writer::Flush()
