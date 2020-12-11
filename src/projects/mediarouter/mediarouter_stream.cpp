@@ -459,7 +459,7 @@ bool MediaRouteStream::UpdateKeyFlags(
 		break;
 		case MediaCodecId::H265: {
 			// Key Frame
-			if (H264Parser::CheckKeyframe(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetData()->GetLength()) == true)
+			if (H265Parser::CheckKeyframe(media_packet->GetData()->GetDataAs<uint8_t>(), media_packet->GetData()->GetLength()) == true)
 			{
 				media_packet->SetFlag(MediaPacketFlag::Key);
 			}
