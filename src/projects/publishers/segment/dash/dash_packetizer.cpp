@@ -352,7 +352,7 @@ bool DashPacketizer::WriteAudioSegment()
 
 bool DashPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet)
 {
-	// logae("#%d [%s] Received a packet: %15ld, %15ld",
+	// logap("#%d [%s] Received a packet: %15ld, %15ld",
 	// 	  media_packet->GetTrackId(), (media_packet->GetMediaType() == cmn::MediaType::Video) ? "V" : "A",
 	// 	  media_packet->GetPts(), media_packet->GetDts());
 
@@ -394,7 +394,7 @@ bool DashPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &
 
 	_first_video_pts = (_first_video_pts == -1L) ? media_packet->GetPts() : _first_video_pts;
 
-	if (media_packet->GetFlag() == MediaPacketFlag::Key) 
+	if (media_packet->GetFlag() == MediaPacketFlag::Key)
 	{
 		auto duration = std::max(
 			media_packet->GetPts() - _video_m4s_writer.GetFirstPts(),
@@ -418,6 +418,10 @@ bool DashPacketizer::AppendVideoFrame(const std::shared_ptr<const MediaPacket> &
 
 bool DashPacketizer::AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet)
 {
+	// logap("#%d [%s] Received a packet: %15ld, %15ld",
+	// 	  media_packet->GetTrackId(), (media_packet->GetMediaType() == cmn::MediaType::Video) ? "V" : "A",
+	// 	  media_packet->GetPts(), media_packet->GetDts());
+
 	auto audio_track = _audio_track;
 	if (audio_track == nullptr)
 	{
@@ -903,8 +907,6 @@ bool DashPacketizer::GetPlayList(ov::String &play_list)
 	ov::String current_time = MakeUtcMillisecond();
 
 	play_list = ov::String::FormatString(_play_list.CStr(), current_time.CStr());
-
-	logtd("%s", play_list.CStr());
 
 	return true;
 }

@@ -11,6 +11,7 @@
 #define OV_LOG_TAG						"DASH"
 
 #define logad(format, ...)				logtd("[%s/%s] %s: " format, _app_name.CStr(), _stream_name.CStr(), GetPacketizerName(), ##__VA_ARGS__)
+#define logap(format, ...)				logtp("[%s/%s] %s: " format, _app_name.CStr(), _stream_name.CStr(), GetPacketizerName(), ##__VA_ARGS__)
 #define logas(format, ...)				logts("[%s/%s] %s: " format, _app_name.CStr(), _stream_name.CStr(), GetPacketizerName(), ##__VA_ARGS__)
 
 #define logai(format, ...)				logti("[%s/%s] %s: " format, _app_name.CStr(), _stream_name.CStr(), GetPacketizerName(), ##__VA_ARGS__)
