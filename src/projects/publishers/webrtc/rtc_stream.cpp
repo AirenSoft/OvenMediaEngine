@@ -339,6 +339,8 @@ bool RtcStream::Start()
 bool RtcStream::Stop()
 {
 	_offer_sdp->Release();
+
+	std::lock_guard<std::shared_mutex> lock(_packetizers_lock);
 	_packetizers.clear();
 
 	return Stream::Stop();
@@ -509,11 +511,13 @@ void RtcStream::AddPacketizer(cmn::MediaCodecId codec_id, uint32_t id, uint8_t p
 			return;
 	}
 
+	std::lock_guard<std::shared_mutex> lock(_packetizers_lock);
 	_packetizers[id] = packetizer;
 }
 
 std::shared_ptr<RtpPacketizer> RtcStream::GetPacketizer(uint32_t id)
 {
+	std::shared_lock<std::shared_mutex> lock(_packetizers_lock);
 	if(!_packetizers.count(id))
 	{
 		return nullptr;

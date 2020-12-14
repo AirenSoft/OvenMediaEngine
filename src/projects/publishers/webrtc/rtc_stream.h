@@ -56,6 +56,7 @@ private:
 	std::shared_ptr<Certificate> _certificate;
 
 	// Track ID, Packetizer
+	std::shared_mutex _packetizers_lock;
 	std::map<uint32_t, std::shared_ptr<RtpPacketizer>> _packetizers;
 
 	// Origin payload type, RtpHistory
