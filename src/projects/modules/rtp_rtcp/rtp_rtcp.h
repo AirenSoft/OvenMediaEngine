@@ -28,6 +28,7 @@ private:
     time_t _last_sender_report_time = 0;
     uint64_t _send_packet_sequence_number = 0;
 
+	std::shared_mutex _session_lock;
 	std::shared_ptr<RtcSession>	_rtc_session;
 
     std::map<uint32_t, std::shared_ptr<RtcpSRGenerator>> _rtcp_sr_generators;

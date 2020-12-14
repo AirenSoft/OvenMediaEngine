@@ -39,7 +39,12 @@ namespace pub
 		{
 			return true;
 		}
+
+		_stream_data_queue.Clear();
+		_incoming_packet_queue.Clear();
+
 		_stop_thread_flag = true;
+
 		_queue_event.Notify();
 
 		if (_worker_thread.joinable())

@@ -78,7 +78,10 @@ namespace pub
 	private:
 		SessionNodeType _node_type;
 		uint32_t _node_id;
-		std::shared_ptr<Session> _session;
 		NodeState _state;
+
+		// Session is forcibly reset in the Stop method so a mutex is required to be thread-safe.
+		std::shared_mutex _session_lock;
+		std::shared_ptr<Session> _session;
 	};
 }  // namespace pub
