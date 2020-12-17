@@ -2,20 +2,17 @@
 
 #include "filter/media_filter_resampler.h"
 #include "filter/media_filter_rescaler.h"
+#include "transcode_private.h"
 
 using namespace cmn;
 
-
-#define OV_LOG_TAG "TranscodeFilter"
-
-TranscodeFilter::TranscodeFilter() :
-	_impl(nullptr)
+TranscodeFilter::TranscodeFilter()
+	: _impl(nullptr)
 {
-	
 }
 
-TranscodeFilter::TranscodeFilter(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context) :
-	_impl(nullptr)
+TranscodeFilter::TranscodeFilter(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context)
+	: _impl(nullptr)
 {
 	// Configure(input_media_track, std::move(input_context), std::move(output_context));
 	Configure(input_media_track, input_context, output_context);
@@ -23,7 +20,7 @@ TranscodeFilter::TranscodeFilter(std::shared_ptr<MediaTrack> input_media_track, 
 
 TranscodeFilter::~TranscodeFilter()
 {
-	if(_impl != nullptr)
+	if (_impl != nullptr)
 	{
 		delete _impl;
 	}
@@ -31,10 +28,10 @@ TranscodeFilter::~TranscodeFilter()
 
 bool TranscodeFilter::Configure(std::shared_ptr<MediaTrack> input_media_track, std::shared_ptr<TranscodeContext> input_context, std::shared_ptr<TranscodeContext> output_context)
 {
-	logtd("Create a transcode filter. track_id(%d). type(%s)", input_media_track->GetId(), (input_media_track->GetMediaType()==MediaType::Video)?"Video":"Audio");
+	logtd("Create a transcode filter. track_id(%d). type(%s)", input_media_track->GetId(), (input_media_track->GetMediaType() == MediaType::Video) ? "Video" : "Audio");
 
 	MediaType type = input_media_track->GetMediaType();
-	switch(type)
+	switch (type)
 	{
 		case MediaType::Audio:
 			_impl = new MediaFilterResampler();
@@ -61,7 +58,6 @@ std::shared_ptr<MediaFrame> TranscodeFilter::RecvBuffer(TranscodeResult *result)
 {
 	return _impl->RecvBuffer(result);
 }
-
 
 uint32_t TranscodeFilter::GetInputBufferSize()
 {

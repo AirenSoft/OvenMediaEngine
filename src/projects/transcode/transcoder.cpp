@@ -9,13 +9,13 @@
 //
 //==============================================================================
 
-#include <iostream>
 #include <unistd.h>
 
-#include "transcoder.h"
-#include "config/config_manager.h"
+#include <iostream>
 
-#define OV_LOG_TAG "Transcoder"
+#include "config/config_manager.h"
+#include "transcode_private.h"
+#include "transcoder.h"
 
 std::shared_ptr<Transcoder> Transcoder::Create(std::shared_ptr<MediaRouteInterface> router)
 {
@@ -55,55 +55,54 @@ bool Transcoder::OnCreateApplication(const info::Application &app_info)
 	_tracode_apps[application_id] = application;
 
 	// Register to MediaRouter
-	if(_router->RegisterObserverApp(app_info, application) == false)
+	if (_router->RegisterObserverApp(app_info, application) == false)
 	{
 		logte("Could not register the application: %p", application.get());
 
 		return false;
 	}
-	
+
 	// Register to MediaRouter
-	if(_router->RegisterConnectorApp(app_info, application) == false)
+	if (_router->RegisterConnectorApp(app_info, application) == false)
 	{
 		logte("Could not register the application: %p", application.get());
 
 		return false;
 	}
 
-	logti("Transcoder has created [%s][%s] application", app_info.IsDynamicApp()?"dynamic":"config", app_info.GetName().CStr());
+	logti("Transcoder has created [%s][%s] application", app_info.IsDynamicApp() ? "dynamic" : "config", app_info.GetName().CStr());
 
 	return true;
 }
-
 
 // Delete Application
 bool Transcoder::OnDeleteApplication(const info::Application &app_info)
 {
 	auto application_id = app_info.GetId();
 	auto it = _tracode_apps.find(application_id);
-	if(it == _tracode_apps.end())
+	if (it == _tracode_apps.end())
 	{
 		return false;
 	}
 
 	auto application = it->second;
 	application->Stop();
-	
+
 	// Unregister to MediaRouter
-	if(_router->UnregisterObserverApp(app_info, application) == false)
+	if (_router->UnregisterObserverApp(app_info, application) == false)
 	{
 		logte("Could not unregister the application: %p", application.get());
 	}
-	
+
 	// Unregister to MediaRouter
-	if(_router->UnregisterConnectorApp(app_info, application) == false)
+	if (_router->UnregisterConnectorApp(app_info, application) == false)
 	{
 		logte("Could not unregister the application: %p", application.get());
 	}
 
 	_tracode_apps.erase(it);
 
-	logti("Transcoder has deleted [%s][%s] application", app_info.IsDynamicApp()?"dynamic":"config", app_info.GetName().CStr());
+	logti("Transcoder has deleted [%s][%s] application", app_info.IsDynamicApp() ? "dynamic" : "config", app_info.GetName().CStr());
 
 	return true;
 }
@@ -113,7 +112,7 @@ std::shared_ptr<TranscodeApplication> Transcoder::GetApplicationById(info::appli
 {
 	auto obj = _tracode_apps.find(application_id);
 
-	if(obj == _tracode_apps.end())
+	if (obj == _tracode_apps.end())
 	{
 		return nullptr;
 	}

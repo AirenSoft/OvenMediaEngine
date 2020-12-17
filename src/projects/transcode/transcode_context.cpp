@@ -11,8 +11,7 @@
 #include <iostream>
 
 #include "transcode_context.h"
-
-#define OV_LOG_TAG "TranscodeContext"
+#include "transcode_private.h"
 
 TranscodeContext::TranscodeContext(bool is_encoding_context)
 	: _is_encoding_context(is_encoding_context)

@@ -8,12 +8,10 @@
 //==============================================================================
 
 #include "transcode_application.h"
-
+#include "transcode_private.h"
 #include <unistd.h>
 
 #include <iostream>
-
-#define OV_LOG_TAG "TranscodeApplication"
 
 #define MIN_APPLICATION_WORKER_COUNT 1
 #define MAX_APPLICATION_WORKER_COUNT 72
@@ -51,12 +49,6 @@ TranscodeApplication::TranscodeApplication(const info::Application &application_
 
 TranscodeApplication::~TranscodeApplication()
 {
-	for (auto &indicator : _indicators)
-	{
-		indicator->Stop();
-		indicator->Clear();
-	}
-	_indicators.clear();
 
 	logtd("Transcoder application has been destroyed. app(%s)", _application_info.GetName().CStr());
 }
@@ -94,6 +86,12 @@ bool TranscodeApplication::Stop()
 
 	std::unique_lock<std::mutex> lock(_mutex);
 
+	for (auto &indicator : _indicators)
+	{
+		indicator->Stop();
+		indicator->Clear();
+	}
+
 	for (auto &worker : _worker_threads)
 	{
 		if (worker.joinable())
@@ -101,7 +99,6 @@ bool TranscodeApplication::Stop()
 			worker.join();
 		}
 	}
-	_worker_threads.clear();
 
 	for (const auto &it : _streams)
 	{
@@ -109,6 +106,8 @@ bool TranscodeApplication::Stop()
 		stream->Stop();
 	}
 
+	_indicators.clear();
+	_worker_threads.clear();
 	_streams.clear();
 
 	logtd("Transcoder application has been stopped. app(%s)", _application_info.GetName().CStr());
@@ -183,7 +182,7 @@ void TranscodeApplication::WorkerThread(uint32_t worker_id)
 {
 	while (!_kill_flag)
 	{
-		auto indicator_ref = _indicators[worker_id]->Dequeue(100);
+		auto indicator_ref = _indicators[worker_id]->Dequeue(ov::Infinite);
 		if (indicator_ref.has_value() == false)
 		{
 			// No indicator

@@ -67,7 +67,7 @@ void FilePublisher::WorkerThread()
 			SessionController();
 		}
 
-		usleep(1000);
+		usleep(100000);
 	}
 }
 

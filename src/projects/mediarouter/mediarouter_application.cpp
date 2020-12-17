@@ -57,20 +57,6 @@ MediaRouteApplication::MediaRouteApplication(const info::Application &applicatio
 
 MediaRouteApplication::~MediaRouteApplication()
 {
-	for (auto &indicator : _inbound_stream_indicator)
-	{
-		indicator->Stop();
-		indicator->Clear();
-	}
-	_inbound_stream_indicator.clear();
-
-	for (auto &indicator : _outbound_stream_indicator)
-	{
-		indicator->Stop();
-		indicator->Clear();
-	}
-	_outbound_stream_indicator.clear();
-
 	logti("Destroyed Mediarouter application. application id(%u), app(%s)", _application_info.GetId(), _application_info.GetName().CStr());
 }
 
@@ -119,6 +105,18 @@ bool MediaRouteApplication::Stop()
 {
 	_kill_flag = true;
 
+	for (auto &indicator : _inbound_stream_indicator)
+	{
+		indicator->Stop();
+		indicator->Clear();
+	}
+
+	for (auto &indicator : _outbound_stream_indicator)
+	{
+		indicator->Stop();
+		indicator->Clear();
+	}
+
 	for (auto &worker : _inbound_threads)
 	{
 		if (worker.joinable())
@@ -126,7 +124,6 @@ bool MediaRouteApplication::Stop()
 			worker.join();
 		}
 	}
-	_inbound_threads.clear();
 
 	for (auto &worker : _outbound_threads)
 	{
@@ -135,6 +132,10 @@ bool MediaRouteApplication::Stop()
 			worker.join();
 		}
 	}
+
+	_inbound_stream_indicator.clear();
+	_outbound_stream_indicator.clear();
+	_inbound_threads.clear();
 	_outbound_threads.clear();
 
 	// TODO: Delete All Stream
@@ -248,13 +249,13 @@ bool MediaRouteApplication::OnCreateStream(
 
 	if (connector == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
-		// Check there is a duplicate inbound stream 
-		if(IsExistingInboundStream(stream_info->GetName()) == true)
+		// Check there is a duplicate inbound stream
+		if (IsExistingInboundStream(stream_info->GetName()) == true)
 		{
 			logtw("Reject stream creation : there is already an incoming stream with the same name. (%s)", stream_info->GetName().CStr());
 			return false;
 		}
-		
+
 		if (!CreateInboundStream(stream_info))
 		{
 			return false;
@@ -575,10 +576,10 @@ bool MediaRouteApplication::IsExistingInboundStream(ov::String stream_name)
 {
 	std::shared_lock<std::shared_mutex> lock_guard(_streams_lock);
 
-	for(const auto &item : _inbound_streams)
+	for (const auto &item : _inbound_streams)
 	{
 		auto stream = item.second;
-		if(stream->GetStream()->GetName() == stream_name)
+		if (stream->GetStream()->GetName() == stream_name)
 		{
 			return true;
 		}
@@ -593,7 +594,7 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 
 	while (!_kill_flag)
 	{
-		auto msg = _inbound_stream_indicator[worker_id]->Dequeue(100);
+		auto msg = _inbound_stream_indicator[worker_id]->Dequeue(ov::Infinite);
 		if (msg.has_value() == false)
 		{
 			// It may be called due to a normal stop signal.
@@ -636,7 +637,7 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 
 	while (!_kill_flag)
 	{
-		auto msg = _outbound_stream_indicator[worker_id]->Dequeue(100);
+		auto msg = _outbound_stream_indicator[worker_id]->Dequeue(ov::Infinite);
 		if (msg.has_value() == false)
 		{
 			// It may be called due to a normal stop signal.

@@ -12,8 +12,7 @@
 #include <config/config_manager.h>
 
 #include "transcode_application.h"
-
-#define OV_LOG_TAG "TranscodeStream"
+#include "transcode_private.h"
 
 #define MAX_QUEUE_SIZE 100
 
@@ -73,7 +72,7 @@ TranscodeApplication *TranscodeStream::GetParent()
 
 info::stream_id_t TranscodeStream::GetStreamId()
 {
-	if(_input_stream != nullptr)
+	if (_input_stream != nullptr)
 		return _input_stream->GetId();
 
 	return 0;
@@ -821,7 +820,6 @@ int32_t TranscodeStream::CreateEncoders(MediaTrackId track_id)
 		auto &track = tracks[output_track_id];
 		auto track_media_type = track->GetMediaType();
 
-
 		switch (track_media_type)
 		{
 			case cmn::MediaType::Video: {
@@ -944,7 +942,7 @@ void TranscodeStream::UpdateOutputTrack(MediaFrame *buffer)
 	{
 		(void)(k);
 
-		if (buffer->GetTrackId() != (int32_t)v->_input_track->GetId() )
+		if (buffer->GetTrackId() != (int32_t)v->_input_track->GetId())
 		{
 			continue;
 		}
