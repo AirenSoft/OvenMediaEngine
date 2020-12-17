@@ -127,7 +127,7 @@
 						</MPEGTS>
 					</Providers>
 					<Publishers>
-						<ThreadCount>8</ThreadCount>
+						<SessionLoadBalancingThreadCount>8</SessionLoadBalancingThreadCount>
 						<OVT />
 						<WebRTC>
 							<Timeout>30000</Timeout>

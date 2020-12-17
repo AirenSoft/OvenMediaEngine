@@ -31,6 +31,7 @@ bool SegmentWorker::Start(const SegmentProcessHandler &process_handler)
 
 	_stop_thread_flag = false;
 	_worker_thread = std::thread(&SegmentWorker::WorkerThread, this);
+	pthread_setname_np(_worker_thread.native_handle(), "SegWorker");
 
 	return true;
 }

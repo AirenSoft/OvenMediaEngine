@@ -78,6 +78,7 @@ namespace ov
 		// To keep the shared_ptr from being released while DispatchThread() is called
 		auto that = GetSharedPtrAs<ClientSocket>();
 		_send_thread = std::thread(std::bind(&ClientSocket::DispatchThread, that));
+		pthread_setname_np(_send_thread.native_handle(), "ClientSocket");
 		_send_thread.detach();
 
 		return true;

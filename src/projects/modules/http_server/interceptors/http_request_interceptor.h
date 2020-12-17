@@ -17,7 +17,8 @@
 
 enum class HttpRequestConnectionType
 {
-	HTTP = 0,
+	Unknown,
+	HTTP,
 	WebSocket
 };
 

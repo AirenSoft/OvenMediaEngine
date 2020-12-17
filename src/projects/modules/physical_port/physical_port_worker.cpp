@@ -47,6 +47,7 @@ bool PhysicalPortWorker::Start()
 
 	_stop = false;
 	_thread = std::thread(&PhysicalPortWorker::ThreadProc, this);
+	pthread_setname_np(_thread.native_handle(), "PhyPortWorker");
 
 	return true;
 }

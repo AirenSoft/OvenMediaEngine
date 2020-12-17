@@ -1,3 +1,3 @@
 #pragma once
 
-#define OV_LOG_TAG                      "RtmpPush"
+#define OV_LOG_TAG                      "RTMPPush"

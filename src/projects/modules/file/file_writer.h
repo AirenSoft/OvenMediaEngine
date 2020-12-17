@@ -41,7 +41,9 @@ public:
 	void SetExtradata(std::vector<uint8_t> &extradata) {
 		_extradata.assign(extradata.begin(), extradata.end());
 	}
-	std::vector<uint8_t>& GetExtradata() { return _extradata; }
+	
+	const std::vector<uint8_t> &GetExtradata() const { return _extradata; }
+	std::vector<uint8_t> &GetExtradata() { return _extradata; }
 
 private:
 	cmn::MediaCodecId    _codec_id;

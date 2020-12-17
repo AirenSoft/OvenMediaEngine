@@ -64,6 +64,7 @@ namespace ov
 
 		_stop = false;
 		_thread = std::thread(std::bind(&DelayQueue::DispatchThreadProc, this));
+		pthread_setname_np(_thread.native_handle(), "DelayQueue");
 
 		return true;
 	}

@@ -9,6 +9,7 @@
 RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<pub::Session> session, const std::vector<uint32_t> &ssrc_list)
 	        : SessionNode(id, pub::SessionNodeType::Rtp, session)
 {
+	// Cached to reduce the cost of dynamic_pointer_cast
 	_rtc_session = std::dynamic_pointer_cast<RtcSession>(session);
 
     for(auto ssrc : ssrc_list)
@@ -20,13 +21,13 @@ RtpRtcp::RtpRtcp(uint32_t id, std::shared_ptr<pub::Session> session, const std::
 
 RtpRtcp::~RtpRtcp()
 {
-    
+    _rtcp_sr_generators.clear();
 }
 
 bool RtpRtcp::Stop()
 {
+	std::lock_guard<std::shared_mutex> lock(_session_lock);
 	_rtc_session.reset();
-	_rtcp_sr_generators.clear();
 
 	return SessionNode::Stop();
 }
@@ -95,6 +96,7 @@ bool RtpRtcp::OnDataReceived(pub::SessionNodeType from_node, const std::shared_p
 	{
 		auto info = receiver.PopRtcpInfo();
 		
+		std::shared_lock<std::shared_mutex> lock(_session_lock);
 		if(_rtc_session != nullptr)
 		{
 			_rtc_session->OnRtcpReceived(info);

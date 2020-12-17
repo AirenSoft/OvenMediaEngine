@@ -13,20 +13,22 @@
 class VideoTrack
 {
 public:
+	VideoTrack();
+
 	void SetFrameRate(double framerate);
-	double GetFrameRate();
+	double GetFrameRate() const;
 
 	void SetWidth(int32_t width);
-	int32_t GetWidth();
+	int32_t GetWidth() const;
 
 	void SetHeight(int32_t height);
-	int32_t GetHeight();
+	int32_t GetHeight() const;
 
 	void SetFormat(int32_t format);
-	int32_t GetFormat();
+	int32_t GetFormat() const;
 
 	void SetVideoTimestampScale(double scale);
-	double GetVideoTimestampScale();
+	double GetVideoTimestampScale() const;
 
 protected:
 	double _framerate;

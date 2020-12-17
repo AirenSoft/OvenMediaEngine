@@ -21,32 +21,6 @@ bool RtmpPushUserdataSets::Set(ov::String userdata_id, std::shared_ptr<info::Pus
 	return true;
 }
 
-std::shared_ptr<info::Push> RtmpPushUserdataSets::GetAt(uint32_t index)
-{
-	auto iter( _userdata_sets.begin() );
-    std::advance( iter, index );
-
-    if(iter == _userdata_sets.end())
-    {
-    	return nullptr;
-    }
-
-	return iter->second;
-}
-
-ov::String RtmpPushUserdataSets::GetKeyAt(uint32_t index)
-{
-	auto iter( _userdata_sets.begin() );
-    std::advance( iter, index );
-
-    if(iter == _userdata_sets.end())
-    {
-    	return nullptr;
-    }
-
-	return iter->first;	
-}
-
 std::shared_ptr<info::Push> RtmpPushUserdataSets::GetByKey(ov::String key)
 {
 	auto iter = _userdata_sets.find(key);
@@ -80,4 +54,9 @@ void RtmpPushUserdataSets::DeleteByKey(ov::String key)
 uint32_t RtmpPushUserdataSets::GetCount()
 {
 	return _userdata_sets.size();	
+}
+
+std::map<ov::String, std::shared_ptr<info::Push>>& RtmpPushUserdataSets::GetUserdataSets()
+{
+	return _userdata_sets;
 }

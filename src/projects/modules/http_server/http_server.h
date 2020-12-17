@@ -34,7 +34,7 @@ public:
 	HttpServer() = default;
 	~HttpServer() override;
 
-	virtual bool Start(const ov::SocketAddress &address);
+	virtual bool Start(const ov::SocketAddress &address, int worker_count);
 	virtual bool Stop();
 
 	bool IsRunning() const;

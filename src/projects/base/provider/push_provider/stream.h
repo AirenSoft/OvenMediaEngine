@@ -46,6 +46,11 @@ namespace pvd
 		time_t GetElapsedSecSinceLastReceived();
 		bool IsTimedOut();
 
+		uint32_t GetNumberOfAttempsToPublish()
+		{
+			return _attemps_publish_count;
+		}
+
 	protected:
 		PushStream(StreamSourceType source_type, uint32_t channel_id, const std::shared_ptr<PushProvider> &provider);
 
@@ -65,6 +70,8 @@ namespace pvd
 		// Time elapsed since the last OnDataReceived function was called
 		ov::StopWatch 	_stop_watch;
 		time_t			_timeout_sec = 0;
+
+		uint32_t		_attemps_publish_count = 0;
 
 		// Push Provider
 		std::shared_ptr<PushProvider>	_provider;

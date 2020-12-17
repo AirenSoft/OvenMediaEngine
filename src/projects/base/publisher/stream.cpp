@@ -30,6 +30,7 @@ namespace pub
 		
 		_stop_thread_flag = false;
 		_worker_thread = std::thread(&StreamWorker::WorkerThread, this);
+		pthread_setname_np(_worker_thread.native_handle(), "StreamWorker");
 
 		return true;
 	}
@@ -261,10 +262,14 @@ namespace pub
 		return GetApplication()->GetApplicationTypeName();
 	}
 
-	std::shared_ptr<StreamWorker> Stream::GetWorkerByStreamID(session_id_t session_id)
+	std::shared_ptr<StreamWorker> Stream::GetWorkerBySessionID(session_id_t session_id)
 	{
+		if(_worker_count == 0)
+		{
+			return nullptr;
+		}
 		std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
-		return _stream_workers[session_id % _stream_workers.size()];
+		return _stream_workers[session_id % _worker_count];
 	}
 
 	bool Stream::AddSession(std::shared_ptr<Session> session)
@@ -272,9 +277,13 @@ namespace pub
 		std::lock_guard<std::shared_mutex> session_lock(_session_map_mutex);
 		// For getting session, all sessions
 		_sessions[session->GetId()] = session;
-		// 가장 적은 Session을 처리하는 Worker를 찾아서 Session을 넣는다.
-		// session id로 hash를 만들어서 분배한다.
-		return GetWorkerByStreamID(session->GetId())->AddSession(session);
+
+		if(_worker_count > 0)
+		{
+			return GetWorkerBySessionID(session->GetId())->AddSession(session);
+		}
+
+		return true;
 	}
 
 	bool Stream::RemoveSession(session_id_t id)
@@ -288,28 +297,23 @@ namespace pub
 		_sessions.erase(id);
 		session_lock.unlock();
 
-		return GetWorkerByStreamID(id)->RemoveSession(id);
+		if(_worker_count > 0)
+		{
+			return GetWorkerBySessionID(id)->RemoveSession(id);
+		}
+
+		return true;
 	}
 
 	std::shared_ptr<Session> Stream::GetSession(session_id_t id)
 	{
 		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex);
-		return GetWorkerByStreamID(id)->GetSession(id);
-	}
-
-	std::shared_ptr<Session> Stream::GetSessionAt(uint32_t index)
-	{
-		std::shared_lock<std::shared_mutex> lock(_session_map_mutex);
-
-		auto it( _sessions.begin() );
-		std::advance( it, index );
-
-		if (it == _sessions.end())
+		if (_sessions.count(id) <= 0)
 		{
 			return nullptr;
 		}
 
-		return it->second;
+		return _sessions[id];
 	}
 
 	const std::map<session_id_t, std::shared_ptr<Session>> Stream::GetAllSessions()
@@ -326,10 +330,22 @@ namespace pub
 
 	bool Stream::BroadcastPacket(const std::any &packet)
 	{
-		std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
-		for (uint32_t i = 0; i < _stream_workers.size(); i++)
+		if(_worker_count > 0)
 		{
-			_stream_workers[i]->SendPacket(packet);
+			std::shared_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
+			for (uint32_t i = 0; i < _stream_workers.size(); i++)
+			{
+				_stream_workers[i]->SendPacket(packet);
+			}
+		}
+		else
+		{
+			std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex);
+			for (auto const &x : _sessions)
+			{
+				auto session = std::static_pointer_cast<Session>(x.second);
+				session->SendOutgoingData(packet);
+			}
 		}
 	
 		return true;

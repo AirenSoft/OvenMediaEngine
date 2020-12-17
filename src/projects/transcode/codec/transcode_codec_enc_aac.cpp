@@ -67,6 +67,7 @@ bool OvenCodecImplAvcodecEncAAC::Configure(std::shared_ptr<TranscodeContext> out
 		_kill_flag = false;
 
 		_thread_work = std::thread(&OvenCodecImplAvcodecEncAAC::ThreadEncode, this);
+		pthread_setname_np(_thread_work.native_handle(), "EncAAC");
 	}
 	catch (const std::system_error &e)
 	{
@@ -190,9 +191,13 @@ void OvenCodecImplAvcodecEncAAC::ThreadEncode()
 				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::AAC_ADTS);
 				packet_buffer->SetPacketType(cmn::PacketType::RAW);
 				
-				// logte("ENCODED:: %lld, %lld", packet_buffer->GetPts(), _packet->pts);
+				// logte("ENCODED:: %lld, %lld, %d, %d", packet_buffer->GetPts(), _packet->pts, _packet->size, _packet->duration);
 				
 				::av_packet_unref(_packet);
+
+				// TODO(soulk) : If the pts value are under zero, the dash packettizer does not work.
+				if(packet_buffer->GetPts() < 0)
+					continue;
 
 				SendOutputBuffer(std::move(packet_buffer));
 			}

@@ -24,12 +24,12 @@ namespace ov
 
         enum class State
         {
+            PARENT_SUCCESS,
+            CHILD_SUCCESS,
             PIPE_FAIL,
             FORK_FAIL,
             PARENT_FAIL,
             CHILD_FAIL,
-            PARENT_SUCCESS,
-            CHILD_SUCCESS,
         };
 
         Daemon() = default;

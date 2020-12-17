@@ -29,6 +29,7 @@ namespace pvd
 	{
 		_stop_collector_thread_flag = false;
 		_collector_thread = std::thread(&PullApplication::WhiteElephantStreamCollector, this);
+		pthread_setname_np(_collector_thread.native_handle(), "StreamCollector");
 		return Application::Start();
 	}
 
@@ -109,10 +110,11 @@ namespace pvd
 	{
 		auto motor_id = GetStreamMotorId(stream);
 		auto motor = std::make_shared<StreamMotor>(motor_id);
-
-		_stream_motors.emplace(motor_id, motor);
 		motor->Start();
 
+		std::unique_lock<std::shared_mutex> lock(_stream_motors_guard);
+		_stream_motors.emplace(motor_id, motor);
+		
 		logti("%s application has created %u stream motor", stream->GetApplicationInfo().GetName().CStr(), motor_id);
 
 		return motor;
@@ -123,6 +125,8 @@ namespace pvd
 		std::shared_ptr<StreamMotor> motor = nullptr;
 
 		auto motor_id = GetStreamMotorId(stream);
+
+		std::shared_lock<std::shared_mutex> lock(_stream_motors_guard);
 		auto it = _stream_motors.find(motor_id);
 		if(it == _stream_motors.end())
 		{
@@ -150,6 +154,8 @@ namespace pvd
 		{
 			motor->Stop();
 			auto motor_id = GetStreamMotorId(stream);
+
+			std::unique_lock<std::shared_mutex> lock(_stream_motors_guard);
 			_stream_motors.erase(motor_id);
 
 			logti("%s application has deleted %u stream motor", stream->GetApplicationInfo().GetName().CStr(), motor_id);
@@ -160,6 +166,13 @@ namespace pvd
 
 	std::shared_ptr<pvd::Stream> PullApplication::CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list)
 	{
+		// Check if same stream name is exist in MediaRouter(may be created by another provider)
+		if(IsExistingInboundStream(stream_name) == true)
+		{
+			logtw("Reject stream creation : there is already an incoming stream with the same name. (%s)", stream_name.CStr());
+			return nullptr;
+		}
+
 		auto stream = CreateStream(IssueUniqueStreamId(), stream_name, url_list);
 		if(stream == nullptr)
 		{

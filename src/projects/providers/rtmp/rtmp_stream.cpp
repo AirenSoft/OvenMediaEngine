@@ -1058,7 +1058,7 @@ namespace pvd
 			dts *= video_track->GetVideoTimestampScale();
 			pts *= video_track->GetVideoTimestampScale();
 
-			cmn::PacketType	packet_type = cmn::PacketType::Unknwon;
+			cmn::PacketType	packet_type = cmn::PacketType::Unknown;
 			if(flv_video.PacketType() == FlvAvcPacketType::AVC_SEQUENCE_HEADER)
 			{
 				packet_type = cmn::PacketType::SEQUENCE_HEADER;
@@ -1210,7 +1210,7 @@ namespace pvd
 			pts *= audio_track->GetAudioTimestampScale();
 			dts *= audio_track->GetAudioTimestampScale();
 
-			cmn::PacketType	packet_type = cmn::PacketType::Unknwon;
+			cmn::PacketType	packet_type = cmn::PacketType::Unknown;
 			if(flv_audio.PacketType() == FlvAACPacketType::SEQUENCE_HEADER)
 			{
 				packet_type = cmn::PacketType::SEQUENCE_HEADER;
@@ -1481,6 +1481,15 @@ namespace pvd
 		RtmpMuxUtil::WriteInt32(body->data(), _rtmp_stream_id);
 
 		return SendUserControlMessage(RTMP_UCMID_STREAMBEGIN, body);
+	}
+
+	bool RtmpStream::SendStreamEnd()
+	{
+		auto body = std::make_shared<std::vector<uint8_t>>(4);
+
+		RtmpMuxUtil::WriteInt32(body->data(), _rtmp_stream_id);
+
+		return SendUserControlMessage(RTMP_UCMID_STREAMEOF, body);
 	}
 
 	bool RtmpStream::SendAmfCommand(std::shared_ptr<RtmpMuxMessageHeader> &message_header, AmfDocument &document)

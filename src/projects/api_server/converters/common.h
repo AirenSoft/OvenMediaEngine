@@ -12,17 +12,21 @@
 
 #include "./converter_private.h"
 
-#define CONVERTER_RETURN_IF(condition)   \
-	if (condition)                       \
-	{                                    \
-		if (optional == Optional::False) \
-		{                                \
-			OV_ASSERT2(#condition);      \
-		}                                \
-                                         \
-		return;                          \
-	}                                    \
-	[[maybe_unused]] Json::Value &object = parent_object[key];
+#define CONVERTER_RETURN_IF(condition, default_value)          \
+	if (condition)                                             \
+	{                                                          \
+		if (optional == Optional::False)                       \
+		{                                                      \
+			OV_ASSERT2(#condition);                            \
+		}                                                      \
+                                                               \
+		return;                                                \
+	}                                                          \
+	[[maybe_unused]] Json::Value &object = parent_object[key]; \
+	if (object.isNull())                                       \
+	{                                                          \
+		object = default_value;                                \
+	}
 
 namespace api
 {
@@ -36,7 +40,7 @@ namespace api
 
 		inline void SetString(Json::Value &parent_object, const char *key, const ov::String &value, Optional optional)
 		{
-			CONVERTER_RETURN_IF(value.IsEmpty());
+			CONVERTER_RETURN_IF(value.IsEmpty(), Json::stringValue);
 
 			object = value.CStr();
 		}
@@ -50,7 +54,6 @@ namespace api
 		{
 			parent_object[key] = value;
 		}
-
 
 		inline void SetFloat(Json::Value &parent_object, const char *key, float value)
 		{

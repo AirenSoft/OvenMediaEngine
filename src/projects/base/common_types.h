@@ -64,6 +64,7 @@ enum class PublisherType : int8_t
 	LlDash,
 	Ovt,
 	File,
+	Thumbnail,
 	NumberOfPublishers,
 };
 
@@ -290,6 +291,8 @@ static ov::String StringFromPublisherType(const PublisherType &type)
 			return "OVT";
 		case PublisherType::File:
 			return "File";
+		case PublisherType::Thumbnail:
+			return "Thumbnail";			
 	}
 
 	return "Unknown";
@@ -321,7 +324,7 @@ static ov::String StringFromMediaCodecId(const cmn::MediaCodecId &type)
 			return "PNG";
 		case cmn::MediaCodecId::None:
 		default:
-			return "Unknwon";
+			return "Unknown";
 	}
 }
 

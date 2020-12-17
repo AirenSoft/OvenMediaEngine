@@ -7,13 +7,14 @@
 //
 //==============================================================================
 #include "hls_publisher.h"
-#include "hls_application.h"
-#include "hls_private.h"
-#include "hls_stream_server.h"
 
 #include <config/config_manager.h>
 #include <modules/signature/signed_token.h>
 #include <orchestrator/orchestrator.h>
+
+#include "hls_application.h"
+#include "hls_private.h"
+#include "hls_stream_server.h"
 
 std::shared_ptr<HlsPublisher> HlsPublisher::Create(const cfg::Server &server_config,
 												   const std::shared_ptr<MediaRouteInterface> &router)
@@ -44,13 +45,7 @@ bool HlsPublisher::Start()
 
 std::shared_ptr<pub::Application> HlsPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	/* Deprecated
-	if (application_info.CheckCodecAvailability({"h264"}, {"aac"}) == false)
-	{
-		logtw("There is no suitable encoding setting for %s (Encoding setting must contains h264 and aac)", GetPublisherName());
-	}
-	*/
-	return HlsApplication::Create(pub::Publisher::GetSharedPtrAs<pub::Publisher>(), application_info);
+	return HlsApplication::Create(pub::Publisher::GetSharedPtrAs<HlsPublisher>(), application_info);
 }
 
 bool HlsPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)

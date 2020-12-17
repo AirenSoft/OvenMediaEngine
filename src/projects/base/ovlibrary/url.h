@@ -114,6 +114,24 @@ namespace ov
 		ov::String ToUrlString(bool include_query_string = true) const;
 		ov::String ToString() const;
 
+		Url	&operator=(const Url& other) noexcept
+		{
+			_source = other._source;
+			_scheme = other._scheme;
+			_host = other._host;
+			_port = other._port;
+			_path = other._path;
+			_has_query_string = other._has_query_string;
+			_query_string = other._query_string;
+			_query_parsed = other._query_parsed;
+			_query_map = other._query_map;
+			_app = other._app;
+			_stream = other._stream;
+			_file = other._file;
+			
+			return *this;
+		}
+
 	private:
 		void ParseQueryIfNeeded() const;
 

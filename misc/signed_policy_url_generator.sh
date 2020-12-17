@@ -11,8 +11,8 @@ then
 	echo "Usage: $0 [HMAC_KEY] [BASE_URL] [SIGNATURE_QUERY_KEY_NAME] [POLICY_QUERY_KEY_NAME] [POLICY]"
 	echo ""
 	echo "Example:"
-	echo "    $0 ome_is_the_best ws://host:3333/app/stream signature policy '{\"policy_expire\":1604377520178}'"
-	echo "    => ws://host:3333/app/stream?policy=e3BvbGljeV9leHBpcmU6MTYwNDM3NzUyMDE3OH0&signature=WTgJM2CZZ5WGGsnwyAIrlzZNA_Q"
+	echo "    $0 ome_is_the_best ws://host:3333/app/stream signature policy '{\"url_expire\":1604377520178}'"
+	echo "    => ws://host:3333/app/stream?policy=e1widXJsX2V4cGlyZVwiOjE2MDQzNzc1MjAxNzh9&signature=rXfU1z1ynBTfK-q6_HM_I9fPzRs"
 
 	exit
 fi

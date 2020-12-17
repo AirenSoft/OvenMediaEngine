@@ -15,11 +15,9 @@ public:
 	
 	uint32_t GetCount();
 
-	ov::String GetKeyAt(uint32_t index);
-	std::shared_ptr<info::Push> GetAt(uint32_t index);
 	std::shared_ptr<info::Push> GetByKey(ov::String key);
 	std::shared_ptr<info::Push> GetBySessionId(session_id_t session_id);
-	
+	std::map<ov::String, std::shared_ptr<info::Push>>& GetUserdataSets();
 	void DeleteByKey(ov::String key);
 
 private:

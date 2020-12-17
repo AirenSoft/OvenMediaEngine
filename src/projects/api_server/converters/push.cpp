@@ -16,7 +16,7 @@ namespace api
 	{
 		static void SetRecordSteramTracks(Json::Value &parent_object, const char *key, const std::map<int32_t, std::shared_ptr<MediaTrack>> &tracks, Optional optional)
 		{
-			CONVERTER_RETURN_IF(false);
+			CONVERTER_RETURN_IF(false, Json::arrayValue);
 
 			for (auto &item : tracks)
 			{
@@ -28,7 +28,7 @@ namespace api
 
 		static void SetRecordStream(Json::Value &parent_object, const char *key, const info::Stream &stream, Optional optional)
 		{
-			CONVERTER_RETURN_IF(false);
+			CONVERTER_RETURN_IF(false, Json::objectValue);
 
 			SetString(object, "name", stream.GetName(), Optional::False);
 			SetRecordSteramTracks(object, "tracks", stream.GetTracks(), Optional::False);

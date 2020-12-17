@@ -8,32 +8,24 @@
 //==============================================================================
 
 #include "cmaf_stream_packetizer.h"
+
 #include "cmaf_private.h"
 
 //====================================================================================================
 // Constructor
 //====================================================================================================
-CmafStreamPacketizer::CmafStreamPacketizer(const ov::String &app_name,
-										   const ov::String &stream_name,
-										   int segment_count,
-										   int segment_duration,
+CmafStreamPacketizer::CmafStreamPacketizer(const ov::String &app_name, const ov::String &stream_name,
+										   int segment_count, int segment_duration,
 										   const ov::String &segment_prefix,
-										   PacketizerStreamType stream_type,
 										   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 										   const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
-	: StreamPacketizer(app_name,
-					   stream_name,
-					   segment_count,
-					   segment_duration,
-					   stream_type,
+	: StreamPacketizer(app_name, stream_name,
+					   segment_count, segment_duration,
 					   video_track, audio_track)
 {
-	_packetizer = std::make_shared<CmafPacketizer>(app_name,
-												   stream_name,
-												   stream_type,
+	_packetizer = std::make_shared<CmafPacketizer>(app_name, stream_name,
 												   segment_prefix,
-												   segment_count,
-												   segment_duration,
+												   segment_count, segment_duration,
 												   video_track, audio_track,
 												   chunked_transfer);
 }
@@ -74,7 +66,7 @@ bool CmafStreamPacketizer::GetPlayList(ov::String &play_list)
 // GetSegmentData
 // - M4S
 //====================================================================================================
-std::shared_ptr<SegmentData> CmafStreamPacketizer::GetSegmentData(const ov::String &file_name)
+std::shared_ptr<const SegmentItem> CmafStreamPacketizer::GetSegmentData(const ov::String &file_name) const
 {
 	return _packetizer->GetSegmentData(file_name);
 }

@@ -7,21 +7,19 @@
 //
 //==============================================================================
 #include "packetizer.h"
-#include "../segment_stream_private.h"
 
 #include <sys/time.h>
+
 #include <algorithm>
 #include <sstream>
 
+#include "../segment_stream_private.h"
+
 Packetizer::Packetizer(const ov::String &app_name, const ov::String &stream_name,
-					   PacketizerType packetizer_type, PacketizerStreamType stream_type,
 					   const ov::String &segment_prefix,
 					   uint32_t segment_count, uint32_t segment_duration,
-					   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track)
-	: _app_name(app_name), _stream_name(stream_name),
-	  _packetizer_type(packetizer_type),
-	  _segment_prefix(segment_prefix),
-	  _stream_type(stream_type),
+					   const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track)
+	: _app_name(app_name), _stream_name(stream_name), _segment_prefix(segment_prefix),
 
 	  _segment_count(segment_count),
 	  _segment_save_count(segment_count * 5),
@@ -30,29 +28,8 @@ Packetizer::Packetizer(const ov::String &app_name, const ov::String &stream_name
 	  _video_track(video_track),
 	  _audio_track(audio_track)
 {
-	for (uint32_t index = 0; index < _segment_save_count; index++)
-	{
-		_video_segment_datas.push_back(nullptr);
-
-		// Only for dash
-		if (_packetizer_type == PacketizerType::Dash)
-		{
-			_audio_segment_datas.push_back(nullptr);
-		}
-	}
-}
-
-uint32_t Packetizer::Gcd(uint32_t n1, uint32_t n2)
-{
-	uint32_t temp;
-
-	while (n2 != 0)
-	{
-		temp = n1;
-		n1 = n2;
-		n2 = temp % n2;
-	}
-	return n1;
+	_video_segments.resize(_segment_save_count);
+	_audio_segments.resize(_segment_save_count);
 }
 
 int64_t Packetizer::GetCurrentMilliseconds()
@@ -134,9 +111,9 @@ uint64_t Packetizer::ConvertTimeScale(uint64_t time, const cmn::Timebase &from_t
 	return (uint64_t)((double)time * ratio);
 }
 
-void Packetizer::SetPlayList(ov::String &play_list)
+void Packetizer::SetPlayList(const ov::String &play_list)
 {
-	std::unique_lock<std::mutex> lock(_play_list_guard);
+	std::unique_lock<std::mutex> lock(_play_list_mutex);
 
 	_play_list = play_list;
 }
@@ -158,24 +135,24 @@ bool Packetizer::GetPlayList(ov::String &play_list)
 		return false;
 	}
 
-	std::unique_lock<std::mutex> lock(_play_list_guard);
+	std::unique_lock<std::mutex> lock(_play_list_mutex);
 
 	play_list = _play_list;
 
 	return true;
 }
 
-bool Packetizer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
+bool Packetizer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentItem>> &segment_datas)
 {
 	uint32_t begin_index = (_current_video_index >= _segment_count) ? (_current_video_index - _segment_count) : (_segment_save_count - (_segment_count - _current_video_index));
 	uint32_t end_index = (begin_index <= (_segment_save_count - _segment_count)) ? (begin_index + _segment_count) - 1 : (_segment_count - (_segment_save_count - begin_index)) - 1;
 
 	// video segment mutex
-	std::unique_lock<std::mutex> lock(_video_segment_guard);
+	std::unique_lock<std::mutex> lock(_video_segment_mutex);
 
 	if (begin_index <= end_index)
 	{
-		for (auto item = _video_segment_datas.begin() + begin_index; item <= _video_segment_datas.begin() + end_index; item++)
+		for (auto item = _video_segments.begin() + begin_index; item <= _video_segments.begin() + end_index; item++)
 		{
 			if (*item == nullptr)
 			{
@@ -187,7 +164,7 @@ bool Packetizer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> 
 	}
 	else
 	{
-		for (auto item = _video_segment_datas.begin() + begin_index; item < _video_segment_datas.end(); item++)
+		for (auto item = _video_segments.begin() + begin_index; item < _video_segments.end(); item++)
 		{
 			if (*item == nullptr)
 			{
@@ -197,7 +174,7 @@ bool Packetizer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> 
 			segment_datas.push_back(*item);
 		}
 
-		for (auto item = _video_segment_datas.begin(); item <= _video_segment_datas.begin() + end_index; item++)
+		for (auto item = _video_segments.begin(); item <= _video_segments.begin() + end_index; item++)
 		{
 			if (*item == nullptr)
 			{
@@ -211,17 +188,17 @@ bool Packetizer::GetVideoPlaySegments(std::vector<std::shared_ptr<SegmentData>> 
 	return true;
 }
 
-bool Packetizer::GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> &segment_datas)
+bool Packetizer::GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentItem>> &segment_datas)
 {
 	uint32_t begin_index = (_current_audio_index >= _segment_count) ? (_current_audio_index - _segment_count) : (_segment_save_count - (_segment_count - _current_audio_index));
 	uint32_t end_index = (begin_index <= (_segment_save_count - _segment_count)) ? (begin_index + _segment_count) - 1 : (_segment_count - (_segment_save_count - begin_index)) - 1;
 
 	// audio segment mutex
-	std::unique_lock<std::mutex> lock(_audio_segment_guard);
+	std::unique_lock<std::mutex> lock(_audio_segment_mutex);
 
 	if (begin_index <= end_index)
 	{
-		for (auto item = _audio_segment_datas.begin() + begin_index; item <= _audio_segment_datas.begin() + end_index; item++)
+		for (auto item = _audio_segments.begin() + begin_index; item <= _audio_segments.begin() + end_index; item++)
 		{
 			if (*item == nullptr)
 			{
@@ -233,7 +210,7 @@ bool Packetizer::GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> 
 	}
 	else
 	{
-		for (auto item = _audio_segment_datas.begin() + begin_index; item < _audio_segment_datas.end(); item++)
+		for (auto item = _audio_segments.begin() + begin_index; item < _audio_segments.end(); item++)
 		{
 			if (*item == nullptr)
 			{
@@ -242,7 +219,7 @@ bool Packetizer::GetAudioPlaySegments(std::vector<std::shared_ptr<SegmentData>> 
 
 			segment_datas.push_back(*item);
 		}
-		for (auto item = _audio_segment_datas.begin(); item <= _audio_segment_datas.begin() + end_index; item++)
+		for (auto item = _audio_segments.begin(); item <= _audio_segments.begin() + end_index; item++)
 		{
 			if (*item == nullptr)
 			{

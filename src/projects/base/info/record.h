@@ -17,6 +17,9 @@ namespace info
 		Record();
 		~Record() override = default;
 
+		void SetTransactionId(ov::String transaction_id);
+		ov::String GetTransactionId();
+
 		void SetId(ov::String id);
 		ov::String GetId() const;
 
@@ -87,6 +90,9 @@ namespace info
 		const ov::String GetInfoString();
 
 	private:
+		ov::String _transaction_id;
+
+		// User custom id
 		ov::String _id;
 	
 		// Enabled/Disabled Flag

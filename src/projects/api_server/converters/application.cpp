@@ -16,35 +16,27 @@ namespace api
 	{
 		static void SetRtmpProvider(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::RtmpProvider &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetRtspPullProvider(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::RtspPullProvider &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetRtspProvider(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::RtspProvider &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetOvtProvider(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::OvtProvider &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetMpegtsStreams(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::mpegts::StreamMap &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::arrayValue);
 
 			auto app = mon::Monitoring::GetInstance()->GetApplicationMetrics(app_info);
 
@@ -54,17 +46,16 @@ namespace api
 				return;
 			}
 
-			// auto &stream_map = app->GetStreamMap();
+			auto stream_map = app->GetReservedStreamMetricsMap();
 
-			object = Json::arrayValue;
-
-			for (auto &stream : config.GetStreamList())
+			for (auto &key : stream_map)
 			{
 				Json::Value item;
 
-				SetString(item, "name", stream.GetName(), Optional::False);
-				// TODO(dimiden): use stream_map
-				SetString(item, "port", stream.GetPort().GetPortString(), Optional::False);
+				auto &reserved_stream = key.second;
+				auto &uri = reserved_stream->GetStreamUri();
+				SetString(item, "name", reserved_stream->GetReservedStreamName(), Optional::False);
+				SetString(item, "port", ov::String::FormatString("%d/%s", uri.Port(), uri.Scheme().LowerCaseString().CStr()), Optional::False);
 
 				object.append(item);
 			}
@@ -72,16 +63,14 @@ namespace api
 
 		static void SetMpegtsProvider(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::MpegtsProvider &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetMpegtsStreams(app_info, object, "streams", config.GetStreamMap(), Optional::True);
 		}
 
 		static void SetProviders(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pvd::Providers &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetRtmpProvider(app_info, object, "rtmp", config.GetRtmpProvider(), Optional::True);
 			SetRtspPullProvider(app_info, object, "rtspPull", config.GetRtspPullProvider(), Optional::True);
@@ -92,14 +81,12 @@ namespace api
 
 		static void SetRtmpPushPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::RtmpPushPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetCrossDomains(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::cmn::CrossDomains &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::arrayValue);
 
 			for (auto &url : config.GetUrls())
 			{
@@ -109,7 +96,7 @@ namespace api
 
 		static void SetHlsPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::HlsPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetInt(object, "segmentCount", config.GetSegmentCount());
 			SetInt(object, "segmentDuration", config.GetSegmentDuration());
@@ -118,7 +105,7 @@ namespace api
 
 		static void SetDashPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::DashPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetInt(object, "segmentCount", config.GetSegmentCount());
 			SetInt(object, "segmentDuration", config.GetSegmentDuration());
@@ -127,7 +114,7 @@ namespace api
 
 		static void SetLlDashPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::LlDashPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetInt(object, "segmentDuration", config.GetSegmentDuration());
 			SetCrossDomains(app_info, object, "crossDomains", config.GetCrossDomains(), Optional::True);
@@ -135,39 +122,36 @@ namespace api
 
 		static void SetWebrtcPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::WebrtcPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetTimeInterval(object, "timeout", config.GetTimeout());
 		}
 
 		static void SetOvtPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::OvtPublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
-
-			object = Json::objectValue;
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 		}
 
 		static void SetFilePublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::FilePublisher &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			SetString(object, "filePath", config.GetFilePath(), Optional::True);
 			SetString(object, "fileInfoPath", config.GetFileInfoPath(), Optional::True);
 		}
 
-		// TODO(soulk): Uncomment below function after implement cfg::ThumbnailPublisher
-		// static void SetThumbnailPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::ThumbnailPublisher &config, Optional optional)
-		// {
-		// 	CONVERTER_RETURN_IF(config.IsParsed() == false);
-		//
-		// 	SetString(object, "filePath", config.GetFilePath(), Optional::True);
-		// }
+		static void SetThumbnailPublisher(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::ThumbnailPublisher &config, Optional optional)
+		{
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
+
+			SetCrossDomains(app_info, object, "crossDomains", config.GetCrossDomains(), Optional::True);
+		}
 
 		static void SetPublishers(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::pub::Publishers &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
-			SetInt(object, "threadCount", config.GetThreadCount());
+			SetInt(object, "sessionLoadBalancingThreadCount", config.GetSessionLoadBalancingThreadCount());
 			SetRtmpPushPublisher(app_info, object, "rtmpPush", config.GetRtmpPushPublisher(), Optional::True);
 			SetHlsPublisher(app_info, object, "hls", config.GetHlsPublisher(), Optional::True);
 			SetDashPublisher(app_info, object, "dash", config.GetDashPublisher(), Optional::True);
@@ -175,16 +159,16 @@ namespace api
 			SetWebrtcPublisher(app_info, object, "webrtc", config.GetWebrtcPublisher(), Optional::True);
 			SetOvtPublisher(app_info, object, "ovt", config.GetOvtPublisher(), Optional::True);
 			SetFilePublisher(app_info, object, "file", config.GetFilePublisher(), Optional::True);
-			// TODO(soulk): Uncomment this line after implement cfg::ThumbnailPublisher
-			// SetThumbnailPublisher(app_info, object, "thumbnail", config.GetThumbnailPublisher(), Optional::True);
+			SetThumbnailPublisher(app_info, object, "thumbnail", config.GetThumbnailPublisher(), Optional::True);
 		}
 
 		static void SetEncodes(Json::Value &parent_object, const char *key, const cfg::vhost::app::oprf::Encodes &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::objectValue);
 
 			Json::Value audios(Json::ValueType::arrayValue);
 			Json::Value videos(Json::ValueType::arrayValue);
+			Json::Value images(Json::ValueType::arrayValue);
 
 			for (auto &profile : config.GetAudioProfileList())
 			{
@@ -228,8 +212,25 @@ namespace api
 				videos.append(video);
 			}
 
+			for (auto &profile : config.GetImageProfileList())
+			{
+				Json::Value image;
+
+				{
+					SetBool(image, "active", profile.IsActive());
+					SetString(image, "codec", profile.GetCodec(), Optional::True);
+					SetString(image, "scale", profile.GetScale(), Optional::True);
+					SetInt(image, "width", profile.GetWidth());
+					SetInt(image, "height", profile.GetHeight());
+					SetFloat(image, "framerate", profile.GetFramerate());
+				}
+
+				images.append(image);
+			}
+
 			object["audios"] = audios;
 			object["videos"] = videos;
+			object["images"] = images;
 		}
 
 		Json::Value JsonFromOutputProfile(const cfg::vhost::app::oprf::OutputProfile &output_profile)
@@ -245,7 +246,7 @@ namespace api
 
 		static void SetOutputProfiles(const info::Application &app_info, Json::Value &parent_object, const char *key, const cfg::vhost::app::oprf::OutputProfiles &config, Optional optional)
 		{
-			CONVERTER_RETURN_IF(config.IsParsed() == false);
+			CONVERTER_RETURN_IF(config.IsParsed() == false, Json::arrayValue);
 
 			for (auto &output_profile : config.GetOutputProfileList())
 			{
@@ -319,14 +320,24 @@ namespace api
 								name = "WebRTC";
 								converted = true;
 							}
-							else if (name == "threadCount")
+							else if (name == "sessionLoadBalancingThreadCount")
 							{
-								name = "ThreadCount";
+								name = "SessionLoadBalancingThreadCount";
 								converted = true;
 							}
 							else if (name == "rtspPull")
 							{
 								name = "RTSPPull";
+								converted = true;
+							}
+							else if (name == "rtmpPush")
+							{
+								name = "RTMPPush";
+								converted = true;
+							}
+							else if (name == "thumbnail")
+							{
+								name = "Thumbnail";
 								converted = true;
 							}
 							else
@@ -353,6 +364,11 @@ namespace api
 							else if (name == "videos")
 							{
 								name = "Video";
+								converted = true;
+							}
+							else if (name == "images")
+							{
+								name = "Image";
 								converted = true;
 							}
 						}

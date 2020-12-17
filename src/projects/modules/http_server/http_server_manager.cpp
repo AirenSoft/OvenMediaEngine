@@ -12,7 +12,7 @@
 
 #include "http_private.h"
 
-std::shared_ptr<HttpServer> HttpServerManager::CreateHttpServer(const ov::SocketAddress &address)
+std::shared_ptr<HttpServer> HttpServerManager::CreateHttpServer(const ov::SocketAddress &address, int worker_count)
 {
 	std::shared_ptr<HttpServer> http_server = nullptr;
 
@@ -38,7 +38,7 @@ std::shared_ptr<HttpServer> HttpServerManager::CreateHttpServer(const ov::Socket
 			// Create a new HTTP server
 			http_server = std::make_shared<HttpServer>();
 
-			if (http_server->Start(address))
+			if (http_server->Start(address, worker_count))
 			{
 				_http_servers[address] = http_server;
 			}
@@ -53,7 +53,7 @@ std::shared_ptr<HttpServer> HttpServerManager::CreateHttpServer(const ov::Socket
 	}
 }
 
-std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const ov::SocketAddress &address, const std::shared_ptr<info::Certificate> &certificate)
+std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const ov::SocketAddress &address, const std::shared_ptr<info::Certificate> &certificate, int worker_count)
 {
 	std::shared_ptr<HttpsServer> https_server = nullptr;
 
@@ -89,7 +89,7 @@ std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const ov::Sock
 
 			if (https_server->SetCertificate(certificate))
 			{
-				if (https_server->Start(address))
+				if (https_server->Start(address, worker_count))
 				{
 					_http_servers[address] = https_server;
 				}
@@ -110,7 +110,7 @@ std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const ov::Sock
 	}
 }
 
-std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const ov::SocketAddress &address, const std::vector<std::shared_ptr<ocst::VirtualHost>> &virtual_host_list)
+std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const ov::SocketAddress &address, const std::vector<std::shared_ptr<ocst::VirtualHost>> &virtual_host_list, int worker_count)
 {
 	// Check if TLS is enabled
 	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
@@ -123,7 +123,7 @@ std::shared_ptr<HttpsServer> HttpServerManager::CreateHttpsServer(const ov::Sock
 	// TODO(Dimiden): OME doesn't support SNI yet, so OME can handle only one certificate.
 	const auto &host_info = vhost_list[0]->host_info;
 
-	return CreateHttpsServer(address, host_info.GetCertificate());
+	return CreateHttpsServer(address, host_info.GetCertificate(), worker_count);
 }
 
 bool HttpServerManager::ReleaseServer(const std::shared_ptr<HttpServer> &http_server)

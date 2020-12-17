@@ -87,8 +87,10 @@ namespace pvd
 
 		// In the future, 
 		// it may be necessary to send data to an application rather than sending it directly to a stream.
-		channel->OnDataReceived(data);
-		channel->UpdateLastReceivedTime();
+		if(channel->OnDataReceived(data) == true)
+		{
+			channel->UpdateLastReceivedTime();
+		}
 
 		return true;
 	}
@@ -168,6 +170,7 @@ namespace pvd
 	{
 		_stop_timer_thread_flag = false;
 		_timer_thread = std::thread(&PushProvider::TimerThread, this);
+		pthread_setname_np(_timer_thread.native_handle(), "PProviderTimer");
 
 		return true;
 	}

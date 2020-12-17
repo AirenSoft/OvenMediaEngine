@@ -18,7 +18,11 @@ PhysicalPortManager::~PhysicalPortManager()
 {
 }
 
-std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(ov::SocketType type, const ov::SocketAddress &address)
+std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(ov::SocketType type, 
+																const ov::SocketAddress &address, 
+																int send_buffer_size, 
+																int recv_buffer_size, 
+																int worker_count)
 {
 	auto lock_guard = std::lock_guard(_port_list_mutex);
 
@@ -30,7 +34,7 @@ std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(ov::SocketType typ
 	{
 		port = std::make_shared<PhysicalPort>();
 
-		if (port->Create(type, address))
+		if (port->Create(type, address, send_buffer_size, recv_buffer_size, worker_count))
 		{
 			_port_list[key] = port;
 		}

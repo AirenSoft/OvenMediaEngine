@@ -264,10 +264,31 @@ bool IcePort::RemoveSession(const session_id_t session_id)
 		std::lock_guard<std::mutex> lock_guard(_ice_port_info_mutex);
 
 		auto item = _session_table.find(session_id);
-
 		if (item == _session_table.end())
 		{
 			logtw("Could not find session: %d", session_id);
+
+			{
+				// If it exists only in _user_mapping_table, find it and remove it.
+				// TODO(Dimiden): In this case, apply a more efficient method of deletion.
+				std::lock_guard<std::mutex> lock_guard(_user_mapping_table_mutex);
+
+				auto it = _user_mapping_table.begin();
+				while(it != _user_mapping_table.end())
+				{
+					auto ice_port_info = it->second;
+					if (ice_port_info->session_info->GetId() == session_id)
+					{
+						_user_mapping_table.erase(it++);
+						logtw("This is because the stun request was not received from this session.");
+						return true;
+					}
+					else
+					{
+						it++;
+					}
+				}
+			}
 
 			return false;
 		}
@@ -371,7 +392,7 @@ void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov
 
 				case StunClass::Indication:
 					// indication은 언제/어떻게 사용하는지 spec을 더 봐야함
-					logtw("Indication - not implemented");
+					logtd("Indication - not implemented");
 					break;
 			}
 		}

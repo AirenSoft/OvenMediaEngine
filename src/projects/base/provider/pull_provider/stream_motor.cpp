@@ -40,6 +40,7 @@ namespace pvd
 
 		_stop_thread_flag = false;
 		_thread = std::thread(&StreamMotor::WorkerThread, this);
+		pthread_setname_np(_thread.native_handle(), "StreamMotor");
 
 		return true;
 	}

@@ -38,17 +38,18 @@ WebRtcPublisher::~WebRtcPublisher()
 bool WebRtcPublisher::Start()
 {
 	auto server_config = GetServerConfig();
-	auto webrtc_config = server_config.GetBind().GetPublishers().GetWebrtc();
+	auto webrtc_bind_config = server_config.GetBind().GetPublishers().GetWebrtc();
 
-	if (webrtc_config.IsParsed() == false)
+	if (webrtc_bind_config.IsParsed() == false)
 	{
 		logtw("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
-	auto &signalling_config = webrtc_config.GetSignalling();
+	auto &signalling_config = webrtc_bind_config.GetSignalling();
 	auto &port_config = signalling_config.GetPort();
 	auto &tls_port_config = signalling_config.GetTlsPort();
+	auto worker_count = signalling_config.GetWorker();
 
 	auto port = static_cast<uint16_t>(port_config.GetPort());
 	auto tls_port = static_cast<uint16_t>(tls_port_config.GetPort());
@@ -67,14 +68,14 @@ bool WebRtcPublisher::Start()
 	// Initialize RtcSignallingServer
 	_signalling_server = std::make_shared<RtcSignallingServer>(server_config);
 	_signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
-	if (_signalling_server->Start(has_port ? &signalling_address : nullptr, has_tls_port ? &signalling_tls_address : nullptr) == false)
+	if (_signalling_server->Start(has_port ? &signalling_address : nullptr, has_tls_port ? &signalling_tls_address : nullptr, worker_count) == false)
 	{
 		return false;
 	}
 
 	bool result = true;
 
-	_ice_port = IcePortManager::GetInstance()->CreatePort(webrtc_config.GetIceCandidates(), IcePortObserver::GetSharedPtr());
+	_ice_port = IcePortManager::GetInstance()->CreatePort(webrtc_bind_config.GetIceCandidates(), IcePortObserver::GetSharedPtr());
 	if (_ice_port == nullptr)
 	{
 		logte("Cannot initialize ICE Port. Check your ICE configuration");
@@ -101,6 +102,45 @@ bool WebRtcPublisher::Start()
 	}
 
 	_message_thread.Start(ov::MessageThreadObserver<std::shared_ptr<ov::CommonMessage>>::GetSharedPtr());
+
+
+	_timer.Push(
+		[this](void *parameter) -> ov::DelayQueueAction 
+		{
+			// 2018-12-24 23:06:25.035,RTSP.SS,CONN_COUNT,INFO,,,[Live users], [Playback users]
+			std::shared_ptr<info::Application> rtsp_live_app_info;
+			std::shared_ptr<mon::ApplicationMetrics> rtsp_live_app_metrics;
+			std::shared_ptr<info::Application> rtsp_play_app_info;
+			std::shared_ptr<mon::ApplicationMetrics> rtsp_play_app_metrics;
+
+			rtsp_live_app_metrics = nullptr;
+			rtsp_play_app_metrics = nullptr;
+			
+			// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
+			rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
+			if (rtsp_live_app_info != nullptr)
+			{
+				rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
+			}
+			rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
+			if (rtsp_play_app_info != nullptr)
+			{
+				rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);
+			}
+
+			stat_log(STAT_LOG_WEBRTC_EDGE_VIEWERS, "%s,%s,%s,%s,,,%u,%u",
+					ov::Clock::Now().CStr(),
+					"WEBRTC.SS",
+					"CONN_COUNT",
+					"INFO",
+					rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
+					rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0);
+
+			return ov::DelayQueueAction::Repeat;
+		}
+		, 1000);
+
+	_timer.Start();
 
 	return Publisher::Start();
 }
@@ -141,7 +181,47 @@ bool WebRtcPublisher::DisconnectSessionInternal(const std::shared_ptr<RtcSession
 
 	session->Stop();
 
-	StatLog(session->GetWSClient(), stream, session, RequestStreamResult::transfer_completed);
+	// Special purpose log
+	stat_log(STAT_LOG_WEBRTC_EDGE_SESSION, "%s,%s,%s,%s,,,%s,%s,%u",
+					ov::Clock::Now().CStr(),
+					"WEBRTC.SS",
+					"SESSION",
+					"INFO",
+					"deleteClientSession",
+					stream->GetName().CStr(),
+					session->GetId());
+
+	std::shared_ptr<info::Application> rtsp_live_app_info;
+	std::shared_ptr<mon::ApplicationMetrics> rtsp_live_app_metrics;
+	std::shared_ptr<info::Application> rtsp_play_app_info;
+	std::shared_ptr<mon::ApplicationMetrics> rtsp_play_app_metrics;
+
+	rtsp_live_app_metrics = nullptr;
+	rtsp_play_app_metrics = nullptr;
+
+	// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
+	rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
+	if (rtsp_live_app_info != nullptr)
+	{
+		rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
+	}
+	rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
+	if (rtsp_play_app_info != nullptr)
+	{
+		rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);
+	}
+
+	stat_log(STAT_LOG_WEBRTC_EDGE_SESSION, "%s,%s,%s,%s,,,%s:%d,%s:%d,%s,%u",
+				ov::Clock::Now().CStr(),
+				"WEBRTC.SS",
+				"SESSION",
+				"INFO",
+				"Live",
+				rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
+				"Playback",
+				rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
+				stream->GetName().CStr(),
+				session->GetId());
 
 	return true;
 }
@@ -170,14 +250,6 @@ void WebRtcPublisher::OnMessage(const std::shared_ptr<ov::CommonMessage> &messag
 	}
 }
 
-void WebRtcPublisher::StatLog(const std::shared_ptr<WebSocketClient> &ws_client,
-							  const std::shared_ptr<RtcStream> &stream,
-							  const std::shared_ptr<RtcSession> &session,
-							  const RequestStreamResult &result)
-{
-
-}
-
 std::shared_ptr<pub::Application> WebRtcPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
 	return RtcApplication::Create(pub::Publisher::GetSharedPtrAs<pub::Publisher>(), application_info, _ice_port, _signalling_server);
@@ -197,7 +269,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 																		  const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 																		  std::vector<RtcIceCandidate> *ice_candidates)
 {
-	RequestStreamResult result = RequestStreamResult::init;
+	[[maybe_unused]] RequestStreamResult result = RequestStreamResult::init;
 	auto request = ws_client->GetClient()->GetRequest();
 	auto remote_address = request->GetRemote()->GetRemoteAddress();
 	auto uri = request->GetUri();
@@ -244,13 +316,26 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		{
 			result = RequestStreamResult::origin_failed;
 		}
+		else
+		{
+			// Connection Request log
+			// 2019-11-06 09:46:45.390 , RTSP.SS ,REQUEST,INFO,,,Live,rtsp://50.1.111.154:10915/1135/1/,220.103.225.254_44757_1573001205_389304_128855562
+			stat_log(STAT_LOG_WEBRTC_EDGE_REQUEST, "%s,%s,%s,%s,,,%s,%s,%s",
+						ov::Clock::Now().CStr(),
+						"WEBRTC.SS",
+						"REQUEST",
+						"INFO",
+						vhost_app_name.CStr(),
+						stream->GetMediaSource().CStr(),
+						remote_address->ToString().CStr());
+
+			logti("URL %s is requested", stream->GetMediaSource().CStr());
+		}
 	}
 	else
 	{
 		result = RequestStreamResult::local_success;
 	}
-
-	StatLog(ws_client, stream, nullptr, result);
 
 	if (stream == nullptr)
 	{
@@ -308,7 +393,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 	}
 	else if(signed_policy_result == CheckSignatureResult::Pass)
 	{
-		session_expired_time = signed_policy->GetPolicyExpireEpochSec();
+		session_expired_time = signed_policy->GetStreamExpireEpochSec();
 	}
 	else if(signed_policy_result == CheckSignatureResult::Off)
 	{
@@ -348,6 +433,50 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		}
 
 		_ice_port->AddSession(session, offer_sdp, peer_sdp);
+
+		// Session is created
+
+		// Special purpose log
+		stat_log(STAT_LOG_WEBRTC_EDGE_SESSION, "%s,%s,%s,%s,,,%s,%s,%u",
+					 ov::Clock::Now().CStr(),
+					 "WEBRTC.SS",
+					 "SESSION",
+					 "INFO",
+					 "createClientSession",
+					 stream->GetName().CStr(),
+					 session->GetId());
+
+		std::shared_ptr<info::Application> rtsp_live_app_info;
+		std::shared_ptr<mon::ApplicationMetrics> rtsp_live_app_metrics;
+		std::shared_ptr<info::Application> rtsp_play_app_info;
+		std::shared_ptr<mon::ApplicationMetrics> rtsp_play_app_metrics;
+
+		rtsp_live_app_metrics = nullptr;
+		rtsp_play_app_metrics = nullptr;
+
+		// This log only for the "default" host and the "rtsp_live"/"rtsp_playback" applications 
+		rtsp_live_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_live")));
+		if (rtsp_live_app_info != nullptr)
+		{
+			rtsp_live_app_metrics = ApplicationMetrics(*rtsp_live_app_info);
+		}
+		rtsp_play_app_info = std::static_pointer_cast<info::Application>(GetApplicationByName(ocst::Orchestrator::GetInstance()->ResolveApplicationName("default", "rtsp_playback")));
+		if (rtsp_play_app_info != nullptr)
+		{
+			rtsp_play_app_metrics = ApplicationMetrics(*rtsp_play_app_info);
+		}
+
+		stat_log(STAT_LOG_WEBRTC_EDGE_SESSION, "%s,%s,%s,%s,,,%s:%d,%s:%d,%s,%u",
+					ov::Clock::Now().CStr(),
+					"WEBRTC.SS",
+					"SESSION",
+					"INFO",
+					"Live",
+					rtsp_live_app_metrics != nullptr ? rtsp_live_app_metrics->GetTotalConnections() : 0,
+					"Playback",
+					rtsp_play_app_metrics != nullptr ? rtsp_play_app_metrics->GetTotalConnections() : 0,
+					stream->GetName().CStr(),
+					session->GetId());
 	}
 	else
 	{
@@ -455,10 +584,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 
 void WebRtcPublisher::OnDataReceived(IcePort &port, const std::shared_ptr<info::Session> &session_info, std::shared_ptr<const ov::Data> data)
 {
-	// ice_port를 통해 STUN을 제외한 모든 Packet이 들어온다.
 	auto session = std::static_pointer_cast<pub::Session>(session_info);
-
-	//받는 Data 형식을 협의해야 한다.
 	auto application = session->GetApplication();
 	application->PushIncomingPacket(session_info, data);
 }

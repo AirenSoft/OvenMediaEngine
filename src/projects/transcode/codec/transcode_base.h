@@ -32,6 +32,7 @@ extern "C"
 
 enum class TranscodeResult : int32_t
 {
+	Again = -5,
 	// An error occurred while process the packet/frame
 	DataError = -4,
 	// An error occurred while parse the packet using av_parser_parse2()
@@ -40,6 +41,7 @@ enum class TranscodeResult : int32_t
 	NoData = -2,
 	// End of file
 	EndOfFile = -1,
+
 	// Decode/Encoder Complete and Reamin more data
 	DataReady = 0,
 	// Change Output Format

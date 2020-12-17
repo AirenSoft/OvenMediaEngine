@@ -26,6 +26,7 @@ namespace pub
 
 	std::shared_ptr<Session> SessionNode::GetSession()
 	{
+		std::shared_lock<std::shared_mutex> lock(_session_lock);
 		return _session;
 	}
 
@@ -48,11 +49,13 @@ namespace pub
 	bool SessionNode::Stop()
 	{
 		_state = NodeState::Stopped;
-		// Because it is a cross-reference to the parent, it forces the removal to free memory.
-		_session.reset();
 
 		_upper_nodes.clear();
 		_lower_nodes.clear();
+
+		// Because it is a cross-reference to the parent, it forces the removal to free memory.
+		std::lock_guard<std::shared_mutex> lock(_session_lock);
+		_session.reset();
 		
 		return true;
 	}

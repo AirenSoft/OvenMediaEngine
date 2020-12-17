@@ -181,26 +181,38 @@ namespace ov
 		return Dump(data, length, nullptr, 0, max_bytes, nullptr);
 	}
 
-	bool DumpToFile(FILE **file, const char *file_name, const void *data, size_t length, off_t offset, bool append) noexcept
+	std::shared_ptr<FILE> DumpToFile(const char *file_name, const void *data, size_t length, off_t offset, bool append) noexcept
 	{
-		if ((file == nullptr) || (offset < 0L))
+		if (offset < 0L)
 		{
-			return false;
+			return nullptr;
 		}
 
-		if (*file == nullptr)
+		FILE *file = ::fopen(file_name, append ? "ab" : "wb");
+
+		if (file == nullptr)
 		{
-			*file = ::fopen(file_name, append ? "ab" : "wb");
+			return nullptr;
 		}
 
-		if (*file == nullptr)
+		::fwrite(static_cast<const uint8_t *>(data) + offset, sizeof(uint8_t), static_cast<size_t>(length), file);
+		::fflush(file);
+
+		return std::shared_ptr<FILE>(file, [](FILE *file) {
+			if (file != nullptr)
+			{
+				::fclose(file);
+			}
+		});
+	}
+
+	std::shared_ptr<FILE> DumpToFile(const char *file_name, const std::shared_ptr<const Data> &data, off_t offset, bool append) noexcept
+	{
+		if (data == nullptr)
 		{
-			return false;
+			return nullptr;
 		}
 
-		::fwrite(static_cast<const uint8_t *>(data) + offset, sizeof(uint8_t), static_cast<size_t>(length), *file);
-		::fflush(*file);
-
-		return true;
+		return DumpToFile(file_name, data->GetData(), data->GetLength(), offset, append);
 	}
 }  // namespace ov

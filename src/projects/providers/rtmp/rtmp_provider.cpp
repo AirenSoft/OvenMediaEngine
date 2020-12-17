@@ -79,10 +79,12 @@ namespace pvd
 
 	bool RtmpProvider::Stop()
 	{
-		_physical_port->RemoveObserver(this);
-		PhysicalPortManager::GetInstance()->DeletePort(_physical_port);
-
-		_physical_port = nullptr;
+		if(_physical_port != nullptr)
+		{
+			_physical_port->RemoveObserver(this);
+			PhysicalPortManager::GetInstance()->DeletePort(_physical_port);
+			_physical_port = nullptr;
+		}
 
 		return Provider::Stop();
 	}

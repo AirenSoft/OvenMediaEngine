@@ -1,6 +1,8 @@
 #include "rtmppush_private.h"
 #include "rtmppush_publisher.h"
 
+#define UNUSED(expr) do { (void)(expr); } while (0)
+
 std::shared_ptr<RtmpPushPublisher> RtmpPushPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
 	auto obj = std::make_shared<RtmpPushPublisher>(server_config, router);
@@ -29,6 +31,7 @@ bool RtmpPushPublisher::Start()
 {
 	_stop_thread_flag = false;
 	_worker_thread = std::thread(&RtmpPushPublisher::WorkerThread, this);
+	pthread_setname_np(_worker_thread.native_handle(), "RtmpPubWorker");
 
 	return Publisher::Start();
 }
@@ -127,12 +130,10 @@ void RtmpPushPublisher::SessionController()
 {
 	std::shared_lock<std::shared_mutex> lock(_userdata_sets_mutex);
 
-	// Session Management by Userdata
-	for(uint32_t userdata_idx=0 ; userdata_idx<_userdata_sets.GetCount() ; userdata_idx++)
+	auto userdata_sets = _userdata_sets.GetUserdataSets();
+	for ( auto& [ key, userdata ] : userdata_sets )
 	{
-		auto userdata = _userdata_sets.GetAt(userdata_idx);
-		if(userdata == nullptr)
-			continue;
+		UNUSED(key);
 
 		// Find a session related to Userdata.
 		auto vhost_app_name = info::VHostAppName(userdata->GetVhost(), userdata->GetApplication());
@@ -171,46 +172,16 @@ void RtmpPushPublisher::SessionController()
 
 		if(userdata->GetRemove() == true)
 		{
-			logtd("Remove userdata of rtmppush publiser. id(%s)", userdata->GetId().CStr());
+			logtd("Remove userdata of file publiser. id(%s)", userdata->GetId().CStr());
+
+			if(stream != nullptr && userdata->GetSessionId() != 0)
+				stream->DeleteSession(userdata->GetSessionId());
+
 			_userdata_sets.DeleteByKey(userdata->GetId());
-			userdata_idx--;
-		}		
+		}			
+
 	}
-
-	// Garbage Collection : Delete sessions that are not in userdata list.
-	for(uint32_t app_idx=0; app_idx<GetApplicationCount() ; app_idx++)
-	{
-		auto application = std::static_pointer_cast<RtmpPushApplication>(GetApplicationAt(app_idx));
-		if(application == nullptr)
-			continue;
-
-		for(uint32_t stream_idx=0; stream_idx<application->GetStreamCount() ; stream_idx++)
-		{
-			auto stream = std::static_pointer_cast<RtmpPushStream>(application->GetStreamAt(stream_idx));
-			if(stream == nullptr)
-				continue;
-
-			for(uint32_t session_idx=0; session_idx<stream->GetSessionCount() ; session_idx++)	
-			{
-				auto session = std::static_pointer_cast<RtmpPushSession>(stream->GetSessionAt(session_idx));
-				if(session == nullptr)
-					continue;
-
-				auto userdata = _userdata_sets.GetBySessionId(session->GetId());
-				if(userdata == nullptr)
-				{
-					// Userdata does not have this session. This session needs to be deleted.
-					logtd("Userdata does not have this session. This session should be delete. session_id(%d)", session->GetId());
-					
-					stream->DeleteSession(session->GetId());
-
-					// If the session is deleted, check again from the beginning.
-					session_idx=0;
-				}
-			}
-		}
-	}	
-}
+}	
 
 void RtmpPushPublisher::WorkerThread()
 {
@@ -224,7 +195,7 @@ void RtmpPushPublisher::WorkerThread()
 			SessionController();
 		}
 
-		usleep(1000);
+		usleep(100000);
 	}
 }
 
@@ -238,6 +209,8 @@ std::shared_ptr<ov::Error> RtmpPushPublisher::PushStart(const info::VHostAppName
 		return ov::Error::CreateError(PushPublisherErrorCode::Failure, 
 			"Duplicate identification Code");		
 	}
+
+
 
 	push->SetEnable(true);
 	push->SetRemove(false);
@@ -272,11 +245,10 @@ std::shared_ptr<ov::Error> RtmpPushPublisher::GetPushes(const info::VHostAppName
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
 
-	for(uint32_t i=0 ; i<_userdata_sets.GetCount() ; i++)
+	auto userdata_sets = _userdata_sets.GetUserdataSets();
+	for (  auto& [ key, userdata ] : userdata_sets )
 	{
-		auto userdata = _userdata_sets.GetAt(i);
-		if(userdata == nullptr)
-			continue;
+		UNUSED(key);
 
 		push_list.push_back(userdata);
 	}

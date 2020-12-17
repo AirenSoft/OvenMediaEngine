@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <string>
 #include <stdexcept>
+#include <limits>
 
 // Various STL helpers
 

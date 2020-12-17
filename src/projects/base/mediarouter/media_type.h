@@ -25,7 +25,7 @@ namespace cmn
 
 	enum class BitstreamFormat : int8_t
 	{
-		Unknwon = -1,
+		Unknown = -1,
 		H264_AVCC = 0,
 		H264_ANNEXB,
 		H265_ANNEXB,
@@ -39,7 +39,7 @@ namespace cmn
 
 	enum class PacketType : int8_t
 	{
-		Unknwon = -1,
+		Unknown = -1,
 		// This is a special purpose packet type, used by the ovt provider, 
 		// and the "media router" delivers this type of packet to the publisher as it is without parsing.
 		OVT = 0,	
@@ -301,7 +301,7 @@ namespace cmn
 			return static_cast<std::underlying_type<AudioSample::Rate>::type>(_rate);
 		}
 
-		const char *GetName()
+		const char *GetName() const
 		{
 			return _name.c_str();
 		}

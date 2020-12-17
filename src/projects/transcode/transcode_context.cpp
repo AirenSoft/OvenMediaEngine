@@ -11,8 +11,7 @@
 #include <iostream>
 
 #include "transcode_context.h"
-
-#define OV_LOG_TAG "TranscodeContext"
+#include "transcode_private.h"
 
 TranscodeContext::TranscodeContext(bool is_encoding_context)
 	: _is_encoding_context(is_encoding_context)
@@ -125,10 +124,16 @@ void TranscodeContext::SetAudioSampleFormat(cmn::AudioSample::Format val)
 	_audio_sample.SetFormat(val);
 }
 
+void TranscodeContext::SetAudioChannel(cmn::AudioChannel channel)
+{
+	_audio_channel = channel;
+}
+
 cmn::AudioChannel &TranscodeContext::GetAudioChannel()
 {
 	return _audio_channel;
 }
+
 
 const cmn::AudioChannel &TranscodeContext::GetAudioChannel() const
 {

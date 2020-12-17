@@ -6,7 +6,6 @@
 #include "base/mediarouter/media_buffer.h"
 #include "session.h"
 
-#define MIN_STREAM_WORKER_THREAD_COUNT 2
 #define MAX_STREAM_WORKER_THREAD_COUNT 72
 
 namespace pub
@@ -50,7 +49,6 @@ namespace pub
 		bool AddSession(std::shared_ptr<Session> session);
 		bool RemoveSession(session_id_t id);
 		std::shared_ptr<Session> GetSession(session_id_t id);
-		std::shared_ptr<Session> GetSessionAt(uint32_t index);
 		const std::map<session_id_t, std::shared_ptr<Session>> GetAllSessions();
 		uint32_t GetSessionCount();
 
@@ -76,7 +74,7 @@ namespace pub
 		virtual ~Stream();
 		
 	private:
-		std::shared_ptr<StreamWorker> GetWorkerByStreamID(session_id_t session_id);
+		std::shared_ptr<StreamWorker> GetWorkerBySessionID(session_id_t session_id);
 		std::map<session_id_t, std::shared_ptr<Session>> _sessions;
 		std::shared_mutex _session_map_mutex;
 

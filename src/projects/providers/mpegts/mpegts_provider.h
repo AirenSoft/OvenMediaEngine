@@ -26,12 +26,17 @@ namespace pvd
 	class MpegTsStreamPortItem
 	{
 	public:
-		MpegTsStreamPortItem(uint16_t port, const info::VHostAppName &vhost_app_name, const ov::String &stream_name, const std::shared_ptr<PhysicalPort> &physical_port)
-			: _port(port),
-			  _vhost_app_name(vhost_app_name),
-			  _stream_name(stream_name),
+		// State : Init | Bound, Attached | Detached, Connected | Disconnected
+		MpegTsStreamPortItem(ov::SocketType scheme, uint16_t port, const std::shared_ptr<PhysicalPort> &physical_port)
+			: _scheme(scheme),
+			  _port(port),
 			  _physical_port(physical_port)
 		{
+		}
+
+		ov::SocketType GetScheme()
+		{
+			return _scheme;
 		}
 
 		uint16_t GetPortNumber()
@@ -54,15 +59,33 @@ namespace pvd
 			return _physical_port;
 		}
 
-		void EnableClient(uint32_t client_id)
+		void AttachToApplication(const info::VHostAppName &vhost_app_name, const ov::String &stream_name)
+		{
+			_attached = true;
+			_vhost_app_name = vhost_app_name;
+			_stream_name = stream_name;
+		}
+
+		void OnClientConnected(uint32_t client_id)
 		{
 			_client_connected = true;
 			_client_id = client_id;
 		}
 
-		void DisableClient()
+		void DetachFromApplication()
+		{
+			_attached = false;
+			OnClientDisconnected();
+		}
+
+		void OnClientDisconnected()
 		{
 			_client_connected = false;
+		}
+
+		bool IsAttached()
+		{
+			return _attached.load();
 		}
 
 		bool IsClientConnected()
@@ -76,11 +99,13 @@ namespace pvd
 		}
 
 	private:
+		ov::SocketType _scheme = ov::SocketType::Udp;
 		uint16_t _port = 0;
-		info::VHostAppName _vhost_app_name;
+		info::VHostAppName _vhost_app_name = info::VHostAppName::InvalidVHostAppName();
 		ov::String _stream_name;
-		std::shared_ptr<PhysicalPort> _physical_port = nullptr;
+		std::shared_ptr<PhysicalPort> _physical_port;
 
+		std::atomic<bool> _attached = false;
 		std::atomic<bool> _client_connected = false;
 		std::atomic<uint32_t> _client_id = 0;
 	};
@@ -127,6 +152,8 @@ namespace pvd
 			ov::String stream_name;
 		};
 
+		bool BindMpegTSPorts();
+
 		// stream_map->key: <port, type>
 		// stream_map->value: <vhost_app_name, stream_name>
 		bool PrepareStreamList(const cfg::Server &server_config, std::map<std::tuple<int, ov::SocketType>, StreamInfo> *stream_map);
@@ -157,6 +184,7 @@ namespace pvd
 
 	private:
 		std::shared_ptr<MpegTsStreamPortItem> GetStreamPortItem(uint16_t local_port);
+		std::shared_ptr<MpegTsStreamPortItem> GetDetachedStreamPortItem();
 
 		std::shared_mutex _stream_port_map_lock;
 		std::map<uint16_t, std::shared_ptr<MpegTsStreamPortItem>> _stream_port_map;

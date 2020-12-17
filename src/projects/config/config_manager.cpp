@@ -142,7 +142,9 @@ namespace cfg
 
 		// Init stat log
 		//TODO(Getroot): This is temporary code for testing. This will change to more elegant code in the future.
-		ov_stat_log_set_path(STAT_LOG_WEBRTC_EDGE, log_path.CStr());
+		ov_stat_log_set_path(STAT_LOG_WEBRTC_EDGE_SESSION, log_path.CStr());
+		ov_stat_log_set_path(STAT_LOG_WEBRTC_EDGE_REQUEST, log_path.CStr());
+		ov_stat_log_set_path(STAT_LOG_WEBRTC_EDGE_VIEWERS, log_path.CStr());
 		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_SESSION, log_path.CStr());
 		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_REQUEST, log_path.CStr());
 		ov_stat_log_set_path(STAT_LOG_HLS_EDGE_VIEWERS, log_path.CStr());

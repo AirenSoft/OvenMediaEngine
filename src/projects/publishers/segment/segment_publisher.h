@@ -204,7 +204,6 @@ protected:
 
 	bool Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server);
 	virtual bool Start() = 0;
-	
 
 	bool HandleSignedX(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, 
 						const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
@@ -219,7 +218,7 @@ protected:
 
 	bool OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
 						  const SegmentStreamRequestInfo &request_info,
-						  std::shared_ptr<SegmentData> &segment) override;
+						  std::shared_ptr<const SegmentItem> &segment) override;
 
 	std::shared_ptr<SegmentStreamServer> _stream_server = nullptr;
 

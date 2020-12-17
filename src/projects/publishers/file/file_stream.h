@@ -21,7 +21,7 @@ public:
 	void SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
 
 	std::shared_ptr<FileSession> CreateSession();
-	void DeleteSession(uint32_t session_id);
+	bool DeleteSession(uint32_t session_id);
 
 private:
 	bool Start() override;

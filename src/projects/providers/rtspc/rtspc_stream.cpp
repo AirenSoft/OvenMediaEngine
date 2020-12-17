@@ -56,7 +56,6 @@ namespace pvd
 	RtspcStream::~RtspcStream()
 	{
 		Stop();
-
 		Release();
 	}
 
@@ -396,12 +395,6 @@ namespace pvd
 
 			is_received_first_packet = true;
 		}
-		
-
-		if(_stream_metrics != nullptr)
-		{
-			_stream_metrics->IncreaseBytesIn(packet.size);
-		}
 
 		auto track = GetTrack(packet.stream_index);
 		if(track == nullptr)
@@ -425,8 +418,8 @@ namespace pvd
 
 		auto media_type = track->GetMediaType();
 		auto codec_id = track->GetCodecId();
-		cmn::BitstreamFormat bitstream_format = cmn::BitstreamFormat::Unknwon;
-		cmn::PacketType packet_type = cmn::PacketType::Unknwon;
+		cmn::BitstreamFormat bitstream_format = cmn::BitstreamFormat::Unknown;
+		cmn::PacketType packet_type = cmn::PacketType::Unknown;
 
 		if(codec_id == cmn::MediaCodecId::H264)
 		{

@@ -8,6 +8,7 @@
 //==============================================================================
 
 #include "segment_stream.h"
+
 #include "config/items/items.h"
 #include "segment_stream_private.h"
 #include "stream_packetizer.h"
@@ -36,16 +37,29 @@ bool SegmentStream::Start(int segment_count, int segment_duration)
 		switch (track->GetMediaType())
 		{
 			case MediaType::Video:
-				if (track->GetCodecId() == MediaCodecId::H264) // TODO(Dimiden): Need to support HEVC
+				switch (track->GetCodecId())
 				{
-					video_track = track;
+					case MediaCodecId::H264:
+					case MediaCodecId::H265:
+						video_track = track;
+						break;
+
+					default:
+						// Not supported codec
+						break;
 				}
 				break;
 
 			case MediaType::Audio:
-				if (track->GetCodecId() == MediaCodecId::Aac)
+				switch (track->GetCodecId())
 				{
-					audio_track = track;
+					case MediaCodecId::Aac:
+						audio_track = track;
+						break;
+
+					default:
+						// Not supported codec
+						break;
 				}
 				break;
 
@@ -57,14 +71,14 @@ bool SegmentStream::Start(int segment_count, int segment_duration)
 	bool video_enabled = false;
 	bool audio_enabled = false;
 
-	if ((video_track != nullptr) && (video_track->GetCodecId() == MediaCodecId::H264)) // // TODO(Dimiden): Need to support HEVC
+	if (video_track != nullptr)
 	{
 		_media_tracks[video_track->GetId()] = video_track;
 		_video_track = video_track;
 		video_enabled = true;
 	}
 
-	if ((audio_track != nullptr) && (audio_track->GetCodecId() == MediaCodecId::Aac))
+	if (audio_track != nullptr)
 	{
 		_media_tracks[audio_track->GetId()] = audio_track;
 		_audio_track = audio_track;
@@ -73,22 +87,9 @@ bool SegmentStream::Start(int segment_count, int segment_duration)
 
 	if (video_enabled || audio_enabled)
 	{
-		PacketizerStreamType stream_type = PacketizerStreamType::Common;
-
-		if (video_enabled == false)
-		{
-			stream_type = PacketizerStreamType::AudioOnly;
-		}
-
-		if (audio_enabled == false)
-		{
-			stream_type = PacketizerStreamType::VideoOnly;
-		}
-
 		_stream_packetizer = CreateStreamPacketizer(segment_count > 0 ? segment_count : DEFAULT_SEGMENT_COUNT,
 													segment_duration > 0 ? segment_duration : DEFAULT_SEGMENT_DURATION,
-													GetName(),  // stream name --> prefix
-													stream_type,
+													GetName(),
 													std::move(video_track), std::move(audio_track));
 	}
 	else
@@ -123,7 +124,7 @@ void SegmentStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_pac
 		//            logtd("null header size - %d", nul_header_size);
 		//        }
 
-		_stream_packetizer->AppendVideoData(media_packet, _video_track->GetTimeBase().GetTimescale());
+		_stream_packetizer->AppendVideoData(media_packet);
 	}
 }
 
@@ -135,7 +136,7 @@ void SegmentStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_pac
 {
 	if (_stream_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
 	{
-		_stream_packetizer->AppendAudioData(media_packet, _audio_track->GetTimeBase().GetTimescale());
+		_stream_packetizer->AppendAudioData(media_packet);
 	}
 }
 
@@ -157,7 +158,7 @@ bool SegmentStream::GetPlayList(ov::String &play_list)
 // GetSegmentData
 // - TS/M4S(mp4)
 //====================================================================================================
-std::shared_ptr<SegmentData> SegmentStream::GetSegmentData(const ov::String &file_name)
+std::shared_ptr<const SegmentItem> SegmentStream::GetSegmentData(const ov::String &file_name) const
 {
 	if (_stream_packetizer == nullptr)
 	{

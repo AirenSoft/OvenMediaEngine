@@ -68,7 +68,7 @@ bool OvenCodecImplAvcodecEncHEVC::Configure(std::shared_ptr<TranscodeContext> co
 	AVRational codec_timebase = ::av_inv_q(::av_mul_q(::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE), (AVRational){_context->ticks_per_frame, 1}));
 	_context->time_base = codec_timebase;
 
-	_context->gop_size = _context->framerate.num / _context->framerate.den;
+	// _context->gop_size = _context->framerate.num / _context->framerate.den;
 	_context->max_b_frames = 0;
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
 	_context->width = _output_context->GetVideoWidth();
@@ -83,16 +83,12 @@ bool OvenCodecImplAvcodecEncHEVC::Configure(std::shared_ptr<TranscodeContext> co
 	// 인코딩 성능
 	::av_opt_set(_context->priv_data, "preset", "veryfast", 0);
 
-	// 인코딩 딜레이
+	// Encoding Delay
 	::av_opt_set(_context->priv_data, "tune", "zerolatency", 0);
-/*
-	// 인코딩 딜레이에서 sliced-thread 옵션 제거. MAC 환경에서 브라우저 호환성
-	::av_opt_set(_context->priv_data, "x264opts", "bframes=0:sliced-threads=0:b-adapt=1:no-scenecut:keyint=30:min-keyint=30", 0);
-	// ::av_opt_set(_context->priv_data, "x264opts", "bframes=0:sliced-threads=0:b-adapt=1", 0);
 
-	// CBR 옵션 / bitrate는 kbps 단위 / *문제는 MAC 크롬에서 재생이 안된다. 그래서 maxrate 값만 지정해줌.
-	// x264opts.AppendFormat(":nal-hrd=cbr:force-cfr=1:bitrate=%d:vbv-maxrate=%d:vbv-bufsize=%d:", _context->bit_rate/1000,  _context->bit_rate/1000,  _context->bit_rate/1000);
-*/
+	// Keyframe Intervasl
+	::av_opt_set(_context->priv_data, "x265-params", ov::String::FormatString("bframes=0:no-opengop=1:no-scenecut=1:keyint=%.0f:min-keyint=%.0f", _output_context->GetFrameRate(), _output_context->GetFrameRate()).CStr(), 0);
+
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
@@ -105,6 +101,7 @@ bool OvenCodecImplAvcodecEncHEVC::Configure(std::shared_ptr<TranscodeContext> co
 		_kill_flag = false;
 
 		_thread_work = std::thread(&OvenCodecImplAvcodecEncHEVC::ThreadEncode, this);
+		pthread_setname_np(_thread_work.native_handle(), "EncHEVC");
 	}
 	catch (const std::system_error &e)
 	{

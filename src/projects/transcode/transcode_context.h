@@ -92,6 +92,7 @@ public:
 
 	void SetAudioSampleFormat(cmn::AudioSample::Format val);
 
+	void SetAudioChannel(cmn::AudioChannel channel);
 	cmn::AudioChannel &GetAudioChannel();
 	const cmn::AudioChannel &GetAudioChannel() const;
 

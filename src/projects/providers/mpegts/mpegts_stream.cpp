@@ -91,7 +91,10 @@ namespace pvd
 		// Publish
 		if(IsPublished() == false && _depacketizer.IsTrackInfoAvailable())
 		{
-			Publish();
+			if(Publish() == false)
+			{
+				return false;
+			}
 		}
 
 		if(IsPublished() == true)
@@ -109,7 +112,7 @@ namespace pvd
 				
 				if(es->IsVideoStream())
 				{	
-					auto bitstream = cmn::BitstreamFormat::Unknwon;
+					auto bitstream = cmn::BitstreamFormat::Unknown;
 					auto packet_type = cmn::PacketType::NALU;
 
 					switch(track->GetCodecId())
@@ -168,7 +171,7 @@ namespace pvd
 							break;
 						}
 						default:
-							bitstream = cmn::BitstreamFormat::Unknwon;
+							bitstream = cmn::BitstreamFormat::Unknown;
 							break;
 					}
 
@@ -220,7 +223,10 @@ namespace pvd
 		}
 
 		// Publish
-		PublishInterleavedChannel(_vhost_app_name);
+		if(PublishInterleavedChannel(_vhost_app_name) == false)
+		{
+			return false;
+		}
 
 		return true;
 	}

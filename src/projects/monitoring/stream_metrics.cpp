@@ -16,8 +16,8 @@ namespace mon
 
 		if(GetSourceType() == StreamSourceType::Ovt || GetSourceType() == StreamSourceType::RtspPull)
 		{
-			out_str.AppendFormat("\n\tElapsed time to connect to origin server : %f ms\n"
-									"\tElapsed time in response from origin server : %f ms\n",
+			out_str.AppendFormat("\n\tElapsed time to connect to origin server : %llu ms\n"
+									"\tElapsed time in response from origin server : %llu ms\n",
 									GetOriginRequestTimeMSec(), GetOriginResponseTimeMSec());
 		}
 		out_str.Append("\n");
@@ -34,11 +34,11 @@ namespace mon
 	// Getter
 	int64_t StreamMetrics::GetOriginRequestTimeMSec() const
 	{
-		return _request_time_to_origin_msec;
+		return _request_time_to_origin_msec.load();
 	}
 	int64_t StreamMetrics::GetOriginResponseTimeMSec() const
 	{
-		return _response_time_from_origin_msec;
+		return _response_time_from_origin_msec.load();
 	}
 
 	// Setter
