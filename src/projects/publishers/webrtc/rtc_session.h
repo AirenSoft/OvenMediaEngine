@@ -91,7 +91,7 @@ private:
 	uint8_t                             _audio_payload_type = 0;
 	uint32_t							_audio_ssrc = 0;
 
-	bool								_use_rtx_flag = false;
+	bool								_rtx_enabled = false;
 
 	uint16_t							_rtx_sequence_number = 1;
 

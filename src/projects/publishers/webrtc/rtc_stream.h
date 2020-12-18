@@ -63,5 +63,7 @@ private:
 	std::map<uint8_t, std::shared_ptr<RtpHistory>> _rtp_history_map;
 
 	std::shared_ptr<mon::StreamMetrics>		_stream_metrics;
-	bool _support_rtx = true;
+
+	bool _rtx_enabled = true;
+	bool _ulpfec_enabled = true;
 };

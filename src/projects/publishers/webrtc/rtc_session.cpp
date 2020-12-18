@@ -92,15 +92,7 @@ bool RtcSession::Start()
 		}
 		else
 		{
-			// "H.264 + FEC" is of lower quality. 
-			// This is because VP8 solves this with PictureID, 
-			// but H.264 recognizes ULPFEC packets as also packets constituting a frame.
-			// So when the first payload codec is H.264, we don't use FEC.
-			if(first_payload->GetCodec() == PayloadAttr::SupportCodec::H264)
-			{
-				_video_payload_type = first_payload->GetId();
-			}
-			else if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
+			if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
 			{
 				_video_payload_type = RED_PAYLOAD_TYPE;
 				_red_block_pt = first_payload->GetId();
@@ -116,7 +108,7 @@ bool RtcSession::Start()
 			{
 				if(payload->GetCodec() == PayloadAttr::SupportCodec::RTX)
 				{
-					_use_rtx_flag = true;
+					_rtx_enabled = true;
 					_video_rtx_ssrc = offer_media_desc->GetRtxSsrc();
 
 					// Now, no RTCP with RTX
@@ -307,6 +299,11 @@ void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 
 bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
 {
+	if(_rtx_enabled == false)
+	{
+		return true;
+	}
+
 	auto stream = std::dynamic_pointer_cast<RtcStream>(GetStream());
 	if(stream == nullptr)
 	{

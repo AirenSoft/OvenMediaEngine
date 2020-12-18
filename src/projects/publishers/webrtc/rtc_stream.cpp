@@ -94,6 +94,9 @@ RtcStream::~RtcStream()
 
 bool RtcStream::Start()
 {
+	_rtx_enabled = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().IsRtxEnabled();
+	_ulpfec_enabled = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().IsUlpfecEnalbed();
+
 	_offer_sdp = std::make_shared<SessionDescription>();
 	_offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
 	_offer_sdp->SetTiming(0, 0);
@@ -192,7 +195,6 @@ bool RtcStream::Start()
 				{
 					video_media_desc = std::make_shared<MediaDescription>();
 					video_media_desc->SetConnection(4, "0.0.0.0");
-					// TODO(dimiden): Prevent duplication
 					video_media_desc->SetMid(ov::Random::GenerateString(6));
 					video_media_desc->SetMsid(msid, ov::Random::GenerateString(36));
 					video_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
@@ -205,7 +207,7 @@ bool RtcStream::Start()
 					// Media SSRC
 					video_media_desc->SetSsrc(ov::Random::GenerateUInt32());
 					// RTX SSRC
-					if(_support_rtx == true)
+					if(_rtx_enabled == true)
 					{
 						video_media_desc->SetRtxSsrc(ov::Random::GenerateUInt32());
 					}
@@ -214,11 +216,16 @@ bool RtcStream::Start()
 				}
 
 				payload->SetRtpmap(payload_type_num++, codec, 90000);
-				payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
+				
+				if(_rtx_enabled == true)
+				{
+					payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
+				}
+
 				video_media_desc->AddPayload(payload);
 
 				// For RTX
-				if(_support_rtx == true)
+				if(_rtx_enabled == true)
 				{
 					auto rtx_payload = std::make_shared<PayloadAttr>();
 					rtx_payload->SetRtpmap(payload_type_num++, "rtx", 90000);
@@ -298,16 +305,24 @@ bool RtcStream::Start()
 		}
 	}
 
-	if (video_media_desc)
+	if (video_media_desc && _ulpfec_enabled == true)
 	{
         // RED & ULPFEC
-        auto red_payload = std::make_shared<PayloadAttr>();
-        red_payload->SetRtpmap(RED_PAYLOAD_TYPE, "red", 90000);
-		red_payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
+		auto red_payload = std::make_shared<PayloadAttr>();
+		red_payload->SetRtpmap(RED_PAYLOAD_TYPE, "red", 90000);
+		if(_rtx_enabled == true)
+		{
+			red_payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
+		}
 		video_media_desc->AddPayload(red_payload);
-		
+
+		// ULPFEC
+		auto ulpfec_payload = std::make_shared<PayloadAttr>();
+		ulpfec_payload->SetRtpmap(ULPFEC_PAYLOAD_TYPE, "ulpfec", 90000);
+		video_media_desc->AddPayload(ulpfec_payload);
+
 		// For RTX
-		if(_support_rtx == true)
+		if(_rtx_enabled == true)
 		{
 			// RTX for RED
 			auto rtx_payload = std::make_shared<PayloadAttr>();
@@ -318,11 +333,6 @@ bool RtcStream::Start()
 
 			video_media_desc->AddPayload(rtx_payload);
 		}
-
-		// ULPFEC
-        auto ulpfec_payload = std::make_shared<PayloadAttr>();
-        ulpfec_payload->SetRtpmap(ULPFEC_PAYLOAD_TYPE, "ulpfec", 90000);
-        video_media_desc->AddPayload(ulpfec_payload);
 
 		video_media_desc->Update();
     }
@@ -361,11 +371,14 @@ bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 		_stream_metrics->IncreaseBytesOut(PublisherType::Webrtc, packet->GetData()->GetLength() * GetSessionCount());
 	}
 
-	// Store for retransmission
-	auto history = GetHistory(packet->PayloadType());
-	if(history != nullptr)
+	if(_rtx_enabled == true)
 	{
-		history->StoreRtpPacket(packet);
+		// Store for retransmission
+		auto history = GetHistory(packet->PayloadType());
+		if(history != nullptr)
+		{
+			history->StoreRtpPacket(packet);
+		}
 	}
 
 	return true;
@@ -500,9 +513,14 @@ void RtcStream::AddPacketizer(cmn::MediaCodecId codec_id, uint32_t id, uint8_t p
 		case MediaCodecId::Vp8:
 		case MediaCodecId::H264:
 		case MediaCodecId::H265:
+		{
 			packetizer->SetVideoCodec(codec_id);
-			packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
+			if(_ulpfec_enabled == true)
+			{
+				packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
+			}
 			break;
+		}
 		case MediaCodecId::Opus:
 			packetizer->SetAudioCodec(codec_id);
 			break;

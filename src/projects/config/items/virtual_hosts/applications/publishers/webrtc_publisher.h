@@ -23,6 +23,8 @@ namespace cfg
 					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Webrtc)
 
 					CFG_DECLARE_GETTER_OF(GetTimeout, _timeout)
+					CFG_DECLARE_GETTER_OF(IsRtxEnabled, _rtx)
+					CFG_DECLARE_GETTER_OF(IsUlpfecEnalbed, _ulpfec)
 
 				protected:
 					void MakeParseList() override
@@ -30,9 +32,13 @@ namespace cfg
 						Publisher::MakeParseList();
 
 						RegisterValue<Optional>("Timeout", &_timeout);
+						RegisterValue<Optional>("Rtx", &_rtx);
+						RegisterValue<Optional>("Ulpfec", &_ulpfec);
 					}
 
 					int _timeout = 30000;
+					bool _rtx = true;
+					bool _ulpfec = true;
 				};
 			}  // namespace pub
 		}	   // namespace app
