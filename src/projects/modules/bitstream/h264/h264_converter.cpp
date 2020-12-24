@@ -125,6 +125,7 @@ bool H264Converter::ConvertAvccToAnnexb(cmn::PacketType type, const std::shared_
 	if (annexb_data->GetLength() > 0)
 	{
 		data->Append(annexb_data);
+		//  *data = *annexb_data;
 	}
 
 	return true;
