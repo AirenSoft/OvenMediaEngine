@@ -4,9 +4,9 @@
 #include "rtx_rtp_packet.h"
 
 // WebRTC-Native-Code uses 9600 value
-#define DEFAULT_MAX_HISTORY_CAPACITY	200
+#define DEFAULT_MAX_HISTORY_CAPACITY	1500
 // Stored RTP packet is only valid for 2 second after being created
-#define VALID_TIME_MS_STORED_RTP_PACKET	2000	
+#define VALID_TIME_MS_STORED_RTP_PACKET	2000
 
 class RtpHistory
 {
