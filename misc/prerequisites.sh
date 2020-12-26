@@ -32,8 +32,14 @@ else
     elif [ -f /etc/os-release ]; then
         OSNAME=$(cat /etc/os-release | grep "^NAME" | tr -d "\"" | cut -d"=" -f2)
         OSVERSION=$(cat /etc/os-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f1 | awk '{print  $1}')
+        OSMINORVERSION=$(cat /etc/os-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f2 | awk '{print  $1}')
     fi
 fi
+
+if [[ "${OSNAME}" == "Ubuntu" && "${OSVERSION}" == "20" && "${OSMINORVERSION}" == "04" ]]; then
+    OPENSSL_VERSION=1.1.1f
+fi
+
 MAKEFLAGS="${MAKEFLAGS} -j${NCPU}"
 CURRENT=$(pwd)
 
@@ -281,7 +287,7 @@ fail_exit()
 
 check_version()
 {
-    if [[ "${OSNAME}" == "Ubuntu" && "${OSVERSION}" != "18" ]]; then
+    if [[ "${OSNAME}" == "Ubuntu" && "${OSVERSION}" != "18" && "${OSVERSION}.${OSMINORVERSION}" != "20.04" ]]; then
         proceed_yn
     fi
 
@@ -296,7 +302,7 @@ check_version()
 
 proceed_yn()
 {
-    read -p "This program [$0] is tested on [Ubuntu 18, CentOS 7, Fedora 28]
+    read -p "This program [$0] is tested on [Ubuntu 18/20.04, CentOS 7, Fedora 28]
 Do you want to continue [y/N] ? " ANS
     if [[ "${ANS}" != "y" && "$ANS" != "yes" ]]; then
         cd ${CURRENT}
