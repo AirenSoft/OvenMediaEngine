@@ -140,7 +140,7 @@ namespace pvd
 		}
 
 		auto scheme = _curr_url->Scheme();
-		if (scheme == "OVT")
+		if (scheme != "OVT")
 		{
 			_state = State::ERROR;
 			logte("The scheme is not OVT : %s", scheme.CStr());
