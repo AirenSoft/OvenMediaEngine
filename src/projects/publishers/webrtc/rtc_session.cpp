@@ -52,6 +52,9 @@ RtcSession::~RtcSession()
 
 bool RtcSession::Start()
 {
+	// start and stop must be called independently.
+	std::lock_guard<std::shared_mutex> lock(_start_stop_lock);
+
 	if(GetState() != SessionState::Ready)
 	{
 		return false;
@@ -151,6 +154,9 @@ bool RtcSession::Start()
 
 bool RtcSession::Stop()
 {
+	// start and stop must be called independently.
+	std::lock_guard<std::shared_mutex> lock(_start_stop_lock);
+
 	logtd("Stop session. Peer sdp session id : %u", GetOfferSDP()->GetSessionId());
 
 	if(GetState() != SessionState::Started && GetState() != SessionState::Stopping)
@@ -214,6 +220,9 @@ void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_
 
 bool RtcSession::SendOutgoingData(const std::any &packet)
 {
+	//It must not be called during start and stop.
+	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
+
 	if(GetState() != SessionState::Started)
 	{
 		return false;
@@ -280,6 +289,14 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 
 void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 {
+	//It must not be called during start and stop.
+	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
+
+	if(GetState() != SessionState::Started)
+	{
+		return;
+	}
+
 	if(rtcp_info->GetPacketType() == RtcpPacketType::RR)
 	{
 		// Process

@@ -96,4 +96,6 @@ private:
 	uint16_t							_rtx_sequence_number = 1;
 
 	uint64_t							_session_expired_time = 0;
+
+	std::shared_mutex					_start_stop_lock;
 };
