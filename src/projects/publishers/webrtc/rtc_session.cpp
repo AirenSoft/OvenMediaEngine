@@ -213,6 +213,9 @@ const std::shared_ptr<WebSocketClient>& RtcSession::GetWSClient()
 void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
 								const std::shared_ptr<const ov::Data> &data)
 {
+	//It must not be called during start and stop.
+	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
+
 	_received_bytes += data->GetLength();
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
 	_dtls_ice_transport->OnDataReceived(pub::SessionNodeType::None, data);
@@ -289,9 +292,6 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 
 void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 {
-	//It must not be called during start and stop.
-	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
-
 	if(GetState() != SessionState::Started)
 	{
 		return;
