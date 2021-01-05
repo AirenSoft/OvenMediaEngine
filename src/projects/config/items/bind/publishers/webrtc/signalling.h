@@ -16,6 +16,12 @@ namespace cfg
 		{
 			struct Signalling : public Item
 			{
+			protected:
+				cmn::SingularPort _port;
+				cmn::SingularPort _tls_port;
+				int _worker = 4;
+
+			public:
 				explicit Signalling(const char *port)
 					: _port(port)
 				{
@@ -38,10 +44,6 @@ namespace cfg
 					RegisterValue<Optional>("TLSPort", &_tls_port);
 					RegisterValue<Optional>("Worker", &_worker);
 				}
-
-				cmn::SingularPort _port;
-				cmn::SingularPort _tls_port;
-				int _worker = 4;
 			};
 		}  // namespace pub
 	}	   // namespace bind

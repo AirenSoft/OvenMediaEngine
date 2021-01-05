@@ -26,6 +26,8 @@ RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config)
 
 bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count)
 {
+	const auto &webrtc_config = _server_config.GetBind().GetPublishers().GetWebrtc();
+
 	if ((_http_server != nullptr) || (_https_server != nullptr))
 	{
 		OV_ASSERT(false, "Server is already running (%p, %p)", _http_server.get(), _https_server.get());
@@ -46,6 +48,52 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 
 	if (result)
 	{
+		auto &ice_servers_config = webrtc_config.GetIceServers();
+
+		if (ice_servers_config.IsParsed())
+		{
+			_ice_servers = Json::arrayValue;
+
+			for (auto ice_server_config : ice_servers_config.GetIceServerList())
+			{
+				Json::Value ice_server = Json::objectValue;
+
+				// URLS
+				auto &url_list = ice_server_config.GetUrls().GetUrlList();
+
+				if (url_list.size() == 0)
+				{
+					logtw("There is no URL list in ICE Servers");
+					continue;
+				}
+
+				Json::Value urls = Json::arrayValue;
+				for (auto url : url_list)
+				{
+					urls.append(url.GetUrl().CStr());
+				}
+				ice_server["urls"] = urls;
+
+				// UserName
+				if (ice_server_config.GetUserName().IsEmpty() == false)
+				{
+					ice_server["user_name"] = ice_server_config.GetUserName().CStr();
+				}
+
+				// Credential
+				if (ice_server_config.GetCredential().IsEmpty() == false)
+				{
+					ice_server["credential"] = ice_server_config.GetCredential().CStr();
+				}
+
+				_ice_servers.append(ice_server);
+			}
+		}
+		else
+		{
+			_ice_servers = Json::nullValue;
+		}
+
 		_http_server = http_server;
 		_https_server = https_server;
 	}
@@ -499,6 +547,10 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 				}
 				value["candidates"] = candidates;
 				value["code"] = static_cast<int>(HttpStatusCode::OK);
+				if(_ice_servers.isNull() == false)
+				{
+					value["ice_servers"] = _ice_servers;
+				}
 
 				info->offer_sdp = sdp;
 
