@@ -73,7 +73,7 @@ namespace mon
 
     uint64_t CommonMetrics::GetTotalBytesIn() const
 	{
-		return _total_bytes_in.load();
+		return _total_bytes_in;
 	}
 	uint64_t CommonMetrics::GetTotalBytesOut() const
 	{
@@ -135,7 +135,8 @@ namespace mon
 	{
 		_publisher_metrics[static_cast<int8_t>(type)]._connections++;
 		_total_connections++;
-		if (_total_connections > _max_total_connections)
+
+		if (_total_connections.load() > _max_total_connections.load())
 		{
 			_max_total_connections.exchange(_total_connections);
 			_max_total_connection_time = std::chrono::system_clock::now();
@@ -145,15 +146,16 @@ namespace mon
 	}
 	void CommonMetrics::OnSessionDisconnected(PublisherType type)
 	{
-		if(_publisher_metrics[static_cast<int8_t>(type)]._connections > 0)
-		{
-			_publisher_metrics[static_cast<int8_t>(type)]._connections--;
-		}
+		_publisher_metrics[static_cast<int8_t>(type)]._connections--;
+		_total_connections--;
 
-		if(_total_connections > 0)
-		{
-			_total_connections--;
-		}
+		UpdateDate();
+	}
+
+	void CommonMetrics::OnSessionsDisconnected(PublisherType type, uint64_t number_of_sessions)
+	{
+		_publisher_metrics[static_cast<int8_t>(type)]._connections -= number_of_sessions;
+		_total_connections -= number_of_sessions;
 
 		UpdateDate();
 	}

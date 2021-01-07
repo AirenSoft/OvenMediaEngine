@@ -67,6 +67,17 @@ namespace mon
 
         logti("Delete StreamMetrics(%s) for monitoring", stream.GetName().CStr());
 
+
+		// If there are sessions in the stream, the number of visitors to the app is recalculated.
+		// Calculate connections to application only if it hasn't origin stream to prevent double subtract. 
+		if(stream_metric->GetOriginStream() == nullptr)
+		{
+			for(uint8_t type = static_cast<uint8_t>(PublisherType::Unknown); type < static_cast<uint8_t>(PublisherType::NumberOfPublishers); type++)
+			{
+				 OnSessionsDisconnected(static_cast<PublisherType>(type), stream_metric->GetConnections(static_cast<PublisherType>(type)));
+			}
+		}
+
         // logging StreamMetric
         stream_metric->ShowInfo();
 
