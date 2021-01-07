@@ -39,11 +39,11 @@ bool OvtPacketizer::Packetize(uint64_t timestamp, const std::shared_ptr<MediaPac
 	 |                            Duration                           |
 	 |                                                               |
 	 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 |    MediaType  |    MediaFlag   |            Data Size
+	 |    MediaType  |    MediaFlag   |  Bit Format  |   PacketType  |         
 	 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                 Data Size            |             Data			 |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	 |                              ...								 |
+     |                            Data Size            				 |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	 |                              Data							 |
 	 |								...								 |
 	 |								...								 |
 	 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -63,9 +63,11 @@ bool OvtPacketizer::Packetize(uint64_t timestamp, const std::shared_ptr<MediaPac
 	ByteWriter<uint64_t>::WriteBigEndian(&buffer[20], media_packet->GetDuration());
 	ByteWriter<uint8_t>::WriteBigEndian(&buffer[28], static_cast<int8_t>(media_packet->GetMediaType()));
 	ByteWriter<uint8_t>::WriteBigEndian(&buffer[29], static_cast<int8_t>(media_packet->GetFlag()));
-	ByteWriter<uint32_t>::WriteBigEndian(&buffer[30], media_packet->GetData()->GetLength());
+	ByteWriter<uint8_t>::WriteBigEndian(&buffer[30], static_cast<int8_t>(media_packet->GetBitstreamFormat()));
+	ByteWriter<uint8_t>::WriteBigEndian(&buffer[31], static_cast<int8_t>(media_packet->GetPacketType()));
+	ByteWriter<uint32_t>::WriteBigEndian(&buffer[32], media_packet->GetData()->GetLength());
 
-	memcpy(&buffer[34], media_packet->GetData()->GetData(), media_packet->GetData()->GetLength());
+	memcpy(&buffer[36], media_packet->GetData()->GetData(), media_packet->GetData()->GetLength());
 
 	size_t max_payload_size = OVT_DEFAULT_MAX_PACKET_SIZE - OVT_FIXED_HEADER_SIZE;
 	size_t remain_payload_len = payload.GetLength();
