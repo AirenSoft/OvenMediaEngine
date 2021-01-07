@@ -29,6 +29,8 @@ private:
 	bool Start() override;
 	bool Stop() override;
 
+	bool GenerateDecription();
+
 	Json::Value							_description;
 	std::mutex 							_packetizer_lock;
 	std::shared_ptr<OvtPacketizer>		_packetizer;

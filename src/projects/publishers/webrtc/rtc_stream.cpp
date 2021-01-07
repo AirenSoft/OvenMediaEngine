@@ -3,6 +3,7 @@
 #include "rtc_application.h"
 #include "rtc_session.h"
 #include <base/info/media_extradata.h>
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 
 using namespace cmn;
 
@@ -142,30 +143,30 @@ bool RtcStream::Start()
 
 						{
 							const auto &codec_extradata = track_item.second->GetCodecExtradata();
-							H264Extradata h264_extradata;
-							if (codec_extradata.empty() == false
-								&& h264_extradata.Deserialize(codec_extradata)
-								&& h264_extradata.GetSps().empty() == false
-								&& h264_extradata.GetSps().front().size() >= 4
-								&& h264_extradata.GetPps().empty() == false
-							)
+
+							AVCDecoderConfigurationRecord config;
+							if (AVCDecoderConfigurationRecord::Parse(codec_extradata.data(), codec_extradata.size(), config) == true &&
+							config.NumOfSPS() > 0)
 							{
 								ov::String parameter_sets;
-								for (const auto &sps : h264_extradata.GetSps())
+
+								for(int i=0; i<config.NumOfSPS(); i++)
 								{
-									parameter_sets.Append(ov::Base64::Encode(std::make_shared<ov::Data>(sps.data(), sps.size())));
+									auto sps = config.GetSPS(i);
+									parameter_sets.Append(ov::Base64::Encode(sps));
 									parameter_sets.Append(',');
 								}
-								const auto &pps = h264_extradata.GetPps();
-								for (size_t pps_index = 0; pps_index < pps.size(); ++pps_index)
+								for(int i=0; i<config.NumOfPPS(); i++)
 								{
-									parameter_sets.Append(ov::Base64::Encode(std::make_shared<ov::Data>(pps[pps_index].data(), pps[pps_index].size())));
-									if (pps_index != pps.size() - 1)
+									auto pps = config.GetPPS(i);
+									parameter_sets.Append(ov::Base64::Encode(pps));
+									if (i != config.NumOfPPS() - 1)
 									{
 										parameter_sets.Append(',');
 									}
 								}
-								const auto &first_sps = h264_extradata.GetSps().front();
+
+								const auto first_sps = config.GetSPS(0)->GetDataAs<uint8_t>();
 								payload->SetFmtp(ov::String::FormatString(
 									// NonInterleaved => packetization-mode=1
 									"packetization-mode=1;profile-level-id=%02x%02x%02x;sprop-parameter-sets=%s;level-asymmetry-allowed=1",

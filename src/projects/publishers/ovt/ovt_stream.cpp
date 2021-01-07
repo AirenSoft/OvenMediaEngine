@@ -39,8 +39,28 @@ bool OvtStream::Start()
 {
 	logtd("OvtStream(%d) has been started", GetId());
 	_packetizer = std::make_shared<OvtPacketizer>(OvtPacketizerInterface::GetSharedPtr());
+	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
 
-	/*
+	return Stream::Start();
+}
+
+bool OvtStream::Stop()
+{
+	logtd("OvtStream(%u) has been stopped", GetId());
+
+	std::unique_lock<std::mutex> mlock(_packetizer_lock);
+	if(_packetizer != nullptr)
+	{	
+		_packetizer.reset();
+		_packetizer = nullptr;
+	}
+
+	return Stream::Stop();
+}
+
+bool OvtStream::GenerateDecription()
+{
+/*
 	"stream" :
 	{
 		"appName" : "app",
@@ -87,6 +107,8 @@ bool OvtStream::Start()
 		Json::Value json_video_track;
 		Json::Value json_audio_track;
 
+		track->GetCodecExtradata();
+
 		json_track["id"] = track->GetId();
 		json_track["codecId"] = static_cast<int8_t>(track->GetCodecId());
 		json_track["mediaType"] = static_cast<int8_t>(track->GetMediaType());
@@ -107,6 +129,13 @@ bool OvtStream::Start()
 		json_track["videoTrack"] = json_video_track;
 		json_track["audioTrack"] = json_audio_track;
 
+		auto &extra_data = track->GetCodecExtradata();
+		if(!extra_data.empty())
+		{
+			auto extra_data_base64 = ov::Base64::Encode(ov::Data(extra_data.data(), extra_data.size()));
+			json_track["extra_data"] = extra_data_base64.CStr();
+		}
+		
 		json_tracks.append(json_track);
 	}
 
@@ -114,23 +143,7 @@ bool OvtStream::Start()
 
 	_description = json_root;
 
-	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
-
-	return Stream::Start();
-}
-
-bool OvtStream::Stop()
-{
-	logtd("OvtStream(%u) has been stopped", GetId());
-
-	std::unique_lock<std::mutex> mlock(_packetizer_lock);
-	if(_packetizer != nullptr)
-	{	
-		_packetizer.reset();
-		_packetizer = nullptr;
-	}
-
-	return Stream::Stop();
+	return true;
 }
 
 void OvtStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
@@ -169,6 +182,7 @@ bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 
 Json::Value& OvtStream::GetDescription()
 {
+	GenerateDecription();
 	return _description;
 }
 
