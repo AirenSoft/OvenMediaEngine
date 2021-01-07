@@ -9,7 +9,7 @@
 
 // Role Definition
 // ------------------------
-// Incoming stream process
+// Inbound stream process
 //		Calculating packet duration ->
 //		Changing the bitstream format  ->
 // 		Parsing Track Information ->
@@ -18,7 +18,7 @@
 // 		Append Decoder PrameterSets ->
 // 		Changing the timestamp based on the timebase
 
-// Outgoing Stream process
+// Outbound Stream process
 //		Calculating packet duration ->
 // 		Parsing Track Information ->
 // 		Parsing Fragmentation Header ->
@@ -94,7 +94,7 @@ void MediaRouteStream::SetInoutType(MediaRouterStreamType inout_type)
 {
 	_inout_type = inout_type;
 
-	_packets_queue.SetAlias(ov::String::FormatString("%s/%s - Mediarouter stream packet %s", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (_inout_type == MediaRouterStreamType::INBOUND) ? "Incoming" : "Outging"));
+	_packets_queue.SetAlias(ov::String::FormatString("%s/%s - Mediarouter stream packet %s", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (_inout_type == MediaRouterStreamType::INBOUND) ? "Inbound" : "Outbound"));
 }
 
 MediaRouterStreamType MediaRouteStream::GetInoutType()
@@ -113,7 +113,7 @@ void MediaRouteStream::SetCreatedSteam(bool created)
 	_is_created_stream = created;
 }
 
-bool MediaRouteStream::PushIncomingStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+bool MediaRouteStream::ProcessInboundStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
 {
 	// Convert to default bitstream format
 	if (!ConvertToDefaultBitstream(media_track, media_packet))
@@ -148,7 +148,7 @@ bool MediaRouteStream::PushIncomingStream(std::shared_ptr<MediaTrack> &media_tra
 	return true;
 }
 
-bool MediaRouteStream::PushOutgoungStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
+bool MediaRouteStream::ProcessOutboundStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
 {
 	// Update fragment header
 	if (!UpdateFlagmentHeaders(media_track, media_packet))
@@ -193,7 +193,7 @@ void MediaRouteStream::SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_trac
 	_parse_completed_track_info[media_track->GetId()] = parsed;
 }
 
-bool MediaRouteStream::GetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track)
+bool MediaRouteStream::IsParseTrackInfo(std::shared_ptr<MediaTrack> &media_track)
 {
 	auto iter = _parse_completed_track_info.find(media_track->GetId());
 	if (iter != _parse_completed_track_info.end())
@@ -232,7 +232,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 	}
 
 	// Check if parsing is already finished.
-	if (GetParseTrackInfo(media_track) == true)
+	if (IsParseTrackInfo(media_track) == true)
 	{
 		return true;
 	}
@@ -295,6 +295,8 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 				if (media_track->GetCodecExtradata().size() == 0)
 				{
 					avc_decoder_configuration_record.SetVersion(1);
+
+					// Set default nal unit length
 					avc_decoder_configuration_record.SetLengthOfNalUnit(3);
 
 					std::vector<uint8_t> extradata;
@@ -399,6 +401,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 		case MediaCodecId::Jpeg:
 		case MediaCodecId::Png:
 			SetParseTrackInfo(media_track, true);
+
 			break;
 
 		default:
@@ -426,7 +429,7 @@ bool MediaRouteStream::UpdateFlagmentHeaders(
 				NalUnitFragmentHeader nal_parser;
 				if (NalUnitFragmentHeader::Parse(media_packet->GetData(), nal_parser) == false)
 				{
-					logte("failed to parse fragment header");
+					logte("Failed to parse fragment header");
 					return false;
 				}
 
@@ -542,7 +545,7 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 		case MediaCodecId::Vp8:
 		case MediaCodecId::Vp9:
 		case MediaCodecId::Opus:
-			logte("Not support codec in incoming stream");
+			logte("Not support codec in stream");
 			return false;
 
 		default:
@@ -796,7 +799,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 		ov::String stat_stream_str = "";
 
-		stat_stream_str.AppendFormat("\n - MediaRouter Stream | type: %s, name: %s/%s, uptime: %lldms, queue: %d, A-V(%lld)", _inout_type == MediaRouterStreamType::INBOUND ? "Incoming" : "Outgoing", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (int64_t)uptime, _packets_queue.Size(), max_pts - min_pts);
+		stat_stream_str.AppendFormat("\n - MediaRouter Stream | type: %s, name: %s/%s, uptime: %lldms, queue: %d, A-V(%lld)", _inout_type == MediaRouterStreamType::INBOUND ? "Inbound" : "Outbound", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (int64_t)uptime, _packets_queue.Size(), max_pts - min_pts);
 
 		stat_track_str = stat_stream_str + stat_track_str;
 
@@ -967,12 +970,13 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		case MediaRouterStreamType::INBOUND: {
 			// DumpPacket(pop_media_packet);
 
-			if (!PushIncomingStream(media_track, pop_media_packet))
+			if (!ProcessInboundStream(media_track, pop_media_packet))
 			{
 				return nullptr;
 			}
 
-			if (GetParseTrackInfo(media_track) == false)
+			// If the parsing of track information is not complete, discard the packet.
+			if (IsParseTrackInfo(media_track) == false)
 			{
 				return nullptr;
 			}
@@ -980,8 +984,14 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 		break;
 
 		case MediaRouterStreamType::OUTBOUND: {
-			if (!PushOutgoungStream(media_track, pop_media_packet))
+			if (!ProcessOutboundStream(media_track, pop_media_packet))
 				return nullptr;
+
+			// If the parsing of track information is not complete, discard the packet.
+			if (IsParseTrackInfo(media_track) == false)
+			{
+				return nullptr;
+			}
 		}
 		break;
 
@@ -1007,7 +1017,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 			// TODO(soulk): I think all tracks should calibrate the PTS with the same value.
 			_pts_correct[track_id] = pop_media_packet->GetPts() - _pts_last[track_id] - _pts_avg_inc[track_id];
 
-			logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld, inc : %lld", track_id, _pts_last[track_id], pop_media_packet->GetPts(), _pts_correct[track_id], _pts_avg_inc[track_id], std::abs(ts_inc_ms));
+			logtw("Detected abnormal increased pts. track_id : %d, prv_pts : %lld, cur_pts : %lld, crt_pts : %lld, avg_inc : %lld, inc : %lld",
+				  track_id, _pts_last[track_id], pop_media_packet->GetPts(), _pts_correct[track_id], _pts_avg_inc[track_id], std::abs(ts_inc_ms));
 		}
 	}
 	else
@@ -1035,7 +1046,15 @@ void MediaRouteStream::DumpPacket(
 	std::shared_ptr<MediaPacket> &media_packet,
 	bool dump)
 {
-	logtd("track_id(%d), type(%d), fmt(%d), flags(%d), pts(%lld) dts(%lld) dur(%d), size(%d)", media_packet->GetTrackId(), media_packet->GetPacketType(), media_packet->GetBitstreamFormat(), media_packet->GetFlag(), media_packet->GetPts(), media_packet->GetDts(), media_packet->GetDuration(), media_packet->GetDataLength());
+	logtd("track_id(%d), type(%d), fmt(%d), flags(%d), pts(%lld) dts(%lld) dur(%d), size(%d)",
+		  media_packet->GetTrackId(),
+		  media_packet->GetPacketType(),
+		  media_packet->GetBitstreamFormat(),
+		  media_packet->GetFlag(),
+		  media_packet->GetPts(),
+		  media_packet->GetDts(),
+		  media_packet->GetDuration(),
+		  media_packet->GetDataLength());
 
 	if (dump == true)
 	{
