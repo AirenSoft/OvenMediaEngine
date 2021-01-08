@@ -26,7 +26,7 @@ std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(const info::A
 TranscodeApplication::TranscodeApplication(const info::Application &application_info)
 	: _application_info(application_info)
 {
-	_max_worker_thread_count = _application_info.GetConfig().GetPublishers().GetStreamLoadBalancingThreadCount() / 2;
+	_max_worker_thread_count = _application_info.GetConfig().GetPublishers().GetStreamLoadBalancingThreadCount();
 
 	if (_max_worker_thread_count < MIN_APPLICATION_WORKER_COUNT)
 	{
