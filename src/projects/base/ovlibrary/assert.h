@@ -11,6 +11,7 @@
 #include <cstdlib>
 
 #include "log.h"
+#include "stack_trace.h"
 
 #ifdef DEBUG
 #	define OV_ASSERT_TO_STRING(x)				# x
@@ -19,8 +20,13 @@
 	{ \
 		if(!(expression)) \
 		{ \
-			loge("Assertion", "Assertion failed: %s:%d\n\tExpression: %s" format, __FILE__, __LINE__, OV_ASSERT_TO_STRING(expression), ## __VA_ARGS__); \
-			abort(); \
+			loge("Assertion", "Assertion failed: %s:%d\n\tExpression: %s" format "\n\tStack trace:\n%s", \
+				__FILE__, __LINE__, \
+				OV_ASSERT_TO_STRING(expression), \
+				## __VA_ARGS__, \
+				ov::StackTrace::GetStackTrace().CStr() \
+				); \
+			::abort(); \
 		} \
 	} \
 	while(false)
