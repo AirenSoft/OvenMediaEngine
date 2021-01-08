@@ -9,6 +9,7 @@
 #include "segment_stream_server.h"
 
 #include <modules/http_server/http_server_manager.h>
+#include <monitoring/monitoring.h>
 
 #include <regex>
 #include <sstream>
@@ -387,4 +388,26 @@ bool SegmentStreamServer::UrlExistCheck(const std::vector<ov::String> &url_list,
 							 });
 
 	return (item != url_list.end());
+}
+
+bool SegmentStreamServer::IncreaseBytesOut(const std::shared_ptr<HttpClient> &client, size_t sent_bytes)
+{
+	auto request = client->GetRequest();
+
+	auto stream_info = request->GetExtraAs<pub::Stream>();
+
+	if (stream_info != nullptr)
+	{
+		auto stream_metric = StreamMetrics(*stream_info);
+		if (stream_metric != nullptr)
+		{
+			stream_metric->IncreaseBytesOut(GetPublisherType(), sent_bytes);
+		}
+	}
+	else
+	{
+		OV_ASSERT(stream_info != nullptr, "stream_info must not be nullptr: %p", request.get());
+	}
+
+	return true;
 }

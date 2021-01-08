@@ -72,6 +72,8 @@ protected:
 
 	bool UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url);
 
+	bool IncreaseBytesOut(const std::shared_ptr<HttpClient> &client, size_t sent_bytes);
+
 protected:
 	std::shared_ptr<HttpServer> _http_server;
 	std::shared_ptr<HttpServer> _https_server;

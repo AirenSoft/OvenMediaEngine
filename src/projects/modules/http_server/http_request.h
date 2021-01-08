@@ -127,7 +127,7 @@ public:
 		return _interceptor;
 	}
 
-	std::shared_ptr<void> GetExtra() const
+	std::any GetExtra() const
 	{
 		return _extra;
 	}
@@ -135,10 +135,19 @@ public:
 	template <typename T>
 	std::shared_ptr<T> GetExtraAs() const
 	{
-		return std::static_pointer_cast<T>(_extra);
+		try
+		{
+			return std::any_cast<std::shared_ptr<T>>(_extra);
+		}
+		catch ([[maybe_unused]] const std::bad_any_cast &e)
+		{
+		}
+
+		return nullptr;
 	}
 
-	void SetExtra(std::shared_ptr<void> extra)
+	template <typename T>
+	void SetExtra(std::shared_ptr<T> extra)
 	{
 		_extra = std::move(extra);
 	}
@@ -206,5 +215,5 @@ protected:
 	// HTTP body
 	std::shared_ptr<ov::Data> _request_body;
 
-	std::shared_ptr<void> _extra;
+	std::any _extra;
 };
