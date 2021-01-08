@@ -14,7 +14,7 @@
 #include "transcode_application.h"
 #include "transcode_private.h"
 
-#define MAX_QUEUE_SIZE 100
+#define MAX_QUEUE_SIZE 1024
 
 TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent)
 	: _application_info(application_info),
