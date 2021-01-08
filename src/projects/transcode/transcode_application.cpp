@@ -41,7 +41,7 @@ TranscodeApplication::TranscodeApplication(const info::Application &application_
 	{
 		_indicators.push_back(std::make_shared<ov::Queue<std::shared_ptr<BufferIndicator>>>(
 			ov::String::FormatString("Transcoder application indicator. app(%s) (%d/%d)", application_info.GetName().CStr(), worker_id, _max_worker_thread_count),
-			100));
+			1024));
 	}
 
 	logtd("Created transcoder application. app(%s)", application_info.GetName().CStr());
