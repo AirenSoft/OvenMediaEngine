@@ -13,7 +13,7 @@
 
 #define OV_LOG_TAG "MediaFilter.Resampler"
 
-MediaFilterResampler::MediaFilterResampler()
+MediaFilterResampler::MediaFilterResampler() 
 {
 	::avfilter_register_all();
 
@@ -38,8 +38,8 @@ MediaFilterResampler::~MediaFilterResampler()
 
 	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
 
-	_input_buffer.clear();
-	_output_buffer.clear();
+	_input_buffer.Clear();
+	_output_buffer.Clear();
 }
 
 bool MediaFilterResampler::Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context)
@@ -179,7 +179,11 @@ void MediaFilterResampler::Stop()
 {
 	_kill_flag = true;
 
-	_queue_event.Notify();
+	// _queue_event.Notify();
+
+	_input_buffer.Stop();
+	_output_buffer.Stop();
+	
 
 	if (_thread_work.joinable())
 	{
@@ -195,19 +199,11 @@ void MediaFilterResampler::ThreadFilter()
 
 	while (!_kill_flag)
 	{
-		_queue_event.Wait();
-
-		std::unique_lock<std::mutex> mlock(_mutex);
-
-		if (_input_buffer.empty())
-		{
+		auto obj = _input_buffer.Dequeue();
+		if (obj.has_value() == false)
 			continue;
-		}
 
-		auto frame = std::move(_input_buffer.front());
-		_input_buffer.pop_front();
-
-		mlock.unlock();
+		auto frame = std::move(obj.value());
 
 		// logtd("format(%d), channels(%d), samples(%d)", frame->GetFormat(), frame->GetChannels(), frame->GetNbSamples());
 		///logtp("Dequeued data for resampling: %lld\n%s", frame->GetPts(), ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
@@ -260,14 +256,13 @@ void MediaFilterResampler::ThreadFilter()
 			::memcpy(_frame->data[0], frame->GetBuffer(0), frame->GetBufferSize(0));
 		}
 
-		// Copy packet data into frame
-		if (::av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0)
-		{
-			logte("An error occurred while feeding the audio filtergraph: pts: %lld, linesize: %d, srate: %d, layout: %d, channels: %d, format: %d, rq: %d",  _frame->pts, _frame->linesize[0], _frame->sample_rate, _frame->channel_layout, _frame->channels, _frame->format, _input_buffer.size());
-		}
-
+		ret = ::av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF);
 		::av_frame_unref(_frame);
-
+		if (ret < 0)
+		{
+			logte("An error occurred while feeding the audio filtergraph: pts: %lld, linesize: %d, srate: %d, layout: %d, channels: %d, format: %d, rq: %d",  _frame->pts, _frame->linesize[0], _frame->sample_rate, _frame->channel_layout, _frame->channels, _frame->format, _input_buffer.Size());
+			continue;
+		}
 
 		while (true)
 		{
@@ -329,11 +324,7 @@ void MediaFilterResampler::ThreadFilter()
 
 				::av_frame_unref(_frame);
 
-				// *result = TranscodeResult::DataReady;
-				// return std::move(output_frame);
-				std::unique_lock<std::mutex> mlock(_mutex);
-
-				_output_buffer.push_back(std::move(output_frame));
+				_output_buffer.Enqueue(std::move(output_frame));
 			}
 		}
 	}
@@ -341,28 +332,23 @@ void MediaFilterResampler::ThreadFilter()
 
 int32_t MediaFilterResampler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
-	std::unique_lock<std::mutex> mlock(_mutex);
-
-	_input_buffer.push_back(std::move(buffer));
-	
-	mlock.unlock();
-	
-	_queue_event.Notify();;
+	_input_buffer.Enqueue(std::move(buffer));
 
 	return 0;
 }
 
 std::shared_ptr<MediaFrame> MediaFilterResampler::RecvBuffer(TranscodeResult *result)
 {
-	std::unique_lock<std::mutex> mlock(_mutex);
-	if(!_output_buffer.empty())
+	// std::unique_lock<std::mutex> mlock(_mutex);
+	if(!_output_buffer.IsEmpty())
 	{
 		*result = TranscodeResult::DataReady;
 
-		auto frame = std::move(_output_buffer.front());
-		_output_buffer.pop_front();
-
-		return std::move(frame);
+		auto obj = _output_buffer.Dequeue();
+		if (obj.has_value())
+		{
+			return std::move(obj.value());
+		}
 	}
 
 	*result = TranscodeResult::NoData;

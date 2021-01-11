@@ -37,6 +37,9 @@ MediaFilterRescaler::~MediaFilterRescaler()
 	OV_SAFE_FUNC(_outputs, nullptr, ::avfilter_inout_free, &);
 
 	OV_SAFE_FUNC(_filter_graph, nullptr, ::avfilter_graph_free, &);
+
+	_input_buffer.Clear();
+	_output_buffer.Clear();
 }
 
 bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context)
@@ -81,7 +84,6 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		input_media_track->GetTimeBase().GetNum(), input_media_track->GetTimeBase().GetDen(),
 		1, 1);
 
-
 	ret = ::avfilter_graph_create_filter(&_buffersrc_ctx, buffersrc, "in", input_args, nullptr, _filter_graph);
 	if (ret < 0)
 	{
@@ -98,18 +100,18 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		return false;
 	}
 
-	if(output_context->GetCodecId() == cmn::MediaCodecId::Jpeg)
+	if (output_context->GetCodecId() == cmn::MediaCodecId::Jpeg)
 	{
 		enum AVPixelFormat pix_fmts[] = {AV_PIX_FMT_YUVJ420P, AV_PIX_FMT_NONE};
 		ret = av_opt_set_int_list(_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
-
 	}
-	if(output_context->GetCodecId() == cmn::MediaCodecId::Png)
+	if (output_context->GetCodecId() == cmn::MediaCodecId::Png)
 	{
 		enum AVPixelFormat pix_fmts[] = {AV_PIX_FMT_RGBA, AV_PIX_FMT_NONE};
 		ret = av_opt_set_int_list(_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
 	}
-	else {
+	else
+	{
 		enum AVPixelFormat pix_fmts[] = {AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE};
 		ret = av_opt_set_int_list(_buffersink_ctx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
 	}
@@ -133,8 +135,9 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 		// "fps" filter options
 		ov::String::FormatString("fps=fps=%.2f:round=near", output_context->GetFrameRate()),
 		// "scale" filter options
-		ov::String::FormatString("scale=%dx%d:flags=bicubic", output_context->GetVideoWidth(), output_context->GetVideoHeight()),
-		// "settb" filter options		
+		// ov::String::FormatString("scale=%dx%d:flags=bicubic", output_context->GetVideoWidth(), output_context->GetVideoHeight()),
+		ov::String::FormatString("scale=%dx%d:flags=bilinear", output_context->GetVideoWidth(), output_context->GetVideoHeight()),
+		// "settb" filter options
 		ov::String::FormatString("settb=%s", output_context->GetTimeBase().GetStringExpr().CStr()),
 	};
 
@@ -176,24 +179,17 @@ bool MediaFilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_med
 
 int32_t MediaFilterRescaler::SendBuffer(std::shared_ptr<MediaFrame> buffer)
 {
-	//logtp("Data before rescaling: %lld (%.0f)\n%s", buffer->GetPts(), buffer->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(buffer->GetBuffer(0), buffer->GetBufferSize(0), 32).CStr());
-	std::unique_lock<std::mutex> mlock(_mutex);
-
-	_input_buffer.push_back(std::move(buffer));
-	
-	mlock.unlock();
-	
-	_queue_event.Notify();;
+	_input_buffer.Enqueue(std::move(buffer));
 
 	return 0;
 }
-
 
 void MediaFilterRescaler::Stop()
 {
 	_kill_flag = true;
 
-	_queue_event.Notify();
+	_input_buffer.Stop();
+	_output_buffer.Stop();
 
 	if (_thread_work.joinable())
 	{
@@ -206,29 +202,21 @@ void MediaFilterRescaler::ThreadFilter()
 {
 	logtd("Start transcode rescaler filter thread.");
 
-	while(!_kill_flag)
+	while (!_kill_flag)
 	{
-		_queue_event.Wait();
-
-		std::unique_lock<std::mutex> mlock(_mutex);
-
-		if(_input_buffer.empty())
-		{
+		auto obj = _input_buffer.Dequeue();
+		if (obj.has_value() == false)
 			continue;
-		}
 
-		// Dequeue a packet
-		auto frame = std::move(_input_buffer.front());
-		_input_buffer.pop_front();
+		auto frame = std::move(obj.value());
 
-		mlock.unlock();
-
-		//logtp("Dequeued data for rescaling: %lld (%.0f)\n%s", frame->GetPts(), frame->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
+		// logte("Filter Queue : %d / %d", _input_buffer.Size(), _output_buffer.Size());
+		// logtp("Dequeued data for rescaling: %lld (%.0f)\n%s", frame->GetPts(), frame->GetPts() * _output_context->GetTimeBase().GetExpr() * 1000.0f, ov::Dump(frame->GetBuffer(0), frame->GetBufferSize(0), 32).CStr());
 
 		_frame->format = frame->GetFormat();
 		_frame->width = frame->GetWidth();
 		_frame->height = frame->GetHeight();
-		_frame->pts = frame->GetPts();;
+		_frame->pts = frame->GetPts();
 		_frame->pkt_duration = frame->GetDuration();
 
 		_frame->linesize[0] = frame->GetStride(0);
@@ -239,17 +227,13 @@ void MediaFilterRescaler::ThreadFilter()
 		if (ret < 0)
 		{
 			logte("Could not allocate the video frame data\n");
-
-			// *result = TranscodeResult::DataError;
 			break;
 		}
 
 		ret = ::av_frame_make_writable(_frame);
 		if (ret < 0)
 		{
-			logte("Could not make writable frame: %d", ret);
-
-			// *result = TranscodeResult::DataError;
+			logte("Could not make writable frame. error(%d)", ret);
 			break;
 		}
 
@@ -258,24 +242,18 @@ void MediaFilterRescaler::ThreadFilter()
 		::memcpy(_frame->data[1], frame->GetBuffer(1), frame->GetBufferSize(1));
 		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
 
-		if (::av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0)
-		{
-			logte("An error occurred while feeding the audio filtergraph: format: %d, pts: %lld, linesize: %d, size: %d", _frame->format, _frame->pts, _frame->linesize[0], _input_buffer.size());
-		
-			std::unique_lock<std::mutex> mlock(_mutex);
-			_input_buffer.push_front(std::move(frame));
-			mlock.unlock();
-			_queue_event.Notify();
-		}
-
+		ret = ::av_buffersrc_add_frame_flags(_buffersrc_ctx, _frame, AV_BUFFERSRC_FLAG_KEEP_REF);
 		::av_frame_unref(_frame);
-	
+		if (ret < 0)
+		{
+			logte("An error occurred while feeding the audio filtergraph: format: %d, pts: %lld, linesize: %d, size: %d", _frame->format, _frame->pts, _frame->linesize[0], _input_buffer.Size());
+
+			continue;
+		}
 
 		while (true)
 		{
-			// 출력될 프레임이 있는지 확인함
 			int ret = ::av_buffersink_get_frame(_buffersink_ctx, _frame);
-
 			if (ret == AVERROR(EAGAIN))
 			{
 				// Need more data
@@ -283,16 +261,12 @@ void MediaFilterRescaler::ThreadFilter()
 			}
 			else if (ret == AVERROR_EOF)
 			{
-				logte("End of file: %d", ret);
-				// *result = TranscodeResult::EndOfFile;
-				// return nullptr;
+				logte("End of file error(%d)", ret);
 				break;
 			}
 			else if (ret < 0)
 			{
-				logte("Unknown error is occurred while get frame: %d", ret);
-				// *result = TranscodeResult::DataError;
-				// return nullptr;
+				logte("Unknown error is occurred while get frame. error(%d)", ret);
 				break;
 			}
 			else
@@ -317,26 +291,22 @@ void MediaFilterRescaler::ThreadFilter()
 
 				::av_frame_unref(_frame);
 
-				std::unique_lock<std::mutex> mlock(_mutex);
-
-				_output_buffer.push_back(std::move(output_frame));
+				_output_buffer.Enqueue(std::move(output_frame));
 			}
 		}
-
-
 	}
 }
 std::shared_ptr<MediaFrame> MediaFilterRescaler::RecvBuffer(TranscodeResult *result)
 {
-	std::unique_lock<std::mutex> mlock(_mutex);
-	if(!_output_buffer.empty())
+	if (!_output_buffer.IsEmpty())
 	{
 		*result = TranscodeResult::DataReady;
 
-		auto frame = std::move(_output_buffer.front());
-		_output_buffer.pop_front();
-
-		return std::move(frame);
+		auto obj = _output_buffer.Dequeue();
+		if (obj.has_value())
+		{
+			return std::move(obj.value());
+		}
 	}
 
 	*result = TranscodeResult::NoData;

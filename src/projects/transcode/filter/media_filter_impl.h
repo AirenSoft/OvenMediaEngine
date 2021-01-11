@@ -38,9 +38,6 @@ public:
 	MediaFilterImpl() = default;
 	virtual ~MediaFilterImpl() = default;
 
-	// 원본 스트림 정보
-	// stream_info : 원본 파일 정보
-	// context : 변환 정보
 	virtual bool Configure(const std::shared_ptr<MediaTrack> &input_media_track, const std::shared_ptr<TranscodeContext> &input_context, const std::shared_ptr<TranscodeContext> &output_context) = 0;
 
 	virtual int32_t SendBuffer(std::shared_ptr<MediaFrame> buffer) = 0;
@@ -56,12 +53,12 @@ public:
 
 	uint32_t GetInputBufferSize()
 	{
-		return _input_buffer.size();
+		return _input_buffer.Size();
 	}
 
 	uint32_t GetOutputBufferSize()
 	{
-		return _output_buffer.size();
+		return _output_buffer.Size();
 	}
 
 	cmn::Timebase GetInputTimebase() const
@@ -74,11 +71,9 @@ public:
 		return _output_context->GetTimeBase();
 	}
 
-
-
 protected:
-	std::deque<std::shared_ptr<MediaFrame>> _input_buffer;
-	std::deque<std::shared_ptr<MediaFrame>> _output_buffer;
+	ov::Queue<std::shared_ptr<MediaFrame>> _input_buffer;
+	ov::Queue<std::shared_ptr<MediaFrame>> _output_buffer;
 
 	AVFrame *_frame = nullptr;
 	AVFilterContext *_buffersink_ctx = nullptr;
@@ -93,8 +88,6 @@ protected:
 	std::shared_ptr<TranscodeContext> _output_context;
 
 	bool _kill_flag = false;
-	std::mutex _mutex;
 	std::thread _thread_work;
-	ov::Semaphore _queue_event;
 };
 
