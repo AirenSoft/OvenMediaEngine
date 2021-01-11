@@ -107,6 +107,12 @@ void OvenCodecImplAvcodecEncJpeg::ThreadEncode()
 
 		auto frame = std::move(_input_buffer.front());
 		_input_buffer.pop_front();
+		
+		// If the MJPEG encoding performance is insufficient, drop the pending frame.
+		while(_input_buffer.size() >= 2)
+		{
+			_input_buffer.pop_front();
+		}
 
 		mlock.unlock();
 
