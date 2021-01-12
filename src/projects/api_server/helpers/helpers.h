@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 
+#include <modules/http_server/http_datastructure.h>
 #include <monitoring/monitoring.h>
 
 namespace api
@@ -20,4 +21,16 @@ namespace api
 
 	std::map<uint32_t, std::shared_ptr<mon::StreamMetrics>> GetStreamList(const std::shared_ptr<mon::ApplicationMetrics> &application);
 	std::shared_ptr<mon::StreamMetrics> GetStream(const std::shared_ptr<mon::ApplicationMetrics> &application, const std::string_view &stream_name, std::vector<std::shared_ptr<mon::StreamMetrics>> *output_streams);
+
+	class MultipleStatus
+	{
+	public:
+		void AddStatusCode(HttpStatusCode status_code);
+		void AddStatusCode(const std::shared_ptr<const ov::Error> &error);
+		HttpStatusCode GetStatusCode() const;
+
+	protected:
+		int _count = 0;
+		HttpStatusCode _last_status_code = HttpStatusCode::OK;
+	};
 }  // namespace api

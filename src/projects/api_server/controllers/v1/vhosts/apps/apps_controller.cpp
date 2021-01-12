@@ -13,6 +13,7 @@
 #include <functional>
 
 #include "../../../../api_private.h"
+#include "../../../../converters/converters.h"
 #include "app_actions_controller.h"
 #include "output_profiles/output_profiles_controller.h"
 #include "streams/streams_controller.h"
@@ -50,6 +51,8 @@ namespace api
 			auto orchestrator = ocst::Orchestrator::GetInstance();
 			Json::Value response_value(Json::ValueType::arrayValue);
 			Json::Value requested_config = request_body;
+
+			MultipleStatus status_code;
 
 			for (auto &item : requested_config)
 			{
@@ -103,18 +106,22 @@ namespace api
 					{
 						case ocst::Result::Failed:
 							error = ov::Error::CreateError(HttpStatusCode::BadRequest, "Failed to create the application");
+							status_code.AddStatusCode(HttpStatusCode::BadRequest);
 							break;
 
 						case ocst::Result::Succeeded:
+							status_code.AddStatusCode(HttpStatusCode::OK);
 							break;
 
 						case ocst::Result::Exists:
-							error = ov::Error::CreateError(HttpStatusCode::Found, "The application already exists");
+							error = ov::Error::CreateError(HttpStatusCode::Conflict, "The application already exists");
+							status_code.AddStatusCode(HttpStatusCode::Conflict);
 							break;
 
 						case ocst::Result::NotExists:
 							// CreateApplication() never returns NotExists
 							error = ov::Error::CreateError(HttpStatusCode::InternalServerError, "Unknown error occurred");
+							status_code.AddStatusCode(HttpStatusCode::InternalServerError);
 							OV_ASSERT2(false);
 							break;
 					}
@@ -122,9 +129,7 @@ namespace api
 
 				if (error != nullptr)
 				{
-					Json::Value error_value;
-					error_value["message"] = error->ToString().CStr();
-					response_value.append(error_value);
+					response_value.append(conv::JsonFromError(error));
 				}
 				else
 				{
@@ -133,7 +138,7 @@ namespace api
 				}
 			}
 
-			return response_value;
+			return std::move(ApiResponse(status_code.GetStatusCode(), std::move(response_value)));
 		}
 
 		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<HttpClient> &client,
@@ -250,7 +255,7 @@ namespace api
 						break;
 
 					case ocst::Result::Exists:
-						error = ov::Error::CreateError(HttpStatusCode::Found, "The application already exists");
+						error = ov::Error::CreateError(HttpStatusCode::Conflict, "The application already exists");
 						break;
 
 					case ocst::Result::NotExists:

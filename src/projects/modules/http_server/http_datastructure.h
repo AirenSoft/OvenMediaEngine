@@ -134,6 +134,8 @@ enum class HttpStatusCode : uint16_t
 	NoContent = 204,
 	ResetContent = 205,
 	PartialContent = 206,
+	// RFC 4918 (https://tools.ietf.org/html/rfc4918#section-11.1)
+	MultiStatus = 207,
 	MultipleChoices = 300,
 	MovedPermanently = 301,
 	Found = 302,
@@ -185,6 +187,7 @@ inline constexpr bool IsValidHttpStatusCode(HttpStatusCode status_code)
 		HTTP_STATUS_RETURN(HttpStatusCode::NoContent, true);
 		HTTP_STATUS_RETURN(HttpStatusCode::ResetContent, true);
 		HTTP_STATUS_RETURN(HttpStatusCode::PartialContent, true);
+		HTTP_STATUS_RETURN(HttpStatusCode::MultiStatus, true);
 		HTTP_STATUS_RETURN(HttpStatusCode::MultipleChoices, true);
 		HTTP_STATUS_RETURN(HttpStatusCode::MovedPermanently, true);
 		HTTP_STATUS_RETURN(HttpStatusCode::Found, true);
@@ -235,6 +238,7 @@ inline constexpr const char *StringFromHttpStatusCode(HttpStatusCode status_code
 		HTTP_STATUS_RETURN(HttpStatusCode::NoContent, "No Content");
 		HTTP_STATUS_RETURN(HttpStatusCode::ResetContent, "Reset Content");
 		HTTP_STATUS_RETURN(HttpStatusCode::PartialContent, "Partial Content");
+		HTTP_STATUS_RETURN(HttpStatusCode::MultiStatus, "Multi Status");
 		HTTP_STATUS_RETURN(HttpStatusCode::MultipleChoices, "Multiple Choices");
 		HTTP_STATUS_RETURN(HttpStatusCode::MovedPermanently, "Moved Permanently");
 		HTTP_STATUS_RETURN(HttpStatusCode::Found, "Found");
