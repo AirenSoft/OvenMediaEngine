@@ -1,3 +1,3 @@
 #pragma once
 
-#define OV_LOG_TAG                      "RtmpWriter"
+#define OV_LOG_TAG                      "RTMPWriter"

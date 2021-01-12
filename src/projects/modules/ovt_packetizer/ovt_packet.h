@@ -170,7 +170,7 @@
 #define OVT_PAYLOAD_TYPE_MEDIA_PACKET		31
 
 // Using MediaPacket (De)Packetizer
-#define MEDIA_PACKET_HEADER_SIZE			(32+64+64+64+8+8+32)/8
+#define MEDIA_PACKET_HEADER_SIZE			(32+64+64+64+8+8+8+8+32)/8
 
 
 class OvtPacket

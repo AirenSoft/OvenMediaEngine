@@ -491,7 +491,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 									const std::shared_ptr<const SessionDescription> &offer_sdp,
 									const std::shared_ptr<const SessionDescription> &peer_sdp)
 {
-	logtd("Stop commnad received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
+	logti("Stop commnad received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 	// Find Stream
 	auto stream = std::static_pointer_cast<RtcStream>(GetStream(vhost_app_name, stream_name));
 	if (!stream)
@@ -574,6 +574,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 		case IcePortConnectionState::Disconnected:
 		case IcePortConnectionState::Closed:
 		{
+			logti("IcePort is disconnected. : (%s/%s/%u) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(), session->GetId(), state);
 			DisconnectSessionInternal(session);
 			break;
 		}

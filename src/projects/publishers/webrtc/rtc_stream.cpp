@@ -3,6 +3,7 @@
 #include "rtc_application.h"
 #include "rtc_session.h"
 #include <base/info/media_extradata.h>
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 
 using namespace cmn;
 
@@ -94,6 +95,9 @@ RtcStream::~RtcStream()
 
 bool RtcStream::Start()
 {
+	_rtx_enabled = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().IsRtxEnabled();
+	_ulpfec_enabled = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().IsUlpfecEnalbed();
+
 	_offer_sdp = std::make_shared<SessionDescription>();
 	_offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
 	_offer_sdp->SetTiming(0, 0);
@@ -139,30 +143,30 @@ bool RtcStream::Start()
 
 						{
 							const auto &codec_extradata = track_item.second->GetCodecExtradata();
-							H264Extradata h264_extradata;
-							if (codec_extradata.empty() == false
-								&& h264_extradata.Deserialize(codec_extradata)
-								&& h264_extradata.GetSps().empty() == false
-								&& h264_extradata.GetSps().front().size() >= 4
-								&& h264_extradata.GetPps().empty() == false
-							)
+
+							AVCDecoderConfigurationRecord config;
+							if (AVCDecoderConfigurationRecord::Parse(codec_extradata.data(), codec_extradata.size(), config) == true &&
+							config.NumOfSPS() > 0)
 							{
 								ov::String parameter_sets;
-								for (const auto &sps : h264_extradata.GetSps())
+
+								for(int i=0; i<config.NumOfSPS(); i++)
 								{
-									parameter_sets.Append(ov::Base64::Encode(std::make_shared<ov::Data>(sps.data(), sps.size())));
+									auto sps = config.GetSPS(i);
+									parameter_sets.Append(ov::Base64::Encode(sps));
 									parameter_sets.Append(',');
 								}
-								const auto &pps = h264_extradata.GetPps();
-								for (size_t pps_index = 0; pps_index < pps.size(); ++pps_index)
+								for(int i=0; i<config.NumOfPPS(); i++)
 								{
-									parameter_sets.Append(ov::Base64::Encode(std::make_shared<ov::Data>(pps[pps_index].data(), pps[pps_index].size())));
-									if (pps_index != pps.size() - 1)
+									auto pps = config.GetPPS(i);
+									parameter_sets.Append(ov::Base64::Encode(pps));
+									if (i != config.NumOfPPS() - 1)
 									{
 										parameter_sets.Append(',');
 									}
 								}
-								const auto &first_sps = h264_extradata.GetSps().front();
+
+								const auto first_sps = config.GetSPS(0)->GetDataAs<uint8_t>();
 								payload->SetFmtp(ov::String::FormatString(
 									// NonInterleaved => packetization-mode=1
 									"packetization-mode=1;profile-level-id=%02x%02x%02x;sprop-parameter-sets=%s;level-asymmetry-allowed=1",
@@ -192,7 +196,6 @@ bool RtcStream::Start()
 				{
 					video_media_desc = std::make_shared<MediaDescription>();
 					video_media_desc->SetConnection(4, "0.0.0.0");
-					// TODO(dimiden): Prevent duplication
 					video_media_desc->SetMid(ov::Random::GenerateString(6));
 					video_media_desc->SetMsid(msid, ov::Random::GenerateString(36));
 					video_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
@@ -205,7 +208,7 @@ bool RtcStream::Start()
 					// Media SSRC
 					video_media_desc->SetSsrc(ov::Random::GenerateUInt32());
 					// RTX SSRC
-					if(_support_rtx == true)
+					if(_rtx_enabled == true)
 					{
 						video_media_desc->SetRtxSsrc(ov::Random::GenerateUInt32());
 					}
@@ -214,11 +217,16 @@ bool RtcStream::Start()
 				}
 
 				payload->SetRtpmap(payload_type_num++, codec, 90000);
-				payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
+				
+				if(_rtx_enabled == true)
+				{
+					payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
+				}
+
 				video_media_desc->AddPayload(payload);
 
 				// For RTX
-				if(_support_rtx == true)
+				if(_rtx_enabled == true)
 				{
 					auto rtx_payload = std::make_shared<PayloadAttr>();
 					rtx_payload->SetRtpmap(payload_type_num++, "rtx", 90000);
@@ -298,16 +306,24 @@ bool RtcStream::Start()
 		}
 	}
 
-	if (video_media_desc)
+	if (video_media_desc && _ulpfec_enabled == true)
 	{
         // RED & ULPFEC
-        auto red_payload = std::make_shared<PayloadAttr>();
-        red_payload->SetRtpmap(RED_PAYLOAD_TYPE, "red", 90000);
-		red_payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
+		auto red_payload = std::make_shared<PayloadAttr>();
+		red_payload->SetRtpmap(RED_PAYLOAD_TYPE, "red", 90000);
+		if(_rtx_enabled == true)
+		{
+			red_payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
+		}
 		video_media_desc->AddPayload(red_payload);
-		
+
+		// ULPFEC
+		auto ulpfec_payload = std::make_shared<PayloadAttr>();
+		ulpfec_payload->SetRtpmap(ULPFEC_PAYLOAD_TYPE, "ulpfec", 90000);
+		video_media_desc->AddPayload(ulpfec_payload);
+
 		// For RTX
-		if(_support_rtx == true)
+		if(_rtx_enabled == true)
 		{
 			// RTX for RED
 			auto rtx_payload = std::make_shared<PayloadAttr>();
@@ -318,11 +334,6 @@ bool RtcStream::Start()
 
 			video_media_desc->AddPayload(rtx_payload);
 		}
-
-		// ULPFEC
-        auto ulpfec_payload = std::make_shared<PayloadAttr>();
-        ulpfec_payload->SetRtpmap(ULPFEC_PAYLOAD_TYPE, "ulpfec", 90000);
-        video_media_desc->AddPayload(ulpfec_payload);
 
 		video_media_desc->Update();
     }
@@ -361,11 +372,14 @@ bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 		_stream_metrics->IncreaseBytesOut(PublisherType::Webrtc, packet->GetData()->GetLength() * GetSessionCount());
 	}
 
-	// Store for retransmission
-	auto history = GetHistory(packet->PayloadType());
-	if(history != nullptr)
+	if(_rtx_enabled == true)
 	{
-		history->StoreRtpPacket(packet);
+		// Store for retransmission
+		auto history = GetHistory(packet->PayloadType());
+		if(history != nullptr)
+		{
+			history->StoreRtpPacket(packet);
+		}
 	}
 
 	return true;
@@ -500,9 +514,14 @@ void RtcStream::AddPacketizer(cmn::MediaCodecId codec_id, uint32_t id, uint8_t p
 		case MediaCodecId::Vp8:
 		case MediaCodecId::H264:
 		case MediaCodecId::H265:
+		{
 			packetizer->SetVideoCodec(codec_id);
-			packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
+			if(_ulpfec_enabled == true)
+			{
+				packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
+			}
 			break;
+		}
 		case MediaCodecId::Opus:
 			packetizer->SetAudioCodec(codec_id);
 			break;

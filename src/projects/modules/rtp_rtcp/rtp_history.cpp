@@ -30,7 +30,8 @@ std::shared_ptr<RtxRtpPacket> RtpHistory::GetRtxRtpPacket(uint16_t seq_no)
 	{
 		// Found!
 		auto rtx_packet = cache_item->second;
-		if(ov::Clock::GetElapsedMiliSecondsFromNow(rtx_packet->GetCreatedTime()) < VALID_TIME_MS_STORED_RTP_PACKET)
+		
+		if(rtx_packet->GetOriginalSequenceNumber() == seq_no)// && ov::Clock::GetElapsedMiliSecondsFromNow(rtx_packet->GetCreatedTime()) < VALID_TIME_MS_STORED_RTP_PACKET)
 		{
 			return rtx_packet;
 		}
@@ -48,6 +49,7 @@ std::shared_ptr<RtxRtpPacket> RtpHistory::GetRtxRtpPacket(uint16_t seq_no)
 		// now, I consider all requests are valid because webrtc player doesn't ask for too old packet anyway 
 		//auto elapsed_ms = ov::Clock::GetElapsedMiliSecondsFromNow(rtp_packet->GetCreatedTime());
 		//if(elapsed_ms < VALID_TIME_MS_STORED_RTP_PACKET)
+		if(rtp_packet->SequenceNumber() == seq_no)
 		{
 			// Create Rtx Packet and store it
 			auto rtx_packet = std::make_shared<RtxRtpPacket>(GetRtxSsrc(), GetRtxPayloadType(), *rtp_packet);

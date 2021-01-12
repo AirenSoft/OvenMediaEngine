@@ -84,4 +84,4 @@ And we are love to hear use cases. Please tell your story to [contact@airensoft.
 
 ## License
 
-OvenMediaEngine is under the [GPLv2 license](LICENSE).
+OvenMediaEngine is licensed under the [GPLv2](LICENSE) or later.

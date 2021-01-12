@@ -30,7 +30,6 @@ bool OvenCodecImplAvcodecEncHEVC::Configure(std::shared_ptr<TranscodeContext> co
 	}
 
 	auto codec_id = GetCodecID();
-
 	AVCodec *codec = ::avcodec_find_encoder(codec_id);
 
 	if (codec == nullptr)
@@ -73,7 +72,7 @@ bool OvenCodecImplAvcodecEncHEVC::Configure(std::shared_ptr<TranscodeContext> co
 	_context->pix_fmt = AV_PIX_FMT_YUV420P;
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
-	_context->thread_count = 2;
+	_context->thread_count = 0;
 
 	// 인코딩 품질 및 브라우저 호환성
 	// For browser compatibility
@@ -91,7 +90,7 @@ bool OvenCodecImplAvcodecEncHEVC::Configure(std::shared_ptr<TranscodeContext> co
 
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{
-		logte("Could not open codec: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		logte("Could not open codec. %s (%d)", ::avcodec_get_name(codec_id), codec_id);
 		return false;
 	}
 
@@ -142,7 +141,6 @@ void OvenCodecImplAvcodecEncHEVC::ThreadEncode()
 
 		auto frame = std::move(_input_buffer.front());
 		_input_buffer.pop_front();
-
 		mlock.unlock();
 
 		///////////////////////////////////////////////////
@@ -159,6 +157,9 @@ void OvenCodecImplAvcodecEncHEVC::ThreadEncode()
 		_frame->linesize[0] = frame->GetStride(0);
 		_frame->linesize[1] = frame->GetStride(1);
 		_frame->linesize[2] = frame->GetStride(2);
+
+		// logte("hevc queue : %d / %lld", _input_buffer.size(), _frame->pts);
+
 
 		if (::av_frame_get_buffer(_frame, 32) < 0)
 		{
@@ -179,7 +180,6 @@ void OvenCodecImplAvcodecEncHEVC::ThreadEncode()
 		::memcpy(_frame->data[2], frame->GetBuffer(2), frame->GetBufferSize(2));
 
 		int ret = ::avcodec_send_frame(_context, _frame);
-		// int ret = 0;
 		::av_frame_unref(_frame);
 
 		if (ret < 0)
@@ -234,6 +234,7 @@ void OvenCodecImplAvcodecEncHEVC::ThreadEncode()
 				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::H265_ANNEXB);
 				packet_buffer->SetPacketType(cmn::PacketType::NALU);
 
+				// logte("SendOutputBuffer");
 				SendOutputBuffer(std::move(packet_buffer));
 			}
 		}

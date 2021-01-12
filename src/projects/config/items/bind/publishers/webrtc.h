@@ -10,6 +10,7 @@
 
 #include "./publisher.h"
 #include "./webrtc/ice_candidates.h"
+#include "./webrtc/ice_servers.h"
 #include "./webrtc/signalling.h"
 
 namespace cfg
@@ -20,6 +21,12 @@ namespace cfg
 		{
 			struct Webrtc : public Item
 			{
+			protected:
+				Signalling _signalling;
+				IceCandidates _ice_candidates;
+				IceServers _ice_servers;
+
+			public:
 				explicit Webrtc(const char *port)
 					: _signalling(port)
 				{
@@ -32,16 +39,15 @@ namespace cfg
 
 				CFG_DECLARE_REF_GETTER_OF(GetSignalling, _signalling)
 				CFG_DECLARE_REF_GETTER_OF(GetIceCandidates, _ice_candidates)
+				CFG_DECLARE_REF_GETTER_OF(GetIceServers, _ice_servers)
 
 			protected:
 				void MakeParseList() override
 				{
 					RegisterValue<Optional>("Signalling", &_signalling);
 					RegisterValue<Optional>("IceCandidates", &_ice_candidates);
+					RegisterValue<Optional>("IceServers", &_ice_servers);
 				};
-
-				Signalling _signalling;
-				IceCandidates _ice_candidates;
 			};
 		}  // namespace pub
 	}	   // namespace bind

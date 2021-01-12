@@ -515,8 +515,6 @@ bool DashPacketizer::AppendAudioFrame(const std::shared_ptr<const MediaPacket> &
 		remained_list.insert(remained_list.begin(), length_list.begin() + position, length_list.end());
 		length_list.resize(position);
 
-		int64_t writte_duration = 0;
-
 		if (position > 0)
 		{
 			result = result && _audio_m4s_writer.WritePacket(media_packet, data, length_list, 0, frame_count);

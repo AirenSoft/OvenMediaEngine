@@ -52,6 +52,9 @@ RtcSession::~RtcSession()
 
 bool RtcSession::Start()
 {
+	// start and stop must be called independently.
+	std::lock_guard<std::shared_mutex> lock(_start_stop_lock);
+
 	if(GetState() != SessionState::Ready)
 	{
 		return false;
@@ -92,15 +95,7 @@ bool RtcSession::Start()
 		}
 		else
 		{
-			// "H.264 + FEC" is of lower quality. 
-			// This is because VP8 solves this with PictureID, 
-			// but H.264 recognizes ULPFEC packets as also packets constituting a frame.
-			// So when the first payload codec is H.264, we don't use FEC.
-			if(first_payload->GetCodec() == PayloadAttr::SupportCodec::H264)
-			{
-				_video_payload_type = first_payload->GetId();
-			}
-			else if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
+			if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
 			{
 				_video_payload_type = RED_PAYLOAD_TYPE;
 				_red_block_pt = first_payload->GetId();
@@ -116,7 +111,7 @@ bool RtcSession::Start()
 			{
 				if(payload->GetCodec() == PayloadAttr::SupportCodec::RTX)
 				{
-					_use_rtx_flag = true;
+					_rtx_enabled = true;
 					_video_rtx_ssrc = offer_media_desc->GetRtxSsrc();
 
 					// Now, no RTCP with RTX
@@ -159,6 +154,9 @@ bool RtcSession::Start()
 
 bool RtcSession::Stop()
 {
+	// start and stop must be called independently.
+	std::lock_guard<std::shared_mutex> lock(_start_stop_lock);
+
 	logtd("Stop session. Peer sdp session id : %u", GetOfferSDP()->GetSessionId());
 
 	if(GetState() != SessionState::Started && GetState() != SessionState::Stopping)
@@ -215,6 +213,9 @@ const std::shared_ptr<WebSocketClient>& RtcSession::GetWSClient()
 void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_info,
 								const std::shared_ptr<const ov::Data> &data)
 {
+	//It must not be called during start and stop.
+	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
+
 	_received_bytes += data->GetLength();
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
 	_dtls_ice_transport->OnDataReceived(pub::SessionNodeType::None, data);
@@ -222,6 +223,9 @@ void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_
 
 bool RtcSession::SendOutgoingData(const std::any &packet)
 {
+	//It must not be called during start and stop.
+	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
+
 	if(GetState() != SessionState::Started)
 	{
 		return false;
@@ -288,6 +292,11 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 
 void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 {
+	if(GetState() != SessionState::Started)
+	{
+		return;
+	}
+
 	if(rtcp_info->GetPacketType() == RtcpPacketType::RR)
 	{
 		// Process
@@ -307,6 +316,11 @@ void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 
 bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
 {
+	if(_rtx_enabled == false)
+	{
+		return true;
+	}
+
 	auto stream = std::dynamic_pointer_cast<RtcStream>(GetStream());
 	if(stream == nullptr)
 	{

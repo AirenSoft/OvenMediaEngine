@@ -41,10 +41,10 @@ public:
 
 	// Queue interfaces
 	bool Push(std::shared_ptr<MediaPacket> media_packet);
-	bool PushIncomingStream(
+	bool ProcessInboundStream(
 		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
-	bool PushOutgoungStream(
+	bool ProcessOutboundStream(
 		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
 
@@ -61,7 +61,7 @@ public:
 private:
 	void InitParseTrackInfo();
 	void SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, bool parsed);
-	bool GetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track);
+	bool IsParseTrackInfo(std::shared_ptr<MediaTrack> &media_track);
 
 	// Parse media track information
 	bool ParseTrackInfo(

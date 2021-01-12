@@ -164,6 +164,11 @@ install_nasm()
 
 install_ffmpeg()
 {
+    # If you need debug symbols, put the options below.
+    #  --extra-cflags="-I${PREFIX}/include -g"  \
+    #  --enable-debug \
+    #  --disable-optimizations --disable-mmx --disable-stripping \
+
     (DIR=${TEMP_PATH}/ffmpeg && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
@@ -183,6 +188,7 @@ install_ffmpeg()
     --disable-avdevice --disable-dct --disable-dwt --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils\
     --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 \
     --disable-everything \
+    --disable-fast-unaligned \
     --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,libx265,mjpeg,png \
     --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc \
@@ -193,6 +199,7 @@ install_ffmpeg()
     sudo rm -rf ${PREFIX}/share && \
     rm -rf ${DIR}) || fail_exit "ffmpeg"
 }
+
 
 install_jemalloc()
 {

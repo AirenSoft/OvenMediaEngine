@@ -119,5 +119,7 @@ protected:
 	std::map<peer_id_t, std::shared_ptr<RtcSignallingInfo>> _client_list;
 	std::shared_mutex _client_list_mutex;
 
+	Json::Value _ice_servers;
+
 	RtcP2PManager _p2p_manager;
 };

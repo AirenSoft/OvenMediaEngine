@@ -129,6 +129,8 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 		}
 	}
 
+	request->SetExtra(std::static_pointer_cast<pub::Stream>(stream));
+
 	if (stream->GetPlayList(play_list) == false)
 	{
 		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), vhost_app_name.CStr(), stream_name.CStr(), request_info.file_name.CStr());
@@ -176,13 +178,15 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &clien
 	logti("Segment requested (%s/%s/%s) from %s : Segment number : %u Duration : %u",
 		  vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr(),
 		  client->GetRequest()->GetRemote()->GetRemoteAddress()->ToString().CStr(),
-		  segment->sequence_number, segment->duration_in_ms);
+		  segment->sequence_number, segment->duration_in_ms/1000);
+
+	client->GetRequest()->SetExtra(std::static_pointer_cast<pub::Stream>(stream));
 
 	auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
 												   *std::static_pointer_cast<info::Stream>(stream),
 												   client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
 												   segment->sequence_number,
-												   segment->duration_in_ms);
+												   segment->duration_in_ms/1000);
 	UpdateSegmentRequestInfo(segment_request_info);
 
 	return true;

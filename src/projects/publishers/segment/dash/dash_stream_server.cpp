@@ -8,8 +8,10 @@
 //==============================================================================
 #include "dash_stream_server.h"
 
+#include <monitoring/monitoring.h>
 #include <publishers/segment/segment_stream/packetizer/packetizer_define.h>
 
+#include "../segment_publisher.h"
 #include "dash_define.h"
 #include "dash_private.h"
 
@@ -69,7 +71,9 @@ HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<Ht
 	response->SetHeader("Expires", "0");
 
 	response->AppendString(play_list);
-	response->Response();
+	auto sent_bytes = response->Response();
+
+	IncreaseBytesOut(client, sent_bytes);
 
 	return HttpConnection::Closed;
 }
@@ -99,7 +103,9 @@ HttpConnection DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 	// Set HTTP header
 	response->SetHeader("Content-Type", (segment->type == SegmentDataType::Video) ? "video/mp4" : "audio/mp4");
 	response->AppendData(segment->data);
-	response->Response();
+	auto sent_bytes = response->Response();
+
+	IncreaseBytesOut(client, sent_bytes);
 
 	return HttpConnection::Closed;
 }

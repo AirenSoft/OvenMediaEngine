@@ -90,7 +90,7 @@ public:
 		_publisher_type = type;
 		_ip_address = ip;
 		_sequence_number = seq;
-		_duration = (double)duration / (double)(PACKTYZER_DEFAULT_TIMESCALE); // convert to second
+		_duration = duration;
 		_last_requested_time = std::chrono::system_clock::now();
 		_count = 0;
 	}
@@ -132,7 +132,7 @@ public:
 	bool IsExpiredRequest()
 	{
 		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - _last_requested_time).count();
-		if(elapsed > _duration * 10)
+		if(elapsed > _duration * 5)
 		{
 			return true;
 		}

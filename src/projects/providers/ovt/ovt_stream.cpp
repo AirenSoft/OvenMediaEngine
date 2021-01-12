@@ -140,7 +140,7 @@ namespace pvd
 		}
 
 		auto scheme = _curr_url->Scheme();
-		if (scheme == "OVT")
+		if (scheme.UpperCaseString() != "OVT")
 		{
 			_state = State::ERROR;
 			logte("The scheme is not OVT : %s", scheme.CStr());
@@ -297,6 +297,16 @@ namespace pvd
 			new_track->SetBitrate(json_track["bitrate"].asUInt());
 			new_track->SetStartFrameTime(json_track["startFrameTime"].asUInt64());
 			new_track->SetLastFrameTime(json_track["lastFrameTime"].asUInt64());
+
+			auto json_extra_data = json_track["extra_data"];
+			if(!json_extra_data.isNull())
+			{
+				ov::String extra_data_base64 = json_track["extra_data"].asString().c_str();
+				auto extra_data = ov::Base64::Decode(extra_data_base64);
+				auto start = extra_data->GetDataAs<uint8_t>();
+				std::vector<uint8_t> v(start, start + extra_data->GetLength());
+				new_track->SetCodecExtradata(v);
+			}
 
 			// video or audio
 			if (new_track->GetMediaType() == cmn::MediaType::Video)

@@ -34,6 +34,7 @@ namespace mon
 		virtual void IncreaseBytesOut(PublisherType type, uint64_t value);
 		virtual void OnSessionConnected(PublisherType type);
 		virtual void OnSessionDisconnected(PublisherType type);
+		virtual void OnSessionsDisconnected(PublisherType type, uint64_t number_of_sessions);
 
 	protected:
 		CommonMetrics();
@@ -50,8 +51,8 @@ namespace mon
 
 		// From Publishers
 		std::atomic<uint64_t> _total_bytes_out;
+
 		std::atomic<uint32_t> _total_connections;
-		
 		std::atomic<uint32_t> _max_total_connections;
 		// Time to reach maximum number of connections. 
 		// TODO(Getroot): Does it need mutex? Check!
