@@ -58,6 +58,12 @@ namespace ov
 				return false;
 			}
 
+			// Validation
+			if(std::stoi(_str_bitmask.CStr()) <= 0 || std::stoi(_str_bitmask.CStr()) > 32)
+			{
+				return false;
+			}
+
 			_ui32_bitmask = CreateBitmask(_str_bitmask);
 
 			_ui32_network_address = (_ui32_ip_addr & _ui32_bitmask);
@@ -82,7 +88,7 @@ namespace ov
 
 		uint32_t CreateBitmask(const ov::String &str_bitmask)
 		{
-			uint32_t times = (unsigned int)std::stoi(str_bitmask.CStr())-1;
+			uint32_t times = (uint32_t)std::stoi(str_bitmask.CStr())-1;
 			uint32_t i;
 			uint32_t ui32_bitmask = 1;
 

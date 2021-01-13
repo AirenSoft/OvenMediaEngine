@@ -153,7 +153,7 @@ bool SignedPolicy::ProcessPolicyJson(const ov::String &policy_json)
 		_cidr = ov::CIDR::Parse(_allow_ip_cidr);
 		if(_cidr == nullptr)
 		{
-			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("IP CIDR is invalid.(%s) ", _allow_ip_cidr.CStr()));
+			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("allow_ip:%s in SignedPolicy is an invalid CIDR.", _allow_ip_cidr.CStr()));
 			return false;
 		}
 	}
