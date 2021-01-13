@@ -2,7 +2,7 @@
 
 #include <base/ovsocket/socket_address.h>
 #include <base/ovlibrary/ovlibrary.h>
-
+#include <base/ovlibrary/cidr.h>
 class SignedPolicy
 {
 public:
@@ -46,18 +46,19 @@ public:
 	uint64_t GetPolicyActivateEpochSec() const;
 	uint64_t GetStreamExpireEpochSec() const;
 	const ov::String& GetAllowIpCidr() const;
+	bool IsAllowedIP(const ov::String &ip_addr) const;
+	bool GetCIDRRange(ov::String &begin, ov::String &end) const;
 
 private:
-    bool Process(const ov::String &client_address, const ov::String &requested_url, const ov::String &policy_query_key, const ov::String &signature_query_key, const ov::String &secret_key);
-	bool ProcessPolicyJson(const ov::String &policy_json);
-
-	bool MakeSignature(const ov::String &base_url, const ov::String &secret_key, ov::String &signature_base64);
-
 	void SetError(ErrCode state, ov::String message)
 	{
 		_error_code = state;
 		_error_message = message;
 	}
+
+    bool Process(const ov::String &client_address, const ov::String &requested_url, const ov::String &policy_query_key, const ov::String &signature_query_key, const ov::String &secret_key);
+	bool ProcessPolicyJson(const ov::String &policy_json);
+	bool MakeSignature(const ov::String &base_url, const ov::String &secret_key, ov::String &signature_base64);
 
 private:
 	ErrCode	_error_code = ErrCode::INIT;
@@ -77,5 +78,7 @@ private:
 	uint64_t	_url_activate_epoch_msec = 0;
 
 	uint64_t	_stream_expire_epoch_msec = 0;
+
 	ov::String	_allow_ip_cidr;
+	std::shared_ptr<ov::CIDR>	_cidr = nullptr;
 };

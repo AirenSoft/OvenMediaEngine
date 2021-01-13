@@ -266,7 +266,7 @@ namespace pvd
 	{
 		// Check SignedPolicy
 		
-		auto result = HandleSignedPolicy(_url, _remote->GetLocalAddress(), _signed_policy);
+		auto result = HandleSignedPolicy(_url, _remote->GetRemoteAddress(), _signed_policy);
 		if(result == CheckSignatureResult::Off)
 		{
 			return true;
