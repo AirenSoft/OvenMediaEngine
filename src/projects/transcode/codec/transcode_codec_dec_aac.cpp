@@ -7,9 +7,9 @@
 //
 //==============================================================================
 #include "transcode_codec_dec_aac.h"
-#include "base/info/application.h"
 
-#define OV_LOG_TAG "TranscodeCodec"
+#include "../transcode_private.h"
+#include "base/info/application.h"
 
 std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::Dequeue(TranscodeResult *result)
 {
@@ -45,8 +45,8 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::Dequeue(TranscodeResult 
 			{
 				auto codec_info = ShowCodecParameters(_context, _codec_par);
 
-				logti("[%s/%s(%u)] input stream information: %s", 
-					_stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
+				logti("[%s/%s(%u)] input stream information: %s",
+					  _stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
 
 				_change_format = true;
 
@@ -76,7 +76,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::Dequeue(TranscodeResult 
 		output_frame->SetDuration(frame_duration_in_timebase);
 
 		// If the decoded audio frame does not have a PTS, Increase frame duration time in PTS of previous frame
-		output_frame->SetPts(static_cast<int64_t>((_frame->pts == AV_NOPTS_VALUE) ? _last_pkt_pts+frame_duration_in_timebase : _frame->pts));
+		output_frame->SetPts(static_cast<int64_t>((_frame->pts == AV_NOPTS_VALUE) ? _last_pkt_pts + frame_duration_in_timebase : _frame->pts));
 		_last_pkt_pts = output_frame->GetPts();
 
 		// logte("frame.pts(%lld), oframe.pts(%lld),nb.samples(%d)", _frame->pts, output_frame->GetPts(), _frame->nb_samples);
@@ -111,18 +111,21 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::Dequeue(TranscodeResult 
 	return nullptr;
 }
 
-
 void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 {
 	*result = TranscodeResult::NoData;
 
-	if(_cur_pkt == nullptr && _input_buffer.empty() == false)
+	if (_cur_pkt == nullptr && _input_buffer.IsEmpty() == false)
 	{
-		auto packet = std::move(_input_buffer.front());
-		_input_buffer.pop_front();
-
-		_cur_pkt = std::move(packet);
-	
+		auto obj = _input_buffer.Dequeue();
+		if (obj.has_value() == false)
+		{
+			logte("there is no packets");
+			*result = TranscodeResult::NoData;
+			return;
+		}
+		
+		_cur_pkt = std::move(obj.value());
 		if (_cur_pkt != nullptr)
 		{
 			_cur_data = _cur_pkt->GetData();
@@ -139,7 +142,7 @@ void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 
 	if (_cur_data != nullptr)
 	{
-		while(_cur_data->GetLength() > _pkt_offset)
+		while (_cur_data->GetLength() > _pkt_offset)
 		{
 			*result = TranscodeResult::DataReady;
 
@@ -159,13 +162,13 @@ void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 				_cur_pkt = nullptr;
 				_cur_data = nullptr;
 				_pkt_offset = 0;
-				
+
 				*result = TranscodeResult::ParseError;
 				return;
-			}	
+			}
 
 			if (_pkt->size > 0)
-			{			
+			{
 				_pkt->pts = _parser->pts;
 				_pkt->dts = _parser->dts;
 
@@ -187,19 +190,22 @@ void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 				{
 					logte("Error sending a packet for decoding : AVERROR(EINVAL)");
 					*result = TranscodeResult::DataError;
-					break;;
+					break;
+					;
 				}
 				else if (ret == AVERROR(ENOMEM))
 				{
 					logte("Error sending a packet for decoding : AVERROR(ENOMEM)");
 					*result = TranscodeResult::DataError;
-					break;;
+					break;
+					;
 				}
 				else if (ret < 0)
 				{
 					logte("Error sending a packet for decoding : ERROR(Unknown %d)", ret);
 					*result = TranscodeResult::DataError;
-					break;;
+					break;
+					;
 				}
 			}
 
@@ -213,20 +219,19 @@ void OvenCodecImplAvcodecDecAAC::Enqueue(TranscodeResult *result)
 			break;
 		}
 
-		if(_cur_data->GetLength() <= _pkt_offset || *result != TranscodeResult::DataReady)
+		if (_cur_data->GetLength() <= _pkt_offset || *result != TranscodeResult::DataReady)
 		{
 			_cur_pkt = nullptr;
 			_cur_data = nullptr;
 			_pkt_offset = 0;
 		}
-
 	}
 }
 
 std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAAC::RecvBuffer(TranscodeResult *result)
 {
 	Enqueue(result);
-	if( *result != TranscodeResult::DataReady && *result != TranscodeResult::Again)
+	if (*result != TranscodeResult::DataReady && *result != TranscodeResult::Again)
 	{
 		return nullptr;
 	}

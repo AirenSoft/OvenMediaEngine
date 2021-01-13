@@ -57,8 +57,6 @@ protected:
 	int _decoded_frame_num = 0;
 
 	bool _kill_flag = false;
-	std::mutex _mutex;
 	std::thread _thread_work;
-	ov::Semaphore _queue_event;
 
 };

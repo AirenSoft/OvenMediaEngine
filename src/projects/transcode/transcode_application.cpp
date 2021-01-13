@@ -8,13 +8,16 @@
 //==============================================================================
 
 #include "transcode_application.h"
-#include "transcode_private.h"
+
 #include <unistd.h>
 
 #include <iostream>
 
+#include "transcode_private.h"
+
 #define MIN_APPLICATION_WORKER_COUNT 1
 #define MAX_APPLICATION_WORKER_COUNT 72
+#define MAX_QUEUE_SIZE 100
 
 std::shared_ptr<TranscodeApplication> TranscodeApplication::Create(const info::Application &application_info)
 {
@@ -40,17 +43,15 @@ TranscodeApplication::TranscodeApplication(const info::Application &application_
 	for (uint32_t worker_id = 0; worker_id < _max_worker_thread_count; worker_id++)
 	{
 		_indicators.push_back(std::make_shared<ov::Queue<std::shared_ptr<BufferIndicator>>>(
-			ov::String::FormatString("Transcoder application indicator. app(%s) (%d/%d)", application_info.GetName().CStr(), worker_id, _max_worker_thread_count),
-			1024));
+			ov::String::FormatString("Transcoder application indicator. app(%s) (%d/%d)", application_info.GetName().CStr(), worker_id, _max_worker_thread_count), MAX_QUEUE_SIZE));
 	}
 
-	logtd("Created transcoder application. app(%s)", application_info.GetName().CStr());
+	logti("Created transcoder application. app(%s)", application_info.GetName().CStr());
 }
 
 TranscodeApplication::~TranscodeApplication()
 {
-
-	logtd("Transcoder application has been destroyed. app(%s)", _application_info.GetName().CStr());
+	logti("Transcoder application has been destroyed. app(%s)", _application_info.GetName().CStr());
 }
 
 bool TranscodeApplication::Start()

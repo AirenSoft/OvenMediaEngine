@@ -10,8 +10,8 @@
 #include "media_filter_rescaler.h"
 
 #include <base/ovlibrary/ovlibrary.h>
+#include "../transcode_private.h"
 
-#define OV_LOG_TAG "MediaFilter.Rescaler"
 
 MediaFilterRescaler::MediaFilterRescaler()
 {
@@ -21,6 +21,11 @@ MediaFilterRescaler::MediaFilterRescaler()
 
 	_outputs = ::avfilter_inout_alloc();
 	_inputs = ::avfilter_inout_alloc();
+
+	_input_buffer.SetAlias("Input queue of media rescaler filter");
+	_input_buffer.SetThreshold(100);
+	_output_buffer.SetAlias("Output queue of media rescaler filter");
+	_output_buffer.SetThreshold(100);
 
 	OV_ASSERT2(_frame != nullptr);
 	OV_ASSERT2(_inputs != nullptr);

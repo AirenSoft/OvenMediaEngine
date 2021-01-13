@@ -70,6 +70,14 @@ namespace ov
 			logd("ov.Queue", "[%p] The alias is changed to %s", this, _queue_name.CStr());
 		}
 
+		void SetThreshold(size_t threshold)
+		{
+			auto lock_guard = std::lock_guard(_name_mutex);
+
+			_threshold = threshold;
+			logd("ov.Queue", "[%p] The threshold is changed to %d", this, _threshold);
+		}
+
 		void Enqueue(const T &item)
 		{
 			auto lock_guard = std::lock_guard(_mutex);

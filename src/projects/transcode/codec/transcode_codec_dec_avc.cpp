@@ -8,9 +8,8 @@
 //==============================================================================
 #include "transcode_codec_dec_avc.h"
 
+#include "../transcode_private.h"
 #include "base/info/application.h"
-
-#define OV_LOG_TAG "TranscodeCodec"
 
 std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResult *result)
 {
@@ -104,11 +103,17 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecAVC::RecvBuffer(TranscodeResu
 		return std::move(decoded_frame);
 	}
 
-	if (_input_buffer.empty() == false)
+	if (_input_buffer.IsEmpty() == false)
 	{
-		// Pop the first packet
-		auto buffer = std::move(_input_buffer.front());
-		_input_buffer.pop_front();
+		auto obj = _input_buffer.Dequeue();
+		if (obj.has_value() == false)
+		{
+			logte("An error occurred while dequeue : no data");
+			*result = TranscodeResult::DataError;
+			return nullptr;
+		}
+
+		auto buffer = std::move(obj.value());
 
 		auto packet_data = buffer->GetData();
 

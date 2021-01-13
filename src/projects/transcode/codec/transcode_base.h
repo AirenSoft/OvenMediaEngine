@@ -71,12 +71,12 @@ public:
 
 	uint32_t GetInputBufferSize()
 	{
-		return _input_buffer.size();
+		return _input_buffer.Size();
 	}
 
 	uint32_t GetOutputBufferSize()
 	{
-		return _output_buffer.size();
+		return _output_buffer.Size();
 	}
 
 protected:
@@ -105,7 +105,7 @@ protected:
 		}
 	}
 
-	std::deque<std::shared_ptr<const InputType>> _input_buffer;
-	std::deque<std::shared_ptr<OutputType>> _output_buffer;
+	ov::Queue<std::shared_ptr<const InputType>> _input_buffer;
+	ov::Queue<std::shared_ptr<OutputType>> _output_buffer;
 };
 

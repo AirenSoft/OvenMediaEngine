@@ -10,8 +10,7 @@
 
 #include <unistd.h>
 
-#define OV_LOG_TAG "TranscodeCodec"
-
+#include "../transcode_private.h"
 
 OvenCodecImplAvcodecEncAVC::~OvenCodecImplAvcodecEncAVC()
 {
@@ -120,8 +119,9 @@ void OvenCodecImplAvcodecEncAVC::Stop()
 {
 	_kill_flag = true;
 
-	_queue_event.Notify();
-
+	_input_buffer.Stop();
+	_output_buffer.Stop();
+	
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
@@ -131,27 +131,17 @@ void OvenCodecImplAvcodecEncAVC::Stop()
 
 void OvenCodecImplAvcodecEncAVC::ThreadEncode()
 {
-	while(!_kill_flag)
+	while (!_kill_flag)
 	{
-		_queue_event.Wait();
-
-		std::unique_lock<std::mutex> mlock(_mutex);
-
-		// 스레드 종료와 같이 큐에 데이터가 없는 경우에는 다시 대기를 한다
-		if (_input_buffer.empty())
-		{
+		auto obj = _input_buffer.Dequeue();
+		if (obj.has_value() == false)
 			continue;
-		}
 
-		auto frame = std::move(_input_buffer.front());
-		_input_buffer.pop_front();
-
-		mlock.unlock();
+		auto frame = std::move(obj.value());
 
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
 		///////////////////////////////////////////////////
-
 
 		_frame->format = frame->GetFormat();
 		_frame->nb_samples = 1;
@@ -192,16 +182,13 @@ void OvenCodecImplAvcodecEncAVC::ThreadEncode()
 			logte("Error sending a frame for encoding : %d", ret);
 
 			// Failure to send frame to encoder. Wait and put it back in. But it doesn't happen as often as possible.
-			std::unique_lock<std::mutex> mlock(_mutex);
-			_input_buffer.push_front(std::move(frame));
-			mlock.unlock();
-			_queue_event.Notify();
+			// _input_buffer.Enqueue(std::move(frame));
 		}
 
 		///////////////////////////////////////////////////
 		// The encoded packet is taken from the codec.
 		///////////////////////////////////////////////////
-		while(true)
+		while (true)
 		{
 			// Check frame is availble
 			int ret = ::avcodec_receive_packet(_context, _packet);
@@ -228,14 +215,14 @@ void OvenCodecImplAvcodecEncAVC::ThreadEncode()
 			{
 				// Encoded packet is ready
 				auto packet_buffer = std::make_shared<MediaPacket>(
-										cmn::MediaType::Video, 
-										0, 
-										_packet->data, 
-										_packet->size, 
-										_packet->pts, 
-										_packet->dts, 										
-										-1L, 
-										(_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+					cmn::MediaType::Video,
+					0,
+					_packet->data,
+					_packet->size,
+					_packet->pts,
+					_packet->dts,
+					-1L,
+					(_packet->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
 				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::H264_ANNEXB);
 				packet_buffer->SetPacketType(cmn::PacketType::NALU);
 
@@ -247,24 +234,22 @@ void OvenCodecImplAvcodecEncAVC::ThreadEncode()
 	}
 }
 
-
 std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::RecvBuffer(TranscodeResult *result)
 {
-	std::unique_lock<std::mutex> mlock(_mutex);
-	if(!_output_buffer.empty())
+	if (!_output_buffer.IsEmpty())
 	{
 		*result = TranscodeResult::DataReady;
 
-		auto packet = std::move(_output_buffer.front());
-		_output_buffer.pop_front();
-
-		return std::move(packet);
+		auto obj = _output_buffer.Dequeue();
+		if (obj.has_value())
+		{
+			return std::move(obj.value());
+		}
 	}
 
 	*result = TranscodeResult::NoData;
 
 	return nullptr;
-
 }
 
 // std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAVC::MakePacket() const

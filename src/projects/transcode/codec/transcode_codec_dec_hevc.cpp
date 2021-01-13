@@ -7,9 +7,9 @@
 //
 //==============================================================================
 #include "transcode_codec_dec_hevc.h"
-#include "base/info/application.h"
 
-#define OV_LOG_TAG "TranscodeCodec"
+#include "../transcode_private.h"
+#include "base/info/application.h"
 
 std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecHEVC::RecvBuffer(TranscodeResult *result)
 {
@@ -44,8 +44,8 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecHEVC::RecvBuffer(TranscodeRes
 			if (ret == 0)
 			{
 				auto codec_info = ShowCodecParameters(_context, _codec_par);
-				logti("[%s/%s(%u)] input stream information: %s", 
-					_stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
+				logti("[%s/%s(%u)] input stream information: %s",
+					  _stream_info.GetApplicationInfo().GetName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
 
 				_change_format = true;
 
@@ -69,7 +69,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecHEVC::RecvBuffer(TranscodeRes
 		decoded_frame->SetPts((_frame->pts == AV_NOPTS_VALUE) ? -1LL : _frame->pts);
 
 		// logte("%s out %lld", (need_to_change_notify==true)?"notify":"ready", decoded_frame->GetPts());
-				
+
 		// Calculate duration using framerate in timebase
 		int den = _input_context->GetTimeBase().GetDen();
 		int64_t duration = (den == 0) ? 0LL : (float)den / _input_context->GetFrameRate();
@@ -80,8 +80,8 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecHEVC::RecvBuffer(TranscodeRes
 		decoded_frame->SetStride(_frame->linesize[2], 2);
 
 		decoded_frame->SetBuffer(_frame->data[0], decoded_frame->GetStride(0) * decoded_frame->GetHeight(), 0);		 // Y-Plane
-		decoded_frame->SetBuffer(_frame->data[1], decoded_frame->GetStride(1) * decoded_frame->GetHeight() / 2, 1);  // Cb Plane
-		decoded_frame->SetBuffer(_frame->data[2], decoded_frame->GetStride(2) * decoded_frame->GetHeight() / 2, 2);  // Cr Plane
+		decoded_frame->SetBuffer(_frame->data[1], decoded_frame->GetStride(1) * decoded_frame->GetHeight() / 2, 1);	 // Cb Plane
+		decoded_frame->SetBuffer(_frame->data[2], decoded_frame->GetStride(2) * decoded_frame->GetHeight() / 2, 2);	 // Cr Plane
 
 		::av_frame_unref(_frame);
 
@@ -90,18 +90,24 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecHEVC::RecvBuffer(TranscodeRes
 		return std::move(decoded_frame);
 	}
 
-	if (_input_buffer.empty() == false)
+	if (_input_buffer.IsEmpty() == false)
 	{
-		// Pop the first packet
-		auto buffer = std::move(_input_buffer.front());
-		_input_buffer.pop_front();
+		auto obj = _input_buffer.Dequeue();
+		if (obj.has_value() == false)
+		{
+			logte("An error occurred while decoding: No data");
+			*result = TranscodeResult::DataError;
+			return nullptr;
+		}
+
+		auto buffer = std::move(obj.value());
 
 		auto packet_data = buffer->GetData();
 
 		int64_t remained = packet_data->GetLength();
 		off_t offset = 0LL;
-		int64_t pts = (buffer->GetPts()==-1LL)?AV_NOPTS_VALUE:buffer->GetPts();
-		int64_t dts = (buffer->GetDts()==-1LL)?AV_NOPTS_VALUE:buffer->GetDts();
+		int64_t pts = (buffer->GetPts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetPts();
+		int64_t dts = (buffer->GetDts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetDts();
 		auto data = packet_data->GetDataAs<uint8_t>();
 
 		while (remained > 0)
@@ -155,7 +161,7 @@ std::shared_ptr<MediaFrame> OvenCodecImplAvcodecDecHEVC::RecvBuffer(TranscodeRes
 					logtd("Invalid data found when processing input (%d)", ret);
 					*result = TranscodeResult::DataError;
 					return nullptr;
-				}				
+				}
 				else if (ret < 0)
 				{
 					char err_msg[1024];

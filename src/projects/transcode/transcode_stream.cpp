@@ -14,18 +14,15 @@
 #include "transcode_application.h"
 #include "transcode_private.h"
 
-#define MAX_QUEUE_SIZE 1024
+#define MAX_QUEUE_SIZE 100
 
 TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent)
 	: _application_info(application_info),
-	  _queue_input_packets(ov::String::FormatString("%s/%s - TranscodeStream input Queue", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr()), MAX_QUEUE_SIZE),
-	  _queue_decoded_frames(ov::String::FormatString("%s/%s - TranscodeStream decoded Queue", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr()), MAX_QUEUE_SIZE),
-	  _queue_filterd_frames(ov::String::FormatString("%s/%s - TranscodeStream filtered Queue", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr()), MAX_QUEUE_SIZE)
+	  _queue_input_packets(ov::String::FormatString("Transcoder Decoder Queue. app(%s) stream(%s)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr()), MAX_QUEUE_SIZE),
+	  _queue_decoded_frames(ov::String::FormatString("Transcoder Filter Queue. app(%s) stream(%s)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr()), MAX_QUEUE_SIZE),
+	  _queue_filterd_frames(ov::String::FormatString("Transcoder Encoder Queue. app(%s) stream(%s)", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr()), MAX_QUEUE_SIZE)
 {
 	logtd("Trying to create transcode stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
-
-	// Determine maximum queue size
-	_max_queue_threshold = 0;
 
 	//store Parent information
 	_parent = parent;
@@ -109,9 +106,6 @@ bool TranscodeStream::Start()
 		logti("No decoder generated");
 	}
 
-	// I will make and apply a packet drop policy.
-	_max_queue_threshold = MAX_QUEUE_SIZE;
-
 	_kill_flag = false;
 
 	// Notify to create a new stream on the media router.
@@ -161,25 +155,13 @@ bool TranscodeStream::Stop()
 	// Notify to delete the stream created on the MediaRouter
 	NotifyDeleteStreams();
 
-	logti("[%s/%s(%u)] Transcoder input stream has been stopped.", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId());
+	logti("[%s/%s(%u)] Transcoder stream has been stopped.", _application_info.GetName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId());
 
 	return true;
 }
 
 bool TranscodeStream::Push(std::shared_ptr<MediaPacket> packet)
 {
-	if (_max_queue_threshold == 0)
-	{
-		// Drop packets because the transcoding information has not been generated.
-		return true;
-	}
-
-	if (_queue_input_packets.Size() > _max_queue_threshold)
-	{
-		logti("Queue(stream) is full, please check your system: (queue: %zu > limit: %llu)", _queue_input_packets.Size(), _max_queue_threshold);
-		return false;
-	}
-
 	_queue_input_packets.Enqueue(std::move(packet));
 
 	if (GetParent() != nullptr)
@@ -1096,12 +1078,6 @@ TranscodeResult TranscodeStream::DecodePacket(int32_t track_id, std::shared_ptr<
 					  (int64_t)decoded_frame->GetBufferSize(),
 					  (int64_t)((double)decoded_frame->GetDuration() * decoder->GetTimebase().GetExpr() * 1000));
 
-				if (_queue_decoded_frames.Size() > _max_queue_threshold)
-				{
-					logti("Decoded frame queue is full, please check your system");
-					return result;
-				}
-
 				_queue_decoded_frames.Enqueue(std::move(decoded_frame));
 
 				if (GetParent() != nullptr)
@@ -1278,7 +1254,7 @@ void TranscodeStream::DoFilteredFrames()
 	if (frame.has_value())
 	{
 		int32_t filter_id = frame.value()->GetTrackId();
-
+	
 		EncodeFrame(filter_id, std::move(frame.value()));
 	}
 }

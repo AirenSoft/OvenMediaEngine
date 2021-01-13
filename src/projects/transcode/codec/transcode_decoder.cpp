@@ -8,11 +8,12 @@
 //==============================================================================
 #include "transcode_decoder.h"
 
+#include "../transcode_private.h"
 #include "transcode_codec_dec_aac.h"
 #include "transcode_codec_dec_avc.h"
 #include "transcode_codec_dec_hevc.h"
 
-#define OV_LOG_TAG "TranscodeCodec"
+#define MAX_QUEUE_SIZE 10
 
 TranscodeDecoder::TranscodeDecoder(info::Stream stream_info)
 	: _stream_info(stream_info)
@@ -26,9 +27,9 @@ TranscodeDecoder::TranscodeDecoder(info::Stream stream_info)
 
 TranscodeDecoder::~TranscodeDecoder()
 {
-	if(_context != nullptr)
+	if (_context != nullptr)
 		::avcodec_flush_buffers(_context);
-	
+
 	::avcodec_free_context(&_context);
 	::avcodec_parameters_free(&_codec_par);
 
@@ -37,11 +38,11 @@ TranscodeDecoder::~TranscodeDecoder()
 
 	::av_parser_close(_parser);
 
-	_input_buffer.clear();
-	_output_buffer.clear();
+	_input_buffer.Clear();
+	_output_buffer.Clear();
 }
 
-std::shared_ptr<TranscodeContext>& TranscodeDecoder::GetContext()
+std::shared_ptr<TranscodeContext> &TranscodeDecoder::GetContext()
 {
 	return _input_context;
 }
@@ -91,7 +92,7 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 
 	_input_context = context;
-	AVCodec *_codec =  ::avcodec_find_decoder(GetCodecID());
+	AVCodec *_codec = ::avcodec_find_decoder(GetCodecID());
 
 	if (_codec == nullptr)
 	{
@@ -121,17 +122,22 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 		logte("Parser not found");
 		return false;
 	}
-	
+
 	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
 
 	_context->time_base = TimebaseToAVRational(_input_context->GetTimeBase());
+
+	_input_buffer.SetAlias(ov::String::FormatString("Input queue of transcode decoder. codec(%s/%d)", ::avcodec_get_name(GetCodecID()), GetCodecID()));
+	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
+	_output_buffer.SetAlias(ov::String::FormatString("Output queue of transcode decoder. codec(%s/%d)", ::avcodec_get_name(GetCodecID()), GetCodecID()));
+	_output_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
 	return true;
 }
 
 void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)
 {
-	_input_buffer.push_back(std::move(packet));
+	_input_buffer.Enqueue(std::move(packet));
 }
 
 const ov::String TranscodeDecoder::ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters)
@@ -189,7 +195,7 @@ const ov::String TranscodeDecoder::ShowCodecParameters(const AVCodecContext *con
 
 				int digit = 0;
 
-				if(context->framerate.den > 1)
+				if (context->framerate.den > 1)
 				{
 					digit = 3;
 				}
@@ -200,8 +206,7 @@ const ov::String TranscodeDecoder::ShowCodecParameters(const AVCodecContext *con
 									 parameters->width, parameters->height,
 									 parameters->sample_aspect_ratio.num, parameters->sample_aspect_ratio.den,
 									 parameters->width / gcd, parameters->height / gcd,
-									 digit, ::av_q2d(context->framerate)
-									 );
+									 digit, ::av_q2d(context->framerate));
 			}
 			else
 			{
@@ -225,7 +230,7 @@ const ov::String TranscodeDecoder::ShowCodecParameters(const AVCodecContext *con
 			}
 
 			break;
-		
+
 		case AVMEDIA_TYPE_DATA:
 			message = "Data";
 			break;
