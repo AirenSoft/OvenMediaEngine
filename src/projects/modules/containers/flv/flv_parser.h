@@ -85,7 +85,7 @@ public:
 	FlvVideoFrameTypes FrameType();
 	FlvVideoCodecId CodecId();
 	FlvAvcPacketType PacketType();
-	uint32_t CompositionTime();
+	int64_t CompositionTime();
 
 	const uint8_t*	Payload();
 	size_t PayloadLength();
@@ -96,7 +96,7 @@ private:
 
 	// AVCVIDEOPACKET
 	FlvAvcPacketType	_packet_type;		// UI8
-	uint32_t			_composition_time;	// SI24
+	int32_t				_composition_time;	// SI24
 
 	// if FlvAvcPacketType == 0
 	// 		AVCDecoderConfigurationRecord 

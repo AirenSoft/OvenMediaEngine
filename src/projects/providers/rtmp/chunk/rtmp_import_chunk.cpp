@@ -190,9 +190,13 @@ bool RtmpImportChunk::ProcessChunkHeader(const std::shared_ptr<RtmpChunkHeader> 
 
 	switch (chunk_header->basic_header.format_type)
 	{
-		case RtmpChunkType::T0:
-		{
+		case RtmpChunkType::T0: {
 			auto &type_0 = chunk_header->header.type_0;
+
+			logtp("Type 0 packet received: is_extended: %s, extended_ts: %u, type0.ts: %u",
+				  chunk_header->is_extended ? "true" : "false",
+				  chunk_header->extended_timestamp,
+				  type_0.timestamp);
 
 			completed.timestamp_delta = 0U;
 			completed.timestamp = chunk_header->is_extended ? chunk_header->extended_timestamp : type_0.timestamp;
@@ -210,9 +214,13 @@ bool RtmpImportChunk::ProcessChunkHeader(const std::shared_ptr<RtmpChunkHeader> 
 			break;
 		}
 
-		case RtmpChunkType::T1:
-		{
+		case RtmpChunkType::T1: {
 			auto &type_1 = chunk_header->header.type_1;
+
+			logtp("Type 1 packet received: is_extended: %s, extended_ts: %u, type1.ts_delta: %u",
+				  chunk_header->is_extended ? "true" : "false",
+				  chunk_header->extended_timestamp,
+				  type_1.timestamp_delta);
 
 			// Copy chunk header from last_chunk_header
 			completed = last_chunk_header->completed;
@@ -225,9 +233,13 @@ bool RtmpImportChunk::ProcessChunkHeader(const std::shared_ptr<RtmpChunkHeader> 
 			break;
 		}
 
-		case RtmpChunkType::T2:
-		{
+		case RtmpChunkType::T2: {
 			auto &type_2 = chunk_header->header.type_2;
+
+			logtp("Type 2 packet received: is_extended: %s, extended_ts: %u, type2.ts_delta: %u",
+				  chunk_header->is_extended ? "true" : "false",
+				  chunk_header->extended_timestamp,
+				  type_2.timestamp_delta);
 
 			// Copy chunk header from last_chunk_header
 			completed = last_chunk_header->completed;
@@ -238,12 +250,15 @@ bool RtmpImportChunk::ProcessChunkHeader(const std::shared_ptr<RtmpChunkHeader> 
 			break;
 		}
 
-		case RtmpChunkType::T3:
-		{
-			// auto &type_3 = chunk_header->header.type_3;
+		case RtmpChunkType::T3: {
+			[[maybe_unused]] auto &type_3 = chunk_header->header.type_3;
 
 			// Copy chunk header from last_chunk_header
 			completed = last_chunk_header->completed;
+
+			logtp("Type 3 packet received: is_extended: %s, extended_ts: %u, type3.ts_delta: %u",
+				  chunk_header->is_extended ? "true" : "false",
+				  chunk_header->completed.timestamp_delta);
 
 			completed.timestamp += completed.timestamp_delta;
 
@@ -295,8 +310,7 @@ bool RtmpImportChunk::CalculateForType3Header(const std::shared_ptr<RtmpChunkHea
 			expected_type_3_header[1] = chunk_header->basic_header.stream_id - 64;
 			break;
 
-		case 3:
-		{
+		case 3: {
 			// Chunk stream ID's range: 64-65599
 			auto stream_id = chunk_header->basic_header.stream_id - 64;
 
