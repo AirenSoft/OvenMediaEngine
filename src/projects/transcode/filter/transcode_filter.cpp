@@ -1,8 +1,8 @@
 #include "transcode_filter.h"
 
-#include "filter/media_filter_resampler.h"
-#include "filter/media_filter_rescaler.h"
-#include "transcode_private.h"
+#include "../transcode_private.h"
+#include "media_filter_resampler.h"
+#include "media_filter_rescaler.h"
 
 using namespace cmn;
 

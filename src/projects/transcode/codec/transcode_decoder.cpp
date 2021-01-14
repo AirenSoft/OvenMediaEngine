@@ -13,7 +13,7 @@
 #include "transcode_codec_dec_avc.h"
 #include "transcode_codec_dec_hevc.h"
 
-#define MAX_QUEUE_SIZE 10
+#define MAX_QUEUE_SIZE 120
 
 TranscodeDecoder::TranscodeDecoder(info::Stream stream_info)
 	: _stream_info(stream_info)
@@ -50,6 +50,11 @@ std::shared_ptr<TranscodeContext> &TranscodeDecoder::GetContext()
 cmn::Timebase TranscodeDecoder::GetTimebase() const
 {
 	return _input_context->GetTimeBase();
+}
+
+void TranscodeDecoder::SetTrackId(int32_t track_id)
+{
+	_track_id = track_id;
 }
 
 std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::Stream &info, cmn::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> input_context)
@@ -93,7 +98,6 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 
 	_input_context = context;
 	AVCodec *_codec = ::avcodec_find_decoder(GetCodecID());
-
 	if (_codec == nullptr)
 	{
 		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
@@ -102,7 +106,6 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 
 	// create codec context
 	_context = ::avcodec_alloc_context3(_codec);
-
 	if (_context == nullptr)
 	{
 		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
@@ -116,7 +119,6 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 
 	_parser = ::av_parser_init(_codec->id);
-
 	if (_parser == nullptr)
 	{
 		logte("Parser not found");
@@ -124,7 +126,6 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 	}
 
 	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
-
 	_context->time_base = TimebaseToAVRational(_input_context->GetTimeBase());
 
 	_input_buffer.SetAlias(ov::String::FormatString("Input queue of transcode decoder. codec(%s/%d)", ::avcodec_get_name(GetCodecID()), GetCodecID()));
@@ -132,12 +133,41 @@ bool TranscodeDecoder::Configure(std::shared_ptr<TranscodeContext> context)
 	_output_buffer.SetAlias(ov::String::FormatString("Output queue of transcode decoder. codec(%s/%d)", ::avcodec_get_name(GetCodecID()), GetCodecID()));
 	_output_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
+	// Generates a thread that reads and encodes frames in the input_buffer queue and places them in the output queue.
+	try
+	{
+		_kill_flag = false;
+
+		_thread_work = std::thread(&TranscodeDecoder::ThreadDecode, this);
+		pthread_setname_np(_thread_work.native_handle(), "Decoder");
+	}
+	catch (const std::system_error &e)
+	{
+		_kill_flag = true;
+
+		logte("Failed to start transcode stream thread.");
+	}
+
 	return true;
 }
 
 void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)
 {
 	_input_buffer.Enqueue(std::move(packet));
+}
+
+void TranscodeDecoder::Stop()
+{
+	_kill_flag = true;
+
+	_input_buffer.Stop();
+	_output_buffer.Stop();
+
+	if (_thread_work.joinable())
+	{
+		_thread_work.join();
+		logtd("decoder thread has ended.");
+	}
 }
 
 const ov::String TranscodeDecoder::ShowCodecParameters(const AVCodecContext *context, const AVCodecParameters *parameters)

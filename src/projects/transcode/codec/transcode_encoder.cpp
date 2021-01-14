@@ -19,7 +19,7 @@
 #include "transcode_codec_enc_png.h"
 #include "transcode_codec_enc_vp8.h"
 
-#define MAX_QUEUE_SIZE 10
+#define MAX_QUEUE_SIZE 120
 
 TranscodeEncoder::TranscodeEncoder()
 {

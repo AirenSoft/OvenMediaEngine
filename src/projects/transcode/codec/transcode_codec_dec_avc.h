@@ -22,6 +22,7 @@ public:
 	{
 		return AV_CODEC_ID_H264;
 	}
+	void ThreadDecode() override;
 
 	std::shared_ptr<MediaFrame> RecvBuffer(TranscodeResult *result) override;
 };

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "transcode_context.h"
-#include "filter/media_filter_impl.h"
-#include "codec/transcode_base.h"
+#include <base/mediarouter/media_buffer.h>
+#include <base/mediarouter/media_type.h>
 
 #include <cstdint>
 
-#include <base/mediarouter/media_buffer.h>
-#include <base/mediarouter/media_type.h>
+#include "../transcode_context.h"
+// #include "codec/transcode_base.h"
+#include "media_filter_impl.h"
 
 enum class TranscodeFilterType : int8_t
 {
@@ -15,7 +15,7 @@ enum class TranscodeFilterType : int8_t
 	AudioResampler,
 	VideoRescaler,
 
-	Count           ///< Number of sample formats. DO NOT USE if linking dynamically
+	Count  ///< Number of sample formats. DO NOT USE if linking dynamically
 };
 
 class TranscodeFilter
@@ -34,9 +34,8 @@ public:
 	uint32_t GetOutputBufferSize();
 
 	cmn::Timebase GetInputTimebase() const;
-	cmn::Timebase GetOutputTimebase() const;	
+	cmn::Timebase GetOutputTimebase() const;
 
 private:
 	MediaFilterImpl *_impl;
 };
-
