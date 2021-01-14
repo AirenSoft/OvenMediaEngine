@@ -85,7 +85,7 @@ bool OvenCodecImplAvcodecEncHEVC::Configure(std::shared_ptr<TranscodeContext> co
 	::av_opt_set(_context->priv_data, "tune", "zerolatency", 0);
 
 	// Keyframe Intervasl
-	::av_opt_set(_context->priv_data, "x265-params", ov::String::FormatString("bframes=0:no-opengop=1:no-scenecut=1:keyint=%.0f:min-keyint=%.0f", _output_context->GetFrameRate(), _output_context->GetFrameRate()).CStr(), 0);
+	::av_opt_set(_context->priv_data, "x265-params", ov::String::FormatString("pass=1:bframes=0:no-scenecut=1:keyint=%.0f:min-keyint=%.0f:level-idc=4:no-open-gop=1", _output_context->GetFrameRate(), _output_context->GetFrameRate()).CStr(), 0);
 
 	if (::avcodec_open2(_context, codec, nullptr) < 0)
 	{
