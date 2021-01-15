@@ -15,6 +15,11 @@
 class HttpsServer : public HttpServer
 {
 public:
+	HttpsServer(const char *server_name)
+		: HttpServer(server_name)
+	{
+	}
+
 	// TODO(Dimiden): OME doesn't support SNI yet, so OME can handle only one certificate.
 	bool SetCertificate(const std::shared_ptr<info::Certificate> &certificate);
 

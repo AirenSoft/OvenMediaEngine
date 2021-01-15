@@ -42,7 +42,7 @@ namespace api
 		{
 			address = ov::SocketAddress(server_config->GetIp(), port.GetPort());
 
-			_http_server = manager->CreateHttpServer(address);
+			_http_server = manager->CreateHttpServer("APIServer", address);
 
 			if (_http_server != nullptr)
 			{
@@ -72,7 +72,7 @@ namespace api
 
 			if (certificate != nullptr)
 			{
-				_https_server = manager->CreateHttpsServer(address, certificate);
+				_https_server = manager->CreateHttpsServer("APIServer", address, certificate);
 
 				if (_https_server != nullptr)
 				{
@@ -119,8 +119,8 @@ namespace api
 		std::shared_ptr<HttpServer> http_server = std::move(_http_server);
 		std::shared_ptr<HttpsServer> https_server = std::move(_https_server);
 
-		bool http_result = (http_server != nullptr) ? manager->ReleaseServer(_http_server) : false;
-		bool https_result = (https_server != nullptr) ? manager->ReleaseServer(_https_server) : false;
+		bool http_result = (http_server != nullptr) ? manager->ReleaseServer(http_server) : false;
+		bool https_result = (https_server != nullptr) ? manager->ReleaseServer(https_server) : false;
 
 		return http_result && https_result;
 	}

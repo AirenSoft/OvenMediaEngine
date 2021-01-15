@@ -56,7 +56,7 @@ bool ThumbnailPublisher::Start()
 	{
 		address = ov::SocketAddress(server_config.GetIp(), port.GetPort());
 
-		_http_server = manager->CreateHttpServer(address);
+		_http_server = manager->CreateHttpServer("ThumbnailPublisher", address);
 
 		if (_http_server != nullptr)
 		{
@@ -88,7 +88,7 @@ bool ThumbnailPublisher::Start()
 
 		if (certificate != nullptr)
 		{
-			_https_server = manager->CreateHttpsServer(address, certificate);
+			_https_server = manager->CreateHttpsServer("ThumbnailPublisher", address, certificate);
 
 			if (_https_server != nullptr)
 			{

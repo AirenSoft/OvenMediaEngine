@@ -12,10 +12,15 @@
 
 #include "http_private.h"
 
+HttpServer::HttpServer(const char *server_name)
+	: _server_name(server_name)
+{
+}
+
 HttpServer::~HttpServer()
 {
 	// PhysicalPort should be stopped before release HttpServer
-	OV_ASSERT(_physical_port == nullptr, "Physical port: %s", _physical_port->ToString().CStr());
+	OV_ASSERT(_physical_port == nullptr, "%s: Physical port: %s", _server_name.CStr(), _physical_port->ToString().CStr());
 }
 
 bool HttpServer::Start(const ov::SocketAddress &address, int worker_count)

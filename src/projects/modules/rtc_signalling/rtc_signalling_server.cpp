@@ -38,8 +38,8 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 
 	auto manager = HttpServerManager::GetInstance();
-	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer(*address, worker_count) : nullptr;
-	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer(*tls_address, vhost_list, worker_count) : nullptr;
+	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("RtcSignallingServer", *address, worker_count) : nullptr;
+	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("RtcSignallingServer", *tls_address, vhost_list, worker_count) : nullptr;
 
 	auto web_socket_interceptor = result ? CreateWebSocketInterceptor() : nullptr;
 

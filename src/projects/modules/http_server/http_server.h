@@ -31,7 +31,7 @@ public:
 	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpClient>>;
 	using ClientIterator = std::function<bool(const std::shared_ptr<HttpClient> &client)>;
 
-	HttpServer() = default;
+	HttpServer(const char *server_name);
 	~HttpServer() override;
 
 	virtual bool Start(const ov::SocketAddress &address, int worker_count);
@@ -63,6 +63,8 @@ protected:
 	void OnConnected(const std::shared_ptr<ov::Socket> &remote) override;
 	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 	void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
+
+	ov::String _server_name;
 
 	// HttpServer와 연결된 physical port
 	mutable std::mutex _physical_port_mutex;
