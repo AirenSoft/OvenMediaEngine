@@ -10,6 +10,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <config/config_manager.h>
+#include <malloc.h>
 #include <orchestrator/orchestrator.h>
 #include <signal.h>
 
@@ -160,6 +161,11 @@ static void AbortHandler(int signum, siginfo_t *si, void *unused)
 	::exit(signum);
 }
 
+static void User1Handler(int signum, siginfo_t *si, void *unused)
+{
+	logtc("Trim result: %d", malloc_trim(0));
+}
+
 static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 {
 	logti("Trying to reload configuration...");
@@ -257,6 +263,18 @@ bool InitializeAbortSignal()
 	return result;
 }
 
+// Configure SIGUSR1 signal
+// WARNING: USE THIS SIGNAL FOR DEBUGGING PURPOSE ONLY
+bool InitializeUser1Signal()
+{
+	auto sa = GetSigAction(User1Handler);
+	bool result = true;
+
+	result = result && (::sigaction(SIGUSR1, &sa, nullptr) == 0);
+
+	return result;
+}
+
 // Configure reload signal
 bool InitializeReloadSignal()
 {
@@ -298,6 +316,7 @@ bool InitializeSignals()
 	//	63) SIGRTMAX-1	64) SIGRTMAX
 
 	return InitializeAbortSignal() &&
+		   InitializeUser1Signal() &&
 		   InitializeReloadSignal() &&
 		   InitializeTerminateSignal();
 }
