@@ -38,6 +38,12 @@ DashPacketizer::DashPacketizer(const ov::String &app_name, const ov::String &str
 	_stat_stop_watch.Start();
 }
 
+DashPacketizer::~DashPacketizer()
+{
+	_video_m4s_writer.Finalize();
+	_audio_m4s_writer.Finalize();
+}
+
 void DashPacketizer::SetVideoTrack(const std::shared_ptr<MediaTrack> &video_track)
 {
 	if (video_track == nullptr)
@@ -128,12 +134,6 @@ void DashPacketizer::SetAudioTrack(const std::shared_ptr<MediaTrack> &audio_trac
 			logaw("Not supported audio codec: %s", ::StringFromMediaCodecId(audio_track->GetCodecId()).CStr());
 			break;
 	}
-}
-
-DashPacketizer::~DashPacketizer()
-{
-	_video_m4s_writer.Finalize();
-	_audio_m4s_writer.Finalize();
 }
 
 DashFileType DashPacketizer::GetFileType(const ov::String &file_name)
@@ -804,7 +804,14 @@ DashPacketizer::SetResult DashPacketizer::SetSegment(std::map<ov::String, std::s
 		if (queue.size() > max_segment_count)
 		{
 			size_t erase_count = queue.size() - max_segment_count;
+
+			auto start = queue.begin();
+			auto end = queue.begin() + erase_count;
+
 			// Remove items with in [0, erase_count)
+			std::for_each(start, end, [&map](const std::shared_ptr<SegmentItem> &segment) -> void {
+				map.erase(segment->file_name);
+			});
 			queue.erase(queue.begin(), queue.begin() + erase_count);
 		}
 
