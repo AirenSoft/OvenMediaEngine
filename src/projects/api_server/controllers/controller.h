@@ -13,24 +13,45 @@
 
 #include <memory>
 
-#include "../helpers/helpers.h"
 #include "../converters/converters.h"
+#include "../helpers/helpers.h"
 
 namespace api
 {
 	class ApiResponse
 	{
 	public:
-		// Empty response body ({}) with 200 OK
-		ApiResponse() = default;
-		// If status_code indicates 2xx then an empty response ({}), if not 2xx, sends an error message
+		// {
+		//     "statusCode": <status_code>,
+		//     "message": <message_of_status_code>
+		// }
 		ApiResponse(HttpStatusCode status_code);
-		// Used to send a JSON object with status code
+
+		// {
+		//     "statusCode": <status_code>,
+		//     "message": <message_of_status_code>,
+		//     "response": <json>
+		// }
 		ApiResponse(HttpStatusCode status_code, const Json::Value &json);
-		// Used to send a JSON object
+
+		// {
+		//     "statusCode": <status_code>,
+		//     "message": <message_of_status_code>
+		// }
+		ApiResponse(MultipleStatus status_code, const Json::Value &json);
+
+		// {
+		//     "statusCode": 200,
+		//     "message": "OK",
+		//     "response": <json>
+		// }
 		ApiResponse(const Json::Value &json);
-		// Used to send an error
-		ApiResponse(const std::shared_ptr<ov::Error> &error);
+
+		// {
+		//     "statusCode": <error->GetCode()>,
+		//     "message": <error->GetMessage()>
+		// }
+		ApiResponse(const std::shared_ptr<HttpError> &error);
 
 		// Copy ctor
 		ApiResponse(const ApiResponse &response);
@@ -46,6 +67,10 @@ namespace api
 		bool SendToClient(const std::shared_ptr<HttpClient> &client);
 
 	protected:
+		void SetResponse(HttpStatusCode status_code);
+		void SetResponse(HttpStatusCode status_code, const char *message);
+		void SetResponse(HttpStatusCode status_code, const char *message, const Json::Value &json);
+
 		HttpStatusCode _status_code = HttpStatusCode::OK;
 		Json::Value _json = Json::Value::null;
 	};
@@ -95,15 +120,15 @@ namespace api
 
 #define API_CONTROLLER_GET_INIT()                                                 \
 	[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult(); \
-	[[maybe_unused]] std::shared_ptr<ov::Error> error;
+	[[maybe_unused]] std::shared_ptr<HttpError> error;
 
-#define API_CONTROLLER_GET_REQUEST_BODY()                              \
-	ov::JsonObject json_object;                                        \
-	error = json_object.Parse(client->GetRequest()->GetRequestBody()); \
-	Json::Value request_body;                                          \
-	if (error == nullptr)                                              \
-	{                                                                  \
-		request_body = json_object.GetJsonValue();                     \
+#define API_CONTROLLER_GET_REQUEST_BODY()                                                      \
+	ov::JsonObject json_object;                                                                \
+	error = HttpError::CreateError(json_object.Parse(client->GetRequest()->GetRequestBody())); \
+	Json::Value request_body;                                                                  \
+	if (error == nullptr)                                                                      \
+	{                                                                                          \
+		request_body = json_object.GetJsonValue();                                             \
 	}
 
 #define API_CONTROLLER_GET_VHOST()                             \
@@ -116,7 +141,7 @@ namespace api
                                                                \
 		if (vhost == nullptr)                                  \
 		{                                                      \
-			error = ov::Error::CreateError(                    \
+			error = HttpError::CreateError(                    \
 				HttpStatusCode::NotFound,                      \
 				"Could not find the virtual host: [%.*s]",     \
 				vhost_name.length(), vhost_name.data());       \
@@ -133,7 +158,7 @@ namespace api
                                                                \
 		if (app == nullptr)                                    \
 		{                                                      \
-			error = ov::Error::CreateError(                    \
+			error = HttpError::CreateError(                    \
 				HttpStatusCode::NotFound,                      \
 				"Could not find the application: [%.*s/%.*s]", \
 				vhost_name.length(), vhost_name.data(),        \
@@ -152,7 +177,7 @@ namespace api
                                                                      \
 		if (stream == nullptr)                                       \
 		{                                                            \
-			error = ov::Error::CreateError(                          \
+			error = HttpError::CreateError(                          \
 				HttpStatusCode::NotFound,                            \
 				"Could not find the stream: [%.*s/%.*s/%.*s]",       \
 				vhost_name.length(), vhost_name.data(),              \

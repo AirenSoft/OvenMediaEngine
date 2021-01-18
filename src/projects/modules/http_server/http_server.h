@@ -8,13 +8,16 @@
 //==============================================================================
 #pragma once
 
+#include <modules/physical_port/physical_port.h>
+
+#include <shared_mutex>
+
+#include "http_client.h"
+#include "http_error.h"
 #include "http_request.h"
 #include "http_response.h"
-#include "http_client.h"
 #include "interceptors/default/http_default_interceptor.h"
 
-#include <modules/physical_port/physical_port.h>
-#include <shared_mutex>
 // 참고 자료
 // RFC7230 - Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing (https://tools.ietf.org/html/rfc7230)
 // RFC7231 - Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content (https://tools.ietf.org/html/rfc7231)

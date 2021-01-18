@@ -393,13 +393,13 @@ namespace api
 			}
 		}
 
-		std::shared_ptr<ov::Error> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)
+		std::shared_ptr<HttpError> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)
 		{
 			Json::Value value;
 
 			MakeUpperCase("application", json_value, &value);
 
-			return application->Parse("", value, "Application");
+			return HttpError::CreateError(application->Parse("", value, "Application"));
 		}
 	}  // namespace conv
 }  // namespace api

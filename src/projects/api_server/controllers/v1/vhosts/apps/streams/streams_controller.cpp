@@ -32,7 +32,7 @@ namespace api
 		{
 			if (request_body.isArray() == false)
 			{
-				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Request body must be an array");
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "Request body must be an array");
 			}
 
 			std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
@@ -74,7 +74,7 @@ namespace api
 				}
 			}
 
-			return response_value;
+			return std::move(response_value);
 		}
 
 		ApiResponse StreamsController::OnGetStreamList(const std::shared_ptr<HttpClient> &client,
@@ -95,7 +95,7 @@ namespace api
 				}
 			}
 
-			return response;
+			return std::move(response);
 		}
 
 		ApiResponse StreamsController::OnGetStream(const std::shared_ptr<HttpClient> &client,
@@ -103,7 +103,7 @@ namespace api
 												   const std::shared_ptr<mon::ApplicationMetrics> &app,
 												   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			return conv::JsonFromStream(stream, std::move(output_streams));
+			return std::move(conv::JsonFromStream(stream, std::move(output_streams)));
 		}
 
 		ApiResponse StreamsController::OnDeleteStream(const std::shared_ptr<HttpClient> &client,
@@ -111,9 +111,7 @@ namespace api
 													  const std::shared_ptr<mon::ApplicationMetrics> &app,
 													  const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
-			// auto orchestrator = ocst::Orchestrator::GetInstance();
-
-			return {};
+			return HttpStatusCode::NotImplemented;
 		}
 	}  // namespace v1
 }  // namespace api

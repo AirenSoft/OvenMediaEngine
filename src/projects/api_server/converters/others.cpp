@@ -12,13 +12,13 @@ namespace api
 {
 	namespace conv
 	{
-		Json::Value JsonFromError(const std::shared_ptr<ov::Error> &error)
+		Json::Value JsonFromError(const std::shared_ptr<HttpError> &error)
 		{
 			Json::Value value(Json::ValueType::nullValue);
 
 			if (error != nullptr)
 			{
-				value["code"] = error->GetCode();
+				value["statusCode"] = error->GetCode();
 				value["message"] = error->GetMessage().CStr();
 			}
 

@@ -95,17 +95,6 @@ namespace ov
 		return std::make_shared<Error>(code, message);
 	}
 
-	std::shared_ptr<Error> Error::CreateError(HttpStatusCode code, const char *format, ...)
-	{
-		String message;
-		va_list list;
-		va_start(list, format);
-		message.VFormat(format, list);
-		va_end(list);
-
-		return std::make_shared<Error>(static_cast<int>(code), message);
-	}
-
 	std::shared_ptr<Error> Error::CreateErrorFromErrno()
 	{
 		return std::make_shared<Error>("errno", errno, "%s", strerror(errno));

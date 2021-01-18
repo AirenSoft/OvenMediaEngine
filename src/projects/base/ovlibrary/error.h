@@ -12,8 +12,6 @@
 
 #include <memory>
 
-enum class HttpStatusCode : uint16_t;
-
 namespace ov
 {
 
@@ -34,7 +32,6 @@ namespace ov
 		static std::shared_ptr<Error> CreateError(ov::String domain, int code, const char *format, ...);
 		static std::shared_ptr<Error> CreateError(ov::String domain, const char *format, ...);
 		static std::shared_ptr<Error> CreateError(int code, const char *format, ...);
-		static std::shared_ptr<Error> CreateError(HttpStatusCode code, const char *format, ...);
 		static std::shared_ptr<Error> CreateErrorFromErrno();
 		static std::shared_ptr<Error> CreateErrorFromSrt();
 		static std::shared_ptr<Error> CreateErrorFromOpenSsl();

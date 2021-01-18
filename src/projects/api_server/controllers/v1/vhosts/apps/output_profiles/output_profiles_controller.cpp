@@ -97,18 +97,18 @@ namespace api
 			return -1;
 		}
 
-		std::shared_ptr<ov::Error> CreateNotFoundError(const std::shared_ptr<mon::HostMetrics> &vhost,
+		std::shared_ptr<HttpError> CreateNotFoundError(const std::shared_ptr<mon::HostMetrics> &vhost,
 													   const std::shared_ptr<mon::ApplicationMetrics> &app,
 													   const std::string_view &output_profile_name)
 		{
-			return ov::Error::CreateError(
+			return HttpError::CreateError(
 				HttpStatusCode::NotFound,
 				"Could not find the output profile: [%s/%s/%.*s]",
 				vhost->GetName().CStr(), app->GetName().GetAppName().CStr(),
 				output_profile_name.length(), output_profile_name.data());
 		}
 
-		std::shared_ptr<ov::Error> ChangeApp(const std::shared_ptr<mon::HostMetrics> &vhost,
+		std::shared_ptr<HttpError> ChangeApp(const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app,
 											 Json::Value &app_json)
 		{
@@ -127,7 +127,7 @@ namespace api
 			{
 				if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
 				{
-					return ov::Error::CreateError(HttpStatusCode::Forbidden, "Could not delete the application: [%s/%s]",
+					return HttpError::CreateError(HttpStatusCode::Forbidden, "Could not delete the application: [%s/%s]",
 												  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 				}
 
@@ -136,25 +136,25 @@ namespace api
 				switch (result)
 				{
 					case ocst::Result::Failed:
-						error = ov::Error::CreateError(HttpStatusCode::BadRequest, "Failed to create the application");
+						error = HttpError::CreateError(HttpStatusCode::BadRequest, "Failed to create the application");
 						break;
 
 					case ocst::Result::Succeeded:
 						break;
 
 					case ocst::Result::Exists:
-						error = ov::Error::CreateError(HttpStatusCode::Conflict, "The application already exists");
+						error = HttpError::CreateError(HttpStatusCode::Conflict, "The application already exists");
 						break;
 
 					case ocst::Result::NotExists:
 						// CreateApplication() never returns NotExists
-						error = ov::Error::CreateError(HttpStatusCode::InternalServerError, "Unknown error occurred");
+						error = HttpError::CreateError(HttpStatusCode::InternalServerError, "Unknown error occurred");
 						OV_ASSERT2(false);
 						break;
 				}
 			}
 
-			return error;
+			return HttpError::CreateError(error);
 		}
 
 		ApiResponse OutputProfilesController::OnPostOutputProfile(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
@@ -163,7 +163,7 @@ namespace api
 		{
 			if (request_body.isArray() == false)
 			{
-				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Request body must be an array");
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "Request body must be an array");
 			}
 
 			MultipleStatus status_code;
@@ -179,7 +179,7 @@ namespace api
 
 				if (name.isString() == false)
 				{
-					response.append(conv::JsonFromError(ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid name")));
+					response.append(conv::JsonFromError(HttpError::CreateError(HttpStatusCode::BadRequest, "Invalid name")));
 					status_code.AddStatusCode(HttpStatusCode::BadRequest);
 				}
 				else
@@ -193,7 +193,7 @@ namespace api
 					}
 					else
 					{
-						response.append(conv::JsonFromError(ov::Error::CreateError(HttpStatusCode::Conflict, "The output profile \"%s\" already exists", name.asCString())));
+						response.append(conv::JsonFromError(HttpError::CreateError(HttpStatusCode::Conflict, "The output profile \"%s\" already exists", name.asCString())));
 						status_code.AddStatusCode(HttpStatusCode::Conflict);
 					}
 				}
@@ -226,12 +226,15 @@ namespace api
 
 						if (FindOutputProfile(new_app_json, name, &new_profile) < 0)
 						{
-							response_profile = conv::JsonFromError(ov::Error::CreateError(HttpStatusCode::InternalServerError, "Output profile is created, but not found"));
+							response_profile = conv::JsonFromError(HttpError::CreateError(HttpStatusCode::InternalServerError, "Output profile is created, but not found"));
 							status_code.AddStatusCode(HttpStatusCode::InternalServerError);
 						}
 						else
 						{
-							response_profile = *new_profile;
+							response_profile = Json::objectValue;
+							response_profile["statusCode"] = static_cast<int>(HttpStatusCode::OK);
+							response_profile["message"] = StringFromHttpStatusCode(HttpStatusCode::OK);
+							response_profile["response"] = *new_profile;
 						}
 					}
 					else
@@ -242,7 +245,7 @@ namespace api
 				}
 			}
 
-			return std::move(ApiResponse(status_code.GetStatusCode(), std::move(response)));
+			return {status_code, std::move(response)};
 		}
 
 		ApiResponse OutputProfilesController::OnGetOutputProfileList(const std::shared_ptr<HttpClient> &client,
@@ -256,7 +259,7 @@ namespace api
 				response.append(item.GetName().CStr());
 			}
 
-			return response;
+			return std::move(response);
 		}
 
 		ApiResponse OutputProfilesController::OnGetOutputProfile(const std::shared_ptr<HttpClient> &client,
@@ -269,7 +272,7 @@ namespace api
 			{
 				if (profile_name == item.GetName().CStr())
 				{
-					return conv::JsonFromOutputProfile(item);
+					return std::move(conv::JsonFromOutputProfile(item));
 				}
 			}
 
@@ -282,7 +285,7 @@ namespace api
 		{
 			if (request_body.isObject() == false)
 			{
-				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Request body must be an object");
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "Request body must be an object");
 			}
 
 			auto profile_name = GetOutputProfileName(client);
@@ -304,7 +307,7 @@ namespace api
 				// Prevent to change the name using this API
 				if (lower_name == "name")
 				{
-					return ov::Error::CreateError(HttpStatusCode::BadRequest, "The %s entry cannot be specified in the modification", name.CStr());
+					return HttpError::CreateError(HttpStatusCode::BadRequest, "The %s entry cannot be specified in the modification", name.CStr());
 				}
 			}
 
@@ -325,10 +328,10 @@ namespace api
 
 				if (FindOutputProfile(new_app, profile_name, &value) < 0)
 				{
-					return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Output profile is modified, but not found");
+					return HttpError::CreateError(HttpStatusCode::InternalServerError, "Output profile is modified, but not found");
 				}
 
-				return value;
+				return std::move(value);
 			}
 
 			return error;
@@ -351,7 +354,7 @@ namespace api
 
 			if (output_profiles.removeIndex(index, nullptr) == false)
 			{
-				return ov::Error::CreateError(HttpStatusCode::Forbidden, "Could not delete output profile");
+				return HttpError::CreateError(HttpStatusCode::Forbidden, "Could not delete output profile");
 			}
 
 			return ChangeApp(vhost, app, app_json);

@@ -41,7 +41,7 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+				return HttpError::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
@@ -51,7 +51,7 @@ namespace api
 			auto error = publisher->GetRecords(app->GetName(), records);
 			if(error->GetCode() != FilePublisher::FilePublisherStatusCode::Success)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+				return HttpError::CreateError(HttpStatusCode::NoContent, error->GetMessage());
 			}
 
 			for ( auto &item : records )
@@ -71,14 +71,14 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+				return HttpError::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
 			auto record = conv::RecordFromJson(request_body);
 			if (record == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 			record->SetVhost(vhost->GetName().CStr());
@@ -88,10 +88,10 @@ namespace api
 			auto error = publisher->RecordStart(app->GetName(), record);
 			if(error->GetCode() != FilePublisher::FilePublisherStatusCode::Success)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+				return HttpError::CreateError(HttpStatusCode::NoContent, error->GetMessage());
 			}
 
-			return ov::Error::CreateError(HttpStatusCode::OK, error->GetMessage());
+			return HttpError::CreateError(HttpStatusCode::OK, error->GetMessage());
 		}
 
 		ApiResponse AppActionsController::OnPostStopRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
@@ -103,14 +103,14 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+				return HttpError::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
 			auto record = conv::RecordFromJson(request_body);
 			if (record == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 			record->SetVhost(vhost->GetName().CStr());
@@ -120,10 +120,10 @@ namespace api
 			auto error = publisher->RecordStop(app->GetName(), record);
 			if(error->GetCode() != FilePublisher::FilePublisherStatusCode::Success)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+				return HttpError::CreateError(HttpStatusCode::NoContent, error->GetMessage());
 			}
 
-			return ov::Error::CreateError(HttpStatusCode::OK, error->GetMessage());
+			return HttpError::CreateError(HttpStatusCode::OK, error->GetMessage());
 		}
 
 		ApiResponse AppActionsController::OnGetPushes(const std::shared_ptr<HttpClient> &client,
@@ -133,7 +133,7 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
 			if (publisher == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+				return HttpError::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
@@ -143,7 +143,7 @@ namespace api
 			auto error = publisher->GetPushes(app->GetName(), pushes);
 			if(error->GetCode() != RtmpPushPublisher::PushPublisherErrorCode::Success)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+				return HttpError::CreateError(HttpStatusCode::NoContent, error->GetMessage());
 			}
 
 			for ( auto &item : pushes )
@@ -161,14 +161,14 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
 			if (publisher == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+				return HttpError::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
 			auto push = conv::PushFromJson(request_body);
 			if (push == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 			push->SetVhost(vhost->GetName().CStr());
@@ -179,9 +179,9 @@ namespace api
 			auto error = publisher->PushStart(app->GetName(), push);
 			if(error->GetCode() != RtmpPushPublisher::PushPublisherErrorCode::Success)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+				return HttpError::CreateError(HttpStatusCode::NoContent, error->GetMessage());
 			}
-			return ov::Error::CreateError(HttpStatusCode::OK, error->GetMessage());
+			return HttpError::CreateError(HttpStatusCode::OK, error->GetMessage());
 		}
 
 		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
@@ -191,14 +191,14 @@ namespace api
 			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
 			if (publisher == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
+				return HttpError::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 
 			auto push = conv::PushFromJson(request_body);
 			if (push == nullptr)
 			{
-				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName());
 			}
 			push->SetVhost(vhost->GetName().CStr());
@@ -209,10 +209,10 @@ namespace api
 			auto error = publisher->PushStop(app->GetName(), push);
 			if(error->GetCode() != RtmpPushPublisher::PushPublisherErrorCode::Success)
 			{
-				return ov::Error::CreateError(HttpStatusCode::NoContent, error->GetMessage());
+				return HttpError::CreateError(HttpStatusCode::NoContent, error->GetMessage());
 			}
 
-			return ov::Error::CreateError(HttpStatusCode::OK, error->GetMessage());;
+			return HttpError::CreateError(HttpStatusCode::OK, error->GetMessage());;
 
 		}
 

@@ -23,6 +23,6 @@ namespace api
 
 	ApiResponse RootController::OnNotFound(const std::shared_ptr<HttpClient> &client)
 	{
-		return ov::Error::CreateError(HttpStatusCode::NotFound, "Controller not found");
+		return HttpError::CreateError(HttpStatusCode::NotFound, "Controller not found");
 	}
 }  // namespace api
