@@ -54,7 +54,6 @@ std::shared_ptr<RtmpWriter> RtmpWriter::Create()
 RtmpWriter::RtmpWriter()
 	: _format_context(nullptr)
 {
-	av_register_all();
 	// av_log_set_callback(RtmpWriter::FFmpegLog);
 	// av_log_set_level(AV_LOG_DEBUG);
 }
@@ -129,13 +128,13 @@ bool RtmpWriter::Start()
 
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
-		int error = avio_open2(&_format_context->pb, _format_context->filename, AVIO_FLAG_WRITE, nullptr, &options);
+		int error = avio_open2(&_format_context->pb, _format_context->url, AVIO_FLAG_WRITE, nullptr, &options);
 		if (error < 0)
 		{
 			char errbuf[256];
 			av_strerror(error, errbuf, sizeof(errbuf));
 
-			logte("Error opening file. error(%d:%s), filename(%s)", error, errbuf, _format_context->filename);
+			logte("Error opening file. error(%d:%s), filename(%s)", error, errbuf, _format_context->url);
 
 			return false;
 		}
@@ -147,7 +146,7 @@ bool RtmpWriter::Start()
 		return false;
 	}
 
-	av_dump_format(_format_context, 0, _format_context->filename, 1);
+	av_dump_format(_format_context, 0, _format_context->url, 1);
 
 	if (_format_context->oformat != nullptr)
 	{

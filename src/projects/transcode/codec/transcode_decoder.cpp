@@ -18,8 +18,6 @@
 TranscodeDecoder::TranscodeDecoder(info::Stream stream_info)
 	: _stream_info(stream_info)
 {
-	::avcodec_register_all();
-
 	_pkt = ::av_packet_alloc();
 	_frame = ::av_frame_alloc();
 	_codec_par = avcodec_parameters_alloc();

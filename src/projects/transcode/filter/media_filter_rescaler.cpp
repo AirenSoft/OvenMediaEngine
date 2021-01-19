@@ -15,8 +15,6 @@
 
 MediaFilterRescaler::MediaFilterRescaler()
 {
-	::avfilter_register_all();
-
 	_frame = ::av_frame_alloc();
 
 	_outputs = ::avfilter_inout_alloc();

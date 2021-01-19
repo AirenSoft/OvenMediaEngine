@@ -49,7 +49,7 @@ bool OvenCodecImplAvcodecEncJpeg::Configure(std::shared_ptr<TranscodeContext> co
 	_context->pix_fmt = AV_PIX_FMT_YUVJ420P;
 	_context->width = _output_context->GetVideoWidth();
 	_context->height = _output_context->GetVideoHeight();
-	_context->flags = CODEC_FLAG_QSCALE;
+	_context->flags = AV_CODEC_FLAG_QSCALE;
 	_context->global_quality = _context->qmin * FF_QP2LAMBDA;
 	_context->framerate = ::av_d2q(_output_context->GetFrameRate(), AV_TIME_BASE);
 

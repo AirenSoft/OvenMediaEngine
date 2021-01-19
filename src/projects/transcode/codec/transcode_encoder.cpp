@@ -23,8 +23,6 @@
 
 TranscodeEncoder::TranscodeEncoder()
 {
-	avcodec_register_all();
-
 	_packet = ::av_packet_alloc();
 	_frame = ::av_frame_alloc();
 

@@ -54,7 +54,6 @@ std::shared_ptr<FileWriter> FileWriter::Create()
 FileWriter::FileWriter()
 	: _format_context(nullptr)
 {
-	av_register_all();
 	// av_log_set_callback(FileWriter::FFmpegLog);
 	// av_log_set_level(AV_LOG_TRACE);
 }
@@ -121,10 +120,10 @@ bool FileWriter::Start()
 
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
-		int error = avio_open2(&_format_context->pb, _format_context->filename, AVIO_FLAG_WRITE, nullptr, &options);
+		int error = avio_open2(&_format_context->pb, _format_context->url, AVIO_FLAG_WRITE, nullptr, &options);
 		if (error < 0)
 		{
-			logte("Error opening file. error(%d), %s", error, _format_context->filename);
+			logte("Error opening file. error(%d), %s", error, _format_context->url);
 			return false;
 		}
 	}
@@ -135,7 +134,7 @@ bool FileWriter::Start()
 		return false;
 	}
 
-	av_dump_format(_format_context, 0, _format_context->filename, 1);
+	av_dump_format(_format_context, 0, _format_context->url, 1);
 
 	if (_format_context->oformat != nullptr)
 	{

@@ -130,9 +130,6 @@ std::shared_ptr<ov::Error> InitializeFFmpeg()
 {
 	::av_log_set_callback(OnFFmpegLog);
 	::av_log_set_level(AV_LOG_DEBUG);
-
-	::av_register_all();
-	::avcodec_register_all();
 	::avformat_network_init();
 
 	return nullptr;
