@@ -22,7 +22,18 @@ enum class StunClass : uint8_t
 
 enum class StunMethod : uint16_t
 {
-	Binding = 0x0001,
+	Binding = 0x001,
+	// Reserved = 0x002 (was SharedSecret prior to [RFC5389])
+	
+	//////////////////
+	// for TURN : https://www.rfc-editor.org/rfc/rfc8656.html#name-stun-methods
+	//////////////////
+	Allocate = 0x003,
+	Refresh = 0x004,
+	Send = 0x006,
+	Data = 0x007,
+	CreatePermission = 0x008,
+	ChannelBind = 0x009
 };
 
 enum class StunAttributeType : uint16_t
@@ -54,6 +65,25 @@ enum class StunAttributeType : uint16_t
 	Software = 0x8022,
 	// 15.11. ALTERNATE-SERVER
 	AlternateServer = 0x8023,
+
+	//////////////
+	// Turn : https://www.rfc-editor.org/rfc/rfc8656.html#section-18
+	//////////////
+	CHANNEL_NUMBER = 0x000C,
+	LIFETIME = 0x000D,
+	// Reserved = 0x0010, // (was BANDWIDTH)
+	XOR_PEER_ADDRESS = 0x0012,
+	DATA = 0x0013,
+	XOR_RELAYED_ADDRESS = 0x0016,
+	REQUESTED_ADDRESS_FAMILY = 0x0017,
+	EVEN_PORT = 0x0018,
+	REQUESTED_TRANSPORT = 0x0019,
+	DONT_FRAGMENT = 0x001A,
+	// Reserved  = 0x0021, (was TIMER-VAL)
+	RESERVATION_TOKEN = 0x0022,
+	ADDITIONAL_ADDRESS_FAMILY = 0x8000,
+	ADDRESS_ERROR_CODE = 0x8001,
+	ICMP = 0x8004
 };
 
 // RFC5389, 15.2. XOR-MAPPED-ADDRESS
@@ -71,9 +101,17 @@ enum class StunErrorCode
 	TryAlternate = 300,
 	BadRequest = 400,
 	Unauthorized = 401,
+	Forbidden = 403,
 	UnknownAttribute = 420,
+	AllocationMismatch = 437,
 	StaleNonce = 438,
-	ServerError = 500
+	AddressFamilyNotSupported = 440,
+	WrongCredentials = 441,
+	UnsupportedTransportProtocol = 442,
+	PeerAddressFamilyMismatch = 443,
+	AllocationQuotaReached = 486,
+	ServerError = 500,
+	InsufficientCapacity = 508
 };
 
 // TODO: legacy 버전(RFC3489)에서는 길이가 다름. RFC3489는 나중에 추가할 것
