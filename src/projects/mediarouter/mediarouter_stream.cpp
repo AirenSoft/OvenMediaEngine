@@ -803,7 +803,7 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 
 		stat_track_str = stat_stream_str + stat_track_str;
 
-		logti("%s", stat_track_str.CStr());
+		logtd("%s", stat_track_str.CStr());
 	}
 }
 
