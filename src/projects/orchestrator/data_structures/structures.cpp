@@ -112,15 +112,21 @@ namespace ocst
 	// Implementation of MediaRouteApplicationObserver
 	//--------------------------------------------------------------------
 	// Temporarily used until Orchestrator takes stream management
-	bool Application::OnCreateStream(const std::shared_ptr<info::Stream> &info)
+	bool Application::OnStreamCreated(const std::shared_ptr<info::Stream> &info)
 	{
-		return callback->OnCreateStream(app_info, info);
+		return callback->OnStreamCreated(app_info, info);
 	}
 
-	bool Application::OnDeleteStream(const std::shared_ptr<info::Stream> &info)
+	bool Application::OnStreamDeleted(const std::shared_ptr<info::Stream> &info)
 	{
-		return callback->OnDeleteStream(app_info, info);
+		return callback->OnStreamDeleted(app_info, info);
 	}
+
+	bool Application::OnStreamParsed(const std::shared_ptr<info::Stream> &info)
+	{
+		return callback->OnStreamParsed(app_info, info);
+	}
+
 
 	bool Application::OnSendFrame(const std::shared_ptr<info::Stream> &info, const std::shared_ptr<MediaPacket> &packet)
 	{

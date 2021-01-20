@@ -56,6 +56,9 @@ public:
 	bool IsCreatedSteam();
 	void SetCreatedSteam(bool created);
 
+	void SetNotifyStreamParsed(bool completed);
+	bool IsNotifyStreamParsed();
+
 	bool IsParseTrackAll();
 
 private:
@@ -101,6 +104,7 @@ private:
 private:
 	// Whether to generate output streams corresponding to the current mr stream.
 	bool _is_created_stream;
+	bool _is_notify_stream_parsed;
 
 	// Incoming/Outgoing Stream
 	MediaRouterStreamType _inout_type;

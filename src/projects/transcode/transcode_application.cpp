@@ -56,7 +56,7 @@ bool TranscodeApplication::Stop()
 	return true;
 }
 
-bool TranscodeApplication::OnCreateStream(const std::shared_ptr<info::Stream> &stream_info)
+bool TranscodeApplication::OnStreamCreated(const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 
@@ -76,7 +76,7 @@ bool TranscodeApplication::OnCreateStream(const std::shared_ptr<info::Stream> &s
 	return true;
 }
 
-bool TranscodeApplication::OnDeleteStream(const std::shared_ptr<info::Stream> &stream_info)
+bool TranscodeApplication::OnStreamDeleted(const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 
@@ -93,6 +93,15 @@ bool TranscodeApplication::OnDeleteStream(const std::shared_ptr<info::Stream> &s
 
 	_streams.erase(stream_info->GetId());
 
+	return true;
+}
+
+bool TranscodeApplication::OnStreamParsed(const std::shared_ptr<info::Stream> &stream)
+{
+	std::unique_lock<std::mutex> lock(_mutex);
+
+	logtw("Called OnStreamParsed. *Please delete this log after checking.*");
+	
 	return true;
 }
 

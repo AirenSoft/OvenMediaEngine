@@ -48,6 +48,7 @@ using namespace cmn;
 MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 	: _is_parsed_all_track(false),
 	  _is_created_stream(false),
+	  _is_notify_stream_parsed(false),
 	  _stream(stream),
 	  _packets_queue(nullptr, 100)
 {
@@ -111,6 +112,16 @@ bool MediaRouteStream::IsCreatedSteam()
 void MediaRouteStream::SetCreatedSteam(bool created)
 {
 	_is_created_stream = created;
+}
+
+void MediaRouteStream::SetNotifyStreamParsed(bool completed)
+{
+	_is_notify_stream_parsed = completed;
+}
+
+bool MediaRouteStream::IsNotifyStreamParsed()
+{
+	return _is_notify_stream_parsed;
 }
 
 bool MediaRouteStream::ProcessInboundStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
@@ -928,10 +939,14 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	// If there is no pts/dts value, do the same as pts/dts value.
 	if (media_packet->GetDts() == -1LL)
+	{
 		media_packet->SetDts(media_packet->GetPts());
+	}
 
 	if (media_packet->GetPts() == -1LL)
+	{
 		media_packet->SetPts(media_packet->GetDts());
+	}
 
 	// Accumulate Packet duplication
 	//	- 1) If the current packet does not have a Duration value then stashed.
@@ -985,7 +1000,9 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 		case MediaRouterStreamType::OUTBOUND: {
 			if (!ProcessOutboundStream(media_track, pop_media_packet))
+			{
 				return nullptr;
+			}
 
 			// If the parsing of track information is not complete, discard the packet.
 			if (IsParseTrackInfo(media_track) == false)

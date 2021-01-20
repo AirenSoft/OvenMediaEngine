@@ -235,7 +235,7 @@ namespace pub
 	}
 
 	// Called by MediaRouteApplicationObserver
-	bool Application::OnCreateStream(const std::shared_ptr<info::Stream> &info)
+	bool Application::OnStreamCreated(const std::shared_ptr<info::Stream> &info)
 	{
 		auto stream_worker_count = GetConfig().GetSessionLoadBalancingThreadCount();
 
@@ -251,7 +251,7 @@ namespace pub
 		return true;
 	}
 
-	bool Application::OnDeleteStream(const std::shared_ptr<info::Stream> &info)
+	bool Application::OnStreamDeleted(const std::shared_ptr<info::Stream> &info)
 	{
 		std::unique_lock<std::shared_mutex> lock(_stream_map_mutex);
 
@@ -259,7 +259,7 @@ namespace pub
 		if(stream_it == _streams.end())
 		{
 			// Sometimes stream rejects stream creation if the input codec is not supported. So this is a normal situation.
-			logtd("OnDeleteStream failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
+			logtd("OnStreamDeleted failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
 			return true;
 		}
 
@@ -278,6 +278,14 @@ namespace pub
 
 		return true;
 	}
+
+	bool Application::OnStreamParsed(const std::shared_ptr<info::Stream> &info) 
+	{
+		logtw("Called OnStreamParsed. *Please delete this log after checking.*");
+
+		return true;
+	}
+
 
 	std::shared_ptr<ApplicationWorker> Application::GetWorkerByStreamID(info::stream_id_t stream_id)
 	{
