@@ -37,6 +37,13 @@ std::shared_ptr<pub::Stream> FileApplication::CreateStream(const std::shared_ptr
 	return FileStream::Create(GetSharedPtrAs<pub::Application>(), *info);
 }
 
+bool FileApplication::ParsedStream(const std::shared_ptr<info::Stream> &info)
+{
+	logtw("Called OnStreamParsed. *Please delete this log after checking.*");
+	return true;
+}
+
+
 bool FileApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
 	logtd("FileApplication::DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());

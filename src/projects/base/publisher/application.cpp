@@ -281,8 +281,24 @@ namespace pub
 
 	bool Application::OnStreamParsed(const std::shared_ptr<info::Stream> &info) 
 	{
-		logtw("Called OnStreamParsed. *Please delete this log after checking.*");
+		std::unique_lock<std::shared_mutex> lock(_stream_map_mutex);
 
+		auto stream_it = _streams.find(info->GetId());
+		if(stream_it == _streams.end())
+		{
+			// Sometimes stream rejects stream creation if the input codec is not supported. So this is a normal situation.
+			logtd("OnStreamParsed failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
+			return true;
+		}
+
+		auto stream = stream_it->second;
+
+		lock.unlock();
+
+		if (ParsedStream(info) == false)
+		{
+			return false;
+		}
 		return true;
 	}
 

@@ -29,6 +29,7 @@ private:
 
 	// Application Implementation
 	std::shared_ptr<pub::Stream> CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count) override;
+	bool ParsedStream(const std::shared_ptr<info::Stream> &info) override;
 	bool DeleteStream(const std::shared_ptr<info::Stream> &info) override;
 
 private :

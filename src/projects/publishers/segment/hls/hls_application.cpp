@@ -49,6 +49,17 @@ std::shared_ptr<pub::Stream> HlsApplication::CreateStream(const std::shared_ptr<
 	return HlsStream::Create(_segment_count, _segment_duration, GetSharedPtrAs<pub::Application>(), *info.get(), thread_count);
 }
 
+//====================================================================================================
+// ParsedStream
+// - Application Override
+//====================================================================================================
+bool HlsApplication::ParsedStream(const std::shared_ptr<info::Stream> &info)
+{
+	logtw("Called OnStreamParsed. *Please delete this log after checking.*");
+	return true;
+}
+
+
 bool HlsApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
 	// Nothing to do

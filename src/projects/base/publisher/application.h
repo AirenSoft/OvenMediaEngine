@@ -119,6 +119,8 @@ namespace pub
 		bool DeleteAllStreams();
 		virtual std::shared_ptr<Stream> CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count) = 0;
 		virtual bool DeleteStream(const std::shared_ptr<info::Stream> &info) = 0;
+		virtual bool ParsedStream(const std::shared_ptr<info::Stream> &info) = 0;
+		
 		std::shared_ptr<ApplicationWorker> GetWorkerByStreamID(info::stream_id_t stream_id);
 
 		uint32_t		_application_worker_count;

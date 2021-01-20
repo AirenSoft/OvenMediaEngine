@@ -86,6 +86,17 @@ std::shared_ptr<pub::Stream> CmafApplication::CreateStream(const std::shared_ptr
 }
 
 //====================================================================================================
+// ParsedStream
+// - Application Override
+//====================================================================================================
+bool CmafApplication::ParsedStream(const std::shared_ptr<info::Stream> &info)
+{
+	logtw("Called OnStreamParsed. *Please delete this log after checking.*");
+	return true;
+}
+
+
+//====================================================================================================
 // DeleteStream
 //====================================================================================================
 bool CmafApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)

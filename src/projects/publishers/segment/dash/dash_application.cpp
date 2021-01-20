@@ -80,6 +80,16 @@ std::shared_ptr<pub::Stream> DashApplication::CreateStream(const std::shared_ptr
                             thread_count);
 }
 
+//====================================================================================================
+// CreateStream
+// - Application Override
+//====================================================================================================
+bool DashApplication::ParsedStream(const std::shared_ptr<info::Stream> &info)
+{
+	logtw("Called OnStreamParsed. *Please delete this log after checking.*");
+	return true;
+}
+
 
 //====================================================================================================
 // DeleteStream

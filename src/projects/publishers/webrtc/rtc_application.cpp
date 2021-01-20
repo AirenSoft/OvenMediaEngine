@@ -72,6 +72,13 @@ bool RtcApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 	return true;
 }
 
+bool RtcApplication::ParsedStream(const std::shared_ptr<info::Stream> &info)
+{
+	logtw("Called OnStreamParsed. *Please delete this log after checking.*");
+}
+
+
+
 bool RtcApplication::Start()
 {
 	if(_certificate == nullptr)
