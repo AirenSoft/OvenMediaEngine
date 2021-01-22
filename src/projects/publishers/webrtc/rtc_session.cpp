@@ -9,7 +9,7 @@
 
 #include <utility>
 
-std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<WebRtcPublisher> &publihser,
+std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<WebRtcPublisher> &publisher,
 											   const std::shared_ptr<pub::Application> &application,
                                                const std::shared_ptr<pub::Stream> &stream,
                                                const std::shared_ptr<const SessionDescription> &offer_sdp,
@@ -19,7 +19,7 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<WebRtcPubli
 {
 	// Session Id of the offer sdp is unique value
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), offer_sdp->GetSessionId());
-	auto session = std::make_shared<RtcSession>(session_info, publihser, application, stream, offer_sdp, peer_sdp, ice_port, ws_client);
+	auto session = std::make_shared<RtcSession>(session_info, publisher, application, stream, offer_sdp, peer_sdp, ice_port, ws_client);
 	if(!session->Start())
 	{
 		return nullptr;
@@ -28,7 +28,7 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<WebRtcPubli
 }
 
 RtcSession::RtcSession(const info::Session &session_info,
-					   const std::shared_ptr<WebRtcPublisher> &publihser,
+					   const std::shared_ptr<WebRtcPublisher> &publisher,
 					   const std::shared_ptr<pub::Application> &application,
 					   const std::shared_ptr<pub::Stream> &stream,
 					   const std::shared_ptr<const SessionDescription> &offer_sdp,
@@ -37,7 +37,7 @@ RtcSession::RtcSession(const info::Session &session_info,
 					   const std::shared_ptr<WebSocketClient> &ws_client)
 	: Session(session_info, application, stream)
 {
-	_publisher = publihser;
+	_publisher = publisher;
 	_offer_sdp = offer_sdp;
 	_peer_sdp = peer_sdp;
 	_ice_port = ice_port;

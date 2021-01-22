@@ -114,7 +114,7 @@ namespace mon
 			// Sending a connection event to application only if it hasn't origin stream to prevent double sum. 
 			GetApplicationMetrics()->OnSessionConnected(type);
 
-			logti("A new session has started playing %s/%s on the %s publihser. %s(%u)/Stream total(%u)/App total(%u)", 
+			logti("A new session has started playing %s/%s on the %s publisher. %s(%u)/Stream total(%u)/App total(%u)", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
 					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}
@@ -139,7 +139,7 @@ namespace mon
 			// Sending a connection event to application only if it hasn't origin stream to prevent double sum. 
 			GetApplicationMetrics()->OnSessionDisconnected(type);
 
-			logti("A session has been stopped playing %s/%s on the %s publihser. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]", 
+			logti("A session has been stopped playing %s/%s on the %s publisher. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]", 
 					GetApplicationInfo().GetName().CStr(), GetName().CStr(), 
 					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}

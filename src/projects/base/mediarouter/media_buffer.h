@@ -34,7 +34,7 @@ public:
 		_packet_type = packet_type;
 	}
 
-	// This constructor is usually used by the MediaRouter to send media packets to the publihsers.
+	// This constructor is usually used by the MediaRouter to send media packets to the publishers.
 	MediaPacket(cmn::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
 		: _media_type(media_type),
 		  _track_id(track_id),
@@ -49,7 +49,7 @@ public:
 	{
 	}
 
-	// This constructor is usually used by the MediaRouter to send media packets to the publihsers.
+	// This constructor is usually used by the MediaRouter to send media packets to the publishers.
 	MediaPacket(cmn::MediaType media_type, int32_t track_id, const std::shared_ptr<ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
 		: _media_type(media_type),
 		  _track_id(track_id),

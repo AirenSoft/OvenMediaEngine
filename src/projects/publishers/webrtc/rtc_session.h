@@ -37,7 +37,7 @@ class RtcStream;
 class RtcSession : public pub::Session
 {
 public:
-	static std::shared_ptr<RtcSession> Create(const std::shared_ptr<WebRtcPublisher> &publihser,
+	static std::shared_ptr<RtcSession> Create(const std::shared_ptr<WebRtcPublisher> &publisher,
 											  const std::shared_ptr<pub::Application> &application,
 	                                          const std::shared_ptr<pub::Stream> &stream,
 	                                          const std::shared_ptr<const SessionDescription> &offer_sdp,
@@ -46,7 +46,7 @@ public:
 											  const std::shared_ptr<WebSocketClient> &ws_client);
 
 	RtcSession(const info::Session &session_info,
-			const std::shared_ptr<WebRtcPublisher> &publihser,
+			const std::shared_ptr<WebRtcPublisher> &publisher,
 			const std::shared_ptr<pub::Application> &application,
 	        const std::shared_ptr<pub::Stream> &stream,
 	        const std::shared_ptr<const SessionDescription> &offer_sdp,
