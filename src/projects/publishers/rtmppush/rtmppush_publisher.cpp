@@ -138,7 +138,7 @@ void RtmpPushPublisher::SessionController()
 		// Find a session related to Userdata.
 		auto vhost_app_name = info::VHostAppName(userdata->GetVhost(), userdata->GetApplication());
 		auto stream = std::static_pointer_cast<RtmpPushStream>(GetStream(vhost_app_name, userdata->GetStreamName()));
-		if(stream != nullptr)
+		if (stream != nullptr || stream->IsParsed() == true)
 		{
 			// If there is no session, create a new file(record) session.
 			auto session = std::static_pointer_cast<RtmpPushSession>(stream->GetSession(userdata->GetSessionId()));

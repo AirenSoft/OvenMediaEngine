@@ -24,7 +24,8 @@ std::shared_ptr<RtmpPushStream> RtmpPushStream::Create(const std::shared_ptr<pub
 
 RtmpPushStream::RtmpPushStream(const std::shared_ptr<pub::Application> application,
 					 const info::Stream &info)
-		: Stream(application, info)
+		: Stream(application, info),
+		_parsed_flag(false)
 {
 	_writer = nullptr;
 }
@@ -82,4 +83,13 @@ std::shared_ptr<RtmpPushSession> RtmpPushStream::CreateSession()
 	AddSession(session);
 
 	return session;
+}
+
+void RtmpPushStream::SetParsed(bool flag)
+{
+	_parsed_flag = flag;
+}
+bool RtmpPushStream::IsParsed()
+{
+	return _parsed_flag;
 }

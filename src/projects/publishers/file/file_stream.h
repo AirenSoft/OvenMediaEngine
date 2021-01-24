@@ -23,9 +23,12 @@ public:
 	std::shared_ptr<FileSession> CreateSession();
 	bool DeleteSession(uint32_t session_id);
 
+	void SetParsed(bool flag);
+	bool IsParsed();
 private:
 	bool Start() override;
 	bool Stop() override;
 
+	bool _parsed_flag;
 	std::shared_ptr<mon::StreamMetrics>		_stream_metrics;	
 };
