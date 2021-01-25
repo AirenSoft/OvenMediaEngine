@@ -26,6 +26,9 @@
 // |           Payload Length      |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+// [SessionID] - Reserved
+// Designed for the purpose of classifying each session when two or more sessions are connected with the same 5tuple in the future. Currently not used because the client connects to the server using a different port.
+
 /***********************************************
  * Protocol Specification
  ***********************************************
@@ -36,122 +39,103 @@
 
  [1] DESCRIBE
  <C->S>
- 	M  : 0
-	PT : DESCRIBE (10)
-    SI : 0
+ 	M  : 0 or 1(Last packet)
+	PT : MESSAGE REQUEST(10)
+    SI : 0		
  	SN : 0
  	TS : Unix timestamp
  	Payload :
  		{
- 			"id": 3921931
- 			"url": "ovt://host:port/app/stream"
+ 			"id": 3921931,
+			"application" : "describe",
+ 			"target": "ovt://host:port/app/stream"
  		}
  <S->C>
- 	M  : 0
- 	PT : RESPONSE (20)
+ 	M  : 0 or 1(Last packet)
+ 	PT : MESSAGE RESPONSE(20)
  	SI : 0
  	SN : 0
  	TS : Unix timestamp
  	Payload :
  		{
- 			"id": 3921931
- 			"code" : 200 | 404 | 500
- 			"message" : "ok" | "app/stream not found" | "Internal Server Error",
-			"stream" :
+ 			"id": 3921931,
+			"application" : "describe",
+			"code" : 200 | 404 | 500,
+			"message" : "ok" | "app/stream not found" | "Internal Server Error",
+			"contents" :
 			{
-				"appName" : "app",
-				"streamName" : "stream_720p",
-				"tracks":
-				[
-					{
-						"id" : 3291291,
-						"codecId" : 32198392,
-						"mediaType" : 0 //0:"video" | 1:"audio" | 2:"data",
-						"timebase_num" : 90000,
-						"timebase_den" : 90000,
-						"bitrate" : 5000000,
-						"startFrameTime" : 1293219321,
-						"lastFrameTime" : 1932193921,
-						"videoTrack" :
+				"stream" :
+				{
+					"appName" : "app",
+					"streamName" : "stream_720p",
+					"tracks":
+					[
 						{
-							"framerate" : 29.97,
-							"width" : 1280,
-							"height" : 720
-						},
-						"audioTrack" :
-						{
-							"samplerate" : 44100,
-							"sampleFormat" : "s16",
-							"layout" : "stereo"
+							"id" : 3291291,
+							"codecId" : 32198392,
+							"mediaType" : 0 //0:"video" | 1:"audio" | 2:"data",
+							"timebase_num" : 90000,
+							"timebase_den" : 90000,
+							"bitrate" : 5000000,
+							"startFrameTime" : 1293219321,
+							"lastFrameTime" : 1932193921,
+							"videoTrack" :
+							{
+								"framerate" : 29.97,
+								"width" : 1280,
+								"height" : 720
+							},
+							"audioTrack" :
+							{
+								"samplerate" : 44100,
+								"sampleFormat" : "s16",
+								"layout" : "stereo"
+							}
 						}
-					}
-				]
+					]
+				}
 			}
 		}
 
- [1] PLAY
+ [1] PLAY, STOP
  <C->S>
- 	M  : 0
- 	PT : PLAY (11) | STOP(12)
+ 	M  : 0 or 1(Last packet)
+ 	PT : MESSAGE REQUEST(10)
  	SI : 0
  	SN : 0
  	TS : Unix timestamp
  	Payload :
  		{
- 			"id": 3921932
- 			"url": "ovt://host:port/app/stream"
+ 			"id": 3921932,
+			"application" : "play", "stop",
+ 			"target": "ovt://host:port/app/stream"
  		}
 
  		<! Later version can be extended to specify tracks or add other options. >
 
  <S->C>
- 	M  : 0
- 	PT : RESPONSE (20)
+ 	M  : 0 or 1(Last packet)
+ 	PT : MESSAGE RESPONSE(20)
  	SI : 11992
  	SN : 0
  	TS : Unix timestamp
  	Payload :
 		{
-			"id": 3921932
-			"code" : 200 | 404 | 500
+			"id": 3921932,
+			"application" : "play" | "stop",
+			"code" : 200 | 404 | 500,
 			"message" : "ok" | "app/stream not found" | "Internal Server Error",
 		}
 
 		while(STOP or DISCONNECTED)
 		{
-			M  : 0
-			PT : MEDIA (21)
+			M  : 0 or 1
+			PT : MEDIA (30)
 			SI : 11992
 			SN : 1 ~ rolling
 			TS : Unix timestamp
 			Payload :
 			[Binary - Serialized MediaPacket]
-		}
-
- [2] STOP
- <C->S>
- 	M  : 0
- 	PT : STOP(12)
- 	SI : 11992
- 	SN : 0
- 	TS : Unix timestamp
- 	Payload :
- 		{
- 			"id": 3921933
- 			"url": "ovt://host:port/app/stream"
- 		}
-
- <S->C>
- 	M  : 0
- 	PT : RESPONSE (20)
- 	SI : 11992
- 	SN : 0
- 	TS : Unix timestamp
- 	Payload :
-		{
-			"id": 3921933
-			"code" : 200 | 404 | 500
-			"message" : "ok" | "app/stream not found" | "Internal Server Error",
 		}
 
  **********************************************/
@@ -160,18 +144,14 @@
 #define OVT_VERSION							1
 #define OVT_FIXED_HEADER_SIZE				18
 #define OVT_DEFAULT_MAX_PACKET_SIZE			1316
+#define OVT_DEFAULT_MAX_PAYLOAD_SIZE		OVT_DEFAULT_MAX_PACKET_SIZE - OVT_FIXED_HEADER_SIZE;
 
-#define OVT_PAYLOAD_TYPE_DESCRIBE			11
-#define OVT_PAYLOAD_TYPE_PLAY				12
-#define OVT_PAYLOAD_TYPE_STOP				13
-
-#define OVT_PAYLOAD_TYPE_ERROR				20
-
-#define OVT_PAYLOAD_TYPE_MEDIA_PACKET		31
+#define OVT_PAYLOAD_TYPE_MESSAGE_REQUEST	10
+#define OVT_PAYLOAD_TYPE_MESSAGE_RESPONSE	20
+#define OVT_PAYLOAD_TYPE_MEDIA_PACKET		30
 
 // Using MediaPacket (De)Packetizer
 #define MEDIA_PACKET_HEADER_SIZE			(32+64+64+64+8+8+8+8+32)/8
-
 
 class OvtPacket
 {
@@ -184,18 +164,18 @@ public:
 	bool 		LoadHeader(const ov::Data &data);
 	bool 		Load(const ov::Data &data);
 
-	bool		IsHeaderAvailable();
-	bool 		IsPacketAvailable();
+	bool		IsHeaderAvailable() const;
+	bool 		IsPacketAvailable() const;
 
-	uint8_t 	Version();
-	bool 		Marker();
-	uint8_t 	PayloadType();
-	uint16_t 	SequenceNumber();
-	uint64_t 	Timestamp();
-	uint32_t 	SessionId();
-	uint16_t 	PayloadLength();
-	uint32_t 	PacketSize();
-	const uint8_t*	Payload();
+	uint8_t 	Version() const;
+	bool 		Marker() const;
+	uint8_t 	PayloadType() const;
+	uint16_t 	SequenceNumber() const;
+	uint64_t 	Timestamp() const;
+	uint32_t 	SessionId() const;
+	uint32_t	PacketLength() const;
+	uint16_t 	PayloadLength() const;
+	const uint8_t*	Payload() const;
 
 	void 		SetMarker(bool marker_bit);
 	void 		SetPayloadType(uint8_t payload_type);
@@ -206,8 +186,8 @@ public:
 
 	bool 		SetPayload(const uint8_t *payload, size_t payload_size);
 
-	const uint8_t* GetBuffer();
-	const std::shared_ptr<ov::Data>& GetData();
+	const uint8_t* GetBuffer() const;
+	const std::shared_ptr<ov::Data>& GetData() const;
 
 private:
 	void 		SetPayloadLength(size_t payload_length);

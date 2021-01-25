@@ -148,6 +148,9 @@ namespace pub
 				continue;
 			}
 
+			ov::StopWatch watch;
+			watch.Start();
+			
 			session_lock.lock();
 			for (auto const &x : _sessions)
 			{
@@ -155,6 +158,11 @@ namespace pub
 				session->SendOutgoingData(packet);
 			}
 			session_lock.unlock();
+			auto elapsed = watch.Elapsed();
+			if(elapsed > 0)
+			{
+				logtc("time : %u", elapsed);
+			}
 		}
 	}
 

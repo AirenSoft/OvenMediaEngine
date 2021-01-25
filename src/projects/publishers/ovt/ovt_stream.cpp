@@ -94,10 +94,11 @@ bool OvtStream::GenerateDecription()
 */
 
 	Json::Value 	json_root;
+	Json::Value		json_stream;
 	Json::Value		json_tracks;
 
-	json_root["appName"] = GetApplicationName();
-	json_root["streamName"] = GetName().CStr();
+	json_stream["appName"] = GetApplicationName();
+	json_stream["streamName"] = GetName().CStr();
 
 	for(auto &track_item : _tracks)
 	{
@@ -139,8 +140,9 @@ bool OvtStream::GenerateDecription()
 		json_tracks.append(json_track);
 	}
 
-	json_root["tracks"] = json_tracks;
-
+	json_stream["tracks"] = json_tracks;
+	json_root["stream"] = json_stream;
+	
 	_description = json_root;
 
 	return true;
@@ -152,7 +154,7 @@ void OvtStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	std::unique_lock<std::mutex> mlock(_packetizer_lock);
 	if(_packetizer != nullptr)
 	{
-		_packetizer->Packetize(media_packet->GetPts(), media_packet);
+		_packetizer->PacketizeMediaPacket(media_packet->GetPts(), media_packet);
 	}
 }
 
@@ -162,7 +164,7 @@ void OvtStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 	std::unique_lock<std::mutex> mlock(_packetizer_lock);
 	if(_packetizer != nullptr)
 	{
-		_packetizer->Packetize(media_packet->GetPts(), media_packet);
+		_packetizer->PacketizeMediaPacket(media_packet->GetPts(), media_packet);
 	}
 }
 

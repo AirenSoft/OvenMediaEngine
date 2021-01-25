@@ -1,6 +1,7 @@
 #pragma once
 
 #include "modules/ovt_packetizer/ovt_packet.h"
+#include "modules/ovt_packetizer/ovt_depacketizer.h"
 
 #include "base/common_types.h"
 #include "base/ovlibrary/url.h"
@@ -53,17 +54,22 @@ private:
 	void HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<const ov::Url> &url);
 	void HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, uint32_t request_id, const std::shared_ptr<const ov::Url> &url);
 
-	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg);
-	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg, const ov::String &key, const Json::Value &value);
+	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String app, uint32_t request_id, uint32_t code, const ov::String &msg);
+	void ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String app, uint32_t request_id, uint32_t code, const ov::String &msg, const Json::Value &contents);
 
-	void SendResponse(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, const ov::String &payload);
-
+	void SendResponse(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String &payload);
 
 	bool LinkRemoteWithStream(int remote_id, std::shared_ptr<OvtStream> &stream);
 	bool UnlinkRemoteFromStream(int remote_id);
 
+	std::shared_ptr<OvtDepacketizer> GetDepacketizer(int remote_id);
+	bool RemoveDepacketizer(int remote_id);
+
 	std::shared_ptr<PhysicalPort> _server_port;
 
+	// remote id : depacketizer
+	std::mutex _depacketizers_lock;
+	std::map<int, std::shared_ptr<OvtDepacketizer>>	_depacketizers;
 	// When a client is disconnected ungracefully, this map helps to find stream and delete the session quickly
 	std::multimap<int, std::shared_ptr<OvtStream>>	_remote_stream_map;
 };

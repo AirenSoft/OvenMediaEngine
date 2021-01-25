@@ -591,6 +591,14 @@ const char *StunMessage::GetMethodString() const
 	{
 		case StunMethod::Binding:
 			return "Binding";
+
+		case StunMethod::Allocate:
+		case StunMethod::Refresh:
+		case StunMethod::Send:
+		case StunMethod::Data:
+		case StunMethod::CreatePermission:
+		case StunMethod::ChannelBind:
+			return "NotImplemented";
 	}
 
 	return "(Unknown)";

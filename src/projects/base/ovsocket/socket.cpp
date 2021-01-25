@@ -718,7 +718,7 @@ namespace ov
 	bool Socket::SetRecvTimeout(timeval &tv)
 	{
 		OV_ASSERT2(_socket.IsValid());
-		CHECK_STATE(== SocketState::Connected, false);
+		//CHECK_STATE(== SocketState::Connected, false);
 
 		switch (GetType())
 		{

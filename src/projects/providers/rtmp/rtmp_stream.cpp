@@ -104,6 +104,7 @@ namespace pvd
 
 	RtmpStream::~RtmpStream()
 	{
+		logtc("RtmpStream::~RtmpStream");
 	}
 
 	bool RtmpStream::Start()

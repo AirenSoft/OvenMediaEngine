@@ -100,79 +100,82 @@ bool OvtPacket::Load(const ov::Data &data)
 		return false;
 	}
 
-	if(data.GetLength() != static_cast<size_t>(OVT_FIXED_HEADER_SIZE + _payload_length))
+	if(data.GetLength() < static_cast<size_t>(OVT_FIXED_HEADER_SIZE + _payload_length))
 	{
 		// Invalid data
+		_is_packet_available = false;
 		return false;
 	}
 
 	auto buffer = data.GetDataAs<uint8_t>();
 	SetPayload(&buffer[OVT_FIXED_HEADER_SIZE], _payload_length);
 
+	_is_packet_available = true;
+
 	return true;
 }
 
-bool OvtPacket::IsHeaderAvailable()
+bool OvtPacket::IsHeaderAvailable() const 
 {
 	return _payload_type > 0;
 }
 
-bool OvtPacket::IsPacketAvailable()
+bool OvtPacket::IsPacketAvailable() const
 {
 	return IsHeaderAvailable() && _is_packet_available;
 }
 
-uint8_t OvtPacket::Version()
+uint8_t OvtPacket::Version() const
 {
 	return _version;
 }
 
-bool OvtPacket::Marker()
+bool OvtPacket::Marker() const
 {
 	return _marker;
 }
 
-uint16_t OvtPacket::SequenceNumber()
+uint16_t OvtPacket::SequenceNumber() const
 {
 	return _sequence_number;
 }
 
-uint8_t OvtPacket::PayloadType()
+uint8_t OvtPacket::PayloadType() const
 {
 	return _payload_type;
 }
 
-uint64_t OvtPacket::Timestamp()
+uint64_t OvtPacket::Timestamp() const
 {
 	return _timestamp;
 }
 
-uint32_t OvtPacket::SessionId()
+uint32_t OvtPacket::SessionId() const
 {
 	return _session_id;
 }
 
-uint16_t OvtPacket::PayloadLength()
+uint32_t OvtPacket::PacketLength() const
+{
+	return OVT_FIXED_HEADER_SIZE + _payload_length;
+}
+
+uint16_t OvtPacket::PayloadLength() const
 {
 	return _payload_length;
 }
 
-const uint8_t* OvtPacket::Payload()
+const uint8_t* OvtPacket::Payload() const
 {
 	return &_buffer[OVT_FIXED_HEADER_SIZE];
 }
 
-uint32_t OvtPacket::PacketSize()
-{
-	return OVT_DEFAULT_MAX_PACKET_SIZE + PayloadLength();
-}
-
-const uint8_t* OvtPacket::GetBuffer()
+const uint8_t* OvtPacket::GetBuffer() const
 {
 	return &_buffer[0];
 }
 
-const std::shared_ptr<ov::Data>& OvtPacket::GetData()
+const std::shared_ptr<ov::Data>& OvtPacket::GetData() const
 {
 	return _data;
 }
