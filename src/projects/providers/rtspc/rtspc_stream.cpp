@@ -55,7 +55,6 @@ namespace pvd
 
 	RtspcStream::~RtspcStream()
 	{
-		logtc("RtspcStream::~RtspcStream");
 		Stop();
 		Release();
 	}

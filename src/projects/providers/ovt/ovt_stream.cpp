@@ -54,9 +54,7 @@ namespace pvd
 
 	OvtStream::~OvtStream()
 	{
-		logtc("OvtStream::~OvtStream");
 		Stop();
-
 		_client_socket.Close();
 	}
 
@@ -540,6 +538,7 @@ namespace pvd
 		auto result = ReceivePacket(true);
 		if(result == false)
 		{
+			Stop();
 			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
 			_state = State::ERROR;
 			return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
@@ -569,6 +568,7 @@ namespace pvd
 
 				if (object.IsNull())
 				{
+					Stop();
 					_state = State::ERROR;
 					logte("An invalid response : Json format");
 					return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
@@ -587,6 +587,7 @@ namespace pvd
 				}
 				else
 				{
+					Stop();
 					logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
 						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 					_state = State::ERROR;
