@@ -345,10 +345,11 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 
 	if (stream == nullptr)
 	{
+		logte("Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
 		return nullptr;
 	}
 
-	if(stream->GetState() != pub::Stream::State::STARTED)
+	if(stream->WaitUntilStart(3000) == false)
 	{
 		logtw("(%s/%s) stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
 		return nullptr;

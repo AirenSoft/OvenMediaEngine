@@ -249,10 +249,17 @@ void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remo
 		}
 	}
 
+	if(stream->WaitUntilStart(3000) == false)
+	{
+		msg.Format("(%s/%s) stream has not started.", vhost_app_name.CStr(), url->Stream().CStr());
+		ResponseResult(remote, 0, "describe", request_id, 202, msg);
+		return;
+	}
+
 	Json::Value description;
 	if(stream->GetDescription(description) == false)
 	{
-		msg.Format("(%s/%s) stream has not started.", vhost_app_name.CStr(), url->Stream().CStr());
+		msg.Format("(%s/%s) stream doesn't have description.", vhost_app_name.CStr(), url->Stream().CStr());
 		ResponseResult(remote, 0, "describe", request_id, 404, msg);
 		return;
 	}

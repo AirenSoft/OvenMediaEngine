@@ -72,6 +72,8 @@ namespace pub
 		virtual bool Start();
 		virtual bool Stop();
 
+		bool WaitUntilStart(uint32_t timeout_ms);
+
 		bool CreateStreamWorker(uint32_t worker_count);
 
 		uint32_t IssueUniqueSessionId();

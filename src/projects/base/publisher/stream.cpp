@@ -147,9 +147,6 @@ namespace pub
 			{
 				continue;
 			}
-
-			ov::StopWatch watch;
-			watch.Start();
 			
 			session_lock.lock();
 			for (auto const &x : _sessions)
@@ -158,11 +155,6 @@ namespace pub
 				session->SendOutgoingData(packet);
 			}
 			session_lock.unlock();
-			auto elapsed = watch.Elapsed();
-			if(elapsed > 0)
-			{
-				logtc("time : %u", elapsed);
-			}
 		}
 	}
 
@@ -189,6 +181,20 @@ namespace pub
 		logti("%s application has started [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
 		_state = State::STARTED;
 		return true;
+	}
+
+	bool Stream::WaitUntilStart(uint32_t timeout_ms)
+	{
+		ov::StopWatch	watch;
+		
+		watch.Start();
+
+		while(_state != State::STARTED && watch.Elapsed() < timeout_ms)
+		{
+			usleep(100 * 1000); // 100ms
+		}
+
+		return _state == State::STARTED;
 	}
 
 	bool Stream::CreateStreamWorker(uint32_t worker_count)
