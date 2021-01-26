@@ -101,7 +101,9 @@ private:
 
 	// std::shared_ptr<MediaRouteStream> GetStream(uint8_t indicator, uint32_t stream_id);
 	std::shared_ptr<MediaRouteStream> GetInboundStream(uint32_t stream_id);
+	std::shared_ptr<MediaRouteStream> GetInboundStreamByName(const ov::String stream_name);
 	std::shared_ptr<MediaRouteStream> GetOutboundStream(uint32_t stream_id);
+	std::shared_ptr<MediaRouteStream> GetOutboundStreamByName(const ov::String stream_name);
 
 private:
 	// Application information from configuration file

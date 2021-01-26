@@ -249,9 +249,9 @@ bool MediaRouteApplication::OnStreamCreated(
 	if (connector == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
 		// Check there is a duplicate inbound stream
-		if (IsExistingInboundStream(stream_info->GetName()) == true)
+		if (GetInboundStreamByName(stream_info->GetName()) != nullptr)
 		{
-			logtw("Reject stream creation : there is already an incoming stream with the same name. (%s)", stream_info->GetName().CStr());
+			logtw("Reject stream creation : there is already an inbound stream with the same name. (%s/%s)", stream_info->GetApplicationName(), stream_info->GetName().CStr());
 			return false;
 		}
 
@@ -261,16 +261,14 @@ bool MediaRouteApplication::OnStreamCreated(
 			return false;
 		}
 	}
-	else if (connector == MediaRouteApplicationConnector::ConnectorType::Transcoder)
+	else if (connector == MediaRouteApplicationConnector::ConnectorType::Transcoder || connector == MediaRouteApplicationConnector::ConnectorType::Relay)
 	{
-		stream = CreateOutboundStream(stream_info);
-		if (stream == nullptr)
+		if (GetOutboundStreamByName(stream_info->GetName()) != nullptr)
 		{
+			logtw("Reject stream creation : there is already an outbound stream with the same name. (%s/%s)", stream_info->GetApplicationName(), stream_info->GetName().CStr());
 			return false;
 		}
-	}
-	else if (connector == MediaRouteApplicationConnector::ConnectorType::Relay)
-	{
+
 		stream = CreateOutboundStream(stream_info);
 		if (stream == nullptr)
 		{
@@ -602,6 +600,38 @@ std::shared_ptr<MediaRouteStream> MediaRouteApplication::GetOutboundStream(uint3
 	}
 
 	return bucket->second;
+}
+
+std::shared_ptr<MediaRouteStream> MediaRouteApplication::GetInboundStreamByName(const ov::String stream_name)
+{
+	std::shared_lock<std::shared_mutex> lock_guard(_streams_lock);
+
+	for (const auto &item : _inbound_streams)
+	{
+		auto stream = item.second;
+		if (stream->GetStream()->GetName() == stream_name)
+		{
+			return stream;
+		}
+	}
+
+	return nullptr;
+}
+
+std::shared_ptr<MediaRouteStream> MediaRouteApplication::GetOutboundStreamByName(const ov::String stream_name)
+{
+	std::shared_lock<std::shared_mutex> lock_guard(_streams_lock);
+
+	for (const auto &item : _outbound_streams)
+	{
+		auto stream = item.second;
+		if (stream->GetStream()->GetName() == stream_name)
+		{
+			return stream;
+		}
+	}
+
+	return nullptr;
 }
 
 bool MediaRouteApplication::IsExistingInboundStream(ov::String stream_name)

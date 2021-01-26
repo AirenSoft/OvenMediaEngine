@@ -18,7 +18,7 @@ void OvenCodecImplAvcodecDecAVC::ThreadDecode()
 		auto obj = _input_buffer.Dequeue();
 		if (obj.has_value() == false)
 		{
-			logte("An error occurred while dequeue : no data");
+			// logte("An error occurred while dequeue : no data");
 			continue;
 		}
 
