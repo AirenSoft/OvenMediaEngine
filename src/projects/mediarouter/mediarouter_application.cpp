@@ -538,7 +538,7 @@ bool MediaRouteApplication::OnPacketReceived(
 			stream = GetInboundStream(stream_info->GetId());
 			if (!stream)
 			{
-				logte("Could not foun inbound stream. name(%s/%s)", _application_info.GetName().CStr(), stream_info->GetName().CStr());
+				// logte("Could not foun inbound stream. name(%s/%s)", _application_info.GetName().CStr(), stream_info->GetName().CStr());
 				return false;
 			}
 
@@ -555,7 +555,7 @@ bool MediaRouteApplication::OnPacketReceived(
 			stream = GetOutboundStream(stream_info->GetId());
 			if (!stream)
 			{
-				logte("Could not found outbound stream. name(%s/%s)", _application_info.GetName().CStr(), stream_info->GetName().CStr());
+				// logte("Could not found outbound stream. name(%s/%s)", _application_info.GetName().CStr(), stream_info->GetName().CStr());
 				return false;
 			}
 

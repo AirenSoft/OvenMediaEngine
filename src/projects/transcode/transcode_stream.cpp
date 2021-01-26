@@ -17,7 +17,8 @@
 #define MAX_QUEUE_SIZE 100
 
 TranscodeStream::TranscodeStream(const info::Application &application_info, const std::shared_ptr<info::Stream> &stream, TranscodeApplication *parent)
-	: _application_info(application_info) {
+	: _application_info(application_info)
+{
 	logtd("Trying to create transcode stream: name(%s) id(%u)", stream->GetName().CStr(), stream->GetId());
 
 	//store Parent information
@@ -1222,7 +1223,7 @@ void TranscodeStream::NotifyCreateStreams()
 		auto stream_output = iter.second;
 
 		bool ret = _parent->CreateStream(stream_output);
-		if(ret == false)
+		if (ret == false)
 		{
 			// TODO(soulk): If the stream creation fails, an exception must be processed.
 		}
@@ -1247,7 +1248,7 @@ void TranscodeStream::NotifyDeleteStreams()
 void TranscodeStream::SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet)
 {
 	bool ret = _parent->SendFrame(stream, std::move(packet));
-	if(ret == false)
+	if (ret == false)
 	{
 		// TODO(soulk): If SendFrame fails, an exception must be processed.
 	}

@@ -100,7 +100,9 @@ bool TranscodeApplication::OnStreamPrepared(const std::shared_ptr<info::Stream> 
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 
-	logtw("Called OnStreamParsed. *Please delete this log after checking.*");
+	// Do nothing
+	
+	// logtw("Called OnStreamParsed. *Please delete this log after checking.*");
 	
 	return true;
 }
