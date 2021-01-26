@@ -149,7 +149,7 @@ bool RtcStream::Start()
 							const auto &codec_extradata = track_item.second->GetCodecExtradata();
 
 							AVCDecoderConfigurationRecord config;
-							if (codec_extradata.size() > 0 && AVCDecoderConfigurationRecord::Parse(codec_extradata.data(), codec_extradata.size(), config) == true &&
+							if (0 && codec_extradata.size() > 0 && AVCDecoderConfigurationRecord::Parse(codec_extradata.data(), codec_extradata.size(), config) == true &&
 								config.NumOfSPS() > 0)
 							{
 								ov::String parameter_sets;
@@ -173,8 +173,8 @@ bool RtcStream::Start()
 								const auto first_sps = config.GetSPS(0)->GetDataAs<uint8_t>();
 								payload->SetFmtp(ov::String::FormatString(
 									// NonInterleaved => packetization-mode=1
-									"packetization-mode=1;profile-level-id=%02x%02x%02x;sprop-parameter-sets=%s;level-asymmetry-allowed=1",
-									first_sps[1], first_sps[2], first_sps[3], parameter_sets.CStr()));
+									"packetization-mode=1;profile-level-id=%02x%02x%02x;level-asymmetry-allowed=1",
+									first_sps[1], first_sps[2], first_sps[3]));
 							}
 							else
 							{
