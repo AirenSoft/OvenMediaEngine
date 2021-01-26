@@ -14,7 +14,7 @@ namespace cfg
 	{
 		namespace sig
 		{
-			struct EnabledModules : public Item
+			struct EnabledModules : public Text
 			{
 				CFG_DECLARE_REF_GETTER_OF(GetValue, _value)
 				CFG_DECLARE_REF_GETTER_OF(GetValueList, _value_list)
@@ -34,13 +34,16 @@ namespace cfg
 					return false;
 				}
 
-			protected:
-				void MakeParseList() override
+				ov::String ToString() const
 				{
-					RegisterValue<ValueType::Text>(nullptr, &_value, nullptr, [this]() -> bool {
-						_value_list = _value.UpperCaseString().Trim().Split(",");
-						return true;
-					});
+					return _value;
+				}
+
+			protected:
+				void FromString(const ov::String &str) override
+				{
+					_value = str;
+					_value_list = _value.UpperCaseString().Trim().Split(",");
 				}
 
 				ov::String _value;

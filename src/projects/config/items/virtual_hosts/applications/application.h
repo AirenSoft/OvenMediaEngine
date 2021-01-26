@@ -30,6 +30,17 @@ namespace cfg
 
 			struct Application : public Item
 			{
+			protected:
+				ov::String _name;
+				ov::String _type;
+				ApplicationType _type_value;
+
+				dec::Decode _decode;
+				oprf::OutputProfiles _output_profiles;
+				pvd::Providers _providers;
+				pub::Publishers _publishers;
+
+			public:
 				CFG_DECLARE_REF_GETTER_OF(GetName, _name)
 				CFG_DECLARE_REF_GETTER_OF(GetType, _type_value)
 				CFG_DECLARE_REF_GETTER_OF(GetTypeString, _type)
@@ -39,44 +50,33 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetOutputProfiles, _output_profiles)
 				CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
 				CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
-				CFG_DECLARE_GETTER_OF(GetStreamLoadBalancingThreadCount, _publishers.GetStreamLoadBalancingThreadCount())
-				CFG_DECLARE_GETTER_OF(GetSessionLoadBalancingThreadCount, _publishers.GetSessionLoadBalancingThreadCount())
+				CFG_DECLARE_REF_GETTER_OF(GetStreamLoadBalancingThreadCount, _publishers.GetStreamLoadBalancingThreadCount())
+				CFG_DECLARE_REF_GETTER_OF(GetSessionLoadBalancingThreadCount, _publishers.GetSessionLoadBalancingThreadCount())
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue("Name", &_name);
-					RegisterValue("Type", &_type, nullptr, [this]() -> bool {
+					Register("Name", &_name);
+					Register("Type", &_type, nullptr, [=]() -> std::shared_ptr<ConfigError> {
 						if (_type == "live")
 						{
 							_type_value = ApplicationType::Live;
+							return nullptr;
 						}
 						else if (_type == "vod")
 						{
 							_type_value = ApplicationType::VoD;
-						}
-						else
-						{
-							return false;
+							return nullptr;
 						}
 
-						return true;
+						return CreateConfigError("Unknown type: %s", _type.CStr());
 					});
 
-					RegisterValue<Optional>("Decode", &_decode);
-					RegisterValue<Optional>("OutputProfiles", &_output_profiles);
-					RegisterValue<Optional>("Providers", &_providers);
-					RegisterValue<Optional>("Publishers", &_publishers);
+					Register<Optional>("Decode", &_decode);
+					Register<Optional>("OutputProfiles", &_output_profiles);
+					Register<Optional>("Providers", &_providers);
+					Register<Optional>("Publishers", &_publishers);
 				}
-
-				ov::String _name;
-				ov::String _type;
-				ApplicationType _type_value;
-
-				dec::Decode _decode;
-				oprf::OutputProfiles _output_profiles;
-				pvd::Providers _providers;
-				pub::Publishers _publishers;
 			};
 		}  // namespace app
 	}	   // namespace vhost

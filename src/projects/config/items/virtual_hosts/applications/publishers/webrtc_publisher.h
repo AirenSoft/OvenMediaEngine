@@ -20,20 +20,23 @@ namespace cfg
 			{
 				struct WebrtcPublisher : public Publisher
 				{
-					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Webrtc)
+					PublisherType GetType() const override
+					{
+						return PublisherType::Webrtc;
+					}
 
-					CFG_DECLARE_GETTER_OF(GetTimeout, _timeout)
-					CFG_DECLARE_GETTER_OF(IsRtxEnabled, _rtx)
-					CFG_DECLARE_GETTER_OF(IsUlpfecEnalbed, _ulpfec)
+					CFG_DECLARE_REF_GETTER_OF(GetTimeout, _timeout)
+					CFG_DECLARE_REF_GETTER_OF(IsRtxEnabled, _rtx)
+					CFG_DECLARE_REF_GETTER_OF(IsUlpfecEnalbed, _ulpfec)
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						Publisher::MakeParseList();
+						Publisher::MakeList();
 
-						RegisterValue<Optional>("Timeout", &_timeout);
-						RegisterValue<Optional>("Rtx", &_rtx);
-						RegisterValue<Optional>("Ulpfec", &_ulpfec);
+						Register<Optional>("Timeout", &_timeout);
+						Register<Optional>("Rtx", &_rtx);
+						Register<Optional>("Ulpfec", &_ulpfec);
 					}
 
 					int _timeout = 30000;

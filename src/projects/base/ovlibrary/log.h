@@ -62,7 +62,7 @@ typedef enum StatLogType
 } StatLogType;
 
 #if DEBUG
-#	define logd(tag, format, ...)                     ov_log_internal(OVLogLevelDebug,          tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
+#	define logd(tag, format, ...)                     ov_log_internal(OVLogLevelDebug,          tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__)
 #	define logp(tag, format, ...)                       \
 		while (ov_log_get_enabled(tag, OVLogLevelDebug)) \
 		{                                                \
@@ -73,21 +73,28 @@ typedef enum StatLogType
 #	define logd(...)                                  do {} while(false)
 #	define logp                                       logd
 #endif // DEBUG
-#define logi(tag, format, ...)                        ov_log_internal(OVLogLevelInformation,    tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
-#define logw(tag, format, ...)                        ov_log_internal(OVLogLevelWarning,        tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
-#define loge(tag, format, ...)                        ov_log_internal(OVLogLevelError,          tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
-#define logc(tag, format, ...)                        ov_log_internal(OVLogLevelCritical,       tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
+//--------------------------------------------------------------------
+// Logging APIs
+//--------------------------------------------------------------------
+#define logi(tag, format, ...)                        ov_log_internal(OVLogLevelInformation,    tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__)
+#define logw(tag, format, ...)                        ov_log_internal(OVLogLevelWarning,        tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__)
+#define loge(tag, format, ...)                        ov_log_internal(OVLogLevelError,          tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__)
+#define logc(tag, format, ...)                        ov_log_internal(OVLogLevelCritical,       tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__)
 
-#define logtd(format, ...)                            logd(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
-#define logtp(format, ...)                            logp(OV_LOG_TAG ".Packet", format, ## __VA_ARGS__) // NOLINT
-#define logts(format, ...)                            logi(OV_LOG_TAG ".Stat", format, ## __VA_ARGS__) // NOLINT
+//--------------------------------------------------------------------
+// Logging APIs with tag
+//--------------------------------------------------------------------
+#define logtd(format, ...)                            logd(OV_LOG_TAG, format, ## __VA_ARGS__)
+// for packet
+#define logtp(format, ...)                            logp(OV_LOG_TAG ".Packet", format, ## __VA_ARGS__)
+// for statistics
+#define logts(format, ...)                            logi(OV_LOG_TAG ".Stat", format, ## __VA_ARGS__)
+#define logti(format, ...)                            logi(OV_LOG_TAG, format, ## __VA_ARGS__)
+#define logtw(format, ...)                            logw(OV_LOG_TAG, format, ## __VA_ARGS__)
+#define logte(format, ...)                            loge(OV_LOG_TAG, format, ## __VA_ARGS__)
+#define logtc(format, ...)                            logc(OV_LOG_TAG, format, ## __VA_ARGS__)
 
-#define logti(format, ...)                            logi(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
-#define logtw(format, ...)                            logw(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
-#define logte(format, ...)                            loge(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
-#define logtc(format, ...)                            logc(OV_LOG_TAG, format, ## __VA_ARGS__) // NOLINT
-
-#define stat_log(type, format, ...)                         ov_stat_log_internal(type, OVLogLevelInformation,    "STAT", __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__) // NOLINT
+#define stat_log(type, format, ...)                         ov_stat_log_internal(type, OVLogLevelInformation,    "STAT", __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__)
 
 /// 모든 log에 1차적으로 적용되는 filter 규칙
 ///

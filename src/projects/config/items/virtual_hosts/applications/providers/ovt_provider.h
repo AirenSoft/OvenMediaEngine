@@ -20,7 +20,10 @@ namespace cfg
 			{
 				struct OvtProvider : public Provider
 				{
-					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Ovt)
+					ProviderType GetType() const override
+					{
+						return ProviderType::Ovt;
+					}
 				};
 			}  // namespace pvd
 		}	   // namespace app

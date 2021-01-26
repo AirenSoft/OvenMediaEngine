@@ -14,21 +14,23 @@ namespace cfg
 	{
 		struct Tls : public Item
 		{
+		protected:
+			ov::String _cert_path;
+			ov::String _key_path;
+			ov::String _chain_cert_path;
+
+		public:
 			CFG_DECLARE_REF_GETTER_OF(GetCertPath, _cert_path)
 			CFG_DECLARE_REF_GETTER_OF(GetKeyPath, _key_path)
 			CFG_DECLARE_REF_GETTER_OF(GetChainCertPath, _chain_cert_path)
 
 		protected:
-			void MakeParseList() override
+			void MakeList() override
 			{
-				RegisterValue<ResolvePath>("CertPath", &_cert_path);
-				RegisterValue<ResolvePath>("KeyPath", &_key_path);
-				RegisterValue<Optional, ResolvePath>("ChainCertPath", &_chain_cert_path);
+				Register<ResolvePath>("CertPath", &_cert_path);
+				Register<ResolvePath>("KeyPath", &_key_path);
+				Register<Optional, ResolvePath>("ChainCertPath", &_chain_cert_path);
 			}
-
-			ov::String _cert_path;
-			ov::String _key_path;
-			ov::String _chain_cert_path;
 		};
 	}  // namespace cmn
 }  // namespace cfg

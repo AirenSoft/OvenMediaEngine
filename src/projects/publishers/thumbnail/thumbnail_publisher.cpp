@@ -51,8 +51,9 @@ bool ThumbnailPublisher::Start()
 
 	bool http_server_result = true;
 	ov::SocketAddress address;
-	auto &port = thumbnail_bind_config.GetPort();
-	if (port.IsParsed())
+	bool is_parsed;
+	auto &port = thumbnail_bind_config.GetPort(&is_parsed);
+	if (is_parsed)
 	{
 		address = ov::SocketAddress(server_config.GetIp(), port.GetPort());
 
@@ -70,17 +71,17 @@ bool ThumbnailPublisher::Start()
 	}
 
 	bool https_server_result = true;
-	auto &tls_port = thumbnail_bind_config.GetTlsPort();
+	auto &tls_port = thumbnail_bind_config.GetTlsPort(&is_parsed);
 	ov::SocketAddress tls_address;
 
-	if (tls_port.IsParsed())
+	if (is_parsed)
 	{
 		const auto &managers = server_config.GetManagers();
 
 		auto host_name_list = std::vector<ov::String>();
 		for (auto &name : managers.GetHost().GetNameList())
 		{
-			host_name_list.push_back(name.GetName());
+			host_name_list.push_back(name);
 		}
 
 		tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());

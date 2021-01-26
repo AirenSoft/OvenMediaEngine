@@ -20,16 +20,19 @@ namespace cfg
 			{
 				struct RtspPullProvider : public Provider
 				{
-					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::RtspPull)
+					ProviderType GetType() const override
+					{
+						return ProviderType::RtspPull;
+					}
 
-					CFG_DECLARE_GETTER_OF(IsBlockDuplicateStreamName, _is_block_duplicate_stream_name)
+					CFG_DECLARE_REF_GETTER_OF(IsBlockDuplicateStreamName, _is_block_duplicate_stream_name)
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						Provider::MakeParseList();
+						Provider::MakeList();
 
-						RegisterValue<Optional>("BlockDuplicateStreamName", &_is_block_duplicate_stream_name);
+						Register<Optional>("BlockDuplicateStreamName", &_is_block_duplicate_stream_name);
 					}
 
 					// true: block(disconnect) new incoming stream

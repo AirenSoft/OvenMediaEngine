@@ -25,9 +25,9 @@ namespace cfg
 						CFG_DECLARE_REF_GETTER_OF(GetStreamList, _stream_list)
 
 					protected:
-						void MakeParseList() override
+						void MakeList() override
 						{
-							RegisterValue("Stream", &_stream_list);
+							Register("Stream", &_stream_list);
 						}
 
 						std::vector<Stream> _stream_list;

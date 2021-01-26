@@ -172,9 +172,13 @@ static void ReloadHandler(int signum, siginfo_t *si, void *unused)
 
 	auto config_manager = cfg::ConfigManager::GetInstance();
 
-	if (config_manager->ReloadConfigs() == false)
+	try
 	{
-		logte("An error occurred while reload configuration");
+		config_manager->ReloadConfigs();
+	}
+	catch (std::shared_ptr<cfg::ConfigError> &error)
+	{
+		logte("An error occurred while reload configuration: %s", error->ToString().CStr());
 		return;
 	}
 

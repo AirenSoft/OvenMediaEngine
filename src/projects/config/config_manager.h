@@ -2,7 +2,7 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Gil Hoon Choi
+//  Created by Hyunjun Jang
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -18,42 +18,29 @@ namespace cfg
 		friend class ov::Singleton<ConfigManager>;
 		~ConfigManager() override;
 
-		bool LoadConfigs(ov::String config_path);
-		// Load configs from default path (<binary_path>/conf/*)
-		bool LoadConfigs();
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void LoadConfigs(ov::String config_path);
 
-		bool ReloadConfigs();
+		// Load configs from default path (<binary_path>/conf/*)
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void LoadConfigs();
+
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void ReloadConfigs();
 
 		std::shared_ptr<Server> GetServer() noexcept
 		{
 			return _server;
 		}
 
-		//
-		//std::shared_ptr<ServerInfo> GetServer() const noexcept;
-		//
-		//std::vector<std::shared_ptr<HostInfo>> GetHosts() const noexcept;
-		//std::shared_ptr<HostInfo> GetHost(uint32_t id) const noexcept;
-		//
-		//std::shared_ptr<HostInfo> GetHost() const noexcept;
-		//
-		//std::shared_ptr<HostTlsInfo> GetHostTls() const noexcept;
-		//std::shared_ptr<HostProviderInfo> GetHostProvider() const noexcept;
-		//std::shared_ptr<HostPublisherInfo> GetHostPublisher() const noexcept;
-		//
-		//std::vector<std::shared_ptr<ApplicationInfo>> GetApplicationInfos() const noexcept;
-		//std::shared_ptr<ApplicationInfo> GetApplicationInfo(const ov::String &name) const noexcept;
-
-		ov::String ResolveMacros(ov::String string);
-
 	protected:
 		ConfigManager();
 
-		void PrepareMacros();
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void LoadLoggerConfig(const ov::String &config_path);
 
-		bool LoadLoggerConfig(const ov::String &config_path) noexcept;
-
-		bool IsValidVersion(const ov::String &name, int version);
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void CheckValidVersion(const ov::String &name, int version);
 
 		ov::String _config_path;
 

@@ -24,24 +24,29 @@ namespace cfg
 			}
 
 		protected:
-			void MakeParseList() override
+			MAY_THROWS(std::shared_ptr<ConfigError>)
+			void FromString(const ov::String &str) override
 			{
-				RegisterValue<ValueType::Text>(nullptr, &_port, nullptr, [this]() -> bool {
-					_socket_type = ov::SocketType::Unknown;
-					_port_value = ov::Converter::ToInt32(_port.Trim());
+				_port = str;
+				_socket_type = ov::SocketType::Unknown;
+				_port_value = ov::Converter::ToInt32(_port.Trim());
 
-					if (IsValidPort(_port_value))
+				if (IsValidPort(_port_value))
+				{
+					auto tokens = _port.Split("/");
+
+					// Default: TCP
+					_socket_type = (tokens.size() != 2) ? ov::SocketType::Tcp : GetSocketType(tokens[1]);
+
+					if (_socket_type == ov::SocketType::Unknown)
 					{
-						auto tokens = _port.Split("/");
-
-						// Default: TCP
-						_socket_type = (tokens.size() != 2) ? ov::SocketType::Tcp : GetSocketType(tokens[1]);
-
-						return _socket_type != ov::SocketType::Unknown;
+						throw CreateConfigError("Unknown socket type: %s", str.CStr());
 					}
 
-					return false;
-				});
+					return;
+				}
+
+				throw CreateConfigError("Invalid port: %s", str.CStr());
 			}
 		};
 	}  // namespace cmn

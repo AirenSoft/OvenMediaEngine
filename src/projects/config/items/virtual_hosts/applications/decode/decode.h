@@ -21,9 +21,9 @@ namespace cfg
 				struct Decode : public Item
 				{
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						RegisterValue("Video", &_video);
+						Register("Video", &_video);
 					}
 
 					DecodeVideo _video;

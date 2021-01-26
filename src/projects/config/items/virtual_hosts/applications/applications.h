@@ -21,9 +21,9 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetApplicationList, _application_list)
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue<Optional>("Application", &_application_list);
+					Register<Optional>("Application", &_application_list);
 				}
 
 				std::vector<Application> _application_list;

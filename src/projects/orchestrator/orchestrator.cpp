@@ -51,8 +51,8 @@ namespace ocst
 
 				for (auto &domain_name : host_info.GetHost().GetNameList())
 				{
-					logtd("      - %s: New", domain_name.GetName().CStr());
-					vhost->host_list.emplace_back(domain_name.GetName());
+					logtd("      - %s: New", domain_name.CStr());
+					vhost->host_list.emplace_back(domain_name);
 				}
 
 				logtd("    - Processing for origins: %d items", host_info.GetOriginList().size());

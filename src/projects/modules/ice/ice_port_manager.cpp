@@ -105,16 +105,14 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::pub::IceCandidates &
 
 	for(auto &ice_candidate : list)
 	{
-		ov::String candidate = ice_candidate.GetCandidate();
-
 		std::vector<ov::String> ip_list;
 		ov::SocketType socket_type;
 		int start_port;
 		int end_port;
 
-		if(ParseIceCandidate(ice_candidate.GetCandidate(), &ip_list, &socket_type, &start_port, &end_port) == false)
+		if(ParseIceCandidate(ice_candidate, &ip_list, &socket_type, &start_port, &end_port) == false)
 		{
-			logte("Invalid ICE candidate in configuration: %s", candidate.CStr());
+			logte("Invalid ICE candidate in configuration: %s", ice_candidate.CStr());
 			return false;
 		}
 

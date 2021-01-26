@@ -21,10 +21,10 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetQueryStringKey, _query_string_key)
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue("CryptoKey", &_crypto_key);
-					RegisterValue("QueryStringKey", &_query_string_key);
+					Register("CryptoKey", &_crypto_key);
+					Register("QueryStringKey", &_query_string_key);
 				}
 
 				ov::String _crypto_key;

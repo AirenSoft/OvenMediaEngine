@@ -70,7 +70,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 				Json::Value urls = Json::arrayValue;
 				for (auto url : url_list)
 				{
-					urls.append(url.GetUrl().CStr());
+					urls.append(url.CStr());
 				}
 				ice_server["urls"] = urls;
 

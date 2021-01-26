@@ -8,26 +8,25 @@
 //==============================================================================
 #pragma once
 
-#include "./string.h"
-
 #include <memory>
+
+#include "./string.h"
 
 namespace ov
 {
-
 	class Error
 	{
 	public:
+		Error(const Error &error) = default;
+
 		// There is no error
 		Error() = default;
-		Error(const ov::String &domain, int code);
-		Error(const ov::String &domain, const char *format, ...);
-		Error(const ov::String &domain, int code, const char *format, ...);
+		Error(ov::String domain, int code);
+		Error(ov::String domain, ov::String message);
+		Error(ov::String domain, int code, ov::String message);
 
 		explicit Error(int code);
-		Error(int code, const char *format, ...);
-
-		Error(const Error &error) = default;
+		Error(int code, ov::String message);
 
 		static std::shared_ptr<Error> CreateError(ov::String domain, int code, const char *format, ...);
 		static std::shared_ptr<Error> CreateError(ov::String domain, const char *format, ...);
@@ -43,12 +42,12 @@ namespace ov
 
 		virtual String ToString() const;
 
-	private:
+	protected:
 		String _domain;
 
 		int _code = 0;
 		bool _code_set = false;
-		
+
 		String _message;
 	};
-}
+}  // namespace ov

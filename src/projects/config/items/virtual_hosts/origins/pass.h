@@ -23,10 +23,10 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetUrls, _urls)
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue("Scheme", &_scheme);
-					RegisterValue("Urls", &_urls);
+					Register("Scheme", &_scheme);
+					Register("Urls", &_urls);
 				}
 
 				ov::String _scheme;

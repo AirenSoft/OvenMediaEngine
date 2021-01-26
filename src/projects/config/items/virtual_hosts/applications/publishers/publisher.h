@@ -19,12 +19,12 @@ namespace cfg
 				struct Publisher : public Item
 				{
 					virtual PublisherType GetType() const = 0;
-					CFG_DECLARE_GETTER_OF(GetMaxConnection, _max_connection)
+					CFG_DECLARE_REF_GETTER_OF(GetMaxConnection, _max_connection)
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						RegisterValue<Optional>("MaxConnection", &_max_connection);
+						Register<Optional>("MaxConnection", &_max_connection);
 					}
 
 					int _max_connection = 0;

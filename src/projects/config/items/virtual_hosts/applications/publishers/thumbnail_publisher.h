@@ -20,17 +20,20 @@ namespace cfg
 			{
 				struct ThumbnailPublisher : public Publisher
 				{
-					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Thumbnail)
+					PublisherType GetType() const override
+					{
+						return PublisherType::Thumbnail;
+					}
 
-					CFG_DECLARE_GETTER_OF(GetCrossDomainList, _cross_domains.GetUrls())
-					CFG_DECLARE_GETTER_OF(GetCrossDomains, _cross_domains)
+					CFG_DECLARE_REF_GETTER_OF(GetCrossDomainList, _cross_domains.GetUrls())
+					CFG_DECLARE_REF_GETTER_OF(GetCrossDomains, _cross_domains)
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						Publisher::MakeParseList();
+						Publisher::MakeList();
 
-						RegisterValue<Optional>("CrossDomains", &_cross_domains);
+						Register<Optional>("CrossDomains", &_cross_domains);
 					}
 
 					cmn::CrossDomains _cross_domains;

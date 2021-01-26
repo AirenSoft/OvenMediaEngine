@@ -36,9 +36,10 @@ namespace api
 		auto http_interceptor = CreateInterceptor();
 
 		bool http_server_result = true;
-		auto &port = api_bind_config.GetPort();
+		bool is_parsed;
+		auto &port = api_bind_config.GetPort(&is_parsed);
 		ov::SocketAddress address;
-		if (port.IsParsed())
+		if (is_parsed)
 		{
 			address = ov::SocketAddress(server_config->GetIp(), port.GetPort());
 
@@ -56,15 +57,15 @@ namespace api
 		}
 
 		bool https_server_result = true;
-		auto &tls_port = api_bind_config.GetTlsPort();
+		auto &tls_port = api_bind_config.GetTlsPort(&is_parsed);
 		ov::SocketAddress tls_address;
-		if (tls_port.IsParsed())
+		if (is_parsed)
 		{
 			auto host_name_list = std::vector<ov::String>();
 
 			for (auto &name : managers.GetHost().GetNameList())
 			{
-				host_name_list.push_back(name.GetName());
+				host_name_list.push_back(name);
 			}
 
 			tls_address = ov::SocketAddress(server_config->GetIp(), tls_port.GetPort());

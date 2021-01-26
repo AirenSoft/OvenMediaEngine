@@ -90,7 +90,7 @@ namespace api
 
 			for (auto &url : config.GetUrls())
 			{
-				object.append(url.GetUrl().CStr());
+				object.append(url.CStr());
 			}
 		}
 
@@ -399,7 +399,17 @@ namespace api
 
 			MakeUpperCase("application", json_value, &value);
 
-			return HttpError::CreateError(application->Parse("", value, "Application"));
+			cfg::DataSource data_source("", "Application", json_value);
+
+			try
+			{
+				application->FromDataSource("application", "Application", data_source);
+				return nullptr;
+			}
+			catch (const std::shared_ptr<cfg::ConfigError> &error)
+			{
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "%s", error->GetMessage().CStr());
+			}
 		}
 	}  // namespace conv
 }  // namespace api

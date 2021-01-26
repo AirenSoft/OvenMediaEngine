@@ -21,9 +21,9 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetOriginList, _origin_list)
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue<Optional>("Origin", &_origin_list);
+					Register<Optional>("Origin", &_origin_list);
 				}
 
 				std::vector<Origin> _origin_list;

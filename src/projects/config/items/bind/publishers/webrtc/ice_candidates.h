@@ -8,8 +8,6 @@
 //==============================================================================
 #pragma once
 
-#include "ice_candidate.h"
-
 namespace cfg
 {
 	namespace bind
@@ -18,16 +16,18 @@ namespace cfg
 		{
 			struct IceCandidates : public Item
 			{
+			protected:
+				std::vector<ov::String> _ice_candidate_list{
+					"*:10000-10005/udp"};
+
+			public:
 				CFG_DECLARE_REF_GETTER_OF(GetIceCandidateList, _ice_candidate_list);
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue<Optional>("IceCandidate", &_ice_candidate_list);
+					Register<Optional>("IceCandidate", &_ice_candidate_list);
 				}
-
-				std::vector<IceCandidate> _ice_candidate_list{
-					IceCandidate("*:10000-10005/udp")};
 			};
 		}  // namespace pub
 	}	   // namespace bind

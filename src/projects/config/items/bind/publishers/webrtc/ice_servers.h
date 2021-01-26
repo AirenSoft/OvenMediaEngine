@@ -25,9 +25,9 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetIceServerList, _ice_server_list);
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue("IceServer", &_ice_server_list);
+					Register("IceServer", &_ice_server_list);
 				}
 			};
 		}  // namespace pub

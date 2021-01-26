@@ -22,10 +22,10 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue<Optional>("Providers", &_providers);
-					RegisterValue<Optional>("Publishers", &_publishers);
+					Register<Optional>("Providers", &_providers);
+					Register<Optional>("Publishers", &_publishers);
 				}
 
 				EnabledModules _providers;

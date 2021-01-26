@@ -21,7 +21,7 @@ namespace info
 
 		for (auto name : host_info.GetHost().GetNameList())
 		{
-			name_list.push_back(name.GetName());
+			name_list.push_back(name.CStr());
 		}
 
 		const cfg::cmn::Tls &tls = GetHost().GetTls();

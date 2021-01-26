@@ -14,15 +14,17 @@ namespace cfg
 	{
 		struct P2P : public Item
 		{
-			CFG_DECLARE_GETTER_OF(GetMaxClientPeersPerHostPeer, _max_client_peers_per_host_peer)
+		protected:
+			int _max_client_peers_per_host_peer = 2;
+
+		public:
+			CFG_DECLARE_REF_GETTER_OF(GetMaxClientPeersPerHostPeer, _max_client_peers_per_host_peer)
 
 		protected:
-			void MakeParseList() override
+			void MakeList() override
 			{
-				RegisterValue<Optional>("MaxClientPeersPerHostPeer", &_max_client_peers_per_host_peer);
+				Register<Optional>("MaxClientPeersPerHostPeer", &_max_client_peers_per_host_peer);
 			}
-
-			int _max_client_peers_per_host_peer = 2;
 		};
 	}  // namespace p2p
 }  // namespace cfg

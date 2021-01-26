@@ -7,105 +7,97 @@
 //
 //==============================================================================
 #include "config_logger_loader.h"
+
 #include "config_private.h"
 
-std::shared_ptr<LoggerTagInfo> ParseTag(pugi::xml_node tag_node);
-
-ConfigLoggerLoader::ConfigLoggerLoader()
+namespace cfg
 {
-}
+	std::shared_ptr<LoggerTagInfo> ParseTag(pugi::xml_node tag_node);
 
-ConfigLoggerLoader::ConfigLoggerLoader(const ov::String config_path)
-        : ConfigLoader(config_path)
-{
-}
+	ConfigLoggerLoader::ConfigLoggerLoader()
+	{
+	}
 
-ConfigLoggerLoader::~ConfigLoggerLoader()
-{
-}
+	ConfigLoggerLoader::ConfigLoggerLoader(const ov::String config_path)
+		: ConfigLoader(config_path)
+	{
+	}
 
-bool ConfigLoggerLoader::Parse()
-{
-    // validates
-    bool result = ConfigLoader::Load();
-    if(!result)
-    {
-        return false;
-    }
+	ConfigLoggerLoader::~ConfigLoggerLoader()
+	{
+	}
 
-    pugi::xml_node logger_node = _document.child("Logger");
-    if(logger_node.empty())
-    {
-        logte("Could not found <Logger> config...");
-        return false;
-    }
+	void ConfigLoggerLoader::Parse()
+	{
+		ConfigLoader::Load();
 
-    pugi::xml_node tag_node = logger_node.child("Tag");
-    if(tag_node.empty())
-    {
-        logte("Could not found <Tag> config...");
-        return false;
-    }
+		pugi::xml_node logger_node = _document.child("Logger");
 
-    // Parse Tag
-    std::shared_ptr<LoggerTagInfo> tag_info;
-    for(; tag_node; tag_node = tag_node.next_sibling())
-    {
-        tag_info = ParseTag(tag_node);
-        if(tag_info != nullptr)
-        {
-            _tags.push_back(tag_info);
-        }
-    }
+		if (logger_node.empty())
+		{
+			throw CreateConfigError("Could not found config: <Logger>");
+		}
 
-    _log_path = logger_node.child_value("Path");
+		pugi::xml_node tag_node = logger_node.child("Tag");
 
-    if (strlen(logger_node.attribute("version").value()) != 0)
-    {
-        _version = logger_node.attribute("version").value();
-    }
+		if (tag_node.empty())
+		{
+			throw CreateConfigError("Could not found config: <Tag>");
+		}
 
-    return true;
-}
+		while (tag_node)
+		{
+			std::shared_ptr<LoggerTagInfo> tag_info = ParseTag(tag_node);
 
-void ConfigLoggerLoader::Reset()
-{
-    _tags.clear();
+			if (tag_info != nullptr)
+			{
+				_tags.push_back(tag_info);
+			}
 
-    ConfigLoader::Reset();
-}
+			tag_node = tag_node.next_sibling();
+		}
 
-std::vector<std::shared_ptr<LoggerTagInfo>> ConfigLoggerLoader::GetTags() const noexcept
-{
-    return _tags;
-}
+		_log_path = logger_node.child_value("Path");
+		_version = logger_node.attribute("version").value();
+	}
 
-ov::String ConfigLoggerLoader::GetLogPath() const noexcept
-{
-    return _log_path;
-}
+	void ConfigLoggerLoader::Reset()
+	{
+		_tags.clear();
 
-ov::String ConfigLoggerLoader::GetVersion() const noexcept
-{
-    return _version;
-}
+		ConfigLoader::Reset();
+	}
 
-std::shared_ptr<LoggerTagInfo> ParseTag(pugi::xml_node tag_node)
-{
-    std::shared_ptr<LoggerTagInfo> tag_info = std::make_shared<LoggerTagInfo>();
+	std::vector<std::shared_ptr<LoggerTagInfo>> ConfigLoggerLoader::GetTags() const noexcept
+	{
+		return _tags;
+	}
 
-    ov::String name = ConfigUtility::StringFromAttribute(tag_node.attribute("name"));
-    ov::String level = ConfigUtility::StringFromAttribute(tag_node.attribute("level"));
+	ov::String ConfigLoggerLoader::GetLogPath() const noexcept
+	{
+		return _log_path;
+	}
 
-    if(!LoggerTagInfo::ValidateLogLevel(level))
-    {
-        logtw("Invalid log level: %s (Tag name: [%s])", level.CStr(), name.CStr());
+	ov::String ConfigLoggerLoader::GetVersion() const noexcept
+	{
+		return _version;
+	}
 
-        return nullptr;
-    }
+	std::shared_ptr<LoggerTagInfo> ParseTag(pugi::xml_node tag_node)
+	{
+		std::shared_ptr<LoggerTagInfo> tag_info = std::make_shared<LoggerTagInfo>();
 
-    tag_info->SetName(name);
-    tag_info->SetLevel(LoggerTagInfo::OVLogLevelFromString(level));
+		ov::String name = ConfigUtility::StringFromAttribute(tag_node.attribute("name"));
+		ov::String level = ConfigUtility::StringFromAttribute(tag_node.attribute("level"));
 
-    return tag_info;
-}
+		if (LoggerTagInfo::ValidateLogLevel(level) == false)
+		{
+			throw CreateConfigError("Invalid log level: %s (Tag name: [%s])", level.CStr(), name.CStr());
+		}
+
+		tag_info->SetName(name);
+		tag_info->SetLevel(LoggerTagInfo::OVLogLevelFromString(level));
+
+		return tag_info;
+	}
+}  // namespace cfg

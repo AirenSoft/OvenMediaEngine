@@ -20,7 +20,10 @@ namespace cfg
 			{
 				struct RtspProvider : public Provider
 				{
-					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, ProviderType::Rtsp)
+					ProviderType GetType() const override
+					{
+						return ProviderType::Rtsp;
+					}
 				};
 			}  // namespace pvd
 		}	   // namespace app

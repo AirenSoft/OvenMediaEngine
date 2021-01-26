@@ -19,9 +19,9 @@ namespace cfg
 				struct DecodeVideo : public Item
 				{
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						RegisterValue("HWAcceleration", &_hw_acceleration);
+						Register("HWAcceleration", &_hw_acceleration);
 					}
 
 					ov::String _hw_acceleration;

@@ -246,13 +246,18 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 
 	ov::LogWrite::Initialize(parse_option->start_service);
 
-	if (cfg::ConfigManager::GetInstance()->LoadConfigs(parse_option->config_path) == false)
+	try
 	{
-		logte("An error occurred while load config");
-		return ov::Daemon::State::CHILD_FAIL;
+		cfg::ConfigManager::GetInstance()->LoadConfigs(parse_option->config_path);
+
+		return ov::Daemon::State::CHILD_SUCCESS;
+	}
+	catch (std::shared_ptr<cfg::ConfigError> &error)
+	{
+		logte("An error occurred while load config: %s", error->ToString().CStr());
 	}
 
-	return ov::Daemon::State::CHILD_SUCCESS;
+	return ov::Daemon::State::CHILD_FAIL;
 }
 
 static bool Uninitialize()

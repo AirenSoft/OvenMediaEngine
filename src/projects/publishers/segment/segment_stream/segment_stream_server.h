@@ -37,7 +37,7 @@ public:
 
 	bool Disconnect(const ov::String &app_name, const ov::String &stream_name);
 
-	void SetCrossDomain(const std::vector<cfg::cmn::Url> &url_list);
+	void SetCrossDomain(const std::vector<ov::String> &url_list);
 
 	virtual PublisherType GetPublisherType() const noexcept = 0;
 	virtual const char *GetPublisherName() const noexcept = 0;

@@ -40,15 +40,9 @@ namespace ocst
 		  state(ItemState::New)
 
 	{
-		for (auto &item : origin_config.GetPass().GetUrlList())
+		for (auto &url : origin_config.GetPass().GetUrlList())
 		{
-			auto url = item.GetUrl();
-
-			// Prepend "<scheme>://"
-			url.Prepend("://");
-			url.Prepend(scheme);
-
-			url_list.push_back(item.GetUrl());
+			url_list.push_back(url);
 		}
 
 		this->origin_config = origin_config;

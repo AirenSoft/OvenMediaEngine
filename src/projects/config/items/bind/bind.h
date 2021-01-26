@@ -18,21 +18,23 @@ namespace cfg
 	{
 		struct Bind : public Item
 		{
+		protected:
+			mgr::Managers _managers;
+			pvd::Providers _providers;
+			pub::Publishers _publishers;
+
+		public:
 			CFG_DECLARE_REF_GETTER_OF(GetManagers, _managers)
 			CFG_DECLARE_REF_GETTER_OF(GetProviders, _providers)
 			CFG_DECLARE_REF_GETTER_OF(GetPublishers, _publishers)
 
 		protected:
-			void MakeParseList() override
+			void MakeList() override
 			{
-				RegisterValue<Optional>("Managers", &_managers);
-				RegisterValue<Optional>("Providers", &_providers);
-				RegisterValue<Optional>("Publishers", &_publishers);
+				Register<Optional>("Managers", &_managers);
+				Register<Optional>("Providers", &_providers);
+				Register<Optional>("Publishers", &_publishers);
 			}
-
-			mgr::Managers _managers;
-			pvd::Providers _providers;
-			pub::Publishers _publishers;
 		};
 	}  // namespace bind
 }  // namespace cfg
