@@ -122,9 +122,9 @@ namespace ocst
 		return callback->OnStreamDeleted(app_info, info);
 	}
 
-	bool Application::OnStreamParsed(const std::shared_ptr<info::Stream> &info)
+	bool Application::OnStreamPrepared(const std::shared_ptr<info::Stream> &info)
 	{
-		return callback->OnStreamParsed(app_info, info);
+		return callback->OnStreamPrepared(app_info, info);
 	}
 
 

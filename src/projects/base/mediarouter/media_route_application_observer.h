@@ -29,7 +29,7 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	virtual bool OnStreamCreated(const std::shared_ptr<info::Stream> &info) = 0;
 	virtual bool OnStreamDeleted(const std::shared_ptr<info::Stream> &info) = 0;
-	virtual bool OnStreamParsed(const std::shared_ptr<info::Stream> &info) = 0;
+	virtual bool OnStreamPrepared(const std::shared_ptr<info::Stream> &info) = 0;
 
 	// Delivery encoded video/audio frame
 	virtual bool OnSendFrame(const std::shared_ptr<info::Stream> &info,

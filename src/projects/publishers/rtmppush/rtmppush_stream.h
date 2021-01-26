@@ -23,14 +23,9 @@ public:
 	std::shared_ptr<RtmpPushSession> CreateSession();
 	bool DeleteSession(uint32_t session_id);
 
-	void SetParsed(bool flag);
-	bool IsParsed();
-
 private:
 	bool Start() override;
 	bool Stop() override;
-
-	bool _parsed_flag;
 
 	std::shared_ptr<mon::StreamMetrics> _stream_metrics;
 	std::shared_ptr<RtmpWriter> _writer;

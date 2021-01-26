@@ -348,6 +348,12 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		return nullptr;
 	}
 
+	if(stream->GetState() != pub::Stream::State::STARTED)
+	{
+		logtw("(%s/%s) stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
+		return nullptr;
+	}
+
 	auto &candidates = _ice_port->GetIceCandidateList();
 	ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
 	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());

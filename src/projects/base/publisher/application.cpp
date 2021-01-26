@@ -274,20 +274,22 @@ namespace pub
 
 		lock.lock();
 		_streams.erase(info->GetId());
+
+		// Stop stream
 		stream->Stop();
 
 		return true;
 	}
 
-	bool Application::OnStreamParsed(const std::shared_ptr<info::Stream> &info) 
+	bool Application::OnStreamPrepared(const std::shared_ptr<info::Stream> &info) 
 	{
-		std::unique_lock<std::shared_mutex> lock(_stream_map_mutex);
+		std::shared_lock<std::shared_mutex> lock(_stream_map_mutex);
 
 		auto stream_it = _streams.find(info->GetId());
 		if(stream_it == _streams.end())
 		{
 			// Sometimes stream rejects stream creation if the input codec is not supported. So this is a normal situation.
-			logtd("OnStreamParsed failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
+			logtd("OnStreamPrepared failed. Cannot find stream : %s/%u", info->GetName().CStr(), info->GetId());
 			return true;
 		}
 
@@ -295,13 +297,11 @@ namespace pub
 
 		lock.unlock();
 
-		if (ParsedStream(info) == false)
-		{
-			return false;
-		}
+		// Start stream
+		stream->Start();
+
 		return true;
 	}
-
 
 	std::shared_ptr<ApplicationWorker> Application::GetWorkerByStreamID(info::stream_id_t stream_id)
 	{

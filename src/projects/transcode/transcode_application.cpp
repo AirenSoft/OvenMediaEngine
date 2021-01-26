@@ -96,7 +96,7 @@ bool TranscodeApplication::OnStreamDeleted(const std::shared_ptr<info::Stream> &
 	return true;
 }
 
-bool TranscodeApplication::OnStreamParsed(const std::shared_ptr<info::Stream> &stream)
+bool TranscodeApplication::OnStreamPrepared(const std::shared_ptr<info::Stream> &stream)
 {
 	std::unique_lock<std::mutex> lock(_mutex);
 

@@ -628,7 +628,7 @@ namespace ocst
 		return true;
 	}
 
-	bool Orchestrator::OnStreamParsed(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
+	bool Orchestrator::OnStreamPrepared(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
 		logte("%s stream is parsed", info->GetName().CStr());
 		return true;

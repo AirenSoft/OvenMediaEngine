@@ -68,22 +68,15 @@ std::shared_ptr<RtcStream> RtcStream::Create(const std::shared_ptr<pub::Applicat
 											 const info::Stream &info,
 											 uint32_t worker_count)
 {
-	auto stream = std::make_shared<RtcStream>(application, info);
-	if (!stream->Start())
-	{
-		return nullptr;
-	}
-
-	if (!stream->CreateStreamWorker(worker_count))
-	{
-		return nullptr;
-	}
+	auto stream = std::make_shared<RtcStream>(application, info, worker_count);
 	return stream;
 }
 
 RtcStream::RtcStream(const std::shared_ptr<pub::Application> application,
-					 const info::Stream &info)
-	: Stream(application, info)
+					 const info::Stream &info,
+					 uint32_t worker_count)
+	: Stream(application, info),
+	_worker_count(worker_count)
 {
 	_certificate = application->GetSharedPtrAs<RtcApplication>()->GetCertificate();
 	_vp8_picture_id = 0x8000;  // 1 {000 0000 0000 0000} 1 is marker for 15 bit length
@@ -97,6 +90,16 @@ RtcStream::~RtcStream()
 
 bool RtcStream::Start()
 {
+	if(GetState() != State::CREATED)
+	{
+		return false;
+	}
+
+	if (!CreateStreamWorker(_worker_count))
+	{
+		return false;
+	}
+
 	_rtx_enabled = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().IsRtxEnabled();
 	_ulpfec_enabled = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().IsUlpfecEnalbed();
 
@@ -347,6 +350,11 @@ bool RtcStream::Start()
 
 bool RtcStream::Stop()
 {
+	if(GetState() != State::STARTED)
+	{
+		return false;
+	}
+
 	_offer_sdp->Release();
 
 	std::lock_guard<std::shared_mutex> lock(_packetizers_lock);
@@ -357,6 +365,11 @@ bool RtcStream::Stop()
 
 std::shared_ptr<SessionDescription> RtcStream::GetSessionDescription()
 {
+	if(GetState() != State::STARTED)
+	{
+		return nullptr;
+	}
+
 	return _offer_sdp;
 }
 
@@ -385,6 +398,11 @@ bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 
 void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	if(GetState() != State::STARTED)
+	{
+		return;
+	}
+
 	auto media_track = GetTrack(media_packet->GetTrackId());
 
 	// Create RTP Video Header
@@ -431,6 +449,11 @@ void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 
 void RtcStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	if(GetState() != State::STARTED)
+	{
+		return;
+	}
+
 	auto media_track = GetTrack(media_packet->GetTrackId());
 
 	// RTP Packetizing
@@ -560,6 +583,11 @@ std::shared_ptr<RtpHistory> RtcStream::GetHistory(uint8_t origin_payload_type)
 
 std::shared_ptr<RtxRtpPacket> RtcStream::GetRtxRtpPacket(uint8_t origin_payload_type, uint16_t origin_sequence_number)
 {
+	if(GetState() != State::STARTED)
+	{
+		return nullptr;
+	}
+
 	auto history = GetHistory(origin_payload_type);
 	if (history == nullptr)
 	{

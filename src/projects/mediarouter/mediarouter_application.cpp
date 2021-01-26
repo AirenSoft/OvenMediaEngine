@@ -377,7 +377,7 @@ bool MediaRouteApplication::NotifyStreamParsed(std::shared_ptr<MediaRouteStream>
 				// Flow: Provider -> MediaRoute -> Transcoder
 				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Transcoder)
 				{
-					observer->OnStreamParsed(stream->GetStream());
+					observer->OnStreamPrepared(stream->GetStream());
 				}
 			}
 			break;
@@ -386,7 +386,7 @@ bool MediaRouteApplication::NotifyStreamParsed(std::shared_ptr<MediaRouteStream>
 				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Publisher ||
 					oberver_type == MediaRouteApplicationObserver::ObserverType::Relay)
 				{
-					observer->OnStreamParsed(stream->GetStream());
+					observer->OnStreamPrepared(stream->GetStream());
 				}
 			}
 			break;

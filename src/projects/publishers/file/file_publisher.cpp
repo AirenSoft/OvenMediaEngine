@@ -162,7 +162,8 @@ void FilePublisher::SessionController()
 		// Find a session related to Userdata.
 		auto vhost_app_name = info::VHostAppName(userdata->GetVhost(), userdata->GetApplication());
 		auto stream = std::static_pointer_cast<FileStream>(GetStream(vhost_app_name, userdata->GetStreamName()));
-		if (stream != nullptr || stream->IsParsed() == true)
+
+		if (stream != nullptr || stream->GetState() == pub::Stream::State::STARTED)
 		{
 			// If there is no session, create a new file(record) session.
 			auto session = std::static_pointer_cast<FileSession>(stream->GetSession(userdata->GetSessionId()));

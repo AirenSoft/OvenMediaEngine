@@ -38,18 +38,6 @@ std::shared_ptr<pub::Stream> OvtApplication::CreateStream(const std::shared_ptr<
 	return OvtStream::Create(GetSharedPtrAs<pub::Application>(), *info, worker_count);
 }
 
-
-//====================================================================================================
-// ParsedStream
-// - Application Override
-//====================================================================================================
-bool OvtApplication::ParsedStream(const std::shared_ptr<info::Stream> &info)
-{
-	logtw("Called OnStreamParsed. *Please delete this log after checking.*");
-	return true;
-}
-
-
 bool OvtApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
 	logtd("OvtApplication::DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());

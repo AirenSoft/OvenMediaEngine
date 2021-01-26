@@ -94,7 +94,7 @@ namespace ocst
 		public:
 			virtual bool OnStreamCreated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) = 0;
 			virtual bool OnStreamDeleted(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) = 0;
-			virtual bool OnStreamParsed(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) = 0;
+			virtual bool OnStreamPrepared(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) = 0;
 		};
 
 		Application(CallbackInterface *callback, const info::Application &app_info);
@@ -105,7 +105,7 @@ namespace ocst
 		// Temporarily used until Orchestrator takes stream management
 		bool OnStreamCreated(const std::shared_ptr<info::Stream> &info) override;
 		bool OnStreamDeleted(const std::shared_ptr<info::Stream> &info) override;
-		bool OnStreamParsed(const std::shared_ptr<info::Stream> &info) override;
+		bool OnStreamPrepared(const std::shared_ptr<info::Stream> &info) override;
 		bool OnSendFrame(const std::shared_ptr<info::Stream> &info, const std::shared_ptr<MediaPacket> &packet) override;
 
 		ObserverType GetObserverType() override;

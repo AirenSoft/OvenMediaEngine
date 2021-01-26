@@ -37,20 +37,6 @@ std::shared_ptr<pub::Stream> FileApplication::CreateStream(const std::shared_ptr
 	return FileStream::Create(GetSharedPtrAs<pub::Application>(), *info);
 }
 
-bool FileApplication::ParsedStream(const std::shared_ptr<info::Stream> &info)
-{
-	auto stream = std::static_pointer_cast<FileStream>(GetStream(info->GetId()));
-	if (stream == nullptr)
-	{
-		logte("Could not found a stream (%s)", info->GetName().CStr());
-		return false;
-	}
-
-	stream->SetParsed(true);
-
-	return true;
-}
-
 bool FileApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
 	auto stream = std::static_pointer_cast<FileStream>(GetStream(info->GetId()));

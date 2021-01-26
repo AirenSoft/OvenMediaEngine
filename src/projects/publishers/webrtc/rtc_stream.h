@@ -22,8 +22,10 @@ public:
 	static std::shared_ptr<RtcStream> Create(const std::shared_ptr<pub::Application> application,
 	                                         const info::Stream &info,
 	                                         uint32_t worker_count);
+
 	explicit RtcStream(const std::shared_ptr<pub::Application> application,
-	                   const info::Stream &info);
+	                   const info::Stream &info,
+					   uint32_t worker_count);
 	~RtcStream() final;
 
 	std::shared_ptr<SessionDescription> GetSessionDescription();
@@ -66,4 +68,5 @@ private:
 
 	bool _rtx_enabled = true;
 	bool _ulpfec_enabled = true;
+	uint32_t _worker_count = 0;
 };

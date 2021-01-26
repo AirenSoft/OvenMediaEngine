@@ -10,23 +10,15 @@ std::shared_ptr<OvtStream> OvtStream::Create(const std::shared_ptr<pub::Applicat
 											 const info::Stream &info,
 											 uint32_t worker_count)
 {
-	auto stream = std::make_shared<OvtStream>(application, info);
-	if(!stream->Start())
-	{
-		return nullptr;
-	}
-
-	if(!stream->CreateStreamWorker(worker_count))
-	{
-		return nullptr;
-	}
-	
+	auto stream = std::make_shared<OvtStream>(application, info, worker_count);
 	return stream;
 }
 
 OvtStream::OvtStream(const std::shared_ptr<pub::Application> application,
-					 const info::Stream &info)
-		: Stream(application, info)
+					 const info::Stream &info,
+					 uint32_t worker_count)
+		: Stream(application, info),
+		_worker_count(worker_count)
 {
 }
 
@@ -37,6 +29,16 @@ OvtStream::~OvtStream()
 
 bool OvtStream::Start()
 {
+	if(GetState() != Stream::State::CREATED)
+	{
+		return false;
+	}
+
+	if(!CreateStreamWorker(_worker_count))
+	{
+		return false;
+	}
+
 	logtd("OvtStream(%d) has been started", GetId());
 	_packetizer = std::make_shared<OvtPacketizer>(OvtPacketizerInterface::GetSharedPtr());
 	_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
@@ -46,6 +48,11 @@ bool OvtStream::Start()
 
 bool OvtStream::Stop()
 {
+	if(GetState() != Stream::State::STARTED)
+	{
+		return false;
+	}
+
 	logtd("OvtStream(%u) has been stopped", GetId());
 
 	std::unique_lock<std::mutex> mlock(_packetizer_lock);
@@ -150,6 +157,11 @@ bool OvtStream::GenerateDecription()
 
 void OvtStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	if(GetState() != Stream::State::STARTED)
+	{
+		return;
+	}
+
 	// Callback OnOvtPacketized()
 	std::unique_lock<std::mutex> mlock(_packetizer_lock);
 	if(_packetizer != nullptr)
@@ -160,6 +172,11 @@ void OvtStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 
 void OvtStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
+	if(GetState() != Stream::State::STARTED)
+	{
+		return;
+	}
+
 	// Callback OnOvtPacketized()
 	std::unique_lock<std::mutex> mlock(_packetizer_lock);
 	if(_packetizer != nullptr)
@@ -182,10 +199,17 @@ bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 	return true;
 }
 
-Json::Value& OvtStream::GetDescription()
+bool OvtStream::GetDescription(Json::Value &description)
 {
+	if(GetState() != Stream::State::STARTED)
+	{
+		return false;
+	}
+	
 	GenerateDecription();
-	return _description;
+	description = _description;
+
+	return true;
 }
 
 bool OvtStream::RemoveSessionByConnectorId(int connector_id)

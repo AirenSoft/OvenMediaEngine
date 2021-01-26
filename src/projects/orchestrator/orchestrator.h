@@ -151,7 +151,7 @@ namespace ocst
 		//--------------------------------------------------------------------
 		bool OnStreamCreated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
 		bool OnStreamDeleted(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
-		bool OnStreamParsed(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
+		bool OnStreamPrepared(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
 
 	protected:
 		std::recursive_mutex _module_list_mutex;

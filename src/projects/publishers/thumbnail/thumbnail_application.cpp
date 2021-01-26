@@ -38,13 +38,6 @@ std::shared_ptr<pub::Stream> ThumbnailApplication::CreateStream(const std::share
 	return ThumbnailStream::Create(GetSharedPtrAs<pub::Application>(), *info);
 }
 
-bool ThumbnailApplication::ParsedStream(const std::shared_ptr<info::Stream> &info)
-{
-	logtd("Called ParsedStream. But there is nothing to do.");
-
-	return true;
-}
-
 bool ThumbnailApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 {
 	logtd("ThumbnailApplication::DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());

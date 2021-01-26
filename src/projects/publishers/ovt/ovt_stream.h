@@ -13,7 +13,8 @@ public:
 											 const info::Stream &info,
 											 uint32_t worker_count);
 	explicit OvtStream(const std::shared_ptr<pub::Application> application,
-					   const info::Stream &info);
+					   const info::Stream &info,
+					   uint32_t worker_count);
 	~OvtStream() final;
 
 	void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) override;
@@ -23,7 +24,7 @@ public:
 
 	bool RemoveSessionByConnectorId(int connector_id);
 
-	Json::Value&		GetDescription();
+	bool GetDescription(Json::Value &description);
 
 private:
 	bool Start() override;
@@ -31,9 +32,11 @@ private:
 
 	bool GenerateDecription();
 
+	uint32_t							_worker_count = 0;
+
 	Json::Value							_description;
 	std::mutex 							_packetizer_lock;
 	std::shared_ptr<OvtPacketizer>		_packetizer;
-
+	
 	std::shared_ptr<mon::StreamMetrics>		_stream_metrics;
 };
