@@ -114,12 +114,12 @@ void MediaRouteStream::SetCreatedSteam(bool created)
 	_is_created_stream = created;
 }
 
-void MediaRouteStream::SetNotifyStreamParsed(bool completed)
+void MediaRouteStream::SetNotifyStreamPrepared(bool completed)
 {
 	_is_notify_stream_parsed = completed;
 }
 
-bool MediaRouteStream::IsNotifyStreamParsed()
+bool MediaRouteStream::IsNotifyStreamPrepared()
 {
 	return _is_notify_stream_parsed;
 }
@@ -192,16 +192,15 @@ void MediaRouteStream::InitParseTrackInfo()
 {
 	for (const auto &iter : _stream->GetTracks())
 	{
-		auto track_id = iter.first;
 		auto track = iter.second;
 
-		_parse_completed_track_info[track_id] = false;
+		SetParseTrackInfo(track);
 	}
 }
 
-void MediaRouteStream::SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, bool parsed)
+void MediaRouteStream::SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track)
 {
-	_parse_completed_track_info[media_track->GetId()] = parsed;
+	_parse_completed_track_info[media_track->GetId()] = media_track->IsValidity();
 }
 
 bool MediaRouteStream::IsParseTrackInfo(std::shared_ptr<MediaTrack> &media_track)
@@ -294,7 +293,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 						avc_decoder_configuration_record.SetProfileIndication(sps.GetProfile());
 						avc_decoder_configuration_record.SetlevelIndication(sps.GetCodecLevel());
 
-						SetParseTrackInfo(media_track, true);
+						// SetParseTrackInfo(media_track, true);
 					}
 					else if (header.GetNalUnitType() == H264NalUnitType::Pps)
 					{
@@ -353,7 +352,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 
 						logtd("%s", sps.GetInfoString().CStr());
 
-						SetParseTrackInfo(media_track, true);
+						// SetParseTrackInfo(media_track, true);
 					}
 				}
 
@@ -400,7 +399,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 						media_track->SetCodecExtradata(extradata);
 					}
 
-					SetParseTrackInfo(media_track, true);
+					// SetParseTrackInfo(media_track, true);
 				}
 			}
 			break;
@@ -411,7 +410,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 		case MediaCodecId::Opus:
 		case MediaCodecId::Jpeg:
 		case MediaCodecId::Png:
-			SetParseTrackInfo(media_track, true);
+			// SetParseTrackInfo(media_track, true);
 
 			break;
 
@@ -419,6 +418,8 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 			logte("Unknown codec");
 			break;
 	}
+
+	SetParseTrackInfo(media_track);
 
 	return true;
 }

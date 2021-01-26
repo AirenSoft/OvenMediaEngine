@@ -56,14 +56,15 @@ public:
 	bool IsCreatedSteam();
 	void SetCreatedSteam(bool created);
 
-	void SetNotifyStreamParsed(bool completed);
-	bool IsNotifyStreamParsed();
+	void SetNotifyStreamPrepared(bool completed);
+	bool IsNotifyStreamPrepared();
 
 	bool IsParseTrackAll();
 
 private:
 	void InitParseTrackInfo();
-	void SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, bool parsed);
+	// void SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, bool parsed);
+	void SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track);
 	bool IsParseTrackInfo(std::shared_ptr<MediaTrack> &media_track);
 
 	// Parse media track information

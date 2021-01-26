@@ -137,7 +137,6 @@ bool MediaRouteApplication::Stop()
 	_inbound_threads.clear();
 	_outbound_threads.clear();
 
-	// TODO: Delete All Stream
 	_connectors.clear();
 	_observers.clear();
 
@@ -245,6 +244,7 @@ bool MediaRouteApplication::OnStreamCreated(
 	logti("%s", stream_info->GetInfoString().CStr());
 
 	auto connector = app_conn->GetConnectorType();
+	std::shared_ptr<MediaRouteStream> stream = nullptr;
 
 	if (connector == MediaRouteApplicationConnector::ConnectorType::Provider)
 	{
@@ -255,21 +255,24 @@ bool MediaRouteApplication::OnStreamCreated(
 			return false;
 		}
 
-		if (!CreateInboundStream(stream_info))
+		stream = CreateInboundStream(stream_info);
+		if (stream == nullptr)
 		{
 			return false;
 		}
 	}
 	else if (connector == MediaRouteApplicationConnector::ConnectorType::Transcoder)
 	{
-		if (!CreateOutboundStream(stream_info))
+		stream = CreateOutboundStream(stream_info);
+		if (stream == nullptr)
 		{
 			return false;
 		}
 	}
 	else if (connector == MediaRouteApplicationConnector::ConnectorType::Relay)
 	{
-		if (!CreateOutboundStream(stream_info))
+		stream = CreateOutboundStream(stream_info);
+		if (stream == nullptr)
 		{
 			return false;
 		}
@@ -290,40 +293,46 @@ bool MediaRouteApplication::OnStreamCreated(
 	// 			    Notifies the Observer that streaming has been created.
 	// - from Transcoder : Notify to Observer(Publisher)
 	// - from Relay : Notify to Observer(Publisher)
-	if (!NotifyStreamCreate(stream_info, connector))
+	if (!NotifyStreamCreate(stream->GetStream(), connector))
 	{
 		return false;
+	}
+
+	// If all track information is validity, Notify the observer that the current stream is preapred.
+	if (stream->IsNotifyStreamPrepared() == false && stream->IsParseTrackAll() == true)
+	{
+		NotifyStreamPrepared(stream);
 	}
 
 	return true;
 }
 
-bool MediaRouteApplication::CreateInboundStream(
+std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateInboundStream(
 	const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 
 	auto new_stream = std::make_shared<MediaRouteStream>(stream_info, MediaRouterStreamType::INBOUND);
 	if (!new_stream)
-		return false;
+		return nullptr;
 
 	_inbound_streams.insert(std::make_pair(stream_info->GetId(), new_stream));
 
-	return true;
+	return new_stream;
 }
 
-bool MediaRouteApplication::CreateOutboundStream(
+std::shared_ptr<MediaRouteStream> MediaRouteApplication::CreateOutboundStream(
 	const std::shared_ptr<info::Stream> &stream_info)
 {
 	std::lock_guard<std::shared_mutex> lock_guard(_streams_lock);
 
 	auto new_stream = std::make_shared<MediaRouteStream>(stream_info, MediaRouterStreamType::OUTBOUND);
 	if (!new_stream)
-		return false;
+		return nullptr;
 
 	_outbound_streams.insert(std::make_pair(stream_info->GetId(), new_stream));
 
-	return true;
+	return new_stream;
 }
 
 bool MediaRouteApplication::NotifyStreamCreate(
@@ -363,7 +372,7 @@ bool MediaRouteApplication::NotifyStreamCreate(
 	return true;
 }
 
-bool MediaRouteApplication::NotifyStreamParsed(std::shared_ptr<MediaRouteStream> &stream)
+bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStream> &stream)
 {
 	std::shared_lock<std::shared_mutex> lock(_observers_lock);
 
@@ -377,15 +386,21 @@ bool MediaRouteApplication::NotifyStreamParsed(std::shared_ptr<MediaRouteStream>
 				// Flow: Provider -> MediaRoute -> Transcoder
 				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Transcoder)
 				{
+					logtd("Notify to prepared stream to trasncoder. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
 					observer->OnStreamPrepared(stream->GetStream());
 				}
 			}
 			break;
 
 			case MediaRouterStreamType::OUTBOUND: {
-				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Publisher ||
-					oberver_type == MediaRouteApplicationObserver::ObserverType::Relay)
+				if (oberver_type == MediaRouteApplicationObserver::ObserverType::Publisher)
 				{
+					logtd("Notify to prepared stream to publisher. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
+					observer->OnStreamPrepared(stream->GetStream());
+				}
+				else if (oberver_type == MediaRouteApplicationObserver::ObserverType::Relay)
+				{
+					logtd("Notify to prepared stream to relay. %s/%s", stream->GetStream()->GetApplicationName(), stream->GetStream()->GetName().CStr());
 					observer->OnStreamPrepared(stream->GetStream());
 				}
 			}
@@ -399,7 +414,7 @@ bool MediaRouteApplication::NotifyStreamParsed(std::shared_ptr<MediaRouteStream>
 		}
 	}
 
-	stream->SetNotifyStreamParsed(true);
+	stream->SetNotifyStreamPrepared(true);
 
 	return true;
 }
@@ -630,12 +645,9 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 		{
 			// When the inbound stream is finished parsing track information,
 			// Notify the Observer that the stream is parsed
-			if (stream->IsNotifyStreamParsed() == false)
+			if (stream->IsNotifyStreamPrepared() == false && stream->IsParseTrackAll() == true)
 			{
-				if (stream->IsParseTrackAll() == true)
-				{
-					NotifyStreamParsed(stream);
-				}
+				NotifyStreamPrepared(stream);
 			}
 
 			std::shared_lock<std::shared_mutex> lock(_observers_lock);
@@ -681,12 +693,9 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 		// StreamDeliver media packet to Publiser(observer) of Transcoder(observer)
 		while (auto media_packet = stream->Pop())
 		{
-			if (stream->IsNotifyStreamParsed() == false)
+			if (stream->IsNotifyStreamPrepared() == false && stream->IsParseTrackAll() == true)
 			{
-				if (stream->IsParseTrackAll() == true)
-				{
-					NotifyStreamParsed(stream);
-				}
+				NotifyStreamPrepared(stream);
 			}
 
 			std::shared_lock<std::shared_mutex> lock(_observers_lock);

@@ -86,15 +86,15 @@ public:
 		const std::shared_ptr<info::Stream> &stream_info,
 		MediaRouteApplicationConnector::ConnectorType connector_type);
 
-	bool NotifyStreamParsed(std::shared_ptr<MediaRouteStream> &stream);
+	bool NotifyStreamPrepared(std::shared_ptr<MediaRouteStream> &stream);
 	
 	bool NotifyStreamDelete(
 		const std::shared_ptr<info::Stream> &stream_info,
 		const MediaRouteApplicationConnector::ConnectorType connector_type);
 
 private:
-	bool CreateInboundStream(const std::shared_ptr<info::Stream> &stream_info);
-	bool CreateOutboundStream(const std::shared_ptr<info::Stream> &stream_info);
+	std::shared_ptr<MediaRouteStream> CreateInboundStream(const std::shared_ptr<info::Stream> &stream_info);
+	std::shared_ptr<MediaRouteStream> CreateOutboundStream(const std::shared_ptr<info::Stream> &stream_info);
 
 	bool DeleteInboundStream(const std::shared_ptr<info::Stream> &stream_info);
 	bool DeleteOutboundStream(const std::shared_ptr<info::Stream> &stream_info);
