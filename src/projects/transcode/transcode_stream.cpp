@@ -1221,7 +1221,11 @@ void TranscodeStream::NotifyCreateStreams()
 	{
 		auto stream_output = iter.second;
 
-		_parent->CreateStream(stream_output);
+		bool ret = _parent->CreateStream(stream_output);
+		if(ret == false)
+		{
+			// TODO(soulk): If the stream creation fails, an exception must be processed.
+		}
 	}
 }
 
@@ -1242,7 +1246,11 @@ void TranscodeStream::NotifyDeleteStreams()
 
 void TranscodeStream::SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet)
 {
-	_parent->SendFrame(stream, std::move(packet));
+	bool ret = _parent->SendFrame(stream, std::move(packet));
+	if(ret == false)
+	{
+		// TODO(soulk): If SendFrame fails, an exception must be processed.
+	}
 }
 
 void TranscodeStream::CreateFilter(MediaFrame *buffer)
