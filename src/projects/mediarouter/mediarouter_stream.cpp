@@ -290,8 +290,9 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 
 						// for Mediatrack.extradata
 						avc_decoder_configuration_record.AddSPS(std::make_shared<ov::Data>(buffer, length));
-						avc_decoder_configuration_record.SetProfileIndication(sps.GetProfile());
-						avc_decoder_configuration_record.SetlevelIndication(sps.GetCodecLevel());
+						avc_decoder_configuration_record.SetProfileIndication(sps.GetProfileIdc());
+						avc_decoder_configuration_record.SetCompatibility(sps.GetConstraintFlag());
+						avc_decoder_configuration_record.SetlevelIndication(sps.GetCodecLevelIdc());
 
 						// SetParseTrackInfo(media_track, true);
 					}

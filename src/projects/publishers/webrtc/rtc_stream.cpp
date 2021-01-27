@@ -148,33 +148,19 @@ bool RtcStream::Start()
 						{
 							const auto &codec_extradata = track_item.second->GetCodecExtradata();
 
+							//(NOTE) The software decoder of Firefox or Chrome cannot play when 64001f (High, 3.1) stream is input. 
+							// However, when I put the fake information of 42e01f in FMTP, I confirmed that both Firefox and Chrome play well (high profile, but stream without B-Frame). 
+							// I thought it would be better to put 42e01f in fmtp than put the correct value, so I decided to put fake information.
+
 							AVCDecoderConfigurationRecord config;
-							if (0 && codec_extradata.size() > 0 && AVCDecoderConfigurationRecord::Parse(codec_extradata.data(), codec_extradata.size(), config) == true &&
-								config.NumOfSPS() > 0)
+							if (0 && codec_extradata.size() > 0 && AVCDecoderConfigurationRecord::Parse(codec_extradata.data(), codec_extradata.size(), config) == true)
 							{
-								ov::String parameter_sets;
-
-								for (int i = 0; i < config.NumOfSPS(); i++)
-								{
-									auto sps = config.GetSPS(i);
-									parameter_sets.Append(ov::Base64::Encode(sps));
-									parameter_sets.Append(',');
-								}
-								for (int i = 0; i < config.NumOfPPS(); i++)
-								{
-									auto pps = config.GetPPS(i);
-									parameter_sets.Append(ov::Base64::Encode(pps));
-									if (i != config.NumOfPPS() - 1)
-									{
-										parameter_sets.Append(',');
-									}
-								}
-
-								const auto first_sps = config.GetSPS(0)->GetDataAs<uint8_t>();
-								payload->SetFmtp(ov::String::FormatString(
-									// NonInterleaved => packetization-mode=1
-									"packetization-mode=1;profile-level-id=%02x%02x%02x;level-asymmetry-allowed=1",
-									first_sps[1], first_sps[2], first_sps[3]));
+								// profile-level-id
+								// |profile idc|contraint flag|level idc|
+								auto h264_fmtp = ov::String::FormatString("packetization-mode=1;profile-level-id=%02x%02x%02x;level-asymmetry-allowed=1",
+														config.ProfileIndication(), config.Compatibility(), config.LevelIndication());
+								logtc("FMTP : %s", h264_fmtp.CStr());
+								payload->SetFmtp(h264_fmtp);
 							}
 							else
 							{
