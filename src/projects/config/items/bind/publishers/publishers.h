@@ -39,12 +39,12 @@ namespace cfg
 			protected:
 				void MakeList() override
 				{
-					Register<Optional>("OVT", &_ovt);
-					Register<Optional>("RTMP", &_rtmp);
-					Register<Optional>("HLS", &_hls);
-					Register<Optional>("DASH", &_dash);
-					Register<Optional>("WebRTC", &_webrtc);
-					Register<Optional>("Thumbnail", &_thumbnail);
+					Register<Optional>({"OVT", "ovt"}, &_ovt);
+					Register<Optional>({"RTMP", "rtmp"}, &_rtmp);
+					Register<Optional>({"HLS", "hls"}, &_hls);
+					Register<Optional>({"DASH", "dash"}, &_dash);
+					Register<Optional>({"WebRTC", "webrtc"}, &_webrtc);
+					Register<Optional>({"Thumbnail", "thumbnail"}, &_thumbnail);
 				};
 			};
 		}  // namespace pub

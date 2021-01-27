@@ -184,6 +184,16 @@ namespace cfg
 			_original_value = std::move(value);
 		}
 
+		void Update(
+			OptionalCallback optional_callback, ValidationCallback validation_callback,
+			const void *raw_target, std::any target)
+		{
+			_optional_callback = optional_callback;
+			_validation_callback = validation_callback;
+			_raw_target = raw_target;
+			_target = std::move(target);
+		}
+
 		bool _is_parsed = false;
 
 		ItemName _name;
@@ -210,11 +220,11 @@ namespace cfg
 	public:
 		ListChild(
 			const ItemName &item_name,
-			const Json::Value &original_value,
-			const std::shared_ptr<const Child> &parent)
+			std::any &target,
+			const Json::Value &original_value)
 			: _item_name(item_name),
-			  _original_value(original_value),
-			  _parent(parent)
+			  _target(target),
+			  _original_value(original_value)
 		{
 		}
 
@@ -223,20 +233,25 @@ namespace cfg
 			return _item_name;
 		}
 
+		std::any &GetTarget()
+		{
+			return _target;
+		}
+
 		const Json::Value &GetOriginalValue() const
 		{
 			return _original_value;
 		}
 
-		std::shared_ptr<const Child> GetParent() const
+		void Update(std::any target)
 		{
-			return _parent;
+			_target = target;
 		}
 
 	protected:
 		ItemName _item_name;
+		std::any _target;
 		Json::Value _original_value;
-		std::shared_ptr<const Child> _parent;
 	};
 
 	class Text
@@ -279,25 +294,29 @@ namespace cfg
 
 	class ListInterface
 	{
+		friend class Item;
+
 	public:
 		ListInterface(ValueType type)
 			: _type(type)
 		{
 		}
 
-		MAY_THROWS(std::shared_ptr<ConfigError>)
-		virtual std::any Allocate(const std::shared_ptr<ListChild> &child) = 0;
+		virtual ~ListInterface() = default;
+
+		virtual void Allocate(size_t size) = 0;
+		virtual std::any GetAt(size_t index) = 0;
 
 		virtual ov::String ToString(int indent_count, const std::shared_ptr<Child> &child) const = 0;
 
 		size_t GetCount() const
 		{
-			return _children.size();
+			return _list_children.size();
 		}
 
 		virtual void Clear()
 		{
-			_children.clear();
+			_list_children.clear();
 		}
 
 		ValueType GetValueType() const
@@ -305,13 +324,36 @@ namespace cfg
 			return _type;
 		}
 
+		void SetItemName(const ItemName &item_name)
+		{
+			_item_name = item_name;
+		}
+
+		const ItemName &GetItemName() const
+		{
+			return _item_name;
+		}
+
+		void AddListChild(const std::shared_ptr<ListChild> &list_child)
+		{
+			_list_children.push_back(list_child);
+		}
+
+		virtual void CopyChildrenFrom(const std::any &another_list) = 0;
+
+		const std::vector<std::shared_ptr<ListChild>> &GetChildren() const
+		{
+			return _list_children;
+		}
+
 		// Get type name of Ttype
 		virtual ov::String GetTypeName() const = 0;
 
 	protected:
 		ValueType _type;
+		ItemName _item_name;
 
-		std::vector<std::shared_ptr<ListChild>> _children;
+		std::vector<std::shared_ptr<ListChild>> _list_children;
 	};
 
 	ov::String ChildToString(int indent_count, const std::shared_ptr<Child> &child, size_t index, size_t child_count);
@@ -343,21 +385,38 @@ namespace cfg
 			{
 			}
 
+			void CopyChildrenFrom(const std::any &another_list) override
+			{
+				auto from = std::static_pointer_cast<List<Ttype>>(TryCast<std::shared_ptr<ListInterface>>(another_list));
+
+				_item_name = from->_item_name;
+
+				_list_children = from->_list_children;
+
+				// _target points to the Item's value;
+				auto iterator = _target->begin();
+
+				// Rebuild target list
+				for (auto &list_child : _list_children)
+				{
+					list_child->Update(MakeAny(&(*iterator)));
+					iterator++;
+				}
+			}
+
 			ov::String GetTypeName() const override
 			{
 				return ov::Demangle(typeid(Ttype).name());
 			}
-			MAY_THROWS(std::shared_ptr<ConfigError>)
-			std::any Allocate(const std::shared_ptr<ListChild> &child) override
+
+			void Allocate(size_t size) override
 			{
-				_children.push_back(child);
+				_target->resize(size);
+			}
 
-				Ttype new_item;
-				_target->push_back(new_item);
-
-				auto last_element = &(_target->back());
-
-				return MakeAny(last_element);
+			std::any GetAt(size_t index) override
+			{
+				return MakeAny(&(_target->operator[](index)));
 			}
 
 			void Clear() override
@@ -395,7 +454,7 @@ namespace cfg
 				{
 					ov::String comma = (index < (child_count - 1)) ? ", " : "";
 
-					if (_type == ValueType::Item)
+					if (GetValueType() == ValueType::Item)
 					{
 						description.AppendFormat(
 							"%s"
@@ -453,6 +512,8 @@ namespace cfg
 		}
 
 		ov::String ToString(int indent_count) const;
+
+		Json::Value ToJson(bool include_default_values = false) const;
 
 	protected:
 		// Returns true if the value exists, otherwise returns false
@@ -529,6 +590,10 @@ namespace cfg
 					 optional_callback, validation_callback,
 					 value, std::static_pointer_cast<ListInterface>(list));
 		}
+
+		static void AddJsonChild(Json::Value &object, ValueType value_type, const ov::String &child_name, const std::any &child_target, const Json::Value &original_value, bool include_default_values);
+
+		Json::Value ToJsonInternal(bool include_default_values) const;
 
 		bool _need_to_update_list = true;
 

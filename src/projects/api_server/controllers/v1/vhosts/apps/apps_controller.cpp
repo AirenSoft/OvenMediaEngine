@@ -222,18 +222,20 @@ namespace api
 			// Delete GET-only fields
 			app_json.removeMember("dynamic");
 
-			for (auto item = request_body.begin(); item != request_body.end(); ++item)
+			// Prevent to change the name/outputProfiles using this API
+			if (request_body.isMember("name"))
 			{
-				ov::String name = item.name().c_str();
-				auto lower_name = name.LowerCaseString();
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "Cannot change [name] using this API");
+			}
 
-				// Prevent to change the name/outputProfiles using this API
-				if (
-					(lower_name == "name") ||
-					(lower_name == "outputprofiles"))
-				{
-					return HttpError::CreateError(HttpStatusCode::BadRequest, "The %s entry cannot be specified in the modification", name.CStr());
-				}
+			if (request_body.isMember("dynamic"))
+			{
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "Cannot change [dynamic] using this API");
+			}
+
+			if (request_body.isMember("outputProfiles"))
+			{
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "Cannot change [outputProfiles] using this API");
 			}
 
 			// Copy request_body into app_json

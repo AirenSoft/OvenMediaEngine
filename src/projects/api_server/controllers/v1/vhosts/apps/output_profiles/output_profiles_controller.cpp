@@ -47,7 +47,7 @@ namespace api
 				{
 					if (value != nullptr)
 					{
-						*value = conv::JsonFromOutputProfile(profile);
+						*value = profile.ToJson();
 					}
 
 					return offset;
@@ -168,7 +168,7 @@ namespace api
 
 			MultipleStatus status_code;
 
-			Json::Value app_json = conv::JsonFromApplication(app);
+			Json::Value app_json = app->GetConfig().ToJson();
 			auto &output_profiles = app_json["outputProfiles"];
 
 			Json::Value response(Json::ValueType::arrayValue);
@@ -208,7 +208,7 @@ namespace api
 			if (error == nullptr)
 			{
 				new_app = GetApplication(vhost, app->GetName().GetAppName().CStr());
-				new_app_json = conv::JsonFromApplication(new_app);
+				new_app_json = new_app->GetConfig().ToJson();
 			}
 
 			for (auto &response_profile : response)
@@ -268,11 +268,11 @@ namespace api
 		{
 			auto profile_name = GetOutputProfileName(client);
 
-			for (auto &item : app->GetConfig().GetOutputProfileList())
+			for (auto &profile : app->GetConfig().GetOutputProfileList())
 			{
-				if (profile_name == item.GetName().CStr())
+				if (profile_name == profile.GetName().CStr())
 				{
-					return std::move(conv::JsonFromOutputProfile(item));
+					return std::move(profile.ToJson());
 				}
 			}
 
@@ -289,7 +289,7 @@ namespace api
 			}
 
 			auto profile_name = GetOutputProfileName(client);
-			Json::Value app_json = conv::JsonFromApplication(app);
+			Json::Value app_json = app->GetConfig().ToJson();
 			Json::Value *output_profile_json;
 
 			off_t index = FindOutputProfile(app_json, profile_name, &output_profile_json);
@@ -349,7 +349,7 @@ namespace api
 				return CreateNotFoundError(vhost, app, profile_name);
 			}
 
-			Json::Value app_json = conv::JsonFromApplication(app);
+			Json::Value app_json = app->GetConfig().ToJson();
 			auto &output_profiles = app_json["outputProfiles"];
 
 			if (output_profiles.removeIndex(index, nullptr) == false)

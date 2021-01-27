@@ -97,12 +97,12 @@ namespace cfg
 				return CreateConfigError("Unknown type: %s", _typeName.CStr());
 			});
 
-			Register("IP", &_ip);
+			Register({"IP", "ip"}, &_ip);
 			Register("Bind", &_bind);
 
 			Register<Optional>("Managers", &_managers);
 
-			Register<Optional>("P2P", &_p2p);
+			Register<Optional>({"P2P", "p2p"}, &_p2p);
 
 			Register<Optional>("VirtualHosts", &_virtual_hosts);
 		}

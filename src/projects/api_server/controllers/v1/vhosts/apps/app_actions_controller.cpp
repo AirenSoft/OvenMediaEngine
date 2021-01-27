@@ -223,7 +223,7 @@ namespace api
 			logte("Called OnGetDummyAction. invoke [%s/%s]",
 				  vhost->GetName().CStr(), app->GetName().GetAppName());
 
-			return conv::JsonFromApplication(app);
+			return app->GetConfig().ToJson();
 		}
 
 	}  // namespace v1

@@ -233,6 +233,10 @@ namespace cfg
 		_is_parsed = item._is_parsed;
 
 		_item_name = item._item_name;
+
+		_children = item._children;
+		_children_for_xml = item._children_for_xml;
+		_children_for_json = item._children_for_json;
 	}
 
 	Item::Item(Item &&item)
@@ -243,9 +247,9 @@ namespace cfg
 
 		std::swap(_item_name, item._item_name);
 
-		std::empty(item._children);
-		std::empty(item._children_for_xml);
-		std::empty(item._children_for_json);
+		std::swap(_children, item._children);
+		std::swap(_children_for_xml, item._children_for_xml);
+		std::swap(_children_for_json, item._children_for_json);
 	}
 
 	Item &Item::operator=(const Item &item)
@@ -255,6 +259,10 @@ namespace cfg
 		_is_parsed = item._is_parsed;
 
 		_item_name = item._item_name;
+
+		_children = item._children;
+		_children_for_xml = item._children_for_xml;
+		_children_for_json = item._children_for_json;
 
 		RebuildListIfNeeded();
 
@@ -273,10 +281,6 @@ namespace cfg
 		{
 			logtd("Rebuilding a list of children for: %s", _item_name.ToString().CStr());
 
-			_children.clear();
-			_children_for_xml.clear();
-			_children_for_json.clear();
-
 			MakeList();
 
 			_need_to_update_list = false;
@@ -288,15 +292,39 @@ namespace cfg
 						OptionalCallback optional_callback, ValidationCallback validation_callback,
 						const void *raw_target, std::any target)
 	{
-		auto child = std::make_shared<Child>(
-			name, type, type_name,
-			is_optional, resolve_path,
-			optional_callback, validation_callback,
-			raw_target, std::move(target));
+		auto old_child_iterator = _children_for_xml.find(name.xml_name);
 
-		_children_for_xml[name.xml_name] = child;
-		_children_for_json[name.json_name] = child;
-		_children.push_back(child);
+		if (old_child_iterator == _children_for_xml.end())
+		{
+			auto child = std::make_shared<Child>(
+				name, type, type_name,
+				is_optional, resolve_path,
+				optional_callback, validation_callback,
+				raw_target, std::move(target));
+
+			_children_for_xml[name.xml_name] = child;
+			_children_for_json[name.json_name] = child;
+			_children.push_back(child);
+		}
+		else
+		{
+			// Reuse previous value to keep some variables such as _is_parsed
+			auto &old_child = old_child_iterator->second;
+
+			OV_ASSERT2(old_child->GetName() == name);
+			OV_ASSERT2(old_child->GetType() == type);
+			OV_ASSERT2(old_child->GetTypeName() == type_name);
+			OV_ASSERT2(old_child->IsOptional() == is_optional);
+			OV_ASSERT2(old_child->ResolvePath() == resolve_path);
+
+			if (type == ValueType::List)
+			{
+				// Copy the children
+				TryCast<std::shared_ptr<ListInterface>>(target)->CopyChildrenFrom(old_child->GetTarget());
+			}
+
+			old_child->Update(optional_callback, validation_callback, raw_target, target);
+		}
 	}
 
 	void Item::FromDataSource(ov::String path, const ItemName &name, const DataSource &data_source)
@@ -372,6 +400,130 @@ namespace cfg
 		}
 
 		return description;
+	}
+
+	void SetJsonChildValue(Json::Value &object, const ov::String &child_name, const Json::Value &value)
+	{
+		if (object.isArray())
+		{
+			object.append(value);
+		}
+		else
+		{
+			object[child_name] = value;
+		}
+	}
+
+	void Item::AddJsonChild(Json::Value &object, ValueType value_type, const ov::String &child_name, const std::any &child_target, const Json::Value &original_value, bool include_default_values)
+	{
+		switch (value_type)
+		{
+			case ValueType::Unknown:
+				SetJsonChildValue(object, child_name, Json::nullValue);
+				break;
+
+			case ValueType::String:
+				SetJsonChildValue(object, child_name, original_value);
+				break;
+
+			case ValueType::Integer:
+				SetJsonChildValue(object, child_name, ov::Converter::ToInt32(original_value));
+				break;
+
+			case ValueType::Long:
+				SetJsonChildValue(object, child_name, ov::Converter::ToInt64(original_value));
+				break;
+
+			case ValueType::Boolean:
+				SetJsonChildValue(object, child_name, ov::Converter::ToBool(original_value));
+				break;
+
+			case ValueType::Double:
+				SetJsonChildValue(object, child_name, ov::Converter::ToDouble(original_value));
+				break;
+
+			case ValueType::Attribute:
+				SetJsonChildValue(object["$"], child_name, original_value);
+				break;
+
+			case ValueType::Text: {
+				if (object.isObject() == false)
+				{
+					object = Json::objectValue;
+				}
+				SetJsonChildValue(object, child_name, original_value);
+				break;
+			}
+
+			case ValueType::Item: {
+				try
+				{
+					auto item_json = TryCast<Item *>(child_target)->ToJsonInternal(include_default_values);
+					SetJsonChildValue(object, child_name, item_json);
+				}
+				catch (const CastException &cast_exception)
+				{
+					logte("Could not cast %s to %s", cast_exception.from.CStr(), cast_exception.to.CStr());
+					return;
+				}
+				break;
+			}
+
+			case ValueType::List: {
+				std::shared_ptr<ListInterface> list_item;
+
+				try
+				{
+					list_item = TryCast<std::shared_ptr<ListInterface>>(child_target);
+				}
+				catch (const CastException &cast_exception)
+				{
+					logte("Could not cast %s to %s", cast_exception.from.CStr(), cast_exception.to.CStr());
+					return;
+				}
+
+				auto &list_children = list_item->GetChildren();
+				auto list_value_type = list_item->GetValueType();
+
+				auto &list_item_name = list_item->GetItemName();
+
+				Json::Value &target_object = (list_item_name.omit_name) ? object : object[list_item_name.json_name];
+
+				if (target_object.isArray() == false)
+				{
+					target_object = Json::arrayValue;
+				}
+
+				for (auto &list_child : list_children)
+				{
+					AddJsonChild(target_object, list_value_type, list_child->GetItemName().json_name, list_child->GetTarget(), list_child->GetOriginalValue(), include_default_values);
+				}
+
+				break;
+			}
+		}
+	}
+
+	Json::Value Item::ToJson(bool include_default_values) const
+	{
+		return std::move(ToJsonInternal(include_default_values));
+	}
+
+	Json::Value Item::ToJsonInternal(bool include_default_values) const
+	{
+		RebuildListIfNeeded();
+
+		Json::Value object = Json::objectValue;
+
+		for (auto &child : _children)
+		{
+			if (include_default_values || child->IsParsed())
+			{
+				AddJsonChild(object, child->GetType(), child->GetName().json_name, child->GetTarget(), child->GetOriginalValue(), include_default_values);
+			}
+		}
+
+		return std::move(object);
 	}
 
 	bool Item::SetValue(const std::shared_ptr<const Child> &child, ValueType type, std::any &child_target, const ov::String &path, const ItemName &child_name, const ov::String &name, const std::any &value)
@@ -474,30 +626,14 @@ namespace cfg
 
 					auto &list_target = std::any_cast<std::shared_ptr<ListInterface> &>(child_target);
 
-					std::vector<cfg::DataSource> data_sources;
-					try
-					{
-						auto &ds = TryCast<const std::vector<cfg::DataSource> &>(value);
+					const std::vector<cfg::DataSource> &data_sources = TryCast<const std::vector<cfg::DataSource> &>(value);
 
-						data_sources = ds;
-					}
-					catch (const CastException &cast_exception)
-					{
-						const ::Json::Value &js = TryCast<const Json::Value &>(value);
-
-						logtw("%s", js.toStyledString().c_str());
-					}
-
-					size_t index = 0;
-
-					list_target->Clear();
+					std::vector<DataSource> new_data_sources;
 
 					for (auto &data_source : data_sources)
 					{
 						if (data_source.IsSourceOf(child_name))
 						{
-							std::vector<DataSource> new_data_sources;
-
 							// Check the child has an include attribute
 							std::vector<ov::String> include_files;
 
@@ -513,22 +649,6 @@ namespace cfg
 								// "include" attribute is not present
 								new_data_sources.push_back(data_source);
 							}
-
-							for (auto &new_data_source : new_data_sources)
-							{
-								Json::Value original_value;
-								auto list_value = new_data_source.GetRootValue(list_target->GetValueType(), child->ResolvePath(), &original_value);
-
-								ItemName new_name = child_name;
-								new_name.index = index;
-
-								auto list_child = std::make_shared<ListChild>(new_name, original_value, child);
-								auto new_item = list_target->Allocate(list_child);
-
-								SetValue(child, list_target->GetValueType(), new_item, child_path, child_name, name, list_value);
-
-								index++;
-							}
 						}
 						else
 						{
@@ -536,8 +656,33 @@ namespace cfg
 						}
 					}
 
-					break;
+					list_target->Clear();
+					list_target->Allocate(new_data_sources.size());
+
+					size_t index = 0;
+
+					list_target->SetItemName(child_name);
+
+					for (auto &new_data_source : new_data_sources)
+					{
+						Json::Value original_value;
+						auto list_value = new_data_source.GetRootValue(list_target->GetValueType(), child->ResolvePath(), &original_value);
+
+						ItemName new_name = child_name;
+						new_name.index = index;
+
+						auto new_item = list_target->GetAt(index);
+
+						auto list_child = std::make_shared<ListChild>(new_name, new_item, original_value);
+						list_target->AddListChild(list_child);
+
+						SetValue(child, list_target->GetValueType(), new_item, child_path, child_name, name, list_value);
+
+						index++;
+					}
 				}
+
+				break;
 			}
 		}
 		catch (const CastException &cast_exception)

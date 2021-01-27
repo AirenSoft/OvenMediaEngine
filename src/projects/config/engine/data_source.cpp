@@ -84,14 +84,43 @@ namespace cfg
 
 					if (children_for_xml.find(name) == children_for_xml.end())
 					{
-						throw CreateConfigError(
-							"Unknown item found: %s.%s in %s", path.CStr(), name.CStr(), file_path.CStr());
+						if (file_path.IsEmpty())
+						{
+							throw CreateConfigError("Unknown item found: %s.%s", path.CStr(), name.CStr());
+						}
+						else
+						{
+							throw CreateConfigError("Unknown item found: %s.%s in %s", path.CStr(), name.CStr(), file_path.CStr());
+						}
 					}
 				}
 				break;
 
-			case DataType::Json:
+			case DataType::Json: {
+				if (_json.isObject())
+				{
+					auto members = _json.getMemberNames();
+
+					for (auto &member : members)
+					{
+						ov::String name(member.c_str());
+
+						if (children_for_json.find(name) == children_for_json.end())
+						{
+							if (file_path.IsEmpty())
+							{
+								throw CreateConfigError("Unknown item found: %s.%s", path.CStr(), name.CStr());
+							}
+							else
+							{
+								throw CreateConfigError("Unknown item found: %s.%s in %s", path.CStr(), name.CStr(), file_path.CStr());
+							}
+						}
+					}
+				}
+
 				break;
+			}
 		}
 	}
 

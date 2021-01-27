@@ -27,7 +27,7 @@ namespace cfg
 			protected:
 				void MakeList() override
 				{
-					Register<Optional>("API", &_api);
+					Register<Optional>({"API", "api"}, &_api);
 				};
 			};
 		}  // namespace mgr

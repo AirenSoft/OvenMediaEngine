@@ -33,10 +33,10 @@ namespace cfg
 			protected:
 				void MakeList() override
 				{
-					Register<Optional>("OVT", &_ovt);
-					Register<Optional>("RTMP", &_rtmp);
-					Register<Optional>("RTSP", &_rtsp);
-					Register<Optional>("MPEGTS", &_mpegts);
+					Register<Optional>({"OVT", "ovt"}, &_ovt);
+					Register<Optional>({"RTMP", "rtmp"}, &_rtmp);
+					Register<Optional>({"RTSP", "rtsp"}, &_rtsp);
+					Register<Optional>({"MPEGTS", "mpegts"}, &_mpegts);
 				};
 			};
 		}  // namespace pvd

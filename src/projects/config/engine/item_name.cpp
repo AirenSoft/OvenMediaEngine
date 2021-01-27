@@ -23,8 +23,14 @@ namespace cfg
 	}
 
 	ItemName::ItemName(const char *xml_name, const char *json_name)
+		: ItemName(xml_name, json_name, true)
+	{
+	}
+
+	ItemName::ItemName(const char *xml_name, const char *json_name, bool omit_name)
 		: xml_name(xml_name),
-		  json_name(json_name)
+		  json_name(json_name),
+		  omit_name(omit_name)
 	{
 	}
 

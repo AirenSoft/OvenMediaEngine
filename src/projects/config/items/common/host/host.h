@@ -30,7 +30,7 @@ namespace cfg
 			void MakeList() override
 			{
 				Register("Names", &_names);
-				Register<Optional>("TLS", &_tls);
+				Register<Optional>({"TLS", "tls"}, &_tls);
 			}
 		};
 	}  // namespace cmn

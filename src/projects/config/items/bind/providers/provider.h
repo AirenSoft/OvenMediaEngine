@@ -40,7 +40,7 @@ namespace cfg
 				void MakeList() override
 				{
 					Register<Optional>("Port", &_port);
-					Register<Optional>("TLSPort", &_tls_port);
+					Register<Optional>({"TLSPort", "tlsPort"}, &_tls_port);
 				};
 			};
 		}  // namespace pvd

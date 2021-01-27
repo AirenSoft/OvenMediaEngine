@@ -31,7 +31,7 @@ namespace cfg
 			{
 				Register("Host", &_host);
 
-				Register<Optional>("API", &_api);
+				Register<Optional>({"API", "api"}, &_api);
 			}
 		};
 	}  // namespace mgr
