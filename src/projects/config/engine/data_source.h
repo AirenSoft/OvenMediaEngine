@@ -21,19 +21,21 @@ namespace cfg
 	class DataSource
 	{
 	public:
-		DataSource(const ov::String &base_path, const std::shared_ptr<pugi::xml_document> &document, const pugi::xml_node &node)
+		DataSource(const ov::String &base_path, const ov::String &file_name, const std::shared_ptr<pugi::xml_document> &document, const pugi::xml_node &node)
 			: _type(DataType::Xml),
 			  _document(document),
 			  _node(node),
-			  _base_path(base_path)
+			  _base_path(base_path),
+			  _file_name(file_name)
 		{
 		}
 
-		DataSource(const ov::String &base_path, const ov::String json_name, const Json::Value &json)
+		DataSource(const ov::String &base_path, const ov::String &file_name, const ov::String json_name, const Json::Value &json)
 			: _type(DataType::Json),
 			  _json_name(json_name),
 			  _json(json),
-			  _base_path(base_path)
+			  _base_path(base_path),
+			  _file_name(file_name)
 		{
 		}
 
@@ -70,7 +72,7 @@ namespace cfg
 		}
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
-		void CheckUnknownItems(const ov::String &path, const std::map<ov::String, std::shared_ptr<Child>> &children_for_xml, const std::map<ov::String, std::shared_ptr<Child>> &children_for_json) const;
+		void CheckUnknownItems(const ov::String &file_path, const ov::String &path, const std::map<ov::String, std::shared_ptr<Child>> &children_for_xml, const std::map<ov::String, std::shared_ptr<Child>> &children_for_json) const;
 
 		std::any GetRootValue(ValueType value_type, bool resolve_path, Json::Value *original_value) const;
 		std::any GetValue(ValueType value_type, const ItemName &name, bool resolve_path, Json::Value *original_value) const;
@@ -83,12 +85,22 @@ namespace cfg
 			return std::move(new_data_source);
 		}
 
+		ov::String GetBasePath() const
+		{
+			return _base_path;
+		}
+
+		ov::String GetFileName() const
+		{
+			return _file_name;
+		}
+
 		ov::String ToString() const;
 
 	protected:
-		void LoadFromFile(const ov::String &file_name, const ItemName &root_name);
+		void LoadFromFile(ov::String file_name, const ItemName &root_name);
 
-		void LoadFromXmlFile(ov::String file_name, const ov::String &root_name);
+		void LoadFromXmlFile(const ov::String &file_name, const ov::String &root_name);
 
 		std::any GetValueFromXml(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const;
 		std::any GetValueFromJson(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const;
@@ -102,5 +114,6 @@ namespace cfg
 		Json::Value _json;
 
 		ov::String _base_path;
+		ov::String _file_name;
 	};
 }  // namespace cfg

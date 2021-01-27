@@ -27,6 +27,43 @@ namespace cfg
 		return "";
 	}
 
+	bool GetIncludeFileList(const DataSource &data_source, ov::String *pattern, std::vector<ov::String> *include_file_list)
+	{
+		Json::Value dummy_value;
+		auto include_file = data_source.GetValue(ValueType::Attribute, "include", false, &dummy_value);
+
+		if (include_file.has_value())
+		{
+			auto base_path = data_source.GetBasePath();
+
+			// Load from the include file
+			ov::String include_file_path = TryCast<ov::String>(include_file);
+
+			logtd("Include file found: %s", include_file_path.CStr());
+
+			std::vector<ov::String> file_list;
+			auto path_error = ov::PathManager::GetFileList(base_path, include_file_path, &file_list);
+
+			if (path_error != nullptr)
+			{
+				throw CreateConfigError("Could not obtain file list: base path: %s, include pattern: %s (%s)", base_path.CStr(), include_file_path.CStr(), path_error->ToString().CStr());
+			}
+
+			if (pattern != nullptr)
+			{
+				*pattern = include_file_path;
+			}
+
+			if (include_file_list != nullptr)
+			{
+				*include_file_list = std::move(file_list);
+			}
+			return true;
+		}
+
+		return false;
+	}
+
 	ov::String ChildToString(int indent_count, const std::shared_ptr<Child> &child, size_t index, size_t child_count)
 	{
 		ov::String indent = MakeIndentString(indent_count + 1);
@@ -265,7 +302,7 @@ namespace cfg
 	void Item::FromDataSource(ov::String path, const ItemName &name, const DataSource &data_source)
 	{
 		RebuildListIfNeeded();
-		data_source.CheckUnknownItems(path, _children_for_xml, _children_for_json);
+		data_source.CheckUnknownItems(data_source.GetFileName(), path, _children_for_xml, _children_for_json);
 
 		_item_name = name;
 
@@ -459,16 +496,43 @@ namespace cfg
 					{
 						if (data_source.IsSourceOf(child_name))
 						{
-							Json::Value original_value;
-							auto list_value = data_source.GetRootValue(list_target->GetValueType(), child->ResolvePath(), &original_value);
+							std::vector<DataSource> new_data_sources;
 
-							ItemName new_name = child_name;
-							new_name.index = index;
+							// Check the child has an include attribute
+							std::vector<ov::String> include_files;
 
-							auto list_child = std::make_shared<ListChild>(new_name, original_value, child);
-							auto new_item = list_target->Allocate(list_child);
+							if (GetIncludeFileList(data_source, nullptr, &include_files))
+							{
+								for (auto &include_file : include_files)
+								{
+									new_data_sources.push_back(std::move(data_source.NewDataSource(include_file, child_name)));
+								}
+							}
+							else
+							{
+								// "include" attribute is not present
+								new_data_sources.push_back(data_source);
+							}
 
-							SetValue(child, list_target->GetValueType(), new_item, child_path, child_name, name, list_value);
+							for (auto &new_data_source : new_data_sources)
+							{
+								Json::Value original_value;
+								auto list_value = new_data_source.GetRootValue(list_target->GetValueType(), child->ResolvePath(), &original_value);
+
+								ItemName new_name = child_name;
+								new_name.index = index;
+
+								auto list_child = std::make_shared<ListChild>(new_name, original_value, child);
+								auto new_item = list_target->Allocate(list_child);
+
+								SetValue(child, list_target->GetValueType(), new_item, child_path, child_name, name, list_value);
+
+								index++;
+							}
+						}
+						else
+						{
+							// The parent has multiple types of items
 						}
 					}
 
@@ -503,20 +567,39 @@ namespace cfg
 				"Rebuilding of children list is required before call FromDataSource()");
 		}
 
-		Json::Value dummy_value;
-		auto include_file = data_source.GetValue(ValueType::Attribute, "include", false, &dummy_value);
+		ov::String pattern;
+		std::vector<ov::String> include_files;
 
-		if (include_file.has_value())
+		if (GetIncludeFileList(data_source, &pattern, &include_files))
 		{
-			// Load from the include file
-			ov::String include_file_path = TryCast<ov::String>(include_file);
+			auto base_path = data_source.GetBasePath();
 
-			logtd("Include file found: %s", include_file_path.CStr());
+			if (include_files.empty())
+			{
+				// "include" attribute is present, but there is no file to include
+				throw CreateConfigError(
+					"There is no file to include for path: %s, base path: %s, include pattern: %s",
+					path.CStr(),
+					base_path.CStr(), pattern.CStr());
+			}
 
-			auto new_data_source = data_source.NewDataSource(include_file_path, _item_name);
+			if (include_files.size() > 1)
+			{
+				throw CreateConfigError(
+					"Too many files found for an Item: %s, base path: %s, include pattern: %s (%zu files found)",
+					path.CStr(),
+					base_path.CStr(), pattern.CStr(), include_files.size());
+			}
 
+			auto &include_file = include_files[0];
+			auto new_data_source = data_source.NewDataSource(include_file, _item_name);
 			FromDataSourceInternal(path, new_data_source);
+
 			return;
+		}
+		else
+		{
+			// "include" attribute is not present
 		}
 
 		for (auto &child : _children)

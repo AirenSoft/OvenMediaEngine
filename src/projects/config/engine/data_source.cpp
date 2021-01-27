@@ -29,8 +29,17 @@ namespace cfg
 		}
 	};
 
-	void DataSource::LoadFromFile(const ov::String &file_name, const ItemName &root_name)
+	void DataSource::LoadFromFile(ov::String file_name, const ItemName &root_name)
 	{
+		if ((ov::PathManager::IsAbsolute(file_name) == false) && (_base_path.IsEmpty() == false))
+		{
+			file_name = ov::PathManager::Combine(ov::PathManager::ExtractPath(_base_path), file_name);
+		}
+
+		_file_name = file_name;
+
+		logti("Trying to load data source from %s", file_name.CStr());
+
 		switch (_type)
 		{
 			case DataType::Xml:
@@ -44,15 +53,8 @@ namespace cfg
 		CreateConfigError("Not implemented for type: %d (%s)", _type, file_name.CStr());
 	}
 
-	void DataSource::LoadFromXmlFile(ov::String file_name, const ov::String &root_name)
+	void DataSource::LoadFromXmlFile(const ov::String &file_name, const ov::String &root_name)
 	{
-		if ((ov::PathManager::IsAbsolute(file_name) == false) && (_base_path.IsEmpty() == false))
-		{
-			file_name = ov::PathManager::Combine(ov::PathManager::ExtractPath(_base_path), file_name);
-		}
-
-		logtd("Trying to parse a XML file: %s", file_name.CStr());
-
 		auto document = std::make_shared<pugi::xml_document>();
 
 		pugi::xml_parse_result result = document->load_file(file_name);
@@ -71,7 +73,7 @@ namespace cfg
 		}
 	}
 
-	void DataSource::CheckUnknownItems(const ov::String &path, const std::map<ov::String, std::shared_ptr<Child>> &children_for_xml, const std::map<ov::String, std::shared_ptr<Child>> &children_for_json) const
+	void DataSource::CheckUnknownItems(const ov::String &file_path, const ov::String &path, const std::map<ov::String, std::shared_ptr<Child>> &children_for_xml, const std::map<ov::String, std::shared_ptr<Child>> &children_for_json) const
 	{
 		switch (_type)
 		{
@@ -83,7 +85,7 @@ namespace cfg
 					if (children_for_xml.find(name) == children_for_xml.end())
 					{
 						throw CreateConfigError(
-							"Unknown item found: %s.%s", path.CStr(), name.CStr());
+							"Unknown item found: %s.%s in %s", path.CStr(), name.CStr(), file_path.CStr());
 					}
 				}
 				break;
@@ -289,7 +291,7 @@ namespace cfg
 			case ValueType::Item: {
 				auto &node = is_child ? _node.child(name) : _node;
 				*original_value = Json::objectValue;
-				return node.empty() ? std::any() : DataSource(_base_path, _document, node);
+				return node.empty() ? std::any() : DataSource(_base_path, _file_name, _document, node);
 			}
 
 			case ValueType::List: {
@@ -300,7 +302,7 @@ namespace cfg
 
 					for (auto &node_child : _node.children())
 					{
-						data_sources.emplace_back(_base_path, _document, node_child);
+						data_sources.emplace_back(_base_path, _file_name, _document, node_child);
 
 						original_value->append(node_child.child_value());
 					}
@@ -343,7 +345,7 @@ namespace cfg
 		return Json::nullValue;
 	}
 
-	std::any GetJsonList(const ov::String &base_path, const Json::Value &json, const ov::String &name, Json::Value *original_value)
+	std::any GetJsonList(const ov::String &base_path, const ov::String &file_name, const Json::Value &json, const ov::String &name, Json::Value *original_value)
 	{
 		if (json.isNull())
 		{
@@ -352,7 +354,7 @@ namespace cfg
 
 		if (json.isArray() == false)
 		{
-			return GetJsonList(base_path, GetJsonValue(json, name), name, original_value);
+			return GetJsonList(base_path, file_name, GetJsonValue(json, name), name, original_value);
 		}
 
 		std::vector<DataSource> data_sources;
@@ -360,7 +362,7 @@ namespace cfg
 
 		for (auto &json_child : json)
 		{
-			data_sources.emplace_back(base_path, name, json_child);
+			data_sources.emplace_back(base_path, file_name, name, json_child);
 
 			original_value->append(json_child);
 		}
@@ -421,13 +423,13 @@ namespace cfg
 			case ValueType::Item: {
 				auto &json = is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
-				return json.isNull() ? std::any() : DataSource(_base_path, name, json);
+				return json.isNull() ? std::any() : DataSource(_base_path, _file_name, name, json);
 			}
 
 			case ValueType::List: {
 				if (_json.isNull() == false)
 				{
-					return GetJsonList(_base_path, _json, name, original_value);
+					return GetJsonList(_base_path, _file_name, _json, name, original_value);
 				}
 
 				return {};

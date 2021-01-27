@@ -133,6 +133,8 @@ int main(int argc, char *argv[])
 
 	logti("All modules are initialized successfully");
 
+	bool should_exit = false;
+
 	for (auto &host_info : host_info_list)
 	{
 		auto host_name = host_info.GetName();
@@ -143,18 +145,54 @@ int main(int argc, char *argv[])
 		// Create applications that defined by the configuration
 		for (auto &app_cfg : host_info.GetApplicationList())
 		{
-			orchestrator->CreateApplication(host_info, app_cfg);
+			auto result = orchestrator->CreateApplication(host_info, app_cfg);
+
+			switch (result)
+			{
+				case ocst::Result::Failed:
+					logtc("Failed to create an application: %s", app_cfg.GetName().CStr());
+					should_exit = true;
+					break;
+
+				case ocst::Result::Succeeded:
+					break;
+
+				case ocst::Result::Exists:
+					logtc("Duplicate application [%s] found. Please check the settings.", app_cfg.GetName().CStr());
+					should_exit = true;
+					break;
+
+				case ocst::Result::NotExists:
+					// This should never happen
+					OV_ASSERT2(false);
+					logtc("Internal error occurred (THIS IS A BUG)");
+					should_exit = true;
+					break;
+			}
+
+			if (should_exit)
+			{
+				break;
+			}
+		}
+
+		if (should_exit)
+		{
+			break;
 		}
 	}
 
-	if (parse_option.start_service)
+	if (should_exit == false)
 	{
-		ov::Daemon::SetEvent();
-	}
+		if (parse_option.start_service)
+		{
+			ov::Daemon::SetEvent();
+		}
 
-	while (g_is_terminated == false)
-	{
-		sleep(1);
+		while (g_is_terminated == false)
+		{
+			sleep(1);
+		}
 	}
 
 	orchestrator->Release();
