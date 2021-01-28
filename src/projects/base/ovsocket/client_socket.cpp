@@ -52,6 +52,11 @@ namespace ov
 
 	bool ClientSocket::PrepareSocketOptions()
 	{
+		if (GetType() == ov::SocketType::Srt)
+		{
+			return true;
+		}
+
 		return
 			// Enable TCP keep-alive
 			SetSockOpt<int>(SOL_SOCKET, SO_KEEPALIVE, 1) &&
