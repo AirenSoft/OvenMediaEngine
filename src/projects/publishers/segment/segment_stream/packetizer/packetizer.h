@@ -14,14 +14,15 @@
 #include <base/ovlibrary/ovlibrary.h>
 
 #include "packetizer_define.h"
+#include "chunked_transfer_interface.h"
 
 class Packetizer
 {
 public:
 	Packetizer(const ov::String &app_name, const ov::String &stream_name,
-			   const ov::String &segment_prefix,
 			   uint32_t segment_count, uint32_t segment_duration,
-			   const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track);
+			   const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track,
+			   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer);
 
 	virtual ~Packetizer() = default;
 
@@ -68,7 +69,6 @@ protected:
 
 	ov::String _app_name;
 	ov::String _stream_name;
-	ov::String _segment_prefix;
 
 	uint32_t _segment_count = 0U;
 	uint32_t _segment_save_count = 0U;
@@ -77,6 +77,8 @@ protected:
 
 	std::shared_ptr<MediaTrack> _video_track;
 	std::shared_ptr<MediaTrack> _audio_track;
+
+	std::shared_ptr<ChunkedTransferInterface> _chunked_transfer;
 
 	uint32_t _sequence_number = 1U;
 	bool _streaming_start = false;

@@ -2,30 +2,36 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Jaejong Bong
+//  Created by Hyunjun Jang
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-
 #include "segment_stream.h"
 
-#include "config/items/items.h"
+#include <base/publisher/publisher.h>
+#include <config/items/items.h>
+
 #include "segment_stream_private.h"
 #include "stream_packetizer.h"
 
-using namespace cmn;
+SegmentStream::SegmentStream(
+	const std::shared_ptr<pub::Application> application,
+	const info::Stream &info,
+	int segment_count, int segment_duration,
+	const std::shared_ptr<PacketizerFactoryInterface> &packetizer_factory,
+	const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
+	: Stream(application, info),
 
-SegmentStream::SegmentStream(const std::shared_ptr<pub::Application> application, const info::Stream &info)
-	: Stream(application, info)
+	  _segment_count(segment_count),
+	  _segment_duration(segment_duration),
+
+	  _packetizer_factory(packetizer_factory),
+
+	  _chunked_transfer(chunked_transfer)
 {
 }
 
-SegmentStream::~SegmentStream()
-{
-	Stop();
-}
-
-bool SegmentStream::Start(int segment_count, int segment_duration)
+bool SegmentStream::Start()
 {
 	std::shared_ptr<MediaTrack> video_track = nullptr;
 	std::shared_ptr<MediaTrack> audio_track = nullptr;
@@ -34,69 +40,55 @@ bool SegmentStream::Start(int segment_count, int segment_duration)
 	{
 		auto &track = track_item.second;
 
-		switch (track->GetMediaType())
+		if (CheckCodec(track->GetMediaType(), track->GetCodecId()))
 		{
-			case MediaType::Video:
-				switch (track->GetCodecId())
-				{
-					case MediaCodecId::H264:
-					case MediaCodecId::H265:
-						video_track = track;
-						break;
+			switch (track->GetMediaType())
+			{
+				case cmn::MediaType::Video:
+					video_track = track;
+					break;
 
-					default:
-						// Not supported codec
-						break;
-				}
-				break;
+				case cmn::MediaType::Audio:
+					audio_track = track;
+					break;
 
-			case MediaType::Audio:
-				switch (track->GetCodecId())
-				{
-					case MediaCodecId::Aac:
-						audio_track = track;
-						break;
-
-					default:
-						// Not supported codec
-						break;
-				}
-				break;
-
-			default:
-				break;
+				default:
+					// Not implemented for another media types
+					break;
+			}
 		}
 	}
 
-	bool video_enabled = false;
-	bool audio_enabled = false;
+	bool video_enabled = (video_track != nullptr);
+	bool audio_enabled = (audio_track != nullptr);
 
-	if (video_track != nullptr)
+	if ((video_enabled == false) && (audio_enabled == false))
+	{
+		auto application = GetApplication();
+
+		logtw("Stream [%s/%s] was not created because there were no supported codecs",
+			  application->GetName().CStr(), GetName().CStr());
+
+		return false;
+	}
+
+	if (video_enabled)
 	{
 		_media_tracks[video_track->GetId()] = video_track;
 		_video_track = video_track;
-		video_enabled = true;
 	}
 
-	if (audio_track != nullptr)
+	if (audio_enabled)
 	{
 		_media_tracks[audio_track->GetId()] = audio_track;
 		_audio_track = audio_track;
-		audio_enabled = true;
 	}
 
-	if (video_enabled || audio_enabled)
-	{
-		_stream_packetizer = CreateStreamPacketizer(segment_count > 0 ? segment_count : DEFAULT_SEGMENT_COUNT,
-													segment_duration > 0 ? segment_duration : DEFAULT_SEGMENT_DURATION,
-													GetName(),
-													std::move(video_track), std::move(audio_track));
-	}
-	else
-	{
-		// log output
-		//logtw("For output DASH/HLS, one of H264(video) or AAC(audio) codecs must be encoded.");
-	}
+	_stream_packetizer = _packetizer_factory->Create(
+		GetApplicationName(), GetName().CStr(),
+		_segment_count, _segment_duration,
+		_video_track, _audio_track,
+		_chunked_transfer);
 
 	return Stream::Start();
 }
@@ -106,32 +98,14 @@ bool SegmentStream::Stop()
 	return Stream::Stop();
 }
 
-//====================================================================================================
-// SendVideoFrame
-// - Packetizer에 Video데이터 추가
-// - 첫 key 프레임 에서 SPS/PPS 추출  이후 생성
-//
-//====================================================================================================
 void SegmentStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	if (_stream_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
 	{
-		//        int nul_header_size = 0;
-		//
-		//        if(fragmentation != nullptr && fragmentation->fragmentation_vector_size > 0)
-		//        {
-		//            nul_header_size = fragmentation->fragmentation_offset[fragmentation->fragmentation_vector_size - 1];
-		//            logtd("null header size - %d", nul_header_size);
-		//        }
-
 		_stream_packetizer->AppendVideoData(media_packet);
 	}
 }
 
-//====================================================================================================
-// SendAudioFrame
-// - Packetizer에 Audio데이터 추가
-//====================================================================================================
 void SegmentStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
 	if (_stream_packetizer != nullptr && _media_tracks.find(media_packet->GetTrackId()) != _media_tracks.end())
@@ -140,10 +114,6 @@ void SegmentStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_pac
 	}
 }
 
-//====================================================================================================
-// GetPlayList
-// - M3U8/MPD
-//====================================================================================================
 bool SegmentStream::GetPlayList(ov::String &play_list)
 {
 	if (_stream_packetizer != nullptr)
@@ -154,10 +124,6 @@ bool SegmentStream::GetPlayList(ov::String &play_list)
 	return false;
 }
 
-//====================================================================================================
-// GetSegmentData
-// - TS/M4S(mp4)
-//====================================================================================================
 std::shared_ptr<const SegmentItem> SegmentStream::GetSegmentData(const ov::String &file_name) const
 {
 	if (_stream_packetizer == nullptr)
@@ -166,4 +132,40 @@ std::shared_ptr<const SegmentItem> SegmentStream::GetSegmentData(const ov::Strin
 	}
 
 	return _stream_packetizer->GetSegmentData(file_name);
+}
+
+bool SegmentStream::CheckCodec(cmn::MediaType type, cmn::MediaCodecId codec_id)
+{
+	switch (type)
+	{
+		case cmn::MediaType::Video:
+			switch (codec_id)
+			{
+				case cmn::MediaCodecId::H264:
+				case cmn::MediaCodecId::H265:
+					return true;
+
+				default:
+					// Not supported codec
+					return false;
+			}
+			break;
+
+		case cmn::MediaType::Audio:
+			switch (codec_id)
+			{
+				case cmn::MediaCodecId::Aac:
+					return true;
+
+				default:
+					// Not supported codec
+					break;
+			}
+			break;
+
+		default:
+			break;
+	}
+
+	return false;
 }

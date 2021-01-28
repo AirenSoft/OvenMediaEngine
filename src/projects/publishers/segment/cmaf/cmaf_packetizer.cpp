@@ -23,14 +23,14 @@
 #define CMAF_JITTER_CORRECTION_INTERVAL 5000
 
 CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &stream_name,
-							   const ov::String &segment_prefix,
 							   uint32_t segment_count, uint32_t segment_duration,
 							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
-							   const std::shared_ptr<ICmafChunkedTransfer> &chunked_transfer)
+							   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	: Packetizer(app_name, stream_name,
-				 segment_prefix,
 				 1, segment_duration,
-				 video_track, audio_track)
+				 video_track, audio_track,
+
+				 chunked_transfer)
 {
 	_mpd_min_buffer_time = 6;
 
@@ -80,8 +80,6 @@ CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &str
 	{
 		_audio_chunk_writer = std::make_shared<CmafChunkWriter>(M4sMediaType::Audio, 2, _ideal_duration_for_audio);
 	}
-
-	_chunked_transfer = chunked_transfer;
 }
 
 DashFileType CmafPacketizer::GetFileType(const ov::String &file_name)
@@ -131,10 +129,10 @@ ov::String CmafPacketizer::GetFileName(int64_t start_timestamp, cmn::MediaType m
 	switch (media_type)
 	{
 		case cmn::MediaType::Video:
-			return ov::String::FormatString("%s_%u%s", _segment_prefix.CStr(), _video_chunk_writer->GetSequenceNumber(), CMAF_MPD_VIDEO_FULL_SUFFIX);
+			return ov::String::FormatString("%u%s", _video_chunk_writer->GetSequenceNumber(), CMAF_MPD_VIDEO_FULL_SUFFIX);
 
 		case cmn::MediaType::Audio:
-			return ov::String::FormatString("%s_%u%s", _segment_prefix.CStr(), _audio_chunk_writer->GetSequenceNumber(), CMAF_MPD_AUDIO_FULL_SUFFIX);
+			return ov::String::FormatString("%u%s", _audio_chunk_writer->GetSequenceNumber(), CMAF_MPD_AUDIO_FULL_SUFFIX);
 
 		default:
 			break;
@@ -900,7 +898,8 @@ bool CmafPacketizer::UpdatePlayList()
 			<< "\" duration=\"" << static_cast<uint32_t>(_segment_duration * _video_track->GetTimeBase().GetTimescale())
 			<< "\" availabilityTimeOffset=\"" << availability_time_offset
 			<< "\" startNumber=\"0\" initialization=\"" << CMAF_MPD_VIDEO_FULL_INIT_FILE_NAME
-			<< "\" media=\"" << _segment_prefix.CStr() << "_$Number$" << CMAF_MPD_VIDEO_FULL_SUFFIX << "\" />\n"
+			<< "\" media=\""
+			<< "$Number$" << CMAF_MPD_VIDEO_FULL_SUFFIX << "\" />\n"
 			<< "\t\t\t<Representation codecs=\"avc1.42401f\" sar=\"1:1\" "
 			<< "bandwidth=\"" << _video_track->GetBitrate() << "\" />\n"
 			<< "\t\t</AdaptationSet>\n";
@@ -920,7 +919,8 @@ bool CmafPacketizer::UpdatePlayList()
 			<< "\" duration=\"" << static_cast<uint32_t>(_segment_duration * _audio_track->GetTimeBase().GetTimescale())
 			<< "\" availabilityTimeOffset=\"" << availability_time_offset
 			<< "\" startNumber=\"0\" initialization=\"" << CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME
-			<< "\" media=\"" << _segment_prefix.CStr() << "_$Number$" << CMAF_MPD_AUDIO_FULL_SUFFIX << "\" />\n"
+			<< "\" media=\""
+			<< "$Number$" << CMAF_MPD_AUDIO_FULL_SUFFIX << "\" />\n"
 			<< "\t\t\t<Representation codecs=\"mp4a.40.2\" audioSamplingRate=\"" << _audio_track->GetSampleRate()
 			<< "\" bandwidth=\"" << _audio_track->GetBitrate() << "\" />\n"
 			<< "\t\t</AdaptationSet>\n";

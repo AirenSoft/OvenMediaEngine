@@ -19,13 +19,13 @@
 #include "dash_private.h"
 
 DashPacketizer::DashPacketizer(const ov::String &app_name, const ov::String &stream_name,
-							   const ov::String &segment_prefix,
 							   uint32_t segment_count, uint32_t segment_duration,
-							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track)
+							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
+							   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	: Packetizer(app_name, stream_name,
-				 segment_prefix,
 				 segment_count, segment_duration,
-				 video_track, audio_track),
+				 video_track, audio_track,
+				 chunked_transfer),
 
 	  _video_m4s_writer(Writer::Type::M4s),
 	  _audio_m4s_writer(Writer::Type::M4s)
