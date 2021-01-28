@@ -27,7 +27,7 @@ namespace cfg
 					int _height = 0;
 					int _bitrate = 0;
 					ov::String _bitrate_string;
-					float _framerate = 0.0f;
+					double _framerate = 0.0;
 
 				public:
 					CFG_DECLARE_REF_GETTER_OF(IsBypass, _bypass)

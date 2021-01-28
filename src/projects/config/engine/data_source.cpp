@@ -159,6 +159,7 @@ namespace cfg
 				return GetValueFromJson(value_type, "", false, resolve_path, original_value);
 		}
 
+		OV_ASSERT2(false);
 		return {};
 	}
 
@@ -173,6 +174,7 @@ namespace cfg
 				return GetValueFromJson(value_type, name.GetName(_type), true, resolve_path, original_value);
 		}
 
+		OV_ASSERT2(false);
 		return {};
 	}
 

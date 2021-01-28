@@ -24,7 +24,7 @@ namespace cfg
 					ov::String _scale;
 					int _width = 0;
 					int _height = 0;
-					float _framerate = 0.0f;
+					double _framerate = 0.0;
 
 				public:
 					CFG_DECLARE_REF_GETTER_OF(IsActive, _active)
