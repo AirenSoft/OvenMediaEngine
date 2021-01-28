@@ -245,6 +245,11 @@ namespace api
 				}
 			}
 
+			if (status_code.HasOK())
+			{
+				cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
+			}
+
 			return {status_code, std::move(response)};
 		}
 
@@ -331,6 +336,8 @@ namespace api
 					return HttpError::CreateError(HttpStatusCode::InternalServerError, "Output profile is modified, but not found");
 				}
 
+				cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
+
 				return std::move(value);
 			}
 
@@ -357,7 +364,14 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::Forbidden, "Could not delete output profile");
 			}
 
-			return ChangeApp(vhost, app, app_json);
+			auto error = ChangeApp(vhost, app, app_json);
+
+			if (error == nullptr)
+			{
+				cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
+			}
+
+			return error;
 		}
 	}  // namespace v1
 }  // namespace api

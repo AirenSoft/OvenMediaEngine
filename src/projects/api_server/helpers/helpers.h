@@ -29,8 +29,15 @@ namespace api
 		void AddStatusCode(const std::shared_ptr<const ov::Error> &error);
 		HttpStatusCode GetStatusCode() const;
 
+		bool HasOK() const
+		{
+			return _has_ok;
+		}
+
 	protected:
 		int _count = 0;
 		HttpStatusCode _last_status_code = HttpStatusCode::OK;
+
+		bool _has_ok = true;
 	};
 }  // namespace api

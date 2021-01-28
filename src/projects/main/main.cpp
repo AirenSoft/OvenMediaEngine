@@ -239,7 +239,11 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 	if (parse_option->help)
 	{
 		::printf("Usage: %s [OPTION]...\n", argv[0]);
-		::printf("    -c <path>             Specify a path of config files\n");
+		::printf("\n");
+		::printf("    -c <path>   Specify a path of config files\n");
+		::printf("    -v          Print OME Version\n");
+		::printf("    -i          Ignores and executes the settings of %s\n", CFG_LAST_CONFIG_FILE_NAME);
+		::printf("                (The JSON file is automatically generated when RESTful API is called)\n");
 		return ov::Daemon::State::PARENT_FAIL;
 	}
 
@@ -286,7 +290,9 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 
 	try
 	{
-		cfg::ConfigManager::GetInstance()->LoadConfigs(parse_option->config_path);
+		cfg::ConfigManager::GetInstance()->LoadConfigs(
+			parse_option->config_path,
+			parse_option->ignore_last_config);
 
 		return ov::Daemon::State::CHILD_SUCCESS;
 	}

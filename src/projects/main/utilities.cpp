@@ -12,7 +12,7 @@
 
 bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 {
-	constexpr const char *opt_string = "hvt:c:d";
+	constexpr const char *opt_string = "hvic:d";
 
 	while (true)
 	{
@@ -30,6 +30,10 @@ bool TryParseOption(int argc, char *argv[], ParseOption *parse_option)
 
 			case 'v':
 				parse_option->version = true;
+				return true;
+
+			case 'i':
+				parse_option->ignore_last_config = true;
 				return true;
 
 			case 'c':

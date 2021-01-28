@@ -8,6 +8,8 @@
 //==============================================================================
 #include "config_manager.h"
 
+#include <monitoring/monitoring.h>
+
 #include <iostream>
 
 #include "config_logger_loader.h"
@@ -39,7 +41,7 @@ namespace cfg
 	{
 	}
 
-	void ConfigManager::LoadConfigs(ov::String config_path)
+	void ConfigManager::LoadConfigs(ov::String config_path, bool ignore_last_config)
 	{
 		if (config_path.IsEmpty())
 		{
@@ -49,34 +51,132 @@ namespace cfg
 		// Load Logger
 		LoadLoggerConfig(config_path);
 
-		ov::String server_config_path = ov::PathManager::Combine(config_path, "Server.xml");
+		bool read_from_main_file = true;
+		const char *ROOT_NAME = "Server";
 
-		logti("Trying to load configurations... (%s)", server_config_path.CStr());
+		// Try to read configurations from CFG_LAST_CONFIG_FILE_NAME
+		ov::String last_config_path = ov::PathManager::Combine(config_path, CFG_LAST_CONFIG_FILE_NAME);
+		if (ignore_last_config == false)
+		{
+			if (ov::PathManager::IsFile(last_config_path))
+			{
+				// Read from last config
+				logti("Trying to load configurations from last config... (%s)", last_config_path.CStr());
 
-		DataSource data_source(DataType::Xml, config_path, server_config_path, "Server");
-		_server = std::make_shared<cfg::Server>();
-		_server->FromDataSource("Server", "Server", data_source);
+				try
+				{
+					DataSource data_source(DataType::Json, config_path, last_config_path, ROOT_NAME);
+					_server = std::make_shared<cfg::Server>();
+					_server->FromDataSource("server", ROOT_NAME, data_source);
+
+					read_from_main_file = false;
+				}
+				catch (const std::shared_ptr<ConfigError> &error)
+				{
+					logte("Could not load configurations from last config. (Is file corrupted?): %s", error->ToString().CStr());
+				}
+			}
+		}
+		else
+		{
+			if (ov::PathManager::IsFile(last_config_path))
+			{
+				logtw("Last config is ignored by option");
+			}
+		}
+
+		if (read_from_main_file)
+		{
+			ov::String server_config_path = ov::PathManager::Combine(config_path, CFG_MAIN_FILE_NAME);
+
+			logti("Trying to load configurations... (%s)", server_config_path.CStr());
+
+			DataSource data_source(DataType::Xml, config_path, server_config_path, ROOT_NAME);
+			_server = std::make_shared<cfg::Server>();
+			_server->FromDataSource("Server", ROOT_NAME, data_source);
+		}
 
 		CheckValidVersion("Server", ov::Converter::ToInt32(_server->GetVersion()));
 
 		_config_path = config_path;
-	}
-
-	void ConfigManager::LoadConfigs()
-	{
-		LoadConfigs("");
+		_ignore_last_config = ignore_last_config;
 	}
 
 	void ConfigManager::ReloadConfigs()
 	{
-		LoadConfigs(_config_path);
+		LoadConfigs(_config_path, _ignore_last_config);
+	}
+
+	bool ConfigManager::SaveCurrentConfig()
+	{
+		auto lock_guard = std::lock_guard(_config_mutex);
+
+		Json::Value config = _server->ToJson();
+		auto host_list = mon::Monitoring::GetInstance()->GetHostMetricsList();
+
+		if (host_list.size() == 0)
+		{
+			if (config.isMember("virtualHosts") == false)
+			{
+				logte("The values of ConfigManager and Monitoring do not match even though the VirtualHost list is immutable. (VirtualHost is not loaded on Monitoring?)");
+				OV_ASSERT2(false);
+				return false;
+			}
+
+			// Nothing to do
+			return true;
+		}
+
+		config.removeMember("virtualHosts");
+
+		Json::Value &vhosts = config["virtualHosts"];
+		vhosts = Json::arrayValue;
+
+		for (auto host_pair : host_list)
+		{
+			auto &host_metrics = host_pair.second;
+
+			Json::Value host_json = std::static_pointer_cast<cfg::vhost::VirtualHost>(host_metrics)->ToJson();
+			host_json.removeMember("applications");
+
+			auto apps_list = host_metrics->GetApplicationMetricsList();
+
+			if (apps_list.size() > 0)
+			{
+				auto &apps_json = host_json["applications"];
+				apps_json = Json::arrayValue;
+
+				for (auto &app_pair : apps_list)
+				{
+					auto &app_metrics = app_pair.second;
+
+					Json::Value app_json = app_metrics->GetConfig().ToJson();
+					apps_json.append(app_json);
+				}
+			}
+
+			vhosts.append(host_json);
+		}
+
+		ov::String last_config_path = ov::PathManager::Combine(_config_path, CFG_LAST_CONFIG_FILE_NAME);
+		auto config_json = config.toStyledString();
+
+		auto file = ov::DumpToFile(last_config_path, config_json.c_str(), config_json.length());
+
+		if (file == nullptr)
+		{
+			logte("Could not write config to file: %s", last_config_path.CStr());
+			return false;
+		}
+
+		return true;
 	}
 
 	void ConfigManager::LoadLoggerConfig(const ov::String &config_path)
 	{
 		struct stat value = {0};
 
-		ov::String logger_config_path = ov::PathManager::Combine(config_path, "Logger.xml");
+		ov::String logger_config_path = ov::PathManager::Combine(config_path, CFG_LOG_FILE_NAME);
 
 		::memset(&_last_modified, 0, sizeof(_last_modified));
 		if (::stat(logger_config_path, &value) == -1)

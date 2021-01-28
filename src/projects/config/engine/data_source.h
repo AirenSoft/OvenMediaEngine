@@ -101,6 +101,7 @@ namespace cfg
 		void LoadFromFile(ov::String file_name, const ItemName &root_name);
 
 		void LoadFromXmlFile(const ov::String &file_name, const ov::String &root_name);
+		void LoadFromJson(const ov::String &file_name, const ov::String &root_name);
 
 		std::any GetValueFromXml(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const;
 		std::any GetValueFromJson(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const;

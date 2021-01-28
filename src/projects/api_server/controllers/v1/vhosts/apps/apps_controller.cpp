@@ -8,6 +8,7 @@
 //==============================================================================
 #include "apps_controller.h"
 
+#include <config/config.h>
 #include <orchestrator/orchestrator.h>
 
 #include <functional>
@@ -69,7 +70,7 @@ namespace api
 				{
 					item["publishers"]["hls"] = Json::objectValue;
 					item["publishers"]["dash"] = Json::objectValue;
-					item["publishers"]["lldash"] = Json::objectValue;
+					item["publishers"]["llDash"] = Json::objectValue;
 					item["publishers"]["webrtc"] = Json::objectValue;
 				}
 
@@ -143,6 +144,11 @@ namespace api
 
 					response_value.append(std::move(response));
 				}
+			}
+
+			if (status_code.HasOK())
+			{
+				cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
 			}
 
 			return {status_code, std::move(response_value)};
@@ -261,6 +267,7 @@ namespace api
 						break;
 
 					case ocst::Result::Succeeded:
+						cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
 						break;
 
 					case ocst::Result::Exists:
@@ -294,6 +301,8 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::Forbidden, "Could not delete the application: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
+
+			cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
 
 			return HttpStatusCode::OK;
 		}

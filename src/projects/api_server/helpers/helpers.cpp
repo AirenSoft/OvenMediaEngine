@@ -107,17 +107,15 @@ namespace api
 
 	void MultipleStatus::AddStatusCode(HttpStatusCode status_code)
 	{
-		if (_last_status_code == HttpStatusCode::MultiStatus)
-		{
-			return;
-		}
-
 		if (_count == 0)
 		{
 			_last_status_code = status_code;
+			_has_ok = (status_code == HttpStatusCode::OK);
 		}
 		else
 		{
+			_has_ok = _has_ok || (status_code == HttpStatusCode::OK);
+
 			if (_last_status_code != status_code)
 			{
 				_last_status_code = HttpStatusCode::MultiStatus;

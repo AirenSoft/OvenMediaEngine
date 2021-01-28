@@ -10,6 +10,7 @@
 
 #include <unistd.h>
 
+#include <fstream>
 #include <regex>
 
 #include "config_error.h"
@@ -47,10 +48,11 @@ namespace cfg
 				return;
 
 			case DataType::Json:
-				break;
+				LoadFromJson(file_name, root_name.GetName(_type));
+				return;
 		}
 
-		CreateConfigError("Not implemented for type: %d (%s)", _type, file_name.CStr());
+		throw CreateConfigError("Not implemented for type: %d (%s)", _type, file_name.CStr());
 	}
 
 	void DataSource::LoadFromXmlFile(const ov::String &file_name, const ov::String &root_name)
@@ -70,6 +72,22 @@ namespace cfg
 		if (_node.empty())
 		{
 			throw CreateConfigError("Could not find the root element: %s in %s", root_name.CStr(), file_name.CStr());
+		}
+	}
+
+	void DataSource::LoadFromJson(const ov::String &file_name, const ov::String &root_name)
+	{
+		std::ifstream json_file;
+		json_file.open(file_name, std::ifstream::in | std::ifstream::binary);
+
+		if (json_file.is_open())
+		{
+			json_file >> _json;
+			json_file.close();
+		}
+		else
+		{
+			throw CreateConfigError("Could not read the file: %s", file_name.CStr());
 		}
 	}
 
@@ -104,6 +122,12 @@ namespace cfg
 					for (auto &member : members)
 					{
 						ov::String name(member.c_str());
+
+						if (name == "$")
+						{
+							// $ == attributes
+							continue;
+						}
 
 						if (children_for_json.find(name) == children_for_json.end())
 						{
