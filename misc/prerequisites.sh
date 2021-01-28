@@ -4,7 +4,7 @@ PREFIX=/opt/ovenmediaengine
 TEMP_PATH=/tmp
 
 OME_VERSION=dev
-OPENSSL_VERSION=1.1.0g
+OPENSSL_VERSION=1.1.1i
 SRTP_VERSION=2.2.0
 SRT_VERSION=1.4.2
 OPUS_VERSION=1.1.3
@@ -34,10 +34,6 @@ else
         OSVERSION=$(cat /etc/os-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f1 | awk '{print  $1}')
         OSMINORVERSION=$(cat /etc/os-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f2 | awk '{print  $1}')
     fi
-fi
-
-if [[ "${OSNAME}" == "Ubuntu" && "${OSVERSION}" == "20" && "${OSMINORVERSION}" == "04" ]]; then
-    OPENSSL_VERSION=1.1.1f
 fi
 
 MAKEFLAGS="${MAKEFLAGS} -j${NCPU}"

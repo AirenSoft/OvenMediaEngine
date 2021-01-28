@@ -12,7 +12,7 @@ ARG     PREFIX=/opt/ovenmediaengine
 ARG     MAKEFLAGS="-j16"
 
 ENV     OME_VERSION=master \
-        OPENSSL_VERSION=1.1.0g \
+        OPENSSL_VERSION=1.1.1i \
         SRTP_VERSION=2.2.0 \
         SRT_VERSION=1.4.2 \
         OPUS_VERSION=1.1.3 \
