@@ -148,14 +148,14 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 	http_interceptor->Register(HttpMethod::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
 		auto request = client->GetRequest();
 
-		ov::String reqeuset_param;
+		ov::String request_param;
 		ov::String app_name;
 		ov::String stream_name;
 		ov::String file_name;
 		ov::String file_ext;
 
 		// Parse Url
-		if (ParseRequestUrl(request->GetRequestTarget(), reqeuset_param, app_name, stream_name, file_name, file_ext) == false)
+		if (ParseRequestUrl(request->GetRequestTarget(), request_param, app_name, stream_name, file_name, file_ext) == false)
 		{
 			logte("Failed to parse URL: %s", request->GetRequestTarget().CStr());
 			return HttpNextHandler::Call;
