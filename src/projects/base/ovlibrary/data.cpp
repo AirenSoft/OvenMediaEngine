@@ -170,6 +170,16 @@ namespace ov
 		return IsEqual(data);
 	}
 
+	bool Data::operator==(const std::shared_ptr<const Data> &data) const
+	{
+		if (data != nullptr)
+		{
+			return IsEqual(data.get());
+		}
+
+		return false;
+	}
+
 	bool Data::IsEqual(const void *data, size_t length) const
 	{
 		if (GetLength() == length)
@@ -349,20 +359,29 @@ namespace ov
 
 	bool Data::Erase(off_t offset, size_t length)
 	{
+		if (length == 0)
+		{
+			// Nothing to do
+			return true;
+		}
+
 		if (Detach() == false)
 		{
 			return false;
 		}
 
-		if ((offset < 0) || (offset + length >= _length))
+		if ((offset < 0) || (offset + length > _length))
 		{
 			OV_ASSERT(false, "Invalid offset: %jd, length: %zu (current length: %zu)", offset, length, _length);
+			return false;
 		}
 
-		_allocated_data->erase(_allocated_data->begin() + offset, _allocated_data->begin() + length);
+		auto begin = _allocated_data->begin() + offset;
+
+		_allocated_data->erase(begin, begin + length);
 		_length -= length;
 
-		OV_ASSERT2(_length = _allocated_data->size());
+		OV_ASSERT(_length == _allocated_data->size(), "length: %zu, allocated size: %zu", _length, _allocated_data->size());
 
 		return true;
 	}

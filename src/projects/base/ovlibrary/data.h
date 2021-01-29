@@ -186,6 +186,7 @@ namespace ov
 
 		bool operator ==(const Data &data) const;
 		bool operator ==(const Data *data) const;
+		bool operator ==(const std::shared_ptr<const Data> &data) const;
 
 		bool IsEqual(const void *data, size_t length) const;
 		bool IsEqual(const Data &data) const;
