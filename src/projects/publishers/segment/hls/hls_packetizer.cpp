@@ -238,7 +238,10 @@ bool HlsPacketizer::AppendAudioFrame(const std::shared_ptr<const MediaPacket> &m
 		if (duration >= _ideal_duration_for_audio)
 		{
 			// Writing a segment is done only on the video side
-			// result = WriteSegment(first_pts, first_pts * _audio_timebase_expr_ms, duration, duration * _audio_timebase_expr_ms);
+			if (_video_enable == false)
+			{
+				result = WriteSegment(first_pts, first_pts * _audio_timebase_expr_ms, duration, duration * _audio_timebase_expr_ms);
+			}
 		}
 	}
 

@@ -83,7 +83,7 @@ static void OnFFmpegLog(void *avcl, int level, const char *fmt, va_list args)
 
 		if (clazz != nullptr)
 		{
-			message.AppendFormat("[%s] ", clazz->class_name);
+			message.AppendFormat("[%s: %p] ", clazz->class_name, avcl);
 		}
 	}
 
