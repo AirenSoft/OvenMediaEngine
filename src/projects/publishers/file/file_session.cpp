@@ -149,11 +149,11 @@ bool FileSession::Stop()
 
 		// Create directory
 		ov::String output_path = GetRecord()->GetFilePath();
-		ov::String output_direcotry = ov::PathManager::ExtractPath(output_path);
+		ov::String output_directory = ov::PathManager::ExtractPath(output_path);
 
-		if (MakeDirectoryRecursive(output_direcotry.CStr()) == false)
+		if (MakeDirectoryRecursive(output_directory.CStr()) == false)
 		{
-			logte("Could not create directory. path(%s)", output_direcotry.CStr());
+			logte("Could not create directory. path(%s)", output_directory.CStr());
 
 			SetState(SessionState::Error);
 			GetRecord()->SetState(info::Record::RecordState::Error);
