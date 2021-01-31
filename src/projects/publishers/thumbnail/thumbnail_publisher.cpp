@@ -89,7 +89,7 @@ bool ThumbnailPublisher::Start()
 
 		if (certificate != nullptr)
 		{
-			_https_server = manager->CreateHttpsServer("ThumbnailPublisher", address, certificate);
+			_https_server = manager->CreateHttpsServer("ThumbnailPublisher", tls_address, certificate);
 
 			if (_https_server != nullptr)
 			{
