@@ -90,7 +90,12 @@ namespace api
 		if (http_server_result && https_server_result)
 		{
 			// Everything is OK
-			logti("API Server is listening on %s", address.ToString().CStr());
+			logti("API Server is listening on %s%s%s%s...",
+				  (_http_server != nullptr) ? address.ToString().CStr() : "",
+				  ((_http_server != nullptr) && (_https_server != nullptr)) ? ", " : "",
+				  (_https_server != nullptr) ? "TLS: " : "",
+				  (_https_server != nullptr) ? tls_address.ToString().CStr() : "");
+
 			return true;
 		}
 
