@@ -8,6 +8,8 @@
 //==============================================================================
 #include "root_controller.h"
 
+#include <base/ovcrypto/ovcrypto.h>
+
 #include "v1/v1_controller.h"
 
 namespace api
@@ -19,7 +21,7 @@ namespace api
 
 	void RootController::PrepareHandlers()
 	{
-		// Prepare a handler to verify that the token sent with the "access_token" query string matches the configuration of Server.xml:
+		// Prepare a handler to verify that the token sent with the "authorized" header matches the configuration of Server.xml:
 		//
 		// <Server>
 		//     <Managers>
@@ -42,19 +44,51 @@ namespace api
 	void RootController::PrepareAccessTokenHandler()
 	{
 		_interceptor->Register(HttpMethod::All, R"(.+)", [=](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
-			auto url = ov::Url::Parse(client->GetRequest()->GetUri());
+			auto authorization = client->GetRequest()->GetHeader("Authorization");
 
-			auto access_token = url->GetQueryValue("access_token");
+			ov::String message = nullptr;
 
-			if (access_token == _access_token)
+			if (authorization.GetLength() > 0)
 			{
-				return HttpNextHandler::Call;
+				auto tokens = authorization.Split(" ");
+
+				if (tokens.size() == 2)
+				{
+					if (tokens[0].UpperCaseString() == "BASIC")
+					{
+						auto data = ov::Base64::Decode(tokens[1]);
+
+						if (data != nullptr)
+						{
+							ov::String str = data->ToString();
+
+							if (str == _access_token)
+							{
+								return HttpNextHandler::Call;
+							}
+							else
+							{
+								message = "Invalid credential";
+							}
+						}
+						else
+						{
+							message = "Invalid credential format";
+						}
+					}
+					else
+					{
+						message.AppendFormat("Not supported credential type: %s", tokens[0].CStr());
+					}
+				}
+				else
+				{
+					// Invalid tokens
+					message = "Invalid authorization header";
+				}
 			}
 
-			ApiResponse response(
-				HttpError::CreateError(
-					HttpStatusCode::Forbidden, "Invalid access token"));
-
+			ApiResponse response(HttpError::CreateError(HttpStatusCode::Forbidden, message));
 			response.SendToClient(client);
 
 			return HttpNextHandler::DoNotCall;
