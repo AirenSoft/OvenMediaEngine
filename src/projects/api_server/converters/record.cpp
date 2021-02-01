@@ -14,7 +14,7 @@ namespace api
 {
 	namespace conv
 	{
-		static void SetRecordSteramTracks(Json::Value &parent_object, const char *key, const std::map<int32_t, std::shared_ptr<MediaTrack>> &tracks, Optional optional)
+		static void SetRecordStreamTracks(Json::Value &parent_object, const char *key, const std::map<int32_t, std::shared_ptr<MediaTrack>> &tracks, Optional optional)
 		{
 			CONVERTER_RETURN_IF(false, Json::arrayValue);
 
@@ -31,7 +31,7 @@ namespace api
 			CONVERTER_RETURN_IF(false, Json::objectValue);
 
 			SetString(object, "name", stream.GetName(), Optional::False);
-			SetRecordSteramTracks(object, "tracks", stream.GetTracks(), Optional::False);
+			SetRecordStreamTracks(object, "tracks", stream.GetTracks(), Optional::False);
 		}
 				
 		// Example of Record Start
