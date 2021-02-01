@@ -197,14 +197,15 @@ std::shared_ptr<WebSocketInterceptor> RtcSignallingServer::CreateWebSocketInterc
 				return HttpInterceptorResult::Disconnect;
 			}
 
-			// TODO(dimiden): 이렇게 호출하면 "command": null 이 추가되어버림. 개선 필요
-			Json::Value &command_value = object.GetJsonValue()["command"];
+			auto &payload = object.GetJsonValue();
 
-			if (command_value.isNull())
+			if ((payload.isObject() == false) || (payload.isMember("command") == false))
 			{
 				logtw("Invalid request message from %s", ws_client->ToString().CStr());
 				return HttpInterceptorResult::Disconnect;
 			}
+
+			auto &command_value = payload["command"];
 
 			ov::String command = ov::Converter::ToString(command_value);
 
@@ -547,7 +548,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 				}
 				value["candidates"] = candidates;
 				value["code"] = static_cast<int>(HttpStatusCode::OK);
-				if(_ice_servers.isNull() == false)
+				if (_ice_servers.isNull() == false)
 				{
 					value["ice_servers"] = _ice_servers;
 				}
