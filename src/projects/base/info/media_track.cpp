@@ -210,14 +210,23 @@ bool MediaTrack::IsValidity()
 {
 	switch (GetCodecId())
 	{
-		case MediaCodecId::H264:
-		case MediaCodecId::H265: {
+		case MediaCodecId::H264: {
 			if (_width > 0 &&
 				_height > 0 &&
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
 				_codec_extradata.size() > 0)
 
+			{
+				return true;
+			}
+		}
+		break;
+		case MediaCodecId::H265: {
+			if (_width > 0 &&
+				_height > 0 &&
+				_time_base.GetNum() > 0 &&
+				_time_base.GetDen() > 0)
 			{
 				return true;
 			}
