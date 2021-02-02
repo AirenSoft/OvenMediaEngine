@@ -895,77 +895,119 @@ bool CmafPacketizer::UpdatePlayList()
 		<< R"(	availabilityStartTime=")" << _start_time.CStr() << R"(")" << std::endl
 		<< R"(	timeShiftBufferDepth="PT)" << time_shift_buffer_depth << R"(S")" << std::endl
 		<< R"(	suggestedPresentationDelay="PT)" << _segment_duration << R"(S")" << std::endl
-		<< R"(	minBufferTime="PT)" << _segment_duration << R"(S">)" << std::endl
+		<< R"(	minBufferTime="PT)" << _segment_duration << R"(S">)" << std::endl;
 
-		// <Period>
-		<< R"(	<Period start="PT0.0S">)" << std::endl;
-
-	if (_last_video_pts >= 0LL)
 	{
-		// availabilityTimeOffset
-		//
-		// - Proposed DASH extension
-		// - Player usually sends request when entire segment available
-		// - availabilityTimeOffset indicates difference of availabilityStartTime of the segment and UTC time
-		//   of server when it can start delivering segment
-		//
-		// availabilityTimeOffset = [segment duration] - [chunk duration] - [UTC mismatch between server and client]
-
-		// Reference: http://mile-high.video/files/mhv2018/pdf/day2/2_06_Henthorne.pdf
-
-		double availability_time_offset = _video_track->GetFrameRate() != 0 ? (_segment_duration - (1.0 / _video_track->GetFrameRate())) : _segment_duration;
-
 		xml
-			// <AdaptationSet>
-			<< R"(		<AdaptationSet id="0" group="1" mimeType="video/mp4" segmentAlignment="true" )"
-			<< R"(frameRate=")" << _video_track->GetFrameRate() << R"(">)" << std::endl
+			// <Period>
+			<< R"(	<Period start="PT0.0S">)" << std::endl;
 
-			// <Representation>
-			<< R"(			<Representation id="0" mimeType="video/mp4" codecs="avc1.42401f" )"
-			<< R"(bandwidth=")" << _video_track->GetBitrate() << R"(" )"
-			<< R"(width=")" << _video_track->GetWidth() << R"(" )"
-			<< R"(height=")" << _video_track->GetHeight() << R"(" )"
-			<< R"(frameRate=")" << _video_track->GetFrameRate() << R"(">)" << std::endl
+		if (_last_video_pts >= 0LL)
+		{
+			// availabilityTimeOffset
+			//
+			// - Proposed DASH extension
+			// - Player usually sends request when entire segment available
+			// - availabilityTimeOffset indicates difference of availabilityStartTime of the segment and UTC time
+			//   of server when it can start delivering segment
+			//
+			// availabilityTimeOffset = [segment duration] - [chunk duration] - [UTC mismatch between server and client]
 
-			// <SegmentTemplate />
-			<< R"(				<SegmentTemplate timescale=")" << static_cast<uint32_t>(_video_track->GetTimeBase().GetTimescale()) << R"(" )"
-			<< R"(duration=")" << static_cast<uint32_t>(_segment_duration * _video_track->GetTimeBase().GetTimescale()) << R"(" )"
-			<< R"(availabilityTimeOffset=")" << availability_time_offset << R"(" )"
-			<< R"(startNumber="0" )"
-			<< R"(initialization=")" << CMAF_MPD_VIDEO_FULL_INIT_FILE_NAME << R"(" )"
-			<< R"(media="$Number$)" << CMAF_MPD_VIDEO_FULL_SUFFIX << R"(" />)" << std::endl
+			// Reference: http://mile-high.video/files/mhv2018/pdf/day2/2_06_Henthorne.pdf
 
-			// </Representation>
-			<< R"(			</Representation>)" << std::endl
+			double availability_time_offset = _video_track->GetFrameRate() != 0 ? (_segment_duration - (1.0 / _video_track->GetFrameRate())) : _segment_duration;
 
-			// </AdaptationSet>
-			<< R"(		</AdaptationSet>)" << std::endl;
+			xml
+				// <AdaptationSet>
+				<< R"(		<AdaptationSet contentType="video" segmentAlignment="true" )"
+				<< R"(frameRate=")" << _video_track->GetFrameRate() << R"(">)" << std::endl;
+
+			{
+				xml
+					// <Representation>
+					<< R"(			<Representation id="0" mimeType="video/mp4" codecs="avc1.42401f" )"
+					<< R"(bandwidth=")" << _video_track->GetBitrate() << R"(" )"
+					<< R"(width=")" << _video_track->GetWidth() << R"(" )"
+					<< R"(height=")" << _video_track->GetHeight() << R"(" )"
+					<< R"(frameRate=")" << _video_track->GetFrameRate() << R"(">)" << std::endl;
+
+				{
+					xml
+						// <SegmentTemplate />
+						<< R"(				<SegmentTemplate startNumber="0" )"
+						<< R"(timescale=")" << static_cast<uint32_t>(_video_track->GetTimeBase().GetTimescale()) << R"(" )"
+						<< R"(duration=")" << static_cast<uint32_t>(_segment_duration * _video_track->GetTimeBase().GetTimescale()) << R"(" )"
+						<< R"(availabilityTimeOffset=")" << availability_time_offset << R"(" )"
+						<< R"(initialization=")" << CMAF_MPD_VIDEO_FULL_INIT_FILE_NAME << R"(" )"
+						<< R"(media="$Number$)" << CMAF_MPD_VIDEO_FULL_SUFFIX << R"(" />)" << std::endl;
+				}
+
+				xml
+					// </Representation>
+					<< R"(			</Representation>)" << std::endl;
+			}
+
+			xml
+				// </AdaptationSet>
+				<< R"(		</AdaptationSet>)" << std::endl;
+		}
+
+		if (_last_audio_pts >= 0LL)
+		{
+			// segment duration - audio one frame duration
+			double availability_time_offset = (_audio_track->GetSampleRate() / 1024) != 0 ? _segment_duration - (1.0 / ((double)_audio_track->GetSampleRate() / 1024)) : _segment_duration;
+
+			xml
+				// <AdaptationSet>
+				<< R"(		<AdaptationSet contentType="audio" segmentAlignment="true">)" << std::endl;
+
+			{
+				xml
+					// <Representation>
+					<< R"(			<Representation id="1" mimeType="audio/mp4" codecs="mp4a.40.2" )"
+					<< R"(bandwidth=")" << _audio_track->GetBitrate() << R"(" )"
+					<< R"(audioSamplingRate=")" << _audio_track->GetSampleRate() << R"(">)" << std::endl;
+
+				{
+					xml
+						// <AudioChannelConfiguration />
+						<< R"(				<AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" )"
+						<< R"(value=")" << _audio_track->GetChannel().GetCounts() << R"(" />)" << std::endl;
+
+					xml
+						// <SegmentTemplate />
+						<< R"(				<SegmentTemplate startNumber="0" )"
+						<< R"(timescale=")" << static_cast<uint32_t>(_audio_track->GetTimeBase().GetTimescale()) << R"(" )"
+						<< R"(duration=")" << static_cast<uint32_t>(_segment_duration * _audio_track->GetTimeBase().GetTimescale()) << R"(" )"
+						<< R"(availabilityTimeOffset=")" << availability_time_offset << R"(" )"
+						<< R"(initialization=")" << CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME << R"(" )"
+						<< R"(media="$Number$)" << CMAF_MPD_AUDIO_FULL_SUFFIX << R"(" />)" << std::endl;
+				}
+				xml
+					// </Representation>
+					<< R"(			</Representation>)" << std::endl;
+			}
+
+			xml
+				// </AdaptationSet>
+				<< R"(		</AdaptationSet>)" << std::endl;
+		}
+
+		xml <<
+			// </Period>
+			R"(	</Period>)" << std::endl;
 	}
 
-	if (_last_audio_pts >= 0LL)
-	{
-		// segment duration - audio one frame duration
-		double availability_time_offset = (_audio_track->GetSampleRate() / 1024) != 0 ? _segment_duration - (1.0 / ((double)_audio_track->GetSampleRate() / 1024)) : _segment_duration;
+	// The dash.js player does not normally recognize the milliseconds value of <UTCTiming>, causing a big difference between the server time and client time.
+#if 0
+	xml
+		// <UTCTiming />
+		<< R"(<UTCTiming schemeIdUri="urn:mpeg:dash:utc:direct:2014" value="%s" />)" << std::endl;
+#endif
 
-		xml
-			<< "\t\t<AdaptationSet id=\"1\" group=\"2\" mimeType=\"audio/mp4\" lang=\"und\" segmentAlignment=\"true\" "
-			<< "startWithSAP=\"1\" subsegmentAlignment=\"true\" subsegmentStartsWithSAP=\"1\">\n"
-			<< "\t\t\t<AudioChannelConfiguration schemeIdUri=\"urn:mpeg:dash:23003:3:audio_channel_configuration:2011\" "
-			<< "value=\"" << _audio_track->GetChannel().GetCounts() << "\"/>\n"
-			<< "\t\t\t<SegmentTemplate presentationTimeOffset=\"0\" timescale=\"" << static_cast<uint32_t>(_audio_track->GetTimeBase().GetTimescale())
-			<< "\" duration=\"" << static_cast<uint32_t>(_segment_duration * _audio_track->GetTimeBase().GetTimescale())
-			<< "\" availabilityTimeOffset=\"" << availability_time_offset
-			<< "\" startNumber=\"0\" initialization=\"" << CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME
-			<< "\" media=\""
-			<< "$Number$" << CMAF_MPD_AUDIO_FULL_SUFFIX << "\" />\n"
-			<< "\t\t\t<Representation codecs=\"mp4a.40.2\" audioSamplingRate=\"" << _audio_track->GetSampleRate()
-			<< "\" bandwidth=\"" << _audio_track->GetBitrate() << "\" />\n"
-			<< "\t\t</AdaptationSet>\n";
-	}
-
-	xml << "\t</Period>\n"
-		<< "\t<UTCTiming schemeIdUri=\"urn:mpeg:dash:utc:direct:2014\" value=\"%s\"/>\n"
-		<< "</MPD>\n";
+	xml
+		// </MPD>
+		<< R"(</MPD>)";
 
 	ov::String play_list = xml.str().c_str();
 
