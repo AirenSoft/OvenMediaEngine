@@ -17,7 +17,7 @@ ENV     OME_VERSION=master \
         SRT_VERSION=1.4.2 \
         OPUS_VERSION=1.1.3 \
         X264_VERSION=20190513-2245-stable \
-        X265_VERSION=3.2.1 \
+        X265_VERSION=3.4 \
         VPX_VERSION=1.7.0 \
         FDKAAC_VERSION=0.1.5 \
         FFMPEG_VERSION=4.3.1 \
@@ -93,7 +93,7 @@ RUN \
         DIR=/tmp/x265 && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sLf https://get.videolan.org/x265/x265_${X265_VERSION}.tar.gz | tar -zx --strip-components=1 && \
+        curl -sLf https://github.com/videolan/x265/archive/${X265_VERSION}.tar.gz | tar -zx --strip-components=1 && \
         cd ${DIR}/build/linux && \
         cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="${PREFIX}" -DENABLE_SHARED:bool=on ../../source && \
         make && \
