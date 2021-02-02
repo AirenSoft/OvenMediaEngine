@@ -369,7 +369,7 @@ ov::String FileSession::ConvertMacro(ov::String src)
 	ov::String replaced_string = ov::String(raw_string.c_str());
 
 	// =========================================
-	// Deifinitino of Macro
+	// Definition of Macro
 	// =========================================
 	// ${StartTime:YYYYMMDDhhmmss}
 	// ${EndTime:YYYYMMDDhhmmss}
@@ -383,7 +383,7 @@ ov::String FileSession::ConvertMacro(ov::String src)
 	// ${Application} : Application Name
 	// ${Stream} : Stream name
 	// ${Sequence} : Sequence number
-	// ${Id} : Idenficiation Code
+	// ${Id} : Identification Code
 
 	std::regex reg_exp("\\$\\{([a-zA-Z0-9:]+)\\}");
 	const std::sregex_iterator it_end;
