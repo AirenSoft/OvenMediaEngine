@@ -13,9 +13,12 @@
 // Attributes
 #include "stun_mapped_address_attribute.h"
 #include "stun_xor_mapped_address_attribute.h"
+#include "stun_xor_relayed_address_attribute.h"
+#include "stun_xor_peer_address_attribute.h"
 #include "stun_user_name_attribute.h"
 #include "stun_message_integrity_attribute.h"
 #include "stun_fingerprint_attribute.h"
+#include "stun_requested_transport_attribute.h"
 #include "stun_unknown_attribute.h"
 
 StunAttribute::StunAttribute(StunAttributeType type, uint16_t type_number, size_t length)
@@ -55,27 +58,22 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 {
 	if(stream.Remained() % 4 != 0)
 	{
-		// 패딩이 맞지 않음
 		logtw("Invalid padding: %d bytes", stream.Remained());
 		return nullptr;
 	}
 
-	// attribute type읽음
 	StunAttributeType type = static_cast<StunAttributeType>(stream.ReadBE16());
-	// attribute 길이 읽음
 	uint16_t length = stream.ReadBE16();
 	auto padded_length = static_cast<uint16_t>(((length % 4) > 0) ? ((length / 4) + 1) * 4 : length);
 
 	if(stream.Remained() < padded_length)
 	{
-		// type + length 정보가 있었음에도 불구하고, 실제 데이터는 없는 상태
 		logtw("Data is too short: type: 0x%04X, data length: %d (expected: %d)", type, stream.Remained(), padded_length);
 		return nullptr;
 	}
 
-		// offset 부터 길이까지 데이터 dump
 #if STUN_LOG_DATA
-		logtd("Parsing attribute: type: 0x%04X, length: %d (padded: %d)...\n%s", type, length, padded_length, stream.Dump(padded_length).CStr());
+	logtd("Parsing attribute: type: 0x%04X, length: %d (padded: %d)...\n%s", type, length, padded_length, stream.Dump(padded_length).CStr());
 #else // STUN_LOG_DATA
 	logtd("Parsing attribute: type: 0x%04X, length: %d (padded: %d)...", type, length, padded_length);
 #endif // STUN_LOG_DATA
@@ -86,7 +84,7 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 
 	if(type == StunAttributeType::Fingerprint)
 	{
-		// fingerprint 는 마지막 attribute 여야 함
+		// fingerprint must be last attribute
 		OV_ASSERT2(stream.Remained() == length);
 
 		if(stream.Remained() != length)
@@ -100,10 +98,8 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 
 	if(attribute == nullptr)
 	{
-		// 아직 미구현 한 attribute
+		// Unimplemented attributes
 		logtd("Skipping attribute (not implemented): 0x%04X (%d bytes)...", type, length);
-
-		// length 만큼 읽지 않음
 		stream.Skip<uint8_t>(length);
 	}
 	else
@@ -117,7 +113,6 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 		logtd("Parsed: %s", attribute->ToString().CStr());
 
 #if DEBUG
-		// 헤더에 명시되어 있는 만큼 데이터를 읽지 않았는지 확인
 		OV_ASSERT(length == (stream.GetOffset() - last_offset), "Length is mismatch. (expected: %d, read length: %d)", length, (stream.GetOffset() - last_offset));
 #endif // DEBUG
 
@@ -136,23 +131,27 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType 
 		case StunAttributeType::MappedAddress:
 			attribute = std::make_unique<StunMappedAddressAttribute>(length);
 			break;
-
+		case StunAttributeType::XorPeerAddress:
+			attribute = std::make_unique<StunXorPeerAddressAttribute>(length);
+			break;
+		case StunAttributeType::XorRelayedAddress:
+			attribute = std::make_unique<StunXorRelayedAddressAttribute>(length);
+			break;
 		case StunAttributeType::XorMappedAddress:
 			attribute = std::make_unique<StunXorMappedAddressAttribute>(length);
 			break;
-
 		case StunAttributeType::UserName:
 			attribute = std::make_unique<StunUserNameAttribute>(length);
 			break;
-
 		case StunAttributeType::MessageIntegrity:
 			attribute = std::make_unique<StunMessageIntegrityAttribute>(length);
 			break;
-
 		case StunAttributeType::Fingerprint:
 			attribute = std::make_unique<StunFingerprintAttribute>(length);
 			break;
-
+		case StunAttributeType::RequestedTransport:
+			attribute = std::make_unique<StunRequestedTransportAttribute>(length);
+			break;
 		case StunAttributeType::ErrorCode:
 		case StunAttributeType::Realm:
 		case StunAttributeType::Nonce:
@@ -247,6 +246,69 @@ const char *StunAttribute::StringFromType(StunAttributeType type) noexcept
 			return "SOFTWARE";
 		case StunAttributeType::AlternateServer:
 			return "ALTERNATE-SERVER";
+		case StunAttributeType::ChannelNumber:
+			return "CHANNEL-NUMBER";
+		case StunAttributeType::Lifetime:
+			return "LIFETIME";
+		case StunAttributeType::XorPeerAddress:
+			return "XOR-PEER-ADDRESS";
+		case StunAttributeType::Data:
+			return "DATA";
+		case StunAttributeType::XorRelayedAddress:
+			return "XOR-RELAYED-ADDRESS";
+		case StunAttributeType::RequestedAddressFamily:
+			return "REQUESTED-ADDRESS-FAMILY";
+		case StunAttributeType::EvenPort:
+			return "EVEN-PORT";
+		case StunAttributeType::RequestedTransport:
+			return "REQUESTED-TRANSPORT";
+		case StunAttributeType::DontFragment:
+			return "DONT-FRAGMENT";
+		case StunAttributeType::ReservationToken:
+			return "RESERVATION-TOKEN";
+		case StunAttributeType::AdditionalAddressFamily:
+			return "ADDITIONAL-ADDRESS-FAMILY";
+		case StunAttributeType::AddressErrorCode:
+			return "ADDRESS-ERROR-CODE";
+		case StunAttributeType::ICMP:
+			return "ICMP";
+	}
+
+	return "<UNKNOWN>";
+}
+
+const char *StunAttribute::StringFromErrorCode(StunErrorCode code) noexcept
+{
+	switch(code)
+	{
+		case StunErrorCode::TryAlternate:
+			return "Try Alternate";
+		case StunErrorCode::BadRequest:
+			return "Bad Request";
+		case StunErrorCode::Unauthonticated:
+			return "Unauthenticated";
+		case StunErrorCode::Forbidden:
+			return "Forbidden";
+		case StunErrorCode::UnknownAttribute:
+			return "Unknown Attribute";
+		case StunErrorCode::AllocationMismatch:
+			return "Allocation Mismatch";
+		case StunErrorCode::StaleNonce:
+			return "Stale Nonce";
+		case StunErrorCode::AddressFamilyNotSupported:
+			return "Address Family Not Supported";
+		case StunErrorCode::WrongCredentials:
+			return "Wrong Credentials";
+		case StunErrorCode::UnsupportedTransportProtocol:
+			return "Unsupported Transport Protocol";
+		case StunErrorCode::PeerAddressFamilyMismatch:
+			return "Peer Address Family Mismatch";
+		case StunErrorCode::AllocationQuotaReached:
+			return "Allocation Quota Reached";
+		case StunErrorCode::ServerError:
+			return "Server Error";
+		case StunErrorCode::InsufficientCapacity:
+			return "Insufficient Capacity";
 	}
 
 	return "<UNKNOWN>";

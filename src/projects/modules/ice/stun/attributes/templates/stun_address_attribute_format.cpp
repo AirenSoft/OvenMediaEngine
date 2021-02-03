@@ -6,32 +6,16 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "stun_mapped_address_attribute.h"
-
 #include <arpa/inet.h>
-
+#include "stun_address_attribute_format.h"
 #include "modules/ice/ice_private.h"
 
-StunMappedAddressAttribute::StunMappedAddressAttribute()
-	: StunMappedAddressAttribute(0)
-{
-}
-
-StunMappedAddressAttribute::StunMappedAddressAttribute(int length)
-	: StunAttribute(StunAttributeType::MappedAddress, length)
-{
-}
-
-StunMappedAddressAttribute::StunMappedAddressAttribute(StunAttributeType type, int length)
+StunAddressAttributeFormat::StunAddressAttributeFormat(StunAttributeType type, int length)
 	: StunAttribute(type, length)
 {
 }
 
-StunMappedAddressAttribute::~StunMappedAddressAttribute()
-{
-}
-
-bool StunMappedAddressAttribute::Parse(ov::ByteStream &stream)
+bool StunAddressAttributeFormat::Parse(ov::ByteStream &stream)
 {
 	//  0                   1                   2                   3
 	//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -51,7 +35,7 @@ bool StunMappedAddressAttribute::Parse(ov::ByteStream &stream)
 		return false;
 	}
 
-	// Padding - 하위 호환성을 위해 남겨준 필드
+	// Reserved
 	stream.Skip<uint8_t>();
 
 	// Family
@@ -107,7 +91,7 @@ bool StunMappedAddressAttribute::Parse(ov::ByteStream &stream)
 	return true;
 }
 
-StunAddressFamily StunMappedAddressAttribute::GetFamily() const
+StunAddressFamily StunAddressAttributeFormat::GetFamily() const
 {
 	switch(_address.GetFamily())
 	{
@@ -122,22 +106,22 @@ StunAddressFamily StunMappedAddressAttribute::GetFamily() const
 	}
 }
 
-uint16_t StunMappedAddressAttribute::GetPort() const
+uint16_t StunAddressAttributeFormat::GetPort() const
 {
 	return _address.Port();
 }
 
-const ov::SocketAddress &StunMappedAddressAttribute::GetAddress() const
+const ov::SocketAddress &StunAddressAttributeFormat::GetAddress() const
 {
 	return _address;
 }
 
-int StunMappedAddressAttribute::GetAddressLength() const
+int StunAddressAttributeFormat::GetAddressLength() const
 {
 	return ((_address.GetFamily() == ov::SocketFamily::Inet) ? 4 : 16);
 }
 
-bool StunMappedAddressAttribute::SetParameters(const ov::SocketAddress &address)
+bool StunAddressAttributeFormat::SetParameters(const ov::SocketAddress &address)
 {
 	_address = address;
 
@@ -147,7 +131,7 @@ bool StunMappedAddressAttribute::SetParameters(const ov::SocketAddress &address)
 	return true;
 }
 
-bool StunMappedAddressAttribute::Serialize(ov::ByteStream &stream) const noexcept
+bool StunAddressAttributeFormat::Serialize(ov::ByteStream &stream) const noexcept
 {
 	return StunAttribute::Serialize(stream) &&
 	       stream.Write8(0x00) &&
@@ -156,12 +140,12 @@ bool StunMappedAddressAttribute::Serialize(ov::ByteStream &stream) const noexcep
 	       stream.Write(_address.AddrInForIPv4(), GetAddressLength());
 }
 
-ov::String StunMappedAddressAttribute::ToString(const char *class_name) const
+ov::String StunAddressAttributeFormat::ToString(const char *class_name) const
 {
 	return StunAttribute::ToString(class_name, ov::String::FormatString(", address: %s", _address.GetIpAddress().CStr()).CStr());
 }
 
-ov::String StunMappedAddressAttribute::ToString() const
+ov::String StunAddressAttributeFormat::ToString() const
 {
-	return ToString("StunMappedAddressAttribute");
+	return ToString(StringFromType(GetType()));
 }

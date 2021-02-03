@@ -2,34 +2,25 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Hyunjun Jang
-//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//  Created by Getroot
+//  Copyright (c) 2021 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
-#include "stun_attribute.h"
+#include "templates/stun_text_attribute_format.h"
 
-class StunUserNameAttribute : public StunAttribute
+class StunUserNameAttribute : public StunTextAttributeFormat
 {
 public:
-	StunUserNameAttribute();
-	StunUserNameAttribute(int length);
-	virtual ~StunUserNameAttribute();
-
-	bool Parse(ov::ByteStream &stream) override;
-
-	const ov::String &GetUserName() const
+	StunUserNameAttribute() : StunUserNameAttribute(0){}
+	StunUserNameAttribute(int length) : StunTextAttributeFormat(StunAttributeType::UserName, length)
 	{
-		return _user_name;
+		// RFC5389 - 15.3. USERNAME
+		// The value of USERNAME is a variable-length value.  It MUST contain a
+		// UTF-8 [RFC3629] encoded sequence of less than 513 bytes, and MUST
+		// have been processed using SASLprep [RFC4013].
+
+		OV_ASSERT2(length < 513);
 	}
-
-	bool SetUserName(const ov::String &name);
-
-	bool Serialize(ov::ByteStream &stream) const noexcept override;
-
-	ov::String ToString() const override;
-
-protected:
-	ov::String _user_name;
 };

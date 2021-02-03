@@ -20,18 +20,23 @@
 class StunMessage
 {
 public:
+	enum LastErrorCode : uint8_t
+	{
+		NOT_USED = 0,
+		SUCCESS,
+		INVALID_DATA,
+		NOT_ENOUGH_DATA
+	};
+
 	StunMessage();
 	virtual ~StunMessage();
 
-	// TODO: TCP일 때, 데이터가 덜 들어오면 파싱에 실패함.
-	// native 코드에서는 들어온 패킷에 대해 fingerprint 확인한 뒤, 실패하면 stun 패킷이 아니라고 간주하고 다른 처리를 하는데,
-	// TCP에서 데이터가 덜 들어오면 어떻게 되나? TCP에서 데이터가 덜 들어오는 경우가 있나 확인 필요
 	bool Parse(ov::ByteStream &stream);
+	bool ParseHeader(ov::ByteStream &stream);
 
+	LastErrorCode GetLastErrorCode() const;
 	bool IsValid() const;
-
 	bool CheckIntegrity(const ov::String &password) const;
-
 	bool GetUfrags(ov::String *local_ufrag, ov::String *remote_ufrag) const;
 
 	static constexpr int DefaultHeaderLength()
@@ -87,7 +92,7 @@ public:
 	std::shared_ptr<ov::Data> Serialize(const ov::String &integrity_key);
 
 protected:
-	bool ParseHeader(ov::ByteStream &stream);
+	
 	bool ParseAttributes(ov::ByteStream &stream);
 	std::unique_ptr<StunAttribute> ParseFingerprintAttribute(ov::ByteStream &stream);
 
@@ -117,4 +122,7 @@ protected:
 	// Integrity attribute와 Fingerprint attribute는 모든 데이터가 입력된 후 Serialze()할 때 자동 생성 되는 것이므로 별도로 취급함
 	std::unique_ptr<StunAttribute> _integrity_attribute;
 	std::unique_ptr<StunAttribute> _fingerprint_attribute;
+
+	// Last error codes
+	LastErrorCode	_last_error_code = NOT_USED;
 };

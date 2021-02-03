@@ -11,9 +11,9 @@
 #include "templates/stun_octet_attribute_format.h"
 #include "modules/ice/stun/stun_datastructure.h"
 
-class StunFingerprintAttribute : public StunOctetAttributeFormat<uint32_t>
+class StunLifetimeAttribute : public StunOctetAttributeFormat<uint32_t>
 {
 public:
-	StunFingerprintAttribute():StunFingerprintAttribute(sizeof(uint32_t)){}
-	StunFingerprintAttribute(int length):StunOctetAttributeFormat(StunAttributeType::Fingerprint, length){}
+	StunLifetimeAttribute():StunLifetimeAttribute(sizeof(uint32_t)){}
+	StunLifetimeAttribute(int length):StunOctetAttributeFormat(StunAttributeType::Lifetime, length){}
 };

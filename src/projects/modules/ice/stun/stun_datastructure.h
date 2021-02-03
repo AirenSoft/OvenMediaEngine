@@ -69,20 +69,20 @@ enum class StunAttributeType : uint16_t
 	//////////////
 	// Turn : https://www.rfc-editor.org/rfc/rfc8656.html#section-18
 	//////////////
-	CHANNEL_NUMBER = 0x000C,
-	LIFETIME = 0x000D,
+	ChannelNumber = 0x000C,
+	Lifetime = 0x000D,
 	// Reserved = 0x0010, // (was BANDWIDTH)
-	XOR_PEER_ADDRESS = 0x0012,
-	DATA = 0x0013,
-	XOR_RELAYED_ADDRESS = 0x0016,
-	REQUESTED_ADDRESS_FAMILY = 0x0017,
-	EVEN_PORT = 0x0018,
-	REQUESTED_TRANSPORT = 0x0019,
-	DONT_FRAGMENT = 0x001A,
+	XorPeerAddress = 0x0012,
+	Data = 0x0013,
+	XorRelayedAddress = 0x0016,
+	RequestedAddressFamily = 0x0017,
+	EvenPort = 0x0018,
+	RequestedTransport = 0x0019,
+	DontFragment = 0x001A,
 	// Reserved  = 0x0021, (was TIMER-VAL)
-	RESERVATION_TOKEN = 0x0022,
-	ADDITIONAL_ADDRESS_FAMILY = 0x8000,
-	ADDRESS_ERROR_CODE = 0x8001,
+	ReservationToken = 0x0022,
+	AdditionalAddressFamily = 0x8000,
+	AddressErrorCode = 0x8001,
 	ICMP = 0x8004
 };
 
@@ -96,11 +96,11 @@ enum class StunAddressFamily : uint8_t
 };
 
 // RFC5389, 15.6. ERROR-CODE
-enum class StunErrorCode
+enum class StunErrorCode : uint16_t
 {
 	TryAlternate = 300,
 	BadRequest = 400,
-	Unauthorized = 401,
+	Unauthonticated = 401,
 	Forbidden = 403,
 	UnknownAttribute = 420,
 	AllocationMismatch = 437,

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "ice_port_observer.h"
+#include "ice_tcp_demultiplexer.h"
 #include "modules/ice/stun/stun_message.h"
 
 #include <vector>
@@ -57,6 +58,15 @@ protected:
 
 	protected:
 		const int _expire_after_ms;
+	};
+
+	// Additional information analyzed during packet parsing
+	struct PacketInfo
+	{
+		IcePacketIdentifier::PacketType packet_type;
+
+		// If this packet is from a turn data channel, store the channel number.
+		uint16_t channel_number;
 	};
 
 public:
@@ -119,11 +129,19 @@ protected:
 	//--------------------------------------------------------------------
 
 	void SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionState state);
-	// STUN 오류를 반환함
 	void ResponseError(const std::shared_ptr<ov::Socket> &remote);
 
 private:
 	void CheckTimedoutItem();
+
+	void ProcessPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
+						const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
+	void ProcessStunPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
+						const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
+	void ProcessChannelDataPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
+						const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
+	void ProcessApplicationPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
+						const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
 
 	// STUN negotiation order:
 	// (State: New)
@@ -141,28 +159,30 @@ private:
 	std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 	std::recursive_mutex _physical_port_list_mutex;
 
-	// IcePort로 부터 데이터가 들어오면 이벤트를 받을 옵져버 목록
+	// List of observers who will receive events when data comes in from IcePort
 	std::vector<std::shared_ptr<IcePortObserver>> _observers;
 
 	std::vector<RtcIceCandidate> _ice_candidate_list;
 
-	// STUN binding이 될 때까지 관련 정보를 담고 있는 mapping table
-	// binding이 완료되면 이후로는 destination ip & port로 구분하기 때문에 필요 없어짐
+	// Mapping table containing related information until STUN binding.
+	// Once binding is complete, there is no need because it can be found by destination ip & port.
 	// key: offer ufrag
 	// value: IcePortInfo
 	std::map<const ov::String, std::shared_ptr<IcePortInfo>> _user_mapping_table;
 	std::mutex _user_mapping_table_mutex;
 
-	// STUN nego가 완료되면 생성되는 mapping table
-
-	// 상대방의 ip:port로 IcePortInfo를 바로 찾을 수 있게 함
+	// Find IcePortInfo with peer's ip:port
 	// key: SocketAddress
 	// value: IcePortInfo
 	std::mutex _ice_port_info_mutex;
 	std::map<ov::SocketAddress, std::shared_ptr<IcePortInfo>> _ice_port_info;
-	// session_id로 IcePortInfo를 바로 찾을 수 있게 함
+	// Find IcePortInfo with peer's session id
 	std::map<session_id_t, std::shared_ptr<IcePortInfo>> _session_table;
 
-	// 마지막으로 STUN 메시지가 온 시점을 기억함
+	// Demultiplexer for data input through TCP
+	// remote's ID : Demultiplexer
+	std::shared_mutex _demultiplexers_lock;
+	std::map<int, std::shared_ptr<IceTcpDemultiplexer>>	_demultiplexers;
+
 	ov::DelayQueue _timer;
 };

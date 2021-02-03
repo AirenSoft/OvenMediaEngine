@@ -50,6 +50,8 @@ public:
 	static const char *StringFromType(StunAttributeType type) noexcept;
 	const char *StringFromType() const noexcept;
 
+	static const char *StringFromErrorCode(StunErrorCode code) noexcept;
+
 	virtual ov::String ToString() const;
 
 protected:

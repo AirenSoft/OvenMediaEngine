@@ -8,21 +8,12 @@
 //==============================================================================
 #pragma once
 
-#include "stun_mapped_address_attribute.h"
+#include "templates/stun_xor_address_attribute_format.h"
 
-class StunXorMappedAddressAttribute : public StunMappedAddressAttribute
+class StunXorMappedAddressAttribute : public StunXorAddressAttributeFormat
 {
 public:
-	StunXorMappedAddressAttribute();
-	StunXorMappedAddressAttribute(int length);
-	virtual ~StunXorMappedAddressAttribute();
-
-	bool Parse(ov::ByteStream &stream) override;
-
-	bool Serialize(ov::ByteStream &stream) const noexcept override;
-
-	ov::String ToString() const override;
-
-protected:
+	StunXorMappedAddressAttribute():StunXorMappedAddressAttribute(0){}
+	StunXorMappedAddressAttribute(int length):StunXorAddressAttributeFormat(StunAttributeType::XorMappedAddress, length){}
 };
 
