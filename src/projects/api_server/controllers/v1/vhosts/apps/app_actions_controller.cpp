@@ -253,7 +253,7 @@ namespace api
 			push->SetVhost(vhost->GetName().CStr());
 			push->SetApplication(app->GetName().GetAppName());
 
-			// logte("%s", push->GetInfoString().CStr());
+			logte("%s", push->GetInfoString().CStr());
 
 			auto error = publisher->PushStop(app->GetName(), push);
 			if (error->GetCode() == RtmpPushPublisher::PushPublisherErrorCode::FailureInvalidParameter)
@@ -265,11 +265,13 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::NotFound, error->GetMessage());
 			}
 
-			HttpStatusCode status_code = HttpStatusCode::OK;
-			Json::Value response;
-			response.append(conv::JsonFromPush(push));
+			return HttpError::CreateError(HttpStatusCode::OK, error->GetMessage());
 
-			return {status_code, std::move(response)};
+			// HttpStatusCode status_code = HttpStatusCode::OK;
+			// Json::Value response;
+			// response.append(conv::JsonFromPush(push));
+
+			// return {status_code, std::move(response)};
 		}
 
 		ApiResponse AppActionsController::OnGetDummyAction(const std::shared_ptr<HttpClient> &client,
@@ -284,3 +286,5 @@ namespace api
 
 	}  // namespace v1
 }  // namespace api
+
+
