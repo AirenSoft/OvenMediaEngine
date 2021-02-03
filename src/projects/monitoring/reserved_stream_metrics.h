@@ -28,11 +28,11 @@ public:
 	{
 		return _who_reserved;
 	}
-	const ov::Url& GetStreamUri()
+	const ov::Url& GetStreamUri() const
 	{
 		return _stream_uri;
 	}
-	const ov::String& GetReservedStreamName()
+	const ov::String& GetReservedStreamName() const
 	{
 		return _stream_name;
 	}

@@ -12,6 +12,7 @@
 
 #include <iostream>
 
+#include "config_converter.h"
 #include "config_logger_loader.h"
 #include "config_private.h"
 #include "items/items.h"
@@ -107,56 +108,18 @@ namespace cfg
 		LoadConfigs(_config_path, _ignore_last_config);
 	}
 
-	bool ConfigManager::SaveCurrentConfig()
+	Json::Value ConfigManager::GetCurrentConfigAsJson()
 	{
 		auto lock_guard = std::lock_guard(_config_mutex);
 
-		Json::Value config = _server->ToJson();
-		auto host_list = mon::Monitoring::GetInstance()->GetHostMetricsList();
+		auto config = conv::GetServerJsonFromConfig(_server, false);
 
-		if (host_list.size() == 0)
-		{
-			if (config.isMember("virtualHosts") == false)
-			{
-				logte("The values of ConfigManager and Monitoring do not match even though the VirtualHost list is immutable. (VirtualHost is not loaded on Monitoring?)");
-				OV_ASSERT2(false);
-				return false;
-			}
+		return std::move(config);
+	}
 
-			// Nothing to do
-			return true;
-		}
-
-		config.removeMember("virtualHosts");
-
-		Json::Value &vhosts = config["virtualHosts"];
-		vhosts = Json::arrayValue;
-
-		for (auto host_pair : host_list)
-		{
-			auto &host_metrics = host_pair.second;
-
-			Json::Value host_json = std::static_pointer_cast<cfg::vhost::VirtualHost>(host_metrics)->ToJson();
-			host_json.removeMember("applications");
-
-			auto apps_list = host_metrics->GetApplicationMetricsList();
-
-			if (apps_list.size() > 0)
-			{
-				auto &apps_json = host_json["applications"];
-				apps_json = Json::arrayValue;
-
-				for (auto &app_pair : apps_list)
-				{
-					auto &app_metrics = app_pair.second;
-
-					Json::Value app_json = app_metrics->GetConfig().ToJson();
-					apps_json.append(app_json);
-				}
-			}
-
-			vhosts.append(host_json);
-		}
+	bool ConfigManager::SaveCurrentConfig()
+	{
+		Json::Value config = GetCurrentConfigAsJson();
 
 		ov::String last_config_path = ov::PathManager::Combine(_config_path, CFG_LAST_CONFIG_FILE_NAME);
 		auto config_json = config.toStyledString();
@@ -168,6 +131,8 @@ namespace cfg
 			logte("Could not write config to file: %s", last_config_path.CStr());
 			return false;
 		}
+
+		logti("Current config is written to %s", last_config_path.CStr());
 
 		return true;
 	}
