@@ -53,7 +53,10 @@ private:
 public:
 	enum PushPublisherErrorCode {
 		Success,
-		Failure
+		FailureInvalidParameter,
+		FailureDupulicateKey,
+		FailureNotExist,
+		FailureUnknown
 	};
 	
 	std::shared_ptr<ov::Error> PushStart(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Push> &record);

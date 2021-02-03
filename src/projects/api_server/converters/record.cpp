@@ -53,7 +53,7 @@ namespace api
 		{
 			auto record = std::make_shared<info::Record>();
 
-			// <Optional>
+			// <Required>
 			auto json_id = json_body["id"];
 			if(json_id.empty() == false && json_id.isString() == true)
 			{
@@ -64,13 +64,13 @@ namespace api
 			auto json_stream = json_body["stream"];
 			if(json_stream.empty() == false || json_stream.isObject() == true)
 			{
-				info::Stream stream(StreamSourceType::Ovt);
+				info::Stream stream(StreamSourceType::Transcoder);
 
 				// <Required>
 				auto json_stream_name = json_stream["name"];
 				if(json_stream_name.empty())
 				{
-					return nullptr;
+					json_stream_name = "";
 				}
 				
 				stream.SetName(json_stream_name.asString().c_str());
@@ -91,6 +91,10 @@ namespace api
 					}
 				}	
 
+				record->SetStream(stream);
+			}
+			else{
+				info::Stream stream(StreamSourceType::Transcoder);
 				record->SetStream(stream);
 			}
 

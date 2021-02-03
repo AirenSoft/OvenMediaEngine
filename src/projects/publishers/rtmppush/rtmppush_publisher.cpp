@@ -1,7 +1,12 @@
-#include "rtmppush_private.h"
 #include "rtmppush_publisher.h"
 
-#define UNUSED(expr) do { (void)(expr); } while (0)
+#include "rtmppush_private.h"
+
+#define UNUSED(expr)  \
+	do                \
+	{                 \
+		(void)(expr); \
+	} while (0)
 
 std::shared_ptr<RtmpPushPublisher> RtmpPushPublisher::Create(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 {
@@ -17,7 +22,7 @@ std::shared_ptr<RtmpPushPublisher> RtmpPushPublisher::Create(const cfg::Server &
 }
 
 RtmpPushPublisher::RtmpPushPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
-		: Publisher(server_config, router)
+	: Publisher(server_config, router)
 {
 	logtd("RtmpPushPublisher has been create");
 }
@@ -56,7 +61,7 @@ std::shared_ptr<pub::Application> RtmpPushPublisher::OnCreatePublisherApplicatio
 bool RtmpPushPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
 {
 	auto rtmppush_application = std::static_pointer_cast<RtmpPushApplication>(application);
-	if(rtmppush_application == nullptr)
+	if (rtmppush_application == nullptr)
 	{
 		logte("Could not found file application. app:%s", rtmppush_application->GetName().CStr());
 		return false;
@@ -72,15 +77,15 @@ void RtmpPushPublisher::StartSession(std::shared_ptr<RtmpPushSession> session)
 	// Check the status of the session.
 	auto session_state = session->GetState();
 
-	switch(session_state)
+	switch (session_state)
 	{
 		// State of disconnected and ready to connect
 		case pub::Session::SessionState::Ready:
 			session->Start();
-		break;
+			break;
 		case pub::Session::SessionState::Stopped:
 			session->Start();
-		break;
+			break;
 		// State of Recording
 		case pub::Session::SessionState::Started:
 			[[fallthrough]];
@@ -93,17 +98,17 @@ void RtmpPushPublisher::StartSession(std::shared_ptr<RtmpPushSession> session)
 	}
 
 	auto next_session_state = session->GetState();
-	if(session_state != next_session_state)
+	if (session_state != next_session_state)
 	{
-		logtd("Changed State. State(%d - %d)", session_state, next_session_state);		
-	}	
+		logtd("Changed State. State(%d - %d)", session_state, next_session_state);
+	}
 }
 
 void RtmpPushPublisher::StopSession(std::shared_ptr<RtmpPushSession> session)
 {
 	auto session_state = session->GetState();
 
-	switch(session_state)
+	switch (session_state)
 	{
 		case pub::Session::SessionState::Started:
 			session->Stop();
@@ -119,19 +124,18 @@ void RtmpPushPublisher::StopSession(std::shared_ptr<RtmpPushSession> session)
 	}
 
 	auto next_session_state = session->GetState();
-	if(session_state != next_session_state)
+	if (session_state != next_session_state)
 	{
-		logtd("Changed State. State(%d - %d)", session_state, next_session_state);		
-	}	
+		logtd("Changed State. State(%d - %d)", session_state, next_session_state);
+	}
 }
-
 
 void RtmpPushPublisher::SessionController()
 {
 	std::shared_lock<std::shared_mutex> lock(_userdata_sets_mutex);
 
 	auto userdata_sets = _userdata_sets.GetUserdataSets();
-	for ( auto& [ key, userdata ] : userdata_sets )
+	for (auto &[key, userdata] : userdata_sets)
 	{
 		UNUSED(key);
 
@@ -139,14 +143,14 @@ void RtmpPushPublisher::SessionController()
 		auto vhost_app_name = info::VHostAppName(userdata->GetVhost(), userdata->GetApplication());
 		auto stream = std::static_pointer_cast<RtmpPushStream>(GetStream(vhost_app_name, userdata->GetStreamName()));
 
-		if (stream != nullptr || stream->GetState() == pub::Stream::State::STARTED)
+		if (stream != nullptr && stream->GetState() == pub::Stream::State::STARTED)
 		{
 			// If there is no session, create a new file(record) session.
 			auto session = std::static_pointer_cast<RtmpPushSession>(stream->GetSession(userdata->GetSessionId()));
 			if (session == nullptr)
 			{
 				session = stream->CreateSession();
-				if(session == nullptr)
+				if (session == nullptr)
 				{
 					logte("Could not create session");
 					continue;
@@ -156,12 +160,12 @@ void RtmpPushPublisher::SessionController()
 				session->SetPush(userdata);
 			}
 
-			if(userdata->GetEnable() == true && userdata->GetRemove() == false)
+			if (userdata->GetEnable() == true && userdata->GetRemove() == false)
 			{
 				StartSession(session);
-			}		
+			}
 
-			if(userdata->GetEnable() == false || userdata->GetRemove() == true)
+			if (userdata->GetEnable() == false || userdata->GetRemove() == true)
 			{
 				StopSession(session);
 			}
@@ -171,18 +175,17 @@ void RtmpPushPublisher::SessionController()
 			userdata->SetState(info::Push::PushState::Ready);
 		}
 
-		if(userdata->GetRemove() == true)
+		if (userdata->GetRemove() == true)
 		{
 			logtd("Remove userdata of file publiser. id(%s)", userdata->GetId().CStr());
 
-			if(stream != nullptr && userdata->GetSessionId() != 0)
+			if (stream != nullptr && userdata->GetSessionId() != 0)
 				stream->DeleteSession(userdata->GetSessionId());
 
 			_userdata_sets.DeleteByKey(userdata->GetId());
-		}			
-
+		}
 	}
-}	
+}
 
 void RtmpPushPublisher::WorkerThread()
 {
@@ -200,62 +203,90 @@ void RtmpPushPublisher::WorkerThread()
 	}
 }
 
-std::shared_ptr<ov::Error> RtmpPushPublisher::PushStart(const info::VHostAppName &vhost_app_name, 
-													  const std::shared_ptr<info::Push> &push)
+std::shared_ptr<ov::Error> RtmpPushPublisher::PushStart(const info::VHostAppName &vhost_app_name,
+														const std::shared_ptr<info::Push> &push)
 {
-	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
+	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
-	if(_userdata_sets.GetByKey(push->GetId()) != nullptr)
+	if (push->GetId().IsEmpty() == true || push->GetStreamName().IsEmpty() == true)
 	{
-		return ov::Error::CreateError(PushPublisherErrorCode::Failure, 
-			"Duplicate identification Code");		
+		ov::String error_message = "There is no required parameter [";
+
+		if (push->GetId().IsEmpty() == true)
+		{
+			error_message += " id";
+		}
+
+		if (push->GetStreamName().IsEmpty() == true)
+		{
+			error_message += " stream.name";
+		}
+
+		error_message += "]";
+
+		return ov::Error::CreateError(PushPublisherErrorCode::FailureInvalidParameter, error_message);
 	}
 
+	if (_userdata_sets.GetByKey(push->GetId()) != nullptr)
+	{
+		ov::String error_message = "Duplicate ID already exists";
 
+		return ov::Error::CreateError(PushPublisherErrorCode::FailureDupulicateKey, error_message);
+	}
 
 	push->SetEnable(true);
 	push->SetRemove(false);
 
 	_userdata_sets.Set(push->GetId(), push);
 
-	return ov::Error::CreateError(PushPublisherErrorCode::Success, 
-		"Request completed");
+	return ov::Error::CreateError(PushPublisherErrorCode::Success, "Success");
 }
 
-std::shared_ptr<ov::Error> RtmpPushPublisher::PushStop(const info::VHostAppName &vhost_app_name, 
-												     const std::shared_ptr<info::Push> &push)
+std::shared_ptr<ov::Error> RtmpPushPublisher::PushStop(const info::VHostAppName &vhost_app_name,
+													   const std::shared_ptr<info::Push> &push)
 {
-	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
+	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
+
+	if (push->GetId().IsEmpty() == true)
+	{
+		ov::String error_message = "There is no required parameter [";
+
+		if (push->GetId().IsEmpty() == true)
+		{
+			error_message += " id";
+		}
+
+		error_message += "]";
+
+		return ov::Error::CreateError(PushPublisherErrorCode::FailureInvalidParameter, error_message);
+	}
 
 	auto userdata = _userdata_sets.GetByKey(push->GetId());
-	if(userdata == nullptr)
+	if (userdata == nullptr)
 	{
-		return ov::Error::CreateError(PushPublisherErrorCode::Failure, 
-			"identification code does not exist");	
+		ov::String error_message = ov::String::FormatString("There is no push information related to the ID [%s]", push->GetId().CStr());
+
+		return ov::Error::CreateError(PushPublisherErrorCode::FailureNotExist, error_message);
 	}
 
 	userdata->SetEnable(false);
 	userdata->SetRemove(true);
 
-	return ov::Error::CreateError(PushPublisherErrorCode::Success, 
-		"Request complted");
+	return ov::Error::CreateError(PushPublisherErrorCode::Success, "Success");
 }
 
-std::shared_ptr<ov::Error> RtmpPushPublisher::GetPushes(const info::VHostAppName &vhost_app_name, 
-											         std::vector<std::shared_ptr<info::Push>> &push_list)
+std::shared_ptr<ov::Error> RtmpPushPublisher::GetPushes(const info::VHostAppName &vhost_app_name,
+														std::vector<std::shared_ptr<info::Push>> &push_list)
 {
-	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);	
+	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
 	auto userdata_sets = _userdata_sets.GetUserdataSets();
-	for (  auto& [ key, userdata ] : userdata_sets )
+	for (auto &[key, userdata] : userdata_sets)
 	{
 		UNUSED(key);
 
 		push_list.push_back(userdata);
 	}
 
-	return ov::Error::CreateError(PushPublisherErrorCode::Success, 
-		"Look up the push list");
+	return ov::Error::CreateError(PushPublisherErrorCode::Success, "Success");
 }
-
-
