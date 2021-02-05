@@ -49,11 +49,16 @@ namespace info
 		void SetFilePath(ov::String file_path);
 		ov::String GetFilePath();
 
+		void SetInfoPath(ov::String info_path);
+		ov::String GetInfoPath();
+
+		void SetFilePathSetByUser(bool by_user);
+		bool IsFilePathSetByUser();
+		void SetInfoPathSetByUser(bool by_user);
+		bool IsInfoPathSetByUser();
+
 		void SetTmpPath(ov::String tmp_path);
 		ov::String GetTmpPath();
-
-		void SetFileInfoPath(ov::String fileinfo_path);
-		ov::String GetFileInfoPath();
 
 		void IncreaseRecordBytes(uint64_t bytes);
 		uint64_t GetRecordBytes();
@@ -110,8 +115,10 @@ namespace info
 		std::shared_ptr<info::Stream> _stream;
 
 		ov::String _file_path;
+		bool 	   _file_path_by_user;
+		ov::String _info_path;
+		bool 	   _info_path_by_user;
 		ov::String _tmp_path;
-		ov::String _fileinfo_path;
 
 		uint64_t _record_bytes;
 		uint64_t _record_time;

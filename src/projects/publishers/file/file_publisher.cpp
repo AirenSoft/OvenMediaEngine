@@ -237,10 +237,12 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 
 		return ov::Error::CreateError(FilePublisherStatusCode::FailureDupulicateKey, error_message);
 	}
-
+	
 	record->SetTransactionId(ov::Random::GenerateString(16));
 	record->SetEnable(true);
 	record->SetRemove(false);
+	record->SetFilePathSetByUser((record->GetFilePath().IsEmpty() != true) ? true : false);
+	record->SetInfoPathSetByUser((record->GetInfoPath().IsEmpty() != true) ? true : false);
 
 	_userdata_sets.Set(record->GetId(), record);
 

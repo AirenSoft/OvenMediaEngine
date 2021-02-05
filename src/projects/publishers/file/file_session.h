@@ -28,7 +28,8 @@ public:
 	std::shared_ptr<info::Record>& GetRecord();
 	
 private:
-	ov::String GetOutputTempFilePath();
+	ov::String GetRootPath();
+	ov::String GetOutputTempFilePath(std::shared_ptr<info::Record> &record);
 	ov::String GetOutputFilePath();
 	ov::String GetOutputFileInfoPath();
 	ov::String ConvertMacro(ov::String src);

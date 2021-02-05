@@ -72,17 +72,13 @@ namespace api
 				response.append(conv::JsonFromRecord(item));
 			}
 
-			HttpStatusCode status_code = HttpStatusCode::OK;
-
-			return {status_code, std::move(response)};
+			return {HttpStatusCode::OK, std::move(response)};
 		}
 
 		ApiResponse AppActionsController::OnPostStartRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
 															const std::shared_ptr<mon::HostMetrics> &vhost,
 															const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			// logte("JsonContext : %s", ov::Json::Stringify(request_body).CStr());
-
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
@@ -109,19 +105,16 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::BadRequest, error->GetMessage());
 			}
 
-			HttpStatusCode status_code = HttpStatusCode::OK;
 			Json::Value response;
 			response.append(conv::JsonFromRecord(record));
 
-			return {status_code, std::move(response)};
+			return {HttpStatusCode::OK, std::move(response)};
 		}
 
 		ApiResponse AppActionsController::OnPostStopRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
 														   const std::shared_ptr<mon::HostMetrics> &vhost,
 														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
-			// logte("JsonContext : %s", ov::Json::Stringify(request_body).CStr());
-
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
@@ -148,11 +141,10 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::NotFound, error->GetMessage());
 			}
 
-			HttpStatusCode status_code = HttpStatusCode::OK;
 			Json::Value response;
 			response.append(conv::JsonFromRecord(record));
 
-			return {status_code, std::move(response)};
+			return {HttpStatusCode::OK, std::move(response)};
 		}
 
 		ApiResponse AppActionsController::OnGetPushes(const std::shared_ptr<HttpClient> &client,
@@ -189,9 +181,7 @@ namespace api
 				response.append(conv::JsonFromPush(item));
 			}
 
-			HttpStatusCode status_code = HttpStatusCode::OK;
-
-			return {status_code, std::move(response)};
+			return {HttpStatusCode::OK, std::move(response)};
 		}
 
 		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
@@ -226,11 +216,10 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::BadRequest, error->GetMessage());
 			}
 
-			HttpStatusCode status_code = HttpStatusCode::OK;
 			Json::Value response;
 			response.append(conv::JsonFromPush(push));
 
-			return {status_code, std::move(response)};
+			return {HttpStatusCode::OK, std::move(response)};
 		}
 
 		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
@@ -253,7 +242,7 @@ namespace api
 			push->SetVhost(vhost->GetName().CStr());
 			push->SetApplication(app->GetName().GetAppName());
 
-			logte("%s", push->GetInfoString().CStr());
+			// logte("%s", push->GetInfoString().CStr());
 
 			auto error = publisher->PushStop(app->GetName(), push);
 			if (error->GetCode() == RtmpPushPublisher::PushPublisherErrorCode::FailureInvalidParameter)
@@ -286,5 +275,3 @@ namespace api
 
 	}  // namespace v1
 }  // namespace api
-
-

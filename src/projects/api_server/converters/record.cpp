@@ -98,6 +98,21 @@ namespace api
 				record->SetStream(stream);
 			}
 
+			// <Optional>
+			auto json_file_path = json_body["filePath"];
+			if(json_file_path.empty() == false && json_file_path.isString() == true)
+			{
+				record->SetFilePath(json_file_path.asString().c_str());			
+			}
+
+			// <Optional>
+			auto json_info_path = json_body["infoPath"];
+			if(json_info_path.empty() == false && json_info_path.isString() == true)
+			{
+				record->SetInfoPath(json_info_path.asString().c_str());			
+			}
+
+
 			return std::move(record);
 		}
 
@@ -111,8 +126,8 @@ namespace api
 			SetRecordStream(response, "stream", record->GetStream(), Optional::False);
 			SetString(response, "state", record->GetStateString(), Optional::False);
 			SetString(response, "filePath", record->GetFilePath(), Optional::False);
-			SetString(response, "fileTmpPath", record->GetTmpPath(), Optional::False);
-			SetString(response, "fileInfoPath", record->GetFileInfoPath(), Optional::False);
+			SetString(response, "infoPath", record->GetInfoPath(), Optional::False);
+			// SetString(response, "fileTmpPath", record->GetTmpPath(), Optional::False);			
 			SetInt64(response, "recordBytes", record->GetRecordBytes());
 			SetInt64(response, "recordTime", record->GetRecordTime());
 			SetInt64(response, "totalRecordBytes", record->GetRecordTotalBytes());
