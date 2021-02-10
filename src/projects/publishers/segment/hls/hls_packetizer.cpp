@@ -19,6 +19,18 @@
 
 #include "hls_private.h"
 
+static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &segment_item)
+{
+#if DEBUG
+#	if 0
+	auto &file_name = segment_item->file_name;
+	auto &data = segment_item->data;
+
+	ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/ts"), file_name), data);
+#	endif
+#endif	// DEBUG
+}
+
 HlsPacketizer::HlsPacketizer(const ov::String &app_name, const ov::String &stream_name,
 							 uint32_t segment_count, uint32_t segment_duration,
 							 const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track,
@@ -392,6 +404,8 @@ bool HlsPacketizer::SetSegmentData(ov::String file_name, int64_t timestamp, int6
 		logai("Segments are ready, segment duration: %fs, count: %u",
 			  _segment_duration, _segment_count);
 	}
+
+	DumpSegmentToFile(segment_data);
 
 	return true;
 }

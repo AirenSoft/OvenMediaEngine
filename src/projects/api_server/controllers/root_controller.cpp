@@ -87,6 +87,10 @@ namespace api
 					message = "Invalid authorization header";
 				}
 			}
+			else
+			{
+				message = "Authorization header is required to call API";
+			}
 
 			ApiResponse response(HttpError::CreateError(HttpStatusCode::Forbidden, message));
 			response.SendToClient(client);

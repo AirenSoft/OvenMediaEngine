@@ -112,7 +112,7 @@ void FilePublisher::StartSession(std::shared_ptr<FileSession> session)
 		case pub::Session::SessionState::Error:
 			[[fallthrough]];
 		default:
-			break;			
+			break;
 	}
 
 	auto next_session_state = session->GetState();
@@ -163,7 +163,7 @@ void FilePublisher::SessionController()
 		auto vhost_app_name = info::VHostAppName(userdata->GetVhost(), userdata->GetApplication());
 		auto stream = std::static_pointer_cast<FileStream>(GetStream(vhost_app_name, userdata->GetStreamName()));
 
-		if (stream != nullptr || stream->GetState() == pub::Stream::State::STARTED)
+		if (stream != nullptr && stream->GetState() == pub::Stream::State::STARTED)
 		{
 			// If there is no session, create a new file(record) session.
 			auto session = std::static_pointer_cast<FileSession>(stream->GetSession(userdata->GetSessionId()));
@@ -212,20 +212,41 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
-	if (_userdata_sets.GetByKey(record->GetId()) != nullptr)
+	if (record->GetId().IsEmpty() == true || record->GetStreamName().IsEmpty() == true)
 	{
-		return ov::Error::CreateError(FilePublisherStatusCode::Failure,
-									  "Duplicate identification Code");
+		ov::String error_message = "There is no required parameter [";
+
+		if (record->GetId().IsEmpty() == true)
+		{
+			error_message += " id";
+		}
+
+		if (record->GetStreamName().IsEmpty() == true)
+		{
+			error_message += " stream.name";
+		}
+
+		error_message += "]";
+
+		return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
 	}
 
+	if (_userdata_sets.GetByKey(record->GetId()) != nullptr)
+	{
+		ov::String error_message = "Duplicate ID already exists";
+
+		return ov::Error::CreateError(FilePublisherStatusCode::FailureDupulicateKey, error_message);
+	}
+	
 	record->SetTransactionId(ov::Random::GenerateString(16));
 	record->SetEnable(true);
 	record->SetRemove(false);
+	record->SetFilePathSetByUser((record->GetFilePath().IsEmpty() != true) ? true : false);
+	record->SetInfoPathSetByUser((record->GetInfoPath().IsEmpty() != true) ? true : false);
 
 	_userdata_sets.Set(record->GetId(), record);
 
-	return ov::Error::CreateError(FilePublisherStatusCode::Success,
-								  "Record request completed");
+	return ov::Error::CreateError(FilePublisherStatusCode::Success, "Success");
 }
 
 std::shared_ptr<ov::Error> FilePublisher::RecordStop(const info::VHostAppName &vhost_app_name,
@@ -233,18 +254,32 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStop(const info::VHostAppName &v
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
+	if (record->GetId().IsEmpty() == true)
+	{
+		ov::String error_message = "There is no required parameter [";
+
+		if (record->GetId().IsEmpty() == true)
+		{
+			error_message += " id";
+		}
+
+		error_message += "]";
+
+		return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
+	}
+
 	auto userdata = _userdata_sets.GetByKey(record->GetId());
 	if (userdata == nullptr)
 	{
-		return ov::Error::CreateError(FilePublisherStatusCode::Failure,
-									  "identification code does not exist");
+		ov::String error_message = ov::String::FormatString("There is no record information related to the ID [%s]", record->GetId().CStr());
+
+		return ov::Error::CreateError(FilePublisherStatusCode::FailureNotExist, error_message);
 	}
 
 	userdata->SetEnable(false);
 	userdata->SetRemove(true);
 
-	return ov::Error::CreateError(FilePublisherStatusCode::Success,
-								  "Recording stop request complted");
+	return ov::Error::CreateError(FilePublisherStatusCode::Success, "Success");
 }
 
 std::shared_ptr<ov::Error> FilePublisher::GetRecords(const info::VHostAppName &vhost_app_name,
@@ -260,6 +295,5 @@ std::shared_ptr<ov::Error> FilePublisher::GetRecords(const info::VHostAppName &v
 		record_list.push_back(userdata);
 	}
 
-	return ov::Error::CreateError(FilePublisherStatusCode::Success,
-								  "Look up the recording list");
+	return ov::Error::CreateError(FilePublisherStatusCode::Success, "Success");
 }

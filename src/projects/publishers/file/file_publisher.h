@@ -53,7 +53,10 @@ private:
 public:
 	enum FilePublisherStatusCode {
 		Success,
-		Failure
+		FailureInvalidParameter,
+		FailureDupulicateKey,
+		FailureNotExist,
+		FailureUnknown
 	};
 	
 	std::shared_ptr<ov::Error> RecordStart(const info::VHostAppName &vhost_app_name, const std::shared_ptr<info::Record> &record);

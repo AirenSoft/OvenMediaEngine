@@ -8,6 +8,8 @@
 //==============================================================================
 #include "application.h"
 
+#include <config/config.h>
+
 #include "common.h"
 
 namespace api
@@ -21,11 +23,14 @@ namespace api
 
 		Json::Value JsonFromApplication(const std::shared_ptr<const mon::ApplicationMetrics> &application)
 		{
-			auto json = application->GetConfig().ToJson();
+			Json::Value app = cfg::conv::GetApplicationFromMetrics(application);
 
-			json["dynamic"] = application->IsDynamicApp();
+			if (app.isObject())
+			{
+				app["dynamic"] = application->IsDynamicApp();
+			}
 
-			return std::move(json);
+			return std::move(app);
 		}
 
 		std::shared_ptr<HttpError> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)

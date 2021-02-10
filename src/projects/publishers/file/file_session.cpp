@@ -41,22 +41,36 @@ bool FileSession::Start()
 	logtd("FileSession(%d) has started.", GetId());
 
 	GetRecord()->UpdateRecordStartTime();
-	GetRecord()->SetFilePath(GetOutputFilePath());
-	GetRecord()->SetTmpPath(GetOutputTempFilePath());
-	GetRecord()->SetFileInfoPath(GetOutputFileInfoPath());
+
+	if (GetRecord()->IsFilePathSetByUser() == false)
+	{
+		GetRecord()->SetFilePath(GetOutputFilePath());
+	}
+
+	if (GetRecord()->IsInfoPathSetByUser() == false)
+	{
+		GetRecord()->SetInfoPath(GetOutputFileInfoPath());
+	}
+
+	GetRecord()->SetTmpPath(GetOutputTempFilePath(GetRecord()));
 	GetRecord()->SetState(info::Record::RecordState::Recording);
 
 	// Create directory for temporary file
-	ov::String tmp_directory = ov::PathManager::ExtractPath(GetOutputTempFilePath());
-	if (MakeDirectoryRecursive(tmp_directory.CStr()) == false)
+	ov::String tmp_directory = ov::PathManager::ExtractPath(GetRecord()->GetTmpPath());
+	ov::String tmp_real_directory = ov::PathManager::Combine(GetRootPath(), tmp_directory);
+
+	if (MakeDirectoryRecursive(tmp_real_directory.CStr()) == false)
 	{
-		logte("Could not create directory. path(%s)", tmp_directory.CStr());
+		logte("%s, %s", GetRootPath().CStr(), tmp_directory.CStr());
+		logte("Could not create directory. path(%s)", tmp_real_directory.CStr());
 
 		SetState(SessionState::Error);
 		GetRecord()->SetState(info::Record::RecordState::Error);
 
 		return false;
 	}
+
+	logtd("The temporary directory was created successfully. (%s)", tmp_real_directory.CStr());
 
 	_writer = FileWriter::Create();
 	if (_writer == nullptr)
@@ -67,7 +81,7 @@ bool FileSession::Start()
 		return false;
 	}
 
-	if (_writer->SetPath(GetRecord()->GetTmpPath(), "mpegts") == false)
+	if (_writer->SetPath(ov::PathManager::Combine(GetRootPath(), GetRecord()->GetTmpPath()), "mpegts") == false)
 	{
 		SetState(SessionState::Error);
 		GetRecord()->SetState(info::Record::RecordState::Error);
@@ -76,6 +90,7 @@ bool FileSession::Start()
 
 		return false;
 	}
+	logtd("The temporary file was created successfully. (%s)", _writer->GetPath().CStr());
 
 	for (auto &track_item : GetStream()->GetTracks())
 	{
@@ -136,19 +151,26 @@ bool FileSession::Stop()
 {
 	if (_writer != nullptr)
 	{
+		_writer->Stop();
+
 		SetState(SessionState::Stopping);
+
 		GetRecord()->SetState(info::Record::RecordState::Stopping);
 
 		GetRecord()->UpdateRecordStopTime();
-		GetRecord()->SetFilePath(GetOutputFilePath());
-		GetRecord()->SetFileInfoPath(GetOutputFileInfoPath());
 
-		_writer->Stop();
+		// The recording end time has been changed. so, the file name needs to be updated.
+		if (GetRecord()->IsFilePathSetByUser() == false)
+		{
+			GetRecord()->SetFilePath(GetOutputFilePath());
+		}
+		if (GetRecord()->IsInfoPathSetByUser() == false)
+		{
+			GetRecord()->SetInfoPath(GetOutputFileInfoPath());
+		}
 
-		ov::String tmp_output_path = _writer->GetPath();
-
-		// Create directory
-		ov::String output_path = GetRecord()->GetFilePath();
+		// Create directory for recorded file
+		ov::String output_path = ov::PathManager::Combine(GetRootPath(), GetRecord()->GetFilePath());
 		ov::String output_directory = ov::PathManager::ExtractPath(output_path);
 
 		if (MakeDirectoryRecursive(output_directory.CStr()) == false)
@@ -160,8 +182,10 @@ bool FileSession::Stop()
 
 			return false;
 		}
+		logtd("file directory was created successfully. (%s)", output_directory.CStr());
 
-		ov::String info_path = GetRecord()->GetFileInfoPath();
+		// Create directory for information file
+		ov::String info_path = ov::PathManager::Combine(GetRootPath(), GetRecord()->GetInfoPath());
 		ov::String info_directory = ov::PathManager::ExtractPath(info_path);
 
 		if (MakeDirectoryRecursive(info_directory.CStr()) == false)
@@ -173,8 +197,11 @@ bool FileSession::Stop()
 
 			return false;
 		}
+		logtd("information directory was created successfully. (%s)", info_directory.CStr());
 
 		// Moves temporary files to a user-defined path.
+		ov::String tmp_output_path = _writer->GetPath();
+
 		if (rename(tmp_output_path.CStr(), output_path.CStr()) != 0)
 		{
 			logte("Failed to move file. %s -> %s", tmp_output_path.CStr(), output_path.CStr());
@@ -184,11 +211,14 @@ bool FileSession::Stop()
 
 			return false;
 		}
+		logtd("Move the temporary file to real file (%s)->(%s)", tmp_output_path.CStr(), output_path.CStr());
 
-		if (FileExport::GetInstance()->ExportRecordToXml(GetRecord()->GetFileInfoPath(), GetRecord()) == false)
+		// Append recorded information to the information file
+		if (FileExport::GetInstance()->ExportRecordToXml(info_path, GetRecord()) == false)
 		{
-			logte("Failed to export xml file. path(%s)", GetRecord()->GetFileInfoPath().CStr());
+			logte("Failed to export xml file. path(%s)", info_path.CStr());
 		}
+		logtd("Append to the infomation file. %s", info_path.CStr());
 
 		GetRecord()->SetState(info::Record::RecordState::Stopped);
 		GetRecord()->IncreaseSequence();
@@ -231,7 +261,6 @@ bool FileSession::SendOutgoingData(const std::any &packet)
 
 		if (ret == false)
 		{
-			logte("Failed to add packet");
 			SetState(SessionState::Error);
 			GetRecord()->SetState(info::Record::RecordState::Error);
 
@@ -264,22 +293,20 @@ std::shared_ptr<info::Record> &FileSession::GetRecord()
 	return _record;
 }
 
-ov::String FileSession::GetOutputTempFilePath()
+ov::String FileSession::GetRootPath()
 {
 	auto app_config = std::static_pointer_cast<info::Application>(GetApplication())->GetConfig();
 	auto file_config = app_config.GetPublishers().GetFilePublisher();
 
-	auto file_path = file_config.GetFilePath();
+	return file_config.GetRootPath();
+}
 
-	// If FILE->FilePath config is not set, save it as the default path.
-	if (file_path.GetLength() == 0 || file_path.IsEmpty() == true)
-	{
-		file_path.Format("%s${TransactionId}_${VirtualHost}_${Application}_${Stream}_${StartTime:YYYYMMDDhhmmss}_tmp.ts", ov::PathManager::GetAppPath("records").CStr());
-	}
+ov::String FileSession::GetOutputTempFilePath(std::shared_ptr<info::Record> &record)
+{
+	ov::String tmp_directory = ov::PathManager::ExtractPath(record->GetFilePath());
+	ov::String tmp_filename = ov::String::FormatString("tmp_%s.ts", ov::Random::GenerateString(32).CStr());
 
-	auto result = ConvertMacro(file_path);
-
-	return result;
+	return ov::PathManager::Combine(tmp_directory, tmp_filename);
 }
 
 ov::String FileSession::GetOutputFilePath()
@@ -306,7 +333,7 @@ ov::String FileSession::GetOutputFileInfoPath()
 	auto file_config = app_config.GetPublishers().GetFilePublisher();
 
 	// If FILE->FileInfoPath config is not set, save it as the default path.
-	auto fileinfo_path = file_config.GetFileInfoPath();
+	auto fileinfo_path = file_config.GetInfoPath();
 	if (fileinfo_path.GetLength() == 0 || fileinfo_path.IsEmpty() == true)
 	{
 		fileinfo_path.Format("%s${TransactionId}_${VirtualHost}_${Application}_${Stream}.xml", ov::PathManager::GetAppPath("records").CStr());
@@ -369,7 +396,7 @@ ov::String FileSession::ConvertMacro(ov::String src)
 	ov::String replaced_string = ov::String(raw_string.c_str());
 
 	// =========================================
-	// Deifinitino of Macro
+	// Definition of Macro
 	// =========================================
 	// ${StartTime:YYYYMMDDhhmmss}
 	// ${EndTime:YYYYMMDDhhmmss}
@@ -383,7 +410,7 @@ ov::String FileSession::ConvertMacro(ov::String src)
 	// ${Application} : Application Name
 	// ${Stream} : Stream name
 	// ${Sequence} : Sequence number
-	// ${Id} : Idenficiation Code
+	// ${Id} : Identification Code
 
 	std::regex reg_exp("\\$\\{([a-zA-Z0-9:]+)\\}");
 	const std::sregex_iterator it_end;
@@ -434,7 +461,7 @@ ov::String FileSession::ConvertMacro(ov::String src)
 			ov::String buff = ov::String::FormatString("%s", GetRecord()->GetTransactionId().CStr());
 
 			replaced_string = replaced_string.Replace(full_match, buff);
-		}		
+		}
 		if (group.IndexOf("StartTime") != -1L)
 		{
 			time_t now = std::chrono::system_clock::to_time_t(GetRecord()->GetRecordStartTime());

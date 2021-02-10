@@ -41,6 +41,48 @@ namespace api
 			CreateSubController<OutputProfilesController>(R"(\/(?<app_name>[^\/:]*)\/outputProfiles)");
 		};
 
+		bool FillDefaultValues(Json::Value &config)
+		{
+			// Setting up the default values
+			if (config.isMember("providers") == false)
+			{
+				config["providers"]["rtmp"] = Json::objectValue;
+				config["providers"]["mpegts"] = Json::objectValue;
+			}
+
+			if (config.isMember("publishers") == false)
+			{
+				config["publishers"]["hls"] = Json::objectValue;
+				config["publishers"]["dash"] = Json::objectValue;
+				config["publishers"]["llDash"] = Json::objectValue;
+				config["publishers"]["webrtc"] = Json::objectValue;
+			}
+
+			if (config.isMember("outputProfiles") == false)
+			{
+				Json::Value output_profile;
+				output_profile["name"] = "bypass";
+				output_profile["outputStreamName"] = "${OriginStreamName}";
+
+				Json::Value codec;
+				codec["bypass"] = true;
+
+				output_profile["encodes"]["videos"].append(codec);
+				output_profile["encodes"]["audios"].append(codec);
+
+				codec = Json::objectValue;
+				codec["codec"] = "opus";
+				codec["bitrate"] = 128000;
+				codec["samplerate"] = 48000;
+				codec["channel"] = 2;
+				output_profile["encodes"]["audios"].append(codec);
+
+				config["outputProfiles"].append(output_profile);
+			}
+
+			return true;
+		}
+
 		ApiResponse AppsController::OnPostApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
 											  const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
@@ -59,43 +101,7 @@ namespace api
 			{
 				cfg::vhost::app::Application app_config;
 
-				// Setting up the default values
-				if (item["providers"].isNull())
-				{
-					item["providers"]["rtmp"] = Json::objectValue;
-					item["providers"]["mpegts"] = Json::objectValue;
-				}
-
-				if (item["publishers"].isNull())
-				{
-					item["publishers"]["hls"] = Json::objectValue;
-					item["publishers"]["dash"] = Json::objectValue;
-					item["publishers"]["llDash"] = Json::objectValue;
-					item["publishers"]["webrtc"] = Json::objectValue;
-				}
-
-				if (item["outputProfiles"].isNull())
-				{
-					Json::Value output_profile;
-
-					output_profile["name"] = "bypass";
-					output_profile["outputStreamName"] = "${OriginStreamName}";
-
-					Json::Value codec;
-
-					codec["bypass"] = true;
-					output_profile["encodes"]["videos"].append(codec);
-					output_profile["encodes"]["audios"].append(codec);
-
-					codec = Json::objectValue;
-					codec["codec"] = "opus";
-					codec["bitrate"] = 128000;
-					codec["samplerate"] = 48000;
-					codec["channel"] = 2;
-					output_profile["encodes"]["audios"].append(codec);
-
-					item["outputProfiles"].append(output_profile);
-				}
+				FillDefaultValues(item);
 
 				auto error = conv::ApplicationFromJson(item, &app_config);
 

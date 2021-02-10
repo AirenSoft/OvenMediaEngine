@@ -10,8 +10,8 @@
 
 #include "items/items.h"
 
-#define CFG_LOG_FILE_NAME          "Logger.xml"
-#define CFG_MAIN_FILE_NAME          "Server.xml"
+#define CFG_LOG_FILE_NAME "Logger.xml"
+#define CFG_MAIN_FILE_NAME "Server.xml"
 #define CFG_LAST_CONFIG_FILE_NAME "LastConfig.json"
 
 namespace cfg
@@ -27,6 +27,8 @@ namespace cfg
 
 		MAY_THROWS(std::shared_ptr<ConfigError>)
 		void ReloadConfigs();
+
+		Json::Value GetCurrentConfigAsJson();
 
 		// ConfigManager contains only the configurations when OME first runs,
 		// so if you want to save the last changes modified with RESTful API, you need to call this API.

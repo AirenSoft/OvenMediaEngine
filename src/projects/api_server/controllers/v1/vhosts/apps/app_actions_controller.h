@@ -25,6 +25,10 @@ namespace api
 									 const std::shared_ptr<mon::HostMetrics> &vhost,
 									 const std::shared_ptr<mon::ApplicationMetrics> &app);
 
+			ApiResponse OnPostRecords(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+									 const std::shared_ptr<mon::HostMetrics> &vhost,
+									 const std::shared_ptr<mon::ApplicationMetrics> &app);
+
 			// POST /v1/vhosts/<vhost_name>/apps/<app_name>:startRecord
 			ApiResponse OnPostStartRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
 										  const std::shared_ptr<mon::HostMetrics> &vhost,
@@ -39,7 +43,12 @@ namespace api
 			ApiResponse OnGetPushes(const std::shared_ptr<HttpClient> &client,
 									const std::shared_ptr<mon::HostMetrics> &vhost,
 									const std::shared_ptr<mon::ApplicationMetrics> &app);
-			
+
+			ApiResponse OnPostPushes(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+									const std::shared_ptr<mon::HostMetrics> &vhost,
+									const std::shared_ptr<mon::ApplicationMetrics> &app);
+						
+
 			// POST /v1/vhosts/<vhost_name>/apps/<app_name>:startPush
 			ApiResponse OnPostStartPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
 										const std::shared_ptr<mon::HostMetrics> &vhost,
