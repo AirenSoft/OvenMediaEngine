@@ -26,6 +26,7 @@ StunDataAttribute::~StunDataAttribute()
 bool StunDataAttribute::Parse(ov::ByteStream &stream)
 {
 	_data = stream.GetRemainData()->Subdata(0, _length);
+	stream.Skip(_length);
 	return true;
 }
 
@@ -34,7 +35,7 @@ const std::shared_ptr<const ov::Data>& StunDataAttribute::GetData() const
 	return _data;
 }
 
-bool StunDataAttribute::SetData(const std::shared_ptr<ov::Data> &data)
+bool StunDataAttribute::SetData(const std::shared_ptr<const ov::Data> &data)
 {
 	_data = data;
 	_length = _data->GetLength();

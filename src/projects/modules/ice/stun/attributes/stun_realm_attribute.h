@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "stun_text_attribute_format.h"
+#include "templates/stun_text_attribute_format.h"
 
 class StunRealmAttribute : public StunTextAttributeFormat
 {

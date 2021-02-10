@@ -48,8 +48,8 @@ bool StunAddressAttributeFormat::Parse(ov::ByteStream &stream)
 	}
 
 	// Port
-	stream.ReadBE16();
-
+	uint16_t port = stream.ReadBE16();
+	
 	// Address
 	size_t address_length = (family == StunAddressFamily::IPv4) ? 4 : 16;
 
@@ -70,6 +70,7 @@ bool StunAddressAttributeFormat::Parse(ov::ByteStream &stream)
 				return false;
 			}
 
+			_address.SetPort(port);
 			_address.UpdateIPAddress();
 
 			break;
@@ -77,6 +78,8 @@ bool StunAddressAttributeFormat::Parse(ov::ByteStream &stream)
 
 		case StunAddressFamily::IPv6:
 			_address.SetFamily(ov::SocketFamily::Inet6);
+
+			_address.SetPort(port);
 			OV_ASSERT(false, "IPv6 is not supported");
 			logte("IPv6 is not supported");
 			return false;

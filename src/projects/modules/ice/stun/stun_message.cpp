@@ -46,7 +46,7 @@ bool StunMessage::Parse(ov::ByteStream &stream)
 	_parsed = _parsed && ParseHeader(stream);
 
 	// STUN 패킷인지를 빠르게 판단하기 위해, finger print를 먼저 계산해봄 (CRC는 stream의 뒷 부분을 탐색하여 계산하기 때문에, 복사해놓음 stream을 사용함)
-	_parsed = _parsed && ValidateFingerprint(copied_stream);
+	//_parsed = _parsed && ValidateFingerprint(copied_stream);
 
 	// 나머지 attribute들 파싱
 	_parsed = _parsed && ParseAttributes(stream);
@@ -156,10 +156,11 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 bool StunMessage::ParseAttributes(ov::ByteStream &stream)
 {
 	// Under normal circumstances, fingerprint attribute must be parsed.
-	OV_ASSERT2(_fingerprint_attribute != nullptr);
+	// OV_ASSERT2(_fingerprint_attribute != nullptr);
 
 	// Since fingerprint attribute is calculated before other attributes, it is excluded.
-	size_t minimum_length = StunAttribute::DefaultHeaderSize() + _fingerprint_attribute->GetLength(true, false);
+	size_t minimum_length = StunAttribute::DefaultHeaderSize() + 
+	((_fingerprint_attribute != nullptr) ? _fingerprint_attribute->GetLength(true, false) : 0);
 
 	// Parsing starts when the minimum data is found
 	while(stream.Remained() >= minimum_length)
@@ -234,7 +235,6 @@ bool StunMessage::WriteHeader(ov::ByteStream &stream)
 
 bool StunMessage::WriteMessageLength(ov::ByteStream &stream)
 {
-	// STUN 헤더 크기
 	_message_length = 0;
 
 	for(const auto &attribute : _attributes)
@@ -244,7 +244,6 @@ bool StunMessage::WriteMessageLength(ov::ByteStream &stream)
 			(attribute->GetType() == StunAttributeType::Fingerprint)
 			)
 		{
-			// 나중에 추가되는 attribute들
 			continue;
 		}
 
@@ -270,7 +269,6 @@ bool StunMessage::WriteAttributes(ov::ByteStream &stream)
 			(attribute->GetType() == StunAttributeType::Fingerprint)
 			)
 		{
-			// 나중에 추가되는 attribute들
 			continue;
 		}
 
@@ -283,7 +281,7 @@ bool StunMessage::WriteAttributes(ov::ByteStream &stream)
 
 		if(padding_count < 4)
 		{
-			// 4의 배수가 아니므로, zero-padding
+			// zero-padding
 			stream.Write<uint8_t>(padding, static_cast<size_t>(padding_count));
 		}
 	}
@@ -297,7 +295,6 @@ bool StunMessage::WriteMessageIntegrityAttribute(ov::ByteStream &stream, const o
 
 	std::unique_ptr<StunMessageIntegrityAttribute> attribute = std::make_unique<StunMessageIntegrityAttribute>();
 
-	// 지금까지의 데이터들을 모두 모아서 integrity hash 생성
 	// RFC5389 - 15.4. MESSAGE-INTEGRITY
 	// ...
 	// The text used as input to HMAC is the STUN message,
@@ -342,7 +339,7 @@ bool StunMessage::WriteFingerprintAttribute(ov::ByteStream &stream)
 
 	std::unique_ptr<StunFingerprintAttribute> attribute = std::make_unique<StunFingerprintAttribute>();
 
-	// Crc를 계산할 땐, STUN 헤더의 length에 fingerprint attribute 길이가 포함되어 있어야 함
+	// When calculating Crc, the length of the STUN header must include the fingerprint attribute length.
 	auto buffer = stream.GetData()->GetWritableDataAs<uint8_t>();
 	auto length_field = reinterpret_cast<uint16_t *>(buffer + sizeof(uint16_t));
 	int attribute_length = attribute->GetLength(true, true);
@@ -372,19 +369,17 @@ bool StunMessage::CalculateFingerprint(ov::ByteStream &stream, ssize_t length, u
 	uint32_t calculated = 0;
 	const auto buffer = stream.Read<>();
 
-	// 위에서 buffer 포인터에 현재 위치를 담아두었으므로, 나머지 데이터는 읽지 않게 skip
+	// Since the current position is stored in the buffer pointer above, the rest of the data is skipped so that it is not read.
 	if(stream.Skip(static_cast<size_t>(length)) == false)
 	{
-		// 데이터가 부족함
 		return false;
 	}
 
 	calculated = ov::Crc32::Calculate(buffer, length);
 
-	// 계산한 CRC에 xoring
+	// xoring
 	calculated ^= OV_STUN_FINGERPRINT_XOR_VALUE;
 
-	// 성공적으로 계산되었다면 CRC 반환을 위해 대입
 	if(fingerprint != nullptr)
 	{
 		*fingerprint = calculated;
@@ -612,14 +607,18 @@ const char *StunMessage::GetMethodString() const
 	{
 		case StunMethod::Binding:
 			return "Binding";
-
 		case StunMethod::Allocate:
+			return "Allocate";
 		case StunMethod::Refresh:
+			return "Refresh";
 		case StunMethod::Send:
+			return "Send";
 		case StunMethod::Data:
+			return "Data";
 		case StunMethod::CreatePermission:
+			return "CreatePermission";
 		case StunMethod::ChannelBind:
-			return "NotImplemented";
+			return "ChannelBind";
 	}
 
 	return "(Unknown)";
@@ -635,7 +634,7 @@ void StunMessage::SetMethod(StunMethod method)
 		// 654 => 765
 		(OV_GET_BITS(uint16_t, method, 4, 3) << 1) |
 		// 3210 => 3210
-		OV_GET_BITS(uint16_t, method, 0, 3);
+		OV_GET_BITS(uint16_t, method, 0, 4);
 
 	// class 쪽 bit 초기화
 	// STUN Message Type에서, C 부분만 남기기 위한 bit_mask = 0b00000100010000 (0x0110)
@@ -684,6 +683,21 @@ bool StunMessage::AddAttribute(std::unique_ptr<StunAttribute> attribute)
 	return true;
 }
 
+// Generate only FINGERPRINT attribute
+std::shared_ptr<ov::Data> StunMessage::Serialize()
+{
+	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>();
+	ov::ByteStream stream(data.get());
+
+	bool result = true;
+
+	result = result && WriteHeader(stream);
+	result = result && WriteAttributes(stream);
+	result = result && WriteFingerprintAttribute(stream);
+
+	return result ? data : nullptr;
+}
+
 std::shared_ptr<ov::Data> StunMessage::Serialize(const ov::String &integrity_key)
 {
 	std::shared_ptr<ov::Data> data = std::make_shared<ov::Data>();
@@ -691,16 +705,9 @@ std::shared_ptr<ov::Data> StunMessage::Serialize(const ov::String &integrity_key
 
 	bool result = true;
 
-	// Write header
 	result = result && WriteHeader(stream);
-
-	// attribute들 기록
 	result = result && WriteAttributes(stream);
-
-	// Integrity attribute 기록
 	result = result && WriteMessageIntegrityAttribute(stream, integrity_key);
-
-	// Fingerprint attribute 기록
 	result = result && WriteFingerprintAttribute(stream);
 
 	return result ? data : nullptr;

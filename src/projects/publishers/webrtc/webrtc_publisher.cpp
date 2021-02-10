@@ -88,6 +88,13 @@ bool WebRtcPublisher::Start()
 		result = false;
 	}
 
+	ov::SocketAddress	turn_address(3478);
+	if(IcePortManager::GetInstance()->CreateTurnServer(_ice_port, turn_address, ov::SocketType::Tcp) == false)
+	{
+		logte("Could not create Turn Server. Check your configuration");
+		result = false;
+	}
+
 	if (result)
 	{
 		logti("%s is listening on %s%s%s%s...",

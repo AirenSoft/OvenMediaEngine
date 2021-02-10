@@ -2,8 +2,8 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Hyunjun Jang
-//  Copyright (c) 2018 AirenSoft. All rights reserved.
+//  Created by Getroot
+//  Copyright (c) 2021 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once

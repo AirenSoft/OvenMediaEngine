@@ -35,7 +35,7 @@ std::shared_ptr<IceTcpDemultiplexer::Packet> IceTcpDemultiplexer::PopPacket()
 
 bool IceTcpDemultiplexer::ParseData()
 {
-	while(_buffer.GetLength() < MINIMUM_PACKET_HEADER_SIZE)
+	while(_buffer.GetLength() > MINIMUM_PACKET_HEADER_SIZE)
 	{
 		// Only STUN and TURN Channel should be input packet types to IceTcpDemultiplexer. 
 		// If another packet is input, it means a problem has occurred.
@@ -122,7 +122,7 @@ IceTcpDemultiplexer::ExtractResult IceTcpDemultiplexer::ExtractChannelMessage()
 		}
 	}
 
-	uint32_t packet_size = FIXED_TURN_CHANNEL_HEADER_SIZE + message.GetDataLength();
+	uint32_t packet_size = message.GetPacketLength();
 	auto data = _buffer.Subdata(0, packet_size);
 	auto packet = std::make_shared<IceTcpDemultiplexer::Packet>(IcePacketIdentifier::PacketType::TURN_CHANNEL_DATA, data);
 

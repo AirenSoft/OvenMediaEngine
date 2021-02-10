@@ -73,7 +73,7 @@ bool StunXorAddressAttributeFormat::Serialize(ov::ByteStream &stream) const noex
 	return StunAttribute::Serialize(stream) &&
 	       stream.Write8(0x00) &&
 	       stream.Write8((uint8_t)GetFamily()) &&
-	       stream.WriteBE16((uint16_t)GetPort()) &&
+	       stream.WriteBE16((uint16_t)address1.Port()) &&	// 여기 address1에서 포트 얻어와야???
 	       stream.Write(address1.ToAddrIn(), GetAddressLength());
 }
 

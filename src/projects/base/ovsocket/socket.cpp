@@ -1324,8 +1324,10 @@ namespace ov
 			{
 				while (true)
 				{
+					
 					int result = ::sendto(_socket.GetSocket(), data, length, MSG_NOSIGNAL | (_is_nonblock ? MSG_DONTWAIT : 0), address.Address(), address.AddressLength());
-
+					
+					//logtc(">> %s", ov::Dump(data, 128).CStr());
 					if (result >= 0)
 					{
 #if USE_STATS_COUNTER

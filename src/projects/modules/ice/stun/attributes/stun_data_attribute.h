@@ -20,7 +20,7 @@ public:
 	bool Parse(ov::ByteStream &stream) override;
 
 	const std::shared_ptr<const ov::Data>& GetData() const;
-	bool SetData(const std::shared_ptr<ov::Data> &data);
+	bool SetData(const std::shared_ptr<const ov::Data> &data);
 
 	bool Serialize(ov::ByteStream &stream) const noexcept override;
 

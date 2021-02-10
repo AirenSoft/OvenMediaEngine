@@ -16,6 +16,7 @@
 #include <algorithm>
 
 #include <base/ovlibrary/ovlibrary.h>
+#include <base/ovcrypto/message_digest.h>
 #include <config/config.h>
 #include <modules/rtc_signalling/rtc_ice_candidate.h>
 #include <base/info/stream.h>
@@ -69,7 +70,7 @@ bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_lis
 
 			bounded[port] = true;
 		}
-
+		
 		// Bind to 0.0.0.0
 		address.SetHostname(nullptr);
 
@@ -126,7 +127,7 @@ bool IcePort::CreateTurnServer(ov::SocketAddress address, ov::SocketType socket_
 	logti("ICE port is bound to %s/%s (%p)", address.ToString().CStr(), StringFromSocketType(socket_type), physical_port.get());
 	_physical_port_list.push_back(physical_port);
 
-	return false;
+	return true;
 }
 
 const std::vector<RtcIceCandidate> &IcePort::GetIceCandidateList() const
@@ -200,14 +201,12 @@ ov::String IcePort::GenerateUfrag()
 
 bool IcePort::AddObserver(std::shared_ptr<IcePortObserver> observer)
 {
-	// 기존에 등록된 observer가 있는지 확인
 	auto item = std::find_if(_observers.begin(), _observers.end(), [&](std::shared_ptr<IcePortObserver> const &value) -> bool {
 		return value == observer;
 	});
 
 	if (item != _observers.end())
 	{
-		// 기존에 등록되어 있음
 		logtw("%p is already observer", observer.get());
 		return false;
 	}
@@ -225,7 +224,6 @@ bool IcePort::RemoveObserver(std::shared_ptr<IcePortObserver> observer)
 
 	if (item == _observers.end())
 	{
-		// 기존에 등록되어 있지 않음
 		logtw("%p is not registered observer", observer.get());
 		return false;
 	}
@@ -338,6 +336,41 @@ bool IcePort::RemoveSession(const std::shared_ptr<info::Session> &session_info)
 	return RemoveSession(session_id);
 }
 
+void IcePort::CheckTimedoutItem()
+{
+	std::vector<std::shared_ptr<IcePortInfo>> delete_list;
+	{
+		std::lock_guard<std::mutex> lock_guard(_user_mapping_table_mutex);
+
+		for (auto item = _user_mapping_table.begin(); item != _user_mapping_table.end();)
+		{
+			if (item->second->IsExpired())
+			{
+				logtd("Client %s(session id: %d) is expired", item->second->address.ToString().CStr(), item->second->session_info->GetId());
+				SetIceState(item->second, IcePortConnectionState::Disconnected);
+
+				delete_list.push_back(item->second);
+
+				item = _user_mapping_table.erase(item);
+			}
+			else
+			{
+				++item;
+			}
+		}
+	}
+
+	{
+		std::lock_guard<std::mutex> lock_guard(_ice_port_info_mutex);
+
+		for (auto &deleted_ice_port : delete_list)
+		{
+			_session_table.erase(deleted_ice_port->session_info->GetId());
+			_ice_port_info.erase(deleted_ice_port->address);
+		}
+	}
+}
+
 bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, std::unique_ptr<RtpPacket> packet)
 {
 	return Send(session_info, packet->GetData());
@@ -350,34 +383,44 @@ bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, std::uniq
 
 bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data)
 {
-	// logtd("Finding socket from session #%d...", session_info->GetId());
-
 	std::shared_ptr<IcePortInfo> ice_port_info;
-
 	{
 		std::lock_guard<std::mutex> lock_guard(_ice_port_info_mutex);
 
 		auto item = _session_table.find(session_info->GetId());
-
 		if (item == _session_table.end())
 		{
-			// logtw("ClientSocket not found for session #%d", session_info->GetId());
+			logtw("ClientSocket not found for session #%d", session_info->GetId());
 			return false;
 		}
 
 		ice_port_info = item->second;
 	}
 
-	// logtd("Sending data to remote for session #%d", session_info->GetId());
+	std::shared_ptr<const ov::Data> send_data = nullptr;
 
-	// if remote is tcp, it must be turn
-	// package as turn and send
-	if(ice_port_info->remote->GetType() == ov::SocketType::Tcp)
+	// Send throutgh TURN data channel
+	if(ice_port_info->is_turn_client == true && ice_port_info->is_data_channel_enabled == true)
+	{	
+		send_data = CreateChannelDataMessage(ice_port_info->data_channle_number, data);
+	}
+	// Send thourgh DATA indication
+	else if(ice_port_info->is_turn_client == true && ice_port_info->is_data_channel_enabled == false)
 	{
-		// ice_port_info has channel id
+		send_data = CreateDataIndication(ice_port_info->peer_address, data);
+	}
+	// Send direct
+	else
+	{
+		send_data = data;
 	}
 
-	return ice_port_info->remote->SendTo(ice_port_info->address, data) >= 0;
+	if(send_data == nullptr)
+	{
+		return false;
+	}
+	
+	return ice_port_info->remote->SendTo(ice_port_info->address, send_data) >= 0;
 }
 
 void IcePort::OnConnected(const std::shared_ptr<ov::Socket> &remote)
@@ -424,43 +467,42 @@ void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov
 		{
 			auto packet = demultiplexer->PopPacket();
 		
-			PacketInfo packet_info;
-			packet_info.packet_type = packet->GetPacketType();
-			ProcessPacket(remote, address, packet_info, packet->GetData());
+			GateInfo gate_info;
+			gate_info.packet_type = packet->GetPacketType();
+			OnPacketReceived(remote, address, gate_info, packet->GetData());
 		}
 	}
 	else if(remote->GetType() == ov::SocketType::Udp)
 	{
-		PacketInfo packet_info;
-		packet_info.packet_type = IcePacketIdentifier::FindPacketType(data);
+		GateInfo gate_info;
+		gate_info.packet_type = IcePacketIdentifier::FindPacketType(data);
 
-		ProcessPacket(remote, address, packet_info, data);
+		OnPacketReceived(remote, address, gate_info, data);
 	}
 }
 
-void IcePort::ProcessPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data)
+void IcePort::OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)
 {
-	switch(packet_info.packet_type)
+	switch(gate_info.packet_type)
 	{
 		case IcePacketIdentifier::PacketType::TURN_CHANNEL_DATA:
-			ProcessChannelDataPacket(remote, address, packet_info, data);
+			OnChannelDataPacketReceived(remote, address, gate_info, data);
 			break;
 		case IcePacketIdentifier::PacketType::STUN:
-			ProcessStunPacket(remote, address, packet_info, data);
+			OnStunPacketReceived(remote, address, gate_info, data);
 			break;
 		case IcePacketIdentifier::PacketType::RTP_RTCP:
 		case IcePacketIdentifier::PacketType::DTLS:
-			ProcessApplicationPacket(remote, address, packet_info, data);
+			OnApplicationPacketReceived(remote, address, gate_info, data);
 			break;
 		case IcePacketIdentifier::PacketType::ZRTP:
 		case IcePacketIdentifier::PacketType::UNKNOWN:
-			// Discard this protocols as they are not supported by OME.	
 			break;
 	}
 }
 
-void IcePort::ProcessApplicationPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
-						const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data)
+void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
+						GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)
 {
 	std::shared_ptr<IcePortInfo> ice_port_info;
 	{
@@ -486,7 +528,7 @@ void IcePort::ProcessApplicationPacket(const std::shared_ptr<ov::Socket> &remote
 	}
 }
 
-void IcePort::ProcessChannelDataPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data)
+void IcePort::OnChannelDataPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)
 {
 	ChannelDataMessage message;
 
@@ -495,108 +537,99 @@ void IcePort::ProcessChannelDataPacket(const std::shared_ptr<ov::Socket> &remote
 		return;
 	}
 
-	PacketInfo application_packet_info;
+	GateInfo application_gate_info;
 
-	application_packet_info.channel_number = message.GetChannelNumber();
-	application_packet_info.packet_type = IcePacketIdentifier::FindPacketType(message.GetData());
+	application_gate_info.input_method = IcePort::GateInfo::GateType::DATA_CHANNEL;
+	application_gate_info.channel_number = message.GetChannelNumber();
+	application_gate_info.packet_type = IcePacketIdentifier::FindPacketType(message.GetData());
 
 	// Decapsulate and process the packet again.
-	ProcessPacket(remote, address, application_packet_info, message.GetData());
+	OnPacketReceived(remote, address, application_gate_info, message.GetData());
 }
 
-void IcePort::ProcessStunPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data)
+void IcePort::OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)
 {
 	ov::ByteStream stream(data.get());
 	StunMessage message;
 
 	if (message.Parse(stream) == false)
 	{
+		logte("Could not parse STUN packet from %s", remote->ToString().CStr());
 		return;
 	}
 
 	logtd("Received message:\n%s", message.ToString().CStr());
 
-	if (message.GetMethod() == StunMethod::Binding)
+	switch(message.GetMethod())
 	{
-		switch (message.GetClass())
+		// STUN
+		case StunMethod::Binding:
 		{
-			case StunClass::Request:
-				if (ProcessBindingRequest(remote, address, message) == false)
-				{
-					ResponseError(remote);
-				}
-				break;
-
-			case StunClass::SuccessResponse:
-				if (ProcessBindingResponse(remote, address, message) == false)
-				{
-					ResponseError(remote);
-				}
-				break;
-
-			case StunClass::ErrorResponse:
-				logtw("Error Response received");
-				break;
-
-			case StunClass::Indication:
-				break;
+			switch(message.GetClass())
+			{
+				case StunClass::Request:
+				case StunClass::Indication:
+					ProcessStunBindingRequest(remote, address, gate_info, message);
+					break;
+				case StunClass::SuccessResponse:
+					ProcessStunBindingResponse(remote, address, gate_info, message);
+					break;
+				case StunClass::ErrorResponse:
+					// Nothing to do
+					break;
+			}
+			break;
 		}
-	}
-	// TURN
-	else if(message.GetMethod() == StunMethod::Allocate)
-	{
-		
-	}
-	else
-	{
-		OV_ASSERT(false, "Not implemented method: %d", message.GetMethod());
-		logtw("Unknown method: %d", message.GetMethod());
-		ResponseError(remote);
+		// TURN Server
+		// Because it is a turn server, no response class comes.
+		case StunMethod::Allocate:
+			if(message.GetClass() == StunClass::Request)
+			{
+				ProcessTurnAllocateRequest(remote, address, gate_info, message);
+			}
+			break;
+		case StunMethod::Refresh:
+			if(message.GetClass() == StunClass::Request)
+			{
+				ProcessTurnRefreshRequest(remote, address, gate_info, message);
+			}
+			break;
+		case StunMethod::Send:
+			if(message.GetClass() == StunClass::Indication)
+			{
+				ProcessTurnSendIndication(remote, address, gate_info, message);
+			}
+			break;
+		case StunMethod::CreatePermission:
+			if(message.GetClass() == StunClass::Request)
+			{
+				ProcessTurnCreatePermissionRequest(remote, address, gate_info, message);
+			}
+			break;
+		case StunMethod::ChannelBind:
+			if(message.GetClass() == StunClass::Request)
+			{
+				ProcessTurnChannelBindRequest(remote, address, gate_info, message);
+			}
+			break;
+		case StunMethod::Data:
+			// Since this is a turn server, it does not receive a data method.
+			logtd("Bad Packet - TURN Server cannot receive the Stun Data method(%s)", remote->ToString().CStr());
+			break;
+		default:
+			OV_ASSERT(false, "Not implemented method: %d", message.GetMethod());
+			logtw("Unknown method: %d", message.GetMethod());
+			break;
 	}
 }
 
-void IcePort::CheckTimedoutItem()
-{
-	std::vector<std::shared_ptr<IcePortInfo>> delete_list;
-	{
-		std::lock_guard<std::mutex> lock_guard(_user_mapping_table_mutex);
-
-		for (auto item = _user_mapping_table.begin(); item != _user_mapping_table.end();)
-		{
-			if (item->second->IsExpired())
-			{
-				logtd("Client %s(session id: %d) is expired", item->second->address.ToString().CStr(), item->second->session_info->GetId());
-				SetIceState(item->second, IcePortConnectionState::Disconnected);
-
-				delete_list.push_back(item->second);
-
-				item = _user_mapping_table.erase(item);
-			}
-			else
-			{
-				++item;
-			}
-		}
-	}
-
-	{
-		std::lock_guard<std::mutex> lock_guard(_ice_port_info_mutex);
-
-		for (auto &deleted_ice_port : delete_list)
-		{
-			_session_table.erase(deleted_ice_port->session_info->GetId());
-			_ice_port_info.erase(deleted_ice_port->address);
-		}
-	}
-}
-
-bool IcePort::ProcessBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &request_message)
+bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
 {
 	// Binding Request
 	ov::String local_ufrag;
 	ov::String remote_ufrag;
 
-	if (request_message.GetUfrags(&local_ufrag, &remote_ufrag) == false)
+	if (message.GetUfrags(&local_ufrag, &remote_ufrag) == false)
 	{
 		logtw("Could not process user name attribute");
 		return false;
@@ -605,15 +638,14 @@ bool IcePort::ProcessBindingRequest(const std::shared_ptr<ov::Socket> &remote, c
 	logtd("Client %s sent STUN binding request: %s:%s", address.ToString().CStr(), local_ufrag.CStr(), remote_ufrag.CStr());
 
 	std::shared_ptr<IcePortInfo> ice_port_info;
-
 	{
+		// WebRTC Publisher registers ufrag with session information 
+		// through IcePort::AddSession function after signaling with player
 		std::lock_guard<std::mutex> lock_guard(_user_mapping_table_mutex);
-
 		auto info = _user_mapping_table.find(local_ufrag);
-
 		if (info == _user_mapping_table.end())
 		{
-			logtd("User not found: %s (AddSession() needed)", local_ufrag.CStr());
+			logtc("User not found: %s (AddSession() needed)", local_ufrag.CStr());
 			return false;
 		}
 
@@ -622,21 +654,14 @@ bool IcePort::ProcessBindingRequest(const std::shared_ptr<ov::Socket> &remote, c
 
 	if (ice_port_info->peer_sdp->GetIceUfrag() != remote_ufrag)
 	{
-		// SDP에 명시된 ufrag와, 실제 STUN으로 들어온 ufrag가 다름
 		logtw("Mismatched ufrag: %s (ufrag in peer SDP: %s)", remote_ufrag.CStr(), ice_port_info->peer_sdp->GetIceUfrag().CStr());
-
-		// TODO: SDP 파싱 기능이 완료되면 처리해야 함
-		// return false;
 	}
 
-	// SDP의 password로 무결성 검사를 한 뒤
-	if (request_message.CheckIntegrity(ice_port_info->offer_sdp->GetIcePwd()) == false)
+	if (message.CheckIntegrity(ice_port_info->offer_sdp->GetIcePwd()) == false)
 	{
-		// 무결성 검사 실패
 		logtw("Failed to check integrity");
 
 		SetIceState(ice_port_info, IcePortConnectionState::Failed);
-
 		{
 			std::lock_guard<std::mutex> lock_guard(_user_mapping_table_mutex);
 
@@ -657,55 +682,36 @@ bool IcePort::ProcessBindingRequest(const std::shared_ptr<ov::Socket> &remote, c
 
 	if (ice_port_info->state == IcePortConnectionState::New)
 	{
-		// 다음 Binding Request까지 Checking 상태 유지
+		// Keep checking until the next Binding Request
 		SetIceState(ice_port_info, IcePortConnectionState::Checking);
 		ice_port_info->remote = remote;
 		ice_port_info->address = address;
-		// SendIndication으로 들어온 경우 XOR-PEER-ADDRESS 추가 저장
-		// ChannelData로 들어온 경우 Channel Number 추가 저장
+
+		// If a request comes from a send indication or channel, this is through a turn. When transmitting a packet to the player, it must be sent through a data indication or channel, so it stores related information.
+		if(gate_info.input_method != GateInfo::GateType::DIRECT)
+		{
+			ice_port_info->is_turn_client = true;
+			if(gate_info.input_method != GateInfo::GateType::DATA_CHANNEL)
+			{
+				ice_port_info->is_data_channel_enabled = true;
+				ice_port_info->data_channle_number = gate_info.channel_number;
+			}
+			else
+			{
+				ice_port_info->peer_address = gate_info.peer_address;
+			}
+		}	
 	}
 
-	return SendBindingResponse(remote, address, request_message, ice_port_info);
-}
-
-bool IcePort::SendBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &request_message, const std::shared_ptr<IcePortInfo> &info)
-{
-	// Binding response 준비
-	StunMessage response_message;
-
-	response_message.SetClass(StunClass::SuccessResponse);
-	response_message.SetMethod(StunMethod::Binding);
-	response_message.SetTransactionId(request_message.GetTransactionId());
-
-	std::unique_ptr<StunAttribute> attribute;
-
-	// XOR-MAPPED-ADDRESS attribute 추가
-	attribute = std::make_unique<StunXorMappedAddressAttribute>();
-	auto *mapped_attribute = dynamic_cast<StunXorMappedAddressAttribute *>(attribute.get());
-
-	mapped_attribute->SetParameters(address);
-	response_message.AddAttribute(std::move(attribute));
-
-	// Integrity 계산을 위한 password 생성
-	ov::String key = info->offer_sdp->GetIcePwd();
-
-	// Integrity & Fingerprint attribute는 Serialize()할 때 자동 생성됨
-	std::shared_ptr<ov::Data> serialized = response_message.Serialize(key);
-
-	logtd("Trying to send STUN binding response to %s\n%s\n%s", address.ToString().CStr(), response_message.ToString().CStr(), serialized->Dump().CStr());
-
-	remote->SendTo(address, serialized);
-
-	// client mapping 정보를 저장해놓음
 	{
 		std::lock_guard<std::mutex> lock_guard(_ice_port_info_mutex);
 
-		if (_session_table.find(info->session_info->GetId()) == _session_table.end())
+		if (_session_table.find(ice_port_info->session_info->GetId()) == _session_table.end())
 		{
 			logtd("Add the client to the port list: %s", address.ToString().CStr());
 
-			_ice_port_info[address] = info;
-			_session_table[info->session_info->GetId()] = info;
+			_ice_port_info[address] = ice_port_info;
+			_session_table[ice_port_info->session_info->GetId()] = ice_port_info;
 		}
 		else
 		{
@@ -713,39 +719,55 @@ bool IcePort::SendBindingResponse(const std::shared_ptr<ov::Socket> &remote, con
 		}
 	}
 
-	SendBindingRequest(remote, address, info);
+	// If the class is Indication it doesn't need to send response
+	if(message.GetClass() == StunClass::Request)
+	{
+		StunMessage response_message;
+		response_message.SetHeader(StunClass::SuccessResponse, StunMethod::Binding, message.GetTransactionId());
 
-	return true;
+		// Add XOR-MAPPED-ADDRESS attribute
+		auto xor_mapped_attribute = std::make_unique<StunXorMappedAddressAttribute>();
+		xor_mapped_attribute->SetParameters(address);
+		response_message.AddAttribute(std::move(xor_mapped_attribute));
+
+		// TODO: apply SASLprep(password)
+		SendStunMessage(remote, address, gate_info, response_message, ice_port_info->offer_sdp->GetIcePwd());
+
+		// Immediately, the server also sends a bind request.
+		SendStunBindingRequest(remote, address, gate_info, ice_port_info);
+	}
+
+
+
+	return true; 
 }
 
-bool IcePort::SendBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<IcePortInfo> &info)
+bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const std::shared_ptr<IcePortInfo> &info)
 {
-	// Binding request 준비
-	StunMessage request_message;
+	StunMessage message;
 
-	request_message.SetClass(StunClass::Request);
-	request_message.SetMethod(StunMethod::Binding);
-	// logtw("TEST PURPOSE TRANSACTION_ID");
-	// TODO: transaction_id가 겹치지 않게 처리 해야 함
+	message.SetClass(StunClass::Request);
+	message.SetMethod(StunMethod::Binding);
+	// TODO: make transaction_id unique
 	uint8_t transaction_id[OV_STUN_TRANSACTION_ID_LENGTH];
 	uint8_t charset[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-	// random 한 transaction id 생성
+	// generate transaction id ramdomly
 	for (int index = 0; index < OV_STUN_TRANSACTION_ID_LENGTH; index++)
 	{
 		transaction_id[index] = charset[rand() % OV_COUNTOF(charset)];
 	}
-	request_message.SetTransactionId(&(transaction_id[0]));
+	message.SetTransactionId(&(transaction_id[0]));
 
 	std::unique_ptr<StunAttribute> attribute;
 
-	// USERNAME attribute 추가
+	// USERNAME attribute 
 	attribute = std::make_unique<StunUserNameAttribute>();
 	auto *user_name_attribute = dynamic_cast<StunUserNameAttribute *>(attribute.get());
 	user_name_attribute->SetText(ov::String::FormatString("%s:%s", info->peer_sdp->GetIceUfrag().CStr(), info->offer_sdp->GetIceUfrag().CStr()));
-	request_message.AddAttribute(std::move(attribute));
+	message.AddAttribute(std::move(attribute));
 
-	// Unknown attribute 추가 (hash 테스트용)
+	// Unknown attribute (for testing hash)
 	StunUnknownAttribute *unknown_attribute = nullptr;
 	// https://tools.ietf.org/html/draft-thatcher-ice-network-cost-00
 	// https://www.ietf.org/mail-archive/web/ice/current/msg00247.html
@@ -753,68 +775,55 @@ bool IcePort::SendBindingRequest(const std::shared_ptr<ov::Socket> &remote, cons
 	// auto *unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
 	// uint8_t unknown_data[] = { 0x00, 0x02, 0x00, 0x00 };
 	// unknown_attribute->SetData(&(unknown_data[0]), 4);
-	// request_message.AddAttribute(std::move(attribute));
+	// message.AddAttribute(std::move(attribute));
 
-	// ICE-CONTROLLING 추가 (hash 테스트용)
+	// ICE-CONTROLLING (for testing hash)
 	attribute = std::make_unique<StunUnknownAttribute>(0x802A, 8);
 	unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
 	uint8_t unknown_data2[] = {0x1C, 0xF5, 0x1E, 0xB1, 0xB0, 0xCB, 0xE3, 0x49};
 	unknown_attribute->SetData(&(unknown_data2[0]), 8);
-	request_message.AddAttribute(std::move(attribute));
+	message.AddAttribute(std::move(attribute));
 
-	// USE-CANDIDATE 추가 - Required (hash 테스트용)
+	// USE-CANDIDATE (for testing hash)
 	attribute = std::make_unique<StunUnknownAttribute>(0x0025, 0);
 	unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
-	request_message.AddAttribute(std::move(attribute));
+	message.AddAttribute(std::move(attribute));
 
-	// PRIORITY 추가 - Required (hash 테스트용)
+	// PRIORITY (for testing hash)
 	attribute = std::make_unique<StunUnknownAttribute>(0x0024, 4);
 	unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
 	uint8_t unknown_data3[] = {0x6E, 0x7F, 0x1E, 0xFF};
 	unknown_attribute->SetData(&(unknown_data3[0]), 4);
-	request_message.AddAttribute(std::move(attribute));
+	message.AddAttribute(std::move(attribute));
 
-	// Integrity 계산을 위한 password 생성
-	ov::String key = info->peer_sdp->GetIcePwd();
-
-	// Integrity & Fingerprint attribute는 Serialize()할 때 자동 생성됨
-	std::shared_ptr<ov::Data> serialized = request_message.Serialize(key);
-
-	logtd("Trying to send STUN binding request to %s\n%s\n%s", address.ToString().CStr(), request_message.ToString().CStr(), serialized->Dump().CStr());
-
-	remote->SendTo(address, serialized);
+	// TODO: apply SASLprep(password)
+	SendStunMessage(remote, address, gate_info, message, info->peer_sdp->GetIcePwd());
 
 	return true;
 }
 
-bool IcePort::ProcessBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &response_message)
+bool IcePort::ProcessStunBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
 {
-	// TODO: state가 checking 상태인지 확인
+	// TODO: Validate (Check if the state is checking)
 
 	std::shared_ptr<IcePortInfo> ice_port_info;
-
 	{
 		std::lock_guard<std::mutex> lock_guard(_ice_port_info_mutex);
-
 		auto item = _ice_port_info.find(address);
-
 		if (item == _ice_port_info.end())
 		{
-			// 포트 정보가 없음
-			// 이전 단계에서 관련 정보가 저장되어 있어야 함
-
-			// 같은 ufrag에 대해 서로 다른 ICE candidate로 부터 동시에 접속 요청이 왔다면, 첫 번째로 도착한 ICE candidate가 저장됨
-			// 따라서 두 번째 address는 처리하지 않으므로, 없다고 간주
+			// No port information
+			// Related information must be saved in the previous step
+			// If connection requests for the same ufrag come from different ICE candidates at the same time, 
+			// the first ICE candidate that arrives is saved
 			return false;
 		}
 
 		ice_port_info = item->second;
 	}
 
-	// SDP의 password로 무결성 검사를 한 뒤
-	if (response_message.CheckIntegrity(ice_port_info->offer_sdp->GetIcePwd()) == false)
+	if (message.CheckIntegrity(ice_port_info->offer_sdp->GetIcePwd()) == false)
 	{
-		// 무결성 검사 실패
 		logtw("Failed to check integrity");
 		return false;
 	}
@@ -823,9 +832,249 @@ bool IcePort::ProcessBindingResponse(const std::shared_ptr<ov::Socket> &remote, 
 
 	if (ice_port_info->state != IcePortConnectionState::Connected)
 	{
-		// 다음 Binding Request까지 Checking 상태 유지
 		SetIceState(ice_port_info, IcePortConnectionState::Connected);
 	}
+
+	return true;
+}
+
+bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info,  StunMessage &message, const ov::String &integity_key)
+{
+	std::shared_ptr<const ov::Data> source_data, send_data;
+
+	if(integity_key.IsEmpty())
+	{
+		source_data = message.Serialize();
+	}
+	else
+	{
+		source_data = message.Serialize(integity_key);
+	}
+	
+	//TODO(Getroot): Send by selecting TURN channel, Data Indication or just Stun message
+
+	if(gate_info.input_method == IcePort::GateInfo::GateType::DIRECT)
+	{
+		send_data = source_data;
+	}
+	else if(gate_info.input_method == IcePort::GateInfo::GateType::SEND_INDICATION)
+	{
+		send_data = CreateDataIndication(gate_info.peer_address, source_data);
+	}
+	else if(gate_info.input_method == IcePort::GateInfo::GateType::DATA_CHANNEL)
+	{
+		send_data = CreateChannelDataMessage(gate_info.channel_number, source_data);
+	}
+
+	if(send_data == nullptr)
+	{
+		return false;
+	}
+
+	auto sent_bytes = remote->SendTo(address, send_data);
+
+	return sent_bytes > 0;
+}
+
+const std::shared_ptr<const ov::Data> IcePort::CreateDataIndication(ov::SocketAddress peer_address, const std::shared_ptr<const ov::Data> &data)
+{
+	StunMessage send_indication_message;
+	send_indication_message.SetHeader(StunClass::Indication, StunMethod::Data, reinterpret_cast<uint8_t *>(ov::Random::GenerateString(20).GetBuffer()));
+
+	auto data_attribute = std::make_unique<StunDataAttribute>();
+	data_attribute->SetData(data);
+	send_indication_message.AddAttribute(std::move(data_attribute));
+
+	auto xor_peer_attribute = std::make_unique<StunXorPeerAddressAttribute>();
+	xor_peer_attribute->SetParameters(peer_address);
+	send_indication_message.AddAttribute(std::move(xor_peer_attribute));
+
+	auto software_attribute = std::make_unique<StunSoftwareAttribute>();
+	software_attribute->SetText("OvenMediaEngien");
+	send_indication_message.AddAttribute(std::move(software_attribute));
+
+	return send_indication_message.Serialize();
+}
+
+const std::shared_ptr<const ov::Data> IcePort::CreateChannelDataMessage(uint16_t channel_number, const std::shared_ptr<const ov::Data> &data)
+{
+	ChannelDataMessage	channel_data_message(channel_number, data);
+	return channel_data_message.GetPacket();
+}
+
+
+bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
+{
+	StunMessage response_message;
+
+	auto requested_transport_attr = message.GetAttribute<StunRequestedTransportAttribute>(StunAttributeType::RequestedTransport);
+	if(requested_transport_attr == nullptr)
+	{
+		response_message.SetHeader(StunClass::ErrorResponse, StunMethod::Allocate, message.GetTransactionId());
+		response_message.SetErrorCodeAttribute(StunErrorCode::BadRequest, "REQUESTED-TRANSPORT attribute is not included");
+		SendStunMessage(remote, address, gate_info, response_message);
+		return false;
+	}
+
+	// only protocol number 17(UDP) is allowed (https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml)
+	if(requested_transport_attr->GetProtocolNumber() != 17)
+	{
+		response_message.SetHeader(StunClass::ErrorResponse, StunMethod::Allocate, message.GetTransactionId());
+		response_message.SetErrorCodeAttribute(StunErrorCode::UnsupportedTransportProtocol);
+		SendStunMessage(remote, address, gate_info, response_message);
+		return false;
+	}
+
+	auto integrity_attribute = message.GetAttribute<StunMessageIntegrityAttribute>(StunAttributeType::MessageIntegrity);
+	if(integrity_attribute == nullptr)
+	{
+		// First request
+		response_message.SetHeader(StunClass::ErrorResponse, StunMethod::Allocate, message.GetTransactionId());
+		response_message.SetErrorCodeAttribute(StunErrorCode::Unauthonticated);
+
+		// Nonce
+		// TODO(Getroot): If you in the future want to give meaning to the nonce, do it.
+		auto nonce_attribute = std::make_unique<StunNonceAttribute>();
+		nonce_attribute->SetText("1bcf94ca7494141e");
+		response_message.AddAttribute(std::move(nonce_attribute));
+
+		// Realm
+		auto realm_attribute = std::make_unique<StunRealmAttribute>();
+		realm_attribute->SetText("airensoft");
+		response_message.AddAttribute(std::move(realm_attribute));
+
+		// Software
+		auto software_attribute = std::make_unique<StunSoftwareAttribute>();
+		software_attribute->SetText("OvenMediaEngien");
+		response_message.AddAttribute(std::move(software_attribute));
+
+		SendStunMessage(remote, address, gate_info, response_message);
+
+		// This is the original protocol specification.
+		return true;
+	}
+
+	// TODO: Check authentication information, USERNAME, REALM, NONCE, MESSAGE-INTEGRITY
+
+	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::Allocate, message.GetTransactionId());
+
+	// Add XOR-MAPPED-ADDRESS attribute
+	auto xor_mapped_address_attribute = std::make_unique<StunXorMappedAddressAttribute>();
+	xor_mapped_address_attribute->SetParameters(address);
+	response_message.AddAttribute(std::move(xor_mapped_address_attribute));
+
+	// Add XOR-RELAYED-ADDRESS attribute
+	// This is the player's candidate and eventually passed to OME. 
+	// However, OME does not use the player's candidate. So we pass anything by this value.
+	auto xor_relayed_address_attribute = std::make_unique<StunXorRelayedAddressAttribute>();
+	xor_relayed_address_attribute->SetParameters(ov::SocketAddress("192.168.0.200", 14090));
+	response_message.AddAttribute(std::move(xor_relayed_address_attribute));
+
+	// LIFETIME
+	auto lifetime_attribute = std::make_unique<StunLifetimeAttribute>();
+	lifetime_attribute->SetValue(600);	
+	response_message.AddAttribute(std::move(lifetime_attribute));
+
+	// Software
+	auto software_attribute = std::make_unique<StunSoftwareAttribute>();
+	software_attribute->SetText("OvenMediaEngien");
+	response_message.AddAttribute(std::move(software_attribute));
+
+	// TOOD(Getroot): Integrity key, username, and realm values should be read in the configuration.
+	auto key = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5, ov::String("airen:airensoft:airen").ToData(false));
+	SendStunMessage(remote, address, gate_info, response_message, key->ToString());
+
+	return true;
+}
+
+bool IcePort::ProcessTurnSendIndication(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
+{
+	auto xor_peer_attribute = message.GetAttribute<StunXorPeerAddressAttribute>(StunAttributeType::XorPeerAddress);
+	if(xor_peer_attribute == nullptr)
+	{
+		return false;
+	}
+	
+	auto data_attribute = message.GetAttribute<StunDataAttribute>(StunAttributeType::Data);
+	if(data_attribute == nullptr)
+	{
+		return false;
+	}
+
+	auto data = data_attribute->GetData();
+
+	gate_info.packet_type = IcePacketIdentifier::FindPacketType(data);
+	gate_info.input_method = IcePort::GateInfo::GateType::SEND_INDICATION;
+	gate_info.peer_address = xor_peer_attribute->GetAddress();
+
+	OnPacketReceived(remote, address, gate_info, data);
+
+	return true;
+}
+
+bool IcePort::ProcessTurnCreatePermissionRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
+{
+	//TODO(Getroot): Check validation
+
+	StunMessage response_message;
+	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::CreatePermission, message.GetTransactionId());
+
+	auto key = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5, ov::String("airen:airensoft:airen").ToData(false));
+	SendStunMessage(remote, address, gate_info, response_message, key->ToString());
+
+	return true;
+}
+
+bool IcePort::ProcessTurnChannelBindRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
+{
+	//TODO(Getroot): Check validation
+	std::shared_ptr<IcePortInfo> ice_port_info;
+	{
+		std::lock_guard<std::mutex> lock_guard(_ice_port_info_mutex);
+		auto item = _ice_port_info.find(address);
+		if (item != _ice_port_info.end())
+		{
+			ice_port_info = item->second;
+		}
+	}
+
+	if (ice_port_info == nullptr)
+	{
+		logtd("Could not find client information. Dropping...");
+		return false;
+	}
+
+	StunMessage response_message;
+
+	auto channel_number_attribute = message.GetAttribute<StunChannelNumberAttribute>(StunAttributeType::ChannelNumber);
+	if(channel_number_attribute == nullptr)
+	{
+		response_message.SetHeader(StunClass::ErrorResponse, StunMethod::ChannelBind, message.GetTransactionId());
+		response_message.SetErrorCodeAttribute(StunErrorCode::BadRequest);
+		SendStunMessage(remote, address, gate_info, response_message);
+		return false;
+	}
+
+	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::ChannelBind, message.GetTransactionId());
+
+	auto key = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5, ov::String("airen:airensoft:airen").ToData(false));
+	SendStunMessage(remote, address, gate_info, response_message, key->ToString());
+
+	ice_port_info->is_turn_client = true;
+	ice_port_info->is_data_channel_enabled = true;
+	ice_port_info->data_channle_number = channel_number_attribute->GetChannelNumber();
+
+	return true;
+}
+
+bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
+{
+	//TODO(Getroot): Check validation and refresh timer
+
+	StunMessage response_message;
+	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::ChannelBind, message.GetTransactionId());
+	auto key = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5, ov::String("airen:airensoft:airen").ToData(false));
+	SendStunMessage(remote, address, gate_info, response_message, key->ToString());
 
 	return true;
 }
@@ -836,12 +1085,6 @@ void IcePort::SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionS
 
 	auto func = std::bind(&IcePortObserver::OnStateChanged, std::placeholders::_1, std::ref(*this), std::ref(info->session_info), state);
 	std::for_each(_observers.begin(), _observers.end(), func);
-}
-
-// STUN 오류를 반환함
-void IcePort::ResponseError(const std::shared_ptr<ov::Socket> &remote)
-{
-	// TOOD: 구현 필요 - chrome에서는 오류가 발생했을 때, 별다른 조치를 취하지 않는 것 같음
 }
 
 ov::String IcePort::ToString() const

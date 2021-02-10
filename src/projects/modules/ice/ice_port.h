@@ -25,6 +25,22 @@ class RtcIceCandidate;
 class IcePort : protected PhysicalPortObserver
 {
 protected:
+	struct GateInfo
+	{
+		enum class GateType
+		{
+			DIRECT,
+			SEND_INDICATION,
+			DATA_CHANNEL
+		};
+
+		IcePacketIdentifier::PacketType packet_type;
+		GateType	input_method = GateType::DIRECT;
+		// If this packet cames from a send 
+		ov::SocketAddress peer_address;
+		// If this packet is from a turn data channel, store the channel number.
+		uint16_t channel_number = 0;
+	};
 	// A data structure to tracking client connection status
 	struct IcePortInfo
 	{
@@ -40,6 +56,12 @@ protected:
 		IcePortConnectionState state;
 
 		std::chrono::time_point<std::chrono::system_clock> expire_time;
+
+		// Information related TURN
+		bool is_turn_client = false;
+		bool is_data_channel_enabled = false;
+		ov::SocketAddress peer_address;
+		uint16_t data_channle_number = 0;
 
 		IcePortInfo(int expire_after_ms)
 			: _expire_after_ms(expire_after_ms)
@@ -58,15 +80,7 @@ protected:
 
 	protected:
 		const int _expire_after_ms;
-	};
-
-	// Additional information analyzed during packet parsing
-	struct PacketInfo
-	{
-		IcePacketIdentifier::PacketType packet_type;
-
-		// If this packet is from a turn data channel, store the channel number.
-		uint16_t channel_number;
+		
 	};
 
 public:
@@ -129,19 +143,27 @@ protected:
 	//--------------------------------------------------------------------
 
 	void SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionState state);
-	void ResponseError(const std::shared_ptr<ov::Socket> &remote);
 
 private:
 	void CheckTimedoutItem();
 
-	void ProcessPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
-						const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
-	void ProcessStunPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
-						const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
-	void ProcessChannelDataPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
-						const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
-	void ProcessApplicationPacket(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
-						const PacketInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
+	void OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
+						GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
+	void OnStunPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
+						GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
+	void OnChannelDataPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
+						GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
+	void OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, 
+						GateInfo &packet_info, const std::shared_ptr<const ov::Data> &data);
+
+
+	bool SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, StunMessage &message, const ov::String &integity_key = "");
+	bool SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const std::shared_ptr<IcePortInfo> &info);
+	bool SendDataIndication(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, std::shared_ptr<ov::Data> &data);
+
+
+	const std::shared_ptr<const ov::Data> CreateDataIndication(ov::SocketAddress peer_address, const std::shared_ptr<const ov::Data> &data);
+	const std::shared_ptr<const ov::Data> CreateChannelDataMessage(uint16_t channel_number, const std::shared_ptr<const ov::Data> &data);
 
 	// STUN negotiation order:
 	// (State: New)
@@ -151,10 +173,13 @@ private:
 	// [Server] --- 3. Binding Request          --> [Player]
 	// [Server] <-- 4. Binding Success Response --- [Player]
 	// (State: Connected)
-	bool ProcessBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &request_message);
-	bool SendBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &request_message, const std::shared_ptr<IcePortInfo> &info);
-	bool SendBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<IcePortInfo> &info);
-	bool ProcessBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const StunMessage &response_message);
+	bool ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const StunMessage &message);
+	bool ProcessStunBindingResponse(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const StunMessage &message);
+	bool ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const StunMessage &message);
+	bool ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const StunMessage &message);
+	bool ProcessTurnSendIndication(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const StunMessage &message);
+	bool ProcessTurnCreatePermissionRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const StunMessage &message);
+	bool ProcessTurnChannelBindRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const StunMessage &message);
 
 	std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 	std::recursive_mutex _physical_port_list_mutex;

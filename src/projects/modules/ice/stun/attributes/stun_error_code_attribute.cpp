@@ -8,10 +8,16 @@
 //==============================================================================
 
 #include "stun_error_code_attribute.h"
-	
+
 StunErrorCodeAttribute::StunErrorCodeAttribute()
-	: StunAttribute(StunAttributeType::ErrorCode, 0)
+	: StunErrorCodeAttribute(0)
 {
+}
+
+StunErrorCodeAttribute::StunErrorCodeAttribute(int length)
+	: StunAttribute(StunAttributeType::ErrorCode, length)
+{
+
 }
 
 bool StunErrorCodeAttribute::Parse(ov::ByteStream &stream)
@@ -83,7 +89,7 @@ bool StunErrorCodeAttribute::Serialize(ov::ByteStream &stream) const noexcept
 	return StunAttribute::Serialize(stream) &&
 	       stream.Write16(0x00) &&
 	       stream.Write8((uint8_t)GetErrorCodeClass()) &&
-	       stream.WriteBE16((uint8_t)GetErrorCodeNumber()) &&
+	       stream.Write8((uint8_t)GetErrorCodeNumber()) &&
 	       stream.Write<uint8_t>((uint8_t *)(_reason.CStr()), _reason.GetLength());
 }
 

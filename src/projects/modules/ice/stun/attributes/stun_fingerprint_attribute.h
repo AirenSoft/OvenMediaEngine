@@ -10,7 +10,6 @@
 
 #include "templates/stun_octet_attribute_format.h"
 #include "modules/ice/stun/stun_datastructure.h"
-
 class StunFingerprintAttribute : public StunOctetAttributeFormat<uint32_t>
 {
 public:

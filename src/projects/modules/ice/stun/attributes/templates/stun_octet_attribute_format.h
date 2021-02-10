@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "modules/ice/stun/attributes/stun_attributes.h"
+#include "modules/ice/stun/attributes/stun_attribute.h"
 #include "modules/ice/stun/stun_datastructure.h"
 
 template<typename T>
@@ -22,17 +22,17 @@ public:
 			return false;
 		}
 
-		stream.ReadBE(static_cast<T&>(_value));
+		stream.ReadBE(_value);
 
 		return true;
 	}
 
-	uint32_t GetValue() const
+	virtual T GetValue() const
 	{
 		return _value;
 	}
 
-	bool SetValue(T value)
+	virtual bool SetValue(T value)
 	{
 		_value = value;
 		return true;
@@ -53,4 +53,3 @@ protected:
 
 	T _value;
 };
-

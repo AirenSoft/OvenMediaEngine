@@ -14,6 +14,7 @@
 class StunErrorCodeAttribute : public StunAttribute
 {
 public:
+	StunErrorCodeAttribute(int length);
 	// Length will be set when SetError or Parse function called
 	StunErrorCodeAttribute();
 
