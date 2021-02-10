@@ -27,7 +27,8 @@ namespace cfg
 			CFG_DECLARE_REF_GETTER_OF(GetPortList, _port_value);
 
 		protected:
-			bool AddPorts(const ov::String &ports)
+			MAY_THROWS(std::shared_ptr<ConfigError>)
+			void AddPorts(const ov::String &ports)
 			{
 				// ports == "40000-40001" or "40000"
 				auto range = ports.Split("-");
@@ -41,7 +42,7 @@ namespace cfg
 						if (IsValidPort(port) == false)
 						{
 							// Invalid port
-							return false;
+							throw CreateConfigError("Invalid port: %s", ports.CStr());
 						}
 
 						_port_value.push_back(port);
@@ -58,7 +59,7 @@ namespace cfg
 							(start_port > end_port))
 						{
 							// Invalid port range
-							return false;
+							throw CreateConfigError("Invalid port range: %s", ports.CStr());
 						}
 
 						for (int port = start_port; port <= end_port; port++)
@@ -71,37 +72,29 @@ namespace cfg
 
 					default:
 						// Invalid port expression
-						return false;
+						throw CreateConfigError("Invalid port expression: %s", ports.CStr());
 				}
-
-				return true;
 			}
 
-			void MakeParseList() override
+			MAY_THROWS(std::shared_ptr<ConfigError>)
+			void FromString(const ov::String &str) override
 			{
-				RegisterValue<ValueType::Text>(nullptr, &_port, nullptr, [this]() -> bool {
-					// _port == "40000-40001,40004,40005/udp"
-					_socket_type = ov::SocketType::Unknown;
-					_port_value.clear();
+				_port = str;
+				_socket_type = ov::SocketType::Unknown;
+				_port_value.clear();
 
-					auto tokens = _port.Trim().Split("/");
+				auto tokens = str.Trim().Split("/");
 
-					// Default: UDP
-					_socket_type = (tokens.size() != 2) ? ov::SocketType::Udp : GetSocketType(tokens[1]);
+				// Default: UDP
+				_socket_type = (tokens.size() != 2) ? ov::SocketType::Udp : GetSocketType(tokens[1]);
 
-					// Parse port list
-					auto ports = tokens[0].Trim().Split(",");
+				// Parse port list
+				auto ports = tokens[0].Trim().Split(",");
 
-					for (auto &port_item : ports)
-					{
-						if (AddPorts(port_item.Trim()) == false)
-						{
-							return false;
-						}
-					}
-
-					return _socket_type != ov::SocketType::Unknown;
-				});
+				for (auto &port_item : ports)
+				{
+					AddPorts(port_item.Trim());
+				}
 			}
 		};
 	}  // namespace cmn

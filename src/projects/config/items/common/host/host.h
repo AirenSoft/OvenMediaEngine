@@ -17,19 +17,21 @@ namespace cfg
 	{
 		struct Host : public Item
 		{
+		protected:
+			Names _names;
+			Tls _tls;
+
+		public:
 			CFG_DECLARE_REF_GETTER_OF(GetNameList, _names.GetNameList())
 			CFG_DECLARE_REF_GETTER_OF(GetNames, _names)
 			CFG_DECLARE_REF_GETTER_OF(GetTls, _tls)
 
 		protected:
-			void MakeParseList() override
+			void MakeList() override
 			{
-				RegisterValue("Names", &_names);
-				RegisterValue<Optional>("TLS", &_tls);
+				Register("Names", &_names);
+				Register<Optional>({"TLS", "tls"}, &_tls);
 			}
-
-			Names _names;
-			Tls _tls;
 		};
 	}  // namespace cmn
 }  // namespace cfg

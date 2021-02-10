@@ -2,13 +2,11 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Jaejong Bong
+//  Created by Hyunjun Jang
 //  Copyright (c) 2019 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
-
-#include "url.h"
 
 namespace cfg
 {
@@ -16,15 +14,17 @@ namespace cfg
 	{
 		struct CrossDomains : public Item
 		{
+		protected:
+			std::vector<ov::String> _url_list;
+
+		public:
 			CFG_DECLARE_REF_GETTER_OF(GetUrls, _url_list)
 
 		protected:
-			void MakeParseList() override
+			void MakeList() override
 			{
-				RegisterValue("Url", &_url_list);
+				Register("Url", &_url_list);
 			}
-
-			std::vector<Url> _url_list;
 		};
 	}  // namespace cmn
 }  // namespace cfg

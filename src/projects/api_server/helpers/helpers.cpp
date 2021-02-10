@@ -104,4 +104,40 @@ namespace api
 
 		return nullptr;
 	}
+
+	void MultipleStatus::AddStatusCode(HttpStatusCode status_code)
+	{
+		if (_count == 0)
+		{
+			_last_status_code = status_code;
+			_has_ok = (status_code == HttpStatusCode::OK);
+		}
+		else
+		{
+			_has_ok = _has_ok || (status_code == HttpStatusCode::OK);
+
+			if (_last_status_code != status_code)
+			{
+				_last_status_code = HttpStatusCode::MultiStatus;
+			}
+			else
+			{
+				// Keep the status code
+			}
+		}
+
+		_count++;
+	}
+
+	void MultipleStatus::AddStatusCode(const std::shared_ptr<const ov::Error> &error)
+	{
+		HttpStatusCode error_status_code = static_cast<HttpStatusCode>(error->GetCode());
+
+		AddStatusCode(IsValidHttpStatusCode(error_status_code) ? error_status_code : HttpStatusCode::InternalServerError);
+	}
+
+	HttpStatusCode MultipleStatus::GetStatusCode() const
+	{
+		return _last_status_code;
+	}
 }  // namespace api

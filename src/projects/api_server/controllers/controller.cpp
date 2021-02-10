@@ -12,48 +12,41 @@ namespace api
 {
 	ApiResponse::ApiResponse(HttpStatusCode status_code)
 	{
-		_status_code = status_code;
-		int code = static_cast<int>(status_code);
-
-		if ((code / 100) != 2)
-		{
-			_json["code"] = code;
-			_json["message"] = StringFromHttpStatusCode(status_code);
-		}
-		else
-		{
-			_json = Json::objectValue;
-		}
+		SetResponse(status_code);
 	}
 
 	ApiResponse::ApiResponse(HttpStatusCode status_code, const Json::Value &json)
 	{
-		_status_code = status_code;
-		_json = json;
+		SetResponse(status_code, nullptr, json);
+	}
+
+	ApiResponse::ApiResponse(MultipleStatus status_code, const Json::Value &json)
+	{
+		if (json.isArray())
+		{
+			_status_code = status_code.GetStatusCode();
+			_json = json;
+		}
+		else
+		{
+			SetResponse(status_code.GetStatusCode(), nullptr, json);
+		}
 	}
 
 	ApiResponse::ApiResponse(const Json::Value &json)
 	{
-		_json = json;
+		SetResponse(HttpStatusCode::OK, nullptr, json);
 	}
 
-	ApiResponse::ApiResponse(const std::shared_ptr<ov::Error> &error)
+	ApiResponse::ApiResponse(const std::shared_ptr<HttpError> &error)
 	{
 		if (error == nullptr)
 		{
-			_json = Json::objectValue;
+			SetResponse(HttpStatusCode::OK);
 			return;
 		}
 
-		_status_code = static_cast<HttpStatusCode>(error->GetCode());
-
-		if (IsValidHttpStatusCode(_status_code) == false)
-		{
-			_status_code = HttpStatusCode::InternalServerError;
-		}
-
-		_json["code"] = error->GetCode();
-		_json["message"] = error->ToString().CStr();
+		SetResponse(error->GetStatusCode(), error->ToString().CStr());
 	}
 
 	ApiResponse::ApiResponse(const ApiResponse &response)
@@ -66,6 +59,26 @@ namespace api
 	{
 		_status_code = std::move(response._status_code);
 		_json = std::move(response._json);
+	}
+
+	void ApiResponse::SetResponse(HttpStatusCode status_code)
+	{
+		SetResponse(status_code, nullptr);
+	}
+
+	void ApiResponse::SetResponse(HttpStatusCode status_code, const char *message)
+	{
+		_status_code = status_code;
+
+		_json["statusCode"] = static_cast<int>(status_code);
+		_json["message"] = (message == nullptr) ? StringFromHttpStatusCode(status_code) : message;
+	}
+
+	void ApiResponse::SetResponse(HttpStatusCode status_code, const char *message, const Json::Value &json)
+	{
+		SetResponse(status_code, message);
+
+		_json["response"] = json;
 	}
 
 	bool ApiResponse::SendToClient(const std::shared_ptr<HttpClient> &client)

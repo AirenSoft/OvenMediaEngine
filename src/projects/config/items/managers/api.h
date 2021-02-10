@@ -21,9 +21,9 @@ namespace cfg
 			CFG_DECLARE_REF_GETTER_OF(GetAccessToken, _access_token)
 
 		protected:
-			void MakeParseList() override
+			void MakeList() override
 			{
-				RegisterValue("AccessToken", &_access_token);
+				Register("AccessToken", &_access_token);
 			}
 		};
 	}  // namespace mgr

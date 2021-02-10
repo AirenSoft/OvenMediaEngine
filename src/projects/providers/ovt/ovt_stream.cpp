@@ -55,14 +55,12 @@ namespace pvd
 	OvtStream::~OvtStream()
 	{
 		Stop();
-
 		_client_socket.Close();
 	}
 
 	bool OvtStream::Start()
 	{
-		_recv_buffer.SetLength(OVT_DEFAULT_MAX_PACKET_SIZE);
-		ResetRecvBuffer();
+		_packetizer = std::make_shared<OvtPacketizer>(OvtPacketizerInterface::GetSharedPtr());
 
 		// For statistics
 		auto begin = std::chrono::steady_clock::now();
@@ -87,7 +85,7 @@ namespace pvd
 
 		return pvd::PullStream::Start();
 	}
-	
+
 	bool OvtStream::Play()
 	{
 		if (!RequestPlay())
@@ -95,7 +93,7 @@ namespace pvd
 			return false;
 		}
 
-		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(GetSharedPtr()));
+		_stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pvd::Stream::GetSharedPtr()));
 		if(_stream_metrics != nullptr)
 		{
 			_stream_metrics->SetOriginRequestTimeMSec(_origin_request_time_msec);
@@ -155,6 +153,9 @@ namespace pvd
 			return false;
 		}
 
+		struct timeval tv = {5, 0};
+		_client_socket.SetRecvTimeout(tv);
+
 		ov::SocketAddress socket_address(_curr_url->Host(), _curr_url->Port());
 
 		auto error = _client_socket.Connect(socket_address, 1000);
@@ -177,28 +178,16 @@ namespace pvd
 			return false;
 		}
 
-		OvtPacket packet;
-
-		packet.SetSessionId(0);
-		packet.SetPayloadType(OVT_PAYLOAD_TYPE_DESCRIBE);
-		packet.SetMarker(0);
-		packet.SetTimestampNow();
-
 		Json::Value root;
 
 		_last_request_id++;
 		root["id"] = _last_request_id;
-		root["url"] = _curr_url->Source().CStr();
+		root["application"] = "describe";
+		root["target"] = _curr_url->Source().CStr();
 
-		auto payload = ov::Json::Stringify(root).ToData(false);
-
-		packet.SetPayload(payload->GetDataAs<uint8_t>(), payload->GetLength());
-
-		auto sent_size = _client_socket.Send(packet.GetData());
-		if(sent_size != static_cast<ssize_t>(packet.GetData()->GetLength()))
+		auto message = ov::Json::Stringify(root).ToData(false);
+		if(_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
 		{
-			_state = State::ERROR;
-			logte("Could not send Describe message");
 			return false;
 		}
 
@@ -226,11 +215,12 @@ namespace pvd
 		}
 
 		Json::Value &json_id = object.GetJsonValue()["id"];
+		Json::Value &json_application = object.GetJsonValue()["application"];
 		Json::Value &json_code = object.GetJsonValue()["code"];
 		Json::Value &json_message = object.GetJsonValue()["message"];
-		Json::Value &json_stream = object.GetJsonValue()["stream"];
+		Json::Value &json_contents = object.GetJsonValue()["contents"];
 
-		if (!json_id.isUInt() || !json_code.isUInt() || json_message.isNull())
+		if (!json_id.isUInt() || json_application.isNull() || !json_code.isUInt() || json_message.isNull())
 		{
 			_state = State::ERROR;
 			logte("An invalid response : There are no required keys");
@@ -251,14 +241,23 @@ namespace pvd
 			return false;
 		}
 
-		if (json_stream.isNull())
+		ov::String application = json_application.asString().c_str();
+		if (application.UpperCaseString() != "DESCRIBE")
 		{
 			_state = State::ERROR;
-			logte("An invalid response : There is no stream key");
+			logte("An invalid response : wrong application : %s", application.CStr());
+			return false;
+		}
+
+		if (json_contents.isNull())
+		{
+			_state = State::ERROR;
+			logte("An invalid response : There is no contents");
 			return false;
 		}
 
 		// Parse stream and add track
+		auto json_stream = json_contents["stream"];
 		auto json_tracks = json_stream["tracks"];
 
 		// Validation
@@ -351,30 +350,21 @@ namespace pvd
 	{
 		if(_state != State::DESCRIBED)
 		{
+			logte("%s/%s(%u) - Could not request to play. Before receiving describe.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			return false;
 		}
-
-		OvtPacket packet;
-
-		packet.SetSessionId(0);
-		packet.SetPayloadType(OVT_PAYLOAD_TYPE_PLAY);
-		packet.SetMarker(0);
-		packet.SetTimestampNow();
 
 		Json::Value root;
 		_last_request_id++;
 		root["id"] = _last_request_id;
-		root["url"] = _curr_url->Source().CStr();
+		root["application"] = "play";
+		root["target"] = _curr_url->Source().CStr();
 
-		auto payload = ov::Json::Stringify(root).ToData(false);
+		auto message = ov::Json::Stringify(root).ToData(false);
 
-		packet.SetPayload(payload->GetDataAs<uint8_t>(), payload->GetLength());
-
-		auto sent_size = _client_socket.Send(packet.GetData());
-		if(sent_size != static_cast<ssize_t>(packet.GetData()->GetLength()))
+		if(_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
 		{
-			_state = State::ERROR;
-			logte("Could not send Play message");
+			logte("%s/%s(%u) - Could not request to play. Socket send error", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			return false;
 		}
 
@@ -383,26 +373,16 @@ namespace pvd
 
 	bool OvtStream::ReceivePlay(uint32_t request_id)
 	{
-		auto result = ProceedToReceivePacket();
-		std::shared_ptr<OvtPacket> packet = nullptr;
-		if(result == ReceivePacketResult::COMPLETE)
+		auto message = ReceiveMessage();
+		if(message == nullptr)
 		{
-			packet = GetPacket();
-			if (packet == nullptr || packet->PayloadLength() <= 0)
-			{
-				_state = State::ERROR;
-				return false;
-			}
-		}
-		else
-		{
-			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
+			logte("%s/%s(%u) - Could not receive message", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
 			_state = State::ERROR;
 			return false;
 		}
 		
 		// Parsing Payload
-		ov::String payload((const char *) packet->Payload(), packet->PayloadLength());
+		ov::String payload(message->GetDataAs<char>(), message->GetLength());
 		ov::JsonObject object = ov::Json::Parse(payload);
 
 		if (object.IsNull())
@@ -413,13 +393,23 @@ namespace pvd
 		}
 
 		Json::Value &json_id = object.GetJsonValue()["id"];
+		Json::Value &json_app = object.GetJsonValue()["application"];
 		Json::Value &json_code = object.GetJsonValue()["code"];
 		Json::Value &json_message = object.GetJsonValue()["message"];
 
-		if (!json_id.isUInt() || !json_code.isUInt() || json_message.isNull())
+		if (!json_id.isUInt() || json_app.isNull() || !json_code.isUInt() || json_message.isNull())
 		{
 			_state = State::ERROR;
 			logte("An invalid response : There are no required keys");
+			return false;
+		}
+
+		ov::String applicaiton = json_app.asString().c_str();
+
+		if(applicaiton.UpperCaseString() != "PLAY")
+		{
+			_state = State::ERROR;
+			logte("An invalid response : application is wrong (%s).", applicaiton.CStr());
 			return false;
 		}
 
@@ -437,8 +427,6 @@ namespace pvd
 			return false;
 		}
 
-		_session_id = packet->SessionId();
-
 		_state = State::PLAYING;
 		return true;
 	}
@@ -450,237 +438,93 @@ namespace pvd
 			return false;
 		}
 
-		OvtPacket packet;
-
-		packet.SetSessionId(_session_id);
-		packet.SetPayloadType(OVT_PAYLOAD_TYPE_STOP);
-		packet.SetMarker(0);
-		packet.SetTimestampNow();
-
 		Json::Value root;
 		_last_request_id++;
 		root["id"] = _last_request_id;
-		root["url"] = _curr_url->Source().CStr();
+		root["application"] = "stop";
+		root["target"] = _curr_url->Source().CStr();
 
-		auto payload = ov::Json::Stringify(root).ToData(false);
-
-		packet.SetPayload(payload->GetDataAs<uint8_t>(), payload->GetLength());
-
-		auto sent_size = _client_socket.Send(packet.GetData());
-		if(sent_size != static_cast<ssize_t>(packet.GetData()->GetLength()))
+		auto message = ov::Json::Stringify(root).ToData(false);
+		if(_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
 		{
-			_state = State::ERROR;
-			logte("Could not send Stop message");
 			return false;
 		}
 
 		return true; 
 	}
 
-	bool OvtStream::ReceiveStop(uint32_t request_id, const std::shared_ptr<OvtPacket> &packet)
+	bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 	{
-		if (packet == nullptr || packet->PayloadLength() <= 0)
+		auto sent_bytes = _client_socket.Send(packet->GetData());
+		if(sent_bytes != static_cast<ssize_t>(packet->GetData()->GetLength()))
 		{
 			_state = State::ERROR;
+			logte("Could not send message");
 			return false;
 		}
 
-		// Parsing Payload
-		ov::String payload((const char *) packet->Payload(), packet->PayloadLength());
-		ov::JsonObject object = ov::Json::Parse(payload);
-
-		if (object.IsNull())
-		{
-			_state = State::ERROR;
-			logte("An invalid response : Json format");
-			return false;
-		}
-
-		Json::Value &json_id = object.GetJsonValue()["id"];
-		Json::Value &json_code = object.GetJsonValue()["code"];
-		Json::Value &json_message = object.GetJsonValue()["message"];
-
-		if (!json_id.isUInt() || !json_code.isUInt() || json_message.isNull())
-		{
-			_state = State::ERROR;
-			logte("An invalid response : There are no required keys");
-			return false;
-		}
-
-		if (request_id != json_id.asUInt())
-		{
-			_state = State::ERROR;
-			logte("An invalid response : Response ID is wrong.");
-			return false;
-		}
-
-		if (json_code.asUInt() != 200)
-		{
-			_state = State::ERROR;
-			logte("Stop : Server Failure : %d (%s)", json_code.asUInt(), json_message.asString().c_str());
-			return false;
-		}
-
-		_state = State::STOPPED;
 		return true;
 	}
 
 	std::shared_ptr<ov::Data> OvtStream::ReceiveMessage()
 	{
-		auto data = std::make_shared<ov::Data>();
-
 		while(true)
 		{
-			auto result = ProceedToReceivePacket();
-			std::shared_ptr<OvtPacket> packet = nullptr;
-			if(result == ReceivePacketResult::COMPLETE)
-			{
-				packet = GetPacket();
-				if (packet == nullptr || packet->PayloadLength() <= 0)
-				{
-					// Unexpected error
-					_state = State::ERROR;
-					return nullptr;
-				}
-			}
-			else
+			auto result = ReceivePacket();
+			if(result == false)
 			{
 				logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
 				_state = State::ERROR;
 				return nullptr;
 			}
-		
 
-			data->Append(packet->Payload(), packet->PayloadLength());
-
-			if(packet->Marker())
+			if(_depacketizer.IsAvailableMessage())
 			{
-				break;
+				auto message = _depacketizer.PopMessage();
+				return message;
 			}
 		}
 
-		return data;
+		return nullptr;
 	}
 
-	void OvtStream::ResetRecvBuffer()
+	bool OvtStream::ReceivePacket(bool non_block)
 	{
-		_recv_buffer_offset = 0;
-	}
+		uint8_t	buffer[65535];
+		size_t read_bytes = 0ULL;
 
-	OvtStream::ReceivePacketResult OvtStream::ProceedToReceivePacket(bool non_block)
-	{
-		if(_packet_mold == nullptr)
+		auto error = _client_socket.Recv(buffer, 65535, &read_bytes, non_block);
+		if(read_bytes == 0)
 		{
-			_packet_mold = std::make_shared<OvtPacket>();
-		}
-
-		if(_packet_mold->IsPacketAvailable() == true)
-		{
-			return ReceivePacketResult::ALREADY_COMPLETED;
-		}
-		
-		while(true)
-		{
-			auto buffer = _recv_buffer.GetWritableDataAs<uint8_t>();
-			size_t remained = 0;
-			size_t read_bytes = 0ULL;
-
-			// Making header is not completed
-			if(_packet_mold->IsHeaderAvailable() == false)
+			if (error != nullptr)
 			{
-				remained = OVT_FIXED_HEADER_SIZE - _recv_buffer_offset;
+				logte("[%s/%s] An error occurred while receiving packet: %s", GetApplicationName(), GetName().CStr(), error->ToString().CStr());
+				_client_socket.Close();
+				_state = State::ERROR;
+				return false;
 			}
 			else
 			{
-				remained = _packet_mold->PayloadLength() - _recv_buffer_offset;
-			}
-				
-			auto error = _client_socket.Recv(buffer + _recv_buffer_offset, remained, &read_bytes, non_block);
-			if(read_bytes == 0)
-			{
-				if (error != nullptr)
+				if(non_block == true)
 				{
-					logte("An error occurred while receiving packet: %s", error->ToString().CStr());
-					_client_socket.Close();
-					_state = State::ERROR;
-					ResetRecvBuffer();
-					return ReceivePacketResult::ERROR;
+					// retry later
+					return true;
 				}
 				else
 				{
-					return ReceivePacketResult::IMCOMPLETE;
+					// timeout
+					return false;
 				}
-			}
-				
-			_recv_buffer_offset += read_bytes;
-			remained -= read_bytes;
-
-			if(remained == 0)
-			{
-				if(_packet_mold->IsHeaderAvailable() == false)
-				{
-					// Received the header completely
-					if (!_packet_mold->LoadHeader(_recv_buffer))
-					{
-						logte("An error occurred while receiving header: Invalid packet");
-						_client_socket.Close();
-						_state = State::ERROR;
-						ResetRecvBuffer();
-						return ReceivePacketResult::ERROR;
-					}
-				}
-				else
-				{
-					if(!_packet_mold->SetPayload(_recv_buffer.GetDataAs<uint8_t>(), _recv_buffer_offset))
-					{
-						logte("An error occurred while receiving payload: Invalid packet");
-						_client_socket.Close();
-						_state = State::ERROR;
-						ResetRecvBuffer();
-						return ReceivePacketResult::ERROR;
-					}
-				}
-
-				ResetRecvBuffer();
-
-				if (_packet_mold->IsPacketAvailable())
-				{
-					return ReceivePacketResult::COMPLETE;
-				}
-				else
-				{
-					continue;
-				}
-			}
-			else if(remained > 0)
-			{
-				continue;
-			}
-			// error
-			else if(remained < 0)
-			{
-				logte("An error occurred while receive data: Invalid packet");
-				_client_socket.Close();
-				_state = State::ERROR;
-				ResetRecvBuffer();
-				return ReceivePacketResult::ERROR;
 			}
 		}
 
-		return ReceivePacketResult::COMPLETE;
-	}
-
-	std::shared_ptr<OvtPacket> OvtStream::GetPacket()
-	{
-		if(_packet_mold == nullptr || _packet_mold->IsPacketAvailable() == false)
+		if(_depacketizer.AppendPacket(buffer, read_bytes) == false)
 		{
-			return nullptr;
+			logte("[%s/%s] An error occurred while parsing packet: Invalid packet", GetApplicationName(), GetName().CStr());
+			return false;
 		}
 
-		// becasue _packet_mold will be initialized when InitRecvBuffer is called
-		ResetRecvBuffer();
-
-		return std::move(_packet_mold);;
+		return true;
 	}
 
 	int OvtStream::GetFileDescriptorForDetectingEvent()
@@ -691,80 +535,69 @@ namespace pvd
 	PullStream::ProcessMediaResult OvtStream::ProcessMediaPacket()
 	{
 		// Non block
-		auto result = ProceedToReceivePacket(true);
-		std::shared_ptr<OvtPacket> packet = nullptr;
-		if(result == ReceivePacketResult::COMPLETE)
+		auto result = ReceivePacket(true);
+		if(result == false)
 		{
-			packet = GetPacket();
-		}
-		else if(result == ReceivePacketResult::IMCOMPLETE)
-		{
-			return ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN;
-		}
-		else
-		{
+			Stop();
 			logte("%s/%s(%u) - Could not receive packet : err(%d)", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId(), static_cast<uint8_t>(result));
 			_state = State::ERROR;
 			return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
 		}
-		
-		// Validation
-		if (packet == nullptr)
-		{
-			logte("The origin server may have problems. Try to terminate %s/%s(%u) stream", 
-					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-			_state = State::ERROR;
-			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
-		}
 
-		if(packet->PayloadType() == OVT_PAYLOAD_TYPE_STOP)
+		while(true)
 		{
-			ReceiveStop(_last_request_id, packet);
-			logti(" %s/%s(%u) OvtStream thread has finished gracefully", 
-				GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-			_state = State::STOPPED;
-			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FINISH;
-		}
-
-		if(packet->SessionId() != _session_id)
-		{
-			logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
-					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-			_state = State::ERROR;
-			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
-		}
-
-		if(packet->PayloadType() == OVT_PAYLOAD_TYPE_MEDIA_PACKET)
-		{
-			_depacketizer.AppendPacket(packet);
-
-			if (_depacketizer.IsAvaliableMediaPacket())
+			if(_depacketizer.IsAvaliableMediaPacket())
 			{
 				auto media_packet = _depacketizer.PopMediaPacket();
 				media_packet->SetPacketType(cmn::PacketType::OVT);
-
-// Deprecated. The Generate fragment header roll is changed to MediaRouter.
-#if 0
-				// Make Header (Fragmentation) if it is H.264
-				auto track = GetTrack(media_packet->GetTrackId());
-				if(track->GetCodecId() == cmn::MediaCodecId::H264)
-				{
-					H264FragmentHeader::Parse(media_packet);
-				}
-				else if(track->GetCodecId() == cmn::MediaCodecId::H265)
-				{
-					
-				}
-#endif
 				SendFrame(media_packet);
+
+				if(_depacketizer.IsAvaliableMediaPacket() || _depacketizer.IsAvailableMessage())
+				{
+					continue;
+				}
+				return PullStream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
 			}
-		}
-		else
-		{
-			logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
-					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-			_state = State::ERROR;
-			return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
+			else if(_depacketizer.IsAvailableMessage())
+			{
+				auto message = _depacketizer.PopMessage();
+
+				// Parsing Payload
+				ov::String payload(message->GetDataAs<char>(), message->GetLength());
+				ov::JsonObject object = ov::Json::Parse(payload);
+
+				if (object.IsNull())
+				{
+					Stop();
+					_state = State::ERROR;
+					logte("An invalid response : Json format");
+					return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
+				}
+
+				//Json::Value &json_id = object.GetJsonValue()["id"];
+				Json::Value &json_app = object.GetJsonValue()["application"];
+
+				ov::String applicaiton = json_app.asString().c_str();
+
+				if(applicaiton.UpperCaseString() == "STOP")
+				{
+					_state = State::STOPPED;
+					logte("An invalid response : application is wrong (%s).", applicaiton.CStr());
+					return PullStream::ProcessMediaResult::PROCESS_MEDIA_FINISH;
+				}
+				else
+				{
+					Stop();
+					logte("An error occurred while receive data: An unexpected packet was received. Terminate stream thread : %s/%s(%u)", 
+						GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
+					_state = State::ERROR;
+					return PullStream::ProcessMediaResult::PROCESS_MEDIA_FAILURE;
+				}
+			}
+			else
+			{
+				return ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN;
+			}
 		}
 
 		return PullStream::ProcessMediaResult::PROCESS_MEDIA_SUCCESS;

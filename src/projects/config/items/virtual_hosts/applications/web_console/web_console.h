@@ -18,18 +18,18 @@ namespace cfg
 			{
 				struct WebConsole : public Item
 				{
-					CFG_DECLARE_GETTER_OF(GetListenPort, _listen_port)
+					CFG_DECLARE_REF_GETTER_OF(GetListenPort, _listen_port)
 					CFG_DECLARE_REF_GETTER_OF(GetLoginId, _login_id)
 					CFG_DECLARE_REF_GETTER_OF(GetLoginPw, _login_pw)
 					CFG_DECLARE_REF_GETTER_OF(GetDocumentPath, _document_path)
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						RegisterValue<Optional>("ListenPort", &_listen_port);
-						RegisterValue<Optional>("LoginID", &_login_id);
-						RegisterValue("LoginPW", &_login_pw);
-						RegisterValue("DocumentPath", &_document_path);
+						Register<Optional>("ListenPort", &_listen_port);
+						Register<Optional>("LoginID", &_login_id);
+						Register("LoginPW", &_login_pw);
+						Register("DocumentPath", &_document_path);
 					}
 
 					int _listen_port = 8888;

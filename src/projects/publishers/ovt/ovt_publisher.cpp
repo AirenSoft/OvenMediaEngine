@@ -88,6 +88,32 @@ bool OvtPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Appli
 	return true;
 }
 
+std::shared_ptr<OvtDepacketizer> OvtPublisher::GetDepacketizer(int remote_id)
+{
+	std::lock_guard<std::mutex> guard(_depacketizers_lock);
+	std::shared_ptr<OvtDepacketizer> depacketizer;
+
+	// if there is no depacketizer, create
+	if(_depacketizers.find(remote_id) == _depacketizers.end())
+	{
+		depacketizer = std::make_shared<OvtDepacketizer>();
+		_depacketizers[remote_id] = depacketizer;
+	}
+	else
+	{
+		return _depacketizers[remote_id];
+	}
+
+	return depacketizer;
+}
+
+bool OvtPublisher::RemoveDepacketizer(int remote_id)
+{
+	std::lock_guard<std::mutex> guard(_depacketizers_lock);
+	_depacketizers.erase(remote_id);
+	return true;
+}
+
 void OvtPublisher::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
 	// NOTHING
@@ -98,58 +124,70 @@ void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 									const ov::SocketAddress &address,
 									const std::shared_ptr<const ov::Data> &data)
 {
-	auto packet = std::make_shared<OvtPacket>(*data);
-	if(!packet->IsPacketAvailable())
+	auto depacketizer = GetDepacketizer(remote->GetId());
+	
+	if(depacketizer->AppendPacket(data) == false)
 	{
-		// If packet is not valid, it is not necessary to response
-		logte("Invalid packet received and ignored");
+		ResponseResult(remote, 0, "unknown", 0, 500, "Server Internals Error");
 		return;
 	}
 
-	// Parsing Payload
-	ov::String payload((const char *)packet->Payload(), packet->PayloadLength());
-	ov::JsonObject object = ov::Json::Parse(payload);
-
-	if(object.IsNull())
+	if(!depacketizer->IsAvailableMessage())
 	{
-		ResponseResult(remote, OVT_PAYLOAD_TYPE_ERROR, packet->SessionId(), 0, 404, "An invalid request : Json format");
-		return;
+		logtc("Unavailable message");
 	}
 
-	Json::Value &json_request_id = object.GetJsonValue()["id"];
-	Json::Value &json_request_url = object.GetJsonValue()["url"];
-
-	if(json_request_id.isNull() || json_request_url.isNull() || !json_request_id.isUInt())
+	while(depacketizer->IsAvailableMessage())
 	{
-		ResponseResult(remote, OVT_PAYLOAD_TYPE_ERROR, packet->SessionId(), 0, 404, "An invalid request : Id or Url are not valid");
-		return;
-	}
+		auto message = depacketizer->PopMessage();
+		
+		// Parsing Payload
+		ov::String payload(message->GetDataAs<char>(), message->GetLength());
+		ov::JsonObject object = ov::Json::Parse(payload);
 
-	uint32_t request_id = json_request_id.asUInt();
-	auto url = ov::Url::Parse(json_request_url.asString().c_str());
-	if(url == nullptr)
-	{
-		ResponseResult(remote, OVT_PAYLOAD_TYPE_ERROR, packet->SessionId(), json_request_id.asUInt(), 404, "An invalid request : Url is not valid");
-		return;
-	}
+		if(object.IsNull())
+		{
+			ResponseResult(remote, 0, "unknown", 0, 404, "An invalid request : Json format");
+			return;
+		}
 
-	switch(packet->PayloadType())
-	{
-		case OVT_PAYLOAD_TYPE_DESCRIBE:
-			// Add session
+		Json::Value &json_request_id = object.GetJsonValue()["id"];
+		Json::Value &json_request_app = object.GetJsonValue()["application"];
+		Json::Value &json_request_target = object.GetJsonValue()["target"];
+
+		if(json_request_id.isNull() || !json_request_id.isUInt() ||
+			json_request_app.isNull() || !json_request_app.isString() ||
+			json_request_target.isNull() || !json_request_target.isString())
+		{
+			ResponseResult(remote, 0, "unknown", 0, 404, "An invalid request : id or target or application are invalid");
+			return;
+		}
+
+		uint32_t request_id = json_request_id.asUInt();
+		ov::String app = json_request_app.asString().c_str();
+		auto url = ov::Url::Parse(json_request_target.asString().c_str());
+		if(url == nullptr)
+		{
+			ResponseResult(remote, 0, "unknown", json_request_id.asUInt(), 404, "An invalid request : Target is not valid");
+			return;
+		}
+
+		if(app.UpperCaseString() == "DESCRIBE")
+		{
 			HandleDescribeRequest(remote, request_id, url);
-			break;
-		case OVT_PAYLOAD_TYPE_PLAY:
+		}
+		else if(app.UpperCaseString() == "PLAY")
+		{
 			HandlePlayRequest(remote, request_id, url);
-			break;
-		case OVT_PAYLOAD_TYPE_STOP:
-			// Remove session
-			HandleStopRequest(remote, packet->SessionId(), request_id, url);
-			break;
-		default:
-			// Response error message and disconnect
-			ResponseResult(remote, OVT_PAYLOAD_TYPE_ERROR, packet->SessionId(), request_id, 404, "An invalid request");
-			break;
+		}
+		else if(app.UpperCaseString() == "STOP")
+		{
+			HandleStopRequest(remote, 0, request_id, url);
+		}
+		else
+		{
+			ResponseResult(remote, 0, app.CStr(), request_id, 404, "Unknown application");
+		}
 	}
 }
 
@@ -164,6 +202,7 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 									PhysicalPortDisconnectReason reason,
 									const std::shared_ptr<const ov::Error> &error)
 {
+	logti("OvtProvider is disconnected : %s", remote->ToString().CStr());
 	// disconnect means when the stream disconnects itself.
 	if(reason != PhysicalPortDisconnectReason::Disconnect)
 	{
@@ -175,6 +214,7 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 		}
 	}
 	UnlinkRemoteFromStream(remote->GetId());
+	RemoveDepacketizer(remote->GetId());
 }
 
 void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, const uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
@@ -194,7 +234,7 @@ void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remo
 		if (orchestrator->RequestPullStream(url, vhost_app_name, stream_name) == false)
 		{
 			msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
-			ResponseResult(remote, OVT_PAYLOAD_TYPE_DESCRIBE, 0, request_id, 404, msg);
+			ResponseResult(remote, 0, "describe", request_id, 404, msg);
 			return;
 		}
 		else
@@ -203,14 +243,28 @@ void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remo
 			if (stream == nullptr)
 			{
 				msg.Format("Could not pull the stream: [%s/%s]", vhost_app_name.CStr(), stream_name.CStr());
-				ResponseResult(remote, OVT_PAYLOAD_TYPE_DESCRIBE, 0, request_id, 404, msg);
+				ResponseResult(remote, 0, "describe", request_id, 404, msg);
 				return;
 			}
 		}
 	}
 
-	Json::Value description = stream->GetDescription();
-	ResponseResult(remote, OVT_PAYLOAD_TYPE_DESCRIBE, 0, request_id, 200, "ok", "stream", description);
+	if(stream->WaitUntilStart(3000) == false)
+	{
+		msg.Format("(%s/%s) stream has not started.", vhost_app_name.CStr(), url->Stream().CStr());
+		ResponseResult(remote, 0, "describe", request_id, 202, msg);
+		return;
+	}
+
+	Json::Value description;
+	if(stream->GetDescription(description) == false)
+	{
+		msg.Format("(%s/%s) stream doesn't have description.", vhost_app_name.CStr(), url->Stream().CStr());
+		ResponseResult(remote, 0, "describe", request_id, 404, msg);
+		return;
+	}
+
+	ResponseResult(remote, 0, "describe", request_id, 200, "ok", description);
 }
 
 void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
@@ -222,7 +276,7 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 	{
 		ov::String msg;
 		msg.Format("There is no such app (%s)", vhost_app_name.CStr());
-		ResponseResult(remote, OVT_PAYLOAD_TYPE_PLAY, 0, request_id, 404, msg);
+		ResponseResult(remote, 0, "play", request_id, 404, msg);
 		return;
 	}
 
@@ -231,22 +285,23 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 	{
 		ov::String msg;
 		msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
-		ResponseResult(remote, OVT_PAYLOAD_TYPE_PLAY, 0, request_id, 404, msg);
+		ResponseResult(remote, 0, "play", request_id, 404, msg);
 		return;
 	}
 
-	auto session = OvtSession::Create(app, stream, stream->IssueUniqueSessionId(), remote);
+	// Session ID is remote socket's ID
+	auto session = OvtSession::Create(app, stream, remote->GetId(), remote);
 	if(session == nullptr)
 	{
 		ov::String msg;
 		msg.Format("Internal Error : Cannot create session");
-		ResponseResult(remote, OVT_PAYLOAD_TYPE_PLAY, 0, request_id, 404, msg);
+		ResponseResult(remote, 0, "play", request_id, 404, msg);
 		return;
 	}
 
 	LinkRemoteWithStream(remote->GetId(), stream);
 
-	ResponseResult(remote, OVT_PAYLOAD_TYPE_PLAY, session->GetId(), request_id, 200, "ok");
+	ResponseResult(remote, session->GetId(), "play", request_id, 200, "ok");
 
 	stream->AddSession(session);
 }
@@ -260,74 +315,57 @@ void OvtPublisher::HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, 
 	{
 		ov::String msg;
 		msg.Format("There is no such stream (%s/%s)", vhost_app_name.CStr(), url->Stream().CStr());
-		ResponseResult(remote, OVT_PAYLOAD_TYPE_STOP, 0, request_id, 404, msg);
+		ResponseResult(remote, 0, "stop", request_id, 404, msg);
 		return;
 	}
 
-	ResponseResult(remote, OVT_PAYLOAD_TYPE_STOP, session_id, request_id, 200, "ok");
+	ResponseResult(remote, session_id, "stop", request_id, 200, "ok");
 
-	stream->RemoveSession(session_id);
+	// Session ID is remote socket's ID
+	stream->RemoveSession(remote->GetId());
 }
 
-void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, uint32_t request_id, uint32_t code, const ov::String &msg)
+void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String app, uint32_t request_id, uint32_t code, const ov::String &msg)
 {
 	Json::Value root;
 
 	root["id"] = request_id;
+	root["application"] = app.CStr();
 	root["code"] = code;
 	root["message"] = msg.CStr();
 
-	SendResponse(remote, payload_type, session_id, ov::Json::Stringify(root));
+	SendResponse(remote, session_id, ov::Json::Stringify(root));
 }
 
-void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, uint32_t request_id,
-									uint32_t code, const ov::String &msg, const ov::String &key, const Json::Value &value)
+void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, ov::String app, uint32_t request_id, uint32_t code, const ov::String &msg, const Json::Value &contents)
 {
 	Json::Value root;
 
 	root["id"] = request_id;
+	root["application"] = app.CStr();
 	root["code"] = code;
 	root["message"] = msg.CStr();
-	root[key.CStr()] = value;
+	root["contents"] = contents;
 
-	SendResponse(remote, payload_type, session_id, ov::Json::Stringify(root));
+	SendResponse(remote, session_id, ov::Json::Stringify(root));
 }
 
-void OvtPublisher::SendResponse(const std::shared_ptr<ov::Socket> &remote, uint8_t payload_type, uint32_t session_id, const ov::String &payload)
+void OvtPublisher::SendResponse(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String &payload)
 {
-	size_t max_payload_size = OVT_DEFAULT_MAX_PACKET_SIZE - OVT_FIXED_HEADER_SIZE;
-	size_t remain_payload_len = payload.GetLength();
-	size_t offset = 0;
-	uint32_t sn = 0;
+	OvtPacketizer packetizer;
 
-	auto data = payload.ToData(false);
-	auto buffer = data->GetDataAs<uint8_t>();
-
-	while(remain_payload_len != 0)
+	if(packetizer.PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_RESPONSE, ov::Clock::NowMSec(), payload.ToData(false)) == false)
 	{
-		// Serialize
-		auto packet = std::make_shared<OvtPacket>();;
-		// Session ID should be set in Session Level
-		packet->SetSessionId(session_id);
-		packet->SetPayloadType(payload_type);
-		packet->SetMarker(0);
-		packet->SetTimestampNow();
+		return;
+	}
 
-		if(remain_payload_len > max_payload_size)
+	while(packetizer.IsAvailablePackets())
+	{
+		auto packet = packetizer.PopPacket();
+		if(packet == nullptr)
 		{
-			packet->SetPayload(&buffer[offset], max_payload_size);
-			offset += max_payload_size;
-			remain_payload_len -= max_payload_size;
+			return;
 		}
-		else
-		{
-			// The last packet of group has marker bit.
-			packet->SetMarker(true);
-			packet->SetPayload(&buffer[offset], remain_payload_len);
-			remain_payload_len = 0;
-		}
-
-		packet->SetSequenceNumber(sn++);
 
 		remote->Send(packet->GetData());
 	}

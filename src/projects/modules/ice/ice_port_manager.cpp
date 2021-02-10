@@ -11,38 +11,17 @@
 
 #include <modules/rtc_signalling/rtc_ice_candidate.h>
 
-std::shared_ptr<IcePort> IcePortManager::CreatePort(const cfg::bind::pub::IceCandidates &ice_candidates, std::shared_ptr<IcePortObserver> observer)
+
+// std::shared_ptr<IcePort> IcePortManager::CreatePort(const cfg::bind::pub::IceCandidates &ice_candidates, std::shared_ptr<IcePortObserver> observer)
+
+std::shared_ptr<IcePort> IcePortManager::CreatePort(std::shared_ptr<IcePortObserver> observer)
 {
 	std::shared_ptr<IcePort> ice_port = nullptr;
 
-	// 새로 할당
 	ice_port = std::make_shared<IcePort>();
-
 	if(ice_port != nullptr)
 	{
 		ice_port->AddObserver(std::move(observer));
-
-		std::vector<RtcIceCandidate> ice_candidate_list;
-
-		if(GenerateIceCandidates(ice_candidates, &ice_candidate_list) == false)
-		{
-			logte("Could not parse ICE candidates");
-			return nullptr;
-		}
-
-		if(ice_port->Create(std::move(ice_candidate_list)) == false)
-		{
-			// 초기화 도중 오류 발생
-			ice_port->Close();
-			ice_port = nullptr;
-
-			logte("Could not initialize ICE port");
-			OV_ASSERT2(false);
-		}
-		else
-		{
-			logtd("IcePort is created successfully: %s", ice_port->ToString().CStr());
-		}
 	}
 	else
 	{
@@ -50,6 +29,50 @@ std::shared_ptr<IcePort> IcePortManager::CreatePort(const cfg::bind::pub::IceCan
 	}
 
 	return ice_port;
+}
+
+bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePort> ice_port, const cfg::bind::pub::IceCandidates &ice_candidates)
+{
+	std::vector<RtcIceCandidate> ice_candidate_list;
+
+	if(GenerateIceCandidates(ice_candidates, &ice_candidate_list) == false)
+	{
+		logte("Could not parse ICE candidates");
+		return false;
+	}
+
+	if(ice_port->CreateIceCandidates(std::move(ice_candidate_list)) == false)
+	{
+		ice_port->Close();
+		ice_port = nullptr;
+
+		logte("Could not create ice candidates");
+		OV_ASSERT2(false);
+	}
+	else
+	{
+		logtd("IceCandidates is created successfully: %s", ice_port->ToString().CStr());
+	}
+
+	return true;
+}
+
+bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePort> ice_port, const ov::SocketAddress &address, const ov::SocketType socket_type)
+{
+	if(ice_port->CreateTurnServer(address, socket_type) == false)
+	{
+		ice_port->Close();
+		ice_port = nullptr;
+
+		logte("Could not create turn server");
+		OV_ASSERT2(false);
+	}
+	else
+	{
+		logtd("TurnServer is created successfully: %s", ice_port->ToString().CStr());
+	}
+	
+	return true;
 }
 
 bool IcePortManager::ReleasePort(std::shared_ptr<IcePort> ice_port, std::shared_ptr<IcePortObserver> observer)
@@ -82,16 +105,14 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::pub::IceCandidates &
 
 	for(auto &ice_candidate : list)
 	{
-		ov::String candidate = ice_candidate.GetCandidate();
-
 		std::vector<ov::String> ip_list;
 		ov::SocketType socket_type;
 		int start_port;
 		int end_port;
 
-		if(ParseIceCandidate(ice_candidate.GetCandidate(), &ip_list, &socket_type, &start_port, &end_port) == false)
+		if(ParseIceCandidate(ice_candidate, &ip_list, &socket_type, &start_port, &end_port) == false)
 		{
-			logte("Invalid ICE candidate in configuration: %s", candidate.CStr());
+			logte("Invalid ICE candidate in configuration: %s", ice_candidate.CStr());
 			return false;
 		}
 

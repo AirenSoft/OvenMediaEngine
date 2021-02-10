@@ -83,7 +83,7 @@ static void OnFFmpegLog(void *avcl, int level, const char *fmt, va_list args)
 
 		if (clazz != nullptr)
 		{
-			message.AppendFormat("[%s] ", clazz->class_name);
+			message.AppendFormat("[%s: %p] ", clazz->class_name, avcl);
 		}
 	}
 
@@ -130,9 +130,6 @@ std::shared_ptr<ov::Error> InitializeFFmpeg()
 {
 	::av_log_set_callback(OnFFmpegLog);
 	::av_log_set_level(AV_LOG_DEBUG);
-
-	::av_register_all();
-	::avcodec_register_all();
 	::avformat_network_init();
 
 	return nullptr;
@@ -200,7 +197,7 @@ static void SrtLogHandler(void *opaque, int level, const char *file, int line, c
 	std::string m = message;
 	ov::String mess;
 
-	if (std::regex_search(m, matches, std::regex("^([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{6})([/a-zA-Z:.!*_]+) ([/a-zA-Z:.!]+ )?(.+)")))
+	if (std::regex_search(m, matches, std::regex("^([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{6})([\\/a-zA-Z:.!*_0-9]+) ([\\/a-zA-Z:.0-9!]+ )?(.+)")))
 	{
 		mess = std::string(matches[4]).c_str();
 	}
@@ -211,31 +208,33 @@ static void SrtLogHandler(void *opaque, int level, const char *file, int line, c
 	}
 
 	const char *SRT_LOG_TAG = "SRT";
+	ov::String new_file = file;
+	new_file.Append("@SRT");
 
 	switch (level)
 	{
 		case srt_logging::LogLevel::debug:
-			::ov_log_internal(OVLogLevelDebug, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
+			::ov_log_internal(OVLogLevelDebug, SRT_LOG_TAG, new_file, line, area, "%s", mess.CStr());
 			break;
 
 		case srt_logging::LogLevel::note:
-			::ov_log_internal(OVLogLevelInformation, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
+			::ov_log_internal(OVLogLevelInformation, SRT_LOG_TAG, new_file, line, area, "%s", mess.CStr());
 			break;
 
 		case srt_logging::LogLevel::warning:
-			::ov_log_internal(OVLogLevelWarning, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
+			::ov_log_internal(OVLogLevelWarning, SRT_LOG_TAG, new_file, line, area, "%s", mess.CStr());
 			break;
 
 		case srt_logging::LogLevel::error:
-			::ov_log_internal(OVLogLevelError, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
+			::ov_log_internal(OVLogLevelError, SRT_LOG_TAG, new_file, line, area, "%s", mess.CStr());
 			break;
 
 		case srt_logging::LogLevel::fatal:
-			::ov_log_internal(OVLogLevelCritical, SRT_LOG_TAG, file, line, area, "%s", mess.CStr());
+			::ov_log_internal(OVLogLevelCritical, SRT_LOG_TAG, new_file, line, area, "%s", mess.CStr());
 			break;
 
 		default:
-			::ov_log_internal(OVLogLevelError, SRT_LOG_TAG, file, line, area, "(Unknown level: %d) %s", level, mess.CStr());
+			::ov_log_internal(OVLogLevelError, SRT_LOG_TAG, new_file, line, area, "(Unknown level: %d) %s", level, mess.CStr());
 			break;
 	}
 }

@@ -27,11 +27,11 @@ namespace cfg
 			CFG_DECLARE_REF_GETTER_OF(GetApi, _api)
 
 		protected:
-			void MakeParseList() override
+			void MakeList() override
 			{
-				RegisterValue("Host", &_host);
+				Register("Host", &_host);
 
-				RegisterValue<Optional>("API", &_api);
+				Register<Optional>({"API", "api"}, &_api);
 			}
 		};
 	}  // namespace mgr

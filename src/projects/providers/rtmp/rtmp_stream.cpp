@@ -53,6 +53,29 @@ Process of publishing
  - AAC : Control Byte 
 */
 
+// When using b-frames in Wiredcast, sometimes CTS is negative, so a PTS < DTS situation occurs.
+// This is not a normal situation, so we need to adjust it.
+//
+// [OBS]
+// DTS   CTS   PTS
+//   0     0     0
+//   0    66    66
+//  33   166   199
+//  66    66   132
+//  99     0    99
+// 132    33   165
+//
+// [Wirecast]
+// DTS   CTS   PTS
+//   0     0     0
+//  33   100   133
+//  66     0    66
+// 100   -66    34 <== ERROR (PTS < DTS)
+// 133   -33   100 <== ERROR (PTS < DTS)
+// 166   100   266
+// 200     0   200
+#define ADJUST_PTS				(150)
+
 namespace pvd
 {
 	std::shared_ptr<RtmpStream> RtmpStream::Create(StreamSourceType source_type, uint32_t client_id, const std::shared_ptr<ov::Socket> &client_socket, const std::shared_ptr<PushProvider> &provider)
@@ -86,6 +109,8 @@ namespace pvd
 	bool RtmpStream::Start()
 	{
 		_state = Stream::State::PLAYING;
+		_negative_cts_detected = false;
+
 		return PushStream::Start();
 	}
 
@@ -266,7 +291,7 @@ namespace pvd
 	{
 		// Check SignedPolicy
 		
-		auto result = HandleSignedPolicy(_url, _remote->GetLocalAddress(), _signed_policy);
+		auto result = HandleSignedPolicy(_url, _remote->GetRemoteAddress(), _signed_policy);
 		if(result == CheckSignatureResult::Off)
 		{
 			return true;
@@ -1045,8 +1070,22 @@ namespace pvd
 				return false;
 			}
 
+			if (flv_video.CompositionTime() < 0L)
+			{
+				if (_negative_cts_detected == false)
+				{
+					logtw("A negative CTS has been detected and will attempt to adjust the PTS. HLS/DASH may not play smoothly in the beginning.");
+					_negative_cts_detected = true;
+				}
+			}
+
 			int64_t dts = message->header->completed.timestamp;
 			int64_t pts = dts + flv_video.CompositionTime();
+
+			if(_negative_cts_detected)
+			{
+				pts += ADJUST_PTS;
+			}
 
 			auto video_track = GetTrack(RTMP_VIDEO_TRACK_ID);
 			if(video_track == nullptr)
@@ -1196,9 +1235,14 @@ namespace pvd
 				return false;
 			}
 
-			int64_t pts = message->header->completed.timestamp;
-			int64_t dts = pts;
-			
+			int64_t dts = message->header->completed.timestamp;
+			int64_t pts = dts;
+
+			if(_negative_cts_detected)
+			{
+				pts += ADJUST_PTS;
+			}
+
 			// Get audio track info
 			auto audio_track = GetTrack(RTMP_AUDIO_TRACK_ID);
 			if(audio_track == nullptr)

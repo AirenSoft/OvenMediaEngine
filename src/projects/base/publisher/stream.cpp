@@ -147,7 +147,7 @@ namespace pub
 			{
 				continue;
 			}
-
+			
 			session_lock.lock();
 			for (auto const &x : _sessions)
 			{
@@ -162,8 +162,8 @@ namespace pub
 		: info::Stream(info)
 	{
 		_application = application;
-		_run_flag = false;
 		_last_issued_session_id = 100;
+		_state = State::CREATED;
 	}
 
 	Stream::~Stream()
@@ -173,14 +173,28 @@ namespace pub
 
 	bool Stream::Start()
 	{
-		if (_run_flag == true)
+		if (_state != State::CREATED)
 		{
 			return false;
 		}
 
 		logti("%s application has started [%s(%u)] stream", GetApplicationTypeName(), GetName().CStr(), GetId());
-		_run_flag = true;
+		_state = State::STARTED;
 		return true;
+	}
+
+	bool Stream::WaitUntilStart(uint32_t timeout_ms)
+	{
+		ov::StopWatch	watch;
+		
+		watch.Start();
+
+		while(_state != State::STARTED && watch.Elapsed() < timeout_ms)
+		{
+			usleep(100 * 1000); // 100ms
+		}
+
+		return _state == State::STARTED;
 	}
 
 	bool Stream::CreateStreamWorker(uint32_t worker_count)
@@ -218,12 +232,12 @@ namespace pub
 	{
 		std::unique_lock<std::shared_mutex> worker_lock(_stream_worker_lock);
 
-		if (_run_flag == false)
+		if (_state != State::STARTED)
 		{
 			return false;
 		}
 
-		_run_flag = false;
+		_state = State::STOPPED;
 
 		for(const auto &worker : _stream_workers)
 		{

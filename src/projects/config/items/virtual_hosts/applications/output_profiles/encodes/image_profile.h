@@ -24,25 +24,25 @@ namespace cfg
 					ov::String _scale;
 					int _width = 0;
 					int _height = 0;
-					float _framerate = 0.0f;
+					double _framerate = 0.0;
 
 				public:
-					CFG_DECLARE_GETTER_OF(IsActive, _active)
-					CFG_DECLARE_GETTER_OF(GetCodec, _codec)
-					CFG_DECLARE_GETTER_OF(GetScale, _scale)
-					CFG_DECLARE_GETTER_OF(GetWidth, _width)
-					CFG_DECLARE_GETTER_OF(GetHeight, _height)
-					CFG_DECLARE_GETTER_OF(GetFramerate, _framerate)
+					CFG_DECLARE_REF_GETTER_OF(IsActive, _active)
+					CFG_DECLARE_REF_GETTER_OF(GetCodec, _codec)
+					CFG_DECLARE_REF_GETTER_OF(GetScale, _scale)
+					CFG_DECLARE_REF_GETTER_OF(GetWidth, _width)
+					CFG_DECLARE_REF_GETTER_OF(GetHeight, _height)
+					CFG_DECLARE_REF_GETTER_OF(GetFramerate, _framerate)
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						RegisterValue<Optional>("Active", &_active);
-						RegisterValue<Optional>("Codec", &_codec);
-						RegisterValue<Optional>("Scale", &_scale);
-						RegisterValue<Optional>("Width", &_width);
-						RegisterValue<Optional>("Height", &_height);
-						RegisterValue<Optional>("Framerate", &_framerate);
+						Register<Optional>("Active", &_active);
+						Register<Optional>("Codec", &_codec);
+						Register<Optional>("Scale", &_scale);
+						Register<Optional>("Width", &_width);
+						Register<Optional>("Height", &_height);
+						Register<Optional>("Framerate", &_framerate);
 					}
 				};
 			}  // namespace oprf

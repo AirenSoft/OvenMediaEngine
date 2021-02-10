@@ -22,10 +22,10 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetPass, _pass)
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue("Location", &_location);
-					RegisterValue("Pass", &_pass);
+					Register("Location", &_location);
+					Register("Pass", &_pass);
 				}
 
 				ov::String _location;

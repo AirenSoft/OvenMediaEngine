@@ -428,7 +428,7 @@ namespace ov
 				break;
 
 			case SocketType::Srt:
-				_socket.SetSocket(type, ::srt_socket(AF_INET, SOCK_DGRAM, 0));
+				_socket.SetSocket(type, ::srt_create_socket());
 				break;
 
 			default:
@@ -718,7 +718,7 @@ namespace ov
 	bool Socket::SetRecvTimeout(timeval &tv)
 	{
 		OV_ASSERT2(_socket.IsValid());
-		CHECK_STATE(== SocketState::Connected, false);
+		//CHECK_STATE(== SocketState::Connected, false);
 
 		switch (GetType())
 		{

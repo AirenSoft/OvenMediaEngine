@@ -20,21 +20,24 @@ namespace cfg
 			{
 				struct HlsPublisher : public Publisher
 				{
-					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Hls)
+					PublisherType GetType() const override
+					{
+						return PublisherType::Hls;
+					}
 
-					CFG_DECLARE_GETTER_OF(GetSegmentCount, _segment_count)
-					CFG_DECLARE_GETTER_OF(GetSegmentDuration, _segment_duration)
-					CFG_DECLARE_GETTER_OF(GetCrossDomainList, _cross_domains.GetUrls())
-					CFG_DECLARE_GETTER_OF(GetCrossDomains, _cross_domains)
+					CFG_DECLARE_REF_GETTER_OF(GetSegmentCount, _segment_count)
+					CFG_DECLARE_REF_GETTER_OF(GetSegmentDuration, _segment_duration)
+					CFG_DECLARE_REF_GETTER_OF(GetCrossDomainList, _cross_domains.GetUrls())
+					CFG_DECLARE_REF_GETTER_OF(GetCrossDomains, _cross_domains)
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						Publisher::MakeParseList();
+						Publisher::MakeList();
 
-						RegisterValue<Optional>("SegmentCount", &_segment_count);
-						RegisterValue<Optional>("SegmentDuration", &_segment_duration);
-						RegisterValue<Optional>("CrossDomains", &_cross_domains);
+						Register<Optional>("SegmentCount", &_segment_count);
+						Register<Optional>("SegmentDuration", &_segment_duration);
+						Register<Optional>("CrossDomains", &_cross_domains);
 					}
 
 					int _segment_count = 3;

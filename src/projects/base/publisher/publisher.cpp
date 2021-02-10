@@ -119,7 +119,7 @@ namespace pub
 				}
 			}
 
-			logte("%s publihser hasn't the %s application.", ::StringFromPublisherType(GetPublisherType()).CStr(), app_info.GetName().CStr());
+			logte("%s publisher hasn't the %s application.", ::StringFromPublisherType(GetPublisherType()).CStr(), app_info.GetName().CStr());
 			return false;
 		}
 

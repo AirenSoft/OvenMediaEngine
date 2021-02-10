@@ -54,6 +54,9 @@ namespace mon
 		bool OnStreamReserved(ProviderType who, const ov::Url &stream_uri, const ov::String &stream_name);
 		bool OnStreamCanceled(const ov::Url &stream_uri); // Reservation Canceled
 		std::map<uint32_t, std::shared_ptr<ReservedStreamMetrics>> GetReservedStreamMetricsMap();
+		// TODO: To prevent side-effects from occurring, the value returned must also be changed to const
+		// For example: std::map<uint32_t, std::shared_ptr<const ReservedStreamMetrics>>
+		std::map<uint32_t, std::shared_ptr<ReservedStreamMetrics>> GetReservedStreamMetricsMap() const;
 
 		// Overriding from CommonMetrics 
 		void IncreaseBytesIn(uint64_t value) override;
@@ -66,7 +69,7 @@ namespace mon
 		std::shared_mutex _streams_guard;
 		std::map<uint32_t, std::shared_ptr<StreamMetrics>> _streams;
 
-		std::shared_mutex _reserved_streams_guard;
+		mutable std::shared_mutex _reserved_streams_guard;
 		std::map<uint32_t, std::shared_ptr<ReservedStreamMetrics>> _reserved_streams;
 	};
 }  // namespace mon

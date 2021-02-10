@@ -305,7 +305,7 @@ namespace ov
 	{
 		_pattern.clear();
 
-		if (_code == nullptr)
+		if (_code != nullptr)
 		{
 			::pcre2_code_free(GET_CODE());
 			_code = nullptr;

@@ -12,7 +12,7 @@
 #include "cmaf_interceptor.h"
 #include "cmaf_packetizer.h"
 
-class CmafStreamServer : public DashStreamServer, public ICmafChunkedTransfer
+class CmafStreamServer : public DashStreamServer, public ChunkedTransferInterface
 {
 public:
 	PublisherType GetPublisherType() const noexcept override

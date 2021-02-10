@@ -16,8 +16,10 @@ namespace info
 		_stream = nullptr;
 
 		_file_path = "";
+		_file_path_by_user = false;
 		_tmp_path = "";
-		_fileinfo_path = "";
+		_info_path = "";
+		_info_path_by_user = false;
 
 		_record_bytes = 0;
 		_record_time = 0;
@@ -120,9 +122,25 @@ namespace info
 	{
 		_tmp_path = tmp_path;
 	}
-	void Record::SetFileInfoPath(ov::String fileinfo_path)
+	void Record::SetInfoPath(ov::String info_path)
 	{
-		_fileinfo_path = fileinfo_path;
+		_info_path = info_path;
+	}
+	void Record::SetFilePathSetByUser(bool by_user)
+	{
+		_file_path_by_user = by_user;
+	}
+	bool Record::IsFilePathSetByUser()
+	{
+		return _file_path_by_user;
+	}
+	void Record::SetInfoPathSetByUser(bool by_user)
+	{
+		_info_path_by_user = by_user;
+	}
+	bool Record::IsInfoPathSetByUser()
+	{
+		return _info_path_by_user;
 	}
 	void Record::IncreaseRecordBytes(uint64_t bytes)
 	{
@@ -157,9 +175,9 @@ namespace info
 	{
 		return _tmp_path;
 	}
-	ov::String Record::GetFileInfoPath()
+	ov::String Record::GetInfoPath()
 	{
-		return _fileinfo_path;
+		return _info_path;
 	}
 	uint64_t Record::GetRecordBytes()
 	{
@@ -224,7 +242,7 @@ namespace info
 		info.AppendFormat(" stream=%s\n", (_stream != nullptr) ? _stream->GetName().CStr() : "");
 		info.AppendFormat(" file_path=%s\n", _file_path.CStr());
 		info.AppendFormat(" tmp_path=%s\n", _tmp_path.CStr());
-		info.AppendFormat(" fileinfo_path=%s\n", _fileinfo_path.CStr());
+		info.AppendFormat(" info_path=%s\n", _info_path.CStr());
 		info.AppendFormat(" record_bytes=%lld\n", _record_bytes);
 		info.AppendFormat(" record_bytes=%lld\n", _record_bytes);
 		info.AppendFormat(" record_total_bytes=%lld\n", _record_total_bytes);

@@ -38,12 +38,12 @@ namespace cfg
 				}
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue("PolicyQueryKeyName", &_policy_query_key_name);
-					RegisterValue("SignatureQueryKeyName", &_signature_query_key_name);
-					RegisterValue("SecretKey", &_secret_key);
-					RegisterValue("Enables", &_enables);
+					Register("PolicyQueryKeyName", &_policy_query_key_name);
+					Register("SignatureQueryKeyName", &_signature_query_key_name);
+					Register("SecretKey", &_secret_key);
+					Register("Enables", &_enables);
 				}
 
 				ov::String _policy_query_key_name;

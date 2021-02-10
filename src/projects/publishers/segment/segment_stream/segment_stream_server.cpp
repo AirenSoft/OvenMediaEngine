@@ -43,8 +43,8 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 
 	auto manager = HttpServerManager::GetInstance();
-	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer(*address) : nullptr;
-	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer(*tls_address, vhost_list) : nullptr;
+	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer(GetPublisherName(), *address) : nullptr;
+	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer(GetPublisherName(), *tls_address, vhost_list) : nullptr;
 
 	auto segment_stream_interceptor = result ? CreateInterceptor() : nullptr;
 
@@ -305,7 +305,7 @@ bool SegmentStreamServer::SetAllowOrigin(const ov::String &origin_url, const std
 // <Url>https://demo.ovenplayer.com</Url>
 // <Url>http://*.ovenplayer.com</Url>
 //====================================================================================================
-void SegmentStreamServer::SetCrossDomain(const std::vector<cfg::cmn::Url> &url_list)
+void SegmentStreamServer::SetCrossDomain(const std::vector<ov::String> &url_list)
 {
 	std::vector<ov::String> crossdmain_urls;
 	ov::String http_prefix = "http://";
@@ -316,10 +316,8 @@ void SegmentStreamServer::SetCrossDomain(const std::vector<cfg::cmn::Url> &url_l
 		return;
 	}
 
-	for (auto &url_item : url_list)
+	for (auto &url : url_list)
 	{
-		ov::String url = url_item.GetUrl();
-
 		// all access allow
 		if (url == "*")
 		{

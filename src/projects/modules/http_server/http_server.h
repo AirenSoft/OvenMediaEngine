@@ -8,13 +8,16 @@
 //==============================================================================
 #pragma once
 
+#include <modules/physical_port/physical_port.h>
+
+#include <shared_mutex>
+
+#include "http_client.h"
+#include "http_error.h"
 #include "http_request.h"
 #include "http_response.h"
-#include "http_client.h"
 #include "interceptors/default/http_default_interceptor.h"
 
-#include <modules/physical_port/physical_port.h>
-#include <shared_mutex>
 // 참고 자료
 // RFC7230 - Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing (https://tools.ietf.org/html/rfc7230)
 // RFC7231 - Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content (https://tools.ietf.org/html/rfc7231)
@@ -31,7 +34,7 @@ public:
 	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpClient>>;
 	using ClientIterator = std::function<bool(const std::shared_ptr<HttpClient> &client)>;
 
-	HttpServer() = default;
+	HttpServer(const char *server_name);
 	~HttpServer() override;
 
 	virtual bool Start(const ov::SocketAddress &address, int worker_count);
@@ -63,6 +66,8 @@ protected:
 	void OnConnected(const std::shared_ptr<ov::Socket> &remote) override;
 	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 	void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
+
+	ov::String _server_name;
 
 	// HttpServer와 연결된 physical port
 	mutable std::mutex _physical_port_mutex;

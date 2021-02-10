@@ -38,11 +38,11 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetWorker, _worker);
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue<Optional>("Port", &_port);
-					RegisterValue<Optional>("TLSPort", &_tls_port);
-					RegisterValue<Optional>("Worker", &_worker);
+					Register<Optional>("Port", &_port);
+					Register<Optional>({"TLSPort", "tlsPort"}, &_tls_port);
+					Register<Optional>("Worker", &_worker);
 				}
 			};
 		}  // namespace pub

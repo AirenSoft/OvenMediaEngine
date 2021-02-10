@@ -35,13 +35,13 @@ namespace api
 				response.append(item.second->GetName().CStr());
 			}
 
-			return response;
+			return std::move(response);
 		}
 
 		ApiResponse VHostsController::OnGetVhost(const std::shared_ptr<HttpClient> &client,
 												 const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
-			return conv::JsonFromVHost(vhost);
+			return std::move(conv::JsonFromVHost(vhost));
 		}
 	}  // namespace v1
 }  // namespace api

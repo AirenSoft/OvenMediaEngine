@@ -41,7 +41,12 @@ public:
 	bool Start();
 	bool Stop();
 
+
 public:
+	//////////////////////////////////////////////////////////////////////
+	// Interface for Application Binding
+	//////////////////////////////////////////////////////////////////////
+
 	// Register/unregister connector from provider
 	bool RegisterConnectorApp(
 		std::shared_ptr<MediaRouteApplicationConnector> connector);
@@ -57,40 +62,48 @@ public:
 		std::shared_ptr<MediaRouteApplicationObserver> observer);
 
 public:
-	bool OnCreateStream(
+	//////////////////////////////////////////////////////////////////////
+	// Interface for Stream and MediaPacket
+	//////////////////////////////////////////////////////////////////////
+	bool OnStreamCreated(
 		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
 		const std::shared_ptr<info::Stream> &stream) override;
 
-	bool NotifyCreateStream(
-		const std::shared_ptr<info::Stream> &stream_info,
-		MediaRouteApplicationConnector::ConnectorType connector_type);
-
-	bool OnDeleteStream(
+	bool OnStreamDeleted(
 		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
 		const std::shared_ptr<info::Stream> &stream) override;
 
-	bool NotifyDeleteStream(
-		const std::shared_ptr<info::Stream> &stream_info,
-		const MediaRouteApplicationConnector::ConnectorType connector_type);
-
-	bool OnReceiveBuffer(
+	bool OnPacketReceived(
 		const std::shared_ptr<MediaRouteApplicationConnector> &app_conn,
 		const std::shared_ptr<info::Stream> &stream,
 		const std::shared_ptr<MediaPacket> &packet) override;
 
 	bool IsExistingInboundStream(ov::String stream_name) override;
 
+
+public:
+	bool NotifyStreamCreate(
+		const std::shared_ptr<info::Stream> &stream_info,
+		MediaRouteApplicationConnector::ConnectorType connector_type);
+
+	bool NotifyStreamPrepared(std::shared_ptr<MediaRouteStream> &stream);
+	
+	bool NotifyStreamDelete(
+		const std::shared_ptr<info::Stream> &stream_info,
+		const MediaRouteApplicationConnector::ConnectorType connector_type);
+
 private:
-	bool CreateInboundStream(const std::shared_ptr<info::Stream> &stream_info);
-	bool CreateOutboundStream(const std::shared_ptr<info::Stream> &stream_info);
+	std::shared_ptr<MediaRouteStream> CreateInboundStream(const std::shared_ptr<info::Stream> &stream_info);
+	std::shared_ptr<MediaRouteStream> CreateOutboundStream(const std::shared_ptr<info::Stream> &stream_info);
 
 	bool DeleteInboundStream(const std::shared_ptr<info::Stream> &stream_info);
 	bool DeleteOutboundStream(const std::shared_ptr<info::Stream> &stream_info);
 
 	// std::shared_ptr<MediaRouteStream> GetStream(uint8_t indicator, uint32_t stream_id);
 	std::shared_ptr<MediaRouteStream> GetInboundStream(uint32_t stream_id);
+	std::shared_ptr<MediaRouteStream> GetInboundStreamByName(const ov::String stream_name);
 	std::shared_ptr<MediaRouteStream> GetOutboundStream(uint32_t stream_id);
-
+	std::shared_ptr<MediaRouteStream> GetOutboundStreamByName(const ov::String stream_name);
 
 private:
 	// Application information from configuration file
@@ -105,11 +118,11 @@ private:
 	std::shared_mutex _observers_lock;
 
 	// Information of MediaStream instance
-	// Incoming Streams
+	// Inbound Streams
 	// Key : Stream.id
 	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _inbound_streams;
 
-	// Outgoing Streams
+	// Outbound Streams
 	// Key : Stream.id
 	std::map<uint32_t, std::shared_ptr<MediaRouteStream>> _outbound_streams;
 	std::shared_mutex _streams_lock;

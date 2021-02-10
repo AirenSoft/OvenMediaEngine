@@ -51,11 +51,49 @@ We have tested OME on the platforms listed below. However, we think it can work 
 
 ## Getting Started
 
-```
-docker run -d \
--p 1935:1935 -p 3333:3333 -p 8080:8080 -p 9000:9000 -p 4000-4005:4000-4005/udp -p 10006-10010:10006-10010/udp \
+### Docker
+
+```bash
+docker run -d \ 
+-p 1935:1935 \
+-p 3333:3333 \
+-p 8080:8080 \
+-p 9000:9000 \
+-p 4000-4005:4000-4005/udp \
+-p 10006-10010:10006-10010/udp \
+--name ovenmediaengine \
 airensoft/ovenmediaengine:latest
 ```
+
+You can also store the configuration files on your host:
+
+```bash
+docker run -d \
+-p 1935:1935 \
+-p 3333:3333 \
+-p 8080:8080 \
+-p 9000:9000 \
+-p 4000-4005:4000-4005/udp \
+-p 10006-10010:10006-10010/udp \
+-v ome-origin-conf:/opt/ovenmediaengine/bin/origin_conf \
+-v ome-edge-conf:/opt/ovenmediaengine/bin/edge_conf \
+--name ovenmediaengine \
+airensoft/ovenmediaengine:latest
+```
+
+The configuration files are now accessible under `/var/lib/docker/volumes/<volume_name>/_data`.
+
+Following the above example, you will find them under `/var/lib/docker/volumes/ome-origin-conf/_data` and `/var/lib/docker/volumes/ome-edge-conf/_data`.
+
+If you want them on a different location, the easiest way is to create links:
+
+```bash
+ln -s /var/lib/docker/volumes/ome-origin-conf/_data/ /my/new/path/to/ome-origin-conf \
+&& ln -s /var/lib/docker/volumes/ome-edge-conf/_data/ /my/new/path/to/ome-edge-conf
+```
+
+### Other Methods
+
 Please read [Getting Started](https://airensoft.gitbook.io/ovenmediaengine/getting-started) chapter in tutorials.
 
 

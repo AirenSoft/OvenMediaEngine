@@ -25,14 +25,14 @@ namespace cfg
 						cmn::RangedPort _port{"4000/udp"};
 
 					public:
-						CFG_DECLARE_GETTER_OF(GetName, _name)
-						CFG_DECLARE_GETTER_OF(GetPort, _port)
+						CFG_DECLARE_REF_GETTER_OF(GetName, _name)
+						CFG_DECLARE_REF_GETTER_OF(GetPort, _port)
 
 					protected:
-						void MakeParseList() override
+						void MakeList() override
 						{
-							RegisterValue("Name", &_name);
-							RegisterValue<Optional>("Port", &_port);
+							Register("Name", &_name);
+							Register<Optional>("Port", &_port);
 						}
 					};
 				}  // namespace mpegts

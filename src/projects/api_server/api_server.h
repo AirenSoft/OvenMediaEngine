@@ -26,7 +26,6 @@ namespace api
 
 	protected:
 		std::shared_ptr<HttpRequestInterceptor> CreateInterceptor();
-		void RegisterHandlers();
 
 		std::shared_ptr<HttpServer> _http_server;
 		std::shared_ptr<HttpsServer> _https_server;

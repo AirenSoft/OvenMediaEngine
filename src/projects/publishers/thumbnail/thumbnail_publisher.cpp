@@ -51,12 +51,13 @@ bool ThumbnailPublisher::Start()
 
 	bool http_server_result = true;
 	ov::SocketAddress address;
-	auto &port = thumbnail_bind_config.GetPort();
-	if (port.IsParsed())
+	bool is_parsed;
+	auto &port = thumbnail_bind_config.GetPort(&is_parsed);
+	if (is_parsed)
 	{
 		address = ov::SocketAddress(server_config.GetIp(), port.GetPort());
 
-		_http_server = manager->CreateHttpServer(address);
+		_http_server = manager->CreateHttpServer("ThumbnailPublisher", address);
 
 		if (_http_server != nullptr)
 		{
@@ -70,17 +71,17 @@ bool ThumbnailPublisher::Start()
 	}
 
 	bool https_server_result = true;
-	auto &tls_port = thumbnail_bind_config.GetTlsPort();
+	auto &tls_port = thumbnail_bind_config.GetTlsPort(&is_parsed);
 	ov::SocketAddress tls_address;
 
-	if (tls_port.IsParsed())
+	if (is_parsed)
 	{
 		const auto &managers = server_config.GetManagers();
 
 		auto host_name_list = std::vector<ov::String>();
 		for (auto &name : managers.GetHost().GetNameList())
 		{
-			host_name_list.push_back(name.GetName());
+			host_name_list.push_back(name);
 		}
 
 		tls_address = ov::SocketAddress(server_config.GetIp(), tls_port.GetPort());
@@ -88,7 +89,7 @@ bool ThumbnailPublisher::Start()
 
 		if (certificate != nullptr)
 		{
-			_https_server = manager->CreateHttpsServer(address, certificate);
+			_https_server = manager->CreateHttpsServer("ThumbnailPublisher", tls_address, certificate);
 
 			if (_https_server != nullptr)
 			{
@@ -147,14 +148,14 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 	http_interceptor->Register(HttpMethod::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
 		auto request = client->GetRequest();
 
-		ov::String reqeuset_param;
+		ov::String request_param;
 		ov::String app_name;
 		ov::String stream_name;
 		ov::String file_name;
 		ov::String file_ext;
 
 		// Parse Url
-		if (ParseRequestUrl(request->GetRequestTarget(), reqeuset_param, app_name, stream_name, file_name, file_ext) == false)
+		if (ParseRequestUrl(request->GetRequestTarget(), request_param, app_name, stream_name, file_name, file_ext) == false)
 		{
 			logte("Failed to parse URL: %s", request->GetRequestTarget().CStr());
 			return HttpNextHandler::Call;

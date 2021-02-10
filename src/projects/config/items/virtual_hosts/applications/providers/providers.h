@@ -41,13 +41,13 @@ namespace cfg
 					CFG_DECLARE_REF_GETTER_OF(GetMpegtsProvider, _mpegts_provider)
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						RegisterValue<Optional>("RTMP", &_rtmp_provider);
-						RegisterValue<Optional>("RTSPPull", &_rtsp_pull_provider);
-						RegisterValue<Optional>("RTSP", &_rtsp_provider);
-						RegisterValue<Optional>("OVT", &_ovt_provider);
-						RegisterValue<Optional>("MPEGTS", &_mpegts_provider);
+						Register<Optional>({"RTMP", "rtmp"}, &_rtmp_provider);
+						Register<Optional>({"RTSPPull", "rtspPull"}, &_rtsp_pull_provider);
+						Register<Optional>({"RTSP", "rtsp"}, &_rtsp_provider);
+						Register<Optional>({"OVT", "ovt"}, &_ovt_provider);
+						Register<Optional>({"MPEGTS", "mpegts"}, &_mpegts_provider);
 					};
 
 					RtmpProvider _rtmp_provider;

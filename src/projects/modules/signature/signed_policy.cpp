@@ -66,6 +66,13 @@ bool SignedPolicy::Process(const ov::String &client_address, const ov::String &r
 		return false;
 	}
 
+	// Check IP
+	if(IsAllowedIP(client_address) == false)
+	{	
+		SetError(ErrCode::UNAUTHORIZED_CLIENT, ov::String::FormatString("%s IP address is not allowed.(Allowed range : %s ~ %s)", client_address.CStr(), _cidr->Begin().CStr(), _cidr->End().CStr()));
+		return false;
+	}
+
 	SetError(ErrCode::PASSED, "Authorized");
 	
 	return true;
@@ -142,9 +149,13 @@ bool SignedPolicy::ProcessPolicyJson(const ov::String &policy_json)
 	
 	if(!jv_allow_ip.isNull() && jv_allow_ip.isString())
 	{
-		_allow_ip_cidr = jv_stream_expire.asCString();
-
-		//TODO(Getroot) : Check if client address is allowed
+		_allow_ip_cidr = jv_allow_ip.asString().c_str();
+		_cidr = ov::CIDR::Parse(_allow_ip_cidr);
+		if(_cidr == nullptr)
+		{
+			SetError(ErrCode::INVALID_POLICY, ov::String::FormatString("allow_ip:%s in SignedPolicy is an invalid CIDR.", _allow_ip_cidr.CStr()));
+			return false;
+		}
 	}
 
 	return true;
@@ -200,4 +211,26 @@ uint64_t SignedPolicy::GetStreamExpireEpochSec() const
 const ov::String& SignedPolicy::GetAllowIpCidr() const
 {
 	return _allow_ip_cidr;
+}
+
+bool SignedPolicy::IsAllowedIP(const ov::String &ip_addr) const
+{
+	// Do not have IP policy
+	if(_cidr == nullptr)
+	{
+		return true;
+	}
+
+	return _cidr->CheckIP(ip_addr);
+}
+
+bool SignedPolicy::GetCIDRRange(ov::String &begin, ov::String &end) const
+{
+	if(_cidr == nullptr)
+	{
+		return false;
+	}
+	begin = _cidr->Begin();
+	end = _cidr->End();
+	return true;
 }

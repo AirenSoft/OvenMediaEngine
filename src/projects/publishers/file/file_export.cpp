@@ -3,6 +3,8 @@
 #include <base/info/stream.h>
 #include <base/publisher/stream.h>
 
+#include <pugixml-1.9/src/pugixml.hpp>
+
 #include "file_private.h"
 
 FileExport::FileExport()

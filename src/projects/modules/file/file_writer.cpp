@@ -54,7 +54,6 @@ std::shared_ptr<FileWriter> FileWriter::Create()
 FileWriter::FileWriter()
 	: _format_context(nullptr)
 {
-	av_register_all();
 	// av_log_set_callback(FileWriter::FFmpegLog);
 	// av_log_set_level(AV_LOG_TRACE);
 }
@@ -121,10 +120,10 @@ bool FileWriter::Start()
 
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
-		int error = avio_open2(&_format_context->pb, _format_context->filename, AVIO_FLAG_WRITE, nullptr, &options);
+		int error = avio_open2(&_format_context->pb, _format_context->url, AVIO_FLAG_WRITE, nullptr, &options);
 		if (error < 0)
 		{
-			logte("Error opening file. error(%d), %s", error, _format_context->filename);
+			logte("Error opening file. error(%d), %s", error, _format_context->url);
 			return false;
 		}
 	}
@@ -135,7 +134,7 @@ bool FileWriter::Start()
 		return false;
 	}
 
-	av_dump_format(_format_context, 0, _format_context->filename, 1);
+	av_dump_format(_format_context, 0, _format_context->url, 1);
 
 	if (_format_context->oformat != nullptr)
 	{
@@ -186,7 +185,10 @@ bool FileWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 
 			codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
 			codecpar->codec_id =
-				(track_info->GetCodecId() == cmn::MediaCodecId::H264) ? AV_CODEC_ID_H264 : (track_info->GetCodecId() == cmn::MediaCodecId::H265) ? AV_CODEC_ID_H265 : (track_info->GetCodecId() == cmn::MediaCodecId::Vp8) ? AV_CODEC_ID_VP8 : (track_info->GetCodecId() == cmn::MediaCodecId::Vp9) ? AV_CODEC_ID_VP9 : AV_CODEC_ID_NONE;
+				(track_info->GetCodecId() == cmn::MediaCodecId::H264) ? AV_CODEC_ID_H264 : (track_info->GetCodecId() == cmn::MediaCodecId::H265) ? AV_CODEC_ID_H265
+																					   : (track_info->GetCodecId() == cmn::MediaCodecId::Vp8)	 ? AV_CODEC_ID_VP8
+																					   : (track_info->GetCodecId() == cmn::MediaCodecId::Vp9)	 ? AV_CODEC_ID_VP9
+																																				 : AV_CODEC_ID_NONE;
 
 			codecpar->bit_rate = track_info->GetBitrate();
 			codecpar->width = track_info->GetWidth();
@@ -217,10 +219,13 @@ bool FileWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 
 			codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
 			codecpar->codec_id =
-				(track_info->GetCodecId() == cmn::MediaCodecId::Aac) ? AV_CODEC_ID_AAC : (track_info->GetCodecId() == cmn::MediaCodecId::Mp3) ? AV_CODEC_ID_MP3 : (track_info->GetCodecId() == cmn::MediaCodecId::Opus) ? AV_CODEC_ID_OPUS : AV_CODEC_ID_NONE;
+				(track_info->GetCodecId() == cmn::MediaCodecId::Aac) ? AV_CODEC_ID_AAC : (track_info->GetCodecId() == cmn::MediaCodecId::Mp3) ? AV_CODEC_ID_MP3
+																					 : (track_info->GetCodecId() == cmn::MediaCodecId::Opus)  ? AV_CODEC_ID_OPUS
+																																			  : AV_CODEC_ID_NONE;
 			codecpar->bit_rate = track_info->GetBitrate();
 			codecpar->channels = static_cast<int>(track_info->GetChannel().GetCounts());
-			codecpar->channel_layout = (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutMono) ? AV_CH_LAYOUT_MONO : (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutStereo) ? AV_CH_LAYOUT_STEREO : 0;  // <- Unknown
+			codecpar->channel_layout = (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutMono) ? AV_CH_LAYOUT_MONO : (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutStereo) ? AV_CH_LAYOUT_STEREO
+																																																							   : 0;	 // <- Unknown
 			codecpar->sample_rate = track_info->GetSample().GetRateNum();
 			codecpar->frame_size = 1024;  // TODO: Need to Frame Size
 			codecpar->codec_tag = 0;
@@ -328,6 +333,18 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	{
 		logte("error = %d", ret);
 		return false;
+	}
+
+	return true;
+}
+
+bool FileWriter::IsWritable()
+{
+	std::unique_lock<std::mutex> mlock(_lock);
+
+	if (_format_context == nullptr)
+	{
+		return false;	
 	}
 
 	return true;

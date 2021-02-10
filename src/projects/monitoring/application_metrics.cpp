@@ -124,6 +124,11 @@ namespace mon
 		return _reserved_streams;
 	}
 
+    std::map<uint32_t, std::shared_ptr<ReservedStreamMetrics>> ApplicationMetrics::GetReservedStreamMetricsMap() const
+	{
+		std::shared_lock<std::shared_mutex> lock(_reserved_streams_guard);
+		return _reserved_streams;
+	}
 
     void ApplicationMetrics::IncreaseBytesIn(uint64_t value)
     {

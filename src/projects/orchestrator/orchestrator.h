@@ -149,8 +149,9 @@ namespace ocst
 		//--------------------------------------------------------------------
 		// Implementation of ocst::Application::CallbackInterface
 		//--------------------------------------------------------------------
-		bool OnCreateStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
-		bool OnDeleteStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
+		bool OnStreamCreated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
+		bool OnStreamDeleted(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
+		bool OnStreamPrepared(const info::Application &app_info, const std::shared_ptr<info::Stream> &info) override;
 
 	protected:
 		std::recursive_mutex _module_list_mutex;

@@ -25,8 +25,11 @@ bool FlvVideoData::Parse(const uint8_t *data, size_t data_length, FlvVideoData &
 	}
 
 	video_data._packet_type = static_cast<FlvAvcPacketType>(parser.ReadBytes<uint8_t>());
-	video_data._composition_time = parser.ReadBits<uint32_t>(24);
 
+	int32_t composition_time = static_cast<int32_t>(parser.ReadBits<uint32_t>(24));
+
+	// Need to convert UI24 to SI24
+	video_data._composition_time = OV_CHECK_FLAG(composition_time, 0x800000) ? composition_time |= 0xFF000000 : composition_time;
 	video_data._payload = parser.CurrentPosition();
 	video_data._payload_length = parser.BytesReamined();
 
@@ -48,7 +51,7 @@ FlvAvcPacketType FlvVideoData::PacketType()
 	return _packet_type;
 }
 
-uint32_t FlvVideoData::CompositionTime()
+int64_t FlvVideoData::CompositionTime()
 {
 	return _composition_time;
 }

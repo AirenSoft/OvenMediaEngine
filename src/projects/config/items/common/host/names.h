@@ -8,23 +8,23 @@
 //==============================================================================
 #pragma once
 
-#include "name.h"
-
 namespace cfg
 {
 	namespace cmn
 	{
 		struct Names : public Item
 		{
+		protected:
+			std::vector<ov::String> _name_list;
+
+		public:
 			CFG_DECLARE_REF_GETTER_OF(GetNameList, _name_list);
 
 		protected:
-			void MakeParseList() override
+			void MakeList() override
 			{
-				RegisterValue("Name", &_name_list);
+				Register("Name", &_name_list);
 			}
-
-			std::vector<Name> _name_list;
 		};
 	}  // namespace cmn
 }  // namespace cfg

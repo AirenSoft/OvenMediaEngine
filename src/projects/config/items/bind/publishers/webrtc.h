@@ -42,11 +42,11 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetIceServers, _ice_servers)
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue<Optional>("Signalling", &_signalling);
-					RegisterValue<Optional>("IceCandidates", &_ice_candidates);
-					RegisterValue<Optional>("IceServers", &_ice_servers);
+					Register<Optional>("Signalling", &_signalling);
+					Register<Optional>("IceCandidates", &_ice_candidates);
+					Register<Optional>("IceServers", &_ice_servers);
 				};
 			};
 		}  // namespace pub

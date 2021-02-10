@@ -24,7 +24,7 @@ MediaDescription::~MediaDescription()
 
 bool MediaDescription::UpdateData(ov::String &sdp)
 {
-	if(_media_type == MediaType::Unknown || _direction == Direction::Unknown || _setup == SetupType::Unknown)
+	if(_media_type == MediaType::Unknown || _direction == Direction::Unknown)
 	{
 		loge("SDP", "Required value is not defined - MediaType: %s, Direction: %s, SetupType: %s",
 		     _media_type_str.CStr(), _direction_str.CStr(), _setup_str.CStr());
@@ -662,7 +662,7 @@ void MediaDescription::SetSetup(const SetupType type)
 			_setup_str = "actpass";
 			break;
 		default:
-			_setup_str = "";
+			_setup_str = "actpass"; // default value
 	}
 }
 

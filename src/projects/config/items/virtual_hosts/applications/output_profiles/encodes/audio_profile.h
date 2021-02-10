@@ -28,31 +28,32 @@ namespace cfg
 					int _channel = 0;
 
 				public:
-					CFG_DECLARE_GETTER_OF(IsBypass, _bypass)
-					CFG_DECLARE_GETTER_OF(IsActive, _active)
-					CFG_DECLARE_GETTER_OF(GetCodec, _codec)
-					CFG_DECLARE_GETTER_OF(GetBitrate, _bitrate)
-					CFG_DECLARE_GETTER_OF(GetBitrateString, _bitrate_string)
-					CFG_DECLARE_GETTER_OF(GetSamplerate, _samplerate)
-					CFG_DECLARE_GETTER_OF(GetChannel, _channel)
+					CFG_DECLARE_REF_GETTER_OF(IsBypass, _bypass)
+					CFG_DECLARE_REF_GETTER_OF(IsActive, _active)
+					CFG_DECLARE_REF_GETTER_OF(GetCodec, _codec)
+					CFG_DECLARE_REF_GETTER_OF(GetBitrate, _bitrate)
+					CFG_DECLARE_REF_GETTER_OF(GetBitrateString, _bitrate_string)
+					CFG_DECLARE_REF_GETTER_OF(GetSamplerate, _samplerate)
+					CFG_DECLARE_REF_GETTER_OF(GetChannel, _channel)
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						RegisterValue<Optional>("Bypass", &_bypass);
-						RegisterValue<Optional>("Active", &_active);
-						RegisterValue<CondOptional>("Codec", &_codec, [this]() -> bool {
+						Register<Optional>("Bypass", &_bypass);
+						Register<Optional>("Active", &_active);
+						Register<Optional>("Codec", &_codec, [=]() -> std::shared_ptr<ConfigError> {
 							// <Codec> is an option when _bypass is true
-							return _bypass;
+							return (_bypass) ? nullptr : CreateConfigError("Codec must be specified when bypass is false");
 						});
-						RegisterValue<CondOptional>(
+						Register<Optional>(
 							"Bitrate", &_bitrate_string,
-							[this]() -> bool {
+							[=]() -> std::shared_ptr<ConfigError> {
 								// <Bitrate> is an option when _bypass is true
-								return _bypass;
+								return (_bypass) ? nullptr : CreateConfigError("Bitrate must be specified when bypass is false");
 							},
-							[this]() -> bool {
+							[=]() -> std::shared_ptr<ConfigError> {
 								auto bitrate_string = _bitrate_string.UpperCaseString();
+
 								int multiplier = 1;
 								if (bitrate_string.HasSuffix("K"))
 								{
@@ -65,15 +66,15 @@ namespace cfg
 
 								_bitrate = static_cast<int>(ov::Converter::ToFloat(bitrate_string) * multiplier);
 
-								return (_bitrate > 0);
+								return (_bitrate > 0) ? nullptr : CreateConfigError("Bitrate must be greater than 0");
 							});
-						RegisterValue<CondOptional>("Samplerate", &_samplerate, [this]() -> bool {
+						Register<Optional>("Samplerate", &_samplerate, [=]() -> std::shared_ptr<ConfigError> {
 							// <Samplerate> is an option when _bypass is true
-							return _bypass;
+							return (_bypass) ? nullptr : CreateConfigError("Samplerate must be specified when bypass is false");
 						});
-						RegisterValue<CondOptional>("Channel", &_channel, [this]() -> bool {
+						Register<Optional>("Channel", &_channel, [=]() -> std::shared_ptr<ConfigError> {
 							// <Channel> is an option when _bypass is true
-							return _bypass;
+							return (_bypass) ? nullptr : CreateConfigError("Channel must be specified when bypass is false");
 						});
 					}
 				};

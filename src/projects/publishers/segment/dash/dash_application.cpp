@@ -8,8 +8,10 @@
 //==============================================================================
 
 #include "dash_application.h"
-#include "dash_stream.h"
+
+#include "../segment_stream/segment_stream.h"
 #include "dash_private.h"
+#include "dash_stream_packetizer.h"
 
 //====================================================================================================
 // Create
@@ -17,7 +19,7 @@
 std::shared_ptr<DashApplication> DashApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 {
 	auto application = std::make_shared<DashApplication>(publisher, application_info);
-	if(!application->Start())
+	if (!application->Start())
 	{
 		return nullptr;
 	}
@@ -30,9 +32,9 @@ std::shared_ptr<DashApplication> DashApplication::Create(const std::shared_ptr<p
 DashApplication::DashApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
 	: Application(publisher, application_info)
 {
-    auto publisher_info = application_info.GetPublisher<cfg::vhost::app::pub::DashPublisher>();
-    _segment_count = publisher_info->GetSegmentCount();
-    _segment_duration = publisher_info->GetSegmentDuration();
+	auto publisher_info = application_info.GetPublisher<cfg::vhost::app::pub::DashPublisher>();
+	_segment_count = publisher_info->GetSegmentCount();
+	_segment_duration = publisher_info->GetSegmentDuration();
 }
 
 //====================================================================================================
@@ -50,7 +52,7 @@ DashApplication::~DashApplication()
 bool DashApplication::Start()
 {
 	auto publisher_info = GetPublisher<cfg::vhost::app::pub::DashPublisher>();
-	
+
 	_segment_count = publisher_info->GetSegmentCount();
 	_segment_duration = publisher_info->GetSegmentDuration();
 
@@ -73,13 +75,12 @@ std::shared_ptr<pub::Stream> DashApplication::CreateStream(const std::shared_ptr
 {
 	logtd("Dash CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 
-	return DashStream::Create(_segment_count,
-                            _segment_duration,
-                            GetSharedPtrAs<pub::Application>(),
-                            *info.get(),
-                            thread_count);
+	return SegmentStream::Create<DashStreamPacketizer>(
+		GetSharedPtrAs<pub::Application>(), *info.get(),
+		_segment_count, _segment_duration,
+		thread_count,
+		nullptr);
 }
-
 
 //====================================================================================================
 // DeleteStream

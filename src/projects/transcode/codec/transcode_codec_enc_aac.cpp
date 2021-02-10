@@ -8,7 +8,7 @@
 //==============================================================================
 #include "transcode_codec_enc_aac.h"
 
-#define OV_LOG_TAG "TranscodeCodec"
+#include "../transcode_private.h"
 
 OvenCodecImplAvcodecEncAAC::~OvenCodecImplAvcodecEncAAC()
 {
@@ -79,12 +79,12 @@ bool OvenCodecImplAvcodecEncAAC::Configure(std::shared_ptr<TranscodeContext> out
 	return true;
 }
 
-
 void OvenCodecImplAvcodecEncAAC::Stop()
 {
 	_kill_flag = true;
 
-	_queue_event.Notify();
+	_input_buffer.Stop();
+	_output_buffer.Stop();
 
 	if (_thread_work.joinable())
 	{
@@ -97,20 +97,11 @@ void OvenCodecImplAvcodecEncAAC::ThreadEncode()
 {
 	while (!_kill_flag)
 	{
-		_queue_event.Wait();
-
-		std::unique_lock<std::mutex> mlock(_mutex);
-
-		// 스레드 종료와 같이 큐에 데이터가 없는 경우에는 다시 대기를 한다
-		if (_input_buffer.empty())
-		{
+		auto obj = _input_buffer.Dequeue();
+		if (obj.has_value() == false)
 			continue;
-		}
 
-		auto buffer = std::move(_input_buffer.front());
-		_input_buffer.pop_front();
-
-		mlock.unlock();
+		auto buffer = std::move(obj.value());
 
 		///////////////////////////////////////////////////
 		// Request frame encoding to codec
@@ -153,10 +144,7 @@ void OvenCodecImplAvcodecEncAAC::ThreadEncode()
 			logte("Error sending a frame for encoding : %d", ret);
 
 			// Failure to send frame to encoder. Wait and put it back in. But it doesn't happen as often as possible.
-			std::unique_lock<std::mutex> mlock(_mutex);
-			_input_buffer.push_front(std::move(buffer));
-			mlock.unlock();
-			_queue_event.Notify();
+			_input_buffer.Enqueue(std::move(buffer));
 		}
 
 		while (true)
@@ -190,36 +178,35 @@ void OvenCodecImplAvcodecEncAAC::ThreadEncode()
 				auto packet_buffer = std::make_shared<MediaPacket>(cmn::MediaType::Audio, 1, _packet->data, _packet->size, _packet->pts, _packet->dts, _packet->duration, MediaPacketFlag::Key);
 				packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::AAC_ADTS);
 				packet_buffer->SetPacketType(cmn::PacketType::RAW);
-				
+
 				// logte("ENCODED:: %lld, %lld, %d, %d", packet_buffer->GetPts(), _packet->pts, _packet->size, _packet->duration);
-				
+
 				::av_packet_unref(_packet);
 
 				// TODO(soulk) : If the pts value are under zero, the dash packettizer does not work.
-				if(packet_buffer->GetPts() < 0)
+				if (packet_buffer->GetPts() < 0)
 					continue;
 
 				SendOutputBuffer(std::move(packet_buffer));
 			}
 		}
-
 	}
 }
 
 std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncAAC::RecvBuffer(TranscodeResult *result)
 {
-	std::unique_lock<std::mutex> mlock(_mutex);
-	if(!_output_buffer.empty())
+	if (!_output_buffer.IsEmpty())
 	{
 		*result = TranscodeResult::DataReady;
 
-		auto packet = std::move(_output_buffer.front());
-		_output_buffer.pop_front();
-		
-		return std::move(packet);
+		auto obj = _output_buffer.Dequeue();
+		if (obj.has_value())
+		{
+			return std::move(obj.value());
+		}
 	}
 
 	*result = TranscodeResult::NoData;
 
-	return nullptr;	
+	return nullptr;
 }

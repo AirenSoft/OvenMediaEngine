@@ -89,8 +89,9 @@ namespace pub
 		const char* GetApplicationTypeName() final;
 
 		// MediaRouteApplicationObserver Implementation
-		bool OnCreateStream(const std::shared_ptr<info::Stream> &info) override;
-		bool OnDeleteStream(const std::shared_ptr<info::Stream> &info) override;
+		bool OnStreamCreated(const std::shared_ptr<info::Stream> &info) override;
+		bool OnStreamDeleted(const std::shared_ptr<info::Stream> &info) override;
+		bool OnStreamPrepared(const std::shared_ptr<info::Stream> &info) override;
 
 		// Put data in ApplicationWorker's queue.
 		bool OnSendFrame(const std::shared_ptr<info::Stream> &stream,
@@ -118,6 +119,7 @@ namespace pub
 		bool DeleteAllStreams();
 		virtual std::shared_ptr<Stream> CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t thread_count) = 0;
 		virtual bool DeleteStream(const std::shared_ptr<info::Stream> &info) = 0;
+		
 		std::shared_ptr<ApplicationWorker> GetWorkerByStreamID(info::stream_id_t stream_id);
 
 		uint32_t		_application_worker_count;

@@ -15,8 +15,8 @@
 #include "ovt_publisher.h"
 #include "rtmp_publisher.h"
 #include "rtmppush_publisher.h"
-#include "webrtc_publisher.h"
 #include "thumbnail_publisher.h"
+#include "webrtc_publisher.h"
 
 namespace cfg
 {
@@ -42,8 +42,8 @@ namespace cfg
 							&_thumbnail_publisher};
 					}
 
-					CFG_DECLARE_GETTER_OF(GetStreamLoadBalancingThreadCount, _stream_load_balancing_thread_count)
-					CFG_DECLARE_GETTER_OF(GetSessionLoadBalancingThreadCount, _session_load_balancing_thread_count)
+					CFG_DECLARE_REF_GETTER_OF(GetStreamLoadBalancingThreadCount, _stream_load_balancing_thread_count)
+					CFG_DECLARE_REF_GETTER_OF(GetSessionLoadBalancingThreadCount, _session_load_balancing_thread_count)
 					// CFG_DECLARE_REF_GETTER_OF(GetRtmpPublisher, _rtmp_publisher)
 					CFG_DECLARE_REF_GETTER_OF(GetHlsPublisher, _hls_publisher)
 					CFG_DECLARE_REF_GETTER_OF(GetDashPublisher, _dash_publisher)
@@ -55,20 +55,20 @@ namespace cfg
 					CFG_DECLARE_REF_GETTER_OF(GetThumbnailPublisher, _thumbnail_publisher)
 
 				protected:
-					void MakeParseList() override
-					{	
-						RegisterValue<Optional>("StreamLoadBalancingThreadCount", &_stream_load_balancing_thread_count);
-						RegisterValue<Optional>("SessionLoadBalancingThreadCount", &_session_load_balancing_thread_count);
+					void MakeList() override
+					{
+						Register<Optional>("StreamLoadBalancingThreadCount", &_stream_load_balancing_thread_count);
+						Register<Optional>("SessionLoadBalancingThreadCount", &_session_load_balancing_thread_count);
 
-						// RegisterValue<Optional>("RTMP", &_rtmp_publisher);
-						RegisterValue<Optional>("HLS", &_hls_publisher);
-						RegisterValue<Optional>("DASH", &_dash_publisher);
-						RegisterValue<Optional>("LLDASH", &_ll_dash_publisher);
-						RegisterValue<Optional>("WebRTC", &_webrtc_publisher);
-						RegisterValue<Optional>("OVT", &_ovt_publisher);
-						RegisterValue<Optional>("FILE", &_file_publisher);
-						RegisterValue<Optional>("RTMPPush", &_rtmppush_publisher);
-						RegisterValue<Optional>("Thumbnail", &_thumbnail_publisher);
+						// Register<Optional>("RTMP", &_rtmp_publisher);
+						Register<Optional>({"HLS", "hls"}, &_hls_publisher);
+						Register<Optional>({"DASH", "dash"}, &_dash_publisher);
+						Register<Optional>({"LLDASH", "llDash"}, &_ll_dash_publisher);
+						Register<Optional>({"WebRTC", "webrtc"}, &_webrtc_publisher);
+						Register<Optional>({"OVT", "ovt"}, &_ovt_publisher);
+						Register<Optional>({"FILE", "file"}, &_file_publisher);
+						Register<Optional>({"RTMPPush", "rtmpPush"}, &_rtmppush_publisher);
+						Register<Optional>({"Thumbnail", "thumbnail"}, &_thumbnail_publisher);
 					}
 
 					int _stream_load_balancing_thread_count = 2;

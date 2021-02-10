@@ -17,33 +17,28 @@
 
 namespace ov
 {
-	Error::Error(const ov::String &domain, int code)
-		: _domain(domain),
+	Error::Error(ov::String domain, int code)
+		: _domain(std::move(domain)),
 
 		  _code(code),
 		  _code_set(true)
 	{
 	}
 
-	Error::Error(const ov::String &domain, const char *format, ...)
-		: _domain(domain)
+	Error::Error(ov::String domain, ov::String message)
+		: _domain(std::move(domain)),
+		  _message(std::move(message))
 	{
-		va_list list;
-		va_start(list, format);
-		_message.VFormat(format, list);
-		va_end(list);
 	}
 
-	Error::Error(const ov::String &domain, int code, const char *format, ...)
-		: _domain(domain),
+	Error::Error(ov::String domain, int code, ov::String message)
+		: _domain(std::move(domain)),
 
 		  _code(code),
-		  _code_set(true)
+		  _code_set(true),
+
+		  _message(std::move(message))
 	{
-		va_list list;
-		va_start(list, format);
-		_message.VFormat(format, list);
-		va_end(list);
 	}
 
 	Error::Error(int code)
@@ -52,14 +47,12 @@ namespace ov
 	{
 	}
 
-	Error::Error(int code, const char *format, ...)
+	Error::Error(int code, ov::String message)
 		: _code(code),
-		  _code_set(true)
+		  _code_set(true),
+
+		  _message(std::move(message))
 	{
-		va_list list;
-		va_start(list, format);
-		_message.VFormat(format, list);
-		va_end(list);
 	}
 
 	std::shared_ptr<Error> Error::CreateError(ov::String domain, int code, const char *format, ...)
@@ -70,7 +63,7 @@ namespace ov
 		message.VFormat(format, list);
 		va_end(list);
 
-		return std::make_shared<Error>(domain, code, message);
+		return std::make_shared<Error>(domain, code, std::move(message));
 	}
 
 	std::shared_ptr<Error> Error::CreateError(ov::String domain, const char *format, ...)
@@ -81,7 +74,7 @@ namespace ov
 		message.VFormat(format, list);
 		va_end(list);
 
-		return std::make_shared<Error>(domain, message);
+		return std::make_shared<Error>(domain, std::move(message));
 	}
 
 	std::shared_ptr<Error> Error::CreateError(int code, const char *format, ...)
@@ -92,28 +85,20 @@ namespace ov
 		message.VFormat(format, list);
 		va_end(list);
 
-		return std::make_shared<Error>(code, message);
-	}
-
-	std::shared_ptr<Error> Error::CreateError(HttpStatusCode code, const char *format, ...)
-	{
-		String message;
-		va_list list;
-		va_start(list, format);
-		message.VFormat(format, list);
-		va_end(list);
-
-		return std::make_shared<Error>(static_cast<int>(code), message);
+		return std::make_shared<Error>(code, std::move(message));
 	}
 
 	std::shared_ptr<Error> Error::CreateErrorFromErrno()
 	{
-		return std::make_shared<Error>("errno", errno, "%s", strerror(errno));
+		return ov::Error::CreateError("errno", errno, "%s", ::strerror(errno));
 	}
 
 	std::shared_ptr<Error> Error::CreateErrorFromSrt()
 	{
-		return std::make_shared<Error>("SRT", srt_getlasterror(nullptr), "%s (0x%x)", srt_getlasterror_str(), srt_getlasterror(nullptr));
+		return ov::Error::CreateError("SRT", ::srt_getlasterror(nullptr),
+									  std::move(String::FormatString("%s (0x%x)",
+																	 ::srt_getlasterror_str(),
+																	 ::srt_getlasterror(nullptr))));
 	}
 
 	std::shared_ptr<Error> Error::CreateErrorFromOpenSsl()
@@ -121,9 +106,11 @@ namespace ov
 		unsigned long error_code = ERR_get_error();
 		char buffer[1024];
 
-		ERR_error_string_n(error_code, buffer, OV_COUNTOF(buffer));
+		::ERR_error_string_n(error_code, buffer, OV_COUNTOF(buffer));
 
-		return std::make_shared<Error>("OpenSSL", error_code, "%s (0x%x)", buffer, error_code);
+		return ov::Error::CreateError("OpenSSL", error_code,
+									  std::move(String::FormatString("%s (0x%x)",
+																	 buffer, error_code)));
 	}
 
 	int Error::GetCode() const

@@ -127,6 +127,13 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 
 			logti("URL %s is requested", stream->GetMediaSource().CStr());
 		}
+
+		if (stream->WaitUntilStart(3000) == false)
+		{
+			logtw("(%s/%s) stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
+			// Returns true when the observer search can be ended.
+			return true;
+		}
 	}
 
 	request->SetExtra(std::static_pointer_cast<pub::Stream>(stream));
@@ -178,7 +185,7 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &clien
 	logti("Segment requested (%s/%s/%s) from %s : Segment number : %u Duration : %u",
 		  vhost_app_name.CStr(), stream_name.CStr(), file_name.CStr(),
 		  client->GetRequest()->GetRemote()->GetRemoteAddress()->ToString().CStr(),
-		  segment->sequence_number, segment->duration_in_ms/1000);
+		  segment->sequence_number, segment->duration_in_ms / 1000);
 
 	client->GetRequest()->SetExtra(std::static_pointer_cast<pub::Stream>(stream));
 
@@ -186,7 +193,7 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &clien
 												   *std::static_pointer_cast<info::Stream>(stream),
 												   client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
 												   segment->sequence_number,
-												   segment->duration_in_ms/1000);
+												   segment->duration_in_ms / 1000);
 	UpdateSegmentRequestInfo(segment_request_info);
 
 	return true;

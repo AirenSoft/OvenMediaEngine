@@ -21,7 +21,7 @@
 #include "codec/transcode_decoder.h"
 #include "codec/transcode_encoder.h"
 #include "transcode_context.h"
-#include "transcode_filter.h"
+#include "filter/transcode_filter.h"
 
 typedef int32_t MediaTrackId;
 
@@ -52,13 +52,6 @@ public:
 	bool Stop();
 
 	bool Push(std::shared_ptr<MediaPacket> packet);
-
-	// For statistics
-	uint64_t _max_queue_threshold;
-
-	void DoInputPackets();
-	void DoDecodedFrames();
-	void DoFilteredFrames();
 
 private:
 	// ov::Semaphore _queue_event;
@@ -110,15 +103,6 @@ private:
 	// ENCODER_ID, ENCODER
 	std::map<MediaTrackId, std::shared_ptr<TranscodeEncoder>> _encoders;
 
-	// Buffer for encoded(input) media packets
-	ov::Queue<std::shared_ptr<MediaPacket>> _queue_input_packets;
-
-	// Buffer for decoded frames
-	ov::Queue<std::shared_ptr<MediaFrame>> _queue_decoded_frames;
-
-	// Buffer for filtered frames
-	ov::Queue<std::shared_ptr<MediaFrame>> _queue_filterd_frames;
-
 	// last generated output track id.
 	uint8_t _last_track_index = 0;
 
@@ -133,6 +117,7 @@ private:
 	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::VideoProfile &profile);
 	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::AudioProfile &profile);
 	std::shared_ptr<MediaTrack> CreateOutputTrack(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::ImageProfile &profile);
+	uint8_t NewTrackId(cmn::MediaType media_type);
 
 	// for dynamically generated applications
 	int32_t CreateOutputStreamDynamic();
@@ -141,6 +126,8 @@ private:
 
 	int32_t CreateDecoders();
 	bool CreateDecoder(int32_t input_track_id, int32_t decoder_track_id, std::shared_ptr<TranscodeContext> input_context);
+
+	void CreateFilter(MediaFrame *buffer);
 
 	int32_t CreateEncoders(MediaTrackId track_id);
 	bool CreateEncoder(int32_t encoder_track_id, std::shared_ptr<TranscodeContext> output_context);
@@ -151,23 +138,25 @@ private:
 	void UpdateOutputTrack(MediaFrame *buffer);
 	void UpdateDecoderContext(MediaTrackId track_id);
 
-	void CreateFilter(MediaFrame *buffer);
-	void DoFilters(std::shared_ptr<MediaFrame> frame);
 
 	// There are 3 steps to process packet
 	// Step 1: Decode (Decode a frame from given packets)
-	TranscodeResult DecodePacket(int32_t track_id, std::shared_ptr<MediaPacket> packet);
+	void DecodePacket(int32_t track_id, std::shared_ptr<MediaPacket> packet);
+	void OnDecodedPacket(TranscodeResult result, int32_t decoder_id);
+
 	// Step 2: Filter (resample/rescale the decoded frame)
+	void SpreadToFilters(std::shared_ptr<MediaFrame> frame);
 	TranscodeResult FilterFrame(int32_t track_id, std::shared_ptr<MediaFrame> frame);
+
 	// Step 3: Encode (Encode the filtered frame to packets)
 	TranscodeResult EncodeFrame(int32_t track_id, std::shared_ptr<const MediaFrame> frame);
-	TranscodeResult EncodedPacket(int32_t encoder_id);
+	TranscodeResult OnEncodedPacket(int32_t encoder_id);
 
-	uint8_t NewTrackId(cmn::MediaType media_type);
 
 	// Send frame with output stream's information
 	void SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet);
 
+public:
 	cmn::MediaCodecId GetCodecId(ov::String name);
 
 	bool IsVideoCodec(cmn::MediaCodecId codec_id);

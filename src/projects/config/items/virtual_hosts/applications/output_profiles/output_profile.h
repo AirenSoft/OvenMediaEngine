@@ -31,11 +31,11 @@ namespace cfg
 					CFG_DECLARE_REF_GETTER_OF(GetEncodes, _encodes)
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						RegisterValue("Name", &_name);
-						RegisterValue("OutputStreamName", &_output_stream_name);
-						RegisterValue<Optional>("Encodes", &_encodes);
+						Register("Name", &_name);
+						Register("OutputStreamName", &_output_stream_name);
+						Register<Optional>("Encodes", &_encodes);
 					}
 				};
 			}  // namespace oprf

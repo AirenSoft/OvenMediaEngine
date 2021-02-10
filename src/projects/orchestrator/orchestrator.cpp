@@ -51,8 +51,8 @@ namespace ocst
 
 				for (auto &domain_name : host_info.GetHost().GetNameList())
 				{
-					logtd("      - %s: New", domain_name.GetName().CStr());
-					vhost->host_list.emplace_back(domain_name.GetName());
+					logtd("      - %s: New", domain_name.CStr());
+					vhost->host_list.emplace_back(domain_name);
 				}
 
 				logtd("    - Processing for origins: %d items", host_info.GetOriginList().size());
@@ -616,17 +616,24 @@ namespace ocst
 		return false;
 	}
 
-	bool Orchestrator::OnCreateStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
+	bool Orchestrator::OnStreamCreated(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
 		logtd("%s stream is created", info->GetName().CStr());
 		return true;
 	}
 
-	bool Orchestrator::OnDeleteStream(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
+	bool Orchestrator::OnStreamDeleted(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
 	{
 		logtd("%s stream is deleted", info->GetName().CStr());
 		return true;
 	}
+
+	bool Orchestrator::OnStreamPrepared(const info::Application &app_info, const std::shared_ptr<info::Stream> &info)
+	{
+		logte("%s stream is parsed", info->GetName().CStr());
+		return true;
+	}
+
 
 	std::shared_ptr<pub::Publisher> Orchestrator::GetPublisherFromType(const PublisherType type)
 	{

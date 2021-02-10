@@ -23,12 +23,30 @@ namespace cfg
 
 	struct Server : public Item
 	{
+	protected:
+		Attribute _version;
+
+		ov::String _name;
+
+		ov::String _typeName;
+		ServerType _type;
+
+		ov::String _ip;
+		bind::Bind _bind;
+
+		mgr::Managers _managers;
+
+		p2p::P2P _p2p;
+
+		vhost::VirtualHosts _virtual_hosts;
+
+	public:
 		CFG_DECLARE_REF_GETTER_OF(GetVersion, _version)
 
 		CFG_DECLARE_REF_GETTER_OF(GetName, _name)
 
 		CFG_DECLARE_REF_GETTER_OF(GetTypeName, _typeName)
-		CFG_DECLARE_GETTER_OF(GetType, _type)
+		CFG_DECLARE_REF_GETTER_OF(GetType, _type)
 
 		CFG_DECLARE_REF_GETTER_OF(GetIp, _ip)
 		CFG_DECLARE_REF_GETTER_OF(GetBind, _bind)
@@ -56,51 +74,37 @@ namespace cfg
 		}
 
 	protected:
-		void MakeParseList() override
+		void MakeList() override
 		{
-			RegisterValue<ValueType::Attribute>("version", &_version);
+			Register("version", &_version);
 
-			RegisterValue<Optional>("Name", &_name);
+			Register<Optional>("Name", &_name);
 
-			RegisterValue("Type", &_typeName, nullptr, [this]() -> bool {
+			Register("Type", &_typeName, nullptr, [=]() -> std::shared_ptr<ConfigError> {
 				_type = ServerType::Unknown;
 
 				if (_typeName == "origin")
 				{
 					_type = ServerType::Origin;
+					return nullptr;
 				}
 				else if (_typeName == "edge")
 				{
 					_type = ServerType::Edge;
+					return nullptr;
 				}
 
-				return _type != ServerType::Unknown;
+				return CreateConfigError("Unknown type: %s", _typeName.CStr());
 			});
 
-			RegisterValue("IP", &_ip);
-			RegisterValue("Bind", &_bind);
+			Register({"IP", "ip"}, &_ip);
+			Register("Bind", &_bind);
 
-			RegisterValue<Optional>("Managers", &_managers);
+			Register<Optional>("Managers", &_managers);
 
-			RegisterValue<Optional>("P2P", &_p2p);
+			Register<Optional>({"P2P", "p2p"}, &_p2p);
 
-			RegisterValue<Optional>("VirtualHosts", &_virtual_hosts);
+			Register<Optional>("VirtualHosts", &_virtual_hosts);
 		}
-
-		ov::String _version;
-
-		ov::String _name;
-
-		ov::String _typeName;
-		ServerType _type;
-
-		ov::String _ip;
-		bind::Bind _bind;
-
-		mgr::Managers _managers;
-
-		p2p::P2P _p2p;
-
-		vhost::VirtualHosts _virtual_hosts;
 	};
 }  // namespace cfg

@@ -2,13 +2,17 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Gil Hoon Choi
+//  Created by Hyunjun Jang
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
 #include "items/items.h"
+
+#define CFG_LOG_FILE_NAME "Logger.xml"
+#define CFG_MAIN_FILE_NAME "Server.xml"
+#define CFG_LAST_CONFIG_FILE_NAME "LastConfig.json"
 
 namespace cfg
 {
@@ -18,44 +22,35 @@ namespace cfg
 		friend class ov::Singleton<ConfigManager>;
 		~ConfigManager() override;
 
-		bool LoadConfigs(ov::String config_path);
-		// Load configs from default path (<binary_path>/conf/*)
-		bool LoadConfigs();
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void LoadConfigs(ov::String config_path, bool ignore_last_config);
 
-		bool ReloadConfigs();
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void ReloadConfigs();
+
+		Json::Value GetCurrentConfigAsJson();
+
+		// ConfigManager contains only the configurations when OME first runs,
+		// so if you want to save the last changes modified with RESTful API, you need to call this API.
+		// (DO NOT USE GetServer()->ToJson() to save configurations)
+		bool SaveCurrentConfig();
 
 		std::shared_ptr<Server> GetServer() noexcept
 		{
 			return _server;
 		}
 
-		//
-		//std::shared_ptr<ServerInfo> GetServer() const noexcept;
-		//
-		//std::vector<std::shared_ptr<HostInfo>> GetHosts() const noexcept;
-		//std::shared_ptr<HostInfo> GetHost(uint32_t id) const noexcept;
-		//
-		//std::shared_ptr<HostInfo> GetHost() const noexcept;
-		//
-		//std::shared_ptr<HostTlsInfo> GetHostTls() const noexcept;
-		//std::shared_ptr<HostProviderInfo> GetHostProvider() const noexcept;
-		//std::shared_ptr<HostPublisherInfo> GetHostPublisher() const noexcept;
-		//
-		//std::vector<std::shared_ptr<ApplicationInfo>> GetApplicationInfos() const noexcept;
-		//std::shared_ptr<ApplicationInfo> GetApplicationInfo(const ov::String &name) const noexcept;
-
-		ov::String ResolveMacros(ov::String string);
-
 	protected:
 		ConfigManager();
 
-		void PrepareMacros();
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void LoadLoggerConfig(const ov::String &config_path);
 
-		bool LoadLoggerConfig(const ov::String &config_path) noexcept;
-
-		bool IsValidVersion(const ov::String &name, int version);
+		MAY_THROWS(std::shared_ptr<ConfigError>)
+		void CheckValidVersion(const ov::String &name, int version);
 
 		ov::String _config_path;
+		bool _ignore_last_config = false;
 
 		std::shared_ptr<Server> _server;
 		std::map<ov::String, ov::String> _macros;
@@ -65,5 +60,7 @@ namespace cfg
 		// key: XML file name
 		// value: version number
 		std::map<ov::String, int> _supported_xml;
+
+		std::mutex _config_mutex;
 	};
 }  // namespace cfg

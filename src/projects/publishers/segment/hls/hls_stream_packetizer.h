@@ -18,8 +18,8 @@ class HlsStreamPacketizer : public StreamPacketizer
 public:
 	HlsStreamPacketizer(const ov::String &app_name, const ov::String &stream_name,
 						int segment_count, int segment_duration,
-						const ov::String &segment_prefix,
-						std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track);
+						std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
+						const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer);
 
 public:
 	bool AppendVideoData(const std::shared_ptr<MediaPacket> &media_packet) override;

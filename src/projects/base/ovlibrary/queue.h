@@ -70,6 +70,14 @@ namespace ov
 			logd("ov.Queue", "[%p] The alias is changed to %s", this, _queue_name.CStr());
 		}
 
+		void SetThreshold(size_t threshold)
+		{
+			auto lock_guard = std::lock_guard(_name_mutex);
+
+			_threshold = threshold;
+			logd("ov.Queue", "[%p] The threshold is changed to %d", this, _threshold);
+		}
+
 		void Enqueue(const T &item)
 		{
 			auto lock_guard = std::lock_guard(_mutex);
@@ -171,12 +179,17 @@ namespace ov
 	protected:
 		inline void CheckThreshold()
 		{
+			if (_peak < _queue.size())
+			{
+				_peak = _queue.size();
+			}
+
 			if ((_threshold > 0) && (_queue.size() >= _threshold))
 			{
 				if (_last_log_time.IsElapsed(_log_interval) && _last_log_time.Update())
 				{
 					auto shared_lock = std::shared_lock(_name_mutex);
-					logw("ov.Queue", "[%p] %s size has exceeded the threshold: queue: %zu, threshold: %zu", this, _queue_name.CStr(), _queue.size(), _threshold);
+					logw("ov.Queue", "[%p] %s size has exceeded the threshold: queue: %zu, threshold: %zu, peak: %zu", this, _queue_name.CStr(), _queue.size(), _threshold, _peak);
 				}
 			}
 		}
@@ -188,6 +201,7 @@ namespace ov
 		String _queue_name;
 
 		size_t _threshold = 0;
+		size_t _peak = 0;
 		int _log_interval = 0;
 
 		std::queue<T> _queue;

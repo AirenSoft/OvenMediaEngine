@@ -20,7 +20,10 @@ namespace cfg
 			{
 				struct OvtPublisher : public Publisher
 				{
-					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::Ovt)
+					PublisherType GetType() const override
+					{
+						return PublisherType::Ovt;
+					}
 				};
 			}  // namespace pub
 		}	   // namespace app

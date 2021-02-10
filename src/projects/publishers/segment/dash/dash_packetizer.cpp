@@ -19,13 +19,13 @@
 #include "dash_private.h"
 
 DashPacketizer::DashPacketizer(const ov::String &app_name, const ov::String &stream_name,
-							   const ov::String &segment_prefix,
 							   uint32_t segment_count, uint32_t segment_duration,
-							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track)
+							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
+							   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	: Packetizer(app_name, stream_name,
-				 segment_prefix,
 				 segment_count, segment_duration,
-				 video_track, audio_track),
+				 video_track, audio_track,
+				 chunked_transfer),
 
 	  _video_m4s_writer(Writer::Type::M4s),
 	  _audio_m4s_writer(Writer::Type::M4s)
@@ -36,6 +36,12 @@ DashPacketizer::DashPacketizer(const ov::String &app_name, const ov::String &str
 	SetAudioTrack(audio_track);
 
 	_stat_stop_watch.Start();
+}
+
+DashPacketizer::~DashPacketizer()
+{
+	_video_m4s_writer.Finalize();
+	_audio_m4s_writer.Finalize();
 }
 
 void DashPacketizer::SetVideoTrack(const std::shared_ptr<MediaTrack> &video_track)
@@ -128,12 +134,6 @@ void DashPacketizer::SetAudioTrack(const std::shared_ptr<MediaTrack> &audio_trac
 			logaw("Not supported audio codec: %s", ::StringFromMediaCodecId(audio_track->GetCodecId()).CStr());
 			break;
 	}
-}
-
-DashPacketizer::~DashPacketizer()
-{
-	_video_m4s_writer.Finalize();
-	_audio_m4s_writer.Finalize();
 }
 
 DashFileType DashPacketizer::GetFileType(const ov::String &file_name)
@@ -804,7 +804,14 @@ DashPacketizer::SetResult DashPacketizer::SetSegment(std::map<ov::String, std::s
 		if (queue.size() > max_segment_count)
 		{
 			size_t erase_count = queue.size() - max_segment_count;
+
+			auto start = queue.begin();
+			auto end = queue.begin() + erase_count;
+
 			// Remove items with in [0, erase_count)
+			std::for_each(start, end, [&map](const std::shared_ptr<SegmentItem> &segment) -> void {
+				map.erase(segment->file_name);
+			});
 			queue.erase(queue.begin(), queue.begin() + erase_count);
 		}
 

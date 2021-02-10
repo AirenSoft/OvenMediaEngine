@@ -8,20 +8,20 @@
 //==============================================================================
 #include "path_manager.h"
 
-#include "./assert.h"
-#include "./memory_utilities.h"
+#include <dirent.h>
+#include <errno.h>
 
 #include <regex>
 #include <utility>
 
-#include <dirent.h>
-#include <errno.h>
+#include "./assert.h"
+#include "./memory_utilities.h"
 #if defined(__APPLE__)
-#include <sys/stat.h>
-#include <mach-o/dyld.h>
+#	include <mach-o/dyld.h>
+#	include <sys/stat.h>
 typedef mode_t __mode_t;
 #else
-#include <linux/limits.h>
+#	include <linux/limits.h>
 #endif
 #include <unistd.h>
 #include <wordexp.h>
@@ -33,7 +33,7 @@ namespace ov
 #if defined(__APPLE__)
 		uint32_t path_length = 0;
 
-		if (_NSGetExecutablePath(nullptr, &path_length) == - 1 && path_length != 0)
+		if (_NSGetExecutablePath(nullptr, &path_length) == -1 && path_length != 0)
 		{
 			auto buffer = std::make_unique<char[]>(path_length);
 			if (_NSGetExecutablePath(buffer.get(), &path_length) != -1)
@@ -43,7 +43,7 @@ namespace ov
 		}
 #elif !defined(__CYGWIN__)
 		char buffer[4096] = {0};
-		
+
 		if (readlink("/proc/self/exe", buffer, OV_COUNTOF(buffer)) != -1)
 		{
 			return Combine(Combine(ExtractPath(buffer), std::move(sub_path)), "");
@@ -111,6 +111,30 @@ namespace ov
 		path1.Append(path2);
 
 		return path1;
+	}
+
+	bool PathManager::IsFile(String path)
+	{
+		struct stat file_stat;
+
+		if (::stat(path, &file_stat) == 0)
+		{
+			return S_ISREG(file_stat.st_mode) ? true : false;
+		}
+
+		return false;
+	}
+
+	bool PathManager::IsDirectory(String path)
+	{
+		struct stat file_stat;
+
+		if (::stat(path, &file_stat) == 0)
+		{
+			return S_ISDIR(file_stat.st_mode) ? true : false;
+		}
+
+		return false;
 	}
 
 	bool PathManager::IsAbsolute(const char *path)
@@ -211,7 +235,7 @@ namespace ov
 					{
 						// Could not obtain stat of the file
 					}
-					
+
 					continue;
 			}
 

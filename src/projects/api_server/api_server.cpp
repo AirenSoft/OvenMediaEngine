@@ -36,13 +36,14 @@ namespace api
 		auto http_interceptor = CreateInterceptor();
 
 		bool http_server_result = true;
-		auto &port = api_bind_config.GetPort();
+		bool is_parsed;
+		auto &port = api_bind_config.GetPort(&is_parsed);
 		ov::SocketAddress address;
-		if (port.IsParsed())
+		if (is_parsed)
 		{
 			address = ov::SocketAddress(server_config->GetIp(), port.GetPort());
 
-			_http_server = manager->CreateHttpServer(address);
+			_http_server = manager->CreateHttpServer("APIServer", address);
 
 			if (_http_server != nullptr)
 			{
@@ -56,15 +57,15 @@ namespace api
 		}
 
 		bool https_server_result = true;
-		auto &tls_port = api_bind_config.GetTlsPort();
+		auto &tls_port = api_bind_config.GetTlsPort(&is_parsed);
 		ov::SocketAddress tls_address;
-		if (tls_port.IsParsed())
+		if (is_parsed)
 		{
 			auto host_name_list = std::vector<ov::String>();
 
 			for (auto &name : managers.GetHost().GetNameList())
 			{
-				host_name_list.push_back(name.GetName());
+				host_name_list.push_back(name);
 			}
 
 			tls_address = ov::SocketAddress(server_config->GetIp(), tls_port.GetPort());
@@ -72,7 +73,7 @@ namespace api
 
 			if (certificate != nullptr)
 			{
-				_https_server = manager->CreateHttpsServer(address, certificate);
+				_https_server = manager->CreateHttpsServer("APIServer", tls_address, certificate);
 
 				if (_https_server != nullptr)
 				{
@@ -89,7 +90,12 @@ namespace api
 		if (http_server_result && https_server_result)
 		{
 			// Everything is OK
-			logti("API Server is listening on %s", address.ToString().CStr());
+			logti("API Server is listening on %s%s%s%s...",
+				  (_http_server != nullptr) ? address.ToString().CStr() : "",
+				  ((_http_server != nullptr) && (_https_server != nullptr)) ? ", " : "",
+				  (_https_server != nullptr) ? "TLS: " : "",
+				  (_https_server != nullptr) ? tls_address.ToString().CStr() : "");
+
 			return true;
 		}
 
@@ -105,7 +111,7 @@ namespace api
 		auto http_interceptor = std::make_shared<HttpDefaultInterceptor>();
 
 		// Request Handlers will be added to http_interceptor
-		_root_controller = std::make_shared<RootController>();
+		_root_controller = std::make_shared<RootController>(_access_token);
 		_root_controller->SetInterceptor(http_interceptor);
 		_root_controller->PrepareHandlers();
 
@@ -119,14 +125,10 @@ namespace api
 		std::shared_ptr<HttpServer> http_server = std::move(_http_server);
 		std::shared_ptr<HttpsServer> https_server = std::move(_https_server);
 
-		bool http_result = (http_server != nullptr) ? manager->ReleaseServer(_http_server) : false;
-		bool https_result = (https_server != nullptr) ? manager->ReleaseServer(_https_server) : false;
+		bool http_result = (http_server != nullptr) ? manager->ReleaseServer(http_server) : true;
+		bool https_result = (https_server != nullptr) ? manager->ReleaseServer(https_server) : true;
 
 		return http_result && https_result;
 	}
 
-	void Server::RegisterHandlers()
-	{
-		// _handler_list.push_back();
-	}
 }  // namespace api

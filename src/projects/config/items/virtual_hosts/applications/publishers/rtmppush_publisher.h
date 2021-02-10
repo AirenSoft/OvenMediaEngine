@@ -20,16 +20,19 @@ namespace cfg
 			{
 				struct RtmpPushPublisher : public Publisher
 				{
-					CFG_DECLARE_OVERRIDED_GETTER_OF(GetType, PublisherType::RtmpPush)
+					PublisherType GetType() const override
+					{
+						return PublisherType::RtmpPush;
+					}
 
 					CFG_DECLARE_REF_GETTER_OF(GetCrossDomains, _cross_domains.GetUrls())
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						Publisher::MakeParseList();
+						Publisher::MakeList();
 
-						RegisterValue<Optional>("CrossDomains", &_cross_domains);
+						Register<Optional>("CrossDomains", &_cross_domains);
 					}
 
 					cmn::CrossDomains _cross_domains;

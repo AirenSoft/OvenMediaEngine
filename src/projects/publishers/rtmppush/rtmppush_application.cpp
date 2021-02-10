@@ -1,5 +1,6 @@
-#include "rtmppush_private.h"
 #include "rtmppush_application.h"
+
+#include "rtmppush_private.h"
 #include "rtmppush_stream.h"
 
 std::shared_ptr<RtmpPushApplication> RtmpPushApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
@@ -10,9 +11,8 @@ std::shared_ptr<RtmpPushApplication> RtmpPushApplication::Create(const std::shar
 }
 
 RtmpPushApplication::RtmpPushApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
-		: Application(publisher, application_info)
+	: Application(publisher, application_info)
 {
-
 }
 
 RtmpPushApplication::~RtmpPushApplication()
@@ -34,7 +34,7 @@ bool RtmpPushApplication::Stop()
 std::shared_ptr<pub::Stream> RtmpPushApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count)
 {
 	logtd("CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
-	
+
 	return RtmpPushStream::Create(GetSharedPtrAs<pub::Application>(), *info);
 }
 
@@ -43,12 +43,12 @@ bool RtmpPushApplication::DeleteStream(const std::shared_ptr<info::Stream> &info
 	logtd("DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
 
 	auto stream = std::static_pointer_cast<RtmpPushStream>(GetStream(info->GetId()));
-	if(stream == nullptr)
+	if (stream == nullptr)
 	{
 		logte("RtmpPushApplication::Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
 		return false;
 	}
-	
+
 	logtd("%s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
 
 	return true;

@@ -11,14 +11,14 @@
 #include <base/ovlibrary/converter.h>
 #include <base/ovsocket/socket.h>
 
-#include "../../item.h"
+#include "../../engine/item.h"
 
 namespace cfg
 {
 	namespace cmn
 	{
 		template <typename Tport = int>
-		struct Port : public Item
+		struct Port : public Text
 		{
 		protected:
 			ov::String _port;
@@ -36,6 +36,11 @@ namespace cfg
 			CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetPort, _port_value)
 			CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetPortString, _port)
 			CFG_DECLARE_VIRTUAL_REF_GETTER_OF(GetSocketType, _socket_type)
+
+			ov::String ToString() const override
+			{
+				return _port;
+			}
 
 		protected:
 			static ov::SocketType GetSocketType(const ov::String &type)

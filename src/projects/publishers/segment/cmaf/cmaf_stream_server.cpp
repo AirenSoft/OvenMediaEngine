@@ -78,6 +78,8 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 			IncreaseBytesOut(client, sent_bytes);
 
 			chunk_item->second->client_list.push_back(client);
+
+			return HttpConnection::KeepAlive;
 		}
 	}
 

@@ -18,15 +18,17 @@ namespace cfg
 		{
 			struct Managers : public Item
 			{
+			protected:
+				API _api{"8081/tcp"};
+
+			public:
 				CFG_DECLARE_REF_GETTER_OF(GetApi, _api)
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue<Optional>("API", &_api);
+					Register<Optional>({"API", "api"}, &_api);
 				};
-
-				API _api{"8081/tcp"};
 			};
 		}  // namespace mgr
 	}	   // namespace bind

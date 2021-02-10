@@ -48,6 +48,7 @@ using namespace cmn;
 MediaRouteStream::MediaRouteStream(const std::shared_ptr<info::Stream> &stream)
 	: _is_parsed_all_track(false),
 	  _is_created_stream(false),
+	  _is_notify_stream_parsed(false),
 	  _stream(stream),
 	  _packets_queue(nullptr, 100)
 {
@@ -111,6 +112,16 @@ bool MediaRouteStream::IsCreatedSteam()
 void MediaRouteStream::SetCreatedSteam(bool created)
 {
 	_is_created_stream = created;
+}
+
+void MediaRouteStream::SetNotifyStreamPrepared(bool completed)
+{
+	_is_notify_stream_parsed = completed;
+}
+
+bool MediaRouteStream::IsNotifyStreamPrepared()
+{
+	return _is_notify_stream_parsed;
 }
 
 bool MediaRouteStream::ProcessInboundStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
@@ -181,16 +192,15 @@ void MediaRouteStream::InitParseTrackInfo()
 {
 	for (const auto &iter : _stream->GetTracks())
 	{
-		auto track_id = iter.first;
 		auto track = iter.second;
 
-		_parse_completed_track_info[track_id] = false;
+		SetParseTrackInfo(track);
 	}
 }
 
-void MediaRouteStream::SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, bool parsed)
+void MediaRouteStream::SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track)
 {
-	_parse_completed_track_info[media_track->GetId()] = parsed;
+	_parse_completed_track_info[media_track->GetId()] = media_track->IsValidity();
 }
 
 bool MediaRouteStream::IsParseTrackInfo(std::shared_ptr<MediaTrack> &media_track)
@@ -280,10 +290,11 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 
 						// for Mediatrack.extradata
 						avc_decoder_configuration_record.AddSPS(std::make_shared<ov::Data>(buffer, length));
-						avc_decoder_configuration_record.SetProfileIndication(sps.GetProfile());
-						avc_decoder_configuration_record.SetlevelIndication(sps.GetCodecLevel());
+						avc_decoder_configuration_record.SetProfileIndication(sps.GetProfileIdc());
+						avc_decoder_configuration_record.SetCompatibility(sps.GetConstraintFlag());
+						avc_decoder_configuration_record.SetlevelIndication(sps.GetCodecLevelIdc());
 
-						SetParseTrackInfo(media_track, true);
+						// SetParseTrackInfo(media_track, true);
 					}
 					else if (header.GetNalUnitType() == H264NalUnitType::Pps)
 					{
@@ -342,7 +353,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 
 						logtd("%s", sps.GetInfoString().CStr());
 
-						SetParseTrackInfo(media_track, true);
+						// SetParseTrackInfo(media_track, true);
 					}
 				}
 
@@ -389,7 +400,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 						media_track->SetCodecExtradata(extradata);
 					}
 
-					SetParseTrackInfo(media_track, true);
+					// SetParseTrackInfo(media_track, true);
 				}
 			}
 			break;
@@ -400,7 +411,7 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 		case MediaCodecId::Opus:
 		case MediaCodecId::Jpeg:
 		case MediaCodecId::Png:
-			SetParseTrackInfo(media_track, true);
+			// SetParseTrackInfo(media_track, true);
 
 			break;
 
@@ -408,6 +419,8 @@ bool MediaRouteStream::ParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, 
 			logte("Unknown codec");
 			break;
 	}
+
+	SetParseTrackInfo(media_track);
 
 	return true;
 }
@@ -928,10 +941,14 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 	// If there is no pts/dts value, do the same as pts/dts value.
 	if (media_packet->GetDts() == -1LL)
+	{
 		media_packet->SetDts(media_packet->GetPts());
+	}
 
 	if (media_packet->GetPts() == -1LL)
+	{
 		media_packet->SetPts(media_packet->GetDts());
+	}
 
 	// Accumulate Packet duplication
 	//	- 1) If the current packet does not have a Duration value then stashed.
@@ -985,7 +1002,9 @@ std::shared_ptr<MediaPacket> MediaRouteStream::Pop()
 
 		case MediaRouterStreamType::OUTBOUND: {
 			if (!ProcessOutboundStream(media_track, pop_media_packet))
+			{
 				return nullptr;
+			}
 
 			// If the parsing of track information is not complete, discard the packet.
 			if (IsParseTrackInfo(media_track) == false)

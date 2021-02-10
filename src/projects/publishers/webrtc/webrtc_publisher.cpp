@@ -75,10 +75,16 @@ bool WebRtcPublisher::Start()
 
 	bool result = true;
 
-	_ice_port = IcePortManager::GetInstance()->CreatePort(webrtc_bind_config.GetIceCandidates(), IcePortObserver::GetSharedPtr());
+	_ice_port = IcePortManager::GetInstance()->CreatePort(IcePortObserver::GetSharedPtr());
 	if (_ice_port == nullptr)
 	{
-		logte("Cannot initialize ICE Port. Check your ICE configuration");
+		logte("Could not initialize ICE Port. Check your ICE configuration");
+		result = false;
+	}
+
+	if(IcePortManager::GetInstance()->CreateIceCandidates(_ice_port, webrtc_bind_config.GetIceCandidates()) == false)
+	{
+		logte("Could not create ICE Candidates. Check your ICE configuration");
 		result = false;
 	}
 
@@ -339,6 +345,13 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 
 	if (stream == nullptr)
 	{
+		logte("Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
+		return nullptr;
+	}
+
+	if(stream->WaitUntilStart(3000) == false)
+	{
+		logtw("(%s/%s) stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
 		return nullptr;
 	}
 

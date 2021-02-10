@@ -37,10 +37,10 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetTlsPort, _tls_port);
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue<Optional>("Port", &_port);
-					RegisterValue<Optional>("TLSPort", &_tls_port);
+					Register<Optional>("Port", &_port);
+					Register<Optional>({"TLSPort", "tlsPort"}, &_tls_port);
 				};
 			};
 		}  // namespace pub

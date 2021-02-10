@@ -213,11 +213,12 @@ namespace pvd
 
 		for(auto &stream_item : stream_list)
 		{
-			auto port_config = stream_item.GetPort();
+			bool is_parsed;
+			auto &port_config = stream_item.GetPort(&is_parsed);
 			std::vector<int> port_list; 
 			
 			// If they want to use any available port 
-			if(port_config.IsParsed() == false)
+			if(is_parsed == false)
 			{
 				// Get random port 
 				auto stream_port_item = GetDetachedStreamPortItem();

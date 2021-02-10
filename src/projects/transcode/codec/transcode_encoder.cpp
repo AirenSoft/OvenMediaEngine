@@ -8,22 +8,21 @@
 //==============================================================================
 #include "transcode_encoder.h"
 
-#include "transcode_codec_enc_avc.h"
-#include "transcode_codec_enc_hevc.h"
-#include "transcode_codec_enc_vp8.h"
-#include "transcode_codec_enc_jpeg.h"
-#include "transcode_codec_enc_png.h"
-#include "transcode_codec_enc_aac.h"
-#include "transcode_codec_enc_opus.h"
-
 #include <utility>
 
-#define OV_LOG_TAG "TranscodeCodec"
+#include "../transcode_private.h"
+#include "transcode_codec_enc_aac.h"
+#include "transcode_codec_enc_avc.h"
+#include "transcode_codec_enc_hevc.h"
+#include "transcode_codec_enc_jpeg.h"
+#include "transcode_codec_enc_opus.h"
+#include "transcode_codec_enc_png.h"
+#include "transcode_codec_enc_vp8.h"
+
+#define MAX_QUEUE_SIZE 120
 
 TranscodeEncoder::TranscodeEncoder()
 {
-	avcodec_register_all();
-
 	_packet = ::av_packet_alloc();
 	_frame = ::av_frame_alloc();
 
@@ -32,7 +31,7 @@ TranscodeEncoder::TranscodeEncoder()
 
 TranscodeEncoder::~TranscodeEncoder()
 {
-	if(_context != nullptr)
+	if (_context != nullptr)
 		::avcodec_flush_buffers(_context);
 
 	OV_SAFE_FUNC(_context, nullptr, ::avcodec_free_context, &);
@@ -42,15 +41,15 @@ TranscodeEncoder::~TranscodeEncoder()
 
 	OV_SAFE_FUNC(_codec_par, nullptr, ::avcodec_parameters_free, &);
 
-	_input_buffer.clear();
-	_output_buffer.clear();	
+	_input_buffer.Clear();
+	_output_buffer.Clear();
 }
 
 std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(cmn::MediaCodecId codec_id, std::shared_ptr<TranscodeContext> output_context)
 {
 	std::shared_ptr<TranscodeEncoder> encoder = nullptr;
 
-	switch(codec_id)
+	switch (codec_id)
 	{
 		case cmn::MediaCodecId::H264:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncAVC>();
@@ -66,7 +65,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(cmn::MediaCode
 			break;
 		case cmn::MediaCodecId::Png:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncPng>();
-			break;			
+			break;
 		case cmn::MediaCodecId::Aac:
 			encoder = std::make_shared<OvenCodecImplAvcodecEncAAC>();
 			break;
@@ -78,12 +77,12 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::CreateEncoder(cmn::MediaCode
 			break;
 	}
 
-	if(encoder != nullptr)
+	if (encoder != nullptr)
 	{
-        if (encoder->Configure(std::move(output_context)) == false)
-        {
-            return nullptr;
-        }
+		if (encoder->Configure(std::move(output_context)) == false)
+		{
+			return nullptr;
+		}
 	}
 
 	return std::move(encoder);
@@ -103,34 +102,29 @@ bool TranscodeEncoder::Configure(std::shared_ptr<TranscodeContext> context)
 {
 	_output_context = context;
 
+	_input_buffer.SetAlias(ov::String::FormatString("Input queue of transcode encoder. codec(%s/%d)", ::avcodec_get_name(GetCodecID()), GetCodecID()));
+	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
+	_output_buffer.SetAlias(ov::String::FormatString("Output queue of transcode encoder. codec(%s/%d)", ::avcodec_get_name(GetCodecID()), GetCodecID()));
+	_output_buffer.SetThreshold(MAX_QUEUE_SIZE);
+
 	return (_output_context != nullptr);
 }
 
 void TranscodeEncoder::SendBuffer(std::shared_ptr<const MediaFrame> frame)
 {
-	std::unique_lock<std::mutex> mlock(_mutex);
-
-	_input_buffer.push_back(std::move(frame));
-	
-	mlock.unlock();
-	
-	_queue_event.Notify();;
+	_input_buffer.Enqueue(std::move(frame));
 }
 
 void TranscodeEncoder::SendOutputBuffer(std::shared_ptr<MediaPacket> packet)
 {
-	std::unique_lock<std::mutex> mlock(_mutex);
-
-	_output_buffer.push_back(std::move(packet));
-
-	mlock.unlock();	
+	_output_buffer.Enqueue(std::move(packet));
 
 	// Invoke callback function when encoding/decoding is completed.
-	if(OnCompleteHandler)
+	if (OnCompleteHandler)
 		OnCompleteHandler(_track_id);
 }
 
-std::shared_ptr<TranscodeContext>& TranscodeEncoder::GetContext()
+std::shared_ptr<TranscodeContext> &TranscodeEncoder::GetContext()
 {
 	return _output_context;
 }

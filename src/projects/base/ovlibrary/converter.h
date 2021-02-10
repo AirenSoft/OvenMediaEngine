@@ -170,7 +170,7 @@ namespace ov
 				return value.asInt();
 			}
 
-			return ToInt32(value.toStyledString(), base);
+			return ToInt32(ToString(value), base);
 		}
 
 		static uint16_t ToUInt16(const char *str, int base = 10)
@@ -243,6 +243,16 @@ namespace ov
 			return 0L;
 		}
 
+		static int64_t ToInt64(const ::Json::Value &value, int base = 10)
+		{
+			if (value.isIntegral())
+			{
+				return value.asInt64();
+			}
+
+			return ToInt64(ToString(value), base);
+		}
+
 		static uint64_t ToUInt64(const char *str, int base = 10)
 		{
 			if (str != nullptr)
@@ -288,7 +298,7 @@ namespace ov
 				return value.asBool();
 			}
 
-			return ToBool(value.toStyledString().c_str());
+			return ToBool(ToString(value));
 		}
 
 		static float ToFloat(const char *str)
@@ -314,7 +324,7 @@ namespace ov
 				return value.asDouble();
 			}
 
-			return ToFloat(value.toStyledString().c_str());
+			return ToFloat(ToString(value));
 		}
 
 		static double ToDouble(const char *str)
@@ -331,6 +341,16 @@ namespace ov
 			}
 
 			return 0.0;
+		}
+
+		static double ToDouble(const ::Json::Value &value)
+		{
+			if (value.isDouble())
+			{
+				return value.asDouble();
+			}
+
+			return ToDouble(ToString(value));
 		}
 	};
 }  // namespace ov

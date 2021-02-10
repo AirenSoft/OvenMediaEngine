@@ -8,11 +8,10 @@
 //==============================================================================
 #include "transcode_codec_enc_opus.h"
 
+#include <opus/opus.h>
 #include <unistd.h>
 
-#include <opus/opus.h>
-
-#define OV_LOG_TAG "TranscodeCodec"
+#include "../transcode_private.h"
 
 #if 0
 size_t AudioEncoderOpusImpl::SufficientOutputBufferSize() const {
@@ -88,7 +87,6 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> co
 		logte("Failed to start transcode stream thread.");
 	}
 
-
 	return true;
 }
 
@@ -96,7 +94,8 @@ void OvenCodecImplAvcodecEncOpus::Stop()
 {
 	_kill_flag = true;
 
-	_queue_event.Notify();
+	_input_buffer.Stop();
+	_output_buffer.Stop();
 
 	if (_thread_work.joinable())
 	{
@@ -112,24 +111,15 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 
 	int64_t duration = 0LL;
 
-	while(!_kill_flag)
+	while (!_kill_flag)
 	{
 		if (_buffer->GetLength() < bytes_to_encode)
 		{
-			// dequeue
-			_queue_event.Wait();
-
-			std::unique_lock<std::mutex> mlock(_mutex);
-
-			if (_input_buffer.empty())
-			{
+			auto obj = _input_buffer.Dequeue();
+			if (obj.has_value() == false)
 				continue;
-			}
 
-			auto frame_buffer = std::move(_input_buffer.front());
-			_input_buffer.pop_front();
-
-			mlock.unlock();
+			auto frame_buffer = std::move(obj.value());
 
 			const MediaFrame *frame = frame_buffer.get();
 
@@ -157,42 +147,41 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 				// Currently, OME's OPUS encoder supports up to 2 channels
 				switch (_format)
 				{
-				case cmn::AudioSample::Format::S16P:
-				case cmn::AudioSample::Format::FltP:
-				{
-					// Need to interleave if sample type is planar
+					case cmn::AudioSample::Format::S16P:
+					case cmn::AudioSample::Format::FltP: {
+						// Need to interleave if sample type is planar
 
-					off_t current_offset = _buffer->GetLength();
+						off_t current_offset = _buffer->GetLength();
 
-					// Reserve extra spaces
-					size_t total_bytes = frame->GetBufferSize(0) + frame->GetBufferSize(1);
-					_buffer->SetLength(current_offset + total_bytes);
+						// Reserve extra spaces
+						size_t total_bytes = frame->GetBufferSize(0) + frame->GetBufferSize(1);
+						_buffer->SetLength(current_offset + total_bytes);
 
-					if (_format == cmn::AudioSample::Format::S16P)
-					{
-						// S16P
-						ov::Interleave<int16_t>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
-						_format = cmn::AudioSample::Format::S16;
+						if (_format == cmn::AudioSample::Format::S16P)
+						{
+							// S16P
+							ov::Interleave<int16_t>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
+							_format = cmn::AudioSample::Format::S16;
+						}
+						else
+						{
+							// FltP
+							ov::Interleave<float>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
+							_format = cmn::AudioSample::Format::Flt;
+						}
+
+						break;
 					}
-					else
-					{
-						// FltP
-						ov::Interleave<float>(_buffer->GetWritableDataAs<uint8_t>() + current_offset, frame->GetBuffer(0), frame->GetBuffer(1), frame->GetNbSamples());
-						_format = cmn::AudioSample::Format::Flt;
-					}
 
-					break;
-				}
+					case cmn::AudioSample::Format::S16:
+					case cmn::AudioSample::Format::Flt:
+						// Do not need to interleave if sample type is non-planar
+						_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
+						break;
 
-				case cmn::AudioSample::Format::S16:
-				case cmn::AudioSample::Format::Flt:
-					// Do not need to interleave if sample type is non-planar
-					_buffer->Append(frame->GetBuffer(0), frame->GetBufferSize(0));
-					break;
-
-				default:
-					logte("Not supported format: %d", _format);
-					break;
+					default:
+						logte("Not supported format: %d", _format);
+						break;
 				}
 			}
 		}
@@ -217,17 +206,17 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 		// Encode
 		switch (_format)
 		{
-		case cmn::AudioSample::Format::S16:
-			encoded_bytes = ::opus_encode(_encoder, _buffer->GetDataAs<const opus_int16>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
-			break;
+			case cmn::AudioSample::Format::S16:
+				encoded_bytes = ::opus_encode(_encoder, _buffer->GetDataAs<const opus_int16>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
+				break;
 
-		case cmn::AudioSample::Format::Flt:
-			encoded_bytes = ::opus_encode_float(_encoder, _buffer->GetDataAs<float>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
-			break;
+			case cmn::AudioSample::Format::Flt:
+				encoded_bytes = ::opus_encode_float(_encoder, _buffer->GetDataAs<float>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
+				break;
 
-		default:
-			// *result = TranscodeResult::DataError;
-			continue;
+			default:
+				// *result = TranscodeResult::DataError;
+				continue;
 		}
 
 		if (encoded_bytes < 0)
@@ -248,30 +237,28 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 		auto packet_buffer = std::make_shared<MediaPacket>(cmn::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
 		packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::OPUS);
 		packet_buffer->SetPacketType(cmn::PacketType::RAW);
-		
+
 		_current_pts += frame_count_to_encode;
 		// logte("opus pts : %lld, queue:%d, buffer:%d", _current_pts, _input_buffer.size(), _buffer->GetLength());
 		// *result = TranscodeResult::DataReady;
-		
-		SendOutputBuffer(std::move(packet_buffer));
-	
-		duration = 0L;		
-	}
 
+		SendOutputBuffer(std::move(packet_buffer));
+
+		duration = 0L;
+	}
 }
 
 std::shared_ptr<MediaPacket> OvenCodecImplAvcodecEncOpus::RecvBuffer(TranscodeResult *result)
 {
-	std::unique_lock<std::mutex> mlock(_mutex);
-
-	if (!_output_buffer.empty())
+	if (!_output_buffer.IsEmpty())
 	{
 		*result = TranscodeResult::DataReady;
 
-		auto packet = std::move(_output_buffer.front());
-		_output_buffer.pop_front();
-
-		return std::move(packet);
+		auto obj = _output_buffer.Dequeue();
+		if (obj.has_value())
+		{
+			return std::move(obj.value());
+		}
 	}
 
 	*result = TranscodeResult::NoData;

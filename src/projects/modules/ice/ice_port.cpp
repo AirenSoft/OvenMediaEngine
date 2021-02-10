@@ -38,15 +38,9 @@ IcePort::~IcePort()
 	Close();
 }
 
-bool IcePort::Create(std::vector<RtcIceCandidate> ice_candidate_list)
+bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_list)
 {
 	std::lock_guard<std::recursive_mutex> lock_guard(_physical_port_list_mutex);
-
-	if (_physical_port_list.empty() == false)
-	{
-		logtw("IcePort is running");
-		return false;
-	}
 
 	bool succeeded = true;
 	std::map<int, bool> bounded;
@@ -102,6 +96,36 @@ bool IcePort::Create(std::vector<RtcIceCandidate> ice_candidate_list)
 	}
 
 	return succeeded;
+}
+
+bool IcePort::CreateTurnServer(ov::SocketAddress address, ov::SocketType socket_type)
+{
+	// {[Browser][WebRTC][TURN Client]} <----(TCP)-----> {[TURN Server][OvenMediaEngine]}
+
+	// OME introduces a built-in TURN server to support WebRTC/TCP.
+	// there are networks although the network speed is high but UDP packet loss occurs very seriously. There, WebRTC/udp does not play normally. 
+	
+	// In order to playback in such an environment with good quality, 
+	// we have built in TURN server in OME to transmit WebRTC stream to tcp. 
+	// The built-in turn server does not use UDP when transmitting or receiving data from the relayed port to the peer, 
+	// and only needs to copy the memory within the same process, thus the udp transmission section between OME and Player is omitted. 
+	// In other words, Player and OME can communicate with only TCP.
+
+	// If the peer is the same process as TurnServer (OME), it does not transmit through UDP and calls the function directly.
+	// Player --[TURN/TCP]--> [TurnServer(OME) --[Fucntion Call not udp send]--> Peer(OME)]
+	// Player <--[TURN/TCP]-- [TurnServer(OME) <--[Fucntion Call not udp send]-- Peer(OME)]
+
+	auto physical_port = CreatePhysicalPort(address, socket_type);
+	if (physical_port == nullptr)
+	{
+		logte("Could not create physical port for %s/%s", address.ToString().CStr(), StringFromSocketType(socket_type));
+		return false;
+	}
+
+	logti("ICE port is bound to %s/%s (%p)", address.ToString().CStr(), StringFromSocketType(socket_type), physical_port.get());
+	_physical_port_list.push_back(physical_port);
+
+	return false;
 }
 
 const std::vector<RtcIceCandidate> &IcePort::GetIceCandidateList() const
@@ -349,22 +373,27 @@ bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, const std
 
 void IcePort::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 {
-	// TODO: 일단은 UDP만 처리하므로, 비워둠. 나중에 TCP 지원할 때 구현해야 함
+	// called when TURN client connected to the turn server with TCP
+
+
+}
+
+void IcePort::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
+{
+	// called when TURN client disconnected from the turn server with TCP
+
+
 }
 
 void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
-	// 데이터를 수신했음
-
-	// TODO: 지금은 data 안에 하나의 STUN 메시지만 있을 것으로 간주하고 작성되어 있음
-	// TODO: TCP의 경우, 데이터가 많이 들어올 수 있기 때문에 별도 처리 필요
+	
 
 	ov::ByteStream stream(data.get());
 	StunMessage message;
 
 	if (message.Parse(stream))
 	{
-		// STUN 패킷이 맞음
 		logtd("Received message:\n%s", message.ToString().CStr());
 
 		if (message.GetMethod() == StunMethod::Binding)
@@ -713,11 +742,6 @@ bool IcePort::ProcessBindingResponse(const std::shared_ptr<ov::Socket> &remote, 
 	}
 
 	return true;
-}
-
-void IcePort::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
-{
-	// TODO: TCP 연결이 해제되었을 때 처리. 일단은 UDP만 처리하므로, 비워둠
 }
 
 void IcePort::SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionState state)

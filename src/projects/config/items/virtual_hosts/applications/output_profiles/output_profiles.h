@@ -27,9 +27,9 @@ namespace cfg
 					CFG_DECLARE_REF_GETTER_OF(GetOutputProfileList, _output_profiles)
 
 				protected:
-					void MakeParseList() override
+					void MakeList() override
 					{
-						RegisterValue<Optional>("OutputProfile", &_output_profiles);
+						Register<Optional>("OutputProfile", &_output_profiles);
 					}
 				};
 			}  // namespace oprf

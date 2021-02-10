@@ -20,7 +20,7 @@ namespace api
 
 			for (const auto &name_config : config.GetNameList())
 			{
-				object.append(name_config.GetName().CStr());
+				object.append(name_config.CStr());
 			}
 		}
 
@@ -64,7 +64,7 @@ namespace api
 
 			for (auto &url_config : config.GetUrlList())
 			{
-				object.append(url_config.GetUrl().CStr());
+				object.append(url_config.CStr());
 			}
 		}
 

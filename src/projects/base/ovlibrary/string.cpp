@@ -760,13 +760,18 @@ namespace ov
 			return true;
 		}
 
-		// 위에서 두 값을 비교하기 때문에 여기서 둘 다 nullptr 경우는 없음
+		// Because we compare the two values above to see if they are the same, none of them are nullptr here.
 		if((str._buffer == nullptr) || (_buffer == nullptr))
 		{
 			return false;
 		}
 
-		if(::strcmp(_buffer, str._buffer) == 0)
+		if (str._length != _length)
+		{
+			return false;
+		}
+
+		if(::strncmp(_buffer, str._buffer, _length) == 0)
 		{
 			return true;
 		}
@@ -796,7 +801,7 @@ namespace ov
 			return false;
 		}
 
-		if(::strcmp(_buffer, buffer) == 0)
+		if(::strncmp(_buffer, buffer, _length) == 0)
 		{
 			return true;
 		}

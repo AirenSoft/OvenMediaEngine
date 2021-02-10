@@ -1,5 +1,6 @@
-#include "thumbnail_private.h"
 #include "thumbnail_application.h"
+
+#include "thumbnail_private.h"
 #include "thumbnail_stream.h"
 
 std::shared_ptr<ThumbnailApplication> ThumbnailApplication::Create(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
@@ -10,9 +11,8 @@ std::shared_ptr<ThumbnailApplication> ThumbnailApplication::Create(const std::sh
 }
 
 ThumbnailApplication::ThumbnailApplication(const std::shared_ptr<pub::Publisher> &publisher, const info::Application &application_info)
-		: Application(publisher, application_info)
+	: Application(publisher, application_info)
 {
-
 }
 
 ThumbnailApplication::~ThumbnailApplication()
@@ -33,7 +33,8 @@ bool ThumbnailApplication::Stop()
 
 std::shared_ptr<pub::Stream> ThumbnailApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count)
 {
-	logtd("ThumbnailApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
+	logtd("Created stream : %s/%u", info->GetName().CStr(), info->GetId());
+
 	return ThumbnailStream::Create(GetSharedPtrAs<pub::Application>(), *info);
 }
 
@@ -42,15 +43,13 @@ bool ThumbnailApplication::DeleteStream(const std::shared_ptr<info::Stream> &inf
 	logtd("ThumbnailApplication::DeleteStream : %s/%u", info->GetName().CStr(), info->GetId());
 
 	auto stream = std::static_pointer_cast<ThumbnailStream>(GetStream(info->GetId()));
-	if(stream == nullptr)
+	if (stream == nullptr)
 	{
 		logte("ThumbnailApplication::Delete stream failed. Cannot find stream (%s)", info->GetName().CStr());
 		return false;
 	}
-	
+
 	logtd("ThumbnailApplication %s/%s stream has been deleted", GetName().CStr(), stream->GetName().CStr());
 
 	return true;
 }
-
-

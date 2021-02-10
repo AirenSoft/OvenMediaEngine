@@ -63,7 +63,8 @@ public:
 	IcePort();
 	~IcePort() override;
 
-	bool Create(std::vector<RtcIceCandidate> ice_candidate_list);
+	bool CreateTurnServer(ov::SocketAddress address, ov::SocketType socket_type);
+	bool CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_list);
 
 	const std::vector<RtcIceCandidate> &GetIceCandidateList() const;
 

@@ -11,16 +11,16 @@ WORKDIR /tmp
 ARG     PREFIX=/opt/ovenmediaengine
 ARG     MAKEFLAGS="-j16"
 
-ENV     OME_VERSION=release \
-        OPENSSL_VERSION=1.1.0g \
+ENV     OME_VERSION=master \
+        OPENSSL_VERSION=1.1.1i \
         SRTP_VERSION=2.2.0 \
-        SRT_VERSION=1.3.3 \
+        SRT_VERSION=1.4.2 \
         OPUS_VERSION=1.1.3 \
         X264_VERSION=20190513-2245-stable \
-        X265_VERSION=3.2.1 \
+        X265_VERSION=3.4 \
         VPX_VERSION=1.7.0 \
         FDKAAC_VERSION=0.1.5 \
-        FFMPEG_VERSION=3.4 \
+        FFMPEG_VERSION=4.3.1 \
         JEMALLOC_VERSION=5.2.1 \
         PCRE2_VERSION=10.35
 
@@ -93,7 +93,7 @@ RUN \
         DIR=/tmp/x265 && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sLf https://get.videolan.org/x265/x265_${X265_VERSION}.tar.gz | tar -zx --strip-components=1 && \
+        curl -sLf https://github.com/videolan/x265/archive/${X265_VERSION}.tar.gz | tar -zx --strip-components=1 && \
         cd ${DIR}/build/linux && \
         cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="${PREFIX}" -DENABLE_SHARED:bool=on ../../source && \
         make && \
@@ -128,7 +128,7 @@ RUN \
         DIR=/tmp/ffmpeg && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sLf https://github.com/AirenSoft/FFmpeg/archive/ome/${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+        curl -sLf https://github.com/AirenSoft/FFmpeg/archive/n${FFMPEG_VERSION}-ome.tar.gz | tar -xz --strip-components=1 && \
         PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}" ./configure \
         --prefix="${PREFIX}" \
         --enable-gpl \

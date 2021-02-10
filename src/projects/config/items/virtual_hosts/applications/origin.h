@@ -21,11 +21,11 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetAlias, _alias)
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue<Optional>("Primary", &_primary);
-					RegisterValue<Optional>("Secondary", &_secondary);
-					RegisterValue<Optional>("Alias", &_alias);
+					Register<Optional>("Primary", &_primary);
+					Register<Optional>("Secondary", &_secondary);
+					Register<Optional>("Alias", &_alias);
 				}
 
 				ov::String _primary;

@@ -26,11 +26,15 @@ public:
     {
         return _height;
     }
-    uint8_t GetProfile() const
+    uint8_t GetProfileIdc() const
     {
         return _profile;
     }
-    uint8_t GetCodecLevel() const
+	uint8_t GetConstraintFlag() const
+	{
+		return _constraint;
+	}
+    uint8_t GetCodecLevelIdc() const
     {
         return _codec_level;
     }
@@ -51,8 +55,8 @@ public:
     {
         ov::String out_str = ov::String::FormatString("\n[H264Sps]\n");
 
-        out_str.AppendFormat("\tProfile(%d)\n", GetProfile());
-        out_str.AppendFormat("\tCodecLevel(%d)\n", GetCodecLevel());
+        out_str.AppendFormat("\tProfile(%d)\n", GetProfileIdc());
+        out_str.AppendFormat("\tCodecLevel(%d)\n", GetCodecLevelIdc());
         out_str.AppendFormat("\tWidth(%d)\n", GetWidth());
         out_str.AppendFormat("\tHeight(%d)\n", GetHeight());
         out_str.AppendFormat("\tFps(%d)\n", GetFps());
@@ -65,6 +69,7 @@ public:
 
 private:
     uint8_t _profile = 0;
+	uint8_t _constraint = 0;
     uint8_t _codec_level = 0;
     unsigned int _width = 0;
     unsigned int _height = 0;

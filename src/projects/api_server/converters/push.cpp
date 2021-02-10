@@ -14,7 +14,7 @@ namespace api
 {
 	namespace conv
 	{
-		static void SetRecordSteramTracks(Json::Value &parent_object, const char *key, const std::map<int32_t, std::shared_ptr<MediaTrack>> &tracks, Optional optional)
+		static void SetPushStreamTracks(Json::Value &parent_object, const char *key, const std::map<int32_t, std::shared_ptr<MediaTrack>> &tracks, Optional optional)
 		{
 			CONVERTER_RETURN_IF(false, Json::arrayValue);
 
@@ -26,12 +26,12 @@ namespace api
 			}
 		}		
 
-		static void SetRecordStream(Json::Value &parent_object, const char *key, const info::Stream &stream, Optional optional)
+		static void SetPushStream(Json::Value &parent_object, const char *key, const info::Stream &stream, Optional optional)
 		{
 			CONVERTER_RETURN_IF(false, Json::objectValue);
 
 			SetString(object, "name", stream.GetName(), Optional::False);
-			SetRecordSteramTracks(object, "tracks", stream.GetTracks(), Optional::False);
+			SetPushStreamTracks(object, "tracks", stream.GetTracks(), Optional::False);
 		}
 				
 		// Example of Push Start
@@ -143,7 +143,7 @@ namespace api
 			SetString(response, "id", push->GetId(), Optional::False);
 			SetString(response, "vhost", push->GetVhost(), Optional::False);
 			SetString(response, "app", push->GetApplication(), Optional::False);
-			SetRecordStream(response, "stream", push->GetStream(), Optional::False);
+			SetPushStream(response, "stream", push->GetStream(), Optional::False);
 			SetString(response, "state", push->GetStateString(), Optional::False);
 			SetString(response, "protocol", push->GetProtocol(), Optional::False);
 			SetString(response, "url", push->GetUrl(), Optional::False);

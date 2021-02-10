@@ -4,16 +4,16 @@ PREFIX=/opt/ovenmediaengine
 TEMP_PATH=/tmp
 
 OME_VERSION=dev
-OPENSSL_VERSION=1.1.0g
+OPENSSL_VERSION=1.1.1i
 SRTP_VERSION=2.2.0
-SRT_VERSION=1.3.3
+SRT_VERSION=1.4.2
 OPUS_VERSION=1.1.3
 X264_VERSION=20190513-2245-stable
-X265_VERSION=3.2.1
+X265_VERSION=3.4
 VPX_VERSION=1.7.0
 FDKAAC_VERSION=0.1.5
 NASM_VERSION=2.15.02
-FFMPEG_VERSION=3.4
+FFMPEG_VERSION=4.3.1
 JEMALLOC_VERSION=5.2.1
 PCRE2_VERSION=10.35
 
@@ -32,8 +32,10 @@ else
     elif [ -f /etc/os-release ]; then
         OSNAME=$(cat /etc/os-release | grep "^NAME" | tr -d "\"" | cut -d"=" -f2)
         OSVERSION=$(cat /etc/os-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f1 | awk '{print  $1}')
+        OSMINORVERSION=$(cat /etc/os-release | grep ^VERSION= | tr -d "\"" | cut -d"=" -f2 | cut -d"." -f2 | awk '{print  $1}')
     fi
 fi
+
 MAKEFLAGS="${MAKEFLAGS} -j${NCPU}"
 CURRENT=$(pwd)
 
@@ -109,7 +111,7 @@ install_libx265()
     (DIR=${TEMP_PATH}/x265 && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf  https://get.videolan.org/x265/x265_${X265_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sLf https://github.com/videolan/x265/archive/${X265_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     cd ${DIR}/build/linux && \
     cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="${PREFIX}" -DENABLE_SHARED:bool=on ../../source && \
     make -j$(nproc) && \
@@ -172,7 +174,7 @@ install_ffmpeg()
     (DIR=${TEMP_PATH}/ffmpeg && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/AirenSoft/FFmpeg/archive/ome/${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+    curl -sLf https://github.com/AirenSoft/FFmpeg/archive/n${FFMPEG_VERSION}-ome.tar.gz | tar -xz --strip-components=1 && \
     PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure \
     --prefix="${PREFIX}" \
     --enable-gpl \
@@ -193,7 +195,7 @@ install_ffmpeg()
     --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc \
     --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
-    --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format # && \
+    --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format && \
     make -j$(nproc) && \
     sudo make install && \
     sudo rm -rf ${PREFIX}/share && \
@@ -281,7 +283,7 @@ fail_exit()
 
 check_version()
 {
-    if [[ "${OSNAME}" == "Ubuntu" && "${OSVERSION}" != "18" ]]; then
+    if [[ "${OSNAME}" == "Ubuntu" && "${OSVERSION}" != "18" && "${OSVERSION}.${OSMINORVERSION}" != "20.04" ]]; then
         proceed_yn
     fi
 
@@ -296,7 +298,7 @@ check_version()
 
 proceed_yn()
 {
-    read -p "This program [$0] is tested on [Ubuntu 18, CentOS 7, Fedora 28]
+    read -p "This program [$0] is tested on [Ubuntu 18/20.04, CentOS 7, Fedora 28]
 Do you want to continue [y/N] ? " ANS
     if [[ "${ANS}" != "y" && "$ANS" != "yes" ]]; then
         cd ${CURRENT}

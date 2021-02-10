@@ -53,6 +53,9 @@ bool OvtSession::SendOutgoingData(const std::any &packet)
 {
 	std::shared_ptr<OvtPacket> session_packet;
 
+	ov::StopWatch watch;
+	watch.Start();
+
 	try 
 	{
         session_packet = std::any_cast<std::shared_ptr<OvtPacket>>(packet);
@@ -78,10 +81,29 @@ bool OvtSession::SendOutgoingData(const std::any &packet)
 		return false;
 	}
 
+
+
+	auto elapsed = watch.Elapsed();
+	if(elapsed > 0)
+	{
+		logtc("time : %u", elapsed);
+	}
+
+
 	// Set OVT Session ID into packet
 	auto copy_packet = std::make_shared<OvtPacket>(*session_packet);
 	copy_packet->SetSessionId(GetId());
+
+	watch.Update();
+
+
 	_connector->Send(copy_packet->GetData());
+
+	elapsed = watch.Elapsed();
+	if(elapsed > 0)
+	{
+		logtc("time : %u", elapsed);
+	}
 
 	return true;
 }

@@ -40,15 +40,9 @@ namespace ocst
 		  state(ItemState::New)
 
 	{
-		for (auto &item : origin_config.GetPass().GetUrlList())
+		for (auto &url : origin_config.GetPass().GetUrlList())
 		{
-			auto url = item.GetUrl();
-
-			// Prepend "<scheme>://"
-			url.Prepend("://");
-			url.Prepend(scheme);
-
-			url_list.push_back(item.GetUrl());
+			url_list.push_back(url);
 		}
 
 		this->origin_config = origin_config;
@@ -112,15 +106,21 @@ namespace ocst
 	// Implementation of MediaRouteApplicationObserver
 	//--------------------------------------------------------------------
 	// Temporarily used until Orchestrator takes stream management
-	bool Application::OnCreateStream(const std::shared_ptr<info::Stream> &info)
+	bool Application::OnStreamCreated(const std::shared_ptr<info::Stream> &info)
 	{
-		return callback->OnCreateStream(app_info, info);
+		return callback->OnStreamCreated(app_info, info);
 	}
 
-	bool Application::OnDeleteStream(const std::shared_ptr<info::Stream> &info)
+	bool Application::OnStreamDeleted(const std::shared_ptr<info::Stream> &info)
 	{
-		return callback->OnDeleteStream(app_info, info);
+		return callback->OnStreamDeleted(app_info, info);
 	}
+
+	bool Application::OnStreamPrepared(const std::shared_ptr<info::Stream> &info)
+	{
+		return callback->OnStreamPrepared(app_info, info);
+	}
+
 
 	bool Application::OnSendFrame(const std::shared_ptr<info::Stream> &info, const std::shared_ptr<MediaPacket> &packet)
 	{

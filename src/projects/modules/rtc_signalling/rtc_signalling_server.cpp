@@ -38,8 +38,8 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 
 	auto manager = HttpServerManager::GetInstance();
-	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer(*address, worker_count) : nullptr;
-	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer(*tls_address, vhost_list, worker_count) : nullptr;
+	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("RtcSignallingServer", *address, worker_count) : nullptr;
+	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("RtcSignallingServer", *tls_address, vhost_list, worker_count) : nullptr;
 
 	auto web_socket_interceptor = result ? CreateWebSocketInterceptor() : nullptr;
 
@@ -70,7 +70,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 				Json::Value urls = Json::arrayValue;
 				for (auto url : url_list)
 				{
-					urls.append(url.GetUrl().CStr());
+					urls.append(url.CStr());
 				}
 				ice_server["urls"] = urls;
 
@@ -197,14 +197,15 @@ std::shared_ptr<WebSocketInterceptor> RtcSignallingServer::CreateWebSocketInterc
 				return HttpInterceptorResult::Disconnect;
 			}
 
-			// TODO(dimiden): 이렇게 호출하면 "command": null 이 추가되어버림. 개선 필요
-			Json::Value &command_value = object.GetJsonValue()["command"];
+			auto &payload = object.GetJsonValue();
 
-			if (command_value.isNull())
+			if ((payload.isObject() == false) || (payload.isMember("command") == false))
 			{
 				logtw("Invalid request message from %s", ws_client->ToString().CStr());
 				return HttpInterceptorResult::Disconnect;
 			}
+
+			auto &command_value = payload["command"];
 
 			ov::String command = ov::Converter::ToString(command_value);
 
@@ -394,7 +395,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::share
 
 	if (info->id != object.GetInt64Value("id"))
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid ID");
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "Invalid ID");
 	}
 	else if (command == "answer")
 	{
@@ -418,7 +419,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCommand(const std::share
 	}
 
 	// Unknown command
-	return ov::Error::CreateError(HttpStatusCode::BadRequest, "Unknown command: %s", command.CStr());
+	return HttpError::CreateError(HttpStatusCode::BadRequest, "Unknown command: %s", command.CStr());
 }
 
 std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client, std::shared_ptr<RtcSignallingInfo> &info)
@@ -438,7 +439,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 
 	if (peer_info == nullptr)
 	{
-		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Cannot parse peer info from user agent: %s", request->GetHeader("USER-AGENT").CStr());
+		return HttpError::CreateError(HttpStatusCode::InternalServerError, "Cannot parse peer info from user agent: %s", request->GetHeader("USER-AGENT").CStr());
 	}
 
 	info->peer_info = peer_info;
@@ -492,7 +493,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 				if (_p2p_manager.RegisterAsHostPeer(peer_info) == false)
 				{
 					OV_ASSERT2(false);
-					return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Could not add peer as host");
+					return HttpError::CreateError(HttpStatusCode::InternalServerError, "Could not add peer as host");
 				}
 				else
 				{
@@ -547,7 +548,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 				}
 				value["candidates"] = candidates;
 				value["code"] = static_cast<int>(HttpStatusCode::OK);
-				if(_ice_servers.isNull() == false)
+				if (_ice_servers.isNull() == false)
 				{
 					value["ice_servers"] = _ice_servers;
 				}
@@ -559,13 +560,13 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 			else
 			{
 				logtw("Could not create SDP for stream %s", info->stream_name.CStr());
-				error = ov::Error::CreateError(HttpStatusCode::NotFound, "Cannot create offer");
+				error = HttpError::CreateError(HttpStatusCode::NotFound, "Cannot create offer");
 			}
 		}
 		else
 		{
 			// cannot create offer
-			error = ov::Error::CreateError(HttpStatusCode::NotFound, "Cannot create offer");
+			error = HttpError::CreateError(HttpStatusCode::NotFound, "Cannot create offer");
 		}
 	}
 	else
@@ -600,7 +601,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 
 	if (peer_info == nullptr)
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not find peer id: %d", info->id);
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "Could not find peer id: %d", info->id);
 	}
 
 	const Json::Value &sdp_value = object.GetJsonValue("sdp");
@@ -608,19 +609,19 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 	// Validate SDP
 	if (sdp_value.isNull() || (sdp_value.isObject() == false))
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "There is no SDP");
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "There is no SDP");
 	}
 
 	const Json::Value &sdp_type = sdp_value["type"];
 
 	if ((sdp_type.isString() == false) || (sdp_type != "answer"))
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid SDP type");
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "Invalid SDP type");
 	}
 
 	if (sdp_value["sdp"].isString() == false)
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "SDP must be a string");
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "SDP must be a string");
 	}
 
 	if ((_p2p_manager.IsEnabled() == false) || peer_info->IsHost())
@@ -642,7 +643,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 		}
 		else
 		{
-			return ov::Error::CreateError(HttpStatusCode::BadRequest, "Could not parse SDP");
+			return HttpError::CreateError(HttpStatusCode::BadRequest, "Could not parse SDP");
 		}
 	}
 	else
@@ -656,12 +657,12 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 		if (host_peer == nullptr)
 		{
 			OV_ASSERT2(false);
-			return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Could not find host information");
+			return HttpError::CreateError(HttpStatusCode::InternalServerError, "Could not find host information");
 		}
 
 		if (host_peer->GetId() != peer_id)
 		{
-			return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid peer id: %d", peer_id);
+			return HttpError::CreateError(HttpStatusCode::BadRequest, "Invalid peer id: %d", peer_id);
 		}
 
 		Json::Value value;
@@ -683,12 +684,12 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const std::sha
 
 	if (candidates_value.isNull())
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "There is no candidate list");
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "There is no candidate list");
 	}
 
 	if (candidates_value.isArray() == false)
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Candidates must be array");
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "Candidates must be array");
 	}
 
 	auto peer_id = object.GetIntValue("peer_id");
@@ -716,7 +717,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidate(const std::sha
 
 			if (ice_candidate->ParseFromString(candidate) == false)
 			{
-				return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid candidate: %s", candidate.CStr());
+				return HttpError::CreateError(HttpStatusCode::BadRequest, "Invalid candidate: %s", candidate.CStr());
 			}
 
 			for (auto &observer : _observers)
@@ -749,7 +750,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchOfferP2P(const std::shar
 
 	if (host == nullptr)
 	{
-		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Peer %d does not exists", info->id);
+		return HttpError::CreateError(HttpStatusCode::InternalServerError, "Peer %d does not exists", info->id);
 	}
 
 	auto peer_id = object.GetIntValue("peer_id");
@@ -757,7 +758,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchOfferP2P(const std::shar
 
 	if (client_peer == nullptr)
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid peer_id: %d", peer_id);
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "Invalid peer_id: %d", peer_id);
 	}
 
 	auto sdp_value = object.GetJsonValue("sdp");
@@ -766,24 +767,24 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchOfferP2P(const std::shar
 	// Validate SDP
 	if (sdp_value.isNull() || (sdp_value.isObject() == false))
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid SDP: %s", sdp_value.asCString());
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "Invalid SDP: %s", sdp_value.asCString());
 	}
 
 	const Json::Value &sdp_type = sdp_value["type"];
 
 	if ((sdp_type.isString() == false) || (sdp_type != "offer"))
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid SDP type");
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "Invalid SDP type");
 	}
 
 	if (sdp_value["sdp"].isString() == false)
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "SDP must be a string");
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "SDP must be a string");
 	}
 
 	if ((candidates.isNull() == false) && (candidates.isArray() == false))
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Candidates must be array, but: %d", candidates.type());
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "Candidates must be array, but: %d", candidates.type());
 	}
 
 	logtd("[Host -> Client] The host peer sents an offer: %s", object.ToString().CStr());
@@ -810,7 +811,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidateP2P(const std::
 
 	if (host == nullptr)
 	{
-		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Peer %d does not exists", info->id);
+		return HttpError::CreateError(HttpStatusCode::InternalServerError, "Peer %d does not exists", info->id);
 	}
 
 	auto peer_id = object.GetIntValue("peer_id");
@@ -818,19 +819,19 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchCandidateP2P(const std::
 
 	if (client_peer == nullptr)
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Invalid peer_id: %d", peer_id);
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "Invalid peer_id: %d", peer_id);
 	}
 
 	const Json::Value &candidates_value = object.GetJsonValue("candidates");
 
 	if (candidates_value.isNull())
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "There is no candidate list");
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "There is no candidate list");
 	}
 
 	if (candidates_value.isArray() == false)
 	{
-		return ov::Error::CreateError(HttpStatusCode::BadRequest, "Candidates must be array");
+		return HttpError::CreateError(HttpStatusCode::BadRequest, "Candidates must be array");
 	}
 
 	logtd("[Host -> Client] The host peer sents candidates: %s", object.ToString().CStr());
@@ -940,7 +941,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchStop(const std::shared_p
 
 	if (result == false)
 	{
-		return ov::Error::CreateError(HttpStatusCode::InternalServerError, "Cannot dispatch stop command");
+		return HttpError::CreateError(HttpStatusCode::InternalServerError, "Cannot dispatch stop command");
 	}
 
 	return nullptr;

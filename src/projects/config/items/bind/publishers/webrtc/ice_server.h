@@ -25,15 +25,15 @@ namespace cfg
 
 			public:
 				CFG_DECLARE_REF_GETTER_OF(GetUrls, _urls)
-				CFG_DECLARE_GETTER_OF(GetUserName, _user_name)
-				CFG_DECLARE_GETTER_OF(GetCredential, _credential)
+				CFG_DECLARE_REF_GETTER_OF(GetUserName, _user_name)
+				CFG_DECLARE_REF_GETTER_OF(GetCredential, _credential)
 
 			protected:
-				void MakeParseList() override
+				void MakeList() override
 				{
-					RegisterValue("Urls", &_urls);
-					RegisterValue<Optional>("UserName", &_user_name);
-					RegisterValue<Optional>("Credential", &_credential);
+					Register("Urls", &_urls);
+					Register<Optional>("UserName", &_user_name);
+					Register<Optional>("Credential", &_credential);
 				}
 			};
 		}  // namespace pub

@@ -62,6 +62,8 @@ public:
 
 	ov::String GetInfoString();
 
+	bool IsValidity();
+
 private:
 	uint32_t _id;
 
