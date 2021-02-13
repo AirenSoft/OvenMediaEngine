@@ -36,6 +36,11 @@ Please click on each banner below for details.
 * Embedded WebRTC Signalling Server \(WebSocket based\)
 * Origin-Edge structure
 * Monitoring
+* Beta
+  * File Recording
+  * RTMP Push Publishing(re-streaming)
+  * Thumbnail
+  * REST API
 * Experiment
   * P2P Traffic Distribution (Only WebRTC)
 
