@@ -9,6 +9,8 @@
 #include "ice_port.h"
 #include "ice_private.h"
 
+#include "main/main.h"
+
 #include "modules/ice/stun/attributes/stun_attributes.h"
 #include "modules/ice/stun/stun_message.h"
 #include "modules/ice/stun/channel_data_message.h"
@@ -100,7 +102,7 @@ bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_lis
 	return succeeded;
 }
 
-bool IcePort::CreateTurnServer(ov::SocketAddress address, ov::SocketType socket_type)
+bool IcePort::CreateTurnServer(ov::String relay_ip, uint16_t listening_port, ov::SocketType socket_type)
 {
 	// {[Browser][WebRTC][TURN Client]} <----(TCP)-----> {[TURN Server][OvenMediaEngine]}
 
@@ -117,6 +119,9 @@ bool IcePort::CreateTurnServer(ov::SocketAddress address, ov::SocketType socket_
 	// Player --[TURN/TCP]--> [TurnServer(OME) --[Fucntion Call not udp send]--> Peer(OME)]
 	// Player <--[TURN/TCP]-- [TurnServer(OME) <--[Fucntion Call not udp send]-- Peer(OME)]
 
+	// The relay ip may not be the local ip, so do not listen to relay ip.
+	_relay_ip = relay_ip;
+	ov::SocketAddress address(listening_port);
 	auto physical_port = CreatePhysicalPort(address, socket_type);
 	if (physical_port == nullptr)
 	{
@@ -126,6 +131,40 @@ bool IcePort::CreateTurnServer(ov::SocketAddress address, ov::SocketType socket_
 
 	logti("ICE port is bound to %s/%s (%p)", address.ToString().CStr(), StringFromSocketType(socket_type), physical_port.get());
 	_physical_port_list.push_back(physical_port);
+
+	// make HMAC key
+	// https://tools.ietf.org/html/rfc8489#section-9.2.2
+	//  key = MD5(username ":" OpaqueString(realm) ":" OpaqueString(password))
+	_hmac_key = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5, 
+		ov::String::FormatString("%s:%s:%s", DEFAULT_RELAY_USERNAME, DEFAULT_RELAY_REALM, DEFAULT_RELAY_KEY).ToData(false));
+
+	// Creating an attribute to be used in advance
+
+	// Nonce
+	auto nonce_attribute = std::make_shared<StunNonceAttribute>();
+	nonce_attribute->SetText("1bcf94ca7494141e");
+	_nonce_attribute = std::move(nonce_attribute);
+
+	// Realm
+	auto realm_attribute = std::make_shared<StunRealmAttribute>();
+	realm_attribute->SetText(DEFAULT_RELAY_REALM);
+	_realm_attribute = std::move(realm_attribute);
+
+	// Software
+	auto software_attribute = std::make_shared<StunSoftwareAttribute>();
+	software_attribute->SetText(ov::String::FormatString("OvenMediaEngine v%s", OME_VERSION));
+	_software_attribute = std::move(software_attribute);
+
+	// Add XOR-RELAYED-ADDRESS attribute
+	// This is the player's candidate and eventually passed to OME. 
+	// However, OME does not use the player's candidate. So we pass anything by this value.
+	auto xor_relayed_address_attribute = std::make_shared<StunXorRelayedAddressAttribute>();
+	xor_relayed_address_attribute->SetParameters(ov::SocketAddress(_relay_ip, DEFAULT_RELAY_PORT));
+	_xor_relayed_address_attribute = std::move(xor_relayed_address_attribute);
+
+	auto lifetime_attribute = std::make_shared<StunLifetimeAttribute>();
+	lifetime_attribute->SetValue(600);
+	_lifetime_attribute = std::move(lifetime_attribute);
 
 	return true;
 }
@@ -259,7 +298,6 @@ void IcePort::AddSession(const std::shared_ptr<info::Session> &session_info, std
 
 		logtd("Trying to add session: %d (ufrag: %s:%s)...", session_id, local_ufrag.CStr(), remote_ufrag.CStr());
 
-		// 나중에 STUN Binding request를 대비하여 관련 정보들을 넣어놓음
 		auto expire_after_ms = session_info->GetStream().GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().GetTimeout();
 
 		std::shared_ptr<IcePortInfo> info = std::make_shared<IcePortInfo>(expire_after_ms);
@@ -371,12 +409,12 @@ void IcePort::CheckTimedoutItem()
 	}
 }
 
-bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, std::unique_ptr<RtpPacket> packet)
+bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<RtpPacket> packet)
 {
 	return Send(session_info, packet->GetData());
 }
 
-bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, std::unique_ptr<RtcpPacket> packet)
+bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<RtcpPacket> packet)
 {
 	return Send(session_info, packet->GetData());
 }
@@ -430,6 +468,8 @@ void IcePort::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 
 	std::lock_guard<std::shared_mutex> lock_guard(_demultiplexers_lock);
 	_demultiplexers[remote->GetId()] = demultiplexer;
+
+	logti("Turn client has connected : %s", remote->ToString().CStr());
 }
 
 void IcePort::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
@@ -442,6 +482,8 @@ void IcePort::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physical
 	{
 		_demultiplexers.erase(remote->GetId());
 	}
+
+	logti("Turn client has disconnected : %s", remote->ToString().CStr());
 }
 
 void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
@@ -726,7 +768,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		response_message.SetHeader(StunClass::SuccessResponse, StunMethod::Binding, message.GetTransactionId());
 
 		// Add XOR-MAPPED-ADDRESS attribute
-		auto xor_mapped_attribute = std::make_unique<StunXorMappedAddressAttribute>();
+		auto xor_mapped_attribute = std::make_shared<StunXorMappedAddressAttribute>();
 		xor_mapped_attribute->SetParameters(address);
 		response_message.AddAttribute(std::move(xor_mapped_attribute));
 
@@ -736,8 +778,6 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		// Immediately, the server also sends a bind request.
 		SendStunBindingRequest(remote, address, gate_info, ice_port_info);
 	}
-
-
 
 	return true; 
 }
@@ -759,10 +799,10 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	}
 	message.SetTransactionId(&(transaction_id[0]));
 
-	std::unique_ptr<StunAttribute> attribute;
+	std::shared_ptr<StunAttribute> attribute;
 
 	// USERNAME attribute 
-	attribute = std::make_unique<StunUserNameAttribute>();
+	attribute = std::make_shared<StunUserNameAttribute>();
 	auto *user_name_attribute = dynamic_cast<StunUserNameAttribute *>(attribute.get());
 	user_name_attribute->SetText(ov::String::FormatString("%s:%s", info->peer_sdp->GetIceUfrag().CStr(), info->offer_sdp->GetIceUfrag().CStr()));
 	message.AddAttribute(std::move(attribute));
@@ -771,26 +811,26 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	StunUnknownAttribute *unknown_attribute = nullptr;
 	// https://tools.ietf.org/html/draft-thatcher-ice-network-cost-00
 	// https://www.ietf.org/mail-archive/web/ice/current/msg00247.html
-	// attribute = std::make_unique<StunUnknownAttribute>(0xC057, 4);
+	// attribute = std::make_shared<StunUnknownAttribute>(0xC057, 4);
 	// auto *unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
 	// uint8_t unknown_data[] = { 0x00, 0x02, 0x00, 0x00 };
 	// unknown_attribute->SetData(&(unknown_data[0]), 4);
 	// message.AddAttribute(std::move(attribute));
 
 	// ICE-CONTROLLING (for testing hash)
-	attribute = std::make_unique<StunUnknownAttribute>(0x802A, 8);
+	attribute = std::make_shared<StunUnknownAttribute>(0x802A, 8);
 	unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
 	uint8_t unknown_data2[] = {0x1C, 0xF5, 0x1E, 0xB1, 0xB0, 0xCB, 0xE3, 0x49};
 	unknown_attribute->SetData(&(unknown_data2[0]), 8);
 	message.AddAttribute(std::move(attribute));
 
 	// USE-CANDIDATE (for testing hash)
-	attribute = std::make_unique<StunUnknownAttribute>(0x0025, 0);
+	attribute = std::make_shared<StunUnknownAttribute>(0x0025, 0);
 	unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
 	message.AddAttribute(std::move(attribute));
 
 	// PRIORITY (for testing hash)
-	attribute = std::make_unique<StunUnknownAttribute>(0x0024, 4);
+	attribute = std::make_shared<StunUnknownAttribute>(0x0024, 4);
 	unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
 	uint8_t unknown_data3[] = {0x6E, 0x7F, 0x1E, 0xFF};
 	unknown_attribute->SetData(&(unknown_data3[0]), 4);
@@ -881,17 +921,15 @@ const std::shared_ptr<const ov::Data> IcePort::CreateDataIndication(ov::SocketAd
 	StunMessage send_indication_message;
 	send_indication_message.SetHeader(StunClass::Indication, StunMethod::Data, reinterpret_cast<uint8_t *>(ov::Random::GenerateString(20).GetBuffer()));
 
-	auto data_attribute = std::make_unique<StunDataAttribute>();
+	auto data_attribute = std::make_shared<StunDataAttribute>();
 	data_attribute->SetData(data);
 	send_indication_message.AddAttribute(std::move(data_attribute));
 
-	auto xor_peer_attribute = std::make_unique<StunXorPeerAddressAttribute>();
+	auto xor_peer_attribute = std::make_shared<StunXorPeerAddressAttribute>();
 	xor_peer_attribute->SetParameters(peer_address);
 	send_indication_message.AddAttribute(std::move(xor_peer_attribute));
 
-	auto software_attribute = std::make_unique<StunSoftwareAttribute>();
-	software_attribute->SetText("OvenMediaEngien");
-	send_indication_message.AddAttribute(std::move(software_attribute));
+	send_indication_message.AddAttribute(_software_attribute);
 
 	return send_indication_message.Serialize();
 }
@@ -932,21 +970,9 @@ bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remo
 		response_message.SetHeader(StunClass::ErrorResponse, StunMethod::Allocate, message.GetTransactionId());
 		response_message.SetErrorCodeAttribute(StunErrorCode::Unauthonticated);
 
-		// Nonce
-		// TODO(Getroot): If you in the future want to give meaning to the nonce, do it.
-		auto nonce_attribute = std::make_unique<StunNonceAttribute>();
-		nonce_attribute->SetText("1bcf94ca7494141e");
-		response_message.AddAttribute(std::move(nonce_attribute));
-
-		// Realm
-		auto realm_attribute = std::make_unique<StunRealmAttribute>();
-		realm_attribute->SetText("airensoft");
-		response_message.AddAttribute(std::move(realm_attribute));
-
-		// Software
-		auto software_attribute = std::make_unique<StunSoftwareAttribute>();
-		software_attribute->SetText("OvenMediaEngien");
-		response_message.AddAttribute(std::move(software_attribute));
+		response_message.AddAttribute(_nonce_attribute);
+		response_message.AddAttribute(_realm_attribute);
+		response_message.AddAttribute(_software_attribute);
 
 		SendStunMessage(remote, address, gate_info, response_message);
 
@@ -959,30 +985,15 @@ bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remo
 	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::Allocate, message.GetTransactionId());
 
 	// Add XOR-MAPPED-ADDRESS attribute
-	auto xor_mapped_address_attribute = std::make_unique<StunXorMappedAddressAttribute>();
+	auto xor_mapped_address_attribute = std::make_shared<StunXorMappedAddressAttribute>();
 	xor_mapped_address_attribute->SetParameters(address);
 	response_message.AddAttribute(std::move(xor_mapped_address_attribute));
 
-	// Add XOR-RELAYED-ADDRESS attribute
-	// This is the player's candidate and eventually passed to OME. 
-	// However, OME does not use the player's candidate. So we pass anything by this value.
-	auto xor_relayed_address_attribute = std::make_unique<StunXorRelayedAddressAttribute>();
-	xor_relayed_address_attribute->SetParameters(ov::SocketAddress("192.168.0.200", 14090));
-	response_message.AddAttribute(std::move(xor_relayed_address_attribute));
-
-	// LIFETIME
-	auto lifetime_attribute = std::make_unique<StunLifetimeAttribute>();
-	lifetime_attribute->SetValue(600);	
-	response_message.AddAttribute(std::move(lifetime_attribute));
-
-	// Software
-	auto software_attribute = std::make_unique<StunSoftwareAttribute>();
-	software_attribute->SetText("OvenMediaEngien");
-	response_message.AddAttribute(std::move(software_attribute));
-
-	// TOOD(Getroot): Integrity key, username, and realm values should be read in the configuration.
-	auto key = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5, ov::String("airen:airensoft:airen").ToData(false));
-	SendStunMessage(remote, address, gate_info, response_message, key->ToString());
+	response_message.AddAttribute(_xor_relayed_address_attribute);
+	response_message.AddAttribute(_lifetime_attribute);
+	response_message.AddAttribute(_software_attribute);
+	
+	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
 
 	return true;
 }
@@ -1018,9 +1029,7 @@ bool IcePort::ProcessTurnCreatePermissionRequest(const std::shared_ptr<ov::Socke
 
 	StunMessage response_message;
 	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::CreatePermission, message.GetTransactionId());
-
-	auto key = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5, ov::String("airen:airensoft:airen").ToData(false));
-	SendStunMessage(remote, address, gate_info, response_message, key->ToString());
+	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
 
 	return true;
 }
@@ -1056,9 +1065,7 @@ bool IcePort::ProcessTurnChannelBindRequest(const std::shared_ptr<ov::Socket> &r
 	}
 
 	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::ChannelBind, message.GetTransactionId());
-
-	auto key = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5, ov::String("airen:airensoft:airen").ToData(false));
-	SendStunMessage(remote, address, gate_info, response_message, key->ToString());
+	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
 
 	ice_port_info->is_turn_client = true;
 	ice_port_info->is_data_channel_enabled = true;
@@ -1073,8 +1080,7 @@ bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remot
 
 	StunMessage response_message;
 	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::ChannelBind, message.GetTransactionId());
-	auto key = ov::MessageDigest::ComputeDigest(ov::CryptoAlgorithm::Md5, ov::String("airen:airensoft:airen").ToData(false));
-	SendStunMessage(remote, address, gate_info, response_message, key->ToString());
+	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
 
 	return true;
 }

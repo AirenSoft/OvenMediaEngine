@@ -44,6 +44,16 @@
 					<!-- <TLSPort>3334</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
+					<!-- 
+						If you want to stream WebRTC over TCP, specify Relay IP:Port. Relay IP should use the public IP of the local server.("*"" cannot be used here) This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client via TCP. 
+
+						If you use OvenPlayer, it receives this information during the signaling process and automatically sets the player's iceServers. If you are using another player, set the iceServers yourself as follows:
+						https://developer.mozilla.org/en-US/docs/Web/API/RTCIceServer/urls#a_single_ice_server_with_authentication
+
+						<TcpRelay>192.168.0.200:3478</TcpRelay>
+					-->
+					<!-- <TcpRelay>Relay IP:Port</TcpRelay> -->
+					
 					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10006-10010/udp}</IceCandidate>
 				</IceCandidates>
 			</WebRTC>

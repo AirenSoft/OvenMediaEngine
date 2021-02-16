@@ -57,9 +57,9 @@ bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePort> ice_port, cons
 	return true;
 }
 
-bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePort> ice_port, const ov::SocketAddress &address, const ov::SocketType socket_type)
+bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePort> ice_port, ov::String relay_ip, uint16_t listening_port, const ov::SocketType socket_type)
 {
-	if(ice_port->CreateTurnServer(address, socket_type) == false)
+	if(ice_port->CreateTurnServer(relay_ip, listening_port, socket_type) == false)
 	{
 		ice_port->Close();
 		ice_port = nullptr;
@@ -69,7 +69,7 @@ bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePort> ice_port, const o
 	}
 	else
 	{
-		logtd("TurnServer is created successfully: %s", ice_port->ToString().CStr());
+		logti("RelayServer is created successfully: %s:%d?transport=tcp", relay_ip.CStr(), listening_port);
 	}
 	
 	return true;

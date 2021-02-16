@@ -11,6 +11,7 @@
 
 #include <config/config_manager.h>
 #include <modules/ice/ice.h>
+#include <modules/ice/ice_port.h>
 #include <publishers/webrtc/webrtc_publisher.h>
 
 #include <utility>
@@ -48,12 +49,30 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 
 	if (result)
 	{
-		auto &ice_servers_config = webrtc_config.GetIceServers();
+		_ice_servers = Json::arrayValue;
 
+		// for internal turn/tcp relay configuration
+		bool tcp_relay_parsed = false;
+		auto tcp_relay_address = webrtc_config.GetIceCandidates().GetTcpRelay(&tcp_relay_parsed);
+		if (tcp_relay_parsed)
+		{
+			Json::Value ice_server = Json::objectValue;
+
+			Json::Value urls = Json::arrayValue;
+			urls.append(ov::String::FormatString("turn:%s?transport=tcp", tcp_relay_address.CStr()).CStr());
+			ice_server["urls"] = urls;
+
+			// Embedded turn server has fixed user_name and credential. Security is provided by signed policy after this. This is because the embedded turn server does not relay other servers and only transmits the local stream to tcp when transmitting to webrtc.
+			ice_server["user_name"] = DEFAULT_RELAY_USERNAME;
+			ice_server["credential"] = DEFAULT_RELAY_KEY;
+
+			_ice_servers.append(ice_server);
+		}
+
+		// for external ice server configuration
+		auto &ice_servers_config = webrtc_config.GetIceServers();
 		if (ice_servers_config.IsParsed())
 		{
-			_ice_servers = Json::arrayValue;
-
 			for (auto ice_server_config : ice_servers_config.GetIceServerList())
 			{
 				Json::Value ice_server = Json::objectValue;
@@ -89,7 +108,8 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 				_ice_servers.append(ice_server);
 			}
 		}
-		else
+		
+		if(_ice_servers.size() == 0)
 		{
 			_ice_servers = Json::nullValue;
 		}

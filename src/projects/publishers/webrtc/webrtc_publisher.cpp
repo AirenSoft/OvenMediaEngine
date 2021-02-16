@@ -87,12 +87,24 @@ bool WebRtcPublisher::Start()
 		logte("Could not create ICE Candidates. Check your ICE configuration");
 		result = false;
 	}
-
-	ov::SocketAddress	turn_address(3478);
-	if(IcePortManager::GetInstance()->CreateTurnServer(_ice_port, turn_address, ov::SocketType::Tcp) == false)
+	
+	bool tcp_relay_parsed = false;
+	auto tcp_relay = webrtc_bind_config.GetIceCandidates().GetTcpRelay(&tcp_relay_parsed);
+	if(tcp_relay_parsed)
 	{
-		logte("Could not create Turn Server. Check your configuration");
-		result = false;
+		auto items = tcp_relay.Split(":");
+		if(items.size() != 2)
+		{
+			logte("TcpRelay format is incorrect : <Relay IP>:<Port>");
+		}
+		else
+		{
+			if(IcePortManager::GetInstance()->CreateTurnServer(_ice_port, items[0], std::atoi(items[1]), ov::SocketType::Tcp) == false)
+			{
+				logte("Could not create Turn Server. Check your configuration");
+				result = false;
+			}
+		}
 	}
 
 	if (result)

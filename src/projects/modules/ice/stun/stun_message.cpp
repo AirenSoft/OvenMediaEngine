@@ -165,7 +165,7 @@ bool StunMessage::ParseAttributes(ov::ByteStream &stream)
 	// Parsing starts when the minimum data is found
 	while(stream.Remained() >= minimum_length)
 	{
-		std::unique_ptr<StunAttribute> attribute = StunAttribute::CreateAttribute(stream);
+		std::shared_ptr<StunAttribute> attribute = StunAttribute::CreateAttribute(stream);
 
 		if(attribute == nullptr)
 		{
@@ -179,7 +179,7 @@ bool StunMessage::ParseAttributes(ov::ByteStream &stream)
 	return true;
 }
 
-std::unique_ptr<StunAttribute> StunMessage::ParseFingerprintAttribute(ov::ByteStream &stream)
+std::shared_ptr<StunAttribute> StunMessage::ParseFingerprintAttribute(ov::ByteStream &stream)
 {
 	// Fingerprint attribute header + CRC (4B)
 	int fingerprint_attribute_size = StunAttribute::DefaultHeaderSize() + sizeof(uint32_t);
@@ -195,7 +195,7 @@ std::unique_ptr<StunAttribute> StunMessage::ParseFingerprintAttribute(ov::ByteSt
 		return nullptr;
 	}
 
-	std::unique_ptr<StunAttribute> attribute = StunAttribute::CreateAttribute(stream);
+	std::shared_ptr<StunAttribute> attribute = StunAttribute::CreateAttribute(stream);
 
 	if((attribute != nullptr) && (attribute->GetType() != StunAttributeType::Fingerprint))
 	{
@@ -293,7 +293,7 @@ bool StunMessage::WriteMessageIntegrityAttribute(ov::ByteStream &stream, const o
 {
 	logtd("Trying to write message integrity attribute...");
 
-	std::unique_ptr<StunMessageIntegrityAttribute> attribute = std::make_unique<StunMessageIntegrityAttribute>();
+	std::shared_ptr<StunMessageIntegrityAttribute> attribute = std::make_unique<StunMessageIntegrityAttribute>();
 
 	// RFC5389 - 15.4. MESSAGE-INTEGRITY
 	// ...
@@ -337,7 +337,7 @@ bool StunMessage::WriteFingerprintAttribute(ov::ByteStream &stream)
 {
 	logtd("Trying to write fingerprint attribute...");
 
-	std::unique_ptr<StunFingerprintAttribute> attribute = std::make_unique<StunFingerprintAttribute>();
+	std::shared_ptr<StunFingerprintAttribute> attribute = std::make_unique<StunFingerprintAttribute>();
 
 	// When calculating Crc, the length of the STUN header must include the fingerprint attribute length.
 	auto buffer = stream.GetData()->GetWritableDataAs<uint8_t>();
@@ -662,18 +662,16 @@ void StunMessage::SetTransactionId(const uint8_t transaction_id[OV_STUN_TRANSACT
 	::memcpy(_transaction_id, transaction_id, sizeof(_transaction_id));
 }
 
-bool StunMessage::AddAttribute(std::unique_ptr<StunAttribute> attribute)
+bool StunMessage::AddAttribute(std::shared_ptr<StunAttribute> attribute)
 {
 	if(_fingerprint_attribute != nullptr)
 	{
-		// Serialize 한 뒤에는 메시지를 수정할 수 없음
 		OV_ASSERT(false, "Could not add attribute to serialized message");
 		return false;
 	}
 
 	if(attribute->GetType() == StunAttributeType::Fingerprint)
 	{
-		// Fingerprint attribute는 가장 마지막에 계산 가능
 		OV_ASSERT(false, "Fingerprint attribute will generate automatically");
 		return false;
 	}

@@ -46,7 +46,7 @@ StunAttribute::~StunAttribute()
 {
 }
 
-std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &stream)
+std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &stream)
 {
 	if(stream.Remained() % 4 != 0)
 	{
@@ -86,7 +86,7 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 		}
 	}
 
-	std::unique_ptr<StunAttribute> attribute = CreateAttribute(type, length);
+	std::shared_ptr<StunAttribute> attribute = CreateAttribute(type, length);
 
 	if(attribute == nullptr)
 	{
@@ -115,53 +115,53 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 	return std::move(attribute);
 }
 
-std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType type, int length)
+std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType type, int length)
 {
-	std::unique_ptr<StunAttribute> attribute = nullptr;
+	std::shared_ptr<StunAttribute> attribute = nullptr;
 
 	switch(type)
 	{
 		case StunAttributeType::MappedAddress:
-			attribute = std::make_unique<StunMappedAddressAttribute>(length);
+			attribute = std::make_shared<StunMappedAddressAttribute>(length);
 			break;
 		case StunAttributeType::XorPeerAddress:
-			attribute = std::make_unique<StunXorPeerAddressAttribute>(length);
+			attribute = std::make_shared<StunXorPeerAddressAttribute>(length);
 			break;
 		case StunAttributeType::XorRelayedAddress:
-			attribute = std::make_unique<StunXorRelayedAddressAttribute>(length);
+			attribute = std::make_shared<StunXorRelayedAddressAttribute>(length);
 			break;
 		case StunAttributeType::XorMappedAddress:
-			attribute = std::make_unique<StunXorMappedAddressAttribute>(length);
+			attribute = std::make_shared<StunXorMappedAddressAttribute>(length);
 			break;
 		case StunAttributeType::UserName:
-			attribute = std::make_unique<StunUserNameAttribute>(length);
+			attribute = std::make_shared<StunUserNameAttribute>(length);
 			break;
 		case StunAttributeType::MessageIntegrity:
-			attribute = std::make_unique<StunMessageIntegrityAttribute>(length);
+			attribute = std::make_shared<StunMessageIntegrityAttribute>(length);
 			break;
 		case StunAttributeType::Fingerprint:
-			attribute = std::make_unique<StunFingerprintAttribute>(length);
+			attribute = std::make_shared<StunFingerprintAttribute>(length);
 			break;
 		case StunAttributeType::RequestedTransport:
-			attribute = std::make_unique<StunRequestedTransportAttribute>(length);
+			attribute = std::make_shared<StunRequestedTransportAttribute>(length);
 			break;
 		case StunAttributeType::ErrorCode:
-			attribute = std::make_unique<StunErrorCodeAttribute>(length);
+			attribute = std::make_shared<StunErrorCodeAttribute>(length);
 			break;
 		case StunAttributeType::Realm:
-			attribute = std::make_unique<StunRealmAttribute>(length);
+			attribute = std::make_shared<StunRealmAttribute>(length);
 			break;
 		case StunAttributeType::Nonce:
-			attribute = std::make_unique<StunNonceAttribute>(length);
+			attribute = std::make_shared<StunNonceAttribute>(length);
 			break;
 		case StunAttributeType::Software:
-			attribute = std::make_unique<StunSoftwareAttribute>(length);
+			attribute = std::make_shared<StunSoftwareAttribute>(length);
 			break;
 		case StunAttributeType::ChannelNumber:
-			attribute = std::make_unique<StunChannelNumberAttribute>(length);
+			attribute = std::make_shared<StunChannelNumberAttribute>(length);
 			break;
 		case StunAttributeType::Data:
-			attribute = std::make_unique<StunDataAttribute>(length);
+			attribute = std::make_shared<StunDataAttribute>(length);
 			break;
 		case StunAttributeType::AlternateServer:
 		case StunAttributeType::UnknownAttributes:
@@ -181,12 +181,11 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType 
 					break;
 
 				default:
-					// 잘못된 타입이 들어옴
-					logtw("Unknown attributes: %d (%x, length: %d)", type, type, length);
+					logtd("Unknown attributes: %d (%x, length: %d)", type, type, length);
 					break;
 			}
 
-			attribute = std::make_unique<StunUnknownAttribute>((int)type, length);
+			attribute = std::make_shared<StunUnknownAttribute>((int)type, length);
 			break;
 	}
 

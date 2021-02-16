@@ -20,6 +20,13 @@
 #include <modules/rtp_rtcp/rtcp_packet.h>
 #include <modules/physical_port/physical_port_manager.h>
 
+#define DEFAULT_RELAY_REALM		"airensoft"
+#define DEFAULT_RELAY_USERNAME	"ome"
+#define DEFAULT_RELAY_KEY		"airen"
+// This is the player's candidate and eventually passed to OME. 
+// However, OME does not use the player's candidate. So we pass anything by this value.
+#define DEFAULT_RELAY_PORT		14090
+
 class RtcIceCandidate;
 
 class IcePort : protected PhysicalPortObserver
@@ -87,7 +94,7 @@ public:
 	IcePort();
 	~IcePort() override;
 
-	bool CreateTurnServer(ov::SocketAddress address, ov::SocketType socket_type);
+	bool CreateTurnServer(ov::String relay_ip, uint16_t listening_port, ov::SocketType socket_type);
 	bool CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_list);
 
 	const std::vector<RtcIceCandidate> &GetIceCandidateList() const;
@@ -124,8 +131,8 @@ public:
 	bool RemoveSession(session_id_t session_id);
 	bool RemoveSession(const std::shared_ptr<info::Session> &session_info);
 
-	bool Send(const std::shared_ptr<info::Session> &session_info, std::unique_ptr<RtpPacket> packet);
-	bool Send(const std::shared_ptr<info::Session> &session_info, std::unique_ptr<RtcpPacket> packet);
+	bool Send(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<RtpPacket> packet);
+	bool Send(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<RtcpPacket> packet);
 	bool Send(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data);
 
 	ov::String ToString() const;
@@ -180,6 +187,17 @@ private:
 	bool ProcessTurnSendIndication(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const StunMessage &message);
 	bool ProcessTurnCreatePermissionRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const StunMessage &message);
 	bool ProcessTurnChannelBindRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const StunMessage &message);
+
+	// Related TURN
+	ov::String _relay_ip;
+	std::shared_ptr<ov::Data> _hmac_key;
+	// Creating an attribute to be used in advance
+	std::shared_ptr<StunAttribute>	_realm_attribute;
+	std::shared_ptr<StunAttribute>	_software_attribute;
+	std::shared_ptr<StunAttribute>	_nonce_attribute;
+	std::shared_ptr<StunAttribute>	_xor_relayed_address_attribute;
+	std::shared_ptr<StunAttribute>	_lifetime_attribute;
+
 
 	std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 	std::recursive_mutex _physical_port_list_mutex;

@@ -96,7 +96,7 @@ public:
 		return nullptr;
 	}
 
-	bool AddAttribute(std::unique_ptr<StunAttribute> attribute);
+	bool AddAttribute(std::shared_ptr<StunAttribute> attribute);
 
 	// Generate MESSAGE-INTEGRITY and FINGERPRINT attributes
 	std::shared_ptr<ov::Data> Serialize(const ov::String &integrity_key);
@@ -106,7 +106,7 @@ public:
 protected:
 	
 	bool ParseAttributes(ov::ByteStream &stream);
-	std::unique_ptr<StunAttribute> ParseFingerprintAttribute(ov::ByteStream &stream);
+	std::shared_ptr<StunAttribute> ParseFingerprintAttribute(ov::ByteStream &stream);
 
 	bool WriteHeader(ov::ByteStream &stream);
 	bool WriteMessageLength(ov::ByteStream &stream);
@@ -125,10 +125,10 @@ protected:
 	uint32_t _magic_cookie;
 	uint8_t _transaction_id[OV_STUN_TRANSACTION_ID_LENGTH];
 
-	std::vector<std::unique_ptr<StunAttribute>> _attributes;
+	std::vector<std::shared_ptr<StunAttribute>> _attributes;
 
-	std::unique_ptr<StunAttribute> _integrity_attribute;
-	std::unique_ptr<StunAttribute> _fingerprint_attribute;
+	std::shared_ptr<StunAttribute> _integrity_attribute;
+	std::shared_ptr<StunAttribute> _fingerprint_attribute;
 
 	// Last error codes
 	LastErrorCode	_last_error_code = NOT_USED;
