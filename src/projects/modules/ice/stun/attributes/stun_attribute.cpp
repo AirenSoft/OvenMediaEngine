@@ -71,7 +71,7 @@ std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 #endif // STUN_LOG_DATA
 
 #if DEBUG
-	off_t last_offset = stream.GetOffset();
+	[[maybe_unused]] off_t last_offset = stream.GetOffset();
 #endif // DEBUG
 
 	if(type == StunAttributeType::Fingerprint)
