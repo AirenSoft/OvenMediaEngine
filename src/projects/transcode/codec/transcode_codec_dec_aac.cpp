@@ -13,12 +13,14 @@
 
 void OvenCodecImplAvcodecDecAAC::ThreadDecode()
 {
+	bool no_data_to_encode = false;
+
 	while (!_kill_flag)
 	{
 		/////////////////////////////////////////////////////////////////////
 		// Sending a packet to decoder
 		/////////////////////////////////////////////////////////////////////
-		if (_cur_pkt == nullptr && _input_buffer.IsEmpty() == false)
+		if (_cur_pkt == nullptr && (_input_buffer.IsEmpty() == false || no_data_to_encode == true) )
 		{
 			auto obj = _input_buffer.Dequeue();
 			if (obj.has_value() == false)
@@ -26,6 +28,7 @@ void OvenCodecImplAvcodecDecAAC::ThreadDecode()
 				continue;
 			}
 
+			no_data_to_encode = false;
 			_cur_pkt = std::move(obj.value());
 			if (_cur_pkt != nullptr)
 			{
@@ -122,6 +125,7 @@ void OvenCodecImplAvcodecDecAAC::ThreadDecode()
 		int ret = ::avcodec_receive_frame(_context, _frame);
 		if (ret == AVERROR(EAGAIN))
 		{
+			no_data_to_encode = true;
 			continue;
 		}
 		else if (ret == AVERROR_EOF)
