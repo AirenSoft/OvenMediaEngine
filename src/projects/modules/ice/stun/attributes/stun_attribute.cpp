@@ -104,11 +104,6 @@ std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 
 		logtd("Parsed: %s", attribute->ToString().CStr());
 
-#if DEBUG
-#warning 위에서 패킷이 예상만큼 소진되지 않는 경우가 있는 것 같은데, 일단 주석처리 해놨습니다. stream에서 읽어간 데이터 량 == (stream.GetOffset() - last_offset), length == attribute의 길이
-		// OV_ASSERT(length == (stream.GetOffset() - last_offset), "Length is mismatch. (expected: %d, read length: %d)", length, (stream.GetOffset() - last_offset));
-#endif // DEBUG
-
 		stream.Skip<uint8_t>(padded_length - length);
 	}
 
