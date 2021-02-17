@@ -687,7 +687,8 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		auto info = _user_mapping_table.find(local_ufrag);
 		if (info == _user_mapping_table.end())
 		{
-			logtc("User not found: %s (AddSession() needed)", local_ufrag.CStr());
+			// Stun may arrive first before AddSession, it is not an error
+			logtd("User not found: %s (AddSession() needed)", local_ufrag.CStr());
 			return false;
 		}
 

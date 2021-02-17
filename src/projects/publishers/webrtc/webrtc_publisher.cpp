@@ -292,7 +292,7 @@ bool WebRtcPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Ap
 // Called when receives request offer sdp from client
 std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,
 																		  const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
-																		  std::vector<RtcIceCandidate> *ice_candidates)
+																		  std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
 {
 	[[maybe_unused]] RequestStreamResult result = RequestStreamResult::init;
 	auto request = ws_client->GetClient()->GetRequest();
@@ -372,6 +372,12 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	{
 		logtw("(%s/%s) stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
 		return nullptr;
+	}
+
+	auto transport = parsed_url->GetQueryValue("transport");
+	if(transport.UpperCaseString() == "TCP")
+	{
+		tcp_relay = true;
 	}
 
 	auto &candidates = _ice_port->GetIceCandidateList();

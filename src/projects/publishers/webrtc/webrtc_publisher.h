@@ -33,7 +33,7 @@ public:
 	// SignallingObserver Implementation
 	std::shared_ptr<const SessionDescription> OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,
 													   const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
-													   std::vector<RtcIceCandidate> *ice_candidates) override;
+													   std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay) override;
 	bool OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
 								const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 								const std::shared_ptr<const SessionDescription> &offer_sdp,
