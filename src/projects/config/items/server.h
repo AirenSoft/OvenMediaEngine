@@ -101,7 +101,7 @@ namespace cfg
 			});
 
 			Register({"IP", "ip"}, &_ip);
-			Register("StunServer", &_stun_server);
+			Register<Optional>("StunServer", &_stun_server);
 			Register("Bind", &_bind);
 
 			Register<Optional>("Managers", &_managers);
