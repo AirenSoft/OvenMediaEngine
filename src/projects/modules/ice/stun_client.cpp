@@ -28,16 +28,20 @@ bool StunClient::GetMappedAddress(const ov::SocketAddress &stun_server, ov::Sock
 
 	client.Create(ov::SocketType::Udp);
 	client.SetRecvTimeout(tv);
-	client.SendTo(stun_server, send_data);
+	if(client.SendTo(stun_server, send_data) != send_data->GetLength())
+	{
+		client.Close();
+		return false;
+	}
 
 	auto recv_data = std::make_shared<ov::Data>(1500);
 	auto result = client.RecvFrom(recv_data, nullptr);
+	client.Close();
+
 	if(recv_data->GetLength() <= 0)
 	{
 		return false;
 	}
-
-	client.Close();
 
 	ov::ByteStream recv_stream(recv_data.get());
 	StunMessage recv_message;
