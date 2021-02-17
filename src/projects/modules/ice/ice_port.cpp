@@ -1079,7 +1079,7 @@ bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remot
 	//TODO(Getroot): Check validation and refresh timer
 
 	StunMessage response_message;
-	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::ChannelBind, message.GetTransactionId());
+	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::Refresh, message.GetTransactionId());
 	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
 
 	return true;
