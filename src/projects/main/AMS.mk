@@ -14,6 +14,7 @@ LOCAL_STATIC_LIBRARIES := \
 	rtspc_provider \
 	transcoder \
 	rtc_signalling \
+	address_utilities \
 	ice \
 	api_server \
 	bitstream \

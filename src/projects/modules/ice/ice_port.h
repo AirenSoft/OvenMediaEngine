@@ -94,7 +94,7 @@ public:
 	IcePort();
 	~IcePort() override;
 
-	bool CreateTurnServer(ov::String relay_ip, uint16_t listening_port, ov::SocketType socket_type);
+	bool CreateTurnServer(uint16_t listening_port, ov::SocketType socket_type);
 	bool CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_list);
 
 	const std::vector<RtcIceCandidate> &GetIceCandidateList() const;
@@ -189,7 +189,6 @@ private:
 	bool ProcessTurnChannelBindRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &packet_info, const StunMessage &message);
 
 	// Related TURN
-	ov::String _relay_ip;
 	std::shared_ptr<ov::Data> _hmac_key;
 	// Creating an attribute to be used in advance
 	std::shared_ptr<StunAttribute>	_realm_attribute;

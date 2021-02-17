@@ -99,7 +99,7 @@ bool WebRtcPublisher::Start()
 		}
 		else
 		{
-			if(IcePortManager::GetInstance()->CreateTurnServer(_ice_port, items[0], std::atoi(items[1]), ov::SocketType::Tcp) == false)
+			if(IcePortManager::GetInstance()->CreateTurnServer(_ice_port, std::atoi(items[1]), ov::SocketType::Tcp) == false)
 			{
 				logte("Could not create Turn Server. Check your configuration");
 				result = false;

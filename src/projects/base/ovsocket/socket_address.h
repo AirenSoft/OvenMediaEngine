@@ -9,8 +9,6 @@
 #pragma once
 
 #include "./socket_datastructure.h"
-#include "./socket_utilities.h"
-
 #include "../ovlibrary/string.h"
 
 namespace ov

@@ -9,6 +9,7 @@
 #include "ice_port_manager.h"
 #include "ice_private.h"
 
+#include <modules/address/address_utilities.h>
 #include <modules/rtc_signalling/rtc_ice_candidate.h>
 
 
@@ -57,9 +58,9 @@ bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePort> ice_port, cons
 	return true;
 }
 
-bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePort> ice_port, ov::String relay_ip, uint16_t listening_port, const ov::SocketType socket_type)
+bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePort> ice_port, uint16_t listening_port, const ov::SocketType socket_type)
 {
-	if(ice_port->CreateTurnServer(relay_ip, listening_port, socket_type) == false)
+	if(ice_port->CreateTurnServer(listening_port, socket_type) == false)
 	{
 		ice_port->Close();
 		ice_port = nullptr;
@@ -69,7 +70,7 @@ bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePort> ice_port, ov::Str
 	}
 	else
 	{
-		logti("RelayServer is created successfully: %s:%d?transport=tcp", relay_ip.CStr(), listening_port);
+		logti("RelayServer is created successfully: host:%d?transport=tcp", listening_port);
 	}
 	
 	return true;
@@ -264,7 +265,7 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 	if(ip == "*")
 	{
 		// multiple ip
-		auto local_ip_list = ov::SocketUtilities::GetIpList();
+		auto local_ip_list = ov::AddressUtilities::GetInstance()->GetIpList();
 
 		ip_list->insert(ip_list->end(), local_ip_list.cbegin(), local_ip_list.cend());
 	}

@@ -12,8 +12,8 @@
 #include <config/config_manager.h>
 #include <modules/ice/ice.h>
 #include <modules/ice/ice_port.h>
+#include <modules/address/address_utilities.h>
 #include <publishers/webrtc/webrtc_publisher.h>
-
 #include <utility>
 
 #include "rtc_ice_candidate.h"
@@ -57,9 +57,36 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 		if (tcp_relay_parsed)
 		{
 			Json::Value ice_server = Json::objectValue;
-
 			Json::Value urls = Json::arrayValue;
-			urls.append(ov::String::FormatString("turn:%s?transport=tcp", tcp_relay_address.CStr()).CStr());
+
+			// <TcpRelay>IP:Port</TcpRelay>
+			// <TcpRelay>*:Port</TcpRelay>
+			// <TcpRelay>${PublicIP}:Port</TcpRelay>
+			// Check tcp_relay_address is * or ${PublicIP}
+			auto address_items = tcp_relay_address.Split(":");
+			if(address_items.size() != 2)
+			{
+				
+			}
+
+			if(address_items[0] == "*")
+			{
+				auto ip_list = ov::AddressUtilities::GetInstance()->GetIpList();
+				for(const auto& ip : ip_list)
+				{
+					urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", ip.CStr(), address_items[1].CStr()).CStr());
+				}
+			}
+			else if(address_items[0].UpperCaseString() == "${PublicIP}")
+			{
+				auto public_ip = ov::AddressUtilities::GetInstance()->GetMappedAddress();
+				urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", public_ip->GetIpAddress().CStr(), address_items[1].CStr()).CStr());
+			}
+			else
+			{
+				urls.append(ov::String::FormatString("turn:%s?transport=tcp", tcp_relay_address.CStr()).CStr());
+			}
+
 			ice_server["urls"] = urls;
 
 			// Embedded turn server has fixed user_name and credential. Security is provided by signed policy after this. This is because the embedded turn server does not relay other servers and only transmits the local stream to tcp when transmitting to webrtc.

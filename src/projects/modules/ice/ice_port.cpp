@@ -102,7 +102,7 @@ bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_lis
 	return succeeded;
 }
 
-bool IcePort::CreateTurnServer(ov::String relay_ip, uint16_t listening_port, ov::SocketType socket_type)
+bool IcePort::CreateTurnServer(uint16_t listening_port, ov::SocketType socket_type)
 {
 	// {[Browser][WebRTC][TURN Client]} <----(TCP)-----> {[TURN Server][OvenMediaEngine]}
 
@@ -119,8 +119,6 @@ bool IcePort::CreateTurnServer(ov::String relay_ip, uint16_t listening_port, ov:
 	// Player --[TURN/TCP]--> [TurnServer(OME) --[Fucntion Call not udp send]--> Peer(OME)]
 	// Player <--[TURN/TCP]-- [TurnServer(OME) <--[Fucntion Call not udp send]-- Peer(OME)]
 
-	// The relay ip may not be the local ip, so do not listen to relay ip.
-	_relay_ip = relay_ip;
 	ov::SocketAddress address(listening_port);
 	auto physical_port = CreatePhysicalPort(address, socket_type);
 	if (physical_port == nullptr)
@@ -156,10 +154,10 @@ bool IcePort::CreateTurnServer(ov::String relay_ip, uint16_t listening_port, ov:
 	_software_attribute = std::move(software_attribute);
 
 	// Add XOR-RELAYED-ADDRESS attribute
-	// This is the player's candidate and eventually passed to OME. 
+	// This is the player's candidate and passed to OME.
 	// However, OME does not use the player's candidate. So we pass anything by this value.
 	auto xor_relayed_address_attribute = std::make_shared<StunXorRelayedAddressAttribute>();
-	xor_relayed_address_attribute->SetParameters(ov::SocketAddress(_relay_ip, DEFAULT_RELAY_PORT));
+	xor_relayed_address_attribute->SetParameters(ov::SocketAddress("1.1.1.1", DEFAULT_RELAY_PORT));
 	_xor_relayed_address_attribute = std::move(xor_relayed_address_attribute);
 
 	auto lifetime_attribute = std::make_shared<StunLifetimeAttribute>();
@@ -495,7 +493,8 @@ void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov
 		// If remote protocol is tcp, it must be TURN
 		if(_demultiplexers.find(remote->GetId()) == _demultiplexers.end())
 		{
-			logte("TCP packet input but cannot find the demultiplexer of %s.", remote->ToString().CStr());
+			// If the client disconnects at this time, it cannot be found.
+			logtd("TCP packet input but cannot find the demultiplexer of %s.", remote->ToString().CStr());
 			return;
 		}
 

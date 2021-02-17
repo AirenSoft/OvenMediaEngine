@@ -6,21 +6,53 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "./socket_utilities.h"
-#include "./socket_address.h"
+#include "address_utilities.h"
 
+#include <modules/ice/stun_client.h>
 #include <ifaddrs.h>
 
 namespace ov
 {
-	std::vector<ov::String> SocketUtilities::GetIpList()
+	bool AddressUtilities::ResolveMappedAddress(const ov::String &stun_server_addr)
+	{
+		auto addr_items = stun_server_addr.Split(":");
+		if(addr_items.size() != 2)
+		{
+			return false;
+		}
+
+		return ResolveMappedAddress(ov::SocketAddress(addr_items[0], std::atoi(addr_items[1])));
+	}
+
+	bool AddressUtilities::ResolveMappedAddress(const ov::SocketAddress &stun_server_addr)
+	{
+		ov::SocketAddress mapped_address;
+
+		if(StunClient::GetMappedAddress(stun_server_addr, mapped_address) == true)
+		{
+			_mapped_address = std::make_shared<ov::SocketAddress>(mapped_address);
+			return true;
+		}
+
+		return false;
+	}
+
+	std::shared_ptr<ov::SocketAddress> AddressUtilities::GetMappedAddress()
+	{
+		return _mapped_address;
+	}
+
+	std::vector<ov::String> AddressUtilities::GetIpList(bool include_mapped_address)
 	{
 		std::vector<ov::String> list;
 
+		if(include_mapped_address == true && _mapped_address != nullptr)
+		{
+			list.emplace_back(_mapped_address->GetIpAddress());
+		}
+
 		struct ifaddrs *interfaces = nullptr;
-
 		int result = ::getifaddrs(&interfaces);
-
 		if(result == 0)
 		{
 			struct ifaddrs *temp_addr = interfaces;

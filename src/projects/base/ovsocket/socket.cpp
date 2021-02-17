@@ -1561,7 +1561,10 @@ namespace ov
 					logtd("[%p] [#%d] %zd bytes read", this, _socket.GetSocket(), read_bytes);
 
 					data->SetLength(read_bytes);
-					*address = std::make_shared<ov::SocketAddress>(remote);
+					if(address != nullptr)
+					{
+						*address = std::make_shared<ov::SocketAddress>(remote);
+					}
 				}
 				break;
 			}

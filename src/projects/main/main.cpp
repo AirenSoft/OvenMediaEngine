@@ -19,6 +19,7 @@
 #include <publishers/publishers.h>
 #include <transcode/transcoder.h>
 #include <web_console/web_console.h>
+#include <modules/address/address_utilities.h>
 
 #include "banner.h"
 #include "init_utilities.h"
@@ -62,9 +63,23 @@ int main(int argc, char *argv[])
 	PrintBanner();
 
 	auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
-
 	auto orchestrator = ocst::Orchestrator::GetInstance();
 	auto monitor = mon::Monitoring::GetInstance();
+
+	// Get public IP
+	bool stun_server_parsed;
+	auto stun_server_address = server_config->GetStunServer(&stun_server_parsed);
+	if(stun_server_parsed)
+	{
+		if(ov::AddressUtilities::GetInstance()->ResolveMappedAddress(stun_server_address) == true)
+		{
+			logti("Resolved public IP address (%s) from stun server (%s)", ov::AddressUtilities::GetInstance()->GetMappedAddress()->GetIpAddress().CStr(), stun_server_address.CStr());
+		}
+		else
+		{
+			logtw("Could not resolve public IP address from stun server (%s)", stun_server_address.CStr());
+		}
+	}
 
 	// Create info::Host list
 	std::vector<info::Host> host_info_list;

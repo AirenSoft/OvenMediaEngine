@@ -299,7 +299,6 @@ namespace ov
 
 		virtual bool SetSockOpt(SRT_SOCKOPT option, const void *value, int value_length);
 
-		// 현재 소켓의 접속 상태
 		SocketState GetState() const;
 
 		void SetState(SocketState state);
@@ -314,27 +313,19 @@ namespace ov
 			return _socket.GetSocket();
 		}
 
-		// 소켓 타입
 		SocketType GetType() const;
 
-		// 데이터 송신
 		virtual ssize_t Send(const void *data, size_t length);
 		virtual ssize_t Send(const std::shared_ptr<const Data> &data);
 
 		virtual ssize_t SendTo(const ov::SocketAddress &address, const void *data, size_t length);
 		virtual ssize_t SendTo(const ov::SocketAddress &address, const std::shared_ptr<const Data> &data);
 
-		// 데이터 수신
-		// 최대 ByteData의 capacity만큼 데이터를 기록
-		// false가 반환되면 error를 체크해야 함
 		virtual std::shared_ptr<ov::Error> Recv(std::shared_ptr<Data> &data);
 		virtual std::shared_ptr<ov::Error> Recv(void *data, size_t length, size_t *received_length, bool non_block=false);
 
-		// 최대 ByteData의 capacity만큼 데이터를 기록
-		// nullptr이 반환되면 errno를 체크해야 함
 		virtual std::shared_ptr<ov::Error> RecvFrom(std::shared_ptr<Data> &data, std::shared_ptr<ov::SocketAddress> *address);
 
-		// 소켓을 닫음
 		virtual bool Close();
 
 		virtual String GetStat() const;
