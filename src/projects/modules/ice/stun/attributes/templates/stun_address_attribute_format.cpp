@@ -145,7 +145,7 @@ bool StunAddressAttributeFormat::Serialize(ov::ByteStream &stream) const noexcep
 
 ov::String StunAddressAttributeFormat::ToString(const char *class_name) const
 {
-	return StunAttribute::ToString(class_name, ov::String::FormatString(", address: %s", _address.GetIpAddress().CStr()).CStr());
+	return StunAttribute::ToString(class_name, ov::String::FormatString(", address: %s:%d", _address.GetIpAddress().CStr(), GetPort()).CStr());
 }
 
 ov::String StunAddressAttributeFormat::ToString() const

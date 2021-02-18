@@ -155,6 +155,9 @@ std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType 
 		case StunAttributeType::ChannelNumber:
 			attribute = std::make_shared<StunChannelNumberAttribute>(length);
 			break;
+		case StunAttributeType::Lifetime:
+			attribute = std::make_shared<StunLifetimeAttribute>(length);
+			break;
 		case StunAttributeType::Data:
 			attribute = std::make_shared<StunDataAttribute>(length);
 			break;

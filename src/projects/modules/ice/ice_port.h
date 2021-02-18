@@ -20,12 +20,14 @@
 #include <modules/rtp_rtcp/rtcp_packet.h>
 #include <modules/physical_port/physical_port_manager.h>
 
+
 #define DEFAULT_RELAY_REALM		"airensoft"
 #define DEFAULT_RELAY_USERNAME	"ome"
 #define DEFAULT_RELAY_KEY		"airen"
 // This is the player's candidate and eventually passed to OME. 
 // However, OME does not use the player's candidate. So we pass anything by this value.
-#define DEFAULT_RELAY_PORT		14090
+#define FAKE_RELAY_IP			"1.1.1.1"
+#define FAKE_RELAY_PORT			14090
 
 class RtcIceCandidate;
 
@@ -47,6 +49,11 @@ protected:
 		ov::SocketAddress peer_address;
 		// If this packet is from a turn data channel, store the channel number.
 		uint16_t channel_number = 0;
+
+		ov::String ToString()
+		{
+			return ov::String::FormatString("Packet type : %d GateType : %d", packet_type, input_method);
+		}
 	};
 	// A data structure to tracking client connection status
 	struct IcePortInfo

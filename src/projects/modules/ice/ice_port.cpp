@@ -157,11 +157,11 @@ bool IcePort::CreateTurnServer(uint16_t listening_port, ov::SocketType socket_ty
 	// This is the player's candidate and passed to OME.
 	// However, OME does not use the player's candidate. So we pass anything by this value.
 	auto xor_relayed_address_attribute = std::make_shared<StunXorRelayedAddressAttribute>();
-	xor_relayed_address_attribute->SetParameters(ov::SocketAddress("1.1.1.1", DEFAULT_RELAY_PORT));
+	xor_relayed_address_attribute->SetParameters(ov::SocketAddress(FAKE_RELAY_IP, FAKE_RELAY_PORT));
 	_xor_relayed_address_attribute = std::move(xor_relayed_address_attribute);
 
 	auto lifetime_attribute = std::make_shared<StunLifetimeAttribute>();
-	lifetime_attribute->SetValue(600);
+	lifetime_attribute->SetValue(3600);
 	_lifetime_attribute = std::move(lifetime_attribute);
 
 	return true;
@@ -524,6 +524,8 @@ void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov
 
 void IcePort::OnPacketReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const std::shared_ptr<const ov::Data> &data)
 {
+	logtd("OnPacketReceived : %s", gate_info.ToString().CStr());
+
 	switch(gate_info.packet_type)
 	{
 		case IcePacketIdentifier::PacketType::TURN_CHANNEL_DATA:
@@ -678,16 +680,17 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 
 	logtd("Client %s sent STUN binding request: %s:%s", address.ToString().CStr(), local_ufrag.CStr(), remote_ufrag.CStr());
 
+	
 	std::shared_ptr<IcePortInfo> ice_port_info;
 	{
 		// WebRTC Publisher registers ufrag with session information 
 		// through IcePort::AddSession function after signaling with player
-		std::lock_guard<std::mutex> lock_guard(_user_mapping_table_mutex);
+		std::unique_lock<std::mutex> lock_guard(_user_mapping_table_mutex);
 		auto info = _user_mapping_table.find(local_ufrag);
 		if (info == _user_mapping_table.end())
 		{
 			// Stun may arrive first before AddSession, it is not an error
-			logtd("User not found: %s (AddSession() needed)", local_ufrag.CStr());
+			logte("User not found: %s (AddSession() needed)", local_ufrag.CStr());
 			return false;
 		}
 
@@ -733,7 +736,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		if(gate_info.input_method != GateInfo::GateType::DIRECT)
 		{
 			ice_port_info->is_turn_client = true;
-			if(gate_info.input_method != GateInfo::GateType::DATA_CHANNEL)
+			if(gate_info.input_method == GateInfo::GateType::DATA_CHANNEL)
 			{
 				ice_port_info->is_data_channel_enabled = true;
 				ice_port_info->data_channle_number = gate_info.channel_number;
@@ -768,8 +771,18 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		response_message.SetHeader(StunClass::SuccessResponse, StunMethod::Binding, message.GetTransactionId());
 
 		// Add XOR-MAPPED-ADDRESS attribute
+		// If client is relay, then use relay IP/port
 		auto xor_mapped_attribute = std::make_shared<StunXorMappedAddressAttribute>();
-		xor_mapped_attribute->SetParameters(address);
+		
+		if(gate_info.input_method == GateInfo::GateType::DIRECT)
+		{
+			xor_mapped_attribute->SetParameters(address);
+		}
+		else
+		{
+			xor_mapped_attribute->SetParameters(ov::SocketAddress(FAKE_RELAY_IP, FAKE_RELAY_PORT));
+		}
+
 		response_message.AddAttribute(std::move(xor_mapped_attribute));
 
 		// TODO: apply SASLprep(password)
@@ -856,6 +869,7 @@ bool IcePort::ProcessStunBindingResponse(const std::shared_ptr<ov::Socket> &remo
 			// Related information must be saved in the previous step
 			// If connection requests for the same ufrag come from different ICE candidates at the same time, 
 			// the first ICE candidate that arrives is saved
+			logtw("Could not find ice port information");
 			return false;
 		}
 
@@ -891,7 +905,7 @@ bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const o
 		source_data = message.Serialize(integity_key);
 	}
 	
-	//TODO(Getroot): Send by selecting TURN channel, Data Indication or just Stun message
+	logti("Send message:\n%s", message.ToString().CStr());
 
 	if(gate_info.input_method == IcePort::GateInfo::GateType::DIRECT)
 	{
@@ -931,7 +945,11 @@ const std::shared_ptr<const ov::Data> IcePort::CreateDataIndication(ov::SocketAd
 
 	send_indication_message.AddAttribute(_software_attribute);
 
-	return send_indication_message.Serialize();
+	auto send_data = send_indication_message.Serialize();
+
+	logtd("Send Data Indication:\n%s", send_indication_message.ToString().CStr());
+
+	return send_data;
 }
 
 const std::shared_ptr<const ov::Data> IcePort::CreateChannelDataMessage(uint16_t channel_number, const std::shared_ptr<const ov::Data> &data)
