@@ -315,7 +315,7 @@ namespace ov
 		}
 
 		// Append messages
-		log.AppendVFormat(format, &(arg_list[0]));
+		log.AppendVFormat(format, arg_list);
 		if (show_format)
 		{
 			if (level < OVLogLevelWarning)
