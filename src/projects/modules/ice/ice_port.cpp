@@ -690,7 +690,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		if (info == _user_mapping_table.end())
 		{
 			// Stun may arrive first before AddSession, it is not an error
-			logte("User not found: %s (AddSession() needed)", local_ufrag.CStr());
+			logtd("User not found: %s (AddSession() needed)", local_ufrag.CStr());
 			return false;
 		}
 
@@ -905,7 +905,7 @@ bool IcePort::SendStunMessage(const std::shared_ptr<ov::Socket> &remote, const o
 		source_data = message.Serialize(integity_key);
 	}
 	
-	logti("Send message:\n%s", message.ToString().CStr());
+	logtd("Send message:\n%s", message.ToString().CStr());
 
 	if(gate_info.input_method == IcePort::GateInfo::GateType::DIRECT)
 	{
