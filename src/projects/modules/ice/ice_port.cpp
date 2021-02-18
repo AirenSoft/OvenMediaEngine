@@ -160,10 +160,6 @@ bool IcePort::CreateTurnServer(uint16_t listening_port, ov::SocketType socket_ty
 	xor_relayed_address_attribute->SetParameters(ov::SocketAddress(FAKE_RELAY_IP, FAKE_RELAY_PORT));
 	_xor_relayed_address_attribute = std::move(xor_relayed_address_attribute);
 
-	auto lifetime_attribute = std::make_shared<StunLifetimeAttribute>();
-	lifetime_attribute->SetValue(3600);
-	_lifetime_attribute = std::move(lifetime_attribute);
-
 	return true;
 }
 
@@ -1007,8 +1003,19 @@ bool IcePort::ProcessTurnAllocateRequest(const std::shared_ptr<ov::Socket> &remo
 	xor_mapped_address_attribute->SetParameters(address);
 	response_message.AddAttribute(std::move(xor_mapped_address_attribute));
 
+	// Add lifetime
+	uint32_t lifetime = DEFAULT_LIFETIME;
+	auto requested_lifetime_attribute = message.GetAttribute<StunLifetimeAttribute>(StunAttributeType::Lifetime);
+	if(requested_lifetime_attribute != nullptr)
+	{
+		lifetime = std::min(static_cast<uint32_t>(DEFAULT_LIFETIME), requested_lifetime_attribute->GetValue());
+	}
+
+	auto lifetime_attribute = std::make_shared<StunLifetimeAttribute>();
+	lifetime_attribute->SetValue(lifetime);
+	response_message.AddAttribute(lifetime_attribute);
+
 	response_message.AddAttribute(_xor_relayed_address_attribute);
-	response_message.AddAttribute(_lifetime_attribute);
 	response_message.AddAttribute(_software_attribute);
 	
 	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
@@ -1094,10 +1101,28 @@ bool IcePort::ProcessTurnChannelBindRequest(const std::shared_ptr<ov::Socket> &r
 
 bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, GateInfo &gate_info, const StunMessage &message)
 {
-	//TODO(Getroot): Check validation and refresh timer
-
 	StunMessage response_message;
+
+	auto requested_lifetime_attr = message.GetAttribute<StunLifetimeAttribute>(StunAttributeType::Lifetime);
+	if(requested_lifetime_attr == nullptr)
+	{
+		response_message.SetHeader(StunClass::ErrorResponse, StunMethod::Refresh, message.GetTransactionId());
+		response_message.SetErrorCodeAttribute(StunErrorCode::BadRequest);
+		SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
+		return false;
+	}
+
+	// Add lifetime
+	uint32_t lifetime = DEFAULT_LIFETIME;
+
+	lifetime = std::min(static_cast<uint32_t>(DEFAULT_LIFETIME), requested_lifetime_attr->GetValue());
+
+	auto lifetime_attribute = std::make_shared<StunLifetimeAttribute>();
+	lifetime_attribute->SetValue(lifetime);
+	response_message.AddAttribute(lifetime_attribute);
+
 	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::Refresh, message.GetTransactionId());
+	response_message.AddAttribute(lifetime_attribute);
 	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
 
 	return true;

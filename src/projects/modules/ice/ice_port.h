@@ -24,6 +24,7 @@
 #define DEFAULT_RELAY_REALM		"airensoft"
 #define DEFAULT_RELAY_USERNAME	"ome"
 #define DEFAULT_RELAY_KEY		"airen"
+#define DEFAULT_LIFETIME		3600
 // This is the player's candidate and eventually passed to OME. 
 // However, OME does not use the player's candidate. So we pass anything by this value.
 #define FAKE_RELAY_IP			"1.1.1.1"
@@ -202,8 +203,6 @@ private:
 	std::shared_ptr<StunAttribute>	_software_attribute;
 	std::shared_ptr<StunAttribute>	_nonce_attribute;
 	std::shared_ptr<StunAttribute>	_xor_relayed_address_attribute;
-	std::shared_ptr<StunAttribute>	_lifetime_attribute;
-
 
 	std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 	std::recursive_mutex _physical_port_list_mutex;
