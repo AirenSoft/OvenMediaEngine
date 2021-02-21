@@ -61,8 +61,6 @@ namespace ov
 		/// Example 4) If the level is info and is_enabled is true, ov::Log doesn't display the debug logs, and it displays the logs from information to critical level.
 		bool SetEnable(const char *tag_regex, OVLogLevel level, bool is_enabled);
 
-		int64_t GetThreadId();
-
 		void Log(bool show_format, OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, va_list &arg_list);
 
 		void SetLogPath(const char *log_path);
