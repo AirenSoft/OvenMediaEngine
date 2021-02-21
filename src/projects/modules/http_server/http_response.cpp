@@ -77,8 +77,10 @@ bool HttpResponse::AppendData(const std::shared_ptr<const ov::Data> &data)
 
 	std::lock_guard<decltype(_response_mutex)> lock(_response_mutex);
 
-	_response_data_list.push_back(data);
-	_response_data_size += data->GetLength();
+	auto cloned_data = data->Clone();
+
+	_response_data_list.push_back(cloned_data);
+	_response_data_size += cloned_data->GetLength();
 
 	return true;
 }
@@ -164,7 +166,7 @@ bool HttpResponse::Send(const std::shared_ptr<const ov::Data> &data)
 
 	if (_tls_data == nullptr)
 	{
-		send_data = data;
+		send_data = data->Clone();
 	}
 	else
 	{
