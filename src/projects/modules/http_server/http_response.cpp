@@ -7,14 +7,15 @@
 //
 //==============================================================================
 #include "http_response.h"
-#include "http_client.h"
-#include "http_private.h"
+
+#include <base/ovsocket/ovsocket.h>
 
 #include <algorithm>
 #include <memory>
 #include <utility>
 
-#include <base/ovsocket/ovsocket.h>
+#include "http_client.h"
+#include "http_private.h"
 
 HttpResponse::HttpResponse(const std::shared_ptr<ov::ClientSocket> &client_socket)
 	: _client_socket(client_socket)

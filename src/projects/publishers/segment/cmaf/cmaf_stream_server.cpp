@@ -72,7 +72,7 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 			response->SetChunkedTransfer();
 
 			// Append data to HTTP response
-			response->AppendData(chunk_item->second->chunked_data);
+			response->AppendData(chunk_item->second->chunked_data->Clone());
 			auto sent_bytes = response->Response();
 
 			IncreaseBytesOut(client, sent_bytes);

@@ -32,8 +32,8 @@ public:
 	virtual bool AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet) = 0;
 
 	// Deprecated API - Only used in CmafPacketizer
-	virtual bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame) = 0;
-	virtual bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame) = 0;
+	virtual bool AppendVideoFrame(const std::shared_ptr<const PacketizerFrameData> &frame) = 0;
+	virtual bool AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &frame) = 0;
 
 	virtual std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const = 0;
 	// virtual bool SetSegmentData(ov::String file_name, uint64_t duration_in_ms, int64_t timestamp_in_ms, const std::shared_ptr<const ov::Data> &data) = 0;

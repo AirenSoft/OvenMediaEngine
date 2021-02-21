@@ -46,13 +46,13 @@ public:
 	bool AppendVideoFrame(const std::shared_ptr<const MediaPacket> &media_packet) override;
 	bool AppendAudioFrame(const std::shared_ptr<const MediaPacket> &media_packet) override;
 
-	bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame) override
+	bool AppendVideoFrame(const std::shared_ptr<const PacketizerFrameData> &frame) override
 	{
 		OV_ASSERT2(false);
 		return false;
 	}
 
-	bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame) override
+	bool AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &frame) override
 	{
 		OV_ASSERT2(false);
 		return false;

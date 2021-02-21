@@ -46,8 +46,8 @@ public:
 	virtual bool AppendAudioData(const std::shared_ptr<MediaPacket> &media_packet);
 
 	// Child must implement this functions
-	virtual bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &dEncodedFrameata) = 0;
-	virtual bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &data) = 0;
+	virtual bool AppendVideoFrame(const std::shared_ptr<const PacketizerFrameData> &dEncodedFrameata) = 0;
+	virtual bool AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &data) = 0;
 
 	virtual bool GetPlayList(ov::String &play_list) = 0;
 	virtual std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const = 0;

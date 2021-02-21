@@ -24,8 +24,8 @@ public:
 
 public:
 	// Implement StreamPacketizer Interface
-	bool AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &data) override;
-	bool AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &data) override;
+	bool AppendVideoFrame(const std::shared_ptr<const PacketizerFrameData> &data) override;
+	bool AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &data) override;
 	bool GetPlayList(ov::String &play_list) override;
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const override;
 

@@ -153,7 +153,7 @@ static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &s
 #endif	// DEBUG
 }
 
-bool CmafPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &frame, const ov::String &init_file_name)
+bool CmafPacketizer::WriteVideoInitInternal(const std::shared_ptr<const ov::Data> &frame, const ov::String &init_file_name)
 {
 	const uint8_t *srcData = frame->GetDataAs<uint8_t>();
 	size_t dataOffset = 0;
@@ -334,24 +334,24 @@ bool CmafPacketizer::WriteVideoInitInternal(const std::shared_ptr<ov::Data> &fra
 	return true;
 }
 
-bool CmafPacketizer::WriteVideoInit(const std::shared_ptr<ov::Data> &frame_data)
+bool CmafPacketizer::WriteVideoInit(const std::shared_ptr<const ov::Data> &frame_data)
 {
 	return WriteVideoInitInternal(frame_data, CMAF_MPD_VIDEO_FULL_INIT_FILE_NAME);
 }
 
-bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<ov::Data> &frame_data)
+bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<const ov::Data> &frame_data)
 {
 	return WriteAudioInitInternal(frame_data, CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME);
 }
 
-bool CmafPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback)
+bool CmafPacketizer::AppendVideoFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback)
 {
 	if (WriteVideoInitIfNeeded(frame) == false)
 	{
 		return false;
 	}
 
-	auto &data = frame->data;
+	auto data = frame->data;
 
 	// Calculate offset to skip NAL header
 	int offset = (frame->type == PacketizerFrameType::VideoKeyFrame) ? _avc_nal_header_size : GetStartPatternSize(data->GetDataAs<uint8_t>(), data->GetLength());
@@ -390,7 +390,7 @@ bool CmafPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 	// 0x02000000 = 00000010 00000000 00000000 00000000 (sample_depends_on == 2)
 	// 0x01010000 = 00000001 00000001 00000000 00000000 (sample_depends_on == 1, sample_is_non_sync_sample = 1)
 	uint32_t flag = (frame->type == PacketizerFrameType::VideoKeyFrame) ? 0X02000000 : 0X01010000;
-	auto sample_data = std::make_shared<SampleData>(frame->duration, flag, frame->pts, frame->dts, frame->data);
+	auto sample_data = std::make_shared<SampleData>(frame->duration, flag, frame->pts, frame->dts, data);
 
 	bool new_segment_written = false;
 
@@ -436,7 +436,7 @@ bool CmafPacketizer::AppendVideoFrameInternal(std::shared_ptr<PacketizerFrameDat
 	return true;
 }
 
-bool CmafPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback)
+bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback)
 {
 	if (WriteAudioInitIfNeeded(frame) == false)
 	{
@@ -449,7 +449,7 @@ bool CmafPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameDat
 	}
 
 	// Skip ADTS header
-	frame->data = frame->data->Subdata(ADTS_HEADER_SIZE);
+	auto data = frame->data->Subdata(ADTS_HEADER_SIZE);
 
 	bool new_segment_written = false;
 
@@ -476,16 +476,15 @@ bool CmafPacketizer::AppendAudioFrameInternal(std::shared_ptr<PacketizerFrameDat
 	{
 		if (data_callback != nullptr)
 		{
-			data_callback(std::make_shared<SampleData>(frame->duration, frame->pts, frame->dts, frame->data), new_segment_written);
+			data_callback(std::make_shared<SampleData>(frame->duration, frame->pts, frame->dts, data), new_segment_written);
 		}
 	}
 
 	return true;
 }
-
-bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &frame)
+bool CmafPacketizer::AppendVideoFrame(const std::shared_ptr<const PacketizerFrameData> &frame)
 {
-	return AppendVideoFrameInternal(frame, _video_chunk_writer->GetSegmentDuration(), [this, frame](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
+	return AppendVideoFrameInternal(frame, _video_chunk_writer->GetSegmentDuration(), [this](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
 		auto chunk_data = _video_chunk_writer->AppendSample(data);
 
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
@@ -503,7 +502,7 @@ bool CmafPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &fram
 	});
 }
 
-bool CmafPacketizer::WriteAudioInitInternal(const std::shared_ptr<ov::Data> &frame, const ov::String &init_file_name)
+bool CmafPacketizer::WriteAudioInitInternal(const std::shared_ptr<const ov::Data> &frame, const ov::String &init_file_name)
 {
 	// init.m4s does not have duration
 	M4sInitWriter writer(M4sMediaType::Audio, 0, _video_track, _audio_track, nullptr, nullptr);
@@ -527,9 +526,9 @@ bool CmafPacketizer::WriteAudioInitInternal(const std::shared_ptr<ov::Data> &fra
 	return true;
 }
 
-bool CmafPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &frame)
+bool CmafPacketizer::AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &frame)
 {
-	return AppendAudioFrameInternal(frame, _audio_chunk_writer->GetSegmentDuration(), [this, frame](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
+	return AppendAudioFrameInternal(frame, _audio_chunk_writer->GetSegmentDuration(), [this](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
 		auto chunk_data = _audio_chunk_writer->AppendSample(data);
 
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
@@ -612,7 +611,7 @@ bool CmafPacketizer::WriteAudioSegment()
 	return true;
 }
 
-bool CmafPacketizer::WriteVideoInitIfNeeded(std::shared_ptr<PacketizerFrameData> &frame)
+bool CmafPacketizer::WriteVideoInitIfNeeded(const std::shared_ptr<const PacketizerFrameData> &frame)
 {
 	if (_video_key_frame_received)
 	{
@@ -627,7 +626,7 @@ bool CmafPacketizer::WriteVideoInitIfNeeded(std::shared_ptr<PacketizerFrameData>
 	return _video_key_frame_received;
 }
 
-bool CmafPacketizer::WriteAudioInitIfNeeded(std::shared_ptr<PacketizerFrameData> &frame)
+bool CmafPacketizer::WriteAudioInitIfNeeded(const std::shared_ptr<const PacketizerFrameData> &frame)
 {
 	if (_audio_key_frame_received)
 	{

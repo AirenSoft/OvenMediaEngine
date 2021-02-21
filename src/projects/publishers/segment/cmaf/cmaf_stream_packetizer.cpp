@@ -39,7 +39,7 @@ CmafStreamPacketizer::~CmafStreamPacketizer()
 //====================================================================================================
 // Append Video Frame
 //====================================================================================================
-bool CmafStreamPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData> &data)
+bool CmafStreamPacketizer::AppendVideoFrame(const std::shared_ptr<const PacketizerFrameData> &data)
 {
 	return _packetizer->AppendVideoFrame(data);
 }
@@ -47,7 +47,7 @@ bool CmafStreamPacketizer::AppendVideoFrame(std::shared_ptr<PacketizerFrameData>
 //====================================================================================================
 // Append Audi Frame
 //====================================================================================================
-bool CmafStreamPacketizer::AppendAudioFrame(std::shared_ptr<PacketizerFrameData> &data)
+bool CmafStreamPacketizer::AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &data)
 {
 	return _packetizer->AppendAudioFrame(data);
 }
