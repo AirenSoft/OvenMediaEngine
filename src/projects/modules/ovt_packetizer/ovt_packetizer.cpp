@@ -33,7 +33,7 @@ bool OvtPacketizer::PacketizeMessage(uint8_t payload_type, uint64_t timestamp, c
 	while(remained > 0)
 	{
 		uint32_t set_payload_size = std::min(remained, max_payload_size);
-		auto packet = std::make_shared<OvtPacket>();;
+		auto packet = std::make_shared<OvtPacket>();
 
 		packet->SetSessionId(0);
 		packet->SetSequenceNumber(seq_no++);

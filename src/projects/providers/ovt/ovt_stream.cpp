@@ -58,6 +58,7 @@ namespace pvd
 	{
 		Stop();
 		_client_socket.Close();
+		ReleasePacketizer();
 
 		logtd("OvtStream Terminated : %d", GetId());
 	}
@@ -65,8 +66,11 @@ namespace pvd
 	void OvtStream::ReleasePacketizer()
 	{
 		std::lock_guard<std::shared_mutex> mlock(_packetizer_lock);
-		_packetizer->Release();
-		_packetizer.reset();
+		if(_packetizer != nullptr)
+		{
+			_packetizer->Release();
+			_packetizer.reset();
+		}
 	}
 
 	bool OvtStream::Start()
@@ -168,12 +172,12 @@ namespace pvd
 			return false;
 		}
 
-		struct timeval tv = {1, 500000};
+		struct timeval tv = {1, 500000}; // 1.5 sec
 		_client_socket.SetRecvTimeout(tv);
 
 		ov::SocketAddress socket_address(_curr_url->Host(), _curr_url->Port());
 
-		auto error = _client_socket.Connect(socket_address, 1000);
+		auto error = _client_socket.Connect(socket_address, 1500);
 		if (error != nullptr)
 		{
 			_state = State::ERROR;
