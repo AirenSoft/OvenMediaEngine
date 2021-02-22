@@ -18,7 +18,7 @@ OvtPacketizer::OvtPacketizer(const std::shared_ptr<OvtPacketizerInterface> &stre
 
 OvtPacketizer::~OvtPacketizer()
 {
-
+	_stream.reset();
 }
 
 bool OvtPacketizer::PacketizeMessage(uint8_t payload_type, uint64_t timestamp, const std::shared_ptr<ov::Data> &message)

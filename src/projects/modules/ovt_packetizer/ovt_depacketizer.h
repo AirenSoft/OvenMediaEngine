@@ -8,7 +8,7 @@
 #include "ovt_packetizer_interface.h"
 
 #define INIT_PACKET_BUFFER_SIZE		65535
-#define INIT_PAYLOAD_BUFFER_SIZE	1024 * 1024 * 1024 		// 1MB
+#define INIT_PAYLOAD_BUFFER_SIZE	1024 * 1024 		// 1MB
 
 class OvtDepacketizer
 {

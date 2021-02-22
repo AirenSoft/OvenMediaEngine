@@ -60,6 +60,8 @@ namespace pvd
 		bool ReceivePacket(bool non_block = false);
 		std::shared_ptr<ov::Data> ReceiveMessage();
 
+		void ReleasePacketizer();
+
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		std::shared_ptr<const ov::Url>				_curr_url;
 
@@ -70,6 +72,7 @@ namespace pvd
 		int64_t _origin_request_time_msec = 0;
 		int64_t _origin_response_time_msec = 0;
 
+		std::shared_mutex	_packetizer_lock;
 		std::shared_ptr<OvtPacketizer>	_packetizer;
 		OvtDepacketizer _depacketizer;
 		std::shared_ptr<mon::StreamMetrics> _stream_metrics;

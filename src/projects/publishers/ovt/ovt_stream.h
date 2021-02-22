@@ -35,7 +35,7 @@ private:
 	uint32_t							_worker_count = 0;
 
 	Json::Value							_description;
-	std::mutex 							_packetizer_lock;
+	std::shared_mutex					_packetizer_lock;
 	std::shared_ptr<OvtPacketizer>		_packetizer;
 	
 	std::shared_ptr<mon::StreamMetrics>		_stream_metrics;

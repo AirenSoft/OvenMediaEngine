@@ -20,6 +20,11 @@ public:
 	bool IsAvailablePackets();
 	std::shared_ptr<OvtPacket> PopPacket();
 
+	void Release()
+	{
+		_stream.reset();
+	}
+
 private:
 	uint16_t 									_sequence_number;
 	std::shared_ptr<OvtPacketizerInterface> 	_stream = nullptr;
