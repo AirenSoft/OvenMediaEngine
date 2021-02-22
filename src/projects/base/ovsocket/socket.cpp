@@ -448,6 +448,58 @@ namespace ov
 		return true;
 	}
 
+	bool Socket::MakeBlocking()
+	{
+		int result;
+
+		if (_socket.IsValid() == false)
+		{
+			logte("Could not make blocking socket (Invalid socket)");
+			OV_ASSERT2(_socket.IsValid());
+			return false;
+		}
+
+		switch (GetType())
+		{
+			case SocketType::Tcp:
+			case SocketType::Udp:
+			{
+				result = ::fcntl(_socket.GetSocket(), F_GETFL, 0);
+				if (result == -1)
+				{
+					logte("Could not obtain flags from socket %d (%d)", _socket.GetSocket(), result);
+					return false;
+				}
+
+				int flags = result & (~O_NONBLOCK); 
+
+				result = ::fcntl(_socket.GetSocket(), F_SETFL, flags);
+				if (result == -1)
+				{
+					logte("Could not set flags to socket %d (%d)", _socket.GetSocket(), result);
+					return false;
+				}
+
+				_is_nonblock = false;
+				return true;
+			}
+
+			case SocketType::Srt:
+				if (SetSockOpt(SRTO_RCVSYN, true) && SetSockOpt(SRTO_SNDSYN, true))
+				{
+					_is_nonblock = false;
+				}
+
+				return true;
+
+			default:
+				OV_ASSERT(false, "Invalid socket type: %d", GetType());
+				break;
+		}
+
+		return false;		
+	}
+
 	bool Socket::MakeNonBlocking()
 	{
 		int result;
@@ -668,31 +720,96 @@ namespace ov
 		return SocketWrapper();
 	}
 
-	std::shared_ptr<ov::Error> Socket::Connect(const SocketAddress &endpoint, int timeout)
+	std::shared_ptr<ov::Error> Socket::Connect(const SocketAddress &endpoint, int timeout_msec)
 	{
 		OV_ASSERT2(_socket.IsValid());
 		CHECK_STATE(== SocketState::Created, ov::Error::CreateError(EINVAL, "Invalid state: %d", static_cast<int>(_state)));
 
 		std::shared_ptr<ov::Error> error;
 
-		// TODO: timeout 코드 넣기
+		// To set connection timeout
+		bool origin_nonblock_flag = _is_nonblock;
+
 		switch (GetType())
 		{
 			case SocketType::Tcp:
 			case SocketType::Udp:
-				if (::connect(_socket.GetSocket(), endpoint.Address(), endpoint.AddressLength()) == 0)
+			{
+				if(timeout_msec > 0 && timeout_msec < Infinite)
 				{
+					if(origin_nonblock_flag == false)
+					{
+						MakeNonBlocking();
+					}
+				}
+
+				int result = ::connect(_socket.GetSocket(), endpoint.Address(), endpoint.AddressLength());
+				if (result == 0)
+				{
+					if(origin_nonblock_flag == false)
+					{
+						MakeBlocking();
+					}
+
 					SetState(SocketState::Connected);
 					return nullptr;
 				}
+				// Check timeout
+				else if (result < 0)
+				{
+					if (errno == EINPROGRESS)
+					{
+						do 
+						{
+							struct timeval tv = {timeout_msec/1000, (timeout_msec%1000) * 1000};
+							fd_set con_fd_set; 
 
+							FD_ZERO(&con_fd_set); 
+							FD_SET(GetSocket().GetSocket(), &con_fd_set); 
+							int select_result = select(GetSocket().GetSocket()+1, NULL, &con_fd_set, NULL, &tv); 
+							if (select_result < 0) 
+							{ 
+								break;
+							} 
+							else if (select_result > 0) 
+							{ 
+								// Socket selected for write 
+								socklen_t lon = sizeof(int); 
+								int valopt;
+
+								if (getsockopt(GetSocket().GetSocket(), SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon) < 0) 
+								{ 
+									break;
+								} 
+
+								if (valopt != 0) 
+								{ 
+									break;
+								}
+
+								if(origin_nonblock_flag == false)
+								{
+									MakeBlocking();
+								}
+
+								SetState(SocketState::Connected);
+								return nullptr;
+							} 
+							else 
+							{ 
+								// timeout
+								break;
+							} 
+						} while (true); 
+					}
+				}
+				
 				error = ov::Error::CreateErrorFromErrno();
-
 				break;
-
+			}
 			case SocketType::Srt:
 
-				if (SetSockOpt(SRTO_CONNTIMEO, timeout) == false)
+				if (SetSockOpt(SRTO_CONNTIMEO, timeout_msec) == false)
 				{
 					error = ov::Error::CreateErrorFromSrt();
 				}

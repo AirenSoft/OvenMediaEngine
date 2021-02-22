@@ -248,12 +248,13 @@ namespace ov
 		virtual ~Socket();
 
 		virtual bool Create(SocketType type);
+		virtual bool MakeBlocking();
 		virtual bool MakeNonBlocking();
 
 		virtual bool Bind(const SocketAddress &address);
 		virtual bool Listen(int backlog = SOMAXCONN);
 		virtual SocketWrapper Accept(SocketAddress *client);
-		virtual std::shared_ptr<ov::Error> Connect(const SocketAddress &endpoint, int timeout = Infinite);
+		virtual std::shared_ptr<ov::Error> Connect(const SocketAddress &endpoint, int timeout_msec = Infinite);
 
 		virtual bool SetRecvTimeout(timeval &tv);
 
