@@ -13,6 +13,7 @@ namespace info
 		_created_time = std::chrono::system_clock::now();
 		_transaction_id = "";
 		_id = "";
+		_metadata = "";
 		_stream = nullptr;
 
 		_file_path = "";
@@ -23,7 +24,7 @@ namespace info
 
 		_record_bytes = 0;
 		_record_time = 0;
-
+		_interval = 0;
 		_record_total_bytes = 0;
 		_record_total_time = 0;
 		_sequence = 0;
@@ -48,6 +49,15 @@ namespace info
 	ov::String Record::GetId() const
 	{
 		return _id;
+	}
+
+	void Record::SetMetadata(ov::String metadata)
+	{
+		_metadata = metadata;
+	}
+	ov::String Record::GetMetadata() const
+	{
+		return _metadata;
 	}
 
 	void Record::SetEnable(bool eanble)
@@ -112,7 +122,14 @@ namespace info
 	{
 		return _created_time;
 	}
-
+	void Record::SetInterval(int32_t interval)
+	{
+		_interval = interval;
+	}
+	int32_t Record::GetInterval()
+	{
+		return _interval;
+	}
 	void Record::SetFilePath(ov::String file_path)
 	{
 		_file_path = file_path;

@@ -38,6 +38,7 @@ bool FileExport::ExportRecordToXml(const ov::String path, const std::shared_ptr<
 
 	item.append_child("transactionId").append_child(pugi::node_pcdata).set_value(record->GetTransactionId().CStr());
 	item.append_child("id").append_child(pugi::node_pcdata).set_value(record->GetId().CStr());
+	item.append_child("metadata").append_child(pugi::node_pcdata).set_value(record->GetMetadata().CStr());
 	item.append_child("vhost").append_child(pugi::node_pcdata).set_value(record->GetVhost().CStr());
 	item.append_child("app").append_child(pugi::node_pcdata).set_value(record->GetApplication().CStr());
 	item.append_child("stream").append_child(pugi::node_pcdata).set_value(record->GetStreamName().CStr());
