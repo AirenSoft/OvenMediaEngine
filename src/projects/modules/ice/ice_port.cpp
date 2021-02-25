@@ -232,48 +232,7 @@ ov::String IcePort::GenerateUfrag()
 	}
 }
 
-bool IcePort::AddObserver(std::shared_ptr<IcePortObserver> observer)
-{
-	auto item = std::find_if(_observers.begin(), _observers.end(), [&](std::shared_ptr<IcePortObserver> const &value) -> bool {
-		return value == observer;
-	});
-
-	if (item != _observers.end())
-	{
-		logtw("%p is already observer", observer.get());
-		return false;
-	}
-
-	_observers.push_back(observer);
-
-	return true;
-}
-
-bool IcePort::RemoveObserver(std::shared_ptr<IcePortObserver> observer)
-{
-	auto item = std::find_if(_observers.begin(), _observers.end(), [&](std::shared_ptr<IcePortObserver> const &value) -> bool {
-		return value == observer;
-	});
-
-	if (item == _observers.end())
-	{
-		logtw("%p is not registered observer", observer.get());
-		return false;
-	}
-
-	_observers.erase(item);
-
-	return true;
-}
-
-bool IcePort::RemoveObservers()
-{
-	_observers.clear();
-
-	return true;
-}
-
-void IcePort::AddSession(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp)
+void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, const std::shared_ptr<info::Session> &session_info, std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp)
 {
 	const ov::String &local_ufrag = offer_sdp->GetIceUfrag();
 	const ov::String &remote_ufrag = peer_sdp->GetIceUfrag();
@@ -296,6 +255,7 @@ void IcePort::AddSession(const std::shared_ptr<info::Session> &session_info, std
 
 		std::shared_ptr<IcePortInfo> info = std::make_shared<IcePortInfo>(expire_after_ms);
 
+		info->observer = observer;
 		info->session_info = session_info;
 		info->offer_sdp = offer_sdp;
 		info->peer_sdp = peer_sdp;
@@ -558,12 +518,9 @@ void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &rem
 		logtd("Could not find client information. Dropping...");
 		return;
 	}
-
-	for (auto &observer : _observers)
+	if(ice_port_info->observer != nullptr)
 	{
-		logtd("Trying to callback OnDataReceived() to %p...", observer.get());
-		observer->OnDataReceived(*this, ice_port_info->session_info, data);
-		logtd("OnDataReceived() is returned (%p)", observer.get());
+		ice_port_info->observer->OnDataReceived(*this, ice_port_info->session_info, data);
 	}
 }
 
@@ -1131,9 +1088,10 @@ bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remot
 void IcePort::SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionState state)
 {
 	info->state = state;
-
-	auto func = std::bind(&IcePortObserver::OnStateChanged, std::placeholders::_1, std::ref(*this), std::ref(info->session_info), state);
-	std::for_each(_observers.begin(), _observers.end(), func);
+	if(info->observer != nullptr)
+	{
+		info->observer->OnStateChanged(*this, info->session_info, state);
+	}
 }
 
 ov::String IcePort::ToString() const

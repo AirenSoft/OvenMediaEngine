@@ -26,7 +26,6 @@ public:
 	void OnMessage(const std::shared_ptr<ov::CommonMessage> &message) override;
 
 	// IcePortObserver Implementation
-
 	void OnStateChanged(IcePort &port, const std::shared_ptr<info::Session> &session, IcePortConnectionState state) override;
 	void OnDataReceived(IcePort &port, const std::shared_ptr<info::Session> &session, std::shared_ptr<const ov::Data> data) override;
 
@@ -47,10 +46,7 @@ public:
 					   const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 	                   const std::shared_ptr<const SessionDescription> &offer_sdp,
 	                   const std::shared_ptr<const SessionDescription> &peer_sdp) override;
-
-    uint32_t OnGetBitrate(const std::shared_ptr<WebSocketClient> &ws_client,
-						  const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name) override;
-
+					   
 private:
 	enum class MessageCode : uint32_t
 	{

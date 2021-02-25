@@ -12,6 +12,7 @@ LOCAL_STATIC_LIBRARIES := \
 	rtmp_provider \
 	mpegts_provider \
 	rtspc_provider \
+	webrtc_provider \
 	transcoder \
 	rtc_signalling \
 	address_utilities \

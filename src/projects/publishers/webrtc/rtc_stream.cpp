@@ -186,6 +186,21 @@ bool RtcStream::Start()
 					video_media_desc->SetConnection(4, "0.0.0.0");
 					video_media_desc->SetMid(ov::Random::GenerateString(6));
 					video_media_desc->SetMsid(msid, ov::Random::GenerateString(36));
+					/*
+					https://tools.ietf.org/html/rfc5763#section-5
+					
+					The endpoint MUST use the setup attribute defined in [RFC4145].
+					The endpoint that is the offerer MUST use the setup attribute
+					value of setup:actpass and be prepared to receive a client_hello
+					before it receives the answer.  The answerer MUST use either a
+					setup attribute value of setup:active or setup:passive.  Note that
+					if the answerer uses setup:passive, then the DTLS handshake will
+					not begin until the answerer is received, which adds additional
+					latency. setup:active allows the answer and the DTLS handshake to
+					occur in parallel.  Thus, setup:active is RECOMMENDED.  Whichever
+					party is active MUST initiate a DTLS handshake by sending a
+					ClientHello over each flow (host/port quartet).
+					*/
 					video_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
 					video_media_desc->UseDtls(true);
 					video_media_desc->UseRtcpMux(true);

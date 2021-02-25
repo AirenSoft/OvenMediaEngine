@@ -50,6 +50,7 @@ enum class ProviderType : int8_t
 	RtspPull,
 	Ovt,
 	Mpegts,
+	WebRTC
 };
 
 // Note : If you update PublisherType, you have to update /base/ovlibrary/converter.h:ToString(PublisherType type)
@@ -263,6 +264,8 @@ static ov::String StringFromProviderType(const ProviderType &type)
 			return "OVT";
 		case ProviderType::Mpegts:
 			return "MPEG-TS";
+		case ProviderType::WebRTC:
+			return "WebRTC";
 	}
 
 	return "Unknown";

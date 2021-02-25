@@ -25,7 +25,7 @@ RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config)
 {
 }
 
-bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count)
+bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count, const std::shared_ptr<WebSocketInterceptor> &interceptor)
 {
 	const auto &webrtc_config = _server_config.GetBind().GetPublishers().GetWebrtc();
 
@@ -42,7 +42,7 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("RtcSignallingServer", *address, worker_count) : nullptr;
 	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("RtcSignallingServer", *tls_address, vhost_list, worker_count) : nullptr;
 
-	auto web_socket_interceptor = result ? CreateWebSocketInterceptor() : nullptr;
+	auto web_socket_interceptor = result ? interceptor ? interceptor : CreateWebSocketInterceptor() : nullptr;
 
 	result = result && ((http_server == nullptr) || http_server->AddInterceptor(web_socket_interceptor));
 	result = result && ((https_server == nullptr) || https_server->AddInterceptor(web_socket_interceptor));

@@ -38,23 +38,6 @@ namespace pvd
 		return application->JoinStream(signal_channel);
 	}
 
-	// A data channel must have applicaiton/stream and track informaiton
-	bool PushProvider::PublishDataChannel(uint32_t channel_id, uint32_t signalling_channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<pvd::PushStream> &channel)
-	{
-		// Create stream
-		channel->SetRelatedChannelId(signalling_channel_id);
-
-		auto application = GetApplicationByName(vhost_app_name);
-		if(application == nullptr)
-		{
-			logte("Cannot find %s application to create %s stream", vhost_app_name.CStr(), channel->GetName().CStr());
-		}
-
-		// Notify stream created 
-
-		return false;
-	}
-
 	std::shared_ptr<PushStream> PushProvider::GetChannel(uint32_t channel_id)
 	{
 		std::shared_lock<std::shared_mutex> lock(_channels_lock);

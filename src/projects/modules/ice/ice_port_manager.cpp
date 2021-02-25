@@ -12,27 +12,17 @@
 #include <modules/address/address_utilities.h>
 #include <modules/rtc_signalling/rtc_ice_candidate.h>
 
-
-// std::shared_ptr<IcePort> IcePortManager::CreatePort(const cfg::bind::pub::IceCandidates &ice_candidates, std::shared_ptr<IcePortObserver> observer)
-
-std::shared_ptr<IcePort> IcePortManager::CreatePort(std::shared_ptr<IcePortObserver> observer)
+std::shared_ptr<IcePort> IcePortManager::CreatePort()
 {
-	std::shared_ptr<IcePort> ice_port = nullptr;
-
-	ice_port = std::make_shared<IcePort>();
-	if(ice_port != nullptr)
+	if(_ice_port == nullptr)
 	{
-		ice_port->AddObserver(std::move(observer));
+		_ice_port = std::make_shared<IcePort>();
 	}
-	else
-	{
-		logte("Cannot create ICE port");
-	}
-
-	return ice_port;
+	
+	return _ice_port;
 }
 
-bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePort> ice_port, const cfg::bind::pub::IceCandidates &ice_candidates)
+bool IcePortManager::CreateIceCandidates(const cfg::bind::pub::IceCandidates &ice_candidates)
 {
 	std::vector<RtcIceCandidate> ice_candidate_list;
 
@@ -42,28 +32,26 @@ bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePort> ice_port, cons
 		return false;
 	}
 
-	if(ice_port->CreateIceCandidates(std::move(ice_candidate_list)) == false)
+	if(_ice_port->CreateIceCandidates(std::move(ice_candidate_list)) == false)
 	{
-		ice_port->Close();
-		ice_port = nullptr;
+		Release();
 
 		logte("Could not create ice candidates");
 		OV_ASSERT2(false);
 	}
 	else
 	{
-		logtd("IceCandidates is created successfully: %s", ice_port->ToString().CStr());
+		logtd("IceCandidates is created successfully: %s", _ice_port->ToString().CStr());
 	}
 
 	return true;
 }
 
-bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePort> ice_port, uint16_t listening_port, const ov::SocketType socket_type)
+bool IcePortManager::CreateTurnServer(uint16_t listening_port, const ov::SocketType socket_type)
 {
-	if(ice_port->CreateTurnServer(listening_port, socket_type) == false)
+	if(_ice_port->CreateTurnServer(listening_port, socket_type) == false)
 	{
-		ice_port->Close();
-		ice_port = nullptr;
+		Release();
 
 		logte("Could not create turn server");
 		OV_ASSERT2(false);
@@ -76,26 +64,13 @@ bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePort> ice_port, uint16_
 	return true;
 }
 
-bool IcePortManager::ReleasePort(std::shared_ptr<IcePort> ice_port, std::shared_ptr<IcePortObserver> observer)
+bool IcePortManager::Release()
 {
-	if(observer != nullptr)
+	if(_ice_port != nullptr)
 	{
-		if(ice_port->RemoveObserver(observer) == false)
-		{
-			OV_ASSERT(false, "An error occurred while remove observer: %p", observer.get());
-			return false;
-		}
+		_ice_port->Close();
+		_ice_port = nullptr;
 	}
-	else
-	{
-		if(ice_port->RemoveObservers() == false)
-		{
-			OV_ASSERT(false, "An error occurred while remove observers");
-			return false;
-		}
-	}
-
-	ice_port->Close();
 
 	return true;
 }

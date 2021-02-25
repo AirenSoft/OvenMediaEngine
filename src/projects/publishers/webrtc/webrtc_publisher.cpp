@@ -75,14 +75,14 @@ bool WebRtcPublisher::Start()
 
 	bool result = true;
 
-	_ice_port = IcePortManager::GetInstance()->CreatePort(IcePortObserver::GetSharedPtr());
+	_ice_port = IcePortManager::GetInstance()->CreatePort();
 	if (_ice_port == nullptr)
 	{
 		logte("Could not initialize ICE Port. Check your ICE configuration");
 		result = false;
 	}
 
-	if(IcePortManager::GetInstance()->CreateIceCandidates(_ice_port, webrtc_bind_config.GetIceCandidates()) == false)
+	if(IcePortManager::GetInstance()->CreateIceCandidates(webrtc_bind_config.GetIceCandidates()) == false)
 	{
 		logte("Could not create ICE Candidates. Check your ICE configuration");
 		result = false;
@@ -99,7 +99,7 @@ bool WebRtcPublisher::Start()
 		}
 		else
 		{
-			if(IcePortManager::GetInstance()->CreateTurnServer(_ice_port, std::atoi(items[1]), ov::SocketType::Tcp) == false)
+			if(IcePortManager::GetInstance()->CreateTurnServer(std::atoi(items[1]), ov::SocketType::Tcp) == false)
 			{
 				logte("Could not create Turn Server. Check your configuration");
 				result = false;
@@ -172,7 +172,7 @@ bool WebRtcPublisher::Start()
 
 bool WebRtcPublisher::Stop()
 {
-	IcePortManager::GetInstance()->ReleasePort(_ice_port, IcePortObserver::GetSharedPtr());
+	IcePortManager::GetInstance()->Release();
 
 	_signalling_server->RemoveObserver(RtcSignallingObserver::GetSharedPtr());
 	_signalling_server->Stop();
@@ -470,7 +470,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 			stream_metrics->OnSessionConnected(PublisherType::Webrtc);
 		}
 
-		_ice_port->AddSession(session, offer_sdp, peer_sdp);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), session, offer_sdp, peer_sdp);
 
 		// Session is created
 
@@ -549,33 +549,6 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 	_ice_port->RemoveSession(session);
 
 	return true;
-}
-
-// bitrate info(from signalling)
-uint32_t WebRtcPublisher::OnGetBitrate(const std::shared_ptr<WebSocketClient> &ws_client,
-									   const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name)
-{
-	auto stream = GetStream(vhost_app_name, stream_name);
-	uint32_t bitrate = 0;
-
-	if (!stream)
-	{
-		logte("Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
-		return 0;
-	}
-
-	auto tracks = stream->GetTracks();
-	for (auto &track_iter : tracks)
-	{
-		MediaTrack *track = track_iter.second.get();
-
-		if (track->GetCodecId() == cmn::MediaCodecId::Vp8 || track->GetCodecId() == cmn::MediaCodecId::Opus)
-		{
-			bitrate += track->GetBitrate();
-		}
-	}
-
-	return bitrate;
 }
 
 bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<WebSocketClient> &ws_client,

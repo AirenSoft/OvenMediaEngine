@@ -44,8 +44,4 @@ public:
 							   const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 							   const std::shared_ptr<const SessionDescription> &offer_sdp,
 							   const std::shared_ptr<const SessionDescription> &peer_sdp) = 0;
-
-	// A callback called when client requests bitrate information (currently NOT USED)
-	virtual uint32_t OnGetBitrate(const std::shared_ptr<WebSocketClient> &ws_client,
-								  const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name) = 0;
 };

@@ -21,7 +21,6 @@ namespace pvd
 {
 	class Application;
 	class Stream;
-	// RTMP Server와 같은 모든 Provider는 다음 Interface를 구현하여 MediaRouterInterface에 자신을 등록한다.
 	class Provider : public ocst::ModuleInterface
 	{
 	public:

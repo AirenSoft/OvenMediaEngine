@@ -78,16 +78,6 @@ namespace pvd
 		return _is_published;
 	}
 
-	bool PushStream::PublishDataChannel(const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &data_channel)
-	{
-		if(_provider == nullptr)
-		{
-			return false;
-		}
-
-		return _provider->PublishDataChannel(GetChannelId(), GetRelatedChannelId(), vhost_app_name, data_channel);
-	}
-
 	CheckSignatureResult PushStream::HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy)
 	{
 		if(_provider == nullptr)
