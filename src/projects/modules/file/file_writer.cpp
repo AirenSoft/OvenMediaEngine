@@ -65,7 +65,7 @@ FileWriter::~FileWriter()
 
 bool FileWriter::SetPath(const ov::String path, const ov::String format)
 {
-	std::unique_lock<std::mutex> mlock(_lock);
+	std::lock_guard<std::shared_mutex> mlock(_lock);
 
 	if (path.IsEmpty() == true)
 	{
@@ -109,12 +109,14 @@ bool FileWriter::SetPath(const ov::String path, const ov::String format)
 
 ov::String FileWriter::GetPath()
 {
+	std::shared_lock<std::shared_mutex> mlock(_lock);
+
 	return _path;
 }
 
 bool FileWriter::Start()
 {
-	std::unique_lock<std::mutex> mlock(_lock);
+	std::lock_guard<std::shared_mutex> mlock(_lock);
 
 	AVDictionary *options = nullptr;
 
@@ -152,7 +154,7 @@ bool FileWriter::Start()
 
 bool FileWriter::Stop()
 {
-	std::unique_lock<std::mutex> mlock(_lock);
+	std::lock_guard<std::shared_mutex> mlock(_lock);
 
 	if (_format_context != nullptr)
 	{
@@ -173,7 +175,7 @@ bool FileWriter::Stop()
 
 bool FileWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shared_ptr<FileTrackInfo> track_info)
 {
-	std::unique_lock<std::mutex> mlock(_lock);
+	std::lock_guard<std::shared_mutex> mlock(_lock);
 
 	AVStream *stream = nullptr;
 
@@ -262,7 +264,7 @@ bool FileWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 
 bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, std::shared_ptr<ov::Data> &data)
 {
-	std::unique_lock<std::mutex> mlock(_lock);
+	std::lock_guard<std::shared_mutex> mlock(_lock);
 
 	if (_format_context == nullptr)
 		return false;
@@ -340,7 +342,7 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 
 bool FileWriter::IsWritable()
 {
-	std::unique_lock<std::mutex> mlock(_lock);
+	std::shared_lock<std::shared_mutex> mlock(_lock);
 
 	if (_format_context == nullptr)
 	{

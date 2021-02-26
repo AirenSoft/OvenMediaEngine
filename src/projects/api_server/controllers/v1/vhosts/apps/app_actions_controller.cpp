@@ -59,13 +59,14 @@ namespace api
 			}
 
 			std::vector<std::shared_ptr<info::Record>> records;
-			Json::Value response;
 
 			auto error = publisher->GetRecords(app->GetName(), records);
 			if (error->GetCode() != FilePublisher::FilePublisherStatusCode::Success || records.size() == 0)
 			{
 				return HttpError::CreateError(HttpStatusCode::NoContent, "There is no record information");
 			}
+
+			Json::Value response;
 
 			for (auto &item : records)
 			{
@@ -92,8 +93,11 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
-			record->SetVhost(vhost->GetName().CStr());
-			record->SetApplication(app->GetName().GetAppName());
+			else
+			{
+				record->SetVhost(vhost->GetName().CStr());
+				record->SetApplication(app->GetName().GetAppName());
+			}
 
 			auto error = publisher->RecordStart(app->GetName(), record);
 			if (error->GetCode() == FilePublisher::FilePublisherStatusCode::FailureInvalidParameter)
@@ -128,8 +132,11 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::BadRequest, "Could not parse json context: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
-			record->SetVhost(vhost->GetName().CStr());
-			record->SetApplication(app->GetName().GetAppName());
+			else
+			{
+				record->SetVhost(vhost->GetName().CStr());
+				record->SetApplication(app->GetName().GetAppName());
+			}
 
 			auto error = publisher->RecordStop(app->GetName(), record);
 			if (error->GetCode() == FilePublisher::FilePublisherStatusCode::FailureInvalidParameter)
@@ -242,8 +249,6 @@ namespace api
 			push->SetVhost(vhost->GetName().CStr());
 			push->SetApplication(app->GetName().GetAppName());
 
-			// logte("%s", push->GetInfoString().CStr());
-
 			auto error = publisher->PushStop(app->GetName(), push);
 			if (error->GetCode() == RtmpPushPublisher::PushPublisherErrorCode::FailureInvalidParameter)
 			{
@@ -255,12 +260,6 @@ namespace api
 			}
 
 			return HttpError::CreateError(HttpStatusCode::OK, error->GetMessage());
-
-			// HttpStatusCode status_code = HttpStatusCode::OK;
-			// Json::Value response;
-			// response.append(conv::JsonFromPush(push));
-
-			// return {status_code, std::move(response)};
 		}
 
 		ApiResponse AppActionsController::OnGetDummyAction(const std::shared_ptr<HttpClient> &client,

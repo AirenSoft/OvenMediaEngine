@@ -131,14 +131,6 @@ void FilePublisher::StopSession(std::shared_ptr<FileSession> session)
 		case pub::Session::SessionState::Started:
 			session->Stop();
 			break;
-		case pub::Session::SessionState::Ready:
-			[[fallthrough]];
-		case pub::Session::SessionState::Stopping:
-			[[fallthrough]];
-		case pub::Session::SessionState::Stopped:
-			[[fallthrough]];
-		case pub::Session::SessionState::Error:
-			[[fallthrough]];
 		default:
 			break;
 	}
@@ -148,6 +140,22 @@ void FilePublisher::StopSession(std::shared_ptr<FileSession> session)
 	{
 		logtd("Changed State. State(%d - %d)", session_state, next_session_state);
 	}
+}
+
+void FilePublisher::SplitSession(std::shared_ptr<FileSession> session)
+{
+	auto record_state = session->GetRecord()->GetState();
+
+	switch (record_state)
+	{
+		case info::Record::RecordState::Recording:
+			session->StopRecord();
+			session->StartRecord();
+			break;
+		default:
+			break;
+	}
+
 }
 
 void FilePublisher::SessionController()
@@ -189,6 +197,12 @@ void FilePublisher::SessionController()
 			{
 				StopSession(session);
 			}
+
+			if ((uint64_t)session->GetRecord()->GetInterval() > 0 &&
+				session->GetRecord()->GetRecordTime() > (uint64_t)session->GetRecord()->GetInterval())
+			{
+				SplitSession(session);
+			}
 		}
 		else
 		{
@@ -208,7 +222,7 @@ void FilePublisher::SessionController()
 }
 
 std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &vhost_app_name,
-													  const std::shared_ptr<info::Record> &record)
+													  const std::shared_ptr<info::Record> record)
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
@@ -237,7 +251,7 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 
 		return ov::Error::CreateError(FilePublisherStatusCode::FailureDupulicateKey, error_message);
 	}
-	
+
 	record->SetTransactionId(ov::Random::GenerateString(16));
 	record->SetEnable(true);
 	record->SetRemove(false);
@@ -250,7 +264,7 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 }
 
 std::shared_ptr<ov::Error> FilePublisher::RecordStop(const info::VHostAppName &vhost_app_name,
-													 const std::shared_ptr<info::Record> &record)
+													 const std::shared_ptr<info::Record> record)
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
