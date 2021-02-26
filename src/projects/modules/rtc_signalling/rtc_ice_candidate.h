@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <modules/ice/ice.h>
+#include "modules/ice/ice_candidate.h"
 
 class RtcIceCandidate : public IceCandidate
 {

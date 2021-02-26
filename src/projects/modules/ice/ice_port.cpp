@@ -51,6 +51,9 @@ bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_lis
 
 	for (auto &ice_candidate : ice_candidate_list)
 	{
+		// Find same candidate already created
+		
+
 		auto transport = ice_candidate.GetTransport().UpperCaseString();
 		auto address = ice_candidate.GetAddress();
 		ov::SocketType socket_type = ov::SocketType::Udp;
@@ -92,7 +95,7 @@ bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_lis
 
 	if (succeeded)
 	{
-		_ice_candidate_list = std::move(ice_candidate_list);
+
 	}
 	else
 	{
@@ -163,11 +166,6 @@ bool IcePort::CreateTurnServer(uint16_t listening_port, ov::SocketType socket_ty
 	return true;
 }
 
-const std::vector<RtcIceCandidate> &IcePort::GetIceCandidateList() const
-{
-	return _ice_candidate_list;
-}
-
 std::shared_ptr<PhysicalPort> IcePort::CreatePhysicalPort(const ov::SocketAddress &address, ov::SocketType type)
 {
 	auto physical_port = PhysicalPortManager::GetInstance()->CreatePort(type, address);
@@ -209,7 +207,6 @@ bool IcePort::Close()
 		}
 	}
 
-	_ice_candidate_list.clear();
 	_timer.Stop();
 
 	return result;

@@ -106,9 +106,6 @@ public:
 
 	bool CreateTurnServer(uint16_t listening_port, ov::SocketType socket_type);
 	bool CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_list);
-
-	const std::vector<RtcIceCandidate> &GetIceCandidateList() const;
-
 	bool Close();
 
 	IcePortConnectionState GetState(const std::shared_ptr<info::Session> &session_info) const
@@ -140,6 +137,7 @@ public:
 
 protected:
 	std::shared_ptr<PhysicalPort> CreatePhysicalPort(const ov::SocketAddress &address, ov::SocketType type);
+
 	bool ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, int *start_port, int *end_port);
 
 	//--------------------------------------------------------------------
@@ -199,8 +197,6 @@ private:
 
 	std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 	std::recursive_mutex _physical_port_list_mutex;
-
-	std::vector<RtcIceCandidate> _ice_candidate_list;
 
 	// Mapping table containing related information until STUN binding.
 	// Once binding is complete, there is no need because it can be found by destination ip & port.

@@ -24,24 +24,28 @@ public:
 
 	~IcePortManager() override = default;
 
-	std::shared_ptr<IcePort> CreatePort();
-	bool CreateIceCandidates(const cfg::bind::pub::IceCandidates &ice_candidates);
-	bool CreateTurnServer(uint16_t listening_port, const ov::SocketType socket_type);
+	std::shared_ptr<IcePort> CreatePort(std::shared_ptr<IcePortObserver> observer);
+	bool CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::pub::IceCandidates &ice_candidates);
+	bool CreateTurnServer(std::shared_ptr<IcePortObserver> observer, uint16_t listening_port, const ov::SocketType socket_type);
+
+	const std::vector<RtcIceCandidate> &GetIceCandidateList(const std::shared_ptr<IcePortObserver> &observer) const;
 
 	// TODO(Getroot): In the future, each IceCandidate and TurnServer can be released flexibly.
 	// In the future, each IceCandidate and TurnServer can be released flexibly. 
 	// Currently, WebRTC publisher and provider use IcePortManager until the server is shut down, 
 	// so it is not a problem, but it is necessary if IcePortManager is used in dynamically 
 	// created/deleted modules.
-	bool Release();
+	bool Release(std::shared_ptr<IcePortObserver> observer);
 
 protected:
 	IcePortManager() = default;
 
+	bool IsRegisteredObserver(const std::shared_ptr<IcePortObserver> &observer);
 	bool GenerateIceCandidates(const cfg::bind::pub::IceCandidates &ice_candidates, std::vector<RtcIceCandidate> *parsed_ice_candidate_list);
 	bool ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, int *start_port, int *end_port);
 
 private:
-	
 	std::shared_ptr<IcePort>	_ice_port = nullptr;
+	std::atomic<uint32_t>		_last_issued_observer_id {0};
+	std::vector<std::shared_ptr<IcePortObserver>>	_observers;
 };

@@ -12,18 +12,44 @@
 #include <modules/address/address_utilities.h>
 #include <modules/rtc_signalling/rtc_ice_candidate.h>
 
-std::shared_ptr<IcePort> IcePortManager::CreatePort()
+std::shared_ptr<IcePort> IcePortManager::CreatePort(std::shared_ptr<IcePortObserver> observer)
 {
 	if(_ice_port == nullptr)
 	{
 		_ice_port = std::make_shared<IcePort>();
+
+		observer->_id = _last_issued_observer_id++;
+		_observers.push_back(observer);
 	}
 	
 	return _ice_port;
 }
 
-bool IcePortManager::CreateIceCandidates(const cfg::bind::pub::IceCandidates &ice_candidates)
+bool IcePortManager::IsRegisteredObserver(const std::shared_ptr<IcePortObserver> &observer)
 {
+	for(const auto &item : _observers)
+	{
+		if(item->_id == observer->_id)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+const std::vector<RtcIceCandidate> &IcePortManager::GetIceCandidateList(const std::shared_ptr<IcePortObserver> &observer) const
+{
+	return observer->_ice_candidate_list;
+}
+
+bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::pub::IceCandidates &ice_candidates)
+{
+	if(_ice_port == nullptr || IsRegisteredObserver(observer) == false)
+	{
+		return false;
+	}
+
 	std::vector<RtcIceCandidate> ice_candidate_list;
 
 	if(GenerateIceCandidates(ice_candidates, &ice_candidate_list) == false)
@@ -32,45 +58,60 @@ bool IcePortManager::CreateIceCandidates(const cfg::bind::pub::IceCandidates &ic
 		return false;
 	}
 
-	if(_ice_port->CreateIceCandidates(std::move(ice_candidate_list)) == false)
+	if(_ice_port->CreateIceCandidates(ice_candidate_list) == false)
 	{
-		Release();
+		Release(observer);
 
 		logte("Could not create ice candidates");
 		OV_ASSERT2(false);
 	}
 	else
 	{
+		observer->_ice_candidate_list.insert(observer->_ice_candidate_list.end(), ice_candidate_list.begin(), ice_candidate_list.end());
 		logtd("IceCandidates is created successfully: %s", _ice_port->ToString().CStr());
 	}
 
 	return true;
 }
 
-bool IcePortManager::CreateTurnServer(uint16_t listening_port, const ov::SocketType socket_type)
+bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePortObserver> observer, uint16_t listening_port, const ov::SocketType socket_type)
 {
+	if(_ice_port == nullptr || IsRegisteredObserver(observer) == false)
+	{
+		return false;
+	}
+
 	if(_ice_port->CreateTurnServer(listening_port, socket_type) == false)
 	{
-		Release();
+		Release(observer);
 
 		logte("Could not create turn server");
 		OV_ASSERT2(false);
 	}
 	else
 	{
+		observer->_turn_server_socket_type = socket_type;
+		observer->_turn_server_port = listening_port;
 		logti("RelayServer is created successfully: host:%d?transport=tcp", listening_port);
 	}
 	
 	return true;
 }
 
-bool IcePortManager::Release()
+bool IcePortManager::Release(std::shared_ptr<IcePortObserver> observer)
 {
+	if(IsRegisteredObserver(observer) == false)
+	{
+		return false;
+	}
+
 	if(_ice_port != nullptr)
 	{
 		_ice_port->Close();
 		_ice_port = nullptr;
 	}
+
+	_observers.clear();
 
 	return true;
 }

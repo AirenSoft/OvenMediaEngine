@@ -75,14 +75,14 @@ bool WebRtcPublisher::Start()
 
 	bool result = true;
 
-	_ice_port = IcePortManager::GetInstance()->CreatePort();
+	_ice_port = IcePortManager::GetInstance()->CreatePort(IcePortObserver::GetSharedPtr());
 	if (_ice_port == nullptr)
 	{
 		logte("Could not initialize ICE Port. Check your ICE configuration");
 		result = false;
 	}
 
-	if(IcePortManager::GetInstance()->CreateIceCandidates(webrtc_bind_config.GetIceCandidates()) == false)
+	if(IcePortManager::GetInstance()->CreateIceCandidates(IcePortObserver::GetSharedPtr(), webrtc_bind_config.GetIceCandidates()) == false)
 	{
 		logte("Could not create ICE Candidates. Check your ICE configuration");
 		result = false;
@@ -99,7 +99,7 @@ bool WebRtcPublisher::Start()
 		}
 		else
 		{
-			if(IcePortManager::GetInstance()->CreateTurnServer(std::atoi(items[1]), ov::SocketType::Tcp) == false)
+			if(IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), std::atoi(items[1]), ov::SocketType::Tcp) == false)
 			{
 				logte("Could not create Turn Server. Check your configuration");
 				result = false;
@@ -172,7 +172,7 @@ bool WebRtcPublisher::Start()
 
 bool WebRtcPublisher::Stop()
 {
-	IcePortManager::GetInstance()->Release();
+	IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
 
 	_signalling_server->RemoveObserver(RtcSignallingObserver::GetSharedPtr());
 	_signalling_server->Stop();
@@ -380,7 +380,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		tcp_relay = true;
 	}
 
-	auto &candidates = _ice_port->GetIceCandidateList();
+	auto &candidates = IcePortManager::GetInstance()->GetIceCandidateList(IcePortObserver::GetSharedPtr());
 	ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
 	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
 	session_description->SetOrigin("OvenMediaEngine", ++_last_issued_session_id, 2, "IN", 4, "127.0.0.1");
