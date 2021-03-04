@@ -25,7 +25,7 @@ namespace pvd
     }
 
 	// To be interleaved mode, a channel must have applicaiton/stream and track informaiton
-	bool PushProvider::PublishInterleavedChannel(uint32_t channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &signal_channel)
+	bool PushProvider::PublishChannel(uint32_t channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &channel)
 	{
 		// Append the stream into the application
 		auto application = std::dynamic_pointer_cast<PushApplication>(GetApplicationByName(vhost_app_name));
@@ -35,7 +35,7 @@ namespace pvd
 			return false;
 		}
 
-		return application->JoinStream(signal_channel);
+		return application->JoinStream(channel);
 	}
 
 	std::shared_ptr<PushStream> PushProvider::GetChannel(uint32_t channel_id)
@@ -51,7 +51,7 @@ namespace pvd
 		return it->second;
 	}
 
-	bool PushProvider::OnSignallingChannelCreated(uint32_t channel_id, const std::shared_ptr<pvd::PushStream> &channel)
+	bool PushProvider::OnChannelCreated(uint32_t channel_id, const std::shared_ptr<pvd::PushStream> &channel)
 	{
 		std::lock_guard<std::shared_mutex> lock(_channels_lock);
 

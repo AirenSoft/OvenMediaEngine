@@ -64,7 +64,7 @@ namespace pvd
 		return _stop_watch.Elapsed() / 1000;
 	}
 
-	bool PushStream::PublishInterleavedChannel(const info::VHostAppName &vhost_app_name)
+	bool PushStream::PublishChannel(const info::VHostAppName &vhost_app_name)
 	{
 		if(_provider == nullptr)
 		{
@@ -73,7 +73,7 @@ namespace pvd
 
 		_attemps_publish_count++;
 		
-		_is_published = _provider->PublishInterleavedChannel(GetChannelId(), vhost_app_name, GetSharedPtrAs<PushStream>());
+		_is_published = _provider->PublishChannel(GetChannelId(), vhost_app_name, GetSharedPtrAs<PushStream>());
 
 		return _is_published;
 	}

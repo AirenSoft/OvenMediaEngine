@@ -57,7 +57,7 @@ namespace pvd
 		// app name, stream name, tracks
 		// provider->AssignStream (app)
 		// app-> NotifyStreamReady(this)
-		bool PublishInterleavedChannel(const info::VHostAppName &vhost_app_name);
+		bool PublishChannel(const info::VHostAppName &vhost_app_name);
 		CheckSignatureResult HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy);
 
 	private:

@@ -37,7 +37,6 @@ namespace ov
 		template<typename T>
 		static T GenerateRandom(T min, T max)
 		{
-			//TODO(getroot): 성능상 문제가 생기면 변수를 멤버 변수로 만들어서 사용한다.
 			std::random_device rd;
 			std::mt19937 mt(rd());
 			std::uniform_int_distribution<T> dist(min, max);

@@ -301,7 +301,7 @@ namespace pvd
 		}
 
 		auto stream = MpegTsStream::Create(StreamSourceType::Mpegts, channel_id, stream_port_item->GetVhostAppName(), stream_port_item->GetOutputStreamName(), remote, GetSharedPtrAs<pvd::PushProvider>());
-		if (PushProvider::OnSignallingChannelCreated(remote->GetId(), stream) == true)
+		if (PushProvider::OnChannelCreated(remote->GetId(), stream) == true)
 		{
 			logti("A MPEG-TS client has connected");  // %s", remote->ToString().CStr());
 			stream_port_item->OnClientConnected(channel_id);

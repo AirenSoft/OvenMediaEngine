@@ -12,7 +12,7 @@
 
 namespace pvd
 {
-	std::shared_ptr<WebRTCApplication> WebRTCApplication::Create(const std::shared_ptr<pvd::Provider> &provider, const info::Application &application_info, const std::shared_ptr<IcePort> &ice_port, const std::shared_ptr<RtcSignallingServer> &rtc_signalling)
+	std::shared_ptr<WebRTCApplication> WebRTCApplication::Create(const std::shared_ptr<pvd::PushProvider> &provider, const info::Application &application_info, const std::shared_ptr<IcePort> &ice_port, const std::shared_ptr<RtcSignallingServer> &rtc_signalling)
 	{
 		auto application = std::make_shared<WebRTCApplication>(provider, application_info, ice_port, rtc_signalling);
 		if(application->Start() == false)
@@ -22,8 +22,8 @@ namespace pvd
 		return application;
 	}
 
-	WebRTCApplication::WebRTCApplication(const std::shared_ptr<pvd::Provider> &provider, const info::Application &info, const std::shared_ptr<IcePort> &ice_port, const std::shared_ptr<RtcSignallingServer> &rtc_signalling)
-		: Application(provider, info)
+	WebRTCApplication::WebRTCApplication(const std::shared_ptr<pvd::PushProvider> &provider, const info::Application &info, const std::shared_ptr<IcePort> &ice_port, const std::shared_ptr<RtcSignallingServer> &rtc_signalling)
+		: PushApplication(provider, info)
 	{
 		_ice_port = ice_port;
 		_rtc_signalling = rtc_signalling;
@@ -73,6 +73,8 @@ namespace pvd
 		{
 			return nullptr;
 		}
+
+		//TODO(Getroot): Apply configuration
 
 		auto offer_sdp = std::make_shared<SessionDescription>();
 		offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");

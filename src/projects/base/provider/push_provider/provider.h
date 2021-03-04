@@ -18,8 +18,6 @@
 
 namespace pvd
 {
-	// [Stream] consist of a Signalling Channel and a Data Channel
-
     class PushProvider : public Provider
     {
     public:
@@ -34,7 +32,7 @@ namespace pvd
 		virtual bool Stop() override;
 
 		// To be interleaved mode, a channel must have applicaiton/stream and track informaiton
-		virtual bool PublishInterleavedChannel(uint32_t channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &signal_channel);
+		virtual bool PublishChannel(uint32_t channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &channel);
 
     protected:
 		PushProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
@@ -43,8 +41,8 @@ namespace pvd
 		virtual bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
 
 		// [Interleaved protocols such as RTSP/TCP, RTMP, MPEG-TS]
-		// - OnSignallingChannelCreated() -> [Collect app/stream name and track informaiton] -> PublishInterleavedChannel() -> OnChannelDeleted(Signalling)
-		bool OnSignallingChannelCreated(uint32_t channel_id, const std::shared_ptr<pvd::PushStream> &channel);
+		// - OnChannelCreated() -> [Collect app/stream name and track informaiton] -> PublishChannel() -> OnChannelDeleted(Signalling)
+		bool OnChannelCreated(uint32_t channel_id, const std::shared_ptr<pvd::PushStream> &channel);
 		bool OnDataReceived(uint32_t channel_id, const std::shared_ptr<const ov::Data> &data);
 		bool OnChannelDeleted(uint32_t channel_id);
 		bool OnChannelDeleted(const std::shared_ptr<pvd::PushStream> &channel);

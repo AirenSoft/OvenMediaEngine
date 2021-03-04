@@ -66,8 +66,6 @@ private:
 	bool Start() override;
 	bool DisconnectSessionInternal(const std::shared_ptr<RtcSession> &session);
 
-	std::atomic<session_id_t> _last_issued_session_id { 100 };
-
 	//--------------------------------------------------------------------
 	// Implementation of Publisher
 	//--------------------------------------------------------------------

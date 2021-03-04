@@ -10,8 +10,8 @@
 #pragma once
 
 #include "base/common_types.h"
-#include "base/provider/application.h"
-#include "base/provider/stream.h"
+#include "base/provider/push_provider/application.h"
+#include "base/provider/push_provider/stream.h"
 
 #include "base/ovcrypto/certificate.h"
 #include "modules/ice/ice_port.h"
@@ -19,12 +19,12 @@
 
 namespace pvd
 {
-	class WebRTCApplication : public pvd::Application
+	class WebRTCApplication : public pvd::PushApplication
 	{
 	public:
-		static std::shared_ptr<WebRTCApplication> Create(const std::shared_ptr<pvd::Provider> &provider, const info::Application &application_info, const std::shared_ptr<IcePort> &ice_port, const std::shared_ptr<RtcSignallingServer> &rtc_signalling);
+		static std::shared_ptr<WebRTCApplication> Create(const std::shared_ptr<pvd::PushProvider> &provider, const info::Application &application_info, const std::shared_ptr<IcePort> &ice_port, const std::shared_ptr<RtcSignallingServer> &rtc_signalling);
 
-		explicit WebRTCApplication(const std::shared_ptr<pvd::Provider> &provider, const info::Application &info, const std::shared_ptr<IcePort> &ice_port, const std::shared_ptr<RtcSignallingServer> &rtc_signalling);
+		explicit WebRTCApplication(const std::shared_ptr<pvd::PushProvider> &provider, const info::Application &info, const std::shared_ptr<IcePort> &ice_port, const std::shared_ptr<RtcSignallingServer> &rtc_signalling);
 		~WebRTCApplication() override = default;
 
 		bool Start() override;

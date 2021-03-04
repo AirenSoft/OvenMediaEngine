@@ -106,7 +106,7 @@ namespace pvd
 
 		logti("A RTMP client has connected from %d - %s", remote->GetId(), remote->ToString().CStr());
 
-		PushProvider::OnSignallingChannelCreated(remote->GetId(), stream);
+		PushProvider::OnChannelCreated(remote->GetId(), stream);
 	}
 
 	void RtmpProvider::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,

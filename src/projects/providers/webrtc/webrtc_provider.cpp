@@ -27,7 +27,7 @@ namespace pvd
 	}
 
 	WebRTCProvider::WebRTCProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
-		: pvd::Provider(server_config, router)
+		: pvd::PushProvider(server_config, router)
 	{
 
 	}
@@ -149,7 +149,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> WebRTCProvider::OnCreateProviderApplication(const info::Application &application_info)
 	{
-		return WebRTCApplication::Create(Provider::GetSharedPtrAs<Provider>(), application_info, _ice_port, _signalling_server);
+		return WebRTCApplication::Create(PushProvider::GetSharedPtrAs<PushProvider>(), application_info, _ice_port, _signalling_server);
 	}
 
 	bool WebRTCProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
@@ -165,6 +165,8 @@ namespace pvd
 													const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 													std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
 	{
+		logtd("WebRTCProvider::OnAddRemoteDescription");
+
 		// TODO(Getroot): Implement SingedPolicy
 			
 		// Check if same stream name is exist
@@ -184,6 +186,13 @@ namespace pvd
 			return nullptr;
 		}
 
+		auto &candidates = IcePortManager::GetInstance()->GetIceCandidateList(IcePortObserver::GetSharedPtr());
+		ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
+		auto session_description = std::make_shared<SessionDescription>(*application->GetOfferSDP());
+		session_description->SetOrigin("OvenMediaEngine", ov::Unique::GenerateUint32(), 2, "IN", 4, "127.0.0.1");
+		session_description->SetIceUfrag(_ice_port->GenerateUfrag());
+		session_description->Update();
+
 		return application->GetOfferSDP();
 	}
 
@@ -192,6 +201,8 @@ namespace pvd
 								const std::shared_ptr<const SessionDescription> &offer_sdp,
 								const std::shared_ptr<const SessionDescription> &peer_sdp)
 	{
+		logtd("WebRTCProvider::OnAddRemoteDescription");
+
 		// TODO(Getroot): Implement SingedPolicy
 
 		// Check if same stream name is exist
@@ -212,14 +223,26 @@ namespace pvd
 		}
 
 		// Create Stream
-		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC);
+		auto channel_id = offer_sdp->GetSessionId();
+		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, channel_id, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, peer_sdp, _ice_port);
 		if(stream == nullptr)
 		{
 			logte("Could not create %s stream in %s application", stream_name.CStr(), vhost_app_name.CStr());
 			return false;
 		}
 		
-		application->AddStream(stream);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, 30*1000, stream);
+
+		if(OnChannelCreated(channel_id, stream) == false)
+		{
+			return false;
+		}
+
+		// The stream of the webrtc provider has already completed signaling at this point.
+		if(PublishChannel(channel_id, vhost_app_name, stream) == false)
+		{
+			return false;
+		}
 
 		return true;
 	}
@@ -237,7 +260,17 @@ namespace pvd
 					const std::shared_ptr<const SessionDescription> &offer_sdp,
 					const std::shared_ptr<const SessionDescription> &peer_sdp)
 	{
-		return true;
+		logti("Stop commnad received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
+
+		// Find Stream
+		auto stream = std::static_pointer_cast<WebRTCStream>(GetStreamByName(vhost_app_name, stream_name));
+		if (!stream)
+		{
+			logte("To stop stream failed. Cannot find stream (%s/%s)", vhost_app_name.CStr(), stream_name.CStr());
+			return false;
+		}
+
+		return OnChannelDeleted(stream);
 	}
 
 	//------------------------
@@ -246,11 +279,59 @@ namespace pvd
 
 	void WebRTCProvider::OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data)
 	{
+		logtd("WebRTCProvider::OnStateChanged : %d", state);
 
+		std::shared_ptr<Application> application;
+		std::shared_ptr<WebRTCStream> stream;
+		try
+		{
+			stream = std::any_cast<std::shared_ptr<WebRTCStream>>(user_data);	
+			application = stream->GetApplication();
+		}
+		catch(const std::bad_any_cast& e)
+		{
+			// Internal Error
+			logtc("WebRTCProvider::OnDataReceived - Could not convert user_data, internal error");
+			return;
+		}
+		
+		switch (state)
+		{
+			case IcePortConnectionState::New:
+			case IcePortConnectionState::Checking:
+			case IcePortConnectionState::Connected:
+			case IcePortConnectionState::Completed:
+				// Nothing to do
+				break;
+			case IcePortConnectionState::Failed:
+			case IcePortConnectionState::Disconnected:
+			case IcePortConnectionState::Closed:
+			{
+				logti("IcePort is disconnected. : (%s/%s) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(),  state);
+				OnChannelDeleted(stream);
+				break;
+			}
+			default:
+				break;
+		}
 	}
 
 	void WebRTCProvider::OnDataReceived(IcePort &port, uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data)
 	{
+		logtd("WebRTCProvider::OnDataReceived");
 
+		std::shared_ptr<WebRTCStream> stream;
+		try
+		{
+			stream = std::any_cast<std::shared_ptr<WebRTCStream>>(user_data);	
+		}
+		catch(const std::bad_any_cast& e)
+		{
+			// Internal Error
+			logtc("WebRTCProvider::OnDataReceived - Could not convert user_data, internal error");
+			return;
+		}
+
+		PushProvider::OnDataReceived(stream->GetId(), data);
 	}
 }

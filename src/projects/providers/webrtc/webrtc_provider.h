@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "base/provider/provider.h"
+#include "base/provider/push_provider/provider.h"
 #include "modules/ice/ice_port_manager.h"
 #include "modules/rtc_signalling/rtc_signalling.h"
 #include "base/ovlibrary/ovlibrary.h"
@@ -16,7 +16,7 @@
 
 namespace pvd
 {
-	class WebRTCProvider : public pvd::Provider,
+	class WebRTCProvider : public PushProvider,
 						   public IcePortObserver,
 						   public RtcSignallingObserver
 	{
@@ -28,15 +28,6 @@ namespace pvd
 
 		bool Start() override;
 		bool Stop() override;
-
-		//--------------------------------------------------------------------
-		// Implementation of Orchestrator(ocst::ModuleInterface)'s pure virtual functions
-		//--------------------------------------------------------------------
-		ocst::ModuleType GetModuleType() const override
-		{
-			return ocst::ModuleType::PushProvider;
-		}
-		//--------------------------------------------------------------------
 
 		//--------------------------------------------------------------------
 		// Implementation of Provider's pure virtual functions

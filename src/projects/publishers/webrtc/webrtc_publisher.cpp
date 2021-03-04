@@ -385,7 +385,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	auto &candidates = IcePortManager::GetInstance()->GetIceCandidateList(IcePortObserver::GetSharedPtr());
 	ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
 	auto session_description = std::make_shared<SessionDescription>(*stream->GetSessionDescription());
-	session_description->SetOrigin("OvenMediaEngine", ++_last_issued_session_id, 2, "IN", 4, "127.0.0.1");
+	session_description->SetOrigin("OvenMediaEngine", ov::Unique::GenerateUint32(), 2, "IN", 4, "127.0.0.1");
 	session_description->SetIceUfrag(_ice_port->GenerateUfrag());
 	session_description->Update();
 
@@ -577,6 +577,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, uint32_t session_id, IcePort
 	catch(const std::bad_any_cast& e)
 	{
 		// Internal Error
+		logtc("WebRtcPublisher::OnDataReceived - Could not convert user_data, internal error");
 		return;
 	}
 	

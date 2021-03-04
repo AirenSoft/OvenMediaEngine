@@ -1298,7 +1298,7 @@ namespace pvd
 		SetTrackInfo(_media_info);
 
 		// Publish
-		if(PublishInterleavedChannel(_vhost_app_name) == false)
+		if(PublishChannel(_vhost_app_name) == false)
 		{
 			Stop();
 			return false;
