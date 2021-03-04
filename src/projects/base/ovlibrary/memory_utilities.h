@@ -9,16 +9,25 @@
 #	define OV_GLOBAL_NAMESPACE_PREFIX
 #endif	// __cplusplus
 
-// x가 value가 아니면, func를 호출한 뒤 value 값으로 만듦
-#define OV_SAFE_FUNC(x, value, func, prefix) \
-	do                                       \
-	{                                        \
-		if ((x) != (value))                  \
-		{                                    \
-			func(prefix(x));                 \
-			(x) = (value);                   \
-		}                                    \
+// If <x> is not equal to <value>, execute <exec>, and put <value> in <var>
+#define OV_SAFE_RESET(x, value, exec, var) \
+	do                                     \
+	{                                      \
+		if ((x) != (value))                \
+		{                                  \
+			exec;                          \
+			(var) = (value);               \
+		}                                  \
 	} while (false)
+
+// Example:
+//
+// OV_SAFE_FUNC(val, nullptr, close_func, &)
+//   if(val != nullptr) {
+//     close_func(& val);
+//     val = nullptr
+//   }
+#define OV_SAFE_FUNC(x, value, func, prefix) OV_SAFE_RESET(x, value, func(prefix(x)), x)
 
 #define OV_SAFE_DELETE(x) OV_SAFE_FUNC(x, nullptr, delete, )
 #define OV_SAFE_FREE(x) OV_SAFE_FUNC(x, nullptr, OV_GLOBAL_NAMESPACE_PREFIX free, )	 // NOLINT

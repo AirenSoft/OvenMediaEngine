@@ -56,12 +56,7 @@ bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_lis
 
 		auto transport = ice_candidate.GetTransport().UpperCaseString();
 		auto address = ice_candidate.GetAddress();
-		ov::SocketType socket_type = ov::SocketType::Udp;
-
-		if (transport == "TCP")
-		{
-			socket_type = ov::SocketType::Tcp;
-		}
+		ov::SocketType socket_type = (transport == "TCP") ? ov::SocketType::Tcp : ov::SocketType::Udp;
 
 		{
 			auto port = address.Port();
@@ -397,7 +392,7 @@ bool IcePort::Send(uint32_t session_id, const std::shared_ptr<const ov::Data> &d
 		return false;
 	}
 	
-	return ice_port_info->remote->SendTo(ice_port_info->address, send_data) >= 0;
+	return ice_port_info->remote->SendTo(ice_port_info->address, send_data);
 }
 
 void IcePort::OnConnected(const std::shared_ptr<ov::Socket> &remote)
@@ -406,7 +401,7 @@ void IcePort::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	auto demultiplexer = std::make_shared<IceTcpDemultiplexer>();
 
 	std::lock_guard<std::shared_mutex> lock_guard(_demultiplexers_lock);
-	_demultiplexers[remote->GetId()] = demultiplexer;
+	_demultiplexers[remote->GetNativeHandle()] = demultiplexer;
 
 	logti("Turn client has connected : %s", remote->ToString().CStr());
 }
@@ -416,10 +411,10 @@ void IcePort::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physical
 	// called when TURN client disconnected from the turn server with TCP
 	std::lock_guard<std::shared_mutex> lock_guard(_demultiplexers_lock);
 
-	auto it = _demultiplexers.find(remote->GetId());
+	auto it = _demultiplexers.find(remote->GetNativeHandle());
 	if(it != _demultiplexers.end())
 	{
-		_demultiplexers.erase(remote->GetId());
+		_demultiplexers.erase(remote->GetNativeHandle());
 	}
 
 	logti("Turn client has disconnected : %s", remote->ToString().CStr());
@@ -432,14 +427,14 @@ void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov
 	{
 		std::shared_lock<std::shared_mutex> lock(_demultiplexers_lock);
 		// If remote protocol is tcp, it must be TURN
-		if(_demultiplexers.find(remote->GetId()) == _demultiplexers.end())
+		if(_demultiplexers.find(remote->GetNativeHandle()) == _demultiplexers.end())
 		{
 			// If the client disconnects at this time, it cannot be found.
 			logtd("TCP packet input but cannot find the demultiplexer of %s.", remote->ToString().CStr());
 			return;
 		}
 
-		auto demultiplexer = _demultiplexers[remote->GetId()];
+		auto demultiplexer = _demultiplexers[remote->GetNativeHandle()];
 		lock.unlock();
 
 		// TCP demultiplexer 

@@ -23,20 +23,19 @@ bool StunClient::GetMappedAddress(const ov::SocketAddress &stun_server, ov::Sock
 
 	auto send_data = message.Serialize();
 
-	ov::Socket client;
+	auto client = ov::SocketPool::GetUdpPool()->AllocSocket();
 	timeval tv = {1, 0};
 
-	client.Create(ov::SocketType::Udp);
-	client.SetRecvTimeout(tv);
-	if(client.SendTo(stun_server, send_data) != send_data->GetLength())
+	client->SetRecvTimeout(tv);
+	if(client->SendTo(stun_server, send_data) == false)
 	{
-		client.Close();
+		client->CloseSync();
 		return false;
 	}
 
 	auto recv_data = std::make_shared<ov::Data>(1500);
-	auto result = client.RecvFrom(recv_data, nullptr);
-	client.Close();
+	auto result = client->RecvFrom(recv_data, nullptr);
+	client->CloseSync();
 
 	if(recv_data->GetLength() <= 0)
 	{

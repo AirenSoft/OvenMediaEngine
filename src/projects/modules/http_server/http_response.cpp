@@ -47,7 +47,7 @@ bool HttpResponse::SetHeader(const ov::String &key, const ov::String &value)
 {
 	if (_is_header_sent)
 	{
-		logtw("Cannot modify header: Header is sent");
+		logtw("Cannot modify header: Header is sent: %s", _client_socket->ToString().CStr());
 		return false;
 	}
 
@@ -182,7 +182,7 @@ bool HttpResponse::Send(const std::shared_ptr<const ov::Data> &data)
 		}
 	}
 
-	return (_client_socket->Send(send_data) == static_cast<ssize_t>(send_data->GetLength()));
+	return _client_socket->Send(send_data);
 }
 
 bool HttpResponse::SendChunkedData(const void *data, size_t length)

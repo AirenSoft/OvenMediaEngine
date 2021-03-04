@@ -37,7 +37,7 @@ public:
 	HttpServer(const char *server_name);
 	~HttpServer() override;
 
-	virtual bool Start(const ov::SocketAddress &address, int worker_count);
+	virtual bool Start(const ov::SocketAddress &address, int worker_count, int socket_pool_count);
 	virtual bool Stop();
 
 	bool IsRunning() const;

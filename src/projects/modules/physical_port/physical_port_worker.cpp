@@ -41,7 +41,7 @@ bool PhysicalPortWorker::Start()
 	}
 
 	ov::String queue_name;
-	queue_name.Format("[%p] PhyPortWorker for #%d (%s)", this, socket->GetSocket().GetSocket(), socket->GetLocalAddress()->ToString().CStr());
+	queue_name.Format("[%p] PhyPortWorker for #%d (%s)", this, socket->GetNativeHandle(), socket->GetLocalAddress()->ToString().CStr());
 
 	_task_list.SetAlias(queue_name);
 
@@ -76,10 +76,25 @@ bool PhysicalPortWorker::AddTask(const std::shared_ptr<ov::ClientSocket> &client
 {
 	if (_stop)
 	{
+		logtw("PhysicalPortWorker is not running");
 		return false;
 	}
 
 	Task task(client, data);
+	_task_list.Enqueue(std::move(task));
+
+	return true;
+}
+
+bool PhysicalPortWorker::AddTask(const std::shared_ptr<ov::ClientSocket> &client, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
+{
+	if (_stop)
+	{
+		logtw("PhysicalPortWorker is not running");
+		return false;
+	}
+
+	Task task(client, address, data);
 	_task_list.Enqueue(std::move(task));
 
 	return true;
@@ -99,7 +114,12 @@ void PhysicalPortWorker::ThreadProc()
 			auto &data = value.data;
 
 			// Notify observers
-			auto func = std::bind(&PhysicalPortObserver::OnDataReceived, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), std::ref(*(client->GetRemoteAddress().get())), ref(data));
+			auto func = std::bind(
+				&PhysicalPortObserver::OnDataReceived,
+				std::placeholders::_1,
+				std::static_pointer_cast<ov::Socket>(client),
+				value.has_address ? value.address : *(client->GetRemoteAddress().get()),
+				ref(data));
 			std::for_each(_observer_list.begin(), _observer_list.end(), func);
 		}
 	}

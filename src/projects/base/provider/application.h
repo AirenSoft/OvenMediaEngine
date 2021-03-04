@@ -21,6 +21,7 @@
 namespace pvd
 {
 	class Provider;
+	
 	class Application : public info::Application, public MediaRouteApplicationConnector
 	{
 	public:

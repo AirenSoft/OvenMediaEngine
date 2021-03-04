@@ -49,7 +49,7 @@ void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 			HTTP_INTERMEDIATE_COMPATIBILITY);
 
 		tls_data->SetWriteCallback([remote](const void *data, size_t length) -> ssize_t {
-			return remote->Send(data, length);
+			return remote->Send(data, length) ? length : -1L;
 		});
 
 		client->GetRequest()->SetTlsData(tls_data);

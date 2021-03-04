@@ -223,9 +223,9 @@ bool OvtStream::RemoveSessionByConnectorId(int connector_id)
 	for(const auto &item : sessions)
 	{
 		auto session = std::static_pointer_cast<OvtSession>(item.second);
-		logtd("session : %d %d", session->GetId(), session->GetConnector()->GetId());
+		logtd("session : %d %d", session->GetId(), session->GetConnector()->GetNativeHandle());
 
-		if(session->GetConnector()->GetId() == connector_id)
+		if(session->GetConnector()->GetNativeHandle() == connector_id)
 		{
 			RemoveSession(session->GetId());
 			return true;

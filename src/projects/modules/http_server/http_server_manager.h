@@ -13,14 +13,15 @@
 #include "http_server.h"
 #include "https_server.h"
 
-#define DEFAULT_HTTP_SERVER_WORKER_COUNT	4
+#define DEFAULT_HTTP_SERVER_WORKER_COUNT 4
+#define DEFAULT_HTTP_SERVER_SOCKET_POOL_WORKER_COUNT 4
 
 class HttpServerManager : public ov::Singleton<HttpServerManager>
 {
 public:
-	std::shared_ptr<HttpServer> CreateHttpServer(const char *server_name, const ov::SocketAddress &address, int worker_count=DEFAULT_HTTP_SERVER_WORKER_COUNT);
-	std::shared_ptr<HttpsServer> CreateHttpsServer(const char *server_name, const ov::SocketAddress &address, const std::shared_ptr<info::Certificate> &certificate, int worker_count=DEFAULT_HTTP_SERVER_WORKER_COUNT);
-	std::shared_ptr<HttpsServer> CreateHttpsServer(const char *server_name, const ov::SocketAddress &address, const std::vector<std::shared_ptr<ocst::VirtualHost>> &virtual_host_list, int worker_count=DEFAULT_HTTP_SERVER_WORKER_COUNT);
+	std::shared_ptr<HttpServer> CreateHttpServer(const char *server_name, const ov::SocketAddress &address, int worker_count = DEFAULT_HTTP_SERVER_WORKER_COUNT, int socket_pool_worker_count = DEFAULT_HTTP_SERVER_SOCKET_POOL_WORKER_COUNT);
+	std::shared_ptr<HttpsServer> CreateHttpsServer(const char *server_name, const ov::SocketAddress &address, const std::shared_ptr<info::Certificate> &certificate, int worker_count = DEFAULT_HTTP_SERVER_WORKER_COUNT, int socket_pool_worker_count = DEFAULT_HTTP_SERVER_SOCKET_POOL_WORKER_COUNT);
+	std::shared_ptr<HttpsServer> CreateHttpsServer(const char *server_name, const ov::SocketAddress &address, const std::vector<std::shared_ptr<ocst::VirtualHost>> &virtual_host_list, int worker_count = DEFAULT_HTTP_SERVER_WORKER_COUNT, int socket_pool_worker_count = DEFAULT_HTTP_SERVER_SOCKET_POOL_WORKER_COUNT);
 
 	bool ReleaseServer(const std::shared_ptr<HttpServer> &http_server);
 

@@ -22,13 +22,13 @@ namespace pvd
 			logte("An error occurred while creating OvtProvider");
 			return nullptr;
 		}
+
 		return provider;
 	}
 
 	OvtProvider::OvtProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 			: PullProvider(server_config, router)
 	{
-
 	}
 
 	OvtProvider::~OvtProvider()

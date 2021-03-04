@@ -25,6 +25,7 @@ public:
 	bool Stop();
 
 	bool AddTask(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data);
+	bool AddTask(const std::shared_ptr<ov::ClientSocket> &client, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data);
 
 protected:
 	struct Task
@@ -35,7 +36,17 @@ protected:
 		{
 		}
 
+		Task(const std::shared_ptr<ov::ClientSocket> &client, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
+			: client(client),
+			  has_address(true),
+			  address(address),
+			  data(data)
+		{
+		}
+
 		const std::shared_ptr<ov::ClientSocket> client;
+		bool has_address = false;
+		ov::SocketAddress address;
 		const std::shared_ptr<const ov::Data> data;
 	};
 
@@ -47,5 +58,5 @@ protected:
 	std::thread _thread;
 	volatile bool _stop = true;
 
-	ov::Queue<Task> _task_list { nullptr, 500 };
+	ov::Queue<Task> _task_list{nullptr, 500};
 };

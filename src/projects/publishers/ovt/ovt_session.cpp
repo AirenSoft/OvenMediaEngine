@@ -44,7 +44,7 @@ bool OvtSession::Start()
 bool OvtSession::Stop()
 {
 	logtd("OvtSession(%d) has stopped", GetId());
-	_connector->Close();
+	_connector->CloseSync();
 	
 	return Session::Stop();
 }

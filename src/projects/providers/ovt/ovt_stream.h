@@ -18,6 +18,8 @@
 #define OVT_TIMEOUT_MSEC		3000
 namespace pvd
 {
+	class OvtProvider;
+
 	class OvtStream : public pvd::PullStream, public OvtPacketizerInterface
 	{
 	public:
@@ -46,6 +48,8 @@ namespace pvd
 			ALREADY_COMPLETED,
 		};
 
+		std::shared_ptr<pvd::OvtProvider> GetOvtProvider();
+
 		bool Start() override;
 		bool Play() override;
 		bool Stop() override;
@@ -65,7 +69,7 @@ namespace pvd
 		std::vector<std::shared_ptr<const ov::Url>> _url_list;
 		std::shared_ptr<const ov::Url>				_curr_url;
 
-		ov::Socket _client_socket;
+		std::shared_ptr<ov::Socket> _client_socket;
 
 		uint32_t _last_request_id;
 

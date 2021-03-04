@@ -106,17 +106,26 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 
 	chunk_item->second->AddChunkData(chunk_data);
 
-	for (auto client : chunk_item->second->client_list)
+	auto client_item = chunk_item->second->client_list.begin();
+
+	while (client_item != chunk_item->second->client_list.end())
 	{
+		auto &client = *client_item;
+
 		auto response = client->GetResponse();
 
 		if (response->SendChunkedData(chunk_data))
 		{
 			IncreaseBytesOut(client, chunk_data->GetLength());
+
+			++client_item;
 		}
 		else
 		{
 			logtw("Failed to send the chunked data for [%s/%s, %s] to %s (%zu bytes)", app_name.CStr(), stream_name.CStr(), file_name.CStr(), response->GetRemote()->ToString().CStr(), chunk_data->GetLength());
+
+			client_item = chunk_item->second->client_list.erase(client_item);
+			response->Close();
 		}
 	}
 }

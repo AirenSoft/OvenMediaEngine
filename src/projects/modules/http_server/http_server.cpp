@@ -23,7 +23,7 @@ HttpServer::~HttpServer()
 	OV_ASSERT(_physical_port == nullptr, "%s: Physical port: %s", _server_name.CStr(), _physical_port->ToString().CStr());
 }
 
-bool HttpServer::Start(const ov::SocketAddress &address, int worker_count)
+bool HttpServer::Start(const ov::SocketAddress &address, int worker_count, int socket_pool_count)
 {
 	auto lock_guard = std::lock_guard(_physical_port_mutex);
 
@@ -33,7 +33,7 @@ bool HttpServer::Start(const ov::SocketAddress &address, int worker_count)
 		return false;
 	}
 
-	_physical_port = PhysicalPortManager::GetInstance()->CreatePort(ov::SocketType::Tcp, address, 0, 0, worker_count);
+	_physical_port = PhysicalPortManager::GetInstance()->CreatePort(ov::SocketType::Tcp, address, 0, 0, worker_count, socket_pool_count);
 
 	if (_physical_port != nullptr)
 	{
@@ -167,7 +167,7 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 					if (request->ParseStatus() == HttpStatusCode::OK)
 					{
 						// Probe scheme
-						if(IsWebSocketRequest(request) == true)
+						if (IsWebSocketRequest(request) == true)
 						{
 							request->SetConnectionType(HttpRequestConnectionType::WebSocket);
 						}
@@ -201,15 +201,15 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 							need_to_disconnect = true;
 							OV_ASSERT2(false);
 						}
-						
+
 						auto remote = request->GetRemote();
 
 						if (remote != nullptr)
 						{
-							logti("Client(%s) is requested uri: [%s]", remote->GetRemoteAddress()->ToString().CStr(), request->GetUri().CStr());
+							logti("Client(%s) is requested uri: [%s]", remote->ToString().CStr(), request->GetUri().CStr());
 						}
 
-						if(found_interceptor == false)
+						if (found_interceptor == false)
 						{
 							logtw("No module could be found to handle this connection request : [%s]", request->GetUri().CStr());
 						}
@@ -251,7 +251,7 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 
 std::shared_ptr<HttpClient> HttpServer::ProcessConnect(const std::shared_ptr<ov::Socket> &remote)
 {
-	logti("Client(%s) is connected on %s", remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
+	logti("Client(%s) is connected on %s", remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 
 	auto client_socket = std::dynamic_pointer_cast<ov::ClientSocket>(remote);
 
@@ -295,7 +295,14 @@ void HttpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 		return;
 	}
 
-	ProcessData(client, data);
+	if (remote->HasCloseCommand() == false)
+	{
+		ProcessData(client, data);
+	}
+	else
+	{
+		// Avoid processing data received from sockets that attempted to close when keep alive request
+	}
 }
 
 void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)

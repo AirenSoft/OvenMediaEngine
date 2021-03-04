@@ -51,7 +51,7 @@ bool OvtPublisher::Start()
 		_server_port = PhysicalPortManager::GetInstance()->CreatePort(port_config.GetSocketType(), address);
 		if (_server_port != nullptr)
 		{
-			logti("%s is listening on %s", GetPublisherName(), address.ToString().CStr());
+			logti("%s is listening on %s/%s", GetPublisherName(), address.ToString().CStr(), ov::StringFromSocketType(port_config.GetSocketType()));
 			_server_port->AddObserver(this);
 		}
 		else
@@ -124,7 +124,7 @@ void OvtPublisher::OnDataReceived(const std::shared_ptr<ov::Socket> &remote,
 									const ov::SocketAddress &address,
 									const std::shared_ptr<const ov::Data> &data)
 {
-	auto depacketizer = GetDepacketizer(remote->GetId());
+	auto depacketizer = GetDepacketizer(remote->GetNativeHandle());
 	
 	if(depacketizer->AppendPacket(data) == false)
 	{
@@ -206,15 +206,15 @@ void OvtPublisher::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
 	// disconnect means when the stream disconnects itself.
 	if(reason != PhysicalPortDisconnectReason::Disconnect)
 	{
-		auto streams = _remote_stream_map.equal_range(remote->GetId());
+		auto streams = _remote_stream_map.equal_range(remote->GetNativeHandle());
 		for(auto it = streams.first; it != streams.second; ++it)
 		{
 			auto stream = it->second;
-			stream->RemoveSessionByConnectorId(remote->GetId());
+			stream->RemoveSessionByConnectorId(remote->GetNativeHandle());
 		}
 	}
-	UnlinkRemoteFromStream(remote->GetId());
-	RemoveDepacketizer(remote->GetId());
+	UnlinkRemoteFromStream(remote->GetNativeHandle());
+	RemoveDepacketizer(remote->GetNativeHandle());
 }
 
 void OvtPublisher::HandleDescribeRequest(const std::shared_ptr<ov::Socket> &remote, const uint32_t request_id, const std::shared_ptr<const ov::Url> &url)
@@ -290,7 +290,7 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 	}
 
 	// Session ID is remote socket's ID
-	auto session = OvtSession::Create(app, stream, remote->GetId(), remote);
+	auto session = OvtSession::Create(app, stream, remote->GetNativeHandle(), remote);
 	if(session == nullptr)
 	{
 		ov::String msg;
@@ -299,7 +299,7 @@ void OvtPublisher::HandlePlayRequest(const std::shared_ptr<ov::Socket> &remote, 
 		return;
 	}
 
-	LinkRemoteWithStream(remote->GetId(), stream);
+	LinkRemoteWithStream(remote->GetNativeHandle(), stream);
 
 	ResponseResult(remote, session->GetId(), "play", request_id, 200, "ok");
 
@@ -322,7 +322,7 @@ void OvtPublisher::HandleStopRequest(const std::shared_ptr<ov::Socket> &remote, 
 	ResponseResult(remote, session_id, "stop", request_id, 200, "ok");
 
 	// Session ID is remote socket's ID
-	stream->RemoveSession(remote->GetId());
+	stream->RemoveSession(remote->GetNativeHandle());
 }
 
 void OvtPublisher::ResponseResult(const std::shared_ptr<ov::Socket> &remote, uint32_t session_id, const ov::String app, uint32_t request_id, uint32_t code, const ov::String &msg)

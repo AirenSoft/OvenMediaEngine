@@ -127,18 +127,18 @@ namespace pvd
 		auto &port_list_config = port_config.GetPortList();
 		auto socket_type = port_config.GetSocketType();
 
-		for(const auto &port : port_list_config)
+		for (const auto &port : port_list_config)
 		{
 			auto address = ov::SocketAddress(ip, port);
 			auto physical_port = PhysicalPortManager::GetInstance()->CreatePort(socket_type, address);
 			if (physical_port == nullptr)
 			{
-				logte("Could not initialize phyiscal port for MPEG-TS server: %s", address.ToString().CStr());
+				logte("Could not initialize phyiscal port for MPEG-TS server: %s/%s", address.ToString().CStr(), ov::StringFromSocketType(socket_type));
 				return false;
 			}
 			else
 			{
-				logti("%s is listening on %s", GetProviderName(), address.ToString().CStr());
+				logti("%s is listening on %s/%s", GetProviderName(), address.ToString().CStr(), ov::StringFromSocketType(socket_type));
 			}
 
 			physical_port->AddObserver(this);
@@ -154,11 +154,11 @@ namespace pvd
 	{
 		std::shared_lock<std::shared_mutex> lock(_stream_port_map_lock);
 
-		for(const auto &item : _stream_port_map)
+		for (const auto &item : _stream_port_map)
 		{
 			auto &stream_port_item = item.second;
 
-			if(stream_port_item->IsAttached() == false)
+			if (stream_port_item->IsAttached() == false)
 			{
 				return stream_port_item;
 			}
@@ -211,21 +211,21 @@ namespace pvd
 		auto &stream_list = app_config.GetProviders().GetMpegtsProvider().GetStreamMap().GetStreamList();
 		auto app_metrics = ApplicationMetrics(application_info);
 
-		for(auto &stream_item : stream_list)
+		for (auto &stream_item : stream_list)
 		{
 			bool is_parsed;
 			auto &port_config = stream_item.GetPort(&is_parsed);
-			std::vector<int> port_list; 
-			
-			// If they want to use any available port 
-			if(is_parsed == false)
+			std::vector<int> port_list;
+
+			// If they want to use any available port
+			if (is_parsed == false)
 			{
-				// Get random port 
+				// Get random port
 				auto stream_port_item = GetDetachedStreamPortItem();
-				if(stream_port_item == nullptr)
+				if (stream_port_item == nullptr)
 				{
-					logte("The %s application could not be created in %s provider because there are no ports available.", 
-								application_info.GetName().CStr(), GetProviderName());
+					logte("The %s application could not be created in %s provider because there are no ports available.",
+						  application_info.GetName().CStr(), GetProviderName());
 					return nullptr;
 				}
 
@@ -236,14 +236,14 @@ namespace pvd
 				port_list = port_config.GetPortList();
 			}
 
-			for(auto port : port_list)
+			for (auto port : port_list)
 			{
 				// Search for the port in bound mpegts ports map
 				auto stream_port_item = GetStreamPortItem(port);
-				if(stream_port_item == nullptr || stream_port_item->IsAttached() == true)
+				if (stream_port_item == nullptr || stream_port_item->IsAttached() == true)
 				{
-					logte("The %s application could not be created in %s provider because port %d requested to be assigned to mpegts is not available.", 
-							application_info.GetName().CStr(), GetProviderName(), port);
+					logte("The %s application could not be created in %s provider because port %d requested to be assigned to mpegts is not available.",
+						  application_info.GetName().CStr(), GetProviderName(), port);
 					return nullptr;
 				}
 
@@ -262,10 +262,10 @@ namespace pvd
 	{
 		std::shared_lock<std::shared_mutex> lock(_stream_port_map_lock);
 
-		for(const auto &item : _stream_port_map)
+		for (const auto &item : _stream_port_map)
 		{
 			auto &stream_port_item = item.second;
-			if(stream_port_item->GetVhostAppName() == application->GetName())
+			if (stream_port_item->GetVhostAppName() == application->GetName())
 			{
 				stream_port_item->DetachFromApplication();
 			}
@@ -292,7 +292,7 @@ namespace pvd
 	void MpegTsProvider::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	{
 		auto local_port = remote->GetLocalAddress()->Port();
-		auto channel_id = remote->GetId();
+		auto channel_id = remote->GetNativeHandle();
 
 		auto stream_port_item = GetStreamPortItem(local_port);
 		if (stream_port_item == nullptr || stream_port_item->IsAttached() == false)
@@ -301,7 +301,7 @@ namespace pvd
 		}
 
 		auto stream = MpegTsStream::Create(StreamSourceType::Mpegts, channel_id, stream_port_item->GetVhostAppName(), stream_port_item->GetOutputStreamName(), remote, GetSharedPtrAs<pvd::PushProvider>());
-		if (PushProvider::OnChannelCreated(remote->GetId(), stream) == true)
+		if (PushProvider::OnChannelCreated(remote->GetNativeHandle(), stream) == true)
 		{
 			logti("A MPEG-TS client has connected");  // %s", remote->ToString().CStr());
 			stream_port_item->OnClientConnected(channel_id);
@@ -316,7 +316,7 @@ namespace pvd
 										const std::shared_ptr<const ov::Data> &data)
 	{
 		auto local_port = remote->GetLocalAddress()->Port();
-		auto channel_id = remote->GetId();
+		auto channel_id = remote->GetNativeHandle();
 
 		auto stream_port_item = GetStreamPortItem(local_port);
 		if (stream_port_item == nullptr)
@@ -359,7 +359,7 @@ namespace pvd
 										PhysicalPortDisconnectReason reason,
 										const std::shared_ptr<const ov::Error> &error)
 	{
-		auto channel = GetChannel(remote->GetId());
+		auto channel = GetChannel(remote->GetNativeHandle());
 		if (channel == nullptr)
 		{
 			logte("Failed to find channel to delete stream (remote : ");  //%s)", remote->ToString().CStr());
@@ -370,6 +370,6 @@ namespace pvd
 			  channel->GetApplicationName(), channel->GetName().CStr());
 		//remote->ToString().CStr());
 
-		PushProvider::OnChannelDeleted(remote->GetId());
+		PushProvider::OnChannelDeleted(remote->GetNativeHandle());
 	}
 }  // namespace pvd
