@@ -31,9 +31,6 @@ namespace pvd
 			}
 			return false;
 		}
-
-		stream->SetApplication(GetSharedPtrAs<Application>());
-		stream->SetApplicationInfo(GetSharedPtrAs<Application>());
 		
 		if(stream->IsReadyToReceiveStreamData() == false)
 		{
@@ -41,13 +38,7 @@ namespace pvd
 			return false;
 		}
 
-		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
-		_streams[stream->GetId()] = stream;
-		streams_lock.unlock();
-
-		NotifyStreamCreated(stream);
-
-		return true;
+		return AddStream(stream);
 	}
 
 	bool PushApplication::DeleteAllStreams()

@@ -37,7 +37,6 @@ std::shared_ptr<Certificate> RtcApplication::GetCertificate()
 
 std::shared_ptr<pub::Stream> RtcApplication::CreateStream(const std::shared_ptr<info::Stream> &info, uint32_t worker_count)
 {
-	// Stream Class 생성할때는 복사를 사용한다.
 	logtd("RtcApplication::CreateStream : %s/%u", info->GetName().CStr(), info->GetId());
 	return RtcStream::Create(GetSharedPtrAs<pub::Application>(), *info, worker_count);
 }
@@ -53,17 +52,14 @@ bool RtcApplication::DeleteStream(const std::shared_ptr<info::Stream> &info)
 		return false;
 	}
 
-	// 모든 Session의 연결을 종료한다.
 	const auto sessions = stream->GetAllSessions();
 	for(auto it = sessions.begin(); it != sessions.end();)
 	{
 		auto session = std::static_pointer_cast<RtcSession>(it->second);
 		it++;
 
-		// IcePort에 모든 Session 삭제
-		_ice_port->RemoveSession(session);
+		_ice_port->RemoveSession(session->GetId());
 
-		// Signalling에 모든 Session 삭제
 		_rtc_signalling->Disconnect(GetName(), stream->GetName(), session->GetPeerSDP());
 	}
 
@@ -76,7 +72,6 @@ bool RtcApplication::Start()
 {
 	if(_certificate == nullptr)
 	{
-		// 인증서를 생성한다.
 		_certificate = std::make_shared<Certificate>();
 
 		auto error = _certificate->Generate();

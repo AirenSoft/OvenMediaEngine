@@ -29,6 +29,8 @@ public:
 		_is_crossdomain_block = false;
 	}
 
+	bool IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client) override;
+
 protected:
 	SegmentWorkerManager _worker_manager;
 	bool _is_crossdomain_block;

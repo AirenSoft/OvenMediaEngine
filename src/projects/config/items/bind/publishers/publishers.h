@@ -9,7 +9,7 @@
 #pragma once
 
 #include "./publisher.h"
-#include "./webrtc.h"
+#include "../common/webrtc/webrtc.h"
 
 namespace cfg
 {
@@ -26,7 +26,7 @@ namespace cfg
 				Publisher<cmn::SingularPort> _dash{"80/tcp", "443/tcp"};
 				Publisher<cmn::SingularPort> _thumbnail{"80/tcp", "443/tcp"};
 
-				Webrtc _webrtc{"3333/tcp", "3334/tcp"};
+				cmm::Webrtc _webrtc{"3333/tcp", "3334/tcp"};
 
 			public:
 				CFG_DECLARE_REF_GETTER_OF(GetOvt, _ovt)

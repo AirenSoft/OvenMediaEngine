@@ -25,13 +25,19 @@ RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config)
 {
 }
 
-bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count, const std::shared_ptr<WebSocketInterceptor> &interceptor)
+bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count, std::shared_ptr<WebSocketInterceptor> interceptor)
 {
 	const auto &webrtc_config = _server_config.GetBind().GetPublishers().GetWebrtc();
 
 	if ((_http_server != nullptr) || (_https_server != nullptr))
 	{
 		OV_ASSERT(false, "Server is already running (%p, %p)", _http_server.get(), _https_server.get());
+		return false;
+	}
+
+	if(interceptor == nullptr)
+	{	
+		OV_ASSERT(false, "Interceptor must not be nullptr");
 		return false;
 	}
 
@@ -42,10 +48,14 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("RtcSignallingServer", *address, worker_count) : nullptr;
 	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("RtcSignallingServer", *tls_address, vhost_list, worker_count) : nullptr;
 
-	auto web_socket_interceptor = result ? interceptor ? interceptor : CreateWebSocketInterceptor() : nullptr;
+	if(SetWebSocketHandler(interceptor) == false)
+	{
+		OV_ASSERT(false, "SetWebSocketHandler failed");
+		return false;
+	}
 
-	result = result && ((http_server == nullptr) || http_server->AddInterceptor(web_socket_interceptor));
-	result = result && ((https_server == nullptr) || https_server->AddInterceptor(web_socket_interceptor));
+	result = result && ((http_server == nullptr) || http_server->AddInterceptor(interceptor));
+	result = result && ((https_server == nullptr) || https_server->AddInterceptor(interceptor));
 
 	if (result)
 	{
@@ -154,10 +164,8 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	return result;
 }
 
-std::shared_ptr<WebSocketInterceptor> RtcSignallingServer::CreateWebSocketInterceptor()
+bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<WebSocketInterceptor> interceptor)
 {
-	auto interceptor = std::make_shared<WebSocketInterceptor>();
-
 	interceptor->SetConnectionHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> HttpInterceptorResult {
 			auto &client = ws_client->GetClient();
@@ -308,28 +316,26 @@ std::shared_ptr<WebSocketInterceptor> RtcSignallingServer::CreateWebSocketInterc
 				}
 
 				logti("Client is disconnected: %s (%s / %s, ufrag: local: %s, remote: %s)",
-					  ws_client->ToString().CStr(),
-					  info->vhost_app_name.CStr(), info->stream_name.CStr(),
-					  (info->offer_sdp != nullptr) ? info->offer_sdp->GetIceUfrag().CStr() : "(N/A)",
-					  (info->peer_sdp != nullptr) ? info->peer_sdp->GetIceUfrag().CStr() : "(N/A)");
+						ws_client->ToString().CStr(),
+						info->vhost_app_name.CStr(), info->stream_name.CStr(),
+						(info->offer_sdp != nullptr) ? info->offer_sdp->GetIceUfrag().CStr() : "(N/A)",
+						(info->peer_sdp != nullptr) ? info->peer_sdp->GetIceUfrag().CStr() : "(N/A)");
 			}
 			else
 			{
 				// The client is disconnected before websocket negotiation
 			}
 		});
-
-	return interceptor;
+	
+	return true;
 }
 
 bool RtcSignallingServer::AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer)
 {
-	// 기존에 등록된 observer가 있는지 확인
 	for (const auto &item : _observers)
 	{
 		if (item == observer)
 		{
-			// 기존에 등록되어 있음
 			logtw("%p is already observer of RtcSignallingServer", observer.get());
 			return false;
 		}
@@ -685,8 +691,12 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 			for (auto &observer : _observers)
 			{
 				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->vhost_app_name.CStr(), info->stream_name.CStr());
-				// TODO(Getroot): Add param "request->GetRequestTarget()"
-				observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp);
+				
+				// TODO : Improved to return detailed error cause
+				if(observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+				{
+					return HttpError::CreateError(HttpStatusCode::Forbidden, "Forbidden");
+				}
 			}
 		}
 		else

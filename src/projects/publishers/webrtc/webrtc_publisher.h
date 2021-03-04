@@ -26,8 +26,8 @@ public:
 	void OnMessage(const std::shared_ptr<ov::CommonMessage> &message) override;
 
 	// IcePortObserver Implementation
-	void OnStateChanged(IcePort &port, const std::shared_ptr<info::Session> &session, IcePortConnectionState state) override;
-	void OnDataReceived(IcePort &port, const std::shared_ptr<info::Session> &session, std::shared_ptr<const ov::Data> data) override;
+	void OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data) override;
+	void OnDataReceived(IcePort &port, uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data) override;
 
 	// SignallingObserver Implementation
 	std::shared_ptr<const SessionDescription> OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,

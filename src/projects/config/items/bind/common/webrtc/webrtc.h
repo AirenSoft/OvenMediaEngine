@@ -8,16 +8,15 @@
 //==============================================================================
 #pragma once
 
-#include "./publisher.h"
-#include "./webrtc/ice_candidates.h"
-#include "./webrtc/ice_servers.h"
-#include "./webrtc/signalling.h"
+#include "./ice_candidates.h"
+#include "./ice_servers.h"
+#include "./signalling.h"
 
 namespace cfg
 {
 	namespace bind
 	{
-		namespace pub
+		namespace cmm
 		{
 			struct Webrtc : public Item
 			{
@@ -50,5 +49,5 @@ namespace cfg
 				};
 			};
 		}  // namespace pub
-	}	   // namespace bind
+	} // namespace bind
 }  // namespace cfg

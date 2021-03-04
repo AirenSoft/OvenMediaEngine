@@ -12,7 +12,7 @@ namespace cfg
 {
 	namespace bind
 	{
-		namespace pub
+		namespace cmm
 		{
 			struct Signalling : public Item
 			{

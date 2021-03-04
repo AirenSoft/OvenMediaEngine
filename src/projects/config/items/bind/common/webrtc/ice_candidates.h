@@ -12,7 +12,7 @@ namespace cfg
 {
 	namespace bind
 	{
-		namespace pub
+		namespace cmm
 		{
 			struct IceCandidates : public Item
 			{
@@ -31,6 +31,6 @@ namespace cfg
 					Register<Optional>("TcpRelay", &_tcp_relay);
 				}
 			};
-		}  // namespace pub
-	}	   // namespace bind
+		}  // namespace pvd
+	}	// namespace bind
 }  // namespace cfg

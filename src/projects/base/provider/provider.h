@@ -31,7 +31,6 @@ namespace pvd
 		virtual bool Start();
 		virtual bool Stop();
 
-		// app_name으로 Application을 찾아서 반환한다.
 		std::shared_ptr<Application> GetApplicationByName(const info::VHostAppName &vhost_app_name);
 		std::shared_ptr<Stream> GetStreamByName(const info::VHostAppName &vhost_app_name, ov::String stream_name);
 

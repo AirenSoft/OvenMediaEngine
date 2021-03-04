@@ -162,7 +162,7 @@ bool SrtpAdapter::UnprotectRtcp(const std::shared_ptr<ov::Data> &data)
     int err = srtp_unprotect_rtcp(_session, buffer, &out_len);
     if (err != srtp_err_status_ok)
     {
-        logte("Failed to unprotect SRTP packet, err=%d", err);
+        logte("Failed to unprotect SRTCP packet, err=%d", err);
         return false;
     }
 

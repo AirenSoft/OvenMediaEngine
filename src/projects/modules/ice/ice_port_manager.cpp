@@ -43,7 +43,7 @@ const std::vector<RtcIceCandidate> &IcePortManager::GetIceCandidateList(const st
 	return observer->_ice_candidate_list;
 }
 
-bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::pub::IceCandidates &ice_candidates)
+bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::cmm::IceCandidates &ice_candidates)
 {
 	if(_ice_port == nullptr || IsRegisteredObserver(observer) == false)
 	{
@@ -116,7 +116,7 @@ bool IcePortManager::Release(std::shared_ptr<IcePortObserver> observer)
 	return true;
 }
 
-bool IcePortManager::GenerateIceCandidates(const cfg::bind::pub::IceCandidates &ice_candidates, std::vector<RtcIceCandidate> *parsed_ice_candidate_list)
+bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &ice_candidates, std::vector<RtcIceCandidate> *parsed_ice_candidate_list)
 {
 	auto &list = ice_candidates.GetIceCandidateList();
 

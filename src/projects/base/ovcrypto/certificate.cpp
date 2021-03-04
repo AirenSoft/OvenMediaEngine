@@ -352,17 +352,16 @@ bool Certificate::ComputeDigest(const ov::String &algorithm)
 	return true;
 }
 
-X509 *Certificate::GetX509()
+X509 *Certificate::GetX509() const
 {
 	return _X509;
 }
 
-EVP_PKEY *Certificate::GetPkey()
+EVP_PKEY *Certificate::GetPkey() const
 {
 	return _pkey;
 }
 
-//TODO(getroot): Algorithm을 enum값으로 변경
 ov::String Certificate::GetFingerprint(const ov::String &algorithm)
 {
 	if(_digest.GetLength() <= 0)

@@ -312,15 +312,18 @@ std::shared_ptr<ov::Socket> PhysicalPort::GetSocket()
 
 bool PhysicalPort::AddObserver(PhysicalPortObserver *observer)
 {
-	_observer_list.push_back(observer);
-
+	auto item = std::find(_observer_list.begin(), _observer_list.end(), observer);
+	if (item == _observer_list.end())
+	{
+		_observer_list.push_back(observer);
+	}
+	
 	return true;
 }
 
 bool PhysicalPort::RemoveObserver(PhysicalPortObserver *observer)
 {
 	auto item = std::find(_observer_list.begin(), _observer_list.end(), observer);
-
 	if (item == _observer_list.end())
 	{
 		return false;

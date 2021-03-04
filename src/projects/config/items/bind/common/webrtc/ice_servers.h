@@ -14,7 +14,7 @@ namespace cfg
 {
 	namespace bind
 	{
-		namespace pub
+		namespace cmm
 		{
 			struct IceServers : public Item
 			{

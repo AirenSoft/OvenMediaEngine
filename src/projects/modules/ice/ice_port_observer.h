@@ -34,7 +34,7 @@ class IcePortObserver : public ov::EnableSharedFromThis<IcePortObserver>
 public:
 	friend class IcePortManager;
 
-	virtual void OnStateChanged(IcePort &port, const std::shared_ptr<info::Session> &session, IcePortConnectionState state)
+	virtual void OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data)
 	{
 		// dummy function
 	}
@@ -42,7 +42,7 @@ public:
 	{
 		// dummy function
 	}
-	virtual void OnDataReceived(IcePort &port, const std::shared_ptr<info::Session> &session, std::shared_ptr<const ov::Data> data) = 0;
+	virtual void OnDataReceived(IcePort &port, uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data) = 0;
 
 private:
 	uint32_t _id = 0;

@@ -51,65 +51,14 @@ ov::DelayQueueAction WebSocketInterceptor::DoPing(void *parameter)
 bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
 {
 	const auto request = client->GetRequest();
-	const auto response = client->GetResponse();
 
-	// 여기서 web socket request 인지 확인
-	// RFC6455 - 4.2.1.  Reading the Client's Opening Handshake
-	//
-	// 1.   An HTTP/1.1 or higher GET request, including a "Request-URI"
-	//      [RFC2616] that should be interpreted as a /resource name/
-	//      defined in Section 3 (or an absolute HTTP/HTTPS URI containing
-	//      the /resource name/).
-	//
-	// 2.   A |Host| header field containing the server's authority.
-	//
-	if ((request->GetMethod() == HttpMethod::Get) && (request->GetHttpVersionAsNumber() > 1.0))
+	if(request->GetConnectionType() != HttpRequestConnectionType::WebSocket)
 	{
-		if (
-			// 3.   An |Upgrade| header field containing the value "websocket",
-			//      treated as an ASCII case-insensitive value.
-			(request->GetHeader("UPGRADE") == "websocket") &&
-
-			// 4.   A |Connection| header field that includes the token "Upgrade",
-			//      treated as an ASCII case-insensitive value.
-			(request->GetHeader("CONNECTION").UpperCaseString().IndexOf("UPGRADE") >= 0L) &&
-
-			// 5.   A |Sec-WebSocket-Key| header field with a base64-encoded (see
-			//      Section 4 of [RFC4648]) value that, when decoded, is 16 bytes in
-			//      length.
-			request->IsHeaderExists("SEC-WEBSOCKET-KEY") &&
-
-			// 6.   A |Sec-WebSocket-Version| header field, with a value of 13.
-			(request->GetHeader("SEC-WEBSOCKET-VERSION") == "13"))
-		{
-			// 나머지 사항은 체크하지 않음
-			// 7.   Optionally, an |Origin| header field.  This header field is sent
-			//      by all browser clients.  A connection attempt lacking this
-			//      header field SHOULD NOT be interpreted as coming from a browser
-			//      client.
-			//
-			// 8.   Optionally, a |Sec-WebSocket-Protocol| header field, with a list
-			//      of values indicating which protocols the client would like to
-			//      speak, ordered by preference.
-			//
-			// 9.   Optionally, a |Sec-WebSocket-Extensions| header field, with a
-			//      list of values indicating which extensions the client would like
-			//      to speak.  The interpretation of this header field is discussed
-			//      in Section 9.1.
-			//
-			// 10.  Optionally, other header fields, such as those used to send
-			//      cookies or request authentication to a server.  Unknown header
-			//      fields are ignored, as per [RFC2616].
-
-			logtd("%s is websocket request", request->ToString().CStr());
-
-			return true;
-		}
+		logtd("%s is not websocket request", request->ToString().CStr());
+		return false;
 	}
 
-	logtd("%s is not websocket request", request->ToString().CStr());
-
-	return false;
+	return true;
 }
 
 HttpInterceptorResult WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpClient> &client)

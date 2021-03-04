@@ -31,7 +31,7 @@ bool DtlsIceTransport::SendData(pub::SessionNodeType from_node, const std::share
 	}
 
 	logtd("DtlsIceTransport Send by ice port : %d", data->GetLength());
-	_ice_port->Send(GetSession(), data);
+	_ice_port->Send(GetSession()->GetId(), data);
 
 	return true;
 }

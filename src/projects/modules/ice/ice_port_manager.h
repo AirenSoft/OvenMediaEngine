@@ -25,7 +25,7 @@ public:
 	~IcePortManager() override = default;
 
 	std::shared_ptr<IcePort> CreatePort(std::shared_ptr<IcePortObserver> observer);
-	bool CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::pub::IceCandidates &ice_candidates);
+	bool CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::cmm::IceCandidates &ice_candidates);
 	bool CreateTurnServer(std::shared_ptr<IcePortObserver> observer, uint16_t listening_port, const ov::SocketType socket_type);
 
 	const std::vector<RtcIceCandidate> &GetIceCandidateList(const std::shared_ptr<IcePortObserver> &observer) const;
@@ -41,7 +41,7 @@ protected:
 	IcePortManager() = default;
 
 	bool IsRegisteredObserver(const std::shared_ptr<IcePortObserver> &observer);
-	bool GenerateIceCandidates(const cfg::bind::pub::IceCandidates &ice_candidates, std::vector<RtcIceCandidate> *parsed_ice_candidate_list);
+	bool GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &ice_candidates, std::vector<RtcIceCandidate> *parsed_ice_candidate_list);
 	bool ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, int *start_port, int *end_port);
 
 private:

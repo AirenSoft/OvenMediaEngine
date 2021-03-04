@@ -27,6 +27,7 @@
 
 enum class StreamSourceType : int8_t
 {
+	WebRTC,
 	Ovt,
 	Rtmp,
 	Rtsp,
@@ -233,6 +234,8 @@ static ov::String StringFromStreamSourceType(const StreamSourceType &type)
 {
 	switch (type)
 	{
+		case StreamSourceType::WebRTC:
+			return "WebRTC";
 		case StreamSourceType::Ovt:
 			return "Ovt";
 		case StreamSourceType::Rtmp:

@@ -4,7 +4,7 @@
 #include "rtc_session.h"
 #include "rtc_stream.h"
 #include "webrtc_publisher.h"
-
+#include "webrtc_publisher_signalling_interceptor.h"
 #include "config/config_manager.h"
 
 #include <orchestrator/orchestrator.h>
@@ -66,9 +66,10 @@ bool WebRtcPublisher::Start()
 	ov::SocketAddress signalling_tls_address = ov::SocketAddress(server_config.GetIp(), tls_port);
 
 	// Initialize RtcSignallingServer
+	auto interceptor = std::make_shared<WebRtcPublisherSignallingInterceptor>();
 	_signalling_server = std::make_shared<RtcSignallingServer>(server_config);
 	_signalling_server->AddObserver(RtcSignallingObserver::GetSharedPtr());
-	if (_signalling_server->Start(has_port ? &signalling_address : nullptr, has_tls_port ? &signalling_tls_address : nullptr, worker_count) == false)
+	if (_signalling_server->Start(has_port ? &signalling_address : nullptr, has_tls_port ? &signalling_tls_address : nullptr, worker_count, interceptor) == false)
 	{
 		return false;
 	}
@@ -122,6 +123,7 @@ bool WebRtcPublisher::Start()
 		logte("An error occurred while initialize WebRTC Publisher. Stopping RtcSignallingServer...");
 
 		_signalling_server->Stop();
+		IcePortManager::GetInstance()->Release(IcePortObserver::GetSharedPtr());
 
 		return false;
 	}
@@ -264,7 +266,7 @@ void WebRtcPublisher::OnMessage(const std::shared_ptr<ov::CommonMessage> &messag
 				return;
 			}
 
-			_ice_port->RemoveSession(session);
+			_ice_port->RemoveSession(session->GetId());
 			DisconnectSessionInternal(session);
 		}
 		catch(const std::bad_any_cast& e) 
@@ -470,7 +472,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 			stream_metrics->OnSessionConnected(PublisherType::Webrtc);
 		}
 
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), session, offer_sdp, peer_sdp);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), session->GetId(), offer_sdp, peer_sdp, 30*1000, session);
 
 		// Session is created
 
@@ -546,7 +548,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 	}
 
 	DisconnectSessionInternal(session);
-	_ice_port->RemoveSession(session);
+	_ice_port->RemoveSession(session->GetId());
 
 	return true;
 }
@@ -563,23 +565,31 @@ bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<WebSocketClient> &ws_
  * IcePort Implementation
  */
 
-void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::Session> &session_info,
-									 IcePortConnectionState state)
+void WebRtcPublisher::OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data)
 {
 	logtd("IcePort OnStateChanged : %d", state);
-
-	auto session = std::static_pointer_cast<RtcSession>(session_info);
+	
+	std::shared_ptr<RtcSession> session;
+	try
+	{
+		session = std::any_cast<std::shared_ptr<RtcSession>>(user_data);	
+	}
+	catch(const std::bad_any_cast& e)
+	{
+		// Internal Error
+		return;
+	}
+	
 	auto application = session->GetApplication();
 	auto stream = std::static_pointer_cast<RtcStream>(session->GetStream());
 
-	// state를 보고 session을 처리한다.
 	switch (state)
 	{
 		case IcePortConnectionState::New:
 		case IcePortConnectionState::Checking:
 		case IcePortConnectionState::Connected:
 		case IcePortConnectionState::Completed:
-			// 연결되었을때는 할일이 없다.
+			// Nothing to do
 			break;
 		case IcePortConnectionState::Failed:
 		case IcePortConnectionState::Disconnected:
@@ -594,9 +604,22 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, const std::shared_ptr<info::
 	}
 }
 
-void WebRtcPublisher::OnDataReceived(IcePort &port, const std::shared_ptr<info::Session> &session_info, std::shared_ptr<const ov::Data> data)
+void WebRtcPublisher::OnDataReceived(IcePort &port,uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data)
 {
-	auto session = std::static_pointer_cast<pub::Session>(session_info);
+	std::shared_ptr<RtcSession> session;
+	try
+	{
+		session = std::any_cast<std::shared_ptr<RtcSession>>(user_data);	
+	}
+	catch(const std::bad_any_cast& e)
+	{
+		// Internal Error
+		logtc("WebRtcPublisher::OnDataReceived - Could not convert user_data, internal error");
+		return;
+	}
+
+	logtd("WebRtcPublisher::OnDataReceived : %d", session_id);
+
 	auto application = session->GetApplication();
-	application->PushIncomingPacket(session_info, data);
+	application->PushIncomingPacket(session, data);
 }

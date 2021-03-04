@@ -19,9 +19,6 @@
 class PhysicalPortWorker;
 
 #define PHYSICAL_PORT_EPOLL_TIMEOUT_MSEC 500
-
-// PhysicalPort는 여러 곳에서 공유해서 사용할 수 있음
-// PhysicalPortObserver를 iteration 하면서 callback 할 수 있는 구조 필요
 class PhysicalPort : public ov::EnableSharedFromThis<PhysicalPort>
 {
 public:

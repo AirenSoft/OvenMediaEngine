@@ -81,4 +81,7 @@ protected:
 	std::shared_ptr<HttpRequestInterceptor> _default_interceptor = std::make_shared<HttpDefaultInterceptor>();
 
 	std::vector<std::shared_ptr<ocst::VirtualHost>> _virtual_host_list;
+
+private:
+	bool IsWebSocketRequest(const std::shared_ptr<const HttpRequest> &request);
 };

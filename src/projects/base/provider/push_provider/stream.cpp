@@ -106,12 +106,6 @@ namespace pvd
 			return false;
 		}
 
-		// Check if it belongs application
-		if(DoesBelongApplication() == false)
-		{
-			return false;
-		}
-
 		// Check if it has stream name
 		if(GetName().GetLength() == 0)
 		{

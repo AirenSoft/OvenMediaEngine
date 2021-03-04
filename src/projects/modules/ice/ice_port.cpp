@@ -81,7 +81,6 @@ bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_lis
 
 		// Create an ICE port using candidate information
 		auto physical_port = CreatePhysicalPort(address, socket_type);
-
 		if (physical_port == nullptr)
 		{
 			logte("Could not create physical port for %s/%s", address.ToString().CStr(), transport.CStr());
@@ -169,7 +168,6 @@ bool IcePort::CreateTurnServer(uint16_t listening_port, ov::SocketType socket_ty
 std::shared_ptr<PhysicalPort> IcePort::CreatePhysicalPort(const ov::SocketAddress &address, ov::SocketType type)
 {
 	auto physical_port = PhysicalPortManager::GetInstance()->CreatePort(type, address);
-
 	if (physical_port != nullptr)
 	{
 		if (physical_port->AddObserver(this))
@@ -229,7 +227,7 @@ ov::String IcePort::GenerateUfrag()
 	}
 }
 
-void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, const std::shared_ptr<info::Session> &session_info, std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp)
+void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id, std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp, int expired_ms, std::any user_data)
 {
 	const ov::String &local_ufrag = offer_sdp->GetIceUfrag();
 	const ov::String &remote_ufrag = peer_sdp->GetIceUfrag();
@@ -238,22 +236,18 @@ void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, const
 		std::lock_guard<std::mutex> lock_guard(_user_mapping_table_mutex);
 
 		auto item = _user_mapping_table.find(local_ufrag);
-
-		[[maybe_unused]] session_id_t session_id = session_info->GetId();
-
 		if (item != _user_mapping_table.end())
 		{
-			OV_ASSERT(false, "Duplicated ufrag: %s:%s, session_id: %d (old session_id: %d)", local_ufrag.CStr(), remote_ufrag.CStr(), session_id, item->second->session_info->GetId());
+			OV_ASSERT(false, "Duplicated ufrag: %s:%s, session_id: %d (old session_id: %d)", local_ufrag.CStr(), remote_ufrag.CStr(), session_id, item->second->session_id);
 		}
 
 		logtd("Trying to add session: %d (ufrag: %s:%s)...", session_id, local_ufrag.CStr(), remote_ufrag.CStr());
 
-		auto expire_after_ms = session_info->GetStream().GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher().GetTimeout();
-
-		std::shared_ptr<IcePortInfo> info = std::make_shared<IcePortInfo>(expire_after_ms);
+		std::shared_ptr<IcePortInfo> info = std::make_shared<IcePortInfo>(expired_ms);
 
 		info->observer = observer;
-		info->session_info = session_info;
+		info->user_data = user_data;
+		info->session_id = session_id;
 		info->offer_sdp = offer_sdp;
 		info->peer_sdp = peer_sdp;
 		info->remote = nullptr;
@@ -268,7 +262,7 @@ void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, const
 	SetIceState(_user_mapping_table[local_ufrag], IcePortConnectionState::New);
 }
 
-bool IcePort::RemoveSession(const session_id_t session_id)
+bool IcePort::RemoveSession(uint32_t session_id)
 {
 	std::shared_ptr<IcePortInfo> ice_port_info;
 
@@ -289,7 +283,7 @@ bool IcePort::RemoveSession(const session_id_t session_id)
 				while(it != _user_mapping_table.end())
 				{
 					auto ice_port_info = it->second;
-					if (ice_port_info->session_info->GetId() == session_id)
+					if (ice_port_info->session_id == session_id)
 					{
 						_user_mapping_table.erase(it++);
 						logtw("This is because the stun request was not received from this session.");
@@ -319,12 +313,6 @@ bool IcePort::RemoveSession(const session_id_t session_id)
 	return true;
 }
 
-bool IcePort::RemoveSession(const std::shared_ptr<info::Session> &session_info)
-{
-	session_id_t session_id = session_info->GetId();
-	return RemoveSession(session_id);
-}
-
 void IcePort::CheckTimedoutItem()
 {
 	std::vector<std::shared_ptr<IcePortInfo>> delete_list;
@@ -335,7 +323,7 @@ void IcePort::CheckTimedoutItem()
 		{
 			if (item->second->IsExpired())
 			{
-				logtd("Client %s(session id: %d) is expired", item->second->address.ToString().CStr(), item->second->session_info->GetId());
+				logtd("Client %s(session id: %d) is expired", item->second->address.ToString().CStr(), item->second->session_id);
 				SetIceState(item->second, IcePortConnectionState::Disconnected);
 
 				delete_list.push_back(item->second);
@@ -354,32 +342,32 @@ void IcePort::CheckTimedoutItem()
 
 		for (auto &deleted_ice_port : delete_list)
 		{
-			_session_table.erase(deleted_ice_port->session_info->GetId());
+			_session_table.erase(deleted_ice_port->session_id);
 			_ice_port_info.erase(deleted_ice_port->address);
 		}
 	}
 }
 
-bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<RtpPacket> packet)
+bool IcePort::Send(uint32_t session_id, std::shared_ptr<RtpPacket> packet)
 {
-	return Send(session_info, packet->GetData());
+	return Send(session_id, packet->GetData());
 }
 
-bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<RtcpPacket> packet)
+bool IcePort::Send(uint32_t session_id, std::shared_ptr<RtcpPacket> packet)
 {
-	return Send(session_info, packet->GetData());
+	return Send(session_id, packet->GetData());
 }
 
-bool IcePort::Send(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data)
+bool IcePort::Send(uint32_t session_id, const std::shared_ptr<const ov::Data> &data)
 {
 	std::shared_ptr<IcePortInfo> ice_port_info;
 	{
 		std::lock_guard<std::mutex> lock_guard(_ice_port_info_mutex);
 
-		auto item = _session_table.find(session_info->GetId());
+		auto item = _session_table.find(session_id);
 		if (item == _session_table.end())
 		{
-			logtw("ClientSocket not found for session #%d", session_info->GetId());
+			logtw("ClientSocket not found for session #%d", session_id);
 			return false;
 		}
 
@@ -515,9 +503,10 @@ void IcePort::OnApplicationPacketReceived(const std::shared_ptr<ov::Socket> &rem
 		logtd("Could not find client information. Dropping...");
 		return;
 	}
+	
 	if(ice_port_info->observer != nullptr)
 	{
-		ice_port_info->observer->OnDataReceived(*this, ice_port_info->session_info, data);
+		ice_port_info->observer->OnDataReceived(*this, ice_port_info->session_id, data, ice_port_info->user_data);
 	}
 }
 
@@ -667,7 +656,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 			std::lock_guard<std::mutex> lock_guard(_ice_port_info_mutex);
 
 			_ice_port_info.erase(ice_port_info->address);
-			_session_table.erase(ice_port_info->session_info->GetId());
+			_session_table.erase(ice_port_info->session_id);
 		}
 
 		return false;
@@ -701,12 +690,12 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 	{
 		std::lock_guard<std::mutex> lock_guard(_ice_port_info_mutex);
 
-		if (_session_table.find(ice_port_info->session_info->GetId()) == _session_table.end())
+		if (_session_table.find(ice_port_info->session_id) == _session_table.end())
 		{
 			logtd("Add the client to the port list: %s", address.ToString().CStr());
 
 			_ice_port_info[address] = ice_port_info;
-			_session_table[ice_port_info->session_info->GetId()] = ice_port_info;
+			_session_table[ice_port_info->session_id] = ice_port_info;
 		}
 		else
 		{
@@ -1087,7 +1076,7 @@ void IcePort::SetIceState(std::shared_ptr<IcePortInfo> &info, IcePortConnectionS
 	info->state = state;
 	if(info->observer != nullptr)
 	{
-		info->observer->OnStateChanged(*this, info->session_info, state);
+		info->observer->OnStateChanged(*this, info->session_id, state, info->user_data);
 	}
 }
 

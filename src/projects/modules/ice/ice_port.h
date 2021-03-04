@@ -61,8 +61,9 @@ protected:
 	{
 		std::shared_ptr<IcePortObserver> observer;
 
-		// Session information that connected with the client
-		std::shared_ptr<info::Session> session_info;
+		// Session ID that connected with the client
+		uint32_t session_id;
+		std::any user_data;
 
 		std::shared_ptr<const SessionDescription> offer_sdp;
 		std::shared_ptr<const SessionDescription> peer_sdp;
@@ -108,15 +109,12 @@ public:
 	bool CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_list);
 	bool Close();
 
-	IcePortConnectionState GetState(const std::shared_ptr<info::Session> &session_info) const
+	IcePortConnectionState GetState(uint32_t session_id) const
 	{
-		OV_ASSERT2(session_info != nullptr);
-
-		auto item = _session_table.find(session_info->GetId());
-
+		auto item = _session_table.find(session_id);
 		if(item == _session_table.end())
 		{
-			OV_ASSERT(false, "Invalid session_id: %d", session_info->GetId());
+			OV_ASSERT(false, "Invalid session_id: %d", session_id);
 			return IcePortConnectionState::Failed;
 		}
 
@@ -125,13 +123,12 @@ public:
 
 	ov::String GenerateUfrag();
 
-	void AddSession(const std::shared_ptr<IcePortObserver> &observer, const std::shared_ptr<info::Session> &session_info, std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp);
-	bool RemoveSession(session_id_t session_id);
-	bool RemoveSession(const std::shared_ptr<info::Session> &session_info);
+	void AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id, std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp, int stun_timeout_ms, std::any user_data);
+	bool RemoveSession(uint32_t session_id);
 
-	bool Send(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<RtpPacket> packet);
-	bool Send(const std::shared_ptr<info::Session> &session_info, std::shared_ptr<RtcpPacket> packet);
-	bool Send(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data);
+	bool Send(uint32_t session_id, std::shared_ptr<RtpPacket> packet);
+	bool Send(uint32_t session_id, std::shared_ptr<RtcpPacket> packet);
+	bool Send(uint32_t session_id, const std::shared_ptr<const ov::Data> &data);
 
 	ov::String ToString() const;
 
