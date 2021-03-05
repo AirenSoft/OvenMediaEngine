@@ -22,7 +22,7 @@ bool StunClient::GetMappedAddress(const ov::SocketAddress &stun_server, ov::Sock
 	message.SetTransactionId(&(transaction_id[0]));
 
 	auto send_data = message.Serialize();
-
+	
 	auto client = ov::SocketPool::GetUdpPool()->AllocSocket();
 	timeval tv = {1, 0};
 

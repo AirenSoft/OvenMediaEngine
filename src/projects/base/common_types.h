@@ -81,6 +81,17 @@ enum class FrameType : int8_t
 	VideoFrameDelta,
 };
 
+enum class NodeType : int16_t
+{
+	Unknown = 0,
+	Rtp = 100,
+	Rtcp = 101,
+	Srtp = 200,
+	Sctp = 300,
+	Dtls = 400,
+	Ice = 500
+};
+
 struct FragmentationHeader
 {
 public:

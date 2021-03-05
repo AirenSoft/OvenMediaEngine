@@ -60,8 +60,6 @@ bool RtcSession::Start()
 		return false;
 	}
 
-	auto session = std::static_pointer_cast<pub::Session>(GetSharedPtr());
-
 	auto offer_media_desc_list = _offer_sdp->GetMediaList();
 	auto peer_media_desc_list = _peer_sdp->GetMediaList();
 
@@ -124,16 +122,16 @@ bool RtcSession::Start()
 		}
 	}
 
-	_rtp_rtcp = std::make_shared<RtpRtcp>((uint32_t)pub::SessionNodeType::Rtp, session, ssrc_list);
+	_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr(), ssrc_list);
 
-	_srtp_transport = std::make_shared<SrtpTransport>((uint32_t)pub::SessionNodeType::Srtp, session);
+	_srtp_transport = std::make_shared<SrtpTransport>();
 
-	_dtls_transport = std::make_shared<DtlsTransport>((uint32_t)pub::SessionNodeType::Dtls, session);
+	_dtls_transport = std::make_shared<DtlsTransport>();
 	std::shared_ptr<RtcApplication> application = std::static_pointer_cast<RtcApplication>(GetApplication());
 	_dtls_transport->SetLocalCertificate(application->GetCertificate());
 	_dtls_transport->StartDTLS();
 
-	_dtls_ice_transport = std::make_shared<DtlsIceTransport>((uint32_t)pub::SessionNodeType::Ice, session, _ice_port);
+	_dtls_ice_transport = std::make_shared<DtlsIceTransport>(GetId(), _ice_port);
 
 	// Connect nodes
 	_rtp_rtcp->RegisterUpperNode(nullptr);
@@ -218,7 +216,7 @@ void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_
 
 	_received_bytes += data->GetLength();
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
-	_dtls_ice_transport->OnDataReceived(pub::SessionNodeType::None, data);
+	_dtls_ice_transport->OnDataReceived(NodeType::Unknown, data);
 }
 
 bool RtcSession::SendOutgoingData(const std::any &packet)
@@ -234,7 +232,7 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 	// Check expired time
 	if(_session_expired_time != 0 && _session_expired_time < ov::Clock::NowMSec())
 	{
-		_publisher->DisconnectSession(GetSharedPtrAs<RtcSession>());
+		_publisher->DisconnectSession(pub::Session::GetSharedPtrAs<RtcSession>());
 		SetState(SessionState::Stopping);
 		return false;
 	}
@@ -288,6 +286,11 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 	// RTP Session must be copied and sent because data is altered due to SRTP.
 	auto copy_packet = std::make_shared<RtpPacket>(*session_packet);
 	return _rtp_rtcp->SendOutgoingData(copy_packet);
+}
+
+void RtcSession::OnRtpReceived(const std::shared_ptr<RtpPacket> &rtp_packet)
+{
+	// No one send RTP packet 
 }
 
 void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)

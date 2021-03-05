@@ -34,7 +34,7 @@ class WebRtcPublisher;
 class RtcApplication;
 class RtcStream;
 
-class RtcSession : public pub::Session
+class RtcSession : public pub::Session, public RtpRtcpInterface
 {
 public:
 	static std::shared_ptr<RtcSession> Create(const std::shared_ptr<WebRtcPublisher> &publisher,
@@ -67,7 +67,8 @@ public:
 	bool SendOutgoingData(const std::any &packet) override;
 	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data) override;
 
-	void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info);
+	void OnRtpReceived(const std::shared_ptr<RtpPacket> &rtp_packet) override;
+	void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
 
 private:
 	bool ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info);

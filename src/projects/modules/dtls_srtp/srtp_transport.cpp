@@ -11,8 +11,8 @@
 
 #define OV_LOG_TAG "SRTP"
 
-SrtpTransport::SrtpTransport(uint32_t node_id, std::shared_ptr<pub::Session> session)
-	: SessionNode(node_id, pub::SessionNodeType::Srtp, session)
+SrtpTransport::SrtpTransport()
+	: ov::Node(NodeType::Srtp)
 {
 
 }
@@ -33,14 +33,14 @@ bool SrtpTransport::Stop()
 		_recv_session->Release();
 	}
 
-	return SessionNode::Stop();
+	return Node::Stop();
 }
 
-bool SrtpTransport::SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
+bool SrtpTransport::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
-	if(GetState() != SessionNode::NodeState::Started)
+	if(GetState() != ov::Node::NodeState::Started)
 	{
-		logtd("SessionNode has not started, so the received data has been canceled.");
+		logtd("Node has not started, so the received data has been canceled.");
 		return false;
 	}
 
@@ -49,14 +49,14 @@ bool SrtpTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 		return false;
 	}
 	
-	if(from_node == pub::SessionNodeType::Rtp)
+	if(from_node == NodeType::Rtp)
 	{
 		if(!_send_session->ProtectRtp(data))
 		{
 			return false;
 		}
 	}
-	else if(from_node == pub::SessionNodeType::Rtcp)
+	else if(from_node == NodeType::Rtcp)
 	{
 		 if(!_send_session->ProtectRtcp(data))
 		 {
@@ -79,11 +79,11 @@ bool SrtpTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 	return node->SendData(GetNodeType(), data);
 }
 
-bool SrtpTransport::OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
+bool SrtpTransport::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
-	if(GetState() != SessionNode::NodeState::Started)
+	if(GetState() != ov::Node::NodeState::Started)
 	{
-		logtd("SessionNode has not started, so the received data has been canceled.");
+		logtd("Node has not started, so the received data has been canceled.");
 		return false;
 	}
 
