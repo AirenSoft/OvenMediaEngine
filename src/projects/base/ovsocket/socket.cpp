@@ -566,17 +566,14 @@ namespace ov
 				sent_bytes = SendToInternal(command.address, data);
 				break;
 
+			case DispatchCommand::Type::HalfClose:
+				return HalfClose();
+
+			case DispatchCommand::Type::WaitForHalfClose:
+				return WaitForHalfClose();
+
 			case DispatchCommand::Type::Close:
 				logad("Trying to close the socket...");
-
-				if (GetState() == ov::SocketState::Connected)
-				{
-					// Half close (socket descriptor is alive)
-					if (HalfClose() == false)
-					{
-						logaw("Unable to half-close (ignored)");
-					}
-				}
 
 				// Remove the socket from epoll
 				if (_worker->ReleaseSocket(this->GetSharedPtr()))
@@ -606,28 +603,24 @@ namespace ov
 		return DispatchResult::PartialDispatched;
 	}
 
-	Socket::DispatchResult Socket::DispatchEvents(bool dispatch_close)
+	Socket::DispatchResult Socket::DispatchEvents()
 	{
 		std::lock_guard lock_guard(_dispatch_queue_lock);
 
 		if (_dispatch_queue.size() > 0)
 		{
-			logap("Dispatching events (count: %zu, close: %d)...", _dispatch_queue.size(), dispatch_close);
+			logap("Dispatching events (count: %zu)...", _dispatch_queue.size());
 		}
 
 		auto iterator = _dispatch_queue.begin();
 
 		while (iterator != _dispatch_queue.end())
 		{
-			if ((dispatch_close == false) && (iterator->type == DispatchCommand::Type::Close))
-			{
-				// If dispatch_close is false, do not dispatch the close command
-				return DispatchResult::PartialDispatched;
-			}
+			bool is_close_command = DispatchCommand::IsCloseCommand(iterator->type);
 
 			if (GetState() == SocketState::Closed)
 			{
-				if (iterator->type != DispatchCommand::Type::Close)
+				if (is_close_command)
 				{
 					// If the socket is closed during dispatching, the rest of the data will not be sent.
 					logad("Some commands have not been dispatched: %zu commands", _dispatch_queue.size());
@@ -655,10 +648,18 @@ namespace ov
 			else if (result == DispatchResult::PartialDispatched)
 			{
 				// The data is not fully processed and will not be removed from queue
+
+				// Close-related commands will be processed when we receive the event from epoll later
 			}
 			else
 			{
 				// An error occurred
+
+				if (is_close_command)
+				{
+					// Ignore errors that occurred during close
+					return DispatchResult::Dispatched;
+				}
 			}
 
 			return result;
@@ -673,7 +674,7 @@ namespace ov
 		{
 			return -1L;
 		}
-		
+
 		auto data_to_send = data->GetDataAs<uint8_t>();
 		size_t remained = data->GetLength();
 		size_t total_sent = 0L;
@@ -882,7 +883,7 @@ namespace ov
 			}
 		}
 
-		return (DispatchEvents(false) != DispatchResult::Error);
+		return (DispatchEvents() != DispatchResult::Error);
 	}
 
 	bool Socket::Send(const void *data, size_t length)
@@ -926,7 +927,7 @@ namespace ov
 			}
 		}
 
-		return (DispatchEvents(false) != DispatchResult::Error);
+		return (DispatchEvents() != DispatchResult::Error);
 	}
 
 	bool Socket::SendTo(const SocketAddress &address, const void *data, size_t length)
@@ -1021,10 +1022,22 @@ namespace ov
 			}
 			else if (read_bytes < 0L)
 			{
-				logae("An error occurred while read data: %s\nStack trace: %s",
-					  error->ToString().CStr(),
-					  ov::StackTrace::GetStackTrace().CStr());
+				switch (error->GetCode())
+				{
+					// Errors that can occur under normal circumstances do not output
+					case EBADF:
+						// Socket is closed somewhere in OME
+						break;
 
+					case ECONNRESET:
+						// Peer is disconnected
+						break;
+
+					default:
+						logae("An error occurred while read data: %s\nStack trace: %s",
+							  error->ToString().CStr(),
+							  ov::StackTrace::GetStackTrace().CStr());
+				}
 				SetState(SocketState::Error);
 			}
 		}
@@ -1114,7 +1127,7 @@ namespace ov
 		// Dispatch ALL commands
 		while (_dispatch_queue.size() > 0)
 		{
-			if (DispatchEvents(false) == DispatchResult::Error)
+			if (DispatchEvents() == DispatchResult::Error)
 			{
 				return false;
 			}
@@ -1128,16 +1141,16 @@ namespace ov
 		CHECK_STATE(>= SocketState::Closed, false);
 		CHECK_STATE(!= SocketState::Error, false);
 
-		logad("Enqueuing close command");
-
-		bool enqueued = false;
-
 		{
 			std::lock_guard lock_guard(_dispatch_queue_lock);
+
 			if (_has_close_command == false)
 			{
+				logad("Enqueuing close command");
 				_has_close_command = true;
-				enqueued = true;
+
+				_dispatch_queue.emplace_back(DispatchCommand::Type::HalfClose);
+				_dispatch_queue.emplace_back(DispatchCommand::Type::WaitForHalfClose);
 				_dispatch_queue.emplace_back(DispatchCommand::Type::Close);
 			}
 			else
@@ -1146,99 +1159,57 @@ namespace ov
 			}
 		}
 
-		if (enqueued)
+		return DispatchEvents() != DispatchResult::Error;
+	}
+
+	Socket::DispatchResult Socket::HalfClose()
+	{
+		if (GetType() == SocketType::Tcp)
 		{
-			if (_is_nonblock)
+			if (_socket.IsValid())
 			{
-				// Dispatch later
-				_worker->EnqueueToDispatchLater(this->GetSharedPtr());
+				// Send FIN
+				::shutdown(GetNativeHandle(), SHUT_WR);
+			}
+		}
+
+		return DispatchResult::Dispatched;
+	}
+
+	Socket::DispatchResult Socket::WaitForHalfClose()
+	{
+		if (GetType() != SocketType::Tcp)
+		{
+			return DispatchResult::Dispatched;
+		}
+
+		while (true)
+		{
+			char buffer[MAX_BUFFER_SIZE];
+			int result = ::recv(GetNativeHandle(), buffer, MAX_BUFFER_SIZE, MSG_DONTWAIT);
+
+			if (result < 0L)
+			{
+				auto error = ov::Error::CreateErrorFromErrno();
+
+				if (error->GetCode() == EAGAIN)
+				{
+					return DispatchResult::PartialDispatched;
+				}
+
+				logae("An error occurred while half-closing: %s", error->ToString().CStr());
+				return DispatchResult::Error;
+			}
+			else if (result == 0)
+			{
+				logad("Half closed");
+				return DispatchResult::Dispatched;
 			}
 			else
 			{
-				// Dispatch now
-				return DispatchEvents(true) != DispatchResult::Error;
+				// Ignores those data
 			}
 		}
-
-		return true;
-	}
-
-	bool Socket::CloseSync()
-	{
-		// Enqueues close command
-		if (Close() == false)
-		{
-			return false;
-		}
-
-		if(_is_nonblock)
-		{
-			// Dispatch until close command is executed
-			return DispatchEvents(true) != DispatchResult::Error;
-		}
-
-		// This socket just closed in Close()
-		return true;
-	}
-
-	bool Socket::HalfClose()
-	{
-		CHECK_STATE(== SocketState::Connected, false);
-
-		if (_socket.IsValid())
-		{
-			switch (GetType())
-			{
-				case SocketType::Tcp: {
-					// Send FIN
-					logad("Half closing...");
-					::shutdown(GetNativeHandle(), SHUT_WR);
-
-					ov::StopWatch stop_watch;
-					stop_watch.Start();
-
-					// Wait for ACK/FIN
-					while (stop_watch.IsElapsed(HALF_CLOSE_TIMEOUT) == false)
-					{
-						char buffer[MAX_BUFFER_SIZE];
-						int result = ::recv(GetNativeHandle(), buffer, MAX_BUFFER_SIZE, MSG_DONTWAIT);
-
-						if (result < 0L)
-						{
-							auto error = ov::Error::CreateErrorFromErrno();
-
-							if (error->GetCode() == EAGAIN)
-							{
-								::usleep(10 * 1000);
-								continue;
-							}
-
-							logae("An error occurred while half-closing: %s", error->ToString().CStr());
-							return false;
-						}
-						else if (result == 0)
-						{
-							logad("Half closed");
-							return true;
-						}
-						else
-						{
-							// Ignores those data
-						}
-					}
-
-					break;
-				}
-
-				case SocketType::Unknown:
-				case SocketType::Udp:
-				case SocketType::Srt:
-					// Not supported
-					break;
-			}
-		}
-
-		return true;
 	}
 
 	bool Socket::CloseInternal()

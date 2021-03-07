@@ -159,7 +159,7 @@ namespace ov
 			return AttachToWorker(socket);
 		}
 
-		socket->CloseSync();
+		socket->Close();
 
 		return false;
 	}
@@ -258,7 +258,7 @@ namespace ov
 
 					if (OV_CHECK_FLAG(events, EPOLLOUT))
 					{
-						switch (socket->DispatchEvents(true))
+						switch (socket->DispatchEvents())
 						{
 							case Socket::DispatchResult::Dispatched:
 								break;
@@ -268,7 +268,7 @@ namespace ov
 								break;
 
 							case Socket::DispatchResult::Error:
-								socket->CloseSync();
+								socket->Close();
 								break;
 						}
 					}
@@ -295,7 +295,7 @@ namespace ov
 							}
 							else
 							{
-								socket->CloseSync();
+								socket->Close();
 							}
 						}
 					}
@@ -314,7 +314,7 @@ namespace ov
 
 				for (auto &socket : socket_list)
 				{
-					switch (socket->DispatchEvents(true))
+					switch (socket->DispatchEvents())
 					{
 						case Socket::DispatchResult::Dispatched:
 							break;
@@ -324,7 +324,7 @@ namespace ov
 							break;
 
 						case Socket::DispatchResult::Error:
-							socket->CloseSync();
+							socket->Close();
 							break;
 					}
 				}
@@ -566,7 +566,7 @@ namespace ov
 			logae("Epoll is not initialized");
 
 			OV_ASSERT2(GetNativeHandle() != InvalidSocket);
-			return -1;
+			return false;
 		}
 
 		std::shared_ptr<ov::Error> error;
@@ -610,10 +610,19 @@ namespace ov
 		}
 		else
 		{
-			logae("Could not delete the socket %d from epoll: %s\n%s",
-				  native_handle,
-				  error->ToString().CStr(),
-				  ov::StackTrace::GetStackTrace().CStr());
+			if (error->GetCode() == EBADF)
+			{
+				// Socket is closed somewhere in OME
+
+				// Do not print 'Bad file descriptor' error log
+			}
+			else
+			{
+				logae("Could not delete the socket %d from epoll: %s\n%s",
+					  native_handle,
+					  error->ToString().CStr(),
+					  ov::StackTrace::GetStackTrace().CStr());
+			}
 		}
 
 		return (error == nullptr);

@@ -61,7 +61,7 @@ namespace ov
 				Bind(address) &&
 				Listen(backlog)) == false)
 		{
-			CloseSync();
+			Close();
 
 			// Rollback
 			_connection_callback = nullptr;
@@ -161,7 +161,7 @@ namespace ov
 
 		for (const auto &client : client_list)
 		{
-			client.second->CloseSync();
+			client.second->Close();
 		}
 
 		_callback = nullptr;

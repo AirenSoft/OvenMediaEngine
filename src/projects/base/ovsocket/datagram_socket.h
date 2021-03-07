@@ -28,7 +28,7 @@ namespace ov
 		// address에 해당하는 주소로 bind
 		bool Prepare(const SocketAddress &address, DatagramCallback datagram_callback);
 
-		using Socket::CloseSync;
+		using Socket::Close;
 		using Socket::Connect;
 		using Socket::GetState;
 		using Socket::Recv;

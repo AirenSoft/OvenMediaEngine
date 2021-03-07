@@ -40,7 +40,7 @@ namespace ov
 				SetSockOpt<int>(SO_REUSEADDR, 1) &&
 				Bind(address)) == false)
 		{
-			CloseSync();
+			Close();
 			return false;
 		}
 

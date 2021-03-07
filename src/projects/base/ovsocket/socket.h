@@ -169,14 +169,11 @@ namespace ov
 		std::shared_ptr<Error> RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block = false);
 
 		// Dispatches as many command as possible
-		DispatchResult DispatchEvents(bool dispatch_close);
+		DispatchResult DispatchEvents();
 
 		bool Flush();
 
-		// Close the socket asynchronously
 		bool Close();
-		// Close the socket and wait for close
-		bool CloseSync();
 
 		bool HasCommand() const
 		{
@@ -215,15 +212,26 @@ namespace ov
 	protected:
 		struct DispatchCommand
 		{
-			enum class Type
+			static constexpr int CLOSE_TYPE_MASK = 0xf0;
+
+			enum class Type : uint8_t
 			{
 				// Need to send data using send()
-				Send,
+				Send = 0x00,
 				// Need to send data using sendto()
-				SendTo,
+				SendTo = 0x01,
+				// Need to call shutdown(SHUT_WR) (TCP only)
+				HalfClose = CLOSE_TYPE_MASK | 0x02,
+				// Wait for ACK/FIN
+				WaitForHalfClose = CLOSE_TYPE_MASK | 0x03,
 				// Need to close the socket
-				Close
+				Close = CLOSE_TYPE_MASK | 0x04
 			};
+
+			static bool IsCloseCommand(Type type)
+			{
+				return OV_CHECK_FLAG(static_cast<uint8_t>(type), CLOSE_TYPE_MASK);
+			}
 
 			static const char *StringFromType(Type type)
 			{
@@ -234,6 +242,12 @@ namespace ov
 
 					case Type::SendTo:
 						return "SendTo";
+
+					case Type::HalfClose:
+						return "HalfClose";
+
+					case Type::WaitForHalfClose:
+						return "WaitForHalfClose";
 
 					case Type::Close:
 						return "Close";
@@ -316,7 +330,8 @@ namespace ov
 
 		virtual String ToString(const char *class_name) const;
 
-		bool HalfClose();
+		DispatchResult HalfClose();
+		DispatchResult WaitForHalfClose();
 
 		virtual bool CloseInternal();
 
