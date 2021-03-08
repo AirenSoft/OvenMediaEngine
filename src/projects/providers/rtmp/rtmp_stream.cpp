@@ -125,7 +125,7 @@ namespace pvd
 
 		if(_remote->GetState() == ov::SocketState::Connected)
 		{
-			_remote->CloseSync();
+			_remote->Close();
 		}
 
 		return PushStream::Stop();
@@ -631,7 +631,7 @@ namespace pvd
 		_media_info->audio_stream_coming = false;
 
 		// it will call PhysicalPort::OnDisconnected
-		_remote->CloseSync();
+		_remote->Close();
 	}
 
 

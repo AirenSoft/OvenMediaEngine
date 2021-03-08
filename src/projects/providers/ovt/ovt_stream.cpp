@@ -61,7 +61,7 @@ namespace pvd
 
 		if(_client_socket != nullptr)
 		{
-			_client_socket->CloseSync();
+			_client_socket->Close();
 			_client_socket = nullptr;
 		}
 
@@ -537,7 +537,7 @@ namespace pvd
 			if (error != nullptr)
 			{
 				logte("[%s/%s] An error occurred while receiving packet: %s", GetApplicationName(), GetName().CStr(), error->ToString().CStr());
-				_client_socket->CloseSync();
+				_client_socket->Close();
 				_state = State::ERROR;
 				return false;
 			}

@@ -37,7 +37,7 @@ void RtspConnection::AppendRequestData(const std::shared_ptr<const ov::Data> &da
                     if (rtsp_rtp_demuxer_.AppendMuxedData(bytes, bytes_remaining, bytes_consumed, rtsp_rtp_demuxer_has_pending_data_) == false)
                     {
                         // We failed to demux the interleaved RTP the stream, shutdown the connection
-                        remote_->CloseSync();
+                        remote_->Close();
                         return;
                     }
                     if (bytes_consumed > bytes_remaining)

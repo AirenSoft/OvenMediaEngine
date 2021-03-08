@@ -67,7 +67,7 @@ namespace pvd
 
 		if(_remote->GetState() == ov::SocketState::Connected)
 		{
-			_remote->CloseSync();
+			_remote->Close();
 		}
 
 		return PushStream::Stop();

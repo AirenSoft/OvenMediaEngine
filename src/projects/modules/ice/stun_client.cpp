@@ -29,13 +29,13 @@ bool StunClient::GetMappedAddress(const ov::SocketAddress &stun_server, ov::Sock
 	client->SetRecvTimeout(tv);
 	if(client->SendTo(stun_server, send_data) == false)
 	{
-		client->CloseSync();
+		client->Close();
 		return false;
 	}
 
 	auto recv_data = std::make_shared<ov::Data>(1500);
 	auto result = client->RecvFrom(recv_data, nullptr);
-	client->CloseSync();
+	client->Close();
 
 	if(recv_data->GetLength() <= 0)
 	{
