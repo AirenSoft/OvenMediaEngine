@@ -8,15 +8,19 @@
 //==============================================================================
 
 #include "webrtc_stream.h"
+#include "webrtc_application.h"
+#include "webrtc_private.h"
 
 namespace pvd
 {
-	std::shared_ptr<WebRTCStream> WebRTCStream::Create(StreamSourceType source_type, uint32_t client_id, const std::shared_ptr<PushProvider> &provider,
+	std::shared_ptr<WebRTCStream> WebRTCStream::Create(StreamSourceType source_type, ov::String stream_name, uint32_t stream_id, 
+														const std::shared_ptr<PushProvider> &provider,
 														const std::shared_ptr<const SessionDescription> &offer_sdp,
 														const std::shared_ptr<const SessionDescription> &peer_sdp,
+														const std::shared_ptr<Certificate> &certificate, 
 														const std::shared_ptr<IcePort> &ice_port)
 	{
-		auto stream = std::make_shared<WebRTCStream>(source_type, client_id, provider, offer_sdp, peer_sdp, ice_port);
+		auto stream = std::make_shared<WebRTCStream>(source_type, stream_name, stream_id, provider, offer_sdp, peer_sdp, certificate, ice_port);
 		if(stream != nullptr)
 		{
 			if(stream->Start() == false)
@@ -27,15 +31,18 @@ namespace pvd
 		return stream;
 	}
 	
-	WebRTCStream::WebRTCStream(StreamSourceType source_type, uint32_t client_id, const std::shared_ptr<PushProvider> &provider,
+	WebRTCStream::WebRTCStream(StreamSourceType source_type, ov::String stream_name, uint32_t stream_id, 
+								const std::shared_ptr<PushProvider> &provider,
 								const std::shared_ptr<const SessionDescription> &offer_sdp,
 								const std::shared_ptr<const SessionDescription> &peer_sdp,
+								const std::shared_ptr<Certificate> &certificate,
 								const std::shared_ptr<IcePort> &ice_port)
-		: PushStream(source_type, client_id, provider)
+		: PushStream(source_type, stream_name, stream_id, provider)
 	{
 		_offer_sdp = offer_sdp;
 		_peer_sdp = peer_sdp;
 		_ice_port = ice_port;
+		_certificate = certificate;
 	}
 
 	WebRTCStream::~WebRTCStream()
@@ -45,19 +52,205 @@ namespace pvd
 
 	bool WebRTCStream::Start()
 	{
+		std::lock_guard<std::shared_mutex> lock(_start_stop_lock);
+
+		auto offer_media_desc_list = _offer_sdp->GetMediaList();
+		auto peer_media_desc_list = _peer_sdp->GetMediaList();
+
+		if(offer_media_desc_list.size() != peer_media_desc_list.size())
+		{
+			logte("m= line of answer does not correspond with offer");
+			return false;
+		}
+
+		// RFC3264
+		// For each "m=" line in the offer, there MUST be a corresponding "m=" line in the answer.
+		std::vector<uint32_t> ssrc_list;
+		for(size_t i = 0; i < peer_media_desc_list.size(); i++)
+		{
+			auto peer_media_desc = peer_media_desc_list[i];
+			auto offer_media_desc = offer_media_desc_list[i];
+
+			// The first payload has the highest priority.
+			auto first_payload = peer_media_desc->GetFirstPayload();
+			if(first_payload == nullptr)
+			{
+				logte("%s - Failed to get the first Payload type of peer sdp", GetName().CStr());
+				return false;
+			}
+
+			if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
+			{
+				_audio_payload_type = first_payload->GetId();
+				_audio_ssrc = offer_media_desc->GetSsrc();
+				ssrc_list.push_back(_audio_ssrc);
+
+				// Add Track
+				auto audio_track = std::make_shared<MediaTrack>();
+
+				// 	a=rtpmap:102 OPUS/48000/2
+				auto codec = first_payload->GetCodec();
+				auto samplerate = first_payload->GetCodecRate();
+				auto channels = std::atoi(first_payload->GetCodecParams());
+
+				if(codec == PayloadAttr::SupportCodec::OPUS)
+				{
+					audio_track->SetCodecId(cmn::MediaCodecId::Opus);
+				}
+				else
+				{
+					logte("%s - Unsupported audio codec : %s", GetName().CStr(), first_payload->GetCodecParams().CStr());
+					return false;
+				}
+				
+				audio_track->SetId(first_payload->GetId());
+				audio_track->SetMediaType(cmn::MediaType::Audio);
+				audio_track->SetTimeBase(1, samplerate);
+				audio_track->SetAudioTimestampScale(1.0);
+
+				if (channels == 1)
+				{
+					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutMono);
+				}
+				else if (channels == 2)
+				{
+					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
+				}
+
+				AddTrack(audio_track);
+			}
+			else
+			{
+				if(peer_media_desc->GetPayload(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE)))
+				{
+					_video_payload_type = static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE);
+					_red_block_pt = first_payload->GetId();
+				}
+				else
+				{
+					_video_payload_type = first_payload->GetId();
+				}
+
+				// Retransmission, We always define the RTX payload as payload + 1
+				auto payload = peer_media_desc->GetPayload(_video_payload_type+1);
+				if(payload != nullptr)
+				{
+					if(payload->GetCodec() == PayloadAttr::SupportCodec::RTX)
+					{
+						_rtx_enabled = true;
+						_video_rtx_ssrc = offer_media_desc->GetRtxSsrc();
+					}
+				}
+
+				_video_ssrc = offer_media_desc->GetSsrc();
+				ssrc_list.push_back(_video_ssrc);
+				
+				// a=rtpmap:100 H264/90000
+				auto codec = first_payload->GetCodec();
+				auto timebase = first_payload->GetCodecRate();
+
+				auto video_track = std::make_shared<MediaTrack>();
+
+				video_track->SetId(first_payload->GetId());
+				video_track->SetMediaType(cmn::MediaType::Video);
+
+				if(codec == PayloadAttr::SupportCodec::H264)
+				{
+					video_track->SetCodecId(cmn::MediaCodecId::H264);
+				}
+				else if(codec == PayloadAttr::SupportCodec::VP8)
+				{
+					video_track->SetCodecId(cmn::MediaCodecId::Vp8);
+				}
+				else
+				{
+					logte("%s - Unsupported video codec  : %s", GetName().CStr(), first_payload->GetCodecParams().CStr());
+					return false;
+				}
+
+				video_track->SetTimeBase(1, timebase);
+				video_track->SetVideoTimestampScale(1.0);			
+				AddTrack(video_track);
+			}
+		}
 		
+		// Create Nodes
+		_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr(), ssrc_list);
+		_srtp_transport = std::make_shared<SrtpTransport>();
+		_dtls_transport = std::make_shared<DtlsTransport>();
+
+		auto application = std::static_pointer_cast<WebRTCApplication>(GetApplication());
+		_dtls_transport->SetLocalCertificate(_certificate);
+		_dtls_transport->StartDTLS();
+		_dtls_ice_transport = std::make_shared<DtlsIceTransport>(GetId(), _ice_port);
+
+		// Connect nodes
+		_rtp_rtcp->RegisterUpperNode(nullptr);
+		_rtp_rtcp->RegisterLowerNode(_srtp_transport);
+		_rtp_rtcp->Start();
+		_srtp_transport->RegisterUpperNode(_rtp_rtcp);
+		_srtp_transport->RegisterLowerNode(_dtls_transport);
+		_srtp_transport->Start();
+		_dtls_transport->RegisterUpperNode(_srtp_transport);
+		_dtls_transport->RegisterLowerNode(_dtls_ice_transport);
+		_dtls_transport->Start();
+		_dtls_ice_transport->RegisterUpperNode(_dtls_transport);
+		_dtls_ice_transport->RegisterLowerNode(nullptr);
+		_dtls_ice_transport->Start();
 
 		return pvd::Stream::Start();
 	}
 
 	bool WebRTCStream::Stop()
 	{
+		std::lock_guard<std::shared_mutex> lock(_start_stop_lock);
+
+		if(_rtp_rtcp != nullptr)
+		{
+			_rtp_rtcp->Stop();
+		}
+
+		if(_dtls_ice_transport != nullptr)
+		{
+			_dtls_ice_transport->Stop();
+		}
+
+		if(_dtls_transport != nullptr)
+		{
+			_dtls_transport->Stop();
+		}
+
+		if(_srtp_transport != nullptr)
+		{
+			_srtp_transport->Stop();
+		}
+
 		return pvd::Stream::Stop();
 	}
 
+	// From IcePort -> WebRTCProvider -> Application -> 
 	bool WebRTCStream::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 	{
+		logtd("OnDataReceived (%d)", data->GetLength());
+		// To DTLS -> SRTP -> RTP|RTCP -> WebRTCStream::OnRtxpReceived
+		
+		//It must not be called during start and stop.
+		std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
 
+		_dtls_ice_transport->OnDataReceived(NodeType::Edge, data);
+		
 		return true;
+	}
+
+	// From RtpRtcp node
+	void WebRTCStream::OnRtpReceived(const std::shared_ptr<RtpPacket> &rtp_packet)
+	{
+		
+	}
+
+	// From RtpRtcp node
+	void WebRTCStream::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
+	{
+
 	}
 }

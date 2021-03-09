@@ -13,19 +13,28 @@
 #include "modules/ice/ice_port.h"
 #include "modules/sdp/session_description.h"
 
+#include "modules/rtp_rtcp/rtp_rtcp.h"
+#include "modules/rtp_rtcp/rtp_rtcp_interface.h"
+#include "modules/dtls_srtp/dtls_transport.h"
+#include "modules//dtls_srtp/dtls_ice_transport.h"
+
 namespace pvd
 {
-	class WebRTCStream : public pvd::PushStream
+	class WebRTCStream : public pvd::PushStream, public RtpRtcpInterface
 	{
 	public:
-		static std::shared_ptr<WebRTCStream> Create(StreamSourceType source_type, uint32_t client_id, const std::shared_ptr<PushProvider> &provider,
+		static std::shared_ptr<WebRTCStream> Create(StreamSourceType source_type, ov::String stream_name, uint32_t stream_id, 
+													const std::shared_ptr<PushProvider> &provider,
 													const std::shared_ptr<const SessionDescription> &offer_sdp,
 													const std::shared_ptr<const SessionDescription> &peer_sdp,
+													const std::shared_ptr<Certificate> &certificate, 
 													const std::shared_ptr<IcePort> &ice_port);
 		
-		explicit WebRTCStream(StreamSourceType source_type, uint32_t client_id, const std::shared_ptr<PushProvider> &provider,
+		explicit WebRTCStream(StreamSourceType source_type, ov::String stream_name, uint32_t stream_id, 
+								const std::shared_ptr<PushProvider> &provider,
 								const std::shared_ptr<const SessionDescription> &offer_sdp,
 								const std::shared_ptr<const SessionDescription> &peer_sdp,
+								const std::shared_ptr<Certificate> &certificate, 
 								const std::shared_ptr<IcePort> &ice_port);
 		~WebRTCStream() final;
 
@@ -41,9 +50,31 @@ namespace pvd
 		}
 		bool OnDataReceived(const std::shared_ptr<const ov::Data> &data) override;
 
+		// RtpRtcpInterface Implement
+		void OnRtpReceived(const std::shared_ptr<RtpPacket> &rtp_packet) override;
+		void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
+
 	private:
 		std::shared_ptr<const SessionDescription> _offer_sdp;
 		std::shared_ptr<const SessionDescription> _peer_sdp;
 		std::shared_ptr<IcePort> _ice_port;
+		std::shared_ptr<Certificate> _certificate;
+
+		std::shared_ptr<RtpRtcp>            _rtp_rtcp;
+		std::shared_ptr<SrtpTransport>      _srtp_transport;
+		std::shared_ptr<DtlsTransport>      _dtls_transport;
+		std::shared_ptr<DtlsIceTransport>   _dtls_ice_transport;
+
+		uint8_t 							_red_block_pt = 0;
+		uint8_t                             _video_payload_type = 0;
+		uint32_t							_video_ssrc = 0;
+		uint32_t							_video_rtx_ssrc = 0;
+		uint8_t                             _audio_payload_type = 0;
+		uint32_t							_audio_ssrc = 0;
+		bool								_rtx_enabled = false;
+		uint16_t							_rtx_sequence_number = 1;
+		uint64_t							_session_expired_time = 0;
+
+		std::shared_mutex					_start_stop_lock;
 	};
 }

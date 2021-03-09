@@ -114,6 +114,13 @@ namespace pvd
 			}
 		}
 
+		_certificate = CreateCertificate();
+		if(_certificate == nullptr)
+		{
+			logte("Could not create certificate.");
+			result = false;
+		}
+
 		if (result)
 		{
 			logti("%s is listening on %s%s%s%s...",
@@ -149,7 +156,7 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> WebRTCProvider::OnCreateProviderApplication(const info::Application &application_info)
 	{
-		return WebRTCApplication::Create(PushProvider::GetSharedPtrAs<PushProvider>(), application_info, _ice_port, _signalling_server);
+		return WebRTCApplication::Create(PushProvider::GetSharedPtrAs<PushProvider>(), application_info, _certificate, _ice_port, _signalling_server);
 	}
 
 	bool WebRTCProvider::OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application)
@@ -224,7 +231,7 @@ namespace pvd
 
 		// Create Stream
 		auto channel_id = offer_sdp->GetSessionId();
-		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, channel_id, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, peer_sdp, _ice_port);
+		auto stream = WebRTCStream::Create(StreamSourceType::WebRTC, stream_name, channel_id, PushProvider::GetSharedPtrAs<PushProvider>(), offer_sdp, peer_sdp, _certificate, _ice_port);
 		if(stream == nullptr)
 		{
 			logte("Could not create %s stream in %s application", stream_name.CStr(), vhost_app_name.CStr());
@@ -333,5 +340,24 @@ namespace pvd
 		}
 
 		PushProvider::OnDataReceived(stream->GetId(), data);
+	}
+
+	std::shared_ptr<Certificate> WebRTCProvider::CreateCertificate()
+	{
+		auto certificate = std::make_shared<Certificate>();
+
+		auto error = certificate->Generate();
+		if(error != nullptr)
+		{
+			logte("Cannot create certificate: %s", error->ToString().CStr());
+			return nullptr;
+		}
+
+		return certificate;
+	}
+
+	std::shared_ptr<Certificate> WebRTCProvider::GetCertificate()
+	{
+		return _certificate;
 	}
 }

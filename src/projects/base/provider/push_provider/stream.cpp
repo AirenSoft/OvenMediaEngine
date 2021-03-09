@@ -15,6 +15,12 @@
 
 namespace pvd
 {
+	PushStream::PushStream(StreamSourceType source_type, ov::String channel_name, uint32_t channel_id, const std::shared_ptr<PushProvider> &provider)
+		: PushStream(source_type, channel_id, provider)
+	{
+		SetName(channel_name);
+	}
+
 	PushStream::PushStream(StreamSourceType source_type, uint32_t channel_id, const std::shared_ptr<PushProvider> &provider)
 		: Stream(source_type)
 	{

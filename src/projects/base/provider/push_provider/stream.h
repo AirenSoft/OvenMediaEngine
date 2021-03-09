@@ -52,6 +52,7 @@ namespace pvd
 		}
 
 	protected:
+		PushStream(StreamSourceType source_type, ov::String channel_name, uint32_t channel_id, const std::shared_ptr<PushProvider> &provider);
 		PushStream(StreamSourceType source_type, uint32_t channel_id, const std::shared_ptr<PushProvider> &provider);
 
 		// app name, stream name, tracks

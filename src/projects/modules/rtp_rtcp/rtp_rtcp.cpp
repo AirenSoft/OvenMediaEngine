@@ -85,22 +85,31 @@ bool RtpRtcp::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov:
 		return false;
 	}
 
-	// Parse RTCP Packet
-	RtcpReceiver receiver;
-	if(receiver.ParseCompoundPacket(data) == false)
+	if(from_node == NodeType::Srtcp)
 	{
-		return false;
-	}
-
-	while(receiver.HasAvailableRtcpInfo())
-	{
-		auto info = receiver.PopRtcpInfo();
-		
-		if(_observer != nullptr)
+		logtd("Get RTCP Packet - length(%d)", data->GetLength());
+		// Parse RTCP Packet
+		RtcpReceiver receiver;
+		if(receiver.ParseCompoundPacket(data) == false)
 		{
-			std::shared_lock<std::shared_mutex> lock(_observer_lock);
-			_observer->OnRtcpReceived(info);
+			return false;
 		}
+
+		while(receiver.HasAvailableRtcpInfo())
+		{
+			auto info = receiver.PopRtcpInfo();
+			
+			if(_observer != nullptr)
+			{
+				std::shared_lock<std::shared_mutex> lock(_observer_lock);
+				_observer->OnRtcpReceived(info);
+			}
+		}
+	}
+	else if(from_node == NodeType::Srtp)
+	{
+		//auto packet = std::make_shared<RtpPacket>(data);
+		
 	}
 
     return true;

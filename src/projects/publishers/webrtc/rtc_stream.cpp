@@ -120,7 +120,7 @@ bool RtcStream::Start()
 
 	bool first_video_desc = true;
 	bool first_audio_desc = true;
-	uint8_t payload_type_num = PAYLOAD_TYPE_OFFSET;
+	uint8_t payload_type_num = static_cast<uint8_t>(FixedRtcPayloadType::PAYLOAD_TYPE_OFFSET);
 
 	auto cname = ov::Random::GenerateString(16);
 
@@ -312,7 +312,7 @@ bool RtcStream::Start()
 	{
 		// RED & ULPFEC
 		auto red_payload = std::make_shared<PayloadAttr>();
-		red_payload->SetRtpmap(RED_PAYLOAD_TYPE, "red", 90000);
+		red_payload->SetRtpmap(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE), "red", 90000);
 		if (_rtx_enabled == true)
 		{
 			red_payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
@@ -321,7 +321,7 @@ bool RtcStream::Start()
 
 		// ULPFEC
 		auto ulpfec_payload = std::make_shared<PayloadAttr>();
-		ulpfec_payload->SetRtpmap(ULPFEC_PAYLOAD_TYPE, "ulpfec", 90000);
+		ulpfec_payload->SetRtpmap(static_cast<uint8_t>(FixedRtcPayloadType::ULPFEC_PAYLOAD_TYPE), "ulpfec", 90000);
 		video_media_desc->AddPayload(ulpfec_payload);
 
 		// For RTX
@@ -329,8 +329,8 @@ bool RtcStream::Start()
 		{
 			// RTX for RED
 			auto rtx_payload = std::make_shared<PayloadAttr>();
-			rtx_payload->SetRtpmap(RED_RTX_PAYLOAD_TYPE, "rtx", 90000);
-			rtx_payload->SetFmtp(ov::String::FormatString("apt=%d", RED_PAYLOAD_TYPE));
+			rtx_payload->SetRtpmap(static_cast<uint8_t>(FixedRtcPayloadType::RED_RTX_PAYLOAD_TYPE), "rtx", 90000);
+			rtx_payload->SetFmtp(ov::String::FormatString("apt=%d", static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE)));
 
 			AddRtpHistory(red_payload->GetId(), rtx_payload->GetId(), video_media_desc->GetRtxSsrc());
 
@@ -539,7 +539,7 @@ void RtcStream::AddPacketizer(cmn::MediaCodecId codec_id, uint32_t id, uint8_t p
 			packetizer->SetVideoCodec(codec_id);
 			if (_ulpfec_enabled == true)
 			{
-				packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
+				packetizer->SetUlpfec(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE), static_cast<uint8_t>(FixedRtcPayloadType::ULPFEC_PAYLOAD_TYPE));
 			}
 			break;
 		}

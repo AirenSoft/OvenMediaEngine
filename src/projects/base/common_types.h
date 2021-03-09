@@ -84,12 +84,25 @@ enum class FrameType : int8_t
 enum class NodeType : int16_t
 {
 	Unknown = 0,
+	Edge = 10,	// Start or End of Nodes
 	Rtp = 100,
 	Rtcp = 101,
 	Srtp = 200,
+	Srtcp = 201,
 	Sctp = 300,
 	Dtls = 400,
 	Ice = 500
+};
+
+// https://tools.ietf.org/html/rfc5761#section-4
+// - payload type values in the range 64-95 MUST NOT be used
+// - dynamic RTP payload types SHOULD be chosen in the range 96-127 where possible
+enum class FixedRtcPayloadType : uint8_t
+{
+	PAYLOAD_TYPE_OFFSET	= 100,
+	RED_PAYLOAD_TYPE = 120,
+	RED_RTX_PAYLOAD_TYPE = 121,
+	ULPFEC_PAYLOAD_TYPE	= 122
 };
 
 struct FragmentationHeader

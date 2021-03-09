@@ -93,9 +93,9 @@ bool RtcSession::Start()
 		}
 		else
 		{
-			if(peer_media_desc->GetPayload(RED_PAYLOAD_TYPE))
+			if(peer_media_desc->GetPayload(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE)))
 			{
-				_video_payload_type = RED_PAYLOAD_TYPE;
+				_video_payload_type = static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE);
 				_red_block_pt = first_payload->GetId();
 			}
 			else
@@ -216,7 +216,7 @@ void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_
 
 	_received_bytes += data->GetLength();
 	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
-	_dtls_ice_transport->OnDataReceived(NodeType::Unknown, data);
+	_dtls_ice_transport->OnDataReceived(NodeType::Edge, data);
 }
 
 bool RtcSession::SendOutgoingData(const std::any &packet)
@@ -258,7 +258,7 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 	uint32_t red_block_pt = 0;
 	uint32_t origin_pt_of_fec = 0;
 
-	if(rtp_payload_type == RED_PAYLOAD_TYPE)
+	if(rtp_payload_type == static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE))
 	{
 		red_block_pt = std::dynamic_pointer_cast<RedRtpPacket>(session_packet)->BlockPT();
 
@@ -274,7 +274,7 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 		return false;
 	}
 
-	if(rtp_payload_type == RED_PAYLOAD_TYPE)
+	if(rtp_payload_type == static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE))
 	{
 		// When red_block_pt is ULPFEC_PAYLOAD_TYPE, origin_pt_of_fec is origin media payload type.
 		if(red_block_pt != _red_block_pt && origin_pt_of_fec != _red_block_pt)

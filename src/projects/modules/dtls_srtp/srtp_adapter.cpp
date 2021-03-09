@@ -148,6 +148,29 @@ bool SrtpAdapter::ProtectRtcp(std::shared_ptr<ov::Data> data)
     return true;
 }
 
+bool SrtpAdapter::UnprotectRtp(const std::shared_ptr<ov::Data> &data)
+{
+	if (!_session)
+    {
+        return false;
+    }
+
+    auto buffer = data->GetWritableData();
+    int out_len = static_cast<int>(data->GetLength());
+
+	std::lock_guard<std::mutex> lock(_session_lock);
+    int err = srtp_unprotect(_session, buffer, &out_len);
+    if (err != srtp_err_status_ok)
+    {
+        logte("Failed to unprotect SRTP packet, err=%d", err);
+        return false;
+    }
+
+    data->SetLength(out_len);
+
+	return true;
+}
+
 bool SrtpAdapter::UnprotectRtcp(const std::shared_ptr<ov::Data> &data)
 {
     if (!_session)

@@ -76,6 +76,9 @@ namespace pvd
 						const std::shared_ptr<const SessionDescription> &peer_sdp) override;
 		//--------------------------------------------------------------------
 	private:
+		std::shared_ptr<Certificate> CreateCertificate();
+		std::shared_ptr<Certificate> GetCertificate();
+
 		//--------------------------------------------------------------------
 		// Implementation of Provider's pure virtual functions
 		//--------------------------------------------------------------------
@@ -85,6 +88,7 @@ namespace pvd
 
 		std::shared_ptr<IcePort> _ice_port = nullptr;
 		std::shared_ptr<RtcSignallingServer> _signalling_server = nullptr;
+		std::shared_ptr<Certificate> _certificate = nullptr;
 
 		std::mutex	_stream_lock;
 	};

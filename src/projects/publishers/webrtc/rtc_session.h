@@ -89,6 +89,7 @@ private:
 	uint8_t                             _video_payload_type = 0;
 	uint32_t							_video_ssrc = 0;
 	uint32_t							_video_rtx_ssrc = 0;
+	
 	uint8_t                             _audio_payload_type = 0;
 	uint32_t							_audio_ssrc = 0;
 

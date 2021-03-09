@@ -92,12 +92,41 @@ bool SrtpTransport::OnDataReceived(NodeType from_node, const std::shared_ptr<con
 		return false;
 	}
 
+	if(data->GetLength() < 4)
+	{
+		// Invalid RTP or RTCP packet
+		return false;
+	}
+
 	auto decode_data = data->Clone();
-    if(!_recv_session->UnprotectRtcp(decode_data))
-    {
-        logtd("stcp unprotected fail");
-        return false;
-    }
+	// Distinguishable RTP and RTCP Packets
+	// https://tools.ietf.org/html/rfc5761#section-4
+	auto payload_type = decode_data->GetDataAs<uint8_t>()[1];
+
+	NodeType node_type = NodeType::Unknown;
+
+	// RTCP
+	if(payload_type >= 192 && payload_type <= 223)
+	{
+		if(!_recv_session->UnprotectRtcp(decode_data))
+		{
+			logtd("RTCP unprotected fail");
+			return false;
+		}
+
+		node_type = NodeType::Srtcp;
+	}	
+	// RTP
+	else
+	{
+		if(!_recv_session->UnprotectRtp(decode_data))
+		{
+			logtd("RTP unprotected fail");
+			return false;
+		}
+
+		node_type = NodeType::Srtp;
+	}
 
 	// To RTP_RTCP
     auto node = GetUpperNode();
@@ -105,7 +134,8 @@ bool SrtpTransport::OnDataReceived(NodeType from_node, const std::shared_ptr<con
     {
         return false;
     }
-    node->OnDataReceived(GetNodeType(), decode_data);
+	
+    node->OnDataReceived(node_type, decode_data);
 
 	return true;
 }

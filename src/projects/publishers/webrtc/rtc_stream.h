@@ -11,10 +11,7 @@
 #include <monitoring/monitoring.h>
 #include "rtc_session.h"
 
-#define PAYLOAD_TYPE_OFFSET		100
-#define RED_PAYLOAD_TYPE		120
-#define RED_RTX_PAYLOAD_TYPE	121
-#define	ULPFEC_PAYLOAD_TYPE		122
+
 
 class RtcStream : public pub::Stream, public RtpRtcpPacketizerInterface
 {
