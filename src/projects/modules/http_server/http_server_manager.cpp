@@ -34,15 +34,18 @@ std::shared_ptr<HttpServer> HttpServerManager::CreateHttpServer(const char *serv
 			}
 			else
 			{
-				auto physical_port = http_server->GetPhysicalPort();
-
-				if (physical_port != nullptr)
+				if (worker_count != HTTP_SERVER_USE_DEFAULT_COUNT)
 				{
-					if (physical_port->GetWorkerCount() != worker_count)
+					auto physical_port = http_server->GetPhysicalPort();
+
+					if (physical_port != nullptr)
 					{
-						logtw("The number of workers in the existing physical port differs from the number of workers passed by the argument: physical port: %zu, argument: %zu",
-							  physical_port->GetWorkerCount(), worker_count);
-						logtw("Because worker counts are different, the first initialized count is used: %d", physical_port->GetWorkerCount());
+						if (physical_port->GetWorkerCount() != worker_count)
+						{
+							logtw("The number of workers in the existing physical port differs from the number of workers passed by the argument: physical port: %zu, argument: %zu",
+								  physical_port->GetWorkerCount(), worker_count);
+							logtw("Because worker counts are different, the first initialized count is used: %d", physical_port->GetWorkerCount());
+						}
 					}
 				}
 			}
