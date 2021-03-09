@@ -47,7 +47,17 @@ namespace ov
 		//--------------------------------------------------------------------
 		// Implementation of SocketAsyncInterface
 		//--------------------------------------------------------------------
-		void OnReadable(const std::shared_ptr<ov::Socket> &socket) override;
+		void OnConnected() override
+		{
+			// datagram socket should not be called this event
+			OV_ASSERT2(false);
+		}
+		void OnReadable() override;
+		void OnClosed() override
+		{
+			// datagram socket should not be called this event
+			OV_ASSERT2(false);
+		}
 
 		DatagramCallback _datagram_callback = nullptr;
 	};

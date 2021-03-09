@@ -11,6 +11,10 @@
 #include "../socket_private.h"
 #include "socket_pool.h"
 
+#undef OV_LOG_TAG
+#define OV_LOG_TAG "Socket.Pool.Worker"
+
+#define logap(format, ...) logtp("[#%d] [%p] " format, (GetNativeHandle() == InvalidSocket) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 #define logad(format, ...) logtd("[#%d] [%p] " format, (GetNativeHandle() == InvalidSocket) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 #define logas(format, ...) logts("[#%d] [%p] " format, (GetNativeHandle() == InvalidSocket) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 
@@ -54,7 +58,13 @@ namespace ov
 
 		_stop_epoll_thread = false;
 		_epoll_thread = std::thread(&SocketPoolWorker::ThreadProc, this);
-		::pthread_setname_np(_epoll_thread.native_handle(), "SockPoolWorker");
+
+		auto name = _pool->GetName();
+		name.Prepend("SckPool");
+		name = name.Replace(" ", "");
+		name.SetLength(15);
+
+		::pthread_setname_np(_epoll_thread.native_handle(), name.CStr());
 
 		return true;
 	}
@@ -154,14 +164,7 @@ namespace ov
 
 	bool SocketPoolWorker::PrepareSocket(std::shared_ptr<Socket> socket)
 	{
-		if (socket->Create(GetType()))
-		{
-			return AttachToWorker(socket);
-		}
-
-		socket->Close();
-
-		return false;
+		return socket->Create(GetType());
 	}
 
 	void SocketPoolWorker::MergeSocketList()
@@ -202,7 +205,7 @@ namespace ov
 			if (socket->HasExpiredCommand())
 			{
 				// Sockets that have failed to send data for a long time are forced to shut down
-				logaw("Failed to send data for %dms - This socket will be garbage collection (%s)", OV_SOCKET_EXPIRE_TIMEOUT, socket->ToString().CStr());
+				logaw("Failed to send data for %dms - This socket is going to be garbage collection (%s)", OV_SOCKET_EXPIRE_TIMEOUT, socket->ToString().CStr());
 
 				RemoveFromEpoll(socket);
 
@@ -251,11 +254,6 @@ namespace ov
 					auto socket = socket_data->GetSharedPtr();
 					auto events = event.events;
 
-					if (OV_CHECK_FLAG(events, EPOLLIN))
-					{
-						socket->OnReadableFromSocket();
-					}
-
 					if (OV_CHECK_FLAG(events, EPOLLOUT))
 					{
 						switch (socket->DispatchEvents())
@@ -273,11 +271,18 @@ namespace ov
 						}
 					}
 
+					if (OV_CHECK_FLAG(events, EPOLLIN))
+					{
+						socket->OnReadableFromSocket();
+					}
+
 					if (OV_CHECK_FLAG(events, EPOLLHUP) || OV_CHECK_FLAG(events, EPOLLRDHUP))
 					{
-						if ((socket->GetState() == SocketState::Created) || (socket->GetState() == SocketState::Listening))
+						auto state = socket->GetState();
+
+						if ((state == SocketState::Created) || (state == SocketState::Listening))
 						{
-							// EPOLHUP event might occur immediately after creation
+							// EPOLLHUP event might occur immediately after creation
 						}
 						else
 						{
@@ -288,15 +293,9 @@ namespace ov
 								  ov::Error::CreateErrorFromErrno()->ToString().CStr());
 
 							socket->SetEndOfStream();
+							socket->CloseIfNeeded();
 
-							if (socket->HasCloseCommand())
-							{
-								// Socket closed somewhere by OME
-							}
-							else
-							{
-								socket->Close();
-							}
+							_gc_candidates.erase(socket->GetNativeHandle());
 						}
 					}
 				}

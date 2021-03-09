@@ -21,12 +21,12 @@ namespace ov
 
 	public:
 		// SocketPool can only be created using SocketPool::Create()
-		SocketPool(PrivateToken token, SocketType type);
+		SocketPool(PrivateToken token, const char *name, SocketType type);
 		~SocketPool() override;
 
-		static std::shared_ptr<SocketPool> Create(SocketType type)
+		static std::shared_ptr<SocketPool> Create(const char *name, SocketType type)
 		{
-			return std::make_shared<SocketPool>(PrivateToken{nullptr}, type);
+			return std::make_shared<SocketPool>(PrivateToken{nullptr}, name, type);
 		}
 
 		static std::shared_ptr<SocketPool> GetTcpPool()
@@ -40,7 +40,12 @@ namespace ov
 
 				if (pool == nullptr)
 				{
-					pool = Create(SocketType::Tcp);
+					pool = Create("DefTcp", SocketType::Tcp);
+
+					if (pool != nullptr)
+					{
+						pool->Initialize(1);
+					}
 				}
 			}
 
@@ -58,20 +63,30 @@ namespace ov
 
 				if (pool == nullptr)
 				{
-					pool = Create(SocketType::Udp);
+					pool = Create("DefUdp", SocketType::Udp);
+
+					if (pool != nullptr)
+					{
+						pool->Initialize(1);
+					}
 				}
 			}
 
 			return pool;
 		}
 
+		ov::String GetName() const
+		{
+			return _name;
+		}
+
 		SocketType GetType() const;
 
 		bool Initialize(int worker_count);
 
-		size_t GetWorkerCount() const
+		int GetWorkerCount() const
 		{
-			return _worker_list.size();
+			return static_cast<int>(_worker_list.size());
 		}
 
 		template <typename Tsocket = ov::Socket, typename... Targuments>
@@ -123,6 +138,8 @@ namespace ov
 		}
 
 		bool UninitializeInternal();
+
+		ov::String _name;
 
 		SocketType _type = SocketType::Unknown;
 

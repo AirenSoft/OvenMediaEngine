@@ -11,6 +11,10 @@
 #include <modules/physical_port/physical_port_manager.h>
 
 #include "http_private.h"
+#include "http_server_manager.h"
+
+#define HTTP_SERVER_DEFAULT_WORKER_COUNT 4
+#define HTTP_SERVER_DEFAULT_SOCKET_WORKER_THREAD_COUNT 4
 
 HttpServer::HttpServer(const char *server_name)
 	: _server_name(server_name)
@@ -23,7 +27,7 @@ HttpServer::~HttpServer()
 	OV_ASSERT(_physical_port == nullptr, "%s: Physical port: %s", _server_name.CStr(), _physical_port->ToString().CStr());
 }
 
-bool HttpServer::Start(const ov::SocketAddress &address, int worker_count, int socket_pool_count)
+bool HttpServer::Start(const ov::SocketAddress &address, int worker_count)
 {
 	auto lock_guard = std::lock_guard(_physical_port_mutex);
 
@@ -33,7 +37,7 @@ bool HttpServer::Start(const ov::SocketAddress &address, int worker_count, int s
 		return false;
 	}
 
-	_physical_port = PhysicalPortManager::GetInstance()->CreatePort(ov::SocketType::Tcp, address, 0, 0, worker_count, socket_pool_count);
+	_physical_port = PhysicalPortManager::GetInstance()->CreatePort(_server_name.CStr(), ov::SocketType::Tcp, address, worker_count);
 
 	if (_physical_port != nullptr)
 	{
@@ -295,7 +299,7 @@ void HttpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 		return;
 	}
 
-	if (remote->HasCloseCommand() == false)
+	if (remote->IsClosing() == false)
 	{
 		ProcessData(client, data);
 	}

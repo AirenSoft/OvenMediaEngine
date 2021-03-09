@@ -37,7 +37,7 @@ bool DashPublisher::Start()
 	}
 
 	return SegmentPublisher::Start(dash_config.GetPort(), dash_config.GetTlsPort(),
-								   std::make_shared<DashStreamServer>());
+								   std::make_shared<DashStreamServer>(), dash_config.GetWorkerCount());
 }
 
 std::shared_ptr<pub::Application> DashPublisher::OnCreatePublisherApplication(const info::Application &application_info)

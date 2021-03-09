@@ -35,8 +35,6 @@
 #define logae(format, ...) logte("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 #define logac(format, ...) logtc("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 
-#define HALF_CLOSE_TIMEOUT 1000
-
 namespace ov
 {
 	Socket::Socket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker)
@@ -102,10 +100,12 @@ namespace ov
 				break;
 			}
 
-			logad("Socket descriptor is created for type %d", type);
+			logad("Socket descriptor is created for type %s", StringFromSocketType(type));
 
 			_has_close_command = false;
 			_end_of_stream = false;
+
+			_connection_event_fired = false;
 
 			SetState(SocketState::Created);
 
@@ -180,6 +180,25 @@ namespace ov
 		}
 
 		return false;
+	}
+
+	bool Socket::AppendCommand(DispatchCommand command)
+	{
+		std::lock_guard lock_guard(_dispatch_queue_lock);
+
+		if (_has_close_command)
+		{
+			// Socket was closed
+			return false;
+		}
+
+		_dispatch_queue.push_back(std::move(command));
+		return true;
+	}
+
+	bool Socket::AttachToWorker()
+	{
+		return _worker->AttachToWorker(GetSharedPtr());
 	}
 
 	bool Socket::MakeBlocking()
@@ -303,8 +322,6 @@ namespace ov
 
 	SocketWrapper Socket::Accept(SocketAddress *client)
 	{
-		logad("New client is connected. Trying to accept the client...");
-
 		CHECK_STATE(<= SocketState::Listening, SocketWrapper());
 
 		switch (GetType())
@@ -558,6 +575,14 @@ namespace ov
 
 		switch (command.type)
 		{
+			case DispatchCommand::Type::Connected:
+				if (_callback != nullptr)
+				{
+					_connection_event_fired = true;
+					_callback->OnConnected();
+				}
+				return DispatchResult::Dispatched;
+
 			case DispatchCommand::Type::Send:
 				sent_bytes = SendInternal(data);
 				break;
@@ -578,14 +603,14 @@ namespace ov
 				// Remove the socket from epoll
 				if (_worker->ReleaseSocket(this->GetSharedPtr()))
 				{
+					// CloseInternal() will be called in ReleaseSocket()
 					return DispatchResult::Dispatched;
 				}
-				else
-				{
-					logae("Could not release socket from worker");
-					OV_ASSERT2(false);
-				}
 
+				logae("Could not release socket from worker");
+				CloseInternal();
+
+				OV_ASSERT2(false);
 				return DispatchResult::Error;
 		}
 
@@ -612,37 +637,42 @@ namespace ov
 			logap("Dispatching events (count: %zu)...", _dispatch_queue.size());
 		}
 
-		auto iterator = _dispatch_queue.begin();
-
-		while (iterator != _dispatch_queue.end())
+		while (_dispatch_queue.empty() == false)
 		{
-			bool is_close_command = DispatchCommand::IsCloseCommand(iterator->type);
+			auto &front = _dispatch_queue.front();
 
-			if (GetState() == SocketState::Closed)
+			bool is_close_command = front.IsCloseCommand();
+
+			if ((GetState() == SocketState::Closed) && (is_close_command == false))
 			{
-				if (is_close_command)
-				{
-					// If the socket is closed during dispatching, the rest of the data will not be sent.
-					logad("Some commands have not been dispatched: %zu commands", _dispatch_queue.size());
+				// If the socket is closed during dispatching, the rest of the data will not be sent.
+				logad("Some commands have not been dispatched: %zu commands", _dispatch_queue.size());
 #if DEBUG
-					for (auto &queue : _dispatch_queue)
-					{
-						logad("  - Command: %s", queue.ToString().CStr());
-					}
-#endif	// DEBUG
+				for (auto &queue : _dispatch_queue)
+				{
+					logad("  - Command: %s", queue.ToString().CStr());
 				}
+#endif	// DEBUG
 
 				_dispatch_queue.clear();
 
 				return DispatchResult::Dispatched;
 			}
 
-			auto result = DispatchInternal(*iterator);
+			auto result = DispatchInternal(front);
 
 			if (result == DispatchResult::Dispatched)
 			{
-				// Dispatches the next item
-				iterator = _dispatch_queue.erase(iterator);
+				if (_dispatch_queue.size() > 0)
+				{
+					// Dispatches the next item
+					_dispatch_queue.pop_front();
+				}
+				else
+				{
+					// All items are dispatched int DispatchInternal();
+				}
+
 				continue;
 			}
 			else if (result == DispatchResult::PartialDispatched)
@@ -694,15 +724,33 @@ namespace ov
 					{
 						auto error = Error::CreateErrorFromErrno();
 
-						if (error->GetCode() == EAGAIN)
+						switch (error->GetCode())
 						{
-							// Socket buffer is full - retry later
-							STATS_COUNTER_INCREASE_RETRY();
-							return total_sent;
+							// Errors that can occur under normal circumstances do not output
+							case EAGAIN:
+								// Socket buffer is full - retry later
+								STATS_COUNTER_INCREASE_RETRY();
+								return total_sent;
+
+							case EBADF:
+								// Socket is closed somewhere in OME
+								break;
+
+							case EPIPE:
+								// Broken pipe - maybe peer is disconnected
+								break;
+
+							case ECONNRESET:
+								// Connection reset - maybe peer is disconnected
+								break;
+
+							default:
+								logaw("Could not send data: %zd (%s)", sent, error->ToString().CStr());
+								break;
 						}
 
 						STATS_COUNTER_INCREASE_ERROR();
-						logaw("Could not send data: %zd (%s)", sent, error->ToString().CStr());
+
 						return sent;
 					}
 
@@ -849,9 +897,15 @@ namespace ov
 
 	bool Socket::Send(const std::shared_ptr<const Data> &data)
 	{
-		if (GetState() == SocketState::Closed)
+		switch (GetState())
 		{
-			return false;
+			case SocketState::Closed:
+				[[fallthrough]];
+			case SocketState::Error:
+				return false;
+
+			default:
+				break;
 		}
 
 		if (GetType() != SocketType::Udp)
@@ -869,18 +923,9 @@ namespace ov
 			return false;
 		}
 
+		if (AppendCommand({data->Clone()}) == false)
 		{
-			std::lock_guard lock_guard(_dispatch_queue_lock);
-
-			if (_has_close_command == false)
-			{
-				_dispatch_queue.emplace_back(data->Clone());
-			}
-			else
-			{
-				// Socket was closed asynchronously
-				return false;
-			}
+			return false;
 		}
 
 		return (DispatchEvents() != DispatchResult::Error);
@@ -913,18 +958,9 @@ namespace ov
 			return false;
 		}
 
+		if (AppendCommand({address, data->Clone()}) == false)
 		{
-			std::lock_guard lock_guard(_dispatch_queue_lock);
-
-			if (_has_close_command == false)
-			{
-				_dispatch_queue.emplace_back(address, data->Clone());
-			}
-			else
-			{
-				// Socket was closed asynchronously
-				return false;
-			}
+			return false;
 		}
 
 		return (DispatchEvents() != DispatchResult::Error);
@@ -958,6 +994,11 @@ namespace ov
 
 	std::shared_ptr<ov::Error> Socket::Recv(void *data, size_t length, size_t *received_length, bool non_block)
 	{
+		if (GetState() == SocketState::Closed)
+		{
+			return Error::CreateError("Socket", "Socket is closed");
+		}
+
 		OV_ASSERT2(data != nullptr);
 		OV_ASSERT2(received_length != nullptr);
 
@@ -1136,10 +1177,26 @@ namespace ov
 		return true;
 	}
 
+	bool Socket::CloseIfNeeded()
+	{
+		if (IsClosing() == false)
+		{
+			// Socket is already closed
+			return Close();
+		}
+
+		return false;
+	}
+
 	bool Socket::Close()
 	{
 		CHECK_STATE(>= SocketState::Closed, false);
-		CHECK_STATE(!= SocketState::Error, false);
+
+		if (GetState() == SocketState::Error)
+		{
+			// Supress error message
+			return false;
+		}
 
 		{
 			std::lock_guard lock_guard(_dispatch_queue_lock);
@@ -1194,7 +1251,8 @@ namespace ov
 
 				if (error->GetCode() == EAGAIN)
 				{
-					return DispatchResult::PartialDispatched;
+					// Peer doesn't send ACK/FIN yet - ignores this
+					return DispatchResult::Dispatched;
 				}
 
 				logae("An error occurred while half-closing: %s", error->ToString().CStr());
@@ -1215,6 +1273,8 @@ namespace ov
 	bool Socket::CloseInternal()
 	{
 		CHECK_STATE(!= SocketState::Closed, false);
+
+		auto callback = std::move(_callback);
 
 		if (_socket.IsValid())
 		{
@@ -1240,7 +1300,7 @@ namespace ov
 
 			if (_dispatch_queue.size() > 0)
 			{
-				if (_dispatch_queue.front().type != DispatchCommand::Type::Close)
+				if (_dispatch_queue.front().IsCloseCommand() == false)
 				{
 					logaw("Socket was closed even though there was %zu commands in the socket", _dispatch_queue.size());
 
@@ -1255,6 +1315,14 @@ namespace ov
 
 			logad("Socket is closed successfully");
 			SetState(SocketState::Closed);
+
+			if (callback != nullptr)
+			{
+				if(_connection_event_fired)
+				{
+					callback->OnClosed();
+				}
+			}
 
 			return true;
 		}

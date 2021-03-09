@@ -42,7 +42,7 @@ IcePort::~IcePort()
 	Close();
 }
 
-bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_list)
+bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_list, int ice_worker_count)
 {
 	std::lock_guard<std::recursive_mutex> lock_guard(_physical_port_list_mutex);
 
@@ -75,7 +75,7 @@ bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_lis
 		address.SetHostname(nullptr);
 
 		// Create an ICE port using candidate information
-		auto physical_port = CreatePhysicalPort(address, socket_type);
+		auto physical_port = CreatePhysicalPort(address, socket_type, ice_worker_count);
 		if (physical_port == nullptr)
 		{
 			logte("Could not create physical port for %s/%s", address.ToString().CStr(), transport.CStr());
@@ -99,7 +99,7 @@ bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_lis
 	return succeeded;
 }
 
-bool IcePort::CreateTurnServer(uint16_t listening_port, ov::SocketType socket_type)
+bool IcePort::CreateTurnServer(uint16_t listening_port, ov::SocketType socket_type, int tcp_relay_worker_count)
 {
 	// {[Browser][WebRTC][TURN Client]} <----(TCP)-----> {[TURN Server][OvenMediaEngine]}
 
@@ -117,7 +117,7 @@ bool IcePort::CreateTurnServer(uint16_t listening_port, ov::SocketType socket_ty
 	// Player <--[TURN/TCP]-- [TurnServer(OME) <--[Fucntion Call not udp send]-- Peer(OME)]
 
 	ov::SocketAddress address(listening_port);
-	auto physical_port = CreatePhysicalPort(address, socket_type);
+	auto physical_port = CreatePhysicalPort(address, socket_type, tcp_relay_worker_count);
 	if (physical_port == nullptr)
 	{
 		logte("Could not create physical port for %s/%s", address.ToString().CStr(), StringFromSocketType(socket_type));
@@ -160,9 +160,9 @@ bool IcePort::CreateTurnServer(uint16_t listening_port, ov::SocketType socket_ty
 	return true;
 }
 
-std::shared_ptr<PhysicalPort> IcePort::CreatePhysicalPort(const ov::SocketAddress &address, ov::SocketType type)
+std::shared_ptr<PhysicalPort> IcePort::CreatePhysicalPort(const ov::SocketAddress &address, ov::SocketType type, int worker_count)
 {
-	auto physical_port = PhysicalPortManager::GetInstance()->CreatePort(type, address);
+	auto physical_port = PhysicalPortManager::GetInstance()->CreatePort("ICE", type, address, worker_count);
 	if (physical_port != nullptr)
 	{
 		if (physical_port->AddObserver(this))
@@ -176,7 +176,7 @@ std::shared_ptr<PhysicalPort> IcePort::CreatePhysicalPort(const ov::SocketAddres
 	}
 	else
 	{
-		logte("Cannot create physical port for %s (type: %d)", address.ToString().CStr(), type);
+		logte("Cannot create physical port for %s (type: %s), workers: %d", address.ToString().CStr(), ov::StringFromSocketType(type), worker_count);
 	}
 
 	return nullptr;

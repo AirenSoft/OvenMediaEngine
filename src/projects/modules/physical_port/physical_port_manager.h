@@ -13,8 +13,7 @@
 #include "physical_port.h"
 #include "physical_port_observer.h"
 
-#define DEFAULT_PHYSICAL_PORT_WORKER_COUNT 4
-#define DEFAULT_SOCKET_POOL_WORKER_COUNT 4
+#define PHYSICAL_PORT_USE_DEFAULT_COUNT -1
 
 class PhysicalPortManager : public ov::Singleton<PhysicalPortManager>
 {
@@ -23,12 +22,13 @@ public:
 
 	virtual ~PhysicalPortManager();
 
-	std::shared_ptr<PhysicalPort> CreatePort(ov::SocketType type,
+	// name is up to 9 characters including null
+	std::shared_ptr<PhysicalPort> CreatePort(const char *name,
+											 ov::SocketType type,
 											 const ov::SocketAddress &address,
+											 int worker_count = PHYSICAL_PORT_USE_DEFAULT_COUNT,
 											 int send_buffer_size = 0,
-											 int recv_buffer_size = 0,
-											 size_t worker_count = DEFAULT_PHYSICAL_PORT_WORKER_COUNT,
-											 size_t socket_pool_worker_count = DEFAULT_SOCKET_POOL_WORKER_COUNT);
+											 int recv_buffer_size = 0);
 
 	bool DeletePort(std::shared_ptr<PhysicalPort> &port);
 

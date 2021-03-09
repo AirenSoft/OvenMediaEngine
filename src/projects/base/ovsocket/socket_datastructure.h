@@ -147,8 +147,8 @@ namespace ov
 	class ServerSocket;
 	class ClientSocket;
 
-	typedef std::function<SocketConnectionState(const std::shared_ptr<ov::ClientSocket> &client, SocketConnectionState state, const std::shared_ptr<ov::Error> &error)> ClientConnectionCallback;
-	typedef std::function<SocketConnectionState(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<Data> &data)> ClientDataCallback;
+	typedef std::function<void(const std::shared_ptr<ov::ClientSocket> &client, SocketConnectionState state, const std::shared_ptr<ov::Error> &error)> ClientConnectionCallback;
+	typedef std::function<void(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<Data> &data)> ClientDataCallback;
 
 	// For UDP sockets
 	class DatagramSocket;

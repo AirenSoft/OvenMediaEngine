@@ -66,10 +66,6 @@ int main(int argc, char *argv[])
 	auto orchestrator = ocst::Orchestrator::GetInstance();
 	auto monitor = mon::Monitoring::GetInstance();
 
-	// Init Socket Pool (Temporary)
-	ov::SocketPool::GetUdpPool()->Initialize(1);
-	ov::SocketPool::GetTcpPool()->Initialize(1);
-
 	// Get public IP
 	bool stun_server_parsed;
 	auto stun_server_address = server_config->GetStunServer(&stun_server_parsed);

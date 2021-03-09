@@ -40,7 +40,7 @@ bool HlsPublisher::Start()
 	}
 
 	return SegmentPublisher::Start(hls_config.GetPort(), hls_config.GetTlsPort(),
-								   std::make_shared<HlsStreamServer>());
+								   std::make_shared<HlsStreamServer>(), hls_config.GetWorkerCount());
 }
 
 std::shared_ptr<pub::Application> HlsPublisher::OnCreatePublisherApplication(const info::Application &application_info)

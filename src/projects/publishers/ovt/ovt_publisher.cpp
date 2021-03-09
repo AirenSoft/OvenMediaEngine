@@ -48,7 +48,12 @@ bool OvtPublisher::Start()
 		const ov::String &ip = server_config.GetIp();
 		ov::SocketAddress address = ov::SocketAddress(ip.IsEmpty() ? nullptr : ip.CStr(), static_cast<uint16_t>(port));
 
-		_server_port = PhysicalPortManager::GetInstance()->CreatePort(port_config.GetSocketType(), address);
+		bool is_parsed;
+
+		auto worker_count = ovt_config.GetWorkerCount(&is_parsed);
+		worker_count = is_parsed ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+		_server_port = PhysicalPortManager::GetInstance()->CreatePort("OvtPub", port_config.GetSocketType(), address, worker_count);
 		if (_server_port != nullptr)
 		{
 			logti("%s is listening on %s/%s", GetPublisherName(), address.ToString().CStr(), ov::StringFromSocketType(port_config.GetSocketType()));

@@ -29,7 +29,8 @@ SegmentStreamServer::SegmentStreamServer()
 
 bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 								const ov::SocketAddress *tls_address,
-								int thread_count)
+								int thread_count,
+								int worker_count)
 {
 	if ((_http_server != nullptr) || (_https_server != nullptr))
 	{
@@ -43,8 +44,8 @@ bool SegmentStreamServer::Start(const ov::SocketAddress *address,
 	auto vhost_list = ocst::Orchestrator::GetInstance()->GetVirtualHostList();
 
 	auto manager = HttpServerManager::GetInstance();
-	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer(GetPublisherName(), *address) : nullptr;
-	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer(GetPublisherName(), *tls_address, vhost_list) : nullptr;
+	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("SegPub", *address, worker_count) : nullptr;
+	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("SegPub", *tls_address, vhost_list, worker_count) : nullptr;
 
 	auto segment_stream_interceptor = result ? CreateInterceptor() : nullptr;
 

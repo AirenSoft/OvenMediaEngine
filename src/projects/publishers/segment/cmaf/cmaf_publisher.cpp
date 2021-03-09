@@ -37,7 +37,7 @@ bool CmafPublisher::Start()
 	}
 
 	return SegmentPublisher::Start(dash_config.GetPort(), dash_config.GetTlsPort(),
-								   std::make_shared<CmafStreamServer>());
+								   std::make_shared<CmafStreamServer>(), dash_config.GetWorkerCount());
 }
 
 std::shared_ptr<pub::Application> CmafPublisher::OnCreatePublisherApplication(const info::Application &application_info)

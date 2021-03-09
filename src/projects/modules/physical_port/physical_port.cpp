@@ -11,19 +11,18 @@
 #include <algorithm>
 
 #include "physical_port_private.h"
-#include "physical_port_worker.h"
 
 PhysicalPort::~PhysicalPort()
 {
 	OV_ASSERT2(_observer_list.empty());
 }
 
-bool PhysicalPort::Create(ov::SocketType type,
+bool PhysicalPort::Create(const char *name,
+						  ov::SocketType type,
 						  const ov::SocketAddress &address,
-						  int send_buffer_size,
-						  int recv_buffer_size,
 						  int worker_count,
-						  int socket_pool_worker_count)
+						  int send_buffer_size,
+						  int recv_buffer_size)
 {
 	if ((_server_socket != nullptr) || (_datagram_socket != nullptr))
 	{
@@ -31,7 +30,10 @@ bool PhysicalPort::Create(ov::SocketType type,
 		OV_ASSERT2((_server_socket == nullptr) && (_datagram_socket == nullptr));
 	}
 
-	logtd("Trying to start server...");
+	logtd("Trying to start physical port [%s] on %s/%s (worker: %d, send_buffer_size: %d, recv_buffer_size: %d)...",
+		  name,
+		  address.ToString().CStr(), ov::StringFromSocketType(type),
+		  worker_count, send_buffer_size, recv_buffer_size);
 
 	bool result = false;
 
@@ -39,11 +41,11 @@ bool PhysicalPort::Create(ov::SocketType type,
 	{
 		case ov::SocketType::Srt:
 		case ov::SocketType::Tcp:
-			result = CreateServerSocket(type, address, send_buffer_size, recv_buffer_size, worker_count, socket_pool_worker_count);
+			result = CreateServerSocket(name, type, address, worker_count, send_buffer_size, recv_buffer_size);
 			break;
 
 		case ov::SocketType::Udp:
-			result = CreateDatagramSocket(type, address, worker_count, socket_pool_worker_count);
+			result = CreateDatagramSocket(name, type, address, worker_count);
 			break;
 
 		case ov::SocketType::Unknown:
@@ -51,37 +53,24 @@ bool PhysicalPort::Create(ov::SocketType type,
 			break;
 	}
 
-	if (result)
-	{
-		// Prepare physical port workers
-		{
-			auto lock_guard = std::lock_guard(_worker_mutex);
-			for (int index = 0; index < worker_count; index++)
-			{
-				auto worker = std::make_shared<PhysicalPortWorker>(GetSharedPtr());
-				worker->Start();
-				_worker_list.emplace_back(worker);
-			}
-		}
-	}
-
 	return result;
 }
 
-bool PhysicalPort::CreateServerSocket(ov::SocketType type,
-									  const ov::SocketAddress &address,
-									  int send_buffer_size,
-									  int recv_buffer_size,
-									  int worker_count,
-									  int socket_pool_worker_count)
+bool PhysicalPort::CreateServerSocket(
+	const char *name,
+	ov::SocketType type,
+	const ov::SocketAddress &address,
+	int worker_count,
+	int send_buffer_size,
+	int recv_buffer_size)
 {
-	_socket_pool = ov::SocketPool::Create(type);
+	_socket_pool = ov::SocketPool::Create(name, type);
 
 	if (_socket_pool != nullptr)
 	{
-		if (_socket_pool->Initialize(socket_pool_worker_count))
+		if (_socket_pool->Initialize(worker_count))
 		{
-			auto socket = _socket_pool->AllocSocket<ov::ServerSocket>();
+			auto socket = _socket_pool->AllocSocket<ov::ServerSocket>(_socket_pool);
 
 			if (socket != nullptr)
 			{
@@ -90,45 +79,14 @@ bool PhysicalPort::CreateServerSocket(ov::SocketType type,
 									std::bind(&PhysicalPort::OnClientData, this, std::placeholders::_1, std::placeholders::_2),
 									send_buffer_size, recv_buffer_size, 4096))
 				{
-					_type = type;
-					_server_socket = socket;
-					_address = address;
+					if (socket->AttachToWorker())
+					{
+						_type = type;
+						_server_socket = socket;
+						_address = address;
 
-					return true;
-				}
-			}
-
-			_socket_pool->ReleaseSocket(socket);
-		}
-	}
-
-	return false;
-}
-
-bool PhysicalPort::CreateDatagramSocket(ov::SocketType type,
-										const ov::SocketAddress &address,
-										int worker_count,
-										int socket_pool_worker_count)
-{
-	_socket_pool = ov::SocketPool::Create(type);
-
-	if (_socket_pool != nullptr)
-	{
-		if (_socket_pool->Initialize(socket_pool_worker_count))
-		{
-			auto socket = _socket_pool->AllocSocket<ov::DatagramSocket>();
-
-			if (socket != nullptr)
-			{
-				if (socket->Prepare(
-						address,
-						std::bind(&PhysicalPort::OnDatagram, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)))
-				{
-					_type = type;
-					_datagram_socket = socket;
-					_address = address;
-
-					return true;
+						return true;
+					}
 				}
 
 				_socket_pool->ReleaseSocket(socket);
@@ -145,7 +103,51 @@ bool PhysicalPort::CreateDatagramSocket(ov::SocketType type,
 	return false;
 }
 
-ov::SocketConnectionState PhysicalPort::OnClientConnectionStateChanged(const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error)
+bool PhysicalPort::CreateDatagramSocket(
+	const char *name,
+	ov::SocketType type,
+	const ov::SocketAddress &address,
+	int worker_count)
+{
+	_socket_pool = ov::SocketPool::Create(name, type);
+
+	if (_socket_pool != nullptr)
+	{
+		if (_socket_pool->Initialize(worker_count))
+		{
+			auto socket = _socket_pool->AllocSocket<ov::DatagramSocket>();
+
+			if (socket != nullptr)
+			{
+				if (socket->Prepare(
+						address,
+						std::bind(&PhysicalPort::OnDatagram, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)))
+				{
+					if (socket->AttachToWorker())
+					{
+						_type = type;
+						_datagram_socket = socket;
+						_address = address;
+
+						return true;
+					}
+				}
+
+				_socket_pool->ReleaseSocket(socket);
+			}
+
+			OV_SAFE_RESET(_socket_pool, nullptr, _socket_pool->Uninitialize(), _socket_pool);
+		}
+		else
+		{
+			_socket_pool = nullptr;
+		}
+	}
+
+	return false;
+}
+
+void PhysicalPort::OnClientConnectionStateChanged(const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error)
 {
 	switch (state)
 	{
@@ -189,41 +191,32 @@ ov::SocketConnectionState PhysicalPort::OnClientConnectionStateChanged(const std
 			break;
 		}
 	}
-
-	return state;
 }
 
-ov::SocketConnectionState PhysicalPort::OnClientData(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data)
+void PhysicalPort::OnClientData(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data)
 {
 	auto sock = client->GetSocket();
 
 	if (sock.IsValid())
 	{
-		logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
+		// Notify observers
+		auto func = std::bind(
+			&PhysicalPortObserver::OnDataReceived,
+			std::placeholders::_1,
+			std::static_pointer_cast<ov::Socket>(client),
+			*(client->GetRemoteAddress().get()),
+			std::ref(data));
 
-		auto shared_lock = std::shared_lock(_worker_mutex, std::defer_lock);
-
-		shared_lock.lock();
-		auto &worker = _worker_list.at(sock.GetNativeHandle() % _worker_list.size());
-		shared_lock.unlock();
-
-		if (worker->AddTask(client, data) == false)
-		{
-			logte("Could not add task");
-		}
+		std::for_each(_observer_list.begin(), _observer_list.end(), func);
 	}
 	else
 	{
 		logtw("Received data %d bytes from disconnected client");
 	}
-
-	return ov::SocketConnectionState::Connected;
 }
 
 void PhysicalPort::OnDatagram(const std::shared_ptr<ov::DatagramSocket> &client, const ov::SocketAddress &remote_address, const std::shared_ptr<ov::Data> &data)
 {
-	logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
-
 	// Notify observers
 	for (auto &observer : _observer_list)
 	{
@@ -233,16 +226,6 @@ void PhysicalPort::OnDatagram(const std::shared_ptr<ov::DatagramSocket> &client,
 
 bool PhysicalPort::Close()
 {
-	{
-		auto shared_lock = std::shared_lock(_worker_mutex);
-		for (auto &worker : _worker_list)
-		{
-			worker->Stop();
-		}
-
-		_worker_list.clear();
-	}
-
 	auto socket = GetSocket();
 
 	if (socket != nullptr)
@@ -325,11 +308,6 @@ bool PhysicalPort::RemoveObserver(PhysicalPortObserver *observer)
 	_observer_list.erase(item);
 
 	return true;
-}
-
-bool PhysicalPort::DisconnectClient(ov::ClientSocket *client_socket)
-{
-	return _server_socket->DisconnectClient(client_socket, ov::SocketConnectionState::Disconnect);
 }
 
 ov::String PhysicalPort::ToString() const

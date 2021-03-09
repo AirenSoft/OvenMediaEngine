@@ -25,7 +25,7 @@ SegmentPublisher::~SegmentPublisher()
 	logtd("Publisher has been destroyed");
 }
 
-bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server)
+bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server, int worker_count)
 {
 	auto server_config = GetServerConfig();
 	auto ip = server_config.GetIp();
@@ -46,7 +46,7 @@ bool SegmentPublisher::Start(const cfg::cmn::SingularPort &port_config, const cf
 	//stream_server->SetCrossDomain(cross_domains);
 
 	if (stream_server->Start(has_port ? &address : nullptr, has_tls_port ? &tls_address : nullptr,
-							 DEFAULT_SEGMENT_WORKER_THREAD_COUNT) == false)
+							 DEFAULT_SEGMENT_WORKER_THREAD_COUNT, worker_count) == false)
 	{
 		logte("An error occurred while start %s Publisher", GetPublisherName());
 		return false;
@@ -109,7 +109,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 		stream = std::dynamic_pointer_cast<SegmentStream>(PullStream(parsed_url, vhost_app_name, request_info.host_name, stream_name));
 		if (stream == nullptr)
 		{
-			client->GetResponse()->SetStatusCode(HttpStatusCode::NotAcceptable);
+			client->GetResponse()->SetStatusCode(HttpStatusCode::NotFound);
 			return true;
 		}
 		else

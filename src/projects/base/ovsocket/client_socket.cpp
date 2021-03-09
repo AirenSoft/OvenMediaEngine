@@ -14,6 +14,15 @@
 #undef OV_LOG_TAG
 #define OV_LOG_TAG "Socket.Client"
 
+#define logap(format, ...) logtp("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
+#define logad(format, ...) logtd("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
+#define logas(format, ...) logts("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
+
+#define logai(format, ...) logti("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
+#define logaw(format, ...) logtw("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
+#define logae(format, ...) logte("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
+#define logac(format, ...) logtc("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
+
 // If no packet is sent during this time, the connection is disconnected
 #define CLIENT_SOCKET_SEND_TIMEOUT (60 * 1000)
 
@@ -87,14 +96,72 @@ namespace ov
 		return
 			// Set socket options
 			SetSocketOptions() &&
-			MakeNonBlocking(_server_socket);
+			MakeNonBlocking(GetSharedPtrAs<SocketAsyncInterface>()) &&
+			AppendCommand({DispatchCommand::Type::Connected});
+	}
+
+	void ClientSocket::OnConnected()
+	{
+		auto callback = _server_socket->GetConnectionCallback();
+
+		if (callback != nullptr)
+		{
+			callback(GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Connected, nullptr);
+		}
+	}
+
+	void ClientSocket::OnReadable()
+	{
+		auto &data_callback = _server_socket->GetDataCallback();
+
+		auto data = std::make_shared<Data>(TcpBufferSize);
+
+		while (true)
+		{
+			auto error = Recv(data);
+
+			if (error == nullptr)
+			{
+				if (data->GetLength() > 0)
+				{
+					if (data_callback != nullptr)
+					{
+						data_callback(GetSharedPtrAs<ClientSocket>(), data->Clone());
+					}
+
+					continue;
+				}
+				else
+				{
+					// Try later (EAGAIN)
+				}
+			}
+			else
+			{
+				// An error occurred
+			}
+
+			break;
+		}
+	}
+
+	void ClientSocket::OnClosed()
+	{
+		auto callback = _server_socket->GetConnectionCallback();
+
+		if (callback != nullptr)
+		{
+			callback(GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected, nullptr);
+		}
+
+		_server_socket->OnClientDisconnected(GetSharedPtrAs<ClientSocket>());
 	}
 
 	bool ClientSocket::CloseInternal()
 	{
 		Socket::CloseInternal();
-		
-		return _server_socket->DisconnectClient(this->GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnect);
+
+		return _server_socket->OnClientDisconnected(GetSharedPtrAs<ClientSocket>());
 	}
 
 	String ClientSocket::ToString() const

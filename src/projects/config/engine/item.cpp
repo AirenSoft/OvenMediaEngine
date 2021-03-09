@@ -616,7 +616,7 @@ namespace cfg
 					logtd("[%s] Trying to cast %s",
 						  path.CStr(),
 						  ov::Demangle(value.type().name()).CStr());
-					std::any_cast<Item *>(child_target)->FromDataSource(path, child_name, TryCast<const cfg::DataSource &>(value));
+					std::any_cast<Item *>(child_target)->FromDataSource(child_path, child_name, TryCast<const cfg::DataSource &>(value));
 					break;
 
 				case ValueType::List: {

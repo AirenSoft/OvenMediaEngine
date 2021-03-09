@@ -16,12 +16,19 @@
 
 namespace ov
 {
+	class SocketPool;
+
 	// TCP 서버 (UDP는 DatagramSocket 사용)
 	class ServerSocket : public Socket, public SocketAsyncInterface
 	{
+	protected:
+		friend class ClientSocket;
+
 	public:
-		ServerSocket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker)
-			: Socket(token, worker)
+		ServerSocket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker, const std::shared_ptr<SocketPool> &pool)
+			: Socket(token, worker),
+
+			  _pool(pool)
 		{
 		}
 
@@ -49,12 +56,24 @@ namespace ov
 
 		String ToString() const override;
 
-		bool DisconnectClient(std::shared_ptr<ClientSocket> client_socket, SocketConnectionState state, const std::shared_ptr<Error> &error = nullptr);
-		bool DisconnectClient(ClientSocket *client_socket, SocketConnectionState state, const std::shared_ptr<Error> &error = nullptr);
-
 	protected:
 		bool SetSocketOptions(int send_buffer_size, int recv_buffer_size);
-		
+
+		ClientConnectionCallback &GetConnectionCallback()
+		{
+			return _connection_callback;
+		}
+
+		ClientDataCallback &GetDataCallback()
+		{
+			return _data_callback;
+		}
+
+		void AcceptClients();
+
+		// Called from ClientSocket
+		bool OnClientDisconnected(const std::shared_ptr<ClientSocket> &client);
+
 		//--------------------------------------------------------------------
 		// Overriding of Socket
 		//--------------------------------------------------------------------
@@ -63,17 +82,22 @@ namespace ov
 		//--------------------------------------------------------------------
 		// Implementation of SocketAsyncInterface
 		//--------------------------------------------------------------------
-		void OnReadable(const std::shared_ptr<ov::Socket> &socket) override;
+		void OnConnected() override
+		{
+			// server socket should not be called this event
+			OV_ASSERT2(false);
+		}
+		void OnReadable() override;
+		void OnClosed() override
+		{
+			// server socket should not be called this event
+			OV_ASSERT2(false);
+		}
 
+		std::shared_ptr<SocketPool> _pool;
 
-		void DispatchAccept();
-		void DispatchEvents(const void *key, const epoll_event *event);
-
-		std::shared_mutex _client_list_mutex;
+		std::mutex _client_list_mutex;
 		std::map<const void *, std::shared_ptr<ClientSocket>> _client_list;
-		// To keep ClientSocket pointer while DispatchEvent() is running
-		// (In DispatchEvent(), the client_socket is not referenced as shared_ptr)
-		std::map<const void *, std::shared_ptr<ClientSocket>> _disconnected_client_list;
 
 		ClientConnectionCallback _connection_callback = nullptr;
 		ClientDataCallback _data_callback = nullptr;

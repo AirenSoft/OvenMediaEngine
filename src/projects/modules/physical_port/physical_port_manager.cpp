@@ -10,6 +10,8 @@
 
 #include "physical_port_private.h"
 
+#define PHYSICAL_PORT_DEFAULT_WORKER_COUNT 4
+
 PhysicalPortManager::PhysicalPortManager()
 {
 }
@@ -18,12 +20,12 @@ PhysicalPortManager::~PhysicalPortManager()
 {
 }
 
-std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(ov::SocketType type,
+std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(const char *name,
+															  ov::SocketType type,
 															  const ov::SocketAddress &address,
+															  int worker_count,
 															  int send_buffer_size,
-															  int recv_buffer_size,
-															  size_t worker_count,
-															  size_t socket_pool_worker_count)
+															  int recv_buffer_size)
 {
 	auto lock_guard = std::lock_guard(_port_list_mutex);
 
@@ -31,11 +33,16 @@ std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(ov::SocketType typ
 	auto item = _port_list.find(key);
 	std::shared_ptr<PhysicalPort> port = nullptr;
 
+	if (worker_count == PHYSICAL_PORT_USE_DEFAULT_COUNT)
+	{
+		worker_count = PHYSICAL_PORT_DEFAULT_WORKER_COUNT;
+	}
+
 	if (item == _port_list.end())
 	{
-		port = std::make_shared<PhysicalPort>();
+		port = std::make_shared<PhysicalPort>(PhysicalPort::PrivateToken{nullptr});
 
-		if (port->Create(type, address, send_buffer_size, recv_buffer_size, worker_count, socket_pool_worker_count))
+		if (port->Create(name, type, address, worker_count, send_buffer_size, recv_buffer_size))
 		{
 			_port_list[key] = port;
 		}
@@ -55,14 +62,8 @@ std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(ov::SocketType typ
 
 		if (port->GetWorkerCount() != worker_count)
 		{
-			logtw("The number of workers in the existing port differs from the number of workers passed by the argument: port: %zu, argument: %zu",
-				port->GetWorkerCount(), worker_count);
-		}
-
-		if (port->GetSocketPoolWorkerCount() != socket_pool_worker_count)
-		{
-			logtw("The number of workers in the existing socket pool differs from the number of workers passed by the argument: socket pool: %zu, argument: %zu",
-				port->GetSocketPoolWorkerCount(), socket_pool_worker_count);
+			logtw("The number of workers in the existing socket pool differs from the number of workers passed by the argument: socket pool: %d, argument: %d",
+				  port->GetWorkerCount(), worker_count);
 		}
 	}
 
