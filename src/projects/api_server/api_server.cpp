@@ -33,6 +33,15 @@ namespace api
 
 		_access_token = api_config.GetAccessToken();
 
+		if (_access_token.IsEmpty())
+		{
+#if DEBUG
+			logtw("An empty AccessToken setting was found. This is only allowed on Debug builds for ease of development, and the Release build does not allow empty AccessToken.");
+#else	// DEBUG
+			logte("Empty  AccessToken is not allowed");
+#endif	// DEBUG
+		}
+
 		auto http_interceptor = CreateInterceptor();
 
 		bool http_server_result = true;
