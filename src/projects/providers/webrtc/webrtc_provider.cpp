@@ -277,6 +277,8 @@ namespace pvd
 			return false;
 		}
 
+		_ice_port->RemoveSession(stream->GetId());
+
 		return OnChannelDeleted(stream);
 	}
 

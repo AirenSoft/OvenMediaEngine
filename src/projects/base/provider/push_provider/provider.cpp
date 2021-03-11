@@ -93,7 +93,7 @@ namespace pvd
 		if(_channels.erase(channel->GetChannelId()) == 0)
 		{
 			// probabliy, it was removed 
-			logtd("%d channel to be deleted cannot be found", channel->GetChannelId());
+			logte("%d channel to be deleted cannot be found", channel->GetChannelId());
 			return false;
 		}
 
