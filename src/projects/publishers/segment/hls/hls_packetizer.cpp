@@ -26,7 +26,7 @@ static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &s
 	auto &file_name = segment_item->file_name;
 	auto &data = segment_item->data;
 
-	ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/ts"), file_name), data);
+	ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/hls"), file_name), data);
 #	endif
 #endif	// DEBUG
 }
@@ -36,11 +36,11 @@ HlsPacketizer::HlsPacketizer(const ov::String &app_name, const ov::String &strea
 							 const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track,
 							 const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	: Packetizer(app_name, stream_name,
-				 segment_count, segment_duration,
+				 segment_count, segment_count * 5, segment_duration,
 				 video_track, audio_track,
 				 chunked_transfer),
 
-	  _ts_writer(Writer::Type::MpegTs)
+	  _ts_writer(Writer::Type::MpegTs, Writer::MediaType::Both)
 {
 	_video_enable = false;
 	_audio_enable = false;

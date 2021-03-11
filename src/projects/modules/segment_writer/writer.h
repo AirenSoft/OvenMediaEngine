@@ -29,8 +29,26 @@ public:
 		M4s
 	};
 
-	Writer(Type type);
+	enum class MediaType
+	{
+		None,
+		Both,
+		Video,
+		Audio
+	};
+
+	Writer(Type type, MediaType media_type);
 	virtual ~Writer();
+
+	Type GetType() const
+	{
+		return _type;
+	}
+
+	MediaType GetMediaType() const
+	{
+		return _media_type;
+	}
 
 	bool AddTrack(const std::shared_ptr<const MediaTrack> &media_track);
 	bool Prepare();
@@ -109,6 +127,7 @@ protected:
 	bool FillCodecParameters(const std::shared_ptr<const Track> &track, AVCodecParameters *codec_parameters);
 
 	Type _type;
+	MediaType _media_type = MediaType::None;
 
 	std::shared_ptr<AVFormatContext> _format_context;
 	std::shared_ptr<AVIOContext> _avio_context;
