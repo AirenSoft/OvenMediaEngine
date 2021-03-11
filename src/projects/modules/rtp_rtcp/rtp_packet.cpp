@@ -23,54 +23,13 @@ RtpPacket::RtpPacket()
 	_buffer[0] = RTP_VERSION << 6;
 
 	_created_time = std::chrono::system_clock::now();
+
+	_is_available = true;
 }
 
-RtpPacket::RtpPacket(const std::shared_ptr<ov::Data> &data)
+RtpPacket::RtpPacket(const std::shared_ptr<const ov::Data> &data)
 {
-	if(data->GetLength() < FIXED_HEADER_SIZE)
-	{
-		// Wrong data
-		return;
-	}
-
-	auto buffer = data->GetDataAs<uint8_t>();
-	uint8_t version = buffer[0] >> 6;
-	if(version != RTP_VERSION)
-	{
-		// This data is not RTP packet
-		return;
-	}
-
-	// We don't use the Padding, Extension and CSRC yet. 
-	// If the P and the E are set, it can't be parsed but this class is used for a packet that generated from this class now,
-	// TODO(Getroot): RTP Packet parsing must be fully supported.
-	_padding_size = 0;
-	_extension_size = 0;
-
-	// It is specific values only for OME
-	_is_fec = false;
-	_origin_payload_type = 0;
-
-	// CC
-	//_cc = buffer[0] & 0xFF;
-	// Marker
-	_marker = (buffer[1] & (1 << 8));
-	// PT
-	_payload_type = buffer[1] & 0x7f;
-	// Sequence Number
-	_sequence_number = ByteReader<uint16_t>::ReadBigEndian(&buffer[2]);
-	// Timestamp
-	_timestamp = ByteReader<uint32_t>::ReadBigEndian(&buffer[4]);
-	// SSRC
-	_ssrc = ByteReader<uint32_t>::ReadBigEndian(&buffer[8]);
-	_payload_offset = FIXED_HEADER_SIZE + _cc;
-	_payload_size = data->GetLength() - _payload_offset;
-	
-	// Full data
-	_data = data;
-	_buffer = _data->GetWritableDataAs<uint8_t>();
-
-	_created_time = std::chrono::system_clock::now();
+	_is_available = Parse(data);
 }
 
 RtpPacket::RtpPacket(RtpPacket &src)
@@ -91,11 +50,130 @@ RtpPacket::RtpPacket(RtpPacket &src)
 	_buffer = _data->GetWritableDataAs<uint8_t>();
 
 	_created_time = std::chrono::system_clock::now();
+
+	_is_available = true;
 }
 
 RtpPacket::~RtpPacket()
 {
 
+}
+
+ov::String RtpPacket::Dump()
+{
+	if(_is_available == false)
+	{
+		return ov::String::FormatString("Invalid packet");
+	}
+
+	return ov::String::FormatString("RTP Packet - size(%u) p(%d) x(%d) cc(%d) m(%d) pt(%d) seq_no(%d) timestamp(%u) ssrc(%u) extension_size(%d) payload_offset(%d), payload_size(%u) padding_size(%u)", _data->GetLength(), _has_padding, _has_extension, _cc, _marker, _payload_type, _sequence_number, _timestamp, _ssrc, _extension_size, _payload_offset, _payload_size, _padding_size);
+}
+
+bool RtpPacket::Parse(const std::shared_ptr<const ov::Data> &data)
+{
+	if(data->GetLength() < FIXED_HEADER_SIZE)
+	{
+		// Wrong data
+		return false;
+	}
+
+	auto buffer = data->GetDataAs<uint8_t>();
+	auto buffer_size = data->GetLength();
+
+	uint8_t version = buffer[0] >> 6;
+	if(version != RTP_VERSION)
+	{
+		// This data is not RTP packet
+		return false;
+	}
+
+	_has_padding = (buffer[0] & 0x20) != 0;
+	_has_extension = (buffer[0] & 0x10) != 0;
+	_cc = buffer[0] & 0x0f;
+
+	// It is specific values only for OME
+	_is_fec = false;
+	_origin_payload_type = 0;
+
+	// Marker
+	_marker = (buffer[1] & 0x80) != 0;
+	// PT
+	_payload_type = buffer[1] & 0x7f;
+	// Sequence Number
+	_sequence_number = ByteReader<uint16_t>::ReadBigEndian(&buffer[2]);
+	// Timestamp
+	_timestamp = ByteReader<uint32_t>::ReadBigEndian(&buffer[4]);
+	// SSRC
+	_ssrc = ByteReader<uint32_t>::ReadBigEndian(&buffer[8]);
+
+	//TODO(Getroot): Parse CSRC
+	_payload_offset = FIXED_HEADER_SIZE + (_cc * 4);
+	
+	if(_has_padding)
+	{
+		_padding_size = buffer[buffer_size -1];
+		if(_padding_size == 0)
+		{
+			return false;
+		}
+	}
+	else
+	{
+		_padding_size = 0;
+	}
+
+	_extension_size = 0;
+	if(_has_extension)
+	{
+		/*
+		https://tools.ietf.org/html/rfc3550#section-5.3.1
+
+		16-bit length field that counts the number of 32-bit words in the extension, 
+		excluding the four-octet extension header
+
+		0                   1                   2                   3
+		0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+		+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+		|      defined by profile       |           length              |
+		+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+		|                        header extension                       |
+		|                             ....                              |
+		*/
+		size_t extension_offset = _payload_offset + 4;
+		if(extension_offset > buffer_size)
+		{
+			return false;
+		}
+
+		uint16_t extension_profile = ByteReader<uint16_t>::ReadBigEndian(&buffer[_payload_offset]);
+		_extension_size = ByteReader<uint16_t>::ReadBigEndian(&buffer[_payload_offset + 2]) * 4;
+
+		if(extension_offset + _extension_size > buffer_size)
+		{
+			return false;
+		}
+
+		// https://tools.ietf.org/html/rfc8285
+		// A General Mechanism for RTP Header Extensions
+		// TODO(Getroot): Extract extensions
+		
+		_payload_offset = extension_offset + _extension_size;
+	}
+
+	if(_payload_offset + _padding_size > buffer_size)
+	{
+		return false;
+	}
+
+	_payload_size = buffer_size - _payload_offset - _padding_size;
+
+	// Full data
+	_data = data->Clone();
+	_buffer = _data->GetWritableDataAs<uint8_t>();
+
+	_created_time = std::chrono::system_clock::now();
+
+	return true;
 }
 
 std::shared_ptr<ov::Data> RtpPacket::GetData()

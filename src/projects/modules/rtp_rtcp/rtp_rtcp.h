@@ -4,6 +4,7 @@
 #include "rtp_packetizer.h"
 #include "base/ovlibrary/node.h"
 #include "rtcp_info/rtcp_sr_generator.h"
+#include "rtp_jitter_buffer.h"
 
 class RtcSession;
 
@@ -28,7 +29,12 @@ public:
 	bool SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
 	bool OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 	
+	bool OnRtpReceived(const std::shared_ptr<const ov::Data> &data);
+	bool OnRtcpReceived(const std::shared_ptr<const ov::Data> &data);
+
 private:
+	std::shared_ptr<RtpJitterBuffer> GetJitterBuffer(uint8_t payload_type);
+
     time_t _first_receiver_report_time = 0; // 0 - not received RR packet
     time_t _last_sender_report_time = 0;
     uint64_t _send_packet_sequence_number = 0;
@@ -37,4 +43,8 @@ private:
 	std::shared_ptr<RtpRtcpInterface> _observer;
 
     std::map<uint32_t, std::shared_ptr<RtcpSRGenerator>> _rtcp_sr_generators;
+
+	// Jitter buffer
+	// payload type : Jitter buffer
+	std::unordered_map<uint8_t, std::shared_ptr<RtpJitterBuffer>> _rtp_jitter_buffers;
 };

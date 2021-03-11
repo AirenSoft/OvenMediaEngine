@@ -38,9 +38,12 @@ class RtpPacket
 {
 public:
 	RtpPacket();
-	RtpPacket(const std::shared_ptr<ov::Data> &data);
+	RtpPacket(const std::shared_ptr<const ov::Data> &data);
 	RtpPacket(RtpPacket &src);
 	virtual ~RtpPacket();
+
+	// Parse from Data
+	bool		Parse(const std::shared_ptr<const ov::Data> &data);
 
 	// Getter
 	bool		Marker() const;
@@ -84,8 +87,13 @@ public:
 	// Created time
 	std::chrono::system_clock::time_point GetCreatedTime();
 
+	// Dump print
+	ov::String	Dump();
+
 protected:
 	size_t		_payload_offset = 0;	// Payload Start Point (Header size)
+	bool		_has_padding = false;
+	bool		_has_extension = false;
 	uint8_t		_cc = 0;
 	bool		_marker = false;
 	uint8_t		_payload_type = 0;
@@ -96,9 +104,9 @@ protected:
 	uint32_t	_timestamp = 0;
 	uint32_t	_ssrc = 0;
 	size_t		_payload_size = 0;		// Payload Size
-
-	//TODO: Futur works : develop extensions
 	size_t		_extension_size;
+
+	bool		_is_available = false;
 
 	// std::vector<uint8_t>	_buffer;
 	uint8_t *					_buffer = nullptr;

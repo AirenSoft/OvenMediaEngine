@@ -176,6 +176,7 @@ namespace pvd
 		
 		// Create Nodes
 		_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr(), ssrc_list);
+
 		_srtp_transport = std::make_shared<SrtpTransport>();
 		_dtls_transport = std::make_shared<DtlsTransport>();
 
@@ -245,7 +246,10 @@ namespace pvd
 	// From RtpRtcp node
 	void WebRTCStream::OnRtpReceived(const std::shared_ptr<RtpPacket> &rtp_packet)
 	{
+		logtd("%s", rtp_packet->Dump().CStr());
+
 		
+
 	}
 
 	// From RtpRtcp node

@@ -87,30 +87,94 @@ bool RtpRtcp::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov:
 
 	if(from_node == NodeType::Srtcp)
 	{
-		logtd("Get RTCP Packet - length(%d)", data->GetLength());
-		// Parse RTCP Packet
-		RtcpReceiver receiver;
-		if(receiver.ParseCompoundPacket(data) == false)
-		{
-			return false;
-		}
-
-		while(receiver.HasAvailableRtcpInfo())
-		{
-			auto info = receiver.PopRtcpInfo();
-			
-			if(_observer != nullptr)
-			{
-				std::shared_lock<std::shared_mutex> lock(_observer_lock);
-				_observer->OnRtcpReceived(info);
-			}
-		}
+		return OnRtcpReceived(data);
 	}
 	else if(from_node == NodeType::Srtp)
 	{
-		//auto packet = std::make_shared<RtpPacket>(data);
-		
+		return OnRtpReceived(data);
 	}
 
     return true;
+}
+
+bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
+{
+	auto packet = std::make_shared<RtpPacket>(data);
+	logtd("%s", packet->Dump().CStr());
+
+	auto jitter_buffer = GetJitterBuffer(packet->PayloadType());
+	if(jitter_buffer == nullptr)
+	{
+		// can not happen
+		logte("Could not find jitter buffer for payload type %d", packet->PayloadType());
+		return false;
+	}
+
+	jitter_buffer->InsertPacket(packet);
+
+	auto frame = jitter_buffer->PopAvailableFrame();
+	if(frame != nullptr && _observer != nullptr)
+	{
+		std::shared_lock<std::shared_mutex> lock(_observer_lock);
+
+		auto packet = frame->GetFirstRtpPacket();
+		if(packet == nullptr)
+		{
+			// can not happen
+			logte("Could not get first rtp packet from jitter buffer - payload type : %d", packet->PayloadType());
+			return false;
+		}
+		_observer->OnRtpReceived(packet);
+
+		while(true)
+		{
+			packet = frame->GetNextRtpPacket();
+			if(packet == nullptr)
+			{
+				break;
+			}
+
+			_observer->OnRtpReceived(packet);
+		}
+	}
+
+	return true;
+}
+
+bool RtpRtcp::OnRtcpReceived(const std::shared_ptr<const ov::Data> &data)
+{
+	logtd("Get RTCP Packet - length(%d)", data->GetLength());
+	// Parse RTCP Packet
+	RtcpReceiver receiver;
+	if(receiver.ParseCompoundPacket(data) == false)
+	{
+		return false;
+	}
+
+	while(receiver.HasAvailableRtcpInfo())
+	{
+		auto info = receiver.PopRtcpInfo();
+		
+		if(_observer != nullptr)
+		{
+			std::shared_lock<std::shared_mutex> lock(_observer_lock);
+			_observer->OnRtcpReceived(info);
+		}
+	}
+	return true;
+}
+
+std::shared_ptr<RtpJitterBuffer> RtpRtcp::GetJitterBuffer(uint8_t payload_type)
+{
+	auto it = _rtp_jitter_buffers.find(payload_type);
+	if(it == _rtp_jitter_buffers.end())
+	{
+		logti("Create jitter buffer for payload type %d", payload_type);
+		// Create new jitter buffer
+		auto jitter_buffer = std::make_shared<RtpJitterBuffer>();
+		_rtp_jitter_buffers[payload_type] = jitter_buffer;
+		return jitter_buffer;
+	}
+
+	return it->second;
 }
