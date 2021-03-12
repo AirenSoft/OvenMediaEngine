@@ -121,7 +121,8 @@ namespace pvd
 			}
 			else
 			{
-				if(peer_media_desc->GetPayload(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE)))
+				// RED is not support yet
+				if(0 && peer_media_desc->GetPayload(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE)))
 				{
 					_video_payload_type = static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE);
 					_red_block_pt = first_payload->GetId();
@@ -169,7 +170,13 @@ namespace pvd
 				}
 
 				video_track->SetTimeBase(1, timebase);
-				video_track->SetVideoTimestampScale(1.0);			
+				video_track->SetVideoTimestampScale(1.0);
+
+				if(AddDepacketizer(_video_payload_type, video_track->GetCodecId()) == false)
+				{
+					return false;
+				}
+
 				AddTrack(video_track);
 			}
 		}
@@ -200,6 +207,32 @@ namespace pvd
 		_dtls_ice_transport->Start();
 
 		return pvd::Stream::Start();
+	}
+
+	bool WebRTCStream::AddDepacketizer(uint8_t payload_type, cmn::MediaCodecId codec_id)
+	{
+		// Depacketizer
+		auto depacketizer = RtpDepacketizingManager::Create(codec_id);
+		if(depacketizer == nullptr)
+		{
+			logte("%s - Could not create depacketizer : codec_id(%d)", GetName().CStr(), static_cast<uint8_t>(codec_id));
+			return false;
+		}
+
+		_depacketizers[payload_type] = depacketizer;
+
+		return true;
+	}
+
+	std::shared_ptr<RtpDepacketizingManager> WebRTCStream::GetDepacketizer(uint8_t payload_type)
+	{
+		auto it = _depacketizers.find(payload_type);
+		if(it == _depacketizers.end())
+		{
+			return nullptr;
+		}
+
+		return it->second;
 	}
 
 	bool WebRTCStream::Stop()
@@ -244,12 +277,45 @@ namespace pvd
 	}
 
 	// From RtpRtcp node
-	void WebRTCStream::OnRtpReceived(const std::shared_ptr<RtpPacket> &rtp_packet)
+	void WebRTCStream::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
 	{
-		logtd("%s", rtp_packet->Dump().CStr());
+		auto first_rtp_packet = rtp_packets.front();
+		auto payload_type = first_rtp_packet->PayloadType();
+		logtd("%s", first_rtp_packet->Dump().CStr());
 
+		auto depacketizer = GetDepacketizer(payload_type);
+		if(depacketizer == nullptr)
+		{
+			logte("%s - Could not find depacketizer : payload_type(%d)", GetName().CStr(), payload_type);
+			return;
+		}
+
+		std::vector<std::shared_ptr<ov::Data>> payload_list;
+		for(const auto &packet : rtp_packets)
+		{
+			auto payload = std::make_shared<ov::Data>(packet->Payload(), packet->PayloadSize());
+			payload_list.push_back(payload);
+		}
 		
+		auto bitstream = depacketizer->ParseAndAssembleFrame(payload_list);
+		if(bitstream == nullptr)
+		{
+			logte("%s - Could not depacketize packet : payload_type(%d)", GetName().CStr(), payload_type);
+			return;
+		}
 
+		auto track = GetTrack(payload_type);
+
+		auto frame = std::make_shared<MediaPacket>(track->GetMediaType(),
+											  track->GetId(),
+											  bitstream,
+											  first_rtp_packet->Timestamp(),
+											  first_rtp_packet->Timestamp(),
+											  cmn::BitstreamFormat::H264_ANNEXB,
+											 cmn::PacketType::NALU);
+
+		logtd("Send Frame : track_id(%d) data_length(%d) pts(%d)",  track->GetId(), bitstream->GetLength(), first_rtp_packet->Timestamp());
+		SendFrame(frame);
 	}
 
 	// From RtpRtcp node

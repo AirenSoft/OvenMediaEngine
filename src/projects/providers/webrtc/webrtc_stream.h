@@ -14,9 +14,10 @@
 #include "modules/sdp/session_description.h"
 
 #include "modules/rtp_rtcp/rtp_rtcp.h"
-#include "modules/rtp_rtcp/rtp_rtcp_interface.h"
+#include "modules/rtp_rtcp/rtp_packetizer_interface.h"
 #include "modules/dtls_srtp/dtls_transport.h"
-#include "modules//dtls_srtp/dtls_ice_transport.h"
+#include "modules/dtls_srtp/dtls_ice_transport.h"
+#include "modules/rtp_rtcp/rtp_depacketizing_manager.h"
 
 namespace pvd
 {
@@ -51,10 +52,13 @@ namespace pvd
 		bool OnDataReceived(const std::shared_ptr<const ov::Data> &data) override;
 
 		// RtpRtcpInterface Implement
-		void OnRtpReceived(const std::shared_ptr<RtpPacket> &rtp_packet) override;
+		void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) override;
 		void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
 
 	private:
+		bool AddDepacketizer(uint8_t payload_type, cmn::MediaCodecId codec_id);
+		std::shared_ptr<RtpDepacketizingManager> GetDepacketizer(uint8_t payload_type);
+
 		std::shared_ptr<const SessionDescription> _offer_sdp;
 		std::shared_ptr<const SessionDescription> _peer_sdp;
 		std::shared_ptr<IcePort> _ice_port;
@@ -76,5 +80,8 @@ namespace pvd
 		uint64_t							_session_expired_time = 0;
 
 		std::shared_mutex					_start_stop_lock;
+
+		// Payload type, Depacketizer
+		std::map<uint8_t, std::shared_ptr<RtpDepacketizingManager>> _depacketizers;
 	};
 }

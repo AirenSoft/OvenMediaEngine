@@ -11,7 +11,7 @@ class RtcSession;
 class RtpRtcpInterface : public ov::EnableSharedFromThis<RtpRtcpInterface>
 {
 public:
-	virtual void OnRtpReceived(const std::shared_ptr<RtpPacket> &rtp_packet) = 0;
+	virtual void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) = 0;
 	virtual void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) = 0;
 };
 

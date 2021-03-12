@@ -5,7 +5,7 @@
 #include <vector>
 #include "base/ovlibrary/ovlibrary.h"
 #include "rtp_packet.h"
-#include "rtp_rtcp_interface.h"
+#include "rtp_packetizer_interface.h"
 #include "base/common_types.h"
 
 const int16_t kNoPictureId = -1;

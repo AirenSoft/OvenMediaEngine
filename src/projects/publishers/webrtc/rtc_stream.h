@@ -13,7 +13,7 @@
 
 
 
-class RtcStream : public pub::Stream, public RtpRtcpPacketizerInterface
+class RtcStream : public pub::Stream, public RtpPacketizerInterface
 {
 public:
 	static std::shared_ptr<RtcStream> Create(const std::shared_ptr<pub::Application> application,

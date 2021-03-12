@@ -116,6 +116,7 @@ bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
 	if(frame != nullptr && _observer != nullptr)
 	{
 		std::shared_lock<std::shared_mutex> lock(_observer_lock);
+		std::vector<std::shared_ptr<RtpPacket>> rtp_packets;
 
 		auto packet = frame->GetFirstRtpPacket();
 		if(packet == nullptr)
@@ -124,7 +125,8 @@ bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
 			logte("Could not get first rtp packet from jitter buffer - payload type : %d", packet->PayloadType());
 			return false;
 		}
-		_observer->OnRtpReceived(packet);
+		
+		rtp_packets.push_back(packet);
 
 		while(true)
 		{
@@ -134,8 +136,10 @@ bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
 				break;
 			}
 
-			_observer->OnRtpReceived(packet);
+			rtp_packets.push_back(packet);
 		}
+
+		_observer->OnRtpFrameReceived(rtp_packets);
 	}
 
 	return true;

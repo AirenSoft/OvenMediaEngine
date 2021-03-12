@@ -288,9 +288,9 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 	return _rtp_rtcp->SendOutgoingData(copy_packet);
 }
 
-void RtcSession::OnRtpReceived(const std::shared_ptr<RtpPacket> &rtp_packet)
+void RtcSession::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
 {
-	// No one send RTP packet 
+	// No player send RTP packet 
 }
 
 void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)

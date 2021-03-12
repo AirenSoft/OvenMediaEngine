@@ -7,7 +7,7 @@
 #include "modules/ice/ice_port.h"
 #include "modules//dtls_srtp/dtls_ice_transport.h"
 #include "modules/rtp_rtcp/rtp_rtcp.h"
-#include "modules/rtp_rtcp/rtp_rtcp_interface.h"
+#include "modules/rtp_rtcp/rtp_packetizer_interface.h"
 #include "modules/dtls_srtp/dtls_transport.h"
 #include <unordered_set>
 
@@ -67,7 +67,7 @@ public:
 	bool SendOutgoingData(const std::any &packet) override;
 	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data) override;
 
-	void OnRtpReceived(const std::shared_ptr<RtpPacket> &rtp_packet) override;
+	void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) override;
 	void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
 
 private:

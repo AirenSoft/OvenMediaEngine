@@ -3,7 +3,7 @@
 #include "rtp_packet.h"
 #include "rtcp_packet.h"
 
-class RtpRtcpPacketizerInterface : public ov::EnableSharedFromThis<RtpRtcpPacketizerInterface>
+class RtpPacketizerInterface : public ov::EnableSharedFromThis<RtpPacketizerInterface>
 {
 public:
     // RTP Packet을 전송한다.
