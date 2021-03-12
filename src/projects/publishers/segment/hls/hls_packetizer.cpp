@@ -22,12 +22,15 @@
 static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &segment_item)
 {
 #if DEBUG
-#	if 0
-	auto &file_name = segment_item->file_name;
-	auto &data = segment_item->data;
+	static bool dump = ov::Converter::ToBool(std::getenv("OME_DUMP_HLS"));
 
-	ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/hls"), file_name), data);
-#	endif
+	if (dump)
+	{
+		auto &file_name = segment_item->file_name;
+		auto &data = segment_item->data;
+
+		ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/hls"), file_name), data);
+	}
 #endif	// DEBUG
 }
 

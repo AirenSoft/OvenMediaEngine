@@ -22,6 +22,21 @@
 #define CMAF_JITTER_CORRECTION_PER_ONCE 1000
 #define CMAF_JITTER_CORRECTION_INTERVAL 5000
 
+static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &segment_item)
+{
+#if DEBUG
+	static bool dump = ov::Converter::ToBool(std::getenv("OME_DUMP_LLDASH"));
+
+	if (dump)
+	{
+		auto &file_name = segment_item->file_name;
+		auto &data = segment_item->data;
+
+		ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/lldash"), file_name), data);
+	}
+#endif	// DEBUG
+}
+
 CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &stream_name,
 							   uint32_t segment_count, uint32_t segment_duration,
 							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
@@ -136,18 +151,6 @@ ov::String CmafPacketizer::GetFileName(cmn::MediaType media_type) const
 	}
 
 	return "";
-}
-
-static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &segment_item)
-{
-#if DEBUG
-#	if 0
-	auto &file_name = segment_item->file_name;
-	auto &data = segment_item->data;
-
-	ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/lldash"), file_name), data);
-#	endif
-#endif	// DEBUG
 }
 
 bool CmafPacketizer::WriteVideoInitInternal(const std::shared_ptr<const ov::Data> &frame, const ov::String &init_file_name)

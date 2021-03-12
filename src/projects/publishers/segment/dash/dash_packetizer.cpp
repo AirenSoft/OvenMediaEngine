@@ -18,6 +18,21 @@
 #include "dash_define.h"
 #include "dash_private.h"
 
+static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &segment_item)
+{
+#if DEBUG
+	static bool dump = ov::Converter::ToBool(std::getenv("OME_DUMP_DASH"));
+
+	if (dump)
+	{
+		auto &file_name = segment_item->file_name;
+		auto &data = segment_item->data;
+
+		ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/dash"), file_name), data);
+	}
+#endif	// DEBUG
+}
+
 DashPacketizer::DashPacketizer(const ov::String &app_name, const ov::String &stream_name,
 							   uint32_t segment_count, uint32_t segment_duration,
 							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
@@ -175,18 +190,6 @@ ov::String DashPacketizer::GetFileName(int segment_index, cmn::MediaType media_t
 	}
 
 	return "";
-}
-
-static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &segment_item)
-{
-#if DEBUG
-#	if 0
-	auto &file_name = segment_item->file_name;
-	auto &data = segment_item->data;
-
-	ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/dash"), file_name), data);
-#	endif
-#endif	// DEBUG
 }
 
 bool DashPacketizer::PrepareVideoInitIfNeeded()
