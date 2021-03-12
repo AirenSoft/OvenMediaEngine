@@ -22,12 +22,27 @@
 #define CMAF_JITTER_CORRECTION_PER_ONCE 1000
 #define CMAF_JITTER_CORRECTION_INTERVAL 5000
 
+static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &segment_item)
+{
+#if DEBUG
+	static bool dump = ov::Converter::ToBool(std::getenv("OME_DUMP_LLDASH"));
+
+	if (dump)
+	{
+		auto &file_name = segment_item->file_name;
+		auto &data = segment_item->data;
+
+		ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/lldash"), file_name), data);
+	}
+#endif	// DEBUG
+}
+
 CmafPacketizer::CmafPacketizer(const ov::String &app_name, const ov::String &stream_name,
 							   uint32_t segment_count, uint32_t segment_duration,
 							   std::shared_ptr<MediaTrack> video_track, std::shared_ptr<MediaTrack> audio_track,
 							   const std::shared_ptr<ChunkedTransferInterface> &chunked_transfer)
 	: Packetizer(app_name, stream_name,
-				 1, segment_duration,
+				 1, 1 * 5, segment_duration,
 				 video_track, audio_track,
 
 				 chunked_transfer)
@@ -121,11 +136,8 @@ int CmafPacketizer::GetStartPatternSize(const uint8_t *buffer, const size_t buff
 	return 0;
 }
 
-ov::String CmafPacketizer::GetFileName(int64_t start_timestamp, cmn::MediaType media_type) const
+ov::String CmafPacketizer::GetFileName(cmn::MediaType media_type) const
 {
-	// start_timestamp must be -1 because it is an unused parameter
-	OV_ASSERT2(start_timestamp == -1LL);
-
 	switch (media_type)
 	{
 		case cmn::MediaType::Video:
@@ -139,18 +151,6 @@ ov::String CmafPacketizer::GetFileName(int64_t start_timestamp, cmn::MediaType m
 	}
 
 	return "";
-}
-
-static inline void DumpSegmentToFile(const std::shared_ptr<const SegmentItem> &segment_item)
-{
-#if DEBUG
-#	if 0
-	auto &file_name = segment_item->file_name;
-	auto &data = segment_item->data;
-
-	ov::DumpToFile(ov::PathManager::Combine(ov::PathManager::GetAppPath("dump/ll"), file_name), data);
-#	endif
-#endif	// DEBUG
 }
 
 bool CmafPacketizer::WriteVideoInitInternal(const std::shared_ptr<const ov::Data> &frame, const ov::String &init_file_name)
@@ -490,7 +490,7 @@ bool CmafPacketizer::AppendVideoFrame(const std::shared_ptr<const PacketizerFram
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
 		{
 			// Response chunk data to HTTP client
-			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(-1LL, cmn::MediaType::Video), true, chunk_data);
+			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(cmn::MediaType::Video), true, chunk_data);
 		}
 
 		_last_video_pts = data->pts;
@@ -534,7 +534,7 @@ bool CmafPacketizer::AppendAudioFrame(const std::shared_ptr<const PacketizerFram
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
 		{
 			// Response chunk data to HTTP client
-			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(-1LL, cmn::MediaType::Audio), false, chunk_data);
+			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(cmn::MediaType::Audio), false, chunk_data);
 		}
 
 		_last_audio_pts = data->pts;
@@ -554,7 +554,7 @@ bool CmafPacketizer::WriteVideoSegment()
 		return true;
 	}
 
-	auto file_name = GetFileName(-1LL, cmn::MediaType::Video);
+	auto file_name = GetFileName(cmn::MediaType::Video);
 	auto start_timestamp = _video_chunk_writer->GetStartTimestamp();
 	auto segment_duration = _video_chunk_writer->GetSegmentDuration();
 
@@ -587,7 +587,7 @@ bool CmafPacketizer::WriteAudioSegment()
 		return true;
 	}
 
-	auto file_name = GetFileName(-1LL, cmn::MediaType::Audio);
+	auto file_name = GetFileName(cmn::MediaType::Audio);
 	auto start_timestamp = _audio_chunk_writer->GetStartTimestamp();
 	auto segment_duration = _audio_chunk_writer->GetSegmentDuration();
 
@@ -864,9 +864,6 @@ void CmafPacketizer::DoJitterCorrection()
 bool CmafPacketizer::UpdatePlayList()
 {
 	std::ostringstream xml;
-	double time_shift_buffer_depth = 6;
-	// double minimumUpdatePeriod = _segment_duration;
-	double minimumUpdatePeriod = 600.0;
 
 	if (IsReadyForStreaming() == false)
 	{
@@ -877,7 +874,7 @@ bool CmafPacketizer::UpdatePlayList()
 
 	ov::String publish_time = MakeUtcSecond(::time(nullptr));
 
-	logtd("Trying to update playlist for CMAF with availabilityStartTime: %s, publishTime: %s", _start_time.CStr(), publish_time.CStr());
+	logtd("Trying to update playlist for LL-DASH with availabilityStartTime: %s, publishTime: %s", _start_time.CStr(), publish_time.CStr());
 
 	xml << std::fixed << std::setprecision(3)
 		<< R"(<?xml version="1.0" encoding="utf-8"?>)" << std::endl
@@ -889,10 +886,10 @@ bool CmafPacketizer::UpdatePlayList()
 		<< R"(	xsi:schemaLocation="urn:mpeg:DASH:schema:MPD:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd")" << std::endl
 		<< R"(	profiles="urn:mpeg:dash:profile:isoff-live:2011")" << std::endl
 		<< R"(	type="dynamic")" << std::endl
-		<< R"(	minimumUpdatePeriod="PT)" << minimumUpdatePeriod << R"(S")" << std::endl
+		<< R"(	minimumUpdatePeriod="PT30S")" << std::endl
 		<< R"(	publishTime=")" << publish_time.CStr() << R"(")" << std::endl
 		<< R"(	availabilityStartTime=")" << _start_time.CStr() << R"(")" << std::endl
-		<< R"(	timeShiftBufferDepth="PT)" << time_shift_buffer_depth << R"(S")" << std::endl
+		<< R"(	timeShiftBufferDepth="PT)" << (_segment_save_count * _segment_duration) << R"(S")" << std::endl
 		<< R"(	suggestedPresentationDelay="PT)" << _segment_duration << R"(S")" << std::endl
 		<< R"(	minBufferTime="PT)" << _segment_duration << R"(S">)" << std::endl;
 

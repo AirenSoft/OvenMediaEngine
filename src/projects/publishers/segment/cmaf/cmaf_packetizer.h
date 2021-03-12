@@ -27,7 +27,7 @@ public:
 
 	static DashFileType GetFileType(const ov::String &file_name);
 	static int GetStartPatternSize(const uint8_t *buffer, const size_t buffer_len);
-	ov::String GetFileName(int64_t start_timestamp, cmn::MediaType media_type) const;
+	ov::String GetFileName(cmn::MediaType media_type) const;
 
 	bool WriteVideoInit(const std::shared_ptr<const ov::Data> &frame);
 	bool WriteAudioInit(const std::shared_ptr<const ov::Data> &frame);

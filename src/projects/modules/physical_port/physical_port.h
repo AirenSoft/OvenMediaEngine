@@ -16,22 +16,28 @@
 
 #include "physical_port_observer.h"
 
-class PhysicalPortWorker;
+class PhysicalPortManager;
 
 class PhysicalPort : public ov::EnableSharedFromThis<PhysicalPort>
 {
-public:
-	friend class PhysicalPortWorker;
+protected:
+	OV_SOCKET_DECLARE_PRIVATE_TOKEN();
 
-	PhysicalPort() = default;
+	friend class PhysicalPortManager;
+
+public:
+	explicit PhysicalPort(PrivateToken token)
+	{
+	}
+
 	virtual ~PhysicalPort();
 
-	bool Create(ov::SocketType type,
+	bool Create(const char *name,
+				ov::SocketType type,
 				const ov::SocketAddress &address,
-				int send_buffer_size,
-				int recv_buffer_size,
 				int worker_count,
-				int socket_pool_worker_count);
+				int send_buffer_size,
+				int recv_buffer_size);
 
 	bool Close();
 
@@ -65,12 +71,7 @@ public:
 	std::shared_ptr<const ov::Socket> GetSocket() const;
 	std::shared_ptr<ov::Socket> GetSocket();
 
-	size_t GetWorkerCount() const
-	{
-		return _worker_list.size();
-	}
-
-	size_t GetSocketPoolWorkerCount() const
+	int GetWorkerCount() const
 	{
 		return _socket_pool->GetWorkerCount();
 	}
@@ -79,26 +80,24 @@ public:
 
 	bool RemoveObserver(PhysicalPortObserver *observer);
 
-	bool DisconnectClient(ov::ClientSocket *client_socket);
-
 	ov::String ToString() const;
 
 protected:
-	bool CreateServerSocket(ov::SocketType type,
+	bool CreateServerSocket(const char *name,
+							ov::SocketType type,
 							const ov::SocketAddress &address,
-							int send_buffer_size,
-							int recv_buffer_size,
 							int worker_count,
-							int socket_pool_worker_count);
+							int send_buffer_size,
+							int recv_buffer_size);
 
-	bool CreateDatagramSocket(ov::SocketType type,
+	bool CreateDatagramSocket(const char *name,
+							  ov::SocketType type,
 							  const ov::SocketAddress &address,
-							  int worker_count,
-							  int socket_pool_worker_count);
+							  int worker_count);
 
 	// For TCP physical port
-	ov::SocketConnectionState OnClientConnectionStateChanged(const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error);
-	ov::SocketConnectionState OnClientData(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data);
+	void OnClientConnectionStateChanged(const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error);
+	void OnClientData(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data);
 
 	// For UDP physical port
 	void OnDatagram(const std::shared_ptr<ov::DatagramSocket> &client, const ov::SocketAddress &remote_address, const std::shared_ptr<ov::Data> &data);
@@ -113,9 +112,6 @@ protected:
 
 	std::atomic<int> _ref_count{0};
 
-	// TODO(dimiden): Must use a mutex to prevent race condition
+	// Because the life cycle of PhysicalPort is the same as that of the OME now, we do not need to use mutex for _observer_list
 	std::vector<PhysicalPortObserver *> _observer_list;
-
-	std::shared_mutex _worker_mutex;
-	std::vector<std::shared_ptr<PhysicalPortWorker>> _worker_list;
 };

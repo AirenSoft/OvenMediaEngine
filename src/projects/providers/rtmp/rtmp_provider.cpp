@@ -62,7 +62,12 @@ namespace pvd
 		auto rtmp_address = ov::SocketAddress(server.GetIp(), static_cast<uint16_t>(rtmp_config.GetPort().GetPort()));
 		auto socket_type = ov::SocketType::Tcp;
 
-		_physical_port = PhysicalPortManager::GetInstance()->CreatePort(socket_type, rtmp_address);
+		bool is_parsed;
+
+		auto worker_count = rtmp_config.GetWorkerCount(&is_parsed);
+		worker_count = is_parsed ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+		_physical_port = PhysicalPortManager::GetInstance()->CreatePort("RTMP", socket_type, rtmp_address, worker_count);
 		if (_physical_port == nullptr)
 		{
 			logte("Could not initialize phyiscal port for RTMP server: %s", rtmp_address.ToString().CStr());

@@ -39,7 +39,9 @@ namespace ov
 	class SocketAsyncInterface
 	{
 	public:
-		virtual void OnReadable(const std::shared_ptr<ov::Socket> &socket) = 0;
+		virtual void OnConnected() = 0;
+		virtual void OnReadable() = 0;
+		virtual void OnClosed() = 0;
 	};
 
 	class Socket : public EnableSharedFromThis<Socket>
@@ -80,6 +82,8 @@ namespace ov
 		{
 			return _worker;
 		}
+
+		bool AttachToWorker();
 
 		bool MakeBlocking();
 		bool MakeNonBlocking(std::shared_ptr<SocketAsyncInterface> callback);
@@ -173,6 +177,7 @@ namespace ov
 
 		bool Flush();
 
+		bool CloseIfNeeded();
 		bool Close();
 
 		bool HasCommand() const
@@ -202,7 +207,7 @@ namespace ov
 			_end_of_stream = true;
 		}
 
-		bool HasCloseCommand() const
+		bool IsClosing() const
 		{
 			return _has_close_command;
 		}
@@ -212,31 +217,33 @@ namespace ov
 	protected:
 		struct DispatchCommand
 		{
-			static constexpr int CLOSE_TYPE_MASK = 0xf0;
+			static constexpr int CLOSE_TYPE_MASK = 0x40;
 
 			enum class Type : uint8_t
 			{
-				// Need to send data using send()
-				Send = 0x00,
-				// Need to send data using sendto()
-				SendTo = 0x01,
-				// Need to call shutdown(SHUT_WR) (TCP only)
-				HalfClose = CLOSE_TYPE_MASK | 0x02,
-				// Wait for ACK/FIN
-				WaitForHalfClose = CLOSE_TYPE_MASK | 0x03,
-				// Need to close the socket
-				Close = CLOSE_TYPE_MASK | 0x04
-			};
+				// Need to call connection callback
+				Connected = 0x00,
 
-			static bool IsCloseCommand(Type type)
-			{
-				return OV_CHECK_FLAG(static_cast<uint8_t>(type), CLOSE_TYPE_MASK);
-			}
+				// Need to send data using send()
+				Send = 0x01,
+				// Need to send data using sendto()
+				SendTo = 0x02,
+
+				// Need to call shutdown(SHUT_WR) (TCP only)
+				HalfClose = CLOSE_TYPE_MASK | 0x01,
+				// Wait for ACK/FIN
+				WaitForHalfClose = CLOSE_TYPE_MASK | 0x02,
+				// Need to close the socket
+				Close = CLOSE_TYPE_MASK | 0x03
+			};
 
 			static const char *StringFromType(Type type)
 			{
 				switch (type)
 				{
+					case Type::Connected:
+						return "Connected";
+
 					case Type::Send:
 						return "Send";
 
@@ -277,6 +284,11 @@ namespace ov
 			{
 			}
 
+			bool IsCloseCommand() const
+			{
+				return OV_CHECK_FLAG(static_cast<uint8_t>(type), CLOSE_TYPE_MASK);
+			}
+
 			void UpdateTime()
 			{
 				enqueued_time = std::chrono::system_clock::now();
@@ -312,6 +324,8 @@ namespace ov
 
 		bool SetBlockingInternal(bool blocking);
 
+		bool AppendCommand(DispatchCommand command);
+
 		DispatchResult DispatchInternal(DispatchCommand &command);
 
 		ssize_t SendInternal(const std::shared_ptr<const Data> &data);
@@ -322,7 +336,7 @@ namespace ov
 		{
 			if (_callback != nullptr)
 			{
-				_callback->OnReadable(GetSharedPtr());
+				_callback->OnReadable();
 			}
 		}
 
@@ -349,10 +363,11 @@ namespace ov
 		std::shared_ptr<SocketAddress> _local_address = nullptr;
 		std::shared_ptr<SocketAddress> _remote_address = nullptr;
 
-		mutable std::mutex _dispatch_queue_lock;
+		mutable std::recursive_mutex _dispatch_queue_lock;
 		std::deque<DispatchCommand> _dispatch_queue;
 		bool _has_close_command = false;
 
+		std::atomic<bool> _connection_event_fired{false};
 		std::shared_ptr<SocketAsyncInterface> _callback;
 
 		volatile bool _force_stop = false;

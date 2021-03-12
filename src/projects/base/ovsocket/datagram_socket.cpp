@@ -38,15 +38,16 @@ namespace ov
 			(
 				MakeNonBlocking(GetSharedPtrAs<ov::SocketAsyncInterface>()) &&
 				SetSockOpt<int>(SO_REUSEADDR, 1) &&
-				Bind(address)) == false)
+				Bind(address)))
 		{
-			Close();
-			return false;
+			_datagram_callback = std::move(datagram_callback);
+
+			return true;
 		}
 
-		_datagram_callback = std::move(datagram_callback);
+		Close();
 
-		return true;
+		return false;
 	}
 
 	bool DatagramSocket::CloseInternal()
@@ -56,7 +57,7 @@ namespace ov
 		return Socket::CloseInternal();
 	}
 
-	void DatagramSocket::OnReadable(const std::shared_ptr<ov::Socket> &socket)
+	void DatagramSocket::OnReadable()
 	{
 		logtp("Trying to read UDP packets...");
 
@@ -78,7 +79,7 @@ namespace ov
 				{
 					if (_datagram_callback != nullptr)
 					{
-						_datagram_callback(socket->GetSharedPtrAs<DatagramSocket>(), remote, data->Clone());
+						_datagram_callback(GetSharedPtrAs<DatagramSocket>(), remote, data->Clone());
 					}
 				}
 			}

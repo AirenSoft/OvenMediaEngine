@@ -105,8 +105,8 @@ public:
 	IcePort();
 	~IcePort() override;
 
-	bool CreateTurnServer(uint16_t listening_port, ov::SocketType socket_type);
-	bool CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_list);
+	bool CreateTurnServer(uint16_t listening_port, ov::SocketType socket_type, int tcp_relay_worker_count);
+	bool CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_list, int ice_worker_count);
 	bool Close();
 
 	IcePortConnectionState GetState(uint32_t session_id) const
@@ -133,7 +133,7 @@ public:
 	ov::String ToString() const;
 
 protected:
-	std::shared_ptr<PhysicalPort> CreatePhysicalPort(const ov::SocketAddress &address, ov::SocketType type);
+	std::shared_ptr<PhysicalPort> CreatePhysicalPort(const ov::SocketAddress &address, ov::SocketType type, int ice_worker_count);
 
 	bool ParseIceCandidate(const ov::String &ice_candidate, std::vector<ov::String> *ip_list, ov::SocketType *socket_type, int *start_port, int *end_port);
 

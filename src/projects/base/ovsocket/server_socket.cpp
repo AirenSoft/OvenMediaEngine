@@ -11,6 +11,7 @@
 #include <netinet/tcp.h>
 
 #include "client_socket.h"
+#include "socket_pool/socket_pool.h"
 #include "socket_pool/socket_pool_worker.h"
 #include "socket_private.h"
 
@@ -51,106 +52,90 @@ namespace ov
 	{
 		CHECK_STATE(== SocketState::Created, false);
 
-		_connection_callback = connection_callback;
-		_data_callback = data_callback;
-
 		if (
 			(
-				MakeNonBlocking(GetSharedPtrAs<ov::SocketAsyncInterface>()) &&
+				MakeNonBlocking(GetSharedPtrAs<SocketAsyncInterface>()) &&
 				SetSocketOptions(send_buffer_size, recv_buffer_size) &&
 				Bind(address) &&
-				Listen(backlog)) == false)
+				Listen(backlog)))
 		{
-			Close();
+			_connection_callback = connection_callback;
+			_data_callback = data_callback;
 
-			// Rollback
-			_connection_callback = nullptr;
-			_data_callback = nullptr;
-
-			return false;
+			return true;
 		}
 
-		return true;
+		Close();
+
+		return false;
 	}
 
-	void ServerSocket::OnReadable(const std::shared_ptr<ov::Socket> &socket)
+	void ServerSocket::AcceptClients()
 	{
-		if (socket.get() == this)
+		while (true)
 		{
-			DispatchAccept();
-		}
-		else
-		{
-			auto data = std::make_shared<Data>(TcpBufferSize);
+			SocketAddress address;
+			SocketWrapper client_socket = Socket::Accept(&address);
 
-			while (true)
+			if (client_socket.IsValid() == false)
 			{
-				auto error = socket->Recv(data);
+				// There is no client to accept
+				return;
+			}
 
-				if (error == nullptr)
+			logad("Trying to allocate a socket for client: %s", address.ToString().CStr());
+
+			auto client = _pool->AllocSocket<ClientSocket>(GetSharedPtrAs<ServerSocket>(), client_socket, address);
+
+			if (client != nullptr)
+			{
+				logad("New client is connected: %s", client->ToString().CStr());
+
+				if (client->Prepare())
 				{
-					if (data->GetLength() == 0)
+					// An event occurs the moment client socket is added to the epoll,
+					// so we must add the client into _client_list before calling AttachToWorker()
 					{
-						// Try later
-						break;
+						std::lock_guard lock_guard(_client_list_mutex);
+						_client_list[client.get()] = client;
 					}
-					else
+
+					if (client->AttachToWorker() == false)
 					{
-						if (_data_callback != nullptr)
-						{
-							_data_callback(socket->GetSharedPtrAs<ClientSocket>(), data->Clone());
-						}
+						// The client will be removed from _client_list in the future
+						logad("An error occurred while attach client to worker: %s", client->ToString().CStr());
+						client->Close();
 					}
 				}
 				else
 				{
-					// An error occurred
-					break;
+					logae("Could not prepare socket options: %s", client->ToString().CStr());
 				}
 			}
 		}
-
-		// Delete all lists of clients that were temporarily holding std::shared_ptr<ClientSocket>
-		// so that they could not be released while receiving data.
-		//
-		// TODO(dimiden): Since SocketPool currently manages Socket's life-cycle, let's consider deleting this later.
-		{
-			std::lock_guard<std::shared_mutex> lock(_client_list_mutex);
-			_disconnected_client_list.clear();
-		}
 	}
 
-	std::shared_ptr<ClientSocket> ServerSocket::Accept()
+	bool ServerSocket::OnClientDisconnected(const std::shared_ptr<ClientSocket> &client)
 	{
-		SocketAddress address;
-		SocketWrapper client_socket = Socket::Accept(&address);
+		std::lock_guard lock_guard(_client_list_mutex);
 
-		if (client_socket.IsValid() == false)
+		auto item = _client_list.find(client.get());
+
+		if (item == _client_list.end())
 		{
-			return nullptr;
+			return false;
 		}
 
-		auto client = _worker->AllocSocket<ClientSocket>(GetSharedPtrAs<ServerSocket>(), client_socket, address);
+		logai("Client(%s) is disconnected", client->ToString().CStr());
 
-		if (client != nullptr)
-		{
-			logad("New client is connected: %s", client->ToString().CStr());
+		_client_list.erase(item);
 
-			if (client->Prepare())
-			{
-				_client_list_mutex.lock();
-				_client_list[client.get()] = client;
-				_client_list_mutex.unlock();
+		return true;
+	}
 
-				return client;
-			}
-			else
-			{
-				logae("Could not prepare socket options: %s", client->ToString().CStr());
-			}
-		}
-
-		return nullptr;
+	void ServerSocket::OnReadable()
+	{
+		AcceptClients();
 	}
 
 	bool ServerSocket::CloseInternal()
@@ -169,214 +154,9 @@ namespace ov
 		return Socket::CloseInternal();
 	}
 
-	void ServerSocket::DispatchAccept()
-	{
-		while (true)
-		{
-			std::shared_ptr<ClientSocket> client = Accept();
-
-			if (client == nullptr)
-			{
-				break;
-			}
-
-			logad("Client #%d is connected", client->GetSocket().GetNativeHandle());
-
-			auto new_state = _connection_callback(client, SocketConnectionState::Connected, nullptr);
-
-			switch (new_state)
-			{
-				case SocketConnectionState::Connected:
-					break;
-
-				case SocketConnectionState::Disconnect:
-					logad("The connection callback requested to disconnect the client #%d",
-						  client->GetSocket().GetNativeHandle());
-					DisconnectClient(client, new_state);
-					break;
-
-				case SocketConnectionState::Disconnected:
-					logad("Invalid socket state for client #%d",
-						  client->GetSocket().GetNativeHandle());
-					OV_ASSERT2(false);
-					DisconnectClient(client, new_state);
-					break;
-
-				case SocketConnectionState::Error: {
-					auto error = Error::CreateError("Connection", "The connection callback requested to disconnect the client #%d",
-													_socket.GetNativeHandle(), client->GetSocket().GetNativeHandle());
-					logad("%s", error->ToString().CStr());
-					DisconnectClient(client, new_state, error);
-					break;
-				}
-			}
-		}
-	}
-
-	void ServerSocket::DispatchEvents(const void *key, const epoll_event *event)
-	{
-		std::shared_ptr<ClientSocket> client = nullptr;
-		uint32_t epoll_events = event->events;
-
-		{
-			std::shared_lock<std::shared_mutex> lock(_client_list_mutex);
-			auto item = _client_list.find(key);
-
-			if (item == _client_list.end())
-			{
-				// If the client deleted from another thread as soon as the event occurs at epoll(), it enters here
-				logad("Could not find a client: %p", key);
-				return;
-			}
-
-			client = item->second;
-		}
-
-		if (OV_CHECK_FLAG(epoll_events, EPOLLERR) || (!OV_CHECK_FLAG(epoll_events, EPOLLIN)))
-		{
-			// An error occurred while communiting with the client
-			auto error = Error::CreateError("Epoll", "%s", StringFromEpollEvent(event).CStr());
-			logae("%s", error->ToString().CStr());
-
-			DisconnectClient(client, SocketConnectionState::Error, error);
-		}
-		else if (OV_CHECK_FLAG(event->events, EPOLLHUP) || OV_CHECK_FLAG(event->events, EPOLLRDHUP))
-		{
-			// The client is disconnected
-			logad("Client #%d is disconnected with events: %s", client->GetSocket().GetNativeHandle(), StringFromEpollEvent(event).CStr());
-			DisconnectClient(client, SocketConnectionState::Disconnected);
-		}
-		else
-		{
-			// Data is available that sent by the client
-			auto data = std::make_shared<Data>(TcpBufferSize);
-
-			logad("The data received from client #%d", client->GetSocket().GetNativeHandle());
-
-			while (client->GetState() == SocketState::Connected)
-			{
-				data->SetLength(0);
-
-				auto error = client->Recv(data);
-
-				if (data->GetLength() > 0L)
-				{
-					auto new_state = _data_callback(client->GetSharedPtrAs<ClientSocket>(), data);
-					switch (new_state)
-					{
-						case SocketConnectionState::Connected:
-							break;
-
-						case SocketConnectionState::Disconnect:
-							logad("The data callback requested to disconnect the client #%d",
-								  client->GetSocket().GetNativeHandle());
-							DisconnectClient(client, new_state);
-							break;
-
-						case SocketConnectionState::Disconnected:
-							logad("Invalid socket state for client #%d",
-								  client->GetSocket().GetNativeHandle());
-							OV_ASSERT2(false);
-							DisconnectClient(client, new_state);
-							break;
-
-						case SocketConnectionState::Error: {
-							auto error = Error::CreateError("Connection", "The connection callback requested to disconnect the client #%d",
-															_socket.GetNativeHandle(), client->GetSocket().GetNativeHandle());
-							logad("%s", error->ToString().CStr());
-							DisconnectClient(client, new_state, error);
-							break;
-						}
-					}
-				}
-
-				if (client->GetState() == SocketState::Error)
-				{
-					logad("An error occurred on client %s", client->ToString().CStr());
-					DisconnectClient(client, SocketConnectionState::Error, error);
-					break;
-				}
-
-				if (error != nullptr)
-				{
-					logad("Client %s is disconnected", client->ToString().CStr());
-					DisconnectClient(client, SocketConnectionState::Disconnected, nullptr);
-					break;
-				}
-
-				// TODO(dimiden): (ClientSocketBlocking) Temporarily comment while processing as blocking
-				// if (data->GetLength() == 0L)
-				{
-					// Waiting for next data
-					break;
-				}
-			}
-		}
-	}
-
 	String ServerSocket::ToString() const
 	{
 		return Socket::ToString("ServerSocket");
-	}
-
-	bool ServerSocket::DisconnectClient(std::shared_ptr<ClientSocket> client_socket, SocketConnectionState state, const std::shared_ptr<Error> &error)
-	{
-		if (client_socket == nullptr)
-		{
-			OV_ASSERT2(false);
-			return false;
-		}
-
-		bool remove = false;
-
-		{
-			std::lock_guard<std::shared_mutex> lock(_client_list_mutex);
-
-			auto item = _client_list.find(client_socket.get());
-
-			if (item != _client_list.end())
-			{
-				logad("Deleting the client %s from list...", client_socket->ToString().CStr());
-				_disconnected_client_list[item->first] = item->second;
-				_client_list.erase(item);
-
-				remove = true;
-			}
-			else
-			{
-				logad("Could not find socket instance for %s", client_socket->ToString().CStr());
-			}
-		}
-
-		if (remove)
-		{
-			if (_connection_callback != nullptr)
-			{
-				_connection_callback(client_socket->GetSharedPtrAs<ClientSocket>(), state, error);
-			}
-
-			if (client_socket->GetState() != SocketState::Closed)
-			{
-				return _worker->ReleaseSocket(client_socket);
-			}
-		}
-		else
-		{
-			return true;
-		}
-
-		return false;
-	}
-
-	bool ServerSocket::DisconnectClient(ClientSocket *client_socket, SocketConnectionState state, const std::shared_ptr<Error> &error)
-	{
-		if (client_socket != nullptr)
-		{
-			return DisconnectClient(client_socket->GetSharedPtrAs<ClientSocket>(), state, error);
-		}
-
-		OV_ASSERT2(false);
-		return false;
 	}
 
 	bool ServerSocket::SetSocketOptions(int send_buffer_size, int recv_buffer_size)

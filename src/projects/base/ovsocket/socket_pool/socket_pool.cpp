@@ -20,8 +20,9 @@
 
 namespace ov
 {
-	SocketPool::SocketPool(PrivateToken token, SocketType type)
-		: _type(type)
+	SocketPool::SocketPool(PrivateToken token, const char *name, SocketType type)
+		: _name(name),
+		  _type(type)
 	{
 	}
 
@@ -103,7 +104,6 @@ namespace ov
 	{
 		for (auto worker : _worker_list)
 		{
-			logtc(">> %ld", this->GetSharedPtr().use_count());
 			worker->Uninitialize();
 		}
 

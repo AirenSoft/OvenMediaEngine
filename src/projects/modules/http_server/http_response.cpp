@@ -255,5 +255,5 @@ bool HttpResponse::Close()
 		return false;
 	}
 
-	return _client_socket->Close();
+	return _client_socket->CloseIfNeeded();
 }

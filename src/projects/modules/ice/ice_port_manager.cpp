@@ -43,7 +43,7 @@ const std::vector<RtcIceCandidate> &IcePortManager::GetIceCandidateList(const st
 	return observer->_ice_candidate_list;
 }
 
-bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::cmm::IceCandidates &ice_candidates)
+bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::cmm::IceCandidates &ice_candidates_config)
 {
 	if(_ice_port == nullptr || IsRegisteredObserver(observer) == false)
 	{
@@ -52,13 +52,17 @@ bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observ
 
 	std::vector<RtcIceCandidate> ice_candidate_list;
 
-	if(GenerateIceCandidates(ice_candidates, &ice_candidate_list) == false)
+	if(GenerateIceCandidates(ice_candidates_config, &ice_candidate_list) == false)
 	{
 		logte("Could not parse ICE candidates");
 		return false;
 	}
 
-	if(_ice_port->CreateIceCandidates(ice_candidate_list) == false)
+	bool is_parsed;
+	auto ice_worker_count = ice_candidates_config.GetIceWorkerCount(&is_parsed);
+	ice_worker_count = is_parsed ? ice_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+	if(_ice_port->CreateIceCandidates(ice_candidate_list, ice_worker_count) == false)
 	{
 		Release(observer);
 
@@ -74,14 +78,14 @@ bool IcePortManager::CreateIceCandidates(std::shared_ptr<IcePortObserver> observ
 	return true;
 }
 
-bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePortObserver> observer, uint16_t listening_port, const ov::SocketType socket_type)
+bool IcePortManager::CreateTurnServer(std::shared_ptr<IcePortObserver> observer, uint16_t listening_port, const ov::SocketType socket_type, int tcp_relay_worker_count)
 {
 	if(_ice_port == nullptr || IsRegisteredObserver(observer) == false)
 	{
 		return false;
 	}
 
-	if(_ice_port->CreateTurnServer(listening_port, socket_type) == false)
+	if(_ice_port->CreateTurnServer(listening_port, socket_type, tcp_relay_worker_count) == false)
 	{
 		Release(observer);
 

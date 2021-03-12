@@ -25,8 +25,8 @@ public:
 	~IcePortManager() override = default;
 
 	std::shared_ptr<IcePort> CreatePort(std::shared_ptr<IcePortObserver> observer);
-	bool CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::cmm::IceCandidates &ice_candidates);
-	bool CreateTurnServer(std::shared_ptr<IcePortObserver> observer, uint16_t listening_port, const ov::SocketType socket_type);
+	bool CreateIceCandidates(std::shared_ptr<IcePortObserver> observer, const cfg::bind::cmm::IceCandidates &ice_candidates_config);
+	bool CreateTurnServer(std::shared_ptr<IcePortObserver> observer, uint16_t listening_port, const ov::SocketType socket_type, int tcp_relay_worker_count);
 
 	const std::vector<RtcIceCandidate> &GetIceCandidateList(const std::shared_ptr<IcePortObserver> &observer) const;
 

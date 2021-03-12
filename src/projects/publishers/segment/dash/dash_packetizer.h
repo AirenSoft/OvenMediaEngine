@@ -59,7 +59,7 @@ public:
 	}
 
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const override;
-	bool SetSegmentData(ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data);
+	bool SetSegmentData(Writer &writer, int64_t timestamp);
 
 	bool GetPlayList(ov::String &play_list) override;
 
@@ -77,7 +77,7 @@ protected:
 	void SetAudioTrack(const std::shared_ptr<MediaTrack> &audio_track);
 
 	// Unit: timebase
-	ov::String GetFileName(int64_t start_timestamp, cmn::MediaType media_type) const;
+	ov::String GetFileName(int segment_index, cmn::MediaType media_type) const;
 
 	bool PrepareVideoInitIfNeeded();
 	bool PrepareAudioInitIfNeeded();

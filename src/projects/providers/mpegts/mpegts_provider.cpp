@@ -130,7 +130,7 @@ namespace pvd
 		for (const auto &port : port_list_config)
 		{
 			auto address = ov::SocketAddress(ip, port);
-			auto physical_port = PhysicalPortManager::GetInstance()->CreatePort(socket_type, address);
+			auto physical_port = PhysicalPortManager::GetInstance()->CreatePort("MPEGTS", socket_type, address, 1);
 			if (physical_port == nullptr)
 			{
 				logte("Could not initialize phyiscal port for MPEG-TS server: %s/%s", address.ToString().CStr(), ov::StringFromSocketType(socket_type));

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 
 <Server version="8">
 	<Name>OvenMediaEngine</Name>
@@ -21,6 +21,7 @@
 		<Managers>
 			<API>
 				<Port>48081</Port>
+				<WorkerCount>1</WorkerCount>
 			</API>
 		</Managers>
 		-->
@@ -28,6 +29,7 @@
 		<Providers>
 			<RTMP>
 				<Port>1935</Port>
+				<!-- <WorkerCount>1</WorkerCount> -->
 			</RTMP>
 			<MPEGTS>
 				<!--
@@ -41,22 +43,26 @@
 		<Publishers>
 			<OVT>
 				<Port>9000</Port>
+				<!-- <WorkerCount>1</WorkerCount> -->
 			</OVT>
 			<HLS>
 				<Port>80</Port>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>443</TLSPort> -->
+				<!-- <WorkerCount>4</WorkerCount> -->
 			</HLS>
 			<DASH>
 				<Port>80</Port>
 				<!-- If you want to use TLS, specify the TLS port -->
 				<!-- <TLSPort>443</TLSPort> -->
+				<!-- <WorkerCount>4</WorkerCount> -->
 			</DASH>
 			<WebRTC>
 				<Signalling>
 					<Port>3333</Port>
 					<!-- If you want to use TLS, specify the TLS port -->
 					<!-- <TLSPort>3334</TLSPort> -->
+					<!-- <WorkerCount>4</WorkerCount> -->
 				</Signalling>
 
 				<IceCandidates>
@@ -67,6 +73,12 @@
 					-->
 					<TcpRelay>*:3478</TcpRelay>
 					<IceCandidate>*:10000-10005/udp</IceCandidate>
+
+					<!--
+						Sets the number of worker threads to use in TcpRelay
+						
+						<TcpRelayWorkerCount>4</TcpRelayWorkerCount>
+					-->
 				</IceCandidates>
 			</WebRTC>
 		</Publishers>

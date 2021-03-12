@@ -33,17 +33,30 @@ namespace api
 
 		_access_token = api_config.GetAccessToken();
 
+		if (_access_token.IsEmpty())
+		{
+#if DEBUG
+			logtw("An empty AccessToken setting was found. This is only allowed on Debug builds for ease of development, and the Release build does not allow empty AccessToken.");
+#else	// DEBUG
+			logte("Empty  AccessToken is not allowed");
+#endif	// DEBUG
+		}
+
 		auto http_interceptor = CreateInterceptor();
 
 		bool http_server_result = true;
 		bool is_parsed;
+
+		auto worker_count = api_bind_config.GetWorkerCount(&is_parsed);
+		worker_count = is_parsed ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
+
 		auto &port = api_bind_config.GetPort(&is_parsed);
 		ov::SocketAddress address;
 		if (is_parsed)
 		{
 			address = ov::SocketAddress(server_config->GetIp(), port.GetPort());
 
-			_http_server = manager->CreateHttpServer("APIServer", address);
+			_http_server = manager->CreateHttpServer("APIServer", address, worker_count);
 
 			if (_http_server != nullptr)
 			{
@@ -73,7 +86,7 @@ namespace api
 
 			if (certificate != nullptr)
 			{
-				_https_server = manager->CreateHttpsServer("APIServer", tls_address, certificate);
+				_https_server = manager->CreateHttpsServer("APIServer", tls_address, certificate, worker_count);
 
 				if (_https_server != nullptr)
 				{

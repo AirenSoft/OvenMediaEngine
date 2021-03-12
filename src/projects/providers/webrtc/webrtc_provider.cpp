@@ -55,7 +55,10 @@ namespace pvd
 		auto &signalling_config = webrtc_bind_config.GetSignalling();
 		auto &port_config = signalling_config.GetPort();
 		auto &tls_port_config = signalling_config.GetTlsPort();
-		auto worker_count = signalling_config.GetWorker();
+		bool is_parsed;
+
+		auto worker_count = signalling_config.GetWorkerCount(&is_parsed);
+		worker_count = is_parsed ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
 
 		auto port = static_cast<uint16_t>(port_config.GetPort());
 		auto tls_port = static_cast<uint16_t>(tls_port_config.GetPort());
@@ -89,14 +92,16 @@ namespace pvd
 			result = false;
 		}
 
-		if(IcePortManager::GetInstance()->CreateIceCandidates(IcePortObserver::GetSharedPtr(), webrtc_bind_config.GetIceCandidates()) == false)
+		auto &ice_candidates_config = webrtc_bind_config.GetIceCandidates();
+
+		if(IcePortManager::GetInstance()->CreateIceCandidates(IcePortObserver::GetSharedPtr(), ice_candidates_config) == false)
 		{
 			logte("Could not create ICE Candidates. Check your ICE configuration");
 			result = false;
 		}
 		
 		bool tcp_relay_parsed = false;
-		auto tcp_relay = webrtc_bind_config.GetIceCandidates().GetTcpRelay(&tcp_relay_parsed);
+		auto tcp_relay = ice_candidates_config.GetTcpRelay(&tcp_relay_parsed);
 		if(tcp_relay_parsed)
 		{
 			auto items = tcp_relay.Split(":");
@@ -106,7 +111,11 @@ namespace pvd
 			}
 			else
 			{
-				if(IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), std::atoi(items[1]), ov::SocketType::Tcp) == false)
+				bool is_parsed;
+				auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&is_parsed);
+				tcp_relay_worker_count = is_parsed ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+				if(IcePortManager::GetInstance()->CreateTurnServer(IcePortObserver::GetSharedPtr(), std::atoi(items[1]), ov::SocketType::Tcp, tcp_relay_worker_count) == false)
 				{
 					logte("Could not create Turn Server. Check your configuration");
 					result = false;

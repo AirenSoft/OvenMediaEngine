@@ -80,7 +80,7 @@ public:
         for (const auto &port : port_range)
         {
             address.SetPort(port);
-            auto physical_port = PhysicalPortManager::GetInstance()->CreatePort(socket_type, address);
+            auto physical_port = PhysicalPortManager::GetInstance()->CreatePort("RtpUdp", socket_type, address);
             if (physical_port)
             {
                 if (rtp_physical_port == nullptr)

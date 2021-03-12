@@ -202,7 +202,7 @@ protected:
 	SegmentPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 	~SegmentPublisher() override;
 
-	bool Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server);
+	bool Start(const cfg::cmn::SingularPort &port_config, const cfg::cmn::SingularPort &tls_port_config, const std::shared_ptr<SegmentStreamServer> &stream_server, int worker_count);
 	virtual bool Start() = 0;
 
 	bool HandleSignedX(const info::VHostAppName &vhost_app_name, const ov::String &stream_name, 
