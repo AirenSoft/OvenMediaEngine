@@ -29,6 +29,18 @@ namespace pvd
 	OvtProvider::OvtProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 			: PullProvider(server_config, router)
 	{
+		auto &ovt_provider_config = server_config.GetBind().GetProviders().GetOvt();
+
+		if (ovt_provider_config.IsParsed())
+		{
+			bool is_parsed;
+			auto worker_count = ovt_provider_config.GetWorkerCount(&is_parsed);
+			worker_count = is_parsed ? worker_count : PHYSICAL_PORT_DEFAULT_WORKER_COUNT;
+
+			_client_socket_pool = ov::SocketPool::Create("OvtProvider", ov::SocketType::Tcp);
+
+			_client_socket_pool->Initialize(worker_count);
+		}
 	}
 
 	OvtProvider::~OvtProvider()

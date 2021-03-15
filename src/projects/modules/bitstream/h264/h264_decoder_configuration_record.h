@@ -44,6 +44,7 @@ class AVCDecoderConfigurationRecord
 {
 public:
 	static bool Parse(const uint8_t *data, size_t data_length, AVCDecoderConfigurationRecord &record);
+	static bool Parse(const std::vector<uint8_t> &data, AVCDecoderConfigurationRecord &record);
 
 	uint8_t Version();
 	uint8_t	ProfileIndication();

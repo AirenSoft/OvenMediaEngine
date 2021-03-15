@@ -10,8 +10,6 @@
 
 #include "physical_port_private.h"
 
-#define PHYSICAL_PORT_DEFAULT_WORKER_COUNT 4
-
 PhysicalPortManager::PhysicalPortManager()
 {
 }

@@ -755,7 +755,7 @@ bool CmafPacketizer::SetSegmentData(ov::String file_name, int64_t timestamp, int
 
 void CmafPacketizer::SetReadyForStreaming() noexcept
 {
-	_start_time_ms = std::max(_video_start_time, _audio_start_time);
+	_start_time_ms = std::min(_video_start_time, _audio_start_time);
 	_start_time = MakeUtcMillisecond(_start_time_ms);
 
 	Packetizer::SetReadyForStreaming();
@@ -896,9 +896,9 @@ bool CmafPacketizer::UpdatePlayList()
 	{
 		xml
 			// <Period>
-			<< R"(	<Period start="PT0.0S">)" << std::endl;
+			<< R"(	<Period start="PT0.000S">)" << std::endl;
 
-		if (_last_video_pts >= 0LL)
+		if (_video_track != nullptr)
 		{
 			// availabilityTimeOffset
 			//
@@ -915,13 +915,18 @@ bool CmafPacketizer::UpdatePlayList()
 
 			xml
 				// <AdaptationSet>
-				<< R"(		<AdaptationSet contentType="video" segmentAlignment="true" )"
+				<< R"(		<AdaptationSet )"
+				<< R"(contentType="video" )"
+				<< R"(segmentAlignment="true" )"
 				<< R"(frameRate=")" << _video_track->GetFrameRate() << R"(">)" << std::endl;
 
 			{
 				xml
 					// <Representation>
-					<< R"(			<Representation id="0" mimeType="video/mp4" codecs="avc1.42401f" )"
+					<< R"(			<Representation )"
+					<< R"(mimeType="video/mp4" )"
+					<< R"(id="video)" << _video_track->GetId() << R"(" )"
+					<< R"(codecs=")" << GetCodecString(_video_track).CStr() << R"(" )"
 					<< R"(bandwidth=")" << _video_track->GetBitrate() << R"(" )"
 					<< R"(width=")" << _video_track->GetWidth() << R"(" )"
 					<< R"(height=")" << _video_track->GetHeight() << R"(" )"
@@ -930,7 +935,8 @@ bool CmafPacketizer::UpdatePlayList()
 				{
 					xml
 						// <SegmentTemplate />
-						<< R"(				<SegmentTemplate startNumber="0" )"
+						<< R"(				<SegmentTemplate )"
+						<< R"(startNumber="0" )"
 						<< R"(timescale=")" << static_cast<uint32_t>(_video_track->GetTimeBase().GetTimescale()) << R"(" )"
 						<< R"(duration=")" << static_cast<uint32_t>(_segment_duration * _video_track->GetTimeBase().GetTimescale()) << R"(" )"
 						<< R"(availabilityTimeOffset=")" << availability_time_offset << R"(" )"
@@ -948,31 +954,38 @@ bool CmafPacketizer::UpdatePlayList()
 				<< R"(		</AdaptationSet>)" << std::endl;
 		}
 
-		if (_last_audio_pts >= 0LL)
+		if (_audio_track != nullptr)
 		{
 			// segment duration - audio one frame duration
 			double availability_time_offset = (_audio_track->GetSampleRate() / 1024) != 0 ? _segment_duration - (1.0 / ((double)_audio_track->GetSampleRate() / 1024)) : _segment_duration;
 
 			xml
 				// <AdaptationSet>
-				<< R"(		<AdaptationSet contentType="audio" segmentAlignment="true">)" << std::endl;
+				<< R"(		<AdaptationSet )"
+				<< R"(contentType="audio" )"
+				<< R"(segmentAlignment="true">)" << std::endl;
 
 			{
 				xml
 					// <Representation>
-					<< R"(			<Representation id="1" mimeType="audio/mp4" codecs="mp4a.40.2" )"
+					<< R"(			<Representation )"
+					<< R"(mimeType="audio/mp4" )"
+					<< R"(id="audio)" << _audio_track->GetId() << R"(" )"
+					<< R"(codecs=")" << GetCodecString(_audio_track).CStr() << R"(" )"
 					<< R"(bandwidth=")" << _audio_track->GetBitrate() << R"(" )"
 					<< R"(audioSamplingRate=")" << _audio_track->GetSampleRate() << R"(">)" << std::endl;
 
 				{
 					xml
 						// <AudioChannelConfiguration />
-						<< R"(				<AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" )"
+						<< R"(				<AudioChannelConfiguration )"
+						<< R"(schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" )"
 						<< R"(value=")" << _audio_track->GetChannel().GetCounts() << R"(" />)" << std::endl;
 
 					xml
 						// <SegmentTemplate />
-						<< R"(				<SegmentTemplate startNumber="0" )"
+						<< R"(				<SegmentTemplate )"
+						<< R"(startNumber="0" )"
 						<< R"(timescale=")" << static_cast<uint32_t>(_audio_track->GetTimeBase().GetTimescale()) << R"(" )"
 						<< R"(duration=")" << static_cast<uint32_t>(_segment_duration * _audio_track->GetTimeBase().GetTimescale()) << R"(" )"
 						<< R"(availabilityTimeOffset=")" << availability_time_offset << R"(" )"
@@ -994,12 +1007,9 @@ bool CmafPacketizer::UpdatePlayList()
 			R"(	</Period>)" << std::endl;
 	}
 
-	// The dash.js player does not normally recognize the milliseconds value of <UTCTiming>, causing a big difference between the server time and client time.
-#if 0
 	xml
 		// <UTCTiming />
-		<< R"(<UTCTiming schemeIdUri="urn:mpeg:dash:utc:direct:2014" value="%s" />)" << std::endl;
-#endif
+		<< R"(	<UTCTiming schemeIdUri="urn:mpeg:dash:utc:direct:2014" value="%s" />)" << std::endl;
 
 	xml
 		// </MPD>

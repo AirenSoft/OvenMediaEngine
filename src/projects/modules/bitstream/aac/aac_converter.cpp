@@ -226,3 +226,15 @@ std::shared_ptr<const ov::Data> AacConverter::ConvertAdtsToLatm(const std::share
 
 	return latm_data;
 }
+
+ov::String AacConverter::GetProfileString(const std::vector<uint8_t> &codec_extradata)
+{
+	AACSpecificConfig aac_specific_config;
+
+	if (AACSpecificConfig::Parse(&codec_extradata.front(), codec_extradata.size(), aac_specific_config))
+	{
+		return ov::String::FormatString("%d", static_cast<int>(aac_specific_config.ObjectType()));
+	}
+
+	return "";
+}

@@ -67,6 +67,8 @@ public:
 protected:
 	virtual void SetReadyForStreaming() noexcept;
 
+	static ov::String GetCodecString(const std::shared_ptr<const MediaTrack> &track);
+
 	ov::String _app_name;
 	ov::String _stream_name;
 
