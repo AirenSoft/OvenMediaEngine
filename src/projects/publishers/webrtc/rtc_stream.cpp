@@ -1,7 +1,7 @@
 #include "rtc_stream.h"
 
 #include <base/info/media_extradata.h>
-#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+#include <modules/bitstream/h264/h264_converter.h>
 
 #include "rtc_application.h"
 #include "rtc_private.h"
@@ -150,26 +150,24 @@ bool RtcStream::Start()
 
 							//(NOTE) The software decoder of Firefox or Chrome cannot play when 64001f (High, 3.1) stream is input. 
 							// However, when I put the fake information of 42e01f in FMTP, I confirmed that both Firefox and Chrome play well (high profile, but stream without B-Frame). 
-							// I thought it would be better to put 42e01f in fmtp than put the correct value, so I decided to put fake information.
+							// I thought it would be better to put 42e01f (H264_CONVERTER_DEFAULT_PROFILE) in fmtp than put the correct value, so I decided to put fake information.
 
-							AVCDecoderConfigurationRecord config;
-							if (0 && codec_extradata.size() > 0 && AVCDecoderConfigurationRecord::Parse(codec_extradata.data(), codec_extradata.size(), config) == true)
+							// profile-level-id
+							ov::String profile_string;
+							if(false)
 							{
-								// profile-level-id
-								// |profile idc|contraint flag|level idc|
-								auto h264_fmtp = ov::String::FormatString("packetization-mode=1;profile-level-id=%02x%02x%02x;level-asymmetry-allowed=1",
-														config.ProfileIndication(), config.Compatibility(), config.LevelIndication());
-								logtc("FMTP : %s", h264_fmtp.CStr());
-								payload->SetFmtp(h264_fmtp);
+								profile_string = H264Converter::GetProfileString(codec_extradata);
 							}
-							else
+
+							if(profile_string.IsEmpty())
 							{
-								payload->SetFmtp(ov::String::FormatString(
+								profile_string = H264_CONVERTER_DEFAULT_PROFILE;
+							}
+
+							payload->SetFmtp(ov::String::FormatString(
 									// NonInterleaved => packetization-mode=1
-									// baseline & lvl 3.1 => profile-level-id=42e01f
-									"packetization-mode=1;profile-level-id=%x;level-asymmetry-allowed=1",
-									0x42e01f));
-							}
+									"packetization-mode=1;profile-level-id=%s;level-asymmetry-allowed=1",
+									profile_string.CStr()));
 						}
 
 						break;

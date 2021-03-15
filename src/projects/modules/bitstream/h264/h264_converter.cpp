@@ -319,3 +319,18 @@ std::shared_ptr<const ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::sh
 
 	return avcc_data;
 }
+
+ov::String H264Converter::GetProfileString(const std::vector<uint8_t> &codec_extradata)
+{
+	AVCDecoderConfigurationRecord record;
+
+	if (AVCDecoderConfigurationRecord::Parse(codec_extradata, record) == false)
+	{
+		return "";
+	}
+
+	// PPCCLL = <profile idc><constraint set flags><level idc>
+	return ov::String::FormatString(
+		"%02x%02x%02x",
+		record.ProfileIndication(), record.Compatibility(), record.LevelIndication());
+}

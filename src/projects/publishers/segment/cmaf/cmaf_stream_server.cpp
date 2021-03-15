@@ -53,9 +53,10 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 
 			if (stream_info == nullptr)
 			{
-				OV_ASSERT(false, "Stream does not exist, but remains in _http_chunk_list");
-
-				response->SetStatusCode(HttpStatusCode::InternalServerError);
+				// The stream has been deleted, but if it remains in the Worker queue, this code will run.
+				response->SetStatusCode(HttpStatusCode::NotFound);
+				_http_chunk_list.clear();
+				
 				return HttpConnection::Closed;
 			}
 
