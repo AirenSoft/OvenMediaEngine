@@ -13,16 +13,12 @@ public:
 	// RtcpInfo must provide packet type
 	virtual RtcpPacketType GetPacketType() const = 0;
 
-	virtual uint8_t GetCount() const
-	{
-		return _count_or_fmt;
-	}
 	// If the packet type is one of the feedback messages (205, 206) child must override this function
-	virtual uint8_t GetFmt() const 
+	virtual uint8_t GetCountOrFmt() const
 	{
 		return _count_or_fmt;
 	}
-	
+
 	// RtcpInfo must provide raw data
 	virtual std::shared_ptr<ov::Data> GetData() const = 0;
 

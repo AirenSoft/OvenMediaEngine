@@ -1298,7 +1298,7 @@ namespace pvd
 		SetTrackInfo(_media_info);
 
 		// Publish
-		if(PublishInterleavedChannel(_vhost_app_name) == false)
+		if(PublishChannel(_vhost_app_name) == false)
 		{
 			Stop();
 			return false;
@@ -1378,44 +1378,31 @@ namespace pvd
 		return true;
 	}
 
-	bool RtmpStream::SendData(int data_size, uint8_t *data)
+	bool RtmpStream::SendData(const std::shared_ptr<const ov::Data> &data)
 	{
-		int remained = data_size;
-		uint8_t *data_to_send = data;
-
-		while (remained > 0L)
+		if (data == nullptr)
 		{
-			int to_send = std::min(remained, (int)(1024L * 1024L));
-			int sent = _remote->Send(data_to_send, to_send);
-
-			if (sent != to_send)
-			{
-				logtw("Send Data Loop Fail");
-				return false;
-			}
-
-			remained -= sent;
-			data_to_send += sent;
+			return false;
 		}
 
-		return true;
+		return _remote->Send(data);
+	}
+
+	bool RtmpStream::SendData(const void *data, size_t data_size)
+	{
+		if (data == nullptr)
+		{
+			return false;
+		}
+
+		return _remote->Send(data, data_size);
 	}
 
 	bool RtmpStream::SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data)
 	{
-		if (message_header == nullptr)
-		{
-			return false;
-		}
-
 		auto export_data = _export_chunk->ExportStreamData(message_header, data);
 
-		if (export_data == nullptr || export_data->data() == nullptr)
-		{
-			return false;
-		}
-
-		return SendData(export_data->size(), export_data->data());
+		return SendData(export_data->data(), export_data->size());
 	}
 
 		//====================================================================================================
@@ -1434,7 +1421,7 @@ namespace pvd
 		_handshake_state = RtmpHandshakeState::C1;
 
 		// Send s0
-		if (SendData(sizeof(s0), &s0) == false)
+		if (SendData(&s0, sizeof(s0)) == false)
 		{
 			logte("Handshake s0 Send Fail");
 			return false;
@@ -1442,7 +1429,7 @@ namespace pvd
 		_handshake_state = RtmpHandshakeState::S0;
 
 		// Send s1
-		if (SendData(sizeof(s1), s1) == false)
+		if (SendData(s1, sizeof(s1)) == false)
 		{
 			logte("Handshake s1 Send Fail");
 			return false;
@@ -1450,7 +1437,7 @@ namespace pvd
 		_handshake_state = RtmpHandshakeState::S1;
 
 		// Send s2
-		if (SendData(sizeof(s2), s2) == false)
+		if (SendData(s2, sizeof(s2)) == false)
 		{
 			logte("Handshake s2 Send Fail");
 			return false;

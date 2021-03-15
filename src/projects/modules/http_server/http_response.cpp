@@ -7,14 +7,15 @@
 //
 //==============================================================================
 #include "http_response.h"
-#include "http_client.h"
-#include "http_private.h"
+
+#include <base/ovsocket/ovsocket.h>
 
 #include <algorithm>
 #include <memory>
 #include <utility>
 
-#include <base/ovsocket/ovsocket.h>
+#include "http_client.h"
+#include "http_private.h"
 
 HttpResponse::HttpResponse(const std::shared_ptr<ov::ClientSocket> &client_socket)
 	: _client_socket(client_socket)
@@ -46,7 +47,7 @@ bool HttpResponse::SetHeader(const ov::String &key, const ov::String &value)
 {
 	if (_is_header_sent)
 	{
-		logtw("Cannot modify header: Header is sent");
+		logtw("Cannot modify header: Header is sent: %s", _client_socket->ToString().CStr());
 		return false;
 	}
 
@@ -76,8 +77,10 @@ bool HttpResponse::AppendData(const std::shared_ptr<const ov::Data> &data)
 
 	std::lock_guard<decltype(_response_mutex)> lock(_response_mutex);
 
-	_response_data_list.push_back(data);
-	_response_data_size += data->GetLength();
+	auto cloned_data = data->Clone();
+
+	_response_data_list.push_back(cloned_data);
+	_response_data_size += cloned_data->GetLength();
 
 	return true;
 }
@@ -163,7 +166,7 @@ bool HttpResponse::Send(const std::shared_ptr<const ov::Data> &data)
 
 	if (_tls_data == nullptr)
 	{
-		send_data = data;
+		send_data = data->Clone();
 	}
 	else
 	{
@@ -179,7 +182,7 @@ bool HttpResponse::Send(const std::shared_ptr<const ov::Data> &data)
 		}
 	}
 
-	return (_client_socket->Send(send_data) == static_cast<ssize_t>(send_data->GetLength()));
+	return _client_socket->Send(send_data);
 }
 
 bool HttpResponse::SendChunkedData(const void *data, size_t length)
@@ -252,5 +255,5 @@ bool HttpResponse::Close()
 		return false;
 	}
 
-	return _client_socket->Close();
+	return _client_socket->CloseIfNeeded();
 }

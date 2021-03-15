@@ -11,257 +11,237 @@
 #include <algorithm>
 
 #include "physical_port_private.h"
-#include "physical_port_worker.h"
-
-
-PhysicalPort::PhysicalPort()
-	: _type(ov::SocketType::Unknown),
-	  _server_socket(nullptr),
-	  _datagram_socket(nullptr),
-
-	  _need_to_stop(true)
-{
-}
 
 PhysicalPort::~PhysicalPort()
 {
 	OV_ASSERT2(_observer_list.empty());
 }
 
-bool PhysicalPort::Create(ov::SocketType type,
+bool PhysicalPort::Create(const char *name,
+						  ov::SocketType type,
 						  const ov::SocketAddress &address,
+						  int worker_count,
 						  int send_buffer_size,
-						  int recv_buffer_size,
-						  int worker_count)
+						  int recv_buffer_size)
 {
-	OV_ASSERT2((_server_socket == nullptr) && (_datagram_socket == nullptr));
+	if ((_server_socket != nullptr) || (_datagram_socket != nullptr))
+	{
+		logte("Physical port already created");
+		OV_ASSERT2((_server_socket == nullptr) && (_datagram_socket == nullptr));
+	}
 
-	logtd("Trying to start server...");
+	logtd("Trying to start physical port [%s] on %s/%s (worker: %d, send_buffer_size: %d, recv_buffer_size: %d)...",
+		  name,
+		  address.ToString().CStr(), ov::StringFromSocketType(type),
+		  worker_count, send_buffer_size, recv_buffer_size);
+
+	bool result = false;
 
 	switch (type)
 	{
 		case ov::SocketType::Srt:
-		case ov::SocketType::Tcp: {
-			return CreateServerSocket(type, address, send_buffer_size, recv_buffer_size, worker_count);
-		}
+		case ov::SocketType::Tcp:
+			result = CreateServerSocket(name, type, address, worker_count, send_buffer_size, recv_buffer_size);
+			break;
 
-		case ov::SocketType::Udp: {
-			return CreateDatagramSocket(type, address);
-		}
+		case ov::SocketType::Udp:
+			result = CreateDatagramSocket(name, type, address, worker_count);
+			break;
 
 		case ov::SocketType::Unknown:
+			logte("Not supported socket type: %s", ov::StringFromSocketType(type));
 			break;
 	}
 
-	return false;
+	return result;
 }
 
-bool PhysicalPort::CreateServerSocket(ov::SocketType type,
-									  const ov::SocketAddress &address,
-									  int send_buffer_size,
-									  int recv_buffer_size,
-									  int worker_count)
+bool PhysicalPort::CreateServerSocket(
+	const char *name,
+	ov::SocketType type,
+	const ov::SocketAddress &address,
+	int worker_count,
+	int send_buffer_size,
+	int recv_buffer_size)
 {
-	// Prepare physical port workers
+	_socket_pool = ov::SocketPool::Create(name, type);
+
+	if (_socket_pool != nullptr)
 	{
-		auto lock_guard = std::lock_guard(_worker_mutex);
-		for (int index = 0; index < worker_count; index++)
+		if (_socket_pool->Initialize(worker_count))
 		{
-			_worker_list.emplace_back(std::make_shared<PhysicalPortWorker>(GetSharedPtr()));
-		}
-	}
+			auto socket = _socket_pool->AllocSocket<ov::ServerSocket>(_socket_pool);
 
-	auto socket = std::make_shared<ov::ServerSocket>();
-
-	if (socket->Prepare(type, address, send_buffer_size, recv_buffer_size, 4096))
-	{
-		_type = type;
-		_server_socket = socket;
-
-		_need_to_stop = false;
-
-		auto proc = [&, socket, worker_count]() -> void {
-			auto client_callback = [&](const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error) -> ov::SocketConnectionState {
-				switch (state)
+			if (socket != nullptr)
+			{
+				if (socket->Prepare(address,
+									std::bind(&PhysicalPort::OnClientConnectionStateChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+									std::bind(&PhysicalPort::OnClientData, this, std::placeholders::_1, std::placeholders::_2),
+									send_buffer_size, recv_buffer_size, 4096))
 				{
-					case ov::SocketConnectionState::Connected: {
-						logtd("New client is connected: %s", client->ToString().CStr());
-
-						// Notify observers
-						auto func = std::bind(&PhysicalPortObserver::OnConnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client));
-						for_each(_observer_list.begin(), _observer_list.end(), func);
-
-						break;
-					}
-
-					case ov::SocketConnectionState::Disconnect: {
-						logtd("Disconnected by server: %s", client->ToString().CStr());
-
-						// Notify observers
-						auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), PhysicalPortDisconnectReason::Disconnect, nullptr);
-						for_each(_observer_list.begin(), _observer_list.end(), func);
-
-						break;
-					}
-
-					case ov::SocketConnectionState::Disconnected: {
-						logtd("Client is disconnected: %s", client->ToString().CStr());
-
-						// Notify observers
-						auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), PhysicalPortDisconnectReason::Disconnected, nullptr);
-						for_each(_observer_list.begin(), _observer_list.end(), func);
-
-						break;
-					}
-
-					case ov::SocketConnectionState::Error: {
-						logtd("Client is disconnected with error: %s (%s)", client->ToString().CStr(), (error != nullptr) ? error->ToString().CStr() : "N/A");
-
-						// Notify observers
-						auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), PhysicalPortDisconnectReason::Error, error);
-						for_each(_observer_list.begin(), _observer_list.end(), func);
-
-						break;
-					}
-				}
-
-				return state;
-			};
-
-			auto data_callback = [&, worker_count](const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data) -> ov::SocketConnectionState {
-				auto sock = client->GetSocket();
-
-				if (sock.IsValid())
-				{
-					logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
-
-					auto shared_lock = std::shared_lock(_worker_mutex, std::defer_lock);
-
-					shared_lock.lock();
-					auto &worker = _worker_list.at(sock.GetSocket() % worker_count);
-					shared_lock.unlock();
-
-					if (worker->AddTask(client, data) == false)
+					if (socket->AttachToWorker())
 					{
-						logte("Could not add task");
+						_type = type;
+						_server_socket = socket;
+						_address = address;
+
+						return true;
 					}
 				}
-				else
-				{
-					logtw("Received data %d bytes from disconnected client");
-				}
 
-				return ov::SocketConnectionState::Connected;
-			};
-
-			while ((_need_to_stop == false) && (socket->DispatchEvent(client_callback, data_callback, PHYSICAL_PORT_EPOLL_TIMEOUT_MSEC)))
-			{
+				_socket_pool->ReleaseSocket(socket);
 			}
 
-			socket->Close();
-
-			logtd("Server is stopped");
-		};
-
-		{
-			auto shared_lock = std::shared_lock(_worker_mutex);
-			for (auto &worker : _worker_list)
-			{
-				worker->Start();
-			}
+			OV_SAFE_RESET(_socket_pool, nullptr, _socket_pool->Uninitialize(), _socket_pool);
 		}
-
-		_thread = std::thread(proc);
-		pthread_setname_np(_thread.native_handle(), "PhyPortSerSock");
-
-		_address = address;
-
-		return true;
+		else
+		{
+			_socket_pool = nullptr;
+		}
 	}
 
 	return false;
 }
 
-bool PhysicalPort::CreateDatagramSocket(ov::SocketType type, const ov::SocketAddress &address)
+bool PhysicalPort::CreateDatagramSocket(
+	const char *name,
+	ov::SocketType type,
+	const ov::SocketAddress &address,
+	int worker_count)
 {
-	auto socket = std::make_shared<ov::DatagramSocket>();
+	_socket_pool = ov::SocketPool::Create(name, type);
 
-	if (socket->Prepare(address))
+	if (_socket_pool != nullptr)
 	{
-		_type = type;
-		_datagram_socket = socket;
+		if (_socket_pool->Initialize(worker_count))
+		{
+			auto socket = _socket_pool->AllocSocket<ov::DatagramSocket>();
 
-		_need_to_stop = false;
-
-		auto proc = [&, socket]() -> void {
-			auto data_callback = [&](const std::shared_ptr<ov::DatagramSocket> &socket, const ov::SocketAddress &remote_address, const std::shared_ptr<const ov::Data> &data) -> bool {
-				logtd("Received data %d bytes:\n%s", data->GetLength(), data->Dump().CStr());
-
-				// Notify observers
-				auto func = std::bind(&PhysicalPortObserver::OnDataReceived, std::placeholders::_1, socket, remote_address, ref(data));
-				for_each(_observer_list.begin(), _observer_list.end(), func);
-
-				return true;
-			};
-
-			while ((_need_to_stop == false) && (socket->DispatchEvent(data_callback, 500)))
+			if (socket != nullptr)
 			{
+				if (socket->Prepare(
+						address,
+						std::bind(&PhysicalPort::OnDatagram, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)))
+				{
+					if (socket->AttachToWorker())
+					{
+						_type = type;
+						_datagram_socket = socket;
+						_address = address;
+
+						return true;
+					}
+				}
+
+				_socket_pool->ReleaseSocket(socket);
 			}
 
-			socket->Close();
-
-			logtd("Server is stopped");
-		};
-
-		_thread = std::thread(proc);
-		pthread_setname_np(_thread.native_handle(), "PhyPortDgSock");
-
-		_address = address;
-
-		return true;
+			OV_SAFE_RESET(_socket_pool, nullptr, _socket_pool->Uninitialize(), _socket_pool);
+		}
+		else
+		{
+			_socket_pool = nullptr;
+		}
 	}
 
 	return false;
+}
+
+void PhysicalPort::OnClientConnectionStateChanged(const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error)
+{
+	switch (state)
+	{
+		case ov::SocketConnectionState::Connected: {
+			logtd("New client is connected: %s", client->ToString().CStr());
+
+			// Notify observers
+			auto func = std::bind(&PhysicalPortObserver::OnConnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client));
+			std::for_each(_observer_list.begin(), _observer_list.end(), func);
+
+			break;
+		}
+
+		case ov::SocketConnectionState::Disconnect: {
+			logtd("Disconnected by server: %s", client->ToString().CStr());
+
+			// Notify observers
+			auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), PhysicalPortDisconnectReason::Disconnect, nullptr);
+			std::for_each(_observer_list.begin(), _observer_list.end(), func);
+
+			break;
+		}
+
+		case ov::SocketConnectionState::Disconnected: {
+			logtd("Client is disconnected: %s", client->ToString().CStr());
+
+			// Notify observers
+			auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), PhysicalPortDisconnectReason::Disconnected, nullptr);
+			std::for_each(_observer_list.begin(), _observer_list.end(), func);
+
+			break;
+		}
+
+		case ov::SocketConnectionState::Error: {
+			logtd("Client is disconnected with error: %s (%s)", client->ToString().CStr(), (error != nullptr) ? error->ToString().CStr() : "N/A");
+
+			// Notify observers
+			auto func = bind(&PhysicalPortObserver::OnDisconnected, std::placeholders::_1, std::static_pointer_cast<ov::Socket>(client), PhysicalPortDisconnectReason::Error, error);
+			std::for_each(_observer_list.begin(), _observer_list.end(), func);
+
+			break;
+		}
+	}
+}
+
+void PhysicalPort::OnClientData(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data)
+{
+	auto sock = client->GetSocket();
+
+	if (sock.IsValid())
+	{
+		// Notify observers
+		auto func = std::bind(
+			&PhysicalPortObserver::OnDataReceived,
+			std::placeholders::_1,
+			std::static_pointer_cast<ov::Socket>(client),
+			*(client->GetRemoteAddress().get()),
+			std::ref(data));
+
+		std::for_each(_observer_list.begin(), _observer_list.end(), func);
+	}
+	else
+	{
+		logtw("Received data %d bytes from disconnected client");
+	}
+}
+
+void PhysicalPort::OnDatagram(const std::shared_ptr<ov::DatagramSocket> &client, const ov::SocketAddress &remote_address, const std::shared_ptr<ov::Data> &data)
+{
+	// Notify observers
+	for (auto &observer : _observer_list)
+	{
+		observer->OnDataReceived(client, remote_address, data);
+	}
 }
 
 bool PhysicalPort::Close()
 {
-	_need_to_stop = true;
-
-	{
-		auto shared_lock = std::shared_lock(_worker_mutex);
-		for (auto &worker : _worker_list)
-		{
-			worker->Stop();
-		}
-	}
-
-	{
-		auto lock_guard = std::lock_guard(_worker_mutex);
-		_worker_list.clear();
-	}
-
-	if (_thread.joinable())
-	{
-		_thread.join();
-	}
-
 	auto socket = GetSocket();
 
 	if (socket != nullptr)
 	{
-		if ((socket->GetState() == ov::SocketState::Closed) || (socket->Close()))
-		{
-			_server_socket = nullptr;
-			_datagram_socket = nullptr;
+		_socket_pool->ReleaseSocket(socket);
 
-			_observer_list.clear();
-
-			return true;
-		}
+		_server_socket = nullptr;
+		_datagram_socket = nullptr;
 	}
 
-	return false;
+	_socket_pool->Uninitialize();
+	_socket_pool = nullptr;
+
+	_observer_list.clear();
+
+	return true;
 }
 
 ov::SocketState PhysicalPort::GetState() const
@@ -281,15 +261,14 @@ std::shared_ptr<const ov::Socket> PhysicalPort::GetSocket() const
 	switch (_type)
 	{
 		case ov::SocketType::Tcp:
+			[[fallthrough]];
+		default:
 			OV_ASSERT2(_server_socket != nullptr);
 			return _server_socket;
 
 		case ov::SocketType::Udp:
 			OV_ASSERT2(_datagram_socket != nullptr);
 			return _datagram_socket;
-
-		default:
-			return nullptr;
 	}
 }
 
@@ -298,21 +277,22 @@ std::shared_ptr<ov::Socket> PhysicalPort::GetSocket()
 	switch (_type)
 	{
 		case ov::SocketType::Tcp:
-			OV_ASSERT2(_server_socket != nullptr);
+			[[fallthrough]];
+		default:
 			return _server_socket;
 
 		case ov::SocketType::Udp:
-			OV_ASSERT2(_datagram_socket != nullptr);
 			return _datagram_socket;
-
-		default:
-			return nullptr;
 	}
 }
 
 bool PhysicalPort::AddObserver(PhysicalPortObserver *observer)
 {
-	_observer_list.push_back(observer);
+	auto item = std::find(_observer_list.begin(), _observer_list.end(), observer);
+	if (item == _observer_list.end())
+	{
+		_observer_list.push_back(observer);
+	}
 
 	return true;
 }
@@ -320,7 +300,6 @@ bool PhysicalPort::AddObserver(PhysicalPortObserver *observer)
 bool PhysicalPort::RemoveObserver(PhysicalPortObserver *observer)
 {
 	auto item = std::find(_observer_list.begin(), _observer_list.end(), observer);
-
 	if (item == _observer_list.end())
 	{
 		return false;
@@ -329,11 +308,6 @@ bool PhysicalPort::RemoveObserver(PhysicalPortObserver *observer)
 	_observer_list.erase(item);
 
 	return true;
-}
-
-bool PhysicalPort::DisconnectClient(ov::ClientSocket *client_socket)
-{
-	return _server_socket->DisconnectClient(client_socket, ov::SocketConnectionState::Disconnect);
 }
 
 ov::String PhysicalPort::ToString() const

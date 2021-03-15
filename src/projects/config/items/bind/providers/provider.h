@@ -21,6 +21,8 @@ namespace cfg
 				Tport _port;
 				Tport _tls_port;
 
+				int _worker_count{};
+
 			public:
 				explicit Provider(const char *port)
 					: _port(port)
@@ -36,11 +38,15 @@ namespace cfg
 				CFG_DECLARE_REF_GETTER_OF(GetPort, _port);
 				CFG_DECLARE_REF_GETTER_OF(GetTlsPort, _tls_port);
 
+				CFG_DECLARE_REF_GETTER_OF(GetWorkerCount, _worker_count);
+
 			protected:
 				void MakeList() override
 				{
 					Register<Optional>("Port", &_port);
 					Register<Optional>({"TLSPort", "tlsPort"}, &_tls_port);
+
+					Register<Optional>("WorkerCount", &_worker_count);
 				};
 			};
 		}  // namespace pvd

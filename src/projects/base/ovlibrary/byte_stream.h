@@ -182,6 +182,21 @@ namespace ov
 			return buffer;
 		}
 
+		void ReadBE(uint8_t &value)
+		{
+			value = *Read();
+		}
+
+		void ReadBE(uint16_t &value)
+		{
+			value = ReadBE16();
+		}
+
+		void ReadBE(uint32_t &value)
+		{
+			value = ReadBE32();
+		}
+
 		// byte order를 고려하여 읽을 수 있는 유틸리티 함수
 		// 사용 방법)
 		// uint8_t b = stream.Read8();
@@ -324,6 +339,21 @@ namespace ov
 		bool Write(const T *buffer)
 		{
 			return Write(buffer, 1);
+		}
+
+		bool WriteBE(uint8_t value)
+		{
+			return Write(&value);
+		}
+
+		bool WriteBE(uint16_t value)
+		{
+			return WriteBE16(value);
+		}
+
+		bool WriteBE(uint32_t value)
+		{
+			return WriteBE32(value);
 		}
 
 		/// data를 데이터 끝에 bytes만큼 기록함. 기록 후 현재 위치가 변경되지 않음.

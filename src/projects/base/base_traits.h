@@ -54,7 +54,7 @@ public:
             return false;
         }
 
-        _physical_port = PhysicalPortManager::GetInstance()->CreatePort(socket_type, address);
+        _physical_port = PhysicalPortManager::GetInstance()->CreatePort(T::ClassName, socket_type, address);
 
         if(_physical_port != nullptr)
         {

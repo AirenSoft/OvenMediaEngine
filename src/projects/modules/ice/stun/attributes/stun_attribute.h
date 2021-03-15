@@ -34,8 +34,8 @@ public:
 		return sizeof(uint16_t) + sizeof(uint16_t);
 	}
 
-	static std::unique_ptr<StunAttribute> CreateAttribute(ov::ByteStream &stream);
-	static std::unique_ptr<StunAttribute> CreateAttribute(StunAttributeType type, int length);
+	static std::shared_ptr<StunAttribute> CreateAttribute(ov::ByteStream &stream);
+	static std::shared_ptr<StunAttribute> CreateAttribute(StunAttributeType type, int length);
 
 	virtual bool Parse(ov::ByteStream &stream) = 0;
 
@@ -49,6 +49,8 @@ public:
 
 	static const char *StringFromType(StunAttributeType type) noexcept;
 	const char *StringFromType() const noexcept;
+
+	static const char *StringFromErrorCode(StunErrorCode code) noexcept;
 
 	virtual ov::String ToString() const;
 

@@ -120,7 +120,7 @@ namespace ov
 		// Group 6: <path>
 		// Group 7: ?<query string>
 		// Group 8: <query string>
-		if (std::regex_search(url_string, matches, std::regex(R"((.+?)://([^:/]+)(:([0-9]+))?(/([^\?]+)?)?(\?([^\?]+)?(.+)?)?)")) == false)
+		if (std::regex_search(url_string, matches, std::regex(R"((.*)://([^:/]+)(:([0-9]+))?(/([^\?]+)?)?(\?([^\?]+)?(.+)?)?)")) == false)
 		{
 			return nullptr;
 		}

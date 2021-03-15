@@ -66,7 +66,7 @@ namespace ov
 		return bio_method;
 	}
 
-	bool Tls::Initialize(const SSL_METHOD *method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback)
+	bool Tls::Initialize(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback)
 	{
 		bool result = true;
 
@@ -101,7 +101,7 @@ namespace ov
 		return true;
 	}
 
-	bool Tls::PrepareSslContext(const SSL_METHOD *method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list)
+	bool Tls::PrepareSslContext(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list)
 	{
 		do
 		{

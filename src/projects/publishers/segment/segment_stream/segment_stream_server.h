@@ -26,10 +26,13 @@ public:
 	SegmentStreamServer();
 	virtual ~SegmentStreamServer() = default;
 
+	// thread_count: A thread count of SegmentWorkerManager
+	// worker_count: A thread count of socket pool
 	bool Start(
 		const ov::SocketAddress *address,
 		const ov::SocketAddress *tls_address,
-		int thread_count);
+		int thread_count,
+		int worker_count);
 	bool Stop();
 
 	bool AddObserver(const std::shared_ptr<SegmentStreamObserver> &observer);

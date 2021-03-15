@@ -44,53 +44,59 @@ namespace api
 	void RootController::PrepareAccessTokenHandler()
 	{
 		_interceptor->Register(HttpMethod::All, R"(.+)", [=](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+#if DEBUG
+			if (_access_token.IsEmpty())
+			{
+				// Authorization is disabled
+				return HttpNextHandler::Call;
+			}
+#endif	// DEBUG
+
 			auto authorization = client->GetRequest()->GetHeader("Authorization");
 
 			ov::String message = nullptr;
 
-			if (authorization.GetLength() > 0)
+			do
 			{
+				if (authorization.IsEmpty())
+				{
+					message = "Authorization header is required to call API";
+					break;
+				}
+
 				auto tokens = authorization.Split(" ");
 
-				if (tokens.size() == 2)
-				{
-					if (tokens[0].UpperCaseString() == "BASIC")
-					{
-						auto data = ov::Base64::Decode(tokens[1]);
-
-						if (data != nullptr)
-						{
-							ov::String str = data->ToString();
-
-							if (str == _access_token)
-							{
-								return HttpNextHandler::Call;
-							}
-							else
-							{
-								message = "Invalid credential";
-							}
-						}
-						else
-						{
-							message = "Invalid credential format";
-						}
-					}
-					else
-					{
-						message.AppendFormat("Not supported credential type: %s", tokens[0].CStr());
-					}
-				}
-				else
+				if (tokens.size() != 2)
 				{
 					// Invalid tokens
 					message = "Invalid authorization header";
+					break;
 				}
-			}
-			else
-			{
-				message = "Authorization header is required to call API";
-			}
+
+				if (tokens[0].UpperCaseString() != "BASIC")
+				{
+					message.AppendFormat("Not supported credential type: %s", tokens[0].CStr());
+					break;
+				}
+
+				auto data = ov::Base64::Decode(tokens[1]);
+
+				if (data == nullptr)
+				{
+					message = "Invalid credential format";
+					break;
+				}
+
+				ov::String str = data->ToString();
+
+				if (str != _access_token)
+				{
+					message = "Invalid credential";
+					break;
+				}
+
+				return HttpNextHandler::Call;
+			} while (false);
 
 			ApiResponse response(HttpError::CreateError(HttpStatusCode::Forbidden, message));
 			response.SendToClient(client);

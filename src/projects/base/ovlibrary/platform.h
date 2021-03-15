@@ -101,8 +101,9 @@ namespace ov
 	class Platform
 	{
 	public:
-		static std::string GetName();
+		static const char *GetName();
 		static uint64_t GetProcessId();
 		static uint64_t GetThreadId();
+		static const char *GetThreadName();
 	};
 }

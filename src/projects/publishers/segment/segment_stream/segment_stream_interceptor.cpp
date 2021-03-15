@@ -66,3 +66,15 @@ HttpInterceptorResult SegmentStreamInterceptor::OnHttpData(const std::shared_ptr
 
 	return HttpInterceptorResult::Keep;
 }
+
+bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
+{
+	auto request = client->GetRequest();
+	
+	if(request->GetConnectionType() != HttpRequestConnectionType::HTTP)
+	{
+		return false;
+	}
+
+	return true;
+}

@@ -62,13 +62,16 @@ typedef enum StatLogType
 } StatLogType;
 
 #if DEBUG
-#	define logd(tag, format, ...)                     ov_log_internal(OVLogLevelDebug,          tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ## __VA_ARGS__)
-#	define logp(tag, format, ...)                       \
-		while (ov_log_get_enabled(tag, OVLogLevelDebug)) \
-		{                                                \
-			logd(tag, format, ##__VA_ARGS__);            \
-			break;                                       \
-		}
+#	define logd(tag, format, ...)                                                                                     \
+		do                                                                                                             \
+		{                                                                                                              \
+			if (ov_log_get_enabled(tag, OVLogLevelDebug))                                                              \
+			{                                                                                                          \
+				ov_log_internal(OVLogLevelDebug, tag, __FILE__, __LINE__, __PRETTY_FUNCTION__, format, ##__VA_ARGS__); \
+			}                                                                                                          \
+		} while (false)
+
+#	define logp(tag, format, ...)                     logd(tag ".Packet", format, ##__VA_ARGS__)
 #else
 #	define logd(...)                                  do {} while(false)
 #	define logp                                       logd
@@ -86,7 +89,7 @@ typedef enum StatLogType
 //--------------------------------------------------------------------
 #define logtd(format, ...)                            logd(OV_LOG_TAG, format, ## __VA_ARGS__)
 // for packet
-#define logtp(format, ...)                            logp(OV_LOG_TAG ".Packet", format, ## __VA_ARGS__)
+#define logtp(format, ...)                            logp(OV_LOG_TAG, format, ## __VA_ARGS__)
 // for statistics
 #define logts(format, ...)                            logi(OV_LOG_TAG ".Stat", format, ## __VA_ARGS__)
 #define logti(format, ...)                            logi(OV_LOG_TAG, format, ## __VA_ARGS__)

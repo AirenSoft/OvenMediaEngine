@@ -21,7 +21,7 @@ public:
 		return RtcpPacketType::RR;
 	}
 
-	uint8_t GetCount() const override
+	uint8_t GetCountOrFmt() const override
 	{
 		return _report_blocks.size();
 	}

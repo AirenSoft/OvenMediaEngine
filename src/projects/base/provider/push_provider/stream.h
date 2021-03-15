@@ -52,13 +52,13 @@ namespace pvd
 		}
 
 	protected:
+		PushStream(StreamSourceType source_type, ov::String channel_name, uint32_t channel_id, const std::shared_ptr<PushProvider> &provider);
 		PushStream(StreamSourceType source_type, uint32_t channel_id, const std::shared_ptr<PushProvider> &provider);
 
-		// app name, stream name, tracks 가 모두 준비되면 호출한다. 
+		// app name, stream name, tracks
 		// provider->AssignStream (app)
 		// app-> NotifyStreamReady(this)
-		bool PublishInterleavedChannel(const info::VHostAppName &vhost_app_name);
-		bool PublishDataChannel(const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &data_channel);
+		bool PublishChannel(const info::VHostAppName &vhost_app_name);
 		CheckSignatureResult HandleSignedPolicy(const std::shared_ptr<const ov::Url> &request_url, const std::shared_ptr<ov::SocketAddress> &client_address, std::shared_ptr<const SignedPolicy> &signed_policy);
 
 	private:

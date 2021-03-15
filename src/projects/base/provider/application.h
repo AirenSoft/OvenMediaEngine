@@ -21,6 +21,7 @@
 namespace pvd
 {
 	class Provider;
+	
 	class Application : public info::Application, public MediaRouteApplicationConnector
 	{
 	public:
@@ -40,7 +41,7 @@ namespace pvd
 
 		uint32_t 	IssueUniqueStreamId();
 
-		// Delete stream
+		virtual bool AddStream(const std::shared_ptr<Stream> &stream);
 		virtual bool DeleteStream(const std::shared_ptr<Stream> &stream);
 		virtual bool DeleteAllStreams();
 

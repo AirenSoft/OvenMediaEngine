@@ -11,12 +11,7 @@
 #include "modules/ice/ice_private.h"
 
 // Attributes
-#include "stun_mapped_address_attribute.h"
-#include "stun_xor_mapped_address_attribute.h"
-#include "stun_user_name_attribute.h"
-#include "stun_message_integrity_attribute.h"
-#include "stun_fingerprint_attribute.h"
-#include "stun_unknown_attribute.h"
+#include "stun_attributes.h"
 
 StunAttribute::StunAttribute(StunAttributeType type, uint16_t type_number, size_t length)
 	: _type(type),
@@ -51,42 +46,37 @@ StunAttribute::~StunAttribute()
 {
 }
 
-std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &stream)
+std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &stream)
 {
 	if(stream.Remained() % 4 != 0)
 	{
-		// 패딩이 맞지 않음
 		logtw("Invalid padding: %d bytes", stream.Remained());
 		return nullptr;
 	}
 
-	// attribute type읽음
 	StunAttributeType type = static_cast<StunAttributeType>(stream.ReadBE16());
-	// attribute 길이 읽음
 	uint16_t length = stream.ReadBE16();
 	auto padded_length = static_cast<uint16_t>(((length % 4) > 0) ? ((length / 4) + 1) * 4 : length);
 
 	if(stream.Remained() < padded_length)
 	{
-		// type + length 정보가 있었음에도 불구하고, 실제 데이터는 없는 상태
 		logtw("Data is too short: type: 0x%04X, data length: %d (expected: %d)", type, stream.Remained(), padded_length);
 		return nullptr;
 	}
 
-		// offset 부터 길이까지 데이터 dump
 #if STUN_LOG_DATA
-		logtd("Parsing attribute: type: 0x%04X, length: %d (padded: %d)...\n%s", type, length, padded_length, stream.Dump(padded_length).CStr());
+	logtd("Parsing attribute: type: 0x%04X, length: %d (padded: %d)...\n%s", type, length, padded_length, stream.Dump(padded_length).CStr());
 #else // STUN_LOG_DATA
 	logtd("Parsing attribute: type: 0x%04X, length: %d (padded: %d)...", type, length, padded_length);
 #endif // STUN_LOG_DATA
 
 #if DEBUG
-	off_t last_offset = stream.GetOffset();
+	[[maybe_unused]] off_t last_offset = stream.GetOffset();
 #endif // DEBUG
 
 	if(type == StunAttributeType::Fingerprint)
 	{
-		// fingerprint 는 마지막 attribute 여야 함
+		// fingerprint must be last attribute
 		OV_ASSERT2(stream.Remained() == length);
 
 		if(stream.Remained() != length)
@@ -96,14 +86,12 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 		}
 	}
 
-	std::unique_ptr<StunAttribute> attribute = CreateAttribute(type, length);
+	std::shared_ptr<StunAttribute> attribute = CreateAttribute(type, length);
 
 	if(attribute == nullptr)
 	{
-		// 아직 미구현 한 attribute
+		// Unimplemented attributes
 		logtd("Skipping attribute (not implemented): 0x%04X (%d bytes)...", type, length);
-
-		// length 만큼 읽지 않음
 		stream.Skip<uint8_t>(length);
 	}
 	else
@@ -116,50 +104,64 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(ov::ByteStream &st
 
 		logtd("Parsed: %s", attribute->ToString().CStr());
 
-#if DEBUG
-		// 헤더에 명시되어 있는 만큼 데이터를 읽지 않았는지 확인
-		OV_ASSERT(length == (stream.GetOffset() - last_offset), "Length is mismatch. (expected: %d, read length: %d)", length, (stream.GetOffset() - last_offset));
-#endif // DEBUG
-
 		stream.Skip<uint8_t>(padded_length - length);
 	}
 
 	return std::move(attribute);
 }
 
-std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType type, int length)
+std::shared_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType type, int length)
 {
-	std::unique_ptr<StunAttribute> attribute = nullptr;
+	std::shared_ptr<StunAttribute> attribute = nullptr;
 
 	switch(type)
 	{
 		case StunAttributeType::MappedAddress:
-			attribute = std::make_unique<StunMappedAddressAttribute>(length);
+			attribute = std::make_shared<StunMappedAddressAttribute>(length);
 			break;
-
+		case StunAttributeType::XorPeerAddress:
+			attribute = std::make_shared<StunXorPeerAddressAttribute>(length);
+			break;
+		case StunAttributeType::XorRelayedAddress:
+			attribute = std::make_shared<StunXorRelayedAddressAttribute>(length);
+			break;
 		case StunAttributeType::XorMappedAddress:
-			attribute = std::make_unique<StunXorMappedAddressAttribute>(length);
+			attribute = std::make_shared<StunXorMappedAddressAttribute>(length);
 			break;
-
 		case StunAttributeType::UserName:
-			attribute = std::make_unique<StunUserNameAttribute>(length);
+			attribute = std::make_shared<StunUserNameAttribute>(length);
 			break;
-
 		case StunAttributeType::MessageIntegrity:
-			attribute = std::make_unique<StunMessageIntegrityAttribute>(length);
+			attribute = std::make_shared<StunMessageIntegrityAttribute>(length);
 			break;
-
 		case StunAttributeType::Fingerprint:
-			attribute = std::make_unique<StunFingerprintAttribute>(length);
+			attribute = std::make_shared<StunFingerprintAttribute>(length);
 			break;
-
+		case StunAttributeType::RequestedTransport:
+			attribute = std::make_shared<StunRequestedTransportAttribute>(length);
+			break;
 		case StunAttributeType::ErrorCode:
-		case StunAttributeType::Realm:
-		case StunAttributeType::Nonce:
-		case StunAttributeType::Software:
-		case StunAttributeType::AlternateServer:
+			attribute = std::make_shared<StunErrorCodeAttribute>(length);
 			break;
-
+		case StunAttributeType::Realm:
+			attribute = std::make_shared<StunRealmAttribute>(length);
+			break;
+		case StunAttributeType::Nonce:
+			attribute = std::make_shared<StunNonceAttribute>(length);
+			break;
+		case StunAttributeType::Software:
+			attribute = std::make_shared<StunSoftwareAttribute>(length);
+			break;
+		case StunAttributeType::ChannelNumber:
+			attribute = std::make_shared<StunChannelNumberAttribute>(length);
+			break;
+		case StunAttributeType::Lifetime:
+			attribute = std::make_shared<StunLifetimeAttribute>(length);
+			break;
+		case StunAttributeType::Data:
+			attribute = std::make_shared<StunDataAttribute>(length);
+			break;
+		case StunAttributeType::AlternateServer:
 		case StunAttributeType::UnknownAttributes:
 		default:
 			switch(static_cast<int>(type))
@@ -177,12 +179,11 @@ std::unique_ptr<StunAttribute> StunAttribute::CreateAttribute(StunAttributeType 
 					break;
 
 				default:
-					// 잘못된 타입이 들어옴
-					logtw("Unknown attributes: %d (%x, length: %d)", type, type, length);
+					logtd("Unknown attributes: %d (%x, length: %d)", type, type, length);
 					break;
 			}
 
-			attribute = std::make_unique<StunUnknownAttribute>((int)type, length);
+			attribute = std::make_shared<StunUnknownAttribute>((int)type, length);
 			break;
 	}
 
@@ -247,6 +248,69 @@ const char *StunAttribute::StringFromType(StunAttributeType type) noexcept
 			return "SOFTWARE";
 		case StunAttributeType::AlternateServer:
 			return "ALTERNATE-SERVER";
+		case StunAttributeType::ChannelNumber:
+			return "CHANNEL-NUMBER";
+		case StunAttributeType::Lifetime:
+			return "LIFETIME";
+		case StunAttributeType::XorPeerAddress:
+			return "XOR-PEER-ADDRESS";
+		case StunAttributeType::Data:
+			return "DATA";
+		case StunAttributeType::XorRelayedAddress:
+			return "XOR-RELAYED-ADDRESS";
+		case StunAttributeType::RequestedAddressFamily:
+			return "REQUESTED-ADDRESS-FAMILY";
+		case StunAttributeType::EvenPort:
+			return "EVEN-PORT";
+		case StunAttributeType::RequestedTransport:
+			return "REQUESTED-TRANSPORT";
+		case StunAttributeType::DontFragment:
+			return "DONT-FRAGMENT";
+		case StunAttributeType::ReservationToken:
+			return "RESERVATION-TOKEN";
+		case StunAttributeType::AdditionalAddressFamily:
+			return "ADDITIONAL-ADDRESS-FAMILY";
+		case StunAttributeType::AddressErrorCode:
+			return "ADDRESS-ERROR-CODE";
+		case StunAttributeType::ICMP:
+			return "ICMP";
+	}
+
+	return "<UNKNOWN>";
+}
+
+const char *StunAttribute::StringFromErrorCode(StunErrorCode code) noexcept
+{
+	switch(code)
+	{
+		case StunErrorCode::TryAlternate:
+			return "Try Alternate";
+		case StunErrorCode::BadRequest:
+			return "Bad Request";
+		case StunErrorCode::Unauthonticated:
+			return "Unauthenticated";
+		case StunErrorCode::Forbidden:
+			return "Forbidden";
+		case StunErrorCode::UnknownAttribute:
+			return "Unknown Attribute";
+		case StunErrorCode::AllocationMismatch:
+			return "Allocation Mismatch";
+		case StunErrorCode::StaleNonce:
+			return "Stale Nonce";
+		case StunErrorCode::AddressFamilyNotSupported:
+			return "Address Family Not Supported";
+		case StunErrorCode::WrongCredentials:
+			return "Wrong Credentials";
+		case StunErrorCode::UnsupportedTransportProtocol:
+			return "Unsupported Transport Protocol";
+		case StunErrorCode::PeerAddressFamilyMismatch:
+			return "Peer Address Family Mismatch";
+		case StunErrorCode::AllocationQuotaReached:
+			return "Allocation Quota Reached";
+		case StunErrorCode::ServerError:
+			return "Server Error";
+		case StunErrorCode::InsufficientCapacity:
+			return "Insufficient Capacity";
 	}
 
 	return "<UNKNOWN>";

@@ -7,11 +7,12 @@
 //
 //==============================================================================
 #include "cmaf_publisher.h"
+
+#include <config/config_manager.h>
+
 #include "cmaf_application.h"
 #include "cmaf_private.h"
 #include "cmaf_stream_server.h"
-
-#include <config/config_manager.h>
 
 std::shared_ptr<CmafPublisher> CmafPublisher::Create(const cfg::Server &server_config,
 													 const std::shared_ptr<MediaRouteInterface> &router)
@@ -20,8 +21,8 @@ std::shared_ptr<CmafPublisher> CmafPublisher::Create(const cfg::Server &server_c
 }
 
 CmafPublisher::CmafPublisher(PrivateToken token,
-							const cfg::Server &server_config,
-							const std::shared_ptr<MediaRouteInterface> &router)
+							 const cfg::Server &server_config,
+							 const std::shared_ptr<MediaRouteInterface> &router)
 	: DashPublisher(token, server_config, router)
 {
 }
@@ -36,8 +37,12 @@ bool CmafPublisher::Start()
 		return true;
 	}
 
+	bool is_parsed;
+	auto worker_count = dash_config.GetWorkerCount(&is_parsed);
+	worker_count = is_parsed ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
+
 	return SegmentPublisher::Start(dash_config.GetPort(), dash_config.GetTlsPort(),
-								   std::make_shared<CmafStreamServer>());
+								   std::make_shared<CmafStreamServer>(), worker_count);
 }
 
 std::shared_ptr<pub::Application> CmafPublisher::OnCreatePublisherApplication(const info::Application &application_info)

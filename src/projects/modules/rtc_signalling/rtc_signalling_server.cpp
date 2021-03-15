@@ -11,8 +11,9 @@
 
 #include <config/config_manager.h>
 #include <modules/ice/ice.h>
+#include <modules/ice/ice_port.h>
+#include <modules/address/address_utilities.h>
 #include <publishers/webrtc/webrtc_publisher.h>
-
 #include <utility>
 
 #include "rtc_ice_candidate.h"
@@ -24,13 +25,19 @@ RtcSignallingServer::RtcSignallingServer(const cfg::Server &server_config)
 {
 }
 
-bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count)
+bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::SocketAddress *tls_address, int worker_count, std::shared_ptr<WebSocketInterceptor> interceptor)
 {
 	const auto &webrtc_config = _server_config.GetBind().GetPublishers().GetWebrtc();
 
 	if ((_http_server != nullptr) || (_https_server != nullptr))
 	{
 		OV_ASSERT(false, "Server is already running (%p, %p)", _http_server.get(), _https_server.get());
+		return false;
+	}
+
+	if(interceptor == nullptr)
+	{	
+		OV_ASSERT(false, "Interceptor must not be nullptr");
 		return false;
 	}
 
@@ -41,19 +48,68 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	std::shared_ptr<HttpServer> http_server = (address != nullptr) ? manager->CreateHttpServer("RtcSignallingServer", *address, worker_count) : nullptr;
 	std::shared_ptr<HttpsServer> https_server = (tls_address != nullptr) ? manager->CreateHttpsServer("RtcSignallingServer", *tls_address, vhost_list, worker_count) : nullptr;
 
-	auto web_socket_interceptor = result ? CreateWebSocketInterceptor() : nullptr;
+	if(SetWebSocketHandler(interceptor) == false)
+	{
+		OV_ASSERT(false, "SetWebSocketHandler failed");
+		return false;
+	}
 
-	result = result && ((http_server == nullptr) || http_server->AddInterceptor(web_socket_interceptor));
-	result = result && ((https_server == nullptr) || https_server->AddInterceptor(web_socket_interceptor));
+	result = result && ((http_server == nullptr) || http_server->AddInterceptor(interceptor));
+	result = result && ((https_server == nullptr) || https_server->AddInterceptor(interceptor));
 
 	if (result)
 	{
-		auto &ice_servers_config = webrtc_config.GetIceServers();
+		_ice_servers = Json::arrayValue;
 
+		// for internal turn/tcp relay configuration
+		bool tcp_relay_parsed = false;
+		auto tcp_relay_address = webrtc_config.GetIceCandidates().GetTcpRelay(&tcp_relay_parsed);
+		if (tcp_relay_parsed)
+		{
+			Json::Value ice_server = Json::objectValue;
+			Json::Value urls = Json::arrayValue;
+
+			// <TcpRelay>IP:Port</TcpRelay>
+			// <TcpRelay>*:Port</TcpRelay>
+			// <TcpRelay>${PublicIP}:Port</TcpRelay>
+			// Check tcp_relay_address is * or ${PublicIP}
+			auto address_items = tcp_relay_address.Split(":");
+			if(address_items.size() != 2)
+			{
+				
+			}
+
+			if(address_items[0] == "*")
+			{
+				auto ip_list = ov::AddressUtilities::GetInstance()->GetIpList();
+				for(const auto& ip : ip_list)
+				{
+					urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", ip.CStr(), address_items[1].CStr()).CStr());
+				}
+			}
+			else if(address_items[0].UpperCaseString() == "${PublicIP}")
+			{
+				auto public_ip = ov::AddressUtilities::GetInstance()->GetMappedAddress();
+				urls.append(ov::String::FormatString("turn:%s:%s?transport=tcp", public_ip->GetIpAddress().CStr(), address_items[1].CStr()).CStr());
+			}
+			else
+			{
+				urls.append(ov::String::FormatString("turn:%s?transport=tcp", tcp_relay_address.CStr()).CStr());
+			}
+
+			ice_server["urls"] = urls;
+
+			// Embedded turn server has fixed user_name and credential. Security is provided by signed policy after this. This is because the embedded turn server does not relay other servers and only transmits the local stream to tcp when transmitting to webrtc.
+			ice_server["user_name"] = DEFAULT_RELAY_USERNAME;
+			ice_server["credential"] = DEFAULT_RELAY_KEY;
+
+			_ice_servers.append(ice_server);
+		}
+
+		// for external ice server configuration
+		auto &ice_servers_config = webrtc_config.GetIceServers();
 		if (ice_servers_config.IsParsed())
 		{
-			_ice_servers = Json::arrayValue;
-
 			for (auto ice_server_config : ice_servers_config.GetIceServerList())
 			{
 				Json::Value ice_server = Json::objectValue;
@@ -89,7 +145,8 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 				_ice_servers.append(ice_server);
 			}
 		}
-		else
+		
+		if(_ice_servers.size() == 0)
 		{
 			_ice_servers = Json::nullValue;
 		}
@@ -107,10 +164,8 @@ bool RtcSignallingServer::Start(const ov::SocketAddress *address, const ov::Sock
 	return result;
 }
 
-std::shared_ptr<WebSocketInterceptor> RtcSignallingServer::CreateWebSocketInterceptor()
+bool RtcSignallingServer::SetWebSocketHandler(std::shared_ptr<WebSocketInterceptor> interceptor)
 {
-	auto interceptor = std::make_shared<WebSocketInterceptor>();
-
 	interceptor->SetConnectionHandler(
 		[this](const std::shared_ptr<WebSocketClient> &ws_client) -> HttpInterceptorResult {
 			auto &client = ws_client->GetClient();
@@ -261,28 +316,26 @@ std::shared_ptr<WebSocketInterceptor> RtcSignallingServer::CreateWebSocketInterc
 				}
 
 				logti("Client is disconnected: %s (%s / %s, ufrag: local: %s, remote: %s)",
-					  ws_client->ToString().CStr(),
-					  info->vhost_app_name.CStr(), info->stream_name.CStr(),
-					  (info->offer_sdp != nullptr) ? info->offer_sdp->GetIceUfrag().CStr() : "(N/A)",
-					  (info->peer_sdp != nullptr) ? info->peer_sdp->GetIceUfrag().CStr() : "(N/A)");
+						ws_client->ToString().CStr(),
+						info->vhost_app_name.CStr(), info->stream_name.CStr(),
+						(info->offer_sdp != nullptr) ? info->offer_sdp->GetIceUfrag().CStr() : "(N/A)",
+						(info->peer_sdp != nullptr) ? info->peer_sdp->GetIceUfrag().CStr() : "(N/A)");
 			}
 			else
 			{
 				// The client is disconnected before websocket negotiation
 			}
 		});
-
-	return interceptor;
+	
+	return true;
 }
 
 bool RtcSignallingServer::AddObserver(const std::shared_ptr<RtcSignallingObserver> &observer)
 {
-	// 기존에 등록된 observer가 있는지 확인
 	for (const auto &item : _observers)
 	{
 		if (item == observer)
 		{
-			// 기존에 등록되어 있음
 			logtw("%p is already observer of RtcSignallingServer", observer.get());
 			return false;
 		}
@@ -477,10 +530,11 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 			logtd("peer %s became a host peer because there is no p2p host for client %s.", peer_info->ToString().CStr(), ws_client->ToString().CStr());
 		}
 
+		bool tcp_relay = false;
 		// None of the hosts can accept this client, so the peer will be connectioned to OME
-		std::find_if(_observers.begin(), _observers.end(), [ws_client, info, &sdp, vhost_app_name, stream_name](auto &observer) -> bool {
+		std::find_if(_observers.begin(), _observers.end(), [ws_client, info, &sdp, vhost_app_name, stream_name, &tcp_relay](auto &observer) -> bool {
 			// Ask observer to fill local_candidates
-			sdp = observer->OnRequestOffer(ws_client, vhost_app_name, info->host_name, stream_name, &(info->local_candidates));
+			sdp = observer->OnRequestOffer(ws_client, vhost_app_name, info->host_name, stream_name, &(info->local_candidates), tcp_relay);
 			return sdp != nullptr;
 		});
 
@@ -548,7 +602,7 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchRequestOffer(const std::
 				}
 				value["candidates"] = candidates;
 				value["code"] = static_cast<int>(HttpStatusCode::OK);
-				if (_ice_servers.isNull() == false)
+				if (tcp_relay == true && _ice_servers.isNull() == false)
 				{
 					value["ice_servers"] = _ice_servers;
 				}
@@ -637,8 +691,12 @@ std::shared_ptr<ov::Error> RtcSignallingServer::DispatchAnswer(const std::shared
 			for (auto &observer : _observers)
 			{
 				logtd("Trying to callback OnAddRemoteDescription to %p (%s / %s)...", observer.get(), info->vhost_app_name.CStr(), info->stream_name.CStr());
-				// TODO(Getroot): Add param "request->GetRequestTarget()"
-				observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp);
+				
+				// TODO : Improved to return detailed error cause
+				if(observer->OnAddRemoteDescription(ws_client, info->vhost_app_name, info->host_name, info->stream_name, info->offer_sdp, info->peer_sdp) == false)
+				{
+					return HttpError::CreateError(HttpStatusCode::Forbidden, "Forbidden");
+				}
 			}
 		}
 		else

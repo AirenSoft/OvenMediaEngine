@@ -150,5 +150,5 @@ private:
 	// <MediaTrack.id, AVStream.index>
 	std::map<int32_t, int64_t> _track_map;
 
-	std::mutex _lock;
+	std::shared_mutex _lock;
 };

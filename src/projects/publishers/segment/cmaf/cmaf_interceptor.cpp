@@ -12,6 +12,11 @@
 
 bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
 {
+	if(SegmentStreamInterceptor::IsInterceptorForRequest(client) == false)
+	{
+		return false;
+	}
+
 	const auto request = client->GetRequest();
 
 	// Temporary code to accept HTTP 1.0

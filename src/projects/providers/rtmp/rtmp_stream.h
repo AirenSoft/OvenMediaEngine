@@ -67,7 +67,8 @@ namespace pvd
 
 
 		// Send messages
-		bool SendData(int data_size, uint8_t *data);
+		bool SendData(const std::shared_ptr<const ov::Data> &data);
+		bool SendData(const void *data, size_t data_size);
 		bool SendMessagePacket(std::shared_ptr<RtmpMuxMessageHeader> &message_header, std::shared_ptr<std::vector<uint8_t>> &data);
 		bool SendAcknowledgementSize(uint32_t acknowledgement_traffic);
 

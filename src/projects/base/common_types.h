@@ -27,6 +27,7 @@
 
 enum class StreamSourceType : int8_t
 {
+	WebRTC,
 	Ovt,
 	Rtmp,
 	Rtsp,
@@ -50,6 +51,7 @@ enum class ProviderType : int8_t
 	RtspPull,
 	Ovt,
 	Mpegts,
+	WebRTC
 };
 
 // Note : If you update PublisherType, you have to update /base/ovlibrary/converter.h:ToString(PublisherType type)
@@ -77,6 +79,30 @@ enum class FrameType : int8_t
 	AudioFrameCN,  // Comfort Noise, https://tools.ietf.org/html/rfc3389
 	VideoFrameKey,
 	VideoFrameDelta,
+};
+
+enum class NodeType : int16_t
+{
+	Unknown = 0,
+	Edge = 10,	// Start or End of Nodes
+	Rtp = 100,
+	Rtcp = 101,
+	Srtp = 200,
+	Srtcp = 201,
+	Sctp = 300,
+	Dtls = 400,
+	Ice = 500
+};
+
+// https://tools.ietf.org/html/rfc5761#section-4
+// - payload type values in the range 64-95 MUST NOT be used
+// - dynamic RTP payload types SHOULD be chosen in the range 96-127 where possible
+enum class FixedRtcPayloadType : uint8_t
+{
+	PAYLOAD_TYPE_OFFSET	= 100,
+	RED_PAYLOAD_TYPE = 120,
+	RED_RTX_PAYLOAD_TYPE = 121,
+	ULPFEC_PAYLOAD_TYPE	= 122
 };
 
 struct FragmentationHeader
@@ -232,6 +258,8 @@ static ov::String StringFromStreamSourceType(const StreamSourceType &type)
 {
 	switch (type)
 	{
+		case StreamSourceType::WebRTC:
+			return "WebRTC";
 		case StreamSourceType::Ovt:
 			return "Ovt";
 		case StreamSourceType::Rtmp:
@@ -263,6 +291,8 @@ static ov::String StringFromProviderType(const ProviderType &type)
 			return "OVT";
 		case ProviderType::Mpegts:
 			return "MPEG-TS";
+		case ProviderType::WebRTC:
+			return "WebRTC";
 	}
 
 	return "Unknown";

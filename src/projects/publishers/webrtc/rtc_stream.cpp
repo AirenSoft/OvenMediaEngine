@@ -1,7 +1,7 @@
 #include "rtc_stream.h"
 
 #include <base/info/media_extradata.h>
-#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
+#include <modules/bitstream/h264/h264_converter.h>
 
 #include "rtc_application.h"
 #include "rtc_private.h"
@@ -120,7 +120,7 @@ bool RtcStream::Start()
 
 	bool first_video_desc = true;
 	bool first_audio_desc = true;
-	uint8_t payload_type_num = PAYLOAD_TYPE_OFFSET;
+	uint8_t payload_type_num = static_cast<uint8_t>(FixedRtcPayloadType::PAYLOAD_TYPE_OFFSET);
 
 	auto cname = ov::Random::GenerateString(16);
 
@@ -150,26 +150,24 @@ bool RtcStream::Start()
 
 							//(NOTE) The software decoder of Firefox or Chrome cannot play when 64001f (High, 3.1) stream is input. 
 							// However, when I put the fake information of 42e01f in FMTP, I confirmed that both Firefox and Chrome play well (high profile, but stream without B-Frame). 
-							// I thought it would be better to put 42e01f in fmtp than put the correct value, so I decided to put fake information.
+							// I thought it would be better to put 42e01f (H264_CONVERTER_DEFAULT_PROFILE) in fmtp than put the correct value, so I decided to put fake information.
 
-							AVCDecoderConfigurationRecord config;
-							if (0 && codec_extradata.size() > 0 && AVCDecoderConfigurationRecord::Parse(codec_extradata.data(), codec_extradata.size(), config) == true)
+							// profile-level-id
+							ov::String profile_string;
+							if(false)
 							{
-								// profile-level-id
-								// |profile idc|contraint flag|level idc|
-								auto h264_fmtp = ov::String::FormatString("packetization-mode=1;profile-level-id=%02x%02x%02x;level-asymmetry-allowed=1",
-														config.ProfileIndication(), config.Compatibility(), config.LevelIndication());
-								logtc("FMTP : %s", h264_fmtp.CStr());
-								payload->SetFmtp(h264_fmtp);
+								profile_string = H264Converter::GetProfileString(codec_extradata);
 							}
-							else
+
+							if(profile_string.IsEmpty())
 							{
-								payload->SetFmtp(ov::String::FormatString(
+								profile_string = H264_CONVERTER_DEFAULT_PROFILE;
+							}
+
+							payload->SetFmtp(ov::String::FormatString(
 									// NonInterleaved => packetization-mode=1
-									// baseline & lvl 3.1 => profile-level-id=42e01f
-									"packetization-mode=1;profile-level-id=%x;level-asymmetry-allowed=1",
-									0x42e01f));
-							}
+									"packetization-mode=1;profile-level-id=%s;level-asymmetry-allowed=1",
+									profile_string.CStr()));
 						}
 
 						break;
@@ -186,6 +184,21 @@ bool RtcStream::Start()
 					video_media_desc->SetConnection(4, "0.0.0.0");
 					video_media_desc->SetMid(ov::Random::GenerateString(6));
 					video_media_desc->SetMsid(msid, ov::Random::GenerateString(36));
+					/*
+					https://tools.ietf.org/html/rfc5763#section-5
+					
+					The endpoint MUST use the setup attribute defined in [RFC4145].
+					The endpoint that is the offerer MUST use the setup attribute
+					value of setup:actpass and be prepared to receive a client_hello
+					before it receives the answer.  The answerer MUST use either a
+					setup attribute value of setup:active or setup:passive.  Note that
+					if the answerer uses setup:passive, then the DTLS handshake will
+					not begin until the answerer is received, which adds additional
+					latency. setup:active allows the answer and the DTLS handshake to
+					occur in parallel.  Thus, setup:active is RECOMMENDED.  Whichever
+					party is active MUST initiate a DTLS handshake by sending a
+					ClientHello over each flow (host/port quartet).
+					*/
 					video_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
 					video_media_desc->UseDtls(true);
 					video_media_desc->UseRtcpMux(true);
@@ -297,7 +310,7 @@ bool RtcStream::Start()
 	{
 		// RED & ULPFEC
 		auto red_payload = std::make_shared<PayloadAttr>();
-		red_payload->SetRtpmap(RED_PAYLOAD_TYPE, "red", 90000);
+		red_payload->SetRtpmap(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE), "red", 90000);
 		if (_rtx_enabled == true)
 		{
 			red_payload->EnableRtcpFb(PayloadAttr::RtcpFbType::Nack, true);
@@ -306,7 +319,7 @@ bool RtcStream::Start()
 
 		// ULPFEC
 		auto ulpfec_payload = std::make_shared<PayloadAttr>();
-		ulpfec_payload->SetRtpmap(ULPFEC_PAYLOAD_TYPE, "ulpfec", 90000);
+		ulpfec_payload->SetRtpmap(static_cast<uint8_t>(FixedRtcPayloadType::ULPFEC_PAYLOAD_TYPE), "ulpfec", 90000);
 		video_media_desc->AddPayload(ulpfec_payload);
 
 		// For RTX
@@ -314,8 +327,8 @@ bool RtcStream::Start()
 		{
 			// RTX for RED
 			auto rtx_payload = std::make_shared<PayloadAttr>();
-			rtx_payload->SetRtpmap(RED_RTX_PAYLOAD_TYPE, "rtx", 90000);
-			rtx_payload->SetFmtp(ov::String::FormatString("apt=%d", RED_PAYLOAD_TYPE));
+			rtx_payload->SetRtpmap(static_cast<uint8_t>(FixedRtcPayloadType::RED_RTX_PAYLOAD_TYPE), "rtx", 90000);
+			rtx_payload->SetFmtp(ov::String::FormatString("apt=%d", static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE)));
 
 			AddRtpHistory(red_payload->GetId(), rtx_payload->GetId(), video_media_desc->GetRtxSsrc());
 
@@ -512,7 +525,7 @@ void RtcStream::AddPacketizer(cmn::MediaCodecId codec_id, uint32_t id, uint8_t p
 {
 	logtd("Add Packetizer : codec(%u) id(%u) pt(%d) ssrc(%u)", codec_id, id, payload_type, ssrc);
 
-	auto packetizer = std::make_shared<RtpPacketizer>(RtpRtcpPacketizerInterface::GetSharedPtr());
+	auto packetizer = std::make_shared<RtpPacketizer>(RtpPacketizerInterface::GetSharedPtr());
 	packetizer->SetPayloadType(payload_type);
 	packetizer->SetSSRC(ssrc);
 
@@ -524,7 +537,7 @@ void RtcStream::AddPacketizer(cmn::MediaCodecId codec_id, uint32_t id, uint8_t p
 			packetizer->SetVideoCodec(codec_id);
 			if (_ulpfec_enabled == true)
 			{
-				packetizer->SetUlpfec(RED_PAYLOAD_TYPE, ULPFEC_PAYLOAD_TYPE);
+				packetizer->SetUlpfec(static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE), static_cast<uint8_t>(FixedRtcPayloadType::ULPFEC_PAYLOAD_TYPE));
 			}
 			break;
 		}

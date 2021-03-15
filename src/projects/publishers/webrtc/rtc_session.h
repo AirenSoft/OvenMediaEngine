@@ -7,7 +7,7 @@
 #include "modules/ice/ice_port.h"
 #include "modules//dtls_srtp/dtls_ice_transport.h"
 #include "modules/rtp_rtcp/rtp_rtcp.h"
-#include "modules/rtp_rtcp/rtp_rtcp_interface.h"
+#include "modules/rtp_rtcp/rtp_packetizer_interface.h"
 #include "modules/dtls_srtp/dtls_transport.h"
 #include <unordered_set>
 
@@ -34,7 +34,7 @@ class WebRtcPublisher;
 class RtcApplication;
 class RtcStream;
 
-class RtcSession : public pub::Session
+class RtcSession : public pub::Session, public RtpRtcpInterface
 {
 public:
 	static std::shared_ptr<RtcSession> Create(const std::shared_ptr<WebRtcPublisher> &publisher,
@@ -67,7 +67,8 @@ public:
 	bool SendOutgoingData(const std::any &packet) override;
 	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data) override;
 
-	void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info);
+	void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) override;
+	void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
 
 private:
 	bool ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info);
@@ -88,6 +89,7 @@ private:
 	uint8_t                             _video_payload_type = 0;
 	uint32_t							_video_ssrc = 0;
 	uint32_t							_video_rtx_ssrc = 0;
+	
 	uint8_t                             _audio_payload_type = 0;
 	uint32_t							_audio_ssrc = 0;
 

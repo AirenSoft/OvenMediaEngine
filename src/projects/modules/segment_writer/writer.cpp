@@ -55,8 +55,9 @@ static ov::String StringFromError(int code)
 	return str;
 }
 
-Writer::Writer(Type type)
-	: _type(type)
+Writer::Writer(Type type, MediaType media_type)
+	: _type(type),
+	  _media_type(media_type)
 {
 }
 

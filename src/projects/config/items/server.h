@@ -32,6 +32,7 @@ namespace cfg
 		ServerType _type;
 
 		ov::String _ip;
+		ov::String _stun_server;
 		bind::Bind _bind;
 
 		mgr::Managers _managers;
@@ -49,6 +50,8 @@ namespace cfg
 		CFG_DECLARE_REF_GETTER_OF(GetType, _type)
 
 		CFG_DECLARE_REF_GETTER_OF(GetIp, _ip)
+		CFG_DECLARE_REF_GETTER_OF(GetStunServer, _stun_server)
+
 		CFG_DECLARE_REF_GETTER_OF(GetBind, _bind)
 
 		CFG_DECLARE_REF_GETTER_OF(GetManagers, _managers)
@@ -98,6 +101,7 @@ namespace cfg
 			});
 
 			Register({"IP", "ip"}, &_ip);
+			Register<Optional>("StunServer", &_stun_server);
 			Register("Bind", &_bind);
 
 			Register<Optional>("Managers", &_managers);

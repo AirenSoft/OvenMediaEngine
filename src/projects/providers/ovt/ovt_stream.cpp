@@ -5,6 +5,7 @@
 #include "base/info/application.h"
 
 #include "ovt_stream.h"
+#include "ovt_provider.h"
 
 #define OV_LOG_TAG "OvtStream"
 
@@ -50,12 +51,33 @@ namespace pvd
 			_curr_url = _url_list[0];
 			SetMediaSource(_curr_url->ToUrlString(true));
 		}
+
+		logtd("OvtStream Created : %d", GetId());
 	}
 
 	OvtStream::~OvtStream()
 	{
 		Stop();
-		_client_socket.Close();
+
+		if(_client_socket != nullptr)
+		{
+			_client_socket->Close();
+			_client_socket = nullptr;
+		}
+
+		ReleasePacketizer();
+
+		logtd("OvtStream Terminated : %d", GetId());
+	}
+
+	void OvtStream::ReleasePacketizer()
+	{
+		std::lock_guard<std::shared_mutex> mlock(_packetizer_lock);
+		if(_packetizer != nullptr)
+		{
+			_packetizer->Release();
+			_packetizer.reset();
+		}
 	}
 
 	bool OvtStream::Start()
@@ -66,6 +88,7 @@ namespace pvd
 		auto begin = std::chrono::steady_clock::now();
 		if (!ConnectOrigin())
 		{
+			ReleasePacketizer();
 			return false;
 		}
 
@@ -76,6 +99,7 @@ namespace pvd
 		begin = std::chrono::steady_clock::now();
 		if (!RequestDescribe())
 		{
+			ReleasePacketizer();
 			return false;
 		}
 
@@ -84,6 +108,11 @@ namespace pvd
 		_origin_response_time_msec = static_cast<int64_t>(elapsed.count());
 
 		return pvd::PullStream::Start();
+	}
+
+	std::shared_ptr<pvd::OvtProvider> OvtStream::GetOvtProvider()
+	{
+		return std::static_pointer_cast<OvtProvider>(_application->GetParentProvider());
 	}
 
 	bool OvtStream::Play()
@@ -120,6 +149,8 @@ namespace pvd
 		{
 			SetState(State::STOPPED);
 		}
+
+		ReleasePacketizer();
 	
 		return pvd::PullStream::Stop();
 	}
@@ -144,21 +175,34 @@ namespace pvd
 			logte("The scheme is not OVT : %s", scheme.CStr());
 			return false;
 		}
-		
 
-		if (!_client_socket.Create(ov::SocketType::Tcp))
+		auto pool = GetOvtProvider()->GetClientSocketPool();
+
+		if (pool == nullptr)
 		{
-			_state = State::ERROR;
-			logte("To create client socket is failed.");
+			// Provider is not initialized
 			return false;
 		}
 
-		struct timeval tv = {5, 0};
-		_client_socket.SetRecvTimeout(tv);
+		_client_socket = pool->AllocSocket();
+
+		if ((_client_socket == nullptr) || (_client_socket->AttachToWorker() == false))
+		{
+			_state = State::ERROR;
+			logte("To create client socket is failed.");
+			
+			_client_socket = nullptr;
+			return false;
+		}
+
+		_client_socket->MakeBlocking();
+
+		struct timeval tv = {1, 500000}; // 1.5 sec
+		_client_socket->SetRecvTimeout(tv);
 
 		ov::SocketAddress socket_address(_curr_url->Host(), _curr_url->Port());
 
-		auto error = _client_socket.Connect(socket_address, 1000);
+		auto error = _client_socket->Connect(socket_address, 1500);
 		if (error != nullptr)
 		{
 			_state = State::ERROR;
@@ -186,6 +230,8 @@ namespace pvd
 		root["target"] = _curr_url->Source().CStr();
 
 		auto message = ov::Json::Stringify(root).ToData(false);
+
+		std::shared_lock<std::shared_mutex> lock(_packetizer_lock);
 		if(_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
 		{
 			return false;
@@ -362,6 +408,7 @@ namespace pvd
 
 		auto message = ov::Json::Stringify(root).ToData(false);
 
+		std::shared_lock<std::shared_mutex> lock(_packetizer_lock);
 		if(_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
 		{
 			logte("%s/%s(%u) - Could not request to play. Socket send error", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
@@ -445,6 +492,8 @@ namespace pvd
 		root["target"] = _curr_url->Source().CStr();
 
 		auto message = ov::Json::Stringify(root).ToData(false);
+
+		std::shared_lock<std::shared_mutex> lock(_packetizer_lock);
 		if(_packetizer->PacketizeMessage(OVT_PAYLOAD_TYPE_MESSAGE_REQUEST, ov::Clock::NowMSec(), message) == false)
 		{
 			return false;
@@ -455,8 +504,7 @@ namespace pvd
 
 	bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 	{
-		auto sent_bytes = _client_socket.Send(packet->GetData());
-		if(sent_bytes != static_cast<ssize_t>(packet->GetData()->GetLength()))
+		if(_client_socket->Send(packet->GetData()) == false)
 		{
 			_state = State::ERROR;
 			logte("Could not send message");
@@ -493,13 +541,13 @@ namespace pvd
 		uint8_t	buffer[65535];
 		size_t read_bytes = 0ULL;
 
-		auto error = _client_socket.Recv(buffer, 65535, &read_bytes, non_block);
+		auto error = _client_socket->Recv(buffer, 65535, &read_bytes, non_block);
 		if(read_bytes == 0)
 		{
 			if (error != nullptr)
 			{
 				logte("[%s/%s] An error occurred while receiving packet: %s", GetApplicationName(), GetName().CStr(), error->ToString().CStr());
-				_client_socket.Close();
+				_client_socket->Close();
 				_state = State::ERROR;
 				return false;
 			}
@@ -529,7 +577,7 @@ namespace pvd
 
 	int OvtStream::GetFileDescriptorForDetectingEvent()
 	{
-		return _client_socket.GetSocket().GetSocket();
+		return _client_socket->GetNativeHandle();
 	}
 
 	PullStream::ProcessMediaResult OvtStream::ProcessMediaPacket()

@@ -10,22 +10,21 @@
 
 #pragma once
 
-#include <base/publisher/session_node.h>
+#include <base/ovlibrary/node.h>
+#include <base/info/session.h>
 #include "modules/ice/ice_port.h"
 
-
-class DtlsIceTransport : public pub::SessionNode
+class DtlsIceTransport : public ov::Node
 {
 public:
-	DtlsIceTransport(uint32_t node_id, std::shared_ptr<pub::Session> session, std::shared_ptr<IcePort> ice_port);
+	DtlsIceTransport(session_id_t session_id, const std::shared_ptr<IcePort> &ice_port);
 	virtual ~DtlsIceTransport();
 
-	// Implement SessionNode Interface
-	// 데이터를 upper에서 받는다. lower node로 보낸다.
-	bool SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data) override;
-	// 데이터를 lower에서 받는다. upper node로 보낸다.
-	bool OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
+	// Implement ov::Node Interface
+	bool SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
+	bool OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
 private:
+	session_id_t _session_id;
 	std::shared_ptr<IcePort> _ice_port;
 };

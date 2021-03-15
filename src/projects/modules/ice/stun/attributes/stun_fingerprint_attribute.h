@@ -8,27 +8,11 @@
 //==============================================================================
 #pragma once
 
-#include "stun_attribute.h"
-
+#include "templates/stun_octet_attribute_format.h"
 #include "modules/ice/stun/stun_datastructure.h"
-
-class StunFingerprintAttribute : public StunAttribute
+class StunFingerprintAttribute : public StunOctetAttributeFormat<uint32_t>
 {
 public:
-	StunFingerprintAttribute();
-	StunFingerprintAttribute(int length);
-	virtual ~StunFingerprintAttribute();
-
-	virtual bool Parse(ov::ByteStream &stream) override;
-
-	uint32_t GetCrc() const;
-	bool SetCrc(uint32_t crc);
-
-	bool Serialize(ov::ByteStream &stream) const noexcept override;
-
-	ov::String ToString() const override;
-
-protected:
-	uint32_t _crc;
+	StunFingerprintAttribute():StunFingerprintAttribute(sizeof(uint32_t)){}
+	StunFingerprintAttribute(int length):StunOctetAttributeFormat(StunAttributeType::Fingerprint, length){}
 };
-

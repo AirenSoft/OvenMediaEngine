@@ -100,7 +100,6 @@ public:
 
 	bool operator ==(const SessionDescription &description) const
 	{
-		// TODO(getroot): this와 description이 같은지를 판단할 수 있게 해주세요
 		return (_session_id == description._session_id);
 	}
 

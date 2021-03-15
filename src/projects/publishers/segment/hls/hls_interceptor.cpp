@@ -25,6 +25,11 @@ HlsInterceptor::~HlsInterceptor()
 //====================================================================================================
 bool HlsInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
 {
+	if(SegmentStreamInterceptor::IsInterceptorForRequest(client) == false)
+	{
+		return false;
+	}
+	
     const auto request = client->GetRequest();
 
 	// logtd("Request Target : %s", request->GetRequestTarget().CStr());

@@ -13,24 +13,18 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/info/session.h>
 #include <modules/sdp/session_description.h>
+#include <modules/rtc_signalling/rtc_ice_candidate.h>
 
 enum class IcePortConnectionState : int
 {
-	// 새로운 클라이언트가 접속함
-		New,
-	// <Browser의 Binding request> ~ <Browser의 Binding response> 까지의 상태
-		Checking,
-	// Binding request & response가 올바르게 잘 된 상태
-		Connected,
+	New,
+	Checking,
+	Connected,
 	Completed,
-	// 오류 발생
-		Failed,
-	// 접속이 해제된 상태. Timeout이 발생한 경우에도 disconnected이 전달됨
-		Disconnected,
+	Failed,
+	Disconnected,
 	Closed,
-
-	// 개수 세기 위한 용도
-		Max,
+	Max,
 };
 
 class IcePort;
@@ -38,20 +32,21 @@ class IcePort;
 class IcePortObserver : public ov::EnableSharedFromThis<IcePortObserver>
 {
 public:
-	// ICE 접속 상태가 바뀜
-	virtual void OnStateChanged(IcePort &port, const std::shared_ptr<info::Session> &session, IcePortConnectionState state)
+	friend class IcePortManager;
+
+	virtual void OnStateChanged(IcePort &port, uint32_t session_id, IcePortConnectionState state, std::any user_data)
 	{
 		// dummy function
 	}
-
-	// ICE 경로가 바뀜. 즉, A candidate로 통신하다 실패하면 B candidate로 절체되는데, 이 때 호출됨.
-	// 일반적인 경우 이 이벤트를 처리할 필요 없음
-	// TODO: OnRouteChanged 이벤트가 notify 되도록 구현
 	virtual void OnRouteChanged(IcePort &port)
 	{
 		// dummy function
 	}
+	virtual void OnDataReceived(IcePort &port, uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data) = 0;
 
-	// 데이터가 수신됨
-	virtual void OnDataReceived(IcePort &port, const std::shared_ptr<info::Session> &session, std::shared_ptr<const ov::Data> data) = 0;
+private:
+	uint32_t _id = 0;
+	std::vector<RtcIceCandidate> _ice_candidate_list;
+	ov::SocketType _turn_server_socket_type = ov::SocketType::Unknown;
+	uint16_t _turn_server_port = 0;
 };

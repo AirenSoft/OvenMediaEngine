@@ -85,6 +85,16 @@ bool AVCDecoderConfigurationRecord::Parse(const uint8_t *data, size_t data_lengt
 	return true;
 }
 
+bool AVCDecoderConfigurationRecord::Parse(const std::vector<uint8_t> &data, AVCDecoderConfigurationRecord &record)
+{
+	if(data.size() == 0)
+	{
+		return false;
+	}
+
+	return Parse(data.data(), data.size(), record);
+}
+
 uint8_t AVCDecoderConfigurationRecord::Version()
 {
 	return _version;

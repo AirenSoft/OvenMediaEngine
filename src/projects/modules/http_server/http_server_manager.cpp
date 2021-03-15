@@ -32,6 +32,23 @@ std::shared_ptr<HttpServer> HttpServerManager::CreateHttpServer(const char *serv
 				logte("Cannot reuse instance: Requested HttpServer, but previous instance is HttpsServer (%s)", address.ToString().CStr());
 				http_server = nullptr;
 			}
+			else
+			{
+				if (worker_count != HTTP_SERVER_USE_DEFAULT_COUNT)
+				{
+					auto physical_port = http_server->GetPhysicalPort();
+
+					if (physical_port != nullptr)
+					{
+						if (physical_port->GetWorkerCount() != worker_count)
+						{
+							logtw("The number of workers in the existing physical port differs from the number of workers passed by the argument: physical port: %zu, argument: %zu",
+								  physical_port->GetWorkerCount(), worker_count);
+							logtw("Because worker counts are different, the first initialized count is used: %d", physical_port->GetWorkerCount());
+						}
+					}
+				}
+			}
 		}
 		else
 		{

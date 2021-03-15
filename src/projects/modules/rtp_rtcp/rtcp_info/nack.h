@@ -3,6 +3,31 @@
 #include "rtcp_info.h"
 #include "../rtcp_packet.h"
 
+// RFC 4585: Feedback format.
+//
+// Common packet format:
+//
+//    0                   1                   2                   3
+//    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |V=2|P|   FMT   |       PT      |          length               |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// 0 |                  SSRC of packet sender                        |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// 4 |                  SSRC of media source                         |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   :            Feedback Control Information (FCI)                 :
+//   :                                                               :
+//
+// Generic NACK (RFC 4585).
+//
+// FCI:
+//    0                   1                   2                   3
+//    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   |            PID                |             BLP               |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
 class NACK : public RtcpInfo
 {
 public:
@@ -21,7 +46,7 @@ public:
 	}
 
 	// If the packet type is one of the feedback messages (205, 206) child must provide fmt(format)
-	uint8_t GetFmt() const override
+	uint8_t GetCountOrFmt() const override
 	{
 		return static_cast<uint8_t>(RTPFBFMT::NACK);
 	}

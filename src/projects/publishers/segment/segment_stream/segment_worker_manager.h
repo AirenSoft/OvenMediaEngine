@@ -77,7 +77,6 @@ public:
 				 const ov::String &origin_url);
 
 private:
-	int _worker_count = 0;
 	int _worker_index = 0;
 
 	std::vector<std::shared_ptr<SegmentWorker>> _workers;

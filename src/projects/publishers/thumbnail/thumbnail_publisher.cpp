@@ -52,12 +52,15 @@ bool ThumbnailPublisher::Start()
 	bool http_server_result = true;
 	ov::SocketAddress address;
 	bool is_parsed;
+	auto worker_count = thumbnail_bind_config.GetWorkerCount(&is_parsed);
+	worker_count = is_parsed ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
+
 	auto &port = thumbnail_bind_config.GetPort(&is_parsed);
 	if (is_parsed)
 	{
 		address = ov::SocketAddress(server_config.GetIp(), port.GetPort());
 
-		_http_server = manager->CreateHttpServer("ThumbnailPublisher", address);
+		_http_server = manager->CreateHttpServer("ThumbnailPublisher", address, worker_count);
 
 		if (_http_server != nullptr)
 		{

@@ -25,7 +25,7 @@ namespace pvd
     }
 
 	// To be interleaved mode, a channel must have applicaiton/stream and track informaiton
-	bool PushProvider::PublishInterleavedChannel(uint32_t channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &signal_channel)
+	bool PushProvider::PublishChannel(uint32_t channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<PushStream> &channel)
 	{
 		// Append the stream into the application
 		auto application = std::dynamic_pointer_cast<PushApplication>(GetApplicationByName(vhost_app_name));
@@ -35,24 +35,7 @@ namespace pvd
 			return false;
 		}
 
-		return application->JoinStream(signal_channel);
-	}
-
-	// A data channel must have applicaiton/stream and track informaiton
-	bool PushProvider::PublishDataChannel(uint32_t channel_id, uint32_t signalling_channel_id, const info::VHostAppName &vhost_app_name, const std::shared_ptr<pvd::PushStream> &channel)
-	{
-		// Create stream
-		channel->SetRelatedChannelId(signalling_channel_id);
-
-		auto application = GetApplicationByName(vhost_app_name);
-		if(application == nullptr)
-		{
-			logte("Cannot find %s application to create %s stream", vhost_app_name.CStr(), channel->GetName().CStr());
-		}
-
-		// Notify stream created 
-
-		return false;
+		return application->JoinStream(channel);
 	}
 
 	std::shared_ptr<PushStream> PushProvider::GetChannel(uint32_t channel_id)
@@ -68,7 +51,7 @@ namespace pvd
 		return it->second;
 	}
 
-	bool PushProvider::OnSignallingChannelCreated(uint32_t channel_id, const std::shared_ptr<pvd::PushStream> &channel)
+	bool PushProvider::OnChannelCreated(uint32_t channel_id, const std::shared_ptr<pvd::PushStream> &channel)
 	{
 		std::lock_guard<std::shared_mutex> lock(_channels_lock);
 
@@ -109,7 +92,7 @@ namespace pvd
 		
 		if(_channels.erase(channel->GetChannelId()) == 0)
 		{
-			// Something wrong
+			// probabliy, it was removed 
 			logte("%d channel to be deleted cannot be found", channel->GetChannelId());
 			return false;
 		}

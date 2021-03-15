@@ -5,8 +5,8 @@
 
 #define OV_LOG_TAG              "DTLS"
 
-DtlsTransport::DtlsTransport(uint32_t id, std::shared_ptr<pub::Session> session)
-	: SessionNode(id, pub::SessionNodeType::Dtls, std::move(session))
+DtlsTransport::DtlsTransport()
+	: ov::Node(NodeType::Dtls)
 {
 	_state = SSL_NONE;
 	_peer_cerificate_verified = false;
@@ -23,7 +23,7 @@ bool DtlsTransport::Stop()
 
 	_tls.Uninitialize();
 
-	return SessionNode::Stop();
+	return ov::Node::Stop();
 }
 
 // Set Local Certificate
@@ -125,7 +125,7 @@ bool DtlsTransport::ContinueSSL()
 
 		if(VerifyPeerCertificate() == false)
 		{
-			logte("(%u) Session could not verify peer certificate", GetSession()->GetId());
+			logte("Session could not verify peer certificate");
 			return false;
 		}
 
@@ -155,7 +155,7 @@ bool DtlsTransport::MakeSrtpKey()
 	_tls.ExportKeyingMaterial(crypto_suite, label, server_key, client_key);
 
 	auto node = GetUpperNode();
-	if(node->GetNodeType() == pub::SessionNodeType::Srtp)
+	if(node->GetNodeType() == NodeType::Srtp)
 	{
 		auto srtp_transport = std::static_pointer_cast<SrtpTransport>(node);
 		srtp_transport->SetKeyMeterial(crypto_suite, server_key, client_key);
@@ -172,11 +172,11 @@ bool DtlsTransport::VerifyPeerCertificate()
 	return true;
 }
 
-bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_ptr<ov::Data> &data)
+bool DtlsTransport::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
-	if(GetState() != SessionNode::NodeState::Started)
+	if(GetState() != ov::Node::NodeState::Started)
 	{
-		logtd("SessionNode has not started, so the received data has been canceled.");
+		logtd("Node has not started, so the received data has been canceled.");
 		return false;
 	}
 
@@ -188,9 +188,9 @@ bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 			break;
 		case SSL_CONNECTED:
 			// Since SRTP is already encrypted, it is sent directly to ICE.
-			if(from_node == pub::SessionNodeType::Srtp)
+			if(from_node == NodeType::Srtp)
 			{
-				auto node = GetLowerNode(pub::SessionNodeType::Ice);
+				auto node = GetLowerNode(NodeType::Ice);
 				if(node == nullptr)
 				{
 					return false;
@@ -225,11 +225,11 @@ bool DtlsTransport::SendData(pub::SessionNodeType from_node, const std::shared_p
 }
 
 // IcePort -> Publisher ->[queue] Application {thread}-> Session -> DtlsTransport -> SRTP || SCTP
-bool DtlsTransport::OnDataReceived(pub::SessionNodeType from_node, const std::shared_ptr<const ov::Data> &data)
+bool DtlsTransport::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
-	if(GetState() != SessionNode::NodeState::Started)
+	if(GetState() != ov::Node::NodeState::Started)
 	{
-		logtd("SessionNode has not started, so the received data has been canceled.");
+		logtd("Node has not started, so the received data has been canceled.");
 		return false;
 	}
 
@@ -325,7 +325,7 @@ ssize_t DtlsTransport::Write(ov::Tls *tls, const void *data, size_t length)
 {
 	auto packet = std::make_shared<ov::Data>(data, length);
 
-	auto node = GetLowerNode(pub::SessionNodeType::Ice);
+	auto node = GetLowerNode(NodeType::Ice);
 
 	if(node == nullptr)
 	{

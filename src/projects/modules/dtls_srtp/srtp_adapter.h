@@ -23,6 +23,7 @@ public:
 
 	bool	ProtectRtp(std::shared_ptr<ov::Data> data);
     bool	ProtectRtcp(std::shared_ptr<ov::Data> data);
+	bool	UnprotectRtp(const std::shared_ptr<ov::Data> &data);
     bool	UnprotectRtcp(const std::shared_ptr<ov::Data> &data);
 
 private:

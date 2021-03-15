@@ -36,6 +36,11 @@ Please click on each banner below for details.
 * Embedded WebRTC Signalling Server \(WebSocket based\)
 * Origin-Edge structure
 * Monitoring
+* Beta
+  * File Recording
+  * RTMP Push Publishing(re-streaming)
+  * Thumbnail
+  * REST API
 * Experiment
   * P2P Traffic Distribution (Only WebRTC)
 
@@ -112,6 +117,8 @@ And we are love to hear use cases. Please tell your story to [contact@airensoft.
   * Basic Information, FAQ, and Benchmark
 * [OvenMediaEngine Tutorials](https://airensoft.gitbook.io/ovenmediaengine/)
   * Getting Started, Install, and Configuration
+* [OvenMediaEngine Tutorials Source](https://github.com/AirenSoft/OvenMediaEngineDocs)
+  * Please make a pull request for the manual in this project. Thanks for your contribution.
 * Test Player
   * `Without TLS` : [http://demo.ovenplayer.com](http://demo.ovenplayer.com)
   * `Based on TLS` : [https://demo.ovenplayer.com](https://demo.ovenplayer.com)

@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "log_internal.h"
+#include "platform.h"
 
 #include <thread>
 
@@ -157,11 +158,6 @@ namespace ov
 		}
 	}
 
-	int64_t LogInternal::GetThreadId()
-	{
-		return (int64_t)::syscall(SYS_gettid);
-	}
-
 	void LogInternal::Log(bool show_format, OVLogLevel level, const char *tag, const char *file, int line, const char *method, const char *format, va_list &arg_list)
 	{
 		if (level < _level)
@@ -252,9 +248,8 @@ namespace ov
 
 		if (show_format)
 		{
-			auto tid = GetThreadId();
-			char name[16]{};
-			::pthread_getname_np(::pthread_self(), name, 16);
+			auto tid = ov::Platform::GetThreadId();
+			auto name = ov::Platform::GetThreadName();
 
 			// log format
 			//  [<date> <time>] <tag> <log level> <thread id> | <message>
@@ -277,7 +272,7 @@ namespace ov
 				// <log level>
 				" %s"
 				// <thread id>
-				" [%s:%ld]"
+				" [%s:%lu]"
 				// tag
 				"%s%s"
 				// |
@@ -315,7 +310,7 @@ namespace ov
 		}
 
 		// Append messages
-		log.AppendVFormat(format, &(arg_list[0]));
+		log.AppendVFormat(format, arg_list);
 		if (show_format)
 		{
 			if (level < OVLogLevelWarning)

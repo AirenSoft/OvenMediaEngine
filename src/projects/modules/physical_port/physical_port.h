@@ -16,25 +16,28 @@
 
 #include "physical_port_observer.h"
 
-class PhysicalPortWorker;
+class PhysicalPortManager;
 
-#define PHYSICAL_PORT_EPOLL_TIMEOUT_MSEC 500
-
-// PhysicalPort는 여러 곳에서 공유해서 사용할 수 있음
-// PhysicalPortObserver를 iteration 하면서 callback 할 수 있는 구조 필요
 class PhysicalPort : public ov::EnableSharedFromThis<PhysicalPort>
 {
-public:
-	friend class PhysicalPortWorker;
+protected:
+	OV_SOCKET_DECLARE_PRIVATE_TOKEN();
 
-	PhysicalPort();
+	friend class PhysicalPortManager;
+
+public:
+	explicit PhysicalPort(PrivateToken token)
+	{
+	}
+
 	virtual ~PhysicalPort();
 
-	bool Create(ov::SocketType type,
+	bool Create(const char *name,
+				ov::SocketType type,
 				const ov::SocketAddress &address,
+				int worker_count,
 				int send_buffer_size,
-				int recv_buffer_size,
-				int worker_count);
+				int recv_buffer_size);
 
 	bool Close();
 
@@ -68,37 +71,47 @@ public:
 	std::shared_ptr<const ov::Socket> GetSocket() const;
 	std::shared_ptr<ov::Socket> GetSocket();
 
+	int GetWorkerCount() const
+	{
+		return _socket_pool->GetWorkerCount();
+	}
+
 	bool AddObserver(PhysicalPortObserver *observer);
 
 	bool RemoveObserver(PhysicalPortObserver *observer);
 
-	bool DisconnectClient(ov::ClientSocket *client_socket);
-
 	ov::String ToString() const;
 
 protected:
-	bool CreateServerSocket(ov::SocketType type,
+	bool CreateServerSocket(const char *name,
+							ov::SocketType type,
 							const ov::SocketAddress &address,
+							int worker_count,
 							int send_buffer_size,
-							int recv_buffer_size,
-							int worker_count);
+							int recv_buffer_size);
 
-	bool CreateDatagramSocket(ov::SocketType type, const ov::SocketAddress &address);
+	bool CreateDatagramSocket(const char *name,
+							  ov::SocketType type,
+							  const ov::SocketAddress &address,
+							  int worker_count);
 
-	ov::SocketType _type;
+	// For TCP physical port
+	void OnClientConnectionStateChanged(const std::shared_ptr<ov::ClientSocket> &client, ov::SocketConnectionState state, const std::shared_ptr<ov::Error> &error);
+	void OnClientData(const std::shared_ptr<ov::ClientSocket> &client, const std::shared_ptr<const ov::Data> &data);
+
+	// For UDP physical port
+	void OnDatagram(const std::shared_ptr<ov::DatagramSocket> &client, const ov::SocketAddress &remote_address, const std::shared_ptr<ov::Data> &data);
+
+	std::shared_ptr<ov::SocketPool> _socket_pool;
+
+	ov::SocketType _type = ov::SocketType::Unknown;
 	ov::SocketAddress _address;
 
 	std::shared_ptr<ov::ServerSocket> _server_socket;
 	std::shared_ptr<ov::DatagramSocket> _datagram_socket;
 
-	volatile bool _need_to_stop;
-	std::thread _thread;
+	std::atomic<int> _ref_count{0};
 
-	std::atomic<int> _ref_count { 0 };
-
-	// TODO(dimiden): Must use a mutex to prevent race condition
+	// Because the life cycle of PhysicalPort is the same as that of the OME now, we do not need to use mutex for _observer_list
 	std::vector<PhysicalPortObserver *> _observer_list;
-
-	std::shared_mutex _worker_mutex;
-	std::vector<std::shared_ptr<PhysicalPortWorker>> _worker_list;
 };

@@ -8,14 +8,14 @@
 //==============================================================================
 #include "platform.h"
 
-#include <unistd.h>
-#include <sys/syscall.h>
-#include <zconf.h>
 #include <pthread.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <zconf.h>
 
 namespace ov
 {
-	std::string Platform::GetName()
+	const char *Platform::GetName()
 	{
 		return PLATFORM_NAME;
 	}
@@ -37,4 +37,18 @@ namespace ov
 		return 0ULL;
 #endif
 	}
-}
+
+	const char *Platform::GetThreadName()
+	{
+		static thread_local char name[16]{0};
+		static thread_local bool initialized = false;
+
+		if (initialized == false)
+		{
+			::pthread_getname_np(::pthread_self(), name, 16);
+			initialized = true;
+		}
+
+		return name;
+	}
+}  // namespace ov

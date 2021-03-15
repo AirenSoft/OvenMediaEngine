@@ -12,7 +12,7 @@ bool RtcpPacket::Build(const RtcpInfo &info)
 		return false;
 	}
 
-	SetReportCount(info.GetCount());
+	SetReportCount(info.GetCountOrFmt());
 	SetType(info.GetPacketType());
 
 	_payload_size = info_data->GetLength();
@@ -26,7 +26,7 @@ bool RtcpPacket::Build(const RtcpInfo &info)
 	uint8_t version = 2 << 6;
 	uint8_t padding = false ? 1 << 5 : 0; // We don't use padding bit
 	
-	buffer[0] = version | padding | info.GetCount();
+	buffer[0] = version | padding | info.GetCountOrFmt();
 	buffer[1] = static_cast<uint8_t>(info.GetPacketType());
 
 	// Payload length must be divided zero

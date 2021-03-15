@@ -241,6 +241,7 @@ bool RtpPacketizerH264::NextPacket(RtpPacket* rtp_packet)
 	return true;
 }
 
+// [kStapA][Len][Fragment][Len][Fragment]...
 void RtpPacketizerH264::NextAggregatePacket(RtpPacket* rtp_packet, bool last) 
 {
 	uint8_t* buffer = rtp_packet->AllocatePayload(last ? _max_payload_len - _last_packet_reduction_len : _max_payload_len);

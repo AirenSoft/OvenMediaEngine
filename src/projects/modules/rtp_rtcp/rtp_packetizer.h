@@ -9,7 +9,7 @@
 class RtpPacketizer
 {
 public:
-	RtpPacketizer(std::shared_ptr<RtpRtcpPacketizerInterface> session);
+	RtpPacketizer(std::shared_ptr<RtpPacketizerInterface> session);
 	~RtpPacketizer();
 
 	void SetVideoCodec(cmn::MediaCodecId codec_type);
@@ -77,5 +77,5 @@ private:
 	uint64_t		_rtp_packet_count = 0;
 
 	// Session Descriptor
-	std::shared_ptr<RtpRtcpPacketizerInterface> _stream;
+	std::shared_ptr<RtpPacketizerInterface> _stream;
 };

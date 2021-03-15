@@ -18,6 +18,8 @@
 #include "http_response.h"
 #include "interceptors/default/http_default_interceptor.h"
 
+#define HTTP_SERVER_USE_DEFAULT_COUNT PHYSICAL_PORT_USE_DEFAULT_COUNT
+
 // 참고 자료
 // RFC7230 - Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing (https://tools.ietf.org/html/rfc7230)
 // RFC7231 - Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content (https://tools.ietf.org/html/rfc7231)
@@ -30,6 +32,9 @@ namespace ocst
 
 class HttpServer : protected PhysicalPortObserver, public ov::EnableSharedFromThis<HttpServer>
 {
+protected:
+	friend class HttpServerManager;
+
 public:
 	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpClient>>;
 	using ClientIterator = std::function<bool(const std::shared_ptr<HttpClient> &client)>;
@@ -67,6 +72,11 @@ protected:
 	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
 	void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
 
+	std::shared_ptr<PhysicalPort> GetPhysicalPort()
+	{
+		return _physical_port;
+	}
+
 	ov::String _server_name;
 
 	// HttpServer와 연결된 physical port
@@ -81,4 +91,7 @@ protected:
 	std::shared_ptr<HttpRequestInterceptor> _default_interceptor = std::make_shared<HttpDefaultInterceptor>();
 
 	std::vector<std::shared_ptr<ocst::VirtualHost>> _virtual_host_list;
+
+private:
+	bool IsWebSocketRequest(const std::shared_ptr<const HttpRequest> &request);
 };

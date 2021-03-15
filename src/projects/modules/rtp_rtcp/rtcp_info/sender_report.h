@@ -23,7 +23,7 @@ public:
 		return RtcpPacketType::SR;
 	}
 
-	uint8_t GetCount() const override
+	uint8_t GetCountOrFmt() const override
 	{
 		return _report_block_list.size();
 	}

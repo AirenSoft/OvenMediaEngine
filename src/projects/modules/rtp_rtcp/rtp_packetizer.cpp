@@ -8,7 +8,7 @@
 
 #define OV_LOG_TAG "RtpRtcp"
 
-RtpPacketizer::RtpPacketizer(std::shared_ptr<RtpRtcpPacketizerInterface> session)
+RtpPacketizer::RtpPacketizer(std::shared_ptr<RtpPacketizerInterface> session)
 {
 	_stream = session;
 

@@ -96,6 +96,20 @@ namespace pvd
 		return nullptr;
 	}
 
+	bool Application::AddStream(const std::shared_ptr<Stream> &stream)
+	{
+		stream->SetApplication(GetSharedPtrAs<Application>());
+		stream->SetApplicationInfo(GetSharedPtrAs<Application>());
+
+		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);
+		_streams[stream->GetId()] = stream;
+		streams_lock.unlock();
+
+		NotifyStreamCreated(stream);
+		
+		return true;
+	}
+
 	bool Application::DeleteStream(const std::shared_ptr<Stream> &stream)
 	{
 		std::unique_lock<std::shared_mutex> streams_lock(_streams_guard);

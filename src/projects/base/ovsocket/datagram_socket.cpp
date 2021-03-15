@@ -8,128 +8,91 @@
 //==============================================================================
 
 #include "datagram_socket.h"
+
 #include "client_socket.h"
 #include "socket_private.h"
 
+#undef OV_LOG_TAG
+#define OV_LOG_TAG "Socket.Datagram"
+
+#define logad(format, ...) logtd("[%p] " format, this, ##__VA_ARGS__)
+#define logas(format, ...) logts("[%p] " format, this, ##__VA_ARGS__)
+
+#define logai(format, ...) logti("[%p] " format, this, ##__VA_ARGS__)
+#define logaw(format, ...) logtw("[%p] " format, this, ##__VA_ARGS__)
+#define logae(format, ...) logte("[%p] " format, this, ##__VA_ARGS__)
+#define logac(format, ...) logtc("[%p] " format, this, ##__VA_ARGS__)
+
 namespace ov
 {
-	bool DatagramSocket::Prepare(int port)
+	bool DatagramSocket::Prepare(int port, DatagramCallback datagram_callback)
 	{
-		return Prepare(SocketAddress(port));
+		return Prepare(SocketAddress(port), std::move(datagram_callback));
 	}
 
-	bool DatagramSocket::Prepare(const SocketAddress &address)
+	bool DatagramSocket::Prepare(const SocketAddress &address, DatagramCallback datagram_callback)
 	{
-		CHECK_STATE(== SocketState::Closed, false);
+		CHECK_STATE(== SocketState::Created, false);
 
-		if(
+		if (
 			(
-				Create(SocketType::Udp) &&
-				MakeNonBlocking() &&
-				PrepareEpoll() &&
-				AddToEpoll(this, static_cast<void *>(this)) &&
+				MakeNonBlocking(GetSharedPtrAs<ov::SocketAsyncInterface>()) &&
 				SetSockOpt<int>(SO_REUSEADDR, 1) &&
-				Bind(address)
-			) == false)
+				Bind(address)))
 		{
-			// 중간 과정에서 오류가 발생하면 실패 반환
-			Close();
-			return false;
+			_datagram_callback = std::move(datagram_callback);
+
+			return true;
 		}
 
-		return true;
+		Close();
+
+		return false;
 	}
 
-	bool DatagramSocket::DispatchEvent(const DatagramCallback& data_callback, int timeout)
+	bool DatagramSocket::CloseInternal()
 	{
-		CHECK_STATE2(>= SocketState::Created, <= SocketState::Bound, false);
-		OV_ASSERT2(data_callback != nullptr);
+		_callback = nullptr;
 
-		if(_is_nonblock)
+		return Socket::CloseInternal();
+	}
+
+	void DatagramSocket::OnReadable()
+	{
+		logtp("Trying to read UDP packets...");
+
+		auto data = std::make_shared<ov::Data>(UdpBufferSize);
+
+		while (true)
 		{
-			int count = EpollWait(timeout);
+			SocketAddress remote;
+			auto error = RecvFrom(data, &remote);
 
-			for(int index = 0; index < count; index++)
+			if (error == nullptr)
 			{
-				const epoll_event *event = EpollEvents(index);
-
-				if(event == nullptr)
+				if (data->GetLength() == 0L)
 				{
-					// 버그가 아닌 이상 nullptr이 될 수 없음
-					OV_ASSERT2(false);
-					return false;
-				}
-
-				void *epoll_data = event->data.ptr;
-
-				if(
-					OV_CHECK_FLAG(event->events, EPOLLERR) ||
-					OV_CHECK_FLAG(event->events, EPOLLHUP) ||
-					(!OV_CHECK_FLAG(event->events, EPOLLIN))
-					)
-				{
-					// 오류 발생
-					logte("[#%d] Epoll error: %p, events: %s (%d)", GetSocket(), epoll_data, StringFromEpollEvent(event).CStr(), event->events);
-					_last_epoll_event_count = 0;
-					return false;
-				}
-				else if(epoll_data == static_cast<void *>(this))
-				{
-					logtd("Trying to read UDP packets...");
-
-					while(true)
-					{
-						std::shared_ptr<Data> data = std::make_shared<ov::Data>(UdpBufferSize);
-
-						// socket에서 이벤트 발생
-						std::shared_ptr<SocketAddress> remote;
-						std::shared_ptr<ov::Error> error = RecvFrom(data, &remote);
-
-						if(data->GetLength() > 0L)
-						{
-							data_callback(this->GetSharedPtrAs<DatagramSocket>(), *(remote.get()), data);
-						}
-
-						if(error != nullptr)
-						{
-							logtw("[#%d] An error occurred: %s", GetSocket(), error->ToString().CStr());
-							break;
-						}
-						else
-						{
-							if(data->GetLength() == 0L)
-							{
-								// 다음 데이터를 기다려야 함
-								break;
-							}
-						}
-					}
-
-					logtd("All UDP data are processed");
+					// Try later
+					break;
 				}
 				else
 				{
-					// epoll에 자기 자신만 등록해놓은 상태이므로, 절대로 여기로 진입할 수 없음
-					OV_ASSERT2(false);
-					_last_epoll_event_count = 0;
-					return false;
+					if (_datagram_callback != nullptr)
+					{
+						_datagram_callback(GetSharedPtrAs<DatagramSocket>(), remote, data->Clone());
+					}
 				}
-
-				_last_epoll_event_count--;
 			}
-
-			OV_ASSERT2(_last_epoll_event_count == 0);
+			else
+			{
+				// An error occurred
+				break;
+			}
 		}
-		else
-		{
-
-		}
-
-		return true;
 	}
 
 	String DatagramSocket::ToString() const
 	{
 		return Socket::ToString("DatagramSocket");
 	}
-}
+}  // namespace ov
