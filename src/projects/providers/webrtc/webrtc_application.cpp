@@ -83,7 +83,6 @@ namespace pvd
 		///////////////////////////////////////
 		auto video_media_desc = std::make_shared<MediaDescription>();
 		video_media_desc->SetMediaType(MediaDescription::MediaType::Video);
-		video_media_desc->SetCname(cname);
 		video_media_desc->SetConnection(4, "0.0.0.0");
 		video_media_desc->SetMid(ov::Random::GenerateString(6));
 		video_media_desc->SetMsid(msid, ov::Random::GenerateString(36));
@@ -91,7 +90,8 @@ namespace pvd
 		video_media_desc->UseDtls(true);
 		video_media_desc->UseRtcpMux(true);
 		video_media_desc->SetDirection(MediaDescription::Direction::RecvOnly);
-		video_media_desc->SetSsrc(ov::Random::GenerateUInt32());
+		//video_media_desc->SetCname(cname);
+		//video_media_desc->SetSsrc(ov::Random::GenerateUInt32());
 		// not support yet
 		// video_media_desc->SetRtxSsrc(ov::Random::GenerateUInt32()); 
 
@@ -106,6 +106,7 @@ namespace pvd
 		auto payload = std::make_shared<PayloadAttr>();
 		payload->SetRtpmap(payload_type_num++, "H264", 90000);
 		payload->SetFmtp(ov::String::FormatString("packetization-mode=1;profile-level-id=%x;level-asymmetry-allowed=1",	0x42e01f));
+		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::CcmFir, true);
 		video_media_desc->AddPayload(payload);
 
 		video_media_desc->Update();

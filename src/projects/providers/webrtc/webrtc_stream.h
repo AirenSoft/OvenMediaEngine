@@ -59,6 +59,11 @@ namespace pvd
 		bool AddDepacketizer(uint8_t payload_type, cmn::MediaCodecId codec_id);
 		std::shared_ptr<RtpDepacketizingManager> GetDepacketizer(uint8_t payload_type);
 
+		bool SendFIR();
+
+		uint8_t _fir_seq = 0;
+		ov::StopWatch _fir_timer;
+
 		std::shared_ptr<const SessionDescription> _offer_sdp;
 		std::shared_ptr<const SessionDescription> _peer_sdp;
 		std::shared_ptr<IcePort> _ice_port;

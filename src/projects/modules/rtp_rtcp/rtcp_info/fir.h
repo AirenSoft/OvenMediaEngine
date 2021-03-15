@@ -19,16 +19,18 @@
 //   :            Feedback Control Information (FCI)                 :
 //   :                                                               :
 //
-// Generic NACK (RFC 4585).
+// FIR (https://tools.ietf.org/html/rfc5104#section-4.3.1.1)
 //
 // FCI:
 //    0                   1                   2                   3
 //    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |            PID                |             BLP               |
+//   |                              SSRC                             |
+//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//   | Seq nr.       |    Reserved                                   |
 //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-class NACK : public RtcpInfo
+class FIR : public RtcpInfo
 {
 public:
 	///////////////////////////////////////////
@@ -42,35 +44,38 @@ public:
 	// RtcpInfo must provide packet type
 	RtcpPacketType GetPacketType() const override
 	{
-		return RtcpPacketType::RTPFB;
+		return RtcpPacketType::PSFB;
 	}
 
 	// If the packet type is one of the feedback messages (205, 206) child must provide fmt(format)
 	uint8_t GetCountOrFmt() const override
 	{
-		return static_cast<uint8_t>(RTPFBFMT::NACK);
+		return static_cast<uint8_t>(PSFBFMT::FIR);
 	}
-	
-	// Feedback
-	uint32_t GetSrcSsrc(){return _src_ssrc;}
+
+	// FEEDBACK
+	uint32_t GetSrcSsrc() const {return _src_ssrc;}
 	void SetSrcSsrc(uint32_t ssrc){_src_ssrc = ssrc;}
-	uint32_t GetMediaSsrc(){return _media_ssrc;}
+	uint32_t GetMediaSsrc() const {return _media_ssrc;}
 	void SetMediaSsrc(uint32_t ssrc){_media_ssrc = ssrc;}
 
-	size_t GetLostIdCount(){return _lost_ids.size();}
-	uint16_t GetLostId(size_t index)
+	bool AddFirMessage(uint32_t media_ssrc, uint8_t seq_no)
 	{
-		if(index > GetLostIdCount() - 1)
-		{
-			return 0;
-		}
+		_fir_message.push_back(std::pair<uint32_t, uint8_t>(media_ssrc, seq_no));
+		return true;
+	}
 
-		return _lost_ids[index];
+	size_t GetFirMessageCount() const
+	{
+		return _fir_message.size();
 	}
 
 private:
-	uint32_t	_src_ssrc = 0;
-	uint32_t	_media_ssrc = 0;
+	// FEEDBACK
+	uint32_t _src_ssrc = 0;
+	uint32_t _media_ssrc = 0;	// MAYBE NOT USED
 
-	std::vector<uint16_t> _lost_ids;
+	// FCI
+	// media ssrc, sequence number
+	std::vector<std::pair<uint32_t, uint8_t>> _fir_message;
 };

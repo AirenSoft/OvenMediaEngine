@@ -29,6 +29,7 @@ enum class PSFBFMT : uint8_t
 	PLI = 1,	// Picture Loss Indication
 	SLI = 2,	// Slice Loss Indication
 	RPSI = 3,	// Reference Picture Selection Indication
+	FIR = 4,	// Full Intra Request (FIR) Command
 	AFB = 15,	// Application Layer Feedback
 	EXT = 31,	// Reserved for future extensions.
 };

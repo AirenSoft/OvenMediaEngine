@@ -11,6 +11,8 @@
 #include "webrtc_application.h"
 #include "webrtc_private.h"
 
+#include "modules/rtp_rtcp/rtcp_info/fir.h"
+
 namespace pvd
 {
 	std::shared_ptr<WebRTCStream> WebRTCStream::Create(StreamSourceType source_type, ov::String stream_name, uint32_t stream_id, 
@@ -82,7 +84,7 @@ namespace pvd
 			if(peer_media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
 			{
 				_audio_payload_type = first_payload->GetId();
-				_audio_ssrc = offer_media_desc->GetSsrc();
+				_audio_ssrc = peer_media_desc->GetSsrc();
 				ssrc_list.push_back(_audio_ssrc);
 
 				// Add Track
@@ -139,11 +141,11 @@ namespace pvd
 					if(payload->GetCodec() == PayloadAttr::SupportCodec::RTX)
 					{
 						_rtx_enabled = true;
-						_video_rtx_ssrc = offer_media_desc->GetRtxSsrc();
+						_video_rtx_ssrc = peer_media_desc->GetRtxSsrc();
 					}
 				}
 
-				_video_ssrc = offer_media_desc->GetSsrc();
+				_video_ssrc = peer_media_desc->GetSsrc();
 				ssrc_list.push_back(_video_ssrc);
 				
 				// a=rtpmap:100 H264/90000
@@ -205,6 +207,8 @@ namespace pvd
 		_dtls_ice_transport->RegisterUpperNode(_dtls_transport);
 		_dtls_ice_transport->RegisterLowerNode(nullptr);
 		_dtls_ice_transport->Start();
+
+		_fir_timer.Start();
 
 		return pvd::Stream::Start();
 	}
@@ -316,11 +320,36 @@ namespace pvd
 
 		logtd("Send Frame : track_id(%d) data_length(%d) pts(%d)",  track->GetId(), bitstream->GetLength(), first_rtp_packet->Timestamp());
 		SendFrame(frame);
+
+		// Send FIR to reduce keyframe interval
+		if(_fir_timer.IsElapsed(1000))
+		{
+			_fir_timer.Update();
+			SendFIR();
+		}
+		
+		// Send Receiver Report
 	}
 
 	// From RtpRtcp node
 	void WebRTCStream::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	{
+		// Receive Sender Report
 
+	}
+
+	bool WebRTCStream::SendFIR()
+	{
+		FIR fir;
+	
+		fir.SetSrcSsrc(_video_ssrc);
+		fir.AddFirMessage(_video_ssrc, _fir_seq++);
+
+		auto rtcp_packet = std::make_shared<RtcpPacket>();
+		rtcp_packet->Build(fir);
+
+		_rtp_rtcp->SendData(NodeType::Rtcp, rtcp_packet->GetData());
+
+		return true;
 	}
 }

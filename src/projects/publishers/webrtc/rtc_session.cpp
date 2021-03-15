@@ -306,7 +306,7 @@ void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	}
 	else if(rtcp_info->GetPacketType() == RtcpPacketType::RTPFB)
 	{
-		if(rtcp_info->GetFmt() == static_cast<uint8_t>(RTPFBFMT::NACK))
+		if(rtcp_info->GetCountOrFmt() == static_cast<uint8_t>(RTPFBFMT::NACK))
 		{
 			// Process
 			ProcessNACK(rtcp_info);

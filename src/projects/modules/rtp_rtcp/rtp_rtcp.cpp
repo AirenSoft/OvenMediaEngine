@@ -70,6 +70,18 @@ bool RtpRtcp::SendOutgoingData(const std::shared_ptr<RtpPacket> &rtp_packet)
 
 bool RtpRtcp::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
+	auto node = GetLowerNode();
+	if(!node)
+	{
+		return false;
+	}
+
+	if(!node->SendData(from_node, data))
+	{
+		loge("RtpRtcp","Send data failed from(%d) data_len(%d)", static_cast<uint16_t>(from_node), data->GetLength());
+		return false;
+	}
+
 	return true;
 }
 
