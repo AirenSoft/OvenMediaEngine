@@ -71,7 +71,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseFuaAndConvertAnnexB(const st
 		uint8_t	start_prefix_and_nal_header[ANNEXB_START_PREFIX_LENGTH + NAL_HEADER_SIZE];
 		uint8_t original_nal_header = fnri | original_nal_type;
 
-		logc("DEBUG", "FUA Nal Type : %d", original_nal_type);
+		logd("DEBUG", "FUA Nal Type : %d", original_nal_type);
 
 		start_prefix_and_nal_header[0] = 0;
 		start_prefix_and_nal_header[1] = 0;
@@ -144,7 +144,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerH264::ParseStapAAndConvertToAnnexB(cons
 
 		uint8_t nal_type = payload_buffer[offset] & NAL_TYPE_MASK;
 
-		logc("DEBUG", "STAP-A Nal Type : %d", nal_type);
+		logd("DEBUG", "STAP-A Nal Type : %d", nal_type);
 
 		offset += nalu_size;
 	}
