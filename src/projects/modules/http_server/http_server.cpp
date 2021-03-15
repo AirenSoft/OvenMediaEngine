@@ -311,44 +311,47 @@ void HttpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 
 void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 {
-	std::lock_guard<std::shared_mutex> guard(_client_list_mutex);
+	std::shared_ptr<HttpClient> client;
 
-	auto client_iterator = _client_list.find(remote.get());
-
-	if (client_iterator != _client_list.end())
 	{
-		auto &client = client_iterator->second;
-		auto request = client->GetRequest();
-		auto response = client->GetResponse();
+		std::lock_guard<std::shared_mutex> guard(_client_list_mutex);
 
-		if (reason == PhysicalPortDisconnectReason::Disconnect)
+		auto client_iterator = _client_list.find(remote.get());
+
+		if (client_iterator == _client_list.end())
 		{
-			logti("The HTTP client(%s) has been disconnected from %s (%d)",
-				  remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
-		}
-		else
-		{
-			logti("The HTTP client(%s) is disconnected from %s (%d)",
-				  remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
+			logte("Could not find client %s from list", remote->ToString().CStr());
+			OV_ASSERT2(false);
+			return;
 		}
 
-		auto interceptor = request->GetRequestInterceptor();
-
-		if (interceptor != nullptr)
-		{
-			interceptor->OnHttpClosed(client, reason);
-		}
-		else
-		{
-			logtw("Interceptor does not exists for HTTP client %p", client.get());
-		}
-
+		client = client_iterator->second;
 		_client_list.erase(client_iterator);
+	}
+
+	auto request = client->GetRequest();
+	auto response = client->GetResponse();
+
+	if (reason == PhysicalPortDisconnectReason::Disconnect)
+	{
+		logti("The HTTP client(%s) has been disconnected from %s (%d)",
+			  remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
 	}
 	else
 	{
-		logte("Could not find client %s from list", remote->ToString().CStr());
-		OV_ASSERT2(false);
+		logti("The HTTP client(%s) is disconnected from %s (%d)",
+			  remote->GetRemoteAddress()->ToString().CStr(), _physical_port->GetAddress().ToString().CStr(), response->GetStatusCode());
+	}
+
+	auto interceptor = request->GetRequestInterceptor();
+
+	if (interceptor != nullptr)
+	{
+		interceptor->OnHttpClosed(client, reason);
+	}
+	else
+	{
+		logtw("Interceptor does not exists for HTTP client %p", client.get());
 	}
 }
 
