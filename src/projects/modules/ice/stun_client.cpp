@@ -26,6 +26,11 @@ bool StunClient::GetMappedAddress(const ov::SocketAddress &stun_server, ov::Sock
 	auto client = ov::SocketPool::GetUdpPool()->AllocSocket();
 	timeval tv = {1, 0};
 
+	if (client->AttachToWorker() == false)
+	{
+		return false;
+	}
+
 	client->SetRecvTimeout(tv);
 	if(client->SendTo(stun_server, send_data) == false)
 	{

@@ -949,7 +949,7 @@ namespace ov
 		}
 		else
 		{
-			CHECK_STATE(== SocketState::Bound, false);
+			CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
 		}
 
 		if (data == nullptr)

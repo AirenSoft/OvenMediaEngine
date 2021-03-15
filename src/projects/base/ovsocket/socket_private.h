@@ -26,3 +26,16 @@
 			return return_value;                                             \
 		}                                                                    \
 	} while (false)
+
+#define CHECK_STATE2(condition1, condition2, return_value)                    \
+	do                                                                       \
+	{                                                                        \
+		if ((!(_state condition1)) && (!(_state condition2)))                  \
+		{                                                                    \
+			logaw("%s(): Invalid state: %s (expected: _state " #condition1 " && _state " #condition2 ") - %s", \
+				  __FUNCTION__,                                              \
+				  StringFromSocketState(_state),                             \
+				  ToString().CStr());                                        \
+			return return_value;                                             \
+		}                                                                    \
+	} while (false)
