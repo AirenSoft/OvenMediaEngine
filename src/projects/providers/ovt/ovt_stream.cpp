@@ -178,6 +178,12 @@ namespace pvd
 
 		auto pool = GetOvtProvider()->GetClientSocketPool();
 
+		if (pool == nullptr)
+		{
+			// Provider is not initialized
+			return false;
+		}
+
 		_client_socket = pool->AllocSocket();
 
 		if ((_client_socket == nullptr) || (_client_socket->AttachToWorker() == false))
@@ -188,6 +194,8 @@ namespace pvd
 			_client_socket = nullptr;
 			return false;
 		}
+
+		_client_socket->MakeBlocking();
 
 		struct timeval tv = {1, 500000}; // 1.5 sec
 		_client_socket->SetRecvTimeout(tv);

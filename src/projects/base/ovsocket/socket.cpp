@@ -431,7 +431,7 @@ namespace ov
 
 								if (origin_nonblock_flag == false)
 								{
-									// MakeBlocking();
+									MakeBlocking();
 								}
 
 								SetState(SocketState::Connected);
@@ -1238,6 +1238,11 @@ namespace ov
 		if (GetType() != SocketType::Tcp)
 		{
 			return DispatchResult::Dispatched;
+		}
+
+		if(GetState() == ov::SocketState::Created)
+		{
+			return Socket::DispatchResult::Dispatched;
 		}
 
 		while (true)
