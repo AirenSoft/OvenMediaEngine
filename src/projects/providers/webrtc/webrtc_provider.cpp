@@ -182,6 +182,15 @@ namespace pvd
 													std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
 	{
 		logtd("WebRTCProvider::OnAddRemoteDescription");
+		auto request = ws_client->GetClient()->GetRequest();
+		auto remote_address = request->GetRemote()->GetRemoteAddress();
+		auto uri = request->GetUri();
+		auto parsed_url = ov::Url::Parse(uri);
+		if (parsed_url == nullptr)
+		{
+			logte("Could not parse the url: %s", uri.CStr());
+			return nullptr;
+		}
 
 		// TODO(Getroot): Implement SingedPolicy
 			
@@ -202,6 +211,12 @@ namespace pvd
 			return nullptr;
 		}
 
+		auto transport = parsed_url->GetQueryValue("transport");
+		if(transport.UpperCaseString() == "TCP")
+		{
+			tcp_relay = true;
+		}
+
 		auto &candidates = IcePortManager::GetInstance()->GetIceCandidateList(IcePortObserver::GetSharedPtr());
 		ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
 		auto session_description = std::make_shared<SessionDescription>(*application->GetOfferSDP());
@@ -209,7 +224,7 @@ namespace pvd
 		session_description->SetIceUfrag(_ice_port->GenerateUfrag());
 		session_description->Update();
 
-		return application->GetOfferSDP();
+		return session_description;
 	}
 
 	bool WebRTCProvider::OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
