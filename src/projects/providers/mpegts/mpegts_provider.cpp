@@ -211,14 +211,6 @@ namespace pvd
 			return nullptr;
 		}
 
-		bool is_parsed = false;
-		application_info.GetConfig().GetProviders().GetMpegtsProvider(&is_parsed);
-		if(is_parsed == false)
-		{
-			logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetProviderName());
-			return nullptr;
-		}
-
 		auto &app_config = application_info.GetConfig();
 		auto &stream_list = app_config.GetProviders().GetMpegtsProvider().GetStreamMap().GetStreamList();
 		auto app_metrics = ApplicationMetrics(application_info);

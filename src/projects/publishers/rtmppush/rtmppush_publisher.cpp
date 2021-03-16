@@ -59,14 +59,6 @@ std::shared_ptr<pub::Application> RtmpPushPublisher::OnCreatePublisherApplicatio
 	{
 		return nullptr;
 	}
-	
-	bool is_parsed = false;
-	application_info.GetConfig().GetPublishers().GetRtmpPushPublisher(&is_parsed);
-	if(is_parsed == false)
-	{
-		logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetPublisherName());
-		return nullptr;
-	}
 
 	return RtmpPushApplication::Create(RtmpPushPublisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }

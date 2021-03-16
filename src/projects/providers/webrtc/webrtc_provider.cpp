@@ -169,14 +169,6 @@ namespace pvd
 			return nullptr;
 		}
 
-		bool is_parsed = false;
-		application_info.GetConfig().GetProviders().GetWebrtcProvider(&is_parsed);
-		if(is_parsed == false)
-		{
-			logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetProviderName());
-			return nullptr;
-		}
-
 		return WebRTCApplication::Create(PushProvider::GetSharedPtrAs<PushProvider>(), application_info, _certificate, _ice_port, _signalling_server);
 	}
 

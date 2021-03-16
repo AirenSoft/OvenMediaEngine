@@ -104,7 +104,7 @@ namespace pvd
 		auto application = OnCreateProviderApplication(app_info);
 		if(application == nullptr)
 		{
-			logte("Could not create application for [%s]", app_info.GetName().CStr());
+			logtd("Could not create application for [%s]", app_info.GetName().CStr());
 			// It may not be a error that the Application failed due to disabling that Publisher.
 			// Failure to create a single application should not affect the whole.
 			// TODO(Getroot): The reason for the error must be defined and handled in detail.
@@ -151,8 +151,9 @@ namespace pvd
 				}
 			}
 
-			logte("%s provider hasn't the %s application.", ::StringFromProviderType(GetProviderType()).CStr(), app_info.GetName().CStr());
-			return false;
+			// It is not an error because it might not be created 
+			logtd("%s provider hasn't the %s application.", ::StringFromProviderType(GetProviderType()).CStr(), app_info.GetName().CStr());
+			return true;
 		}
 
 		auto application = item->second;

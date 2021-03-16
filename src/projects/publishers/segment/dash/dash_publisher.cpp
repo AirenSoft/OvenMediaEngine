@@ -51,14 +51,6 @@ std::shared_ptr<pub::Application> DashPublisher::OnCreatePublisherApplication(co
 		return nullptr;
 	}
 
-	bool is_parsed = false;
-	application_info.GetConfig().GetPublishers().GetDashPublisher(&is_parsed);
-	if(is_parsed == false)
-	{
-		logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetPublisherName());
-		return nullptr;
-	}
-
 	return DashApplication::Create(pub::Publisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }
 

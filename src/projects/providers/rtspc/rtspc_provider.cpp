@@ -42,14 +42,6 @@ namespace pvd
 		{
 			return nullptr;
 		}
-		
-		bool is_parsed = false;
-		app_info.GetConfig().GetProviders().GetRtspPullProvider(&is_parsed);
-		if(is_parsed == false)
-		{
-			logtd("%s application disables %s by configuration. so could not create application", app_info.GetName().CStr(), GetProviderName());
-			return nullptr;
-		}
 
 		return RtspcApplication::Create(GetSharedPtrAs<pvd::PullProvider>(), app_info);
 	}

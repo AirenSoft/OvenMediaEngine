@@ -54,14 +54,6 @@ std::shared_ptr<pub::Application> HlsPublisher::OnCreatePublisherApplication(con
 		return nullptr;
 	}
 
-	bool is_parsed = false;
-	application_info.GetConfig().GetPublishers().GetHlsPublisher(&is_parsed);
-	if(is_parsed == false)
-	{
-		logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetPublisherName());
-		return nullptr;
-	}
-
 	return HlsApplication::Create(pub::Publisher::GetSharedPtrAs<HlsPublisher>(), application_info);
 }
 

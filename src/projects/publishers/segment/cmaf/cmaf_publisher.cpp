@@ -51,15 +51,7 @@ std::shared_ptr<pub::Application> CmafPublisher::OnCreatePublisherApplication(co
 	{
 		return nullptr;
 	}
-
-	bool is_parsed = false;
-	application_info.GetConfig().GetPublishers().GetLlDashPublisher(&is_parsed);
-	if(is_parsed == false)
-	{
-		logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetPublisherName());
-		return nullptr;
-	}
-
+	
 	return CmafApplication::Create(pub::Publisher::GetSharedPtrAs<pub::Publisher>(), application_info, std::static_pointer_cast<CmafStreamServer>(_stream_server));
 }
 

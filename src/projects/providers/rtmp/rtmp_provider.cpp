@@ -101,14 +101,6 @@ namespace pvd
 			return nullptr;
 		}
 
-		bool is_parsed = false;
-		application_info.GetConfig().GetProviders().GetRtmpProvider(&is_parsed);
-		if(is_parsed == false)
-		{
-			logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetProviderName());
-			return nullptr;
-		}
-
 		return RtmpApplication::Create(GetSharedPtrAs<pvd::PushProvider>(), application_info);
 	}
 
