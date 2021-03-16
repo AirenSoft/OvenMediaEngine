@@ -35,7 +35,7 @@ bool HlsPublisher::Start()
 
 	if (hls_config.IsParsed() == false)
 	{
-		logtw("%s is disabled by configuration", GetPublisherName());
+		logti("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
@@ -49,6 +49,11 @@ bool HlsPublisher::Start()
 
 std::shared_ptr<pub::Application> HlsPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
+	if(IsModuleAvailable() == false)
+	{
+		return nullptr;
+	}
+
 	return HlsApplication::Create(pub::Publisher::GetSharedPtrAs<HlsPublisher>(), application_info);
 }
 

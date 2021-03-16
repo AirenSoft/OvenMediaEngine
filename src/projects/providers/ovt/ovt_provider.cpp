@@ -31,16 +31,13 @@ namespace pvd
 	{
 		auto &ovt_provider_config = server_config.GetBind().GetProviders().GetOvt();
 
-		if (ovt_provider_config.IsParsed())
-		{
-			bool is_parsed;
-			auto worker_count = ovt_provider_config.GetWorkerCount(&is_parsed);
-			worker_count = is_parsed ? worker_count : PHYSICAL_PORT_DEFAULT_WORKER_COUNT;
+		bool is_parsed;
+		auto worker_count = ovt_provider_config.GetWorkerCount(&is_parsed);
+		worker_count = is_parsed ? worker_count : PHYSICAL_PORT_DEFAULT_WORKER_COUNT;
 
-			_client_socket_pool = ov::SocketPool::Create("OvtProvider", ov::SocketType::Tcp);
+		_client_socket_pool = ov::SocketPool::Create("OvtProvider", ov::SocketType::Tcp);
 
-			_client_socket_pool->Initialize(worker_count);
-		}
+		_client_socket_pool->Initialize(worker_count);
 	}
 
 	OvtProvider::~OvtProvider()
@@ -51,6 +48,11 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{
+		if(IsModuleAvailable() == false)
+		{
+			return nullptr;
+		}
+
 		return OvtApplication::Create(GetSharedPtrAs<pvd::PullProvider>(), app_info);
 	}
 

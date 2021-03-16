@@ -55,6 +55,11 @@ bool RtmpPushPublisher::Stop()
 
 std::shared_ptr<pub::Application> RtmpPushPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
+	if(IsModuleAvailable() == false)
+	{
+		return nullptr;
+	}
+
 	return RtmpPushApplication::Create(RtmpPushPublisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }
 

@@ -20,7 +20,6 @@ namespace pvd
 		auto webrtc = std::make_shared<WebRTCProvider>(server_config, router);
 		if (!webrtc->Start())
 		{
-			logte("An error occurred while creating WebRTCProvider");
 			return nullptr;
 		}
 		return webrtc;
@@ -48,7 +47,7 @@ namespace pvd
 		
 		if (webrtc_bind_config.IsParsed() == false)
 		{
-			logtw("%s is disabled by configuration", GetProviderName());
+			logti("%s is disabled by configuration", GetProviderName());
 			return true;
 		}
 
@@ -164,7 +163,12 @@ namespace pvd
 	}
 
 	std::shared_ptr<pvd::Application> WebRTCProvider::OnCreateProviderApplication(const info::Application &application_info)
-	{
+	{	
+		if(IsModuleAvailable() == false)
+		{
+			return nullptr;
+		}
+
 		return WebRTCApplication::Create(PushProvider::GetSharedPtrAs<PushProvider>(), application_info, _certificate, _ice_port, _signalling_server);
 	}
 
@@ -262,7 +266,8 @@ namespace pvd
 			return false;
 		}
 		
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, 30*1000, stream);
+		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, ice_timeout, stream);
 
 		if(OnChannelCreated(channel_id, stream) == false)
 		{

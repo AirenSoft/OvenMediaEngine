@@ -26,6 +26,9 @@ namespace ocst
 	class ModuleInterface : public ov::EnableSharedFromThis<ModuleInterface>
 	{
 	public:
+		void SetModuleAvailable(bool flag) {_module_available = flag;}
+		bool IsModuleAvailable() { return _module_available;}
+
 		virtual ModuleType GetModuleType() const = 0;
 
 		//--------------------------------------------------------------------
@@ -40,6 +43,9 @@ namespace ocst
 		///
 		/// @param app_info The information of the application
 		virtual bool OnDeleteApplication(const info::Application &app_info) = 0;
+
+	private:
+		bool _module_available = false;
 	};
 
 	class PullProviderModuleInterface

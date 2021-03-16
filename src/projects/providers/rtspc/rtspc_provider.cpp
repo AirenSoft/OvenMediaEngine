@@ -38,6 +38,11 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> RtspcProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{
+		if(IsModuleAvailable() == false)
+		{
+			return nullptr;
+		}
+
 		return RtspcApplication::Create(GetSharedPtrAs<pvd::PullProvider>(), app_info);
 	}
 

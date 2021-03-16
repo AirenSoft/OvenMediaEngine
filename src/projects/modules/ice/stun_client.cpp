@@ -31,6 +31,8 @@ bool StunClient::GetMappedAddress(const ov::SocketAddress &stun_server, ov::Sock
 		return false;
 	}
 
+	client->MakeBlocking();
+
 	client->SetRecvTimeout(tv);
 	if(client->SendTo(stun_server, send_data) == false)
 	{

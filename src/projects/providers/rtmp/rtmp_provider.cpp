@@ -25,7 +25,6 @@ namespace pvd
 		auto provider = std::make_shared<RtmpProvider>(server_config, router);
 		if (!provider->Start())
 		{
-			logte("An error occurred while creating RtmpProvider");
 			return nullptr;
 		}
 		return provider;
@@ -55,7 +54,7 @@ namespace pvd
 
 		if(rtmp_config.IsParsed() == false)
 		{
-			logtw("%s is disabled by configuration", GetProviderName());
+			logti("%s is disabled by configuration", GetProviderName());
 			return true;
 		}
 
@@ -97,6 +96,11 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> RtmpProvider::OnCreateProviderApplication(const info::Application &application_info)
 	{
+		if(IsModuleAvailable() == false)
+		{
+			return nullptr;
+		}
+
 		return RtmpApplication::Create(GetSharedPtrAs<pvd::PushProvider>(), application_info);
 	}
 

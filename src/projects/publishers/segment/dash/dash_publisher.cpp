@@ -32,7 +32,7 @@ bool DashPublisher::Start()
 
 	if (dash_config.IsParsed() == false)
 	{
-		logtw("%s is disabled by configuration", GetPublisherName());
+		logti("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
@@ -46,13 +46,10 @@ bool DashPublisher::Start()
 
 std::shared_ptr<pub::Application> DashPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	/* Deprecated
-	if (!application_info.CheckCodecAvailability({"h264"}, {"aac"}))
+	if(IsModuleAvailable() == false)
 	{
-		logtw("There is no suitable encoding setting for %s (Encoding setting must contains h264 and aac)", GetPublisherName());
-		// return nullptr;
+		return nullptr;
 	}
-	*/
 
 	return DashApplication::Create(pub::Publisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }

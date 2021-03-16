@@ -23,7 +23,6 @@ namespace pvd
 		auto provider = std::make_shared<MpegTsProvider>(server_config, router);
 		if (!provider->Start())
 		{
-			logte("An error occurred while creating Mpegts Provider");
 			return nullptr;
 		}
 		return provider;
@@ -175,7 +174,7 @@ namespace pvd
 
 		if (server_config.GetBind().GetProviders().GetMpegts().IsParsed() == false)
 		{
-			logtw("%s is disabled by configuration", GetProviderName());
+			logti("%s is disabled by configuration", GetProviderName());
 			return true;
 		}
 
@@ -207,6 +206,11 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> MpegTsProvider::OnCreateProviderApplication(const info::Application &application_info)
 	{
+		if(IsModuleAvailable() == false)
+		{
+			return nullptr;
+		}
+
 		auto &app_config = application_info.GetConfig();
 		auto &stream_list = app_config.GetProviders().GetMpegtsProvider().GetStreamMap().GetStreamList();
 		auto app_metrics = ApplicationMetrics(application_info);

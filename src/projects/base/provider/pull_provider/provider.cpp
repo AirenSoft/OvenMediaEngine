@@ -149,7 +149,7 @@ namespace pvd
 		stream = app->CreateStream(stream_name, url_list);
 		if (stream == nullptr)
 		{
-			logte("Cannot create %s stream.", stream_name.CStr());
+			logte("%s could not create [%s] stream.", app->GetApplicationTypeName(), stream_name.CStr());
 			UnlockPullStreamIfNeeded(app_info, stream_name, PullingItem::PullingItemState::ERROR);
 			return nullptr;
 		}

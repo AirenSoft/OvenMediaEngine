@@ -17,6 +17,7 @@ namespace pub
 	bool Publisher::Start()
 	{
 		logti("%s has been started.", GetPublisherName());
+		SetModuleAvailable(true);
 		return true;
 	}
 
@@ -35,6 +36,7 @@ namespace pub
 		}
 
 		logti("%s has been stopped.", GetPublisherName());
+		SetModuleAvailable(false);
 		return true;
 	}
 

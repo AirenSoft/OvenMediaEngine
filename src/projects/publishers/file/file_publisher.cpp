@@ -73,6 +73,11 @@ void FilePublisher::WorkerThread()
 
 std::shared_ptr<pub::Application> FilePublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
+	if(IsModuleAvailable() == false)
+	{
+		return nullptr;
+	}
+
 	return FileApplication::Create(FilePublisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }
 
