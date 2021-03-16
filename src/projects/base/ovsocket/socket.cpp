@@ -403,45 +403,53 @@ namespace ov
 					{
 						do
 						{
-							// TODO: Because FD_SETSIZE is 1024, other methods other than select() should be used
-							struct timeval tv = {timeout_msec / 1000, (timeout_msec % 1000) * 1000};
-							fd_set con_fd_set;
-
-							FD_ZERO(&con_fd_set);
-							FD_SET(GetSocket().GetNativeHandle(), &con_fd_set);
-							int select_result = select(GetSocket().GetNativeHandle() + 1, NULL, &con_fd_set, NULL, &tv);
-							if (select_result < 0)
+							// For timeout and fastest to notice connection success
+							struct epoll_event triggered_events;
+							int ep_fd = epoll_create1(0);
+							struct epoll_event ep_event;
+							ep_event.events = EPOLLOUT | EPOLLIN | EPOLLERR;
+							ep_event.data.fd = GetSocket().GetNativeHandle();
+							
+							if(epoll_ctl(ep_fd, EPOLL_CTL_ADD, GetSocket().GetNativeHandle(), &ep_event) == -1)
 							{
+								close(ep_fd);
 								break;
 							}
-							else if (select_result > 0)
+
+							auto num_events = epoll_wait(ep_fd, &triggered_events, 1, timeout_msec);
+							if(num_events < 0)
 							{
-								// Socket selected for write
-								int error_value;
-
-								if (GetSockOpt(SO_ERROR, &error_value) == false)
-								{
-									break;
-								}
-
-								if (error_value != 0)
-								{
-									break;
-								}
-
-								if (origin_nonblock_flag == false)
-								{
-									MakeBlocking();
-								}
-
-								SetState(SocketState::Connected);
-								return nullptr;
-							}
-							else
-							{
-								// timeout
+								close(ep_fd);
 								break;
 							}
+
+							// Socket selected for write
+							int error_value;
+
+							if (GetSockOpt(SO_ERROR, &error_value) == false)
+							{
+								close(ep_fd);
+								break;
+							}
+
+							// Not connected
+							if (error_value != 0)
+							{
+								close(ep_fd);
+								break;
+							}
+
+							// Recover origin state
+							if (origin_nonblock_flag == false)
+							{
+								MakeBlocking();
+							}
+
+							SetState(SocketState::Connected);
+							close(ep_fd);
+
+							return nullptr;
+
 						} while (true);
 					}
 				}
