@@ -1067,6 +1067,7 @@ namespace ov
 				logad("Remote is disconnected: %s", error->ToString().CStr());
 				*received_length = 0UL;
 
+				SetState(SocketState::Disconnected);
 				Close();
 
 				return error;
@@ -1195,10 +1196,10 @@ namespace ov
 	{
 		if (IsClosing() == false)
 		{
-			// Socket is already closed
 			return Close();
 		}
 
+		// Socket is already closed
 		return false;
 	}
 
@@ -1208,7 +1209,7 @@ namespace ov
 
 		if (GetState() == SocketState::Error)
 		{
-			// Supress error message
+			// Suppress error message
 			return false;
 		}
 
@@ -1220,8 +1221,12 @@ namespace ov
 				logad("Enqueuing close command");
 				_has_close_command = true;
 
-				_dispatch_queue.emplace_back(DispatchCommand::Type::HalfClose);
-				_dispatch_queue.emplace_back(DispatchCommand::Type::WaitForHalfClose);
+				if (GetState() != SocketState::Disconnected)
+				{
+					_dispatch_queue.emplace_back(DispatchCommand::Type::HalfClose);
+					_dispatch_queue.emplace_back(DispatchCommand::Type::WaitForHalfClose);
+				}
+
 				_dispatch_queue.emplace_back(DispatchCommand::Type::Close);
 			}
 			else
@@ -1332,9 +1337,6 @@ namespace ov
 				}
 			}
 
-			logad("Socket is closed successfully");
-			SetState(SocketState::Closed);
-
 			if (callback != nullptr)
 			{
 				if(_connection_event_fired)
@@ -1342,6 +1344,9 @@ namespace ov
 					callback->OnClosed();
 				}
 			}
+
+			logad("Socket is closed successfully");
+			SetState(SocketState::Closed);
 
 			return true;
 		}

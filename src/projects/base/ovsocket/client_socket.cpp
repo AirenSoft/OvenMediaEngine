@@ -151,7 +151,9 @@ namespace ov
 
 		if (callback != nullptr)
 		{
-			callback(GetSharedPtrAs<ClientSocket>(), SocketConnectionState::Disconnected, nullptr);
+			auto state = (GetState() == SocketState::Disconnected) ? (SocketConnectionState::Disconnected) : (SocketConnectionState::Disconnect);
+
+			callback(GetSharedPtrAs<ClientSocket>(), state, nullptr);
 		}
 
 		_server_socket->OnClientDisconnected(GetSharedPtrAs<ClientSocket>());

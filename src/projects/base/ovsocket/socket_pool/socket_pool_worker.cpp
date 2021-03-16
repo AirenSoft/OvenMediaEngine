@@ -293,6 +293,10 @@ namespace ov
 								  ov::Error::CreateErrorFromErrno()->ToString().CStr());
 
 							socket->SetEndOfStream();
+							if (socket->GetState() != SocketState::Closed)
+							{
+								socket->SetState(SocketState::Disconnected);
+							}
 							socket->CloseIfNeeded();
 
 							_gc_candidates.erase(socket->GetNativeHandle());
