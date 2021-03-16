@@ -274,7 +274,8 @@ namespace pvd
 			return false;
 		}
 		
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, 30*1000, stream);
+		auto ice_timeout = application->GetConfig().GetProviders().GetWebrtcProvider().GetTimeout();
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), stream->GetId(), offer_sdp, peer_sdp, ice_timeout, stream);
 
 		if(OnChannelCreated(channel_id, stream) == false)
 		{
