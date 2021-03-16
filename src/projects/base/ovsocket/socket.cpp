@@ -417,7 +417,9 @@ namespace ov
 							}
 
 							auto num_events = epoll_wait(ep_fd, &triggered_events, 1, timeout_msec);
-							if(num_events < 0)
+
+							// timeout or error
+							if(num_events <= 0)
 							{
 								close(ep_fd);
 								break;
