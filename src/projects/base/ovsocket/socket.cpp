@@ -1074,6 +1074,10 @@ namespace ov
 						// Peer is disconnected
 						break;
 
+					case ENOTCONN:
+						// Transport endpoint is not connected
+						break;
+
 					default:
 						logae("An error occurred while read data: %s\nStack trace: %s",
 							  error->ToString().CStr(),
