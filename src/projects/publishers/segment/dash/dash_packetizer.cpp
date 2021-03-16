@@ -877,7 +877,17 @@ bool DashPacketizer::SetSegmentData(Writer &writer, int64_t timestamp)
 
 void DashPacketizer::SetReadyForStreaming() noexcept
 {
-	_start_time_ms = std::min(_video_start_time, _audio_start_time);
+	if ((_video_start_time == -1L) || (_audio_start_time == -1L))
+	{
+		// Choose one of the two
+		_start_time_ms = std::max(_video_start_time, _audio_start_time);
+	}
+	else
+	{
+		// Choose the time that came out faster between the two
+		_start_time_ms = std::min(_video_start_time, _audio_start_time);
+	}
+
 	_start_time = MakeUtcMillisecond(_start_time_ms);
 
 	Packetizer::SetReadyForStreaming();
