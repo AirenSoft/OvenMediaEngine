@@ -15,7 +15,6 @@ std::shared_ptr<WebRtcPublisher> WebRtcPublisher::Create(const cfg::Server &serv
 
 	if (!webrtc->Start())
 	{
-		logte("An error occurred while creating WebRtcPublisher");
 		return nullptr;
 	}
 	return webrtc;
@@ -42,7 +41,7 @@ bool WebRtcPublisher::Start()
 
 	if (webrtc_bind_config.IsParsed() == false)
 	{
-		logtw("%s is disabled by configuration", GetPublisherName());
+		logti("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
@@ -288,6 +287,19 @@ void WebRtcPublisher::OnMessage(const std::shared_ptr<ov::CommonMessage> &messag
 
 std::shared_ptr<pub::Application> WebRtcPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
+	if(IsModuleAvailable() == false)
+	{
+		return nullptr;
+	}
+
+	bool is_parsed = false;
+	application_info.GetConfig().GetPublishers().GetWebrtcPublisher(&is_parsed);
+	if(is_parsed == false)
+	{
+		logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetPublisherName());
+		return nullptr;
+	}
+
 	return RtcApplication::Create(pub::Publisher::GetSharedPtrAs<pub::Publisher>(), application_info, _ice_port, _signalling_server);
 }
 

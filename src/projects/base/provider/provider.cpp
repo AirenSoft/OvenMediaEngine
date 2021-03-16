@@ -36,6 +36,8 @@ namespace pvd
 	{
 		logti("%s has been started.", GetProviderName());
 
+		SetModuleAvailable(true);
+
 		return true;
 	}
 
@@ -55,6 +57,9 @@ namespace pvd
 		}
 
 		logti("%s has been stopped.", GetProviderName());
+
+		SetModuleAvailable(false);
+
 		return true;
 	}
 

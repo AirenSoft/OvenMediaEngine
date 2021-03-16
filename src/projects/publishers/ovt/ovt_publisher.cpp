@@ -9,7 +9,6 @@ std::shared_ptr<OvtPublisher> OvtPublisher::Create(const cfg::Server &server_con
 
 	if (!obj->Start())
 	{
-		logte("An error occurred while creating OvtPublisher");
 		return nullptr;
 	}
 
@@ -36,7 +35,7 @@ bool OvtPublisher::Start()
 
 	if (ovt_config.IsParsed() == false)
 	{
-		logtw("%s is disabled by configuration", GetPublisherName());
+		logti("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
@@ -85,6 +84,19 @@ bool OvtPublisher::Stop()
 
 std::shared_ptr<pub::Application> OvtPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
+	if(IsModuleAvailable() == false)
+	{
+		return nullptr;
+	}
+
+	bool is_parsed = false;
+	application_info.GetConfig().GetPublishers().GetOvtPublisher(&is_parsed);
+	if(is_parsed == false)
+	{
+		logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetPublisherName());
+		return nullptr;
+	}
+
 	return OvtApplication::Create(OvtPublisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }
 

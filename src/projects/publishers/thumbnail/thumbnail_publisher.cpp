@@ -16,7 +16,6 @@ std::shared_ptr<ThumbnailPublisher> ThumbnailPublisher::Create(const cfg::Server
 
 	if (!file->Start())
 	{
-		logte("An error occurred while creating ThumbnailPublisher");
 		return nullptr;
 	}
 
@@ -43,7 +42,7 @@ bool ThumbnailPublisher::Start()
 	const auto &thumbnail_bind_config = server_config.GetBind().GetPublishers().GetThumbnail();
 	if (thumbnail_bind_config.IsParsed() == false)
 	{
-		logtw("%s is disabled by configuration", GetPublisherName());
+		logti("%s is disabled by configuration", GetPublisherName());
 		return true;
 	}
 
@@ -301,6 +300,19 @@ bool ThumbnailPublisher::ParseRequestUrl(const ov::String &request_url,
 
 std::shared_ptr<pub::Application> ThumbnailPublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
+	if(IsModuleAvailable() == false)
+	{
+		return nullptr;
+	}
+
+	bool is_parsed = false;
+	application_info.GetConfig().GetPublishers().GetThumbnailPublisher(&is_parsed);
+	if(is_parsed == false)
+	{
+		logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetPublisherName());
+		return nullptr;
+	}
+
 	return ThumbnailApplication::Create(ThumbnailPublisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }
 

@@ -20,7 +20,6 @@ namespace pvd
 		auto webrtc = std::make_shared<WebRTCProvider>(server_config, router);
 		if (!webrtc->Start())
 		{
-			logte("An error occurred while creating WebRTCProvider");
 			return nullptr;
 		}
 		return webrtc;
@@ -48,7 +47,7 @@ namespace pvd
 		
 		if (webrtc_bind_config.IsParsed() == false)
 		{
-			logtw("%s is disabled by configuration", GetProviderName());
+			logti("%s is disabled by configuration", GetProviderName());
 			return true;
 		}
 
@@ -164,7 +163,20 @@ namespace pvd
 	}
 
 	std::shared_ptr<pvd::Application> WebRTCProvider::OnCreateProviderApplication(const info::Application &application_info)
-	{
+	{	
+		if(IsModuleAvailable() == false)
+		{
+			return nullptr;
+		}
+
+		bool is_parsed = false;
+		application_info.GetConfig().GetProviders().GetWebrtcProvider(&is_parsed);
+		if(is_parsed == false)
+		{
+			logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetProviderName());
+			return nullptr;
+		}
+
 		return WebRTCApplication::Create(PushProvider::GetSharedPtrAs<PushProvider>(), application_info, _certificate, _ice_port, _signalling_server);
 	}
 

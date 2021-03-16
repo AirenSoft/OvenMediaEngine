@@ -51,6 +51,19 @@ namespace pvd
 
 	std::shared_ptr<pvd::Application> OvtProvider::OnCreateProviderApplication(const info::Application &app_info)
 	{
+		if(IsModuleAvailable() == false)
+		{
+			return nullptr;
+		}
+		
+		bool is_parsed = false;
+		app_info.GetConfig().GetProviders().GetOvtProvider(&is_parsed);
+		if(is_parsed == false)
+		{
+			logtd("%s application disables %s by configuration. so could not create application", app_info.GetName().CStr(), GetProviderName());
+			return nullptr;
+		}
+
 		return OvtApplication::Create(GetSharedPtrAs<pvd::PullProvider>(), app_info);
 	}
 

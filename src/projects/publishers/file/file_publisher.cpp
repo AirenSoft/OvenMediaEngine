@@ -73,6 +73,19 @@ void FilePublisher::WorkerThread()
 
 std::shared_ptr<pub::Application> FilePublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
+	if(IsModuleAvailable() == false)
+	{
+		return nullptr;
+	}
+	
+	bool is_parsed = false;
+	application_info.GetConfig().GetPublishers().GetFilePublisher(&is_parsed);
+	if(is_parsed == false)
+	{
+		logtd("%s application disables %s by configuration. so could not create application", application_info.GetName().CStr(), GetPublisherName());
+		return nullptr;
+	}
+
 	return FileApplication::Create(FilePublisher::GetSharedPtrAs<pub::Publisher>(), application_info);
 }
 

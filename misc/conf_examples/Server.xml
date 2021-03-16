@@ -38,6 +38,30 @@
 				-->
 				<Port>4000-4004,4005/udp</Port>
 			</MPEGTS>
+			<WebRTC>
+				<Signalling>
+					<Port>3333</Port>
+					<!-- If you want to use TLS, specify the TLS port -->
+					<!-- <TLSPort>3334</TLSPort> -->
+					<!-- <WorkerCount>4</WorkerCount> -->
+				</Signalling>
+
+				<IceCandidates>
+					<!-- 
+						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
+						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
+						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/v/0.11.1/streaming/webrtc-publishing#webrtc-over-tcp
+					-->
+					<TcpRelay>*:3478</TcpRelay>
+					<IceCandidate>*:10000-10005/udp</IceCandidate>
+
+					<!--
+						Sets the number of worker threads to use in TcpRelay
+						
+						<TcpRelayWorkerCount>4</TcpRelayWorkerCount>
+					-->
+				</IceCandidates>
+			</WebRTC>
 		</Providers>
 
 		<Publishers>
@@ -236,12 +260,17 @@
 							</StreamMap>
 						</MPEGTS>
 						<RTSPPull />
+						<WebRTC>
+							<Timeout>30000</Timeout>
+						</WebRTC>
 					</Providers>
 					<Publishers>
 						<SessionLoadBalancingThreadCount>8</SessionLoadBalancingThreadCount>
 						<OVT />
 						<WebRTC>
 							<Timeout>30000</Timeout>
+							<Rtx>true</Rtx>
+							<Ulpfec>true</Ulpfec>
 						</WebRTC>
 						<HLS>
 							<SegmentDuration>5</SegmentDuration>
