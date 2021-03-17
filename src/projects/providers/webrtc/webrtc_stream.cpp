@@ -64,6 +64,16 @@ namespace pvd
 			logte("m= line of answer does not correspond with offer");
 			return false;
 		}
+	
+		// Create Nodes
+		_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr());
+		_srtp_transport = std::make_shared<SrtpTransport>();
+		_dtls_transport = std::make_shared<DtlsTransport>();
+
+		auto application = std::static_pointer_cast<WebRTCApplication>(GetApplication());
+		_dtls_transport->SetLocalCertificate(_certificate);
+		_dtls_transport->StartDTLS();
+		_dtls_ice_transport = std::make_shared<DtlsIceTransport>(GetId(), _ice_port);
 
 		// RFC3264
 		// For each "m=" line in the offer, there MUST be a corresponding "m=" line in the answer.
@@ -125,6 +135,7 @@ namespace pvd
 				}
 
 				AddTrack(audio_track);
+				_rtp_rtcp->AddRtpReceiver(_audio_payload_type, audio_track);
 			}
 			else
 			{
@@ -185,19 +196,9 @@ namespace pvd
 				}
 
 				AddTrack(video_track);
+				_rtp_rtcp->AddRtpReceiver(_video_payload_type, video_track);
 			}
 		}
-		
-		// Create Nodes
-		_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr(), ssrc_list);
-
-		_srtp_transport = std::make_shared<SrtpTransport>();
-		_dtls_transport = std::make_shared<DtlsTransport>();
-
-		auto application = std::static_pointer_cast<WebRTCApplication>(GetApplication());
-		_dtls_transport->SetLocalCertificate(_certificate);
-		_dtls_transport->StartDTLS();
-		_dtls_ice_transport = std::make_shared<DtlsIceTransport>(GetId(), _ice_port);
 
 		// Connect nodes
 		_rtp_rtcp->RegisterUpperNode(nullptr);
@@ -336,8 +337,12 @@ namespace pvd
 				packet_type = cmn::PacketType::RAW;
 				break;
 
-			// It can't be reached here because it has already failed in GetDepacketizer.
 			case cmn::MediaCodecId::Vp8:
+				bitstream_format = cmn::BitstreamFormat::VP8;
+				packet_type = cmn::PacketType::RAW;
+				break;
+
+			// It can't be reached here because it has already failed in GetDepacketizer.
 			default:
 				return;
 		}
@@ -350,7 +355,8 @@ namespace pvd
 											  bitstream_format,
 											  packet_type);
 
-		logtd("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%d)",  track->GetId(),  track->GetCodecId(), bitstream_format, packet_type, bitstream->GetLength(), first_rtp_packet->Timestamp());
+		logtd("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)",  track->GetId(),  track->GetCodecId(), bitstream_format, packet_type, bitstream->GetLength(), first_rtp_packet->Timestamp());
+		
 		SendFrame(frame);
 
 		// Send FIR to reduce keyframe interval
@@ -370,6 +376,7 @@ namespace pvd
 
 	}
 
+	// TODO(Getroot): Move to RtpRtcp
 	bool WebRTCStream::SendFIR()
 	{
 		FIR fir;

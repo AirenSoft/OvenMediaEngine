@@ -69,9 +69,21 @@ bool RtcSession::Start()
 		return false;
 	}
 
+	// Create nodes
+
+	_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr());
+	_srtp_transport = std::make_shared<SrtpTransport>();
+
+	_dtls_transport = std::make_shared<DtlsTransport>();
+	std::shared_ptr<RtcApplication> application = std::static_pointer_cast<RtcApplication>(GetApplication());
+	_dtls_transport->SetLocalCertificate(application->GetCertificate());
+	_dtls_transport->StartDTLS();
+
+	_dtls_ice_transport = std::make_shared<DtlsIceTransport>(GetId(), _ice_port);
+
+
 	// RFC3264
 	// For each "m=" line in the offer, there MUST be a corresponding "m=" line in the answer.
-	std::vector<uint32_t> ssrc_list;
 	for(size_t i = 0; i < peer_media_desc_list.size(); i++)
 	{
 		auto peer_media_desc = peer_media_desc_list[i];
@@ -89,7 +101,7 @@ bool RtcSession::Start()
 		{
 			_audio_payload_type = first_payload->GetId();
 			_audio_ssrc = offer_media_desc->GetSsrc();
-			ssrc_list.push_back(_audio_ssrc);
+			_rtp_rtcp->AddRtcpSRGenerator(_audio_payload_type, _audio_ssrc);
 		}
 		else
 		{
@@ -118,20 +130,9 @@ bool RtcSession::Start()
 			}
 
 			_video_ssrc = offer_media_desc->GetSsrc();
-			ssrc_list.push_back(_video_ssrc);
+			_rtp_rtcp->AddRtcpSRGenerator(_video_payload_type, _video_ssrc);
 		}
 	}
-
-	_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr(), ssrc_list);
-
-	_srtp_transport = std::make_shared<SrtpTransport>();
-
-	_dtls_transport = std::make_shared<DtlsTransport>();
-	std::shared_ptr<RtcApplication> application = std::static_pointer_cast<RtcApplication>(GetApplication());
-	_dtls_transport->SetLocalCertificate(application->GetCertificate());
-	_dtls_transport->StartDTLS();
-
-	_dtls_ice_transport = std::make_shared<DtlsIceTransport>(GetId(), _ice_port);
 
 	// Connect nodes
 	_rtp_rtcp->RegisterUpperNode(nullptr);
