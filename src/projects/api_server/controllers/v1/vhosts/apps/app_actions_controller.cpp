@@ -63,7 +63,7 @@ namespace api
 			auto error = publisher->GetRecords(app->GetName(), records);
 			if (error->GetCode() != FilePublisher::FilePublisherStatusCode::Success || records.size() == 0)
 			{
-				return HttpError::CreateError(HttpStatusCode::NoContent, "There is no record information");
+				return HttpError::CreateError(HttpStatusCode::NotFound, "There is no record information");
 			}
 
 			Json::Value response;
