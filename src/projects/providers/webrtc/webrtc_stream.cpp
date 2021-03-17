@@ -350,7 +350,7 @@ namespace pvd
 											  bitstream_format,
 											  packet_type);
 
-		logti("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%d)",  track->GetId(),  track->GetCodecId(), bitstream_format, packet_type, bitstream->GetLength(), first_rtp_packet->Timestamp());
+		logtd("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%d)",  track->GetId(),  track->GetCodecId(), bitstream_format, packet_type, bitstream->GetLength(), first_rtp_packet->Timestamp());
 		SendFrame(frame);
 
 		// Send FIR to reduce keyframe interval
