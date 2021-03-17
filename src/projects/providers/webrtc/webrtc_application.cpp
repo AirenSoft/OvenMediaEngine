@@ -60,8 +60,6 @@ namespace pvd
 			return nullptr;
 		}
 
-		//TODO(Getroot): Apply configuration
-
 		auto offer_sdp = std::make_shared<SessionDescription>();
 		offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
 		offer_sdp->SetTiming(0, 0);
@@ -90,10 +88,6 @@ namespace pvd
 		video_media_desc->UseDtls(true);
 		video_media_desc->UseRtcpMux(true);
 		video_media_desc->SetDirection(MediaDescription::Direction::RecvOnly);
-		//video_media_desc->SetCname(cname);
-		//video_media_desc->SetSsrc(ov::Random::GenerateUInt32());
-		// not support yet
-		// video_media_desc->SetRtxSsrc(ov::Random::GenerateUInt32()); 
 
 		// VP8
 		/*
@@ -115,10 +109,10 @@ namespace pvd
 		///////////////////////////////////////
 		// Audio Media Description
 		///////////////////////////////////////
-		/* NOW DOESN'T SUPPORT OPUS DECODER
+// until opus decoder is developed
+#if 0	
 		auto audio_media_desc = std::make_shared<MediaDescription>();
 		audio_media_desc->SetConnection(4, "0.0.0.0");
-		// TODO(dimiden): Need to prevent duplication
 		audio_media_desc->SetMid(ov::Random::GenerateString(6));
 		audio_media_desc->SetMsid(msid, ov::Random::GenerateString(36));
 		audio_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
@@ -126,8 +120,6 @@ namespace pvd
 		audio_media_desc->UseRtcpMux(true);
 		audio_media_desc->SetDirection(MediaDescription::Direction::RecvOnly);
 		audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
-		audio_media_desc->SetCname(cname);
-		audio_media_desc->SetSsrc(ov::Random::GenerateUInt32());
 
 		// OPUS
 		payload = std::make_shared<PayloadAttr>();
@@ -137,7 +129,7 @@ namespace pvd
 
 		audio_media_desc->Update();
 		offer_sdp->AddMedia(audio_media_desc);
-		*/
+#endif
 
 		offer_sdp->Update();
 		logtd("Offer SDP created : %s", offer_sdp->ToString().CStr());
