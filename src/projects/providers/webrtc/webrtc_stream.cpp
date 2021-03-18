@@ -64,6 +64,16 @@ namespace pvd
 			logte("m= line of answer does not correspond with offer");
 			return false;
 		}
+	
+		// Create Nodes
+		_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr());
+		_srtp_transport = std::make_shared<SrtpTransport>();
+		_dtls_transport = std::make_shared<DtlsTransport>();
+
+		auto application = std::static_pointer_cast<WebRTCApplication>(GetApplication());
+		_dtls_transport->SetLocalCertificate(_certificate);
+		_dtls_transport->StartDTLS();
+		_dtls_ice_transport = std::make_shared<DtlsIceTransport>(GetId(), _ice_port);
 
 		// RFC3264
 		// For each "m=" line in the offer, there MUST be a corresponding "m=" line in the answer.
@@ -119,7 +129,13 @@ namespace pvd
 					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
 				}
 
+				if(AddDepacketizer(_audio_payload_type, audio_track->GetCodecId()) == false)
+				{
+					return false;
+				}
+
 				AddTrack(audio_track);
+				_rtp_rtcp->AddRtpReceiver(_audio_payload_type, audio_track);
 			}
 			else
 			{
@@ -180,19 +196,9 @@ namespace pvd
 				}
 
 				AddTrack(video_track);
+				_rtp_rtcp->AddRtpReceiver(_video_payload_type, video_track);
 			}
 		}
-		
-		// Create Nodes
-		_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr(), ssrc_list);
-
-		_srtp_transport = std::make_shared<SrtpTransport>();
-		_dtls_transport = std::make_shared<DtlsTransport>();
-
-		auto application = std::static_pointer_cast<WebRTCApplication>(GetApplication());
-		_dtls_transport->SetLocalCertificate(_certificate);
-		_dtls_transport->StartDTLS();
-		_dtls_ice_transport = std::make_shared<DtlsIceTransport>(GetId(), _ice_port);
 
 		// Connect nodes
 		_rtp_rtcp->RegisterUpperNode(nullptr);
@@ -287,6 +293,13 @@ namespace pvd
 		auto payload_type = first_rtp_packet->PayloadType();
 		logtd("%s", first_rtp_packet->Dump().CStr());
 
+		auto track = GetTrack(payload_type);
+		if(track == nullptr)
+		{
+			logte("%s - Could not find track : payload_type(%d)", GetName().CStr(), payload_type);
+			return;
+		}
+
 		auto depacketizer = GetDepacketizer(payload_type);
 		if(depacketizer == nullptr)
 		{
@@ -308,17 +321,42 @@ namespace pvd
 			return;
 		}
 
-		auto track = GetTrack(payload_type);
+		cmn::BitstreamFormat bitstream_format;
+		cmn::PacketType packet_type;
+
+		switch(track->GetCodecId())
+		{
+			case cmn::MediaCodecId::H264:
+				// Our H264 depacketizer always converts packet to Annex B
+				bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
+				packet_type = cmn::PacketType::NALU;
+				break;
+			
+			case cmn::MediaCodecId::Opus:
+				bitstream_format = cmn::BitstreamFormat::OPUS;
+				packet_type = cmn::PacketType::RAW;
+				break;
+
+			case cmn::MediaCodecId::Vp8:
+				bitstream_format = cmn::BitstreamFormat::VP8;
+				packet_type = cmn::PacketType::RAW;
+				break;
+
+			// It can't be reached here because it has already failed in GetDepacketizer.
+			default:
+				return;
+		}
 
 		auto frame = std::make_shared<MediaPacket>(track->GetMediaType(),
 											  track->GetId(),
 											  bitstream,
 											  first_rtp_packet->Timestamp(),
 											  first_rtp_packet->Timestamp(),
-											  cmn::BitstreamFormat::H264_ANNEXB,
-											 cmn::PacketType::NALU);
+											  bitstream_format,
+											  packet_type);
 
-		logtd("Send Frame : track_id(%d) data_length(%d) pts(%d)",  track->GetId(), bitstream->GetLength(), first_rtp_packet->Timestamp());
+		logtd("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)",  track->GetId(),  track->GetCodecId(), bitstream_format, packet_type, bitstream->GetLength(), first_rtp_packet->Timestamp());
+		
 		SendFrame(frame);
 
 		// Send FIR to reduce keyframe interval
@@ -338,6 +376,7 @@ namespace pvd
 
 	}
 
+	// TODO(Getroot): Move to RtpRtcp
 	bool WebRTCStream::SendFIR()
 	{
 		FIR fir;

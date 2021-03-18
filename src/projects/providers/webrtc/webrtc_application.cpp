@@ -60,8 +60,6 @@ namespace pvd
 			return nullptr;
 		}
 
-		//TODO(Getroot): Apply configuration
-
 		auto offer_sdp = std::make_shared<SessionDescription>();
 		offer_sdp->SetOrigin("OvenMediaEngine", ov::Random::GenerateUInt32(), 2, "IN", 4, "127.0.0.1");
 		offer_sdp->SetTiming(0, 0);
@@ -90,20 +88,16 @@ namespace pvd
 		video_media_desc->UseDtls(true);
 		video_media_desc->UseRtcpMux(true);
 		video_media_desc->SetDirection(MediaDescription::Direction::RecvOnly);
-		//video_media_desc->SetCname(cname);
-		//video_media_desc->SetSsrc(ov::Random::GenerateUInt32());
-		// not support yet
-		// video_media_desc->SetRtxSsrc(ov::Random::GenerateUInt32()); 
 
+		std::shared_ptr<PayloadAttr> payload;
 		// VP8
-		/*
-		auto payload = std::make_shared<PayloadAttr>();
+		payload = std::make_shared<PayloadAttr>();
 		payload->SetRtpmap(payload_type_num++, "VP8", 90000);
+		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::CcmFir, true);
 		video_media_desc->AddPayload(payload);
-		*/
 
 		// H264
-		auto payload = std::make_shared<PayloadAttr>();
+		payload = std::make_shared<PayloadAttr>();
 		payload->SetRtpmap(payload_type_num++, "H264", 90000);
 		payload->SetFmtp(ov::String::FormatString("packetization-mode=1;profile-level-id=%x;level-asymmetry-allowed=1",	0x42e01f));
 		payload->EnableRtcpFb(PayloadAttr::RtcpFbType::CcmFir, true);
@@ -115,10 +109,8 @@ namespace pvd
 		///////////////////////////////////////
 		// Audio Media Description
 		///////////////////////////////////////
-		/* NOW DOESN'T SUPPORT OPUS DECODER
 		auto audio_media_desc = std::make_shared<MediaDescription>();
 		audio_media_desc->SetConnection(4, "0.0.0.0");
-		// TODO(dimiden): Need to prevent duplication
 		audio_media_desc->SetMid(ov::Random::GenerateString(6));
 		audio_media_desc->SetMsid(msid, ov::Random::GenerateString(36));
 		audio_media_desc->SetSetup(MediaDescription::SetupType::ActPass);
@@ -126,8 +118,6 @@ namespace pvd
 		audio_media_desc->UseRtcpMux(true);
 		audio_media_desc->SetDirection(MediaDescription::Direction::RecvOnly);
 		audio_media_desc->SetMediaType(MediaDescription::MediaType::Audio);
-		audio_media_desc->SetCname(cname);
-		audio_media_desc->SetSsrc(ov::Random::GenerateUInt32());
 
 		// OPUS
 		payload = std::make_shared<PayloadAttr>();
@@ -137,7 +127,6 @@ namespace pvd
 
 		audio_media_desc->Update();
 		offer_sdp->AddMedia(audio_media_desc);
-		*/
 
 		offer_sdp->Update();
 		logtd("Offer SDP created : %s", offer_sdp->ToString().CStr());

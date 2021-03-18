@@ -555,9 +555,12 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 				return false;
 			}
 			break;
+			
 		case MediaCodecId::Vp8:
-		case MediaCodecId::Vp9:
 		case MediaCodecId::Opus:
+			return true;
+
+		case MediaCodecId::Vp9:
 			logte("Not support codec in stream");
 			return false;
 

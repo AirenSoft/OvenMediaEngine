@@ -232,7 +232,11 @@ bool MediaTrack::IsValidity()
 			}
 		}
 		break;
-		case MediaCodecId::Vp8:
+		case MediaCodecId::Vp8: {
+			// The exception is that it is temporarily valid until codec parser development.
+			return true;
+		}
+		break;
 		case MediaCodecId::Vp9:
 		case MediaCodecId::Flv: {
 			if (_width > 0 &&
@@ -266,7 +270,10 @@ bool MediaTrack::IsValidity()
 			}
 		}
 		break;
-		case MediaCodecId::Opus:
+		case MediaCodecId::Opus: {
+			// The exception is that it is temporarily valid until codec parser development.
+			return true;
+		}
 		case MediaCodecId::Mp3: {
 			if (_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
