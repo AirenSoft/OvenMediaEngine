@@ -318,9 +318,6 @@ void IcePort::CheckTimedoutItem()
 		{
 			if (item->second->IsExpired())
 			{
-				logtd("Client %s(session id: %d) is expired", item->second->address.ToString().CStr(), item->second->session_id);
-				SetIceState(item->second, IcePortConnectionState::Disconnected);
-
 				delete_list.push_back(item->second);
 
 				item = _user_mapping_table.erase(item);
@@ -340,6 +337,13 @@ void IcePort::CheckTimedoutItem()
 			_session_table.erase(deleted_ice_port->session_id);
 			_ice_port_info.erase(deleted_ice_port->address);
 		}
+	}
+
+	// Notify to observer
+	for (auto &deleted_ice_port : delete_list)
+	{
+		logtd("Client %s(session id: %d) is expired", deleted_ice_port->address.ToString().CStr(), deleted_ice_port->session_id);
+		SetIceState(deleted_ice_port, IcePortConnectionState::Disconnected);
 	}
 }
 
@@ -657,7 +661,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		return false;
 	}
 
-	ice_port_info->UpdateBindingTime();
+	//ice_port_info->UpdateBindingTime();
 
 	if (ice_port_info->state == IcePortConnectionState::New)
 	{
