@@ -267,7 +267,14 @@ bool IcePort::RemoveSession(uint32_t session_id)
 		auto item = _session_table.find(session_id);
 		if (item == _session_table.end())
 		{
-			logtw("Could not find session: %d", session_id);
+			/*
+			The case of reaching here is as follows.
+
+			1. Already the session was deleted but WebRTC Signalling server try to delete the session again
+			2. IcePort sent Stun request but player didn't response stun bind response
+
+			*/
+			logtd("Could not find session: %d", session_id);
 
 			{
 				// If it exists only in _user_mapping_table, find it and remove it.
@@ -281,7 +288,14 @@ bool IcePort::RemoveSession(uint32_t session_id)
 					if (ice_port_info->session_id == session_id)
 					{
 						_user_mapping_table.erase(it++);
-						logtw("This is because the stun request was not received from this session.");
+						logtd("This is because the stun request was not received from this session.");
+
+						// Close only TCP (TURN)
+						if(ice_port_info->remote->GetSocket().GetType() == ov::SocketType::Tcp)
+						{
+							ice_port_info->remote->CloseIfNeeded();
+						}
+
 						return true;
 					}
 					else
@@ -298,6 +312,12 @@ bool IcePort::RemoveSession(uint32_t session_id)
 
 		_session_table.erase(item);
 		_ice_port_info.erase(ice_port_info->address);
+
+		// Close only TCP (TURN)
+		if(ice_port_info->remote->GetSocket().GetType() == ov::SocketType::Tcp)
+		{
+			ice_port_info->remote->CloseIfNeeded();
+		}
 	}
 
 	{
@@ -319,7 +339,6 @@ void IcePort::CheckTimedoutItem()
 			if (item->second->IsExpired())
 			{
 				delete_list.push_back(item->second);
-
 				item = _user_mapping_table.erase(item);
 			}
 			else
@@ -342,7 +361,14 @@ void IcePort::CheckTimedoutItem()
 	// Notify to observer
 	for (auto &deleted_ice_port : delete_list)
 	{
-		logtd("Client %s(session id: %d) is expired", deleted_ice_port->address.ToString().CStr(), deleted_ice_port->session_id);
+		logtw("Client %s(session id: %d) has expired", deleted_ice_port->address.ToString().CStr(), deleted_ice_port->session_id);
+
+		// Close only TCP (TURN)
+		if(deleted_ice_port->remote->GetSocket().GetType() == ov::SocketType::Tcp)
+		{
+			deleted_ice_port->remote->CloseIfNeeded();
+		}
+
 		SetIceState(deleted_ice_port, IcePortConnectionState::Disconnected);
 	}
 }
@@ -366,7 +392,7 @@ bool IcePort::Send(uint32_t session_id, const std::shared_ptr<const ov::Data> &d
 		auto item = _session_table.find(session_id);
 		if (item == _session_table.end())
 		{
-			logtw("ClientSocket not found for session #%d", session_id);
+			logtd("ClientSocket not found for session #%d", session_id);
 			return false;
 		}
 

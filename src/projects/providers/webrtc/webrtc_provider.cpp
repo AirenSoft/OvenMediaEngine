@@ -346,7 +346,10 @@ namespace pvd
 			case IcePortConnectionState::Closed:
 			{
 				logti("IcePort is disconnected. : (%s/%s) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(),  state);
-				OnChannelDeleted(stream);
+
+				// Signalling server will call OnStopCommand, then stream will be removed in that function
+				_signalling_server->Disconnect(stream->GetApplicationInfo().GetName(), stream->GetName(), stream->GetPeerSDP());
+
 				break;
 			}
 			default:

@@ -562,6 +562,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 	}
 
 	DisconnectSessionInternal(session);
+
 	_ice_port->RemoveSession(session->GetId());
 
 	return true;
@@ -611,7 +612,10 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, uint32_t session_id, IcePort
 		case IcePortConnectionState::Closed:
 		{
 			logti("IcePort is disconnected. : (%s/%s/%u) reason(%d)", stream->GetApplicationName(), stream->GetName().CStr(), session->GetId(), state);
-			DisconnectSessionInternal(session);
+
+			_signalling_server->Disconnect(session->GetApplication()->GetName(), session->GetStream()->GetName(), session->GetPeerSDP());
+
+			//DisconnectSessionInternal(session);
 			break;
 		}
 		default:

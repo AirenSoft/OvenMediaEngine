@@ -42,6 +42,9 @@ namespace pvd
 		bool Start() override;
 		bool Stop() override;
 
+		std::shared_ptr<const SessionDescription> GetOfferSDP();
+		std::shared_ptr<const SessionDescription> GetPeerSDP();
+
 		// ------------------------------------------
 		// Implementation of PushStream
 		// ------------------------------------------

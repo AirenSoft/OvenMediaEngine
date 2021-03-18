@@ -272,6 +272,16 @@ namespace pvd
 		return pvd::Stream::Stop();
 	}
 
+	std::shared_ptr<const SessionDescription> WebRTCStream::GetOfferSDP()
+	{
+		return _offer_sdp;
+	}
+
+	std::shared_ptr<const SessionDescription> WebRTCStream::GetPeerSDP()
+	{
+		return _peer_sdp;
+	}
+
 	// From IcePort -> WebRTCProvider -> Application -> 
 	bool WebRTCStream::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 	{
