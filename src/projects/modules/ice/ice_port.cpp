@@ -661,7 +661,7 @@ bool IcePort::ProcessStunBindingRequest(const std::shared_ptr<ov::Socket> &remot
 		return false;
 	}
 
-	//ice_port_info->UpdateBindingTime();
+	ice_port_info->UpdateBindingTime();
 
 	if (ice_port_info->state == IcePortConnectionState::New)
 	{
