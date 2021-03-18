@@ -409,8 +409,8 @@ namespace ov
 							struct epoll_event ep_event;
 							ep_event.events = EPOLLOUT | EPOLLIN | EPOLLERR;
 							ep_event.data.fd = GetSocket().GetNativeHandle();
-							
-							if(epoll_ctl(ep_fd, EPOLL_CTL_ADD, GetSocket().GetNativeHandle(), &ep_event) == -1)
+
+							if (epoll_ctl(ep_fd, EPOLL_CTL_ADD, GetSocket().GetNativeHandle(), &ep_event) == -1)
 							{
 								close(ep_fd);
 								break;
@@ -419,7 +419,7 @@ namespace ov
 							auto num_events = epoll_wait(ep_fd, &triggered_events, 1, timeout_msec);
 
 							// timeout or error
-							if(num_events <= 0)
+							if (num_events <= 0)
 							{
 								close(ep_fd);
 								break;
@@ -865,15 +865,28 @@ namespace ov
 					{
 						auto error = Error::CreateErrorFromErrno();
 
-						if (error->GetCode() == EAGAIN)
+						switch (error->GetCode())
 						{
-							// Socket buffer is full - retry later
-							STATS_COUNTER_INCREASE_RETRY();
-							return total_sent;
+							case EAGAIN:
+								// Socket buffer is full - retry later
+								STATS_COUNTER_INCREASE_RETRY();
+								return total_sent;
+
+							case EBADF:
+								// Socket is closed somewhere in OME
+								break;
+
+							case EPIPE:
+								// Broken pipe - maybe peer is disconnected
+								break;
+
+							default:
+								logaw("Could not send data: %zd (%s)", sent, error->ToString().CStr());
+								break;
 						}
 
 						STATS_COUNTER_INCREASE_ERROR();
-						logaw("Could not send data: %zd (%s)", sent, error->ToString().CStr());
+						
 						return sent;
 					}
 
@@ -1259,7 +1272,7 @@ namespace ov
 			return DispatchResult::Dispatched;
 		}
 
-		if(GetState() == ov::SocketState::Created)
+		if (GetState() == ov::SocketState::Created)
 		{
 			return Socket::DispatchResult::Dispatched;
 		}
@@ -1339,7 +1352,7 @@ namespace ov
 
 			if (callback != nullptr)
 			{
-				if(_connection_event_fired)
+				if (_connection_event_fired)
 				{
 					callback->OnClosed();
 				}
