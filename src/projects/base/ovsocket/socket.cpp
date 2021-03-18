@@ -642,10 +642,12 @@ namespace ov
 	{
 		std::lock_guard lock_guard(_dispatch_queue_lock);
 
-		if (_dispatch_queue.size() > 0)
+		if (_dispatch_queue.empty())
 		{
-			logap("Dispatching events (count: %zu)...", _dispatch_queue.size());
+			return DispatchResult::Dispatched;
 		}
+
+		logap("Dispatching events (count: %zu)...", _dispatch_queue.size());
 
 		while (_dispatch_queue.empty() == false)
 		{
@@ -886,7 +888,7 @@ namespace ov
 						}
 
 						STATS_COUNTER_INCREASE_ERROR();
-						
+
 						return sent;
 					}
 
@@ -931,27 +933,56 @@ namespace ov
 				break;
 		}
 
-		if (GetType() != SocketType::Udp)
-		{
-			CHECK_STATE(== SocketState::Connected, false);
-		}
-		else
-		{
-			CHECK_STATE(== SocketState::Bound, false);
-		}
-
 		if (data == nullptr)
 		{
 			OV_ASSERT2(data != nullptr);
 			return false;
 		}
 
-		if (AppendCommand({data->Clone()}) == false)
+		if (GetType() != SocketType::Udp)
 		{
-			return false;
-		}
+			CHECK_STATE(== SocketState::Connected, false);
 
-		return (DispatchEvents() != DispatchResult::Error);
+			if (AppendCommand({data->Clone()}) == false)
+			{
+				return false;
+			}
+
+			return (DispatchEvents() != DispatchResult::Error);
+		}
+		else
+		{
+			CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
+
+			// We don't have to be accurate here, because we'll acquire lock of _dispatch_queue_lock in DispatchEvent()
+			if (_dispatch_queue.empty() == false)
+			{
+				// Send remaining data
+				if (DispatchEvents() == DispatchResult::Error)
+				{
+					return false;
+				}
+			}
+
+			// Send the data directly
+			auto sent = SendInternal(data);
+
+			if (sent == static_cast<ssize_t>(data->GetLength()))
+			{
+				// The data has been sent
+				return true;
+			}
+			else if (sent == 0L)
+			{
+				// Need to send later
+				return AppendCommand({data->Clone()});
+			}
+			else
+			{
+				// An error occurred
+				return false;
+			}
+		}
 	}
 
 	bool Socket::Send(const void *data, size_t length)
@@ -961,18 +992,15 @@ namespace ov
 
 	bool Socket::SendTo(const SocketAddress &address, const std::shared_ptr<const Data> &data)
 	{
-		if (GetState() == SocketState::Closed)
+		switch (GetState())
 		{
-			return false;
-		}
+			case SocketState::Closed:
+				[[fallthrough]];
+			case SocketState::Error:
+				return false;
 
-		if (GetType() != SocketType::Udp)
-		{
-			CHECK_STATE(== SocketState::Connected, false);
-		}
-		else
-		{
-			CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
+			default:
+				break;
 		}
 
 		if (data == nullptr)
@@ -981,12 +1009,50 @@ namespace ov
 			return false;
 		}
 
-		if (AppendCommand({address, data->Clone()}) == false)
+		if (GetType() != SocketType::Udp)
 		{
-			return false;
-		}
+			CHECK_STATE(== SocketState::Connected, false);
 
-		return (DispatchEvents() != DispatchResult::Error);
+			if (AppendCommand({address, data->Clone()}) == false)
+			{
+				return false;
+			}
+
+			return (DispatchEvents() != DispatchResult::Error);
+		}
+		else
+		{
+			CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
+
+			// We don't have to be accurate here, because we'll acquire lock of _dispatch_queue_lock in DispatchEvent()
+			if (_dispatch_queue.empty() == false)
+			{
+				// Send remaining data
+				if (DispatchEvents() == DispatchResult::Error)
+				{
+					return false;
+				}
+			}
+
+			// Send the data directly
+			auto sent = SendToInternal(address, data);
+
+			if (sent == static_cast<ssize_t>(data->GetLength()))
+			{
+				// The data has been sent
+				return true;
+			}
+			else if (sent == 0L)
+			{
+				// Need to send later
+				return AppendCommand({address, data->Clone()});
+			}
+			else
+			{
+				// An error occurred
+				return false;
+			}
+		}
 	}
 
 	bool Socket::SendTo(const SocketAddress &address, const void *data, size_t length)
