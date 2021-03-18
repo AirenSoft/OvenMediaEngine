@@ -1071,19 +1071,14 @@ bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remot
 {
 	StunMessage response_message;
 
-	auto requested_lifetime_attr = message.GetAttribute<StunLifetimeAttribute>(StunAttributeType::Lifetime);
-	if(requested_lifetime_attr == nullptr)
-	{
-		response_message.SetHeader(StunClass::ErrorResponse, StunMethod::Refresh, message.GetTransactionId());
-		response_message.SetErrorCodeAttribute(StunErrorCode::BadRequest);
-		SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
-		return false;
-	}
-
 	// Add lifetime
 	uint32_t lifetime = DEFAULT_LIFETIME;
 
-	lifetime = std::min(static_cast<uint32_t>(DEFAULT_LIFETIME), requested_lifetime_attr->GetValue());
+	auto requested_lifetime_attr = message.GetAttribute<StunLifetimeAttribute>(StunAttributeType::Lifetime);
+	if(requested_lifetime_attr != nullptr)
+	{
+		lifetime = std::min(static_cast<uint32_t>(DEFAULT_LIFETIME), requested_lifetime_attr->GetValue());
+	}
 
 	auto lifetime_attribute = std::make_shared<StunLifetimeAttribute>();
 	lifetime_attribute->SetValue(lifetime);
@@ -1092,6 +1087,8 @@ bool IcePort::ProcessTurnRefreshRequest(const std::shared_ptr<ov::Socket> &remot
 	response_message.SetHeader(StunClass::SuccessResponse, StunMethod::Refresh, message.GetTransactionId());
 	response_message.AddAttribute(lifetime_attribute);
 	SendStunMessage(remote, address, gate_info, response_message, _hmac_key->ToString());
+
+	logtd("Turn Refresh Request : %s", lifetime_attribute->ToString().CStr());	
 
 	return true;
 }
