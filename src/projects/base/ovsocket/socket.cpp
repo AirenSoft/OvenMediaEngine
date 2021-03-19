@@ -35,12 +35,63 @@
 #define logae(format, ...) logte("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 #define logac(format, ...) logtc("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 
+#define USE_SOCKET_PROFILER 0
+
 namespace ov
 {
+#if USE_SOCKET_PROFILER
+	// Calculate and callback the time before and after the mutex lock and the time until the method is completely processed
+
+	class SocketProfiler
+	{
+	public:
+		using PostHandler = std::function<void(int64_t lock_elapsed, int64_t total_elapsed)>;
+
+		SocketProfiler()
+		{
+			sw.Start();
+		}
+
+		~SocketProfiler()
+		{
+			if (post_handler != nullptr)
+			{
+				post_handler(lock_elapsed, sw.Elapsed());
+			}
+		}
+
+		void AfterLock()
+		{
+			lock_elapsed = sw.Elapsed();
+		}
+
+		void SetPostHandler(PostHandler post_handler)
+		{
+			this->post_handler = post_handler;
+		}
+
+		ov::StopWatch sw;
+		int64_t lock_elapsed;
+		PostHandler post_handler;
+	};
+
+#	define SOCKET_PROFILER_INIT() SocketProfiler __socket_profiler
+#	define SOCKET_PROFILER_AFTER_LOCK() __socket_profiler.AfterLock()
+#	define SOCKET_PROFILER_POST_HANDLER(handler) __socket_profiler.SetPostHandler(handler)
+#else  // USE_SOCKET_PROFILER
+#	define SOCKET_PROFILER_NOOP() \
+		do                         \
+		{                          \
+		} while (false)
+
+#	define SOCKET_PROFILER_INIT() STATS_COUNTER_NOOP()
+#	define SOCKET_PROFILER_AFTER_LOCK() STATS_COUNTER_NOOP()
+#	define SOCKET_PROFILER_POST_HANDLER() STATS_COUNTER_NOOP()
+#endif	// USE_SOCKET_PROFILER
+
 	Socket::Socket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker)
 		: _worker(worker)
 	{
-		STATS_COUNTER_START_TRACKING();
 	}
 
 	// Creates a socket using remote information.
@@ -58,8 +109,6 @@ namespace ov
 
 	Socket::~Socket()
 	{
-		STATS_COUNTER_STOP_TRACKING();
-
 		// Verify that the socket is closed normally
 		CHECK_STATE(== SocketState::Closed, );
 		OV_ASSERT(_socket.IsValid() == false, "Socket is not closed. Current state: %s", StringFromSocketState(GetState()));
@@ -184,7 +233,16 @@ namespace ov
 
 	bool Socket::AppendCommand(DispatchCommand command)
 	{
+		SOCKET_PROFILER_INIT();
 		std::lock_guard lock_guard(_dispatch_queue_lock);
+		SOCKET_PROFILER_AFTER_LOCK();
+
+		SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
+			if ((lock_elapsed > 100) || (_dispatch_queue.size() > 10))
+			{
+				logtw("[SockProfiler] AppendCommand() - %s, Queue: %zu, Lock: %dms, Total: %dms", ToString().CStr(), _dispatch_queue.size(), lock_elapsed, total_elapsed);
+			}
+		});
 
 		if (_has_close_command)
 		{
@@ -193,6 +251,7 @@ namespace ov
 		}
 
 		_dispatch_queue.push_back(std::move(command));
+
 		return true;
 	}
 
@@ -578,6 +637,14 @@ namespace ov
 
 	Socket::DispatchResult Socket::DispatchInternal(DispatchCommand &command)
 	{
+		SOCKET_PROFILER_INIT();
+		SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
+			if (total_elapsed > 100)
+			{
+				logtw("[SockProfiler] DispatchInternal() - %s, Total: %dms", ToString().CStr(), total_elapsed);
+			}
+		});
+
 		ssize_t sent_bytes;
 		auto &data = command.data;
 
@@ -640,7 +707,17 @@ namespace ov
 
 	Socket::DispatchResult Socket::DispatchEvents()
 	{
+		SOCKET_PROFILER_INIT();
 		std::lock_guard lock_guard(_dispatch_queue_lock);
+		SOCKET_PROFILER_AFTER_LOCK();
+
+		[[maybe_unused]] auto count = _dispatch_queue.size();
+		SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
+			if ((lock_elapsed > 100) || (count > 10) || (_dispatch_queue.size() > 10))
+			{
+				logtw("[SockProfiler] DispatchEvents() - %s, Before Queue: %zu, After Queue: %zu, Lock: %dms, Total: %dms", ToString().CStr(), count, _dispatch_queue.size(), lock_elapsed, total_elapsed);
+			}
+		});
 
 		if (_dispatch_queue.empty())
 		{
@@ -1293,7 +1370,16 @@ namespace ov
 		}
 
 		{
+			SOCKET_PROFILER_INIT();
 			std::lock_guard lock_guard(_dispatch_queue_lock);
+			SOCKET_PROFILER_AFTER_LOCK();
+
+			SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
+				if ((lock_elapsed > 100) || (_dispatch_queue.size() > 10))
+				{
+					logtw("[SockProfiler] Close() - %s, Queue: %zu, Lock: %dms, Total: %dms", ToString().CStr(), _dispatch_queue.size(), lock_elapsed, total_elapsed);
+				}
+			});
 
 			if (_has_close_command == false)
 			{
