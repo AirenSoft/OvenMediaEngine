@@ -86,7 +86,7 @@ namespace ov
 
 #	define SOCKET_PROFILER_INIT() STATS_COUNTER_NOOP()
 #	define SOCKET_PROFILER_AFTER_LOCK() STATS_COUNTER_NOOP()
-#	define SOCKET_PROFILER_POST_HANDLER() STATS_COUNTER_NOOP()
+#	define SOCKET_PROFILER_POST_HANDLER(handler) STATS_COUNTER_NOOP()
 #endif	// USE_SOCKET_PROFILER
 
 	Socket::Socket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker)
