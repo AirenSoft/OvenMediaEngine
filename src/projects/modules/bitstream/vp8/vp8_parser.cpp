@@ -92,7 +92,6 @@ bool VP8Parser::Parse(const uint8_t *data, size_t data_length, VP8Parser &parser
 
 	BitReader reader(data, data_length);
 
-	// uint32_t frame_tag = (c[2] << 16) | (c[1] << 8) | c[0];
 	uint32_t frame_tag = reader.ReadBits<uint8_t>(8) | (reader.ReadBits<uint8_t>(8) << 8) | (reader.ReadBits<uint8_t>(8) << 16);
 
 	parser._key_frame = (frame_tag & 0x1) == 0 ? true : false;
