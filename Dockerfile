@@ -20,7 +20,7 @@ ENV     OME_VERSION=master \
         X265_VERSION=3.4 \
         VPX_VERSION=1.7.0 \
         FDKAAC_VERSION=0.1.5 \
-        FFMPEG_VERSION=4.3.1 \
+        FFMPEG_VERSION=4.3.2 \
         JEMALLOC_VERSION=5.2.1 \
         PCRE2_VERSION=10.35
 
