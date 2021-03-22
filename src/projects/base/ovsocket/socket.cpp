@@ -708,83 +708,100 @@ namespace ov
 	Socket::DispatchResult Socket::DispatchEvents()
 	{
 		SOCKET_PROFILER_INIT();
-		std::lock_guard lock_guard(_dispatch_queue_lock);
-		SOCKET_PROFILER_AFTER_LOCK();
 
-		[[maybe_unused]] auto count = _dispatch_queue.size();
-		SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
-			if ((lock_elapsed > 100) || (count > 10) || (_dispatch_queue.size() > 10))
-			{
-				logtw("[SockProfiler] DispatchEvents() - %s, Before Queue: %zu, After Queue: %zu, Lock: %dms, Total: %dms", ToString().CStr(), count, _dispatch_queue.size(), lock_elapsed, total_elapsed);
-			}
-		});
+		DispatchResult result = DispatchResult::Dispatched;
 
-		if (_dispatch_queue.empty())
 		{
-			return DispatchResult::Dispatched;
-		}
+			std::lock_guard lock_guard(_dispatch_queue_lock);
+			SOCKET_PROFILER_AFTER_LOCK();
 
-		logap("Dispatching events (count: %zu)...", _dispatch_queue.size());
-
-		while (_dispatch_queue.empty() == false)
-		{
-			auto &front = _dispatch_queue.front();
-
-			bool is_close_command = front.IsCloseCommand();
-
-			if ((GetState() == SocketState::Closed) && (is_close_command == false))
-			{
-				// If the socket is closed during dispatching, the rest of the data will not be sent.
-				logad("Some commands have not been dispatched: %zu commands", _dispatch_queue.size());
-#if DEBUG
-				for (auto &queue : _dispatch_queue)
+			[[maybe_unused]] auto count = _dispatch_queue.size();
+			SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
+				if ((lock_elapsed > 100) || (count > 10) || (_dispatch_queue.size() > 10))
 				{
-					logad("  - Command: %s", queue.ToString().CStr());
+					logtw("[SockProfiler] DispatchEvents() - %s, Before Queue: %zu, After Queue: %zu, Lock: %dms, Total: %dms", ToString().CStr(), count, _dispatch_queue.size(), lock_elapsed, total_elapsed);
 				}
-#endif	// DEBUG
+			});
 
-				_dispatch_queue.clear();
-
+			if (_dispatch_queue.empty())
+			{
 				return DispatchResult::Dispatched;
 			}
 
-			auto result = DispatchInternal(front);
+			logap("Dispatching events (count: %zu)...", _dispatch_queue.size());
 
-			if (result == DispatchResult::Dispatched)
+			while (_dispatch_queue.empty() == false)
 			{
-				if (_dispatch_queue.size() > 0)
+				auto &front = _dispatch_queue.front();
+
+				bool is_close_command = front.IsCloseCommand();
+
+				if ((GetState() == SocketState::Closed) && (is_close_command == false))
 				{
-					// Dispatches the next item
-					_dispatch_queue.pop_front();
+					// If the socket is closed during dispatching, the rest of the data will not be sent.
+					logad("Some commands have not been dispatched: %zu commands", _dispatch_queue.size());
+#if DEBUG
+					for (auto &queue : _dispatch_queue)
+					{
+						logad("  - Command: %s", queue.ToString().CStr());
+					}
+#endif	// DEBUG
+
+					_dispatch_queue.clear();
+
+					result = DispatchResult::Dispatched;
+					break;
+				}
+
+				result = DispatchInternal(front);
+
+				if (result == DispatchResult::Dispatched)
+				{
+					if (_dispatch_queue.size() > 0)
+					{
+						// Dispatches the next item
+						_dispatch_queue.pop_front();
+					}
+					else
+					{
+						// All items are dispatched int DispatchInternal();
+					}
+
+					continue;
+				}
+				else if (result == DispatchResult::PartialDispatched)
+				{
+					// The data is not fully processed and will not be removed from queue
+
+					// Close-related commands will be processed when we receive the event from epoll later
 				}
 				else
 				{
-					// All items are dispatched int DispatchInternal();
+					// An error occurred
+
+					if (is_close_command)
+					{
+						// Ignore errors that occurred during close
+						result = DispatchResult::Dispatched;
+						break;
+					}
 				}
 
-				continue;
+				break;
 			}
-			else if (result == DispatchResult::PartialDispatched)
-			{
-				// The data is not fully processed and will not be removed from queue
-
-				// Close-related commands will be processed when we receive the event from epoll later
-			}
-			else
-			{
-				// An error occurred
-
-				if (is_close_command)
-				{
-					// Ignore errors that occurred during close
-					return DispatchResult::Dispatched;
-				}
-			}
-
-			return result;
 		}
 
-		return DispatchResult::Dispatched;
+		// Since the resource is usually cleaned inside the OnClosed() callback,
+		// callback is performed outside the lock_guard to prevent acquiring the lock.
+		if (_post_callback != nullptr)
+		{
+			if (_connection_event_fired)
+			{
+				_post_callback->OnClosed();
+			}
+		}
+
+		return result;
 	}
 
 	ssize_t Socket::SendInternal(const std::shared_ptr<const Data> &data)
@@ -1001,7 +1018,10 @@ namespace ov
 	{
 		switch (GetState())
 		{
+			// When data transfer is requested after disconnection by a worker, etc., it enters here
 			case SocketState::Closed:
+				[[fallthrough]];
+			case SocketState::Disconnected:
 				[[fallthrough]];
 			case SocketState::Error:
 				return false;
@@ -1071,7 +1091,10 @@ namespace ov
 	{
 		switch (GetState())
 		{
+			// When data transfer is requested after disconnection by a worker, etc., it enters here
 			case SocketState::Closed:
+				[[fallthrough]];
+			case SocketState::Disconnected:
 				[[fallthrough]];
 			case SocketState::Error:
 				return false;
@@ -1463,7 +1486,7 @@ namespace ov
 	{
 		CHECK_STATE(!= SocketState::Closed, false);
 
-		auto callback = std::move(_callback);
+		_post_callback = std::move(_callback);
 
 		if (_socket.IsValid())
 		{
@@ -1499,14 +1522,6 @@ namespace ov
 						logad("  - Command: %s", queue.ToString().CStr());
 					}
 #endif	// DEBUG
-				}
-			}
-
-			if (callback != nullptr)
-			{
-				if (_connection_event_fired)
-				{
-					callback->OnClosed();
 				}
 			}
 
