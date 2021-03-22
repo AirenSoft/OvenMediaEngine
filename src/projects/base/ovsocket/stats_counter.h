@@ -13,8 +13,6 @@
 namespace ov
 {
 #if USE_STATS_COUNTER
-#	define STATS_COUNTER_START_TRACKING() stats_counter.StartTracking()
-#	define STATS_COUNTER_STOP_TRACKING() stats_counter.StopTracking()
 #	define STATS_COUNTER_INCREASE_PPS() stats_counter.IncreasePps()
 #	define STATS_COUNTER_INCREASE_RETRY() stats_counter.IncreaseRetry()
 #	define STATS_COUNTER_INCREASE_ERROR() stats_counter.IncreaseError()
@@ -22,6 +20,21 @@ namespace ov
 	class StatsCounter
 	{
 	public:
+		StatsCounter()
+		{
+			StartTracking();
+		}
+
+		~StatsCounter()
+		{
+			_stop = true;
+
+			if (_tracking_thread.joinable())
+			{
+				_tracking_thread.join();
+			}
+		}
+
 		void IncreasePps()
 		{
 			_count++;
@@ -42,16 +55,6 @@ namespace ov
 
 		void StartTracking()
 		{
-			{
-				std::lock_guard<std::mutex> lock_guard(_mutex);
-				if (_is_running)
-				{
-					return;
-				}
-
-				_is_running = true;
-			}
-
 			_stop = false;
 
 			_tracking_thread = std::thread(
@@ -77,7 +80,7 @@ namespace ov
 						int64_t error_count = _error_count;
 						_error_count = 0;
 
-						if ((count > 0) || (retry_count) || (error_count > 0))
+						if ((count > 0) || (retry_count > 0) || (error_count > 0))
 						{
 							loop_count++;
 
@@ -111,23 +114,12 @@ namespace ov
 
 						sleep(1);
 					}
+
+					logi("SockStat", "[Stats Counter] Stats counter is terminated");
 				});
 		}
 
-		void StopTracking()
-		{
-			_stop = true;
-
-			if (_tracking_thread.joinable())
-			{
-				_tracking_thread.join();
-			}
-		}
-
 	protected:
-		std::mutex _mutex;
-		volatile bool _is_running = false;
-
 		std::atomic<int64_t> _count{0};
 		std::atomic<int64_t> _total_count{0};
 
@@ -147,9 +139,6 @@ namespace ov
 		do                       \
 		{                        \
 		} while (false)
-#	define STATS_COUNTER_START_TRACKING() STATS_COUNTER_NOOP()
-#	define STATS_COUNTER_STOP_TRACKING() STATS_COUNTER_NOOP()
-
 #	define STATS_COUNTER_INCREASE_PPS() STATS_COUNTER_NOOP()
 #	define STATS_COUNTER_INCREASE_RETRY() STATS_COUNTER_NOOP()
 #	define STATS_COUNTER_INCREASE_ERROR() STATS_COUNTER_NOOP()

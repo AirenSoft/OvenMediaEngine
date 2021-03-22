@@ -291,9 +291,14 @@ bool IcePort::RemoveSession(uint32_t session_id)
 						logtd("This is because the stun request was not received from this session.");
 
 						// Close only TCP (TURN)
-						if(ice_port_info->remote->GetSocket().GetType() == ov::SocketType::Tcp)
+						auto remote = ice_port_info->remote;
+
+						if (remote != nullptr)
 						{
-							ice_port_info->remote->CloseIfNeeded();
+							if (remote->GetSocket().GetType() == ov::SocketType::Tcp)
+							{
+								remote->CloseIfNeeded();
+							}
 						}
 
 						return true;

@@ -10,8 +10,10 @@
 
 #include "../transcode_private.h"
 #include "transcode_codec_dec_aac.h"
+#include "transcode_codec_dec_opus.h"
 #include "transcode_codec_dec_avc.h"
 #include "transcode_codec_dec_hevc.h"
+#include "transcode_codec_dec_vp8.h"
 
 #define MAX_QUEUE_SIZE 120
 
@@ -67,10 +69,15 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::CreateDecoder(const info::St
 		case cmn::MediaCodecId::H265:
 			decoder = std::make_shared<OvenCodecImplAvcodecDecHEVC>(info);
 			break;
+		case cmn::MediaCodecId::Vp8:
+			decoder = std::make_shared<OvenCodecImplAvcodecDecVP8>(info);
+			break;			
 		case cmn::MediaCodecId::Aac:
 			decoder = std::make_shared<OvenCodecImplAvcodecDecAAC>(info);
 			break;
-
+		case cmn::MediaCodecId::Opus:
+			decoder = std::make_shared<OvenCodecImplAvcodecDecOPUS>(info);
+			break;
 		default:
 			OV_ASSERT(false, "Not supported codec: %d", codec_id);
 			break;

@@ -20,7 +20,7 @@ ENV     OME_VERSION=master \
         X265_VERSION=3.4 \
         VPX_VERSION=1.7.0 \
         FDKAAC_VERSION=0.1.5 \
-        FFMPEG_VERSION=4.3.1 \
+        FFMPEG_VERSION=4.3.2 \
         JEMALLOC_VERSION=5.2.1 \
         PCRE2_VERSION=10.35
 
@@ -145,8 +145,8 @@ RUN \
         --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 \
         --disable-everything \
         --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,libx265,mjpeg,png \
-        --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc \
-        --enable-parser=aac,aac_latm,aac_fixed,h264,hevc \
+        --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
+        --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \        
         --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
         --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format && \
         make && \

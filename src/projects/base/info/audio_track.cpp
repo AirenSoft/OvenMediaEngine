@@ -12,7 +12,7 @@ using namespace cmn;
 
 AudioTrack::AudioTrack()
 {
-
+	_channel_layout.SetLayout(AudioChannel::Layout::LayoutUnknown);
 }
 
 void AudioTrack::SetSampleRate(int32_t sample_rate)

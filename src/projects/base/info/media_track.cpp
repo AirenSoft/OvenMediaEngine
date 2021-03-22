@@ -233,8 +233,13 @@ bool MediaTrack::IsValidity()
 		}
 		break;
 		case MediaCodecId::Vp8: {
-			// The exception is that it is temporarily valid until codec parser development.
-			return true;
+			if (_width > 0 &&
+				_height > 0 &&
+				_time_base.GetNum() > 0 &&
+				_time_base.GetDen() > 0)
+			{
+				return true;
+			}
 		}
 		break;
 		case MediaCodecId::Vp9:
@@ -271,9 +276,16 @@ bool MediaTrack::IsValidity()
 		}
 		break;
 		case MediaCodecId::Opus: {
-			// The exception is that it is temporarily valid until codec parser development.
-			return true;
+			if (_time_base.GetNum() > 0 &&
+				_time_base.GetDen() > 0 &&
+				_channel_layout.GetCounts() > 0 &&
+				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown && 
+				_sample.GetRate() == cmn::AudioSample::Rate::R48000)
+			{
+				return true;
+			}
 		}
+		break;
 		case MediaCodecId::Mp3: {
 			if (_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
