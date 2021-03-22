@@ -364,7 +364,7 @@ void IcePort::CheckTimedoutItem()
 		logtw("Client %s(session id: %d) has expired", deleted_ice_port->address.ToString().CStr(), deleted_ice_port->session_id);
 
 		// Close only TCP (TURN)
-		if(deleted_ice_port->remote->GetSocket().GetType() == ov::SocketType::Tcp)
+		if(deleted_ice_port->remote != nullptr && deleted_ice_port->remote->GetSocket().GetType() == ov::SocketType::Tcp)
 		{
 			deleted_ice_port->remote->CloseIfNeeded();
 		}
@@ -452,6 +452,7 @@ void IcePort::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physical
 
 void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
+	return;
 	// The only packet input to IcePort/TCP is STUN and TURN DATA CHANNEL.
 	if(remote->GetType() == ov::SocketType::Tcp)
 	{
