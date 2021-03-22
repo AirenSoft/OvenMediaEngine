@@ -457,7 +457,6 @@ void IcePort::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physical
 
 void IcePort::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
 {
-	return;
 	// The only packet input to IcePort/TCP is STUN and TURN DATA CHANNEL.
 	if(remote->GetType() == ov::SocketType::Tcp)
 	{
