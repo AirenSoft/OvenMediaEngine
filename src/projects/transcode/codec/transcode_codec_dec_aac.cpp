@@ -20,7 +20,7 @@ void OvenCodecImplAvcodecDecAAC::ThreadDecode()
 		/////////////////////////////////////////////////////////////////////
 		// Sending a packet to decoder
 		/////////////////////////////////////////////////////////////////////
-		if (_cur_pkt == nullptr && (_input_buffer.IsEmpty() == false || no_data_to_encode == true) )
+		if (_cur_pkt == nullptr && (_input_buffer.IsEmpty() == false || no_data_to_encode == true))
 		{
 			auto obj = _input_buffer.Dequeue();
 			if (obj.has_value() == false)
@@ -95,8 +95,9 @@ void OvenCodecImplAvcodecDecAAC::ThreadDecode()
 					}
 					else if (ret < 0)
 					{
-						logte("Error sending a packet for decoding : ERROR(Unknown %d)", ret);
-						break;
+						char err_msg[1024];
+						av_strerror(ret, err_msg, sizeof(err_msg));
+						logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
 					}
 				}
 

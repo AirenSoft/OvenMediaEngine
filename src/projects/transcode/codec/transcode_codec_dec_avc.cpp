@@ -85,7 +85,6 @@ void OvenCodecImplAvcodecDecAVC::ThreadDecode()
 					char err_msg[1024];
 					av_strerror(ret, err_msg, sizeof(err_msg));
 					logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
-					break;
 				}
 			}
 

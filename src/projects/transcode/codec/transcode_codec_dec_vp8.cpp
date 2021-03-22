@@ -85,7 +85,6 @@ void OvenCodecImplAvcodecDecVP8::ThreadDecode()
 					char err_msg[1024];
 					av_strerror(ret, err_msg, sizeof(err_msg));
 					logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
-					break;
 				}
 			}
 
@@ -177,7 +176,7 @@ void OvenCodecImplAvcodecDecVP8::ThreadDecode()
 				::av_frame_unref(_frame);
 
 				TranscodeResult result = need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady;
-				
+
 				_output_buffer.Enqueue(std::move(decoded_frame));
 
 				OnCompleteHandler(result, _track_id);
