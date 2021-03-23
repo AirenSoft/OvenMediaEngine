@@ -97,6 +97,13 @@ bool FileSession::StartRecord()
 	GetRecord()->SetTmpPath(GetOutputTempFilePath(GetRecord()));
 	GetRecord()->SetState(info::Record::RecordState::Recording);
 
+	// Get extension and container format
+	ov::String output_extention = ov::PathManager::ExtractExtension(GetRecord()->GetFilePath());
+	ov::String output_format = FileWriter::GetFormatByExtension(output_extention, "mpegts");
+
+	logtd("output extention : %s", output_extention.CStr());
+	logtd("output format : %s", output_format.CStr());
+
 	// Create directory for temporary file
 	ov::String tmp_directory = ov::PathManager::ExtractPath(GetRecord()->GetTmpPath());
 	ov::String tmp_real_directory = ov::PathManager::Combine(GetRootPath(), tmp_directory);
@@ -122,7 +129,7 @@ bool FileSession::StartRecord()
 		return false;
 	}
 
-	if (_writer->SetPath(ov::PathManager::Combine(GetRootPath(), GetRecord()->GetTmpPath()), "mpegts") == false)
+	if (_writer->SetPath(ov::PathManager::Combine(GetRootPath(), GetRecord()->GetTmpPath()), output_format) == false)
 	{
 		SetState(SessionState::Error);
 		GetRecord()->SetState(info::Record::RecordState::Error);
@@ -146,16 +153,9 @@ bool FileSession::StartRecord()
 			continue;
 		}
 
-		// It does not transmit unless it is H264 and AAC codec.
-		if (!(track->GetCodecId() == cmn::MediaCodecId::H264 ||
-			  track->GetCodecId() == cmn::MediaCodecId::H265 ||
-			  track->GetCodecId() == cmn::MediaCodecId::Vp8 ||
-			  track->GetCodecId() == cmn::MediaCodecId::Vp9 ||
-			  track->GetCodecId() == cmn::MediaCodecId::Aac ||
-			  track->GetCodecId() == cmn::MediaCodecId::Mp3 ||
-			  track->GetCodecId() == cmn::MediaCodecId::Opus))
+		if (FileWriter::IsSupportCodec(output_format, track->GetCodecId()) == false)
 		{
-			logtw("Could not supported codec. codec_id: %d", track->GetCodecId());
+			logtw("%s format does not support the codec(%d)", output_format.CStr(), track->GetCodecId());
 			continue;
 		}
 
@@ -353,7 +353,7 @@ ov::String FileSession::GetRootPath()
 ov::String FileSession::GetOutputTempFilePath(std::shared_ptr<info::Record> &record)
 {
 	ov::String tmp_directory = ov::PathManager::ExtractPath(record->GetFilePath());
-	ov::String tmp_filename = ov::String::FormatString("tmp_%s.ts", ov::Random::GenerateString(32).CStr());
+	ov::String tmp_filename = ov::String::FormatString("tmp_%s", ov::Random::GenerateString(32).CStr());
 
 	return ov::PathManager::Combine(tmp_directory, tmp_filename);
 }

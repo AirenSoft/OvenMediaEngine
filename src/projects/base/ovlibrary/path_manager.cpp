@@ -156,6 +156,20 @@ namespace ov
 		return String(buffer);
 	}
 
+	ov::String PathManager::ExtractExtension(ov::String path)
+	{
+		ov::String extension = "";
+
+		off_t idx = path.IndexOfRev('.', path.GetLength() - 1);
+		if (idx != -1L)
+		{
+			extension = path.Substring(idx + 1);
+		}
+		extension.MakeLower();
+
+		return extension;
+	}
+
 	std::shared_ptr<ov::Error> PathManager::GetFileList(const ov::String &base_file_name, const ov::String &pattern, std::vector<ov::String> *file_list, bool exclude_base_path)
 	{
 		auto base_path = ov::PathManager::ExtractPath(base_file_name);
