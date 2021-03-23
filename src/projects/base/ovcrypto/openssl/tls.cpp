@@ -155,6 +155,9 @@ namespace ov
 			// https://curl.haxx.se/docs/ssl-ciphers.html
 			// https://wiki.mozilla.org/Security/Server_Side_TLS
 			::SSL_CTX_set_cipher_list(ctx, cipher_list.CStr());
+			
+			// Disable old TLS versions which are neither secure nor needed any more
+			::SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
 
 			_ssl_ctx = std::move(ctx);
 
