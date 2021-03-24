@@ -150,6 +150,8 @@ private:
 	// <MediaTrack.id, std::hsared_ptr<FileTrackInfo>>
 	std::map<int32_t, std::shared_ptr<FileTrackInfo>> _trackinfo_map;
 
+	int64_t 	_start_timestamp;
+
 	// Map of track
 	// <MediaTrack.id, AVStream.index>
 	std::map<int32_t, int64_t> _track_map;
