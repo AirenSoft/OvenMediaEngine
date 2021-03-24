@@ -64,6 +64,9 @@ namespace pvd
 
 		bool SendFIR();
 
+		uint32_t AdjustTimestamp(uint8_t payload_type, uint32_t timestamp);
+		uint32_t GetTimestampDelta(uint8_t payload_type, uint32_t timestamp);
+
 		uint8_t _fir_seq = 0;
 		ov::StopWatch _fir_timer;
 
@@ -86,6 +89,10 @@ namespace pvd
 		bool								_rtx_enabled = false;
 		uint16_t							_rtx_sequence_number = 1;
 		uint64_t							_session_expired_time = 0;
+
+		// Payload type : Timestamp
+		std::map<uint8_t, uint32_t>			_last_timestamp_map;
+		std::map<uint8_t, uint32_t>			_timestamp_map;
 
 		std::shared_mutex					_start_stop_lock;
 
