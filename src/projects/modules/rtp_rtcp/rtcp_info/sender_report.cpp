@@ -20,6 +20,7 @@
 // 20 |                      sender's octet count                     |
 // 24 +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
 
+#define OV_LOG_TAG "RTCP-SR"
 #define RTCP_SENDER_REPORT_BASE_SIZE	24
 
 SenderReport::SenderReport()
@@ -36,7 +37,20 @@ SenderReport::~SenderReport()
 
 bool SenderReport::Parse(const RtcpPacket &packet)
 {
-	// OME doesn't receive SR, so it will be developed later
+	if(packet.GetPayloadSize() != RTCP_SENDER_REPORT_BASE_SIZE)
+	{
+		logtw("RTCP SR size is not %d", RTCP_SENDER_REPORT_BASE_SIZE);
+	}
+
+	auto sr_data = packet.GetPayload();
+
+	SetSenderSsrc(ByteReader<uint32_t>::ReadBigEndian(&sr_data[0]));
+	SetMsw(ByteReader<uint32_t>::ReadBigEndian(&sr_data[4]));
+	SetLsw(ByteReader<uint32_t>::ReadBigEndian(&sr_data[8]));
+	SetTimestamp(ByteReader<uint32_t>::ReadBigEndian(&sr_data[12]));
+	SetPacketCount(ByteReader<uint32_t>::ReadBigEndian(&sr_data[16]));
+	SetOctetCount(ByteReader<uint32_t>::ReadBigEndian(&sr_data[20]));
+
 	return true;
 }
 
@@ -48,7 +62,8 @@ std::shared_ptr<ov::Data> SenderReport::GetData() const
 
 void SenderReport::DebugPrint()
 {
-	
+	logti("[RTCP-SR] SSRC(%u) MSW(%u) LSW(%u) Timestamp(%u) Packet Count(%u) Octaet Count(%u)", 
+		GetSenderSsrc(), GetMsw(), GetLsw(), GetTimestamp(), GetPacketCount(), GetOctetCount());
 }
 
 void SenderReport::SetSenderSsrc(uint32_t ssrc)
