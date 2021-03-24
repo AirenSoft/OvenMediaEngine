@@ -137,6 +137,10 @@ public:
 
 	static void FFmpegLog(void *ptr, int level, const char *fmt, va_list vl);
 
+	static ov::String GetFormatByExtension(ov::String extension, ov::String default_format = "ts");
+
+	static bool IsSupportCodec(ov::String format, cmn::MediaCodecId codec_id);
+
 private:
 	ov::String _path;
 	ov::String _format;

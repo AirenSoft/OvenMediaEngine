@@ -186,11 +186,10 @@ bool FileWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 			AVCodecParameters *codecpar = stream->codecpar;
 
 			codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
-			codecpar->codec_id =
-				(track_info->GetCodecId() == cmn::MediaCodecId::H264) ? AV_CODEC_ID_H264 : (track_info->GetCodecId() == cmn::MediaCodecId::H265) ? AV_CODEC_ID_H265
-																					   : (track_info->GetCodecId() == cmn::MediaCodecId::Vp8)	 ? AV_CODEC_ID_VP8
-																					   : (track_info->GetCodecId() == cmn::MediaCodecId::Vp9)	 ? AV_CODEC_ID_VP9
-																																				 : AV_CODEC_ID_NONE;
+			codecpar->codec_id = (track_info->GetCodecId() == cmn::MediaCodecId::H264) ? AV_CODEC_ID_H264 : (track_info->GetCodecId() == cmn::MediaCodecId::H265) ? AV_CODEC_ID_H265
+																										: (track_info->GetCodecId() == cmn::MediaCodecId::Vp8)	  ? AV_CODEC_ID_VP8
+																										: (track_info->GetCodecId() == cmn::MediaCodecId::Vp9)	  ? AV_CODEC_ID_VP9
+																																								  : AV_CODEC_ID_NONE;
 
 			codecpar->bit_rate = track_info->GetBitrate();
 			codecpar->width = track_info->GetWidth();
@@ -220,10 +219,9 @@ bool FileWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 			AVCodecParameters *codecpar = stream->codecpar;
 
 			codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
-			codecpar->codec_id =
-				(track_info->GetCodecId() == cmn::MediaCodecId::Aac) ? AV_CODEC_ID_AAC : (track_info->GetCodecId() == cmn::MediaCodecId::Mp3) ? AV_CODEC_ID_MP3
-																					 : (track_info->GetCodecId() == cmn::MediaCodecId::Opus)  ? AV_CODEC_ID_OPUS
-																																			  : AV_CODEC_ID_NONE;
+			codecpar->codec_id = (track_info->GetCodecId() == cmn::MediaCodecId::Aac) ? AV_CODEC_ID_AAC : (track_info->GetCodecId() == cmn::MediaCodecId::Mp3) ? AV_CODEC_ID_MP3
+																									  : (track_info->GetCodecId() == cmn::MediaCodecId::Opus)  ? AV_CODEC_ID_OPUS
+																																							   : AV_CODEC_ID_NONE;
 			codecpar->bit_rate = track_info->GetBitrate();
 			codecpar->channels = static_cast<int>(track_info->GetChannel().GetCounts());
 			codecpar->channel_layout = (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutMono) ? AV_CH_LAYOUT_MONO : (track_info->GetChannel().GetLayout() == cmn::AudioChannel::Layout::LayoutStereo) ? AV_CH_LAYOUT_STEREO
@@ -346,7 +344,7 @@ bool FileWriter::IsWritable()
 
 	if (_format_context == nullptr)
 	{
-		return false;	
+		return false;
 	}
 
 	return true;
@@ -388,4 +386,51 @@ void FileWriter::FFmpegLog(void *ptr, int level, const char *fmt, va_list vl)
 			//		log_level = ANDROID_LOG_VERBOSE;
 			break;
 	}
+}
+
+ov::String FileWriter::GetFormatByExtension(ov::String extension, ov::String default_format)
+{
+	if (extension == "mp4")
+	{
+		return "mp4";
+	}
+	else if (extension == "ts")
+	{
+		return "mpegts";
+	}
+
+	return default_format;
+}
+
+bool FileWriter::IsSupportCodec(ov::String format, cmn::MediaCodecId codec_id)
+{
+	if (format == "mp4")
+	{
+		if (codec_id == cmn::MediaCodecId::H264 ||
+			codec_id == cmn::MediaCodecId::H265 ||
+			codec_id == cmn::MediaCodecId::Aac ||
+			codec_id == cmn::MediaCodecId::Mp3)
+		{
+			return true;
+		}
+
+		return false;
+	}
+	else if (format == "mpegts")
+	{
+		if (codec_id == cmn::MediaCodecId::H264 ||
+			codec_id == cmn::MediaCodecId::H265 ||
+			codec_id == cmn::MediaCodecId::Vp8 ||
+			codec_id == cmn::MediaCodecId::Vp9 ||
+			codec_id == cmn::MediaCodecId::Aac ||
+			codec_id == cmn::MediaCodecId::Mp3 ||
+			codec_id == cmn::MediaCodecId::Opus)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	return false;
 }

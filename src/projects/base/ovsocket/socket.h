@@ -370,6 +370,9 @@ namespace ov
 		std::atomic<bool> _connection_event_fired{false};
 		std::shared_ptr<SocketAsyncInterface> _callback;
 
+		// A temporary variable used to send callback without mutex lock
+		std::shared_ptr<SocketAsyncInterface> _post_callback;
+
 		volatile bool _force_stop = false;
 	};
 }  // namespace ov

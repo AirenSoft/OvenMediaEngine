@@ -335,6 +335,28 @@ namespace pvd
 
 	PullStream::ProcessMediaResult RtspcStream::ProcessMediaPacket()
 	{
+		//============================================
+		// FIXME: THIS IS A TEMPORARY CODE
+		//
+		// When we call av_read_frame, if the RTSP data is not received as much as is required for parsing, the RTSP demuxer will loop around the loop and wait for the next data and will not return for a while.
+		// To make this work like pseudo-asynchronous, we wrote a temporary code to call av_read_frame() after waiting for enough data(1500 bytes) to be stacked in socket queue.
+
+		// Obtains the size of data in the queue
+		int pending_data_size;
+		if (::ioctl(GetFileDescriptorForDetectingEvent(), SIOCINQ, &pending_data_size) == 0)
+		{
+			if (pending_data_size < 1500)
+			{
+				::usleep(10 * 1000);
+				return ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN;
+			}
+		}
+		else
+		{
+			// Failed to call ioctl() - Leave the rest of the role to FFmpeg
+		}
+		//============================================
+
 		AVPacket packet;
 		av_init_packet(&packet);
 		packet.size = 0;
