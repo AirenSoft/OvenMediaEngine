@@ -86,6 +86,10 @@ namespace pvd
 		bool OnDeleteProviderApplication(const std::shared_ptr<pvd::Application> &application) override;
 		//--------------------------------------------------------------------
 
+		// This is a index used to send ICE Candidate in round-robin
+		// WebRTC Provider calculates the actual index by doing a modular operation, so it doesn't matter if overflow occurs
+		std::atomic<uint32_t> _current_ice_candidate_index{0};
+
 		std::shared_ptr<IcePort> _ice_port = nullptr;
 		std::shared_ptr<RtcSignallingServer> _signalling_server = nullptr;
 		std::shared_ptr<Certificate> _certificate = nullptr;

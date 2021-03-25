@@ -81,6 +81,10 @@ private:
 	std::shared_ptr<pub::Application> OnCreatePublisherApplication(const info::Application &application_info) override;
 	bool OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application) override;
 
+	// This is a index used to send ICE Candidate in round-robin
+	// WebRTC Publisher calculates the actual index by doing a modular operation, so it doesn't matter if overflow occurs
+	std::atomic<uint32_t> _current_ice_candidate_index{0};
+
 	std::shared_ptr<IcePort> _ice_port;
 	std::shared_ptr<RtcSignallingServer> _signalling_server;
 	ov::MessageThread<std::shared_ptr<ov::CommonMessage>>	_message_thread;

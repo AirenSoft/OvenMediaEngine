@@ -719,7 +719,8 @@ namespace ov
 			SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
 				if ((lock_elapsed > 100) || (count > 10) || (_dispatch_queue.size() > 10))
 				{
-					logtw("[SockProfiler] DispatchEvents() - %s, Before Queue: %zu, After Queue: %zu, Lock: %dms, Total: %dms", ToString().CStr(), count, _dispatch_queue.size(), lock_elapsed, total_elapsed);
+					logtw("[SockProfiler] DispatchEvents() - %s, Before Queue: %zu, After Queue: %zu, Lock: %dms, Total: %dms",
+						ToString().CStr(), count, _dispatch_queue.size(), lock_elapsed, total_elapsed);
 				}
 			});
 
