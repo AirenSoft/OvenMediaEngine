@@ -221,8 +221,14 @@ namespace pvd
 			tcp_relay = true;
 		}
 
-		auto &candidates = IcePortManager::GetInstance()->GetIceCandidateList(IcePortObserver::GetSharedPtr());
-		ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
+		if (_ice_candidate_list.empty() == false)
+		{
+			auto candidate_index_to_send = _current_ice_candidate_index++ % _ice_candidate_list.size();
+			const auto &candidates = _ice_candidate_list[candidate_index_to_send];
+
+			ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
+		}
+
 		auto session_description = std::make_shared<SessionDescription>(*application->GetOfferSDP());
 		session_description->SetOrigin("OvenMediaEngine", ov::Unique::GenerateUint32(), 2, "IN", 4, "127.0.0.1");
 		session_description->SetIceUfrag(_ice_port->GenerateUfrag());

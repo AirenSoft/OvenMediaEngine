@@ -42,49 +42,50 @@ IcePort::~IcePort()
 	Close();
 }
 
-bool IcePort::CreateIceCandidates(std::vector<RtcIceCandidate> ice_candidate_list, int ice_worker_count)
+bool IcePort::CreateIceCandidates(const std::vector<std::vector<RtcIceCandidate>> &ice_candidate_list, int ice_worker_count)
 {
 	std::lock_guard<std::recursive_mutex> lock_guard(_physical_port_list_mutex);
 
 	bool succeeded = true;
 	std::map<int, bool> bounded;
 
-	for (auto &ice_candidate : ice_candidate_list)
+	for (auto &ice_candidates : ice_candidate_list)
 	{
-		// Find same candidate already created
-		
-
-		auto transport = ice_candidate.GetTransport().UpperCaseString();
-		auto address = ice_candidate.GetAddress();
-		ov::SocketType socket_type = (transport == "TCP") ? ov::SocketType::Tcp : ov::SocketType::Udp;
-
+		for (auto &ice_candidate : ice_candidates)
 		{
-			auto port = address.Port();
-			auto item = bounded.find(port);
+			// Find same candidate already created
+			auto transport = ice_candidate.GetTransport().UpperCaseString();
+			auto address = ice_candidate.GetAddress();
+			ov::SocketType socket_type = (transport == "TCP") ? ov::SocketType::Tcp : ov::SocketType::Udp;
 
-			if (item != bounded.end())
 			{
-				// Already opened
-				continue;
+				auto port = address.Port();
+				auto item = bounded.find(port);
+
+				if (item != bounded.end())
+				{
+					// Already opened
+					continue;
+				}
+
+				bounded[port] = true;
 			}
 
-			bounded[port] = true;
-		}
-		
-		// Bind to 0.0.0.0
-		address.SetHostname(nullptr);
+			// Bind to 0.0.0.0
+			address.SetHostname(nullptr);
 
-		// Create an ICE port using candidate information
-		auto physical_port = CreatePhysicalPort(address, socket_type, ice_worker_count);
-		if (physical_port == nullptr)
-		{
-			logte("Could not create physical port for %s/%s", address.ToString().CStr(), transport.CStr());
-			succeeded = false;
-			break;
-		}
+			// Create an ICE port using candidate information
+			auto physical_port = CreatePhysicalPort(address, socket_type, ice_worker_count);
+			if (physical_port == nullptr)
+			{
+				logte("Could not create physical port for %s/%s", address.ToString().CStr(), transport.CStr());
+				succeeded = false;
+				break;
+			}
 
-		logti("ICE port is bound to %s/%s (%p)", address.ToString().CStr(), transport.CStr(), physical_port.get());
-		_physical_port_list.push_back(physical_port);
+			logti("ICE port is bound to %s/%s (%p)", address.ToString().CStr(), transport.CStr(), physical_port.get());
+			_physical_port_list.push_back(physical_port);
+		}
 	}
 
 	if (succeeded)
