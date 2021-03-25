@@ -44,7 +44,11 @@ bool RtpRtcp::AddRtpReceiver(uint8_t payload_type, const std::shared_ptr<MediaTr
 	// Only use JitterBuffer for Video
 	if(track->GetMediaType() == cmn::MediaType::Video)
 	{
-		_rtp_jitter_buffers[payload_type] = std::make_shared<RtpJitterBuffer>();
+		_rtp_video_jitter_buffers[payload_type] = std::make_shared<RtpVideoJitterBuffer>();
+	}
+	else if(track->GetMediaType() == cmn::MediaType::Audio)
+	{
+		_rtp_audio_jitter_buffers[payload_type] = std::make_shared<RtpAudioJitterBuffer>();
 	}
 
 	return true;
@@ -170,8 +174,8 @@ bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
 
 	if(track->GetMediaType() == cmn::MediaType::Video)
 	{
-		auto buffer_it = _rtp_jitter_buffers.find(packet->PayloadType());
-		if(buffer_it == _rtp_jitter_buffers.end())
+		auto buffer_it = _rtp_video_jitter_buffers.find(packet->PayloadType());
+		if(buffer_it == _rtp_video_jitter_buffers.end())
 		{
 			// can not happen
 			logte("Could not find jitter buffer for payload type %d", packet->PayloadType());
@@ -214,9 +218,25 @@ bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
 	// Audio
 	else
 	{
-		std::vector<std::shared_ptr<RtpPacket>> rtp_packets;
-		rtp_packets.push_back(packet);
-		_observer->OnRtpFrameReceived(rtp_packets);
+		auto buffer_it = _rtp_audio_jitter_buffers.find(packet->PayloadType());
+		if(buffer_it == _rtp_audio_jitter_buffers.end())
+		{
+			// can not happen
+			logte("Could not find jitter buffer for payload type %d", packet->PayloadType());
+			return false;
+		}
+
+		auto jitter_buffer = buffer_it->second;
+
+		jitter_buffer->InsertPacket(packet);
+
+		auto pop_packet = jitter_buffer->PopAvailablePacket();
+		if(pop_packet != nullptr)
+		{
+			std::vector<std::shared_ptr<RtpPacket>> rtp_packets;
+			rtp_packets.push_back(pop_packet);
+			_observer->OnRtpFrameReceived(rtp_packets);
+		}
 	}
 
 	return true;

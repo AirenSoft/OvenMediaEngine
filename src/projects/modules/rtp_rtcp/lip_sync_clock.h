@@ -26,6 +26,7 @@ private:
 		double		_timebase = 0;
 		
 		double		_last_pts = 0;
+		uint64_t	_addend_timestamp = 0;
 		uint64_t	_last_timestamp = 0;
 
 		uint32_t	_last_received_rtp_timestamp = 0;

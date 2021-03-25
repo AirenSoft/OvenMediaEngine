@@ -4,7 +4,7 @@
 #include "rtp_packet.h"
 #include <unordered_map>
 
-#define DEFAULT_JITTER_BUFFER_SIZE_MS	100	 // 100ms
+#define DEFAULT_VIDEO_MAX_BUFFERING_TIME_MS	100	 // 100ms
 
 // RTP Packet Group by Frame
 class RtpFrame
@@ -39,7 +39,7 @@ private:
 	std::unordered_map<uint16_t, std::shared_ptr<RtpPacket>> _packets;
 };
 
-class RtpJitterBuffer
+class RtpVideoJitterBuffer
 {
 public:
 	bool InsertPacket(const std::shared_ptr<RtpPacket> &packet);
@@ -49,7 +49,7 @@ public:
 private:	
 	void BurnOutExpiredFrames();
 
-	uint32_t _buffer_size_ms = DEFAULT_JITTER_BUFFER_SIZE_MS;
+	uint32_t _buffer_size_ms = DEFAULT_VIDEO_MAX_BUFFERING_TIME_MS;
 	// timestamp : RtpFrameInfo
 	// it should be ordered, so use std::map
 	std::map<uint32_t, std::shared_ptr<RtpFrame>> _rtp_frames;

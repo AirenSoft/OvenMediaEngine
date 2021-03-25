@@ -42,7 +42,7 @@ uint32_t LipSyncClock::GetNextTimestamp(ClockType type, uint32_t rtp_timestamp)
 
 	if(clock._ntp_per_timestamp != 0)
 	{
-		clock._last_received_ntp_timestamp_ms = clock._first_sr_ntp_timestamp_ms + ((rtp_timestamp - clock._first_sr_timestamp) * clock._ntp_per_timestamp);
+		clock._last_received_ntp_timestamp_ms = clock._first_sr_ntp_timestamp_ms + (static_cast<double>(rtp_timestamp - clock._first_sr_timestamp) * clock._ntp_per_timestamp);
 		
 		// Sync Video timestamp to audio
 		if(type == ClockType::VIDEO)
@@ -53,18 +53,27 @@ uint32_t LipSyncClock::GetNextTimestamp(ClockType type, uint32_t rtp_timestamp)
 			{
 				int64_t av_ntp_time_delta_ms = clock._last_received_ntp_timestamp_ms - audio_clock._last_received_ntp_timestamp_ms;
 				double av_pts_delta_ms = clock._last_pts - audio_clock._last_pts;
-
-				// Adjust Video PTS
-				double calibrated_pts = (audio_clock._last_pts * static_cast<double>(clock._last_received_ntp_timestamp_ms)) / static_cast<double>(audio_clock._last_received_ntp_timestamp_ms);
+				double av_gap = static_cast<double>(av_ntp_time_delta_ms) - av_pts_delta_ms;
 				
-				// Adjust Video Timestamp
-				clock._last_timestamp = calibrated_pts / clock._timebase;
+				double calibrated_pts = 0.0;
 
-				logtd("Last Received Video NTP Timestamp(%llu) Last Received Audio NTP Timestamp(%llu) NTP Delta(%lld) Last Video PTS(%f) Last Audio PTS(%f) PTS Delta(%f) Calibrated Video PTS(%f) Calibrated Video Timestamp(%u)", 
+				if(std::abs(av_gap) > 50.0)
+				{
+					// Adjust Video PTS
+					calibrated_pts = (audio_clock._last_pts * static_cast<double>(clock._last_received_ntp_timestamp_ms)) / static_cast<double>(audio_clock._last_received_ntp_timestamp_ms);
+
+					// Adjust Video Timestamp
+					clock._addend_timestamp = (calibrated_pts / clock._timebase) - clock._last_timestamp;
+					clock._last_timestamp = (calibrated_pts / clock._timebase);
+					clock._last_pts = calibrated_pts;
+
+					logti("Video timestamps have been adjusted for lip sync. (Video timestamp %llu)", clock._last_timestamp);
+				}
+
+				logti("Last Received Video NTP Timestamp(%llu) Last Received Audio NTP Timestamp(%llu) NTP Delta(%lld) Last Video PTS(%f) Last Audio PTS(%f) PTS Delta(%f) Calibrated Video PTS(%f) AV Gap(%f) Calibrated Video Timestamp(%u)", 
 								clock._last_received_ntp_timestamp_ms, audio_clock._last_received_ntp_timestamp_ms, av_ntp_time_delta_ms, 
-								clock._last_pts, audio_clock._last_pts, av_pts_delta_ms, calibrated_pts, clock._last_timestamp);
+								clock._last_pts, audio_clock._last_pts, av_pts_delta_ms, calibrated_pts, av_gap, clock._last_timestamp);
 
-				clock._last_pts = calibrated_pts;
 			}
 		}
 	}

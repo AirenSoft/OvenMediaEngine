@@ -1,6 +1,6 @@
-#include "rtp_jitter_buffer.h"
+#include "rtp_video_jitter_buffer.h"
 
-#define OV_LOG_TAG "RtpJitterBuffer"
+#define OV_LOG_TAG "RtpVideoJitterBuffer"
 
 /************************************************************************
  * 								RTPFrame
@@ -140,7 +140,7 @@ uint64_t RtpFrame::GetElapsed()
  * 							Jitter Buffer
  ***********************************************************************/
 
-bool RtpJitterBuffer::InsertPacket(const std::shared_ptr<RtpPacket> &packet)
+bool RtpVideoJitterBuffer::InsertPacket(const std::shared_ptr<RtpPacket> &packet)
 {
 	auto it = _rtp_frames.find(packet->Timestamp());
 	std::shared_ptr<RtpFrame> frame;
@@ -162,7 +162,7 @@ bool RtpJitterBuffer::InsertPacket(const std::shared_ptr<RtpPacket> &packet)
 	return true;
 }
 
-void RtpJitterBuffer::BurnOutExpiredFrames()
+void RtpVideoJitterBuffer::BurnOutExpiredFrames()
 {
 	uint64_t expired_time;
 	bool last_item;
@@ -202,7 +202,7 @@ void RtpJitterBuffer::BurnOutExpiredFrames()
 	}
 }
 
-bool RtpJitterBuffer::HasAvailableFrame()
+bool RtpVideoJitterBuffer::HasAvailableFrame()
 {
 	BurnOutExpiredFrames();
 
@@ -216,7 +216,7 @@ bool RtpJitterBuffer::HasAvailableFrame()
 	return first_frame->IsCompleted();
 }
 
-std::shared_ptr<RtpFrame> RtpJitterBuffer::PopAvailableFrame()
+std::shared_ptr<RtpFrame> RtpVideoJitterBuffer::PopAvailableFrame()
 {
 	if(HasAvailableFrame() == false)
 	{
