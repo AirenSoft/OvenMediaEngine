@@ -120,6 +120,8 @@ bool FileWriter::Start()
 
 	AVDictionary *options = nullptr;
 
+	_start_timestamp = -1LL;
+
 	if (!(_format_context->oformat->flags & AVFMT_NOFILE))
 	{
 		int error = avio_open2(&_format_context->pb, _format_context->url, AVIO_FLAG_WRITE, nullptr, &options);
@@ -290,14 +292,19 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	// Find Ouput Track Info
 	auto track_info = _trackinfo_map[track_id];
 
+	if (_start_timestamp == -1LL)
+	{
+		_start_timestamp = pts;
+	}
+
 	// Make avpacket
 	AVPacket pkt = {0};
 	av_init_packet(&pkt);
 
 	pkt.stream_index = stream_index;
 	pkt.flags = (flag == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
-	pkt.pts = av_rescale_q(pts, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
-	pkt.dts = av_rescale_q(dts, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
+	pkt.pts = av_rescale_q(pts - _start_timestamp, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
+	pkt.dts = av_rescale_q(dts - _start_timestamp, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
 	pkt.size = data->GetLength();
 	pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
 
