@@ -18,6 +18,7 @@
 #include "modules/dtls_srtp/dtls_transport.h"
 #include "modules/dtls_srtp/dtls_ice_transport.h"
 #include "modules/rtp_rtcp/rtp_depacketizing_manager.h"
+#include "modules/rtp_rtcp/lip_sync_clock.h"
 
 namespace pvd
 {
@@ -64,8 +65,8 @@ namespace pvd
 
 		bool SendFIR();
 
-		uint32_t AdjustTimestamp(uint8_t payload_type, uint32_t timestamp);
-		uint32_t GetTimestampDelta(uint8_t payload_type, uint32_t timestamp);
+		uint64_t AdjustTimestamp(uint8_t payload_type, uint32_t timestamp);
+		uint64_t GetTimestampDelta(uint8_t payload_type, uint32_t timestamp);
 
 		uint8_t _fir_seq = 0;
 		ov::StopWatch _fir_timer;
@@ -98,5 +99,7 @@ namespace pvd
 
 		// Payload type, Depacketizer
 		std::map<uint8_t, std::shared_ptr<RtpDepacketizingManager>> _depacketizers;
+
+		std::shared_ptr<LipSyncClock> _lip_sync_clock;
 	};
 }

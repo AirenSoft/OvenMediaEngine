@@ -11,6 +11,7 @@
 #include "webrtc_application.h"
 #include "webrtc_private.h"
 
+#include "modules/rtp_rtcp/rtcp_info/sender_report.h"
 #include "modules/rtp_rtcp/rtcp_info/fir.h"
 
 namespace pvd
@@ -75,6 +76,8 @@ namespace pvd
 		_dtls_transport->StartDTLS();
 		_dtls_ice_transport = std::make_shared<DtlsIceTransport>(GetId(), _ice_port);
 
+		double audio_lip_sync_timebase = 0, video_lip_sync_timebase = 0;
+
 		// RFC3264
 		// For each "m=" line in the offer, there MUST be a corresponding "m=" line in the answer.
 		std::vector<uint32_t> ssrc_list;
@@ -118,6 +121,7 @@ namespace pvd
 				audio_track->SetId(first_payload->GetId());
 				audio_track->SetMediaType(cmn::MediaType::Audio);
 				audio_track->SetTimeBase(1, samplerate);
+				audio_lip_sync_timebase = audio_track->GetTimeBase().GetExpr();
 				audio_track->SetAudioTimestampScale(1.0);
 
 				if (channels == 1)
@@ -188,6 +192,7 @@ namespace pvd
 				}
 
 				video_track->SetTimeBase(1, timebase);
+				video_lip_sync_timebase = video_track->GetTimeBase().GetExpr();
 				video_track->SetVideoTimestampScale(1.0);
 
 				if(AddDepacketizer(_video_payload_type, video_track->GetCodecId()) == false)
@@ -199,6 +204,9 @@ namespace pvd
 				_rtp_rtcp->AddRtpReceiver(_video_payload_type, video_track);
 			}
 		}
+
+		// lip sync clock
+		_lip_sync_clock = std::make_shared<LipSyncClock>(audio_lip_sync_timebase, video_lip_sync_timebase);
 
 		// Connect nodes
 		_rtp_rtcp->RegisterUpperNode(nullptr);
@@ -296,7 +304,7 @@ namespace pvd
 		return true;
 	}
 
-	uint32_t WebRTCStream::AdjustTimestamp(uint8_t payload_type, uint32_t timestamp)
+	uint64_t WebRTCStream::AdjustTimestamp(uint8_t payload_type, uint32_t timestamp)
 	{
 		uint32_t curr_timestamp; 
 
@@ -316,7 +324,7 @@ namespace pvd
 		return curr_timestamp;
 	}
 
-	uint32_t WebRTCStream::GetTimestampDelta(uint8_t payload_type, uint32_t timestamp)
+	uint64_t WebRTCStream::GetTimestampDelta(uint8_t payload_type, uint32_t timestamp)
 	{
 		// First timestamp
 		if(_last_timestamp_map.find(payload_type) == _last_timestamp_map.end())
@@ -393,9 +401,21 @@ namespace pvd
 				return;
 		}
 
-		auto timestamp = AdjustTimestamp(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp());
+		ClockType clock_type;
+		if(track->GetMediaType() == cmn::MediaType::Audio)
+		{
+			clock_type = ClockType::AUDIO;
+		}
+		else
+		{
+			clock_type = ClockType::VIDEO;
+		}
 
-		logti("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
+		auto timestamp = _lip_sync_clock->GetNextTimestamp(clock_type, first_rtp_packet->Timestamp());
+
+		//auto timestamp = AdjustTimestamp(first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp());
+
+		logtd("Payload Type(%d) Timestamp(%u) Timestamp Delta(%u) Time scale(%f) Adjust Timestamp(%f)", 
 				first_rtp_packet->PayloadType(), first_rtp_packet->Timestamp(), timestamp, track->GetTimeBase().GetExpr(), static_cast<double>(timestamp) * track->GetTimeBase().GetExpr());
 
 		auto frame = std::make_shared<MediaPacket>(track->GetMediaType(),
@@ -424,8 +444,26 @@ namespace pvd
 	void WebRTCStream::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 	{
 		// Receive Sender Report
+		if(rtcp_info->GetPacketType() == RtcpPacketType::SR)
+		{
+			auto sr = std::dynamic_pointer_cast<SenderReport>(rtcp_info);
+			ClockType clock_type = ClockType::NUMBER_OF_TYPE;
+			if(sr->GetSenderSsrc() == _video_ssrc)
+			{
+				clock_type = ClockType::VIDEO;
+			}
+			else if(sr->GetSenderSsrc() == _audio_ssrc)
+			{
+				clock_type = ClockType::AUDIO;
+			}
+			else
+			{
+				logtw("Could not find SSRC of sender report : %u", sr->GetSenderSsrc());
+				return;
+			}
 
-		// TODO : using later for statistics
+			_lip_sync_clock->ApplySenderReportTime(clock_type, sr->GetMsw(), sr->GetLsw(), sr->GetTimestamp());
+		}
 	}
 
 	// TODO(Getroot): Move to RtpRtcp
