@@ -145,7 +145,7 @@ bool RtpPacket::Parse(const std::shared_ptr<const ov::Data> &data)
 			return false;
 		}
 
-		uint16_t extension_profile = ByteReader<uint16_t>::ReadBigEndian(&buffer[_payload_offset]);
+		[[maybe_unused]]uint16_t extension_profile = ByteReader<uint16_t>::ReadBigEndian(&buffer[_payload_offset]);
 		_extension_size = ByteReader<uint16_t>::ReadBigEndian(&buffer[_payload_offset + 2]) * 4;
 
 		if(extension_offset + _extension_size > buffer_size)

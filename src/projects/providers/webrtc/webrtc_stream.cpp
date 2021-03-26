@@ -401,7 +401,7 @@ namespace pvd
 				return;
 		}
 
-		ClockType clock_type;
+		[[maybe_unused]]ClockType clock_type = ClockType::NUMBER_OF_TYPE;
 		if(track->GetMediaType() == cmn::MediaType::Audio)
 		{
 			clock_type = ClockType::AUDIO;

@@ -276,7 +276,7 @@ namespace pvd
 			if(signed_policy == nullptr)
 			{
 				// Probably this doesn't happen
-				logte("Could not load SingedToken");
+				logte("Could not load SingedPolicy");
 				return CheckSignatureResult::Error;
 			}
 

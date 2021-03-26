@@ -193,17 +193,17 @@ const ov::String& SignedPolicy::GetSignatureValue() const
 
 
 // Policy
-uint64_t SignedPolicy::GetPolicyExpireEpochSec() const
+uint64_t SignedPolicy::GetPolicyExpireEpochMSec() const
 {
 	return _url_expire_epoch_msec;
 }
 
-uint64_t SignedPolicy::GetPolicyActivateEpochSec() const
+uint64_t SignedPolicy::GetPolicyActivateEpochMSec() const
 {
 	return _url_activate_epoch_msec;
 }
 
-uint64_t SignedPolicy::GetStreamExpireEpochSec() const
+uint64_t SignedPolicy::GetStreamExpireEpochMSec() const
 {
 	return _stream_expire_epoch_msec;
 }

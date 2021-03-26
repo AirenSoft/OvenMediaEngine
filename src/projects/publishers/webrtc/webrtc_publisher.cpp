@@ -437,7 +437,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		return false;
 	}
 
-	uint64_t session_expired_time = 0;
+	uint64_t session_life_time = 0;
 	std::shared_ptr<const SignedPolicy> signed_policy;
 	std::shared_ptr<const SignedToken> signed_token;
 	auto signed_policy_result = Publisher::HandleSignedPolicy(parsed_url, remote_address, signed_policy);
@@ -452,7 +452,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 	}
 	else if(signed_policy_result == CheckSignatureResult::Pass)
 	{
-		session_expired_time = signed_policy->GetStreamExpireEpochSec();
+		session_life_time = signed_policy->GetStreamExpireEpochMSec();
 	}
 	else if(signed_policy_result == CheckSignatureResult::Off)
 	{
@@ -469,7 +469,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		}
 		else if(signed_token_result == CheckSignatureResult::Pass)
 		{
-			session_expired_time = signed_token->GetStreamExpiredTime();
+			session_life_time = signed_token->GetStreamExpiredTime();
 		}
 	}
 
@@ -479,11 +479,6 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 	auto session = RtcSession::Create(Publisher::GetSharedPtrAs<WebRtcPublisher>(), application, stream, offer_sdp, peer_sdp, _ice_port, ws_client);
 	if (session != nullptr)
 	{
-		if(session_expired_time != 0)
-		{
-			session->SetSessionExpiredTime(session_expired_time);
-		}
-
 		stream->AddSession(session);
 		auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
 		if (stream_metrics != nullptr)
@@ -492,7 +487,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 		}
 
 		auto ice_timeout = application->GetConfig().GetPublishers().GetWebrtcPublisher().GetTimeout();
-		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), session->GetId(), offer_sdp, peer_sdp, ice_timeout, session);
+		_ice_port->AddSession(IcePortObserver::GetSharedPtr(), session->GetId(), offer_sdp, peer_sdp, ice_timeout, session_life_time, session);
 
 		// Session is created
 

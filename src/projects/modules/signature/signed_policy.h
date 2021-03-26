@@ -42,9 +42,9 @@ public:
 	const ov::String& GetSignatureValue() const;
 	
 	// Policy
-	uint64_t GetPolicyExpireEpochSec() const;
-	uint64_t GetPolicyActivateEpochSec() const;
-	uint64_t GetStreamExpireEpochSec() const;
+	uint64_t GetPolicyExpireEpochMSec() const;
+	uint64_t GetPolicyActivateEpochMSec() const;
+	uint64_t GetStreamExpireEpochMSec() const;
 	const ov::String& GetAllowIpCidr() const;
 	bool IsAllowedIP(const ov::String &ip_addr) const;
 	bool GetCIDRRange(ov::String &begin, ov::String &end) const;

@@ -223,7 +223,9 @@ ov::String IcePort::GenerateUfrag()
 	}
 }
 
-void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id, std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp, int expired_ms, std::any user_data)
+void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint32_t session_id, 
+							std::shared_ptr<const SessionDescription> offer_sdp, std::shared_ptr<const SessionDescription> peer_sdp, 
+							int expired_ms, uint64_t life_time_epoch_ms, std::any user_data)
 {
 	const ov::String &local_ufrag = offer_sdp->GetIceUfrag();
 	const ov::String &remote_ufrag = peer_sdp->GetIceUfrag();
@@ -239,7 +241,7 @@ void IcePort::AddSession(const std::shared_ptr<IcePortObserver> &observer, uint3
 
 		logtd("Trying to add session: %d (ufrag: %s:%s)...", session_id, local_ufrag.CStr(), remote_ufrag.CStr());
 
-		std::shared_ptr<IcePortInfo> info = std::make_shared<IcePortInfo>(expired_ms);
+		std::shared_ptr<IcePortInfo> info = std::make_shared<IcePortInfo>(expired_ms, life_time_epoch_ms);
 
 		info->observer = observer;
 		info->user_data = user_data;
