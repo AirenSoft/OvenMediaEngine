@@ -953,11 +953,9 @@ void MediaRouteStream::DropNonDecodingPackets()
 	}
 }
 
-bool MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
+void MediaRouteStream::Push(std::shared_ptr<MediaPacket> media_packet)
 {
 	_packets_queue.Enqueue(std::move(media_packet));
-
-	return (_packets_queue.Size() > 0) ? true : false;
 }
 
 std::shared_ptr<MediaPacket> MediaRouteStream::Pop()

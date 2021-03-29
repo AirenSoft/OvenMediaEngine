@@ -542,10 +542,8 @@ bool MediaRouteApplication::OnPacketReceived(
 				return false;
 			}
 
-			if (!stream->Push(packet))
-			{
-				return false;
-			}
+			stream->Push(packet);
+
 			_inbound_stream_indicator[stream_info->GetId() % _max_worker_thread_count]->Enqueue(stream);
 		}
 		break;
@@ -559,10 +557,7 @@ bool MediaRouteApplication::OnPacketReceived(
 				return false;
 			}
 
-			if (!stream->Push(packet))
-			{
-				return false;
-			}
+			stream->Push(packet);
 
 			_outbound_stream_indicator[stream_info->GetId() % _max_worker_thread_count]->Enqueue(stream);
 		}
@@ -669,30 +664,32 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 			continue;
 		}
 
-		// Processes all packets in the selected stream.
 		// StreamDeliver media packet to Publiser(observer) of Transcoder(observer)
-		while (auto media_packet = stream->Pop())
+		auto media_packet = stream->Pop();
+		if (media_packet == nullptr)
 		{
-			// When the inbound stream is finished parsing track information,
-			// Notify the Observer that the stream is parsed
-			if (stream->IsNotifyStreamPrepared() == false && stream->IsParseTrackAll() == true)
+			continue;
+		}
+
+		// When the inbound stream is finished parsing track information,
+		// Notify the Observer that the stream is parsed
+		if (stream->IsNotifyStreamPrepared() == false && stream->IsParseTrackAll() == true)
+		{
+			NotifyStreamPrepared(stream);
+		}
+
+		std::shared_lock<std::shared_mutex> lock(_observers_lock);
+		for (const auto &observer : _observers)
+		{
+			auto observer_type = observer->GetObserverType();
+
+			if (observer_type == MediaRouteApplicationObserver::ObserverType::Transcoder)
 			{
-				NotifyStreamPrepared(stream);
-			}
+				// Get Stream Info
+				auto stream_info = stream->GetStream();
 
-			std::shared_lock<std::shared_mutex> lock(_observers_lock);
-			for (const auto &observer : _observers)
-			{
-				auto observer_type = observer->GetObserverType();
-
-				if (observer_type == MediaRouteApplicationObserver::ObserverType::Transcoder)
-				{
-					// Get Stream Info
-					auto stream_info = stream->GetStream();
-
-					// observer->OnSendFrame(stream_info, std::move(media_packet->ClonePacket()));
-					observer->OnSendFrame(stream_info, media_packet);
-				}
+				// observer->OnSendFrame(stream_info, std::move(media_packet->ClonePacket()));
+				observer->OnSendFrame(stream_info, media_packet);
 			}
 		}
 	}
@@ -719,27 +716,31 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 			continue;
 		}
 
-		// Processes all packets in the selected stream.
 		// StreamDeliver media packet to Publiser(observer) of Transcoder(observer)
-		while (auto media_packet = stream->Pop())
+		auto media_packet = stream->Pop();
+		if (media_packet == nullptr)
 		{
-			if (stream->IsNotifyStreamPrepared() == false && stream->IsParseTrackAll() == true)
+			continue;
+		}
+
+		
+
+		if (stream->IsNotifyStreamPrepared() == false && stream->IsParseTrackAll() == true)
+		{
+			NotifyStreamPrepared(stream);
+		}
+
+		std::shared_lock<std::shared_mutex> lock(_observers_lock);
+		for (const auto &observer : _observers)
+		{
+			auto observer_type = observer->GetObserverType();
+
+			if (observer_type == MediaRouteApplicationObserver::ObserverType::Publisher)
 			{
-				NotifyStreamPrepared(stream);
-			}
+				// Get Stream Info
+				auto stream_info = stream->GetStream();
 
-			std::shared_lock<std::shared_mutex> lock(_observers_lock);
-			for (const auto &observer : _observers)
-			{
-				auto observer_type = observer->GetObserverType();
-
-				if (observer_type == MediaRouteApplicationObserver::ObserverType::Publisher)
-				{
-					// Get Stream Info
-					auto stream_info = stream->GetStream();
-
-					observer->OnSendFrame(stream_info, media_packet);
-				}
+				observer->OnSendFrame(stream_info, media_packet);
 			}
 		}
 	}

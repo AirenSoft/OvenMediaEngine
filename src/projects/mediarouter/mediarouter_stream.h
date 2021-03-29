@@ -40,7 +40,7 @@ public:
 	MediaRouterStreamType GetInoutType();
 
 	// Queue interfaces
-	bool Push(std::shared_ptr<MediaPacket> media_packet);
+	void Push(std::shared_ptr<MediaPacket> media_packet);
 	bool ProcessInboundStream(
 		std::shared_ptr<MediaTrack> &media_track,
 		std::shared_ptr<MediaPacket> &media_packet);
