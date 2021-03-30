@@ -56,6 +56,7 @@ protected:
 			return ov::String::FormatString("Packet type : %d GateType : %d", packet_type, input_method);
 		}
 	};
+
 	// A data structure to tracking client connection status
 	struct IcePortInfo
 	{
@@ -109,6 +110,30 @@ protected:
 		
 	};
 
+	struct BindingRequestInfo
+	{
+		BindingRequestInfo(ov::String transaction_id, const std::shared_ptr<IcePortInfo> &ice_port)
+		{
+			_transaction_id = transaction_id;
+			_ice_port = ice_port;
+			_requested_time = std::chrono::system_clock::now();
+		}
+
+		bool IsExpired() const
+		{
+			if(ov::Clock::GetElapsedMiliSecondsFromNow(_requested_time) > 3000)
+			{
+				return true;
+			}
+
+			return false;
+		}
+
+		ov::String _transaction_id;
+		std::shared_ptr<IcePortInfo> _ice_port;
+		std::chrono::time_point<std::chrono::system_clock>	_requested_time;
+	};
+
 public:
 	IcePort();
 	~IcePort() override;
@@ -119,8 +144,8 @@ public:
 
 	IcePortConnectionState GetState(uint32_t session_id) const
 	{
-		auto item = _session_table.find(session_id);
-		if(item == _session_table.end())
+		auto item = _session_port_table.find(session_id);
+		if(item == _session_port_table.end())
 		{
 			OV_ASSERT(false, "Invalid session_id: %d", session_id);
 			return IcePortConnectionState::Failed;
@@ -209,16 +234,22 @@ private:
 	// Once binding is complete, there is no need because it can be found by destination ip & port.
 	// key: offer ufrag
 	// value: IcePortInfo
-	std::map<const ov::String, std::shared_ptr<IcePortInfo>> _user_mapping_table;
-	std::mutex _user_mapping_table_mutex;
-
+	std::mutex _user_port_table_lock;
+	std::map<const ov::String, std::shared_ptr<IcePortInfo>> _user_port_table;
+	
 	// Find IcePortInfo with peer's ip:port
-	// key: SocketAddress
-	// value: IcePortInfo
-	std::mutex _ice_port_info_mutex;
-	std::map<ov::SocketAddress, std::shared_ptr<IcePortInfo>> _ice_port_info;
+	// key: SocketAddress value: IcePortInfo
+	std::mutex _port_table_lock;
+	std::map<ov::SocketAddress, std::shared_ptr<IcePortInfo>> _address_port_table;
 	// Find IcePortInfo with peer's session id
-	std::map<session_id_t, std::shared_ptr<IcePortInfo>> _session_table;
+	std::map<session_id_t, std::shared_ptr<IcePortInfo>> _session_port_table;
+
+	// Insert item when send stun binding request
+	// Remove item when receive stun binding response or timed out
+	// Request Transaction ID : Info
+	std::shared_mutex _binding_request_table_lock;
+	std::map<ov::String, BindingRequestInfo> _binding_request_table;
+	
 
 	// Demultiplexer for data input through TCP
 	// remote's ID : Demultiplexer
