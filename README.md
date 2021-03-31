@@ -59,7 +59,7 @@ We have tested OME on the platforms listed below. However, we think it can work 
 ### Docker
 
 ```bash
-docker run -d \ 
+docker run -d \
 -p 1935:1935 \
 -p 3333:3333 \
 -p 8080:8080 \
