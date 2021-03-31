@@ -9,6 +9,7 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
+#include "http_datastructure.h"
 
 class HttpError : public ov::Error
 {

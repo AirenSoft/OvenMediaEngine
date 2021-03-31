@@ -31,7 +31,7 @@ bool SegmentStreamInterceptor::Start(int thread_count, const SegmentProcessHandl
 // http 1.0  : request -> response
 // http 1.1  : request -> response -> request -> response ...
 //====================================================================================================
-HttpInterceptorResult SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
+HttpInterceptorResult SegmentStreamInterceptor::OnHttpData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data)
 {
 	auto request = client->GetRequest();
 	auto response = client->GetResponse();
@@ -67,7 +67,7 @@ HttpInterceptorResult SegmentStreamInterceptor::OnHttpData(const std::shared_ptr
 	return HttpInterceptorResult::Keep;
 }
 
-bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
+bool SegmentStreamInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client)
 {
 	auto request = client->GetRequest();
 	

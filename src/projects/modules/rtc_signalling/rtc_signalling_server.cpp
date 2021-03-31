@@ -371,7 +371,7 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 	if ((disconnected == false) && (_http_server != nullptr))
 	{
 		disconnected = _http_server->DisconnectIf(
-			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool {
+			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<HttpConnection> &client) -> bool {
 				auto request = client->GetRequest();
 				auto info = request->GetExtraAs<RtcSignallingInfo>();
 
@@ -393,7 +393,7 @@ bool RtcSignallingServer::Disconnect(const info::VHostAppName &vhost_app_name, c
 	if ((disconnected == false) && (_https_server != nullptr))
 	{
 		disconnected = _https_server->DisconnectIf(
-			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<HttpClient> &client) -> bool {
+			[vhost_app_name, stream_name, peer_sdp](const std::shared_ptr<HttpConnection> &client) -> bool {
 				auto request = client->GetRequest();
 				auto info = request->GetExtraAs<RtcSignallingInfo>();
 

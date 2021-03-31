@@ -147,7 +147,7 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 {
 	auto http_interceptor = std::make_shared<HttpDefaultInterceptor>();
 
-	http_interceptor->Register(HttpMethod::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+	http_interceptor->Register(HttpMethod::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<HttpConnection> &client) -> HttpNextHandler {
 		auto request = client->GetRequest();
 
 		ov::String request_param;

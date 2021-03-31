@@ -11,7 +11,7 @@
 #include "web_socket_client.h"
 #include "web_socket_frame.h"
 
-#include <modules/http_server/http_server.h>
+#include <modules/http/server/http_server.h>
 #include <shared_mutex>
 class WebSocketInterceptor : public HttpRequestInterceptor
 {
@@ -35,13 +35,13 @@ protected:
 	// Implementation of HttpRequestInterceptorInterface
 	//--------------------------------------------------------------------
 	HttpRequestConnectionType GetConnectionType() override {return HttpRequestConnectionType::WebSocket;}
-	bool IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client) override;
+	bool IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client) override;
 
 	// If these handler return false, the connection will be disconnected
-	HttpInterceptorResult OnHttpPrepare(const std::shared_ptr<HttpClient> &client) override;
-	HttpInterceptorResult OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data) override;
-	void OnHttpError(const std::shared_ptr<HttpClient> &client, HttpStatusCode status_code) override;
-	void OnHttpClosed(const std::shared_ptr<HttpClient> &client, PhysicalPortDisconnectReason reason) override;
+	HttpInterceptorResult OnHttpPrepare(const std::shared_ptr<HttpConnection> &client) override;
+	HttpInterceptorResult OnHttpData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data) override;
+	void OnHttpError(const std::shared_ptr<HttpConnection> &client, HttpStatusCode status_code) override;
+	void OnHttpClosed(const std::shared_ptr<HttpConnection> &client, PhysicalPortDisconnectReason reason) override;
 
 	struct WebSocketInfo
 	{

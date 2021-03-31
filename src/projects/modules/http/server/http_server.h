@@ -12,15 +12,14 @@
 
 #include <shared_mutex>
 
-#include "http_client.h"
-#include "http_error.h"
-#include "http_request.h"
-#include "http_response.h"
+#include "../http_error.h"
+#include "http_connection.h"
 #include "interceptors/default/http_default_interceptor.h"
 
 #define HTTP_SERVER_USE_DEFAULT_COUNT PHYSICAL_PORT_USE_DEFAULT_COUNT
 
-// 참고 자료
+// References
+//
 // RFC7230 - Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing (https://tools.ietf.org/html/rfc7230)
 // RFC7231 - Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content (https://tools.ietf.org/html/rfc7231)
 // RFC7232 - Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests (https://tools.ietf.org/html/rfc7232)
@@ -36,8 +35,8 @@ protected:
 	friend class HttpServerManager;
 
 public:
-	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpClient>>;
-	using ClientIterator = std::function<bool(const std::shared_ptr<HttpClient> &client)>;
+	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpConnection>>;
+	using ClientIterator = std::function<bool(const std::shared_ptr<HttpConnection> &client)>;
 
 	HttpServer(const char *server_name);
 	~HttpServer() override;
@@ -58,12 +57,12 @@ public:
 
 protected:
 	// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨
-	ssize_t TryParseHeader(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data);
+	ssize_t TryParseHeader(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data);
 
-	std::shared_ptr<HttpClient> FindClient(const std::shared_ptr<ov::Socket> &remote);
+	std::shared_ptr<HttpConnection> FindClient(const std::shared_ptr<ov::Socket> &remote);
 
-	std::shared_ptr<HttpClient> ProcessConnect(const std::shared_ptr<ov::Socket> &remote);
-	void ProcessData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data);
+	std::shared_ptr<HttpConnection> ProcessConnect(const std::shared_ptr<ov::Socket> &remote);
+	void ProcessData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data);
 
 	//--------------------------------------------------------------------
 	// Implementation of PhysicalPortObserver
@@ -84,7 +83,7 @@ protected:
 	std::shared_ptr<PhysicalPort> _physical_port = nullptr;
 
 	std::shared_mutex _client_list_mutex;
-	ClientList _client_list;
+	ClientList _connection_list;
 
 	std::shared_mutex _interceptor_list_mutex;
 	std::vector<std::shared_ptr<HttpRequestInterceptor>> _interceptor_list;

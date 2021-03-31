@@ -38,7 +38,7 @@ namespace api
 			RegisterPost(R"((stopPush))", &AppActionsController::OnPostStopPush);
 		};
 
-		ApiResponse AppActionsController::OnGetRecords(const std::shared_ptr<HttpClient> &client,
+		ApiResponse AppActionsController::OnGetRecords(const std::shared_ptr<HttpConnection> &client,
 													   const std::shared_ptr<mon::HostMetrics> &vhost,
 													   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -47,7 +47,7 @@ namespace api
 			return OnPostRecords(client, empty_body, vhost, app);
 		}
 
-		ApiResponse AppActionsController::OnPostRecords(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostRecords(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 														const std::shared_ptr<mon::HostMetrics> &vhost,
 														const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -76,7 +76,7 @@ namespace api
 			return {HttpStatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStartRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStartRecord(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 															const std::shared_ptr<mon::HostMetrics> &vhost,
 															const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -115,7 +115,7 @@ namespace api
 			return {HttpStatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStopRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStopRecord(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 														   const std::shared_ptr<mon::HostMetrics> &vhost,
 														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -154,7 +154,7 @@ namespace api
 			return {HttpStatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnGetPushes(const std::shared_ptr<HttpClient> &client,
+		ApiResponse AppActionsController::OnGetPushes(const std::shared_ptr<HttpConnection> &client,
 													  const std::shared_ptr<mon::HostMetrics> &vhost,
 													  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -163,7 +163,7 @@ namespace api
 			return OnPostPushes(client, empty_body, vhost, app);
 		}
 
-		ApiResponse AppActionsController::OnPostPushes(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostPushes(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 													   const std::shared_ptr<mon::HostMetrics> &vhost,
 													   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -191,7 +191,7 @@ namespace api
 			return {HttpStatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 														  const std::shared_ptr<mon::HostMetrics> &vhost,
 														  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -229,7 +229,7 @@ namespace api
 			return {HttpStatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 														 const std::shared_ptr<mon::HostMetrics> &vhost,
 														 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -262,7 +262,7 @@ namespace api
 			return HttpError::CreateError(HttpStatusCode::OK, error->GetMessage());
 		}
 
-		ApiResponse AppActionsController::OnGetDummyAction(const std::shared_ptr<HttpClient> &client,
+		ApiResponse AppActionsController::OnGetDummyAction(const std::shared_ptr<HttpConnection> &client,
 														   const std::shared_ptr<mon::HostMetrics> &vhost,
 														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{

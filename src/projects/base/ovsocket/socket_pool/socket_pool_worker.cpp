@@ -60,7 +60,7 @@ namespace ov
 		_epoll_thread = std::thread(&SocketPoolWorker::ThreadProc, this);
 
 		auto name = _pool->GetName();
-		name.Prepend("SckPool");
+		name.Prepend("SP");
 		name = name.Replace(" ", "");
 		name.SetLength(15);
 

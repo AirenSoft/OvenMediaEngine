@@ -8,8 +8,8 @@
 //==============================================================================
 #include "http_default_interceptor.h"
 
-#include "../../http_client.h"
-#include "../../http_private.h"
+#include "../../../http_private.h"
+#include "../../http_connection.h"
 
 HttpDefaultInterceptor::HttpDefaultInterceptor(const ov::String &pattern_prefix)
 	: _pattern_prefix(pattern_prefix)
@@ -49,13 +49,13 @@ bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &patte
 	return true;
 }
 
-bool HttpDefaultInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
+bool HttpDefaultInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client)
 {
 	// Process all requests because this is a default interceptor
 	return true;
 }
 
-HttpInterceptorResult HttpDefaultInterceptor::OnHttpPrepare(const std::shared_ptr<HttpClient> &client)
+HttpInterceptorResult HttpDefaultInterceptor::OnHttpPrepare(const std::shared_ptr<HttpConnection> &client)
 {
 	// Pre-allocate memory to process request body
 	auto request = client->GetRequest();
@@ -82,7 +82,7 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpPrepare(const std::shared_pt
 	return HttpInterceptorResult::Keep;
 }
 
-HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
+HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data)
 {
 	auto request = client->GetRequest();
 	auto response = client->GetResponse();
@@ -138,7 +138,7 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 
 			auto uri = ov::Url::Parse(request->GetUri());
 
-			if(uri == nullptr)
+			if (uri == nullptr)
 			{
 				logte("Could not parse uri: %s", request->GetUri().CStr());
 				return HttpInterceptorResult::Disconnect;
@@ -225,14 +225,14 @@ HttpInterceptorResult HttpDefaultInterceptor::OnHttpData(const std::shared_ptr<H
 	return HttpInterceptorResult::Disconnect;
 }
 
-void HttpDefaultInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client, HttpStatusCode status_code)
+void HttpDefaultInterceptor::OnHttpError(const std::shared_ptr<HttpConnection> &client, HttpStatusCode status_code)
 {
 	auto response = client->GetResponse();
 
 	response->SetStatusCode(status_code);
 }
 
-void HttpDefaultInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client, PhysicalPortDisconnectReason reason)
+void HttpDefaultInterceptor::OnHttpClosed(const std::shared_ptr<HttpConnection> &client, PhysicalPortDisconnectReason reason)
 {
 	// 아무 처리 하지 않아도 됨
 }

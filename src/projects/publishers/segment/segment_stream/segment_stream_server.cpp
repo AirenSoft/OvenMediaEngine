@@ -8,7 +8,7 @@
 //==============================================================================
 #include "segment_stream_server.h"
 
-#include <modules/http_server/http_server_manager.h>
+#include <modules/http/server/http_server_manager.h>
 #include <monitoring/monitoring.h>
 
 #include <regex>
@@ -201,13 +201,13 @@ bool SegmentStreamServer::ParseRequestUrl(const ov::String &request_url,
 	return true;
 }
 
-bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &client,
+bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpConnection> &client,
 										 const ov::String &request_target,
 										 const ov::String &origin_url)
 {
 	auto response = client->GetResponse();
 	auto request = client->GetRequest();
-	HttpConnection connetion = HttpConnection::Closed;
+	HttpConnectionPolicy connetion = HttpConnectionPolicy::Closed;
 
 	do
 	{
@@ -253,10 +253,10 @@ bool SegmentStreamServer::ProcessRequest(const std::shared_ptr<HttpClient> &clie
 
 	switch (connetion)
 	{
-		case HttpConnection::Closed:
+		case HttpConnectionPolicy::Closed:
 			return response->Close();
 
-		case HttpConnection::KeepAlive:
+		case HttpConnectionPolicy::KeepAlive:
 			return true;
 
 		default:
@@ -391,7 +391,7 @@ bool SegmentStreamServer::UrlExistCheck(const std::vector<ov::String> &url_list,
 	return (item != url_list.end());
 }
 
-bool SegmentStreamServer::IncreaseBytesOut(const std::shared_ptr<HttpClient> &client, size_t sent_bytes)
+bool SegmentStreamServer::IncreaseBytesOut(const std::shared_ptr<HttpConnection> &client, size_t sent_bytes)
 {
 	auto request = client->GetRequest();
 

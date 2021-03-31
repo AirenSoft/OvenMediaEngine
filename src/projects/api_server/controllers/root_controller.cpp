@@ -43,7 +43,7 @@ namespace api
 
 	void RootController::PrepareAccessTokenHandler()
 	{
-		_interceptor->Register(HttpMethod::All, R"(.+)", [=](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+		_interceptor->Register(HttpMethod::All, R"(.+)", [=](const std::shared_ptr<HttpConnection> &client) -> HttpNextHandler {
 #if DEBUG
 			if (_access_token.IsEmpty())
 			{
@@ -105,7 +105,7 @@ namespace api
 		});
 	}
 
-	ApiResponse RootController::OnNotFound(const std::shared_ptr<HttpClient> &client)
+	ApiResponse RootController::OnNotFound(const std::shared_ptr<HttpConnection> &client)
 	{
 		return HttpError::CreateError(HttpStatusCode::NotFound, "Controller not found");
 	}

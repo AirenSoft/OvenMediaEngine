@@ -12,7 +12,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
 #include <config/config.h>
-#include <modules/http_server/http_server_manager.h>
+#include <modules/http/server/http_server_manager.h>
 
 #include "controllers/root_controller.h"
 

@@ -9,7 +9,7 @@
 #pragma once
 
 #include <monitoring/monitoring.h>
-#include <modules/http_server/http_server.h>
+#include <modules/http/server/http_server.h>
 
 namespace api
 {

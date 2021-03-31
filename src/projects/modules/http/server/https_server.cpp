@@ -8,7 +8,7 @@
 //==============================================================================
 #include "https_server.h"
 
-#include "http_private.h"
+#include "../http_private.h"
 
 // Reference: https://wiki.mozilla.org/Security/Server_Side_TLS
 

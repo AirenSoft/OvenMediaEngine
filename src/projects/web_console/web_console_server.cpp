@@ -104,14 +104,14 @@ bool WebConsoleServer::InitializeServer()
 	auto http_interceptor = std::make_shared<HttpDefaultInterceptor>();
 	ov::String document_root = ov::PathManager::GetCanonicalPath(_web_console.GetDocumentPath());
 
-	http_interceptor->Register(HttpMethod::Post, "/api/login", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+	http_interceptor->Register(HttpMethod::Post, "/api/login", [this](const std::shared_ptr<HttpConnection> &client) -> HttpNextHandler {
 		// auto request_body = request->GetRequestBody();
 		// auto json = ov::Json::Parse(request_body);
 
 		return HttpNextHandler::DoNotCall;
 	});
 
-	http_interceptor->Register(HttpMethod::Post, "/api/logout", [this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+	http_interceptor->Register(HttpMethod::Post, "/api/logout", [this](const std::shared_ptr<HttpConnection> &client) -> HttpNextHandler {
 		// auto request_body = request->GetRequestBody();
 		// auto json = ov::Json::Parse(request_body);
 
@@ -120,7 +120,7 @@ bool WebConsoleServer::InitializeServer()
 		return HttpNextHandler::DoNotCall;
 	});
 
-	http_interceptor->Register(HttpMethod::Get, ".*", [document_root, this](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+	http_interceptor->Register(HttpMethod::Get, ".*", [document_root, this](const std::shared_ptr<HttpConnection> &client) -> HttpNextHandler {
 		auto request = client->GetRequest();
 		auto response = client->GetResponse();
 

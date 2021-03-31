@@ -7,13 +7,15 @@
 //
 //==============================================================================
 #include "web_socket_client.h"
-#include "../../http_private.h"
-#include "web_socket_datastructure.h"
 
 #include <unistd.h>
+
 #include <algorithm>
 
-WebSocketClient::WebSocketClient(const std::shared_ptr<HttpClient> &client)
+#include "../../../http_private.h"
+#include "web_socket_datastructure.h"
+
+WebSocketClient::WebSocketClient(const std::shared_ptr<HttpConnection> &client)
 	: _client(client)
 {
 }

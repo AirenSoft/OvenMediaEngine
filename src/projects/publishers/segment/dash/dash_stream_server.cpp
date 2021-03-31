@@ -15,7 +15,7 @@
 #include "dash_define.h"
 #include "dash_private.h"
 
-HttpConnection DashStreamServer::ProcessStreamRequest(const std::shared_ptr<HttpClient> &client,
+HttpConnectionPolicy DashStreamServer::ProcessStreamRequest(const std::shared_ptr<HttpConnection> &client,
 													  const SegmentStreamRequestInfo &request_info,
 													  const ov::String &file_ext)
 {
@@ -33,10 +33,10 @@ HttpConnection DashStreamServer::ProcessStreamRequest(const std::shared_ptr<Http
 	response->SetStatusCode(HttpStatusCode::NotFound);
 	response->Response();
 
-	return HttpConnection::Closed;
+	return HttpConnectionPolicy::Closed;
 }
 
-HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<HttpClient> &client,
+HttpConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<HttpConnection> &client,
 														const SegmentStreamRequestInfo &request_info,
 														PlayListType play_list_type)
 {
@@ -55,13 +55,13 @@ HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<Ht
 		response->SetStatusCode(HttpStatusCode::NotFound);
 		response->Response();
 
-		return HttpConnection::Closed;
+		return HttpConnectionPolicy::Closed;
 	}
 
 	if (response->GetStatusCode() != HttpStatusCode::OK || play_list.IsEmpty())
 	{
 		response->Response();
-		return HttpConnection::Closed;
+		return HttpConnectionPolicy::Closed;
 	}
 
 	// Set HTTP header
@@ -75,10 +75,10 @@ HttpConnection DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<Ht
 
 	IncreaseBytesOut(client, sent_bytes);
 
-	return HttpConnection::Closed;
+	return HttpConnectionPolicy::Closed;
 }
 
-HttpConnection DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
+HttpConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpConnection> &client,
 													   const SegmentStreamRequestInfo &request_info,
 													   SegmentType segment_type)
 {
@@ -97,7 +97,7 @@ HttpConnection DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 		response->SetStatusCode(HttpStatusCode::NotFound);
 		response->Response();
 
-		return HttpConnection::Closed;
+		return HttpConnectionPolicy::Closed;
 	}
 
 	// Set HTTP header
@@ -107,5 +107,5 @@ HttpConnection DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 
 	IncreaseBytesOut(client, sent_bytes);
 
-	return HttpConnection::Closed;
+	return HttpConnectionPolicy::Closed;
 }

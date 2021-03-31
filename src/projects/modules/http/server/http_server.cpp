@@ -10,7 +10,7 @@
 
 #include <modules/physical_port/physical_port_manager.h>
 
-#include "http_private.h"
+#include "../http_private.h"
 #include "http_server_manager.h"
 
 #define HTTP_SERVER_DEFAULT_WORKER_COUNT 4
@@ -71,7 +71,7 @@ bool HttpServer::Stop()
 
 	{
 		auto lock_guard = std::lock_guard(_client_list_mutex);
-		client_list = std::move(_client_list);
+		client_list = std::move(_connection_list);
 	}
 
 	for (auto &client : client_list)
@@ -91,7 +91,7 @@ bool HttpServer::IsRunning() const
 	return (_physical_port != nullptr);
 }
 
-ssize_t HttpServer::TryParseHeader(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
+ssize_t HttpServer::TryParseHeader(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data)
 {
 	auto request = client->GetRequest();
 
@@ -120,13 +120,13 @@ ssize_t HttpServer::TryParseHeader(const std::shared_ptr<HttpClient> &client, co
 	return processed_length;
 }
 
-std::shared_ptr<HttpClient> HttpServer::FindClient(const std::shared_ptr<ov::Socket> &remote)
+std::shared_ptr<HttpConnection> HttpServer::FindClient(const std::shared_ptr<ov::Socket> &remote)
 {
 	std::shared_lock<std::shared_mutex> guard(_client_list_mutex);
 
-	auto item = _client_list.find(remote.get());
+	auto item = _connection_list.find(remote.get());
 
-	if (item != _client_list.end())
+	if (item != _connection_list.end())
 	{
 		return item->second;
 	}
@@ -134,7 +134,7 @@ std::shared_ptr<HttpClient> HttpServer::FindClient(const std::shared_ptr<ov::Soc
 	return nullptr;
 }
 
-void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
+void HttpServer::ProcessData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data)
 {
 	if (client != nullptr)
 	{
@@ -253,7 +253,7 @@ void HttpServer::ProcessData(const std::shared_ptr<HttpClient> &client, const st
 	}
 }
 
-std::shared_ptr<HttpClient> HttpServer::ProcessConnect(const std::shared_ptr<ov::Socket> &remote)
+std::shared_ptr<HttpConnection> HttpServer::ProcessConnect(const std::shared_ptr<ov::Socket> &remote)
 {
 	logti("Client(%s) is connected on %s", remote->ToString().CStr(), _physical_port->GetAddress().ToString().CStr());
 
@@ -277,11 +277,11 @@ std::shared_ptr<HttpClient> HttpServer::ProcessConnect(const std::shared_ptr<ov:
 
 	std::lock_guard<std::shared_mutex> guard(_client_list_mutex);
 
-	auto http_client = std::make_shared<HttpClient>(GetSharedPtr(), request, response);
+	auto http_connection = std::make_shared<HttpConnection>(GetSharedPtr(), request, response);
 
-	_client_list[remote.get()] = http_client;
+	_connection_list[remote.get()] = http_connection;
 
-	return std::move(http_client);
+	return std::move(http_connection);
 }
 
 void HttpServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
@@ -311,14 +311,14 @@ void HttpServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const
 
 void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error)
 {
-	std::shared_ptr<HttpClient> client;
+	std::shared_ptr<HttpConnection> client;
 
 	{
 		std::lock_guard<std::shared_mutex> guard(_client_list_mutex);
 
-		auto client_iterator = _client_list.find(remote.get());
+		auto client_iterator = _connection_list.find(remote.get());
 
-		if (client_iterator == _client_list.end())
+		if (client_iterator == _connection_list.end())
 		{
 			logte("Could not find client %s from list", remote->ToString().CStr());
 			OV_ASSERT2(false);
@@ -326,7 +326,7 @@ void HttpServer::OnDisconnected(const std::shared_ptr<ov::Socket> &remote, Physi
 		}
 
 		client = client_iterator->second;
-		_client_list.erase(client_iterator);
+		_connection_list.erase(client_iterator);
 	}
 
 	auto request = client->GetRequest();
@@ -399,7 +399,7 @@ ov::Socket *HttpServer::FindClient(ClientIterator iterator)
 {
 	std::shared_lock<std::shared_mutex> guard(_client_list_mutex);
 
-	for (auto &client : _client_list)
+	for (auto &client : _connection_list)
 	{
 		if (iterator(client.second))
 		{
@@ -412,12 +412,12 @@ ov::Socket *HttpServer::FindClient(ClientIterator iterator)
 
 bool HttpServer::DisconnectIf(ClientIterator iterator)
 {
-	std::vector<std::shared_ptr<HttpClient>> temp_list;
+	std::vector<std::shared_ptr<HttpConnection>> temp_list;
 
 	{
 		std::shared_lock<std::shared_mutex> guard(_client_list_mutex);
 
-		for (auto client_iterator : _client_list)
+		for (auto client_iterator : _connection_list)
 		{
 			auto &client = client_iterator.second;
 

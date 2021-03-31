@@ -14,8 +14,7 @@
 #include <memory>
 #include <utility>
 
-#include "http_client.h"
-#include "http_private.h"
+#include "../http_private.h"
 
 HttpResponse::HttpResponse(const std::shared_ptr<ov::ClientSocket> &client_socket)
 	: _client_socket(client_socket)

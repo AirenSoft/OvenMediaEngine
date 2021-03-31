@@ -9,7 +9,7 @@
 #pragma once
 
 #include <config/items/items.h>
-#include <modules/http_server/http_server.h>
+#include <modules/http/server/http_server.h>
 
 #include <list>
 #include <thread>
@@ -23,13 +23,13 @@ public:
 	~SegmentStreamInterceptor() override;
 
 	bool Start(int thread_count, const SegmentProcessHandler &process_handler);
-	HttpInterceptorResult OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data) override;
+	HttpInterceptorResult OnHttpData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data) override;
 	void SetCrossdomainBlock()
 	{
 		_is_crossdomain_block = false;
 	}
 
-	bool IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client) override;
+	bool IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client) override;
 
 protected:
 	SegmentWorkerManager _worker_manager;
