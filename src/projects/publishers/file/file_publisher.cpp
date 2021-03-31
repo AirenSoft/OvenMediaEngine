@@ -73,7 +73,7 @@ void FilePublisher::WorkerThread()
 
 std::shared_ptr<pub::Application> FilePublisher::OnCreatePublisherApplication(const info::Application &application_info)
 {
-	if(IsModuleAvailable() == false)
+	if (IsModuleAvailable() == false)
 	{
 		return nullptr;
 	}
@@ -160,7 +160,6 @@ void FilePublisher::SplitSession(std::shared_ptr<FileSession> session)
 		default:
 			break;
 	}
-
 }
 
 void FilePublisher::SessionController()
@@ -203,10 +202,13 @@ void FilePublisher::SessionController()
 				StopSession(session);
 			}
 
-			if ((uint64_t)session->GetRecord()->GetInterval() > 0 &&
-				session->GetRecord()->GetRecordTime() > (uint64_t)session->GetRecord()->GetInterval())
+			// When setting interval parameters, perform segmentation recording.
+			if ((uint64_t)session->GetRecord()->GetInterval() > 0)
 			{
-				SplitSession(session);
+				if (session->GetRecord()->GetRecordTime() > (uint64_t)session->GetRecord()->GetInterval())
+				{
+					SplitSession(session);
+				}
 			}
 		}
 		else
@@ -231,6 +233,7 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 {
 	std::lock_guard<std::shared_mutex> lock(_userdata_sets_mutex);
 
+	// Checking for the required parameters
 	if (record->GetId().IsEmpty() == true || record->GetStreamName().IsEmpty() == true)
 	{
 		ov::String error_message = "There is no required parameter [";
@@ -250,6 +253,91 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 		return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
 	}
 
+	// Validation of duplicate parameters
+	if (record->GetSchedule().IsEmpty() == false && record->GetInterval() > 0)
+	{
+		ov::String error_message = "[Interval] and [Schedule] cannot be used at the same time";
+
+		return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
+	}
+
+	// Validation of schedule Parameter
+	if (record->GetSchedule().IsEmpty() == false)
+	{
+		ov::String pattern = R"(^(\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\*\/([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])) (\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\*\/([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])) (\*|([0-9]|1[0-9]|2[0-3])|\*\/([0-9]|1[0-9]|2[0-3]))$)";
+		auto regex = ov::Regex(pattern);
+		auto error = regex.Compile();
+
+		if (error != nullptr)
+		{
+			ov::String error_message = "Invalid regular expression pattern";
+			return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
+		}
+
+		auto match_result = regex.Matches(record->GetSchedule().CStr());
+		if (match_result.GetError() != nullptr)
+		{
+			ov::String error_message = "Invalid [schedule] parameter";
+			return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
+		}
+
+		ov::String group_full = "";
+		ov::String group_s1 = "";
+		ov::String group_s2 = "";
+		ov::String group_s3 = "";
+		ov::String group_m1 = "";
+		ov::String group_m2 = "";
+		ov::String group_m3 = "";
+		ov::String group_h1 = "";
+		ov::String group_h2 = "";
+		ov::String group_h3 = "";
+
+		auto group_list = match_result.GetGroupList();
+		for (size_t i = 0; i < 10; i++)
+		{
+			ov::String group = (i < group_list.size()) ? std::string(group_list[i]).c_str() : "";
+			switch (i)
+			{
+				case 0:
+					group_full = group;
+					break;
+				case 1:
+					group_s1 = group;
+					break;
+				case 2:
+					group_s2 = group;
+					break;
+				case 3:
+					group_s3 = group;
+					break;
+				case 4:
+					group_m1 = group;
+					break;
+				case 5:
+					group_m2 = group;
+					break;
+				case 6:
+					group_m3 = group;
+					break;
+				case 7:
+					group_h1 = group;
+					break;
+				case 8:
+					group_h2 = group;
+					break;
+				case 9:
+					group_h3 = group;
+					break;
+			}
+		}
+		logtd("[ %s | %s | %s | %s | %s | %s | %s | %s | %s | %s ]",
+			  group_full.CStr(),
+			  group_s1.CStr(), group_s2.CStr(), group_s3.CStr(),
+			  group_m1.CStr(), group_m2.CStr(), group_m3.CStr(),
+			  group_h1.CStr(), group_h2.CStr(), group_h3.CStr());
+	}
+
+	// Checking for the dupilicate id
 	if (_userdata_sets.GetByKey(record->GetId()) != nullptr)
 	{
 		ov::String error_message = "Duplicate ID already exists";

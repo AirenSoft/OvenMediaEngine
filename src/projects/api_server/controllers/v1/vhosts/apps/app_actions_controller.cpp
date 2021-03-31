@@ -51,6 +51,8 @@ namespace api
 														const std::shared_ptr<mon::HostMetrics> &vhost,
 														const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			Json::Value response;
+
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
@@ -66,8 +68,6 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::NotFound, "There is no record information");
 			}
 
-			Json::Value response;
-
 			for (auto &item : records)
 			{
 				response.append(conv::JsonFromRecord(item));
@@ -80,6 +80,8 @@ namespace api
 															const std::shared_ptr<mon::HostMetrics> &vhost,
 															const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			Json::Value response;
+
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
@@ -109,7 +111,6 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::BadRequest, error->GetMessage());
 			}
 
-			Json::Value response;
 			response.append(conv::JsonFromRecord(record));
 
 			return {HttpStatusCode::OK, std::move(response)};
@@ -119,6 +120,8 @@ namespace api
 														   const std::shared_ptr<mon::HostMetrics> &vhost,
 														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			Json::Value response;
+
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
@@ -148,7 +151,6 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::NotFound, error->GetMessage());
 			}
 
-			Json::Value response;
 			response.append(conv::JsonFromRecord(record));
 
 			return {HttpStatusCode::OK, std::move(response)};
@@ -167,15 +169,15 @@ namespace api
 													   const std::shared_ptr<mon::HostMetrics> &vhost,
 													   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			std::vector<std::shared_ptr<info::Push>> pushes;
+			Json::Value response;
+
 			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
 			if (publisher == nullptr)
 			{
 				return HttpError::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
-
-			std::vector<std::shared_ptr<info::Push>> pushes;
-			Json::Value response;
 
 			auto error = publisher->GetPushes(app->GetName(), pushes);
 			if (error->GetCode() != RtmpPushPublisher::PushPublisherErrorCode::Success || pushes.size() == 0)
@@ -195,6 +197,8 @@ namespace api
 														  const std::shared_ptr<mon::HostMetrics> &vhost,
 														  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			Json::Value response;
+
 			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
 			if (publisher == nullptr)
 			{
@@ -223,7 +227,6 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::BadRequest, error->GetMessage());
 			}
 
-			Json::Value response;
 			response.append(conv::JsonFromPush(push));
 
 			return {HttpStatusCode::OK, std::move(response)};

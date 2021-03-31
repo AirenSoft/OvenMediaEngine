@@ -802,10 +802,8 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 		_stat_first_time_diff[track_id] = uptime - rescaled_last_pts;
 	}
 
-	if (_stop_watch.IsElapsed(5000))
+	if (_stop_watch.IsElapsed(5000) && _stop_watch.Update())
 	{
-		_stop_watch.Update();
-
 		// Uptime
 		int64_t uptime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _stat_start_time).count();
 
@@ -847,12 +845,25 @@ void MediaRouteStream::UpdateStatistics(std::shared_ptr<MediaTrack> &media_track
 			min_pts = std::min(min_pts, rescaled_last_pts);
 			max_pts = std::max(max_pts, rescaled_last_pts);
 
-			stat_track_str.AppendFormat("\n\t[%3d] type: %5s(%2d/%4s), %s, pkt_cnt: %6lld, pkt_siz: %sB", track_id, track->GetMediaType() == MediaType::Video ? "video" : "audio", track->GetCodecId(), ::StringFromMediaCodecId(track->GetCodecId()).CStr(), pts_str.CStr(), _stat_recv_pkt_count[track_id], ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr());
+			stat_track_str.AppendFormat("\n\t[%3d] type: %5s(%2d/%4s), %s, pkt_cnt: %6lld, pkt_siz: %sB",
+										track_id,
+										track->GetMediaType() == MediaType::Video ? "video" : "audio",
+										track->GetCodecId(),
+										::StringFromMediaCodecId(track->GetCodecId()).CStr(),
+										pts_str.CStr(),
+										_stat_recv_pkt_count[track_id],
+										ov::Converter::ToSiString(_stat_recv_pkt_size[track_id], 1).CStr());
 		}
 
 		ov::String stat_stream_str = "";
 
-		stat_stream_str.AppendFormat("\n - MediaRouter Stream | type: %s, name: %s/%s, uptime: %lldms, queue: %d, A-V(%lld)", _inout_type == MediaRouterStreamType::INBOUND ? "Inbound" : "Outbound", _stream->GetApplicationInfo().GetName().CStr(), _stream->GetName().CStr(), (int64_t)uptime, _packets_queue.Size(), max_pts - min_pts);
+		stat_stream_str.AppendFormat("\n - MediaRouter Stream | type: %s, name: %s/%s, uptime: %lldms, queue: %d, A-V(%lld)",
+									 _inout_type == MediaRouterStreamType::INBOUND ? "Inbound" : "Outbound",
+									 _stream->GetApplicationInfo().GetName().CStr(),
+									 _stream->GetName().CStr(),
+									 (int64_t)uptime,
+									 _packets_queue.Size(),
+									 max_pts - min_pts);
 
 		stat_track_str = stat_stream_str + stat_track_str;
 

@@ -53,6 +53,9 @@ namespace info
 		void SetInterval(int32_t interval);
 		int32_t GetInterval();
 
+		void SetSchedule(ov::String schedule);
+		ov::String GetSchedule();
+
 		void SetFilePath(ov::String file_path);
 		ov::String GetFilePath();
 
@@ -138,6 +141,15 @@ namespace info
 		//  0 : infinite
 		//  > 0 : seconds
 		int32_t _interval;
+
+		// Recording a schedule synchronized with system time
+		// 
+		// <minute> <hour> : be similar to the cron-tap pattern
+		// * * : split every minutes
+		// */30 * : split by 30 minutes
+		// */20 * : split by every 20 minutes
+		// 
+		ov::String _schedule;
 
 		// Recorded (Accumulated) file size
 		uint64_t _record_bytes;
