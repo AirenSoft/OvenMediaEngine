@@ -8,12 +8,12 @@
 //==============================================================================
 #pragma once
 
-#include "../http_datastructure.h"
+#include <base/ovlibrary/ovlibrary.h>
+#include <modules/physical_port/physical_port_observer.h>
 
 #include <memory>
 
-#include <base/ovlibrary/ovlibrary.h>
-#include <modules/physical_port/physical_port_observer.h>
+#include "../http_datastructure.h"
 
 enum class HttpRequestConnectionType
 {
@@ -30,43 +30,40 @@ public:
 
 	virtual HttpRequestConnectionType GetConnectionType() = 0;
 
-	// request를 처리할 수 있는 interceptor인지 여부 반환
-	// 만약, true를 반환하면 앞으로 이 interceptor만 호출됨
+	// Returns whether the request is an interceptor capable of processing.
+	// If this method returns true, it will only pass to this interceptor when data is received in the future, but not to another interceptor.
 	virtual bool IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client) = 0;
 
-	/// IsInterceptorForRequest() 직후, request/response를 초기화 하기 위해 호출됨
+	/// A callback called to initialize request/response immediately after IsInterceptorForRequest()
 	///
-	/// @param request HTTP 요청 정보
-	/// @param response HTTP 응답을 처리하는 instance
+	/// @param client An instance that contains informations related to HTTP request/response
 	///
-	/// @return false를 반환할 경우, client와의 연결을 종료함
+	/// @return Whether to disconnect with the client
 	virtual HttpInterceptorResult OnHttpPrepare(const std::shared_ptr<HttpClient> &client) = 0;
 
-	/// 클라이언트로 부터 데이터를 수신함
+	/// A callback called if data received from the client.
 	///
-	/// @param request HTTP 요청 정보
-	/// @param response HTTP 응답을 처리하는 instance
-	/// @param data 수신한 데이터
+	/// @param client An instance that contains informations related to HTTP request/response
+	/// @param data Received data from the client
 	///
-	/// @return false를 반환할 경우, client와의 연결을 종료함
+	/// @return Whether to disconnect with the client
 	virtual HttpInterceptorResult OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data) = 0;
 
-	/// 처리 도중 오류 발생
+	/// A callback called if an error occurs during processing.
 	///
-	/// @param request HTTP 요청 정보
-	/// @param response HTTP 응답을 처리하는 instance
-	/// @param status_code 오류 종류
+	/// @param client An instance that contains informations related to HTTP request/response
+	/// @param status_code A status code
 	///
-	/// @remark interceptor가 HttpServer의 default interceptor일 경우, OnHttpPrepare()가 호출되기 전에 호출될 수 있음
+	/// @remark If the interceptor is the default interceptor of the HttpServer, it can be called before OnHttpPrepare() is called.
 	virtual void OnHttpError(const std::shared_ptr<HttpClient> &client, HttpStatusCode status_code) = 0;
 
-	/// 클라이언트에서 연결을 해제하였음
+	/// A callback called when the client is disconnects.
 	///
-	/// @param request HTTP 요청 정보
-	/// @param response HTTP 응답을 처리하는 instance
+	/// @param client An instance that contains informations related to HTTP request/response
+	/// @param reason Indicates why this callback was called
 	///
-	/// @remark 연결이 이미 해제 된 상태이기 때문에, 이 상태에서는 더 이상 클라이언트로 응답을 보낼 수 없음.
-	/// Closed는 Error가 발생해도 항상 호출되는 것을 보장함
+	/// @remark The response can no longer be sent to the client in this state because the connection is already disconnected.
+	/// This callback is guaranteed to be called at all times even if an error occurs.
 	virtual void OnHttpClosed(const std::shared_ptr<HttpClient> &client, PhysicalPortDisconnectReason reason) = 0;
 
 protected:

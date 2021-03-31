@@ -51,16 +51,16 @@ bool HttpDefaultInterceptor::Register(HttpMethod method, const ov::String &patte
 
 bool HttpDefaultInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
 {
-	// 기본 handler 이므로, 모든 request에 대해 무조건 처리
+	// Process all requests because this is a default interceptor
 	return true;
 }
 
 HttpInterceptorResult HttpDefaultInterceptor::OnHttpPrepare(const std::shared_ptr<HttpClient> &client)
 {
-	// request body를 처리하기 위해 메모리를 미리 할당해놓음
+	// Pre-allocate memory to process request body
 	auto request = client->GetRequest();
 
-	// TODO: content-length가 너무 크면 비정상 종료 될 수 있으므로, 파일 업로드 지원 & 너무 큰 요청은 차단하는 기능 만들어야 함
+	// TODO: Support for file upload & need to create a feature to block requests that are too large because too much CONTENT-LENGTH can cause OOM
 	ssize_t content_length = request->GetContentLength();
 
 	if (content_length > (1024LL * 1024LL))
