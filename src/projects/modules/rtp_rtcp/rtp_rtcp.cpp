@@ -138,6 +138,11 @@ bool RtpRtcp::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data
 // no upper node( receive data process end)
 bool RtpRtcp::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
+	// In the case of UDP, one complete packet is received here.
+	// In the case of TCP, demuxing is already performed in the lower layer 
+	// such as IcePort or RTSP Interleaved channel to complete and input one packet.
+	// Therefore, it is not necessary to demux the packet here.
+
 	std::shared_lock<std::shared_mutex> lock(_state_lock);
 	// nothing to do before node start
 	if(GetState() != ov::Node::NodeState::Started)
@@ -146,13 +151,49 @@ bool RtpRtcp::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov:
 		return false;
 	}
 
-	if(from_node == NodeType::Srtcp)
+	// std::min(FIXED_HEADER_SIZE, RTCP_HEADER_SIZE)
+	if(data->GetLength() < RTCP_HEADER_SIZE)
 	{
-		return OnRtcpReceived(data);
+		logtd("It is not an RTP or RTCP packet.");
+		return false;
 	}
-	else if(from_node == NodeType::Srtp)
+
+
+	/* Check if this is a RTP/RTCP packet
+		https://www.rfc-editor.org/rfc/rfc7983.html
+					+----------------+
+					|        [0..3] -+--> forward to STUN
+					|                |
+					|      [16..19] -+--> forward to ZRTP
+					|                |
+		packet -->  |      [20..63] -+--> forward to DTLS
+					|                |
+					|      [64..79] -+--> forward to TURN Channel
+					|                |
+					|    [128..191] -+--> forward to RTP/RTCP
+					+----------------+
+	*/
+	auto first_byte = data->GetDataAs<uint8_t>()[0];
+	if(first_byte >= 128 && first_byte <= 191)
 	{
-		return OnRtpReceived(data);
+		// Distinguish between RTP and RTCP 
+		// https://tools.ietf.org/html/rfc5761#section-4
+		auto payload_type = data->GetDataAs<uint8_t>()[1];
+		// RTCP
+		if(payload_type >= 192 && payload_type <= 223)
+		{
+			return OnRtcpReceived(data);
+		}
+		// RTP
+		else
+		{
+			return OnRtpReceived(data);
+		}
+	}
+	else
+	{
+		logtd("It is not an RTP or RTCP packet.");
+		return false;
 	}
 
     return true;
