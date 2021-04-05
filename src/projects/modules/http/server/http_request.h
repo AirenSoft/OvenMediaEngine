@@ -7,12 +7,10 @@
 //
 //==============================================================================
 #pragma once
-#include <base/ovlibrary/converter.h>
 
-#include "http_datastructure.h"
 #include "interceptors/http_request_interceptor.h"
 
-class HttpClient;
+class HttpConnection;
 
 class HttpRequest : public ov::EnableSharedFromThis<HttpRequest>
 {

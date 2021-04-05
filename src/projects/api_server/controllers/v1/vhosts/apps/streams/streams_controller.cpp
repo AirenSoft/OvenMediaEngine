@@ -26,7 +26,7 @@ namespace api
 			RegisterDelete(R"(\/(?<stream_name>[^\/]*))", &StreamsController::OnDeleteStream);
 		};
 
-		ApiResponse StreamsController::OnPostStream(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse StreamsController::OnPostStream(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 													const std::shared_ptr<mon::HostMetrics> &vhost,
 													const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -77,7 +77,7 @@ namespace api
 			return std::move(response_value);
 		}
 
-		ApiResponse StreamsController::OnGetStreamList(const std::shared_ptr<HttpClient> &client,
+		ApiResponse StreamsController::OnGetStreamList(const std::shared_ptr<HttpConnection> &client,
 													   const std::shared_ptr<mon::HostMetrics> &vhost,
 													   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -98,7 +98,7 @@ namespace api
 			return std::move(response);
 		}
 
-		ApiResponse StreamsController::OnGetStream(const std::shared_ptr<HttpClient> &client,
+		ApiResponse StreamsController::OnGetStream(const std::shared_ptr<HttpConnection> &client,
 												   const std::shared_ptr<mon::HostMetrics> &vhost,
 												   const std::shared_ptr<mon::ApplicationMetrics> &app,
 												   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
@@ -106,7 +106,7 @@ namespace api
 			return std::move(conv::JsonFromStream(stream, std::move(output_streams)));
 		}
 
-		ApiResponse StreamsController::OnDeleteStream(const std::shared_ptr<HttpClient> &client,
+		ApiResponse StreamsController::OnDeleteStream(const std::shared_ptr<HttpConnection> &client,
 													  const std::shared_ptr<mon::HostMetrics> &vhost,
 													  const std::shared_ptr<mon::ApplicationMetrics> &app,
 													  const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <modules/http_server/http_server_manager.h>
+#include <modules/http/server/http_server_manager.h>
 #include <orchestrator/orchestrator.h>
 
 #include "base/common_types.h"

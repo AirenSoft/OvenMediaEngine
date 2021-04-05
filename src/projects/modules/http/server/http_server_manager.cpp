@@ -10,7 +10,7 @@
 
 #include <orchestrator/orchestrator.h>
 
-#include "http_private.h"
+#include "../http_private.h"
 
 std::shared_ptr<HttpServer> HttpServerManager::CreateHttpServer(const char *server_name, const ov::SocketAddress &address, int worker_count)
 {

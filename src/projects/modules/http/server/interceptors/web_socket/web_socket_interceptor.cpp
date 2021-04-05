@@ -7,13 +7,15 @@
 //
 //==============================================================================
 #include "./web_socket_interceptor.h"
-#include "../../http_private.h"
-#include "./web_socket_datastructure.h"
-#include "./web_socket_frame.h"
 
 #include <base/ovcrypto/ovcrypto.h>
-#include <modules/http_server/http_server.h>
+#include <modules/http/server/http_server.h>
+
 #include <utility>
+
+#include "../../../http_private.h"
+#include "./web_socket_datastructure.h"
+#include "./web_socket_frame.h"
 
 WebSocketInterceptor::WebSocketInterceptor()
 {
@@ -48,11 +50,11 @@ ov::DelayQueueAction WebSocketInterceptor::DoPing(void *parameter)
 	return ov::DelayQueueAction::Repeat;
 }
 
-bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
+bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client)
 {
 	const auto request = client->GetRequest();
 
-	if(request->GetConnectionType() != HttpRequestConnectionType::WebSocket)
+	if (request->GetConnectionType() != HttpRequestConnectionType::WebSocket)
 	{
 		logtd("%s is not websocket request", request->ToString().CStr());
 		return false;
@@ -61,7 +63,7 @@ bool WebSocketInterceptor::IsInterceptorForRequest(const std::shared_ptr<const H
 	return true;
 }
 
-HttpInterceptorResult WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpClient> &client)
+HttpInterceptorResult WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<HttpConnection> &client)
 {
 	auto request = client->GetRequest();
 	auto response = client->GetResponse();
@@ -107,7 +109,7 @@ HttpInterceptorResult WebSocketInterceptor::OnHttpPrepare(const std::shared_ptr<
 	return HttpInterceptorResult::Keep;
 }
 
-HttpInterceptorResult WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data)
+HttpInterceptorResult WebSocketInterceptor::OnHttpData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data)
 {
 	auto request = client->GetRequest();
 
@@ -159,8 +161,7 @@ HttpInterceptorResult WebSocketInterceptor::OnHttpData(const std::shared_ptr<Htt
 		case WebSocketFrameParseStatus::Parsing:
 			break;
 
-		case WebSocketFrameParseStatus::Completed:
-		{
+		case WebSocketFrameParseStatus::Completed: {
 			const std::shared_ptr<const ov::Data> payload = frame->GetPayload();
 
 			switch (static_cast<WebSocketFrameOpcode>(frame->GetHeader().opcode))
@@ -228,7 +229,7 @@ HttpInterceptorResult WebSocketInterceptor::OnHttpData(const std::shared_ptr<Htt
 	return HttpInterceptorResult::Keep;
 }
 
-void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client, HttpStatusCode status_code)
+void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpConnection> &client, HttpStatusCode status_code)
 {
 	auto request = client->GetRequest();
 	auto response = client->GetResponse();
@@ -257,7 +258,7 @@ void WebSocketInterceptor::OnHttpError(const std::shared_ptr<HttpClient> &client
 	response->SetStatusCode(status_code);
 }
 
-void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &client, PhysicalPortDisconnectReason reason)
+void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpConnection> &client, PhysicalPortDisconnectReason reason)
 {
 	auto request = client->GetRequest();
 
@@ -269,7 +270,7 @@ void WebSocketInterceptor::OnHttpClosed(const std::shared_ptr<HttpClient> &clien
 
 		logtd("Deleting %s from websocket client list...", request->ToString().CStr());
 
-		if(item != _websocket_client_list.end())
+		if (item != _websocket_client_list.end())
 		{
 			socket_info = item->second;
 			_websocket_client_list.erase(item);

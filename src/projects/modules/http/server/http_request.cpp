@@ -7,10 +7,10 @@
 //
 //==============================================================================
 #include "http_request.h"
-#include "http_client.h"
-#include "http_private.h"
 
 #include <algorithm>
+
+#include "../http_private.h"
 
 HttpRequest::HttpRequest(const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<HttpRequestInterceptor> &interceptor)
 	: _client_socket(client_socket),
@@ -328,11 +328,11 @@ void HttpRequest::UpdateUri()
 	}
 
 	ov::String scheme;
-	if(GetConnectionType() == HttpRequestConnectionType::HTTP)
+	if (GetConnectionType() == HttpRequestConnectionType::HTTP)
 	{
 		scheme = "http";
 	}
-	else if(GetConnectionType() == HttpRequestConnectionType::WebSocket)
+	else if (GetConnectionType() == HttpRequestConnectionType::WebSocket)
 	{
 		scheme = "ws";
 	}

@@ -7,9 +7,10 @@
 //
 //==============================================================================
 #include "web_socket_frame.h"
-#include "../../http_private.h"
 
 #include <algorithm>
+
+#include "../../../http_private.h"
 
 WebSocketFrame::WebSocketFrame()
 	: _remained_length(0L),
@@ -25,7 +26,7 @@ WebSocketFrame::~WebSocketFrame()
 
 ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 {
-	switch(_last_status)
+	switch (_last_status)
 	{
 		case WebSocketFrameParseStatus::Prepare:
 		case WebSocketFrameParseStatus::Parsing:
@@ -43,11 +44,11 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 
 	ssize_t header_length = 0L;
 
-	if(_last_status == WebSocketFrameParseStatus::Prepare)
+	if (_last_status == WebSocketFrameParseStatus::Prepare)
 	{
 		header_length = ProcessHeader(stream);
 
-		if(_last_status != WebSocketFrameParseStatus::Parsing)
+		if (_last_status != WebSocketFrameParseStatus::Parsing)
 		{
 			return header_length;
 		}
@@ -56,10 +57,10 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 	// 남은 데이터와 websocket frame 크기 중, 작은 크기를 구해 데이터를 누적함
 	size_t length = std::min(static_cast<uint64_t>(stream.Remained()), _remained_length);
 
-	if(length > 0L)
+	if (length > 0L)
 	{
 		// 잔여 데이터가 있다면 payload에 추가
-		if(_payload->Append(stream.GetRemainData()->GetData(), length) == false)
+		if (_payload->Append(stream.GetRemainData()->GetData(), length) == false)
 		{
 			return -1L;
 		}
@@ -67,12 +68,12 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 
 	_remained_length -= length;
 
-	if(_payload->GetLength() == _total_length)
+	if (_payload->GetLength() == _total_length)
 	{
 		OV_ASSERT2(_remained_length == 0L);
 
 		// masking 처리
-		if(_header.mask)
+		if (_header.mask)
 		{
 			size_t payload_length = _payload->GetLength();
 
@@ -89,7 +90,7 @@ ssize_t WebSocketFrame::Process(const std::shared_ptr<const ov::Data> &data)
 
 			auto current = _payload->GetWritableDataAs<uint64_t>();
 
-			for(size_t index = 0; index < count; index++)
+			for (size_t index = 0; index < count; index++)
 			{
 				*current ^= mask;
 				current++;
@@ -126,12 +127,12 @@ ssize_t WebSocketFrame::ProcessHeader(ov::ByteStream &stream)
 	ssize_t before_offset = stream.GetOffset();
 	ssize_t read_count = stream.Read(reinterpret_cast<char *>(&_header) + _header_read_bytes, sizeof(_header) - _header_read_bytes);
 
-	if(read_count >= 0)
+	if (read_count >= 0)
 	{
 		_header_read_bytes += read_count;
 	}
 
-	if(_header_read_bytes != sizeof(_header))
+	if (_header_read_bytes != sizeof(_header))
 	{
 		// Not enough data to process
 		return read_count;
@@ -141,7 +142,7 @@ ssize_t WebSocketFrame::ProcessHeader(ov::ByteStream &stream)
 	// TODO: 일단은 사용하지 않는 것으로 간주
 	bool extensions = false;
 
-	if((extensions == false) && (_header.reserved != 0x00))
+	if ((extensions == false) && (_header.reserved != 0x00))
 	{
 		OV_ASSERT(false, "Invalid reserved value: %d (expected: %d)", _header.reserved, 0x00);
 		_last_status = WebSocketFrameParseStatus::Error;
@@ -170,14 +171,13 @@ ssize_t WebSocketFrame::ProcessHeader(ov::ByteStream &stream)
 	//     "Application data".  The length of the "Extension data" may be
 	//     zero, in which case the payload length is the length of the
 	//     "Application data".
-	switch(_header.payload_length)
+	switch (_header.payload_length)
 	{
-		case 126:
-		{
+		case 126: {
 			// 126이면, 다음 이어서 오는 16bit가 payload length
 			uint16_t extra_length;
 
-			if(stream.Read(&extra_length) == 1)
+			if (stream.Read(&extra_length) == 1)
 			{
 				_total_length = ov::NetworkToHost16(extra_length);
 				_remained_length = _total_length;
@@ -192,12 +192,11 @@ ssize_t WebSocketFrame::ProcessHeader(ov::ByteStream &stream)
 			break;
 		}
 
-		case 127:
-		{
+		case 127: {
 			// 127이면, 다음 이어서 오는 64bit가 payload length
 			uint64_t extra_length;
 
-			if(stream.Read(&extra_length) == 1)
+			if (stream.Read(&extra_length) == 1)
 			{
 				_total_length = ov::NetworkToHost64(extra_length);
 				_remained_length = _total_length;
@@ -221,9 +220,9 @@ ssize_t WebSocketFrame::ProcessHeader(ov::ByteStream &stream)
 	ssize_t total_length = _header.mask ? (_total_length / 8L) * 8L : _total_length;
 	_payload = std::make_shared<ov::Data>(total_length);
 
-	if(_header.mask)
+	if (_header.mask)
 	{
-		if(stream.Read(&_frame_masking_key) != 1)
+		if (stream.Read(&_frame_masking_key) != 1)
 		{
 			OV_ASSERT(false, "Could not read masking key");
 			_last_status = WebSocketFrameParseStatus::Error;
@@ -243,6 +242,5 @@ ov::String WebSocketFrame::ToString() const
 		(_header.fin ? "True" : "False"),
 		_header.opcode,
 		(_header.mask ? "True" : "False"),
-		_total_length
-	);
+		_total_length);
 }

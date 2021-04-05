@@ -25,7 +25,7 @@ namespace api
 			CreateSubController<AppsController>(R"(\/(?<vhost_name>[^\/]*)\/apps)");
 		}
 
-		ApiResponse VHostsController::OnGetVhostList(const std::shared_ptr<HttpClient> &client)
+		ApiResponse VHostsController::OnGetVhostList(const std::shared_ptr<HttpConnection> &client)
 		{
 			auto vhost_list = GetVirtualHostList();
 			Json::Value response(Json::ValueType::arrayValue);
@@ -38,7 +38,7 @@ namespace api
 			return std::move(response);
 		}
 
-		ApiResponse VHostsController::OnGetVhost(const std::shared_ptr<HttpClient> &client,
+		ApiResponse VHostsController::OnGetVhost(const std::shared_ptr<HttpConnection> &client,
 												 const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
 			return std::move(conv::JsonFromVHost(vhost));

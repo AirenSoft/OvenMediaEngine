@@ -77,7 +77,7 @@ bool SegmentPublisher::Stop()
 	return Publisher::Stop();
 }
 
-bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &client,
+bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpConnection> &client,
 										 const SegmentStreamRequestInfo &request_info,
 										 ov::String &play_list)
 {
@@ -150,7 +150,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpClient> &clie
 	return true;
 }
 
-bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpClient> &client,
+bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpConnection> &client,
 										const SegmentStreamRequestInfo &request_info,
 										std::shared_ptr<const SegmentItem> &segment)
 {
@@ -485,7 +485,7 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 }
 
 bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
-									 const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Url> &request_url,
+									 const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Url> &request_url,
 									 std::shared_ptr<PlaylistRequestInfo> &request_info)
 {
 	auto request = client->GetRequest();

@@ -38,7 +38,7 @@ namespace api
 			RegisterPost(R"((stopPush))", &AppActionsController::OnPostStopPush);
 		};
 
-		ApiResponse AppActionsController::OnGetRecords(const std::shared_ptr<HttpClient> &client,
+		ApiResponse AppActionsController::OnGetRecords(const std::shared_ptr<HttpConnection> &client,
 													   const std::shared_ptr<mon::HostMetrics> &vhost,
 													   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -47,10 +47,12 @@ namespace api
 			return OnPostRecords(client, empty_body, vhost, app);
 		}
 
-		ApiResponse AppActionsController::OnPostRecords(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostRecords(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 														const std::shared_ptr<mon::HostMetrics> &vhost,
 														const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			Json::Value response;
+
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
@@ -66,8 +68,6 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::NotFound, "There is no record information");
 			}
 
-			Json::Value response;
-
 			for (auto &item : records)
 			{
 				response.append(conv::JsonFromRecord(item));
@@ -76,10 +76,12 @@ namespace api
 			return {HttpStatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStartRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStartRecord(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 															const std::shared_ptr<mon::HostMetrics> &vhost,
 															const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			Json::Value response;
+
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
@@ -109,16 +111,17 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::BadRequest, error->GetMessage());
 			}
 
-			Json::Value response;
 			response.append(conv::JsonFromRecord(record));
 
 			return {HttpStatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStopRecord(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStopRecord(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 														   const std::shared_ptr<mon::HostMetrics> &vhost,
 														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			Json::Value response;
+
 			auto publisher = std::dynamic_pointer_cast<FilePublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::File));
 			if (publisher == nullptr)
 			{
@@ -148,13 +151,12 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::NotFound, error->GetMessage());
 			}
 
-			Json::Value response;
 			response.append(conv::JsonFromRecord(record));
 
 			return {HttpStatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnGetPushes(const std::shared_ptr<HttpClient> &client,
+		ApiResponse AppActionsController::OnGetPushes(const std::shared_ptr<HttpConnection> &client,
 													  const std::shared_ptr<mon::HostMetrics> &vhost,
 													  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -163,19 +165,19 @@ namespace api
 			return OnPostPushes(client, empty_body, vhost, app);
 		}
 
-		ApiResponse AppActionsController::OnPostPushes(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostPushes(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 													   const std::shared_ptr<mon::HostMetrics> &vhost,
 													   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			std::vector<std::shared_ptr<info::Push>> pushes;
+			Json::Value response;
+
 			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
 			if (publisher == nullptr)
 			{
 				return HttpError::CreateError(HttpStatusCode::NotFound, "Could not find publisher: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
-
-			std::vector<std::shared_ptr<info::Push>> pushes;
-			Json::Value response;
 
 			auto error = publisher->GetPushes(app->GetName(), pushes);
 			if (error->GetCode() != RtmpPushPublisher::PushPublisherErrorCode::Success || pushes.size() == 0)
@@ -191,10 +193,12 @@ namespace api
 			return {HttpStatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStartPush(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 														  const std::shared_ptr<mon::HostMetrics> &vhost,
 														  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
+			Json::Value response;
+
 			auto publisher = std::dynamic_pointer_cast<RtmpPushPublisher>(ocst::Orchestrator::GetInstance()->GetPublisherFromType(PublisherType::RtmpPush));
 			if (publisher == nullptr)
 			{
@@ -223,13 +227,12 @@ namespace api
 				return HttpError::CreateError(HttpStatusCode::BadRequest, error->GetMessage());
 			}
 
-			Json::Value response;
 			response.append(conv::JsonFromPush(push));
 
 			return {HttpStatusCode::OK, std::move(response)};
 		}
 
-		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppActionsController::OnPostStopPush(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 														 const std::shared_ptr<mon::HostMetrics> &vhost,
 														 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -262,7 +265,7 @@ namespace api
 			return HttpError::CreateError(HttpStatusCode::OK, error->GetMessage());
 		}
 
-		ApiResponse AppActionsController::OnGetDummyAction(const std::shared_ptr<HttpClient> &client,
+		ApiResponse AppActionsController::OnGetDummyAction(const std::shared_ptr<HttpConnection> &client,
 														   const std::shared_ptr<mon::HostMetrics> &vhost,
 														   const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{

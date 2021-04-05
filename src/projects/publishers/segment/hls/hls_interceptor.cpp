@@ -23,7 +23,7 @@ HlsInterceptor::~HlsInterceptor()
 //====================================================================================================
 // IsInterceptorForRequest
 //====================================================================================================
-bool HlsInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
+bool HlsInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client)
 {
 	if(SegmentStreamInterceptor::IsInterceptorForRequest(client) == false)
 	{

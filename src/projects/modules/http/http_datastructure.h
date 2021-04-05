@@ -8,12 +8,12 @@
 //==============================================================================
 #pragma once
 
-#include <functional>
-#include <memory>
-
 #include <base/ovcrypto/ovcrypto.h>
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
+
+#include <functional>
+#include <memory>
 
 // RFC7231 - 4. Request Methods
 // +---------+-------------------------------------------------+-------+
@@ -52,9 +52,11 @@ enum class HttpMethod : uint16_t
 	All = Get | Head | Post | Put | Delete | Connect | Options | Trace
 };
 
-enum class HttpConnection : char
+enum class HttpConnectionPolicy : char
 {
+	// Send "Connection: Closed" header
 	Closed,
+	// Send "Connection: Keep-Alive" header
 	KeepAlive
 };
 
@@ -171,7 +173,7 @@ enum class HttpStatusCode : uint16_t
 };
 
 #define HTTP_STATUS_RETURN(condition, value) \
-	case condition:                           \
+	case condition:                          \
 		return value
 
 inline constexpr bool IsValidHttpStatusCode(HttpStatusCode status_code)
@@ -277,9 +279,9 @@ inline constexpr const char *StringFromHttpStatusCode(HttpStatusCode status_code
 }
 
 class HttpServer;
-class HttpClient;
+class HttpConnection;
 
-using HttpRequestHandler = std::function<HttpNextHandler(const std::shared_ptr<HttpClient> &client)>;
-using HttpRequestErrorHandler = std::function<void(const std::shared_ptr<HttpClient> &client)>;
+using HttpRequestHandler = std::function<HttpNextHandler(const std::shared_ptr<HttpConnection> &client)>;
+using HttpRequestErrorHandler = std::function<void(const std::shared_ptr<HttpConnection> &client)>;
 
 using HttpResponseWriteHandler = std::function<bool(const std::shared_ptr<ov::Data> &data)>;

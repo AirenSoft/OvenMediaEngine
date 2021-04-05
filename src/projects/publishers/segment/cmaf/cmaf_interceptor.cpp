@@ -10,7 +10,7 @@
 #include "../dash/dash_define.h"
 #include "cmaf_private.h"
 
-bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client)
+bool CmafInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client)
 {
 	if(SegmentStreamInterceptor::IsInterceptorForRequest(client) == false)
 	{

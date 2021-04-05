@@ -27,7 +27,7 @@ namespace api
 			RegisterDelete(R"(\/(?<output_profile_name>[^\/]*))", &OutputProfilesController::OnDeleteOutputProfile);
 		};
 
-		std::string_view GetOutputProfileName(const std::shared_ptr<HttpClient> &client)
+		std::string_view GetOutputProfileName(const std::shared_ptr<HttpConnection> &client)
 		{
 			auto &match_result = client->GetRequest()->GetMatchResult();
 
@@ -157,7 +157,7 @@ namespace api
 			return HttpError::CreateError(error);
 		}
 
-		ApiResponse OutputProfilesController::OnPostOutputProfile(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse OutputProfilesController::OnPostOutputProfile(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 																  const std::shared_ptr<mon::HostMetrics> &vhost,
 																  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -253,7 +253,7 @@ namespace api
 			return {status_code, std::move(response)};
 		}
 
-		ApiResponse OutputProfilesController::OnGetOutputProfileList(const std::shared_ptr<HttpClient> &client,
+		ApiResponse OutputProfilesController::OnGetOutputProfileList(const std::shared_ptr<HttpConnection> &client,
 																	 const std::shared_ptr<mon::HostMetrics> &vhost,
 																	 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -267,7 +267,7 @@ namespace api
 			return std::move(response);
 		}
 
-		ApiResponse OutputProfilesController::OnGetOutputProfile(const std::shared_ptr<HttpClient> &client,
+		ApiResponse OutputProfilesController::OnGetOutputProfile(const std::shared_ptr<HttpConnection> &client,
 																 const std::shared_ptr<mon::HostMetrics> &vhost,
 																 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -284,7 +284,7 @@ namespace api
 			return CreateNotFoundError(vhost, app, profile_name);
 		}
 
-		ApiResponse OutputProfilesController::OnPutOutputProfile(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse OutputProfilesController::OnPutOutputProfile(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 																 const std::shared_ptr<mon::HostMetrics> &vhost,
 																 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -344,7 +344,7 @@ namespace api
 			return error;
 		}
 
-		ApiResponse OutputProfilesController::OnDeleteOutputProfile(const std::shared_ptr<HttpClient> &client,
+		ApiResponse OutputProfilesController::OnDeleteOutputProfile(const std::shared_ptr<HttpConnection> &client,
 																	const std::shared_ptr<mon::HostMetrics> &vhost,
 																	const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{

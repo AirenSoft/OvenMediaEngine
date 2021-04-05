@@ -14,12 +14,12 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
-#include <modules/http_server/http_server.h>
+#include <modules/http/server/http_server.h>
 
 class WebSocketClient
 {
 public:
-	WebSocketClient(const std::shared_ptr<HttpClient> &client);
+	WebSocketClient(const std::shared_ptr<HttpConnection> &client);
 	virtual ~WebSocketClient();
 
 	ssize_t Send(const std::shared_ptr<const ov::Data> &data, WebSocketFrameOpcode opcode);
@@ -27,7 +27,7 @@ public:
 	ssize_t Send(const ov::String &string);
 	ssize_t Send(const Json::Value &value);
 
-	const std::shared_ptr<HttpClient> &GetClient()
+	const std::shared_ptr<HttpConnection> &GetClient()
 	{
 		return _client;
 	}
@@ -37,5 +37,5 @@ public:
 	void Close();
 
 protected:
-	std::shared_ptr<HttpClient> _client;
+	std::shared_ptr<HttpConnection> _client;
 };

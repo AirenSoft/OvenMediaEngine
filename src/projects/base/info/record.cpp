@@ -130,6 +130,17 @@ namespace info
 	{
 		return _interval;
 	}
+
+	void Record::SetSchedule(ov::String schedule)
+	{
+		_schedule = schedule;
+	}
+
+	ov::String Record::GetSchedule()
+	{
+		return _schedule;
+	}
+
 	void Record::SetFilePath(ov::String file_path)
 	{
 		_file_path = file_path;
@@ -268,6 +279,8 @@ namespace info
 		info.AppendFormat(" created_time=%s\n", ov::Converter::ToString(_created_time).CStr());
 		info.AppendFormat(" record_start_time=%s\n", ov::Converter::ToString(_record_start_time).CStr());
 		info.AppendFormat(" record_stop_time=%s", ov::Converter::ToString(_record_stop_time).CStr());
+		info.AppendFormat(" interval=%d", _interval);
+		info.AppendFormat(" schedule=%s", _schedule.CStr());
 
 		return info;
 	}

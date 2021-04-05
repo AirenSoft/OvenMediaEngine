@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <modules/http_server/http_datastructure.h>
+#include <modules/http/http_datastructure.h>
 #include <monitoring/monitoring.h>
 
 namespace api

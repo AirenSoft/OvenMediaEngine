@@ -10,7 +10,7 @@
 
 #include <regex>
 
-#include "../../http_datastructure.h"
+#include "../../../http_datastructure.h"
 #include "../http_request_interceptor.h"
 
 /// Default HTTP processor
@@ -52,11 +52,11 @@ public:
 		return HttpRequestConnectionType::HTTP;
 	}
 
-	bool IsInterceptorForRequest(const std::shared_ptr<const HttpClient> &client) override;
-	HttpInterceptorResult OnHttpPrepare(const std::shared_ptr<HttpClient> &client) override;
-	HttpInterceptorResult OnHttpData(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<const ov::Data> &data) override;
-	void OnHttpError(const std::shared_ptr<HttpClient> &client, HttpStatusCode status_code) override;
-	void OnHttpClosed(const std::shared_ptr<HttpClient> &client, PhysicalPortDisconnectReason reason) override;
+	bool IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client) override;
+	HttpInterceptorResult OnHttpPrepare(const std::shared_ptr<HttpConnection> &client) override;
+	HttpInterceptorResult OnHttpData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data) override;
+	void OnHttpError(const std::shared_ptr<HttpConnection> &client, HttpStatusCode status_code) override;
+	void OnHttpClosed(const std::shared_ptr<HttpConnection> &client, PhysicalPortDisconnectReason reason) override;
 
 protected:
 	struct RequestInfo

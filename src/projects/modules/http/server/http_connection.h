@@ -14,17 +14,17 @@
 
 class HttpServer;
 
-// HttpClient: Contains HttpRequest & HttpResponse
+// HttpConnection: Contains HttpRequest & HttpResponse
 // HttpRequest: Contains request informations (Request HTTP Header & Body)
 // HttpResponse: Contains socket & response informations (Response HTTP Header & Body)
 
-class HttpClient
+class HttpConnection
 {
 public:
 	friend class HttpServer;
 
-	HttpClient(const std::shared_ptr<HttpServer> &server, std::shared_ptr<HttpRequest> &http_request, std::shared_ptr<HttpResponse> &http_response);
-	virtual ~HttpClient() = default;
+	HttpConnection(const std::shared_ptr<HttpServer> &server, std::shared_ptr<HttpRequest> &http_request, std::shared_ptr<HttpResponse> &http_response);
+	virtual ~HttpConnection() = default;
 
 	std::shared_ptr<HttpRequest> GetRequest();
 	std::shared_ptr<HttpResponse> GetResponse();

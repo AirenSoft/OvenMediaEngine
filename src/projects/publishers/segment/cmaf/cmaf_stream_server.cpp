@@ -14,7 +14,7 @@
 #include "cmaf_packetizer.h"
 #include "cmaf_private.h"
 
-HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpClient> &client,
+HttpConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpConnection> &client,
 													   const SegmentStreamRequestInfo &request_info,
 													   SegmentType segment_type)
 {
@@ -57,7 +57,7 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 				response->SetStatusCode(HttpStatusCode::NotFound);
 				_http_chunk_list.clear();
 				
-				return HttpConnection::Closed;
+				return HttpConnectionPolicy::Closed;
 			}
 
 			client->GetRequest()->SetExtra(stream_info);
@@ -80,7 +80,7 @@ HttpConnection CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<Htt
 
 			chunk_item->second->client_list.push_back(client);
 
-			return HttpConnection::KeepAlive;
+			return HttpConnectionPolicy::KeepAlive;
 		}
 	}
 

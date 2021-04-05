@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <modules/http_server/http_server.h>
+#include <modules/http/server/http_server.h>
 #include <monitoring/monitoring.h>
 
 #include <memory>
@@ -64,7 +64,7 @@ namespace api
 			return (static_cast<int>(_status_code) / 100) == 2;
 		}
 
-		bool SendToClient(const std::shared_ptr<HttpClient> &client);
+		bool SendToClient(const std::shared_ptr<HttpConnection> &client);
 
 	protected:
 		void SetResponse(HttpStatusCode status_code);
@@ -105,18 +105,18 @@ namespace api
 		virtual void PrepareHandlers() = 0;
 
 	protected:
-		using Handler = std::function<void(Tclass *clazz, const std::shared_ptr<HttpClient> &client)>;
+		using Handler = std::function<void(Tclass *clazz, const std::shared_ptr<HttpConnection> &client)>;
 
 		// API Handlers
-		using ApiHandler = ApiResponse (Tclass::*)(const std::shared_ptr<HttpClient> &client);
-		using ApiHandlerWithVHost = ApiResponse (Tclass::*)(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<mon::HostMetrics> &vhost);
-		using ApiHandlerWithVHostApp = ApiResponse (Tclass::*)(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app);
-		using ApiHandlerWithVHostAppStream = ApiResponse (Tclass::*)(const std::shared_ptr<HttpClient> &client, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app, const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
+		using ApiHandler = ApiResponse (Tclass::*)(const std::shared_ptr<HttpConnection> &client);
+		using ApiHandlerWithVHost = ApiResponse (Tclass::*)(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<mon::HostMetrics> &vhost);
+		using ApiHandlerWithVHostApp = ApiResponse (Tclass::*)(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app);
+		using ApiHandlerWithVHostAppStream = ApiResponse (Tclass::*)(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app, const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
 
-		using ApiHandlerWithBody = ApiResponse (Tclass::*)(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body);
-		using ApiHandlerWithBodyVHost = ApiResponse (Tclass::*)(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost);
-		using ApiHandlerWithBodyVHostApp = ApiResponse (Tclass::*)(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app);
-		using ApiHandlerWithBodyVHostAppStream = ApiResponse (Tclass::*)(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app, const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
+		using ApiHandlerWithBody = ApiResponse (Tclass::*)(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body);
+		using ApiHandlerWithBodyVHost = ApiResponse (Tclass::*)(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost);
+		using ApiHandlerWithBodyVHostApp = ApiResponse (Tclass::*)(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app);
+		using ApiHandlerWithBodyVHostAppStream = ApiResponse (Tclass::*)(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app, const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
 
 #define API_CONTROLLER_GET_INIT()                                                 \
 	[[maybe_unused]] auto &match_result = client->GetRequest()->GetMatchResult(); \
@@ -227,7 +227,7 @@ namespace api
 			auto new_pattern = ov::String::FormatString("^%s%s$", _prefix.CStr(), pattern.CStr());
 			auto that = dynamic_cast<Tclass *>(this);
 
-			_interceptor->Register(method, new_pattern, [that, handler](const std::shared_ptr<HttpClient> &client) -> HttpNextHandler {
+			_interceptor->Register(method, new_pattern, [that, handler](const std::shared_ptr<HttpConnection> &client) -> HttpNextHandler {
 				if (that != nullptr)
 				{
 					handler(that, client);
@@ -243,7 +243,7 @@ namespace api
 
 		void Register(HttpMethod method, const ov::String &pattern, const ApiHandler &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpClient> &client) {
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpConnection> &client) {
 				API_CONTROLLER_GET_INIT();
 
 				ApiResponse result = (error == nullptr) ? (clazz->*handler)(client) : error;
@@ -253,7 +253,7 @@ namespace api
 
 		void Register(HttpMethod method, const ov::String &pattern, const ApiHandlerWithVHost &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpClient> &client) {
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpConnection> &client) {
 				API_CONTROLLER_GET_INIT();
 				API_CONTROLLER_GET_VHOST();
 
@@ -264,7 +264,7 @@ namespace api
 
 		void Register(HttpMethod method, const ov::String &pattern, const ApiHandlerWithVHostApp &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpClient> &client) {
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpConnection> &client) {
 				API_CONTROLLER_GET_INIT();
 				API_CONTROLLER_GET_VHOST();
 				API_CONTROLLER_GET_APP();
@@ -276,7 +276,7 @@ namespace api
 
 		void Register(HttpMethod method, const ov::String &pattern, const ApiHandlerWithVHostAppStream &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpClient> &client) {
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpConnection> &client) {
 				API_CONTROLLER_GET_INIT();
 				API_CONTROLLER_GET_VHOST();
 				API_CONTROLLER_GET_APP();
@@ -289,7 +289,7 @@ namespace api
 
 		void Register(HttpMethod method, const ov::String &pattern, const ApiHandlerWithBody &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpClient> &client) {
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpConnection> &client) {
 				API_CONTROLLER_GET_INIT();
 				API_CONTROLLER_GET_REQUEST_BODY();
 
@@ -300,7 +300,7 @@ namespace api
 
 		void Register(HttpMethod method, const ov::String &pattern, const ApiHandlerWithBodyVHost &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpClient> &client) {
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpConnection> &client) {
 				API_CONTROLLER_GET_INIT();
 				API_CONTROLLER_GET_REQUEST_BODY();
 				API_CONTROLLER_GET_VHOST();
@@ -312,7 +312,7 @@ namespace api
 
 		void Register(HttpMethod method, const ov::String &pattern, const ApiHandlerWithBodyVHostApp &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpClient> &client) {
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpConnection> &client) {
 				API_CONTROLLER_GET_INIT();
 				API_CONTROLLER_GET_REQUEST_BODY();
 				API_CONTROLLER_GET_VHOST();
@@ -325,7 +325,7 @@ namespace api
 
 		void Register(HttpMethod method, const ov::String &pattern, const ApiHandlerWithBodyVHostAppStream &handler)
 		{
-			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpClient> &client) {
+			Register(method, pattern, [handler](Tclass *clazz, const std::shared_ptr<HttpConnection> &client) {
 				API_CONTROLLER_GET_INIT();
 				API_CONTROLLER_GET_REQUEST_BODY();
 				API_CONTROLLER_GET_VHOST();

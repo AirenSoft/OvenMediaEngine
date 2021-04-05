@@ -8,15 +8,16 @@
 //==============================================================================
 #pragma once
 
-#include "../base/ovlibrary/converter.h"
-#include "http_datastructure.h"
+#include <base/ovlibrary/converter.h>
 
-class HttpClient;
+#include "../http_datastructure.h"
+
+class HttpConnection;
 
 class HttpResponse : public ov::EnableSharedFromThis<HttpResponse>
 {
 public:
-	friend class HttpClient;
+	friend class HttpConnection;
 
 	class IoCallback
 	{

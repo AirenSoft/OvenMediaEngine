@@ -83,7 +83,7 @@ namespace api
 			return true;
 		}
 
-		ApiResponse AppsController::OnPostApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppsController::OnPostApp(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 											  const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
 			if (request_body.isArray() == false)
@@ -160,7 +160,7 @@ namespace api
 			return {status_code, std::move(response_value)};
 		}
 
-		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<HttpClient> &client,
+		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<HttpConnection> &client,
 												 const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
 			Json::Value response(Json::ValueType::arrayValue);
@@ -177,7 +177,7 @@ namespace api
 			return std::move(response);
 		}
 
-		ApiResponse AppsController::OnGetApp(const std::shared_ptr<HttpClient> &client,
+		ApiResponse AppsController::OnGetApp(const std::shared_ptr<HttpConnection> &client,
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -214,7 +214,7 @@ namespace api
 			}
 		}
 
-		ApiResponse AppsController::OnPutApp(const std::shared_ptr<HttpClient> &client, const Json::Value &request_body,
+		ApiResponse AppsController::OnPutApp(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -298,7 +298,7 @@ namespace api
 			return error;
 		}
 
-		ApiResponse AppsController::OnDeleteApp(const std::shared_ptr<HttpClient> &client,
+		ApiResponse AppsController::OnDeleteApp(const std::shared_ptr<HttpConnection> &client,
 												const std::shared_ptr<mon::HostMetrics> &vhost,
 												const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
