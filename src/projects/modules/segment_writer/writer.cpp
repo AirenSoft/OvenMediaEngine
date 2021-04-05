@@ -676,7 +676,7 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			length_list.push_back(data->GetLength());
 			break;
 
-		case cmn::BitstreamFormat::AAC_LATM:
+		case cmn::BitstreamFormat::AAC_RAW:
 			data = packet->GetData();
 			length_list.push_back(data->GetLength());
 			break;
@@ -689,10 +689,10 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			}
 			else
 			{
-				data = AacConverter::ConvertAdtsToLatm(packet->GetData(), &length_list);
+				data = AacConverter::ConvertAdtsToRaw(packet->GetData(), &length_list);
 			}
 			break;
-
+		case cmn::BitstreamFormat::AAC_LATM:
 		case cmn::BitstreamFormat::Unknown:
 			[[fallthrough]];
 		case cmn::BitstreamFormat::VP8:

@@ -9,7 +9,7 @@
 
 #define OV_LOG_TAG "AACConverter"
 
-bool AacConverter::GetExtraDataFromLatm(const cmn::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
+bool AacConverter::GetExtraDataFromASC(const cmn::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
 {
 	if (type == cmn::PacketType::SEQUENCE_HEADER)
 	{
@@ -93,7 +93,7 @@ std::shared_ptr<ov::Data> AacConverter::MakeAdtsHeader(uint8_t aac_profile, uint
 	10 (2)   Scalable Sample Rate profile (SSR)   AAC SSR
 	11 (3)   (reserved)   AAC LTP
 */
-bool AacConverter::ConvertLatmToAdts(const cmn::PacketType type, const std::shared_ptr<ov::Data> &data, const std::vector<uint8_t> &extradata)
+bool AacConverter::ConvertRawToAdts(const cmn::PacketType type, const std::shared_ptr<ov::Data> &data, const std::vector<uint8_t> &extradata)
 {
 	auto adts_data = std::make_shared<ov::Data>();
 	adts_data->Clear();
@@ -135,9 +135,9 @@ bool AacConverter::ConvertLatmToAdts(const cmn::PacketType type, const std::shar
 	return true;
 }
 
-std::shared_ptr<const ov::Data> AacConverter::ConvertAdtsToLatm(const std::shared_ptr<const ov::Data> &data, std::vector<size_t> *length_list)
+std::shared_ptr<const ov::Data> AacConverter::ConvertAdtsToRaw(const std::shared_ptr<const ov::Data> &data, std::vector<size_t> *length_list)
 {
-	auto latm_data = std::make_shared<ov::Data>();
+	auto raw_data = std::make_shared<ov::Data>();
 	size_t remained = data->GetLength();
 	off_t offset = 0L;
 	auto buffer = data->GetDataAs<uint8_t>();
@@ -212,7 +212,7 @@ std::shared_ptr<const ov::Data> AacConverter::ConvertAdtsToLatm(const std::share
 		// Skip ADTS header
 		buffer += header_length;
 
-		latm_data->Append(buffer, payload_length);
+		raw_data->Append(buffer, payload_length);
 		if (length_list != nullptr)
 		{
 			length_list->push_back(payload_length);
@@ -224,7 +224,7 @@ std::shared_ptr<const ov::Data> AacConverter::ConvertAdtsToLatm(const std::share
 		offset += frame_length;
 	}
 
-	return latm_data;
+	return raw_data;
 }
 
 ov::String AacConverter::GetProfileString(const std::vector<uint8_t> &codec_extradata)

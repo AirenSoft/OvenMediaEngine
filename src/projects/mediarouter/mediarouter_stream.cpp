@@ -565,16 +565,16 @@ bool MediaRouteStream::ConvertToDefaultBitstream(std::shared_ptr<MediaTrack> &me
 
 			break;
 		case MediaCodecId::Aac:
-			if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_LATM)
+			if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_RAW)
 			{
 				std::vector<uint8_t> extradata;
-				if (AacConverter::GetExtraDataFromLatm(media_packet->GetPacketType(), media_packet->GetData(), extradata) == true)
+				if (AacConverter::GetExtraDataFromASC(media_packet->GetPacketType(), media_packet->GetData(), extradata) == true)
 				{
 					media_track->SetCodecExtradata(extradata);
 					return false;
 				}
 
-				if (AacConverter::ConvertLatmToAdts(media_packet->GetPacketType(), media_packet->GetData(), media_track->GetCodecExtradata()) == false)
+				if (AacConverter::ConvertRawToAdts(media_packet->GetPacketType(), media_packet->GetData(), media_track->GetCodecExtradata()) == false)
 				{
 					logte("Failed to change bitstream format");
 					return false;

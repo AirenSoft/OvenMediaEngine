@@ -322,10 +322,10 @@ bool RtmpWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	//  - VP8 : Passthrough (unknown name)
 	// format(flv)
 	//	- H264 : AnnexB -> AVCC
-	//	- AAC : to LATM
+	//	- AAC : to RAW
 	// format(mp4)
 	//	- H264 : Passthrough
-	//	- AAC : to LATM
+	//	- AAC : to RAW
 
 	std::shared_ptr<ov::Data> nalu;
 

@@ -317,10 +317,10 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	//  - VP8 : Passthrough (unknown name)
 	// format(flv)
 	//	- H264 : Passthrough
-	//	- AAC : to LATM
+	//	- AAC : to RAW
 	// format(mp4)
 	//	- H264 : Passthrough
-	//	- AAC : to LATM
+	//	- AAC : to RAW
 
 	if ((stream->codecpar->codec_id == AV_CODEC_ID_AAC) &&
 		(strcmp(_format_context->oformat->name, "flv") == 0 || strcmp(_format_context->oformat->name, "mp4")))

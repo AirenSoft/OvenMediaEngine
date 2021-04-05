@@ -435,7 +435,7 @@ bool DashPacketizer::AppendAudioFrame(const std::shared_ptr<const MediaPacket> &
 
 	if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::AAC_ADTS)
 	{
-		data = AacConverter::ConvertAdtsToLatm(data, &length_list);
+		data = AacConverter::ConvertAdtsToRaw(data, &length_list);
 	}
 	else
 	{

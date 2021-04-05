@@ -1273,7 +1273,7 @@ namespace pvd
 											  data,
 											  pts,
 											  dts,
-											  cmn::BitstreamFormat::AAC_LATM,
+											  cmn::BitstreamFormat::AAC_RAW,
 											  packet_type);
 
 			SendFrame(frame);											

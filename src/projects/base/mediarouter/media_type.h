@@ -30,8 +30,9 @@ namespace cmn
 		H264_ANNEXB,
 		H265_ANNEXB,
 		VP8,
-		AAC_LATM,
+		AAC_RAW,
 		AAC_ADTS,
+		AAC_LATM,
 		OPUS,
 		JPEG,
 		PNG
@@ -44,9 +45,9 @@ namespace cmn
 		// and the "media router" delivers this type of packet to the publisher as it is without parsing.
 		OVT = 0,	
 
-		RAW, // AAC LATM, AAC ADTS, JPEG
+		RAW, // AAC RAW, AAC ADTS, JPEG
 		// H.264
-		SEQUENCE_HEADER, // For H.264 AVCC, AAC LATM
+		SEQUENCE_HEADER, // For H.264 AVCC, AAC RAW
 		NALU, // For H.264 AVCC, ANNEXB	
 	};
 
