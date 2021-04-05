@@ -24,9 +24,21 @@ public:
 		VP9,
 		H264,
 		H265,
+		MPEG4_GENERIC,
 		OPUS,
 		RED,
 		RTX
+	};
+
+	enum class Mpeg4GenericMode
+	{
+		Generic,
+		CELP_cbr,
+		CELP_vbr,
+		AAC_lbr,
+		AAC_hbr,
+		MPS_lbr,
+		MPS_hbr
 	};
 
 	enum class RtcpFbType
@@ -64,6 +76,8 @@ private:
 	ov::String _codec_str;
 	uint32_t _rate;
 	ov::String _codec_param;
+
+	Mpeg4GenericMode _mpeg4_generic_mode = Mpeg4GenericMode::Generic;
 
 	bool _rtcpfb_support_flag[(int)(RtcpFbType::NumberOfRtcpFbType)];
 

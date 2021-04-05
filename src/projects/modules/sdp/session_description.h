@@ -84,6 +84,12 @@ public:
 	ov::String GetMsidSemantic() const;
 	ov::String GetMsidToken() const;
 
+	void SetSdpLang(const ov::String &lang);
+	ov::String GetSdpLang();
+
+	void SetRange(const ov::String &range);
+	ov::String GetRange();
+
 	// m=video 9 UDP/TLS/RTP/SAVPF 97
 	// a=group:BUNDLE 에 AddMedia의 mid를 추가한다. OME는 BUNDLE-ONLY만 지원한다. (2018.05.01)
 	void AddMedia(const std::shared_ptr<const MediaDescription> &media);
@@ -128,6 +134,12 @@ private:
 	// msid-semantic
 	ov::String _msid_semantic;
 	ov::String _msid_token;
+
+	// a=sdplang
+	ov::String _sdp_lang;
+
+	// a=range:
+	ov::String _range;
 
 	// group:Bundle
 	std::vector<ov::String> _bundles;

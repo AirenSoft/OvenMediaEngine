@@ -27,7 +27,14 @@ namespace pvd
 	RtspcProvider::RtspcProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 			: PullProvider(server_config, router)
 	{
-		logtd("Created Rtspc Provider module.");
+		auto &rtspc_provider_config = server_config.GetBind().GetProviders().GetRtspc();
+
+		bool is_parsed;
+		auto worker_count = rtspc_provider_config.GetWorkerCount(&is_parsed);
+		worker_count = is_parsed ? worker_count : PHYSICAL_PORT_DEFAULT_WORKER_COUNT;
+
+		_signalling_socket_pool = ov::SocketPool::Create("RtspcProvider", ov::SocketType::Tcp);
+		_signalling_socket_pool->Initialize(worker_count);
 	}
 
 	RtspcProvider::~RtspcProvider()

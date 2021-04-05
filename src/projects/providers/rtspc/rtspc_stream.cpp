@@ -1,11 +1,15 @@
+//==============================================================================
 //
-// Created by soulk on 20. 1. 20.
+//  OvenMediaEngine
 //
-
+//  Created by Getroot
+//  Copyright (c) 2021 AirenSoft. All rights reserved.
+//
+//==============================================================================
 
 #include "base/info/application.h"
 #include "rtspc_stream.h"
-#include "modules/bitstream/aac/aac.h"
+#include "rtspc_provider.h"
 
 #define OV_LOG_TAG "RtspcStream"
 
@@ -35,7 +39,6 @@ namespace pvd
 	: pvd::PullStream(application, stream_info)
 	{
 		_state = State::IDLE;
-		_format_context = 0;
 
 		for(auto &url : url_list)
 		{
@@ -59,29 +62,13 @@ namespace pvd
 		Release();
 	}
 
+	std::shared_ptr<pvd::RtspcProvider> RtspcStream::GetRtspcProvider()
+	{
+		return std::static_pointer_cast<RtspcProvider>(_application->GetParentProvider());
+	}
+
 	void RtspcStream::Release()
 	{
-		if(_format_context != nullptr)
-		{
-			avformat_close_input(&_format_context);
-			_format_context = nullptr;
-		}
-
-		if(_format_options != nullptr)
-		{
-			av_dict_free(&_format_options);
-			_format_options = nullptr;
-		}	
-
-		if(_cumulative_pts != nullptr)
-		{
-			delete[] _cumulative_pts;
-		}
-		
-		if(_cumulative_dts != nullptr)
-		{
-			delete[] _cumulative_dts;
-		}
 	}
 
 	bool RtspcStream::Start()
@@ -91,27 +78,28 @@ namespace pvd
 			return false;
 		}
 
-		_stop_watch.Start();
+		ov::StopWatch stop_watch;
 
-		auto begin = std::chrono::steady_clock::now();
-		if (!ConnectTo())
+		stop_watch.Start();
+		if(ConnectTo() == false)
+		{
+			return false;
+		}
+		_origin_request_time_msec = stop_watch.Elapsed();
+
+		stop_watch.Update();
+
+		if(RequestDescribe() == false)
 		{
 			return false;
 		}
 
-		auto end = std::chrono::steady_clock::now();
-		std::chrono::duration<double, std::milli> elapsed = end - begin;
-		_origin_request_time_msec = static_cast<int64_t>(elapsed.count());
-
-		begin = std::chrono::steady_clock::now();
-		if (!RequestDescribe())
+		if(RequestSetup() == false)
 		{
 			return false;
 		}
 
-		end = std::chrono::steady_clock::now();
-		elapsed = end - begin;
-		_origin_response_time_msec = static_cast<int64_t>(elapsed.count());
+		_origin_response_time_msec = stop_watch.Elapsed();
 
 		return pvd::PullStream::Start();
 	}
@@ -162,46 +150,46 @@ namespace pvd
 
 		logti("Requested url[%d] : %s", strlen(_curr_url->Source().CStr()), _curr_url->Source().CStr() );
 
-		// release allocated memory
-		Release();
-
-		_format_context = avformat_alloc_context(); 
-		if(_format_context == nullptr)
+		auto scheme = _curr_url->Scheme();
+		if(scheme.UpperCaseString() != "RTSP")
 		{
 			_state = State::ERROR;
-			logte("Canot create context");
-			
+			logte("The scheme is not rtsp : %s", scheme.CStr());
 			return false;
 		}
 
-		// Interrupt Callback for session termination.
-		_format_context->interrupt_callback.callback = InterruptCallback;
-		_format_context->interrupt_callback.opaque = this;
+		auto signalling_socket_pool = GetRtspcProvider()->GetSignallingSocketPool();
+		if (signalling_socket_pool == nullptr)
+		{
+			// Provider is not initialized
+			logte("Could not get socket from socket pool");
+			return false;
+		}
 
-		::av_dict_set(&_format_options, "rtsp_transport", "tcp", 0);
-		
-		_format_context->flags |= AVFMT_FLAG_GENPTS;
-		// This is a feature added to the existing ffmpeg for OME.
-		_format_context->flags |= AVFMT_FLAG_NONBLOCK;
-
-		int err = 0;
-		_stop_watch.Update();
-		if ( (err = ::avformat_open_input(&_format_context, _curr_url->Source().CStr(), NULL, &_format_options))  < 0) 
+		// Connect
+		_signalling_socket = signalling_socket_pool->AllocSocket();
+		if ((_signalling_socket == nullptr) || (_signalling_socket->AttachToWorker() == false))
 		{
 			_state = State::ERROR;
+			logte("To create client socket is failed.");
 			
-			char errbuf[256];
-			av_strerror(err, errbuf, sizeof(errbuf));
+			_signalling_socket = nullptr;
+			return false;
+		}
 
-			if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
-			{
-				logte("Failed to connect to RTSP server.(%s/%s) : Timed out", GetApplicationInfo().GetName().CStr(), GetName().CStr(), errbuf);
-			}
-			else
-			{
-				logte("Failed to connect to RTSP server.(%s/%s) : %s", GetApplicationInfo().GetName().CStr(), GetName().CStr(), errbuf);
-			}
+		_signalling_socket->MakeBlocking();
 
+		struct timeval tv = {3, 0}; // 1.5 sec
+		// Only work for blocking mode
+		_signalling_socket->SetRecvTimeout(tv);
+
+		ov::SocketAddress socket_address(_curr_url->Host(), _curr_url->Port());
+
+		auto error = _signalling_socket->Connect(socket_address, 1500);
+		if (error != nullptr)
+		{
+			_state = State::ERROR;
+			logte("Cannot connect to server (%s) : %s:%d", error->GetMessage().CStr(), _curr_url->Host().CStr(), _curr_url->Port());
 			return false;
 		}
 
@@ -217,88 +205,70 @@ namespace pvd
 			return false;
 		}
 
-		_stop_watch.Update();
-		if (::avformat_find_stream_info(_format_context, NULL) < 0) 
+		auto describe = std::make_shared<RtspMessage>(RtspMethod::DESCRIBE, GetNextCSeq(), _curr_url->ToUrlString(true));
+		describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Accept,"application/sdp"));
+		describe->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
+		
+		if(SendRequestMessage(describe) == false)
 		{
-			_state = State::ERROR;        	
-			logte("Could not find stream information");
-
+			_state = State::ERROR;
+			logte("Could not request DESCIBE to RTSP server (%s)", _curr_url->ToUrlString().CStr());
 			return false;
 		}
 
-		for (uint32_t track_id = 0; track_id < _format_context->nb_streams; track_id++)
+		auto reply = WaitForResponse(std::make_shared<RequestResponse>(describe), 3000);
+		if(reply == nullptr || reply->GetStatusCode() != 200)
 		{
-			AVStream *stream = _format_context->streams[track_id];
-
-			logtd("[%d] media_type[%d] codec_id[%d], extradata_size[%d] tb[%d/%d]", track_id, stream->codecpar->codec_type, stream->codecpar->codec_id, stream->codecpar->extradata_size, stream->time_base.num, stream->time_base.den);
-
-			auto new_track = std::make_shared<MediaTrack>();
-
-			cmn::MediaType media_type = 
-				(stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)?cmn::MediaType::Video:
-				(stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)?cmn::MediaType::Audio:
-				cmn::MediaType::Unknown;
-
-			cmn::MediaCodecId media_codec = 
-				(stream->codecpar->codec_id == AV_CODEC_ID_H264)?cmn::MediaCodecId::H264:
-				(stream->codecpar->codec_id == AV_CODEC_ID_H265)?cmn::MediaCodecId::H265:
-				(stream->codecpar->codec_id == AV_CODEC_ID_VP8)?cmn::MediaCodecId::Vp8:
-				(stream->codecpar->codec_id == AV_CODEC_ID_VP9)?cmn::MediaCodecId::Vp9:
-				(stream->codecpar->codec_id == AV_CODEC_ID_AAC)?cmn::MediaCodecId::Aac:
-				(stream->codecpar->codec_id == AV_CODEC_ID_MP3)?cmn::MediaCodecId::Mp3:
-				(stream->codecpar->codec_id == AV_CODEC_ID_OPUS)?cmn::MediaCodecId::Opus:
-				cmn::MediaCodecId::None;
-
-			if (media_type == cmn::MediaType::Unknown || media_codec == cmn::MediaCodecId::None)
-			{
-				logtp("Unknown media type or codec_id. media_type(%d), media_codec(%d)", media_type, media_codec);
-
-				continue;
-			}
-
-			new_track->SetId(track_id);
-			new_track->SetCodecId(media_codec);
-			new_track->SetMediaType(media_type);
-			new_track->SetTimeBase(stream->time_base.num, stream->time_base.den);
-			new_track->SetBitrate(stream->codecpar->bit_rate);
-			new_track->SetStartFrameTime(0);
-			new_track->SetLastFrameTime(0);
-
-			// Video Specific parameters
-			if (media_type == cmn::MediaType::Video)
-			{
-				new_track->SetFrameRate(av_q2d(stream->r_frame_rate));
-				new_track->SetWidth(stream->codecpar->width);
-				new_track->SetHeight(stream->codecpar->height);
-			}
-			// Audio Specific parameters
-			else if(media_type == cmn::MediaType::Audio)
-			{
-				new_track->SetSampleRate(stream->codecpar->sample_rate);
-				new_track->GetSample().SetFormat(static_cast<cmn::AudioSample::Format>(cmn::AudioSample::Format::S16P));
-				new_track->GetChannel().SetLayout(static_cast<cmn::AudioChannel::Layout>(
-					(stream->codecpar->channels==1)?cmn::AudioChannel::Layout::LayoutMono:
-					(stream->codecpar->channels==2)?cmn::AudioChannel::Layout::LayoutStereo:
-													cmn::AudioChannel::Layout::LayoutUnknown));
-			}
-
-			AddTrack(new_track);
+			_state = State::ERROR;
+			logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
+			return false;
 		}
 
-		// Sometimes the values of PTS/DTS are negative or incorrect(invalid pts) 
-		// Decided to calculate PTS/DTS as the cumulative value of the packet duration.
-		_cumulative_pts = new int64_t[_format_context->nb_streams];
-		_cumulative_dts = new int64_t[_format_context->nb_streams];
-
-		for(uint32_t track_id=0 ; track_id<_format_context->nb_streams ; ++track_id)
+		// Parse SDP to add track information
+		SessionDescription	sdp;
+		if(sdp.FromString(reply->GetBody()->ToString()) == false)
 		{
-			_cumulative_pts[track_id] = 0;
-			_cumulative_dts[track_id] = 0;
+			_state = State::ERROR;
+			logte("Parsing of SDP received from rtsp url (%s)failed. ", _curr_url->ToUrlString());
+			return false;
+		}
+
+		auto media_desc_list = sdp.GetMediaList();
+		for(const auto &media_desc : media_desc_list)
+		{
+			auto first_payload = media_desc->GetFirstPayload();
+			if(first_payload == nullptr)
+			{
+				logte("Failed to get the first Payload type of peer sdp");
+				return false;
+			}
+
+			if(media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
+			{
+				_audio_payload_type = first_payload->GetId();
+
+				auto audio_track = std::make_shared<MediaTrack>();
+
+				auto codec = first_payload->GetCodec();
+				auto samplerate = first_payload->GetCodecRate();
+				auto channels = std::atoi(first_payload->GetCodecParams());
+				
+				
+			}
+			else if(media_desc->GetMediaType() == MediaDescription::MediaType::Video)
+			{
+				_video_payload_type = first_payload->GetId();
+			}
 		}
 
 		_state = State::DESCRIBED;
 
 		return true;
+	}
+
+	bool RtspcStream::RequestSetup()
+	{
+		return false;
 	}
 
 	bool RtspcStream::RequestPlay()
@@ -308,7 +278,6 @@ namespace pvd
 			return false;
 		}
 
-		SendSequenceHeader();
 
 		_state = State::PLAYING;
 
@@ -327,271 +296,77 @@ namespace pvd
 		return true;
 	}
 
+	int32_t RtspcStream::GetNextCSeq()
+	{
+		return _cseq++;
+	}
+
+	bool RtspcStream::SendRequestMessage(const std::shared_ptr<RtspMessage> &message)
+	{
+		return true;
+	}
+
+	std::shared_ptr<RtspMessage> RtspcStream::WaitForResponse(const std::shared_ptr<RequestResponse>& request, uint64_t timeout_ms)
+	{
+		// state == Playing
+			// return RequestMessage.WaitForResponse(), erase
+		
+		// else
+			// return Receivemessage, erase
+
+
+		// timeout
+			// Remove
+
+		return nullptr;
+	}
+
+	std::shared_ptr<RtspMessage> RtspcStream::ReceiveMessage(int64_t timeout_msec)
+	{
+		ov::StopWatch stop_watch;
+
+		stop_watch.Start();
+		while(true)
+		{
+			if(ReceivePacket(false) == false)
+			{
+				return nullptr;
+			}
+
+			if(_rtsp_demuxer.IsAvailableMessage())
+			{
+				return _rtsp_demuxer.PopMessage();
+			}
+
+			if(stop_watch.IsElapsed(timeout_msec))
+			{
+				return nullptr;
+			}
+		}
+
+		return nullptr;
+	}
+
+	bool RtspcStream::ReceivePacket(bool non_block, int64_t timeout_msec)
+	{
+		return true;
+	}
+
 	int RtspcStream::GetFileDescriptorForDetectingEvent()
 	{
-		// This is a feature added to the existing ffmpeg for OME.
-		return av_get_iformat_file_descriptor(_format_context);
+		return 0;
 	}
 
 	PullStream::ProcessMediaResult RtspcStream::ProcessMediaPacket()
 	{
-		//============================================
-		// FIXME: THIS IS A TEMPORARY CODE
-		//
-		// When we call av_read_frame, if the RTSP data is not received as much as is required for parsing, the RTSP demuxer will loop around the loop and wait for the next data and will not return for a while.
-		// To make this work like pseudo-asynchronous, we wrote a temporary code to call av_read_frame() after waiting for enough data(1500 bytes) to be stacked in socket queue.
+		// Receive Packet
 
-		// Obtains the size of data in the queue
-		int pending_data_size;
-		if (::ioctl(GetFileDescriptorForDetectingEvent(), SIOCINQ, &pending_data_size) == 0)
-		{
-			if (pending_data_size < 1500)
-			{
-				::usleep(10 * 1000);
-				return ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN;
-			}
-		}
-		else
-		{
-			// Failed to call ioctl() - Leave the rest of the role to FFmpeg
-		}
-		//============================================
+		// Append packet to demuxer
 
-		AVPacket packet;
-		av_init_packet(&packet);
-		packet.size = 0;
-		packet.data = nullptr;
-
-		bool is_eof = false;
-		bool is_received_first_packet = false;
-
-		_stop_watch.Update();
-		int32_t ret = ::av_read_frame(_format_context, &packet);
-		if ( ret < 0 )
-		{
-			// This is a feature added to the existing ffmpeg for OME.
-			if (ret == AVERROR(EAGAIN))
-			{
-				return ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN;
-			}
-
-			if(_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
-			{
-				return ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN;
-			}
-
-			if ( (ret == AVERROR_EOF || ::avio_feof(_format_context->pb)) && !is_eof)
-			{
-				// If EOF is not receiving packets anymore, end thread.
-				logti("%s/%s(%u) RtspcStream has finished.", GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-				_state = State::STOPPED;
-				is_eof = true;
-				return ProcessMediaResult::PROCESS_MEDIA_FINISH;
-			}
-
-			if (_format_context->pb && _format_context->pb->error)
-			{
-				// If the connection is broken, terminate the thread.
-				logte("%s/%s(%u) RtspcStream's connection has broken.", 
-					GetApplicationInfo().GetName().CStr(), GetName().CStr(), GetId());
-				_state = State::ERROR;
-				return ProcessMediaResult::PROCESS_MEDIA_FAILURE;
-			}
-		}
-		else
-		{
-			is_eof = false;
-		}
-
-		// If the first packet is received as NOPTS_VALUE, reset the PTS value to zero.
-		if (!is_received_first_packet)
-		{
-			if (packet.pts == AV_NOPTS_VALUE)
-			{
-				packet.pts = 0;
-			}
-			if (packet.dts == AV_NOPTS_VALUE)
-			{	
-				packet.dts = 0;
-			}
-
-			is_received_first_packet = true;
-		}
-
-		auto track = GetTrack(packet.stream_index);
-		if(track == nullptr)
-		{
-			::av_packet_unref(&packet);
-			return ProcessMediaResult::PROCESS_MEDIA_TRY_AGAIN;
-		}
-
-		// Accumulate PTS/DTS
-		// TODO : Require Verification
-		if(packet.duration != 0)
-		{
-			_cumulative_pts[packet.stream_index] += packet.duration;
-			_cumulative_dts[packet.stream_index] += packet.duration;
-		}
-		else
-		{
-			_cumulative_pts[packet.stream_index] = packet.pts;
-			_cumulative_dts[packet.stream_index] = packet.dts;
-		}
-
-		auto media_type = track->GetMediaType();
-		auto codec_id = track->GetCodecId();
-		cmn::BitstreamFormat bitstream_format = cmn::BitstreamFormat::Unknown;
-		cmn::PacketType packet_type = cmn::PacketType::Unknown;
-
-		if(codec_id == cmn::MediaCodecId::H264)
-		{
-			bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
-			packet_type = cmn::PacketType::NALU;
-		}
-		else if(codec_id == cmn::MediaCodecId::H265)
-		{
-			bitstream_format = cmn::BitstreamFormat::H265_ANNEXB;
-			packet_type = cmn::PacketType::NALU;
-		}
-		else if(codec_id == cmn::MediaCodecId::Aac)
-		{
-			if(AACAdts::IsValid(packet.data, packet.size) == true)
-				bitstream_format = cmn::BitstreamFormat::AAC_ADTS;
-			else
-				bitstream_format = cmn::BitstreamFormat::AAC_LATM;
-	
-			packet_type = cmn::PacketType::RAW;
-		}
-
-		// Make MediaPacket from AVPacket
-		auto data = std::make_shared<ov::Data>(packet.data, packet.size);
-		auto media_packet = std::make_shared<MediaPacket>(media_type, 
-														track->GetId(), 
-														data,
-														_cumulative_pts[packet.stream_index], 
-														_cumulative_dts[packet.stream_index], 
-														bitstream_format, 
-														packet_type);
-
-		SendFrame(media_packet);
-
-		::av_packet_unref(&packet);
+		// In an interleaved session, the server sends both messages and data in the same session.
+		// Check if there are available messages and interleaved data
 
 		return ProcessMediaResult::PROCESS_MEDIA_SUCCESS;
-	}
-
-
-	void RtspcStream::SendSequenceHeader()
-	{
-		for(uint32_t track_id=0 ; track_id<_format_context->nb_streams ; ++track_id)
-		{
-			AVStream *stream = _format_context->streams[track_id];
-
-			auto track = GetTrack(stream->index);
-			if(track == nullptr)
-			{
-				continue;
-			}
-
-			auto media_type = track->GetMediaType();
-			auto codec_id = track->GetCodecId();
-
-			if(codec_id == cmn::MediaCodecId::H264)
-			{
-				// Send SPS/PPS Nalunit
-				auto media_packet = std::make_shared<MediaPacket>(media_type, 
-					track->GetId(), 
-					std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size),
-					0, 
-					0, 
-					cmn::BitstreamFormat::H264_ANNEXB, 
-					cmn::PacketType::NALU);
-
-				SendFrame(media_packet);
-			}
-			else if(codec_id == cmn::MediaCodecId::H265)
-			{
-				// Nothing to do here
-			}			
-			else if(codec_id == cmn::MediaCodecId::Aac)
-			{
-				AACSpecificConfig aac_config;
-				aac_config.SetOjbectType(GetAacObjectType(stream->codecpar->profile));
-				aac_config.SetSamplingFrequency(GetSamplingFrequency(stream->codecpar->sample_rate));
-				aac_config.SetChannel(stream->codecpar->channels);
-
-				std::vector<uint8_t> sequence_header;
-				aac_config.Serialize(sequence_header);
-				
-				auto media_packet = std::make_shared<MediaPacket>(media_type, 
-					track->GetId(), 
-					std::make_shared<ov::Data>(&sequence_header[0], sequence_header.size()),
-					0, 
-					0, 
-					cmn::BitstreamFormat::AAC_LATM, 
-					cmn::PacketType::SEQUENCE_HEADER);
-
-				SendFrame(media_packet);
-			}
-		}
-	}
-
-	AacObjectType RtspcStream::GetAacObjectType(int32_t ff_profile)
-	{
-		AacObjectType aac_profile = AacObjectTypeAacMain;
-		switch(ff_profile)
-		{
-			case FF_PROFILE_AAC_MAIN:
-				aac_profile = AacObjectTypeAacMain;
-				break;
-			case FF_PROFILE_AAC_LOW:
-				aac_profile = AacObjectTypeAacLC;
-				break;
-			case FF_PROFILE_AAC_SSR:
-				aac_profile = AacObjectTypeAacSSR;
-				break;
-			case FF_PROFILE_AAC_LTP:
-				aac_profile = AacObjecttypeAacLTP;
-				break;
-			default:
-				break;
-		}
-
-		return aac_profile;
-	}
-
-	AacSamplingFrequencies RtspcStream::GetSamplingFrequency(int32_t ff_samplerate)
-	{
-		AacSamplingFrequencies aac_sample_rate = 
-			(ff_samplerate == 96000)?RATES_96000HZ:
-			(ff_samplerate == 88200)?RATES_88200HZ:
-			(ff_samplerate == 64000)?RATES_64000HZ:
-			(ff_samplerate == 48000)?RATES_48000HZ:
-			(ff_samplerate == 44100)?RATES_44100HZ:
-			(ff_samplerate == 32000)?RATES_32000HZ:
-			(ff_samplerate == 24000)?RATES_24000HZ:
-			(ff_samplerate == 22050)?RATES_22050HZ:
-			(ff_samplerate == 16000)?RATES_16000HZ:
-			(ff_samplerate == 12000)?RATES_12000HZ:
-			(ff_samplerate == 11025)?RATES_11025HZ:
-			(ff_samplerate == 7350)?RATES_8000HZ:EXPLICIT_RATE;
-
-		return aac_sample_rate;
-	}
-
-	int RtspcStream::InterruptCallback(void *ctx)
-	{
-		if(ctx != nullptr)
-		{
-			auto obj = (RtspcStream*)ctx;
-			if(obj->_stop_watch.IsElapsed(RTSP_PULL_TIMEOUT_MSEC))
-			{
-				// timed out
-				return true;
-			}
-		}
-
-		return false;
 	}
 }
 

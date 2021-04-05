@@ -60,6 +60,10 @@ void PayloadAttr::SetRtpmap(const uint8_t payload_type, const ov::String &codec,
 	{
 		_codec = SupportCodec::OPUS;
 	}
+	else if(codec.LowerCaseString() == "mpeg4-generic")
+	{
+		_codec = SupportCodec::MPEG4_GENERIC;
+	}
 	else if(codec.LowerCaseString() == "red")
 	{
 		_codec = SupportCodec::RED;
@@ -139,6 +143,59 @@ bool PayloadAttr::IsRtcpFbEnabled(const PayloadAttr::RtcpFbType &type) const
 
 void PayloadAttr::SetFmtp(const ov::String &fmtp)
 {
+	// https://tools.ietf.org/html/rfc3640#section-3.3
+	// In the case of mpeg4-generic, there are several modes, which are classified by fmtp.
+	// fmtp:96 profile-level-id=1;mode=AAC-hbr;sizelength=13;indexlength=3;indexdeltalength=3;config=1190
+
+	if(_codec == SupportCodec::MPEG4_GENERIC)
+	{
+		auto params = fmtp.Split(";");
+		for(const auto &param : params)
+		{
+			auto key_value = param.Split("=");
+			if(key_value.size() != 2)
+			{
+				// fmtp parsing error
+				logd("SDP", "fmtp parsing error : %s", fmtp.CStr());
+			}
+
+			auto key = key_value[0];
+			auto value = key_value[1];
+
+			if(key.UpperCaseString() == "MODE")
+			{
+				if(value.UpperCaseString() == "GENERIC")
+				{
+					_mpeg4_generic_mode = Mpeg4GenericMode::Generic;
+				}
+				else if(value.UpperCaseString() == "CELP-CBR")
+				{
+					_mpeg4_generic_mode = Mpeg4GenericMode::CELP_cbr;
+				}
+				else if(value.UpperCaseString() == "CELP-VBR")
+				{
+					_mpeg4_generic_mode = Mpeg4GenericMode::CELP_vbr;
+				}
+				else if(value.UpperCaseString() == "AAC-LBR")
+				{
+					_mpeg4_generic_mode = Mpeg4GenericMode::AAC_lbr;
+				}
+				else if(value.UpperCaseString() == "AAC-HBR")
+				{
+					_mpeg4_generic_mode = Mpeg4GenericMode::AAC_hbr;
+				}
+				else if(value.UpperCaseString() == "MPS-LBR")
+				{
+					_mpeg4_generic_mode = Mpeg4GenericMode::AAC_hbr;
+				}
+				else if(value.UpperCaseString() == "MPS-HBR")
+				{
+					_mpeg4_generic_mode = Mpeg4GenericMode::AAC_hbr;
+				}
+			}
+		}
+	}
+
 	_fmtp = fmtp;
 }
 

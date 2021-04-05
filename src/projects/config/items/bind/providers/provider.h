@@ -29,6 +29,10 @@ namespace cfg
 				{
 				}
 
+				Provider()
+				{
+				}
+
 				Provider(const char *port, const char *tls_port)
 					: _port(port),
 					  _tls_port(tls_port)
@@ -37,7 +41,6 @@ namespace cfg
 
 				CFG_DECLARE_REF_GETTER_OF(GetPort, _port);
 				CFG_DECLARE_REF_GETTER_OF(GetTlsPort, _tls_port);
-
 				CFG_DECLARE_REF_GETTER_OF(GetWorkerCount, _worker_count);
 
 			protected:
@@ -45,7 +48,6 @@ namespace cfg
 				{
 					Register<Optional>("Port", &_port);
 					Register<Optional>({"TLSPort", "tlsPort"}, &_tls_port);
-
 					Register<Optional>("WorkerCount", &_worker_count);
 				};
 			};

@@ -27,6 +27,7 @@ LOCAL_STATIC_LIBRARIES := \
 	segment_writer \
 	web_console \
 	mediarouter \
+	rtsp_module \
 	ovt_packetizer \
 	orchestrator \
 	publisher \
