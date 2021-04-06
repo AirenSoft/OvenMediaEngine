@@ -17,17 +17,18 @@ class RtspDemuxer
 public:
 	RtspDemuxer();
 	bool AppendPacket(const std::shared_ptr<ov::Data> &packet);
+	bool AppendPacket(const uint8_t *data, size_t data_length);
 
 	bool IsAvailableMessage();
 	bool IsAvaliableData();
 
 	std::shared_ptr<RtspMessage> PopMessage();
-	std::shared_ptr<ov::Data> PopData();
+	std::shared_ptr<RtspData> PopData();
 
 private:
 	std::shared_ptr<ov::Data> _buffer;
 
-	ov::Queue<std::shared_ptr<RtspMessage>>	_messages;
+	std::queue<std::shared_ptr<RtspMessage>> _messages;
 	// Interleaved binary data
-	ov::Queue<std::shared_ptr<RtspData>> _datas;
+	std::queue<std::shared_ptr<RtspData>> _datas;
 };

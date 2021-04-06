@@ -18,7 +18,7 @@ enum class RtspHeaderFieldType : uint16_t
 	Server,
 	CacheControl,
 	Public,
-	Supported,
+	Unsupported,
 	Accept,
 	ContentLength,
 	ContentBase,
@@ -30,11 +30,18 @@ enum class RtspHeaderFieldType : uint16_t
 	Range
 };
 
+enum class ParsedFieldType : uint16_t
+{
+	GeneralType = 0, // String or Integer
+	Session
+};
+
 // Basic field(name, value) class
 class RtspHeaderField
 {
 public:
 	RtspHeaderField();
+	RtspHeaderField(RtspHeaderFieldType type);
 	RtspHeaderField(RtspHeaderFieldType type, ov::String value);
 	RtspHeaderField(RtspHeaderFieldType type, int32_t value);
 	RtspHeaderField(ov::String name, ov::String value);
@@ -46,6 +53,11 @@ public:
 
 	virtual bool SetContent(ov::String name, ov::String value);
 	virtual bool SetContent(ov::String name, int32_t value);
+
+	virtual ParsedFieldType GetParsedFieldClass()
+	{
+		return ParsedFieldType::GeneralType;
+	}
 	
 	ov::String GetName();
 	ov::String GetValue();

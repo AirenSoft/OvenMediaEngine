@@ -24,14 +24,6 @@ MediaDescription::~MediaDescription()
 
 bool MediaDescription::UpdateData(ov::String &sdp)
 {
-	if(_media_type == MediaType::Unknown || _direction == Direction::Unknown)
-	{
-		loge("SDP", "Required value is not defined - MediaType: %s, Direction: %s, SetupType: %s",
-		     _media_type_str.CStr(), _direction_str.CStr(), _setup_str.CStr());
-
-		return false;
-	}
-
 	// Make m line
 	sdp = ov::String::FormatString("m=%s %d %s", _media_type_str.CStr(), _port, _protocol.CStr());
 

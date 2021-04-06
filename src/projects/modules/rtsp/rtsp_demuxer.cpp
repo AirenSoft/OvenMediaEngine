@@ -7,7 +7,12 @@ RtspDemuxer::RtspDemuxer()
 
 bool RtspDemuxer::AppendPacket(const std::shared_ptr<ov::Data> &packet)
 {
-	_buffer->Append(packet);
+	return AppendPacket(packet->GetDataAs<uint8_t>(), packet->GetLength());
+}
+
+bool RtspDemuxer::AppendPacket(const uint8_t *data, size_t data_length)
+{
+	_buffer->Append(data, data_length);
 
 	while(_buffer->GetLength() > 0)
 	{
@@ -18,7 +23,7 @@ bool RtspDemuxer::AppendPacket(const std::shared_ptr<ov::Data> &packet)
 			// Success
 			if(result > 0)
 			{
-				_datas.Enqueue(rtsp_data);
+				_datas.push(rtsp_data);
 				_buffer->Erase(0, result);
 				continue;
 			}
@@ -40,7 +45,7 @@ bool RtspDemuxer::AppendPacket(const std::shared_ptr<ov::Data> &packet)
 			// Success
 			if(result > 0)
 			{
-				_messages.Enqueue(rtsp_message);
+				_messages.push(rtsp_message);
 				_buffer->Erase(0, result);
 				continue;
 			}
@@ -63,24 +68,37 @@ bool RtspDemuxer::AppendPacket(const std::shared_ptr<ov::Data> &packet)
 
 bool RtspDemuxer::IsAvailableMessage()
 {
-
-	return false;
+	return _messages.size() > 0;
 }
 
 bool RtspDemuxer::IsAvaliableData()
 {
 
-	return false;
+	return _datas.size() > 0;
 }
 
 std::shared_ptr<RtspMessage> RtspDemuxer::PopMessage()
 {
+	if(IsAvailableMessage() == false)
+	{
+		return nullptr;
+	}
 
-	return nullptr;
+	auto message = _messages.front();
+	_messages.pop();
+
+	return message;
 }
 
-std::shared_ptr<ov::Data> RtspDemuxer::PopData()
+std::shared_ptr<RtspData> RtspDemuxer::PopData()
 {
+	if(IsAvaliableData() == false)
+	{
+		return nullptr;
+	}
+	
+	auto data = _datas.front();
+	_datas.pop();
 
-	return nullptr;
+	return data;
 }

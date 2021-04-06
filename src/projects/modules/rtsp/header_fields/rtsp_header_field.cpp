@@ -5,14 +5,23 @@ RtspHeaderField::RtspHeaderField()
 
 }
 
+RtspHeaderField::RtspHeaderField(RtspHeaderFieldType type)
+{
+	_type = type;
+}
+
 RtspHeaderField::RtspHeaderField(RtspHeaderFieldType type, ov::String value)
 {
-
+	_type = type;
+	_name = RtspHeaderField::FieldTypeToString(type);
+	_value = value;
 }
 
 RtspHeaderField::RtspHeaderField(RtspHeaderFieldType type, int32_t value)
 {
-
+	_type = type;
+	_name = RtspHeaderField::FieldTypeToString(type);
+	_value = ov::Converter::ToString(value);
 }
 
 RtspHeaderField::RtspHeaderField(ov::String name, int32_t value)
@@ -30,27 +39,27 @@ ov::String RtspHeaderField::FieldTypeToString(RtspHeaderFieldType type)
 	switch(type)
 	{
 		case RtspHeaderFieldType::ContentType:
-			return "ContentType";
+			return "Content-Type";
 		case RtspHeaderFieldType::ContentBase:
-			return "ContentBase";
+			return "Content-Base";
 		case RtspHeaderFieldType::Date:
 			return "Date";
 		case RtspHeaderFieldType::CSeq:
 			return "CSeq";
 		case RtspHeaderFieldType::UserAgent:
-			return "UserAgent";
+			return "User-Agent";
 		case RtspHeaderFieldType::Server:
 			return "Server";
 		case RtspHeaderFieldType::CacheControl:
-			return "CacheControl";
+			return "Cache-Control";
 		case RtspHeaderFieldType::Public:
 			return "Public";
-		case RtspHeaderFieldType::Supported:
-			return "Supported";
+		case RtspHeaderFieldType::Unsupported:
+			return "Unsupported";
 		case RtspHeaderFieldType::Accept:
 			return "Accept";
 		case RtspHeaderFieldType::ContentLength:
-			return "ContentLength";
+			return "Content-Length";
 		case RtspHeaderFieldType::Session:
 			return "Session";
 		case RtspHeaderFieldType::Transport:
@@ -69,14 +78,30 @@ bool RtspHeaderField::Parse(const ov::String &message)
 {
 	std::shared_ptr<RtspHeaderField> field = nullptr;
 	
+	logd("DEBUG", "RtspHeaderField::Parse(%s)", message.CStr());
+
 	// Parsing
-	auto name_value = message.Split(":");
-	if(name_value.size() != 2)
+	auto index = message.IndexOf(':');
+	if(index == -1)
 	{
 		return false;
 	}
 
-	return SetContent(name_value[0], name_value[1]);
+	auto name = message.Substring(0, index);
+
+	// Remove space
+	for(size_t i=index+1; i<message.GetLength(); i++)
+	{
+		if(message.Get(i) != ' ')
+		{
+			index = i;
+			break;
+		}
+	}
+
+	auto value = message.Substring(index);
+	
+	return SetContent(name, value);
 }
 
 bool RtspHeaderField::SetContent(ov::String name, ov::String value)

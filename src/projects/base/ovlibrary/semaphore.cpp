@@ -36,6 +36,25 @@ namespace ov
 		--_count;
 	}
 
+	bool Semaphore::WaitFor(uint32_t timeout_delta_msec)
+	{
+		std::unique_lock<decltype(_mutex)> lock(_mutex);
+
+		while(_count <= 0)
+		{
+			auto result = _condition.wait_for(lock, std::chrono::milliseconds(timeout_delta_msec));
+			if(result == std::cv_status::timeout)
+			{
+				return false;
+			}
+		}
+
+		OV_ASSERT2(_count > 0);
+		
+		--_count;
+		return true;
+	}
+
 	bool Semaphore::TryWait()
 	{
 		std::unique_lock<decltype(_mutex)> lock(_mutex);

@@ -10,6 +10,8 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 
+// $ + ID + Length = 4
+#define RTSP_INTERLEAVED_DATA_HEADER_LEN	4	
 class RtspData
 {
 public:
@@ -19,14 +21,15 @@ public:
 	// Usage : auto [message, parsed_bytes] = RtspData::Parse(~);
 	static std::tuple<std::shared_ptr<RtspData>, int> Parse(const std::shared_ptr<const ov::Data> &data);
 
+	// Only use in Parse()
+	RtspData(){}
 	RtspData(uint8_t channel_id, const std::shared_ptr<ov::Data> &data);
 
 	uint8_t GetChannelId();
 	std::shared_ptr<ov::Data> GetData();
 
 private:
-	// Only use in Parse()
-	RtspData(){}
+	int ParseInternal(const std::shared_ptr<const ov::Data> &data);
 
 	uint8_t _channel_id;
 	std::shared_ptr<ov::Data>	_data;
