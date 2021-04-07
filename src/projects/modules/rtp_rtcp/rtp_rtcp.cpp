@@ -63,7 +63,7 @@ bool RtpRtcp::Stop()
 	return Node::Stop();
 }
 
-bool RtpRtcp::SendOutgoingData(const std::shared_ptr<RtpPacket> &rtp_packet)
+bool RtpRtcp::SendRtpPacket(const std::shared_ptr<RtpPacket> &rtp_packet)
 {
 	std::shared_lock<std::shared_mutex> lock(_state_lock);
 	// nothing to do before node start

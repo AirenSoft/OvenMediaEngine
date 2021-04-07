@@ -40,7 +40,7 @@ namespace pvd
 								const std::shared_ptr<const SessionDescription> &peer_sdp,
 								const std::shared_ptr<Certificate> &certificate,
 								const std::shared_ptr<IcePort> &ice_port)
-		: PushStream(source_type, stream_name, stream_id, provider)
+		: PushStream(source_type, stream_name, stream_id, provider), Node(NodeType::Edge)
 	{
 		_offer_sdp = offer_sdp;
 		_peer_sdp = peer_sdp;
@@ -74,7 +74,6 @@ namespace pvd
 		auto application = std::static_pointer_cast<WebRTCApplication>(GetApplication());
 		_dtls_transport->SetLocalCertificate(_certificate);
 		_dtls_transport->StartDTLS();
-		_dtls_ice_transport = std::make_shared<DtlsIceTransport>(GetId(), _ice_port);
 
 		double audio_lip_sync_timebase = 0, video_lip_sync_timebase = 0;
 
@@ -216,11 +215,12 @@ namespace pvd
 		_srtp_transport->RegisterLowerNode(_dtls_transport);
 		_srtp_transport->Start();
 		_dtls_transport->RegisterUpperNode(_srtp_transport);
-		_dtls_transport->RegisterLowerNode(_dtls_ice_transport);
+		_dtls_transport->RegisterLowerNode(ov::Node::GetSharedPtr());
 		_dtls_transport->Start();
-		_dtls_ice_transport->RegisterUpperNode(_dtls_transport);
-		_dtls_ice_transport->RegisterLowerNode(nullptr);
-		_dtls_ice_transport->Start();
+
+		RegisterUpperNode(_dtls_transport);
+		RegisterLowerNode(nullptr);
+		ov::Node::Start();
 
 		_fir_timer.Start();
 
@@ -262,11 +262,6 @@ namespace pvd
 			_rtp_rtcp->Stop();
 		}
 
-		if(_dtls_ice_transport != nullptr)
-		{
-			_dtls_ice_transport->Stop();
-		}
-
 		if(_dtls_transport != nullptr)
 		{
 			_dtls_transport->Stop();
@@ -276,6 +271,8 @@ namespace pvd
 		{
 			_srtp_transport->Stop();
 		}
+
+		ov::Node::Stop();
 
 		return pvd::Stream::Stop();
 	}
@@ -290,7 +287,6 @@ namespace pvd
 		return _peer_sdp;
 	}
 
-	// From IcePort -> WebRTCProvider -> Application -> 
 	bool WebRTCStream::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 	{
 		logtd("OnDataReceived (%d)", data->GetLength());
@@ -299,9 +295,14 @@ namespace pvd
 		//It must not be called during start and stop.
 		std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
 
-		_dtls_ice_transport->OnDataReceived(NodeType::Edge, data);
-		
-		return true;
+
+		auto node = GetUpperNode();
+		if(node == nullptr)
+		{
+			return false;
+		}
+
+		return node->OnDataReceived(NodeType::Edge, data);
 	}
 
 	uint64_t WebRTCStream::AdjustTimestamp(uint8_t payload_type, uint32_t timestamp)
@@ -479,6 +480,25 @@ namespace pvd
 
 		_rtp_rtcp->SendData(NodeType::Rtcp, rtcp_packet->GetData());
 
+		return true;
+	}
+
+	// ov::Node Interface
+	// RtpRtcp -> SRTP -> DTLS -> Edge(this)
+	bool WebRTCStream::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data)
+	{
+		if(ov::Node::GetState() != ov::Node::NodeState::Started)
+		{
+			logtd("Node has not started, so the received data has been canceled.");
+			return false;
+		}
+
+		return _ice_port->Send(GetId(), data);
+	}
+
+	// WebRTCStream Node has not a lower node so it will not be called
+	bool WebRTCStream::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
+	{
 		return true;
 	}
 }

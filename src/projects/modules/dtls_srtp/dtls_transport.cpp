@@ -190,7 +190,7 @@ bool DtlsTransport::SendData(NodeType from_node, const std::shared_ptr<ov::Data>
 			// Since SRTP is already encrypted, it is sent directly to ICE.
 			if(from_node == NodeType::Srtp)
 			{
-				auto node = GetLowerNode(NodeType::Ice);
+				auto node = GetLowerNode();
 				if(node == nullptr)
 				{
 					return false;
@@ -325,7 +325,7 @@ ssize_t DtlsTransport::Write(ov::Tls *tls, const void *data, size_t length)
 {
 	auto packet = std::make_shared<ov::Data>(data, length);
 
-	auto node = GetLowerNode(NodeType::Ice);
+	auto node = GetLowerNode();
 
 	if(node == nullptr)
 	{

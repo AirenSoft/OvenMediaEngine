@@ -5,36 +5,26 @@
 #include "base/publisher/session.h"
 #include "modules/sdp/session_description.h"
 #include "modules/ice/ice_port.h"
-#include "modules//dtls_srtp/dtls_ice_transport.h"
 #include "modules/rtp_rtcp/rtp_rtcp.h"
 #include "modules/rtp_rtcp/rtp_packetizer_interface.h"
 #include "modules/dtls_srtp/dtls_transport.h"
 #include <unordered_set>
 
-/*
- *
- *
- *   - Send -						  - Recv -
- * [MediaRouter]					[  ICEPort  ]
- * [ Publisher ]					[ Publisher ]
- * [Application][Stream Queue]		[Application][Packet Queue]
- * [  Stream   ]					      |
- * [  Session  ]					[  Session	]
- * -------------------------------------------------------
- * 					Session Node
- * -------------------------------------------------------
- * [  RTP_RTCP ]					[  ICE/STUN ]
- * [SRTP] [SCTP]					[    DTLS	]
- * [    DTLS   ]					[SRTP] [SCTP]
- * [  ICE/STUN ]					[  RTP_RTCP	]
- *
+/*	Node Connection
+ * [  RTP_RTCP ]
+ * [SRTP] [SCTP]				
+ * [    DTLS   ]
+ * [  ICE/STUN ]
+ * [ RtcSession](Edge Node)	 ----> Send packet
+ *		  <----------------------- Recv packet
+ *   
  */
 
 class WebRtcPublisher;
 class RtcApplication;
 class RtcStream;
 
-class RtcSession : public pub::Session, public RtpRtcpInterface
+class RtcSession : public pub::Session, public RtpRtcpInterface, public ov::Node
 {
 public:
 	static std::shared_ptr<RtcSession> Create(const std::shared_ptr<WebRtcPublisher> &publisher,
@@ -64,11 +54,17 @@ public:
 	const std::shared_ptr<const SessionDescription>& GetOfferSDP() const;
 	const std::shared_ptr<WebSocketClient>& GetWSClient();
 
+	// pub::Session Interface
 	bool SendOutgoingData(const std::any &packet) override;
 	void OnPacketReceived(const std::shared_ptr<info::Session> &session_info, const std::shared_ptr<const ov::Data> &data) override;
-
+	
+	// RtpRtcp Interface
 	void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) override;
 	void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
+
+	// ov::Node Interface
+	bool SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
+	bool OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
 private:
 	bool ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info);
@@ -78,7 +74,6 @@ private:
 	std::shared_ptr<RtpRtcp>            _rtp_rtcp;
 	std::shared_ptr<SrtpTransport>      _srtp_transport;
 	std::shared_ptr<DtlsTransport>      _dtls_transport;
-	std::shared_ptr<DtlsIceTransport>   _dtls_ice_transport;
 
 	std::shared_ptr<const SessionDescription> _offer_sdp;
 	std::shared_ptr<const SessionDescription> _peer_sdp;

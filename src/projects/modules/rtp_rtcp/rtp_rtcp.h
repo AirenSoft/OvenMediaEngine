@@ -26,7 +26,7 @@ public:
 
 	bool Stop() override;
 
-	bool SendOutgoingData(const std::shared_ptr<RtpPacket> &packet);
+	bool SendRtpPacket(const std::shared_ptr<RtpPacket> &packet);
 
 	// Implement Node Interface
 	bool SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;

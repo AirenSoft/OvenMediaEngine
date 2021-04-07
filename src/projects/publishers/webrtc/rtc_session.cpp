@@ -35,7 +35,7 @@ RtcSession::RtcSession(const info::Session &session_info,
 					   const std::shared_ptr<const SessionDescription> &peer_sdp,
 					   const std::shared_ptr<IcePort> &ice_port,
 					   const std::shared_ptr<WebSocketClient> &ws_client)
-	: Session(session_info, application, stream)
+	: Session(session_info, application, stream), Node(NodeType::Edge)
 {
 	_publisher = publisher;
 	_offer_sdp = offer_sdp;
@@ -55,7 +55,7 @@ bool RtcSession::Start()
 	// start and stop must be called independently.
 	std::lock_guard<std::shared_mutex> lock(_start_stop_lock);
 
-	if(GetState() != SessionState::Ready)
+	if(pub::Session::GetState() != SessionState::Ready)
 	{
 		return false;
 	}
@@ -78,8 +78,6 @@ bool RtcSession::Start()
 	std::shared_ptr<RtcApplication> application = std::static_pointer_cast<RtcApplication>(GetApplication());
 	_dtls_transport->SetLocalCertificate(application->GetCertificate());
 	_dtls_transport->StartDTLS();
-
-	_dtls_ice_transport = std::make_shared<DtlsIceTransport>(GetId(), _ice_port);
 
 
 	// RFC3264
@@ -135,6 +133,9 @@ bool RtcSession::Start()
 	}
 
 	// Connect nodes
+
+	// [RTP_RTCP] -> [SRTP] -> [DTLS] -> [RtcSession(Edge)]
+
 	_rtp_rtcp->RegisterUpperNode(nullptr);
 	_rtp_rtcp->RegisterLowerNode(_srtp_transport);
 	_rtp_rtcp->Start();
@@ -142,11 +143,12 @@ bool RtcSession::Start()
 	_srtp_transport->RegisterLowerNode(_dtls_transport);
 	_srtp_transport->Start();
 	_dtls_transport->RegisterUpperNode(_srtp_transport);
-	_dtls_transport->RegisterLowerNode(_dtls_ice_transport);
+	_dtls_transport->RegisterLowerNode(ov::Node::GetSharedPtr());
 	_dtls_transport->Start();
-	_dtls_ice_transport->RegisterUpperNode(_dtls_transport);
-	_dtls_ice_transport->RegisterLowerNode(nullptr);
-	_dtls_ice_transport->Start();
+
+	RegisterUpperNode(_dtls_transport);
+	RegisterLowerNode(nullptr);
+	ov::Node::Start();
 
 	return Session::Start();
 }
@@ -158,7 +160,7 @@ bool RtcSession::Stop()
 
 	logtd("Stop session. Peer sdp session id : %u", GetOfferSDP()->GetSessionId());
 
-	if(GetState() != SessionState::Started && GetState() != SessionState::Stopping)
+	if(pub::Session::GetState() != SessionState::Started && pub::Session::GetState() != SessionState::Stopping)
 	{
 		return true;
 	}
@@ -166,11 +168,6 @@ bool RtcSession::Stop()
 	if(_rtp_rtcp != nullptr)
 	{
 		_rtp_rtcp->Stop();
-	}
-
-	if(_dtls_ice_transport != nullptr)
-	{
-		_dtls_ice_transport->Stop();
 	}
 
 	if(_dtls_transport != nullptr)
@@ -185,6 +182,8 @@ bool RtcSession::Stop()
 
 	// TODO(Getroot): Doesn't need this?
 	//_ws_client->Close();
+
+	ov::Node::Stop();
 
 	return Session::Stop();
 }
@@ -216,8 +215,14 @@ void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_
 	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
 
 	_received_bytes += data->GetLength();
-	// ICE -> DTLS -> SRTP | SCTP -> RTP|RTCP
-	_dtls_ice_transport->OnDataReceived(NodeType::Edge, data);
+
+	auto node = GetUpperNode();
+	if(node == nullptr)
+	{
+		return;
+	}
+	// Edge Node(RtcSession) -> DTLS -> SRTP | SCTP -> RTP|RTCP
+	node->OnDataReceived(NodeType::Edge, data);
 }
 
 bool RtcSession::SendOutgoingData(const std::any &packet)
@@ -225,7 +230,7 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 	//It must not be called during start and stop.
 	std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
 
-	if(GetState() != SessionState::Started)
+	if(pub::Session::GetState() != SessionState::Started)
 	{
 		return false;
 	}
@@ -286,7 +291,9 @@ bool RtcSession::SendOutgoingData(const std::any &packet)
 
 	// RTP Session must be copied and sent because data is altered due to SRTP.
 	auto copy_packet = std::make_shared<RtpPacket>(*session_packet);
-	return _rtp_rtcp->SendOutgoingData(copy_packet);
+
+	// rtp_rtcp -> srtp -> dtls -> Edge Node(RtcSession)
+	return _rtp_rtcp->SendRtpPacket(copy_packet);
 }
 
 void RtcSession::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets)
@@ -296,7 +303,7 @@ void RtcSession::OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>
 
 void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 {
-	if(GetState() != SessionState::Started)
+	if(pub::Session::GetState() != SessionState::Started)
 	{
 		return;
 	}
@@ -347,9 +354,28 @@ bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
 			logd("RTCP", "Send RTX packet : %u/%u", _video_payload_type, seq_no);
 			auto copy_packet = std::make_shared<RtpPacket>(*(std::dynamic_pointer_cast<RtpPacket>(packet)));
 			copy_packet->SetSequenceNumber(_rtx_sequence_number++);
-			return _rtp_rtcp->SendOutgoingData(copy_packet);
+			return _rtp_rtcp->SendRtpPacket(copy_packet);
 		}
 	}
 
+	return true;
+}
+
+// ov::Node Interface
+// RtpRtcp -> SRTP -> DTLS -> Edge(this)
+bool RtcSession::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data)
+{
+	if(ov::Node::GetState() != ov::Node::NodeState::Started)
+	{
+		logtd("Node has not started, so the received data has been canceled.");
+		return false;
+	}
+
+	return _ice_port->Send(GetId(), data);
+}
+
+// RtcSession Node has not a lower node so it will not be called
+bool RtcSession::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
+{
 	return true;
 }
