@@ -69,11 +69,11 @@ namespace api
 			// <Optional>
 			if(json_body.isMember("stream"))
 			{
-				auto json_stream = json_body["stream"];
-				if(json_stream.empty() == false || json_stream.isObject() == true)
-				{
-					info::Stream stream(StreamSourceType::Ovt);
+				info::Stream stream(StreamSourceType::Ovt);
 
+				auto json_stream = json_body["stream"];
+				if(json_stream.empty() == false && json_stream.isObject() == true)
+				{
 					// <Required>
 					if(json_stream.isMember("name"))
 					{
@@ -102,8 +102,8 @@ namespace api
 							}
 						}	
 					}
-					push->SetStream(stream);
 				}
+				push->SetStream(stream);
 			}
 
 			if(json_body.isMember("protocol"))

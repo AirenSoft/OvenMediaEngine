@@ -76,6 +76,11 @@ namespace info
 
 	ov::String Push::GetStreamName()
 	{
+		if(_stream == nullptr)
+		{
+			return "";
+		}
+
 		return _stream->GetName();
 	}
 
