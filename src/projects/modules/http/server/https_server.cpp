@@ -21,85 +21,91 @@
 // Fastest suite only, which is still considered `secure`.
 #define HTTP_FAST_NOT_VERY_SECURE "AES128-SHA"
 
-bool HttpsServer::SetCertificate(const std::shared_ptr<info::Certificate> &certificate)
+namespace http
 {
-	if ((_certificate != nullptr) && (_certificate != certificate))
+	namespace svr
 	{
-		// TODO(dimiden): Cannot change certificate - Currently, it's a limitation of HttpServer
-		return false;
-	}
-
-	_certificate = certificate;
-
-	return true;
-}
-
-void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
-{
-	auto client = ProcessConnect(remote);
-
-	if (client != nullptr)
-	{
-		if (_certificate == nullptr)
+		bool HttpsServer::SetCertificate(const std::shared_ptr<info::Certificate> &certificate)
 		{
-			return;
+			if ((_certificate != nullptr) && (_certificate != certificate))
+			{
+				// TODO(dimiden): Cannot change certificate - Currently, it's a limitation of Server
+				return false;
+			}
+
+			_certificate = certificate;
+
+			return true;
 		}
 
-		auto tls_data = std::make_shared<ov::TlsData>(
-			ov::TlsData::Method::TlsServerMethod,
-			_certificate->GetCertificate(), _certificate->GetChainCertificate(),
-			HTTP_FAST_NOT_VERY_SECURE);
-
-		tls_data->SetWriteCallback([remote](const void *data, size_t length) -> ssize_t {
-			return remote->Send(data, length) ? length : -1L;
-		});
-
-		client->GetRequest()->SetTlsData(tls_data);
-		client->GetResponse()->SetTlsData(tls_data);
-	}
-}
-
-void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
-{
-	auto client = FindClient(remote);
-
-	if (client == nullptr)
-	{
-		// This can be called in situations where the client closes the connection from the server at the same time as the data is sent
-		return;
-	}
-
-	auto request = client->GetRequest();
-	auto tls_data = request->GetTlsData();
-
-	if (tls_data != nullptr)
-	{
-		std::shared_ptr<const ov::Data> plain_data;
-
-		if (tls_data->Decrypt(data, &plain_data))
+		void HttpsServer::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 		{
-			if ((plain_data != nullptr) && (plain_data->GetLength() > 0))
-			{
-				// plain_data is HTTP data
+			auto client = ProcessConnect(remote);
 
-				// Use the decrypted data
-				HttpServer::ProcessData(client, plain_data);
+			if (client != nullptr)
+			{
+				if (_certificate == nullptr)
+				{
+					return;
+				}
+
+				auto tls_data = std::make_shared<ov::TlsData>(
+					ov::TlsData::Method::TlsServerMethod,
+					_certificate->GetCertificate(), _certificate->GetChainCertificate(),
+					HTTP_FAST_NOT_VERY_SECURE);
+
+				tls_data->SetWriteCallback([remote](const void *data, size_t length) -> ssize_t {
+					return remote->Send(data, length) ? length : -1L;
+				});
+
+				client->GetRequest()->SetTlsData(tls_data);
+				client->GetResponse()->SetTlsData(tls_data);
+			}
+		}
+
+		void HttpsServer::OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data)
+		{
+			auto client = FindClient(remote);
+
+			if (client == nullptr)
+			{
+				// This can be called in situations where the client closes the connection from the server at the same time as the data is sent
+				return;
+			}
+
+			auto request = client->GetRequest();
+			auto tls_data = request->GetTlsData();
+
+			if (tls_data != nullptr)
+			{
+				std::shared_ptr<const ov::Data> plain_data;
+
+				if (tls_data->Decrypt(data, &plain_data))
+				{
+					if ((plain_data != nullptr) && (plain_data->GetLength() > 0))
+					{
+						// plain_data is HTTP data
+
+						// Use the decrypted data
+						HttpServer::ProcessData(client, plain_data);
+					}
+					else
+					{
+						// Need more data to decrypt the data
+					}
+
+					return;
+				}
+
+				// Error
+				logtd("Could not decrypt data");
 			}
 			else
 			{
-				// Need more data to decrypt the data
+				OV_ASSERT(false, "TlsData must not be null");
 			}
 
-			return;
+			client->GetResponse()->Close();
 		}
-
-		// Error
-		logtd("Could not decrypt data");
-	}
-	else
-	{
-		OV_ASSERT(false, "TlsData must not be null");
-	}
-
-	client->GetResponse()->Close();
-}
+	}  // namespace svr
+}  // namespace http

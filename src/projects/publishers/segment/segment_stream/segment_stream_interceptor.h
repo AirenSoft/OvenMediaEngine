@@ -16,20 +16,20 @@
 
 #include "segment_worker_manager.h"
 
-class SegmentStreamInterceptor : public HttpDefaultInterceptor
+class SegmentStreamInterceptor : public http::svr::DefaultInterceptor
 {
 public:
 	SegmentStreamInterceptor();
 	~SegmentStreamInterceptor() override;
 
 	bool Start(int thread_count, const SegmentProcessHandler &process_handler);
-	HttpInterceptorResult OnHttpData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data) override;
+	http::svr::InterceptorResult OnHttpData(const std::shared_ptr<http::svr::HttpConnection> &client, const std::shared_ptr<const ov::Data> &data) override;
 	void SetCrossdomainBlock()
 	{
 		_is_crossdomain_block = false;
 	}
 
-	bool IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client) override;
+	bool IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpConnection> &client) override;
 
 protected:
 	SegmentWorkerManager _worker_manager;

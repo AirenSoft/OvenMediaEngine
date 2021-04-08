@@ -12,113 +12,119 @@
 
 #include "../http_datastructure.h"
 
-class HttpConnection;
-
-class HttpResponse : public ov::EnableSharedFromThis<HttpResponse>
+namespace http
 {
-public:
-	friend class HttpConnection;
-
-	class IoCallback
+	namespace svr
 	{
-	};
+		class HttpConnection;
 
-	HttpResponse(const std::shared_ptr<ov::ClientSocket> &client_socket);
-	~HttpResponse() override = default;
+		class HttpResponse : public ov::EnableSharedFromThis<HttpResponse>
+		{
+		public:
+			friend class HttpConnection;
 
-	std::shared_ptr<ov::ClientSocket> GetRemote();
-	std::shared_ptr<const ov::ClientSocket> GetRemote() const;
+			class IoCallback
+			{
+			};
 
-	void SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data);
-	std::shared_ptr<ov::TlsData> GetTlsData();
+			HttpResponse(const std::shared_ptr<ov::ClientSocket> &client_socket);
+			~HttpResponse() override = default;
 
-	HttpStatusCode GetStatusCode() const
-	{
-		return _status_code;
-	}
+			std::shared_ptr<ov::ClientSocket> GetRemote();
+			std::shared_ptr<const ov::ClientSocket> GetRemote() const;
 
-	void SetHttpVersion(const ov::String &http_version)
-	{
-		_http_version = http_version;
-	}
+			void SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data);
+			std::shared_ptr<ov::TlsData> GetTlsData();
 
-	// reason = default
-	void SetStatusCode(HttpStatusCode status_code)
-	{
-		SetStatusCode(status_code, StringFromHttpStatusCode(status_code));
-	}
+			StatusCode GetStatusCode() const
+			{
+				return _status_code;
+			}
 
-	// custom reason
-	void SetStatusCode(HttpStatusCode status_code, const ov::String &reason)
-	{
-		_status_code = status_code;
-		_reason = reason;
-	}
+			void SetHttpVersion(const ov::String &http_version)
+			{
+				_http_version = http_version;
+			}
 
-	bool SetHeader(const ov::String &key, const ov::String &value);
-	const ov::String &GetHeader(const ov::String &key);
+			// reason = default
+			void SetStatusCode(StatusCode status_code)
+			{
+				SetStatusCode(status_code, StringFromStatusCode(status_code));
+			}
 
-	// Enqueue the data into the queue (This data will be sent when SendResponse() is called)
-	// Can be used for response with content-length
-	bool AppendData(const std::shared_ptr<const ov::Data> &data);
-	bool AppendString(const ov::String &string);
-	bool AppendFile(const ov::String &filename);
+			// custom reason
+			void SetStatusCode(StatusCode status_code, const ov::String &reason)
+			{
+				_status_code = status_code;
+				_reason = reason;
+			}
 
-	// Send the data immediately
-	// Can be used for response without content-length
-	template <typename T>
-	bool Send(const T *data)
-	{
-		return Send(data, sizeof(T));
-	}
-	virtual bool Send(const void *data, size_t length);
-	virtual bool Send(const std::shared_ptr<const ov::Data> &data);
+			bool SetHeader(const ov::String &key, const ov::String &value);
+			const ov::String &GetHeader(const ov::String &key);
 
-	bool SendChunkedData(const void *data, size_t length);
-	bool SendChunkedData(const std::shared_ptr<const ov::Data> &data);
+			// Enqueue the data into the queue (This data will be sent when SendResponse() is called)
+			// Can be used for response with content-length
+			bool AppendData(const std::shared_ptr<const ov::Data> &data);
+			bool AppendString(const ov::String &string);
+			bool AppendFile(const ov::String &filename);
 
-	uint32_t Response();
+			// Send the data immediately
+			// Can be used for response without content-length
+			template <typename T>
+			bool Send(const T *data)
+			{
+				return Send(data, sizeof(T));
+			}
+			virtual bool Send(const void *data, size_t length);
+			virtual bool Send(const std::shared_ptr<const ov::Data> &data);
 
-	bool Close();
+			bool SendChunkedData(const void *data, size_t length);
+			bool SendChunkedData(const std::shared_ptr<const ov::Data> &data);
 
-	void SetKeepAlive()
-	{
-		SetHeader("Connection", "keep-alive");
-	}
+			uint32_t Response();
 
-	void SetChunkedTransfer()
-	{
-		SetHeader("Transfer-Encoding", "chunked");
-		_chunked_transfer = true;
-	}
+			bool Close();
 
-	bool IsChunkedTransfer() const
-	{
-		return _chunked_transfer;
-	}
+			void SetKeepAlive()
+			{
+				SetHeader("Connection", "keep-alive");
+			}
 
-protected:
-	uint32_t SendHeaderIfNeeded();
-	uint32_t SendResponse();
+			void SetChunkedTransfer()
+			{
+				SetHeader("Transfer-Encoding", "chunked");
+				_chunked_transfer = true;
+			}
 
-	std::shared_ptr<ov::ClientSocket> _client_socket;
-	std::shared_ptr<ov::TlsData> _tls_data;
+			bool IsChunkedTransfer() const
+			{
+				return _chunked_transfer;
+			}
 
-	ov::String _http_version = "1.1";
+		protected:
+			uint32_t SendHeaderIfNeeded();
+			uint32_t SendResponse();
 
-	HttpStatusCode _status_code = HttpStatusCode::OK;
-	ov::String _reason = StringFromHttpStatusCode(HttpStatusCode::OK);
+			std::shared_ptr<ov::ClientSocket> _client_socket;
+			std::shared_ptr<ov::TlsData> _tls_data;
 
-	bool _is_header_sent = false;
+			ov::String _http_version = "1.1";
 
-	std::map<ov::String, ov::String> _response_header;
+			StatusCode _status_code = StatusCode::OK;
+			ov::String _reason = StringFromStatusCode(StatusCode::OK);
 
-	// FIXME(dimiden): It is supposed to be synchronized whenever a packet is sent, but performance needs to be improved
-	std::recursive_mutex _response_mutex;
-	size_t _response_data_size = 0;
-	std::vector<std::shared_ptr<const ov::Data>> _response_data_list;
+			bool _is_header_sent = false;
 
-	ov::String _default_value = "";
+			std::map<ov::String, ov::String> _response_header;
 
-	bool _chunked_transfer = false;
-};
+			// FIXME(dimiden): It is supposed to be synchronized whenever a packet is sent, but performance needs to be improved
+			std::recursive_mutex _response_mutex;
+			size_t _response_data_size = 0;
+			std::vector<std::shared_ptr<const ov::Data>> _response_data_list;
+
+			ov::String _default_value = "";
+
+			bool _chunked_transfer = false;
+		};
+	}  // namespace svr
+}  // namespace http

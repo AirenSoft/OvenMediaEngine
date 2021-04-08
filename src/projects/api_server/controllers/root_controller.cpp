@@ -38,17 +38,17 @@ namespace api
 		CreateSubController<v1::V1Controller>(R"(\/v1)");
 
 		// This handler is called if it does not match all other registered handlers
-		Register(HttpMethod::All, R"(.+)", &RootController::OnNotFound);
+		Register(http::Method::All, R"(.+)", &RootController::OnNotFound);
 	};
 
 	void RootController::PrepareAccessTokenHandler()
 	{
-		_interceptor->Register(HttpMethod::All, R"(.+)", [=](const std::shared_ptr<HttpConnection> &client) -> HttpNextHandler {
+		_interceptor->Register(http::Method::All, R"(.+)", [=](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
 #if DEBUG
 			if (_access_token.IsEmpty())
 			{
 				// Authorization is disabled
-				return HttpNextHandler::Call;
+				return http::svr::NextHandler::Call;
 			}
 #endif	// DEBUG
 
@@ -95,18 +95,18 @@ namespace api
 					break;
 				}
 
-				return HttpNextHandler::Call;
+				return http::svr::NextHandler::Call;
 			} while (false);
 
-			ApiResponse response(HttpError::CreateError(HttpStatusCode::Forbidden, message));
+			ApiResponse response(http::HttpError::CreateError(http::StatusCode::Forbidden, message));
 			response.SendToClient(client);
 
-			return HttpNextHandler::DoNotCall;
+			return http::svr::NextHandler::DoNotCall;
 		});
 	}
 
-	ApiResponse RootController::OnNotFound(const std::shared_ptr<HttpConnection> &client)
+	ApiResponse RootController::OnNotFound(const std::shared_ptr<http::svr::HttpConnection> &client)
 	{
-		return HttpError::CreateError(HttpStatusCode::NotFound, "Controller not found");
+		return http::HttpError::CreateError(http::StatusCode::NotFound, "Controller not found");
 	}
 }  // namespace api

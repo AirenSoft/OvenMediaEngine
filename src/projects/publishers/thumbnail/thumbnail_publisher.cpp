@@ -35,7 +35,7 @@ ThumbnailPublisher::~ThumbnailPublisher()
 
 bool ThumbnailPublisher::Start()
 {
-	auto manager = HttpServerManager::GetInstance();
+	auto manager = http::svr::HttpServerManager::GetInstance();
 
 	auto server_config = GetServerConfig();
 
@@ -125,10 +125,10 @@ bool ThumbnailPublisher::Start()
 
 bool ThumbnailPublisher::Stop()
 {
-	auto manager = HttpServerManager::GetInstance();
+	auto manager = http::svr::HttpServerManager::GetInstance();
 
-	std::shared_ptr<HttpServer> http_server = std::move(_http_server);
-	std::shared_ptr<HttpsServer> https_server = std::move(_https_server);
+	std::shared_ptr<http::svr::HttpServer> http_server = std::move(_http_server);
+	std::shared_ptr<http::svr::HttpsServer> https_server = std::move(_https_server);
 
 	if (http_server != nullptr)
 	{
@@ -143,11 +143,11 @@ bool ThumbnailPublisher::Stop()
 	return Publisher::Stop();
 }
 
-std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
+std::shared_ptr<http::svr::RequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 {
-	auto http_interceptor = std::make_shared<HttpDefaultInterceptor>();
+	auto http_interceptor = std::make_shared<http::svr::DefaultInterceptor>();
 
-	http_interceptor->Register(HttpMethod::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<HttpConnection> &client) -> HttpNextHandler {
+	http_interceptor->Register(http::Method::Get, R"(.+thumb\.(jpg|png)$)", [this](const std::shared_ptr<http::svr::HttpConnection> &client) -> http::svr::NextHandler {
 		auto request = client->GetRequest();
 
 		ov::String request_param;
@@ -160,7 +160,7 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 		if (ParseRequestUrl(request->GetRequestTarget(), request_param, app_name, stream_name, file_name, file_ext) == false)
 		{
 			logte("Failed to parse URL: %s", request->GetRequestTarget().CStr());
-			return HttpNextHandler::Call;
+			return http::svr::NextHandler::Call;
 		}
 
 		auto host_name = request->GetHeader("HOST").Split(":")[0];
@@ -173,10 +173,10 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 		if (stream == nullptr)
 		{
 			response->AppendString("There is no stream");
-			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
 
-			return HttpNextHandler::DoNotCall;
+			return http::svr::NextHandler::DoNotCall;
 		}
 
 		/*
@@ -185,10 +185,10 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 		{
 			// This part is not excute due to the regular expression.
 			response->AppendString("Thre is no file");
-			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->SetStatusCode(http::HttpStatusCode::NotFound);
 			response->Response();
 
-			return HttpNextHandler::DoNotCall;
+			return http::svr::NextHandler::DoNotCall;
 		}
 		*/
 
@@ -207,10 +207,10 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 		{
 			// This part is not excute due to the regular expression.
 			response->AppendString("Thre is no file(invalid extention)");
-			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->SetStatusCode(http::HttpStatusCode::NotFound);
 			response->Response();
 
-			return HttpNextHandler::DoNotCall;
+			return http::svr::NextHandler::DoNotCall;
 		}
 		*/
 
@@ -219,18 +219,18 @@ std::shared_ptr<HttpRequestInterceptor> ThumbnailPublisher::CreateInterceptor()
 		if (endcoded_video_frame == nullptr)
 		{
 			response->AppendString("There is no encoded thumbnail image");
-			response->SetStatusCode(HttpStatusCode::NotFound);
+			response->SetStatusCode(http::StatusCode::NotFound);
 			response->Response();
 
-			return HttpNextHandler::DoNotCall;
+			return http::svr::NextHandler::DoNotCall;
 		}
 
 		response->SetHeader("Content-Type", (media_codec_id == cmn::MediaCodecId::Jpeg) ? "image/jpeg" : "image/png");
-		response->SetStatusCode(HttpStatusCode::OK);
+		response->SetStatusCode(http::StatusCode::OK);
 		response->AppendData(std::move(endcoded_video_frame->Clone()));
 		response->Response();
 
-		return HttpNextHandler::DoNotCall;
+		return http::svr::NextHandler::DoNotCall;
 	});
 
 	return http_interceptor;

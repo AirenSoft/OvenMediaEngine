@@ -83,12 +83,12 @@ namespace api
 			return true;
 		}
 
-		ApiResponse AppsController::OnPostApp(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
+		ApiResponse AppsController::OnPostApp(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 											  const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
 			if (request_body.isArray() == false)
 			{
-				return HttpError::CreateError(HttpStatusCode::BadRequest, "Request body must be an array");
+				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Request body must be an array");
 			}
 
 			auto orchestrator = ocst::Orchestrator::GetInstance();
@@ -112,23 +112,23 @@ namespace api
 					switch (result)
 					{
 						case ocst::Result::Failed:
-							error = HttpError::CreateError(HttpStatusCode::BadRequest, "Failed to create the application");
-							status_code.AddStatusCode(HttpStatusCode::BadRequest);
+							error = http::HttpError::CreateError(http::StatusCode::BadRequest, "Failed to create the application");
+							status_code.AddStatusCode(http::StatusCode::BadRequest);
 							break;
 
 						case ocst::Result::Succeeded:
-							status_code.AddStatusCode(HttpStatusCode::OK);
+							status_code.AddStatusCode(http::StatusCode::OK);
 							break;
 
 						case ocst::Result::Exists:
-							error = HttpError::CreateError(HttpStatusCode::Conflict, "The application already exists");
-							status_code.AddStatusCode(HttpStatusCode::Conflict);
+							error = http::HttpError::CreateError(http::StatusCode::Conflict, "The application already exists");
+							status_code.AddStatusCode(http::StatusCode::Conflict);
 							break;
 
 						case ocst::Result::NotExists:
 							// CreateApplication() never returns NotExists
-							error = HttpError::CreateError(HttpStatusCode::InternalServerError, "Unknown error occurred");
-							status_code.AddStatusCode(HttpStatusCode::InternalServerError);
+							error = http::HttpError::CreateError(http::StatusCode::InternalServerError, "Unknown error occurred");
+							status_code.AddStatusCode(http::StatusCode::InternalServerError);
 							OV_ASSERT2(false);
 							break;
 					}
@@ -144,8 +144,8 @@ namespace api
 					auto app_json = conv::JsonFromApplication(app);
 
 					Json::Value response;
-					response["statusCode"] = static_cast<int>(HttpStatusCode::OK);
-					response["message"] = StringFromHttpStatusCode(HttpStatusCode::OK);
+					response["statusCode"] = static_cast<int>(http::StatusCode::OK);
+					response["message"] = StringFromStatusCode(http::StatusCode::OK);
 					response["response"] = app_json;
 
 					response_value.append(std::move(response));
@@ -160,7 +160,7 @@ namespace api
 			return {status_code, std::move(response_value)};
 		}
 
-		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<HttpConnection> &client,
+		ApiResponse AppsController::OnGetAppList(const std::shared_ptr<http::svr::HttpConnection> &client,
 												 const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
 			Json::Value response(Json::ValueType::arrayValue);
@@ -177,7 +177,7 @@ namespace api
 			return std::move(response);
 		}
 
-		ApiResponse AppsController::OnGetApp(const std::shared_ptr<HttpConnection> &client,
+		ApiResponse AppsController::OnGetApp(const std::shared_ptr<http::svr::HttpConnection> &client,
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
@@ -214,13 +214,13 @@ namespace api
 			}
 		}
 
-		ApiResponse AppsController::OnPutApp(const std::shared_ptr<HttpConnection> &client, const Json::Value &request_body,
+		ApiResponse AppsController::OnPutApp(const std::shared_ptr<http::svr::HttpConnection> &client, const Json::Value &request_body,
 											 const std::shared_ptr<mon::HostMetrics> &vhost,
 											 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			if (request_body.isObject() == false)
 			{
-				return HttpError::CreateError(HttpStatusCode::BadRequest, "Request body must be an object");
+				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Request body must be an object");
 			}
 
 			// TODO(dimiden): Caution - Race condition may occur
@@ -237,17 +237,17 @@ namespace api
 			// Prevent to change the name/outputProfiles using this API
 			if (request_body.isMember("name"))
 			{
-				return HttpError::CreateError(HttpStatusCode::BadRequest, "Cannot change [name] using this API");
+				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Cannot change [name] using this API");
 			}
 
 			if (request_body.isMember("dynamic"))
 			{
-				return HttpError::CreateError(HttpStatusCode::BadRequest, "Cannot change [dynamic] using this API");
+				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Cannot change [dynamic] using this API");
 			}
 
 			if (request_body.isMember("outputProfiles"))
 			{
-				return HttpError::CreateError(HttpStatusCode::BadRequest, "Cannot change [outputProfiles] using this API");
+				return http::HttpError::CreateError(http::StatusCode::BadRequest, "Cannot change [outputProfiles] using this API");
 			}
 
 			// Copy request_body into app_json
@@ -260,7 +260,7 @@ namespace api
 			{
 				if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
 				{
-					return HttpError::CreateError(HttpStatusCode::Forbidden, "Could not delete the application: [%s/%s]",
+					return http::HttpError::CreateError(http::StatusCode::Forbidden, "Could not delete the application: [%s/%s]",
 												  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 				}
 
@@ -269,7 +269,7 @@ namespace api
 				switch (result)
 				{
 					case ocst::Result::Failed:
-						error = HttpError::CreateError(HttpStatusCode::BadRequest, "Failed to create the application");
+						error = http::HttpError::CreateError(http::StatusCode::BadRequest, "Failed to create the application");
 						break;
 
 					case ocst::Result::Succeeded:
@@ -277,12 +277,12 @@ namespace api
 						break;
 
 					case ocst::Result::Exists:
-						error = HttpError::CreateError(HttpStatusCode::Conflict, "The application already exists");
+						error = http::HttpError::CreateError(http::StatusCode::Conflict, "The application already exists");
 						break;
 
 					case ocst::Result::NotExists:
 						// CreateApplication() never returns NotExists
-						error = HttpError::CreateError(HttpStatusCode::InternalServerError, "Unknown error occurred");
+						error = http::HttpError::CreateError(http::StatusCode::InternalServerError, "Unknown error occurred");
 						OV_ASSERT2(false);
 						break;
 				}
@@ -298,19 +298,19 @@ namespace api
 			return error;
 		}
 
-		ApiResponse AppsController::OnDeleteApp(const std::shared_ptr<HttpConnection> &client,
+		ApiResponse AppsController::OnDeleteApp(const std::shared_ptr<http::svr::HttpConnection> &client,
 												const std::shared_ptr<mon::HostMetrics> &vhost,
 												const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			if (ocst::Orchestrator::GetInstance()->DeleteApplication(*app) == ocst::Result::Failed)
 			{
-				return HttpError::CreateError(HttpStatusCode::Forbidden, "Could not delete the application: [%s/%s]",
+				return http::HttpError::CreateError(http::StatusCode::Forbidden, "Could not delete the application: [%s/%s]",
 											  vhost->GetName().CStr(), app->GetName().GetAppName().CStr());
 			}
 
 			cfg::ConfigManager::GetInstance()->SaveCurrentConfig();
 
-			return HttpStatusCode::OK;
+			return http::StatusCode::OK;
 		}
 	}  // namespace v1
 }  // namespace api

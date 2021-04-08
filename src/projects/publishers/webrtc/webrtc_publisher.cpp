@@ -305,7 +305,7 @@ bool WebRtcPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Ap
  */
 
 // Called when receives request offer sdp from client
-std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,
+std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 																		  const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 																		  std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
 {
@@ -412,7 +412,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 }
 
 // Called when receives an answer sdp from client
-bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
+bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 											 const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 											 const std::shared_ptr<const SessionDescription> &offer_sdp,
 											 const std::shared_ptr<const SessionDescription> &peer_sdp)
@@ -541,7 +541,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<WebSocketClie
 	return true;
 }
 
-bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_client,
+bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 									const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 									const std::shared_ptr<const SessionDescription> &offer_sdp,
 									const std::shared_ptr<const SessionDescription> &peer_sdp)
@@ -569,7 +569,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_c
 	return true;
 }
 
-bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<WebSocketClient> &ws_client,
+bool WebRtcPublisher::OnIceCandidate(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 									 const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 									 const std::shared_ptr<RtcIceCandidate> &candidate,
 									 const ov::String &username_fragment)

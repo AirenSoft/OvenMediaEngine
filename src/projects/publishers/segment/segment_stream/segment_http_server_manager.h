@@ -10,11 +10,11 @@ public:
 	SegmentHttpServerManager();
 	~SegmentHttpServerManager();
 /*
-	std::share_ptr<HttpServer>&		GetHttpServer(int port);
-	void 							AddServer(int port, const std::share_ptr<HttpServer> &server);
+	std::share_ptr<http::svr::Server>&		GetHttpServer(int port);
+	void 							AddServer(int port, const std::share_ptr<http::svr::Server> &server);
 	void 							RemoveServer(int port);
 */
 private:
 	// Port Num : Server
-	//std::map<int, std::shared_ptr<HttpServer>> _http_server_map;
+	//std::map<int, std::shared_ptr<http::svr::Server>> _http_server_map;
 };

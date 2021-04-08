@@ -14,7 +14,7 @@
 #include "cmaf_packetizer.h"
 #include "cmaf_private.h"
 
-HttpConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpConnection> &client,
+http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 													   const SegmentStreamRequestInfo &request_info,
 													   SegmentType segment_type)
 {
@@ -54,10 +54,10 @@ HttpConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::shared_p
 			if (stream_info == nullptr)
 			{
 				// The stream has been deleted, but if it remains in the Worker queue, this code will run.
-				response->SetStatusCode(HttpStatusCode::NotFound);
+				response->SetStatusCode(http::StatusCode::NotFound);
 				_http_chunk_list.clear();
 				
-				return HttpConnectionPolicy::Closed;
+				return http::svr::ConnectionPolicy::Closed;
 			}
 
 			client->GetRequest()->SetExtra(stream_info);
@@ -80,7 +80,7 @@ HttpConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::shared_p
 
 			chunk_item->second->client_list.push_back(client);
 
-			return HttpConnectionPolicy::KeepAlive;
+			return http::svr::ConnectionPolicy::KeepAlive;
 		}
 	}
 

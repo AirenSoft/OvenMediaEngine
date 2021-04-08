@@ -120,7 +120,9 @@ namespace ov
 		virtual ~Tls();
 
 		// method: DTLS_server_method(), TLS_server_method()
-		bool Initialize(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback);
+		bool InitializeServerTls(const SSL_METHOD *method, const std::shared_ptr<const Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const ov::String &cipher_list, TlsCallback callback);
+		// method: TLS_client_method()
+		bool InitializeClientTls(const SSL_METHOD *method, TlsCallback callback);
 		bool Uninitialize();
 
 		// @return Returns SSL_ERROR_NONE on success

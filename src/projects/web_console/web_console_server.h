@@ -37,5 +37,5 @@ protected:
 	const info::Host &_host_info;
 	cfg::vhost::app::wc::WebConsole _web_console;
 
-	std::shared_ptr<HttpServer> _http_server;
+	std::shared_ptr<http::svr::HttpServer> _http_server;
 };

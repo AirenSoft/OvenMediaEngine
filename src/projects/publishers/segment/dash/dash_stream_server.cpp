@@ -15,7 +15,7 @@
 #include "dash_define.h"
 #include "dash_private.h"
 
-HttpConnectionPolicy DashStreamServer::ProcessStreamRequest(const std::shared_ptr<HttpConnection> &client,
+http::svr::ConnectionPolicy DashStreamServer::ProcessStreamRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 													  const SegmentStreamRequestInfo &request_info,
 													  const ov::String &file_ext)
 {
@@ -30,13 +30,13 @@ HttpConnectionPolicy DashStreamServer::ProcessStreamRequest(const std::shared_pt
 		return ProcessSegmentRequest(client, request_info, SegmentType::M4S);
 	}
 
-	response->SetStatusCode(HttpStatusCode::NotFound);
+	response->SetStatusCode(http::StatusCode::NotFound);
 	response->Response();
 
-	return HttpConnectionPolicy::Closed;
+	return http::svr::ConnectionPolicy::Closed;
 }
 
-HttpConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<HttpConnection> &client,
+http::svr::ConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 														const SegmentStreamRequestInfo &request_info,
 														PlayListType play_list_type)
 {
@@ -52,16 +52,16 @@ HttpConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::shared_
 	if ((item == _observers.end()))
 	{
 		logtd("Could not find a %s playlist for [%s/%s], %s", GetPublisherName(), request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), request_info.file_name.CStr());
-		response->SetStatusCode(HttpStatusCode::NotFound);
+		response->SetStatusCode(http::StatusCode::NotFound);
 		response->Response();
 
-		return HttpConnectionPolicy::Closed;
+		return http::svr::ConnectionPolicy::Closed;
 	}
 
-	if (response->GetStatusCode() != HttpStatusCode::OK || play_list.IsEmpty())
+	if (response->GetStatusCode() != http::StatusCode::OK || play_list.IsEmpty())
 	{
 		response->Response();
-		return HttpConnectionPolicy::Closed;
+		return http::svr::ConnectionPolicy::Closed;
 	}
 
 	// Set HTTP header
@@ -75,10 +75,10 @@ HttpConnectionPolicy DashStreamServer::ProcessPlayListRequest(const std::shared_
 
 	IncreaseBytesOut(client, sent_bytes);
 
-	return HttpConnectionPolicy::Closed;
+	return http::svr::ConnectionPolicy::Closed;
 }
 
-HttpConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<HttpConnection> &client,
+http::svr::ConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 													   const SegmentStreamRequestInfo &request_info,
 													   SegmentType segment_type)
 {
@@ -94,10 +94,10 @@ HttpConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::shared_p
 	if (item == _observers.end())
 	{
 		logtd("Could not find a %s segment for [%s/%s], %s", GetPublisherName(), request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), request_info.file_name.CStr());
-		response->SetStatusCode(HttpStatusCode::NotFound);
+		response->SetStatusCode(http::StatusCode::NotFound);
 		response->Response();
 
-		return HttpConnectionPolicy::Closed;
+		return http::svr::ConnectionPolicy::Closed;
 	}
 
 	// Set HTTP header
@@ -107,5 +107,5 @@ HttpConnectionPolicy DashStreamServer::ProcessSegmentRequest(const std::shared_p
 
 	IncreaseBytesOut(client, sent_bytes);
 
-	return HttpConnectionPolicy::Closed;
+	return http::svr::ConnectionPolicy::Closed;
 }

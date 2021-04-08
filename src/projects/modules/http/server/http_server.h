@@ -29,68 +29,74 @@ namespace ocst
 	struct VirtualHost;
 }
 
-class HttpServer : protected PhysicalPortObserver, public ov::EnableSharedFromThis<HttpServer>
+namespace http
 {
-protected:
-	friend class HttpServerManager;
-
-public:
-	using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpConnection>>;
-	using ClientIterator = std::function<bool(const std::shared_ptr<HttpConnection> &client)>;
-
-	HttpServer(const char *server_name);
-	~HttpServer() override;
-
-	virtual bool Start(const ov::SocketAddress &address, int worker_count);
-	virtual bool Stop();
-
-	bool IsRunning() const;
-
-	bool AddInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor);
-	bool RemoveInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor);
-
-	// If the iterator returns true, FindClient() will return the client
-	ov::Socket *FindClient(ClientIterator iterator);
-
-	// If the iterator returns true, the client will be disconnected
-	bool DisconnectIf(ClientIterator iterator);
-
-protected:
-	// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨
-	ssize_t TryParseHeader(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data);
-
-	std::shared_ptr<HttpConnection> FindClient(const std::shared_ptr<ov::Socket> &remote);
-
-	std::shared_ptr<HttpConnection> ProcessConnect(const std::shared_ptr<ov::Socket> &remote);
-	void ProcessData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data);
-
-	//--------------------------------------------------------------------
-	// Implementation of PhysicalPortObserver
-	//--------------------------------------------------------------------
-	void OnConnected(const std::shared_ptr<ov::Socket> &remote) override;
-	void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
-	void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
-
-	std::shared_ptr<PhysicalPort> GetPhysicalPort()
+	namespace svr
 	{
-		return _physical_port;
-	}
+		class HttpServer : protected PhysicalPortObserver, public ov::EnableSharedFromThis<HttpServer>
+		{
+		protected:
+			friend class HttpServerManager;
 
-	ov::String _server_name;
+		public:
+			using ClientList = std::map<ov::Socket *, std::shared_ptr<HttpConnection>>;
+			using ClientIterator = std::function<bool(const std::shared_ptr<HttpConnection> &client)>;
 
-	// HttpServer와 연결된 physical port
-	mutable std::mutex _physical_port_mutex;
-	std::shared_ptr<PhysicalPort> _physical_port = nullptr;
+			HttpServer(const char *server_name);
+			~HttpServer() override;
 
-	std::shared_mutex _client_list_mutex;
-	ClientList _connection_list;
+			virtual bool Start(const ov::SocketAddress &address, int worker_count);
+			virtual bool Stop();
 
-	std::shared_mutex _interceptor_list_mutex;
-	std::vector<std::shared_ptr<HttpRequestInterceptor>> _interceptor_list;
-	std::shared_ptr<HttpRequestInterceptor> _default_interceptor = std::make_shared<HttpDefaultInterceptor>();
+			bool IsRunning() const;
 
-	std::vector<std::shared_ptr<ocst::VirtualHost>> _virtual_host_list;
+			bool AddInterceptor(const std::shared_ptr<RequestInterceptor> &interceptor);
+			bool RemoveInterceptor(const std::shared_ptr<RequestInterceptor> &interceptor);
 
-private:
-	bool IsWebSocketRequest(const std::shared_ptr<const HttpRequest> &request);
-};
+			// If the iterator returns true, FindClient() will return the client
+			ov::Socket *FindClient(ClientIterator iterator);
+
+			// If the iterator returns true, the client will be disconnected
+			bool DisconnectIf(ClientIterator iterator);
+
+		protected:
+			// @return 파싱이 성공적으로 되었다면 true를, 데이터가 더 필요하거나 오류가 발생하였다면 false이 반환됨
+			ssize_t TryParseHeader(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data);
+
+			std::shared_ptr<HttpConnection> FindClient(const std::shared_ptr<ov::Socket> &remote);
+
+			std::shared_ptr<HttpConnection> ProcessConnect(const std::shared_ptr<ov::Socket> &remote);
+			void ProcessData(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data);
+
+			//--------------------------------------------------------------------
+			// Implementation of PhysicalPortObserver
+			//--------------------------------------------------------------------
+			void OnConnected(const std::shared_ptr<ov::Socket> &remote) override;
+			void OnDataReceived(const std::shared_ptr<ov::Socket> &remote, const ov::SocketAddress &address, const std::shared_ptr<const ov::Data> &data) override;
+			void OnDisconnected(const std::shared_ptr<ov::Socket> &remote, PhysicalPortDisconnectReason reason, const std::shared_ptr<const ov::Error> &error) override;
+
+			std::shared_ptr<PhysicalPort> GetPhysicalPort()
+			{
+				return _physical_port;
+			}
+
+			ov::String _server_name;
+
+			// Server와 연결된 physical port
+			mutable std::mutex _physical_port_mutex;
+			std::shared_ptr<PhysicalPort> _physical_port = nullptr;
+
+			std::shared_mutex _client_list_mutex;
+			ClientList _connection_list;
+
+			std::shared_mutex _interceptor_list_mutex;
+			std::vector<std::shared_ptr<RequestInterceptor>> _interceptor_list;
+			std::shared_ptr<RequestInterceptor> _default_interceptor = std::make_shared<DefaultInterceptor>();
+
+			std::vector<std::shared_ptr<ocst::VirtualHost>> _virtual_host_list;
+
+		private:
+			bool IsWebSocketRequest(const std::shared_ptr<const HttpRequest> &request);
+		};
+	}  // namespace svr
+}  // namespace http

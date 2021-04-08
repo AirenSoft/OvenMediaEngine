@@ -181,7 +181,7 @@ namespace pvd
 	// Signalling
 	//------------------------
 
-	std::shared_ptr<const SessionDescription> WebRTCProvider::OnRequestOffer(const std::shared_ptr<WebSocketClient> &ws_client,
+	std::shared_ptr<const SessionDescription> WebRTCProvider::OnRequestOffer(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 													const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 													std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
 	{
@@ -251,7 +251,7 @@ namespace pvd
 		return session_description;
 	}
 
-	bool WebRTCProvider::OnAddRemoteDescription(const std::shared_ptr<WebSocketClient> &ws_client,
+	bool WebRTCProvider::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 								const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 								const std::shared_ptr<const SessionDescription> &offer_sdp,
 								const std::shared_ptr<const SessionDescription> &peer_sdp)
@@ -331,7 +331,7 @@ namespace pvd
 		return true;
 	}
 
-	bool WebRTCProvider::OnIceCandidate(const std::shared_ptr<WebSocketClient> &ws_client,
+	bool WebRTCProvider::OnIceCandidate(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 						const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 						const std::shared_ptr<RtcIceCandidate> &candidate,
 						const ov::String &username_fragment)
@@ -339,7 +339,7 @@ namespace pvd
 		return true;
 	}
 
-	bool WebRTCProvider::OnStopCommand(const std::shared_ptr<WebSocketClient> &ws_client,
+	bool WebRTCProvider::OnStopCommand(const std::shared_ptr<http::svr::ws::Client> &ws_client,
 					const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 					const std::shared_ptr<const SessionDescription> &offer_sdp,
 					const std::shared_ptr<const SessionDescription> &peer_sdp)

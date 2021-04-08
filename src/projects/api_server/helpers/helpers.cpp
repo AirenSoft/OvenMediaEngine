@@ -105,20 +105,20 @@ namespace api
 		return nullptr;
 	}
 
-	void MultipleStatus::AddStatusCode(HttpStatusCode status_code)
+	void MultipleStatus::AddStatusCode(http::StatusCode status_code)
 	{
 		if (_count == 0)
 		{
 			_last_status_code = status_code;
-			_has_ok = (status_code == HttpStatusCode::OK);
+			_has_ok = (status_code == http::StatusCode::OK);
 		}
 		else
 		{
-			_has_ok = _has_ok || (status_code == HttpStatusCode::OK);
+			_has_ok = _has_ok || (status_code == http::StatusCode::OK);
 
 			if (_last_status_code != status_code)
 			{
-				_last_status_code = HttpStatusCode::MultiStatus;
+				_last_status_code = http::StatusCode::MultiStatus;
 			}
 			else
 			{
@@ -131,12 +131,12 @@ namespace api
 
 	void MultipleStatus::AddStatusCode(const std::shared_ptr<const ov::Error> &error)
 	{
-		HttpStatusCode error_status_code = static_cast<HttpStatusCode>(error->GetCode());
+		http::StatusCode error_status_code = static_cast<http::StatusCode>(error->GetCode());
 
-		AddStatusCode(IsValidHttpStatusCode(error_status_code) ? error_status_code : HttpStatusCode::InternalServerError);
+		AddStatusCode(IsValidStatusCode(error_status_code) ? error_status_code : http::StatusCode::InternalServerError);
 	}
 
-	HttpStatusCode MultipleStatus::GetStatusCode() const
+	http::StatusCode MultipleStatus::GetStatusCode() const
 	{
 		return _last_status_code;
 	}

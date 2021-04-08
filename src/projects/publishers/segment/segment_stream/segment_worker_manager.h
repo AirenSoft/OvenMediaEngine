@@ -16,19 +16,19 @@
 #include <string>
 struct SegmentWorkInfo
 {
-	SegmentWorkInfo(const std::shared_ptr<HttpConnection> &client, const ov::String &request_target, const ov::String &origin_url)
+	SegmentWorkInfo(const std::shared_ptr<http::svr::HttpConnection> &client, const ov::String &request_target, const ov::String &origin_url)
 		: client(client),
 		  request_target(request_target),
 		  origin_url(origin_url)
 	{
 	}
 
-	std::shared_ptr<HttpConnection> client = nullptr;
+	std::shared_ptr<http::svr::HttpConnection> client = nullptr;
 	ov::String request_target;
 	ov::String origin_url;
 };
 
-using SegmentProcessHandler = std::function<bool(const std::shared_ptr<HttpConnection> &client,
+using SegmentProcessHandler = std::function<bool(const std::shared_ptr<http::svr::HttpConnection> &client,
 												 const ov::String &request_target,
 												 const ov::String &origin_url)>;
 //====================================================================================================
@@ -72,7 +72,7 @@ public:
 public:
 	bool Start(int worker_count, const SegmentProcessHandler &process_handler);
 	bool Stop();
-	bool AddWork(const std::shared_ptr<HttpConnection> &response,
+	bool AddWork(const std::shared_ptr<http::svr::HttpConnection> &response,
 				 const ov::String &request_target,
 				 const ov::String &origin_url);
 

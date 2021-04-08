@@ -235,7 +235,7 @@ public:
 		return _host_peer;
 	}
 
-	std::shared_ptr<WebSocketClient> GetResponse()
+	std::shared_ptr<http::svr::ws::Client> GetResponse()
 	{
 		return _ws_client;
 	}
@@ -244,7 +244,7 @@ public:
 
 	ov::String ToString() const;
 
-	static std::shared_ptr<RtcPeerInfo> FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<WebSocketClient> &ws_client);
+	static std::shared_ptr<RtcPeerInfo> FromUserAgent(peer_id_t id, const ov::String &user_agent, const std::shared_ptr<http::svr::ws::Client> &ws_client);
 
 protected:
 	RtcPeerInfo() = default;
@@ -264,7 +264,7 @@ protected:
 	// host peer info (client only)
 	std::shared_ptr<RtcPeerInfo> _host_peer;
 
-	std::shared_ptr<WebSocketClient> _ws_client;
+	std::shared_ptr<http::svr::ws::Client> _ws_client;
 
 	std::map<peer_id_t, std::shared_ptr<RtcPeerInfo>> _client_list;
 };
