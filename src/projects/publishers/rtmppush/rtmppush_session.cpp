@@ -32,12 +32,15 @@ RtmpPushSession::~RtmpPushSession()
 
 bool RtmpPushSession::Start()
 {
+
 	logtd("RtmpPushSession(%d) has started.", GetId());
 
 	GetPush()->UpdatePushStartTime();
 	GetPush()->SetState(info::Push::PushState::Pushing);
 	
 	ov::String rtmp_url = ov::String::FormatString("%s/%s", GetPush()->GetUrl().CStr(), GetPush()->GetStreamKey().CStr());
+
+	std::lock_guard<std::shared_mutex> lock(_mutex);
 
 	_writer = RtmpWriter::Create();
 	if(_writer == nullptr)
@@ -101,7 +104,8 @@ bool RtmpPushSession::Start()
 
 bool RtmpPushSession::Stop()
 {
-	
+	std::lock_guard<std::shared_mutex> lock(_mutex);
+
 	if(_writer != nullptr)
 	{
 		GetPush()->SetState(info::Push::PushState::Stopping);
@@ -138,6 +142,8 @@ bool RtmpPushSession::SendOutgoingData(const std::any &packet)
 		return false;
     }
 
+	std::lock_guard<std::shared_mutex> lock(_mutex);
+
 	if(_writer != nullptr)
     {
 	  	bool ret = _writer->PutData(
@@ -150,7 +156,9 @@ bool RtmpPushSession::SendOutgoingData(const std::any &packet)
 		if(ret == false)
 		{
 			logte("Failed to add packet");
+
 			SetState(SessionState::Error);
+			
 			_writer->Stop();
 			_writer = nullptr;
 
