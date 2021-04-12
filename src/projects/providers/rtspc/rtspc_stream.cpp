@@ -184,7 +184,7 @@ namespace pvd
 			return false;
 		}
 
-		logti("Requested url[%d] : %s", strlen(_curr_url->Source().CStr()), _curr_url->Source().CStr() );
+		logtd("Requested url[%d] : %s", strlen(_curr_url->Source().CStr()), _curr_url->Source().CStr() );
 
 		auto scheme = _curr_url->Scheme();
 		if(scheme.UpperCaseString() != "RTSP")
@@ -264,6 +264,9 @@ namespace pvd
 			return false;
 		}
 
+
+		logtd("Response Describe : %s", reply->DumpHeader().CStr());
+
 		// Content-Base
 		auto content_base_field = reply->GetHeaderField(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::ContentBase));
 		if(content_base_field != nullptr)
@@ -275,16 +278,15 @@ namespace pvd
 		auto session_field = reply->GetHeaderFieldAs<RtspHeaderSessionField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Session));
 		if(session_field == nullptr)
 		{
-			_state = State::ERROR;
-			logte("There is no Session field in the header of describe reply. Url(%s) CSeq(%d)", _curr_url->ToUrlString().CStr(), describe->GetCSeq());
-			return false;
+			_rtsp_session_id = 0;
 		}
-
-		// TODO(Getroot) : Parse session
-		// Session  = "Session" ":" session-id [ ";" "timeout" "=" delta-seconds ]
-		_rtsp_session_id = session_field->GetSessionId();
-		// timeout
-		[[maybe_unused]] auto timeout_delta_seconds = session_field->GetTimeoutDeltaSeconds();
+		else
+		{
+			// Session  = "Session" ":" session-id [ ";" "timeout" "=" delta-seconds ]
+			_rtsp_session_id = session_field->GetSessionId();
+			// timeout
+			[[maybe_unused]] auto timeout_delta_seconds = session_field->GetTimeoutDeltaSeconds();
+		}
 
 		if(reply->GetBody() == nullptr)
 		{
@@ -301,6 +303,8 @@ namespace pvd
 			logte("Parsing of SDP received from rtsp url (%s)failed. ", _curr_url->ToUrlString().CStr());
 			return false;
 		}
+
+		logtd("SDP : %s\n", sdp.ToString().CStr());
 
 		_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr());
 
@@ -345,6 +349,7 @@ namespace pvd
 				if(codec == PayloadAttr::SupportCodec::H264)
 				{
 					video_track->SetCodecId(cmn::MediaCodecId::H264);
+					_h264_extradata_nalu = first_payload->GetH264ExtraDataAsNalu();
 				}
 				else if(codec == PayloadAttr::SupportCodec::VP8)
 				{
@@ -434,6 +439,8 @@ namespace pvd
 				return false;
 			}
 
+			logtd("Request SETUP : %s", setup->DumpHeader().CStr());
+
 			auto reply = ReceiveResponse(setup->GetCSeq(), 3000);
 			if(reply == nullptr)
 			{
@@ -447,6 +454,22 @@ namespace pvd
 				logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
 				return false;
 			}
+
+			// Session
+			auto session_field = reply->GetHeaderFieldAs<RtspHeaderSessionField>(RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::Session));
+			if(session_field == nullptr)
+			{
+				_rtsp_session_id = 0;
+			}
+			else
+			{
+				// Session  = "Session" ":" session-id [ ";" "timeout" "=" delta-seconds ]
+				_rtsp_session_id = session_field->GetSessionId();
+				// timeout
+				[[maybe_unused]] auto timeout_delta_seconds = session_field->GetTimeoutDeltaSeconds();
+			}
+
+			logtd("Response SETUP : %s", reply->DumpHeader().CStr());
 		}
 
 		return true;
@@ -459,6 +482,9 @@ namespace pvd
 			return false;
 		}
 
+		// Send SPS/PPS if stream is H264
+		SendSequenceHeaderIfNeeded();
+
 		auto play = std::make_shared<RtspMessage>(RtspMethod::PLAY, GetNextCSeq(), _curr_url->ToUrlString(true));
 
 		play->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
@@ -470,6 +496,8 @@ namespace pvd
 			logte("Could not request DESCIBE to RTSP server (%s)", _curr_url->ToUrlString().CStr());
 			return false;
 		}
+
+		logtd("Request PLAY : %s", play->DumpHeader().CStr());
 
 		auto reply = ReceiveResponse(play->GetCSeq(), 3000);
 		
@@ -485,6 +513,8 @@ namespace pvd
 			logte("Rtsp server(%s) rejected the describe request : %d(%s)", _curr_url->ToUrlString().CStr(), reply->GetStatusCode(), reply->GetReasonPhrase().CStr());
 			return false;
 		}
+
+		logtd("Response PLAY : %s", reply->DumpHeader().CStr());
 
 		_state = State::PLAYING;
 
@@ -525,6 +555,29 @@ namespace pvd
 		}
 
 		_state = State::STOPPING;
+
+		return true;
+	}
+
+	bool RtspcStream::SendSequenceHeaderIfNeeded()
+	{
+		for(const auto &track_it : GetTracks())
+		{
+			auto track = track_it.second;
+
+			if(track->GetCodecId() == cmn::MediaCodecId::H264 && _h264_extradata_nalu != nullptr)
+			{
+				auto media_packet = std::make_shared<MediaPacket>(track->GetMediaType(), 
+					track->GetId(), 
+					_h264_extradata_nalu,
+					0, 
+					0, 
+					cmn::BitstreamFormat::H264_ANNEXB, 
+					cmn::PacketType::NALU);
+
+				SendFrame(media_packet);
+			}
+		}
 
 		return true;
 	}

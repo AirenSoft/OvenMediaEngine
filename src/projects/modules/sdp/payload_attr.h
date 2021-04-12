@@ -70,6 +70,33 @@ public:
 	void SetFmtp(const ov::String &fmtp);
 	ov::String GetFmtp() const;
 
+	std::shared_ptr<ov::Data> GetH264ExtraDataAsNalu() const
+	{
+		if(GetH264SPS() == nullptr || GetH264PPS() == nullptr)
+		{
+			return nullptr;
+		}
+
+		auto data = std::make_shared<ov::Data>();
+		ov::ByteStream stream(data);
+
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)1);
+		stream.Write(GetH264SPS());
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)0);
+		stream.WriteBE((uint8_t)1);
+		stream.Write(GetH264PPS());
+
+		return data;
+	}
+
+	std::shared_ptr<ov::Data> GetH264SPS() const {return _h264_sps_bytes;}
+	std::shared_ptr<ov::Data> GetH264PPS() const {return _h264_pps_bytes;}
+
 private:
 	uint8_t _id;
 	SupportCodec _codec;
@@ -82,4 +109,7 @@ private:
 	bool _rtcpfb_support_flag[(int)(RtcpFbType::NumberOfRtcpFbType)];
 
 	ov::String _fmtp;
+
+	std::shared_ptr<ov::Data>	_h264_sps_bytes;
+	std::shared_ptr<ov::Data>	_h264_pps_bytes;
 };

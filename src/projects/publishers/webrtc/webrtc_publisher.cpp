@@ -383,7 +383,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		return nullptr;
 	}
 
-	if(stream->WaitUntilStart(3000) == false)
+	if(stream->WaitUntilStart(10000) == false)
 	{
 		logtw("(%s/%s) stream has not started.", vhost_app_name.CStr(), stream_name.CStr());
 		return nullptr;

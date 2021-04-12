@@ -104,6 +104,8 @@ namespace pvd
 
 		int32_t GetNextCSeq();
 
+		bool SendSequenceHeaderIfNeeded();
+
 		bool SendRequestMessage(const std::shared_ptr<RtspMessage> &message);
 		std::shared_ptr<RtspMessage> ReceiveResponse(uint32_t cseq, uint64_t timeout_ms);
 
@@ -140,6 +142,7 @@ namespace pvd
 		uint8_t _video_rtcp_channel_id = 0;
 		ov::String _video_control;
 		ov::String _video_control_url;
+		std::shared_ptr<ov::Data> _h264_extradata_nalu = nullptr;
 
 		uint8_t	_audio_payload_type = 0;
 		uint8_t _audio_rtp_channel_id = 0;
