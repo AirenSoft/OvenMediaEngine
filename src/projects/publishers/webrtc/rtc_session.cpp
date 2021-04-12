@@ -15,7 +15,7 @@ std::shared_ptr<RtcSession> RtcSession::Create(const std::shared_ptr<WebRtcPubli
                                                const std::shared_ptr<const SessionDescription> &offer_sdp,
                                                const std::shared_ptr<const SessionDescription> &peer_sdp,
                                                const std::shared_ptr<IcePort> &ice_port,
-											   const std::shared_ptr<WebSocketClient> &ws_client)
+											   const std::shared_ptr<http::svr::ws::Client> &ws_client)
 {
 	// Session Id of the offer sdp is unique value
 	auto session_info = info::Session(*std::static_pointer_cast<info::Stream>(stream), offer_sdp->GetSessionId());
@@ -34,7 +34,7 @@ RtcSession::RtcSession(const info::Session &session_info,
 					   const std::shared_ptr<const SessionDescription> &offer_sdp,
 					   const std::shared_ptr<const SessionDescription> &peer_sdp,
 					   const std::shared_ptr<IcePort> &ice_port,
-					   const std::shared_ptr<WebSocketClient> &ws_client)
+					   const std::shared_ptr<http::svr::ws::Client> &ws_client)
 	: Session(session_info, application, stream), Node(NodeType::Edge)
 {
 	_publisher = publisher;
@@ -203,7 +203,7 @@ const std::shared_ptr<const SessionDescription>& RtcSession::GetPeerSDP() const
 	return _peer_sdp;
 }
 
-const std::shared_ptr<WebSocketClient>& RtcSession::GetWSClient()
+const std::shared_ptr<http::svr::ws::Client>& RtcSession::GetWSClient()
 {
 	return _ws_client;
 }

@@ -22,17 +22,29 @@ namespace ov
 			// TLS_server_method()
 			TlsServerMethod,
 			// DTLS_server_method()
-			DtlsServerMethod
+			DtlsServerMethod,
+
+			// TLS_client_method()
+			TlsClientMethod
 		};
 
 		enum class State
 		{
 			Invalid,
+
+			// For TLS/DTLS server
 			WaitingForAccept,
-			Accepted
+			Accepted,
+
+			// For TLS/DTLS client
+			Connected,
 		};
 
+		// For TLS/DTLS server
 		TlsData(Method method, const std::shared_ptr<Certificate> &certificate, const std::shared_ptr<Certificate> &chain_certificate, const String &cipher_list);
+		// For TLS/DTLS client
+		TlsData(Method method);
+		
 		~TlsData();
 
 		State GetState() const
@@ -64,6 +76,7 @@ namespace ov
 		ssize_t OnTlsWrite(Tls *tls, const void *data, size_t length);
 
 		State _state = State::Invalid;
+		Method _method;
 
 		Tls _tls;
 		std::mutex _data_mutex;

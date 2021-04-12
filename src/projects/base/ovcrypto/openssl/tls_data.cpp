@@ -43,6 +43,7 @@ namespace ov
 				.verify_callback = nullptr};
 
 		const SSL_METHOD *tls_method = nullptr;
+		std::shared_ptr<ov::Error> error;
 
 		switch (method)
 		{
@@ -53,14 +54,97 @@ namespace ov
 			case Method::DtlsServerMethod:
 				tls_method = DTLS_server_method();
 				break;
+
+			case Method::TlsClientMethod:
+				error = ov::Error::CreateError("OpenSSL", "Not supported method: %d", static_cast<int>(method));
+				break;
 		}
 
-		if (_tls.Initialize(tls_method, certificate, chain_certificate, cipher_list, callback) == false)
+		if (error == nullptr)
 		{
-			logte("Could not initialize TLS: %s", ov::Error::CreateErrorFromOpenSsl()->ToString().CStr());
+			if (_tls.InitializeServerTls(tls_method, certificate, chain_certificate, cipher_list, callback))
+			{
+				_method = method;
+				_state = State::WaitingForAccept;
+			}
+			else
+			{
+				error = ov::Error::CreateErrorFromOpenSsl();
+			}
 		}
 
-		_state = State::WaitingForAccept;
+		if (error != nullptr)
+		{
+			logte("Could not initialize TLS: %s", error->ToString().CStr());
+			_state = State::Invalid;
+		}
+	}
+
+	// For TLS/DTLS client
+	TlsData::TlsData(Method method)
+	{
+		ov::TlsCallback callback =
+			{
+				.create_callback = [](ov::Tls *tls, SSL_CTX *context) -> bool {
+					return true;
+				},
+
+				.read_callback = std::bind(&TlsData::OnTlsRead, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+				.write_callback = std::bind(&TlsData::OnTlsWrite, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
+				.destroy_callback = nullptr,
+				.ctrl_callback = [](ov::Tls *tls, int cmd, long num, void *arg) -> long {
+					logtd("[TLS] Ctrl: %d, %ld, %p", cmd, num, arg);
+
+					switch (cmd)
+					{
+						case BIO_CTRL_RESET:
+						case BIO_CTRL_WPENDING:
+						case BIO_CTRL_PENDING:
+							return 0;
+
+						case BIO_CTRL_FLUSH:
+							return 1;
+
+						default:
+							return 0;
+					}
+				},
+				.verify_callback = nullptr};
+
+		const SSL_METHOD *tls_method = nullptr;
+		std::shared_ptr<ov::Error> error;
+
+		switch (method)
+		{
+			case Method::TlsServerMethod:
+				[[fallthrough]];
+			case Method::DtlsServerMethod:
+				error = ov::Error::CreateError("OpenSSL", "Not supported method: %d", static_cast<int>(method));
+				break;
+
+			case Method::TlsClientMethod:
+				tls_method = TLS_client_method();
+				break;
+		}
+
+		if (error == nullptr)
+		{
+			if (_tls.InitializeClientTls(tls_method, callback))
+			{
+				_method = method;
+				_state = State::WaitingForAccept;
+			}
+			else
+			{
+				error = ov::Error::CreateErrorFromOpenSsl();
+			}
+		}
+
+		if (error != nullptr)
+		{
+			logte("Could not initialize TLS: %s", error->ToString().CStr());
+			_state = State::Invalid;
+		}
 	}
 
 	TlsData::~TlsData()

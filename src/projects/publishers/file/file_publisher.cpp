@@ -210,12 +210,34 @@ void FilePublisher::SessionController()
 					SplitSession(session);
 				}
 			}
+			// When setting schedule parameter, perform segmentation recording.
+			else if (session->GetRecord()->GetSchedule().IsEmpty() != true)
+			{
+				if (session->GetRecord()->IsNextScheduleTimeEmpty() == true)
+				{
+					if (session->GetRecord()->UpdateNextScheduleTime() == false)
+					{
+						userdata->SetEnable(false);
+						logte("Failed to update next schedule time. reqeuset to stop recording.");
+					}
+				}
+				else if (session->GetRecord()->GetNextScheduleTime() <= std::chrono::system_clock::now())
+				{
+					SplitSession(session);
+					if (session->GetRecord()->UpdateNextScheduleTime() == false)
+					{
+						userdata->SetEnable(false);
+						logte("Failed to update next schedule time. reqeuset to stop recording.");
+					}
+				}
+			}
 		}
 		else
 		{
 			userdata->SetState(info::Record::RecordState::Ready);
 		}
 
+		// Garbage collector of removed userdata sets
 		if (userdata->GetRemove() == true)
 		{
 			logtd("Remove userdata of file publiser. id(%s)", userdata->GetId().CStr());
@@ -253,7 +275,7 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 		return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
 	}
 
-	// Validation of duplicate parameters
+	// Validation check of duplicate parameters
 	if (record->GetSchedule().IsEmpty() == false && record->GetInterval() > 0)
 	{
 		ov::String error_message = "[Interval] and [Schedule] cannot be used at the same time";
@@ -261,7 +283,7 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 		return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
 	}
 
-	// Validation of schedule Parameter
+	// Validation check of schedule Parameter
 	if (record->GetSchedule().IsEmpty() == false)
 	{
 		ov::String pattern = R"(^(\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\*\/([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])) (\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\*\/([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])) (\*|([0-9]|1[0-9]|2[0-3])|\*\/([0-9]|1[0-9]|2[0-3]))$)";
@@ -274,67 +296,13 @@ std::shared_ptr<ov::Error> FilePublisher::RecordStart(const info::VHostAppName &
 			return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
 		}
 
+		// Just validation for schedule pattren
 		auto match_result = regex.Matches(record->GetSchedule().CStr());
 		if (match_result.GetError() != nullptr)
 		{
 			ov::String error_message = "Invalid [schedule] parameter";
 			return ov::Error::CreateError(FilePublisherStatusCode::FailureInvalidParameter, error_message);
 		}
-
-		ov::String group_full = "";
-		ov::String group_s1 = "";
-		ov::String group_s2 = "";
-		ov::String group_s3 = "";
-		ov::String group_m1 = "";
-		ov::String group_m2 = "";
-		ov::String group_m3 = "";
-		ov::String group_h1 = "";
-		ov::String group_h2 = "";
-		ov::String group_h3 = "";
-
-		auto group_list = match_result.GetGroupList();
-		for (size_t i = 0; i < 10; i++)
-		{
-			ov::String group = (i < group_list.size()) ? std::string(group_list[i]).c_str() : "";
-			switch (i)
-			{
-				case 0:
-					group_full = group;
-					break;
-				case 1:
-					group_s1 = group;
-					break;
-				case 2:
-					group_s2 = group;
-					break;
-				case 3:
-					group_s3 = group;
-					break;
-				case 4:
-					group_m1 = group;
-					break;
-				case 5:
-					group_m2 = group;
-					break;
-				case 6:
-					group_m3 = group;
-					break;
-				case 7:
-					group_h1 = group;
-					break;
-				case 8:
-					group_h2 = group;
-					break;
-				case 9:
-					group_h3 = group;
-					break;
-			}
-		}
-		logtd("[ %s | %s | %s | %s | %s | %s | %s | %s | %s | %s ]",
-			  group_full.CStr(),
-			  group_s1.CStr(), group_s2.CStr(), group_s3.CStr(),
-			  group_m1.CStr(), group_m2.CStr(), group_m3.CStr(),
-			  group_h1.CStr(), group_h2.CStr(), group_h3.CStr());
 	}
 
 	// Checking for the dupilicate id

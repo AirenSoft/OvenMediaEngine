@@ -10,7 +10,7 @@
 #include "dash_define.h"
 #include "dash_private.h"
 
-bool DashInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client)
+bool DashInterceptor::IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpConnection> &client)
 {
 	if(SegmentStreamInterceptor::IsInterceptorForRequest(client) == false)
 	{
@@ -20,7 +20,7 @@ bool DashInterceptor::IsInterceptorForRequest(const std::shared_ptr<const HttpCo
 	const auto request = client->GetRequest();
 
 	// Temporary code to accept HTTP 1.0
-	if ((request->GetMethod() != HttpMethod::Get) || (request->GetHttpVersionAsNumber() < 1.0))
+	if ((request->GetMethod() != http::Method::Get) || (request->GetHttpVersionAsNumber() < 1.0))
 	{
 		return false;
 	}

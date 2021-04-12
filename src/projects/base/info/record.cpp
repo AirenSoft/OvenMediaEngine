@@ -1,5 +1,6 @@
 #include "record.h"
 
+#include <base/ovlibrary/cron.h>
 #include <base/ovlibrary/ovlibrary.h>
 
 #include <random>
@@ -10,24 +11,27 @@ namespace info
 {
 	Record::Record()
 	{
-		_created_time = std::chrono::system_clock::now();
-		_transaction_id = "";
-		_id = "";
-		_metadata = "";
 		_stream = nullptr;
 
+		_created_time = std::chrono::system_clock::now();
+		_id = "";
+		_metadata = "";
+		_transaction_id = "";
+
+		_tmp_path = "";
 		_file_path = "";
 		_file_path_by_user = false;
-		_tmp_path = "";
 		_info_path = "";
 		_info_path_by_user = false;
 
 		_record_bytes = 0;
 		_record_time = 0;
-		_interval = 0;
 		_record_total_bytes = 0;
 		_record_total_time = 0;
+
 		_sequence = 0;
+		_interval = 0;
+		_schedule = "";
 
 		_state = RecordState::Ready;
 	}
@@ -139,6 +143,42 @@ namespace info
 	ov::String Record::GetSchedule()
 	{
 		return _schedule;
+	}
+
+	const std::chrono::system_clock::time_point &Record::GetNextScheduleTime() const
+	{
+		return _schedule_next;
+	}
+
+	bool Record::IsNextScheduleTimeEmpty()
+	{
+		return (_schedule_next.time_since_epoch().count() == 0) ? true : false;
+	}
+
+	void Record::SetNextScheduleTime(std::chrono::system_clock::time_point &next)
+	{
+		_schedule_next = next;
+	}
+
+	bool Record::UpdateNextScheduleTime()
+	{
+		try
+		{
+			ov::String cron_expr = ov::String::FormatString("%s * * ?", GetSchedule().CStr());
+
+			auto cron = ov::Cron::Make(cron_expr.CStr());
+			std::time_t next = ov::Cron::Next(cron, std::time(0));
+			std::chrono::system_clock::time_point next_time = std::chrono::system_clock::from_time_t(next);
+
+			SetNextScheduleTime(next_time);
+		}
+		catch (ov::Cron::Exception const &ex)
+		{
+			loge("%s", ex.what());
+			return false;
+		}
+
+		return true;
 	}
 
 	void Record::SetFilePath(ov::String file_path)

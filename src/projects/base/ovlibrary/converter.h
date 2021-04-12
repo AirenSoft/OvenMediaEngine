@@ -108,7 +108,7 @@ namespace ov
 			::localtime_r(&time, &local_time);
 
 			std::ostringstream oss;
-			oss << std::put_time(&local_time, "%Y-%m-%dT%I:%M:%S") << "." << std::setfill('0') << std::setw(3) << milliseconds << std::put_time(&local_time, "%z");
+			oss << std::put_time(&local_time, "%Y-%m-%dT%H:%M:%S") << "." << std::setfill('0') << std::setw(3) << milliseconds << std::put_time(&local_time, "%z");
 
 			return oss.str().c_str();
 		}

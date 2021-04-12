@@ -10,208 +10,214 @@
 
 #include "interceptors/http_request_interceptor.h"
 
-class HttpConnection;
-
-class HttpRequest : public ov::EnableSharedFromThis<HttpRequest>
+namespace http
 {
-public:
-	friend class HttpRequestInterceptor;
-
-	HttpRequest(const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<HttpRequestInterceptor> &interceptor);
-	~HttpRequest() override = default;
-
-	std::shared_ptr<ov::ClientSocket> GetRemote();
-	std::shared_ptr<const ov::ClientSocket> GetRemote() const;
-
-	void SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data);
-	std::shared_ptr<ov::TlsData> GetTlsData();
-
-	void SetConnectionType(HttpRequestConnectionType type);
-	HttpRequestConnectionType GetConnectionType() const;
-
-	/// HttpRequest 객체 초기화를 위해, client에서 보낸 데이터를 처리함
-	///
-	/// @param data 수신한 데이터
-	///
-	/// @return HTTP 파싱에 사용한 데이터 크기. 만약 파싱 도중 오류가 발생하면 -1L을 반환함
-	ssize_t ProcessData(const std::shared_ptr<const ov::Data> &data);
-
-	/// 헤더 파싱 상태 (ProcessData() 안에서 갱신됨)
-	///
-	/// @return HttpStatusCode::PartialContent = 데이터가 더 필요함.
-	///         HttpStatusCode::OK = 데이터 수신이 모두 완료되었음.
-	///         기타 = 오류 발생.
-	HttpStatusCode ParseStatus() const
+	namespace svr
 	{
-		return _parse_status;
-	}
+		class HttpConnection;
 
-	HttpMethod GetMethod() const noexcept
-	{
-		return _method;
-	}
-
-	ov::String GetHttpVersion() const noexcept
-	{
-		return _http_version;
-	}
-
-	double GetHttpVersionAsNumber() const noexcept
-	{
-		auto tokens = _http_version.Split("/");
-
-		if (tokens.size() != 2)
+		class HttpRequest : public ov::EnableSharedFromThis<HttpRequest>
 		{
-			return 0.0;
-		}
+		public:
+			friend class RequestInterceptor;
 
-		return ov::Converter::ToDouble(tokens[1]);
-	}
+			HttpRequest(const std::shared_ptr<ov::ClientSocket> &client_socket, const std::shared_ptr<RequestInterceptor> &interceptor);
+			~HttpRequest() override = default;
 
-	// Full URI (including domain and port)
-	// Example: http://<domain>:<port>/<app>/<stream>/...
-	const ov::String &GetUri() const noexcept
-	{
-		return _request_uri;
-	}
+			std::shared_ptr<ov::ClientSocket> GetRemote();
+			std::shared_ptr<const ov::ClientSocket> GetRemote() const;
 
-	// Path of the URI (excluding domain and port)
-	// Example: /<app>/<stream>/...
-	const ov::String &GetRequestTarget() const noexcept
-	{
-		return _request_target;
-	}
+			void SetTlsData(const std::shared_ptr<ov::TlsData> &tls_data);
+			std::shared_ptr<ov::TlsData> GetTlsData();
 
-	/// HTTP body 데이터 길이 반환
-	///
-	/// @return body 데이터 길이. 파싱이 제대로 되지 않았거나, request header에 명시가 안되어 있으면 0이 반환됨.
-	ssize_t GetContentLength() const noexcept
-	{
-		return _content_length;
-	}
+			void SetConnectionType(RequestConnectionType type);
+			RequestConnectionType GetConnectionType() const;
 
-	std::shared_ptr<const ov::Data> GetRequestBody() const
-	{
-		return _request_body;
-	}
+			/// HttpRequest 객체 초기화를 위해, client에서 보낸 데이터를 처리함
+			///
+			/// @param data 수신한 데이터
+			///
+			/// @return HTTP 파싱에 사용한 데이터 크기. 만약 파싱 도중 오류가 발생하면 -1L을 반환함
+			ssize_t ProcessData(const std::shared_ptr<const ov::Data> &data);
 
-	const std::map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetRequestHeader() const noexcept
-	{
-		return _request_header;
-	}
+			/// 헤더 파싱 상태 (ProcessData() 안에서 갱신됨)
+			///
+			/// @return HttpStatusCode::PartialContent = 데이터가 더 필요함.
+			///         HttpStatusCode::OK = 데이터 수신이 모두 완료되었음.
+			///         기타 = 오류 발생.
+			StatusCode ParseStatus() const
+			{
+				return _parse_status;
+			}
 
-	ov::String GetHeader(const ov::String &key) const noexcept;
-	ov::String GetHeader(const ov::String &key, ov::String default_value) const noexcept;
-	const bool IsHeaderExists(const ov::String &key) const noexcept;
+			Method GetMethod() const noexcept
+			{
+				return _method;
+			}
 
-	bool SetRequestInterceptor(const std::shared_ptr<HttpRequestInterceptor> &interceptor) noexcept
-	{
-		_interceptor = interceptor;
-		return true;
-	}
+			ov::String GetHttpVersion() const noexcept
+			{
+				return _http_version;
+			}
 
-	void SetMatchResult(ov::MatchResult match_result)
-	{
-		_match_result = std::move(match_result);
-	}
+			double GetHttpVersionAsNumber() const noexcept
+			{
+				auto tokens = _http_version.Split("/");
 
-	const ov::MatchResult &GetMatchResult() const
-	{
-		return _match_result;
-	}
+				if (tokens.size() != 2)
+				{
+					return 0.0;
+				}
 
-	const std::shared_ptr<HttpRequestInterceptor> &GetRequestInterceptor()
-	{
-		return _interceptor;
-	}
+				return ov::Converter::ToDouble(tokens[1]);
+			}
 
-	std::any GetExtra() const
-	{
-		return _extra;
-	}
+			// Full URI (including domain and port)
+			// Example: http://<domain>:<port>/<app>/<stream>/...
+			const ov::String &GetUri() const noexcept
+			{
+				return _request_uri;
+			}
 
-	template <typename T>
-	std::shared_ptr<T> GetExtraAs() const
-	{
-		try
-		{
-			return std::any_cast<std::shared_ptr<T>>(_extra);
-		}
-		catch ([[maybe_unused]] const std::bad_any_cast &e)
-		{
-		}
+			// Path of the URI (excluding domain and port)
+			// Example: /<app>/<stream>/...
+			const ov::String &GetRequestTarget() const noexcept
+			{
+				return _request_target;
+			}
 
-		return nullptr;
-	}
+			/// HTTP body 데이터 길이 반환
+			///
+			/// @return body 데이터 길이. 파싱이 제대로 되지 않았거나, request header에 명시가 안되어 있으면 0이 반환됨.
+			ssize_t GetContentLength() const noexcept
+			{
+				return _content_length;
+			}
 
-	template <typename T>
-	void SetExtra(std::shared_ptr<T> extra)
-	{
-		_extra = std::move(extra);
-	}
+			std::shared_ptr<const ov::Data> GetRequestBody() const
+			{
+				return _request_body;
+			}
 
-	ov::String ToString() const;
+			const std::map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetRequestHeader() const noexcept
+			{
+				return _request_header;
+			}
 
-	void InitParseInfo()
-	{
-		_parse_status = HttpStatusCode::PartialContent;
+			ov::String GetHeader(const ov::String &key) const noexcept;
+			ov::String GetHeader(const ov::String &key, ov::String default_value) const noexcept;
+			const bool IsHeaderExists(const ov::String &key) const noexcept;
 
-		_is_header_found = false;
-		_request_string = "";
-		_request_header.clear();
+			bool SetRequestInterceptor(const std::shared_ptr<RequestInterceptor> &interceptor) noexcept
+			{
+				_interceptor = interceptor;
+				return true;
+			}
 
-		_method = HttpMethod::Unknown;
-		_request_target = "";
-		_http_version = "";
-	}
+			void SetMatchResult(ov::MatchResult match_result)
+			{
+				_match_result = std::move(match_result);
+			}
 
-protected:
-	// HttpRequestInterceptorInterface를 통해, 다른 interceptor에서 사용됨
-	const std::shared_ptr<ov::Data> &GetRequestBodyInternal()
-	{
-		if (_request_body == nullptr)
-		{
-			_request_body = std::make_shared<ov::Data>();
-		}
+			const ov::MatchResult &GetMatchResult() const
+			{
+				return _match_result;
+			}
 
-		return _request_body;
-	}
+			const std::shared_ptr<RequestInterceptor> &GetRequestInterceptor()
+			{
+				return _interceptor;
+			}
 
-	HttpStatusCode ParseMessage();
-	HttpStatusCode ParseRequestLine(const ov::String &line);
-	HttpStatusCode ParseHeader(const ov::String &line);
+			std::any GetExtra() const
+			{
+				return _extra;
+			}
 
-	void PostProcess();
-	void UpdateUri();
+			template <typename T>
+			std::shared_ptr<T> GetExtraAs() const
+			{
+				try
+				{
+					return std::any_cast<std::shared_ptr<T>>(_extra);
+				}
+				catch ([[maybe_unused]] const std::bad_any_cast &e)
+				{
+				}
 
-	std::shared_ptr<ov::ClientSocket> _client_socket;
-	HttpRequestConnectionType _connection_type = HttpRequestConnectionType::Unknown;
-	std::shared_ptr<ov::TlsData> _tls_data;
+				return nullptr;
+			}
 
-	// request 처리를 담당하는 객체
-	std::shared_ptr<HttpRequestInterceptor> _interceptor;
+			template <typename T>
+			void SetExtra(std::shared_ptr<T> extra)
+			{
+				_extra = std::move(extra);
+			}
 
-	HttpStatusCode _parse_status = HttpStatusCode::PartialContent;
+			ov::String ToString() const;
 
-	// request 관련 정보 저장
-	HttpMethod _method = HttpMethod::Unknown;
-	ov::String _request_uri;
-	ov::String _request_target;
-	ov::String _http_version;
+			void InitParseInfo()
+			{
+				_parse_status = StatusCode::PartialContent;
 
-	ov::MatchResult _match_result;
+				_is_header_found = false;
+				_request_string = "";
+				_request_header.clear();
 
-	// request 헤더
-	bool _is_header_found = false;
-	// 헤더 영역을 추출해내기 위해 임시로 사용되는 문자열 버퍼
-	ov::String _request_string;
-	std::map<ov::String, ov::String, ov::CaseInsensitiveComparator> _request_header;
+				_method = Method::Unknown;
+				_request_target = "";
+				_http_version = "";
+			}
 
-	// 자주 사용하는 헤더 값은 미리 저장해놓음
-	ssize_t _content_length = 0L;
+		protected:
+			// HttpRequestInterceptorInterface를 통해, 다른 interceptor에서 사용됨
+			const std::shared_ptr<ov::Data> &GetRequestBodyInternal()
+			{
+				if (_request_body == nullptr)
+				{
+					_request_body = std::make_shared<ov::Data>();
+				}
 
-	// HTTP body
-	std::shared_ptr<ov::Data> _request_body;
+				return _request_body;
+			}
 
-	std::any _extra;
-};
+			StatusCode ParseMessage();
+			StatusCode ParseRequestLine(const ov::String &line);
+			StatusCode ParseHeader(const ov::String &line);
+
+			void PostProcess();
+			void UpdateUri();
+
+			std::shared_ptr<ov::ClientSocket> _client_socket;
+			RequestConnectionType _connection_type = RequestConnectionType::Unknown;
+			std::shared_ptr<ov::TlsData> _tls_data;
+
+			// request 처리를 담당하는 객체
+			std::shared_ptr<RequestInterceptor> _interceptor;
+
+			StatusCode _parse_status = StatusCode::PartialContent;
+
+			// request 관련 정보 저장
+			Method _method = Method::Unknown;
+			ov::String _request_uri;
+			ov::String _request_target;
+			ov::String _http_version;
+
+			ov::MatchResult _match_result;
+
+			// request 헤더
+			bool _is_header_found = false;
+			// 헤더 영역을 추출해내기 위해 임시로 사용되는 문자열 버퍼
+			ov::String _request_string;
+			std::map<ov::String, ov::String, ov::CaseInsensitiveComparator> _request_header;
+
+			// 자주 사용하는 헤더 값은 미리 저장해놓음
+			ssize_t _content_length = 0L;
+
+			// HTTP body
+			std::shared_ptr<ov::Data> _request_body;
+
+			std::any _extra;
+		};
+	}  // namespace svr
+}  // namespace http

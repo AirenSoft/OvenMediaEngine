@@ -33,7 +33,7 @@ public:
 	                                          const std::shared_ptr<const SessionDescription> &offer_sdp,
 	                                          const std::shared_ptr<const SessionDescription> &peer_sdp,
 	                                          const std::shared_ptr<IcePort> &ice_port,
-											  const std::shared_ptr<WebSocketClient> &ws_client);
+											  const std::shared_ptr<http::svr::ws::Client> &ws_client);
 
 	RtcSession(const info::Session &session_info,
 			const std::shared_ptr<WebRtcPublisher> &publisher,
@@ -42,7 +42,7 @@ public:
 	        const std::shared_ptr<const SessionDescription> &offer_sdp,
 	        const std::shared_ptr<const SessionDescription> &peer_sdp,
 	        const std::shared_ptr<IcePort> &ice_port,
-			const std::shared_ptr<WebSocketClient> &ws_client);
+			const std::shared_ptr<http::svr::ws::Client> &ws_client);
 	~RtcSession() override;
 
 	bool Start() override;
@@ -52,7 +52,7 @@ public:
 
 	const std::shared_ptr<const SessionDescription>& GetPeerSDP() const;
 	const std::shared_ptr<const SessionDescription>& GetOfferSDP() const;
-	const std::shared_ptr<WebSocketClient>& GetWSClient();
+	const std::shared_ptr<http::svr::ws::Client>& GetWSClient();
 
 	// pub::Session Interface
 	bool SendOutgoingData(const std::any &packet) override;
@@ -78,7 +78,7 @@ private:
 	std::shared_ptr<const SessionDescription> _offer_sdp;
 	std::shared_ptr<const SessionDescription> _peer_sdp;
 	std::shared_ptr<IcePort>            _ice_port;
-	std::shared_ptr<WebSocketClient> 	_ws_client; // Signalling  
+	std::shared_ptr<http::svr::ws::Client> 	_ws_client; // Signalling  
 
 	uint8_t 							_red_block_pt = 0;
 	uint8_t                             _video_payload_type = 0;

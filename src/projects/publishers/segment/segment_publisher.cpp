@@ -77,7 +77,7 @@ bool SegmentPublisher::Stop()
 	return Publisher::Stop();
 }
 
-bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpConnection> &client,
+bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 										 const SegmentStreamRequestInfo &request_info,
 										 ov::String &play_list)
 {
@@ -88,7 +88,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpConnection> &
 	if (parsed_url == nullptr)
 	{
 		logte("Could not parse the url: %s", uri.CStr());
-		client->GetResponse()->SetStatusCode(HttpStatusCode::BadRequest);
+		client->GetResponse()->SetStatusCode(http::StatusCode::BadRequest);
 		// Returns true when the observer search can be ended.
 		return true;
 	}
@@ -99,7 +99,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpConnection> &
 	std::shared_ptr<PlaylistRequestInfo> playlist_request_info;
 	if (HandleSignedX(vhost_app_name, stream_name, client, parsed_url, playlist_request_info) == false)
 	{
-		client->GetResponse()->SetStatusCode(HttpStatusCode::Forbidden);
+		client->GetResponse()->SetStatusCode(http::StatusCode::Forbidden);
 		return true;
 	}
 
@@ -109,7 +109,7 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpConnection> &
 		stream = std::dynamic_pointer_cast<SegmentStream>(PullStream(parsed_url, vhost_app_name, request_info.host_name, stream_name));
 		if (stream == nullptr)
 		{
-			client->GetResponse()->SetStatusCode(HttpStatusCode::NotFound);
+			client->GetResponse()->SetStatusCode(http::StatusCode::NotFound);
 			return true;
 		}
 		else
@@ -141,16 +141,16 @@ bool SegmentPublisher::OnPlayListRequest(const std::shared_ptr<HttpConnection> &
 	if (stream->GetPlayList(play_list) == false)
 	{
 		logtw("Could not get a playlist for %s [%p, %s/%s, %s]", GetPublisherName(), stream.get(), vhost_app_name.CStr(), stream_name.CStr(), request_info.file_name.CStr());
-		client->GetResponse()->SetStatusCode(HttpStatusCode::Accepted);
+		client->GetResponse()->SetStatusCode(http::StatusCode::Accepted);
 		// Returns true when the observer search can be ended.
 		return true;
 	}
 
-	client->GetResponse()->SetStatusCode(HttpStatusCode::OK);
+	client->GetResponse()->SetStatusCode(http::StatusCode::OK);
 	return true;
 }
 
-bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<HttpConnection> &client,
+bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 										const SegmentStreamRequestInfo &request_info,
 										std::shared_ptr<const SegmentItem> &segment)
 {
@@ -485,7 +485,7 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 }
 
 bool SegmentPublisher::HandleSignedX(const info::VHostAppName &vhost_app_name, const ov::String &stream_name,
-									 const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Url> &request_url,
+									 const std::shared_ptr<http::svr::HttpConnection> &client, const std::shared_ptr<const ov::Url> &request_url,
 									 std::shared_ptr<PlaylistRequestInfo> &request_info)
 {
 	auto request = client->GetRequest();

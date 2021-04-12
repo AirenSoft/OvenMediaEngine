@@ -10,32 +10,41 @@
 //==============================================================================
 #pragma once
 
-#include "./web_socket_datastructure.h"
-
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
 #include <modules/http/server/http_server.h>
 
-class WebSocketClient
+#include "./web_socket_datastructure.h"
+
+namespace http
 {
-public:
-	WebSocketClient(const std::shared_ptr<HttpConnection> &client);
-	virtual ~WebSocketClient();
-
-	ssize_t Send(const std::shared_ptr<const ov::Data> &data, WebSocketFrameOpcode opcode);
-	ssize_t Send(const std::shared_ptr<const ov::Data> &data);
-	ssize_t Send(const ov::String &string);
-	ssize_t Send(const Json::Value &value);
-
-	const std::shared_ptr<HttpConnection> &GetClient()
+	namespace svr
 	{
-		return _client;
-	}
+		namespace ws
+		{
+			class Client
+			{
+			public:
+				Client(const std::shared_ptr<HttpConnection> &client);
+				virtual ~Client();
 
-	ov::String ToString() const;
+				ssize_t Send(const std::shared_ptr<const ov::Data> &data, FrameOpcode opcode);
+				ssize_t Send(const std::shared_ptr<const ov::Data> &data);
+				ssize_t Send(const ov::String &string);
+				ssize_t Send(const Json::Value &value);
 
-	void Close();
+				const std::shared_ptr<HttpConnection> &GetClient()
+				{
+					return _client;
+				}
 
-protected:
-	std::shared_ptr<HttpConnection> _client;
-};
+				ov::String ToString() const;
+
+				void Close();
+
+			protected:
+				std::shared_ptr<HttpConnection> _client;
+			};
+		}  // namespace ws
+	}	   // namespace svr
+}  // namespace http

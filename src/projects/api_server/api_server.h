@@ -25,10 +25,10 @@ namespace api
 		bool Stop();
 
 	protected:
-		std::shared_ptr<HttpRequestInterceptor> CreateInterceptor();
+		std::shared_ptr<http::svr::RequestInterceptor> CreateInterceptor();
 
-		std::shared_ptr<HttpServer> _http_server;
-		std::shared_ptr<HttpsServer> _https_server;
+		std::shared_ptr<http::svr::HttpServer> _http_server;
+		std::shared_ptr<http::svr::HttpsServer> _https_server;
 
 		std::shared_ptr<RootController> _root_controller;
 

@@ -10,7 +10,13 @@
 
 #include "../http_request.h"
 
-const std::shared_ptr<ov::Data> &HttpRequestInterceptor::GetRequestBody(const std::shared_ptr<HttpRequest> &request)
+namespace http
 {
-	return request->GetRequestBodyInternal();
-}
+	namespace svr
+	{
+		const std::shared_ptr<ov::Data> &RequestInterceptor::GetRequestBody(const std::shared_ptr<HttpRequest> &request)
+		{
+			return request->GetRequestBodyInternal();
+		}
+	}  // namespace svr
+}  // namespace http

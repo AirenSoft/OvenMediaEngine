@@ -55,6 +55,10 @@ namespace info
 
 		void SetSchedule(ov::String schedule);
 		ov::String GetSchedule();
+		const std::chrono::system_clock::time_point &GetNextScheduleTime() const;
+		void SetNextScheduleTime(std::chrono::system_clock::time_point &next);
+		bool IsNextScheduleTimeEmpty();
+		bool UpdateNextScheduleTime();
 
 		void SetFilePath(ov::String file_path);
 		ov::String GetFilePath();
@@ -142,14 +146,28 @@ namespace info
 		//  > 0 : seconds
 		int32_t _interval;
 
-		// Recording a schedule synchronized with system time
-		// 
-		// <minute> <hour> : be similar to the cron-tap pattern
-		// * * : split every minutes
-		// */30 * : split by 30 minutes
-		// */20 * : split by every 20 minutes
-		// 
+		// Split recording a schedule synchronized with system time, be similar to the cron-tap pattern
+		//
+		//  "<second> <minute> <hour>"
+		//
+		//   * : any value
+		//   / : step values
+		//   0-59 : allowed value of second and minute
+		//   0-23 : allowed value of hour
+		//
+		// Examples
+		// ---------------------------
+		// * * *    : Every second
+		// */30 * * : Every 30 seconds starting at 0 second after miniute
+		// 30 * *   : At second 30 of every minitue
+		// * 2 *    : Every second during minute 2 of every hour
+		// * */2 *  : Every second past 2 minute starting at 0 minute after the hour
+		// 0 0 1    : at 1:00:00 every day
+		// 0 0 */1  : at second 0, at minute 0, every hour starting at 0 hour of every day
+
+		// Recording schedule expr
 		ov::String _schedule;
+		std::chrono::system_clock::time_point _schedule_next;
 
 		// Recorded (Accumulated) file size
 		uint64_t _record_bytes;

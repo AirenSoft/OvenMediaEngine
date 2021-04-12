@@ -12,7 +12,7 @@ namespace api
 {
 	namespace conv
 	{
-		Json::Value JsonFromError(const std::shared_ptr<HttpError> &error)
+		Json::Value JsonFromError(const std::shared_ptr<http::HttpError> &error)
 		{
 			Json::Value value(Json::ValueType::nullValue);
 

@@ -46,13 +46,13 @@ protected:
 		}
 
 		std::shared_ptr<ov::Data> chunked_data;
-		std::vector<std::shared_ptr<HttpConnection>> client_list;
+		std::vector<std::shared_ptr<http::svr::HttpConnection>> client_list;
 	};
 
 	//--------------------------------------------------------------------
 	// Overriding functions of DashStreamServer
 	//--------------------------------------------------------------------
-	HttpConnectionPolicy ProcessSegmentRequest(const std::shared_ptr<HttpConnection> &client,
+	http::svr::ConnectionPolicy ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 										 const SegmentStreamRequestInfo &request_info, SegmentType segment_type) override;
 
 	//--------------------------------------------------------------------

@@ -154,7 +154,7 @@ bool SegmentWorkerManager::Stop()
 // Worker Add
 //====================================================================================================
 #define MAX_WORKER_INDEX 100000000
-bool SegmentWorkerManager::AddWork(const std::shared_ptr<HttpConnection> &response,
+bool SegmentWorkerManager::AddWork(const std::shared_ptr<http::svr::HttpConnection> &response,
 								   const ov::String &request_target,
 								   const ov::String &origin_url)
 {

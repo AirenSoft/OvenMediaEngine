@@ -94,7 +94,7 @@ bool DtlsTransport::StartDTLS()
 			}
 		};
 
-	if(_tls.Initialize(DTLS_server_method(), _local_certificate, nullptr, "DEFAULT:!NULL:!aNULL:!SHA256:!SHA384:!aECDH:!AESGCM+AES256:!aPSK", callback) == false)
+	if(_tls.InitializeServerTls(DTLS_server_method(), _local_certificate, nullptr, "DEFAULT:!NULL:!aNULL:!SHA256:!SHA384:!aECDH:!AESGCM+AES256:!aPSK", callback) == false)
 	{
 		_state = SSL_ERROR;
 		return false;

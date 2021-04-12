@@ -10,15 +10,15 @@
 
 #include "modules/http/server/interceptors/web_socket/web_socket_interceptor.h"
 
-class WebRtcPublisherSignallingInterceptor : public WebSocketInterceptor
+class WebRtcPublisherSignallingInterceptor : public http::svr::ws::Interceptor
 {
 public:
     //--------------------------------------------------------------------
 	// Implementation of HttpRequestInterceptorInterface
 	//--------------------------------------------------------------------
-	bool IsInterceptorForRequest(const std::shared_ptr<const HttpConnection> &client) override
+	bool IsInterceptorForRequest(const std::shared_ptr<const http::svr::HttpConnection> &client) override
 	{
-		if(WebSocketInterceptor::IsInterceptorForRequest(client) == false)
+		if(http::svr::ws::Interceptor::IsInterceptorForRequest(client) == false)
 		{
 			return false;
 		}

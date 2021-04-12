@@ -10,53 +10,62 @@
 
 #include "./web_socket_datastructure.h"
 
-enum class WebSocketFrameParseStatus
+namespace http
 {
-	Prepare,
-	Parsing,
-	Completed,
-	Error,
-};
-
-class WebSocketFrame
-{
-public:
-	WebSocketFrame();
-	virtual ~WebSocketFrame();
-
-	void Reset()
+	namespace svr
 	{
-		::memset(&_header, 0, sizeof(_header));
-		_total_length = 0L;
+		namespace ws
+		{
+			enum class FrameParseStatus
+			{
+				Prepare,
+				Parsing,
+				Completed,
+				Error,
+			};
 
-		_last_status = WebSocketFrameParseStatus::Prepare;
+			class Frame
+			{
+			public:
+				Frame();
+				virtual ~Frame();
 
-		_payload->Clear();
-	}
+				void Reset()
+				{
+					::memset(&_header, 0, sizeof(_header));
+					_total_length = 0L;
 
-	const std::shared_ptr<const ov::Data> GetPayload() const noexcept
-	{
-		return _payload;
-	}
+					_last_status = FrameParseStatus::Prepare;
 
-	ssize_t Process(const std::shared_ptr<const ov::Data> &data);
-	WebSocketFrameParseStatus GetStatus() const noexcept;
+					_payload->Clear();
+				}
 
-	const WebSocketFrameHeader &GetHeader();
+				const std::shared_ptr<const ov::Data> GetPayload() const noexcept
+				{
+					return _payload;
+				}
 
-	ov::String ToString() const;
+				ssize_t Process(const std::shared_ptr<const ov::Data> &data);
+				FrameParseStatus GetStatus() const noexcept;
 
-protected:
-	ssize_t ProcessHeader(ov::ByteStream &stream);
+				const FrameHeader &GetHeader();
 
-	WebSocketFrameHeader _header;
-	int _header_read_bytes = 0;
+				ov::String ToString() const;
 
-	uint64_t _remained_length;
-	uint64_t _total_length;
-	uint32_t _frame_masking_key;
+			protected:
+				ssize_t ProcessHeader(ov::ByteStream &stream);
 
-	WebSocketFrameParseStatus _last_status;
+				FrameHeader _header;
+				int _header_read_bytes = 0;
 
-	std::shared_ptr<ov::Data> _payload;
-};
+				uint64_t _remained_length;
+				uint64_t _total_length;
+				uint32_t _frame_masking_key;
+
+				FrameParseStatus _last_status;
+
+				std::shared_ptr<ov::Data> _payload;
+			};
+		}  // namespace ws
+	}	   // namespace svr
+}  // namespace http

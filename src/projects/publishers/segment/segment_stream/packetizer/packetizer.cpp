@@ -95,9 +95,14 @@ ov::String Packetizer::MakeUtcMillisecond(int64_t value)
 
 	if (result.SetLength(length))
 	{
-		// YYYY-MM-DDTHH:II:SS.sssZ
-		//                    ~~~~~
-		result.AppendFormat(".%03uZ", static_cast<uint32_t>(value % 1000LL));
+		// Change to "+00:00", because dash.js does not recognize timezone format such as "Z"
+		//
+		// in dash.js/src/dash/parser/matchers/DateTimeMatcher.js:
+		// const datetimeRegex = /^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2})(?::([0-9]*)(\.[0-9]*)?)?(?:([+-])([0-9]{2})(?::?)([0-9]{2}))?/;
+
+		// YYYY-MM-DDTHH:II:SS.sss+00:00
+		//                    ~~~~~~~~~~
+		result.AppendFormat(".%03u+00:00", static_cast<uint32_t>(value % 1000LL));
 		return result;
 	}
 

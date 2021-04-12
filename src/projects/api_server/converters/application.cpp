@@ -33,7 +33,7 @@ namespace api
 			return std::move(app);
 		}
 
-		std::shared_ptr<HttpError> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)
+		std::shared_ptr<http::HttpError> ApplicationFromJson(const Json::Value &json_value, cfg::vhost::app::Application *application)
 		{
 			cfg::DataSource data_source("", "", "Application", json_value);
 
@@ -44,7 +44,7 @@ namespace api
 			}
 			catch (const std::shared_ptr<cfg::ConfigError> &error)
 			{
-				return HttpError::CreateError(HttpStatusCode::BadRequest, "%s", error->GetMessage().CStr());
+				return http::HttpError::CreateError(http::StatusCode::BadRequest, "%s", error->GetMessage().CStr());
 			}
 		}
 	}  // namespace conv

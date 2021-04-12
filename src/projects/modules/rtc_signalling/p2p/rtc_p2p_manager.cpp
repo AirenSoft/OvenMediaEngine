@@ -28,7 +28,7 @@ RtcP2PManager::RtcP2PManager(const cfg::Server &server_config)
 	}
 }
 
-std::shared_ptr<RtcPeerInfo> RtcP2PManager::CreatePeerInfo(peer_id_t id, const std::shared_ptr<WebSocketClient> &ws_client)
+std::shared_ptr<RtcPeerInfo> RtcP2PManager::CreatePeerInfo(peer_id_t id, const std::shared_ptr<http::svr::ws::Client> &ws_client)
 {
 	auto request = ws_client->GetClient()->GetRequest();
 
