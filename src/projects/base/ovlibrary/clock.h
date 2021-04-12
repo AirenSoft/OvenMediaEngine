@@ -42,6 +42,16 @@ namespace ov
 		}
 
 		#define GETTIMEOFDAY_TO_NTP_OFFSET 2208988800 //  Number of seconds between 1-Jan-1900 and 1-Jan-1970
+
+		// NTP seconds to be expressed as a real number
+		static double GetNtpTime()
+		{
+			struct timespec now;
+			clock_gettime(CLOCK_REALTIME, &now);
+
+			return (double)now.tv_sec + (double)GETTIMEOFDAY_TO_NTP_OFFSET + (double)now.tv_nsec*(double)1.0e-9;
+		}
+
 		static void	GetNtpTime(uint32_t &msw, uint32_t &lsw)
 		{
 			struct timespec now;

@@ -8,6 +8,7 @@
 //==============================================================================
 
 #include <base/info/application.h>
+#include <base/ovlibrary/byte_io.h>
 #include <modules/rtsp/header_fields/rtsp_header_fields.h>
 
 #include "rtspc_stream.h"
@@ -38,7 +39,7 @@ namespace pvd
 	}
 
 	RtspcStream::RtspcStream(const std::shared_ptr<pvd::PullApplication> &application, const info::Stream &stream_info, const std::vector<ov::String> &url_list)
-	: pvd::PullStream(application, stream_info)
+	: pvd::PullStream(application, stream_info), Node(NodeType::Edge)
 	{
 		_state = State::IDLE;
 
@@ -163,6 +164,13 @@ namespace pvd
 			// Force terminate 
 			_state = State::ERROR;
 		}
+
+		if(_rtp_rtcp != nullptr)
+		{
+			_rtp_rtcp->Stop();
+		}
+
+		ov::Node::Stop();
 
 		_state = State::STOPPED;
 	
@@ -367,10 +375,13 @@ namespace pvd
 			}
 		}
 
-		// Single node
-		_rtp_rtcp->RegisterUpperNode(nullptr);
-		_rtp_rtcp->RegisterLowerNode(nullptr);
+		_rtp_rtcp->RegisterPrevNode(nullptr);
+		_rtp_rtcp->RegisterNextNode(ov::Node::GetSharedPtr());
 		_rtp_rtcp->Start();
+
+		RegisterPrevNode(_rtp_rtcp);
+		RegisterNextNode(nullptr);
+		ov::Node::Start();
 
 		_state = State::DESCRIBED;
 
@@ -395,10 +406,14 @@ namespace pvd
 			if(track->GetMediaType() == cmn::MediaType::Video)
 			{
 				setup_url = _video_control_url;
+				_video_rtp_channel_id = interleaved_channel;
+				_video_rtcp_channel_id = interleaved_channel + 1;
 			}
 			else
 			{
 				setup_url = _audio_control_url;
+				_audio_rtp_channel_id = interleaved_channel;
+				_audio_rtcp_channel_id = interleaved_channel + 1;
 			}
 
 			auto setup = std::make_shared<RtspMessage>(RtspMethod::SETUP, GetNextCSeq(), setup_url);
@@ -407,6 +422,7 @@ namespace pvd
 			// The chennel id can be used for demuxing, but since it is already demuxing in a different way, it is not saved.
 			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Transport,
 									ov::String::FormatString("RTP/AVP/TCP;unicast;interleaved=%d-%d", interleaved_channel, interleaved_channel+1)));
+
 			interleaved_channel += 2;
 			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::Session, _rtsp_session_id));
 			setup->AddHeaderField(std::make_shared<RtspHeaderField>(RtspHeaderFieldType::UserAgent, RTSP_USER_AGENT_NAME));
@@ -715,7 +731,10 @@ namespace pvd
 
 				// RTP or RTCP
 				auto rtsp_data = _rtsp_demuxer.PopData();
-				_rtp_rtcp->OnDataReceived(NodeType::Edge, rtsp_data->GetData());
+
+				// RtpRtcpInterface(RtspcStream) <--> [RTP_RTCP Node] <--> [Edge Node(RtspcStream)] ---Send--> {Socket}
+				//							        					     					    <--Recv--- {Socket}
+				SendDataToPrevNode(rtsp_data->GetData());
 			}
 			else
 			{
@@ -871,6 +890,67 @@ namespace pvd
 		}
 
 		return control_url;
+	}
+
+	// ov::Node Interface
+	// RtpRtcp <-> Edge(this)
+	bool RtspcStream::OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data)
+	{
+		if(ov::Node::GetNodeState() != ov::Node::NodeState::Started)
+		{
+			logtd("Node has not started, so the received data has been canceled.");
+			return false;
+		}
+
+		// Make RTSP interleaved data
+		if(from_node == NodeType::Rtcp)
+		{
+			uint8_t channel_id = 0;
+
+			auto rtcp_packet = _rtp_rtcp->GetLastSentRtcpPacket();
+			auto rtcp_info = rtcp_packet->GetRtcpInfo();
+
+			auto rtp_payload_type = rtcp_info->GetRtpPayloadType();
+			if(rtp_payload_type == _video_payload_type)
+			{
+				channel_id = _video_rtcp_channel_id;
+			}
+			else if(rtp_payload_type == _audio_payload_type)
+			{
+				channel_id = _audio_rtcp_channel_id;
+			}
+			else
+			{
+				logte("The channel ID cannot be obtained from the generated RTCP packet. RTP PT(%d)", rtp_payload_type);
+				return false;
+			}
+
+			auto channel_data = std::make_shared<ov::Data>();
+			// $ + 1 bytes channel id + length + payload
+			// 4 + payload length
+			channel_data->SetLength(4);
+			auto ptr = channel_data->GetWritableDataAs<uint8_t>();
+			
+			ptr[0] = '$';
+			ptr[1] = channel_id;
+			ByteWriter<uint16_t>::WriteBigEndian(&ptr[2], data->GetLength());
+			channel_data->Append(data);
+
+			return _signalling_socket->Send(channel_data);
+		}
+		else
+		{
+			// RtspcStream doen't send rtp packet
+			return false;
+		}
+
+		return false;
+	}
+
+	// RtspcStream Node has not a lower node so it will not be called
+	bool RtspcStream::OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
+	{
+		return true;
 	}
 }
 

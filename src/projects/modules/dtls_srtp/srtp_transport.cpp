@@ -36,9 +36,9 @@ bool SrtpTransport::Stop()
 	return Node::Stop();
 }
 
-bool SrtpTransport::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data)
+bool SrtpTransport::OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
-	if(GetState() != ov::Node::NodeState::Started)
+	if(GetNodeState() != ov::Node::NodeState::Started)
 	{
 		logtd("Node has not started, so the received data has been canceled.");
 		return false;
@@ -69,19 +69,12 @@ bool SrtpTransport::SendData(NodeType from_node, const std::shared_ptr<ov::Data>
 	}
 
 	// To DTLS transport
-	auto node = GetLowerNode();
-	if(!node)
-	{
-		return false;
-	}
-	
-	logtd("SrtpTransport Send next node : %d", data->GetLength());
-	return node->SendData(GetNodeType(), data);
+	return SendDataToNextNode(data);
 }
 
-bool SrtpTransport::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
+bool SrtpTransport::OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
-	if(GetState() != ov::Node::NodeState::Started)
+	if(GetNodeState() != ov::Node::NodeState::Started)
 	{
 		logtd("Node has not started, so the received data has been canceled.");
 		return false;
@@ -129,15 +122,7 @@ bool SrtpTransport::OnDataReceived(NodeType from_node, const std::shared_ptr<con
 	}
 
 	// To RTP_RTCP
-    auto node = GetUpperNode();
-    if(node == nullptr)
-    {
-        return false;
-    }
-	
-    node->OnDataReceived(node_type, decode_data);
-
-	return true;
+	return SendDataToPrevNode(node_type, decode_data);
 }
 
 // Initialize SRTP

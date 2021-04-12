@@ -26,7 +26,7 @@ namespace pvd
 {
 	class RtspcProvider;
 
-	class RtspcStream : public pvd::PullStream, public RtpRtcpInterface
+	class RtspcStream : public pvd::PullStream, public RtpRtcpInterface, public ov::Node
 	{
 	public:
 		static std::shared_ptr<RtspcStream> Create(const std::shared_ptr<pvd::PullApplication> &application, const uint32_t stream_id, const ov::String &stream_name,	const std::vector<ov::String> &url_list);
@@ -44,6 +44,10 @@ namespace pvd
 		// RtpRtcpInterface Implementation
 		void OnRtpFrameReceived(const std::vector<std::shared_ptr<RtpPacket>> &rtp_packets) override;
 		void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
+
+		// ov::Node Interface
+		bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
+		bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
 	private:
 		std::shared_ptr<pvd::RtspcProvider> GetRtspcProvider();
@@ -132,10 +136,14 @@ namespace pvd
 		ov::String _rtsp_session_id;
 
 		uint8_t	_video_payload_type = 0;
+		uint8_t _video_rtp_channel_id = 0;
+		uint8_t _video_rtcp_channel_id = 0;
 		ov::String _video_control;
 		ov::String _video_control_url;
 
 		uint8_t	_audio_payload_type = 0;
+		uint8_t _audio_rtp_channel_id = 0;
+		uint8_t _audio_rtcp_channel_id = 0;
 		ov::String _audio_control;
 		ov::String _audio_control_url;
 

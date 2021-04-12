@@ -136,18 +136,18 @@ bool RtcSession::Start()
 
 	// [RTP_RTCP] -> [SRTP] -> [DTLS] -> [RtcSession(Edge)]
 
-	_rtp_rtcp->RegisterUpperNode(nullptr);
-	_rtp_rtcp->RegisterLowerNode(_srtp_transport);
+	_rtp_rtcp->RegisterPrevNode(nullptr);
+	_rtp_rtcp->RegisterNextNode(_srtp_transport);
 	_rtp_rtcp->Start();
-	_srtp_transport->RegisterUpperNode(_rtp_rtcp);
-	_srtp_transport->RegisterLowerNode(_dtls_transport);
+	_srtp_transport->RegisterPrevNode(_rtp_rtcp);
+	_srtp_transport->RegisterNextNode(_dtls_transport);
 	_srtp_transport->Start();
-	_dtls_transport->RegisterUpperNode(_srtp_transport);
-	_dtls_transport->RegisterLowerNode(ov::Node::GetSharedPtr());
+	_dtls_transport->RegisterPrevNode(_srtp_transport);
+	_dtls_transport->RegisterNextNode(ov::Node::GetSharedPtr());
 	_dtls_transport->Start();
 
-	RegisterUpperNode(_dtls_transport);
-	RegisterLowerNode(nullptr);
+	RegisterPrevNode(_dtls_transport);
+	RegisterNextNode(nullptr);
 	ov::Node::Start();
 
 	return Session::Start();
@@ -216,13 +216,8 @@ void RtcSession::OnPacketReceived(const std::shared_ptr<info::Session> &session_
 
 	_received_bytes += data->GetLength();
 
-	auto node = GetUpperNode();
-	if(node == nullptr)
-	{
-		return;
-	}
-	// Edge Node(RtcSession) -> DTLS -> SRTP | SCTP -> RTP|RTCP
-	node->OnDataReceived(NodeType::Edge, data);
+	// RTP_RTCP -> SRTP -> DTLS -> Edge Node(RtcSession)
+	SendDataToPrevNode(data);
 }
 
 bool RtcSession::SendOutgoingData(const std::any &packet)
@@ -321,7 +316,7 @@ void RtcSession::OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info)
 		}
 	}
 
-	rtcp_info->DebugPrint();
+	//rtcp_info->DebugPrint();
 }
 
 
@@ -363,9 +358,9 @@ bool RtcSession::ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info)
 
 // ov::Node Interface
 // RtpRtcp -> SRTP -> DTLS -> Edge(this)
-bool RtcSession::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data)
+bool RtcSession::OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
-	if(ov::Node::GetState() != ov::Node::NodeState::Started)
+	if(ov::Node::GetNodeState() != ov::Node::NodeState::Started)
 	{
 		logtd("Node has not started, so the received data has been canceled.");
 		return false;
@@ -375,7 +370,7 @@ bool RtcSession::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &d
 }
 
 // RtcSession Node has not a lower node so it will not be called
-bool RtcSession::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
+bool RtcSession::OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
 	return true;
 }

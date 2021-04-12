@@ -27,7 +27,7 @@ public:
 	}
 	
 	// Receiver Report
-	uint32_t GetSenderSsrc()
+	uint32_t GetSenderSsrc() const
 	{
 		return _sender_ssrc;
 	}
@@ -50,6 +50,12 @@ public:
 		}
 
 		return _report_blocks[index];
+	}
+
+	bool AddReportBlock(const std::shared_ptr<ReportBlock> &block)
+	{
+		_report_blocks.push_back(block);
+		return true;
 	}
 
 private:

@@ -22,8 +22,8 @@ public:
 
 	bool Stop() override;
 
-	bool SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
-	bool OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
+	bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
+	bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
 	bool SetKeyMeterial(uint64_t crypto_suite, std::shared_ptr<ov::Data> server_key, std::shared_ptr<ov::Data> client_key);
 

@@ -59,19 +59,16 @@ namespace pvd
 		void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
 
 		// ov::Node Interface
-		bool SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
-		bool OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
+		bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
+		bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
 	private:
 		bool AddDepacketizer(uint8_t payload_type, cmn::MediaCodecId codec_id);
 		std::shared_ptr<RtpDepacketizingManager> GetDepacketizer(uint8_t payload_type);
 
-		bool SendFIR();
-
 		uint64_t AdjustTimestamp(uint8_t payload_type, uint32_t timestamp);
 		uint64_t GetTimestampDelta(uint8_t payload_type, uint32_t timestamp);
 
-		uint8_t _fir_seq = 0;
 		ov::StopWatch _fir_timer;
 
 		std::shared_ptr<const SessionDescription> _offer_sdp;
@@ -82,6 +79,8 @@ namespace pvd
 		std::shared_ptr<RtpRtcp>            _rtp_rtcp;
 		std::shared_ptr<SrtpTransport>      _srtp_transport;
 		std::shared_ptr<DtlsTransport>      _dtls_transport;
+
+		uint32_t							_local_ssrc = 0;
 
 		uint8_t 							_red_block_pt = 0;
 		uint8_t                             _video_payload_type = 0;

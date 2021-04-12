@@ -63,8 +63,8 @@ public:
 	void OnRtcpReceived(const std::shared_ptr<RtcpInfo> &rtcp_info) override;
 
 	// ov::Node Interface
-	bool SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
-	bool OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
+	bool OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data) override;
+	bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
 private:
 	bool ProcessNACK(const std::shared_ptr<RtcpInfo> &rtcp_info);

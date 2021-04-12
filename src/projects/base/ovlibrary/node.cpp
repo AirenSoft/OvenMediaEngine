@@ -27,82 +27,114 @@ namespace ov
 
 	bool Node::Start()
 	{
-		_state = NodeState::Started;
+		_node_state = NodeState::Started;
 		return true;
 	}
 
 	bool Node::Stop()
 	{
-		_state = NodeState::Stopped;
+		_node_state = NodeState::Stopped;
 
-		_upper_nodes.clear();
-		_lower_nodes.clear();
+		_next_nodes.clear();
+		_prev_nodes.clear();
 
 		return true;
 	}
 
-	Node::NodeState Node::GetState()
+	Node::NodeState Node::GetNodeState()
 	{
-		return _state;
+		return _node_state;
 	}
 
-	std::shared_ptr<Node> Node::GetUpperNode()
+	std::shared_ptr<Node> Node::GetNextNode()
 	{
-		if (_upper_nodes.empty())
+		if (_next_nodes.empty())
 		{
 			return nullptr;
 		}
 
-		return _upper_nodes.begin()->second;
+		return _next_nodes.begin()->second;
 	}
 
-	std::shared_ptr<Node> Node::GetLowerNode()
+	std::shared_ptr<Node> Node::GetPrevNode()
 	{
-		if (_lower_nodes.empty())
+		if (_prev_nodes.empty())
 		{
 			return nullptr;
 		}
 
-		return _lower_nodes.begin()->second;
+		return _prev_nodes.begin()->second;
 	}
 
-	std::shared_ptr<Node> Node::GetUpperNode(NodeType node_type)
+	std::shared_ptr<Node> Node::GetNextNode(NodeType node_type)
 	{
-		if (_upper_nodes.count(node_type) == 0)
+		if (_next_nodes.count(node_type) == 0)
 		{
 			return nullptr;
 		}
 
-		return _upper_nodes[node_type];
+		return _next_nodes[node_type];
 	}
 
-	std::shared_ptr<Node> Node::GetLowerNode(NodeType node_type)
+	std::shared_ptr<Node> Node::GetPrevNode(NodeType node_type)
 	{
-		if (_lower_nodes.count(node_type) == 0)
+		if (_prev_nodes.count(node_type) == 0)
 		{
 			return nullptr;
 		}
 
-		return _lower_nodes[node_type];
+		return _prev_nodes[node_type];
 	}
 
-	void Node::RegisterUpperNode(const std::shared_ptr<Node> &node)
+	void Node::RegisterPrevNode(const std::shared_ptr<Node> &node)
 	{
 		if (!node)
 		{
 			return;
 		}
 
-		_upper_nodes[node->GetNodeType()] = node;
+		_prev_nodes[node->GetNodeType()] = node;
 	}
 
-	void Node::RegisterLowerNode(const std::shared_ptr<Node> &node)
+	void Node::RegisterNextNode(const std::shared_ptr<Node> &node)
 	{
 		if (!node)
 		{
 			return;
 		}
 
-		_lower_nodes[node->GetNodeType()] = node;
+		_next_nodes[node->GetNodeType()] = node;
+	}
+
+	bool Node::SendDataToPrevNode(const std::shared_ptr<const ov::Data> &data)
+	{
+		return SendDataToPrevNode(GetNodeType(), data);
+	}
+
+	bool Node::SendDataToNextNode(const std::shared_ptr<ov::Data> &data)
+	{
+		return SendDataToNextNode(GetNodeType(), data);	
+	}
+
+	bool Node::SendDataToPrevNode(NodeType node_type, const std::shared_ptr<const ov::Data> &data)
+	{
+		auto node = GetPrevNode();
+		if(node == nullptr)
+		{
+			return false;
+		}
+
+		return node->OnDataReceivedFromNextNode(node_type, data);
+	}
+
+	bool Node::SendDataToNextNode(NodeType node_type, const std::shared_ptr<ov::Data> &data)
+	{
+		auto node = GetNextNode();
+		if(node == nullptr)
+		{
+			return false;
+		}
+
+		return node->OnDataReceivedFromPrevNode(node_type, data);
 	}
 }  // namespace pub

@@ -1,8 +1,10 @@
+#include <base/ovlibrary/byte_io.h>
+
 #include "rtp_rtcp.h"
 #include "publishers/webrtc/rtc_application.h"
 #include "publishers/webrtc/rtc_stream.h"
 #include "rtcp_receiver.h"
-#include <base/ovlibrary/byte_io.h>
+#include "rtcp_info/fir.h"
 
 #define OV_LOG_TAG "RtpRtcp"
 
@@ -10,6 +12,7 @@ RtpRtcp::RtpRtcp(const std::shared_ptr<RtpRtcpInterface> &observer)
 	        : ov::Node(NodeType::Rtp)
 {
 	_observer = observer;
+	_receiver_report_timer.Start();
 }
 
 RtpRtcp::~RtpRtcp()
@@ -20,7 +23,7 @@ RtpRtcp::~RtpRtcp()
 bool RtpRtcp::AddRtcpSRGenerator(uint8_t payload_type, uint32_t ssrc)
 {
 	std::shared_lock<std::shared_mutex> lock(_state_lock);
-	if(GetState() != ov::Node::NodeState::Ready)
+	if(GetNodeState() != ov::Node::NodeState::Ready)
 	{
 		logtd("It can only be called in the ready state.");
 		return false;
@@ -33,7 +36,7 @@ bool RtpRtcp::AddRtcpSRGenerator(uint8_t payload_type, uint32_t ssrc)
 bool RtpRtcp::AddRtpReceiver(uint8_t payload_type, const std::shared_ptr<MediaTrack> &track)
 {
 	std::shared_lock<std::shared_mutex> lock(_state_lock);
-	if(GetState() != ov::Node::NodeState::Ready)
+	if(GetNodeState() != ov::Node::NodeState::Ready)
 	{
 		logtd("It can only be called in the ready state.");
 		return false;
@@ -67,16 +70,9 @@ bool RtpRtcp::SendRtpPacket(const std::shared_ptr<RtpPacket> &rtp_packet)
 {
 	std::shared_lock<std::shared_mutex> lock(_state_lock);
 	// nothing to do before node start
-	if(GetState() != ov::Node::NodeState::Started)
+	if(GetNodeState() != ov::Node::NodeState::Started)
 	{
 		logtd("Node has not started, so the received data has been canceled.");
-		return false;
-	}
-
-	// Lower Node is SRTP
-	auto node = GetLowerNode();
-	if(!node)
-	{
 		return false;
 	}
 
@@ -89,7 +85,8 @@ bool RtpRtcp::SendRtpPacket(const std::shared_ptr<RtpPacket> &rtp_packet)
 		if(rtcp_sr_generator->IsAvailableRtcpSRPacket())
 		{
 			auto rtcp_sr_packet = rtcp_sr_generator->PopRtcpSRPacket();
-			if(!node->SendData(NodeType::Rtcp, rtcp_sr_packet->GetData()))
+			_last_sent_rtcp_packet = rtcp_sr_packet;
+			if(SendDataToNextNode(NodeType::Rtcp, rtcp_sr_packet->GetData()) == false)
 			{
 				logd("RTCP","Send RTCP failed : pt(%d) ssrc(%u)", rtp_packet->PayloadType(), rtp_packet->Ssrc());
 			}
@@ -100,31 +97,58 @@ bool RtpRtcp::SendRtpPacket(const std::shared_ptr<RtpPacket> &rtp_packet)
 		}
 	}
 
-	if(!node->SendData(NodeType::Rtp, rtp_packet->GetData()))
-    {
-		return false;
-    }
-
-	return true;
+	_last_sent_rtp_packet = rtp_packet;
+	return SendDataToNextNode(NodeType::Rtp, rtp_packet->GetData());
 }
 
-bool RtpRtcp::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data)
+bool RtpRtcp::SendFir(uint32_t media_ssrc)
+{
+	auto stat_it = _receive_statistics.find(media_ssrc);
+	if(stat_it == _receive_statistics.end())
+	{
+		// Never received such SSRC packet
+		return false;
+	}
+
+	auto stat = stat_it->second;
+	
+	auto fir = std::make_shared<FIR>();
+
+	fir->SetSrcSsrc(stat->GetReceiverSSRC());
+	fir->AddFirMessage(media_ssrc, static_cast<uint8_t>(stat->GetNumberOfFirRequests()%256));
+	auto rtcp_packet = std::make_shared<RtcpPacket>();
+	rtcp_packet->Build(fir);
+
+	stat->OnFirRequested();
+
+	_last_sent_rtcp_packet = rtcp_packet;
+
+	return SendDataToNextNode(NodeType::Rtcp, rtcp_packet->GetData());
+}
+
+uint8_t RtpRtcp::GetReceivedPayloadType(uint32_t ssrc)
+{
+	auto stat_it = _receive_statistics.find(ssrc);
+	if(stat_it == _receive_statistics.end())
+	{
+		return 0;
+	}
+
+	return stat_it->second->GetPayloadType();
+}
+
+// In general, since RTP_RTCP is the first node, there is no previous node. So it will not be called
+bool RtpRtcp::OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data)
 {
 	std::shared_lock<std::shared_mutex> lock(_state_lock);
 	// nothing to do before node start
-	if(GetState() != ov::Node::NodeState::Started)
+	if(GetNodeState() != ov::Node::NodeState::Started)
 	{
 		logtd("Node has not started, so the received data has been canceled.");
 		return false;
 	}
 
-	auto node = GetLowerNode();
-	if(!node)
-	{
-		return false;
-	}
-
-	if(!node->SendData(from_node, data))
+	if(SendDataToNextNode(from_node, data) == false)
 	{
 		loge("RtpRtcp","Send data failed from(%d) data_len(%d)", static_cast<uint16_t>(from_node), data->GetLength());
 		return false;
@@ -136,7 +160,7 @@ bool RtpRtcp::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data
 // Implement Node Interface
 // decoded data from srtp
 // no upper node( receive data process end)
-bool RtpRtcp::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
+bool RtpRtcp::OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 {
 	// In the case of UDP, one complete packet is received here.
 	// In the case of TCP, demuxing is already performed in the lower layer 
@@ -145,7 +169,7 @@ bool RtpRtcp::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov:
 
 	std::shared_lock<std::shared_mutex> lock(_state_lock);
 	// nothing to do before node start
-	if(GetState() != ov::Node::NodeState::Started)
+	if(GetNodeState() != ov::Node::NodeState::Started)
 	{
 		logtd("Node has not started, so the received data has been canceled.");
 		return false;
@@ -210,8 +234,38 @@ bool RtpRtcp::OnRtpReceived(const std::shared_ptr<const ov::Data> &data)
 		logte("Could not find track info for payload type %d", packet->PayloadType());
 		return false;
 	}
-
 	auto track = track_it->second;
+
+	std::shared_ptr<RtpReceiveStatistics> stat;
+	auto stat_it = _receive_statistics.find(packet->Ssrc());
+	if(stat_it == _receive_statistics.end())
+	{
+		// First receive
+		stat = std::make_shared<RtpReceiveStatistics>(packet->PayloadType(), packet->Ssrc(), track->GetTimeBase().GetDen());
+		_receive_statistics.emplace(packet->Ssrc(), stat);
+	}
+	else
+	{
+		stat = stat_it->second;
+	}
+
+	stat->AddReceivedRtpPacket(packet);
+
+	// Send ReceiverReport
+	if(stat->HasElapsedSinceLastReportBlock(RECEIVER_REPORT_CYCLE_MS))
+	{
+		auto report = std::make_shared<ReceiverReport>();
+		report->SetRtpPayloadType(packet->PayloadType());
+		report->SetSenderSsrc(stat->GetReceiverSSRC());
+		report->AddReportBlock(stat->GenerateReportBlock());
+
+		auto rtcp_packet = std::make_shared<RtcpPacket>();
+		if(rtcp_packet->Build(report) == true)
+		{
+			_last_sent_rtcp_packet = rtcp_packet;
+			SendDataToNextNode(NodeType::Rtcp, rtcp_packet->GetData());
+		}
+	}
 
 	if(track->GetMediaType() == cmn::MediaType::Video)
 	{
@@ -296,11 +350,33 @@ bool RtpRtcp::OnRtcpReceived(const std::shared_ptr<const ov::Data> &data)
 	while(receiver.HasAvailableRtcpInfo())
 	{
 		auto info = receiver.PopRtcpInfo();
+
+		if(info->GetPacketType() == RtcpPacketType::SR)
+		{
+			auto sr = std::dynamic_pointer_cast<SenderReport>(info);
+			auto stat_it = _receive_statistics.find(sr->GetSenderSsrc());
+			if(stat_it != _receive_statistics.end())
+			{
+				auto stat = stat_it->second;
+				stat->AddReceivedRtcpSenderReport(sr);
+			}
+		}
 		
 		if(_observer != nullptr)
 		{
 			_observer->OnRtcpReceived(info);
 		}
 	}
+	
 	return true;
+}
+
+std::shared_ptr<RtpPacket> RtpRtcp::GetLastSentRtpPacket()
+{
+	return _last_sent_rtp_packet;
+}
+
+std::shared_ptr<RtcpPacket> RtpRtcp::GetLastSentRtcpPacket()
+{
+	return _last_sent_rtcp_packet;
 }

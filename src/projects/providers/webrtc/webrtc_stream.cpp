@@ -12,7 +12,8 @@
 #include "webrtc_private.h"
 
 #include "modules/rtp_rtcp/rtcp_info/sender_report.h"
-#include "modules/rtp_rtcp/rtcp_info/fir.h"
+
+#include "base/ovlibrary/random.h"
 
 namespace pvd
 {
@@ -65,7 +66,9 @@ namespace pvd
 			logte("m= line of answer does not correspond with offer");
 			return false;
 		}
-	
+
+		_local_ssrc = ov::Random::GenerateUInt32();
+
 		// Create Nodes
 		_rtp_rtcp = std::make_shared<RtpRtcp>(RtpRtcpInterface::GetSharedPtr());
 		_srtp_transport = std::make_shared<SrtpTransport>();
@@ -208,18 +211,18 @@ namespace pvd
 		_lip_sync_clock = std::make_shared<LipSyncClock>(audio_lip_sync_timebase, video_lip_sync_timebase);
 
 		// Connect nodes
-		_rtp_rtcp->RegisterUpperNode(nullptr);
-		_rtp_rtcp->RegisterLowerNode(_srtp_transport);
+		_rtp_rtcp->RegisterPrevNode(nullptr);
+		_rtp_rtcp->RegisterNextNode(_srtp_transport);
 		_rtp_rtcp->Start();
-		_srtp_transport->RegisterUpperNode(_rtp_rtcp);
-		_srtp_transport->RegisterLowerNode(_dtls_transport);
+		_srtp_transport->RegisterPrevNode(_rtp_rtcp);
+		_srtp_transport->RegisterNextNode(_dtls_transport);
 		_srtp_transport->Start();
-		_dtls_transport->RegisterUpperNode(_srtp_transport);
-		_dtls_transport->RegisterLowerNode(ov::Node::GetSharedPtr());
+		_dtls_transport->RegisterPrevNode(_srtp_transport);
+		_dtls_transport->RegisterNextNode(ov::Node::GetSharedPtr());
 		_dtls_transport->Start();
 
-		RegisterUpperNode(_dtls_transport);
-		RegisterLowerNode(nullptr);
+		RegisterPrevNode(_dtls_transport);
+		RegisterNextNode(nullptr);
 		ov::Node::Start();
 
 		_fir_timer.Start();
@@ -295,14 +298,7 @@ namespace pvd
 		//It must not be called during start and stop.
 		std::shared_lock<std::shared_mutex> lock(_start_stop_lock);
 
-
-		auto node = GetUpperNode();
-		if(node == nullptr)
-		{
-			return false;
-		}
-
-		return node->OnDataReceived(NodeType::Edge, data);
+		return SendDataToPrevNode(data);
 	}
 
 	uint64_t WebRTCStream::AdjustTimestamp(uint8_t payload_type, uint32_t timestamp)
@@ -435,7 +431,7 @@ namespace pvd
 		if(_fir_timer.IsElapsed(1000))
 		{
 			_fir_timer.Update();
-			SendFIR();
+			_rtp_rtcp->SendFir(_video_ssrc);
 		}
 		
 		// Send Receiver Report
@@ -467,27 +463,11 @@ namespace pvd
 		}
 	}
 
-	// TODO(Getroot): Move to RtpRtcp
-	bool WebRTCStream::SendFIR()
-	{
-		FIR fir;
-	
-		fir.SetSrcSsrc(_video_ssrc);
-		fir.AddFirMessage(_video_ssrc, _fir_seq++);
-
-		auto rtcp_packet = std::make_shared<RtcpPacket>();
-		rtcp_packet->Build(fir);
-
-		_rtp_rtcp->SendData(NodeType::Rtcp, rtcp_packet->GetData());
-
-		return true;
-	}
-
 	// ov::Node Interface
 	// RtpRtcp -> SRTP -> DTLS -> Edge(this)
-	bool WebRTCStream::SendData(NodeType from_node, const std::shared_ptr<ov::Data> &data)
+	bool WebRTCStream::OnDataReceivedFromPrevNode(NodeType from_node, const std::shared_ptr<ov::Data> &data)
 	{
-		if(ov::Node::GetState() != ov::Node::NodeState::Started)
+		if(ov::Node::GetNodeState() != ov::Node::NodeState::Started)
 		{
 			logtd("Node has not started, so the received data has been canceled.");
 			return false;
@@ -497,7 +477,7 @@ namespace pvd
 	}
 
 	// WebRTCStream Node has not a lower node so it will not be called
-	bool WebRTCStream::OnDataReceived(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
+	bool WebRTCStream::OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data)
 	{
 		return true;
 	}
