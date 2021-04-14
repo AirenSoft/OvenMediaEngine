@@ -319,9 +319,14 @@ bool IcePort::RemoveSession(uint32_t session_id)
 		_ice_port_info.erase(ice_port_info->address);
 
 		// Close only TCP (TURN)
-		if(ice_port_info->remote->GetSocket().GetType() == ov::SocketType::Tcp)
+		auto remote = ice_port_info->remote;
+
+		if (remote != nullptr)
 		{
-			ice_port_info->remote->CloseIfNeeded();
+			if (remote->GetSocket().GetType() == ov::SocketType::Tcp)
+			{
+				remote->CloseIfNeeded();
+			}
 		}
 	}
 
@@ -427,7 +432,14 @@ bool IcePort::Send(uint32_t session_id, const std::shared_ptr<const ov::Data> &d
 		return false;
 	}
 	
-	return ice_port_info->remote->SendTo(ice_port_info->address, send_data);
+	auto remote = ice_port_info->remote;
+
+	if (remote == nullptr)
+	{
+		return false;
+	}
+
+	return remote->SendTo(ice_port_info->address, send_data);
 }
 
 void IcePort::OnConnected(const std::shared_ptr<ov::Socket> &remote)
