@@ -1017,9 +1017,11 @@ bool CmafPacketizer::UpdatePlayList()
 			R"(	</Period>)" << std::endl;
 	}
 
+#if 0
 	xml
 		// <UTCTiming />
 		<< R"(	<UTCTiming schemeIdUri="urn:mpeg:dash:utc:direct:2014" value="%s" />)" << std::endl;
+#endif
 
 	xml
 		// </MPD>
