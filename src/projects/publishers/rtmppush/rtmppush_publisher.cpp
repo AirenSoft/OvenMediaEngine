@@ -243,7 +243,7 @@ std::shared_ptr<ov::Error> RtmpPushPublisher::PushStart(const info::VHostAppName
 		return ov::Error::CreateError(PushPublisherErrorCode::FailureInvalidParameter, error_message);
 	}
 
-	// Validation check for dupulicate unique id
+	// Validation check for dupulicate id
 	if (_userdata_sets.GetByKey(push->GetId()) != nullptr)
 	{
 		ov::String error_message = "Duplicate ID already exists";
@@ -251,7 +251,7 @@ std::shared_ptr<ov::Error> RtmpPushPublisher::PushStart(const info::VHostAppName
 		return ov::Error::CreateError(PushPublisherErrorCode::FailureDupulicateKey, error_message);
 	}
 
-	// Validation check for ptorocol scheme
+	// Validation check for protocol scheme
 	if (push->GetUrl().HasPrefix("rtmp://") == false)
 	{
 		ov::String error_message = "Unsupported protocol";
