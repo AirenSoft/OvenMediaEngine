@@ -811,8 +811,8 @@ bool IcePort::SendStunBindingRequest(const std::shared_ptr<ov::Socket> &remote, 
 	// unknown_attribute->SetData(&(unknown_data[0]), 4);
 	// message.AddAttribute(std::move(attribute));
 
-	// ICE-CONTROLLING (for testing hash)
-	attribute = std::make_shared<StunUnknownAttribute>(0x802A, 8);
+	// ICE-CONTROLLED (for testing hash)
+	attribute = std::make_shared<StunUnknownAttribute>(0x8029, 8);
 	unknown_attribute = dynamic_cast<StunUnknownAttribute *>(attribute.get());
 	uint8_t unknown_data2[] = {0x1C, 0xF5, 0x1E, 0xB1, 0xB0, 0xCB, 0xE3, 0x49};
 	unknown_attribute->SetData(&(unknown_data2[0]), 8);
