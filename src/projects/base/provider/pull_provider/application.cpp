@@ -86,6 +86,14 @@ namespace pvd
 									stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
 						}
 
+						// Abort pull stream when no packets arrived for more than 15 seconds. Most likely the stream source died, thus give OME a chance to correctly create a new stream + playlistis
+						if(elapsed_time_from_last_recv > 15)
+						{
+							logtw("%s/%s(%u) There were no incoming packets. %d seconds have elapsed since the last packet was received. Deleting the stream.", 
+									stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), elapsed_time_from_last_recv);
+							DeleteStream(stream);
+						}
+
 						if(elapsed_time_from_last_sent > MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC)
 						{
 							logtw("%s/%s(%u) stream will be deleted because it hasn't been used for %u seconds", stream->GetApplicationInfo().GetName().CStr(), stream->GetName().CStr(), stream->GetId(), MAX_UNUSED_STREAM_AVAILABLE_TIME_SEC);
