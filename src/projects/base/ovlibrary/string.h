@@ -10,12 +10,12 @@
 
 #include <memory.h>
 
-#include <cstdio>
 #include <cstdarg>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <memory>
 #include <map>
+#include <memory>
 #include <vector>
 
 namespace ov
@@ -26,7 +26,7 @@ namespace ov
 	{
 	public:
 		String() = default;
-		String(const char *string); // NOLINT
+		String(const char *string);	 // NOLINT
 		String(const char *string, size_t length);
 
 		// copy constructor
@@ -37,16 +37,16 @@ namespace ov
 
 		~String();
 
-		operator const char *() const noexcept; // NOLINT
+		operator const char *() const noexcept;	 // NOLINT
 		const char *CStr() const noexcept;
 		// 수정 가능한 버퍼 반환. 반드시 SetLength()를 호출하였거나, 길이를 확실하게 알고 있는 경우에만 이 버퍼를 받아서 사용해야 함
 		char *GetBuffer() noexcept;
 
 		// 문자열 조작 API
-		String &operator =(const String &buffer) noexcept;
-		String &operator =(const char *buffer) noexcept;
-		const String &operator +=(const char *buffer) noexcept;
-		String operator +(const String &other) noexcept;
+		String &operator=(const String &buffer) noexcept;
+		String &operator=(const char *buffer) noexcept;
+		const String &operator+=(const char *buffer) noexcept;
+		String operator+(const String &other) noexcept;
 
 		// 문자 추가
 		bool Prepend(char c);
@@ -99,14 +99,14 @@ namespace ov
 
 		// index번째 글자를 가져옴
 		char Get(off_t index) const;
-		char operator [](off_t index) const;
+		char operator[](off_t index) const;
 
 		// 비교 연산
-		bool operator !=(const char *buffer) const;
-		bool operator ==(const String &str) const;
-		bool operator ==(const char *buffer) const;
-		bool operator <(const String &string) const;
-		bool operator >(const String &string) const;
+		bool operator!=(const char *buffer) const;
+		bool operator==(const String &str) const;
+		bool operator==(const char *buffer) const;
+		bool operator<(const String &string) const;
+		bool operator>(const String &string) const;
 
 		// 할당된 메모리 크기를 얻어옴
 		size_t GetCapacity() const noexcept;
@@ -144,9 +144,9 @@ namespace ov
 
 	struct CaseInsensitiveComparator
 	{
-		bool operator ()(const String &s1, const String &s2) const
+		bool operator()(const String &s1, const String &s2) const
 		{
 			return s1.UpperCaseString() < s2.UpperCaseString();
 		}
 	};
-}
+}  // namespace ov
