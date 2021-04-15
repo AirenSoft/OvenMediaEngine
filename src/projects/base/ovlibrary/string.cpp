@@ -753,55 +753,64 @@ namespace ov
 		return ((operator==(buffer)) == true) ? false : true;
 	}
 
-	bool String::operator==(const String &str) const
+	bool String::IsEqualsTo(const char *str, size_t length) const
 	{
-		if (str._buffer == _buffer)
+		if (str == _buffer)
 		{
 			return true;
 		}
 
 		// Because we compare the two values above to see if they are the same, none of them are nullptr here.
-		if ((str._buffer == nullptr) || (_buffer == nullptr))
+		if ((str == nullptr) || (_buffer == nullptr))
 		{
 			return false;
 		}
 
-		if (str._length != _length)
+		if (length != _length)
 		{
 			return false;
 		}
 
-		if (::strncmp(_buffer, str._buffer, _length) == 0)
+		if (::strncmp(_buffer, _buffer, _length) == 0)
 		{
 			return true;
 		}
 
 		return false;
+	}
+
+	bool String::operator==(const String &str) const
+	{
+		return IsEqualsTo(str.CStr(), str.GetLength());
 	}
 
 	bool String::operator==(const char *buffer) const
 	{
-		if (buffer == _buffer)
-		{
-			return true;
-		}
+		return IsEqualsTo(buffer, (buffer == nullptr) ? 0 : ::strlen(buffer));
+	}
 
-		if (buffer == nullptr)
-		{
-			return false;
-		}
-
+	bool String::operator<(const String &str) const
+	{
 		if (_buffer == nullptr)
 		{
-			if (buffer[0] == '\0')
+			if (str._buffer != nullptr)
 			{
+				// _buffer == nullptr && str != nullptr
 				return true;
 			}
 
+			// _buffer == nullptr && str == nullptr
 			return false;
 		}
 
-		if (::strncmp(_buffer, buffer, _length) == 0)
+		if (str._buffer == nullptr)
+		{
+			// _buffer != nullptr && str == nullptr
+			return false;
+		}
+
+		// _buffer != nullptr && str != nullptr
+		if (::strcmp(_buffer, str._buffer) < 0)
 		{
 			return true;
 		}
@@ -809,52 +818,23 @@ namespace ov
 		return false;
 	}
 
-	bool String::operator<(const String &string) const
+	bool String::operator>(const String &str) const
 	{
 		if (_buffer == nullptr)
 		{
-			if (string._buffer != nullptr)
-			{
-				// _buffer == nullptr && string != nullptr
-				return true;
-			}
-
-			// _buffer == nullptr && string == nullptr
+			// _buffer == nullptr && str != nullptr
+			// _buffer == nullptr && str == nullptr
 			return false;
 		}
 
-		if (string._buffer == nullptr)
+		if (str._buffer == nullptr)
 		{
-			// _buffer != nullptr && string == nullptr
-			return false;
-		}
-
-		// _buffer != nullptr && string != nullptr
-		if (::strcmp(_buffer, string._buffer) < 0)
-		{
+			// _buffer != nullptr && str == null
 			return true;
 		}
 
-		return false;
-	}
-
-	bool String::operator>(const String &string) const
-	{
-		if (_buffer == nullptr)
-		{
-			// _buffer == nullptr && string != nullptr
-			// _buffer == nullptr && string == nullptr
-			return false;
-		}
-
-		if (string._buffer == nullptr)
-		{
-			// _buffer != nullptr && string == null
-			return true;
-		}
-
-		// _buffer != nullptr && string != nullptr
-		if (::strcmp(_buffer, string._buffer) > 0)
+		// _buffer != nullptr && str != nullptr
+		if (::strcmp(_buffer, str._buffer) > 0)
 		{
 			return true;
 		}
