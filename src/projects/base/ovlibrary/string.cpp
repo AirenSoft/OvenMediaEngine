@@ -771,7 +771,7 @@ namespace ov
 			return false;
 		}
 
-		if (::strncmp(_buffer, _buffer, _length) == 0)
+		if (::strncmp(_buffer, str, _length) == 0)
 		{
 			return true;
 		}
