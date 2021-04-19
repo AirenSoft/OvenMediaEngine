@@ -142,17 +142,17 @@ bool MediaTrack::IsBypass()
 	return _byass;
 }
 
-void MediaTrack::SetCodecExtradata(std::vector<uint8_t> codec_extradata)
+void MediaTrack::SetCodecExtradata(const std::shared_ptr<ov::Data> &codec_extradata)
 {
-	_codec_extradata = std::move(codec_extradata);
+	_codec_extradata = codec_extradata;
 }
 
-const std::vector<uint8_t> &MediaTrack::GetCodecExtradata() const
+const std::shared_ptr<ov::Data> &MediaTrack::GetCodecExtradata() const
 {
 	return _codec_extradata;
 }
 
-std::vector<uint8_t> &MediaTrack::GetCodecExtradata()
+std::shared_ptr<ov::Data> &MediaTrack::GetCodecExtradata()
 {
 	return _codec_extradata;
 }
@@ -206,8 +206,13 @@ ov::String MediaTrack::GetInfoString()
 	return out_str;
 }
 
-bool MediaTrack::IsValidity()
+bool MediaTrack::IsValid()
 {
+	if(_is_valid == true)
+	{
+		return true;
+	}
+
 	switch (GetCodecId())
 	{
 		case MediaCodecId::H264: {
@@ -215,9 +220,10 @@ bool MediaTrack::IsValidity()
 				_height > 0 &&
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0 &&
-				_codec_extradata.size() > 0)
+				_codec_extradata != nullptr)
 
 			{
+				_is_valid = true;
 				return true;
 			}
 		}
@@ -228,6 +234,7 @@ bool MediaTrack::IsValidity()
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0)
 			{
+				_is_valid = true;
 				return true;
 			}
 		}
@@ -238,6 +245,7 @@ bool MediaTrack::IsValidity()
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0)
 			{
+				_is_valid = true;
 				return true;
 			}
 		}
@@ -249,6 +257,7 @@ bool MediaTrack::IsValidity()
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0)
 			{
+				_is_valid = true;
 				return true;
 			}
 		}
@@ -260,6 +269,7 @@ bool MediaTrack::IsValidity()
 				_time_base.GetNum() > 0 &&
 				_time_base.GetDen() > 0)
 			{
+				_is_valid = true;
 				return true;
 			}
 		}
@@ -269,8 +279,9 @@ bool MediaTrack::IsValidity()
 				_time_base.GetDen() > 0 &&
 				_channel_layout.GetCounts() > 0 &&
 				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown &&
-				_codec_extradata.size() > 0)
+				_codec_extradata != nullptr)
 			{
+				_is_valid = true;
 				return true;
 			}
 		}
@@ -282,6 +293,7 @@ bool MediaTrack::IsValidity()
 				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown && 
 				_sample.GetRate() == cmn::AudioSample::Rate::R48000)
 			{
+				_is_valid = true;
 				return true;
 			}
 		}
@@ -292,6 +304,7 @@ bool MediaTrack::IsValidity()
 				_channel_layout.GetCounts() > 0 &&
 				_channel_layout.GetLayout() > cmn::AudioChannel::Layout::LayoutUnknown)
 			{
+				_is_valid = true;
 				return true;
 			}
 		}

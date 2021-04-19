@@ -82,16 +82,16 @@ public:
 		return _channel;
 	}
 
-	void SetExtradata(std::vector<uint8_t> &extradata)
+	void SetExtradata(const std::shared_ptr<ov::Data> &extradata)
 	{
-		_extradata.assign(extradata.begin(), extradata.end());
+		_extradata = extradata;
 	}
 
-	const std::vector<uint8_t> &GetExtradata() const
+	const std::shared_ptr<ov::Data> &GetExtradata() const
 	{
 		return _extradata;
 	}
-	std::vector<uint8_t> &GetExtradata()
+	std::shared_ptr<ov::Data> &GetExtradata()
 	{
 		return _extradata;
 	}
@@ -108,7 +108,7 @@ private:
 	cmn::AudioSample _sample;
 	cmn::AudioChannel _channel;
 
-	std::vector<uint8_t> _extradata;
+	std::shared_ptr<ov::Data> _extradata;
 };
 
 class FileWriter

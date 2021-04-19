@@ -148,9 +148,9 @@ ov::String Packetizer::GetCodecString(const std::shared_ptr<const MediaTrack> &t
 			// Not supported
 			break;
 
-		case cmn::MediaCodecId::H264: {
+		case cmn::MediaCodecId::H264: 
+		{
 			auto profile_string = H264Converter::GetProfileString(track->GetCodecExtradata());
-
 			if (profile_string.IsEmpty())
 			{
 				profile_string = H264_CONVERTER_DEFAULT_PROFILE;
@@ -195,7 +195,7 @@ ov::String Packetizer::GetCodecString(const std::shared_ptr<const MediaTrack> &t
 		}
 
 		case cmn::MediaCodecId::Aac: {
-			auto profile_string = AacConverter::GetProfileString(track->GetCodecExtradata());
+			auto profile_string = AacConverter::GetProfileString(track->GetAacConfig());
 
 			if (profile_string.IsEmpty())
 			{

@@ -41,71 +41,33 @@ public:
 
 	// Queue interfaces
 	void Push(std::shared_ptr<MediaPacket> media_packet);
-	bool ProcessInboundStream(
-		std::shared_ptr<MediaTrack> &media_track,
-		std::shared_ptr<MediaPacket> &media_packet);
-	bool ProcessOutboundStream(
-		std::shared_ptr<MediaTrack> &media_track,
-		std::shared_ptr<MediaPacket> &media_packet);
+	bool ProcessInboundStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
+	bool ProcessOutboundStream(std::shared_ptr<MediaTrack> &media_track,std::shared_ptr<MediaPacket> &media_packet);
 
 	std::shared_ptr<MediaPacket> Pop();
 
 	// Query original stream information
 	std::shared_ptr<info::Stream> GetStream();
 
-	bool IsCreatedSteam();
-	void SetCreatedSteam(bool created);
-
-	void SetNotifyStreamPrepared(bool completed);
-	bool IsNotifyStreamPrepared();
-
-	bool IsParseTrackAll();
-
-private:
-	void InitParseTrackInfo();
-	// void SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track, bool parsed);
-	void SetParseTrackInfo(std::shared_ptr<MediaTrack> &media_track);
-	bool IsParseTrackInfo(std::shared_ptr<MediaTrack> &media_track);
-
-	// Parse media track information
-	bool ParseTrackInfo(
-		std::shared_ptr<MediaTrack> &media_track,
-		std::shared_ptr<MediaPacket> &media_packet);
-
-	// Set whether parsing media track is complete
-	std::map<MediaTrackId, bool> _parse_completed_track_info;
-	bool _is_parsed_all_track;
+	void OnStreamPrepared(bool completed);
+	bool IsStreamPrepared();
+	bool AreAllTracksParsed();
 
 private:
 	void DropNonDecodingPackets();
 
-private:
-	// Convert to default bitstream format
-	bool ConvertToDefaultBitstream(
-		std::shared_ptr<MediaTrack> &media_track,
-		std::shared_ptr<MediaPacket> &media_packet);
+	bool ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
+	bool ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
+	bool ProcessH265AnnexBStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
+	bool ProcessAACRawStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
+	bool ProcessAACAdtsStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
+	bool ProcessVP8Stream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
+	bool ProcessOPUSStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet);
 
-	// Parse fragment header, flags
-	bool UpdateFlagmentHeaders(
-		std::shared_ptr<MediaTrack> &media_track,
-		std::shared_ptr<MediaPacket> &media_packet, bool force = false);
+	void UpdateStatistics(std::shared_ptr<MediaTrack> &media_track,  std::shared_ptr<MediaPacket> &media_packet);
 
-	// Periodically insert sps/pps so that the player's decoding starts quickly.
-	bool UpdateDecoderParameterSets(
-		std::shared_ptr<MediaTrack> &media_track,
-		std::shared_ptr<MediaPacket> &media_packet);
-
-	bool UpdateKeyFlags(
-		std::shared_ptr<MediaTrack> &media_track,
-		std::shared_ptr<MediaPacket> &media_packet);
-
-	void UpdateStatistics(std::shared_ptr<MediaTrack> &media_track,
-						  std::shared_ptr<MediaPacket> &media_packet);
-
-private:
-	// Whether to generate output streams corresponding to the current mr stream.
-	bool _is_created_stream;
-	bool _is_notify_stream_parsed;
+	bool _is_stream_prepared = false;
+	bool _are_all_tracks_parsed = false;
 
 	// Incoming/Outgoing Stream
 	MediaRouterStreamType _inout_type;
@@ -114,13 +76,15 @@ private:
 	MediaRouteApplicationConnector::ConnectorType _application_connector_type;
 
 	// Stream Information
-	std::shared_ptr<info::Stream> _stream;
+	std::shared_ptr<info::Stream> _stream = nullptr;
 
 	// Temporary packet store. for calculating packet duration
 	std::map<MediaTrackId, std::shared_ptr<MediaPacket>> _media_packet_stash;
 
 	// Packets queue
 	ov::Queue<std::shared_ptr<MediaPacket>> _packets_queue;
+
+	// TODO(Soulk) : Modified to use by tying statistical information into a class and creating a map with MediaTrackId as a key
 
 	// Store the correction values in case of sudden change in PTS.
 	// If the PTS suddenly increases, the filter behaves incorrectly.
@@ -147,8 +111,5 @@ private:
 	std::chrono::time_point<std::chrono::system_clock> _last_recv_time;
 	std::chrono::time_point<std::chrono::system_clock> _stat_start_time;
 
-private:
-	void DumpPacket(
-		std::shared_ptr<MediaPacket> &media_packet,
-		bool dump = false);
+	void DumpPacket(std::shared_ptr<MediaPacket> &media_packet, bool dump = false);
 };

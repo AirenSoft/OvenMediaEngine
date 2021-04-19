@@ -67,3 +67,20 @@ double VideoTrack::GetVideoTimestampScale() const
 	return _video_timescale;
 }
 
+std::shared_ptr<ov::Data> VideoTrack::GetH264SpsPpsAnnexBFormat() const
+{
+	return _h264_sps_pps_annexb_data;
+}
+
+const FragmentationHeader& VideoTrack::GetH264SpsPpsAnnexBFragmentHeader() const
+{
+	return _h264_sps_pps_annexb_fragment_header;
+}
+
+void VideoTrack::SetH264SpsPpsAnnexBFormat(const std::shared_ptr<ov::Data>& data, const FragmentationHeader &header)
+{
+	_h264_sps_pps_annexb_data = data;
+	_h264_sps_pps_annexb_fragment_header = header;
+}
+
+

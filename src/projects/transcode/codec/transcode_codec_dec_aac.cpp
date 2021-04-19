@@ -111,7 +111,7 @@ void OvenCodecImplAvcodecDecAAC::ThreadDecode()
 				break;
 			}
 
-			if (_cur_data->GetLength() <= _pkt_offset)
+			if (_cur_data == nullptr || _cur_data->GetLength() <= _pkt_offset)
 			{
 				_cur_pkt = nullptr;
 				_cur_data = nullptr;

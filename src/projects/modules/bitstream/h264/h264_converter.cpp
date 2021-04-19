@@ -8,7 +8,7 @@
 
 static uint8_t START_CODE[4] = {0x00, 0x00, 0x00, 0x01};
 
-bool H264Converter::GetExtraDataFromAvcc(const cmn::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
+bool H264Converter::GetExtraDataFromAvccSequenceHeader(const cmn::PacketType type, const std::shared_ptr<ov::Data> &data, std::vector<uint8_t> &extradata)
 {
 	if (type == cmn::PacketType::SEQUENCE_HEADER)
 	{
@@ -21,14 +21,13 @@ bool H264Converter::GetExtraDataFromAvcc(const cmn::PacketType type, const std::
 		logtd("%s", config.GetInfoString().CStr());
 
 		config.Serialize(extradata);
-
 		return true;
 	}
 
 	return false;
 }
 
-bool H264Converter::ConvertAvccToAnnexb(cmn::PacketType type, const std::shared_ptr<ov::Data> &data, const std::vector<uint8_t> &extradata)
+bool H264Converter::ConvertAvccToAnnexb(cmn::PacketType type, const std::shared_ptr<ov::Data> &data, const std::shared_ptr<ov::Data> &sps_pps_annexb)
 {
 	auto annexb_data = std::make_shared<ov::Data>();
 
@@ -93,30 +92,9 @@ bool H264Converter::ConvertAvccToAnnexb(cmn::PacketType type, const std::shared_
 		// Deprecated. The same function is performed in Mediarouter.
 
 		// Append SPS/PPS NalU before IdrSlice NalU. not every packet.
-		if (extradata.size() > 0 && has_idr_slice == true)
+		if (sps_pps_annexb != nullptr && has_idr_slice == true)
 		{
-			AVCDecoderConfigurationRecord config;
-			if (!AVCDecoderConfigurationRecord::Parse(extradata.data(), extradata.size(), config))
-			{
-				logte("Could not parse sequence header");
-				return false;
-			}
-
-			auto sps_pps = std::make_shared<ov::Data>();
-
-			for (int i = 0; i < config.NumOfSPS(); i++)
-			{
-				sps_pps->Append(START_CODE, sizeof(START_CODE));
-				sps_pps->Append(config.GetSPS(i));
-			}
-
-			for (int i = 0; i < config.NumOfPPS(); i++)
-			{
-				sps_pps->Append(START_CODE, sizeof(START_CODE));
-				sps_pps->Append(config.GetPPS(i));
-			}
-
-			annexb_data->Insert(sps_pps->GetDataAs<uint8_t>(), 0, sps_pps->GetLength());
+			annexb_data->Insert(sps_pps_annexb->GetDataAs<uint8_t>(), 0, sps_pps_annexb->GetLength());
 		}
 	}
 
@@ -125,7 +103,6 @@ bool H264Converter::ConvertAvccToAnnexb(cmn::PacketType type, const std::shared_
 	if (annexb_data->GetLength() > 0)
 	{
 		data->Append(annexb_data);
-		//  *data = *annexb_data;
 	}
 
 	return true;
@@ -320,17 +297,26 @@ std::shared_ptr<const ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::sh
 	return avcc_data;
 }
 
+ov::String H264Converter::GetProfileString(const std::shared_ptr<ov::Data> &codec_extradata)
+{
+	AVCDecoderConfigurationRecord record;
+	if (AVCDecoderConfigurationRecord::Parse(codec_extradata->GetDataAs<uint8_t>(), codec_extradata->GetLength(), record) == false)
+	{
+		return "";
+	}
+
+	// PPCCLL = <profile idc><constraint set flags><level idc>
+	return ov::String::FormatString("%02x%02x%02x",	record.ProfileIndication(), record.Compatibility(), record.LevelIndication());
+}
+
 ov::String H264Converter::GetProfileString(const std::vector<uint8_t> &codec_extradata)
 {
 	AVCDecoderConfigurationRecord record;
-
 	if (AVCDecoderConfigurationRecord::Parse(codec_extradata, record) == false)
 	{
 		return "";
 	}
 
 	// PPCCLL = <profile idc><constraint set flags><level idc>
-	return ov::String::FormatString(
-		"%02x%02x%02x",
-		record.ProfileIndication(), record.Compatibility(), record.LevelIndication());
+	return ov::String::FormatString("%02x%02x%02x",	record.ProfileIndication(), record.Compatibility(), record.LevelIndication());
 }

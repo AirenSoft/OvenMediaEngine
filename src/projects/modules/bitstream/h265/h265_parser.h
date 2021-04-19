@@ -145,6 +145,9 @@ private:
 class H265Parser
 {
 public:
+	// returns offset (start point), code_size : 3(001) or 4(0001)
+	// returns -1 if there is no start code in the buffer
+	static int FindAnnexBStartCode(const uint8_t *bitstream, size_t length, size_t &start_code_size);
     static bool CheckKeyframe(const uint8_t *bitstream, size_t length);
     static bool ParseNalUnitHeader(const uint8_t *nalu, size_t length, H265NalUnitHeader &header);
     static bool ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps);

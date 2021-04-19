@@ -545,6 +545,7 @@ namespace ov
 		///
 		/// @return 저장된 데이터
 		std::shared_ptr<const Data> GetRemainData() const noexcept;
+		std::shared_ptr<const Data> GetRemainData(size_t length) const noexcept;
 
 		/// 현재 위치를 얻어옴
 		///

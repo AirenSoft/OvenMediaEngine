@@ -97,6 +97,11 @@ public:
 		return _media_type;
 	}
 
+	void SetData(std::shared_ptr<ov::Data> &data)
+	{
+		_data = data;
+	}
+
 	const std::shared_ptr<const ov::Data> GetData() const noexcept
 	{
 		return _data;

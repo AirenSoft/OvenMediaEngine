@@ -1,42 +1,64 @@
 #include "h264_parser.h"
 
-bool H264Parser::CheckKeyframe(const uint8_t *bitstream, size_t length)
+int H264Parser::FindAnnexBStartCode(const uint8_t *bitstream, size_t length, size_t &start_code_size)
 {
-    size_t offset = 0;
-    while(offset < length)
-    {
-        size_t remaining = length - offset;
-        const uint8_t* data = bitstream + offset;
+	size_t offset = 0;
+	start_code_size = 0;
+	
+	while(offset < length)
+	{
+		size_t remaining = length - offset;
+		const uint8_t* data = bitstream + offset;
 
-        if((remaining >= 3 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x01) || 
+		if((remaining >= 3 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x01) || 
             (remaining >= 4 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x01))
         {
             if(data[2] == 0x01)
             {
-                offset += 3;
+                start_code_size = 3;
             }
             else
             {
-                offset += 4;
+                start_code_size = 4;
             }
 
-			if(length - offset > H264_NAL_UNIT_HEADER_SIZE)
-			{
-				H264NalUnitHeader header;
-				ParseNalUnitHeader(bitstream+offset, H264_NAL_UNIT_HEADER_SIZE, header);
-
-				if(header.GetNalUnitType() == H264NalUnitType::IdrSlice ||
-				header.GetNalUnitType() == H264NalUnitType::Sps)
-				{
-					return true;
-				}
-			}
+			return offset;
 		}
 		else
 		{
-			offset ++;
+			offset += 1;
 		}
 	}
+
+	return -1;
+}
+
+bool H264Parser::CheckAnnexBKeyframe(const uint8_t *bitstream, size_t length)
+{
+    size_t offset = 0;
+    while(offset < length)
+    {
+		size_t start_code_size = 0;
+
+		auto pos = FindAnnexBStartCode(bitstream+offset, length-offset, start_code_size);
+		if(pos == -1)
+		{
+			break;
+		}
+
+		offset = offset + pos + start_code_size;
+		if(length - offset > H264_NAL_UNIT_HEADER_SIZE)
+		{
+			H264NalUnitHeader header;
+			ParseNalUnitHeader(bitstream+offset, H264_NAL_UNIT_HEADER_SIZE, header);
+
+			if(header.GetNalUnitType() == H264NalUnitType::IdrSlice || header.GetNalUnitType() == H264NalUnitType::Sps)
+			{
+				return true;
+			}
+		}
+	}
+
 	return false;
 }
 

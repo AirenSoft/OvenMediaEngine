@@ -136,6 +136,7 @@ public:
 
 	AacObjectType				ObjectType();
 	AacSamplingFrequencies		SamplingFrequency();
+	uint32_t					SamplerateNum();
 	uint8_t						Channel();
 
 	void 						SetOjbectType(AacObjectType object_type);
@@ -147,6 +148,7 @@ public:
 	ov::String 					GetInfoString();
 
 	// std::vector<uint8_t> 		Serialize() const;
+	std::shared_ptr<ov::Data>	Serialize();
 	void 						Serialize(std::vector<uint8_t>& serialze);
 
 private:

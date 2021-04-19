@@ -54,3 +54,13 @@ const AudioChannel &AudioTrack::GetChannel() const
 {
 	return _channel_layout;
 }
+
+std::shared_ptr<AACSpecificConfig> AudioTrack::GetAacConfig() const
+{
+	return _aac_config;
+}
+
+void AudioTrack::SetAacConfig(const std::shared_ptr<AACSpecificConfig> &config)
+{
+	_aac_config = config;
+}

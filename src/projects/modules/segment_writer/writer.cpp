@@ -208,12 +208,12 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 			}
 
 			auto &extra_data = media_track->GetCodecExtradata();
-			if (extra_data.size() > 0)
+			if (extra_data != nullptr)
 			{
-				codec_parameters->extradata_size = extra_data.size();
+				codec_parameters->extradata_size = extra_data->GetLength();
 				codec_parameters->extradata = static_cast<uint8_t *>(::av_malloc(codec_parameters->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE));
 				::memset(codec_parameters->extradata, 0, codec_parameters->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
-				::memcpy(codec_parameters->extradata, extra_data.data(), codec_parameters->extradata_size);
+				::memcpy(codec_parameters->extradata, extra_data->GetData(), codec_parameters->extradata_size);
 			}
 
 			// _output_format->video_codec = codec_parameters->codec_id;
@@ -233,12 +233,12 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 			codec_parameters->codec_tag = 0;
 
 			auto &extra_data = media_track->GetCodecExtradata();
-			if (extra_data.size() > 0)
+			if (extra_data != nullptr)
 			{
-				codec_parameters->extradata_size = extra_data.size();
+				codec_parameters->extradata_size = extra_data->GetLength();
 				codec_parameters->extradata = static_cast<uint8_t *>(::av_malloc(codec_parameters->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE));
 				::memset(codec_parameters->extradata, 0, codec_parameters->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
-				::memcpy(codec_parameters->extradata, extra_data.data(), codec_parameters->extradata_size);
+				::memcpy(codec_parameters->extradata, extra_data->GetData(), codec_parameters->extradata_size);
 			}
 
 			// _output_format->audio_codec = codec_parameters->codec_id;

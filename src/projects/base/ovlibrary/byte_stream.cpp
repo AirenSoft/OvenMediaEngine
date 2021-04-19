@@ -120,6 +120,11 @@ namespace ov
 		return _read_only_data->Subdata(_offset);
 	}
 
+	std::shared_ptr<const Data> ByteStream::GetRemainData(size_t length) const noexcept
+	{
+		return _read_only_data->Subdata(_offset, length);
+	}
+
 	off_t ByteStream::GetOffset() const noexcept
 	{
 		return _offset;

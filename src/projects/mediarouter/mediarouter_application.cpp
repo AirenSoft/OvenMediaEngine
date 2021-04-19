@@ -297,7 +297,7 @@ bool MediaRouteApplication::OnStreamCreated(
 	}
 
 	// If all track information is validity, Notify the observer that the current stream is preapred.
-	if (stream->IsNotifyStreamPrepared() == false && stream->IsParseTrackAll() == true)
+	if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
 	{
 		NotifyStreamPrepared(stream);
 	}
@@ -412,7 +412,7 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 		}
 	}
 
-	stream->SetNotifyStreamPrepared(true);
+	stream->OnStreamPrepared(true);
 
 	return true;
 }
@@ -673,7 +673,7 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 
 		// When the inbound stream is finished parsing track information,
 		// Notify the Observer that the stream is parsed
-		if (stream->IsNotifyStreamPrepared() == false && stream->IsParseTrackAll() == true)
+		if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
 		{
 			NotifyStreamPrepared(stream);
 		}
@@ -725,7 +725,7 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 
 		
 
-		if (stream->IsNotifyStreamPrepared() == false && stream->IsParseTrackAll() == true)
+		if (stream->IsStreamPrepared() == false && stream->AreAllTracksParsed() == true)
 		{
 			NotifyStreamPrepared(stream);
 		}

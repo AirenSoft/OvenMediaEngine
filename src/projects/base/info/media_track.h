@@ -10,7 +10,6 @@
 
 #include "video_track.h"
 #include "audio_track.h"
-
 class MediaTrack : public VideoTrack, public AudioTrack
 {
 public:
@@ -50,21 +49,21 @@ public:
 	void SetBypass(bool flag);
 	bool IsBypass();
 
+	ov::String GetInfoString();
+	bool IsValid();
+
 	// Define extradata by codec
 	//  H264 : AVCDecoderConfigurationRecord
 	//  H265 : HEVCDecoderConfiguratinRecord(TODO)
 	//  AAC : AACSpecificConfig
 	//  VP8 : No plan
 	//  OPUS : No plan
-	void SetCodecExtradata(std::vector<uint8_t> codec_extradata);
-	const std::vector<uint8_t> &GetCodecExtradata() const;
-	std::vector<uint8_t> &GetCodecExtradata();
-
-	ov::String GetInfoString();
-
-	bool IsValidity();
+	void SetCodecExtradata(const std::shared_ptr<ov::Data> &codec_extradata);
+	const std::shared_ptr<ov::Data> &GetCodecExtradata() const;
+	std::shared_ptr<ov::Data> &GetCodecExtradata();
 
 private:
+	bool _is_valid = false;
 	uint32_t _id;
 
 	cmn::MediaCodecId _codec_id;
@@ -80,5 +79,5 @@ private:
 	// Time of last frame(packet)
 	int64_t _last_frame_time;
 
-	std::vector<uint8_t> _codec_extradata;
+	std::shared_ptr<ov::Data> _codec_extradata = nullptr;
 };
