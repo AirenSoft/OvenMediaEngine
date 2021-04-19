@@ -254,7 +254,7 @@ bool MediaDescription::ParsingMediaLine(char type, std::string content)
 				{
 					UseDtls(true);
 				}
-				else if(protocol.UpperCaseString() == "RTP/AVPF")
+				else if(protocol.UpperCaseString() == "RTP/AVPF" || protocol.UpperCaseString() == "RTP/AVP")
 				{
 					UseDtls(false);
 				}
