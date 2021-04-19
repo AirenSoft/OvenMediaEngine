@@ -1,7 +1,9 @@
+#include "push.h"
+
 #include <base/ovlibrary/ovlibrary.h>
+
 #include <random>
 
-#include "push.h"
 #include "stream.h"
 
 namespace info
@@ -35,14 +37,14 @@ namespace info
 	{
 		return _id;
 	}
-		
-	void Push::SetEnable(bool eanble) 
-	{ 
-		_enable = eanble; 
+
+	void Push::SetEnable(bool eanble)
+	{
+		_enable = eanble;
 	}
-	bool Push::GetEnable() 
-	{ 
-		return _enable; 
+	bool Push::GetEnable()
+	{
+		return _enable;
 	}
 
 	void Push::SetVhost(ov::String value)
@@ -76,7 +78,7 @@ namespace info
 
 	ov::String Push::GetStreamName()
 	{
-		if(_stream == nullptr)
+		if (_stream == nullptr)
 		{
 			return "";
 		}
@@ -89,13 +91,14 @@ namespace info
 		_session_id = id;
 	}
 
-	session_id_t Push::GetSessionId() {
+	session_id_t Push::GetSessionId()
+	{
 		return _session_id;
 	}
 
 	void Push::SetStream(const info::Stream &stream)
 	{
-		_stream = std::make_shared<info::Stream>(stream);		
+		_stream = std::make_shared<info::Stream>(stream);
 	}
 
 	const std::chrono::system_clock::time_point &Push::GetCreatedTime() const
@@ -105,7 +108,8 @@ namespace info
 
 	void Push::SetProtocol(ov::String protocol)
 	{
-		_protocol = protocol;
+		_protocol = protocol.Trim();
+		_protocol.MakeLower();
 	}
 	ov::String Push::GetProtocol()
 	{
@@ -114,7 +118,7 @@ namespace info
 
 	void Push::SetUrl(ov::String url)
 	{
-		_url = url;
+		_url = url.Trim();
 	}
 	ov::String Push::GetUrl()
 	{
@@ -123,7 +127,7 @@ namespace info
 
 	void Push::SetStreamKey(ov::String stream_key)
 	{
-		_stream_key = stream_key;
+		_stream_key = stream_key.Trim();
 	}
 	ov::String Push::GetStreamKey()
 	{
@@ -193,29 +197,29 @@ namespace info
 	}
 	ov::String Push::GetStateString()
 	{
-		switch(GetState())
+		switch (GetState())
 		{
 			case PushState::Ready:
 				return "ready";
 			case PushState::Pushing:
-				return "Pushing";				
+				return "Pushing";
 			case PushState::Stopping:
-				return "stopping";					
+				return "stopping";
 			case PushState::Stopped:
-				return "stopped";	
+				return "stopped";
 			case PushState::Error:
-				return "error";									
+				return "error";
 		}
 
 		return "Unknown";
 	}
 
-	const ov::String Push::GetInfoString() 
+	const ov::String Push::GetInfoString()
 	{
 		ov::String info = "\n";
 
 		info.AppendFormat(" id=%s\n", _id.CStr());
-		info.AppendFormat(" stream=%s\n", (_stream != nullptr)?_stream->GetName().CStr():"");
+		info.AppendFormat(" stream=%s\n", (_stream != nullptr) ? _stream->GetName().CStr() : "");
 		info.AppendFormat(" protocol=%s\n", _protocol.CStr());
 		info.AppendFormat(" url=%s\n", _url.CStr());
 		info.AppendFormat(" stream_key=%s\n", _stream_key.CStr());
@@ -229,6 +233,6 @@ namespace info
 		info.AppendFormat(" Push_stop_time=%s", ov::Converter::ToString(_Push_stop_time).CStr());
 
 		return info;
-	}	
+	}
 
 }  // namespace info

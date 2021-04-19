@@ -6,14 +6,15 @@
 //  Copyright (c) 2018 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "./data.h"
 #include "./string.h"
-#include "./assert.h"
-#include "./memory_utilities.h"
 
-#include <cstdarg>
-#include <cctype>
 #include <algorithm>
+#include <cctype>
+#include <cstdarg>
+
+#include "./assert.h"
+#include "./data.h"
+#include "./memory_utilities.h"
 
 namespace ov
 {
@@ -56,7 +57,7 @@ namespace ov
 
 	const char *String::CStr() const noexcept
 	{
-		if(_buffer == nullptr)
+		if (_buffer == nullptr)
 		{
 			return "";
 		}
@@ -72,15 +73,15 @@ namespace ov
 		return _buffer;
 	}
 
-	String &String::operator =(const String &buffer) noexcept
+	String &String::operator=(const String &buffer) noexcept
 	{
-		if(this == &buffer)
+		if (this == &buffer)
 		{
 			// 자기 자신일 경우, 대입하지 않아도 됨
 			return *this;
 		}
 
-		if(_buffer != nullptr)
+		if (_buffer != nullptr)
 		{
 			// 기존 버퍼에 복사하기 위해, 길이를 0으로 만듦
 			_length = 0;
@@ -92,9 +93,9 @@ namespace ov
 		return *this;
 	}
 
-	String &String::operator =(const char *buffer) noexcept
+	String &String::operator=(const char *buffer) noexcept
 	{
-		if(_buffer != nullptr)
+		if (_buffer != nullptr)
 		{
 			// 기존 버퍼에 복사하기 위해, 길이를 0으로 만듦
 			_length = 0;
@@ -106,14 +107,14 @@ namespace ov
 		return *this;
 	}
 
-	const String &String::operator +=(const char *buffer) noexcept
+	const String &String::operator+=(const char *buffer) noexcept
 	{
 		Append(buffer);
 
 		return *this;
 	}
 
-	String String::operator +(const String &other) noexcept
+	String String::operator+(const String &other) noexcept
 	{
 		String instance(*this);
 
@@ -122,10 +123,9 @@ namespace ov
 		return instance;
 	}
 
-
 	bool String::Prepend(char c)
 	{
-		if(Alloc(_length + 1) == false)
+		if (Alloc(_length + 1) == false)
 		{
 			return false;
 		}
@@ -143,7 +143,7 @@ namespace ov
 
 	bool String::Prepend(const char *string)
 	{
-		if(string == nullptr)
+		if (string == nullptr)
 		{
 			return false;
 		}
@@ -153,19 +153,19 @@ namespace ov
 
 	bool String::Prepend(const char *string, size_t length)
 	{
-		if(string == nullptr)
+		if (string == nullptr)
 		{
 			return false;
 		}
 
-		if(length == 0)
+		if (length == 0)
 		{
 			// 문자열을 추가하지 않음
 			return true;
 		}
 
 		// 기존 데이터 + 새 데이터가 들어갈 만한 공간을 확보한 뒤
-		if(Alloc(_length + length) == false)
+		if (Alloc(_length + length) == false)
 		{
 			return false;
 		}
@@ -183,7 +183,7 @@ namespace ov
 
 	bool String::Append(char c)
 	{
-		if(Alloc(_length + 1) == false)
+		if (Alloc(_length + 1) == false)
 		{
 			return false;
 		}
@@ -198,7 +198,7 @@ namespace ov
 
 	bool String::Append(const char *string)
 	{
-		if(string == nullptr)
+		if (string == nullptr)
 		{
 			return false;
 		}
@@ -208,32 +208,32 @@ namespace ov
 
 	bool String::Append(const char *string, size_t length)
 	{
-		if(string == nullptr)
+		if (string == nullptr)
 		{
 			return false;
 		}
 
-		if(length == 0)
+		if (length == 0)
 		{
 			// 문자열을 추가하지 않음
 			return true;
 		}
 
 		// 기존 데이터 + 새 데이터가 들어갈 만한 공간을 확보한 뒤
-		if(Alloc(_length + length) == false)
+		if (Alloc(_length + length) == false)
 		{
 			return false;
 		}
 
 		// 기존 데이터 뒤에 Append
-		if(_buffer != nullptr)
+		if (_buffer != nullptr)
 		{
 			::memcpy(_buffer + _length, string, sizeof(char) * length);
 		}
 
 		_length += length;
 
-		if(_buffer != nullptr)
+		if (_buffer != nullptr)
 		{
 			_buffer[_length] = '\0';
 		}
@@ -263,25 +263,25 @@ namespace ov
 
 		int result = ::vsnprintf(nullptr, 0, format, list_for_count);
 
-		if(result < 0)
+		if (result < 0)
 		{
 			return 0L;
 		}
 
 		size_t length = static_cast<size_t>(result);
 
-		if(Alloc(_length + length) == false)
+		if (Alloc(_length + length) == false)
 		{
 			return 0;
 		}
 
-		if(_buffer != nullptr)
+		if (_buffer != nullptr)
 		{
 			::vsnprintf(_buffer + _length, length + 1, format, list);
 			_length += length;
 		}
 
-		if(_buffer != nullptr)
+		if (_buffer != nullptr)
 		{
 			_buffer[_length] = '\0';
 		}
@@ -312,14 +312,14 @@ namespace ov
 
 		int result = ::vsnprintf(nullptr, 0, format, list);
 
-		if(result <= 0L)
+		if (result <= 0L)
 		{
 			return 0L;
 		}
 
 		size_t length = static_cast<size_t>(result);
 
-		if(Alloc(length))
+		if (Alloc(length))
 		{
 			va_copy(list, list_for_count);
 
@@ -346,14 +346,14 @@ namespace ov
 
 	off_t String::IndexOf(char c, off_t start_position) const noexcept
 	{
-		if(start_position < 0)
+		if (start_position < 0)
 		{
 			return -1L;
 		}
 
-		for(auto index = static_cast<size_t>(start_position); index < _length; index++)
+		for (auto index = static_cast<size_t>(start_position); index < _length; index++)
 		{
-			if(_buffer[index] == c)
+			if (_buffer[index] == c)
 			{
 				return index;
 			}
@@ -364,14 +364,14 @@ namespace ov
 
 	off_t String::IndexOf(const char *str, off_t start_position) const noexcept
 	{
-		if(start_position >= static_cast<off_t>(_length))
+		if (start_position >= static_cast<off_t>(_length))
 		{
 			return -1L;
 		}
 
 		char *p = ::strstr(_buffer + start_position, str);
 
-		if(p == nullptr)
+		if (p == nullptr)
 		{
 			return -1L;
 		}
@@ -384,12 +384,12 @@ namespace ov
 		off_t index;
 		off_t start;
 
-		if((_length == 0L) || (start_position < -1L) || (start_position >= static_cast<off_t>(_length)))
+		if ((_length == 0L) || (start_position < -1L) || (start_position >= static_cast<off_t>(_length)))
 		{
 			return -1L;
 		}
 
-		if(start_position == -1L)
+		if (start_position == -1L)
 		{
 			start = _length - 1L;
 		}
@@ -398,9 +398,9 @@ namespace ov
 			start = std::min(static_cast<off_t>(_length) - 1L, start_position);
 		}
 
-		for(index = start; index >= 0L; index--)
+		for (index = start; index >= 0L; index--)
 		{
-			if(_buffer[index] == c)
+			if (_buffer[index] == c)
 			{
 				return index;
 			}
@@ -413,11 +413,11 @@ namespace ov
 	{
 		size_t remained = length - GetLength();
 
-		if(remained > 0L)
+		if (remained > 0L)
 		{
 			String padding;
 
-			for(size_t index = 0; index < remained; index++)
+			for (size_t index = 0; index < remained; index++)
 			{
 				padding.Append(pad);
 			}
@@ -428,7 +428,7 @@ namespace ov
 
 	void String::PadRight(size_t length, char pad)
 	{
-		if(length <= GetLength())
+		if (length <= GetLength())
 		{
 			return;
 		}
@@ -437,7 +437,7 @@ namespace ov
 
 		String padding;
 
-		for(size_t index = 0L; index < remained; index++)
+		for (size_t index = 0L; index < remained; index++)
 		{
 			padding.Append(pad);
 		}
@@ -447,9 +447,9 @@ namespace ov
 
 	void String::MakeUpper()
 	{
-		for(size_t index = 0L; index < _length; index++)
+		for (size_t index = 0L; index < _length; index++)
 		{
-			if(isalpha(_buffer[index]) != 0)
+			if (isalpha(_buffer[index]) != 0)
 			{
 				_buffer[index] = static_cast<char>(::toupper(_buffer[index]));
 			}
@@ -460,9 +460,9 @@ namespace ov
 	{
 		size_t index;
 
-		for(index = 0L; index < _length; index++)
+		for (index = 0L; index < _length; index++)
 		{
-			if(isalpha(_buffer[index]) != 0)
+			if (isalpha(_buffer[index]) != 0)
 			{
 				_buffer[index] = static_cast<char>(::tolower(_buffer[index]));
 			}
@@ -473,7 +473,7 @@ namespace ov
 	{
 		String target;
 
-		if(old_token == nullptr || new_token == nullptr)
+		if (old_token == nullptr || new_token == nullptr)
 		{
 			return "";
 		}
@@ -483,11 +483,11 @@ namespace ov
 		size_t new_len = ::strlen(new_token);
 		const char *target_buffer = _buffer;
 
-		while(true)
+		while (true)
 		{
 			off_t new_pos = IndexOf(old_token, pos);
 
-			if(new_pos == -1)
+			if (new_pos == -1)
 			{
 				target.Append(target_buffer);
 				break;
@@ -507,7 +507,7 @@ namespace ov
 
 	String String::Substring(off_t start) const
 	{
-		if((start < 0L) || (_length < static_cast<size_t>(start)))
+		if ((start < 0L) || (_length < static_cast<size_t>(start)))
 		{
 			return "";
 		}
@@ -517,12 +517,12 @@ namespace ov
 
 	String String::Substring(off_t start, size_t length) const
 	{
-		if((start < 0L) || (_length < static_cast<size_t>(start)))
+		if ((start < 0L) || (_length < static_cast<size_t>(start)))
 		{
 			return "";
 		}
 
-		if((start + length) > _length)
+		if ((start + length) > _length)
 		{
 			// _length 값보다 크면 보정
 			length = _length - start;
@@ -536,15 +536,15 @@ namespace ov
 		size_t left_index;
 		size_t right_index;
 
-		if(_length == 0)
+		if (_length == 0)
 		{
 			return "";
 		}
 
 		// 왼쪽 공백 위치 찾음
-		for(left_index = 0L; left_index < _length; left_index++)
+		for (left_index = 0L; left_index < _length; left_index++)
 		{
-			switch(_buffer[left_index])
+			switch (_buffer[left_index])
 			{
 				case '\r':
 				case '\n':
@@ -559,9 +559,9 @@ namespace ov
 			break;
 		}
 
-		for(right_index = (_length - 1L); right_index >= left_index; right_index--)
+		for (right_index = (_length - 1L); right_index >= left_index; right_index--)
 		{
-			switch(_buffer[right_index])
+			switch (_buffer[right_index])
 			{
 				case '\r':
 				case '\n':
@@ -576,13 +576,13 @@ namespace ov
 			break;
 		}
 
-		if((left_index == 0) && (right_index == (_length - 1L)))
+		if ((left_index == 0) && (right_index == (_length - 1L)))
 		{
 			// trim 할 게 없음
 			return *this;
 		}
 
-		if(right_index < left_index)
+		if (right_index < left_index)
 		{
 			// 공백으로만 이루어진 문자열
 			return "";
@@ -639,9 +639,9 @@ namespace ov
 		const char *last;
 		size_t seperator_length;
 
-		if(separator == nullptr)
+		if (separator == nullptr)
 		{
-			if(string != nullptr)
+			if (string != nullptr)
 			{
 				list.emplace_back(string);
 			}
@@ -651,9 +651,9 @@ namespace ov
 
 		seperator_length = (int)::strlen(separator);
 
-		if(((string == nullptr) || (::strlen(string) == 0L)) || (seperator_length == 0L))
+		if (((string == nullptr) || (::strlen(string) == 0L)) || (seperator_length == 0L))
 		{
-			if(string != nullptr)
+			if (string != nullptr)
 			{
 				list.emplace_back(string);
 			}
@@ -664,15 +664,15 @@ namespace ov
 		size_t token_count = 0;
 		max_count = std::max(max_count, 1UL);
 
-		while(token_count < max_count)
+		while (token_count < max_count)
 		{
 			last = ::strstr(string, separator);
 
 			auto length = ((last == nullptr) || (token_count == (max_count - 1))) ? (::strlen(string) * sizeof(char)) : ((last - string) * sizeof(char));
 
 			list.emplace_back(string, length);
-			
-			if(last == nullptr)
+
+			if (last == nullptr)
 			{
 				break;
 			}
@@ -689,9 +689,9 @@ namespace ov
 		String string;
 		bool is_first = true;
 
-		for(auto const &item : list)
+		for (auto const &item : list)
 		{
-			if(is_first == false)
+			if (is_first == false)
 			{
 				string.Append(seperator);
 			}
@@ -735,7 +735,7 @@ namespace ov
 
 	char String::Get(off_t index) const
 	{
-		if((index < 0) || (index >= static_cast<off_t>(_length)))
+		if ((index < 0) || (index >= static_cast<off_t>(_length)))
 		{
 			return 0;
 		}
@@ -743,35 +743,35 @@ namespace ov
 		return _buffer[index];
 	}
 
-	char String::operator [](off_t index) const
+	char String::operator[](off_t index) const
 	{
 		return Get(index);
 	}
 
-	bool String::operator !=(const char *buffer) const
+	bool String::operator!=(const char *buffer) const
 	{
-		return ((operator ==(buffer)) == true) ? false : true;
+		return ((operator==(buffer)) == true) ? false : true;
 	}
 
-	bool String::operator ==(const String &str) const
+	bool String::IsEqualsTo(const char *str, size_t length) const
 	{
-		if(str._buffer == _buffer)
+		if (str == _buffer)
 		{
 			return true;
 		}
 
 		// Because we compare the two values above to see if they are the same, none of them are nullptr here.
-		if((str._buffer == nullptr) || (_buffer == nullptr))
+		if ((str == nullptr) || (_buffer == nullptr))
 		{
 			return false;
 		}
 
-		if (str._length != _length)
+		if (length != _length)
 		{
 			return false;
 		}
 
-		if(::strncmp(_buffer, str._buffer, _length) == 0)
+		if (::strncmp(_buffer, str, _length) == 0)
 		{
 			return true;
 		}
@@ -779,29 +779,38 @@ namespace ov
 		return false;
 	}
 
-	bool String::operator ==(const char *buffer) const
+	bool String::operator==(const String &str) const
 	{
-		if(buffer == _buffer)
-		{
-			return true;
-		}
+		return IsEqualsTo(str.CStr(), str.GetLength());
+	}
 
-		if(buffer == nullptr)
-		{
-			return false;
-		}
+	bool String::operator==(const char *buffer) const
+	{
+		return IsEqualsTo(buffer, (buffer == nullptr) ? 0 : ::strlen(buffer));
+	}
 
-		if(_buffer == nullptr)
+	bool String::operator<(const String &str) const
+	{
+		if (_buffer == nullptr)
 		{
-			if(buffer[0] == '\0')
+			if (str._buffer != nullptr)
 			{
+				// _buffer == nullptr && str != nullptr
 				return true;
 			}
 
+			// _buffer == nullptr && str == nullptr
 			return false;
 		}
 
-		if(::strncmp(_buffer, buffer, _length) == 0)
+		if (str._buffer == nullptr)
+		{
+			// _buffer != nullptr && str == nullptr
+			return false;
+		}
+
+		// _buffer != nullptr && str != nullptr
+		if (::strcmp(_buffer, str._buffer) < 0)
 		{
 			return true;
 		}
@@ -809,52 +818,23 @@ namespace ov
 		return false;
 	}
 
-	bool String::operator <(const String &string) const
+	bool String::operator>(const String &str) const
 	{
-		if(_buffer == nullptr)
+		if (_buffer == nullptr)
 		{
-			if(string._buffer != nullptr)
-			{
-				// _buffer == nullptr && string != nullptr
-				return true;
-			}
-
-			// _buffer == nullptr && string == nullptr
+			// _buffer == nullptr && str != nullptr
+			// _buffer == nullptr && str == nullptr
 			return false;
 		}
 
-		if(string._buffer == nullptr)
+		if (str._buffer == nullptr)
 		{
-			// _buffer != nullptr && string == nullptr
-			return false;
-		}
-
-		// _buffer != nullptr && string != nullptr
-		if(::strcmp(_buffer, string._buffer) < 0)
-		{
+			// _buffer != nullptr && str == null
 			return true;
 		}
 
-		return false;
-	}
-
-	bool String::operator >(const String &string) const
-	{
-		if(_buffer == nullptr)
-		{
-			// _buffer == nullptr && string != nullptr
-			// _buffer == nullptr && string == nullptr
-			return false;
-		}
-
-		if(string._buffer == nullptr)
-		{
-			// _buffer != nullptr && string == null
-			return true;
-		}
-
-		// _buffer != nullptr && string != nullptr
-		if(::strcmp(_buffer, string._buffer) > 0)
+		// _buffer != nullptr && str != nullptr
+		if (::strcmp(_buffer, str._buffer) > 0)
 		{
 			return true;
 		}
@@ -879,7 +859,7 @@ namespace ov
 
 	bool String::SetLength(size_t length) noexcept
 	{
-		if(length < _length)
+		if (length < _length)
 		{
 			// 버퍼 축소
 			::memset(_buffer + length, 0, static_cast<size_t>(_length - length));
@@ -889,7 +869,7 @@ namespace ov
 		}
 
 		// 버퍼 확장
-		if(Alloc(length))
+		if (Alloc(length))
 		{
 			// 길이 정보 저장
 			_length = length;
@@ -911,7 +891,7 @@ namespace ov
 
 	std::shared_ptr<Data> String::ToData(bool include_null_char) const
 	{
-		if(_buffer == nullptr)
+		if (_buffer == nullptr)
 		{
 			return std::make_shared<ov::Data>();
 		}
@@ -921,25 +901,24 @@ namespace ov
 
 	bool String::Alloc(size_t length, bool alloc_exactly) noexcept
 	{
-		if(
+		if (
 			// 기존에 할당된 버퍼가 충분 하지 않거나
 			(_capacity < length) ||
 			// 기존에 할당된 버퍼가 너무 크거나
 			(_capacity > (length * 2)) ||
 			// alloc_exactly flag가 켜져 있으면서 capacity가 정확히 일치하지 않는 경우
-			(alloc_exactly && (_capacity != length))
-			)
+			(alloc_exactly && (_capacity != length)))
 		{
 			size_t allocated_length = length;
 
-			if(alloc_exactly == false)
+			if (alloc_exactly == false)
 			{
 				allocated_length = 1L;
 
 				// 2의 거듭 제곱 크기로 계산
-				while(allocated_length < length)
+				while (allocated_length < length)
 				{
-					if(allocated_length >= 1024L * 1024L)
+					if (allocated_length >= 1024L * 1024L)
 					{
 						// 1MB를 넘어가면 지수 형태로 증가 하지 않음
 						allocated_length += 1024L * 1024L;
@@ -955,7 +934,7 @@ namespace ov
 			// null문자가 들어갈 공간 더함
 			char *buffer = static_cast<char *>(::malloc(sizeof(char) * (allocated_length + 1L)));
 
-			if(buffer == nullptr)
+			if (buffer == nullptr)
 			{
 				// 메모리 할당 실패
 				return false;
@@ -964,7 +943,7 @@ namespace ov
 			::memset(buffer, 0, sizeof(char) * (allocated_length + 1L));
 
 			// 기존에 데이터가 있다면 복사
-			if(_length > 0L)
+			if (_length > 0L)
 			{
 				::memcpy(buffer, _buffer, sizeof(char) * std::min(allocated_length, _length));
 			}
@@ -995,4 +974,4 @@ namespace ov
 
 		return true;
 	}
-}
+}  // namespace ov
