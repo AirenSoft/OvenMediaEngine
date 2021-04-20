@@ -42,13 +42,13 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> co
 		return false;
 	}
 
-	// Initialize OPUS encoder
+	// Coding Mode
+	// int application = OPUS_APPLICATION_VOIP;
 	// int application = OPUS_APPLICATION_AUDIO;
 	int application = OPUS_APPLICATION_RESTRICTED_LOWDELAY;
 	int error;
 
 	_encoder = ::opus_encoder_create(context->GetAudioSampleRate(), context->GetAudioChannel().GetCounts(), application, &error);
-
 	if ((_encoder == nullptr) || (error != OPUS_OK))
 	{
 		logte("Could not create OPUS encoder: %d", error);
@@ -61,13 +61,26 @@ bool OvenCodecImplAvcodecEncOpus::Configure(std::shared_ptr<TranscodeContext> co
 	::opus_encoder_ctl(_encoder, OPUS_SET_INBAND_FEC(1));
 	::opus_encoder_ctl(_encoder, OPUS_SET_PACKET_LOSS_PERC(10));
 
-	// (48000Hz / 100ms) * 6 = 2880 samples / 600ms
-	const int max_opus_frame_count = (48000 / 100) * 6;
+	// Duration per frame
+	// _expert_frame_duration = OPUS_FRAMESIZE_2_5_MS;
+	// _expert_frame_duration = OPUS_FRAMESIZE_5_MS;
+	// _expert_frame_duration = OPUS_FRAMESIZE_10_MS;
+	_expert_frame_duration = OPUS_FRAMESIZE_20_MS;
+	// _expert_frame_duration = OPUS_FRAMESIZE_40_MS;
+	// _expert_frame_duration = OPUS_FRAMESIZE_60_MS;
+	::opus_encoder_ctl(_encoder, OPUS_SET_EXPERT_FRAME_DURATION(_expert_frame_duration));
+
+	// Bitrate
+	::opus_encoder_ctl(_encoder, OPUS_SET_BITRATE(context->GetBitrate()));
+
+	// (48000Hz / 100ms) * 6 = 2880 samples( == 60ms)
+	const int max_opus_frame_count = (context->GetAudioSampleRate() / 100) * 6;
 	// OPUS supports up to 256, but only 16 are used here.
 	const int estimated_channel_count = 16;
 	// OPUS supports int16 or float
 	const int estimated_frame_size = std::max(sizeof(opus_int16), sizeof(float));
 
+	//
 	_buffer = std::make_shared<ov::Data>(max_opus_frame_count * estimated_channel_count * estimated_frame_size);
 	_format = cmn::AudioSample::Format::None;
 	_current_pts = -1;
@@ -106,13 +119,42 @@ void OvenCodecImplAvcodecEncOpus::Stop()
 
 void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 {
-	const unsigned int frame_count_to_encode = 480 * 2;
-	const unsigned int bytes_to_encode = frame_count_to_encode * _output_context->GetAudioChannel().GetCounts() * _output_context->GetAudioSample().GetSampleSize();
+	// Refrence : https://opus-codec.org/docs/opus_api-1.1.3/group__opus__encoder.html#gad2d6bf6a9ffb6674879d7605ed073e25
+	// Number of samples per channel in the input signal. This must be an Opus frame size for the encoder's sampling rate.
+	// For example, at 48 kHz the permitted values are 120, 240, 480, 960, 1920, and 2880. Passing in a duration of less than 10 ms (480 samples at 48 kHz)
 
-	int64_t duration = 0LL;
+	//  frame_size is the duration of the frame in samples (per channel).
+	const uint32_t default_frame_size = _output_context->GetAudioSampleRate() / 100;  // default 10ms
+	unsigned int frame_size = 0;
+
+	switch (_expert_frame_duration)
+	{
+		case OPUS_FRAMESIZE_2_5_MS:
+			frame_size = default_frame_size / 4;
+			break;
+		case OPUS_FRAMESIZE_5_MS:
+			frame_size = default_frame_size / 2;
+			break;
+		case OPUS_FRAMESIZE_10_MS:
+			frame_size = default_frame_size;
+			break;
+		case OPUS_FRAMESIZE_20_MS:
+			frame_size = default_frame_size * 2;
+			break;
+		case OPUS_FRAMESIZE_40_MS:
+			frame_size = default_frame_size * 4;
+			break;
+		case OPUS_FRAMESIZE_60_MS:
+			frame_size = default_frame_size * 6;
+			break;
+	}
+	OV_ASSERT2(frame_size > 0);
+
+	const unsigned int bytes_to_encode = frame_size * _output_context->GetAudioChannel().GetCounts() * _output_context->GetAudioSample().GetSampleSize();
 
 	while (!_kill_flag)
 	{
+		// If there is no data to encode, the data is fetched from the queue.
 		if (_buffer->GetLength() < bytes_to_encode)
 		{
 			auto obj = _input_buffer.Dequeue();
@@ -133,10 +175,7 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 				_current_pts = frame->GetPts();
 			}
 
-			duration += frame->GetDuration();
-
 			// Append frame data into the buffer
-
 			if (frame->GetChannels() == 1)
 			{
 				// Just copy data into buffer
@@ -150,7 +189,6 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 					case cmn::AudioSample::Format::S16P:
 					case cmn::AudioSample::Format::FltP: {
 						// Need to interleave if sample type is planar
-
 						off_t current_offset = _buffer->GetLength();
 
 						// Reserve extra spaces
@@ -192,37 +230,35 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 			// logte("There is no data to encode");
 			continue;
 		}
-
 		OV_ASSERT2(_current_pts >= 0);
 		OV_ASSERT2(_buffer->GetLength() >= bytes_to_encode);
-
-		int encoded_bytes = -1;
 
 		// "1275 * 3 + 7" formula is used in opusenc.c:813
 		// or, use the formula in "AudioEncoderOpusImpl::SufficientOutputBufferSize()" of the native code.
 		std::shared_ptr<ov::Data> encoded = std::make_shared<ov::Data>(1275 * 3 + 7);
 		encoded->SetLength(encoded->GetCapacity());
 
+		// result of opus_encode[_float] function
+		//  The length of the encoded packet (in bytes) on success or a negative error code (see Error codes) on failure.
+		int encoded_bytes = -1;
 		// Encode
 		switch (_format)
 		{
 			case cmn::AudioSample::Format::S16:
-				encoded_bytes = ::opus_encode(_encoder, _buffer->GetDataAs<const opus_int16>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
+				encoded_bytes = ::opus_encode(_encoder, _buffer->GetDataAs<const opus_int16>(), frame_size, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
 				break;
 
 			case cmn::AudioSample::Format::Flt:
-				encoded_bytes = ::opus_encode_float(_encoder, _buffer->GetDataAs<float>(), frame_count_to_encode, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
+				encoded_bytes = ::opus_encode_float(_encoder, _buffer->GetDataAs<float>(), frame_size, encoded->GetWritableDataAs<unsigned char>(), static_cast<opus_int32>(encoded->GetCapacity()));
 				break;
 
 			default:
-				// *result = TranscodeResult::DataError;
 				continue;
 		}
 
 		if (encoded_bytes < 0)
 		{
-			logte("An error occurred while encode data %zu bytes: %d (Buffer: %zu bytes)", _buffer->GetLength(), encoded_bytes, encoded->GetCapacity());
-			// *result = TranscodeResult::DataError;
+			logte("An error occurred while encode data %zu bytes. error:%d", _buffer->GetLength(), encoded_bytes);
 			continue;
 		}
 
@@ -234,17 +270,15 @@ void OvenCodecImplAvcodecEncOpus::ThreadEncode()
 		::memmove(buffer, buffer + bytes_to_encode, _buffer->GetLength() - bytes_to_encode);
 		_buffer->SetLength(_buffer->GetLength() - bytes_to_encode);
 
-		auto packet_buffer = std::make_shared<MediaPacket>(cmn::MediaType::Audio, 1, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
+		int64_t duration = frame_size;
+
+		auto packet_buffer = std::make_shared<MediaPacket>(cmn::MediaType::Audio, 0, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
 		packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::OPUS);
 		packet_buffer->SetPacketType(cmn::PacketType::RAW);
 
-		_current_pts += frame_count_to_encode;
-		// logte("opus pts : %lld, queue:%d, buffer:%d", _current_pts, _input_buffer.size(), _buffer->GetLength());
-		// *result = TranscodeResult::DataReady;
+		_current_pts += duration;
 
 		SendOutputBuffer(std::move(packet_buffer));
-
-		duration = 0L;
 	}
 }
 

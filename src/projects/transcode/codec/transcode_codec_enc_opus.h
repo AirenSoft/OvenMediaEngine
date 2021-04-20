@@ -33,7 +33,7 @@ public:
 
 protected:
 	std::shared_ptr<ov::Data> _buffer;
-
+	int _expert_frame_duration;
 	cmn::AudioSample::Format _format;
 	int64_t _current_pts;
 
