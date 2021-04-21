@@ -438,12 +438,6 @@ bool MediaRouteStream::ProcessAACAdtsStream(std::shared_ptr<MediaTrack> &media_t
 	media_track->SetSampleRate(adts.SamplerateNum());
 	media_track->GetChannel().SetLayout((adts.ChannelConfiguration() == 1) ? (AudioChannel::Layout::LayoutMono) : (AudioChannel::Layout::LayoutStereo));
 
-	if (media_packet->GetDataLength() - adts.AacFrameLength() != 0)
-	{
-		logte("Invalid frame length. adts length : %d != packet length : %d", adts.AacFrameLength(), media_packet->GetDataLength());
-		return false;
-	}
-
 	// for extradata
 	auto aac_config = std::make_shared<AACSpecificConfig>();
 

@@ -115,7 +115,7 @@ namespace pvd
 		// Receive and append packet to demuxer
 		bool ReceivePacket(bool non_block = false, int64_t timeout_msec = 0);
 
-		bool AddDepacketizer(uint8_t payload_type, cmn::MediaCodecId codec_id);
+		bool AddDepacketizer(uint8_t payload_type, RtpDepacketizingManager::SupportedDepacketizerType codec_id);
 		std::shared_ptr<RtpDepacketizingManager> GetDepacketizer(uint8_t payload_type);
 
 		uint64_t AdjustTimestamp(uint8_t payload_type, uint32_t timestamp);

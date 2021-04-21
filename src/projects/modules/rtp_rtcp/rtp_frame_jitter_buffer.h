@@ -39,7 +39,9 @@ private:
 	std::unordered_map<uint16_t, std::shared_ptr<RtpPacket>> _packets;
 };
 
-class RtpVideoJitterBuffer
+// A jitter buffer for a media stream in the form that the frame is fragmented
+// and the rtp marker bit indicates that it is the last fragment.
+class RtpFrameJitterBuffer
 {
 public:
 	bool InsertPacket(const std::shared_ptr<RtpPacket> &packet);

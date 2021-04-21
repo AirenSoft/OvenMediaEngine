@@ -27,13 +27,17 @@ namespace cmn
 	{
 		Unknown = -1,
 		H264_AVCC = 0,
-		H264_ANNEXB,
-		H265_ANNEXB,
-		VP8,
+		H264_ANNEXB,		// OME's default internal bitstream format for H264
+		H264_RTP_RFC_6184,
+		H265_ANNEXB,		// OME's default internal bitstream format for H265
+		VP8,/*raw*/			// OME's default internal bitstream format for VP8
+		VP8_RTP_RFC_7741,
 		AAC_RAW,
-		AAC_ADTS,
+		AAC_MPEG4_GENERIC,
+		AAC_ADTS,			// OME's default internal bitstream format for AAC
 		AAC_LATM,
-		OPUS,
+		OPUS,/*raw*/		// OME's default internal bitstream format for OPUS
+		OPUS_RTP_RFC_7587,
 		JPEG,
 		PNG
 	};

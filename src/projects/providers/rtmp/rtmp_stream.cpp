@@ -1330,6 +1330,7 @@ namespace pvd
 			new_track->SetId(RTMP_VIDEO_TRACK_ID);
 			new_track->SetMediaType(cmn::MediaType::Video);
 			new_track->SetCodecId(cmn::MediaCodecId::H264);
+			new_track->SetOriginBitstream(cmn::BitstreamFormat::H264_AVCC);
 			new_track->SetTimeBase(1, 1000);
 			new_track->SetVideoTimestampScale(1.0);
 
@@ -1351,6 +1352,7 @@ namespace pvd
 			new_track->SetId(RTMP_AUDIO_TRACK_ID);
 			new_track->SetMediaType(cmn::MediaType::Audio);
 			new_track->SetCodecId(cmn::MediaCodecId::Aac);
+			new_track->SetOriginBitstream(cmn::BitstreamFormat::AAC_RAW);
 			new_track->SetTimeBase(1, 1000);
 			new_track->SetAudioTimestampScale(1.0);
 

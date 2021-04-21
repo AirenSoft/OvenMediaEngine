@@ -109,14 +109,23 @@ namespace pvd
 				auto codec = first_payload->GetCodec();
 				auto samplerate = first_payload->GetCodecRate();
 				auto channels = std::atoi(first_payload->GetCodecParams());
+				RtpDepacketizingManager::SupportedDepacketizerType depacketizer_type;
 
 				if(codec == PayloadAttr::SupportCodec::OPUS)
 				{
 					audio_track->SetCodecId(cmn::MediaCodecId::Opus);
+					audio_track->SetOriginBitstream(cmn::BitstreamFormat::OPUS_RTP_RFC_7587);
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::OPUS;
+				}
+				else if(codec == PayloadAttr::SupportCodec::MPEG4_GENERIC)
+				{
+					audio_track->SetCodecId(cmn::MediaCodecId::Aac);
+					audio_track->SetOriginBitstream(cmn::BitstreamFormat::AAC_MPEG4_GENERIC);
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO;
 				}
 				else
 				{
-					logte("%s - Unsupported audio codec : %s", GetName().CStr(), first_payload->GetCodecParams().CStr());
+					logte("%s - Unsupported audio codec : %s", GetName().CStr(), first_payload->GetCodecStr().CStr());
 					return false;
 				}
 				
@@ -130,12 +139,12 @@ namespace pvd
 				{
 					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutMono);
 				}
-				else if (channels == 2)
+				else
 				{
 					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
 				}
 
-				if(AddDepacketizer(_audio_payload_type, audio_track->GetCodecId()) == false)
+				if(AddDepacketizer(_audio_payload_type, depacketizer_type) == false)
 				{
 					return false;
 				}
@@ -173,6 +182,7 @@ namespace pvd
 				// a=rtpmap:100 H264/90000
 				auto codec = first_payload->GetCodec();
 				auto timebase = first_payload->GetCodecRate();
+				RtpDepacketizingManager::SupportedDepacketizerType depacketizer_type;
 
 				auto video_track = std::make_shared<MediaTrack>();
 
@@ -182,10 +192,14 @@ namespace pvd
 				if(codec == PayloadAttr::SupportCodec::H264)
 				{
 					video_track->SetCodecId(cmn::MediaCodecId::H264);
+					video_track->SetOriginBitstream(cmn::BitstreamFormat::H264_RTP_RFC_6184);
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::H264;
 				}
 				else if(codec == PayloadAttr::SupportCodec::VP8)
 				{
 					video_track->SetCodecId(cmn::MediaCodecId::Vp8);
+					video_track->SetOriginBitstream(cmn::BitstreamFormat::VP8_RTP_RFC_7741);
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::VP8;
 				}
 				else
 				{
@@ -197,7 +211,7 @@ namespace pvd
 				video_lip_sync_timebase = video_track->GetTimeBase().GetExpr();
 				video_track->SetVideoTimestampScale(1.0);
 
-				if(AddDepacketizer(_video_payload_type, video_track->GetCodecId()) == false)
+				if(AddDepacketizer(_video_payload_type, depacketizer_type) == false)
 				{
 					return false;
 				}
@@ -230,7 +244,7 @@ namespace pvd
 		return pvd::Stream::Start();
 	}
 
-	bool WebRTCStream::AddDepacketizer(uint8_t payload_type, cmn::MediaCodecId codec_id)
+	bool WebRTCStream::AddDepacketizer(uint8_t payload_type, RtpDepacketizingManager::SupportedDepacketizerType codec_id)
 	{
 		// Depacketizer
 		auto depacketizer = RtpDepacketizingManager::Create(codec_id);

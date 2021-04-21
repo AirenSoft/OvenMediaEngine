@@ -6,7 +6,8 @@
 
 #define DEFAULT_AUDIO_MAX_BUFFERING_TIME_MS	200
 
-class RtpAudioJitterBuffer
+// It only corrects unordered packet for rfc3551
+class RtpMinimalJitterBuffer
 {
 public:
 	bool InsertPacket(const std::shared_ptr<RtpPacket> &packet);

@@ -2,7 +2,6 @@
 
 #include "rtp_depacketizing_manager.h"
 #include "rtp_rtcp_defines.h"
-
 class RtpDepacketizerGenericAudio : public RtpDepacketizingManager
 {
 public:

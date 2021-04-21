@@ -191,7 +191,69 @@ void PayloadAttr::SetFmtp(const ov::String &fmtp)
 			auto key = key_value[0];
 			auto value = key_value[1];
 
-			if(key.UpperCaseString() == "MODE")
+			if(key.UpperCaseString() == "SIZELENGTH")
+			{
+				_mpeg4_generic_size_length = ov::Converter::ToInt32(value.CStr());
+			}
+			else if(key.UpperCaseString() == "INDEXLENGTH")
+			{
+				_mpeg4_generic_index_length = ov::Converter::ToInt32(value.CStr());
+			}
+			else if(key.UpperCaseString() == "INDEXDELTALENGTH")
+			{
+				_mpeg4_generic_index_delta_length = ov::Converter::ToInt32(value.CStr());
+			}
+			else if(key.UpperCaseString() == "CONFIG")
+			{
+				// (RFC3640) A hexadecimal representation of an octet string that expresses the
+				// media payload configuration.  Configuration data is mapped onto
+				// the hexadecimal octet string in an MSB-first basis.  The first bit
+				// of the configuration data SHALL be located at the MSB of the first
+				// octet.  In the last octet, if necessary to achieve octet-
+				// alignment, up to 7 zero-valued padding bits shall follow the
+				// configuration data.
+			
+				size_t config_len = (value.GetLength()+1)/2;
+				uint8_t config[config_len];
+
+				for(size_t i=0; i<config_len; i++)
+				{
+					for(size_t j=0; j<2; j++)
+					{
+						char c = value.Get((i*2)+j); // 0, 1, 2, 3
+						char converted;
+
+						if(c >= '0' && c <= '9') 
+						{
+							converted = c - '0';
+						} 
+						else if(c >= 'A' && c <= 'F') 
+						{
+							converted = 10 + c - 'A';
+						} 
+						else if(c >= 'a' && c <= 'f') 
+						{
+							converted = 10 + c - 'a';
+						} 
+						else 
+						{
+							return;
+						}
+
+						if(j == 0)
+						{
+							config[i] = converted << 4;
+						}
+						else if(j == 1)
+						{
+							config[i] |= converted;
+						}
+					}
+				}
+			
+				_mpeg4_generic_config = std::make_shared<ov::Data>(&config[0], config_len);
+			}
+			else if(key.UpperCaseString() == "MODE")
 			{
 				if(value.UpperCaseString() == "GENERIC")
 				{
@@ -215,11 +277,11 @@ void PayloadAttr::SetFmtp(const ov::String &fmtp)
 				}
 				else if(value.UpperCaseString() == "MPS-LBR")
 				{
-					_mpeg4_generic_mode = Mpeg4GenericMode::AAC_hbr;
+					_mpeg4_generic_mode = Mpeg4GenericMode::MPS_lbr;
 				}
 				else if(value.UpperCaseString() == "MPS-HBR")
 				{
-					_mpeg4_generic_mode = Mpeg4GenericMode::AAC_hbr;
+					_mpeg4_generic_mode = Mpeg4GenericMode::MPS_hbr;
 				}
 			}
 		}

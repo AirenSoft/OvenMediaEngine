@@ -29,6 +29,10 @@ public:
 	void SetCodecId(cmn::MediaCodecId id);
 	cmn::MediaCodecId GetCodecId() const;
 
+	// Origin bitstream foramt
+	void SetOriginBitstream(cmn::BitstreamFormat format);
+	cmn::BitstreamFormat GetOriginBitstream() const;
+
 	// Timebase Settings
 	const cmn::Timebase &GetTimeBase() const;
 	void SetTimeBase(int32_t num, int32_t den);
@@ -67,6 +71,7 @@ private:
 	uint32_t _id;
 
 	cmn::MediaCodecId _codec_id;
+	cmn::BitstreamFormat _origin_bitstream_format = cmn::BitstreamFormat::Unknown;
 	cmn::MediaType _media_type;
 	cmn::Timebase _time_base;
 	int32_t _bitrate;

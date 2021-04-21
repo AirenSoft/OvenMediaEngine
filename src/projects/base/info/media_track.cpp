@@ -87,6 +87,16 @@ MediaCodecId MediaTrack::GetCodecId() const
 	return _codec_id;
 }
 
+void MediaTrack::SetOriginBitstream(cmn::BitstreamFormat format)
+{
+	_origin_bitstream_format = format;
+}
+
+cmn::BitstreamFormat MediaTrack::GetOriginBitstream() const
+{
+	return _origin_bitstream_format;
+}
+
 const Timebase &MediaTrack::GetTimeBase() const
 {
 	return _time_base;
