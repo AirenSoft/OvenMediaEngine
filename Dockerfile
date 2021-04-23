@@ -174,7 +174,7 @@ RUN \
                 -DCMAKE_INSTALL_PREFIX=${PREFIX} \
                 -DCMAKE_INSTALL_LIBDIR=${PREFIX}/lib \
                 -DINSTALL_DRIVER_SYSCONF=OFF \
-                -DLIBVA_DRIVERS_PATH=${PREFIX}/lib && \
+                -DLIBVA_DRIVERS_PATH=${PREFIX}/lib/dri && \
         make install && \
         rm -rf ${DIR} && \
         rm -rf ${DIR_IMD} && \
@@ -214,8 +214,8 @@ RUN \
         --disable-avdevice --disable-dct --disable-dwt --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils \
         --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 --enable-libmfx \
         --disable-everything \
-        --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,libx265,mjpeg,png \
-        --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
+        --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,h264_qsv,libx265,hevc_qsv,mjpeg,png \
+        --enable-decoder=aac,aac_latm,aac_fixed,h264,h264_qsv,hevc,hevc_qsv,opus,vp8,vp8_qsv \
         --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \        
         --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
         --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format && \

@@ -196,8 +196,8 @@ install_ffmpeg()
     --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 --enable-libmfx \
     --disable-everything \
     --disable-fast-unaligned \
-    --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,libx265,mjpeg,png \
-    --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
+    --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,h264_qsv,libx265,hevc_qsv,mjpeg,png \
+    --enable-decoder=aac,aac_latm,aac_fixed,h264,h264_qsv,hevc,hevc_qsv,opus,vp8,vp8_qsv \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
     --enable-network --enable-protocol=tcp --enable-protocol=udp --enable-protocol=rtp,file,rtmp --enable-demuxer=rtsp --enable-muxer=mp4,webm,mpegts,flv,mpjpeg \
     --enable-filter=asetnsamples,aresample,aformat,channelmap,channelsplit,scale,transpose,fps,settb,asettb,format && \
@@ -283,7 +283,7 @@ install_intel_media_driver() {
         -DCMAKE_INSTALL_PREFIX=${PREFIX} \
         -DCMAKE_INSTALL_LIBDIR=${PREFIX}/lib \
         -DINSTALL_DRIVER_SYSCONF=OFF \
-        -DLIBVA_DRIVERS_PATH=${PREFIX}/lib && \
+        -DLIBVA_DRIVERS_PATH=${PREFIX}/lib/dri && \
     sudo make -j$(nproc) install && \
     rm -rf ${DIR} && \
     rm -rf ${DIR_IMD} && \
@@ -424,7 +424,6 @@ else
     echo "This program [$0] does not support your operating system [${OSNAME}]"
     echo "Please refer to manual installation page"
 fi
-
 
 install_nasm
 install_openssl
