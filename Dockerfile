@@ -20,12 +20,16 @@ ENV     OME_VERSION=master \
         X265_VERSION=3.4 \
         VPX_VERSION=1.7.0 \
         FDKAAC_VERSION=0.1.5 \
-        FFMPEG_VERSION=4.3.1 \
+        FFMPEG_VERSION=4.3.2 \
         JEMALLOC_VERSION=5.2.1 \
-        PCRE2_VERSION=10.35
+        PCRE2_VERSION=10.35 \
+        LIBVA_VERSION=2.11.0 \
+        GMMLIB_VERSION=21.1.1 \
+        INTEL_MEDIA_DRIVER_VERSION=21.1.3 \
+        INTEL_MEDIA_SDK_VERSION=21.1.3
 
 ## Install build utils
-RUN     apt-get -y install build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc
+RUN     apt-get -y install build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc libdrm-dev
 
 ## Build OpenSSL
 RUN \
@@ -123,12 +127,78 @@ RUN \
         make install && \
         rm -rf ${DIR}
 
+## Build libva
+RUN \
+        DIR=/tmp/libva && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        curl -sLf https://github.com/intel/libva/archive/refs/tags/${LIBVA_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+        ./autogen.sh --prefix="${PREFIX}" && \
+        make && \
+        make install && \
+        rm -rf ${DIR}
+
+## Build gmmlib
+RUN \
+        DIR=/tmp/gmmlib && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        curl -sLf https://github.com/intel/gmmlib/archive/refs/tags/intel-gmmlib-${GMMLIB_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+        mkdir -p ${DIR}/build && \
+        cd ${DIR}/build && \
+        cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" .. && \
+        make && \
+        make install && \
+        rm -rf ${DIR}
+
+## Build Intel Media Driver
+RUN \
+        DIR_IMD=/tmp/media-driver && \
+        mkdir -p ${DIR_IMD} && \
+        cd ${DIR_IMD} && \
+        curl -sLf https://github.com/intel/media-driver/archive/refs/tags/intel-media-${INTEL_MEDIA_DRIVER_VERSION}.tar.gz  | tar -xz --strip-components=1 && \
+        DIR_GMMLIB=/tmp/gmmlib && \
+        mkdir -p ${DIR_GMMLIB} && \
+        cd ${DIR_GMMLIB} && \
+        curl -sLf https://github.com/intel/gmmlib/archive/refs/tags/intel-gmmlib-${GMMLIB_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+        DIR=/tmp/build && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}" cmake \
+                $DIR_IMD \
+                -DBUILD_TYPE=release \
+                -DBS_DIR_GMMLIB="$DIR_GMMLIB/Source/GmmLib" \
+                -DBS_DIR_COMMON=$DIR_GMMLIB/Source/Common \
+                -DBS_DIR_INC=$DIR_GMMLIB/Source/inc \
+                -DBS_DIR_MEDIA=$DIR_IMD \
+                -DCMAKE_INSTALL_PREFIX=${PREFIX} \
+                -DCMAKE_INSTALL_LIBDIR=${PREFIX}/lib \
+                -DINSTALL_DRIVER_SYSCONF=OFF \
+                -DLIBVA_DRIVERS_PATH=${PREFIX}/lib && \
+        make install && \
+        rm -rf ${DIR} && \
+        rm -rf ${DIR_IMD} && \
+        rm -rf ${DIR_GMMLIB}
+
+## Build Intel Media SDK
+RUN \
+        DIR=/tmp/medka-sdk && \
+        mkdir -p ${DIR} && \
+        cd ${DIR} && \
+        curl -sLf https://github.com/Intel-Media-SDK/MediaSDK/archive/refs/tags/intel-mediasdk-${INTEL_MEDIA_SDK_VERSION}.tar.gz  | tar -xz --strip-components=1 && \
+        mkdir -p ${DIR}/build && \
+        cd ${DIR}/build && \
+        PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}" cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" .. && \
+        make && \
+        make install && \
+        rm -rf ${DIR}
+
 ## Build FFMPEG
 RUN \
         DIR=/tmp/ffmpeg && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sLf https://github.com/AirenSoft/FFmpeg/archive/n${FFMPEG_VERSION}-ome.tar.gz | tar -xz --strip-components=1 && \
+        curl -sLf https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
         PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}" ./configure \
         --prefix="${PREFIX}" \
         --enable-gpl \
@@ -142,7 +212,7 @@ RUN \
         --disable-doc \
         --disable-programs \
         --disable-avdevice --disable-dct --disable-dwt --disable-lsp --disable-lzo --disable-rdft --disable-faan --disable-pixelutils \
-        --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 \
+        --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libx264 --enable-libx265 --enable-libmfx \
         --disable-everything \
         --enable-encoder=libvpx_vp8,libvpx_vp9,libopus,libfdk_aac,libx264,libx265,mjpeg,png \
         --enable-decoder=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
