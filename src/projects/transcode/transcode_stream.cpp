@@ -215,6 +215,7 @@ int32_t TranscodeStream::CreateOutputStreamDynamic()
 		output_track->SetId(NewTrackId(output_track->GetMediaType()));
 		output_track->SetBitrate(input_track->GetBitrate());
 		output_track->SetCodecId(input_track->GetCodecId());
+		output_track->SetOriginBitstream(input_track->GetOriginBitstream());
 
 		output_track->SetWidth(input_track->GetWidth());
 		output_track->SetHeight(input_track->GetHeight());

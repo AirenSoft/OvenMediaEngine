@@ -10,6 +10,7 @@
 #include <base/info/application.h>
 #include <base/ovlibrary/byte_io.h>
 #include <modules/rtsp/header_fields/rtsp_header_fields.h>
+#include <modules/rtp_rtcp/rtp_depacketizer_mpeg4_generic_audio.h>
 
 #include "rtspc_stream.h"
 #include "rtspc_provider.h"
@@ -70,7 +71,7 @@ namespace pvd
 		return std::static_pointer_cast<RtspcProvider>(_application->GetParentProvider());
 	}
 
-	bool RtspcStream::AddDepacketizer(uint8_t payload_type, cmn::MediaCodecId codec_id)
+	bool RtspcStream::AddDepacketizer(uint8_t payload_type, RtpDepacketizingManager::SupportedDepacketizerType codec_id)
 	{
 		// Depacketizer
 		auto depacketizer = RtpDepacketizingManager::Create(codec_id);
@@ -340,7 +341,9 @@ namespace pvd
 				
 				auto codec = first_payload->GetCodec();
 				auto timebase = first_payload->GetCodecRate();
-				
+				RtpDepacketizingManager::SupportedDepacketizerType depacketizer_type;
+
+
 				auto video_track = std::make_shared<MediaTrack>();
 
 				video_track->SetId(first_payload->GetId());
@@ -349,11 +352,15 @@ namespace pvd
 				if(codec == PayloadAttr::SupportCodec::H264)
 				{
 					video_track->SetCodecId(cmn::MediaCodecId::H264);
-					_h264_extradata_nalu = first_payload->GetH264ExtraDataAsNalu();
+					video_track->SetOriginBitstream(cmn::BitstreamFormat::H264_RTP_RFC_6184);
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::H264;
+					_h264_extradata_nalu = first_payload->GetH264ExtraDataAsAnnexB();
 				}
 				else if(codec == PayloadAttr::SupportCodec::VP8)
 				{
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::VP8;
 					video_track->SetCodecId(cmn::MediaCodecId::Vp8);
+					video_track->SetOriginBitstream(cmn::BitstreamFormat::VP8_RTP_RFC_7741);
 				}
 				else
 				{
@@ -364,7 +371,7 @@ namespace pvd
 				video_track->SetTimeBase(1, timebase);
 				video_track->SetVideoTimestampScale(1.0);
 				
-				if(AddDepacketizer(_video_payload_type, video_track->GetCodecId()) == false)
+				if(AddDepacketizer(_video_payload_type, depacketizer_type) == false)
 				{
 					return false;
 				}
@@ -375,8 +382,112 @@ namespace pvd
 			}
 			else if(media_desc->GetMediaType() == MediaDescription::MediaType::Audio)
 			{
-				// Later
-				// _audio_control = media_desc->GetControl();
+				_audio_control = media_desc->GetControl();
+				if(_audio_control.IsEmpty())
+				{
+					_state = State::ERROR;
+					logte("Could not get control attribute in (%s) ", _curr_url->ToUrlString().CStr());
+					return false;
+				}
+
+				_audio_control_url = GenerateControlUrl(_audio_control);
+				if(_audio_control_url.IsEmpty())
+				{
+					_state = State::ERROR;
+					logte("Could not make control url with (%s) ", _video_control.CStr());
+					return false;
+				}
+
+				_audio_payload_type = first_payload->GetId();
+				auto codec = first_payload->GetCodec();
+				auto samplerate = first_payload->GetCodecRate();
+				auto channels = std::atoi(first_payload->GetCodecParams());
+				RtpDepacketizingManager::SupportedDepacketizerType depacketizer_type;
+
+				auto audio_track = std::make_shared<MediaTrack>();
+				if(codec == PayloadAttr::SupportCodec::MPEG4_GENERIC)
+				{
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO;
+					audio_track->SetCodecId(cmn::MediaCodecId::Aac);
+					audio_track->SetOriginBitstream(cmn::BitstreamFormat::AAC_MPEG4_GENERIC);
+				}
+				else if(codec == PayloadAttr::SupportCodec::OPUS)
+				{
+					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::OPUS;
+					audio_track->SetCodecId(cmn::MediaCodecId::Opus);
+					audio_track->SetOriginBitstream(cmn::BitstreamFormat::OPUS_RTP_RFC_7587);
+				}
+				else
+				{
+					logte("%s - Unsupported audio codec : %s", GetName().CStr(), first_payload->GetCodecParams().CStr());
+					return false;
+				}
+
+				audio_track->SetId(first_payload->GetId());
+				audio_track->SetMediaType(cmn::MediaType::Audio);
+				audio_track->SetTimeBase(1, samplerate);
+				audio_track->SetAudioTimestampScale(1.0);
+
+				if(channels == 1)
+				{
+					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutMono);
+				}
+				else
+				{
+					audio_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutStereo);
+				}
+
+				// Add depacketizer and config if needed
+				if(depacketizer_type == RtpDepacketizingManager::SupportedDepacketizerType::MPEG4_GENERIC_AUDIO)
+				{
+					RtpDepacketizerMpeg4GenericAudio::Mode mpeg4_mode;
+					if(first_payload->GetMpeg4GenericMode() == PayloadAttr::Mpeg4GenericMode::AAC_lbr)
+					{
+						mpeg4_mode = RtpDepacketizerMpeg4GenericAudio::Mode::AAC_lbr;
+					}
+					else if(first_payload->GetMpeg4GenericMode() == PayloadAttr::Mpeg4GenericMode::AAC_hbr)
+					{
+						mpeg4_mode = RtpDepacketizerMpeg4GenericAudio::Mode::AAC_hbr;
+					}
+					else
+					{
+						logte("%s - It is not supported MPEG4-GENERIC audio mode : %s", GetName().CStr(), first_payload->GetFmtp().CStr());
+						return false;
+					}
+
+					auto mpeg4_size_length = first_payload->GetMpeg4GenericSizeLength();
+					auto mpeg4_index_length = first_payload->GetMpeg4GenericIndexLength();
+					auto mpeg4_index_delta_length = first_payload->GetMpeg4GenericIndexDeltaLength();
+					auto mpeg4_config = first_payload->GetMpeg4GenericConfig();
+
+					if(mpeg4_config == nullptr)
+					{
+						logte("%s - Could not parse MPEG4-GENERIC audio config : %s", GetName().CStr(), first_payload->GetFmtp().CStr());
+						return false;
+					}
+
+					if(AddDepacketizer(_audio_payload_type, depacketizer_type) == false)
+					{
+						return false;
+					}
+
+					auto depacketizer = std::dynamic_pointer_cast<RtpDepacketizerMpeg4GenericAudio>(GetDepacketizer(_audio_payload_type));
+					if(depacketizer->SetConfigParams(mpeg4_mode, mpeg4_size_length, mpeg4_index_length, mpeg4_index_delta_length, mpeg4_config) == false)
+					{
+						logte("%s - Could not parse MPEG4-GENERIC audio config : %s", GetName().CStr(), first_payload->GetFmtp().CStr());
+						return false;
+					}
+				}
+				else 
+				{
+					if(AddDepacketizer(_audio_payload_type, depacketizer_type) == false)
+					{
+						return false;
+					}
+				}
+				
+				AddTrack(audio_track);
+				_rtp_rtcp->AddRtpReceiver(_audio_payload_type, audio_track);
 			}
 		}
 
@@ -785,7 +896,7 @@ namespace pvd
 				// RTP or RTCP
 				auto rtsp_data = _rtsp_demuxer.PopData();
 
-				// RtpRtcpInterface(RtspcStream) <--> [RTP_RTCP Node] <--> [Edge Node(RtspcStream)] ---Send--> {Socket}
+				// RtpRtcpInterface(RtspcStream) <--> [RTP_RTCP Node] <--> [*Edge Node(RtspcStream)] ---Send--> {Socket}
 				//							        					     					    <--Recv--- {Socket}
 				SendDataToPrevNode(rtsp_data->GetData());
 			}
@@ -839,13 +950,19 @@ namespace pvd
 		switch(track->GetCodecId())
 		{
 			case cmn::MediaCodecId::H264:
-				// Our H264 depacketizer always converts packet to Annex B
+				// Our H264 depacketizer always converts packet to AnnexB
 				bitstream_format = cmn::BitstreamFormat::H264_ANNEXB;
 				packet_type = cmn::PacketType::NALU;
 				break;
 			
 			case cmn::MediaCodecId::Opus:
 				bitstream_format = cmn::BitstreamFormat::OPUS;
+				packet_type = cmn::PacketType::RAW;
+				break;
+
+			// Our AAC depacketizer always converts packet to ADTS
+			case cmn::MediaCodecId::Aac:
+				bitstream_format = cmn::BitstreamFormat::AAC_ADTS;
 				packet_type = cmn::PacketType::RAW;
 				break;
 

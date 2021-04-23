@@ -1,8 +1,8 @@
-#include "rtp_audio_jitter_buffer.h"
+#include "rtp_minimal_jitter_buffer.h"
 
 #define OV_LOG_TAG "RtpVideoJitterBuffer"
 
-bool RtpAudioJitterBuffer::InsertPacket(const std::shared_ptr<RtpPacket> &packet)
+bool RtpMinimalJitterBuffer::InsertPacket(const std::shared_ptr<RtpPacket> &packet)
 {
 	// Already it determined this packet was lost
 	if(packet->SequenceNumber() < _next_sequence_number)
@@ -14,7 +14,7 @@ bool RtpAudioJitterBuffer::InsertPacket(const std::shared_ptr<RtpPacket> &packet
 	return true;
 }
 
-bool RtpAudioJitterBuffer::HasAvailablePacket()
+bool RtpMinimalJitterBuffer::HasAvailablePacket()
 {
 	if(_rtp_packets.size() <= 0)
 	{
@@ -24,7 +24,7 @@ bool RtpAudioJitterBuffer::HasAvailablePacket()
 	return true;
 }
 
-std::shared_ptr<RtpPacket> RtpAudioJitterBuffer::PopAvailablePacket()
+std::shared_ptr<RtpPacket> RtpMinimalJitterBuffer::PopAvailablePacket()
 {
 	std::shared_ptr<RtpPacketBox> packet_box = nullptr;
 

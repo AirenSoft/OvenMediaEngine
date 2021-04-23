@@ -527,6 +527,7 @@ namespace mpegts
 				track->SetId(pes->PID());
 				track->SetMediaType(cmn::MediaType::Video);
 				track->SetCodecId(cmn::MediaCodecId::H264);
+				track->SetOriginBitstream(cmn::BitstreamFormat::H264_ANNEXB);
 				track->SetTimeBase(1, 90000);
 				track->SetVideoTimestampScale(90000.0 / 1000.0);
 				break;
@@ -535,6 +536,7 @@ namespace mpegts
 				track->SetId(pes->PID());
 				track->SetMediaType(cmn::MediaType::Video);
 				track->SetCodecId(cmn::MediaCodecId::H265);
+				track->SetOriginBitstream(cmn::BitstreamFormat::H265_ANNEXB);
 				track->SetTimeBase(1, 90000);
 				track->SetVideoTimestampScale(90000.0 / 1000.0);
 				break;
@@ -543,6 +545,7 @@ namespace mpegts
 				track->SetId(pes->PID());
 				track->SetMediaType(cmn::MediaType::Audio);
 				track->SetCodecId(cmn::MediaCodecId::Aac);
+				track->SetOriginBitstream(cmn::BitstreamFormat::AAC_ADTS);
 				track->SetTimeBase(1, 90000);
 				track->SetAudioTimestampScale(90000/1000);
 				break;

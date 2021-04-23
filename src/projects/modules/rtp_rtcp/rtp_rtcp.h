@@ -6,8 +6,8 @@
 #include "base/info/media_track.h"
 #include "rtcp_info/rtcp_sr_generator.h"
 #include "rtcp_info/receiver_report.h"
-#include "rtp_video_jitter_buffer.h"
-#include "rtp_audio_jitter_buffer.h"
+#include "rtp_frame_jitter_buffer.h"
+#include "rtp_minimal_jitter_buffer.h"
 #include "rtp_receive_statistics.h"
 
 #define RECEIVER_REPORT_CYCLE_MS	3000
@@ -47,7 +47,7 @@ private:
 	bool OnRtpReceived(const std::shared_ptr<const ov::Data> &data);
 	bool OnRtcpReceived(const std::shared_ptr<const ov::Data> &data);
 
-	std::shared_ptr<RtpVideoJitterBuffer> GetJitterBuffer(uint8_t payload_type);
+	std::shared_ptr<RtpFrameJitterBuffer> GetJitterBuffer(uint8_t payload_type);
 
     time_t _first_receiver_report_time = 0; // 0 - not received RR packet
     time_t _last_sender_report_time = 0;
@@ -64,8 +64,8 @@ private:
 
 	// Jitter buffer
 	// payload type : Jitter buffer
-	std::unordered_map<uint8_t, std::shared_ptr<RtpVideoJitterBuffer>> _rtp_video_jitter_buffers;
-	std::unordered_map<uint8_t, std::shared_ptr<RtpAudioJitterBuffer>> _rtp_audio_jitter_buffers;
+	std::unordered_map<uint8_t, std::shared_ptr<RtpFrameJitterBuffer>> _rtp_frame_jitter_buffers;
+	std::unordered_map<uint8_t, std::shared_ptr<RtpMinimalJitterBuffer>> _rtp_minimal_jitter_buffers;
 
 	// payload type : MediaTrack Info
 	std::unordered_map<uint8_t, std::shared_ptr<MediaTrack>> _tracks;

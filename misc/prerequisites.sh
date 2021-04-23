@@ -13,7 +13,7 @@ X265_VERSION=3.4
 VPX_VERSION=1.7.0
 FDKAAC_VERSION=0.1.5
 NASM_VERSION=2.15.02
-FFMPEG_VERSION=4.3.1
+FFMPEG_VERSION=4.3.2
 JEMALLOC_VERSION=5.2.1
 PCRE2_VERSION=10.35
 
@@ -174,7 +174,7 @@ install_ffmpeg()
     (DIR=${TEMP_PATH}/ffmpeg && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    curl -sLf https://github.com/AirenSoft/FFmpeg/archive/n${FFMPEG_VERSION}-ome.tar.gz | tar -xz --strip-components=1 && \
+    curl -sLf https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
     PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure \
     --prefix="${PREFIX}" \
     --enable-gpl \

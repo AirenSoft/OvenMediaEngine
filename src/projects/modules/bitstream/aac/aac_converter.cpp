@@ -94,7 +94,24 @@ std::shared_ptr<ov::Data> AacConverter::MakeAdtsHeader(uint8_t aac_profile, uint
 	11 (3)   (reserved)   AAC LTP
 */
 
-// Raw audio data should be 1 frame
+// Raw audio data msut be 1 frame
+std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const uint8_t *data, size_t data_len, const AACSpecificConfig &aac_config)
+{
+	auto adts_data = std::make_shared<ov::Data>();
+
+	//Get the AACSecificConfig value from extradata;
+	uint8_t aac_profile = (uint8_t)aac_config.GetAacProfile();
+	uint8_t aac_sample_rate = (uint8_t)aac_config.SamplingFrequency();
+	uint8_t aac_channels = (uint8_t)aac_config.Channel();
+
+	auto adts_header = MakeAdtsHeader(aac_profile, aac_sample_rate, aac_channels, data_len);
+
+	adts_data->Append(adts_header);
+	adts_data->Append(data, data_len);
+
+	return adts_data;
+}
+
 std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<ov::Data> &data, const std::shared_ptr<AACSpecificConfig> &aac_config)
 {
 	if(aac_config == nullptr)
@@ -118,6 +135,7 @@ std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<o
 	return adts_data;
 }
 
+// TODO : Multiple ADTS should not be allowed
 std::shared_ptr<const ov::Data> AacConverter::ConvertAdtsToRaw(const std::shared_ptr<const ov::Data> &data, std::vector<size_t> *length_list)
 {
 	auto raw_data = std::make_shared<ov::Data>();

@@ -55,7 +55,7 @@ void AACSpecificConfig::Serialize(std::vector<uint8_t>& serialze)
 	std::copy(data->GetDataAs<uint8_t>(), data->GetDataAs<uint8_t>()+data->GetLength(), serialze.begin());
 }
 
-AacObjectType AACSpecificConfig::ObjectType()
+AacObjectType AACSpecificConfig::ObjectType() const
 {
 	return _object_type;
 }
@@ -66,7 +66,7 @@ void AACSpecificConfig::SetOjbectType(AacObjectType object_type)
 	_object_type = object_type;
 }
 
-uint32_t AACSpecificConfig::SamplerateNum()
+uint32_t AACSpecificConfig::SamplerateNum() const
 {
 	switch(SamplingFrequency())
 	{
@@ -103,7 +103,7 @@ uint32_t AACSpecificConfig::SamplerateNum()
 	return 0;
 }
 
-AacSamplingFrequencies AACSpecificConfig::SamplingFrequency()
+AacSamplingFrequencies AACSpecificConfig::SamplingFrequency() const
 {
 	return _sampling_frequency_index;
 }
@@ -115,7 +115,7 @@ void AACSpecificConfig::SetSamplingFrequency(AacSamplingFrequencies sampling_fre
 }
 
 
-uint8_t	AACSpecificConfig::Channel()
+uint8_t	AACSpecificConfig::Channel() const
 {
 	return _channel;
 }
@@ -127,7 +127,7 @@ void AACSpecificConfig::SetChannel(uint8_t channel)
 }
 
 
-AacProfile AACSpecificConfig::GetAacProfile()
+AacProfile AACSpecificConfig::GetAacProfile() const
 {
 	switch(_object_type)
 	{
@@ -145,7 +145,7 @@ AacProfile AACSpecificConfig::GetAacProfile()
 }
 
 
-ov::String AACSpecificConfig::GetInfoString()
+ov::String AACSpecificConfig::GetInfoString() const
 {
 	ov::String out_str = ov::String::FormatString("\n[AACSpecificConfig]\n");
 

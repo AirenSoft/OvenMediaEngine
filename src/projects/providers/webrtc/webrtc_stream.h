@@ -63,7 +63,7 @@ namespace pvd
 		bool OnDataReceivedFromNextNode(NodeType from_node, const std::shared_ptr<const ov::Data> &data) override;
 
 	private:
-		bool AddDepacketizer(uint8_t payload_type, cmn::MediaCodecId codec_id);
+		bool AddDepacketizer(uint8_t payload_type, RtpDepacketizingManager::SupportedDepacketizerType codec_id);
 		std::shared_ptr<RtpDepacketizingManager> GetDepacketizer(uint8_t payload_type);
 
 		uint64_t AdjustTimestamp(uint8_t payload_type, uint32_t timestamp);
