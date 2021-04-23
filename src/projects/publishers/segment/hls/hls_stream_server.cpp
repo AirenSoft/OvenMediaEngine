@@ -69,7 +69,12 @@ http::svr::ConnectionPolicy HlsStreamServer::ProcessPlayListRequest(const std::s
 	response->AppendString(play_list);
 	auto sent_bytes = response->Response();
 
-	IncreaseBytesOut(client, sent_bytes);
+	auto metric = GetStreamMetric(client);
+	if(metric != nullptr)
+	{
+		metric->IncreaseBytesOut(GetPublisherType(), sent_bytes);
+	}
+
 
 	return http::svr::ConnectionPolicy::Closed;
 }
@@ -101,7 +106,11 @@ http::svr::ConnectionPolicy HlsStreamServer::ProcessSegmentRequest(const std::sh
 	response->AppendData(segment->data);
 	auto sent_bytes = response->Response();
 
-	IncreaseBytesOut(client, sent_bytes);
+	auto metric = GetStreamMetric(client);
+	if(metric != nullptr)
+	{
+		metric->IncreaseBytesOut(GetPublisherType(), sent_bytes);
+	}
 
 	return http::svr::ConnectionPolicy::Closed;
 }

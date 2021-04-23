@@ -189,12 +189,18 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<http::svr::HttpCon
 
 	client->GetRequest()->SetExtra(std::static_pointer_cast<pub::Stream>(stream));
 
-	auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
-												   *std::static_pointer_cast<info::Stream>(stream),
-												   client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
-												   segment->sequence_number,
-												   segment->duration_in_ms / 1000);
-	UpdateSegmentRequestInfo(segment_request_info);
+	// The first sequence number 0 means init_video and init_audio in MPEG-DASH.
+	// These are excluded because they confuse statistical calculations.
+	if(segment->sequence_number != 0)
+	{
+		auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
+													*std::static_pointer_cast<info::Stream>(stream),
+													client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),				
+													segment->sequence_number,
+													segment->type,		
+													segment->duration_in_ms / 1000);
+		UpdateSegmentRequestInfo(segment_request_info);
+	}
 
 	return true;
 }
@@ -409,6 +415,12 @@ void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 		for (auto itr = it.first; itr != it.second;)
 		{
 			auto item = itr->second;
+
+			// If the segment is divided into audio and video, statistics must be calculated using only one.
+			if(item->GetDataType() != info.GetDataType())
+			{
+				return;
+			}
 
 			if (item->IsNextRequest(info))
 			{

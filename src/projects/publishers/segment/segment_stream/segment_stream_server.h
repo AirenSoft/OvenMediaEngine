@@ -13,6 +13,7 @@
 #include <modules/http/server/http_server.h>
 #include <modules/http/server/https_server.h>
 #include <modules/http/server/interceptors/http_request_interceptors.h>
+#include <monitoring/monitoring.h>
 
 #include <memory>
 
@@ -75,7 +76,7 @@ protected:
 
 	bool UrlExistCheck(const std::vector<ov::String> &url_list, const ov::String &check_url);
 
-	bool IncreaseBytesOut(const std::shared_ptr<http::svr::HttpConnection> &client, size_t sent_bytes);
+	std::shared_ptr<mon::StreamMetrics> GetStreamMetric(const std::shared_ptr<http::svr::HttpConnection> &client);
 
 protected:
 	std::shared_ptr<http::svr::HttpServer> _http_server;

@@ -84,12 +84,13 @@ private:
 class SegmentRequestInfo
 {
 public:
-	SegmentRequestInfo(const PublisherType &type, const info::Stream &stream_info, const ov::String &ip, int seq, int64_t duration)
+	SegmentRequestInfo(const PublisherType &pub_type, const info::Stream &stream_info, const ov::String &ip, int seq, SegmentDataType data_type, int64_t duration)
 		: _stream_info(stream_info)
 	{
-		_publisher_type = type;
+		_publisher_type = pub_type;
 		_ip_address = ip;
 		_sequence_number = seq;
+		_data_type = data_type;
 		_duration = duration;
 		_last_requested_time = std::chrono::system_clock::now();
 		_count = 0;
@@ -101,9 +102,15 @@ public:
 		_publisher_type = info._publisher_type;
 		_ip_address = info._ip_address;
 		_sequence_number = info._sequence_number;
+		_data_type = info._data_type;
 		_duration = info._duration;
 		_last_requested_time = info._last_requested_time;
 		_count = info._count;
+	}
+
+	SegmentDataType GetDataType()
+	{
+		return _data_type;
 	}
 
 	bool IsNextRequest(const SegmentRequestInfo &next)
@@ -111,11 +118,18 @@ public:
 		// Is this a series of requests?
 		if(_publisher_type == next._publisher_type && 
 			_stream_info == next._stream_info && 
-			_ip_address == next._ip_address && 
-			_sequence_number + 1 == next._sequence_number)
+			_ip_address == next._ip_address)
 		{
-			// Not measuring the time interval between segment requests will give more accurate results when the network is bad.
-			return true;
+			if(_data_type != next._data_type)
+			{
+				return false;
+			}
+			// next segemnt is requested
+			else if(_sequence_number + 1 == next._sequence_number)
+			{
+				// Not measuring the time interval between segment requests will give more accurate results when the network is bad.
+				return true;
+			}
 
 			/*TODO(Getroot): Check again how effective this function is
 			auto gap = std::chrono::duration_cast<std::chrono::seconds>(next._last_requested_time - _last_requested_time).count();
@@ -162,6 +176,7 @@ private:
 	info::Stream		_stream_info;
 	ov::String			_ip_address;
 	int					_sequence_number;
+	SegmentDataType		_data_type;
 	int64_t				_duration;
 	uint32_t			_count = 0;
 	std::chrono::system_clock::time_point	_last_requested_time;
