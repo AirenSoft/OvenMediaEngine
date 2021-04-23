@@ -76,7 +76,11 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 			response->AppendData(chunk_item->second->chunked_data);
 			auto sent_bytes = response->Response();
 
-			IncreaseBytesOut(client, sent_bytes);
+			auto metric = GetStreamMetric(client);
+			if(metric != nullptr)
+			{
+				metric->IncreaseBytesOut(GetPublisherType(), sent_bytes);
+			}
 
 			chunk_item->second->client_list.push_back(client);
 
@@ -114,16 +118,24 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 		auto &client = *client_item;
 
 		auto response = client->GetResponse();
+		auto metric = GetStreamMetric(client);
 
 		if (response->SendChunkedData(chunk_data))
 		{
-			IncreaseBytesOut(client, chunk_data->GetLength());
-
+            if(metric != nullptr)
+            {
+                metric->IncreaseBytesOut(GetPublisherType(), chunk_data->GetLength());
+            }
 			++client_item;
 		}
 		else
 		{
 			logtw("Failed to send the chunked data for [%s/%s, %s] to %s (%zu bytes)", app_name.CStr(), stream_name.CStr(), file_name.CStr(), response->GetRemote()->ToString().CStr(), chunk_data->GetLength());
+
+			if(metric != nullptr)
+            {
+                metric->OnSessionDisconnected(GetPublisherType());
+            }
 
 			client_item = chunk_item->second->client_list.erase(client_item);
 			response->Close();
