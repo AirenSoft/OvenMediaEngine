@@ -13,6 +13,7 @@
 #include "../dash/dash_define.h"
 #include "cmaf_packetizer.h"
 #include "cmaf_private.h"
+#include "../segment_publisher.h"
 
 http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
 													   const SegmentStreamRequestInfo &request_info,
@@ -23,8 +24,7 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 	auto type = CmafPacketizer::GetFileType(request_info.file_name);
 
 	bool is_video = ((type == DashFileType::VideoSegment) || (type == DashFileType::VideoInit));
-	std::shared_ptr<SegmentItem> segment = nullptr;
-
+	
 	// Check if the requested file is being created
 	{
 		auto key = ov::String::FormatString("%s/%s/%s", request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), request_info.file_name.CStr());
@@ -38,14 +38,24 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 			std::shared_ptr<pub::Stream> stream_info;
 			for (auto observer : _observers)
 			{
-				auto segment_publisher = std::dynamic_pointer_cast<pub::Publisher>(observer);
-
+				auto segment_publisher = std::dynamic_pointer_cast<SegmentPublisher>(observer);
 				if (segment_publisher != nullptr)
 				{
 					stream_info = segment_publisher->GetStreamAs<pub::Stream>(request_info.vhost_app_name, request_info.stream_name);
-
 					if (stream_info != nullptr)
 					{
+						/* 
+						TODO(Dimiden) : Decommnet below codes and write sequence_number and duration_in_seconds
+						// For statistics
+						auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
+													*std::static_pointer_cast<info::Stream>(stream_info),
+													client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),		
+													-->> sequence_number,
+													is_video ? SegmentDataType::Video : SegmentDataType::Audio,
+													-->> duration_in_seconds);
+
+						segment_publisher->UpdateSegmentRequestInfo(segment_request_info);
+						*/
 						break;
 					}
 				}

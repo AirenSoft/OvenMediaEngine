@@ -213,6 +213,9 @@ public:
 
 	bool Stop() override;
 
+	void		UpdatePlaylistRequestInfo(const std::shared_ptr<PlaylistRequestInfo> &info);
+	void		UpdateSegmentRequestInfo(SegmentRequestInfo &info);
+
 protected:
 	SegmentPublisher(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router);
 	~SegmentPublisher() override;
@@ -240,12 +243,10 @@ protected:
 private:
 	bool		StartSessionTableManager();
 	void 		RequestTableUpdateThread();
-
-	void		UpdatePlaylistRequestInfo(const std::shared_ptr<PlaylistRequestInfo> &info);
 	const std::shared_ptr<PlaylistRequestInfo>	GetSessionRequestInfoBySegmentRequestInfo(const SegmentRequestInfo &info);
 	bool		IsAuthorizedSession(const PlaylistRequestInfo &info);
 
-	void		UpdateSegmentRequestInfo(SegmentRequestInfo &info);
+	
 
 	bool					_run_thread = false;
 	std::recursive_mutex 	_playlist_request_table_lock;

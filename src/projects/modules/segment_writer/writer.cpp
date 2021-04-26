@@ -693,6 +693,7 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			}
 			break;
 		case cmn::BitstreamFormat::AAC_LATM:
+			[[fallthrough]];
 		case cmn::BitstreamFormat::Unknown:
 			[[fallthrough]];
 		case cmn::BitstreamFormat::VP8:
@@ -701,8 +702,15 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 			[[fallthrough]];
 		case cmn::BitstreamFormat::JPEG:
 			[[fallthrough]];
+		case cmn::BitstreamFormat::H264_RTP_RFC_6184:
+			[[fallthrough]];
+		case cmn::BitstreamFormat::VP8_RTP_RFC_7741:
+			[[fallthrough]];
+		case cmn::BitstreamFormat::AAC_MPEG4_GENERIC:
+			[[fallthrough]];
+		case cmn::BitstreamFormat::OPUS_RTP_RFC_7587:
+			[[fallthrough]];
 		case cmn::BitstreamFormat::PNG:
-			// Not supported
 			break;
 	}
 
