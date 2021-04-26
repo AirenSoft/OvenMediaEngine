@@ -8,7 +8,6 @@
 #include <modules/sdp/session_description.h>
 #include <modules/rtp_rtcp/rtp_rtcp_defines.h>
 #include <modules/rtp_rtcp/rtp_history.h>
-#include <monitoring/monitoring.h>
 #include "rtc_session.h"
 
 
@@ -60,8 +59,6 @@ private:
 
 	// Origin payload type, RtpHistory
 	std::map<uint8_t, std::shared_ptr<RtpHistory>> _rtp_history_map;
-
-	std::shared_ptr<mon::StreamMetrics>		_stream_metrics;
 
 	bool _rtx_enabled = true;
 	bool _ulpfec_enabled = true;

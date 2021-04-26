@@ -9,6 +9,7 @@
 #include "modules/rtp_rtcp/rtp_packetizer_interface.h"
 #include "modules/dtls_srtp/dtls_transport.h"
 #include <unordered_set>
+#include <monitoring/monitoring.h>
 
 /*	Node Connection
  * [  RTP_RTCP ]
@@ -95,4 +96,6 @@ private:
 	uint64_t							_session_expired_time = 0;
 
 	std::shared_mutex					_start_stop_lock;
+
+	std::shared_ptr<mon::StreamMetrics>		_stream_metrics;
 };
