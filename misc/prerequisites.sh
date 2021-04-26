@@ -272,8 +272,7 @@ install_intel_media_driver() {
     DIR=${TEMP_PATH}/build && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
-    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH} && \
-    cmake \
+    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH} cmake \
         $DIR_IMD \
         -DBUILD_TYPE=release \
         -DBS_DIR_GMMLIB="$DIR_GMMLIB/Source/GmmLib" \
@@ -300,8 +299,7 @@ install_intel_media_sdk() {
     curl -sLf https://github.com/Intel-Media-SDK/MediaSDK/archive/refs/tags/intel-mediasdk-${INTEL_MEDIA_SDK_VERSION}.tar.gz  | tar -xz --strip-components=1 && \
     mkdir -p ${DIR}/build && \
     cd ${DIR}/build && \
-    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH} && \
-    cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" .. && \
+    PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH} cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" .. && \
     make -j$(nproc) && \
     sudo make install && \
     rm -rf ${DIR}) || fail_exit "intel_media_sdk"   
