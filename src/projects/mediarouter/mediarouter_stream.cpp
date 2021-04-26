@@ -610,7 +610,7 @@ bool MediaRouteStream::ProcessInboundStream(std::shared_ptr<MediaTrack> &media_t
 		case cmn::BitstreamFormat::PNG:
 		case cmn::BitstreamFormat::Unknown:
 		default:
-			logte("Unsupported bitstream is being input");
+			logte("Bitstream not supported by inbound");
 			break;
 	}
 
@@ -644,12 +644,14 @@ bool MediaRouteStream::ProcessOutboundStream(std::shared_ptr<MediaTrack> &media_
 		case cmn::BitstreamFormat::OPUS:
 			result = ProcessOPUSStream(media_track, media_packet);
 			break;
-		case cmn::BitstreamFormat::AAC_LATM:
 		case cmn::BitstreamFormat::JPEG:
 		case cmn::BitstreamFormat::PNG:
+			result = true;
+			break;
+		case cmn::BitstreamFormat::AAC_LATM:			
 		case cmn::BitstreamFormat::Unknown:
 		default:
-			logte("Unsupported bitstream is being input");
+			logte("Bitstream not supported by outbound");
 			break;
 	}
 
