@@ -95,16 +95,18 @@ namespace http
 		ssize_t HttpServer::TryParseHeader(const std::shared_ptr<HttpConnection> &client, const std::shared_ptr<const ov::Data> &data)
 		{
 			auto request = client->GetRequest();
+			auto &parser = request->GetRequestParser();
 
-			OV_ASSERT2(request->ParseStatus() == StatusCode::PartialContent);
+			OV_ASSERT2(parser.GetParseStatus() == StatusCode::PartialContent);
 
 			// 파싱이 필요한 상태 - ProcessData()를 호출하여 파싱 시도
-			ssize_t processed_length = request->ProcessData(data);
+			ssize_t processed_length = parser.ProcessData(data);
 
-			switch (request->ParseStatus())
+			switch (parser.GetParseStatus())
 			{
 				case StatusCode::OK:
 					// 파싱이 이제 막 완료된 상태. 즉, 파싱이 완료된 후 최초 1번만 여기로 진입함
+					request->PostProcess();
 					break;
 
 				case StatusCode::PartialContent:
@@ -142,9 +144,11 @@ namespace http
 				std::shared_ptr<HttpRequest> request = client->GetRequest();
 				std::shared_ptr<HttpResponse> response = client->GetResponse();
 
+				auto &parser = request->GetRequestParser();
+
 				bool need_to_disconnect = false;
 
-				switch (request->ParseStatus())
+				switch (parser.GetParseStatus())
 				{
 					case StatusCode::OK: {
 						auto interceptor = request->GetRequestInterceptor();
@@ -169,7 +173,7 @@ namespace http
 
 						if (processed_length >= 0)
 						{
-							if (request->ParseStatus() == StatusCode::OK)
+							if (parser.GetParseStatus() == StatusCode::OK)
 							{
 								// Probe scheme
 								if (IsWebSocketRequest(request) == true)
@@ -222,7 +226,7 @@ namespace http
 								need_to_disconnect = need_to_disconnect || (interceptor->OnHttpPrepare(client) == InterceptorResult::Disconnect);
 								need_to_disconnect = need_to_disconnect || (interceptor->OnHttpData(client, data->Subdata(processed_length)) == InterceptorResult::Disconnect);
 							}
-							else if (request->ParseStatus() == StatusCode::PartialContent)
+							else if (parser.GetParseStatus() == StatusCode::PartialContent)
 							{
 								// Need more data
 							}
@@ -239,7 +243,7 @@ namespace http
 
 					default:
 						// 이전에 parse 할 때 오류가 발생했다면 response한 뒤 close() 했으므로, 정상적인 상황이라면 여기에 진입하면 안됨
-						logte("Invalid parse status: %d", request->ParseStatus());
+						logte("Invalid parse status: %d", parser.GetParseStatus());
 						OV_ASSERT2(false);
 						need_to_disconnect = true;
 						break;

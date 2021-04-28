@@ -65,7 +65,7 @@ namespace http
 			auto request = client->GetRequest();
 
 			// TODO: Support for file upload & need to create a feature to block requests that are too large because too much CONTENT-LENGTH can cause OOM
-			ssize_t content_length = request->GetContentLength();
+			size_t content_length = request->GetContentLength();
 
 			if (content_length > (1024LL * 1024LL))
 			{
@@ -77,7 +77,7 @@ namespace http
 			{
 				const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
 
-				if (request_body->Reserve(static_cast<size_t>(request->GetContentLength())) == false)
+				if (request_body->Reserve(request->GetContentLength()) == false)
 				{
 					return InterceptorResult::Disconnect;
 				}
@@ -92,14 +92,14 @@ namespace http
 			auto response = client->GetResponse();
 
 			const std::shared_ptr<ov::Data> &request_body = GetRequestBody(request);
-			ssize_t current_length = (request_body != nullptr) ? request_body->GetLength() : 0L;
-			ssize_t content_length = request->GetContentLength();
+			size_t current_length = (request_body != nullptr) ? request_body->GetLength() : 0L;
+			size_t content_length = request->GetContentLength();
 
 			// content length가 0 초과면, request_body는 반드시 초기화 되어 있어야 함
 			OV_ASSERT2((content_length == 0L) || ((content_length > 0L) && (request_body != nullptr)));
 
 			std::shared_ptr<const ov::Data> process_data;
-			if ((content_length > 0) && ((current_length + static_cast<ssize_t>(data->GetLength())) > content_length))
+			if ((content_length > 0) && ((current_length + data->GetLength()) > content_length))
 			{
 				logtw("Client sent too many data: expected: %ld, sent: %ld", content_length, (current_length + data->GetLength()));
 				// 원래는, 클라이언트가 보낸 데이터는 content-length를 넘어설 수 없으나,
@@ -107,7 +107,7 @@ namespace http
 
 				if (content_length > current_length)
 				{
-					process_data = data->Subdata(0L, static_cast<size_t>(content_length - current_length));
+					process_data = data->Subdata(0L, content_length - current_length);
 				}
 				else
 				{
@@ -129,7 +129,7 @@ namespace http
 				request_body->Append(process_data.get());
 
 				// 다 받아졌는지 확인
-				if (static_cast<ssize_t>(request_body->GetLength()) >= content_length)
+				if (request_body->GetLength() >= content_length)
 				{
 					// 데이터가 다 받아졌다면, Register()된 handler 호출
 					logtd("HTTP message is parsed successfully");

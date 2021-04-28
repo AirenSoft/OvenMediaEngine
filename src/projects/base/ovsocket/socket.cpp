@@ -89,6 +89,33 @@ namespace ov
 #	define SOCKET_PROFILER_POST_HANDLER(handler) SOCKET_PROFILER_NOOP()
 #endif	// USE_SOCKET_PROFILER
 
+	// Used to wait for connection
+	class ConnectHelper : public SocketAsyncInterface
+	{
+	public:
+		void OnConnected() override
+		{
+			logtd("Connected");
+			_connected_event.SetEvent();
+		}
+
+		void OnReadable() override
+		{
+		}
+
+		void OnClosed() override
+		{
+		}
+
+		bool WaitForConnect(int timeout)
+		{
+			return _connected_event.Wait(timeout);
+		}
+
+	protected:
+		ov::Event _connected_event{true};
+	};
+
 	Socket::Socket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker)
 		: _worker(worker)
 	{
@@ -166,13 +193,13 @@ namespace ov
 		return false;
 	}
 
-	bool Socket::SetBlockingInternal(bool blocking)
+	bool Socket::SetBlockingInternal(BlockingMode mode)
 	{
 		int result;
 
 		if (_socket.IsValid() == false)
 		{
-			logae("Could not make %sblocking socket (Invalid socket)", blocking ? "" : "non ");
+			logae("Could not make %s socket (Invalid socket)", StringFromBlockingMode(mode));
 			OV_ASSERT2(_socket.IsValid());
 			return false;
 		}
@@ -191,7 +218,7 @@ namespace ov
 
 				int flags = result;
 
-				if (blocking)
+				if (mode == BlockingMode::Blocking)
 				{
 					flags &= ~O_NONBLOCK;
 				}
@@ -208,15 +235,17 @@ namespace ov
 					return false;
 				}
 
-				_is_nonblock = !blocking;
+				_blocking_mode = mode;
 
 				return true;
 			}
 
 			case SocketType::Srt:
-				if (SetSockOpt(SRTO_RCVSYN, blocking) && SetSockOpt(SRTO_SNDSYN, blocking))
+				if (
+					SetSockOpt(SRTO_RCVSYN, _blocking_mode == BlockingMode::Blocking) &&
+					SetSockOpt(SRTO_SNDSYN, _blocking_mode == BlockingMode::Blocking))
 				{
-					_is_nonblock = !blocking;
+					_blocking_mode = mode;
 					return true;
 				}
 
@@ -262,12 +291,13 @@ namespace ov
 
 	bool Socket::MakeBlocking()
 	{
-		return SetBlockingInternal(true);
+		_callback = nullptr;
+		return SetBlockingInternal(BlockingMode::Blocking);
 	}
 
 	bool Socket::MakeNonBlocking(std::shared_ptr<SocketAsyncInterface> callback)
 	{
-		if (SetBlockingInternal(false))
+		if (SetBlockingInternal(BlockingMode::NonBlocking))
 		{
 			_callback = std::move(callback);
 			return true;
@@ -427,9 +457,10 @@ namespace ov
 		CHECK_STATE(== SocketState::Created, ov::Error::CreateError(EINVAL, "Invalid state: %d", static_cast<int>(_state)));
 
 		std::shared_ptr<ov::Error> error;
+		std::shared_ptr<ConnectHelper> connect_helper;
 
 		// To set connection timeout
-		bool origin_nonblock_flag = _is_nonblock;
+		auto original_blocking_mode = _blocking_mode;
 
 		switch (GetType())
 		{
@@ -437,85 +468,66 @@ namespace ov
 			case SocketType::Udp: {
 				if (timeout_msec > 0 && timeout_msec < Infinite)
 				{
-					if (origin_nonblock_flag == false)
+					if (original_blocking_mode == BlockingMode::Blocking)
 					{
-						MakeNonBlocking(nullptr);
+						connect_helper = std::make_shared<ConnectHelper>();
+						MakeNonBlocking(connect_helper);
 					}
 				}
 
+				SetState(SocketState::Connecting);
+
+				logtd("Trying to connect to %s...", endpoint.ToString().CStr());
 				int result = ::connect(GetNativeHandle(), endpoint.Address(), endpoint.AddressLength());
 
 				if (result == 0)
 				{
-					if (origin_nonblock_flag == false)
+					if (original_blocking_mode == BlockingMode::Blocking)
 					{
+						// Restore blocking state
 						MakeBlocking();
 					}
 
 					SetState(SocketState::Connected);
 					return nullptr;
 				}
-				else if (result < 0)
+
+				error = ov::Error::CreateErrorFromErrno();
+
+				if (result < 0)
 				{
 					// Check timeout
-					if (errno == EINPROGRESS)
+					if (error->GetCode() == EINPROGRESS)
 					{
-						do
+						if (original_blocking_mode == BlockingMode::NonBlocking)
 						{
-							// For timeout and fastest to notice connection success
-							struct epoll_event triggered_events;
-							int ep_fd = epoll_create1(0);
-							struct epoll_event ep_event;
-							ep_event.events = EPOLLOUT | EPOLLIN | EPOLLERR;
-							ep_event.data.fd = GetSocket().GetNativeHandle();
-
-							if (epoll_ctl(ep_fd, EPOLL_CTL_ADD, GetSocket().GetNativeHandle(), &ep_event) == -1)
-							{
-								close(ep_fd);
-								break;
-							}
-
-							auto num_events = epoll_wait(ep_fd, &triggered_events, 1, timeout_msec);
-
-							// timeout or error
-							if (num_events <= 0)
-							{
-								close(ep_fd);
-								break;
-							}
-
-							// Socket selected for write
-							int error_value;
-
-							if (GetSockOpt(SO_ERROR, &error_value) == false)
-							{
-								close(ep_fd);
-								break;
-							}
-
-							// Not connected
-							if (error_value != 0)
-							{
-								close(ep_fd);
-								break;
-							}
-
-							// Recover origin state
-							if (origin_nonblock_flag == false)
-							{
-								MakeBlocking();
-							}
-
-							SetState(SocketState::Connected);
-							close(ep_fd);
-
+							// Don't wait for the connection if this socket is non-blocking mode
 							return nullptr;
+						}
 
-						} while (true);
+						// Blocking mode
+						if (connect_helper->WaitForConnect(timeout_msec))
+						{
+							// Recover original state
+							MakeBlocking();
+							SetState(SocketState::Connected);
+							error = nullptr;
+						}
+						else
+						{
+							// Timed out
+							int socket_error;
+							GetSockOpt(SO_ERROR, &socket_error);
+
+							error = ov::Error::CreateError(socket_error, "Connection timed out (%d ms elapsed, SO_ERROR: %d)", timeout_msec, socket_error);
+
+							// Timed out/Error occurred
+							CloseInternal();
+							SetState(SocketState::Error);
+						}
 					}
 				}
 
-				error = ov::Error::CreateErrorFromErrno();
 				break;
 			}
 
@@ -711,7 +723,7 @@ namespace ov
 		return DispatchResult::PartialDispatched;
 	}
 
-	Socket::DispatchResult Socket::DispatchEvents()
+	Socket::DispatchResult Socket::DispatchEventsInternal()
 	{
 		SOCKET_PROFILER_INIT();
 
@@ -725,8 +737,8 @@ namespace ov
 			SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
 				if ((lock_elapsed > 100) || (count > 10) || (_dispatch_queue.size() > 10))
 				{
-					logtw("[SockProfiler] DispatchEvents() - %s, Before Queue: %zu, After Queue: %zu, Lock: %dms, Total: %dms",
-						ToString().CStr(), count, _dispatch_queue.size(), lock_elapsed, total_elapsed);
+					logtw("[SockProfiler] DispatchEventsInternal() - %s, Before Queue: %zu, After Queue: %zu, Lock: %dms, Total: %dms",
+						  ToString().CStr(), count, _dispatch_queue.size(), lock_elapsed, total_elapsed);
 				}
 			});
 
@@ -809,6 +821,27 @@ namespace ov
 		}
 
 		return result;
+	}
+
+	Socket::DispatchResult Socket::DispatchEvents()
+	{
+		switch (_blocking_mode)
+		{
+			case ov::BlockingMode::Blocking:
+#if DEBUG
+			{
+				std::lock_guard lock_guard(_dispatch_queue_lock);
+				[[maybe_unused]] auto count = _dispatch_queue.size();
+				OV_ASSERT2(count == 0);
+			}
+#endif	// DEBUG
+				return Socket::DispatchResult::Dispatched;
+
+			case ov::BlockingMode::NonBlocking:
+				return DispatchEventsInternal();
+		}
+
+		return Socket::DispatchResult::Error;
 	}
 
 	ssize_t Socket::SendInternal(const std::shared_ptr<const Data> &data)
@@ -1043,50 +1076,57 @@ namespace ov
 			return false;
 		}
 
-		if (GetType() != SocketType::Udp)
+		switch (_blocking_mode)
 		{
-			CHECK_STATE(== SocketState::Connected, false);
+			case ov::BlockingMode::Blocking:
+				return (SendInternal(data) == static_cast<ssize_t>(data->GetLength()));
 
-			if (AppendCommand({data->Clone()}) == false)
-			{
-				return false;
-			}
-
-			return (DispatchEvents() != DispatchResult::Error);
-		}
-		else
-		{
-			CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
-
-			// We don't have to be accurate here, because we'll acquire lock of _dispatch_queue_lock in DispatchEvent()
-			if (_dispatch_queue.empty() == false)
-			{
-				// Send remaining data
-				if (DispatchEvents() == DispatchResult::Error)
+			case ov::BlockingMode::NonBlocking:
+				if (GetType() != SocketType::Udp)
 				{
+					CHECK_STATE(== SocketState::Connected, false);
+
+					if (AppendCommand({data->Clone()}))
+					{
+						return (DispatchEvents() != DispatchResult::Error);
+					}
+
 					return false;
 				}
-			}
+				else
+				{
+					CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
 
-			// Send the data directly
-			auto sent = SendInternal(data);
+					// We don't have to be accurate here, because we'll acquire lock of _dispatch_queue_lock in DispatchEvents()
+					if (_dispatch_queue.empty() == false)
+					{
+						// Send remaining data
+						if (DispatchEvents() == DispatchResult::Error)
+						{
+							return false;
+						}
+					}
 
-			if (sent == static_cast<ssize_t>(data->GetLength()))
-			{
-				// The data has been sent
-				return true;
-			}
-			else if (sent == 0L)
-			{
-				// Need to send later
-				return AppendCommand({data->Clone()});
-			}
-			else
-			{
-				// An error occurred
-				return false;
-			}
+					// Send the data directly
+					auto sent = SendInternal(data);
+
+					if (sent == static_cast<ssize_t>(data->GetLength()))
+					{
+						// The data has been sent
+						return true;
+					}
+					else if (sent == 0L)
+					{
+						// Need to send later
+						return AppendCommand({data->Clone()});
+					}
+
+					// An error occurred
+					return false;
+				}
 		}
+
+		return false;
 	}
 
 	bool Socket::Send(const void *data, size_t length)
@@ -1116,50 +1156,60 @@ namespace ov
 			return false;
 		}
 
-		if (GetType() != SocketType::Udp)
+		switch (_blocking_mode)
 		{
-			CHECK_STATE(== SocketState::Connected, false);
+			case ov::BlockingMode::Blocking:
+				return (SendToInternal(address, data) == static_cast<ssize_t>(data->GetLength()));
 
-			if (AppendCommand({address, data->Clone()}) == false)
-			{
-				return false;
-			}
-
-			return (DispatchEvents() != DispatchResult::Error);
-		}
-		else
-		{
-			CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
-
-			// We don't have to be accurate here, because we'll acquire lock of _dispatch_queue_lock in DispatchEvent()
-			if (_dispatch_queue.empty() == false)
-			{
-				// Send remaining data
-				if (DispatchEvents() == DispatchResult::Error)
+			case ov::BlockingMode::NonBlocking:
+				if (GetType() != SocketType::Udp)
 				{
+					CHECK_STATE(== SocketState::Connected, false);
+
+					if (AppendCommand({address, data->Clone()}))
+					{
+						return (DispatchEvents() != DispatchResult::Error);
+					}
+
 					return false;
 				}
-			}
+				else
+				{
+					CHECK_STATE2(== SocketState::Created, == SocketState::Bound, false);
 
-			// Send the data directly
-			auto sent = SendToInternal(address, data);
+					// We don't have to be accurate here, because we'll acquire lock of _dispatch_queue_lock in DispatchEvents()
+					if (_dispatch_queue.empty() == false)
+					{
+						// Send remaining data
+						if (DispatchEvents() == DispatchResult::Error)
+						{
+							return false;
+						}
+					}
 
-			if (sent == static_cast<ssize_t>(data->GetLength()))
-			{
-				// The data has been sent
-				return true;
-			}
-			else if (sent == 0L)
-			{
-				// Need to send later
-				return AppendCommand({address, data->Clone()});
-			}
-			else
-			{
-				// An error occurred
-				return false;
-			}
+					// Send the data directly
+					auto sent = SendToInternal(address, data);
+
+					if (sent == static_cast<ssize_t>(data->GetLength()))
+					{
+						// The data has been sent
+						return true;
+					}
+					else if (sent == 0L)
+					{
+						// Need to send later
+						return AppendCommand({address, data->Clone()});
+					}
+					else
+					{
+						// An error occurred
+					}
+
+					return false;
+				}
 		}
+
+		return false;
 	}
 
 	bool Socket::SendTo(const SocketAddress &address, const void *data, size_t length)
@@ -1207,7 +1257,8 @@ namespace ov
 		{
 			case SocketType::Udp:
 			case SocketType::Tcp:
-				read_bytes = ::recv(GetNativeHandle(), data, length, (_is_nonblock || non_block) ? MSG_DONTWAIT : 0);
+				read_bytes = ::recv(GetNativeHandle(), data, length,
+									((_blocking_mode == BlockingMode::NonBlocking) || non_block) ? MSG_DONTWAIT : 0);
 
 				if (read_bytes <= 0L)
 				{
@@ -1310,7 +1361,9 @@ namespace ov
 				logad("Trying to read from the socket...");
 				data->SetLength(data->GetCapacity());
 
-				ssize_t read_bytes = ::recvfrom(GetNativeHandle(), data->GetWritableData(), data->GetLength(), (_is_nonblock || non_block) ? MSG_DONTWAIT : 0, (sockaddr *)&remote, &remote_length);
+				ssize_t read_bytes = ::recvfrom(GetNativeHandle(), data->GetWritableData(), data->GetLength(),
+												((_blocking_mode == BlockingMode::NonBlocking) || non_block) ? MSG_DONTWAIT : 0,
+												reinterpret_cast<sockaddr *>(&remote), &remote_length);
 
 				if (read_bytes < 0L)
 				{
@@ -1393,40 +1446,63 @@ namespace ov
 	{
 		CHECK_STATE(>= SocketState::Closed, false);
 
-		if (GetState() == SocketState::Error)
+		if ((GetState() == SocketState::Closed) || (GetState() == SocketState::Error))
 		{
 			// Suppress error message
 			return false;
 		}
 
+		switch (_blocking_mode)
 		{
-			SOCKET_PROFILER_INIT();
-			std::lock_guard lock_guard(_dispatch_queue_lock);
-			SOCKET_PROFILER_AFTER_LOCK();
+			case ov::BlockingMode::Blocking: {
+				bool result = true;
 
-			SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
-				if ((lock_elapsed > 100) || (_dispatch_queue.size() > 10))
+				if (HalfClose() == DispatchResult::Error)
 				{
-					logtw("[SockProfiler] Close() - %s, Queue: %zu, Lock: %dms, Total: %dms", ToString().CStr(), _dispatch_queue.size(), lock_elapsed, total_elapsed);
+					result = false;
 				}
-			});
-
-			if (_has_close_command == false)
-			{
-				logad("Enqueuing close command");
-				_has_close_command = true;
-
-				if (GetState() != SocketState::Disconnected)
+				if (WaitForHalfClose() == DispatchResult::Error)
 				{
-					_dispatch_queue.emplace_back(DispatchCommand::Type::HalfClose);
-					_dispatch_queue.emplace_back(DispatchCommand::Type::WaitForHalfClose);
+					result = false;
 				}
 
-				_dispatch_queue.emplace_back(DispatchCommand::Type::Close);
+				if (CloseInternal() == false)
+				{
+					result = false;
+				}
+
+				return result;
 			}
-			else
-			{
-				logad("This socket already has close command (Do not need to call Close*() in this case)");
+
+			case ov::BlockingMode::NonBlocking: {
+				SOCKET_PROFILER_INIT();
+				std::lock_guard lock_guard(_dispatch_queue_lock);
+				SOCKET_PROFILER_AFTER_LOCK();
+
+				SOCKET_PROFILER_POST_HANDLER([&](int64_t lock_elapsed, int64_t total_elapsed) {
+					if ((lock_elapsed > 100) || (_dispatch_queue.size() > 10))
+					{
+						logtw("[SockProfiler] Close() - %s, Queue: %zu, Lock: %dms, Total: %dms", ToString().CStr(), _dispatch_queue.size(), lock_elapsed, total_elapsed);
+					}
+				});
+
+				if (_has_close_command == false)
+				{
+					logad("Enqueuing close command");
+					_has_close_command = true;
+
+					if (GetState() != SocketState::Disconnected)
+					{
+						_dispatch_queue.emplace_back(DispatchCommand::Type::HalfClose);
+						_dispatch_queue.emplace_back(DispatchCommand::Type::WaitForHalfClose);
+					}
+
+					_dispatch_queue.emplace_back(DispatchCommand::Type::Close);
+				}
+				else
+				{
+					logad("This socket already has close command (Do not need to call Close*() in this case)");
+				}
 			}
 		}
 
@@ -1454,9 +1530,15 @@ namespace ov
 			return DispatchResult::Dispatched;
 		}
 
-		if (GetState() == ov::SocketState::Created)
+		switch (GetState())
 		{
-			return Socket::DispatchResult::Dispatched;
+			case ov::SocketState::Created:
+				[[fallthrough]];
+			case ov::SocketState::Disconnected:
+				return Socket::DispatchResult::Dispatched;
+
+			default:
+				break;
 		}
 
 		while (true)
@@ -1547,10 +1629,11 @@ namespace ov
 	String Socket::ToString(const char *class_name) const
 	{
 		return String::FormatString(
-			"<%s: %p, #%d, state: %s, %s, %s>",
+			"<%s: %p, #%d, state: %s, %s, %s, %s>",
 			class_name, this,
 			GetNativeHandle(), StringFromSocketState(_state),
 			StringFromSocketType(GetType()),
+			StringFromBlockingMode(_blocking_mode),
 			(_remote_address != nullptr) ? _remote_address->ToString().CStr() : "N/A");
 	}
 
