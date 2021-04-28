@@ -135,6 +135,12 @@ namespace ov
 
 		std::shared_ptr<Data> ToData(bool include_null_char = true) const;
 
+		std::size_t Hash() const
+		{
+			auto temp = std::string_view(CStr(), GetLength());
+			return std::hash<std::string_view>{}(temp);
+		}
+
 	protected:
 		bool IsEqualsTo(const char *str, size_t length) const;
 
@@ -153,9 +159,16 @@ namespace ov
 
 	struct CaseInsensitiveComparator
 	{
+		// for std::map
 		bool operator()(const String &s1, const String &s2) const
 		{
 			return s1.UpperCaseString() < s2.UpperCaseString();
+		}
+
+		// for std::unordered_map
+		std::size_t operator()(const String &str) const
+		{
+			return str.UpperCaseString().Hash();
 		}
 	};
 }  // namespace ov
@@ -167,8 +180,7 @@ namespace std
 	{
 		std::size_t operator()(ov::String const &str) const
 		{
-			auto temp = std::string_view(str.CStr(), str.GetLength());
-			return std::hash<std::string_view>{}(temp);
+			return str.Hash();
 		}
 	};
 }  // namespace std
