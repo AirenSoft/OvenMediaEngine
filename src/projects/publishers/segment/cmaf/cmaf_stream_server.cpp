@@ -11,20 +11,20 @@
 #include <monitoring/monitoring.h>
 
 #include "../dash/dash_define.h"
+#include "../segment_publisher.h"
 #include "cmaf_packetizer.h"
 #include "cmaf_private.h"
-#include "../segment_publisher.h"
 
 http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::shared_ptr<http::svr::HttpConnection> &client,
-													   const SegmentStreamRequestInfo &request_info,
-													   SegmentType segment_type)
+																	const SegmentStreamRequestInfo &request_info,
+																	SegmentType segment_type)
 {
 	auto response = client->GetResponse();
 
 	auto type = CmafPacketizer::GetFileType(request_info.file_name);
 
 	bool is_video = ((type == DashFileType::VideoSegment) || (type == DashFileType::VideoInit));
-	
+
 	// Check if the requested file is being created
 	{
 		auto key = ov::String::FormatString("%s/%s/%s", request_info.vhost_app_name.CStr(), request_info.stream_name.CStr(), request_info.file_name.CStr());
@@ -44,18 +44,18 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 					stream_info = segment_publisher->GetStreamAs<pub::Stream>(request_info.vhost_app_name, request_info.stream_name);
 					if (stream_info != nullptr)
 					{
-						/* 
-						TODO(Dimiden) : Decommnet below codes and write sequence_number and duration_in_seconds
 						// For statistics
-						auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
-													*std::static_pointer_cast<info::Stream>(stream_info),
-													client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),		
-													-->> sequence_number,
-													is_video ? SegmentDataType::Video : SegmentDataType::Audio,
-													-->> duration_in_seconds);
+						auto segment_request_info = SegmentRequestInfo(
+							GetPublisherType(),
+							*std::static_pointer_cast<info::Stream>(stream_info),
+							client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
+							static_cast<int>(chunk_item->second->sequence_number),
+							is_video ? SegmentDataType::Video : SegmentDataType::Audio,
+							// Round & convert to seconds
+							static_cast<int64_t>((chunk_item->second->duration_in_msec + 500) / 1000));
 
 						segment_publisher->UpdateSegmentRequestInfo(segment_request_info);
-						*/
+
 						break;
 					}
 				}
@@ -66,7 +66,7 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 				// The stream has been deleted, but if it remains in the Worker queue, this code will run.
 				response->SetStatusCode(http::StatusCode::NotFound);
 				_http_chunk_list.clear();
-				
+
 				return http::svr::ConnectionPolicy::Closed;
 			}
 
@@ -87,7 +87,7 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 			auto sent_bytes = response->Response();
 
 			auto metric = GetStreamMetric(client);
-			if(metric != nullptr)
+			if (metric != nullptr)
 			{
 				metric->IncreaseBytesOut(GetPublisherType(), sent_bytes);
 			}
@@ -103,6 +103,8 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 
 void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov::String &stream_name,
 										   const ov::String &file_name,
+										   const uint32_t sequence_number,
+										   const uint64_t duration_in_msec,
 										   bool is_video,
 										   std::shared_ptr<ov::Data> &chunk_data)
 {
@@ -115,7 +117,7 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 	{
 		// New chunk data is arrived
 		logtd("Create a new chunk for [%s/%s, %s], size: %zu bytes", app_name.CStr(), stream_name.CStr(), file_name.CStr(), chunk_data->GetLength());
-		_http_chunk_list.emplace(key, std::make_shared<CmafHttpChunkedData>(chunk_data));
+		_http_chunk_list.emplace(key, std::make_shared<CmafHttpChunkedData>(sequence_number, duration_in_msec, chunk_data));
 		return;
 	}
 
@@ -132,20 +134,20 @@ void CmafStreamServer::OnCmafChunkDataPush(const ov::String &app_name, const ov:
 
 		if (response->SendChunkedData(chunk_data))
 		{
-            if(metric != nullptr)
-            {
-                metric->IncreaseBytesOut(GetPublisherType(), chunk_data->GetLength());
-            }
+			if (metric != nullptr)
+			{
+				metric->IncreaseBytesOut(GetPublisherType(), chunk_data->GetLength());
+			}
 			++client_item;
 		}
 		else
 		{
 			logtw("Failed to send the chunked data for [%s/%s, %s] to %s (%zu bytes)", app_name.CStr(), stream_name.CStr(), file_name.CStr(), response->GetRemote()->ToString().CStr(), chunk_data->GetLength());
 
-			if(metric != nullptr)
-            {
-                metric->OnSessionDisconnected(GetPublisherType());
-            }
+			if (metric != nullptr)
+			{
+				metric->OnSessionDisconnected(GetPublisherType());
+			}
 
 			client_item = chunk_item->second->client_list.erase(client_item);
 			response->Close();

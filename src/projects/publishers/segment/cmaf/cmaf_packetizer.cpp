@@ -344,7 +344,7 @@ bool CmafPacketizer::WriteAudioInit(const std::shared_ptr<const ov::Data> &frame
 	return WriteAudioInitInternal(frame_data, CMAF_MPD_AUDIO_FULL_INIT_FILE_NAME);
 }
 
-bool CmafPacketizer::AppendVideoFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback)
+bool CmafPacketizer::AppendVideoFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, DataCallback data_callback)
 {
 	if (WriteVideoInitIfNeeded(frame) == false)
 	{
@@ -393,17 +393,20 @@ bool CmafPacketizer::AppendVideoFrameInternal(const std::shared_ptr<const Packet
 	auto sample_data = std::make_shared<SampleData>(frame->duration, flag, frame->pts, frame->dts, data);
 
 	bool new_segment_written = false;
+	const auto sequence_number = _video_chunk_writer->GetSequenceNumber();
+	const auto duration = _video_chunk_writer->GetSegmentDuration();
+	const auto duration_in_msec = duration * _video_scale;
 
 	// Check whether the incoming frame is a key frame
 	if (frame->type == PacketizerFrameType::VideoKeyFrame)
 	{
 		if (_video_start_time == -1LL)
 		{
-			_video_start_time = GetCurrentMilliseconds() - current_segment_duration;
+			_video_start_time = GetCurrentMilliseconds() - duration_in_msec;
 		}
 
 		// Check the timestamp to determine if a new segment is to be created
-		if ((current_segment_duration >= (_ideal_duration_for_video + _duration_delta_for_video)))
+		if ((duration >= (_ideal_duration_for_video + _duration_delta_for_video)))
 		{
 			// Need to create a new segment
 
@@ -429,23 +432,27 @@ bool CmafPacketizer::AppendVideoFrameInternal(const std::shared_ptr<const Packet
 	{
 		if (data_callback != nullptr)
 		{
-			data_callback(sample_data, new_segment_written);
+			data_callback(sequence_number, duration_in_msec, sample_data, new_segment_written);
 		}
 	}
 
 	return true;
 }
 
-bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, uint64_t current_segment_duration, DataCallback data_callback)
+bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const PacketizerFrameData> &frame, DataCallback data_callback)
 {
 	if (WriteAudioInitIfNeeded(frame) == false)
 	{
 		return false;
 	}
 
+	const auto sequence_number = _audio_chunk_writer->GetSequenceNumber();
+	const auto duration = _audio_chunk_writer->GetSegmentDuration();
+	const auto duration_in_msec = duration * _audio_scale;
+
 	if (_audio_start_time == -1LL)
 	{
-		_audio_start_time = GetCurrentMilliseconds() - current_segment_duration;
+		_audio_start_time = GetCurrentMilliseconds() - duration_in_msec;
 	}
 
 	// Skip ADTS header
@@ -456,7 +463,7 @@ bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const Packet
 	// Since audio frame is always a key frame, don't need to check the frame type
 
 	// Check the timestamp to determine if a new segment is to be created
-	if ((current_segment_duration >= (_ideal_duration_for_audio + _duration_delta_for_audio)))
+	if ((duration >= (_ideal_duration_for_audio + _duration_delta_for_audio)))
 	{
 		// Need to create a new segment
 
@@ -476,7 +483,7 @@ bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const Packet
 	{
 		if (data_callback != nullptr)
 		{
-			data_callback(std::make_shared<SampleData>(frame->duration, frame->pts, frame->dts, data), new_segment_written);
+			data_callback(sequence_number, duration_in_msec, std::make_shared<SampleData>(frame->duration, frame->pts, frame->dts, data), new_segment_written);
 		}
 	}
 
@@ -484,13 +491,16 @@ bool CmafPacketizer::AppendAudioFrameInternal(const std::shared_ptr<const Packet
 }
 bool CmafPacketizer::AppendVideoFrame(const std::shared_ptr<const PacketizerFrameData> &frame)
 {
-	return AppendVideoFrameInternal(frame, _video_chunk_writer->GetSegmentDuration(), [this](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
+	return AppendVideoFrameInternal(frame, [this](const uint32_t sequence_number, const uint64_t duration_in_msec, const std::shared_ptr<const SampleData> data, bool new_segment_written) {
 		auto chunk_data = _video_chunk_writer->AppendSample(data);
 
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
 		{
 			// Response chunk data to HTTP client
-			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(cmn::MediaType::Video), true, chunk_data);
+			_chunked_transfer->OnCmafChunkDataPush(
+				_app_name, _stream_name, GetFileName(cmn::MediaType::Video),
+				sequence_number, duration_in_msec,
+				true, chunk_data);
 		}
 
 		_last_video_pts = data->pts;
@@ -528,13 +538,16 @@ bool CmafPacketizer::WriteAudioInitInternal(const std::shared_ptr<const ov::Data
 
 bool CmafPacketizer::AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &frame)
 {
-	return AppendAudioFrameInternal(frame, _audio_chunk_writer->GetSegmentDuration(), [this](const std::shared_ptr<const SampleData> data, bool new_segment_written) {
+	return AppendAudioFrameInternal(frame, [this](const uint32_t sequence_number, const uint64_t duration_in_msec, const std::shared_ptr<const SampleData> data, bool new_segment_written) {
 		auto chunk_data = _audio_chunk_writer->AppendSample(data);
 
 		if (chunk_data != nullptr && _chunked_transfer != nullptr)
 		{
 			// Response chunk data to HTTP client
-			_chunked_transfer->OnCmafChunkDataPush(_app_name, _stream_name, GetFileName(cmn::MediaType::Audio), false, chunk_data);
+			_chunked_transfer->OnCmafChunkDataPush(
+				_app_name, _stream_name, GetFileName(cmn::MediaType::Audio),
+				sequence_number, duration_in_msec,
+				false, chunk_data);
 		}
 
 		_last_audio_pts = data->pts;
