@@ -272,9 +272,13 @@ static ov::String StringFromStreamSourceType(const StreamSourceType &type)
 			return "RtspPull";
 		case StreamSourceType::Transcoder:
 			return "Transcoder";
-		default:
-			return "Unknown";
+		case StreamSourceType::Srt:
+			return "SRT";
+		case StreamSourceType::Mpegts:
+			return "MPEGTS";
 	}
+
+	return "Unknown";
 }
 
 static ov::String StringFromProviderType(const ProviderType &type)

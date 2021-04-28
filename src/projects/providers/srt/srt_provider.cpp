@@ -42,9 +42,20 @@ namespace pvd
 	bool SrtProvider::Start()
 	{
 		auto &server_config = GetServerConfig();
+		auto &srt_config = server_config.GetBind().GetProviders().GetSrt();
 
-		auto srt_address = ov::SocketAddress("0.0.0.0", 9999);
-		_physical_port = PhysicalPortManager::GetInstance()->CreatePort("SRT", ov::SocketType::Srt, srt_address);
+		if(srt_config.IsParsed() == false)
+		{
+			logti("%s is disabled by configuration", GetProviderName());
+			return true;
+		}
+
+		auto srt_address = ov::SocketAddress(server_config.GetIp(), static_cast<uint16_t>(srt_config.GetPort().GetPort()));
+		bool is_parsed;
+		auto worker_count = srt_config.GetWorkerCount(&is_parsed);
+		worker_count = is_parsed ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+
+		_physical_port = PhysicalPortManager::GetInstance()->CreatePort("SRT", ov::SocketType::Srt, srt_address, worker_count);
 		if (_physical_port == nullptr)
 		{
 			logte("Could not initialize phyiscal port for SRT server: %s", srt_address.ToString().CStr());

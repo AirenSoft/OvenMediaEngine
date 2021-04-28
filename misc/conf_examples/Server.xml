@@ -31,6 +31,10 @@
 				<Port>1935</Port>
 				<!-- <WorkerCount>1</WorkerCount> -->
 			</RTMP>
+			<SRT>
+				<Port>9999</Port>
+				<!-- <WorkerCount>1</WorkerCount> -->
+			</SRT>
 			<MPEGTS>
 				<!--
 					Listen on port 4000~4005
@@ -243,6 +247,7 @@
 					<Providers>
 						<OVT />
 						<RTMP />
+						<SRT />
 						<MPEGTS>
 							<StreamMap>
 								<!--

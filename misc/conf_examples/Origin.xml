@@ -20,6 +20,9 @@
 			<RTMP>
 				<Port>${env:OME_RTMP_PROV_PORT:1935}</Port>
 			</RTMP>
+			<SRT>
+				<Port>${env:OME_SRT_PROV_PORT:9999}</Port>
+			</SRT>
 			<MPEGTS>
 				<!--
 					Listen on port 4000,4001,4004,4005
@@ -121,6 +124,7 @@
 					<Providers>
 						<OVT />
 						<RTMP />
+						<SRT />
 						<RTSPPull />
 						<MPEGTS>
 							<StreamMap>
