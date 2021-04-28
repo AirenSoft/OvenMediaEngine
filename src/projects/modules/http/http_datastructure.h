@@ -38,6 +38,8 @@ namespace http
 	// | TRACE   | Perform a message loop-back test along the path | 4.3.8 |
 	// |         | to the target resource.                         |       |
 	// +---------+-------------------------------------------------+-------+
+	//
+	// RFC5789 - PATCH Method for HTTP
 	enum class Method : uint16_t
 	{
 		Unknown = 0x0000,
@@ -51,7 +53,9 @@ namespace http
 		Options = 0x0040,
 		Trace = 0x0080,
 
-		All = Get | Head | Post | Put | Delete | Connect | Options | Trace
+		Patch = 0x0100,
+
+		All = Get | Head | Post | Put | Delete | Connect | Options | Trace | Patch
 	};
 
 	inline Method operator|(Method lhs, Method rhs)
@@ -107,6 +111,8 @@ namespace http
 	// +------+-------------------------------+--------------------------+
 	enum class StatusCode : uint16_t
 	{
+		Unknown = 0,
+		
 		Continue = 100,
 		SwitchingProtocols = 101,
 		OK = 200,
@@ -160,6 +166,7 @@ namespace http
 	{
 		switch (status_code)
 		{
+			HTTP_STATUS_RETURN(StatusCode::Unknown, false);
 			HTTP_STATUS_RETURN(StatusCode::Continue, true);
 			HTTP_STATUS_RETURN(StatusCode::SwitchingProtocols, true);
 			HTTP_STATUS_RETURN(StatusCode::OK, true);
@@ -211,6 +218,7 @@ namespace http
 	{
 		switch (status_code)
 		{
+			HTTP_STATUS_RETURN(StatusCode::Unknown, "Unknown");
 			HTTP_STATUS_RETURN(StatusCode::Continue, "Continue");
 			HTTP_STATUS_RETURN(StatusCode::SwitchingProtocols, "Switching Protocols");
 			HTTP_STATUS_RETURN(StatusCode::OK, "OK");
@@ -257,6 +265,7 @@ namespace http
 
 		return "Unknown";
 	}
+
 	namespace svr
 	{
 		enum class ConnectionPolicy : char
@@ -289,4 +298,11 @@ namespace http
 
 		using ResponseWriteHandler = std::function<bool(const std::shared_ptr<ov::Data> &data)>;
 	}  // namespace svr
+
+	class HttpError;
+
+	namespace clnt
+	{
+		using ResponseHandler = std::function<void(StatusCode status_code, const std::shared_ptr<ov::Data> &data, const std::shared_ptr<const ov::Error> &error)>;
+	}
 }  // namespace http

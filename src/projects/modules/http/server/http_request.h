@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 
+#include "../parser/http_request_parser.h"
 #include "interceptors/http_request_interceptor.h"
 
 namespace http
@@ -33,43 +34,31 @@ namespace http
 			void SetConnectionType(RequestConnectionType type);
 			RequestConnectionType GetConnectionType() const;
 
-			/// HttpRequest 객체 초기화를 위해, client에서 보낸 데이터를 처리함
-			///
-			/// @param data 수신한 데이터
-			///
-			/// @return HTTP 파싱에 사용한 데이터 크기. 만약 파싱 도중 오류가 발생하면 -1L을 반환함
-			ssize_t ProcessData(const std::shared_ptr<const ov::Data> &data);
-
-			/// 헤더 파싱 상태 (ProcessData() 안에서 갱신됨)
-			///
-			/// @return HttpStatusCode::PartialContent = 데이터가 더 필요함.
-			///         HttpStatusCode::OK = 데이터 수신이 모두 완료되었음.
-			///         기타 = 오류 발생.
-			StatusCode ParseStatus() const
+			HttpParser &GetRequestParser()
 			{
-				return _parse_status;
+				return _parser;
 			}
+
+			const HttpParser &GetRequestParser() const
+			{
+				return _parser;
+			}
+
+			void PostProcess();
 
 			Method GetMethod() const noexcept
 			{
-				return _method;
+				return _parser.GetMethod();
 			}
 
 			ov::String GetHttpVersion() const noexcept
 			{
-				return _http_version;
+				return _parser.GetHttpVersion();
 			}
 
 			double GetHttpVersionAsNumber() const noexcept
 			{
-				auto tokens = _http_version.Split("/");
-
-				if (tokens.size() != 2)
-				{
-					return 0.0;
-				}
-
-				return ov::Converter::ToDouble(tokens[1]);
+				return _parser.GetHttpVersionAsNumber();
 			}
 
 			// Full URI (including domain and port)
@@ -79,19 +68,19 @@ namespace http
 				return _request_uri;
 			}
 
-			// Path of the URI (excluding domain and port)
+			// Path of the URI (excluding domain and poirt)
 			// Example: /<app>/<stream>/...
 			const ov::String &GetRequestTarget() const noexcept
 			{
-				return _request_target;
+				return _parser.GetRequestTarget();
 			}
 
 			/// HTTP body 데이터 길이 반환
 			///
 			/// @return body 데이터 길이. 파싱이 제대로 되지 않았거나, request header에 명시가 안되어 있으면 0이 반환됨.
-			ssize_t GetContentLength() const noexcept
+			size_t GetContentLength() const noexcept
 			{
-				return _content_length;
+				return _parser.GetContentLength();
 			}
 
 			std::shared_ptr<const ov::Data> GetRequestBody() const
@@ -99,9 +88,9 @@ namespace http
 				return _request_body;
 			}
 
-			const std::map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetRequestHeader() const noexcept
+			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveComparator> &GetRequestHeader() const noexcept
 			{
-				return _request_header;
+				return _parser.GetHeaders();
 			}
 
 			ov::String GetHeader(const ov::String &key) const noexcept;
@@ -156,19 +145,6 @@ namespace http
 
 			ov::String ToString() const;
 
-			void InitParseInfo()
-			{
-				_parse_status = StatusCode::PartialContent;
-
-				_is_header_found = false;
-				_request_string = "";
-				_request_header.clear();
-
-				_method = Method::Unknown;
-				_request_target = "";
-				_http_version = "";
-			}
-
 		protected:
 			// HttpRequestInterceptorInterface를 통해, 다른 interceptor에서 사용됨
 			const std::shared_ptr<ov::Data> &GetRequestBodyInternal()
@@ -181,11 +157,6 @@ namespace http
 				return _request_body;
 			}
 
-			StatusCode ParseMessage();
-			StatusCode ParseRequestLine(const ov::String &line);
-			StatusCode ParseHeader(const ov::String &line);
-
-			void PostProcess();
 			void UpdateUri();
 
 			std::shared_ptr<ov::ClientSocket> _client_socket;
@@ -195,24 +166,11 @@ namespace http
 			// request 처리를 담당하는 객체
 			std::shared_ptr<RequestInterceptor> _interceptor;
 
-			StatusCode _parse_status = StatusCode::PartialContent;
-
-			// request 관련 정보 저장
-			Method _method = Method::Unknown;
-			ov::String _request_uri;
-			ov::String _request_target;
-			ov::String _http_version;
-
 			ov::MatchResult _match_result;
 
-			// request 헤더
-			bool _is_header_found = false;
-			// 헤더 영역을 추출해내기 위해 임시로 사용되는 문자열 버퍼
-			ov::String _request_string;
-			std::map<ov::String, ov::String, ov::CaseInsensitiveComparator> _request_header;
+			ov::String _request_uri;
 
-			// 자주 사용하는 헤더 값은 미리 저장해놓음
-			ssize_t _content_length = 0L;
+			HttpRequestParser _parser;
 
 			// HTTP body
 			std::shared_ptr<ov::Data> _request_body;

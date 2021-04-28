@@ -36,8 +36,6 @@ http::svr::InterceptorResult SegmentStreamInterceptor::OnHttpData(const std::sha
 	auto request = client->GetRequest();
 	auto response = client->GetResponse();
 
-	OV_ASSERT2(request->GetContentLength() >= 0);
-
 	if (request->GetContentLength() == 0)
 	{
 		response->SetStatusCode(http::StatusCode::OK);
@@ -49,7 +47,7 @@ http::svr::InterceptorResult SegmentStreamInterceptor::OnHttpData(const std::sha
 
 		// data size over(error)
 		if (request_body == nullptr ||
-			request_body->GetLength() + data->GetLength() > static_cast<size_t>(request->GetContentLength()))
+			request_body->GetLength() + data->GetLength() > request->GetContentLength())
 		{
 			return http::svr::InterceptorResult::Disconnect;
 		}
@@ -57,7 +55,7 @@ http::svr::InterceptorResult SegmentStreamInterceptor::OnHttpData(const std::sha
 		request_body->Append(data.get());
 
 		// http data completed
-		if (request_body->GetLength() == static_cast<size_t>(request->GetContentLength()))
+		if (request_body->GetLength() == request->GetContentLength())
 		{
 			response->SetStatusCode(http::StatusCode::OK);
 			_worker_manager.AddWork(client, request->GetRequestTarget(), request->GetHeader("Origin"));
