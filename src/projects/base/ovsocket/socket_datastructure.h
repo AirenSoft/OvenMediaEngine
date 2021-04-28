@@ -58,6 +58,12 @@ namespace ov
 		Error
 	};
 
+	enum class BlockingMode : char
+	{
+		Blocking,
+		NonBlocking
+	};
+
 	enum class SocketFamily : sa_family_t
 	{
 		Unknown = AF_UNSPEC,
@@ -84,6 +90,8 @@ namespace ov
 		Bound,
 		// Listening
 		Listening,
+		// Connecting
+		Connecting,
 		// Connection established
 		Connected,
 		// The connection with Peer has been lost (However, we can read data from the kernel socket buffer if available)
@@ -91,6 +99,20 @@ namespace ov
 		// An error occurred
 		Error,
 	};
+
+	static const char *StringFromBlockingMode(BlockingMode mode)
+	{
+		switch (mode)
+		{
+			case BlockingMode::Blocking:
+				return "Blocking";
+
+			case BlockingMode::NonBlocking:
+				return "Nonblocking";
+		}
+
+		return "Unknown";
+	}
 
 	static const char *StringFromSocketState(SocketState state)
 	{
@@ -107,6 +129,9 @@ namespace ov
 
 			case SocketState::Listening:
 				return "Listening";
+
+			case SocketState::Connecting:
+				return "Connecting";
 
 			case SocketState::Connected:
 				return "Connected";

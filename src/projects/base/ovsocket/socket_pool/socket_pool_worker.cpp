@@ -256,6 +256,8 @@ namespace ov
 
 					if (OV_CHECK_FLAG(events, EPOLLOUT))
 					{
+						socket->OnWritableFromSocket();
+						
 						switch (socket->DispatchEvents())
 						{
 							case Socket::DispatchResult::Dispatched:

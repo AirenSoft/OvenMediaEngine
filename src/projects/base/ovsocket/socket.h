@@ -39,8 +39,11 @@ namespace ov
 	class SocketAsyncInterface
 	{
 	public:
+		// Called when 1) A new client connected to ServerSocket 2) Socket is connected to server
 		virtual void OnConnected() = 0;
+		// Data is readable (by epoll)
 		virtual void OnReadable() = 0;
+		// Socket is closed
 		virtual void OnClosed() = 0;
 	};
 
@@ -91,7 +94,7 @@ namespace ov
 		bool Bind(const SocketAddress &address);
 		bool Listen(int backlog = SOMAXCONN);
 		SocketWrapper Accept(SocketAddress *client);
-		std::shared_ptr<Error> Connect(const SocketAddress &endpoint, int timeout_msec = Infinite);
+		std::shared_ptr<Error> Connect(const SocketAddress &endpoint, int timeout_msec = (10 * 1000));
 
 		bool SetRecvTimeout(const timeval &tv);
 
@@ -221,6 +224,7 @@ namespace ov
 
 			enum class Type : uint8_t
 			{
+				// Fired when a client is connected to server (ServerSocket)
 				// Need to call connection callback
 				Connected = 0x00,
 
@@ -322,7 +326,7 @@ namespace ov
 	protected:
 		virtual bool Create(SocketType type);
 
-		bool SetBlockingInternal(bool blocking);
+		bool SetBlockingInternal(BlockingMode mode);
 
 		bool AppendCommand(DispatchCommand command);
 
@@ -330,6 +334,20 @@ namespace ov
 
 		ssize_t SendInternal(const std::shared_ptr<const Data> &data);
 		ssize_t SendToInternal(const SocketAddress &address, const std::shared_ptr<const Data> &data);
+
+		// From SocketPollWorker (Called when EPOLLOUT event raised)
+		virtual void OnWritableFromSocket()
+		{
+			if (GetState() == SocketState::Connecting)
+			{
+				SetState(SocketState::Connected);
+
+				if (_callback != nullptr)
+				{
+					_callback->OnConnected();
+				}
+			}
+		}
 
 		// From SocketPollWorker (Called when EPOLLIN event raised)
 		virtual void OnReadableFromSocket()
@@ -350,13 +368,42 @@ namespace ov
 		virtual bool CloseInternal();
 
 	protected:
+		// Used to wait for connection
+		class ConnectHelper : public SocketAsyncInterface
+		{
+		public:
+			void OnConnected() override
+			{
+				_connected_event.SetEvent();
+			}
+
+			void OnReadable() override
+			{
+			}
+
+			void OnClosed() override
+			{
+			}
+
+			bool WaitForConnect(int timeout)
+			{
+				return _connected_event.Wait(timeout);
+			}
+
+		protected:
+			ov::Event _connected_event{true};
+		};
+
+	protected:
+		DispatchResult DispatchEventsInternal();
+
 		std::shared_ptr<SocketPoolWorker> _worker;
 
 		SocketWrapper _socket;
 
 		SocketState _state = SocketState::Closed;
 
-		bool _is_nonblock = true;
+		BlockingMode _blocking_mode = BlockingMode::Blocking;
 
 		bool _end_of_stream = false;
 
