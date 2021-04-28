@@ -135,7 +135,6 @@ std::shared_ptr<ov::Data> AacConverter::ConvertRawToAdts(const std::shared_ptr<o
 	return adts_data;
 }
 
-// TODO : Multiple ADTS should not be allowed
 std::shared_ptr<const ov::Data> AacConverter::ConvertAdtsToRaw(const std::shared_ptr<const ov::Data> &data, std::vector<size_t> *length_list)
 {
 	auto raw_data = std::make_shared<ov::Data>();

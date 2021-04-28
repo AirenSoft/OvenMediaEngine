@@ -210,18 +210,30 @@ aligned(8) class AVCDecoderConfigurationRecord {
 	}
 } */
 
-std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurationRecord::GetSpsPpsAsAnnexB()
+std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurationRecord::GetSpsPpsAsAnnexB(uint8_t start_code_size)
 {
 	auto data = std::make_shared<ov::Data>();
 	FragmentationHeader frag_header;
 	size_t offset = 0;
 
-	const uint8_t START_CODE[4] = {0x00, 0x00, 0x00, 0x01};
+	uint8_t START_CODE[4];
+	
+	START_CODE[0] = 0x00;
+	START_CODE[1] = 0x00;
+	if(start_code_size == 3)
+	{
+		START_CODE[2] = 0x01;
+	}
+	else // 4
+	{
+		START_CODE[2] = 0x00;
+		START_CODE[3] = 0x01;
+	}
 
 	for(int i=0; i<NumOfSPS(); i++)
 	{
-		data->Append(START_CODE, sizeof(START_CODE));
-		offset += sizeof(START_CODE);
+		data->Append(START_CODE, start_code_size);
+		offset += start_code_size;
 
 		auto sps = GetSPS(i);
 		frag_header.fragmentation_offset.push_back(offset);
@@ -234,8 +246,8 @@ std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurati
 
 	for(int i=0; i<NumOfPPS(); i++)
 	{
-		data->Append(START_CODE, sizeof(START_CODE));
-		offset += sizeof(START_CODE);
+		data->Append(START_CODE, start_code_size);
+		offset += start_code_size;
 
 		auto pps = GetPPS(i);
 		frag_header.fragmentation_offset.push_back(offset);

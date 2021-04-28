@@ -635,6 +635,12 @@ namespace ov
 		return _socket.GetType();
 	}
 
+	// Only avaliable if socket is SRT
+	ov::String Socket::GetStreamId() const
+	{
+		return _stream_id;
+	}
+
 	Socket::DispatchResult Socket::DispatchInternal(DispatchCommand &command)
 	{
 		SOCKET_PROFILER_INIT();

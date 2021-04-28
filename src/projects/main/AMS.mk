@@ -10,6 +10,7 @@ LOCAL_STATIC_LIBRARIES := \
 	thumbnail_publisher \
 	ovt_provider \
 	rtmp_provider \
+	srt_provider \
 	mpegts_provider \
 	rtspc_provider \
 	webrtc_provider \

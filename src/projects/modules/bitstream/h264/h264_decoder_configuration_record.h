@@ -63,7 +63,7 @@ public:
 
 	std::shared_ptr<ov::Data> Serialize();
 	void Serialize(std::vector<uint8_t>& serialze);
-	std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> GetSpsPpsAsAnnexB();
+	std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> GetSpsPpsAsAnnexB(uint8_t start_code_size);
 
 	ov::String GetInfoString();
 	

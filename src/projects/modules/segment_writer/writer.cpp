@@ -664,10 +664,7 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 
 		case cmn::BitstreamFormat::H264_ANNEXB:
 			data = packet->GetData();
-			if (_type == Type::M4s)
-			{
-				data = H264Converter::ConvertAnnexbToAvcc(data);
-			}
+			data = H264Converter::ConvertAnnexbToAvcc(data);
 			length_list.push_back(data->GetLength());
 			break;
 

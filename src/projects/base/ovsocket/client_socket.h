@@ -32,6 +32,7 @@ namespace ov
 		bool Create(SocketType type) override;
 
 		bool SetSocketOptions();
+		bool GetSrtStreamId();	// Only available if socket is SRT
 
 		//--------------------------------------------------------------------
 		// Implementation of SocketAsyncInterface

@@ -156,7 +156,7 @@ bool MediaRouteStream::ProcessH264AVCCStream(std::shared_ptr<MediaTrack> &media_
 		} 
 
 		media_track->SetCodecExtradata(media_packet->GetData());
-		auto [sps_pps_data, frag_header] = config.GetSpsPpsAsAnnexB();
+		auto [sps_pps_data, frag_header] = config.GetSpsPpsAsAnnexB(4);
 		media_track->SetH264SpsPpsAnnexBFormat(sps_pps_data, frag_header);
 
 		return false;
@@ -241,7 +241,8 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 	auto bitstream = media_packet->GetData()->GetDataAs<uint8_t>();
 	auto bitstream_length = media_packet->GetData()->GetLength();
 	bool has_sps = false, has_pps = false, has_idr = false;
-
+	size_t annexb_start_code_size = 0;
+	
 	while(offset < bitstream_length)
 	{
 		size_t start_code_size;
@@ -252,6 +253,11 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		if(pos == -1)
 		{
 			break;
+		}
+
+		if(annexb_start_code_size == 0)
+		{
+			annexb_start_code_size = start_code_size;
 		}
 
 		offset += pos + start_code_size;
@@ -334,7 +340,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 		// Set default nal unit length
 		avc_decoder_configuration_record.SetLengthOfNalUnit(3);
 		media_track->SetCodecExtradata(avc_decoder_configuration_record.Serialize());
-		auto [sps_pps_annexb_data, sps_pps_frag_header] = avc_decoder_configuration_record.GetSpsPpsAsAnnexB();
+		auto [sps_pps_annexb_data, sps_pps_frag_header] = avc_decoder_configuration_record.GetSpsPpsAsAnnexB(annexb_start_code_size);
 		media_track->SetH264SpsPpsAnnexBFormat(sps_pps_annexb_data, sps_pps_frag_header);
 	}
 
@@ -371,6 +377,7 @@ bool MediaRouteStream::ProcessH264AnnexBStream(std::shared_ptr<MediaTrack> &medi
 
 bool MediaRouteStream::ProcessAACRawStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
 {
+	media_packet->SetFlag(MediaPacketFlag::Key);
 	// everytime : Convert to ADTS
 	// one time : Parse sequence header
 	if(media_packet->GetPacketType() == cmn::PacketType::SEQUENCE_HEADER)
@@ -421,6 +428,8 @@ bool MediaRouteStream::ProcessAACRawStream(std::shared_ptr<MediaTrack> &media_tr
 bool MediaRouteStream::ProcessAACAdtsStream(std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
 {
 	// One time : Parse track information
+
+	media_packet->SetFlag(MediaPacketFlag::Key);
 
 	// AAC ADTS only needs to analyze the track information of the media stream once.
 	if(media_track->IsValid() == true)

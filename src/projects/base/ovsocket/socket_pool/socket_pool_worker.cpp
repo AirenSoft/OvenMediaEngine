@@ -132,6 +132,7 @@ namespace ov
 
 				if (_srt_epoll != SRT_INVALID_SOCK)
 				{
+					srt_epoll_set(_srt_epoll, SRT_EPOLL_ENABLE_EMPTY);
 					_epoll_events.resize(EpollMaxEvents);
 					_srt_epoll_events.resize(EpollMaxEvents);
 				}
@@ -337,8 +338,6 @@ namespace ov
 			{
 				GarbageCollection();
 			}
-
-			MergeSocketList();
 		}
 
 		// Clean up all sockets
@@ -459,7 +458,6 @@ namespace ov
 
 			case SocketType::Srt:
 				event_count = ::srt_epoll_uwait(_srt_epoll, _srt_epoll_events.data(), EpollMaxEvents, timeout_in_msec);
-
 				if (event_count == 0)
 				{
 					// timed out
@@ -470,6 +468,7 @@ namespace ov
 				else if (event_count > 0)
 				{
 					// polled successfully
+					MergeSocketList();
 
 					// Make a list of epoll_event from SRT_EPOLL_EVENTs
 					for (int index = 0; index < event_count; index++)
@@ -479,9 +478,8 @@ namespace ov
 				}
 				else
 				{
-					OV_ASSERT(false, "Unknown error");
-
 					error = ov::Error::CreateErrorFromSrt();
+					OV_ASSERT(false, "Unknown error: %s", error->ToString().CStr());
 				}
 
 				break;

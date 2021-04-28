@@ -151,6 +151,9 @@ namespace ov
 			return _callback;
 		}
 
+		// only available for SRT socket
+		ov::String GetStreamId() const;
+
 		bool Send(const std::shared_ptr<const Data> &data);
 		bool Send(const void *data, size_t length);
 
@@ -374,5 +377,7 @@ namespace ov
 		std::shared_ptr<SocketAsyncInterface> _post_callback;
 
 		volatile bool _force_stop = false;
+
+		ov::String _stream_id;	// only available for SRT socket
 	};
 }  // namespace ov

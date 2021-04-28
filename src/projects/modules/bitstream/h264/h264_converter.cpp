@@ -27,6 +27,39 @@ bool H264Converter::GetExtraDataFromAvccSequenceHeader(const cmn::PacketType typ
 	return false;
 }
 
+std::shared_ptr<const ov::Data> H264Converter::ConvertAvccToAnnexb(const std::shared_ptr<const ov::Data> &data)
+{
+	auto annexb_data = std::make_shared<ov::Data>();
+
+	ov::ByteStream read_stream(data.get());
+
+	while (read_stream.Remained() > 0)
+	{
+		if (read_stream.IsRemained(4) == false)
+		{
+			logte("Not enough data to parse NAL");
+			return nullptr;
+		}
+
+		size_t nal_length = read_stream.ReadBE32();
+
+		if (read_stream.IsRemained(nal_length) == false)
+		{
+			logte("NAL length (%d) is greater than buffer length (%d)", nal_length, read_stream.Remained());
+			return nullptr;
+		}
+
+		auto nal_data = read_stream.GetRemainData()->Subdata(0LL, nal_length);
+		[[maybe_unused]] auto skipped = read_stream.Skip(nal_length);
+		OV_ASSERT2(skipped == nal_length);
+
+		annexb_data->Append(START_CODE, sizeof(START_CODE));
+		annexb_data->Append(nal_data);
+	}
+
+	return annexb_data;
+}
+
 bool H264Converter::ConvertAvccToAnnexb(cmn::PacketType type, const std::shared_ptr<ov::Data> &data, const std::shared_ptr<ov::Data> &sps_pps_annexb)
 {
 	auto annexb_data = std::make_shared<ov::Data>();
@@ -248,14 +281,12 @@ std::shared_ptr<const ov::Data> H264Converter::ConvertAnnexbToAvcc(const std::sh
 	auto avcc_data = std::make_shared<ov::Data>();
 	ov::ByteStream byte_stream(avcc_data);
 
-	int first_pattern_size = 0;
-
 	// This code assumes that (NALULengthSizeMinusOne == 3)
 	while (remained > 0)
 	{
 		if (*buffer == 0x00)
 		{
-			auto pattern_size = GetStartPatternSize(buffer, remained, first_pattern_size);
+			auto pattern_size = GetStartPatternSize(buffer, remained, 0);
 
 			if (pattern_size > 0)
 			{

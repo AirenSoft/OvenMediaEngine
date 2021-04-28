@@ -33,6 +33,7 @@ enum class StreamSourceType : int8_t
 	Rtsp,
 	RtspPull,
 	Mpegts,
+	Srt,
 	Transcoder,
 };
 
@@ -51,7 +52,8 @@ enum class ProviderType : int8_t
 	RtspPull,
 	Ovt,
 	Mpegts,
-	WebRTC
+	WebRTC,
+	Srt
 };
 
 // Note : If you update PublisherType, you have to update /base/ovlibrary/converter.h:ToString(PublisherType type)
@@ -293,6 +295,8 @@ static ov::String StringFromProviderType(const ProviderType &type)
 			return "MPEG-TS";
 		case ProviderType::WebRTC:
 			return "WebRTC";
+		case ProviderType::Srt:
+			return "SRT";
 	}
 
 	return "Unknown";

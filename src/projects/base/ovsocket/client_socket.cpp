@@ -57,6 +57,26 @@ namespace ov
 		return false;
 	}
 
+	bool ClientSocket::GetSrtStreamId()
+	{
+		if(GetType() == ov::SocketType::Srt)
+		{
+			char stream_id_buff[512];
+			int stream_id_len = sizeof(stream_id_buff);
+			if(srt_getsockflag(GetNativeHandle(), SRT_SOCKOPT::SRTO_STREAMID, &stream_id_buff[0], &stream_id_len) != SRT_ERROR)
+			{
+				_stream_id = ov::String(stream_id_buff, stream_id_len);
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		
+		return true;
+	}
+
 	bool ClientSocket::SetSocketOptions()
 	{
 		bool result = true;
@@ -93,6 +113,10 @@ namespace ov
 
 	bool ClientSocket::Prepare()
 	{
+		// In the case of SRT, app/stream is classified by streamid. 
+		// Since the streamid is processed by the application, error is not checked here.
+		GetSrtStreamId();
+
 		return
 			// Set socket options
 			SetSocketOptions() &&
