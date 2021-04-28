@@ -368,33 +368,6 @@ namespace ov
 		virtual bool CloseInternal();
 
 	protected:
-		// Used to wait for connection
-		class ConnectHelper : public SocketAsyncInterface
-		{
-		public:
-			void OnConnected() override
-			{
-				_connected_event.SetEvent();
-			}
-
-			void OnReadable() override
-			{
-			}
-
-			void OnClosed() override
-			{
-			}
-
-			bool WaitForConnect(int timeout)
-			{
-				return _connected_event.Wait(timeout);
-			}
-
-		protected:
-			ov::Event _connected_event{true};
-		};
-
-	protected:
 		DispatchResult DispatchEventsInternal();
 
 		std::shared_ptr<SocketPoolWorker> _worker;

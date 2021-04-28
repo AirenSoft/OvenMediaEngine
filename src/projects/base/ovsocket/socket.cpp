@@ -89,6 +89,33 @@ namespace ov
 #	define SOCKET_PROFILER_POST_HANDLER(handler) SOCKET_PROFILER_NOOP()
 #endif	// USE_SOCKET_PROFILER
 
+	// Used to wait for connection
+	class ConnectHelper : public SocketAsyncInterface
+	{
+	public:
+		void OnConnected() override
+		{
+			logtd("Connected");
+			_connected_event.SetEvent();
+		}
+
+		void OnReadable() override
+		{
+		}
+
+		void OnClosed() override
+		{
+		}
+
+		bool WaitForConnect(int timeout)
+		{
+			return _connected_event.Wait(timeout);
+		}
+
+	protected:
+		ov::Event _connected_event{true};
+	};
+
 	Socket::Socket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker)
 		: _worker(worker)
 	{
