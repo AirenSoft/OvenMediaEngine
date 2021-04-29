@@ -191,7 +191,7 @@ bool SegmentPublisher::OnSegmentRequest(const std::shared_ptr<http::svr::HttpCon
 
 	// The first sequence number 0 means init_video and init_audio in MPEG-DASH.
 	// These are excluded because they confuse statistical calculations.
-	if(segment->sequence_number != 0)
+	if(GetPublisherType() != PublisherType::LlDash &&  segment->sequence_number != 0)
 	{
 		auto segment_request_info = SegmentRequestInfo(GetPublisherType(),
 													*std::static_pointer_cast<info::Stream>(stream),
@@ -404,6 +404,8 @@ bool SegmentPublisher::IsAuthorizedSession(const PlaylistRequestInfo &info)
 
 void SegmentPublisher::UpdateSegmentRequestInfo(SegmentRequestInfo &info)
 {
+	logtd("Update segment request info - Segment number : %u Duration : %u Type : %s", info.GetSequenceNumber(), info.GetDuration(), info.GetDataType()==SegmentDataType::Video?"Video":"Audio");
+
 	bool new_session = true;
 	std::unique_lock<std::recursive_mutex> table_lock(_segment_request_table_lock);
 
