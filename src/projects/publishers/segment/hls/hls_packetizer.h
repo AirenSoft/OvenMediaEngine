@@ -54,6 +54,8 @@ protected:
 	bool _audio_enable;
 	bool _video_enable;
 
+	uint32_t _sequence_number = 1U;
+
 	// To convert from timebase to seconds, multiply by these value
 	double _video_timebase_expr = 0.0;
 	double _audio_timebase_expr = 0.0;

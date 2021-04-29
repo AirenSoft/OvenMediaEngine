@@ -82,7 +82,6 @@ protected:
 
 	std::shared_ptr<ChunkedTransferInterface> _chunked_transfer;
 
-	uint32_t _sequence_number = 1U;
 	bool _streaming_start = false;
 
 	bool _video_key_frame_received = false;

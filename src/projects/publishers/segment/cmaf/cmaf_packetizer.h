@@ -32,8 +32,8 @@ public:
 	bool WriteVideoInit(const std::shared_ptr<const ov::Data> &frame);
 	bool WriteAudioInit(const std::shared_ptr<const ov::Data> &frame);
 
-	bool WriteVideoSegment();
-	bool WriteAudioSegment();
+	bool WriteVideoSegment(const uint32_t sequence_number, const uint64_t duration, const uint64_t duration_in_msec);
+	bool WriteAudioSegment(const uint32_t sequence_number, const uint64_t duration, const uint64_t duration_in_msec);
 
 	bool WriteVideoInitIfNeeded(const std::shared_ptr<const PacketizerFrameData> &frame);
 	bool WriteAudioInitIfNeeded(const std::shared_ptr<const PacketizerFrameData> &frame);
@@ -53,7 +53,7 @@ public:
 	bool AppendAudioFrame(const std::shared_ptr<const PacketizerFrameData> &frame) override;
 
 	std::shared_ptr<const SegmentItem> GetSegmentData(const ov::String &file_name) const override;
-	bool SetSegmentData(ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data);
+	bool SetSegmentData(const uint32_t sequence_number, ov::String file_name, int64_t timestamp, int64_t timestamp_in_ms, int64_t duration, int64_t duration_in_ms, const std::shared_ptr<const ov::Data> &data);
 
 	bool GetPlayList(ov::String &play_list) override;
 
