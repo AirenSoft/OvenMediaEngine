@@ -89,8 +89,6 @@ namespace ov
 
 			if (client != nullptr)
 			{
-				logad("New client is connected: %s", client->ToString().CStr());
-
 				if (client->Prepare())
 				{
 					// An event occurs the moment client socket is added to the epoll,
@@ -100,16 +98,21 @@ namespace ov
 						_client_list[client.get()] = client;
 					}
 
-					if (client->AttachToWorker() == false)
+					if (client->AttachToWorker())
+					{
+						logad("Client(%s) is connected", client->ToString().CStr());
+					}
+					else
 					{
 						// The client will be removed from _client_list in the future
-						logad("An error occurred while attach client to worker: %s", client->ToString().CStr());
+						logad("Client(%s) is connected, but an error occurred while attach client to worker: %s",
+							  client->ToString().CStr(), client->ToString().CStr());
 						client->Close();
 					}
 				}
 				else
 				{
-					logae("Could not prepare socket options: %s", client->ToString().CStr());
+					logad("Client(%s) is connected, but could not prepare socket options", client->ToString().CStr());
 				}
 			}
 		}
@@ -126,7 +129,7 @@ namespace ov
 			return false;
 		}
 
-		logai("Client(%s) is disconnected", client->ToString().CStr());
+		logad("Client(%s) is disconnected", client->ToString().CStr());
 
 		_client_list.erase(item);
 
