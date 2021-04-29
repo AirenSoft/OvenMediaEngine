@@ -23,17 +23,19 @@ Please click on each banner below for details.
 
 ## Features
 
-* RTMP Push, MPEG-2 TS Push (Beta), RTSP Pull (Beta) Input
+* Ingest
+  * WebRTC Push, RTMP Push, SRT Push, MPEG-2 TS Push, RTSP Pull
 * WebRTC sub-second streaming 
+  * WebRTC over TCP \(with Embedded TURN Server\)
   * ICE \(Interactive Connectivity Establishment\)
   * DTLS \(Datagram Transport Layer Security\)
   * SRTP \(Secure Real-time Transport Protocol\)
   * ULPFEC \(Forward Error Correction\) with VP8, H.264
   * In-band FEC \(Forward Error Correction\) with Opus
+  * Embedded WebRTC Signalling Server \(WebSocket based\)
 * Low latency MPEG-DASH(Chunked CAMF) streaming
 * Legacy HLS/MPEG-DASH Streaming
 * Embedded Live Transcoder \(VP8, H.264, Opus, AAC, Bypass\)
-* Embedded WebRTC Signalling Server \(WebSocket based\)
 * Origin-Edge structure
 * Monitoring
 * Beta
