@@ -51,8 +51,7 @@ http::svr::ConnectionPolicy CmafStreamServer::ProcessSegmentRequest(const std::s
 							client->GetRequest()->GetRemote()->GetRemoteAddress()->GetIpAddress(),
 							static_cast<int>(chunk_item->second->sequence_number),
 							is_video ? SegmentDataType::Video : SegmentDataType::Audio,
-							// Round & convert to seconds
-							static_cast<int64_t>((chunk_item->second->duration_in_msec + 500) / 1000));
+							static_cast<int64_t>(chunk_item->second->duration_in_msec / 1000));
 
 						segment_publisher->UpdateSegmentRequestInfo(segment_request_info);
 

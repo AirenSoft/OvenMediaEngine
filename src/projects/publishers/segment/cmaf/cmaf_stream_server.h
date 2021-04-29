@@ -75,6 +75,6 @@ protected:
 
 	// A temporary queue for the intermediate chunks
 	// Key: [app name]/[stream name]/[file name]
-	std::map<ov::String, std::shared_ptr<CmafHttpChunkedData>> _http_chunk_list;
+	std::unordered_map<ov::String, std::shared_ptr<CmafHttpChunkedData>> _http_chunk_list;
 	std::mutex _http_chunk_guard;
 };
