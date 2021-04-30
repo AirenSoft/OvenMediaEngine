@@ -64,8 +64,10 @@ We have tested OME on the platforms listed below. However, we think it can work 
 docker run -d \
 -p 1935:1935 \
 -p 3333:3333 \
+-p 3478:3478 \
 -p 8080:8080 \
 -p 9000:9000 \
+-p 9999:9999/udp \
 -p 4000-4005:4000-4005/udp \
 -p 10006-10010:10006-10010/udp \
 --name ovenmediaengine \
@@ -78,8 +80,10 @@ You can also store the configuration files on your host:
 docker run -d \
 -p 1935:1935 \
 -p 3333:3333 \
+-p 3478:3478 \
 -p 8080:8080 \
 -p 9000:9000 \
+-p 9999:9999/udp \
 -p 4000-4005:4000-4005/udp \
 -p 10006-10010:10006-10010/udp \
 -v ome-origin-conf:/opt/ovenmediaengine/bin/origin_conf \
