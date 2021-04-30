@@ -306,6 +306,7 @@ bool FileSession::SendOutgoingData(const std::any &packet)
 			session_packet->GetPts(),
 			session_packet->GetDts(),
 			session_packet->GetFlag(),
+			session_packet->GetBitstreamFormat(),
 			session_packet->GetData());
 
 		if (ret == false)

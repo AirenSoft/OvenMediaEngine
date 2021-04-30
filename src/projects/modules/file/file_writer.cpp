@@ -1,5 +1,7 @@
 #include "file_writer.h"
 
+#include <modules/bitstream/h264/h264_converter.h>
+
 #include "private.h"
 
 /* 
@@ -262,7 +264,7 @@ bool FileWriter::AddTrack(cmn::MediaType media_type, int32_t track_id, std::shar
 //	- H264 : AnnexB bitstream
 // 	- AAC : ASC(Audio Specific Config) bitstream
 
-bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, std::shared_ptr<ov::Data> &data)
+bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacketFlag flag, cmn::BitstreamFormat format, std::shared_ptr<ov::Data> &data)
 {
 	std::lock_guard<std::shared_mutex> mlock(_lock);
 
@@ -305,8 +307,6 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	pkt.flags = (flag == MediaPacketFlag::Key) ? AV_PKT_FLAG_KEY : 0;
 	pkt.pts = av_rescale_q(pts - _start_timestamp, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
 	pkt.dts = av_rescale_q(dts - _start_timestamp, AVRational{track_info->GetTimeBase().GetNum(), track_info->GetTimeBase().GetDen()}, stream->time_base);
-	pkt.size = data->GetLength();
-	pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
 
 	// TODO: Depending on the extension, the bitstream format should be changed.
 	// format(mpegts)
@@ -315,24 +315,45 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	//  - AAC : Passthrough(ADTS)
 	//  - OPUS : Passthrough (?)
 	//  - VP8 : Passthrough (unknown name)
-	// format(flv)
-	//	- H264 : Passthrough
-	//	- AAC : to RAW
 	// format(mp4)
-	//	- H264 : Passthrough
+	//	- H264 : AVCC
 	//	- AAC : to RAW
-
-	if ((stream->codecpar->codec_id == AV_CODEC_ID_AAC) &&
-		(strcmp(_format_context->oformat->name, "flv") == 0 || strcmp(_format_context->oformat->name, "mp4")))
+	std::shared_ptr<const ov::Data> cdata = nullptr;
+	if (strcmp(_format_context->oformat->name, "mp4") == 0)
 	{
-		// delete adts header
-		pkt.size = data->GetLength() - 7;
-		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>() + 7;
+		switch (format)
+		{
+			case cmn::BitstreamFormat::H264_ANNEXB:
+				cdata = H264Converter::ConvertAnnexbToAvcc(data);
+				pkt.size = cdata->GetLength();
+				pkt.data = (uint8_t *)cdata->GetDataAs<uint8_t>();
+				break;
+			case cmn::BitstreamFormat::AAC_ADTS:
+				// Skip ADTS header
+				pkt.size = data->GetLength() - 7;
+				pkt.data = (uint8_t *)data->GetDataAs<uint8_t>() + 7;
+				break;
+			case cmn::BitstreamFormat::AAC_RAW:
+			case cmn::BitstreamFormat::H264_AVCC:
+				pkt.size = data->GetLength();
+				pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
+				break;
+			case cmn::BitstreamFormat::AAC_LATM:
+			default: {
+				logte("Could not support bitstream format");
+				return false;
+			}
+		}
 	}
-	else
+	else if (strcmp(_format_context->oformat->name, "ts") == 0)
 	{
 		pkt.size = data->GetLength();
 		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
+	}
+	else
+	{
+		logte("Could not support file format");
+		return false;
 	}
 
 	int ret = av_interleaved_write_frame(_format_context, &pkt);
