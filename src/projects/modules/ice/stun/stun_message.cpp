@@ -60,7 +60,7 @@ bool StunMessage::ParseHeader(ov::ByteStream &stream)
 
 	size_t remained = stream.Remained();
 
-	if((remained >= DefaultHeaderLength()) == false)
+	if((static_cast<int>(remained) >= DefaultHeaderLength()) == false)
 	{
 		_last_error_code = LastErrorCode::NOT_ENOUGH_DATA;
 		return false;

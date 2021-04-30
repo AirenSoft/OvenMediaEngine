@@ -99,7 +99,7 @@ void RtmpPushPublisher::StartSession(std::shared_ptr<RtmpPushSession> session)
 			[[fallthrough]];
 		// State of Record failed
 		case pub::Session::SessionState::Error:
-			[[fallthrough]];
+			break;
 	}
 
 	auto next_session_state = session->GetState();
@@ -125,7 +125,7 @@ void RtmpPushPublisher::StopSession(std::shared_ptr<RtmpPushSession> session)
 		case pub::Session::SessionState::Stopped:
 			[[fallthrough]];
 		case pub::Session::SessionState::Error:
-			[[fallthrough]];
+			break;
 	}
 
 	auto next_session_state = session->GetState();
