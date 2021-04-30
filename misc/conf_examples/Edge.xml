@@ -16,6 +16,15 @@
 
 	<!-- Settings for the ports to bind -->
 	<Bind>
+		<!-- Enable this configuration if you want to use API Server -->
+		<!--
+		<Managers>
+			<API>
+				<Port>${env:OME_API_PORT:48081}</Port>
+				<WorkerCount>1</WorkerCount>
+			</API>
+		</Managers>
+		-->
 		<Providers>
 			<!-- Currently, OME doesn't support using the specified port for OVT Provider -->
 			<OVT>
@@ -41,11 +50,6 @@
 					<!-- <TLSPort>5556</TLSPort> -->
 				</Signalling>
 				<IceCandidates>
-					<!-- 
-						If you want to stream WebRTC over TCP, specify IP:Port for TURN server.
-						This uses the TURN protocol, which delivers the stream from the built-in TURN server to the player's TURN client over TCP. 
-						For detailed information, refer https://airensoft.gitbook.io/ovenmediaengine/v/0.11.1/streaming/webrtc-publishing#webrtc-over-tcp
-					-->
 					<TcpRelay>${env:OME_TCP_RELAY_ADDRESS:*:3478}</TcpRelay>
 					<IceCandidate>${env:OME_ICE_CANDIDATES:*:10000-10005/udp}</IceCandidate>
 				</IceCandidates>

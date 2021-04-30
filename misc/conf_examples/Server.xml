@@ -246,6 +246,7 @@
 					</OutputProfiles>
 					<Providers>
 						<OVT />
+						<WebRTC />
 						<RTMP />
 						<SRT />
 						<MPEGTS>
