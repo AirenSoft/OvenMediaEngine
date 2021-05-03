@@ -219,10 +219,11 @@ int AmfUtil::EncodeString(void *data, char *string)
     pt_out += WriteInt8(pt_out, (int) AmfTypeMarker::String);
 
     // 데이터 기록
-    pt_out += WriteInt16(pt_out, (uint16_t) strlen(string));
-    strncpy((char *) pt_out, string, strlen(string));
+    int length = strlen(string);
+    pt_out += WriteInt16(pt_out, static_cast<uint16_t>(length));
+    strncpy((char *) pt_out, string, length);
 
-    return (1 + 2 + (int) strlen(string));
+    return (1 + 2 + length);
 }
 
 //====================================================================================================
