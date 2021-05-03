@@ -754,7 +754,7 @@ namespace ov
 			}
 		});
 
-		ssize_t sent_bytes;
+		ssize_t sent_bytes = 0;
 		auto &data = command.data;
 
 		logap("Dispatching event: %s", command.ToString().CStr());
