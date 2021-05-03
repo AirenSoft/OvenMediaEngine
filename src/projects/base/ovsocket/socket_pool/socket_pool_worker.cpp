@@ -261,8 +261,6 @@ namespace ov
 						  StringFromEpollEvent(event).CStr(), events, events,
 						  ov::Error::CreateErrorFromErrno()->ToString().CStr());
 
-					bool need_to_close = false;
-
 					if (OV_CHECK_FLAG(events, EPOLLOUT))
 					{
 						if (socket->UpdateFirstEpollEvent())
@@ -280,6 +278,9 @@ namespace ov
 						continue;
 					}
 
+					bool need_to_close = false;
+					SocketState new_state = SocketState::Closed;
+
 					if (OV_CHECK_FLAG(events, EPOLLOUT))
 					{
 						// Socket is ready for writing data
@@ -295,6 +296,7 @@ namespace ov
 								break;
 
 							case Socket::DispatchResult::Error:
+								new_state = SocketState::Error;
 								need_to_close = true;
 								break;
 						}
@@ -316,6 +318,7 @@ namespace ov
 							logad("EPOLLERR detected: %s\n", ::strerror(error));
 						}
 
+						new_state = SocketState::Error;
 						need_to_close = true;
 					}
 
@@ -324,11 +327,7 @@ namespace ov
 						// Disconnected
 						socket->SetEndOfStream();
 
-						if (socket->GetState() != SocketState::Closed)
-						{
-							socket->SetState(SocketState::Disconnected);
-						}
-
+						new_state = SocketState::Disconnected;
 						need_to_close = true;
 
 						_gc_candidates.erase(socket->GetNativeHandle());
@@ -337,6 +336,7 @@ namespace ov
 					if (need_to_close)
 					{
 						socket->CloseIfNeeded();
+						socket->SetState(new_state);
 					}
 				}
 			}
