@@ -186,7 +186,7 @@ namespace pvd
 
 		_client_socket = pool->AllocSocket();
 
-		if ((_client_socket == nullptr) || (_client_socket->AttachToWorker() == false))
+		if (_client_socket == nullptr)
 		{
 			_state = State::ERROR;
 			logte("To create client socket is failed.");

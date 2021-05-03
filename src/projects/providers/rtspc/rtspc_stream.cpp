@@ -205,7 +205,7 @@ namespace pvd
 
 		// Connect
 		_signalling_socket = signalling_socket_pool->AllocSocket();
-		if ((_signalling_socket == nullptr) || (_signalling_socket->AttachToWorker() == false))
+		if (_signalling_socket == nullptr)
 		{
 			_state = State::ERROR;
 			logte("To create client socket is failed.");

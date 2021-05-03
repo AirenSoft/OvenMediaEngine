@@ -80,24 +80,26 @@ namespace ov
 		Srt
 	};
 
-	enum class SocketState : char
+	constexpr const int SOCKET_STATE_CLOSABLE = 0x01000000;
+
+	enum class SocketState : int
 	{
 		// Socket was closed
-		Closed,
+		Closed = 0,
 		// Socket is created
-		Created,
+		Created = 1 | SOCKET_STATE_CLOSABLE,
 		// Bound on some port
-		Bound,
+		Bound = 2 | SOCKET_STATE_CLOSABLE,
 		// Listening
-		Listening,
+		Listening = 3 | SOCKET_STATE_CLOSABLE,
 		// Connecting
-		Connecting,
+		Connecting = 4 | SOCKET_STATE_CLOSABLE,
 		// Connection established
-		Connected,
+		Connected = 5 | SOCKET_STATE_CLOSABLE,
 		// The connection with Peer has been lost (However, we can read data from the kernel socket buffer if available)
-		Disconnected,
+		Disconnected = 6,
 		// An error occurred
-		Error,
+		Error = 7,
 	};
 
 	static const char *StringFromBlockingMode(BlockingMode mode)

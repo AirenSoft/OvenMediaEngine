@@ -165,11 +165,6 @@ namespace http
 				return ov::Error::CreateError("HTTP", "Could not create a socket");
 			}
 
-			if (_socket->AttachToWorker() == false)
-			{
-				return ov::Error::CreateError("HTTP", "Could not initialize socket");
-			}
-
 			if (((_blocking_mode == ov::BlockingMode::Blocking) ? _socket->MakeBlocking() : _socket->MakeNonBlocking(GetSharedPtr())) == false)
 			{
 				return ov::Error::CreateError("HTTP", "Could not set blocking mode");
@@ -185,7 +180,8 @@ namespace http
 			_url = url;
 			_parsed_url = parsed_url;
 
-			_request_header["Host"] = _parsed_url->Host();
+			_request_header["Host"] = ov::String::FormatString(
+				"%s:%d", _parsed_url->Host().CStr(), _parsed_url->Port());
 
 			return nullptr;
 		}
@@ -193,6 +189,12 @@ namespace http
 		void HttpClient::SendRequest()
 		{
 			auto path = _parsed_url->Path();
+
+			if (path.IsEmpty())
+			{
+				path = "/";
+			}
+
 			{
 				auto query_string = _parsed_url->Query();
 				if (query_string.IsEmpty() == false)
@@ -204,16 +206,21 @@ namespace http
 			ov::String request_header;
 
 			// Make HTTP 1.1 request header
+			logtd("Request resource: %s", path.CStr());
+
 			request_header.AppendFormat("GET %s HTTP/1.1\r\n", path.CStr());
+
+			logtd("Request headers: %zu:", _request_header.size());
 
 			for (auto header : _request_header)
 			{
 				request_header.AppendFormat("%s: %s\r\n", header.first.CStr(), header.second.CStr());
+				logtd("  >> %s: %s", header.first.CStr(), header.second.CStr());
 			}
 
 			request_header.Append("\r\n");
 
-			_socket->Send(request_header.ToData());
+			_socket->Send(request_header.ToData(false));
 		}
 
 		void HttpClient::RecvResponse()
@@ -341,7 +348,7 @@ namespace http
 
 				auto address = ov::SocketAddress(_parsed_url->Host(), _parsed_url->Port());
 
-				logtd("Trying to connect to %s...", address.ToString().CStr());
+				logtd("Request an URL: %s (address: %s)...", url.CStr(), address.ToString().CStr());
 
 				error = _socket->Connect(address, _timeout_in_msec);
 

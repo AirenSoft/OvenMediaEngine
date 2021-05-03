@@ -97,7 +97,7 @@ namespace ov
 		std::shared_ptr<SocketPool> _pool;
 
 		std::mutex _client_list_mutex;
-		std::map<const void *, std::shared_ptr<ClientSocket>> _client_list;
+		std::unordered_map<const void *, std::shared_ptr<ClientSocket>> _client_list;
 
 		ClientConnectionCallback _connection_callback = nullptr;
 		ClientDataCallback _data_callback = nullptr;

@@ -143,7 +143,7 @@ namespace http
 			}
 		}
 
-		logtd("Request Headers: %ld:", _headers.size());
+		logtd("Headers: %ld:", _headers.size());
 
 		std::for_each(_headers.begin(), _headers.end(), [](const auto &pair) -> void {
 			logtd("\t>> %s: %s", pair.first.CStr(), pair.second.CStr());
