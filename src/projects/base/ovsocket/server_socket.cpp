@@ -107,7 +107,7 @@ namespace ov
 					std::lock_guard lock_guard(_client_list_mutex);
 					_client_list.erase(key);
 
-					logad("Client(%s) is connected, but could not prepare socket options", client->ToString().CStr());
+					logae("Client(%s) is connected, but could not prepare socket options", client->ToString().CStr());
 				}
 			}
 		}

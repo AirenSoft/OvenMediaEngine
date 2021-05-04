@@ -1420,7 +1420,9 @@ namespace ov
 
 		if (error != nullptr)
 		{
-			if (read_bytes == 0L)
+			if (
+				((_socket.GetType() != SocketType::Srt) && (read_bytes == 0L)) ||
+				((_socket.GetType() == SocketType::Srt) && (error->GetCode() == SRT_ECONNLOST)))
 			{
 				error = Error::CreateError("Socket", "Remote is disconnected");
 				*received_length = 0UL;
@@ -1432,27 +1434,43 @@ namespace ov
 			}
 			else if (read_bytes < 0L)
 			{
-				switch (error->GetCode())
+				if (_socket.GetType() != SocketType::Srt)
 				{
-					// Errors that can occur under normal circumstances do not output
-					case EBADF:
-						// Socket is closed somewhere in OME
-						break;
+					switch (error->GetCode())
+					{
+						// Errors that can occur under normal circumstances do not output
+						case EBADF:
+							// Socket is closed somewhere in OME
+							break;
 
-					case ECONNRESET:
-						// Peer is disconnected
-						break;
+						case ECONNRESET:
+							// Peer is disconnected
+							break;
 
-					case ENOTCONN:
-						// Transport endpoint is not connected
-						break;
+						case ENOTCONN:
+							// Transport endpoint is not connected
+							break;
 
-					default:
-						logae("An error occurred while read data: %s\nStack trace: %s",
-							  error->ToString().CStr(),
-							  StackTrace::GetStackTrace().CStr());
+						default:
+							logae("An error occurred while read data: %s\nStack trace: %s",
+								  error->ToString().CStr(),
+								  StackTrace::GetStackTrace().CStr());
+					}
+
+					SetState(SocketState::Error);
 				}
-				SetState(SocketState::Error);
+				else
+				{
+					switch (error->GetCode())
+					{
+						default:
+							logae("An error occurred while read data: %s\nStack trace: %s",
+								  error->ToString().CStr(),
+								  StackTrace::GetStackTrace().CStr());
+					}
+
+					SetState(SocketState::Error);
+				}
 			}
 		}
 		else

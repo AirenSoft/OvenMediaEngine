@@ -366,9 +366,15 @@ namespace ov
 		bool AddToWorker(bool update_first_event_flag);
 		bool DeleteFromWorker();
 
-		// Returns previous state
+		// Returns true if it should be ignored as the first event, false if it should not be ignored.
 		bool UpdateFirstEpollEvent()
 		{
+			if (_socket.GetType() == SocketType::Srt)
+			{
+				// All events should not be ignored
+				return false;
+			}
+
 			bool is_first_event = _is_first_event;
 			_is_first_event = false;
 
