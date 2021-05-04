@@ -31,10 +31,12 @@ namespace ov
 		// Verify that the epoll is closed normally
 		std::lock_guard lock_guard(_worker_list_mutex);
 
+#if DEBUG
 		for (auto &worker : _worker_list)
 		{
 			OV_ASSERT(worker->_epoll == InvalidSocket, "Epoll is not uninitialized");
 		}
+#endif // DEBUG
 	}
 
 	SocketType SocketPool::GetType() const

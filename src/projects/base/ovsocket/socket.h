@@ -39,7 +39,9 @@ namespace ov
 	class SocketAsyncInterface
 	{
 	public:
-		// Called when 1) A new client connected to ServerSocket 2) Socket is connected to server
+		// Called when
+		//   1) A new client connected to ServerSocket
+		//   2) Socket is connected to server
 		virtual void OnConnected() = 0;
 		// Data is readable (by epoll)
 		virtual void OnReadable() = 0;
@@ -86,7 +88,10 @@ namespace ov
 			return _worker;
 		}
 
-		bool AttachToWorker();
+		BlockingMode GetBlockingMode() const
+		{
+			return _blocking_mode;
+		}
 
 		bool MakeBlocking();
 		bool MakeNonBlocking(std::shared_ptr<SocketAsyncInterface> callback);
@@ -135,6 +140,7 @@ namespace ov
 		bool SetSockOpt(SRT_SOCKOPT option, const void *value, int value_length);
 
 		SocketState GetState() const;
+		bool IsClosable() const;
 
 		void SetState(SocketState state);
 
@@ -329,6 +335,9 @@ namespace ov
 	protected:
 		virtual bool Create(SocketType type);
 
+		// Internal version of MakeNonBlocking() - It doesn't check state
+		bool MakeNonBlockingInternal(std::shared_ptr<SocketAsyncInterface> callback, bool update_first_event_flag);
+
 		bool SetBlockingInternal(BlockingMode mode);
 
 		bool AppendCommand(DispatchCommand command);
@@ -339,27 +348,10 @@ namespace ov
 		ssize_t SendToInternal(const SocketAddress &address, const std::shared_ptr<const Data> &data);
 
 		// From SocketPollWorker (Called when EPOLLOUT event raised)
-		virtual void OnWritableFromSocket()
-		{
-			if (GetState() == SocketState::Connecting)
-			{
-				SetState(SocketState::Connected);
-
-				if (_callback != nullptr)
-				{
-					_callback->OnConnected();
-				}
-			}
-		}
+		virtual void OnDataWritable();
 
 		// From SocketPollWorker (Called when EPOLLIN event raised)
-		virtual void OnReadableFromSocket()
-		{
-			if (_callback != nullptr)
-			{
-				_callback->OnReadable();
-			}
-		}
+		virtual void OnDataReceived();
 
 		std::shared_ptr<Error> RecvInternal(void *data, size_t length, size_t *received_length);
 
@@ -371,8 +363,21 @@ namespace ov
 		virtual bool CloseInternal();
 
 	protected:
+		bool AddToWorker(bool update_first_event_flag);
+		bool DeleteFromWorker();
+
+		// Returns previous state
+		bool UpdateFirstEpollEvent()
+		{
+			bool is_first_event = _is_first_event;
+			_is_first_event = false;
+
+			return is_first_event;
+		}
+
 		DispatchResult DispatchEventsInternal();
 
+	protected:
 		std::shared_ptr<SocketPoolWorker> _worker;
 
 		SocketWrapper _socket;
@@ -380,6 +385,8 @@ namespace ov
 		SocketState _state = SocketState::Closed;
 
 		BlockingMode _blocking_mode = BlockingMode::Blocking;
+
+		bool _is_first_event = true;
 
 		bool _end_of_stream = false;
 

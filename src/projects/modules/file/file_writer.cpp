@@ -317,7 +317,9 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 	//  - VP8 : Passthrough (unknown name)
 	// format(mp4)
 	//	- H264 : AVCC
-	//	- AAC : to RAW
+	//	- AAC : to RA
+	uint8_t ADTS_HEADER_LENGTH = 7;
+
 	std::shared_ptr<const ov::Data> cdata = nullptr;
 	if (strcmp(_format_context->oformat->name, "mp4") == 0)
 	{
@@ -330,8 +332,8 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 				break;
 			case cmn::BitstreamFormat::AAC_ADTS:
 				// Skip ADTS header
-				pkt.size = data->GetLength() - 7;
-				pkt.data = (uint8_t *)data->GetDataAs<uint8_t>() + 7;
+				pkt.size = data->GetLength() - ADTS_HEADER_LENGTH;
+				pkt.data = (uint8_t *)data->GetDataAs<uint8_t>() + ADTS_HEADER_LENGTH;
 				break;
 			case cmn::BitstreamFormat::AAC_RAW:
 			case cmn::BitstreamFormat::H264_AVCC:
@@ -345,14 +347,14 @@ bool FileWriter::PutData(int32_t track_id, int64_t pts, int64_t dts, MediaPacket
 			}
 		}
 	}
-	else if (strcmp(_format_context->oformat->name, "ts") == 0)
+	else if (strcmp(_format_context->oformat->name, "mpegts") == 0)
 	{
 		pkt.size = data->GetLength();
 		pkt.data = (uint8_t *)data->GetDataAs<uint8_t>();
 	}
 	else
 	{
-		logte("Could not support file format");
+		logte("Could not support output file format");
 		return false;
 	}
 

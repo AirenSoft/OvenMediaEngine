@@ -70,7 +70,7 @@ namespace ov
 			this->post_handler = post_handler;
 		}
 
-		ov::StopWatch sw;
+		StopWatch sw;
 		int64_t lock_elapsed;
 		PostHandler post_handler;
 	};
@@ -113,24 +113,25 @@ namespace ov
 		}
 
 	protected:
-		ov::Event _connected_event{true};
+		Event _connected_event{true};
 	};
 
 	Socket::Socket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker)
 		: _worker(worker)
 	{
+		OV_ASSERT(worker != nullptr, "Worker must be not nullptr");
 	}
 
 	// Creates a socket using remote information.
-	// Remote information is present, considered already connected
 	Socket::Socket(PrivateToken token, const std::shared_ptr<SocketPoolWorker> &worker,
 				   SocketWrapper socket, const SocketAddress &remote_address)
 		: Socket(token, worker)
 	{
 		_socket = socket;
-		_state = SocketState::Connected;
 
-		// 로컬 정보는 없으며, 상대 정보만 있음. 즉, send만 가능
+		// Remote information is present, considered already connected
+		SetState(SocketState::Connected);
+
 		_remote_address = std::make_shared<SocketAddress>(remote_address);
 	}
 
@@ -188,15 +189,16 @@ namespace ov
 			return true;
 		} while (false);
 
-		CloseInternal();
+		if (CloseInternal())
+		{
+			SetState(SocketState::Closed);
+		}
 
 		return false;
 	}
 
 	bool Socket::SetBlockingInternal(BlockingMode mode)
 	{
-		int result;
-
 		if (_socket.IsValid() == false)
 		{
 			logae("Could not make %s socket (Invalid socket)", StringFromBlockingMode(mode));
@@ -204,60 +206,50 @@ namespace ov
 			return false;
 		}
 
+		auto socket = GetSharedPtr();
+
 		switch (GetType())
 		{
 			case SocketType::Tcp:
 			case SocketType::Udp: {
-				result = ::fcntl(GetNativeHandle(), F_GETFL, 0);
+				int result = ::fcntl(GetNativeHandle(), F_GETFL, 0);
 
 				if (result == -1)
 				{
-					logae("Could not obtain flags from socket %d (%d)", GetNativeHandle(), result);
+					logae("Could not obtain flags: %s", Error::CreateErrorFromErrno()->ToString().CStr());
 					return false;
 				}
 
-				int flags = result;
-
-				if (mode == BlockingMode::Blocking)
-				{
-					flags &= ~O_NONBLOCK;
-				}
-				else
-				{
-					flags |= O_NONBLOCK;
-				}
+				int flags = (mode == BlockingMode::Blocking) ? (result & ~O_NONBLOCK) : (result | O_NONBLOCK);
 
 				result = ::fcntl(GetNativeHandle(), F_SETFL, flags);
 
 				if (result == -1)
 				{
-					logae("Could not set flags to socket %d: %s", GetNativeHandle(), ov::Error::CreateErrorFromErrno()->ToString().CStr());
+					logae("Could not set flags: %s", Error::CreateErrorFromErrno()->ToString().CStr());
 					return false;
 				}
 
-				_blocking_mode = mode;
-
-				return true;
+				break;
 			}
 
 			case SocketType::Srt:
 				if (
-					SetSockOpt(SRTO_RCVSYN, _blocking_mode == BlockingMode::Blocking) &&
-					SetSockOpt(SRTO_SNDSYN, _blocking_mode == BlockingMode::Blocking))
+					SetSockOpt(SRTO_RCVSYN, mode != BlockingMode::Blocking) ||
+					SetSockOpt(SRTO_SNDSYN, mode != BlockingMode::Blocking))
 				{
-					_blocking_mode = mode;
-					return true;
+					logae("Could not set flags to SRT socket %d: %s", GetNativeHandle(), Error::CreateErrorFromSrt()->ToString().CStr());
+					return false;
 				}
 
-				logae("Could not set flags to SRT socket %d: %s", GetNativeHandle(), ov::Error::CreateErrorFromSrt()->ToString().CStr());
-				return false;
+				break;
 
 			default:
 				OV_ASSERT(false, "Invalid socket type: %d", GetType());
-				break;
+				return false;
 		}
 
-		return false;
+		return true;
 	}
 
 	bool Socket::AppendCommand(DispatchCommand command)
@@ -284,26 +276,91 @@ namespace ov
 		return true;
 	}
 
-	bool Socket::AttachToWorker()
+	bool Socket::AddToWorker(bool update_first_event_flag)
 	{
-		return _worker->AttachToWorker(GetSharedPtr());
+		if (update_first_event_flag)
+		{
+			_is_first_event = true;
+		}
+
+		return _worker->AddToEpoll(GetSharedPtr());
+	}
+
+	bool Socket::DeleteFromWorker()
+	{
+		return _worker->DeleteFromEpoll(GetSharedPtr());
 	}
 
 	bool Socket::MakeBlocking()
 	{
+		if (GetState() != SocketState::Created)
+		{
+			logae("Blocking mode can only be changed at the beginning of socket creation");
+			OV_ASSERT2(false);
+			return false;
+		}
+
+		if (_blocking_mode == BlockingMode::Blocking)
+		{
+			// Socket is already blocking mode
+			OV_ASSERT2(_callback == nullptr);
+
+			return true;
+		}
+
+		auto old_callback = _callback;
 		_callback = nullptr;
-		return SetBlockingInternal(BlockingMode::Blocking);
+
+		if (
+			SetBlockingInternal(BlockingMode::Blocking) &&
+			DeleteFromWorker())
+		{
+			_blocking_mode = BlockingMode::Blocking;
+			return true;
+		}
+
+		// Rollback
+		_callback = old_callback;
+
+		return false;
 	}
 
 	bool Socket::MakeNonBlocking(std::shared_ptr<SocketAsyncInterface> callback)
 	{
-		if (SetBlockingInternal(BlockingMode::NonBlocking))
+		if (GetState() != SocketState::Created)
 		{
-			_callback = std::move(callback);
+			logae("Blocking mode can only be changed at the beginning of socket creation");
+			OV_ASSERT2(false);
+			return false;
+		}
+
+		return MakeNonBlockingInternal(callback, true);
+	}
+
+	bool Socket::MakeNonBlockingInternal(std::shared_ptr<SocketAsyncInterface> callback, bool update_first_event_flag)
+	{
+		if (_blocking_mode == BlockingMode::NonBlocking)
+		{
+			// Socket is already non-blocking mode
+			_callback = callback;
+
 			return true;
 		}
 
-		_callback = nullptr;
+		auto old_callback = _callback;
+		_callback = callback;
+
+		if (
+			SetBlockingInternal(BlockingMode::NonBlocking) &&
+			AddToWorker(update_first_event_flag))
+		{
+			_blocking_mode = BlockingMode::NonBlocking;
+			return true;
+		}
+
+		// Rollback
+		_callback = old_callback;
+
 		return false;
 	}
 
@@ -451,55 +508,72 @@ namespace ov
 		return SocketWrapper();
 	}
 
-	std::shared_ptr<ov::Error> Socket::Connect(const SocketAddress &endpoint, int timeout_msec)
+	std::shared_ptr<Error> Socket::Connect(const SocketAddress &endpoint, int timeout_msec)
 	{
 		OV_ASSERT2(_socket.IsValid());
-		CHECK_STATE(== SocketState::Created, ov::Error::CreateError(EINVAL, "Invalid state: %d", static_cast<int>(_state)));
+		CHECK_STATE(== SocketState::Created, Error::CreateError(EINVAL, "Invalid state: %d", static_cast<int>(_state)));
 
-		std::shared_ptr<ov::Error> error;
+		std::shared_ptr<Error> error;
 		std::shared_ptr<ConnectHelper> connect_helper;
 
 		// To set connection timeout
-		auto original_blocking_mode = _blocking_mode;
+		bool use_timeout = (timeout_msec > 0 && timeout_msec < Infinite);
 
 		switch (GetType())
 		{
 			case SocketType::Tcp:
 			case SocketType::Udp: {
-				if (timeout_msec > 0 && timeout_msec < Infinite)
+				if (_blocking_mode == BlockingMode::Blocking)
 				{
-					if (original_blocking_mode == BlockingMode::Blocking)
+					if (use_timeout)
 					{
+						if (
+							(SetBlockingInternal(BlockingMode::NonBlocking) == false) ||
+							(AddToWorker(true) == false))
+						{
+							return Error::CreateError("Socket cannot be changed to nonblocking mode: %s", ToString().CStr());
+						}
+
 						connect_helper = std::make_shared<ConnectHelper>();
-						MakeNonBlocking(connect_helper);
+						_callback = connect_helper;
 					}
 				}
 
 				SetState(SocketState::Connecting);
 
-				logtd("Trying to connect to %s...", endpoint.ToString().CStr());
+				logad("Trying to connect to %s...", endpoint.ToString().CStr());
 				int result = ::connect(GetNativeHandle(), endpoint.Address(), endpoint.AddressLength());
 
 				if (result == 0)
 				{
-					if (original_blocking_mode == BlockingMode::Blocking)
+					if (_blocking_mode == BlockingMode::Blocking)
 					{
-						// Restore blocking state
-						MakeBlocking();
+						_callback = nullptr;
+
+						if (use_timeout)
+						{
+							// Restore blocking state
+							if (
+								(DeleteFromWorker() == false) ||
+								(SetBlockingInternal(BlockingMode::Blocking) == false))
+							{
+								return Error::CreateError("Socket cannot be changed to blocking mode: %s", ToString().CStr());
+							}
+						}
 					}
 
 					SetState(SocketState::Connected);
 					return nullptr;
 				}
 
-				error = ov::Error::CreateErrorFromErrno();
+				error = Error::CreateErrorFromErrno();
 
 				if (result < 0)
 				{
 					// Check timeout
 					if (error->GetCode() == EINPROGRESS)
 					{
-						if (original_blocking_mode == BlockingMode::NonBlocking)
+						if (_blocking_mode == BlockingMode::NonBlocking)
 						{
 							// Don't wait for the connection if this socket is non-blocking mode
 							return nullptr;
@@ -508,10 +582,18 @@ namespace ov
 						// Blocking mode
 						if (connect_helper->WaitForConnect(timeout_msec))
 						{
-							// Recover original state
-							MakeBlocking();
-							SetState(SocketState::Connected);
-							error = nullptr;
+							// Restore blocking state
+							if (
+								(DeleteFromWorker() == false) ||
+								(SetBlockingInternal(BlockingMode::Blocking) == false))
+							{
+								error = Error::CreateError("Socket cannot be changed to blocking mode: %s", ToString().CStr());
+							}
+							else
+							{
+								SetState(SocketState::Connected);
+								error = nullptr;
+							}
 						}
 						else
 						{
@@ -519,7 +601,7 @@ namespace ov
 							int socket_error;
 							GetSockOpt(SO_ERROR, &socket_error);
 
-							error = ov::Error::CreateError(socket_error, "Connection timed out (%d ms elapsed, SO_ERROR: %d)", timeout_msec, socket_error);
+							error = Error::CreateError(socket_error, "Connection timed out (%d ms elapsed, SO_ERROR: %d)", timeout_msec, socket_error);
 
 							// Timed out/Error occurred
 							CloseInternal();
@@ -541,12 +623,12 @@ namespace ov
 					}
 				}
 
-				error = ov::Error::CreateErrorFromSrt();
+				error = Error::CreateErrorFromSrt();
 
 				break;
 
 			default:
-				error = ov::Error::CreateError("Socket", "Not implemented");
+				error = Error::CreateError("Socket", "Not implemented");
 				break;
 		}
 
@@ -571,12 +653,12 @@ namespace ov
 		}
 	}
 
-	std::shared_ptr<ov::SocketAddress> Socket::GetLocalAddress() const
+	std::shared_ptr<SocketAddress> Socket::GetLocalAddress() const
 	{
 		return _local_address;
 	}
 
-	std::shared_ptr<ov::SocketAddress> Socket::GetRemoteAddress() const
+	std::shared_ptr<SocketAddress> Socket::GetRemoteAddress() const
 	{
 		return _remote_address;
 	}
@@ -624,7 +706,7 @@ namespace ov
 
 		if (result == SRT_ERROR)
 		{
-			auto error = ov::Error::CreateErrorFromSrt();
+			auto error = Error::CreateErrorFromSrt();
 			logaw("Could not set option: %d (result: %s)", option, error->ToString().CStr());
 			return false;
 		}
@@ -637,8 +719,17 @@ namespace ov
 		return _state;
 	}
 
+	bool Socket::IsClosable() const
+	{
+		return OV_CHECK_FLAG(static_cast<std::underlying_type<SocketState>::type>(_state), SOCKET_STATE_CLOSABLE);
+	}
+
 	void Socket::SetState(SocketState state)
 	{
+		logad("Socket state is changed: %s => %s",
+			  StringFromSocketState(_state),
+			  StringFromSocketState(state));
+
 		_state = state;
 	}
 
@@ -648,7 +739,7 @@ namespace ov
 	}
 
 	// Only avaliable if socket is SRT
-	ov::String Socket::GetStreamId() const
+	String Socket::GetStreamId() const
 	{
 		return _stream_id;
 	}
@@ -663,7 +754,7 @@ namespace ov
 			}
 		});
 
-		ssize_t sent_bytes;
+		ssize_t sent_bytes = 0;
 		auto &data = command.data;
 
 		logap("Dispatching event: %s", command.ToString().CStr());
@@ -703,7 +794,14 @@ namespace ov
 				}
 
 				logae("Could not release socket from worker");
-				CloseInternal();
+				if (CloseInternal())
+				{
+					SetState(SocketState::Closed);
+				}
+				else
+				{
+					SetState(SocketState::Error);
+				}
 
 				OV_ASSERT2(false);
 				return DispatchResult::Error;
@@ -827,7 +925,7 @@ namespace ov
 	{
 		switch (_blocking_mode)
 		{
-			case ov::BlockingMode::Blocking:
+			case BlockingMode::Blocking:
 #if DEBUG
 			{
 				std::lock_guard lock_guard(_dispatch_queue_lock);
@@ -837,7 +935,7 @@ namespace ov
 #endif	// DEBUG
 				return Socket::DispatchResult::Dispatched;
 
-			case ov::BlockingMode::NonBlocking:
+			case BlockingMode::NonBlocking:
 				return DispatchEventsInternal();
 		}
 
@@ -1054,6 +1152,31 @@ namespace ov
 		return total_sent;
 	}
 
+	void Socket::OnDataWritable()
+	{
+		logad("Socket is ready to write");
+
+		if (GetState() == SocketState::Connecting)
+		{
+			SetState(SocketState::Connected);
+
+			if (_callback != nullptr)
+			{
+				_callback->OnConnected();
+			}
+		}
+	}
+
+	void Socket::OnDataReceived()
+	{
+		logad("Socket is ready to read");
+
+		if (_callback != nullptr)
+		{
+			_callback->OnReadable();
+		}
+	}
+
 	bool Socket::Send(const std::shared_ptr<const Data> &data)
 	{
 		switch (GetState())
@@ -1078,10 +1201,10 @@ namespace ov
 
 		switch (_blocking_mode)
 		{
-			case ov::BlockingMode::Blocking:
+			case BlockingMode::Blocking:
 				return (SendInternal(data) == static_cast<ssize_t>(data->GetLength()));
 
-			case ov::BlockingMode::NonBlocking:
+			case BlockingMode::NonBlocking:
 				if (GetType() != SocketType::Udp)
 				{
 					CHECK_STATE(== SocketState::Connected, false);
@@ -1158,10 +1281,10 @@ namespace ov
 
 		switch (_blocking_mode)
 		{
-			case ov::BlockingMode::Blocking:
+			case BlockingMode::Blocking:
 				return (SendToInternal(address, data) == static_cast<ssize_t>(data->GetLength()));
 
-			case ov::BlockingMode::NonBlocking:
+			case BlockingMode::NonBlocking:
 				if (GetType() != SocketType::Udp)
 				{
 					CHECK_STATE(== SocketState::Connected, false);
@@ -1217,7 +1340,7 @@ namespace ov
 		return SendTo(address, (data == nullptr) ? nullptr : std::make_shared<Data>(data, length));
 	}
 
-	std::shared_ptr<ov::Error> Socket::Recv(std::shared_ptr<Data> &data, bool non_block)
+	std::shared_ptr<Error> Socket::Recv(std::shared_ptr<Data> &data, bool non_block)
 	{
 		OV_ASSERT2(data != nullptr);
 		OV_ASSERT(data->GetCapacity() > 0, "Must specify a data size in advance using Reserve().");
@@ -1238,7 +1361,7 @@ namespace ov
 		return nullptr;
 	}
 
-	std::shared_ptr<ov::Error> Socket::Recv(void *data, size_t length, size_t *received_length, bool non_block)
+	std::shared_ptr<Error> Socket::Recv(void *data, size_t length, size_t *received_length, bool non_block)
 	{
 		if (GetState() == SocketState::Closed)
 		{
@@ -1301,7 +1424,7 @@ namespace ov
 		{
 			if (read_bytes == 0L)
 			{
-				logad("Remote is disconnected: %s", error->ToString().CStr());
+				error = Error::CreateError("Socket", "Remote is disconnected");
 				*received_length = 0UL;
 
 				SetState(SocketState::Disconnected);
@@ -1329,7 +1452,7 @@ namespace ov
 					default:
 						logae("An error occurred while read data: %s\nStack trace: %s",
 							  error->ToString().CStr(),
-							  ov::StackTrace::GetStackTrace().CStr());
+							  StackTrace::GetStackTrace().CStr());
 				}
 				SetState(SocketState::Error);
 			}
@@ -1343,7 +1466,7 @@ namespace ov
 		return error;
 	}
 
-	std::shared_ptr<ov::Error> Socket::RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block)
+	std::shared_ptr<Error> Socket::RecvFrom(std::shared_ptr<Data> &data, SocketAddress *address, bool non_block)
 	{
 		OV_ASSERT2(_socket.IsValid());
 		OV_ASSERT2(data != nullptr);
@@ -1394,12 +1517,12 @@ namespace ov
 			case SocketType::Srt:
 				// Does not support RecvFrom() for SRT
 				OV_ASSERT2(false);
-				error = ov::Error::CreateError("Socket", "RecvFrom() is not supported operation while using SRT");
+				error = Error::CreateError("Socket", "RecvFrom() is not supported operation while using SRT");
 				break;
 
 			case SocketType::Unknown:
 				OV_ASSERT2(false);
-				error = ov::Error::CreateError("Socket", "Unknown socket type");
+				error = Error::CreateError("Socket", "Unknown socket type");
 				break;
 		}
 
@@ -1407,7 +1530,7 @@ namespace ov
 		{
 			logae("An error occurred while read data: %s\nStack trace: %s",
 				  error->ToString().CStr(),
-				  ov::StackTrace::GetStackTrace().CStr());
+				  StackTrace::GetStackTrace().CStr());
 
 			SetState(SocketState::Error);
 		}
@@ -1433,13 +1556,12 @@ namespace ov
 
 	bool Socket::CloseIfNeeded()
 	{
-		if (IsClosing() == false)
+		if (_blocking_mode == BlockingMode::Blocking)
 		{
-			return Close();
+			return IsClosable() && Close();
 		}
 
-		// Socket is already closed
-		return false;
+		return (IsClosing() == false) && IsClosable() && Close();
 	}
 
 	bool Socket::Close()
@@ -1454,7 +1576,7 @@ namespace ov
 
 		switch (_blocking_mode)
 		{
-			case ov::BlockingMode::Blocking: {
+			case BlockingMode::Blocking: {
 				bool result = true;
 
 				if (HalfClose() == DispatchResult::Error)
@@ -1466,7 +1588,12 @@ namespace ov
 					result = false;
 				}
 
-				if (CloseInternal() == false)
+				// Close regardless of result
+				if (CloseInternal())
+				{
+					SetState(SocketState::Closed);
+				}
+				else
 				{
 					result = false;
 				}
@@ -1474,7 +1601,7 @@ namespace ov
 				return result;
 			}
 
-			case ov::BlockingMode::NonBlocking: {
+			case BlockingMode::NonBlocking: {
 				SOCKET_PROFILER_INIT();
 				std::lock_guard lock_guard(_dispatch_queue_lock);
 				SOCKET_PROFILER_AFTER_LOCK();
@@ -1532,9 +1659,9 @@ namespace ov
 
 		switch (GetState())
 		{
-			case ov::SocketState::Created:
+			case SocketState::Created:
 				[[fallthrough]];
-			case ov::SocketState::Disconnected:
+			case SocketState::Disconnected:
 				return Socket::DispatchResult::Dispatched;
 
 			default:
@@ -1548,7 +1675,7 @@ namespace ov
 
 			if (result < 0L)
 			{
-				auto error = ov::Error::CreateErrorFromErrno();
+				auto error = Error::CreateErrorFromErrno();
 
 				if (error->GetCode() == EAGAIN)
 				{
@@ -1615,7 +1742,6 @@ namespace ov
 			}
 
 			logad("Socket is closed successfully");
-			SetState(SocketState::Closed);
 
 			return true;
 		}
@@ -1629,12 +1755,13 @@ namespace ov
 	String Socket::ToString(const char *class_name) const
 	{
 		return String::FormatString(
-			"<%s: %p, #%d, state: %s, %s, %s, %s>",
+			"<%s: %p, #%d, %s, %s, %s%s%s>",
 			class_name, this,
 			GetNativeHandle(), StringFromSocketState(_state),
 			StringFromSocketType(GetType()),
 			StringFromBlockingMode(_blocking_mode),
-			(_remote_address != nullptr) ? _remote_address->ToString().CStr() : "N/A");
+			(_remote_address != nullptr) ? ", " : "",
+			(_remote_address != nullptr) ? _remote_address->ToString().CStr() : "");
 	}
 
 	String Socket::ToString() const

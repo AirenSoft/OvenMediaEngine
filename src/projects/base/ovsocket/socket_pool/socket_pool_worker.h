@@ -50,10 +50,7 @@ namespace ov
 			return nullptr;
 		}
 
-		bool ReleaseSocket(const std::shared_ptr<Socket> &socket)
-		{
-			return RemoveFromEpoll(socket);
-		}
+		bool ReleaseSocket(const std::shared_ptr<Socket> &socket);
 
 	protected:
 		SocketType GetType() const;
@@ -84,9 +81,9 @@ namespace ov
 
 		void ThreadProc();
 
-		bool AttachToWorker(const std::shared_ptr<Socket> &socket);
+		bool AddToEpoll(const std::shared_ptr<Socket> &socket);
 		int EpollWait(int timeout_in_msec = Infinite);
-		bool RemoveFromEpoll(const std::shared_ptr<Socket> &socket);
+		bool DeleteFromEpoll(const std::shared_ptr<Socket> &socket);
 
 		void ConvertSrtEventToEpollEvent(const SRT_EPOLL_EVENT &srt_event, epoll_event *event);
 
