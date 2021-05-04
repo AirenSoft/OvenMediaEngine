@@ -31,12 +31,12 @@ namespace pvd
 	SrtProvider::SrtProvider(const cfg::Server &server_config, const std::shared_ptr<MediaRouteInterface> &router)
 		: PushProvider(server_config, router)
 	{
-		logtd("Created Mpegts Provider module.");
+		logtd("Created SRT Provider module.");
 	}
 
 	SrtProvider::~SrtProvider()
 	{
-		logti("Terminated Mpegts Provider module.");
+		logti("Terminated SRT Provider module.");
 	}
 
 	bool SrtProvider::Start()
