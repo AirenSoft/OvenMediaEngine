@@ -110,6 +110,19 @@
 				-->
 			</Host>
 
+			<!-- Refer https://airensoft.gitbook.io/ovenmediaengine/signedpolicy
+			<SignedPolicy>
+				<PolicyQueryKeyName>policy</PolicyQueryKeyName>
+				<SignatureQueryKeyName>signature</SignatureQueryKeyName>
+				<SecretKey>aKq#1kj</SecretKey>
+
+				<Enables>
+					<Providers>rtmp,webrtc,srt</Providers>
+					<Publishers>webrtc,hls,dash,lldash</Publishers>
+				</Enables>
+			</SignedPolicy>
+			-->
+
 			<!-- Settings for applications -->
 			<Applications>
 				<Application>

@@ -98,7 +98,7 @@ protected:
 		{
 			if(_lifetime_epoch_ms != 0 && _lifetime_epoch_ms < ov::Clock::NowMSec())
 			{
-				return false;
+				return true;
 			}
 
 			return (std::chrono::system_clock::now() > expire_time);

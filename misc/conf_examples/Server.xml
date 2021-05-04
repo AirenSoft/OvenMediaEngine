@@ -177,7 +177,7 @@
 				<SecretKey>aKq#1kj</SecretKey>
 
 				<Enables>
-					<Providers>rtmp</Providers>
+					<Providers>rtmp,webrtc,srt</Providers>
 					<Publishers>webrtc,hls,dash,lldash</Publishers>
 				</Enables>
 			</SignedPolicy>
